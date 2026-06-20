@@ -1,0 +1,16 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.data/
+*.db
+*.db-shm
+*.db-wal
+.DS_Store
+*.log
+graphify-out/
+.pi
+
+# Local-only docs and planning (kept on disk, never committed to the public tree)
+CONTEXT.md
+.claude/plans/
+docs/**

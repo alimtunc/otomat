@@ -1,0 +1,47 @@
+import { createContext, type ReactNode, use, useEffect, useMemo, useReducer } from "react";
+
+import { applyTheme } from "./dom";
+import { themeReducer } from "./reducer";
+import { readStored, writeStored } from "./storage";
+import type { Density, Direction, Theme, ThemeContextValue } from "./types";
+
+export type { Density, Direction, Theme, ThemeContextValue, ThemeState } from "./types";
+
+const ThemeContext = createContext<ThemeContextValue | null>(null);
+
+export interface ThemeProviderProps {
+  children: ReactNode;
+}
+
+export function ThemeProvider({ children }: ThemeProviderProps): ReactNode {
+  const [state, dispatch] = useReducer(themeReducer, null, readStored);
+
+  // otomat-allow-effect: mirror the resolved theme to the document root and persist it.
+  useEffect(() => {
+    applyTheme(document.documentElement, state);
+    writeStored(state);
+  }, [state]);
+
+  const actions = useMemo(
+    () => ({
+      setTheme: (theme: Theme) => dispatch({ type: "setTheme", theme }),
+      toggleTheme: () => dispatch({ type: "toggleTheme" }),
+      setDensity: (density: Density) => dispatch({ type: "setDensity", density }),
+      setDirection: (direction: Direction) => dispatch({ type: "setDirection", direction }),
+      setAccent: (accent: string | null) => dispatch({ type: "setAccent", accent }),
+    }),
+    [],
+  );
+
+  const value = useMemo<ThemeContextValue>(() => ({ ...state, ...actions }), [state, actions]);
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+export function useTheme(): ThemeContextValue {
+  const ctx = use(ThemeContext);
+  if (!ctx) {
+    throw new Error("useTheme must be used within a ThemeProvider");
+  }
+  return ctx;
+}

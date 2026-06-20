@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "typescript/no-explicit-any": "error",
+    "no-nested-ternary": "error",
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["../../*", "../../**"],
+            "message": "Deep relative import (../../+). Import the workspace package's public entry (@otomat/*) or use a shallower path."
+          },
+          {
+            "group": ["@radix-ui/*", "@radix-ui"],
+            "message": "Direct Radix import is banned. Use the primitives in @otomat/ui (built on Base UI)."
+          }
+        ]
+      }
+    ]
+  },
+  "ignorePatterns": ["**/dist/**", "**/drizzle/**", "**/node_modules/**", "**/*.d.ts"]
+}

@@ -1,0 +1,50 @@
+{
+  // React Doctor — file-scoped exceptions. Each entry is a verified false positive
+  // or a deliberate, reviewed pattern, not a blanket rule disable.
+  "ignore": {
+    "overrides": [
+      {
+        // @otomat/domain is consumed via type-only subpath imports (`@otomat/domain/types`)
+        // across packages/ui (and re-exported from src/index.ts); deslop's dependency graph
+        // does not resolve subpath type-only imports, so it reports it as unused.
+        "files": ["**/ui/package.json", "packages/ui/package.json"],
+        "rules": ["deslop/unused-dependency"]
+      },
+      {
+        // apps/web -> packages/domain is an intentional dependency declared by
+        // docs/ai/import-boundaries.md. The app currently consumes domain types
+        // transitively via @otomat/ui re-exports; the direct dependency is kept
+        // deliberately and will be imported directly as routes are built out.
+        // (deslop reports project-relative paths, so package.json has no dir prefix.)
+        "files": ["package.json", "**/web/package.json", "apps/web/package.json"],
+        "rules": ["deslop/unused-dependency"]
+      },
+      {
+        // The unmount cleanup must clear the LATEST timer id (timer.current), which is set
+        // after mount; copying the ref to a local at mount (the rule's suggested fix) would
+        // capture null and clear nothing. Reading the ref in cleanup is correct here.
+        "files": ["**/components/copy-button.tsx"],
+        "rules": ["react-doctor/exhaustive-deps"]
+      },
+      {
+        // <Button> is a generic primitive: its accessible name comes from caller-provided
+        // children / aria-label / render prop, which the analyzer cannot see through useRender.
+        "files": ["**/primitives/button.tsx"],
+        "rules": ["react-doctor/control-has-associated-label"]
+      },
+      {
+        // Cohesive Base UI primitive barrel (Root / Trigger / Content), consistent with the
+        // dialog/sheet/popover sibling primitives. Splitting 3 thin wrappers adds no value.
+        "files": ["**/primitives/collapsible.tsx"],
+        "rules": ["react-doctor/no-multi-comp"]
+      },
+      {
+        // Custom indeterminate progress bar: the moving sweep is drawn with a ::before
+        // pseudo-element, which a native <progress> cannot render. role="progressbar" +
+        // aria-busy is the intentional, accessible choice here.
+        "files": ["**/components/reconnecting-bar.tsx"],
+        "rules": ["react-doctor/prefer-tag-over-role"]
+      }
+    ]
+  }
+}

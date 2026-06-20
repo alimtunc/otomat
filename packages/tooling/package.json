@@ -1,0 +1,22 @@
+{
+  "name": "@otomat/tooling",
+  "version": "0.0.0",
+  "private": true,
+  "files": [
+    "tsconfig.base.json",
+    "dependency-cruiser.cjs",
+    "oxlintrc.base.json",
+    "vitest.base.js"
+  ],
+  "type": "module",
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./dependency-cruiser": "./dependency-cruiser.cjs",
+    "./oxlint": "./oxlintrc.base.json",
+    "./vitest": "./vitest.base.js"
+  },
+  "scripts": {
+    "build": "true",
+    "typecheck": "true"
+  }
+}

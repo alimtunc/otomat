@@ -1,0 +1,252 @@
+/* Otomat — design tokens.
+   Token names are contractual. Dark is the primary/default theme. Visual
+   reference ONLY — imports nothing from apps/* or packages/*. */
+
+:root,
+.dark {
+  /* shadcn semantic (dark, default) */
+  --background: #0a0b0d;
+  --foreground: #e7e9ee;
+  --card: #101216;
+  --card-foreground: #e7e9ee;
+  --popover: #16181d;
+  --popover-foreground: #e7e9ee;
+  --primary: #5b7cfa;
+  --primary-foreground: #ffffff;
+  --secondary: #16181d;
+  --secondary-foreground: #e7e9ee;
+  --muted: #16181d;
+  --muted-foreground: #9197a3;
+  --accent: #1a1d24;
+  --accent-foreground: #e7e9ee;
+  --destructive: #f2545b;
+  --destructive-foreground: #ffffff;
+  --border: #23262d;
+  --input: #23262d;
+  --ring: #5b7cfa;
+
+  /* Otomat surfaces (layered near-black) */
+  --sidebar: #0c0d10;
+  --surface-1: #101216; /* cards / panels */
+  --surface-2: #16181d; /* row hover / raised */
+  --surface-3: #1b1e25; /* popovers / menus */
+  --hover: #15171c; /* generic hover wash */
+  --selected: rgba(91, 124, 250, 0.12);
+  --border-subtle: #1b1e24;
+  --border-strong: #30343d;
+  --text-secondary: #9197a3;
+  --text-tertiary: #646a76;
+  --text-disabled: #454b55;
+
+  /* Iris (single interactive hue) */
+  --iris-solid: #5b7cfa;
+  --iris-hover: #6e8bfb;
+  --iris-active: #4a6bf0;
+  --iris-subtle-bg: rgba(91, 124, 250, 0.12);
+  --iris-ring: #5b7cfa;
+  --iris-text: #9db2ff;
+
+  /* status */
+  --success: #3fb950;
+  --warning: #d8a12b;
+  --danger: #f2545b;
+  --info: #5b7cfa;
+  --review: #a371f7;
+  --stale: #e0833b;
+  --neutral: #646a76;
+  --todo: #d8a12b;
+  --done: #a371f7;
+
+  /* status subtle tints (chips) */
+  --success-bg: rgba(63, 185, 80, 0.12);
+  --warning-bg: rgba(216, 161, 43, 0.13);
+  --danger-bg: rgba(242, 84, 91, 0.13);
+  --review-bg: rgba(163, 113, 247, 0.13);
+  --stale-bg: rgba(224, 131, 59, 0.13);
+  --iris-bg: rgba(91, 124, 250, 0.13);
+  --neutral-bg: rgba(145, 151, 163, 0.12);
+
+  /* provenance (event source) */
+  --prov-otomat: #5b7cfa;
+  --prov-claude: #c96442;
+  --prov-codex: #10a37f;
+  --prov-git: #e0833b;
+  --prov-github: #8b949e;
+  --prov-linear: #8a8ff5;
+  --prov-system: #646a76;
+
+  /* radius / shadow */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-overlay: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border);
+  --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border);
+  --shadow-button: 0 1px 0 rgba(0, 0, 0, 0.15) inset, 0 1px 2px rgba(0, 0, 0, 0.25);
+
+  /* fixed cross-theme colors (identical in every theme) */
+  --on-accent: #ffffff;
+  --overlay: rgba(0, 0, 0, 0.4);
+  --overlay-strong: rgba(0, 0, 0, 0.5);
+  --ring-contrast: rgba(255, 255, 255, 0.18);
+  --ring-contrast-weak: rgba(255, 255, 255, 0.14);
+  --button-light-bg: #e9ebf0;
+  --button-light-fg: #16181d;
+
+  /* spacing (4px grid) */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 12px;
+  --space-6: 16px;
+  --space-7: 20px;
+  --space-8: 24px;
+  --space-9: 32px;
+  --space-10: 40px;
+  --space-11: 48px;
+
+  /* typography */
+  --font-ui: "Inter", "SF Pro Display", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  --text-micro: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 18px;
+  --text-xl: 21px;
+  --text-2xl: 26px;
+
+  /* z-index */
+  --z-sticky: 10;
+  --z-dropdown: 1000;
+  --z-overlay: 1100;
+  --z-modal: 1200;
+  --z-popover: 1300;
+  --z-toast: 1400;
+  --z-command: 1500;
+  --z-tooltip: 1600;
+
+  /* motion */
+  --motion-fast: 90ms;
+  --motion-base: 140ms;
+  --motion-medium: 200ms;
+  --motion-slow: 300ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1); /* standard ease-out, Linear-ish */
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1); /* slight overshoot for pop-ins */
+}
+
+.light {
+  --background: #fbfbfc;
+  --foreground: #16181d;
+  --card: #ffffff;
+  --card-foreground: #16181d;
+  --popover: #ffffff;
+  --popover-foreground: #16181d;
+  --primary: #4f6af0;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #16181d;
+  --muted: #f3f4f6;
+  --muted-foreground: #5a616b;
+  --accent: #f3f4f6;
+  --accent-foreground: #16181d;
+  --destructive: #e03b43;
+  --destructive-foreground: #ffffff;
+  --border: #e4e6ea;
+  --input: #e4e6ea;
+  --ring: #4f6af0;
+
+  --sidebar: #f7f8f9;
+  --surface-1: #ffffff;
+  --surface-2: #f3f4f6;
+  --surface-3: #ffffff;
+  --hover: #f3f4f6;
+  --selected: rgba(79, 106, 240, 0.1);
+  --border-subtle: #eceef1;
+  --border-strong: #d2d6dc;
+  --text-secondary: #5a616b;
+  --text-tertiary: #878e99;
+  --text-disabled: #b7bcc4;
+
+  --iris-solid: #4f6af0;
+  --iris-hover: #5e78f4;
+  --iris-active: #3e59e0;
+  --iris-subtle-bg: rgba(79, 106, 240, 0.09);
+  --iris-ring: #4f6af0;
+  --iris-text: #3e59e0;
+  --success-bg: rgba(45, 164, 78, 0.12);
+  --warning-bg: rgba(176, 124, 10, 0.14);
+  --danger-bg: rgba(224, 59, 67, 0.1);
+  --review-bg: rgba(140, 86, 232, 0.12);
+  --stale-bg: rgba(193, 108, 40, 0.12);
+  --iris-bg: rgba(79, 106, 240, 0.1);
+  --neutral-bg: rgba(90, 97, 107, 0.1);
+  --shadow-overlay: 0 10px 30px rgba(20, 22, 28, 0.12), 0 0 0 1px var(--border);
+  --shadow-modal: 0 24px 60px rgba(20, 22, 28, 0.18), 0 0 0 1px var(--border);
+}
+
+/* ---- direction identities (live switch; overrides the iris hue + radii) ----
+   Values tunable; names contractual. */
+:root[data-dir="brass"],
+[data-dir="brass"] {
+  --iris-solid: #c0883e;
+  --iris-hover: #d29a4e;
+  --iris-active: #a9742f;
+  --iris-subtle-bg: rgba(192, 136, 62, 0.15);
+  --iris-ring: #c0883e;
+  --iris-text: #e0ac68;
+  --iris-bg: rgba(192, 136, 62, 0.15);
+  --selected: rgba(192, 136, 62, 0.12);
+  --info: #c0883e;
+  --primary: #c0883e;
+  --ring: #c0883e;
+  --radius-md: 4px;
+  --radius-lg: 5px;
+  --radius-xl: 9px;
+}
+:root[data-dir="viridian"],
+[data-dir="viridian"] {
+  --iris-solid: #2db07a;
+  --iris-hover: #3cc489;
+  --iris-active: #249668;
+  --iris-subtle-bg: rgba(45, 176, 122, 0.14);
+  --iris-ring: #2db07a;
+  --iris-text: #5fd3a6;
+  --iris-bg: rgba(45, 176, 122, 0.14);
+  --selected: rgba(45, 176, 122, 0.12);
+  --info: #2db07a;
+  --primary: #2db07a;
+  --ring: #2db07a;
+  --radius-md: 9px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
+
+/* ---- density hooks (default = compact, per design-system §3) ---- */
+:root[data-density="compact"],
+[data-density="compact"] {
+  --row-h: 32px;
+  --nav-h: 28px;
+  --toolbar-h: 40px;
+  --topbar-h: 48px;
+}
+:root[data-density="comfortable"],
+[data-density="comfortable"] {
+  --row-h: 36px;
+  --nav-h: 32px;
+  --toolbar-h: 44px;
+  --topbar-h: 52px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-medium: 0ms;
+    --motion-slow: 0ms;
+  }
+}
