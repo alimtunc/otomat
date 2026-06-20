@@ -37,3 +37,9 @@ export const RUN_TERMINAL_STATES = [
   "canceled",
 ] as const satisfies readonly RunState[];
 export type RunTerminalState = (typeof RUN_TERMINAL_STATES)[number];
+
+const runTerminalSet: ReadonlySet<string> = new Set(RUN_TERMINAL_STATES);
+
+export function isRunTerminal(status: string): boolean {
+  return runTerminalSet.has(status);
+}

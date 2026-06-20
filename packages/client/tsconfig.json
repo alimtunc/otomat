@@ -1,11 +1,11 @@
 {
   "extends": "@otomat/tooling/tsconfig.base.json",
   "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "outDir": "./dist",
     "rootDir": "./src",
-    "types": ["node"]
+    "types": [],
+    "verbatimModuleSyntax": true
   },
   "include": ["src"],
   "exclude": ["dist", "src/**/*.test.ts"]

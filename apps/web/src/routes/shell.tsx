@@ -4,33 +4,41 @@ import {
   Breadcrumbs,
   ConnectionStatusIndicator,
   NavSection,
+  OfflineBanner,
   ProjectSwitcher,
   SidebarDaemonStatus,
   SidebarNavItem,
   Topbar,
   useTheme,
   type BreadcrumbItem,
-  type ConnectionState,
+  type ProjectSummary,
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { CircleDot, ListTodo, Settings } from "lucide-react";
 import type { ReactNode } from "react";
+
+import { useDaemonStatus, useProjects } from "../lib/queries";
 
 export interface RouteShellProps {
   breadcrumbs: BreadcrumbItem[];
   active: "issues" | "runs" | "settings";
   actions?: ReactNode;
   rightPanel?: ReactNode;
-  connectionState?: ConnectionState;
   children: ReactNode;
 }
 
-const NO_PROJECTS: never[] = [];
-const PROJECT_SWITCHER = <ProjectSwitcher projects={NO_PROJECTS} onSelect={() => {}} />;
-
-function Sidebar({ active }: { active: RouteShellProps["active"] }) {
+function Sidebar({
+  active,
+  online,
+  projects,
+}: {
+  active: RouteShellProps["active"];
+  online: boolean;
+  projects: ProjectSummary[];
+}) {
+  const projectSwitcher = <ProjectSwitcher projects={projects} onSelect={() => {}} />;
   return (
-    <AppSidebar projectSwitcher={PROJECT_SWITCHER} footer={<SidebarDaemonStatus online={false} />}>
+    <AppSidebar projectSwitcher={projectSwitcher} footer={<SidebarDaemonStatus online={online} />}>
       <NavSection label="Workspace">
         <SidebarNavItem
           icon={ListTodo}
@@ -74,10 +82,15 @@ export function RouteShell({
   active,
   actions,
   rightPanel,
-  connectionState = "online",
   children,
 }: RouteShellProps) {
   const { density } = useTheme();
+  const { connectionState, lastSyncAt, retry } = useDaemonStatus();
+  const projectsQuery = useProjects();
+  const projects: ProjectSummary[] = (projectsQuery.data ?? []).map((project) => ({
+    id: project.id,
+    name: project.name,
+  }));
 
   const topbar = (
     <Topbar
@@ -94,7 +107,13 @@ export function RouteShell({
           )}
         />
       }
-      connectionStatus={<ConnectionStatusIndicator state={connectionState} />}
+      connectionStatus={
+        <ConnectionStatusIndicator
+          state={connectionState}
+          lastSyncAt={lastSyncAt}
+          onRetry={retry}
+        />
+      }
       actions={actions}
     />
   );
@@ -103,10 +122,15 @@ export function RouteShell({
     <AppShell
       density={density}
       connectionState={connectionState}
-      sidebar={<Sidebar active={active} />}
+      sidebar={
+        <Sidebar active={active} online={connectionState === "online"} projects={projects} />
+      }
       rightPanel={rightPanel}
       topbar={topbar}
     >
+      {connectionState === "offline" ? (
+        <OfflineBanner message="Daemon unreachable — live data and actions are unavailable until it reconnects." />
+      ) : null}
       {children}
     </AppShell>
   );

@@ -10,8 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@otomat/client": "workspace:*",
     "@otomat/domain": "workspace:*",
     "@otomat/ui": "workspace:*",
+    "@tanstack/react-query": "^5.66.0",
     "@tanstack/react-router": "^1.170.16",
     "lucide-react": "^1.21.0",
     "react": "^19.2.7",
