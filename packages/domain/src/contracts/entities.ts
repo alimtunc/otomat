@@ -20,7 +20,7 @@ export const issueContractSchema = z.object({
   status: z.enum(ISSUE_STATES),
   source: issueSourceSchema,
   source_external_id: z.string().nullable(),
-  synced_at: z.string().datetime().nullable(),
+  synced_at: z.iso.datetime().nullable(),
 });
 export type IssueContract = z.infer<typeof issueContractSchema>;
 
@@ -92,7 +92,7 @@ export const pullRequestContractSchema = z.object({
   run_id: z.string(),
   provider: z.literal("github"),
   number: z.number().int().positive().nullable(),
-  url: z.string().url().nullable(),
+  url: z.url().nullable(),
   status: z.enum(PULL_REQUEST_STATES),
 });
 export type PullRequestContract = z.infer<typeof pullRequestContractSchema>;

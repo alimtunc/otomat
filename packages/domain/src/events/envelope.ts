@@ -51,8 +51,8 @@ export const eventEnvelopeSchema = z.object({
   seq: z.number().int().nonnegative(),
   type: z.enum(EVENT_TYPES),
   source: z.enum(EVENT_SOURCES),
-  occurred_at: z.string().datetime(),
-  payload: z.record(z.unknown()),
+  occurred_at: z.iso.datetime(),
+  payload: z.record(z.string(), z.unknown()),
   raw_ref: z.string().nullable(),
 });
 
