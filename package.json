@@ -19,7 +19,7 @@
   "devDependencies": {
     "@otomat/tooling": "workspace:*",
     "@typescript/native-preview": "7.0.0-dev.20260618.1",
-    "dependency-cruiser": "^16.10.0",
+    "dependency-cruiser": "^17.4.3",
     "lefthook": "^2.1.9",
     "oxfmt": "^0.55.0",
     "oxlint": "^1.70.0",
