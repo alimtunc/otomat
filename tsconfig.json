@@ -1,7 +1,8 @@
 {
   "extends": "./packages/tooling/tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "paths": { "@web/*": ["./apps/web/src/*"] }
   },
   "files": [],
   "include": []

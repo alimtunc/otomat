@@ -1,29 +1,9 @@
 import { Button, SegmentedControl, SegmentedItem, useTheme } from "@otomat/ui";
 import type { Density, Direction, Theme } from "@otomat/ui";
+import { AppearanceRow } from "@web/components/settings/appearance-row";
+import { SectionHeading } from "@web/components/settings/section-heading";
+import { DEFAULT_ACCENT } from "@web/constants";
 import { Moon, Palette, Rows3, Rows4, Sun } from "lucide-react";
-import type { ReactNode } from "react";
-
-function Row({
-  label,
-  description,
-  control,
-}: {
-  label: string;
-  description: string;
-  control: ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-6 border-b border-border-subtle py-4 last:border-b-0">
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-sm font-medium text-foreground">{label}</span>
-        <span className="text-xs text-text-tertiary">{description}</span>
-      </div>
-      <div className="flex-none">{control}</div>
-    </div>
-  );
-}
-
-const DEFAULT_ACCENT = "#5B7CFA";
 
 export function AppearanceSection() {
   const { theme, density, direction, accent, setTheme, setDensity, setDirection, setAccent } =
@@ -31,15 +11,13 @@ export function AppearanceSection() {
 
   return (
     <div>
-      <div className="mb-5 flex flex-col gap-1">
-        <h1 className="text-md font-semibold text-foreground">Appearance</h1>
-        <p className="text-sm text-text-tertiary">
-          Local interface preferences. Stored on this device only.
-        </p>
-      </div>
+      <SectionHeading
+        title="Appearance"
+        description="Local interface preferences. Stored on this device only."
+      />
 
       <div className="rounded-lg border border-border-subtle bg-card px-4">
-        <Row
+        <AppearanceRow
           label="Theme"
           description="Dark is the default surface."
           control={
@@ -59,7 +37,7 @@ export function AppearanceSection() {
           }
         />
 
-        <Row
+        <AppearanceRow
           label="Density"
           description="Controls row heights and spacing."
           control={
@@ -79,7 +57,7 @@ export function AppearanceSection() {
           }
         />
 
-        <Row
+        <AppearanceRow
           label="Accent direction"
           description="Built-in accent palettes. Selecting one clears any custom accent."
           control={
@@ -96,7 +74,7 @@ export function AppearanceSection() {
           }
         />
 
-        <Row
+        <AppearanceRow
           label="Custom accent"
           description="Override the direction palette with a single base color."
           control={

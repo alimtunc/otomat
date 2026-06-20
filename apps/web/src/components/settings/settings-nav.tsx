@@ -1,7 +1,5 @@
 import { cn } from "@otomat/ui";
-import { Link, Outlet, useMatchRoute } from "@tanstack/react-router";
-
-import { RouteShell } from "./shell";
+import { Link, useMatchRoute } from "@tanstack/react-router";
 
 interface SettingsSection {
   to: string;
@@ -16,7 +14,7 @@ const SECTIONS: SettingsSection[] = [
   { to: "/settings/about", label: "About" },
 ];
 
-function SettingsNav() {
+export function SettingsNav() {
   const matchRoute = useMatchRoute();
   return (
     <nav
@@ -42,18 +40,5 @@ function SettingsNav() {
         );
       })}
     </nav>
-  );
-}
-
-export function SettingsRoute() {
-  return (
-    <RouteShell active="settings" breadcrumbs={[{ label: "Settings", current: true }]}>
-      <div className="flex h-full min-h-0">
-        <SettingsNav />
-        <div className="min-w-0 flex-1 overflow-auto p-6">
-          <Outlet />
-        </div>
-      </div>
-    </RouteShell>
   );
 }

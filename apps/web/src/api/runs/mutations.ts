@@ -1,9 +1,21 @@
 import { DaemonRequestError } from "@otomat/client";
 import type { StartRunRequest } from "@otomat/domain";
 import { toast } from "@otomat/ui";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { daemon } from "@web/api/client";
+import { queryKeys } from "@web/api/query-keys";
 
-import { useStartRun } from "./queries";
+export function useStartRun() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: StartRunRequest) => daemon.startRun(request),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: queryKeys.issues });
+      client.invalidateQueries({ queryKey: ["runs"] });
+    },
+  });
+}
 
 function startRunErrorMessage(error: unknown): string {
   if (error instanceof DaemonRequestError) {

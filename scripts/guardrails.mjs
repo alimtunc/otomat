@@ -37,7 +37,7 @@ function listFiles(dir) {
   }
   return entries
     .map((e) => join(abs, e))
-    .filter((p) => /\.(ts|tsx)$/.test(p) && !/\.d\.ts$/.test(p))
+    .filter((p) => /\.(ts|tsx)$/.test(p) && !/\.d\.ts$/.test(p) && !/routeTree\.gen\.ts$/.test(p))
     .filter((p) => statSync(p).isFile());
 }
 

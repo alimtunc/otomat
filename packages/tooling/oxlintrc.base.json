@@ -25,5 +25,11 @@
       }
     ]
   },
-  "ignorePatterns": ["**/dist/**", "**/drizzle/**", "**/node_modules/**", "**/*.d.ts"]
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/drizzle/**",
+    "**/node_modules/**",
+    "**/*.d.ts",
+    "**/routeTree.gen.ts"
+  ]
 }
