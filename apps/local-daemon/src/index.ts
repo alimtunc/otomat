@@ -1,11 +1,17 @@
 import { defaultDbPath } from "@otomat/db";
-import { runMachine } from "@otomat/domain";
 
-// OTO-5 ships the daemon shell only; the HTTP+SSE API (OTO-9) and supervisor/reconciliation loop (OTO-10) are added by their owning tickets.
+import { DAEMON_NAME, DAEMON_VERSION, startDaemon } from "./server.js";
+
+export { startDaemon } from "./server.js";
+export type { DaemonHandle, StartDaemonOptions } from "./server.js";
+export { createRunLauncher } from "./launcher.js";
+export { ensureDefaultProject, DEFAULT_PROJECT_ID } from "./bootstrap.js";
+
 export function describeFoundation(): string {
-  return `[otomat] local-daemon shell ready — db ${defaultDbPath()}, run initial state "${runMachine.initial}"`;
+  return `[otomat] ${DAEMON_NAME} ${DAEMON_VERSION} — db ${defaultDbPath()}`;
 }
 
 if (!process.env.VITEST) {
-  console.log(describeFoundation());
+  const handle = startDaemon();
+  console.log(`${describeFoundation()} — listening on http://localhost:${handle.port}/api`);
 }

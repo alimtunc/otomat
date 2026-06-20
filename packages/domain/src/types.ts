@@ -10,6 +10,8 @@ export type { EventType, EventSource, EventEnvelope } from "./events/envelope.js
 export type {
   IssueSource,
   IssueContract,
+  ProjectContract,
+  RepositoryContract,
   RunContract,
   RunPlan,
   RunPlanStep,
