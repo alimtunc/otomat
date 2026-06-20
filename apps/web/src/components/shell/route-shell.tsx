@@ -1,80 +1,24 @@
 import {
   AppShell,
-  AppSidebar,
   Breadcrumbs,
   ConnectionStatusIndicator,
-  NavSection,
   OfflineBanner,
-  ProjectSwitcher,
-  SidebarDaemonStatus,
-  SidebarNavItem,
   Topbar,
   useTheme,
   type BreadcrumbItem,
   type ProjectSummary,
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-import { CircleDot, ListTodo, Settings } from "lucide-react";
+import { useDaemonStatus, useProjects } from "@web/api/daemon/queries";
+import { Sidebar, type ShellSection } from "@web/components/shell/sidebar";
 import type { ReactNode } from "react";
-
-import { useDaemonStatus, useProjects } from "../lib/queries";
 
 export interface RouteShellProps {
   breadcrumbs: BreadcrumbItem[];
-  active: "issues" | "runs" | "settings";
+  active: ShellSection;
   actions?: ReactNode;
   rightPanel?: ReactNode;
   children: ReactNode;
-}
-
-function Sidebar({
-  active,
-  online,
-  projects,
-}: {
-  active: RouteShellProps["active"];
-  online: boolean;
-  projects: ProjectSummary[];
-}) {
-  const projectSwitcher = <ProjectSwitcher projects={projects} onSelect={() => {}} />;
-  return (
-    <AppSidebar projectSwitcher={projectSwitcher} footer={<SidebarDaemonStatus online={online} />}>
-      <NavSection label="Workspace">
-        <SidebarNavItem
-          icon={ListTodo}
-          label="Issues"
-          active={active === "issues"}
-          render={({ className, children, ...rest }) => (
-            <Link to="/issues" className={className} {...rest}>
-              {children}
-            </Link>
-          )}
-        />
-        <SidebarNavItem
-          icon={CircleDot}
-          label="Runs"
-          active={active === "runs"}
-          render={({ className, children, ...rest }) => (
-            <Link to="/issues" className={className} {...rest}>
-              {children}
-            </Link>
-          )}
-        />
-      </NavSection>
-      <NavSection label="Configure">
-        <SidebarNavItem
-          icon={Settings}
-          label="Settings"
-          active={active === "settings"}
-          render={({ className, children, ...rest }) => (
-            <Link to="/settings/repositories" className={className} {...rest}>
-              {children}
-            </Link>
-          )}
-        />
-      </NavSection>
-    </AppSidebar>
-  );
 }
 
 export function RouteShell({

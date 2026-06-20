@@ -12,7 +12,7 @@ export function mergeEventsBySeq(
   const bySeq = new Map<number, EventEnvelope>();
   for (const event of persisted) bySeq.set(event.seq, event);
   for (const event of live) bySeq.set(event.seq, event);
-  return [...bySeq.values()].sort((a, b) => a.seq - b.seq);
+  return [...bySeq.values()].toSorted((a, b) => a.seq - b.seq);
 }
 
 export function eventSummary(event: EventEnvelope): string {

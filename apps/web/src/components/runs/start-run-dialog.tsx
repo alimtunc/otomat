@@ -9,10 +9,9 @@ import {
   DialogTitle,
   Textarea,
 } from "@otomat/ui";
+import { useStartRunAndNavigate } from "@web/api/runs/mutations";
 import { Play } from "lucide-react";
 import { useState } from "react";
-
-import { useStartRunAndNavigate } from "../lib/use-start-run";
 
 export function StartRunDialog() {
   const [open, setOpen] = useState(false);
