@@ -14,15 +14,15 @@
     "@otomat/ui": "workspace:*",
     "@tanstack/react-router": "^1.170.16",
     "lucide-react": "^1.21.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.1",
-    "@types/react": "^19.0.4",
-    "@types/react-dom": "^19.0.2",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
     "tailwindcss": "^4.3.1",
-    "vite": "^6.0.7"
+    "vite": "^8.0.16"
   }
 }

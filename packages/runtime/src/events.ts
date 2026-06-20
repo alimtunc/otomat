@@ -17,13 +17,11 @@ export type EventFidelity = (typeof EVENT_FIDELITY)[number];
  * adapter id. `test_adapter` marks data that must never be shown as a real
  * provider result. Extra keys pass through (tool args, usage numbers, frames).
  */
-export const runtimeEventPayloadSchema = z
-  .object({
-    fidelity: eventFidelitySchema,
-    adapter: z.string(),
-    test_adapter: z.boolean().optional(),
-  })
-  .passthrough();
+export const runtimeEventPayloadSchema = z.looseObject({
+  fidelity: eventFidelitySchema,
+  adapter: z.string(),
+  test_adapter: z.boolean().optional(),
+});
 
 export type RuntimeEventPayload = z.infer<typeof runtimeEventPayloadSchema>;
 
