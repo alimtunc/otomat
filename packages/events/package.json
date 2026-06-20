@@ -24,11 +24,11 @@
     "@otomat/db": "workspace:*",
     "@otomat/domain": "workspace:*",
     "@otomat/runtime": "workspace:*",
-    "drizzle-orm": "^0.38.3",
+    "drizzle-orm": "^0.45.2",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
-    "vitest": "^2.1.8"
+    "vitest": "^4.1.9"
   }
 }
