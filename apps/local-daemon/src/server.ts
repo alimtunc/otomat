@@ -1,8 +1,9 @@
 import { dirname } from "node:path";
 
 import { serve } from "@hono/node-server";
-import { createApiApp, logApiRoutes } from "@otomat/api";
 import { createClient, defaultDbPath, runMigrations } from "@otomat/db";
+
+import { createApiApp, logApiRoutes } from "#api";
 
 import { ensureDefaultProject } from "./bootstrap.js";
 import { createRunLauncher } from "./launcher.js";

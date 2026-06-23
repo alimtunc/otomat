@@ -2,8 +2,8 @@ import { Toggle } from "@base-ui/react/toggle";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
-import { ToggleGroupRoot, type ToggleGroupRootProps } from "../lib/toggle-group";
 import { cn } from "../lib/utils";
+import { ToggleGroupRoot, type ToggleGroupRootProps } from "../primitives/toggle-group";
 
 const segmentedVariants = cva(
   "inline-flex gap-0.5 bg-surface-2 border border-border rounded-md p-0.5",

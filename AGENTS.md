@@ -10,25 +10,43 @@ discipline.
 
 ## Monorepo layout
 
+`apps/*` are **runnable targets**, not only UI apps — `local-daemon` is a Node
+process that hosts the backend as internal modules.
+
 ```
 apps/
-  web/            React + Vite cockpit shell
-  local-daemon/   Node local process (API, runtime host, supervision)
+  web/                  React + Vite cockpit shell
+  local-daemon/         Node local process; the backend lives here as internal modules:
+    src/api/            local daemon HTTP routes + SSE handlers
+    src/events/         append-only event ledger + non-lossy stream-to-file tailer
+    src/git/            worktree/branch lifecycle + canonical git diff
+    src/runtime/        runtime adapter contract + deterministic fake adapter
+    src/{index,server,launcher,bootstrap}.ts   composition root / entrypoint
 packages/
-  domain/         Pure TS: types, state machines, event envelope, zod contracts
-  db/             SQLite (WAL) + Drizzle + better-sqlite3, schema/migrations/repos
-  runtime/        Runtime adapter contract + deterministic fake adapter
-  events/         Append-only event ledger + non-lossy stream-to-file tailer
-  git/            Worktree/branch lifecycle + canonical git diff
-  ui/             Shared UI primitives and design system
-  tooling/        Shared tsconfig / oxlint / vitest / dependency-cruiser presets
+  domain/               Pure TS: types, state machines, event envelope, zod contracts
+  db/                   SQLite (WAL) + Drizzle + better-sqlite3, schema/migrations/repos
+  ui/                   Shared UI primitives and design system
+  client/               Typed daemon API/SSE client (frontend)
+  tooling/              Shared tsconfig / oxlint / vitest / dependency-cruiser presets
 ```
 
-Packages stay flat under `packages/*`. `api`, `client`, `domains`, `supervisor`,
-`integrations`, and `review` are **created by their owning ticket** when they hold
-real code — never as placeholders. See
-[`docs/ai/codebase-map.md`](docs/ai/codebase-map.md) for the full target tree and
-ownership table.
+### A package must earn its place
+
+A directory is a **package** only when it has a real reason: multiple real
+consumers, an important boundary to protect, a heavy/dangerous dependency to
+isolate, a stable interface between two worlds, or reuse planned across apps.
+Otherwise it is an internal folder of an app/process, not a package.
+
+- `domain` (shared by everyone), `ui`/`client` (frontend, reused by `web` and
+  future apps), `tooling` (shared config), and `db` (isolates the native
+  `better-sqlite3` driver + Drizzle schema, used by every backend module) each
+  meet that bar.
+- `api`, `events`, `git`, `runtime` were daemon-only with no cross-app consumer,
+  so they are internal modules of `apps/local-daemon`, not packages. The future
+  `supervisor` (OTO-10) joins them there. Promote one back to `packages/*` only
+  with an explicit justification. See
+  [`docs/ai/codebase-map.md`](docs/ai/codebase-map.md) for the full tree and the
+  per-ticket ownership table.
 
 ## Import boundaries (enforced, not advisory)
 
@@ -38,10 +56,10 @@ ownership table.
 
 - `packages/domain` is pure: no React, DOM, Drizzle, better-sqlite3, Node-only
   builtins, or app/backend/frontend package imports.
-- Frontend (`apps/web`, future `ui`/`client`/`domains`) must not import a backend
-  package (`db`, `runtime`, `events`, `git`, `api`, `supervisor`, `integrations`,
-  `review`). External state is mirrored by the local daemon.
-- Backend packages must not import frontend UI packages.
+- Frontend (`apps/web`, `ui`, `client`) must not import the backend package `db`
+  or reach into `apps/local-daemon`. External state is mirrored by the local
+  daemon and reaches the frontend over the typed client + SSE.
+- `apps/local-daemon` and `packages/db` must not import frontend UI packages.
 - `better-sqlite3` is constructed only inside `packages/db` (`src/client.ts`).
 
 ## Code guardrails (enforced by lint + `pnpm guardrails`)
@@ -109,6 +127,29 @@ every pull request. Dependency updates come through Dependabot
   `IllegalTransitionError`. Do not hand-roll transition checks elsewhere.
 - One canonical writer (the daemon). No scheduler/leases/outbox/idempotency
   tables — `runs.plan_json` is the plan frozen at launch.
+
+## Source & test layout
+
+- **Tests live outside `src`.** Each module mirrors its domain:
+  `<module>/src/<domain>/…` is the runtime/buildable code, `<module>/tests/<domain>/…`
+  holds its tests, and shared fixtures/helpers go in `<module>/tests/support/…`.
+  `src` contains only code that ships; tsconfig builds `src` only, Vitest collects
+  `tests/**/*.test.ts`.
+- **Reach source from tests, and reach one daemon module from another, through
+  Node subpath imports — never a deep relative (`../../…`, banned by oxlint).**
+  - In `apps/local-daemon`, each internal module is consumed through its public
+    index: `#api`, `#events`, `#git`, `#runtime` (and `#api/<file>` for a specific
+    file). Within a module, use shallow relative imports.
+  - In every other package, tests reach source via `#<pkg>/<path>` (e.g.
+    `#domain/state-machines/machine`, `#db/client`, `#client/types`) — the
+    private mirror of the package's public `@otomat/<pkg>` entry. The map is the
+    package's `imports` field in `package.json` and stays private to that package.
+- **Types/constants/helpers have a home, not a junk drawer.** Domain types live in
+  the module that owns them and are re-exported from a thin barrel (e.g.
+  `packages/domain/src/types.ts`); there is no global mixed `types.ts`. A
+  component's own `*Props` stay with the component. Constants live in an explicitly
+  named file next to their use. Shared UI helpers live in `packages/ui/src/lib`
+  (`cn`, date, status, theme); components and primitives never live there.
 
 ## Scope discipline
 

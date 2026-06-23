@@ -35,21 +35,24 @@ importers:
       '@hono/node-server':
         specifier: ^1.13.7
         version: 1.19.14(hono@4.12.26)
-      '@otomat/api':
-        specifier: workspace:*
-        version: link:../../packages/api
+      '@hono/zod-validator':
+        specifier: ^0.8.0
+        version: 0.8.0(hono@4.12.26)(zod@4.4.3)
       '@otomat/db':
         specifier: workspace:*
         version: link:../../packages/db
       '@otomat/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@otomat/events':
-        specifier: workspace:*
-        version: link:../../packages/events
-      '@otomat/runtime':
-        specifier: workspace:*
-        version: link:../../packages/runtime
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.11.1)(gel@2.2.0)
+      hono:
+        specifier: ^4.12.0
+        version: 4.12.26
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@types/node':
         specifier: ^26.0.0
@@ -110,34 +113,6 @@ importers:
         specifier: ^8.0.16
         version: 8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)
 
-  packages/api:
-    dependencies:
-      '@hono/zod-validator':
-        specifier: ^0.8.0
-        version: 0.8.0(hono@4.12.26)(zod@4.4.3)
-      '@otomat/db':
-        specifier: workspace:*
-        version: link:../db
-      '@otomat/domain':
-        specifier: workspace:*
-        version: link:../domain
-      '@otomat/events':
-        specifier: workspace:*
-        version: link:../events
-      hono:
-        specifier: ^4.12.0
-        version: 4.12.26
-    devDependencies:
-      '@otomat/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      '@types/node':
-        specifier: ^26.0.0
-        version: 26.0.0
-      vitest:
-        specifier: ^4.1.9
-        version: 4.1.9(@types/node@26.0.0)(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))
-
   packages/client:
     dependencies:
       '@otomat/domain':
@@ -182,63 +157,6 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      vitest:
-        specifier: ^4.1.9
-        version: 4.1.9(@types/node@26.0.0)(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))
-
-  packages/events:
-    dependencies:
-      '@otomat/db':
-        specifier: workspace:*
-        version: link:../db
-      '@otomat/domain':
-        specifier: workspace:*
-        version: link:../domain
-      '@otomat/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.11.1)(gel@2.2.0)
-      zod:
-        specifier: ^4.4.3
-        version: 4.4.3
-    devDependencies:
-      '@types/node':
-        specifier: ^26.0.0
-        version: 26.0.0
-      vitest:
-        specifier: ^4.1.9
-        version: 4.1.9(@types/node@26.0.0)(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))
-
-  packages/git:
-    dependencies:
-      '@otomat/db':
-        specifier: workspace:*
-        version: link:../db
-      drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.11.1)(gel@2.2.0)
-    devDependencies:
-      '@types/node':
-        specifier: ^26.0.0
-        version: 26.0.0
-      vitest:
-        specifier: ^4.1.9
-        version: 4.1.9(@types/node@26.0.0)(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))
-
-  packages/runtime:
-    dependencies:
-      '@otomat/domain':
-        specifier: workspace:*
-        version: link:../domain
-      zod:
-        specifier: ^4.4.3
-        version: 4.4.3
-    devDependencies:
-      '@types/node':
-        specifier: ^26.0.0
-        version: 26.0.0
       vitest:
         specifier: ^4.1.9
         version: 4.1.9(@types/node@26.0.0)(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))

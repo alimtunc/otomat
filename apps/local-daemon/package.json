@@ -3,6 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "imports": {
+    "#api": "./src/api/index.ts",
+    "#api/*": "./src/api/*.ts",
+    "#events": "./src/events/index.ts",
+    "#events/*": "./src/events/*.ts",
+    "#git": "./src/git/index.ts",
+    "#git/*": "./src/git/*.ts",
+    "#runtime": "./src/runtime/index.ts",
+    "#runtime/*": "./src/runtime/*.ts"
+  },
   "scripts": {
     "build": "tsgo -p tsconfig.json",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
@@ -11,11 +21,12 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
-    "@otomat/api": "workspace:*",
+    "@hono/zod-validator": "^0.8.0",
     "@otomat/db": "workspace:*",
     "@otomat/domain": "workspace:*",
-    "@otomat/events": "workspace:*",
-    "@otomat/runtime": "workspace:*"
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",

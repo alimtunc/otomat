@@ -13,8 +13,12 @@ Claude-specific notes.
 
 ## Fast facts
 
-- Packages: `apps/{web,local-daemon}`, `packages/{domain,db,runtime,events,git,ui,tooling}`.
-  Other packages are added by their owning ticket, never as placeholders.
+- Targets: `apps/{web,local-daemon}` (`apps/*` = runnable targets). Packages:
+  `packages/{domain,db,ui,client,tooling}`. The daemon-only backend (`api`,
+  `events`, `git`, `runtime`) lives as internal modules under
+  `apps/local-daemon/src/<module>`, consumed via `#`-subpath imports — not as
+  packages. A new package needs an explicit justification (see `AGENTS.md`).
+- Tests live in `<module>/tests/<domain>` (+ `tests/support`), never in `src`.
 - DB: SQLite WAL + Drizzle + `better-sqlite3`, isolated behind `packages/db`.
   Canonical schema; `runs.plan_json` (no `workflow_revisions`); `issues` carry
   `source`/`source_external_id`/`synced_at`; `sync_state` for external mirroring.

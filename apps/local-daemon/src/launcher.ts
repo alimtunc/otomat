@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 
-import { toRun } from "@otomat/api";
 import {
   getIssue,
   getRun,
@@ -25,13 +24,10 @@ import {
   type StartRunRequest,
   type StepRunState,
 } from "@otomat/domain";
-import { EventTailer } from "@otomat/events";
-import {
-  FAKE_ADAPTER_ID,
-  FakeRuntimeAdapter,
-  MemorySink,
-  type RuntimeFinalStatus,
-} from "@otomat/runtime";
+
+import { toRun } from "#api";
+import { EventTailer } from "#events";
+import { FAKE_ADAPTER_ID, FakeRuntimeAdapter, MemorySink, type RuntimeFinalStatus } from "#runtime";
 
 export interface RunLauncherConfig {
   db: Db;
