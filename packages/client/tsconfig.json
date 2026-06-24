@@ -8,5 +8,5 @@
     "verbatimModuleSyntax": true
   },
   "include": ["src"],
-  "exclude": ["dist", "src/**/*.test.ts"]
+  "exclude": ["dist"]
 }

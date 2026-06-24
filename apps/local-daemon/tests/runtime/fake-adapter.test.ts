@@ -1,0 +1,176 @@
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+import {
+  runtimeFinalStateSchema,
+  type RuntimeRunInput,
+  type RuntimeSessionRef,
+} from "#runtime/contract";
+import { EVENT_FIDELITY, runtimeEventSchema } from "#runtime/events";
+import { FAKE_ADAPTER_ID, FakeRuntimeAdapter } from "#runtime/fake/fake-adapter";
+import { MemorySink, readEventsJsonl } from "#runtime/sinks";
+
+let dir: string;
+let adapter: FakeRuntimeAdapter;
+
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), "otomat-fake-"));
+  adapter = new FakeRuntimeAdapter();
+});
+
+afterEach(() => {
+  rmSync(dir, { recursive: true, force: true });
+});
+
+const input = (): RuntimeRunInput => ({
+  run_id: "run-1",
+  step_run_id: "step-1",
+  agent_session_id: "sess-1",
+  prompt: "do the thing",
+  run_dir: dir,
+});
+
+const sessionRef = (): RuntimeSessionRef => ({
+  run_id: "run-1",
+  step_run_id: "step-1",
+  agent_session_id: "sess-1",
+  provider_session_id: "fake-session-run-1",
+});
+
+const liveSignal = (): AbortSignal => new AbortController().signal;
+
+describe("FakeRuntimeAdapter contract", () => {
+  it("exposes a lean 6-flag capability model and a test-adapter identity", () => {
+    expect(adapter.id).toBe(FAKE_ADAPTER_ID);
+    expect(adapter.displayName).toMatch(/test adapter/i);
+    expect(Object.keys(adapter.capabilities).toSorted()).toEqual([
+      "abort",
+      "diffHints",
+      "permissions",
+      "resume",
+      "sendMessage",
+      "stream",
+    ]);
+  });
+});
+
+describe("FakeRuntimeAdapter.run", () => {
+  it("pushes a deterministic lifecycle and returns a completed final state", async () => {
+    const sink = new MemorySink();
+    const final = await adapter.run(input(), sink, liveSignal());
+
+    expect(runtimeFinalStateSchema.parse(final)).toEqual(final);
+    expect(final.status).toBe("completed");
+    expect(final.provider_session_id).toBe("fake-session-run-1");
+    expect(final.usage).not.toBeNull();
+    expect(sink.events).toHaveLength(10);
+    expect(final.event_count).toBe(sink.events.length);
+  });
+
+  it("emits events at all three fidelity tiers, each a valid runtime event", async () => {
+    const sink = new MemorySink();
+    await adapter.run(input(), sink, liveSignal());
+    for (const event of sink.events) {
+      expect(() => runtimeEventSchema.parse(event)).not.toThrow();
+    }
+    const tiers = new Set(sink.events.map((e) => e.payload.fidelity));
+    expect([...tiers].toSorted()).toEqual([...EVENT_FIDELITY].toSorted());
+  });
+
+  it("labels every event as test data and never as a real provider", async () => {
+    const sink = new MemorySink();
+    await adapter.run(input(), sink, liveSignal());
+    for (const event of sink.events) {
+      expect(event.source).toBe("otomat");
+      expect(event.source).not.toBe("claude");
+      expect(event.source).not.toBe("codex");
+      expect(event.payload.adapter).toBe(FAKE_ADAPTER_ID);
+      expect(event.payload.test_adapter).toBe(true);
+    }
+  });
+
+  it("never assigns seq (the OTO-7 ledger owns sequence allocation)", async () => {
+    const sink = new MemorySink();
+    await adapter.run(input(), sink, liveSignal());
+    for (const event of sink.events) {
+      expect(event).not.toHaveProperty("seq");
+    }
+  });
+
+  it("is deterministic: a fresh adapter replays byte-identical events", async () => {
+    const a = new MemorySink();
+    const b = new MemorySink();
+    await new FakeRuntimeAdapter().run(
+      { ...input(), run_dir: mkdtempSync(join(tmpdir(), "otomat-a-")) },
+      a,
+      liveSignal(),
+    );
+    await new FakeRuntimeAdapter().run(
+      { ...input(), run_dir: mkdtempSync(join(tmpdir(), "otomat-b-")) },
+      b,
+      liveSignal(),
+    );
+    expect(a.events).toEqual(b.events);
+  });
+
+  it("writes a re-readable events.jsonl matching the pushed events", async () => {
+    const sink = new MemorySink();
+    await adapter.run(input(), sink, liveSignal());
+    const path = join(dir, "events.jsonl");
+    expect(existsSync(path)).toBe(true);
+    expect(readEventsJsonl(path)).toEqual(sink.events);
+  });
+});
+
+describe("FakeRuntimeAdapter abort", () => {
+  it("returns canceled and emits a single abort log when pre-aborted", async () => {
+    const ac = new AbortController();
+    ac.abort();
+    const sink = new MemorySink();
+    const final = await adapter.run(input(), sink, ac.signal);
+
+    expect(final.status).toBe("canceled");
+    expect(final.usage).toBeNull();
+    expect(sink.events).toHaveLength(1);
+    expect(final.event_count).toBe(1);
+    expect(sink.events[0]?.payload.text).toContain("aborted");
+    expect(readEventsJsonl(join(dir, "events.jsonl"))).toEqual(sink.events);
+  });
+
+  it("resolves abort(session, reason) without throwing", async () => {
+    await expect(adapter.abort(sessionRef(), "user_canceled")).resolves.toBeUndefined();
+  });
+});
+
+describe("FakeRuntimeAdapter.resume", () => {
+  it("reuses the provider session and completes a follow-up turn", async () => {
+    const sink = new MemorySink();
+    const final = await adapter.resume(
+      sessionRef(),
+      { prompt: "follow up", run_dir: dir },
+      sink,
+      liveSignal(),
+    );
+
+    expect(final.status).toBe("completed");
+    expect(final.provider_session_id).toBe("fake-session-run-1");
+    expect(sink.events.length).toBeGreaterThan(0);
+    expect(readEventsJsonl(join(dir, "events.jsonl"))).toEqual(sink.events);
+  });
+
+  it("appends a resume turn to the same run_dir without losing the prior turn", async () => {
+    const first = new MemorySink();
+    await adapter.run(input(), first, liveSignal());
+    const second = new MemorySink();
+    await adapter.resume(sessionRef(), { prompt: "more", run_dir: dir }, second, liveSignal());
+
+    const onDisk = readEventsJsonl(join(dir, "events.jsonl"));
+    expect(onDisk).toEqual([...first.events, ...second.events]);
+
+    const ids = onDisk.map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});

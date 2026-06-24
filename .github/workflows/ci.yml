@@ -31,6 +31,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Daemon dist smoke
+        run: pnpm --filter @otomat/local-daemon smoke:dist
+
       - name: Typecheck
         run: pnpm typecheck
 

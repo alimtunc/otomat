@@ -1,44 +1,50 @@
 # Otomat Import Boundaries
 
-These rules define the dependency boundaries for the Otomat monorepo. They must
-be enforced by tooling, not only by convention. OTO-5 should wire a boundary
-check into the build with `dependency-cruiser` or `eslint-plugin-boundaries`.
+These rules define the dependency boundaries for the Otomat monorepo. They are
+enforced by tooling (`dependency-cruiser`, run inside `pnpm build`), not only by
+convention. Config: [`packages/tooling/dependency-cruiser.cjs`](../../packages/tooling/dependency-cruiser.cjs).
 
 ## Conceptual Layers
 
 ```text
 apps/web          -> frontend packages + packages/domain
-apps/local-daemon -> backend packages + packages/domain
+apps/local-daemon -> packages/db + packages/domain, and its own internal modules
 packages/domain   -> no app-specific packages
 frontend packages -> packages/domain only
-backend packages  -> packages/domain only, unless a later ticket explicitly widens the rule
+packages/db       -> packages/domain only
 ```
 
-The flat package layout is intentional:
+The package layout is flat and intentionally small:
 
 ```text
-packages/domain
-packages/db
-packages/tooling
-packages/runtime
-packages/events
-packages/git
-packages/api
-packages/ui
-packages/client
-packages/domains
-packages/supervisor
-packages/integrations
-packages/review
+packages/domain     # shared
+packages/db         # backend
+packages/ui         # frontend
+packages/client     # frontend
+packages/tooling    # tooling
 ```
 
-The grouping is conceptual:
+Grouping:
 
 - shared: `domain`
-- frontend: `ui`, `client`, `domains`
-- backend: `db`, `runtime`, `events`, `git`, `api`, `supervisor`,
-  `integrations`, `review`
+- frontend: `ui`, `client` (and a future `domains`)
+- backend: `db` (the only backend package)
 - tooling: `tooling`
+
+## Daemon-internal modules
+
+The daemon-only backend lives inside `apps/local-daemon/src/<module>`:
+`api`, `events`, `git`, `runtime` (and the future `supervisor`). They are **not**
+packages and carry no `@otomat/*` specifier. Inside the daemon:
+
+- a module is consumed through its public index via a Node subpath import —
+  `#api`, `#events`, `#git`, `#runtime` (or `#api/<file>` for a specific file);
+- imports within a module stay shallow-relative;
+- deep relative imports (`../../…`) are banned by oxlint everywhere.
+
+These `#`-imports are declared in `apps/local-daemon/package.json` `imports` and
+never cross a package boundary, so `db`/`domain` stay the daemon's only `@otomat/*`
+dependencies.
 
 ## Allowed App Imports
 
@@ -47,104 +53,69 @@ apps/web
   -> packages/domain
   -> packages/ui
   -> packages/client
-  -> packages/domains
 
 apps/local-daemon
   -> packages/domain
   -> packages/db
-  -> packages/runtime
-  -> packages/events
-  -> packages/git
-  -> packages/api
-  -> packages/supervisor
-  -> packages/integrations
-  -> packages/review
+  -> #api / #events / #git / #runtime   (its own internal modules)
 ```
 
-Future apps:
-
-```text
-apps/desktop
-  -> packages/domain
-  -> packages/ui
-  -> packages/client
-  -> packages/domains
-  -> launcher code for local-daemon only
-
-apps/mobile
-  -> packages/domain
-  -> packages/ui
-  -> packages/client
-  -> packages/domains
-```
+Future apps (`desktop`, `mobile`) follow `apps/web`: `domain`, `ui`, `client`
+(+ a daemon launcher for `desktop`). They never import a backend package or reach
+into `apps/local-daemon`.
 
 ## Package Rules
 
 `packages/domain`:
 
 - may depend on small shared runtime libraries such as `zod`;
-- must not import React, DOM-specific UI code, Node-only daemon code,
-  Drizzle, `better-sqlite3`, git/process APIs, or HTTP server code;
+- must not import React, DOM UI code, Node-only builtins, Drizzle,
+  `better-sqlite3`, git/process APIs, HTTP server code, or any app/backend/
+  frontend package;
 - owns pure TypeScript business types, state machines, event envelope, and zod
-  contracts in OTO-5.
+  contracts.
 
-Frontend packages (`ui`, `client`, `domains`):
+Frontend packages (`ui`, `client`):
 
 - may import `packages/domain`;
-- must not import `db`, `runtime`, `events`, `git`, `api`, `supervisor`,
-  `integrations`, or `review`;
+- must not import `db` or reach into `apps/local-daemon`;
 - must not call Linear/GitHub directly. External API mirroring belongs to the
   local daemon.
-
-Backend packages (`db`, `runtime`, `events`, `git`, `api`, `supervisor`,
-`integrations`, `review`):
-
-- may import `packages/domain`;
-- must not import `ui`, `client`, or `domains`;
-- should avoid depending on each other by default. The local daemon composes
-  backend packages. A later ticket may add an explicit exception when a concrete
-  package has real code and a justified dependency.
 
 `packages/db`:
 
 - owns Drizzle schema, migrations, repository helpers, and the isolated
-  `better-sqlite3` driver;
-- must not import frontend packages;
-- must not contain runtime adapter, git, supervisor, or UI logic.
+  `better-sqlite3` driver (constructed only in `src/client.ts`);
+- may import `packages/domain`;
+- must not import frontend packages or contain runtime/git/UI logic.
+
+`apps/local-daemon`:
+
+- composes `db` + `domain` + its internal modules;
+- must not import frontend UI packages.
 
 `packages/tooling`:
 
-- may be referenced by workspace config;
-- must not own product behavior.
+- may be referenced by workspace config; must not own product behavior.
 
 ## Forbidden Examples
 
 These must fail the boundary lint:
 
 ```text
-apps/web -> packages/db
-apps/web -> packages/runtime
-apps/web -> packages/git
-apps/web -> packages/supervisor
-packages/ui -> packages/db
-packages/domains -> packages/integrations
-packages/db -> packages/ui
-packages/runtime -> packages/domains
-packages/domain -> packages/db
-packages/domain -> React
+apps/web          -> packages/db
+apps/web          -> apps/local-daemon
+packages/ui       -> packages/db
+packages/client   -> apps/local-daemon
+packages/db       -> packages/ui
+packages/domain   -> packages/db
+packages/domain   -> React
 ```
 
-## OTO-5 Enforcement Requirement
+## Adding a backend or frontend package later
 
-OTO-5 must add a boundary lint step to the build so a frontend import of a
-backend package fails. It should enforce the packages that exist in OTO-5 and
-document the future package groups in config comments or docs without creating
-placeholder packages.
-
-Acceptable tools:
-
-- `dependency-cruiser`
-- `eslint-plugin-boundaries`
-
-The exact tool is a local implementation choice, but `pnpm build` must run the
-boundary check.
+A new package must earn its place (multiple consumers, a boundary to protect, a
+heavy dependency to isolate, a stable cross-world interface, or planned cross-app
+reuse). When that bar is met, add its name to the `BACKEND`/`FRONTEND` regex in
+`dependency-cruiser.cjs` and record the justification in the owning ticket. Until
+then, daemon-only code stays a module inside `apps/local-daemon`.

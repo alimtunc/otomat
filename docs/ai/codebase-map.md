@@ -1,105 +1,99 @@
 # Otomat Codebase Map
 
-This is the target map for the Otomat monorepo. It is intentionally a map, not
-permission to scaffold every package in OTO-5.
+This is the map of the Otomat monorepo as it stands, plus where later tickets add
+code. It is a map, not permission to scaffold empty packages.
 
-Packages stay flat under `packages/*` at the start. The frontend/backend/shared
-grouping is conceptual and enforced by import-boundary lint rules. Nested
-`packages/frontend/*` or `packages/backend/*` can be reconsidered later if the
-package count becomes large enough to justify it.
+`apps/*` are **runnable targets** (a UI app or a local process), not only UI apps.
+A directory under `packages/*` exists only when it earns it (see "When something is
+a package" below); daemon-only backend code lives inside `apps/local-daemon`.
 
-## Target Tree
+## Current Tree
 
 ```text
 apps/
-  web/                 # OTO-5 creates shell; OTO-9 builds React cockpit shell
-  local-daemon/        # OTO-5 creates shell; OTO-9 adds HTTP+SSE; OTO-10 supervises
-  desktop/  (later)    # Post-V1: Tauri shell launching/observing local-daemon
-  mobile/   (later)    # Post-V1: companion app, no local agent execution
-  cli/      (later)    # Post-V1 or hardening: command-line controls
+  web/                 # React + Vite cockpit (OTO-9, refactored in OTO-15)
+  local-daemon/        # Node local process — hosts the backend as internal modules
+    src/
+      api/             # HTTP routes + SSE handlers          (OTO-9)
+      events/          # event ledger + stream-to-file tailer (OTO-7)
+      git/             # worktree/branch lifecycle + diff      (OTO-8)
+      runtime/         # runtime adapter contract + fake adapter (OTO-6)
+      index.ts server.ts launcher.ts bootstrap.ts   # composition root / entrypoint
+    tests/             # api/ events/ git/ runtime/ launcher.test.ts + support/
 
 packages/
-  domain/              # OTO-5: pure TS domain, state machines, event envelope, zod contracts
-  db/                  # OTO-5: better-sqlite3 + Drizzle schema/migrations/repositories
-  tooling/             # OTO-5: shared tsconfig, lint, vitest/build presets
+  domain/              # pure TS domain, state machines, event envelope, zod contracts (OTO-5)
+  db/                  # better-sqlite3 + Drizzle schema/migrations/repositories (OTO-5)
+  ui/                  # Base UI primitives + Otomat design system (OTO-9)
+  client/              # typed daemon API/SSE client for the frontend (OTO-9)
+  tooling/             # shared tsconfig, lint, vitest/build/boundary presets (OTO-5)
 
-  runtime/   (later)   # OTO-6: runtime adapter contract + deterministic fake adapter
-  events/    (later)   # OTO-7: event ledger, per-run seq allocation, stream-to-file tailer
-  git/       (later)   # OTO-8: worktree/branch lifecycle and canonical git diff
-  api/       (later)   # OTO-9: local daemon HTTP routes and SSE handlers
-  ui/        (later)   # OTO-9: shadcn primitives and Otomat design system
-  client/    (later)   # OTO-9: typed daemon API client and SSE client
-  domains/   (later)   # OTO-9: grouped frontend domains (issues, runs, review, settings)
-  supervisor/(later)   # OTO-10: process lifecycle, pid/pgid tracking, reconciliation
-  integrations/(later) # OTO-11 or post-V1: Linear/GitHub daemon-side clients/cache
-  review/    (later)   # OTO-11: pin-to-SHA comments and fix-context builder
+apps/ (later)
+  desktop/             # Post-V1: Tauri shell launching/observing local-daemon
+  mobile/              # Post-V1: companion app, no local agent execution
+  cli/                 # Post-V1 or hardening: command-line controls
 ```
+
+## When something is a package
+
+A directory is a **package** only when it has a real reason to be one:
+
+- multiple real consumers;
+- an important boundary to protect;
+- a heavy/dangerous dependency to isolate;
+- a stable interface between two worlds;
+- reuse planned across more than one app.
+
+Otherwise it is an internal folder of an app/process. Do not create a new package
+without an explicit justification recorded in its owning ticket.
+
+Why each current package qualifies:
+
+| Package           | Reason it is a package                                                            |
+| ----------------- | --------------------------------------------------------------------------------- |
+| `domain`          | Shared by every app and module; the single source of canonical types/contracts.   |
+| `db`              | Isolates the native `better-sqlite3` driver + Drizzle schema; used by all backend modules; an enforced boundary. |
+| `ui`              | Frontend design system reused by `web` and future `desktop`/`mobile`.             |
+| `client`          | Typed daemon API/SSE client reused by `web` and future frontend apps.             |
+| `tooling`         | Shared build/lint/test/boundary config.                                           |
+
+Why `api`, `events`, `git`, `runtime` are **not** packages: each was consumed only
+by the local daemon (and each other) — no frontend or cross-app consumer — so they
+are internal daemon modules, consumed through `#api`/`#events`/`#git`/`#runtime`
+subpath imports. The future `supervisor` (OTO-10) lands the same way under
+`apps/local-daemon/src/supervisor`.
 
 ## Ticket Ownership
 
-| Path                    | Owner                           | Notes                                                                                      |
-| ----------------------- | ------------------------------- | ------------------------------------------------------------------------------------------ |
-| `apps/web`              | OTO-5, expanded by OTO-9        | OTO-5 creates a minimal Vite/React shell only. No real issue workspace yet.                |
-| `apps/local-daemon`     | OTO-5, expanded by OTO-9/OTO-10 | OTO-5 creates a minimal local process shell only. No API, runtime host, or supervisor yet. |
-| `apps/desktop`          | Post-V1                         | Tauri shell after the web + local daemon loop works.                                       |
-| `apps/mobile`           | Post-V1                         | Companion app only; it does not spawn local agents.                                        |
-| `apps/cli`              | Post-V1 or hardening            | Optional operator CLI.                                                                     |
-| `packages/domain`       | OTO-5                           | Pure TypeScript. Owns canonical types, state machines, event envelope, and zod contracts.  |
-| `packages/db`           | OTO-5                           | Owns SQLite driver isolation, Drizzle schema, migrations, and repository helpers.          |
-| `packages/tooling`      | OTO-5                           | Shared TypeScript, lint/boundary, and test configuration.                                  |
-| `packages/runtime`      | OTO-6                           | Thin push-sink adapter contract and fake adapter.                                          |
-| `packages/events`       | OTO-7                           | Append-only event store, non-lossy stream-to-file ingestion, event projections.            |
-| `packages/git`          | OTO-8                           | Worktree/branch ownership, canonical diff, cleanup primitives.                             |
-| `packages/api`          | OTO-9                           | Local daemon routes and SSE surface.                                                       |
-| `packages/ui`           | OTO-9                           | Shared UI primitives/design system, based on shadcn/Tailwind/lucide.                       |
-| `packages/client`       | OTO-9                           | Typed API/SSE client for the local daemon.                                                 |
-| `packages/domains`      | OTO-9                           | Frontend application domains grouped by product area.                                      |
-| `packages/supervisor`   | OTO-10                          | Process supervision, pid reconciliation, resume-on-action behavior.                        |
-| `packages/integrations` | OTO-11 or post-V1               | Linear/GitHub clients. Start only when the local loop needs real integration.              |
-| `packages/review`       | OTO-11                          | Review pinning and fix-context builder for the E2E slice.                                  |
+| Path                              | Owner                    | Notes                                                                 |
+| --------------------------------- | ------------------------ | --------------------------------------------------------------------- |
+| `apps/web`                        | OTO-5, OTO-9, OTO-15     | Vite/React cockpit; file-based routing + domain-split components.     |
+| `apps/local-daemon`               | OTO-5, OTO-9/10, OTO-13  | Local process host; backend modules folded in by OTO-13.              |
+| `apps/local-daemon/src/runtime`   | OTO-6                    | Push-sink adapter contract and fake adapter.                          |
+| `apps/local-daemon/src/events`    | OTO-7                    | Append-only event store, stream-to-file ingestion, projections.       |
+| `apps/local-daemon/src/git`       | OTO-8                    | Worktree/branch ownership, canonical diff, cleanup primitives.        |
+| `apps/local-daemon/src/api`       | OTO-9                    | Local daemon routes and SSE surface.                                  |
+| `apps/local-daemon/src/supervisor`| OTO-10                   | Process supervision, pid reconciliation (lands as a daemon module).   |
+| `packages/domain`                 | OTO-5                    | Pure TS. Canonical types, state machines, event envelope, contracts.  |
+| `packages/db`                     | OTO-5                    | SQLite driver isolation, Drizzle schema, migrations, repositories.    |
+| `packages/ui`                     | OTO-9                    | UI primitives/design system (Base UI/Tailwind/lucide).                |
+| `packages/client`                 | OTO-9                    | Typed API/SSE client for the local daemon.                            |
+| `packages/tooling`                | OTO-5                    | Shared TypeScript, lint/boundary, and test configuration.             |
 
-## OTO-5 Scope
-
-OTO-5 creates real content for only:
-
-- `apps/web`
-- `apps/local-daemon`
-- `packages/domain`
-- `packages/db`
-- `packages/tooling`
-
-OTO-5 must not create placeholder packages for `runtime`, `events`, `git`,
-`api`, `ui`, `client`, `domains`, `supervisor`, `integrations`, or `review`.
-Those packages are created by their owning tickets when they have real code.
+Integrations (Linear/GitHub) and review pinning (OTO-11) start as daemon modules
+when the local loop needs them; promote either to `packages/*` only if a real
+cross-app consumer appears.
 
 ## Frontend Stack Direction
 
-The preferred frontend stack is:
-
-- React
-- Vite
-- TanStack Router
-- TanStack Query
-- TanStack Form
-- Tailwind
-- shadcn
-- lucide-react
-- sonner
-- zod
-- zustand, only when a local UI store is actually needed
-- `@git-diff-view/react` for diff surfaces
-- xterm for terminal/session surfaces
-
-OTO-5 does not build real frontend behavior. OTO-9 introduces the web cockpit
-shell and should decide which frontend packages need to be created at that time.
+React, Vite, TanStack Router/Query/Form, Tailwind, Base UI (shadcn-style
+primitives), lucide-react, sonner, zod, `@git-diff-view/react` for diffs, xterm for
+terminal/session surfaces, and zustand only when a local UI store is actually
+needed.
 
 ## Offline-First Direction
 
-For V1, the local daemon is the offline cache:
-
-- it mirrors external state into SQLite;
-- it serves the last known state even without network;
-- it streams local updates to the web app over SSE.
-
-The frontend uses TanStack Query plus SSE later. Do not create an IndexedDB
-replica or `frontend/store` package in OTO-5.
+For V1, the local daemon is the offline cache: it mirrors external state into
+SQLite, serves last-known state without network, and streams local updates to the
+web app over SSE. The frontend uses TanStack Query + SSE. There is no IndexedDB
+replica and no `frontend/store` package.

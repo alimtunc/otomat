@@ -3,23 +3,29 @@
 // Conceptual layers (see docs/ai/import-boundaries.md):
 //   shared:   domain
 //   frontend: ui, client, domains            (apps/web, future apps/{desktop,mobile})
-//   backend:  db, runtime, events, git, api, supervisor, integrations, review
+//   backend:  db                             (the only backend package)
 //   tooling:  tooling
-//   apps:     apps/web (frontend), apps/local-daemon (backend)
+//   apps:     apps/web (frontend), apps/local-daemon (backend host)
 //
-// Future packages are matched by regex even though only domain/db/tooling exist
-// in OTO-5 — adding them later does not require editing these rules.
+// Daemon-only backend modules (api, events, git, runtime, and the future
+// supervisor) live INSIDE apps/local-daemon/src/<module> — they are not packages.
+// Frontend must not reach into the daemon; apps/local-daemon is a forbidden target
+// for the frontend layer below. `domains` and the future backend packages are kept
+// in the regexes so adding a justified package later does not require editing rules.
 //
 // Enforcement notes:
 // - Cross-package imports use the `@otomat/<name>` specifier, which pnpm resolves
 //   to the in-repo realpath `packages/<name>/...`, so target rules key on that.
+// - Inside apps/local-daemon, modules consume each other through Node subpath
+//   imports (`#api`, `#events`, `#git`, `#runtime`); those stay private to the
+//   daemon package and never cross a package boundary.
 // - With pnpm's non-hoisted node_modules, an UNDECLARED bare specifier (e.g.
 //   `import "react"` from domain) does not resolve, so it is caught by both the
 //   specifier-name match below AND `not-to-unresolvable`. The specifier-name
 //   rules are ordered before `not-to-unresolvable` so the targeted, accurate
 //   message wins for the heavy-lib case.
 
-const BACKEND = "db|runtime|events|git|api|supervisor|integrations|review";
+const BACKEND = "db|supervisor|integrations|review";
 const FRONTEND = "ui|client|domains";
 
 /** @param {string} group */
@@ -53,9 +59,9 @@ module.exports = {
       name: "frontend-not-to-backend",
       severity: "error",
       comment:
-        "Frontend (apps/web + ui/client/domains) must never import a backend package. External state is mirrored by the local daemon.",
+        "Frontend (apps/web + ui/client/domains) must never import a backend package or reach into the local daemon. External state is mirrored by the local daemon.",
       from: { path: `^(apps/web|packages/(${FRONTEND}))` },
-      to: { path: pkgTargets(BACKEND) },
+      to: { path: [...pkgTargets(BACKEND), "^apps/local-daemon(/|$)"] },
     },
     {
       name: "backend-not-to-frontend",

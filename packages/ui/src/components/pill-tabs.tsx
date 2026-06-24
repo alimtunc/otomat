@@ -2,8 +2,8 @@ import { Toggle } from "@base-ui/react/toggle";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
-import { ToggleGroupRoot, type ToggleGroupRootProps } from "../lib/toggle-group";
 import { cn } from "../lib/utils";
+import { ToggleGroupRoot, type ToggleGroupRootProps } from "../primitives/toggle-group";
 
 const pillsVariants = cva(
   "inline-flex gap-0.5 bg-surface-1 p-0.75 rounded-md border border-border-subtle",
