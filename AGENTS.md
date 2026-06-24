@@ -144,6 +144,12 @@ every pull request. Dependency updates come through Dependabot
     `#domain/state-machines/machine`, `#db/client`, `#client/types`) — the
     private mirror of the package's public `@otomat/<pkg>` entry. The map is the
     package's `imports` field in `package.json` and stays private to that package.
+- **The daemon runs from source in dev and from `dist` in prod — both are real
+  modes.** `start` runs `tsx src` (the `#`-imports resolve to `src/*.ts`). `pnpm
+  build` bundles the daemon with `tsdown` (Rolldown + oxc): internal `#` modules are
+  inlined and `node_modules` deps stay external, so `start:dist` runs a plain
+  `node dist/index.js`. `smoke:dist` boots the built dist and asserts `/api/health`,
+  and CI runs it right after the build so the emitted artifact can never silently rot.
 - **Types/constants/helpers have a home, not a junk drawer.** Domain types live in
   the module that owns them and are re-exported from a thin barrel (e.g.
   `packages/domain/src/types.ts`); there is no global mixed `types.ts`. A
