@@ -112,6 +112,14 @@ export const agentSessions = sqliteTable("agent_sessions", {
   agent_id: text("agent_id").references(() => agents.id),
   status: text("status").notNull().default("created"),
   provider_session_id: text("provider_session_id"),
+  // Supervisor liveness (OTO-10): the runtime runs as a child process whose
+  // pid/pgid survive a daemon crash, so boot reconciliation can probe it.
+  pid: integer("pid"),
+  pgid: integer("pgid"),
+  started_at: text("started_at"),
+  last_seen: text("last_seen"),
+  exit_code: integer("exit_code"),
+  exit_signal: text("exit_signal"),
   ...timestamps,
 });
 

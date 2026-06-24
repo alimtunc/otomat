@@ -47,6 +47,25 @@ export function createRunRoutes(deps: ApiDeps): Hono {
     return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
   });
 
+  routes.post("/:id/resume", async (c) => {
+    const runId = c.req.param("id");
+    if (!getRun(deps.db, runId)) return c.json({ error: "run_not_found" }, 404);
+    try {
+      return c.json(await deps.resumeRun(runId));
+    } catch (error) {
+      console.error(`[otomat] resume run ${runId} failed`, error);
+      return c.json({ error: "run_not_resumable" }, 409);
+    }
+  });
+
+  routes.post("/:id/abort", async (c) => {
+    const runId = c.req.param("id");
+    if (!getRun(deps.db, runId)) return c.json({ error: "run_not_found" }, 404);
+    await deps.abortRun(runId);
+    const detail = readRunDetail(deps.db, runId);
+    return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
+  });
+
   routes.get("/:id/events", (c) => {
     const runId = c.req.param("id");
     if (!getRun(deps.db, runId)) {

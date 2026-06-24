@@ -8,4 +8,8 @@ export interface ApiDeps {
   startedAt: string;
   dbPath: string;
   launchRun(request: StartRunRequest): Promise<RunContract>;
+  /** Re-run a human-waiting run on an explicit operator action (resume-on-action, never auto). */
+  resumeRun(runId: string): Promise<RunContract>;
+  /** Cancel a run: kill its process group and write the canonical canceled state + event. */
+  abortRun(runId: string, reason?: string): Promise<void>;
 }

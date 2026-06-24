@@ -1,5 +1,5 @@
-import { runPlanSchema, type RunPlan, type RunState } from "@otomat/domain";
-import { eq, sql } from "drizzle-orm";
+import { RUN_TERMINAL_STATES, runPlanSchema, type RunPlan, type RunState } from "@otomat/domain";
+import { eq, notInArray, sql } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { runs } from "../schema/index.js";
@@ -26,6 +26,17 @@ export function listRuns(db: Db, options: { issueId?: string } = {}): RunRow[] {
     .select()
     .from(runs)
     .where(options.issueId ? eq(runs.issue_id, options.issueId) : undefined)
+    .orderBy(runs.created_at)
+    .all()
+    .map((row) => ({ ...row, plan_json: runPlanSchema.parse(row.plan_json) }));
+}
+
+/** Runs still in a non-terminal state — the boot reconciliation work-list. */
+export function listActiveRuns(db: Db): RunRow[] {
+  return db
+    .select()
+    .from(runs)
+    .where(notInArray(runs.status, [...RUN_TERMINAL_STATES]))
     .orderBy(runs.created_at)
     .all()
     .map((row) => ({ ...row, plan_json: runPlanSchema.parse(row.plan_json) }));

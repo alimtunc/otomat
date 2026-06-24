@@ -64,14 +64,22 @@ function seedTerminalRun(database: Db, runId: string): void {
   appendEvents(database, runId, [logEvent(runId, 0), logEvent(runId, 1), logEvent(runId, 2)], 0);
 }
 
-function makeApp(launchRun: ApiDeps["launchRun"] = async () => ({}) as RunContract) {
+interface AppOverrides {
+  launchRun?: ApiDeps["launchRun"];
+  resumeRun?: ApiDeps["resumeRun"];
+  abortRun?: ApiDeps["abortRun"];
+}
+
+function makeApp(overrides: AppOverrides = {}) {
   return createApiApp({
     db,
     name: "test-daemon",
     version: "9.9.9",
     startedAt: "2026-06-20T00:00:00.000Z",
     dbPath,
-    launchRun,
+    launchRun: overrides.launchRun ?? (async () => ({}) as RunContract),
+    resumeRun: overrides.resumeRun ?? (async () => ({}) as RunContract),
+    abortRun: overrides.abortRun ?? (async () => {}),
   });
 }
 
@@ -139,9 +147,11 @@ it("delegates start-run to the injected launcher", async () => {
     branch: "b",
     plan_json: { version: 1, steps: [] },
   } satisfies RunContract;
-  const app = makeApp(async (request) => {
-    received = request;
-    return run;
+  const app = makeApp({
+    launchRun: async (request) => {
+      received = request;
+      return run;
+    },
   });
   const res = await app.request("/api/runs", {
     method: "POST",
@@ -151,6 +161,42 @@ it("delegates start-run to the injected launcher", async () => {
   expect(res.status).toBe(201);
   expect(received).toEqual({ prompt: "do it" });
   expect(((await res.json()) as RunContract).id).toBe("run-x");
+});
+
+it("delegates resume to the supervisor for a known run", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(db, runId);
+  let resumed = "";
+  const app = makeApp({
+    resumeRun: async (id) => {
+      resumed = id;
+      return {
+        id,
+        issue_id: ISSUE_ID,
+        status: "running",
+        branch: "b",
+        plan_json: { version: 1, steps: [] },
+      };
+    },
+  });
+  const res = await app.request(`/api/runs/${runId}/resume`, { method: "POST" });
+  expect(res.status).toBe(200);
+  expect(resumed).toBe(runId);
+});
+
+it("returns 404 resuming an unknown run", async () => {
+  const res = await makeApp().request("/api/runs/nope/resume", { method: "POST" });
+  expect(res.status).toBe(404);
+});
+
+it("delegates abort to the supervisor and returns the run detail", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(db, runId);
+  let aborted = "";
+  const app = makeApp({ abortRun: async (id) => void (aborted = id) });
+  const res = await app.request(`/api/runs/${runId}/abort`, { method: "POST" });
+  expect(res.status).toBe(200);
+  expect(aborted).toBe(runId);
 });
 
 it("streams persisted events over SSE and ends on a terminal run", async () => {
