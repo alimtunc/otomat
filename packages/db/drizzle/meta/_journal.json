@@ -15,6 +15,13 @@
       "when": 1781824126183,
       "tag": "0001_famous_eternals",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782767699748,
+      "tag": "0002_peaceful_black_bird",
+      "breakpoints": true
     }
   ]
 }

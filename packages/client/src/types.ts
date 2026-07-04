@@ -29,6 +29,8 @@ export interface RunEventsHandlers {
   onStreamError?(payload: RunStreamErrorPayload): void;
   /** A transport-level EventSource error; EventSource may still reconnect. */
   onError?(error: Event): void;
+  /** An SSE frame that failed `JSON.parse`/schema validation (e.g. daemon/web contract drift). */
+  onParseError?(error: unknown): void;
 }
 
 export interface RunEventsSubscription {

@@ -46,6 +46,16 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
     async startRun(request: StartRunRequest) {
       return runContractSchema.parse(await postJson(config, "/api/runs", request));
     },
+    async resumeRun(id: string) {
+      return runContractSchema.parse(
+        await postJson(config, `/api/runs/${encodeURIComponent(id)}/resume`, {}),
+      );
+    },
+    async abortRun(id: string) {
+      return runDetailSchema.parse(
+        await postJson(config, `/api/runs/${encodeURIComponent(id)}/abort`, {}),
+      );
+    },
     subscribeRunEvents(runId: string, handlers: RunEventsHandlers): RunEventsSubscription {
       return subscribeRunEvents(config, runId, handlers);
     },

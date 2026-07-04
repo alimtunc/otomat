@@ -12,9 +12,37 @@ export function useStartRun() {
     mutationFn: (request: StartRunRequest) => daemon.startRun(request),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: queryKeys.issues });
-      client.invalidateQueries({ queryKey: ["runs"] });
+      client.invalidateQueries({ queryKey: queryKeys.runs });
     },
   });
+}
+
+function useRunCommand(runId: string, command: () => Promise<unknown>, errorMessage: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: command,
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: queryKeys.run(runId) });
+      client.invalidateQueries({ queryKey: queryKeys.runs });
+    },
+    onError: () => toast.error(errorMessage),
+  });
+}
+
+export function useAbortRun(runId: string) {
+  return useRunCommand(
+    runId,
+    () => daemon.abortRun(runId),
+    "Could not abort run — is the daemon running?",
+  );
+}
+
+export function useResumeRun(runId: string) {
+  return useRunCommand(
+    runId,
+    () => daemon.resumeRun(runId),
+    "Could not resume run — it may no longer be resumable.",
+  );
 }
 
 function startRunErrorMessage(error: unknown): string {

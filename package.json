@@ -12,7 +12,8 @@
     "format:check": "oxfmt --check apps packages",
     "boundaries": "depcruise apps packages",
     "guardrails": "node scripts/guardrails.mjs",
-    "check": "pnpm run format:check && pnpm run lint && pnpm run guardrails && pnpm run typecheck && pnpm run build && pnpm run test",
+    "smoke:dist": "pnpm --filter @otomat/local-daemon smoke:dist",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run guardrails && pnpm run build && pnpm run typecheck && pnpm run smoke:dist && pnpm run test",
     "db:migrate": "pnpm --filter @otomat/db run migrate",
     "prepare": "lefthook install"
   },
@@ -21,7 +22,7 @@
     "@typescript/native-preview": "7.0.0-dev.20260623.1",
     "dependency-cruiser": "^17.4.3",
     "lefthook": "^2.1.9",
-    "oxfmt": "^0.56.0",
+    "oxfmt": "~0.56.0",
     "oxlint": "^1.71.0",
     "typescript": "^6.0.3"
   },

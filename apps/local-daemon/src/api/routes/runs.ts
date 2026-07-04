@@ -1,10 +1,13 @@
 import { zValidator } from "@hono/zod-validator";
-import { getRun } from "@otomat/db";
+import { getRun, type Db } from "@otomat/db";
 import { startRunRequestSchema } from "@otomat/domain";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
+
+import { RunNotResumableError } from "#supervisor";
 
 import type { ApiDeps } from "../deps.js";
 import { readRunDetail, readRuns } from "../reads.js";
+import { toRun } from "../serialize.js";
 import { streamRunEvents } from "../sse.js";
 
 /** SSE resume cursor: explicit `?afterSeq` wins, else the `Last-Event-ID` from a reconnecting EventSource. */
@@ -18,7 +21,11 @@ function parseCursor(
   return Number.isInteger(value) && value >= 0 ? value : undefined;
 }
 
-/** Mounted at `/api/runs`. Holds the run reads, the start-run command, and the SSE stream. */
+function runNotFound(c: Context, db: Db, runId: string): Response | null {
+  return getRun(db, runId) ? null : c.json({ error: "run_not_found" }, 404);
+}
+
+/** Mounted at `/api/runs`. Holds the run reads, the run commands (start/resume/abort), and the SSE stream. */
 export function createRunRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();
 
@@ -34,7 +41,7 @@ export function createRunRoutes(deps: ApiDeps): Hono {
     async (c) => {
       try {
         const run = await deps.launchRun(c.req.valid("json"));
-        return c.json(run, 201);
+        return c.json(toRun(run), 201);
       } catch (error) {
         console.error("[otomat] launch run failed", error);
         return c.json({ error: "run_launch_failed" }, 500);
@@ -47,11 +54,39 @@ export function createRunRoutes(deps: ApiDeps): Hono {
     return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
   });
 
+  routes.post("/:id/resume", async (c) => {
+    const runId = c.req.param("id");
+    const missing = runNotFound(c, deps.db, runId);
+    if (missing) return missing;
+    try {
+      return c.json(toRun(await deps.resumeRun(runId)));
+    } catch (error) {
+      if (error instanceof RunNotResumableError) {
+        return c.json({ error: "run_not_resumable" }, 409);
+      }
+      console.error(`[otomat] resume run ${runId} failed`, error);
+      return c.json({ error: "run_resume_failed" }, 500);
+    }
+  });
+
+  routes.post("/:id/abort", async (c) => {
+    const runId = c.req.param("id");
+    const missing = runNotFound(c, deps.db, runId);
+    if (missing) return missing;
+    try {
+      await deps.abortRun(runId);
+    } catch (error) {
+      console.error(`[otomat] abort run ${runId} failed`, error);
+      return c.json({ error: "run_abort_failed" }, 500);
+    }
+    const detail = readRunDetail(deps.db, runId);
+    return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
+  });
+
   routes.get("/:id/events", (c) => {
     const runId = c.req.param("id");
-    if (!getRun(deps.db, runId)) {
-      return c.json({ error: "run_not_found" }, 404);
-    }
+    const missing = runNotFound(c, deps.db, runId);
+    if (missing) return missing;
     const cursor = parseCursor(c.req.query("afterSeq"), c.req.header("Last-Event-ID"));
     return streamRunEvents(c, deps.db, runId, cursor);
   });

@@ -18,8 +18,9 @@ apps/
       events/          # event ledger + stream-to-file tailer (OTO-7)
       git/             # worktree/branch lifecycle + diff      (OTO-8)
       runtime/         # runtime adapter contract + fake adapter (OTO-6)
-      index.ts server.ts launcher.ts bootstrap.ts   # composition root / entrypoint
-    tests/             # api/ events/ git/ runtime/ launcher.test.ts + support/
+      supervisor/      # process supervisor + pid reconciliation (OTO-10)
+      index.ts server.ts bootstrap.ts   # composition root / entrypoint
+    tests/             # api/ events/ git/ runtime/ supervisor/ + support/
 
 packages/
   domain/              # pure TS domain, state machines, event envelope, zod contracts (OTO-5)
@@ -60,8 +61,8 @@ Why each current package qualifies:
 Why `api`, `events`, `git`, `runtime` are **not** packages: each was consumed only
 by the local daemon (and each other) — no frontend or cross-app consumer — so they
 are internal daemon modules, consumed through `#api`/`#events`/`#git`/`#runtime`
-subpath imports. The future `supervisor` (OTO-10) lands the same way under
-`apps/local-daemon/src/supervisor`.
+subpath imports. `supervisor` (OTO-10) lives the same way under
+`apps/local-daemon/src/supervisor`, consumed through `#supervisor`.
 
 ## Ticket Ownership
 

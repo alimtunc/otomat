@@ -40,6 +40,6 @@ export type RunTerminalState = (typeof RUN_TERMINAL_STATES)[number];
 
 const runTerminalSet: ReadonlySet<string> = new Set(RUN_TERMINAL_STATES);
 
-export function isRunTerminal(status: string): boolean {
+export function isRunTerminal(status: string): status is RunTerminalState {
   return runTerminalSet.has(status);
 }

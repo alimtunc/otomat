@@ -1,10 +1,9 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
-import { createClient, runMigrations, schema, type DbClient } from "@otomat/db";
+import type { DbClient } from "@otomat/db";
 
 import type { RuntimeEvent } from "#runtime";
+
+import { setupTestDb } from "./db.js";
+import { seedRun } from "./seed.js";
 
 export interface LedgerTestDb {
   client: DbClient;
@@ -17,46 +16,20 @@ export interface LedgerTestDb {
 
 // Seeds the full project->issue->run->step_run->agent_session chain so runtime_events FKs resolve.
 export function setupLedgerDb(): LedgerTestDb {
-  const dir = mkdtempSync(join(tmpdir(), "otomat-events-"));
-  const dbPath = join(dir, "otomat.db");
-  runMigrations(dbPath);
-  const client = createClient(dbPath);
-
-  const runId = "run-1";
-  const stepRunId = "step-1";
-  const agentSessionId = "sess-1";
-
-  client.db.insert(schema.projects).values({ id: "p1", name: "P", root_path: dir }).run();
-  client.db.insert(schema.issues).values({ id: "i1", project_id: "p1", title: "I" }).run();
-  client.db
-    .insert(schema.runs)
-    .values({
-      id: runId,
-      issue_id: "i1",
-      status: "running",
-      branch: "alimtunc/oto-7",
-      plan_json: { version: 1, steps: [] },
-    })
-    .run();
-  client.db
-    .insert(schema.stepRuns)
-    .values({ id: stepRunId, run_id: runId, idx: 0, name: "scaffold" })
-    .run();
-  client.db
-    .insert(schema.agentSessions)
-    .values({ id: agentSessionId, step_run_id: stepRunId })
-    .run();
-
+  const base = setupTestDb("otomat-events-");
+  const seeded = seedRun(base.db, {
+    runId: "run-1",
+    runStatus: "running",
+    stepStatus: "queued",
+    sessionStatus: "created",
+  });
   return {
-    client,
-    dir,
-    runId,
-    stepRunId,
-    agentSessionId,
-    cleanup() {
-      client.sqlite.close();
-      rmSync(dir, { recursive: true, force: true });
-    },
+    client: base.client,
+    dir: base.dir,
+    runId: seeded.runId,
+    stepRunId: seeded.stepRunId,
+    agentSessionId: seeded.agentSessionId,
+    cleanup: base.cleanup,
   };
 }
 

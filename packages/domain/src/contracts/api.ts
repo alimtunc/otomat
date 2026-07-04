@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { eventEnvelopeSchema } from "../events/envelope.js";
 import {
   agentSessionContractSchema,
   runContractSchema,
@@ -17,12 +16,11 @@ export const healthResponseSchema = z.object({
 });
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
 
-/** A run plus its persisted step/session graph and the event ledger catch-up snapshot. */
+/** A run plus its persisted step/session graph; the event ledger is served by the run's SSE stream, not here. */
 export const runDetailSchema = z.object({
   run: runContractSchema,
   steps: z.array(stepRunContractSchema),
   sessions: z.array(agentSessionContractSchema),
-  events: z.array(eventEnvelopeSchema),
 });
 export type RunDetail = z.infer<typeof runDetailSchema>;
 

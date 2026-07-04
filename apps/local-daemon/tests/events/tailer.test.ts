@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readRunEvents } from "#events/projection";
 import { EventTailer } from "#events/tailer";
 import { EVENTS_FILENAME } from "#events/types";
-import { FakeRuntimeAdapter, JsonlEventSink, MemorySink, readEventsJsonl } from "#runtime";
+import { FakeRuntimeAdapter, JsonlEventSink, readEventsJsonl } from "#runtime";
 
 import { makeEvent, setupLedgerDb, type LedgerTestDb } from "../support/events.js";
 
@@ -39,6 +39,7 @@ function seqs(): number[] {
 describe("EventTailer", () => {
   it("ingests an events.jsonl produced by the OTO-6 fake adapter into the ledger", async () => {
     const adapter = new FakeRuntimeAdapter();
+    const sink = new JsonlEventSink(filePath);
     await adapter.run(
       {
         run_id: t.runId,
@@ -47,9 +48,10 @@ describe("EventTailer", () => {
         prompt: "do the thing",
         run_dir: t.dir,
       },
-      new MemorySink(),
+      sink,
       new AbortController().signal,
     );
+    sink.close();
 
     const onDisk = readEventsJsonl(filePath);
     const result = newTailer().drain();

@@ -22,17 +22,29 @@ export function subscribeRunEvents(
   const url = resolveUrl(config, `/api/runs/${encodeURIComponent(runId)}/events${query}`);
   const source = new Source(url);
 
-  source.addEventListener("event", (event) => {
-    handlers.onEvent(eventEnvelopeSchema.parse(JSON.parse((event as MessageEvent).data)));
-  });
+  // EventSource swallows listener throws, so parse failures are surfaced instead of silently gapping the timeline.
+  const deliver = <T>(
+    event: Event,
+    schema: { parse(raw: unknown): T },
+    handle: (value: T) => void,
+  ): void => {
+    try {
+      handle(schema.parse(JSON.parse((event as MessageEvent).data)));
+    } catch (error) {
+      if (handlers.onParseError) handlers.onParseError(error);
+      else console.error("[otomat] SSE frame failed to parse", error);
+    }
+  };
+
+  source.addEventListener("event", (event) =>
+    deliver(event, eventEnvelopeSchema, (value) => handlers.onEvent(value)),
+  );
   source.addEventListener("end", (event) => {
-    handlers.onEnd?.(runEndPayloadSchema.parse(JSON.parse((event as MessageEvent).data)));
+    deliver(event, runEndPayloadSchema, (value) => handlers.onEnd?.(value));
     source.close();
   });
   source.addEventListener("stream_error", (event) => {
-    handlers.onStreamError?.(
-      runStreamErrorPayloadSchema.parse(JSON.parse((event as MessageEvent).data)),
-    );
+    deliver(event, runStreamErrorPayloadSchema, (value) => handlers.onStreamError?.(value));
     source.close();
   });
   source.addEventListener("open", () => handlers.onOpen?.());

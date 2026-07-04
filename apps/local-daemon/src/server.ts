@@ -4,9 +4,9 @@ import { serve } from "@hono/node-server";
 import { createClient, defaultDbPath, runMigrations } from "@otomat/db";
 
 import { createApiApp, logApiRoutes } from "#api";
+import { createReexecSpawn, createSupervisor } from "#supervisor";
 
 import { ensureDefaultProject } from "./bootstrap.js";
-import { createRunLauncher } from "./launcher.js";
 
 export const DAEMON_NAME = "otomat-local-daemon";
 export const DAEMON_VERSION = "0.1.0";
@@ -21,7 +21,7 @@ export interface DaemonHandle {
   close(): Promise<void>;
 }
 
-/** The daemon is the single writer: it migrates, bootstraps the project, and owns the runtime/ledger composition. */
+/** The daemon is the single writer: it migrates, bootstraps the project, reconciles crashed runs, then owns the supervisor. */
 export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
   const dbPath = options.dbPath ?? defaultDbPath();
   runMigrations(dbPath);
@@ -30,7 +30,21 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
   const dataDir = dirname(dbPath);
   const projectRoot = process.env.OTOMAT_PROJECT_ROOT ?? process.cwd();
   const defaultProjectId = ensureDefaultProject(db, projectRoot);
-  const launcher = createRunLauncher({ db, dataDir, defaultProjectId });
+
+  const mainScript = process.argv[1];
+  if (!mainScript) throw new Error("cannot determine daemon entrypoint for worker re-exec");
+  const supervisor = createSupervisor({
+    db,
+    dataDir,
+    defaultProjectId,
+    spawn: createReexecSpawn(mainScript),
+  });
+
+  // Settle crash remnants before accepting traffic: no phantom "running" run, no double-spawn.
+  const report = supervisor.reconcile();
+  if (report.reconciled.length > 0) {
+    console.log(`[otomat] reconciled ${report.reconciled.length} run(s) left in flight at boot`);
+  }
 
   const app = createApiApp({
     db,
@@ -38,13 +52,16 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
     version: DAEMON_VERSION,
     startedAt: new Date().toISOString(),
     dbPath,
-    launchRun: launcher.launchRun,
+    launchRun: supervisor.start,
+    resumeRun: supervisor.resume,
+    abortRun: supervisor.abort,
   });
 
   if (process.env.OTOMAT_LOG_ROUTES) logApiRoutes(app);
 
   const port = options.port ?? Number(process.env.OTOMAT_DAEMON_PORT ?? 4319);
-  const server = serve({ fetch: app.fetch, port });
+  const hostname = process.env.OTOMAT_DAEMON_HOST ?? "127.0.0.1";
+  const server = serve({ fetch: app.fetch, port, hostname });
   server.on("error", (error) => {
     console.error(`[otomat] daemon failed to bind port ${port}`, error);
     process.exit(1);
@@ -55,7 +72,7 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
     close: () =>
       new Promise<void>((resolve, reject) => {
         server.close((closeError) => {
-          void launcher.settle().finally(() => {
+          void supervisor.settle().finally(() => {
             sqlite.close();
             if (closeError) reject(closeError);
             else resolve();

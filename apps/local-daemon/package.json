@@ -11,7 +11,9 @@
     "#git": "./src/git/index.ts",
     "#git/*": "./src/git/*.ts",
     "#runtime": "./src/runtime/index.ts",
-    "#runtime/*": "./src/runtime/*.ts"
+    "#runtime/*": "./src/runtime/*.ts",
+    "#supervisor": "./src/supervisor/index.ts",
+    "#supervisor/*": "./src/supervisor/*.ts"
   },
   "scripts": {
     "build": "tsdown",
@@ -31,7 +33,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^26.0.0",
+    "@types/node": "^22.0.0",
     "tsdown": "^0.22.3",
     "tsx": "^4.22.4",
     "vitest": "^4.1.9"

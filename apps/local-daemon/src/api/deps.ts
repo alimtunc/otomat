@@ -1,5 +1,5 @@
-import type { Db } from "@otomat/db";
-import type { RunContract, StartRunRequest } from "@otomat/domain";
+import type { Db, RunRow } from "@otomat/db";
+import type { StartRunRequest } from "@otomat/domain";
 
 export interface ApiDeps {
   db: Db;
@@ -7,5 +7,7 @@ export interface ApiDeps {
   version: string;
   startedAt: string;
   dbPath: string;
-  launchRun(request: StartRunRequest): Promise<RunContract>;
+  launchRun(request: StartRunRequest): Promise<RunRow>;
+  resumeRun(runId: string): Promise<RunRow>;
+  abortRun(runId: string): Promise<void>;
 }

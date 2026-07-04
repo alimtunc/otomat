@@ -1,5 +1,5 @@
-import { runPlanSchema, type RunPlan, type RunState } from "@otomat/domain";
-import { eq, sql } from "drizzle-orm";
+import { RUN_TERMINAL_STATES, runPlanSchema, type RunPlan, type RunState } from "@otomat/domain";
+import { eq, notInArray, sql } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { runs } from "../schema/index.js";
@@ -21,6 +21,7 @@ export function getRun(db: Db, id: string): RunRow | undefined {
   return { ...row, plan_json: runPlanSchema.parse(row.plan_json) };
 }
 
+/** User-facing list: a corrupt `plan_json` throws (fail loud) rather than silently hiding a run. */
 export function listRuns(db: Db, options: { issueId?: string } = {}): RunRow[] {
   return db
     .select()
@@ -29,6 +30,36 @@ export function listRuns(db: Db, options: { issueId?: string } = {}): RunRow[] {
     .orderBy(runs.created_at)
     .all()
     .map((row) => ({ ...row, plan_json: runPlanSchema.parse(row.plan_json) }));
+}
+
+export interface CorruptActiveRun {
+  id: string;
+  status: RunState;
+  issues: unknown;
+}
+
+export interface ActiveRuns {
+  runs: RunRow[];
+  corrupt: CorruptActiveRun[];
+}
+
+/** Boot reconciliation work-list; unlike `listRuns`, a corrupt `plan_json` row is returned separately so the caller can settle it instead of hiding it. */
+export function listActiveRuns(db: Db): ActiveRuns {
+  const active: ActiveRuns = { runs: [], corrupt: [] };
+  for (const row of db
+    .select()
+    .from(runs)
+    .where(notInArray(runs.status, [...RUN_TERMINAL_STATES]))
+    .orderBy(runs.created_at)
+    .all()) {
+    const parsed = runPlanSchema.safeParse(row.plan_json);
+    if (parsed.success) {
+      active.runs.push({ ...row, plan_json: parsed.data });
+    } else {
+      active.corrupt.push({ id: row.id, status: row.status, issues: parsed.error.issues });
+    }
+  }
+  return active;
 }
 
 export interface RunStatusUpdate {

@@ -23,6 +23,14 @@ const ISSUE = {
   synced_at: null,
 };
 
+const RUN = {
+  id: "run-1",
+  issue_id: "issue-1",
+  status: "running",
+  branch: "b",
+  plan_json: { version: 1, steps: [] },
+};
+
 it("parses a typed list response", async () => {
   const fetchMock: typeof fetch = vi.fn(async () => jsonResponse([ISSUE]));
   const client = createDaemonClient({ fetch: fetchMock });
@@ -50,22 +58,43 @@ it("throws DaemonRequestError on a non-2xx response", async () => {
 
 it("posts a start-run request body", async () => {
   let captured: { method?: string; body?: unknown } = {};
-  const run = {
-    id: "run-1",
-    issue_id: "issue-1",
-    status: "running",
-    branch: "b",
-    plan_json: { version: 1, steps: [] },
-  };
   const fetchMock: typeof fetch = async (_input, init) => {
     captured = { method: init?.method, body: init?.body };
-    return jsonResponse(run, 201);
+    return jsonResponse(RUN, 201);
   };
   const client = createDaemonClient({ fetch: fetchMock });
   const result = await client.startRun({ prompt: "go" });
   expect(captured.method).toBe("POST");
   expect(JSON.parse(String(captured.body))).toEqual({ prompt: "go" });
   expect(result.id).toBe("run-1");
+});
+
+it("posts resume to the run's resume endpoint", async () => {
+  let calledUrl = "";
+  let method = "";
+  const fetchMock: typeof fetch = async (input, init) => {
+    calledUrl = String(input);
+    method = String(init?.method);
+    return jsonResponse(RUN);
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+  const result = await client.resumeRun("run-1");
+  expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/resume");
+  expect(method).toBe("POST");
+  expect(result.id).toBe("run-1");
+});
+
+it("posts abort and parses the returned run detail", async () => {
+  let calledUrl = "";
+  const detail = { run: { ...RUN, status: "canceled" }, steps: [], sessions: [] };
+  const fetchMock: typeof fetch = async (input) => {
+    calledUrl = String(input);
+    return jsonResponse(detail);
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+  const result = await client.abortRun("run-1");
+  expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/abort");
+  expect(result.run.status).toBe("canceled");
 });
 
 class FakeEventSource {
@@ -107,7 +136,10 @@ const ENVELOPE: EventEnvelope = {
   raw_ref: null,
 };
 
-it("delivers SSE events and closes on end", () => {
+function captureEventSource(): {
+  sources: FakeEventSource[];
+  client: ReturnType<typeof createDaemonClient>;
+} {
   const sources: FakeEventSource[] = [];
   const factory = class extends FakeEventSource {
     constructor(url: string) {
@@ -119,6 +151,11 @@ it("delivers SSE events and closes on end", () => {
     baseUrl: "",
     EventSource: factory as unknown as typeof EventSource,
   });
+  return { sources, client };
+}
+
+it("delivers SSE events and closes on end", () => {
+  const { sources, client } = captureEventSource();
 
   const received: EventEnvelope[] = [];
   let endStatus = "";
@@ -138,4 +175,26 @@ it("delivers SSE events and closes on end", () => {
   expect(endStatus).toBe("completed");
   expect(source.closed).toBe(true);
   sub.close();
+});
+
+it("routes a malformed SSE frame to onParseError instead of throwing", () => {
+  const { sources, client } = captureEventSource();
+
+  const received: EventEnvelope[] = [];
+  let parseErrors = 0;
+  client.subscribeRunEvents("run-1", {
+    onEvent: (event) => received.push(event),
+    onParseError: () => {
+      parseErrors += 1;
+    },
+  });
+
+  const source = sources[0];
+  // Not valid JSON, then valid JSON that fails the envelope schema.
+  expect(() => source.emit("event", "{not json")).not.toThrow();
+  expect(() => source.emit("event", JSON.stringify({ nope: true }))).not.toThrow();
+  source.emit("event", JSON.stringify(ENVELOPE));
+
+  expect(parseErrors).toBe(2);
+  expect(received.map((e) => e.seq)).toEqual([0]);
 });
