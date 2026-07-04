@@ -13,7 +13,7 @@
     "boundaries": "depcruise apps packages",
     "guardrails": "node scripts/guardrails.mjs",
     "smoke:dist": "pnpm --filter @otomat/local-daemon smoke:dist",
-    "check": "pnpm run format:check && pnpm run lint && pnpm run guardrails && pnpm run typecheck && pnpm run build && pnpm run smoke:dist && pnpm run test",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run guardrails && pnpm run build && pnpm run typecheck && pnpm run smoke:dist && pnpm run test",
     "db:migrate": "pnpm --filter @otomat/db run migrate",
     "prepare": "lefthook install"
   },
