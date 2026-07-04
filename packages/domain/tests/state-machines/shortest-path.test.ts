@@ -1,7 +1,7 @@
-import { runMachine } from "@otomat/domain";
 import { expect, it } from "vitest";
 
-import { shortestPath } from "#supervisor";
+import { shortestPath } from "#domain/state-machines/machine";
+import { runMachine } from "#domain/state-machines/run";
 
 it("returns a single-hop path for a direct edge", () => {
   expect(shortestPath(runMachine, "running", "review_ready")).toEqual(["review_ready"]);

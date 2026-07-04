@@ -9,7 +9,7 @@ import { createClient, type DbClient } from "#db/client";
 import { schema } from "#db/index";
 import { runMigrations } from "#db/migrate";
 import { getIssue, insertIssue } from "#db/repositories/issues";
-import { getRun, insertRun } from "#db/repositories/runs";
+import { getRun, insertRun, listActiveRuns, listRuns } from "#db/repositories/runs";
 
 let dbPath = "";
 let client: DbClient;
@@ -69,4 +69,38 @@ it("stores and parses the frozen run plan_json", () => {
 
   const run = getRun(client.db, "r1");
   expect(run?.plan_json).toEqual(plan);
+});
+
+function seedRunPair(db: DbClient["db"]): void {
+  db.insert(schema.projects).values({ id: "p1", name: "P", root_path: "/tmp/p" }).run();
+  insertIssue(db, { id: "i1", project_id: "p1", title: "I", source: "local" });
+  insertRun(db, {
+    id: "good",
+    issue_id: "i1",
+    status: "running",
+    branch: "b1",
+    plan_json: { version: 1, steps: [] },
+  });
+  db.insert(schema.runs)
+    .values({
+      id: "corrupt",
+      issue_id: "i1",
+      status: "running",
+      branch: "b2",
+      plan_json: { nope: true },
+    })
+    .run();
+}
+
+it("listActiveRuns returns a corrupt plan_json row separately so reconciliation can settle it", () => {
+  seedRunPair(client.db);
+  const active = listActiveRuns(client.db);
+  expect(active.runs.map((r) => r.id)).toEqual(["good"]);
+  expect(active.corrupt.map((r) => r.id)).toEqual(["corrupt"]);
+  expect(active.corrupt[0]?.status).toBe("running");
+});
+
+it("listRuns fails loud on a corrupt plan_json instead of hiding the run", () => {
+  seedRunPair(client.db);
+  expect(() => listRuns(client.db)).toThrow();
 });

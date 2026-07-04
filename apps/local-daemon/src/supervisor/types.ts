@@ -1,5 +1,5 @@
-import type { Db } from "@otomat/db";
-import type { RunContract, StartRunRequest } from "@otomat/domain";
+import type { Db, RunRow } from "@otomat/db";
+import type { StartRunRequest } from "@otomat/domain";
 
 /** Identifies the supervisor as the event source so its markers are never shown as a provider result. */
 export const SUPERVISOR_ADAPTER = "otomat-supervisor";
@@ -7,13 +7,17 @@ export const SUPERVISOR_ADAPTER = "otomat-supervisor";
 /** Env var carrying the serialized job to a re-exec'd worker process. */
 export const WORKER_JOB_ENV = "OTOMAT_WORKER_JOB";
 
-/** A turn the supervisor hands to a child process: a fresh run, or a follow-up that resumes a provider session. */
-export interface SupervisedJob {
+/** The run/step/session ids, prompt, and artifact dir a single turn drives. */
+export interface TurnContext {
   runId: string;
   stepRunId: string;
   agentSessionId: string;
   prompt: string;
   runDir: string;
+}
+
+/** A turn the supervisor hands to a child process: a fresh run, or a follow-up that resumes a provider session. */
+export interface SupervisedJob extends TurnContext {
   mode: "run" | "resume";
   providerSessionId: string | null;
 }
@@ -24,11 +28,7 @@ export interface ProcessExit {
   signal: string | null;
 }
 
-/**
- * Handle to a spawned session process. `pgid` is the process-group id used for
- * group-wide signalling; for a detached child it equals `pid`. `exited` resolves
- * once the child is gone (never rejects).
- */
+/** `pgid` equals `pid` for a detached child; `exited` resolves once the child is gone and never rejects. */
 export interface SessionProcess {
   pid: number;
   pgid: number;
@@ -51,13 +51,13 @@ export interface SupervisorConfig {
 
 export interface Supervisor {
   /** Create the run/step/session rows, then spawn and track the session process. Returns once it is running. */
-  start(request: StartRunRequest): Promise<RunContract>;
+  start(request: StartRunRequest): Promise<RunRow>;
   /** Resume a human-waiting run on an explicit action — spawns a `resume` turn, never auto-runs. */
-  resume(runId: string): Promise<RunContract>;
+  resume(runId: string): Promise<RunRow>;
   /** Kill the run's process group and write the canonical canceled state + a ledger event. No fake success. */
-  abort(runId: string, reason?: string): Promise<void>;
+  abort(runId: string): Promise<void>;
   /** Boot-time pass: classify every non-terminal in-flight run from durable evidence and settle it. */
-  reconcile(): Promise<ReconcileReport>;
+  reconcile(): ReconcileReport;
   /** Resolve once every in-flight session process has exited (shutdown/test aid). */
   settle(): Promise<void>;
 }
@@ -79,12 +79,3 @@ export interface ReconcileReport {
 }
 
 export const DEFAULT_CONCURRENCY = 4;
-
-/**
- * Non-terminal states a crash must NOT disturb: review_ready awaits review and
- * awaiting_human awaits an explicit resume. Every other non-terminal run (queued,
- * preparing, running, awaiting_permission) is an in-flight remnant the boot pass
- * settles — so a run parked in `queued` on the concurrency semaphore is reconciled,
- * not left as a phantom.
- */
-export const RESTING_RUN_STATES = ["review_ready", "awaiting_human"] as const;

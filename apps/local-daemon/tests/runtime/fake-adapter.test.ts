@@ -11,7 +11,7 @@ import {
 } from "#runtime/contract";
 import { EVENT_FIDELITY, runtimeEventSchema } from "#runtime/events";
 import { FAKE_ADAPTER_ID, FakeRuntimeAdapter } from "#runtime/fake/fake-adapter";
-import { MemorySink, readEventsJsonl } from "#runtime/sinks";
+import { JsonlEventSink, MemorySink, readEventsJsonl } from "#runtime/sinks";
 
 let dir: string;
 let adapter: FakeRuntimeAdapter;
@@ -116,12 +116,15 @@ describe("FakeRuntimeAdapter.run", () => {
     expect(a.events).toEqual(b.events);
   });
 
-  it("writes a re-readable events.jsonl matching the pushed events", async () => {
+  it("emits only to the caller's sink — durability belongs to the sink, never to the adapter", async () => {
     const sink = new MemorySink();
     await adapter.run(input(), sink, liveSignal());
-    const path = join(dir, "events.jsonl");
-    expect(existsSync(path)).toBe(true);
-    expect(readEventsJsonl(path)).toEqual(sink.events);
+    expect(existsSync(join(dir, "events.jsonl"))).toBe(false);
+
+    const jsonl = new JsonlEventSink(join(dir, "events.jsonl"));
+    await new FakeRuntimeAdapter().run(input(), jsonl, liveSignal());
+    jsonl.close();
+    expect(readEventsJsonl(join(dir, "events.jsonl"))).toEqual(sink.events);
   });
 });
 
@@ -137,7 +140,6 @@ describe("FakeRuntimeAdapter abort", () => {
     expect(sink.events).toHaveLength(1);
     expect(final.event_count).toBe(1);
     expect(sink.events[0]?.payload.text).toContain("aborted");
-    expect(readEventsJsonl(join(dir, "events.jsonl"))).toEqual(sink.events);
   });
 
   it("resolves abort(session, reason) without throwing", async () => {
@@ -158,18 +160,22 @@ describe("FakeRuntimeAdapter.resume", () => {
     expect(final.status).toBe("completed");
     expect(final.provider_session_id).toBe("fake-session-run-1");
     expect(sink.events.length).toBeGreaterThan(0);
-    expect(readEventsJsonl(join(dir, "events.jsonl"))).toEqual(sink.events);
   });
 
-  it("appends a resume turn to the same run_dir without losing the prior turn", async () => {
-    const first = new MemorySink();
+  it("appends a resume turn to the caller's jsonl sink without losing the prior turn", async () => {
+    const path = join(dir, "events.jsonl");
+    const first = new JsonlEventSink(path);
     await adapter.run(input(), first, liveSignal());
-    const second = new MemorySink();
+    first.close();
+    const firstTurn = readEventsJsonl(path);
+
+    const second = new JsonlEventSink(path);
     await adapter.resume(sessionRef(), { prompt: "more", run_dir: dir }, second, liveSignal());
+    second.close();
 
-    const onDisk = readEventsJsonl(join(dir, "events.jsonl"));
-    expect(onDisk).toEqual([...first.events, ...second.events]);
-
+    const onDisk = readEventsJsonl(path);
+    expect(onDisk.slice(0, firstTurn.length)).toEqual(firstTurn);
+    expect(onDisk.length).toBeGreaterThan(firstTurn.length);
     const ids = onDisk.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
   });

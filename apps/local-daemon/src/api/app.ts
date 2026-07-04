@@ -8,11 +8,13 @@ import { createCatalogRoutes } from "./routes/catalog.js";
 import { createHealthRoutes } from "./routes/health.js";
 import { createIssueRoutes } from "./routes/issues.js";
 import { createRunRoutes } from "./routes/runs.js";
+import { allowedOrigin, hostGuard } from "./security.js";
 
 export function createApiApp(deps: ApiDeps): Hono {
   const app = new Hono();
 
-  app.use("/api/*", cors());
+  app.use("/api/*", hostGuard());
+  app.use("/api/*", cors({ origin: allowedOrigin() }));
 
   app.route("/api", createHealthRoutes(deps));
   app.route("/api", createCatalogRoutes(deps));

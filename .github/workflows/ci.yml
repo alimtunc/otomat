@@ -28,23 +28,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build
-
-      - name: Daemon dist smoke
-        run: pnpm --filter @otomat/local-daemon smoke:dist
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Test
-        run: pnpm test
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Format check
-        run: pnpm format:check
-
-      - name: Frontend guardrails
-        run: pnpm guardrails
+      # Same gate as `pnpm check` locally, kept as one step so CI can never drift from it.
+      - name: Check
+        run: pnpm check

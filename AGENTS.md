@@ -21,7 +21,8 @@ apps/
     src/events/         append-only event ledger + non-lossy stream-to-file tailer
     src/git/            worktree/branch lifecycle + canonical git diff
     src/runtime/        runtime adapter contract + deterministic fake adapter
-    src/{index,server,launcher,bootstrap}.ts   composition root / entrypoint
+    src/supervisor/     process supervisor, pid reconciliation, resume-on-action
+    src/{index,server,bootstrap}.ts   composition root / entrypoint
 packages/
   domain/               Pure TS: types, state machines, event envelope, zod contracts
   db/                   SQLite (WAL) + Drizzle + better-sqlite3, schema/migrations/repos
@@ -41,9 +42,9 @@ Otherwise it is an internal folder of an app/process, not a package.
   future apps), `tooling` (shared config), and `db` (isolates the native
   `better-sqlite3` driver + Drizzle schema, used by every backend module) each
   meet that bar.
-- `api`, `events`, `git`, `runtime` were daemon-only with no cross-app consumer,
-  so they are internal modules of `apps/local-daemon`, not packages. The future
-  `supervisor` (OTO-10) joins them there. Promote one back to `packages/*` only
+- `api`, `events`, `git`, `runtime`, and `supervisor` are daemon-only with no
+  cross-app consumer, so they are internal modules of `apps/local-daemon`, not
+  packages. Promote one back to `packages/*` only
   with an explicit justification. See
   [`docs/ai/codebase-map.md`](docs/ai/codebase-map.md) for the full tree and the
   per-ticket ownership table.

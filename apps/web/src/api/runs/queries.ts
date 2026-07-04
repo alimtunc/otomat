@@ -28,11 +28,14 @@ export type RunStreamState = "connecting" | "open" | "closed" | "error";
 export interface RunStream {
   events: EventEnvelope[];
   state: RunStreamState;
+  /** At least one SSE frame failed to decode: the stream is alive but the timeline may have gaps. */
+  degraded: boolean;
 }
 
 export function useRunEvents(runId: string): RunStream {
   const [events, setEvents] = useState<EventEnvelope[]>([]);
   const [state, setState] = useState<RunStreamState>("connecting");
+  const [degraded, setDegraded] = useState(false);
   const closedRef = useRef(false);
 
   // otomat-allow-effect: open the daemon SSE run-event stream and tear it down on unmount / run change.
@@ -40,6 +43,7 @@ export function useRunEvents(runId: string): RunStream {
     closedRef.current = false;
     setEvents([]);
     setState("connecting");
+    setDegraded(false);
     const subscription = daemon.subscribeRunEvents(runId, {
       onOpen: () => setState("open"),
       onEvent: (event) => setEvents((current) => mergeEvent(current, event)),
@@ -54,9 +58,10 @@ export function useRunEvents(runId: string): RunStream {
       onError: () => {
         if (!closedRef.current) setState("error");
       },
+      onParseError: () => setDegraded(true),
     });
     return () => subscription.close();
   }, [runId]);
 
-  return { events, state };
+  return { events, state, degraded };
 }

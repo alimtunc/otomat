@@ -1,9 +1,4 @@
-// Spawnable stand-in for the supervisor's worker, used by the supervisor integration
-// tests so they exercise real OS processes (pid/pgid/kill/exit). Pure Node, no workspace
-// imports, so it survives being re-spawned. Behavior is chosen via FAKE_WORKER_BEHAVIOR:
-//   complete -> write events + a "completed" terminal marker, exit 0
-//   crash    -> write partial events, exit 1 (no marker)
-//   linger   -> write partial events, stay alive; SIGTERM writes a "canceled" marker
+// Pure Node with no workspace imports so the spawned child survives independent of the test process; behavior via FAKE_WORKER_BEHAVIOR.
 import { appendFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 

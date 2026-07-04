@@ -2,7 +2,8 @@ import { expect, it } from "vitest";
 
 import { isProcessAlive, killProcessGroup } from "#supervisor";
 
-import { deadPid, spawnOrphan, waitFor } from "../support/supervisor.js";
+import { waitFor } from "../support/poll.js";
+import { deadPid, spawnOrphan } from "../support/spawn.js";
 
 it("reports the current process as alive", () => {
   expect(isProcessAlive(process.pid)).toBe(true);
@@ -14,10 +15,13 @@ it("reports a finished process as dead", async () => {
 
 it("kills a detached process group", async () => {
   const orphan = spawnOrphan();
-  expect(isProcessAlive(orphan.pid)).toBe(true);
-  killProcessGroup(orphan.pgid, "SIGKILL");
-  expect(await waitFor(() => !isProcessAlive(orphan.pid))).toBe(true);
-  orphan.stop();
+  try {
+    expect(isProcessAlive(orphan.pid)).toBe(true);
+    killProcessGroup(orphan.pgid, "SIGKILL");
+    expect(await waitFor(() => !isProcessAlive(orphan.pid))).toBe(true);
+  } finally {
+    orphan.stop();
+  }
 });
 
 it("ignores a signal to a non-existent group", () => {

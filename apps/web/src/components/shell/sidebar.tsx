@@ -7,9 +7,9 @@ import {
   type ProjectSummary,
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-import { CircleDot, ListTodo, Settings } from "lucide-react";
+import { ListTodo, Settings } from "lucide-react";
 
-export type ShellSection = "issues" | "runs" | "settings";
+export type ShellSection = "issues" | "settings";
 
 export function Sidebar({
   active,
@@ -28,16 +28,6 @@ export function Sidebar({
           icon={ListTodo}
           label="Issues"
           active={active === "issues"}
-          render={({ className, children, ...rest }) => (
-            <Link to="/issues" className={className} {...rest}>
-              {children}
-            </Link>
-          )}
-        />
-        <SidebarNavItem
-          icon={CircleDot}
-          label="Runs"
-          active={active === "runs"}
           render={({ className, children, ...rest }) => (
             <Link to="/issues" className={className} {...rest}>
               {children}

@@ -1,5 +1,5 @@
-import type { Db } from "@otomat/db";
-import type { RunContract, StartRunRequest } from "@otomat/domain";
+import type { Db, RunRow } from "@otomat/db";
+import type { StartRunRequest } from "@otomat/domain";
 
 export interface ApiDeps {
   db: Db;
@@ -7,9 +7,7 @@ export interface ApiDeps {
   version: string;
   startedAt: string;
   dbPath: string;
-  launchRun(request: StartRunRequest): Promise<RunContract>;
-  /** Re-run a human-waiting run on an explicit operator action (resume-on-action, never auto). */
-  resumeRun(runId: string): Promise<RunContract>;
-  /** Cancel a run: kill its process group and write the canonical canceled state + event. */
-  abortRun(runId: string, reason?: string): Promise<void>;
+  launchRun(request: StartRunRequest): Promise<RunRow>;
+  resumeRun(runId: string): Promise<RunRow>;
+  abortRun(runId: string): Promise<void>;
 }

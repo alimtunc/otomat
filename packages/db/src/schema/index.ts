@@ -1,3 +1,4 @@
+import type { AgentSessionState, RunState, StepRunState } from "@otomat/domain";
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
@@ -80,7 +81,7 @@ export const runs = sqliteTable("runs", {
   repository_id: text("repository_id").references(() => repositories.id),
   worktree_id: text("worktree_id").references(() => worktrees.id),
   agent_id: text("agent_id").references(() => agents.id),
-  status: text("status").notNull().default("queued"),
+  status: text("status").$type<RunState>().notNull().default("queued"),
   branch: text("branch").notNull(),
   // Plan frozen at launch. There is no workflow_revisions table by design.
   plan_json: text("plan_json", { mode: "json" }).notNull(),
@@ -98,7 +99,7 @@ export const stepRuns = sqliteTable(
       .references(() => runs.id),
     idx: integer("idx").notNull(),
     name: text("name").notNull(),
-    status: text("status").notNull().default("queued"),
+    status: text("status").$type<StepRunState>().notNull().default("queued"),
     ...timestamps,
   },
   (table) => [uniqueIndex("step_runs_run_idx_unique").on(table.run_id, table.idx)],
@@ -110,14 +111,12 @@ export const agentSessions = sqliteTable("agent_sessions", {
     .notNull()
     .references(() => stepRuns.id),
   agent_id: text("agent_id").references(() => agents.id),
-  status: text("status").notNull().default("created"),
+  status: text("status").$type<AgentSessionState>().notNull().default("created"),
   provider_session_id: text("provider_session_id"),
-  // Supervisor liveness (OTO-10): the runtime runs as a child process whose
-  // pid/pgid survive a daemon crash, so boot reconciliation can probe it.
+  // The runtime runs as a child process whose pid/pgid survive a daemon crash,
+  // so boot reconciliation can probe it.
   pid: integer("pid"),
   pgid: integer("pgid"),
-  started_at: text("started_at"),
-  last_seen: text("last_seen"),
   exit_code: integer("exit_code"),
   exit_signal: text("exit_signal"),
   ...timestamps,

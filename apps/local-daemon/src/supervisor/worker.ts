@@ -1,48 +1,66 @@
 import { join } from "node:path";
 
-import { FakeRuntimeAdapter, JsonlEventSink, MemorySink, type RuntimeFinalState } from "#runtime";
+import { z } from "zod";
 
-import { buildTerminalMarker } from "./marker.js";
+import { EVENTS_FILENAME } from "#events";
+import { FakeRuntimeAdapter, JsonlEventSink, type RuntimeFinalState } from "#runtime";
+
+import { buildTerminalMarker } from "./markers.js";
 import { WORKER_JOB_ENV, type SupervisedJob } from "./types.js";
 
-/** Reads the job a parent supervisor handed this process, or null when run outside worker mode. */
+const supervisedJobSchema = z.object({
+  runId: z.string(),
+  stepRunId: z.string(),
+  agentSessionId: z.string(),
+  prompt: z.string(),
+  runDir: z.string(),
+  mode: z.enum(["run", "resume"]),
+  providerSessionId: z.string().nullable(),
+}) satisfies z.ZodType<SupervisedJob>;
+
 export function parseJob(env: NodeJS.ProcessEnv): SupervisedJob | null {
   const raw = env[WORKER_JOB_ENV];
   if (raw === undefined || raw === "") return null;
-  return JSON.parse(raw) as SupervisedJob;
+  return supervisedJobSchema.parse(JSON.parse(raw));
 }
 
-/** Executes one turn with the fake adapter, which streams its evidence into the run's `events.jsonl`. */
-export function runWorkerJob(job: SupervisedJob, signal: AbortSignal): Promise<RuntimeFinalState> {
+export async function runWorkerJob(
+  job: SupervisedJob,
+  signal: AbortSignal,
+): Promise<RuntimeFinalState> {
   const adapter = new FakeRuntimeAdapter();
-  const sink = new MemorySink();
-  if (job.mode === "resume") {
-    return adapter.resume(
+  // The worker owns durability: every event lands in the run's events.jsonl for the tailer/reconciliation.
+  const sink = new JsonlEventSink(join(job.runDir, EVENTS_FILENAME));
+  try {
+    if (job.mode === "resume") {
+      return await adapter.resume(
+        {
+          run_id: job.runId,
+          step_run_id: job.stepRunId,
+          agent_session_id: job.agentSessionId,
+          provider_session_id: job.providerSessionId,
+        },
+        { prompt: job.prompt, run_dir: job.runDir },
+        sink,
+        signal,
+      );
+    }
+    return await adapter.run(
       {
         run_id: job.runId,
         step_run_id: job.stepRunId,
         agent_session_id: job.agentSessionId,
-        provider_session_id: job.providerSessionId,
+        prompt: job.prompt,
+        run_dir: job.runDir,
       },
-      { prompt: job.prompt, run_dir: job.runDir },
       sink,
       signal,
     );
+  } finally {
+    sink.close();
   }
-  return adapter.run(
-    {
-      run_id: job.runId,
-      step_run_id: job.stepRunId,
-      agent_session_id: job.agentSessionId,
-      prompt: job.prompt,
-      run_dir: job.runDir,
-    },
-    sink,
-    signal,
-  );
 }
 
-/** Appends the durable terminal marker as the final `events.jsonl` line, so reconciliation can read the outcome. */
 export function writeTerminalMarker(
   job: SupervisedJob,
   final: RuntimeFinalState,
@@ -55,7 +73,7 @@ export function writeTerminalMarker(
     final.event_count,
     occurredAt,
   );
-  const sink = new JsonlEventSink(join(job.runDir, "events.jsonl"));
+  const sink = new JsonlEventSink(join(job.runDir, EVENTS_FILENAME));
   try {
     sink.emit(marker);
   } finally {
@@ -63,11 +81,8 @@ export function writeTerminalMarker(
   }
 }
 
-/**
- * Worker entrypoint: run the job, write the terminal marker, exit. A `SIGTERM`/`SIGINT`
- * (graceful abort) aborts the turn so the adapter writes a `canceled` marker; a `SIGKILL`
- * leaves no marker, which reconciliation reads as an interrupted (resumable) run.
- */
+// SIGTERM/SIGINT abort the turn so the adapter writes a `canceled` marker; SIGKILL leaves
+// none, which reconciliation reads as interrupted (resumable).
 export async function runWorkerMain(env: NodeJS.ProcessEnv = process.env): Promise<void> {
   const job = parseJob(env);
   if (job === null) {

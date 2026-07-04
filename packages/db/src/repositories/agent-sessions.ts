@@ -11,10 +11,6 @@ export function insertAgentSession(db: Db, value: NewAgentSession): void {
   db.insert(agentSessions).values(value).run();
 }
 
-export function getAgentSession(db: Db, id: string): AgentSessionRow | undefined {
-  return db.select().from(agentSessions).where(eq(agentSessions.id, id)).get();
-}
-
 export function listAgentSessionsForRun(db: Db, runId: string): AgentSessionRow[] {
   return db
     .select(getTableColumns(agentSessions))
@@ -25,46 +21,42 @@ export function listAgentSessionsForRun(db: Db, runId: string): AgentSessionRow[
     .all();
 }
 
-export function updateAgentSessionStatus(db: Db, id: string, status: AgentSessionState): void {
+function patchAgentSession(
+  db: Db,
+  id: string,
+  set: Partial<typeof agentSessions.$inferInsert>,
+): void {
   db.update(agentSessions)
-    .set({ status, updated_at: sql`(CURRENT_TIMESTAMP)` })
+    .set({ ...set, updated_at: sql`(CURRENT_TIMESTAMP)` })
     .where(eq(agentSessions.id, id))
     .run();
+}
+
+export function updateAgentSessionStatus(db: Db, id: string, status: AgentSessionState): void {
+  patchAgentSession(db, id, { status });
 }
 
 /** Persist the provider session id (the resume key) once the runtime reports it. */
 export function updateAgentSessionProvider(db: Db, id: string, providerSessionId: string): void {
-  db.update(agentSessions)
-    .set({ provider_session_id: providerSessionId, updated_at: sql`(CURRENT_TIMESTAMP)` })
-    .where(eq(agentSessions.id, id))
-    .run();
+  patchAgentSession(db, id, { provider_session_id: providerSessionId });
 }
 
-/** Process liveness recorded when the supervisor spawns the session's child process. */
+/** The child process ids recorded when the supervisor spawns a session, so reconciliation can probe them. */
 export interface AgentSessionProcess {
   pid: number;
   pgid: number;
-  started_at: string;
-  last_seen: string;
 }
 
 export function recordAgentSessionProcess(db: Db, id: string, process: AgentSessionProcess): void {
-  db.update(agentSessions)
-    .set({ ...process, updated_at: sql`(CURRENT_TIMESTAMP)` })
-    .where(eq(agentSessions.id, id))
-    .run();
+  patchAgentSession(db, id, process);
 }
 
 /** Final process accounting written once the supervisor observes the child exit. */
 export interface AgentSessionExit {
   exit_code: number | null;
   exit_signal: string | null;
-  last_seen: string;
 }
 
 export function recordAgentSessionExit(db: Db, id: string, exit: AgentSessionExit): void {
-  db.update(agentSessions)
-    .set({ ...exit, updated_at: sql`(CURRENT_TIMESTAMP)` })
-    .where(eq(agentSessions.id, id))
-    .run();
+  patchAgentSession(db, id, exit);
 }

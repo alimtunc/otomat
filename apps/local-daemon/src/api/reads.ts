@@ -17,8 +17,6 @@ import {
   type RunDetail,
 } from "@otomat/domain";
 
-import { readRunEvents } from "#events";
-
 import { toAgentSession, toIssue, toProject, toRepository, toRun, toStepRun } from "./serialize.js";
 
 export function readProjects(db: Db): ProjectContract[] {
@@ -49,6 +47,5 @@ export function readRunDetail(db: Db, runId: string): RunDetail | null {
     run: toRun(run),
     steps: listStepRunsForRun(db, runId).map(toStepRun),
     sessions: listAgentSessionsForRun(db, runId).map(toAgentSession),
-    events: readRunEvents(db, runId),
   };
 }

@@ -7,14 +7,27 @@ import {
   type SupervisedJob,
 } from "./types.js";
 
-/**
- * Is `pid` a live process? `kill(pid, 0)` sends no signal; it only probes. `ESRCH`
- * means gone, `EPERM` means alive but owned by another user (still "alive" for our
- * purposes). Any other error is treated as not-alive to stay conservative.
- */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    timer.unref();
+  });
+}
+
+export async function terminateGracefully(proc: SessionProcess, graceMs: number): Promise<void> {
+  proc.kill("SIGTERM");
+  const exitedInTime = await Promise.race([
+    proc.exited.then(() => true),
+    delay(graceMs).then(() => false),
+  ]);
+  if (!exitedInTime) {
+    proc.kill("SIGKILL");
+    await proc.exited;
+  }
+}
+
+// kill(pid, 0) only probes: ESRCH = gone, EPERM = alive under another uid; pid <= 1 rejects the kill(0)/kill(-1)/init sentinels.
 export function isProcessAlive(pid: number): boolean {
-  // Reject non-positive sentinels: `kill(0/-1)` mean "my group"/"every process",
-  // and pid 1 is init — none are a supervised worker we may probe or signal.
   if (pid <= 1) return false;
   try {
     process.kill(pid, 0);
@@ -24,29 +37,17 @@ export function isProcessAlive(pid: number): boolean {
   }
 }
 
-/**
- * Signal a whole process group (`kill(-pgid)`). The detached worker is its own
- * group leader, so this also reaps any grandchildren it spawned. A missing group
- * (already-dead, or a pid the OS reused that is not this group's leader) yields
- * `ESRCH` and is ignored, which keeps the blast radius off unrelated processes.
- */
+// kill(-pgid) signals the whole detached group; pgid <= 1 guards init, kill(-0), and the -1 spawn-failure sentinel.
 export function killProcessGroup(pgid: number, signal: NodeJS.Signals): void {
-  // Guard against `-pgid` resolving to PID 1 (pgid 1), the whole system (pgid 0 ->
-  // kill(-0)=kill(0)), or the -1 sentinel from a failed spawn (kill(1)).
   if (pgid <= 1) return;
   try {
     process.kill(-pgid, signal);
   } catch {
-    // ESRCH: group already gone. Nothing to reap.
+    // ESRCH: group already gone.
   }
 }
 
-/**
- * Re-execs the daemon's own entrypoint in worker mode (gated by {@link WORKER_JOB_ENV}),
- * detached into a fresh process group so the child outlives a daemon crash and can be
- * group-signalled. `mainScript` is the entry to re-run (`process.argv[1]`); `execArgv`
- * carries dev loader flags (e.g. tsx) so it works from `src` and from bundled `dist`.
- */
+// Re-execs the daemon entrypoint detached into its own group so the child outlives a daemon crash; execArgv carries dev loader flags so it works from src and dist.
 export function createReexecSpawn(mainScript: string): (job: SupervisedJob) => SessionProcess {
   return (job) => {
     const child = spawn(process.execPath, [...process.execArgv, mainScript], {
@@ -59,7 +60,10 @@ export function createReexecSpawn(mainScript: string): (job: SupervisedJob) => S
     const pid = child.pid ?? -1;
     const exited = new Promise<ProcessExit>((resolve) => {
       child.on("exit", (code, signal) => resolve({ code, signal }));
-      child.on("error", () => resolve({ code: null, signal: null }));
+      child.on("error", (error) => {
+        console.error(`[otomat] spawn failed for run ${job.runId}`, error);
+        resolve({ code: null, signal: null });
+      });
     });
 
     return {

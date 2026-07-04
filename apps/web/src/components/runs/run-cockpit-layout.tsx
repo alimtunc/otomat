@@ -6,7 +6,7 @@ export function RunCockpitLayout() {
   const { runId } = useParams({ from: "/runs/$runId" });
   return (
     <RouteShell
-      active="runs"
+      active="issues"
       breadcrumbs={[
         { label: "Issues", href: "/issues" },
         { label: `Run ${runId.slice(0, 8)}`, current: true },

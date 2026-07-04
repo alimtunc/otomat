@@ -15,5 +15,11 @@ pre-push:
       run: pnpm typecheck
     boundaries:
       run: pnpm boundaries
+    lint:
+      run: pnpm lint
+    format:
+      run: pnpm format:check
+    guardrails:
+      run: pnpm guardrails
     test:
       run: pnpm test

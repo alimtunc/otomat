@@ -1,24 +1,23 @@
 import { appendFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { getRun, listAgentSessionsForRun, listStepRunsForRun } from "@otomat/db";
+import { getRun, listAgentSessionsForRun, listStepRunsForRun, schema } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
 import { isProcessAlive, reconcileRuns } from "#supervisor";
 
+import { waitFor } from "../support/poll.js";
 import {
   completedMarker,
-  deadPid,
+  expectContiguousSeqs,
   logEvent,
   providerSessionEvent,
-  seedRun,
-  setupSupervisorDb,
-  spawnOrphan,
-  waitFor,
   writeRunEvents,
-  type SupervisorTestDb,
-} from "../support/supervisor.js";
+} from "../support/run-event-fixtures.js";
+import { seedRun } from "../support/seed.js";
+import { deadPid, spawnOrphan } from "../support/spawn.js";
+import { setupSupervisorDb, type SupervisorTestDb } from "../support/supervisor-db.js";
 
 const NOW = "2026-06-24T12:00:00.000Z";
 
@@ -55,7 +54,7 @@ it("classifies a run with a terminal marker as completed → review_ready", asyn
   expect(listAgentSessionsForRun(fix.db, "r1")[0]?.status).toBe("terminated");
 
   const events = readRunEvents(fix.db, "r1");
-  expect(events.map((e) => e.seq)).toEqual(events.map((_, i) => i));
+  expectContiguousSeqs(events);
   expect(events.at(-1)?.type).toBe("system.reconciled");
 });
 
@@ -196,6 +195,24 @@ it("settles a queued run left in flight by a crash (semaphore window)", async ()
   expect(report.reconciled.map((o) => o.runId)).toContain("rq");
   expect(getRun(fix.db, "rq")?.status).toBe("failed");
   expect(listStepRunsForRun(fix.db, "rq")[0]?.status).toBe("stale");
+});
+
+it("settles a corrupt plan_json run as failed instead of hiding it", () => {
+  fix.db
+    .insert(schema.runs)
+    .values({ id: "rx", issue_id: "i1", status: "running", branch: "b", plan_json: { nope: true } })
+    .run();
+  writeRunEvents(fix.dataDir, "rx", []);
+
+  const report = reconcileRuns(fix.db, fix.dataDir, NOW);
+
+  expect(report.reconciled.map((o) => o.runId)).toContain("rx");
+  const row = fix.db
+    .select()
+    .from(schema.runs)
+    .all()
+    .find((r) => r.id === "rx");
+  expect(row?.status).toBe("failed");
 });
 
 it("normalizes an awaiting_permission run through running to its outcome", async () => {

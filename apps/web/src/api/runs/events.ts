@@ -1,18 +1,13 @@
 import type { EventEnvelope } from "@otomat/domain";
 
+// Events arrive in ascending seq (catch-up then live), so the common path is an O(1) tail append.
 export function mergeEvent(current: EventEnvelope[], event: EventEnvelope): EventEnvelope[] {
+  const last = current.at(-1);
+  if (last === undefined || event.seq > last.seq) return [...current, event];
   if (current.some((existing) => existing.seq === event.seq)) return current;
-  return [...current, event];
-}
-
-export function mergeEventsBySeq(
-  persisted: EventEnvelope[],
-  live: EventEnvelope[],
-): EventEnvelope[] {
-  const bySeq = new Map<number, EventEnvelope>();
-  for (const event of persisted) bySeq.set(event.seq, event);
-  for (const event of live) bySeq.set(event.seq, event);
-  return [...bySeq.values()].toSorted((a, b) => a.seq - b.seq);
+  const next = [...current, event];
+  next.sort((a, b) => a.seq - b.seq);
+  return next;
 }
 
 export function eventSummary(event: EventEnvelope): string {

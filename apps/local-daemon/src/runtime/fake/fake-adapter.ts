@@ -1,5 +1,3 @@
-import { join } from "node:path";
-
 import type { RuntimeCapabilities } from "../capabilities.js";
 import {
   type RuntimeAdapter,
@@ -10,7 +8,7 @@ import {
   type RuntimeUsage,
 } from "../contract.js";
 import type { EventFidelity, RuntimeEvent } from "../events.js";
-import { JsonlEventSink, createTeeSink, type RuntimeSink } from "../sinks.js";
+import type { RuntimeSink } from "../sinks.js";
 
 export const FAKE_ADAPTER_ID = "fake";
 
@@ -117,9 +115,9 @@ function resumeSpecs(prompt: string, providerSession: string): EventSpec[] {
 /**
  * Deterministic test adapter. Exercises the full sink pipeline — provider
  * session, logs, tool calls, permission round-trip, usage — across all three
- * fidelity tiers, and persists a re-readable `events.jsonl`. Every event is
- * labeled `test_adapter` with `source: "otomat"`, so no frame can ever be
- * presented as a real provider result.
+ * fidelity tiers. Durability is the caller's sink concern, as with a real
+ * provider adapter. Every event is labeled `test_adapter` with
+ * `source: "otomat"`, so no frame can ever be presented as a real provider result.
  */
 export class FakeRuntimeAdapter implements RuntimeAdapter {
   readonly id = FAKE_ADAPTER_ID;
@@ -148,7 +146,7 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
       agent_session_id: input.agent_session_id,
       provider_session_id: providerSession,
     };
-    return this.emitTurn(ctx, input.run_dir, runSpecs(input.prompt, providerSession), sink, signal);
+    return this.emitTurn(ctx, runSpecs(input.prompt, providerSession), sink, signal);
   }
 
   async resume(
@@ -164,13 +162,7 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
       agent_session_id: session.agent_session_id,
       provider_session_id: providerSession,
     };
-    return this.emitTurn(
-      ctx,
-      input.run_dir,
-      resumeSpecs(input.prompt, providerSession),
-      sink,
-      signal,
-    );
+    return this.emitTurn(ctx, resumeSpecs(input.prompt, providerSession), sink, signal);
   }
 
   async abort(_session: RuntimeSessionRef, _reason: string): Promise<void> {
@@ -179,27 +171,20 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
 
   private emitTurn(
     ctx: TurnContext,
-    runDir: string,
     specs: EventSpec[],
     sink: RuntimeSink,
     signal: AbortSignal,
   ): RuntimeFinalState {
     const turn = this.turn++;
-    const jsonl = new JsonlEventSink(join(runDir, "events.jsonl"));
-    const out = createTeeSink([sink, jsonl]);
     let emitted = 0;
-    try {
-      for (const spec of specs) {
-        if (signal.aborted) {
-          out.emit(buildEvent(ctx, turn, emitted, abortSpec()));
-          emitted += 1;
-          return canceledState(ctx.provider_session_id, emitted);
-        }
-        out.emit(buildEvent(ctx, turn, emitted, spec));
+    for (const spec of specs) {
+      if (signal.aborted) {
+        sink.emit(buildEvent(ctx, turn, emitted, abortSpec()));
         emitted += 1;
+        return canceledState(ctx.provider_session_id, emitted);
       }
-    } finally {
-      jsonl.close();
+      sink.emit(buildEvent(ctx, turn, emitted, spec));
+      emitted += 1;
     }
     return {
       status: "completed",

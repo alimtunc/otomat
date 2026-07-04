@@ -49,3 +49,30 @@ export function defineMachine<S extends string>(definition: MachineDefinition<S>
     },
   };
 }
+
+/** Shortest legal sequence of states from `from` to `to` (excluding `from`, including `to`), or null if unreachable. */
+export function shortestPath<S extends string>(
+  machine: StateMachine<S>,
+  from: S,
+  to: S,
+): S[] | null {
+  if (from === to) return [];
+  const queue: S[][] = [[from]];
+  const seen = new Set<S>([from]);
+
+  while (queue.length > 0) {
+    const path = queue.shift();
+    if (path === undefined) break;
+    const last = path.at(-1);
+    if (last === undefined) continue;
+
+    for (const next of machine.next(last)) {
+      if (seen.has(next)) continue;
+      const extended = [...path, next];
+      if (next === to) return extended.slice(1);
+      seen.add(next);
+      queue.push(extended);
+    }
+  }
+  return null;
+}

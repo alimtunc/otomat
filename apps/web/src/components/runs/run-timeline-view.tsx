@@ -1,6 +1,5 @@
 import { ErrorState, Skeleton } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
-import { mergeEventsBySeq } from "@web/api/runs/events";
 import { useRunDetail, useRunEvents } from "@web/api/runs/queries";
 import { RunStatusBar } from "@web/components/runs/run-status-bar";
 import { RunTimeline } from "@web/components/runs/run-timeline";
@@ -31,11 +30,10 @@ export function RunTimelineView() {
     );
   }
 
-  const events = mergeEventsBySeq(detail.data.events, stream.events);
   return (
     <div className="flex h-full min-h-0 flex-col">
       <RunStatusBar detail={detail.data} />
-      <RunTimeline events={events} state={stream.state} />
+      <RunTimeline events={stream.events} state={stream.state} degraded={stream.degraded} />
     </div>
   );
 }

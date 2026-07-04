@@ -2,12 +2,16 @@ import {
   updateAgentSessionStatus,
   updateRunStatus,
   updateStepRunStatus,
+  type AgentSessionRow,
   type Db,
+  type StepRunRow,
 } from "@otomat/db";
 import {
   agentSessionMachine,
+  IllegalTransitionError,
   isRunTerminal,
   runMachine,
+  shortestPath,
   stepRunMachine,
   type AgentSessionState,
   type RunState,
@@ -15,71 +19,27 @@ import {
   type StepRunState,
 } from "@otomat/domain";
 
-/**
- * Shortest legal sequence of states from `from` to `to` through `machine`, excluding
- * `from` and including `to`; null when `to` is unreachable. Lets reconciliation aim a
- * crashed entity at a target outcome without hard-coding every intermediate hop (e.g.
- * `awaiting_permission → running → awaiting_human`).
- */
-export function shortestPath<S extends string>(
+function drive<S extends string>(
   machine: StateMachine<S>,
   from: S,
   to: S,
-): S[] | null {
-  if (from === to) return [];
-  const queue: S[][] = [[from]];
-  const seen = new Set<S>([from]);
-
-  while (queue.length > 0) {
-    const path = queue.shift();
-    if (path === undefined) break;
-    const last = path.at(-1);
-    if (last === undefined) continue;
-
-    for (const next of machine.next(last)) {
-      if (seen.has(next)) continue;
-      const extended = [...path, next];
-      if (next === to) return extended.slice(1);
-      seen.add(next);
-      queue.push(extended);
-    }
-  }
-  return null;
+  apply: (state: S) => void,
+): void {
+  const path = shortestPath(machine, from, to);
+  if (path === null) throw new IllegalTransitionError(machine.name, from, to);
+  for (const state of path) apply(state);
 }
 
-/** Walks the run from `from` to `to` along the shortest legal path, stamping `completed_at` on a terminal landing. */
-export function driveRunTo(
-  db: Db,
-  runId: string,
-  from: RunState,
-  to: RunState,
-  now: string,
-): RunState {
-  const path = shortestPath(runMachine, from, to);
-  if (path === null) return from;
-  let reached = from;
-  for (const state of path) {
+/** Walks the run to `to` along the shortest legal path, stamping `completed_at` on a terminal landing. */
+export function driveRunTo(db: Db, runId: string, from: RunState, to: RunState, now: string): void {
+  drive(runMachine, from, to, (state) => {
     const completedAt = isRunTerminal(state) ? { completed_at: now } : {};
     updateRunStatus(db, runId, { status: state, ...completedAt });
-    reached = state;
-  }
-  return reached;
+  });
 }
 
-export function driveStepTo(
-  db: Db,
-  stepRunId: string,
-  from: StepRunState,
-  to: StepRunState,
-): StepRunState {
-  const path = shortestPath(stepRunMachine, from, to);
-  if (path === null) return from;
-  let reached = from;
-  for (const state of path) {
-    updateStepRunStatus(db, stepRunId, state);
-    reached = state;
-  }
-  return reached;
+export function driveStepTo(db: Db, stepRunId: string, from: StepRunState, to: StepRunState): void {
+  drive(stepRunMachine, from, to, (state) => updateStepRunStatus(db, stepRunId, state));
 }
 
 export function driveSessionTo(
@@ -87,13 +47,23 @@ export function driveSessionTo(
   sessionId: string,
   from: AgentSessionState,
   to: AgentSessionState,
-): AgentSessionState {
-  const path = shortestPath(agentSessionMachine, from, to);
-  if (path === null) return from;
-  let reached = from;
-  for (const state of path) {
-    updateAgentSessionStatus(db, sessionId, state);
-    reached = state;
+): void {
+  drive(agentSessionMachine, from, to, (state) => updateAgentSessionStatus(db, sessionId, state));
+}
+
+/** Drives every non-terminal step and session of a run to the given targets. */
+export function driveStepsAndSessionsTo(
+  db: Db,
+  steps: readonly StepRunRow[],
+  sessions: readonly AgentSessionRow[],
+  stepTarget: StepRunState,
+  sessionTarget: AgentSessionState,
+): void {
+  for (const step of steps) {
+    if (!stepRunMachine.isTerminal(step.status)) driveStepTo(db, step.id, step.status, stepTarget);
   }
-  return reached;
+  for (const session of sessions) {
+    if (!agentSessionMachine.isTerminal(session.status))
+      driveSessionTo(db, session.id, session.status, sessionTarget);
+  }
 }

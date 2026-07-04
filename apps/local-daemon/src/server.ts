@@ -4,7 +4,7 @@ import { serve } from "@hono/node-server";
 import { createClient, defaultDbPath, runMigrations } from "@otomat/db";
 
 import { createApiApp, logApiRoutes } from "#api";
-import { createReexecSpawn, createSupervisor, reconcileRuns } from "#supervisor";
+import { createReexecSpawn, createSupervisor } from "#supervisor";
 
 import { ensureDefaultProject } from "./bootstrap.js";
 
@@ -31,19 +31,20 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
   const projectRoot = process.env.OTOMAT_PROJECT_ROOT ?? process.cwd();
   const defaultProjectId = ensureDefaultProject(db, projectRoot);
 
-  // Before accepting traffic: settle any run left non-terminal by a previous crash/kill,
-  // so the API never serves a phantom "running" run and never double-spawns one.
-  const report = reconcileRuns(db, dataDir, new Date().toISOString());
-  if (report.reconciled.length > 0) {
-    console.log(`[otomat] reconciled ${report.reconciled.length} run(s) left in flight at boot`);
-  }
-
+  const mainScript = process.argv[1];
+  if (!mainScript) throw new Error("cannot determine daemon entrypoint for worker re-exec");
   const supervisor = createSupervisor({
     db,
     dataDir,
     defaultProjectId,
-    spawn: createReexecSpawn(process.argv[1] ?? ""),
+    spawn: createReexecSpawn(mainScript),
   });
+
+  // Settle crash remnants before accepting traffic: no phantom "running" run, no double-spawn.
+  const report = supervisor.reconcile();
+  if (report.reconciled.length > 0) {
+    console.log(`[otomat] reconciled ${report.reconciled.length} run(s) left in flight at boot`);
+  }
 
   const app = createApiApp({
     db,
@@ -59,7 +60,8 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
   if (process.env.OTOMAT_LOG_ROUTES) logApiRoutes(app);
 
   const port = options.port ?? Number(process.env.OTOMAT_DAEMON_PORT ?? 4319);
-  const server = serve({ fetch: app.fetch, port });
+  const hostname = process.env.OTOMAT_DAEMON_HOST ?? "127.0.0.1";
+  const server = serve({ fetch: app.fetch, port, hostname });
   server.on("error", (error) => {
     console.error(`[otomat] daemon failed to bind port ${port}`, error);
     process.exit(1);
