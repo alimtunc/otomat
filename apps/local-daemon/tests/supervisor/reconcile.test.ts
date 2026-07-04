@@ -1,4 +1,4 @@
-import { appendFileSync } from "node:fs";
+import { appendFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { getRun, listAgentSessionsForRun, listStepRunsForRun, schema } from "@otomat/db";
@@ -6,6 +6,11 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
 import { isProcessAlive, reconcileRuns } from "#supervisor";
+import {
+  readProcessStartTime,
+  WORKER_IDENTITY_FILE,
+  writeWorkerIdentity,
+} from "#supervisor/identity";
 
 import { waitFor } from "../support/poll.js";
 import {
@@ -97,7 +102,7 @@ it("classifies a dead process with no evidence as failed → stale", async () =>
   expect(listAgentSessionsForRun(fix.db, "r3")[0]?.status).toBe("failed");
 });
 
-it("terminates a still-alive orphan group and marks it interrupted", async () => {
+it("terminates a still-alive orphan group whose identity is proven, and marks it interrupted", async () => {
   const orphan = spawnOrphan();
   try {
     const seed = seedRun(fix.db, {
@@ -108,6 +113,8 @@ it("terminates a still-alive orphan group and marks it interrupted", async () =>
       pid: orphan.pid,
       pgid: orphan.pgid,
     });
+    // A real worker stamps its identity next to its pid; here we simulate that for the live orphan.
+    writeWorkerIdentity(join(fix.dataDir, "runs", "r4"), orphan.pid, orphan.pgid);
     writeRunEvents(fix.dataDir, "r4", [providerSessionEvent(seed, "ps-r4")]);
 
     const report = reconcileRuns(fix.db, fix.dataDir, NOW);
@@ -116,6 +123,65 @@ it("terminates a still-alive orphan group and marks it interrupted", async () =>
     expect(report.reconciled[0]?.classification).toBe("interrupted");
     expect(getRun(fix.db, "r4")?.status).toBe("awaiting_human");
     expect(await waitFor(() => !isProcessAlive(orphan.pid))).toBe(true);
+  } finally {
+    orphan.stop();
+  }
+});
+
+it("does not signal an alive pid with no recorded identity; settles it from the ledger", async () => {
+  const orphan = spawnOrphan();
+  try {
+    const seed = seedRun(fix.db, {
+      runId: "r4b",
+      runStatus: "running",
+      stepStatus: "running",
+      sessionStatus: "active",
+      pid: orphan.pid,
+      pgid: orphan.pgid,
+    });
+    // No worker.json written → identity unprovable → the group must be left untouched.
+    writeRunEvents(fix.dataDir, "r4b", [providerSessionEvent(seed, "ps-r4b")]);
+
+    const report = reconcileRuns(fix.db, fix.dataDir, NOW);
+
+    expect(report.reconciled[0]?.orphanTerminated).toBe(false);
+    expect(report.reconciled[0]?.classification).toBe("interrupted");
+    expect(getRun(fix.db, "r4b")?.status).toBe("awaiting_human");
+    expect(listAgentSessionsForRun(fix.db, "r4b")[0]?.status).toBe("awaiting_input");
+    expect(isProcessAlive(orphan.pid)).toBe(true);
+    expect(readRunEvents(fix.db, "r4b").some((e) => e.type === "system.reconciled")).toBe(true);
+  } finally {
+    orphan.stop();
+  }
+});
+
+it("does not signal an alive pid the OS reused (identity start-time mismatch)", async () => {
+  const orphan = spawnOrphan();
+  try {
+    const seed = seedRun(fix.db, {
+      runId: "r4c",
+      runStatus: "running",
+      stepStatus: "running",
+      sessionStatus: "active",
+      pid: orphan.pid,
+      pgid: orphan.pgid,
+    });
+    writeRunEvents(fix.dataDir, "r4c", [providerSessionEvent(seed, "ps-r4c")]);
+    // Identity recorded for this pid, but with a start-time that no longer matches the live process —
+    // exactly what a reused pid looks like after a long daemon downtime.
+    const stale = readProcessStartTime(orphan.pid) ?? "Mon Jan  1 00:00:00 2000";
+    writeFileSync(
+      join(fix.dataDir, "runs", "r4c", WORKER_IDENTITY_FILE),
+      JSON.stringify({ pid: orphan.pid, pgid: orphan.pgid, start_time: `stale ${stale}` }),
+    );
+
+    const report = reconcileRuns(fix.db, fix.dataDir, NOW);
+
+    expect(report.reconciled[0]?.orphanTerminated).toBe(false);
+    expect(report.reconciled[0]?.classification).toBe("interrupted");
+    expect(getRun(fix.db, "r4c")?.status).toBe("awaiting_human");
+    expect(isProcessAlive(orphan.pid)).toBe(true);
+    expect(readRunEvents(fix.db, "r4c").some((e) => e.type === "system.reconciled")).toBe(true);
   } finally {
     orphan.stop();
   }

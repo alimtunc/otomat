@@ -7,7 +7,8 @@ import {
 } from "@otomat/db";
 import { runMachine } from "@otomat/domain";
 
-import { startLiveTail } from "./run-events.js";
+import { writeWorkerIdentity } from "./identity.js";
+import { runDir, startLiveTail } from "./run-events.js";
 import { settleRun } from "./settle.js";
 import type { SupervisorState } from "./state.js";
 import { driveRunTo, driveStepsAndSessionsTo } from "./transitions.js";
@@ -94,6 +95,8 @@ export async function spawnTurn(
     advanceToRunning(state, ctx);
     proc = state.spawn({ ...ctx, mode, providerSessionId });
     recordAgentSessionProcess(db, ctx.agentSessionId, { pid: proc.pid, pgid: proc.pgid });
+    // Stamp the process identity next to its pid so a later boot proves the group is still ours before killing it.
+    writeWorkerIdentity(runDir(state.dataDir, ctx.runId), proc.pid, proc.pgid);
     trackTurn(state, ctx, proc, release);
   } catch (error) {
     release();

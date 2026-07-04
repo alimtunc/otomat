@@ -13,9 +13,10 @@ import { readRunEvents } from "#events";
 
 import { classify, describe, TARGETS } from "./classify.js";
 import { findFinalStatus, findProviderSessionId } from "./evidence.js";
+import { isReapableWorker } from "./identity.js";
 import { buildReconciledEvent } from "./markers.js";
 import { isProcessAlive, killProcessGroup } from "./process.js";
-import { drainRunEvents, emitLedgerEvent } from "./run-events.js";
+import { drainRunEvents, emitLedgerEvent, runDir } from "./run-events.js";
 import { driveRunTo, driveStepsAndSessionsTo } from "./transitions.js";
 import { type ProcessExit, type ReconcileOutcome } from "./types.js";
 
@@ -44,7 +45,7 @@ export function settleRun(
   const sessions = listAgentSessionsForRun(db, run.id);
   const steps = listStepRunsForRun(db, run.id);
 
-  const orphanTerminated = reapProcesses(db, sessions, options);
+  const orphanTerminated = reapProcesses(db, runDir(dataDir, run.id), sessions, options);
 
   const classification = classify(finalStatus, providerSessionId);
   const reason = describe(classification, providerSessionId, orphanTerminated);
@@ -81,7 +82,12 @@ export function settleRun(
   return { runId: run.id, classification, reason, orphanTerminated, providerSessionId };
 }
 
-function reapProcesses(db: Db, sessions: AgentSessionRow[], options: SettleOptions): boolean {
+function reapProcesses(
+  db: Db,
+  runDirPath: string,
+  sessions: AgentSessionRow[],
+  options: SettleOptions,
+): boolean {
   let orphanTerminated = false;
   for (const session of sessions) {
     if (options.observedExit && session.pid !== null) {
@@ -92,10 +98,18 @@ function reapProcesses(db: Db, sessions: AgentSessionRow[], options: SettleOptio
     }
     if (options.mode !== "boot" || session.pid === null || session.pid <= 1) continue;
     if (agentSessionMachine.isTerminal(session.status)) continue;
-    if (isProcessAlive(session.pid)) {
+    if (!isProcessAlive(session.pid)) continue;
+    // The pid is alive — but after a long downtime the OS may have reused it. Only signal when the
+    // process identity still proves it is our worker; otherwise leave it and settle from the ledger.
+    if (isReapableWorker(runDirPath, session.pid)) {
       killProcessGroup(session.pgid ?? session.pid, "SIGKILL");
       recordAgentSessionExit(db, session.id, { exit_code: null, exit_signal: "SIGKILL" });
       orphanTerminated = true;
+    } else {
+      console.error(
+        `[otomat] session ${session.id}: pid ${session.pid} is alive but its identity is unproven ` +
+          `(possible pid reuse); not signalling — settling from ledger evidence`,
+      );
     }
   }
   return orphanTerminated;
