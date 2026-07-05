@@ -2,7 +2,6 @@ import type { EventEnvelope } from "@otomat/domain";
 import { EmptyState, TimelineEventRow } from "@otomat/ui";
 import { eventSummary } from "@web/api/runs/events";
 import type { RunStreamState } from "@web/api/runs/run-events-provider";
-import { Loader } from "lucide-react";
 
 import { emptyTimelineContent } from "./copy";
 
@@ -22,7 +21,7 @@ export function RunTimeline({
     return (
       <div className="grid flex-1 place-items-center p-6">
         <EmptyState
-          icon={Loader}
+          icon="loader"
           tone={empty.tone}
           title={empty.title}
           description={empty.description}

@@ -7,7 +7,6 @@ import {
   type ProjectSummary,
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-import { ListTodo, Settings } from "lucide-react";
 
 export type ShellSection = "issues" | "settings";
 
@@ -25,7 +24,7 @@ export function Sidebar({
     <AppSidebar projectSwitcher={projectSwitcher} footer={<SidebarDaemonStatus online={online} />}>
       <NavSection label="Workspace">
         <SidebarNavItem
-          icon={ListTodo}
+          icon="list-todo"
           label="Issues"
           active={active === "issues"}
           render={({ className, children, ...rest }) => (
@@ -37,7 +36,7 @@ export function Sidebar({
       </NavSection>
       <NavSection label="Configure">
         <SidebarNavItem
-          icon={Settings}
+          icon="settings"
           label="Settings"
           active={active === "settings"}
           render={({ className, children, ...rest }) => (

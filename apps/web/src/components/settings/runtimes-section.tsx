@@ -1,6 +1,5 @@
 import { EmptyState } from "@otomat/ui";
 import { SectionHeading } from "@web/components/settings/section-heading";
-import { Terminal } from "lucide-react";
 
 export function RuntimesSection() {
   return (
@@ -11,7 +10,7 @@ export function RuntimesSection() {
       />
       <div className="rounded-lg border border-border-subtle bg-card">
         <EmptyState
-          icon={Terminal}
+          icon="terminal"
           variant="inline"
           title="No runtimes registered"
           description="Runtime adapters are reported by the daemon. Capabilities are shown as present or absent — never aspirational."

@@ -8,11 +8,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
+  Icon,
   IconButton,
   Kbd,
   LiveDot,
 } from "@otomat/ui";
-import { Bot, ChevronDown, Cpu, MoreHorizontal } from "lucide-react";
 
 import { Row, Section } from "../section";
 
@@ -24,20 +24,20 @@ export function DropdownsSection() {
           <DropdownMenuTrigger
             render={
               <Button size="sm">
-                <Bot />
+                <Icon name="bot" />
                 Assign agent
-                <ChevronDown className="size-3.25" />
+                <Icon name="chevron-down" className="size-3.25" />
               </Button>
             }
           />
           <DropdownMenuContent align="start">
             <DropdownMenuLabel>Agents</DropdownMenuLabel>
             <DropdownMenuItem>
-              <Bot />
+              <Icon name="bot" />
               Implementer
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <Bot />
+              <Icon name="bot" />
               Reviewer
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -54,7 +54,7 @@ export function DropdownsSection() {
               <Chip tone="iris" className="cursor-pointer">
                 <LiveDot tone="iris" live size={7} />
                 running
-                <ChevronDown className="size-2.75" />
+                <Icon name="chevron-down" className="size-2.75" />
               </Chip>
             }
           />
@@ -68,9 +68,9 @@ export function DropdownsSection() {
           <DropdownMenuTrigger
             render={
               <Button size="sm">
-                <Cpu />
+                <Icon name="cpu" />
                 claude-sonnet-4.5
-                <ChevronDown className="size-3.25" />
+                <Icon name="chevron-down" className="size-3.25" />
               </Button>
             }
           />
@@ -82,7 +82,9 @@ export function DropdownsSection() {
         </DropdownMenu>
 
         <DropdownMenu>
-          <DropdownMenuTrigger render={<IconButton label="Actions" icon={<MoreHorizontal />} />} />
+          <DropdownMenuTrigger
+            render={<IconButton label="Actions" icon={<Icon name="more-horizontal" />} />}
+          />
           <DropdownMenuContent align="end">
             <DropdownMenuItem>
               Copy link

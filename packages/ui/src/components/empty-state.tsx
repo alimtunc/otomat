@@ -1,13 +1,13 @@
-import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { cn } from "../lib/utils";
+import { Icon, type IconName } from "./icon";
 
 export type EmptyStateTone = "neutral" | "error";
 export type EmptyStateVariant = "full" | "inline" | "compact";
 
 export interface EmptyStateProps {
-  icon: LucideIcon;
+  icon: IconName;
   title: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
@@ -23,7 +23,7 @@ const PADDING: Record<EmptyStateVariant, string> = {
 };
 
 export function EmptyState({
-  icon: Icon,
+  icon,
   title,
   description,
   action,
@@ -51,7 +51,11 @@ export function EmptyState({
           color: isError ? "var(--danger)" : "var(--text-tertiary)",
         }}
       >
-        <Icon size={variant === "compact" ? 24 : 32} aria-hidden="true" />
+        <Icon
+          name={icon}
+          className={variant === "compact" ? "size-6" : "size-8"}
+          aria-hidden="true"
+        />
       </div>
       <div
         className="font-semibold text-base"

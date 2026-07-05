@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Frontend lint rules oxlint cannot express (useEffect / &&-JSX / Tailwind spacing),
+// Frontend lint rules oxlint cannot express (useEffect / &&-JSX / Tailwind spacing / no lucide-react in apps/web),
 // over apps/web + packages/ui. Run via `pnpm guardrails`; each rule's intent lives in its report() message.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -26,6 +26,9 @@ const SPACING_RE = new RegExp(
   `(?<![\\w-])(${SPACING_PREFIXES.join("|")})-\\[(\\d+)px\\]`,
   "g",
 );
+// lucide-react is centralized behind @otomat/ui <Icon />; apps/web must never name it directly.
+const LUCIDE_RE = /["']lucide-react["']/g;
+const WEB_DIR = "apps/web/src";
 
 function listFiles(dir) {
   const abs = join(ROOT, dir);
@@ -98,6 +101,20 @@ for (const dir of SCAN_DIRS) {
         "no-and-jsx",
         "Conditional render with `&&` is banned. Use `condition ? <Component /> : null`.",
       );
+    }
+
+    // 4. lucide-react in apps/web (must go through @otomat/ui <Icon /> + IconName)
+    if (dir === WEB_DIR) {
+      for (const m of src.matchAll(LUCIDE_RE)) {
+        const { line, col } = lineColAt(src, m.index ?? 0);
+        report(
+          file,
+          line,
+          col,
+          "no-lucide-in-web",
+          'Direct lucide-react import is banned in apps/web. Use `<Icon name="…" />` and `IconName` from @otomat/ui.',
+        );
+      }
     }
   }
 }

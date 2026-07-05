@@ -1,8 +1,7 @@
 import type { ReviewState, RunDiffContract, RunState } from "@otomat/domain";
-import { Button, ReviewStatusChip } from "@otomat/ui";
+import { Button, Icon, ReviewStatusChip } from "@otomat/ui";
 import { DiffSummary } from "@web/components/runs/diff/summary";
 import type { ReviewSelection } from "@web/components/runs/review/use-selection";
-import { Wand2 } from "lucide-react";
 
 export interface RunDiffHeaderProps {
   diff: RunDiffContract;
@@ -32,7 +31,7 @@ export function RunDiffHeader({ diff, reviewStatus, runStatus, selection }: RunD
           loading={selection.isFixPending}
           onClick={selection.submitFix}
         >
-          <Wand2 aria-hidden />
+          <Icon name="wand-2" aria-hidden />
           Fix with AI ({selection.selectedIds.size})
         </Button>
       </span>

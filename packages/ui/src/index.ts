@@ -301,6 +301,8 @@ export {
   type FieldProps,
 } from "./components/field";
 
+export { Icon, type IconName, type IconProps, type IconSize } from "./components/icon";
+
 export { IconButton, type IconButtonProps } from "./components/icon-button";
 
 export { Kbd, type KbdProps } from "./components/kbd";

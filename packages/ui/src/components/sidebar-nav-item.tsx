@@ -1,7 +1,8 @@
-import type { ComponentType, ElementType, ReactElement, ReactNode } from "react";
+import type { ElementType, ReactElement, ReactNode } from "react";
 
 import { cn } from "../lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../primitives/tooltip";
+import { Icon, type IconName } from "./icon";
 import { Kbd } from "./kbd";
 
 export interface SidebarNavItemRenderProps {
@@ -11,7 +12,7 @@ export interface SidebarNavItemRenderProps {
 }
 
 export interface SidebarNavItemProps {
-  icon: ComponentType<{ className?: string }>;
+  icon: IconName;
   label: string;
   active?: boolean;
   badgeCount?: number;
@@ -25,7 +26,7 @@ export interface SidebarNavItemProps {
 }
 
 export function SidebarNavItem({
-  icon: Icon,
+  icon,
   label,
   active = false,
   badgeCount,
@@ -54,6 +55,7 @@ export function SidebarNavItem({
 
   const iconEl = (
     <Icon
+      name={icon}
       className={cn(
         "h-4 w-4 shrink-0",
         active ? "text-iris-text" : "text-text-tertiary group-hover:text-text-secondary",

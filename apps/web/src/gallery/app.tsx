@@ -1,5 +1,4 @@
-import { Toaster } from "@otomat/ui";
-import { Layers } from "lucide-react";
+import { Icon, Toaster } from "@otomat/ui";
 
 import { AvatarsSection } from "./sections/avatars";
 import { ButtonsSection } from "./sections/buttons";
@@ -18,7 +17,7 @@ export function GalleryApp() {
       <div className="mx-auto max-w-275 px-6 pb-24">
         <Switcher />
         <div className="flex items-center gap-2 py-6">
-          <Layers className="size-5 text-iris-text" />
+          <Icon name="layers" className="size-5 text-iris-text" />
           <h1 className="m-0 text-xl font-semibold">Design system</h1>
           <span className="ml-1.5 text-xs text-text-tertiary">
             shadcn/ui + Base UI · Otomat Iris · live @otomat/ui components

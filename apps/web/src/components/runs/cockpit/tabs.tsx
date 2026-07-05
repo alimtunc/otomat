@@ -1,6 +1,5 @@
-import { SegmentedControl, SegmentedItem } from "@otomat/ui";
+import { Icon, SegmentedControl, SegmentedItem } from "@otomat/ui";
 import { Link, useMatchRoute } from "@tanstack/react-router";
-import { GitCompare, GitPullRequest, ListTree } from "lucide-react";
 
 function activeTab(onDiff: boolean, onPr: boolean): string {
   if (onDiff) return "diff";
@@ -18,21 +17,21 @@ export function CockpitTabs({ runId }: { runId: string }) {
     <SegmentedControl type="single" value={value} aria-label="Run cockpit tabs">
       <SegmentedItem
         value="timeline"
-        icon={<ListTree />}
+        icon={<Icon name="list-tree" />}
         render={<Link to="/runs/$runId" params={{ runId }} />}
       >
         Timeline
       </SegmentedItem>
       <SegmentedItem
         value="diff"
-        icon={<GitCompare />}
+        icon={<Icon name="git-compare" />}
         render={<Link to="/runs/$runId/diff" params={{ runId }} />}
       >
         Diff
       </SegmentedItem>
       <SegmentedItem
         value="pr"
-        icon={<GitPullRequest />}
+        icon={<Icon name="git-pull-request" />}
         render={<Link to="/runs/$runId/pr" params={{ runId }} />}
       >
         PR

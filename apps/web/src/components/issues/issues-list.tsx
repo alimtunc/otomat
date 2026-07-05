@@ -1,7 +1,6 @@
 import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
 import type { useIssues } from "@web/api/issues/queries";
 import { IssueRow } from "@web/components/issues/issue-row";
-import { Inbox } from "lucide-react";
 
 export function IssuesList({ query }: { query: ReturnType<typeof useIssues> }) {
   if (query.isPending) {
@@ -30,7 +29,7 @@ export function IssuesList({ query }: { query: ReturnType<typeof useIssues> }) {
     return (
       <div className="grid h-full place-items-center p-6">
         <EmptyState
-          icon={Inbox}
+          icon="inbox"
           title="No issues yet"
           description="Start a local run to create your first issue and stream its events live."
         />
