@@ -23,6 +23,7 @@ export async function startRun(state: SupervisorState, request: StartRunRequest)
   return row;
 }
 
+/** Resumes a run waiting on a human by spawning a `resume` turn against its existing provider session. Throws `RunNotResumableError` unless the run is in `awaiting_human`, is not already running, and has a resumable provider session. */
 export async function resumeRun(state: SupervisorState, runId: string): Promise<RunRow> {
   const run = requireFollowUpableRun(state, runId, "awaiting_human");
   const prompt = run.plan_json.steps[0]?.prompt ?? null;

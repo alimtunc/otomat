@@ -8,6 +8,10 @@ const { worktrees } = schema;
 export type WorktreeRow = typeof worktrees.$inferSelect;
 export type NewWorktreeRow = typeof worktrees.$inferInsert;
 
+/**
+ * Inserts a `worktrees` row. Throws on the `worktrees_owner_active_unique`
+ * partial index when an active row already exists for the same `owner_token`.
+ */
 export function insertWorktree(db: Db, row: NewWorktreeRow): void {
   db.insert(worktrees).values(row).run();
 }

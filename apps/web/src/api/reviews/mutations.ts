@@ -12,6 +12,11 @@ function commentErrorMessage(error: unknown): string {
   return "Could not add the comment — is the daemon running?";
 }
 
+/**
+ * Adds a review comment. On success invalidates the run's review cache. A 409
+ * means the diff moved under the anchor: it refreshes the diff cache and toasts
+ * asking the user to re-anchor.
+ */
 export function useAddReviewComment(runId: string) {
   const client = useQueryClient();
   return useMutation({
@@ -35,6 +40,10 @@ function fixErrorMessage(error: unknown): string {
   return "Could not request the fix — is the daemon running?";
 }
 
+/**
+ * Requests a fix turn over the given comment ids. On success invalidates the
+ * run's detail and toasts. A 409 means the run or comments are not fixable now.
+ */
 export function useRequestFix(runId: string) {
   const client = useQueryClient();
   return useMutation({
@@ -47,6 +56,7 @@ export function useRequestFix(runId: string) {
   });
 }
 
+/** Saves the pull-request draft. On success invalidates the run's PR cache and toasts. */
 export function usePreparePullRequest(runId: string) {
   const client = useQueryClient();
   return useMutation({

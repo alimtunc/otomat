@@ -11,6 +11,12 @@ import { createReviewRoutes } from "./routes/review.js";
 import { createRunRoutes } from "./routes/runs.js";
 import { allowedOrigin, hostGuard } from "./security.js";
 
+/**
+ * Builds the daemon's Hono app: a host-guard then CORS on `/api/*` (the guard runs
+ * first, so a rejected `Host` never reaches CORS), the mounted route groups, and a
+ * JSON fallthrough — unmatched routes return 404 `not_found`, `HTTPException`s are
+ * passed through, and any other thrown error is logged and returned as 500 `internal_error`.
+ */
 export function createApiApp(deps: ApiDeps): Hono {
   const app = new Hono();
 

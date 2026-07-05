@@ -10,6 +10,7 @@ export function mergeEvent(current: EventEnvelope[], event: EventEnvelope): Even
   return next;
 }
 
+/** One-line human summary: the first present payload field by priority (text, tool, action, decision, provider session id), else the raw event type. */
 export function eventSummary(event: EventEnvelope): string {
   const payload = event.payload;
   if (typeof payload.text === "string") return payload.text;

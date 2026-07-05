@@ -48,6 +48,7 @@ export const eventEnvelopeSchema = z.object({
   run_id: z.string(),
   step_run_id: z.string().nullable(),
   agent_session_id: z.string().nullable(),
+  /** Per-run sequence number; a run's events are ordered by ascending `seq`. */
   seq: z.number().int().nonnegative(),
   type: z.enum(EVENT_TYPES),
   source: z.enum(EVENT_SOURCES),

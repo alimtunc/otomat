@@ -1,3 +1,12 @@
+/**
+ * Public surface of `@otomat/ui`: the `cn` class merger, the theme system
+ * (`ThemeProvider`/`useTheme`), domain status→visual mappings (`resolveStatus`
+ * and friends), shell types, and the primitive + composed component library.
+ * Import from this barrel rather than reaching into `./primitives`, `./components`,
+ * or `./lib` directly.
+ *
+ * @packageDocumentation
+ */
 export { cn } from "./lib/utils";
 
 export {

@@ -7,6 +7,7 @@ export interface DaemonClientConfig {
   EventSource?: typeof EventSource;
 }
 
+/** Thrown by the HTTP helpers when the daemon responds with a non-2xx status. */
 export class DaemonRequestError extends Error {
   readonly status: number;
   readonly path: string;

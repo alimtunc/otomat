@@ -1,3 +1,13 @@
+/**
+ * Append-only runtime-event ledger with a non-lossy file tailer and read-side
+ * projections. Per run, `seq` is monotonic and tracks the `events.jsonl` line
+ * index; re-appending already-committed lines is idempotent (unique
+ * `(run_id, seq)` index + `ON CONFLICT DO NOTHING`), so a tail resuming after a
+ * crash replays with neither loss nor duplication. Write via `emitLedgerEvent`
+ * or a live `EventTailer`; read the persisted ledger via `readRunEvents`.
+ *
+ * @packageDocumentation
+ */
 export * from "./types.js";
 export * from "./ledger.js";
 export * from "./tailer.js";

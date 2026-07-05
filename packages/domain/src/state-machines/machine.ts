@@ -1,3 +1,4 @@
+/** Thrown by `StateMachine.transition` when the requested `from -> to` edge is not in the machine's transition table. */
 export class IllegalTransitionError extends Error {
   readonly machine: string;
   readonly from: string;
@@ -12,6 +13,11 @@ export class IllegalTransitionError extends Error {
   }
 }
 
+/**
+ * Declarative machine spec. `transitions` is an adjacency map from each state to
+ * its legal successors, and its keys are taken as the machine's full state set;
+ * terminal states map to `[]`.
+ */
 export interface MachineDefinition<S extends string> {
   readonly name: string;
   readonly initial: S;
@@ -29,6 +35,13 @@ export interface StateMachine<S extends string> {
   transition(from: S, to: S): S;
 }
 
+/**
+ * Builds a StateMachine from a definition. `states` is the set of keys in
+ * `transitions`; `next` returns a state's declared successors (`[]` for terminal
+ * or undeclared states), so `isTerminal` is true exactly when a state has no
+ * outgoing edges. `transition` returns `to` on a legal edge and throws
+ * IllegalTransitionError otherwise.
+ */
 export function defineMachine<S extends string>(definition: MachineDefinition<S>): StateMachine<S> {
   const states = Object.keys(definition.transitions) as S[];
   const next = (from: S): readonly S[] => definition.transitions[from] ?? [];

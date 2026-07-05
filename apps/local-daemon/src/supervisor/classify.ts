@@ -16,6 +16,7 @@ export const TARGETS: Record<ReconcileClassification, Targets> = {
   failed: { run: "failed", step: "stale", session: "failed" },
 };
 
+/** Classifies a torn run from durable evidence: an explicit terminal marker wins; absent that, a known provider session means `interrupted` (resumable); otherwise `failed`. */
 export function classify(
   finalStatus: RunTerminalState | null,
   providerSessionId: string | null,

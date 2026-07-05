@@ -7,6 +7,10 @@ export type ThemeAction =
   | { type: "setDirection"; direction: Direction }
   | { type: "setAccent"; accent: string | null };
 
+/**
+ * Pure theme-state transitions. `setDirection` also clears any custom `accent`
+ * (the incoming palette supplies its own), so switching direction resets `accent` to null.
+ */
 export function themeReducer(state: ThemeState, action: ThemeAction): ThemeState {
   switch (action.type) {
     case "setTheme":

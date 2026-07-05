@@ -17,6 +17,7 @@ export const runtimeCapabilitiesSchema = z.object({
 
 export type RuntimeCapabilities = z.infer<typeof runtimeCapabilitiesSchema>;
 
+/** Every optional behavior off — the baseline for an adapter that supports only batch `run`. */
 export const NO_CAPABILITIES: RuntimeCapabilities = {
   stream: false,
   sendMessage: false,

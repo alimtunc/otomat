@@ -7,6 +7,16 @@ import {
 import { resolveUrl } from "./http";
 import type { DaemonClientConfig, RunEventsHandlers, RunEventsSubscription } from "./types";
 
+/**
+ * Opens an SSE stream of a run's events, routing each named frame to its handler.
+ * Throws synchronously when no `EventSource` is available (neither global nor
+ * `config.EventSource`). `handlers.afterSeq` is sent as a resume cursor so only events
+ * after it replay. Each frame is schema-validated; a parse failure is routed to
+ * `onParseError` (or logged) instead of throwing into EventSource, so the timeline
+ * never silently gaps. `end` and `stream_error` are terminal and close the stream; a
+ * transport `error` reaches `onError` while EventSource keeps auto-reconnecting. The
+ * returned subscription's `close()` stops the stream and any further reconnection.
+ */
 export function subscribeRunEvents(
   config: DaemonClientConfig,
   runId: string,

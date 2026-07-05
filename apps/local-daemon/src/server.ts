@@ -19,6 +19,7 @@ export interface StartDaemonOptions {
 
 export interface DaemonHandle {
   port: number;
+  /** Stops accepting connections, then settles in-flight runs and closes the SQLite handle; resolves once all three finish, rejecting if the server itself fails to close. */
   close(): Promise<void>;
 }
 

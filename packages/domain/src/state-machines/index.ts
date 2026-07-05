@@ -1,3 +1,12 @@
+/**
+ * Pure finite state machines for the domain entities (issue, run, step-run,
+ * agent-session, review, review-comment, pull-request). `defineMachine` builds a
+ * StateMachine whose `transition` throws IllegalTransitionError on an illegal
+ * edge; terminal states have no outgoing edges, and `shortestPath` returns null
+ * when the target state is unreachable.
+ *
+ * @packageDocumentation
+ */
 export * from "./machine.js";
 export * from "./issue.js";
 export * from "./run.js";

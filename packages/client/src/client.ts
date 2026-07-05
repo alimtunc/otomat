@@ -19,6 +19,12 @@ import { getJson, postJson, queryString } from "./http";
 import { subscribeRunEvents } from "./sse";
 import type { DaemonClientConfig, RunEventsHandlers, RunEventsSubscription } from "./types";
 
+/**
+ * Builds a typed daemon client bound to `config`. Each method issues one HTTP request
+ * and validates the response against its zod contract, throwing `ZodError` on schema
+ * drift and `DaemonRequestError` on a non-2xx status. Reads use GET, mutations POST a
+ * JSON body; `subscribeRunEvents` instead opens an SSE stream (see `subscribeRunEvents`).
+ */
 export function createDaemonClient(config: DaemonClientConfig = {}) {
   return {
     async health() {

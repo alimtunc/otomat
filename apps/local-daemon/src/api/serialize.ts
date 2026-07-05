@@ -122,6 +122,7 @@ export function toPullRequest(row: PullRequestRow): PullRequestContract {
   });
 }
 
+/** Maps a `RunDiffResult` to its wire contract, remapping camelCase fields to snake_case; `diff` is null when the result carries no computed diff. */
 export function toRunDiffResponse(runId: string, result: RunDiffResult): RunDiffResponse {
   const diff = result.diff;
   return runDiffResponseSchema.parse({

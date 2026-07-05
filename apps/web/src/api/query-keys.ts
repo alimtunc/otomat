@@ -1,3 +1,9 @@
+/**
+ * Query-key factory. Keys nest so a parent invalidation cascades to children
+ * (TanStack matches by prefix): invalidating `run(id)` also clears that run's
+ * `runDiff`/`runReview`/`runPullRequest`, and invalidating `runs` also clears
+ * every `runsForIssue`. Note `run` (single) and `runs` (list) are distinct roots.
+ */
 export const queryKeys = {
   health: ["health"] as const,
   projects: ["projects"] as const,

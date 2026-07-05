@@ -52,6 +52,11 @@ export function prepareFix(ctx: ReviewContext, run: RunRow, commentIds: string[]
   };
 }
 
+/**
+ * Stamps `fix_requested_at` on each selected comment and drives the review to
+ * `changes_requested`. The drive is a no-op when the run has no review or it is
+ * already `changes_requested`. Does not validate the comment ids — prepareFix does.
+ */
 export function markFixRequested(ctx: ReviewContext, runId: string, commentIds: string[]): void {
   const now = new Date().toISOString();
   for (const commentId of commentIds) setReviewCommentFixRequested(ctx.db, commentId, now);

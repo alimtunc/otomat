@@ -10,6 +10,10 @@ export function useRunsForIssue(issueId: string) {
   });
 }
 
+/**
+ * Fetches one run's detail and polls it every 1.5s until the run reaches a
+ * terminal status, then stops refetching.
+ */
 export function useRunDetail(runId: string) {
   return useQuery({
     queryKey: queryKeys.run(runId),
