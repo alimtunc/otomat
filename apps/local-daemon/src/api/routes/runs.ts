@@ -1,11 +1,10 @@
-import { zValidator } from "@hono/zod-validator";
-import { getRun, type Db } from "@otomat/db";
 import { startRunRequestSchema } from "@otomat/domain";
-import { Hono, type Context } from "hono";
+import { Hono } from "hono";
 
 import { RunNotResumableError } from "#supervisor";
 
 import type { ApiDeps } from "../deps.js";
+import { requireRun, validateJson } from "../guards.js";
 import { readRunDetail, readRuns } from "../reads.js";
 import { toRun } from "../serialize.js";
 import { streamRunEvents } from "../sse.js";
@@ -21,33 +20,21 @@ function parseCursor(
   return Number.isInteger(value) && value >= 0 ? value : undefined;
 }
 
-function runNotFound(c: Context, db: Db, runId: string): Response | null {
-  return getRun(db, runId) ? null : c.json({ error: "run_not_found" }, 404);
-}
-
 /** Mounted at `/api/runs`. Holds the run reads, the run commands (start/resume/abort), and the SSE stream. */
 export function createRunRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();
 
   routes.get("/", (c) => c.json(readRuns(deps.db, c.req.query("issueId"))));
 
-  routes.post(
-    "/",
-    zValidator("json", startRunRequestSchema, (result, c) => {
-      if (!result.success) {
-        return c.json({ error: "invalid_request", issues: result.error.issues }, 400);
-      }
-    }),
-    async (c) => {
-      try {
-        const run = await deps.launchRun(c.req.valid("json"));
-        return c.json(toRun(run), 201);
-      } catch (error) {
-        console.error("[otomat] launch run failed", error);
-        return c.json({ error: "run_launch_failed" }, 500);
-      }
-    },
-  );
+  routes.post("/", validateJson(startRunRequestSchema), async (c) => {
+    try {
+      const run = await deps.launchRun(c.req.valid("json"));
+      return c.json(toRun(run), 201);
+    } catch (error) {
+      console.error("[otomat] launch run failed", error);
+      return c.json({ error: "run_launch_failed" }, 500);
+    }
+  });
 
   routes.get("/:id", (c) => {
     const detail = readRunDetail(deps.db, c.req.param("id"));
@@ -55,40 +42,37 @@ export function createRunRoutes(deps: ApiDeps): Hono {
   });
 
   routes.post("/:id/resume", async (c) => {
-    const runId = c.req.param("id");
-    const missing = runNotFound(c, deps.db, runId);
-    if (missing) return missing;
+    const run = requireRun(c, deps.db);
+    if (run instanceof Response) return run;
     try {
-      return c.json(toRun(await deps.resumeRun(runId)));
+      return c.json(toRun(await deps.resumeRun(run.id)));
     } catch (error) {
       if (error instanceof RunNotResumableError) {
         return c.json({ error: "run_not_resumable" }, 409);
       }
-      console.error(`[otomat] resume run ${runId} failed`, error);
+      console.error(`[otomat] resume run ${run.id} failed`, error);
       return c.json({ error: "run_resume_failed" }, 500);
     }
   });
 
   routes.post("/:id/abort", async (c) => {
-    const runId = c.req.param("id");
-    const missing = runNotFound(c, deps.db, runId);
-    if (missing) return missing;
+    const run = requireRun(c, deps.db);
+    if (run instanceof Response) return run;
     try {
-      await deps.abortRun(runId);
+      await deps.abortRun(run.id);
     } catch (error) {
-      console.error(`[otomat] abort run ${runId} failed`, error);
+      console.error(`[otomat] abort run ${run.id} failed`, error);
       return c.json({ error: "run_abort_failed" }, 500);
     }
-    const detail = readRunDetail(deps.db, runId);
+    const detail = readRunDetail(deps.db, run.id);
     return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
   });
 
   routes.get("/:id/events", (c) => {
-    const runId = c.req.param("id");
-    const missing = runNotFound(c, deps.db, runId);
-    if (missing) return missing;
+    const run = requireRun(c, deps.db);
+    if (run instanceof Response) return run;
     const cursor = parseCursor(c.req.query("afterSeq"), c.req.header("Last-Event-ID"));
-    return streamRunEvents(c, deps.db, runId, cursor);
+    return streamRunEvents(c, deps.db, run.id, cursor);
   });
 
   return routes;

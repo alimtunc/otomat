@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "pnpm --filter @otomat/web dev",
+    "back": "pnpm --filter @otomat/local-daemon start",
     "build": "pnpm -r run build && pnpm run boundaries",
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck",

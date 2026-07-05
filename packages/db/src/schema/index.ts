@@ -1,4 +1,11 @@
-import type { AgentSessionState, RunState, StepRunState } from "@otomat/domain";
+import type {
+  AgentSessionState,
+  PullRequestState,
+  ReviewCommentState,
+  ReviewState,
+  RunState,
+  StepRunState,
+} from "@otomat/domain";
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
@@ -151,7 +158,7 @@ export const reviews = sqliteTable("reviews", {
   run_id: text("run_id")
     .notNull()
     .references(() => runs.id),
-  status: text("status").notNull().default("open"),
+  status: text("status").$type<ReviewState>().notNull().default("open"),
   ...timestamps,
 });
 
@@ -162,9 +169,13 @@ export const reviewComments = sqliteTable("review_comments", {
     .references(() => reviews.id),
   file_path: text("file_path").notNull(),
   line: integer("line").notNull(),
+  // Immutable pin-to-SHA anchor: the per-file diff sha the comment was written against.
   diff_sha: text("diff_sha").notNull(),
   body: text("body").notNull(),
-  status: text("status").notNull().default("open"),
+  status: text("status").$type<ReviewCommentState>().notNull().default("open"),
+  // Captured at creation so a stale comment renders against what the reviewer saw.
+  hunk_snapshot: text("hunk_snapshot").notNull().default(""),
+  fix_requested_at: text("fix_requested_at"),
   ...timestamps,
 });
 
@@ -176,7 +187,9 @@ export const pullRequests = sqliteTable("pull_requests", {
   provider: text("provider").notNull().default("github"),
   number: integer("number"),
   url: text("url"),
-  status: text("status").notNull().default("draft"),
+  status: text("status").$type<PullRequestState>().notNull().default("draft"),
+  title: text("title").notNull().default(""),
+  body: text("body"),
   ...timestamps,
 });
 

@@ -3,6 +3,7 @@ export type { RunState, RunTerminalState } from "./state-machines/run.js";
 export type { StepRunState } from "./state-machines/step-run.js";
 export type { AgentSessionState } from "./state-machines/agent-session.js";
 export type { ReviewState } from "./state-machines/review.js";
+export type { ReviewCommentState } from "./state-machines/review-comment.js";
 export type { PullRequestState } from "./state-machines/pull-request.js";
 
 export type { EventType, EventSource, EventEnvelope } from "./events/envelope.js";
@@ -21,3 +22,10 @@ export type {
   ReviewCommentContract,
   PullRequestContract,
 } from "./contracts/entities.js";
+
+export type {
+  ChangeStatus,
+  DiffFileContract,
+  RunDiffContract,
+  RunDiffResponse,
+} from "./contracts/diff.js";

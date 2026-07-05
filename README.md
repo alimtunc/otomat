@@ -27,7 +27,9 @@ packages/
 
 The full target tree and per-ticket ownership live in
 [`docs/ai/codebase-map.md`](docs/ai/codebase-map.md). The enforced dependency
-rules are in [`docs/ai/import-boundaries.md`](docs/ai/import-boundaries.md).
+rules are in [`docs/ai/import-boundaries.md`](docs/ai/import-boundaries.md). A
+traced walkthrough of a run's lifecycle (start → worker → settle, with resume,
+fix, and abort) is in [`docs/ai/run-lifecycle.md`](docs/ai/run-lifecycle.md).
 
 ## Getting started
 

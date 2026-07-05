@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { eventEnvelopeSchema } from "@otomat/domain";
 import { z } from "zod";
 
@@ -35,3 +37,32 @@ export const runtimeEventSchema = eventEnvelopeSchema.omit({ seq: true }).extend
 });
 
 export type RuntimeEvent = z.infer<typeof runtimeEventSchema>;
+
+export interface RuntimeEventInput {
+  runId: string;
+  /** Discriminator segment in the event id (`${runId}:${kind}:${uuid}`); usually the event type. */
+  kind: string;
+  type: RuntimeEvent["type"];
+  source: RuntimeEvent["source"];
+  /** Emitting adapter id, recorded on the payload alongside the fixed `parsed` fidelity. */
+  adapter: string;
+  occurredAt: string;
+  stepRunId?: string | null;
+  agentSessionId?: string | null;
+  payload?: Record<string, unknown>;
+}
+
+/** Builds a control-plane `RuntimeEvent` envelope (the shared shape for review + supervisor markers). */
+export function buildRuntimeEvent(input: RuntimeEventInput): RuntimeEvent {
+  return {
+    id: `${input.runId}:${input.kind}:${randomUUID()}`,
+    run_id: input.runId,
+    step_run_id: input.stepRunId ?? null,
+    agent_session_id: input.agentSessionId ?? null,
+    type: input.type,
+    source: input.source,
+    occurred_at: input.occurredAt,
+    payload: { fidelity: "parsed", adapter: input.adapter, ...input.payload },
+    raw_ref: null,
+  };
+}

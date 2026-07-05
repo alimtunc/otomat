@@ -5,9 +5,11 @@ import type { EventTailer } from "#events";
 import { Semaphore } from "./semaphore.js";
 import {
   DEFAULT_CONCURRENCY,
+  type ReconcileOutcome,
   type SessionProcess,
   type SpawnSession,
   type SupervisorConfig,
+  type WorktreeBinding,
 } from "./types.js";
 
 export interface InflightProcess {
@@ -22,6 +24,8 @@ export interface SupervisorState {
   dataDir: string;
   defaultProjectId: string;
   spawn: SpawnSession;
+  worktrees: WorktreeBinding | null;
+  afterSettle: ((outcome: ReconcileOutcome) => void) | null;
   slots: Semaphore;
   inflight: Map<string, InflightProcess>;
   /** Runs whose abort owns the settle, so the exit monitor never races a second finalize. */
@@ -36,6 +40,8 @@ export function createState(config: SupervisorConfig): SupervisorState {
     dataDir: config.dataDir,
     defaultProjectId: config.defaultProjectId,
     spawn: config.spawn,
+    worktrees: config.worktrees ?? null,
+    afterSettle: config.afterSettle ?? null,
     slots: new Semaphore(config.concurrency ?? DEFAULT_CONCURRENCY),
     inflight: new Map(),
     aborting: new Set(),

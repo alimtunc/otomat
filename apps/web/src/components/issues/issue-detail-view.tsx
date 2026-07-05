@@ -4,7 +4,7 @@ import { useIssue } from "@web/api/issues/queries";
 import { useStartRunAndNavigate } from "@web/api/runs/mutations";
 import { useRunsForIssue } from "@web/api/runs/queries";
 import { IssueHeader } from "@web/components/issues/issue-header";
-import { RunsList } from "@web/components/runs/runs-list";
+import { RunsList } from "@web/components/runs/launch/list";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { Play } from "lucide-react";
 

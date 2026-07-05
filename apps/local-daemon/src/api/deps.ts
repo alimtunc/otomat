@@ -1,6 +1,8 @@
 import type { Db, RunRow } from "@otomat/db";
 import type { StartRunRequest } from "@otomat/domain";
 
+import type { ReviewService } from "#review";
+
 export interface ApiDeps {
   db: Db;
   name: string;
@@ -9,5 +11,7 @@ export interface ApiDeps {
   dbPath: string;
   launchRun(request: StartRunRequest): Promise<RunRow>;
   resumeRun(runId: string): Promise<RunRow>;
+  fixRun(runId: string, prompt: string): Promise<RunRow>;
   abortRun(runId: string): Promise<void>;
+  review: ReviewService;
 }

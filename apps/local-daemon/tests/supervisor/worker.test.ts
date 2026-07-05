@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -23,13 +23,14 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-function job(mode: "run" | "resume"): SupervisedJob {
+function job(mode: "run" | "resume", worktreePath: string | null = null): SupervisedJob {
   return {
     runId: "w1",
     stepRunId: "s1",
     agentSessionId: "a1",
     prompt: "do the thing",
     runDir: dir,
+    worktreePath,
     mode,
     providerSessionId: mode === "resume" ? "ps-w1" : null,
   };
@@ -58,4 +59,26 @@ it("parses a job from the environment, or null when absent", () => {
   const j = job("resume");
   expect(parseJob({ [WORKER_JOB_ENV]: JSON.stringify(j) })).toEqual(j);
   expect(parseJob({})).toBeNull();
+});
+
+it("writes a real file on a run turn and appends on a resume turn", async () => {
+  const worktree = mkdtempSync(join(tmpdir(), "otomat-worktree-"));
+  try {
+    await runWorkerJob(job("run", worktree), new AbortController().signal);
+    const file = join(worktree, "fake-implementation.md");
+    const first = readFileSync(file, "utf8");
+    expect(first).toContain("do the thing");
+
+    await runWorkerJob(job("resume", worktree), new AbortController().signal);
+    const second = readFileSync(file, "utf8");
+    expect(second).toContain("Follow-up turn");
+    expect(second.length).toBeGreaterThan(first.length);
+  } finally {
+    rmSync(worktree, { recursive: true, force: true });
+  }
+});
+
+it("leaves the filesystem untouched when the job has no worktree", async () => {
+  await runWorkerJob(job("run"), new AbortController().signal);
+  expect(existsSync(join(dir, "fake-implementation.md"))).toBe(false);
 });

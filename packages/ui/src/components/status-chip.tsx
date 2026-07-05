@@ -1,24 +1,17 @@
 import type {
   AgentSessionState,
+  ChangeStatus,
   IssueState,
   PullRequestState,
+  ReviewCommentState,
   ReviewState,
   RunState,
   StepRunState,
 } from "@otomat/domain/types";
 
-import { resolveStatus, type StatusKind } from "../lib/status";
+import { resolveStatus, type KindStatusMap, type StatusKind } from "../lib/status";
 import { cn } from "../lib/utils";
 import { Chip, type ChipSize } from "./chip";
-
-interface KindStatusMap {
-  issue: IssueState;
-  run: RunState;
-  step: StepRunState;
-  session: AgentSessionState;
-  review: ReviewState;
-  pr: PullRequestState;
-}
 
 export interface StatusChipProps<K extends StatusKind = StatusKind> {
   kind: K;
@@ -78,6 +71,14 @@ export function ReviewStatusChip(props: PresetStatusChipProps<ReviewState>) {
   return <StatusChip kind="review" {...props} />;
 }
 
+export function ReviewCommentStatusChip(props: PresetStatusChipProps<ReviewCommentState>) {
+  return <StatusChip kind="reviewComment" {...props} />;
+}
+
 export function PRStatusBadge(props: PresetStatusChipProps<PullRequestState>) {
   return <StatusChip kind="pr" {...props} />;
+}
+
+export function DiffFileStatusChip(props: PresetStatusChipProps<ChangeStatus>) {
+  return <StatusChip kind="diffFile" {...props} />;
 }

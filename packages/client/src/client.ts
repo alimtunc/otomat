@@ -2,9 +2,16 @@ import {
   healthResponseSchema,
   issueContractSchema,
   projectContractSchema,
+  pullRequestDetailSchema,
   repositoryContractSchema,
+  reviewCommentContractSchema,
+  reviewDetailSchema,
   runContractSchema,
   runDetailSchema,
+  runDiffResponseSchema,
+  type CreateReviewCommentRequest,
+  type PreparePullRequestRequest,
+  type RequestFixRequest,
   type StartRunRequest,
 } from "@otomat/domain";
 
@@ -54,6 +61,36 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
     async abortRun(id: string) {
       return runDetailSchema.parse(
         await postJson(config, `/api/runs/${encodeURIComponent(id)}/abort`, {}),
+      );
+    },
+    async getRunDiff(id: string) {
+      return runDiffResponseSchema.parse(
+        await getJson(config, `/api/runs/${encodeURIComponent(id)}/diff`),
+      );
+    },
+    async getRunReview(id: string) {
+      return reviewDetailSchema.parse(
+        await getJson(config, `/api/runs/${encodeURIComponent(id)}/review`),
+      );
+    },
+    async addReviewComment(id: string, request: CreateReviewCommentRequest) {
+      return reviewCommentContractSchema.parse(
+        await postJson(config, `/api/runs/${encodeURIComponent(id)}/review/comments`, request),
+      );
+    },
+    async requestFix(id: string, request: RequestFixRequest) {
+      return runContractSchema.parse(
+        await postJson(config, `/api/runs/${encodeURIComponent(id)}/review/fix`, request),
+      );
+    },
+    async getPullRequest(id: string) {
+      return pullRequestDetailSchema.parse(
+        await getJson(config, `/api/runs/${encodeURIComponent(id)}/pr`),
+      );
+    },
+    async preparePullRequest(id: string, request: PreparePullRequestRequest) {
+      return pullRequestDetailSchema.parse(
+        await postJson(config, `/api/runs/${encodeURIComponent(id)}/pr`, request),
       );
     },
     subscribeRunEvents(runId: string, handlers: RunEventsHandlers): RunEventsSubscription {

@@ -1,6 +1,6 @@
 import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
 import type { useRunsForIssue } from "@web/api/runs/queries";
-import { RunRow } from "@web/components/runs/run-row";
+import { RunRow } from "@web/components/runs/launch/row";
 import { Inbox } from "lucide-react";
 
 export function RunsList({ query }: { query: ReturnType<typeof useRunsForIssue> }) {

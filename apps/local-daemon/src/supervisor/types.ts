@@ -1,6 +1,8 @@
 import type { Db, RunRow } from "@otomat/db";
 import type { StartRunRequest } from "@otomat/domain";
 
+import type { GitWorktreeService } from "#git";
+
 /** Identifies the supervisor as the event source so its markers are never shown as a provider result. */
 export const SUPERVISOR_ADAPTER = "otomat-supervisor";
 
@@ -14,6 +16,8 @@ export interface TurnContext {
   agentSessionId: string;
   prompt: string;
   runDir: string;
+  /** Isolated working dir the turn mutates; null when the project has no git repository. */
+  worktreePath: string | null;
 }
 
 /** A turn the supervisor hands to a child process: a fresh run, or a follow-up that resumes a provider session. */
@@ -39,6 +43,13 @@ export interface SessionProcess {
 /** Spawns one job as a real OS process. Injected so the supervisor stays testable without the daemon binary. */
 export type SpawnSession = (job: SupervisedJob) => SessionProcess;
 
+/** Ties the supervisor to the repository its runs carve worktrees from. */
+export interface WorktreeBinding {
+  /** `repositories.id` stamped on runs so their diffs resolve. */
+  repositoryId: string;
+  service: GitWorktreeService;
+}
+
 export interface SupervisorConfig {
   db: Db;
   /** Root under which each run gets a `runs/<id>/events.jsonl` artifact directory. */
@@ -47,6 +58,10 @@ export interface SupervisorConfig {
   spawn: SpawnSession;
   /** Max concurrent session processes. Defaults to {@link DEFAULT_CONCURRENCY}. */
   concurrency?: number;
+  /** When absent (no git repo), runs execute without a worktree and have no diff. */
+  worktrees?: WorktreeBinding;
+  /** Fires after any settle (live, abort, boot) so review anchors/diff projections can react. */
+  afterSettle?: (outcome: ReconcileOutcome) => void;
 }
 
 export interface Supervisor {
@@ -54,6 +69,8 @@ export interface Supervisor {
   start(request: StartRunRequest): Promise<RunRow>;
   /** Resume a human-waiting run on an explicit action — spawns a `resume` turn, never auto-runs. */
   resume(runId: string): Promise<RunRow>;
+  /** Spawn a follow-up fix turn on a review-ready run with a caller-built prompt. */
+  fix(runId: string, prompt: string): Promise<RunRow>;
   /** Kill the run's process group and write the canonical canceled state + a ledger event. No fake success. */
   abort(runId: string): Promise<void>;
   /** Boot-time pass: classify every non-terminal in-flight run from durable evidence and settle it. */

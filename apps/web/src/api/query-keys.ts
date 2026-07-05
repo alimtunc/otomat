@@ -7,4 +7,7 @@ export const queryKeys = {
   runs: ["runs"] as const,
   runsForIssue: (issueId: string) => ["runs", { issueId }] as const,
   run: (id: string) => ["run", id] as const,
+  runDiff: (id: string) => ["run", id, "diff"] as const,
+  runReview: (id: string) => ["run", id, "review"] as const,
+  runPullRequest: (id: string) => ["run", id, "pr"] as const,
 };

@@ -21,6 +21,7 @@ import { Route as SettingsAboutRouteImport } from './routes/settings/about'
 import { Route as IssuesIssueIdRouteImport } from './routes/issues/$issueId'
 import { Route as RunsRunIdRouteRouteImport } from './routes/runs/$runId/route'
 import { Route as RunsRunIdIndexRouteImport } from './routes/runs/$runId/index'
+import { Route as RunsRunIdPrRouteImport } from './routes/runs/$runId/pr'
 import { Route as RunsRunIdDiffRouteImport } from './routes/runs/$runId/diff'
 
 const SettingsRouteRoute = SettingsRouteRouteImport.update({
@@ -83,6 +84,11 @@ const RunsRunIdIndexRoute = RunsRunIdIndexRouteImport.update({
   path: '/',
   getParentRoute: () => RunsRunIdRouteRoute,
 } as any)
+const RunsRunIdPrRoute = RunsRunIdPrRouteImport.update({
+  id: '/pr',
+  path: '/pr',
+  getParentRoute: () => RunsRunIdRouteRoute,
+} as any)
 const RunsRunIdDiffRoute = RunsRunIdDiffRouteImport.update({
   id: '/diff',
   path: '/diff',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/issues/': typeof IssuesIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
+  '/runs/$runId/pr': typeof RunsRunIdPrRoute
   '/runs/$runId/': typeof RunsRunIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/issues': typeof IssuesIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
+  '/runs/$runId/pr': typeof RunsRunIdPrRoute
   '/runs/$runId': typeof RunsRunIdIndexRoute
 }
 export interface FileRoutesById {
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/issues/': typeof IssuesIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
+  '/runs/$runId/pr': typeof RunsRunIdPrRoute
   '/runs/$runId/': typeof RunsRunIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -148,6 +157,7 @@ export interface FileRouteTypes {
     | '/issues/'
     | '/settings/'
     | '/runs/$runId/diff'
+    | '/runs/$runId/pr'
     | '/runs/$runId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/issues'
     | '/settings'
     | '/runs/$runId/diff'
+    | '/runs/$runId/pr'
     | '/runs/$runId'
   id:
     | '__root__'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/issues/'
     | '/settings/'
     | '/runs/$runId/diff'
+    | '/runs/$runId/pr'
     | '/runs/$runId/'
   fileRoutesById: FileRoutesById
 }
@@ -273,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsRunIdIndexRouteImport
       parentRoute: typeof RunsRunIdRouteRoute
     }
+    '/runs/$runId/pr': {
+      id: '/runs/$runId/pr'
+      path: '/pr'
+      fullPath: '/runs/$runId/pr'
+      preLoaderRoute: typeof RunsRunIdPrRouteImport
+      parentRoute: typeof RunsRunIdRouteRoute
+    }
     '/runs/$runId/diff': {
       id: '/runs/$runId/diff'
       path: '/diff'
@@ -307,11 +326,13 @@ const SettingsRouteRouteWithChildren = SettingsRouteRoute._addFileChildren(
 
 interface RunsRunIdRouteRouteChildren {
   RunsRunIdDiffRoute: typeof RunsRunIdDiffRoute
+  RunsRunIdPrRoute: typeof RunsRunIdPrRoute
   RunsRunIdIndexRoute: typeof RunsRunIdIndexRoute
 }
 
 const RunsRunIdRouteRouteChildren: RunsRunIdRouteRouteChildren = {
   RunsRunIdDiffRoute: RunsRunIdDiffRoute,
+  RunsRunIdPrRoute: RunsRunIdPrRoute,
   RunsRunIdIndexRoute: RunsRunIdIndexRoute,
 }
 

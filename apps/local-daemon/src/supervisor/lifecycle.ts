@@ -7,12 +7,23 @@ import {
 } from "@otomat/db";
 import { runMachine } from "@otomat/domain";
 
+import { runDir, startLiveTail } from "#events";
+
 import { writeWorkerIdentity } from "./identity.js";
-import { runDir, startLiveTail } from "./run-events.js";
 import { settleRun } from "./settle.js";
 import type { SupervisorState } from "./state.js";
 import { driveRunTo, driveStepsAndSessionsTo } from "./transitions.js";
-import type { ProcessExit, SessionProcess, TurnContext } from "./types.js";
+import type { ProcessExit, ReconcileOutcome, SessionProcess, TurnContext } from "./types.js";
+
+/** A failing settle listener must never break the settle itself (or the exit monitor). */
+export function notifyAfterSettle(state: SupervisorState, outcome: ReconcileOutcome | null): void {
+  if (outcome === null || state.afterSettle === null) return;
+  try {
+    state.afterSettle(outcome);
+  } catch (error) {
+    console.error(`[otomat] after-settle hook failed for run ${outcome.runId}`, error);
+  }
+}
 
 function advanceToRunning(state: SupervisorState, ctx: TurnContext): void {
   const { db } = state;
@@ -34,11 +45,12 @@ function settleLive(state: SupervisorState, ctx: TurnContext, exit?: ProcessExit
   const run = getRun(state.db, ctx.runId);
   if (!run) return;
   try {
-    settleRun(state.db, state.dataDir, run, {
+    const outcome = settleRun(state.db, state.dataDir, run, {
       mode: "live",
       ...(exit ? { observedExit: exit } : {}),
       now: new Date().toISOString(),
     });
+    notifyAfterSettle(state, outcome);
   } catch (error) {
     console.error(`[otomat] run ${ctx.runId} settle failed`, error);
   }

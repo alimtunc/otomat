@@ -23,6 +23,17 @@ export function mergeBase(repoPath: string, a: string, b: string): string | null
   return sha === "" ? null : sha;
 }
 
+/** The repo's current branch, or null when `repoPath` is not a git work tree or HEAD is detached. */
+export function detectDefaultBranch(repoPath: string): string | null {
+  const probe = runGit(["rev-parse", "--is-inside-work-tree"], {
+    cwd: repoPath,
+    allowFailure: true,
+  });
+  if (probe.exitCode !== 0 || probe.stdout.trim() !== "true") return null;
+  const branch = currentBranch(repoPath);
+  return branch === "" || branch === "HEAD" ? null : branch;
+}
+
 /** Whether a local branch ref exists. */
 export function branchExists(repoPath: string, branch: string): boolean {
   const res = runGit(["rev-parse", "--verify", "--quiet", `refs/heads/${branch}`], {

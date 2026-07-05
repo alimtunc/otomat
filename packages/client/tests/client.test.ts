@@ -97,6 +97,116 @@ it("posts abort and parses the returned run detail", async () => {
   expect(result.run.status).toBe("canceled");
 });
 
+const COMMENT = {
+  id: "c1",
+  review_id: "rv1",
+  file_path: "src/thing.ts",
+  line: 12,
+  diff_sha: "sha-1",
+  body: "Rename this.",
+  status: "open",
+  hunk_snapshot: "@@ -1 +1 @@",
+  fix_requested_at: null,
+};
+
+it("fetches and parses the run diff (null diff allowed, never fabricated)", async () => {
+  let calledUrl = "";
+  const fetchMock: typeof fetch = async (input) => {
+    calledUrl = String(input);
+    return jsonResponse({
+      run_id: "run-1",
+      computed_at: "2026-07-05T00:00:00.000Z",
+      diff: null,
+    });
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+  const result = await client.getRunDiff("run-1");
+  expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/diff");
+  expect(result.diff).toBeNull();
+});
+
+it("fetches the review surface and posts a pinned comment", async () => {
+  const urls: string[] = [];
+  let body: unknown;
+  const fetchMock: typeof fetch = async (input, init) => {
+    urls.push(String(input));
+    if (init?.method === "POST") {
+      body = JSON.parse(String(init.body));
+      return jsonResponse(COMMENT, 201);
+    }
+    return jsonResponse({
+      review: { id: "rv1", run_id: "run-1", status: "in_review" },
+      comments: [COMMENT],
+    });
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+
+  const review = await client.getRunReview("run-1");
+  expect(review.review?.status).toBe("in_review");
+  expect(review.comments[0].diff_sha).toBe("sha-1");
+
+  const created = await client.addReviewComment("run-1", {
+    file_path: "src/thing.ts",
+    line: 12,
+    diff_sha: "sha-1",
+    body: "Rename this.",
+  });
+  expect(created.id).toBe("c1");
+  expect(urls).toEqual([
+    "http://localhost:4319/api/runs/run-1/review",
+    "http://localhost:4319/api/runs/run-1/review/comments",
+  ]);
+  expect(body).toEqual({
+    file_path: "src/thing.ts",
+    line: 12,
+    diff_sha: "sha-1",
+    body: "Rename this.",
+  });
+});
+
+it("posts a fix request with the selected comment ids", async () => {
+  let calledUrl = "";
+  let body: unknown;
+  const fetchMock: typeof fetch = async (input, init) => {
+    calledUrl = String(input);
+    body = JSON.parse(String(init?.body));
+    return jsonResponse({ ...RUN, status: "running" });
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+  const result = await client.requestFix("run-1", { comment_ids: ["c1", "c2"] });
+  expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/review/fix");
+  expect(body).toEqual({ comment_ids: ["c1", "c2"] });
+  expect(result.status).toBe("running");
+});
+
+it("reads and prepares the local PR draft", async () => {
+  const PR = {
+    id: "pr1",
+    run_id: "run-1",
+    provider: "github",
+    number: null,
+    url: null,
+    status: "draft",
+    title: "First slice",
+    body: null,
+  };
+  let lastBody: unknown;
+  const fetchMock: typeof fetch = async (_input, init) => {
+    if (init?.method === "POST") {
+      lastBody = JSON.parse(String(init.body));
+      return jsonResponse({ pull_request: PR }, 201);
+    }
+    return jsonResponse({ pull_request: null });
+  };
+  const client = createDaemonClient({ fetch: fetchMock });
+
+  expect((await client.getPullRequest("run-1")).pull_request).toBeNull();
+
+  const prepared = await client.preparePullRequest("run-1", { title: "First slice", body: "" });
+  expect(prepared.pull_request?.status).toBe("draft");
+  expect(lastBody).toEqual({ title: "First slice", body: "" });
+});
+
 class FakeEventSource {
   readonly url: string;
   closed = false;

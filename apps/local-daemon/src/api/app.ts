@@ -7,6 +7,7 @@ import type { ApiDeps } from "./deps.js";
 import { createCatalogRoutes } from "./routes/catalog.js";
 import { createHealthRoutes } from "./routes/health.js";
 import { createIssueRoutes } from "./routes/issues.js";
+import { createReviewRoutes } from "./routes/review.js";
 import { createRunRoutes } from "./routes/runs.js";
 import { allowedOrigin, hostGuard } from "./security.js";
 
@@ -20,6 +21,7 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.route("/api", createCatalogRoutes(deps));
   app.route("/api/issues", createIssueRoutes(deps));
   app.route("/api/runs", createRunRoutes(deps));
+  app.route("/api/runs", createReviewRoutes(deps));
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {

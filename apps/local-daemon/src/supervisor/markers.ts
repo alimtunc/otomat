@@ -1,8 +1,6 @@
-import { randomUUID } from "node:crypto";
-
 import type { RunTerminalState } from "@otomat/domain";
 
-import type { RuntimeEvent } from "#runtime";
+import { buildRuntimeEvent, type RuntimeEvent } from "#runtime";
 
 import { SUPERVISOR_ADAPTER, type ReconcileClassification } from "./types.js";
 
@@ -20,24 +18,22 @@ export function buildTerminalMarker(
   eventCount: number,
   occurredAt: string,
 ): RuntimeEvent {
-  return {
-    id: `${ref.runId}:final:${randomUUID()}`,
-    run_id: ref.runId,
-    step_run_id: ref.stepRunId,
-    agent_session_id: ref.agentSessionId,
+  return buildRuntimeEvent({
+    runId: ref.runId,
+    kind: "final",
     type: "run.lifecycle",
     source: "otomat",
-    occurred_at: occurredAt,
+    adapter: SUPERVISOR_ADAPTER,
+    occurredAt,
+    stepRunId: ref.stepRunId,
+    agentSessionId: ref.agentSessionId,
     payload: {
-      fidelity: "parsed",
-      adapter: SUPERVISOR_ADAPTER,
       phase: "final",
       final_status: finalStatus,
       provider_session_id: providerSessionId,
       event_count: eventCount,
     },
-    raw_ref: null,
-  };
+  });
 }
 
 export function buildReconciledEvent(
@@ -48,22 +44,20 @@ export function buildReconciledEvent(
   orphanTerminated: boolean,
   occurredAt: string,
 ): RuntimeEvent {
-  return {
-    id: `${ref.runId}:reconciled:${randomUUID()}`,
-    run_id: ref.runId,
-    step_run_id: ref.stepRunId,
-    agent_session_id: ref.agentSessionId,
+  return buildRuntimeEvent({
+    runId: ref.runId,
+    kind: "reconciled",
     type: "system.reconciled",
     source: "system",
-    occurred_at: occurredAt,
+    adapter: SUPERVISOR_ADAPTER,
+    occurredAt,
+    stepRunId: ref.stepRunId,
+    agentSessionId: ref.agentSessionId,
     payload: {
-      fidelity: "parsed",
-      adapter: SUPERVISOR_ADAPTER,
       classification,
       reason,
       provider_session_id: providerSessionId,
       orphan_terminated: orphanTerminated,
     },
-    raw_ref: null,
-  };
+  });
 }
