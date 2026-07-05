@@ -133,7 +133,7 @@ function hasGitIdentity(cwd: string): boolean {
 function snapshotWorktree(cwd: string, message: string): void {
   if (!isDirty(cwd)) return;
   runGit(["add", "-A"], { cwd });
-  const env = hasGitIdentity(cwd) ? process.env : { ...process.env, ...OTOMAT_IDENTITY };
+  const env = hasGitIdentity(cwd) ? undefined : OTOMAT_IDENTITY;
   runGit(["-c", "commit.gpgsign=false", "commit", "--no-verify", "-m", message], { cwd, env });
 }
 
