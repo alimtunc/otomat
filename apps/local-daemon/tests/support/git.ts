@@ -5,6 +5,8 @@ import { dirname, join } from "node:path";
 
 import { createClient, runMigrations, schema, type DbClient } from "@otomat/db";
 
+import { scrubGitEnv } from "#git/git-cli";
+
 const TEST_IDENTITY = {
   GIT_AUTHOR_NAME: "Otomat Test",
   GIT_AUTHOR_EMAIL: "test@otomat.local",
@@ -16,7 +18,7 @@ function git(cwd: string, ...args: string[]): string {
   return execFileSync("git", args, {
     cwd,
     encoding: "utf8",
-    env: { ...process.env, ...TEST_IDENTITY },
+    env: { ...scrubGitEnv(process.env), ...TEST_IDENTITY },
   }).toString();
 }
 

@@ -19,7 +19,8 @@ function sha256(text: string): string {
  */
 export function worktreeStateTree(gitCwd: string, baseRef: string): string {
   const dir = mkdtempSync(join(tmpdir(), "otomat-git-index-"));
-  const env = { ...process.env, GIT_INDEX_FILE: join(dir, "index") };
+  // Explicit throwaway index only; runGit isolates the rest of the git env.
+  const env = { GIT_INDEX_FILE: join(dir, "index") };
   try {
     runGit(["read-tree", baseRef], { cwd: gitCwd, env });
     runGit(["add", "-A"], { cwd: gitCwd, env });
