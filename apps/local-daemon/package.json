@@ -26,7 +26,7 @@
     "smoke:dist": "node scripts/smoke-dist.mjs"
   },
   "dependencies": {
-    "@hono/node-server": "^2.0.6",
+    "@hono/node-server": "^2.0.8",
     "@hono/zod-validator": "^0.8.0",
     "@otomat/db": "workspace:*",
     "@otomat/domain": "workspace:*",
@@ -37,7 +37,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "tsdown": "^0.22.3",
-    "tsx": "^4.22.4",
+    "tsx": "^4.23.0",
     "vitest": "^4.1.9"
   }
 }
