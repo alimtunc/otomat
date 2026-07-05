@@ -55,7 +55,13 @@ function endsWithNewline(file: string): boolean {
   }
 }
 
-// File-first (never DB-only) so per-run seq stays equal to the jsonl line index across resume turns; a torn final line is newline-closed first.
+/**
+ * Appends one event to the run's `events.jsonl` (creating the run dir, and
+ * newline-closing a torn final line so the append stays whole), then drains the
+ * file into the DB ledger. File-first — never DB-only — so the per-run `seq`
+ * stays equal to the jsonl line index across resume turns. Synchronous: on
+ * return the event is durably in the ledger with its allocated `seq`.
+ */
 export function emitLedgerEvent(db: Db, dataDir: string, runId: string, event: RuntimeEvent): void {
   const file = runEventsPath(dataDir, runId);
   mkdirSync(dirname(file), { recursive: true });

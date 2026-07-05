@@ -15,6 +15,7 @@ export function insertRun(db: Db, value: NewRun): void {
   db.insert(runs).values(value).run();
 }
 
+/** Throws (Zod) when the matched row's `plan_json` is corrupt; `undefined` means no row matched `id`, never a corrupt plan. */
 export function getRun(db: Db, id: string): RunRow | undefined {
   const row = db.select().from(runs).where(eq(runs.id, id)).get();
   if (!row) return undefined;
@@ -32,6 +33,7 @@ export function listRuns(db: Db, options: { issueId?: string } = {}): RunRow[] {
     .map((row) => ({ ...row, plan_json: runPlanSchema.parse(row.plan_json) }));
 }
 
+/** A run whose `plan_json` failed to parse; `issues` is the Zod validation problems from that parse (a `ZodError.issues` array) — not domain issues. */
 export interface CorruptActiveRun {
   id: string;
   status: RunState;

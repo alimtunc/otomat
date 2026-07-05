@@ -15,6 +15,10 @@ export class RunNotResumableError extends Error {
   }
 }
 
+/**
+ * Starts a fresh run. Side effect: when the request omits `issue_id`, a local `issue`
+ * row is created from the prompt (its first line as the title) to anchor the run.
+ */
 export async function startRun(state: SupervisorState, request: StartRunRequest): Promise<RunRow> {
   const ctx = prepareRun(state, request);
   await spawnTurn(state, ctx, "run", null);
