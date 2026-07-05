@@ -1,9 +1,8 @@
-import { Button, SegmentedControl, SegmentedItem, useTheme } from "@otomat/ui";
+import { Button, Icon, SegmentedControl, SegmentedItem, useTheme } from "@otomat/ui";
 import type { Density, Direction, Theme } from "@otomat/ui";
 import { AppearanceRow } from "@web/components/settings/appearance-row";
 import { SectionHeading } from "@web/components/settings/section-heading";
 import { DEFAULT_ACCENT } from "@web/constants";
-import { Moon, Palette, Rows3, Rows4, Sun } from "lucide-react";
 
 export function AppearanceSection() {
   const { theme, density, direction, accent, setTheme, setDensity, setDirection, setAccent } =
@@ -27,10 +26,10 @@ export function AppearanceSection() {
               onValueChange={(v) => v && setTheme(v as Theme)}
               aria-label="Theme"
             >
-              <SegmentedItem value="dark" icon={<Moon />}>
+              <SegmentedItem value="dark" icon={<Icon name="moon" />}>
                 Dark
               </SegmentedItem>
-              <SegmentedItem value="light" icon={<Sun />}>
+              <SegmentedItem value="light" icon={<Icon name="sun" />}>
                 Light
               </SegmentedItem>
             </SegmentedControl>
@@ -47,10 +46,10 @@ export function AppearanceSection() {
               onValueChange={(v) => v && setDensity(v as Density)}
               aria-label="Density"
             >
-              <SegmentedItem value="compact" icon={<Rows4 />}>
+              <SegmentedItem value="compact" icon={<Icon name="rows-4" />}>
                 Compact
               </SegmentedItem>
-              <SegmentedItem value="comfortable" icon={<Rows3 />}>
+              <SegmentedItem value="comfortable" icon={<Icon name="rows-3" />}>
                 Comfortable
               </SegmentedItem>
             </SegmentedControl>
@@ -83,7 +82,11 @@ export function AppearanceSection() {
                 className="relative inline-flex h-6.5 w-6.5 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-border"
                 style={{ background: accent ?? "var(--iris-solid)" }}
               >
-                <Palette className="h-3 w-3 text-white mix-blend-difference" aria-hidden />
+                <Icon
+                  name="palette"
+                  className="h-3 w-3 text-white mix-blend-difference"
+                  aria-hidden
+                />
                 <input
                   type="color"
                   aria-label="Custom accent color"

@@ -1,14 +1,14 @@
-import { AlertTriangle, RefreshCw } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "../primitives/button";
 import { EmptyState, type EmptyStateVariant } from "./empty-state";
+import type { IconName } from "./icon";
 
 export interface ErrorStateProps {
   title?: ReactNode;
   description?: ReactNode;
-  icon?: LucideIcon;
+  icon?: IconName;
   retryLabel?: ReactNode;
   onRetry?: () => void;
   retryDisabled?: boolean;
@@ -20,7 +20,7 @@ export interface ErrorStateProps {
 export function ErrorState({
   title = "Something went wrong",
   description,
-  icon = AlertTriangle,
+  icon = "alert-triangle",
   retryLabel = "Retry",
   onRetry,
   retryDisabled = false,

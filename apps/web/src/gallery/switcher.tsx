@@ -1,5 +1,11 @@
-import { Button, SegmentedControl, SegmentedItem, useTheme, type Direction } from "@otomat/ui";
-import { Monitor, MoonStar, Rows3, Sun } from "lucide-react";
+import {
+  Button,
+  Icon,
+  SegmentedControl,
+  SegmentedItem,
+  useTheme,
+  type Direction,
+} from "@otomat/ui";
 
 import { ACCENT_SWATCHES } from "./gallery.fixtures";
 
@@ -16,7 +22,7 @@ export function Switcher() {
   return (
     <div className="sticky top-0 z-10 -mx-6 mb-2 flex flex-wrap items-center gap-4 border-b border-border bg-background/90 px-6 py-3 backdrop-blur">
       <Button size="sm" onClick={toggleTheme}>
-        {theme === "dark" ? <MoonStar /> : <Sun />}
+        {theme === "dark" ? <Icon name="moon-star" /> : <Icon name="sun" />}
         {theme === "dark" ? "Dark" : "Light"}
       </Button>
 
@@ -39,10 +45,10 @@ export function Switcher() {
         onValueChange={(value) => value && setDensity(value as "compact" | "comfortable")}
         aria-label="Density"
       >
-        <SegmentedItem value="compact" icon={<Rows3 />}>
+        <SegmentedItem value="compact" icon={<Icon name="rows-3" />}>
           Compact
         </SegmentedItem>
-        <SegmentedItem value="comfortable" icon={<Monitor />}>
+        <SegmentedItem value="comfortable" icon={<Icon name="monitor" />}>
           Comfortable
         </SegmentedItem>
       </SegmentedControl>

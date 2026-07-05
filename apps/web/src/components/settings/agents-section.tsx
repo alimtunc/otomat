@@ -1,6 +1,5 @@
 import { EmptyState } from "@otomat/ui";
 import { SectionHeading } from "@web/components/settings/section-heading";
-import { Bot } from "lucide-react";
 
 export function AgentsSection() {
   return (
@@ -11,7 +10,7 @@ export function AgentsSection() {
       />
       <div className="rounded-lg border border-border-subtle bg-card">
         <EmptyState
-          icon={Bot}
+          icon="bot"
           variant="inline"
           title="No agents configured"
           description="Agents are defined alongside the daemon. None are configured yet."

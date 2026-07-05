@@ -9,7 +9,6 @@ import { RunDiffHeader } from "@web/components/runs/diff/header";
 import { ArchivedComments } from "@web/components/runs/review/archived-comments";
 import { partitionComments } from "@web/components/runs/review/partition";
 import { useReviewSelection } from "@web/components/runs/review/use-selection";
-import { GitCompare } from "lucide-react";
 
 function DiffLoading() {
   return (
@@ -52,7 +51,7 @@ export function RunDiffView() {
     return (
       <div className="grid h-full place-items-center p-6">
         <EmptyState
-          icon={GitCompare}
+          icon="git-compare"
           title="No worktree for this run"
           description="This run executed without a git worktree, so there is no diff to show. Diffs are never fabricated."
         />
@@ -76,7 +75,7 @@ export function RunDiffView() {
       {diff.files.length === 0 ? (
         <div className="grid flex-1 place-items-center p-6">
           <EmptyState
-            icon={GitCompare}
+            icon="git-compare"
             title="No changes yet"
             description="The canonical git diff appears once a run produces changes. Diffs are never fabricated."
           />

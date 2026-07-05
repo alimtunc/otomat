@@ -7,10 +7,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Icon,
   Textarea,
 } from "@otomat/ui";
 import { useStartRunAndNavigate } from "@web/api/runs/mutations";
-import { Play } from "lucide-react";
 import { useState } from "react";
 
 export function StartRunDialog() {
@@ -31,7 +31,7 @@ export function StartRunDialog() {
   return (
     <>
       <Button variant="primary" size="sm" onClick={() => setOpen(true)}>
-        <Play aria-hidden />
+        <Icon name="play" aria-hidden />
         New local run
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>

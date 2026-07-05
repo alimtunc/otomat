@@ -1,4 +1,4 @@
-import { Button } from "@otomat/ui";
+import { Button, Icon } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
 import { useStartRunAndNavigate } from "@web/api/runs/mutations";
@@ -6,7 +6,6 @@ import { useRunsForIssue } from "@web/api/runs/queries";
 import { IssueHeader } from "@web/components/issues/issue-header";
 import { RunsList } from "@web/components/runs/launch/list";
 import { RouteShell } from "@web/components/shell/route-shell";
-import { Play } from "lucide-react";
 
 export function IssueDetailView() {
   const { issueId } = useParams({ from: "/issues/$issueId" });
@@ -35,7 +34,7 @@ export function IssueDetailView() {
           disabled={isPending || issue.isError}
           onClick={launch}
         >
-          <Play aria-hidden />
+          <Icon name="play" aria-hidden />
           Start run
         </Button>
       }

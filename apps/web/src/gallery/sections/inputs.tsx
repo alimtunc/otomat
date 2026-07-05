@@ -1,5 +1,4 @@
-import { Checkbox, Field, FieldControl, FieldLabel, Input, Switch } from "@otomat/ui";
-import { Folder } from "lucide-react";
+import { Checkbox, Field, FieldControl, FieldLabel, Icon, Input, Switch } from "@otomat/ui";
 import { useState } from "react";
 
 import { Section } from "../section";
@@ -15,7 +14,7 @@ export function InputsSection() {
         <Field className="w-60" hint="Local git repository.">
           <FieldLabel>Repository path</FieldLabel>
           <FieldControl>
-            <Input icon={<Folder />} placeholder="/Users/…/web-app" />
+            <Input icon={<Icon name="folder" />} placeholder="/Users/…/web-app" />
           </FieldControl>
         </Field>
 

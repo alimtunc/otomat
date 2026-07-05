@@ -1,7 +1,6 @@
 import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
 import type { useRepositories } from "@web/api/daemon/queries";
 import { RepositoryRow } from "@web/components/settings/repository-row";
-import { FolderGit2 } from "lucide-react";
 
 export function RepositoriesList({ query }: { query: ReturnType<typeof useRepositories> }) {
   if (query.isPending) return <Skeleton className="m-4" height={40} />;
@@ -19,7 +18,7 @@ export function RepositoriesList({ query }: { query: ReturnType<typeof useReposi
   if (query.data.length === 0) {
     return (
       <EmptyState
-        icon={FolderGit2}
+        icon="folder-git-2"
         variant="inline"
         title="No repositories registered"
         description="Register a local repository to validate its git state and run agents against it."

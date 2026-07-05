@@ -5,10 +5,10 @@ import {
   SegmentedControl,
   SegmentedItem,
   Tabs,
+  Icon,
   TabsList,
   TabsTrigger,
 } from "@otomat/ui";
-import { Columns3, List } from "lucide-react";
 
 import { Section } from "../section";
 
@@ -17,10 +17,10 @@ export function TabsSection() {
     <Section title="Tabs · segmented · pills">
       <div className="flex flex-wrap items-start gap-6">
         <SegmentedControl type="single" defaultValue="board" aria-label="Layout">
-          <SegmentedItem value="board" icon={<Columns3 />}>
+          <SegmentedItem value="board" icon={<Icon name="columns-3" />}>
             Board
           </SegmentedItem>
-          <SegmentedItem value="list" icon={<List />}>
+          <SegmentedItem value="list" icon={<Icon name="list" />}>
             List
           </SegmentedItem>
         </SegmentedControl>

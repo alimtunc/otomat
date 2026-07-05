@@ -1,5 +1,4 @@
-import { Button, IconButton, Kbd } from "@otomat/ui";
-import { Play, Settings } from "lucide-react";
+import { Button, Icon, IconButton, Kbd } from "@otomat/ui";
 
 import { Row, Section } from "../section";
 
@@ -8,7 +7,7 @@ export function ButtonsSection() {
     <Section title="Buttons">
       <Row>
         <Button variant="primary">
-          <Play />
+          <Icon name="play" />
           Launch run
         </Button>
         <Button>Secondary</Button>
@@ -20,7 +19,7 @@ export function ButtonsSection() {
         <Button variant="primary" loading style={{ width: 96 }}>
           Loading
         </Button>
-        <IconButton label="Icon button" icon={<Settings />} />
+        <IconButton label="Icon button" icon={<Icon name="settings" />} />
         <Kbd>⌘K</Kbd>
       </Row>
     </Section>

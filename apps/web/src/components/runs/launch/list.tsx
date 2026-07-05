@@ -1,7 +1,6 @@
 import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
 import type { useRunsForIssue } from "@web/api/runs/queries";
 import { RunRow } from "@web/components/runs/launch/row";
-import { Inbox } from "lucide-react";
 
 export function RunsList({ query }: { query: ReturnType<typeof useRunsForIssue> }) {
   if (query.isPending) return <Skeleton height={44} />;
@@ -20,7 +19,7 @@ export function RunsList({ query }: { query: ReturnType<typeof useRunsForIssue> 
     return (
       <div className="rounded-lg border border-border-subtle bg-card">
         <EmptyState
-          icon={Inbox}
+          icon="inbox"
           variant="inline"
           title="No runs yet"
           description="Start a run to launch the agent on this issue."
