@@ -1,7 +1,9 @@
 import type { ReviewCommentContract, RunDiffContract } from "@otomat/domain";
 
 export interface PartitionedComments {
+  /** Open comments still matching the live diff, grouped by file path then by line. */
   anchored: Map<string, Map<number, ReviewCommentContract[]>>;
+  /** Comments detached from the live diff (closed, or whose anchor sha no longer matches a live file); rendered against their snapshot. */
   archived: ReviewCommentContract[];
 }
 

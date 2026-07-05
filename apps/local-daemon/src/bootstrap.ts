@@ -8,6 +8,7 @@ import type { WorktreeBinding } from "#supervisor";
 export const DEFAULT_PROJECT_ID = "local-default";
 export const DEFAULT_REPOSITORY_ID = "local-default-repo";
 
+/** Idempotently upserts the local default project at `rootPath`; always returns `DEFAULT_PROJECT_ID`. */
 export function ensureDefaultProject(db: Db, rootPath: string): string {
   upsertProject(db, { id: DEFAULT_PROJECT_ID, name: "Local workspace", root_path: rootPath });
   return DEFAULT_PROJECT_ID;

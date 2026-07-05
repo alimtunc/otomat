@@ -30,6 +30,7 @@ export interface FixPreparation {
 
 export interface PreparePullRequestResult {
   row: PullRequestRow;
+  /** False when an existing draft was updated in place rather than inserted. */
   created: boolean;
 }
 

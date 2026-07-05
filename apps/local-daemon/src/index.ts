@@ -1,3 +1,13 @@
+/**
+ * Daemon process entry point. Two mutually exclusive modes are chosen by env:
+ * when `OTOMAT_WORKER_JOB` is set the process was re-exec'd by the supervisor to
+ * run a single supervised worker and never binds HTTP; otherwise `startDaemon()`
+ * migrates, bootstraps,
+ * reconciles crashed runs, and binds the server — skipped under `VITEST`.
+ * Public entry: `startDaemon` (re-exported from `./server.js`).
+ *
+ * @packageDocumentation
+ */
 import { defaultDbPath } from "@otomat/db";
 
 import { runWorkerMain } from "#supervisor";

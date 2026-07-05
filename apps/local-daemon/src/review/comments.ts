@@ -35,6 +35,7 @@ function ensureReview(ctx: ReviewContext, runId: string): ReviewRow {
   );
 }
 
+/** The run's review row (null until the first comment creates it) and all its comments. */
 export function getReviewDetail(ctx: ReviewContext, runId: string): ReviewDetailResult {
   return {
     review: getReviewForRun(ctx.db, runId) ?? null,
@@ -42,6 +43,13 @@ export function getReviewDetail(ctx: ReviewContext, runId: string): ReviewDetail
   };
 }
 
+/**
+ * Pins a comment to the live diff: the request's `diff_sha` must still match the
+ * file's current `DiffFile.sha`. Captures the covering hunk (or the whole patch) as
+ * `hunk_snapshot`, creates the review on the first comment, drives it to `in_review`,
+ * and emits `review.comment_created`. Throws DiffUnavailableError when the run has no
+ * worktree diff, and ReviewAnchorStaleError when the path/sha no longer matches.
+ */
 export function addComment(
   ctx: ReviewContext,
   runId: string,

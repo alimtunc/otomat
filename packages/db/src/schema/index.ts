@@ -1,3 +1,11 @@
+/**
+ * Canonical Drizzle schema for the local SQLite database — the single source of
+ * every table shape. Most tables default `created_at`/`updated_at` to
+ * `CURRENT_TIMESTAMP` via a shared helper; `runtime_events` is the exception,
+ * carrying only `created_at`. WAL mode and `foreign_keys = ON` are established by
+ * `createClient`, not declared here.
+ * @packageDocumentation
+ */
 import type {
   AgentSessionState,
   PullRequestState,

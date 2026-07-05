@@ -14,6 +14,7 @@ function delay(ms: number): Promise<void> {
   });
 }
 
+/** Sends `SIGTERM`, waits up to `graceMs` for exit, then escalates to `SIGKILL`. Resolves only once the process has actually exited. */
 export async function terminateGracefully(proc: SessionProcess, graceMs: number): Promise<void> {
   proc.kill("SIGTERM");
   const exitedInTime = await Promise.race([

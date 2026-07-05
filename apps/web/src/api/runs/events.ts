@@ -1,6 +1,10 @@
 import type { EventEnvelope } from "@otomat/domain";
 
-// Events arrive in ascending seq (catch-up then live), so the common path is an O(1) tail append.
+/**
+ * Idempotent by seq: a re-delivered seq returns `current` unchanged (same reference), so the
+ * `setEvents` updater bails out of a re-render. Out-of-order arrivals are inserted and the list
+ * re-sorted ascending; the common ascending-arrival path is a plain tail append.
+ */
 export function mergeEvent(current: EventEnvelope[], event: EventEnvelope): EventEnvelope[] {
   const last = current.at(-1);
   if (last === undefined || event.seq > last.seq) return [...current, event];
@@ -10,6 +14,7 @@ export function mergeEvent(current: EventEnvelope[], event: EventEnvelope): Even
   return next;
 }
 
+/** One-line human summary: the first present payload field by priority (text, tool, action, decision, provider session id), else the raw event type. */
 export function eventSummary(event: EventEnvelope): string {
   const payload = event.payload;
   if (typeof payload.text === "string") return payload.text;

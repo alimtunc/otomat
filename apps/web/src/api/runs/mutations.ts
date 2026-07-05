@@ -6,6 +6,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
+/** Starts a run. On success invalidates the issues and runs caches. */
 export function useStartRun() {
   const client = useQueryClient();
   return useMutation({
@@ -29,6 +30,7 @@ function useRunCommand(runId: string, command: () => Promise<unknown>, errorMess
   });
 }
 
+/** Aborts the run. On success invalidates its detail and the runs list; toasts on failure. */
 export function useAbortRun(runId: string) {
   return useRunCommand(
     runId,
@@ -37,6 +39,7 @@ export function useAbortRun(runId: string) {
   );
 }
 
+/** Resumes the run. On success invalidates its detail and the runs list; toasts on failure. */
 export function useResumeRun(runId: string) {
   return useRunCommand(
     runId,
@@ -55,10 +58,16 @@ function startRunErrorMessage(error: unknown): string {
 }
 
 export interface StartRunAndNavigate {
+  /** Resolves true when the run started and navigation fired; false when it failed (an error toast was shown). */
   start: (request: StartRunRequest) => Promise<boolean>;
   isPending: boolean;
 }
 
+/**
+ * Starts a run and, on success, toasts and navigates to its detail route; on
+ * failure shows an error toast keyed to the daemon response. `start` resolves
+ * true/false accordingly.
+ */
 export function useStartRunAndNavigate(): StartRunAndNavigate {
   const startRun = useStartRun();
   const navigate = useNavigate();

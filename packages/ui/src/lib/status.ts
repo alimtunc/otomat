@@ -73,6 +73,7 @@ export interface StatusDescriptor {
   tone: StatusTone;
   icon: LucideIcon;
   label: string;
+  /** True for in-progress states that should render a live/animated indicator. */
   live?: boolean;
 }
 
@@ -173,6 +174,7 @@ const STATUS_REGISTRY: { [K in StatusKind]: StatusMap<KindStatusMap[K]> } = {
   diffFile: DIFF_FILE_STATUS,
 };
 
+/** Resolves the visual descriptor (tone, icon, label) for a domain status; total over every state of each `StatusKind`. */
 export function resolveStatus<K extends StatusKind>(
   kind: K,
   status: KindStatusMap[K],

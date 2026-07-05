@@ -10,6 +10,7 @@ export function useRunDiff(runId: string) {
   });
 }
 
+/** Event-driven: invalidated by the run's ledger stream on `review.*` events (see RunEventsProvider), never polled. */
 export function useRunReview(runId: string) {
   return useQuery({
     queryKey: queryKeys.runReview(runId),
@@ -17,6 +18,7 @@ export function useRunReview(runId: string) {
   });
 }
 
+/** Event-driven: invalidated by the run's ledger stream on `pr.*` events (see RunEventsProvider), never polled. */
 export function useRunPullRequest(runId: string) {
   return useQuery({
     queryKey: queryKeys.runPullRequest(runId),

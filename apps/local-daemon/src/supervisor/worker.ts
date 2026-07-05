@@ -19,12 +19,18 @@ const supervisedJobSchema = z.object({
   providerSessionId: z.string().nullable(),
 }) satisfies z.ZodType<SupervisedJob>;
 
+/** Parses the serialized job from `WORKER_JOB_ENV`; null when the var is absent or empty. Throws (zod/JSON) when it is present but malformed. */
 export function parseJob(env: NodeJS.ProcessEnv): SupervisedJob | null {
   const raw = env[WORKER_JOB_ENV];
   if (raw === undefined || raw === "") return null;
   return supervisedJobSchema.parse(JSON.parse(raw));
 }
 
+/**
+ * Runs one turn through the runtime adapter — or resumes the provider session when
+ * `job.mode` is `resume` — streaming every event into the job's `events.jsonl` and
+ * closing the sink before returning. Rejects if the turn throws.
+ */
 export async function runWorkerJob(
   job: SupervisedJob,
   signal: AbortSignal,
@@ -63,6 +69,7 @@ export async function runWorkerJob(
   }
 }
 
+/** Appends the run's terminal-marker line (final status, provider session, event count) to its `events.jsonl` — the durable sentinel reconciliation reads to tell a finished run from a torn one. */
 export function writeTerminalMarker(
   job: SupervisedJob,
   final: RuntimeFinalState,

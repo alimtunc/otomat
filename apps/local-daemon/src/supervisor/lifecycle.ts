@@ -76,6 +76,14 @@ function trackTurn(
   state.inflight.set(ctx.runId, { proc, monitor, tail });
 }
 
+/**
+ * Advances a prepared run to `running`, spawns its worker, and tracks it to exit.
+ * Awaits a concurrency slot first, then re-checks the run wasn't aborted or made
+ * terminal while waiting — if it was, releases the slot and returns without spawning.
+ * Throws when the run is already claiming or in-flight. A spawn failure kills any child
+ * and settles the run before rethrowing. The run/step/session rows must already exist
+ * (via `prepareRun`).
+ */
 export async function spawnTurn(
   state: SupervisorState,
   ctx: TurnContext,

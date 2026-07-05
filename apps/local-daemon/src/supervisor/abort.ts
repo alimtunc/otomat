@@ -14,6 +14,12 @@ import { driveRunTo, driveStepsAndSessionsTo } from "./transitions.js";
 /** Grace between a graceful `SIGTERM` and a forced `SIGKILL` during abort. */
 const ABORT_GRACE_MS = 2000;
 
+/**
+ * Aborts an in-flight run: gracefully terminates its process group (SIGTERM then
+ * SIGKILL), then drives it to `canceled` and appends a terminal marker. No-op when the
+ * run is missing or already terminal. If the worker wrote its own final marker before
+ * the abort landed, that result is honored instead of a forced cancel.
+ */
 export async function abortRun(state: SupervisorState, runId: string): Promise<void> {
   const { db, dataDir } = state;
   const run = getRun(db, runId);

@@ -54,6 +54,7 @@ export type RunContract = z.infer<typeof runContractSchema>;
 export const stepRunContractSchema = z.object({
   id: z.string(),
   run_id: z.string(),
+  /** Zero-based position of this step within the run. */
   idx: z.number().int().nonnegative(),
   name: z.string().min(1),
   status: z.enum(STEP_RUN_STATES),
@@ -65,6 +66,7 @@ export const agentSessionContractSchema = z.object({
   step_run_id: z.string(),
   agent_id: z.string().nullable(),
   status: z.enum(AGENT_SESSION_STATES),
+  /** The runtime provider's own session id; null until the provider assigns one, then reused when resuming the session. */
   provider_session_id: z.string().nullable(),
 });
 export type AgentSessionContract = z.infer<typeof agentSessionContractSchema>;
@@ -91,6 +93,7 @@ export const reviewCommentContractSchema = z.object({
 });
 export type ReviewCommentContract = z.infer<typeof reviewCommentContractSchema>;
 
+/** Local PR record; preparing one is a stub (nothing hits the provider), so `number` and `url` stay null until a real PR exists. */
 export const pullRequestContractSchema = z.object({
   id: z.string(),
   run_id: z.string(),

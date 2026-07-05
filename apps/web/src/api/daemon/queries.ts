@@ -19,6 +19,11 @@ export interface DaemonStatus {
   retry: () => void;
 }
 
+/**
+ * Coarse daemon connection state derived from the health poll: `online` on a
+ * successful response, `offline` on error while not mid-request, else
+ * `reconnecting`. `lastSyncAt` is the last successful health timestamp, or null.
+ */
 export function useDaemonStatus(): DaemonStatus {
   const health = useHealth();
   let connectionState: ConnectionState = "reconnecting";

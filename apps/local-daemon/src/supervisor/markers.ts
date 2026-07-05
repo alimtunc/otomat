@@ -36,6 +36,7 @@ export function buildTerminalMarker(
   });
 }
 
+/** Audit event appended on boot recording how reconciliation classified a torn run and whether an orphan process group was terminated. */
 export function buildReconciledEvent(
   ref: SessionRef,
   classification: ReconcileClassification,

@@ -15,6 +15,10 @@ export class RunNotResumableError extends Error {
   }
 }
 
+/**
+ * Starts a fresh run. Side effect: when the request omits `issue_id`, a local `issue`
+ * row is created from the prompt (its first line as the title) to anchor the run.
+ */
 export async function startRun(state: SupervisorState, request: StartRunRequest): Promise<RunRow> {
   const ctx = prepareRun(state, request);
   await spawnTurn(state, ctx, "run", null);
@@ -23,6 +27,7 @@ export async function startRun(state: SupervisorState, request: StartRunRequest)
   return row;
 }
 
+/** Resumes a run waiting on a human by spawning a `resume` turn against its existing provider session. Throws `RunNotResumableError` unless the run is in `awaiting_human`, is not already running, and has a resumable provider session. */
 export async function resumeRun(state: SupervisorState, runId: string): Promise<RunRow> {
   const run = requireFollowUpableRun(state, runId, "awaiting_human");
   const prompt = run.plan_json.steps[0]?.prompt ?? null;

@@ -2,6 +2,11 @@ import { DEFAULTS, type ThemeState } from "./types";
 
 const STORAGE_KEY = "otomat.theme";
 
+/**
+ * Reads persisted theme state from `localStorage`, coercing each field to a valid
+ * value and falling back to `DEFAULTS` for anything missing or malformed. Returns
+ * `DEFAULTS` when there is no `window` (SSR) or on any read/parse error.
+ */
 export function readStored(): ThemeState {
   if (typeof window === "undefined") {
     return DEFAULTS;
@@ -24,6 +29,7 @@ export function readStored(): ThemeState {
   }
 }
 
+/** Persists theme state to `localStorage`; a no-op with no `window` (SSR) and silent when storage is unavailable. */
 export function writeStored(state: ThemeState): void {
   if (typeof window === "undefined") {
     return;

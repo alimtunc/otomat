@@ -54,12 +54,42 @@ export interface WorktreeListFilter {
 }
 
 export interface GitWorktreeService {
+  /**
+   * Forks a new worktree on a dedicated `branch` for `owner`. Idempotent when
+   * `owner` already holds an active worktree on the same branch (returns it
+   * unchanged). Creates the branch + checkout under `worktreesRoot` and records
+   * a row with `headSha` pinned to the fork point. Throws WorktreeConflictError
+   * when `owner` holds a different branch or the branch/path is already taken.
+   */
   acquire(input: AcquireWorktreeInput): WorktreeRecord;
+  /** The owner's active worktree, or `undefined`; archived/removed rows are ignored. */
   get(owner: string): WorktreeRecord | undefined;
+  /** Records for the configured repository, newest first; optionally filtered by `status`. */
   list(filter?: WorktreeListFilter): WorktreeRecord[];
+  /**
+   * Per-file changes of the owner's worktree against its fork point. Resolves
+   * the active worktree, else the latest non-removed one; throws
+   * WorktreeNotFoundError when neither exists.
+   */
   changedFiles(owner: string): ChangedFile[];
+  /**
+   * Canonical diff of the owner's worktree against its fork point. Resolves the
+   * active worktree, else the latest non-removed one; throws
+   * WorktreeNotFoundError when neither exists.
+   */
   diff(owner: string): CanonicalDiff;
+  /**
+   * Commits any uncommitted work, removes the working directory, and marks the
+   * row archived with the branch tip as `headSha`; the branch is kept. Requires
+   * an active worktree — throws WorktreeNotFoundError otherwise. Converges even
+   * when the working directory has vanished by reading the branch tip.
+   */
   archive(owner: string): WorktreeRecord;
+  /**
+   * Removes the working directory and marks the row removed, deleting the branch
+   * unless `deleteBranch` is false. Tolerant of an already-removed directory.
+   * Throws WorktreeNotFoundError when no active or archived worktree is tracked.
+   */
   cleanup(owner: string, options?: CleanupOptions): void;
 }
 
@@ -107,6 +137,13 @@ function snapshotWorktree(cwd: string, message: string): void {
   runGit(["-c", "commit.gpgsign=false", "commit", "--no-verify", "-m", message], { cwd, env });
 }
 
+/**
+ * Builds the worktree/branch lifecycle service over `config.db` and the repo at
+ * `config.repoRoot`. One active worktree per owner is enforced by the
+ * `worktrees` partial unique index; diffs resolve against each worktree's fork
+ * point (merge-base with the default branch), while archives snapshot
+ * uncommitted work and pin the branch tip as `headSha`.
+ */
 export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitWorktreeService {
   const { db, repositoryId, repoRoot, defaultBranch, worktreesRoot } = config;
   const idFactory = config.idFactory ?? randomUUID;
