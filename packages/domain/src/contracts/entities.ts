@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AGENT_SESSION_STATES } from "../state-machines/agent-session.js";
 import { ISSUE_STATES } from "../state-machines/issue.js";
 import { PULL_REQUEST_STATES } from "../state-machines/pull-request.js";
+import { REVIEW_COMMENT_STATES } from "../state-machines/review-comment.js";
 import { REVIEW_STATES } from "../state-machines/review.js";
 import { RUN_STATES } from "../state-machines/run.js";
 import { STEP_RUN_STATES } from "../state-machines/step-run.js";
@@ -75,7 +76,7 @@ export const reviewContractSchema = z.object({
 });
 export type ReviewContract = z.infer<typeof reviewContractSchema>;
 
-/** Pin-to-SHA review comment anchor (OTO-11 builds the migration/fix loop). */
+/** Pin-to-SHA review comment: `(file_path, line, diff_sha)` is immutable, never live-migrated. */
 export const reviewCommentContractSchema = z.object({
   id: z.string(),
   review_id: z.string(),
@@ -83,7 +84,10 @@ export const reviewCommentContractSchema = z.object({
   line: z.number().int().nonnegative(),
   diff_sha: z.string(),
   body: z.string(),
-  status: z.string(),
+  status: z.enum(REVIEW_COMMENT_STATES),
+  /** The hunk (or whole file patch) captured at comment time, shown once the anchor goes stale. */
+  hunk_snapshot: z.string(),
+  fix_requested_at: z.iso.datetime().nullable(),
 });
 export type ReviewCommentContract = z.infer<typeof reviewCommentContractSchema>;
 
@@ -94,6 +98,8 @@ export const pullRequestContractSchema = z.object({
   number: z.number().int().positive().nullable(),
   url: z.url().nullable(),
   status: z.enum(PULL_REQUEST_STATES),
+  title: z.string(),
+  body: z.string().nullable(),
 });
 export type PullRequestContract = z.infer<typeof pullRequestContractSchema>;
 

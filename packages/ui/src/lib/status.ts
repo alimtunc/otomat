@@ -1,10 +1,12 @@
 import type {
   AgentSessionState,
+  ChangeStatus,
   EventSource,
   EventType,
   IssueSource,
   IssueState,
   PullRequestState,
+  ReviewCommentState,
   ReviewState,
   RunState,
   StepRunState,
@@ -19,7 +21,13 @@ import {
   CircleDotDashed,
   CircleSlash,
   Clock,
+  Copy,
   FileDiff,
+  FileMinus,
+  FilePen,
+  FilePlus,
+  FileSymlink,
+  FileType,
   Flag,
   GitCommitHorizontal,
   GitCompare,
@@ -50,7 +58,15 @@ export type StatusTone =
   | "stale"
   | "ghost";
 
-export type StatusKind = "issue" | "run" | "step" | "session" | "review" | "pr";
+export type StatusKind =
+  | "issue"
+  | "run"
+  | "step"
+  | "session"
+  | "review"
+  | "reviewComment"
+  | "pr"
+  | "diffFile";
 
 // icon (LucideIcon) is the web binding layer; kept in ui on purpose, not in @otomat/domain.
 export interface StatusDescriptor {
@@ -113,6 +129,12 @@ const REVIEW_STATUS: StatusMap<ReviewState> = {
   resolved: { tone: "success", icon: CheckCircle2, label: "Resolved" },
 };
 
+const REVIEW_COMMENT_STATUS: StatusMap<ReviewCommentState> = {
+  open: { tone: "review", icon: MessageSquare, label: "Open" },
+  addressed: { tone: "success", icon: CheckCircle2, label: "Addressed" },
+  outdated: { tone: "stale", icon: AlertTriangle, label: "Outdated" },
+};
+
 const PR_STATUS: StatusMap<PullRequestState> = {
   draft: { tone: "neutral", icon: GitPullRequestDraft, label: "Draft" },
   open: { tone: "success", icon: GitPullRequest, label: "Open" },
@@ -120,13 +142,24 @@ const PR_STATUS: StatusMap<PullRequestState> = {
   closed: { tone: "danger", icon: GitPullRequestClosed, label: "Closed" },
 };
 
-interface KindStatusMap {
+const DIFF_FILE_STATUS: StatusMap<ChangeStatus> = {
+  added: { tone: "success", icon: FilePlus, label: "Added" },
+  modified: { tone: "review", icon: FilePen, label: "Modified" },
+  deleted: { tone: "danger", icon: FileMinus, label: "Deleted" },
+  renamed: { tone: "iris", icon: FileSymlink, label: "Renamed" },
+  copied: { tone: "iris", icon: Copy, label: "Copied" },
+  type_changed: { tone: "neutral", icon: FileType, label: "Type changed" },
+};
+
+export interface KindStatusMap {
   issue: IssueState;
   run: RunState;
   step: StepRunState;
   session: AgentSessionState;
   review: ReviewState;
+  reviewComment: ReviewCommentState;
   pr: PullRequestState;
+  diffFile: ChangeStatus;
 }
 
 const STATUS_REGISTRY: { [K in StatusKind]: StatusMap<KindStatusMap[K]> } = {
@@ -135,7 +168,9 @@ const STATUS_REGISTRY: { [K in StatusKind]: StatusMap<KindStatusMap[K]> } = {
   step: STEP_STATUS,
   session: SESSION_STATUS,
   review: REVIEW_STATUS,
+  reviewComment: REVIEW_COMMENT_STATUS,
   pr: PR_STATUS,
+  diffFile: DIFF_FILE_STATUS,
 };
 
 export function resolveStatus<K extends StatusKind>(

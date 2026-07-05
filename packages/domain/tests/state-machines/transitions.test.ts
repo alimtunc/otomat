@@ -5,6 +5,7 @@ import { issueMachine } from "#domain/state-machines/issue";
 import { IllegalTransitionError } from "#domain/state-machines/machine";
 import { pullRequestMachine } from "#domain/state-machines/pull-request";
 import { reviewMachine } from "#domain/state-machines/review";
+import { reviewCommentMachine } from "#domain/state-machines/review-comment";
 import { RUN_TERMINAL_STATES, runMachine } from "#domain/state-machines/run";
 import { stepRunMachine } from "#domain/state-machines/step-run";
 
@@ -14,6 +15,7 @@ const machines = [
   stepRunMachine,
   agentSessionMachine,
   reviewMachine,
+  reviewCommentMachine,
   pullRequestMachine,
 ];
 

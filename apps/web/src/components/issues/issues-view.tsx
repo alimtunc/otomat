@@ -1,6 +1,6 @@
 import { useIssues } from "@web/api/issues/queries";
 import { IssuesList } from "@web/components/issues/issues-list";
-import { StartRunDialog } from "@web/components/runs/start-run-dialog";
+import { StartRunDialog } from "@web/components/runs/launch/dialog";
 import { RouteShell } from "@web/components/shell/route-shell";
 
 export function IssuesView() {

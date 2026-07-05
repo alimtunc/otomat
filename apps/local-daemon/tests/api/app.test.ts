@@ -20,6 +20,7 @@ import type { ApiDeps } from "#api/deps";
 import { appendEvents } from "#events";
 import type { RuntimeEvent } from "#runtime";
 
+import { stubReviewService } from "../support/review.js";
 import { seedRun } from "../support/seed.js";
 
 const PROJECT_ID = "project-1";
@@ -82,7 +83,9 @@ function request(
 interface AppOverrides {
   launchRun?: ApiDeps["launchRun"];
   resumeRun?: ApiDeps["resumeRun"];
+  fixRun?: ApiDeps["fixRun"];
   abortRun?: ApiDeps["abortRun"];
+  review?: ApiDeps["review"];
 }
 
 function makeApp(overrides: AppOverrides = {}) {
@@ -94,7 +97,9 @@ function makeApp(overrides: AppOverrides = {}) {
     dbPath,
     launchRun: overrides.launchRun ?? (async () => runRow("run-default")),
     resumeRun: overrides.resumeRun ?? (async () => runRow("run-default")),
+    fixRun: overrides.fixRun ?? (async () => runRow("run-default")),
     abortRun: overrides.abortRun ?? (async () => {}),
+    review: overrides.review ?? stubReviewService(),
   });
 }
 

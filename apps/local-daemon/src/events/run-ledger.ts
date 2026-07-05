@@ -11,8 +11,10 @@ import { dirname, join } from "node:path";
 
 import type { Db } from "@otomat/db";
 
-import { EVENTS_FILENAME, EventTailer } from "#events";
 import type { RuntimeEvent } from "#runtime";
+
+import { EventTailer } from "./tailer.js";
+import { EVENTS_FILENAME } from "./types.js";
 
 const LIVE_TAIL_INTERVAL_MS = 200;
 

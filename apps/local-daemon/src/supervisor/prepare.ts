@@ -17,9 +17,10 @@ import {
   type StartRunRequest,
 } from "@otomat/domain";
 
+import { runDir } from "#events";
 import { FAKE_ADAPTER_ID } from "#runtime";
 
-import { runDir } from "./run-events.js";
+import type { SupervisorState } from "./state.js";
 import type { TurnContext } from "./types.js";
 
 const STEP_NAME = "Agent turn";
@@ -44,13 +45,9 @@ function resolveIssueId(db: Db, defaultProjectId: string, request: StartRunReque
   return issueId;
 }
 
-/** Materializes the run/step/session rows and the frozen plan for a fresh turn, returning its context. */
-export function prepareRun(
-  db: Db,
-  dataDir: string,
-  defaultProjectId: string,
-  request: StartRunRequest,
-): TurnContext {
+/** Materializes the run/step/session rows, the frozen plan, and the run's isolated worktree. */
+export function prepareRun(state: SupervisorState, request: StartRunRequest): TurnContext {
+  const { db, dataDir, defaultProjectId, worktrees } = state;
   const issueId = resolveIssueId(db, defaultProjectId, request);
   const issue = getIssue(db, issueId);
   if (!issue) throw new Error(`issue ${issueId} not found`);
@@ -59,30 +56,55 @@ export function prepareRun(
   const runId = randomUUID();
   const stepRunId = randomUUID();
   const agentSessionId = randomUUID();
+  const branch = `otomat/run/${runId.slice(0, 8)}`;
   const plan: RunPlan = {
     version: 1,
     steps: [{ id: stepRunId, name: STEP_NAME, agent: FAKE_ADAPTER_ID, prompt, depends_on: [] }],
   };
 
-  insertRun(db, {
-    id: runId,
-    issue_id: issueId,
-    status: runMachine.initial,
-    branch: `otomat/run/${runId.slice(0, 8)}`,
-    plan_json: plan,
-  });
-  insertStepRun(db, {
-    id: stepRunId,
-    run_id: runId,
-    idx: 0,
-    name: STEP_NAME,
-    status: stepRunMachine.initial,
-  });
-  insertAgentSession(db, {
-    id: agentSessionId,
-    step_run_id: stepRunId,
-    status: agentSessionMachine.initial,
-  });
+  // Acquired before the run row exists so a git failure aborts the launch cleanly (no phantom run).
+  const worktree = worktrees ? worktrees.service.acquire({ owner: runId, branch }) : null;
 
-  return { runId, stepRunId, agentSessionId, prompt, runDir: runDir(dataDir, runId) };
+  try {
+    insertRun(db, {
+      id: runId,
+      issue_id: issueId,
+      status: runMachine.initial,
+      branch,
+      plan_json: plan,
+      repository_id: worktrees?.repositoryId ?? null,
+      worktree_id: worktree?.id ?? null,
+    });
+    insertStepRun(db, {
+      id: stepRunId,
+      run_id: runId,
+      idx: 0,
+      name: STEP_NAME,
+      status: stepRunMachine.initial,
+    });
+    insertAgentSession(db, {
+      id: agentSessionId,
+      step_run_id: stepRunId,
+      status: agentSessionMachine.initial,
+    });
+  } catch (error) {
+    // The rows never landed — roll back the worktree acquired above so no orphan dir/branch leaks.
+    if (worktree) {
+      try {
+        worktrees?.service.cleanup(runId);
+      } catch (cleanupError) {
+        console.error(`[otomat] worktree rollback for aborted run ${runId} failed`, cleanupError);
+      }
+    }
+    throw error;
+  }
+
+  return {
+    runId,
+    stepRunId,
+    agentSessionId,
+    prompt,
+    runDir: runDir(dataDir, runId),
+    worktreePath: worktree?.path ?? null,
+  };
 }

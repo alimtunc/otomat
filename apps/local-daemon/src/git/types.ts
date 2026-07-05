@@ -1,6 +1,8 @@
+import type { ChangeStatus } from "@otomat/domain";
+
 export type WorktreeStatus = "active" | "archived" | "removed";
 
-export type ChangeStatus = "added" | "modified" | "deleted" | "renamed" | "copied" | "type_changed";
+export type { ChangeStatus };
 
 export interface ChangedFile {
   /** Current path (the new path for renames/copies). */

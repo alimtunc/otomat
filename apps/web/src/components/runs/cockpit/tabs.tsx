@@ -1,11 +1,19 @@
 import { SegmentedControl, SegmentedItem } from "@otomat/ui";
 import { Link, useMatchRoute } from "@tanstack/react-router";
-import { GitCompare, ListTree } from "lucide-react";
+import { GitCompare, GitPullRequest, ListTree } from "lucide-react";
+
+function activeTab(onDiff: boolean, onPr: boolean): string {
+  if (onDiff) return "diff";
+  if (onPr) return "pr";
+  return "timeline";
+}
 
 export function CockpitTabs({ runId }: { runId: string }) {
   const matchRoute = useMatchRoute();
-  const onDiff = !!matchRoute({ to: "/runs/$runId/diff" });
-  const value = onDiff ? "diff" : "timeline";
+  const value = activeTab(
+    !!matchRoute({ to: "/runs/$runId/diff" }),
+    !!matchRoute({ to: "/runs/$runId/pr" }),
+  );
   return (
     <SegmentedControl type="single" value={value} aria-label="Run cockpit tabs">
       <SegmentedItem
@@ -21,6 +29,13 @@ export function CockpitTabs({ runId }: { runId: string }) {
         render={<Link to="/runs/$runId/diff" params={{ runId }} />}
       >
         Diff
+      </SegmentedItem>
+      <SegmentedItem
+        value="pr"
+        icon={<GitPullRequest />}
+        render={<Link to="/runs/$runId/pr" params={{ runId }} />}
+      >
+        PR
       </SegmentedItem>
     </SegmentedControl>
   );

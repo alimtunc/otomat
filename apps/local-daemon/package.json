@@ -10,6 +10,8 @@
     "#events/*": "./src/events/*.ts",
     "#git": "./src/git/index.ts",
     "#git/*": "./src/git/*.ts",
+    "#review": "./src/review/index.ts",
+    "#review/*": "./src/review/*.ts",
     "#runtime": "./src/runtime/index.ts",
     "#runtime/*": "./src/runtime/*.ts",
     "#supervisor": "./src/supervisor/index.ts",

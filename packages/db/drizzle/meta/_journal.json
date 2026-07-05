@@ -22,6 +22,13 @@
       "when": 1782767699748,
       "tag": "0002_peaceful_black_bird",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1783201055217,
+      "tag": "0003_wise_dreadnoughts",
+      "breakpoints": true
     }
   ]
 }

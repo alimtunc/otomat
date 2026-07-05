@@ -1,13 +1,14 @@
 import { ErrorState, Skeleton } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
-import { useRunDetail, useRunEvents } from "@web/api/runs/queries";
-import { RunStatusBar } from "@web/components/runs/run-status-bar";
-import { RunTimeline } from "@web/components/runs/run-timeline";
+import { useRunDetail } from "@web/api/runs/queries";
+import { useRunEventStream } from "@web/api/runs/run-events-provider";
+import { RunTimeline } from "@web/components/runs/timeline/list";
+import { RunStatusBar } from "@web/components/runs/timeline/status-bar";
 
 export function RunTimelineView() {
   const { runId } = useParams({ from: "/runs/$runId/" });
   const detail = useRunDetail(runId);
-  const stream = useRunEvents(runId);
+  const stream = useRunEventStream();
 
   if (detail.isPending) {
     return (

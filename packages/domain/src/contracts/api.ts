@@ -2,6 +2,9 @@ import { z } from "zod";
 
 import {
   agentSessionContractSchema,
+  pullRequestContractSchema,
+  reviewCommentContractSchema,
+  reviewContractSchema,
   runContractSchema,
   stepRunContractSchema,
 } from "./entities.js";
@@ -34,6 +37,41 @@ export const startRunRequestSchema = z
     message: "Provide either issue_id or prompt",
   });
 export type StartRunRequest = z.infer<typeof startRunRequestSchema>;
+
+/** A run's review surface: the review row (null before the first comment) plus every comment, newest last. */
+export const reviewDetailSchema = z.object({
+  review: reviewContractSchema.nullable(),
+  comments: z.array(reviewCommentContractSchema),
+});
+export type ReviewDetail = z.infer<typeof reviewDetailSchema>;
+
+/** Create a comment pinned to the diff the reviewer is looking at; the daemon verifies the anchor. */
+export const createReviewCommentRequestSchema = z.object({
+  file_path: z.string().min(1),
+  line: z.number().int().nonnegative(),
+  diff_sha: z.string().min(1),
+  body: z.string().min(1),
+});
+export type CreateReviewCommentRequest = z.infer<typeof createReviewCommentRequestSchema>;
+
+/** Ask an agent to fix the selected open comments as a follow-up turn on the same run. */
+export const requestFixRequestSchema = z.object({
+  comment_ids: z.array(z.string().min(1)).min(1),
+});
+export type RequestFixRequest = z.infer<typeof requestFixRequestSchema>;
+
+/** Persist the local PR draft (stub — nothing is sent to a provider). */
+export const preparePullRequestRequestSchema = z.object({
+  title: z.string().min(1),
+  body: z.string(),
+});
+export type PreparePullRequestRequest = z.infer<typeof preparePullRequestRequestSchema>;
+
+/** `pull_request` is null while no PR has been prepared for the run. */
+export const pullRequestDetailSchema = z.object({
+  pull_request: pullRequestContractSchema.nullable(),
+});
+export type PullRequestDetail = z.infer<typeof pullRequestDetailSchema>;
 
 /** Terminal payload of a run's SSE stream: the run's final status once the ledger is drained. */
 export const runEndPayloadSchema = z.object({ status: z.string() });

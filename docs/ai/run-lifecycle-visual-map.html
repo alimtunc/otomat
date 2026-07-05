@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="generator" content="otomat visual-map" />
+<title>Cycle de vie d'une run — Otomat</title>
+<style>
+  :root {
+    --bg: #eaeef3;
+    --panel: #ffffff;
+    --panel-2: #f4f7fb;
+    --ink: #141a26;
+    --muted: #5d6a7d;
+    --border: #d6dde8;
+    --lifeline: #c2cbd8;
+    --flow: #4954c8;
+    --worker: #b0741a;
+    --ledger: #0b7f8f;
+    --good: #1f8558;
+    --bad: #cb3b3b;
+    --warn: #b9791a;
+    --shadow: 0 1px 2px rgba(20, 26, 38, .06), 0 8px 24px rgba(20, 26, 38, .06);
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e131b;
+      --panel: #161d28;
+      --panel-2: #1b2330;
+      --ink: #e6ecf4;
+      --muted: #95a1b3;
+      --border: #29323f;
+      --lifeline: #313c4c;
+      --flow: #8f9bff;
+      --worker: #e0a24d;
+      --ledger: #34b6c6;
+      --good: #4fc98d;
+      --bad: #f0736f;
+      --warn: #e0a24d;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px rgba(0, 0, 0, .35);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #eaeef3; --panel: #ffffff; --panel-2: #f4f7fb; --ink: #141a26; --muted: #5d6a7d;
+    --border: #d6dde8; --lifeline: #c2cbd8; --flow: #4954c8; --worker: #b0741a; --ledger: #0b7f8f;
+    --good: #1f8558; --bad: #cb3b3b; --warn: #b9791a;
+    --shadow: 0 1px 2px rgba(20,26,38,.06), 0 8px 24px rgba(20,26,38,.06);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e131b; --panel: #161d28; --panel-2: #1b2330; --ink: #e6ecf4; --muted: #95a1b3;
+    --border: #29323f; --lifeline: #313c4c; --flow: #8f9bff; --worker: #e0a24d; --ledger: #34b6c6;
+    --good: #4fc98d; --bad: #f0736f; --warn: #e0a24d;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, color-mix(in srgb, var(--flow) 8%, transparent), transparent 60%),
+      var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 22px 64px; }
+
+  header.top { margin-bottom: 26px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--flow);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-family: var(--mono);
+    font-weight: 650;
+    font-size: clamp(24px, 4vw, 34px);
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  .lede { color: var(--muted); max-width: 64ch; margin: 0; font-size: 15px; }
+  .lede code { font-family: var(--mono); font-size: .92em; color: var(--ink); }
+
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 8px 18px;
+    margin: 20px 0 0; padding: 0; list-style: none;
+    font-size: 12.5px; color: var(--muted);
+  }
+  .legend li { display: flex; align-items: center; gap: 8px; }
+  .swatch { width: 22px; height: 3px; border-radius: 2px; flex: none; }
+  .swatch.solid { height: 10px; width: 10px; border-radius: 3px; }
+  .dash { background: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 9px); height: 2px; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .panel-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel-2);
+  }
+  .panel-head h2 { font-family: var(--mono); font-size: 14px; margin: 0; letter-spacing: .01em; }
+  .panel-head .hint { font-size: 12px; color: var(--muted); }
+
+  .scroll { overflow-x: auto; padding: 8px 12px 14px; }
+  svg.diagram { display: block; width: 100%; min-width: 760px; height: auto; }
+
+  .lifeline { stroke: var(--lifeline); stroke-width: 1.4; stroke-dasharray: 3 5; }
+  .actor { fill: var(--panel-2); stroke: var(--border); stroke-width: 1.2; }
+  .lane-title { font-family: var(--mono); font-size: 13px; font-weight: 600; fill: var(--ink); }
+  .lane-sub { font-family: var(--sans); font-size: 10.5px; fill: var(--muted); }
+  .msg { font-family: var(--mono); font-size: 11.5px; fill: var(--ink); }
+  .msg-ret { fill: var(--muted); }
+  .ln { stroke-width: 1.9; fill: none; }
+  .ln.dash { stroke-dasharray: 5 4; }
+  .flow { stroke: var(--flow); }
+  .worker { stroke: var(--worker); }
+  .ledger { stroke: var(--ledger); }
+  .muted { stroke: var(--lifeline); }
+  .act-worker { fill: color-mix(in srgb, var(--worker) 20%, var(--panel)); stroke: var(--worker); stroke-width: 1; }
+  .act-sup { fill: color-mix(in srgb, var(--flow) 12%, var(--panel)); stroke: none; }
+  .note { fill: var(--panel); stroke: var(--flow); stroke-width: 1.2; }
+  .note-t { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
+  .note-sub { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
+  .frame { fill: none; stroke: var(--border); stroke-width: 1.2; stroke-dasharray: 2 4; }
+  .frame-tab { fill: var(--panel-2); stroke: var(--border); stroke-width: 1; }
+  .frame-lbl { font-family: var(--mono); font-size: 10px; fill: var(--muted); letter-spacing: .04em; }
+
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
+  .card h3 { font-family: var(--mono); font-size: 13px; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+  .tag { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; padding: 2px 7px; border-radius: 999px; border: 1px solid; }
+  .tag.resume { color: var(--flow); border-color: color-mix(in srgb, var(--flow) 45%, transparent); }
+  .tag.fix { color: var(--worker); border-color: color-mix(in srgb, var(--worker) 45%, transparent); }
+  .tag.abort { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+  .card p { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
+  .chain { font-family: var(--mono); font-size: 11.5px; color: var(--ink); line-height: 1.9; margin-top: 6px; }
+  .chain b { color: var(--flow); font-weight: 600; }
+  .arrow { color: var(--muted); }
+
+  .sm { display: flex; flex-direction: column; gap: 14px; padding: 18px; }
+  .sm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .sm-row .rowlbl { font-family: var(--mono); font-size: 11px; color: var(--muted); width: 148px; flex: none; }
+  .pill { font-family: var(--mono); font-size: 12px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel-2); color: var(--ink); white-space: nowrap; }
+  .pill.chev::after { content: "\2192"; margin-left: 10px; color: var(--muted); }
+  .pill.start { border-color: color-mix(in srgb, var(--flow) 40%, var(--border)); }
+  .pill.wait { border-color: color-mix(in srgb, var(--warn) 45%, transparent); color: var(--warn); background: color-mix(in srgb, var(--warn) 8%, var(--panel)); }
+  .pill.good { border-color: color-mix(in srgb, var(--good) 45%, transparent); color: var(--good); background: color-mix(in srgb, var(--good) 8%, var(--panel)); }
+  .pill.bad { border-color: color-mix(in srgb, var(--bad) 45%, transparent); color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--panel)); }
+
+  .section-label { font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 36px 0 4px; }
+
+  footer { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 18px; color: var(--muted); font-size: 12.5px; }
+  footer .files { font-family: var(--mono); font-size: 11.5px; display: grid; gap: 3px; margin-top: 8px; }
+  footer .files span b { color: var(--ink); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">otomat · local-daemon</p>
+    <h1>Cycle de vie d'une run</h1>
+    <p class="lede">Un tour d'agent supervisé. Le parent <code>fork</code> un worker enfant — seul écrivain durable — qui écrit dans <code>events.jsonl</code> ; le parent <code>tail</code> ce ledger et pilote les state machines du domaine. La vérité de fin vient toujours du <strong>ledger</strong>, jamais d'une supposition.</p>
+    <ul class="legend">
+      <li><span class="swatch solid" style="background:var(--flow)"></span> control plane (api · supervisor)</li>
+      <li><span class="swatch solid" style="background:var(--worker)"></span> worker enfant (durable)</li>
+      <li><span class="swatch solid" style="background:var(--ledger)"></span> ledger / stream</li>
+      <li style="color:var(--muted)"><span class="swatch dash"></span> retour / async</li>
+    </ul>
+  </header>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Flux nominal — start → settle</h2>
+      <span class="hint">le temps descend ↓</span>
+    </div>
+    <div class="scroll">
+      <svg class="diagram" viewBox="0 0 1000 720" role="img" aria-label="Diagramme de séquence du cycle de vie d'une run">
+        <defs>
+          <marker id="ah-flow" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+            <path d="M0,0 L7.5,3 L0,6 Z" fill="var(--flow)"/>
+          </marker>
+          <marker id="ah-worker" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+            <path d="M0,0 L7.5,3 L0,6 Z" fill="var(--worker)"/>
+          </marker>
+          <marker id="ah-ledger" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+            <path d="M0,0 L7.5,3 L0,6 Z" fill="var(--ledger)"/>
+          </marker>
+          <marker id="ah-muted" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+            <path d="M0,0 L7.5,3 L0,6 Z" fill="var(--lifeline)"/>
+          </marker>
+        </defs>
+
+        <line class="lifeline" x1="90"  y1="62" x2="90"  y2="690"/>
+        <line class="lifeline" x1="275" y1="62" x2="275" y2="690"/>
+        <line class="lifeline" x1="490" y1="62" x2="490" y2="690"/>
+        <line class="lifeline" x1="705" y1="62" x2="705" y2="690"/>
+        <line class="lifeline" x1="915" y1="62" x2="915" y2="690"/>
+
+        <rect class="act-sup"    x="485" y="140" width="10" height="526" rx="3"/>
+        <rect class="act-worker" x="699" y="264" width="12" height="276" rx="3"/>
+
+        <rect class="frame" x="120" y="374" width="850" height="94" rx="6"/>
+        <rect class="frame-tab" x="120" y="374" width="150" height="18" rx="4"/>
+        <text class="frame-lbl" x="130" y="387">loop · pendant le tour</text>
+
+        <g>
+          <rect class="actor" x="25"  y="16" width="130" height="46" rx="9"/>
+          <rect x="25"  y="16" width="130" height="4" rx="2" fill="var(--lifeline)"/>
+          <text class="lane-title" x="90"  y="38" text-anchor="middle">Client</text>
+          <text class="lane-sub"   x="90"  y="52" text-anchor="middle">web · SSE</text>
+
+          <rect class="actor" x="210" y="16" width="130" height="46" rx="9"/>
+          <rect x="210" y="16" width="130" height="4" rx="2" fill="var(--flow)"/>
+          <text class="lane-title" x="275" y="38" text-anchor="middle">API</text>
+          <text class="lane-sub"   x="275" y="52" text-anchor="middle">Hono routes</text>
+
+          <rect class="actor" x="405" y="16" width="170" height="46" rx="9"/>
+          <rect x="405" y="16" width="170" height="4" rx="2" fill="var(--flow)"/>
+          <text class="lane-title" x="490" y="38" text-anchor="middle">Supervisor</text>
+          <text class="lane-sub"   x="490" y="52" text-anchor="middle">commands · lifecycle</text>
+
+          <rect class="actor" x="630" y="16" width="150" height="46" rx="9"/>
+          <rect x="630" y="16" width="150" height="4" rx="2" fill="var(--worker)"/>
+          <text class="lane-title" x="705" y="38" text-anchor="middle">Worker</text>
+          <text class="lane-sub"   x="705" y="52" text-anchor="middle">child · durable</text>
+
+          <rect class="actor" x="840" y="16" width="150" height="46" rx="9"/>
+          <rect x="840" y="16" width="150" height="4" rx="2" fill="var(--ledger)"/>
+          <text class="lane-title" x="915" y="38" text-anchor="middle">State</text>
+          <text class="lane-sub"   x="915" y="52" text-anchor="middle">ledger · domain</text>
+        </g>
+
+        <text class="msg" x="182" y="93"  text-anchor="middle">POST /api/runs</text>
+        <line class="ln flow" x1="90"  y1="100" x2="273" y2="100" marker-end="url(#ah-flow)"/>
+
+        <text class="msg" x="382" y="133" text-anchor="middle">startRun(request)</text>
+        <line class="ln flow" x1="275" y1="140" x2="488" y2="140" marker-end="url(#ah-flow)"/>
+
+        <rect class="note" x="402" y="152" width="176" height="40" rx="7"/>
+        <text class="note-t"   x="490" y="169" text-anchor="middle">prepareRun()</text>
+        <text class="note-sub" x="490" y="184" text-anchor="middle">rows · plan figé · worktree</text>
+
+        <text class="msg" x="702" y="217" text-anchor="middle">driveRunTo · queued → running</text>
+        <line class="ln flow" x1="490" y1="224" x2="913" y2="224" marker-end="url(#ah-flow)"/>
+
+        <text class="msg" x="597" y="257" text-anchor="middle" fill="var(--worker)">fork · state.spawn()</text>
+        <line class="ln worker" x1="490" y1="264" x2="703" y2="264" marker-end="url(#ah-worker)"/>
+
+        <text class="msg" x="702" y="297" text-anchor="middle">startLiveTail()</text>
+        <line class="ln flow" x1="490" y1="304" x2="913" y2="304" marker-end="url(#ah-flow)"/>
+
+        <text class="msg msg-ret" x="182" y="337" text-anchor="middle">201 { run } · running</text>
+        <line class="ln muted dash" x1="275" y1="344" x2="92" y2="344" marker-end="url(#ah-muted)"/>
+
+        <text class="msg" x="810" y="399" text-anchor="middle" fill="var(--worker)">emit events → events.jsonl</text>
+        <line class="ln worker" x1="705" y1="406" x2="913" y2="406" marker-end="url(#ah-worker)"/>
+
+        <text class="msg" x="502" y="439" text-anchor="middle" fill="var(--ledger)">SSE /:id/events  (tail → ledger)</text>
+        <line class="ln ledger dash" x1="915" y1="446" x2="92" y2="446" marker-end="url(#ah-ledger)"/>
+
+        <text class="msg" x="810" y="493" text-anchor="middle" fill="var(--worker)">writeTerminalMarker</text>
+        <line class="ln worker" x1="705" y1="500" x2="913" y2="500" marker-end="url(#ah-worker)"/>
+
+        <text class="msg msg-ret" x="597" y="533" text-anchor="middle" fill="var(--worker)">process.exit</text>
+        <line class="ln worker dash" x1="705" y1="540" x2="492" y2="540" marker-end="url(#ah-worker)"/>
+
+        <text class="msg" x="702" y="573" text-anchor="middle">drain + read final status</text>
+        <line class="ln flow" x1="490" y1="580" x2="913" y2="580" marker-end="url(#ah-flow)"/>
+
+        <text class="msg" x="702" y="613" text-anchor="middle">classify → driveRunTo(terminal)</text>
+        <line class="ln flow" x1="490" y1="620" x2="913" y2="620" marker-end="url(#ah-flow)"/>
+
+        <text class="msg msg-ret" x="290" y="653" text-anchor="middle">notifyAfterSettle → SSE</text>
+        <line class="ln flow dash" x1="490" y1="660" x2="92" y2="660" marker-end="url(#ah-flow)"/>
+      </svg>
+    </div>
+  </div>
+
+  <p class="section-label">Reprises &amp; abort — greffent sur la même spawnTurn</p>
+  <div class="grid3">
+    <div class="card">
+      <h3>resume <span class="tag resume">awaiting_human</span></h3>
+      <div class="chain">
+        <span class="arrow">POST</span> /:id/resume<br>
+        <span class="arrow">→</span> <b>resumeRun</b><br>
+        <span class="arrow">→</span> spawnFollowUpTurn<br>
+        <span class="arrow">→</span> spawnTurn('resume')
+      </div>
+      <p>Reprend le tour interrompu avec la même provider session.</p>
+    </div>
+    <div class="card">
+      <h3>fix <span class="tag fix">review_ready</span></h3>
+      <div class="chain">
+        <span class="arrow">POST</span> /:id/review/fix<br>
+        <span class="arrow">→</span> <b>fixRun</b> <span class="arrow">(prompt = commentaires)</span><br>
+        <span class="arrow">→</span> spawnFollowUpTurn<br>
+        <span class="arrow">→</span> spawnTurn('resume')
+      </div>
+      <p>Un « honest resume » : nouveau prompt construit depuis les commentaires de review.</p>
+    </div>
+    <div class="card">
+      <h3>abort / crash <span class="tag abort">terminal</span></h3>
+      <div class="chain">
+        <span class="arrow">POST</span> /:id/abort <span class="arrow">→</span> <b>abortRun</b><br>
+        <span class="arrow">·</span> SIGTERM (2s) → SIGKILL<br>
+        <span class="arrow">reboot →</span> <b>reconcile()</b><br>
+        <span class="arrow">→</span> settleRun (mode boot)
+      </div>
+      <p>Le filet : après un crash, le ledger seul suffit à finaliser ou reprendre.</p>
+    </div>
+  </div>
+
+  <p class="section-label">Domain · runMachine (transition illégale → throw)</p>
+  <div class="panel">
+    <div class="sm">
+      <div class="sm-row">
+        <span class="rowlbl">progression</span>
+        <span class="pill start chev">queued</span>
+        <span class="pill chev">preparing</span>
+        <span class="pill">running</span>
+      </div>
+      <div class="sm-row">
+        <span class="rowlbl">en attente ↺ running</span>
+        <span class="pill wait">awaiting_permission</span>
+        <span class="pill wait">awaiting_human</span>
+        <span class="pill wait">review_ready</span>
+      </div>
+      <div class="sm-row">
+        <span class="rowlbl">terminaux</span>
+        <span class="pill good">completed</span>
+        <span class="pill bad">failed</span>
+        <span class="pill bad">canceled</span>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Chaque flèche est une vraie fonction ; le worker est le seul écrivain durable, le supervisor ne fait que <em>tail</em> + <em>settle</em>.
+    <div class="files">
+      <span><b>api/routes</b>/runs.ts · review.ts — surface HTTP (start · resume · abort · fix · SSE)</span>
+      <span><b>supervisor</b>/commands.ts — startRun · resumeRun · fixRun</span>
+      <span><b>supervisor</b>/prepare.ts — prepareRun (rows · plan · worktree)</span>
+      <span><b>supervisor</b>/lifecycle.ts — spawnTurn · advanceToRunning · trackTurn</span>
+      <span><b>supervisor</b>/worker.ts — runWorkerMain · events.jsonl · terminal marker</span>
+      <span><b>supervisor</b>/settle.ts — settleRun (live · abort · boot)</span>
+      <span><b>domain</b>/state-machines/run.ts — runMachine</span>
+    </div>
+  </footer>
+</div>
+</body>
+</html>

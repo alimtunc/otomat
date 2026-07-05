@@ -1,3 +1,6 @@
+import { appendFileSync, existsSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
 import type { RuntimeCapabilities } from "../capabilities.js";
 import {
   type RuntimeAdapter,
@@ -11,6 +14,19 @@ import type { EventFidelity, RuntimeEvent } from "../events.js";
 import type { RuntimeSink } from "../sinks.js";
 
 export const FAKE_ADAPTER_ID = "fake";
+
+const FAKE_WORK_FILENAME = "fake-implementation.md";
+
+/** The fake turn leaves real edits in its `cwd` worktree so the canonical git diff has honest content to show. */
+function writeFakeWork(cwd: string | null | undefined, prompt: string, followUp: boolean): void {
+  if (!cwd || !existsSync(cwd)) return;
+  const file = join(cwd, FAKE_WORK_FILENAME);
+  if (followUp && existsSync(file)) {
+    appendFileSync(file, `\n## Follow-up turn\n\n${prompt}\n`);
+    return;
+  }
+  writeFileSync(file, `# Fake implementation\n\n## Prompt\n\n${prompt}\n`);
+}
 
 /** Fixed clock so the fake's output is byte-identical across runs (fixtures/tests). */
 const BASE_EPOCH_MS = Date.parse("2026-01-01T00:00:00.000Z");
@@ -139,6 +155,7 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
+    writeFakeWork(input.cwd, input.prompt, false);
     const providerSession = providerSessionId(input.run_id);
     const ctx: TurnContext = {
       run_id: input.run_id,
@@ -155,6 +172,7 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
+    writeFakeWork(input.cwd, input.prompt, true);
     const providerSession = session.provider_session_id ?? providerSessionId(session.run_id);
     const ctx: TurnContext = {
       run_id: session.run_id,

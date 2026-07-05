@@ -351,8 +351,10 @@ export { SourceBadge, type SourceBadgeProps } from "./components/source-badge";
 export { Spinner, type SpinnerProps } from "./components/spinner";
 
 export {
+  DiffFileStatusChip,
   IssueStatusChip,
   PRStatusBadge,
+  ReviewCommentStatusChip,
   ReviewStatusChip,
   RunStatusChip,
   SessionStatusChip,

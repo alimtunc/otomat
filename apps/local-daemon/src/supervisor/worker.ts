@@ -14,6 +14,7 @@ const supervisedJobSchema = z.object({
   agentSessionId: z.string(),
   prompt: z.string(),
   runDir: z.string(),
+  worktreePath: z.string().nullable(),
   mode: z.enum(["run", "resume"]),
   providerSessionId: z.string().nullable(),
 }) satisfies z.ZodType<SupervisedJob>;
@@ -40,7 +41,7 @@ export async function runWorkerJob(
           agent_session_id: job.agentSessionId,
           provider_session_id: job.providerSessionId,
         },
-        { prompt: job.prompt, run_dir: job.runDir },
+        { prompt: job.prompt, run_dir: job.runDir, cwd: job.worktreePath },
         sink,
         signal,
       );
@@ -52,6 +53,7 @@ export async function runWorkerJob(
         agent_session_id: job.agentSessionId,
         prompt: job.prompt,
         run_dir: job.runDir,
+        cwd: job.worktreePath,
       },
       sink,
       signal,

@@ -1,12 +1,12 @@
 import { getRun, listAgentSessionsForRun, listStepRunsForRun } from "@otomat/db";
 import { runMachine } from "@otomat/domain";
 
-import { readRunEvents } from "#events";
+import { drainRunEvents, emitLedgerEvent, readRunEvents } from "#events";
 
 import { findFinalStatus } from "./evidence.js";
+import { notifyAfterSettle } from "./lifecycle.js";
 import { buildTerminalMarker } from "./markers.js";
 import { terminateGracefully } from "./process.js";
-import { drainRunEvents, emitLedgerEvent } from "./run-events.js";
 import { settleRun } from "./settle.js";
 import type { SupervisorState } from "./state.js";
 import { driveRunTo, driveStepsAndSessionsTo } from "./transitions.js";
@@ -32,7 +32,7 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
 
     // Worker finished before/during the abort — honor its marker, never overwrite with a fake cancel.
     if (findFinalStatus(readRunEvents(db, runId)) !== null) {
-      settleRun(db, dataDir, current, { mode: "live", now });
+      notifyAfterSettle(state, settleRun(db, dataDir, current, { mode: "live", now }));
       return;
     }
 
@@ -49,6 +49,13 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
       sessions.find((s) => s.provider_session_id !== null)?.provider_session_id ?? null;
     const marker = buildTerminalMarker(ref, "canceled", providerSessionId, 0, now);
     emitLedgerEvent(db, dataDir, runId, marker);
+    notifyAfterSettle(state, {
+      runId,
+      classification: "canceled",
+      reason: "aborted by user",
+      orphanTerminated: false,
+      providerSessionId,
+    });
   } finally {
     state.aborting.delete(runId);
   }
