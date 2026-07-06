@@ -7,7 +7,6 @@ import {
   getReviewForRun,
   getRun,
   listReviewCommentsForRun,
-  schema,
 } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -21,26 +20,24 @@ import {
   type ReviewService,
 } from "#review";
 
+import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { seedRepository } from "../support/db.js";
 import { setupTestRepo, type TestRepo } from "../support/git.js";
 import { seedRun } from "../support/seed.js";
-import { setupSupervisorDb, type SupervisorTestDb } from "../support/supervisor-db.js";
 
 const RUN_ID = "r-review";
 const BRANCH = "otomat/run/r-review";
 
-let fix: SupervisorTestDb;
+let fix: DaemonTestDb;
 let repo: TestRepo;
 let worktrees: GitWorktreeService;
 let review: ReviewService;
 let worktreePath = "";
 
 beforeEach(() => {
-  fix = setupSupervisorDb();
+  fix = setupDaemonDb();
   repo = setupTestRepo();
-  fix.db
-    .insert(schema.repositories)
-    .values({ id: "repo-1", project_id: "p1", name: "R", default_branch: repo.defaultBranch })
-    .run();
+  seedRepository(fix.db, repo.defaultBranch);
   worktrees = createGitWorktreeService({
     db: fix.db,
     repositoryId: "repo-1",

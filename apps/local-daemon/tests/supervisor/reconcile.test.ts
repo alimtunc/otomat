@@ -12,6 +12,7 @@ import {
   writeWorkerIdentity,
 } from "#supervisor/identity";
 
+import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { waitFor } from "../support/poll.js";
 import {
   completedMarker,
@@ -22,14 +23,13 @@ import {
 } from "../support/run-event-fixtures.js";
 import { seedRun } from "../support/seed.js";
 import { deadPid, spawnOrphan } from "../support/spawn.js";
-import { setupSupervisorDb, type SupervisorTestDb } from "../support/supervisor-db.js";
 
 const NOW = "2026-06-24T12:00:00.000Z";
 
-let fix: SupervisorTestDb;
+let fix: DaemonTestDb;
 
 beforeEach(() => {
-  fix = setupSupervisorDb();
+  fix = setupDaemonDb();
 });
 
 afterEach(() => {

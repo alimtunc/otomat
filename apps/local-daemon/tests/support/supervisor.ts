@@ -1,7 +1,7 @@
 import { createSupervisor, type Supervisor, type SupervisorConfig } from "#supervisor";
 
+import type { DaemonTestDb } from "./daemon-db.js";
 import { workerSpawn } from "./spawn.js";
-import type { SupervisorTestDb } from "./supervisor-db.js";
 
 export interface TestSupervisor {
   supervisor: Supervisor;
@@ -10,7 +10,7 @@ export interface TestSupervisor {
 
 /** A supervisor wired to the fixture db and a real fake-worker spawn. */
 export function makeSupervisor(
-  fix: SupervisorTestDb,
+  fix: DaemonTestDb,
   behavior: Parameters<typeof workerSpawn>[0],
   overrides: Partial<Omit<SupervisorConfig, "spawn">> = {},
 ): TestSupervisor {

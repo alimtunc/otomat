@@ -9,18 +9,18 @@ import { branchExists } from "#git/repo";
 import { createGitWorktreeService, type GitWorktreeService } from "#git/service";
 import { listWorktrees } from "#git/worktree-cli";
 
-import { setupTestDb, setupTestRepo, type TestDb, type TestRepo } from "../support/git.js";
+import { setupGitDb, setupTestRepo, type GitTestDb, type TestRepo } from "../support/git.js";
 
 interface Env {
   repo: TestRepo;
-  db: TestDb;
+  db: GitTestDb;
   service: GitWorktreeService;
   cleanup(): void;
 }
 
 function setup(): Env {
   const repo = setupTestRepo();
-  const db = setupTestDb();
+  const db = setupGitDb();
   const worktreesRoot = mkdtempSync(join(tmpdir(), "otomat-wt-root-"));
   const service = createGitWorktreeService({
     db: db.client.db,

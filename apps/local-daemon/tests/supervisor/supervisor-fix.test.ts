@@ -7,15 +7,15 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createGitWorktreeService } from "#git";
 import { RunNotResumableError, type ReconcileOutcome, type WorktreeBinding } from "#supervisor";
 
+import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { setupTestRepo, type TestRepo } from "../support/git.js";
 import { seedRun } from "../support/seed.js";
-import { setupSupervisorDb, type SupervisorTestDb } from "../support/supervisor-db.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
-let fix: SupervisorTestDb;
+let fix: DaemonTestDb;
 
 beforeEach(() => {
-  fix = setupSupervisorDb();
+  fix = setupDaemonDb();
 });
 
 afterEach(() => {

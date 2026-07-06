@@ -8,6 +8,7 @@ export interface TestDb {
   client: DbClient;
   db: Db;
   dir: string;
+  dbPath: string;
   cleanup(): void;
 }
 
@@ -23,9 +24,18 @@ export function setupTestDb(prefix: string): TestDb {
     client,
     db: client.db,
     dir,
+    dbPath,
     cleanup() {
       client.sqlite.close();
       rmSync(dir, { recursive: true, force: true });
     },
   };
+}
+
+/** Seeds the repo-1 repository row under p1 so worktree FKs resolve. */
+export function seedRepository(db: Db, defaultBranch = "main"): string {
+  db.insert(schema.repositories)
+    .values({ id: "repo-1", project_id: "p1", name: "R", default_branch: defaultBranch })
+    .run();
+  return "repo-1";
 }

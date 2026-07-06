@@ -7,13 +7,13 @@ import {
   updateWorktreeStatus,
 } from "#git/worktrees-store";
 
-import { setupTestDb, type TestDb } from "../support/git.js";
+import { setupGitDb, type GitTestDb } from "../support/git.js";
 
 describe("worktrees-store", () => {
-  let db: TestDb;
+  let db: GitTestDb;
 
   beforeEach(() => {
-    db = setupTestDb();
+    db = setupGitDb();
   });
 
   afterEach(() => {
