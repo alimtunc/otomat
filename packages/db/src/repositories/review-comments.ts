@@ -1,8 +1,9 @@
 import type { ReviewCommentState } from "@otomat/domain";
-import { eq, getTableColumns, sql } from "drizzle-orm";
+import { eq, getTableColumns } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { reviewComments, reviews } from "../schema/index.js";
+import { touch } from "./touch.js";
 
 export type NewReviewComment = typeof reviewComments.$inferInsert;
 export type ReviewCommentRow = typeof reviewComments.$inferSelect;
@@ -39,10 +40,7 @@ function patchReviewComment(
   id: string,
   set: Partial<typeof reviewComments.$inferInsert>,
 ): void {
-  db.update(reviewComments)
-    .set({ ...set, updated_at: sql`(CURRENT_TIMESTAMP)` })
-    .where(eq(reviewComments.id, id))
-    .run();
+  db.update(reviewComments).set(touch(set)).where(eq(reviewComments.id, id)).run();
 }
 
 export function updateReviewCommentStatus(db: Db, id: string, status: ReviewCommentState): void {

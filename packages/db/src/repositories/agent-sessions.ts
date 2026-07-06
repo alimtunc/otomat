@@ -1,8 +1,9 @@
 import type { AgentSessionState } from "@otomat/domain";
-import { eq, getTableColumns, sql } from "drizzle-orm";
+import { eq, getTableColumns } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { agentSessions, stepRuns } from "../schema/index.js";
+import { touch } from "./touch.js";
 
 export type NewAgentSession = typeof agentSessions.$inferInsert;
 export type AgentSessionRow = typeof agentSessions.$inferSelect;
@@ -26,10 +27,7 @@ function patchAgentSession(
   id: string,
   set: Partial<typeof agentSessions.$inferInsert>,
 ): void {
-  db.update(agentSessions)
-    .set({ ...set, updated_at: sql`(CURRENT_TIMESTAMP)` })
-    .where(eq(agentSessions.id, id))
-    .run();
+  db.update(agentSessions).set(touch(set)).where(eq(agentSessions.id, id)).run();
 }
 
 export function updateAgentSessionStatus(db: Db, id: string, status: AgentSessionState): void {
