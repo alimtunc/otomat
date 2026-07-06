@@ -259,12 +259,12 @@ export { AgentAvatar, type AgentAvatarProps } from "./components/agent-avatar";
 
 export { AppShell, type AppShellProps } from "./components/app-shell";
 
+export { AppSidebar, type AppSidebarProps } from "./components/app-sidebar";
+
 export {
-  AppSidebar,
   SidebarDaemonStatus,
-  type AppSidebarProps,
   type SidebarDaemonStatusProps,
-} from "./components/app-sidebar";
+} from "./components/sidebar-daemon-status";
 
 export { Avatar, type AvatarProps, type AvatarShape, type AvatarSize } from "./components/avatar";
 
@@ -274,13 +274,16 @@ export { Chip, type ChipProps, type ChipSize } from "./components/chip";
 
 export {
   CommandPalette,
-  useCommandPalette,
   type CommandPaletteCommand,
   type CommandPaletteGroup,
   type CommandPaletteProps,
+} from "./components/command-palette";
+
+export {
+  useCommandPalette,
   type UseCommandPaletteOptions,
   type UseCommandPaletteReturn,
-} from "./components/command-palette";
+} from "./components/use-command-palette";
 
 export {
   ConnectionStatusIndicator,

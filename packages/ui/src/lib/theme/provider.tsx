@@ -5,8 +5,6 @@ import { themeReducer } from "./reducer";
 import { readStored, writeStored } from "./storage";
 import type { Density, Direction, Theme, ThemeContextValue } from "./types";
 
-export type { Density, Direction, Theme, ThemeContextValue, ThemeState } from "./types";
-
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export interface ThemeProviderProps {
