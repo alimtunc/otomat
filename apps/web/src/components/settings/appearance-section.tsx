@@ -1,8 +1,8 @@
 import { Button, Icon, SegmentedControl, SegmentedItem, useTheme } from "@otomat/ui";
 import type { Density, Direction, Theme } from "@otomat/ui";
 import { AppearanceRow } from "@web/components/settings/appearance-row";
+import { DEFAULT_ACCENT } from "@web/components/settings/appearance-section.constants";
 import { SectionHeading } from "@web/components/settings/section-heading";
-import { DEFAULT_ACCENT } from "@web/constants";
 
 export function AppearanceSection() {
   const { theme, density, direction, accent, setTheme, setDensity, setDirection, setAccent } =
