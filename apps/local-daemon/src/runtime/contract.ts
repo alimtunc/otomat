@@ -1,14 +1,17 @@
-import { RUN_TERMINAL_STATES, type RunTerminalState } from "@otomat/domain";
+import {
+  RUN_TERMINAL_STATES,
+  type RuntimeCapabilities,
+  type RunTerminalState,
+} from "@otomat/domain";
 import { z } from "zod";
 
-import type { RuntimeCapabilities } from "./capabilities.js";
 import type { RuntimeSink } from "./sinks.js";
 
 export type RuntimeId = string;
 
-/** Token/cost/model evidence a runtime reports for a turn. */
+/** Token/cost/model evidence a runtime reports for a turn. Null fields mean the provider did not report them. */
 export const runtimeUsageSchema = z.object({
-  model: z.string(),
+  model: z.string().nullable(),
   input_tokens: z.number().int().nonnegative(),
   output_tokens: z.number().int().nonnegative(),
   total_tokens: z.number().int().nonnegative(),

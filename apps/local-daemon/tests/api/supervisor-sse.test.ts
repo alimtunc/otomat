@@ -1,8 +1,7 @@
 import { eventEnvelopeSchema, runEndPayloadSchema, type EventEnvelope } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { createApiApp } from "#api/app";
-
+import { makeApiApp } from "../support/api.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
@@ -42,14 +41,10 @@ it(
   { timeout: 20_000 },
   async () => {
     const { supervisor } = makeSupervisor(fix, "linger");
-    const app = createApiApp({
-      db: fix.db,
-      name: "it-daemon",
-      version: "0.0.0",
-      startedAt: new Date().toISOString(),
-      dbPath: "",
+    const app = makeApiApp(fix, {
       launchRun: supervisor.start,
       resumeRun: supervisor.resume,
+      fixRun: supervisor.fix,
       abortRun: supervisor.abort,
     });
 

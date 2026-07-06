@@ -2,6 +2,7 @@ import type { Db, RunRow } from "@otomat/db";
 import type { StartRunRequest } from "@otomat/domain";
 
 import type { GitWorktreeService } from "#git";
+import type { KnownRuntimeId } from "#runtime";
 
 /** Identifies the supervisor as the event source so its markers are never shown as a provider result. */
 export const SUPERVISOR_ADAPTER = "otomat-supervisor";
@@ -18,6 +19,8 @@ export interface TurnContext {
   runDir: string;
   /** Isolated working dir the turn mutates; null when the project has no git repository. */
   worktreePath: string | null;
+  /** Runtime adapter id the worker instantiates; persisted on the run via its agent row. */
+  runtime: KnownRuntimeId;
 }
 
 /** A turn the supervisor hands to a child process: a fresh run, or a follow-up that resumes a provider session. */

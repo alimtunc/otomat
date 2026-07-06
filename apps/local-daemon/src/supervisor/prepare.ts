@@ -18,8 +18,8 @@ import {
 } from "@otomat/domain";
 
 import { runDir } from "#events";
-import { FAKE_ADAPTER_ID } from "#runtime";
 
+import { ensureRuntimeAgent } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
 import type { TurnContext } from "./types.js";
 
@@ -48,6 +48,7 @@ function resolveIssueId(db: Db, defaultProjectId: string, request: StartRunReque
 /** Materializes the run/step/session rows, the frozen plan, and the run's isolated worktree. */
 export function prepareRun(state: SupervisorState, request: StartRunRequest): TurnContext {
   const { db, dataDir, defaultProjectId, worktrees } = state;
+  const runtime = ensureRuntimeAgent(db, request.runtime);
   const issueId = resolveIssueId(db, defaultProjectId, request);
   const issue = getIssue(db, issueId);
   if (!issue) throw new Error(`issue ${issueId} not found`);
@@ -59,7 +60,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): Tu
   const branch = `otomat/run/${runId.slice(0, 8)}`;
   const plan: RunPlan = {
     version: 1,
-    steps: [{ id: stepRunId, name: STEP_NAME, agent: FAKE_ADAPTER_ID, prompt, depends_on: [] }],
+    steps: [{ id: stepRunId, name: STEP_NAME, agent: runtime, prompt, depends_on: [] }],
   };
 
   // Acquired before the run row exists so a git failure aborts the launch cleanly (no phantom run).
@@ -69,6 +70,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): Tu
     insertRun(db, {
       id: runId,
       issue_id: issueId,
+      agent_id: runtime,
       status: runMachine.initial,
       branch,
       plan_json: plan,
@@ -106,5 +108,6 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): Tu
     prompt,
     runDir: runDir(dataDir, runId),
     worktreePath: worktree?.path ?? null,
+    runtime,
   };
 }

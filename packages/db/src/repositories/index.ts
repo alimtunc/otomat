@@ -8,6 +8,7 @@
  * @packageDocumentation
  */
 export * from "./agent-sessions.js";
+export * from "./agents.js";
 export * from "./issues.js";
 export * from "./projects.js";
 export * from "./pull-requests.js";

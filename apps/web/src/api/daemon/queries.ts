@@ -43,3 +43,12 @@ export function useProjects() {
 export function useRepositories() {
   return useQuery({ queryKey: queryKeys.repositories, queryFn: () => daemon.listRepositories() });
 }
+
+/** The daemon's runtime registry (adapter ids + honest capabilities); static per daemon process. */
+export function useRuntimes() {
+  return useQuery({
+    queryKey: queryKeys.runtimes,
+    queryFn: () => daemon.listRuntimes(),
+    staleTime: Infinity,
+  });
+}

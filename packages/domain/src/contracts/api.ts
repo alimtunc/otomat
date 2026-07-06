@@ -27,16 +27,41 @@ export const runDetailSchema = z.object({
 });
 export type RunDetail = z.infer<typeof runDetailSchema>;
 
+/** Wire id of the built-in deterministic fake runtime — the default when a launch request omits `runtime`. */
+export const FAKE_RUNTIME_ID = "fake";
+
 /** Launch a run from an existing issue or from an ad-hoc local prompt. At least one is required. */
 export const startRunRequestSchema = z
   .object({
     issue_id: z.string().min(1).optional(),
     prompt: z.string().min(1).optional(),
+    /** Runtime adapter id; the daemon validates it against its registry and defaults to the fake runtime. */
+    runtime: z.string().min(1).optional(),
   })
   .refine((value) => Boolean(value.issue_id) || Boolean(value.prompt), {
     message: "Provide either issue_id or prompt",
   });
 export type StartRunRequest = z.infer<typeof startRunRequestSchema>;
+
+/** Optional behaviors a runtime may advertise; absent ones degrade silently in the UI. Single source for the daemon registry and the wire contract. */
+export const runtimeCapabilitiesSchema = z.object({
+  stream: z.boolean(),
+  /** Follow-up between turns via `resume`, never mid-turn steering. */
+  send_message: z.boolean(),
+  abort: z.boolean(),
+  resume: z.boolean(),
+  permissions: z.boolean(),
+  diff_hints: z.boolean(),
+});
+export type RuntimeCapabilities = z.infer<typeof runtimeCapabilitiesSchema>;
+
+/** One runtime adapter as reported by the daemon: identity plus its honest capability set. */
+export const runtimeDescriptorSchema = z.object({
+  id: z.string(),
+  display_name: z.string(),
+  capabilities: runtimeCapabilitiesSchema,
+});
+export type RuntimeDescriptor = z.infer<typeof runtimeDescriptorSchema>;
 
 /** A run's review surface: the review row (null before the first comment) plus every comment, newest last. */
 export const reviewDetailSchema = z.object({

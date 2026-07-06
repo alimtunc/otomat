@@ -1,3 +1,4 @@
+import { FAKE_RUNTIME_ID } from "@otomat/domain";
 import {
   Button,
   Dialog,
@@ -11,17 +12,19 @@ import {
   Textarea,
 } from "@otomat/ui";
 import { useStartRunAndNavigate } from "@web/api/runs/mutations";
+import { RuntimeSelect } from "@web/components/runs/launch/runtime-select";
 import { useState } from "react";
 
 export function StartRunDialog() {
   const [open, setOpen] = useState(false);
   const [promptText, setPromptText] = useState("");
+  const [runtime, setRuntime] = useState<string>(FAKE_RUNTIME_ID);
   const { start, isPending } = useStartRunAndNavigate();
 
   const canSubmit = promptText.trim().length > 0 && !isPending;
 
   async function submit() {
-    const started = await start({ prompt: promptText.trim() });
+    const started = await start({ prompt: promptText.trim(), runtime });
     if (started) {
       setOpen(false);
       setPromptText("");
@@ -41,7 +44,7 @@ export function StartRunDialog() {
           </DialogHeader>
           <DialogBody className="flex flex-col gap-3">
             <DialogDescription>
-              Launches the fake runtime against a new local issue and streams its events live.
+              Launches the selected runtime against a new local issue and streams its events live.
             </DialogDescription>
             <Textarea
               value={promptText}
@@ -50,6 +53,7 @@ export function StartRunDialog() {
               rows={4}
               aria-label="Run prompt"
             />
+            <RuntimeSelect value={runtime} onValueChange={setRuntime} />
           </DialogBody>
           <DialogFooter>
             <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>

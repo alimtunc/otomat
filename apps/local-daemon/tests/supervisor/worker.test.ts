@@ -31,6 +31,7 @@ function job(mode: "run" | "resume", worktreePath: string | null = null): Superv
     prompt: "do the thing",
     runDir: dir,
     worktreePath,
+    runtime: "fake",
     mode,
     providerSessionId: mode === "resume" ? "ps-w1" : null,
   };
@@ -46,6 +47,13 @@ it("runs a job and appends a completed terminal marker", async () => {
   expect(events.some((e) => e.type === "runtime.provider_session")).toBe(true);
   expect(events.at(-1)?.type).toBe("run.lifecycle");
   expect(events.at(-1)?.payload["final_status"]).toBe("completed");
+});
+
+it("rejects a serialized job whose runtime is unknown to the registry", () => {
+  const corrupted = { ...job("run"), runtime: "nope" };
+  expect(() => parseJob({ [WORKER_JOB_ENV]: JSON.stringify(corrupted) })).toThrow(
+    /unknown runtime/,
+  );
 });
 
 it("returns a canceled state when the signal is already aborted", async () => {

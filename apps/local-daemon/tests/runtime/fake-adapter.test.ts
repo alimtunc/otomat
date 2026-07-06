@@ -4,14 +4,12 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  runtimeFinalStateSchema,
-  type RuntimeRunInput,
-  type RuntimeSessionRef,
-} from "#runtime/contract";
+import { runtimeFinalStateSchema } from "#runtime/contract";
 import { EVENT_FIDELITY, runtimeEventSchema } from "#runtime/events";
-import { FAKE_ADAPTER_ID, FakeRuntimeAdapter } from "#runtime/fake-adapter";
+import { FAKE_ADAPTER_ID, FakeRuntimeAdapter } from "#runtime/providers/fake/adapter";
 import { JsonlEventSink, MemorySink, readEventsJsonl } from "#runtime/sinks";
+
+import { runtimeRunInput, runtimeSessionRef } from "../support/runtime.js";
 
 let dir: string;
 let adapter: FakeRuntimeAdapter;
@@ -25,20 +23,9 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-const input = (): RuntimeRunInput => ({
-  run_id: "run-1",
-  step_run_id: "step-1",
-  agent_session_id: "sess-1",
-  prompt: "do the thing",
-  run_dir: dir,
-});
+const input = () => runtimeRunInput({ run_dir: dir, prompt: "do the thing" });
 
-const sessionRef = (): RuntimeSessionRef => ({
-  run_id: "run-1",
-  step_run_id: "step-1",
-  agent_session_id: "sess-1",
-  provider_session_id: "fake-session-run-1",
-});
+const sessionRef = () => runtimeSessionRef("fake-session-run-1");
 
 const liveSignal = (): AbortSignal => new AbortController().signal;
 
@@ -48,10 +35,10 @@ describe("FakeRuntimeAdapter contract", () => {
     expect(adapter.displayName).toMatch(/test adapter/i);
     expect(Object.keys(adapter.capabilities).toSorted()).toEqual([
       "abort",
-      "diffHints",
+      "diff_hints",
       "permissions",
       "resume",
-      "sendMessage",
+      "send_message",
       "stream",
     ]);
   });

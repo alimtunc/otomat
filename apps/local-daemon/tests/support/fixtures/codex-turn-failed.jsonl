@@ -1,0 +1,2 @@
+{"type":"thread.started","thread_id":"thread-codex-2"}
+{"type":"turn.failed","error":{"message":"model provider rejected the request"}}

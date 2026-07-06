@@ -234,6 +234,7 @@ export const EVENT_GLYPH: Record<EventType, EventGlyphDescriptor> = {
   "step.lifecycle": { icon: GitCommitHorizontal, tone: "neutral" },
   "session.lifecycle": { icon: Play, tone: "neutral" },
   "runtime.log": { icon: Terminal, tone: "neutral" },
+  "runtime.message": { icon: MessageSquare, tone: "neutral" },
   "runtime.tool_call": { icon: Terminal, tone: "iris" },
   "runtime.permission_request": { icon: ShieldQuestion, tone: "warning" },
   "runtime.permission_response": { icon: ShieldQuestion, tone: "neutral" },

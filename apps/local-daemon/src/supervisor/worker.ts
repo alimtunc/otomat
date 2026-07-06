@@ -3,7 +3,13 @@ import { join } from "node:path";
 import { z } from "zod";
 
 import { EVENTS_FILENAME } from "#events";
-import { FakeRuntimeAdapter, JsonlEventSink, type RuntimeFinalState } from "#runtime";
+import {
+  createRuntimeAdapter,
+  isKnownRuntimeId,
+  JsonlEventSink,
+  type KnownRuntimeId,
+  type RuntimeFinalState,
+} from "#runtime";
 
 import { buildTerminalMarker } from "./markers.js";
 import { WORKER_JOB_ENV, type SupervisedJob } from "./types.js";
@@ -15,6 +21,10 @@ const supervisedJobSchema = z.object({
   prompt: z.string(),
   runDir: z.string(),
   worktreePath: z.string().nullable(),
+  runtime: z.custom<KnownRuntimeId>(
+    (value) => typeof value === "string" && isKnownRuntimeId(value),
+    "unknown runtime",
+  ),
   mode: z.enum(["run", "resume"]),
   providerSessionId: z.string().nullable(),
 }) satisfies z.ZodType<SupervisedJob>;
@@ -35,11 +45,20 @@ export async function runWorkerJob(
   job: SupervisedJob,
   signal: AbortSignal,
 ): Promise<RuntimeFinalState> {
-  const adapter = new FakeRuntimeAdapter();
+  const adapter = createRuntimeAdapter(job.runtime);
   // The worker owns durability: every event lands in the run's events.jsonl for the tailer/reconciliation.
   const sink = new JsonlEventSink(join(job.runDir, EVENTS_FILENAME));
   try {
     if (job.mode === "resume") {
+      if (!adapter.resume) {
+        return {
+          status: "failed",
+          provider_session_id: job.providerSessionId,
+          usage: null,
+          error: { message: `runtime ${job.runtime} does not support resume` },
+          event_count: 0,
+        };
+      }
       return await adapter.resume(
         {
           run_id: job.runId,
