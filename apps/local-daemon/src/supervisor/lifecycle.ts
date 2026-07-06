@@ -11,19 +11,9 @@ import { runDir, startLiveTail } from "#events";
 
 import { writeWorkerIdentity } from "./identity.js";
 import { settleRun } from "./settle.js";
-import type { SupervisorState } from "./state.js";
+import { notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveRunTo, driveStepsAndSessionsTo } from "./transitions.js";
-import type { ProcessExit, ReconcileOutcome, SessionProcess, TurnContext } from "./types.js";
-
-/** A failing settle listener must never break the settle itself (or the exit monitor). */
-export function notifyAfterSettle(state: SupervisorState, outcome: ReconcileOutcome | null): void {
-  if (outcome === null || state.afterSettle === null) return;
-  try {
-    state.afterSettle(outcome);
-  } catch (error) {
-    console.error(`[otomat] after-settle hook failed for run ${outcome.runId}`, error);
-  }
-}
+import type { ProcessExit, SessionProcess, TurnContext } from "./types.js";
 
 function advanceToRunning(state: SupervisorState, ctx: TurnContext): void {
   const { db } = state;

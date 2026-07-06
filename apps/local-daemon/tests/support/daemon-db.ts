@@ -2,7 +2,7 @@ import type { Db, DbClient } from "@otomat/db";
 
 import { setupTestDb } from "./db.js";
 
-export interface SupervisorTestDb {
+export interface DaemonTestDb {
   client: DbClient;
   db: Db;
   /** Root the supervisor writes `runs/<id>/events.jsonl` under (mirrors `dirname(dbPath)`). */
@@ -10,7 +10,7 @@ export interface SupervisorTestDb {
   cleanup(): void;
 }
 
-export function setupSupervisorDb(): SupervisorTestDb {
-  const base = setupTestDb("otomat-sup-");
+export function setupDaemonDb(): DaemonTestDb {
+  const base = setupTestDb("otomat-daemon-");
   return { client: base.client, db: base.db, dataDir: base.dir, cleanup: base.cleanup };
 }

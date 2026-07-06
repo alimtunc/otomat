@@ -89,3 +89,15 @@ export function shortestPath<S extends string>(
   }
   return null;
 }
+
+/** Walks `from -> to` along the shortest legal path, invoking `apply` for each state after `from`; throws IllegalTransitionError when `to` is unreachable. */
+export function drivePath<S extends string>(
+  machine: StateMachine<S>,
+  from: S,
+  to: S,
+  apply: (state: S) => void,
+): void {
+  const path = shortestPath(machine, from, to);
+  if (path === null) throw new IllegalTransitionError(machine.name, from, to);
+  for (const state of path) apply(state);
+}

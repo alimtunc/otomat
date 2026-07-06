@@ -13,3 +13,16 @@ export class WorktreeNotFoundError extends Error {
     this.name = "WorktreeNotFoundError";
   }
 }
+
+/** A non-zero `git` exit, carrying the invocation and captured stderr. */
+export class GitCommandError extends Error {
+  constructor(
+    readonly args: readonly string[],
+    readonly cwd: string,
+    readonly exitCode: number | null,
+    readonly stderr: string,
+  ) {
+    super(`git ${args.join(" ")} failed (exit ${exitCode}): ${stderr.trim()}`);
+    this.name = "GitCommandError";
+  }
+}

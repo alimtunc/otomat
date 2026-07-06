@@ -34,11 +34,12 @@ Grouping:
 ## Daemon-internal modules
 
 The daemon-only backend lives inside `apps/local-daemon/src/<module>`:
-`api`, `events`, `git`, `runtime` (and the future `supervisor`). They are **not**
+`api`, `events`, `git`, `review`, `runtime`, `supervisor`. They are **not**
 packages and carry no `@otomat/*` specifier. Inside the daemon:
 
 - a module is consumed through its public index via a Node subpath import —
-  `#api`, `#events`, `#git`, `#runtime` (or `#api/<file>` for a specific file);
+  `#api`, `#events`, `#git`, `#review`, `#runtime`, `#supervisor` (or
+  `#api/<file>` for a specific file);
 - imports within a module stay shallow-relative;
 - deep relative imports (`../../…`) are banned by oxlint everywhere.
 
@@ -57,7 +58,7 @@ apps/web
 apps/local-daemon
   -> packages/domain
   -> packages/db
-  -> #api / #events / #git / #runtime   (its own internal modules)
+  -> #api / #events / #git / #review / #runtime / #supervisor   (its own internal modules)
 ```
 
 Future apps (`desktop`, `mobile`) follow `apps/web`: `domain`, `ui`, `client`

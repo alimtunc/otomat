@@ -1,8 +1,9 @@
 import type { ReviewState } from "@otomat/domain";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { reviews } from "../schema/index.js";
+import { touch } from "./touch.js";
 
 export type NewReview = typeof reviews.$inferInsert;
 export type ReviewRow = typeof reviews.$inferSelect;
@@ -26,8 +27,5 @@ export function getReviewForRun(db: Db, runId: string): ReviewRow | undefined {
 }
 
 export function updateReviewStatus(db: Db, id: string, status: ReviewState): void {
-  db.update(reviews)
-    .set({ status, updated_at: sql`(CURRENT_TIMESTAMP)` })
-    .where(eq(reviews.id, id))
-    .run();
+  db.update(reviews).set(touch({ status })).where(eq(reviews.id, id)).run();
 }

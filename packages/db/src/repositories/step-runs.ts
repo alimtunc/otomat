@@ -1,8 +1,9 @@
 import type { StepRunState } from "@otomat/domain";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { stepRuns } from "../schema/index.js";
+import { touch } from "./touch.js";
 
 export type NewStepRun = typeof stepRuns.$inferInsert;
 export type StepRunRow = typeof stepRuns.$inferSelect;
@@ -16,8 +17,5 @@ export function listStepRunsForRun(db: Db, runId: string): StepRunRow[] {
 }
 
 export function updateStepRunStatus(db: Db, id: string, status: StepRunState): void {
-  db.update(stepRuns)
-    .set({ status, updated_at: sql`(CURRENT_TIMESTAMP)` })
-    .where(eq(stepRuns.id, id))
-    .run();
+  db.update(stepRuns).set(touch({ status })).where(eq(stepRuns.id, id)).run();
 }

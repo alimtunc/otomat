@@ -3,13 +3,13 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createApiApp } from "#api/app";
 
-import { setupSupervisorDb, type SupervisorTestDb } from "../support/supervisor-db.js";
+import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
-let fix: SupervisorTestDb;
+let fix: DaemonTestDb;
 
 beforeEach(() => {
-  fix = setupSupervisorDb();
+  fix = setupDaemonDb();
 });
 
 afterEach(() => {

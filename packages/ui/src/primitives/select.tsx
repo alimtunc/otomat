@@ -3,8 +3,8 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Check, ChevronDown } from "lucide-react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
-import { FIELD_TRANSITION } from "../lib/styles";
 import { cn } from "../lib/utils";
+import { FIELD_TRANSITION } from "./styles";
 
 export const Select = SelectPrimitive.Root;
 export const SelectGroup = SelectPrimitive.Group;

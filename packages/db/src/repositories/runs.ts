@@ -1,8 +1,9 @@
 import { RUN_TERMINAL_STATES, runPlanSchema, type RunPlan, type RunState } from "@otomat/domain";
-import { eq, notInArray, sql } from "drizzle-orm";
+import { eq, notInArray } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { runs } from "../schema/index.js";
+import { touch } from "./touch.js";
 
 export type NewRun = Omit<typeof runs.$inferInsert, "plan_json"> & {
   plan_json: RunPlan;
@@ -71,8 +72,5 @@ export interface RunStatusUpdate {
 }
 
 export function updateRunStatus(db: Db, id: string, update: RunStatusUpdate): void {
-  db.update(runs)
-    .set({ ...update, updated_at: sql`(CURRENT_TIMESTAMP)` })
-    .where(eq(runs.id, id))
-    .run();
+  db.update(runs).set(touch(update)).where(eq(runs.id, id)).run();
 }

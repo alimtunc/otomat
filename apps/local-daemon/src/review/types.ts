@@ -2,7 +2,7 @@ import type { Db, PullRequestRow, ReviewCommentRow, ReviewRow, RunRow } from "@o
 import type { CreateReviewCommentRequest, PreparePullRequestRequest } from "@otomat/domain";
 
 import type { CanonicalDiff, GitWorktreeService } from "#git";
-import type { ReconcileClassification } from "#supervisor/types";
+import type { ReconcileClassification } from "#supervisor";
 
 export interface ReviewServiceConfig {
   db: Db;
@@ -11,6 +11,9 @@ export interface ReviewServiceConfig {
   /** Null when the project has no git repository; diffs and comments are then unavailable. */
   worktrees: GitWorktreeService | null;
 }
+
+/** Shared handles every review operation threads through — the module's equivalent of SupervisorState. */
+export type ReviewContext = ReviewServiceConfig;
 
 export interface RunDiffResult {
   computedAt: string;

@@ -2,8 +2,14 @@ import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu
 import { Check, ChevronRight, Circle } from "lucide-react";
 import type { ComponentPropsWithRef, ReactNode } from "react";
 
-import { MENU_CONTENT_CLASS as contentClass, MENU_ITEM_CLASS as itemClass } from "../lib/styles";
 import { cn } from "../lib/utils";
+import {
+  MENU_CONTENT_CLASS as contentClass,
+  MENU_ITEM_CLASS as itemClass,
+  MENU_LABEL_CLASS,
+  MENU_SEPARATOR_CLASS,
+  MENU_SHORTCUT_CLASS,
+} from "./styles";
 
 export const ContextMenu = ContextMenuPrimitive.Root;
 export const ContextMenuTrigger = ContextMenuPrimitive.Trigger;
@@ -106,11 +112,7 @@ export function ContextMenuLabel({ className, inset, ref, ...props }: ContextMen
   return (
     <ContextMenuPrimitive.GroupLabel
       ref={ref}
-      className={cn(
-        "px-2 py-1.5 text-micro font-semibold tracking-[0.03em] text-text-tertiary",
-        inset && "pl-7",
-        className,
-      )}
+      className={cn(MENU_LABEL_CLASS, inset && "pl-7", className)}
       {...props}
     />
   );
@@ -124,7 +126,7 @@ export function ContextMenuSeparator({ className, ref, ...props }: ContextMenuSe
   return (
     <ContextMenuPrimitive.Separator
       ref={ref}
-      className={cn("my-1.25 h-px bg-border-subtle", className)}
+      className={cn(MENU_SEPARATOR_CLASS, className)}
       {...props}
     />
   );
@@ -136,13 +138,7 @@ export type ContextMenuShortcutProps = {
 };
 
 export function ContextMenuShortcut({ className, children }: ContextMenuShortcutProps) {
-  return (
-    <span
-      className={cn("ml-auto text-xs tracking-widest text-text-tertiary tabular-nums", className)}
-    >
-      {children}
-    </span>
-  );
+  return <span className={cn(MENU_SHORTCUT_CLASS, className)}>{children}</span>;
 }
 
 export type ContextMenuSubTriggerProps = ComponentPropsWithRef<

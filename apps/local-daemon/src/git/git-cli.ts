@@ -1,17 +1,6 @@
 import { spawnSync } from "node:child_process";
 
-/** A non-zero `git` exit, carrying the invocation and captured stderr. */
-export class GitCommandError extends Error {
-  constructor(
-    readonly args: readonly string[],
-    readonly cwd: string,
-    readonly exitCode: number | null,
-    readonly stderr: string,
-  ) {
-    super(`git ${args.join(" ")} failed (exit ${exitCode}): ${stderr.trim()}`);
-    this.name = "GitCommandError";
-  }
-}
+import { GitCommandError } from "./errors.js";
 
 export interface RunGitOptions {
   cwd: string;
@@ -31,7 +20,7 @@ const MAX_BUFFER = 256 * 1024 * 1024;
 
 // Repo-location vars a parent process (notably a `pre-push` hook) may export;
 // left in the child env they redirect a `cwd`-scoped git call at that repo.
-const GIT_ISOLATION_ENV_VARS = [
+export const GIT_ISOLATION_ENV_VARS = [
   "GIT_DIR",
   "GIT_WORK_TREE",
   "GIT_INDEX_FILE",

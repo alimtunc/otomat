@@ -1,5 +1,6 @@
 import type { ComponentPropsWithoutRef } from "react";
 
+import { injectStyleOnce } from "../lib/inject-style";
 import { cn } from "../lib/utils";
 
 const SPINNER_STYLE_ID = "otomat-spinner";
@@ -8,15 +9,6 @@ const SPINNER_CSS = `
 .otomat-spinner{border-radius:50%;border:2px solid var(--border-strong);border-top-color:var(--iris-solid);animation:otomat-spinner-rotate .7s linear infinite}
 @media (prefers-reduced-motion:reduce){.otomat-spinner{animation:none}}
 `;
-
-function ensureSpinnerStyle(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(SPINNER_STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = SPINNER_STYLE_ID;
-  style.textContent = SPINNER_CSS;
-  document.head.appendChild(style);
-}
 
 export interface SpinnerProps extends Omit<ComponentPropsWithoutRef<"output">, "children"> {
   size?: number;
@@ -30,7 +22,7 @@ export function Spinner({
   style,
   ...props
 }: SpinnerProps) {
-  ensureSpinnerStyle();
+  injectStyleOnce(SPINNER_STYLE_ID, SPINNER_CSS);
   return (
     <output
       aria-label={label}

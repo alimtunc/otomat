@@ -1,8 +1,16 @@
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog";
 import type { ComponentPropsWithRef, ReactNode } from "react";
 
-import { MODAL_POPUP_BASE, MODAL_STYLE, OVERLAY_CLASS, OVERLAY_STYLE } from "../lib/styles";
 import { cn } from "../lib/utils";
+import {
+  MODAL_DESCRIPTION_CLASS,
+  MODAL_FOOTER_CLASS,
+  MODAL_POPUP_BASE,
+  MODAL_STYLE,
+  MODAL_TITLE_CLASS,
+  OVERLAY_CLASS,
+  OVERLAY_STYLE,
+} from "./styles";
 
 export const AlertDialog = AlertDialogPrimitive.Root;
 export const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
@@ -57,16 +65,7 @@ export function AlertDialogBody({ className, children }: AlertDialogSectionProps
 }
 
 export function AlertDialogFooter({ className, children }: AlertDialogSectionProps) {
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-end gap-2.5 border-t border-border-subtle px-4 py-3",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
+  return <div className={cn(MODAL_FOOTER_CLASS, "justify-end", className)}>{children}</div>;
 }
 
 export interface AlertDialogTitleProps extends ComponentPropsWithRef<
@@ -75,11 +74,7 @@ export interface AlertDialogTitleProps extends ComponentPropsWithRef<
 
 export function AlertDialogTitle({ className, ref, ...props }: AlertDialogTitleProps) {
   return (
-    <AlertDialogPrimitive.Title
-      ref={ref}
-      className={cn("text-sm font-semibold text-foreground", className)}
-      {...props}
-    />
+    <AlertDialogPrimitive.Title ref={ref} className={cn(MODAL_TITLE_CLASS, className)} {...props} />
   );
 }
 
@@ -91,7 +86,7 @@ export function AlertDialogDescription({ className, ref, ...props }: AlertDialog
   return (
     <AlertDialogPrimitive.Description
       ref={ref}
-      className={cn("text-sm leading-relaxed text-text-secondary", className)}
+      className={cn(MODAL_DESCRIPTION_CLASS, "leading-relaxed", className)}
       {...props}
     />
   );

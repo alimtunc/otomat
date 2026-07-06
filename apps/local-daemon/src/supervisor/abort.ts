@@ -4,11 +4,10 @@ import { runMachine } from "@otomat/domain";
 import { drainRunEvents, emitLedgerEvent, readRunEvents } from "#events";
 
 import { findFinalStatus } from "./evidence.js";
-import { notifyAfterSettle } from "./lifecycle.js";
 import { buildTerminalMarker } from "./markers.js";
 import { terminateGracefully } from "./process.js";
 import { settleRun } from "./settle.js";
-import type { SupervisorState } from "./state.js";
+import { notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveRunTo, driveStepsAndSessionsTo } from "./transitions.js";
 
 /** Grace between a graceful `SIGTERM` and a forced `SIGKILL` during abort. */

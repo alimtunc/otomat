@@ -1,6 +1,7 @@
 import { Avatar, AgentAvatar, Button, LiveDot, Spinner, toast } from "@otomat/ui";
 
-import { Row, Section } from "../section";
+import { Row } from "../row";
+import { Section } from "../section";
 
 export function AvatarsSection() {
   return (

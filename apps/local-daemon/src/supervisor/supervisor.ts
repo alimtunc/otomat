@@ -1,8 +1,7 @@
 import { abortRun } from "./abort.js";
 import { fixRun, resumeRun, startRun } from "./commands.js";
-import { notifyAfterSettle } from "./lifecycle.js";
 import { reconcileRuns } from "./reconcile.js";
-import { createState } from "./state.js";
+import { createState, notifyAfterSettle } from "./state.js";
 import type { Supervisor, SupervisorConfig } from "./types.js";
 
 export function createSupervisor(config: SupervisorConfig): Supervisor {

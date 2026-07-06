@@ -9,6 +9,7 @@ import { RunDiffHeader } from "@web/components/runs/diff/header";
 import { ArchivedComments } from "@web/components/runs/review/archived-comments";
 import { partitionComments } from "@web/components/runs/review/partition";
 import { useReviewSelection } from "@web/components/runs/review/use-selection";
+import { CenteredState } from "@web/components/shell/centered-state";
 
 function DiffLoading() {
   return (
@@ -31,7 +32,7 @@ export function RunDiffView() {
   if (diffQuery.isPending || reviewQuery.isPending) return <DiffLoading />;
   if (diffQuery.isError || reviewQuery.isError) {
     return (
-      <div className="grid h-full place-items-center p-6">
+      <CenteredState>
         <ErrorState
           title="Could not load the diff"
           description="The daemon did not answer or the git diff failed. Check the daemon logs."
@@ -40,7 +41,7 @@ export function RunDiffView() {
             void reviewQuery.refetch();
           }}
         />
-      </div>
+      </CenteredState>
     );
   }
 
@@ -49,13 +50,13 @@ export function RunDiffView() {
 
   if (diff === null) {
     return (
-      <div className="grid h-full place-items-center p-6">
+      <CenteredState>
         <EmptyState
           icon="git-compare"
           title="No worktree for this run"
           description="This run executed without a git worktree, so there is no diff to show. Diffs are never fabricated."
         />
-      </div>
+      </CenteredState>
     );
   }
 
@@ -73,13 +74,13 @@ export function RunDiffView() {
       />
 
       {diff.files.length === 0 ? (
-        <div className="grid flex-1 place-items-center p-6">
+        <CenteredState fill="flex">
           <EmptyState
             icon="git-compare"
             title="No changes yet"
             description="The canonical git diff appears once a run produces changes. Diffs are never fabricated."
           />
-        </div>
+        </CenteredState>
       ) : (
         <div className="flex flex-col gap-3">
           {diff.files.map((file) => (

@@ -1,5 +1,6 @@
 import type { ComponentPropsWithoutRef } from "react";
 
+import { injectStyleOnce } from "../lib/inject-style";
 import type { StatusTone } from "../lib/status";
 import { cn } from "../lib/utils";
 
@@ -10,15 +11,6 @@ const LIVEDOT_CSS = `
 .otomat-livedot::after{content:"";position:absolute;inset:0;border-radius:inherit;background:inherit;animation:otomat-livedot-pulse 1.6s var(--ease) infinite}
 @media (prefers-reduced-motion:reduce){.otomat-livedot::after{display:none}}
 `;
-
-function ensureLiveDotStyle(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(LIVEDOT_STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = LIVEDOT_STYLE_ID;
-  style.textContent = LIVEDOT_CSS;
-  document.head.appendChild(style);
-}
 
 const TONE_CLASS: Record<Exclude<StatusTone, "ghost">, string> = {
   neutral: "bg-neutral",
@@ -44,7 +36,7 @@ export function LiveDot({
   style,
   ...props
 }: LiveDotProps) {
-  if (live) ensureLiveDotStyle();
+  if (live) injectStyleOnce(LIVEDOT_STYLE_ID, LIVEDOT_CSS);
   return (
     <span
       aria-hidden="true"

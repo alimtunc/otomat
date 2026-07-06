@@ -8,6 +8,8 @@
  */
 import type {
   AgentSessionState,
+  IssueSource,
+  IssueState,
   PullRequestState,
   ReviewCommentState,
   ReviewState,
@@ -74,8 +76,8 @@ export const issues = sqliteTable("issues", {
     .references(() => projects.id),
   title: text("title").notNull(),
   body: text("body"),
-  status: text("status").notNull().default("backlog"),
-  source: text("source").notNull().default("local"),
+  status: text("status").$type<IssueState>().notNull().default("backlog"),
+  source: text("source").$type<IssueSource>().notNull().default("local"),
   source_external_id: text("source_external_id"),
   synced_at: text("synced_at"),
   ...timestamps,
@@ -192,7 +194,7 @@ export const pullRequests = sqliteTable("pull_requests", {
   run_id: text("run_id")
     .notNull()
     .references(() => runs.id),
-  provider: text("provider").notNull().default("github"),
+  provider: text("provider").$type<"github">().notNull().default("github"),
   number: integer("number"),
   url: text("url"),
   status: text("status").$type<PullRequestState>().notNull().default("draft"),

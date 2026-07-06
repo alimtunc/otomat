@@ -1,8 +1,9 @@
 import type { PullRequestState } from "@otomat/domain";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { pullRequests } from "../schema/index.js";
+import { touch } from "./touch.js";
 
 export type NewPullRequest = typeof pullRequests.$inferInsert;
 export type PullRequestRow = typeof pullRequests.$inferSelect;
@@ -30,10 +31,7 @@ function patchPullRequest(
   id: string,
   set: Partial<typeof pullRequests.$inferInsert>,
 ): void {
-  db.update(pullRequests)
-    .set({ ...set, updated_at: sql`(CURRENT_TIMESTAMP)` })
-    .where(eq(pullRequests.id, id))
-    .run();
+  db.update(pullRequests).set(touch(set)).where(eq(pullRequests.id, id)).run();
 }
 
 export function updatePullRequestDraft(

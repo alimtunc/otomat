@@ -39,3 +39,20 @@ export const MODAL_CLOSE_CLASS =
 export const MODAL_CLOSE_STYLE: CSSProperties = {
   transition: "background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease)",
 };
+
+export const MODAL_HEADER_CLASS = "flex items-center gap-2 px-4 py-3.5";
+
+export const MODAL_FOOTER_CLASS =
+  "flex items-center gap-2.5 border-t border-border-subtle px-4 py-3";
+
+export const MODAL_TITLE_CLASS = "text-sm font-semibold text-foreground";
+
+export const MODAL_DESCRIPTION_CLASS = "text-sm text-text-secondary";
+
+export const MENU_LABEL_CLASS =
+  "px-2 py-1.5 text-micro font-semibold tracking-[0.03em] text-text-tertiary";
+
+export const MENU_SEPARATOR_CLASS = "my-1.25 h-px bg-border-subtle";
+
+export const MENU_SHORTCUT_CLASS =
+  "ml-auto text-xs tracking-widest text-text-tertiary tabular-nums";

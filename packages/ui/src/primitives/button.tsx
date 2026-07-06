@@ -2,6 +2,7 @@ import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentPropsWithoutRef, ReactElement } from "react";
 
+import { injectStyleOnce } from "../lib/inject-style";
 import { cn } from "../lib/utils";
 
 const SPIN_STYLE_ID = "otomat-spin";
@@ -11,15 +12,6 @@ const SPIN_CSS = `
 .otomat-btn-loading::after{content:"";position:absolute;inset:0;margin:auto;width:14px;height:14px;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;animation:otomat-spin .7s linear infinite}
 @media (prefers-reduced-motion:reduce){.otomat-btn-loading::after{animation:none}}
 `;
-
-function ensureSpinStyle(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(SPIN_STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = SPIN_STYLE_ID;
-  style.textContent = SPIN_CSS;
-  document.head.appendChild(style);
-}
 
 const buttonVariants = cva(
   cn(
@@ -81,7 +73,7 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  ensureSpinStyle();
+  injectStyleOnce(SPIN_STYLE_ID, SPIN_CSS);
   const element = useRender({
     render: render ?? <button type="button" />,
     props: {

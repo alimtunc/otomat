@@ -1,10 +1,9 @@
 import { addComment, getReviewDetail } from "./comments.js";
-import type { ReviewContext } from "./context.js";
 import { getRunDiff } from "./diff.js";
 import { markFixRequested, prepareFix } from "./fix.js";
 import { getPullRequest, preparePullRequest } from "./pull-requests.js";
 import { onRunSettled } from "./settle.js";
-import type { ReviewService, ReviewServiceConfig } from "./types.js";
+import type { ReviewContext, ReviewService, ReviewServiceConfig } from "./types.js";
 
 /** Wires the shared {@link ReviewContext} and delegates each operation to its concern module. */
 export function createReviewService(config: ReviewServiceConfig): ReviewService {

@@ -2,8 +2,6 @@ import { schema, type Db } from "@otomat/db";
 import { eventEnvelopeSchema, type EventEnvelope } from "@otomat/domain";
 import { and, asc, eq, gt } from "drizzle-orm";
 
-import { maxSeqForRun } from "./ledger.js";
-
 const { runtimeEvents } = schema;
 
 export interface ReadRunEventsOptions {
@@ -31,11 +29,6 @@ export function readRunEvents(
   const base = db.select().from(runtimeEvents).where(where).orderBy(asc(runtimeEvents.seq));
   const rows = options.limit === undefined ? base.all() : base.limit(options.limit).all();
   return rows.map(toEnvelope).filter((event): event is EventEnvelope => event !== null);
-}
-
-/** Highest persisted `seq` for a run, or `null` if it has no events yet (SSE head cursor). */
-export function latestSeqForRun(db: Db, runId: string): number | null {
-  return maxSeqForRun(db, runId);
 }
 
 function toEnvelope(row: typeof runtimeEvents.$inferSelect): EventEnvelope | null {

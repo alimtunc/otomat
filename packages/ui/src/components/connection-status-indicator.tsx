@@ -4,8 +4,9 @@ import { RefreshCw, Wifi, WifiOff } from "lucide-react";
 import type { ComponentType } from "react";
 
 import { cn } from "../lib/utils";
-import type { ConnectionState } from "../types/shell";
 import { LiveDot } from "./live-dot";
+
+export type ConnectionState = "online" | "reconnecting" | "offline";
 
 export interface ConnectionStatusIndicatorProps {
   state: ConnectionState;

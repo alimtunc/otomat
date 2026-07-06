@@ -1,4 +1,17 @@
-import { DaemonRequestError, type DaemonClientConfig } from "./types";
+import type { DaemonClientConfig } from "./types";
+
+/** Thrown by the HTTP helpers when the daemon responds with a non-2xx status. */
+export class DaemonRequestError extends Error {
+  readonly status: number;
+  readonly path: string;
+
+  constructor(status: number, path: string) {
+    super(`Daemon request to ${path} failed with status ${status}`);
+    this.name = "DaemonRequestError";
+    this.status = status;
+    this.path = path;
+  }
+}
 
 export function resolveUrl(config: DaemonClientConfig, path: string): string {
   return `${config.baseUrl ?? ""}${path}`;

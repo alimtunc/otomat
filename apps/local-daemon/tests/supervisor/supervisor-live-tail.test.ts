@@ -3,14 +3,14 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
 
+import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { waitFor } from "../support/poll.js";
-import { setupSupervisorDb, type SupervisorTestDb } from "../support/supervisor-db.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
-let fix: SupervisorTestDb;
+let fix: DaemonTestDb;
 
 beforeEach(() => {
-  fix = setupSupervisorDb();
+  fix = setupDaemonDb();
 });
 
 afterEach(() => {

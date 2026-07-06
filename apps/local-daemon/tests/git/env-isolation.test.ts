@@ -6,11 +6,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { worktreeStateTree } from "#git/diff";
-import { runGit } from "#git/git-cli";
+import { GIT_ISOLATION_ENV_VARS, runGit } from "#git/git-cli";
 
 import { setupTestRepo } from "../support/git.js";
 
-const HOOK_GIT_ENV_KEYS = [
+// Implementation-independent copy: the ground-truth git must not trust the src list.
+const GROUND_TRUTH_SCRUB_KEYS = [
   "GIT_DIR",
   "GIT_WORK_TREE",
   "GIT_INDEX_FILE",
@@ -29,7 +30,7 @@ const TEST_IDENTITY = {
 // the sentinel repo stay trustworthy even while the hook env is active.
 function systemGit(cwd: string, ...args: string[]): string {
   const env = { ...process.env, ...TEST_IDENTITY };
-  for (const key of HOOK_GIT_ENV_KEYS) delete env[key];
+  for (const key of GROUND_TRUTH_SCRUB_KEYS) delete env[key];
   return execFileSync("git", args, { cwd, encoding: "utf8", env }).toString();
 }
 
@@ -60,19 +61,19 @@ function makeRepo(prefix: string, seedFile: string): string {
 
 function activateHookEnv(repoRoot: string): () => void {
   const previous = new Map<string, string | undefined>();
-  const values: Record<(typeof HOOK_GIT_ENV_KEYS)[number], string> = {
+  const values: Record<(typeof GIT_ISOLATION_ENV_VARS)[number], string> = {
     GIT_DIR: join(repoRoot, ".git"),
     GIT_WORK_TREE: repoRoot,
     GIT_INDEX_FILE: join(repoRoot, ".git", "index"),
     GIT_COMMON_DIR: join(repoRoot, ".git"),
     GIT_OBJECT_DIRECTORY: join(repoRoot, ".git", "objects"),
   };
-  for (const key of HOOK_GIT_ENV_KEYS) {
+  for (const key of GIT_ISOLATION_ENV_VARS) {
     previous.set(key, process.env[key]);
     process.env[key] = values[key];
   }
   return () => {
-    for (const key of HOOK_GIT_ENV_KEYS) {
+    for (const key of GIT_ISOLATION_ENV_VARS) {
       const value = previous.get(key);
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;

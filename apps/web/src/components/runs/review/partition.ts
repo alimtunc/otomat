@@ -36,7 +36,3 @@ export function partitionComments(
 
   return { anchored, archived };
 }
-
-export function openCommentIds(comments: ReviewCommentContract[]): string[] {
-  return comments.filter((comment) => comment.status === "open").map((comment) => comment.id);
-}

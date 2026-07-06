@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { RuntimeEvent } from "#runtime/events";
 import { JsonlEventSink, MemorySink, createTeeSink, readEventsJsonl } from "#runtime/sinks";
 
+import { makeEvent } from "../support/run-event-fixtures.js";
+
 let dir: string;
 
 beforeEach(() => {
@@ -17,17 +19,13 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-const sampleEvent = (id: string): RuntimeEvent => ({
-  id,
-  run_id: "run-1",
-  step_run_id: "step-1",
-  agent_session_id: "sess-1",
-  type: "runtime.log",
-  source: "otomat",
-  occurred_at: "2026-01-01T00:00:00.000Z",
-  payload: { fidelity: "raw_log", adapter: "fake", test_adapter: true, text: id },
-  raw_ref: null,
-});
+const sampleEvent = (id: string): RuntimeEvent =>
+  makeEvent("run-1", 0, {
+    id,
+    step_run_id: "step-1",
+    agent_session_id: "sess-1",
+    payload: { fidelity: "raw_log", adapter: "fake", test_adapter: true, text: id },
+  });
 
 describe("sinks", () => {
   it("MemorySink collects events in emission order", () => {

@@ -14,7 +14,9 @@ import type { Db } from "@otomat/db";
 import type { RuntimeEvent } from "#runtime";
 
 import { EventTailer } from "./tailer.js";
-import { EVENTS_FILENAME } from "./types.js";
+
+/** Conventional per-run evidence file the runtime appends to (OTO-6 `JsonlEventSink`). */
+export const EVENTS_FILENAME = "events.jsonl";
 
 const LIVE_TAIL_INTERVAL_MS = 200;
 

@@ -1,12 +1,19 @@
 import { zValidator } from "@hono/zod-validator";
 import { getRun, type Db, type RunRow } from "@otomat/db";
-import type { Context } from "hono";
+import { createMiddleware } from "hono/factory";
 import type { ZodType } from "zod";
 
-/** Resolves the `/:id` param to its run row, or a 404 Response the caller returns as-is. */
-export function requireRun(c: Context, db: Db): RunRow | Response {
-  const runId = c.req.param("id") ?? "";
-  return getRun(db, runId) ?? c.json({ error: "run_not_found" }, 404);
+/** Hono env for the `/:id` run routes: {@link runGuard} resolves the row into `c.var.run`. */
+export type RunEnv = { Variables: { run: RunRow } };
+
+/** Resolves the `/:id` param to its run row, or short-circuits with a 404 `run_not_found`. */
+export function runGuard(db: Db) {
+  return createMiddleware<RunEnv>(async (c, next) => {
+    const run = getRun(db, c.req.param("id") ?? "");
+    if (!run) return c.json({ error: "run_not_found" }, 404);
+    c.set("run", run);
+    await next();
+  });
 }
 
 /** `zValidator("json", …)` returning a uniform 400 `invalid_request` on schema failure. */

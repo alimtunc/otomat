@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { GitCommandError, runGit } from "#git/git-cli";
+import { GitCommandError } from "#git";
+import { runGit } from "#git/git-cli";
 
 import { setupTestRepo } from "../support/git.js";
 

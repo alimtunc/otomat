@@ -1,9 +1,3 @@
-import { randomUUID } from "node:crypto";
-import { rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
-import { createClient, insertIssue, insertProject, runMigrations, type Db } from "@otomat/db";
 import type {
   PullRequestDetail,
   ReviewCommentContract,
@@ -11,69 +5,20 @@ import type {
   RunContract,
   RunDiffResponse,
 } from "@otomat/domain";
-import type { Hono } from "hono";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { createApiApp } from "#api/app";
-import type { ApiDeps } from "#api/deps";
 import type { CanonicalDiff } from "#git";
 import { CommentsNotFixableError, DiffUnavailableError, ReviewAnchorStaleError } from "#review";
 import { RunNotResumableError } from "#supervisor";
 
+import { makeApiApp, post, request, runRow } from "../support/api.js";
+import { setupTestDb, type TestDb } from "../support/db.js";
 import { commentRow, pullRequestRow, reviewRow, stubReviewService } from "../support/review.js";
 import { seedRun } from "../support/seed.js";
 
-const PROJECT_ID = "project-1";
-const ISSUE_ID = "issue-1";
 const RUN_ID = "run-review";
 
-let dbPath = "";
-let db: Db;
-let close: () => void;
-
-function request(
-  app: Hono,
-  path: string,
-  init: RequestInit & { headers?: Record<string, string> } = {},
-): Promise<Response> {
-  return app.request(path, { ...init, headers: { Host: "127.0.0.1", ...init.headers } });
-}
-
-function post(app: Hono, path: string, body: unknown): Promise<Response> {
-  return request(app, path, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-interface AppOverrides {
-  fixRun?: ApiDeps["fixRun"];
-  review?: ApiDeps["review"];
-}
-
-function makeApp(overrides: AppOverrides = {}) {
-  return createApiApp({
-    db,
-    name: "test-daemon",
-    version: "9.9.9",
-    startedAt: "2026-07-05T00:00:00.000Z",
-    dbPath,
-    launchRun: async () => {
-      throw new Error("not under test");
-    },
-    resumeRun: async () => {
-      throw new Error("not under test");
-    },
-    fixRun:
-      overrides.fixRun ??
-      (async () => {
-        throw new Error("fixRun stub not configured");
-      }),
-    abortRun: async () => {},
-    review: overrides.review ?? stubReviewService(),
-  });
-}
+let t: TestDb;
 
 const DIFF: CanonicalDiff = {
   base: "base-sha",
@@ -95,16 +40,9 @@ const DIFF: CanonicalDiff = {
 };
 
 beforeEach(() => {
-  dbPath = join(tmpdir(), `otomat-review-api-${randomUUID()}.db`);
-  runMigrations(dbPath);
-  const client = createClient(dbPath);
-  db = client.db;
-  close = () => client.sqlite.close();
-  insertProject(db, { id: PROJECT_ID, name: "Local", root_path: "/tmp/repo" });
-  insertIssue(db, { id: ISSUE_ID, project_id: PROJECT_ID, title: "First issue", status: "ready" });
-  seedRun(db, {
+  t = setupTestDb("otomat-review-api-");
+  seedRun(t.db, {
     runId: RUN_ID,
-    issueId: ISSUE_ID,
     runStatus: "review_ready",
     stepStatus: "succeeded",
     sessionStatus: "terminated",
@@ -113,19 +51,18 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  close();
-  for (const suffix of ["", "-shm", "-wal"]) rmSync(`${dbPath}${suffix}`, { force: true });
+  t.cleanup();
 });
 
 it("returns 404 on every review surface for an unknown run", async () => {
-  const app = makeApp();
+  const app = makeApiApp(t);
   for (const path of ["/diff", "/review", "/pr"]) {
     expect((await request(app, `/api/runs/nope${path}`)).status).toBe(404);
   }
 });
 
 it("serves the canonical diff mapped to the wire contract", async () => {
-  const app = makeApp({
+  const app = makeApiApp(t, {
     review: stubReviewService({
       getRunDiff: () => ({ computedAt: "2026-07-05T00:00:00.000Z", diff: DIFF }),
     }),
@@ -139,13 +76,13 @@ it("serves the canonical diff mapped to the wire contract", async () => {
 });
 
 it("serves an honest null diff when the run has no worktree", async () => {
-  const res = await request(makeApp(), `/api/runs/${RUN_ID}/diff`);
+  const res = await request(makeApiApp(t), `/api/runs/${RUN_ID}/diff`);
   expect(res.status).toBe(200);
   expect(((await res.json()) as RunDiffResponse).diff).toBeNull();
 });
 
 it("serves the review surface with serialized comments", async () => {
-  const app = makeApp({
+  const app = makeApiApp(t, {
     review: stubReviewService({
       getReviewDetail: () => ({ review: reviewRow(), comments: [commentRow()] }),
     }),
@@ -159,10 +96,10 @@ it("serves the review surface with serialized comments", async () => {
 
 it("creates a pinned comment and returns 201", async () => {
   let received: unknown;
-  const app = makeApp({
+  const app = makeApiApp(t, {
     review: stubReviewService({
-      addComment: (_run, request) => {
-        received = request;
+      addComment: (_run, req) => {
+        received = req;
         return commentRow();
       },
     }),
@@ -184,13 +121,13 @@ it("creates a pinned comment and returns 201", async () => {
 });
 
 it("rejects an invalid comment body with 400", async () => {
-  const res = await post(makeApp(), `/api/runs/${RUN_ID}/review/comments`, { body: "" });
+  const res = await post(makeApiApp(t), `/api/runs/${RUN_ID}/review/comments`, { body: "" });
   expect(res.status).toBe(400);
   expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
 });
 
 it("maps stale anchors and missing diffs to 409 conflicts", async () => {
-  const stale = makeApp({
+  const stale = makeApiApp(t, {
     review: stubReviewService({
       addComment: () => {
         throw new ReviewAnchorStaleError("src/thing.ts");
@@ -206,7 +143,7 @@ it("maps stale anchors and missing diffs to 409 conflicts", async () => {
   expect(staleRes.status).toBe(409);
   expect(((await staleRes.json()) as { error: string }).error).toBe("comment_anchor_stale");
 
-  const bare = makeApp({
+  const bare = makeApiApp(t, {
     review: stubReviewService({
       addComment: () => {
         throw new DiffUnavailableError(RUN_ID);
@@ -227,7 +164,7 @@ it("orchestrates a fix request: prepare, spawn the turn, then mark", async () =>
   const calls: string[] = [];
   let fixPrompt = "";
   let marked: string[] = [];
-  const app = makeApp({
+  const app = makeApiApp(t, {
     review: stubReviewService({
       prepareFix: (_run, commentIds) => {
         calls.push("prepare");
@@ -241,20 +178,7 @@ it("orchestrates a fix request: prepare, spawn the turn, then mark", async () =>
     fixRun: async (_runId, prompt) => {
       calls.push("spawn");
       fixPrompt = prompt;
-      return {
-        id: RUN_ID,
-        issue_id: ISSUE_ID,
-        repository_id: null,
-        worktree_id: null,
-        agent_id: null,
-        status: "running",
-        branch: "b",
-        plan_json: { version: 1, steps: [] },
-        started_at: null,
-        completed_at: null,
-        created_at: "2026-07-05T00:00:00.000Z",
-        updated_at: "2026-07-05T00:00:00.000Z",
-      };
+      return runRow(RUN_ID);
     },
   });
 
@@ -268,10 +192,10 @@ it("orchestrates a fix request: prepare, spawn the turn, then mark", async () =>
 
 it("rejects an empty fix selection with 400 and maps conflicts to 409", async () => {
   expect(
-    (await post(makeApp(), `/api/runs/${RUN_ID}/review/fix`, { comment_ids: [] })).status,
+    (await post(makeApiApp(t), `/api/runs/${RUN_ID}/review/fix`, { comment_ids: [] })).status,
   ).toBe(400);
 
-  const notFixable = makeApp({
+  const notFixable = makeApiApp(t, {
     review: stubReviewService({
       prepareFix: () => {
         throw new CommentsNotFixableError("comment c9 not found on run");
@@ -282,7 +206,7 @@ it("rejects an empty fix selection with 400 and maps conflicts to 409", async ()
   expect(nfRes.status).toBe(409);
   expect(((await nfRes.json()) as { error: string }).error).toBe("comments_not_fixable");
 
-  const notResumable = makeApp({
+  const notResumable = makeApiApp(t, {
     review: stubReviewService({
       prepareFix: (_run, commentIds) => ({ prompt: "p", commentIds }),
     }),
@@ -298,14 +222,14 @@ it("rejects an empty fix selection with 400 and maps conflicts to 409", async ()
 });
 
 it("serves and persists the local PR draft", async () => {
-  const empty = await request(makeApp(), `/api/runs/${RUN_ID}/pr`);
+  const empty = await request(makeApiApp(t), `/api/runs/${RUN_ID}/pr`);
   expect(((await empty.json()) as PullRequestDetail).pull_request).toBeNull();
 
-  const app = makeApp({
+  const app = makeApiApp(t, {
     review: stubReviewService({
       getPullRequest: () => pullRequestRow(),
-      preparePullRequest: (_run, request) => ({
-        row: pullRequestRow({ title: request.title }),
+      preparePullRequest: (_run, req) => ({
+        row: pullRequestRow({ title: req.title }),
         created: true,
       }),
     }),
@@ -322,10 +246,10 @@ it("serves and persists the local PR draft", async () => {
 });
 
 it("returns 200 when updating an existing PR draft", async () => {
-  const app = makeApp({
+  const app = makeApiApp(t, {
     review: stubReviewService({
-      preparePullRequest: (_run, request) => ({
-        row: pullRequestRow({ title: request.title }),
+      preparePullRequest: (_run, req) => ({
+        row: pullRequestRow({ title: req.title }),
         created: false,
       }),
     }),

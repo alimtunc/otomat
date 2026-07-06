@@ -6,7 +6,6 @@ import { runtimeEventSchema, type RuntimeEvent } from "#runtime";
 
 import { appendSeqedEvents, applyLedgerPragmas, nextSeqForRun, type SeqedEvent } from "./ledger.js";
 import { byteOffsetForLine, readCompleteLinesFrom } from "./tail-source.js";
-import { type TailTickResult } from "./types.js";
 
 export interface EventTailerOptions {
   db: Db;
@@ -14,6 +13,15 @@ export interface EventTailerOptions {
   /** Path to the run's `events.jsonl` (OTO-6 `JsonlEventSink` target). */
   filePath: string;
   busyTimeoutMs?: number;
+}
+
+export interface TailTickResult {
+  /** New rows persisted this tick. */
+  ingested: number;
+  /** Bytes of `events.jsonl` consumed so far. */
+  byteOffset: number;
+  /** Next unused per-run `seq`. */
+  nextSeq: number;
 }
 
 /**

@@ -3,9 +3,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import { createClient, runMigrations, schema, type DbClient } from "@otomat/db";
+import type { DbClient } from "@otomat/db";
 
 import { scrubGitEnv } from "#git/git-cli";
+
+import { seedRepository, setupTestDb } from "./db.js";
 
 const TEST_IDENTITY = {
   GIT_AUTHOR_NAME: "Otomat Test",
@@ -65,7 +67,7 @@ export function setupTestRepo(): TestRepo {
   };
 }
 
-export interface TestDb {
+export interface GitTestDb {
   client: DbClient;
   dir: string;
   repositoryId: string;
@@ -73,24 +75,12 @@ export interface TestDb {
 }
 
 /** A migrated temp DB with a project + repository row so worktree FKs resolve. */
-export function setupTestDb(): TestDb {
-  const dir = mkdtempSync(join(tmpdir(), "otomat-git-db-"));
-  const dbPath = join(dir, "otomat.db");
-  runMigrations(dbPath);
-  const client = createClient(dbPath);
-  client.db.insert(schema.projects).values({ id: "p1", name: "P", root_path: dir }).run();
-  client.db
-    .insert(schema.repositories)
-    .values({ id: "repo-1", project_id: "p1", name: "R", default_branch: "main" })
-    .run();
-
+export function setupGitDb(): GitTestDb {
+  const base = setupTestDb("otomat-git-db-");
   return {
-    client,
-    dir,
-    repositoryId: "repo-1",
-    cleanup() {
-      client.sqlite.close();
-      rmSync(dir, { recursive: true, force: true });
-    },
+    client: base.client,
+    dir: base.dir,
+    repositoryId: seedRepository(base.db),
+    cleanup: base.cleanup,
   };
 }

@@ -1,14 +1,14 @@
 import { getRun } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
+import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { seedRun } from "../support/seed.js";
-import { setupSupervisorDb, type SupervisorTestDb } from "../support/supervisor-db.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
-let fix: SupervisorTestDb;
+let fix: DaemonTestDb;
 
 beforeEach(() => {
-  fix = setupSupervisorDb();
+  fix = setupDaemonDb();
 });
 
 afterEach(() => {

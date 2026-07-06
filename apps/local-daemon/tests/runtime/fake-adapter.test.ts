@@ -10,7 +10,7 @@ import {
   type RuntimeSessionRef,
 } from "#runtime/contract";
 import { EVENT_FIDELITY, runtimeEventSchema } from "#runtime/events";
-import { FAKE_ADAPTER_ID, FakeRuntimeAdapter } from "#runtime/fake/fake-adapter";
+import { FAKE_ADAPTER_ID, FakeRuntimeAdapter } from "#runtime/fake-adapter";
 import { JsonlEventSink, MemorySink, readEventsJsonl } from "#runtime/sinks";
 
 let dir: string;

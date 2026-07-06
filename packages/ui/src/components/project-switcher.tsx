@@ -1,7 +1,6 @@
 import { Check, ChevronsUpDown, FolderGit2, Settings } from "lucide-react";
 import { useState } from "react";
 
-import { HEALTH_COLOR } from "../lib/status";
 import { cn } from "../lib/utils";
 import {
   Command,
@@ -12,7 +11,20 @@ import {
   CommandList,
 } from "../primitives/command";
 import { Popover, PopoverContent, PopoverTrigger } from "../primitives/popover";
-import type { ProjectSummary } from "../types/shell";
+
+export interface ProjectSummary {
+  id: string;
+  name: string;
+  repo?: string;
+  branch?: string;
+  health?: "healthy" | "degraded" | "unknown";
+}
+
+const HEALTH_COLOR: Record<NonNullable<ProjectSummary["health"]>, string> = {
+  healthy: "var(--success)",
+  degraded: "var(--warning)",
+  unknown: "var(--neutral)",
+};
 
 export interface ProjectSwitcherProps {
   projects: ProjectSummary[];
