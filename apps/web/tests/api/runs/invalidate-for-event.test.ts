@@ -4,20 +4,9 @@ import { queryKeys } from "@web/api/query-keys";
 import { invalidateForEvent } from "@web/api/runs/invalidate-for-event";
 import { expect, it, vi } from "vitest";
 
-function event(type: EventEnvelope["type"]): EventEnvelope {
-  return {
-    id: "e0",
-    run_id: "run-1",
-    step_run_id: null,
-    agent_session_id: null,
-    seq: 0,
-    type,
-    source: "otomat",
-    occurred_at: "2026-07-05T00:00:00.000Z",
-    payload: {},
-    raw_ref: null,
-  };
-}
+import { envelope } from "#support/envelope";
+
+const event = (type: EventEnvelope["type"]): EventEnvelope => envelope({ type });
 
 function fakeClient() {
   const keys: unknown[] = [];

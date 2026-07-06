@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "imports": {
+    "#support/*": "./tests/support/*.ts"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsgo -p tsconfig.json --noEmit && vite build",

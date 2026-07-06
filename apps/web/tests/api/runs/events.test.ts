@@ -2,20 +2,10 @@ import type { EventEnvelope } from "@otomat/domain";
 import { mergeEvent } from "@web/api/runs/events";
 import { expect, it } from "vitest";
 
-function envelope(seq: number, payload: Record<string, unknown> = {}): EventEnvelope {
-  return {
-    id: `e${seq}`,
-    run_id: "run-1",
-    step_run_id: null,
-    agent_session_id: null,
-    seq,
-    type: "runtime.log",
-    source: "otomat",
-    occurred_at: "2026-01-01T00:00:00.000Z",
-    payload,
-    raw_ref: null,
-  };
-}
+import { envelope as makeEnvelope } from "#support/envelope";
+
+const envelope = (seq: number, payload: Record<string, unknown> = {}): EventEnvelope =>
+  makeEnvelope({ id: `e${seq}`, seq, payload });
 
 it("appends ascending events in order", () => {
   let events: EventEnvelope[] = [];
