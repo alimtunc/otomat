@@ -8,6 +8,7 @@ export const queryKeys = {
   health: ["health"] as const,
   projects: ["projects"] as const,
   repositories: ["repositories"] as const,
+  runtimes: ["runtimes"] as const,
   issues: ["issues"] as const,
   issue: (id: string) => ["issues", id] as const,
   runs: ["runs"] as const,

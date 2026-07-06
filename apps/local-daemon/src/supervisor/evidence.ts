@@ -1,10 +1,8 @@
 import { isRunTerminal, type EventEnvelope, type RunTerminalState } from "@otomat/domain";
 
-import { SUPERVISOR_ADAPTER } from "./types.js";
+import { asString } from "#runtime/cli/frame-guards";
 
-function asString(value: unknown): string | null {
-  return typeof value === "string" ? value : null;
-}
+import { SUPERVISOR_ADAPTER } from "./types.js";
 
 function isSupervisorFinal(event: EventEnvelope): boolean {
   return (

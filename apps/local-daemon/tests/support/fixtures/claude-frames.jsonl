@@ -1,0 +1,9 @@
+{"type":"system","subtype":"hook_started","hook_id":"h1","hook_name":"SessionStart:startup","hook_event":"SessionStart","uuid":"u0","session_id":"sess-claude-1"}
+{"type":"system","subtype":"init","cwd":"/work","session_id":"sess-claude-1","tools":["Write"],"model":"claude-test-1","permissionMode":"bypassPermissions","apiKeySource":"none","slash_commands":[],"mcp_servers":[]}
+plain text noise the CLI printed outside JSON
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Creating the file now."}]},"session_id":"sess-claude-1","uuid":"u1"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu1","name":"Write","input":{"file_path":"hello.txt","content":"hello"}}]},"session_id":"sess-claude-1","uuid":"u2"}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu1","content":"File created successfully"}]},"session_id":"sess-claude-1","uuid":"u3","tool_use_result":{"type":"create"}}
+{"type":"rate_limit_event","rate_limit_info":{"status":"allowed"},"uuid":"u4","session_id":"sess-claude-1"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"DONE"}]},"session_id":"sess-claude-1","uuid":"u5"}
+{"type":"result","subtype":"success","is_error":false,"duration_ms":1200,"num_turns":2,"result":"DONE","session_id":"sess-claude-1","total_cost_usd":0.0123,"usage":{"input_tokens":100,"cache_creation_input_tokens":75,"cache_read_input_tokens":300,"output_tokens":25}}

@@ -44,15 +44,17 @@ export interface RuntimeEventInput {
   kind: string;
   type: RuntimeEvent["type"];
   source: RuntimeEvent["source"];
-  /** Emitting adapter id, recorded on the payload alongside the fixed `parsed` fidelity. */
+  /** Emitting adapter id, recorded on the payload alongside the fidelity tier. */
   adapter: string;
+  /** Payload fidelity tier; defaults to `parsed`. */
+  fidelity?: EventFidelity;
   occurredAt: string;
   stepRunId?: string | null;
   agentSessionId?: string | null;
   payload?: Record<string, unknown>;
 }
 
-/** Builds a control-plane `RuntimeEvent` envelope (the shared shape for review + supervisor markers). */
+/** Builds a `RuntimeEvent` envelope with identity and fidelity/adapter provenance stamped; shared by the adapter emitters and the review + supervisor markers. */
 export function buildRuntimeEvent(input: RuntimeEventInput): RuntimeEvent {
   return {
     id: `${input.runId}:${input.kind}:${randomUUID()}`,
@@ -62,7 +64,7 @@ export function buildRuntimeEvent(input: RuntimeEventInput): RuntimeEvent {
     type: input.type,
     source: input.source,
     occurred_at: input.occurredAt,
-    payload: { fidelity: "parsed", adapter: input.adapter, ...input.payload },
+    payload: { fidelity: input.fidelity ?? "parsed", adapter: input.adapter, ...input.payload },
     raw_ref: null,
   };
 }

@@ -195,7 +195,7 @@ it("on a completed settle: emits git.diff_updated, marks fixed comments addresse
   const resolutions = events
     .filter((e) => e.type === "review.comment_resolved")
     .map((e) => e.payload["resolution"]);
-  expect(resolutions.sort()).toEqual(["addressed", "outdated"]);
+  expect(resolutions.toSorted()).toEqual(["addressed", "outdated"]);
 
   // Snapshots keep showing what the reviewer saw at comment time.
   expect(getReviewComment(fix.db, requested.id)?.hunk_snapshot).toContain("+beta");

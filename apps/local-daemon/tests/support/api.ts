@@ -43,7 +43,10 @@ export function runRow(id: string, overrides: Partial<RunRow> = {}): RunRow {
 }
 
 /** ApiDeps app over the shared TestDb; un-overridden run commands throw, never fake-succeed. */
-export function makeApiApp(t: TestDb, overrides: Partial<ApiDeps> = {}): Hono {
+export function makeApiApp(
+  t: Pick<TestDb, "db" | "dbPath">,
+  overrides: Partial<ApiDeps> = {},
+): Hono {
   return createApiApp({
     db: t.db,
     dbPath: t.dbPath,

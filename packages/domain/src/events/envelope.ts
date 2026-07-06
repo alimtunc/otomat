@@ -23,6 +23,7 @@ export const EVENT_TYPES = [
   "step.lifecycle",
   "session.lifecycle",
   "runtime.log",
+  "runtime.message",
   "runtime.tool_call",
   "runtime.permission_request",
   "runtime.permission_response",

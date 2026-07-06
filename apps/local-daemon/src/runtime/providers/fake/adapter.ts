@@ -1,7 +1,8 @@
 import { appendFileSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { RuntimeCapabilities } from "./capabilities.js";
+import { FAKE_RUNTIME_ID, type RuntimeCapabilities } from "@otomat/domain";
+
 import {
   type RuntimeAdapter,
   type RuntimeFinalState,
@@ -9,11 +10,11 @@ import {
   type RuntimeRunInput,
   type RuntimeSessionRef,
   type RuntimeUsage,
-} from "./contract.js";
-import type { EventFidelity, RuntimeEvent } from "./events.js";
-import type { RuntimeSink } from "./sinks.js";
+} from "#runtime/contract";
+import type { EventFidelity, RuntimeEvent } from "#runtime/events";
+import type { RuntimeSink } from "#runtime/sinks";
 
-export const FAKE_ADAPTER_ID = "fake";
+export const FAKE_ADAPTER_ID = FAKE_RUNTIME_ID;
 
 const FAKE_WORK_FILENAME = "fake-implementation.md";
 
@@ -140,11 +141,11 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
   readonly displayName = "Fake Runtime (test adapter)";
   readonly capabilities: RuntimeCapabilities = {
     stream: true,
-    sendMessage: true,
+    send_message: true,
     abort: true,
     resume: true,
     permissions: true,
-    diffHints: false,
+    diff_hints: false,
   };
 
   /** Monotonic per-instance turn counter: keeps event ids unique across run/resume turns. */

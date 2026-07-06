@@ -2,9 +2,11 @@ import { getRun, listAgentSessionsForRun, type AgentSessionRow, type RunRow } fr
 import type { RunState, StartRunRequest } from "@otomat/domain";
 
 import { runDir } from "#events";
+import { createRuntimeAdapter, isKnownRuntimeId } from "#runtime";
 
 import { spawnTurn } from "./lifecycle.js";
 import { prepareRun } from "./prepare.js";
+import { runtimeForRun } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
 
 /** A resume the caller got wrong (bad state, concurrent turn, no session) — a conflict, not a daemon fault. */
@@ -32,7 +34,7 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
   const run = requireFollowUpableRun(state, runId, "awaiting_human");
   const prompt = run.plan_json.steps[0]?.prompt ?? null;
   if (prompt === null) throw new Error(`run ${runId} has no plan step to resume`);
-  return spawnFollowUpTurn(state, runId, prompt);
+  return spawnFollowUpTurn(state, run, prompt);
 }
 
 /** A fix turn is an honest resume: same provider session, a new prompt built from the review comments. */
@@ -41,8 +43,8 @@ export async function fixRun(
   runId: string,
   prompt: string,
 ): Promise<RunRow> {
-  requireFollowUpableRun(state, runId, "review_ready");
-  return spawnFollowUpTurn(state, runId, prompt);
+  const run = requireFollowUpableRun(state, runId, "review_ready");
+  return spawnFollowUpTurn(state, run, prompt);
 }
 
 function requireFollowUpableRun(
@@ -63,12 +65,22 @@ function requireFollowUpableRun(
 
 async function spawnFollowUpTurn(
   state: SupervisorState,
-  runId: string,
+  run: RunRow,
   prompt: string,
 ): Promise<RunRow> {
   const { db } = state;
+  const runId = run.id;
   const session = pickResumableSession(listAgentSessionsForRun(db, runId));
   if (!session) throw new RunNotResumableError(`run ${runId} has no provider session to resume`);
+
+  const runtime = runtimeForRun(db, run);
+  if (
+    runtime === undefined ||
+    !isKnownRuntimeId(runtime) ||
+    !createRuntimeAdapter(runtime).capabilities.resume
+  ) {
+    throw new RunNotResumableError(`run ${runId} runtime "${runtime}" does not support resume`);
+  }
 
   await spawnTurn(
     state,
@@ -79,6 +91,7 @@ async function spawnFollowUpTurn(
       prompt,
       runDir: runDir(state.dataDir, runId),
       worktreePath: state.worktrees?.service.get(runId)?.path ?? null,
+      runtime,
     },
     "resume",
     session.provider_session_id,

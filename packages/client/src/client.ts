@@ -9,6 +9,7 @@ import {
   runContractSchema,
   runDetailSchema,
   runDiffResponseSchema,
+  runtimeDescriptorSchema,
   type CreateReviewCommentRequest,
   type PreparePullRequestRequest,
   type RequestFixRequest,
@@ -37,6 +38,9 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
       return repositoryContractSchema
         .array()
         .parse(await getJson(config, `/api/repositories${queryString(params)}`));
+    },
+    async listRuntimes() {
+      return runtimeDescriptorSchema.array().parse(await getJson(config, "/api/runtimes"));
     },
     async listIssues(params: { projectId?: string } = {}) {
       return issueContractSchema

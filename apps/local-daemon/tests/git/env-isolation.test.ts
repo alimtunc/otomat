@@ -29,7 +29,7 @@ const TEST_IDENTITY = {
 // Ground-truth git that always ignores the ambient hook env, so snapshots of
 // the sentinel repo stay trustworthy even while the hook env is active.
 function systemGit(cwd: string, ...args: string[]): string {
-  const env = { ...process.env, ...TEST_IDENTITY };
+  const env: NodeJS.ProcessEnv = { ...process.env, ...TEST_IDENTITY };
   for (const key of GROUND_TRUTH_SCRUB_KEYS) delete env[key];
   return execFileSync("git", args, { cwd, encoding: "utf8", env }).toString();
 }
