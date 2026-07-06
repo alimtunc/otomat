@@ -1,7 +1,5 @@
 import type { DbClient } from "@otomat/db";
 
-import type { RuntimeEvent } from "#runtime";
-
 import { setupTestDb } from "./db.js";
 import { seedRun } from "./seed.js";
 
@@ -30,24 +28,5 @@ export function setupLedgerDb(): LedgerTestDb {
     stepRunId: seeded.stepRunId,
     agentSessionId: seeded.agentSessionId,
     cleanup: base.cleanup,
-  };
-}
-
-export function makeEvent(
-  runId: string,
-  index: number,
-  overrides: Partial<RuntimeEvent> = {},
-): RuntimeEvent {
-  return {
-    id: `${runId}:${index}`,
-    run_id: runId,
-    step_run_id: null,
-    agent_session_id: null,
-    type: "runtime.log",
-    source: "otomat",
-    occurred_at: "2026-01-01T00:00:00.000Z",
-    payload: { fidelity: "raw_log", adapter: "fake", test_adapter: true, text: `e${index}` },
-    raw_ref: null,
-    ...overrides,
   };
 }

@@ -8,7 +8,8 @@ import { readRunEvents } from "#events/projection";
 import { EventTailer } from "#events/tailer";
 import { FakeRuntimeAdapter, JsonlEventSink, readEventsJsonl } from "#runtime";
 
-import { makeEvent, setupLedgerDb, type LedgerTestDb } from "../support/events.js";
+import { setupLedgerDb, type LedgerTestDb } from "../support/ledger-db.js";
+import { makeEvent } from "../support/run-event-fixtures.js";
 
 let t: LedgerTestDb;
 let filePath: string;

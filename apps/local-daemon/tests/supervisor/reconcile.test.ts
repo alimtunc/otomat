@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { getRun, listAgentSessionsForRun, listStepRunsForRun, schema } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { readRunEvents } from "#events";
+import { readRunEvents, runDir, runEventsPath } from "#events";
 import { isProcessAlive, reconcileRuns } from "#supervisor";
 import {
   readProcessStartTime,
@@ -114,7 +114,7 @@ it("terminates a still-alive orphan group whose identity is proven, and marks it
       pgid: orphan.pgid,
     });
     // A real worker stamps its identity next to its pid; here we simulate that for the live orphan.
-    writeWorkerIdentity(join(fix.dataDir, "runs", "r4"), orphan.pid, orphan.pgid);
+    writeWorkerIdentity(runDir(fix.dataDir, "r4"), orphan.pid, orphan.pgid);
     writeRunEvents(fix.dataDir, "r4", [providerSessionEvent(seed, "ps-r4")]);
 
     const report = reconcileRuns(fix.db, fix.dataDir, NOW);
@@ -171,7 +171,7 @@ it("does not signal an alive pid the OS reused (identity start-time mismatch)", 
     // exactly what a reused pid looks like after a long daemon downtime.
     const stale = readProcessStartTime(orphan.pid) ?? "Mon Jan  1 00:00:00 2000";
     writeFileSync(
-      join(fix.dataDir, "runs", "r4c", WORKER_IDENTITY_FILE),
+      join(runDir(fix.dataDir, "r4c"), WORKER_IDENTITY_FILE),
       JSON.stringify({ pid: orphan.pid, pgid: orphan.pgid, start_time: `stale ${stale}` }),
     );
 
@@ -234,7 +234,7 @@ it("skips a truncated final line and still ingests the complete prefix", async (
   });
   writeRunEvents(fix.dataDir, "r6", [providerSessionEvent(seed, "ps-r6")]);
   // A kill mid-write: an unparseable JSON fragment with no trailing newline.
-  appendFileSync(join(fix.dataDir, "runs", "r6", "events.jsonl"), '{"id":"torn","run_id":"r6","ty');
+  appendFileSync(runEventsPath(fix.dataDir, "r6"), '{"id":"torn","run_id":"r6","ty');
 
   const report = reconcileRuns(fix.db, fix.dataDir, NOW);
 

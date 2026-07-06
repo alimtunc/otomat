@@ -1,29 +1,44 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
 
 import { expect } from "vitest";
 
+import { runDir, runEventsPath } from "#events";
 import type { RuntimeEvent } from "#runtime";
 import { buildTerminalMarker } from "#supervisor";
 
 import type { SeededRun } from "./seed.js";
 
+export function makeEvent(
+  runId: string,
+  index: number,
+  overrides: Partial<RuntimeEvent> = {},
+): RuntimeEvent {
+  return {
+    id: `${runId}:${index}`,
+    run_id: runId,
+    step_run_id: null,
+    agent_session_id: null,
+    type: "runtime.log",
+    source: "otomat",
+    occurred_at: "2026-01-01T00:00:00.000Z",
+    payload: { fidelity: "raw_log", adapter: "fake", test_adapter: true, text: `e${index}` },
+    raw_ref: null,
+    ...overrides,
+  };
+}
+
 function event(
   seed: SeededRun,
   type: RuntimeEvent["type"],
-  payload: Record<string, unknown>,
+  payload: RuntimeEvent["payload"],
 ): RuntimeEvent {
-  return {
+  return makeEvent(seed.runId, 0, {
     id: `${seed.runId}:${type}:${Object.keys(payload).length}:${payload["text"] ?? ""}`,
-    run_id: seed.runId,
     step_run_id: seed.stepRunId,
     agent_session_id: seed.agentSessionId,
     type,
-    source: "otomat",
-    occurred_at: "2026-01-01T00:00:00.000Z",
     payload,
-    raw_ref: null,
-  };
+  });
 }
 
 export function providerSessionEvent(seed: SeededRun, providerSessionId: string): RuntimeEvent {
@@ -54,8 +69,8 @@ export function writeRunEvents(
   runId: string,
   events: readonly RuntimeEvent[],
 ): void {
-  const file = join(dataDir, "runs", runId, "events.jsonl");
-  mkdirSync(dirname(file), { recursive: true });
+  const file = runEventsPath(dataDir, runId);
+  mkdirSync(runDir(dataDir, runId), { recursive: true });
   const body = events.map((e) => JSON.stringify(e)).join("\n");
   writeFileSync(file, events.length > 0 ? `${body}\n` : body);
 }
