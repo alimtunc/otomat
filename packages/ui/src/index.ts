@@ -20,8 +20,6 @@ export {
   type ThemeState,
 } from "./lib/theme";
 
-export { type BreadcrumbItem, type ConnectionState, type ProjectSummary } from "./types/shell";
-
 export type {
   AgentSessionState,
   EventSource,
@@ -40,7 +38,6 @@ export {
   PROVENANCE_VAR,
   resolveStatus,
   SOURCE_BADGE,
-  TONE_CHIP_CLASS,
   type EventGlyphDescriptor,
   type StatusDescriptor,
   type StatusKind,
@@ -271,7 +268,7 @@ export {
 
 export { Avatar, type AvatarProps, type AvatarShape, type AvatarSize } from "./components/avatar";
 
-export { Breadcrumbs, type BreadcrumbsProps } from "./components/breadcrumbs";
+export { Breadcrumbs, type BreadcrumbItem, type BreadcrumbsProps } from "./components/breadcrumbs";
 
 export { Chip, type ChipProps, type ChipSize } from "./components/chip";
 
@@ -287,6 +284,7 @@ export {
 
 export {
   ConnectionStatusIndicator,
+  type ConnectionState,
   type ConnectionStatusIndicatorProps,
 } from "./components/connection-status-indicator";
 
@@ -328,7 +326,11 @@ export { OfflineBanner, type OfflineBannerProps } from "./components/offline-ban
 
 export { Pill, PillTabs, type PillProps, type PillTabsProps } from "./components/pill-tabs";
 
-export { ProjectSwitcher, type ProjectSwitcherProps } from "./components/project-switcher";
+export {
+  ProjectSwitcher,
+  type ProjectSummary,
+  type ProjectSwitcherProps,
+} from "./components/project-switcher";
 
 export { ReconnectingBar, type ReconnectingBarProps } from "./components/reconnecting-bar";
 

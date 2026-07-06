@@ -2,7 +2,7 @@ import { useCallback, useEffect, useEffectEvent, useState, type ReactNode } from
 
 import type { Density } from "../lib/theme";
 import { cn } from "../lib/utils";
-import type { ConnectionState } from "../types/shell";
+import type { ConnectionState } from "./connection-status-indicator";
 import { OfflineBanner } from "./offline-banner";
 import { ReconnectingBar } from "./reconnecting-bar";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./resizable-panels";

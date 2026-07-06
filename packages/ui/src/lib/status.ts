@@ -204,17 +204,6 @@ export const HEALTH_COLOR: Record<"healthy" | "degraded" | "unknown", string> = 
   unknown: "var(--neutral)",
 };
 
-export const TONE_CHIP_CLASS: Record<StatusTone, string> = {
-  neutral: "",
-  iris: "chip--iris",
-  success: "chip--success",
-  warning: "chip--warning",
-  danger: "chip--danger",
-  review: "chip--review",
-  stale: "chip--stale",
-  ghost: "chip--ghost",
-};
-
 export const PROVENANCE_VAR: Record<EventSource, string> = {
   otomat: "var(--prov-otomat)",
   claude: "var(--prov-claude)",

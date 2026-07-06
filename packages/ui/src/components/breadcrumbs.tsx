@@ -2,7 +2,12 @@ import { ChevronRight } from "lucide-react";
 import { Fragment, type ReactNode } from "react";
 
 import { cn } from "../lib/utils";
-import type { BreadcrumbItem } from "../types/shell";
+
+export interface BreadcrumbItem {
+  label: string;
+  href?: string;
+  current?: boolean;
+}
 
 export interface BreadcrumbsProps {
   items: BreadcrumbItem[];

@@ -12,7 +12,14 @@ import {
   CommandList,
 } from "../primitives/command";
 import { Popover, PopoverContent, PopoverTrigger } from "../primitives/popover";
-import type { ProjectSummary } from "../types/shell";
+
+export interface ProjectSummary {
+  id: string;
+  name: string;
+  repo?: string;
+  branch?: string;
+  health?: "healthy" | "degraded" | "unknown";
+}
 
 export interface ProjectSwitcherProps {
   projects: ProjectSummary[];
