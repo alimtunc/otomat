@@ -7,19 +7,6 @@ export interface DaemonClientConfig {
   EventSource?: typeof EventSource;
 }
 
-/** Thrown by the HTTP helpers when the daemon responds with a non-2xx status. */
-export class DaemonRequestError extends Error {
-  readonly status: number;
-  readonly path: string;
-
-  constructor(status: number, path: string) {
-    super(`Daemon request to ${path} failed with status ${status}`);
-    this.name = "DaemonRequestError";
-    this.status = status;
-    this.path = path;
-  }
-}
-
 export interface RunEventsHandlers {
   /** Resume cursor: only events with `seq` greater than this are delivered. */
   afterSeq?: number;

@@ -8,4 +8,5 @@
  * @packageDocumentation
  */
 export * from "./client";
+export { DaemonRequestError } from "./http";
 export * from "./types";
