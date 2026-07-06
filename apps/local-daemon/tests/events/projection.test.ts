@@ -2,7 +2,7 @@ import { schema } from "@otomat/db";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { appendEvents } from "#events/ledger";
-import { latestSeqForRun, readRunEvents } from "#events/projection";
+import { readRunEvents } from "#events/projection";
 
 import { makeEvent, setupLedgerDb, type LedgerTestDb } from "../support/events.js";
 
@@ -33,11 +33,6 @@ describe("projection", () => {
 
   it("respects limit", () => {
     expect(readRunEvents(t.client.db, t.runId, { limit: 2 }).map((e) => e.seq)).toEqual([0, 1]);
-  });
-
-  it("latestSeqForRun is the head cursor, null when empty", () => {
-    expect(latestSeqForRun(t.client.db, t.runId)).toBe(3);
-    expect(latestSeqForRun(t.client.db, "no-such-run")).toBeNull();
   });
 
   it("returns validated envelopes", () => {

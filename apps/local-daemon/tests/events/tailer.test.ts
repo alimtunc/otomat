@@ -3,9 +3,9 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { EVENTS_FILENAME } from "#events";
 import { readRunEvents } from "#events/projection";
 import { EventTailer } from "#events/tailer";
-import { EVENTS_FILENAME } from "#events/types";
 import { FakeRuntimeAdapter, JsonlEventSink, readEventsJsonl } from "#runtime";
 
 import { makeEvent, setupLedgerDb, type LedgerTestDb } from "../support/events.js";

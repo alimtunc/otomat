@@ -1,7 +1,7 @@
 import { appendFileSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { RuntimeCapabilities } from "../capabilities.js";
+import type { RuntimeCapabilities } from "./capabilities.js";
 import {
   type RuntimeAdapter,
   type RuntimeFinalState,
@@ -9,9 +9,9 @@ import {
   type RuntimeRunInput,
   type RuntimeSessionRef,
   type RuntimeUsage,
-} from "../contract.js";
-import type { EventFidelity, RuntimeEvent } from "../events.js";
-import type { RuntimeSink } from "../sinks.js";
+} from "./contract.js";
+import type { EventFidelity, RuntimeEvent } from "./events.js";
+import type { RuntimeSink } from "./sinks.js";
 
 export const FAKE_ADAPTER_ID = "fake";
 

@@ -3,9 +3,16 @@ import { eq, max, sql } from "drizzle-orm";
 
 import type { RuntimeEvent } from "#runtime";
 
-import { DEFAULT_BUSY_TIMEOUT_MS, INSERT_CHUNK, type AppendResult } from "./types.js";
-
 const { runtimeEvents } = schema;
+
+/**
+ * SQLite `busy_timeout` the ledger applies so a reader/writer waits out a peer's
+ * lock under WAL instead of failing fast with `SQLITE_BUSY`.
+ */
+export const DEFAULT_BUSY_TIMEOUT_MS = 5000;
+
+/** Max rows per `INSERT` so a coalesced tick stays well under SQLite's bound-parameter ceiling. */
+export const INSERT_CHUNK = 500;
 
 /** A runtime event paired with the per-run `seq` allocated for it at persistence time. */
 export interface SeqedEvent {
@@ -75,6 +82,13 @@ export function appendSeqedEvents(db: Db, runId: string, entries: readonly Seqed
   );
 
   return inserted;
+}
+
+export interface AppendResult {
+  /** Rows actually inserted this batch; conflicts on re-ingest are ignored, not counted. */
+  inserted: number;
+  /** Next unused per-run `seq` after this batch. */
+  nextSeq: number;
 }
 
 /** Appends a batch with contiguous `seq` allocated from `fromSeq`. */
