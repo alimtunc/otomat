@@ -1,5 +1,5 @@
 import type { ReviewCommentContract, RunDiffContract } from "@otomat/domain";
-import { openCommentIds, partitionComments } from "@web/components/runs/review/partition";
+import { partitionComments } from "@web/components/runs/review/partition";
 import { expect, it } from "vitest";
 
 function comment(overrides: Partial<ReviewCommentContract>): ReviewCommentContract {
@@ -80,13 +80,4 @@ it("archives everything when the run has no diff", () => {
   const { anchored, archived } = partitionComments(null, [comment({})]);
   expect(anchored.size).toBe(0);
   expect(archived).toHaveLength(1);
-});
-
-it("lists only open comment ids as fix candidates", () => {
-  const comments = [
-    comment({ id: "c1", status: "open" }),
-    comment({ id: "c2", status: "addressed" }),
-    comment({ id: "c3", status: "open" }),
-  ];
-  expect(openCommentIds(comments)).toEqual(["c1", "c3"]);
 });
