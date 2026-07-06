@@ -48,3 +48,13 @@ export function createState(config: SupervisorConfig): SupervisorState {
     claiming: new Set(),
   };
 }
+
+/** A failing settle listener must never break the settle itself (or the exit monitor). */
+export function notifyAfterSettle(state: SupervisorState, outcome: ReconcileOutcome | null): void {
+  if (outcome === null || state.afterSettle === null) return;
+  try {
+    state.afterSettle(outcome);
+  } catch (error) {
+    console.error(`[otomat] after-settle hook failed for run ${outcome.runId}`, error);
+  }
+}
