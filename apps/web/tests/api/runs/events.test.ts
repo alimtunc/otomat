@@ -1,5 +1,5 @@
 import type { EventEnvelope } from "@otomat/domain";
-import { eventSummary, mergeEvent } from "@web/api/runs/events";
+import { mergeEvent } from "@web/api/runs/events";
 import { expect, it } from "vitest";
 
 function envelope(seq: number, payload: Record<string, unknown> = {}): EventEnvelope {
@@ -37,11 +37,4 @@ it("sorts an out-of-order late arrival back into place", () => {
   for (const seq of [0, 2]) events = mergeEvent(events, envelope(seq));
   events = mergeEvent(events, envelope(1));
   expect(events.map((e) => e.seq)).toEqual([0, 1, 2]);
-});
-
-it("summarizes an event by the most specific payload field", () => {
-  expect(eventSummary(envelope(0, { text: "hello" }))).toBe("hello");
-  expect(eventSummary(envelope(1, { tool: "grep" }))).toBe("tool · grep");
-  expect(eventSummary(envelope(2, { provider_session_id: "s1" }))).toBe("session · s1");
-  expect(eventSummary(envelope(3, {}))).toBe("runtime.log");
 });

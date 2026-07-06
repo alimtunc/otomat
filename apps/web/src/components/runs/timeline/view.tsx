@@ -4,6 +4,7 @@ import { useRunDetail } from "@web/api/runs/queries";
 import { useRunEventStream } from "@web/api/runs/run-events-provider";
 import { RunTimeline } from "@web/components/runs/timeline/list";
 import { RunStatusBar } from "@web/components/runs/timeline/status-bar";
+import { CenteredState } from "@web/components/shell/centered-state";
 
 export function RunTimelineView() {
   const { runId } = useParams({ from: "/runs/$runId/" });
@@ -21,13 +22,13 @@ export function RunTimelineView() {
 
   if (detail.isError) {
     return (
-      <div className="grid h-full place-items-center p-6">
+      <CenteredState>
         <ErrorState
           title="Couldn’t load this run"
           description="The daemon is unreachable. Check that it is running, then retry."
           onRetry={() => void detail.refetch()}
         />
-      </div>
+      </CenteredState>
     );
   }
 

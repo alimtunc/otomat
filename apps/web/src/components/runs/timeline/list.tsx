@@ -1,9 +1,9 @@
 import type { EventEnvelope } from "@otomat/domain";
 import { EmptyState, TimelineEventRow } from "@otomat/ui";
-import { eventSummary } from "@web/api/runs/events";
 import type { RunStreamState } from "@web/api/runs/run-events-provider";
-
-import { emptyTimelineContent } from "./copy";
+import { emptyTimelineContent } from "@web/components/runs/timeline/copy";
+import { eventSummary } from "@web/components/runs/timeline/event-summary";
+import { CenteredState } from "@web/components/shell/centered-state";
 
 export function RunTimeline({
   events,
@@ -19,14 +19,14 @@ export function RunTimeline({
   if (events.length === 0) {
     const empty = emptyTimelineContent(isError, degraded);
     return (
-      <div className="grid flex-1 place-items-center p-6">
+      <CenteredState fill="flex">
         <EmptyState
           icon="loader"
           tone={empty.tone}
           title={empty.title}
           description={empty.description}
         />
-      </div>
+      </CenteredState>
     );
   }
 

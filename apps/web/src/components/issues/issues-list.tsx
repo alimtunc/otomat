@@ -1,6 +1,7 @@
 import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
 import type { useIssues } from "@web/api/issues/queries";
 import { IssueRow } from "@web/components/issues/issue-row";
+import { CenteredState } from "@web/components/shell/centered-state";
 
 export function IssuesList({ query }: { query: ReturnType<typeof useIssues> }) {
   if (query.isPending) {
@@ -15,25 +16,25 @@ export function IssuesList({ query }: { query: ReturnType<typeof useIssues> }) {
 
   if (query.isError) {
     return (
-      <div className="grid h-full place-items-center p-6">
+      <CenteredState>
         <ErrorState
           title="Couldn’t load issues"
           description="The daemon is unreachable. Check that it is running, then retry."
           onRetry={() => void query.refetch()}
         />
-      </div>
+      </CenteredState>
     );
   }
 
   if (query.data.length === 0) {
     return (
-      <div className="grid h-full place-items-center p-6">
+      <CenteredState>
         <EmptyState
           icon="inbox"
           title="No issues yet"
           description="Start a local run to create your first issue and stream its events live."
         />
-      </div>
+      </CenteredState>
     );
   }
 

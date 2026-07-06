@@ -4,6 +4,7 @@ import { usePreparePullRequest } from "@web/api/reviews/mutations";
 import { useRunPullRequest } from "@web/api/reviews/queries";
 import { useRunDetail } from "@web/api/runs/queries";
 import { PullRequestForm } from "@web/components/runs/pr/form";
+import { CenteredState } from "@web/components/shell/centered-state";
 
 export function RunPrView() {
   const { runId } = useParams({ from: "/runs/$runId/pr" });
@@ -21,13 +22,13 @@ export function RunPrView() {
   }
   if (prQuery.isError) {
     return (
-      <div className="grid h-full place-items-center p-6">
+      <CenteredState>
         <ErrorState
           title="Could not load the pull request draft"
           description="The daemon did not answer. Check that it is running."
           onRetry={() => void prQuery.refetch()}
         />
-      </div>
+      </CenteredState>
     );
   }
 
