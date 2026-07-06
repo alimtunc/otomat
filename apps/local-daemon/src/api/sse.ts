@@ -9,8 +9,20 @@ const POLL_INTERVAL_MS = 500;
 /** ~10s of silence between heartbeats keeps proxies and EventSource alive without spamming. */
 const HEARTBEAT_EVERY_TICKS = 20;
 
+/** SSE resume cursor: explicit `?afterSeq` wins, else the `Last-Event-ID` from a reconnecting EventSource. */
+function parseCursor(
+  query: string | undefined,
+  lastEventId: string | undefined,
+): number | undefined {
+  const raw = query ?? lastEventId;
+  if (raw === undefined) return undefined;
+  const value = Number(raw);
+  return Number.isInteger(value) && value >= 0 ? value : undefined;
+}
+
 /** Each event carries its `seq` as the SSE id so an EventSource reconnect resumes via `Last-Event-ID`. */
-export function streamRunEvents(c: Context, db: Db, runId: string, afterSeq: number | undefined) {
+export function streamRunEvents(c: Context, db: Db, runId: string) {
+  const afterSeq = parseCursor(c.req.query("afterSeq"), c.req.header("Last-Event-ID"));
   return streamSSE(c, async (stream) => {
     let cursor = afterSeq;
     let ticks = 0;

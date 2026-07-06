@@ -9,7 +9,7 @@ import { CommentsNotFixableError, DiffUnavailableError, ReviewAnchorStaleError }
 import { RunNotResumableError } from "#supervisor";
 
 import type { ApiDeps } from "../deps.js";
-import { requireRun, validateJson } from "../guards.js";
+import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import {
   toPullRequest,
   toReview,
@@ -19,12 +19,11 @@ import {
 } from "../serialize.js";
 
 /** Mounted at `/api/runs`. The per-run review surface: canonical diff, pinned comments, fix turns, local PR draft. */
-export function createReviewRoutes(deps: ApiDeps): Hono {
-  const routes = new Hono();
+export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
+  const routes = new Hono<RunEnv>();
 
-  routes.get("/:id/diff", (c) => {
-    const run = requireRun(c, deps.db);
-    if (run instanceof Response) return run;
+  routes.get("/:id/diff", runGuard(deps.db), (c) => {
+    const run = c.get("run");
     try {
       return c.json(toRunDiffResponse(run.id, deps.review.getRunDiff(run)));
     } catch (error) {
@@ -33,9 +32,8 @@ export function createReviewRoutes(deps: ApiDeps): Hono {
     }
   });
 
-  routes.get("/:id/review", (c) => {
-    const run = requireRun(c, deps.db);
-    if (run instanceof Response) return run;
+  routes.get("/:id/review", runGuard(deps.db), (c) => {
+    const run = c.get("run");
     const detail = deps.review.getReviewDetail(run.id);
     return c.json({
       review: detail.review ? toReview(detail.review) : null,
@@ -43,53 +41,59 @@ export function createReviewRoutes(deps: ApiDeps): Hono {
     });
   });
 
-  routes.post("/:id/review/comments", validateJson(createReviewCommentRequestSchema), (c) => {
-    const run = requireRun(c, deps.db);
-    if (run instanceof Response) return run;
-    try {
-      return c.json(toReviewComment(deps.review.addComment(run, c.req.valid("json"))), 201);
-    } catch (error) {
-      if (error instanceof DiffUnavailableError) {
-        return c.json({ error: "diff_unavailable" }, 409);
+  routes.post(
+    "/:id/review/comments",
+    validateJson(createReviewCommentRequestSchema),
+    runGuard(deps.db),
+    (c) => {
+      const run = c.get("run");
+      try {
+        return c.json(toReviewComment(deps.review.addComment(run, c.req.valid("json"))), 201);
+      } catch (error) {
+        if (error instanceof DiffUnavailableError) {
+          return c.json({ error: "diff_unavailable" }, 409);
+        }
+        if (error instanceof ReviewAnchorStaleError) {
+          return c.json({ error: "comment_anchor_stale" }, 409);
+        }
+        console.error(`[otomat] comment on run ${run.id} failed`, error);
+        return c.json({ error: "comment_create_failed" }, 500);
       }
-      if (error instanceof ReviewAnchorStaleError) {
-        return c.json({ error: "comment_anchor_stale" }, 409);
-      }
-      console.error(`[otomat] comment on run ${run.id} failed`, error);
-      return c.json({ error: "comment_create_failed" }, 500);
-    }
-  });
+    },
+  );
 
-  routes.post("/:id/review/fix", validateJson(requestFixRequestSchema), async (c) => {
-    const run = requireRun(c, deps.db);
-    if (run instanceof Response) return run;
-    try {
-      const preparation = deps.review.prepareFix(run, c.req.valid("json").comment_ids);
-      const updated = await deps.fixRun(run.id, preparation.prompt);
-      deps.review.markFixRequested(run.id, preparation.commentIds);
-      return c.json(toRun(updated));
-    } catch (error) {
-      if (error instanceof CommentsNotFixableError) {
-        return c.json({ error: "comments_not_fixable" }, 409);
+  routes.post(
+    "/:id/review/fix",
+    validateJson(requestFixRequestSchema),
+    runGuard(deps.db),
+    async (c) => {
+      const run = c.get("run");
+      try {
+        const preparation = deps.review.prepareFix(run, c.req.valid("json").comment_ids);
+        const updated = await deps.fixRun(run.id, preparation.prompt);
+        deps.review.markFixRequested(run.id, preparation.commentIds);
+        return c.json(toRun(updated));
+      } catch (error) {
+        if (error instanceof CommentsNotFixableError) {
+          return c.json({ error: "comments_not_fixable" }, 409);
+        }
+        if (error instanceof RunNotResumableError) {
+          return c.json({ error: "run_not_fixable" }, 409);
+        }
+        console.error(`[otomat] fix request on run ${run.id} failed`, error);
+        return c.json({ error: "fix_request_failed" }, 500);
       }
-      if (error instanceof RunNotResumableError) {
-        return c.json({ error: "run_not_fixable" }, 409);
-      }
-      console.error(`[otomat] fix request on run ${run.id} failed`, error);
-      return c.json({ error: "fix_request_failed" }, 500);
-    }
-  });
+    },
+  );
 
-  routes.get("/:id/pr", (c) => {
-    const run = requireRun(c, deps.db);
-    if (run instanceof Response) return run;
+  routes.get("/:id/pr", runGuard(deps.db), (c) => {
+    const run = c.get("run");
     const row = deps.review.getPullRequest(run.id);
     return c.json({ pull_request: row ? toPullRequest(row) : null });
   });
 
-  routes.post("/:id/pr", validateJson(preparePullRequestRequestSchema), (c) => {
-    const run = requireRun(c, deps.db);
-    if (run instanceof Response) return run;
+  routes.post("/:id/pr", validateJson(preparePullRequestRequestSchema), runGuard(deps.db), (c) => {
+    const run = c.get("run");
     try {
       const result = deps.review.preparePullRequest(run, c.req.valid("json"));
       return c.json({ pull_request: toPullRequest(result.row) }, result.created ? 201 : 200);

@@ -4,25 +4,14 @@ import { Hono } from "hono";
 import { RunNotResumableError } from "#supervisor";
 
 import type { ApiDeps } from "../deps.js";
-import { requireRun, validateJson } from "../guards.js";
+import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { readRunDetail, readRuns } from "../reads.js";
 import { toRun } from "../serialize.js";
 import { streamRunEvents } from "../sse.js";
 
-/** SSE resume cursor: explicit `?afterSeq` wins, else the `Last-Event-ID` from a reconnecting EventSource. */
-function parseCursor(
-  query: string | undefined,
-  lastEventId: string | undefined,
-): number | undefined {
-  const raw = query ?? lastEventId;
-  if (raw === undefined) return undefined;
-  const value = Number(raw);
-  return Number.isInteger(value) && value >= 0 ? value : undefined;
-}
-
 /** Mounted at `/api/runs`. Holds the run reads, the run commands (start/resume/abort), and the SSE stream. */
-export function createRunRoutes(deps: ApiDeps): Hono {
-  const routes = new Hono();
+export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
+  const routes = new Hono<RunEnv>();
 
   routes.get("/", (c) => c.json(readRuns(deps.db, c.req.query("issueId"))));
 
@@ -41,9 +30,8 @@ export function createRunRoutes(deps: ApiDeps): Hono {
     return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
   });
 
-  routes.post("/:id/resume", async (c) => {
-    const run = requireRun(c, deps.db);
-    if (run instanceof Response) return run;
+  routes.post("/:id/resume", runGuard(deps.db), async (c) => {
+    const run = c.get("run");
     try {
       return c.json(toRun(await deps.resumeRun(run.id)));
     } catch (error) {
@@ -55,9 +43,8 @@ export function createRunRoutes(deps: ApiDeps): Hono {
     }
   });
 
-  routes.post("/:id/abort", async (c) => {
-    const run = requireRun(c, deps.db);
-    if (run instanceof Response) return run;
+  routes.post("/:id/abort", runGuard(deps.db), async (c) => {
+    const run = c.get("run");
     try {
       await deps.abortRun(run.id);
     } catch (error) {
@@ -68,12 +55,7 @@ export function createRunRoutes(deps: ApiDeps): Hono {
     return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
   });
 
-  routes.get("/:id/events", (c) => {
-    const run = requireRun(c, deps.db);
-    if (run instanceof Response) return run;
-    const cursor = parseCursor(c.req.query("afterSeq"), c.req.header("Last-Event-ID"));
-    return streamRunEvents(c, deps.db, run.id, cursor);
-  });
+  routes.get("/:id/events", runGuard(deps.db), (c) => streamRunEvents(c, deps.db, c.get("run").id));
 
   return routes;
 }
