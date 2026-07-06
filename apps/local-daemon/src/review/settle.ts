@@ -11,13 +11,14 @@ import { reviewCommentMachine } from "@otomat/domain";
 import { emitLedgerEvent } from "#events";
 import type { CanonicalDiff } from "#git";
 
-import { computeDiff, driveReviewTo, type ReviewContext } from "./context.js";
+import { computeDiff } from "./diff.js";
 import {
   buildCommentResolvedEvent,
   buildDiffUpdatedEvent,
   type CommentResolution,
 } from "./events.js";
-import type { RunSettledOutcome } from "./types.js";
+import { driveReviewTo } from "./transitions.js";
+import type { ReviewContext, RunSettledOutcome } from "./types.js";
 
 function resolveComment(
   ctx: ReviewContext,

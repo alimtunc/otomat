@@ -17,11 +17,13 @@ import {
 
 import { emitLedgerEvent } from "#events";
 
-import { computeDiff, driveReviewTo, reloadOrThrow, type ReviewContext } from "./context.js";
+import { computeDiff } from "./diff.js";
 import { DiffUnavailableError, ReviewAnchorStaleError } from "./errors.js";
 import { buildCommentCreatedEvent } from "./events.js";
 import { extractHunkForLine } from "./hunks.js";
-import type { ReviewDetailResult } from "./types.js";
+import { reloadOrThrow } from "./reload.js";
+import { driveReviewTo } from "./transitions.js";
+import type { ReviewContext, ReviewDetailResult } from "./types.js";
 
 /** Returns the run's review row, creating it (status `open`) on the first comment. */
 function ensureReview(ctx: ReviewContext, runId: string): ReviewRow {
