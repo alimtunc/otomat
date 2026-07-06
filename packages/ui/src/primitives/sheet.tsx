@@ -3,14 +3,18 @@ import { type VariantProps, cva } from "class-variance-authority";
 import { X } from "lucide-react";
 import type { ComponentPropsWithRef, ReactNode } from "react";
 
+import { cn } from "../lib/utils";
 import {
   MODAL_CLOSE_CLASS,
   MODAL_CLOSE_STYLE,
+  MODAL_DESCRIPTION_CLASS,
+  MODAL_FOOTER_CLASS,
+  MODAL_HEADER_CLASS,
   MODAL_STYLE,
+  MODAL_TITLE_CLASS,
   OVERLAY_CLASS,
   OVERLAY_STYLE,
-} from "../lib/styles";
-import { cn } from "../lib/utils";
+} from "./styles";
 
 export const Sheet = DialogPrimitive.Root;
 export const SheetTrigger = DialogPrimitive.Trigger;
@@ -94,7 +98,7 @@ export interface SheetSectionProps {
 }
 
 export function SheetHeader({ className, children }: SheetSectionProps) {
-  return <div className={cn("flex items-center gap-2 px-4 py-3.5", className)}>{children}</div>;
+  return <div className={cn(MODAL_HEADER_CLASS, className)}>{children}</div>;
 }
 
 export function SheetBody({ className, children }: SheetSectionProps) {
@@ -102,24 +106,14 @@ export function SheetBody({ className, children }: SheetSectionProps) {
 }
 
 export function SheetFooter({ className, children }: SheetSectionProps) {
-  return (
-    <div
-      className={cn("flex items-center gap-2.5 border-t border-border-subtle px-4 py-3", className)}
-    >
-      {children}
-    </div>
-  );
+  return <div className={cn(MODAL_FOOTER_CLASS, className)}>{children}</div>;
 }
 
 export interface SheetTitleProps extends ComponentPropsWithRef<typeof DialogPrimitive.Title> {}
 
 export function SheetTitle({ className, ref, ...props }: SheetTitleProps) {
   return (
-    <DialogPrimitive.Title
-      ref={ref}
-      className={cn("text-sm font-semibold text-foreground", className)}
-      {...props}
-    />
+    <DialogPrimitive.Title ref={ref} className={cn(MODAL_TITLE_CLASS, className)} {...props} />
   );
 }
 
@@ -131,7 +125,7 @@ export function SheetDescription({ className, ref, ...props }: SheetDescriptionP
   return (
     <DialogPrimitive.Description
       ref={ref}
-      className={cn("text-sm text-text-secondary", className)}
+      className={cn(MODAL_DESCRIPTION_CLASS, className)}
       {...props}
     />
   );

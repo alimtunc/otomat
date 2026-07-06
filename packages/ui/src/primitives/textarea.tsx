@@ -1,8 +1,8 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentPropsWithoutRef } from "react";
 
-import { FIELD_TRANSITION } from "../lib/styles";
 import { cn } from "../lib/utils";
+import { FIELD_TRANSITION } from "./styles";
 
 const textareaVariants = cva(
   cn(
