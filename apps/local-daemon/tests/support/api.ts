@@ -8,7 +8,7 @@ import type { TestDb } from "./db.js";
 import { stubReviewService } from "./review.js";
 
 /** `app.request` with the loopback Host header the api's host-guard requires. */
-export function request(
+export async function request(
   app: Hono,
   path: string,
   init: RequestInit & { headers?: Record<string, string> } = {},
