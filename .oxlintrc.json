@@ -1,3 +1,29 @@
 {
-  "extends": ["./packages/tooling/oxlintrc.base.json"]
+  "extends": ["./packages/tooling/oxlintrc.base.json"],
+  "overrides": [
+    {
+      "files": ["apps/web/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["../../*", "../../**"],
+                "message": "Deep relative import (../../+). Import the workspace package's public entry (@otomat/*) or use a shallower path."
+              },
+              {
+                "group": ["@radix-ui/*", "@radix-ui"],
+                "message": "Direct Radix import is banned. Use the primitives in @otomat/ui (built on Base UI)."
+              },
+              {
+                "group": ["lucide-react", "lucide-react/*"],
+                "message": "Direct lucide-react import is banned in apps/web. Use <Icon name=\"…\" /> and IconName from @otomat/ui."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }

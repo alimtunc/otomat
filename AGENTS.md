@@ -72,7 +72,9 @@ Otherwise it is an internal folder of an app/process, not a package.
 - no nested ternaries (`no-nested-ternary`) — extract a named variable, a pure
   helper, a variant map, or an early return;
 - no deep relative imports (`../../+`) and no direct `@radix-ui/*` imports — use a
-  workspace package entry (`@otomat/*`) and the primitives in `@otomat/ui`.
+  workspace package entry (`@otomat/*`) and the primitives in `@otomat/ui`. In
+  `apps/web`, direct `lucide-react` imports are also banned (scoped override in the
+  root `.oxlintrc.json`) — use `<Icon name="…" />` and `IconName` from `@otomat/ui`.
 
 `pnpm guardrails` (`scripts/guardrails.mjs`) covers the frontend rules oxlint
 cannot express, over `apps/web/src` and `packages/ui/src`:
