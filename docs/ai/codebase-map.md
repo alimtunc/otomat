@@ -17,6 +17,7 @@ apps/
       api/             # HTTP routes + SSE handlers          (OTO-9)
       events/          # event ledger + stream-to-file tailer (OTO-7)
       git/             # worktree/branch lifecycle + diff      (OTO-8)
+      review/          # review slice: diff snapshot + comment anchoring (OTO-11)
       runtime/         # runtime adapter contract + fake adapter (OTO-6)
       supervisor/      # process supervisor + pid reconciliation (OTO-10)
       index.ts server.ts bootstrap.ts   # composition root / entrypoint
@@ -61,8 +62,8 @@ Why each current package qualifies:
 Why `api`, `events`, `git`, `runtime` are **not** packages: each was consumed only
 by the local daemon (and each other) — no frontend or cross-app consumer — so they
 are internal daemon modules, consumed through `#api`/`#events`/`#git`/`#runtime`
-subpath imports. `supervisor` (OTO-10) lives the same way under
-`apps/local-daemon/src/supervisor`, consumed through `#supervisor`.
+subpath imports. `supervisor` (OTO-10) and `review` (OTO-11) live the same way
+under `apps/local-daemon/src/<module>`, consumed through `#supervisor`/`#review`.
 
 ## Ticket Ownership
 
@@ -75,15 +76,16 @@ subpath imports. `supervisor` (OTO-10) lives the same way under
 | `apps/local-daemon/src/git`       | OTO-8                    | Worktree/branch ownership, canonical diff, cleanup primitives.        |
 | `apps/local-daemon/src/api`       | OTO-9                    | Local daemon routes and SSE surface.                                  |
 | `apps/local-daemon/src/supervisor`| OTO-10                   | Process supervision, pid reconciliation (lands as a daemon module).   |
+| `apps/local-daemon/src/review`    | OTO-11                   | Review slice: server-side diff snapshot, comment anchoring, fix-resume.|
 | `packages/domain`                 | OTO-5                    | Pure TS. Canonical types, state machines, event envelope, contracts.  |
 | `packages/db`                     | OTO-5                    | SQLite driver isolation, Drizzle schema, migrations, repositories.    |
 | `packages/ui`                     | OTO-9                    | UI primitives/design system (Base UI/Tailwind/lucide).                |
 | `packages/client`                 | OTO-9                    | Typed API/SSE client for the local daemon.                            |
 | `packages/tooling`                | OTO-5                    | Shared TypeScript, lint/boundary, and test configuration.             |
 
-Integrations (Linear/GitHub) and review pinning (OTO-11) start as daemon modules
-when the local loop needs them; promote either to `packages/*` only if a real
-cross-app consumer appears.
+Integrations (Linear/GitHub) start as daemon modules when the local loop needs
+them; review pinning (OTO-11) already landed as `apps/local-daemon/src/review`.
+Promote a module to `packages/*` only if a real cross-app consumer appears.
 
 ## Frontend Stack Direction
 

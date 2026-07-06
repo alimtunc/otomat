@@ -20,6 +20,7 @@ apps/
     src/api/            local daemon HTTP routes + SSE handlers
     src/events/         append-only event ledger + non-lossy stream-to-file tailer
     src/git/            worktree/branch lifecycle + canonical git diff
+    src/review/         review slice: server-side diff snapshot, per-file sha anchoring, fix-resume
     src/runtime/        runtime adapter contract + deterministic fake adapter
     src/supervisor/     process supervisor, pid reconciliation, resume-on-action
     src/{index,server,bootstrap}.ts   composition root / entrypoint
@@ -42,9 +43,9 @@ Otherwise it is an internal folder of an app/process, not a package.
   future apps), `tooling` (shared config), and `db` (isolates the native
   `better-sqlite3` driver + Drizzle schema, used by every backend module) each
   meet that bar.
-- `api`, `events`, `git`, `runtime`, and `supervisor` are daemon-only with no
-  cross-app consumer, so they are internal modules of `apps/local-daemon`, not
-  packages. Promote one back to `packages/*` only
+- `api`, `events`, `git`, `review`, `runtime`, and `supervisor` are daemon-only
+  with no cross-app consumer, so they are internal modules of `apps/local-daemon`,
+  not packages. Promote one back to `packages/*` only
   with an explicit justification. See
   [`docs/ai/codebase-map.md`](docs/ai/codebase-map.md) for the full tree and the
   per-ticket ownership table.
@@ -139,8 +140,9 @@ every pull request. Dependency updates come through Dependabot
 - **Reach source from tests, and reach one daemon module from another, through
   Node subpath imports — never a deep relative (`../../…`, banned by oxlint).**
   - In `apps/local-daemon`, each internal module is consumed through its public
-    index: `#api`, `#events`, `#git`, `#runtime` (and `#api/<file>` for a specific
-    file). Within a module, use shallow relative imports.
+    index: `#api`, `#events`, `#git`, `#review`, `#runtime`, `#supervisor` (and
+    `#api/<file>` for a specific file). Within a module, use shallow relative
+    imports.
   - In every other package, tests reach source via `#<pkg>/<path>` (e.g.
     `#domain/state-machines/machine`, `#db/client`, `#client/types`) — the
     private mirror of the package's public `@otomat/<pkg>` entry. The map is the
