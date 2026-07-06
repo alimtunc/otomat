@@ -1,6 +1,7 @@
 import { IssueStatusChip, PRStatusBadge, RunStatusChip, StepStatusChip } from "@otomat/ui";
 
-import { Row, Section } from "../section";
+import { Row } from "../row";
+import { Section } from "../section";
 
 export function StatusChipsSection() {
   return (

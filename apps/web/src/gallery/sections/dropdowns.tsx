@@ -14,7 +14,8 @@ import {
   LiveDot,
 } from "@otomat/ui";
 
-import { Row, Section } from "../section";
+import { Row } from "../row";
+import { Section } from "../section";
 
 export function DropdownsSection() {
   return (

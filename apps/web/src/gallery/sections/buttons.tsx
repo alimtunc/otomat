@@ -1,6 +1,7 @@
 import { Button, Icon, IconButton, Kbd } from "@otomat/ui";
 
-import { Row, Section } from "../section";
+import { Row } from "../row";
+import { Section } from "../section";
 
 export function ButtonsSection() {
   return (

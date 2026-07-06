@@ -1,7 +1,8 @@
 import { Chip, PROVENANCE_LABEL, PROVENANCE_VAR } from "@otomat/ui";
 
 import { PROVENANCE_SOURCES } from "../gallery.fixtures";
-import { Row, Section } from "../section";
+import { Row } from "../row";
+import { Section } from "../section";
 
 export function ProvenanceSection() {
   return (

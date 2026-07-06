@@ -15,25 +15,3 @@ export function Section({ title, children }: SectionProps) {
     </section>
   );
 }
-
-export interface RowProps {
-  children: ReactNode;
-  align?: "center" | "start";
-  className?: string;
-}
-
-export function Row({ children, align = "center", className }: RowProps) {
-  return (
-    <div
-      className={[
-        "flex flex-wrap gap-3",
-        align === "start" ? "items-start" : "items-center",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      {children}
-    </div>
-  );
-}
