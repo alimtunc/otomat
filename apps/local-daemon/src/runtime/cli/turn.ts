@@ -95,7 +95,7 @@ export async function runCliTurn(
         emitter.emitted,
       );
     }
-    return finalStateFromExit(spec.adapter, exit, mapper.outcome, emitter.emitted);
+    return finalStateFromExit(spec.adapter, exit, mapper.outcome, emitter);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     emitter.daemonLog(`failed to run ${spec.adapter}: ${message}`);
@@ -111,7 +111,7 @@ function finalStateFromExit(
   adapter: string,
   exit: CliProcessExit,
   outcome: ProviderTurnOutcome,
-  eventCount: number,
+  emitter: TurnEmitter,
 ): RuntimeFinalState {
   if (outcome.result !== null) {
     return {
@@ -121,7 +121,7 @@ function finalStateFromExit(
       error: outcome.result.isError
         ? { message: outcome.result.message ?? "provider reported an error" }
         : null,
-      event_count: eventCount,
+      event_count: emitter.emitted,
     };
   }
   if (exit.aborted) {
@@ -130,14 +130,13 @@ function finalStateFromExit(
       provider_session_id: outcome.providerSessionId,
       usage: outcome.usage,
       error: null,
-      event_count: eventCount,
+      event_count: emitter.emitted,
     };
   }
-  return failedState(
-    `${adapter} exited (${exit.signal ?? exit.code ?? "unknown"}) without reporting a result`,
-    outcome,
-    eventCount,
-  );
+  // The process ended without a result frame: log the daemon's verdict so the failure is legible in the ledger, not just a bare `failed` status.
+  const message = `${adapter} exited (${exit.signal ?? exit.code ?? "unknown"}) without reporting a result`;
+  emitter.daemonLog(message);
+  return failedState(message, outcome, emitter.emitted);
 }
 
 function dispatchStdoutLine(line: string, emitter: TurnEmitter, mapper: ProviderFrameMapper): void {
