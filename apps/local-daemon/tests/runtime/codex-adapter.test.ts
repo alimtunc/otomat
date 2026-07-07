@@ -87,6 +87,24 @@ describe("CodexRuntimeAdapter", () => {
     expect(final.error?.message).toBe("model provider rejected the request");
   });
 
+  it("surfaces an [otomat] diagnostic when the provider exits without reporting a result", async () => {
+    process.env["OTOMAT_STUB_EXIT"] = "3";
+    const adapter = new CodexRuntimeAdapter(STUB_BIN);
+    const sink = new MemorySink();
+
+    const final = await adapter.run(input(worktree), sink, new AbortController().signal);
+
+    expect(final.status).toBe("failed");
+    expect(final.error?.message).toMatch(/codex exited \(3\) without reporting a result/);
+
+    const diagnostic = sink.events.find((e) => e.source === "otomat");
+    expect(diagnostic?.type).toBe("runtime.log");
+    expect(diagnostic?.payload["text"]).toMatch(
+      /^\[otomat\] codex exited \(3\) without reporting a result/,
+    );
+    expect(final.event_count).toBe(sink.events.length);
+  });
+
   it("fails honestly when the run has no worktree", async () => {
     const adapter = new CodexRuntimeAdapter("/nonexistent/codex-binary");
     const sink = new MemorySink();
@@ -95,6 +113,19 @@ describe("CodexRuntimeAdapter", () => {
 
     expect(final.status).toBe("failed");
     expect(final.error?.message).toMatch(/requires the run's worktree/);
+  });
+
+  it("fails with an [otomat] diagnostic when the binary cannot be spawned", async () => {
+    const adapter = new CodexRuntimeAdapter("/nonexistent/codex-binary");
+    const sink = new MemorySink();
+
+    const final = await adapter.run(input(worktree), sink, new AbortController().signal);
+
+    expect(final.status).toBe("failed");
+    expect(final.error?.message).toMatch(/failed to run codex: spawn .*ENOENT/);
+
+    const diagnostic = sink.events.find((e) => e.source === "otomat");
+    expect(diagnostic?.payload["text"]).toMatch(/^\[otomat\] failed to run codex: spawn .*ENOENT/);
   });
 
   it("resumes via exec resume with the thread id and refuses to resume without one", async () => {
