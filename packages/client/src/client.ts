@@ -1,5 +1,6 @@
 import {
   healthResponseSchema,
+  githubConnectionContractSchema,
   issueContractSchema,
   projectContractSchema,
   pullRequestDetailSchema,
@@ -30,6 +31,14 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
   return {
     async health() {
       return healthResponseSchema.parse(await getJson(config, "/api/health"));
+    },
+    async getGitHubConnection() {
+      return githubConnectionContractSchema.parse(await getJson(config, "/api/github/connection"));
+    },
+    async connectGitHub() {
+      return githubConnectionContractSchema.parse(
+        await postJson(config, "/api/github/connect", {}),
+      );
     },
     async listProjects() {
       return projectContractSchema.array().parse(await getJson(config, "/api/projects"));

@@ -4,6 +4,7 @@ import { agentSessionMachine } from "#domain/state-machines/agent-session";
 import { issueMachine } from "#domain/state-machines/issue";
 import { IllegalTransitionError } from "#domain/state-machines/machine";
 import { pullRequestMachine } from "#domain/state-machines/pull-request";
+import { pullRequestPublicationMachine } from "#domain/state-machines/pull-request-publication";
 import { reviewMachine } from "#domain/state-machines/review";
 import { reviewCommentMachine } from "#domain/state-machines/review-comment";
 import { RUN_TERMINAL_STATES, runMachine } from "#domain/state-machines/run";
@@ -17,6 +18,7 @@ const machines = [
   reviewMachine,
   reviewCommentMachine,
   pullRequestMachine,
+  pullRequestPublicationMachine,
 ];
 
 describe.each(machines.map((machine) => [machine.name, machine] as const))(
@@ -74,6 +76,16 @@ describe("representative illegal transitions are rejected", () => {
 
   it("pull_request cannot reopen merged -> open", () => {
     expect(() => pullRequestMachine.transition("merged", "open")).toThrow(IllegalTransitionError);
+  });
+
+  it("pull_request_publication cannot create before pushing", () => {
+    expect(() => pullRequestPublicationMachine.transition("not_configured", "creating")).toThrow(
+      IllegalTransitionError,
+    );
+  });
+
+  it("pull_request_publication can update a created PR through pushing", () => {
+    expect(pullRequestPublicationMachine.transition("created", "pushing")).toBe("pushing");
   });
 });
 

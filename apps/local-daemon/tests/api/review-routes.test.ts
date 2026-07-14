@@ -1,5 +1,4 @@
 import type {
-  PullRequestDetail,
   ReviewCommentContract,
   ReviewDetail,
   RunContract,
@@ -13,7 +12,7 @@ import { RunNotResumableError } from "#supervisor";
 
 import { makeApiApp, post, request, runRow } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
-import { commentRow, pullRequestRow, reviewRow, stubReviewService } from "../support/review.js";
+import { commentRow, reviewRow, stubReviewService } from "../support/review.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "run-review";
@@ -219,41 +218,4 @@ it("rejects an empty fix selection with 400 and maps conflicts to 409", async ()
   });
   expect(nrRes.status).toBe(409);
   expect(((await nrRes.json()) as { error: string }).error).toBe("run_not_fixable");
-});
-
-it("serves and persists the local PR draft", async () => {
-  const empty = await request(makeApiApp(t), `/api/runs/${RUN_ID}/pr`);
-  expect(((await empty.json()) as PullRequestDetail).pull_request).toBeNull();
-
-  const app = makeApiApp(t, {
-    review: stubReviewService({
-      getPullRequest: () => pullRequestRow(),
-      preparePullRequest: (_run, req) => ({
-        row: pullRequestRow({ title: req.title }),
-        created: true,
-      }),
-    }),
-  });
-
-  const created = await post(app, `/api/runs/${RUN_ID}/pr`, { title: "First slice", body: "" });
-  expect(created.status).toBe(201);
-  expect(((await created.json()) as PullRequestDetail).pull_request?.title).toBe("First slice");
-
-  const fetched = await request(app, `/api/runs/${RUN_ID}/pr`);
-  expect(((await fetched.json()) as PullRequestDetail).pull_request?.status).toBe("draft");
-
-  expect((await post(app, `/api/runs/${RUN_ID}/pr`, { title: "" })).status).toBe(400);
-});
-
-it("returns 200 when updating an existing PR draft", async () => {
-  const app = makeApiApp(t, {
-    review: stubReviewService({
-      preparePullRequest: (_run, req) => ({
-        row: pullRequestRow({ title: req.title }),
-        created: false,
-      }),
-    }),
-  });
-  const res = await post(app, `/api/runs/${RUN_ID}/pr`, { title: "Renamed", body: "b" });
-  expect(res.status).toBe(200);
 });

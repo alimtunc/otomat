@@ -109,7 +109,10 @@ export function toReviewComment(row: ReviewCommentRow): ReviewCommentContract {
   });
 }
 
-export function toPullRequest(row: PullRequestRow): PullRequestContract {
+export function toPullRequest(
+  row: PullRequestRow,
+  hasUnpublishedChanges: boolean | null,
+): PullRequestContract {
   return pullRequestContractSchema.parse({
     id: row.id,
     run_id: row.run_id,
@@ -117,8 +120,16 @@ export function toPullRequest(row: PullRequestRow): PullRequestContract {
     number: row.number,
     url: row.url,
     status: row.status,
+    publication_status: row.publication_status,
     title: row.title,
     body: row.body,
+    head_ref: row.head_ref,
+    base_ref: row.base_ref,
+    published_head_sha: row.published_head_sha,
+    published_diff_sha: row.published_diff_sha,
+    error_code: row.error_code,
+    error_message: row.error_message,
+    has_unpublished_changes: hasUnpublishedChanges,
   });
 }
 

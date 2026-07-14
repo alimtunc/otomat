@@ -1,4 +1,4 @@
-import type { PullRequestRow, ReviewCommentRow } from "@otomat/db";
+import type { ReviewCommentRow } from "@otomat/db";
 import type { EventSource, EventType } from "@otomat/domain";
 
 import type { CanonicalDiff } from "#git";
@@ -65,18 +65,5 @@ export function buildCommentResolvedEvent(
   return buildEvent(runId, "review.comment_resolved", "otomat", occurredAt, {
     comment_id: commentId,
     resolution,
-  });
-}
-
-export function buildPullRequestEvent(
-  runId: string,
-  type: "pr.created" | "pr.updated",
-  row: PullRequestRow,
-  occurredAt: string,
-): RuntimeEvent {
-  return buildEvent(runId, type, "otomat", occurredAt, {
-    pull_request_id: row.id,
-    status: row.status,
-    title: row.title,
   });
 }

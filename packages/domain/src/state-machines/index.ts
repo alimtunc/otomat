@@ -15,3 +15,4 @@ export * from "./agent-session.js";
 export * from "./review.js";
 export * from "./review-comment.js";
 export * from "./pull-request.js";
+export * from "./pull-request-publication.js";

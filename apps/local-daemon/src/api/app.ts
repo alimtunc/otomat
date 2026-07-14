@@ -5,6 +5,7 @@ import { HTTPException } from "hono/http-exception";
 
 import type { ApiDeps } from "./deps.js";
 import { createCatalogRoutes } from "./routes/catalog.js";
+import { createGitHubRoutes } from "./routes/github.js";
 import { createHealthRoutes } from "./routes/health.js";
 import { createIssueRoutes } from "./routes/issues.js";
 import { createReviewRoutes } from "./routes/review.js";
@@ -24,6 +25,7 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.use("/api/*", cors({ origin: allowedOrigin() }));
 
   app.route("/api", createHealthRoutes(deps));
+  app.route("/api", createGitHubRoutes(deps));
   app.route("/api", createCatalogRoutes(deps));
   app.route("/api/issues", createIssueRoutes(deps));
   app.route("/api/runs", createRunRoutes(deps));

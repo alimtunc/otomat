@@ -56,15 +56,35 @@ export function useRequestFix(runId: string) {
   });
 }
 
-/** Saves the pull-request draft. On success invalidates the run's PR cache and toasts. */
+/** Starts GitHub CLI's official browser login and lets the connection query observe completion. */
+export function useConnectGitHub() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => daemon.connectGitHub(),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: queryKeys.githubConnection });
+      toast.success("GitHub login opened in your browser");
+    },
+    onError: () => toast.error("Could not start GitHub login — is the daemon running?"),
+  });
+}
+
+/** Publishes or updates the run's real GitHub pull request. */
 export function usePreparePullRequest(runId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: PreparePullRequestRequest) => daemon.preparePullRequest(runId, request),
-    onSuccess: () => {
+    onSuccess: (detail) => {
       client.invalidateQueries({ queryKey: queryKeys.runPullRequest(runId) });
-      toast.success("Pull request draft saved");
+      const pullRequest = detail.pull_request;
+      if (pullRequest?.publication_status === "created") {
+        toast.success(`Pull request #${pullRequest.number} is ready`);
+        return;
+      }
+      if (pullRequest?.error_message) {
+        toast.error(pullRequest.error_message);
+      }
     },
-    onError: () => toast.error("Could not save the pull request draft — is the daemon running?"),
+    onError: () => toast.error("Could not publish the pull request — is the daemon running?"),
   });
 }

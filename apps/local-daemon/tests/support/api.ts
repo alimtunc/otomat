@@ -5,6 +5,7 @@ import { createApiApp } from "#api/app";
 import type { ApiDeps } from "#api/deps";
 
 import type { TestDb } from "./db.js";
+import { stubGitHubService } from "./github.js";
 import { stubReviewService } from "./review.js";
 
 /** `app.request` with the loopback Host header the api's host-guard requires. */
@@ -63,6 +64,7 @@ export function makeApiApp(
       throw new Error("fixRun stub not configured");
     },
     abortRun: async () => {},
+    github: stubGitHubService(),
     review: stubReviewService(),
     ...overrides,
   });

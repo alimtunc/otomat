@@ -1,6 +1,6 @@
 /**
- * Review → fix → PR slice for a run: snapshots the worktree diff, pins comments to
- * it, drives the review state machine, and records a local PR draft. Anchoring
+ * Review → fix slice for a run: snapshots the worktree diff, pins comments to
+ * it, and drives the review state machine. Anchoring
  * invariant: a comment is
  * pinned to its file's `DiffFile.sha` plus a captured hunk snapshot; the server
  * snapshots the diff and never migrates a stale anchor live — a moved, unaddressed
@@ -11,7 +11,6 @@ export { CommentsNotFixableError, DiffUnavailableError, ReviewAnchorStaleError }
 export { createReviewService } from "./service.js";
 export type {
   FixPreparation,
-  PreparePullRequestResult,
   ReviewDetailResult,
   ReviewService,
   ReviewServiceConfig,

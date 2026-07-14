@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { AGENT_SESSION_STATES } from "../state-machines/agent-session.js";
 import { ISSUE_STATES } from "../state-machines/issue.js";
+import { PULL_REQUEST_PUBLICATION_STATES } from "../state-machines/pull-request-publication.js";
 import { PULL_REQUEST_STATES } from "../state-machines/pull-request.js";
 import { REVIEW_COMMENT_STATES } from "../state-machines/review-comment.js";
 import { REVIEW_STATES } from "../state-machines/review.js";
@@ -93,7 +94,7 @@ export const reviewCommentContractSchema = z.object({
 });
 export type ReviewCommentContract = z.infer<typeof reviewCommentContractSchema>;
 
-/** Local PR record; preparing one is a stub (nothing hits the provider), so `number` and `url` stay null until a real PR exists. */
+/** Durable mirror of one run's GitHub pull request and its local publication progress. */
 export const pullRequestContractSchema = z.object({
   id: z.string(),
   run_id: z.string(),
@@ -101,8 +102,16 @@ export const pullRequestContractSchema = z.object({
   number: z.number().int().positive().nullable(),
   url: z.url().nullable(),
   status: z.enum(PULL_REQUEST_STATES),
+  publication_status: z.enum(PULL_REQUEST_PUBLICATION_STATES),
   title: z.string(),
   body: z.string().nullable(),
+  head_ref: z.string().nullable(),
+  base_ref: z.string().nullable(),
+  published_head_sha: z.string().nullable(),
+  published_diff_sha: z.string().nullable(),
+  error_code: z.string().nullable(),
+  error_message: z.string().nullable(),
+  has_unpublished_changes: z.boolean().nullable(),
 });
 export type PullRequestContract = z.infer<typeof pullRequestContractSchema>;
 

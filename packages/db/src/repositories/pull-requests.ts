@@ -7,6 +7,24 @@ import { touch } from "./touch.js";
 
 export type NewPullRequest = typeof pullRequests.$inferInsert;
 export type PullRequestRow = typeof pullRequests.$inferSelect;
+export type PullRequestPatch = Partial<
+  Pick<
+    PullRequestRow,
+    | "provider"
+    | "number"
+    | "url"
+    | "status"
+    | "publication_status"
+    | "title"
+    | "body"
+    | "head_ref"
+    | "base_ref"
+    | "published_head_sha"
+    | "published_diff_sha"
+    | "error_code"
+    | "error_message"
+  >
+>;
 
 export function insertPullRequest(db: Db, value: NewPullRequest): void {
   db.insert(pullRequests).values(value).run();
@@ -32,6 +50,10 @@ function patchPullRequest(
   set: Partial<typeof pullRequests.$inferInsert>,
 ): void {
   db.update(pullRequests).set(touch(set)).where(eq(pullRequests.id, id)).run();
+}
+
+export function updatePullRequest(db: Db, id: string, patch: PullRequestPatch): void {
+  patchPullRequest(db, id, patch);
 }
 
 export function updatePullRequestDraft(

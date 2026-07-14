@@ -178,7 +178,31 @@ it("posts a fix request with the selected comment ids", async () => {
   expect(result.status).toBe("running");
 });
 
-it("reads and prepares the local PR draft", async () => {
+it("reads connection state and starts delegated GitHub login", async () => {
+  const urls: string[] = [];
+  const fetchMock: typeof fetch = async (input, init) => {
+    urls.push(`${init?.method ?? "GET"} ${String(input)}`);
+    return jsonResponse({
+      status: init?.method === "POST" ? "connecting" : "connected",
+      login: init?.method === "POST" ? null : "octocat",
+      error_code: null,
+      error_message: null,
+    });
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+
+  expect(await client.getGitHubConnection()).toMatchObject({
+    status: "connected",
+    login: "octocat",
+  });
+  expect(await client.connectGitHub()).toMatchObject({ status: "connecting" });
+  expect(urls).toEqual([
+    "GET http://localhost:4319/api/github/connection",
+    "POST http://localhost:4319/api/github/connect",
+  ]);
+});
+
+it("reads and publishes the run pull request", async () => {
   const PR = {
     id: "pr1",
     run_id: "run-1",
@@ -186,8 +210,16 @@ it("reads and prepares the local PR draft", async () => {
     number: null,
     url: null,
     status: "draft",
+    publication_status: "not_configured",
     title: "First slice",
     body: null,
+    head_ref: null,
+    base_ref: null,
+    published_head_sha: null,
+    published_diff_sha: null,
+    error_code: null,
+    error_message: null,
+    has_unpublished_changes: false,
   };
   let lastBody: unknown;
   const fetchMock: typeof fetch = async (_input, init) => {
@@ -202,6 +234,6 @@ it("reads and prepares the local PR draft", async () => {
   expect((await client.getPullRequest("run-1")).pull_request).toBeNull();
 
   const prepared = await client.preparePullRequest("run-1", { title: "First slice", body: "" });
-  expect(prepared.pull_request?.status).toBe("draft");
+  expect(prepared.pull_request?.publication_status).toBe("not_configured");
   expect(lastBody).toEqual({ title: "First slice", body: "" });
 });

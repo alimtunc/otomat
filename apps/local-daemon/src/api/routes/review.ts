@@ -1,8 +1,4 @@
-import {
-  createReviewCommentRequestSchema,
-  preparePullRequestRequestSchema,
-  requestFixRequestSchema,
-} from "@otomat/domain";
+import { createReviewCommentRequestSchema, requestFixRequestSchema } from "@otomat/domain";
 import { Hono } from "hono";
 
 import { CommentsNotFixableError, DiffUnavailableError, ReviewAnchorStaleError } from "#review";
@@ -10,15 +6,9 @@ import { RunNotResumableError } from "#supervisor";
 
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
-import {
-  toPullRequest,
-  toReview,
-  toReviewComment,
-  toRun,
-  toRunDiffResponse,
-} from "../serialize.js";
+import { toReview, toReviewComment, toRun, toRunDiffResponse } from "../serialize.js";
 
-/** Mounted at `/api/runs`. The per-run review surface: canonical diff, pinned comments, fix turns, local PR draft. */
+/** Mounted at `/api/runs`. The per-run review surface: canonical diff, pinned comments, and fix turns. */
 export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
 
@@ -85,23 +75,6 @@ export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
       }
     },
   );
-
-  routes.get("/:id/pr", runGuard(deps.db), (c) => {
-    const run = c.get("run");
-    const row = deps.review.getPullRequest(run.id);
-    return c.json({ pull_request: row ? toPullRequest(row) : null });
-  });
-
-  routes.post("/:id/pr", validateJson(preparePullRequestRequestSchema), runGuard(deps.db), (c) => {
-    const run = c.get("run");
-    try {
-      const result = deps.review.preparePullRequest(run, c.req.valid("json"));
-      return c.json({ pull_request: toPullRequest(result.row) }, result.created ? 201 : 200);
-    } catch (error) {
-      console.error(`[otomat] pr prep on run ${run.id} failed`, error);
-      return c.json({ error: "pr_prepare_failed" }, 500);
-    }
-  });
 
   return routes;
 }

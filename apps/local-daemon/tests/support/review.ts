@@ -38,8 +38,15 @@ export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullReq
     number: null,
     url: null,
     status: "draft",
+    publication_status: "not_configured",
     title: "First slice",
     body: null,
+    head_ref: null,
+    base_ref: null,
+    published_head_sha: null,
+    published_diff_sha: null,
+    error_code: null,
+    error_message: null,
     created_at: "2026-07-05T00:00:00.000Z",
     updated_at: "2026-07-05T00:00:00.000Z",
     ...overrides,
@@ -58,10 +65,6 @@ export function stubReviewService(overrides: Partial<ReviewService> = {}): Revie
       throw new Error("prepareFix stub not configured");
     },
     markFixRequested: () => {},
-    getPullRequest: () => null,
-    preparePullRequest: () => {
-      throw new Error("preparePullRequest stub not configured");
-    },
     onRunSettled: () => {},
     ...overrides,
   };
