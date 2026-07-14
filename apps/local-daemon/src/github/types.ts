@@ -1,4 +1,11 @@
-import type { GitHubConnectionContract, PullRequestState } from "@otomat/domain";
+import type { Db, PullRequestRow, RunRow } from "@otomat/db";
+import type {
+  GitHubConnectionContract,
+  PreparePullRequestRequest,
+  PullRequestState,
+} from "@otomat/domain";
+
+import type { GitWorktreeService } from "#git";
 
 export interface CommandRequest {
   command: string;
@@ -16,13 +23,32 @@ export interface CommandResult {
 
 export type CommandRunner = (request: CommandRequest) => Promise<CommandResult>;
 
+export interface PullRequestView {
+  row: PullRequestRow;
+  hasUnpublishedChanges: boolean | null;
+}
+
+export interface GitHubServiceConfig {
+  db: Db;
+  dataDir: string;
+  worktrees: GitWorktreeService | null;
+  cli: GitHubCli;
+  idFactory?: () => string;
+}
+
+export interface GitHubService {
+  connection(): Promise<GitHubConnectionContract>;
+  connect(): GitHubConnectionContract;
+  getPullRequest(runId: string): PullRequestView | null;
+  publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView>;
+}
+
 export interface GitHubRemote {
   name: string;
   repository: string;
 }
 
 export interface GitHubPullRequest {
-  providerId: string;
   number: number;
   url: string;
   title: string;

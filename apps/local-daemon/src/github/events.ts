@@ -1,13 +1,15 @@
 import type { PullRequestRow } from "@otomat/db";
-import type { EventSource } from "@otomat/domain";
+import type { EventSource, EventType } from "@otomat/domain";
 
 import { buildRuntimeEvent, type RuntimeEvent } from "#runtime";
 
-export const GITHUB_ADAPTER = "otomat-github";
+const GITHUB_ADAPTER = "otomat-github";
+
+export type PullRequestEventType = Extract<EventType, "pr.created" | "pr.updated">;
 
 export function buildPullRequestEvent(
   runId: string,
-  type: "pr.created" | "pr.updated",
+  type: PullRequestEventType,
   source: EventSource,
   row: PullRequestRow,
   occurredAt: string,

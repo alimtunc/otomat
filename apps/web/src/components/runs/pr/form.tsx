@@ -1,4 +1,4 @@
-import type { PullRequestContract } from "@otomat/domain";
+import type { GitHubConnectionContract, PullRequestContract } from "@otomat/domain";
 import {
   Button,
   Chip,
@@ -12,13 +12,13 @@ import {
 import { useForm } from "@tanstack/react-form";
 import { fieldErrorProps } from "@web/lib/form";
 
-import type { PullRequestViewModel } from "./model";
+import { pullRequestViewModel } from "./model";
 
 interface PullRequestFormProps {
   pullRequest: PullRequestContract | null;
   branch: string | null;
-  model: PullRequestViewModel;
-  onSubmit: (value: { title: string; body: string }) => Promise<void>;
+  connection: GitHubConnectionContract;
+  onSubmit: (value: { title: string; body: string }) => Promise<boolean>;
   onConnect: () => void;
   isPending: boolean;
   isConnecting: boolean;
@@ -28,7 +28,7 @@ interface PullRequestFormProps {
 export function PullRequestForm({
   pullRequest,
   branch,
-  model,
+  connection,
   onSubmit,
   onConnect,
   isPending,
@@ -40,13 +40,15 @@ export function PullRequestForm({
       title: pullRequest?.title ?? "",
       body: pullRequest?.body ?? "",
     },
-    onSubmit: async ({ value }) => {
-      await onSubmit({ title: value.title.trim(), body: value.body });
+    onSubmit: async ({ value, formApi }) => {
+      const submitted = { title: value.title.trim(), body: value.body };
+      if (await onSubmit(submitted)) formApi.reset(submitted);
     },
   });
 
   const terminal = pullRequest?.status === "merged" || pullRequest?.status === "closed";
-  const fieldsDisabled = terminal || model.actionPending;
+  const model = pullRequestViewModel(connection, pullRequest, canPublish);
+  const fieldsDisabled = terminal || model.actionPending || isPending;
 
   return (
     <form
@@ -58,9 +60,16 @@ export function PullRequestForm({
     >
       <div className="flex items-center gap-2">
         {pullRequest ? <PRStatusBadge status={pullRequest.status} /> : null}
-        <Chip tone={model.stateLabel === "Up to date" ? "success" : "neutral"}>
-          {model.stateLabel}
-        </Chip>
+        <form.Subscribe selector={(state) => state.isDirty}>
+          {(isDirty) => {
+            const currentModel = pullRequestViewModel(connection, pullRequest, canPublish, isDirty);
+            return (
+              <Chip tone={currentModel.stateLabel === "Up to date" ? "success" : "neutral"}>
+                {currentModel.stateLabel}
+              </Chip>
+            );
+          }}
+        </form.Subscribe>
         {branch ? <Chip tone="ghost">{branch}</Chip> : null}
       </div>
       <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface-2 p-3">
@@ -112,7 +121,7 @@ export function PullRequestForm({
       </form.Field>
       <form.Field name="body">
         {(field) => (
-          <Field hint="Optional description shown on the future pull request.">
+          <Field hint="Optional description shown on GitHub.">
             <FieldLabel>Description</FieldLabel>
             <FieldControl>
               <Textarea
@@ -130,20 +139,16 @@ export function PullRequestForm({
       <div className="flex justify-end">
         <form.Subscribe selector={(state) => [state.canSubmit, state.isDirty] as const}>
           {([canSubmit, isDirty]) => {
-            const createdAndClean = model.action === "none" && !isDirty && !model.actionPending;
-            const submitLabel =
-              model.action === "none" && isDirty ? "Update PR" : model.actionLabel;
+            const currentModel = pullRequestViewModel(connection, pullRequest, canPublish, isDirty);
             return (
               <Button
                 type="submit"
                 variant="primary"
                 size="sm"
-                disabled={
-                  !canSubmit || !canPublish || model.actionDisabled || createdAndClean || terminal
-                }
-                loading={isPending || model.actionPending}
+                disabled={!canSubmit || currentModel.actionDisabled || terminal}
+                loading={isPending || currentModel.actionPending}
               >
-                {submitLabel}
+                {currentModel.actionLabel}
               </Button>
             );
           }}

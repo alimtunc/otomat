@@ -6,8 +6,7 @@ import { GitHubPublicationError } from "#github";
 
 import { makeApiApp, post, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
-import { stubGitHubService } from "../support/github.js";
-import { pullRequestRow } from "../support/review.js";
+import { pullRequestRow, stubGitHubService } from "../support/github.js";
 
 const RUN_ID = "run-github-api";
 let t: TestDb;
@@ -74,6 +73,8 @@ it("serves and publishes the durable PR through the GitHub module", async () => 
     publication_status: "created",
     head_ref: `otomat/run/${RUN_ID}`,
     base_ref: "main",
+    published_head_sha: "abc123",
+    published_diff_sha: "diff123",
   });
   const app = makeApiApp(t, {
     github: stubGitHubService({

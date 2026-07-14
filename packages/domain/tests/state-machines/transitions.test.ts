@@ -87,6 +87,22 @@ describe("representative illegal transitions are rejected", () => {
   it("pull_request_publication can update a created PR through pushing", () => {
     expect(pullRequestPublicationMachine.transition("created", "pushing")).toBe("pushing");
   });
+
+  it.each(["not_configured", "failed"] as const)(
+    "pull_request_publication can reconcile a confirmed PR from %s",
+    (status) => {
+      expect(pullRequestPublicationMachine.transition(status, "created")).toBe("created");
+    },
+  );
+
+  it.each(["pushing", "creating"] as const)(
+    "pull_request_publication cannot become not configured from %s",
+    (status) => {
+      expect(() => pullRequestPublicationMachine.transition(status, "not_configured")).toThrow(
+        IllegalTransitionError,
+      );
+    },
+  );
 });
 
 describe("RUN_TERMINAL_STATES", () => {

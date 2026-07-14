@@ -56,7 +56,6 @@ export function useRequestFix(runId: string) {
   });
 }
 
-/** Starts GitHub CLI's official browser login and lets the connection query observe completion. */
 export function useConnectGitHub() {
   const client = useQueryClient();
   return useMutation({
@@ -69,7 +68,6 @@ export function useConnectGitHub() {
   });
 }
 
-/** Publishes or updates the run's real GitHub pull request. */
 export function usePreparePullRequest(runId: string) {
   const client = useQueryClient();
   return useMutation({
@@ -77,6 +75,10 @@ export function usePreparePullRequest(runId: string) {
     onSuccess: (detail) => {
       client.invalidateQueries({ queryKey: queryKeys.runPullRequest(runId) });
       const pullRequest = detail.pull_request;
+      if (pullRequest?.status === "merged" || pullRequest?.status === "closed") {
+        toast.success(`Pull request #${pullRequest.number} is ${pullRequest.status}`);
+        return;
+      }
       if (pullRequest?.publication_status === "created") {
         toast.success(`Pull request #${pullRequest.number} is ready`);
         return;

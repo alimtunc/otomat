@@ -8,7 +8,6 @@ import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { toReview, toReviewComment, toRun, toRunDiffResponse } from "../serialize.js";
 
-/** Mounted at `/api/runs`. The per-run review surface: canonical diff, pinned comments, and fix turns. */
 export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
 

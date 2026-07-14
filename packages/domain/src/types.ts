@@ -16,6 +16,7 @@ export type { AgentSessionState } from "./state-machines/agent-session.js";
 export type { ReviewState } from "./state-machines/review.js";
 export type { ReviewCommentState } from "./state-machines/review-comment.js";
 export type { PullRequestState } from "./state-machines/pull-request.js";
+export type { PullRequestPublicationState } from "./state-machines/pull-request-publication.js";
 
 export type { EventType, EventSource, EventEnvelope } from "./events/envelope.js";
 

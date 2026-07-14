@@ -80,7 +80,6 @@ describe("GitHub CLI adapter", () => {
   it("reports connected identity without requesting a token", async () => {
     const runner = fakeRunner([
       ok("gh version 2.96.0\n"),
-      ok(),
       ok(
         JSON.stringify({
           hosts: {
@@ -109,10 +108,55 @@ describe("GitHub CLI adapter", () => {
     expect(runner.requests.flatMap((request) => request.args)).not.toContain("--show-token");
   });
 
+  it("uses the active valid account when another account is stale", async () => {
+    const runner = fakeRunner([
+      ok("gh version 2.96.0\n"),
+      ok(
+        JSON.stringify({
+          hosts: {
+            "github.com": [
+              {
+                state: "failure",
+                active: false,
+                host: "github.com",
+                login: "stale-user",
+              },
+              {
+                state: "success",
+                active: true,
+                host: "github.com",
+                login: "octocat",
+              },
+            ],
+          },
+        }),
+      ),
+    ]);
+
+    await expect(createGitHubCli(runner.run).connection()).resolves.toMatchObject({
+      status: "connected",
+      login: "octocat",
+    });
+    expect(runner.requests).toHaveLength(2);
+  });
+
   it("reports authentication as required without exposing command output", async () => {
     const runner = fakeRunner([
       ok("gh version 2.96.0\n"),
-      { stdout: "", stderr: "secret-bearing provider output", exitCode: 1 },
+      ok(
+        JSON.stringify({
+          hosts: {
+            "github.com": [
+              {
+                state: "failure",
+                active: true,
+                host: "github.com",
+                login: "octocat",
+              },
+            ],
+          },
+        }),
+      ),
     ]);
     const cli = createGitHubCli(runner.run);
 
@@ -124,9 +168,22 @@ describe("GitHub CLI adapter", () => {
     });
   });
 
+  it("reports a failed connection when the auth status command fails", async () => {
+    const runner = fakeRunner([
+      ok("gh version 2.96.0\n"),
+      { stdout: "", stderr: "sensitive failure", exitCode: 1 },
+    ]);
+
+    await expect(createGitHubCli(runner.run).connection()).resolves.toEqual({
+      status: "failed",
+      login: null,
+      error_code: "github_auth_status_failed",
+      error_message: "GitHub authentication status could not be read.",
+    });
+  });
+
   it("creates with body on stdin then reads structured provider metadata", async () => {
     const provider = {
-      id: "PR_node_id",
       number: 42,
       url: "https://github.com/acme/otomat/pull/42",
       title: "Ship it",

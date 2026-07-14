@@ -1,6 +1,30 @@
+import type { PullRequestRow } from "@otomat/db";
+
 import type { GitHubService } from "#github";
 
-/** Every mutation throws unless a test overrides it; reads default to disconnected/empty. */
+export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullRequestRow {
+  return {
+    id: "pr1",
+    run_id: "run-detail",
+    provider: "github",
+    number: null,
+    url: null,
+    status: "draft",
+    publication_status: "not_configured",
+    title: "First slice",
+    body: null,
+    head_ref: null,
+    base_ref: null,
+    published_head_sha: null,
+    published_diff_sha: null,
+    error_code: null,
+    error_message: null,
+    created_at: "2026-07-05T00:00:00.000Z",
+    updated_at: "2026-07-05T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
 export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHubService {
   return {
     connection: async () => ({

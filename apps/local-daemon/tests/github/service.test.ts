@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { getPullRequestForRun, getRun, updatePullRequest } from "@otomat/db";
+import { getPullRequestForRun, getRun, insertPullRequest, updatePullRequest } from "@otomat/db";
 import type { GitHubConnectionContract } from "@otomat/domain";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -37,7 +37,6 @@ class FakeGitHubCli implements GitHubCli {
   connectionValue: GitHubConnectionContract = connected;
   remote: GitHubRemote = { name: "origin", repository: "acme/otomat" };
   provider: GitHubPullRequest = {
-    providerId: "PR_node_id",
     number: 42,
     url: "https://github.com/acme/otomat/pull/42",
     title: "Ship it",
@@ -49,7 +48,7 @@ class FakeGitHubCli implements GitHubCli {
   resolveError: GitHubCliError | null = null;
   pushError: GitHubCliError | null = null;
   createError: GitHubCliError | null = null;
-  connectionError: GitHubCliError | null = null;
+  connectionError: Error | null = null;
   providerExists = false;
   loginCalls = 0;
   pushCalls = 0;
@@ -78,9 +77,11 @@ class FakeGitHubCli implements GitHubCli {
     if (this.pushError) throw this.pushError;
   }
 
-  async findPullRequest(_input: PullRequestSelector): Promise<GitHubPullRequest | null> {
+  async findPullRequest(input: PullRequestSelector): Promise<GitHubPullRequest | null> {
     this.findCalls += 1;
-    return this.providerExists ? this.provider : null;
+    const matchesSelector =
+      this.provider.headRef === input.head && this.provider.baseRef === input.base;
+    return this.providerExists && matchesSelector ? this.provider : null;
   }
 
   async viewPullRequest(): Promise<GitHubPullRequest> {
@@ -149,6 +150,31 @@ describe("GitHubService", () => {
     });
   }
 
+  it("returns a safe failed connection state when GitHub auth metadata is invalid", async () => {
+    cli.connectionError = new GitHubCliError(
+      "github_auth_response_invalid",
+      "GitHub auth response was invalid.",
+    );
+
+    await expect(service().connection()).resolves.toEqual({
+      status: "failed",
+      login: null,
+      error_code: "github_auth_response_invalid",
+      error_message: "GitHub auth response was invalid.",
+    });
+  });
+
+  it("returns a connection-specific safe failure for an unexpected connection error", async () => {
+    cli.connectionError = new Error("sensitive failure");
+
+    await expect(service().connection()).resolves.toEqual({
+      status: "failed",
+      login: null,
+      error_code: "github_connection_failed",
+      error_message: "GitHub connection failed unexpectedly.",
+    });
+  });
+
   it("persists not_configured without touching git when authentication is missing", async () => {
     cli.connectionValue = {
       status: "disconnected",
@@ -166,6 +192,78 @@ describe("GitHubService", () => {
       error_code: "github_auth_required",
     });
     expect(cli.pushCalls).toBe(0);
+    expect(cli.createCalls).toBe(0);
+  });
+
+  it("persists a failed publication when the connection preflight fails", async () => {
+    cli.connectionValue = {
+      status: "failed",
+      login: null,
+      error_code: "github_auth_status_failed",
+      error_message: "GitHub authentication status could not be read.",
+    };
+
+    const result = await service().publish(run(), { title: "Ship it", body: "Details" });
+
+    expect(result.row).toMatchObject({
+      publication_status: "failed",
+      error_code: "github_auth_status_failed",
+      error_message: "GitHub authentication status could not be read.",
+    });
+    expect(cli.pushCalls).toBe(0);
+    expect(cli.createCalls).toBe(0);
+  });
+
+  it("restores a created publication after reconnecting without new changes", async () => {
+    const github = service();
+    await github.publish(run(), { title: "Ship it", body: "Details" });
+    cli.connectionValue = {
+      status: "disconnected",
+      login: null,
+      error_code: "github_auth_required",
+      error_message: "Sign in to GitHub to continue.",
+    };
+    const disconnected = await github.publish(run(), { title: "Ship it", body: "Details" });
+    expect(disconnected.row.publication_status).toBe("not_configured");
+
+    cli.connectionValue = connected;
+    const recovered = await github.publish(run(), { title: "Ship it", body: "Details" });
+
+    expect(recovered.row).toMatchObject({
+      publication_status: "created",
+      error_code: null,
+      error_message: null,
+    });
+    expect(cli.pushCalls).toBe(1);
+    expect(cli.updateCalls).toBe(0);
+  });
+
+  it("publishes a fresh snapshot before marking a migrated provider row created", async () => {
+    insertPullRequest(fix.db, {
+      id: "pr-legacy",
+      run_id: RUN_ID,
+      provider: "github",
+      number: 42,
+      url: "https://github.com/acme/otomat/pull/42",
+      status: "open",
+      publication_status: "not_configured",
+      title: "Ship it",
+      body: "Details",
+      head_ref: BRANCH,
+      base_ref: "main",
+    });
+    cli.providerExists = true;
+
+    const result = await service().publish(run(), { title: "Ship it", body: "Details" });
+
+    expect(result.row).toMatchObject({
+      id: "pr-legacy",
+      publication_status: "created",
+      number: 42,
+    });
+    expect(result.row.published_head_sha).not.toBeNull();
+    expect(result.row.published_diff_sha).not.toBeNull();
+    expect(cli.pushCalls).toBe(1);
     expect(cli.createCalls).toBe(0);
   });
 
@@ -294,9 +392,15 @@ describe("GitHubService", () => {
     expect(cli.createCalls).toBe(1);
 
     const events = readRunEvents(fix.db, RUN_ID);
-    expect(events.map((event) => event.type)).toEqual(["pr.updated", "pr.updated", "pr.created"]);
+    expect(events.map((event) => event.type)).toEqual([
+      "pr.updated",
+      "pr.updated",
+      "pr.updated",
+      "pr.created",
+    ]);
     expect(events.map((event) => event.payload["publication_status"])).toEqual([
       "pushing",
+      "creating",
       "creating",
       "created",
     ]);
@@ -338,6 +442,19 @@ describe("GitHubService", () => {
     expect(cli.createCalls).toBe(0);
     expect(cli.pushCalls).toBe(1);
     expect(getPullRequestForRun(fix.db, RUN_ID)?.number).toBe(42);
+  });
+
+  it("treats an empty provider body as the canonical empty body", async () => {
+    cli.provider = { ...cli.provider, body: "" };
+    const github = service();
+
+    const first = await github.publish(run(), { title: "Ship it", body: "" });
+    const second = await github.publish(run(), { title: "Ship it", body: "" });
+
+    expect(first.row.body).toBeNull();
+    expect(second.row.body).toBeNull();
+    expect(cli.pushCalls).toBe(1);
+    expect(cli.updateCalls).toBe(0);
   });
 
   it("coalesces concurrent publication requests for one run", async () => {
@@ -407,6 +524,40 @@ describe("GitHubService", () => {
     expect(cli.updateCalls).toBe(1);
   });
 
+  it("updates a known pull request by number after its base branch changes", async () => {
+    const github = service();
+    await github.publish(run(), { title: "Ship it", body: "Details" });
+    cli.provider = { ...cli.provider, baseRef: "release" };
+    writeFileSync(join(worktreePath, "change.txt"), "first\nsecond\n");
+
+    const updated = await github.publish(run(), {
+      title: "Ship it better",
+      body: "New body",
+    });
+
+    expect(updated.row).toMatchObject({
+      publication_status: "created",
+      number: 42,
+      base_ref: "release",
+      title: "Ship it better",
+    });
+    expect(cli.createCalls).toBe(1);
+    expect(cli.updateCalls).toBe(1);
+  });
+
+  it("refreshes provider lifecycle without pushing an unchanged branch", async () => {
+    cli.provider = { ...cli.provider, lifecycle: "draft" };
+    const github = service();
+    const created = await github.publish(run(), { title: "Ship it", body: "Details" });
+    expect(created.row.status).toBe("draft");
+
+    cli.provider = { ...cli.provider, lifecycle: "open" };
+    const refreshed = await github.publish(run(), { title: "Ship it", body: "Details" });
+
+    expect(refreshed.row.status).toBe("open");
+    expect(cli.pushCalls).toBe(1);
+  });
+
   it("refreshes merged lifecycle and refuses to publish another PR for the run", async () => {
     const github = service();
     await github.publish(run(), { title: "Ship it", body: "Details" });
@@ -416,6 +567,23 @@ describe("GitHubService", () => {
     const result = await github.publish(run(), { title: "Another PR", body: "No" });
 
     expect(result.row).toMatchObject({ status: "merged", number: 42 });
+    expect(cli.pushCalls).toBe(1);
+    expect(cli.createCalls).toBe(1);
+    expect(cli.updateCalls).toBe(0);
+  });
+
+  it("keeps a closed pull request terminal when it is reopened on GitHub", async () => {
+    const github = service();
+    await github.publish(run(), { title: "Ship it", body: "Details" });
+    cli.provider = { ...cli.provider, lifecycle: "closed" };
+    writeFileSync(join(worktreePath, "after-close.txt"), "follow up\n");
+    const closed = await github.publish(run(), { title: "Another PR", body: "No" });
+    expect(closed.row.status).toBe("closed");
+
+    cli.provider = { ...cli.provider, lifecycle: "open" };
+    const reopened = await github.publish(run(), { title: "Reopen", body: "No" });
+
+    expect(reopened.row).toMatchObject({ status: "closed", number: 42 });
     expect(cli.pushCalls).toBe(1);
     expect(cli.createCalls).toBe(1);
     expect(cli.updateCalls).toBe(0);

@@ -52,4 +52,27 @@ describe("pull request contract", () => {
       has_unpublished_changes: false,
     });
   });
+
+  it("rejects a created publication without confirmed provider metadata", () => {
+    expect(() =>
+      pullRequestContractSchema.parse({
+        id: "pr1",
+        run_id: "run1",
+        provider: "github",
+        number: null,
+        url: null,
+        status: "open",
+        publication_status: "created",
+        title: "Ship it",
+        body: null,
+        head_ref: null,
+        base_ref: null,
+        published_head_sha: null,
+        published_diff_sha: null,
+        error_code: null,
+        error_message: null,
+        has_unpublished_changes: false,
+      }),
+    ).toThrow();
+  });
 });

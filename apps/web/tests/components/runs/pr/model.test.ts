@@ -1,5 +1,5 @@
 import type { GitHubConnectionContract, PullRequestContract } from "@otomat/domain";
-import { pullRequestViewModel } from "@web/components/runs/pr/model";
+import { pullRequestAcceptedSubmission, pullRequestViewModel } from "@web/components/runs/pr/model";
 import { describe, expect, it } from "vitest";
 
 const connected: GitHubConnectionContract = {
@@ -46,8 +46,14 @@ describe("pullRequestViewModel", () => {
     expect(model).toMatchObject({
       connectionLabel: "GitHub not connected",
       showConnect: true,
-      action: "prepare",
       actionDisabled: true,
+    });
+  });
+
+  it("does not claim a run is ready before it reaches review-ready", () => {
+    expect(pullRequestViewModel(connected, null, false)).toMatchObject({
+      actionDisabled: true,
+      stateLabel: "Run not ready for publication",
     });
   });
 
@@ -57,7 +63,7 @@ describe("pullRequestViewModel", () => {
   ] as const)("renders honest %s progress", (publicationStatus, actionLabel) => {
     expect(
       pullRequestViewModel(connected, pullRequest({ publication_status: publicationStatus })),
-    ).toMatchObject({ action: "none", actionLabel, actionPending: true });
+    ).toMatchObject({ actionLabel, actionPending: true });
   });
 
   it("offers the real link and Update PR only for unpublished changes", () => {
@@ -70,7 +76,6 @@ describe("pullRequestViewModel", () => {
     });
 
     expect(pullRequestViewModel(connected, row)).toMatchObject({
-      action: "update",
       actionLabel: "Update PR",
       stateLabel: "Unpublished changes",
       linkLabel: "Open PR #42",
@@ -78,7 +83,13 @@ describe("pullRequestViewModel", () => {
     });
     expect(
       pullRequestViewModel(connected, { ...row, has_unpublished_changes: false }),
-    ).toMatchObject({ action: "none", stateLabel: "Up to date" });
+    ).toMatchObject({ stateLabel: "Up to date" });
+    expect(
+      pullRequestViewModel(connected, { ...row, has_unpublished_changes: false }, true, true),
+    ).toMatchObject({
+      actionLabel: "Update PR",
+      stateLabel: "Unpublished changes",
+    });
   });
 
   it("keeps a provider link visible when the latest update failed", () => {
@@ -95,11 +106,26 @@ describe("pullRequestViewModel", () => {
     );
 
     expect(model).toMatchObject({
-      action: "update",
       stateLabel: "Update failed",
       errorMessage: "The run branch could not be pushed to GitHub.",
       linkLabel: "Open PR #42",
     });
+  });
+
+  it("disables an existing pull request when the run is not review-ready", () => {
+    expect(
+      pullRequestViewModel(
+        connected,
+        pullRequest({
+          number: 42,
+          url: "https://github.com/acme/otomat/pull/42",
+          status: "open",
+          publication_status: "created",
+          has_unpublished_changes: true,
+        }),
+        false,
+      ),
+    ).toMatchObject({ actionLabel: "Update PR", actionDisabled: true });
   });
 
   it("does not claim the PR is up to date when git comparison is unavailable", () => {
@@ -115,7 +141,6 @@ describe("pullRequestViewModel", () => {
         }),
       ),
     ).toMatchObject({
-      action: "update",
       actionLabel: "Retry comparison",
       stateLabel: "Changes unavailable",
     });
@@ -132,6 +157,30 @@ describe("pullRequestViewModel", () => {
           publication_status: "created",
         }),
       ),
-    ).toMatchObject({ action: "none", actionDisabled: true, stateLabel: `PR ${status}` });
+    ).toMatchObject({ actionDisabled: true, stateLabel: `PR ${status}` });
+  });
+});
+
+describe("pullRequestAcceptedSubmission", () => {
+  it("rejects a failed result that retained older metadata", () => {
+    expect(
+      pullRequestAcceptedSubmission(
+        pullRequest({
+          publication_status: "failed",
+          title: "Old title",
+          body: "Old body",
+        }),
+        { title: "New title", body: "New body" },
+      ),
+    ).toBe(false);
+  });
+
+  it("accepts normalized empty body metadata", () => {
+    expect(
+      pullRequestAcceptedSubmission(pullRequest({ title: "Ship it", body: null }), {
+        title: "Ship it",
+        body: "",
+      }),
+    ).toBe(true);
   });
 });

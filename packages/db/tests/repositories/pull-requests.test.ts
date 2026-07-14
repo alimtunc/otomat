@@ -4,8 +4,6 @@ import {
   getPullRequestForRun,
   insertPullRequest,
   updatePullRequest,
-  updatePullRequestDraft,
-  updatePullRequestStatus,
 } from "#db/repositories/pull-requests";
 
 import { createTempDb, seedReviewRun, type TempDb } from "../support/temp-db.js";
@@ -50,17 +48,10 @@ it("stores publication metadata and updates one row in place", () => {
     error_message: null,
   });
 
-  updatePullRequestDraft(db, "pr1", { title: "First slice, retitled", body: "Adds the loop." });
-  expect(getPullRequestForRun(db, "r1")).toMatchObject({
+  updatePullRequest(db, "pr1", {
     title: "First slice, retitled",
     body: "Adds the loop.",
-    status: "draft",
-  });
-
-  updatePullRequestStatus(db, "pr1", "open");
-  expect(getPullRequestForRun(db, "r1")?.status).toBe("open");
-
-  updatePullRequest(db, "pr1", {
+    status: "open",
     publication_status: "created",
     number: 42,
     url: "https://github.com/acme/repo/pull/42",
@@ -72,6 +63,9 @@ it("stores publication metadata and updates one row in place", () => {
     error_message: null,
   });
   expect(getPullRequestForRun(db, "r1")).toMatchObject({
+    title: "First slice, retitled",
+    body: "Adds the loop.",
+    status: "open",
     publication_status: "created",
     number: 42,
     url: "https://github.com/acme/repo/pull/42",

@@ -14,10 +14,10 @@ export const pullRequestPublicationMachine = defineMachine<PullRequestPublicatio
   name: "pull_request_publication",
   initial: "not_configured",
   transitions: {
-    not_configured: ["pushing", "failed"],
-    pushing: ["creating", "created", "failed", "not_configured"],
-    creating: ["created", "failed", "not_configured"],
+    not_configured: ["pushing", "created", "failed"],
+    pushing: ["creating", "created", "failed"],
+    creating: ["created", "failed"],
     created: ["pushing", "failed", "not_configured"],
-    failed: ["pushing", "not_configured"],
+    failed: ["pushing", "created", "not_configured"],
   },
 });

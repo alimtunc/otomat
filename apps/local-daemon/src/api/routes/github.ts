@@ -7,7 +7,6 @@ import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { toPullRequest } from "../serialize.js";
 
-/** GitHub connection plus per-run pull-request publication. */
 export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
 

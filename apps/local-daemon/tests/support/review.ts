@@ -1,4 +1,4 @@
-import type { PullRequestRow, ReviewCommentRow, ReviewRow } from "@otomat/db";
+import type { ReviewCommentRow, ReviewRow } from "@otomat/db";
 
 import type { ReviewService } from "#review";
 
@@ -24,29 +24,6 @@ export function commentRow(overrides: Partial<ReviewCommentRow> = {}): ReviewCom
     status: "open",
     hunk_snapshot: "@@ -1 +1 @@",
     fix_requested_at: null,
-    created_at: "2026-07-05T00:00:00.000Z",
-    updated_at: "2026-07-05T00:00:00.000Z",
-    ...overrides,
-  };
-}
-
-export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullRequestRow {
-  return {
-    id: "pr1",
-    run_id: "run-detail",
-    provider: "github",
-    number: null,
-    url: null,
-    status: "draft",
-    publication_status: "not_configured",
-    title: "First slice",
-    body: null,
-    head_ref: null,
-    base_ref: null,
-    published_head_sha: null,
-    published_diff_sha: null,
-    error_code: null,
-    error_message: null,
     created_at: "2026-07-05T00:00:00.000Z",
     updated_at: "2026-07-05T00:00:00.000Z",
     ...overrides,
