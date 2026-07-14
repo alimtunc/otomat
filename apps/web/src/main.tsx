@@ -1,5 +1,6 @@
 import "@otomat/ui/styles.css";
 import "@git-diff-view/react/styles/diff-view.css";
+import "@web/components/runs/diff/review-diff.css";
 import { ThemeProvider, Toaster } from "@otomat/ui";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";

@@ -9,5 +9,8 @@ export default mergeConfig(
     resolve: {
       alias: { "@web": resolve(import.meta.dirname, "src") },
     },
+    test: {
+      include: ["tests/**/*.test.{ts,tsx}"],
+    },
   }),
 );

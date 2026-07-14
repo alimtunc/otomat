@@ -14,9 +14,12 @@ import { runtimeRunInput, runtimeSessionRef } from "../support/runtime.js";
 let dir: string;
 let adapter: FakeRuntimeAdapter;
 
+const RUN_EPOCH_MS = Date.parse("2026-07-14T12:00:00.000Z");
+const fixedClock = () => RUN_EPOCH_MS;
+
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "otomat-fake-"));
-  adapter = new FakeRuntimeAdapter();
+  adapter = new FakeRuntimeAdapter(fixedClock);
 });
 
 afterEach(() => {
@@ -90,17 +93,48 @@ describe("FakeRuntimeAdapter.run", () => {
   it("is deterministic: a fresh adapter replays byte-identical events", async () => {
     const a = new MemorySink();
     const b = new MemorySink();
-    await new FakeRuntimeAdapter().run(
+    await new FakeRuntimeAdapter(fixedClock).run(
       { ...input(), run_dir: mkdtempSync(join(tmpdir(), "otomat-a-")) },
       a,
       liveSignal(),
     );
-    await new FakeRuntimeAdapter().run(
+    await new FakeRuntimeAdapter(fixedClock).run(
       { ...input(), run_dir: mkdtempSync(join(tmpdir(), "otomat-b-")) },
       b,
       liveSignal(),
     );
     expect(a.events).toEqual(b.events);
+  });
+
+  it("stamps every event from a fresh clock reading, monotonic across run and resume", async () => {
+    let now = RUN_EPOCH_MS;
+    const steppingClock = () => {
+      const value = now;
+      now += 1000;
+      return value;
+    };
+    const stepped = new FakeRuntimeAdapter(steppingClock);
+
+    const runSink = new MemorySink();
+    await stepped.run(input(), runSink, liveSignal());
+    expect(runSink.events).toHaveLength(10);
+    expect(runSink.events.map((event) => event.occurred_at)).toEqual(
+      Array.from({ length: 10 }, (_, index) => new Date(RUN_EPOCH_MS + index * 1000).toISOString()),
+    );
+
+    const resumeSink = new MemorySink();
+    await stepped.resume(
+      sessionRef(),
+      { prompt: "follow up", run_dir: dir },
+      resumeSink,
+      liveSignal(),
+    );
+    expect(resumeSink.events).toHaveLength(5);
+    expect(resumeSink.events.map((event) => event.occurred_at)).toEqual(
+      Array.from({ length: 5 }, (_, index) =>
+        new Date(RUN_EPOCH_MS + (10 + index) * 1000).toISOString(),
+      ),
+    );
   });
 
   it("emits only to the caller's sink — durability belongs to the sink, never to the adapter", async () => {
@@ -109,7 +143,7 @@ describe("FakeRuntimeAdapter.run", () => {
     expect(existsSync(join(dir, "events.jsonl"))).toBe(false);
 
     const jsonl = new JsonlEventSink(join(dir, "events.jsonl"));
-    await new FakeRuntimeAdapter().run(input(), jsonl, liveSignal());
+    await new FakeRuntimeAdapter(fixedClock).run(input(), jsonl, liveSignal());
     jsonl.close();
     expect(readEventsJsonl(join(dir, "events.jsonl"))).toEqual(sink.events);
   });

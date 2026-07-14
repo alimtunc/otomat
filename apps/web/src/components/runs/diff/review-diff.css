@@ -1,0 +1,20 @@
+/* Unlayered on purpose: these must out-cascade @git-diff-view's unlayered `.invisible` rule. */
+.otomat-review-diff .diff-tailwindcss-wrapper {
+  .diff-add-widget-wrapper {
+    visibility: visible;
+  }
+
+  .diff-add-widget-wrapper[data-add-widget="old"] {
+    display: none;
+  }
+
+  .diff-add-widget {
+    opacity: 0;
+    transition: opacity var(--motion-fast) var(--ease);
+  }
+
+  .diff-line:hover .diff-add-widget,
+  .diff-add-widget:focus-visible {
+    opacity: 1;
+  }
+}
