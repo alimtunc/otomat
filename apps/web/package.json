@@ -14,7 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@git-diff-view/react": "^0.1.6",
+    "@git-diff-view/react": "^0.1.7",
     "@otomat/client": "workspace:*",
     "@otomat/domain": "workspace:*",
     "@otomat/ui": "workspace:*",
