@@ -113,6 +113,25 @@ describe("GitWorktreeService", () => {
     expect(d1.additions).toBeGreaterThan(0);
   });
 
+  it("snapshots dirty work without removing the active worktree", () => {
+    const wt = env.service.acquire({ owner: "publisher", branch: "feat-publish" });
+    writeFileSync(join(wt.path, "published.txt"), "ready\n");
+    const diffBefore = env.service.diff("publisher");
+
+    const snapshot = env.service.snapshot("publisher");
+
+    expect(snapshot.status).toBe("active");
+    expect(snapshot.path).toBe(wt.path);
+    expect(existsSync(wt.path)).toBe(true);
+    expect(snapshot.headSha).toBe(env.repo.git("-C", wt.path, "rev-parse", "HEAD").trim());
+    expect(snapshot.headSha).not.toBe(wt.headSha);
+    expect(env.repo.git("-C", wt.path, "status", "--porcelain").trim()).toBe("");
+    expect(env.service.diff("publisher").sha).toBe(diffBefore.sha);
+    expect(env.service.get("publisher")?.headSha).toBe(snapshot.headSha);
+
+    expect(env.service.snapshot("publisher").headSha).toBe(snapshot.headSha);
+  });
+
   it("archives a worktree: removes the dir, keeps the branch, leaves no orphan, diff survives", () => {
     const wt = env.service.acquire({ owner: "loser", branch: "feat-l" });
     writeFileSync(join(wt.path, "work.txt"), "loser work\n");
@@ -203,6 +222,7 @@ describe("GitWorktreeService", () => {
 
   it("throws WorktreeNotFoundError for an unknown owner", () => {
     expect(() => env.service.diff("ghost")).toThrow(WorktreeNotFoundError);
+    expect(() => env.service.snapshot("ghost")).toThrow(WorktreeNotFoundError);
     expect(() => env.service.archive("ghost")).toThrow(WorktreeNotFoundError);
   });
 });

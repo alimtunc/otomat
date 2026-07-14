@@ -9,6 +9,22 @@ import {
   stepRunContractSchema,
 } from "./entities.js";
 
+export const GITHUB_CONNECTION_STATES = [
+  "not_installed",
+  "disconnected",
+  "connecting",
+  "connected",
+  "failed",
+] as const;
+
+export const githubConnectionContractSchema = z.object({
+  status: z.enum(GITHUB_CONNECTION_STATES),
+  login: z.string().nullable(),
+  error_code: z.string().nullable(),
+  error_message: z.string().nullable(),
+});
+export type GitHubConnectionContract = z.infer<typeof githubConnectionContractSchema>;
+
 /** Daemon liveness/identity surface served at `GET /api/health`. */
 export const healthResponseSchema = z.object({
   status: z.literal("ok"),
@@ -85,7 +101,7 @@ export const requestFixRequestSchema = z.object({
 });
 export type RequestFixRequest = z.infer<typeof requestFixRequestSchema>;
 
-/** Persist the local PR draft (stub — nothing is sent to a provider). */
+/** Publish or update the run's GitHub pull request. */
 export const preparePullRequestRequestSchema = z.object({
   title: z.string().min(1),
   body: z.string(),

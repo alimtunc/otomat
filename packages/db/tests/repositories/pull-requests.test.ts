@@ -3,8 +3,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import {
   getPullRequestForRun,
   insertPullRequest,
-  updatePullRequestDraft,
-  updatePullRequestStatus,
+  updatePullRequest,
 } from "#db/repositories/pull-requests";
 
 import { createTempDb, seedReviewRun, type TempDb } from "../support/temp-db.js";
@@ -20,7 +19,7 @@ afterEach(() => {
   t.cleanup();
 });
 
-it("stores the local PR draft and updates it in place", () => {
+it("stores publication metadata and updates one row in place", () => {
   const { db } = t.client;
   insertPullRequest(db, {
     id: "pr1",
@@ -40,15 +39,46 @@ it("stores the local PR draft and updates it in place", () => {
     body: null,
     number: null,
     url: null,
+    publication_status: "not_configured",
+    head_ref: null,
+    base_ref: null,
+    published_head_sha: null,
+    published_diff_sha: null,
+    error_code: null,
+    error_message: null,
   });
 
-  updatePullRequestDraft(db, "pr1", { title: "First slice, retitled", body: "Adds the loop." });
+  updatePullRequest(db, "pr1", {
+    title: "First slice, retitled",
+    body: "Adds the loop.",
+    status: "open",
+    publication_status: "created",
+    number: 42,
+    url: "https://github.com/acme/repo/pull/42",
+    head_ref: "otomat/run/r1",
+    base_ref: "main",
+    published_head_sha: "abc123",
+    published_diff_sha: "diff123",
+    error_code: null,
+    error_message: null,
+  });
   expect(getPullRequestForRun(db, "r1")).toMatchObject({
     title: "First slice, retitled",
     body: "Adds the loop.",
-    status: "draft",
+    status: "open",
+    publication_status: "created",
+    number: 42,
+    url: "https://github.com/acme/repo/pull/42",
+    head_ref: "otomat/run/r1",
+    base_ref: "main",
+    published_head_sha: "abc123",
+    published_diff_sha: "diff123",
   });
+});
 
-  updatePullRequestStatus(db, "pr1", "open");
-  expect(getPullRequestForRun(db, "r1")?.status).toBe("open");
+it("enforces one pull request row per run", () => {
+  const { db } = t.client;
+  insertPullRequest(db, { id: "pr1", run_id: "r1", title: "First" });
+
+  expect(() => insertPullRequest(db, { id: "pr2", run_id: "r1", title: "Duplicate" })).toThrow();
 });

@@ -1,7 +1,6 @@
 import { addComment, getReviewDetail } from "./comments.js";
 import { getRunDiff } from "./diff.js";
 import { markFixRequested, prepareFix } from "./fix.js";
-import { getPullRequest, preparePullRequest } from "./pull-requests.js";
 import { onRunSettled } from "./settle.js";
 import type { ReviewContext, ReviewService, ReviewServiceConfig } from "./types.js";
 
@@ -14,8 +13,6 @@ export function createReviewService(config: ReviewServiceConfig): ReviewService 
     addComment: (run, request) => addComment(ctx, run.id, request),
     prepareFix: (run, commentIds) => prepareFix(ctx, run, commentIds),
     markFixRequested: (runId, commentIds) => markFixRequested(ctx, runId, commentIds),
-    getPullRequest: (runId) => getPullRequest(ctx, runId),
-    preparePullRequest: (run, request) => preparePullRequest(ctx, run.id, request),
     onRunSettled: (outcome) => onRunSettled(ctx, outcome),
   };
 }

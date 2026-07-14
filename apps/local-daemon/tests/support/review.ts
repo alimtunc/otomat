@@ -1,4 +1,4 @@
-import type { PullRequestRow, ReviewCommentRow, ReviewRow } from "@otomat/db";
+import type { ReviewCommentRow, ReviewRow } from "@otomat/db";
 
 import type { ReviewService } from "#review";
 
@@ -30,22 +30,6 @@ export function commentRow(overrides: Partial<ReviewCommentRow> = {}): ReviewCom
   };
 }
 
-export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullRequestRow {
-  return {
-    id: "pr1",
-    run_id: "run-detail",
-    provider: "github",
-    number: null,
-    url: null,
-    status: "draft",
-    title: "First slice",
-    body: null,
-    created_at: "2026-07-05T00:00:00.000Z",
-    updated_at: "2026-07-05T00:00:00.000Z",
-    ...overrides,
-  };
-}
-
 /** Every method throws or returns empty unless a test overrides it — no accidental fake success. */
 export function stubReviewService(overrides: Partial<ReviewService> = {}): ReviewService {
   return {
@@ -58,10 +42,6 @@ export function stubReviewService(overrides: Partial<ReviewService> = {}): Revie
       throw new Error("prepareFix stub not configured");
     },
     markFixRequested: () => {},
-    getPullRequest: () => null,
-    preparePullRequest: () => {
-      throw new Error("preparePullRequest stub not configured");
-    },
     onRunSettled: () => {},
     ...overrides,
   };

@@ -78,6 +78,8 @@ export interface GitWorktreeService {
    * WorktreeNotFoundError when neither exists.
    */
   diff(owner: string): CanonicalDiff;
+  /** Commits outstanding changes and records the new branch tip without removing the active worktree. */
+  snapshot(owner: string): WorktreeRecord;
   /**
    * Commits any uncommitted work, removes the working directory, and marks the
    * row archived with the branch tip as `headSha`; the branch is kept. Requires
@@ -245,6 +247,15 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
     diff(owner) {
       const { gitCwd, base, tree } = diffInputs(resolve(owner));
       return computeCanonicalDiff(gitCwd, base, tree);
+    },
+
+    snapshot(owner) {
+      const row = findActiveByOwner(db, owner);
+      if (!row) throw new WorktreeNotFoundError(owner);
+      snapshotWorktree(row.path, `otomat: snapshot for ${owner}`);
+      const head = headSha(row.path);
+      updateWorktreeStatus(db, row.id, { status: "active", head_sha: head });
+      return toRecord({ ...row, head_sha: head });
     },
 
     archive(owner) {

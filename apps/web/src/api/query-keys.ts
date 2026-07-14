@@ -6,6 +6,7 @@
  */
 export const queryKeys = {
   health: ["health"] as const,
+  githubConnection: ["github", "connection"] as const,
   projects: ["projects"] as const,
   repositories: ["repositories"] as const,
   runtimes: ["runtimes"] as const,

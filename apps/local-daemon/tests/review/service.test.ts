@@ -1,13 +1,7 @@
 import { appendFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import {
-  getPullRequestForRun,
-  getReviewComment,
-  getReviewForRun,
-  getRun,
-  listReviewCommentsForRun,
-} from "@otomat/db";
+import { getReviewComment, getReviewForRun, getRun } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
@@ -230,29 +224,4 @@ it("releases pending fix requests when the turn does not complete", () => {
   const row = getReviewComment(fix.db, comment.id);
   expect(row?.status).toBe("open");
   expect(row?.fix_requested_at).toBeNull();
-});
-
-it("persists the local PR draft as a stub — created once, then updated in place", () => {
-  const first = review.preparePullRequest(run(), { title: "Slice one", body: "The loop." });
-  expect(first.created).toBe(true);
-  expect(first.row).toMatchObject({
-    status: "draft",
-    provider: "github",
-    title: "Slice one",
-    body: "The loop.",
-    number: null,
-    url: null,
-  });
-
-  const second = review.preparePullRequest(run(), { title: "Slice one, renamed", body: "" });
-  expect(second.created).toBe(false);
-  expect(second.row.title).toBe("Slice one, renamed");
-  expect(second.row.body).toBeNull();
-  expect(getPullRequestForRun(fix.db, RUN_ID)?.id).toBe(first.row.id);
-
-  const types = readRunEvents(fix.db, RUN_ID).map((e) => e.type);
-  expect(types).toContain("pr.created");
-  expect(types).toContain("pr.updated");
-
-  expect(listReviewCommentsForRun(fix.db, RUN_ID)).toEqual([]);
 });

@@ -42,7 +42,7 @@ export interface WorktreeRecord {
   repositoryId: string;
   path: string;
   branch: string;
-  /** Recorded HEAD sha (the fork point at acquire; the final tip after archive). */
+  /** Recorded HEAD sha (the fork point at acquire; the latest snapshot/archive tip afterward). */
   headSha: string;
   status: WorktreeStatus;
 }

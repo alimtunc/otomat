@@ -4,6 +4,7 @@ import { serve } from "@hono/node-server";
 import { createClient, defaultDbPath, runMigrations } from "@otomat/db";
 
 import { createApiApp, logApiRoutes } from "#api";
+import { createGitHubCli, createGitHubService, runCommand } from "#github";
 import { createReviewService } from "#review";
 import { createReexecSpawn, createSupervisor } from "#supervisor";
 
@@ -34,6 +35,12 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
   const defaultProjectId = ensureDefaultProject(db, projectRoot);
   const worktrees = ensureDefaultRepository(db, defaultProjectId, projectRoot, dataDir);
   const review = createReviewService({ db, dataDir, worktrees: worktrees?.service ?? null });
+  const github = createGitHubService({
+    db,
+    dataDir,
+    worktrees: worktrees?.service ?? null,
+    cli: createGitHubCli(runCommand),
+  });
 
   const mainScript = process.argv[1];
   if (!mainScript) throw new Error("cannot determine daemon entrypoint for worker re-exec");
@@ -62,6 +69,7 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
     resumeRun: supervisor.resume,
     fixRun: supervisor.fix,
     abortRun: supervisor.abort,
+    github,
     review,
   });
 

@@ -1,5 +1,5 @@
-import type { Db, PullRequestRow, ReviewCommentRow, ReviewRow, RunRow } from "@otomat/db";
-import type { CreateReviewCommentRequest, PreparePullRequestRequest } from "@otomat/domain";
+import type { Db, ReviewCommentRow, ReviewRow, RunRow } from "@otomat/db";
+import type { CreateReviewCommentRequest } from "@otomat/domain";
 
 import type { CanonicalDiff, GitWorktreeService } from "#git";
 import type { ReconcileClassification } from "#supervisor";
@@ -31,12 +31,6 @@ export interface FixPreparation {
   commentIds: string[];
 }
 
-export interface PreparePullRequestResult {
-  row: PullRequestRow;
-  /** False when an existing draft was updated in place rather than inserted. */
-  created: boolean;
-}
-
 export interface RunSettledOutcome {
   runId: string;
   classification: ReconcileClassification;
@@ -51,11 +45,6 @@ export interface ReviewService {
   prepareFix(run: RunRow, commentIds: string[]): FixPreparation;
   /** Stamps the selected comments and drives the review to `changes_requested`. */
   markFixRequested(runId: string, commentIds: string[]): void;
-  getPullRequest(runId: string): PullRequestRow | null;
-  preparePullRequest(
-    run: Pick<RunRow, "id">,
-    request: PreparePullRequestRequest,
-  ): PreparePullRequestResult;
   /** Post-settle hook: refreshes the diff projection and resolves comment anchors. */
   onRunSettled(outcome: RunSettledOutcome): void;
 }
