@@ -70,14 +70,17 @@ export function Button({
   loading = false,
   disabled,
   style,
+  type,
   children,
   ...props
 }: ButtonProps) {
   injectStyleOnce(SPIN_STYLE_ID, SPIN_CSS);
   const element = useRender({
-    render: render ?? <button type="button" />,
+    render: render ?? <button />,
     props: {
       "data-slot": "button",
+      // render-element props win in useRender: a type on the fallback <button> would override type="submit"
+      type: render ? type : (type ?? "button"),
       "data-loading": loading || undefined,
       "aria-busy": loading || undefined,
       disabled: disabled || loading,
