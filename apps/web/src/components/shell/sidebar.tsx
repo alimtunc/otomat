@@ -14,12 +14,18 @@ export function Sidebar({
   active,
   online,
   projects,
+  currentProjectId,
+  onProjectSelect,
 }: {
   active: ShellSection;
   online: boolean;
   projects: ProjectSummary[];
+  currentProjectId?: string;
+  onProjectSelect: (id: string) => void;
 }) {
-  const projectSwitcher = <ProjectSwitcher projects={projects} onSelect={() => {}} />;
+  const projectSwitcher = (
+    <ProjectSwitcher projects={projects} currentId={currentProjectId} onSelect={onProjectSelect} />
+  );
   return (
     <AppSidebar projectSwitcher={projectSwitcher} footer={<SidebarDaemonStatus online={online} />}>
       <NavSection label="Workspace">

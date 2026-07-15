@@ -50,44 +50,46 @@ export function DiffFileCard({
       {note !== null ? (
         <p className="px-3 py-4 text-sm text-text-tertiary">{note}</p>
       ) : (
-        <DiffView<ReviewCommentContract[]>
-          data={data}
-          extendData={extendData}
-          diffViewMode={DiffModeEnum.Unified}
-          diffViewTheme={theme}
-          diffViewHighlight={false}
-          diffViewFontSize={12}
-          diffViewAddWidget
-          renderWidgetLine={({ side, lineNumber, onClose }) =>
-            side === SplitSide.new ? (
-              <ReviewCommentForm
-                filePath={file.path}
-                line={lineNumber}
-                onSubmit={(body) => onAddComment(lineNumber, body)}
-                onClose={onClose}
-              />
-            ) : (
-              <div className="flex items-center gap-2 border-y border-border bg-surface-2 p-3 text-xs text-text-tertiary">
-                Comments pin to the new side of the diff.
-                <Button variant="ghost" size="xs" onClick={onClose}>
-                  Close
-                </Button>
-              </div>
-            )
-          }
-          renderExtendLine={({ data: comments }) => (
-            <div className="flex flex-col gap-2 border-y border-border bg-surface-1 p-3">
-              {comments.map((comment) => (
-                <ReviewCommentCard
-                  key={comment.id}
-                  comment={comment}
-                  selected={selectedCommentIds.has(comment.id)}
-                  onSelectedChange={(selected) => onToggleComment(comment.id, selected)}
+        <div className="otomat-review-diff">
+          <DiffView<ReviewCommentContract[]>
+            data={data}
+            extendData={extendData}
+            diffViewMode={DiffModeEnum.Unified}
+            diffViewTheme={theme}
+            diffViewHighlight={false}
+            diffViewFontSize={12}
+            diffViewAddWidget
+            renderWidgetLine={({ side, lineNumber, onClose }) =>
+              side === SplitSide.new ? (
+                <ReviewCommentForm
+                  filePath={file.path}
+                  line={lineNumber}
+                  onSubmit={(body) => onAddComment(lineNumber, body)}
+                  onClose={onClose}
                 />
-              ))}
-            </div>
-          )}
-        />
+              ) : (
+                <div className="flex items-center gap-2 border-y border-border bg-surface-2 p-3 text-xs text-text-tertiary">
+                  Comments pin to the new side of the diff.
+                  <Button variant="ghost" size="xs" onClick={onClose}>
+                    Close
+                  </Button>
+                </div>
+              )
+            }
+            renderExtendLine={({ data: comments }) => (
+              <div className="flex flex-col gap-2 border-y border-border bg-surface-1 p-3">
+                {comments.map((comment) => (
+                  <ReviewCommentCard
+                    key={comment.id}
+                    comment={comment}
+                    selected={selectedCommentIds.has(comment.id)}
+                    onSelectedChange={(selected) => onToggleComment(comment.id, selected)}
+                  />
+                ))}
+              </div>
+            )}
+          />
+        </div>
       )}
     </section>
   );

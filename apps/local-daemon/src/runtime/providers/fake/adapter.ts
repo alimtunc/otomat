@@ -29,10 +29,6 @@ function writeFakeWork(cwd: string | null | undefined, prompt: string, followUp:
   writeFileSync(file, `# Fake implementation\n\n## Prompt\n\n${prompt}\n`);
 }
 
-/** Fixed clock so the fake's output is byte-identical across runs (fixtures/tests). */
-const BASE_EPOCH_MS = Date.parse("2026-01-01T00:00:00.000Z");
-const STEP_MS = 1000;
-
 const FAKE_USAGE: RuntimeUsage = {
   model: "fake-model-v1",
   input_tokens: 128,
@@ -70,7 +66,13 @@ function providerSessionId(runId: string): string {
   return `fake-session-${runId}`;
 }
 
-function buildEvent(ctx: TurnContext, turn: number, index: number, spec: EventSpec): RuntimeEvent {
+function buildEvent(
+  ctx: TurnContext,
+  turn: number,
+  index: number,
+  spec: EventSpec,
+  occurredAtMs: number,
+): RuntimeEvent {
   return {
     id: `${ctx.run_id}:${turn}:${index}`,
     run_id: ctx.run_id,
@@ -78,7 +80,7 @@ function buildEvent(ctx: TurnContext, turn: number, index: number, spec: EventSp
     agent_session_id: ctx.agent_session_id,
     type: spec.type,
     source: "otomat",
-    occurred_at: new Date(BASE_EPOCH_MS + (turn * 1000 + index) * STEP_MS).toISOString(),
+    occurred_at: new Date(occurredAtMs).toISOString(),
     payload: {
       fidelity: spec.fidelity,
       adapter: FAKE_ADAPTER_ID,
@@ -130,9 +132,10 @@ function resumeSpecs(prompt: string, providerSession: string): EventSpec[] {
 }
 
 /**
- * Deterministic test adapter. Exercises the full sink pipeline — provider
- * session, logs, tool calls, permission round-trip, usage — across all three
- * fidelity tiers. Durability is the caller's sink concern, as with a real
+ * Test adapter with deterministic ids and payloads; each event is stamped from
+ * the injected clock (`Date.now` by default) at emission. Exercises the full
+ * sink pipeline — provider session, logs, tool calls, permission round-trip,
+ * usage — across all three fidelity tiers. Durability is the caller's sink concern, as with a real
  * provider adapter. Every event is labeled `test_adapter` with
  * `source: "otomat"`, so no frame can ever be presented as a real provider result.
  */
@@ -150,6 +153,8 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
 
   /** Monotonic per-instance turn counter: keeps event ids unique across run/resume turns. */
   private turn = 0;
+
+  constructor(private readonly clock: () => number = Date.now) {}
 
   async run(
     input: RuntimeRunInput,
@@ -198,11 +203,11 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     let emitted = 0;
     for (const spec of specs) {
       if (signal.aborted) {
-        sink.emit(buildEvent(ctx, turn, emitted, abortSpec()));
+        sink.emit(buildEvent(ctx, turn, emitted, abortSpec(), this.clock()));
         emitted += 1;
         return canceledState(ctx.provider_session_id, emitted);
       }
-      sink.emit(buildEvent(ctx, turn, emitted, spec));
+      sink.emit(buildEvent(ctx, turn, emitted, spec, this.clock()));
       emitted += 1;
     }
     return {

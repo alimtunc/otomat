@@ -11,6 +11,7 @@ import {
 import { Link } from "@tanstack/react-router";
 import { useDaemonStatus, useProjects } from "@web/api/daemon/queries";
 import { Sidebar, type ShellSection } from "@web/components/shell/sidebar";
+import { useProjectSelection } from "@web/components/shell/use-project-selection";
 import type { ReactNode } from "react";
 
 export interface RouteShellProps {
@@ -35,6 +36,7 @@ export function RouteShell({
     id: project.id,
     name: project.name,
   }));
+  const { currentProjectId, selectProject } = useProjectSelection(projects);
 
   const topbar = (
     <Topbar
@@ -67,7 +69,13 @@ export function RouteShell({
       density={density}
       connectionState={connectionState}
       sidebar={
-        <Sidebar active={active} online={connectionState === "online"} projects={projects} />
+        <Sidebar
+          active={active}
+          online={connectionState === "online"}
+          projects={projects}
+          currentProjectId={currentProjectId}
+          onProjectSelect={selectProject}
+        />
       }
       rightPanel={rightPanel}
       topbar={topbar}

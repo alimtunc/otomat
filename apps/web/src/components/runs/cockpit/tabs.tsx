@@ -1,6 +1,12 @@
 import { Icon, SegmentedControl, SegmentedItem } from "@otomat/ui";
 import { Link, useMatchRoute } from "@tanstack/react-router";
 
+const COCKPIT_TABS = [
+  { value: "timeline", icon: "list-tree", to: "/runs/$runId", label: "Timeline" },
+  { value: "diff", icon: "git-compare", to: "/runs/$runId/diff", label: "Diff" },
+  { value: "pr", icon: "git-pull-request", to: "/runs/$runId/pr", label: "PR" },
+] as const;
+
 function activeTab(onDiff: boolean, onPr: boolean): string {
   if (onDiff) return "diff";
   if (onPr) return "pr";
@@ -15,27 +21,17 @@ export function CockpitTabs({ runId }: { runId: string }) {
   );
   return (
     <SegmentedControl type="single" value={value} aria-label="Run cockpit tabs">
-      <SegmentedItem
-        value="timeline"
-        icon={<Icon name="list-tree" />}
-        render={<Link to="/runs/$runId" params={{ runId }} />}
-      >
-        Timeline
-      </SegmentedItem>
-      <SegmentedItem
-        value="diff"
-        icon={<Icon name="git-compare" />}
-        render={<Link to="/runs/$runId/diff" params={{ runId }} />}
-      >
-        Diff
-      </SegmentedItem>
-      <SegmentedItem
-        value="pr"
-        icon={<Icon name="git-pull-request" />}
-        render={<Link to="/runs/$runId/pr" params={{ runId }} />}
-      >
-        PR
-      </SegmentedItem>
+      {COCKPIT_TABS.map((tab) => (
+        <SegmentedItem
+          key={tab.value}
+          value={tab.value}
+          icon={<Icon name={tab.icon} />}
+          nativeButton={false}
+          render={<Link to={tab.to} params={{ runId }} />}
+        >
+          {tab.label}
+        </SegmentedItem>
+      ))}
     </SegmentedControl>
   );
 }
