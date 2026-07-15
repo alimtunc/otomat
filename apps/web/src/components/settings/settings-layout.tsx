@@ -4,7 +4,11 @@ import { RouteShell } from "@web/components/shell/route-shell";
 
 export function SettingsLayout() {
   return (
-    <RouteShell active="settings" breadcrumbs={[{ label: "Settings", current: true }]}>
+    <RouteShell
+      active="settings"
+      titleIcon="settings"
+      breadcrumbs={[{ label: "Settings", current: true }]}
+    >
       <div className="flex h-full min-h-0">
         <SettingsNav />
         <div className="min-w-0 flex-1 overflow-auto p-6">

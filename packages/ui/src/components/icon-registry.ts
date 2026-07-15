@@ -1,4 +1,5 @@
 import {
+  Activity,
   AlertTriangle,
   Bot,
   ChevronDown,
@@ -30,6 +31,7 @@ import {
 } from "lucide-react";
 
 export const icons = {
+  activity: Activity,
   "alert-triangle": AlertTriangle,
   bot: Bot,
   "chevron-down": ChevronDown,

@@ -91,65 +91,65 @@ const ISSUE_STATUS: StatusMap<IssueState> = {
 };
 
 const RUN_STATUS: StatusMap<RunState> = {
-  queued: { tone: "neutral", icon: Clock, label: "Queued" },
-  preparing: { tone: "iris", icon: Loader, label: "Preparing" },
-  running: { tone: "iris", icon: Loader, label: "Running", live: true },
-  awaiting_permission: { tone: "warning", icon: ShieldQuestion, label: "Awaiting permission" },
-  awaiting_human: { tone: "warning", icon: Hand, label: "Awaiting human" },
-  review_ready: { tone: "review", icon: GitCompare, label: "Review ready" },
-  completed: { tone: "success", icon: CheckCircle2, label: "Completed" },
-  failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
-  canceled: { tone: "neutral", icon: Ban, label: "Canceled" },
+  queued: { tone: "neutral", icon: Clock, label: "queued" },
+  preparing: { tone: "iris", icon: Loader, label: "preparing" },
+  running: { tone: "iris", icon: Loader, label: "running", live: true },
+  awaiting_permission: { tone: "warning", icon: ShieldQuestion, label: "awaiting permission" },
+  awaiting_human: { tone: "warning", icon: Hand, label: "awaiting human" },
+  review_ready: { tone: "review", icon: GitCompare, label: "review ready" },
+  completed: { tone: "success", icon: CheckCircle2, label: "completed" },
+  failed: { tone: "danger", icon: TriangleAlert, label: "failed" },
+  canceled: { tone: "neutral", icon: Ban, label: "canceled" },
 };
 
 const STEP_STATUS: StatusMap<StepRunState> = {
-  queued: { tone: "neutral", icon: Clock, label: "Queued" },
-  starting: { tone: "iris", icon: Loader, label: "Starting" },
-  running: { tone: "iris", icon: Loader, label: "Running", live: true },
-  awaiting_permission: { tone: "warning", icon: ShieldQuestion, label: "Awaiting permission" },
-  awaiting_human: { tone: "warning", icon: Hand, label: "Awaiting human" },
-  succeeded: { tone: "success", icon: CheckCircle2, label: "Succeeded" },
-  failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
-  canceled: { tone: "neutral", icon: Ban, label: "Canceled" },
-  stale: { tone: "stale", icon: AlertTriangle, label: "Stale" },
+  queued: { tone: "neutral", icon: Clock, label: "queued" },
+  starting: { tone: "iris", icon: Loader, label: "starting" },
+  running: { tone: "iris", icon: Loader, label: "running", live: true },
+  awaiting_permission: { tone: "warning", icon: ShieldQuestion, label: "awaiting permission" },
+  awaiting_human: { tone: "warning", icon: Hand, label: "awaiting human" },
+  succeeded: { tone: "success", icon: CheckCircle2, label: "succeeded" },
+  failed: { tone: "danger", icon: TriangleAlert, label: "failed" },
+  canceled: { tone: "neutral", icon: Ban, label: "canceled" },
+  stale: { tone: "stale", icon: AlertTriangle, label: "stale" },
 };
 
 const SESSION_STATUS: StatusMap<AgentSessionState> = {
-  created: { tone: "neutral", icon: CircleDotDashed, label: "Created" },
-  active: { tone: "success", icon: Activity, label: "Active", live: true },
-  idle: { tone: "neutral", icon: Pause, label: "Idle" },
-  awaiting_input: { tone: "warning", icon: MessageCircleQuestion, label: "Awaiting input" },
-  terminated: { tone: "neutral", icon: Square, label: "Terminated" },
-  failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
+  created: { tone: "neutral", icon: CircleDotDashed, label: "created" },
+  active: { tone: "success", icon: Activity, label: "active", live: true },
+  idle: { tone: "neutral", icon: Pause, label: "idle" },
+  awaiting_input: { tone: "warning", icon: MessageCircleQuestion, label: "awaiting input" },
+  terminated: { tone: "neutral", icon: Square, label: "terminated" },
+  failed: { tone: "danger", icon: TriangleAlert, label: "failed" },
 };
 
 const REVIEW_STATUS: StatusMap<ReviewState> = {
-  open: { tone: "iris", icon: CircleDot, label: "Open" },
-  in_review: { tone: "iris", icon: MessageSquare, label: "In review" },
-  changes_requested: { tone: "warning", icon: CircleSlash, label: "Changes requested" },
-  resolved: { tone: "success", icon: CheckCircle2, label: "Resolved" },
+  open: { tone: "iris", icon: CircleDot, label: "open" },
+  in_review: { tone: "iris", icon: MessageSquare, label: "in review" },
+  changes_requested: { tone: "warning", icon: CircleSlash, label: "changes requested" },
+  resolved: { tone: "success", icon: CheckCircle2, label: "resolved" },
 };
 
 const REVIEW_COMMENT_STATUS: StatusMap<ReviewCommentState> = {
-  open: { tone: "review", icon: MessageSquare, label: "Open" },
-  addressed: { tone: "success", icon: CheckCircle2, label: "Addressed" },
-  outdated: { tone: "stale", icon: AlertTriangle, label: "Outdated" },
+  open: { tone: "review", icon: MessageSquare, label: "open" },
+  addressed: { tone: "success", icon: CheckCircle2, label: "addressed" },
+  outdated: { tone: "stale", icon: AlertTriangle, label: "outdated" },
 };
 
 const PR_STATUS: StatusMap<PullRequestState> = {
-  draft: { tone: "neutral", icon: GitPullRequestDraft, label: "Draft" },
-  open: { tone: "success", icon: GitPullRequest, label: "Open" },
-  merged: { tone: "review", icon: GitMerge, label: "Merged" },
-  closed: { tone: "danger", icon: GitPullRequestClosed, label: "Closed" },
+  draft: { tone: "neutral", icon: GitPullRequestDraft, label: "draft" },
+  open: { tone: "success", icon: GitPullRequest, label: "open" },
+  merged: { tone: "review", icon: GitMerge, label: "merged" },
+  closed: { tone: "danger", icon: GitPullRequestClosed, label: "closed" },
 };
 
 const DIFF_FILE_STATUS: StatusMap<ChangeStatus> = {
-  added: { tone: "success", icon: FilePlus, label: "Added" },
-  modified: { tone: "review", icon: FilePen, label: "Modified" },
-  deleted: { tone: "danger", icon: FileMinus, label: "Deleted" },
-  renamed: { tone: "iris", icon: FileSymlink, label: "Renamed" },
-  copied: { tone: "iris", icon: Copy, label: "Copied" },
-  type_changed: { tone: "neutral", icon: FileType, label: "Type changed" },
+  added: { tone: "success", icon: FilePlus, label: "added" },
+  modified: { tone: "review", icon: FilePen, label: "modified" },
+  deleted: { tone: "danger", icon: FileMinus, label: "deleted" },
+  renamed: { tone: "iris", icon: FileSymlink, label: "renamed" },
+  copied: { tone: "iris", icon: Copy, label: "copied" },
+  type_changed: { tone: "neutral", icon: FileType, label: "type changed" },
 };
 
 export interface KindStatusMap {

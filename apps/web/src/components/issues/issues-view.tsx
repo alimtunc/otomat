@@ -8,6 +8,7 @@ export function IssuesView() {
   return (
     <RouteShell
       active="issues"
+      titleIcon="list-todo"
       breadcrumbs={[{ label: "Issues", current: true }]}
       actions={<StartRunDialog />}
     >
