@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@git-diff-view/react@0.1.7': 88818be447bb7ee5862261de7792056c19ec351cfd58174a3a2e5f9ac089cb64
+
 importers:
 
   .:
@@ -68,7 +71,7 @@ importers:
     dependencies:
       '@git-diff-view/react':
         specifier: ^0.1.7
-        version: 0.1.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 0.1.7(patch_hash=88818be447bb7ee5862261de7792056c19ec351cfd58174a3a2e5f9ac089cb64)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@otomat/client':
         specifier: workspace:*
         version: link:../../packages/client
@@ -87,6 +90,9 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.170.17
         version: 1.170.17(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@tanstack/react-store':
+        specifier: ^0.11.0
+        version: 0.11.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react:
         specifier: ^19.2.7
         version: 19.2.7
@@ -3593,7 +3599,7 @@ snapshots:
       highlight.js: 11.11.1
       lowlight: 3.3.0
 
-  '@git-diff-view/react@0.1.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@git-diff-view/react@0.1.7(patch_hash=88818be447bb7ee5862261de7792056c19ec351cfd58174a3a2e5f9ac089cb64)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@git-diff-view/core': 0.1.7
       '@types/hast': 3.0.4

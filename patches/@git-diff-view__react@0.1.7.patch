@@ -1,0 +1,90 @@
+diff --git a/dist/cjs/index.development.js b/dist/cjs/index.development.js
+index e59e5524de8886c31a7a7a4d39f98ae7f50005ce..7bd75efcc7492f0a6c283faaff2c5a756e2f5917 100644
+--- a/dist/cjs/index.development.js
++++ b/dist/cjs/index.development.js
+@@ -273,10 +273,10 @@ const DiffSplitAddWidget = ({ side, className, lineNumber, onWidgetClick, onOpen
+             width: `calc(var(${diffFontSizeName}) * 1.4)`,
+             height: `calc(var(${diffFontSizeName}) * 1.4)`,
+             top: `calc(var(${diffFontSizeName}) * 0.1)`,
+-        }, children: jsxRuntime.jsx("button", { className: "diff-add-widget z-[1] flex h-full w-full origin-center cursor-pointer items-center justify-center rounded-md text-[1.2em]", style: {
++        }, children: jsxRuntime.jsx("button", { type: "button", "aria-label": `Add comment on line ${lineNumber}`, className: "diff-add-widget z-[1] flex h-full w-full origin-center cursor-pointer items-center justify-center rounded-md text-[1.2em]", style: {
+                 color: `var(${addWidgetColorName})`,
+                 backgroundColor: `var(${addWidgetBGName})`,
+-            }, onMouseDown: (e) => {
++            }, onClick: (e) => {
+                 e.stopPropagation();
+                 onOpenAddWidget(lineNumber, side);
+                 onWidgetClick === null || onWidgetClick === void 0 ? void 0 : onWidgetClick(lineNumber, side);
+@@ -287,10 +287,10 @@ const DiffUnifiedAddWidget = ({ lineNumber, side, onWidgetClick, onOpenAddWidget
+             width: `calc(var(${diffFontSizeName}) * 1.4)`,
+             height: `calc(var(${diffFontSizeName}) * 1.4)`,
+             top: `calc(var(${diffFontSizeName}) * 0.1)`,
+-        }, children: jsxRuntime.jsx("button", { className: "diff-add-widget z-[1] flex h-full w-full origin-center cursor-pointer items-center justify-center rounded-md text-[1.2em]", style: {
++        }, children: jsxRuntime.jsx("button", { type: "button", "aria-label": `Add comment on line ${lineNumber}`, className: "diff-add-widget z-[1] flex h-full w-full origin-center cursor-pointer items-center justify-center rounded-md text-[1.2em]", style: {
+                 color: `var(${addWidgetColorName})`,
+                 backgroundColor: `var(${addWidgetBGName})`,
+-            }, onMouseDown: (e) => {
++            }, onClick: (e) => {
+                 e.stopPropagation();
+                 onOpenAddWidget(lineNumber, side);
+                 onWidgetClick === null || onWidgetClick === void 0 ? void 0 : onWidgetClick(lineNumber, side);
+diff --git a/dist/cjs/index.production.js b/dist/cjs/index.production.js
+index a74aa47ad7ffdf75b17149eab05446c995eafaff..1f83a6471ce24fb214491e9a2fe1d6a94b9f47ae 100644
+--- a/dist/cjs/index.production.js
++++ b/dist/cjs/index.production.js
+@@ -273,10 +273,10 @@ const DiffSplitAddWidget = ({ side, className, lineNumber, onWidgetClick, onOpen
+             width: `calc(var(${diffFontSizeName}) * 1.4)`,
+             height: `calc(var(${diffFontSizeName}) * 1.4)`,
+             top: `calc(var(${diffFontSizeName}) * 0.1)`,
+-        }, children: jsxRuntime.jsx("button", { className: "diff-add-widget z-[1] flex h-full w-full origin-center cursor-pointer items-center justify-center rounded-md text-[1.2em]", style: {
++        }, children: jsxRuntime.jsx("button", { type: "button", "aria-label": `Add comment on line ${lineNumber}`, className: "diff-add-widget z-[1] flex h-full w-full origin-center cursor-pointer items-center justify-center rounded-md text-[1.2em]", style: {
+                 color: `var(${addWidgetColorName})`,
+                 backgroundColor: `var(${addWidgetBGName})`,
+-            }, onMouseDown: (e) => {
++            }, onClick: (e) => {
+                 e.stopPropagation();
+                 onOpenAddWidget(lineNumber, side);
+                 onWidgetClick === null || onWidgetClick === void 0 ? void 0 : onWidgetClick(lineNumber, side);
+@@ -287,10 +287,10 @@ const DiffUnifiedAddWidget = ({ lineNumber, side, onWidgetClick, onOpenAddWidget
+             width: `calc(var(${diffFontSizeName}) * 1.4)`,
+             height: `calc(var(${diffFontSizeName}) * 1.4)`,
+             top: `calc(var(${diffFontSizeName}) * 0.1)`,
+-        }, children: jsxRuntime.jsx("button", { className: "diff-add-widget z-[1] flex h-full w-full origin-center cursor-pointer items-center justify-center rounded-md text-[1.2em]", style: {
++        }, children: jsxRuntime.jsx("button", { type: "button", "aria-label": `Add comment on line ${lineNumber}`, className: "diff-add-widget z-[1] flex h-full w-full origin-center cursor-pointer items-center justify-center rounded-md text-[1.2em]", style: {
+                 color: `var(${addWidgetColorName})`,
+                 backgroundColor: `var(${addWidgetBGName})`,
+-            }, onMouseDown: (e) => {
++            }, onClick: (e) => {
+                 e.stopPropagation();
+                 onOpenAddWidget(lineNumber, side);
+                 onWidgetClick === null || onWidgetClick === void 0 ? void 0 : onWidgetClick(lineNumber, side);
+diff --git a/dist/esm/index.mjs b/dist/esm/index.mjs
+index 9df5cbd36c74f58b823cdda8e2be6abab3c1ee00..b952c1319e7efffbbcc20d85b0c7064647dcb62a 100644
+--- a/dist/esm/index.mjs
++++ b/dist/esm/index.mjs
+@@ -255,10 +255,10 @@ const DiffSplitAddWidget = ({ side, className, lineNumber, onWidgetClick, onOpen
+             width: `calc(var(${diffFontSizeName}) * 1.4)`,
+             height: `calc(var(${diffFontSizeName}) * 1.4)`,
+             top: `calc(var(${diffFontSizeName}) * 0.1)`,
+-        }, children: jsx("button", { className: "diff-add-widget z-[1] flex h-full w-full origin-center cursor-pointer items-center justify-center rounded-md text-[1.2em]", style: {
++        }, children: jsx("button", { type: "button", "aria-label": `Add comment on line ${lineNumber}`, className: "diff-add-widget z-[1] flex h-full w-full origin-center cursor-pointer items-center justify-center rounded-md text-[1.2em]", style: {
+                 color: `var(${addWidgetColorName})`,
+                 backgroundColor: `var(${addWidgetBGName})`,
+-            }, onMouseDown: (e) => {
++            }, onClick: (e) => {
+                 e.stopPropagation();
+                 onOpenAddWidget(lineNumber, side);
+                 onWidgetClick === null || onWidgetClick === void 0 ? void 0 : onWidgetClick(lineNumber, side);
+@@ -269,10 +269,10 @@ const DiffUnifiedAddWidget = ({ lineNumber, side, onWidgetClick, onOpenAddWidget
+             width: `calc(var(${diffFontSizeName}) * 1.4)`,
+             height: `calc(var(${diffFontSizeName}) * 1.4)`,
+             top: `calc(var(${diffFontSizeName}) * 0.1)`,
+-        }, children: jsx("button", { className: "diff-add-widget z-[1] flex h-full w-full origin-center cursor-pointer items-center justify-center rounded-md text-[1.2em]", style: {
++        }, children: jsx("button", { type: "button", "aria-label": `Add comment on line ${lineNumber}`, className: "diff-add-widget z-[1] flex h-full w-full origin-center cursor-pointer items-center justify-center rounded-md text-[1.2em]", style: {
+                 color: `var(${addWidgetColorName})`,
+                 backgroundColor: `var(${addWidgetBGName})`,
+-            }, onMouseDown: (e) => {
++            }, onClick: (e) => {
+                 e.stopPropagation();
+                 onOpenAddWidget(lineNumber, side);
+                 onWidgetClick === null || onWidgetClick === void 0 ? void 0 : onWidgetClick(lineNumber, side);

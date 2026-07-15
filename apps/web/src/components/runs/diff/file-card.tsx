@@ -1,16 +1,11 @@
 import { DiffModeEnum, DiffView, SplitSide } from "@git-diff-view/react";
 import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
 import { Button, DiffFileStatusChip, useTheme } from "@otomat/ui";
-import {
-  configureDiffCommentButtons,
-  extendDataFor,
-  handleCommentButtonKeyDown,
-  unrenderableNote,
-} from "@web/components/runs/diff/file-card.utils";
+import { extendDataFor, unrenderableNote } from "@web/components/runs/diff/file-card.utils";
 import { DiffStat } from "@web/components/runs/diff/stat";
 import { ReviewCommentCard } from "@web/components/runs/review/comment-card";
 import { ReviewCommentForm } from "@web/components/runs/review/comment-form";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 
 export interface DiffFileCardProps {
   file: DiffFileContract;
@@ -40,18 +35,6 @@ export function DiffFileCard({
 
   const renamedFrom = file.old_path !== null && file.old_path !== file.path ? file.old_path : null;
   const note = unrenderableNote(file);
-  const diffRootRef = useRef<HTMLDivElement>(null);
-
-  // otomat-allow-effect: annotate and observe third-party diff controls that expose no render hook.
-  useEffect(() => {
-    const node = diffRootRef.current;
-    if (node === null) return undefined;
-    const configure = () => configureDiffCommentButtons(node, file.path);
-    configure();
-    const observer = new MutationObserver(configure);
-    observer.observe(node, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, [file.path]);
 
   return (
     <section className="overflow-hidden rounded-md border border-border bg-surface-2">
@@ -67,11 +50,7 @@ export function DiffFileCard({
       {note !== null ? (
         <p className="px-3 py-4 text-sm text-text-tertiary">{note}</p>
       ) : (
-        <div
-          ref={diffRootRef}
-          className="otomat-review-diff"
-          onKeyDownCapture={handleCommentButtonKeyDown}
-        >
+        <div className="otomat-review-diff">
           <DiffView<ReviewCommentContract[]>
             data={data}
             extendData={extendData}
