@@ -13,12 +13,14 @@ export type ShellSection = "issues" | "settings";
 export function Sidebar({
   active,
   online,
+  daemonVersion,
   projects,
   currentProjectId,
   onProjectSelect,
 }: {
   active: ShellSection;
   online: boolean;
+  daemonVersion?: string;
   projects: ProjectSummary[];
   currentProjectId?: string;
   onProjectSelect: (id: string) => void;
@@ -26,8 +28,11 @@ export function Sidebar({
   const projectSwitcher = (
     <ProjectSwitcher projects={projects} currentId={currentProjectId} onSelect={onProjectSelect} />
   );
+  const footer = (
+    <SidebarDaemonStatus online={online} version={daemonVersion && `v${daemonVersion}`} />
+  );
   return (
-    <AppSidebar projectSwitcher={projectSwitcher} footer={<SidebarDaemonStatus online={online} />}>
+    <AppSidebar projectSwitcher={projectSwitcher} footer={footer}>
       <NavSection label="Workspace">
         <SidebarNavItem
           icon="list-todo"

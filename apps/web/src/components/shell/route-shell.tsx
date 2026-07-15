@@ -9,7 +9,7 @@ import {
   type ProjectSummary,
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-import { useDaemonStatus, useProjects } from "@web/api/daemon/queries";
+import { useDaemonStatus, useHealth, useProjects } from "@web/api/daemon/queries";
 import { Sidebar, type ShellSection } from "@web/components/shell/sidebar";
 import { useProjectSelection } from "@web/components/shell/use-project-selection";
 import type { ReactNode } from "react";
@@ -31,10 +31,12 @@ export function RouteShell({
 }: RouteShellProps) {
   const { density } = useTheme();
   const { connectionState, lastSyncAt, retry } = useDaemonStatus();
+  const health = useHealth();
   const projectsQuery = useProjects();
   const projects: ProjectSummary[] = (projectsQuery.data ?? []).map((project) => ({
     id: project.id,
     name: project.name,
+    repo: project.root_path.split("/").filter(Boolean).at(-1),
   }));
   const { currentProjectId, selectProject } = useProjectSelection(projects);
 
@@ -72,6 +74,7 @@ export function RouteShell({
         <Sidebar
           active={active}
           online={connectionState === "online"}
+          daemonVersion={health.data?.version}
           projects={projects}
           currentProjectId={currentProjectId}
           onProjectSelect={selectProject}

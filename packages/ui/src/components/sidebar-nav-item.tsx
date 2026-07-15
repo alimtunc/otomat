@@ -39,19 +39,12 @@ export function SidebarNavItem({
   render,
 }: SidebarNavItemProps) {
   const className = cn(
-    "group relative flex h-7.25 items-center gap-2.25 rounded-md px-2 text-sm font-[450]",
+    "group flex h-7.25 items-center gap-2.25 rounded-md px-2 text-sm font-[450]",
     "text-text-secondary hover:bg-hover hover:text-foreground",
     "focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]",
     active && "bg-selected text-foreground",
     collapsed && "justify-center px-0",
   );
-
-  const marker = active ? (
-    <span
-      aria-hidden
-      className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-iris-solid"
-    />
-  ) : null;
 
   const iconEl = (
     <Icon
@@ -83,7 +76,6 @@ export function SidebarNavItem({
 
   const inner = (
     <>
-      {marker}
       {iconEl}
       {!collapsed ? <span className="truncate">{label}</span> : null}
       {rightEl}

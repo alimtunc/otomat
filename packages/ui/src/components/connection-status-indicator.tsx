@@ -21,6 +21,7 @@ interface StateMeta {
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   dotColorVar: string;
   textClass: string;
+  triggerTextClass: string;
   live: boolean;
 }
 
@@ -30,20 +31,23 @@ const STATE_META: Record<ConnectionState, StateMeta> = {
     icon: Wifi,
     dotColorVar: "var(--success)",
     textClass: "text-success",
+    triggerTextClass: "text-text-secondary",
     live: false,
   },
   reconnecting: {
     label: "Reconnecting…",
     icon: RefreshCw,
-    dotColorVar: "var(--iris-solid)",
+    dotColorVar: "var(--warning)",
     textClass: "text-iris-text",
+    triggerTextClass: "text-text-secondary",
     live: true,
   },
   offline: {
-    label: "Offline — showing cached",
+    label: "Offline · cached",
     icon: WifiOff,
-    dotColorVar: "var(--danger)",
+    dotColorVar: "var(--text-tertiary)",
     textClass: "text-danger",
+    triggerTextClass: "text-text-tertiary",
     live: false,
   },
 };
@@ -74,18 +78,13 @@ export function ConnectionStatusIndicator({
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md px-1.75 py-1 text-xs",
               "transition-colors hover:bg-surface-2",
-              meta.textClass,
+              meta.triggerTextClass,
               className,
             )}
             style={{ transition: "background var(--motion-fast) var(--ease)" }}
           >
             <LiveDot live={meta.live} style={{ background: meta.dotColorVar }} />
-            {variant === "dot+label" ? (
-              <>
-                <Icon className="h-3 w-3" aria-hidden={true} />
-                <span>{meta.label}</span>
-              </>
-            ) : null}
+            {variant === "dot+label" ? <span>{meta.label}</span> : null}
           </button>
         }
       />
