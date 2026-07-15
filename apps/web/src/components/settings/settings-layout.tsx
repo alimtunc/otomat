@@ -11,8 +11,10 @@ export function SettingsLayout() {
     >
       <div className="flex h-full min-h-0">
         <SettingsNav />
-        <div className="min-w-0 flex-1 overflow-auto p-6">
-          <Outlet />
+        <div className="min-w-0 flex-1 overflow-auto">
+          <div className="max-w-190 px-8 py-6.5">
+            <Outlet />
+          </div>
         </div>
       </div>
     </RouteShell>
