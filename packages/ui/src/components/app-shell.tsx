@@ -96,14 +96,19 @@ export function AppShell({
   );
 
   return (
-    <div
-      data-density={density}
-      className={cn("grid h-screen overflow-hidden", className)}
-      style={{ gridTemplateColumns: `${collapsed ? railWidth : sidebarWidth}px 1fr` }}
-    >
-      {sidebar}
-      {content}
+    <>
+      <div
+        data-density={density}
+        className={cn("grid h-screen overflow-hidden", className)}
+        style={{
+          gridTemplateColumns: `${collapsed ? railWidth : sidebarWidth}px 1fr`,
+          gridTemplateRows: "minmax(0, 1fr)",
+        }}
+      >
+        {sidebar}
+        {content}
+      </div>
       <Toaster />
-    </div>
+    </>
   );
 }
