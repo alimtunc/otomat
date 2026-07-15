@@ -31,7 +31,7 @@ export function SettingsNav() {
             className={cn(
               "flex h-7.25 items-center rounded-md px-2 text-sm font-[450] text-text-secondary",
               "hover:bg-hover hover:text-foreground",
-              "focus-visible:outline-none focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]",
+              "focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]",
               active && "bg-selected text-foreground",
             )}
           >

@@ -71,7 +71,7 @@ export function ProjectSwitcher({
             disabled={loading}
             className={cn(
               "flex h-12 items-center gap-2.25 px-3 text-left hover:bg-hover",
-              "focus-visible:outline-none focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]",
+              "focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]",
               "disabled:cursor-not-allowed disabled:opacity-60",
               collapsed && "justify-center px-0",
             )}

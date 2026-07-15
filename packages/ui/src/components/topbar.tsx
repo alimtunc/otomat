@@ -43,7 +43,7 @@ export function Topbar({
           className={cn(
             "flex h-7 w-57.5 min-w-30 flex-[0_1_230px] items-center gap-2 rounded-md border border-border bg-background px-2.25 text-sm text-text-tertiary",
             "hover:border-border-strong",
-            "focus-visible:outline-none focus-visible:[outline:2px_solid_var(--iris-ring)]",
+            "focus-visible:[outline:2px_solid_var(--iris-ring)]",
           )}
           style={{ transition: "border-color var(--motion-fast) var(--ease)" }}
         >

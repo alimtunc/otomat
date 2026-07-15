@@ -46,7 +46,7 @@ export function RouteShell({
           renderLink={(item, label) => (
             <Link
               to={item.href as string}
-              className="truncate hover:text-foreground focus-visible:outline-none focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:rounded-sm"
+              className="truncate hover:text-foreground focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:rounded-sm"
             >
               {label}
             </Link>

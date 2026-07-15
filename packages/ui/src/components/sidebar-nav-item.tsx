@@ -41,7 +41,7 @@ export function SidebarNavItem({
   const className = cn(
     "group relative flex h-7.25 items-center gap-2.25 rounded-md px-2 text-sm font-[450]",
     "text-text-secondary hover:bg-hover hover:text-foreground",
-    "focus-visible:outline-none focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]",
+    "focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]",
     active && "bg-selected text-foreground",
     collapsed && "justify-center px-0",
   );
