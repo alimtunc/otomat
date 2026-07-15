@@ -1,10 +1,7 @@
 import type { ProjectSummary } from "@otomat/ui";
-import {
-  readSelectedProjectId,
-  resolveSelectedProjectId,
-  writeSelectedProjectId,
-} from "@web/components/shell/project-selection";
-import { useState } from "react";
+import { useSelector } from "@tanstack/react-store";
+import { resolveSelectedProjectId } from "@web/components/shell/project-selection";
+import { projectSelectionStore } from "@web/components/shell/project-selection-store";
 
 export interface ProjectSelection {
   currentProjectId: string | undefined;
@@ -12,13 +9,9 @@ export interface ProjectSelection {
 }
 
 export function useProjectSelection(projects: ProjectSummary[]): ProjectSelection {
-  const [preferredProjectId, setPreferredProjectId] = useState(() => readSelectedProjectId());
-  const currentProjectId = resolveSelectedProjectId(projects, preferredProjectId);
-
-  function selectProject(projectId: string): void {
-    setPreferredProjectId(projectId);
-    writeSelectedProjectId(projectId);
-  }
-
-  return { currentProjectId, selectProject };
+  const preferredProjectId = useSelector(projectSelectionStore);
+  return {
+    currentProjectId: resolveSelectedProjectId(projects, preferredProjectId),
+    selectProject: projectSelectionStore.actions.select,
+  };
 }
