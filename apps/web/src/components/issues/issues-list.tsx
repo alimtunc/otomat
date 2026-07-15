@@ -4,6 +4,9 @@ import { IssueRow } from "@web/components/issues/issue-row";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { QueryList } from "@web/components/shell/query-list";
 
+const HEAD_CELL =
+  "sticky top-0 h-7.5 border-b border-border-subtle bg-background px-3 text-left text-xs font-medium text-text-tertiary";
+
 export function IssuesList({ query }: { query: ReturnType<typeof useIssues> }) {
   return (
     <QueryList
@@ -35,11 +38,30 @@ export function IssuesList({ query }: { query: ReturnType<typeof useIssues> }) {
       }
     >
       {(issues) => (
-        <ul className="flex flex-col divide-y divide-border-subtle">
-          {issues.map((issue) => (
-            <IssueRow key={issue.id} issue={issue} />
-          ))}
-        </ul>
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr>
+              <th className={HEAD_CELL} style={{ width: 90 }}>
+                ID
+              </th>
+              <th className={HEAD_CELL}>Title</th>
+              <th className={HEAD_CELL} style={{ width: 140 }}>
+                Status
+              </th>
+              <th className={HEAD_CELL} style={{ width: 90 }}>
+                Source
+              </th>
+              <th className={HEAD_CELL} style={{ width: 110 }}>
+                Updated
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {issues.map((issue) => (
+              <IssueRow key={issue.id} issue={issue} />
+            ))}
+          </tbody>
+        </table>
       )}
     </QueryList>
   );

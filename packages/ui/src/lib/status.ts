@@ -80,14 +80,14 @@ export interface StatusDescriptor {
 type StatusMap<K extends string> = Record<K, StatusDescriptor>;
 
 const ISSUE_STATUS: StatusMap<IssueState> = {
-  backlog: { tone: "neutral", icon: Circle, label: "Backlog" },
-  ready: { tone: "iris", icon: CircleDot, label: "Ready" },
-  running: { tone: "iris", icon: Loader, label: "Running", live: true },
-  reviewing: { tone: "review", icon: MessageSquare, label: "Reviewing" },
+  backlog: { tone: "neutral", icon: Circle, label: "backlog" },
+  ready: { tone: "iris", icon: CircleDot, label: "ready" },
+  running: { tone: "iris", icon: Loader, label: "running", live: true },
+  reviewing: { tone: "review", icon: MessageSquare, label: "reviewing" },
   pr_open: { tone: "success", icon: GitPullRequest, label: "PR open" },
-  blocked: { tone: "warning", icon: CircleSlash, label: "Blocked" },
-  done: { tone: "success", icon: CheckCircle2, label: "Done" },
-  canceled: { tone: "neutral", icon: Ban, label: "Canceled" },
+  blocked: { tone: "warning", icon: CircleSlash, label: "blocked" },
+  done: { tone: "success", icon: CheckCircle2, label: "done" },
+  canceled: { tone: "neutral", icon: Ban, label: "canceled" },
 };
 
 const RUN_STATUS: StatusMap<RunState> = {
