@@ -1,9 +1,24 @@
 import type { EventSource, EventType } from "@otomat/domain/types";
+import { format } from "date-fns";
 import type { ComponentPropsWithoutRef, KeyboardEvent, ReactNode } from "react";
 
+import { toDate } from "../lib/date";
 import { EVENT_GLYPH, PROVENANCE_LABEL, PROVENANCE_VAR, TONE_BG, TONE_COLOR } from "../lib/status";
 import { cn } from "../lib/utils";
-import { RelativeTime } from "./relative-time";
+
+function EventTime({ at }: { at: Date | string | number }) {
+  const resolved = toDate(at);
+  const valid = !Number.isNaN(resolved.getTime());
+  return (
+    <time
+      dateTime={valid ? resolved.toISOString() : undefined}
+      title={valid ? format(resolved, "PPpp") : undefined}
+      className="cursor-default pt-0.5 font-mono text-[10px] tabular-nums text-text-tertiary"
+    >
+      {valid ? format(resolved, "HH:mm:ss") : "—"}
+    </time>
+  );
+}
 
 export interface TimelineEventRowProps {
   type: EventType;
@@ -82,10 +97,7 @@ export function TimelineEventRow({
         }}
       />
 
-      <RelativeTime
-        date={at}
-        className="cursor-default pt-0.5 font-mono text-[10px] tabular-nums"
-      />
+      <EventTime at={at} />
 
       <div style={{ minWidth: 0 }}>
         <div
