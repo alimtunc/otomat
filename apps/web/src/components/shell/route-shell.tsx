@@ -1,9 +1,11 @@
 import {
   AppShell,
   Breadcrumbs,
+  CommandPalette,
   ConnectionStatusIndicator,
   Icon,
   Topbar,
+  useCommandPalette,
   useTheme,
   type BreadcrumbItem,
   type IconName,
@@ -12,6 +14,7 @@ import {
 import { Link } from "@tanstack/react-router";
 import { useDaemonStatus, useHealth, useProjects } from "@web/api/daemon/queries";
 import { Sidebar, type ShellSection } from "@web/components/shell/sidebar";
+import { usePaletteGroups } from "@web/components/shell/use-palette-groups";
 import { useProjectSelection } from "@web/components/shell/use-project-selection";
 import type { ReactNode } from "react";
 
@@ -50,6 +53,8 @@ export function RouteShell({
   }));
   const { currentProjectId, selectProject } = useProjectSelection(projects);
   const currentProject = projects.find((project) => project.id === currentProjectId);
+  const palette = useCommandPalette();
+  const paletteGroups = usePaletteGroups({});
 
   const topbar = (
     <Topbar
@@ -58,6 +63,7 @@ export function RouteShell({
           {currentProject?.repo ?? currentProject?.name ?? ""}
         </span>
       }
+      onSearch={() => palette.setOpen(true)}
       connectionStatus={
         <ConnectionStatusIndicator
           state={connectionState}
@@ -82,6 +88,7 @@ export function RouteShell({
           projects={projects}
           currentProjectId={currentProjectId}
           onProjectSelect={selectProject}
+          onSearch={() => palette.setOpen(true)}
         />
       }
       rightPanel={rightPanel}
@@ -122,6 +129,7 @@ export function RouteShell({
         </div>
         <div className="min-h-0 flex-1 overflow-auto">{children}</div>
       </div>
+      <CommandPalette open={palette.open} onOpenChange={palette.setOpen} groups={paletteGroups} />
     </AppShell>
   );
 }
