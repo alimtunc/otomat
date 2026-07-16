@@ -20,6 +20,8 @@ export interface RouteShellProps {
   active: ShellSection;
   /** Icon shown next to the title when the view has a single root crumb. */
   titleIcon?: IconName;
+  /** Muted sentence after the title (prototype vhead note). */
+  titleNote?: string;
   /** Extra inline content after the breadcrumbs (status chip, sha…). */
   breadcrumbExtra?: ReactNode;
   actions?: ReactNode;
@@ -31,6 +33,7 @@ export function RouteShell({
   breadcrumbs,
   active,
   titleIcon,
+  titleNote,
   breadcrumbExtra,
   actions,
   rightPanel,
@@ -87,12 +90,19 @@ export function RouteShell({
       <div className="flex h-full min-h-0 flex-col">
         <div className="flex h-12 flex-none items-center gap-2.5 border-b border-border-subtle bg-background px-4.5">
           {isTitle ? (
-            <h1 className="flex items-center gap-2.25 text-md font-semibold text-foreground">
-              {titleIcon ? (
-                <Icon name={titleIcon} aria-hidden className="h-4.25 w-4.25 text-text-secondary" />
-              ) : null}
-              {breadcrumbs[0]?.label}
-            </h1>
+            <>
+              <h1 className="flex items-center gap-2.25 text-md font-semibold text-foreground">
+                {titleIcon ? (
+                  <Icon
+                    name={titleIcon}
+                    aria-hidden
+                    className="h-4.25 w-4.25 text-text-secondary"
+                  />
+                ) : null}
+                {breadcrumbs[0]?.label}
+              </h1>
+              {titleNote ? <span className="text-xs text-text-tertiary">{titleNote}</span> : null}
+            </>
           ) : (
             <Breadcrumbs
               items={breadcrumbs}

@@ -3,6 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
+export function useRuns() {
+  return useQuery({
+    queryKey: queryKeys.runs,
+    queryFn: () => daemon.listRuns(),
+  });
+}
+
 export function useRunsForIssue(issueId: string) {
   return useQuery({
     queryKey: queryKeys.runsForIssue(issueId),

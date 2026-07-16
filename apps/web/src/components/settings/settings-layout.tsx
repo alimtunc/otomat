@@ -1,11 +1,13 @@
-import { Outlet } from "@tanstack/react-router";
+import { Outlet, useMatchRoute } from "@tanstack/react-router";
 import { SettingsNav } from "@web/components/settings/settings-nav";
 import { RouteShell } from "@web/components/shell/route-shell";
 
 export function SettingsLayout() {
+  const matchRoute = useMatchRoute();
+  const onRuntimes = !!matchRoute({ to: "/settings/runtimes" });
   return (
     <RouteShell
-      active="settings"
+      active={onRuntimes ? "runtimes" : "settings"}
       titleIcon="settings"
       breadcrumbs={[{ label: "Settings", current: true }]}
     >
