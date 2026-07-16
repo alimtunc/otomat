@@ -13,10 +13,11 @@ import {
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useDaemonStatus, useHealth, useProjects } from "@web/api/daemon/queries";
+import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
 import { Sidebar, type ShellSection } from "@web/components/shell/sidebar";
 import { usePaletteGroups } from "@web/components/shell/use-palette-groups";
 import { useProjectSelection } from "@web/components/shell/use-project-selection";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 export interface RouteShellProps {
   breadcrumbs: BreadcrumbItem[];
@@ -54,7 +55,8 @@ export function RouteShell({
   const { currentProjectId, selectProject } = useProjectSelection(projects);
   const currentProject = projects.find((project) => project.id === currentProjectId);
   const palette = useCommandPalette();
-  const paletteGroups = usePaletteGroups({});
+  const [newIssueOpen, setNewIssueOpen] = useState(false);
+  const paletteGroups = usePaletteGroups({ onNewIssue: () => setNewIssueOpen(true) });
 
   const topbar = (
     <Topbar
@@ -89,6 +91,7 @@ export function RouteShell({
           currentProjectId={currentProjectId}
           onProjectSelect={selectProject}
           onSearch={() => palette.setOpen(true)}
+          onNewIssue={() => setNewIssueOpen(true)}
         />
       }
       rightPanel={rightPanel}
@@ -130,6 +133,11 @@ export function RouteShell({
         <div className="min-h-0 flex-1 overflow-auto">{children}</div>
       </div>
       <CommandPalette open={palette.open} onOpenChange={palette.setOpen} groups={paletteGroups} />
+      <NewIssueDialog
+        open={newIssueOpen}
+        onOpenChange={setNewIssueOpen}
+        projectName={currentProject?.repo ?? currentProject?.name}
+      />
     </AppShell>
   );
 }

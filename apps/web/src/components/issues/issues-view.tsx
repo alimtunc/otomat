@@ -1,6 +1,6 @@
 import { useIssues } from "@web/api/issues/queries";
 import { IssuesList } from "@web/components/issues/issues-list";
-import { StartRunDialog } from "@web/components/runs/launch/dialog";
+import { NewIssueButton } from "@web/components/issues/new-issue-button";
 import { RouteShell } from "@web/components/shell/route-shell";
 
 export function IssuesView() {
@@ -10,7 +10,7 @@ export function IssuesView() {
       active="issues"
       titleIcon="list-todo"
       breadcrumbs={[{ label: "Issues", current: true }]}
-      actions={<StartRunDialog />}
+      actions={<NewIssueButton />}
     >
       <IssuesList query={issues} />
     </RouteShell>
