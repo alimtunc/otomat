@@ -8,7 +8,6 @@ import {
   type ProjectSummary,
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-import { useRuns } from "@web/api/runs/queries";
 import type { ReactNode } from "react";
 
 export type ShellSection =
@@ -31,6 +30,10 @@ interface SidebarProps {
   onProjectSelect: (id: string) => void;
   onSearch?: () => void;
   onNewIssue?: () => void;
+  /** A run is currently `running` — shows the live dot on the Runs row. */
+  liveRun?: boolean;
+  /** Count of `review_ready` runs — shown as the Reviews badge. */
+  reviewCount?: number;
 }
 
 function navRender(to: string) {
@@ -68,11 +71,9 @@ export function Sidebar({
   onProjectSelect,
   onSearch,
   onNewIssue,
+  liveRun = false,
+  reviewCount = 0,
 }: SidebarProps) {
-  const runs = useRuns();
-  const liveRun = (runs.data ?? []).some((run) => run.status === "running");
-  const reviewCount = (runs.data ?? []).filter((run) => run.status === "review_ready").length;
-
   const projectSwitcher = (
     <ProjectSwitcher projects={projects} currentId={currentProjectId} onSelect={onProjectSelect} />
   );

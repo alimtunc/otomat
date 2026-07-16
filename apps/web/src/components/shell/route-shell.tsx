@@ -13,6 +13,7 @@ import {
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useDaemonStatus, useHealth, useProjects } from "@web/api/daemon/queries";
+import { useRuns } from "@web/api/runs/queries";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
 import { Sidebar, type ShellSection } from "@web/components/shell/sidebar";
 import { usePaletteGroups } from "@web/components/shell/use-palette-groups";
@@ -57,6 +58,9 @@ export function RouteShell({
   const palette = useCommandPalette();
   const [newIssueOpen, setNewIssueOpen] = useState(false);
   const paletteGroups = usePaletteGroups({ onNewIssue: () => setNewIssueOpen(true) });
+  const runs = useRuns();
+  const liveRun = (runs.data ?? []).some((run) => run.status === "running");
+  const reviewCount = (runs.data ?? []).filter((run) => run.status === "review_ready").length;
 
   const topbar = (
     <Topbar
@@ -92,6 +96,8 @@ export function RouteShell({
           onProjectSelect={selectProject}
           onSearch={() => palette.setOpen(true)}
           onNewIssue={() => setNewIssueOpen(true)}
+          liveRun={liveRun}
+          reviewCount={reviewCount}
         />
       }
       rightPanel={rightPanel}
