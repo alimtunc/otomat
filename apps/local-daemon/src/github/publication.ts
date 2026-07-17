@@ -19,7 +19,7 @@ import {
 } from "@otomat/domain";
 
 import { emitLedgerEvent } from "#events";
-import type { CanonicalDiff, GitWorktreeService, WorktreeRecord } from "#git";
+import type { GitWorktreeService, WorktreeRecord } from "#git";
 
 import { normalizePullRequestBody } from "./body.js";
 import { GitHubPublicationError, safeGitHubFailure } from "./errors.js";
@@ -64,7 +64,6 @@ interface PublicationRequest extends PreparePullRequestRequest {
 interface PublishableWorktree {
   worktrees: GitWorktreeService;
   worktree: WorktreeRecord;
-  diff: CanonicalDiff;
 }
 
 interface PublicationContext {
@@ -247,7 +246,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
     if (diff.files.length === 0) {
       throw new GitHubPublicationError("diff_empty", "The run has no changes to publish.");
     }
-    return { worktrees, worktree, diff };
+    return { worktrees, worktree };
   }
 
   private async refreshExisting(
