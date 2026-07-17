@@ -40,7 +40,7 @@ export function ResizablePanelGroup({
 }: ResizablePanelGroupProps) {
   const persisted = useDefaultLayout({
     id: autoSaveId ?? "otomat.panels",
-    storage: layoutStorage(),
+    storage: autoSaveId ? layoutStorage() : noopStorage,
   });
   return (
     <Group

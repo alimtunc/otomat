@@ -35,7 +35,7 @@ export function AppShell({
   toggleKey = "[",
   sidebarWidth = 236,
   railWidth = 56,
-  rightPanelAutoSaveId = "otomat.cockpit",
+  rightPanelAutoSaveId,
   className,
 }: AppShellProps) {
   const controlled = collapsedProp != null;

@@ -1,6 +1,6 @@
 import { Button, Icon, Pill, PillTabs, SegmentedControl, SegmentedItem } from "@otomat/ui";
 import { useIssues } from "@web/api/issues/queries";
-import { IssuesList } from "@web/components/issues/issues-list";
+import { IssuesContent } from "@web/components/issues/issues-content";
 import { NewIssueButton } from "@web/components/issues/new-issue-button";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { applyIssuesFilter, isIssuesFilter, type IssuesFilter } from "@web/lib/issue-filters";
@@ -60,7 +60,7 @@ export function IssuesView() {
           <NewIssueButton />
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
-          <IssuesList
+          <IssuesContent
             query={issues}
             filter={(items) => applyIssuesFilter(items, filter)}
             board={layout === "board"}

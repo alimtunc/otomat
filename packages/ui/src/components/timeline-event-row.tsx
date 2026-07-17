@@ -3,7 +3,8 @@ import { format } from "date-fns";
 import type { ComponentPropsWithoutRef, KeyboardEvent, ReactNode } from "react";
 
 import { toDate } from "../lib/date";
-import { EVENT_GLYPH, PROVENANCE_LABEL, PROVENANCE_VAR, TONE_BG, TONE_TEXT } from "../lib/status";
+import { EVENT_GLYPH, PROVENANCE_LABEL, PROVENANCE_VAR } from "../lib/provenance";
+import { TONE_BG, TONE_TEXT } from "../lib/status";
 import { cn } from "../lib/utils";
 
 function EventTime({ at }: { at: Date | string | number }) {

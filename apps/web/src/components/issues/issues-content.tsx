@@ -30,7 +30,7 @@ function IssuesTable({ issues }: { issues: IssueContract[] }) {
   );
 }
 
-export function IssuesList({
+export function IssuesContent({
   query,
   filter,
   board = false,

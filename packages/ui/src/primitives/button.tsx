@@ -3,11 +3,11 @@ import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentPropsWithoutRef, ReactElement } from "react";
 
 import { injectStyleOnce } from "../lib/inject-style";
+import { injectSpinKeyframes } from "../lib/spin";
 import { cn } from "../lib/utils";
 
-const SPIN_STYLE_ID = "otomat-spin";
-const SPIN_CSS = `
-@keyframes otomat-spin{to{transform:rotate(360deg)}}
+const BTN_LOADING_STYLE_ID = "otomat-btn-loading";
+const BTN_LOADING_CSS = `
 .otomat-btn-loading{color:transparent!important}
 .otomat-btn-loading::after{content:"";position:absolute;inset:0;margin:auto;width:14px;height:14px;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;animation:otomat-spin .7s linear infinite}
 @media (prefers-reduced-motion:reduce){.otomat-btn-loading::after{animation:none}}
@@ -74,7 +74,8 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  injectStyleOnce(SPIN_STYLE_ID, SPIN_CSS);
+  injectSpinKeyframes();
+  injectStyleOnce(BTN_LOADING_STYLE_ID, BTN_LOADING_CSS);
   const element = useRender({
     render: render ?? <button />,
     props: {

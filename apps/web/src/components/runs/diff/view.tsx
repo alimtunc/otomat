@@ -1,9 +1,9 @@
 import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
-import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
+import { EmptyState, ErrorState } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useAddReviewComment } from "@web/api/reviews/mutations";
-import { useRunDiff, useRunReview } from "@web/api/reviews/queries";
-import { useRunDetail } from "@web/api/runs/queries";
+import { useRunReview } from "@web/api/reviews/queries";
+import { useRunDetail, useRunDiff } from "@web/api/runs/queries";
 import { DiffFileCard } from "@web/components/runs/diff/file-card";
 import { diffFileDomId } from "@web/components/runs/diff/file-card.utils";
 import { DiffFileTree } from "@web/components/runs/diff/file-tree";
@@ -13,17 +13,8 @@ import { ArchivedComments } from "@web/components/runs/review/archived-comments"
 import { partitionComments } from "@web/components/runs/review/partition";
 import { useReviewSelection } from "@web/components/runs/review/use-selection";
 import { CenteredState } from "@web/components/shell/centered-state";
+import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
 import { useState } from "react";
-
-function DiffLoading() {
-  return (
-    <div className="flex flex-col gap-3 p-6">
-      <Skeleton className="h-8 w-64" />
-      <Skeleton className="h-40 w-full" />
-      <Skeleton className="h-40 w-full" />
-    </div>
-  );
-}
 
 export function RunDiffView() {
   const { runId } = useParams({ from: "/runs/$runId/diff" });
@@ -34,7 +25,7 @@ export function RunDiffView() {
   const selection = useReviewSelection(runId);
   const [activePath, setActivePath] = useState<string | null>(null);
 
-  if (diffQuery.isPending || reviewQuery.isPending) return <DiffLoading />;
+  if (diffQuery.isPending || reviewQuery.isPending) return <DetailSkeleton blocks={2} />;
   if (diffQuery.isError || reviewQuery.isError) {
     return (
       <CenteredState>

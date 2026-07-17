@@ -1,5 +1,6 @@
 import { cn, Icon, type IconName } from "@otomat/ui";
 import { Link, useMatchRoute } from "@tanstack/react-router";
+import { FOCUS_RING } from "@web/lib/focus";
 
 interface SettingsSection {
   to: string;
@@ -36,7 +37,7 @@ export function SettingsNav() {
               className={cn(
                 "group flex h-7.25 items-center gap-2.25 rounded-md px-2 text-sm font-[450] text-text-secondary",
                 "hover:bg-hover hover:text-foreground",
-                "focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]",
+                `${FOCUS_RING} focus-visible:outline-offset-[-2px]`,
                 active && "bg-selected text-foreground",
               )}
             >

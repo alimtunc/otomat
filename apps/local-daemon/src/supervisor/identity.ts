@@ -45,7 +45,7 @@ export function writeWorkerIdentity(runDir: string, pid: number, pgid: number): 
 }
 
 /** Reads the recorded worker identity from the run dir, or null when the file is absent or unparseable. */
-export function readWorkerIdentity(runDir: string): WorkerIdentity | null {
+function readWorkerIdentity(runDir: string): WorkerIdentity | null {
   const path = identityPath(runDir);
   if (!existsSync(path)) return null;
   try {

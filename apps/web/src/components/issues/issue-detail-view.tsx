@@ -5,7 +5,7 @@ import { useStartRunAndNavigate } from "@web/api/runs/mutations";
 import { useRunsForIssue } from "@web/api/runs/queries";
 import { IssueHeader } from "@web/components/issues/issue-header";
 import { IssueRail } from "@web/components/issues/issue-rail";
-import { RunsList } from "@web/components/runs/list/list";
+import { IssueRunList } from "@web/components/issues/issue-run-list";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { issueShortId, shortId } from "@web/lib/ids";
 
@@ -46,7 +46,7 @@ export function IssueDetailView() {
         <div className="min-w-0 overflow-auto px-8 py-6.5">
           <div className="flex max-w-180 flex-col gap-6">
             <IssueHeader query={issue} />
-            <RunsList query={runs} />
+            <IssueRunList query={runs} />
           </div>
         </div>
         {issue.data ? <IssueRail issue={issue.data} latestRun={runs.data?.at(-1)} /> : <div />}

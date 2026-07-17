@@ -18,6 +18,7 @@ import { Sidebar } from "@web/components/shell/sidebar";
 import { useNewIssueShortcut } from "@web/components/shell/use-new-issue-shortcut";
 import { usePaletteGroups } from "@web/components/shell/use-palette-groups";
 import { useShellData } from "@web/components/shell/use-shell-data";
+import { FOCUS_RING } from "@web/lib/focus";
 import { useCallback, useState, type ReactNode } from "react";
 
 export interface RouteShellProps {
@@ -86,6 +87,7 @@ export function RouteShell({
         />
       }
       rightPanel={rightPanel}
+      rightPanelAutoSaveId="otomat.cockpit"
       topbar={topbar}
     >
       <NewIssueContext.Provider value={openNewIssue}>
@@ -111,7 +113,7 @@ export function RouteShell({
                 renderLink={(item, label) => (
                   <Link
                     to={item.href as string}
-                    className="truncate hover:text-foreground focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:rounded-sm"
+                    className={`truncate hover:text-foreground ${FOCUS_RING} focus-visible:rounded-sm`}
                   >
                     {label}
                   </Link>

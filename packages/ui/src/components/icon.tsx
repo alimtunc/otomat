@@ -1,9 +1,9 @@
 import type { LucideProps } from "lucide-react";
 
+import { icons, type IconName } from "../lib/icon-registry";
 import { cn } from "../lib/utils";
-import { icons, type IconName } from "./icon-registry";
 
-export type { IconName } from "./icon-registry";
+export type { IconName } from "../lib/icon-registry";
 
 export type IconSize = "xs" | "sm" | "md" | "lg";
 

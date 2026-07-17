@@ -1,6 +1,7 @@
 import { Check, Copy, X, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { TONE_FACETS } from "../lib/status";
 import { cn } from "../lib/utils";
 
 type CopyStatus = "idle" | "copied" | "error";
@@ -12,9 +13,9 @@ const ICON_BY_STATUS: Record<CopyStatus, LucideIcon> = {
 };
 
 const COLOR_BY_STATUS: Record<CopyStatus, string> = {
-  idle: "var(--text-tertiary)",
-  copied: "var(--success)",
-  error: "var(--danger)",
+  idle: TONE_FACETS.ghost.cssVar,
+  copied: TONE_FACETS.success.cssVar,
+  error: TONE_FACETS.danger.cssVar,
 };
 
 export interface CopyButtonProps {

@@ -2,7 +2,7 @@ import type { AgentSessionState, RunState, RunTerminalState, StepRunState } from
 
 import type { ReconcileClassification } from "./types.js";
 
-interface Targets {
+export interface Targets {
   run: RunState;
   step: StepRunState;
   session: AgentSessionState;

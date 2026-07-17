@@ -1,6 +1,6 @@
 import type { IssueContract, IssueState } from "@otomat/domain";
 
-export const ISSUES_FILTERS = ["all", "active", "backlog"] as const;
+const ISSUES_FILTERS = ["all", "active", "backlog"] as const;
 export type IssuesFilter = (typeof ISSUES_FILTERS)[number];
 
 export function isIssuesFilter(value: string): value is IssuesFilter {

@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { StringDecoder } from "node:string_decoder";
 
-import { scrubGitEnv } from "#git/git-cli";
+import { scrubGitEnv } from "#git";
 
 import type { CommandRequest, CommandResult } from "./types.js";
 

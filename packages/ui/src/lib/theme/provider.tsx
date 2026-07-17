@@ -3,7 +3,7 @@ import { createContext, type ReactNode, use, useEffect, useMemo, useReducer } fr
 import { applyTheme } from "./dom";
 import { themeReducer } from "./reducer";
 import { readStored, writeStored } from "./storage";
-import type { Density, Direction, Theme, ThemeContextValue } from "./types";
+import type { Accent, Density, Theme, ThemeContextValue } from "./types";
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
@@ -31,8 +31,9 @@ export function ThemeProvider({ children }: ThemeProviderProps): ReactNode {
       setTheme: (theme: Theme) => dispatch({ type: "setTheme", theme }),
       toggleTheme: () => dispatch({ type: "toggleTheme" }),
       setDensity: (density: Density) => dispatch({ type: "setDensity", density }),
-      setDirection: (direction: Direction) => dispatch({ type: "setDirection", direction }),
-      setAccent: (accent: string | null) => dispatch({ type: "setAccent", accent }),
+      setAccent: (accent: Accent) => dispatch({ type: "setAccent", accent }),
+      setCustomAccent: (hex: string | null) =>
+        dispatch({ type: "setCustomAccent", customAccent: hex }),
     }),
     [],
   );

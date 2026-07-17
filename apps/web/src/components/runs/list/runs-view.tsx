@@ -7,6 +7,7 @@ import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
+import { FOCUS_RING } from "@web/lib/focus";
 import { shortId } from "@web/lib/ids";
 import { CELL, HEAD_CELL, TABLE } from "@web/lib/table";
 
@@ -17,7 +18,7 @@ function RunListRow({ run }: { run: RunContract }) {
         <Link
           to="/runs/$runId"
           params={{ runId: run.id }}
-          className="flex h-full items-center px-3 after:absolute after:inset-0 focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]"
+          className={`flex h-full items-center px-3 after:absolute after:inset-0 ${FOCUS_RING} focus-visible:outline-offset-[-2px]`}
         >
           {shortId(run.id)}
         </Link>
@@ -30,7 +31,7 @@ function RunListRow({ run }: { run: RunContract }) {
         <Link
           to="/issues/$issueId"
           params={{ issueId: run.issue_id }}
-          className="relative z-[1] hover:text-foreground focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:rounded-sm"
+          className={`relative z-[1] hover:text-foreground ${FOCUS_RING} focus-visible:rounded-sm`}
         >
           {shortId(run.issue_id)}
         </Link>

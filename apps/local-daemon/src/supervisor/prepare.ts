@@ -25,6 +25,13 @@ import type { TurnContext } from "./types.js";
 
 const STEP_NAME = "Agent turn";
 
+const RUN_BRANCH_PREFIX = "otomat/run/";
+
+/** 8 hex chars of the run UUID: readable branch names with a negligible per-repo collision surface. */
+function runBranchName(runId: string): string {
+  return `${RUN_BRANCH_PREFIX}${runId.slice(0, 8)}`;
+}
+
 function firstLine(text: string): string {
   const [first = ""] = text.split("\n");
   return first.trim().slice(0, 120);
@@ -57,7 +64,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): Tu
   const runId = randomUUID();
   const stepRunId = randomUUID();
   const agentSessionId = randomUUID();
-  const branch = `otomat/run/${runId.slice(0, 8)}`;
+  const branch = runBranchName(runId);
   const plan: RunPlan = {
     version: 1,
     steps: [{ id: stepRunId, name: STEP_NAME, agent: runtime, prompt, depends_on: [] }],
@@ -67,28 +74,33 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): Tu
   const worktree = worktrees ? worktrees.service.acquire({ owner: runId, branch }) : null;
 
   try {
-    insertRun(db, {
-      id: runId,
-      issue_id: issueId,
-      agent_id: runtime,
-      status: runMachine.initial,
-      branch,
-      plan_json: plan,
-      repository_id: worktrees?.repositoryId ?? null,
-      worktree_id: worktree?.id ?? null,
-    });
-    insertStepRun(db, {
-      id: stepRunId,
-      run_id: runId,
-      idx: 0,
-      name: STEP_NAME,
-      status: stepRunMachine.initial,
-    });
-    insertAgentSession(db, {
-      id: agentSessionId,
-      step_run_id: stepRunId,
-      status: agentSessionMachine.initial,
-    });
+    db.transaction(
+      () => {
+        insertRun(db, {
+          id: runId,
+          issue_id: issueId,
+          agent_id: runtime,
+          status: runMachine.initial,
+          branch,
+          plan_json: plan,
+          repository_id: worktrees?.repositoryId ?? null,
+          worktree_id: worktree?.id ?? null,
+        });
+        insertStepRun(db, {
+          id: stepRunId,
+          run_id: runId,
+          idx: 0,
+          name: STEP_NAME,
+          status: stepRunMachine.initial,
+        });
+        insertAgentSession(db, {
+          id: agentSessionId,
+          step_run_id: stepRunId,
+          status: agentSessionMachine.initial,
+        });
+      },
+      { behavior: "immediate" },
+    );
   } catch (error) {
     // The rows never landed — roll back the worktree acquired above so no orphan dir/branch leaks.
     if (worktree) {

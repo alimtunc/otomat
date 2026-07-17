@@ -1,12 +1,12 @@
 import type { ComponentPropsWithoutRef } from "react";
 
 import { injectStyleOnce } from "../lib/inject-style";
+import { injectSpinKeyframes } from "../lib/spin";
 import { cn } from "../lib/utils";
 
 const SPINNER_STYLE_ID = "otomat-spinner";
 const SPINNER_CSS = `
-@keyframes otomat-spinner-rotate{to{transform:rotate(360deg)}}
-.otomat-spinner{border-radius:50%;border:2px solid var(--border-strong);border-top-color:var(--iris-solid);animation:otomat-spinner-rotate .7s linear infinite}
+.otomat-spinner{border-radius:50%;border:2px solid var(--border-strong);border-top-color:var(--iris-solid);animation:otomat-spin .7s linear infinite}
 @media (prefers-reduced-motion:reduce){.otomat-spinner{animation:none}}
 `;
 
@@ -22,6 +22,7 @@ export function Spinner({
   style,
   ...props
 }: SpinnerProps) {
+  injectSpinKeyframes();
   injectStyleOnce(SPINNER_STYLE_ID, SPINNER_CSS);
   return (
     <output

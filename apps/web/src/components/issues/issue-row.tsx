@@ -1,6 +1,7 @@
 import type { IssueContract } from "@otomat/domain";
 import { cn, IssueStatusChip, RelativeTime } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
+import { FOCUS_RING } from "@web/lib/focus";
 import { issueShortId } from "@web/lib/ids";
 import { CELL } from "@web/lib/table";
 
@@ -12,7 +13,7 @@ export function IssueRow({ issue }: { issue: IssueContract }) {
         <Link
           to="/issues/$issueId"
           params={{ issueId: issue.id }}
-          className="flex h-full items-center px-3 text-foreground after:absolute after:inset-0 focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]"
+          className={`flex h-full items-center px-3 text-foreground after:absolute after:inset-0 ${FOCUS_RING} focus-visible:outline-offset-[-2px]`}
         >
           <span className="truncate">{issue.title}</span>
         </Link>

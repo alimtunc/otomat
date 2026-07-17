@@ -1,10 +1,10 @@
 import { schema } from "@otomat/db";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { appendEvents } from "#events/ledger";
 import { readRunEvents } from "#events/projection";
 
 import { setupLedgerDb, type LedgerTestDb } from "../support/ledger-db.js";
+import { appendEvents } from "../support/ledger.js";
 import { makeEvent } from "../support/run-event-fixtures.js";
 
 let t: LedgerTestDb;

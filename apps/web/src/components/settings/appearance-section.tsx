@@ -1,11 +1,13 @@
 import { Button, Icon, SegmentedControl, SegmentedItem, useTheme } from "@otomat/ui";
-import type { Density, Direction, Theme } from "@otomat/ui";
+import type { Accent, Density, Theme } from "@otomat/ui";
 import { AppearanceRow } from "@web/components/settings/appearance-row";
-import { DEFAULT_ACCENT } from "@web/components/settings/appearance-section.constants";
 import { SectionHeading } from "@web/components/settings/section-heading";
 
+/** Fallback base color shown in the custom-accent picker before the user sets one. */
+const DEFAULT_ACCENT = "#5B7CFA";
+
 export function AppearanceSection() {
-  const { theme, density, direction, accent, setTheme, setDensity, setDirection, setAccent } =
+  const { theme, density, accent, customAccent, setTheme, setDensity, setAccent, setCustomAccent } =
     useTheme();
 
   return (
@@ -62,8 +64,8 @@ export function AppearanceSection() {
           control={
             <SegmentedControl
               type="single"
-              value={direction}
-              onValueChange={(v) => v && setDirection(v as Direction)}
+              value={accent}
+              onValueChange={(v) => v && setAccent(v as Accent)}
               aria-label="Accent direction"
             >
               <SegmentedItem value="iris">Iris</SegmentedItem>
@@ -80,7 +82,7 @@ export function AppearanceSection() {
             <div className="flex items-center gap-2">
               <label
                 className="relative inline-flex h-6.5 w-6.5 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-border"
-                style={{ background: accent ?? "var(--iris-solid)" }}
+                style={{ background: customAccent ?? "var(--iris-solid)" }}
               >
                 <Icon
                   name="palette"
@@ -90,16 +92,16 @@ export function AppearanceSection() {
                 <input
                   type="color"
                   aria-label="Custom accent color"
-                  value={accent ?? DEFAULT_ACCENT}
-                  onChange={(e) => setAccent(e.target.value)}
+                  value={customAccent ?? DEFAULT_ACCENT}
+                  onChange={(e) => setCustomAccent(e.target.value)}
                   className="absolute inset-0 cursor-pointer opacity-0"
                 />
               </label>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setAccent(null)}
-                disabled={accent == null}
+                onClick={() => setCustomAccent(null)}
+                disabled={customAccent == null}
               >
                 Reset
               </Button>

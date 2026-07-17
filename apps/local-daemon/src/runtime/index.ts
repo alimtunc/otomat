@@ -8,6 +8,7 @@
  *
  * @packageDocumentation
  */
+export { asString } from "./cli/frame-guards.js";
 export * from "./contract.js";
 export * from "./events.js";
 export * from "./providers/fake/adapter.js";

@@ -1,9 +1,27 @@
-import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
+import type { RunContract } from "@otomat/domain";
+import { EmptyState, ErrorState, RunStatusChip, Skeleton } from "@otomat/ui";
+import { Link } from "@tanstack/react-router";
 import type { useRunsForIssue } from "@web/api/runs/queries";
-import { RunRow } from "@web/components/runs/list/row";
 import { QueryList } from "@web/components/shell/query-list";
 
-export function RunsList({ query }: { query: ReturnType<typeof useRunsForIssue> }) {
+function IssueRunRow({ run }: { run: RunContract }) {
+  return (
+    <li>
+      <Link
+        to="/runs/$runId"
+        params={{ runId: run.id }}
+        className="flex items-center gap-3 px-4 py-3 hover:bg-hover"
+      >
+        <RunStatusChip status={run.status} />
+        <span className="min-w-0 flex-1 truncate font-mono text-xs text-text-tertiary">
+          {run.branch}
+        </span>
+      </Link>
+    </li>
+  );
+}
+
+export function IssueRunList({ query }: { query: ReturnType<typeof useRunsForIssue> }) {
   return (
     <QueryList
       query={query}
@@ -31,7 +49,7 @@ export function RunsList({ query }: { query: ReturnType<typeof useRunsForIssue> 
           <h2 className="text-sm font-semibold text-text-secondary">Runs</h2>
           <ul className="flex flex-col divide-y divide-border-subtle rounded-lg border border-border-subtle">
             {runs.map((run) => (
-              <RunRow key={run.id} run={run} />
+              <IssueRunRow key={run.id} run={run} />
             ))}
           </ul>
         </div>

@@ -1,9 +1,10 @@
-import { Popover } from "@base-ui/react/popover";
 import { formatDistanceToNow } from "date-fns";
 import { RefreshCw, Wifi, WifiOff } from "lucide-react";
 import type { ComponentType } from "react";
 
+import { TONE_FACETS } from "../lib/status";
 import { cn } from "../lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "../primitives/popover";
 import { LiveDot } from "./live-dot";
 
 export type ConnectionState = "online" | "reconnecting" | "offline";
@@ -29,24 +30,24 @@ const STATE_META: Record<ConnectionState, StateMeta> = {
   online: {
     label: "Online",
     icon: Wifi,
-    dotColorVar: "var(--success)",
-    textClass: "text-success",
+    dotColorVar: TONE_FACETS.success.cssVar,
+    textClass: TONE_FACETS.success.text,
     triggerTextClass: "text-text-secondary",
     live: false,
   },
   reconnecting: {
     label: "Reconnecting…",
     icon: RefreshCw,
-    dotColorVar: "var(--warning)",
-    textClass: "text-warning",
+    dotColorVar: TONE_FACETS.warning.cssVar,
+    textClass: TONE_FACETS.warning.text,
     triggerTextClass: "text-text-secondary",
     live: true,
   },
   offline: {
     label: "Offline · cached",
     icon: WifiOff,
-    dotColorVar: "var(--text-tertiary)",
-    textClass: "text-danger",
+    dotColorVar: TONE_FACETS.ghost.cssVar,
+    textClass: TONE_FACETS.danger.text,
     triggerTextClass: "text-text-tertiary",
     live: false,
   },
@@ -68,8 +69,8 @@ export function ConnectionStatusIndicator({
   const Icon = meta.icon;
 
   return (
-    <Popover.Root>
-      <Popover.Trigger
+    <Popover>
+      <PopoverTrigger
         render={
           <button
             type="button"
@@ -88,41 +89,32 @@ export function ConnectionStatusIndicator({
           </button>
         }
       />
-      <Popover.Portal>
-        <Popover.Positioner align="end" sideOffset={6}>
-          <Popover.Popup
+      <PopoverContent align="end" className="w-64 p-3 text-sm text-foreground">
+        <div className={cn("flex items-center gap-1.5 font-medium", meta.textClass)}>
+          <Icon className="h-3.5 w-3.5" aria-hidden={true} />
+          <span>{meta.label}</span>
+        </div>
+        <dl className="mt-2 flex items-center justify-between text-text-secondary">
+          <dt>Last sync</dt>
+          <dd className="text-foreground">{formatLastSync(lastSyncAt)}</dd>
+        </dl>
+        {onRetry ? (
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={state === "online"}
             className={cn(
-              "w-64 rounded-lg border border-border bg-popover p-3 text-sm text-foreground shadow-[var(--shadow-overlay)]",
+              "mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs",
+              "bg-surface-1 transition-colors hover:bg-surface-2",
+              "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface-1",
             )}
-            style={{ zIndex: "var(--z-popover)" }}
+            style={{ transition: "background var(--motion-fast) var(--ease)" }}
           >
-            <div className={cn("flex items-center gap-1.5 font-medium", meta.textClass)}>
-              <Icon className="h-3.5 w-3.5" aria-hidden={true} />
-              <span>{meta.label}</span>
-            </div>
-            <dl className="mt-2 flex items-center justify-between text-text-secondary">
-              <dt>Last sync</dt>
-              <dd className="text-foreground">{formatLastSync(lastSyncAt)}</dd>
-            </dl>
-            {onRetry ? (
-              <button
-                type="button"
-                onClick={onRetry}
-                disabled={state === "online"}
-                className={cn(
-                  "mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs",
-                  "bg-surface-1 transition-colors hover:bg-surface-2",
-                  "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface-1",
-                )}
-                style={{ transition: "background var(--motion-fast) var(--ease)" }}
-              >
-                <RefreshCw className="h-3 w-3" aria-hidden={true} />
-                Retry now
-              </button>
-            ) : null}
-          </Popover.Popup>
-        </Popover.Positioner>
-      </Popover.Portal>
-    </Popover.Root>
+            <RefreshCw className="h-3 w-3" aria-hidden={true} />
+            Retry now
+          </button>
+        ) : null}
+      </PopoverContent>
+    </Popover>
   );
 }

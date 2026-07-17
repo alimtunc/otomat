@@ -16,7 +16,7 @@ import { findFinalStatus, findProviderSessionId } from "./evidence.js";
 import { isReapableWorker } from "./identity.js";
 import { buildReconciledEvent } from "./markers.js";
 import { isProcessAlive, killProcessGroup } from "./process.js";
-import { driveRunTo, driveStepsAndSessionsTo } from "./transitions.js";
+import { driveRunConvergence } from "./transitions.js";
 import { type ProcessExit, type ReconcileOutcome } from "./types.js";
 
 export interface SettleOptions {
@@ -58,8 +58,7 @@ export function settleRun(
     }
   }
 
-  driveRunTo(db, run.id, run.status, targets.run, options.now);
-  driveStepsAndSessionsTo(db, steps, sessions, targets.step, targets.session);
+  driveRunConvergence(db, run, steps, sessions, targets, options.now);
 
   if (options.mode === "boot") {
     const ref = {

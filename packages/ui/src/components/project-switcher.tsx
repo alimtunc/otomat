@@ -1,6 +1,7 @@
 import { Check, ChevronsUpDown, FolderGit2, Settings } from "lucide-react";
 import { useState } from "react";
 
+import { TONE_FACETS } from "../lib/status";
 import { cn } from "../lib/utils";
 import {
   Command,
@@ -21,9 +22,9 @@ export interface ProjectSummary {
 }
 
 const HEALTH_COLOR: Record<NonNullable<ProjectSummary["health"]>, string> = {
-  healthy: "var(--success)",
-  degraded: "var(--warning)",
-  unknown: "var(--neutral)",
+  healthy: TONE_FACETS.success.cssVar,
+  degraded: TONE_FACETS.warning.cssVar,
+  unknown: TONE_FACETS.neutral.cssVar,
 };
 
 export interface ProjectSwitcherProps {

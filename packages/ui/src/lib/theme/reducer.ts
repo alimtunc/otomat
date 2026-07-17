@@ -1,15 +1,15 @@
-import type { Density, Direction, Theme, ThemeState } from "./types";
+import type { Accent, Density, Theme, ThemeState } from "./types";
 
 export type ThemeAction =
   | { type: "setTheme"; theme: Theme }
   | { type: "toggleTheme" }
   | { type: "setDensity"; density: Density }
-  | { type: "setDirection"; direction: Direction }
-  | { type: "setAccent"; accent: string | null };
+  | { type: "setAccent"; accent: Accent }
+  | { type: "setCustomAccent"; customAccent: string | null };
 
 /**
- * Pure theme-state transitions. `setDirection` also clears any custom `accent`
- * (the incoming palette supplies its own), so switching direction resets `accent` to null.
+ * Pure theme-state transitions. `setAccent` also clears any `customAccent`
+ * (the incoming palette supplies its own), so switching palette resets `customAccent` to null.
  */
 export function themeReducer(state: ThemeState, action: ThemeAction): ThemeState {
   switch (action.type) {
@@ -19,9 +19,9 @@ export function themeReducer(state: ThemeState, action: ThemeAction): ThemeState
       return { ...state, theme: state.theme === "dark" ? "light" : "dark" };
     case "setDensity":
       return { ...state, density: action.density };
-    case "setDirection":
-      return { ...state, direction: action.direction, accent: null };
     case "setAccent":
-      return { ...state, accent: action.accent };
+      return { ...state, accent: action.accent, customAccent: null };
+    case "setCustomAccent":
+      return { ...state, customAccent: action.customAccent };
   }
 }

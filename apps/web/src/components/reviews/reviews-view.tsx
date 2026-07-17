@@ -6,6 +6,7 @@ import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
+import { FOCUS_RING } from "@web/lib/focus";
 import { shortId } from "@web/lib/ids";
 import { isReviewable } from "@web/lib/run-filters";
 
@@ -49,7 +50,7 @@ export function ReviewsView() {
                   <Link
                     to="/runs/$runId/diff"
                     params={{ runId: run.id }}
-                    className="flex items-start gap-2.25 rounded-md px-2.5 py-2.25 hover:bg-hover focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]"
+                    className={`flex items-start gap-2.25 rounded-md px-2.5 py-2.25 hover:bg-hover ${FOCUS_RING} focus-visible:outline-offset-[-2px]`}
                   >
                     <Icon
                       name="git-compare"

@@ -17,6 +17,14 @@ export function useRunsForIssue(issueId: string) {
   });
 }
 
+/** Event-driven: invalidated by the run's ledger stream (see RunEventsProvider), never polled. */
+export function useRunDiff(runId: string) {
+  return useQuery({
+    queryKey: queryKeys.runDiff(runId),
+    queryFn: () => daemon.getRunDiff(runId),
+  });
+}
+
 /**
  * Fetches one run's detail and polls it every 1.5s until the run reaches a
  * terminal status, then stops refetching.

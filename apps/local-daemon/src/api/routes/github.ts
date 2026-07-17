@@ -37,7 +37,7 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
         if (error instanceof GitHubPublicationError) {
           return c.json({ error: error.code }, 409);
         }
-        console.error(`[otomat] GitHub publication for run ${run.id} failed`);
+        console.error(`[otomat] GitHub publication for run ${run.id} failed`, error);
         return c.json({ error: "pr_prepare_failed" }, 500);
       }
     },

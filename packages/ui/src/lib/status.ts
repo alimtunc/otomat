@@ -1,9 +1,6 @@
 import type {
   AgentSessionState,
   ChangeStatus,
-  EventSource,
-  EventType,
-  IssueSource,
   IssueState,
   PullRequestState,
   ReviewCommentState,
@@ -22,14 +19,11 @@ import {
   CircleSlash,
   Clock,
   Copy,
-  FileDiff,
   FileMinus,
   FilePen,
   FilePlus,
   FileSymlink,
   FileType,
-  Flag,
-  GitCommitHorizontal,
   GitCompare,
   GitMerge,
   GitPullRequest,
@@ -41,10 +35,8 @@ import {
   MessageCircleQuestion,
   MessageSquare,
   Pause,
-  Play,
   ShieldQuestion,
   Square,
-  Terminal,
   TriangleAlert,
 } from "lucide-react";
 
@@ -182,68 +174,89 @@ export function resolveStatus<K extends StatusKind>(
   return STATUS_REGISTRY[kind][status];
 }
 
-export const TONE_BG: Partial<Record<StatusTone, string>> = {
-  warning: "var(--warning-bg)",
-  danger: "var(--danger-bg)",
-};
-
-export const TONE_TEXT: Record<StatusTone, string> = {
-  neutral: "text-text-tertiary",
-  iris: "text-iris-text",
-  success: "text-success",
-  warning: "text-warning",
-  danger: "text-danger",
-  review: "text-review",
-  stale: "text-stale",
-  ghost: "text-text-tertiary",
-};
-
-export const PROVENANCE_VAR: Record<EventSource, string> = {
-  otomat: "var(--prov-otomat)",
-  claude: "var(--prov-claude)",
-  codex: "var(--prov-codex)",
-  git: "var(--prov-git)",
-  github: "var(--prov-github)",
-  linear: "var(--prov-linear)",
-  system: "var(--prov-system)",
-};
-
-export const PROVENANCE_LABEL: Record<EventSource, string> = {
-  otomat: "Otomat",
-  claude: "Claude",
-  codex: "Codex",
-  git: "Git",
-  github: "GitHub",
-  linear: "Linear",
-  system: "System",
-};
-
-export const SOURCE_BADGE: Record<IssueSource, { var: string; label: string; tone: StatusTone }> = {
-  local: { var: "var(--prov-otomat)", label: "Local", tone: "neutral" },
-  linear: { var: "var(--prov-linear)", label: "Linear", tone: "review" },
-  github: { var: "var(--prov-github)", label: "GitHub", tone: "neutral" },
-};
-
-export interface EventGlyphDescriptor {
-  icon: LucideIcon;
-  tone: StatusTone;
+export interface ToneFacets {
+  text: string;
+  textOnSubtle: string;
+  subtleBg: string;
+  solid: string;
+  cssVar: string;
+  subtleBgVar?: string;
 }
 
-export const EVENT_GLYPH: Record<EventType, EventGlyphDescriptor> = {
-  "run.lifecycle": { icon: Flag, tone: "neutral" },
-  "step.lifecycle": { icon: GitCommitHorizontal, tone: "neutral" },
-  "session.lifecycle": { icon: Play, tone: "neutral" },
-  "runtime.log": { icon: Terminal, tone: "neutral" },
-  "runtime.message": { icon: MessageSquare, tone: "neutral" },
-  "runtime.tool_call": { icon: Terminal, tone: "iris" },
-  "runtime.permission_request": { icon: ShieldQuestion, tone: "warning" },
-  "runtime.permission_response": { icon: ShieldQuestion, tone: "neutral" },
-  "runtime.usage": { icon: Activity, tone: "neutral" },
-  "runtime.provider_session": { icon: CircleDotDashed, tone: "neutral" },
-  "git.diff_updated": { icon: FileDiff, tone: "stale" },
-  "review.comment_created": { icon: MessageSquare, tone: "review" },
-  "review.comment_resolved": { icon: CheckCircle2, tone: "success" },
-  "pr.created": { icon: GitPullRequest, tone: "success" },
-  "pr.updated": { icon: GitPullRequest, tone: "neutral" },
-  "system.reconciled": { icon: AlertTriangle, tone: "stale" },
+export const TONE_FACETS: Record<StatusTone, ToneFacets> = {
+  neutral: {
+    text: "text-text-tertiary",
+    textOnSubtle: "text-text-secondary",
+    subtleBg: "bg-neutral-bg",
+    solid: "bg-neutral",
+    cssVar: "var(--neutral)",
+  },
+  iris: {
+    text: "text-iris-text",
+    textOnSubtle: "text-iris-text",
+    subtleBg: "bg-iris-bg",
+    solid: "bg-iris",
+    cssVar: "var(--iris-solid)",
+  },
+  success: {
+    text: "text-success",
+    textOnSubtle: "text-success",
+    subtleBg: "bg-success-bg",
+    solid: "bg-success",
+    cssVar: "var(--success)",
+  },
+  warning: {
+    text: "text-warning",
+    textOnSubtle: "text-warning",
+    subtleBg: "bg-warning-bg",
+    solid: "bg-warning",
+    cssVar: "var(--warning)",
+    subtleBgVar: "var(--warning-bg)",
+  },
+  danger: {
+    text: "text-danger",
+    textOnSubtle: "text-danger",
+    subtleBg: "bg-danger-bg",
+    solid: "bg-danger",
+    cssVar: "var(--danger)",
+    subtleBgVar: "var(--danger-bg)",
+  },
+  review: {
+    text: "text-review",
+    textOnSubtle: "text-review",
+    subtleBg: "bg-review-bg",
+    solid: "bg-review",
+    cssVar: "var(--review)",
+  },
+  stale: {
+    text: "text-stale",
+    textOnSubtle: "text-stale",
+    subtleBg: "bg-stale-bg",
+    solid: "bg-stale",
+    cssVar: "var(--stale)",
+  },
+  ghost: {
+    text: "text-text-tertiary",
+    textOnSubtle: "text-text-secondary",
+    subtleBg: "bg-transparent border-border",
+    solid: "bg-text-tertiary",
+    cssVar: "var(--text-tertiary)",
+  },
 };
+
+const TONE_ENTRIES = Object.entries(TONE_FACETS) as [StatusTone, ToneFacets][];
+
+export function toneClassMap(pick: (facets: ToneFacets) => string): Record<StatusTone, string> {
+  return Object.fromEntries(TONE_ENTRIES.map(([tone, facets]) => [tone, pick(facets)])) as Record<
+    StatusTone,
+    string
+  >;
+}
+
+export const TONE_TEXT: Record<StatusTone, string> = toneClassMap((facets) => facets.text);
+
+export const TONE_BG: Partial<Record<StatusTone, string>> = Object.fromEntries(
+  TONE_ENTRIES.flatMap(([tone, facets]) =>
+    facets.subtleBgVar ? [[tone, facets.subtleBgVar]] : [],
+  ),
+);

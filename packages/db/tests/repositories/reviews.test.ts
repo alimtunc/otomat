@@ -3,7 +3,6 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import {
   getReviewComment,
   insertReviewComment,
-  listReviewCommentsForReview,
   listReviewCommentsForRun,
   setReviewCommentFixRequested,
   updateReviewCommentStatus,
@@ -49,7 +48,6 @@ it("round-trips a review and its pin-to-SHA comments for a run", () => {
   });
   expect(comment?.hunk_snapshot).toContain("@@");
 
-  expect(listReviewCommentsForReview(db, "rv1").map((c) => c.id)).toEqual(["c1"]);
   expect(listReviewCommentsForRun(db, "r1").map((c) => c.id)).toEqual(["c1"]);
 
   setReviewCommentFixRequested(db, "c1", "2026-07-05T00:00:00.000Z");

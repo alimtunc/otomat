@@ -1,6 +1,7 @@
 import { ISSUE_STATES, type IssueContract, type IssueState } from "@otomat/domain";
 import { resolveStatus, TONE_TEXT } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
+import { FOCUS_RING } from "@web/lib/focus";
 import { issueShortId } from "@web/lib/ids";
 
 // blocked/canceled are hidden per the prototype board; the List layout still shows them.
@@ -15,7 +16,7 @@ function BoardCard({ issue }: { issue: IssueContract }) {
       <Link
         to="/issues/$issueId"
         params={{ issueId: issue.id }}
-        className="flex flex-col gap-1.75 rounded-lg border border-border-subtle bg-surface-1 px-3 py-2.75 hover:border-border hover:bg-surface-2 hover:shadow-[var(--shadow-sm)] hover:-translate-y-px focus-visible:[outline:2px_solid_var(--iris-ring)]"
+        className={`flex flex-col gap-1.75 rounded-lg border border-border-subtle bg-surface-1 px-3 py-2.75 hover:border-border hover:bg-surface-2 hover:shadow-[var(--shadow-sm)] hover:-translate-y-px ${FOCUS_RING}`}
         style={{
           transition:
             "background var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease)",
