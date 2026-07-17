@@ -12,9 +12,9 @@ export function RunCockpitLayout() {
   return (
     <RunEventsProvider runId={runId}>
       <RouteShell
-        active="issues"
+        active="runs"
         breadcrumbs={[
-          { label: "Issues", href: "/issues" },
+          { label: "Runs", href: "/runs" },
           { label: `Run ${shortId(runId)}`, current: true },
         ]}
         breadcrumbExtra={detail.data ? <RunStatusChip status={detail.data.run.status} /> : null}

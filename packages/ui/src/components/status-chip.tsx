@@ -33,7 +33,7 @@ export function StatusChip<K extends StatusKind>({
     <Chip
       tone={tone}
       size={size}
-      className={cn(!showLabel && "px-1.25", className)}
+      className={cn("lowercase", !showLabel && "px-1.25", className)}
       aria-label={showLabel ? undefined : label}
       title={showLabel ? undefined : label}
     >

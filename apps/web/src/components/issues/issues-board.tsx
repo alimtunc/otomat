@@ -44,13 +44,12 @@ export function IssuesBoard({ issues }: { issues: IssueContract[] }) {
       {BOARD_COLUMNS.map((status) => {
         const meta = resolveStatus("issue", status);
         const StatusIcon = meta.icon;
-        const columnLabel = meta.label.charAt(0).toUpperCase() + meta.label.slice(1);
         const columnIssues = issues.filter((issue) => issue.status === status);
         return (
-          <section key={status} aria-label={columnLabel} className="flex min-h-0 flex-col gap-2">
+          <section key={status} aria-label={meta.label} className="flex min-h-0 flex-col gap-2">
             <header className="flex h-8 items-center gap-2 px-1 text-sm font-medium text-foreground">
               <StatusIcon aria-hidden className={`h-3.5 w-3.5 ${TONE_TEXT[meta.tone]}`} />
-              {columnLabel}
+              {meta.label}
               <span className="inline-flex h-4.25 min-w-4.25 items-center justify-center rounded-full bg-surface-3 px-1.25 text-micro font-medium tabular-nums text-text-secondary">
                 {columnIssues.length}
               </span>

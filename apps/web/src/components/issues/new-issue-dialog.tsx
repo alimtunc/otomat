@@ -8,15 +8,11 @@ import {
   DialogHeader,
   Icon,
   Kbd,
-  SegmentedControl,
-  SegmentedItem,
   Textarea,
 } from "@otomat/ui";
 import { useStartRunAndNavigate } from "@web/api/runs/mutations";
 import { RuntimeSelect } from "@web/components/runs/launch/runtime-select";
 import { useState, type KeyboardEvent } from "react";
-
-type IssueMode = "manual" | "agent";
 
 export interface NewIssueDialogProps {
   open: boolean;
@@ -25,12 +21,11 @@ export interface NewIssueDialogProps {
 }
 
 export function NewIssueDialog({ open, onOpenChange, projectName }: NewIssueDialogProps) {
-  const [mode, setMode] = useState<IssueMode>("agent");
   const [promptText, setPromptText] = useState("");
   const [runtime, setRuntime] = useState<string>(FAKE_RUNTIME_ID);
   const { start, isPending } = useStartRunAndNavigate();
 
-  const canSubmit = mode === "agent" && promptText.trim().length > 0 && !isPending;
+  const canSubmit = promptText.trim().length > 0 && !isPending;
 
   async function submit() {
     if (!canSubmit) return;
@@ -63,44 +58,21 @@ export function NewIssueDialog({ open, onOpenChange, projectName }: NewIssueDial
                 />
               </>
             ) : null}
-            <span>{mode === "manual" ? "Create manually" : "Create with agent"}</span>
+            <span>Create with agent</span>
           </div>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-3">
-          {mode === "manual" ? (
-            <p className="py-6 text-sm leading-[1.6] text-text-tertiary">
-              Manual issue creation needs a daemon endpoint that does not exist yet — issues are
-              currently created by launching a run. Switch to{" "}
-              <b className="font-medium text-text-secondary">With agent</b> to describe the work and
-              launch it.
-            </p>
-          ) : (
-            <>
-              <Textarea
-                value={promptText}
-                onChange={(event) => setPromptText(event.target.value)}
-                onKeyDown={onPromptKeyDown}
-                placeholder='Tell the agent what to do, e.g. "implement nested CSV quoting in the parser and open a PR"'
-                rows={4}
-                aria-label="Issue prompt"
-              />
-              <RuntimeSelect value={runtime} onValueChange={setRuntime} />
-            </>
-          )}
+          <Textarea
+            value={promptText}
+            onChange={(event) => setPromptText(event.target.value)}
+            onKeyDown={onPromptKeyDown}
+            placeholder='Tell the agent what to do, e.g. "implement nested CSV quoting in the parser and open a PR"'
+            rows={4}
+            aria-label="Issue prompt"
+          />
+          <RuntimeSelect value={runtime} onValueChange={setRuntime} />
         </DialogBody>
-        <DialogFooter className="justify-start">
-          <SegmentedControl
-            type="single"
-            value={mode}
-            onValueChange={(value) => {
-              if (value === "manual" || value === "agent") setMode(value);
-            }}
-            aria-label="Issue creation mode"
-          >
-            <SegmentedItem value="manual">Manual</SegmentedItem>
-            <SegmentedItem value="agent">With agent</SegmentedItem>
-          </SegmentedControl>
-          <div className="flex-1" />
+        <DialogFooter>
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

@@ -6,7 +6,6 @@ import type { ConnectionState } from "./connection-status-indicator";
 import { OfflineBanner } from "./offline-banner";
 import { ReconnectingBar } from "./reconnecting-bar";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./resizable-panels";
-import { Toaster } from "./toaster";
 
 export interface AppShellProps {
   sidebar: ReactNode;
@@ -96,19 +95,16 @@ export function AppShell({
   );
 
   return (
-    <>
-      <div
-        data-density={density}
-        className={cn("grid h-screen overflow-hidden", className)}
-        style={{
-          gridTemplateColumns: `${collapsed ? railWidth : sidebarWidth}px 1fr`,
-          gridTemplateRows: "minmax(0, 1fr)",
-        }}
-      >
-        {sidebar}
-        {content}
-      </div>
-      <Toaster />
-    </>
+    <div
+      data-density={density}
+      className={cn("grid h-screen overflow-hidden", className)}
+      style={{
+        gridTemplateColumns: `${collapsed ? railWidth : sidebarWidth}px 1fr`,
+        gridTemplateRows: "minmax(0, 1fr)",
+      }}
+    >
+      {sidebar}
+      {content}
+    </div>
   );
 }

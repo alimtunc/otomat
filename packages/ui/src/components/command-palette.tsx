@@ -1,6 +1,6 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { Loader2 } from "lucide-react";
-import type { ComponentType, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useCallback, useState } from "react";
 
 import { cn } from "../lib/utils";
@@ -14,11 +14,12 @@ import {
   CommandItemRight,
   CommandList,
 } from "../primitives/command";
+import { Icon, type IconName } from "./icon";
 
 export type CommandPaletteCommand = {
   id: string;
   label: string;
-  icon?: ComponentType<{ className?: string }>;
+  icon?: IconName;
   shortcut?: ReactNode;
   refId?: string;
   keywords?: string;
@@ -102,13 +103,12 @@ export function CommandPalette({
               {groups.map((group) => (
                 <CommandGroup key={group.id} heading={group.heading}>
                   {group.commands.map((command) => {
-                    const Icon = command.icon;
                     const isPending = pending === command.id;
                     let leading: ReactNode = null;
                     if (isPending) {
                       leading = <Loader2 className="animate-spin motion-reduce:animate-none" />;
-                    } else if (Icon) {
-                      leading = <Icon />;
+                    } else if (command.icon) {
+                      leading = <Icon name={command.icon} aria-hidden />;
                     }
                     return (
                       <CommandItem

@@ -21,7 +21,9 @@ export function StepsPane({ detail }: { detail: RunDetail }) {
               <div className="flex items-center gap-2 text-sm">
                 <LiveDot tone={meta.tone} live={meta.live} size={7} />
                 <span className="font-medium text-foreground">{step.name}</span>
-                <span className={`ml-auto text-xs ${TONE_TEXT[meta.tone]}`}>{meta.label}</span>
+                <span className={`ml-auto text-xs lowercase ${TONE_TEXT[meta.tone]}`}>
+                  {meta.label}
+                </span>
               </div>
               {sessions.length > 0 ? (
                 <div className="mb-0.5 mt-1.5 ml-5.5 flex flex-col gap-0.75">
@@ -34,7 +36,7 @@ export function StepsPane({ detail }: { detail: RunDetail }) {
                       >
                         <AgentAvatar size="sm" name={session.agent_id ?? "agent"} />
                         <span className="truncate">{session.agent_id ?? "agent"}</span>
-                        <span className="ml-auto text-[10px] text-text-tertiary">
+                        <span className="ml-auto text-[10px] lowercase text-text-tertiary">
                           {sessionMeta.label}
                         </span>
                       </div>
