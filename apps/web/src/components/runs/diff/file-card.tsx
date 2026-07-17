@@ -1,8 +1,11 @@
 import { DiffModeEnum, DiffView, SplitSide } from "@git-diff-view/react";
 import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
 import { Button, DiffFileStatusChip, useTheme } from "@otomat/ui";
-import { extendDataFor, unrenderableNote } from "@web/components/runs/diff/file-card.utils";
-import { diffFileDomId } from "@web/components/runs/diff/file-tree";
+import {
+  diffFileDomId,
+  extendDataFor,
+  unrenderableNote,
+} from "@web/components/runs/diff/file-card.utils";
 import { DiffStat } from "@web/components/runs/diff/stat";
 import { ReviewCommentCard } from "@web/components/runs/review/comment-card";
 import { ReviewCommentForm } from "@web/components/runs/review/comment-form";

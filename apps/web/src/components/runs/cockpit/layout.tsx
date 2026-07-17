@@ -4,6 +4,7 @@ import { useRunDetail } from "@web/api/runs/queries";
 import { RunEventsProvider } from "@web/api/runs/run-events-provider";
 import { CockpitTabs } from "@web/components/runs/cockpit/tabs";
 import { RouteShell } from "@web/components/shell/route-shell";
+import { shortId } from "@web/lib/ids";
 
 export function RunCockpitLayout() {
   const { runId } = useParams({ from: "/runs/$runId" });
@@ -14,7 +15,7 @@ export function RunCockpitLayout() {
         active="issues"
         breadcrumbs={[
           { label: "Issues", href: "/issues" },
-          { label: `Run ${runId.slice(0, 8)}`, current: true },
+          { label: `Run ${shortId(runId)}`, current: true },
         ]}
         breadcrumbExtra={detail.data ? <RunStatusChip status={detail.data.run.status} /> : null}
         actions={<CockpitTabs runId={runId} />}

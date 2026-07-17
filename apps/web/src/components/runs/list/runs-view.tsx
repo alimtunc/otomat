@@ -1,25 +1,25 @@
 import type { RunContract } from "@otomat/domain";
-import { EmptyState, ErrorState, RunStatusChip, Skeleton } from "@otomat/ui";
+import { cn, EmptyState, RunStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useRuns } from "@web/api/runs/queries";
 import { CenteredState } from "@web/components/shell/centered-state";
+import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
+import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
-
-const HEAD_CELL =
-  "sticky top-0 h-7.5 border-b border-border-subtle bg-background px-3 text-left text-xs font-medium text-text-tertiary";
-const CELL = "h-10 border-b border-border-subtle px-3";
+import { shortId } from "@web/lib/ids";
+import { CELL, HEAD_CELL, TABLE } from "@web/lib/table";
 
 function RunListRow({ run }: { run: RunContract }) {
   return (
-    <tr className="transition-colors hover:bg-hover">
-      <td className={`${CELL} relative p-0 font-mono text-text-tertiary`}>
+    <tr className="relative transition-colors hover:bg-hover">
+      <td className={cn(CELL, "p-0 font-mono text-text-tertiary")}>
         <Link
           to="/runs/$runId"
           params={{ runId: run.id }}
           className="flex h-full items-center px-3 after:absolute after:inset-0 focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]"
         >
-          {run.id.slice(0, 8)}
+          {shortId(run.id)}
         </Link>
       </td>
       <td className={CELL}>
@@ -30,9 +30,9 @@ function RunListRow({ run }: { run: RunContract }) {
         <Link
           to="/issues/$issueId"
           params={{ issueId: run.issue_id }}
-          className="hover:text-foreground focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:rounded-sm"
+          className="relative z-[1] hover:text-foreground focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:rounded-sm"
         >
-          {run.issue_id.slice(0, 8)}
+          {shortId(run.issue_id)}
         </Link>
       </td>
     </tr>
@@ -45,21 +45,9 @@ export function RunsView() {
     <RouteShell active="runs" titleIcon="activity" breadcrumbs={[{ label: "Runs", current: true }]}>
       <QueryList
         query={runs}
-        pending={
-          <div className="flex flex-col gap-2 p-6">
-            {[0, 1, 2].map((row) => (
-              <Skeleton key={row} height={40} />
-            ))}
-          </div>
-        }
+        pending={<ListSkeleton rows={3} height={40} />}
         error={
-          <CenteredState>
-            <ErrorState
-              title="Couldn’t load runs"
-              description="The daemon is unreachable. Check that it is running, then retry."
-              onRetry={() => void runs.refetch()}
-            />
-          </CenteredState>
+          <DaemonUnreachableState title="Couldn’t load runs" onRetry={() => void runs.refetch()} />
         }
         empty={
           <CenteredState>
@@ -72,19 +60,13 @@ export function RunsView() {
         }
       >
         {(items) => (
-          <table className="w-full border-collapse text-sm">
+          <table className={TABLE}>
             <thead>
               <tr>
-                <th className={HEAD_CELL} style={{ width: 110 }}>
-                  Run
-                </th>
-                <th className={HEAD_CELL} style={{ width: 160 }}>
-                  Status
-                </th>
+                <th className={`${HEAD_CELL} w-27.5`}>Run</th>
+                <th className={`${HEAD_CELL} w-40`}>Status</th>
                 <th className={HEAD_CELL}>Branch</th>
-                <th className={HEAD_CELL} style={{ width: 110 }}>
-                  Issue
-                </th>
+                <th className={`${HEAD_CELL} w-27.5`}>Issue</th>
               </tr>
             </thead>
             <tbody>

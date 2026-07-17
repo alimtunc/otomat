@@ -38,7 +38,7 @@ const STATE_META: Record<ConnectionState, StateMeta> = {
     label: "Reconnecting…",
     icon: RefreshCw,
     dotColorVar: "var(--warning)",
-    textClass: "text-iris-text",
+    textClass: "text-warning",
     triggerTextClass: "text-text-secondary",
     live: true,
   },

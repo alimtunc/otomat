@@ -4,22 +4,16 @@ import {
   ProjectSwitcher,
   SidebarDaemonStatus,
   SidebarNavItem,
-  type IconName,
   type ProjectSummary,
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
+import {
+  CONFIGURE_NAV,
+  INBOX_NAV,
+  WORKSPACE_NAV,
+  type ShellSection,
+} from "@web/components/shell/nav-items";
 import type { ReactNode } from "react";
-
-export type ShellSection =
-  | "issues"
-  | "runs"
-  | "reviews"
-  | "agents"
-  | "usage"
-  | "runtimes"
-  | "skills"
-  | "settings"
-  | "inbox";
 
 interface SidebarProps {
   active: ShellSection;
@@ -28,11 +22,9 @@ interface SidebarProps {
   projects: ProjectSummary[];
   currentProjectId?: string;
   onProjectSelect: (id: string) => void;
-  onSearch?: () => void;
-  onNewIssue?: () => void;
-  /** A run is currently `running` — shows the live dot on the Runs row. */
-  liveRun?: boolean;
-  /** Count of `review_ready` runs — shown as the Reviews badge. */
+  onSearch: () => void;
+  onNewIssue: () => void;
+  hasLiveRun?: boolean;
   reviewCount?: number;
 }
 
@@ -54,14 +46,6 @@ function navRender(to: string) {
   };
 }
 
-const WORKSPACE_ITEMS: { section: ShellSection; icon: IconName; label: string; to: string }[] = [
-  { section: "issues", icon: "list-todo", label: "Issues", to: "/issues" },
-  { section: "runs", icon: "activity", label: "Runs", to: "/runs" },
-  { section: "reviews", icon: "git-pull-request", label: "Reviews", to: "/reviews" },
-  { section: "agents", icon: "bot", label: "Agents", to: "/agents" },
-  { section: "usage", icon: "bar-chart", label: "Usage", to: "/usage" },
-];
-
 export function Sidebar({
   active,
   online,
@@ -71,7 +55,7 @@ export function Sidebar({
   onProjectSelect,
   onSearch,
   onNewIssue,
-  liveRun = false,
+  hasLiveRun = false,
   reviewCount = 0,
 }: SidebarProps) {
   const projectSwitcher = (
@@ -83,51 +67,38 @@ export function Sidebar({
   return (
     <AppSidebar projectSwitcher={projectSwitcher} footer={footer}>
       <nav aria-label="Quick actions" className="mt-1 flex flex-col gap-px px-2">
-        {onSearch ? (
-          <SidebarNavItem icon="search" label="Search" kbd="⌘K" onClick={onSearch} as="button" />
-        ) : null}
-        {onNewIssue ? (
-          <SidebarNavItem icon="plus" label="New issue" kbd="C" onClick={onNewIssue} as="button" />
-        ) : null}
+        <SidebarNavItem icon="search" label="Search" kbd="⌘K" onClick={onSearch} as="button" />
+        <SidebarNavItem icon="plus" label="New issue" kbd="C" onClick={onNewIssue} as="button" />
         <SidebarNavItem
-          icon="inbox"
-          label="Inbox"
-          active={active === "inbox"}
-          render={navRender("/inbox")}
+          icon={INBOX_NAV.icon}
+          label={INBOX_NAV.label}
+          active={active === INBOX_NAV.section}
+          render={navRender(INBOX_NAV.to)}
         />
       </nav>
       <NavSection label="Workspace">
-        {WORKSPACE_ITEMS.map((item) => (
+        {WORKSPACE_NAV.map((item) => (
           <SidebarNavItem
             key={item.section}
             icon={item.icon}
             label={item.label}
             active={active === item.section}
-            live={item.section === "runs" && liveRun}
+            live={item.section === "runs" && hasLiveRun}
             badgeCount={item.section === "reviews" && reviewCount > 0 ? reviewCount : undefined}
             render={navRender(item.to)}
           />
         ))}
       </NavSection>
       <NavSection label="Configure">
-        <SidebarNavItem
-          icon="cpu"
-          label="Runtimes"
-          active={active === "runtimes"}
-          render={navRender("/settings/runtimes")}
-        />
-        <SidebarNavItem
-          icon="book"
-          label="Skills"
-          active={active === "skills"}
-          render={navRender("/skills")}
-        />
-        <SidebarNavItem
-          icon="settings"
-          label="Settings"
-          active={active === "settings"}
-          render={navRender("/settings/repositories")}
-        />
+        {CONFIGURE_NAV.map((item) => (
+          <SidebarNavItem
+            key={item.section}
+            icon={item.icon}
+            label={item.label}
+            active={active === item.section}
+            render={navRender(item.to)}
+          />
+        ))}
       </NavSection>
       <NavSection label="Reference">
         <SidebarNavItem icon="layers" label="Design system" href="/gallery.html" />

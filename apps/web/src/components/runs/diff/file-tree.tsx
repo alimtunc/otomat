@@ -1,19 +1,8 @@
-import type { ChangeStatus, DiffFileContract, RunDiffContract } from "@otomat/domain";
-import { cn } from "@otomat/ui";
+import type { DiffFileContract, RunDiffContract } from "@otomat/domain";
+import { cn, resolveStatus } from "@otomat/ui";
+import { STATUS_LETTER } from "@web/components/runs/diff/file-tree.utils";
 import { DiffStat } from "@web/components/runs/diff/stat";
-
-const STATUS_LETTER: Record<ChangeStatus, { letter: string; className: string }> = {
-  added: { letter: "A", className: "text-success" },
-  modified: { letter: "M", className: "text-warning" },
-  deleted: { letter: "D", className: "text-danger" },
-  renamed: { letter: "R", className: "text-iris-text" },
-  copied: { letter: "C", className: "text-iris-text" },
-  type_changed: { letter: "T", className: "text-text-tertiary" },
-};
-
-export function diffFileDomId(file: DiffFileContract): string {
-  return `diff-file-${file.sha.slice(0, 12)}`;
-}
+import { PaneHeader } from "@web/components/runs/pane-header";
 
 export function DiffFileTree({
   diff,
@@ -29,12 +18,12 @@ export function DiffFileTree({
       aria-label="Changed files"
       className="min-h-0 overflow-auto border-r border-border-subtle bg-sidebar"
     >
-      <div className="sticky top-0 z-[2] flex h-8.5 items-center gap-2 border-b border-border-subtle bg-sidebar px-3.5 text-micro font-semibold uppercase tracking-[0.04em] text-text-tertiary">
+      <PaneHeader className="bg-sidebar">
         Files
         <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] font-normal normal-case">
           <DiffStat additions={diff.additions} deletions={diff.deletions} />
         </span>
-      </div>
+      </PaneHeader>
       <ul className="py-1">
         {diff.files.map((file) => {
           const status = STATUS_LETTER[file.status];
@@ -44,13 +33,14 @@ export function DiffFileTree({
               <button
                 type="button"
                 onClick={() => onSelect(file)}
+                aria-current={active ? "true" : undefined}
                 className={cn(
                   "flex h-7 w-full items-center gap-1.75 px-3 text-xs text-text-secondary hover:bg-hover",
                   active && "bg-selected text-foreground",
                 )}
               >
                 <span
-                  aria-label={file.status}
+                  aria-label={resolveStatus("diffFile", file.status).label}
                   className={cn("w-3 text-center font-mono text-[10px]", status.className)}
                 >
                   {status.letter}

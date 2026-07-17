@@ -1,16 +1,12 @@
 import { Button, Icon } from "@otomat/ui";
-import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
-import { useState } from "react";
+import { useNewIssue } from "@web/components/shell/new-issue-context";
 
-export function NewIssueButton({ projectName }: { projectName?: string }) {
-  const [open, setOpen] = useState(false);
+export function NewIssueButton() {
+  const openNewIssue = useNewIssue();
   return (
-    <>
-      <Button variant="primary" size="sm" onClick={() => setOpen(true)}>
-        <Icon name="plus" aria-hidden />
-        New issue
-      </Button>
-      <NewIssueDialog open={open} onOpenChange={setOpen} projectName={projectName} />
-    </>
+    <Button variant="primary" size="sm" onClick={openNewIssue}>
+      <Icon name="plus" aria-hidden />
+      New issue
+    </Button>
   );
 }

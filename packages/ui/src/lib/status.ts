@@ -182,20 +182,20 @@ export function resolveStatus<K extends StatusKind>(
   return STATUS_REGISTRY[kind][status];
 }
 
-export const TONE_COLOR: Record<StatusTone, string> = {
-  neutral: "var(--text-tertiary)",
-  iris: "var(--iris-text)",
-  success: "var(--success)",
-  warning: "var(--warning)",
-  danger: "var(--danger)",
-  review: "var(--review)",
-  stale: "var(--stale)",
-  ghost: "var(--text-tertiary)",
-};
-
 export const TONE_BG: Partial<Record<StatusTone, string>> = {
   warning: "var(--warning-bg)",
   danger: "var(--danger-bg)",
+};
+
+export const TONE_TEXT: Record<StatusTone, string> = {
+  neutral: "text-text-tertiary",
+  iris: "text-iris-text",
+  success: "text-success",
+  warning: "text-warning",
+  danger: "text-danger",
+  review: "text-review",
+  stale: "text-stale",
+  ghost: "text-text-tertiary",
 };
 
 export const PROVENANCE_VAR: Record<EventSource, string> = {

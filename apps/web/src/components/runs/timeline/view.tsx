@@ -1,12 +1,12 @@
-import { ErrorState, Skeleton } from "@otomat/ui";
+import { Skeleton } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useRunDetail } from "@web/api/runs/queries";
 import { useRunEventStream } from "@web/api/runs/run-events-provider";
 import { ContextPane } from "@web/components/runs/cockpit/context-pane";
-import { PaneHeader } from "@web/components/runs/cockpit/pane-header";
 import { StepsPane } from "@web/components/runs/cockpit/steps-pane";
+import { PaneHeader } from "@web/components/runs/pane-header";
 import { RunTimeline } from "@web/components/runs/timeline/list";
-import { CenteredState } from "@web/components/shell/centered-state";
+import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
 
 export function RunTimelineView() {
   const { runId } = useParams({ from: "/runs/$runId/" });
@@ -24,13 +24,10 @@ export function RunTimelineView() {
 
   if (detail.isError) {
     return (
-      <CenteredState>
-        <ErrorState
-          title="Couldn’t load this run"
-          description="The daemon is unreachable. Check that it is running, then retry."
-          onRetry={() => void detail.refetch()}
-        />
-      </CenteredState>
+      <DaemonUnreachableState
+        title="Couldn’t load this run"
+        onRetry={() => void detail.refetch()}
+      />
     );
   }
 
@@ -41,7 +38,7 @@ export function RunTimelineView() {
         <PaneHeader>
           Event timeline
           <span className="ml-auto font-normal normal-case text-text-tertiary">
-            ordered by seq · live
+            {stream.state === "open" ? "ordered by seq · live" : "ordered by seq"}
           </span>
         </PaneHeader>
         <RunTimeline events={stream.events} state={stream.state} degraded={stream.degraded} />

@@ -1,14 +1,15 @@
-import type { IssueContract, IssueState } from "@otomat/domain";
-import { resolveStatus } from "@otomat/ui";
+import { ISSUE_STATES, type IssueContract, type IssueState } from "@otomat/domain";
+import { resolveStatus, TONE_TEXT } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-import { TONE_TEXT } from "@web/lib/status-tone";
+import { issueShortId } from "@web/lib/ids";
 
-const BOARD_COLUMNS: IssueState[] = ["backlog", "ready", "running", "reviewing", "pr_open", "done"];
+// blocked/canceled are hidden per the prototype board; the List layout still shows them.
+const HIDDEN_COLUMNS = new Set<IssueState>(["blocked", "canceled"]);
+const BOARD_COLUMNS = ISSUE_STATES.filter((status) => !HIDDEN_COLUMNS.has(status));
 
 function BoardCard({ issue }: { issue: IssueContract }) {
   const meta = resolveStatus("issue", issue.status);
   const StatusIcon = meta.icon;
-  const shortId = issue.source_external_id ?? issue.id.slice(0, 8);
   return (
     <li>
       <Link
@@ -22,7 +23,7 @@ function BoardCard({ issue }: { issue: IssueContract }) {
       >
         <span className="flex items-center gap-1.75 text-xs tabular-nums text-text-tertiary">
           <StatusIcon aria-hidden className={`h-3.25 w-3.25 ${TONE_TEXT[meta.tone]}`} />
-          <span className="font-mono">{shortId}</span>
+          <span className="font-mono">{issueShortId(issue)}</span>
           <span>·</span>
           <span>{issue.source}</span>
         </span>

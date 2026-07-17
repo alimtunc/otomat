@@ -1,15 +1,14 @@
 import type { IssueContract } from "@otomat/domain";
-import { IssueStatusChip, RelativeTime } from "@otomat/ui";
+import { cn, IssueStatusChip, RelativeTime } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-
-const CELL = "h-10 border-b border-border-subtle px-3";
+import { issueShortId } from "@web/lib/ids";
+import { CELL } from "@web/lib/table";
 
 export function IssueRow({ issue }: { issue: IssueContract }) {
-  const shortId = issue.source_external_id ?? issue.id.slice(0, 8);
   return (
-    <tr className="transition-colors hover:bg-hover">
-      <td className={`${CELL} font-mono text-text-tertiary`}>{shortId}</td>
-      <td className={`${CELL} relative p-0`}>
+    <tr className="relative transition-colors hover:bg-hover">
+      <td className={`${CELL} font-mono text-text-tertiary`}>{issueShortId(issue)}</td>
+      <td className={cn(CELL, "p-0")}>
         <Link
           to="/issues/$issueId"
           params={{ issueId: issue.id }}

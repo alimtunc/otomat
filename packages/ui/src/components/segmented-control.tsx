@@ -12,7 +12,7 @@ const segmentedVariants = cva(
 const segmentedItemVariants = cva(
   [
     "inline-flex items-center gap-1.25 px-2.25 font-medium rounded-[4px]",
-    "text-text-secondary outline-none",
+    "text-text-secondary",
     "transition-[background,color] duration-[--motion-fast] ease-standard",
     "hover:text-foreground",
     "data-[pressed]:bg-surface-3 data-[pressed]:text-foreground data-[pressed]:shadow-[--shadow-sm]",

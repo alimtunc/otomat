@@ -12,7 +12,7 @@ const pillsVariants = cva(
 const pillVariants = cva(
   [
     "inline-flex items-center gap-1.5 px-2.5 font-medium rounded-[4px]",
-    "text-text-secondary outline-none",
+    "text-text-secondary",
     "transition-[background,color] duration-[--motion-fast] ease-standard",
     "hover:text-foreground",
     "data-[pressed]:bg-surface-3 data-[pressed]:text-foreground",

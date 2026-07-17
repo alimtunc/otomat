@@ -2,7 +2,7 @@ import { isRunTerminal, type RunDetail } from "@otomat/domain";
 import { Button, Icon, RunStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useAbortRun, useResumeRun } from "@web/api/runs/mutations";
-import { PaneHeader } from "@web/components/runs/cockpit/pane-header";
+import { PaneHeader } from "@web/components/runs/pane-header";
 
 export function ContextPane({ detail }: { detail: RunDetail }) {
   const runId = detail.run.id;

@@ -1,5 +1,4 @@
 import type {
-  AgentSessionState,
   ChangeStatus,
   IssueState,
   PullRequestState,
@@ -61,10 +60,6 @@ export function RunStatusChip(props: PresetStatusChipProps<RunState>) {
 
 export function StepStatusChip(props: PresetStatusChipProps<StepRunState>) {
   return <StatusChip kind="step" {...props} />;
-}
-
-export function SessionStatusChip(props: PresetStatusChipProps<AgentSessionState>) {
-  return <StatusChip kind="session" {...props} />;
 }
 
 export function ReviewStatusChip(props: PresetStatusChipProps<ReviewState>) {

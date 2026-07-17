@@ -7,6 +7,7 @@ import { IssueHeader } from "@web/components/issues/issue-header";
 import { IssueRail } from "@web/components/issues/issue-rail";
 import { RunsList } from "@web/components/runs/list/list";
 import { RouteShell } from "@web/components/shell/route-shell";
+import { issueShortId, shortId } from "@web/lib/ids";
 
 export function IssueDetailView() {
   const { issueId } = useParams({ from: "/issues/$issueId" });
@@ -18,14 +19,14 @@ export function IssueDetailView() {
     await start({ issue_id: issueId });
   }
 
-  const shortId = issue.data?.source_external_id ?? issueId.slice(0, 8);
+  const idLabel = issue.data ? issueShortId(issue.data) : shortId(issueId);
 
   return (
     <RouteShell
       active="issues"
       breadcrumbs={[
         { label: "Issues", href: "/issues" },
-        { label: shortId, current: true },
+        { label: idLabel, current: true },
       ]}
       breadcrumbExtra={issue.data ? <IssueStatusChip status={issue.data.status} /> : null}
       actions={

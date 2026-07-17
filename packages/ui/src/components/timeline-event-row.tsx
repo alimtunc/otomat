@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import type { ComponentPropsWithoutRef, KeyboardEvent, ReactNode } from "react";
 
 import { toDate } from "../lib/date";
-import { EVENT_GLYPH, PROVENANCE_LABEL, PROVENANCE_VAR, TONE_BG, TONE_COLOR } from "../lib/status";
+import { EVENT_GLYPH, PROVENANCE_LABEL, PROVENANCE_VAR, TONE_BG, TONE_TEXT } from "../lib/status";
 import { cn } from "../lib/utils";
 
 function EventTime({ at }: { at: Date | string | number }) {
@@ -110,7 +110,8 @@ export function TimelineEventRow({
         >
           <Icon
             aria-hidden
-            style={{ width: 13, height: 13, flexShrink: 0, color: TONE_COLOR[tone] }}
+            className={TONE_TEXT[tone]}
+            style={{ width: 13, height: 13, flexShrink: 0 }}
           />
           <span style={{ fontSize: "var(--text-sm)", color: "var(--foreground)" }}>{summary}</span>
           <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>

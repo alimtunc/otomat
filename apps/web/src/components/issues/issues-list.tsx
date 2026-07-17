@@ -1,32 +1,24 @@
 import type { IssueContract } from "@otomat/domain";
-import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
+import { EmptyState } from "@otomat/ui";
 import type { useIssues } from "@web/api/issues/queries";
 import { IssueRow } from "@web/components/issues/issue-row";
 import { IssuesBoard } from "@web/components/issues/issues-board";
 import { CenteredState } from "@web/components/shell/centered-state";
+import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
+import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { QueryList } from "@web/components/shell/query-list";
-
-const HEAD_CELL =
-  "sticky top-0 h-7.5 border-b border-border-subtle bg-background px-3 text-left text-xs font-medium text-text-tertiary";
+import { HEAD_CELL, TABLE } from "@web/lib/table";
 
 function IssuesTable({ issues }: { issues: IssueContract[] }) {
   return (
-    <table className="w-full border-collapse text-sm">
+    <table className={TABLE}>
       <thead>
         <tr>
-          <th className={HEAD_CELL} style={{ width: 90 }}>
-            ID
-          </th>
+          <th className={`${HEAD_CELL} w-22.5`}>ID</th>
           <th className={HEAD_CELL}>Title</th>
-          <th className={HEAD_CELL} style={{ width: 140 }}>
-            Status
-          </th>
-          <th className={HEAD_CELL} style={{ width: 90 }}>
-            Source
-          </th>
-          <th className={HEAD_CELL} style={{ width: 110 }}>
-            Updated
-          </th>
+          <th className={`${HEAD_CELL} w-35`}>Status</th>
+          <th className={`${HEAD_CELL} w-22.5`}>Source</th>
+          <th className={`${HEAD_CELL} w-27.5`}>Updated</th>
         </tr>
       </thead>
       <tbody>
@@ -50,21 +42,9 @@ export function IssuesList({
   return (
     <QueryList
       query={query}
-      pending={
-        <div className="flex flex-col gap-2 p-6">
-          {[0, 1, 2, 3].map((row) => (
-            <Skeleton key={row} height={44} />
-          ))}
-        </div>
-      }
+      pending={<ListSkeleton rows={4} height={44} />}
       error={
-        <CenteredState>
-          <ErrorState
-            title="Couldn’t load issues"
-            description="The daemon is unreachable. Check that it is running, then retry."
-            onRetry={() => void query.refetch()}
-          />
-        </CenteredState>
+        <DaemonUnreachableState title="Couldn’t load issues" onRetry={() => void query.refetch()} />
       }
       empty={
         <CenteredState>

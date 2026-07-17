@@ -7,7 +7,6 @@ import { Kbd } from "./kbd";
 export interface TopbarProps {
   breadcrumbs?: ReactNode;
   connectionStatus?: ReactNode;
-  actions?: ReactNode;
   onSearch?: () => void;
   searchLabel?: string;
   searchKbd?: string;
@@ -18,7 +17,6 @@ export interface TopbarProps {
 export function Topbar({
   breadcrumbs,
   connectionStatus,
-  actions,
   onSearch,
   searchLabel = "Search…",
   searchKbd = "⌘K",
@@ -55,7 +53,6 @@ export function Topbar({
       {connectionStatus ? (
         <div className="flex items-center gap-1.5 px-1.5 text-xs">{connectionStatus}</div>
       ) : null}
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
     </header>
   );
 }

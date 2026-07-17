@@ -1,7 +1,6 @@
 import type { RunDetail } from "@otomat/domain";
-import { AgentAvatar, resolveStatus } from "@otomat/ui";
-import { PaneHeader } from "@web/components/runs/cockpit/pane-header";
-import { TONE_DOT, TONE_TEXT } from "@web/lib/status-tone";
+import { AgentAvatar, cn, LiveDot, resolveStatus, TONE_TEXT } from "@otomat/ui";
+import { PaneHeader } from "@web/components/runs/pane-header";
 
 export function StepsPane({ detail }: { detail: RunDetail }) {
   return (
@@ -14,18 +13,13 @@ export function StepsPane({ detail }: { detail: RunDetail }) {
           return (
             <div
               key={step.id}
-              className={
-                i < detail.steps.length - 1
-                  ? "border-b border-border-subtle px-3.5 py-1.75"
-                  : "px-3.5 py-1.75"
-              }
+              className={cn(
+                "px-3.5 py-1.75",
+                i < detail.steps.length - 1 && "border-b border-border-subtle",
+              )}
             >
               <div className="flex items-center gap-2 text-sm">
-                <span
-                  aria-hidden
-                  className="inline-block h-1.75 w-1.75 flex-none rounded-full"
-                  style={{ background: TONE_DOT[meta.tone] }}
-                />
+                <LiveDot tone={meta.tone} live={meta.live} size={7} />
                 <span className="font-medium text-foreground">{step.name}</span>
                 <span className={`ml-auto text-xs ${TONE_TEXT[meta.tone]}`}>{meta.label}</span>
               </div>

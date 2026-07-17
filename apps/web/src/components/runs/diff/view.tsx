@@ -5,7 +5,8 @@ import { useAddReviewComment } from "@web/api/reviews/mutations";
 import { useRunDiff, useRunReview } from "@web/api/reviews/queries";
 import { useRunDetail } from "@web/api/runs/queries";
 import { DiffFileCard } from "@web/components/runs/diff/file-card";
-import { diffFileDomId, DiffFileTree } from "@web/components/runs/diff/file-tree";
+import { diffFileDomId } from "@web/components/runs/diff/file-card.utils";
+import { DiffFileTree } from "@web/components/runs/diff/file-tree";
 import { DiffFixBar } from "@web/components/runs/diff/fix-bar";
 import { RunDiffHeader } from "@web/components/runs/diff/header";
 import { ArchivedComments } from "@web/components/runs/review/archived-comments";
@@ -77,13 +78,20 @@ export function RunDiffView() {
     <div className="flex h-full min-h-0 flex-col">
       <RunDiffHeader diff={diff} reviewStatus={reviewQuery.data.review?.status ?? null} />
       {diff.files.length === 0 ? (
-        <CenteredState fill="flex">
-          <EmptyState
-            icon="git-compare"
-            title="No changes yet"
-            description="The canonical git diff appears once a run produces changes. Diffs are never fabricated."
-          />
-        </CenteredState>
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto">
+          <CenteredState fill="flex">
+            <EmptyState
+              icon="git-compare"
+              title="No changes yet"
+              description="The canonical git diff appears once a run produces changes. Diffs are never fabricated."
+            />
+          </CenteredState>
+          {archived.length > 0 ? (
+            <div className="p-4">
+              <ArchivedComments comments={archived} selection={selection} />
+            </div>
+          ) : null}
+        </div>
       ) : (
         <div className="grid min-h-0 flex-1 grid-cols-[240px_1fr]">
           <DiffFileTree diff={diff} activePath={activePath} onSelect={jumpToFile} />

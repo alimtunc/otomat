@@ -12,6 +12,8 @@ describe("Sidebar", () => {
       projects: [{ id: "local-default", name: "Local workspace" }],
       currentProjectId: "local-default",
       onProjectSelect,
+      onSearch: vi.fn(),
+      onNewIssue: vi.fn(),
     }) as ReactElement<{ projectSwitcher: ReactElement<ProjectSwitcherProps> }>;
     const switcher = shell.props.projectSwitcher;
 

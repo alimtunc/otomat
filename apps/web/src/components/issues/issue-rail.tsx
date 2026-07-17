@@ -1,6 +1,7 @@
 import type { IssueContract, RunContract } from "@otomat/domain";
 import { Button, Icon, IssueStatusChip, RunStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
+import { shortId } from "@web/lib/ids";
 import type { ReactNode } from "react";
 
 function RailSection({
@@ -59,7 +60,7 @@ export function IssueRail({ issue, latestRun }: { issue: IssueContract; latestRu
           title={
             <>
               Run
-              <span className="font-normal text-text-tertiary">· {latestRun.id.slice(0, 8)}</span>
+              <span className="font-normal text-text-tertiary">· {shortId(latestRun.id)}</span>
             </>
           }
           last

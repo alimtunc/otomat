@@ -12,7 +12,7 @@ const LIVEDOT_CSS = `
 @media (prefers-reduced-motion:reduce){.otomat-livedot::after{display:none}}
 `;
 
-const TONE_CLASS: Record<Exclude<StatusTone, "ghost">, string> = {
+const TONE_CLASS: Record<StatusTone, string> = {
   neutral: "bg-neutral",
   success: "bg-success",
   warning: "bg-warning",
@@ -20,10 +20,11 @@ const TONE_CLASS: Record<Exclude<StatusTone, "ghost">, string> = {
   review: "bg-review",
   stale: "bg-stale",
   iris: "bg-iris",
+  ghost: "bg-text-tertiary",
 };
 
 export interface LiveDotProps extends ComponentPropsWithoutRef<"span"> {
-  tone?: keyof typeof TONE_CLASS;
+  tone?: StatusTone;
   live?: boolean;
   size?: number;
 }

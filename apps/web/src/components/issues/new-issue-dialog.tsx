@@ -50,7 +50,7 @@ export function NewIssueDialog({ open, onOpenChange, projectName }: NewIssueDial
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent aria-label="New issue">
         <DialogHeader>
           <div className="flex items-center gap-1.75 text-sm text-text-secondary">
             {projectName ? (
