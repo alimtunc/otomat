@@ -1,7 +1,7 @@
 import { startRunRequestSchema } from "@otomat/domain";
 import { Hono } from "hono";
 
-import { UnknownRuntimeError } from "#runtime";
+import { RuntimeUnavailableError, UnknownRuntimeError } from "#runtime";
 import { RunNotResumableError } from "#supervisor";
 
 import type { ApiDeps } from "../deps.js";
@@ -23,6 +23,12 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
     } catch (error) {
       if (error instanceof UnknownRuntimeError) {
         return c.json({ error: "unknown_runtime" }, 400);
+      }
+      if (error instanceof RuntimeUnavailableError) {
+        return c.json(
+          { error: "runtime_unavailable", runtime: error.runtime, reason: error.reason },
+          409,
+        );
       }
       console.error("[otomat] launch run failed", error);
       return c.json({ error: "run_launch_failed" }, 500);

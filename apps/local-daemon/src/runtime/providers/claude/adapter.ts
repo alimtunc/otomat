@@ -20,6 +20,8 @@ import { ClaudeFrameMapper } from "./frames.js";
 
 export const CLAUDE_ADAPTER_ID = "claude";
 
+export const CLAUDE_BINARY = "claude";
+
 const CLAUDE_PERMISSION_MODE_ENV = "OTOMAT_CLAUDE_PERMISSION_MODE";
 const CLAUDE_PERMISSION_MODES = ["acceptEdits", "bypassPermissions"] as const;
 type ClaudePermissionMode = (typeof CLAUDE_PERMISSION_MODES)[number];
@@ -60,7 +62,7 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
   readonly capabilities = CLAUDE_CAPABILITIES;
 
   /** The binary parameter is the test seam: tests point it at a stub replaying recorded frames. */
-  constructor(private readonly binary = "claude") {}
+  constructor(private readonly binary: string = CLAUDE_BINARY) {}
 
   async run(
     input: RuntimeRunInput,

@@ -1,44 +1,48 @@
+import type { RuntimeDescriptor } from "@otomat/domain";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@otomat/ui";
-import { useRuntimes } from "@web/api/daemon/queries";
+import { isAvailableRuntime, isRealRuntime } from "@web/lib/runtimes";
+
+function runtimeItemLabel(descriptor: RuntimeDescriptor): string {
+  const devSuffix = isRealRuntime(descriptor) ? "" : " (dev only)";
+  const unavailableSuffix = isAvailableRuntime(descriptor) ? "" : " — not installed";
+  return `${descriptor.display_name}${devSuffix}${unavailableSuffix}`;
+}
 
 export function RuntimeSelect({
+  descriptors,
   value,
   onValueChange,
+  disabled = false,
 }: {
-  value: string;
+  descriptors: RuntimeDescriptor[];
+  value: string | null;
   onValueChange: (value: string) => void;
+  disabled?: boolean;
 }) {
-  const runtimes = useRuntimes();
-  const items = (runtimes.data ?? []).map((descriptor) => ({
+  const items = descriptors.map((descriptor) => ({
     value: descriptor.id,
-    label: descriptor.display_name,
+    label: runtimeItemLabel(descriptor),
+    disabled: !isAvailableRuntime(descriptor),
   }));
 
   return (
-    <>
-      <Select
-        items={items}
-        value={value}
-        onValueChange={(next) => {
-          if (next !== null) onValueChange(next);
-        }}
-      >
-        <SelectTrigger aria-label="Runtime" disabled={runtimes.isPending}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {items.map((item) => (
-            <SelectItem key={item.value} value={item.value}>
-              {item.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {runtimes.isError ? (
-        <p className="text-xs text-danger">
-          Couldn’t load the daemon’s runtime list — only the default runtime is available.
-        </p>
-      ) : null}
-    </>
+    <Select
+      items={items}
+      value={value}
+      onValueChange={(next) => {
+        if (next !== null) onValueChange(next);
+      }}
+    >
+      <SelectTrigger aria-label="Runtime" disabled={disabled}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {items.map((item) => (
+          <SelectItem key={item.value} value={item.value} disabled={item.disabled}>
+            {item.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

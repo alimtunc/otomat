@@ -1,3 +1,7 @@
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { getAgent, getRun, schema } from "@otomat/db";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -33,10 +37,38 @@ function insertRun(id: string, values: { agentId?: string; steps?: (typeof PLAN_
 
 describe("ensureRuntimeAgent", () => {
   it("defaults to fake, validates against the registry, and upserts the agent row", () => {
-    expect(ensureRuntimeAgent(harness.db, undefined)).toBe("fake");
-    expect(ensureRuntimeAgent(harness.db, "claude")).toBe("claude");
-    expect(getAgent(harness.db, "claude")?.runtime).toBe("claude");
-    expect(() => ensureRuntimeAgent(harness.db, "bogus")).toThrow(/unknown runtime "bogus"/);
+    const binDir = mkdtempSync(join(tmpdir(), "otomat-runtime-selection-bin-"));
+    try {
+      const claudeBin = join(binDir, "claude");
+      writeFileSync(claudeBin, "#!/bin/sh\nexit 0\n");
+      chmodSync(claudeBin, 0o755);
+
+      expect(ensureRuntimeAgent(harness.db, undefined)).toBe("fake");
+      expect(ensureRuntimeAgent(harness.db, "claude", { PATH: binDir })).toBe("claude");
+      expect(getAgent(harness.db, "claude")?.runtime).toBe("claude");
+      expect(() => ensureRuntimeAgent(harness.db, "bogus")).toThrow(/unknown runtime "bogus"/);
+    } finally {
+      rmSync(binDir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a real runtime whose binary is not installed", () => {
+    expect(() => ensureRuntimeAgent(harness.db, "claude", { PATH: "" })).toThrow(
+      /runtime "claude" is unavailable \(binary_not_found\)/,
+    );
+    expect(getAgent(harness.db, "claude")).toBeUndefined();
+  });
+
+  it("refuses the fake runtime outside tests and explicit dev", () => {
+    expect(() => ensureRuntimeAgent(harness.db, "fake", { PATH: "" })).toThrow(
+      /runtime "fake" is unavailable \(not_enabled\)/,
+    );
+    expect(() => ensureRuntimeAgent(harness.db, undefined, { PATH: "" })).toThrow(
+      /runtime "fake" is unavailable \(not_enabled\)/,
+    );
+    expect(ensureRuntimeAgent(harness.db, "fake", { OTOMAT_ENABLE_FAKE_RUNTIME: "1" })).toBe(
+      "fake",
+    );
   });
 });
 

@@ -11,6 +11,7 @@ import {
   runDetailSchema,
   runDiffResponseSchema,
   runtimeDescriptorSchema,
+  type CreateIssueRequest,
   type CreateReviewCommentRequest,
   type PreparePullRequestRequest,
   type RequestFixRequest,
@@ -55,6 +56,9 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
       return issueContractSchema
         .array()
         .parse(await getJson(config, `/api/issues${queryString(params)}`));
+    },
+    async createIssue(request: CreateIssueRequest) {
+      return issueContractSchema.parse(await postJson(config, "/api/issues", request));
     },
     async getIssue(id: string) {
       return issueContractSchema.parse(
