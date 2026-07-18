@@ -3,6 +3,7 @@ import {
   listAgentSessionsForRun,
   listStepRunsForRun,
   type AgentSessionRow,
+  type Db,
   type RunRow,
   type StepRunRow,
 } from "@otomat/db";
@@ -32,18 +33,10 @@ export class RunNotResumableError extends Error {
 export async function startRun(state: SupervisorState, request: StartRunRequest): Promise<RunRow> {
   const ctx = prepareRun(state, request);
   await spawnTurn(state, ctx, "run", null);
-  const row = getRun(state.db, ctx.runId);
-  if (!row) throw new Error("run vanished immediately after spawn");
-  return row;
+  return requireRunRow(state.db, ctx.runId, "spawn");
 }
 
-/**
- * Resumes a run waiting on a human. An interrupted step resumes its own provider
- * session; a run paused between steps starts the next ready plan step fresh; a
- * run whose steps all finished (a torn follow-up turn) resumes its latest
- * session. Throws `RunNotResumableError` unless the run is in `awaiting_human`,
- * is not already running, and has a step to resume or start.
- */
+/** Resumes an `awaiting_human` run: an interrupted step resumes its own session, a run paused between steps starts the next ready step, a torn follow-up turn resumes the latest session. */
 export async function resumeRun(state: SupervisorState, runId: string): Promise<RunRow> {
   const run = requireFollowUpableRun(state, runId, ["awaiting_human"]);
   const steps = listStepRunsForRun(state.db, runId);
@@ -56,11 +49,7 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
   }
 
   const started = await startNextReadyStep(state, run);
-  if (started) {
-    const row = getRun(state.db, runId);
-    if (!row) throw new Error("run vanished immediately after resume");
-    return row;
-  }
+  if (started) return requireRunRow(state.db, runId, "resume");
 
   const lastPrompt = run.plan_json.steps.at(-1)?.prompt ?? null;
   if (lastPrompt === null) throw new RunNotResumableError(`run ${runId} has no step to resume`);
@@ -85,6 +74,12 @@ export async function followUpRun(
 ): Promise<RunRow> {
   const run = requireFollowUpableRun(state, runId, RUN_FOLLOW_UP_STATES);
   return spawnFollowUpTurn(state, run, prompt);
+}
+
+function requireRunRow(db: Db, runId: string, when: "spawn" | "resume"): RunRow {
+  const row = getRun(db, runId);
+  if (!row) throw new Error(`run vanished immediately after ${when}`);
+  return row;
 }
 
 function requireFollowUpableRun(
@@ -138,9 +133,7 @@ async function spawnFollowUpTurn(
     session.provider_session_id,
   );
 
-  const row = getRun(db, runId);
-  if (!row) throw new Error("run vanished immediately after resume");
-  return row;
+  return requireRunRow(db, runId, "resume");
 }
 
 /** The latest resumable session: the one on the furthest plan step (an interrupted step, or the last finished turn). */

@@ -16,12 +16,7 @@ export interface TimelineStepGroup {
   events: EventEnvelope[];
 }
 
-/**
- * Splits the seq-ordered event list at each change of `step_run_id`, so a
- * multi-step timeline reads as one section per step without reordering
- * anything. Events without a step (run-level markers) stay in the current
- * section.
- */
+/** Splits the seq-ordered list at each `step_run_id` change; run-level (null) events stay in the current section. */
 export function groupEventsByStep(
   events: readonly EventEnvelope[],
   steps: readonly { id: string; name: string }[],
@@ -33,10 +28,6 @@ export function groupEventsByStep(
     const stepRunId = event.step_run_id;
     if (last && (stepRunId === null || stepRunId === last.stepRunId)) {
       last.events.push(event);
-      continue;
-    }
-    if (last === undefined && stepRunId === null) {
-      groups.push({ stepRunId: null, stepName: null, events: [event] });
       continue;
     }
     groups.push({

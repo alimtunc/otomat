@@ -22,7 +22,9 @@ export interface SeedWorkflowStep {
   id: string;
   status: StepRunState;
   dependsOn?: string[];
+  name?: string;
   prompt?: string;
+  sessionId?: string;
   session?: {
     status: AgentSessionState;
     providerSessionId?: string | null;
@@ -38,8 +40,11 @@ export interface SeedWorkflowOptions {
   steps: SeedWorkflowStep[];
 }
 
-/** Seeds a multi-step run (plan + step rows, sessions only where given) in arbitrary crash-leftover states. */
-export function seedWorkflowRun(db: Db, options: SeedWorkflowOptions): Map<string, SeededRun> {
+/** Seeds a multi-step run (plan + step rows, sessions only where given) in arbitrary crash-leftover states; the returned lookup throws on an unknown step id. */
+export function seedWorkflowRun(
+  db: Db,
+  options: SeedWorkflowOptions,
+): (stepId: string) => SeededRun {
   const refs = new Map<string, SeededRun>();
   db.insert(schema.runs)
     .values({
@@ -51,7 +56,7 @@ export function seedWorkflowRun(db: Db, options: SeedWorkflowOptions): Map<strin
         version: 1,
         steps: options.steps.map((step) => ({
           id: step.id,
-          name: `Step ${step.id}`,
+          name: step.name ?? `Step ${step.id}`,
           agent: "fake",
           prompt: step.prompt ?? `p-${step.id}`,
           depends_on: step.dependsOn ?? [],
@@ -65,11 +70,11 @@ export function seedWorkflowRun(db: Db, options: SeedWorkflowOptions): Map<strin
         id: step.id,
         run_id: options.runId,
         idx: index,
-        name: `Step ${step.id}`,
+        name: step.name ?? `Step ${step.id}`,
         status: step.status,
       })
       .run();
-    const sessionId = `${step.id}-session`;
+    const sessionId = step.sessionId ?? `${step.id}-session`;
     if (step.session) {
       db.insert(schema.agentSessions)
         .values({
@@ -89,43 +94,35 @@ export function seedWorkflowRun(db: Db, options: SeedWorkflowOptions): Map<strin
       agentSessionId: sessionId,
     });
   });
-  return refs;
+  return (stepId) => {
+    const ref = refs.get(stepId);
+    if (!ref) throw new Error(`unknown seeded step ${stepId}`);
+    return ref;
+  };
 }
 
 /** Seeds a run/step/session chain in arbitrary (e.g. crash-leftover) states with optional process liveness. */
 export function seedRun(db: Db, options: SeedRunOptions): SeededRun {
   const stepRunId = `${options.runId}-step`;
-  const agentSessionId = `${options.runId}-session`;
-  db.insert(schema.runs)
-    .values({
-      id: options.runId,
-      issue_id: options.issueId ?? "i1",
-      status: options.runStatus,
-      branch: `otomat/run/${options.runId}`,
-      plan_json: {
-        version: 1,
-        steps: [{ id: stepRunId, name: "Agent turn", agent: "fake", prompt: "p", depends_on: [] }],
+  const lookup = seedWorkflowRun(db, {
+    runId: options.runId,
+    issueId: options.issueId,
+    runStatus: options.runStatus,
+    steps: [
+      {
+        id: stepRunId,
+        name: "Agent turn",
+        prompt: "p",
+        status: options.stepStatus,
+        sessionId: `${options.runId}-session`,
+        session: {
+          status: options.sessionStatus,
+          providerSessionId: options.providerSessionId ?? null,
+          pid: options.pid ?? null,
+          pgid: options.pgid ?? null,
+        },
       },
-    })
-    .run();
-  db.insert(schema.stepRuns)
-    .values({
-      id: stepRunId,
-      run_id: options.runId,
-      idx: 0,
-      name: "Agent turn",
-      status: options.stepStatus,
-    })
-    .run();
-  db.insert(schema.agentSessions)
-    .values({
-      id: agentSessionId,
-      step_run_id: stepRunId,
-      status: options.sessionStatus,
-      provider_session_id: options.providerSessionId ?? null,
-      pid: options.pid ?? null,
-      pgid: options.pgid ?? null,
-    })
-    .run();
-  return { runId: options.runId, stepRunId, agentSessionId };
+    ],
+  });
+  return lookup(stepRunId);
 }

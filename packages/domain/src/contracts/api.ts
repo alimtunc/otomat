@@ -48,12 +48,7 @@ export type RunDetail = z.infer<typeof runDetailSchema>;
 /** Wire id of the built-in deterministic fake runtime — a simulated runtime for tests and explicit development only. */
 export const FAKE_RUNTIME_ID = "fake";
 
-/**
- * Launch a run from an existing issue or from an ad-hoc local prompt. At least
- * one is required. An optional multi-step `plan` (RunPlan V1, strictly
- * validated) replaces the single implicit step; without it the simple
- * single-step launch stays the default path.
- */
+/** Launch from an issue or an ad-hoc prompt (one required); an optional `plan` replaces the implicit single step. */
 export const startRunRequestSchema = z
   .object({
     issue_id: z.string().min(1).optional(),

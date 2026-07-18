@@ -27,7 +27,7 @@ import { eventsForSession, findFinalStatus, findProviderSessionId } from "./evid
 import { isReapableWorker } from "./identity.js";
 import { buildReconciledEvent, type SessionRef } from "./markers.js";
 import { isProcessAlive, killProcessGroup } from "./process.js";
-import { driveRunConvergence, driveTurnConvergence } from "./transitions.js";
+import { driveIdleRunTo, driveRunConvergence, driveTurnConvergence } from "./transitions.js";
 import { type ProcessExit, type ReconcileClassification, type ReconcileOutcome } from "./types.js";
 
 export interface SettleOptions {
@@ -35,12 +35,8 @@ export interface SettleOptions {
   mode: "live" | "boot";
   /** Exit observed live by the parent; recorded as the session's exit accounting. */
   observedExit?: ProcessExit;
-  /**
-   * The turn being settled, when the caller tracked it live. A follow-up turn
-   * runs on an already-terminal step/session, so the turn cannot be derived
-   * from row status; boot settles without one and derives it from the rows.
-   */
-  turn?: { stepRunId: string; agentSessionId: string };
+  /** The live-tracked turn; a follow-up runs on an already-terminal step/session so it cannot be derived from rows — boot omits it. */
+  turn?: { agentSessionId: string };
   now: string;
 }
 
@@ -48,7 +44,7 @@ export interface SettleOptions {
 type SettleableRun = Pick<RunRow, "id" | "status"> & { plan_json?: RunPlan };
 
 /** The turn being settled: the one session the single-flight supervisor still has open. */
-export function findActiveSession(sessions: readonly AgentSessionRow[]): AgentSessionRow | null {
+function findActiveSession(sessions: readonly AgentSessionRow[]): AgentSessionRow | null {
   for (let i = sessions.length - 1; i >= 0; i--) {
     const session = sessions[i];
     if (session && !agentSessionMachine.isTerminal(session.status)) return session;
@@ -56,8 +52,17 @@ export function findActiveSession(sessions: readonly AgentSessionRow[]): AgentSe
   return null;
 }
 
-function stepStatuses(steps: readonly StepRunRow[]): Map<string, StepRunState> {
+export function stepStatuses(steps: readonly StepRunRow[]): Map<string, StepRunState> {
   return new Map(steps.map((step) => [step.id, step.status]));
+}
+
+/** The session this settle judges: the explicitly tracked turn's, else the one still open. */
+export function resolveTurnSession(
+  sessions: readonly AgentSessionRow[],
+  turn: { agentSessionId: string } | null | undefined,
+): AgentSessionRow | null {
+  if (turn) return sessions.find((session) => session.id === turn.agentSessionId) ?? null;
+  return findActiveSession(sessions);
 }
 
 interface RunResolution {
@@ -65,12 +70,7 @@ interface RunResolution {
   cancelRemaining: boolean;
 }
 
-/**
- * Where the run lands once this turn's step reaches its target. A completed
- * step with more work chains live but rests at `awaiting_human` on boot — the
- * daemon never auto-runs after a restart. Failure and cancel are fail-fast:
- * nothing else starts, remaining queued steps are honestly canceled.
- */
+/** A completed step with more work chains live but rests at `awaiting_human` on boot (no auto-run after restart); failure/cancel are fail-fast. */
 function resolveRunTarget(
   classification: ReconcileClassification,
   plan: RunPlan,
@@ -105,9 +105,7 @@ export function settleRun(
   const steps = listStepRunsForRun(db, run.id);
   const plan = run.plan_json ?? null;
 
-  const turnSession = options.turn
-    ? (sessions.find((session) => session.id === options.turn?.agentSessionId) ?? null)
-    : findActiveSession(sessions);
+  const turnSession = resolveTurnSession(sessions, options.turn);
   if (options.observedExit && turnSession !== null && turnSession.pid !== null) {
     recordAgentSessionExit(db, turnSession.id, {
       exit_code: options.observedExit.code,
@@ -184,12 +182,7 @@ export function settleRun(
   return { runId: run.id, classification, reason, orphanTerminated, providerSessionId };
 }
 
-/**
- * A non-terminal run with no open session: the daemon died between steps (or
- * before the first spawn). Progression is rebuilt from the step rows alone —
- * finished steps are never replayed; a still-startable plan rests at
- * `awaiting_human` for an explicit resume.
- */
+/** No open session (daemon died between steps): progression rebuilds from step rows — finished steps never replay, a startable plan rests at `awaiting_human`. */
 function settleIdleRun(
   db: Db,
   dataDir: string,
@@ -226,14 +219,7 @@ function settleIdleRun(
     reason = "no step can start and the plan is not finished";
   }
 
-  driveTurnConvergence(
-    db,
-    run,
-    { step: null, session: null },
-    { run: target, step: "canceled", session: "terminated" },
-    cancelRemaining ? steps : [],
-    options.now,
-  );
+  driveIdleRunTo(db, run, target, cancelRemaining ? steps : [], options.now);
 
   emitReconciled(db, dataDir, run.id, options, {
     ref: { runId: run.id, stepRunId: null, agentSessionId: null },

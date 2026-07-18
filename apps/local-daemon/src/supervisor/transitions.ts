@@ -43,7 +43,7 @@ export function driveSessionTo(
 }
 
 /** Drives every non-terminal step and session of a run to the given targets. */
-export function driveStepsAndSessionsTo(
+function driveStepsAndSessionsTo(
   db: Db,
   steps: readonly StepRunRow[],
   sessions: readonly AgentSessionRow[],
@@ -59,11 +59,7 @@ export function driveStepsAndSessionsTo(
   }
 }
 
-/**
- * Converges one settled turn as a single transaction: the turn's step and
- * session go to the classification targets, steps that can no longer start are
- * honestly canceled, and the run lands on the plan-derived target.
- */
+/** One transaction: the turn's step/session reach their targets, no-longer-startable steps cancel, the run lands on the plan-derived target. */
 export function driveTurnConvergence(
   db: Db,
   run: { id: string; status: RunState },
@@ -88,6 +84,24 @@ export function driveTurnConvergence(
       driveRunTo(db, run.id, run.status, targets.run, now);
     },
     { behavior: "immediate" },
+  );
+}
+
+/** Converges a run with no live turn: `cancelSteps` cancel and the run lands on `target`. */
+export function driveIdleRunTo(
+  db: Db,
+  run: { id: string; status: RunState },
+  target: RunState,
+  cancelSteps: readonly StepRunRow[],
+  now: string,
+): void {
+  driveTurnConvergence(
+    db,
+    run,
+    { step: null, session: null },
+    { run: target, step: "canceled", session: "terminated" },
+    cancelSteps,
+    now,
   );
 }
 

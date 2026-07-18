@@ -72,11 +72,7 @@ function resolveStepRuntimes(
   );
 }
 
-/**
- * Freezes the launch plan: request-local step ids are rewritten to the
- * generated `step_runs` ids — the persisted invariant is plan step id ==
- * step_run id — and per-step `agent` lands resolved, never null.
- */
+/** Freezes the launch plan: request-local ids become the generated `step_runs` ids (plan step id == step_run id) and per-step `agent` lands resolved, never null. */
 function freezePlan(
   request: StartRunRequest,
   defaultRuntime: KnownRuntimeId,

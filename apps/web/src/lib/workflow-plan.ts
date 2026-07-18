@@ -16,7 +16,7 @@ export function newWorkflowStep(counter: number): WorkflowStepDraft {
 }
 
 /** Keeps every dependency pointing at an earlier, still-existing step. */
-export function sanitizeWorkflowSteps(steps: readonly WorkflowStepDraft[]): WorkflowStepDraft[] {
+function sanitizeWorkflowSteps(steps: readonly WorkflowStepDraft[]): WorkflowStepDraft[] {
   const earlier = new Set<string>();
   return steps.map((step) => {
     const dependsOn = step.dependsOn.filter((key) => earlier.has(key));
@@ -36,7 +36,6 @@ export function moveWorkflowStep(
   }
   const next = [...steps];
   const [moved] = next.splice(index, 1);
-  if (moved === undefined) return [...steps];
   next.splice(target, 0, moved);
   return sanitizeWorkflowSteps(next);
 }
@@ -46,6 +45,14 @@ export function removeWorkflowStep(
   index: number,
 ): WorkflowStepDraft[] {
   return sanitizeWorkflowSteps(steps.filter((_, stepIndex) => stepIndex !== index));
+}
+
+export function setWorkflowStepRuntime(
+  steps: readonly WorkflowStepDraft[],
+  index: number,
+  runtime: string | null,
+): WorkflowStepDraft[] {
+  return steps.map((step, stepIndex) => (stepIndex === index ? { ...step, runtime } : step));
 }
 
 export function toggleWorkflowDependency(

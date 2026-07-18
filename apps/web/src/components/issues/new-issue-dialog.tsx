@@ -11,10 +11,11 @@ import { ManualIssueForm } from "@web/components/issues/manual-issue-form";
 import { WorkflowIssueForm } from "@web/components/issues/workflow-issue-form";
 import { useState } from "react";
 
-type NewIssueMode = "agent" | "workflow" | "manual";
+const NEW_ISSUE_MODES = ["agent", "workflow", "manual"] as const;
+type NewIssueMode = (typeof NEW_ISSUE_MODES)[number];
 
 function isNewIssueMode(value: string): value is NewIssueMode {
-  return value === "agent" || value === "workflow" || value === "manual";
+  return (NEW_ISSUE_MODES as readonly string[]).includes(value);
 }
 
 export interface NewIssueDialogProps {

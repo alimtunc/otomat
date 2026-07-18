@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import type { RunPlanStep } from "../contracts/entities.js";
 import {
   RUN_PLAN_MAX_STEPS,
   RUN_PLAN_STEP_ID_PATTERN,
@@ -24,19 +23,15 @@ export const runPlanStepInputSchema = z.object({
 });
 export type RunPlanStepInput = z.infer<typeof runPlanStepInputSchema>;
 
-interface StructuralCheck {
-  sound: boolean;
-}
-
 function checkStepIds(
   steps: readonly RunPlanStepInput[],
   ctx: z.RefinementCtx,
-  check: StructuralCheck,
-): Set<string> {
+): { ids: Set<string>; sound: boolean } {
   const ids = new Set<string>();
+  let sound = true;
   steps.forEach((step, index) => {
     if (ids.has(step.id)) {
-      check.sound = false;
+      sound = false;
       ctx.addIssue({
         code: "custom",
         path: ["steps", index, "id"],
@@ -45,28 +40,28 @@ function checkStepIds(
     }
     ids.add(step.id);
   });
-  return ids;
+  return { ids, sound };
 }
 
 function checkDependencies(
   steps: readonly RunPlanStepInput[],
   ids: ReadonlySet<string>,
   ctx: z.RefinementCtx,
-  check: StructuralCheck,
-): void {
+): boolean {
+  let sound = true;
   steps.forEach((step, index) => {
     const seen = new Set<string>();
     step.depends_on.forEach((dependency, dependencyIndex) => {
       const path = ["steps", index, "depends_on", dependencyIndex];
       if (dependency === step.id) {
-        check.sound = false;
+        sound = false;
         ctx.addIssue({
           code: "custom",
           path,
           message: `Step "${step.id}" cannot depend on itself`,
         });
       } else if (!ids.has(dependency)) {
-        check.sound = false;
+        sound = false;
         ctx.addIssue({
           code: "custom",
           path,
@@ -74,7 +69,7 @@ function checkDependencies(
         });
       }
       if (seen.has(dependency)) {
-        check.sound = false;
+        sound = false;
         ctx.addIssue({
           code: "custom",
           path,
@@ -84,26 +79,21 @@ function checkDependencies(
       seen.add(dependency);
     });
   });
+  return sound;
 }
 
-/**
- * Strict launch-time shape of `RunPlan` V1: unique step ids, existing acyclic
- * dependencies, at least one step, bounded sizes. The persisted `runPlanSchema`
- * stays the lenient mirror of what launch already validated.
- */
+/** Strict launch-time schema; the persisted `runPlanSchema` stays the lenient mirror of what launch already validated. */
 export const runPlanInputSchema = z
   .object({
     version: z.literal(1),
     steps: z.array(runPlanStepInputSchema).min(1).max(RUN_PLAN_MAX_STEPS),
   })
   .superRefine((plan, ctx) => {
-    const check: StructuralCheck = { sound: true };
-    const ids = checkStepIds(plan.steps, ctx, check);
-    checkDependencies(plan.steps, ids, ctx, check);
-    if (!check.sound) return;
+    const { ids, sound: idsSound } = checkStepIds(plan.steps, ctx);
+    const depsSound = checkDependencies(plan.steps, ids, ctx);
+    if (!idsSound || !depsSound) return;
 
-    const steps: RunPlanStep[] = plan.steps.map((step) => ({ ...step }));
-    const { remaining } = topologicalStepOrder(steps);
+    const { remaining } = topologicalStepOrder(plan.steps);
     if (remaining.length > 0) {
       ctx.addIssue({
         code: "custom",

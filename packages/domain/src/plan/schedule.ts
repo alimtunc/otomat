@@ -51,11 +51,9 @@ export function topologicalStepOrder(steps: readonly RunPlanStep[]): Topological
     if (readyIndex === -1) break;
     placed.add(readyIndex);
     const step = steps[readyIndex];
-    if (step === undefined) break;
     order.push(step);
     for (const dependentIndex of dependents.get(step.id) ?? []) {
-      const current = indegree[dependentIndex];
-      if (current !== undefined) indegree[dependentIndex] = current - 1;
+      indegree[dependentIndex] -= 1;
     }
   }
 
@@ -84,10 +82,7 @@ export function hasActiveStep(plan: RunPlan, statuses: PlanStepStatuses): boolea
   return plan.steps.some((step) => isStepActive(statusOf(statuses, step.id)));
 }
 
-/**
- * First queued step (in execution order) whose dependencies have all succeeded.
- * Ignores whether another step is active — single-flight is the caller's rule.
- */
+/** First queued step whose dependencies all succeeded; ignores active steps — single-flight is the caller's rule. */
 export function nextReadyStep(plan: RunPlan, statuses: PlanStepStatuses): RunPlanStep | null {
   for (const step of planExecutionOrder(plan)) {
     if (statusOf(statuses, step.id) !== "queued") continue;
@@ -103,11 +98,7 @@ export function allStepsSucceeded(plan: RunPlan, statuses: PlanStepStatuses): bo
 
 export type PlanOutcome = "running" | "succeeded" | "failed" | "canceled";
 
-/**
- * `running` while a step is active or another can still start; otherwise the
- * honest terminal outcome — `failed` wins over `canceled` when both occurred
- * (`stale` counts as failed: the daemon lost the process and refuses to guess).
- */
+/** `running` while a step is active or startable; otherwise `failed` wins over `canceled`, and `stale` counts as failed. */
 export function planOutcome(plan: RunPlan, statuses: PlanStepStatuses): PlanOutcome {
   if (allStepsSucceeded(plan, statuses)) return "succeeded";
   if (hasActiveStep(plan, statuses)) return "running";

@@ -1,5 +1,11 @@
-import { getRun, listAgentSessionsForRun, listRuns, listStepRunsForRun, schema } from "@otomat/db";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import {
+  getRun,
+  listAgentSessionsForRun,
+  listIssues,
+  listRuns,
+  listStepRunsForRun,
+} from "@otomat/db";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { readRunEvents } from "#events";
 import { RuntimeUnavailableError } from "#runtime";
@@ -23,6 +29,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   fix.cleanup();
 });
 
@@ -112,36 +119,31 @@ it("stop mid-workflow honors the active step's own end and cancels the rest", as
 
 it("rejects a plan step runtime that is unavailable before writing anything", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "complete");
-  const issuesBefore = fix.db.select().from(schema.issues).all().length;
+  const issuesBefore = listIssues(fix.db).length;
 
   // The fake runtime stays enabled under Vitest; an empty PATH makes any real CLI unavailable.
-  const pathBefore = process.env["PATH"];
-  process.env["PATH"] = "";
-  try {
-    await expect(
-      supervisor.start({
-        prompt: "the goal",
-        plan: {
-          version: 1,
-          steps: [
-            { id: "a", name: "A", agent: null, prompt: "pa", depends_on: [] },
-            { id: "b", name: "B", agent: "claude", prompt: "pb", depends_on: ["a"] },
-          ],
-        },
-      }),
-    ).rejects.toThrow(RuntimeUnavailableError);
-  } finally {
-    process.env["PATH"] = pathBefore;
-  }
+  vi.stubEnv("PATH", "");
+  await expect(
+    supervisor.start({
+      prompt: "the goal",
+      plan: {
+        version: 1,
+        steps: [
+          { id: "a", name: "A", agent: null, prompt: "pa", depends_on: [] },
+          { id: "b", name: "B", agent: "claude", prompt: "pb", depends_on: ["a"] },
+        ],
+      },
+    }),
+  ).rejects.toThrow(RuntimeUnavailableError);
 
   expect(listRuns(fix.db)).toHaveLength(0);
-  expect(fix.db.select().from(schema.issues).all().length).toBe(issuesBefore);
+  expect(listIssues(fix.db)).toHaveLength(issuesBefore);
   expect(spawn.calls).toBe(0);
 });
 
 it("boot mid-step: finished steps are never replayed and the torn step resumes", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "complete");
-  const refs = seedWorkflowRun(fix.db, {
+  const seeded = seedWorkflowRun(fix.db, {
     runId: "wf1",
     runStatus: "running",
     steps: [
@@ -155,9 +157,8 @@ it("boot mid-step: finished steps are never replayed and the torn step resumes",
       { id: "s3", status: "queued", dependsOn: ["s2"] },
     ],
   });
-  const s1 = refs.get("s1");
-  const s2 = refs.get("s2");
-  if (!s1 || !s2) throw new Error("seed refs missing");
+  const s1 = seeded("s1");
+  const s2 = seeded("s2");
   writeRunEvents(fix.dataDir, "wf1", [
     providerSessionEvent(s1, "ps-s1"),
     completedMarker(s1, "ps-s1"),
@@ -215,7 +216,7 @@ it("boot between steps: progression resumes without duplicating the finished ste
 
 it("boot after a step's marker landed but before its settle: no replay of that step", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "complete");
-  const refs = seedWorkflowRun(fix.db, {
+  const seeded = seedWorkflowRun(fix.db, {
     runId: "wf3",
     runStatus: "running",
     steps: [
@@ -227,8 +228,7 @@ it("boot after a step's marker landed but before its settle: no replay of that s
       { id: "s2", status: "queued", dependsOn: ["s1"] },
     ],
   });
-  const s1 = refs.get("s1");
-  if (!s1) throw new Error("seed refs missing");
+  const s1 = seeded("s1");
   writeRunEvents(fix.dataDir, "wf3", [
     providerSessionEvent(s1, "ps-s1"),
     completedMarker(s1, "ps-s1"),

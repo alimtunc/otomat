@@ -22,13 +22,14 @@ import { useRuntimes } from "@web/api/daemon/queries";
 import { useStartRunAndNavigate } from "@web/api/runs/mutations";
 import { IssueFormFooter } from "@web/components/issues/issue-form-footer";
 import { RuntimePicker } from "@web/components/runs/launch/runtime-picker";
-import { fieldErrorProps } from "@web/lib/form";
+import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@web/lib/form";
 import { isAvailableRuntime, resolveRuntimeChoice } from "@web/lib/runtimes";
 import {
   buildRunPlanInput,
   moveWorkflowStep,
   newWorkflowStep,
   removeWorkflowStep,
+  setWorkflowStepRuntime,
   toggleWorkflowDependency,
   type WorkflowStepDraft,
 } from "@web/lib/workflow-plan";
@@ -161,20 +162,12 @@ export function WorkflowIssueForm({
         event.preventDefault();
         void form.handleSubmit();
       }}
-      onKeyDown={(event) => {
-        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-          event.preventDefault();
-          void form.handleSubmit();
-        }
-      }}
+      onKeyDown={submitOnCmdEnter(() => void form.handleSubmit())}
     >
       <DialogBody className="flex max-h-[62vh] flex-col gap-3 overflow-y-auto">
         <form.Field
           name="goal"
-          validators={{
-            onChange: ({ value }) =>
-              value.trim().length === 0 ? "Describe the overall goal." : undefined,
-          }}
+          validators={{ onChange: requiredTrimmed("Describe the overall goal.") }}
         >
           {(field) => (
             <Field {...fieldErrorProps(field.state.meta)}>
@@ -214,10 +207,7 @@ export function WorkflowIssueForm({
                     <span className="text-xs font-semibold text-text-tertiary">{index + 1}</span>
                     <form.Field
                       name={`steps[${index}].name`}
-                      validators={{
-                        onChange: ({ value }) =>
-                          value.trim().length === 0 ? "Name this step." : undefined,
-                      }}
+                      validators={{ onChange: requiredTrimmed("Name this step.") }}
                     >
                       {(field) => (
                         <Field {...fieldErrorProps(field.state.meta)} className="flex-1">
@@ -262,10 +252,7 @@ export function WorkflowIssueForm({
                   <form.Field
                     name={`steps[${index}].prompt`}
                     validators={{
-                      onChange: ({ value }) =>
-                        value.trim().length === 0
-                          ? "Tell the agent what this step does."
-                          : undefined,
+                      onChange: requiredTrimmed("Tell the agent what this step does."),
                     }}
                   >
                     {(field) => (
@@ -296,13 +283,7 @@ export function WorkflowIssueForm({
                         descriptors={descriptors}
                         value={step.runtime}
                         onValueChange={(next) =>
-                          updateSteps((steps) =>
-                            steps.map((candidate, candidateIndex) =>
-                              candidateIndex === index
-                                ? { ...candidate, runtime: next }
-                                : candidate,
-                            ),
-                          )
+                          updateSteps((steps) => setWorkflowStepRuntime(steps, index, next))
                         }
                       />
                     </div>
@@ -326,33 +307,34 @@ export function WorkflowIssueForm({
             </div>
           )}
         </form.Field>
-        {planError === null ? null : <p className="text-xs text-danger">{planError}</p>}
+        {planError === null ? null : (
+          <p role="alert" className="text-xs text-danger">
+            {planError}
+          </p>
+        )}
       </DialogBody>
       <IssueFormFooter
         onCancel={onCancel}
         submit={
-          <form.Subscribe selector={(state) => state.values}>
-            {(values) => {
-              const stepsReady =
-                values.steps.length > 0 &&
-                values.steps.every(
-                  (step) => step.name.trim().length > 0 && step.prompt.trim().length > 0,
-                );
-              const canSubmit =
-                values.goal.trim().length > 0 && stepsReady && runtime !== null && !isPending;
-              return (
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="sm"
-                  loading={isPending}
-                  disabled={!canSubmit}
-                >
-                  Launch workflow
-                  <Kbd className="border-[rgba(255,255,255,.4)] text-on-accent">⌘↵</Kbd>
-                </Button>
-              );
-            }}
+          <form.Subscribe
+            selector={(state) =>
+              hasText(state.values.goal) &&
+              state.values.steps.length > 0 &&
+              state.values.steps.every((step) => hasText(step.name) && hasText(step.prompt))
+            }
+          >
+            {(filled) => (
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                loading={isPending}
+                disabled={!(filled && runtime !== null && !isPending)}
+              >
+                Launch workflow
+                <Kbd className="border-[rgba(255,255,255,.4)] text-on-accent">⌘↵</Kbd>
+              </Button>
+            )}
           </form.Subscribe>
         }
       />

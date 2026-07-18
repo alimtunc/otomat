@@ -17,8 +17,8 @@ export interface InflightProcess {
   monitor: Promise<void>;
   /** Live tailer draining the child's `events.jsonl` into the ledger while it runs. */
   tail: EventTailer;
-  /** The step/session this process is a turn of, so abort can settle against the right ledger slice. */
-  turn: { stepRunId: string; agentSessionId: string };
+  /** The session this process is a turn of, so abort can settle against the right ledger slice. */
+  turn: { agentSessionId: string };
 }
 
 export interface SupervisorState {

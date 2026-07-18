@@ -7,9 +7,9 @@ import { TARGETS } from "./classify.js";
 import { eventsForSession, findFinalStatus } from "./evidence.js";
 import { buildTerminalMarker } from "./markers.js";
 import { terminateGracefully } from "./process.js";
-import { findActiveSession, settleRun } from "./settle.js";
+import { resolveTurnSession, settleRun } from "./settle.js";
 import { notifyAfterSettle, type SupervisorState } from "./state.js";
-import { driveRunConvergence, driveTurnConvergence } from "./transitions.js";
+import { driveIdleRunTo, driveRunConvergence } from "./transitions.js";
 
 /** Grace between a graceful `SIGTERM` and a forced `SIGKILL` during abort. */
 const ABORT_GRACE_MS = 2000;
@@ -17,23 +17,10 @@ const ABORT_GRACE_MS = 2000;
 /** The user asked to stop: whatever the settled turn produced, nothing further starts. */
 function cancelRemainder(state: SupervisorState, run: RunRow, now: string): void {
   if (run.status !== "running") return;
-  driveTurnConvergence(
-    state.db,
-    run,
-    { step: null, session: null },
-    { run: "canceled", step: "canceled", session: "terminated" },
-    listStepRunsForRun(state.db, run.id),
-    now,
-  );
+  driveIdleRunTo(state.db, run, "canceled", listStepRunsForRun(state.db, run.id), now);
 }
 
-/**
- * Aborts an in-flight run: gracefully terminates its process group (SIGTERM then
- * SIGKILL), then drives it to `canceled` and appends a terminal marker. No-op when the
- * run is missing or already terminal. If the worker wrote its own final marker before
- * the abort landed, that result is honored instead of a forced cancel — and any steps
- * that were still waiting are then canceled, never started.
- */
+/** SIGTERM-then-SIGKILL the process group and drive the run to `canceled`; a worker-written final marker is honored over a forced cancel, and waiting steps are canceled, never started. */
 export async function abortRun(state: SupervisorState, runId: string): Promise<void> {
   const { db, dataDir } = state;
   const run = getRun(db, runId);
@@ -52,9 +39,7 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
 
     const sessions = listAgentSessionsForRun(db, runId);
     const turn = handle?.turn ?? null;
-    const active = turn
-      ? (sessions.find((session) => session.id === turn.agentSessionId) ?? null)
-      : findActiveSession(sessions);
+    const active = resolveTurnSession(sessions, turn);
     const events = readRunEvents(db, runId);
     const scoped = active === null ? events : eventsForSession(events, active.id);
 

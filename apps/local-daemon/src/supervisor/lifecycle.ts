@@ -15,11 +15,7 @@ import { notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveRunTo, driveSessionTo, driveStepTo } from "./transitions.js";
 import type { ProcessExit, SessionProcess, TurnContext } from "./types.js";
 
-/**
- * Advances the run and the turn's own step/session only — sibling plan steps
- * keep their state. A follow-up turn resumes an already-succeeded step: its
- * terminal step/session rows are left untouched by design, never reopened.
- */
+/** Advances only the turn's own step/session — siblings keep their state, and a follow-up's already-terminal rows are never reopened. */
 function advanceToRunning(state: SupervisorState, ctx: TurnContext): void {
   const { db } = state;
   const now = new Date().toISOString();
@@ -45,7 +41,7 @@ function settleLive(state: SupervisorState, ctx: TurnContext, exit?: ProcessExit
     const outcome = settleRun(state.db, state.dataDir, run, {
       mode: "live",
       ...(exit ? { observedExit: exit } : {}),
-      turn: { stepRunId: ctx.stepRunId, agentSessionId: ctx.agentSessionId },
+      turn: { agentSessionId: ctx.agentSessionId },
       now: new Date().toISOString(),
     });
     notifyAfterSettle(state, outcome);
@@ -81,7 +77,7 @@ function trackTurn(
     proc,
     monitor,
     tail,
-    turn: { stepRunId: ctx.stepRunId, agentSessionId: ctx.agentSessionId },
+    turn: { agentSessionId: ctx.agentSessionId },
   });
 }
 
