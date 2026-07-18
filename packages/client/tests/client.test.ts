@@ -122,7 +122,12 @@ it("posts resume to the run's resume endpoint", async () => {
 
 it("posts abort and parses the returned run detail", async () => {
   let calledUrl = "";
-  const detail = { run: { ...RUN, status: "canceled" }, steps: [], sessions: [] };
+  const detail = {
+    run: { ...RUN, status: "canceled" },
+    steps: [],
+    sessions: [],
+    worktree_path: null,
+  };
   const fetchMock: typeof fetch = async (input) => {
     calledUrl = String(input);
     return jsonResponse(detail);

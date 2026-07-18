@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   findActiveByOwner,
+  findWorktreeById,
   insertWorktree,
   listWorktreeRows,
   updateWorktreeStatus,
@@ -32,6 +33,8 @@ describe("worktrees-store", () => {
     });
 
     expect(findActiveByOwner(db.client.db, "owner-1")?.id).toBe("w1");
+    expect(findWorktreeById(db.client.db, "w1")?.path).toBe("/tmp/w1");
+    expect(findWorktreeById(db.client.db, "missing")).toBeUndefined();
     expect(listWorktreeRows(db.client.db, { repositoryId: db.repositoryId })).toHaveLength(1);
   });
 

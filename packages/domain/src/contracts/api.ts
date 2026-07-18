@@ -35,11 +35,12 @@ export const healthResponseSchema = z.object({
 });
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
 
-/** A run plus its persisted step/session graph; the event ledger is served by the run's SSE stream, not here. */
+/** A run plus its persisted step/session graph; the event ledger is served by the run's SSE stream, not here. `worktree_path` is null when the run has no worktree. */
 export const runDetailSchema = z.object({
   run: runContractSchema,
   steps: z.array(stepRunContractSchema),
   sessions: z.array(agentSessionContractSchema),
+  worktree_path: z.string().nullable(),
 });
 export type RunDetail = z.infer<typeof runDetailSchema>;
 
