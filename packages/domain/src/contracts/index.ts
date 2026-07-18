@@ -18,6 +18,7 @@ export {
   reviewContractSchema,
   runContractSchema,
   runPlanSchema,
+  runPlanStepSchema,
   stepRunContractSchema,
   type AgentSessionContract,
   type IssueContract,
@@ -29,5 +30,6 @@ export {
   type ReviewContract,
   type RunContract,
   type RunPlan,
+  type RunPlanStep,
   type StepRunContract,
 } from "./entities.js";

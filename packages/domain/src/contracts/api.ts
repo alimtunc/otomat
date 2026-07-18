@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { runPlanInputSchema } from "../plan/validate.js";
 import {
   agentSessionContractSchema,
   pullRequestContractSchema,
@@ -47,13 +48,19 @@ export type RunDetail = z.infer<typeof runDetailSchema>;
 /** Wire id of the built-in deterministic fake runtime — a simulated runtime for tests and explicit development only. */
 export const FAKE_RUNTIME_ID = "fake";
 
-/** Launch a run from an existing issue or from an ad-hoc local prompt. At least one is required. */
+/**
+ * Launch a run from an existing issue or from an ad-hoc local prompt. At least
+ * one is required. An optional multi-step `plan` (RunPlan V1, strictly
+ * validated) replaces the single implicit step; without it the simple
+ * single-step launch stays the default path.
+ */
 export const startRunRequestSchema = z
   .object({
     issue_id: z.string().min(1).optional(),
     prompt: z.string().min(1).optional(),
-    /** Runtime adapter id; the daemon validates it against its registry and rejects unavailable runtimes. */
+    /** Runtime adapter id; the daemon validates it against its registry and rejects unavailable runtimes. Steps may override it per step via `plan.steps[].agent`. */
     runtime: z.string().min(1).optional(),
+    plan: runPlanInputSchema.optional(),
   })
   .refine((value) => Boolean(value.issue_id) || Boolean(value.prompt), {
     message: "Provide either issue_id or prompt",
