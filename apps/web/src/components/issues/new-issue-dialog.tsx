@@ -8,9 +8,14 @@ import {
 } from "@otomat/ui";
 import { AgentIssueForm } from "@web/components/issues/agent-issue-form";
 import { ManualIssueForm } from "@web/components/issues/manual-issue-form";
+import { WorkflowIssueForm } from "@web/components/issues/workflow-issue-form";
 import { useState } from "react";
 
-type NewIssueMode = "agent" | "manual";
+type NewIssueMode = "agent" | "workflow" | "manual";
+
+function isNewIssueMode(value: string): value is NewIssueMode {
+  return value === "agent" || value === "workflow" || value === "manual";
+}
 
 export interface NewIssueDialogProps {
   open: boolean;
@@ -51,11 +56,12 @@ export function NewIssueDialog({
               type="single"
               value={mode}
               onValueChange={(value) => {
-                if (value === "agent" || value === "manual") setMode(value);
+                if (isNewIssueMode(value)) setMode(value);
               }}
               aria-label="Issue creation mode"
             >
               <SegmentedItem value="agent">With agent</SegmentedItem>
+              <SegmentedItem value="workflow">Workflow</SegmentedItem>
               <SegmentedItem value="manual">Manual</SegmentedItem>
             </SegmentedControl>
           </div>
@@ -67,9 +73,18 @@ export function NewIssueDialog({
             onLaunched={close}
             onCancel={close}
           />
-        ) : (
+        ) : null}
+        {mode === "workflow" ? (
+          <WorkflowIssueForm
+            runtimeChoice={runtimeChoice}
+            onRuntimeChoice={setRuntimeChoice}
+            onLaunched={close}
+            onCancel={close}
+          />
+        ) : null}
+        {mode === "manual" ? (
           <ManualIssueForm projectId={projectId} onCreated={close} onCancel={close} />
-        )}
+        ) : null}
       </DialogContent>
     </Dialog>
   );
