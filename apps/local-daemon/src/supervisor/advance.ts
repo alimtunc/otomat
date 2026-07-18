@@ -8,7 +8,7 @@ import { emitLedgerEvent, runDir } from "#events";
 import { spawnTurn } from "./lifecycle.js";
 import { buildTerminalMarker } from "./markers.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
-import { stepStatuses } from "./settle.js";
+import { stepStatuses } from "./settle/index.js";
 import { notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveIdleRunTo } from "./transitions.js";
 

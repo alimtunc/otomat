@@ -7,7 +7,7 @@ import { TARGETS } from "./classify.js";
 import { eventsForSession, findFinalStatus } from "./evidence.js";
 import { buildTerminalMarker } from "./markers.js";
 import { terminateGracefully } from "./process.js";
-import { resolveTurnSession, settleRun } from "./settle.js";
+import { resolveTurnSession, settleRun } from "./settle/index.js";
 import { notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveIdleRunTo, driveRunConvergence } from "./transitions.js";
 

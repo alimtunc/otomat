@@ -10,7 +10,7 @@ import { agentSessionMachine, runMachine, stepRunMachine } from "@otomat/domain"
 import { runDir, startLiveTail } from "#events";
 
 import { writeWorkerIdentity } from "./identity.js";
-import { settleRun } from "./settle.js";
+import { settleRun } from "./settle/index.js";
 import { notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveRunTo, driveSessionTo, driveStepTo } from "./transitions.js";
 import type { ProcessExit, SessionProcess, TurnContext } from "./types.js";
