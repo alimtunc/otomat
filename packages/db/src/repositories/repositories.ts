@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { repositories } from "../schema/index.js";
+import { touch } from "./touch.js";
 
 export type NewRepository = typeof repositories.$inferInsert;
 export type RepositoryRow = typeof repositories.$inferSelect;
@@ -12,6 +13,14 @@ export function insertRepository(db: Db, value: NewRepository): void {
 
 export function getRepository(db: Db, id: string): RepositoryRow | undefined {
   return db.select().from(repositories).where(eq(repositories.id, id)).get();
+}
+
+/** Boot-time refresh for the bootstrapped repository, whose branch is re-detected each daemon start. */
+export function updateRepositoryDefaultBranch(db: Db, id: string, defaultBranch: string): void {
+  db.update(repositories)
+    .set(touch({ default_branch: defaultBranch }))
+    .where(eq(repositories.id, id))
+    .run();
 }
 
 export function listRepositories(db: Db, options: { projectId?: string } = {}): RepositoryRow[] {

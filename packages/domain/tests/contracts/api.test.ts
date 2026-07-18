@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   createIssueRequestSchema,
   followUpRunRequestSchema,
+  registerRepositoryRequestSchema,
+  repositoryRegistrationErrorSchema,
   runDetailSchema,
   runtimeAvailabilitySchema,
   runtimeDescriptorSchema,
+  startRunRequestSchema,
 } from "#domain/contracts/api";
 
 const RUN = {
@@ -97,5 +100,34 @@ describe("runtime availability contract", () => {
     expect(runtimeDescriptorSchema.parse(descriptor)).toEqual(descriptor);
     const { availability: _availability, ...withoutAvailability } = descriptor;
     expect(runtimeDescriptorSchema.safeParse(withoutAvailability).success).toBe(false);
+  });
+});
+
+describe("startRunRequestSchema project pinning", () => {
+  it("accepts an ad-hoc prompt with a project_id", () => {
+    const parsed = startRunRequestSchema.parse({ prompt: "do it", project_id: "p1" });
+    expect(parsed.project_id).toBe("p1");
+  });
+
+  it("still requires an issue_id or a prompt", () => {
+    expect(startRunRequestSchema.safeParse({ project_id: "p1" }).success).toBe(false);
+  });
+});
+
+describe("repository registration contracts", () => {
+  it("trims the registered path and rejects a blank one", () => {
+    expect(registerRepositoryRequestSchema.parse({ path: "  /tmp/repo  " })).toEqual({
+      path: "/tmp/repo",
+    });
+    expect(registerRepositoryRequestSchema.safeParse({ path: "   " }).success).toBe(false);
+  });
+
+  it("only admits the enumerated registration error codes", () => {
+    expect(
+      repositoryRegistrationErrorSchema.parse({ error: "head_detached", message: "m" }).error,
+    ).toBe("head_detached");
+    expect(
+      repositoryRegistrationErrorSchema.safeParse({ error: "disk_on_fire", message: "m" }).success,
+    ).toBe(false);
   });
 });

@@ -76,3 +76,30 @@ it("listRuns fails loud on a corrupt plan_json instead of hiding the run", () =>
   seedRunPair(t.client.db);
   expect(() => listRuns(t.client.db)).toThrow();
 });
+
+it("listRuns filters by the project owning each run's issue", () => {
+  seedProject(t.client.db);
+  t.client.db.insert(schema.projects).values({ id: "p2", name: "P2", root_path: "/tmp/p2" }).run();
+  insertIssue(t.client.db, { id: "i1", project_id: "p1", title: "A", source: "local" });
+  insertIssue(t.client.db, { id: "i2", project_id: "p2", title: "B", source: "local" });
+  const plan = { version: 1 as const, steps: [] };
+  insertRun(t.client.db, {
+    id: "r1",
+    issue_id: "i1",
+    status: "queued",
+    branch: "b1",
+    plan_json: plan,
+  });
+  insertRun(t.client.db, {
+    id: "r2",
+    issue_id: "i2",
+    status: "queued",
+    branch: "b2",
+    plan_json: plan,
+  });
+
+  expect(listRuns(t.client.db, { projectId: "p1" }).map((r) => r.id)).toEqual(["r1"]);
+  expect(listRuns(t.client.db, { projectId: "p2" }).map((r) => r.id)).toEqual(["r2"]);
+  expect(listRuns(t.client.db, { projectId: "p2", issueId: "i1" })).toEqual([]);
+  expect(listRuns(t.client.db).map((r) => r.id)).toEqual(["r1", "r2"]);
+});

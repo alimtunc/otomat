@@ -3,7 +3,9 @@ import { z } from "zod";
 import { runPlanInputSchema } from "../plan/validate.js";
 import {
   agentSessionContractSchema,
+  projectContractSchema,
   pullRequestContractSchema,
+  repositoryContractSchema,
   reviewCommentContractSchema,
   reviewContractSchema,
   runContractSchema,
@@ -53,6 +55,8 @@ export const startRunRequestSchema = z
   .object({
     issue_id: z.string().min(1).optional(),
     prompt: z.string().min(1).optional(),
+    /** Project an ad-hoc run (and its anchor issue) belongs to; ignored when `issue_id` already pins the project. */
+    project_id: z.string().min(1).optional(),
     /** Runtime adapter id; the daemon validates it against its registry and rejects unavailable runtimes. Steps may override it per step via `plan.steps[].agent`. */
     runtime: z.string().min(1).optional(),
     plan: runPlanInputSchema.optional(),
@@ -61,6 +65,39 @@ export const startRunRequestSchema = z
     message: "Provide either issue_id or prompt",
   });
 export type StartRunRequest = z.infer<typeof startRunRequestSchema>;
+
+/** Why a local path was refused as a repository registration; safe to show verbatim in the UI. */
+export const REPOSITORY_REGISTRATION_ERRORS = [
+  "path_not_absolute",
+  "path_not_found",
+  "path_not_directory",
+  "path_not_git_repository",
+  "path_not_repository_root",
+  "head_detached",
+  "default_branch_undetectable",
+  "repository_already_registered",
+] as const;
+export type RepositoryRegistrationError = (typeof REPOSITORY_REGISTRATION_ERRORS)[number];
+
+/** Register a local git repository by absolute path; the daemon canonicalizes and validates it. */
+export const registerRepositoryRequestSchema = z.object({
+  path: z.string().trim().min(1),
+});
+export type RegisterRepositoryRequest = z.infer<typeof registerRepositoryRequestSchema>;
+
+/** A registration materializes one local project owning one main repository (V1). */
+export const registerRepositoryResponseSchema = z.object({
+  project: projectContractSchema,
+  repository: repositoryContractSchema,
+});
+export type RegisterRepositoryResponse = z.infer<typeof registerRepositoryResponseSchema>;
+
+/** Wire shape of a refused registration: a stable code plus an actionable, internals-free message. */
+export const repositoryRegistrationErrorSchema = z.object({
+  error: z.enum(REPOSITORY_REGISTRATION_ERRORS),
+  message: z.string(),
+});
+export type RepositoryRegistrationErrorResponse = z.infer<typeof repositoryRegistrationErrorSchema>;
 
 /** Create a local issue without launching a run. */
 export const createIssueRequestSchema = z.object({

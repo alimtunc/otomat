@@ -29,12 +29,16 @@ const timestamps = {
     .default(sql`(CURRENT_TIMESTAMP)`),
 };
 
-export const projects = sqliteTable("projects", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  root_path: text("root_path").notNull(),
-  ...timestamps,
-});
+export const projects = sqliteTable(
+  "projects",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    root_path: text("root_path").notNull(),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("projects_root_path_unique").on(table.root_path)],
+);
 
 export const repositories = sqliteTable("repositories", {
   id: text("id").primaryKey(),
