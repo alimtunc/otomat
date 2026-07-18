@@ -6,6 +6,7 @@ import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
+import { useSelectedProjectId } from "@web/components/shell/use-selected-project";
 import { FOCUS_RING } from "@web/lib/focus";
 import { shortId } from "@web/lib/ids";
 import { isReviewable } from "@web/lib/run-filters";
@@ -21,7 +22,7 @@ const EMPTY = (
 );
 
 export function ReviewsView() {
-  const runs = useRuns();
+  const runs = useRuns(useSelectedProjectId());
   return (
     <RouteShell
       active="reviews"

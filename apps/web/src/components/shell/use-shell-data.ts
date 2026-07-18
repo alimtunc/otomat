@@ -15,7 +15,7 @@ export function useShellData() {
   }));
   const { currentProjectId, selectProject } = useProjectSelection(projects);
   const currentProject = projects.find((project) => project.id === currentProjectId);
-  const runs = useRuns();
+  const runs = useRuns(currentProjectId);
   return {
     connectionState,
     lastSyncAt,

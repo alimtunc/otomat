@@ -1,0 +1,125 @@
+// @vitest-environment happy-dom
+import { DaemonRequestError } from "@otomat/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { RegisterRepositoryForm } from "@web/components/settings/register-repository-form";
+import { setFolderPicker } from "@web/lib/folder-picker";
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const registerRepository = vi.fn();
+
+vi.mock("@web/api/client", () => ({
+  daemon: { registerRepository: (request: unknown) => registerRepository(request) },
+}));
+
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+
+const cleanups: Array<() => Promise<void>> = [];
+
+afterEach(async () => {
+  for (const cleanup of cleanups.splice(0)) await cleanup();
+  document.body.replaceChildren();
+  registerRepository.mockReset();
+  setFolderPicker(null);
+});
+
+async function renderForm() {
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root: Root = createRoot(container);
+  const client = new QueryClient();
+  await act(async () => {
+    root.render(
+      <QueryClientProvider client={client}>
+        <RegisterRepositoryForm />
+      </QueryClientProvider>,
+    );
+  });
+  cleanups.push(async () => {
+    await act(async () => root.unmount());
+  });
+}
+
+function pathInput(): HTMLInputElement {
+  const input = document.querySelector<HTMLInputElement>("input[aria-label='Repository path']");
+  if (!input) throw new Error("path input not found");
+  return input;
+}
+
+function submitButton(): HTMLButtonElement {
+  const button = [...document.querySelectorAll("button")].find(
+    (candidate) => candidate.textContent?.trim() === "Register",
+  );
+  if (!button) throw new Error("Register button not found");
+  return button;
+}
+
+function setInputValue(input: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  setter?.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function buttonLabels(): Array<string | undefined> {
+  return [...document.querySelectorAll("button")].map((button) => button.textContent?.trim());
+}
+
+describe("RegisterRepositoryForm", () => {
+  it("submits the trimmed path and resets on success", async () => {
+    registerRepository.mockResolvedValue({
+      project: { id: "p", name: "otomat", root_path: "/repos/otomat" },
+      repository: {
+        id: "r",
+        project_id: "p",
+        name: "otomat",
+        remote_url: null,
+        default_branch: "main",
+      },
+    });
+    await renderForm();
+
+    expect(submitButton().disabled).toBe(true);
+    await act(async () => {
+      setInputValue(pathInput(), "  /repos/otomat  ");
+    });
+    await act(async () => {
+      submitButton().click();
+    });
+
+    expect(registerRepository).toHaveBeenCalledWith({ path: "/repos/otomat" });
+    expect(pathInput().value).toBe("");
+  });
+
+  it("shows the daemon's refusal message on error and keeps the input", async () => {
+    registerRepository.mockRejectedValue(
+      new DaemonRequestError(400, "/api/repositories", {
+        error: "head_detached",
+        message: "The repository's HEAD is detached; check out a branch first.",
+      }),
+    );
+    await renderForm();
+
+    await act(async () => {
+      setInputValue(pathInput(), "/repos/broken");
+    });
+    await act(async () => {
+      submitButton().click();
+    });
+
+    expect(document.body.textContent).toContain(
+      "The repository's HEAD is detached; check out a branch first.",
+    );
+    expect(pathInput().value).toBe("/repos/broken");
+  });
+
+  it("shows no Browse button in the web build, and one when a picker is injected", async () => {
+    await renderForm();
+    expect(buttonLabels()).not.toContain("Browse…");
+
+    await cleanups.pop()?.();
+    setFolderPicker({ pickFolder: async () => "/picked/dir" });
+    await renderForm();
+    expect(buttonLabels()).toContain("Browse…");
+  });
+});

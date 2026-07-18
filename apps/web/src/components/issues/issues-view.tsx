@@ -3,13 +3,14 @@ import { useIssues } from "@web/api/issues/queries";
 import { IssuesContent } from "@web/components/issues/issues-content";
 import { NewIssueButton } from "@web/components/issues/new-issue-button";
 import { RouteShell } from "@web/components/shell/route-shell";
+import { useSelectedProjectId } from "@web/components/shell/use-selected-project";
 import { applyIssuesFilter, isIssuesFilter, type IssuesFilter } from "@web/lib/issue-filters";
 import { useState } from "react";
 
 type IssuesLayout = "board" | "list";
 
 export function IssuesView() {
-  const issues = useIssues();
+  const issues = useIssues(useSelectedProjectId());
   const [layout, setLayout] = useState<IssuesLayout>("board");
   const [filter, setFilter] = useState<IssuesFilter>("all");
 

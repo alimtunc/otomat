@@ -3,10 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
-export function useRuns() {
+/** Runs of the selected project (through each run's issue); unscoped when `projectId` is undefined. */
+export function useRuns(projectId?: string) {
   return useQuery({
-    queryKey: queryKeys.runs,
-    queryFn: () => daemon.listRuns(),
+    queryKey: queryKeys.runsList(projectId),
+    queryFn: () => daemon.listRuns(projectId ? { projectId } : {}),
   });
 }
 

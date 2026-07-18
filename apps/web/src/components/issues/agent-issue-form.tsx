@@ -7,6 +7,7 @@ import { resolveRuntimeChoice } from "@web/lib/runtimes";
 import { useState, type KeyboardEvent } from "react";
 
 export interface AgentIssueFormProps {
+  projectId: string | undefined;
   runtimeChoice: string | null;
   onRuntimeChoice: (runtime: string) => void;
   onLaunched: () => void;
@@ -14,6 +15,7 @@ export interface AgentIssueFormProps {
 }
 
 export function AgentIssueForm({
+  projectId,
   runtimeChoice,
   onRuntimeChoice,
   onLaunched,
@@ -25,11 +27,12 @@ export function AgentIssueForm({
   const descriptors = runtimes.data ?? [];
   const runtime = resolveRuntimeChoice(descriptors, runtimeChoice);
 
-  const canSubmit = promptText.trim().length > 0 && runtime !== null && !isPending;
+  const canSubmit =
+    promptText.trim().length > 0 && runtime !== null && projectId !== undefined && !isPending;
 
   async function submit() {
-    if (!canSubmit || runtime === null) return;
-    const started = await start({ prompt: promptText.trim(), runtime });
+    if (!canSubmit || runtime === null || projectId === undefined) return;
+    const started = await start({ prompt: promptText.trim(), runtime, project_id: projectId });
     if (started) {
       setPromptText("");
       onLaunched();
@@ -63,6 +66,9 @@ export function AgentIssueForm({
           isSuccess={runtimes.isSuccess}
           onRetry={() => void runtimes.refetch()}
         />
+        {projectId === undefined ? (
+          <p className="text-xs text-danger">Select a project before launching a run.</p>
+        ) : null}
       </DialogBody>
       <IssueFormFooter
         onCancel={onCancel}

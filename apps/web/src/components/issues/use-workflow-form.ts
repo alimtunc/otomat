@@ -5,12 +5,13 @@ import { buildRunPlanInput, newWorkflowStep, type WorkflowStepDraft } from "@web
 import { useRef, useState } from "react";
 
 export interface UseWorkflowFormOptions {
+  projectId: string | undefined;
   runtime: string | null;
   onLaunched: () => void;
 }
 
 /** Owns the workflow launch form: values, plan validation at submit, and the step-list mutations. */
-export function useWorkflowForm({ runtime, onLaunched }: UseWorkflowFormOptions) {
+export function useWorkflowForm({ projectId, runtime, onLaunched }: UseWorkflowFormOptions) {
   const { start, isPending } = useStartRunAndNavigate();
   const stepCounter = useRef(1);
   const [planError, setPlanError] = useState<string | null>(null);
@@ -18,7 +19,7 @@ export function useWorkflowForm({ runtime, onLaunched }: UseWorkflowFormOptions)
   const form = useForm({
     defaultValues: { goal: "", steps: [newWorkflowStep(1)] },
     onSubmit: async ({ value }) => {
-      if (runtime === null) return;
+      if (runtime === null || projectId === undefined) return;
       const plan = buildRunPlanInput(value.steps);
       const parsed = runPlanInputSchema.safeParse(plan);
       if (!parsed.success) {
@@ -26,7 +27,12 @@ export function useWorkflowForm({ runtime, onLaunched }: UseWorkflowFormOptions)
         return;
       }
       setPlanError(null);
-      const started = await start({ prompt: value.goal.trim(), runtime, plan: parsed.data });
+      const started = await start({
+        prompt: value.goal.trim(),
+        runtime,
+        plan: parsed.data,
+        project_id: projectId,
+      });
       if (started) {
         form.reset();
         onLaunched();
