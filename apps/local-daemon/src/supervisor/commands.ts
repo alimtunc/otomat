@@ -1,5 +1,5 @@
 import { getRun, listAgentSessionsForRun, type AgentSessionRow, type RunRow } from "@otomat/db";
-import type { RunState, StartRunRequest } from "@otomat/domain";
+import { RUN_FOLLOW_UP_STATES, type RunState, type StartRunRequest } from "@otomat/domain";
 
 import { runDir } from "#events";
 import { createRuntimeAdapter, isKnownRuntimeId } from "#runtime";
@@ -31,7 +31,7 @@ export async function startRun(state: SupervisorState, request: StartRunRequest)
 
 /** Resumes a run waiting on a human by spawning a `resume` turn against its existing provider session. Throws `RunNotResumableError` unless the run is in `awaiting_human`, is not already running, and has a resumable provider session. */
 export async function resumeRun(state: SupervisorState, runId: string): Promise<RunRow> {
-  const run = requireFollowUpableRun(state, runId, "awaiting_human");
+  const run = requireFollowUpableRun(state, runId, ["awaiting_human"]);
   const prompt = run.plan_json.steps[0]?.prompt ?? null;
   if (prompt === null) throw new Error(`run ${runId} has no plan step to resume`);
   return spawnFollowUpTurn(state, run, prompt);
@@ -43,18 +43,28 @@ export async function fixRun(
   runId: string,
   prompt: string,
 ): Promise<RunRow> {
-  const run = requireFollowUpableRun(state, runId, "review_ready");
+  const run = requireFollowUpableRun(state, runId, ["review_ready"]);
+  return spawnFollowUpTurn(state, run, prompt);
+}
+
+/** A user follow-up is an honest resume from any resting state: same provider session, same worktree, same run — the user's own prompt as the new turn. */
+export async function followUpRun(
+  state: SupervisorState,
+  runId: string,
+  prompt: string,
+): Promise<RunRow> {
+  const run = requireFollowUpableRun(state, runId, RUN_FOLLOW_UP_STATES);
   return spawnFollowUpTurn(state, run, prompt);
 }
 
 function requireFollowUpableRun(
   state: SupervisorState,
   runId: string,
-  requiredStatus: RunState,
+  allowedStatuses: readonly RunState[],
 ): RunRow {
   const run = getRun(state.db, runId);
   if (!run) throw new RunNotResumableError(`run ${runId} not found`);
-  if (run.status !== requiredStatus) {
+  if (!allowedStatuses.includes(run.status)) {
     throw new RunNotResumableError(`run ${runId} is not resumable (status ${run.status})`);
   }
   if (state.claiming.has(runId) || state.inflight.has(runId)) {

@@ -13,6 +13,7 @@ import {
   runtimeDescriptorSchema,
   type CreateIssueRequest,
   type CreateReviewCommentRequest,
+  type FollowUpRunRequest,
   type PreparePullRequestRequest,
   type RequestFixRequest,
   type StartRunRequest,
@@ -79,6 +80,11 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
     async resumeRun(id: string) {
       return runContractSchema.parse(
         await postJson(config, `/api/runs/${encodeURIComponent(id)}/resume`, {}),
+      );
+    },
+    async followUpRun(id: string, request: FollowUpRunRequest) {
+      return runContractSchema.parse(
+        await postJson(config, `/api/runs/${encodeURIComponent(id)}/follow-up`, request),
       );
     },
     async abortRun(id: string) {

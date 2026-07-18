@@ -74,6 +74,8 @@ export interface Supervisor {
   resume(runId: string): Promise<RunRow>;
   /** Spawn a follow-up fix turn on a review-ready run with a caller-built prompt. */
   fix(runId: string, prompt: string): Promise<RunRow>;
+  /** Resume a resting run (`awaiting_human` or `review_ready`) with the user's own follow-up prompt. */
+  followUp(runId: string, prompt: string): Promise<RunRow>;
   /** Kill the run's process group and write the canonical canceled state + a ledger event. No fake success. */
   abort(runId: string): Promise<void>;
   /** Boot-time pass: classify every non-terminal in-flight run from durable evidence and settle it. */

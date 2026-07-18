@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import type { RuntimeEvent } from "#runtime";
+import { RunNotResumableError } from "#supervisor";
 
 import { makeApiApp, post, request, runRow } from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
@@ -127,6 +128,48 @@ it("delegates resume to the supervisor for a known run", async () => {
 it("returns 404 resuming an unknown run", async () => {
   const res = await request(makeApiApp(t), "/api/runs/nope/resume", { method: "POST" });
   expect(res.status).toBe(404);
+});
+
+it("delegates a follow-up to the supervisor with the trimmed prompt", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  let received: { id: string; prompt: string } | null = null;
+  const app = makeApiApp(t, {
+    followUpRun: async (id, prompt) => {
+      received = { id, prompt };
+      return runRow(id, { status: "running" });
+    },
+  });
+  const res = await post(app, `/api/runs/${runId}/follow-up`, { prompt: "  keep going  " });
+  expect(res.status).toBe(200);
+  expect(received).toEqual({ id: runId, prompt: "keep going" });
+  expect(((await res.json()) as RunContract).status).toBe("running");
+});
+
+it("rejects a follow-up with a blank prompt", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  const res = await post(makeApiApp(t), `/api/runs/${runId}/follow-up`, { prompt: "   " });
+  expect(res.status).toBe(400);
+  expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
+});
+
+it("returns 404 following up an unknown run", async () => {
+  const res = await post(makeApiApp(t), "/api/runs/nope/follow-up", { prompt: "p" });
+  expect(res.status).toBe(404);
+});
+
+it("maps RunNotResumableError to 409 run_not_resumable on follow-up", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  const app = makeApiApp(t, {
+    followUpRun: async () => {
+      throw new RunNotResumableError("nope");
+    },
+  });
+  const res = await post(app, `/api/runs/${runId}/follow-up`, { prompt: "p" });
+  expect(res.status).toBe(409);
+  expect(((await res.json()) as { error: string }).error).toBe("run_not_resumable");
 });
 
 it("delegates abort to the supervisor and returns the run detail", async () => {

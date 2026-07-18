@@ -63,6 +63,9 @@ export function makeApiApp(
     fixRun: async () => {
       throw new Error("fixRun stub not configured");
     },
+    followUpRun: async () => {
+      throw new Error("followUpRun stub not configured");
+    },
     abortRun: async () => {},
     github: stubGitHubService(),
     review: stubReviewService(),

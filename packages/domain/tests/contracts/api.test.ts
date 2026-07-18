@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createIssueRequestSchema,
+  followUpRunRequestSchema,
   runDetailSchema,
   runtimeAvailabilitySchema,
   runtimeDescriptorSchema,
@@ -45,6 +46,19 @@ describe("createIssueRequestSchema", () => {
     );
     expect(createIssueRequestSchema.safeParse({ title: "T" }).success).toBe(false);
     expect(createIssueRequestSchema.safeParse({ project_id: "", title: "T" }).success).toBe(false);
+  });
+});
+
+describe("followUpRunRequestSchema", () => {
+  it("accepts a prompt and trims it", () => {
+    expect(followUpRunRequestSchema.parse({ prompt: "  continue with tests  " })).toEqual({
+      prompt: "continue with tests",
+    });
+  });
+
+  it("rejects a blank or missing prompt", () => {
+    expect(followUpRunRequestSchema.safeParse({ prompt: "   " }).success).toBe(false);
+    expect(followUpRunRequestSchema.safeParse({}).success).toBe(false);
   });
 });
 

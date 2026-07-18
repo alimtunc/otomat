@@ -1,5 +1,5 @@
 import { DaemonRequestError } from "@otomat/client";
-import type { StartRunRequest } from "@otomat/domain";
+import type { FollowUpRunRequest, StartRunRequest } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -46,6 +46,31 @@ export function useResumeRun(runId: string) {
     () => daemon.resumeRun(runId),
     "Could not resume run — it may no longer be resumable.",
   );
+}
+
+/** Sends a user follow-up prompt as a new resume turn. On success invalidates the run's detail and the runs list; toasts on failure. */
+export function useFollowUpRun(runId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: FollowUpRunRequest) => daemon.followUpRun(runId, request),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: queryKeys.run(runId) });
+      client.invalidateQueries({ queryKey: queryKeys.runs });
+    },
+    onError: (error) => toast.error(followUpErrorMessage(error)),
+  });
+}
+
+export function followUpErrorMessage(error: unknown): string {
+  if (error instanceof DaemonRequestError) {
+    if (error.status === 409) {
+      return "Could not send follow-up — the run is no longer resumable.";
+    }
+    return error.status >= 500
+      ? "Could not send follow-up — the daemon failed to resume the run."
+      : "Could not send follow-up — the request was rejected.";
+  }
+  return "Could not send follow-up — is the daemon running?";
 }
 
 export function startRunErrorMessage(error: unknown): string {
