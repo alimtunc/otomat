@@ -5,16 +5,21 @@ import {
   recordAgentSessionProcess,
   updateRunStatus,
 } from "@otomat/db";
-import { runMachine } from "@otomat/domain";
+import { agentSessionMachine, runMachine, stepRunMachine } from "@otomat/domain";
 
 import { runDir, startLiveTail } from "#events";
 
 import { writeWorkerIdentity } from "./identity.js";
 import { settleRun } from "./settle.js";
 import { notifyAfterSettle, type SupervisorState } from "./state.js";
-import { driveRunTo, driveStepsAndSessionsTo } from "./transitions.js";
+import { driveRunTo, driveSessionTo, driveStepTo } from "./transitions.js";
 import type { ProcessExit, SessionProcess, TurnContext } from "./types.js";
 
+/**
+ * Advances the run and the turn's own step/session only — sibling plan steps
+ * keep their state. A follow-up turn resumes an already-succeeded step: its
+ * terminal step/session rows are left untouched by design, never reopened.
+ */
 function advanceToRunning(state: SupervisorState, ctx: TurnContext): void {
   const { db } = state;
   const now = new Date().toISOString();
@@ -22,13 +27,15 @@ function advanceToRunning(state: SupervisorState, ctx: TurnContext): void {
   if (!run) throw new Error(`run ${ctx.runId} vanished before spawn`);
   driveRunTo(db, ctx.runId, run.status, "running", now);
   if (!run.started_at) updateRunStatus(db, ctx.runId, { status: "running", started_at: now });
-  driveStepsAndSessionsTo(
-    db,
-    listStepRunsForRun(db, ctx.runId),
-    listAgentSessionsForRun(db, ctx.runId),
-    "running",
-    "active",
+  const step = listStepRunsForRun(db, ctx.runId).find((row) => row.id === ctx.stepRunId);
+  const session = listAgentSessionsForRun(db, ctx.runId).find(
+    (row) => row.id === ctx.agentSessionId,
   );
+  if (!step || !session) throw new Error(`run ${ctx.runId} turn rows vanished before spawn`);
+  if (!stepRunMachine.isTerminal(step.status)) driveStepTo(db, step.id, step.status, "running");
+  if (!agentSessionMachine.isTerminal(session.status)) {
+    driveSessionTo(db, session.id, session.status, "active");
+  }
 }
 
 function settleLive(state: SupervisorState, ctx: TurnContext, exit?: ProcessExit): void {
@@ -38,6 +45,7 @@ function settleLive(state: SupervisorState, ctx: TurnContext, exit?: ProcessExit
     const outcome = settleRun(state.db, state.dataDir, run, {
       mode: "live",
       ...(exit ? { observedExit: exit } : {}),
+      turn: { stepRunId: ctx.stepRunId, agentSessionId: ctx.agentSessionId },
       now: new Date().toISOString(),
     });
     notifyAfterSettle(state, outcome);
@@ -62,8 +70,19 @@ function trackTurn(
       tail.stop();
       state.inflight.delete(ctx.runId);
       release();
-    });
-  state.inflight.set(ctx.runId, { proc, monitor, tail });
+    })
+    // Chained after the slot release so the next plan step can claim it; a no-op unless the run is still `running` with a ready step.
+    .then(() => {
+      if (state.aborting.has(ctx.runId)) return;
+      return state.advance?.(ctx.runId);
+    })
+    .catch((error) => console.error(`[otomat] run ${ctx.runId} step chain failed`, error));
+  state.inflight.set(ctx.runId, {
+    proc,
+    monitor,
+    tail,
+    turn: { stepRunId: ctx.stepRunId, agentSessionId: ctx.agentSessionId },
+  });
 }
 
 /**

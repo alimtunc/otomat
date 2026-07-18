@@ -200,4 +200,23 @@ describe("FakeRuntimeAdapter.resume", () => {
     const ids = onDisk.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it("keeps ids unique across separate adapter instances, as multi-step worker processes are", async () => {
+    // Each plan step re-execs a fresh worker (fresh adapter, turn counter reset);
+    // colliding ids would be silently dropped by the ledger's conflict guard.
+    const sinkA = new MemorySink();
+    const sinkB = new MemorySink();
+    await new FakeRuntimeAdapter(fixedClock).run(
+      runtimeRunInput({ run_dir: dir, agent_session_id: "sess-1" }),
+      sinkA,
+      liveSignal(),
+    );
+    await new FakeRuntimeAdapter(fixedClock).run(
+      runtimeRunInput({ run_dir: dir, agent_session_id: "sess-2" }),
+      sinkB,
+      liveSignal(),
+    );
+    const ids = [...sinkA.events, ...sinkB.events].map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
 });

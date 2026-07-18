@@ -27,11 +27,11 @@ export function driveRunTo(db: Db, runId: string, from: RunState, to: RunState, 
   });
 }
 
-function driveStepTo(db: Db, stepRunId: string, from: StepRunState, to: StepRunState): void {
+export function driveStepTo(db: Db, stepRunId: string, from: StepRunState, to: StepRunState): void {
   drivePath(stepRunMachine, from, to, (state) => updateStepRunStatus(db, stepRunId, state));
 }
 
-function driveSessionTo(
+export function driveSessionTo(
   db: Db,
   sessionId: string,
   from: AgentSessionState,
@@ -57,6 +57,38 @@ export function driveStepsAndSessionsTo(
     if (!agentSessionMachine.isTerminal(session.status))
       driveSessionTo(db, session.id, session.status, sessionTarget);
   }
+}
+
+/**
+ * Converges one settled turn as a single transaction: the turn's step and
+ * session go to the classification targets, steps that can no longer start are
+ * honestly canceled, and the run lands on the plan-derived target.
+ */
+export function driveTurnConvergence(
+  db: Db,
+  run: { id: string; status: RunState },
+  turn: { step: StepRunRow | null; session: AgentSessionRow | null },
+  targets: Targets,
+  cancelSteps: readonly StepRunRow[],
+  now: string,
+): void {
+  db.transaction(
+    () => {
+      if (turn.step && !stepRunMachine.isTerminal(turn.step.status)) {
+        driveStepTo(db, turn.step.id, turn.step.status, targets.step);
+      }
+      if (turn.session && !agentSessionMachine.isTerminal(turn.session.status)) {
+        driveSessionTo(db, turn.session.id, turn.session.status, targets.session);
+      }
+      for (const step of cancelSteps) {
+        if (!stepRunMachine.isTerminal(step.status)) {
+          driveStepTo(db, step.id, step.status, "canceled");
+        }
+      }
+      driveRunTo(db, run.id, run.status, targets.run, now);
+    },
+    { behavior: "immediate" },
+  );
 }
 
 /** Converges a run and its non-terminal steps/sessions onto the target states as one transaction. */

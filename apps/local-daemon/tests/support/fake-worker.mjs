@@ -12,7 +12,8 @@ let n = 0;
 
 function emit(type, source, payload) {
   const event = {
-    id: `${job.runId}:${n++}`,
+    // pid-scoped so ids stay unique across the several worker turns of one run.
+    id: `${job.agentSessionId}:${process.pid}:${n++}`,
     run_id: job.runId,
     step_run_id: job.stepRunId,
     agent_session_id: job.agentSessionId,
@@ -52,6 +53,9 @@ emit("runtime.log", "otomat", {
 if (behavior === "complete") {
   marker("completed");
   process.exit(0);
+} else if (behavior === "fail") {
+  marker("failed");
+  process.exit(1);
 } else if (behavior === "crash") {
   process.exit(1);
 } else {

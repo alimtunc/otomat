@@ -33,7 +33,8 @@ function event(
   payload: RuntimeEvent["payload"],
 ): RuntimeEvent {
   return makeEvent(seed.runId, 0, {
-    id: `${seed.runId}:${type}:${Object.keys(payload).length}:${payload["text"] ?? ""}`,
+    // step-scoped so multi-step fixtures never collide on the events PK.
+    id: `${seed.runId}:${seed.stepRunId}:${type}:${Object.keys(payload).length}:${payload["text"] ?? ""}`,
     step_run_id: seed.stepRunId,
     agent_session_id: seed.agentSessionId,
     type,

@@ -74,7 +74,9 @@ function buildEvent(
   occurredAtMs: number,
 ): RuntimeEvent {
   return {
-    id: `${ctx.run_id}:${turn}:${index}`,
+    // Session- and pid-scoped: each step/resume turn runs in a fresh worker
+    // process whose ids must never collide with an earlier turn's ledger rows.
+    id: `${ctx.agent_session_id}:${process.pid}:${turn}:${index}`,
     run_id: ctx.run_id,
     step_run_id: ctx.step_run_id,
     agent_session_id: ctx.agent_session_id,

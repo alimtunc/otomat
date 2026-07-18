@@ -17,6 +17,8 @@ export interface InflightProcess {
   monitor: Promise<void>;
   /** Live tailer draining the child's `events.jsonl` into the ledger while it runs. */
   tail: EventTailer;
+  /** The step/session this process is a turn of, so abort can settle against the right ledger slice. */
+  turn: { stepRunId: string; agentSessionId: string };
 }
 
 export interface SupervisorState {
@@ -32,6 +34,8 @@ export interface SupervisorState {
   aborting: Set<string>;
   /** Runs reserved between the spawn guard and `inflight.set`, so concurrent starts can't double-spawn. */
   claiming: Set<string>;
+  /** Wired by `createSupervisor` to the plan scheduler; the exit monitor chains it after a live settle. Injected to keep `lifecycle` free of a module cycle. */
+  advance: ((runId: string) => Promise<void>) | null;
 }
 
 export function createState(config: SupervisorConfig): SupervisorState {
@@ -46,6 +50,7 @@ export function createState(config: SupervisorConfig): SupervisorState {
     inflight: new Map(),
     aborting: new Set(),
     claiming: new Set(),
+    advance: null,
   };
 }
 

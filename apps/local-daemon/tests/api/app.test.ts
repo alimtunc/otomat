@@ -96,6 +96,72 @@ it("rejects a start-run request with neither issue_id nor prompt", async () => {
   expect(res.status).toBe(400);
 });
 
+it("rejects a cyclic run plan with 400 before the launch dep ever runs", async () => {
+  let launched = 0;
+  const app = makeApiApp(t, {
+    launchRun: async () => {
+      launched += 1;
+      return runRow("run-x");
+    },
+  });
+  const res = await post(app, "/api/runs", {
+    prompt: "goal",
+    plan: {
+      version: 1,
+      steps: [
+        { id: "a", name: "A", agent: null, prompt: "pa", depends_on: ["b"] },
+        { id: "b", name: "B", agent: null, prompt: "pb", depends_on: ["a"] },
+      ],
+    },
+  });
+  expect(res.status).toBe(400);
+  expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
+  expect(launched).toBe(0);
+});
+
+it("rejects duplicate step ids and unknown dependencies with 400", async () => {
+  const duplicate = await post(makeApiApp(t), "/api/runs", {
+    prompt: "goal",
+    plan: {
+      version: 1,
+      steps: [
+        { id: "a", name: "A", agent: null, prompt: "pa", depends_on: [] },
+        { id: "a", name: "A2", agent: null, prompt: "pa2", depends_on: [] },
+      ],
+    },
+  });
+  expect(duplicate.status).toBe(400);
+
+  const unknownDep = await post(makeApiApp(t), "/api/runs", {
+    prompt: "goal",
+    plan: {
+      version: 1,
+      steps: [{ id: "a", name: "A", agent: null, prompt: "pa", depends_on: ["ghost"] }],
+    },
+  });
+  expect(unknownDep.status).toBe(400);
+});
+
+it("delegates a valid multi-step plan to launchRun untouched", async () => {
+  let received: StartRunRequest | null = null;
+  const app = makeApiApp(t, {
+    launchRun: async (req) => {
+      received = req;
+      return runRow("run-plan");
+    },
+  });
+  const plan = {
+    version: 1,
+    steps: [
+      { id: "plan", name: "Plan", agent: null, prompt: "plan it", depends_on: [] },
+      { id: "build", name: "Build", agent: "fake", prompt: "build it", depends_on: ["plan"] },
+    ],
+  };
+  const res = await post(app, "/api/runs", { prompt: "goal", plan });
+  expect(res.status).toBe(201);
+  expect(received).toEqual({ prompt: "goal", plan });
+});
+
 it("delegates start-run to the injected launchRun dep", async () => {
   let received: StartRunRequest | null = null;
   const app = makeApiApp(t, {

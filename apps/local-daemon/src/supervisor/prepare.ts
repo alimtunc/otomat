@@ -11,15 +11,18 @@ import {
 import {
   agentSessionMachine,
   issueMachine,
+  nextReadyStep,
   runMachine,
   stepRunMachine,
   type RunPlan,
+  type RunPlanStep,
   type StartRunRequest,
 } from "@otomat/domain";
 
 import { runDir } from "#events";
+import type { KnownRuntimeId } from "#runtime";
 
-import { ensureRuntimeAgent } from "./runtime-selection.js";
+import { ensureRuntimeAgent, requireAvailableRuntime } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
 import type { TurnContext } from "./types.js";
 
@@ -52,23 +55,89 @@ function resolveIssueId(db: Db, defaultProjectId: string, request: StartRunReque
   return issueId;
 }
 
+function mappedStepId(idByRequestId: ReadonlyMap<string, string>, requestId: string): string {
+  const mapped = idByRequestId.get(requestId);
+  if (mapped === undefined) throw new Error(`plan references unknown step id ${requestId}`);
+  return mapped;
+}
+
+/** Effective runtime per plan step (`null` inherits the run default), validated without writing. */
+function resolveStepRuntimes(
+  request: StartRunRequest,
+  defaultRuntime: KnownRuntimeId,
+): KnownRuntimeId[] | null {
+  if (!request.plan) return null;
+  return request.plan.steps.map((step) =>
+    step.agent === null ? defaultRuntime : requireAvailableRuntime(step.agent),
+  );
+}
+
+/**
+ * Freezes the launch plan: request-local step ids are rewritten to the
+ * generated `step_runs` ids — the persisted invariant is plan step id ==
+ * step_run id — and per-step `agent` lands resolved, never null.
+ */
+function freezePlan(
+  request: StartRunRequest,
+  defaultRuntime: KnownRuntimeId,
+  stepRuntimes: KnownRuntimeId[] | null,
+  fallbackPrompt: string,
+): RunPlan {
+  if (!request.plan || stepRuntimes === null) {
+    return {
+      version: 1,
+      steps: [
+        {
+          id: randomUUID(),
+          name: STEP_NAME,
+          agent: defaultRuntime,
+          prompt: fallbackPrompt,
+          depends_on: [],
+        },
+      ],
+    };
+  }
+
+  const idByRequestId = new Map<string, string>(
+    request.plan.steps.map((step) => [step.id, randomUUID()]),
+  );
+  return {
+    version: 1,
+    steps: request.plan.steps.map((step, index) => ({
+      id: mappedStepId(idByRequestId, step.id),
+      name: step.name,
+      agent: stepRuntimes[index] ?? defaultRuntime,
+      prompt: step.prompt,
+      depends_on: step.depends_on.map((dependency) => mappedStepId(idByRequestId, dependency)),
+    })),
+  };
+}
+
+function firstStepToRun(plan: RunPlan): RunPlanStep {
+  const first = nextReadyStep(plan, new Map());
+  if (first === null) throw new Error("run plan has no startable step");
+  return first;
+}
+
 /** Materializes the run/step/session rows, the frozen plan, and the run's isolated worktree. */
 export function prepareRun(state: SupervisorState, request: StartRunRequest): TurnContext {
   const { db, dataDir, defaultProjectId, worktrees } = state;
-  const runtime = ensureRuntimeAgent(db, request.runtime);
+  // Every effective runtime is validated before any row (issue included) is written.
+  const defaultRuntime = requireAvailableRuntime(request.runtime);
+  const stepRuntimes = resolveStepRuntimes(request, defaultRuntime);
+
   const issueId = resolveIssueId(db, defaultProjectId, request);
   const issue = getIssue(db, issueId);
   if (!issue) throw new Error(`issue ${issueId} not found`);
   const prompt = request.prompt ?? issue.title;
 
   const runId = randomUUID();
-  const stepRunId = randomUUID();
-  const agentSessionId = randomUUID();
   const branch = runBranchName(runId);
-  const plan: RunPlan = {
-    version: 1,
-    steps: [{ id: stepRunId, name: STEP_NAME, agent: runtime, prompt, depends_on: [] }],
-  };
+  const plan = freezePlan(request, defaultRuntime, stepRuntimes, prompt);
+  const firstStep = firstStepToRun(plan);
+  const firstStepRuntime = ensureRuntimeAgent(db, firstStep.agent ?? defaultRuntime);
+  ensureRuntimeAgent(db, defaultRuntime);
+  const agentSessionId = randomUUID();
 
   // Acquired before the run row exists so a git failure aborts the launch cleanly (no phantom run).
   const worktree = worktrees ? worktrees.service.acquire({ owner: runId, branch }) : null;
@@ -79,23 +148,26 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): Tu
         insertRun(db, {
           id: runId,
           issue_id: issueId,
-          agent_id: runtime,
+          agent_id: defaultRuntime,
           status: runMachine.initial,
           branch,
           plan_json: plan,
           repository_id: worktrees?.repositoryId ?? null,
           worktree_id: worktree?.id ?? null,
         });
-        insertStepRun(db, {
-          id: stepRunId,
-          run_id: runId,
-          idx: 0,
-          name: STEP_NAME,
-          status: stepRunMachine.initial,
+        plan.steps.forEach((step, index) => {
+          insertStepRun(db, {
+            id: step.id,
+            run_id: runId,
+            idx: index,
+            name: step.name,
+            status: stepRunMachine.initial,
+          });
         });
         insertAgentSession(db, {
           id: agentSessionId,
-          step_run_id: stepRunId,
+          step_run_id: firstStep.id,
+          agent_id: firstStepRuntime,
           status: agentSessionMachine.initial,
         });
       },
@@ -115,11 +187,11 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): Tu
 
   return {
     runId,
-    stepRunId,
+    stepRunId: firstStep.id,
     agentSessionId,
-    prompt,
+    prompt: firstStep.prompt ?? prompt,
     runDir: runDir(dataDir, runId),
     worktreePath: worktree?.path ?? null,
-    runtime,
+    runtime: firstStepRuntime,
   };
 }
