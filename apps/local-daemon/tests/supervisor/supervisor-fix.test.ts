@@ -4,10 +4,11 @@ import { join } from "node:path";
 import { getRun, schema } from "@otomat/db";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createGitWorktreeService } from "#git";
-import { RunNotResumableError, type ReconcileOutcome, type WorktreeBinding } from "#supervisor";
+import { createGitWorktreeService, type GitWorktreeService } from "#git";
+import { RunNotResumableError, type ReconcileOutcome } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { anchorProjectRoot } from "../support/db.js";
 import { setupTestRepo, type TestRepo } from "../support/git.js";
 import { seedRun } from "../support/seed.js";
 import { makeSupervisor } from "../support/supervisor.js";
@@ -86,7 +87,7 @@ it("notifies afterSettle when a turn settles live", async () => {
 
 describe("worktree acquisition", () => {
   let repo: TestRepo;
-  let binding: WorktreeBinding;
+  let service: GitWorktreeService;
 
   beforeEach(() => {
     repo = setupTestRepo();
@@ -94,24 +95,22 @@ describe("worktree acquisition", () => {
       .insert(schema.repositories)
       .values({ id: "repo-1", project_id: "p1", name: "R", default_branch: repo.defaultBranch })
       .run();
-    binding = {
+    anchorProjectRoot(fix.db, repo.root);
+    service = createGitWorktreeService({
+      db: fix.db,
       repositoryId: "repo-1",
-      service: createGitWorktreeService({
-        db: fix.db,
-        repositoryId: "repo-1",
-        repoRoot: repo.root,
-        defaultBranch: repo.defaultBranch,
-        worktreesRoot: join(fix.dataDir, "worktrees"),
-      }),
-    };
+      repoRoot: repo.root,
+      defaultBranch: repo.defaultBranch,
+      worktreesRoot: join(fix.dataDir, "worktrees"),
+    });
   });
 
   afterEach(() => {
     repo.cleanup();
   });
 
-  it("acquires an isolated worktree at prepare and threads its path into the job", async () => {
-    const { supervisor, spawn } = makeSupervisor(fix, "complete", { worktrees: binding });
+  it("acquires an isolated worktree in the project's repository and threads its path into the job", async () => {
+    const { supervisor, spawn } = makeSupervisor(fix, "complete");
 
     const run = await supervisor.start({ prompt: "implement the thing" });
     await supervisor.settle();
@@ -121,15 +120,16 @@ describe("worktree acquisition", () => {
     const job = spawn.jobs[0];
     expect(job?.worktreePath).toBeTruthy();
     expect(existsSync(job?.worktreePath ?? "")).toBe(true);
-    expect(binding.service.get(run.id)?.branch).toBe(run.branch);
+    expect(service.get(run.id)?.branch).toBe(run.branch);
   });
+});
 
-  it("runs without a worktree when no binding is configured", async () => {
-    const { supervisor, spawn } = makeSupervisor(fix, "complete");
-    const run = await supervisor.start({ prompt: "no git here" });
-    await supervisor.settle();
+it("runs without a worktree when the project has no repository", async () => {
+  const { supervisor, spawn } = makeSupervisor(fix, "complete");
+  const run = await supervisor.start({ prompt: "no git here" });
+  await supervisor.settle();
 
-    expect(run.worktree_id).toBeNull();
-    expect(spawn.jobs[0]?.worktreePath).toBeNull();
-  });
+  expect(run.repository_id).toBeNull();
+  expect(run.worktree_id).toBeNull();
+  expect(spawn.jobs[0]?.worktreePath).toBeNull();
 });

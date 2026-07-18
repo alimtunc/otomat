@@ -10,6 +10,7 @@
  */
 export * from "./types.js";
 export { RunNotResumableError } from "./commands.js";
+export { ProjectNotFoundError } from "./prepare.js";
 export { buildTerminalMarker } from "./markers.js";
 export { createReexecSpawn, isProcessAlive, killProcessGroup } from "./process.js";
 export { reconcileRuns } from "./reconcile.js";

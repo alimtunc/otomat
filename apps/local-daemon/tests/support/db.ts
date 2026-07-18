@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { createClient, runMigrations, schema, type Db, type DbClient } from "@otomat/db";
+import { eq } from "drizzle-orm";
 
 export interface TestDb {
   client: DbClient;
@@ -38,4 +39,12 @@ export function seedRepository(db: Db, defaultBranch = "main"): string {
     .values({ id: "repo-1", project_id: "p1", name: "R", default_branch: defaultBranch })
     .run();
   return "repo-1";
+}
+
+/** Points a project's root at a real git repo so the repository resolver builds a usable service. */
+export function anchorProjectRoot(db: Db, rootPath: string, projectId = "p1"): void {
+  db.update(schema.projects)
+    .set({ root_path: rootPath })
+    .where(eq(schema.projects.id, projectId))
+    .run();
 }

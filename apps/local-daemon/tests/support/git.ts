@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 
 import type { DbClient } from "@otomat/db";
 
+import type { GitWorktreeService, RepositoryResolver } from "#git";
 import { scrubGitEnv } from "#git/git-cli";
 
 import { seedRepository, setupTestDb } from "./db.js";
@@ -64,6 +65,19 @@ export function setupTestRepo(): TestRepo {
     cleanup() {
       rmSync(root, { recursive: true, force: true });
     },
+  };
+}
+
+/** Resolver that binds every repository/project/run to one service — for tests exercising git behavior, not resolution. */
+export function stubRepositoryResolver(
+  service: GitWorktreeService,
+  repositoryId = "repo-1",
+): RepositoryResolver {
+  const binding = { repositoryId, service };
+  return {
+    forRepository: () => binding,
+    forProject: () => binding,
+    forRun: () => binding,
   };
 }
 

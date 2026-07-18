@@ -38,8 +38,11 @@ export function readIssue(db: Db, id: string): IssueContract | null {
   return row ? toIssue(row) : null;
 }
 
-export function readRuns(db: Db, issueId?: string): RunContract[] {
-  return listRuns(db, { issueId }).map(toRun);
+export function readRuns(
+  db: Db,
+  options: { issueId?: string; projectId?: string } = {},
+): RunContract[] {
+  return listRuns(db, options).map(toRun);
 }
 
 export function readRunDetail(db: Db, runId: string): RunDetail | null {

@@ -37,7 +37,8 @@ export async function startNextReadyStep(state: SupervisorState, run: RunRow): P
       agentSessionId,
       prompt: next.prompt,
       runDir: runDir(state.dataDir, run.id),
-      worktreePath: state.worktrees?.service.get(run.id)?.path ?? null,
+      worktreePath:
+        state.repositories.forRepository(run.repository_id)?.service.get(run.id)?.path ?? null,
       runtime,
     },
     "run",

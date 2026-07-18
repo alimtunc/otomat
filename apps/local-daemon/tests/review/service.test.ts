@@ -5,7 +5,7 @@ import { getReviewComment, getReviewForRun, getRun } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
-import { createGitWorktreeService, type GitWorktreeService } from "#git";
+import { createRepositoryResolver, type GitWorktreeService } from "#git";
 import {
   createReviewService,
   DiffUnavailableError,
@@ -15,7 +15,7 @@ import {
 } from "#review";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
-import { seedRepository } from "../support/db.js";
+import { anchorProjectRoot, seedRepository } from "../support/db.js";
 import { setupTestRepo, type TestRepo } from "../support/git.js";
 import { seedRun } from "../support/seed.js";
 
@@ -32,17 +32,19 @@ beforeEach(() => {
   fix = setupDaemonDb();
   repo = setupTestRepo();
   seedRepository(fix.db, repo.defaultBranch);
-  worktrees = createGitWorktreeService({
+  anchorProjectRoot(fix.db, repo.root);
+  const repositories = createRepositoryResolver({
     db: fix.db,
-    repositoryId: "repo-1",
-    repoRoot: repo.root,
-    defaultBranch: repo.defaultBranch,
     worktreesRoot: join(fix.dataDir, "worktrees"),
   });
-  review = createReviewService({ db: fix.db, dataDir: fix.dataDir, worktrees });
+  const binding = repositories.forRepository("repo-1");
+  if (!binding) throw new Error("repo-1 binding missing");
+  worktrees = binding.service;
+  review = createReviewService({ db: fix.db, dataDir: fix.dataDir, repositories });
 
   seedRun(fix.db, {
     runId: RUN_ID,
+    repositoryId: "repo-1",
     runStatus: "review_ready",
     stepStatus: "succeeded",
     sessionStatus: "terminated",

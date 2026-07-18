@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "imports": {
+    "#bootstrap": "./src/bootstrap.ts",
     "#api": "./src/api/index.ts",
     "#api/*": "./src/api/*.ts",
     "#events": "./src/events/index.ts",

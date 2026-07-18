@@ -9,12 +9,14 @@ import {
   reviewDetailSchema,
   runContractSchema,
   runDetailSchema,
+  registerRepositoryResponseSchema,
   runDiffResponseSchema,
   runtimeDescriptorSchema,
   type CreateIssueRequest,
   type CreateReviewCommentRequest,
   type FollowUpRunRequest,
   type PreparePullRequestRequest,
+  type RegisterRepositoryRequest,
   type RequestFixRequest,
   type StartRunRequest,
 } from "@otomat/domain";
@@ -50,6 +52,11 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
         .array()
         .parse(await getJson(config, `/api/repositories${queryString(params)}`));
     },
+    async registerRepository(request: RegisterRepositoryRequest) {
+      return registerRepositoryResponseSchema.parse(
+        await postJson(config, "/api/repositories", request),
+      );
+    },
     async listRuntimes() {
       return runtimeDescriptorSchema.array().parse(await getJson(config, "/api/runtimes"));
     },
@@ -66,7 +73,7 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
         await getJson(config, `/api/issues/${encodeURIComponent(id)}`),
       );
     },
-    async listRuns(params: { issueId?: string } = {}) {
+    async listRuns(params: { issueId?: string; projectId?: string } = {}) {
       return runContractSchema
         .array()
         .parse(await getJson(config, `/api/runs${queryString(params)}`));

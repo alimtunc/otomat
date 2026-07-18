@@ -126,7 +126,8 @@ async function spawnFollowUpTurn(
       agentSessionId: session.id,
       prompt,
       runDir: runDir(state.dataDir, runId),
-      worktreePath: state.worktrees?.service.get(runId)?.path ?? null,
+      worktreePath:
+        state.repositories.forRepository(run.repository_id)?.service.get(runId)?.path ?? null,
       runtime,
     },
     "resume",

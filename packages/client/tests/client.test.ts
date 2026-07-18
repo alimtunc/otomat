@@ -295,3 +295,52 @@ it("reads and publishes the run pull request", async () => {
   expect(prepared.pull_request?.publication_status).toBe("not_configured");
   expect(lastBody).toEqual({ title: "First slice", body: "" });
 });
+
+it("registers a repository and parses the project + repository pair", async () => {
+  const PROJECT = { id: "p-new", name: "otomat", root_path: "/tmp/otomat" };
+  const REPOSITORY = {
+    id: "r-new",
+    project_id: "p-new",
+    name: "otomat",
+    remote_url: null,
+    default_branch: "main",
+  };
+  let calledUrl = "";
+  let lastBody: unknown;
+  const fetchMock: typeof fetch = async (input, init) => {
+    calledUrl = String(input);
+    lastBody = JSON.parse(String(init?.body));
+    return jsonResponse({ project: PROJECT, repository: REPOSITORY }, 201);
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+
+  const result = await client.registerRepository({ path: "/tmp/otomat" });
+  expect(calledUrl).toBe("http://localhost:4319/api/repositories");
+  expect(lastBody).toEqual({ path: "/tmp/otomat" });
+  expect(result.repository.default_branch).toBe("main");
+});
+
+it("surfaces the daemon's error payload on a refused registration", async () => {
+  const fetchMock: typeof fetch = async () =>
+    jsonResponse({ error: "head_detached", message: "The repository's HEAD is detached." }, 400);
+  const client = createDaemonClient({ fetch: fetchMock });
+
+  const error = await client.registerRepository({ path: "/tmp/x" }).catch((e: unknown) => e);
+  expect(error).toBeInstanceOf(DaemonRequestError);
+  expect((error as DaemonRequestError).status).toBe(400);
+  expect((error as DaemonRequestError).body).toEqual({
+    error: "head_detached",
+    message: "The repository's HEAD is detached.",
+  });
+});
+
+it("passes the projectId filter to the runs list", async () => {
+  let calledUrl = "";
+  const fetchMock: typeof fetch = async (input) => {
+    calledUrl = String(input);
+    return jsonResponse([]);
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+  await client.listRuns({ projectId: "p1" });
+  expect(calledUrl).toBe("http://localhost:4319/api/runs?projectId=p1");
+});

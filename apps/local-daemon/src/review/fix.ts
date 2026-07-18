@@ -16,7 +16,7 @@ import type { FixPreparation, ReviewContext } from "./types.js";
 
 /** Current worktree content of a commented file, or null when the run has no worktree / the file is gone. */
 function readCurrentFile(ctx: ReviewContext, runId: string, filePath: string): string | null {
-  const worktree = ctx.worktrees?.get(runId);
+  const worktree = ctx.repositories.forRun(runId)?.service.get(runId);
   if (!worktree) return null;
   try {
     return readFileSync(join(worktree.path, filePath), "utf8");

@@ -1,3 +1,6 @@
+import { join } from "node:path";
+
+import { createRepositoryResolver } from "#git";
 import { createSupervisor, type Supervisor, type SupervisorConfig } from "#supervisor";
 
 import type { DaemonTestDb } from "./daemon-db.js";
@@ -20,6 +23,10 @@ export function makeSupervisor(
     dataDir: fix.dataDir,
     defaultProjectId: "p1",
     spawn,
+    repositories: createRepositoryResolver({
+      db: fix.db,
+      worktreesRoot: join(fix.dataDir, "worktrees"),
+    }),
     ...overrides,
   });
   return { supervisor, spawn };

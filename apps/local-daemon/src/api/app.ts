@@ -8,6 +8,7 @@ import { createCatalogRoutes } from "./routes/catalog.js";
 import { createGitHubRoutes } from "./routes/github.js";
 import { createHealthRoutes } from "./routes/health.js";
 import { createIssueRoutes } from "./routes/issues.js";
+import { createRepositoryRoutes } from "./routes/repositories.js";
 import { createReviewRoutes } from "./routes/review.js";
 import { createRunRoutes } from "./routes/runs.js";
 import { allowedOrigin, hostGuard } from "./security.js";
@@ -27,6 +28,7 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.route("/api", createHealthRoutes(deps));
   app.route("/api", createGitHubRoutes(deps));
   app.route("/api", createCatalogRoutes(deps));
+  app.route("/api/repositories", createRepositoryRoutes(deps));
   app.route("/api/issues", createIssueRoutes(deps));
   app.route("/api/runs", createRunRoutes(deps));
   app.route("/api/runs", createReviewRoutes(deps));

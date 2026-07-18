@@ -224,12 +224,12 @@ class PullRequestPublisher implements PullRequestPublicationService {
 
   private view(row: PullRequestRow): PullRequestView {
     if (!row.published_diff_sha) return { row, hasUnpublishedChanges: false };
-    if (!this.config.worktrees) return { row, hasUnpublishedChanges: null };
+    const service = this.config.repositories.forRun(row.run_id)?.service;
+    if (!service) return { row, hasUnpublishedChanges: null };
     try {
       return {
         row,
-        hasUnpublishedChanges:
-          this.config.worktrees.diff(row.run_id).sha !== row.published_diff_sha,
+        hasUnpublishedChanges: service.diff(row.run_id).sha !== row.published_diff_sha,
       };
     } catch {
       return { row, hasUnpublishedChanges: null };
@@ -237,7 +237,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
   }
 
   private requireWorktree(runId: string): PublishableWorktree {
-    const worktrees = this.config.worktrees;
+    const worktrees = this.config.repositories.forRun(runId)?.service;
     const worktree = worktrees?.get(runId);
     if (!worktrees || !worktree) {
       throw new GitHubPublicationError("worktree_missing", "The run has no active worktree.");
