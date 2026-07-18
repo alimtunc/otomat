@@ -7,8 +7,9 @@ import { RunEventsProvider } from "@web/api/runs/run-events-provider";
 import { IssueHeader } from "@web/components/issues/issue-header";
 import { ActivityFeed } from "@web/components/issues/workspace/activity-feed";
 import { LaunchRunPopover } from "@web/components/issues/workspace/launch-run-popover";
-import { WorkspaceRail } from "@web/components/issues/workspace/rail";
+import { WorkspaceRail } from "@web/components/issues/workspace/rail/workspace-rail";
 import { RunStrip } from "@web/components/issues/workspace/run-strip";
+import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { issueShortId, shortId } from "@web/lib/ids";
 import { resolveFollowedRun } from "@web/lib/run-activity";
@@ -45,31 +46,33 @@ function RunsArea({
   followedRun: RunContract | null;
   onFollow: (run: RunContract) => void;
 }) {
-  if (query.isPending) return <Skeleton height={44} />;
-  if (query.isError) {
-    return (
-      <ErrorState
-        variant="inline"
-        title="Couldn’t load runs"
-        onRetry={() => void query.refetch()}
-      />
-    );
-  }
-  if (query.data.length === 0) {
-    return <NoRunsEmptyState issueId={issueId} onLaunched={onFollow} />;
-  }
   return (
-    <>
-      <RunStrip
-        runs={query.data}
-        followedRunId={followedRun?.id ?? null}
-        onFollow={(runId) => {
-          const run = query.data.find((candidate) => candidate.id === runId);
-          if (run) onFollow(run);
-        }}
-      />
-      {followedRun ? <ActivityFeed run={followedRun} /> : null}
-    </>
+    <QueryList
+      query={query}
+      pending={<Skeleton height={44} />}
+      error={
+        <ErrorState
+          variant="inline"
+          title="Couldn’t load runs"
+          onRetry={() => void query.refetch()}
+        />
+      }
+      empty={<NoRunsEmptyState issueId={issueId} onLaunched={onFollow} />}
+    >
+      {(runs) => (
+        <>
+          <RunStrip
+            runs={runs}
+            followedRunId={followedRun?.id ?? null}
+            onFollow={(runId) => {
+              const run = runs.find((candidate) => candidate.id === runId);
+              if (run) onFollow(run);
+            }}
+          />
+          {followedRun ? <ActivityFeed run={followedRun} /> : null}
+        </>
+      )}
+    </QueryList>
   );
 }
 

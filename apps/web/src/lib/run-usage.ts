@@ -1,4 +1,5 @@
 import type { EventEnvelope } from "@otomat/domain";
+import { asNumber, asString } from "@web/lib/coerce";
 
 /** Usage exactly as the runtime last reported it; a null field means the provider did not report it. */
 export interface ReportedUsage {
@@ -8,22 +9,8 @@ export interface ReportedUsage {
   costUsd: number | null;
 }
 
-function asString(value: unknown): string | null {
-  return typeof value === "string" ? value : null;
-}
-
-function asNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-/**
- * The last `runtime.usage` event's payload, field by field — never summed or
- * estimated across turns. Null when the run's ledger carries no usage event.
- */
-export function latestReportedUsage(events: EventEnvelope[]): ReportedUsage | null {
-  const usageEvents = events.filter((event) => event.type === "runtime.usage");
-  const payload = usageEvents.at(-1)?.payload;
-  if (!payload) return null;
+/** Parse a `runtime.usage` payload into ReportedUsage; null when its `usage` object is absent or malformed. */
+export function parseReportedUsage(payload: EventEnvelope["payload"]): ReportedUsage | null {
   const usage = payload["usage"];
   if (typeof usage !== "object" || usage === null) return null;
   const record = usage as Record<string, unknown>;
@@ -33,6 +20,16 @@ export function latestReportedUsage(events: EventEnvelope[]): ReportedUsage | nu
     outputTokens: asNumber(record["output_tokens"]),
     costUsd: asNumber(record["cost_usd"]),
   };
+}
+
+/**
+ * The last `runtime.usage` event's payload, field by field — never summed or
+ * estimated across turns. Null when the run's ledger carries no usage event.
+ */
+export function latestReportedUsage(events: EventEnvelope[]): ReportedUsage | null {
+  const usageEvents = events.filter((event) => event.type === "runtime.usage");
+  const payload = usageEvents.at(-1)?.payload;
+  return payload ? parseReportedUsage(payload) : null;
 }
 
 export function formatTokenCount(count: number): string {

@@ -12,11 +12,7 @@ export interface LaunchRunPopoverProps {
   triggerLabel?: string;
 }
 
-/**
- * Launch-run action for the issue workspace: the runtime comes from the
- * daemon's readiness list, the launched run is tied to the issue via
- * `issue_id`, and the workspace stays put to follow it live.
- */
+/** Launch-run action that stays on the issue workspace (not the old navigate-away flow) so the launched run can be followed live. */
 export function LaunchRunPopover({
   issueId,
   onLaunched,

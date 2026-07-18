@@ -1,7 +1,11 @@
-import { isRunTerminal, type RunContract } from "@otomat/domain";
+import { isRunTerminal, RUN_STATES, type RunContract, type RunState } from "@otomat/domain";
 
 export function isActiveRun(run: RunContract): boolean {
   return !isRunTerminal(run.status);
+}
+
+export function isRunState(value: unknown): value is RunState {
+  return typeof value === "string" && (RUN_STATES as readonly string[]).includes(value);
 }
 
 /**

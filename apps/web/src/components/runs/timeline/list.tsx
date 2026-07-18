@@ -2,7 +2,7 @@ import type { EventEnvelope } from "@otomat/domain";
 import { EmptyState, TimelineEventRow } from "@otomat/ui";
 import type { RunStreamState } from "@web/api/runs/run-events-provider";
 import { emptyTimelineContent } from "@web/components/runs/timeline/copy";
-import { eventDetail } from "@web/components/runs/timeline/event-detail";
+import { eventDetail } from "@web/components/runs/timeline/event-detail/event-detail";
 import { eventSummary } from "@web/components/runs/timeline/event-summary";
 import { CenteredState } from "@web/components/shell/centered-state";
 
