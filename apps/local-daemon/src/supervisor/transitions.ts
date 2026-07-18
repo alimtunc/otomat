@@ -27,11 +27,11 @@ export function driveRunTo(db: Db, runId: string, from: RunState, to: RunState, 
   });
 }
 
-function driveStepTo(db: Db, stepRunId: string, from: StepRunState, to: StepRunState): void {
+export function driveStepTo(db: Db, stepRunId: string, from: StepRunState, to: StepRunState): void {
   drivePath(stepRunMachine, from, to, (state) => updateStepRunStatus(db, stepRunId, state));
 }
 
-function driveSessionTo(
+export function driveSessionTo(
   db: Db,
   sessionId: string,
   from: AgentSessionState,
@@ -43,7 +43,7 @@ function driveSessionTo(
 }
 
 /** Drives every non-terminal step and session of a run to the given targets. */
-export function driveStepsAndSessionsTo(
+function driveStepsAndSessionsTo(
   db: Db,
   steps: readonly StepRunRow[],
   sessions: readonly AgentSessionRow[],
@@ -57,6 +57,52 @@ export function driveStepsAndSessionsTo(
     if (!agentSessionMachine.isTerminal(session.status))
       driveSessionTo(db, session.id, session.status, sessionTarget);
   }
+}
+
+/** One transaction: the turn's step/session reach their targets, no-longer-startable steps cancel, the run lands on the plan-derived target. */
+export function driveTurnConvergence(
+  db: Db,
+  run: { id: string; status: RunState },
+  turn: { step: StepRunRow | null; session: AgentSessionRow | null },
+  targets: Targets,
+  cancelSteps: readonly StepRunRow[],
+  now: string,
+): void {
+  db.transaction(
+    () => {
+      if (turn.step && !stepRunMachine.isTerminal(turn.step.status)) {
+        driveStepTo(db, turn.step.id, turn.step.status, targets.step);
+      }
+      if (turn.session && !agentSessionMachine.isTerminal(turn.session.status)) {
+        driveSessionTo(db, turn.session.id, turn.session.status, targets.session);
+      }
+      for (const step of cancelSteps) {
+        if (!stepRunMachine.isTerminal(step.status)) {
+          driveStepTo(db, step.id, step.status, "canceled");
+        }
+      }
+      driveRunTo(db, run.id, run.status, targets.run, now);
+    },
+    { behavior: "immediate" },
+  );
+}
+
+/** Converges a run with no live turn: `cancelSteps` cancel and the run lands on `target`. */
+export function driveIdleRunTo(
+  db: Db,
+  run: { id: string; status: RunState },
+  target: RunState,
+  cancelSteps: readonly StepRunRow[],
+  now: string,
+): void {
+  driveTurnConvergence(
+    db,
+    run,
+    { step: null, session: null },
+    { run: target, step: "canceled", session: "terminated" },
+    cancelSteps,
+    now,
+  );
 }
 
 /** Converges a run and its non-terminal steps/sessions onto the target states as one transaction. */

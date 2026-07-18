@@ -13,23 +13,32 @@ as empty placeholders.
 
 ```
 apps/
-  web/            React + Vite cockpit shell
-  local-daemon/   Node local process (API, runtime host, supervision)
+  web/                  React + Vite cockpit shell
+  local-daemon/         Node process; backend modules live under src/:
+    api/                HTTP routes + SSE
+    events/             Append-only event ledger + live tailer
+    git/                Worktree/branch lifecycle + canonical diff
+    github/             GitHub CLI integration + PR publication
+    review/             Diff snapshots, comments, fix and follow-up
+    runtime/            Codex, Claude and deterministic fake adapters
+    supervisor/         Process lifecycle, reconciliation and resume
 packages/
-  domain/         Pure TS: types, state machines, event envelope, zod contracts
-  db/             SQLite (WAL) + Drizzle + better-sqlite3, schema/migrations/repos
-  runtime/        Runtime adapter contract + deterministic fake adapter
-  events/         Append-only event ledger + non-lossy stream-to-file tailer
-  git/            Worktree/branch lifecycle + canonical git diff
-  ui/             Shared UI primitives and design system
-  tooling/        Shared tsconfig / oxlint / vitest / dependency-cruiser presets
+  domain/               Pure TS: types, state machines, event envelope, contracts
+  db/                   SQLite + Drizzle + better-sqlite3, schema/migrations/repos
+  client/               Typed daemon HTTP/SSE client for frontend consumers
+  ui/                   Shared UI primitives and design system
+  tooling/              Shared TypeScript, lint, test and boundary presets
 ```
 
-The full target tree and per-ticket ownership live in
-[`docs/ai/codebase-map.md`](docs/ai/codebase-map.md). The enforced dependency
-rules are in [`docs/ai/import-boundaries.md`](docs/ai/import-boundaries.md). A
-traced walkthrough of a run's lifecycle (start → worker → settle, with resume,
-fix, and abort) is in [`docs/ai/run-lifecycle.md`](docs/ai/run-lifecycle.md).
+Start with the standalone
+[`Otomat architecture atlas`](docs/ai/otomat-visual-map.html) for the current
+system topology, data flow, database, runtime traces, boundaries, technology
+rationale, and “where to change what” guide.
+
+Focused references remain available in
+[`docs/ai/codebase-map.md`](docs/ai/codebase-map.md),
+[`docs/ai/import-boundaries.md`](docs/ai/import-boundaries.md), and
+[`docs/ai/run-lifecycle.md`](docs/ai/run-lifecycle.md).
 
 ## Getting started
 

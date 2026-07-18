@@ -147,6 +147,24 @@ describe("FakeRuntimeAdapter.run", () => {
     jsonl.close();
     expect(readEventsJsonl(join(dir, "events.jsonl"))).toEqual(sink.events);
   });
+
+  it("keeps ids unique across separate adapter instances, as multi-step worker processes are", async () => {
+    // Colliding ids across fresh per-step workers would be silently dropped by the ledger's conflict guard.
+    const sinkA = new MemorySink();
+    const sinkB = new MemorySink();
+    await new FakeRuntimeAdapter(fixedClock).run(
+      runtimeRunInput({ run_dir: dir, agent_session_id: "sess-1" }),
+      sinkA,
+      liveSignal(),
+    );
+    await new FakeRuntimeAdapter(fixedClock).run(
+      runtimeRunInput({ run_dir: dir, agent_session_id: "sess-2" }),
+      sinkB,
+      liveSignal(),
+    );
+    const ids = [...sinkA.events, ...sinkB.events].map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
 });
 
 describe("FakeRuntimeAdapter abort", () => {

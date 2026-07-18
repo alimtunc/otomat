@@ -41,3 +41,10 @@ export type {
   RunDiffContract,
   RunDiffResponse,
 } from "./contracts/diff.js";
+
+export type {
+  PlanOutcome,
+  PlanStepStatuses,
+  RunPlanInput,
+  RunPlanStepInput,
+} from "./plan/index.js";

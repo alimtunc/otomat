@@ -1,6 +1,8 @@
 import {
   Activity,
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
   BarChart3,
   BookOpen,
   Bot,
@@ -32,12 +34,15 @@ import {
   Sun,
   Terminal,
   Wand2,
+  X,
   type LucideIcon,
 } from "lucide-react";
 
 export const icons = {
   activity: Activity,
   "alert-triangle": AlertTriangle,
+  "arrow-down": ArrowDown,
+  "arrow-up": ArrowUp,
   "bar-chart": BarChart3,
   book: BookOpen,
   bot: Bot,
@@ -69,6 +74,7 @@ export const icons = {
   sun: Sun,
   terminal: Terminal,
   "wand-2": Wand2,
+  x: X,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons;

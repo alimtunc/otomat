@@ -1,7 +1,7 @@
 import { listActiveRuns, type Db } from "@otomat/db";
 import type { RunState } from "@otomat/domain";
 
-import { settleRun } from "./settle.js";
+import { settleRun } from "./settle/index.js";
 import type { ReconcileOutcome, ReconcileReport } from "./types.js";
 
 /** Non-terminal states a crash must not disturb: they await an explicit human action, not a process. */

@@ -27,18 +27,22 @@ function toHandle(child: ReturnType<typeof spawn>): SessionProcess {
   };
 }
 
-/** A spawn that launches the real fake-worker process with the given behavior. Records spawned jobs. */
+export type WorkerBehavior = "complete" | "fail" | "crash" | "linger";
+
+/** Launches the real fake-worker per job and records spawned jobs; a behavior array maps one entry per call, last entry repeats. */
 export function workerSpawn(
-  behavior: "complete" | "crash" | "linger",
+  behavior: WorkerBehavior | WorkerBehavior[],
 ): SpawnSession & { calls: number; jobs: SupervisedJob[] } {
+  const behaviors = Array.isArray(behavior) ? behavior : [behavior];
   const spawnFn = (job: SupervisedJob): SessionProcess => {
+    const turnBehavior = behaviors[Math.min(spawnFn.calls, behaviors.length - 1)];
     spawnFn.calls += 1;
     spawnFn.jobs.push(job);
     const child = spawn(process.execPath, [FAKE_WORKER], {
       env: {
         ...process.env,
         [WORKER_JOB_ENV]: JSON.stringify(job),
-        FAKE_WORKER_BEHAVIOR: behavior,
+        FAKE_WORKER_BEHAVIOR: turnBehavior,
       },
       detached: true,
       stdio: "ignore",

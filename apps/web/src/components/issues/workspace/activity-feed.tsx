@@ -30,7 +30,12 @@ export function ActivityFeed({ run }: { run: RunContract }) {
         </span>
       </div>
       <div className="min-h-50 rounded-lg border border-border-subtle bg-card py-1">
-        <RunTimeline events={stream.events} state={stream.state} degraded={stream.degraded} />
+        <RunTimeline
+          events={stream.events}
+          steps={run.plan_json.steps}
+          state={stream.state}
+          degraded={stream.degraded}
+        />
       </div>
     </div>
   );

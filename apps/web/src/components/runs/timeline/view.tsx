@@ -42,7 +42,12 @@ export function RunTimelineView() {
             {stream.state === "open" ? "ordered by seq · live" : "ordered by seq"}
           </span>
         </PaneHeader>
-        <RunTimeline events={stream.events} state={stream.state} degraded={stream.degraded} />
+        <RunTimeline
+          events={stream.events}
+          steps={detail.data.steps}
+          state={stream.state}
+          degraded={stream.degraded}
+        />
         <FollowUpComposer detail={detail.data} />
       </div>
       <ContextPane detail={detail.data} />
