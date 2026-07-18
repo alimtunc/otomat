@@ -10,11 +10,7 @@ import {
   type KnownRuntimeId,
 } from "#runtime";
 
-/**
- * Validates the requested runtime against the registry, refuses one that is not
- * actually available (missing CLI binary, fake outside tests/explicit dev), and
- * guarantees its builtin agent row exists (FK for `runs.agent_id`).
- */
+/** Validates the runtime, refuses an unavailable one (missing CLI binary, or fake outside tests/dev), and ensures its builtin agent row exists (FK for `runs.agent_id`). */
 export function ensureRuntimeAgent(
   db: Db,
   requested: string | undefined,

@@ -1,8 +1,9 @@
-import { Button, DialogBody, DialogFooter, EmptyState, Kbd, Textarea } from "@otomat/ui";
+import { Button, DialogBody, Kbd, Textarea } from "@otomat/ui";
 import { useRuntimes } from "@web/api/daemon/queries";
 import { useStartRunAndNavigate } from "@web/api/runs/mutations";
-import { RuntimeSelect } from "@web/components/runs/launch/runtime-select";
-import { hasLaunchableRuntime, resolveRuntimeChoice } from "@web/lib/runtimes";
+import { IssueFormFooter } from "@web/components/issues/issue-form-footer";
+import { RuntimePicker } from "@web/components/runs/launch/runtime-picker";
+import { resolveRuntimeChoice } from "@web/lib/runtimes";
 import { useState, type KeyboardEvent } from "react";
 
 export interface AgentIssueFormProps {
@@ -42,45 +43,6 @@ export function AgentIssueForm({
     }
   }
 
-  let runtimePicker = (
-    <RuntimeSelect
-      descriptors={descriptors}
-      value={runtime}
-      onValueChange={onRuntimeChoice}
-      disabled={runtimes.isPending}
-    />
-  );
-  if (runtimes.isError) {
-    runtimePicker = (
-      <EmptyState
-        variant="compact"
-        tone="error"
-        icon="alert-triangle"
-        title="Couldn’t load runtimes"
-        description="The daemon didn’t return its runtime list, so a run can’t be launched."
-        action={
-          <Button variant="outline" size="xs" onClick={() => void runtimes.refetch()}>
-            Retry
-          </Button>
-        }
-      />
-    );
-  } else if (runtimes.isSuccess && !hasLaunchableRuntime(descriptors)) {
-    runtimePicker = (
-      <EmptyState
-        variant="compact"
-        icon="bot"
-        title="No agent runtime available"
-        description="Install Claude Code (npm install -g @anthropic-ai/claude-code) or Codex CLI (npm install -g @openai/codex), then check again."
-        action={
-          <Button variant="outline" size="xs" onClick={() => void runtimes.refetch()}>
-            Check again
-          </Button>
-        }
-      />
-    );
-  }
-
   return (
     <>
       <DialogBody className="flex flex-col gap-3">
@@ -92,23 +54,31 @@ export function AgentIssueForm({
           rows={4}
           aria-label="Issue prompt"
         />
-        {runtimePicker}
+        <RuntimePicker
+          descriptors={descriptors}
+          value={runtime}
+          onValueChange={onRuntimeChoice}
+          isPending={runtimes.isPending}
+          isError={runtimes.isError}
+          isSuccess={runtimes.isSuccess}
+          onRetry={() => void runtimes.refetch()}
+        />
       </DialogBody>
-      <DialogFooter>
-        <Button variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          variant="primary"
-          size="sm"
-          loading={isPending}
-          disabled={!canSubmit}
-          onClick={() => void submit()}
-        >
-          Create & launch
-          <Kbd className="border-[rgba(255,255,255,.4)] text-on-accent">⌘↵</Kbd>
-        </Button>
-      </DialogFooter>
+      <IssueFormFooter
+        onCancel={onCancel}
+        submit={
+          <Button
+            variant="primary"
+            size="sm"
+            loading={isPending}
+            disabled={!canSubmit}
+            onClick={() => void submit()}
+          >
+            Create & launch
+            <Kbd className="border-[rgba(255,255,255,.4)] text-on-accent">⌘↵</Kbd>
+          </Button>
+        }
+      />
     </>
   );
 }

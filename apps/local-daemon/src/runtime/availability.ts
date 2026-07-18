@@ -1,11 +1,7 @@
 import { accessSync, constants, statSync } from "node:fs";
 import { delimiter, join } from "node:path";
 
-/**
- * The fake runtime is opt-in only: test runs (Vitest) or an explicit
- * OTOMAT_ENABLE_FAKE_RUNTIME=1 for development. It never surfaces in a normal
- * production daemon.
- */
+/** Fake runtime is opt-in only (Vitest, or an explicit OTOMAT_ENABLE_FAKE_RUNTIME); never in a normal production daemon. */
 export function isFakeRuntimeEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   if (env.OTOMAT_ENABLE_FAKE_RUNTIME === "1" || env.OTOMAT_ENABLE_FAKE_RUNTIME === "true") {
     return true;

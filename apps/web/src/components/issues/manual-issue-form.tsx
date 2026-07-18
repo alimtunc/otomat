@@ -1,15 +1,7 @@
-import {
-  Button,
-  DialogBody,
-  DialogFooter,
-  Field,
-  FieldControl,
-  FieldLabel,
-  Input,
-  Textarea,
-} from "@otomat/ui";
+import { Button, DialogBody, Field, FieldControl, FieldLabel, Input, Textarea } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import { useCreateIssueAndNavigate } from "@web/api/issues/mutations";
+import { IssueFormFooter } from "@web/components/issues/issue-form-footer";
 import { fieldErrorProps } from "@web/lib/form";
 
 export interface ManualIssueFormProps {
@@ -89,24 +81,24 @@ export function ManualIssueForm({ projectId, onCreated, onCancel }: ManualIssueF
           <p className="text-xs text-danger">Select a project before creating an issue.</p>
         )}
       </DialogBody>
-      <DialogFooter>
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-        <form.Subscribe selector={(state) => [state.canSubmit, state.values.title] as const}>
-          {([canSubmit, title]) => (
-            <Button
-              type="submit"
-              variant="primary"
-              size="sm"
-              loading={isPending}
-              disabled={!canSubmit || title.trim().length === 0 || !projectId || isPending}
-            >
-              Create issue
-            </Button>
-          )}
-        </form.Subscribe>
-      </DialogFooter>
+      <IssueFormFooter
+        onCancel={onCancel}
+        submit={
+          <form.Subscribe selector={(state) => [state.canSubmit, state.values.title] as const}>
+            {([canSubmit, title]) => (
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                loading={isPending}
+                disabled={!canSubmit || title.trim().length === 0 || !projectId || isPending}
+              >
+                Create issue
+              </Button>
+            )}
+          </form.Subscribe>
+        }
+      />
     </form>
   );
 }

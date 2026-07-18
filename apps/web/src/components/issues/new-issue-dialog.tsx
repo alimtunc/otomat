@@ -51,7 +51,7 @@ export function NewIssueDialog({
               type="single"
               value={mode}
               onValueChange={(value) => {
-                if (value) setMode(value as NewIssueMode);
+                if (value === "agent" || value === "manual") setMode(value);
               }}
               aria-label="Issue creation mode"
             >

@@ -24,7 +24,7 @@ export function createIssueRoutes(deps: ApiDeps): Hono {
     insertIssue(deps.db, {
       id,
       project_id: request.project_id,
-      title: request.title.trim(),
+      title: request.title,
       body: request.body ?? null,
       status: issueMachine.initial,
       source: "local",
