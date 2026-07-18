@@ -131,6 +131,7 @@ export function RouteShell({
       <NewIssueDialog
         open={newIssueOpen}
         onOpenChange={setNewIssueOpen}
+        projectId={shell.currentProjectId}
         projectName={shell.projectLabel}
       />
     </AppShell>

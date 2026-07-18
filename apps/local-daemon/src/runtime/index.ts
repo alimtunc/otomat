@@ -8,6 +8,7 @@
  *
  * @packageDocumentation
  */
+export { isFakeRuntimeEnabled, resolveBinaryPath } from "./availability.js";
 export { asString } from "./cli/frame-guards.js";
 export * from "./contract.js";
 export * from "./events.js";

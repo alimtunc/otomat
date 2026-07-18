@@ -49,6 +49,43 @@ it("appends defined query params only", async () => {
   expect(calledUrl).toBe("http://localhost:4319/api/runs?issueId=issue-1");
 });
 
+it("posts a create-issue request and parses the created issue", async () => {
+  let calledUrl = "";
+  let captured: { method?: string; body?: unknown } = {};
+  const fetchMock: typeof fetch = async (input, init) => {
+    calledUrl = String(input);
+    captured = { method: init?.method, body: init?.body };
+    return jsonResponse({ ...ISSUE, status: "backlog" }, 201);
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+  const issue = await client.createIssue({ project_id: "project-1", title: "Manual" });
+  expect(calledUrl).toBe("http://localhost:4319/api/issues");
+  expect(captured.method).toBe("POST");
+  expect(JSON.parse(String(captured.body))).toEqual({ project_id: "project-1", title: "Manual" });
+  expect(issue.status).toBe("backlog");
+});
+
+it("parses the runtime catalog with kind and availability", async () => {
+  const descriptor = {
+    id: "claude",
+    display_name: "Claude Code",
+    kind: "real",
+    capabilities: {
+      stream: true,
+      send_message: true,
+      abort: true,
+      resume: true,
+      permissions: false,
+      diff_hints: false,
+    },
+    availability: { status: "unavailable", reason: "binary_not_found" },
+  };
+  const fetchMock: typeof fetch = async () => jsonResponse([descriptor]);
+  const client = createDaemonClient({ fetch: fetchMock });
+  const runtimes = await client.listRuntimes();
+  expect(runtimes).toEqual([descriptor]);
+});
+
 it("throws DaemonRequestError on a non-2xx response", async () => {
   const fetchMock: typeof fetch = async () => jsonResponse({ error: "run_not_found" }, 404);
   const client = createDaemonClient({ fetch: fetchMock });

@@ -44,11 +44,11 @@ export function useRepositories() {
   return useQuery({ queryKey: queryKeys.repositories, queryFn: () => daemon.listRepositories() });
 }
 
-/** The daemon's runtime registry (adapter ids + honest capabilities); static per daemon process. */
+/** The daemon's runtime catalog with probed availability; short staleTime so installing a CLI shows up without a daemon restart. */
 export function useRuntimes() {
   return useQuery({
     queryKey: queryKeys.runtimes,
     queryFn: () => daemon.listRuntimes(),
-    staleTime: Infinity,
+    staleTime: 30_000,
   });
 }

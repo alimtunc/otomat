@@ -1,43 +1,156 @@
 // @vitest-environment happy-dom
+import type { CreateIssueRequest, RuntimeDescriptor } from "@otomat/domain";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
 import { act } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const start = vi.fn(async () => false);
+const create = vi.fn(async (_request: CreateIssueRequest) => true);
+let runtimesData: RuntimeDescriptor[] = [];
+const runtimeSelectProps = vi.fn();
 
 vi.mock("@web/api/runs/mutations", () => ({
   useStartRunAndNavigate: () => ({ start, isPending: false }),
 }));
 
+vi.mock("@web/api/issues/mutations", () => ({
+  useCreateIssueAndNavigate: () => ({ create, isPending: false }),
+}));
+
+vi.mock("@web/api/daemon/queries", () => ({
+  useRuntimes: () => ({
+    data: runtimesData,
+    isPending: false,
+    isError: false,
+    isSuccess: true,
+    refetch: vi.fn(),
+  }),
+}));
+
 vi.mock("@web/components/runs/launch/runtime-select", () => ({
-  RuntimeSelect: () => <div data-testid="runtime-select" />,
+  RuntimeSelect: (props: { value: string | null }) => {
+    runtimeSelectProps(props);
+    return <div data-testid="runtime-select" />;
+  },
 }));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+
+function runtimeDescriptor(
+  id: string,
+  kind: RuntimeDescriptor["kind"],
+  available: boolean,
+): RuntimeDescriptor {
+  return {
+    id,
+    display_name: id,
+    kind,
+    capabilities: {
+      stream: true,
+      send_message: true,
+      abort: true,
+      resume: true,
+      permissions: false,
+      diff_hints: false,
+    },
+    availability: available
+      ? { status: "available", version: null }
+      : { status: "unavailable", reason: "binary_not_found" },
+  };
+}
 
 const cleanups: Array<() => Promise<void>> = [];
 
 afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
   document.body.replaceChildren();
+  start.mockClear();
+  create.mockClear();
+  runtimeSelectProps.mockClear();
+  runtimesData = [];
 });
 
+async function renderDialog(onOpenChange: (open: boolean) => void = () => undefined) {
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root: Root = createRoot(container);
+  await act(async () => {
+    root.render(
+      <NewIssueDialog open onOpenChange={onOpenChange} projectId="p1" projectName="otomat" />,
+    );
+  });
+  cleanups.push(async () => {
+    await act(async () => root.unmount());
+  });
+}
+
+function buttonByText(text: string): HTMLButtonElement {
+  const button = [...document.querySelectorAll("button")].find(
+    (candidate) => candidate.textContent?.trim() === text,
+  );
+  if (!button) throw new Error(`button "${text}" not found`);
+  return button;
+}
+
+function setInputValue(input: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  setter?.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 describe("NewIssueDialog", () => {
-  it("exposes only the working agent-backed issue flow", async () => {
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
+  it("offers both the Manual and With agent modes", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+    const labels = [...document.querySelectorAll("button")].map((button) =>
+      button.textContent?.trim(),
+    );
+    expect(labels).toContain("Manual");
+    expect(labels).toContain("With agent");
+    expect(document.body.textContent).toContain("Create & launch");
+  });
+
+  it("auto-selects the first available real runtime in agent mode", async () => {
+    runtimesData = [
+      runtimeDescriptor("claude", "real", false),
+      runtimeDescriptor("codex", "real", true),
+      runtimeDescriptor("fake", "simulated", true),
+    ];
+    await renderDialog();
+    expect(runtimeSelectProps).toHaveBeenCalledWith(expect.objectContaining({ value: "codex" }));
+  });
+
+  it("blocks launch with an actionable empty state when no runtime is launchable", async () => {
+    runtimesData = [
+      runtimeDescriptor("claude", "real", false),
+      runtimeDescriptor("codex", "real", false),
+    ];
+    await renderDialog();
+    expect(document.body.textContent).toContain("No agent runtime available");
+    expect(buttonByText("Create & launch⌘↵").disabled).toBe(true);
+    expect(document.querySelector("[data-testid='runtime-select']")).toBeNull();
+  });
+
+  it("creates a manual issue for the current project and closes", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    const onOpenChange = vi.fn();
+    await renderDialog(onOpenChange);
+
     await act(async () => {
-      root.render(<NewIssueDialog open onOpenChange={() => undefined} projectName="otomat" />);
+      buttonByText("Manual").click();
     });
-    cleanups.push(async () => {
-      await act(async () => root.unmount());
+    const title = document.querySelector<HTMLInputElement>("input[aria-label='Issue title']");
+    expect(title).not.toBeNull();
+    await act(async () => {
+      setInputValue(title!, "Ship the CSV parser");
+    });
+    await act(async () => {
+      buttonByText("Create issue").click();
     });
 
-    const buttons = [...document.querySelectorAll("button")].map((button) => button.textContent);
-    expect(buttons).not.toContain("Manual");
-    expect(document.querySelector("textarea")).not.toBeNull();
-    expect(document.body.textContent).toContain("Create & launch");
+    expect(create).toHaveBeenCalledWith({ project_id: "p1", title: "Ship the CSV parser" });
+    expect(start).not.toHaveBeenCalled();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

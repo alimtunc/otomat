@@ -20,6 +20,8 @@ import { CodexFrameMapper } from "./frames.js";
 
 export const CODEX_ADAPTER_ID = "codex";
 
+export const CODEX_BINARY = "codex";
+
 const CODEX_CAPABILITIES: RuntimeCapabilities = {
   stream: true,
   send_message: true,
@@ -39,7 +41,7 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
   readonly capabilities = CODEX_CAPABILITIES;
 
   /** The binary parameter is the test seam: tests point it at a stub replaying recorded frames. */
-  constructor(private readonly binary = "codex") {}
+  constructor(private readonly binary: string = CODEX_BINARY) {}
 
   async run(
     input: RuntimeRunInput,
