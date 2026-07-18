@@ -20,20 +20,20 @@
     "@otomat/ui": "workspace:*",
     "@tanstack/react-form": "^1.33.1",
     "@tanstack/react-query": "^5.101.2",
-    "@tanstack/react-router": "^1.170.17",
+    "@tanstack/react-router": "^1.170.18",
     "@tanstack/react-store": "^0.11.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.2",
-    "@tanstack/router-plugin": "^1.168.19",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/router-plugin": "^1.168.22",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
-    "happy-dom": "^20.10.6",
-    "tailwindcss": "^4.3.2",
-    "vite": "^8.1.4",
+    "happy-dom": "^20.11.0",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.1.5",
     "vitest": "^4.1.10"
   }
 }
