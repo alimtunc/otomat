@@ -21,7 +21,7 @@ export type RuntimeUsage = z.infer<typeof runtimeUsageSchema>;
 
 /** Terminal outcomes a runtime can return: the run machine's terminal states. */
 export const RUNTIME_FINAL_STATUSES = RUN_TERMINAL_STATES;
-export const runtimeFinalStatusSchema = z.enum(RUNTIME_FINAL_STATUSES);
+const runtimeFinalStatusSchema = z.enum(RUNTIME_FINAL_STATUSES);
 export type RuntimeFinalStatus = RunTerminalState;
 
 export const runtimeFinalStateSchema = z.object({
@@ -34,7 +34,7 @@ export const runtimeFinalStateSchema = z.object({
 export type RuntimeFinalState = z.infer<typeof runtimeFinalStateSchema>;
 
 /** Inputs to a fresh run. `run_dir` is the per-run artifact directory. */
-export const runtimeRunInputSchema = z.object({
+const runtimeRunInputSchema = z.object({
   run_id: z.string(),
   step_run_id: z.string(),
   agent_session_id: z.string(),
@@ -45,7 +45,7 @@ export const runtimeRunInputSchema = z.object({
 export type RuntimeRunInput = z.infer<typeof runtimeRunInputSchema>;
 
 /** Inputs to a follow-up turn that resumes an existing provider session. */
-export const runtimeResumeInputSchema = z.object({
+const runtimeResumeInputSchema = z.object({
   prompt: z.string(),
   run_dir: z.string(),
   cwd: z.string().nullable().optional(),
@@ -53,7 +53,7 @@ export const runtimeResumeInputSchema = z.object({
 export type RuntimeResumeInput = z.infer<typeof runtimeResumeInputSchema>;
 
 /** Handle to a started session, used by out-of-band `abort`/`resume`. */
-export const runtimeSessionRefSchema = z.object({
+const runtimeSessionRefSchema = z.object({
   run_id: z.string(),
   step_run_id: z.string(),
   agent_session_id: z.string(),

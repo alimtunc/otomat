@@ -1,5 +1,6 @@
-import { ErrorState, IssueStatusChip, Skeleton } from "@otomat/ui";
+import { ErrorState, Skeleton } from "@otomat/ui";
 import type { useIssue } from "@web/api/issues/queries";
+import { issueShortId } from "@web/lib/ids";
 
 export function IssueHeader({ query }: { query: ReturnType<typeof useIssue> }) {
   if (query.isPending) {
@@ -23,14 +24,17 @@ export function IssueHeader({ query }: { query: ReturnType<typeof useIssue> }) {
 
   const issue = query.data;
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <IssueStatusChip status={issue.status} />
-        <span className="font-mono text-xs text-text-tertiary">{issue.source}</span>
+    <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">{issue.title}</h1>
+        <div className="flex items-center gap-1.5 text-xs text-text-tertiary">
+          <span className="font-mono">{issueShortId(issue)}</span>
+          <span>·</span>
+          <span>{issue.source}</span>
+        </div>
       </div>
-      <h1 className="text-lg font-semibold text-foreground">{issue.title}</h1>
       {issue.body ? (
-        <p className="whitespace-pre-wrap text-sm text-text-secondary">{issue.body}</p>
+        <p className="whitespace-pre-wrap text-sm leading-[1.65] text-foreground">{issue.body}</p>
       ) : null}
     </div>
   );

@@ -2,6 +2,7 @@ import type { GitHubConnectionContract, PullRequestState } from "@otomat/domain"
 import { z } from "zod";
 
 import { normalizePullRequestBody } from "./body.js";
+import { GitHubCliError } from "./errors.js";
 import type {
   CommandResult,
   CommandRunner,
@@ -12,16 +13,6 @@ import type {
   PullRequestSelector,
   PullRequestUpdateInput,
 } from "./types.js";
-
-export class GitHubCliError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-  ) {
-    super(message);
-    this.name = "GitHubCliError";
-  }
-}
 
 const providerPullRequestSchema = z.object({
   number: z.number().int().positive(),
@@ -71,6 +62,17 @@ function toPullRequest(value: unknown): GitHubPullRequest {
     baseRef: parsed.baseRefName,
     lifecycle: lifecycle(parsed.state, parsed.isDraft),
   };
+}
+
+function parsePullRequestJson<T>(stdout: string, parse: (payload: unknown) => T): T {
+  try {
+    return parse(JSON.parse(stdout));
+  } catch {
+    throw new GitHubCliError(
+      "github_pr_response_invalid",
+      "GitHub returned invalid pull request metadata.",
+    );
+  }
 }
 
 function repositoryFromPath(pathname: string): string | null {
@@ -267,15 +269,10 @@ class CommandGitHubCli implements GitHubCli {
       "github_pr_lookup_failed",
       "GitHub pull requests could not be queried.",
     );
-    try {
-      const rows = z.array(providerPullRequestSchema).parse(JSON.parse(pullRequestResult.stdout));
-      return rows[0] ? toPullRequest(rows[0]) : null;
-    } catch {
-      throw new GitHubCliError(
-        "github_pr_response_invalid",
-        "GitHub returned invalid pull request metadata.",
-      );
-    }
+    const rows = parsePullRequestJson(pullRequestResult.stdout, (payload) =>
+      z.array(providerPullRequestSchema).parse(payload),
+    );
+    return rows[0] ? toPullRequest(rows[0]) : null;
   }
 
   async viewPullRequest(
@@ -293,14 +290,7 @@ class CommandGitHubCli implements GitHubCli {
       "github_pr_lookup_failed",
       "The GitHub pull request could not be read.",
     );
-    try {
-      return toPullRequest(JSON.parse(pullRequestResult.stdout));
-    } catch {
-      throw new GitHubCliError(
-        "github_pr_response_invalid",
-        "GitHub returned invalid pull request metadata.",
-      );
-    }
+    return parsePullRequestJson(pullRequestResult.stdout, toPullRequest);
   }
 
   async createPullRequest(input: PullRequestCreateInput): Promise<void> {

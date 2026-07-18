@@ -1,11 +1,12 @@
-import { ErrorState, Skeleton } from "@otomat/ui";
+import { ErrorState } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
-import { useConnectGitHub, usePreparePullRequest } from "@web/api/reviews/mutations";
-import { useGitHubConnection, useRunPullRequest } from "@web/api/reviews/queries";
+import { useConnectGitHub, usePreparePullRequest } from "@web/api/prs/mutations";
+import { useGitHubConnection, useRunPullRequest } from "@web/api/prs/queries";
 import { useRunDetail } from "@web/api/runs/queries";
 import { PullRequestForm } from "@web/components/runs/pr/form";
 import { pullRequestAcceptedSubmission } from "@web/components/runs/pr/model";
 import { CenteredState } from "@web/components/shell/centered-state";
+import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
 
 export function RunPrView() {
   const { runId } = useParams({ from: "/runs/$runId/pr" });
@@ -16,12 +17,7 @@ export function RunPrView() {
   const prepare = usePreparePullRequest(runId);
 
   if (runQuery.isPending || prQuery.isPending || connectionQuery.isPending) {
-    return (
-      <div className="flex flex-col gap-3 p-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-40 w-full max-w-2xl" />
-      </div>
-    );
+    return <DetailSkeleton blockClassName="h-40 w-full max-w-2xl" />;
   }
   if (runQuery.isError || prQuery.isError || connectionQuery.isError) {
     return (

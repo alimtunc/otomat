@@ -8,4 +8,26 @@
  */
 export * from "./api.js";
 export * from "./diff.js";
-export * from "./entities.js";
+export {
+  agentSessionContractSchema,
+  issueContractSchema,
+  projectContractSchema,
+  pullRequestContractSchema,
+  repositoryContractSchema,
+  reviewCommentContractSchema,
+  reviewContractSchema,
+  runContractSchema,
+  runPlanSchema,
+  stepRunContractSchema,
+  type AgentSessionContract,
+  type IssueContract,
+  type IssueSource,
+  type ProjectContract,
+  type PullRequestContract,
+  type RepositoryContract,
+  type ReviewCommentContract,
+  type ReviewContract,
+  type RunContract,
+  type RunPlan,
+  type StepRunContract,
+} from "./entities.js";

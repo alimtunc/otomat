@@ -1,8 +1,10 @@
-import { AlertTriangle, CheckCircle2, Info, Loader2, Undo2, XCircle } from "lucide-react";
-import { type CSSProperties, type ReactNode } from "react";
-import { Toaster as SonnerToaster, toast as sonnerToast } from "sonner";
+import { AlertTriangle, CheckCircle2, Info, Loader2, XCircle } from "lucide-react";
+import { type CSSProperties } from "react";
+import { Toaster as SonnerToaster, toast } from "sonner";
 
 import { useTheme } from "../lib/theme";
+
+export { toast };
 
 export type ToasterProps = {
   position?:
@@ -60,32 +62,3 @@ export function Toaster({
     />
   );
 }
-
-export type OptimisticRollbackOptions = {
-  id?: string | number;
-  message: ReactNode;
-  description?: ReactNode;
-  undoLabel?: string;
-  onUndo: () => void;
-  duration?: number;
-};
-
-function optimisticRollback({
-  id,
-  message,
-  description,
-  undoLabel = "Undo",
-  onUndo,
-  duration = 6000,
-}: OptimisticRollbackOptions) {
-  return sonnerToast.warning(message, {
-    id,
-    description,
-    duration,
-    icon: <Undo2 className="h-4 w-4 text-warning" />,
-    action: { label: undoLabel, onClick: onUndo },
-  });
-}
-
-export const toast: typeof sonnerToast & { optimisticRollback: typeof optimisticRollback } =
-  Object.assign(sonnerToast, { optimisticRollback });

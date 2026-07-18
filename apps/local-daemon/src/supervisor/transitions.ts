@@ -17,6 +17,8 @@ import {
   type StepRunState,
 } from "@otomat/domain";
 
+import type { Targets } from "./classify.js";
+
 /** Walks the run to `to` along the shortest legal path, stamping `completed_at` on a terminal landing. */
 export function driveRunTo(db: Db, runId: string, from: RunState, to: RunState, now: string): void {
   drivePath(runMachine, from, to, (state) => {
@@ -25,11 +27,11 @@ export function driveRunTo(db: Db, runId: string, from: RunState, to: RunState, 
   });
 }
 
-export function driveStepTo(db: Db, stepRunId: string, from: StepRunState, to: StepRunState): void {
+function driveStepTo(db: Db, stepRunId: string, from: StepRunState, to: StepRunState): void {
   drivePath(stepRunMachine, from, to, (state) => updateStepRunStatus(db, stepRunId, state));
 }
 
-export function driveSessionTo(
+function driveSessionTo(
   db: Db,
   sessionId: string,
   from: AgentSessionState,
@@ -55,4 +57,22 @@ export function driveStepsAndSessionsTo(
     if (!agentSessionMachine.isTerminal(session.status))
       driveSessionTo(db, session.id, session.status, sessionTarget);
   }
+}
+
+/** Converges a run and its non-terminal steps/sessions onto the target states as one transaction. */
+export function driveRunConvergence(
+  db: Db,
+  run: { id: string; status: RunState },
+  steps: readonly StepRunRow[],
+  sessions: readonly AgentSessionRow[],
+  targets: Targets,
+  now: string,
+): void {
+  db.transaction(
+    () => {
+      driveRunTo(db, run.id, run.status, targets.run, now);
+      driveStepsAndSessionsTo(db, steps, sessions, targets.step, targets.session);
+    },
+    { behavior: "immediate" },
+  );
 }

@@ -8,12 +8,6 @@ export const PopoverTrigger = PopoverPrimitive.Trigger;
 export const PopoverPortal = PopoverPrimitive.Portal;
 export const PopoverClose = PopoverPrimitive.Close;
 
-export interface PopoverAnchorProps extends ComponentPropsWithRef<"div"> {}
-
-export function PopoverAnchor({ className, ref, ...props }: PopoverAnchorProps) {
-  return <div ref={ref} className={className} {...props} />;
-}
-
 export interface PopoverContentProps extends ComponentPropsWithRef<typeof PopoverPrimitive.Popup> {
   align?: PopoverPrimitive.Positioner.Props["align"];
   side?: PopoverPrimitive.Positioner.Props["side"];

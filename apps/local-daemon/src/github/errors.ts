@@ -1,4 +1,12 @@
-import { GitHubCliError } from "./cli.js";
+export class GitHubCliError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "GitHubCliError";
+  }
+}
 
 export class GitHubPublicationError extends Error {
   constructor(

@@ -1,9 +1,25 @@
 import type { EventSource, EventType } from "@otomat/domain/types";
+import { format } from "date-fns";
 import type { ComponentPropsWithoutRef, KeyboardEvent, ReactNode } from "react";
 
-import { EVENT_GLYPH, PROVENANCE_LABEL, PROVENANCE_VAR, TONE_BG, TONE_COLOR } from "../lib/status";
+import { toDate } from "../lib/date";
+import { EVENT_GLYPH, PROVENANCE_LABEL, PROVENANCE_VAR } from "../lib/provenance";
+import { TONE_BG, TONE_TEXT } from "../lib/status";
 import { cn } from "../lib/utils";
-import { RelativeTime } from "./relative-time";
+
+function EventTime({ at }: { at: Date | string | number }) {
+  const resolved = toDate(at);
+  const valid = !Number.isNaN(resolved.getTime());
+  return (
+    <time
+      dateTime={valid ? resolved.toISOString() : undefined}
+      title={valid ? format(resolved, "PPpp") : undefined}
+      className="cursor-default pt-0.5 font-mono text-[10px] tabular-nums text-text-tertiary"
+    >
+      {valid ? format(resolved, "HH:mm:ss") : "—"}
+    </time>
+  );
+}
 
 export interface TimelineEventRowProps {
   type: EventType;
@@ -82,10 +98,7 @@ export function TimelineEventRow({
         }}
       />
 
-      <RelativeTime
-        date={at}
-        className="cursor-default pt-0.5 font-mono text-[10px] tabular-nums"
-      />
+      <EventTime at={at} />
 
       <div style={{ minWidth: 0 }}>
         <div
@@ -98,7 +111,8 @@ export function TimelineEventRow({
         >
           <Icon
             aria-hidden
-            style={{ width: 13, height: 13, flexShrink: 0, color: TONE_COLOR[tone] }}
+            className={TONE_TEXT[tone]}
+            style={{ width: 13, height: 13, flexShrink: 0 }}
           />
           <span style={{ fontSize: "var(--text-sm)", color: "var(--foreground)" }}>{summary}</span>
           <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>

@@ -3,12 +3,13 @@ import { runMachine } from "@otomat/domain";
 
 import { drainRunEvents, emitLedgerEvent, readRunEvents } from "#events";
 
+import { TARGETS } from "./classify.js";
 import { findFinalStatus } from "./evidence.js";
 import { buildTerminalMarker } from "./markers.js";
 import { terminateGracefully } from "./process.js";
 import { settleRun } from "./settle.js";
 import { notifyAfterSettle, type SupervisorState } from "./state.js";
-import { driveRunTo, driveStepsAndSessionsTo } from "./transitions.js";
+import { driveRunConvergence } from "./transitions.js";
 
 /** Grace between a graceful `SIGTERM` and a forced `SIGKILL` during abort. */
 const ABORT_GRACE_MS = 2000;
@@ -41,9 +42,15 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
       return;
     }
 
-    driveRunTo(db, runId, current.status, "canceled", now);
     const sessions = listAgentSessionsForRun(db, runId);
-    driveStepsAndSessionsTo(db, listStepRunsForRun(db, runId), sessions, "canceled", "terminated");
+    driveRunConvergence(
+      db,
+      current,
+      listStepRunsForRun(db, runId),
+      sessions,
+      TARGETS.canceled,
+      now,
+    );
 
     const ref = {
       runId,

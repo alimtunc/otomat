@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
-import type { StatusTone } from "../lib/status";
+import { toneClassMap, type StatusTone } from "../lib/status";
 import { cn } from "../lib/utils";
 
 export type ChipSize = "sm" | "lg";
@@ -11,16 +11,9 @@ export interface ChipProps extends HTMLAttributes<HTMLSpanElement> {
   children: ReactNode;
 }
 
-const TONE_CLASS: Record<StatusTone, string> = {
-  neutral: "bg-neutral-bg text-text-secondary",
-  iris: "bg-iris-bg text-iris-text",
-  success: "bg-success-bg text-success",
-  warning: "bg-warning-bg text-warning",
-  danger: "bg-danger-bg text-danger",
-  review: "bg-review-bg text-review",
-  stale: "bg-stale-bg text-stale",
-  ghost: "bg-transparent border-border text-text-secondary",
-};
+const TONE_CLASS: Record<StatusTone, string> = toneClassMap(
+  (facets) => `${facets.subtleBg} ${facets.textOnSubtle}`,
+);
 
 export function Chip({
   tone = "neutral",

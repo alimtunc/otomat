@@ -4,6 +4,7 @@ import { useState } from "react";
 export interface ReviewSelection {
   selectedIds: ReadonlySet<string>;
   toggle: (commentId: string, selected: boolean) => void;
+  clear: () => void;
   submitFix: () => void;
   isFixPending: boolean;
 }
@@ -22,9 +23,13 @@ export function useReviewSelection(runId: string): ReviewSelection {
     });
   }
 
+  function clear(): void {
+    setSelectedIds(new Set());
+  }
+
   function submitFix(): void {
     requestFix.mutate([...selectedIds], { onSuccess: () => setSelectedIds(new Set()) });
   }
 
-  return { selectedIds, toggle, submitFix, isFixPending: requestFix.isPending };
+  return { selectedIds, toggle, clear, submitFix, isFixPending: requestFix.isPending };
 }

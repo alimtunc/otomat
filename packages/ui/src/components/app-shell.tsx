@@ -6,7 +6,6 @@ import type { ConnectionState } from "./connection-status-indicator";
 import { OfflineBanner } from "./offline-banner";
 import { ReconnectingBar } from "./reconnecting-bar";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./resizable-panels";
-import { Toaster } from "./toaster";
 
 export interface AppShellProps {
   sidebar: ReactNode;
@@ -36,7 +35,7 @@ export function AppShell({
   toggleKey = "[",
   sidebarWidth = 236,
   railWidth = 56,
-  rightPanelAutoSaveId = "otomat.cockpit",
+  rightPanelAutoSaveId,
   className,
 }: AppShellProps) {
   const controlled = collapsedProp != null;
@@ -99,11 +98,13 @@ export function AppShell({
     <div
       data-density={density}
       className={cn("grid h-screen overflow-hidden", className)}
-      style={{ gridTemplateColumns: `${collapsed ? railWidth : sidebarWidth}px 1fr` }}
+      style={{
+        gridTemplateColumns: `${collapsed ? railWidth : sidebarWidth}px 1fr`,
+        gridTemplateRows: "minmax(0, 1fr)",
+      }}
     >
       {sidebar}
       {content}
-      <Toaster />
     </div>
   );
 }

@@ -48,9 +48,7 @@ const tabTriggerVariants = cva(
 
 export type TabsProps = ComponentPropsWithoutRef<typeof TabsPrimitive.Root>;
 
-export function Tabs(props: TabsProps) {
-  return <TabsPrimitive.Root {...props} />;
-}
+export const Tabs = TabsPrimitive.Root;
 
 export interface TabsListProps
   extends

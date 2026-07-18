@@ -1,6 +1,6 @@
 import { isRunTerminal, type EventEnvelope, type RunTerminalState } from "@otomat/domain";
 
-import { asString } from "#runtime/cli/frame-guards";
+import { asString } from "#runtime";
 
 import { SUPERVISOR_ADAPTER } from "./types.js";
 

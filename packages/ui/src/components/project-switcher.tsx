@@ -1,6 +1,7 @@
 import { Check, ChevronsUpDown, FolderGit2, Settings } from "lucide-react";
 import { useState } from "react";
 
+import { TONE_FACETS } from "../lib/status";
 import { cn } from "../lib/utils";
 import {
   Command,
@@ -21,9 +22,9 @@ export interface ProjectSummary {
 }
 
 const HEALTH_COLOR: Record<NonNullable<ProjectSummary["health"]>, string> = {
-  healthy: "var(--success)",
-  degraded: "var(--warning)",
-  unknown: "var(--neutral)",
+  healthy: TONE_FACETS.success.cssVar,
+  degraded: TONE_FACETS.warning.cssVar,
+  unknown: TONE_FACETS.neutral.cssVar,
 };
 
 export interface ProjectSwitcherProps {
@@ -71,7 +72,7 @@ export function ProjectSwitcher({
             disabled={loading}
             className={cn(
               "flex h-12 items-center gap-2.25 px-3 text-left hover:bg-hover",
-              "focus-visible:outline-none focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]",
+              "focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]",
               "disabled:cursor-not-allowed disabled:opacity-60",
               collapsed && "justify-center px-0",
             )}

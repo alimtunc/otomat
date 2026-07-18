@@ -2,11 +2,11 @@ import type { Db } from "@otomat/db";
 import type { HealthResponse, RunContract, RunDetail, StartRunRequest } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { appendEvents } from "#events";
 import type { RuntimeEvent } from "#runtime";
 
 import { makeApiApp, post, request, runRow } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
+import { appendEvents } from "../support/ledger.js";
 import { makeEvent } from "../support/run-event-fixtures.js";
 import { seedRun } from "../support/seed.js";
 

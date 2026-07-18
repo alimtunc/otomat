@@ -19,7 +19,7 @@ import {
 } from "@otomat/domain";
 
 import { emitLedgerEvent } from "#events";
-import type { WorktreeRecord } from "#git";
+import type { GitWorktreeService, WorktreeRecord } from "#git";
 
 import { normalizePullRequestBody } from "./body.js";
 import { GitHubPublicationError, safeGitHubFailure } from "./errors.js";
@@ -61,11 +61,24 @@ interface PublicationRequest extends PreparePullRequestRequest {
   normalizedBody: string | null;
 }
 
+interface PublishableWorktree {
+  worktrees: GitWorktreeService;
+  worktree: WorktreeRecord;
+}
+
 interface PublicationContext {
   run: RunRow;
+  worktrees: GitWorktreeService;
   worktree: WorktreeRecord;
   remote: GitHubRemote;
   request: PublicationRequest;
+}
+
+function metadataMatches(provider: GitHubPullRequest, request: PublicationRequest): boolean {
+  return (
+    provider.title === request.title &&
+    normalizePullRequestBody(provider.body) === request.normalizedBody
+  );
 }
 
 function providerPatch(
@@ -210,34 +223,30 @@ class PullRequestPublisher implements PullRequestPublicationService {
   }
 
   private view(row: PullRequestRow): PullRequestView {
-    let hasUnpublishedChanges: boolean | null = false;
-    if (row.published_diff_sha && !this.config.worktrees) {
-      hasUnpublishedChanges = null;
-    } else if (row.published_diff_sha && this.config.worktrees) {
-      try {
-        hasUnpublishedChanges =
-          this.config.worktrees.diff(row.run_id).sha !== row.published_diff_sha;
-      } catch {
-        hasUnpublishedChanges = null;
-      }
+    if (!row.published_diff_sha) return { row, hasUnpublishedChanges: false };
+    if (!this.config.worktrees) return { row, hasUnpublishedChanges: null };
+    try {
+      return {
+        row,
+        hasUnpublishedChanges:
+          this.config.worktrees.diff(row.run_id).sha !== row.published_diff_sha,
+      };
+    } catch {
+      return { row, hasUnpublishedChanges: null };
     }
-    return { row, hasUnpublishedChanges };
   }
 
-  private requireWorktree(runId: string): WorktreeRecord {
+  private requireWorktree(runId: string): PublishableWorktree {
     const worktrees = this.config.worktrees;
-    if (!worktrees) {
-      throw new GitHubPublicationError("worktree_missing", "The run has no active worktree.");
-    }
-    const worktree = worktrees.get(runId);
-    if (!worktree) {
+    const worktree = worktrees?.get(runId);
+    if (!worktrees || !worktree) {
       throw new GitHubPublicationError("worktree_missing", "The run has no active worktree.");
     }
     const diff = worktrees.diff(runId);
     if (diff.files.length === 0) {
       throw new GitHubPublicationError("diff_empty", "The run has no changes to publish.");
     }
-    return worktree;
+    return { worktrees, worktree };
   }
 
   private async refreshExisting(
@@ -269,13 +278,12 @@ class PullRequestPublisher implements PullRequestPublicationService {
       return { row, completedView: this.view(row), provider };
     }
     const current = this.view(row);
-    const metadataChanged =
-      provider.title !== context.request.title ||
-      normalizePullRequestBody(provider.body) !== context.request.normalizedBody;
     return {
       row,
       completedView:
-        hasPublishedSnapshot && current.hasUnpublishedChanges === false && !metadataChanged
+        hasPublishedSnapshot &&
+        current.hasUnpublishedChanges === false &&
+        metadataMatches(provider, context.request)
           ? current
           : null,
       provider,
@@ -294,11 +302,9 @@ class PullRequestPublisher implements PullRequestPublicationService {
       },
       "git",
     );
-    const snapshot = this.config.worktrees?.snapshot(context.run.id);
-    const diff = this.config.worktrees?.diff(context.run.id);
-    if (!snapshot || !diff) {
-      throw new GitHubPublicationError("worktree_missing", "The run has no active worktree.");
-    }
+    const snapshot = context.worktrees.snapshot(context.run.id);
+    // Re-read after snapshot(): the commit moves the tree, and this diff is the published anchor.
+    const diff = context.worktrees.diff(context.run.id);
     await this.config.cli.push(context.worktree.path, context.remote.name, context.worktree.branch);
     return {
       row,
@@ -340,10 +346,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
     selector: PullRequestSelector,
     request: PublicationRequest,
   ): Promise<GitHubPullRequest> {
-    const metadataChanged =
-      provider.title !== request.title ||
-      normalizePullRequestBody(provider.body) !== request.normalizedBody;
-    if (!metadataChanged) return provider;
+    if (metadataMatches(provider, request)) return provider;
     await this.config.cli.updatePullRequest({
       cwd: selector.cwd,
       repository: selector.repository,
@@ -419,7 +422,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
     );
     if (row.status === "merged" || row.status === "closed") return this.view(row);
     try {
-      const worktree = this.requireWorktree(run.id);
+      const { worktrees, worktree } = this.requireWorktree(run.id);
       const connection = await this.config.cli.connection();
       if (connection.status === "failed") {
         return this.persistConnectionState(row, publicationRequest, connection, "failed");
@@ -428,7 +431,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
         return this.persistConnectionState(row, publicationRequest, connection, "not_configured");
       }
       const remote = await this.config.cli.resolveRemote(worktree.path);
-      const context = { run, worktree, remote, request: publicationRequest };
+      const context = { run, worktrees, worktree, remote, request: publicationRequest };
       const existing = await this.refreshExisting(row, context);
       row = existing.row;
       if (existing.completedView) return existing.completedView;

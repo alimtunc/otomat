@@ -7,7 +7,7 @@
  *
  * @packageDocumentation
  */
-export * from "./machine.js";
+export { IllegalTransitionError, drivePath } from "./machine.js";
 export * from "./issue.js";
 export * from "./run.js";
 export * from "./step-run.js";

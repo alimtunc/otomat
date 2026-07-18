@@ -1,23 +1,24 @@
-import {
-  Button,
-  Icon,
-  SegmentedControl,
-  SegmentedItem,
-  useTheme,
-  type Direction,
-} from "@otomat/ui";
+import { Button, Icon, SegmentedControl, SegmentedItem, useTheme, type Accent } from "@otomat/ui";
 
 import { ACCENT_SWATCHES } from "./gallery.fixtures";
 
-const DIRECTIONS: { value: Direction; label: string }[] = [
+const ACCENTS: { value: Accent; label: string }[] = [
   { value: "iris", label: "Iris" },
   { value: "brass", label: "Brass" },
   { value: "viridian", label: "Viridian" },
 ];
 
 export function Switcher() {
-  const { theme, density, direction, accent, toggleTheme, setDensity, setDirection, setAccent } =
-    useTheme();
+  const {
+    theme,
+    density,
+    accent,
+    customAccent,
+    toggleTheme,
+    setDensity,
+    setAccent,
+    setCustomAccent,
+  } = useTheme();
 
   return (
     <div className="sticky top-0 z-10 -mx-6 mb-2 flex flex-wrap items-center gap-4 border-b border-border bg-background/90 px-6 py-3 backdrop-blur">
@@ -28,11 +29,11 @@ export function Switcher() {
 
       <SegmentedControl
         type="single"
-        value={direction}
-        onValueChange={(value) => value && setDirection(value as Direction)}
+        value={accent}
+        onValueChange={(value) => value && setAccent(value as Accent)}
         aria-label="Accent direction"
       >
-        {DIRECTIONS.map((d) => (
+        {ACCENTS.map((d) => (
           <SegmentedItem key={d.value} value={d.value}>
             {d.label}
           </SegmentedItem>
@@ -59,14 +60,14 @@ export function Switcher() {
           <button
             key={sw.hex}
             type="button"
-            onClick={() => setAccent(sw.hex)}
+            onClick={() => setCustomAccent(sw.hex)}
             aria-label={`Accent ${sw.label}`}
             title={sw.label}
             className="size-5 rounded-full border"
             style={{
               backgroundColor: sw.hex,
               borderColor:
-                accent?.toLowerCase() === sw.hex.toLowerCase()
+                customAccent?.toLowerCase() === sw.hex.toLowerCase()
                   ? "var(--foreground)"
                   : "var(--border)",
             }}
@@ -74,7 +75,7 @@ export function Switcher() {
         ))}
         <button
           type="button"
-          onClick={() => setAccent(null)}
+          onClick={() => setCustomAccent(null)}
           className="text-xs text-text-tertiary hover:text-foreground"
         >
           Reset

@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef } from "react";
 
 import { injectStyleOnce } from "../lib/inject-style";
-import type { StatusTone } from "../lib/status";
+import { toneClassMap, type StatusTone } from "../lib/status";
 import { cn } from "../lib/utils";
 
 const LIVEDOT_STYLE_ID = "otomat-livedot";
@@ -12,18 +12,10 @@ const LIVEDOT_CSS = `
 @media (prefers-reduced-motion:reduce){.otomat-livedot::after{display:none}}
 `;
 
-const TONE_CLASS: Record<Exclude<StatusTone, "ghost">, string> = {
-  neutral: "bg-neutral",
-  success: "bg-success",
-  warning: "bg-warning",
-  danger: "bg-danger",
-  review: "bg-review",
-  stale: "bg-stale",
-  iris: "bg-iris",
-};
+const TONE_CLASS: Record<StatusTone, string> = toneClassMap((facets) => facets.solid);
 
 export interface LiveDotProps extends ComponentPropsWithoutRef<"span"> {
-  tone?: keyof typeof TONE_CLASS;
+  tone?: StatusTone;
   live?: boolean;
   size?: number;
 }

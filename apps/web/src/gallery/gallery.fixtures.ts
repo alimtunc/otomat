@@ -1,4 +1,4 @@
-import type { EventSource } from "@otomat/ui";
+import type { EventSource } from "@otomat/domain";
 
 export interface SurfaceSwatch {
   varName: string;

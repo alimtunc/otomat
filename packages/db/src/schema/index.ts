@@ -47,6 +47,8 @@ export const repositories = sqliteTable("repositories", {
   ...timestamps,
 });
 
+export type WorktreeStatus = "active" | "archived" | "removed";
+
 export const worktrees = sqliteTable(
   "worktrees",
   {
@@ -60,7 +62,7 @@ export const worktrees = sqliteTable(
     // Exclusive owner of the mutable worktree (e.g. step_run_id). OTO-8 owns
     // worktree ownership; the partial unique index below is the hard guard.
     owner_token: text("owner_token"),
-    status: text("status").notNull().default("active"),
+    status: text("status").$type<WorktreeStatus>().notNull().default("active"),
     ...timestamps,
   },
   (table) => [

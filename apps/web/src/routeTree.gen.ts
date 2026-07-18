@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UsageRouteImport } from './routes/usage'
+import { Route as SkillsRouteImport } from './routes/skills'
+import { Route as ReviewsRouteImport } from './routes/reviews'
+import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as SettingsRouteRouteImport } from './routes/settings/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as RunsIndexRouteImport } from './routes/runs/index'
 import { Route as IssuesIndexRouteImport } from './routes/issues/index'
 import { Route as SettingsRuntimesRouteImport } from './routes/settings/runtimes'
 import { Route as SettingsRepositoriesRouteImport } from './routes/settings/repositories'
@@ -24,6 +30,31 @@ import { Route as RunsRunIdIndexRouteImport } from './routes/runs/$runId/index'
 import { Route as RunsRunIdPrRouteImport } from './routes/runs/$runId/pr'
 import { Route as RunsRunIdDiffRouteImport } from './routes/runs/$runId/diff'
 
+const UsageRoute = UsageRouteImport.update({
+  id: '/usage',
+  path: '/usage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SkillsRoute = SkillsRouteImport.update({
+  id: '/skills',
+  path: '/skills',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewsRoute = ReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentsRoute = AgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRouteRoute = SettingsRouteRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -38,6 +69,11 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => SettingsRouteRoute,
+} as any)
+const RunsIndexRoute = RunsIndexRouteImport.update({
+  id: '/runs/',
+  path: '/runs/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const IssuesIndexRoute = IssuesIndexRouteImport.update({
   id: '/issues/',
@@ -98,6 +134,11 @@ const RunsRunIdDiffRoute = RunsRunIdDiffRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
+  '/agents': typeof AgentsRoute
+  '/inbox': typeof InboxRoute
+  '/reviews': typeof ReviewsRoute
+  '/skills': typeof SkillsRoute
+  '/usage': typeof UsageRoute
   '/runs/$runId': typeof RunsRunIdRouteRouteWithChildren
   '/issues/$issueId': typeof IssuesIssueIdRoute
   '/settings/about': typeof SettingsAboutRoute
@@ -106,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/issues/': typeof IssuesIndexRoute
+  '/runs/': typeof RunsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
@@ -113,6 +155,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agents': typeof AgentsRoute
+  '/inbox': typeof InboxRoute
+  '/reviews': typeof ReviewsRoute
+  '/skills': typeof SkillsRoute
+  '/usage': typeof UsageRoute
   '/issues/$issueId': typeof IssuesIssueIdRoute
   '/settings/about': typeof SettingsAboutRoute
   '/settings/agents': typeof SettingsAgentsRoute
@@ -120,6 +167,7 @@ export interface FileRoutesByTo {
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/issues': typeof IssuesIndexRoute
+  '/runs': typeof RunsIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
@@ -129,6 +177,11 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
+  '/agents': typeof AgentsRoute
+  '/inbox': typeof InboxRoute
+  '/reviews': typeof ReviewsRoute
+  '/skills': typeof SkillsRoute
+  '/usage': typeof UsageRoute
   '/runs/$runId': typeof RunsRunIdRouteRouteWithChildren
   '/issues/$issueId': typeof IssuesIssueIdRoute
   '/settings/about': typeof SettingsAboutRoute
@@ -137,6 +190,7 @@ export interface FileRoutesById {
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/issues/': typeof IssuesIndexRoute
+  '/runs/': typeof RunsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
@@ -147,6 +201,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/settings'
+    | '/agents'
+    | '/inbox'
+    | '/reviews'
+    | '/skills'
+    | '/usage'
     | '/runs/$runId'
     | '/issues/$issueId'
     | '/settings/about'
@@ -155,6 +214,7 @@ export interface FileRouteTypes {
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/issues/'
+    | '/runs/'
     | '/settings/'
     | '/runs/$runId/diff'
     | '/runs/$runId/pr'
@@ -162,6 +222,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/agents'
+    | '/inbox'
+    | '/reviews'
+    | '/skills'
+    | '/usage'
     | '/issues/$issueId'
     | '/settings/about'
     | '/settings/agents'
@@ -169,6 +234,7 @@ export interface FileRouteTypes {
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/issues'
+    | '/runs'
     | '/settings'
     | '/runs/$runId/diff'
     | '/runs/$runId/pr'
@@ -177,6 +243,11 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/settings'
+    | '/agents'
+    | '/inbox'
+    | '/reviews'
+    | '/skills'
+    | '/usage'
     | '/runs/$runId'
     | '/issues/$issueId'
     | '/settings/about'
@@ -185,6 +256,7 @@ export interface FileRouteTypes {
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/issues/'
+    | '/runs/'
     | '/settings/'
     | '/runs/$runId/diff'
     | '/runs/$runId/pr'
@@ -194,13 +266,54 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
+  AgentsRoute: typeof AgentsRoute
+  InboxRoute: typeof InboxRoute
+  ReviewsRoute: typeof ReviewsRoute
+  SkillsRoute: typeof SkillsRoute
+  UsageRoute: typeof UsageRoute
   RunsRunIdRouteRoute: typeof RunsRunIdRouteRouteWithChildren
   IssuesIssueIdRoute: typeof IssuesIssueIdRoute
   IssuesIndexRoute: typeof IssuesIndexRoute
+  RunsIndexRoute: typeof RunsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/usage': {
+      id: '/usage'
+      path: '/usage'
+      fullPath: '/usage'
+      preLoaderRoute: typeof UsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/skills': {
+      id: '/skills'
+      path: '/skills'
+      fullPath: '/skills'
+      preLoaderRoute: typeof SkillsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reviews': {
+      id: '/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof ReviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agents': {
+      id: '/agents'
+      path: '/agents'
+      fullPath: '/agents'
+      preLoaderRoute: typeof AgentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -221,6 +334,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/'
       preLoaderRoute: typeof SettingsIndexRouteImport
       parentRoute: typeof SettingsRouteRoute
+    }
+    '/runs/': {
+      id: '/runs/'
+      path: '/runs'
+      fullPath: '/runs/'
+      preLoaderRoute: typeof RunsIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/issues/': {
       id: '/issues/'
@@ -343,9 +463,15 @@ const RunsRunIdRouteRouteWithChildren = RunsRunIdRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRouteRoute: SettingsRouteRouteWithChildren,
+  AgentsRoute: AgentsRoute,
+  InboxRoute: InboxRoute,
+  ReviewsRoute: ReviewsRoute,
+  SkillsRoute: SkillsRoute,
+  UsageRoute: UsageRoute,
   RunsRunIdRouteRoute: RunsRunIdRouteRouteWithChildren,
   IssuesIssueIdRoute: IssuesIssueIdRoute,
   IssuesIndexRoute: IssuesIndexRoute,
+  RunsIndexRoute: RunsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

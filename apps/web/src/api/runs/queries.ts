@@ -3,10 +3,25 @@ import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
+export function useRuns() {
+  return useQuery({
+    queryKey: queryKeys.runs,
+    queryFn: () => daemon.listRuns(),
+  });
+}
+
 export function useRunsForIssue(issueId: string) {
   return useQuery({
     queryKey: queryKeys.runsForIssue(issueId),
     queryFn: () => daemon.listRuns({ issueId }),
+  });
+}
+
+/** Event-driven: invalidated by the run's ledger stream (see RunEventsProvider), never polled. */
+export function useRunDiff(runId: string) {
+  return useQuery({
+    queryKey: queryKeys.runDiff(runId),
+    queryFn: () => daemon.getRunDiff(runId),
   });
 }
 

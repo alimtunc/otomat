@@ -1,7 +1,11 @@
 import { DiffModeEnum, DiffView, SplitSide } from "@git-diff-view/react";
 import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
 import { Button, DiffFileStatusChip, useTheme } from "@otomat/ui";
-import { extendDataFor, unrenderableNote } from "@web/components/runs/diff/file-card.utils";
+import {
+  diffFileDomId,
+  extendDataFor,
+  unrenderableNote,
+} from "@web/components/runs/diff/file-card.utils";
 import { DiffStat } from "@web/components/runs/diff/stat";
 import { ReviewCommentCard } from "@web/components/runs/review/comment-card";
 import { ReviewCommentForm } from "@web/components/runs/review/comment-form";
@@ -37,13 +41,16 @@ export function DiffFileCard({
   const note = unrenderableNote(file);
 
   return (
-    <section className="overflow-hidden rounded-md border border-border bg-surface-2">
-      <header className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <DiffFileStatusChip status={file.status} />
-        <span className="min-w-0 truncate font-mono text-xs">
+    <section
+      id={diffFileDomId(file)}
+      className="overflow-hidden rounded-md border border-border bg-surface-2"
+    >
+      <header className="flex h-9 items-center gap-2.5 border-b border-border bg-surface-1 px-3.5 font-mono text-xs">
+        <DiffFileStatusChip status={file.status} showLabel={false} />
+        <span className="min-w-0 truncate">
           {renamedFrom ? `${renamedFrom} → ${file.path}` : file.path}
         </span>
-        <span className="ml-auto flex items-center gap-2 font-mono text-xs">
+        <span className="ml-auto flex items-center gap-2">
           <DiffStat additions={file.additions} deletions={file.deletions} />
         </span>
       </header>

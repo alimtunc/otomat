@@ -1,5 +1,4 @@
 import type {
-  AgentSessionState,
   ChangeStatus,
   IssueState,
   PullRequestState,
@@ -34,7 +33,7 @@ export function StatusChip<K extends StatusKind>({
     <Chip
       tone={tone}
       size={size}
-      className={cn(!showLabel && "px-1.25", className)}
+      className={cn("lowercase", !showLabel && "px-1.25", className)}
       aria-label={showLabel ? undefined : label}
       title={showLabel ? undefined : label}
     >
@@ -61,10 +60,6 @@ export function RunStatusChip(props: PresetStatusChipProps<RunState>) {
 
 export function StepStatusChip(props: PresetStatusChipProps<StepRunState>) {
   return <StatusChip kind="step" {...props} />;
-}
-
-export function SessionStatusChip(props: PresetStatusChipProps<AgentSessionState>) {
-  return <StatusChip kind="session" {...props} />;
 }
 
 export function ReviewStatusChip(props: PresetStatusChipProps<ReviewState>) {

@@ -38,7 +38,7 @@ export function Breadcrumbs({ items, className, renderLink }: BreadcrumbsProps) 
           content = (
             <a
               href={item.href}
-              className="truncate hover:text-foreground focus-visible:outline-none focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:rounded-sm"
+              className="truncate hover:text-foreground focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:rounded-sm"
               style={{ transition: "color var(--motion-fast) var(--ease)" }}
             >
               {text}

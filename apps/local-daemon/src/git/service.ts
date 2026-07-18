@@ -118,7 +118,7 @@ function toRecord(row: WorktreeRow): WorktreeRecord {
     path: row.path,
     branch: row.branch,
     headSha: row.head_sha ?? "",
-    status: row.status as WorktreeStatus,
+    status: row.status,
   };
 }
 

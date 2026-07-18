@@ -13,7 +13,9 @@ export function SidebarDaemonStatus({
   online = true,
   collapsed = false,
 }: SidebarDaemonStatusProps) {
-  const label = [daemonId && `daemon ${daemonId}`, version].filter(Boolean).join(" · ");
+  const label = [daemonId ? `daemon ${daemonId}` : version && "daemon", version]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <output
       className={cn(

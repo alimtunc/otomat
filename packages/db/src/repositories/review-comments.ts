@@ -16,15 +16,6 @@ export function getReviewComment(db: Db, id: string): ReviewCommentRow | undefin
   return db.select().from(reviewComments).where(eq(reviewComments.id, id)).get();
 }
 
-export function listReviewCommentsForReview(db: Db, reviewId: string): ReviewCommentRow[] {
-  return db
-    .select()
-    .from(reviewComments)
-    .where(eq(reviewComments.review_id, reviewId))
-    .orderBy(reviewComments.created_at)
-    .all();
-}
-
 export function listReviewCommentsForRun(db: Db, runId: string): ReviewCommentRow[] {
   return db
     .select(getTableColumns(reviewComments))

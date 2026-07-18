@@ -12,10 +12,6 @@ export function insertReview(db: Db, value: NewReview): void {
   db.insert(reviews).values(value).run();
 }
 
-export function getReview(db: Db, id: string): ReviewRow | undefined {
-  return db.select().from(reviews).where(eq(reviews.id, id)).get();
-}
-
 /** A run has at most one review surface; the latest row wins if legacy data ever holds more. */
 export function getReviewForRun(db: Db, runId: string): ReviewRow | undefined {
   return db

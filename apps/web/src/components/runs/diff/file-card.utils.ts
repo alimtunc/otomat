@@ -1,5 +1,10 @@
 import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
 
+// The id derives from path, not sha: sha is sha256(patch) and collides for hunk-less files.
+export function diffFileDomId(file: Pick<DiffFileContract, "path">): string {
+  return `diff-file-${encodeURIComponent(file.path)}`;
+}
+
 /** Shapes the per-line comments into @git-diff-view's `extendData` contract (new side only). */
 export function extendDataFor(commentsByLine: Map<number, ReviewCommentContract[]>) {
   const newFile: Record<string, { data: ReviewCommentContract[] }> = {};
