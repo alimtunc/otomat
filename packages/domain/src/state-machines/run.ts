@@ -43,3 +43,16 @@ const runTerminalSet: ReadonlySet<string> = new Set(RUN_TERMINAL_STATES);
 export function isRunTerminal(status: string): status is RunTerminalState {
   return runTerminalSet.has(status);
 }
+
+/** Resting states a user follow-up can resume from: the run awaits an explicit human action, not a process. */
+export const RUN_FOLLOW_UP_STATES = [
+  "awaiting_human",
+  "review_ready",
+] as const satisfies readonly RunState[];
+export type RunFollowUpState = (typeof RUN_FOLLOW_UP_STATES)[number];
+
+const runFollowUpSet: ReadonlySet<string> = new Set(RUN_FOLLOW_UP_STATES);
+
+export function canFollowUpRun(status: string): status is RunFollowUpState {
+  return runFollowUpSet.has(status);
+}

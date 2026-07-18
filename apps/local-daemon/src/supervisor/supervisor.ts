@@ -1,5 +1,5 @@
 import { abortRun } from "./abort.js";
-import { fixRun, resumeRun, startRun } from "./commands.js";
+import { fixRun, followUpRun, resumeRun, startRun } from "./commands.js";
 import { reconcileRuns } from "./reconcile.js";
 import { createState, notifyAfterSettle } from "./state.js";
 import type { Supervisor, SupervisorConfig } from "./types.js";
@@ -10,6 +10,7 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     start: (request) => startRun(state, request),
     resume: (runId) => resumeRun(state, runId),
     fix: (runId, prompt) => fixRun(state, runId, prompt),
+    followUp: (runId, prompt) => followUpRun(state, runId, prompt),
     abort: (runId) => abortRun(state, runId),
     reconcile: () => {
       const report = reconcileRuns(state.db, state.dataDir, new Date().toISOString());

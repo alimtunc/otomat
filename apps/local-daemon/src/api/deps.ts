@@ -13,6 +13,7 @@ export interface ApiDeps {
   launchRun(request: StartRunRequest): Promise<RunRow>;
   resumeRun(runId: string): Promise<RunRow>;
   fixRun(runId: string, prompt: string): Promise<RunRow>;
+  followUpRun(runId: string, prompt: string): Promise<RunRow>;
   abortRun(runId: string): Promise<void>;
   github: GitHubService;
   review: ReviewService;

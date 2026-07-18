@@ -1,4 +1,4 @@
-import { startRunRequestSchema } from "@otomat/domain";
+import { followUpRunRequestSchema, startRunRequestSchema } from "@otomat/domain";
 import { Hono } from "hono";
 
 import { RuntimeUnavailableError, UnknownRuntimeError } from "#runtime";
@@ -52,6 +52,24 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       return c.json({ error: "run_resume_failed" }, 500);
     }
   });
+
+  routes.post(
+    "/:id/follow-up",
+    validateJson(followUpRunRequestSchema),
+    runGuard(deps.db),
+    async (c) => {
+      const run = c.get("run");
+      try {
+        return c.json(toRun(await deps.followUpRun(run.id, c.req.valid("json").prompt)));
+      } catch (error) {
+        if (error instanceof RunNotResumableError) {
+          return c.json({ error: "run_not_resumable" }, 409);
+        }
+        console.error(`[otomat] follow-up on run ${run.id} failed`, error);
+        return c.json({ error: "run_follow_up_failed" }, 500);
+      }
+    },
+  );
 
   routes.post("/:id/abort", runGuard(deps.db), async (c) => {
     const run = c.get("run");

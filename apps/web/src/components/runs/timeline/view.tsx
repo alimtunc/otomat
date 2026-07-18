@@ -3,6 +3,7 @@ import { useParams } from "@tanstack/react-router";
 import { useRunDetail } from "@web/api/runs/queries";
 import { useRunEventStream } from "@web/api/runs/run-events-provider";
 import { ContextPane } from "@web/components/runs/cockpit/context-pane";
+import { FollowUpComposer } from "@web/components/runs/cockpit/follow-up-composer";
 import { StepsPane } from "@web/components/runs/cockpit/steps-pane";
 import { PaneHeader } from "@web/components/runs/pane-header";
 import { RunTimeline } from "@web/components/runs/timeline/list";
@@ -42,6 +43,7 @@ export function RunTimelineView() {
           </span>
         </PaneHeader>
         <RunTimeline events={stream.events} state={stream.state} degraded={stream.degraded} />
+        <FollowUpComposer detail={detail.data} />
       </div>
       <ContextPane detail={detail.data} />
     </div>

@@ -127,6 +127,12 @@ export const requestFixRequestSchema = z.object({
 });
 export type RequestFixRequest = z.infer<typeof requestFixRequestSchema>;
 
+/** Send the user's own prompt as a follow-up turn resuming the run's existing provider session. */
+export const followUpRunRequestSchema = z.object({
+  prompt: z.string().trim().min(1),
+});
+export type FollowUpRunRequest = z.infer<typeof followUpRunRequestSchema>;
+
 /** Publish or update the run's GitHub pull request. */
 export const preparePullRequestRequestSchema = z.object({
   title: z.string().min(1),

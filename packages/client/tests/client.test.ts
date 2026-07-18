@@ -120,6 +120,22 @@ it("posts resume to the run's resume endpoint", async () => {
   expect(result.id).toBe("run-1");
 });
 
+it("posts a follow-up prompt to the run's follow-up endpoint", async () => {
+  let calledUrl = "";
+  let captured: { method?: string; body?: unknown } = {};
+  const fetchMock: typeof fetch = async (input, init) => {
+    calledUrl = String(input);
+    captured = { method: init?.method, body: init?.body };
+    return jsonResponse(RUN);
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+  const result = await client.followUpRun("run-1", { prompt: "keep going" });
+  expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/follow-up");
+  expect(captured.method).toBe("POST");
+  expect(JSON.parse(String(captured.body))).toEqual({ prompt: "keep going" });
+  expect(result.id).toBe("run-1");
+});
+
 it("posts abort and parses the returned run detail", async () => {
   let calledUrl = "";
   const detail = {

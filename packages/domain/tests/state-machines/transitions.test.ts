@@ -7,7 +7,12 @@ import { pullRequestMachine } from "#domain/state-machines/pull-request";
 import { pullRequestPublicationMachine } from "#domain/state-machines/pull-request-publication";
 import { reviewMachine } from "#domain/state-machines/review";
 import { reviewCommentMachine } from "#domain/state-machines/review-comment";
-import { RUN_TERMINAL_STATES, runMachine } from "#domain/state-machines/run";
+import {
+  RUN_FOLLOW_UP_STATES,
+  RUN_TERMINAL_STATES,
+  canFollowUpRun,
+  runMachine,
+} from "#domain/state-machines/run";
 import { stepRunMachine } from "#domain/state-machines/step-run";
 
 const machines = [
@@ -109,5 +114,17 @@ describe("RUN_TERMINAL_STATES", () => {
   it("matches the run machine's terminal states", () => {
     const derived = runMachine.states.filter((state) => runMachine.isTerminal(state));
     expect([...RUN_TERMINAL_STATES].toSorted()).toEqual(derived.toSorted());
+  });
+});
+
+describe("RUN_FOLLOW_UP_STATES", () => {
+  it.each(RUN_FOLLOW_UP_STATES)("%s can legally resume to running", (status) => {
+    expect(canFollowUpRun(status)).toBe(true);
+    expect(() => runMachine.transition(status, "running")).not.toThrow();
+  });
+
+  it("excludes terminal and active states", () => {
+    expect(canFollowUpRun("running")).toBe(false);
+    for (const status of RUN_TERMINAL_STATES) expect(canFollowUpRun(status)).toBe(false);
   });
 });
