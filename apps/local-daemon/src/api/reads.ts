@@ -17,6 +17,8 @@ import {
   type RunDetail,
 } from "@otomat/domain";
 
+import { findWorktreeById } from "#git/worktrees-store";
+
 import { toAgentSession, toIssue, toProject, toRepository, toRun, toStepRun } from "./serialize.js";
 
 export function readProjects(db: Db): ProjectContract[] {
@@ -43,9 +45,11 @@ export function readRuns(db: Db, issueId?: string): RunContract[] {
 export function readRunDetail(db: Db, runId: string): RunDetail | null {
   const run = getRun(db, runId);
   if (!run) return null;
+  const worktree = run.worktree_id ? findWorktreeById(db, run.worktree_id) : undefined;
   return {
     run: toRun(run),
     steps: listStepRunsForRun(db, runId).map(toStepRun),
     sessions: listAgentSessionsForRun(db, runId).map(toAgentSession),
+    worktree_path: worktree?.path ?? null,
   };
 }

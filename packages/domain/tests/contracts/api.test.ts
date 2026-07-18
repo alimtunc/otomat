@@ -2,9 +2,28 @@ import { describe, expect, it } from "vitest";
 
 import {
   createIssueRequestSchema,
+  runDetailSchema,
   runtimeAvailabilitySchema,
   runtimeDescriptorSchema,
 } from "#domain/contracts/api";
+
+const RUN = {
+  id: "run-1",
+  issue_id: "i1",
+  status: "running",
+  branch: "otomat/run/run-1",
+  plan_json: { version: 1, steps: [] },
+};
+
+describe("runDetailSchema", () => {
+  it("carries the run's worktree path and accepts null when it has none", () => {
+    const base = { run: RUN, steps: [], sessions: [] };
+    const withPath = runDetailSchema.parse({ ...base, worktree_path: "/tmp/wt" });
+    expect(withPath.worktree_path).toBe("/tmp/wt");
+    expect(runDetailSchema.parse({ ...base, worktree_path: null }).worktree_path).toBeNull();
+    expect(runDetailSchema.safeParse(base).success).toBe(false);
+  });
+});
 
 describe("createIssueRequestSchema", () => {
   it("accepts a titled request and trims the title", () => {

@@ -1,11 +1,12 @@
-import type { Db } from "@otomat/db";
+import { schema, type Db } from "@otomat/db";
 import type { HealthResponse, RunContract, RunDetail, StartRunRequest } from "@otomat/domain";
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import type { RuntimeEvent } from "#runtime";
 
 import { makeApiApp, post, request, runRow } from "../support/api.js";
-import { setupTestDb, type TestDb } from "../support/db.js";
+import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
 import { appendEvents } from "../support/ledger.js";
 import { makeEvent } from "../support/run-event-fixtures.js";
 import { seedRun } from "../support/seed.js";
@@ -65,7 +66,28 @@ it("composes run detail with steps and sessions (events come over SSE, not detai
   expect(detail.run.id).toBe(runId);
   expect(detail.steps).toHaveLength(1);
   expect(detail.sessions).toHaveLength(1);
+  expect(detail.worktree_path).toBeNull();
   expect(detail).not.toHaveProperty("events");
+});
+
+it("exposes the run's worktree path on its detail", async () => {
+  const runId = "run-worktree";
+  seedTerminalRun(t.db, runId);
+  const repositoryId = seedRepository(t.db);
+  t.db
+    .insert(schema.worktrees)
+    .values({
+      id: "wt1",
+      repository_id: repositoryId,
+      path: "/tmp/otomat/wt1",
+      branch: `otomat/run/${runId}`,
+      owner_token: runId,
+    })
+    .run();
+  t.db.update(schema.runs).set({ worktree_id: "wt1" }).where(eq(schema.runs.id, runId)).run();
+  const res = await request(makeApiApp(t), `/api/runs/${runId}`);
+  const detail = (await res.json()) as RunDetail;
+  expect(detail.worktree_path).toBe("/tmp/otomat/wt1");
 });
 
 it("rejects a start-run request with neither issue_id nor prompt", async () => {

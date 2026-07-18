@@ -48,7 +48,7 @@ export function useResumeRun(runId: string) {
   );
 }
 
-function startRunErrorMessage(error: unknown): string {
+export function startRunErrorMessage(error: unknown): string {
   if (error instanceof DaemonRequestError) {
     return error.status >= 500
       ? "Could not start run — the daemon failed to launch it."

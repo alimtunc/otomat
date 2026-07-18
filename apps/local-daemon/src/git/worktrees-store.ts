@@ -16,6 +16,10 @@ export function insertWorktree(db: Db, row: NewWorktreeRow): void {
   db.insert(worktrees).values(row).run();
 }
 
+export function findWorktreeById(db: Db, id: string): WorktreeRow | undefined {
+  return db.select().from(worktrees).where(eq(worktrees.id, id)).get();
+}
+
 export function findActiveByOwner(db: Db, owner: string): WorktreeRow | undefined {
   return db
     .select()
