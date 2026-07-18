@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { getAgent, getRun, schema } from "@otomat/db";
+import { getAgent, getRun, schema, upsertAgent } from "@otomat/db";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ensureRuntimeAgent, runtimeForRun } from "#supervisor/runtime-selection";
@@ -74,7 +74,7 @@ describe("ensureRuntimeAgent", () => {
 
 describe("runtimeForRun", () => {
   it("prefers the run's agent row over its frozen plan", () => {
-    ensureRuntimeAgent(harness.db, "codex");
+    upsertAgent(harness.db, { id: "codex", name: "Codex", runtime: "codex" });
     insertRun("r-agent", { agentId: "codex" });
 
     const run = getRun(harness.db, "r-agent");
