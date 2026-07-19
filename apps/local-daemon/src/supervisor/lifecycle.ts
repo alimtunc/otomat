@@ -7,7 +7,7 @@ import {
 } from "@otomat/db";
 import { agentSessionMachine, runMachine, stepRunMachine } from "@otomat/domain";
 
-import { runDir, startLiveTail } from "#events";
+import { startSessionTail } from "#events";
 
 import { writeWorkerIdentity } from "./identity.js";
 import { settleRun } from "./settle/index.js";
@@ -56,7 +56,7 @@ function trackTurn(
   proc: SessionProcess,
   release: () => void,
 ): void {
-  const tail = startLiveTail(state.db, state.dataDir, ctx.runId);
+  const tail = startSessionTail(state.db, state.dataDir, ctx.runId, ctx.agentSessionId);
   const monitor = proc.exited
     .then((exit) => {
       if (!state.aborting.has(ctx.runId)) settleLive(state, ctx, exit);
@@ -121,7 +121,7 @@ export async function spawnTurn(
     proc = state.spawn({ ...ctx, mode, providerSessionId });
     recordAgentSessionProcess(db, ctx.agentSessionId, { pid: proc.pid, pgid: proc.pgid });
     // Stamp the process identity next to its pid so a later boot proves the group is still ours before killing it.
-    writeWorkerIdentity(runDir(state.dataDir, ctx.runId), proc.pid, proc.pgid);
+    writeWorkerIdentity(ctx.runDir, proc.pid, proc.pgid);
     trackTurn(state, ctx, proc, release);
   } catch (error) {
     release();

@@ -7,7 +7,7 @@ import {
 } from "@otomat/db";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { readRunEvents } from "#events";
+import { readRunEvents, sessionDir } from "#events";
 import { RuntimeUnavailableError } from "#runtime";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
@@ -70,6 +70,9 @@ it("runs a three-step plan in order: three step_runs, three sessions, events per
   expect(spawn.calls).toBe(3);
   expect(spawn.jobs.map((job) => job.stepRunId)).toEqual(steps.map((step) => step.id));
   expect(spawn.jobs.map((job) => job.prompt)).toEqual(["plan it", "build it", "check it"]);
+  expect(spawn.jobs.map((job) => job.runDir)).toEqual(
+    sessions.map((session) => sessionDir(fix.dataDir, run.id, session.id)),
+  );
 
   const events = readRunEvents(fix.db, run.id);
   expectContiguousSeqs(events);

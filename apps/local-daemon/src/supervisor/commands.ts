@@ -9,7 +9,7 @@ import {
 } from "@otomat/db";
 import { RUN_FOLLOW_UP_STATES, type RunState, type StartRunRequest } from "@otomat/domain";
 
-import { runDir } from "#events";
+import { sessionDir } from "#events";
 import { createRuntimeAdapter, isKnownRuntimeId } from "#runtime";
 
 import { startNextReadyStep } from "./advance.js";
@@ -125,7 +125,7 @@ async function spawnFollowUpTurn(
       stepRunId: session.step_run_id,
       agentSessionId: session.id,
       prompt,
-      runDir: runDir(state.dataDir, runId),
+      runDir: sessionDir(state.dataDir, runId, session.id),
       worktreePath:
         state.repositories.forRepository(run.repository_id)?.service.get(runId)?.path ?? null,
       runtime,

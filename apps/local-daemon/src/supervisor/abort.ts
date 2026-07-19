@@ -1,7 +1,7 @@
 import { getRun, listAgentSessionsForRun, listStepRunsForRun, type RunRow } from "@otomat/db";
 import { runMachine } from "@otomat/domain";
 
-import { drainRunEvents, emitLedgerEvent, readRunEvents } from "#events";
+import { drainRunEvents, drainSessionEvents, emitLedgerEvent, readRunEvents } from "#events";
 
 import { TARGETS } from "./classify.js";
 import { eventsForSession, findFinalStatus } from "./evidence.js";
@@ -38,6 +38,7 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
     if (!current || runMachine.isTerminal(current.status)) return;
 
     const sessions = listAgentSessionsForRun(db, runId);
+    for (const session of sessions) drainSessionEvents(db, dataDir, runId, session.id);
     const turn = handle?.turn ?? null;
     const active = resolveTurnSession(sessions, turn);
     const events = readRunEvents(db, runId);

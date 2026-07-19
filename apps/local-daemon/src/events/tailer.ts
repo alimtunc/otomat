@@ -1,16 +1,18 @@
-import { existsSync, statSync } from "node:fs";
+import { statSync } from "node:fs";
 
-import type { Db } from "@otomat/db";
+import { ensureEventStream, type Db } from "@otomat/db";
 
 import { runtimeEventSchema, type RuntimeEvent } from "#runtime";
 
-import { appendSeqedEvents, applyLedgerPragmas, nextSeqForRun, type SeqedEvent } from "./ledger.js";
-import { byteOffsetForLine, readCompleteLinesFrom } from "./tail-source.js";
+import { appendEventStreamBatch, applyLedgerPragmas, nextSeqForRun } from "./ledger.js";
+import { readCompleteLinesFrom } from "./tail-source.js";
 
 export interface EventTailerOptions {
   db: Db;
   runId: string;
-  /** Path to the run's `events.jsonl` (OTO-6 `JsonlEventSink` target). */
+  /** Stable durable identity of this file stream; defaults to the run control stream. */
+  streamId?: string;
+  /** Path to this session or control stream's `events.jsonl`. */
   filePath: string;
   busyTimeoutMs?: number;
 }
@@ -36,6 +38,7 @@ export interface TailTickResult {
 export class EventTailer {
   private readonly db: Db;
   private readonly runId: string;
+  private readonly streamId: string;
   private readonly filePath: string;
   private byteOffset = 0;
   private nextSeq = 0;
@@ -45,6 +48,7 @@ export class EventTailer {
   constructor(options: EventTailerOptions) {
     this.db = options.db;
     this.runId = options.runId;
+    this.streamId = options.streamId ?? `run:${options.runId}:control`;
     this.filePath = options.filePath;
     applyLedgerPragmas(this.db, options.busyTimeoutMs);
   }
@@ -68,19 +72,22 @@ export class EventTailer {
     const { lines, consumedBytes } = readCompleteLinesFrom(this.filePath, this.byteOffset);
     if (lines.length === 0) return this.idle();
 
-    // seq stays equal to the file line index: every line advances nextSeq, but a
-    // corrupt line is skipped (leaving a gap) so one poison line can neither stall
-    // the tail nor crash the host. The skipped seq is the signal it was dropped.
-    const entries: SeqedEvent[] = [];
-    lines.forEach((line, index) => {
+    const events: RuntimeEvent[] = [];
+    lines.forEach((line) => {
       const event = parseLine(line);
-      if (event !== null) entries.push({ event, seq: this.nextSeq + index });
+      if (event !== null) events.push(event);
     });
 
-    const inserted = appendSeqedEvents(this.db, this.runId, entries);
+    const appended = appendEventStreamBatch(this.db, this.runId, {
+      streamId: this.streamId,
+      filePath: this.filePath,
+      fromByteOffset: this.byteOffset,
+      consumedBytes,
+      events,
+    });
     this.byteOffset += consumedBytes;
-    this.nextSeq += lines.length;
-    return { ingested: inserted, byteOffset: this.byteOffset, nextSeq: this.nextSeq };
+    this.nextSeq = appended.nextSeq;
+    return { ingested: appended.inserted, byteOffset: this.byteOffset, nextSeq: this.nextSeq };
   }
 
   /** Ticks until the file yields no further complete line. Returns the totals across the drain. */
@@ -119,10 +126,13 @@ export class EventTailer {
 
   private seed(): void {
     if (this.seeded) return;
+    const stream = ensureEventStream(this.db, {
+      id: this.streamId,
+      run_id: this.runId,
+      file_path: this.filePath,
+    });
     this.nextSeq = nextSeqForRun(this.db, this.runId);
-    this.byteOffset = existsSync(this.filePath)
-      ? byteOffsetForLine(this.filePath, this.nextSeq)
-      : 0;
+    this.byteOffset = stream.byte_offset;
     this.seeded = true;
   }
 

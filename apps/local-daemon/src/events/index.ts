@@ -8,7 +8,15 @@
  *
  * @packageDocumentation
  */
-export { appendSeqedEvents, applyLedgerPragmas, nextSeqForRun, type SeqedEvent } from "./ledger.js";
+export {
+  appendEventStreamBatch,
+  appendSeqedEvents,
+  applyLedgerPragmas,
+  nextSeqForRun,
+  type EventStreamAppendResult,
+  type EventStreamBatch,
+  type SeqedEvent,
+} from "./ledger.js";
 export * from "./tailer.js";
 export * from "./projection.js";
 export * from "./run-ledger.js";

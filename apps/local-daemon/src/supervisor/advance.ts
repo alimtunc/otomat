@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { getRun, insertAgentSession, listStepRunsForRun, type RunRow } from "@otomat/db";
 import { agentSessionMachine, nextReadyStep, runMachine } from "@otomat/domain";
 
-import { emitLedgerEvent, runDir } from "#events";
+import { emitLedgerEvent, sessionDir } from "#events";
 
 import { spawnTurn } from "./lifecycle.js";
 import { buildTerminalMarker } from "./markers.js";
@@ -36,7 +36,7 @@ export async function startNextReadyStep(state: SupervisorState, run: RunRow): P
       stepRunId: next.id,
       agentSessionId,
       prompt: next.prompt,
-      runDir: runDir(state.dataDir, run.id),
+      runDir: sessionDir(state.dataDir, run.id, agentSessionId),
       worktreePath:
         state.repositories.forRepository(run.repository_id)?.service.get(run.id)?.path ?? null,
       runtime,

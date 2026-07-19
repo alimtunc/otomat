@@ -17,7 +17,7 @@ import {
   type StartRunRequest,
 } from "@otomat/domain";
 
-import { runDir } from "#events";
+import { sessionDir } from "#events";
 
 import { firstStepToRun, freezePlan, resolveStepRuntimes } from "./freeze-plan.js";
 import { ensureRuntimeAgent, requireAvailableRuntime } from "./runtime-selection.js";
@@ -144,7 +144,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): Tu
     stepRunId: firstStep.id,
     agentSessionId,
     prompt: firstStep.prompt ?? prompt,
-    runDir: runDir(dataDir, runId),
+    runDir: sessionDir(dataDir, runId, agentSessionId),
     worktreePath: worktree?.path ?? null,
     runtime: firstStepRuntime,
   };
