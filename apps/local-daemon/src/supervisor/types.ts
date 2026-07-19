@@ -75,6 +75,8 @@ export interface Supervisor {
   reconcile(): ReconcileReport;
   /** Resolve once every in-flight session process has exited (shutdown/test aid). */
   settle(): Promise<void>;
+  /** Stop every in-flight worker group (SIGTERM, then SIGKILL after `graceMs`); resolves once all have exited. */
+  shutdown(graceMs: number): Promise<void>;
 }
 
 /** Outcome of classifying one crashed/aborted run against the durable ledger + process liveness. */

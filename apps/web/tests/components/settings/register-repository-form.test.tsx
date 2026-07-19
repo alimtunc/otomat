@@ -20,7 +20,24 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
   document.body.replaceChildren();
   registerRepository.mockReset();
+  delete window.otomat;
 });
+
+function installDesktopBridge(pickDirectory: () => Promise<string | null>): void {
+  window.otomat = { daemonUrl: "http://127.0.0.1:5000", pickDirectory };
+}
+
+function browseButton(): HTMLButtonElement | undefined {
+  return [...document.querySelectorAll("button")].find(
+    (candidate) => candidate.textContent?.trim() === "Browse…",
+  );
+}
+
+function requireBrowseButton(): HTMLButtonElement {
+  const button = browseButton();
+  if (button === undefined) throw new Error("Browse button was not rendered");
+  return button;
+}
 
 async function renderForm() {
   const container = document.createElement("div");
@@ -110,5 +127,48 @@ describe("RegisterRepositoryForm", () => {
       setInputValue(pathInput(), "/repos/fixed");
     });
     expect(document.body.textContent).not.toContain("The repository's HEAD is detached");
+  });
+
+  it("hides the native Browse button when no desktop bridge is present", async () => {
+    await renderForm();
+    expect(browseButton()).toBeUndefined();
+  });
+
+  it("fills the path from the native picker when the desktop bridge is present", async () => {
+    installDesktopBridge(async () => "/picked/repo");
+    await renderForm();
+
+    await act(async () => {
+      requireBrowseButton().click();
+    });
+    expect(pathInput().value).toBe("/picked/repo");
+  });
+
+  it("creates nothing and leaves the path untouched when the picker is canceled", async () => {
+    installDesktopBridge(async () => null);
+    await renderForm();
+
+    await act(async () => {
+      setInputValue(pathInput(), "/typed/path");
+    });
+    await act(async () => {
+      requireBrowseButton().click();
+    });
+
+    expect(pathInput().value).toBe("/typed/path");
+    expect(registerRepository).not.toHaveBeenCalled();
+  });
+
+  it("shows an error when the native picker fails", async () => {
+    installDesktopBridge(async () => {
+      throw new Error("native dialog failed");
+    });
+    await renderForm();
+
+    await act(async () => {
+      requireBrowseButton().click();
+    });
+
+    expect(document.body.textContent).toContain("Could not open the folder picker.");
   });
 });

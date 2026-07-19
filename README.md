@@ -22,6 +22,7 @@ apps/
     review/             Diff snapshots, comments, fix and follow-up
     runtime/            Codex, Claude and deterministic fake adapters
     supervisor/         Process lifecycle, reconciliation and resume
+  desktop/              Electron alpha shell: manages the daemon lifecycle, serves the web build
 packages/
   domain/               Pure TS: types, state machines, event envelope, contracts
   db/                   SQLite + Drizzle + better-sqlite3, schema/migrations/repos
@@ -48,6 +49,27 @@ pnpm build          # build every package, then run the import-boundary lint
 pnpm test           # Vitest across packages
 pnpm db:migrate     # create/upgrade the local SQLite database
 ```
+
+## Desktop app (alpha)
+
+The desktop shell packages Otomat as a single macOS app — no terminals. It launches the
+`local-daemon` build as a child process on a free loopback port, waits for `/api/health`, then
+opens the cockpit, and shuts the daemon down cleanly on quit.
+
+```
+pnpm desktop:dev       # run in dev: Vite dev server + Electron managing a spawned daemon
+pnpm desktop:package   # build an unsigned macOS .app + .dmg into apps/desktop/release/
+```
+
+- Data (SQLite, runs, worktrees) lives under the app's `userData` directory, so first launch and
+  relaunch share the same DB, projects, and runs. Only one daemon instance runs per app.
+- CLIs you use in your shell (`git`, `gh`, `claude`, `codex`) are found even from a Finder launch:
+  the app resolves your login-shell `PATH` (only `PATH` — no tokens are read).
+- Repositories can be added with a native folder picker (the typed-path field still works too).
+- The artifact is **unsigned** and macOS-only — Gatekeeper needs a right-click → Open on first
+  launch. Auto-update, signing/notarization, and Windows/Linux builds are out of scope for the alpha.
+
+The classic two-terminal flow (`pnpm dev` + `pnpm back`) is unchanged.
 
 ## Quality gates
 

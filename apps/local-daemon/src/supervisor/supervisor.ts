@@ -1,6 +1,7 @@
 import { abortRun } from "./abort.js";
 import { advanceRun } from "./advance.js";
 import { fixRun, followUpRun, resumeRun, startRun } from "./commands.js";
+import { terminateGracefully } from "./process.js";
 import { reconcileRuns } from "./reconcile.js";
 import { createState, notifyAfterSettle } from "./state.js";
 import type { Supervisor, SupervisorConfig } from "./types.js";
@@ -24,6 +25,12 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
       while (state.inflight.size > 0) {
         await Promise.all([...state.inflight.values()].map((handle) => handle.monitor));
       }
+    },
+    shutdown: async (graceMs) => {
+      // Signal every live worker group; each worker's own SIGTERM handler settles its turn on exit.
+      await Promise.all(
+        [...state.inflight.values()].map((handle) => terminateGracefully(handle.proc, graceMs)),
+      );
     },
   };
 }

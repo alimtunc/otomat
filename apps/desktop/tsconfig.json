@@ -1,0 +1,10 @@
+{
+  "extends": "@otomat/tooling/tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node"]
+  },
+  "include": ["src", "tests"],
+  "exclude": ["dist", "release"]
+}

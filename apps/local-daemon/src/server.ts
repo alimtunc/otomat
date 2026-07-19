@@ -19,10 +19,15 @@ export interface StartDaemonOptions {
   dbPath?: string;
 }
 
+export interface CloseOptions {
+  /** SIGTERM then (after this many ms) SIGKILL every in-flight worker before settling, so shutdown never blocks on a live run. Omitted → wait for runs to settle themselves. */
+  terminateInFlightMs?: number;
+}
+
 export interface DaemonHandle {
   port: number;
   /** Stops accepting connections, then settles in-flight runs and closes the SQLite handle; resolves once all three finish, rejecting if the server itself fails to close. */
-  close(): Promise<void>;
+  close(options?: CloseOptions): Promise<void>;
 }
 
 /** The daemon is the single writer: it migrates, bootstraps the project, reconciles crashed runs, then owns the supervisor. */
@@ -90,17 +95,20 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
     process.exit(1);
   });
 
-  return {
-    port,
-    close: () =>
-      new Promise<void>((resolve, reject) => {
-        server.close((closeError) => {
-          void supervisor.settle().finally(() => {
-            sqlite.close();
-            if (closeError) reject(closeError);
-            else resolve();
-          });
+  async function close(closeOptions: CloseOptions = {}): Promise<void> {
+    if (closeOptions.terminateInFlightMs !== undefined) {
+      await supervisor.shutdown(closeOptions.terminateInFlightMs);
+    }
+    await new Promise<void>((resolve, reject) => {
+      server.close((closeError) => {
+        void supervisor.settle().finally(() => {
+          sqlite.close();
+          if (closeError) reject(closeError);
+          else resolve();
         });
-      }),
-  };
+      });
+    });
+  }
+
+  return { port, close };
 }

@@ -22,6 +22,11 @@ apps/
       supervisor/      # process supervisor + pid reconciliation (OTO-10)
       index.ts server.ts bootstrap.ts   # composition root / entrypoint
     tests/             # api/ events/ git/ runtime/ supervisor/ + support/
+  desktop/             # Electron alpha shell: manages the local-daemon lifecycle, serves the web build
+    src/
+      main/            # app lifecycle, daemon spawn, app:// protocol, windows, secure IPC
+      preload/         # contextBridge preloads (cockpit + splash)
+      shared/          # pure lifecycle logic (free port, PATH resolve, health poll, env, terminate)
 
 packages/
   domain/              # pure TS domain, state machines, event envelope, zod contracts (OTO-5)
@@ -31,7 +36,6 @@ packages/
   tooling/             # shared tsconfig, lint, vitest/build/boundary presets (OTO-5)
 
 apps/ (later)
-  desktop/             # Post-V1: Tauri shell launching/observing local-daemon
   mobile/              # Post-V1: companion app, no local agent execution
   cli/                 # Post-V1 or hardening: command-line controls
 ```
