@@ -2,6 +2,7 @@ import {
   getIssue,
   getRun,
   listAgentSessionsForRun,
+  listCompeteGroupsForRun,
   listIssues,
   listProjects,
   listRepositories,
@@ -51,8 +52,27 @@ export function readRunDetail(db: Db, runId: string): RunDetail | null {
   const worktree = run.worktree_id ? findWorktreeById(db, run.worktree_id) : undefined;
   return {
     run: toRun(run),
-    steps: listStepRunsForRun(db, runId).map(toStepRun),
+    steps: listStepRunsForRun(db, runId).map((step) => {
+      const serialized = toStepRun(step);
+      const candidateWorktree = step.worktree_id
+        ? findWorktreeById(db, step.worktree_id)
+        : undefined;
+      return {
+        ...serialized,
+        branch: candidateWorktree?.branch ?? null,
+        worktree_status: candidateWorktree?.status ?? null,
+      };
+    }),
     sessions: listAgentSessionsForRun(db, runId).map(toAgentSession),
+    compete_groups: listCompeteGroupsForRun(db, runId).map((group) => ({
+      id: group.id,
+      run_id: group.run_id,
+      idx: group.idx,
+      name: group.name,
+      status: group.status,
+      winner_step_run_id: group.winner_step_run_id,
+      base_head_sha: group.base_head_sha,
+    })),
     worktree_path: worktree?.path ?? null,
   };
 }

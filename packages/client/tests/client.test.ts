@@ -182,6 +182,41 @@ it("fetches and parses the run diff (null diff allowed, never fabricated)", asyn
   expect(result.diff).toBeNull();
 });
 
+it("fetches candidate evidence and posts an explicit compete winner", async () => {
+  const calls: Array<{ url: string; body?: unknown }> = [];
+  const detail = {
+    run: { ...RUN, status: "running" },
+    steps: [],
+    sessions: [],
+    compete_groups: [],
+    worktree_path: null,
+  };
+  const fetchMock: typeof fetch = async (input, init) => {
+    calls.push({ url: String(input), body: init?.body });
+    if (init?.method === "POST") return jsonResponse(detail);
+    return jsonResponse({
+      run_id: "run-1",
+      computed_at: "2026-07-05T00:00:00.000Z",
+      diff: null,
+    });
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+
+  await client.getCompeteCandidateDiff("run-1", "group/1", "candidate 1");
+  const selected = await client.selectCompeteWinner("run-1", "group/1", {
+    step_run_id: "candidate 1",
+  });
+
+  expect(calls[0]?.url).toBe(
+    "http://localhost:4319/api/runs/run-1/compete-groups/group%2F1/candidates/candidate%201/diff",
+  );
+  expect(calls[1]?.url).toBe(
+    "http://localhost:4319/api/runs/run-1/compete-groups/group%2F1/winner",
+  );
+  expect(JSON.parse(String(calls[1]?.body))).toEqual({ step_run_id: "candidate 1" });
+  expect(selected.run.status).toBe("running");
+});
+
 it("fetches the review surface and posts a pinned comment", async () => {
   const urls: string[] = [];
   let body: unknown;

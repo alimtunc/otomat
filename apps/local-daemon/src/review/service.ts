@@ -1,5 +1,5 @@
 import { addComment, getReviewDetail } from "./comments.js";
-import { getRunDiff } from "./diff.js";
+import { getRunDiff, getWorktreeDiff } from "./diff.js";
 import { markFixRequested, prepareFix } from "./fix.js";
 import { onRunSettled } from "./settle.js";
 import type { ReviewContext, ReviewService, ReviewServiceConfig } from "./types.js";
@@ -9,6 +9,7 @@ export function createReviewService(config: ReviewServiceConfig): ReviewService 
   const ctx: ReviewContext = config;
   return {
     getRunDiff: (run) => getRunDiff(ctx, run.id),
+    getWorktreeDiff: (run, owner) => getWorktreeDiff(ctx, run.id, owner),
     getReviewDetail: (runId) => getReviewDetail(ctx, runId),
     addComment: (run, request) => addComment(ctx, run.id, request),
     prepareFix: (run, commentIds) => prepareFix(ctx, run, commentIds),
