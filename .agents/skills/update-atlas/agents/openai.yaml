@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update Atlas"
+  short_description: "Refresh the Otomat architecture atlas"
+  default_prompt: "Use $update-atlas to refresh the Otomat architecture atlas when the repository changes."
