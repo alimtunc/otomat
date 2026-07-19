@@ -9,45 +9,30 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UsageRouteImport } from './routes/usage'
-import { Route as SkillsRouteImport } from './routes/skills'
-import { Route as ReviewsRouteImport } from './routes/reviews'
-import { Route as InboxRouteImport } from './routes/inbox'
-import { Route as AgentsRouteImport } from './routes/agents'
-import { Route as SettingsRouteRouteImport } from './routes/settings/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as SettingsIndexRouteImport } from './routes/settings/index'
-import { Route as RunsIndexRouteImport } from './routes/runs/index'
+import { Route as AgentsRouteImport } from './routes/agents'
+import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as ReviewsRouteImport } from './routes/reviews'
+import { Route as SettingsRouteRouteImport } from './routes/settings/route'
+import { Route as SkillsRouteImport } from './routes/skills'
+import { Route as UsageRouteImport } from './routes/usage'
 import { Route as IssuesIndexRouteImport } from './routes/issues/index'
-import { Route as SettingsRuntimesRouteImport } from './routes/settings/runtimes'
-import { Route as SettingsRepositoriesRouteImport } from './routes/settings/repositories'
-import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
-import { Route as SettingsAgentsRouteImport } from './routes/settings/agents'
-import { Route as SettingsAboutRouteImport } from './routes/settings/about'
 import { Route as IssuesIssueIdRouteImport } from './routes/issues/$issueId'
+import { Route as RunsIndexRouteImport } from './routes/runs/index'
 import { Route as RunsRunIdRouteRouteImport } from './routes/runs/$runId/route'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as SettingsAboutRouteImport } from './routes/settings/about'
+import { Route as SettingsAgentsRouteImport } from './routes/settings/agents'
+import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
+import { Route as SettingsRepositoriesRouteImport } from './routes/settings/repositories'
+import { Route as SettingsRuntimesRouteImport } from './routes/settings/runtimes'
 import { Route as RunsRunIdIndexRouteImport } from './routes/runs/$runId/index'
-import { Route as RunsRunIdPrRouteImport } from './routes/runs/$runId/pr'
 import { Route as RunsRunIdDiffRouteImport } from './routes/runs/$runId/diff'
+import { Route as RunsRunIdPrRouteImport } from './routes/runs/$runId/pr'
 
-const UsageRoute = UsageRouteImport.update({
-  id: '/usage',
-  path: '/usage',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SkillsRoute = SkillsRouteImport.update({
-  id: '/skills',
-  path: '/skills',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReviewsRoute = ReviewsRouteImport.update({
-  id: '/reviews',
-  path: '/reviews',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InboxRoute = InboxRouteImport.update({
-  id: '/inbox',
-  path: '/inbox',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgentsRoute = AgentsRouteImport.update({
@@ -55,24 +40,29 @@ const AgentsRoute = AgentsRouteImport.update({
   path: '/agents',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewsRoute = ReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRouteRoute = SettingsRouteRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const SkillsRoute = SkillsRouteImport.update({
+  id: '/skills',
+  path: '/skills',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsIndexRoute = SettingsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => SettingsRouteRoute,
-} as any)
-const RunsIndexRoute = RunsIndexRouteImport.update({
-  id: '/runs/',
-  path: '/runs/',
+const UsageRoute = UsageRouteImport.update({
+  id: '/usage',
+  path: '/usage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IssuesIndexRoute = IssuesIndexRouteImport.update({
@@ -80,34 +70,14 @@ const IssuesIndexRoute = IssuesIndexRouteImport.update({
   path: '/issues/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsRuntimesRoute = SettingsRuntimesRouteImport.update({
-  id: '/runtimes',
-  path: '/runtimes',
-  getParentRoute: () => SettingsRouteRoute,
-} as any)
-const SettingsRepositoriesRoute = SettingsRepositoriesRouteImport.update({
-  id: '/repositories',
-  path: '/repositories',
-  getParentRoute: () => SettingsRouteRoute,
-} as any)
-const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
-  id: '/appearance',
-  path: '/appearance',
-  getParentRoute: () => SettingsRouteRoute,
-} as any)
-const SettingsAgentsRoute = SettingsAgentsRouteImport.update({
-  id: '/agents',
-  path: '/agents',
-  getParentRoute: () => SettingsRouteRoute,
-} as any)
-const SettingsAboutRoute = SettingsAboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => SettingsRouteRoute,
-} as any)
 const IssuesIssueIdRoute = IssuesIssueIdRouteImport.update({
   id: '/issues/$issueId',
   path: '/issues/$issueId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RunsIndexRoute = RunsIndexRouteImport.update({
+  id: '/runs/',
+  path: '/runs/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RunsRunIdRouteRoute = RunsRunIdRouteRouteImport.update({
@@ -115,19 +85,49 @@ const RunsRunIdRouteRoute = RunsRunIdRouteRouteImport.update({
   path: '/runs/$runId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+const SettingsAboutRoute = SettingsAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+const SettingsAgentsRoute = SettingsAgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
+  id: '/appearance',
+  path: '/appearance',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+const SettingsRepositoriesRoute = SettingsRepositoriesRouteImport.update({
+  id: '/repositories',
+  path: '/repositories',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+const SettingsRuntimesRoute = SettingsRuntimesRouteImport.update({
+  id: '/runtimes',
+  path: '/runtimes',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 const RunsRunIdIndexRoute = RunsRunIdIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => RunsRunIdRouteRoute,
 } as any)
-const RunsRunIdPrRoute = RunsRunIdPrRouteImport.update({
-  id: '/pr',
-  path: '/pr',
-  getParentRoute: () => RunsRunIdRouteRoute,
-} as any)
 const RunsRunIdDiffRoute = RunsRunIdDiffRouteImport.update({
   id: '/diff',
   path: '/diff',
+  getParentRoute: () => RunsRunIdRouteRoute,
+} as any)
+const RunsRunIdPrRoute = RunsRunIdPrRouteImport.update({
+  id: '/pr',
+  path: '/pr',
   getParentRoute: () => RunsRunIdRouteRoute,
 } as any)
 
@@ -279,32 +279,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/usage': {
-      id: '/usage'
-      path: '/usage'
-      fullPath: '/usage'
-      preLoaderRoute: typeof UsageRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/skills': {
-      id: '/skills'
-      path: '/skills'
-      fullPath: '/skills'
-      preLoaderRoute: typeof SkillsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reviews': {
-      id: '/reviews'
-      path: '/reviews'
-      fullPath: '/reviews'
-      preLoaderRoute: typeof ReviewsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/inbox': {
-      id: '/inbox'
-      path: '/inbox'
-      fullPath: '/inbox'
-      preLoaderRoute: typeof InboxRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agents': {
@@ -314,6 +293,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reviews': {
+      id: '/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof ReviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -321,25 +314,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/skills': {
+      id: '/skills'
+      path: '/skills'
+      fullPath: '/skills'
+      preLoaderRoute: typeof SkillsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings/': {
-      id: '/settings/'
-      path: '/'
-      fullPath: '/settings/'
-      preLoaderRoute: typeof SettingsIndexRouteImport
-      parentRoute: typeof SettingsRouteRoute
-    }
-    '/runs/': {
-      id: '/runs/'
-      path: '/runs'
-      fullPath: '/runs/'
-      preLoaderRoute: typeof RunsIndexRouteImport
+    '/usage': {
+      id: '/usage'
+      path: '/usage'
+      fullPath: '/usage'
+      preLoaderRoute: typeof UsageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/issues/': {
@@ -349,46 +335,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IssuesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings/runtimes': {
-      id: '/settings/runtimes'
-      path: '/runtimes'
-      fullPath: '/settings/runtimes'
-      preLoaderRoute: typeof SettingsRuntimesRouteImport
-      parentRoute: typeof SettingsRouteRoute
-    }
-    '/settings/repositories': {
-      id: '/settings/repositories'
-      path: '/repositories'
-      fullPath: '/settings/repositories'
-      preLoaderRoute: typeof SettingsRepositoriesRouteImport
-      parentRoute: typeof SettingsRouteRoute
-    }
-    '/settings/appearance': {
-      id: '/settings/appearance'
-      path: '/appearance'
-      fullPath: '/settings/appearance'
-      preLoaderRoute: typeof SettingsAppearanceRouteImport
-      parentRoute: typeof SettingsRouteRoute
-    }
-    '/settings/agents': {
-      id: '/settings/agents'
-      path: '/agents'
-      fullPath: '/settings/agents'
-      preLoaderRoute: typeof SettingsAgentsRouteImport
-      parentRoute: typeof SettingsRouteRoute
-    }
-    '/settings/about': {
-      id: '/settings/about'
-      path: '/about'
-      fullPath: '/settings/about'
-      preLoaderRoute: typeof SettingsAboutRouteImport
-      parentRoute: typeof SettingsRouteRoute
-    }
     '/issues/$issueId': {
       id: '/issues/$issueId'
       path: '/issues/$issueId'
       fullPath: '/issues/$issueId'
       preLoaderRoute: typeof IssuesIssueIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/runs/': {
+      id: '/runs/'
+      path: '/runs'
+      fullPath: '/runs/'
+      preLoaderRoute: typeof RunsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/runs/$runId': {
@@ -398,6 +356,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsRunIdRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/': {
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/about': {
+      id: '/settings/about'
+      path: '/about'
+      fullPath: '/settings/about'
+      preLoaderRoute: typeof SettingsAboutRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/agents': {
+      id: '/settings/agents'
+      path: '/agents'
+      fullPath: '/settings/agents'
+      preLoaderRoute: typeof SettingsAgentsRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/appearance': {
+      id: '/settings/appearance'
+      path: '/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof SettingsAppearanceRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/repositories': {
+      id: '/settings/repositories'
+      path: '/repositories'
+      fullPath: '/settings/repositories'
+      preLoaderRoute: typeof SettingsRepositoriesRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/runtimes': {
+      id: '/settings/runtimes'
+      path: '/runtimes'
+      fullPath: '/settings/runtimes'
+      preLoaderRoute: typeof SettingsRuntimesRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/runs/$runId/': {
       id: '/runs/$runId/'
       path: '/'
@@ -405,18 +405,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsRunIdIndexRouteImport
       parentRoute: typeof RunsRunIdRouteRoute
     }
-    '/runs/$runId/pr': {
-      id: '/runs/$runId/pr'
-      path: '/pr'
-      fullPath: '/runs/$runId/pr'
-      preLoaderRoute: typeof RunsRunIdPrRouteImport
-      parentRoute: typeof RunsRunIdRouteRoute
-    }
     '/runs/$runId/diff': {
       id: '/runs/$runId/diff'
       path: '/diff'
       fullPath: '/runs/$runId/diff'
       preLoaderRoute: typeof RunsRunIdDiffRouteImport
+      parentRoute: typeof RunsRunIdRouteRoute
+    }
+    '/runs/$runId/pr': {
+      id: '/runs/$runId/pr'
+      path: '/pr'
+      fullPath: '/runs/$runId/pr'
+      preLoaderRoute: typeof RunsRunIdPrRouteImport
       parentRoute: typeof RunsRunIdRouteRoute
     }
   }
