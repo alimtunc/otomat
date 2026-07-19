@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content="turkit visual-map" />
-    <meta name="otomat-baseline" content="79ca0a24ef569c498ce3d71c5e65838ff259df29" />
+    <meta name="otomat-baseline" content="1995f8a63091e4f6c1886a9081134db06a5f9041" />
     <meta
       name="description"
       content="Atlas autonome de l’architecture stable d’Otomat : topology, flux, données, runtime, boundaries et points d’entrée."
@@ -1165,7 +1165,7 @@
         </nav>
         <div class="side-meta">
           <b>Scope</b> OTO-28 target<br />
-          <b>Commit</b> 79ca0a2<br />
+          <b>Commit</b> 1995f8a<br />
           <b>Generated</b> 2026-07-19
         </div>
       </aside>
@@ -1205,7 +1205,7 @@
                 <dt>Graph index</dt>
                 <dd>
                   L’index Graphify du 2026-07-18 sert uniquement à naviguer ; les claims sont
-                  recoupés avec <code>79ca0a2</code>.
+                  recoupés avec <code>1995f8a</code>.
                 </dd>
               </div>
               <div class="meta-row">
@@ -1272,7 +1272,8 @@
                 <h3>Worktree isolé</h3>
                 <p>
                   Une run obtient une branch et un Git worktree dédiés lorsque le projet racine est
-                  un repository utilisable.
+                  un repository utilisable. Compete refuse launch, reprise et promotion si ce
+                  repository ou ses worktrees ne sont plus résolvables.
                 </p>
               </article>
               <article class="mental-card">
@@ -1296,7 +1297,8 @@
                 <h3>Gagnant explicite</h3>
                 <p>
                   Un groupe compete isole au moins deux candidats, attend une sélection humaine,
-                  promeut un seul snapshot puis débloque ses dépendants.
+                  promeut un seul snapshot puis débloque ses dépendants. L’objectif partagé est
+                  figé dans chaque prompt candidat.
                 </p>
               </article>
             </div>
@@ -1467,7 +1469,8 @@
                   <b>Supervisor</b>
                   <p>
                     Gèle le DAG, ordonnance un step ou tous les candidats d’un groupe compete sous
-                    le sémaphore global, puis attend une sélection explicite.
+                    le sémaphore global, garde les workers derrière une barrière de démarrage
+                    durable, puis attend une sélection explicite.
                   </p>
                 </div>
                 <div class="spine-mark">CTRL</div>
@@ -1885,14 +1888,15 @@
                       <span class="seq">seq 003</span><span class="loc">startNextReadyStep</span
                       ><span class="action"
                         >Le scheduler du DAG choisit un step normal ou un groupe compete ; chaque
-                        tour attend un slot global puis revalide son état avant spawn.</span
+                        tour attend un slot global, persiste PID et identité, puis revalide son état
+                        avant de libérer le worker.</span
                       >
                     </div>
                     <div class="trace-node">
                       <span class="seq">seq 004</span><span class="loc">worker.ts</span
                       ><span class="action"
-                        >Instancie Codex/Claude/fake, exécute ou resume, append chaque event puis
-                        écrit le terminal marker.</span
+                        >Attend le fichier de release parent, instancie Codex/Claude/fake, exécute
+                        ou resume, append chaque event puis écrit le terminal marker.</span
                       >
                     </div>
                     <div class="trace-node">
@@ -2306,7 +2310,8 @@
                 <h3>Le worker laisse une trace survivante</h3>
                 <p>
                   Le fichier ne dépend pas de la mémoire du parent ; le daemon peut drainer,
-                  reprendre un offset et réconcilier au boot.
+                  reprendre un offset et réconcilier au boot sans dupliquer un tour. Les streams
+                  restent distincts par session concurrente.
                 </p>
               </article>
               <article class="tech-card">
@@ -2611,7 +2616,8 @@
                 <h3>Process OS</h3>
                 <p>
                   PID/PGID, signals et process identity servent à abort/reconcile. Un PID réutilisé
-                  n’est jamais signalé sans preuve d’identité.
+                  n’est jamais signalé sans preuve d’identité ; Stop et shutdown possèdent aussi
+                  les processes encore derrière la barrière de démarrage.
                 </p>
               </article>
             </div>
@@ -2801,7 +2807,7 @@
         </main>
 
         <footer>
-          <span>Otomat architecture atlas · OTO-28 commit 79ca0a2</span>
+          <span>Otomat architecture atlas · OTO-28 commit 1995f8a</span>
           <span>Generated 2026-07-19 · source evidence + Graphify navigation index</span>
         </footer>
       </div>
