@@ -23,6 +23,11 @@ export function reconcileRuns(db: Db, dataDir: string, now: string): ReconcileRe
   const reconciled: ReconcileOutcome[] = [];
   for (const run of [...active.runs, ...active.corrupt]) {
     if (RESTING_RUN_STATES.has(run.status)) continue;
+    if (!("plan_json" in run)) {
+      const outcome = settleRun(db, dataDir, run, { mode: "boot", now });
+      if (outcome !== null) reconciled.push(outcome);
+      continue;
+    }
     const openSessions = listAgentSessionsForRun(db, run.id).filter(
       (session) => !agentSessionMachine.isTerminal(session.status),
     );

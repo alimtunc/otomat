@@ -23,11 +23,10 @@ function candidateEvents(
   stepId: string,
   events: readonly EventEnvelope[],
 ): EventEnvelope[] {
-  const sessionIds = new Set(
-    detail.sessions
-      .filter((session) => session.step_run_id === stepId)
-      .map((session) => session.id),
-  );
+  const sessionIds = new Set<string>();
+  for (const session of detail.sessions) {
+    if (session.step_run_id === stepId) sessionIds.add(session.id);
+  }
   return events.filter(
     (event) => event.step_run_id === stepId || sessionIds.has(event.agent_session_id ?? ""),
   );
