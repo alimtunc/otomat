@@ -19,6 +19,7 @@ import { useWorkflowForm } from "./use-workflow-form";
 import { WorkflowStepCard } from "./workflow-step-card";
 
 export interface WorkflowIssueFormProps {
+  projectId: string | undefined;
   runtimeChoice: string | null;
   onRuntimeChoice: (runtime: string) => void;
   onLaunched: () => void;
@@ -26,6 +27,7 @@ export interface WorkflowIssueFormProps {
 }
 
 export function WorkflowIssueForm({
+  projectId,
   runtimeChoice,
   onRuntimeChoice,
   onLaunched,
@@ -35,6 +37,7 @@ export function WorkflowIssueForm({
   const descriptors = runtimes.data ?? [];
   const runtime = resolveRuntimeChoice(descriptors, runtimeChoice);
   const { form, planError, isPending, updateSteps, addStep } = useWorkflowForm({
+    projectId,
     runtime,
     onLaunched,
   });
@@ -110,6 +113,9 @@ export function WorkflowIssueForm({
             {planError}
           </p>
         )}
+        {projectId === undefined ? (
+          <p className="text-xs text-danger">Select a project before launching a workflow.</p>
+        ) : null}
       </DialogBody>
       <IssueFormFooter
         onCancel={onCancel}
@@ -127,7 +133,7 @@ export function WorkflowIssueForm({
                 variant="primary"
                 size="sm"
                 loading={isPending}
-                disabled={!(filled && runtime !== null && !isPending)}
+                disabled={!(filled && runtime !== null && projectId !== undefined && !isPending)}
               >
                 Launch workflow
                 <Kbd className="border-[rgba(255,255,255,.4)] text-on-accent">⌘↵</Kbd>

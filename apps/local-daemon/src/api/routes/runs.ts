@@ -2,7 +2,7 @@ import { followUpRunRequestSchema, startRunRequestSchema } from "@otomat/domain"
 import { Hono } from "hono";
 
 import { RuntimeUnavailableError, UnknownRuntimeError } from "#runtime";
-import { RunNotResumableError } from "#supervisor";
+import { ProjectNotFoundError, RunNotResumableError } from "#supervisor";
 
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
@@ -14,7 +14,14 @@ import { streamRunEvents } from "../sse.js";
 export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
 
-  routes.get("/", (c) => c.json(readRuns(deps.db, c.req.query("issueId"))));
+  routes.get("/", (c) =>
+    c.json(
+      readRuns(deps.db, {
+        issueId: c.req.query("issueId"),
+        projectId: c.req.query("projectId"),
+      }),
+    ),
+  );
 
   routes.post("/", validateJson(startRunRequestSchema), async (c) => {
     try {
@@ -23,6 +30,9 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
     } catch (error) {
       if (error instanceof UnknownRuntimeError) {
         return c.json({ error: "unknown_runtime" }, 400);
+      }
+      if (error instanceof ProjectNotFoundError) {
+        return c.json({ error: "project_not_found" }, 400);
       }
       if (error instanceof RuntimeUnavailableError) {
         return c.json(

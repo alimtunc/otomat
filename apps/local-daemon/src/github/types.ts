@@ -5,7 +5,7 @@ import type {
   PullRequestState,
 } from "@otomat/domain";
 
-import type { GitWorktreeService } from "#git";
+import type { RepositoryResolver } from "#git";
 
 export interface CommandRequest {
   command: string;
@@ -31,7 +31,8 @@ export interface PullRequestView {
 export interface GitHubServiceConfig {
   db: Db;
   dataDir: string;
-  worktrees: GitWorktreeService | null;
+  /** Per-run resolution ensures publication pushes from the run's own repository. */
+  repositories: RepositoryResolver;
   cli: GitHubCli;
   idFactory?: () => string;
 }

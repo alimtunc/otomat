@@ -1,15 +1,28 @@
 import type { DaemonClientConfig } from "./types";
 
-/** Thrown by the HTTP helpers when the daemon responds with a non-2xx status. */
+/**
+ * Thrown by HTTP helpers on a non-2xx response; `body` carries the daemon's JSON
+ * error payload when one was provided.
+ */
 export class DaemonRequestError extends Error {
   readonly status: number;
   readonly path: string;
+  readonly body: unknown;
 
-  constructor(status: number, path: string) {
+  constructor(status: number, path: string, body: unknown = null) {
     super(`Daemon request to ${path} failed with status ${status}`);
     this.name = "DaemonRequestError";
     this.status = status;
     this.path = path;
+    this.body = body;
+  }
+}
+
+async function readErrorBody(res: Response): Promise<unknown> {
+  try {
+    return await res.json();
+  } catch {
+    return null;
   }
 }
 
@@ -30,7 +43,7 @@ export function queryString(params: Record<string, string | undefined>): string 
 export async function getJson(config: DaemonClientConfig, path: string): Promise<unknown> {
   const doFetch = config.fetch ?? fetch;
   const res = await doFetch(resolveUrl(config, path));
-  if (!res.ok) throw new DaemonRequestError(res.status, path);
+  if (!res.ok) throw new DaemonRequestError(res.status, path, await readErrorBody(res));
   return res.json();
 }
 
@@ -46,6 +59,6 @@ export async function postJson(
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new DaemonRequestError(res.status, path);
+  if (!res.ok) throw new DaemonRequestError(res.status, path, await readErrorBody(res));
   return res.json();
 }

@@ -1,9 +1,10 @@
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 
 import { serve } from "@hono/node-server";
 import { createClient, defaultDbPath, runMigrations } from "@otomat/db";
 
 import { createApiApp, logApiRoutes } from "#api";
+import { createRepositoryResolver } from "#git";
 import { createGitHubCli, createGitHubService, runCommand } from "#github";
 import { createReviewService } from "#review";
 import { createReexecSpawn, createSupervisor } from "#supervisor";
@@ -33,12 +34,17 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
   const dataDir = dirname(dbPath);
   const projectRoot = process.env.OTOMAT_PROJECT_ROOT ?? process.cwd();
   const defaultProjectId = ensureDefaultProject(db, projectRoot);
-  const worktrees = ensureDefaultRepository(db, defaultProjectId, projectRoot, dataDir);
-  const review = createReviewService({ db, dataDir, worktrees: worktrees?.service ?? null });
+  const defaultRepositoryId = ensureDefaultRepository(db, defaultProjectId, projectRoot);
+  const repositories = createRepositoryResolver({
+    db,
+    worktreesRoot: process.env.OTOMAT_WORKTREES_ROOT ?? join(dataDir, "worktrees"),
+    ...(defaultRepositoryId === null ? { unavailableProjectIds: new Set([defaultProjectId]) } : {}),
+  });
+  const review = createReviewService({ db, dataDir, repositories });
   const github = createGitHubService({
     db,
     dataDir,
-    worktrees: worktrees?.service ?? null,
+    repositories,
     cli: createGitHubCli(runCommand),
   });
 
@@ -49,7 +55,7 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
     dataDir,
     defaultProjectId,
     spawn: createReexecSpawn(mainScript),
-    ...(worktrees ? { worktrees } : {}),
+    repositories,
     afterSettle: review.onRunSettled,
   });
 

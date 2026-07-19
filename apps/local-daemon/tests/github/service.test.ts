@@ -20,7 +20,7 @@ import {
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { seedRepository } from "../support/db.js";
-import { setupTestRepo, type TestRepo } from "../support/git.js";
+import { setupTestRepo, stubRepositoryResolver, type TestRepo } from "../support/git.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-github";
@@ -144,7 +144,7 @@ describe("GitHubService", () => {
     return createGitHubService({
       db: fix.db,
       dataDir: fix.dataDir,
-      worktrees: worktreeService,
+      repositories: stubRepositoryResolver(worktreeService),
       cli,
       idFactory: () => "pr-local-1",
     });

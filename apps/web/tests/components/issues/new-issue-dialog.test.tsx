@@ -71,13 +71,22 @@ afterEach(async () => {
   runtimesData = [];
 });
 
-async function renderDialog(onOpenChange: (open: boolean) => void = () => undefined) {
+async function renderDialog(
+  onOpenChange: (open: boolean) => void = () => undefined,
+  options: { withProject?: boolean } = {},
+) {
+  const projectId = (options.withProject ?? true) ? "p1" : undefined;
   const container = document.createElement("div");
   document.body.append(container);
   const root: Root = createRoot(container);
   await act(async () => {
     root.render(
-      <NewIssueDialog open onOpenChange={onOpenChange} projectId="p1" projectName="otomat" />,
+      <NewIssueDialog
+        open
+        onOpenChange={onOpenChange}
+        projectId={projectId}
+        projectName="otomat"
+      />,
     );
   });
   cleanups.push(async () => {
@@ -152,5 +161,39 @@ describe("NewIssueDialog", () => {
     expect(create).toHaveBeenCalledWith({ project_id: "p1", title: "Ship the CSV parser" });
     expect(start).not.toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("pins an agent launch to the current project", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+
+    const prompt = document.querySelector<HTMLTextAreaElement>(
+      "textarea[aria-label='Issue prompt']",
+    );
+    expect(prompt).not.toBeNull();
+    if (!prompt) throw new Error("issue prompt not found");
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+      setter?.call(prompt, "implement the thing");
+      prompt.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => {
+      buttonByText("Create & launch⌘↵").click();
+    });
+
+    expect(start).toHaveBeenCalledWith({
+      prompt: "implement the thing",
+      runtime: "claude",
+      project_id: "p1",
+    });
+  });
+
+  it("blocks an agent launch when no project is selected", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog(() => undefined, { withProject: false });
+
+    expect(buttonByText("Create & launch⌘↵").disabled).toBe(true);
+    expect(document.body.textContent).toContain("Select a project before launching a run.");
+    expect(start).not.toHaveBeenCalled();
   });
 });

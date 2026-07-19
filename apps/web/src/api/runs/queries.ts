@@ -3,10 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
-export function useRuns() {
+/** Runs for the selected project; disabled while no project is selected. */
+export function useProjectRuns(projectId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.runs,
-    queryFn: () => daemon.listRuns(),
+    queryKey: queryKeys.runsList(projectId),
+    queryFn: () => daemon.listRuns({ projectId }),
+    enabled: projectId !== undefined,
   });
 }
 

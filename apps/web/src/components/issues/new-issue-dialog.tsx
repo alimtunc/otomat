@@ -69,6 +69,7 @@ export function NewIssueDialog({
         </DialogHeader>
         {mode === "agent" ? (
           <AgentIssueForm
+            projectId={projectId}
             runtimeChoice={runtimeChoice}
             onRuntimeChoice={setRuntimeChoice}
             onLaunched={close}
@@ -77,6 +78,7 @@ export function NewIssueDialog({
         ) : null}
         {mode === "workflow" ? (
           <WorkflowIssueForm
+            projectId={projectId}
             runtimeChoice={runtimeChoice}
             onRuntimeChoice={setRuntimeChoice}
             onLaunched={close}

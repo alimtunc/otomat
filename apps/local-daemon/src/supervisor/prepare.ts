@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import {
   getIssue,
+  getProject,
   insertAgentSession,
   insertIssue,
   insertRun,
@@ -35,13 +36,28 @@ function firstLine(text: string): string {
   return first.trim().slice(0, 120);
 }
 
-function resolveIssueId(db: Db, defaultProjectId: string, request: StartRunRequest): string {
-  if (request.issue_id) return request.issue_id;
+/** An explicit project id that matches no row: a caller error, not a daemon failure. */
+export class ProjectNotFoundError extends Error {
+  constructor(projectId: string) {
+    super(`project ${projectId} not found`);
+    this.name = "ProjectNotFoundError";
+  }
+}
+
+/** Ad-hoc launches pin an explicit valid project; otherwise they use the boot workspace. */
+function resolveProjectId(db: Db, defaultProjectId: string, request: StartRunRequest): string {
+  if (!request.project_id) return defaultProjectId;
+  if (!getProject(db, request.project_id)) throw new ProjectNotFoundError(request.project_id);
+  return request.project_id;
+}
+
+/** Creates the issue that anchors a prompt-only launch and returns its id. */
+function insertAdHocIssue(db: Db, projectId: string, request: StartRunRequest): string {
   const issueId = randomUUID();
   const prompt = request.prompt ?? "";
   insertIssue(db, {
     id: issueId,
-    project_id: defaultProjectId,
+    project_id: projectId,
     title: firstLine(prompt) || "Local run",
     body: prompt,
     status: issueMachine.transition(issueMachine.initial, "ready"),
@@ -50,17 +66,24 @@ function resolveIssueId(db: Db, defaultProjectId: string, request: StartRunReque
   return issueId;
 }
 
-/** Materializes the run/step/session rows, the frozen plan, and the run's isolated worktree. */
+/**
+ * Materializes the run, step and session rows, freezes the plan, and acquires an
+ * isolated worktree from the repository belonging to the run's issue.
+ */
 export function prepareRun(state: SupervisorState, request: StartRunRequest): TurnContext {
-  const { db, dataDir, defaultProjectId, worktrees } = state;
+  const { db, dataDir, defaultProjectId, repositories } = state;
   // Every effective runtime is validated before any row (issue included) is written.
   const defaultRuntime = requireAvailableRuntime(request.runtime);
   const stepRuntimes = resolveStepRuntimes(request, defaultRuntime);
 
-  const issueId = resolveIssueId(db, defaultProjectId, request);
+  const issueId =
+    request.issue_id ??
+    insertAdHocIssue(db, resolveProjectId(db, defaultProjectId, request), request);
   const issue = getIssue(db, issueId);
   if (!issue) throw new Error(`issue ${issueId} not found`);
   const prompt = request.prompt ?? issue.title;
+  // The issue owns the project, so issue-based launches always resolve that project's repository.
+  const binding = repositories.forProject(issue.project_id);
 
   const runId = randomUUID();
   const branch = runBranchName(runId);
@@ -71,7 +94,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): Tu
   const agentSessionId = randomUUID();
 
   // Acquired before the run row exists so a git failure aborts the launch cleanly (no phantom run).
-  const worktree = worktrees ? worktrees.service.acquire({ owner: runId, branch }) : null;
+  const worktree = binding ? binding.service.acquire({ owner: runId, branch }) : null;
 
   try {
     db.transaction(
@@ -83,7 +106,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): Tu
           status: runMachine.initial,
           branch,
           plan_json: plan,
-          repository_id: worktrees?.repositoryId ?? null,
+          repository_id: binding?.repositoryId ?? null,
           worktree_id: worktree?.id ?? null,
         });
         plan.steps.forEach((step, index) => {
@@ -108,7 +131,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): Tu
     // The rows never landed — roll back the worktree acquired above so no orphan dir/branch leaks.
     if (worktree) {
       try {
-        worktrees?.service.cleanup(runId);
+        binding?.service.cleanup(runId);
       } catch (cleanupError) {
         console.error(`[otomat] worktree rollback for aborted run ${runId} failed`, cleanupError);
       }

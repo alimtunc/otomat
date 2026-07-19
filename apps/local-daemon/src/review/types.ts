@@ -1,15 +1,15 @@
 import type { Db, ReviewCommentRow, ReviewRow, RunRow } from "@otomat/db";
 import type { CreateReviewCommentRequest } from "@otomat/domain";
 
-import type { CanonicalDiff, GitWorktreeService } from "#git";
+import type { CanonicalDiff, RepositoryResolver } from "#git";
 import type { ReconcileClassification } from "#supervisor";
 
 export interface ReviewServiceConfig {
   db: Db;
   /** Root of the run artifact dirs — review events land in the same per-run ledger. */
   dataDir: string;
-  /** Null when the project has no git repository; diffs and comments are then unavailable. */
-  worktrees: GitWorktreeService | null;
+  /** A run without a repository has no diff or review-comment surface. */
+  repositories: RepositoryResolver;
 }
 
 /** Shared handles every review operation threads through — the module's equivalent of SupervisorState. */

@@ -4,9 +4,10 @@ import type { ReviewContext, RunDiffResult } from "./types.js";
 
 /** The run's live canonical diff, or null when it has no worktree — never a fabricated diff. */
 export function computeDiff(ctx: ReviewContext, runId: string): CanonicalDiff | null {
-  if (ctx.worktrees === null) return null;
+  const binding = ctx.repositories.forRun(runId);
+  if (binding === null) return null;
   try {
-    return ctx.worktrees.diff(runId);
+    return binding.service.diff(runId);
   } catch (error) {
     if (error instanceof WorktreeNotFoundError) return null;
     throw error;

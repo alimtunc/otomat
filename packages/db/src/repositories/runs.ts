@@ -1,8 +1,8 @@
 import { RUN_TERMINAL_STATES, runPlanSchema, type RunPlan, type RunState } from "@otomat/domain";
-import { eq, notInArray } from "drizzle-orm";
+import { and, eq, notInArray, type SQL } from "drizzle-orm";
 
 import type { Db } from "../client.js";
-import { runs } from "../schema/index.js";
+import { issues, runs } from "../schema/index.js";
 import { touch } from "./touch.js";
 
 export type NewRun = Omit<typeof runs.$inferInsert, "plan_json"> & {
@@ -23,15 +23,22 @@ export function getRun(db: Db, id: string): RunRow | undefined {
   return { ...row, plan_json: runPlanSchema.parse(row.plan_json) };
 }
 
-/** User-facing list: a corrupt `plan_json` throws (fail loud) rather than silently hiding a run. */
-export function listRuns(db: Db, options: { issueId?: string } = {}): RunRow[] {
+/**
+ * User-facing list: `projectId` filters through the run's issue, and corrupt
+ * `plan_json` throws rather than silently hiding a run.
+ */
+export function listRuns(db: Db, options: { issueId?: string; projectId?: string } = {}): RunRow[] {
+  const filters: SQL[] = [];
+  if (options.issueId) filters.push(eq(runs.issue_id, options.issueId));
+  if (options.projectId) filters.push(eq(issues.project_id, options.projectId));
   return db
-    .select()
+    .select({ runs })
     .from(runs)
-    .where(options.issueId ? eq(runs.issue_id, options.issueId) : undefined)
+    .innerJoin(issues, eq(runs.issue_id, issues.id))
+    .where(filters.length > 0 ? and(...filters) : undefined)
     .orderBy(runs.created_at)
     .all()
-    .map((row) => ({ ...row, plan_json: runPlanSchema.parse(row.plan_json) }));
+    .map(({ runs: row }) => ({ ...row, plan_json: runPlanSchema.parse(row.plan_json) }));
 }
 
 /** A run whose `plan_json` failed to parse; `issues` is the Zod validation problems from that parse (a `ZodError.issues` array) — not domain issues. */

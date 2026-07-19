@@ -4,6 +4,7 @@ import type { AgentSessionState, RunState, StepRunState } from "@otomat/domain";
 export interface SeedRunOptions {
   runId: string;
   issueId?: string;
+  repositoryId?: string;
   runStatus: RunState;
   stepStatus: StepRunState;
   sessionStatus: AgentSessionState;
@@ -36,6 +37,7 @@ export interface SeedWorkflowStep {
 export interface SeedWorkflowOptions {
   runId: string;
   issueId?: string;
+  repositoryId?: string;
   runStatus: RunState;
   steps: SeedWorkflowStep[];
 }
@@ -50,6 +52,7 @@ export function seedWorkflowRun(
     .values({
       id: options.runId,
       issue_id: options.issueId ?? "i1",
+      repository_id: options.repositoryId ?? null,
       status: options.runStatus,
       branch: `otomat/run/${options.runId}`,
       plan_json: {
@@ -107,6 +110,7 @@ export function seedRun(db: Db, options: SeedRunOptions): SeededRun {
   const lookup = seedWorkflowRun(db, {
     runId: options.runId,
     issueId: options.issueId,
+    repositoryId: options.repositoryId,
     runStatus: options.runStatus,
     steps: [
       {

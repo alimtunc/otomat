@@ -1,6 +1,7 @@
 import type { Db } from "@otomat/db";
 
 import type { EventTailer } from "#events";
+import type { RepositoryResolver } from "#git";
 
 import { Semaphore } from "./semaphore.js";
 import {
@@ -9,7 +10,6 @@ import {
   type SessionProcess,
   type SpawnSession,
   type SupervisorConfig,
-  type WorktreeBinding,
 } from "./types.js";
 
 export interface InflightProcess {
@@ -26,7 +26,7 @@ export interface SupervisorState {
   dataDir: string;
   defaultProjectId: string;
   spawn: SpawnSession;
-  worktrees: WorktreeBinding | null;
+  repositories: RepositoryResolver;
   afterSettle: ((outcome: ReconcileOutcome) => void) | null;
   slots: Semaphore;
   inflight: Map<string, InflightProcess>;
@@ -44,7 +44,7 @@ export function createState(config: SupervisorConfig): SupervisorState {
     dataDir: config.dataDir,
     defaultProjectId: config.defaultProjectId,
     spawn: config.spawn,
-    worktrees: config.worktrees ?? null,
+    repositories: config.repositories,
     afterSettle: config.afterSettle ?? null,
     slots: new Semaphore(config.concurrency ?? DEFAULT_CONCURRENCY),
     inflight: new Map(),

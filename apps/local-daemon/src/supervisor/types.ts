@@ -1,7 +1,7 @@
 import type { Db, RunRow } from "@otomat/db";
 import type { StartRunRequest } from "@otomat/domain";
 
-import type { GitWorktreeService } from "#git";
+import type { RepositoryResolver } from "#git";
 import type { KnownRuntimeId } from "#runtime";
 
 /** Identifies the supervisor as the event source so its markers are never shown as a provider result. */
@@ -46,13 +46,6 @@ export interface SessionProcess {
 /** Spawns one job as a real OS process. Injected so the supervisor stays testable without the daemon binary. */
 export type SpawnSession = (job: SupervisedJob) => SessionProcess;
 
-/** Ties the supervisor to the repository its runs carve worktrees from. */
-export interface WorktreeBinding {
-  /** `repositories.id` stamped on runs so their diffs resolve. */
-  repositoryId: string;
-  service: GitWorktreeService;
-}
-
 export interface SupervisorConfig {
   db: Db;
   /** Root under which each run gets a `runs/<id>/events.jsonl` artifact directory. */
@@ -61,8 +54,8 @@ export interface SupervisorConfig {
   spawn: SpawnSession;
   /** Max concurrent session processes. Defaults to {@link DEFAULT_CONCURRENCY}. */
   concurrency?: number;
-  /** When absent (no git repo), runs execute without a worktree and have no diff. */
-  worktrees?: WorktreeBinding;
+  /** A project without a usable repository yields runs with no worktree or diff. */
+  repositories: RepositoryResolver;
   /** Fires after any settle (live, abort, boot) so review anchors/diff projections can react. */
   afterSettle?: (outcome: ReconcileOutcome) => void;
 }
