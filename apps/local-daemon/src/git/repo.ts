@@ -23,6 +23,21 @@ export function mergeBase(repoPath: string, a: string, b: string): string | null
   return sha === "" ? null : sha;
 }
 
+/** Whether `ancestor` is reachable from `descendant`. */
+export function isAncestor(repoPath: string, ancestor: string, descendant: string): boolean {
+  return (
+    runGit(["merge-base", "--is-ancestor", ancestor, descendant], {
+      cwd: repoPath,
+      allowFailure: true,
+    }).exitCode === 0
+  );
+}
+
+/** Moves the current branch to `ref` only when git can fast-forward it. */
+export function fastForward(repoPath: string, ref: string): void {
+  runGit(["merge", "--ff-only", ref], { cwd: repoPath });
+}
+
 /** The repo's current branch, or null when `repoPath` is not a git work tree or HEAD is detached. */
 export function detectDefaultBranch(repoPath: string): string | null {
   const probe = runGit(["rev-parse", "--is-inside-work-tree"], {

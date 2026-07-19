@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -192,6 +192,60 @@ describe("GitWorktreeService", () => {
       false,
     );
     expect(env.service.get("winner")?.status).toBe("active");
+  });
+
+  it("fast-forwards the canonical worktree to exactly one candidate result", () => {
+    const canonical = env.service.acquire({ owner: "run-1", branch: "otomat/run/run-1" });
+    writeFileSync(join(canonical.path, "shared.txt"), "shared base\n");
+    const base = env.service.snapshot("run-1");
+    const candidate = env.service.acquire({
+      owner: "candidate-a",
+      branch: "otomat/run/run-1--compete-candidate-a",
+      baseRef: base.branch,
+    });
+    writeFileSync(join(candidate.path, "winner.txt"), "winner\n");
+
+    const promoted = env.service.promote("candidate-a", "run-1", base.headSha);
+
+    expect(readFileSync(join(canonical.path, "winner.txt"), "utf8")).toBe("winner\n");
+    expect(promoted.canonical.headSha).toBe(promoted.source.headSha);
+    expect(
+      env.repo.git("-C", canonical.path, "rev-list", "--count", base.headSha + "..HEAD").trim(),
+    ).toBe("1");
+  });
+
+  it("replays the same promotion idempotently", () => {
+    env.service.acquire({ owner: "run-1", branch: "otomat/run/run-1" });
+    const base = env.service.snapshot("run-1");
+    const candidate = env.service.acquire({
+      owner: "candidate-a",
+      branch: "otomat/run/run-1--compete-candidate-a",
+      baseRef: base.branch,
+    });
+    writeFileSync(join(candidate.path, "winner.txt"), "winner\n");
+
+    const first = env.service.promote("candidate-a", "run-1", base.headSha);
+    const second = env.service.promote("candidate-a", "run-1", base.headSha);
+
+    expect(second.canonical.headSha).toBe(first.canonical.headSha);
+    expect(second.source.headSha).toBe(first.source.headSha);
+  });
+
+  it("rejects promotion when the canonical worktree changed after competitors forked", () => {
+    const canonical = env.service.acquire({ owner: "run-1", branch: "otomat/run/run-1" });
+    const base = env.service.snapshot("run-1");
+    const candidate = env.service.acquire({
+      owner: "candidate-a",
+      branch: "otomat/run/run-1--compete-candidate-a",
+      baseRef: base.branch,
+    });
+    writeFileSync(join(candidate.path, "winner.txt"), "winner\n");
+    writeFileSync(join(canonical.path, "diverged.txt"), "canonical change\n");
+    env.service.snapshot("run-1");
+
+    expect(() => env.service.promote("candidate-a", "run-1", base.headSha)).toThrow(
+      WorktreeConflictError,
+    );
   });
 
   it("re-acquires an owner after cleanup with a fresh active worktree", () => {
