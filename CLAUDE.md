@@ -1,51 +1,6 @@
-# CLAUDE.md
+# Claude Code
 
-Otomat is a local-first, issue-first agent cockpit (TypeScript monorepo, pnpm).
-Read **`AGENTS.md`** first — it is the canonical guide (layout, import boundaries,
-code guardrails, commands, conventions, scope discipline). This file adds only
-Claude-specific notes.
+@AGENTS.md
 
-## Source of truth
-
-- `AGENTS.md` — contributor/agent guide and guardrails.
-- `docs/ai/codebase-map.md` — target tree and per-ticket ownership.
-- `docs/ai/import-boundaries.md` — the dependency rules `pnpm build` enforces.
-
-## Fast facts
-
-- Targets: `apps/{web,local-daemon}` (`apps/*` = runnable targets). Packages:
-  `packages/{domain,db,ui,client,tooling}`. The daemon-only backend (`api`,
-  `events`, `git`, `runtime`) lives as internal modules under
-  `apps/local-daemon/src/<module>`, consumed via `#`-subpath imports — not as
-  packages. A new package needs an explicit justification (see `AGENTS.md`).
-- Tests live in `<module>/tests/<domain>` (+ `tests/support`), never in `src`.
-- DB: SQLite WAL + Drizzle + `better-sqlite3`, isolated behind `packages/db`.
-  Canonical schema; `runs.plan_json` (no `workflow_revisions`); `issues` carry
-  `source`/`source_external_id`/`synced_at`; `sync_state` for external mirroring.
-- Domain: pure TS state machines (Issue/Run/StepRun/AgentSession/Review/PR),
-  event envelope, zod contracts. Illegal transitions throw.
-
-## Commands
-
-```
-pnpm install && pnpm build   # tsgo emit + boundary lint
-pnpm check                   # full PR gate set
-pnpm test                    # Vitest
-pnpm typecheck               # tsgo --noEmit
-pnpm lint                    # oxlint
-pnpm guardrails              # frontend guardrails
-pnpm format                  # oxfmt
-pnpm db:migrate              # create/upgrade local SQLite
-```
-
-Toolchain: `tsgo` (type check + emit), `oxlint`, `oxfmt`, `lefthook` git hooks,
-`dependency-cruiser` boundaries. No tsc/eslint/prettier.
-
-## When working here
-
-- Stay inside the active ticket's scope; one ticket per branch.
-- Honor import boundaries — `pnpm build` fails on a frontend→backend import.
-- Honor the code guardrails in `AGENTS.md` (no `any`, documented `useEffect`,
-  no nested ternaries, no `&&` JSX, canonical Tailwind spacing).
-- Keep `packages/domain` dependency-light (zod only); no Node/DOM/Drizzle there.
-- No Effect, no graph tooling, no offline-first frontend store.
+`AGENTS.md` is the canonical project guide. Keep Claude-specific instructions in
+this file only when they cannot be expressed for every coding agent.
