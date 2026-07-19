@@ -19,6 +19,8 @@ apps/
   web/                  React + Vite cockpit
   local-daemon/         Node backend process
     src/{api,events,git,review,runtime,supervisor}/
+  desktop/              Electron shell: manages the daemon lifecycle, serves the web build
+    src/{main,preload,shared}/
 packages/
   domain/               Pure TypeScript domain model and contracts
   db/                   SQLite, Drizzle, and better-sqlite3 boundary
@@ -96,10 +98,17 @@ pnpm format        # write oxfmt formatting
 pnpm guardrails    # run frontend-specific static checks
 pnpm check         # run the complete PR gate, including smoke:dist
 pnpm db:migrate    # apply Drizzle migrations to local SQLite
+pnpm desktop:dev      # run the Electron shell in dev (Vite + a spawned daemon)
+pnpm desktop:package  # build the unsigned macOS .app/.dmg
 ```
 
 After a schema change, regenerate migrations with
 `pnpm --filter @otomat/db run generate`.
+
+The desktop shell (`apps/desktop`) composes existing builds: it launches the
+`local-daemon` on a free loopback port, waits for `/api/health`, then serves the
+packaged `apps/web` build over an `app://` scheme with the daemon URL injected. It
+never imports the daemon or a backend package.
 
 ## Toolchain
 

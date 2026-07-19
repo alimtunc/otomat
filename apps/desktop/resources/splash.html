@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:"
+    />
+    <title>Otomat</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b0b0e;
+        --fg: #ededf2;
+        --muted: #9a9aa6;
+        --accent: #6d5efc;
+        --danger: #ff6b6b;
+        --border: #24242c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          13px/1.5 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-app-region: drag;
+      }
+      main {
+        width: 100%;
+        padding: 28px 32px;
+        text-align: center;
+      }
+      .brand {
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        margin-bottom: 18px;
+      }
+      .spinner {
+        width: 22px;
+        height: 22px;
+        margin: 0 auto 14px;
+        border: 2px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .status {
+        color: var(--muted);
+      }
+      .error-title {
+        color: var(--danger);
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .detail {
+        color: var(--muted);
+        font-size: 12px;
+        max-height: 84px;
+        overflow: auto;
+        margin: 0 0 16px;
+        word-break: break-word;
+      }
+      button {
+        -webkit-app-region: no-drag;
+        appearance: none;
+        border: 1px solid var(--border);
+        background: var(--accent);
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        padding: 7px 18px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      button:hover {
+        filter: brightness(1.08);
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand">Otomat</div>
+
+      <section id="launching">
+        <div class="spinner"></div>
+        <div class="status">Starting the local daemon…</div>
+      </section>
+
+      <section id="failed" hidden>
+        <div class="error-title">Couldn't start the local daemon</div>
+        <pre class="detail" id="detail"></pre>
+        <button id="retry" type="button">Retry</button>
+      </section>
+    </main>
+
+    <script>
+      const launching = document.getElementById("launching");
+      const failed = document.getElementById("failed");
+      const detail = document.getElementById("detail");
+      const retry = document.getElementById("retry");
+
+      function showLaunching() {
+        failed.hidden = true;
+        launching.hidden = false;
+      }
+      function showFailed(message) {
+        detail.textContent = message || "The daemon exited before it became ready.";
+        launching.hidden = true;
+        failed.hidden = false;
+      }
+
+      retry.addEventListener("click", () => {
+        showLaunching();
+        window.otomatSplash.retry();
+      });
+
+      window.otomatSplash.onStatus((status) => {
+        if (status.phase === "launching") showLaunching();
+        else showFailed(status.message);
+      });
+    </script>
+  </body>
+</html>

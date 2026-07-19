@@ -59,8 +59,8 @@ module.exports = {
       name: "frontend-not-to-backend",
       severity: "error",
       comment:
-        "Frontend (apps/web + ui/client/domains) must never import a backend package or reach into the local daemon. External state is mirrored by the local daemon.",
-      from: { path: `^(apps/web|packages/(${FRONTEND}))` },
+        "Frontend (apps/web, apps/desktop + ui/client/domains) must never import a backend package or reach into the local daemon. The desktop shell launches the daemon as a child process and talks to it over HTTP/SSE; it never imports its source.",
+      from: { path: `^(apps/web|apps/desktop|packages/(${FRONTEND}))` },
       to: { path: [...pkgTargets(BACKEND), "^apps/local-daemon(/|$)"] },
     },
     {
