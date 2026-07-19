@@ -48,6 +48,28 @@ export function useResumeRun(runId: string) {
   );
 }
 
+export function useSelectCompeteWinner(runId: string, groupId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (stepRunId: string) =>
+      daemon.selectCompeteWinner(runId, groupId, { step_run_id: stepRunId }),
+    onSuccess: (detail) => {
+      client.setQueryData(queryKeys.run(runId), detail);
+      client.invalidateQueries({ queryKey: queryKeys.run(runId) });
+      client.invalidateQueries({ queryKey: queryKeys.runs });
+      toast.success("Winner selected — dependent steps can continue");
+    },
+    onError: (error) => {
+      const message =
+        error instanceof DaemonRequestError && error.status === 409
+          ? "A winner was already selected. Refreshing the run."
+          : "Could not select this winner — the promotion did not complete.";
+      toast.error(message);
+      client.invalidateQueries({ queryKey: queryKeys.run(runId) });
+    },
+  });
+}
+
 /** Sends a user follow-up prompt as a new resume turn. On success invalidates the run's detail and the runs list; toasts on failure. */
 export function useFollowUpRun(runId: string) {
   const client = useQueryClient();

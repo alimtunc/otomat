@@ -1,5 +1,6 @@
 import type {
   ChangeStatus,
+  CompeteGroupState,
   IssueState,
   PullRequestState,
   ReviewCommentState,
@@ -60,6 +61,10 @@ export function RunStatusChip(props: PresetStatusChipProps<RunState>) {
 
 export function StepStatusChip(props: PresetStatusChipProps<StepRunState>) {
   return <StatusChip kind="step" {...props} />;
+}
+
+export function CompeteGroupStatusChip(props: PresetStatusChipProps<CompeteGroupState>) {
+  return <StatusChip kind="compete" {...props} />;
 }
 
 export function ReviewStatusChip(props: PresetStatusChipProps<ReviewState>) {

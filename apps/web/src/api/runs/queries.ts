@@ -27,6 +27,13 @@ export function useRunDiff(runId: string) {
   });
 }
 
+export function useCompeteCandidateDiff(runId: string, groupId: string, stepId: string) {
+  return useQuery({
+    queryKey: queryKeys.competeCandidateDiff(runId, groupId, stepId),
+    queryFn: () => daemon.getCompeteCandidateDiff(runId, groupId, stepId),
+  });
+}
+
 /**
  * Fetches one run's detail and polls it every 1.5s until the run reaches a
  * terminal status, then stops refetching.
