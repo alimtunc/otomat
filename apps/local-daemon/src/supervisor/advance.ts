@@ -1,7 +1,22 @@
 import { randomUUID } from "node:crypto";
 
-import { getRun, insertAgentSession, listStepRunsForRun, type RunRow } from "@otomat/db";
-import { agentSessionMachine, nextReadyStep, runMachine } from "@otomat/domain";
+import {
+  attachStepWorktree,
+  getRun,
+  insertAgentSession,
+  listAgentSessionsForRun,
+  listCompeteGroupsForRun,
+  listStepRunsForRun,
+  updateCompeteGroupBase,
+  updateCompeteGroupStatus,
+  type RunRow,
+} from "@otomat/db";
+import {
+  agentSessionMachine,
+  readyPlanWork,
+  runMachine,
+  type RunPlanCompetitor,
+} from "@otomat/domain";
 
 import { emitLedgerEvent, sessionDir } from "#events";
 
@@ -9,56 +24,143 @@ import { spawnTurn } from "./lifecycle.js";
 import { buildTerminalMarker } from "./markers.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
 import { stepStatuses } from "./settle/index.js";
-import { notifyAfterSettle, type SupervisorState } from "./state.js";
+import { hasRunActivity, notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveIdleRunTo } from "./transitions.js";
+import type { TurnContext } from "./types.js";
 
-/** Starts the next ready plan step as a fresh turn; false when none is ready (the settle path owns run convergence). */
-export async function startNextReadyStep(state: SupervisorState, run: RunRow): Promise<boolean> {
-  const steps = listStepRunsForRun(state.db, run.id);
-  const next = nextReadyStep(run.plan_json, stepStatuses(steps));
-  if (next === null) return false;
-  if (next.agent === null || next.prompt === null) {
-    throw new Error(`run ${run.id} frozen plan step ${next.id} is missing its agent or prompt`);
+function groupStatuses(state: SupervisorState, runId: string) {
+  return new Map(listCompeteGroupsForRun(state.db, runId).map((group) => [group.id, group.status]));
+}
+
+function canonicalWorktreePath(state: SupervisorState, run: RunRow): string | null {
+  return state.repositories.forRepository(run.repository_id)?.service.get(run.id)?.path ?? null;
+}
+
+function insertTurn(
+  state: SupervisorState,
+  run: RunRow,
+  step: RunPlanCompetitor,
+  worktreePath: string | null,
+): TurnContext {
+  if (step.agent === null || step.prompt === null) {
+    throw new Error(`run ${run.id} frozen plan step ${step.id} is missing its agent or prompt`);
   }
-
-  const runtime = ensureRuntimeAgent(state.db, next.agent);
+  const runtime = ensureRuntimeAgent(state.db, step.agent);
   const agentSessionId = randomUUID();
   insertAgentSession(state.db, {
     id: agentSessionId,
-    step_run_id: next.id,
+    step_run_id: step.id,
     agent_id: runtime,
     status: agentSessionMachine.initial,
   });
-  await spawnTurn(
-    state,
-    {
-      runId: run.id,
-      stepRunId: next.id,
-      agentSessionId,
-      prompt: next.prompt,
-      runDir: sessionDir(state.dataDir, run.id, agentSessionId),
-      worktreePath:
-        state.repositories.forRepository(run.repository_id)?.service.get(run.id)?.path ?? null,
-      runtime,
-    },
-    "run",
-    null,
-  );
+  return {
+    runId: run.id,
+    stepRunId: step.id,
+    agentSessionId,
+    prompt: step.prompt,
+    runDir: sessionDir(state.dataDir, run.id, agentSessionId),
+    worktreePath,
+    runtime,
+  };
+}
+
+export function scheduleTurn(
+  state: SupervisorState,
+  ctx: TurnContext,
+  mode: "run" | "resume" = "run",
+  providerSessionId: string | null = null,
+): Promise<void> {
+  let pending: Promise<void>;
+  pending = spawnTurn(state, ctx, mode, providerSessionId)
+    .catch((error) => {
+      console.error(`[otomat] run ${ctx.runId} competitor ${ctx.stepRunId} failed to start`, error);
+    })
+    .finally(() => state.pending.delete(pending));
+  state.pending.add(pending);
+  return pending;
+}
+
+async function startCompeteGroup(
+  state: SupervisorState,
+  run: RunRow,
+  groupId: string,
+  competitors: readonly RunPlanCompetitor[],
+): Promise<void> {
+  const group = listCompeteGroupsForRun(state.db, run.id).find((entry) => entry.id === groupId);
+  if (!group) throw new Error(`run ${run.id} compete group ${groupId} is missing`);
+  const sessions = listAgentSessionsForRun(state.db, run.id);
+  const sessionStepIds = new Set(sessions.map((session) => session.step_run_id));
+  const unstarted = competitors.filter((competitor) => !sessionStepIds.has(competitor.id));
+  if (unstarted.length === 0) return;
+
+  const binding = state.repositories.forRepository(run.repository_id);
+  let baseHeadSha = group.base_head_sha;
+  if (binding && baseHeadSha === null) {
+    baseHeadSha = binding.service.snapshot(run.id).headSha;
+    updateCompeteGroupBase(state.db, group.id, baseHeadSha);
+  }
+
+  const acquiredOwners: string[] = [];
+  let contexts: TurnContext[];
+  try {
+    contexts = unstarted.map((competitor) => {
+      let worktreePath: string | null = null;
+      if (binding) {
+        const worktree = binding.service.acquire({
+          owner: competitor.id,
+          branch: `${run.branch}--compete-${competitor.id}`,
+          baseRef: run.branch,
+        });
+        acquiredOwners.push(competitor.id);
+        attachStepWorktree(state.db, competitor.id, worktree.id);
+        worktreePath = worktree.path;
+      }
+      return insertTurn(state, run, competitor, worktreePath);
+    });
+  } catch (error) {
+    for (const owner of acquiredOwners) {
+      if (binding?.service.get(owner)) binding.service.cleanup(owner);
+    }
+    updateCompeteGroupStatus(state.db, group.id, "failed");
+    throw error;
+  }
+  if (group.status === "queued" || group.status === "awaiting_human") {
+    updateCompeteGroupStatus(state.db, group.id, "running");
+  }
+  const launches = contexts.map((ctx) => scheduleTurn(state, ctx));
+  await launches[0];
+}
+
+/** Starts the next ready plan node; a compete node schedules all candidates under the global semaphore. */
+export async function startNextReadyStep(state: SupervisorState, run: RunRow): Promise<boolean> {
+  const steps = listStepRunsForRun(state.db, run.id);
+  const next = readyPlanWork(run.plan_json, stepStatuses(steps), groupStatuses(state, run.id));
+  if (next === null) return false;
+  if (next.kind === "compete") {
+    await startCompeteGroup(state, run, next.group.id, next.competitors);
+    return true;
+  }
+
+  const ctx = insertTurn(state, run, next.step, canonicalWorktreePath(state, run));
+  await spawnTurn(state, ctx, "run", null);
   return true;
 }
 
-/** Live chain after a completed step: a step that cannot start settles the run as failed — never a silent stall. */
+/** Live chain after completed work. Run-level scheduling is serialized while sibling sessions remain concurrent. */
 export async function advanceRun(state: SupervisorState, runId: string): Promise<void> {
   const run = getRun(state.db, runId);
   if (!run || run.status !== "running") return;
-  if (state.inflight.has(runId) || state.claiming.has(runId) || state.aborting.has(runId)) return;
+  if (hasRunActivity(state, runId) || state.aborting.has(runId) || state.advancing.has(runId)) {
+    return;
+  }
 
+  state.advancing.add(runId);
   try {
     await startNextReadyStep(state, run);
   } catch (error) {
-    console.error(`[otomat] run ${runId} failed to start its next step`, error);
+    console.error(`[otomat] run ${runId} failed to start its next work`, error);
     const current = getRun(state.db, runId);
-    if (!current || runMachine.isTerminal(current.status) || state.inflight.has(runId)) return;
+    if (!current || runMachine.isTerminal(current.status) || hasRunActivity(state, runId)) return;
     const now = new Date().toISOString();
     driveIdleRunTo(state.db, current, "failed", listStepRunsForRun(state.db, runId), now);
     const ref = { runId, stepRunId: null, agentSessionId: null };
@@ -71,9 +173,11 @@ export async function advanceRun(state: SupervisorState, runId: string): Promise
     notifyAfterSettle(state, {
       runId,
       classification: "failed",
-      reason: `next step failed to start: ${error instanceof Error ? error.message : String(error)}`,
+      reason: `next work failed to start: ${error instanceof Error ? error.message : String(error)}`,
       orphanTerminated: false,
       providerSessionId: null,
     });
+  } finally {
+    state.advancing.delete(runId);
   }
 }

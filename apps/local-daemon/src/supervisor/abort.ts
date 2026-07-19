@@ -8,7 +8,7 @@ import { eventsForSession, findFinalStatus } from "./evidence.js";
 import { buildTerminalMarker } from "./markers.js";
 import { terminateGracefully } from "./process.js";
 import { resolveTurnSession, settleRun } from "./settle/index.js";
-import { notifyAfterSettle, type SupervisorState } from "./state.js";
+import { inflightForRun, notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveIdleRunTo, driveRunConvergence } from "./transitions.js";
 
 /** Grace between a graceful `SIGTERM` and a forced `SIGKILL` during abort. */
@@ -28,8 +28,8 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
 
   state.aborting.add(runId);
   try {
-    const handle = state.inflight.get(runId);
-    if (handle) await terminateGracefully(handle.proc, ABORT_GRACE_MS);
+    const handles = inflightForRun(state, runId);
+    await Promise.all(handles.map((handle) => terminateGracefully(handle.proc, ABORT_GRACE_MS)));
 
     const now = new Date().toISOString();
     drainRunEvents(db, dataDir, runId);
@@ -39,13 +39,13 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
 
     const sessions = listAgentSessionsForRun(db, runId);
     for (const session of sessions) drainSessionEvents(db, dataDir, runId, session.id);
-    const turn = handle?.turn ?? null;
+    const turn = handles.length === 1 ? (handles[0]?.turn ?? null) : null;
     const active = resolveTurnSession(sessions, turn);
     const events = readRunEvents(db, runId);
     const scoped = active === null ? events : eventsForSession(events, active.id);
 
     // Worker finished before/during the abort — honor its marker, never overwrite with a fake cancel.
-    if (findFinalStatus(scoped) !== null) {
+    if (handles.length <= 1 && findFinalStatus(scoped) !== null) {
       notifyAfterSettle(
         state,
         settleRun(db, dataDir, current, { mode: "live", ...(turn ? { turn } : {}), now }),

@@ -64,7 +64,7 @@ function trackTurn(
     .catch((error) => console.error(`[otomat] run ${ctx.runId} monitor failed`, error))
     .finally(() => {
       tail.stop();
-      state.inflight.delete(ctx.runId);
+      state.inflight.delete(ctx.agentSessionId);
       release();
     })
     // Chained after the slot release so the next plan step can claim it; a no-op unless the run is still `running` with a ready step.
@@ -73,7 +73,8 @@ function trackTurn(
       return state.advance?.(ctx.runId);
     })
     .catch((error) => console.error(`[otomat] run ${ctx.runId} step chain failed`, error));
-  state.inflight.set(ctx.runId, {
+  state.inflight.set(ctx.agentSessionId, {
+    runId: ctx.runId,
     proc,
     monitor,
     tail,
@@ -96,10 +97,10 @@ export async function spawnTurn(
   providerSessionId: string | null,
 ): Promise<void> {
   const { db, slots, inflight, claiming, aborting } = state;
-  if (claiming.has(ctx.runId) || inflight.has(ctx.runId)) {
-    throw new Error(`run ${ctx.runId} is already starting`);
+  if (claiming.has(ctx.agentSessionId) || inflight.has(ctx.agentSessionId)) {
+    throw new Error(`session ${ctx.agentSessionId} is already starting`);
   }
-  claiming.add(ctx.runId);
+  claiming.set(ctx.agentSessionId, ctx.runId);
   await slots.acquire();
   let released = false;
   const release = (): void => {
@@ -112,7 +113,12 @@ export async function spawnTurn(
   try {
     // A slot can take a while to free; an abort/cancel may have landed meanwhile.
     const current = getRun(db, ctx.runId);
-    if (!current || runMachine.isTerminal(current.status) || aborting.has(ctx.runId)) {
+    if (
+      !current ||
+      runMachine.isTerminal(current.status) ||
+      aborting.has(ctx.runId) ||
+      state.shuttingDown
+    ) {
       release();
       return;
     }
@@ -130,6 +136,6 @@ export async function spawnTurn(
     settleLive(state, ctx);
     throw error;
   } finally {
-    claiming.delete(ctx.runId);
+    claiming.delete(ctx.agentSessionId);
   }
 }

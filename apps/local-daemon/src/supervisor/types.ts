@@ -69,6 +69,8 @@ export interface Supervisor {
   fix(runId: string, prompt: string): Promise<RunRow>;
   /** Resume a resting run (`awaiting_human` or `review_ready`) with the user's own follow-up prompt. */
   followUp(runId: string, prompt: string): Promise<RunRow>;
+  /** Reserve, promote and archive one succeeded competitor, then unlock dependent work. */
+  selectWinner(runId: string, groupId: string, stepRunId: string): Promise<RunRow>;
   /** Kill the run's process group and write the canonical canceled state + a ledger event. No fake success. */
   abort(runId: string): Promise<void>;
   /** Boot-time pass: classify every non-terminal in-flight run from durable evidence and settle it. */

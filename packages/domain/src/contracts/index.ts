@@ -12,6 +12,7 @@ export {
   agentSessionContractSchema,
   competeGroupContractSchema,
   issueContractSchema,
+  isRunPlanCompeteGroup,
   projectContractSchema,
   pullRequestContractSchema,
   repositoryContractSchema,

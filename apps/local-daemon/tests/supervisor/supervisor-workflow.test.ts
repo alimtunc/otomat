@@ -59,7 +59,7 @@ it("runs a three-step plan in order: three step_runs, three sessions, events per
   // The frozen plan carries the generated step ids and resolved runtimes.
   const planSteps = settled?.plan_json.steps ?? [];
   expect(planSteps.map((step) => step.id)).toEqual(steps.map((step) => step.id));
-  expect(planSteps.every((step) => step.agent === "fake")).toBe(true);
+  expect(planSteps.every((step) => !("compete" in step) && step.agent === "fake")).toBe(true);
   expect(planSteps[1]?.depends_on).toEqual([planSteps[0]?.id]);
 
   const sessions = listAgentSessionsForRun(fix.db, run.id);

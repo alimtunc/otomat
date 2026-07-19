@@ -1,5 +1,10 @@
-import type { AgentSessionRow, Db, RunRow, StepRunRow } from "@otomat/db";
-import { agentSessionMachine, type RunPlan, type StepRunState } from "@otomat/domain";
+import type { AgentSessionRow, CompeteGroupRow, Db, RunRow, StepRunRow } from "@otomat/db";
+import {
+  agentSessionMachine,
+  type CompeteGroupState,
+  type RunPlan,
+  type StepRunState,
+} from "@otomat/domain";
 
 import type { Targets } from "../classify.js";
 import type { ProcessExit, ReconcileClassification } from "../types.js";
@@ -24,6 +29,7 @@ export interface SettleContext {
   run: SettleableRun;
   steps: readonly StepRunRow[];
   sessions: readonly AgentSessionRow[];
+  groups: readonly CompeteGroupRow[];
   options: SettleOptions;
   orphanTerminated: boolean;
 }
@@ -38,6 +44,12 @@ export interface SettleEvidence {
 
 export function stepStatuses(steps: readonly StepRunRow[]): Map<string, StepRunState> {
   return new Map(steps.map((step) => [step.id, step.status]));
+}
+
+export function competeGroupStatuses(
+  groups: readonly CompeteGroupRow[],
+): Map<string, CompeteGroupState> {
+  return new Map(groups.map((group) => [group.id, group.status]));
 }
 
 /** The turn being settled: the one session the single-flight supervisor still has open. */

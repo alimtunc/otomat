@@ -1,10 +1,12 @@
 import {
   getRun,
+  listCompeteGroupsForRun,
   listAgentSessionsForRun,
   listStepRunsForRun,
   type AgentSessionRow,
   type Db,
   type RunRow,
+  updateCompeteGroupStatus,
   type StepRunRow,
 } from "@otomat/db";
 import { RUN_FOLLOW_UP_STATES, type RunState, type StartRunRequest } from "@otomat/domain";
@@ -12,11 +14,11 @@ import { RUN_FOLLOW_UP_STATES, type RunState, type StartRunRequest } from "@otom
 import { sessionDir } from "#events";
 import { createRuntimeAdapter, isKnownRuntimeId } from "#runtime";
 
-import { startNextReadyStep } from "./advance.js";
+import { scheduleTurn, startNextReadyStep } from "./advance.js";
 import { spawnTurn } from "./lifecycle.js";
 import { prepareRun } from "./prepare.js";
 import { runtimeForRun } from "./runtime-selection.js";
-import type { SupervisorState } from "./state.js";
+import { hasRunActivity, type SupervisorState } from "./state.js";
 
 /** A resume the caller got wrong (bad state, concurrent turn, no session) — a conflict, not a daemon fault. */
 export class RunNotResumableError extends Error {
@@ -31,19 +33,29 @@ export class RunNotResumableError extends Error {
  * row is created from the prompt (its first line as the title) to anchor the run.
  */
 export async function startRun(state: SupervisorState, request: StartRunRequest): Promise<RunRow> {
-  const ctx = prepareRun(state, request);
-  await spawnTurn(state, ctx, "run", null);
-  return requireRunRow(state.db, ctx.runId, "spawn");
+  const runId = prepareRun(state, request);
+  const run = requireRunRow(state.db, runId, "spawn");
+  await startNextReadyStep(state, run);
+  return requireRunRow(state.db, runId, "spawn");
 }
 
 /** Resumes an `awaiting_human` run: an interrupted step resumes its own session, a run paused between steps starts the next ready step, a torn follow-up turn resumes the latest session. */
 export async function resumeRun(state: SupervisorState, runId: string): Promise<RunRow> {
   const run = requireFollowUpableRun(state, runId, ["awaiting_human"]);
   const steps = listStepRunsForRun(state.db, runId);
+  const interruptedGroup = listCompeteGroupsForRun(state.db, runId).find(
+    (group) => group.status === "awaiting_human",
+  );
+  if (interruptedGroup) {
+    return resumeCompeteGroup(state, run, interruptedGroup.id, steps);
+  }
   const interrupted = steps.find((step) => step.status === "awaiting_human");
 
   if (interrupted) {
-    const prompt = run.plan_json.steps.find((step) => step.id === interrupted.id)?.prompt ?? null;
+    const prompt =
+      run.plan_json.steps
+        .flatMap((node) => ("compete" in node ? node.compete : [node]))
+        .find((step) => step.id === interrupted.id)?.prompt ?? null;
     if (prompt === null) throw new Error(`run ${runId} has no plan step to resume`);
     return spawnFollowUpTurn(state, run, prompt);
   }
@@ -51,9 +63,67 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
   const started = await startNextReadyStep(state, run);
   if (started) return requireRunRow(state.db, runId, "resume");
 
-  const lastPrompt = run.plan_json.steps.at(-1)?.prompt ?? null;
+  const lastNode = run.plan_json.steps.at(-1);
+  let lastPrompt: string | null = null;
+  if (lastNode) {
+    lastPrompt =
+      "compete" in lastNode ? (lastNode.compete.at(-1)?.prompt ?? null) : lastNode.prompt;
+  }
   if (lastPrompt === null) throw new RunNotResumableError(`run ${runId} has no step to resume`);
   return spawnFollowUpTurn(state, run, lastPrompt);
+}
+
+async function resumeCompeteGroup(
+  state: SupervisorState,
+  run: RunRow,
+  groupId: string,
+  steps: readonly StepRunRow[],
+): Promise<RunRow> {
+  const candidates = steps.filter(
+    (step) => step.compete_group_id === groupId && step.status === "awaiting_human",
+  );
+  const sessions = listAgentSessionsForRun(state.db, run.id);
+  const planSteps = run.plan_json.steps.flatMap((node) =>
+    "compete" in node ? node.compete : [node],
+  );
+  const service = state.repositories.forRepository(run.repository_id)?.service;
+  const launches = candidates.map((candidate) => {
+    const session = sessions.find(
+      (entry) => entry.step_run_id === candidate.id && entry.provider_session_id !== null,
+    );
+    const planStep = planSteps.find((entry) => entry.id === candidate.id);
+    if (!session || !planStep?.prompt) {
+      throw new RunNotResumableError(`competitor ${candidate.id} has no resumable session`);
+    }
+    const runtime = session.agent_id ?? runtimeForRun(state.db, run);
+    if (
+      runtime === undefined ||
+      !isKnownRuntimeId(runtime) ||
+      !createRuntimeAdapter(runtime).capabilities.resume
+    ) {
+      throw new RunNotResumableError(`run ${run.id} runtime "${runtime}" does not support resume`);
+    }
+    return scheduleTurn(
+      state,
+      {
+        runId: run.id,
+        stepRunId: candidate.id,
+        agentSessionId: session.id,
+        prompt: planStep.prompt,
+        runDir: sessionDir(state.dataDir, run.id, session.id),
+        worktreePath: service?.get(candidate.id)?.path ?? null,
+        runtime,
+      },
+      "resume",
+      session.provider_session_id,
+    );
+  });
+  if (launches.length === 0) {
+    throw new RunNotResumableError(`compete group ${groupId} has no interrupted competitor`);
+  }
+  updateCompeteGroupStatus(state.db, groupId, "running");
+  await launches[0];
+  return requireRunRow(state.db, run.id, "resume");
 }
 
 /** A fix turn is an honest resume: same provider session, a new prompt built from the review comments. */
@@ -92,7 +162,7 @@ function requireFollowUpableRun(
   if (!allowedStatuses.includes(run.status)) {
     throw new RunNotResumableError(`run ${runId} is not resumable (status ${run.status})`);
   }
-  if (state.claiming.has(runId) || state.inflight.has(runId)) {
+  if (hasRunActivity(state, runId)) {
     throw new RunNotResumableError(`run ${runId} is already running`);
   }
   return run;
@@ -106,7 +176,12 @@ async function spawnFollowUpTurn(
   const { db } = state;
   const runId = run.id;
   const steps = listStepRunsForRun(db, runId);
-  const session = pickResumableSession(listAgentSessionsForRun(db, runId), steps);
+  const winnerStepIds = new Set(
+    listCompeteGroupsForRun(db, runId).flatMap((group) =>
+      group.winner_step_run_id ? [group.winner_step_run_id] : [],
+    ),
+  );
+  const session = pickResumableSession(listAgentSessionsForRun(db, runId), steps, winnerStepIds);
   if (!session) throw new RunNotResumableError(`run ${runId} has no provider session to resume`);
 
   const runtime = session.agent_id ?? runtimeForRun(db, run);
@@ -141,12 +216,15 @@ async function spawnFollowUpTurn(
 function pickResumableSession(
   sessions: readonly AgentSessionRow[],
   steps: readonly StepRunRow[],
+  winnerStepIds: ReadonlySet<string>,
 ): AgentSessionRow | undefined {
   const idxByStepId = new Map(steps.map((step) => [step.id, step.idx]));
   let best: AgentSessionRow | undefined;
   let bestIdx = -1;
   for (const session of sessions) {
     if (session.provider_session_id === null) continue;
+    const step = steps.find((entry) => entry.id === session.step_run_id);
+    if (step?.compete_group_id && !winnerStepIds.has(step.id)) continue;
     const idx = idxByStepId.get(session.step_run_id) ?? -1;
     if (idx >= bestIdx) {
       best = session;
