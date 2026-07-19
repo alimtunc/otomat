@@ -1,7 +1,12 @@
 import { runPlanInputSchema } from "@otomat/domain";
 import { useForm } from "@tanstack/react-form";
 import { useStartRunAndNavigate } from "@web/api/runs/mutations";
-import { buildRunPlanInput, newWorkflowStep, type WorkflowStepDraft } from "@web/lib/workflow-plan";
+import {
+  buildRunPlanInput,
+  newWorkflowCompeteGroup,
+  newWorkflowStep,
+  type WorkflowStepDraft,
+} from "@web/lib/workflow-plan";
 import { useRef, useState } from "react";
 
 export interface UseWorkflowFormOptions {
@@ -50,7 +55,12 @@ export function useWorkflowForm({ projectId, runtime, onLaunched }: UseWorkflowF
     updateSteps((steps) => [...steps, newWorkflowStep(stepCounter.current)]);
   }
 
-  return { form, planError, isPending, updateSteps, addStep };
+  function addCompeteGroup() {
+    stepCounter.current += 1;
+    updateSteps((steps) => [...steps, newWorkflowCompeteGroup(stepCounter.current)]);
+  }
+
+  return { form, planError, isPending, updateSteps, addStep, addCompeteGroup };
 }
 
 export type WorkflowForm = ReturnType<typeof useWorkflowForm>["form"];

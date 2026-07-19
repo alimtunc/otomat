@@ -1,21 +1,75 @@
-import type { RunPlanInput, RunPlanStepInput } from "@otomat/domain";
+import type { RunPlanInput, RunPlanNodeInput } from "@otomat/domain";
 
-/** One editable step of the workflow builder; `key` is the form-local plan step id. */
-export interface WorkflowStepDraft {
+export interface WorkflowCompetitorDraft {
   key: string;
   name: string;
   prompt: string;
-  /** Runtime adapter id for this step; null inherits the launch's default runtime. */
   runtime: string | null;
-  /** Keys of steps this one waits for — always earlier in the list, so the plan stays acyclic by construction. */
+}
+
+/** One top-level dependency node. Compete nodes own at least two executable competitors. */
+export interface WorkflowStepDraft {
+  kind: "step" | "compete";
+  key: string;
+  name: string;
+  prompt: string;
+  runtime: string | null;
+  /** Keys of top-level nodes this one waits for; competitors are never valid dependency targets. */
   dependsOn: string[];
+  competitors: WorkflowCompetitorDraft[];
 }
 
 export function newWorkflowStep(counter: number): WorkflowStepDraft {
-  return { key: `step-${counter}`, name: "", prompt: "", runtime: null, dependsOn: [] };
+  return {
+    kind: "step",
+    key: `step-${counter}`,
+    name: "",
+    prompt: "",
+    runtime: null,
+    dependsOn: [],
+    competitors: [],
+  };
 }
 
-/** Keeps every dependency pointing at an earlier, still-existing step. */
+function newCompetitor(groupKey: string, counter: number): WorkflowCompetitorDraft {
+  return {
+    key: `${groupKey}-candidate-${counter}`,
+    name: "",
+    prompt: "",
+    runtime: null,
+  };
+}
+
+export function newWorkflowCompeteGroup(counter: number): WorkflowStepDraft {
+  const key = `compete-${counter}`;
+  return {
+    kind: "compete",
+    key,
+    name: "",
+    prompt: "",
+    runtime: null,
+    dependsOn: [],
+    competitors: [newCompetitor(key, 1), newCompetitor(key, 2)],
+  };
+}
+
+export function workflowExecutableCount(steps: readonly WorkflowStepDraft[]): number {
+  return steps.reduce(
+    (count, step) => count + (step.kind === "compete" ? step.competitors.length : 1),
+    0,
+  );
+}
+
+export function isWorkflowNodeComplete(step: WorkflowStepDraft): boolean {
+  if (!step.name.trim()) return false;
+  if (step.kind === "step") return Boolean(step.prompt.trim());
+  return (
+    step.competitors.length >= 2 &&
+    step.competitors.every((competitor) => competitor.name.trim() && competitor.prompt.trim())
+  );
+}
+
+/** Keeps every dependency pointing at an earlier, still-existing top-level node. */
 function sanitizeWorkflowSteps(steps: readonly WorkflowStepDraft[]): WorkflowStepDraft[] {
   const earlier = new Set<string>();
   return steps.map((step) => {
@@ -55,6 +109,54 @@ export function setWorkflowStepRuntime(
   return steps.map((step, stepIndex) => (stepIndex === index ? { ...step, runtime } : step));
 }
 
+export function updateWorkflowCompetitor(
+  steps: readonly WorkflowStepDraft[],
+  stepIndex: number,
+  competitorIndex: number,
+  update: Partial<Pick<WorkflowCompetitorDraft, "name" | "prompt" | "runtime">>,
+): WorkflowStepDraft[] {
+  return steps.map((step, index) =>
+    index === stepIndex
+      ? {
+          ...step,
+          competitors: step.competitors.map((competitor, candidateIndex) =>
+            candidateIndex === competitorIndex ? { ...competitor, ...update } : competitor,
+          ),
+        }
+      : step,
+  );
+}
+
+export function addWorkflowCompetitor(
+  steps: readonly WorkflowStepDraft[],
+  stepIndex: number,
+): WorkflowStepDraft[] {
+  return steps.map((step, index) => {
+    if (index !== stepIndex || step.kind !== "compete") return step;
+    const nextCounter = step.competitors.length + 1;
+    return {
+      ...step,
+      competitors: [...step.competitors, newCompetitor(step.key, nextCounter)],
+    };
+  });
+}
+
+export function removeWorkflowCompetitor(
+  steps: readonly WorkflowStepDraft[],
+  stepIndex: number,
+  competitorIndex: number,
+): WorkflowStepDraft[] {
+  return steps.map((step, index) => {
+    if (index !== stepIndex || step.kind !== "compete" || step.competitors.length <= 2) return step;
+    return {
+      ...step,
+      competitors: step.competitors.filter(
+        (_, candidateIndex) => candidateIndex !== competitorIndex,
+      ),
+    };
+  });
+}
+
 export function toggleWorkflowDependency(
   steps: readonly WorkflowStepDraft[],
   index: number,
@@ -75,12 +177,27 @@ export function toggleWorkflowDependency(
 }
 
 export function buildRunPlanInput(steps: readonly WorkflowStepDraft[]): RunPlanInput {
-  const planSteps: RunPlanStepInput[] = sanitizeWorkflowSteps(steps).map((step) => ({
-    id: step.key,
-    name: step.name.trim(),
-    agent: step.runtime,
-    prompt: step.prompt.trim(),
-    depends_on: step.dependsOn,
-  }));
-  return { version: 1, steps: planSteps };
+  const nodes: RunPlanNodeInput[] = sanitizeWorkflowSteps(steps).map((step) => {
+    if (step.kind === "compete") {
+      return {
+        id: step.key,
+        name: step.name.trim(),
+        depends_on: step.dependsOn,
+        compete: step.competitors.map((competitor) => ({
+          id: competitor.key,
+          name: competitor.name.trim(),
+          agent: competitor.runtime,
+          prompt: competitor.prompt.trim(),
+        })),
+      };
+    }
+    return {
+      id: step.key,
+      name: step.name.trim(),
+      agent: step.runtime,
+      prompt: step.prompt.trim(),
+      depends_on: step.dependsOn,
+    };
+  });
+  return { version: 1, steps: nodes };
 }

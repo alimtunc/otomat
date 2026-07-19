@@ -43,7 +43,8 @@ export function resolveFollowUpGate(
   if (descriptors === undefined) {
     return disabled("Checking runtime availability…");
   }
-  const runtimeId = detail.run.plan_json.steps[0]?.agent ?? null;
+  const runtimeId =
+    detail.sessions.find((session) => session.provider_session_id !== null)?.agent_id ?? null;
   const runtime = descriptors.find((descriptor) => descriptor.id === runtimeId);
   if (!runtime) {
     return disabled("This run's runtime is not registered on the daemon.");

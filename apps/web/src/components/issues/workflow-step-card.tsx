@@ -28,7 +28,7 @@ import type { WorkflowForm } from "./use-workflow-form";
 
 const DEFAULT_RUNTIME_VALUE = "__default";
 
-function StepRuntimeSelect({
+export function StepRuntimeSelect({
   descriptors,
   value,
   onValueChange,
@@ -67,7 +67,7 @@ function StepRuntimeSelect({
   );
 }
 
-function DependencyToggles({
+export function DependencyToggles({
   earlier,
   dependsOn,
   onToggle,
@@ -95,6 +95,7 @@ function DependencyToggles({
             className={cn(pressed ? "border-accent text-accent" : "text-text-secondary")}
             onClick={() => onToggle(candidate.key)}
           >
+            {candidate.kind === "compete" ? "Winner of " : ""}
             {candidate.name.trim() || `Step ${candidateIndex + 1}`}
           </Button>
         );
@@ -119,6 +120,7 @@ export function WorkflowStepCard({
   onUpdateSteps,
 }: WorkflowStepCardProps) {
   const step = steps[index];
+  if (!step || step.kind !== "step") return null;
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border-subtle bg-surface p-2.5">
       <div className="flex items-center gap-2">

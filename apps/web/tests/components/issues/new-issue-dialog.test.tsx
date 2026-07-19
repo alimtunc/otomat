@@ -108,6 +108,12 @@ function setInputValue(input: HTMLInputElement, value: string): void {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+function setTextareaValue(input: HTMLTextAreaElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+  setter?.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 describe("NewIssueDialog", () => {
   it("offers both the Manual and With agent modes", async () => {
     runtimesData = [runtimeDescriptor("claude", "real", true)];
@@ -185,6 +191,81 @@ describe("NewIssueDialog", () => {
       prompt: "implement the thing",
       runtime: "claude",
       project_id: "p1",
+    });
+  });
+
+  it("builds a valid compete group and explains that dependents wait for the winner", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+
+    await act(async () => buttonByText("Workflow").click());
+    await act(async () => buttonByText("Add compete group").click());
+    const removeInitial = document.querySelector<HTMLButtonElement>(
+      "button[aria-label='Remove step 1']",
+    );
+    if (!removeInitial) throw new Error("initial workflow step remove button not found");
+    await act(async () => removeInitial.click());
+
+    const goal = document.querySelector<HTMLTextAreaElement>(
+      "textarea[aria-label='Workflow goal']",
+    );
+    const objective = document.querySelector<HTMLInputElement>(
+      "input[aria-label='Compete group 1 objective']",
+    );
+    const candidateNames = [
+      ...document.querySelectorAll<HTMLInputElement>(
+        "input[aria-label^='Candidate '][aria-label$=' name']",
+      ),
+    ];
+    const candidatePrompts = [
+      ...document.querySelectorAll<HTMLTextAreaElement>(
+        "textarea[aria-label^='Candidate '][aria-label$=' prompt']",
+      ),
+    ];
+    expect(candidateNames).toHaveLength(2);
+    expect(candidatePrompts).toHaveLength(2);
+    expect(document.body.textContent).toContain(
+      "Steps that depend on this group stay queued until you compare the results and select a winner.",
+    );
+
+    await act(async () => {
+      setTextareaValue(goal!, "Choose the implementation");
+      setInputValue(objective!, "Implement the feature");
+      setInputValue(candidateNames[0]!, "Direct");
+      setInputValue(candidateNames[1]!, "Layered");
+      setTextareaValue(candidatePrompts[0]!, "Implement directly");
+      setTextareaValue(candidatePrompts[1]!, "Implement behind a boundary");
+    });
+    await act(async () => buttonByText("Launch workflow⌘↵").click());
+
+    expect(start).toHaveBeenCalledWith({
+      prompt: "Choose the implementation",
+      runtime: "claude",
+      project_id: "p1",
+      plan: {
+        version: 1,
+        steps: [
+          {
+            id: "compete-2",
+            name: "Implement the feature",
+            depends_on: [],
+            compete: [
+              {
+                id: "compete-2-candidate-1",
+                name: "Direct",
+                agent: null,
+                prompt: "Implement directly",
+              },
+              {
+                id: "compete-2-candidate-2",
+                name: "Layered",
+                agent: null,
+                prompt: "Implement behind a boundary",
+              },
+            ],
+          },
+        ],
+      },
     });
   });
 

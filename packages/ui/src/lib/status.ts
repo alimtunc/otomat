@@ -88,6 +88,7 @@ const RUN_STATUS: StatusMap<RunState> = {
   running: { tone: "iris", icon: Loader, label: "Running", live: true },
   awaiting_permission: { tone: "warning", icon: ShieldQuestion, label: "Awaiting permission" },
   awaiting_human: { tone: "warning", icon: Hand, label: "Awaiting human" },
+  awaiting_selection: { tone: "warning", icon: GitCompare, label: "Awaiting winner" },
   review_ready: { tone: "review", icon: GitCompare, label: "Review ready" },
   completed: { tone: "success", icon: CheckCircle2, label: "Completed" },
   failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
