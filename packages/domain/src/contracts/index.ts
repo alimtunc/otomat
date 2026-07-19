@@ -10,6 +10,7 @@ export * from "./api.js";
 export * from "./diff.js";
 export {
   agentSessionContractSchema,
+  competeGroupContractSchema,
   issueContractSchema,
   projectContractSchema,
   pullRequestContractSchema,
@@ -18,9 +19,13 @@ export {
   reviewContractSchema,
   runContractSchema,
   runPlanSchema,
+  runPlanCompeteGroupSchema,
+  runPlanCompetitorSchema,
+  runPlanNodeSchema,
   runPlanStepSchema,
   stepRunContractSchema,
   type AgentSessionContract,
+  type CompeteGroupContract,
   type IssueContract,
   type IssueSource,
   type ProjectContract,
@@ -30,6 +35,9 @@ export {
   type ReviewContract,
   type RunContract,
   type RunPlan,
+  type RunPlanCompeteGroup,
+  type RunPlanCompetitor,
+  type RunPlanNode,
   type RunPlanStep,
   type StepRunContract,
 } from "./entities.js";

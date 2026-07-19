@@ -13,6 +13,28 @@ function step(id: string, dependsOn: string[] = []) {
   };
 }
 
+function compete(id: string, dependsOn: string[] = []) {
+  return {
+    id,
+    name: `Compete ${id}`,
+    depends_on: dependsOn,
+    compete: [
+      {
+        id: `${id}-claude`,
+        name: "Claude",
+        agent: "claude",
+        prompt: `Solve ${id} with Claude`,
+      },
+      {
+        id: `${id}-codex`,
+        name: "Codex",
+        agent: "codex",
+        prompt: `Solve ${id} with Codex`,
+      },
+    ],
+  };
+}
+
 function issuesOf(plan: unknown): string[] {
   const result = runPlanInputSchema.safeParse(plan);
   if (result.success) return [];
@@ -39,6 +61,90 @@ describe("runPlanInputSchema", () => {
       ],
     });
     expect(result.success).toBe(true);
+  });
+
+  it("accepts a compete group as one dependency node", () => {
+    const parsed = runPlanInputSchema.parse({
+      version: 1,
+      steps: [
+        step("plan"),
+        compete("implementation", ["plan"]),
+        step("verify", ["implementation"]),
+      ],
+    });
+
+    expect(parsed.steps).toHaveLength(3);
+    expect(parsed.steps[1]).toMatchObject({
+      id: "implementation",
+      compete: [{ id: "implementation-claude" }, { id: "implementation-codex" }],
+    });
+  });
+
+  it("requires at least two competitors", () => {
+    const group = compete("implementation");
+    const messages = issuesOf({
+      version: 1,
+      steps: [{ ...group, compete: group.compete.slice(0, 1) }],
+    });
+
+    expect(messages).toContain("Compete groups require at least two competitors");
+  });
+
+  it("rejects dependencies on individual competitors", () => {
+    const messages = issuesOf({
+      version: 1,
+      steps: [compete("implementation"), step("verify", ["implementation-claude"])],
+    });
+
+    expect(messages).toContain(
+      'Dependencies cannot target competitor "implementation-claude"; depend on group "implementation"',
+    );
+  });
+
+  it("requires ids to be unique across nodes and competitors", () => {
+    const group = compete("implementation");
+    const messages = issuesOf({
+      version: 1,
+      steps: [step("implementation-claude"), group],
+    });
+
+    expect(messages).toContain('Duplicate plan id "implementation-claude"');
+  });
+
+  it("counts competitors against the executable-step limit", () => {
+    const group = compete("implementation");
+    const oversized = {
+      ...group,
+      compete: Array.from({ length: RUN_PLAN_MAX_STEPS + 1 }, (_, index) => ({
+        id: `candidate-${index}`,
+        name: `Candidate ${index}`,
+        agent: null,
+        prompt: `Solve with candidate ${index}`,
+      })),
+    };
+
+    expect(runPlanInputSchema.safeParse({ version: 1, steps: [oversized] }).success).toBe(false);
+  });
+
+  it("rejects unknown properties on compete groups and competitors", () => {
+    const group = compete("implementation");
+    expect(
+      runPlanInputSchema.safeParse({
+        version: 1,
+        steps: [{ ...group, hidden_policy: "pick-first" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      runPlanInputSchema.safeParse({
+        version: 1,
+        steps: [
+          {
+            ...group,
+            compete: [{ ...group.compete[0], score: 100 }, group.compete[1]],
+          },
+        ],
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects an empty plan", () => {

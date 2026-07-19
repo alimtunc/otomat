@@ -1,8 +1,17 @@
-import type { RunPlan, RunPlanStep } from "../contracts/entities.js";
+import {
+  isRunPlanCompeteGroup,
+  type RunPlan,
+  type RunPlanCompeteGroup,
+  type RunPlanCompetitor,
+  type RunPlanNode,
+  type RunPlanStep,
+} from "../contracts/entities.js";
+import type { CompeteGroupState } from "../state-machines/compete-group.js";
 import type { StepRunState } from "../state-machines/step-run.js";
 
 /** Step statuses keyed by plan step id; a step with no row yet is treated as `queued`. */
 export type PlanStepStatuses = ReadonlyMap<string, StepRunState>;
+export type PlanCompeteGroupStatuses = ReadonlyMap<string, CompeteGroupState>;
 
 const HALTED_STEP_STATES: ReadonlySet<StepRunState> = new Set(["failed", "canceled", "stale"]);
 const ACTIVE_STEP_STATES: ReadonlySet<StepRunState> = new Set([
@@ -26,12 +35,12 @@ function statusOf(statuses: PlanStepStatuses, stepId: string): StepRunState {
 
 export interface TopologicalStepOrder {
   /** Steps in deterministic execution order: dependencies first, ties broken by plan position. */
-  readonly order: readonly RunPlanStep[];
+  readonly order: readonly RunPlanNode[];
   /** Steps that could not be ordered — non-empty exactly when the plan has a dependency cycle. */
-  readonly remaining: readonly RunPlanStep[];
+  readonly remaining: readonly RunPlanNode[];
 }
 
-export function topologicalStepOrder(steps: readonly RunPlanStep[]): TopologicalStepOrder {
+export function topologicalStepOrder(steps: readonly RunPlanNode[]): TopologicalStepOrder {
   const indexById = new Map(steps.map((step, index) => [step.id, index]));
   const indegree = steps.map((step) => step.depends_on.filter((dep) => indexById.has(dep)).length);
   const dependents = new Map<string, number[]>();
@@ -44,7 +53,7 @@ export function topologicalStepOrder(steps: readonly RunPlanStep[]): Topological
     }
   });
 
-  const order: RunPlanStep[] = [];
+  const order: RunPlanNode[] = [];
   const placed = new Set<number>();
   while (order.length < steps.length) {
     const readyIndex = steps.findIndex((_, index) => !placed.has(index) && indegree[index] === 0);
@@ -69,7 +78,7 @@ export class InvalidRunPlanError extends Error {
 }
 
 /** Deterministic execution order for a validated plan; throws when the plan holds a cycle. */
-export function planExecutionOrder(plan: RunPlan): readonly RunPlanStep[] {
+export function planExecutionOrder(plan: RunPlan): readonly RunPlanNode[] {
   const { order, remaining } = topologicalStepOrder(plan.steps);
   if (remaining.length > 0) {
     const ids = remaining.map((step) => step.id).join(", ");
@@ -79,31 +88,100 @@ export function planExecutionOrder(plan: RunPlan): readonly RunPlanStep[] {
 }
 
 export function hasActiveStep(plan: RunPlan, statuses: PlanStepStatuses): boolean {
-  return plan.steps.some((step) => isStepActive(statusOf(statuses, step.id)));
+  return executableSteps(plan).some((step) => isStepActive(statusOf(statuses, step.id)));
 }
 
-/** First queued step whose dependencies all succeeded; ignores active steps — single-flight is the caller's rule. */
-export function nextReadyStep(plan: RunPlan, statuses: PlanStepStatuses): RunPlanStep | null {
-  for (const step of planExecutionOrder(plan)) {
-    if (statusOf(statuses, step.id) !== "queued") continue;
-    const depsSucceeded = step.depends_on.every((dep) => statusOf(statuses, dep) === "succeeded");
-    if (depsSucceeded) return step;
+function executableSteps(plan: RunPlan): Array<RunPlanStep | RunPlanCompetitor> {
+  return plan.steps.flatMap((node) => (isRunPlanCompeteGroup(node) ? node.compete : [node]));
+}
+
+function dependencySucceeded(
+  plan: RunPlan,
+  dependencyId: string,
+  statuses: PlanStepStatuses,
+  groupStatuses: PlanCompeteGroupStatuses,
+): boolean {
+  const dependency = plan.steps.find((node) => node.id === dependencyId);
+  if (!dependency) return false;
+  return isRunPlanCompeteGroup(dependency)
+    ? groupStatuses.get(dependency.id) === "selected"
+    : statusOf(statuses, dependency.id) === "succeeded";
+}
+
+export type ReadyPlanWork =
+  | { kind: "step"; step: RunPlanStep }
+  | {
+      kind: "compete";
+      group: RunPlanCompeteGroup;
+      competitors: readonly RunPlanCompetitor[];
+    };
+
+/** First ready top-level node; only candidates inside that node may be returned together. */
+export function readyPlanWork(
+  plan: RunPlan,
+  statuses: PlanStepStatuses,
+  groupStatuses: PlanCompeteGroupStatuses,
+): ReadyPlanWork | null {
+  for (const node of planExecutionOrder(plan)) {
+    const depsSucceeded = node.depends_on.every((dependency) =>
+      dependencySucceeded(plan, dependency, statuses, groupStatuses),
+    );
+    if (!depsSucceeded) continue;
+
+    if (!isRunPlanCompeteGroup(node)) {
+      if (statusOf(statuses, node.id) === "queued") return { kind: "step", step: node };
+      continue;
+    }
+
+    const groupStatus = groupStatuses.get(node.id) ?? "queued";
+    if (groupStatus !== "queued" && groupStatus !== "running") continue;
+    const competitors = node.compete.filter(
+      (competitor) => statusOf(statuses, competitor.id) === "queued",
+    );
+    if (competitors.length > 0) return { kind: "compete", group: node, competitors };
   }
   return null;
 }
 
-export function allStepsSucceeded(plan: RunPlan, statuses: PlanStepStatuses): boolean {
-  return plan.steps.every((step) => statusOf(statuses, step.id) === "succeeded");
+/** First queued step whose dependencies all succeeded; ignores active steps — single-flight is the caller's rule. */
+export function nextReadyStep(plan: RunPlan, statuses: PlanStepStatuses): RunPlanStep | null {
+  const ready = readyPlanWork(plan, statuses, new Map());
+  return ready?.kind === "step" ? ready.step : null;
+}
+
+export function allStepsSucceeded(
+  plan: RunPlan,
+  statuses: PlanStepStatuses,
+  groupStatuses: PlanCompeteGroupStatuses = new Map(),
+): boolean {
+  return plan.steps.every((node) =>
+    isRunPlanCompeteGroup(node)
+      ? groupStatuses.get(node.id) === "selected"
+      : statusOf(statuses, node.id) === "succeeded",
+  );
 }
 
 export type PlanOutcome = "running" | "succeeded" | "failed" | "canceled";
 
 /** `running` while a step is active or startable; otherwise `failed` wins over `canceled`, and `stale` counts as failed. */
-export function planOutcome(plan: RunPlan, statuses: PlanStepStatuses): PlanOutcome {
-  if (allStepsSucceeded(plan, statuses)) return "succeeded";
+export function planOutcome(
+  plan: RunPlan,
+  statuses: PlanStepStatuses,
+  groupStatuses: PlanCompeteGroupStatuses = new Map(),
+): PlanOutcome {
+  if (allStepsSucceeded(plan, statuses, groupStatuses)) return "succeeded";
   if (hasActiveStep(plan, statuses)) return "running";
-  if (nextReadyStep(plan, statuses) !== null) return "running";
-  const states = plan.steps.map((step) => statusOf(statuses, step.id));
+  if (readyPlanWork(plan, statuses, groupStatuses) !== null) return "running";
+  const competitionStates = [...groupStatuses.values()];
+  if (
+    competitionStates.some((state) =>
+      ["running", "awaiting_human", "awaiting_selection", "promoting"].includes(state),
+    )
+  ) {
+    return "running";
+  }
+  const states = executableSteps(plan).map((step) => statusOf(statuses, step.id));
+  if (competitionStates.includes("failed")) return "failed";
   if (states.some((state) => state === "failed" || state === "stale")) return "failed";
   return "canceled";
 }

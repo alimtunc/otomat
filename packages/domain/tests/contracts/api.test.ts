@@ -8,6 +8,7 @@ import {
   runDetailSchema,
   runtimeAvailabilitySchema,
   runtimeDescriptorSchema,
+  selectCompeteWinnerRequestSchema,
   startRunRequestSchema,
 } from "#domain/contracts/api";
 
@@ -26,6 +27,55 @@ describe("runDetailSchema", () => {
     expect(withPath.worktree_path).toBe("/tmp/wt");
     expect(runDetailSchema.parse({ ...base, worktree_path: null }).worktree_path).toBeNull();
     expect(runDetailSchema.safeParse(base).success).toBe(false);
+  });
+
+  it("carries durable compete groups and candidate worktree metadata", () => {
+    const detail = runDetailSchema.parse({
+      run: { ...RUN, status: "awaiting_selection" },
+      steps: [
+        {
+          id: "candidate-a",
+          run_id: RUN.id,
+          idx: 0,
+          name: "Candidate A",
+          status: "succeeded",
+          compete_group_id: "implementation",
+          worktree_id: "wt-a",
+          branch: "otomat/run/run-1/compete/candidate-a",
+          worktree_status: "archived",
+        },
+      ],
+      sessions: [],
+      compete_groups: [
+        {
+          id: "implementation",
+          run_id: RUN.id,
+          idx: 0,
+          name: "Implementation",
+          status: "awaiting_selection",
+          winner_step_run_id: null,
+          base_head_sha: "abc123",
+        },
+      ],
+      worktree_path: "/tmp/canonical",
+    });
+
+    expect(detail.compete_groups[0]?.status).toBe("awaiting_selection");
+    expect(detail.steps[0]?.branch).toContain("candidate-a");
+  });
+});
+
+describe("selectCompeteWinnerRequestSchema", () => {
+  it("accepts one explicit candidate and rejects hidden selection policy", () => {
+    expect(selectCompeteWinnerRequestSchema.parse({ step_run_id: "candidate-a" })).toEqual({
+      step_run_id: "candidate-a",
+    });
+    expect(
+      selectCompeteWinnerRequestSchema.safeParse({
+        step_run_id: "candidate-a",
+        policy: "highest-score",
+      }).success,
+    ).toBe(false);
   });
 });
 

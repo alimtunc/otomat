@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { agentSessionMachine } from "#domain/state-machines/agent-session";
+import { competeGroupMachine } from "#domain/state-machines/compete-group";
 import { issueMachine } from "#domain/state-machines/issue";
 import { IllegalTransitionError } from "#domain/state-machines/machine";
 import { pullRequestMachine } from "#domain/state-machines/pull-request";
@@ -24,6 +25,7 @@ const machines = [
   reviewCommentMachine,
   pullRequestMachine,
   pullRequestPublicationMachine,
+  competeGroupMachine,
 ];
 
 describe.each(machines.map((machine) => [machine.name, machine] as const))(
@@ -63,6 +65,16 @@ describe("representative illegal transitions are rejected", () => {
 
   it("run cannot resurrect completed -> running", () => {
     expect(() => runMachine.transition("completed", "running")).toThrow(IllegalTransitionError);
+  });
+
+  it("run and compete group wait for an explicit winner", () => {
+    expect(runMachine.transition("running", "awaiting_selection")).toBe("awaiting_selection");
+    expect(runMachine.transition("awaiting_selection", "running")).toBe("running");
+    expect(competeGroupMachine.transition("running", "awaiting_selection")).toBe(
+      "awaiting_selection",
+    );
+    expect(competeGroupMachine.transition("awaiting_selection", "promoting")).toBe("promoting");
+    expect(competeGroupMachine.transition("promoting", "selected")).toBe("selected");
   });
 
   it("step_run cannot skip queued -> succeeded", () => {

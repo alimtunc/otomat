@@ -3,6 +3,7 @@ import { z } from "zod";
 import { runPlanInputSchema } from "../plan/validate.js";
 import {
   agentSessionContractSchema,
+  competeGroupContractSchema,
   projectContractSchema,
   pullRequestContractSchema,
   repositoryContractSchema,
@@ -43,6 +44,7 @@ export const runDetailSchema = z.object({
   run: runContractSchema,
   steps: z.array(stepRunContractSchema),
   sessions: z.array(agentSessionContractSchema),
+  compete_groups: z.array(competeGroupContractSchema).default([]),
   worktree_path: z.string().nullable(),
 });
 export type RunDetail = z.infer<typeof runDetailSchema>;
@@ -169,6 +171,12 @@ export const followUpRunRequestSchema = z.object({
   prompt: z.string().trim().min(1),
 });
 export type FollowUpRunRequest = z.infer<typeof followUpRunRequestSchema>;
+
+/** Select one succeeded competitor explicitly; the daemon rejects premature or conflicting choices. */
+export const selectCompeteWinnerRequestSchema = z
+  .object({ step_run_id: z.string().min(1) })
+  .strict();
+export type SelectCompeteWinnerRequest = z.infer<typeof selectCompeteWinnerRequestSchema>;
 
 /** Publish or update the run's GitHub pull request. */
 export const preparePullRequestRequestSchema = z.object({

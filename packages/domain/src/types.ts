@@ -13,6 +13,7 @@ export type { IssueState } from "./state-machines/issue.js";
 export type { RunState, RunTerminalState } from "./state-machines/run.js";
 export type { StepRunState } from "./state-machines/step-run.js";
 export type { AgentSessionState } from "./state-machines/agent-session.js";
+export type { CompeteGroupState } from "./state-machines/compete-group.js";
 export type { ReviewState } from "./state-machines/review.js";
 export type { ReviewCommentState } from "./state-machines/review-comment.js";
 export type { PullRequestState } from "./state-machines/pull-request.js";
@@ -23,10 +24,14 @@ export type { EventType, EventSource, EventEnvelope } from "./events/envelope.js
 export type {
   IssueSource,
   IssueContract,
+  CompeteGroupContract,
   ProjectContract,
   RepositoryContract,
   RunContract,
   RunPlan,
+  RunPlanCompeteGroup,
+  RunPlanCompetitor,
+  RunPlanNode,
   RunPlanStep,
   StepRunContract,
   AgentSessionContract,

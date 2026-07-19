@@ -8,6 +8,7 @@ import {
   nextReadyStep,
   planExecutionOrder,
   planOutcome,
+  readyPlanWork,
 } from "#domain/plan/schedule";
 import type { StepRunState } from "#domain/state-machines/step-run";
 
@@ -34,6 +35,35 @@ const diamond = plan([
   { id: "right", depends_on: ["root"] },
   { id: "merge", depends_on: ["left", "right"] },
 ]);
+
+const competePlan: RunPlan = {
+  version: 1,
+  steps: [
+    {
+      id: "plan",
+      name: "Plan",
+      agent: "claude",
+      prompt: "Plan it",
+      depends_on: [],
+    },
+    {
+      id: "implementation",
+      name: "Implementation",
+      depends_on: ["plan"],
+      compete: [
+        { id: "candidate-a", name: "A", agent: "claude", prompt: "Build it" },
+        { id: "candidate-b", name: "B", agent: "codex", prompt: "Build it" },
+      ],
+    },
+    {
+      id: "verify",
+      name: "Verify",
+      agent: "codex",
+      prompt: "Verify it",
+      depends_on: ["implementation"],
+    },
+  ],
+};
 
 describe("planExecutionOrder", () => {
   it("orders dependencies first and breaks ties by plan position", () => {
@@ -78,6 +108,58 @@ describe("nextReadyStep", () => {
   });
 });
 
+describe("readyPlanWork", () => {
+  it("offers all queued competitors together after group dependencies succeed", () => {
+    const ready = readyPlanWork(
+      competePlan,
+      statuses({ plan: "succeeded" }),
+      new Map([["implementation", "queued"]]),
+    );
+
+    expect(ready).toMatchObject({
+      kind: "compete",
+      group: { id: "implementation" },
+      competitors: [{ id: "candidate-a" }, { id: "candidate-b" }],
+    });
+  });
+
+  it("blocks dependents until the group has a selected winner", () => {
+    const candidateStatuses = statuses({
+      plan: "succeeded",
+      "candidate-a": "succeeded",
+      "candidate-b": "succeeded",
+    });
+
+    expect(
+      readyPlanWork(
+        competePlan,
+        candidateStatuses,
+        new Map([["implementation", "awaiting_selection"]]),
+      ),
+    ).toBeNull();
+    expect(
+      readyPlanWork(competePlan, candidateStatuses, new Map([["implementation", "selected"]])),
+    ).toMatchObject({ kind: "step", step: { id: "verify" } });
+  });
+
+  it("offers only queued competitors when an interrupted group resumes", () => {
+    const ready = readyPlanWork(
+      competePlan,
+      statuses({
+        plan: "succeeded",
+        "candidate-a": "succeeded",
+        "candidate-b": "queued",
+      }),
+      new Map([["implementation", "running"]]),
+    );
+
+    expect(ready).toMatchObject({
+      kind: "compete",
+      competitors: [{ id: "candidate-b" }],
+    });
+  });
+});
+
 describe("planOutcome", () => {
   it("reports running while a step is active", () => {
     expect(planOutcome(diamond, statuses({ root: "running" }))).toBe("running");
@@ -111,5 +193,20 @@ describe("planOutcome", () => {
 
   it("reports canceled when steps were only canceled", () => {
     expect(planOutcome(diamond, statuses({ root: "canceled" }))).toBe("canceled");
+  });
+
+  it("keeps a compete plan running until a winner is selected", () => {
+    const candidateStatuses = statuses({
+      plan: "succeeded",
+      "candidate-a": "succeeded",
+      "candidate-b": "succeeded",
+    });
+    expect(
+      planOutcome(
+        competePlan,
+        candidateStatuses,
+        new Map([["implementation", "awaiting_selection"]]),
+      ),
+    ).toBe("running");
   });
 });
