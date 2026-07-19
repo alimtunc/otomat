@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, expect, it } from "vitest";
 
+import { scrubGitEnv } from "#git/git-cli";
 import { probeLocalRepository, tryRealpath } from "#git/probe";
 
 import { setupTestRepo, type TestRepo } from "../support/git.js";
@@ -77,7 +78,7 @@ it("refuses a repository with a detached HEAD", () => {
 it("refuses a repository whose branch has no commit yet", () => {
   const bare = join(scratch, "unborn");
   mkdirSync(bare);
-  execFileSync("git", ["init", "-b", "main"], { cwd: bare });
+  execFileSync("git", ["init", "-b", "main"], { cwd: bare, env: scrubGitEnv(process.env) });
   expect(probeLocalRepository(bare)).toEqual({
     ok: false,
     error: "default_branch_undetectable",
