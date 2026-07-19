@@ -133,7 +133,9 @@ export function addWorkflowCompetitor(
 ): WorkflowStepDraft[] {
   return steps.map((step, index) => {
     if (index !== stepIndex || step.kind !== "compete") return step;
-    const nextCounter = step.competitors.length + 1;
+    const candidateKeys = new Set(step.competitors.map((competitor) => competitor.key));
+    let nextCounter = step.competitors.length + 1;
+    while (candidateKeys.has(`${step.key}-candidate-${nextCounter}`)) nextCounter += 1;
     return {
       ...step,
       competitors: [...step.competitors, newCompetitor(step.key, nextCounter)],

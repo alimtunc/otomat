@@ -34,6 +34,7 @@ export type {
   RunPlanNode,
   RunPlanStep,
   StepRunContract,
+  WorktreeStatus,
   AgentSessionContract,
   ReviewContract,
   ReviewCommentContract,

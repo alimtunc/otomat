@@ -17,6 +17,7 @@ import type {
   ReviewState,
   RunState,
   StepRunState,
+  WorktreeStatus,
 } from "@otomat/domain";
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
@@ -52,7 +53,7 @@ export const repositories = sqliteTable("repositories", {
   ...timestamps,
 });
 
-export type WorktreeStatus = "active" | "archived" | "removed";
+export type { WorktreeStatus } from "@otomat/domain";
 
 export const worktrees = sqliteTable(
   "worktrees",

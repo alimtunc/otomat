@@ -8,11 +8,11 @@ import {
   listCompeteGroupsForRun,
   listStepRunsForRun,
   updateCompeteGroupBase,
-  updateCompeteGroupStatus,
   type RunRow,
 } from "@otomat/db";
 import {
   agentSessionMachine,
+  isRunPlanCompeteGroup,
   readyPlanWork,
   runMachine,
   type RunPlanCompetitor,
@@ -25,7 +25,7 @@ import { buildTerminalMarker } from "./markers.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
 import { stepStatuses } from "./settle/index.js";
 import { hasRunActivity, notifyAfterSettle, type SupervisorState } from "./state.js";
-import { driveIdleRunTo } from "./transitions.js";
+import { driveCompeteGroupTo, driveIdleRunTo } from "./transitions.js";
 import type { TurnContext } from "./types.js";
 
 function groupStatuses(state: SupervisorState, runId: string) {
@@ -33,7 +33,12 @@ function groupStatuses(state: SupervisorState, runId: string) {
 }
 
 function canonicalWorktreePath(state: SupervisorState, run: RunRow): string | null {
-  return state.repositories.forRepository(run.repository_id)?.service.get(run.id)?.path ?? null;
+  const path =
+    state.repositories.forRepository(run.repository_id)?.service.get(run.id)?.path ?? null;
+  if (path === null && run.plan_json.steps.some(isRunPlanCompeteGroup)) {
+    throw new Error(`run ${run.id} compete continuation requires its canonical worktree`);
+  }
+  return path;
 }
 
 function insertTurn(
@@ -94,8 +99,9 @@ async function startCompeteGroup(
   if (unstarted.length === 0) return;
 
   const binding = state.repositories.forRepository(run.repository_id);
+  if (!binding) throw new Error(`run ${run.id} compete group requires a Git repository`);
   let baseHeadSha = group.base_head_sha;
-  if (binding && baseHeadSha === null) {
+  if (baseHeadSha === null) {
     baseHeadSha = binding.service.snapshot(run.id).headSha;
     updateCompeteGroupBase(state.db, group.id, baseHeadSha);
   }
@@ -104,28 +110,24 @@ async function startCompeteGroup(
   let contexts: TurnContext[];
   try {
     contexts = unstarted.map((competitor) => {
-      let worktreePath: string | null = null;
-      if (binding) {
-        const worktree = binding.service.acquire({
-          owner: competitor.id,
-          branch: `${run.branch}--compete-${competitor.id}`,
-          baseRef: run.branch,
-        });
-        acquiredOwners.push(competitor.id);
-        attachStepWorktree(state.db, competitor.id, worktree.id);
-        worktreePath = worktree.path;
-      }
-      return insertTurn(state, run, competitor, worktreePath);
+      const worktree = binding.service.acquire({
+        owner: competitor.id,
+        branch: `${run.branch}--compete-${competitor.id}`,
+        baseRef: run.branch,
+      });
+      acquiredOwners.push(competitor.id);
+      attachStepWorktree(state.db, competitor.id, worktree.id);
+      return insertTurn(state, run, competitor, worktree.path);
     });
   } catch (error) {
     for (const owner of acquiredOwners) {
-      if (binding?.service.get(owner)) binding.service.cleanup(owner);
+      if (binding.service.get(owner)) binding.service.cleanup(owner);
     }
-    updateCompeteGroupStatus(state.db, group.id, "failed");
+    driveCompeteGroupTo(state.db, group.id, group.status, "failed");
     throw error;
   }
   if (group.status === "queued" || group.status === "awaiting_human") {
-    updateCompeteGroupStatus(state.db, group.id, "running");
+    driveCompeteGroupTo(state.db, group.id, group.status, "running");
   }
   const launches = contexts.map((ctx) => scheduleTurn(state, ctx));
   await launches[0];

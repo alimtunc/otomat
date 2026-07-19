@@ -19,7 +19,7 @@ const fixedClock = () => RUN_EPOCH_MS;
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "otomat-fake-"));
-  adapter = new FakeRuntimeAdapter(fixedClock);
+  adapter = new FakeRuntimeAdapter(fixedClock, null, "test-instance");
 });
 
 afterEach(() => {
@@ -28,7 +28,7 @@ afterEach(() => {
 
 const input = () => runtimeRunInput({ run_dir: dir, prompt: "do the thing" });
 
-const sessionRef = () => runtimeSessionRef("fake-session-run-1");
+const sessionRef = () => runtimeSessionRef("fake-session-sess-1");
 
 const liveSignal = (): AbortSignal => new AbortController().signal;
 
@@ -54,7 +54,7 @@ describe("FakeRuntimeAdapter.run", () => {
 
     expect(runtimeFinalStateSchema.parse(final)).toEqual(final);
     expect(final.status).toBe("completed");
-    expect(final.provider_session_id).toBe("fake-session-run-1");
+    expect(final.provider_session_id).toBe("fake-session-sess-1");
     expect(final.usage).not.toBeNull();
     expect(sink.events).toHaveLength(10);
     expect(final.event_count).toBe(sink.events.length);
@@ -93,12 +93,12 @@ describe("FakeRuntimeAdapter.run", () => {
   it("is deterministic: a fresh adapter replays byte-identical events", async () => {
     const a = new MemorySink();
     const b = new MemorySink();
-    await new FakeRuntimeAdapter(fixedClock).run(
+    await new FakeRuntimeAdapter(fixedClock, null, "deterministic-instance").run(
       { ...input(), run_dir: mkdtempSync(join(tmpdir(), "otomat-a-")) },
       a,
       liveSignal(),
     );
-    await new FakeRuntimeAdapter(fixedClock).run(
+    await new FakeRuntimeAdapter(fixedClock, null, "deterministic-instance").run(
       { ...input(), run_dir: mkdtempSync(join(tmpdir(), "otomat-b-")) },
       b,
       liveSignal(),
@@ -143,7 +143,11 @@ describe("FakeRuntimeAdapter.run", () => {
     expect(existsSync(join(dir, "events.jsonl"))).toBe(false);
 
     const jsonl = new JsonlEventSink(join(dir, "events.jsonl"));
-    await new FakeRuntimeAdapter(fixedClock).run(input(), jsonl, liveSignal());
+    await new FakeRuntimeAdapter(fixedClock, null, "test-instance").run(
+      input(),
+      jsonl,
+      liveSignal(),
+    );
     jsonl.close();
     expect(readEventsJsonl(join(dir, "events.jsonl"))).toEqual(sink.events);
   });
@@ -164,6 +168,42 @@ describe("FakeRuntimeAdapter.run", () => {
     );
     const ids = [...sinkA.events, ...sinkB.events].map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("keeps ids unique when a fresh worker resumes the same agent session", async () => {
+    const firstTurn = new MemorySink();
+    const resumedTurn = new MemorySink();
+    await new FakeRuntimeAdapter(fixedClock, null, "worker-a").run(
+      input(),
+      firstTurn,
+      liveSignal(),
+    );
+    await new FakeRuntimeAdapter(fixedClock, null, "worker-b").resume(
+      sessionRef(),
+      { prompt: "resume", run_dir: dir },
+      resumedTurn,
+      liveSignal(),
+    );
+
+    const ids = [...firstTurn.events, ...resumedTurn.events].map((event) => event.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("assigns a distinct provider session to each competing agent session", async () => {
+    const first = new MemorySink();
+    const second = new MemorySink();
+    const firstFinal = await new FakeRuntimeAdapter(fixedClock).run(
+      runtimeRunInput({ run_dir: dir, agent_session_id: "candidate-a" }),
+      first,
+      liveSignal(),
+    );
+    const secondFinal = await new FakeRuntimeAdapter(fixedClock).run(
+      runtimeRunInput({ run_dir: dir, agent_session_id: "candidate-b" }),
+      second,
+      liveSignal(),
+    );
+
+    expect(firstFinal.provider_session_id).not.toBe(secondFinal.provider_session_id);
   });
 });
 
@@ -197,7 +237,7 @@ describe("FakeRuntimeAdapter.resume", () => {
     );
 
     expect(final.status).toBe("completed");
-    expect(final.provider_session_id).toBe("fake-session-run-1");
+    expect(final.provider_session_id).toBe("fake-session-sess-1");
     expect(sink.events.length).toBeGreaterThan(0);
   });
 

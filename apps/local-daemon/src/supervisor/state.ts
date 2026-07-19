@@ -22,6 +22,12 @@ export interface InflightProcess {
   turn: { agentSessionId: string };
 }
 
+export interface StartingProcess {
+  runId: string;
+  proc: SessionProcess;
+  turn: { agentSessionId: string };
+}
+
 export interface SupervisorState {
   db: Db;
   dataDir: string;
@@ -31,6 +37,8 @@ export interface SupervisorState {
   afterSettle: ((outcome: ReconcileOutcome) => void) | null;
   slots: Semaphore;
   inflight: Map<string, InflightProcess>;
+  /** Spawned but gated workers whose durable identity is still being recorded. */
+  starting: Map<string, StartingProcess>;
   /** Runs whose abort owns the settle, so the exit monitor never races a second finalize. */
   aborting: Set<string>;
   /** Session ids reserved between the spawn guard and `inflight.set`. */
@@ -55,6 +63,7 @@ export function createState(config: SupervisorConfig): SupervisorState {
     afterSettle: config.afterSettle ?? null,
     slots: new Semaphore(config.concurrency ?? DEFAULT_CONCURRENCY),
     inflight: new Map(),
+    starting: new Map(),
     aborting: new Set(),
     claiming: new Map(),
     pending: new Set(),
@@ -69,8 +78,13 @@ export function hasRunActivity(state: SupervisorState, runId: string): boolean {
   return [...state.claiming.values()].some((claimRunId) => claimRunId === runId);
 }
 
-export function inflightForRun(state: SupervisorState, runId: string): InflightProcess[] {
-  return [...state.inflight.values()].filter((handle) => handle.runId === runId);
+export function processesForRun(
+  state: SupervisorState,
+  runId: string,
+): Array<InflightProcess | StartingProcess> {
+  return [...state.starting.values(), ...state.inflight.values()].filter(
+    (handle) => handle.runId === runId,
+  );
 }
 
 /** A failing settle listener must never break the settle itself (or the exit monitor). */

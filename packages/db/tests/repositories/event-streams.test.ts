@@ -1,12 +1,7 @@
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { schema } from "#db/index";
-import {
-  advanceEventStreamCursor,
-  ensureEventStream,
-  EventStreamConflictError,
-  getEventStream,
-} from "#db/repositories/event-streams";
+import { ensureEventStream, EventStreamConflictError } from "#db/repositories/event-streams";
 
 import { createTempDb, seedProject, type TempDb } from "../support/temp-db.js";
 
@@ -62,18 +57,4 @@ it("rejects reattaching a stream id to another file or run", () => {
       file_path: "/tmp/other/events.jsonl",
     }),
   ).toThrow(EventStreamConflictError);
-});
-
-it("advances the cursor monotonically", () => {
-  ensureEventStream(t.client.db, {
-    id: "session:s1",
-    run_id: "r1",
-    file_path: "/tmp/r1/s1/events.jsonl",
-  });
-
-  advanceEventStreamCursor(t.client.db, "session:s1", 120);
-  expect(getEventStream(t.client.db, "session:s1")?.byte_offset).toBe(120);
-  expect(() => advanceEventStreamCursor(t.client.db, "session:s1", 119)).toThrow(
-    EventStreamConflictError,
-  );
 });

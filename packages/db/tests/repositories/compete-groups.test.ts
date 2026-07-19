@@ -92,6 +92,17 @@ it("claims exactly one succeeded candidate and repeats the same choice idempoten
   );
 });
 
+it("rejects retrying a reserved winner after promotion reached a terminal state", () => {
+  seedReadyGroup();
+  claimCompeteWinner(t.client.db, "g1", "candidate-a");
+  updateCompeteGroupStatus(t.client.db, "g1", "failed");
+
+  expect(() => claimCompeteWinner(t.client.db, "g1", "candidate-a")).toThrow(
+    CompeteWinnerConflictError,
+  );
+  expect(getCompeteGroup(t.client.db, "g1")?.status).toBe("failed");
+});
+
 it("rejects a candidate outside the group or without a succeeded result", () => {
   seedReadyGroup();
   insertStepRun(t.client.db, {

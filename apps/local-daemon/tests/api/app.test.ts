@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import type { RuntimeEvent } from "#runtime";
-import { RunNotResumableError } from "#supervisor";
+import { CompeteRepositoryRequiredError, RunNotResumableError } from "#supervisor";
 
 import { makeApiApp, post, request, runRow } from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
@@ -175,6 +175,18 @@ it("delegates start-run to the injected launchRun dep", async () => {
   expect(res.status).toBe(201);
   expect(received).toEqual({ prompt: "do it" });
   expect(((await res.json()) as RunContract).id).toBe("run-x");
+});
+
+it("returns a conflict when compete cannot obtain isolated repository worktrees", async () => {
+  const app = makeApiApp(t, {
+    launchRun: async () => {
+      throw new CompeteRepositoryRequiredError("p1");
+    },
+  });
+  const res = await post(app, "/api/runs", { prompt: "goal" });
+
+  expect(res.status).toBe(409);
+  expect(await res.json()).toEqual({ error: "compete_repository_required" });
 });
 
 it("delegates resume to the supervisor for a known run", async () => {

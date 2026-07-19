@@ -1,10 +1,13 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
   killProcessGroup,
   WORKER_JOB_ENV,
+  WORKER_START_TOKEN_ENV,
   type ProcessExit,
   type SessionProcess,
   type SpawnSession,
@@ -13,7 +16,7 @@ import {
 
 const FAKE_WORKER = join(dirname(fileURLToPath(import.meta.url)), "fake-worker.mjs");
 
-function toHandle(child: ReturnType<typeof spawn>): SessionProcess {
+function toHandle(child: ReturnType<typeof spawn>, start: SessionProcess["start"]): SessionProcess {
   const pid = child.pid ?? -1;
   const exited = new Promise<ProcessExit>((resolve) => {
     child.on("exit", (code, signal) => resolve({ code, signal }));
@@ -23,6 +26,7 @@ function toHandle(child: ReturnType<typeof spawn>): SessionProcess {
     pid,
     pgid: pid,
     exited,
+    start,
     kill: (signal) => killProcessGroup(pid, signal),
   };
 }
@@ -36,19 +40,24 @@ export function workerSpawn(
   const behaviors = Array.isArray(behavior) ? behavior : [behavior];
   const spawnFn = (job: SupervisedJob): SessionProcess => {
     const turnBehavior = behaviors[Math.min(spawnFn.calls, behaviors.length - 1)];
+    const startToken = randomUUID();
     spawnFn.calls += 1;
     spawnFn.jobs.push(job);
     const child = spawn(process.execPath, [FAKE_WORKER], {
       env: {
         ...process.env,
         [WORKER_JOB_ENV]: JSON.stringify(job),
+        [WORKER_START_TOKEN_ENV]: startToken,
         FAKE_WORKER_BEHAVIOR: turnBehavior,
       },
       detached: true,
       stdio: "ignore",
     });
     child.unref();
-    return toHandle(child);
+    return toHandle(child, () => {
+      mkdirSync(job.runDir, { recursive: true });
+      writeFileSync(join(job.runDir, `.worker-start-${startToken}`), "ready", { flag: "wx" });
+    });
   };
   spawnFn.calls = 0;
   spawnFn.jobs = [] as SupervisedJob[];

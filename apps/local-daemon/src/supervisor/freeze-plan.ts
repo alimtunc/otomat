@@ -53,7 +53,7 @@ function freezeNode(
         id: mappedStepId(idByRequestId, competitor.id),
         name: competitor.name,
         agent: runtimes.get(competitor.id) ?? null,
-        prompt: competitor.prompt,
+        prompt: `Shared objective:\n${node.name}\n\nCandidate instructions:\n${competitor.prompt}`,
       })),
     };
   }

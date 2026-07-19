@@ -15,6 +15,10 @@ export const ISSUE_SOURCES = ["local", "linear", "github"] as const;
 export const issueSourceSchema = z.enum(ISSUE_SOURCES);
 export type IssueSource = (typeof ISSUE_SOURCES)[number];
 
+export const WORKTREE_STATUSES = ["active", "archived", "removed"] as const;
+export const worktreeStatusSchema = z.enum(WORKTREE_STATUSES);
+export type WorktreeStatus = (typeof WORKTREE_STATUSES)[number];
+
 export const issueContractSchema = z.object({
   id: z.string(),
   project_id: z.string(),
@@ -88,7 +92,7 @@ export const stepRunContractSchema = z.object({
   compete_group_id: z.string().nullable().default(null),
   worktree_id: z.string().nullable().default(null),
   branch: z.string().nullable().default(null),
-  worktree_status: z.enum(["active", "archived", "removed"]).nullable().default(null),
+  worktree_status: worktreeStatusSchema.nullable().default(null),
 });
 export type StepRunContract = z.infer<typeof stepRunContractSchema>;
 

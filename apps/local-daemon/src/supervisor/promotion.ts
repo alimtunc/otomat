@@ -60,6 +60,10 @@ export async function selectCompeteWinner(
   stepRunId: string,
 ): Promise<RunRow> {
   const scoped = requireSelectionScope(state, runId, groupId);
+  const service = state.repositories.forRepository(scoped.run.repository_id)?.service;
+  if (!service) {
+    throw new CompeteWinnerConflictError(groupId, "competition repository is unavailable");
+  }
   if (scoped.group.status === "selected") {
     if (scoped.group.winner_step_run_id !== stepRunId) {
       throw new CompeteWinnerConflictError(groupId, "another winner is already selected");
@@ -74,15 +78,12 @@ export async function selectCompeteWinner(
   }
 
   const claimed = claimCompeteWinner(state.db, groupId, stepRunId);
-  const service = state.repositories.forRepository(scoped.run.repository_id)?.service;
-  if (service) {
-    if (claimed.base_head_sha === null) {
-      throw new CompeteWinnerConflictError(groupId, "competition base commit is missing");
-    }
-    service.promote(stepRunId, runId, claimed.base_head_sha);
+  if (claimed.base_head_sha === null) {
+    throw new CompeteWinnerConflictError(groupId, "competition base commit is missing");
   }
+  service.promote(stepRunId, runId, claimed.base_head_sha);
 
-  driveCompeteGroupTo(state.db, groupId, "promoting", "selected");
+  driveCompeteGroupTo(state.db, groupId, claimed.status, "selected");
   const current = getRun(state.db, runId);
   if (!current) throw new Error(`run ${runId} vanished after winner promotion`);
   driveRunTo(state.db, runId, current.status, "running", new Date().toISOString());
@@ -117,10 +118,9 @@ export function recoverCompeteSelections(state: SupervisorState): ReconcileOutco
       try {
         if (group.status === "promoting") {
           const service = state.repositories.forRepository(run.repository_id)?.service;
-          if (service) {
-            if (!group.base_head_sha) throw new Error("competition base commit is missing");
-            service.promote(winnerId, run.id, group.base_head_sha);
-          }
+          if (!service) throw new Error("competition repository is unavailable");
+          if (!group.base_head_sha) throw new Error("competition base commit is missing");
+          service.promote(winnerId, run.id, group.base_head_sha);
           driveCompeteGroupTo(state.db, group.id, group.status, "selected");
         }
         const current = getRun(state.db, run.id);

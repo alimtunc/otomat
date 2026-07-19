@@ -15,7 +15,12 @@ import {
 } from "@otomat/ui";
 import { useSelectCompeteWinner } from "@web/api/runs/mutations";
 import { useCompeteCandidateDiff } from "@web/api/runs/queries";
-import { eventSummary } from "@web/components/runs/timeline/event-summary";
+import {
+  CandidateProviderUsage,
+  CandidateRuntimeActivity,
+} from "@web/components/runs/compete/candidate-runtime-evidence";
+import { CandidateTestEvidence } from "@web/components/runs/compete/candidate-test-evidence";
+import { collectTestEvidence } from "@web/components/runs/compete/test-evidence";
 import { useState } from "react";
 
 function candidateEvents(
@@ -104,7 +109,8 @@ function CandidateEvidence({
   onMark: () => void;
 }) {
   const session = detail.sessions.find((entry) => entry.step_run_id === candidate.id);
-  const activity = candidateEvents(detail, candidate.id, events).slice(-4).toReversed();
+  const evidence = candidateEvents(detail, candidate.id, events);
+  const tests = collectTestEvidence(evidence);
   const canWin = candidate.status === "succeeded" && group.status === "awaiting_selection";
 
   return (
@@ -148,22 +154,10 @@ function CandidateEvidence({
           <CandidateDiffEvidence runId={detail.run.id} groupId={group.id} stepId={candidate.id} />
         </section>
 
-        <section>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-tertiary">
-            Latest activity
-          </p>
-          {activity.length === 0 ? (
-            <p className="text-xs text-text-tertiary">No runtime evidence received.</p>
-          ) : (
-            <ul className="space-y-1 text-xs text-text-secondary">
-              {activity.map((event) => (
-                <li key={event.id} className="truncate font-mono text-[10px]">
-                  {eventSummary(event)}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <CandidateTestEvidence tests={tests} />
+
+        <CandidateProviderUsage events={evidence} />
+        <CandidateRuntimeActivity events={evidence} />
       </div>
 
       <footer className="border-t border-border-subtle p-2.5">

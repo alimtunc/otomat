@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 
+import { releaseWorkerStart, WORKER_START_TOKEN_ENV } from "./start-gate.js";
 import {
   WORKER_JOB_ENV,
   type ProcessExit,
@@ -51,8 +53,13 @@ export function killProcessGroup(pgid: number, signal: NodeJS.Signals): void {
 // Re-execs the daemon entrypoint detached into its own group so the child outlives a daemon crash; execArgv carries dev loader flags so it works from src and dist.
 export function createReexecSpawn(mainScript: string): (job: SupervisedJob) => SessionProcess {
   return (job) => {
+    const startToken = randomUUID();
     const child = spawn(process.execPath, [...process.execArgv, mainScript], {
-      env: { ...process.env, [WORKER_JOB_ENV]: JSON.stringify(job) },
+      env: {
+        ...process.env,
+        [WORKER_JOB_ENV]: JSON.stringify(job),
+        [WORKER_START_TOKEN_ENV]: startToken,
+      },
       detached: true,
       stdio: "ignore",
     });
@@ -71,6 +78,7 @@ export function createReexecSpawn(mainScript: string): (job: SupervisedJob) => S
       pid,
       pgid: pid,
       exited,
+      start: () => releaseWorkerStart(job.runDir, startToken),
       kill: (signal) => killProcessGroup(pid, signal),
     };
   };

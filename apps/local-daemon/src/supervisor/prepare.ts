@@ -42,6 +42,14 @@ export class ProjectNotFoundError extends Error {
   }
 }
 
+/** Compete candidates require isolated Git worktrees and cannot run in a repository-less project. */
+export class CompeteRepositoryRequiredError extends Error {
+  constructor(projectId: string) {
+    super(`project ${projectId} needs a usable Git repository for compete groups`);
+    this.name = "CompeteRepositoryRequiredError";
+  }
+}
+
 /** Ad-hoc launches pin an explicit valid project; otherwise they use the boot workspace. */
 function resolveProjectId(db: Db, defaultProjectId: string, request: StartRunRequest): string {
   if (!request.project_id) return defaultProjectId;
@@ -74,23 +82,25 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
   const defaultRuntime = requireAvailableRuntime(request.runtime);
   const stepRuntimes = resolveStepRuntimes(request, defaultRuntime);
 
-  const issueId =
-    request.issue_id ??
-    insertAdHocIssue(db, resolveProjectId(db, defaultProjectId, request), request);
-  const issue = getIssue(db, issueId);
-  if (!issue) throw new Error(`issue ${issueId} not found`);
-  const prompt = request.prompt ?? issue.title;
+  const existingIssue = request.issue_id ? getIssue(db, request.issue_id) : undefined;
+  if (request.issue_id && !existingIssue) throw new Error(`issue ${request.issue_id} not found`);
+  const projectId = existingIssue?.project_id ?? resolveProjectId(db, defaultProjectId, request);
+  const prompt = request.prompt ?? existingIssue?.title ?? "";
   // The issue owns the project, so issue-based launches always resolve that project's repository.
-  const binding = repositories.forProject(issue.project_id);
+  const binding = repositories.forProject(projectId);
 
   const runId = randomUUID();
   const branch = runBranchName(runId);
   const plan = freezePlan(request, defaultRuntime, stepRuntimes, prompt);
+  if (plan.steps.some(isRunPlanCompeteGroup) && !binding) {
+    throw new CompeteRepositoryRequiredError(projectId);
+  }
   for (const node of plan.steps) {
     const executable = isRunPlanCompeteGroup(node) ? node.compete : [node];
     for (const step of executable) ensureRuntimeAgent(db, step.agent ?? defaultRuntime);
   }
   ensureRuntimeAgent(db, defaultRuntime);
+  const issueId = existingIssue?.id ?? insertAdHocIssue(db, projectId, request);
 
   // Acquired before the run row exists so a git failure aborts the launch cleanly (no phantom run).
   const worktree = binding ? binding.service.acquire({ owner: runId, branch }) : null;

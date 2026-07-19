@@ -38,7 +38,9 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
       state.shuttingDown = true;
       // Signal every live worker group; each worker's own SIGTERM handler settles its turn on exit.
       await Promise.all(
-        [...state.inflight.values()].map((handle) => terminateGracefully(handle.proc, graceMs)),
+        [...state.starting.values(), ...state.inflight.values()].map((handle) =>
+          terminateGracefully(handle.proc, graceMs),
+        ),
       );
       await Promise.all(state.pending);
     },

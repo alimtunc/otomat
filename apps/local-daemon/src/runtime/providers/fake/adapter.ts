@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { appendFileSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -17,6 +18,14 @@ import type { RuntimeSink } from "#runtime/sinks";
 export const FAKE_ADAPTER_ID = FAKE_RUNTIME_ID;
 
 const FAKE_WORK_FILENAME = "fake-implementation.md";
+
+function configuredBarrierPath(env: NodeJS.ProcessEnv = process.env): string | null {
+  return env.OTOMAT_FAKE_RUNTIME_BARRIER_PATH || null;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 /** The fake turn leaves real edits in its `cwd` worktree so the canonical git diff has honest content to show. */
 function writeFakeWork(cwd: string | null | undefined, prompt: string, followUp: boolean): void {
@@ -62,8 +71,8 @@ interface TurnContext {
   provider_session_id: string;
 }
 
-function providerSessionId(runId: string): string {
-  return `fake-session-${runId}`;
+function providerSessionId(agentSessionId: string): string {
+  return `fake-session-${agentSessionId}`;
 }
 
 function buildEvent(
@@ -72,10 +81,10 @@ function buildEvent(
   index: number,
   spec: EventSpec,
   occurredAtMs: number,
+  instanceId: string,
 ): RuntimeEvent {
   return {
-    // Session- and pid-scoped so a fresh per-turn worker never collides with an earlier turn's ledger rows.
-    id: `${ctx.agent_session_id}:${process.pid}:${turn}:${index}`,
+    id: `${ctx.agent_session_id}:${instanceId}:${turn}:${index}`,
     run_id: ctx.run_id,
     step_run_id: ctx.step_run_id,
     agent_session_id: ctx.agent_session_id,
@@ -133,7 +142,7 @@ function resumeSpecs(prompt: string, providerSession: string): EventSpec[] {
 }
 
 /**
- * Test adapter with deterministic ids and payloads; each event is stamped from
+ * Test adapter with collision-resistant ids and deterministic payloads; each event is stamped from
  * the injected clock (`Date.now` by default) at emission. Exercises the full
  * sink pipeline — provider session, logs, tool calls, permission round-trip,
  * usage — across all three fidelity tiers. Durability is the caller's sink concern, as with a real
@@ -154,8 +163,15 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
 
   /** Monotonic per-instance turn counter: keeps event ids unique across run/resume turns. */
   private turn = 0;
+  private readonly instanceId: string;
 
-  constructor(private readonly clock: () => number = Date.now) {}
+  constructor(
+    private readonly clock: () => number = Date.now,
+    private readonly barrierPath = configuredBarrierPath(),
+    instanceId: string = randomUUID(),
+  ) {
+    this.instanceId = instanceId;
+  }
 
   async run(
     input: RuntimeRunInput,
@@ -163,7 +179,7 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
     writeFakeWork(input.cwd, input.prompt, false);
-    const providerSession = providerSessionId(input.run_id);
+    const providerSession = providerSessionId(input.agent_session_id);
     const ctx: TurnContext = {
       run_id: input.run_id,
       step_run_id: input.step_run_id,
@@ -180,7 +196,8 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
     writeFakeWork(input.cwd, input.prompt, true);
-    const providerSession = session.provider_session_id ?? providerSessionId(session.run_id);
+    const providerSession =
+      session.provider_session_id ?? providerSessionId(session.agent_session_id);
     const ctx: TurnContext = {
       run_id: session.run_id,
       step_run_id: session.step_run_id,
@@ -194,22 +211,25 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     // Out-of-band abort is observed through the AbortSignal passed to run/resume.
   }
 
-  private emitTurn(
+  private async emitTurn(
     ctx: TurnContext,
     specs: EventSpec[],
     sink: RuntimeSink,
     signal: AbortSignal,
-  ): RuntimeFinalState {
+  ): Promise<RuntimeFinalState> {
     const turn = this.turn++;
     let emitted = 0;
     for (const spec of specs) {
       if (signal.aborted) {
-        sink.emit(buildEvent(ctx, turn, emitted, abortSpec(), this.clock()));
+        sink.emit(buildEvent(ctx, turn, emitted, abortSpec(), this.clock(), this.instanceId));
         emitted += 1;
         return canceledState(ctx.provider_session_id, emitted);
       }
-      sink.emit(buildEvent(ctx, turn, emitted, spec, this.clock()));
+      sink.emit(buildEvent(ctx, turn, emitted, spec, this.clock(), this.instanceId));
       emitted += 1;
+      if (emitted === 1 && this.barrierPath) {
+        while (!signal.aborted && !existsSync(this.barrierPath)) await delay(10);
+      }
     }
     return {
       status: "completed",

@@ -7,7 +7,11 @@ import {
 import { Hono } from "hono";
 
 import { RuntimeUnavailableError, UnknownRuntimeError } from "#runtime";
-import { ProjectNotFoundError, RunNotResumableError } from "#supervisor";
+import {
+  CompeteRepositoryRequiredError,
+  ProjectNotFoundError,
+  RunNotResumableError,
+} from "#supervisor";
 
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
@@ -44,6 +48,9 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
           { error: "runtime_unavailable", runtime: error.runtime, reason: error.reason },
           409,
         );
+      }
+      if (error instanceof CompeteRepositoryRequiredError) {
+        return c.json({ error: "compete_repository_required" }, 409);
       }
       console.error("[otomat] launch run failed", error);
       return c.json({ error: "run_launch_failed" }, 500);

@@ -2,7 +2,6 @@ import { eq } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { eventStreams } from "../schema/index.js";
-import { touch } from "./touch.js";
 
 export type NewEventStream = typeof eventStreams.$inferInsert;
 export type EventStreamRow = typeof eventStreams.$inferSelect;
@@ -26,17 +25,4 @@ export function ensureEventStream(db: Db, value: NewEventStream): EventStreamRow
     throw new EventStreamConflictError(value.id, "already attached to another run or file");
   }
   return stream;
-}
-
-export function advanceEventStreamCursor(db: Db, id: string, byteOffset: number): void {
-  const stream = getEventStream(db, id);
-  if (!stream) throw new EventStreamConflictError(id, "not found");
-  if (byteOffset < stream.byte_offset) {
-    throw new EventStreamConflictError(id, "cursor cannot move backwards");
-  }
-  if (byteOffset === stream.byte_offset) return;
-  db.update(eventStreams)
-    .set(touch({ byte_offset: byteOffset }))
-    .where(eq(eventStreams.id, id))
-    .run();
 }

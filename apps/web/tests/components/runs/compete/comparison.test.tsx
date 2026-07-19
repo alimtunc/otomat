@@ -135,6 +135,106 @@ it("compares honest candidate evidence and requires an explicit confirm", async 
             agent_session_id: "session-direct",
             payload: { text: "implemented direct path" },
           }),
+          envelope({
+            id: "usage-direct",
+            step_run_id: "direct",
+            agent_session_id: "session-direct",
+            type: "runtime.usage",
+            source: "codex",
+            seq: 1,
+            payload: {
+              usage: {
+                model: "gpt-5",
+                input_tokens: 1200,
+                output_tokens: 340,
+                cost_usd: 0.042,
+              },
+            },
+          }),
+          ...Array.from({ length: 5 }, (_, index) =>
+            envelope({
+              id: `later-direct-${index}`,
+              step_run_id: "direct",
+              agent_session_id: "session-direct",
+              seq: index + 2,
+              payload: { text: `later evidence ${index}` },
+            }),
+          ),
+          envelope({
+            id: "test-call-direct",
+            step_run_id: "direct",
+            agent_session_id: "session-direct",
+            type: "runtime.tool_call",
+            source: "codex",
+            seq: 7,
+            payload: {
+              phase: "call",
+              tool: "command_execution",
+              tool_use_id: "test-command-1",
+              args: { command: "/bin/zsh -lc 'pnpm test:e2e'" },
+            },
+          }),
+          envelope({
+            id: "test-result-direct",
+            step_run_id: "direct",
+            agent_session_id: "session-direct",
+            type: "runtime.tool_call",
+            source: "codex",
+            seq: 8,
+            payload: {
+              phase: "result",
+              tool: "command_execution",
+              tool_use_id: "test-command-1",
+              is_error: false,
+              result: { exit_code: 0, output: "96 tests passed" },
+            },
+          }),
+          envelope({
+            id: "non-test-call-direct",
+            step_run_id: "direct",
+            agent_session_id: "session-direct",
+            type: "runtime.tool_call",
+            source: "codex",
+            seq: 9,
+            payload: {
+              phase: "call",
+              tool: "command_execution",
+              tool_use_id: "non-test-command",
+              args: { command: "echo test" },
+            },
+          }),
+          ...["echo vitest", "rg pytest", "npm install vitest"].map((command, index) =>
+            envelope({
+              id: `runner-mention-${index}`,
+              step_run_id: "direct",
+              agent_session_id: "session-direct",
+              type: "runtime.tool_call",
+              source: "codex",
+              seq: 10 + index,
+              payload: {
+                phase: "call",
+                tool: "command_execution",
+                tool_use_id: `runner-mention-${index}`,
+                args: { command },
+              },
+            }),
+          ),
+          envelope({
+            id: "usage-layered",
+            step_run_id: "layered",
+            agent_session_id: "session-layered",
+            type: "runtime.usage",
+            source: "codex",
+            seq: 13,
+            payload: {
+              usage: {
+                model: null,
+                input_tokens: 90,
+                output_tokens: 12,
+                cost_usd: null,
+              },
+            },
+          }),
         ]}
       />,
     );
@@ -142,6 +242,14 @@ it("compares honest candidate evidence and requires an explicit confirm", async 
 
   expect(container.textContent).toContain("Otomat does not score candidates");
   expect(container.textContent).toContain("implemented direct path");
+  expect(container.textContent).toContain("in 1.2k · out 340 · $0.042 · gpt-5");
+  expect(container.textContent).toContain("Test passed");
+  expect(container.textContent).toContain("Test evidence · 1");
+  expect(container.textContent).not.toContain("Test evidence · 2");
+  expect(container.textContent).toContain("/bin/zsh -lc 'pnpm test:e2e'");
+  expect(container.textContent).toContain("exit 0");
+  expect(container.textContent).toContain("96 tests passed");
+  expect(container.textContent).toContain("No cost reported.");
   expect(container.textContent).toContain("+direct");
   expect(selectWinner).not.toHaveBeenCalled();
 

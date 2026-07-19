@@ -1,7 +1,11 @@
 import { getRun } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
+import { createRepositoryResolver } from "#git";
+import { createSupervisor, isProcessAlive, type SpawnSession, type Supervisor } from "#supervisor";
+
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { workerSpawn } from "../support/spawn.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
@@ -39,5 +43,42 @@ it("shutdown is a no-op when nothing is in flight", async () => {
   await supervisor.settle();
 
   await expect(supervisor.shutdown(50)).resolves.toBeUndefined();
+  expect(getRun(fix.db, run.id)?.status).not.toBe("running");
+});
+
+it("never releases a spawned worker when shutdown lands during durable startup", async () => {
+  const worker = workerSpawn("linger");
+  let supervisor: Supervisor;
+  let shuttingDown: Promise<void> | null = null;
+  let released = 0;
+  let workerPid = -1;
+  const spawn: SpawnSession = (job) => {
+    const proc = worker(job);
+    workerPid = proc.pid;
+    const release = proc.start;
+    proc.start = () => {
+      released += 1;
+      release();
+    };
+    shuttingDown = supervisor.shutdown(50);
+    return proc;
+  };
+  supervisor = createSupervisor({
+    db: fix.db,
+    dataDir: fix.dataDir,
+    defaultProjectId: "p1",
+    spawn,
+    repositories: createRepositoryResolver({
+      db: fix.db,
+      worktreesRoot: `${fix.dataDir}/worktrees`,
+    }),
+  });
+
+  const run = await supervisor.start({ prompt: "shutdown in the start gate" });
+  if (!shuttingDown) throw new Error("shutdown did not start during spawn");
+  await shuttingDown;
+
+  expect(released).toBe(0);
+  expect(isProcessAlive(workerPid)).toBe(false);
   expect(getRun(fix.db, run.id)?.status).not.toBe("running");
 });

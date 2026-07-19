@@ -8,7 +8,7 @@ import { eventsForSession, findFinalStatus } from "./evidence.js";
 import { buildTerminalMarker } from "./markers.js";
 import { terminateGracefully } from "./process.js";
 import { resolveTurnSession, settleRun } from "./settle/index.js";
-import { inflightForRun, notifyAfterSettle, type SupervisorState } from "./state.js";
+import { notifyAfterSettle, processesForRun, type SupervisorState } from "./state.js";
 import { driveIdleRunTo, driveRunConvergence } from "./transitions.js";
 
 /** Grace between a graceful `SIGTERM` and a forced `SIGKILL` during abort. */
@@ -28,7 +28,7 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
 
   state.aborting.add(runId);
   try {
-    const handles = inflightForRun(state, runId);
+    const handles = processesForRun(state, runId);
     await Promise.all(handles.map((handle) => terminateGracefully(handle.proc, ABORT_GRACE_MS)));
 
     const now = new Date().toISOString();

@@ -40,6 +40,8 @@ export interface SessionProcess {
   pid: number;
   pgid: number;
   exited: Promise<ProcessExit>;
+  /** Releases the worker after the parent has durably recorded its process identity. */
+  start(): void;
   kill(signal: NodeJS.Signals): void;
 }
 

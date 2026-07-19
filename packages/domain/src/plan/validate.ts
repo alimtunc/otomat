@@ -48,6 +48,7 @@ export const runPlanCompeteGroupInputSchema = z
         RUN_PLAN_STEP_ID_PATTERN,
         "Step ids are lowercase alphanumerics and dashes, 64 chars max",
       ),
+    /** Shared objective pursued by every competitor. */
     name: z.string().trim().min(1).max(RUN_PLAN_STEP_NAME_MAX_LENGTH),
     depends_on: z.array(z.string()).max(RUN_PLAN_MAX_STEPS - 1),
     compete: z

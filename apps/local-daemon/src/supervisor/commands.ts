@@ -4,21 +4,28 @@ import {
   listAgentSessionsForRun,
   listStepRunsForRun,
   type AgentSessionRow,
+  type CompeteGroupRow,
   type Db,
   type RunRow,
-  updateCompeteGroupStatus,
   type StepRunRow,
 } from "@otomat/db";
-import { RUN_FOLLOW_UP_STATES, type RunState, type StartRunRequest } from "@otomat/domain";
+import {
+  isRunPlanCompeteGroup,
+  RUN_FOLLOW_UP_STATES,
+  type RunState,
+  type StartRunRequest,
+} from "@otomat/domain";
 
 import { sessionDir } from "#events";
-import { createRuntimeAdapter, isKnownRuntimeId } from "#runtime";
+import { createRuntimeAdapter, isKnownRuntimeId, type KnownRuntimeId } from "#runtime";
 
 import { scheduleTurn, startNextReadyStep } from "./advance.js";
 import { spawnTurn } from "./lifecycle.js";
 import { prepareRun } from "./prepare.js";
 import { runtimeForRun } from "./runtime-selection.js";
 import { hasRunActivity, type SupervisorState } from "./state.js";
+import { driveCompeteGroupTo } from "./transitions.js";
+import type { TurnContext } from "./types.js";
 
 /** A resume the caller got wrong (bad state, concurrent turn, no session) — a conflict, not a daemon fault. */
 export class RunNotResumableError extends Error {
@@ -47,7 +54,7 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
     (group) => group.status === "awaiting_human",
   );
   if (interruptedGroup) {
-    return resumeCompeteGroup(state, run, interruptedGroup.id, steps);
+    return resumeCompeteGroup(state, run, interruptedGroup, steps);
   }
   const interrupted = steps.find((step) => step.status === "awaiting_human");
 
@@ -76,52 +83,66 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
 async function resumeCompeteGroup(
   state: SupervisorState,
   run: RunRow,
-  groupId: string,
+  group: CompeteGroupRow,
   steps: readonly StepRunRow[],
 ): Promise<RunRow> {
   const candidates = steps.filter(
-    (step) => step.compete_group_id === groupId && step.status === "awaiting_human",
+    (step) => step.compete_group_id === group.id && step.status === "awaiting_human",
   );
   const sessions = listAgentSessionsForRun(state.db, run.id);
   const planSteps = run.plan_json.steps.flatMap((node) =>
     "compete" in node ? node.compete : [node],
   );
   const service = state.repositories.forRepository(run.repository_id)?.service;
-  const launches = candidates.map((candidate) => {
-    const session = sessions.find(
-      (entry) => entry.step_run_id === candidate.id && entry.provider_session_id !== null,
-    );
-    const planStep = planSteps.find((entry) => entry.id === candidate.id);
-    if (!session || !planStep?.prompt) {
-      throw new RunNotResumableError(`competitor ${candidate.id} has no resumable session`);
-    }
-    const runtime = session.agent_id ?? runtimeForRun(state.db, run);
-    if (
-      runtime === undefined ||
-      !isKnownRuntimeId(runtime) ||
-      !createRuntimeAdapter(runtime).capabilities.resume
-    ) {
-      throw new RunNotResumableError(`run ${run.id} runtime "${runtime}" does not support resume`);
-    }
-    return scheduleTurn(
-      state,
-      {
-        runId: run.id,
-        stepRunId: candidate.id,
-        agentSessionId: session.id,
-        prompt: planStep.prompt,
-        runDir: sessionDir(state.dataDir, run.id, session.id),
-        worktreePath: service?.get(candidate.id)?.path ?? null,
-        runtime,
-      },
-      "resume",
-      session.provider_session_id,
-    );
-  });
-  if (launches.length === 0) {
-    throw new RunNotResumableError(`compete group ${groupId} has no interrupted competitor`);
+  if (!service) {
+    throw new RunNotResumableError(`compete group ${group.id} repository is unavailable`);
   }
-  updateCompeteGroupStatus(state.db, groupId, "running");
+  const contexts = candidates.map(
+    (candidate): { context: TurnContext; providerSessionId: string } => {
+      const session = sessions.find(
+        (entry) => entry.step_run_id === candidate.id && entry.provider_session_id !== null,
+      );
+      const planStep = planSteps.find((entry) => entry.id === candidate.id);
+      if (!session || session.provider_session_id === null || !planStep?.prompt) {
+        throw new RunNotResumableError(`competitor ${candidate.id} has no resumable session`);
+      }
+      const runtime = session.agent_id ?? runtimeForRun(state.db, run);
+      if (runtime === undefined || !isKnownRuntimeId(runtime)) {
+        throw new RunNotResumableError(
+          `run ${run.id} runtime "${runtime}" does not support resume`,
+        );
+      }
+      const knownRuntime: KnownRuntimeId = runtime;
+      if (!createRuntimeAdapter(knownRuntime).capabilities.resume) {
+        throw new RunNotResumableError(
+          `run ${run.id} runtime "${runtime}" does not support resume`,
+        );
+      }
+      const worktreePath = service.get(candidate.id)?.path;
+      if (!worktreePath) {
+        throw new RunNotResumableError(`competitor ${candidate.id} worktree is unavailable`);
+      }
+      return {
+        context: {
+          runId: run.id,
+          stepRunId: candidate.id,
+          agentSessionId: session.id,
+          prompt: planStep.prompt,
+          runDir: sessionDir(state.dataDir, run.id, session.id),
+          worktreePath,
+          runtime: knownRuntime,
+        },
+        providerSessionId: session.provider_session_id,
+      };
+    },
+  );
+  if (contexts.length === 0) {
+    throw new RunNotResumableError(`compete group ${group.id} has no interrupted competitor`);
+  }
+  driveCompeteGroupTo(state.db, group.id, group.status, "running");
+  const launches = contexts.map(({ context, providerSessionId }) =>
+    scheduleTurn(state, context, "resume", providerSessionId),
+  );
   await launches[0];
   return requireRunRow(state.db, run.id, "resume");
 }
@@ -192,6 +213,11 @@ async function spawnFollowUpTurn(
   ) {
     throw new RunNotResumableError(`run ${runId} runtime "${runtime}" does not support resume`);
   }
+  const worktreePath =
+    state.repositories.forRepository(run.repository_id)?.service.get(runId)?.path ?? null;
+  if (worktreePath === null && run.plan_json.steps.some(isRunPlanCompeteGroup)) {
+    throw new RunNotResumableError(`run ${runId} canonical compete worktree is unavailable`);
+  }
 
   await spawnTurn(
     state,
@@ -201,8 +227,7 @@ async function spawnFollowUpTurn(
       agentSessionId: session.id,
       prompt,
       runDir: sessionDir(state.dataDir, runId, session.id),
-      worktreePath:
-        state.repositories.forRepository(run.repository_id)?.service.get(runId)?.path ?? null,
+      worktreePath,
       runtime,
     },
     "resume",

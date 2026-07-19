@@ -50,6 +50,9 @@ it("keeps compete groups valid and dependencies top-level while editing", () => 
   expect(steps[0]?.competitors).toHaveLength(2);
   steps = addWorkflowCompetitor(steps, 0);
   expect(workflowExecutableCount(steps)).toBe(4);
+  steps = removeWorkflowCompetitor(steps, 0, 1);
+  steps = addWorkflowCompetitor(steps, 0);
+  expect(new Set(steps[0]?.competitors.map((competitor) => competitor.key)).size).toBe(3);
 
   const moved = moveWorkflowStep(steps, 1, -1);
   expect(moved[0]?.dependsOn).toEqual([]);

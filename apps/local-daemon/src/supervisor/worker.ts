@@ -12,6 +12,7 @@ import {
 } from "#runtime";
 
 import { buildTerminalMarker } from "./markers.js";
+import { waitForWorkerStart, WORKER_START_TOKEN_ENV } from "./start-gate.js";
 import { WORKER_JOB_ENV, type SupervisedJob } from "./types.js";
 
 const supervisedJobSchema = z.object({
@@ -124,6 +125,11 @@ export async function runWorkerMain(env: NodeJS.ProcessEnv = process.env): Promi
   process.once("SIGINT", onSignal);
 
   try {
+    const startToken = env[WORKER_START_TOKEN_ENV];
+    if (!startToken) throw new Error("worker start token is missing");
+    if (!(await waitForWorkerStart(job.runDir, startToken, controller.signal))) {
+      throw new Error("worker was not released before startup timed out");
+    }
     const final = await runWorkerJob(job, controller.signal);
     writeTerminalMarker(job, final, new Date().toISOString());
     process.exit(final.status === "failed" ? 1 : 0);

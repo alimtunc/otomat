@@ -1,4 +1,4 @@
-import type { CompeteGroupState } from "@otomat/domain";
+import { competeGroupMachine, type CompeteGroupState } from "@otomat/domain";
 import { eq } from "drizzle-orm";
 
 import type { Db } from "../client.js";
@@ -48,7 +48,7 @@ export function claimCompeteWinner(db: Db, groupId: string, stepRunId: string): 
     (tx) => {
       const group = tx.select().from(competeGroups).where(eq(competeGroups.id, groupId)).get();
       if (!group) throw new CompeteWinnerConflictError(groupId, "group not found");
-      if (group.winner_step_run_id === stepRunId) return group;
+      if (group.winner_step_run_id === stepRunId && group.status === "promoting") return group;
       if (group.status !== "awaiting_selection" || group.winner_step_run_id !== null) {
         throw new CompeteWinnerConflictError(groupId, "another winner is already reserved");
       }
@@ -62,8 +62,9 @@ export function claimCompeteWinner(db: Db, groupId: string, stepRunId: string): 
         throw new CompeteWinnerConflictError(groupId, "candidate is not a succeeded result");
       }
 
+      const status = competeGroupMachine.transition(group.status, "promoting");
       tx.update(competeGroups)
-        .set(touch({ status: "promoting", winner_step_run_id: stepRunId }))
+        .set(touch({ status, winner_step_run_id: stepRunId }))
         .where(eq(competeGroups.id, groupId))
         .run();
       const claimed = tx.select().from(competeGroups).where(eq(competeGroups.id, groupId)).get();

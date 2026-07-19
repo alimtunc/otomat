@@ -9,7 +9,7 @@ import { agentSessionMachine, runMachine, stepRunMachine } from "@otomat/domain"
 
 import { startSessionTail } from "#events";
 
-import { writeWorkerIdentity } from "./identity.js";
+import { waitForWorkerIdentity } from "./identity.js";
 import { settleRun } from "./settle/index.js";
 import { notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveRunTo, driveSessionTo, driveStepTo } from "./transitions.js";
@@ -125,17 +125,45 @@ export async function spawnTurn(
 
     advanceToRunning(state, ctx);
     proc = state.spawn({ ...ctx, mode, providerSessionId });
+    state.starting.set(ctx.agentSessionId, {
+      runId: ctx.runId,
+      proc,
+      turn: { agentSessionId: ctx.agentSessionId },
+    });
     recordAgentSessionProcess(db, ctx.agentSessionId, { pid: proc.pid, pgid: proc.pgid });
     // Stamp the process identity next to its pid so a later boot proves the group is still ours before killing it.
-    writeWorkerIdentity(ctx.runDir, proc.pid, proc.pgid);
+    if (!(await waitForWorkerIdentity(ctx.runDir, proc.pid, proc.pgid))) {
+      throw new Error(`worker ${proc.pid} exited before its identity could be recorded`);
+    }
+    const readyRun = getRun(db, ctx.runId);
+    if (
+      !readyRun ||
+      runMachine.isTerminal(readyRun.status) ||
+      aborting.has(ctx.runId) ||
+      state.shuttingDown
+    ) {
+      proc.kill("SIGKILL");
+      const exit = await proc.exited;
+      if (readyRun && !runMachine.isTerminal(readyRun.status) && !aborting.has(ctx.runId)) {
+        settleLive(state, ctx, exit);
+      }
+      release();
+      return;
+    }
+    proc.start();
+    state.starting.delete(ctx.agentSessionId);
     trackTurn(state, ctx, proc, release);
   } catch (error) {
     release();
     // A turn that failed mid-flight must not leave a live child or a phantom "running" row.
-    proc?.kill("SIGKILL");
-    settleLive(state, ctx);
+    if (proc) {
+      proc.kill("SIGKILL");
+      await proc.exited;
+    }
+    if (!aborting.has(ctx.runId)) settleLive(state, ctx);
     throw error;
   } finally {
+    state.starting.delete(ctx.agentSessionId);
     claiming.delete(ctx.agentSessionId);
   }
 }

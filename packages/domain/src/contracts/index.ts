@@ -25,6 +25,8 @@ export {
   runPlanNodeSchema,
   runPlanStepSchema,
   stepRunContractSchema,
+  WORKTREE_STATUSES,
+  worktreeStatusSchema,
   type AgentSessionContract,
   type CompeteGroupContract,
   type IssueContract,
@@ -41,4 +43,5 @@ export {
   type RunPlanNode,
   type RunPlanStep,
   type StepRunContract,
+  type WorktreeStatus,
 } from "./entities.js";

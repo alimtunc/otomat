@@ -30,18 +30,37 @@ function identityPath(runDir: string): string {
   return join(runDir, WORKER_IDENTITY_FILE);
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * Records the live worker's identity (pid + pgid + OS start time) in the run dir so a later boot can
- * prove the process group is still ours before signalling it. No-op if the pid can't be stamped.
+ * prove the process group is still ours before signalling it. Returns false if the pid can't be stamped.
  */
-export function writeWorkerIdentity(runDir: string, pid: number, pgid: number): void {
+export function writeWorkerIdentity(runDir: string, pid: number, pgid: number): boolean {
   const start_time = readProcessStartTime(pid);
-  if (start_time === null) return;
+  if (start_time === null) return false;
   mkdirSync(runDir, { recursive: true });
   writeFileSync(
     identityPath(runDir),
     JSON.stringify({ pid, pgid, start_time } satisfies WorkerIdentity),
   );
+  return true;
+}
+
+/** Gives a freshly spawned pid a bounded window to become visible to `ps` before startup fails. */
+export async function waitForWorkerIdentity(
+  runDir: string,
+  pid: number,
+  pgid: number,
+): Promise<boolean> {
+  const deadline = Date.now() + 2_000;
+  do {
+    if (writeWorkerIdentity(runDir, pid, pgid)) return true;
+    await delay(10);
+  } while (Date.now() < deadline);
+  return false;
 }
 
 /** Reads the recorded worker identity from the run dir, or null when the file is absent or unparseable. */
