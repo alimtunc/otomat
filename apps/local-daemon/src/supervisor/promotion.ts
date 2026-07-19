@@ -3,8 +3,8 @@ import {
   claimCompeteWinner,
   getCompeteGroup,
   getRun,
+  listActiveRuns,
   listCompeteGroupsForRun,
-  listRuns,
   listStepRunsForRun,
   type RunRow,
 } from "@otomat/db";
@@ -109,7 +109,7 @@ function restRecoveredRun(state: SupervisorState, runId: string): void {
 /** Completes a winner reservation interrupted by daemon exit, but never auto-starts dependent work on boot. */
 export function recoverCompeteSelections(state: SupervisorState): ReconcileOutcome[] {
   const outcomes: ReconcileOutcome[] = [];
-  for (const run of listRuns(state.db)) {
+  for (const run of listActiveRuns(state.db).runs) {
     for (const group of listCompeteGroupsForRun(state.db, run.id)) {
       if (group.status !== "promoting" && group.status !== "selected") continue;
       const winnerId = group.winner_step_run_id;
