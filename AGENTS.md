@@ -92,6 +92,36 @@ cannot express, over `apps/web/src` and `packages/ui/src`:
 Import order and formatting are handled by `oxfmt` (`.oxfmtrc.json`,
 `sortImports`) and verified by `pnpm format:check`.
 
+## Code quality (authoring)
+
+Authoring-time rules the lint/guardrails cannot express. Not machine-enforced —
+they hold at review.
+
+- **DRY.** Grep for an existing helper before writing one; import it instead of
+  duplicating. Extract a copy-pasted block at its 3rd occurrence — not sooner;
+  three clear lines beat one bad abstraction.
+- **Naming.** Names state intent — avoid `data`, `info`, `util`, `helper`,
+  `temp`, `result` when the intent is knowable, and no abbreviations that hide
+  meaning or names that lie about shape or side effects.
+- **Complexity.** Keep functions under ~40 lines and ~3 nesting levels, at most
+  ~5 params. Break a chained pipeline that stops reading top-to-bottom.
+- **Simplification.** Before adding a branch, mode, flag, or layer, ask whether a
+  reframing — a state model, an ownership move, a default flow — deletes the
+  complexity instead. Delete complexity rather than relocate it.
+- **Separation of concerns.** A renderer renders, a hook orchestrates, a util
+  computes — one concern per file. Split any unit branching on more than ~2
+  distinct shapes or modes.
+- **No speculative abstraction.** No single-call-site wrappers (inline until a
+  2nd caller exists), no config knobs or polymorphic params without a consumer
+  today, no one-method manager/service indirections. (Project specifics: no
+  scheduler/leases/outbox, no Effect — see Conventions.)
+- **Never swallow errors.** No `catch {}`, `.catch(() => {})`, or optional
+  chaining that hides an error-created undefined. Give the UI explicit loading,
+  error, and empty states where users need them.
+- **Casts and unions.** Casts only in narrow idioms (`as const`, `as unknown`) or
+  immediately after real validation. One shared definition per union/enum — never
+  redeclared. Values non-null by contract are typed non-null.
+
 ## Commands
 
 ```
