@@ -4,11 +4,13 @@ import {
   registerRepositoryErrorMessage,
   useRegisterRepository,
 } from "@web/api/repositories/mutations";
+import { desktopBridge } from "@web/lib/desktop-bridge";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { useState } from "react";
 
 export function RegisterRepositoryForm() {
   const register = useRegisterRepository();
+  const bridge = desktopBridge();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm({
@@ -24,6 +26,18 @@ export function RegisterRepositoryForm() {
       }
     },
   });
+
+  async function browseForPath(): Promise<void> {
+    if (bridge === null) return;
+    try {
+      const picked = await bridge.pickDirectory();
+      if (picked === null) return; // canceled: create nothing, leave the typed path untouched
+      setSubmitError(null);
+      form.setFieldValue("path", picked);
+    } catch {
+      setSubmitError("Could not open the folder picker.");
+    }
+  }
 
   return (
     <form
@@ -56,6 +70,17 @@ export function RegisterRepositoryForm() {
                   />
                 </FieldControl>
               </div>
+              {bridge === null ? null : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={register.isPending}
+                  onClick={() => void browseForPath()}
+                >
+                  Browse…
+                </Button>
+              )}
               <form.Subscribe selector={(state) => state.values.path}>
                 {(path) => (
                   <Button
