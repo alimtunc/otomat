@@ -9,6 +9,8 @@
  */
 export * from "./agent-sessions.js";
 export * from "./agents.js";
+export * from "./compete-groups.js";
+export * from "./event-streams.js";
 export * from "./issues.js";
 export * from "./projects.js";
 export * from "./pull-requests.js";
