@@ -19,9 +19,8 @@ export const DEFAULT_REPOSITORY_ID = "local-default-repo";
 
 /**
  * Anchors the daemon's boot root to a project row and returns its id. A root
- * already registered (Settings → Repositories) wins over the legacy default
- * project; otherwise the default project is created, or re-anchored when the
- * boot root moved between daemon starts.
+ * already registered through Settings wins over the legacy default project;
+ * otherwise the default project is created or re-anchored after a move.
  */
 export function ensureDefaultProject(db: Db, rootPath: string): string {
   const canonical = tryRealpath(rootPath) ?? rootPath;
@@ -40,9 +39,8 @@ export function ensureDefaultProject(db: Db, rootPath: string): string {
 
 /**
  * Ensures the project's repository row exists with a fresh default branch.
- * Null when the root is not a usable git repository (or HEAD is detached) —
- * runs on this project then have no worktree/diff. Row-only: worktree services
- * are built per repository by the resolver, never here.
+ * Returns null when no usable repository row can be established; worktree
+ * services are created later by the repository resolver, never here.
  */
 export function ensureDefaultRepository(
   db: Db,
@@ -56,7 +54,15 @@ export function ensureDefaultRepository(
     return null;
   }
 
-  if (projectId !== DEFAULT_PROJECT_ID) return projectIdRepository(db, projectId);
+  if (projectId !== DEFAULT_PROJECT_ID) {
+    // A registered boot root already owns its repository; refresh it instead of duplicating it.
+    const [repository] = listRepositories(db, { projectId });
+    if (!repository) return null;
+    if (repository.default_branch !== defaultBranch) {
+      updateRepositoryDefaultBranch(db, repository.id, defaultBranch);
+    }
+    return repository.id;
+  }
 
   const existing = getRepository(db, DEFAULT_REPOSITORY_ID);
   if (existing) {
@@ -73,10 +79,4 @@ export function ensureDefaultRepository(
     default_branch: defaultBranch,
   });
   return DEFAULT_REPOSITORY_ID;
-}
-
-/** The boot root belongs to a registered project: reuse its repository, never duplicate it. */
-function projectIdRepository(db: Db, projectId: string): string | null {
-  const [repository] = listRepositories(db, { projectId });
-  return repository ? repository.id : null;
 }

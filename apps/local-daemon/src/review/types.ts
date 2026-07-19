@@ -8,7 +8,7 @@ export interface ReviewServiceConfig {
   db: Db;
   /** Root of the run artifact dirs — review events land in the same per-run ledger. */
   dataDir: string;
-  /** Per-run repository resolution; a run without a repository has no diff or comment surface. */
+  /** A run without a repository has no diff or review-comment surface. */
   repositories: RepositoryResolver;
 }
 

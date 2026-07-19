@@ -31,7 +31,7 @@ export interface PullRequestView {
 export interface GitHubServiceConfig {
   db: Db;
   dataDir: string;
-  /** Per-run repository resolution so publication pushes from the run's own repo. */
+  /** Per-run resolution ensures publication pushes from the run's own repository. */
   repositories: RepositoryResolver;
   cli: GitHubCli;
   idFactory?: () => string;

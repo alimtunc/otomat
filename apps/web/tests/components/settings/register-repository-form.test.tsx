@@ -2,7 +2,6 @@
 import { DaemonRequestError } from "@otomat/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RegisterRepositoryForm } from "@web/components/settings/register-repository-form";
-import { setFolderPicker } from "@web/lib/folder-picker";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -21,7 +20,6 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
   document.body.replaceChildren();
   registerRepository.mockReset();
-  setFolderPicker(null);
 });
 
 async function renderForm() {
@@ -59,10 +57,6 @@ function setInputValue(input: HTMLInputElement, value: string): void {
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
   setter?.call(input, value);
   input.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-function buttonLabels(): Array<string | undefined> {
-  return [...document.querySelectorAll("button")].map((button) => button.textContent?.trim());
 }
 
 describe("RegisterRepositoryForm", () => {
@@ -111,15 +105,10 @@ describe("RegisterRepositoryForm", () => {
       "The repository's HEAD is detached; check out a branch first.",
     );
     expect(pathInput().value).toBe("/repos/broken");
-  });
 
-  it("shows no Browse button in the web build, and one when a picker is injected", async () => {
-    await renderForm();
-    expect(buttonLabels()).not.toContain("Browse…");
-
-    await cleanups.pop()?.();
-    setFolderPicker({ pickFolder: async () => "/picked/dir" });
-    await renderForm();
-    expect(buttonLabels()).toContain("Browse…");
+    await act(async () => {
+      setInputValue(pathInput(), "/repos/fixed");
+    });
+    expect(document.body.textContent).not.toContain("The repository's HEAD is detached");
   });
 });

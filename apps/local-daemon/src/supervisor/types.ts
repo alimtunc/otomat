@@ -54,7 +54,7 @@ export interface SupervisorConfig {
   spawn: SpawnSession;
   /** Max concurrent session processes. Defaults to {@link DEFAULT_CONCURRENCY}. */
   concurrency?: number;
-  /** Per-run repository resolution; a project without a usable repository yields runs with no worktree/diff. */
+  /** A project without a usable repository yields runs with no worktree or diff. */
   repositories: RepositoryResolver;
   /** Fires after any settle (live, abort, boot) so review anchors/diff projections can react. */
   afterSettle?: (outcome: ReconcileOutcome) => void;

@@ -34,10 +34,11 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
   const dataDir = dirname(dbPath);
   const projectRoot = process.env.OTOMAT_PROJECT_ROOT ?? process.cwd();
   const defaultProjectId = ensureDefaultProject(db, projectRoot);
-  ensureDefaultRepository(db, defaultProjectId, projectRoot);
+  const defaultRepositoryId = ensureDefaultRepository(db, defaultProjectId, projectRoot);
   const repositories = createRepositoryResolver({
     db,
     worktreesRoot: process.env.OTOMAT_WORKTREES_ROOT ?? join(dataDir, "worktrees"),
+    ...(defaultRepositoryId === null ? { unavailableProjectIds: new Set([defaultProjectId]) } : {}),
   });
   const review = createReviewService({ db, dataDir, repositories });
   const github = createGitHubService({

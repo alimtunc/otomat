@@ -3,10 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { listProjects, listRepositories } from "@otomat/db";
+import {
+  registerRepositoryResponseSchema,
+  repositoryContractSchema,
+  repositoryRegistrationErrorSchema,
+} from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { post, request } from "../support/api.js";
-import { makeApiApp } from "../support/api.js";
+import { makeApiApp, post, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 import { setupTestRepo, type TestRepo } from "../support/git.js";
 
@@ -35,10 +39,7 @@ it("registers a repository root as a project + repository pair", async () => {
   const res = await post(app, "/api/repositories", { path: repo.root });
   expect(res.status).toBe(201);
 
-  const body = (await res.json()) as {
-    project: { id: string; name: string; root_path: string };
-    repository: { id: string; project_id: string; default_branch: string };
-  };
+  const body = registerRepositoryResponseSchema.parse(await res.json());
   expect(body.project.root_path).toBe(realpathSync(repo.root));
   expect(body.repository.project_id).toBe(body.project.id);
   expect(body.repository.default_branch).toBe("main");
@@ -47,7 +48,7 @@ it("registers a repository root as a project + repository pair", async () => {
   expect(listRepositories(t.db, { projectId: body.project.id })).toHaveLength(1);
 
   const list = await request(app, "/api/repositories");
-  const repositories = (await list.json()) as Array<{ id: string }>;
+  const repositories = repositoryContractSchema.array().parse(await list.json());
   expect(repositories.map((r) => r.id)).toContain(body.repository.id);
 });
 
@@ -67,18 +68,22 @@ it("refuses a relative path and a missing path", async () => {
   const app = makeApiApp(t);
   const relative = await post(app, "/api/repositories", { path: "relative/repo" });
   expect(relative.status).toBe(400);
-  expect(((await relative.json()) as { error: string }).error).toBe("path_not_absolute");
+  expect(repositoryRegistrationErrorSchema.parse(await relative.json()).error).toBe(
+    "path_not_absolute",
+  );
 
   const missing = await post(app, "/api/repositories", { path: join(scratch, "ghost") });
   expect(missing.status).toBe(400);
-  expect(((await missing.json()) as { error: string }).error).toBe("path_not_found");
+  expect(repositoryRegistrationErrorSchema.parse(await missing.json()).error).toBe(
+    "path_not_found",
+  );
 });
 
 it("refuses a detached-HEAD repository", async () => {
   repo.git("checkout", "--detach", repo.git("rev-parse", "HEAD").trim());
   const res = await post(makeApiApp(t), "/api/repositories", { path: repo.root });
   expect(res.status).toBe(400);
-  expect(((await res.json()) as { error: string }).error).toBe("head_detached");
+  expect(repositoryRegistrationErrorSchema.parse(await res.json()).error).toBe("head_detached");
 });
 
 it("deduplicates the canonical root, including through a symlink", async () => {
@@ -87,7 +92,7 @@ it("deduplicates the canonical root, including through a symlink", async () => {
 
   const duplicate = await post(app, "/api/repositories", { path: repo.root });
   expect(duplicate.status).toBe(409);
-  expect(((await duplicate.json()) as { error: string }).error).toBe(
+  expect(repositoryRegistrationErrorSchema.parse(await duplicate.json()).error).toBe(
     "repository_already_registered",
   );
 

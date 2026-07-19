@@ -82,4 +82,8 @@ it("reuses the registered project's repository when booting from a registered ro
   expect(projectId).toBe("registered");
   expect(ensureDefaultRepository(t.db, projectId, repo.root)).toBe("registered-repo");
   expect(getRepository(t.db, DEFAULT_REPOSITORY_ID)).toBeUndefined();
+
+  repo.git("checkout", "-b", "trunk");
+  expect(ensureDefaultRepository(t.db, projectId, repo.root)).toBe("registered-repo");
+  expect(getRepository(t.db, "registered-repo")?.default_branch).toBe("trunk");
 });

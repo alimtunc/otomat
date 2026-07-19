@@ -1,6 +1,6 @@
 import type { ProjectSummary } from "@otomat/ui";
 import { useDaemonStatus, useHealth, useProjects } from "@web/api/daemon/queries";
-import { useRuns } from "@web/api/runs/queries";
+import { useProjectRuns } from "@web/api/runs/queries";
 import { useProjectSelection } from "@web/components/shell/use-project-selection";
 import { isReviewable, isRunning } from "@web/lib/run-filters";
 
@@ -15,7 +15,7 @@ export function useShellData() {
   }));
   const { currentProjectId, selectProject } = useProjectSelection(projects);
   const currentProject = projects.find((project) => project.id === currentProjectId);
-  const runs = useRuns(currentProjectId);
+  const runs = useProjectRuns(currentProjectId);
   return {
     connectionState,
     lastSyncAt,

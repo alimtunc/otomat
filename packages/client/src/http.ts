@@ -1,6 +1,9 @@
 import type { DaemonClientConfig } from "./types";
 
-/** Thrown by the HTTP helpers when the daemon responds with a non-2xx status; `body` carries the daemon's JSON error payload when it sent one. */
+/**
+ * Thrown by HTTP helpers on a non-2xx response; `body` carries the daemon's JSON
+ * error payload when one was provided.
+ */
 export class DaemonRequestError extends Error {
   readonly status: number;
   readonly path: string;

@@ -41,7 +41,7 @@ export function seedRepository(db: Db, defaultBranch = "main"): string {
   return "repo-1";
 }
 
-/** Points a project's root at a real git repo so the repository resolver builds a usable service. */
+/** Points a project at a real git root so resolver-dependent tests get a usable service. */
 export function anchorProjectRoot(db: Db, rootPath: string, projectId = "p1"): void {
   db.update(schema.projects)
     .set({ root_path: rootPath })

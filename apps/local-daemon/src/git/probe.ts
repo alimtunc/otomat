@@ -15,7 +15,7 @@ export type RepositoryProbe =
   | { ok: true; rootPath: string; defaultBranch: string }
   | { ok: false; error: RepositoryProbeError };
 
-/** `realpathSync` that returns null instead of throwing (missing path, permission). */
+/** Resolves a path canonically, or returns null when the filesystem cannot resolve it. */
 export function tryRealpath(path: string): string | null {
   try {
     return realpathSync(path);
@@ -26,9 +26,8 @@ export function tryRealpath(path: string): string | null {
 
 /**
  * Validates a user-supplied path as a registrable local repository: absolute,
- * existing directory, the root of a usable git work tree, HEAD on a branch that
- * resolves to a commit. Returns the canonical (symlink-resolved) root and the
- * detected default branch; never throws for a refusable path.
+ * existing directory, repository root, and attached HEAD resolving to a commit.
+ * Refusable paths are returned as typed errors instead of being thrown.
  */
 export function probeLocalRepository(inputPath: string): RepositoryProbe {
   if (!isAbsolute(inputPath)) return { ok: false, error: "path_not_absolute" };

@@ -68,7 +68,7 @@ export function setupTestRepo(): TestRepo {
   };
 }
 
-/** Resolver that binds every repository/project/run to one service — for tests exercising git behavior, not resolution. */
+/** Binds every lookup to one service when a test targets git behavior rather than resolution. */
 export function stubRepositoryResolver(
   service: GitWorktreeService,
   repositoryId = "repo-1",

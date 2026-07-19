@@ -1,13 +1,14 @@
 import type { RunContract } from "@otomat/domain";
 import { cn, EmptyState, RunStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-import { useRuns } from "@web/api/runs/queries";
+import { useProjectRuns } from "@web/api/runs/queries";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
+import { ProjectQueryBoundary } from "@web/components/shell/project-query-boundary";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
-import { useSelectedProjectId } from "@web/components/shell/use-selected-project";
+import { useSelectedProject } from "@web/components/shell/use-selected-project";
 import { FOCUS_RING } from "@web/lib/focus";
 import { shortId } from "@web/lib/ids";
 import { CELL, HEAD_CELL, TABLE } from "@web/lib/table";
@@ -42,43 +43,49 @@ function RunListRow({ run }: { run: RunContract }) {
 }
 
 export function RunsView() {
-  const runs = useRuns(useSelectedProjectId());
+  const selectedProject = useSelectedProject();
+  const runs = useProjectRuns(selectedProject.projectId);
   return (
     <RouteShell active="runs" titleIcon="activity" breadcrumbs={[{ label: "Runs", current: true }]}>
-      <QueryList
-        query={runs}
-        pending={<ListSkeleton rows={3} height={40} />}
-        error={
-          <DaemonUnreachableState title="Couldn’t load runs" onRetry={() => void runs.refetch()} />
-        }
-        empty={
-          <CenteredState>
-            <EmptyState
-              icon="activity"
-              title="No runs yet"
-              description="Launch a run from an issue to see it stream here."
+      <ProjectQueryBoundary query={selectedProject.projects}>
+        <QueryList
+          query={runs}
+          pending={<ListSkeleton rows={3} height={40} />}
+          error={
+            <DaemonUnreachableState
+              title="Couldn’t load runs"
+              onRetry={() => void runs.refetch()}
             />
-          </CenteredState>
-        }
-      >
-        {(items) => (
-          <table className={TABLE}>
-            <thead>
-              <tr>
-                <th className={`${HEAD_CELL} w-27.5`}>Run</th>
-                <th className={`${HEAD_CELL} w-40`}>Status</th>
-                <th className={HEAD_CELL}>Branch</th>
-                <th className={`${HEAD_CELL} w-27.5`}>Issue</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((run) => (
-                <RunListRow key={run.id} run={run} />
-              ))}
-            </tbody>
-          </table>
-        )}
-      </QueryList>
+          }
+          empty={
+            <CenteredState>
+              <EmptyState
+                icon="activity"
+                title="No runs yet"
+                description="Launch a run from an issue to see it stream here."
+              />
+            </CenteredState>
+          }
+        >
+          {(items) => (
+            <table className={TABLE}>
+              <thead>
+                <tr>
+                  <th className={`${HEAD_CELL} w-27.5`}>Run</th>
+                  <th className={`${HEAD_CELL} w-40`}>Status</th>
+                  <th className={HEAD_CELL}>Branch</th>
+                  <th className={`${HEAD_CELL} w-27.5`}>Issue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((run) => (
+                  <RunListRow key={run.id} run={run} />
+                ))}
+              </tbody>
+            </table>
+          )}
+        </QueryList>
+      </ProjectQueryBoundary>
     </RouteShell>
   );
 }

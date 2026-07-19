@@ -110,7 +110,7 @@ export function seedRun(db: Db, options: SeedRunOptions): SeededRun {
   const lookup = seedWorkflowRun(db, {
     runId: options.runId,
     issueId: options.issueId,
-    ...(options.repositoryId ? { repositoryId: options.repositoryId } : {}),
+    repositoryId: options.repositoryId,
     runStatus: options.runStatus,
     steps: [
       {

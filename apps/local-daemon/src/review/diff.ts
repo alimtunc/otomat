@@ -2,7 +2,7 @@ import { WorktreeNotFoundError, type CanonicalDiff } from "#git";
 
 import type { ReviewContext, RunDiffResult } from "./types.js";
 
-/** The run's live canonical diff, or null when it has no repository/worktree — never a fabricated diff. */
+/** The run's live canonical diff, or null when it has no worktree — never a fabricated diff. */
 export function computeDiff(ctx: ReviewContext, runId: string): CanonicalDiff | null {
   const binding = ctx.repositories.forRun(runId);
   if (binding === null) return null;

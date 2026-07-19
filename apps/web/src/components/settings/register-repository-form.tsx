@@ -4,14 +4,12 @@ import {
   registerRepositoryErrorMessage,
   useRegisterRepository,
 } from "@web/api/repositories/mutations";
-import { getFolderPicker } from "@web/lib/folder-picker";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { useState } from "react";
 
 export function RegisterRepositoryForm() {
   const register = useRegisterRepository();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const picker = getFolderPicker();
 
   const form = useForm({
     defaultValues: { path: "" },
@@ -26,11 +24,6 @@ export function RegisterRepositoryForm() {
       }
     },
   });
-
-  async function browse() {
-    const picked = await picker?.pickFolder();
-    if (picked) form.setFieldValue("path", picked);
-  }
 
   return (
     <form
@@ -53,18 +46,16 @@ export function RegisterRepositoryForm() {
                   <Input
                     value={field.state.value}
                     onBlur={field.handleBlur}
-                    onChange={(event) => field.handleChange(event.target.value)}
+                    onChange={(event) => {
+                      setSubmitError(null);
+                      field.handleChange(event.target.value);
+                    }}
                     placeholder="/absolute/path/to/repository"
                     aria-label="Repository path"
                     spellCheck={false}
                   />
                 </FieldControl>
               </div>
-              {picker ? (
-                <Button type="button" variant="outline" size="sm" onClick={() => void browse()}>
-                  Browse…
-                </Button>
-              ) : null}
               <form.Subscribe selector={(state) => state.values.path}>
                 {(path) => (
                   <Button

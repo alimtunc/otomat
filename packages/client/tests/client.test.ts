@@ -327,8 +327,9 @@ it("surfaces the daemon's error payload on a refused registration", async () => 
 
   const error = await client.registerRepository({ path: "/tmp/x" }).catch((e: unknown) => e);
   expect(error).toBeInstanceOf(DaemonRequestError);
-  expect((error as DaemonRequestError).status).toBe(400);
-  expect((error as DaemonRequestError).body).toEqual({
+  if (!(error instanceof DaemonRequestError)) throw new Error("expected DaemonRequestError");
+  expect(error.status).toBe(400);
+  expect(error.body).toEqual({
     error: "head_detached",
     message: "The repository's HEAD is detached.",
   });

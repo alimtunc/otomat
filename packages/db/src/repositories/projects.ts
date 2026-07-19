@@ -7,12 +7,7 @@ import { touch } from "./touch.js";
 export type NewProject = typeof projects.$inferInsert;
 export type ProjectRow = typeof projects.$inferSelect;
 
-/** Idempotent: leaves an existing project untouched. Used for the daemon's default-project bootstrap. */
-export function upsertProject(db: Db, value: NewProject): void {
-  db.insert(projects).values(value).onConflictDoNothing().run();
-}
-
-/** Strict insert for registrations: duplicate id or `root_path` throws (unique index). */
+/** Strict insert used by registration; duplicate ids or root paths are surfaced to the caller. */
 export function insertProject(db: Db, value: NewProject): void {
   db.insert(projects).values(value).run();
 }
@@ -22,7 +17,7 @@ export function getProjectByRootPath(db: Db, rootPath: string): ProjectRow | und
   return db.select().from(projects).where(eq(projects.root_path, rootPath)).get();
 }
 
-/** Re-anchors a project (the bootstrapped workspace) whose root moved between daemon boots. */
+/** Re-anchors the boot project after its workspace root moves between daemon starts. */
 export function updateProjectRootPath(db: Db, id: string, rootPath: string): void {
   db.update(projects)
     .set(touch({ root_path: rootPath }))

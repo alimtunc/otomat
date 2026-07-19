@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
-/** Registers a local repository; on success invalidates the projects + repositories caches so the switcher and Settings refresh. */
+/** Registers a local repository and refreshes both project and repository catalogs. */
 export function useRegisterRepository() {
   const client = useQueryClient();
   return useMutation({
@@ -16,7 +16,7 @@ export function useRegisterRepository() {
   });
 }
 
-/** The daemon's own safe refusal message when it sent one; honest fallbacks otherwise. */
+/** Preserves typed daemon refusals and falls back to a connectivity message otherwise. */
 export function registerRepositoryErrorMessage(error: unknown): string {
   if (error instanceof DaemonRequestError) {
     const refusal = repositoryRegistrationErrorSchema.safeParse(error.body);

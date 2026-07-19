@@ -45,6 +45,17 @@ it("returns null for a null id, an unknown repository, and a project without rep
   expect(resolver.forProject("p2")).toBeNull();
 });
 
+it("does not bind repositories for a project rejected by the boot probe", () => {
+  const unavailable = createRepositoryResolver({
+    db: fix.db,
+    worktreesRoot: join(fix.dataDir, "worktrees"),
+    unavailableProjectIds: new Set(["p1"]),
+  });
+
+  expect(unavailable.forProject("p1")).toBeNull();
+  expect(unavailable.forRepository("repo-1")).toBeNull();
+});
+
 it("resolves a project to its main repository", () => {
   expect(resolver.forProject("p1")?.repositoryId).toBe("repo-1");
 });

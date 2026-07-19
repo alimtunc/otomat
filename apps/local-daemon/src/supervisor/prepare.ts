@@ -36,7 +36,7 @@ function firstLine(text: string): string {
   return first.trim().slice(0, 120);
 }
 
-/** An explicit `project_id` that matches no project row — a caller mistake, not a daemon fault. */
+/** An explicit project id that matches no row: a caller error, not a daemon failure. */
 export class ProjectNotFoundError extends Error {
   constructor(projectId: string) {
     super(`project ${projectId} not found`);
@@ -44,15 +44,15 @@ export class ProjectNotFoundError extends Error {
   }
 }
 
-/** Ad-hoc launches pin their project explicitly; the bootstrapped workspace stays the fallback. */
+/** Ad-hoc launches pin an explicit valid project; otherwise they use the boot workspace. */
 function resolveProjectId(db: Db, defaultProjectId: string, request: StartRunRequest): string {
   if (!request.project_id) return defaultProjectId;
   if (!getProject(db, request.project_id)) throw new ProjectNotFoundError(request.project_id);
   return request.project_id;
 }
 
-function resolveIssueId(db: Db, projectId: string, request: StartRunRequest): string {
-  if (request.issue_id) return request.issue_id;
+/** Creates the issue that anchors a prompt-only launch and returns its id. */
+function insertAdHocIssue(db: Db, projectId: string, request: StartRunRequest): string {
   const issueId = randomUUID();
   const prompt = request.prompt ?? "";
   insertIssue(db, {
@@ -66,18 +66,23 @@ function resolveIssueId(db: Db, projectId: string, request: StartRunRequest): st
   return issueId;
 }
 
-/** Materializes the run/step/session rows, the frozen plan, and the run's isolated worktree in its issue's repository. */
+/**
+ * Materializes the run, step and session rows, freezes the plan, and acquires an
+ * isolated worktree from the repository belonging to the run's issue.
+ */
 export function prepareRun(state: SupervisorState, request: StartRunRequest): TurnContext {
   const { db, dataDir, defaultProjectId, repositories } = state;
   // Every effective runtime is validated before any row (issue included) is written.
   const defaultRuntime = requireAvailableRuntime(request.runtime);
   const stepRuntimes = resolveStepRuntimes(request, defaultRuntime);
 
-  const issueId = resolveIssueId(db, resolveProjectId(db, defaultProjectId, request), request);
+  const issueId =
+    request.issue_id ??
+    insertAdHocIssue(db, resolveProjectId(db, defaultProjectId, request), request);
   const issue = getIssue(db, issueId);
   if (!issue) throw new Error(`issue ${issueId} not found`);
   const prompt = request.prompt ?? issue.title;
-  // The issue owns the project, the project owns the repository: launches from an issue always land in its repo.
+  // The issue owns the project, so issue-based launches always resolve that project's repository.
   const binding = repositories.forProject(issue.project_id);
 
   const runId = randomUUID();

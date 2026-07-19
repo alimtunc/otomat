@@ -3,11 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
-/** Runs of the selected project (through each run's issue); unscoped when `projectId` is undefined. */
-export function useRuns(projectId?: string) {
+/** Runs for the selected project; disabled while no project is selected. */
+export function useProjectRuns(projectId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.runsList(projectId),
-    queryFn: () => daemon.listRuns(projectId ? { projectId } : {}),
+    queryFn: () => daemon.listRuns({ projectId }),
+    enabled: projectId !== undefined,
   });
 }
 

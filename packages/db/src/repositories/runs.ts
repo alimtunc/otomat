@@ -23,7 +23,10 @@ export function getRun(db: Db, id: string): RunRow | undefined {
   return { ...row, plan_json: runPlanSchema.parse(row.plan_json) };
 }
 
-/** User-facing list: a corrupt `plan_json` throws (fail loud) rather than silently hiding a run. `projectId` filters through each run's issue. */
+/**
+ * User-facing list: `projectId` filters through the run's issue, and corrupt
+ * `plan_json` throws rather than silently hiding a run.
+ */
 export function listRuns(db: Db, options: { issueId?: string; projectId?: string } = {}): RunRow[] {
   const filters: SQL[] = [];
   if (options.issueId) filters.push(eq(runs.issue_id, options.issueId));

@@ -55,7 +55,7 @@ export const startRunRequestSchema = z
   .object({
     issue_id: z.string().min(1).optional(),
     prompt: z.string().min(1).optional(),
-    /** Project an ad-hoc run (and its anchor issue) belongs to; ignored when `issue_id` already pins the project. */
+    /** Project for an ad-hoc run and its anchor issue; ignored when `issue_id` already pins it. */
     project_id: z.string().min(1).optional(),
     /** Runtime adapter id; the daemon validates it against its registry and rejects unavailable runtimes. Steps may override it per step via `plan.steps[].agent`. */
     runtime: z.string().min(1).optional(),
@@ -79,25 +79,23 @@ export const REPOSITORY_REGISTRATION_ERRORS = [
 ] as const;
 export type RepositoryRegistrationError = (typeof REPOSITORY_REGISTRATION_ERRORS)[number];
 
-/** Register a local git repository by absolute path; the daemon canonicalizes and validates it. */
+/** Local filesystem path submitted for repository registration. */
 export const registerRepositoryRequestSchema = z.object({
   path: z.string().trim().min(1),
 });
 export type RegisterRepositoryRequest = z.infer<typeof registerRepositoryRequestSchema>;
 
-/** A registration materializes one local project owning one main repository (V1). */
+/** Successful registration materializes both the project and its repository. */
 export const registerRepositoryResponseSchema = z.object({
   project: projectContractSchema,
   repository: repositoryContractSchema,
 });
-export type RegisterRepositoryResponse = z.infer<typeof registerRepositoryResponseSchema>;
 
-/** Wire shape of a refused registration: a stable code plus an actionable, internals-free message. */
+/** Stable refusal code plus a user-facing daemon message. */
 export const repositoryRegistrationErrorSchema = z.object({
   error: z.enum(REPOSITORY_REGISTRATION_ERRORS),
   message: z.string(),
 });
-export type RepositoryRegistrationErrorResponse = z.infer<typeof repositoryRegistrationErrorSchema>;
 
 /** Create a local issue without launching a run. */
 export const createIssueRequestSchema = z.object({

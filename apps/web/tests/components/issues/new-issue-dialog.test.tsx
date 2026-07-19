@@ -171,10 +171,11 @@ describe("NewIssueDialog", () => {
       "textarea[aria-label='Issue prompt']",
     );
     expect(prompt).not.toBeNull();
+    if (!prompt) throw new Error("issue prompt not found");
     await act(async () => {
       const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
-      setter?.call(prompt!, "implement the thing");
-      prompt!.dispatchEvent(new Event("input", { bubbles: true }));
+      setter?.call(prompt, "implement the thing");
+      prompt.dispatchEvent(new Event("input", { bubbles: true }));
     });
     await act(async () => {
       buttonByText("Create & launch⌘↵").click();

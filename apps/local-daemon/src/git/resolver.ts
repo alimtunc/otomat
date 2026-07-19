@@ -2,7 +2,7 @@ import { getProject, getRepository, getRun, listRepositories, type Db } from "@o
 
 import { createGitWorktreeService, type GitWorktreeService } from "./service.js";
 
-/** Ties a `repositories.id` to the worktree service operating on its root. */
+/** Ties a persisted repository id to the worktree service operating on its root. */
 export interface RepositoryBinding {
   repositoryId: string;
   service: GitWorktreeService;
@@ -10,23 +10,24 @@ export interface RepositoryBinding {
 
 export interface RepositoryResolverConfig {
   db: Db;
-  /** Directory that holds every repository's worktree working dirs. */
+  /** Directory that holds every repository's worktree working directories. */
   worktreesRoot: string;
-  /** Override `worktrees.id` generation (tests). */
+  /** Overrides worktree id generation, primarily for deterministic tests. */
   idFactory?: () => string;
+  /** Projects rejected during boot probing must never receive a worktree service. */
+  unavailableProjectIds?: ReadonlySet<string>;
 }
 
 /**
- * The single owner of `repository_id → root path → GitWorktreeService`
- * resolution. Services are cached per repository id; registrations are
- * insert-only, so a cached binding never goes stale within one process.
+ * The single owner of repository-id to root-path to worktree-service resolution.
+ * Bindings are cached because repository registrations are insert-only within a process.
  */
 export interface RepositoryResolver {
-  /** Binding for a repository id; null for null ids and unknown repository/project rows. */
+  /** Returns null for null ids and for unknown or unavailable repository rows. */
   forRepository(repositoryId: string | null): RepositoryBinding | null;
-  /** The project's main repository (V1: its only one), or null when the project has none. */
+  /** Resolves the project's main repository, or null when it has none. */
   forProject(projectId: string): RepositoryBinding | null;
-  /** The binding a run's git operations must use, from `runs.repository_id`; null when the run has no repository. */
+  /** Resolves the repository pinned on a run, or null when the run has none. */
   forRun(runId: string): RepositoryBinding | null;
 }
 
@@ -43,6 +44,7 @@ export function createRepositoryResolver(config: RepositoryResolverConfig): Repo
     if (!repository) return null;
     const project = getProject(db, repository.project_id);
     if (!project) return null;
+    if (config.unavailableProjectIds?.has(project.id)) return null;
 
     const binding: RepositoryBinding = {
       repositoryId,

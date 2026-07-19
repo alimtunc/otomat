@@ -72,7 +72,6 @@ it("runs two issues in two repositories concurrently without cross-repo leakage"
   expect(existsSync(jobA?.worktreePath ?? "")).toBe(true);
   expect(existsSync(jobB?.worktreePath ?? "")).toBe(true);
 
-  // Each run's branch exists only in its own repository.
   expect(branches(repoA)).toContain(runA.branch);
   expect(branches(repoA)).not.toContain(runB.branch);
   expect(branches(repoB)).toContain(runB.branch);
@@ -97,4 +96,13 @@ it("rejects an ad-hoc launch on an unknown project before writing anything", asy
     ProjectNotFoundError,
   );
   expect(spawn.calls).toBe(0);
+});
+
+it("ignores project_id when an issue already pins the project", async () => {
+  const { supervisor } = makeSupervisor(fix, "complete");
+
+  const run = await supervisor.start({ issue_id: "ia", project_id: "ghost" });
+  await supervisor.settle();
+
+  expect(run.repository_id).toBe("ra");
 });

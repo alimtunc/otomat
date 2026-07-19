@@ -5,7 +5,7 @@ import { listRuntimeDescriptors } from "#runtime";
 import type { ApiDeps } from "../deps.js";
 import { readProjects } from "../reads.js";
 
-/** Read-only workspace catalog: projects and the runtime registry; repositories live under `/api/repositories`. */
+/** Read-only workspace catalog: projects and the runtime registry. */
 export function createCatalogRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();
 
