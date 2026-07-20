@@ -10,6 +10,24 @@ import {
 } from "@web/components/issues/workspace/rail/rail-primitives";
 import { UsageSection } from "@web/components/issues/workspace/rail/usage-section";
 
+function ExternalIdentifier({ identifier, url }: { identifier: string; url: string | null }) {
+  const label = (
+    <span className="truncate font-mono text-xs text-text-secondary">{identifier}</span>
+  );
+  return url === null ? (
+    label
+  ) : (
+    <a
+      className="truncate font-mono text-xs text-text-secondary underline decoration-border-subtle underline-offset-2 hover:text-text-primary"
+      href={url}
+      rel="noreferrer"
+      target="_blank"
+    >
+      {identifier}
+    </a>
+  );
+}
+
 /**
  * Right rail of the issue workspace. The run-scoped sections read the followed
  * run and must render inside its RunEventsProvider; with no run the rail shows
@@ -27,10 +45,8 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
             <span className="text-text-secondary">{issue.source}</span>
           </RailRow>
           <RailRow label="External id">
-            {issue.source_external_id !== null ? (
-              <span className="truncate font-mono text-xs text-text-secondary">
-                {issue.source_external_id}
-              </span>
+            {issue.source_identifier !== null ? (
+              <ExternalIdentifier identifier={issue.source_identifier} url={issue.source_url} />
             ) : (
               <Unknown />
             )}

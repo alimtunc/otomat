@@ -24,7 +24,15 @@ afterEach(async () => {
 });
 
 function installDesktopBridge(pickDirectory: () => Promise<string | null>): void {
-  window.otomat = { daemonUrl: "http://127.0.0.1:5000", pickDirectory };
+  window.otomat = {
+    daemonUrl: "http://127.0.0.1:5000",
+    pickDirectory,
+    linear: {
+      vaultStatus: async () => ({ encryption_available: true, has_stored_key: false }),
+      saveKey: async () => ({ ok: true, message: null }),
+      forgetKey: async () => ({ ok: true, message: null }),
+    },
+  };
 }
 
 function browseButton(): HTMLButtonElement | undefined {

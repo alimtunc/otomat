@@ -12,6 +12,8 @@ function issue(status: IssueState): IssueContract {
     status,
     source: "local",
     source_external_id: null,
+    source_identifier: null,
+    source_url: null,
     synced_at: null,
   };
 }
