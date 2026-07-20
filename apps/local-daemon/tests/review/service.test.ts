@@ -66,14 +66,14 @@ function run() {
 }
 
 function currentAnchor() {
-  const diff = review.getRunDiff(run()).diff;
+  const diff = review.getWorktreeDiff(run()).diff;
   const file = diff?.files.find((f) => f.path === "notes.md");
   if (!file) throw new Error("expected notes.md in the diff");
   return file;
 }
 
 it("computes the real git diff for the run's worktree and null without one", () => {
-  const withWorktree = review.getRunDiff(run());
+  const withWorktree = review.getWorktreeDiff(run());
   expect(withWorktree.diff?.files.map((f) => f.path)).toEqual(["notes.md"]);
   expect(withWorktree.diff?.additions).toBe(3);
 
@@ -84,7 +84,7 @@ it("computes the real git diff for the run's worktree and null without one", () 
     sessionStatus: "terminated",
   });
   const bare = getRun(fix.db, "r-bare");
-  expect(bare && review.getRunDiff(bare).diff).toBeNull();
+  expect(bare && review.getWorktreeDiff(bare).diff).toBeNull();
 });
 
 it("pins a comment to the live diff, snapshots its hunk, and opens the review", () => {

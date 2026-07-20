@@ -80,6 +80,7 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
     resumeRun: supervisor.resume,
     fixRun: supervisor.fix,
     followUpRun: supervisor.followUp,
+    selectCompeteWinner: supervisor.selectWinner,
     abortRun: supervisor.abort,
     github,
     review,

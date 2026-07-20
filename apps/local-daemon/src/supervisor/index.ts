@@ -10,9 +10,10 @@
  */
 export * from "./types.js";
 export { RunNotResumableError } from "./commands.js";
-export { ProjectNotFoundError } from "./prepare.js";
+export { CompeteRepositoryRequiredError, ProjectNotFoundError } from "./prepare.js";
 export { buildTerminalMarker } from "./markers.js";
 export { createReexecSpawn, isProcessAlive, killProcessGroup } from "./process.js";
+export { WORKER_START_TOKEN_ENV } from "./start-gate.js";
 export { reconcileRuns } from "./reconcile.js";
 export { createSupervisor } from "./supervisor.js";
 export { parseJob, runWorkerJob, runWorkerMain, writeTerminalMarker } from "./worker.js";

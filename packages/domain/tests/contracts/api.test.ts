@@ -8,6 +8,7 @@ import {
   runDetailSchema,
   runtimeAvailabilitySchema,
   runtimeDescriptorSchema,
+  selectCompeteWinnerRequestSchema,
   startRunRequestSchema,
 } from "#domain/contracts/api";
 
@@ -21,11 +22,82 @@ const RUN = {
 
 describe("runDetailSchema", () => {
   it("carries the run's worktree path and accepts null when it has none", () => {
-    const base = { run: RUN, steps: [], sessions: [] };
+    const base = { run: RUN, steps: [], sessions: [], compete_groups: [] };
     const withPath = runDetailSchema.parse({ ...base, worktree_path: "/tmp/wt" });
     expect(withPath.worktree_path).toBe("/tmp/wt");
     expect(runDetailSchema.parse({ ...base, worktree_path: null }).worktree_path).toBeNull();
     expect(runDetailSchema.safeParse(base).success).toBe(false);
+  });
+
+  it("rejects omitted compete and candidate worktree fields", () => {
+    const detail = {
+      run: RUN,
+      steps: [
+        {
+          id: "step-1",
+          run_id: RUN.id,
+          idx: 0,
+          name: "Step",
+          status: "queued",
+        },
+      ],
+      sessions: [],
+      worktree_path: null,
+    };
+
+    expect(runDetailSchema.safeParse(detail).success).toBe(false);
+    expect(runDetailSchema.safeParse({ ...detail, steps: [], compete_groups: [] }).success).toBe(
+      true,
+    );
+  });
+
+  it("carries durable compete groups and candidate worktree metadata", () => {
+    const detail = runDetailSchema.parse({
+      run: { ...RUN, status: "awaiting_selection" },
+      steps: [
+        {
+          id: "candidate-a",
+          run_id: RUN.id,
+          idx: 0,
+          name: "Candidate A",
+          status: "succeeded",
+          compete_group_id: "implementation",
+          worktree_id: "wt-a",
+          branch: "otomat/run/run-1/compete/candidate-a",
+          worktree_status: "archived",
+        },
+      ],
+      sessions: [],
+      compete_groups: [
+        {
+          id: "implementation",
+          run_id: RUN.id,
+          idx: 0,
+          name: "Implementation",
+          status: "awaiting_selection",
+          winner_step_run_id: null,
+          base_head_sha: "abc123",
+        },
+      ],
+      worktree_path: "/tmp/canonical",
+    });
+
+    expect(detail.compete_groups[0]?.status).toBe("awaiting_selection");
+    expect(detail.steps[0]?.branch).toContain("candidate-a");
+  });
+});
+
+describe("selectCompeteWinnerRequestSchema", () => {
+  it("accepts one explicit candidate and rejects hidden selection policy", () => {
+    expect(selectCompeteWinnerRequestSchema.parse({ step_run_id: "candidate-a" })).toEqual({
+      step_run_id: "candidate-a",
+    });
+    expect(
+      selectCompeteWinnerRequestSchema.safeParse({
+        step_run_id: "candidate-a",
+        policy: "highest-score",
+      }).success,
+    ).toBe(false);
   });
 });
 

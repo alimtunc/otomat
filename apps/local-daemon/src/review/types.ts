@@ -37,7 +37,8 @@ export interface RunSettledOutcome {
 }
 
 export interface ReviewService {
-  getRunDiff(run: Pick<RunRow, "id">): RunDiffResult;
+  /** Defaults to the run's own worktree; a compete candidate names its step id as owner. */
+  getWorktreeDiff(run: Pick<RunRow, "id">, owner?: string): RunDiffResult;
   getReviewDetail(runId: string): ReviewDetailResult;
   /** Verifies the anchor against the live diff and captures the hunk snapshot before persisting. */
   addComment(run: Pick<RunRow, "id">, request: CreateReviewCommentRequest): ReviewCommentRow;

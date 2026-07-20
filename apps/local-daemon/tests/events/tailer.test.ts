@@ -105,7 +105,7 @@ describe("EventTailer", () => {
     expect(seqs()).toEqual([0, 1]);
   });
 
-  it("skips a corrupt line without stalling, leaving a seq gap at its line index", () => {
+  it("skips a corrupt line without stalling or consuming a global ledger seq", () => {
     const sink = new JsonlEventSink(filePath);
     sink.emit(makeEvent(t.runId, 0));
     sink.close();
@@ -117,8 +117,7 @@ describe("EventTailer", () => {
     const result = newTailer().drain();
 
     expect(result.ingested).toBe(2); // lines 0 and 2; line 1 dropped, not fatal
-    expect(seqs()).toEqual([0, 2]); // seq stays equal to file line index
-    expect(result.nextSeq).toBe(3); // resume position advanced past every line
+    expect(seqs()).toEqual([0, 1]);
   });
 
   it("polls and ingests on an interval via start/stop", () => {

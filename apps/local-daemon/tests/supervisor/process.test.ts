@@ -1,9 +1,65 @@
-import { expect, it } from "vitest";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-import { isProcessAlive, killProcessGroup } from "#supervisor";
+import { afterEach, beforeEach, expect, it } from "vitest";
+
+import {
+  createReexecSpawn,
+  isProcessAlive,
+  killProcessGroup,
+  type SupervisedJob,
+} from "#supervisor";
 
 import { waitFor } from "../support/poll.js";
 import { deadPid, spawnOrphan } from "../support/spawn.js";
+
+const FAKE_WORKER = join(dirname(fileURLToPath(import.meta.url)), "../support/fake-worker.mjs");
+
+let agentSessionDir = "";
+
+beforeEach(() => {
+  agentSessionDir = mkdtempSync(join(tmpdir(), "otomat-start-gate-"));
+});
+
+afterEach(() => {
+  rmSync(agentSessionDir, { recursive: true, force: true });
+});
+
+function job(): SupervisedJob {
+  return {
+    runId: "run-gate",
+    stepRunId: "step-gate",
+    agentSessionId: "session-gate",
+    prompt: "do not run before release",
+    agentSessionDir,
+    worktreePath: null,
+    runtime: "fake",
+    mode: "run",
+    providerSessionId: null,
+  };
+}
+
+it("does not let a re-exec worker emit events before the durable start release", async () => {
+  const proc = createReexecSpawn(FAKE_WORKER)(job());
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  expect(isProcessAlive(proc.pid)).toBe(true);
+  expect(existsSync(join(agentSessionDir, "events.jsonl"))).toBe(false);
+
+  proc.kill("SIGKILL");
+  await proc.exited;
+  expect(existsSync(join(agentSessionDir, "events.jsonl"))).toBe(false);
+});
+
+it("runs the worker after the parent releases its start gate", async () => {
+  const proc = createReexecSpawn(FAKE_WORKER)(job());
+  proc.start();
+  await proc.exited;
+
+  expect(existsSync(join(agentSessionDir, "events.jsonl"))).toBe(true);
+});
 
 it("reports the current process as alive", () => {
   expect(isProcessAlive(process.pid)).toBe(true);

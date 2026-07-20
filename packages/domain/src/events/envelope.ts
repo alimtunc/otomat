@@ -22,6 +22,7 @@ export const EVENT_TYPES = [
   "run.lifecycle",
   "step.lifecycle",
   "session.lifecycle",
+  "compete.lifecycle",
   "runtime.log",
   "runtime.message",
   "runtime.tool_call",

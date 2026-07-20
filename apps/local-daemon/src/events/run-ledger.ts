@@ -28,9 +28,30 @@ export function runEventsPath(dataDir: string, runId: string): string {
   return join(runDir(dataDir, runId), EVENTS_FILENAME);
 }
 
-// Overlap between the live tail and the final drain is idempotent via the (run_id, seq) unique index.
-export function startLiveTail(db: Db, dataDir: string, runId: string): EventTailer {
-  const tailer = new EventTailer({ db, runId, filePath: runEventsPath(dataDir, runId) });
+export function sessionDir(dataDir: string, runId: string, agentSessionId: string): string {
+  return join(runDir(dataDir, runId), "sessions", agentSessionId);
+}
+
+export function sessionEventsPath(dataDir: string, runId: string, agentSessionId: string): string {
+  return join(sessionDir(dataDir, runId, agentSessionId), EVENTS_FILENAME);
+}
+
+function sessionStreamId(agentSessionId: string): string {
+  return `session:${agentSessionId}`;
+}
+
+export function startSessionTail(
+  db: Db,
+  dataDir: string,
+  runId: string,
+  agentSessionId: string,
+): EventTailer {
+  const tailer = new EventTailer({
+    db,
+    runId,
+    streamId: sessionStreamId(agentSessionId),
+    filePath: sessionEventsPath(dataDir, runId, agentSessionId),
+  });
   tailer.start(LIVE_TAIL_INTERVAL_MS);
   return tailer;
 }
@@ -41,6 +62,24 @@ export function drainRunEvents(db: Db, dataDir: string, runId: string): void {
     new EventTailer({ db, runId, filePath: runEventsPath(dataDir, runId) }).drain();
   } catch (error) {
     console.error(`[otomat] drain failed for run ${runId}`, error);
+  }
+}
+
+export function drainSessionEvents(
+  db: Db,
+  dataDir: string,
+  runId: string,
+  agentSessionId: string,
+): void {
+  try {
+    new EventTailer({
+      db,
+      runId,
+      streamId: sessionStreamId(agentSessionId),
+      filePath: sessionEventsPath(dataDir, runId, agentSessionId),
+    }).drain();
+  } catch (error) {
+    console.error(`[otomat] drain failed for run ${runId} session ${agentSessionId}`, error);
   }
 }
 
@@ -60,9 +99,9 @@ function endsWithNewline(file: string): boolean {
 /**
  * Appends one event to the run's `events.jsonl` (creating the run dir, and
  * newline-closing a torn final line so the append stays whole), then drains the
- * file into the DB ledger. File-first — never DB-only — so the per-run `seq`
- * stays equal to the jsonl line index across resume turns. Synchronous: on
- * return the event is durably in the ledger with its allocated `seq`.
+ * file into the DB ledger. File-first — never DB-only — so the file stays the
+ * replayable source of truth. Synchronous: on return the event is durably in the
+ * ledger with its allocated `seq`.
  */
 export function emitLedgerEvent(db: Db, dataDir: string, runId: string, event: RuntimeEvent): void {
   const file = runEventsPath(dataDir, runId);

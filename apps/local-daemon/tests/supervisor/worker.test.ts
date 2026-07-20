@@ -29,7 +29,7 @@ function job(mode: "run" | "resume", worktreePath: string | null = null): Superv
     stepRunId: "s1",
     agentSessionId: "a1",
     prompt: "do the thing",
-    runDir: dir,
+    agentSessionDir: dir,
     worktreePath,
     runtime: "fake",
     mode,

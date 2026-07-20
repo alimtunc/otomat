@@ -2,6 +2,8 @@ import { getRun, listStepRunsForRun } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
+import { createRepositoryResolver } from "#git";
+import { createSupervisor, isProcessAlive, type SpawnSession, type Supervisor } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import {
@@ -11,6 +13,7 @@ import {
 } from "../support/run-event-fixtures.js";
 import { seedRun } from "../support/seed.js";
 import { deadPid } from "../support/spawn.js";
+import { workerSpawn } from "../support/spawn.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
@@ -86,4 +89,41 @@ it("does not spawn a worker for a run aborted while queued on the semaphore", as
 
   expect(getRun(fix.db, "rqa")?.status).toBe("canceled");
   expect(spawn.calls).toBe(1); // only the holder spawned; the aborted run never did
+});
+
+it("never releases a spawned worker when abort lands during durable startup", async () => {
+  const worker = workerSpawn("linger");
+  let supervisor: Supervisor;
+  let aborting: Promise<void> | null = null;
+  let released = 0;
+  let workerPid = -1;
+  const spawn: SpawnSession = (job) => {
+    const proc = worker(job);
+    workerPid = proc.pid;
+    const release = proc.start;
+    proc.start = () => {
+      released += 1;
+      release();
+    };
+    aborting = supervisor.abort(job.runId);
+    return proc;
+  };
+  supervisor = createSupervisor({
+    db: fix.db,
+    dataDir: fix.dataDir,
+    defaultProjectId: "p1",
+    spawn,
+    repositories: createRepositoryResolver({
+      db: fix.db,
+      worktreesRoot: `${fix.dataDir}/worktrees`,
+    }),
+  });
+
+  const run = await supervisor.start({ prompt: "abort in the start gate" });
+  if (!aborting) throw new Error("abort did not start during spawn");
+  await aborting;
+
+  expect(released).toBe(0);
+  expect(isProcessAlive(workerPid)).toBe(false);
+  expect(getRun(fix.db, run.id)?.status).toBe("canceled");
 });

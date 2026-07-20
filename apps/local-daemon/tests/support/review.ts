@@ -33,7 +33,7 @@ export function commentRow(overrides: Partial<ReviewCommentRow> = {}): ReviewCom
 /** Every method throws or returns empty unless a test overrides it — no accidental fake success. */
 export function stubReviewService(overrides: Partial<ReviewService> = {}): ReviewService {
   return {
-    getRunDiff: () => ({ computedAt: "2026-07-05T00:00:00.000Z", diff: null }),
+    getWorktreeDiff: () => ({ computedAt: "2026-07-05T00:00:00.000Z", diff: null }),
     getReviewDetail: () => ({ review: null, comments: [] }),
     addComment: () => {
       throw new Error("addComment stub not configured");

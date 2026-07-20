@@ -7,7 +7,15 @@ import type { Db } from "@otomat/db";
 import { collectChangedFiles, computeCanonicalDiff, worktreeStateTree } from "./diff.js";
 import { WorktreeConflictError, WorktreeNotFoundError } from "./errors.js";
 import { runGit } from "./git-cli.js";
-import { branchExists, deleteBranch, headSha, mergeBase, revParse } from "./repo.js";
+import {
+  branchExists,
+  deleteBranch,
+  fastForward,
+  headSha,
+  isAncestor,
+  mergeBase,
+  revParse,
+} from "./repo.js";
 import type { CanonicalDiff, ChangedFile, WorktreeRecord, WorktreeStatus } from "./types.js";
 import { addWorktree, pruneWorktrees, removeWorktree } from "./worktree-cli.js";
 import {
@@ -53,6 +61,11 @@ export interface WorktreeListFilter {
   status?: WorktreeStatus;
 }
 
+export interface WorktreePromotion {
+  source: WorktreeRecord;
+  canonical: WorktreeRecord;
+}
+
 export interface GitWorktreeService {
   /**
    * Forks a new worktree on a dedicated `branch` for `owner`. Idempotent when
@@ -80,6 +93,8 @@ export interface GitWorktreeService {
   diff(owner: string): CanonicalDiff;
   /** Commits outstanding changes and records the new branch tip without removing the active worktree. */
   snapshot(owner: string): WorktreeRecord;
+  /** Fast-forwards the clean canonical owner from one candidate forked at `expectedBaseSha`. */
+  promote(sourceOwner: string, canonicalOwner: string, expectedBaseSha: string): WorktreePromotion;
   /**
    * Commits any uncommitted work, removes the working directory, and marks the
    * row archived with the branch tip as `headSha`; the branch is kept. Requires
@@ -256,6 +271,43 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       const head = headSha(row.path);
       updateWorktreeStatus(db, row.id, { status: "active", head_sha: head });
       return toRecord({ ...row, head_sha: head });
+    },
+
+    promote(sourceOwner, canonicalOwner, expectedBaseSha) {
+      const source = findActiveByOwner(db, sourceOwner);
+      const canonical = findActiveByOwner(db, canonicalOwner);
+      if (!source) throw new WorktreeNotFoundError(sourceOwner);
+      if (!canonical) throw new WorktreeNotFoundError(canonicalOwner);
+
+      snapshotWorktree(source.path, `otomat: promote snapshot for ${sourceOwner}`);
+      const sourceHead = headSha(source.path);
+      updateWorktreeStatus(db, source.id, { status: "active", head_sha: sourceHead });
+
+      if (!isAncestor(repoRoot, expectedBaseSha, sourceHead)) {
+        throw new WorktreeConflictError(
+          `candidate ${sourceOwner} does not descend from compete base ${expectedBaseSha}`,
+        );
+      }
+      if (isDirty(canonical.path)) {
+        throw new WorktreeConflictError(`canonical worktree ${canonicalOwner} is dirty`);
+      }
+
+      const canonicalHead = headSha(canonical.path);
+      if (canonicalHead !== sourceHead) {
+        if (canonicalHead !== expectedBaseSha) {
+          throw new WorktreeConflictError(
+            `canonical worktree ${canonicalOwner} moved after competitors forked`,
+          );
+        }
+        fastForward(canonical.path, source.branch);
+      }
+
+      const promotedHead = headSha(canonical.path);
+      updateWorktreeStatus(db, canonical.id, { status: "active", head_sha: promotedHead });
+      return {
+        source: toRecord({ ...source, head_sha: sourceHead }),
+        canonical: toRecord({ ...canonical, head_sha: promotedHead }),
+      };
     },
 
     archive(owner) {

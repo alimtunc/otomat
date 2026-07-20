@@ -1,7 +1,12 @@
 import { runPlanInputSchema } from "@otomat/domain";
 import { useForm } from "@tanstack/react-form";
 import { useStartRunAndNavigate } from "@web/api/runs/mutations";
-import { buildRunPlanInput, newWorkflowStep, type WorkflowStepDraft } from "@web/lib/workflow-plan";
+import {
+  buildRunPlanInput,
+  newWorkflowCompeteGroup,
+  newWorkflowStep,
+  type WorkflowNodeDraft,
+} from "@web/lib/workflow-plan";
 import { useRef, useState } from "react";
 
 export interface UseWorkflowFormOptions {
@@ -16,8 +21,13 @@ export function useWorkflowForm({ projectId, runtime, onLaunched }: UseWorkflowF
   const stepCounter = useRef(1);
   const [planError, setPlanError] = useState<string | null>(null);
 
+  const defaultValues: { goal: string; steps: WorkflowNodeDraft[] } = {
+    goal: "",
+    steps: [newWorkflowStep(1)],
+  };
+
   const form = useForm({
-    defaultValues: { goal: "", steps: [newWorkflowStep(1)] },
+    defaultValues,
     onSubmit: async ({ value }) => {
       if (runtime === null || projectId === undefined) return;
       const plan = buildRunPlanInput(value.steps);
@@ -40,7 +50,7 @@ export function useWorkflowForm({ projectId, runtime, onLaunched }: UseWorkflowF
     },
   });
 
-  function updateSteps(update: (steps: WorkflowStepDraft[]) => WorkflowStepDraft[]) {
+  function updateSteps(update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) {
     form.setFieldValue("steps", update(form.getFieldValue("steps")));
     setPlanError(null);
   }
@@ -50,7 +60,12 @@ export function useWorkflowForm({ projectId, runtime, onLaunched }: UseWorkflowF
     updateSteps((steps) => [...steps, newWorkflowStep(stepCounter.current)]);
   }
 
-  return { form, planError, isPending, updateSteps, addStep };
+  function addCompeteGroup() {
+    stepCounter.current += 1;
+    updateSteps((steps) => [...steps, newWorkflowCompeteGroup(stepCounter.current)]);
+  }
+
+  return { form, planError, isPending, updateSteps, addStep, addCompeteGroup };
 }
 
 export type WorkflowForm = ReturnType<typeof useWorkflowForm>["form"];

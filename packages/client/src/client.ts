@@ -18,6 +18,7 @@ import {
   type PreparePullRequestRequest,
   type RegisterRepositoryRequest,
   type RequestFixRequest,
+  type SelectCompeteWinnerRequest,
   type StartRunRequest,
 } from "@otomat/domain";
 
@@ -97,6 +98,23 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
     async abortRun(id: string) {
       return runDetailSchema.parse(
         await postJson(config, `/api/runs/${encodeURIComponent(id)}/abort`, {}),
+      );
+    },
+    async getCompeteCandidateDiff(id: string, groupId: string, stepId: string) {
+      return runDiffResponseSchema.parse(
+        await getJson(
+          config,
+          `/api/runs/${encodeURIComponent(id)}/compete-groups/${encodeURIComponent(groupId)}/candidates/${encodeURIComponent(stepId)}/diff`,
+        ),
+      );
+    },
+    async selectCompeteWinner(id: string, groupId: string, request: SelectCompeteWinnerRequest) {
+      return runDetailSchema.parse(
+        await postJson(
+          config,
+          `/api/runs/${encodeURIComponent(id)}/compete-groups/${encodeURIComponent(groupId)}/winner`,
+          request,
+        ),
       );
     },
     async getRunDiff(id: string) {

@@ -8,6 +8,7 @@
  */
 import type {
   AgentSessionState,
+  CompeteGroupState,
   IssueSource,
   IssueState,
   PullRequestPublicationState,
@@ -16,6 +17,7 @@ import type {
   ReviewState,
   RunState,
   StepRunState,
+  WorktreeStatus,
 } from "@otomat/domain";
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
@@ -51,7 +53,7 @@ export const repositories = sqliteTable("repositories", {
   ...timestamps,
 });
 
-export type WorktreeStatus = "active" | "archived" | "removed";
+export type { WorktreeStatus } from "@otomat/domain";
 
 export const worktrees = sqliteTable(
   "worktrees",
@@ -114,6 +116,24 @@ export const runs = sqliteTable("runs", {
   ...timestamps,
 });
 
+export const competeGroups = sqliteTable(
+  "compete_groups",
+  {
+    id: text("id").primaryKey(),
+    run_id: text("run_id")
+      .notNull()
+      .references(() => runs.id),
+    idx: integer("idx").notNull(),
+    name: text("name").notNull(),
+    status: text("status").$type<CompeteGroupState>().notNull().default("queued"),
+    // Cycle with step_runs.compete_group_id: no FK here; claimCompeteWinner validates the candidate.
+    winner_step_run_id: text("winner_step_run_id"),
+    base_head_sha: text("base_head_sha"),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("compete_groups_run_idx_unique").on(table.run_id, table.idx)],
+);
+
 export const stepRuns = sqliteTable(
   "step_runs",
   {
@@ -124,10 +144,22 @@ export const stepRuns = sqliteTable(
     idx: integer("idx").notNull(),
     name: text("name").notNull(),
     status: text("status").$type<StepRunState>().notNull().default("queued"),
+    compete_group_id: text("compete_group_id").references(() => competeGroups.id),
+    worktree_id: text("worktree_id").references(() => worktrees.id),
     ...timestamps,
   },
   (table) => [uniqueIndex("step_runs_run_idx_unique").on(table.run_id, table.idx)],
 );
+
+export const eventStreams = sqliteTable("event_streams", {
+  id: text("id").primaryKey(),
+  run_id: text("run_id")
+    .notNull()
+    .references(() => runs.id),
+  file_path: text("file_path").notNull(),
+  byte_offset: integer("byte_offset").notNull().default(0),
+  ...timestamps,
+});
 
 export const agentSessions = sqliteTable("agent_sessions", {
   id: text("id").primaryKey(),

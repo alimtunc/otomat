@@ -1,6 +1,7 @@
 import type {
   AgentSessionState,
   ChangeStatus,
+  CompeteGroupState,
   IssueState,
   PullRequestState,
   ReviewCommentState,
@@ -55,6 +56,7 @@ export type StatusKind =
   | "run"
   | "step"
   | "session"
+  | "compete"
   | "review"
   | "reviewComment"
   | "pr"
@@ -88,6 +90,7 @@ const RUN_STATUS: StatusMap<RunState> = {
   running: { tone: "iris", icon: Loader, label: "Running", live: true },
   awaiting_permission: { tone: "warning", icon: ShieldQuestion, label: "Awaiting permission" },
   awaiting_human: { tone: "warning", icon: Hand, label: "Awaiting human" },
+  awaiting_selection: { tone: "warning", icon: GitCompare, label: "Awaiting winner" },
   review_ready: { tone: "review", icon: GitCompare, label: "Review ready" },
   completed: { tone: "success", icon: CheckCircle2, label: "Completed" },
   failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
@@ -113,6 +116,17 @@ const SESSION_STATUS: StatusMap<AgentSessionState> = {
   awaiting_input: { tone: "warning", icon: MessageCircleQuestion, label: "Awaiting input" },
   terminated: { tone: "neutral", icon: Square, label: "Terminated" },
   failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
+};
+
+const COMPETE_STATUS: StatusMap<CompeteGroupState> = {
+  queued: { tone: "neutral", icon: Clock, label: "Queued" },
+  running: { tone: "iris", icon: Loader, label: "Competing", live: true },
+  awaiting_human: { tone: "warning", icon: Hand, label: "Awaiting human" },
+  awaiting_selection: { tone: "warning", icon: GitCompare, label: "Choose winner" },
+  promoting: { tone: "iris", icon: GitMerge, label: "Promoting", live: true },
+  selected: { tone: "success", icon: CheckCircle2, label: "Winner selected" },
+  failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
+  canceled: { tone: "neutral", icon: Ban, label: "Canceled" },
 };
 
 const REVIEW_STATUS: StatusMap<ReviewState> = {
@@ -149,6 +163,7 @@ export interface KindStatusMap {
   run: RunState;
   step: StepRunState;
   session: AgentSessionState;
+  compete: CompeteGroupState;
   review: ReviewState;
   reviewComment: ReviewCommentState;
   pr: PullRequestState;
@@ -160,6 +175,7 @@ const STATUS_REGISTRY: { [K in StatusKind]: StatusMap<KindStatusMap[K]> } = {
   run: RUN_STATUS,
   step: STEP_STATUS,
   session: SESSION_STATUS,
+  compete: COMPETE_STATUS,
   review: REVIEW_STATUS,
   reviewComment: REVIEW_COMMENT_STATUS,
   pr: PR_STATUS,

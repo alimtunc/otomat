@@ -14,7 +14,7 @@ export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
   routes.get("/:id/diff", runGuard(deps.db), (c) => {
     const run = c.get("run");
     try {
-      return c.json(toRunDiffResponse(run.id, deps.review.getRunDiff(run)));
+      return c.json(toRunDiffResponse(run.id, deps.review.getWorktreeDiff(run)));
     } catch (error) {
       console.error(`[otomat] diff for run ${run.id} failed`, error);
       return c.json({ error: "diff_failed" }, 500);

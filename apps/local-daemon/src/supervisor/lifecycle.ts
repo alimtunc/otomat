@@ -7,9 +7,9 @@ import {
 } from "@otomat/db";
 import { agentSessionMachine, runMachine, stepRunMachine } from "@otomat/domain";
 
-import { runDir, startLiveTail } from "#events";
+import { startSessionTail } from "#events";
 
-import { writeWorkerIdentity } from "./identity.js";
+import { waitForWorkerIdentity } from "./identity.js";
 import { settleRun } from "./settle/index.js";
 import { notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveRunTo, driveSessionTo, driveStepTo } from "./transitions.js";
@@ -56,7 +56,7 @@ function trackTurn(
   proc: SessionProcess,
   release: () => void,
 ): void {
-  const tail = startLiveTail(state.db, state.dataDir, ctx.runId);
+  const tail = startSessionTail(state.db, state.dataDir, ctx.runId, ctx.agentSessionId);
   const monitor = proc.exited
     .then((exit) => {
       if (!state.aborting.has(ctx.runId)) settleLive(state, ctx, exit);
@@ -64,7 +64,7 @@ function trackTurn(
     .catch((error) => console.error(`[otomat] run ${ctx.runId} monitor failed`, error))
     .finally(() => {
       tail.stop();
-      state.inflight.delete(ctx.runId);
+      state.inflight.delete(ctx.agentSessionId);
       release();
     })
     // Chained after the slot release so the next plan step can claim it; a no-op unless the run is still `running` with a ready step.
@@ -73,7 +73,8 @@ function trackTurn(
       return state.advance?.(ctx.runId);
     })
     .catch((error) => console.error(`[otomat] run ${ctx.runId} step chain failed`, error));
-  state.inflight.set(ctx.runId, {
+  state.inflight.set(ctx.agentSessionId, {
+    runId: ctx.runId,
     proc,
     monitor,
     tail,
@@ -96,10 +97,10 @@ export async function spawnTurn(
   providerSessionId: string | null,
 ): Promise<void> {
   const { db, slots, inflight, claiming, aborting } = state;
-  if (claiming.has(ctx.runId) || inflight.has(ctx.runId)) {
-    throw new Error(`run ${ctx.runId} is already starting`);
+  if (claiming.has(ctx.agentSessionId) || inflight.has(ctx.agentSessionId)) {
+    throw new Error(`session ${ctx.agentSessionId} is already starting`);
   }
-  claiming.add(ctx.runId);
+  claiming.set(ctx.agentSessionId, ctx.runId);
   await slots.acquire();
   let released = false;
   const release = (): void => {
@@ -112,24 +113,57 @@ export async function spawnTurn(
   try {
     // A slot can take a while to free; an abort/cancel may have landed meanwhile.
     const current = getRun(db, ctx.runId);
-    if (!current || runMachine.isTerminal(current.status) || aborting.has(ctx.runId)) {
+    if (
+      !current ||
+      runMachine.isTerminal(current.status) ||
+      aborting.has(ctx.runId) ||
+      state.shuttingDown
+    ) {
       release();
       return;
     }
 
     advanceToRunning(state, ctx);
     proc = state.spawn({ ...ctx, mode, providerSessionId });
+    state.starting.set(ctx.agentSessionId, {
+      runId: ctx.runId,
+      proc,
+      turn: { agentSessionId: ctx.agentSessionId },
+    });
     recordAgentSessionProcess(db, ctx.agentSessionId, { pid: proc.pid, pgid: proc.pgid });
     // Stamp the process identity next to its pid so a later boot proves the group is still ours before killing it.
-    writeWorkerIdentity(runDir(state.dataDir, ctx.runId), proc.pid, proc.pgid);
+    if (!(await waitForWorkerIdentity(ctx.agentSessionDir, proc.pid, proc.pgid))) {
+      throw new Error(`worker ${proc.pid} exited before its identity could be recorded`);
+    }
+    const readyRun = getRun(db, ctx.runId);
+    if (
+      !readyRun ||
+      runMachine.isTerminal(readyRun.status) ||
+      aborting.has(ctx.runId) ||
+      state.shuttingDown
+    ) {
+      proc.kill("SIGKILL");
+      const exit = await proc.exited;
+      if (readyRun && !runMachine.isTerminal(readyRun.status) && !aborting.has(ctx.runId)) {
+        settleLive(state, ctx, exit);
+      }
+      release();
+      return;
+    }
+    proc.start();
+    state.starting.delete(ctx.agentSessionId);
     trackTurn(state, ctx, proc, release);
   } catch (error) {
     release();
     // A turn that failed mid-flight must not leave a live child or a phantom "running" row.
-    proc?.kill("SIGKILL");
-    settleLive(state, ctx);
+    if (proc) {
+      proc.kill("SIGKILL");
+      await proc.exited;
+    }
+    if (!aborting.has(ctx.runId)) settleLive(state, ctx);
     throw error;
   } finally {
-    claiming.delete(ctx.runId);
+    state.starting.delete(ctx.agentSessionId);
+    claiming.delete(ctx.agentSessionId);
   }
 }

@@ -1,5 +1,6 @@
 import type {
   AgentSessionRow,
+  CompeteGroupRow,
   IssueRow,
   ProjectRow,
   PullRequestRow,
@@ -11,6 +12,7 @@ import type {
 } from "@otomat/db";
 import {
   agentSessionContractSchema,
+  competeGroupContractSchema,
   issueContractSchema,
   projectContractSchema,
   pullRequestContractSchema,
@@ -21,6 +23,7 @@ import {
   runDiffResponseSchema,
   stepRunContractSchema,
   type AgentSessionContract,
+  type CompeteGroupContract,
   type IssueContract,
   type ProjectContract,
   type PullRequestContract,
@@ -30,6 +33,7 @@ import {
   type RunContract,
   type RunDiffResponse,
   type StepRunContract,
+  type WorktreeStatus,
 } from "@otomat/domain";
 
 import type { RunDiffResult } from "#review";
@@ -50,8 +54,20 @@ export function toRun(row: RunRow): RunContract {
   return runContractSchema.parse(row);
 }
 
-export function toStepRun(row: StepRunRow): StepRunContract {
-  return stepRunContractSchema.parse(row);
+/** A compete candidate carries the branch and status of its own isolated worktree; a plain step has none. */
+export function toStepRun(
+  row: StepRunRow,
+  worktree?: { branch: string; status: WorktreeStatus },
+): StepRunContract {
+  return stepRunContractSchema.parse({
+    ...row,
+    branch: worktree?.branch ?? null,
+    worktree_status: worktree?.status ?? null,
+  });
+}
+
+export function toCompeteGroup(row: CompeteGroupRow): CompeteGroupContract {
+  return competeGroupContractSchema.parse(row);
 }
 
 export function toAgentSession(row: AgentSessionRow): AgentSessionContract {

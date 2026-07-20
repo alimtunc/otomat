@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 
 import {
-  nextReadyStep,
+  isRunPlanCompeteGroup,
   type RunPlan,
-  type RunPlanStep,
+  type RunPlanNodeInput,
   type StartRunRequest,
 } from "@otomat/domain";
 
@@ -23,18 +23,54 @@ function mappedStepId(idByRequestId: ReadonlyMap<string, string>, requestId: str
 export function resolveStepRuntimes(
   request: StartRunRequest,
   defaultRuntime: KnownRuntimeId,
-): KnownRuntimeId[] | null {
+): ReadonlyMap<string, KnownRuntimeId> | null {
   if (!request.plan) return null;
-  return request.plan.steps.map((step) =>
-    step.agent === null ? defaultRuntime : requireAvailableRuntime(step.agent),
-  );
+  const runtimes = new Map<string, KnownRuntimeId>();
+  for (const node of request.plan.steps) {
+    const steps = isRunPlanCompeteGroup(node) ? node.compete : [node];
+    for (const step of steps) {
+      runtimes.set(
+        step.id,
+        step.agent === null ? defaultRuntime : requireAvailableRuntime(step.agent),
+      );
+    }
+  }
+  return runtimes;
+}
+
+function freezeNode(
+  node: RunPlanNodeInput,
+  idByRequestId: ReadonlyMap<string, string>,
+  runtimes: ReadonlyMap<string, KnownRuntimeId>,
+) {
+  const dependencies = node.depends_on.map((dependency) => mappedStepId(idByRequestId, dependency));
+  if (isRunPlanCompeteGroup(node)) {
+    return {
+      id: mappedStepId(idByRequestId, node.id),
+      name: node.name,
+      depends_on: dependencies,
+      compete: node.compete.map((competitor) => ({
+        id: mappedStepId(idByRequestId, competitor.id),
+        name: competitor.name,
+        agent: runtimes.get(competitor.id) ?? null,
+        prompt: `Shared objective:\n${node.name}\n\nCandidate instructions:\n${competitor.prompt}`,
+      })),
+    };
+  }
+  return {
+    id: mappedStepId(idByRequestId, node.id),
+    name: node.name,
+    agent: runtimes.get(node.id) ?? null,
+    prompt: node.prompt,
+    depends_on: dependencies,
+  };
 }
 
 /** Freezes the launch plan: request-local ids become the generated `step_runs` ids (plan step id == step_run id) and per-step `agent` lands resolved, never null. */
 export function freezePlan(
   request: StartRunRequest,
   defaultRuntime: KnownRuntimeId,
-  stepRuntimes: KnownRuntimeId[] | null,
+  stepRuntimes: ReadonlyMap<string, KnownRuntimeId> | null,
   fallbackPrompt: string,
 ): RunPlan {
   if (!request.plan || stepRuntimes === null) {
@@ -52,23 +88,15 @@ export function freezePlan(
     };
   }
 
-  const idByRequestId = new Map<string, string>(
-    request.plan.steps.map((step) => [step.id, randomUUID()]),
-  );
+  const idByRequestId = new Map<string, string>();
+  for (const node of request.plan.steps) {
+    idByRequestId.set(node.id, randomUUID());
+    if (isRunPlanCompeteGroup(node)) {
+      for (const competitor of node.compete) idByRequestId.set(competitor.id, randomUUID());
+    }
+  }
   return {
     version: 1,
-    steps: request.plan.steps.map((step, index) => ({
-      id: mappedStepId(idByRequestId, step.id),
-      name: step.name,
-      agent: stepRuntimes[index] ?? defaultRuntime,
-      prompt: step.prompt,
-      depends_on: step.depends_on.map((dependency) => mappedStepId(idByRequestId, dependency)),
-    })),
+    steps: request.plan.steps.map((node) => freezeNode(node, idByRequestId, stepRuntimes)),
   };
-}
-
-export function firstStepToRun(plan: RunPlan): RunPlanStep {
-  const first = nextReadyStep(plan, new Map());
-  if (first === null) throw new Error("run plan has no startable step");
-  return first;
 }

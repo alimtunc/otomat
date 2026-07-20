@@ -1,6 +1,7 @@
 import {
   canFollowUpRun,
   isRunTerminal,
+  selectLatestResumableSession,
   type RunDetail,
   type RuntimeDescriptor,
 } from "@otomat/domain";
@@ -37,14 +38,18 @@ export function resolveFollowUpGate(
   if (!canFollowUpRun(status)) {
     return disabled("The agent is working — follow-up unlocks when the run pauses.");
   }
-  if (!detail.sessions.some((session) => session.provider_session_id !== null)) {
+  const resumable = selectLatestResumableSession(
+    detail.sessions,
+    detail.steps,
+    detail.compete_groups,
+  );
+  if (!resumable) {
     return disabled("No provider session to resume yet.");
   }
   if (descriptors === undefined) {
     return disabled("Checking runtime availability…");
   }
-  const runtimeId = detail.run.plan_json.steps[0]?.agent ?? null;
-  const runtime = descriptors.find((descriptor) => descriptor.id === runtimeId);
+  const runtime = descriptors.find((descriptor) => descriptor.id === resumable.agent_id);
   if (!runtime) {
     return disabled("This run's runtime is not registered on the daemon.");
   }

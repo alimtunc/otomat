@@ -5,6 +5,7 @@ import { useRunEventStream } from "@web/api/runs/run-events-provider";
 import { ContextPane } from "@web/components/runs/cockpit/context-pane";
 import { FollowUpComposer } from "@web/components/runs/cockpit/follow-up-composer";
 import { StepsPane } from "@web/components/runs/cockpit/steps-pane";
+import { CompeteComparison } from "@web/components/runs/compete/comparison";
 import { PaneHeader } from "@web/components/runs/pane-header";
 import { RunTimeline } from "@web/components/runs/timeline/list";
 import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
@@ -32,23 +33,37 @@ export function RunTimelineView() {
     );
   }
 
+  const activeCompetition = detail.data.compete_groups.find(
+    (group) => group.status === "awaiting_selection" || group.status === "promoting",
+  );
+
   return (
     <div className="grid h-full min-h-0 grid-cols-[226px_1fr_270px]">
       <StepsPane detail={detail.data} />
       <div className="flex min-h-0 min-w-0 flex-col">
-        <PaneHeader>
-          Event timeline
-          <span className="ml-auto font-normal normal-case text-text-tertiary">
-            {stream.state === "open" ? "ordered by seq · live" : "ordered by seq"}
-          </span>
-        </PaneHeader>
-        <RunTimeline
-          events={stream.events}
-          steps={detail.data.steps}
-          state={stream.state}
-          degraded={stream.degraded}
-        />
-        <FollowUpComposer detail={detail.data} />
+        {activeCompetition ? (
+          <CompeteComparison
+            detail={detail.data}
+            group={activeCompetition}
+            events={stream.events}
+          />
+        ) : (
+          <>
+            <PaneHeader>
+              Event timeline
+              <span className="ml-auto font-normal normal-case text-text-tertiary">
+                {stream.state === "open" ? "ordered by seq · live" : "ordered by seq"}
+              </span>
+            </PaneHeader>
+            <RunTimeline
+              events={stream.events}
+              steps={detail.data.steps}
+              state={stream.state}
+              degraded={stream.degraded}
+            />
+            <FollowUpComposer detail={detail.data} />
+          </>
+        )}
       </div>
       <ContextPane detail={detail.data} />
     </div>

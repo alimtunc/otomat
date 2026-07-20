@@ -5,9 +5,9 @@ import {
   allStepsSucceeded,
   hasActiveStep,
   InvalidRunPlanError,
-  nextReadyStep,
   planExecutionOrder,
   planOutcome,
+  readyPlanWork,
 } from "#domain/plan/schedule";
 import type { StepRunState } from "#domain/state-machines/step-run";
 
@@ -28,12 +28,46 @@ function statuses(entries: Record<string, StepRunState>): Map<string, StepRunSta
   return new Map(Object.entries(entries));
 }
 
+function readyStep(target: RunPlan, entries: Record<string, StepRunState>) {
+  const ready = readyPlanWork(target, statuses(entries), new Map());
+  return ready?.kind === "step" ? ready.step : null;
+}
+
 const diamond = plan([
   { id: "root" },
   { id: "left", depends_on: ["root"] },
   { id: "right", depends_on: ["root"] },
   { id: "merge", depends_on: ["left", "right"] },
 ]);
+
+const competePlan: RunPlan = {
+  version: 1,
+  steps: [
+    {
+      id: "plan",
+      name: "Plan",
+      agent: "claude",
+      prompt: "Plan it",
+      depends_on: [],
+    },
+    {
+      id: "implementation",
+      name: "Implementation",
+      depends_on: ["plan"],
+      compete: [
+        { id: "candidate-a", name: "A", agent: "claude", prompt: "Build it" },
+        { id: "candidate-b", name: "B", agent: "codex", prompt: "Build it" },
+      ],
+    },
+    {
+      id: "verify",
+      name: "Verify",
+      agent: "codex",
+      prompt: "Verify it",
+      depends_on: ["implementation"],
+    },
+  ],
+};
 
 describe("planExecutionOrder", () => {
   it("orders dependencies first and breaks ties by plan position", () => {
@@ -59,22 +93,72 @@ describe("planExecutionOrder", () => {
   });
 });
 
-describe("nextReadyStep", () => {
+describe("readyPlanWork over plain steps", () => {
   it("starts with the first dependency-free step", () => {
-    expect(nextReadyStep(diamond, statuses({}))?.id).toBe("root");
+    expect(readyStep(diamond, {})?.id).toBe("root");
   });
 
   it("unblocks dependents only after every dependency succeeded", () => {
-    expect(nextReadyStep(diamond, statuses({ root: "succeeded", left: "succeeded" }))?.id).toBe(
-      "right",
-    );
+    expect(readyStep(diamond, { root: "succeeded", left: "succeeded" })?.id).toBe("right");
     expect(
-      nextReadyStep(diamond, statuses({ root: "succeeded", left: "succeeded", right: "running" })),
+      readyStep(diamond, { root: "succeeded", left: "succeeded", right: "running" }),
     ).toBeNull();
   });
 
   it("never offers a step whose dependency halted", () => {
-    expect(nextReadyStep(diamond, statuses({ root: "failed" }))).toBeNull();
+    expect(readyStep(diamond, { root: "failed" })).toBeNull();
+  });
+});
+
+describe("readyPlanWork", () => {
+  it("offers all queued competitors together after group dependencies succeed", () => {
+    const ready = readyPlanWork(
+      competePlan,
+      statuses({ plan: "succeeded" }),
+      new Map([["implementation", "queued"]]),
+    );
+
+    expect(ready).toMatchObject({
+      kind: "compete",
+      group: { id: "implementation" },
+      competitors: [{ id: "candidate-a" }, { id: "candidate-b" }],
+    });
+  });
+
+  it("blocks dependents until the group has a selected winner", () => {
+    const candidateStatuses = statuses({
+      plan: "succeeded",
+      "candidate-a": "succeeded",
+      "candidate-b": "succeeded",
+    });
+
+    expect(
+      readyPlanWork(
+        competePlan,
+        candidateStatuses,
+        new Map([["implementation", "awaiting_selection"]]),
+      ),
+    ).toBeNull();
+    expect(
+      readyPlanWork(competePlan, candidateStatuses, new Map([["implementation", "selected"]])),
+    ).toMatchObject({ kind: "step", step: { id: "verify" } });
+  });
+
+  it("offers only queued competitors when an interrupted group resumes", () => {
+    const ready = readyPlanWork(
+      competePlan,
+      statuses({
+        plan: "succeeded",
+        "candidate-a": "succeeded",
+        "candidate-b": "queued",
+      }),
+      new Map([["implementation", "running"]]),
+    );
+
+    expect(ready).toMatchObject({
+      kind: "compete",
+      competitors: [{ id: "candidate-b" }],
+    });
   });
 });
 
@@ -111,5 +195,20 @@ describe("planOutcome", () => {
 
   it("reports canceled when steps were only canceled", () => {
     expect(planOutcome(diamond, statuses({ root: "canceled" }))).toBe("canceled");
+  });
+
+  it("keeps a compete plan running until a winner is selected", () => {
+    const candidateStatuses = statuses({
+      plan: "succeeded",
+      "candidate-a": "succeeded",
+      "candidate-b": "succeeded",
+    });
+    expect(
+      planOutcome(
+        competePlan,
+        candidateStatuses,
+        new Map([["implementation", "awaiting_selection"]]),
+      ),
+    ).toBe("running");
   });
 });

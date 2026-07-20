@@ -3,26 +3,25 @@ import { randomUUID } from "node:crypto";
 import {
   getIssue,
   getProject,
-  insertAgentSession,
+  insertCompeteGroup,
   insertIssue,
   insertRun,
   insertStepRun,
   type Db,
 } from "@otomat/db";
 import {
-  agentSessionMachine,
+  competeGroupMachine,
+  executableSteps,
+  isRunPlanCompeteGroup,
   issueMachine,
   runMachine,
   stepRunMachine,
   type StartRunRequest,
 } from "@otomat/domain";
 
-import { runDir } from "#events";
-
-import { firstStepToRun, freezePlan, resolveStepRuntimes } from "./freeze-plan.js";
+import { freezePlan, resolveStepRuntimes } from "./freeze-plan.js";
 import { ensureRuntimeAgent, requireAvailableRuntime } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
-import type { TurnContext } from "./types.js";
 
 const RUN_BRANCH_PREFIX = "otomat/run/";
 
@@ -41,6 +40,14 @@ export class ProjectNotFoundError extends Error {
   constructor(projectId: string) {
     super(`project ${projectId} not found`);
     this.name = "ProjectNotFoundError";
+  }
+}
+
+/** Compete candidates require isolated Git worktrees and cannot run in a repository-less project. */
+export class CompeteRepositoryRequiredError extends Error {
+  constructor(projectId: string) {
+    super(`project ${projectId} needs a usable Git repository for compete groups`);
+    this.name = "CompeteRepositoryRequiredError";
   }
 }
 
@@ -70,28 +77,28 @@ function insertAdHocIssue(db: Db, projectId: string, request: StartRunRequest): 
  * Materializes the run, step and session rows, freezes the plan, and acquires an
  * isolated worktree from the repository belonging to the run's issue.
  */
-export function prepareRun(state: SupervisorState, request: StartRunRequest): TurnContext {
-  const { db, dataDir, defaultProjectId, repositories } = state;
+export function prepareRun(state: SupervisorState, request: StartRunRequest): string {
+  const { db, defaultProjectId, repositories } = state;
   // Every effective runtime is validated before any row (issue included) is written.
   const defaultRuntime = requireAvailableRuntime(request.runtime);
   const stepRuntimes = resolveStepRuntimes(request, defaultRuntime);
 
-  const issueId =
-    request.issue_id ??
-    insertAdHocIssue(db, resolveProjectId(db, defaultProjectId, request), request);
-  const issue = getIssue(db, issueId);
-  if (!issue) throw new Error(`issue ${issueId} not found`);
-  const prompt = request.prompt ?? issue.title;
+  const existingIssue = request.issue_id ? getIssue(db, request.issue_id) : undefined;
+  if (request.issue_id && !existingIssue) throw new Error(`issue ${request.issue_id} not found`);
+  const projectId = existingIssue?.project_id ?? resolveProjectId(db, defaultProjectId, request);
+  const prompt = request.prompt ?? existingIssue?.title ?? "";
   // The issue owns the project, so issue-based launches always resolve that project's repository.
-  const binding = repositories.forProject(issue.project_id);
+  const binding = repositories.forProject(projectId);
 
   const runId = randomUUID();
   const branch = runBranchName(runId);
   const plan = freezePlan(request, defaultRuntime, stepRuntimes, prompt);
-  const firstStep = firstStepToRun(plan);
-  const firstStepRuntime = ensureRuntimeAgent(db, firstStep.agent ?? defaultRuntime);
+  if (plan.steps.some(isRunPlanCompeteGroup) && !binding) {
+    throw new CompeteRepositoryRequiredError(projectId);
+  }
+  for (const step of executableSteps(plan)) ensureRuntimeAgent(db, step.agent ?? defaultRuntime);
   ensureRuntimeAgent(db, defaultRuntime);
-  const agentSessionId = randomUUID();
+  const issueId = existingIssue?.id ?? insertAdHocIssue(db, projectId, request);
 
   // Acquired before the run row exists so a git failure aborts the launch cleanly (no phantom run).
   const worktree = binding ? binding.service.acquire({ owner: runId, branch }) : null;
@@ -109,20 +116,35 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): Tu
           repository_id: binding?.repositoryId ?? null,
           worktree_id: worktree?.id ?? null,
         });
-        plan.steps.forEach((step, index) => {
+        let executableIndex = 0;
+        plan.steps.forEach((node, nodeIndex) => {
+          if (isRunPlanCompeteGroup(node)) {
+            insertCompeteGroup(db, {
+              id: node.id,
+              run_id: runId,
+              idx: nodeIndex,
+              name: node.name,
+              status: competeGroupMachine.initial,
+            });
+            for (const competitor of node.compete) {
+              insertStepRun(db, {
+                id: competitor.id,
+                run_id: runId,
+                idx: executableIndex++,
+                name: competitor.name,
+                status: stepRunMachine.initial,
+                compete_group_id: node.id,
+              });
+            }
+            return;
+          }
           insertStepRun(db, {
-            id: step.id,
+            id: node.id,
             run_id: runId,
-            idx: index,
-            name: step.name,
+            idx: executableIndex++,
+            name: node.name,
             status: stepRunMachine.initial,
           });
-        });
-        insertAgentSession(db, {
-          id: agentSessionId,
-          step_run_id: firstStep.id,
-          agent_id: firstStepRuntime,
-          status: agentSessionMachine.initial,
         });
       },
       { behavior: "immediate" },
@@ -139,13 +161,5 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): Tu
     throw error;
   }
 
-  return {
-    runId,
-    stepRunId: firstStep.id,
-    agentSessionId,
-    prompt: firstStep.prompt ?? prompt,
-    runDir: runDir(dataDir, runId),
-    worktreePath: worktree?.path ?? null,
-    runtime: firstStepRuntime,
-  };
+  return runId;
 }

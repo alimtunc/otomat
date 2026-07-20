@@ -1,13 +1,23 @@
 // Pure Node with no workspace imports so the spawned child survives independent of the test process; behavior via FAKE_WORKER_BEHAVIOR.
-import { appendFileSync, mkdirSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const job = JSON.parse(process.env.OTOMAT_WORKER_JOB);
 const behavior = process.env.FAKE_WORKER_BEHAVIOR ?? "complete";
-const file = join(job.runDir, "events.jsonl");
+const startToken = process.env.OTOMAT_WORKER_START_TOKEN;
+const file = join(job.agentSessionDir, "events.jsonl");
 mkdirSync(dirname(file), { recursive: true });
 
-const provider = `fake-session-${job.runId}`;
+if (!startToken) throw new Error("missing fake worker start token");
+const startGate = join(job.agentSessionDir, `.worker-start-${startToken}`);
+const deadline = Date.now() + 30_000;
+while (!existsSync(startGate) && Date.now() < deadline) {
+  await new Promise((resolve) => setTimeout(resolve, 10));
+}
+if (!existsSync(startGate)) process.exit(1);
+unlinkSync(startGate);
+
+const provider = `fake-session-${job.agentSessionId}`;
 let n = 0;
 
 function emit(type, source, payload) {

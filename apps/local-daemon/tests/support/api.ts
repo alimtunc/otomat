@@ -66,6 +66,9 @@ export function makeApiApp(
     followUpRun: async () => {
       throw new Error("followUpRun stub not configured");
     },
+    selectCompeteWinner: async () => {
+      throw new Error("selectCompeteWinner stub not configured");
+    },
     abortRun: async () => {},
     github: stubGitHubService(),
     review: stubReviewService(),

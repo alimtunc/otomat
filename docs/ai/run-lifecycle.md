@@ -29,7 +29,7 @@ sequenceDiagram
     Note over SUP: prepareRun() — rows · plan figé · worktree
     SUP->>ST: driveRunTo · queued → running
     SUP-)W: fork · state.spawn()
-    SUP->>ST: startLiveTail()
+    SUP->>ST: startSessionTail()
     API-->>UI: 201 { run } · running
 
     activate W
@@ -77,9 +77,11 @@ stateDiagram-v2
     preparing --> running
     running --> awaiting_permission
     running --> awaiting_human
+    running --> awaiting_selection
     running --> review_ready
     awaiting_permission --> running
     awaiting_human --> running
+    awaiting_selection --> running
     review_ready --> running
     review_ready --> completed
     completed --> [*]

@@ -22,13 +22,16 @@ export function parseReportedUsage(payload: EventEnvelope["payload"]): ReportedU
   };
 }
 
+export function latestUsageEvent(events: readonly EventEnvelope[]): EventEnvelope | undefined {
+  return events.filter((event) => event.type === "runtime.usage").at(-1);
+}
+
 /**
  * The last `runtime.usage` event's payload, field by field — never summed or
  * estimated across turns. Null when the run's ledger carries no usage event.
  */
 export function latestReportedUsage(events: EventEnvelope[]): ReportedUsage | null {
-  const usageEvents = events.filter((event) => event.type === "runtime.usage");
-  const payload = usageEvents.at(-1)?.payload;
+  const payload = latestUsageEvent(events)?.payload;
   return payload ? parseReportedUsage(payload) : null;
 }
 

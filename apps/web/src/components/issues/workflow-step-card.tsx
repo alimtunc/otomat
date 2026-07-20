@@ -1,114 +1,23 @@
 import type { RuntimeDescriptor } from "@otomat/domain";
-import {
-  Button,
-  cn,
-  Field,
-  FieldControl,
-  Icon,
-  IconButton,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-} from "@otomat/ui";
+import { Field, FieldControl, Icon, IconButton, Input, Textarea } from "@otomat/ui";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
-import { isAvailableRuntime } from "@web/lib/runtimes";
 import {
   moveWorkflowStep,
   removeWorkflowStep,
   setWorkflowStepRuntime,
   toggleWorkflowDependency,
-  type WorkflowStepDraft,
+  type WorkflowNodeDraft,
 } from "@web/lib/workflow-plan";
 
 import type { WorkflowForm } from "./use-workflow-form";
-
-const DEFAULT_RUNTIME_VALUE = "__default";
-
-function StepRuntimeSelect({
-  descriptors,
-  value,
-  onValueChange,
-}: {
-  descriptors: RuntimeDescriptor[];
-  value: string | null;
-  onValueChange: (runtime: string | null) => void;
-}) {
-  const items = [
-    { value: DEFAULT_RUNTIME_VALUE, label: "Run default", disabled: false },
-    ...descriptors.map((descriptor) => ({
-      value: descriptor.id,
-      label: descriptor.display_name,
-      disabled: !isAvailableRuntime(descriptor),
-    })),
-  ];
-  return (
-    <Select
-      items={items}
-      value={value ?? DEFAULT_RUNTIME_VALUE}
-      onValueChange={(next) => {
-        if (next !== null) onValueChange(next === DEFAULT_RUNTIME_VALUE ? null : next);
-      }}
-    >
-      <SelectTrigger aria-label="Step runtime" className="h-7 text-xs">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {items.map((item) => (
-          <SelectItem key={item.value} value={item.value} disabled={item.disabled}>
-            {item.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-function DependencyToggles({
-  earlier,
-  dependsOn,
-  onToggle,
-}: {
-  earlier: WorkflowStepDraft[];
-  dependsOn: string[];
-  onToggle: (key: string) => void;
-}) {
-  if (earlier.length === 0) {
-    return <span className="text-xs text-text-tertiary">Runs first</span>;
-  }
-  const dependsOnSet = new Set(dependsOn);
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      <span className="text-xs text-text-tertiary">After:</span>
-      {earlier.map((candidate, candidateIndex) => {
-        const pressed = dependsOnSet.has(candidate.key);
-        return (
-          <Button
-            key={candidate.key}
-            type="button"
-            variant="outline"
-            size="xs"
-            aria-pressed={pressed}
-            className={cn(pressed ? "border-accent text-accent" : "text-text-secondary")}
-            onClick={() => onToggle(candidate.key)}
-          >
-            {candidate.name.trim() || `Step ${candidateIndex + 1}`}
-          </Button>
-        );
-      })}
-    </div>
-  );
-}
+import { DependencyToggles, StepRuntimeSelect } from "./workflow-node-controls";
 
 export interface WorkflowStepCardProps {
   form: WorkflowForm;
-  steps: WorkflowStepDraft[];
+  steps: WorkflowNodeDraft[];
   index: number;
   descriptors: RuntimeDescriptor[];
-  onUpdateSteps: (update: (steps: WorkflowStepDraft[]) => WorkflowStepDraft[]) => void;
+  onUpdateSteps: (update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) => void;
 }
 
 export function WorkflowStepCard({
@@ -119,6 +28,7 @@ export function WorkflowStepCard({
   onUpdateSteps,
 }: WorkflowStepCardProps) {
   const step = steps[index];
+  if (!step || step.kind !== "step") return null;
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border-subtle bg-surface p-2.5">
       <div className="flex items-center gap-2">
@@ -195,6 +105,7 @@ export function WorkflowStepCard({
         <div className="w-36">
           <StepRuntimeSelect
             descriptors={descriptors}
+            label={`Step ${index + 1} runtime`}
             value={step.runtime}
             onValueChange={(next) =>
               onUpdateSteps((value) => setWorkflowStepRuntime(value, index, next))

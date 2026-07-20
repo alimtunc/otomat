@@ -1,993 +1,2835 @@
 <!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="generator" content="turkit visual-map">
-  <meta name="description" content="Atlas autonome de l’architecture stable d’Otomat : topology, flux, données, runtime, boundaries et points d’entrée.">
-  <title>Otomat — atlas d’architecture</title>
-  <style>
-    :root {
-      color-scheme: dark;
-      --ink: #0a0e13;
-      --ink-raised: #10161e;
-      --ink-soft: #151d27;
-      --paper: #ece7dc;
-      --paper-dim: #a9b0b8;
-      --paper-faint: #727d89;
-      --grid: #27313d;
-      --grid-strong: #3a4654;
-      --process: #78a7ff;
-      --process-soft: rgba(120, 167, 255, 0.12);
-      --ledger: #e3a451;
-      --ledger-soft: rgba(227, 164, 81, 0.12);
-      --data: #62d6a7;
-      --data-soft: rgba(98, 214, 167, 0.11);
-      --fault: #ff7c73;
-      --fault-soft: rgba(255, 124, 115, 0.11);
-      --shared: #b49bff;
-      --shared-soft: rgba(180, 155, 255, 0.11);
-      --external: #8d99a8;
-      --radius: 14px;
-      --radius-sm: 8px;
-      --display: "Avenir Next", "Segoe UI", system-ui, sans-serif;
-      --body: "Avenir Next", "Segoe UI", system-ui, sans-serif;
-      --mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
-    }
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content="turkit visual-map" />
+    <meta name="otomat-baseline" content="528920cf45cfdb7bd12e3f307da4cdfd5106432f" />
+    <meta
+      name="description"
+      content="Atlas autonome de l’architecture stable d’Otomat : topology, flux, données, runtime, boundaries et points d’entrée."
+    />
+    <title>Otomat — atlas d’architecture</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #0a0e13;
+        --ink-raised: #10161e;
+        --ink-soft: #151d27;
+        --paper: #ece7dc;
+        --paper-dim: #a9b0b8;
+        --paper-faint: #727d89;
+        --grid: #27313d;
+        --grid-strong: #3a4654;
+        --process: #78a7ff;
+        --process-soft: rgba(120, 167, 255, 0.12);
+        --ledger: #e3a451;
+        --ledger-soft: rgba(227, 164, 81, 0.12);
+        --data: #62d6a7;
+        --data-soft: rgba(98, 214, 167, 0.11);
+        --fault: #ff7c73;
+        --fault-soft: rgba(255, 124, 115, 0.11);
+        --shared: #b49bff;
+        --shared-soft: rgba(180, 155, 255, 0.11);
+        --external: #8d99a8;
+        --radius: 14px;
+        --radius-sm: 8px;
+        --display: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+        --body: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+        --mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+      }
 
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      background:
-        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px),
-        var(--ink);
-      background-size: 32px 32px;
-      color: var(--paper);
-      font-family: var(--body);
-      font-size: 15px;
-      line-height: 1.58;
-    }
-    a { color: inherit; }
-    a:hover { color: #fff; }
-    a:focus-visible, button:focus-visible, summary:focus-visible {
-      outline: 2px solid var(--process);
-      outline-offset: 4px;
-      border-radius: 4px;
-    }
-    code, .mono { font-family: var(--mono); }
-    code {
-      padding: 0.08rem 0.35rem;
-      border: 1px solid var(--grid);
-      border-radius: 5px;
-      background: rgba(0,0,0,0.24);
-      color: #dbe5f3;
-      font-size: 0.88em;
-    }
-    .skip-link {
-      position: fixed;
-      z-index: 100;
-      top: 10px;
-      left: 10px;
-      transform: translateY(-160%);
-      padding: 9px 12px;
-      background: var(--paper);
-      color: var(--ink);
-    }
-    .skip-link:focus { transform: translateY(0); }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background:
+          linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px), var(--ink);
+        background-size: 32px 32px;
+        color: var(--paper);
+        font-family: var(--body);
+        font-size: 15px;
+        line-height: 1.58;
+      }
+      a {
+        color: inherit;
+      }
+      a:hover {
+        color: #fff;
+      }
+      a:focus-visible,
+      button:focus-visible,
+      summary:focus-visible {
+        outline: 2px solid var(--process);
+        outline-offset: 4px;
+        border-radius: 4px;
+      }
+      code,
+      .mono {
+        font-family: var(--mono);
+      }
+      code {
+        padding: 0.08rem 0.35rem;
+        border: 1px solid var(--grid);
+        border-radius: 5px;
+        background: rgba(0, 0, 0, 0.24);
+        color: #dbe5f3;
+        font-size: 0.88em;
+      }
+      .skip-link {
+        position: fixed;
+        z-index: 100;
+        top: 10px;
+        left: 10px;
+        transform: translateY(-160%);
+        padding: 9px 12px;
+        background: var(--paper);
+        color: var(--ink);
+      }
+      .skip-link:focus {
+        transform: translateY(0);
+      }
 
-    .app-layout {
-      display: grid;
-      grid-template-columns: 246px minmax(0, 1fr);
-      max-width: 1520px;
-      margin: 0 auto;
-    }
-    .side {
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      padding: 26px 20px 20px;
-      border-right: 1px solid var(--grid);
-      background: rgba(10, 14, 19, 0.92);
-      backdrop-filter: blur(14px);
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 11px;
-      margin-bottom: 30px;
-    }
-    .brand-mark {
-      display: grid;
-      width: 34px;
-      height: 34px;
-      place-items: center;
-      border: 1px solid var(--ledger);
-      border-radius: 50%;
-      color: var(--ledger);
-      font-family: var(--mono);
-      font-size: 12px;
-      box-shadow: inset 0 0 0 5px var(--ledger-soft);
-    }
-    .brand strong { display: block; letter-spacing: -0.02em; }
-    .brand small { color: var(--paper-faint); font-family: var(--mono); }
-    .nav-label, .eyebrow {
-      color: var(--paper-faint);
-      font-family: var(--mono);
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.13em;
-      text-transform: uppercase;
-    }
-    .side nav { display: grid; gap: 3px; }
-    .side nav a {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      padding: 7px 9px;
-      border-left: 2px solid transparent;
-      color: var(--paper-dim);
-      font-size: 12.5px;
-      text-decoration: none;
-      transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
-    }
-    .side nav a::before {
-      content: "";
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: var(--grid-strong);
-    }
-    .side nav a:hover, .side nav a[aria-current="location"] {
-      border-color: var(--process);
-      background: var(--process-soft);
-      color: #fff;
-    }
-    .side nav a[aria-current="location"]::before { background: var(--process); }
-    .side-meta {
-      margin-top: auto;
-      padding-top: 18px;
-      border-top: 1px solid var(--grid);
-      color: var(--paper-faint);
-      font-family: var(--mono);
-      font-size: 10.5px;
-    }
-    .side-meta b { color: var(--paper-dim); font-weight: 600; }
+      .app-layout {
+        display: grid;
+        grid-template-columns: 246px minmax(0, 1fr);
+        max-width: 1520px;
+        margin: 0 auto;
+      }
+      .side {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 26px 20px 20px;
+        border-right: 1px solid var(--grid);
+        background: rgba(10, 14, 19, 0.92);
+        backdrop-filter: blur(14px);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        margin-bottom: 30px;
+      }
+      .brand-mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border: 1px solid var(--ledger);
+        border-radius: 50%;
+        color: var(--ledger);
+        font-family: var(--mono);
+        font-size: 12px;
+        box-shadow: inset 0 0 0 5px var(--ledger-soft);
+      }
+      .brand strong {
+        display: block;
+        letter-spacing: -0.02em;
+      }
+      .brand small {
+        color: var(--paper-faint);
+        font-family: var(--mono);
+      }
+      .nav-label,
+      .eyebrow {
+        color: var(--paper-faint);
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+      .side nav {
+        display: grid;
+        gap: 3px;
+      }
+      .side nav a {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 7px 9px;
+        border-left: 2px solid transparent;
+        color: var(--paper-dim);
+        font-size: 12.5px;
+        text-decoration: none;
+        transition:
+          color 140ms ease,
+          background 140ms ease,
+          border-color 140ms ease;
+      }
+      .side nav a::before {
+        content: "";
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--grid-strong);
+      }
+      .side nav a:hover,
+      .side nav a[aria-current="location"] {
+        border-color: var(--process);
+        background: var(--process-soft);
+        color: #fff;
+      }
+      .side nav a[aria-current="location"]::before {
+        background: var(--process);
+      }
+      .side-meta {
+        margin-top: auto;
+        padding-top: 18px;
+        border-top: 1px solid var(--grid);
+        color: var(--paper-faint);
+        font-family: var(--mono);
+        font-size: 10.5px;
+      }
+      .side-meta b {
+        color: var(--paper-dim);
+        font-weight: 600;
+      }
 
-    .page { min-width: 0; padding: 0 38px 80px; }
-    .hero {
-      min-height: 78vh;
-      display: grid;
-      align-content: center;
-      padding: 74px 0 58px;
-      border-bottom: 1px solid var(--grid);
-    }
-    .hero-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
-      gap: 48px;
-      align-items: end;
-    }
-    h1, h2, h3, p { margin-top: 0; }
-    h1 {
-      max-width: 850px;
-      margin-bottom: 22px;
-      font-family: var(--display);
-      font-size: clamp(3.3rem, 7.2vw, 7.4rem);
-      font-weight: 650;
-      letter-spacing: -0.065em;
-      line-height: 0.84;
-    }
-    h1 em {
-      display: block;
-      color: var(--ledger);
-      font-family: var(--mono);
-      font-size: 0.22em;
-      font-style: normal;
-      font-weight: 600;
-      letter-spacing: 0.03em;
-      line-height: 1.4;
-      text-transform: uppercase;
-    }
-    .hero-lede {
-      max-width: 690px;
-      margin-bottom: 0;
-      color: #c5cbd2;
-      font-size: 18px;
-    }
-    .meta-plate {
-      border-top: 3px double var(--ledger);
-      border-bottom: 1px solid var(--grid);
-      background: rgba(16, 22, 30, 0.76);
-    }
-    .meta-row {
-      display: grid;
-      grid-template-columns: 120px 1fr;
-      gap: 15px;
-      padding: 10px 13px;
-      border-bottom: 1px solid var(--grid);
-    }
-    .meta-row:last-child { border-bottom: 0; }
-    .meta-row dt {
-      color: var(--paper-faint);
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .meta-row dd { margin: 0; color: var(--paper-dim); font-size: 12px; }
-    .scope {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--data);
-      font-family: var(--mono);
-      font-size: 11px;
-    }
-    .scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--data); }
+      .page {
+        min-width: 0;
+        padding: 0 38px 80px;
+      }
+      .hero {
+        min-height: 78vh;
+        display: grid;
+        align-content: center;
+        padding: 74px 0 58px;
+        border-bottom: 1px solid var(--grid);
+      }
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+        gap: 48px;
+        align-items: end;
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+      h1 {
+        max-width: 850px;
+        margin-bottom: 22px;
+        font-family: var(--display);
+        font-size: clamp(3.3rem, 7.2vw, 7.4rem);
+        font-weight: 650;
+        letter-spacing: -0.065em;
+        line-height: 0.84;
+      }
+      h1 em {
+        display: block;
+        color: var(--ledger);
+        font-family: var(--mono);
+        font-size: 0.22em;
+        font-style: normal;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        line-height: 1.4;
+        text-transform: uppercase;
+      }
+      .hero-lede {
+        max-width: 690px;
+        margin-bottom: 0;
+        color: #c5cbd2;
+        font-size: 18px;
+      }
+      .meta-plate {
+        border-top: 3px double var(--ledger);
+        border-bottom: 1px solid var(--grid);
+        background: rgba(16, 22, 30, 0.76);
+      }
+      .meta-row {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 15px;
+        padding: 10px 13px;
+        border-bottom: 1px solid var(--grid);
+      }
+      .meta-row:last-child {
+        border-bottom: 0;
+      }
+      .meta-row dt {
+        color: var(--paper-faint);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .meta-row dd {
+        margin: 0;
+        color: var(--paper-dim);
+        font-size: 12px;
+      }
+      .scope {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--data);
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+      .scope::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--data);
+      }
 
-    section {
-      max-width: 1240px;
-      margin: 0 auto;
-      padding: 72px 0;
-      border-bottom: 1px solid var(--grid);
-      scroll-margin-top: 22px;
-    }
-    .section-head {
-      display: grid;
-      grid-template-columns: minmax(220px, 0.42fr) minmax(0, 1fr);
-      gap: 38px;
-      margin-bottom: 34px;
-      align-items: start;
-    }
-    .section-head h2 {
-      margin: 4px 0 0;
-      font-size: clamp(1.7rem, 3vw, 2.55rem);
-      font-weight: 590;
-      letter-spacing: -0.04em;
-      line-height: 1.02;
-    }
-    .section-head p { max-width: 760px; margin: 0; color: var(--paper-dim); }
-    .evidence {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 3px 7px;
-      border: 1px solid var(--grid-strong);
-      border-radius: 999px;
-      font-family: var(--mono);
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-    .evidence::before { content: ""; width: 5px; height: 5px; border-radius: 50%; }
-    .implemented { color: var(--data); border-color: rgba(98,214,167,.34); }
-    .implemented::before { background: var(--data); }
-    .decision { color: var(--process); border-color: rgba(120,167,255,.34); }
-    .decision::before { background: var(--process); }
-    .unknown { color: var(--ledger); border-color: rgba(227,164,81,.34); }
-    .unknown::before { background: var(--ledger); }
+      section {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 72px 0;
+        border-bottom: 1px solid var(--grid);
+        scroll-margin-top: 22px;
+      }
+      .section-head {
+        display: grid;
+        grid-template-columns: minmax(220px, 0.42fr) minmax(0, 1fr);
+        gap: 38px;
+        margin-bottom: 34px;
+        align-items: start;
+      }
+      .section-head h2 {
+        margin: 4px 0 0;
+        font-size: clamp(1.7rem, 3vw, 2.55rem);
+        font-weight: 590;
+        letter-spacing: -0.04em;
+        line-height: 1.02;
+      }
+      .section-head p {
+        max-width: 760px;
+        margin: 0;
+        color: var(--paper-dim);
+      }
+      .evidence {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 7px;
+        border: 1px solid var(--grid-strong);
+        border-radius: 999px;
+        font-family: var(--mono);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .evidence::before {
+        content: "";
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+      }
+      .implemented {
+        color: var(--data);
+        border-color: rgba(98, 214, 167, 0.34);
+      }
+      .implemented::before {
+        background: var(--data);
+      }
+      .decision {
+        color: var(--process);
+        border-color: rgba(120, 167, 255, 0.34);
+      }
+      .decision::before {
+        background: var(--process);
+      }
+      .unknown {
+        color: var(--ledger);
+        border-color: rgba(227, 164, 81, 0.34);
+      }
+      .unknown::before {
+        background: var(--ledger);
+      }
 
-    .loop {
-      display: grid;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
-      border: 1px solid var(--grid-strong);
-      border-radius: var(--radius);
-      overflow: hidden;
-      background: var(--ink-raised);
-    }
-    .loop-step {
-      position: relative;
-      min-height: 94px;
-      padding: 16px 12px;
-      border-right: 1px solid var(--grid);
-    }
-    .loop-step:last-child { border-right: 0; }
-    .loop-step:not(:last-child)::after {
-      content: "→";
-      position: absolute;
-      z-index: 2;
-      top: 35px;
-      right: -10px;
-      display: grid;
-      width: 19px;
-      height: 19px;
-      place-items: center;
-      border: 1px solid var(--grid-strong);
-      border-radius: 50%;
-      background: var(--ink);
-      color: var(--ledger);
-      font-family: var(--mono);
-      font-size: 10px;
-    }
-    .loop-step small { color: var(--paper-faint); font-family: var(--mono); font-size: 9px; }
-    .loop-step strong { display: block; margin-top: 13px; font-size: 12px; }
-    .flow-caption {
-      margin: 8px 0 0;
-      color: var(--paper-faint);
-      font-family: var(--mono);
-      font-size: 9px;
-      letter-spacing: .025em;
-      text-align: center;
-    }
-    .mental-grid {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 18px;
-    }
-    .mental-card, .tech-card, .external-card, .key-card {
-      border: 1px solid var(--grid);
-      border-radius: var(--radius-sm);
-      background: rgba(16,22,30,.72);
-    }
-    .mental-card { min-height: 160px; padding: 15px; }
-    .mental-card .num { color: var(--ledger); font-family: var(--mono); font-size: 11px; }
-    .mental-card h3 { margin: 24px 0 7px; font-size: 14px; }
-    .mental-card p { margin: 0; color: var(--paper-faint); font-size: 11.5px; }
+      .loop {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        border: 1px solid var(--grid-strong);
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: var(--ink-raised);
+      }
+      .loop-step {
+        position: relative;
+        min-height: 94px;
+        padding: 16px 12px;
+        border-right: 1px solid var(--grid);
+      }
+      .loop-step:last-child {
+        border-right: 0;
+      }
+      .loop-step:not(:last-child)::after {
+        content: "→";
+        position: absolute;
+        z-index: 2;
+        top: 35px;
+        right: -10px;
+        display: grid;
+        width: 19px;
+        height: 19px;
+        place-items: center;
+        border: 1px solid var(--grid-strong);
+        border-radius: 50%;
+        background: var(--ink);
+        color: var(--ledger);
+        font-family: var(--mono);
+        font-size: 10px;
+      }
+      .loop-step small {
+        color: var(--paper-faint);
+        font-family: var(--mono);
+        font-size: 9px;
+      }
+      .loop-step strong {
+        display: block;
+        margin-top: 13px;
+        font-size: 12px;
+      }
+      .flow-caption {
+        margin: 8px 0 0;
+        color: var(--paper-faint);
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 0.025em;
+        text-align: center;
+      }
+      .mental-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 18px;
+      }
+      .mental-card,
+      .tech-card,
+      .external-card,
+      .key-card {
+        border: 1px solid var(--grid);
+        border-radius: var(--radius-sm);
+        background: rgba(16, 22, 30, 0.72);
+      }
+      .mental-card {
+        min-height: 160px;
+        padding: 15px;
+      }
+      .mental-card .num {
+        color: var(--ledger);
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+      .mental-card h3 {
+        margin: 24px 0 7px;
+        font-size: 14px;
+      }
+      .mental-card p {
+        margin: 0;
+        color: var(--paper-faint);
+        font-size: 11.5px;
+      }
 
-    .topology {
-      display: grid;
-      grid-template-columns: 1.08fr 0.92fr;
-      gap: 13px;
-    }
-    .zone {
-      padding: 14px;
-      border: 1px solid var(--grid-strong);
-      border-radius: var(--radius);
-      background: rgba(16,22,30,.62);
-    }
-    .zone-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 11px;
-      color: var(--paper-dim);
-      font-family: var(--mono);
-      font-size: 11px;
-    }
-    .zone-stack { display: grid; gap: 9px; }
-    .zone-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; }
-    .node {
-      padding: 13px;
-      border: 1px solid var(--grid);
-      border-left-width: 3px;
-      border-radius: var(--radius-sm);
-      background: var(--ink-soft);
-    }
-    .node h3 { margin: 0 0 5px; font-family: var(--mono); font-size: 12px; }
-    .node p { margin: 0; color: var(--paper-faint); font-size: 11.5px; }
-    .node .files { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
-    .node.app { border-left-color: var(--process); }
-    .node.backend { border-left-color: var(--ledger); }
-    .node.shared { border-left-color: var(--shared); }
-    .node.data { border-left-color: var(--data); }
-    .node.external { border-left-color: var(--external); }
-    .module-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 6px;
-      margin-top: 10px;
-    }
-    .module {
-      padding: 9px;
-      border: 1px solid rgba(227,164,81,.23);
-      border-radius: 6px;
-      background: var(--ledger-soft);
-    }
-    .module b { display: block; color: #f0c889; font-family: var(--mono); font-size: 10.5px; }
-    .module span { color: var(--paper-faint); font-size: 10px; }
+      .topology {
+        display: grid;
+        grid-template-columns: 1.08fr 0.92fr;
+        gap: 13px;
+      }
+      .zone {
+        padding: 14px;
+        border: 1px solid var(--grid-strong);
+        border-radius: var(--radius);
+        background: rgba(16, 22, 30, 0.62);
+      }
+      .zone-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 11px;
+        color: var(--paper-dim);
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+      .zone-stack {
+        display: grid;
+        gap: 9px;
+      }
+      .zone-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+      }
+      .node {
+        padding: 13px;
+        border: 1px solid var(--grid);
+        border-left-width: 3px;
+        border-radius: var(--radius-sm);
+        background: var(--ink-soft);
+      }
+      .node h3 {
+        margin: 0 0 5px;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      .node p {
+        margin: 0;
+        color: var(--paper-faint);
+        font-size: 11.5px;
+      }
+      .node .files {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 8px;
+      }
+      .node.app {
+        border-left-color: var(--process);
+      }
+      .node.backend {
+        border-left-color: var(--ledger);
+      }
+      .node.shared {
+        border-left-color: var(--shared);
+      }
+      .node.data {
+        border-left-color: var(--data);
+      }
+      .node.external {
+        border-left-color: var(--external);
+      }
+      .module-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .module {
+        padding: 9px;
+        border: 1px solid rgba(227, 164, 81, 0.23);
+        border-radius: 6px;
+        background: var(--ledger-soft);
+      }
+      .module b {
+        display: block;
+        color: #f0c889;
+        font-family: var(--mono);
+        font-size: 10.5px;
+      }
+      .module span {
+        color: var(--paper-faint);
+        font-size: 10px;
+      }
 
-    .spine {
-      position: relative;
-      display: grid;
-      gap: 0;
-      max-width: 980px;
-      margin: 0 auto;
-    }
-    .spine::before {
-      content: "";
-      position: absolute;
-      top: 22px;
-      bottom: 22px;
-      left: 50%;
-      width: 1px;
-      background: linear-gradient(var(--process), var(--ledger), var(--data), var(--process));
-    }
-    .spine-row {
-      position: relative;
-      display: grid;
-      grid-template-columns: 1fr 70px 1fr;
-      min-height: 104px;
-      align-items: center;
-    }
-    .spine-row:nth-child(odd) .spine-card { grid-column: 1; text-align: right; }
-    .spine-row:nth-child(even) .spine-card { grid-column: 3; }
-    .spine-card {
-      padding: 13px 15px;
-      border: 1px solid var(--grid);
-      border-radius: var(--radius-sm);
-      background: var(--ink-raised);
-    }
-    .spine-card b { display: block; font-family: var(--mono); font-size: 12px; }
-    .spine-card p { margin: 4px 0 0; color: var(--paper-faint); font-size: 11px; }
-    .spine-mark {
-      z-index: 2;
-      grid-column: 2;
-      grid-row: 1;
-      justify-self: center;
-      display: grid;
-      width: 34px;
-      height: 34px;
-      place-items: center;
-      border: 1px solid var(--grid-strong);
-      border-radius: 50%;
-      background: var(--ink);
-      color: var(--ledger);
-      font-family: var(--mono);
-      font-size: 9px;
-    }
-    .edge-ledger {
-      margin-top: 26px;
-      border-top: 3px double var(--ledger);
-      background: rgba(16,22,30,.74);
-    }
-    .edge-row {
-      display: grid;
-      grid-template-columns: minmax(120px,.8fr) 120px minmax(120px,.8fr) 1.4fr;
-      gap: 12px;
-      align-items: center;
-      padding: 9px 12px;
-      border-bottom: 1px solid var(--grid);
-      font-size: 11px;
-    }
-    .edge-row .from, .edge-row .to { font-family: var(--mono); font-weight: 650; }
-    .edge-row .verb { color: var(--ledger); font-family: var(--mono); font-size: 9px; text-transform: uppercase; }
-    .edge-row .why { color: var(--paper-faint); }
+      .spine {
+        position: relative;
+        display: grid;
+        gap: 0;
+        max-width: 980px;
+        margin: 0 auto;
+      }
+      .spine::before {
+        content: "";
+        position: absolute;
+        top: 22px;
+        bottom: 22px;
+        left: 50%;
+        width: 1px;
+        background: linear-gradient(var(--process), var(--ledger), var(--data), var(--process));
+      }
+      .spine-row {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr 70px 1fr;
+        min-height: 104px;
+        align-items: center;
+      }
+      .spine-row:nth-child(odd) .spine-card {
+        grid-column: 1;
+        text-align: right;
+      }
+      .spine-row:nth-child(even) .spine-card {
+        grid-column: 3;
+      }
+      .spine-card {
+        padding: 13px 15px;
+        border: 1px solid var(--grid);
+        border-radius: var(--radius-sm);
+        background: var(--ink-raised);
+      }
+      .spine-card b {
+        display: block;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      .spine-card p {
+        margin: 4px 0 0;
+        color: var(--paper-faint);
+        font-size: 11px;
+      }
+      .spine-mark {
+        z-index: 2;
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: center;
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border: 1px solid var(--grid-strong);
+        border-radius: 50%;
+        background: var(--ink);
+        color: var(--ledger);
+        font-family: var(--mono);
+        font-size: 9px;
+      }
+      .edge-ledger {
+        margin-top: 26px;
+        border-top: 3px double var(--ledger);
+        background: rgba(16, 22, 30, 0.74);
+      }
+      .edge-row {
+        display: grid;
+        grid-template-columns: minmax(120px, 0.8fr) 120px minmax(120px, 0.8fr) 1.4fr;
+        gap: 12px;
+        align-items: center;
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--grid);
+        font-size: 11px;
+      }
+      .edge-row .from,
+      .edge-row .to {
+        font-family: var(--mono);
+        font-weight: 650;
+      }
+      .edge-row .verb {
+        color: var(--ledger);
+        font-family: var(--mono);
+        font-size: 9px;
+        text-transform: uppercase;
+      }
+      .edge-row .why {
+        color: var(--paper-faint);
+      }
 
-    .db-groups { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
-    .db-group {
-      padding: 13px;
-      border: 1px solid var(--grid-strong);
-      border-radius: var(--radius);
-      background: rgba(16,22,30,.6);
-    }
-    .db-group h3 { color: var(--data); font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
-    .tables { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
-    .table-card { border: 1px solid var(--grid); border-radius: 7px; background: var(--ink); overflow: hidden; }
-    .table-name { padding: 8px 10px; border-bottom: 1px solid var(--grid); color: #b8f0d8; font-family: var(--mono); font-size: 11px; }
-    .field { display: flex; justify-content: space-between; gap: 8px; padding: 4px 9px; color: var(--paper-faint); font-family: var(--mono); font-size: 9px; }
-    .field b { color: var(--paper-dim); font-weight: 600; }
-    .key { color: var(--ledger); }
-    .fk { color: var(--process); }
-    .relation-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 5px 18px; margin-top: 16px; }
-    .relation { padding: 6px 9px; border-left: 2px solid var(--data); background: var(--data-soft); color: var(--paper-dim); font-family: var(--mono); font-size: 9.5px; }
+      .db-groups {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .db-group {
+        padding: 13px;
+        border: 1px solid var(--grid-strong);
+        border-radius: var(--radius);
+        background: rgba(16, 22, 30, 0.6);
+      }
+      .db-group h3 {
+        color: var(--data);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .tables {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .table-card {
+        border: 1px solid var(--grid);
+        border-radius: 7px;
+        background: var(--ink);
+        overflow: hidden;
+      }
+      .table-name {
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--grid);
+        color: #b8f0d8;
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+      .field {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 4px 9px;
+        color: var(--paper-faint);
+        font-family: var(--mono);
+        font-size: 9px;
+      }
+      .field b {
+        color: var(--paper-dim);
+        font-weight: 600;
+      }
+      .key {
+        color: var(--ledger);
+      }
+      .fk {
+        color: var(--process);
+      }
+      .relation-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 5px 18px;
+        margin-top: 16px;
+      }
+      .relation {
+        padding: 6px 9px;
+        border-left: 2px solid var(--data);
+        background: var(--data-soft);
+        color: var(--paper-dim);
+        font-family: var(--mono);
+        font-size: 9.5px;
+      }
 
-    .trace-list { display: grid; gap: 12px; }
-    details.trace { border: 1px solid var(--grid-strong); border-radius: var(--radius); background: rgba(16,22,30,.64); overflow: hidden; }
-    details.trace summary {
-      display: grid;
-      grid-template-columns: 60px 1fr auto;
-      gap: 12px;
-      align-items: center;
-      padding: 14px 16px;
-      cursor: pointer;
-      list-style: none;
-    }
-    details.trace summary::-webkit-details-marker { display: none; }
-    details.trace summary::after { content: "+"; color: var(--ledger); font-family: var(--mono); }
-    details.trace[open] summary::after { content: "−"; }
-    .trace-id { color: var(--ledger); font-family: var(--mono); font-size: 10px; }
-    .trace-title b { display: block; font-size: 13px; }
-    .trace-title span { color: var(--paper-faint); font-size: 10.5px; }
-    .trace-body { padding: 4px 16px 18px; border-top: 1px solid var(--grid); }
-    .trace-flow { display: grid; gap: 0; margin-top: 12px; }
-    .trace-node { display: grid; grid-template-columns: 62px minmax(180px,.75fr) minmax(0,1.25fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--grid); }
-    .trace-node:last-child { border-bottom: 0; }
-    .trace-node .seq { color: var(--ledger); font-family: var(--mono); font-size: 9px; }
-    .trace-node .loc { font-family: var(--mono); font-size: 10.5px; }
-    .trace-node .action { color: var(--paper-dim); font-size: 11px; }
-    .branches { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
-    .branch { padding: 7px 9px; border: 1px solid rgba(255,124,115,.25); border-radius: 6px; background: var(--fault-soft); color: #f4b2ad; font-size: 10.5px; }
+      .trace-list {
+        display: grid;
+        gap: 12px;
+      }
+      details.trace {
+        border: 1px solid var(--grid-strong);
+        border-radius: var(--radius);
+        background: rgba(16, 22, 30, 0.64);
+        overflow: hidden;
+      }
+      details.trace summary {
+        display: grid;
+        grid-template-columns: 60px 1fr auto;
+        gap: 12px;
+        align-items: center;
+        padding: 14px 16px;
+        cursor: pointer;
+        list-style: none;
+      }
+      details.trace summary::-webkit-details-marker {
+        display: none;
+      }
+      details.trace summary::after {
+        content: "+";
+        color: var(--ledger);
+        font-family: var(--mono);
+      }
+      details.trace[open] summary::after {
+        content: "−";
+      }
+      .trace-id {
+        color: var(--ledger);
+        font-family: var(--mono);
+        font-size: 10px;
+      }
+      .trace-title b {
+        display: block;
+        font-size: 13px;
+      }
+      .trace-title span {
+        color: var(--paper-faint);
+        font-size: 10.5px;
+      }
+      .trace-body {
+        padding: 4px 16px 18px;
+        border-top: 1px solid var(--grid);
+      }
+      .trace-flow {
+        display: grid;
+        gap: 0;
+        margin-top: 12px;
+      }
+      .trace-node {
+        display: grid;
+        grid-template-columns: 62px minmax(180px, 0.75fr) minmax(0, 1.25fr);
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--grid);
+      }
+      .trace-node:last-child {
+        border-bottom: 0;
+      }
+      .trace-node .seq {
+        color: var(--ledger);
+        font-family: var(--mono);
+        font-size: 9px;
+      }
+      .trace-node .loc {
+        font-family: var(--mono);
+        font-size: 10.5px;
+      }
+      .trace-node .action {
+        color: var(--paper-dim);
+        font-size: 11px;
+      }
+      .branches {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 14px;
+      }
+      .branch {
+        padding: 7px 9px;
+        border: 1px solid rgba(255, 124, 115, 0.25);
+        border-radius: 6px;
+        background: var(--fault-soft);
+        color: #f4b2ad;
+        font-size: 10.5px;
+      }
 
-    .rules { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
-    .rule-card { padding: 14px; border: 1px solid var(--grid); border-radius: var(--radius-sm); background: rgba(16,22,30,.7); }
-    .rule-card h3 { margin-bottom: 8px; font-size: 13px; }
-    .rule-card p { margin-bottom: 9px; color: var(--paper-faint); font-size: 11px; }
-    .rule-line { display: flex; gap: 8px; padding: 4px 0; color: var(--paper-dim); font-family: var(--mono); font-size: 9.5px; }
-    .allow { color: var(--data); }
-    .deny { color: var(--fault); }
-    .enforced-by { margin-top: 10px; color: var(--process); font-family: var(--mono); font-size: 9px; text-transform: uppercase; }
+      .rules {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .rule-card {
+        padding: 14px;
+        border: 1px solid var(--grid);
+        border-radius: var(--radius-sm);
+        background: rgba(16, 22, 30, 0.7);
+      }
+      .rule-card h3 {
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+      .rule-card p {
+        margin-bottom: 9px;
+        color: var(--paper-faint);
+        font-size: 11px;
+      }
+      .rule-line {
+        display: flex;
+        gap: 8px;
+        padding: 4px 0;
+        color: var(--paper-dim);
+        font-family: var(--mono);
+        font-size: 9.5px;
+      }
+      .allow {
+        color: var(--data);
+      }
+      .deny {
+        color: var(--fault);
+      }
+      .enforced-by {
+        margin-top: 10px;
+        color: var(--process);
+        font-family: var(--mono);
+        font-size: 9px;
+        text-transform: uppercase;
+      }
 
-    .tech-grid, .external-grid, .key-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
-    .tech-card, .external-card, .key-card { padding: 15px; }
-    .tech-card h3, .external-card h3, .key-card h3 { margin-bottom: 7px; font-size: 13px; }
-    .tech-card p, .external-card p, .key-card p { margin: 0; color: var(--paper-faint); font-size: 11px; }
-    .tech-card .use { margin-bottom: 7px; color: var(--paper-dim); font-family: var(--mono); font-size: 9px; }
-    .tech-card:nth-child(3n+1) { border-top-color: var(--process); }
-    .tech-card:nth-child(3n+2) { border-top-color: var(--ledger); }
-    .tech-card:nth-child(3n) { border-top-color: var(--data); }
+      .tech-grid,
+      .external-grid,
+      .key-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .tech-card,
+      .external-card,
+      .key-card {
+        padding: 15px;
+      }
+      .tech-card h3,
+      .external-card h3,
+      .key-card h3 {
+        margin-bottom: 7px;
+        font-size: 13px;
+      }
+      .tech-card p,
+      .external-card p,
+      .key-card p {
+        margin: 0;
+        color: var(--paper-faint);
+        font-size: 11px;
+      }
+      .tech-card .use {
+        margin-bottom: 7px;
+        color: var(--paper-dim);
+        font-family: var(--mono);
+        font-size: 9px;
+      }
+      .tech-card:nth-child(3n + 1) {
+        border-top-color: var(--process);
+      }
+      .tech-card:nth-child(3n + 2) {
+        border-top-color: var(--ledger);
+      }
+      .tech-card:nth-child(3n) {
+        border-top-color: var(--data);
+      }
 
-    .change-table { width: 100%; border-collapse: collapse; border: 1px solid var(--grid-strong); background: rgba(16,22,30,.65); }
-    .change-table th, .change-table td { padding: 10px 12px; border-bottom: 1px solid var(--grid); text-align: left; vertical-align: top; }
-    .change-table th { color: var(--paper-faint); font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
-    .change-table td { color: var(--paper-dim); font-size: 11px; }
-    .change-table td:first-child { color: var(--paper); font-weight: 600; }
-    .path-link { color: #c7d8f4; font-family: var(--mono); font-size: 9.5px; text-decoration-color: var(--grid-strong); text-underline-offset: 3px; }
+      .change-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid var(--grid-strong);
+        background: rgba(16, 22, 30, 0.65);
+      }
+      .change-table th,
+      .change-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--grid);
+        text-align: left;
+        vertical-align: top;
+      }
+      .change-table th {
+        color: var(--paper-faint);
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .change-table td {
+        color: var(--paper-dim);
+        font-size: 11px;
+      }
+      .change-table td:first-child {
+        color: var(--paper);
+        font-weight: 600;
+      }
+      .path-link {
+        color: #c7d8f4;
+        font-family: var(--mono);
+        font-size: 9.5px;
+        text-decoration-color: var(--grid-strong);
+        text-underline-offset: 3px;
+      }
 
-    .unknown-strip { margin-top: 12px; padding: 14px; border: 1px solid rgba(227,164,81,.3); border-radius: var(--radius-sm); background: var(--ledger-soft); }
-    .unknown-strip h3 { margin-bottom: 7px; color: #f0c889; font-size: 12px; }
-    .unknown-strip ul, .checklist { margin: 0; padding-left: 19px; color: var(--paper-dim); font-size: 11px; }
-    .unknown-strip li, .checklist li { margin: 4px 0; }
-    .key-card a { display: inline-block; margin-bottom: 7px; color: #c7d8f4; font-family: var(--mono); font-size: 10px; text-underline-offset: 3px; }
-    .maintenance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .maintenance-card { padding: 16px; border: 1px solid var(--grid-strong); border-radius: var(--radius); background: rgba(16,22,30,.68); }
-    .maintenance-card h3 { font-size: 13px; }
-    footer {
-      max-width: 1240px;
-      margin: 0 auto;
-      padding: 30px 0 20px;
-      display: flex;
-      justify-content: space-between;
-      gap: 20px;
-      color: var(--paper-faint);
-      font-family: var(--mono);
-      font-size: 9.5px;
-    }
+      .unknown-strip {
+        margin-top: 12px;
+        padding: 14px;
+        border: 1px solid rgba(227, 164, 81, 0.3);
+        border-radius: var(--radius-sm);
+        background: var(--ledger-soft);
+      }
+      .unknown-strip h3 {
+        margin-bottom: 7px;
+        color: #f0c889;
+        font-size: 12px;
+      }
+      .unknown-strip ul,
+      .checklist {
+        margin: 0;
+        padding-left: 19px;
+        color: var(--paper-dim);
+        font-size: 11px;
+      }
+      .unknown-strip li,
+      .checklist li {
+        margin: 4px 0;
+      }
+      .key-card a {
+        display: inline-block;
+        margin-bottom: 7px;
+        color: #c7d8f4;
+        font-family: var(--mono);
+        font-size: 10px;
+        text-underline-offset: 3px;
+      }
+      .maintenance-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .maintenance-card {
+        padding: 16px;
+        border: 1px solid var(--grid-strong);
+        border-radius: var(--radius);
+        background: rgba(16, 22, 30, 0.68);
+      }
+      .maintenance-card h3 {
+        font-size: 13px;
+      }
+      footer {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 30px 0 20px;
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        color: var(--paper-faint);
+        font-family: var(--mono);
+        font-size: 9.5px;
+      }
 
-    @media (max-width: 1120px) {
-      .app-layout { grid-template-columns: 200px minmax(0,1fr); }
-      .page { padding-inline: 24px; }
-      .hero-grid { grid-template-columns: 1fr; }
-      .meta-plate { max-width: 680px; }
-      .mental-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
-      .module-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
-    }
-    @media (max-width: 820px) {
-      .app-layout { display: block; }
-      .side { position: sticky; z-index: 20; height: auto; padding: 10px 14px; border-right: 0; border-bottom: 1px solid var(--grid); }
-      .brand { margin: 0 0 8px; }
-      .brand-mark { width: 27px; height: 27px; }
-      .side nav { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 3px; }
-      .side nav a { flex: 0 0 auto; padding: 5px 8px; border-left: 0; border-bottom: 2px solid transparent; font-size: 10px; }
-      .side nav a::before, .side .nav-label, .side-meta { display: none; }
-      .page { padding: 0 16px 56px; }
-      .hero { min-height: auto; padding: 54px 0; }
-      h1 { font-size: clamp(3.1rem,16vw,5rem); }
-      .section-head { grid-template-columns: 1fr; gap: 12px; }
-      .loop { grid-template-columns: 1fr; }
-      .loop-step { min-height: auto; padding: 10px 14px; border-right: 0; border-bottom: 1px solid var(--grid); }
-      .loop-step:last-child { border-bottom: 0; }
-      .loop-step:not(:last-child)::after { top: auto; right: 20px; bottom: -10px; transform: rotate(90deg); }
-      .loop-step strong { margin-top: 4px; }
-      .mental-grid, .topology, .db-groups, .rules, .tech-grid, .external-grid, .key-grid, .maintenance-grid { grid-template-columns: 1fr; }
-      .zone-grid { grid-template-columns: 1fr; }
-      .spine::before { left: 16px; }
-      .spine-row { grid-template-columns: 44px minmax(0,1fr); min-height: 90px; }
-      .spine-row:nth-child(n) .spine-card { grid-column: 2; text-align: left; }
-      .spine-mark { grid-column: 1; }
-      .edge-row { grid-template-columns: 1fr auto 1fr; }
-      .edge-row .why { grid-column: 1 / -1; }
-      .tables { grid-template-columns: 1fr; }
-      .relation-grid { grid-template-columns: 1fr; }
-      .trace-node { grid-template-columns: 46px 1fr; }
-      .trace-node .action { grid-column: 2; }
-      .change-table { display: block; overflow-x: auto; }
-      footer { display: block; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      html { scroll-behavior: auto; }
-      *, *::before, *::after { transition-duration: 0.01ms !important; }
-    }
-    @media print {
-      :root { color-scheme: light; --ink: #fff; --ink-raised: #fff; --ink-soft: #fff; --paper: #111; --paper-dim: #333; --paper-faint: #555; --grid: #bbb; --grid-strong: #777; }
-      body { background: #fff; }
-      .app-layout { display: block; }
-      .side { display: none; }
-      .page { padding: 0; }
-      section { break-inside: avoid; }
-    }
-  </style>
-</head>
-<body data-otomat-architecture-atlas="true">
-  <a class="skip-link" href="#start">Aller au contenu</a>
-  <div class="app-layout">
-    <aside class="side">
-      <div class="brand">
-        <div class="brand-mark">OT</div>
-        <div><strong>Otomat</strong><small>architecture atlas</small></div>
-      </div>
-      <div class="nav-label">Lire la carte</div>
-      <nav aria-label="Sections de l’atlas">
-        <a href="#start">Commencer</a>
-        <a href="#topology">Topology</a>
-        <a href="#interactions">Interactions</a>
-        <a href="#database">Database</a>
-        <a href="#traces">Traces runtime</a>
-        <a href="#boundaries">Boundaries</a>
-        <a href="#technology">Technologies</a>
-        <a href="#change-map">Où modifier</a>
-        <a href="#external">Systèmes externes</a>
-        <a href="#key-files">Fichiers clés</a>
-        <a href="#maintenance">Maintenance</a>
-      </nav>
-      <div class="side-meta">
-        <b>Scope</b> stable main<br>
-        <b>Commit</b> bd3a958<br>
-        <b>Generated</b> 2026-07-18
-      </div>
-    </aside>
-
-    <div class="page">
-      <header class="hero">
-        <div class="hero-grid">
-          <div>
-            <div class="eyebrow">Le dépôt, du signal à la preuve</div>
-            <h1>Otomat<em>atlas d’architecture · stable main</em></h1>
-            <p class="hero-lede">Un cockpit local qui part d’une issue, isole le travail d’un agent dans Git, conserve chaque preuve d’exécution, puis ramène le résultat vers une diff révisable et une pull request publiable.</p>
-          </div>
-          <dl class="meta-plate">
-            <div class="meta-row"><dt>Pourquoi</dt><dd>Retrouver le fil en dix minutes, puis remonter jusqu’aux fichiers qui prouvent chaque branchement.</dd></div>
-            <div class="meta-row"><dt>Scope</dt><dd><span class="scope">Implémentation stable uniquement</span></dd></div>
-            <div class="meta-row"><dt>Sources</dt><dd>Manifests, composition root, routes, schema, contracts, state machines, boundary config, tests et décisions.</dd></div>
-            <div class="meta-row"><dt>Graph index</dt><dd>Graphify rafraîchi le 2026-07-18 : 2 500 nodes / 4 992 edges. Utilisé pour naviguer ; les claims sont recoupés avec <code>bd3a958</code>.</dd></div>
-            <div class="meta-row"><dt>Limite</dt><dd>Les changements multi-step non commités ne font pas partie de cette carte.</dd></div>
-          </dl>
-        </div>
-      </header>
-
-      <main>
-        <section id="start">
-          <div class="section-head">
-            <div><span class="eyebrow">Otomat en 10 minutes</span><h2>Une boucle locale, une preuve continue</h2></div>
-            <p>Le produit ne délègue pas son control plane aux providers. Il possède les issues, les runs, l’état, la review et la publication ; Codex ou Claude ne sont que des moteurs derrière un adapter.</p>
-          </div>
-          <div class="loop" aria-label="Issue vers pull request">
-            <div class="loop-step"><small>00 · contexte</small><strong>Issue</strong></div>
-            <div class="loop-step"><small>01 · contrôle</small><strong>Run</strong></div>
-            <div class="loop-step"><small>02 · exécution</small><strong>Agent session</strong></div>
-            <div class="loop-step"><small>03 · vérité Git</small><strong>Git diff</strong></div>
-            <div class="loop-step"><small>04 · décision</small><strong>Review</strong></div>
-            <div class="loop-step"><small>05 · reprise</small><strong>Fix</strong></div>
-            <div class="loop-step"><small>06 · livraison</small><strong>Pull request</strong></div>
-          </div>
-          <p class="flow-caption">Issue → Run → Agent session → Git diff → Review → Fix → Pull request</p>
-          <div class="mental-grid">
-            <article class="mental-card"><span class="num">M/01</span><h3>Issue-first</h3><p>L’issue est le workspace métier. Une run existe pour faire progresser ce travail, pas comme conversation isolée.</p></article>
-            <article class="mental-card"><span class="num">M/02</span><h3>Daemon = writer</h3><p>Le process local migre, compose, supervise et écrit. Le browser ne touche jamais directement la DB ou GitHub.</p></article>
-            <article class="mental-card"><span class="num">M/03</span><h3>Worktree isolé</h3><p>Une run obtient une branch et un Git worktree dédiés lorsque le projet racine est un repository utilisable.</p></article>
-            <article class="mental-card"><span class="num">M/04</span><h3>Evidence-first</h3><p>Le worker append dans <code>events.jsonl</code>. Le ledger SQLite ordonne par <code>seq</code> et alimente le live SSE.</p></article>
-            <article class="mental-card"><span class="num">M/05</span><h3>Deux vérités</h3><p>Git est canonique pour la diff. Les state machines et le ledger persisté sont canoniques pour le contrôle et l’historique.</p></article>
-          </div>
-          <p style="margin:18px 0 0;color:var(--paper-faint);font-size:11px"><span class="evidence implemented">Implemented</span> Ce modèle est visible dans <a class="path-link" href="../../apps/local-daemon/src/server.ts">server.ts</a>, <a class="path-link" href="../../apps/local-daemon/src/supervisor/supervisor.ts">supervisor.ts</a> et <a class="path-link" href="../../packages/db/src/schema/index.ts">schema/index.ts</a>. <span class="evidence decision">Decision</span> Les non-goals restent : pas un IDE, pas un chat générique, pas une worker fleet hébergée, pas un workflow builder générique.</p>
-        </section>
-
-        <section id="topology">
-          <div class="section-head">
-            <div><span class="eyebrow">Boxes inside boxes</span><h2>Topology du monorepo</h2></div>
-            <p>Les rectangles suivent les vraies frontières de déploiement et d’import. Leur taille indique leur importance pour comprendre Otomat, pas une métrique de lignes de code.</p>
-          </div>
-          <div class="topology">
-            <div class="zone">
-              <div class="zone-head"><span>apps/</span><span>runnable targets</span></div>
-              <div class="zone-stack">
-                <article class="node app">
-                  <h3>apps/web <span class="evidence implemented">browser</span></h3>
-                  <p>React + Vite. TanStack Router structure les views ; Query/Form portent les données et mutations ; le cockpit rend issues, runs, timeline, diff, review et PR.</p>
-                  <div class="files"><code>main.tsx</code><code>routes/</code><code>api/</code><code>components/</code></div>
-                </article>
-                <article class="node backend">
-                  <h3>apps/local-daemon <span class="evidence implemented">node process</span></h3>
-                  <p>Le seul process backend. Il possède HTTP/SSE, Git, runtime providers, supervision, review, publication GitHub et réconciliation au boot.</p>
-                  <div class="module-grid">
-                    <div class="module"><b>api</b><span>Hono · routes · SSE</span></div>
-                    <div class="module"><b>events</b><span>JSONL → ledger</span></div>
-                    <div class="module"><b>git</b><span>worktree · diff</span></div>
-                    <div class="module"><b>github</b><span>gh · publication</span></div>
-                    <div class="module"><b>review</b><span>anchors · fix</span></div>
-                    <div class="module"><b>runtime</b><span>adapter · CLI frames</span></div>
-                    <div class="module"><b>supervisor</b><span>spawn · settle · abort</span></div>
-                    <div class="module"><b>root</b><span>index · server · bootstrap</span></div>
-                  </div>
-                </article>
-              </div>
-            </div>
-            <div class="zone">
-              <div class="zone-head"><span>packages/</span><span>earned boundaries</span></div>
-              <div class="zone-grid">
-                <article class="node shared"><h3>domain</h3><p>Pure TS : Zod contracts, event envelope, state machines. Dépend seulement de Zod.</p></article>
-                <article class="node data"><h3>db</h3><p>SQLite, Drizzle, migrations, repositories. Seul endroit qui construit <code>better-sqlite3</code>.</p></article>
-                <article class="node app"><h3>client</h3><p>Typed HTTP + SSE client. Valide chaque réponse avec les schemas domain.</p></article>
-                <article class="node app"><h3>ui</h3><p>Design system, Base UI primitives, themes et shell partagés.</p></article>
-                <article class="node external"><h3>tooling</h3><p>tsconfig, Vitest, oxlint et dependency-cruiser partagés. Aucun comportement produit.</p></article>
-                <article class="node external"><h3>outside</h3><p>Git, filesystem, Codex CLI, Claude CLI et <code>gh</code>/GitHub.</p></article>
-              </div>
-            </div>
-          </div>
-          <p style="margin-top:14px;color:var(--paper-faint);font-size:11px"><span class="evidence decision">Decision</span> Un package doit avoir plusieurs consumers, protéger une boundary, isoler une dépendance dangereuse ou stabiliser une interface. Les modules daemon-only restent internes à <code>apps/local-daemon</code>.</p>
-        </section>
-
-        <section id="interactions">
-          <div class="section-head">
-            <div><span class="eyebrow">Control-plane spine</span><h2>Où chaque chose est branchée</h2></div>
-            <p>Le chemin central part d’une intention utilisateur, traverse le control plane, devient une preuve durable, puis revient dans l’UI. Les autres relations importantes sont listées comme un ledger d’edges.</p>
-          </div>
-          <div class="spine" aria-label="Flux de contrôle principal">
-            <div class="spine-row"><div class="spine-card"><b>React cockpit</b><p>Une mutation TanStack exprime l’action ; une query possède le server state.</p></div><div class="spine-mark">UI</div></div>
-            <div class="spine-row"><div class="spine-card"><b>@otomat/client</b><p><code>fetch</code> pour HTTP, <code>EventSource</code> pour le live, Zod au retour.</p></div><div class="spine-mark">HTTP</div></div>
-            <div class="spine-row"><div class="spine-card"><b>Hono API</b><p>Valide, garde la ressource, route vers supervisor, review ou GitHub.</p></div><div class="spine-mark">API</div></div>
-            <div class="spine-row"><div class="spine-card"><b>Supervisor</b><p>Matérialise l’état, prend un slot, ré-exécute un worker et suit sa sortie.</p></div><div class="spine-mark">CTRL</div></div>
-            <div class="spine-row"><div class="spine-card"><b>Worker + adapter</b><p>Codex/Claude tournent dans le worktree ; leurs frames deviennent des events normalisés.</p></div><div class="spine-mark">PROC</div></div>
-            <div class="spine-row"><div class="spine-card"><b>events.jsonl</b><p>Append-only par la child process. Le terminal marker est la preuve de fin.</p></div><div class="spine-mark">FILE</div></div>
-            <div class="spine-row"><div class="spine-card"><b>SQLite ledger</b><p>Le tailer n’ingère que les lignes complètes et alloue un <code>seq</code> par run.</p></div><div class="spine-mark">DB</div></div>
-            <div class="spine-row"><div class="spine-card"><b>SSE projection</b><p>Rejoue après le cursor, heartbeat, puis invalide ou fusionne dans le cache UI.</p></div><div class="spine-mark">SSE</div></div>
-          </div>
-          <div class="edge-ledger" aria-label="Relations d’architecture importantes">
-            <div class="edge-row"><span class="from">apps/web</span><span class="verb">renders</span><span class="to">@otomat/ui</span><span class="why">Shell, primitives, theme, icon registry.</span></div>
-            <div class="edge-row"><span class="from">apps/web</span><span class="verb">calls HTTP</span><span class="to">@otomat/client</span><span class="why">Le browser ne connaît pas les internals backend.</span></div>
-            <div class="edge-row"><span class="from">client</span><span class="verb">opens SSE</span><span class="to">Hono /events</span><span class="why">Replay par <code>afterSeq</code> ou <code>Last-Event-ID</code>.</span></div>
-            <div class="edge-row"><span class="from">api</span><span class="verb">commands</span><span class="to">services</span><span class="why">Supervisor, review et GitHub sont injectés via <code>ApiDeps</code>.</span></div>
-            <div class="edge-row"><span class="from">supervisor</span><span class="verb">acquires</span><span class="to">git worktree</span><span class="why">Une branch <code>otomat/run/&lt;id&gt;</code> et un owner exclusif.</span></div>
-            <div class="edge-row"><span class="from">supervisor</span><span class="verb">re-execs</span><span class="to">worker</span><span class="why">Le job sérialisé passe par <code>OTOMAT_WORKER_JOB</code>.</span></div>
-            <div class="edge-row"><span class="from">worker</span><span class="verb">appends</span><span class="to">events.jsonl</span><span class="why">Le worker possède la durabilité pendant le tour.</span></div>
-            <div class="edge-row"><span class="from">tailer</span><span class="verb">writes DB</span><span class="to">runtime_events</span><span class="why">Une ligne corrompue crée un gap explicite sans bloquer le stream.</span></div>
-            <div class="edge-row"><span class="from">review/github</span><span class="verb">emit</span><span class="to">ledger</span><span class="why">Diff, commentaires et PR rejoignent la même timeline normalisée.</span></div>
-            <div class="edge-row"><span class="from">daemon modules</span><span class="verb">read/write</span><span class="to">@otomat/db</span><span class="why">Repositories dédiés ; domain fournit types, schemas et machines.</span></div>
-          </div>
-        </section>
-
-        <section id="database">
-          <div class="section-head">
-            <div><span class="eyebrow">13 tables · SQLite WAL</span><h2>Database map</h2></div>
-            <p>Les foreign keys ci-dessous sont déclarées dans Drizzle. Les contraintes uniques renforcent l’ownership d’un worktree, l’ordre d’une step, l’ordre des events et l’unicité d’une PR par run.</p>
-          </div>
-          <div class="db-groups">
-            <div class="db-group"><h3>Workspace &amp; Git</h3><div class="tables">
-              <article class="table-card"><div class="table-name">projects</div><div class="field"><b>id</b><span class="key">PK</span></div><div class="field"><b>name</b><span>text</span></div><div class="field"><b>root_path</b><span>text</span></div></article>
-              <article class="table-card"><div class="table-name">repositories</div><div class="field"><b>id</b><span class="key">PK</span></div><div class="field"><b>project_id</b><span class="fk">FK</span></div><div class="field"><b>default_branch</b><span>text</span></div></article>
-              <article class="table-card"><div class="table-name">worktrees</div><div class="field"><b>id</b><span class="key">PK</span></div><div class="field"><b>repository_id</b><span class="fk">FK</span></div><div class="field"><b>owner_token</b><span>unique active</span></div><div class="field"><b>path · branch · status</b><span>state</span></div></article>
-            </div></div>
-            <div class="db-group"><h3>Issue &amp; execution</h3><div class="tables">
-              <article class="table-card"><div class="table-name">issues</div><div class="field"><b>id</b><span class="key">PK</span></div><div class="field"><b>project_id</b><span class="fk">FK</span></div><div class="field"><b>status · source</b><span>domain</span></div></article>
-              <article class="table-card"><div class="table-name">agents</div><div class="field"><b>id</b><span class="key">PK</span></div><div class="field"><b>runtime</b><span>adapter id</span></div></article>
-              <article class="table-card"><div class="table-name">runs</div><div class="field"><b>id</b><span class="key">PK</span></div><div class="field"><b>issue · repo · worktree · agent</b><span class="fk">FK</span></div><div class="field"><b>status · branch</b><span>control</span></div><div class="field"><b>plan_json</b><span>frozen</span></div></article>
-              <article class="table-card"><div class="table-name">step_runs</div><div class="field"><b>id</b><span class="key">PK</span></div><div class="field"><b>run_id</b><span class="fk">FK</span></div><div class="field"><b>run_id + idx</b><span>unique</span></div></article>
-              <article class="table-card"><div class="table-name">agent_sessions</div><div class="field"><b>id</b><span class="key">PK</span></div><div class="field"><b>step_run_id · agent_id</b><span class="fk">FK</span></div><div class="field"><b>provider_session_id</b><span>resume</span></div><div class="field"><b>pid · pgid · exit</b><span>reconcile</span></div></article>
-            </div></div>
-            <div class="db-group"><h3>Evidence ledger</h3><div class="tables">
-              <article class="table-card"><div class="table-name">runtime_events</div><div class="field"><b>id</b><span class="key">PK</span></div><div class="field"><b>run · step · session</b><span class="fk">FK</span></div><div class="field"><b>run_id + seq</b><span>unique order</span></div><div class="field"><b>type · source · payload</b><span>envelope</span></div><div class="field"><b>raw_ref</b><span>provenance</span></div></article>
-            </div><p style="margin:10px 0 0;color:var(--paper-faint);font-size:10px">Une row qui ne valide plus l’envelope est ignorée à la projection : un event malformé ne vide pas toute la timeline.</p></div>
-            <div class="db-group"><h3>Review, delivery &amp; affordance</h3><div class="tables">
-              <article class="table-card"><div class="table-name">reviews</div><div class="field"><b>id</b><span class="key">PK</span></div><div class="field"><b>run_id</b><span class="fk">FK</span></div><div class="field"><b>status</b><span>machine</span></div></article>
-              <article class="table-card"><div class="table-name">review_comments</div><div class="field"><b>id</b><span class="key">PK</span></div><div class="field"><b>review_id</b><span class="fk">FK</span></div><div class="field"><b>file · line · diff_sha</b><span>anchor</span></div><div class="field"><b>hunk_snapshot</b><span>stale view</span></div></article>
-              <article class="table-card"><div class="table-name">pull_requests</div><div class="field"><b>id</b><span class="key">PK</span></div><div class="field"><b>run_id</b><span class="fk">FK · unique</span></div><div class="field"><b>publication_status</b><span>machine</span></div><div class="field"><b>published_*_sha</b><span>snapshot</span></div></article>
-              <article class="table-card"><div class="table-name">sync_state</div><div class="field"><b>id</b><span class="key">PK</span></div><div class="field"><b>source · resource · cursor</b><span>affordance</span></div><div class="field"><b>runtime use</b><span class="unknown">not wired</span></div></article>
-            </div></div>
-          </div>
-          <div class="relation-grid" aria-label="Foreign keys déclarées">
-            <div class="relation">repositories.project_id → projects.id</div><div class="relation">worktrees.repository_id → repositories.id</div>
-            <div class="relation">issues.project_id → projects.id</div><div class="relation">runs.issue_id → issues.id</div>
-            <div class="relation">runs.repository_id → repositories.id</div><div class="relation">runs.worktree_id → worktrees.id</div>
-            <div class="relation">runs.agent_id → agents.id</div><div class="relation">step_runs.run_id → runs.id</div>
-            <div class="relation">agent_sessions.step_run_id → step_runs.id</div><div class="relation">agent_sessions.agent_id → agents.id</div>
-            <div class="relation">runtime_events.run_id → runs.id</div><div class="relation">runtime_events.step_run_id → step_runs.id</div>
-            <div class="relation">runtime_events.agent_session_id → agent_sessions.id</div><div class="relation">reviews.run_id → runs.id</div>
-            <div class="relation">review_comments.review_id → reviews.id</div><div class="relation">pull_requests.run_id → runs.id</div>
-          </div>
-        </section>
-
-        <section id="traces">
-          <div class="section-head">
-            <div><span class="eyebrow">Static execution traces</span><h2>Quatre chemins à connaître</h2></div>
-            <p>Chaque trace part d’un command ou d’une action visible, traverse les vrais symbols, puis atteint DB, Git, filesystem ou provider. Les branches rouges montrent les chemins où Otomat refuse de deviner.</p>
-          </div>
-          <div class="trace-list">
-            <details class="trace" open>
-              <summary><span class="trace-id">TRACE/A</span><span class="trace-title"><b>Boot du daemon</b><span>command → migrations → composition → reconcile → HTTP</span></span></summary>
-              <div class="trace-body"><div class="trace-flow">
-                <div class="trace-node"><span class="seq">seq 000</span><span class="loc">pnpm back</span><span class="action">Filtre <code>@otomat/local-daemon</code> et lance son script <code>start</code>.</span></div>
-                <div class="trace-node"><span class="seq">seq 001</span><span class="loc">tsx src/index.ts</span><span class="action"><code>OTOMAT_WORKER_JOB</code> absent : choisit le mode server et appelle <code>startDaemon()</code>.</span></div>
-                <div class="trace-node"><span class="seq">seq 002</span><span class="loc">server.ts · startDaemon</span><span class="action">Résout le DB path, applique les migrations, ouvre SQLite en WAL avec foreign keys.</span></div>
-                <div class="trace-node"><span class="seq">seq 003</span><span class="loc">bootstrap.ts</span><span class="action">Upsert du projet local ; détecte la default branch et compose le Git worktree service si possible.</span></div>
-                <div class="trace-node"><span class="seq">seq 004</span><span class="loc">server.ts · services</span><span class="action">Compose review, GitHub, supervisor et le worker re-exec depuis le même entrypoint.</span></div>
-                <div class="trace-node"><span class="seq">seq 005</span><span class="loc">supervisor.reconcile</span><span class="action">Finalise les remnants non terminaux avant d’accepter du trafic ; les resting states restent au repos.</span></div>
-                <div class="trace-node"><span class="seq">seq 006</span><span class="loc">createApiApp → serve</span><span class="action">Monte les routes Hono puis écoute par défaut sur <code>127.0.0.1:4319</code>.</span></div>
-              </div><div class="branches"><span class="branch">Root non-Git ou detached → aucun worktree/diff</span><span class="branch">Migration ou bind échoue → le daemon ne prétend pas être prêt</span><span class="branch">PID vivant mais identité non prouvée → aucun signal envoyé</span></div></div>
-            </details>
-            <details class="trace">
-              <summary><span class="trace-id">TRACE/B</span><span class="trace-title"><b>Launch, live et settle d’une run</b><span>UI → API → worktree → worker → JSONL → ledger → SSE → terminal</span></span></summary>
-              <div class="trace-body"><div class="trace-flow">
-                <div class="trace-node"><span class="seq">seq 000</span><span class="loc">useStartRun</span><span class="action">La mutation appelle le typed client puis invalide listes et issue concernée.</span></div>
-                <div class="trace-node"><span class="seq">seq 001</span><span class="loc">POST /api/runs</span><span class="action">Zod valide <code>StartRunRequest</code> ; l’API traduit runtime inconnu/indisponible en réponses explicites.</span></div>
-                <div class="trace-node"><span class="seq">seq 002</span><span class="loc">prepareRun</span><span class="action">Résout l’issue, valide le runtime, crée IDs/branch, acquiert le worktree, puis écrit run + step + session et le plan single-step figé dans une transaction.</span></div>
-                <div class="trace-node"><span class="seq">seq 003</span><span class="loc">spawnTurn</span><span class="action">Réserve la run, attend un slot, revalide l’état, drive les machines vers running et re-exec le worker.</span></div>
-                <div class="trace-node"><span class="seq">seq 004</span><span class="loc">worker.ts</span><span class="action">Instancie Codex/Claude/fake, exécute ou resume, append chaque event puis écrit le terminal marker.</span></div>
-                <div class="trace-node"><span class="seq">seq 005</span><span class="loc">EventTailer</span><span class="action">Lit uniquement les lignes terminées par newline, conserve les offsets et insère avec <code>seq</code> par run.</span></div>
-                <div class="trace-node"><span class="seq">seq 006</span><span class="loc">GET /:id/events</span><span class="action">SSE rejoue après le cursor, heartbeat environ toutes les 10 s, termine lorsque la run est terminale et drainée.</span></div>
-                <div class="trace-node"><span class="seq">seq 007</span><span class="loc">settleRun</span><span class="action">Draine, lit le marker/session provider, classe l’issue, converge run/steps/sessions puis déclenche le settle review.</span></div>
-              </div><div class="branches"><span class="branch">Runtime inconnu → 400</span><span class="branch">Runtime indisponible → 409</span><span class="branch">Worktree acquis mais transaction échoue → cleanup</span><span class="branch">Abort pendant le slot → aucun spawn</span><span class="branch">Spawn échoue → kill + settle</span><span class="branch">Ligne JSONL corrompue → gap de seq, stream continue</span></div></div>
-            </details>
-            <details class="trace">
-              <summary><span class="trace-id">TRACE/C</span><span class="trace-title"><b>Review, fix et follow-up</b><span>diff canonique → anchor SHA → prompt → même session provider</span></span></summary>
-              <div class="trace-body"><div class="trace-flow">
-                <div class="trace-node"><span class="seq">seq 000</span><span class="loc">GET /:id/diff</span><span class="action">Le worktree service calcule la diff Git contre la base, par fichier, avec counts et SHA stables.</span></div>
-                <div class="trace-node"><span class="seq">seq 001</span><span class="loc">review.addComment</span><span class="action">Vérifie <code>file_path + line + diff_sha</code>, capture le hunk et crée review/comment.</span></div>
-                <div class="trace-node"><span class="seq">seq 002</span><span class="loc">POST /review/fix</span><span class="action">Sélectionne les commentaires fixables, construit le prompt, puis appelle <code>fixRun</code>.</span></div>
-                <div class="trace-node"><span class="seq">seq 003</span><span class="loc">spawnFollowUpTurn</span><span class="action">Réutilise runtime, worktree, step/session et <code>provider_session_id</code> ; le prompt peut aussi venir directement du user follow-up.</span></div>
-                <div class="trace-node"><span class="seq">seq 004</span><span class="loc">review.onRunSettled</span><span class="action">Compare la nouvelle diff : commentaire addressed si le hunk a disparu, outdated si l’anchor n’est plus la vue courante.</span></div>
-              </div><div class="branches"><span class="branch">Anchor stale à la création → 409</span><span class="branch">Aucun commentaire fixable → 409</span><span class="branch">État non resumable ou session provider absente → 409</span><span class="branch">Un runtime sans resume ne reçoit pas de faux follow-up</span></div></div>
-            </details>
-            <details class="trace">
-              <summary><span class="trace-id">TRACE/D</span><span class="trace-title"><b>Publication GitHub</b><span>review-ready → snapshot Git → push → create/update PR → ledger</span></span></summary>
-              <div class="trace-body"><div class="trace-flow">
-                <div class="trace-node"><span class="seq">seq 000</span><span class="loc">POST /runs/:id/pr</span><span class="action">Valide title/body et exige une run <code>review_ready</code>.</span></div>
-                <div class="trace-node"><span class="seq">seq 001</span><span class="loc">PullRequestPublisher</span><span class="action">Sérialise une publication active par run et récupère une opération interrompue en état failed explicite.</span></div>
-                <div class="trace-node"><span class="seq">seq 002</span><span class="loc">gh connection + remote</span><span class="action">Délègue login et credential storage à GitHub CLI ; résout le repository depuis le worktree.</span></div>
-                <div class="trace-node"><span class="seq">seq 003</span><span class="loc">worktrees.snapshot</span><span class="action">Commit les changements si nécessaire, recalcule head/diff SHA, puis pousse la branch.</span></div>
-                <div class="trace-node"><span class="seq">seq 004</span><span class="loc">gh pr create/edit/view</span><span class="action">Trouve, crée ou met à jour la PR provider ; persiste number, URL, refs et snapshot publié.</span></div>
-                <div class="trace-node"><span class="seq">seq 005</span><span class="loc">emitLedgerEvent</span><span class="action">Émet <code>pr.created</code> ou <code>pr.updated</code> dans la timeline de la run.</span></div>
-              </div><div class="branches"><span class="branch">Aucun worktree ou diff vide → publication refusée</span><span class="branch">gh non connecté → not_configured sans token Otomat</span><span class="branch">Push/provider échoue → failed + code/message persistés</span><span class="branch">Retry → réconciliation avec la PR existante</span></div></div>
-            </details>
-          </div>
-        </section>
-
-        <section id="boundaries">
-          <div class="section-head">
-            <div><span class="eyebrow">Allowed / forbidden / enforced</span><h2>Boundaries et invariants</h2></div>
-            <p>Une boundary n’est utile que si son owner et son enforcement sont visibles. Ici, certaines règles sont bloquées par le build ; d’autres sont des invariants de conception soutenus par le code et les tests.</p>
-          </div>
-          <div class="rules">
-            <article class="rule-card"><h3>Domain reste pur</h3><p>Types, machines, events et contracts ne connaissent ni Node, ni React, ni DB.</p><div class="rule-line"><span class="allow">✓</span> domain → zod</div><div class="rule-line"><span class="deny">×</span> domain → React / Drizzle / Node core / apps</div><div class="enforced-by">dependency-cruiser + package deps</div></article>
-            <article class="rule-card"><h3>Browser séparé du backend</h3><p>Le frontend reçoit l’état par HTTP/SSE et ne possède aucune intégration provider directe.</p><div class="rule-line"><span class="allow">✓</span> web → domain / ui / client</div><div class="rule-line"><span class="deny">×</span> web → db / local-daemon</div><div class="enforced-by">dependency-cruiser</div></article>
-            <article class="rule-card"><h3>Daemon sans UI</h3><p>Le control plane peut évoluer sans importer de composants ou de browser state.</p><div class="rule-line"><span class="allow">✓</span> daemon → db / domain / #modules</div><div class="rule-line"><span class="deny">×</span> daemon → ui / client</div><div class="enforced-by">dependency-cruiser</div></article>
-            <article class="rule-card"><h3>Modules privés par subpath</h3><p>Les modules daemon se consomment via leur index public, pas par relatives profondes.</p><div class="rule-line"><span class="allow">✓</span> #api #events #git #github #review #runtime #supervisor</div><div class="rule-line"><span class="deny">×</span> ../../…</div><div class="enforced-by">package imports + oxlint</div></article>
-            <article class="rule-card"><h3>Un writer, plusieurs preuves</h3><p>Le daemon écrit la DB ; le worker écrit son fichier append-only ; le tailer fait la jonction.</p><div class="rule-line"><span class="allow">✓</span> worker → events.jsonl → daemon → SQLite</div><div class="rule-line"><span class="deny">×</span> browser/provider → SQLite</div><div class="enforced-by">composition + process topology</div></article>
-            <article class="rule-card"><h3>Transitions centralisées</h3><p>Les updates passent par les state machines et <code>drivePath</code>; une transition illégale throw.</p><div class="rule-line"><span class="allow">✓</span> machine.transition / driveRunTo</div><div class="rule-line"><span class="deny">×</span> checks d’état dispersés comme source de vérité</div><div class="enforced-by">domain machines + tests</div></article>
-            <article class="rule-card"><h3>Contracts à la frontière</h3><p>Requests, responses et SSE frames sont parsés, pas castés.</p><div class="rule-line"><span class="allow">✓</span> Zod validate → typed data</div><div class="rule-line"><span class="deny">×</span> unknown wire data → UI/DB</div><div class="enforced-by">@hono/zod-validator + client parse</div></article>
-            <article class="rule-card"><h3>Guardrails frontend</h3><p>Les effets, conditional renders et spacing suivent des règles auditables.</p><div class="rule-line"><span class="deny">×</span> useEffect sans justification · cond &amp;&amp; JSX · integer px arbitraire</div><div class="rule-line"><span class="deny">×</span> any · nested ternary · direct lucide dans web</div><div class="enforced-by">guardrails + oxlint + oxfmt</div></article>
-          </div>
-        </section>
-
-        <section id="technology">
-          <div class="section-head">
-            <div><span class="eyebrow">Technology rationale</span><h2>Pourquoi ce stack</h2></div>
-            <p>Les outils ne sont pas une collection : chacun soutient la contrainte local-first, l’isolation des agents ou la lisibilité de l’état. Les versions exactes restent dans les manifests.</p>
-          </div>
-          <div class="tech-grid">
-            <article class="tech-card"><div class="use">TypeScript · pnpm workspaces</div><h3>Un langage, plusieurs frontières</h3><p>Les contracts et state machines se partagent sans recopier le modèle entre browser, client, daemon et DB.</p></article>
-            <article class="tech-card"><div class="use">React 19 · Vite 8</div><h3>Un cockpit dense dans le browser</h3><p>Vite garde le dev loop court ; React rend les panes issues, timeline, diff, review et PR.</p></article>
-            <article class="tech-card"><div class="use">TanStack Router · Query · Form</div><h3>Navigation et server state explicites</h3><p>Routes typées, cache HTTP séparé du local UI state, invalidations ciblées après mutations et events.</p></article>
-            <article class="tech-card"><div class="use">Hono · Zod</div><h3>Une petite API locale vérifiable</h3><p>Hono monte HTTP/SSE sans framework lourd ; Zod garde daemon et client alignés sur le wire.</p></article>
-            <article class="tech-card"><div class="use">SQLite WAL · Drizzle · better-sqlite3</div><h3>Durabilité locale sans service</h3><p>Une DB embarquée, foreign keys, transactions immédiates et lectures concurrentes adaptées au daemon single-writer.</p></article>
-            <article class="tech-card"><div class="use">Git worktrees</div><h3>Isolation dans l’outil canonique</h3><p>Chaque run modifie sa branch/worktree ; Git fournit ensuite la diff, les SHA et le snapshot à publier.</p></article>
-            <article class="tech-card"><div class="use">Codex CLI · Claude CLI · adapter</div><h3>Providers remplaçables, contrôle conservé</h3><p>Un contrat push-sink traduit les frames ; les capabilities déclarent honnêtement stream, resume et abort.</p></article>
-            <article class="tech-card"><div class="use">JSONL append-only + SQLite projection</div><h3>Le worker laisse une trace survivante</h3><p>Le fichier ne dépend pas de la mémoire du parent ; le daemon peut drainer, reprendre un offset et réconcilier au boot.</p></article>
-            <article class="tech-card"><div class="use">SSE · per-run seq</div><h3>Live simple, replayable</h3><p>EventSource reconnecte ; <code>Last-Event-ID</code> ou <code>afterSeq</code> évite de perdre le fil sans WebSocket stateful.</p></article>
-            <article class="tech-card"><div class="use">tsgo · oxlint · oxfmt</div><h3>Un toolchain rapide et unique</h3><p>Typecheck/emit, règles statiques et format/import order sans empiler ESLint, Prettier et tsc.</p></article>
-            <article class="tech-card"><div class="use">dependency-cruiser · guardrails</div><h3>Architecture exécutable</h3><p>Les imports interdits et les conventions frontend deviennent des erreurs de gate, pas des conseils oubliés.</p></article>
-            <article class="tech-card"><div class="use">Vitest · Lefthook · CI</div><h3>La même preuve avant et après push</h3><p>Tests par package, hooks ciblés et <code>pnpm check</code> aligné avec GitHub Actions.</p></article>
-          </div>
-        </section>
-
-        <section id="change-map">
-          <div class="section-head">
-            <div><span class="eyebrow">Ownership lookup</span><h2>Où modifier quoi</h2></div>
-            <p>Commencez par l’owner, puis son index public et un test représentatif. Cette table évite de créer un package ou une abstraction avant d’avoir trouvé la vraie frontière.</p>
-          </div>
-          <table class="change-table">
-            <thead><tr><th>Je veux…</th><th>Owner / point d’entrée</th><th>Test à ouvrir</th></tr></thead>
-            <tbody>
-              <tr><td>Ajouter une route API</td><td><a class="path-link" href="../../apps/local-daemon/src/api/app.ts">api/app.ts</a> puis <code>api/routes/*</code></td><td><a class="path-link" href="../../apps/local-daemon/tests/api/app.test.ts">tests/api/app.test.ts</a></td></tr>
-              <tr><td>Ajouter ou changer un runtime</td><td><a class="path-link" href="../../apps/local-daemon/src/runtime/registry.ts">runtime/registry.ts</a> + provider adapter/frames</td><td><a class="path-link" href="../../apps/local-daemon/tests/runtime/codex-adapter.test.ts">tests/runtime/codex-adapter.test.ts</a></td></tr>
-              <tr><td>Changer le lifecycle d’une run</td><td><a class="path-link" href="../../apps/local-daemon/src/supervisor/supervisor.ts">supervisor/supervisor.ts</a> → commands/lifecycle/settle</td><td><a class="path-link" href="../../apps/local-daemon/tests/supervisor/supervisor-start.test.ts">tests/supervisor/supervisor-start.test.ts</a></td></tr>
-              <tr><td>Ajouter une entity DB</td><td><a class="path-link" href="../../packages/db/src/schema/index.ts">db/schema/index.ts</a> + migration + repository</td><td><a class="path-link" href="../../packages/db/tests/schema.test.ts">db/tests/schema.test.ts</a></td></tr>
-              <tr><td>Changer la timeline SSE</td><td><a class="path-link" href="../../apps/local-daemon/src/api/sse.ts">api/sse.ts</a> + events projection + web provider</td><td><a class="path-link" href="../../apps/web/tests/api/runs/events.test.ts">web/tests/api/runs/events.test.ts</a></td></tr>
-              <tr><td>Changer diff / review / fix</td><td><a class="path-link" href="../../apps/local-daemon/src/review/service.ts">review/service.ts</a> + <code>git/diff.ts</code></td><td><a class="path-link" href="../../apps/local-daemon/tests/review/service.test.ts">tests/review/service.test.ts</a></td></tr>
-              <tr><td>Changer la publication GitHub</td><td><a class="path-link" href="../../apps/local-daemon/src/github/publication.ts">github/publication.ts</a> + CLI</td><td><a class="path-link" href="../../apps/local-daemon/tests/github/service.test.ts">tests/github/service.test.ts</a></td></tr>
-              <tr><td>Ajouter query ou mutation web</td><td><a class="path-link" href="../../apps/web/src/api/query-keys.ts">web/api/query-keys.ts</a> + domaine API concerné</td><td><a class="path-link" href="../../apps/web/tests/api/runs/invalidate-for-event.test.ts">web/tests/api/runs/invalidate-for-event.test.ts</a></td></tr>
-              <tr><td>Ajouter une view / route</td><td><a class="path-link" href="../../apps/web/src/router.tsx">web/router.tsx</a> + <code>routes/</code> + <code>components/</code></td><td><a class="path-link" href="../../apps/web/tests/components/runs/cockpit/layout.test.tsx">web/tests/components/runs/cockpit/layout.test.tsx</a></td></tr>
-              <tr><td>Ajouter une primitive UI</td><td><a class="path-link" href="../../packages/ui/src/index.ts">ui/src/index.ts</a> + <code>primitives/</code> ou <code>components/</code></td><td><a class="path-link" href="../../packages/ui/tests/components/quality-boundaries.test.tsx">ui/tests/components/quality-boundaries.test.tsx</a></td></tr>
-              <tr><td>Changer une boundary / guardrail</td><td><a class="path-link" href="../../packages/tooling/dependency-cruiser.cjs">tooling/dependency-cruiser.cjs</a> + root oxlint / script</td><td><a class="path-link" href="../../scripts/guardrails.mjs">scripts/guardrails.mjs</a></td></tr>
-            </tbody>
-          </table>
-        </section>
-
-        <section id="external">
-          <div class="section-head">
-            <div><span class="eyebrow">Outside the process</span><h2>Systèmes externes, risques et inconnues</h2></div>
-            <p>Local-first ne signifie pas « sans dépendances ». La DB est embarquée, mais Git, le filesystem et les CLIs provider font partie de l’environnement d’exécution réel.</p>
-          </div>
-          <div class="external-grid">
-            <article class="external-card"><h3>Git + filesystem</h3><p>Le projet root doit être un repository utilisable pour worktree/diff. Les run artifacts vivent sous le data dir ; les worktrees sont hors du repository principal.</p></article>
-            <article class="external-card"><h3>Codex / Claude CLI</h3><p>Le daemon probe le binary dans PATH. Auth, models et limites provider restent la responsabilité de chaque CLI ; Otomat traduit leurs events.</p></article>
-            <article class="external-card"><h3>gh + GitHub</h3><p>GitHub CLI possède login et credentials. La publication nécessite réseau, remote résolvable, push autorisé et API GitHub disponible.</p></article>
-            <article class="external-card"><h3>Browser EventSource</h3><p>Le typed client requiert EventSource pour le live. HTTP reste disponible ; les transport errors peuvent reconnecter automatiquement.</p></article>
-            <article class="external-card"><h3>SQLite file</h3><p>Le daemon doit pouvoir créer le dossier, migrer et verrouiller le fichier. WAL et foreign keys sont activés à chaque client.</p></article>
-            <article class="external-card"><h3>Process OS</h3><p>PID/PGID, signals et process identity servent à abort/reconcile. Un PID réutilisé n’est jamais signalé sans preuve d’identité.</p></article>
-          </div>
-          <div class="unknown-strip">
-            <h3>Ce que cette carte ne prétend pas</h3>
-            <ul>
-              <li><strong>Linear sync :</strong> <code>sync_state</code> et la source d’event <code>linear</code> sont des affordances ; aucune intégration active n’est branchée.</li>
-              <li><strong>Generic multi-step execution :</strong> absente du baseline stable décrit ici.</li>
-              <li><strong>Desktop, mobile, hosted workers, team mode :</strong> directions produit, pas des applications présentes.</li>
-              <li><strong>Universal permissions / steering :</strong> l’UI doit suivre les capabilities réelles du runtime ; aucune capacité n’est simulée.</li>
-              <li><strong>Runtime version :</strong> l’availability probe prouve aujourd’hui le binary path, pas une version complète.</li>
-            </ul>
-          </div>
-        </section>
-
-        <section id="key-files">
-          <div class="section-head">
-            <div><span class="eyebrow">12 files, pas 500</span><h2>Fichiers clés</h2></div>
-            <p>Ouvrez-les dans cet ordre selon votre question. Ils donnent la composition, les contrats, les chemins d’exécution et les sources de vérité sans transformer l’atlas en file tree.</p>
-          </div>
-          <div class="key-grid">
-            <article class="key-card"><a href="../../apps/local-daemon/src/server.ts">apps/local-daemon/src/server.ts</a><h3>Composition root</h3><p>DB, bootstrap, services, reconcile, API et lifecycle de fermeture.</p></article>
-            <article class="key-card"><a href="../../apps/local-daemon/src/api/app.ts">apps/local-daemon/src/api/app.ts</a><h3>Surface HTTP</h3><p>Middleware de sécurité, route groups et erreurs JSON.</p></article>
-            <article class="key-card"><a href="../../apps/local-daemon/src/supervisor/supervisor.ts">apps/local-daemon/src/supervisor/supervisor.ts</a><h3>Façade supervisor</h3><p>Start, resume, fix, follow-up, abort, reconcile et settle.</p></article>
-            <article class="key-card"><a href="../../apps/local-daemon/src/supervisor/lifecycle.ts">apps/local-daemon/src/supervisor/lifecycle.ts</a><h3>Spawn lifecycle</h3><p>Slot, state drive, child process, live tail et settle.</p></article>
-            <article class="key-card"><a href="../../apps/local-daemon/src/supervisor/worker.ts">apps/local-daemon/src/supervisor/worker.ts</a><h3>Durable worker</h3><p>Job parse, adapter run/resume, JSONL et terminal marker.</p></article>
-            <article class="key-card"><a href="../../apps/local-daemon/src/events/run-ledger.ts">apps/local-daemon/src/events/run-ledger.ts</a><h3>Run ledger bridge</h3><p>Run dir, live tail, drain et emission control-plane.</p></article>
-            <article class="key-card"><a href="../../apps/local-daemon/src/runtime/contract.ts">apps/local-daemon/src/runtime/contract.ts</a><h3>Adapter contract</h3><p>Inputs, final state, session ref et optional capabilities.</p></article>
-            <article class="key-card"><a href="../../apps/local-daemon/src/git/service.ts">apps/local-daemon/src/git/service.ts</a><h3>Worktree owner</h3><p>Acquire, snapshot, diff, cleanup et identity Git.</p></article>
-            <article class="key-card"><a href="../../apps/local-daemon/src/review/service.ts">apps/local-daemon/src/review/service.ts</a><h3>Review façade</h3><p>Diff, comments, fix preparation et settle hook.</p></article>
-            <article class="key-card"><a href="../../apps/local-daemon/src/github/publication.ts">apps/local-daemon/src/github/publication.ts</a><h3>PR stateful effect</h3><p>Recovery, push snapshot, create/update et persistence.</p></article>
-            <article class="key-card"><a href="../../packages/domain/src/state-machines/run.ts">packages/domain/src/state-machines/run.ts</a><h3>Run machine</h3><p>États, transitions, terminal et resting follow-up states.</p></article>
-            <article class="key-card"><a href="../../packages/db/src/schema/index.ts">packages/db/src/schema/index.ts</a><h3>Database truth</h3><p>Tables, foreign keys, unique indexes et fields.</p></article>
-          </div>
-        </section>
-
-        <section id="maintenance">
-          <div class="section-head">
-            <div><span class="eyebrow">Keep the map honest</span><h2>Contrat de maintenance</h2></div>
-            <p>Cette page est volontairement curatée. Sa fraîcheur est visible grâce au commit de référence ; sa mise à jour doit suivre les changements qui déplacent une frontière ou une trace.</p>
-          </div>
-          <div class="maintenance-grid">
-            <article class="maintenance-card"><h3>Revoir l’atlas quand…</h3><ul class="checklist">
-              <li>un app, package ou module daemon apparaît, disparaît ou change d’owner ;</li>
-              <li>un manifest ou une dependency-cruiser rule change les relations autorisées ;</li>
-              <li>bootstrap, routes, schema ou migrations évoluent ;</li>
-              <li>supervisor, runtime, event ledger ou reconciliation changent de chemin ;</li>
-              <li>domain contracts, client methods, review ou publication GitHub évoluent ;</li>
-              <li>les scripts root ou quality gates changent.</li>
-            </ul></article>
-            <article class="maintenance-card"><h3>Definition of done de la carte</h3><ul class="checklist">
-              <li>recouper chaque claim important avec le stable tree ;</li>
-              <li>mettre à jour commit, date, tables, arrows, traces et unknowns ;</li>
-              <li>tester tous les liens repository-relative ;</li>
-              <li>vérifier desktop, mobile, keyboard focus et reduced motion ;</li>
-              <li>chercher les aspirations présentées à tort comme implemented ;</li>
-              <li>garder un seul fichier offline, sans secrets ni external assets.</li>
-            </ul></article>
-          </div>
-        </section>
-      </main>
-
-      <footer>
-        <span>Otomat architecture atlas · stable commit bd3a958</span>
-        <span>Generated 2026-07-18 · source evidence + Graphify navigation index</span>
-      </footer>
-    </div>
-  </div>
-  <script>
-    const links = [...document.querySelectorAll('.side nav a[href^="#"]')];
-    const sections = links.map((link) => document.querySelector(link.hash)).filter(Boolean);
-    if ('IntersectionObserver' in window) {
-      const observer = new IntersectionObserver((entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
-          for (const link of links) link.removeAttribute('aria-current');
-          document.querySelector(`.side nav a[href="#${entry.target.id}"]`)?.setAttribute('aria-current', 'location');
+      @media (max-width: 1120px) {
+        .app-layout {
+          grid-template-columns: 200px minmax(0, 1fr);
         }
-      }, { rootMargin: '-18% 0px -72%' });
-      for (const section of sections) observer.observe(section);
-    }
-  </script>
-</body>
+        .page {
+          padding-inline: 24px;
+        }
+        .hero-grid {
+          grid-template-columns: 1fr;
+        }
+        .meta-plate {
+          max-width: 680px;
+        }
+        .mental-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .module-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 820px) {
+        .app-layout {
+          display: block;
+        }
+        .side {
+          position: sticky;
+          z-index: 20;
+          height: auto;
+          padding: 10px 14px;
+          border-right: 0;
+          border-bottom: 1px solid var(--grid);
+        }
+        .brand {
+          margin: 0 0 8px;
+        }
+        .brand-mark {
+          width: 27px;
+          height: 27px;
+        }
+        .side nav {
+          display: flex;
+          gap: 3px;
+          overflow-x: auto;
+          padding-bottom: 3px;
+        }
+        .side nav a {
+          flex: 0 0 auto;
+          padding: 5px 8px;
+          border-left: 0;
+          border-bottom: 2px solid transparent;
+          font-size: 10px;
+        }
+        .side nav a::before,
+        .side .nav-label,
+        .side-meta {
+          display: none;
+        }
+        .page {
+          padding: 0 16px 56px;
+        }
+        .hero {
+          min-height: auto;
+          padding: 54px 0;
+        }
+        h1 {
+          font-size: clamp(3.1rem, 16vw, 5rem);
+        }
+        .section-head {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+        .loop {
+          grid-template-columns: 1fr;
+        }
+        .loop-step {
+          min-height: auto;
+          padding: 10px 14px;
+          border-right: 0;
+          border-bottom: 1px solid var(--grid);
+        }
+        .loop-step:last-child {
+          border-bottom: 0;
+        }
+        .loop-step:not(:last-child)::after {
+          top: auto;
+          right: 20px;
+          bottom: -10px;
+          transform: rotate(90deg);
+        }
+        .loop-step strong {
+          margin-top: 4px;
+        }
+        .mental-grid,
+        .topology,
+        .db-groups,
+        .rules,
+        .tech-grid,
+        .external-grid,
+        .key-grid,
+        .maintenance-grid {
+          grid-template-columns: 1fr;
+        }
+        .zone-grid {
+          grid-template-columns: 1fr;
+        }
+        .spine::before {
+          left: 16px;
+        }
+        .spine-row {
+          grid-template-columns: 44px minmax(0, 1fr);
+          min-height: 90px;
+        }
+        .spine-row:nth-child(n) .spine-card {
+          grid-column: 2;
+          text-align: left;
+        }
+        .spine-mark {
+          grid-column: 1;
+        }
+        .edge-row {
+          grid-template-columns: 1fr auto 1fr;
+        }
+        .edge-row .why {
+          grid-column: 1 / -1;
+        }
+        .tables {
+          grid-template-columns: 1fr;
+        }
+        .relation-grid {
+          grid-template-columns: 1fr;
+        }
+        .trace-node {
+          grid-template-columns: 46px 1fr;
+        }
+        .trace-node .action {
+          grid-column: 2;
+        }
+        .change-table {
+          display: block;
+          overflow-x: auto;
+        }
+        footer {
+          display: block;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0.01ms !important;
+        }
+      }
+      @media print {
+        :root {
+          color-scheme: light;
+          --ink: #fff;
+          --ink-raised: #fff;
+          --ink-soft: #fff;
+          --paper: #111;
+          --paper-dim: #333;
+          --paper-faint: #555;
+          --grid: #bbb;
+          --grid-strong: #777;
+        }
+        body {
+          background: #fff;
+        }
+        .app-layout {
+          display: block;
+        }
+        .side {
+          display: none;
+        }
+        .page {
+          padding: 0;
+        }
+        section {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body data-otomat-architecture-atlas="true">
+    <a class="skip-link" href="#start">Aller au contenu</a>
+    <div class="app-layout">
+      <aside class="side">
+        <div class="brand">
+          <div class="brand-mark">OT</div>
+          <div><strong>Otomat</strong><small>architecture atlas</small></div>
+        </div>
+        <div class="nav-label">Lire la carte</div>
+        <nav aria-label="Sections de l’atlas">
+          <a href="#start">Commencer</a>
+          <a href="#topology">Topology</a>
+          <a href="#interactions">Interactions</a>
+          <a href="#database">Database</a>
+          <a href="#traces">Traces runtime</a>
+          <a href="#boundaries">Boundaries</a>
+          <a href="#technology">Technologies</a>
+          <a href="#change-map">Où modifier</a>
+          <a href="#external">Systèmes externes</a>
+          <a href="#key-files">Fichiers clés</a>
+          <a href="#maintenance">Maintenance</a>
+        </nav>
+        <div class="side-meta">
+          <b>Scope</b> OTO-28 target<br />
+          <b>Commit</b> 528920c<br />
+          <b>Generated</b> 2026-07-20
+        </div>
+      </aside>
+
+      <div class="page">
+        <header class="hero">
+          <div class="hero-grid">
+            <div>
+              <div class="eyebrow">Le dépôt, du signal à la preuve</div>
+              <h1>Otomat<em>atlas d’architecture · OTO-28</em></h1>
+              <p class="hero-lede">
+                Un cockpit local qui part d’une issue, isole le travail d’un agent dans Git,
+                conserve chaque preuve d’exécution, puis ramène le résultat vers une diff révisable
+                et une pull request publiable.
+              </p>
+            </div>
+            <dl class="meta-plate">
+              <div class="meta-row">
+                <dt>Pourquoi</dt>
+                <dd>
+                  Retrouver le fil en dix minutes, puis remonter jusqu’aux fichiers qui prouvent
+                  chaque branchement.
+                </dd>
+              </div>
+              <div class="meta-row">
+                <dt>Scope</dt>
+                <dd><span class="scope">Source commitée de la branche OTO-28</span></dd>
+              </div>
+              <div class="meta-row">
+                <dt>Sources</dt>
+                <dd>
+                  Manifests, composition root, routes, schema, contracts, state machines, boundary
+                  config, tests et décisions.
+                </dd>
+              </div>
+              <div class="meta-row">
+                <dt>Graph index</dt>
+                <dd>
+                  L’index Graphify du 2026-07-18 sert uniquement à naviguer ; les claims sont
+                  recoupés avec <code>528920c</code>.
+                </dd>
+              </div>
+              <div class="meta-row">
+                <dt>Limite</dt>
+                <dd>
+                  Les documents de travail ignorés et le profil desktop jetable ne font pas partie
+                  de cette carte.
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </header>
+
+        <main>
+          <section id="start">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">Otomat en 10 minutes</span>
+                <h2>Une boucle locale, une preuve continue</h2>
+              </div>
+              <p>
+                Le produit ne délègue pas son control plane aux providers. Il possède les issues,
+                les runs, l’état, la review et la publication ; Codex ou Claude ne sont que des
+                moteurs derrière un adapter.
+              </p>
+            </div>
+            <div class="loop" aria-label="Issue vers pull request">
+              <div class="loop-step"><small>00 · contexte</small><strong>Issue</strong></div>
+              <div class="loop-step"><small>01 · contrôle</small><strong>Run</strong></div>
+              <div class="loop-step">
+                <small>02 · exécution</small><strong>Agent session</strong>
+              </div>
+              <div class="loop-step"><small>03 · concurrence</small><strong>Compare</strong></div>
+              <div class="loop-step"><small>04 · vérité Git</small><strong>Git diff</strong></div>
+              <div class="loop-step"><small>05 · décision</small><strong>Review</strong></div>
+              <div class="loop-step"><small>06 · reprise</small><strong>Fix</strong></div>
+              <div class="loop-step">
+                <small>07 · livraison</small><strong>Pull request</strong>
+              </div>
+            </div>
+            <p class="flow-caption">
+              Issue → Run → Steps séquentielles ou concurrence explicite → Git diff → Review → Fix →
+              Pull request
+            </p>
+            <div class="mental-grid">
+              <article class="mental-card">
+                <span class="num">M/01</span>
+                <h3>Issue-first</h3>
+                <p>
+                  L’issue est le workspace métier. Une run existe pour faire progresser ce travail,
+                  pas comme conversation isolée.
+                </p>
+              </article>
+              <article class="mental-card">
+                <span class="num">M/02</span>
+                <h3>Daemon = writer</h3>
+                <p>
+                  Le process local migre, compose, supervise et écrit. Le browser ne touche jamais
+                  directement la DB ou GitHub.
+                </p>
+              </article>
+              <article class="mental-card">
+                <span class="num">M/03</span>
+                <h3>Worktree isolé</h3>
+                <p>
+                  Une run obtient une branch et un Git worktree dédiés lorsque le projet racine est
+                  un repository utilisable. Compete refuse launch, reprise et promotion si ce
+                  repository ou ses worktrees ne sont plus résolvables.
+                </p>
+              </article>
+              <article class="mental-card">
+                <span class="num">M/04</span>
+                <h3>Evidence-first</h3>
+                <p>
+                  Chaque session worker append dans son <code>events.jsonl</code>. Le ledger SQLite
+                  fusionne ces streams par <code>seq</code> et alimente le live SSE.
+                </p>
+              </article>
+              <article class="mental-card">
+                <span class="num">M/05</span>
+                <h3>Deux vérités</h3>
+                <p>
+                  Git est canonique pour la diff. Les state machines et le ledger persisté sont
+                  canoniques pour le contrôle et l’historique.
+                </p>
+              </article>
+              <article class="mental-card">
+                <span class="num">M/06</span>
+                <h3>Gagnant explicite</h3>
+                <p>
+                  Un groupe compete isole au moins deux candidats, attend une sélection humaine,
+                  promeut un seul snapshot puis débloque ses dépendants. L’objectif partagé est
+                  figé dans chaque prompt candidat.
+                </p>
+              </article>
+            </div>
+            <p style="margin: 18px 0 0; color: var(--paper-faint); font-size: 11px">
+              <span class="evidence implemented">Implemented</span> Ce modèle est visible dans
+              <a class="path-link" href="../../apps/local-daemon/src/server.ts">server.ts</a>,
+              <a class="path-link" href="../../apps/local-daemon/src/supervisor/supervisor.ts"
+                >supervisor.ts</a
+              >
+              et
+              <a class="path-link" href="../../packages/db/src/schema/index.ts">schema/index.ts</a>.
+              <span class="evidence decision">Decision</span> Les non-goals restent : pas un IDE,
+              pas un chat générique, pas une worker fleet hébergée, pas un workflow builder
+              générique.
+            </p>
+          </section>
+
+          <section id="topology">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">Boxes inside boxes</span>
+                <h2>Topology du monorepo</h2>
+              </div>
+              <p>
+                Les rectangles suivent les vraies frontières de déploiement et d’import. Leur taille
+                indique leur importance pour comprendre Otomat, pas une métrique de lignes de code.
+              </p>
+            </div>
+            <div class="topology">
+              <div class="zone">
+                <div class="zone-head"><span>apps/</span><span>runnable targets</span></div>
+                <div class="zone-stack">
+                  <article class="node app">
+                    <h3>apps/web <span class="evidence implemented">browser</span></h3>
+                    <p>
+                      React + Vite. TanStack Router structure les views ; Query/Form portent les
+                      données et mutations ; le cockpit rend issues, workflows, groupes compete,
+                      timeline, diff, review et PR.
+                    </p>
+                    <div class="files">
+                      <code>main.tsx</code><code>routes/</code><code>api/</code
+                      ><code>components/</code>
+                    </div>
+                  </article>
+                  <article class="node backend">
+                    <h3>
+                      apps/local-daemon <span class="evidence implemented">node process</span>
+                    </h3>
+                    <p>
+                      Le seul process backend. Il possède HTTP/SSE, Git, runtime providers,
+                      supervision, review, publication GitHub et réconciliation au boot.
+                    </p>
+                    <div class="module-grid">
+                      <div class="module"><b>api</b><span>Hono · routes · SSE</span></div>
+                      <div class="module"><b>events</b><span>JSONL → ledger</span></div>
+                      <div class="module"><b>git</b><span>worktree · diff</span></div>
+                      <div class="module"><b>github</b><span>gh · publication</span></div>
+                      <div class="module"><b>review</b><span>anchors · fix</span></div>
+                      <div class="module"><b>runtime</b><span>adapter · CLI frames</span></div>
+                      <div class="module">
+                        <b>supervisor</b><span>schedule · compete · promote</span>
+                      </div>
+                      <div class="module"><b>root</b><span>index · server · bootstrap</span></div>
+                    </div>
+                  </article>
+                  <article class="node app">
+                    <h3>apps/desktop <span class="evidence implemented">Electron shell</span></h3>
+                    <p>
+                      Construit et lance le daemon sur un port loopback libre, attend sa health,
+                      injecte son URL dans le cockpit et sert le build web via
+                      <code>app://</code> en package.
+                    </p>
+                    <div class="files">
+                      <code>main/</code><code>preload/</code><code>shared/</code
+                      ><code>scripts/</code>
+                    </div>
+                  </article>
+                </div>
+              </div>
+              <div class="zone">
+                <div class="zone-head"><span>packages/</span><span>earned boundaries</span></div>
+                <div class="zone-grid">
+                  <article class="node shared">
+                    <h3>domain</h3>
+                    <p>
+                      Pure TS : Zod contracts, event envelope, state machines. Dépend seulement de
+                      Zod.
+                    </p>
+                  </article>
+                  <article class="node data">
+                    <h3>db</h3>
+                    <p>
+                      SQLite, Drizzle, migrations, repositories. Seul endroit qui construit
+                      <code>better-sqlite3</code>.
+                    </p>
+                  </article>
+                  <article class="node app">
+                    <h3>client</h3>
+                    <p>Typed HTTP + SSE client. Valide chaque réponse avec les schemas domain.</p>
+                  </article>
+                  <article class="node app">
+                    <h3>ui</h3>
+                    <p>Design system, Base UI primitives, themes et shell partagés.</p>
+                  </article>
+                  <article class="node external">
+                    <h3>tooling</h3>
+                    <p>
+                      tsconfig, Vitest, oxlint et dependency-cruiser partagés. Aucun comportement
+                      produit.
+                    </p>
+                  </article>
+                  <article class="node external">
+                    <h3>outside</h3>
+                    <p>Git, filesystem, Codex CLI, Claude CLI et <code>gh</code>/GitHub.</p>
+                  </article>
+                </div>
+              </div>
+            </div>
+            <p style="margin-top: 14px; color: var(--paper-faint); font-size: 11px">
+              <span class="evidence decision">Decision</span> Un package doit avoir plusieurs
+              consumers, protéger une boundary, isoler une dépendance dangereuse ou stabiliser une
+              interface. Les modules daemon-only restent internes à <code>apps/local-daemon</code>.
+            </p>
+          </section>
+
+          <section id="interactions">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">Control-plane spine</span>
+                <h2>Où chaque chose est branchée</h2>
+              </div>
+              <p>
+                Le chemin central part d’une intention utilisateur, traverse le control plane,
+                devient une preuve durable, puis revient dans l’UI. Les autres relations importantes
+                sont listées comme un ledger d’edges.
+              </p>
+            </div>
+            <div class="spine" aria-label="Flux de contrôle principal">
+              <div class="spine-row">
+                <div class="spine-card">
+                  <b>Desktop + React cockpit</b>
+                  <p>
+                    Electron fournit l’URL du daemon ; TanStack Form construit le plan et Query
+                    possède le server state.
+                  </p>
+                </div>
+                <div class="spine-mark">UI</div>
+              </div>
+              <div class="spine-row">
+                <div class="spine-card">
+                  <b>@otomat/client</b>
+                  <p>
+                    <code>fetch</code> pour HTTP, <code>EventSource</code> pour le live, Zod au
+                    retour.
+                  </p>
+                </div>
+                <div class="spine-mark">HTTP</div>
+              </div>
+              <div class="spine-row">
+                <div class="spine-card">
+                  <b>Hono API</b>
+                  <p>Valide, garde la ressource, route vers supervisor, review ou GitHub.</p>
+                </div>
+                <div class="spine-mark">API</div>
+              </div>
+              <div class="spine-row">
+                <div class="spine-card">
+                  <b>Supervisor</b>
+                  <p>
+                    Gèle le DAG, ordonnance un step ou tous les candidats d’un groupe compete sous
+                    le sémaphore global, garde les workers derrière une barrière de démarrage
+                    durable, puis attend une sélection explicite.
+                  </p>
+                </div>
+                <div class="spine-mark">CTRL</div>
+              </div>
+              <div class="spine-row">
+                <div class="spine-card">
+                  <b>Worker + adapter</b>
+                  <p>
+                    Codex/Claude tournent dans le worktree canonique ou candidat ; leurs frames
+                    deviennent des events normalisés.
+                  </p>
+                </div>
+                <div class="spine-mark">PROC</div>
+              </div>
+              <div class="spine-row">
+                <div class="spine-card">
+                  <b>events.jsonl par session</b>
+                  <p>
+                    Chaque child process append dans son stream indépendant. Le terminal marker est
+                    sa preuve de fin.
+                  </p>
+                </div>
+                <div class="spine-mark">FILE</div>
+              </div>
+              <div class="spine-row">
+                <div class="spine-card">
+                  <b>SQLite ledger</b>
+                  <p>
+                    Le tailer n’ingère que les lignes complètes et alloue un <code>seq</code> par
+                    run.
+                  </p>
+                </div>
+                <div class="spine-mark">DB</div>
+              </div>
+              <div class="spine-row">
+                <div class="spine-card">
+                  <b>SSE projection</b>
+                  <p>
+                    Rejoue après le cursor, heartbeat, puis invalide ou fusionne dans le cache UI.
+                  </p>
+                </div>
+                <div class="spine-mark">SSE</div>
+              </div>
+            </div>
+            <div class="edge-ledger" aria-label="Relations d’architecture importantes">
+              <div class="edge-row">
+                <span class="from">apps/web</span><span class="verb">renders</span
+                ><span class="to">@otomat/ui</span
+                ><span class="why">Shell, primitives, theme, icon registry.</span>
+              </div>
+              <div class="edge-row">
+                <span class="from">apps/web</span><span class="verb">calls HTTP</span
+                ><span class="to">@otomat/client</span
+                ><span class="why">Le browser ne connaît pas les internals backend.</span>
+              </div>
+              <div class="edge-row">
+                <span class="from">client</span><span class="verb">opens SSE</span
+                ><span class="to">Hono /events</span
+                ><span class="why"
+                  >Replay par <code>afterSeq</code> ou <code>Last-Event-ID</code>.</span
+                >
+              </div>
+              <div class="edge-row">
+                <span class="from">api</span><span class="verb">commands</span
+                ><span class="to">services</span
+                ><span class="why"
+                  >Supervisor, review et GitHub sont injectés via <code>ApiDeps</code>.</span
+                >
+              </div>
+              <div class="edge-row">
+                <span class="from">desktop</span><span class="verb">spawns</span
+                ><span class="to">daemon + web</span
+                ><span class="why"
+                  >Lifecycle, port, health et bridge IPC restent dans le shell Electron.</span
+                >
+              </div>
+              <div class="edge-row">
+                <span class="from">supervisor</span><span class="verb">acquires</span
+                ><span class="to">git worktrees</span
+                ><span class="why"
+                  >Une branch canonique par run et une branch isolée par candidat compete.</span
+                >
+              </div>
+              <div class="edge-row">
+                <span class="from">winner selection</span><span class="verb">promotes</span
+                ><span class="to">canonical branch</span
+                ><span class="why"
+                  >Snapshot du gagnant, fast-forward, archivage de tous les candidats, puis
+                  dépendants débloqués.</span
+                >
+              </div>
+              <div class="edge-row">
+                <span class="from">supervisor</span><span class="verb">re-execs</span
+                ><span class="to">worker</span
+                ><span class="why">Le job sérialisé passe par <code>OTOMAT_WORKER_JOB</code>.</span>
+              </div>
+              <div class="edge-row">
+                <span class="from">worker</span><span class="verb">appends</span
+                ><span class="to">session events.jsonl</span
+                ><span class="why"
+                  >Chaque tour possède sa durabilité et son cursor indépendants.</span
+                >
+              </div>
+              <div class="edge-row">
+                <span class="from">tailer</span><span class="verb">writes DB</span
+                ><span class="to">runtime_events</span
+                ><span class="why"
+                  >Une ligne corrompue crée un gap explicite sans bloquer le stream.</span
+                >
+              </div>
+              <div class="edge-row">
+                <span class="from">review/github</span><span class="verb">emit</span
+                ><span class="to">ledger</span
+                ><span class="why"
+                  >Diff, commentaires et PR rejoignent la même timeline normalisée.</span
+                >
+              </div>
+              <div class="edge-row">
+                <span class="from">daemon modules</span><span class="verb">read/write</span
+                ><span class="to">@otomat/db</span
+                ><span class="why"
+                  >Repositories dédiés ; domain fournit types, schemas et machines.</span
+                >
+              </div>
+            </div>
+          </section>
+
+          <section id="database">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">15 tables · SQLite WAL</span>
+                <h2>Database map</h2>
+              </div>
+              <p>
+                Les foreign keys ci-dessous sont déclarées dans Drizzle. Les contraintes uniques
+                renforcent l’ownership d’un worktree, l’ordre d’une step, l’ordre des events et
+                l’unicité d’une PR par run.
+              </p>
+            </div>
+            <div class="db-groups">
+              <div class="db-group">
+                <h3>Workspace &amp; Git</h3>
+                <div class="tables">
+                  <article class="table-card">
+                    <div class="table-name">projects</div>
+                    <div class="field"><b>id</b><span class="key">PK</span></div>
+                    <div class="field"><b>name</b><span>text</span></div>
+                    <div class="field"><b>root_path</b><span>text</span></div>
+                  </article>
+                  <article class="table-card">
+                    <div class="table-name">repositories</div>
+                    <div class="field"><b>id</b><span class="key">PK</span></div>
+                    <div class="field"><b>project_id</b><span class="fk">FK</span></div>
+                    <div class="field"><b>default_branch</b><span>text</span></div>
+                  </article>
+                  <article class="table-card">
+                    <div class="table-name">worktrees</div>
+                    <div class="field"><b>id</b><span class="key">PK</span></div>
+                    <div class="field"><b>repository_id</b><span class="fk">FK</span></div>
+                    <div class="field"><b>owner_token</b><span>unique active</span></div>
+                    <div class="field"><b>path · branch · status</b><span>state</span></div>
+                  </article>
+                </div>
+              </div>
+              <div class="db-group">
+                <h3>Issue &amp; execution</h3>
+                <div class="tables">
+                  <article class="table-card">
+                    <div class="table-name">issues</div>
+                    <div class="field"><b>id</b><span class="key">PK</span></div>
+                    <div class="field"><b>project_id</b><span class="fk">FK</span></div>
+                    <div class="field"><b>status · source</b><span>domain</span></div>
+                  </article>
+                  <article class="table-card">
+                    <div class="table-name">agents</div>
+                    <div class="field"><b>id</b><span class="key">PK</span></div>
+                    <div class="field"><b>runtime</b><span>adapter id</span></div>
+                  </article>
+                  <article class="table-card">
+                    <div class="table-name">runs</div>
+                    <div class="field"><b>id</b><span class="key">PK</span></div>
+                    <div class="field">
+                      <b>issue · repo · worktree · agent</b><span class="fk">FK</span>
+                    </div>
+                    <div class="field"><b>status · branch</b><span>control</span></div>
+                    <div class="field"><b>plan_json</b><span>frozen</span></div>
+                  </article>
+                  <article class="table-card">
+                    <div class="table-name">compete_groups</div>
+                    <div class="field"><b>id · run_id</b><span class="key">PK · FK</span></div>
+                    <div class="field"><b>status · winner_step_run_id</b><span>decision</span></div>
+                    <div class="field"><b>base_head_sha</b><span>promotion guard</span></div>
+                  </article>
+                  <article class="table-card">
+                    <div class="table-name">step_runs</div>
+                    <div class="field"><b>id</b><span class="key">PK</span></div>
+                    <div class="field">
+                      <b>run_id · compete_group_id</b><span class="fk">FK</span>
+                    </div>
+                    <div class="field"><b>worktree_id</b><span class="fk">candidate</span></div>
+                    <div class="field"><b>run_id + idx</b><span>unique</span></div>
+                  </article>
+                  <article class="table-card">
+                    <div class="table-name">agent_sessions</div>
+                    <div class="field"><b>id</b><span class="key">PK</span></div>
+                    <div class="field"><b>step_run_id · agent_id</b><span class="fk">FK</span></div>
+                    <div class="field"><b>provider_session_id</b><span>resume</span></div>
+                    <div class="field"><b>pid · pgid · exit</b><span>reconcile</span></div>
+                  </article>
+                </div>
+              </div>
+              <div class="db-group">
+                <h3>Evidence ledger</h3>
+                <div class="tables">
+                  <article class="table-card">
+                    <div class="table-name">event_streams</div>
+                    <div class="field"><b>id</b><span class="key">PK · session key</span></div>
+                    <div class="field"><b>run_id</b><span class="fk">FK</span></div>
+                    <div class="field">
+                      <b>file_path · byte_offset</b><span>durable cursor</span>
+                    </div>
+                  </article>
+                  <article class="table-card">
+                    <div class="table-name">runtime_events</div>
+                    <div class="field"><b>id</b><span class="key">PK</span></div>
+                    <div class="field"><b>run · step · session</b><span class="fk">FK</span></div>
+                    <div class="field"><b>run_id + seq</b><span>unique order</span></div>
+                    <div class="field"><b>type · source · payload</b><span>envelope</span></div>
+                    <div class="field"><b>raw_ref</b><span>provenance</span></div>
+                  </article>
+                </div>
+                <p style="margin: 10px 0 0; color: var(--paper-faint); font-size: 10px">
+                  Une row qui ne valide plus l’envelope est ignorée à la projection : un event
+                  malformé ne vide pas toute la timeline.
+                </p>
+              </div>
+              <div class="db-group">
+                <h3>Review, delivery &amp; affordance</h3>
+                <div class="tables">
+                  <article class="table-card">
+                    <div class="table-name">reviews</div>
+                    <div class="field"><b>id</b><span class="key">PK</span></div>
+                    <div class="field"><b>run_id</b><span class="fk">FK</span></div>
+                    <div class="field"><b>status</b><span>machine</span></div>
+                  </article>
+                  <article class="table-card">
+                    <div class="table-name">review_comments</div>
+                    <div class="field"><b>id</b><span class="key">PK</span></div>
+                    <div class="field"><b>review_id</b><span class="fk">FK</span></div>
+                    <div class="field"><b>file · line · diff_sha</b><span>anchor</span></div>
+                    <div class="field"><b>hunk_snapshot</b><span>stale view</span></div>
+                  </article>
+                  <article class="table-card">
+                    <div class="table-name">pull_requests</div>
+                    <div class="field"><b>id</b><span class="key">PK</span></div>
+                    <div class="field"><b>run_id</b><span class="fk">FK · unique</span></div>
+                    <div class="field"><b>publication_status</b><span>machine</span></div>
+                    <div class="field"><b>published_*_sha</b><span>snapshot</span></div>
+                  </article>
+                  <article class="table-card">
+                    <div class="table-name">sync_state</div>
+                    <div class="field"><b>id</b><span class="key">PK</span></div>
+                    <div class="field">
+                      <b>source · resource · cursor</b><span>affordance</span>
+                    </div>
+                    <div class="field">
+                      <b>runtime use</b><span class="unknown">not wired</span>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </div>
+            <div class="relation-grid" aria-label="Foreign keys déclarées">
+              <div class="relation">repositories.project_id → projects.id</div>
+              <div class="relation">worktrees.repository_id → repositories.id</div>
+              <div class="relation">issues.project_id → projects.id</div>
+              <div class="relation">runs.issue_id → issues.id</div>
+              <div class="relation">runs.repository_id → repositories.id</div>
+              <div class="relation">runs.worktree_id → worktrees.id</div>
+              <div class="relation">runs.agent_id → agents.id</div>
+              <div class="relation">compete_groups.run_id → runs.id</div>
+              <div class="relation">step_runs.run_id → runs.id</div>
+              <div class="relation">step_runs.compete_group_id → compete_groups.id</div>
+              <div class="relation">step_runs.worktree_id → worktrees.id</div>
+              <div class="relation">agent_sessions.step_run_id → step_runs.id</div>
+              <div class="relation">agent_sessions.agent_id → agents.id</div>
+              <div class="relation">event_streams.run_id → runs.id</div>
+              <div class="relation">runtime_events.run_id → runs.id</div>
+              <div class="relation">runtime_events.step_run_id → step_runs.id</div>
+              <div class="relation">runtime_events.agent_session_id → agent_sessions.id</div>
+              <div class="relation">reviews.run_id → runs.id</div>
+              <div class="relation">review_comments.review_id → reviews.id</div>
+              <div class="relation">pull_requests.run_id → runs.id</div>
+            </div>
+          </section>
+
+          <section id="traces">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">Static execution traces</span>
+                <h2>Cinq chemins à connaître</h2>
+              </div>
+              <p>
+                Chaque trace part d’un command ou d’une action visible, traverse les vrais symbols,
+                puis atteint DB, Git, filesystem ou provider. Les branches rouges montrent les
+                chemins où Otomat refuse de deviner.
+              </p>
+            </div>
+            <div class="trace-list">
+              <details class="trace" open>
+                <summary>
+                  <span class="trace-id">TRACE/A</span
+                  ><span class="trace-title"
+                    ><b>Boot du daemon</b
+                    ><span>command → migrations → composition → reconcile → HTTP</span></span
+                  >
+                </summary>
+                <div class="trace-body">
+                  <div class="trace-flow">
+                    <div class="trace-node">
+                      <span class="seq">seq 000</span><span class="loc">pnpm back</span
+                      ><span class="action"
+                        >Filtre <code>@otomat/local-daemon</code> et lance son script
+                        <code>start</code>.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 001</span><span class="loc">tsx src/index.ts</span
+                      ><span class="action"
+                        ><code>OTOMAT_WORKER_JOB</code> absent : choisit le mode server et appelle
+                        <code>startDaemon()</code>.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 002</span
+                      ><span class="loc">server.ts · startDaemon</span
+                      ><span class="action"
+                        >Résout le DB path, applique les migrations, ouvre SQLite en WAL avec
+                        foreign keys.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 003</span><span class="loc">bootstrap.ts</span
+                      ><span class="action"
+                        >Upsert du projet local ; détecte la default branch et compose le Git
+                        worktree service si possible.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 004</span><span class="loc">server.ts · services</span
+                      ><span class="action"
+                        >Compose review, GitHub, supervisor et le worker re-exec depuis le même
+                        entrypoint.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 005</span><span class="loc">supervisor.reconcile</span
+                      ><span class="action"
+                        >Finalise les remnants non terminaux avant d’accepter du trafic ; les
+                        resting states restent au repos.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 006</span><span class="loc">createApiApp → serve</span
+                      ><span class="action"
+                        >Monte les routes Hono puis écoute par défaut sur
+                        <code>127.0.0.1:4319</code>.</span
+                      >
+                    </div>
+                  </div>
+                  <div class="branches">
+                    <span class="branch">Root non-Git ou detached → aucun worktree/diff</span
+                    ><span class="branch"
+                      >Migration ou bind échoue → le daemon ne prétend pas être prêt</span
+                    ><span class="branch"
+                      >PID vivant mais identité non prouvée → aucun signal envoyé</span
+                    >
+                  </div>
+                </div>
+              </details>
+              <details class="trace">
+                <summary>
+                  <span class="trace-id">TRACE/B</span
+                  ><span class="trace-title"
+                    ><b>Launch, live et settle d’une run</b
+                    ><span
+                      >UI → API → worktree → worker → JSONL → ledger → SSE → terminal</span
+                    ></span
+                  >
+                </summary>
+                <div class="trace-body">
+                  <div class="trace-flow">
+                    <div class="trace-node">
+                      <span class="seq">seq 000</span><span class="loc">useStartRun</span
+                      ><span class="action"
+                        >La mutation appelle le typed client puis invalide listes et issue
+                        concernée.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 001</span><span class="loc">POST /api/runs</span
+                      ><span class="action"
+                        >Zod valide <code>StartRunRequest</code> ; l’API traduit runtime
+                        inconnu/indisponible en réponses explicites.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 002</span><span class="loc">prepareRun</span
+                      ><span class="action"
+                        >Résout l’issue, valide tous les runtimes, acquiert le worktree canonique,
+                        puis écrit run, nodes, groupes et plan figé dans une transaction.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 003</span><span class="loc">startNextReadyStep</span
+                      ><span class="action"
+                        >Le scheduler du DAG choisit un step normal ou un groupe compete ; chaque
+                        tour attend un slot global, persiste PID et identité, puis revalide son état
+                        avant de libérer le worker.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 004</span><span class="loc">worker.ts</span
+                      ><span class="action"
+                        >Attend le fichier de release parent, instancie Codex/Claude/fake, exécute
+                        ou resume, append chaque event puis écrit le terminal marker.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 005</span><span class="loc">EventTailer</span
+                      ><span class="action"
+                        >Lit chaque fichier de session par cursor persisté, ignore les fragments
+                        incomplets et alloue un <code>seq</code> globalement contigu par run.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 006</span><span class="loc">GET /:id/events</span
+                      ><span class="action"
+                        >SSE rejoue après le cursor, heartbeat environ toutes les 10 s, termine
+                        lorsque la run est terminale et drainée.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 007</span><span class="loc">settleRun</span
+                      ><span class="action"
+                        >Draine, lit le marker/session provider, classe l’issue, converge
+                        run/steps/sessions puis déclenche le settle review.</span
+                      >
+                    </div>
+                  </div>
+                  <div class="branches">
+                    <span class="branch">Runtime inconnu → 400</span
+                    ><span class="branch">Runtime indisponible → 409</span
+                    ><span class="branch">Worktree acquis mais transaction échoue → cleanup</span
+                    ><span class="branch">Abort pendant le slot → aucun spawn</span
+                    ><span class="branch">Spawn échoue → kill + settle</span
+                    ><span class="branch">Ligne JSONL corrompue → gap de seq, stream continue</span>
+                  </div>
+                </div>
+              </details>
+              <details class="trace">
+                <summary>
+                  <span class="trace-id">TRACE/C</span
+                  ><span class="trace-title"
+                    ><b>Review, fix et follow-up</b
+                    ><span>diff canonique → anchor SHA → prompt → même session provider</span></span
+                  >
+                </summary>
+                <div class="trace-body">
+                  <div class="trace-flow">
+                    <div class="trace-node">
+                      <span class="seq">seq 000</span><span class="loc">GET /:id/diff</span
+                      ><span class="action"
+                        >Le worktree service calcule la diff Git contre la base, par fichier, avec
+                        counts et SHA stables.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 001</span><span class="loc">review.addComment</span
+                      ><span class="action"
+                        >Vérifie <code>file_path + line + diff_sha</code>, capture le hunk et crée
+                        review/comment.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 002</span><span class="loc">POST /review/fix</span
+                      ><span class="action"
+                        >Sélectionne les commentaires fixables, construit le prompt, puis appelle
+                        <code>fixRun</code>.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 003</span><span class="loc">spawnFollowUpTurn</span
+                      ><span class="action"
+                        >Réutilise runtime, worktree, step/session et
+                        <code>provider_session_id</code> ; le prompt peut aussi venir directement du
+                        user follow-up.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 004</span><span class="loc">review.onRunSettled</span
+                      ><span class="action"
+                        >Compare la nouvelle diff : commentaire addressed si le hunk a disparu,
+                        outdated si l’anchor n’est plus la vue courante.</span
+                      >
+                    </div>
+                  </div>
+                  <div class="branches">
+                    <span class="branch">Anchor stale à la création → 409</span
+                    ><span class="branch">Aucun commentaire fixable → 409</span
+                    ><span class="branch">État non resumable ou session provider absente → 409</span
+                    ><span class="branch"
+                      >Un runtime sans resume ne reçoit pas de faux follow-up</span
+                    >
+                  </div>
+                </div>
+              </details>
+              <details class="trace">
+                <summary>
+                  <span class="trace-id">TRACE/D</span
+                  ><span class="trace-title"
+                    ><b>Publication GitHub</b
+                    ><span
+                      >review-ready → snapshot Git → push → create/update PR → ledger</span
+                    ></span
+                  >
+                </summary>
+                <div class="trace-body">
+                  <div class="trace-flow">
+                    <div class="trace-node">
+                      <span class="seq">seq 000</span><span class="loc">POST /runs/:id/pr</span
+                      ><span class="action"
+                        >Valide title/body et exige une run <code>review_ready</code>.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 001</span><span class="loc">PullRequestPublisher</span
+                      ><span class="action"
+                        >Sérialise une publication active par run et récupère une opération
+                        interrompue en état failed explicite.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 002</span><span class="loc">gh connection + remote</span
+                      ><span class="action"
+                        >Délègue login et credential storage à GitHub CLI ; résout le repository
+                        depuis le worktree.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 003</span><span class="loc">worktrees.snapshot</span
+                      ><span class="action"
+                        >Commit les changements si nécessaire, recalcule head/diff SHA, puis pousse
+                        la branch.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 004</span><span class="loc">gh pr create/edit/view</span
+                      ><span class="action"
+                        >Trouve, crée ou met à jour la PR provider ; persiste number, URL, refs et
+                        snapshot publié.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 005</span><span class="loc">emitLedgerEvent</span
+                      ><span class="action"
+                        >Émet <code>pr.created</code> ou <code>pr.updated</code> dans la timeline de
+                        la run.</span
+                      >
+                    </div>
+                  </div>
+                  <div class="branches">
+                    <span class="branch">Aucun worktree ou diff vide → publication refusée</span
+                    ><span class="branch">gh non connecté → not_configured sans token Otomat</span
+                    ><span class="branch"
+                      >Push/provider échoue → failed + code/message persistés</span
+                    ><span class="branch">Retry → réconciliation avec la PR existante</span>
+                  </div>
+                </div>
+              </details>
+              <details class="trace" open>
+                <summary>
+                  <span class="trace-id">TRACE/E</span
+                  ><span class="trace-title"
+                    ><b>Compete et gagnant explicite</b
+                    ><span
+                      >formulaire → candidats parallèles → comparaison → promotion → poursuite</span
+                    ></span
+                  >
+                </summary>
+                <div class="trace-body">
+                  <div class="trace-flow">
+                    <div class="trace-node">
+                      <span class="seq">seq 000</span><span class="loc">WorkflowIssueForm</span
+                      ><span class="action"
+                        >TanStack Form construit un groupe de deux candidats minimum ; prompts et
+                        runtimes restent propres à chaque candidat et les dépendances ciblent le
+                        groupe.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 001</span><span class="loc">runPlanInputSchema</span
+                      ><span class="action"
+                        >Refuse IDs dupliqués, dépendance vers un candidat, cycle, groupe trop petit
+                        et plan de plus de 20 exécutables avant le launch.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 002</span><span class="loc">startCompeteGroup</span
+                      ><span class="action"
+                        >Capture le head canonique, acquiert un worktree/branch par candidat et
+                        lance leurs sessions indépendamment sous le sémaphore global.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 003</span><span class="loc">settleCompeteTurn</span
+                      ><span class="action"
+                        >Converge chaque candidat sans écraser ses siblings ; dès qu’au moins un
+                        succès existe et que tous sont au repos, la run passe
+                        <code>awaiting_selection</code>.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 004</span><span class="loc">CompeteComparison</span
+                      ><span class="action"
+                        >Charge diff et dernière preuve runtime de chaque candidat ; le choix
+                        requiert marquage puis confirmation, sans score automatique.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 005</span><span class="loc">selectCompeteWinner</span
+                      ><span class="action"
+                        >Réserve atomiquement le winner, snapshot/fast-forward sa branch vers le
+                        canonique, archive tous les worktrees candidats et démarre le prochain node
+                        prêt.</span
+                      >
+                    </div>
+                  </div>
+                  <div class="branches">
+                    <span class="branch">Dépendants → restent queued avant winner</span
+                    ><span class="branch"
+                      >Deux sélections concurrentes → une seule gagne, l’autre reçoit 409</span
+                    ><span class="branch">Crash en promoting → recovery idempotente au boot</span
+                    ><span class="branch">Candidat interrompu → resume explicite de sa session</span
+                    ><span class="branch"
+                      >Aucun candidat réussi → group/run failed ou awaiting_human</span
+                    >
+                  </div>
+                </div>
+              </details>
+            </div>
+          </section>
+
+          <section id="boundaries">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">Allowed / forbidden / enforced</span>
+                <h2>Boundaries et invariants</h2>
+              </div>
+              <p>
+                Une boundary n’est utile que si son owner et son enforcement sont visibles. Ici,
+                certaines règles sont bloquées par le build ; d’autres sont des invariants de
+                conception soutenus par le code et les tests.
+              </p>
+            </div>
+            <div class="rules">
+              <article class="rule-card">
+                <h3>Domain reste pur</h3>
+                <p>Types, machines, events et contracts ne connaissent ni Node, ni React, ni DB.</p>
+                <div class="rule-line"><span class="allow">✓</span> domain → zod</div>
+                <div class="rule-line">
+                  <span class="deny">×</span> domain → React / Drizzle / Node core / apps
+                </div>
+                <div class="enforced-by">dependency-cruiser + package deps</div>
+              </article>
+              <article class="rule-card">
+                <h3>Browser séparé du backend</h3>
+                <p>
+                  Le frontend reçoit l’état par HTTP/SSE et ne possède aucune intégration provider
+                  directe.
+                </p>
+                <div class="rule-line"><span class="allow">✓</span> web → domain / ui / client</div>
+                <div class="rule-line"><span class="deny">×</span> web → db / local-daemon</div>
+                <div class="enforced-by">dependency-cruiser</div>
+              </article>
+              <article class="rule-card">
+                <h3>Daemon sans UI</h3>
+                <p>
+                  Le control plane peut évoluer sans importer de composants ou de browser state.
+                </p>
+                <div class="rule-line">
+                  <span class="allow">✓</span> daemon → db / domain / #modules
+                </div>
+                <div class="rule-line"><span class="deny">×</span> daemon → ui / client</div>
+                <div class="enforced-by">dependency-cruiser</div>
+              </article>
+              <article class="rule-card">
+                <h3>Modules privés par subpath</h3>
+                <p>
+                  Les modules daemon se consomment via leur index public, pas par relatives
+                  profondes.
+                </p>
+                <div class="rule-line">
+                  <span class="allow">✓</span> #api #events #git #github #review #runtime
+                  #supervisor
+                </div>
+                <div class="rule-line"><span class="deny">×</span> ../../…</div>
+                <div class="enforced-by">package imports + oxlint</div>
+              </article>
+              <article class="rule-card">
+                <h3>Un writer, plusieurs preuves</h3>
+                <p>
+                  Le daemon écrit la DB ; chaque worker écrit son stream append-only ; les tailers
+                  font la jonction.
+                </p>
+                <div class="rule-line">
+                  <span class="allow">✓</span> worker → session events.jsonl → daemon → SQLite
+                </div>
+                <div class="rule-line"><span class="deny">×</span> browser/provider → SQLite</div>
+                <div class="enforced-by">composition + process topology</div>
+              </article>
+              <article class="rule-card">
+                <h3>Transitions centralisées</h3>
+                <p>
+                  Les updates passent par les state machines et <code>drivePath</code>; une
+                  transition illégale throw.
+                </p>
+                <div class="rule-line">
+                  <span class="allow">✓</span> machine.transition / driveRunTo
+                </div>
+                <div class="rule-line">
+                  <span class="deny">×</span> checks d’état dispersés comme source de vérité
+                </div>
+                <div class="enforced-by">domain machines + tests</div>
+              </article>
+              <article class="rule-card">
+                <h3>Contracts à la frontière</h3>
+                <p>Requests, responses et SSE frames sont parsés, pas castés.</p>
+                <div class="rule-line"><span class="allow">✓</span> Zod validate → typed data</div>
+                <div class="rule-line"><span class="deny">×</span> unknown wire data → UI/DB</div>
+                <div class="enforced-by">@hono/zod-validator + client parse</div>
+              </article>
+              <article class="rule-card">
+                <h3>Guardrails frontend</h3>
+                <p>Les effets, conditional renders et spacing suivent des règles auditables.</p>
+                <div class="rule-line">
+                  <span class="deny">×</span> useEffect sans justification · cond &amp;&amp; JSX ·
+                  integer px arbitraire
+                </div>
+                <div class="rule-line">
+                  <span class="deny">×</span> any · nested ternary · direct lucide dans web
+                </div>
+                <div class="enforced-by">guardrails + oxlint + oxfmt</div>
+              </article>
+            </div>
+          </section>
+
+          <section id="technology">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">Technology rationale</span>
+                <h2>Pourquoi ce stack</h2>
+              </div>
+              <p>
+                Les outils ne sont pas une collection : chacun soutient la contrainte local-first,
+                l’isolation des agents ou la lisibilité de l’état. Les versions exactes restent dans
+                les manifests.
+              </p>
+            </div>
+            <div class="tech-grid">
+              <article class="tech-card">
+                <div class="use">TypeScript · pnpm workspaces</div>
+                <h3>Un langage, plusieurs frontières</h3>
+                <p>
+                  Les contracts et state machines se partagent sans recopier le modèle entre
+                  browser, client, daemon et DB.
+                </p>
+              </article>
+              <article class="tech-card">
+                <div class="use">React 19 · Vite 8</div>
+                <h3>Un cockpit dense dans le browser</h3>
+                <p>
+                  Vite garde le dev loop court ; React rend les formulaires workflow, groupes
+                  compete, timeline, diff, review et PR.
+                </p>
+              </article>
+              <article class="tech-card">
+                <div class="use">Electron 43</div>
+                <h3>Une app desktop, le même control plane</h3>
+                <p>
+                  Le shell possède le lifecycle du daemon, expose un bridge minimal au renderer et
+                  compose les builds existants sans importer le backend.
+                </p>
+              </article>
+              <article class="tech-card">
+                <div class="use">TanStack Router · Query · Form</div>
+                <h3>Navigation et server state explicites</h3>
+                <p>
+                  Routes typées, cache HTTP séparé du local UI state, invalidations ciblées après
+                  mutations et events.
+                </p>
+              </article>
+              <article class="tech-card">
+                <div class="use">Hono · Zod</div>
+                <h3>Une petite API locale vérifiable</h3>
+                <p>
+                  Hono monte HTTP/SSE sans framework lourd ; Zod garde daemon et client alignés sur
+                  le wire.
+                </p>
+              </article>
+              <article class="tech-card">
+                <div class="use">SQLite WAL · Drizzle · better-sqlite3</div>
+                <h3>Durabilité locale sans service</h3>
+                <p>
+                  Une DB embarquée, foreign keys, transactions immédiates et lectures concurrentes
+                  adaptées au daemon single-writer.
+                </p>
+              </article>
+              <article class="tech-card">
+                <div class="use">Git worktrees</div>
+                <h3>Isolation dans l’outil canonique</h3>
+                <p>
+                  Chaque run possède son canonique ; un groupe compete ajoute un worktree par
+                  candidat, puis Git fournit diff, snapshot et promotion du gagnant.
+                </p>
+              </article>
+              <article class="tech-card">
+                <div class="use">Codex CLI · Claude CLI · adapter</div>
+                <h3>Providers remplaçables, contrôle conservé</h3>
+                <p>
+                  Un contrat push-sink traduit les frames ; les capabilities déclarent honnêtement
+                  stream, resume et abort.
+                </p>
+              </article>
+              <article class="tech-card">
+                <div class="use">JSONL append-only + SQLite projection</div>
+                <h3>Le worker laisse une trace survivante</h3>
+                <p>
+                  Le fichier ne dépend pas de la mémoire du parent ; le daemon peut drainer,
+                  reprendre un offset et réconcilier au boot sans dupliquer un tour. Les streams
+                  restent distincts par session concurrente.
+                </p>
+              </article>
+              <article class="tech-card">
+                <div class="use">SSE · per-run seq</div>
+                <h3>Live simple, replayable</h3>
+                <p>
+                  EventSource reconnecte ; <code>Last-Event-ID</code> ou <code>afterSeq</code> évite
+                  de perdre le fil sans WebSocket stateful.
+                </p>
+              </article>
+              <article class="tech-card">
+                <div class="use">tsgo · oxlint · oxfmt</div>
+                <h3>Un toolchain rapide et unique</h3>
+                <p>
+                  Typecheck/emit, règles statiques et format/import order sans empiler ESLint,
+                  Prettier et tsc.
+                </p>
+              </article>
+              <article class="tech-card">
+                <div class="use">dependency-cruiser · guardrails</div>
+                <h3>Architecture exécutable</h3>
+                <p>
+                  Les imports interdits et les conventions frontend deviennent des erreurs de gate,
+                  pas des conseils oubliés.
+                </p>
+              </article>
+              <article class="tech-card">
+                <div class="use">Vitest · Lefthook · CI</div>
+                <h3>La même preuve avant et après push</h3>
+                <p>
+                  Tests par package, hooks ciblés et <code>pnpm check</code> aligné avec GitHub
+                  Actions.
+                </p>
+              </article>
+            </div>
+          </section>
+
+          <section id="change-map">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">Ownership lookup</span>
+                <h2>Où modifier quoi</h2>
+              </div>
+              <p>
+                Commencez par l’owner, puis son index public et un test représentatif. Cette table
+                évite de créer un package ou une abstraction avant d’avoir trouvé la vraie
+                frontière.
+              </p>
+            </div>
+            <table class="change-table">
+              <thead>
+                <tr>
+                  <th>Je veux…</th>
+                  <th>Owner / point d’entrée</th>
+                  <th>Test à ouvrir</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Ajouter une route API</td>
+                  <td>
+                    <a class="path-link" href="../../apps/local-daemon/src/api/app.ts"
+                      >api/app.ts</a
+                    >
+                    puis <code>api/routes/*</code>
+                  </td>
+                  <td>
+                    <a class="path-link" href="../../apps/local-daemon/tests/api/app.test.ts"
+                      >tests/api/app.test.ts</a
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Ajouter ou changer un runtime</td>
+                  <td>
+                    <a class="path-link" href="../../apps/local-daemon/src/runtime/registry.ts"
+                      >runtime/registry.ts</a
+                    >
+                    + provider adapter/frames
+                  </td>
+                  <td>
+                    <a
+                      class="path-link"
+                      href="../../apps/local-daemon/tests/runtime/codex-adapter.test.ts"
+                      >tests/runtime/codex-adapter.test.ts</a
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Changer le lifecycle d’une run</td>
+                  <td>
+                    <a class="path-link" href="../../apps/local-daemon/src/supervisor/supervisor.ts"
+                      >supervisor/supervisor.ts</a
+                    >
+                    → commands/lifecycle/settle
+                  </td>
+                  <td>
+                    <a
+                      class="path-link"
+                      href="../../apps/local-daemon/tests/supervisor/supervisor-start.test.ts"
+                      >tests/supervisor/supervisor-start.test.ts</a
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Changer DAG ou compete</td>
+                  <td>
+                    <a class="path-link" href="../../packages/domain/src/plan/schedule.ts"
+                      >domain/plan/schedule.ts</a
+                    >
+                    + <code>supervisor/advance.ts</code> + <code>promotion.ts</code>
+                  </td>
+                  <td>
+                    <a
+                      class="path-link"
+                      href="../../apps/local-daemon/tests/supervisor/supervisor-compete.test.ts"
+                      >tests/supervisor/supervisor-compete.test.ts</a
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Ajouter une entity DB</td>
+                  <td>
+                    <a class="path-link" href="../../packages/db/src/schema/index.ts"
+                      >db/schema/index.ts</a
+                    >
+                    + migration + repository
+                  </td>
+                  <td>
+                    <a class="path-link" href="../../packages/db/tests/schema.test.ts"
+                      >db/tests/schema.test.ts</a
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Changer la timeline SSE</td>
+                  <td>
+                    <a class="path-link" href="../../apps/local-daemon/src/api/sse.ts"
+                      >api/sse.ts</a
+                    >
+                    + events projection + web provider
+                  </td>
+                  <td>
+                    <a class="path-link" href="../../apps/web/tests/api/runs/events.test.ts"
+                      >web/tests/api/runs/events.test.ts</a
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Changer diff / review / fix</td>
+                  <td>
+                    <a class="path-link" href="../../apps/local-daemon/src/review/service.ts"
+                      >review/service.ts</a
+                    >
+                    + <code>git/diff.ts</code>
+                  </td>
+                  <td>
+                    <a class="path-link" href="../../apps/local-daemon/tests/review/service.test.ts"
+                      >tests/review/service.test.ts</a
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Changer la publication GitHub</td>
+                  <td>
+                    <a class="path-link" href="../../apps/local-daemon/src/github/publication.ts"
+                      >github/publication.ts</a
+                    >
+                    + CLI
+                  </td>
+                  <td>
+                    <a class="path-link" href="../../apps/local-daemon/tests/github/service.test.ts"
+                      >tests/github/service.test.ts</a
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Ajouter query ou mutation web</td>
+                  <td>
+                    <a class="path-link" href="../../apps/web/src/api/query-keys.ts"
+                      >web/api/query-keys.ts</a
+                    >
+                    + domaine API concerné
+                  </td>
+                  <td>
+                    <a
+                      class="path-link"
+                      href="../../apps/web/tests/api/runs/invalidate-for-event.test.ts"
+                      >web/tests/api/runs/invalidate-for-event.test.ts</a
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Ajouter une view / route</td>
+                  <td>
+                    <a class="path-link" href="../../apps/web/src/router.tsx">web/router.tsx</a> +
+                    <code>routes/</code> + <code>components/</code>
+                  </td>
+                  <td>
+                    <a
+                      class="path-link"
+                      href="../../apps/web/tests/components/runs/cockpit/layout.test.tsx"
+                      >web/tests/components/runs/cockpit/layout.test.tsx</a
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Changer le shell desktop</td>
+                  <td>
+                    <a class="path-link" href="../../apps/desktop/src/main/index.ts"
+                      >desktop/main/index.ts</a
+                    >
+                    + preload/shared
+                  </td>
+                  <td>
+                    <a class="path-link" href="../../apps/desktop/tests/lifecycle.test.ts"
+                      >desktop/tests/lifecycle.test.ts</a
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Ajouter une primitive UI</td>
+                  <td>
+                    <a class="path-link" href="../../packages/ui/src/index.ts">ui/src/index.ts</a> +
+                    <code>primitives/</code> ou <code>components/</code>
+                  </td>
+                  <td>
+                    <a
+                      class="path-link"
+                      href="../../packages/ui/tests/components/quality-boundaries.test.tsx"
+                      >ui/tests/components/quality-boundaries.test.tsx</a
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Changer une boundary / guardrail</td>
+                  <td>
+                    <a class="path-link" href="../../packages/tooling/dependency-cruiser.cjs"
+                      >tooling/dependency-cruiser.cjs</a
+                    >
+                    + root oxlint / script
+                  </td>
+                  <td>
+                    <a class="path-link" href="../../scripts/guardrails.mjs"
+                      >scripts/guardrails.mjs</a
+                    >
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section id="external">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">Outside the process</span>
+                <h2>Systèmes externes, risques et inconnues</h2>
+              </div>
+              <p>
+                Local-first ne signifie pas « sans dépendances ». La DB est embarquée, mais Git, le
+                filesystem et les CLIs provider font partie de l’environnement d’exécution réel.
+              </p>
+            </div>
+            <div class="external-grid">
+              <article class="external-card">
+                <h3>Git + filesystem</h3>
+                <p>
+                  Le projet root doit être un repository utilisable pour worktree/diff. Les run
+                  artifacts vivent sous le data dir ; les worktrees sont hors du repository
+                  principal.
+                </p>
+              </article>
+              <article class="external-card">
+                <h3>Codex / Claude CLI</h3>
+                <p>
+                  Le daemon probe le binary dans PATH. Auth, models et limites provider restent la
+                  responsabilité de chaque CLI ; Otomat traduit leurs events.
+                </p>
+              </article>
+              <article class="external-card">
+                <h3>gh + GitHub</h3>
+                <p>
+                  GitHub CLI possède login et credentials. La publication nécessite réseau, remote
+                  résolvable, push autorisé et API GitHub disponible.
+                </p>
+              </article>
+              <article class="external-card">
+                <h3>Browser EventSource</h3>
+                <p>
+                  Le typed client requiert EventSource pour le live. HTTP reste disponible ; les
+                  transport errors peuvent reconnecter automatiquement.
+                </p>
+              </article>
+              <article class="external-card">
+                <h3>SQLite file</h3>
+                <p>
+                  Le daemon doit pouvoir créer le dossier, migrer et verrouiller le fichier. WAL et
+                  foreign keys sont activés à chaque client.
+                </p>
+              </article>
+              <article class="external-card">
+                <h3>Process OS</h3>
+                <p>
+                  PID/PGID, signals et process identity servent à abort/reconcile. Un PID réutilisé
+                  n’est jamais signalé sans preuve d’identité ; Stop et shutdown possèdent aussi
+                  les processes encore derrière la barrière de démarrage.
+                </p>
+              </article>
+            </div>
+            <div class="unknown-strip">
+              <h3>Ce que cette carte ne prétend pas</h3>
+              <ul>
+                <li>
+                  <strong>Linear sync :</strong> <code>sync_state</code> et la source d’event
+                  <code>linear</code> sont des affordances ; aucune intégration active n’est
+                  branchée.
+                </li>
+                <li>
+                  <strong>Generic workflow builder :</strong> absent par choix ; le plan supporte
+                  des steps, dépendances et groupes compete bornés, pas une surface extensible
+                  arbitraire.
+                </li>
+                <li>
+                  <strong>Mobile, hosted workers, team mode :</strong> directions produit, pas des
+                  applications présentes.
+                </li>
+                <li>
+                  <strong>Universal permissions / steering :</strong> l’UI doit suivre les
+                  capabilities réelles du runtime ; aucune capacité n’est simulée.
+                </li>
+                <li>
+                  <strong>Runtime version :</strong> l’availability probe prouve aujourd’hui le
+                  binary path, pas une version complète.
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <section id="key-files">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">15 files, pas 500</span>
+                <h2>Fichiers clés</h2>
+              </div>
+              <p>
+                Ouvrez-les dans cet ordre selon votre question. Ils donnent la composition, les
+                contrats, les chemins d’exécution et les sources de vérité sans transformer l’atlas
+                en file tree.
+              </p>
+            </div>
+            <div class="key-grid">
+              <article class="key-card">
+                <a href="../../apps/local-daemon/src/server.ts">apps/local-daemon/src/server.ts</a>
+                <h3>Composition root</h3>
+                <p>DB, bootstrap, services, reconcile, API et lifecycle de fermeture.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../apps/local-daemon/src/api/app.ts"
+                  >apps/local-daemon/src/api/app.ts</a
+                >
+                <h3>Surface HTTP</h3>
+                <p>Middleware de sécurité, route groups et erreurs JSON.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../apps/local-daemon/src/supervisor/supervisor.ts"
+                  >apps/local-daemon/src/supervisor/supervisor.ts</a
+                >
+                <h3>Façade supervisor</h3>
+                <p>Start, resume, fix, follow-up, abort, reconcile et settle.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../apps/local-daemon/src/supervisor/lifecycle.ts"
+                  >apps/local-daemon/src/supervisor/lifecycle.ts</a
+                >
+                <h3>Spawn lifecycle</h3>
+                <p>Slot, state drive, child process, live tail et settle.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../apps/local-daemon/src/supervisor/advance.ts"
+                  >apps/local-daemon/src/supervisor/advance.ts</a
+                >
+                <h3>Plan scheduler</h3>
+                <p>Node prêt, groupe compete, worktrees candidats et scheduling parallèle.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../apps/local-daemon/src/supervisor/promotion.ts"
+                  >apps/local-daemon/src/supervisor/promotion.ts</a
+                >
+                <h3>Winner promotion</h3>
+                <p>Claim atomique, fast-forward canonique, archive, recovery et poursuite.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../apps/local-daemon/src/supervisor/worker.ts"
+                  >apps/local-daemon/src/supervisor/worker.ts</a
+                >
+                <h3>Durable worker</h3>
+                <p>Job parse, adapter run/resume, JSONL et terminal marker.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../apps/local-daemon/src/events/run-ledger.ts"
+                  >apps/local-daemon/src/events/run-ledger.ts</a
+                >
+                <h3>Run ledger bridge</h3>
+                <p>Run dir, live tail, drain et emission control-plane.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../apps/local-daemon/src/runtime/contract.ts"
+                  >apps/local-daemon/src/runtime/contract.ts</a
+                >
+                <h3>Adapter contract</h3>
+                <p>Inputs, final state, session ref et optional capabilities.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../apps/local-daemon/src/git/service.ts"
+                  >apps/local-daemon/src/git/service.ts</a
+                >
+                <h3>Worktree owner</h3>
+                <p>Acquire, snapshot, diff, cleanup et identity Git.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../apps/local-daemon/src/review/service.ts"
+                  >apps/local-daemon/src/review/service.ts</a
+                >
+                <h3>Review façade</h3>
+                <p>Diff, comments, fix preparation et settle hook.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../apps/local-daemon/src/github/publication.ts"
+                  >apps/local-daemon/src/github/publication.ts</a
+                >
+                <h3>PR stateful effect</h3>
+                <p>Recovery, push snapshot, create/update et persistence.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../packages/domain/src/state-machines/run.ts"
+                  >packages/domain/src/state-machines/run.ts</a
+                >
+                <h3>Run machine</h3>
+                <p>États, transitions, terminal et resting follow-up states.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../packages/db/src/schema/index.ts">packages/db/src/schema/index.ts</a>
+                <h3>Database truth</h3>
+                <p>Tables, foreign keys, unique indexes et fields.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../apps/desktop/src/main/index.ts">apps/desktop/src/main/index.ts</a>
+                <h3>Desktop composition</h3>
+                <p>Daemon lifecycle, splash, IPC, fenêtre cockpit et shutdown.</p>
+              </article>
+            </div>
+          </section>
+
+          <section id="maintenance">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">Keep the map honest</span>
+                <h2>Contrat de maintenance</h2>
+              </div>
+              <p>
+                Cette page est volontairement curatée. Sa fraîcheur est visible grâce au commit de
+                référence ; sa mise à jour doit suivre les changements qui déplacent une frontière
+                ou une trace.
+              </p>
+            </div>
+            <div class="maintenance-grid">
+              <article class="maintenance-card">
+                <h3>Revoir l’atlas quand…</h3>
+                <ul class="checklist">
+                  <li>un app, package ou module daemon apparaît, disparaît ou change d’owner ;</li>
+                  <li>
+                    un manifest ou une dependency-cruiser rule change les relations autorisées ;
+                  </li>
+                  <li>bootstrap, routes, schema ou migrations évoluent ;</li>
+                  <li>supervisor, runtime, event ledger ou reconciliation changent de chemin ;</li>
+                  <li>domain contracts, client methods, review ou publication GitHub évoluent ;</li>
+                  <li>les scripts root ou quality gates changent.</li>
+                </ul>
+              </article>
+              <article class="maintenance-card">
+                <h3>Definition of done de la carte</h3>
+                <ul class="checklist">
+                  <li>recouper chaque claim important avec le stable tree ;</li>
+                  <li>mettre à jour commit, date, tables, arrows, traces et unknowns ;</li>
+                  <li>tester tous les liens repository-relative ;</li>
+                  <li>vérifier desktop, mobile, keyboard focus et reduced motion ;</li>
+                  <li>chercher les aspirations présentées à tort comme implemented ;</li>
+                  <li>garder un seul fichier offline, sans secrets ni external assets.</li>
+                </ul>
+              </article>
+            </div>
+          </section>
+        </main>
+
+        <footer>
+          <span>Otomat architecture atlas · OTO-28 commit 528920c</span>
+          <span>Generated 2026-07-20 · source evidence + Graphify navigation index</span>
+        </footer>
+      </div>
+    </div>
+    <script>
+      const links = [...document.querySelectorAll('.side nav a[href^="#"]')];
+      const sections = links.map((link) => document.querySelector(link.hash)).filter(Boolean);
+      if ("IntersectionObserver" in window) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              for (const link of links) link.removeAttribute("aria-current");
+              document
+                .querySelector(`.side nav a[href="#${entry.target.id}"]`)
+                ?.setAttribute("aria-current", "location");
+            }
+          },
+          { rootMargin: "-18% 0px -72%" },
+        );
+        for (const section of sections) observer.observe(section);
+      }
+    </script>
+  </body>
 </html>

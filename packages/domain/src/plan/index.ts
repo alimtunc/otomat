@@ -5,5 +5,6 @@
  * @packageDocumentation
  */
 export * from "./limits.js";
+export * from "./resume.js";
 export * from "./schedule.js";
 export * from "./validate.js";

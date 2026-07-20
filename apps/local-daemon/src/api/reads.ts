@@ -1,13 +1,17 @@
 import {
+  getCompeteGroup,
   getIssue,
   getRun,
+  getStepRun,
   listAgentSessionsForRun,
+  listCompeteGroupsForRun,
   listIssues,
   listProjects,
   listRepositories,
   listRuns,
   listStepRunsForRun,
   type Db,
+  type StepRunRow,
 } from "@otomat/db";
 import {
   type IssueContract,
@@ -19,7 +23,15 @@ import {
 
 import { findWorktreeById } from "#git/worktrees-store";
 
-import { toAgentSession, toIssue, toProject, toRepository, toRun, toStepRun } from "./serialize.js";
+import {
+  toAgentSession,
+  toCompeteGroup,
+  toIssue,
+  toProject,
+  toRepository,
+  toRun,
+  toStepRun,
+} from "./serialize.js";
 
 export function readProjects(db: Db): ProjectContract[] {
   return listProjects(db).map(toProject);
@@ -51,8 +63,24 @@ export function readRunDetail(db: Db, runId: string): RunDetail | null {
   const worktree = run.worktree_id ? findWorktreeById(db, run.worktree_id) : undefined;
   return {
     run: toRun(run),
-    steps: listStepRunsForRun(db, runId).map(toStepRun),
+    steps: listStepRunsForRun(db, runId).map((step) =>
+      toStepRun(step, step.worktree_id ? findWorktreeById(db, step.worktree_id) : undefined),
+    ),
     sessions: listAgentSessionsForRun(db, runId).map(toAgentSession),
+    compete_groups: listCompeteGroupsForRun(db, runId).map(toCompeteGroup),
     worktree_path: worktree?.path ?? null,
   };
+}
+
+/** The candidate step of one compete group, or null when either id does not belong to the run. */
+export function readCompeteCandidate(
+  db: Db,
+  runId: string,
+  groupId: string,
+  stepId: string,
+): StepRunRow | null {
+  const group = getCompeteGroup(db, groupId);
+  if (!group || group.run_id !== runId) return null;
+  const step = getStepRun(db, stepId);
+  return step && step.compete_group_id === group.id ? step : null;
 }

@@ -1,4 +1,4 @@
-import { getRun } from "@otomat/db";
+import { getRun, schema } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
@@ -66,4 +66,22 @@ it("never spawns during boot reconciliation", async () => {
   expect(spawn.calls).toBe(0);
   expect(report.reconciled).toHaveLength(1);
   expect(getRun(fix.db, "rc")?.status).toBe("failed");
+});
+
+it("settles a corrupt plan even when compete recovery runs first", () => {
+  const { supervisor } = makeSupervisor(fix, "complete");
+  fix.db
+    .insert(schema.runs)
+    .values({ id: "corrupt", issue_id: "i1", status: "running", branch: "b", plan_json: {} })
+    .run();
+  writeRunEvents(fix.dataDir, "corrupt", []);
+
+  expect(() => supervisor.reconcile()).not.toThrow();
+
+  const row = fix.db
+    .select()
+    .from(schema.runs)
+    .all()
+    .find((run) => run.id === "corrupt");
+  expect(row?.status).toBe("failed");
 });

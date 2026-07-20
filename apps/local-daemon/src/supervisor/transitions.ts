@@ -1,5 +1,6 @@
 import {
   updateAgentSessionStatus,
+  updateCompeteGroupStatus,
   updateRunStatus,
   updateStepRunStatus,
   type AgentSessionRow,
@@ -8,11 +9,13 @@ import {
 } from "@otomat/db";
 import {
   agentSessionMachine,
+  competeGroupMachine,
   drivePath,
   isRunTerminal,
   runMachine,
   stepRunMachine,
   type AgentSessionState,
+  type CompeteGroupState,
   type RunState,
   type StepRunState,
 } from "@otomat/domain";
@@ -40,6 +43,15 @@ export function driveSessionTo(
   drivePath(agentSessionMachine, from, to, (state) =>
     updateAgentSessionStatus(db, sessionId, state),
   );
+}
+
+export function driveCompeteGroupTo(
+  db: Db,
+  groupId: string,
+  from: CompeteGroupState,
+  to: CompeteGroupState,
+): void {
+  drivePath(competeGroupMachine, from, to, (state) => updateCompeteGroupStatus(db, groupId, state));
 }
 
 /** Drives every non-terminal step and session of a run to the given targets. */

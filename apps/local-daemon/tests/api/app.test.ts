@@ -4,11 +4,12 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import type { RuntimeEvent } from "#runtime";
-import { RunNotResumableError } from "#supervisor";
+import { CompeteRepositoryRequiredError, RunNotResumableError } from "#supervisor";
 
 import { makeApiApp, post, request, runRow } from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
 import { appendEvents } from "../support/ledger.js";
+import { stubReviewService } from "../support/review.js";
 import { makeEvent } from "../support/run-event-fixtures.js";
 import { seedRun } from "../support/seed.js";
 
@@ -176,6 +177,18 @@ it("delegates start-run to the injected launchRun dep", async () => {
   expect(((await res.json()) as RunContract).id).toBe("run-x");
 });
 
+it("returns a conflict when compete cannot obtain isolated repository worktrees", async () => {
+  const app = makeApiApp(t, {
+    launchRun: async () => {
+      throw new CompeteRepositoryRequiredError("p1");
+    },
+  });
+  const res = await post(app, "/api/runs", { prompt: "goal" });
+
+  expect(res.status).toBe(409);
+  expect(await res.json()).toEqual({ error: "compete_repository_required" });
+});
+
 it("delegates resume to the supervisor for a known run", async () => {
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
@@ -247,6 +260,91 @@ it("delegates abort to the supervisor and returns the run detail", async () => {
   expect(res.status).toBe(200);
   expect(aborted).toBe(runId);
   expect(((await res.json()) as RunDetail).run.id).toBe(runId);
+});
+
+it("serves isolated candidate diff evidence and delegates explicit winner selection", async () => {
+  const runId = "compete-run";
+  t.db
+    .insert(schema.runs)
+    .values({
+      id: runId,
+      issue_id: "i1",
+      status: "awaiting_selection",
+      branch: "otomat/run/compete",
+      plan_json: {
+        version: 1,
+        steps: [
+          {
+            id: "group-1",
+            name: "Approach",
+            depends_on: [],
+            compete: [
+              { id: "candidate-1", name: "One", agent: "fake", prompt: "one" },
+              { id: "candidate-2", name: "Two", agent: "fake", prompt: "two" },
+            ],
+          },
+        ],
+      },
+    })
+    .run();
+  t.db
+    .insert(schema.competeGroups)
+    .values({
+      id: "group-1",
+      run_id: runId,
+      idx: 0,
+      name: "Approach",
+      status: "awaiting_selection",
+    })
+    .run();
+  t.db
+    .insert(schema.stepRuns)
+    .values([
+      {
+        id: "candidate-1",
+        run_id: runId,
+        idx: 0,
+        name: "One",
+        status: "succeeded",
+        compete_group_id: "group-1",
+      },
+      {
+        id: "candidate-2",
+        run_id: runId,
+        idx: 1,
+        name: "Two",
+        status: "succeeded",
+        compete_group_id: "group-1",
+      },
+    ])
+    .run();
+  let diffOwner: string | undefined;
+  let selected: { runId: string; groupId: string; stepRunId: string } | null = null;
+  const app = makeApiApp(t, {
+    review: {
+      ...stubReviewService(),
+      getWorktreeDiff: (_run, owner) => {
+        diffOwner = owner;
+        return { computedAt: "2026-07-05T00:00:00.000Z", diff: null };
+      },
+    },
+    selectCompeteWinner: async (selectedRunId, groupId, stepRunId) => {
+      selected = { runId: selectedRunId, groupId, stepRunId };
+    },
+  });
+
+  const diff = await request(
+    app,
+    `/api/runs/${runId}/compete-groups/group-1/candidates/candidate-1/diff`,
+  );
+  const winner = await post(app, `/api/runs/${runId}/compete-groups/group-1/winner`, {
+    step_run_id: "candidate-1",
+  });
+
+  expect(diff.status).toBe(200);
+  expect(diffOwner).toBe("candidate-1");
+  expect(winner.status).toBe(200);
+  expect(selected).toEqual({ runId, groupId: "group-1", stepRunId: "candidate-1" });
 });
 
 it("rejects a request with no Host header", async () => {

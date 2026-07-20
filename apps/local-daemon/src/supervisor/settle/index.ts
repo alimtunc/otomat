@@ -1,12 +1,13 @@
 import {
   listAgentSessionsForRun,
+  listCompeteGroupsForRun,
   listStepRunsForRun,
   updateAgentSessionProvider,
   type Db,
 } from "@otomat/db";
 import { runMachine } from "@otomat/domain";
 
-import { drainRunEvents, readRunEvents, runDir } from "#events";
+import { drainRunEvents, drainSessionEvents, readRunEvents } from "#events";
 
 import { classify, describe, TARGETS } from "../classify.js";
 import { eventsForSession, findFinalStatus, findProviderSessionId } from "../evidence.js";
@@ -41,15 +42,26 @@ export function settleRun(
 
   drainRunEvents(db, dataDir, run.id);
 
-  const events = readRunEvents(db, run.id);
   const sessions = listAgentSessionsForRun(db, run.id);
+  for (const session of sessions) drainSessionEvents(db, dataDir, run.id, session.id);
+  const events = readRunEvents(db, run.id);
   const steps = listStepRunsForRun(db, run.id);
+  const groups = listCompeteGroupsForRun(db, run.id);
   const plan = run.plan_json ?? null;
 
   const turnSession = resolveTurnSession(sessions, options.turn);
   recordObservedExit(db, turnSession, options);
-  const orphanTerminated = reapProcesses(db, runDir(dataDir, run.id), sessions, options);
-  const ctx: SettleContext = { db, dataDir, run, steps, sessions, options, orphanTerminated };
+  const orphanTerminated = reapProcesses(db, dataDir, run.id, sessions, options);
+  const ctx: SettleContext = {
+    db,
+    dataDir,
+    run,
+    steps,
+    sessions,
+    groups,
+    options,
+    orphanTerminated,
+  };
 
   if (plan !== null && turnSession === null) return settleIdleRun(ctx, plan);
 

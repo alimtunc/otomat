@@ -1,10 +1,10 @@
-import { appendFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { getRun, listAgentSessionsForRun, listStepRunsForRun, schema } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { readRunEvents, runDir, runEventsPath } from "#events";
+import { readRunEvents, runEventsPath, sessionDir } from "#events";
 import { isProcessAlive, reconcileRuns } from "#supervisor";
 import {
   readProcessStartTime,
@@ -114,7 +114,11 @@ it("terminates a still-alive orphan group whose identity is proven, and marks it
       pgid: orphan.pgid,
     });
     // A real worker stamps its identity next to its pid; here we simulate that for the live orphan.
-    writeWorkerIdentity(runDir(fix.dataDir, "r4"), orphan.pid, orphan.pgid);
+    writeWorkerIdentity(
+      sessionDir(fix.dataDir, "r4", seed.agentSessionId),
+      orphan.pid,
+      orphan.pgid,
+    );
     writeRunEvents(fix.dataDir, "r4", [providerSessionEvent(seed, "ps-r4")]);
 
     const report = reconcileRuns(fix.db, fix.dataDir, NOW);
@@ -170,8 +174,10 @@ it("does not signal an alive pid the OS reused (identity start-time mismatch)", 
     // Identity recorded for this pid, but with a start-time that no longer matches the live process —
     // exactly what a reused pid looks like after a long daemon downtime.
     const stale = readProcessStartTime(orphan.pid) ?? "Mon Jan  1 00:00:00 2000";
+    const identityDir = sessionDir(fix.dataDir, "r4c", seed.agentSessionId);
+    mkdirSync(identityDir, { recursive: true });
     writeFileSync(
-      join(runDir(fix.dataDir, "r4c"), WORKER_IDENTITY_FILE),
+      join(identityDir, WORKER_IDENTITY_FILE),
       JSON.stringify({ pid: orphan.pid, pgid: orphan.pgid, start_time: `stale ${stale}` }),
     );
 

@@ -14,8 +14,10 @@ import { IssueFormFooter } from "@web/components/issues/issue-form-footer";
 import { RuntimePicker } from "@web/components/runs/launch/runtime-picker";
 import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@web/lib/form";
 import { resolveRuntimeChoice } from "@web/lib/runtimes";
+import { isWorkflowNodeComplete, workflowExecutableCount } from "@web/lib/workflow-plan";
 
 import { useWorkflowForm } from "./use-workflow-form";
+import { WorkflowCompeteCard } from "./workflow-compete-card";
 import { WorkflowStepCard } from "./workflow-step-card";
 
 export interface WorkflowIssueFormProps {
@@ -36,7 +38,7 @@ export function WorkflowIssueForm({
   const runtimes = useRuntimes();
   const descriptors = runtimes.data ?? [];
   const runtime = resolveRuntimeChoice(descriptors, runtimeChoice);
-  const { form, planError, isPending, updateSteps, addStep } = useWorkflowForm({
+  const { form, planError, isPending, updateSteps, addStep, addCompeteGroup } = useWorkflowForm({
     projectId,
     runtime,
     onLaunched,
@@ -84,27 +86,51 @@ export function WorkflowIssueForm({
         <form.Field name="steps">
           {(stepsField) => (
             <div className="flex flex-col gap-2">
-              {stepsField.state.value.map((step, index) => (
-                <WorkflowStepCard
-                  key={step.key}
-                  form={form}
-                  steps={stepsField.state.value}
-                  index={index}
-                  descriptors={descriptors}
-                  onUpdateSteps={updateSteps}
-                />
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="self-start"
-                disabled={stepsField.state.value.length >= RUN_PLAN_MAX_STEPS}
-                onClick={addStep}
-              >
-                <Icon name="plus" aria-hidden />
-                Add step
-              </Button>
+              {stepsField.state.value.map((step, index) =>
+                step.kind === "compete" ? (
+                  <WorkflowCompeteCard
+                    key={step.key}
+                    form={form}
+                    steps={stepsField.state.value}
+                    index={index}
+                    descriptors={descriptors}
+                    onUpdateSteps={updateSteps}
+                  />
+                ) : (
+                  <WorkflowStepCard
+                    key={step.key}
+                    form={form}
+                    steps={stepsField.state.value}
+                    index={index}
+                    descriptors={descriptors}
+                    onUpdateSteps={updateSteps}
+                  />
+                ),
+              )}
+              <div className="flex items-center gap-2 self-start">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={workflowExecutableCount(stepsField.state.value) >= RUN_PLAN_MAX_STEPS}
+                  onClick={addStep}
+                >
+                  <Icon name="plus" aria-hidden />
+                  Add step
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    workflowExecutableCount(stepsField.state.value) > RUN_PLAN_MAX_STEPS - 2
+                  }
+                  onClick={addCompeteGroup}
+                >
+                  <Icon name="git-compare" aria-hidden />
+                  Add compete group
+                </Button>
+              </div>
             </div>
           )}
         </form.Field>
@@ -124,7 +150,7 @@ export function WorkflowIssueForm({
             selector={(state) =>
               hasText(state.values.goal) &&
               state.values.steps.length > 0 &&
-              state.values.steps.every((step) => hasText(step.name) && hasText(step.prompt))
+              state.values.steps.every(isWorkflowNodeComplete)
             }
           >
             {(filled) => (
