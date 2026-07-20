@@ -1,10 +1,11 @@
 import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
-import { EmptyState, ErrorState, useMediaQuery } from "@otomat/ui";
+import { EmptyState, ErrorState, useMediaQuery, WIDE_VIEWPORT_MEDIA_QUERY } from "@otomat/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
 import { useAddReviewComment } from "@web/api/reviews/mutations";
 import { useRunReview } from "@web/api/reviews/queries";
 import { useRunDetail, useRunDiff } from "@web/api/runs/queries";
+import { revealAndFocus } from "@web/components/runs/diff/diff-nav";
 import { DiffFileCard } from "@web/components/runs/diff/file-card";
 import { diffFileDomId } from "@web/components/runs/diff/file-card.utils";
 import { DiffFileNav } from "@web/components/runs/diff/file-nav";
@@ -19,8 +20,7 @@ import { partitionComments } from "@web/components/runs/review/partition";
 import { useReviewSelection } from "@web/components/runs/review/use-selection";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
-import { WIDE_COCKPIT_MEDIA_QUERY } from "@web/lib/layout";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 export function RunDiffView() {
   const { runId } = useParams({ from: "/runs/$runId/diff" });
@@ -31,24 +31,21 @@ export function RunDiffView() {
   const addComment = useAddReviewComment(runId);
   const selection = useReviewSelection(runId);
   const [activePath, setActivePath] = useState<string | null>(null);
-  const wide = useMediaQuery(WIDE_COCKPIT_MEDIA_QUERY);
+  const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
   const mode = useSelector(diffViewModeStore);
   const diff = diffQuery.data?.diff ?? null;
   const reviewed = useReviewedFiles(runId, diff?.sha ?? "");
-  const cardsRef = useRef<HTMLDivElement | null>(null);
 
   function jumpToFile(file: DiffFileContract) {
     setActivePath(file.path);
     const card = document.getElementById(diffFileDomId(file));
-    card?.scrollIntoView({ block: "start" });
-    card?.focus({ preventScroll: true });
+    if (card !== null) revealAndFocus(card, "start");
   }
 
   useDiffKeyboardNav({
     enabled: diff !== null && diff.files.length > 0,
     files: diff?.files ?? [],
     activePath,
-    cardsRef,
     onJumpToFile: jumpToFile,
     onToggleReviewed: (path) => reviewed.setReviewed(path, !reviewed.paths.has(path)),
     onExit: () => void navigate({ to: "/runs/$runId", params: { runId } }),
@@ -89,7 +86,7 @@ export function RunDiffView() {
   }
 
   const cards = (
-    <div ref={cardsRef} className="min-w-0 overflow-auto p-4">
+    <div className="min-w-0 overflow-auto p-4">
       <div className="flex flex-col gap-3">
         {diff.files.map((file) => (
           <DiffFileCard
@@ -109,9 +106,15 @@ export function RunDiffView() {
     </div>
   );
 
-  let filesRegion;
-  if (diff.files.length === 0) {
-    filesRegion = (
+  const navProps = {
+    diff,
+    activePath,
+    reviewedPaths: reviewed.paths,
+    onSelect: jumpToFile,
+  };
+
+  const filesRegion =
+    diff.files.length === 0 ? (
       <div className="flex min-h-0 flex-1 flex-col overflow-auto">
         <CenteredState fill="flex">
           <EmptyState
@@ -126,32 +129,16 @@ export function RunDiffView() {
           </div>
         ) : null}
       </div>
-    );
-  } else if (wide) {
-    filesRegion = (
-      <div className="grid min-h-0 flex-1 grid-cols-[240px_1fr]">
-        <DiffFileTree
-          diff={diff}
-          activePath={activePath}
-          reviewedPaths={reviewed.paths}
-          onSelect={jumpToFile}
-        />
+    ) : (
+      <div
+        className={
+          wide ? "grid min-h-0 flex-1 grid-cols-[240px_1fr]" : "flex min-h-0 flex-1 flex-col"
+        }
+      >
+        {wide ? <DiffFileTree {...navProps} /> : <DiffFileNav {...navProps} />}
         {cards}
       </div>
     );
-  } else {
-    filesRegion = (
-      <div className="flex min-h-0 flex-1 flex-col">
-        <DiffFileNav
-          diff={diff}
-          activePath={activePath}
-          reviewedPaths={reviewed.paths}
-          onSelect={jumpToFile}
-        />
-        {cards}
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-full min-h-0 flex-col">

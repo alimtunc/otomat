@@ -1,27 +1,14 @@
-import { EmptyState, Pill, PillTabs, Skeleton } from "@otomat/ui";
+import { Pill, PillTabs, Skeleton } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useRunDetail } from "@web/api/runs/queries";
-import { useRunEventStream, type RunStreamState } from "@web/api/runs/run-events-provider";
-import {
-  countMatching,
-  LOG_FILTERS,
-  matchesLogFilter,
-  type LogFilter,
-} from "@web/components/runs/logs/log-filters";
-import { LogRow } from "@web/components/runs/logs/log-row";
+import { useRunEventStream } from "@web/api/runs/run-events-provider";
+import { LogList } from "@web/components/runs/logs/list";
+import { countMatching, LOG_FILTERS, type LogFilter } from "@web/components/runs/logs/log-filters";
 import { SessionsPanel } from "@web/components/runs/logs/sessions-panel";
 import { PaneHeader } from "@web/components/runs/pane-header";
-import { emptyTimelineContent } from "@web/components/runs/timeline/copy";
-import { CenteredState } from "@web/components/shell/centered-state";
 import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
+import { STREAM_LABEL } from "@web/lib/run-stream";
 import { useState } from "react";
-
-const STREAM_LABEL: Record<RunStreamState, string> = {
-  connecting: "connecting…",
-  open: "live",
-  closed: "stream ended",
-  error: "stream error",
-};
 
 export function RunLogsView() {
   const { runId } = useParams({ from: "/runs/$runId/logs" });
@@ -44,41 +31,6 @@ export function RunLogsView() {
         title="Couldn’t load this run"
         onRetry={() => void detail.refetch()}
       />
-    );
-  }
-
-  const filtered = stream.events.filter((event) => matchesLogFilter(event, filter));
-  const empty = emptyTimelineContent(stream.state === "error", stream.degraded);
-
-  let logList;
-  if (stream.events.length === 0) {
-    logList = (
-      <CenteredState fill="flex">
-        <EmptyState
-          icon="terminal"
-          tone={empty.tone}
-          title={empty.title}
-          description={empty.description}
-        />
-      </CenteredState>
-    );
-  } else if (filtered.length === 0) {
-    logList = (
-      <CenteredState fill="flex">
-        <EmptyState
-          icon="terminal"
-          title="No matching events"
-          description="No persisted event matches this filter for the run so far."
-        />
-      </CenteredState>
-    );
-  } else {
-    logList = (
-      <div role="list" aria-label="Run logs" className="min-h-0 flex-1 overflow-auto py-2">
-        {filtered.map((event) => (
-          <LogRow key={event.seq} event={event} />
-        ))}
-      </div>
     );
   }
 
@@ -111,15 +63,12 @@ export function RunLogsView() {
           })}
         </PillTabs>
       </div>
-      {stream.degraded ? (
-        <div
-          aria-live="polite"
-          className="border-b border-border-subtle px-6 py-2 text-xs text-danger"
-        >
-          Some events could not be decoded — this log may be incomplete.
-        </div>
-      ) : null}
-      {logList}
+      <LogList
+        events={stream.events}
+        filter={filter}
+        state={stream.state}
+        degraded={stream.degraded}
+      />
     </div>
   );
 }

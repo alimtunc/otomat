@@ -1,10 +1,9 @@
 import type { RunDetail } from "@otomat/domain";
 import { cn, Icon } from "@otomat/ui";
-import { StepsList } from "@web/components/runs/cockpit/steps-pane";
+import { StepsList } from "@web/components/runs/cockpit/steps-list";
 import { FOCUS_RING } from "@web/lib/focus";
 import { useState } from "react";
 
-/** Collapsible replacement for the steps rail on narrow cockpit widths. */
 export function StepsDisclosure({ detail }: { detail: RunDetail }) {
   const [open, setOpen] = useState(false);
   const stepCount = detail.run.plan_json.steps.length;

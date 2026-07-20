@@ -2,8 +2,9 @@
 import type { RunDetail } from "@otomat/domain";
 import { RunTimelineView } from "@web/components/runs/timeline/view";
 import { act } from "react";
-import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { mount } from "#support/mount";
 
 let wide = true;
 
@@ -71,25 +72,7 @@ vi.mock("@web/components/runs/compete/comparison", () => ({
   CompeteComparison: () => <div data-testid="compete" />,
 }));
 
-Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-
-async function renderView() {
-  const container = document.createElement("div");
-  document.body.append(container);
-  const root = createRoot(container);
-  await act(async () => {
-    root.render(<RunTimelineView />);
-  });
-  return {
-    container,
-    cleanup: async () => {
-      await act(async () => {
-        root.unmount();
-      });
-      container.remove();
-    },
-  };
-}
+const renderView = () => mount(<RunTimelineView />);
 
 afterEach(() => {
   wide = true;
@@ -108,15 +91,15 @@ describe("RunTimelineView responsive composition", () => {
   it("stacks a context strip and steps disclosure on narrow viewports", async () => {
     wide = false;
     const { container, cleanup } = await renderView();
-    const disclosure = container.querySelector("[aria-expanded]");
-    expect(disclosure).not.toBeNull();
+    const disclosure = container.querySelector<HTMLButtonElement>("[aria-expanded]");
+    if (disclosure === null) throw new Error("no steps disclosure rendered");
     expect(container.textContent).not.toContain("Run context");
     expect(container.textContent).toContain("otomat/run-1");
     expect(container.querySelector('[data-testid="timeline"]')).not.toBeNull();
     expect(container.querySelector('[data-testid="composer"]')).not.toBeNull();
 
     await act(async () => {
-      (disclosure as HTMLButtonElement).click();
+      disclosure.click();
     });
     expect(container.textContent).toContain("Implement");
     await cleanup();

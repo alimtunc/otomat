@@ -11,7 +11,6 @@ import {
 import { adjacentFile } from "@web/components/runs/diff/diff-nav";
 import { STATUS_LETTER } from "@web/components/runs/diff/file-tree.utils";
 
-/** Compact single-row replacement for the file tree on narrow diff widths. */
 export function DiffFileNav({
   diff,
   activePath,
@@ -43,13 +42,17 @@ export function DiffFileNav({
         label="Previous file"
         icon={<Icon name="arrow-up" />}
         disabled={previous === null}
-        onClick={() => selectPath(previous?.path ?? null)}
+        onClick={() => {
+          if (previous !== null) onSelect(previous);
+        }}
       />
       <IconButton
         label="Next file"
         icon={<Icon name="arrow-down" />}
         disabled={next === null}
-        onClick={() => selectPath(next?.path ?? null)}
+        onClick={() => {
+          if (next !== null) onSelect(next);
+        }}
       />
       <Select items={items} value={activePath} onValueChange={selectPath}>
         <SelectTrigger aria-label="Jump to file" className="min-w-0 flex-1 font-mono text-xs">

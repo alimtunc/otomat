@@ -3,27 +3,12 @@ import type { DiffFileContract } from "@otomat/domain";
 import { ThemeProvider } from "@otomat/ui";
 import { DiffFileCard, type DiffFileCardProps } from "@web/components/runs/diff/file-card";
 import { act } from "react";
-import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 
-Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+import { MODIFIED_FILE_PATCH, stubDiffCanvas } from "#support/diff-dom";
+import { mount } from "#support/mount";
 
-// happy-dom has no canvas 2d context; the lib measures line-number width with it.
-HTMLCanvasElement.prototype.getContext = (() => ({
-  font: "",
-  measureText: (text: string) => ({ width: text.length * 7 }),
-})) as unknown as typeof HTMLCanvasElement.prototype.getContext;
-
-const patch = `diff --git a/src/index.ts b/src/index.ts
-index 0000001..0000002 100644
---- a/src/index.ts
-+++ b/src/index.ts
-@@ -1,3 +1,3 @@
- line one
--line two
-+line two changed
- line three
-`;
+stubDiffCanvas();
 
 const file: DiffFileContract = {
   path: "src/index.ts",
@@ -32,38 +17,26 @@ const file: DiffFileContract = {
   additions: 1,
   deletions: 1,
   binary: false,
-  patch,
+  patch: MODIFIED_FILE_PATCH,
   sha: "file-sha",
 };
 
-async function renderCard(overrides: Partial<DiffFileCardProps> = {}) {
-  const container = document.createElement("div");
-  document.body.append(container);
-  const root = createRoot(container);
-  await act(async () => {
-    root.render(
-      <ThemeProvider>
-        <DiffFileCard
-          file={file}
-          mode="unified"
-          reviewed={false}
-          onReviewedChange={() => {}}
-          commentsByLine={new Map()}
-          onAddComment={async () => {}}
-          selectedCommentIds={new Set()}
-          onToggleComment={() => {}}
-          {...overrides}
-        />
-      </ThemeProvider>,
-    );
-  });
-  const cleanup = async () => {
-    await act(async () => {
-      root.unmount();
-    });
-    container.remove();
-  };
-  return { container, cleanup };
+function renderCard(overrides: Partial<DiffFileCardProps> = {}) {
+  return mount(
+    <ThemeProvider>
+      <DiffFileCard
+        file={file}
+        mode="unified"
+        reviewed={false}
+        onReviewedChange={() => {}}
+        commentsByLine={new Map()}
+        onAddComment={async () => {}}
+        selectedCommentIds={new Set()}
+        onToggleComment={() => {}}
+        {...overrides}
+      />
+    </ThemeProvider>,
+  );
 }
 
 describe("DiffFileCard reviewed state and view mode", () => {

@@ -8,7 +8,8 @@
  * @packageDocumentation
  */
 export { cn } from "./lib/utils";
-export { useMediaQuery } from "./lib/use-media-query";
+export { isEditableTarget } from "./lib/keyboard";
+export { useMediaQuery, WIDE_VIEWPORT_MEDIA_QUERY } from "./lib/use-media-query";
 
 export {
   ThemeProvider,

@@ -1,9 +1,5 @@
 import type { DiffFileContract } from "@otomat/domain";
 
-/**
- * The file one step away from `activePath`, or null at a boundary. With no
- * active file, forward starts at the first file and backward at the last.
- */
 export function adjacentFile(
   files: readonly DiffFileContract[],
   activePath: string | null,
@@ -17,9 +13,9 @@ export function adjacentFile(
   return files[next];
 }
 
-export function clampHunkIndex(current: number, direction: 1 | -1, hunkCount: number): number {
-  if (hunkCount === 0) return -1;
-  return Math.min(Math.max(current + direction, 0), hunkCount - 1);
+export function clampBlockIndex(current: number, direction: 1 | -1, blockCount: number): number {
+  if (blockCount === 0) return -1;
+  return Math.min(Math.max(current + direction, 0), blockCount - 1);
 }
 
 function isChangedRow(row: Element): boolean {
@@ -27,18 +23,34 @@ function isChangedRow(row: Element): boolean {
   return operator === "+" || operator === "-";
 }
 
+/** Split mode renders the old and new sides as two row-aligned tables; unified renders one. */
+function panes(container: ParentNode): HTMLElement[][] {
+  const tables = [...container.querySelectorAll<HTMLElement>("table")];
+  if (tables.length === 0) return [[...container.querySelectorAll<HTMLElement>("tr.diff-line")]];
+  return tables.map((table) => [...table.querySelectorAll<HTMLElement>("tr.diff-line")]);
+}
+
 /**
- * First row of each contiguous changed block in the rendered diff, in document
- * order. @git-diff-view renders no dedicated hunk-header row for fully expanded
- * hunks, so blocks of +/- lines are the stable keyboard anchor.
+ * First row of each contiguous changed block, in reading order. Rows are walked by
+ * position across panes so a split-mode change anchors once, not once per side.
  */
 export function changeBlockRows(container: ParentNode): HTMLElement[] {
+  const sides = panes(container);
+  const height = Math.max(0, ...sides.map((rows) => rows.length));
   const blocks: HTMLElement[] = [];
   let inBlock = false;
-  for (const row of container.querySelectorAll<HTMLElement>("tr.diff-line")) {
-    const changed = isChangedRow(row);
-    if (changed && !inBlock) blocks.push(row);
-    inBlock = changed;
+  for (let position = 0; position < height; position += 1) {
+    const changed = sides
+      .map((rows) => rows[position])
+      .find((row) => row !== undefined && isChangedRow(row));
+    if (changed !== undefined && !inBlock) blocks.push(changed);
+    inBlock = changed !== undefined;
   }
   return blocks;
+}
+
+export function revealAndFocus(element: HTMLElement, block: ScrollLogicalPosition): void {
+  element.tabIndex = -1;
+  element.scrollIntoView({ block });
+  element.focus({ preventScroll: true });
 }

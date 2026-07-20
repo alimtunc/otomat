@@ -2,9 +2,7 @@
 import { changeBlockRows } from "@web/components/runs/diff/diff-nav";
 import { describe, expect, it } from "vitest";
 
-function row(operator: string, id: string): string {
-  return `<tr class="diff-line" id="${id}"><td><span class="diff-line-content-operator">${operator}</span></td></tr>`;
-}
+import { diffLineRow as row } from "#support/diff-dom";
 
 describe("changeBlockRows", () => {
   it("returns the first row of each contiguous changed block", () => {

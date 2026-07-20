@@ -8,8 +8,9 @@ import {
   type ReactNode,
 } from "react";
 
+import { isEditableTarget } from "../lib/keyboard";
 import type { Density } from "../lib/theme";
-import { useMediaQuery } from "../lib/use-media-query";
+import { useMediaQuery, WIDE_VIEWPORT_MEDIA_QUERY } from "../lib/use-media-query";
 import { cn } from "../lib/utils";
 import type { ConnectionState } from "./connection-status-indicator";
 import { OfflineBanner } from "./offline-banner";
@@ -18,7 +19,6 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./resizabl
 
 const SidebarCollapsedContext = createContext(false);
 
-/** Whether the enclosing AppShell renders its sidebar as the icon rail. */
 export function useSidebarCollapsed(): boolean {
   return useContext(SidebarCollapsedContext);
 }
@@ -55,7 +55,7 @@ export function AppShell({
   className,
 }: AppShellProps) {
   const controlled = collapsedProp != null;
-  const wide = useMediaQuery("(min-width: 64rem)");
+  const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
   // null = no explicit choice yet: follow the viewport (rail by default on narrow windows).
   const [internalCollapsed, setInternalCollapsed] = useState<boolean | null>(null);
   const collapsed = controlled ? collapsedProp : (internalCollapsed ?? !wide);
@@ -73,8 +73,7 @@ export function AppShell({
     if (!toggleKey) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== toggleKey || e.metaKey || e.ctrlKey || e.altKey) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (isEditableTarget(e.target)) return;
       e.preventDefault();
       onToggle();
     };

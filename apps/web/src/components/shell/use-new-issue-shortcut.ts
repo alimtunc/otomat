@@ -1,4 +1,4 @@
-import { isEditableTarget } from "@web/lib/keyboard";
+import { isEditableTarget } from "@otomat/ui";
 import { useEffect, useEffectEvent } from "react";
 
 export function useNewIssueShortcut(onNewIssue: () => void) {

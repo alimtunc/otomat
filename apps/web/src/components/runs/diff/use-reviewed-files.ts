@@ -1,4 +1,4 @@
-import { readReviewedFiles, writeReviewedFiles } from "@web/components/runs/diff/view-prefs";
+import { readReviewedFiles, writeReviewedFiles } from "@web/components/runs/diff/reviewed-files";
 import { useMemo, useState } from "react";
 
 export interface ReviewedFiles {
@@ -12,7 +12,6 @@ interface ReviewedMarks {
   paths: ReadonlySet<string>;
 }
 
-/** Reviewed marks for a run's current diff sha, persisted across reloads; a sha change starts clean. */
 export function useReviewedFiles(runId: string, sha: string): ReviewedFiles {
   const [marks, setMarks] = useState<ReviewedMarks>(() => ({
     runId,

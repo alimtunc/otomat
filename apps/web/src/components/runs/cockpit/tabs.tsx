@@ -8,20 +8,9 @@ const COCKPIT_TABS = [
   { value: "pr", icon: "git-pull-request", to: "/runs/$runId/pr", label: "PR" },
 ] as const;
 
-function activeTab(onLogs: boolean, onDiff: boolean, onPr: boolean): string {
-  if (onLogs) return "logs";
-  if (onDiff) return "diff";
-  if (onPr) return "pr";
-  return "timeline";
-}
-
 export function CockpitTabs({ runId }: { runId: string }) {
   const matchRoute = useMatchRoute();
-  const value = activeTab(
-    !!matchRoute({ to: "/runs/$runId/logs" }),
-    !!matchRoute({ to: "/runs/$runId/diff" }),
-    !!matchRoute({ to: "/runs/$runId/pr" }),
-  );
+  const value = COCKPIT_TABS.find((tab) => matchRoute({ to: tab.to }))?.value ?? "timeline";
   return (
     <SegmentedControl type="single" value={value} aria-label="Run cockpit tabs">
       {COCKPIT_TABS.map((tab) => (

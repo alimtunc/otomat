@@ -1,6 +1,8 @@
 import { useCallback, useSyncExternalStore } from "react";
 
-/** Reactive `window.matchMedia` match for a media query string. */
+/** Tailwind `lg`: below this the shell falls back to the icon rail and panes stack into strips. */
+export const WIDE_VIEWPORT_MEDIA_QUERY = "(min-width: 64rem)";
+
 export function useMediaQuery(query: string): boolean {
   const subscribe = useCallback(
     (onChange: () => void) => {

@@ -4,13 +4,7 @@ import { useRunEventStream } from "@web/api/runs/run-events-provider";
 import { RunTimeline } from "@web/components/runs/timeline/list";
 import { shortId } from "@web/lib/ids";
 import { isActiveRun } from "@web/lib/run-activity";
-
-function streamLabel(state: "connecting" | "open" | "closed" | "error"): string {
-  if (state === "open") return "live";
-  if (state === "connecting") return "connecting…";
-  if (state === "closed") return "ended";
-  return "stream error";
-}
+import { STREAM_LABEL } from "@web/lib/run-stream";
 
 /**
  * Chronological feed of the followed run's persisted ledger events, streamed
@@ -26,7 +20,7 @@ export function ActivityFeed({ run }: { run: RunContract }) {
         <span className="text-xs text-text-tertiary">· run {shortId(run.id)}</span>
         <span className="inline-flex items-center gap-1.5 text-xs text-text-tertiary">
           {stream.state === "open" && isActiveRun(run) ? <LiveDot /> : null}
-          {streamLabel(stream.state)}
+          {STREAM_LABEL[stream.state]}
         </span>
       </div>
       <div className="min-h-50 rounded-lg border border-border-subtle bg-card py-1">

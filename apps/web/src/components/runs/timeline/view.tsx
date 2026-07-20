@@ -1,4 +1,4 @@
-import { Skeleton, useMediaQuery } from "@otomat/ui";
+import { Skeleton, useMediaQuery, WIDE_VIEWPORT_MEDIA_QUERY } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useRunDetail } from "@web/api/runs/queries";
 import { useRunEventStream } from "@web/api/runs/run-events-provider";
@@ -11,13 +11,12 @@ import { CompeteComparison } from "@web/components/runs/compete/comparison";
 import { PaneHeader } from "@web/components/runs/pane-header";
 import { RunTimeline } from "@web/components/runs/timeline/list";
 import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
-import { WIDE_COCKPIT_MEDIA_QUERY } from "@web/lib/layout";
 
 export function RunTimelineView() {
   const { runId } = useParams({ from: "/runs/$runId/" });
   const detail = useRunDetail(runId);
   const stream = useRunEventStream();
-  const wide = useMediaQuery(WIDE_COCKPIT_MEDIA_QUERY);
+  const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
 
   if (detail.isPending) {
     return (

@@ -1,37 +1,19 @@
 import type { ProjectSummary } from "@otomat/ui";
+import { readStored, writeStored } from "@web/lib/storage";
 
 const PROJECT_SELECTION_KEY = "otomat.selected-project-id";
 
-function browserStorage(): Storage | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
 export function readSelectedProjectId(
-  storage: Pick<Storage, "getItem"> | null = browserStorage(),
+  storage?: Pick<Storage, "getItem"> | null,
 ): string | undefined {
-  if (storage === null) return undefined;
-  try {
-    return storage.getItem(PROJECT_SELECTION_KEY) ?? undefined;
-  } catch {
-    return undefined;
-  }
+  return readStored(PROJECT_SELECTION_KEY, storage) ?? undefined;
 }
 
 export function writeSelectedProjectId(
   projectId: string,
-  storage: Pick<Storage, "setItem"> | null = browserStorage(),
+  storage?: Pick<Storage, "setItem"> | null,
 ): void {
-  if (storage === null) return;
-  try {
-    storage.setItem(PROJECT_SELECTION_KEY, projectId);
-  } catch {
-    /* storage unavailable; the in-memory selection still applies */
-  }
+  writeStored(PROJECT_SELECTION_KEY, projectId, storage);
 }
 
 export function resolveSelectedProjectId(

@@ -1,64 +1,57 @@
 import type { DiffFileContract } from "@otomat/domain";
-import { adjacentFile, changeBlockRows, clampHunkIndex } from "@web/components/runs/diff/diff-nav";
-import { isEditableTarget } from "@web/lib/keyboard";
-import { useEffect, useEffectEvent, useRef, type RefObject } from "react";
+import { isEditableTarget } from "@otomat/ui";
+import {
+  adjacentFile,
+  changeBlockRows,
+  clampBlockIndex,
+  revealAndFocus,
+} from "@web/components/runs/diff/diff-nav";
+import { diffFileDomId } from "@web/components/runs/diff/file-card.utils";
+import { useEffect, useEffectEvent } from "react";
 
 export interface DiffKeyboardNavOptions {
   enabled: boolean;
   files: readonly DiffFileContract[];
   activePath: string | null;
-  /** Container holding the rendered file cards; hunk rows are queried inside it. */
-  cardsRef: RefObject<HTMLElement | null>;
   onJumpToFile: (file: DiffFileContract) => void;
   onToggleReviewed: (path: string) => void;
   onExit: () => void;
 }
 
-function focusAndReveal(row: HTMLElement): void {
-  row.tabIndex = -1;
-  row.scrollIntoView({ block: "center" });
-  row.focus({ preventScroll: true });
-}
-
-/** j/k file stepping, n/p hunk stepping, v reviewed toggle, Escape back to the cockpit. */
 export function useDiffKeyboardNav(options: DiffKeyboardNavOptions): void {
-  const hunkIndexRef = useRef(-1);
-
   const handleKey = useEffectEvent((e: KeyboardEvent) => {
-    const { enabled, files, activePath, cardsRef, onJumpToFile, onToggleReviewed, onExit } =
-      options;
+    const { enabled, files, activePath, onJumpToFile, onToggleReviewed, onExit } = options;
     if (!enabled || e.defaultPrevented || e.repeat) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (isEditableTarget(e.target)) return;
     if (e.target instanceof HTMLElement && e.target.closest('[role="dialog"]') !== null) return;
 
+    const focusedPath = activePath ?? files[0]?.path ?? null;
+
     switch (e.key) {
       case "j":
       case "k": {
         const file = adjacentFile(files, activePath, e.key === "j" ? 1 : -1);
-        if (file !== null) {
-          hunkIndexRef.current = -1;
-          onJumpToFile(file);
-        }
+        if (file !== null) onJumpToFile(file);
         e.preventDefault();
         return;
       }
       case "n":
       case "p": {
-        const container = cardsRef.current;
-        if (container === null) return;
-        const hunks = changeBlockRows(container);
-        const next = clampHunkIndex(hunkIndexRef.current, e.key === "n" ? 1 : -1, hunks.length);
-        if (next !== -1) {
-          hunkIndexRef.current = next;
-          focusAndReveal(hunks[next]);
-        }
+        if (focusedPath === null) return;
         e.preventDefault();
+        if (activePath === null) onJumpToFile(files[0]);
+        const card = document.getElementById(diffFileDomId({ path: focusedPath }));
+        if (card === null) return;
+        const blocks = changeBlockRows(card);
+        const focused = document.activeElement;
+        const current = focused instanceof HTMLElement ? blocks.indexOf(focused) : -1;
+        const next = clampBlockIndex(current, e.key === "n" ? 1 : -1, blocks.length);
+        if (next !== -1) revealAndFocus(blocks[next], "center");
         return;
       }
       case "v": {
-        const path = activePath ?? files[0]?.path;
-        if (path !== undefined) onToggleReviewed(path);
+        if (focusedPath !== null) onToggleReviewed(focusedPath);
         e.preventDefault();
         return;
       }

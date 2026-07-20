@@ -2,10 +2,10 @@
 import type { EventEnvelope, RunDetail } from "@otomat/domain";
 import { RunLogsView } from "@web/components/runs/logs/view";
 import { act } from "react";
-import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 
 import { envelope } from "#support/envelope";
+import { mount } from "#support/mount";
 
 let streamEvents: EventEnvelope[] = [];
 
@@ -58,25 +58,7 @@ vi.mock("@web/api/runs/run-events-provider", () => ({
   useRunEventStream: () => ({ events: streamEvents, state: "open", degraded: false }),
 }));
 
-Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-
-async function renderView() {
-  const container = document.createElement("div");
-  document.body.append(container);
-  const root = createRoot(container);
-  await act(async () => {
-    root.render(<RunLogsView />);
-  });
-  return {
-    container,
-    cleanup: async () => {
-      await act(async () => {
-        root.unmount();
-      });
-      container.remove();
-    },
-  };
-}
+const renderView = () => mount(<RunLogsView />);
 
 describe("RunLogsView", () => {
   it("shows sessions and an honest empty state before any event", async () => {

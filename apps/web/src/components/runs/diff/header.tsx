@@ -26,14 +26,16 @@ export function RunDiffHeader({
           {reviewedCount}/{diff.files.length} reviewed
         </span>
       ) : null}
-      <span className="hidden items-center gap-1.5 text-[10px] text-text-tertiary xl:flex">
-        <Kbd>j</Kbd>
-        <Kbd>k</Kbd> files
-        <Kbd>n</Kbd>
-        <Kbd>p</Kbd> hunks
-        <Kbd>v</Kbd> reviewed
-        <Kbd>esc</Kbd> back
-      </span>
+      {diff.files.length > 0 ? (
+        <span className="hidden items-center gap-1.5 text-[10px] text-text-tertiary xl:flex">
+          <Kbd>j</Kbd>
+          <Kbd>k</Kbd> files
+          <Kbd>n</Kbd>
+          <Kbd>p</Kbd> changes
+          <Kbd>v</Kbd> reviewed
+          <Kbd>esc</Kbd> back
+        </span>
+      ) : null}
       <span className="ml-auto flex items-center gap-2.5">
         <SegmentedControl
           type="single"

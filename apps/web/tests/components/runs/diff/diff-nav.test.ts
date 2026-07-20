@@ -1,5 +1,5 @@
 import type { DiffFileContract } from "@otomat/domain";
-import { adjacentFile, clampHunkIndex } from "@web/components/runs/diff/diff-nav";
+import { adjacentFile, clampBlockIndex } from "@web/components/runs/diff/diff-nav";
 import { describe, expect, it } from "vitest";
 
 function file(path: string): DiffFileContract {
@@ -45,17 +45,17 @@ describe("adjacentFile", () => {
   });
 });
 
-describe("clampHunkIndex", () => {
-  it("enters the list at the first hunk", () => {
-    expect(clampHunkIndex(-1, 1, 3)).toBe(0);
+describe("clampBlockIndex", () => {
+  it("enters the list at the first change block", () => {
+    expect(clampBlockIndex(-1, 1, 3)).toBe(0);
   });
 
   it("clamps at both ends", () => {
-    expect(clampHunkIndex(2, 1, 3)).toBe(2);
-    expect(clampHunkIndex(0, -1, 3)).toBe(0);
+    expect(clampBlockIndex(2, 1, 3)).toBe(2);
+    expect(clampBlockIndex(0, -1, 3)).toBe(0);
   });
 
-  it("returns -1 with no hunks", () => {
-    expect(clampHunkIndex(-1, 1, 0)).toBe(-1);
+  it("returns -1 with no change blocks", () => {
+    expect(clampBlockIndex(-1, 1, 0)).toBe(-1);
   });
 });
