@@ -12,14 +12,14 @@ import {
   type SupervisorConfig,
 } from "./types.js";
 
-export interface StartingProcess {
+interface StartingProcess {
   runId: string;
   proc: SessionProcess;
   /** The session this process is a turn of, so abort can settle against the right ledger slice. */
   turn: { agentSessionId: string };
 }
 
-export interface InflightProcess extends StartingProcess {
+interface InflightProcess extends StartingProcess {
   monitor: Promise<void>;
   /** Live tailer draining the child's `events.jsonl` into the ledger while it runs. */
   tail: EventTailer;

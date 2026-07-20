@@ -271,7 +271,6 @@ export {
 export { Spinner, type SpinnerProps } from "./components/spinner";
 
 export {
-  CompeteGroupStatusChip,
   DiffFileStatusChip,
   IssueStatusChip,
   PRStatusBadge,

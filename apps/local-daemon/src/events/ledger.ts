@@ -68,7 +68,7 @@ export function appendSeqedEvents(db: Db, runId: string, entries: readonly Seqed
   return inserted;
 }
 
-export interface EventStreamBatch {
+interface EventStreamBatch {
   streamId: string;
   filePath: string;
   fromByteOffset: number;
@@ -76,17 +76,8 @@ export interface EventStreamBatch {
   events: readonly RuntimeEvent[];
 }
 
-export interface EventStreamAppendResult {
-  inserted: number;
-  nextSeq: number;
-}
-
 /** Appends one stream slice and advances its byte cursor in the same immediate transaction. */
-export function appendEventStreamBatch(
-  db: Db,
-  runId: string,
-  batch: EventStreamBatch,
-): EventStreamAppendResult {
+export function appendEventStreamBatch(db: Db, runId: string, batch: EventStreamBatch): number {
   return db.transaction(
     (tx) => {
       const stream = tx
@@ -144,7 +135,7 @@ export function appendEventStreamBatch(
         .where(eq(eventStreams.id, batch.streamId))
         .run();
 
-      return { inserted, nextSeq };
+      return inserted;
     },
     { behavior: "immediate" },
   );

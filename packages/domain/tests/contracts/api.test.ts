@@ -22,11 +22,33 @@ const RUN = {
 
 describe("runDetailSchema", () => {
   it("carries the run's worktree path and accepts null when it has none", () => {
-    const base = { run: RUN, steps: [], sessions: [] };
+    const base = { run: RUN, steps: [], sessions: [], compete_groups: [] };
     const withPath = runDetailSchema.parse({ ...base, worktree_path: "/tmp/wt" });
     expect(withPath.worktree_path).toBe("/tmp/wt");
     expect(runDetailSchema.parse({ ...base, worktree_path: null }).worktree_path).toBeNull();
     expect(runDetailSchema.safeParse(base).success).toBe(false);
+  });
+
+  it("rejects omitted compete and candidate worktree fields", () => {
+    const detail = {
+      run: RUN,
+      steps: [
+        {
+          id: "step-1",
+          run_id: RUN.id,
+          idx: 0,
+          name: "Step",
+          status: "queued",
+        },
+      ],
+      sessions: [],
+      worktree_path: null,
+    };
+
+    expect(runDetailSchema.safeParse(detail).success).toBe(false);
+    expect(runDetailSchema.safeParse({ ...detail, steps: [], compete_groups: [] }).success).toBe(
+      true,
+    );
   });
 
   it("carries durable compete groups and candidate worktree metadata", () => {

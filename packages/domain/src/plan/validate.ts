@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { isRunPlanCompeteGroup } from "../contracts/entities.js";
 import {
   RUN_PLAN_MAX_STEPS,
   RUN_PLAN_STEP_ID_PATTERN,
@@ -27,7 +28,7 @@ export const runPlanStepInputSchema = z
   .strict();
 export type RunPlanStepInput = z.infer<typeof runPlanStepInputSchema>;
 
-export const runPlanCompetitorInputSchema = z
+const runPlanCompetitorInputSchema = z
   .object({
     id: planNodeIdSchema,
     name: planNodeNameSchema,
@@ -35,9 +36,7 @@ export const runPlanCompetitorInputSchema = z
     prompt: planNodePromptSchema,
   })
   .strict();
-export type RunPlanCompetitorInput = z.infer<typeof runPlanCompetitorInputSchema>;
-
-export const runPlanCompeteGroupInputSchema = z
+const runPlanCompeteGroupInputSchema = z
   .object({
     id: planNodeIdSchema,
     /** Shared objective pursued by every competitor. */
@@ -49,17 +48,11 @@ export const runPlanCompeteGroupInputSchema = z
       .max(RUN_PLAN_MAX_STEPS),
   })
   .strict();
-export type RunPlanCompeteGroupInput = z.infer<typeof runPlanCompeteGroupInputSchema>;
-
 export const runPlanNodeInputSchema = z.union([
   runPlanStepInputSchema,
   runPlanCompeteGroupInputSchema,
 ]);
 export type RunPlanNodeInput = z.infer<typeof runPlanNodeInputSchema>;
-
-function isCompeteGroup(node: RunPlanNodeInput): node is RunPlanCompeteGroupInput {
-  return "compete" in node;
-}
 
 function checkPlanIds(
   steps: readonly RunPlanNodeInput[],
@@ -84,7 +77,7 @@ function checkPlanIds(
     }
     nodeIds.add(step.id);
     allIds.add(step.id);
-    if (!isCompeteGroup(step)) return;
+    if (!isRunPlanCompeteGroup(step)) return;
     step.compete.forEach((competitor, competitorIndex) => {
       if (allIds.has(competitor.id)) {
         sound = false;
@@ -157,7 +150,7 @@ export const runPlanInputSchema = z
   .strict()
   .superRefine((plan, ctx) => {
     const executableSteps = plan.steps.reduce(
-      (count, node) => count + (isCompeteGroup(node) ? node.compete.length : 1),
+      (count, node) => count + (isRunPlanCompeteGroup(node) ? node.compete.length : 1),
       0,
     );
     if (executableSteps > RUN_PLAN_MAX_STEPS) {

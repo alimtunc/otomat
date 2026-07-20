@@ -14,7 +14,19 @@ function detail(status: RunState, providerSessionId: string | null = "ps-1"): Ru
         steps: [{ id: "s1", name: "Agent turn", agent: "claude", prompt: "p", depends_on: [] }],
       },
     },
-    steps: [],
+    steps: [
+      {
+        id: "s1",
+        run_id: "run-1",
+        idx: 0,
+        name: "Agent turn",
+        status: "succeeded",
+        compete_group_id: null,
+        worktree_id: null,
+        branch: null,
+        worktree_status: null,
+      },
+    ],
     sessions: [
       {
         id: "as1",
@@ -24,6 +36,7 @@ function detail(status: RunState, providerSessionId: string | null = "ps-1"): Ru
         provider_session_id: providerSessionId,
       },
     ],
+    compete_groups: [],
     worktree_path: null,
   };
 }
@@ -117,5 +130,65 @@ describe("resolveFollowUpGate", () => {
     const gate = resolveFollowUpGate(detail("awaiting_human"), [unavailable], "online");
     expect(gate.enabled).toBe(false);
     expect(gate.reason).toContain("not available");
+  });
+
+  it("uses the selected competitor runtime instead of an earlier losing session", () => {
+    const runDetail = detail("awaiting_human");
+    runDetail.steps = [
+      {
+        id: "loser",
+        run_id: "run-1",
+        idx: 0,
+        name: "Loser",
+        status: "succeeded",
+        compete_group_id: "group-1",
+        worktree_id: "worktree-loser",
+        branch: "candidate/loser",
+        worktree_status: "archived",
+      },
+      {
+        id: "winner",
+        run_id: "run-1",
+        idx: 1,
+        name: "Winner",
+        status: "succeeded",
+        compete_group_id: "group-1",
+        worktree_id: "worktree-winner",
+        branch: "candidate/winner",
+        worktree_status: "archived",
+      },
+    ];
+    runDetail.sessions = [
+      {
+        id: "loser-session",
+        step_run_id: "loser",
+        agent_id: "missing-runtime",
+        status: "completed",
+        provider_session_id: "provider-loser",
+      },
+      {
+        id: "winner-session",
+        step_run_id: "winner",
+        agent_id: "claude",
+        status: "awaiting_input",
+        provider_session_id: "provider-winner",
+      },
+    ];
+    runDetail.compete_groups = [
+      {
+        id: "group-1",
+        run_id: "run-1",
+        idx: 0,
+        name: "Choose",
+        status: "selected",
+        winner_step_run_id: "winner",
+        base_head_sha: "base",
+      },
+    ];
+
+    expect(resolveFollowUpGate(runDetail, [descriptor()], "online")).toEqual({
+      enabled: true,
+      reason: null,
+    });
   });
 });

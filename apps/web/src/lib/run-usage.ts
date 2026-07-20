@@ -22,7 +22,6 @@ export function parseReportedUsage(payload: EventEnvelope["payload"]): ReportedU
   };
 }
 
-/** The last `runtime.usage` event, or undefined when the ledger carries none. */
 export function latestUsageEvent(events: readonly EventEnvelope[]): EventEnvelope | undefined {
   return events.filter((event) => event.type === "runtime.usage").at(-1);
 }

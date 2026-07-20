@@ -30,6 +30,21 @@ interface RunResolution {
   cancelRemaining: boolean;
 }
 
+function recordTurnOutcome(
+  ctx: SettleContext,
+  session: AgentSessionRow,
+  stepRunId: string | null,
+  evidence: SettleEvidence,
+): ReconcileOutcome {
+  return recordReconciled(ctx, {
+    ref: { runId: ctx.run.id, stepRunId, agentSessionId: session.id },
+    classification: evidence.classification,
+    reason: evidence.reason,
+    providerSessionId: evidence.providerSessionId,
+    orphanTerminated: ctx.orphanTerminated,
+  });
+}
+
 /** Candidate states that still owe the competition an outcome; `queued` counts because it has not started yet. */
 const UNSETTLED_CANDIDATE_STATES: ReadonlySet<StepRunState> = new Set([
   "queued",
@@ -89,13 +104,7 @@ function settleCompeteTurn(
       [],
       ctx.options.now,
     );
-    return recordReconciled(ctx, {
-      ref: { runId: ctx.run.id, stepRunId: turnStep.id, agentSessionId: turnSession.id },
-      classification: evidence.classification,
-      reason: evidence.reason,
-      providerSessionId: evidence.providerSessionId,
-      orphanTerminated: ctx.orphanTerminated,
-    });
+    return recordTurnOutcome(ctx, turnSession, turnStep.id, evidence);
   }
 
   const projected = stepStatuses(ctx.steps);
@@ -130,13 +139,7 @@ function settleCompeteTurn(
     { behavior: "immediate" },
   );
 
-  return recordReconciled(ctx, {
-    ref: { runId: ctx.run.id, stepRunId: turnStep.id, agentSessionId: turnSession.id },
-    classification: evidence.classification,
-    reason: evidence.reason,
-    providerSessionId: evidence.providerSessionId,
-    orphanTerminated: ctx.orphanTerminated,
-  });
+  return recordTurnOutcome(ctx, turnSession, turnStep.id, evidence);
 }
 
 /** Converges one live-tracked (or still-open) turn without changing a compete sibling. */
@@ -146,7 +149,7 @@ export function settleTurn(
   turnSession: AgentSessionRow,
   evidence: SettleEvidence,
 ): ReconcileOutcome {
-  const { classification, reason, providerSessionId, targets } = evidence;
+  const { classification, targets } = evidence;
 
   const turnStep = ctx.steps.find((step) => step.id === turnSession.step_run_id) ?? null;
   if (turnStep?.compete_group_id) {
@@ -171,11 +174,5 @@ export function settleTurn(
     ctx.options.now,
   );
 
-  return recordReconciled(ctx, {
-    ref: { runId: ctx.run.id, stepRunId: turnStep?.id ?? null, agentSessionId: turnSession.id },
-    classification,
-    reason,
-    providerSessionId,
-    orphanTerminated: ctx.orphanTerminated,
-  });
+  return recordTurnOutcome(ctx, turnSession, turnStep?.id ?? null, evidence);
 }

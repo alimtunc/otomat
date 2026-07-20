@@ -23,7 +23,6 @@ export function mergeBase(repoPath: string, a: string, b: string): string | null
   return sha === "" ? null : sha;
 }
 
-/** Whether `ancestor` is reachable from `descendant`. */
 export function isAncestor(repoPath: string, ancestor: string, descendant: string): boolean {
   return (
     runGit(["merge-base", "--is-ancestor", ancestor, descendant], {
@@ -33,7 +32,6 @@ export function isAncestor(repoPath: string, ancestor: string, descendant: strin
   );
 }
 
-/** Moves the current branch to `ref` only when git can fast-forward it. */
 export function fastForward(repoPath: string, ref: string): void {
   runGit(["merge", "--ff-only", ref], { cwd: repoPath });
 }

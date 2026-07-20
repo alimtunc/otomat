@@ -44,7 +44,7 @@ export const runDetailSchema = z.object({
   run: runContractSchema,
   steps: z.array(stepRunContractSchema),
   sessions: z.array(agentSessionContractSchema),
-  compete_groups: z.array(competeGroupContractSchema).default([]),
+  compete_groups: z.array(competeGroupContractSchema),
   worktree_path: z.string().nullable(),
 });
 export type RunDetail = z.infer<typeof runDetailSchema>;

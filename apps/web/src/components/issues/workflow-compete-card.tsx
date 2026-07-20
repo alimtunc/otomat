@@ -14,7 +14,7 @@ import {
 } from "@web/lib/workflow-plan";
 
 import type { WorkflowForm } from "./use-workflow-form";
-import { DependencyToggles, StepRuntimeSelect } from "./workflow-step-card";
+import { DependencyToggles, StepRuntimeSelect } from "./workflow-node-controls";
 
 export interface WorkflowCompeteCardProps {
   form: WorkflowForm;
@@ -120,6 +120,7 @@ export function WorkflowCompeteCard({
               <div className="w-36">
                 <StepRuntimeSelect
                   descriptors={descriptors}
+                  label={`${competitorLabel(competitorIndex)} runtime`}
                   value={competitor.runtime}
                   onValueChange={(runtime) =>
                     onUpdateSteps((value) =>

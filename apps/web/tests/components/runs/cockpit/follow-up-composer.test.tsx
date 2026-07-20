@@ -33,7 +33,19 @@ function runDetail(status: RunState, providerSessionId: string | null = "ps-1"):
         steps: [{ id: "s1", name: "Agent turn", agent: "claude", prompt: "p", depends_on: [] }],
       },
     },
-    steps: [],
+    steps: [
+      {
+        id: "s1",
+        run_id: "run-1",
+        idx: 0,
+        name: "Agent turn",
+        status: "succeeded",
+        compete_group_id: null,
+        worktree_id: null,
+        branch: null,
+        worktree_status: null,
+      },
+    ],
     sessions: [
       {
         id: "as1",
@@ -43,6 +55,7 @@ function runDetail(status: RunState, providerSessionId: string | null = "ps-1"):
         provider_session_id: providerSessionId,
       },
     ],
+    compete_groups: [],
     worktree_path: null,
   };
 }

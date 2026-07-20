@@ -4,15 +4,7 @@ import type {
   RunDetail,
   StepRunContract,
 } from "@otomat/domain";
-import {
-  Badge,
-  Button,
-  cn,
-  CompeteGroupStatusChip,
-  Icon,
-  Skeleton,
-  StepStatusChip,
-} from "@otomat/ui";
+import { Badge, Button, cn, Icon, Skeleton, StatusChip, StepStatusChip } from "@otomat/ui";
 import { useSelectCompeteWinner } from "@web/api/runs/mutations";
 import { useCompeteCandidateDiff } from "@web/api/runs/queries";
 import {
@@ -21,8 +13,8 @@ import {
 } from "@web/components/runs/compete/candidate-runtime-evidence";
 import { CandidateTestEvidence } from "@web/components/runs/compete/candidate-test-evidence";
 import { EvidenceSection } from "@web/components/runs/compete/evidence-section";
-import { collectTestEvidence } from "@web/components/runs/compete/test-evidence";
 import { eventsForStep } from "@web/lib/run-plan";
+import { collectTestEvidence } from "@web/lib/test-evidence";
 import { useMemo, useState } from "react";
 
 function CandidateDiffEvidence({
@@ -190,7 +182,7 @@ export function CompeteComparison({
               Compare real git and runtime evidence. Otomat does not score candidates.
             </p>
           </div>
-          <CompeteGroupStatusChip status={group.status} />
+          <StatusChip kind="compete" status={group.status} />
         </div>
       </header>
 

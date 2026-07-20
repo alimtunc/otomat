@@ -1,6 +1,7 @@
 import {
   canFollowUpRun,
   isRunTerminal,
+  selectLatestResumableSession,
   type RunDetail,
   type RuntimeDescriptor,
 } from "@otomat/domain";
@@ -37,7 +38,11 @@ export function resolveFollowUpGate(
   if (!canFollowUpRun(status)) {
     return disabled("The agent is working — follow-up unlocks when the run pauses.");
   }
-  const resumable = detail.sessions.find((session) => session.provider_session_id !== null);
+  const resumable = selectLatestResumableSession(
+    detail.sessions,
+    detail.steps,
+    detail.compete_groups,
+  );
   if (!resumable) {
     return disabled("No provider session to resume yet.");
   }

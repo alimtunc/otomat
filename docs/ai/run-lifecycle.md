@@ -77,9 +77,11 @@ stateDiagram-v2
     preparing --> running
     running --> awaiting_permission
     running --> awaiting_human
+    running --> awaiting_selection
     running --> review_ready
     awaiting_permission --> running
     awaiting_human --> running
+    awaiting_selection --> running
     review_ready --> running
     review_ready --> completed
     completed --> [*]

@@ -1,6 +1,17 @@
 import { cn } from "@otomat/ui";
 import { EvidenceSection } from "@web/components/runs/compete/evidence-section";
-import { testOutcomeClass, type TestEvidence } from "@web/components/runs/compete/test-evidence";
+import type { TestEvidence } from "@web/lib/test-evidence";
+
+function testOutcomeClass(outcome: TestEvidence["outcome"]): string {
+  switch (outcome) {
+    case "failed":
+      return "text-danger";
+    case "passed":
+      return "text-success";
+    default:
+      return "text-text-secondary";
+  }
+}
 
 export function CandidateTestEvidence({ tests }: { tests: readonly TestEvidence[] }) {
   const label = `Test evidence · ${tests.length}`;

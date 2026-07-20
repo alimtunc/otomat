@@ -13,6 +13,7 @@ import {
   executableSteps,
   isRunPlanCompeteGroup,
   RUN_FOLLOW_UP_STATES,
+  selectLatestResumableSession,
   type RunState,
   type StartRunRequest,
 } from "@otomat/domain";
@@ -197,12 +198,11 @@ async function spawnFollowUpTurn(
   const { db } = state;
   const runId = run.id;
   const steps = listStepRunsForRun(db, runId);
-  const winnerStepIds = new Set(
-    listCompeteGroupsForRun(db, runId).flatMap((group) =>
-      group.winner_step_run_id ? [group.winner_step_run_id] : [],
-    ),
+  const session = selectLatestResumableSession(
+    listAgentSessionsForRun(db, runId),
+    steps,
+    listCompeteGroupsForRun(db, runId),
   );
-  const session = pickResumableSession(listAgentSessionsForRun(db, runId), steps, winnerStepIds);
   if (!session) throw new RunNotResumableError(`run ${runId} has no provider session to resume`);
 
   const runtime = requireResumableRuntime(db, run, session);
@@ -228,26 +228,4 @@ async function spawnFollowUpTurn(
   );
 
   return requireRunRow(db, runId, "resume");
-}
-
-/** The latest resumable session: the one on the furthest plan step (an interrupted step, or the last finished turn). */
-function pickResumableSession(
-  sessions: readonly AgentSessionRow[],
-  steps: readonly StepRunRow[],
-  winnerStepIds: ReadonlySet<string>,
-): AgentSessionRow | undefined {
-  const idxByStepId = new Map(steps.map((step) => [step.id, step.idx]));
-  let best: AgentSessionRow | undefined;
-  let bestIdx = -1;
-  for (const session of sessions) {
-    if (session.provider_session_id === null) continue;
-    const step = steps.find((entry) => entry.id === session.step_run_id);
-    if (step?.compete_group_id && !winnerStepIds.has(step.id)) continue;
-    const idx = idxByStepId.get(session.step_run_id) ?? -1;
-    if (idx >= bestIdx) {
-      best = session;
-      bestIdx = idx;
-    }
-  }
-  return best;
 }

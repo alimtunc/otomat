@@ -12,7 +12,6 @@ export interface EventTailerOptions {
   runId: string;
   /** Stable durable identity of this file stream; defaults to the run control stream. */
   streamId?: string;
-  /** Path to this session or control stream's `events.jsonl`. */
   filePath: string;
   busyTimeoutMs?: number;
 }
@@ -75,7 +74,7 @@ export class EventTailer {
       if (event !== null) events.push(event);
     });
 
-    const appended = appendEventStreamBatch(this.db, this.runId, {
+    const ingested = appendEventStreamBatch(this.db, this.runId, {
       streamId: this.streamId,
       filePath: this.filePath,
       fromByteOffset: this.byteOffset,
@@ -83,7 +82,7 @@ export class EventTailer {
       events,
     });
     this.byteOffset += consumedBytes;
-    return { ingested: appended.inserted, byteOffset: this.byteOffset };
+    return { ingested, byteOffset: this.byteOffset };
   }
 
   /** Ticks until the file yields no further complete line. Returns the totals across the drain. */

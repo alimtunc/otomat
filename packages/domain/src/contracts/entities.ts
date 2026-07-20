@@ -89,10 +89,10 @@ export const stepRunContractSchema = z.object({
   idx: z.number().int().nonnegative(),
   name: z.string().min(1),
   status: z.enum(STEP_RUN_STATES),
-  compete_group_id: z.string().nullable().default(null),
-  worktree_id: z.string().nullable().default(null),
-  branch: z.string().nullable().default(null),
-  worktree_status: worktreeStatusSchema.nullable().default(null),
+  compete_group_id: z.string().nullable(),
+  worktree_id: z.string().nullable(),
+  branch: z.string().nullable(),
+  worktree_status: worktreeStatusSchema.nullable(),
 });
 export type StepRunContract = z.infer<typeof stepRunContractSchema>;
 

@@ -142,6 +142,7 @@ it("posts abort and parses the returned run detail", async () => {
     run: { ...RUN, status: "canceled" },
     steps: [],
     sessions: [],
+    compete_groups: [],
     worktree_path: null,
   };
   const fetchMock: typeof fetch = async (input) => {

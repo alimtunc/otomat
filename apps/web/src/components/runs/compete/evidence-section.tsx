@@ -5,7 +5,6 @@ export type EvidenceSectionProps = { label: string } & (
   | { empty?: never; children: ReactNode }
 );
 
-/** One labelled evidence block of a candidate card: either the evidence itself, or the honest reason there is none. */
 export function EvidenceSection({ label, empty, children }: EvidenceSectionProps) {
   return (
     <section>

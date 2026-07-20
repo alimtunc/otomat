@@ -1,4 +1,4 @@
-import { collectTestEvidence } from "@web/components/runs/compete/test-evidence";
+import { collectTestEvidence } from "@web/lib/test-evidence";
 import { describe, expect, it } from "vitest";
 
 import { envelope } from "#support/envelope";
@@ -44,6 +44,13 @@ describe("collectTestEvidence", () => {
     "make test --help",
     "just test --help",
     "pnpm test -- --help",
+    "pnpm lint",
+    "pnpm check",
+    "pnpm typecheck",
+    "pnpm test || true",
+    "pnpm test && pnpm lint",
+    "true || vitest",
+    "test -f marker && vitest",
     "pytest --collect-only",
     "echo 'not a test; vitest'",
     "sh -c \"echo 'not a test; vitest'\"",

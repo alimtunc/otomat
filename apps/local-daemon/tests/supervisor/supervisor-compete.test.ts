@@ -15,7 +15,6 @@ import {
   CompeteRepositoryRequiredError,
   createSupervisor,
   RunNotResumableError,
-  type SpawnSession,
 } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
@@ -72,17 +71,13 @@ function makeCompeteSupervisor(behavior: Parameters<typeof workerSpawn>[0] = "co
   spawn: ReturnType<typeof workerSpawn>;
 } {
   const worker = workerSpawn(behavior);
-  const spawn = ((job) => {
+  const spawn = (job: Parameters<typeof worker>[0]) => {
     if (job.prompt !== "verify" && job.worktreePath) {
       const choice = job.prompt.includes("Candidate instructions:\nlayered") ? "layered" : "direct";
       writeFileSync(join(job.worktreePath, "choice.txt"), `${choice}\n`);
     }
     return worker(job);
-  }) as SpawnSession & { calls: number; jobs: typeof worker.jobs };
-  Object.defineProperties(spawn, {
-    calls: { get: () => worker.calls },
-    jobs: { get: () => worker.jobs },
-  });
+  };
   return {
     supervisor: createSupervisor({
       db: fix.db,
@@ -95,7 +90,7 @@ function makeCompeteSupervisor(behavior: Parameters<typeof workerSpawn>[0] = "co
         worktreesRoot: join(fix.dataDir, "worktrees"),
       }),
     }),
-    spawn,
+    spawn: worker,
   };
 }
 

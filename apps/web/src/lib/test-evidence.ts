@@ -9,12 +9,6 @@ export interface TestEvidence {
   output: string | null;
 }
 
-export function testOutcomeClass(outcome: TestEvidence["outcome"]): string {
-  if (outcome === "failed") return "text-danger";
-  if (outcome === "passed") return "text-success";
-  return "text-text-secondary";
-}
-
 const PACKAGE_MANAGERS = new Set(["pnpm", "npm", "yarn", "bun"]);
 const TEST_RUNNERS = new Set(["vitest", "jest", "pytest", "mocha"]);
 const COMMAND_TOOLS = new Set(["bash", "command_execution"]);
@@ -36,7 +30,7 @@ const NON_EXECUTION_FLAGS = new Set([
   "-list",
   "-h",
 ]);
-const TEST_SCRIPT_PATTERN = /^(?:test|check|lint|typecheck)(?::[a-z0-9_-]+)*$/i;
+const TEST_SCRIPT_PATTERN = /^test(?::[a-z0-9_-]+)*$/i;
 
 function commandTokens(command: string): string[] {
   const tokens: string[] = [];
@@ -190,15 +184,9 @@ function segmentRunsTests(tokens: readonly string[]): boolean {
 }
 
 function isExplicitTestCommand(command: string): boolean {
-  const segments: string[][] = [[]];
-  for (const token of commandTokens(command)) {
-    if (token === "&&" || token === "||" || token === ";" || token === "|" || token === "&") {
-      segments.push([]);
-    } else {
-      segments.at(-1)?.push(token);
-    }
-  }
-  return segments.some(segmentRunsTests);
+  const tokens = commandTokens(command);
+  if (tokens.some((token) => ["&&", "||", ";", "|", "&"].includes(token))) return false;
+  return segmentRunsTests(tokens);
 }
 
 function commandFromArgs(value: unknown): string | null {

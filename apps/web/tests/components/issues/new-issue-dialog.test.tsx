@@ -224,6 +224,8 @@ describe("NewIssueDialog", () => {
     ];
     expect(candidateNames).toHaveLength(2);
     expect(candidatePrompts).toHaveLength(2);
+    expect(document.querySelector("button[aria-label='Candidate A runtime']")).not.toBeNull();
+    expect(document.querySelector("button[aria-label='Candidate B runtime']")).not.toBeNull();
     expect(document.body.textContent).toContain(
       "Steps that depend on this group stay queued until you compare the results and select a winner.",
     );
