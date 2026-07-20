@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
 import { CockpitTabs } from "@web/components/runs/cockpit/tabs";
-import { act, type ComponentPropsWithoutRef, type ReactNode } from "react";
-import { createRoot } from "react-dom/client";
-import { describe, expect, it, vi } from "vitest";
+import { type ComponentPropsWithoutRef, type ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { mount } from "#support/mount";
 
 interface LinkMockProps extends ComponentPropsWithoutRef<"a"> {
   to: string;
@@ -10,8 +11,14 @@ interface LinkMockProps extends ComponentPropsWithoutRef<"a"> {
   children?: ReactNode;
 }
 
+let currentRoute: string | null = null;
+const queriedRoutes: string[] = [];
+
 vi.mock("@tanstack/react-router", () => ({
-  useMatchRoute: () => () => false,
+  useMatchRoute: () => (opts: { to: string }) => {
+    queriedRoutes.push(opts.to);
+    return opts.to === currentRoute;
+  },
   Link: ({ to, params: _params, children, ...rest }: LinkMockProps) => (
     <a href={to} {...rest}>
       {children}
@@ -19,27 +26,50 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
-Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+function pressedTabLabel(container: HTMLElement): string | null {
+  return container.querySelector("[data-pressed]")?.textContent ?? null;
+}
+
+afterEach(() => {
+  currentRoute = null;
+  queriedRoutes.length = 0;
+});
 
 describe("CockpitTabs", () => {
   it("renders link tabs as anchors without native button semantics", async () => {
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-    await act(async () => {
-      root.render(<CockpitTabs runId="run-1" />);
-    });
+    const { container, cleanup } = await mount(<CockpitTabs runId="run-1" />);
 
     const anchors = [...container.querySelectorAll("a")];
-    expect(anchors.map((anchor) => anchor.textContent)).toEqual(["Timeline", "Diff", "PR"]);
+    expect(anchors.map((anchor) => anchor.textContent)).toEqual(["Timeline", "Logs", "Diff", "PR"]);
     expect(container.querySelectorAll("button")).toHaveLength(0);
     for (const anchor of anchors) {
       expect(anchor.hasAttribute("type")).toBe(false);
     }
 
-    await act(async () => {
-      root.unmount();
-    });
-    container.remove();
+    await cleanup();
+  });
+
+  it("marks the matched child route active, unshadowed by the index route", async () => {
+    currentRoute = "/runs/$runId/logs";
+    const { container, cleanup } = await mount(<CockpitTabs runId="run-1" />);
+    expect(pressedTabLabel(container)).toBe("Logs");
+    await cleanup();
+  });
+
+  it("marks the index route active from its own match, not the fallback", async () => {
+    currentRoute = "/runs/$runId";
+    const { container, cleanup } = await mount(<CockpitTabs runId="run-1" />);
+    expect(pressedTabLabel(container)).toBe("Timeline");
+    expect(queriedRoutes).toContain("/runs/$runId");
+    expect(queriedRoutes).not.toContain("/runs/$runId/pr");
+    await cleanup();
+  });
+
+  it("falls back to the timeline tab on a cockpit URL that matches no tab", async () => {
+    currentRoute = null;
+    const { container, cleanup } = await mount(<CockpitTabs runId="run-1" />);
+    expect(pressedTabLabel(container)).toBe("Timeline");
+    expect(queriedRoutes).toContain("/runs/$runId/pr");
+    await cleanup();
   });
 });

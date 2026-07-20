@@ -1,14 +1,20 @@
 import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
-import { EmptyState, ErrorState } from "@otomat/ui";
-import { useParams } from "@tanstack/react-router";
+import { EmptyState, ErrorState, useMediaQuery, WIDE_VIEWPORT_MEDIA_QUERY } from "@otomat/ui";
+import { useNavigate, useParams } from "@tanstack/react-router";
+import { useSelector } from "@tanstack/react-store";
 import { useAddReviewComment } from "@web/api/reviews/mutations";
 import { useRunReview } from "@web/api/reviews/queries";
 import { useRunDetail, useRunDiff } from "@web/api/runs/queries";
+import { revealAndFocus } from "@web/components/runs/diff/diff-nav";
 import { DiffFileCard } from "@web/components/runs/diff/file-card";
 import { diffFileDomId } from "@web/components/runs/diff/file-card.utils";
+import { DiffFileNav } from "@web/components/runs/diff/file-nav";
 import { DiffFileTree } from "@web/components/runs/diff/file-tree";
 import { DiffFixBar } from "@web/components/runs/diff/fix-bar";
 import { RunDiffHeader } from "@web/components/runs/diff/header";
+import { useDiffKeyboardNav } from "@web/components/runs/diff/use-diff-keyboard-nav";
+import { useReviewedFiles } from "@web/components/runs/diff/use-reviewed-files";
+import { diffViewModeStore } from "@web/components/runs/diff/view-prefs-store";
 import { ArchivedComments } from "@web/components/runs/review/archived-comments";
 import { partitionComments } from "@web/components/runs/review/partition";
 import { useReviewSelection } from "@web/components/runs/review/use-selection";
@@ -18,12 +24,32 @@ import { useState } from "react";
 
 export function RunDiffView() {
   const { runId } = useParams({ from: "/runs/$runId/diff" });
+  const navigate = useNavigate();
   const runQuery = useRunDetail(runId);
   const diffQuery = useRunDiff(runId);
   const reviewQuery = useRunReview(runId);
   const addComment = useAddReviewComment(runId);
   const selection = useReviewSelection(runId);
   const [activePath, setActivePath] = useState<string | null>(null);
+  const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
+  const mode = useSelector(diffViewModeStore);
+  const diff = diffQuery.data?.diff ?? null;
+  const reviewed = useReviewedFiles(runId, diff?.sha ?? "");
+
+  function jumpToFile(file: DiffFileContract) {
+    setActivePath(file.path);
+    const card = document.getElementById(diffFileDomId(file));
+    if (card !== null) revealAndFocus(card, "start");
+  }
+
+  useDiffKeyboardNav({
+    enabled: diff !== null && diff.files.length > 0,
+    files: diff?.files ?? [],
+    activePath,
+    onJumpToFile: jumpToFile,
+    onToggleReviewed: (path) => reviewed.setReviewed(path, !reviewed.paths.has(path)),
+    onExit: () => void navigate({ to: "/runs/$runId", params: { runId } }),
+  });
 
   if (diffQuery.isPending || reviewQuery.isPending) return <DetailSkeleton blocks={2} />;
   if (diffQuery.isError || reviewQuery.isError) {
@@ -41,7 +67,6 @@ export function RunDiffView() {
     );
   }
 
-  const diff = diffQuery.data.diff;
   const { anchored, archived } = partitionComments(diff, reviewQuery.data.comments);
 
   if (diff === null) {
@@ -60,51 +85,71 @@ export function RunDiffView() {
     await addComment.mutateAsync({ file_path: filePath, diff_sha: diffSha, line, body });
   }
 
-  function jumpToFile(file: DiffFileContract) {
-    setActivePath(file.path);
-    document.getElementById(diffFileDomId(file))?.scrollIntoView({ block: "start" });
-  }
+  const cards = (
+    <div className="min-w-0 overflow-auto p-4">
+      <div className="flex flex-col gap-3">
+        {diff.files.map((file) => (
+          <DiffFileCard
+            key={file.path}
+            file={file}
+            mode={mode}
+            reviewed={reviewed.paths.has(file.path)}
+            onReviewedChange={(next) => reviewed.setReviewed(file.path, next)}
+            commentsByLine={anchored.get(file.path) ?? new Map<number, ReviewCommentContract[]>()}
+            onAddComment={(line, body) => submitComment(file.path, file.sha, line, body)}
+            selectedCommentIds={selection.selectedIds}
+            onToggleComment={selection.toggle}
+          />
+        ))}
+        <ArchivedComments comments={archived} selection={selection} />
+      </div>
+    </div>
+  );
+
+  const navProps = {
+    diff,
+    activePath,
+    reviewedPaths: reviewed.paths,
+    onSelect: jumpToFile,
+  };
+
+  const filesRegion =
+    diff.files.length === 0 ? (
+      <div className="flex min-h-0 flex-1 flex-col overflow-auto">
+        <CenteredState fill="flex">
+          <EmptyState
+            icon="git-compare"
+            title="No changes yet"
+            description="The canonical git diff appears once a run produces changes. Diffs are never fabricated."
+          />
+        </CenteredState>
+        {archived.length > 0 ? (
+          <div className="p-4">
+            <ArchivedComments comments={archived} selection={selection} />
+          </div>
+        ) : null}
+      </div>
+    ) : (
+      <div
+        className={
+          wide ? "grid min-h-0 flex-1 grid-cols-[240px_1fr]" : "flex min-h-0 flex-1 flex-col"
+        }
+      >
+        {wide ? <DiffFileTree {...navProps} /> : <DiffFileNav {...navProps} />}
+        {cards}
+      </div>
+    );
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <RunDiffHeader diff={diff} reviewStatus={reviewQuery.data.review?.status ?? null} />
-      {diff.files.length === 0 ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto">
-          <CenteredState fill="flex">
-            <EmptyState
-              icon="git-compare"
-              title="No changes yet"
-              description="The canonical git diff appears once a run produces changes. Diffs are never fabricated."
-            />
-          </CenteredState>
-          {archived.length > 0 ? (
-            <div className="p-4">
-              <ArchivedComments comments={archived} selection={selection} />
-            </div>
-          ) : null}
-        </div>
-      ) : (
-        <div className="grid min-h-0 flex-1 grid-cols-[240px_1fr]">
-          <DiffFileTree diff={diff} activePath={activePath} onSelect={jumpToFile} />
-          <div className="min-w-0 overflow-auto p-4">
-            <div className="flex flex-col gap-3">
-              {diff.files.map((file) => (
-                <DiffFileCard
-                  key={file.path}
-                  file={file}
-                  commentsByLine={
-                    anchored.get(file.path) ?? new Map<number, ReviewCommentContract[]>()
-                  }
-                  onAddComment={(line, body) => submitComment(file.path, file.sha, line, body)}
-                  selectedCommentIds={selection.selectedIds}
-                  onToggleComment={selection.toggle}
-                />
-              ))}
-              <ArchivedComments comments={archived} selection={selection} />
-            </div>
-          </div>
-        </div>
-      )}
+      <RunDiffHeader
+        diff={diff}
+        reviewStatus={reviewQuery.data.review?.status ?? null}
+        mode={mode}
+        onModeChange={diffViewModeStore.actions.set}
+        reviewedCount={diff.files.filter((file) => reviewed.paths.has(file.path)).length}
+      />
+      {filesRegion}
       <DiffFixBar runStatus={runQuery.data?.run.status} selection={selection} />
     </div>
   );

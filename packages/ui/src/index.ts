@@ -8,6 +8,8 @@
  * @packageDocumentation
  */
 export { cn } from "./lib/utils";
+export { isEditableTarget } from "./lib/keyboard";
+export { useMediaQuery, WIDE_VIEWPORT_MEDIA_QUERY } from "./lib/use-media-query";
 
 export {
   ThemeProvider,
@@ -165,7 +167,7 @@ export {
 
 export { AgentAvatar, type AgentAvatarProps } from "./components/agent-avatar";
 
-export { AppShell, type AppShellProps } from "./components/app-shell";
+export { AppShell, useSidebarCollapsed, type AppShellProps } from "./components/app-shell";
 
 export { AppSidebar, type AppSidebarProps } from "./components/app-sidebar";
 

@@ -1,57 +1,30 @@
 // @vitest-environment happy-dom
 import { DiffModeEnum, DiffView, SplitSide } from "@git-diff-view/react";
 import { act } from "react";
-import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 
-Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+import { MODIFIED_FILE_PATCH, stubDiffCanvas } from "#support/diff-dom";
+import { mount } from "#support/mount";
 
-// happy-dom has no canvas 2d context; the lib measures line-number width with it.
-HTMLCanvasElement.prototype.getContext = (() => ({
-  font: "",
-  measureText: (text: string) => ({ width: text.length * 7 }),
-})) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+stubDiffCanvas();
 
-const hunk = `diff --git a/src/index.ts b/src/index.ts
-index 0000001..0000002 100644
---- a/src/index.ts
-+++ b/src/index.ts
-@@ -1,3 +1,3 @@
- line one
--line two
-+line two changed
- line three
-`;
-
-async function renderDiff() {
-  const container = document.createElement("div");
-  document.body.append(container);
-  const root = createRoot(container);
-  await act(async () => {
-    root.render(
-      <DiffView
-        data={{
-          oldFile: { fileName: "src/index.ts" },
-          newFile: { fileName: "src/index.ts" },
-          hunks: [hunk],
-        }}
-        diffViewMode={DiffModeEnum.Unified}
-        diffViewHighlight={false}
-        diffViewFontSize={12}
-        diffViewAddWidget
-        renderWidgetLine={({ side, lineNumber }) => (
-          <p data-testid="comment-widget">{`widget open: ${SplitSide[side]} ${lineNumber}`}</p>
-        )}
-      />,
-    );
-  });
-  const cleanup = async () => {
-    await act(async () => {
-      root.unmount();
-    });
-    container.remove();
-  };
-  return { container, cleanup };
+function renderDiff() {
+  return mount(
+    <DiffView
+      data={{
+        oldFile: { fileName: "src/index.ts" },
+        newFile: { fileName: "src/index.ts" },
+        hunks: [MODIFIED_FILE_PATCH],
+      }}
+      diffViewMode={DiffModeEnum.Unified}
+      diffViewHighlight={false}
+      diffViewFontSize={12}
+      diffViewAddWidget
+      renderWidgetLine={({ side, lineNumber }) => (
+        <p data-testid="comment-widget">{`widget open: ${SplitSide[side]} ${lineNumber}`}</p>
+      )}
+    />,
+  );
 }
 
 describe("diff comment trigger accessibility (patched @git-diff-view/react)", () => {

@@ -37,7 +37,10 @@ export function StatusChip<K extends StatusKind>({
       aria-label={showLabel ? undefined : label}
       title={showLabel ? undefined : label}
     >
-      <Icon aria-hidden className={cn(live && "animate-spin motion-reduce:animate-none")} />
+      <Icon
+        aria-hidden
+        className={cn(live && "animate-spin [animation-duration:2s] motion-reduce:animate-none")}
+      />
       {showLabel ? <span>{label}</span> : null}
     </Chip>
   );

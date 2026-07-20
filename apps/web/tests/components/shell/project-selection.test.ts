@@ -5,6 +5,8 @@ import {
 } from "@web/components/shell/project-selection";
 import { describe, expect, it } from "vitest";
 
+import { memoryStorage } from "#support/storage";
+
 describe("project selection", () => {
   it("defaults to the first available project when no preference is stored", () => {
     expect(
@@ -29,11 +31,7 @@ describe("project selection", () => {
   });
 
   it("round-trips the selected id through storage for navigation remounts", () => {
-    const values = new Map<string, string>();
-    const storage = {
-      getItem: (key: string) => values.get(key) ?? null,
-      setItem: (key: string, value: string) => values.set(key, value),
-    };
+    const storage = memoryStorage();
 
     writeSelectedProjectId("other", storage);
 
