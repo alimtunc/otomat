@@ -8,8 +8,16 @@ import {
   removeWorkflowCompetitor,
   toggleWorkflowDependency,
   workflowExecutableCount,
+  type WorkflowCompeteDraft,
+  type WorkflowNodeDraft,
 } from "@web/lib/workflow-plan";
 import { expect, it } from "vitest";
+
+function competeGroupAt(steps: readonly WorkflowNodeDraft[], index: number): WorkflowCompeteDraft {
+  const node = steps[index];
+  if (node?.kind !== "compete") throw new Error(`expected a compete group at ${index}`);
+  return node;
+}
 
 it("builds a strict compete node with per-candidate prompts and runtimes", () => {
   const group = newWorkflowCompeteGroup(1);
@@ -47,12 +55,14 @@ it("keeps compete groups valid and dependencies top-level while editing", () => 
   const dependent = newWorkflowStep(2);
   let steps = toggleWorkflowDependency([group, dependent], 1, group.key);
   steps = removeWorkflowCompetitor(steps, 0, 0);
-  expect(steps[0]?.competitors).toHaveLength(2);
+  expect(competeGroupAt(steps, 0).competitors).toHaveLength(2);
   steps = addWorkflowCompetitor(steps, 0);
   expect(workflowExecutableCount(steps)).toBe(4);
   steps = removeWorkflowCompetitor(steps, 0, 1);
   steps = addWorkflowCompetitor(steps, 0);
-  expect(new Set(steps[0]?.competitors.map((competitor) => competitor.key)).size).toBe(3);
+  expect(
+    new Set(competeGroupAt(steps, 0).competitors.map((competitor) => competitor.key)).size,
+  ).toBe(3);
 
   const moved = moveWorkflowStep(steps, 1, -1);
   expect(moved[0]?.dependsOn).toEqual([]);

@@ -118,7 +118,6 @@ describe("EventTailer", () => {
 
     expect(result.ingested).toBe(2); // lines 0 and 2; line 1 dropped, not fatal
     expect(seqs()).toEqual([0, 1]);
-    expect(result.nextSeq).toBe(2);
   });
 
   it("polls and ingests on an interval via start/stop", () => {

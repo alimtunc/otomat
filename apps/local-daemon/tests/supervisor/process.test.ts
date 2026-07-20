@@ -17,14 +17,14 @@ import { deadPid, spawnOrphan } from "../support/spawn.js";
 
 const FAKE_WORKER = join(dirname(fileURLToPath(import.meta.url)), "../support/fake-worker.mjs");
 
-let runDir = "";
+let agentSessionDir = "";
 
 beforeEach(() => {
-  runDir = mkdtempSync(join(tmpdir(), "otomat-start-gate-"));
+  agentSessionDir = mkdtempSync(join(tmpdir(), "otomat-start-gate-"));
 });
 
 afterEach(() => {
-  rmSync(runDir, { recursive: true, force: true });
+  rmSync(agentSessionDir, { recursive: true, force: true });
 });
 
 function job(): SupervisedJob {
@@ -33,7 +33,7 @@ function job(): SupervisedJob {
     stepRunId: "step-gate",
     agentSessionId: "session-gate",
     prompt: "do not run before release",
-    runDir,
+    agentSessionDir,
     worktreePath: null,
     runtime: "fake",
     mode: "run",
@@ -46,11 +46,11 @@ it("does not let a re-exec worker emit events before the durable start release",
   await new Promise((resolve) => setTimeout(resolve, 100));
 
   expect(isProcessAlive(proc.pid)).toBe(true);
-  expect(existsSync(join(runDir, "events.jsonl"))).toBe(false);
+  expect(existsSync(join(agentSessionDir, "events.jsonl"))).toBe(false);
 
   proc.kill("SIGKILL");
   await proc.exited;
-  expect(existsSync(join(runDir, "events.jsonl"))).toBe(false);
+  expect(existsSync(join(agentSessionDir, "events.jsonl"))).toBe(false);
 });
 
 it("runs the worker after the parent releases its start gate", async () => {
@@ -58,7 +58,7 @@ it("runs the worker after the parent releases its start gate", async () => {
   proc.start();
   await proc.exited;
 
-  expect(existsSync(join(runDir, "events.jsonl"))).toBe(true);
+  expect(existsSync(join(agentSessionDir, "events.jsonl"))).toBe(true);
 });
 
 it("reports the current process as alive", () => {

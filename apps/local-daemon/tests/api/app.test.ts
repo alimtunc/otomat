@@ -318,7 +318,7 @@ it("serves isolated candidate diff evidence and delegates explicit winner select
       },
     ])
     .run();
-  let diffOwner = "";
+  let diffOwner: string | undefined;
   let selected: { runId: string; groupId: string; stepRunId: string } | null = null;
   const app = makeApiApp(t, {
     review: {
@@ -330,7 +330,6 @@ it("serves isolated candidate diff evidence and delegates explicit winner select
     },
     selectCompeteWinner: async (selectedRunId, groupId, stepRunId) => {
       selected = { runId: selectedRunId, groupId, stepRunId };
-      return runRow(selectedRunId, { status: "running" });
     },
   });
 

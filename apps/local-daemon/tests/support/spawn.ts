@@ -55,8 +55,10 @@ export function workerSpawn(
     });
     child.unref();
     return toHandle(child, () => {
-      mkdirSync(job.runDir, { recursive: true });
-      writeFileSync(join(job.runDir, `.worker-start-${startToken}`), "ready", { flag: "wx" });
+      mkdirSync(job.agentSessionDir, { recursive: true });
+      writeFileSync(join(job.agentSessionDir, `.worker-start-${startToken}`), "ready", {
+        flag: "wx",
+      });
     });
   };
   spawnFn.calls = 0;

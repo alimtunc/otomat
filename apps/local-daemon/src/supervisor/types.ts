@@ -10,13 +10,14 @@ export const SUPERVISOR_ADAPTER = "otomat-supervisor";
 /** Env var carrying the serialized job to a re-exec'd worker process. */
 export const WORKER_JOB_ENV = "OTOMAT_WORKER_JOB";
 
-/** The run/step/session ids, prompt, and artifact dir a single turn drives. */
+/** The run/step/session ids and prompt a single turn drives, plus the artifact dir its whole session shares. */
 export interface TurnContext {
   runId: string;
   stepRunId: string;
   agentSessionId: string;
   prompt: string;
-  runDir: string;
+  /** Evidence dir of the agent session, reused by every turn of that session. */
+  agentSessionDir: string;
   /** Isolated working dir the turn mutates; null when the project has no git repository. */
   worktreePath: string | null;
   /** Runtime adapter id the worker instantiates; persisted on the run via its agent row. */
@@ -72,7 +73,7 @@ export interface Supervisor {
   /** Resume a resting run (`awaiting_human` or `review_ready`) with the user's own follow-up prompt. */
   followUp(runId: string, prompt: string): Promise<RunRow>;
   /** Reserve, promote and archive one succeeded competitor, then unlock dependent work. */
-  selectWinner(runId: string, groupId: string, stepRunId: string): Promise<RunRow>;
+  selectWinner(runId: string, groupId: string, stepRunId: string): Promise<void>;
   /** Kill the run's process group and write the canonical canceled state + a ledger event. No fake success. */
   abort(runId: string): Promise<void>;
   /** Boot-time pass: classify every non-terminal in-flight run from durable evidence and settle it. */

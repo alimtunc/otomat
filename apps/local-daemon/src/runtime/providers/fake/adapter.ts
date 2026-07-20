@@ -19,8 +19,8 @@ export const FAKE_ADAPTER_ID = FAKE_RUNTIME_ID;
 
 const FAKE_WORK_FILENAME = "fake-implementation.md";
 
-function configuredBarrierPath(env: NodeJS.ProcessEnv = process.env): string | null {
-  return env.OTOMAT_FAKE_RUNTIME_BARRIER_PATH || null;
+function configuredBarrierPath(): string | null {
+  return process.env.OTOMAT_FAKE_RUNTIME_BARRIER_PATH || null;
 }
 
 function delay(ms: number): Promise<void> {
@@ -227,6 +227,7 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
       }
       sink.emit(buildEvent(ctx, turn, emitted, spec, this.clock(), this.instanceId));
       emitted += 1;
+      // Parks each candidate after its first event so a test can hold a whole compete group mid-turn.
       if (emitted === 1 && this.barrierPath) {
         while (!signal.aborted && !existsSync(this.barrierPath)) await delay(10);
       }

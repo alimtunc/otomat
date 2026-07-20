@@ -4,6 +4,8 @@ import { join } from "node:path";
 
 import { z } from "zod";
 
+import { delay } from "./delay.js";
+
 export const WORKER_IDENTITY_FILE = "worker.json";
 
 const workerIdentitySchema = z.object({
@@ -11,7 +13,7 @@ const workerIdentitySchema = z.object({
   pgid: z.number().int(),
   start_time: z.string(),
 });
-type WorkerIdentity = z.infer<typeof workerIdentitySchema>;
+export type WorkerIdentity = z.infer<typeof workerIdentitySchema>;
 
 /**
  * The OS start time of `pid` (`ps -o lstart`, an absolute wall-clock stamp stable for the life of the
@@ -26,24 +28,20 @@ export function readProcessStartTime(pid: number): string | null {
   return value === "" ? null : value;
 }
 
-function identityPath(runDir: string): string {
-  return join(runDir, WORKER_IDENTITY_FILE);
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function identityPath(workerDir: string): string {
+  return join(workerDir, WORKER_IDENTITY_FILE);
 }
 
 /**
- * Records the live worker's identity (pid + pgid + OS start time) in the run dir so a later boot can
+ * Records the live worker's identity (pid + pgid + OS start time) in its dir so a later boot can
  * prove the process group is still ours before signalling it. Returns false if the pid can't be stamped.
  */
-export function writeWorkerIdentity(runDir: string, pid: number, pgid: number): boolean {
+export function writeWorkerIdentity(workerDir: string, pid: number, pgid: number): boolean {
   const start_time = readProcessStartTime(pid);
   if (start_time === null) return false;
-  mkdirSync(runDir, { recursive: true });
+  mkdirSync(workerDir, { recursive: true });
   writeFileSync(
-    identityPath(runDir),
+    identityPath(workerDir),
     JSON.stringify({ pid, pgid, start_time } satisfies WorkerIdentity),
   );
   return true;
@@ -51,21 +49,21 @@ export function writeWorkerIdentity(runDir: string, pid: number, pgid: number): 
 
 /** Gives a freshly spawned pid a bounded window to become visible to `ps` before startup fails. */
 export async function waitForWorkerIdentity(
-  runDir: string,
+  workerDir: string,
   pid: number,
   pgid: number,
 ): Promise<boolean> {
   const deadline = Date.now() + 2_000;
   do {
-    if (writeWorkerIdentity(runDir, pid, pgid)) return true;
+    if (writeWorkerIdentity(workerDir, pid, pgid)) return true;
     await delay(10);
   } while (Date.now() < deadline);
   return false;
 }
 
-/** Reads the recorded worker identity from the run dir, or null when the file is absent or unparseable. */
-function readWorkerIdentity(runDir: string): WorkerIdentity | null {
-  const path = identityPath(runDir);
+/** Reads the recorded worker identity, or null when the file is absent or unparseable. */
+export function readWorkerIdentity(workerDir: string): WorkerIdentity | null {
+  const path = identityPath(workerDir);
   if (!existsSync(path)) return null;
   try {
     return workerIdentitySchema.parse(JSON.parse(readFileSync(path, "utf8")));
@@ -80,8 +78,8 @@ function readWorkerIdentity(runDir: string): WorkerIdentity | null {
  * any mismatch (e.g. the OS reused the pid over a long downtime) returns false — the caller must never
  * signal the group then.
  */
-export function isReapableWorker(runDir: string, pid: number): boolean {
-  const identity = readWorkerIdentity(runDir);
+export function isReapableWorker(workerDir: string, pid: number): boolean {
+  const identity = readWorkerIdentity(workerDir);
   if (identity === null || identity.pid !== pid) return false;
   const current = readProcessStartTime(pid);
   return current !== null && current === identity.start_time;

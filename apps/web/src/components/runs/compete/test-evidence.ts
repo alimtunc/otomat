@@ -9,6 +9,12 @@ export interface TestEvidence {
   output: string | null;
 }
 
+export function testOutcomeClass(outcome: TestEvidence["outcome"]): string {
+  if (outcome === "failed") return "text-danger";
+  if (outcome === "passed") return "text-success";
+  return "text-text-secondary";
+}
+
 const PACKAGE_MANAGERS = new Set(["pnpm", "npm", "yarn", "bun"]);
 const TEST_RUNNERS = new Set(["vitest", "jest", "pytest", "mocha"]);
 const COMMAND_TOOLS = new Set(["bash", "command_execution"]);

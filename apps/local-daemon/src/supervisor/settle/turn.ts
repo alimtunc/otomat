@@ -23,19 +23,20 @@ import {
   type SettleEvidence,
   type SettleOptions,
 } from "./context.js";
-import { emitReconciled } from "./ledger.js";
+import { recordReconciled } from "./ledger.js";
 
 interface RunResolution {
   run: RunState;
   cancelRemaining: boolean;
 }
 
-function selectedFollowUpTarget(classification: ReconcileClassification): RunState {
-  if (classification === "completed") return "review_ready";
-  if (classification === "interrupted") return "awaiting_human";
-  if (classification === "canceled") return "canceled";
-  return "failed";
-}
+/** Candidate states that still owe the competition an outcome; `queued` counts because it has not started yet. */
+const UNSETTLED_CANDIDATE_STATES: ReadonlySet<StepRunState> = new Set([
+  "queued",
+  "starting",
+  "running",
+  "awaiting_permission",
+]);
 
 function competeTargets(
   hasActive: boolean,
@@ -80,22 +81,21 @@ function settleCompeteTurn(
   const group = ctx.groups.find((entry) => entry.id === groupId);
   if (!group) throw new Error(`compete group ${groupId} vanished during settle`);
   if (group.status === "selected") {
-    const runTarget = selectedFollowUpTarget(evidence.classification);
-    driveRunTo(ctx.db, ctx.run.id, ctx.run.status, runTarget, ctx.options.now);
-    emitReconciled(ctx, {
+    driveTurnConvergence(
+      ctx.db,
+      ctx.run,
+      { step: turnStep, session: turnSession },
+      evidence.targets,
+      [],
+      ctx.options.now,
+    );
+    return recordReconciled(ctx, {
       ref: { runId: ctx.run.id, stepRunId: turnStep.id, agentSessionId: turnSession.id },
       classification: evidence.classification,
       reason: evidence.reason,
       providerSessionId: evidence.providerSessionId,
       orphanTerminated: ctx.orphanTerminated,
     });
-    return {
-      runId: ctx.run.id,
-      classification: evidence.classification,
-      reason: evidence.reason,
-      orphanTerminated: ctx.orphanTerminated,
-      providerSessionId: evidence.providerSessionId,
-    };
   }
 
   const projected = stepStatuses(ctx.steps);
@@ -104,9 +104,7 @@ function settleCompeteTurn(
   const candidateStates = ctx.steps
     .filter((step) => step.compete_group_id === group.id)
     .map((step) => projected.get(step.id) ?? step.status);
-  const hasActive = candidateStates.some((status) =>
-    ["queued", "starting", "running", "awaiting_permission"].includes(status),
-  );
+  const hasActive = candidateStates.some((status) => UNSETTLED_CANDIDATE_STATES.has(status));
   const hasSucceeded = candidateStates.includes("succeeded");
   const hasResumable = candidateStates.includes("awaiting_human");
   const targets = competeTargets(hasActive, hasSucceeded, hasResumable);
@@ -132,20 +130,13 @@ function settleCompeteTurn(
     { behavior: "immediate" },
   );
 
-  emitReconciled(ctx, {
+  return recordReconciled(ctx, {
     ref: { runId: ctx.run.id, stepRunId: turnStep.id, agentSessionId: turnSession.id },
     classification: evidence.classification,
     reason: evidence.reason,
     providerSessionId: evidence.providerSessionId,
     orphanTerminated: ctx.orphanTerminated,
   });
-  return {
-    runId: ctx.run.id,
-    classification: evidence.classification,
-    reason: evidence.reason,
-    orphanTerminated: ctx.orphanTerminated,
-    providerSessionId: evidence.providerSessionId,
-  };
 }
 
 /** Converges one live-tracked (or still-open) turn without changing a compete sibling. */
@@ -180,18 +171,11 @@ export function settleTurn(
     ctx.options.now,
   );
 
-  emitReconciled(ctx, {
+  return recordReconciled(ctx, {
     ref: { runId: ctx.run.id, stepRunId: turnStep?.id ?? null, agentSessionId: turnSession.id },
     classification,
     reason,
     providerSessionId,
     orphanTerminated: ctx.orphanTerminated,
   });
-  return {
-    runId: ctx.run.id,
-    classification,
-    reason,
-    orphanTerminated: ctx.orphanTerminated,
-    providerSessionId,
-  };
 }

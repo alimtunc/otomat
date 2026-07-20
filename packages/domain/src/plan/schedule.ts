@@ -25,6 +25,13 @@ export function isStepHalted(status: StepRunState): boolean {
   return HALTED_STEP_STATES.has(status);
 }
 
+const ACTIVE_COMPETE_GROUP_STATES: ReadonlySet<CompeteGroupState> = new Set([
+  "running",
+  "awaiting_human",
+  "awaiting_selection",
+  "promoting",
+]);
+
 export function isStepActive(status: StepRunState): boolean {
   return ACTIVE_STEP_STATES.has(status);
 }
@@ -91,7 +98,8 @@ export function hasActiveStep(plan: RunPlan, statuses: PlanStepStatuses): boolea
   return executableSteps(plan).some((step) => isStepActive(statusOf(statuses, step.id)));
 }
 
-function executableSteps(plan: RunPlan): Array<RunPlanStep | RunPlanCompetitor> {
+/** Every node the supervisor can actually spawn, compete groups flattened into their candidates. */
+export function executableSteps(plan: RunPlan): Array<RunPlanStep | RunPlanCompetitor> {
   return plan.steps.flatMap((node) => (isRunPlanCompeteGroup(node) ? node.compete : [node]));
 }
 
@@ -143,12 +151,6 @@ export function readyPlanWork(
   return null;
 }
 
-/** First queued step whose dependencies all succeeded; ignores active steps — single-flight is the caller's rule. */
-export function nextReadyStep(plan: RunPlan, statuses: PlanStepStatuses): RunPlanStep | null {
-  const ready = readyPlanWork(plan, statuses, new Map());
-  return ready?.kind === "step" ? ready.step : null;
-}
-
 export function allStepsSucceeded(
   plan: RunPlan,
   statuses: PlanStepStatuses,
@@ -173,13 +175,7 @@ export function planOutcome(
   if (hasActiveStep(plan, statuses)) return "running";
   if (readyPlanWork(plan, statuses, groupStatuses) !== null) return "running";
   const competitionStates = [...groupStatuses.values()];
-  if (
-    competitionStates.some((state) =>
-      ["running", "awaiting_human", "awaiting_selection", "promoting"].includes(state),
-    )
-  ) {
-    return "running";
-  }
+  if (competitionStates.some((state) => ACTIVE_COMPETE_GROUP_STATES.has(state))) return "running";
   const states = executableSteps(plan).map((step) => statusOf(statuses, step.id));
   if (competitionStates.includes("failed")) return "failed";
   if (states.some((state) => state === "failed" || state === "stale")) return "failed";

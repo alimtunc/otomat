@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { once } from "node:events";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -9,24 +9,20 @@ import { fileURLToPath } from "node:url";
 import { createClient, listAgentSessionsForRun, listStepRunsForRun, type Db } from "@otomat/db";
 import { runContractSchema, runDetailSchema, type RunDetail } from "@otomat/domain";
 import { expect, it } from "vitest";
-import { z } from "zod";
 
 import { readRunEvents, sessionDir } from "#events";
 import { killProcessGroup } from "#supervisor";
-import { readProcessStartTime, WORKER_IDENTITY_FILE } from "#supervisor/identity";
+import {
+  readProcessStartTime,
+  readWorkerIdentity,
+  type WorkerIdentity,
+} from "#supervisor/identity";
 
 import { setupTestRepo } from "../support/git.js";
 import { waitFor } from "../support/poll.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DAEMON_ENTRY = resolve(HERE, "..", "..", "src", "index.ts");
-const workerIdentitySchema = z.object({
-  pid: z.number().int().positive(),
-  pgid: z.number().int().positive(),
-  start_time: z.string().min(1),
-});
-type WorkerIdentity = z.infer<typeof workerIdentitySchema>;
-
 const COMPETE_PLAN = {
   version: 1 as const,
   steps: [
@@ -82,16 +78,24 @@ async function freePort(): Promise<number> {
   return address.port;
 }
 
-async function waitForAsync(
-  predicate: () => Promise<boolean>,
-  timeoutMs: number,
-): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (await predicate()) return true;
-    await new Promise((resolveDelay) => setTimeout(resolveDelay, 25));
+/** A refused connection is the daemon not listening yet; anything else is a real failure worth surfacing. */
+function isConnectionRefused(error: unknown): boolean {
+  return (
+    error instanceof TypeError &&
+    error.cause instanceof Error &&
+    "code" in error.cause &&
+    error.cause.code === "ECONNREFUSED"
+  );
+}
+
+async function probeHealth(origin: string, child: ChildProcess): Promise<boolean> {
+  if (child.exitCode !== null) return false;
+  try {
+    return (await fetch(`${origin}/api/health`)).ok;
+  } catch (error) {
+    if (isConnectionRefused(error)) return false;
+    throw error;
   }
-  return predicate();
 }
 
 async function startDaemon(
@@ -108,18 +112,15 @@ async function startDaemon(
   child.stdout?.on("data", (chunk: Buffer) => diagnostics.push(chunk.toString()));
   child.stderr?.on("data", (chunk: Buffer) => diagnostics.push(chunk.toString()));
   const origin = `http://127.0.0.1:${port}`;
-  const healthy = await waitForAsync(async () => {
-    if (child.exitCode !== null) return false;
-    try {
-      return (await fetch(`${origin}/api/health`)).ok;
-    } catch {
-      return false;
+  try {
+    if (!(await waitFor(() => probeHealth(origin, child), 15_000))) {
+      throw new Error("health probe timed out");
     }
-  }, 15_000);
-  if (!healthy) {
+  } catch (error) {
     await stopProcess(child, "SIGKILL");
     throw new Error(
       `daemon failed to start (exit ${child.exitCode ?? "pending"}): ${diagnostics.join("").slice(-2_000)}`,
+      { cause: error },
     );
   }
   return { child, origin };
@@ -194,14 +195,8 @@ it(
         if (session.pid === null || session.pgid === null) {
           throw new Error(`session ${session.id} has no durable process identity`);
         }
-        const identity = workerIdentitySchema.parse(
-          JSON.parse(
-            readFileSync(
-              join(sessionDir(dataDir, launchedRun.id, session.id), WORKER_IDENTITY_FILE),
-              "utf8",
-            ),
-          ),
-        );
+        const identity = readWorkerIdentity(sessionDir(dataDir, launchedRun.id, session.id));
+        if (!identity) throw new Error(`session ${session.id} has no recorded worker identity`);
         expect(identity).toMatchObject({ pid: session.pid, pgid: session.pgid });
         originalProcesses.set(session.id, identity);
         workerIdentities.push(identity);
@@ -230,7 +225,7 @@ it(
         ),
       ).toBe(true);
       expect(
-        await waitForAsync(
+        await waitFor(
           async () =>
             (await readDetail(restartedDaemon.origin, launchedRun.id)).run.status ===
             "awaiting_human",
@@ -262,7 +257,7 @@ it(
       );
       expect(resumeResponse.ok).toBe(true);
       expect(
-        await waitForAsync(
+        await waitFor(
           async () =>
             (await readDetail(restartedDaemon.origin, launchedRun.id)).run.status ===
             "awaiting_selection",
@@ -289,14 +284,10 @@ it(
         if (!originalProcess)
           throw new Error(`session ${session.id} was not present before restart`);
         resumedPids.push(session.pid);
-        const resumedIdentity = workerIdentitySchema.parse(
-          JSON.parse(
-            readFileSync(
-              join(sessionDir(dataDir, launchedRun.id, session.id), WORKER_IDENTITY_FILE),
-              "utf8",
-            ),
-          ),
-        );
+        const resumedIdentity = readWorkerIdentity(sessionDir(dataDir, launchedRun.id, session.id));
+        if (!resumedIdentity) {
+          throw new Error(`resumed session ${session.id} has no recorded worker identity`);
+        }
         expect(resumedIdentity).toMatchObject({ pid: session.pid, pgid: session.pgid });
         expect(resumedIdentity).not.toEqual(originalProcess);
         workerIdentities.push(resumedIdentity);

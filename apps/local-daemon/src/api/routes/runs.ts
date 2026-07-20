@@ -1,4 +1,4 @@
-import { CompeteWinnerConflictError, getCompeteGroup, getStepRun } from "@otomat/db";
+import { CompeteWinnerConflictError } from "@otomat/db";
 import {
   followUpRunRequestSchema,
   selectCompeteWinnerRequestSchema,
@@ -15,7 +15,7 @@ import {
 
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
-import { readRunDetail, readRuns } from "../reads.js";
+import { readCompeteCandidate, readRunDetail, readRuns } from "../reads.js";
 import { toRun, toRunDiffResponse } from "../serialize.js";
 import { streamRunEvents } from "../sse.js";
 
@@ -95,11 +95,13 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
 
   routes.get("/:id/compete-groups/:groupId/candidates/:stepId/diff", runGuard(deps.db), (c) => {
     const run = c.get("run");
-    const group = getCompeteGroup(deps.db, c.req.param("groupId"));
-    const step = getStepRun(deps.db, c.req.param("stepId"));
-    if (!group || group.run_id !== run.id || !step || step.compete_group_id !== group.id) {
-      return c.json({ error: "compete_candidate_not_found" }, 404);
-    }
+    const step = readCompeteCandidate(
+      deps.db,
+      run.id,
+      c.req.param("groupId"),
+      c.req.param("stepId"),
+    );
+    if (!step) return c.json({ error: "compete_candidate_not_found" }, 404);
     try {
       return c.json(toRunDiffResponse(run.id, deps.review.getWorktreeDiff(run, step.id)));
     } catch (error) {

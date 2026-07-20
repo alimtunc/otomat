@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { maxSeqForRun, nextSeqForRun } from "#events/ledger";
 import { readRunEvents } from "#events/projection";
 
 import { setupLedgerDb, type LedgerTestDb } from "../support/ledger-db.js";
@@ -24,23 +23,6 @@ describe("ledger", () => {
 
     expect(result).toEqual({ inserted: 3, nextSeq: 3 });
     expect(readRunEvents(t.client.db, t.runId).map((e) => e.seq)).toEqual([0, 1, 2]);
-  });
-
-  it("nextSeqForRun is 0 for a fresh run and one past the max otherwise", () => {
-    expect(nextSeqForRun(t.client.db, t.runId)).toBe(0);
-    appendEvents(t.client.db, t.runId, [makeEvent(t.runId, 0), makeEvent(t.runId, 1)], 0);
-    expect(nextSeqForRun(t.client.db, t.runId)).toBe(2);
-  });
-
-  it("maxSeqForRun is the head cursor, null when empty", () => {
-    appendEvents(
-      t.client.db,
-      t.runId,
-      [0, 1, 2, 3].map((i) => makeEvent(t.runId, i)),
-      0,
-    );
-    expect(maxSeqForRun(t.client.db, t.runId)).toBe(3);
-    expect(maxSeqForRun(t.client.db, "no-such-run")).toBeNull();
   });
 
   it("is idempotent: re-appending the same (run_id, seq) inserts nothing", () => {

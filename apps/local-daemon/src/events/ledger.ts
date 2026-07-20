@@ -28,22 +28,6 @@ export function applyLedgerPragmas(db: Db, busyTimeoutMs = DEFAULT_BUSY_TIMEOUT_
   db.run(sql.raw(`PRAGMA busy_timeout = ${busyTimeoutMs}`));
 }
 
-/** Highest persisted `seq` for a run, or `null` when it has no events yet. */
-export function maxSeqForRun(db: Db, runId: string): number | null {
-  const row = db
-    .select({ maxSeq: max(runtimeEvents.seq) })
-    .from(runtimeEvents)
-    .where(eq(runtimeEvents.run_id, runId))
-    .get();
-  return row?.maxSeq ?? null;
-}
-
-/** Next unused per-run `seq`: one past the highest persisted, or 0 for a fresh run. */
-export function nextSeqForRun(db: Db, runId: string): number {
-  const maxSeq = maxSeqForRun(db, runId);
-  return maxSeq === null ? 0 : maxSeq + 1;
-}
-
 /**
  * Appends events with explicit per-run `seq` as one `BEGIN IMMEDIATE` transaction.
  * Re-appending already-stored events is a no-op: the unique `(run_id, seq)` index

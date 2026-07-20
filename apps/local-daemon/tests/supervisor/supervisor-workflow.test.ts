@@ -70,7 +70,7 @@ it("runs a three-step plan in order: three step_runs, three sessions, events per
   expect(spawn.calls).toBe(3);
   expect(spawn.jobs.map((job) => job.stepRunId)).toEqual(steps.map((step) => step.id));
   expect(spawn.jobs.map((job) => job.prompt)).toEqual(["plan it", "build it", "check it"]);
-  expect(spawn.jobs.map((job) => job.runDir)).toEqual(
+  expect(spawn.jobs.map((job) => job.agentSessionDir)).toEqual(
     sessions.map((session) => sessionDir(fix.dataDir, run.id, session.id)),
   );
 

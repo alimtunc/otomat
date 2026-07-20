@@ -6,6 +6,7 @@ import {
   listActiveRuns,
   listCompeteGroupsForRun,
   listStepRunsForRun,
+  type CompeteGroupRow,
   type RunRow,
 } from "@otomat/db";
 import { allStepsSucceeded, readyPlanWork } from "@otomat/domain";
@@ -20,7 +21,7 @@ function requireSelectionScope(
   state: SupervisorState,
   runId: string,
   groupId: string,
-): { run: RunRow; group: NonNullable<ReturnType<typeof getCompeteGroup>> } {
+): { run: RunRow; group: CompeteGroupRow } {
   const run = getRun(state.db, runId);
   if (!run) throw new CompeteWinnerConflictError(groupId, `run ${runId} not found`);
   const group = getCompeteGroup(state.db, groupId);
@@ -32,7 +33,9 @@ function requireSelectionScope(
 
 function archiveCandidates(state: SupervisorState, run: RunRow, groupId: string): void {
   const service = state.repositories.forRepository(run.repository_id)?.service;
-  if (!service) return;
+  if (!service) {
+    throw new Error(`run ${run.id} compete group ${groupId} has no repository to archive into`);
+  }
   const candidates = listStepRunsForRun(state.db, run.id).filter(
     (step) => step.compete_group_id === groupId,
   );
@@ -41,8 +44,8 @@ function archiveCandidates(state: SupervisorState, run: RunRow, groupId: string)
   }
 }
 
-function finishSelectedGroup(state: SupervisorState, run: RunRow, groupId: string): void {
-  archiveCandidates(state, run, groupId);
+/** Rests a run whose whole plan is now satisfied; a run with work left stays `running` for the scheduler. */
+function finishSelectedGroup(state: SupervisorState, run: RunRow): void {
   const current = getRun(state.db, run.id);
   if (!current || current.status !== "running" || hasRunActivity(state, run.id)) return;
   const steps = listStepRunsForRun(state.db, run.id);
@@ -52,13 +55,24 @@ function finishSelectedGroup(state: SupervisorState, run: RunRow, groupId: strin
   }
 }
 
+/** Archives every candidate worktree, then chains the dependent work the selection just unblocked. */
+async function unlockAfterSelection(
+  state: SupervisorState,
+  run: RunRow,
+  groupId: string,
+): Promise<void> {
+  archiveCandidates(state, run, groupId);
+  await advanceRun(state, run.id);
+  finishSelectedGroup(state, run);
+}
+
 /** Atomically reserves one succeeded candidate, fast-forwards canonical, archives every candidate and unlocks dependents. */
 export async function selectCompeteWinner(
   state: SupervisorState,
   runId: string,
   groupId: string,
   stepRunId: string,
-): Promise<RunRow> {
+): Promise<void> {
   const scoped = requireSelectionScope(state, runId, groupId);
   const service = state.repositories.forRepository(scoped.run.repository_id)?.service;
   if (!service) {
@@ -71,10 +85,7 @@ export async function selectCompeteWinner(
     if (scoped.run.status === "awaiting_selection") {
       driveRunTo(state.db, runId, scoped.run.status, "running", new Date().toISOString());
     }
-    archiveCandidates(state, scoped.run, groupId);
-    await advanceRun(state, runId);
-    finishSelectedGroup(state, scoped.run, groupId);
-    return getRun(state.db, runId) ?? scoped.run;
+    return unlockAfterSelection(state, scoped.run, groupId);
   }
 
   const claimed = claimCompeteWinner(state.db, groupId, stepRunId);
@@ -87,11 +98,7 @@ export async function selectCompeteWinner(
   const current = getRun(state.db, runId);
   if (!current) throw new Error(`run ${runId} vanished after winner promotion`);
   driveRunTo(state.db, runId, current.status, "running", new Date().toISOString());
-  archiveCandidates(state, current, groupId);
-
-  await advanceRun(state, runId);
-  finishSelectedGroup(state, current, groupId);
-  return getRun(state.db, runId) ?? current;
+  return unlockAfterSelection(state, current, groupId);
 }
 
 function restRecoveredRun(state: SupervisorState, runId: string): void {
@@ -137,14 +144,15 @@ export function recoverCompeteSelections(state: SupervisorState): ReconcileOutco
           providerSessionId: null,
         });
       } catch (error) {
-        if (group.status === "promoting") {
-          driveCompeteGroupTo(state.db, group.id, group.status, "failed");
-        }
+        console.error(`[otomat] compete winner recovery failed for group ${group.id}`, error);
+        // Re-read: a throw after a successful promote must not overwrite the `selected` row it just wrote.
+        const stalled = getCompeteGroup(state.db, group.id);
+        if (stalled?.status !== "promoting") continue;
+        driveCompeteGroupTo(state.db, group.id, stalled.status, "failed");
         const current = getRun(state.db, run.id);
         if (current && current.status !== "failed") {
           driveRunTo(state.db, run.id, current.status, "failed", new Date().toISOString());
         }
-        console.error(`[otomat] compete winner recovery failed for group ${group.id}`, error);
       }
     }
   }

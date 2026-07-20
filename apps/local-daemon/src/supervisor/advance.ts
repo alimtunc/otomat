@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import {
   attachStepWorktree,
+  getCompeteGroup,
   getRun,
   insertAgentSession,
   listAgentSessionsForRun,
@@ -23,14 +24,10 @@ import { emitLedgerEvent, sessionDir } from "#events";
 import { spawnTurn } from "./lifecycle.js";
 import { buildTerminalMarker } from "./markers.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
-import { stepStatuses } from "./settle/index.js";
+import { competeGroupStatuses, stepStatuses } from "./settle/context.js";
 import { hasRunActivity, notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveCompeteGroupTo, driveIdleRunTo } from "./transitions.js";
 import type { TurnContext } from "./types.js";
-
-function groupStatuses(state: SupervisorState, runId: string) {
-  return new Map(listCompeteGroupsForRun(state.db, runId).map((group) => [group.id, group.status]));
-}
 
 function canonicalWorktreePath(state: SupervisorState, run: RunRow): string | null {
   const path =
@@ -63,7 +60,7 @@ function insertTurn(
     stepRunId: step.id,
     agentSessionId,
     prompt: step.prompt,
-    runDir: sessionDir(state.dataDir, run.id, agentSessionId),
+    agentSessionDir: sessionDir(state.dataDir, run.id, agentSessionId),
     worktreePath,
     runtime,
   };
@@ -91,7 +88,7 @@ async function startCompeteGroup(
   groupId: string,
   competitors: readonly RunPlanCompetitor[],
 ): Promise<void> {
-  const group = listCompeteGroupsForRun(state.db, run.id).find((entry) => entry.id === groupId);
+  const group = getCompeteGroup(state.db, groupId);
   if (!group) throw new Error(`run ${run.id} compete group ${groupId} is missing`);
   const sessions = listAgentSessionsForRun(state.db, run.id);
   const sessionStepIds = new Set(sessions.map((session) => session.step_run_id));
@@ -100,10 +97,8 @@ async function startCompeteGroup(
 
   const binding = state.repositories.forRepository(run.repository_id);
   if (!binding) throw new Error(`run ${run.id} compete group requires a Git repository`);
-  let baseHeadSha = group.base_head_sha;
-  if (baseHeadSha === null) {
-    baseHeadSha = binding.service.snapshot(run.id).headSha;
-    updateCompeteGroupBase(state.db, group.id, baseHeadSha);
+  if (group.base_head_sha === null) {
+    updateCompeteGroupBase(state.db, group.id, binding.service.snapshot(run.id).headSha);
   }
 
   const acquiredOwners: string[] = [];
@@ -136,7 +131,11 @@ async function startCompeteGroup(
 /** Starts the next ready plan node; a compete node schedules all candidates under the global semaphore. */
 export async function startNextReadyStep(state: SupervisorState, run: RunRow): Promise<boolean> {
   const steps = listStepRunsForRun(state.db, run.id);
-  const next = readyPlanWork(run.plan_json, stepStatuses(steps), groupStatuses(state, run.id));
+  const next = readyPlanWork(
+    run.plan_json,
+    stepStatuses(steps),
+    competeGroupStatuses(listCompeteGroupsForRun(state.db, run.id)),
+  );
   if (next === null) return false;
   if (next.kind === "compete") {
     await startCompeteGroup(state, run, next.group.id, next.competitors);

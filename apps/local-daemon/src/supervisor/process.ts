@@ -78,7 +78,7 @@ export function createReexecSpawn(mainScript: string): (job: SupervisedJob) => S
       pid,
       pgid: pid,
       exited,
-      start: () => releaseWorkerStart(job.runDir, startToken),
+      start: () => releaseWorkerStart(job.agentSessionDir, startToken),
       kill: (signal) => killProcessGroup(pid, signal),
     };
   };

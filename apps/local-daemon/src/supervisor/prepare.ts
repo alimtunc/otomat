@@ -11,6 +11,7 @@ import {
 } from "@otomat/db";
 import {
   competeGroupMachine,
+  executableSteps,
   isRunPlanCompeteGroup,
   issueMachine,
   runMachine,
@@ -95,10 +96,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
   if (plan.steps.some(isRunPlanCompeteGroup) && !binding) {
     throw new CompeteRepositoryRequiredError(projectId);
   }
-  for (const node of plan.steps) {
-    const executable = isRunPlanCompeteGroup(node) ? node.compete : [node];
-    for (const step of executable) ensureRuntimeAgent(db, step.agent ?? defaultRuntime);
-  }
+  for (const step of executableSteps(plan)) ensureRuntimeAgent(db, step.agent ?? defaultRuntime);
   ensureRuntimeAgent(db, defaultRuntime);
   const issueId = existingIssue?.id ?? insertAdHocIssue(db, projectId, request);
 

@@ -20,22 +20,10 @@ import {
   CandidateRuntimeActivity,
 } from "@web/components/runs/compete/candidate-runtime-evidence";
 import { CandidateTestEvidence } from "@web/components/runs/compete/candidate-test-evidence";
+import { EvidenceSection } from "@web/components/runs/compete/evidence-section";
 import { collectTestEvidence } from "@web/components/runs/compete/test-evidence";
-import { useState } from "react";
-
-function candidateEvents(
-  detail: RunDetail,
-  stepId: string,
-  events: readonly EventEnvelope[],
-): EventEnvelope[] {
-  const sessionIds = new Set<string>();
-  for (const session of detail.sessions) {
-    if (session.step_run_id === stepId) sessionIds.add(session.id);
-  }
-  return events.filter(
-    (event) => event.step_run_id === stepId || sessionIds.has(event.agent_session_id ?? ""),
-  );
-}
+import { eventsForStep } from "@web/lib/run-plan";
+import { useMemo, useState } from "react";
 
 function CandidateDiffEvidence({
   runId,
@@ -109,8 +97,11 @@ function CandidateEvidence({
   onMark: () => void;
 }) {
   const session = detail.sessions.find((entry) => entry.step_run_id === candidate.id);
-  const evidence = candidateEvents(detail, candidate.id, events);
-  const tests = collectTestEvidence(evidence);
+  const evidence = useMemo(
+    () => eventsForStep(detail, candidate.id, events),
+    [detail, candidate.id, events],
+  );
+  const tests = useMemo(() => collectTestEvidence(evidence), [evidence]);
   const canWin = candidate.status === "succeeded" && group.status === "awaiting_selection";
 
   return (
@@ -147,12 +138,9 @@ function CandidateEvidence({
           </dd>
         </dl>
 
-        <section>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-tertiary">
-            Git changes
-          </p>
+        <EvidenceSection label="Git changes">
           <CandidateDiffEvidence runId={detail.run.id} groupId={group.id} stepId={candidate.id} />
-        </section>
+        </EvidenceSection>
 
         <CandidateTestEvidence tests={tests} />
 

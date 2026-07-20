@@ -8,49 +8,41 @@ import {
 } from "./limits.js";
 import { topologicalStepOrder } from "./schedule.js";
 
+const planNodeIdSchema = z
+  .string()
+  .regex(RUN_PLAN_STEP_ID_PATTERN, "Step ids are lowercase alphanumerics and dashes, 64 chars max");
+const planNodeNameSchema = z.string().trim().min(1).max(RUN_PLAN_STEP_NAME_MAX_LENGTH);
+const planNodePromptSchema = z.string().trim().min(1).max(RUN_PLAN_STEP_PROMPT_MAX_LENGTH);
+const planDependenciesSchema = z.array(z.string()).max(RUN_PLAN_MAX_STEPS - 1);
+
 export const runPlanStepInputSchema = z
   .object({
-    id: z
-      .string()
-      .regex(
-        RUN_PLAN_STEP_ID_PATTERN,
-        "Step ids are lowercase alphanumerics and dashes, 64 chars max",
-      ),
-    name: z.string().trim().min(1).max(RUN_PLAN_STEP_NAME_MAX_LENGTH),
+    id: planNodeIdSchema,
+    name: planNodeNameSchema,
     /** Runtime adapter id for this step; null inherits the run's default runtime. */
     agent: z.string().min(1).nullable(),
-    prompt: z.string().trim().min(1).max(RUN_PLAN_STEP_PROMPT_MAX_LENGTH),
-    depends_on: z.array(z.string()).max(RUN_PLAN_MAX_STEPS - 1),
+    prompt: planNodePromptSchema,
+    depends_on: planDependenciesSchema,
   })
   .strict();
 export type RunPlanStepInput = z.infer<typeof runPlanStepInputSchema>;
 
 export const runPlanCompetitorInputSchema = z
   .object({
-    id: z
-      .string()
-      .regex(
-        RUN_PLAN_STEP_ID_PATTERN,
-        "Step ids are lowercase alphanumerics and dashes, 64 chars max",
-      ),
-    name: z.string().trim().min(1).max(RUN_PLAN_STEP_NAME_MAX_LENGTH),
+    id: planNodeIdSchema,
+    name: planNodeNameSchema,
     agent: z.string().min(1).nullable(),
-    prompt: z.string().trim().min(1).max(RUN_PLAN_STEP_PROMPT_MAX_LENGTH),
+    prompt: planNodePromptSchema,
   })
   .strict();
 export type RunPlanCompetitorInput = z.infer<typeof runPlanCompetitorInputSchema>;
 
 export const runPlanCompeteGroupInputSchema = z
   .object({
-    id: z
-      .string()
-      .regex(
-        RUN_PLAN_STEP_ID_PATTERN,
-        "Step ids are lowercase alphanumerics and dashes, 64 chars max",
-      ),
+    id: planNodeIdSchema,
     /** Shared objective pursued by every competitor. */
-    name: z.string().trim().min(1).max(RUN_PLAN_STEP_NAME_MAX_LENGTH),
-    depends_on: z.array(z.string()).max(RUN_PLAN_MAX_STEPS - 1),
+    name: planNodeNameSchema,
+    depends_on: planDependenciesSchema,
     compete: z
       .array(runPlanCompetitorInputSchema)
       .min(2, "Compete groups require at least two competitors")
@@ -82,15 +74,7 @@ function checkPlanIds(
   const competitorGroups = new Map<string, string>();
   let sound = true;
   steps.forEach((step, index) => {
-    if (nodeIds.has(step.id)) {
-      sound = false;
-      ctx.addIssue({
-        code: "custom",
-        path: ["steps", index, "id"],
-        message: `Duplicate step id "${step.id}"`,
-      });
-    }
-    if (allIds.has(step.id) && !nodeIds.has(step.id)) {
+    if (allIds.has(step.id)) {
       sound = false;
       ctx.addIssue({
         code: "custom",

@@ -111,6 +111,15 @@ describe("runPlanInputSchema", () => {
     expect(messages).toContain('Duplicate plan id "implementation-claude"');
   });
 
+  it("rejects a node id that collides with an earlier competitor id", () => {
+    const messages = issuesOf({
+      version: 1,
+      steps: [compete("implementation"), step("implementation-claude")],
+    });
+
+    expect(messages).toContain('Duplicate plan id "implementation-claude"');
+  });
+
   it("counts competitors against the executable-step limit", () => {
     const group = compete("implementation");
     const oversized = {
@@ -160,7 +169,7 @@ describe("runPlanInputSchema", () => {
 
   it("rejects duplicate step ids", () => {
     const messages = issuesOf({ version: 1, steps: [step("dup"), step("dup")] });
-    expect(messages).toContain('Duplicate step id "dup"');
+    expect(messages).toContain('Duplicate plan id "dup"');
   });
 
   it("rejects unknown dependencies", () => {

@@ -3,13 +3,14 @@ import { Button, Field, FieldControl, Icon, IconButton, Input, Textarea } from "
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import {
   addWorkflowCompetitor,
+  competitorLabel,
   moveWorkflowStep,
   removeWorkflowCompetitor,
   removeWorkflowStep,
   toggleWorkflowDependency,
   updateWorkflowCompetitor,
   workflowExecutableCount,
-  type WorkflowStepDraft,
+  type WorkflowNodeDraft,
 } from "@web/lib/workflow-plan";
 
 import type { WorkflowForm } from "./use-workflow-form";
@@ -17,10 +18,10 @@ import { DependencyToggles, StepRuntimeSelect } from "./workflow-step-card";
 
 export interface WorkflowCompeteCardProps {
   form: WorkflowForm;
-  steps: WorkflowStepDraft[];
+  steps: WorkflowNodeDraft[];
   index: number;
   descriptors: RuntimeDescriptor[];
-  onUpdateSteps: (update: (steps: WorkflowStepDraft[]) => WorkflowStepDraft[]) => void;
+  onUpdateSteps: (update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) => void;
 }
 
 export function WorkflowCompeteCard({
@@ -95,7 +96,7 @@ export function WorkflowCompeteCard({
           >
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-iris-text">
-                Candidate {String.fromCharCode(65 + competitorIndex)}
+                {competitorLabel(competitorIndex)}
               </span>
               <form.Field
                 name={`steps[${index}].competitors[${competitorIndex}].name`}
@@ -109,7 +110,7 @@ export function WorkflowCompeteCard({
                         onBlur={field.handleBlur}
                         onChange={(event) => field.handleChange(event.target.value)}
                         placeholder="Approach name"
-                        aria-label={`Candidate ${competitorIndex + 1} name`}
+                        aria-label={`${competitorLabel(competitorIndex)} name`}
                         className="h-7 text-sm"
                       />
                     </FieldControl>
@@ -130,7 +131,7 @@ export function WorkflowCompeteCard({
               <IconButton
                 type="button"
                 size="sm"
-                label={`Remove candidate ${competitorIndex + 1}`}
+                label={`Remove ${competitorLabel(competitorIndex)}`}
                 icon={<Icon name="x" aria-hidden />}
                 disabled={group.competitors.length <= 2}
                 onClick={() =>
@@ -151,7 +152,7 @@ export function WorkflowCompeteCard({
                       onBlur={field.handleBlur}
                       onChange={(event) => field.handleChange(event.target.value)}
                       placeholder="Prompt for this candidate"
-                      aria-label={`Candidate ${competitorIndex + 1} prompt`}
+                      aria-label={`${competitorLabel(competitorIndex)} prompt`}
                     />
                   </FieldControl>
                 </Field>

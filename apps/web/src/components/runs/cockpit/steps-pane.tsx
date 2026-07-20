@@ -1,4 +1,9 @@
-import { isRunPlanCompeteGroup, type RunDetail, type StepRunContract } from "@otomat/domain";
+import {
+  isRunPlanCompeteGroup,
+  type RunDetail,
+  type RunPlanCompeteGroup,
+  type StepRunContract,
+} from "@otomat/domain";
 import { AgentAvatar, Badge, cn, Icon, LiveDot, resolveStatus, TONE_TEXT } from "@otomat/ui";
 import { PaneHeader } from "@web/components/runs/pane-header";
 import { stepDependencyNames } from "@web/lib/run-plan";
@@ -63,6 +68,67 @@ function StepRow({
   );
 }
 
+function DependencyNote({ names, className }: { names: string[]; className: string }) {
+  if (names.length === 0) return null;
+  return <p className={className}>after {names.join(", ")}</p>;
+}
+
+function CompeteGroupRow({
+  detail,
+  node,
+  number,
+  dependencies,
+}: {
+  detail: RunDetail;
+  node: RunPlanCompeteGroup;
+  number?: number;
+  dependencies: string[];
+}) {
+  const group = detail.compete_groups.find((entry) => entry.id === node.id);
+  if (!group) return null;
+  const groupMeta = resolveStatus("compete", group.status);
+  return (
+    <div className="border-b border-border-subtle px-3.5 py-2 last:border-b-0">
+      <div className="flex items-center gap-2 text-sm">
+        {number ? (
+          <span className="w-3.5 text-right text-xs font-semibold text-text-tertiary">
+            {number}
+          </span>
+        ) : null}
+        <LiveDot tone={groupMeta.tone} live={groupMeta.live} size={7} />
+        <Icon name="git-compare" aria-hidden className="h-3.5 w-3.5 text-iris-text" />
+        <span className="truncate font-semibold text-foreground">{group.name}</span>
+        <span className={`ml-auto text-xs lowercase ${TONE_TEXT[groupMeta.tone]}`}>
+          {groupMeta.label}
+        </span>
+      </div>
+      <DependencyNote
+        names={dependencies}
+        className="mt-0.5 ml-5.5 truncate text-xs text-text-tertiary"
+      />
+      <div className="mt-1">
+        {node.compete.map((candidate) => {
+          const step = detail.steps.find((entry) => entry.id === candidate.id);
+          return step ? (
+            <StepRow
+              key={step.id}
+              detail={detail}
+              step={step}
+              nested
+              winner={group.winner_step_run_id === step.id}
+            />
+          ) : null;
+        })}
+      </div>
+      {group.status === "awaiting_selection" ? (
+        <p className="mt-1.5 rounded bg-warning-bg px-2 py-1.5 text-[10px] leading-4 text-warning">
+          Dependent steps wait for the winner.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function StepsPane({ detail }: { detail: RunDetail }) {
   const multiNode = detail.run.plan_json.steps.length > 1;
   return (
@@ -71,70 +137,27 @@ export function StepsPane({ detail }: { detail: RunDetail }) {
       <div className="py-1.5">
         {detail.run.plan_json.steps.map((node, nodeIndex) => {
           const dependencies = stepDependencyNames(detail.run.plan_json, node.id);
-          if (!isRunPlanCompeteGroup(node)) {
-            const step = detail.steps.find((entry) => entry.id === node.id);
-            if (!step) return null;
+          const number = multiNode ? nodeIndex + 1 : undefined;
+          if (isRunPlanCompeteGroup(node)) {
             return (
-              <div key={node.id} className="border-b border-border-subtle last:border-b-0">
-                <StepRow
-                  detail={detail}
-                  step={step}
-                  number={multiNode ? nodeIndex + 1 : undefined}
-                />
-                {dependencies.length > 0 ? (
-                  <p className="mb-2 ml-9 truncate text-xs text-text-tertiary">
-                    after {dependencies.join(", ")}
-                  </p>
-                ) : null}
-              </div>
+              <CompeteGroupRow
+                key={node.id}
+                detail={detail}
+                node={node}
+                number={number}
+                dependencies={dependencies}
+              />
             );
           }
-
-          const group = detail.compete_groups.find((entry) => entry.id === node.id);
-          if (!group) return null;
-          const groupMeta = resolveStatus("compete", group.status);
+          const step = detail.steps.find((entry) => entry.id === node.id);
+          if (!step) return null;
           return (
-            <div
-              key={node.id}
-              className="border-b border-border-subtle px-3.5 py-2 last:border-b-0"
-            >
-              <div className="flex items-center gap-2 text-sm">
-                {multiNode ? (
-                  <span className="w-3.5 text-right text-xs font-semibold text-text-tertiary">
-                    {nodeIndex + 1}
-                  </span>
-                ) : null}
-                <LiveDot tone={groupMeta.tone} live={groupMeta.live} size={7} />
-                <Icon name="git-compare" aria-hidden className="h-3.5 w-3.5 text-iris-text" />
-                <span className="truncate font-semibold text-foreground">{group.name}</span>
-                <span className={`ml-auto text-xs lowercase ${TONE_TEXT[groupMeta.tone]}`}>
-                  {groupMeta.label}
-                </span>
-              </div>
-              {dependencies.length > 0 ? (
-                <p className="mt-0.5 ml-5.5 truncate text-xs text-text-tertiary">
-                  after {dependencies.join(", ")}
-                </p>
-              ) : null}
-              <div className="mt-1">
-                {node.compete.map((candidate) => {
-                  const step = detail.steps.find((entry) => entry.id === candidate.id);
-                  return step ? (
-                    <StepRow
-                      key={step.id}
-                      detail={detail}
-                      step={step}
-                      nested
-                      winner={group.winner_step_run_id === step.id}
-                    />
-                  ) : null;
-                })}
-              </div>
-              {group.status === "awaiting_selection" ? (
-                <p className="mt-1.5 rounded bg-warning-bg px-2 py-1.5 text-[10px] leading-4 text-warning">
-                  Dependent steps wait for the winner.
-                </p>
-              ) : null}
+            <div key={node.id} className="border-b border-border-subtle last:border-b-0">
+              <StepRow detail={detail} step={step} number={number} />
+              <DependencyNote
+                names={dependencies}
+                className="mb-2 ml-9 truncate text-xs text-text-tertiary"
+              />
             </div>
           );
         })}

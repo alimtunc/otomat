@@ -13,7 +13,7 @@ export class EventStreamConflictError extends Error {
   }
 }
 
-export function getEventStream(db: Db, id: string): EventStreamRow | undefined {
+function getEventStream(db: Db, id: string): EventStreamRow | undefined {
   return db.select().from(eventStreams).where(eq(eventStreams.id, id)).get();
 }
 

@@ -132,7 +132,7 @@ export async function spawnTurn(
     });
     recordAgentSessionProcess(db, ctx.agentSessionId, { pid: proc.pid, pgid: proc.pgid });
     // Stamp the process identity next to its pid so a later boot proves the group is still ours before killing it.
-    if (!(await waitForWorkerIdentity(ctx.runDir, proc.pid, proc.pgid))) {
+    if (!(await waitForWorkerIdentity(ctx.agentSessionDir, proc.pid, proc.pgid))) {
       throw new Error(`worker ${proc.pid} exited before its identity could be recorded`);
     }
     const readyRun = getRun(db, ctx.runId);

@@ -14,7 +14,7 @@ export interface ApiDeps {
   resumeRun(runId: string): Promise<RunRow>;
   fixRun(runId: string, prompt: string): Promise<RunRow>;
   followUpRun(runId: string, prompt: string): Promise<RunRow>;
-  selectCompeteWinner(runId: string, groupId: string, stepRunId: string): Promise<RunRow>;
+  selectCompeteWinner(runId: string, groupId: string, stepRunId: string): Promise<void>;
   abortRun(runId: string): Promise<void>;
   github: GitHubService;
   review: ReviewService;

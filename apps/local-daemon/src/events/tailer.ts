@@ -4,7 +4,7 @@ import { ensureEventStream, type Db } from "@otomat/db";
 
 import { runtimeEventSchema, type RuntimeEvent } from "#runtime";
 
-import { appendEventStreamBatch, applyLedgerPragmas, nextSeqForRun } from "./ledger.js";
+import { appendEventStreamBatch, applyLedgerPragmas } from "./ledger.js";
 import { readCompleteLinesFrom } from "./tail-source.js";
 
 export interface EventTailerOptions {
@@ -22,8 +22,6 @@ export interface TailTickResult {
   ingested: number;
   /** Bytes of `events.jsonl` consumed so far. */
   byteOffset: number;
-  /** Next unused per-run `seq`. */
-  nextSeq: number;
 }
 
 /**
@@ -41,7 +39,6 @@ export class EventTailer {
   private readonly streamId: string;
   private readonly filePath: string;
   private byteOffset = 0;
-  private nextSeq = 0;
   private seeded = false;
   private timer: ReturnType<typeof setInterval> | null = null;
 
@@ -86,8 +83,7 @@ export class EventTailer {
       events,
     });
     this.byteOffset += consumedBytes;
-    this.nextSeq = appended.nextSeq;
-    return { ingested: appended.inserted, byteOffset: this.byteOffset, nextSeq: this.nextSeq };
+    return { ingested: appended.inserted, byteOffset: this.byteOffset };
   }
 
   /** Ticks until the file yields no further complete line. Returns the totals across the drain. */
@@ -97,7 +93,7 @@ export class EventTailer {
       const before = this.byteOffset;
       ingested += this.tick().ingested;
       if (this.byteOffset === before) {
-        return { ingested, byteOffset: this.byteOffset, nextSeq: this.nextSeq };
+        return { ingested, byteOffset: this.byteOffset };
       }
     }
   }
@@ -131,13 +127,12 @@ export class EventTailer {
       run_id: this.runId,
       file_path: this.filePath,
     });
-    this.nextSeq = nextSeqForRun(this.db, this.runId);
     this.byteOffset = stream.byte_offset;
     this.seeded = true;
   }
 
   private idle(): TailTickResult {
-    return { ingested: 0, byteOffset: this.byteOffset, nextSeq: this.nextSeq };
+    return { ingested: 0, byteOffset: this.byteOffset };
   }
 }
 

@@ -5,7 +5,6 @@ import {
   allStepsSucceeded,
   hasActiveStep,
   InvalidRunPlanError,
-  nextReadyStep,
   planExecutionOrder,
   planOutcome,
   readyPlanWork,
@@ -27,6 +26,11 @@ function plan(steps: Array<{ id: string; depends_on?: string[] }>): RunPlan {
 
 function statuses(entries: Record<string, StepRunState>): Map<string, StepRunState> {
   return new Map(Object.entries(entries));
+}
+
+function readyStep(target: RunPlan, entries: Record<string, StepRunState>) {
+  const ready = readyPlanWork(target, statuses(entries), new Map());
+  return ready?.kind === "step" ? ready.step : null;
 }
 
 const diamond = plan([
@@ -89,22 +93,20 @@ describe("planExecutionOrder", () => {
   });
 });
 
-describe("nextReadyStep", () => {
+describe("readyPlanWork over plain steps", () => {
   it("starts with the first dependency-free step", () => {
-    expect(nextReadyStep(diamond, statuses({}))?.id).toBe("root");
+    expect(readyStep(diamond, {})?.id).toBe("root");
   });
 
   it("unblocks dependents only after every dependency succeeded", () => {
-    expect(nextReadyStep(diamond, statuses({ root: "succeeded", left: "succeeded" }))?.id).toBe(
-      "right",
-    );
+    expect(readyStep(diamond, { root: "succeeded", left: "succeeded" })?.id).toBe("right");
     expect(
-      nextReadyStep(diamond, statuses({ root: "succeeded", left: "succeeded", right: "running" })),
+      readyStep(diamond, { root: "succeeded", left: "succeeded", right: "running" }),
     ).toBeNull();
   });
 
   it("never offers a step whose dependency halted", () => {
-    expect(nextReadyStep(diamond, statuses({ root: "failed" }))).toBeNull();
+    expect(readyStep(diamond, { root: "failed" })).toBeNull();
   });
 });
 

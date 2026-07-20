@@ -5,7 +5,7 @@ import {
   buildRunPlanInput,
   newWorkflowCompeteGroup,
   newWorkflowStep,
-  type WorkflowStepDraft,
+  type WorkflowNodeDraft,
 } from "@web/lib/workflow-plan";
 import { useRef, useState } from "react";
 
@@ -21,8 +21,13 @@ export function useWorkflowForm({ projectId, runtime, onLaunched }: UseWorkflowF
   const stepCounter = useRef(1);
   const [planError, setPlanError] = useState<string | null>(null);
 
+  const defaultValues: { goal: string; steps: WorkflowNodeDraft[] } = {
+    goal: "",
+    steps: [newWorkflowStep(1)],
+  };
+
   const form = useForm({
-    defaultValues: { goal: "", steps: [newWorkflowStep(1)] },
+    defaultValues,
     onSubmit: async ({ value }) => {
       if (runtime === null || projectId === undefined) return;
       const plan = buildRunPlanInput(value.steps);
@@ -45,7 +50,7 @@ export function useWorkflowForm({ projectId, runtime, onLaunched }: UseWorkflowF
     },
   });
 
-  function updateSteps(update: (steps: WorkflowStepDraft[]) => WorkflowStepDraft[]) {
+  function updateSteps(update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) {
     form.setFieldValue("steps", update(form.getFieldValue("steps")));
     setPlanError(null);
   }

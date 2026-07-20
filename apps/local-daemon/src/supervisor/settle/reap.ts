@@ -1,7 +1,7 @@
 import { recordAgentSessionExit, type AgentSessionRow, type Db } from "@otomat/db";
 import { agentSessionMachine } from "@otomat/domain";
 
-import { runDir, sessionDir } from "#events";
+import { sessionDir } from "#events";
 
 import { isReapableWorker } from "../identity.js";
 import { isProcessAlive, killProcessGroup } from "../process.js";
@@ -33,21 +33,16 @@ export function reapProcesses(
     if (!isProcessAlive(session.pid)) continue;
     // The pid is alive — but after a long downtime the OS may have reused it. Only signal when the
     // process identity still proves it is our worker; otherwise leave it and settle from the ledger.
-    const currentSessionDir = sessionDir(dataDir, runId, session.id);
-    const legacyRunDir = runDir(dataDir, runId);
-    if (
-      isReapableWorker(currentSessionDir, session.pid) ||
-      isReapableWorker(legacyRunDir, session.pid)
-    ) {
-      killProcessGroup(session.pgid ?? session.pid, "SIGKILL");
-      recordAgentSessionExit(db, session.id, { exit_code: null, exit_signal: "SIGKILL" });
-      orphanTerminated = true;
-    } else {
+    if (!isReapableWorker(sessionDir(dataDir, runId, session.id), session.pid)) {
       console.error(
         `[otomat] session ${session.id}: pid ${session.pid} is alive but its identity is unproven ` +
           `(possible pid reuse); not signalling — settling from ledger evidence`,
       );
+      continue;
     }
+    killProcessGroup(session.pgid ?? session.pid, "SIGKILL");
+    recordAgentSessionExit(db, session.id, { exit_code: null, exit_signal: "SIGKILL" });
+    orphanTerminated = true;
   }
   return orphanTerminated;
 }

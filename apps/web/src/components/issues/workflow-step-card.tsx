@@ -21,7 +21,7 @@ import {
   removeWorkflowStep,
   setWorkflowStepRuntime,
   toggleWorkflowDependency,
-  type WorkflowStepDraft,
+  type WorkflowNodeDraft,
 } from "@web/lib/workflow-plan";
 
 import type { WorkflowForm } from "./use-workflow-form";
@@ -72,7 +72,7 @@ export function DependencyToggles({
   dependsOn,
   onToggle,
 }: {
-  earlier: WorkflowStepDraft[];
+  earlier: WorkflowNodeDraft[];
   dependsOn: string[];
   onToggle: (key: string) => void;
 }) {
@@ -106,10 +106,10 @@ export function DependencyToggles({
 
 export interface WorkflowStepCardProps {
   form: WorkflowForm;
-  steps: WorkflowStepDraft[];
+  steps: WorkflowNodeDraft[];
   index: number;
   descriptors: RuntimeDescriptor[];
-  onUpdateSteps: (update: (steps: WorkflowStepDraft[]) => WorkflowStepDraft[]) => void;
+  onUpdateSteps: (update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) => void;
 }
 
 export function WorkflowStepCard({

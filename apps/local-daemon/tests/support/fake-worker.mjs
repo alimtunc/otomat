@@ -5,11 +5,11 @@ import { dirname, join } from "node:path";
 const job = JSON.parse(process.env.OTOMAT_WORKER_JOB);
 const behavior = process.env.FAKE_WORKER_BEHAVIOR ?? "complete";
 const startToken = process.env.OTOMAT_WORKER_START_TOKEN;
-const file = join(job.runDir, "events.jsonl");
+const file = join(job.agentSessionDir, "events.jsonl");
 mkdirSync(dirname(file), { recursive: true });
 
 if (!startToken) throw new Error("missing fake worker start token");
-const startGate = join(job.runDir, `.worker-start-${startToken}`);
+const startGate = join(job.agentSessionDir, `.worker-start-${startToken}`);
 const deadline = Date.now() + 30_000;
 while (!existsSync(startGate) && Date.now() < deadline) {
   await new Promise((resolve) => setTimeout(resolve, 10));
@@ -17,7 +17,7 @@ while (!existsSync(startGate) && Date.now() < deadline) {
 if (!existsSync(startGate)) process.exit(1);
 unlinkSync(startGate);
 
-const provider = `fake-session-${job.runId}`;
+const provider = `fake-session-${job.agentSessionId}`;
 let n = 0;
 
 function emit(type, source, payload) {

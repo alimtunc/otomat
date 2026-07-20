@@ -20,7 +20,7 @@ const supervisedJobSchema = z.object({
   stepRunId: z.string(),
   agentSessionId: z.string(),
   prompt: z.string(),
-  runDir: z.string(),
+  agentSessionDir: z.string(),
   worktreePath: z.string().nullable(),
   runtime: z.custom<KnownRuntimeId>(
     (value) => typeof value === "string" && isKnownRuntimeId(value),
@@ -48,7 +48,7 @@ export async function runWorkerJob(
 ): Promise<RuntimeFinalState> {
   const adapter = createRuntimeAdapter(job.runtime);
   // The worker owns durability: every event lands in the run's events.jsonl for the tailer/reconciliation.
-  const sink = new JsonlEventSink(join(job.runDir, EVENTS_FILENAME));
+  const sink = new JsonlEventSink(join(job.agentSessionDir, EVENTS_FILENAME));
   try {
     if (job.mode === "resume") {
       if (!adapter.resume) {
@@ -67,7 +67,7 @@ export async function runWorkerJob(
           agent_session_id: job.agentSessionId,
           provider_session_id: job.providerSessionId,
         },
-        { prompt: job.prompt, run_dir: job.runDir, cwd: job.worktreePath },
+        { prompt: job.prompt, run_dir: job.agentSessionDir, cwd: job.worktreePath },
         sink,
         signal,
       );
@@ -78,7 +78,7 @@ export async function runWorkerJob(
         step_run_id: job.stepRunId,
         agent_session_id: job.agentSessionId,
         prompt: job.prompt,
-        run_dir: job.runDir,
+        run_dir: job.agentSessionDir,
         cwd: job.worktreePath,
       },
       sink,
@@ -102,7 +102,7 @@ export function writeTerminalMarker(
     final.event_count,
     occurredAt,
   );
-  const sink = new JsonlEventSink(join(job.runDir, EVENTS_FILENAME));
+  const sink = new JsonlEventSink(join(job.agentSessionDir, EVENTS_FILENAME));
   try {
     sink.emit(marker);
   } finally {
@@ -127,7 +127,7 @@ export async function runWorkerMain(env: NodeJS.ProcessEnv = process.env): Promi
   try {
     const startToken = env[WORKER_START_TOKEN_ENV];
     if (!startToken) throw new Error("worker start token is missing");
-    if (!(await waitForWorkerStart(job.runDir, startToken, controller.signal))) {
+    if (!(await waitForWorkerStart(job.agentSessionDir, startToken, controller.signal))) {
       throw new Error("worker was not released before startup timed out");
     }
     const final = await runWorkerJob(job, controller.signal);

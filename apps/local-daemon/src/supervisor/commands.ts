@@ -10,6 +10,7 @@ import {
   type StepRunRow,
 } from "@otomat/db";
 import {
+  executableSteps,
   isRunPlanCompeteGroup,
   RUN_FOLLOW_UP_STATES,
   type RunState,
@@ -60,9 +61,7 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
 
   if (interrupted) {
     const prompt =
-      run.plan_json.steps
-        .flatMap((node) => ("compete" in node ? node.compete : [node]))
-        .find((step) => step.id === interrupted.id)?.prompt ?? null;
+      executableSteps(run.plan_json).find((step) => step.id === interrupted.id)?.prompt ?? null;
     if (prompt === null) throw new Error(`run ${runId} has no plan step to resume`);
     return spawnFollowUpTurn(state, run, prompt);
   }
@@ -73,8 +72,9 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
   const lastNode = run.plan_json.steps.at(-1);
   let lastPrompt: string | null = null;
   if (lastNode) {
-    lastPrompt =
-      "compete" in lastNode ? (lastNode.compete.at(-1)?.prompt ?? null) : lastNode.prompt;
+    lastPrompt = isRunPlanCompeteGroup(lastNode)
+      ? (lastNode.compete.at(-1)?.prompt ?? null)
+      : lastNode.prompt;
   }
   if (lastPrompt === null) throw new RunNotResumableError(`run ${runId} has no step to resume`);
   return spawnFollowUpTurn(state, run, lastPrompt);
@@ -90,9 +90,7 @@ async function resumeCompeteGroup(
     (step) => step.compete_group_id === group.id && step.status === "awaiting_human",
   );
   const sessions = listAgentSessionsForRun(state.db, run.id);
-  const planSteps = run.plan_json.steps.flatMap((node) =>
-    "compete" in node ? node.compete : [node],
-  );
+  const planSteps = executableSteps(run.plan_json);
   const service = state.repositories.forRepository(run.repository_id)?.service;
   if (!service) {
     throw new RunNotResumableError(`compete group ${group.id} repository is unavailable`);
@@ -106,18 +104,7 @@ async function resumeCompeteGroup(
       if (!session || session.provider_session_id === null || !planStep?.prompt) {
         throw new RunNotResumableError(`competitor ${candidate.id} has no resumable session`);
       }
-      const runtime = session.agent_id ?? runtimeForRun(state.db, run);
-      if (runtime === undefined || !isKnownRuntimeId(runtime)) {
-        throw new RunNotResumableError(
-          `run ${run.id} runtime "${runtime}" does not support resume`,
-        );
-      }
-      const knownRuntime: KnownRuntimeId = runtime;
-      if (!createRuntimeAdapter(knownRuntime).capabilities.resume) {
-        throw new RunNotResumableError(
-          `run ${run.id} runtime "${runtime}" does not support resume`,
-        );
-      }
+      const knownRuntime = requireResumableRuntime(state.db, run, session);
       const worktreePath = service.get(candidate.id)?.path;
       if (!worktreePath) {
         throw new RunNotResumableError(`competitor ${candidate.id} worktree is unavailable`);
@@ -128,7 +115,7 @@ async function resumeCompeteGroup(
           stepRunId: candidate.id,
           agentSessionId: session.id,
           prompt: planStep.prompt,
-          runDir: sessionDir(state.dataDir, run.id, session.id),
+          agentSessionDir: sessionDir(state.dataDir, run.id, session.id),
           worktreePath,
           runtime: knownRuntime,
         },
@@ -165,6 +152,19 @@ export async function followUpRun(
 ): Promise<RunRow> {
   const run = requireFollowUpableRun(state, runId, RUN_FOLLOW_UP_STATES);
   return spawnFollowUpTurn(state, run, prompt);
+}
+
+/** The known runtime a resume must reuse; an unknown one or one without `resume` is a caller conflict. */
+function requireResumableRuntime(db: Db, run: RunRow, session: AgentSessionRow): KnownRuntimeId {
+  const runtime = session.agent_id ?? runtimeForRun(db, run);
+  if (
+    runtime === undefined ||
+    !isKnownRuntimeId(runtime) ||
+    !createRuntimeAdapter(runtime).capabilities.resume
+  ) {
+    throw new RunNotResumableError(`run ${run.id} runtime "${runtime}" does not support resume`);
+  }
+  return runtime;
 }
 
 function requireRunRow(db: Db, runId: string, when: "spawn" | "resume"): RunRow {
@@ -205,14 +205,7 @@ async function spawnFollowUpTurn(
   const session = pickResumableSession(listAgentSessionsForRun(db, runId), steps, winnerStepIds);
   if (!session) throw new RunNotResumableError(`run ${runId} has no provider session to resume`);
 
-  const runtime = session.agent_id ?? runtimeForRun(db, run);
-  if (
-    runtime === undefined ||
-    !isKnownRuntimeId(runtime) ||
-    !createRuntimeAdapter(runtime).capabilities.resume
-  ) {
-    throw new RunNotResumableError(`run ${runId} runtime "${runtime}" does not support resume`);
-  }
+  const runtime = requireResumableRuntime(db, run, session);
   const worktreePath =
     state.repositories.forRepository(run.repository_id)?.service.get(runId)?.path ?? null;
   if (worktreePath === null && run.plan_json.steps.some(isRunPlanCompeteGroup)) {
@@ -226,7 +219,7 @@ async function spawnFollowUpTurn(
       stepRunId: session.step_run_id,
       agentSessionId: session.id,
       prompt,
-      runDir: sessionDir(state.dataDir, runId, session.id),
+      agentSessionDir: sessionDir(state.dataDir, runId, session.id),
       worktreePath,
       runtime,
     },

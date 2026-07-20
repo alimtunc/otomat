@@ -126,6 +126,7 @@ export const competeGroups = sqliteTable(
     idx: integer("idx").notNull(),
     name: text("name").notNull(),
     status: text("status").$type<CompeteGroupState>().notNull().default("queued"),
+    // Cycle with step_runs.compete_group_id: no FK here; claimCompeteWinner validates the candidate.
     winner_step_run_id: text("winner_step_run_id"),
     base_head_sha: text("base_head_sha"),
     ...timestamps,

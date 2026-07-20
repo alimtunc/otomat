@@ -9,7 +9,7 @@ import {
 import { driveIdleRunTo } from "../transitions.js";
 import type { ReconcileClassification, ReconcileOutcome } from "../types.js";
 import { competeGroupStatuses, stepStatuses, type SettleContext } from "./context.js";
-import { emitReconciled } from "./ledger.js";
+import { recordReconciled } from "./ledger.js";
 
 /** No open session (daemon died between steps): progression rebuilds from step rows — finished steps never replay, a startable plan rests at `awaiting_human`. */
 export function settleIdleRun(ctx: SettleContext, plan: RunPlan): ReconcileOutcome {
@@ -50,18 +50,11 @@ export function settleIdleRun(ctx: SettleContext, plan: RunPlan): ReconcileOutco
 
   driveIdleRunTo(ctx.db, ctx.run, target, cancelRemaining ? ctx.steps : [], ctx.options.now);
 
-  emitReconciled(ctx, {
+  return recordReconciled(ctx, {
     ref: { runId: ctx.run.id, stepRunId: null, agentSessionId: null },
     classification,
     reason,
     providerSessionId: null,
     orphanTerminated: ctx.orphanTerminated,
   });
-  return {
-    runId: ctx.run.id,
-    classification,
-    reason,
-    orphanTerminated: ctx.orphanTerminated,
-    providerSessionId: null,
-  };
 }

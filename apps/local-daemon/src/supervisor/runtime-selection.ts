@@ -1,5 +1,5 @@
 import { getAgent, upsertAgent, type Db, type RunRow } from "@otomat/db";
-import { FAKE_RUNTIME_ID, isRunPlanCompeteGroup } from "@otomat/domain";
+import { executableSteps, FAKE_RUNTIME_ID } from "@otomat/domain";
 
 import {
   createRuntimeAdapter,
@@ -38,10 +38,5 @@ export function ensureRuntimeAgent(
 /** The runtime a follow-up turn must reuse: the run's agent row first, else its frozen plan; undefined only on a corrupt row, which the resume guard rejects. */
 export function runtimeForRun(db: Db, run: RunRow): string | undefined {
   const fromAgent = run.agent_id === null ? undefined : getAgent(db, run.agent_id)?.runtime;
-  const firstNode = run.plan_json.steps[0];
-  let fromPlan: string | null | undefined;
-  if (firstNode) {
-    fromPlan = isRunPlanCompeteGroup(firstNode) ? firstNode.compete[0]?.agent : firstNode.agent;
-  }
-  return fromAgent ?? fromPlan ?? undefined;
+  return fromAgent ?? executableSteps(run.plan_json)[0]?.agent ?? undefined;
 }
