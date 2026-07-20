@@ -4,6 +4,7 @@ import {
   ProjectSwitcher,
   SidebarDaemonStatus,
   SidebarNavItem,
+  useSidebarCollapsed,
   type ProjectSummary,
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
@@ -58,25 +59,50 @@ export function Sidebar({
   hasLiveRun = false,
   reviewCount = 0,
 }: SidebarProps) {
+  const collapsed = useSidebarCollapsed();
   const projectSwitcher = (
-    <ProjectSwitcher projects={projects} currentId={currentProjectId} onSelect={onProjectSelect} />
+    <ProjectSwitcher
+      projects={projects}
+      currentId={currentProjectId}
+      onSelect={onProjectSelect}
+      collapsed={collapsed}
+    />
   );
   const footer = (
-    <SidebarDaemonStatus online={online} version={daemonVersion && `v${daemonVersion}`} />
+    <SidebarDaemonStatus
+      online={online}
+      version={daemonVersion && `v${daemonVersion}`}
+      collapsed={collapsed}
+    />
   );
   return (
-    <AppSidebar projectSwitcher={projectSwitcher} footer={footer}>
+    <AppSidebar projectSwitcher={projectSwitcher} footer={footer} collapsed={collapsed}>
       <nav aria-label="Quick actions" className="mt-1 flex flex-col gap-px px-2">
-        <SidebarNavItem icon="search" label="Search" kbd="⌘K" onClick={onSearch} as="button" />
-        <SidebarNavItem icon="plus" label="New issue" kbd="C" onClick={onNewIssue} as="button" />
+        <SidebarNavItem
+          icon="search"
+          label="Search"
+          kbd="⌘K"
+          onClick={onSearch}
+          as="button"
+          collapsed={collapsed}
+        />
+        <SidebarNavItem
+          icon="plus"
+          label="New issue"
+          kbd="C"
+          onClick={onNewIssue}
+          as="button"
+          collapsed={collapsed}
+        />
         <SidebarNavItem
           icon={INBOX_NAV.icon}
           label={INBOX_NAV.label}
           active={active === INBOX_NAV.section}
           render={navRender(INBOX_NAV.to)}
+          collapsed={collapsed}
         />
       </nav>
-      <NavSection label="Workspace">
+      <NavSection label="Workspace" collapsed={collapsed}>
         {WORKSPACE_NAV.map((item) => (
           <SidebarNavItem
             key={item.section}
@@ -86,10 +112,11 @@ export function Sidebar({
             live={item.section === "runs" && hasLiveRun}
             badgeCount={item.section === "reviews" && reviewCount > 0 ? reviewCount : undefined}
             render={navRender(item.to)}
+            collapsed={collapsed}
           />
         ))}
       </NavSection>
-      <NavSection label="Configure">
+      <NavSection label="Configure" collapsed={collapsed}>
         {CONFIGURE_NAV.map((item) => (
           <SidebarNavItem
             key={item.section}
@@ -97,11 +124,17 @@ export function Sidebar({
             label={item.label}
             active={active === item.section}
             render={navRender(item.to)}
+            collapsed={collapsed}
           />
         ))}
       </NavSection>
-      <NavSection label="Reference">
-        <SidebarNavItem icon="layers" label="Design system" href="/gallery.html" />
+      <NavSection label="Reference" collapsed={collapsed}>
+        <SidebarNavItem
+          icon="layers"
+          label="Design system"
+          href="/gallery.html"
+          collapsed={collapsed}
+        />
       </NavSection>
     </AppSidebar>
   );

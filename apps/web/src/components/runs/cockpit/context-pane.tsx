@@ -1,8 +1,9 @@
-import { isRunTerminal, type RunDetail } from "@otomat/domain";
+import type { RunDetail } from "@otomat/domain";
 import { Button, Icon, RunStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useAbortRun, useResumeRun } from "@web/api/runs/mutations";
 import { PaneHeader } from "@web/components/runs/pane-header";
+import { canAbortRun, canResumeRun } from "@web/lib/run-actions";
 
 export function ContextPane({ detail }: { detail: RunDetail }) {
   const runId = detail.run.id;
@@ -10,9 +11,8 @@ export function ContextPane({ detail }: { detail: RunDetail }) {
   const abort = useAbortRun(runId);
   const resume = useResumeRun(runId);
 
-  // Mirrors the daemon's abort guard, minus review_ready: its completed marker is honored, so abort would be a silent no-op.
-  const canAbort = !isRunTerminal(status) && status !== "review_ready";
-  const canResume = status === "awaiting_human";
+  const canAbort = canAbortRun(status);
+  const canResume = canResumeRun(status);
 
   return (
     <div className="min-h-0 min-w-0 overflow-auto border-l border-border-subtle">
