@@ -13,6 +13,8 @@
     "#git/*": "./src/git/*.ts",
     "#github": "./src/github/index.ts",
     "#github/*": "./src/github/*.ts",
+    "#linear": "./src/linear/index.ts",
+    "#linear/*": "./src/linear/*.ts",
     "#review": "./src/review/index.ts",
     "#review/*": "./src/review/*.ts",
     "#runtime": "./src/runtime/index.ts",

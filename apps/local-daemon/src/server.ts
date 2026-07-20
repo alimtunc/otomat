@@ -6,6 +6,12 @@ import { createClient, defaultDbPath, runMigrations } from "@otomat/db";
 import { createApiApp, logApiRoutes } from "#api";
 import { createRepositoryResolver } from "#git";
 import { createGitHubCli, createGitHubService, runCommand } from "#github";
+import {
+  createLinearApiClient,
+  createLinearService,
+  createLinearTransport,
+  takeLinearKeyFromEnv,
+} from "#linear";
 import { createReviewService } from "#review";
 import { createReexecSpawn, createSupervisor } from "#supervisor";
 
@@ -32,6 +38,9 @@ export interface DaemonHandle {
 
 /** The daemon is the single writer: it migrates, bootstraps the project, reconciles crashed runs, then owns the supervisor. */
 export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
+  // Read and erase before anything can spawn a child: every worker inherits
+  // process.env, and the Linear key must never travel that way.
+  const developmentLinearKey = takeLinearKeyFromEnv();
   const dbPath = options.dbPath ?? defaultDbPath();
   runMigrations(dbPath);
   const { db, sqlite } = createClient(dbPath);
@@ -52,6 +61,11 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
     repositories,
     cli: createGitHubCli(runCommand),
   });
+  const linear = createLinearService({
+    db,
+    client: createLinearApiClient(createLinearTransport()),
+  });
+  if (developmentLinearKey !== null) void linear.connect(developmentLinearKey);
 
   const mainScript = process.argv[1];
   if (!mainScript) throw new Error("cannot determine daemon entrypoint for worker re-exec");
@@ -83,6 +97,7 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
     selectCompeteWinner: supervisor.selectWinner,
     abortRun: supervisor.abort,
     github,
+    linear,
     review,
   });
 

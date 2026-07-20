@@ -6,6 +6,7 @@ import type { ApiDeps } from "#api/deps";
 
 import type { TestDb } from "./db.js";
 import { stubGitHubService } from "./github.js";
+import { stubLinearService } from "./linear.js";
 import { stubReviewService } from "./review.js";
 
 /** `app.request` with the loopback Host header the api's host-guard requires. */
@@ -71,6 +72,7 @@ export function makeApiApp(
     },
     abortRun: async () => {},
     github: stubGitHubService(),
+    linear: stubLinearService(),
     review: stubReviewService(),
     ...overrides,
   });
