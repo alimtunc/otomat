@@ -31,7 +31,7 @@ describe("CockpitTabs", () => {
     });
 
     const anchors = [...container.querySelectorAll("a")];
-    expect(anchors.map((anchor) => anchor.textContent)).toEqual(["Timeline", "Diff", "PR"]);
+    expect(anchors.map((anchor) => anchor.textContent)).toEqual(["Timeline", "Logs", "Diff", "PR"]);
     expect(container.querySelectorAll("button")).toHaveLength(0);
     for (const anchor of anchors) {
       expect(anchor.hasAttribute("type")).toBe(false);
