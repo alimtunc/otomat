@@ -29,6 +29,98 @@ export const githubConnectionContractSchema = z.object({
 });
 export type GitHubConnectionContract = z.infer<typeof githubConnectionContractSchema>;
 
+export const LINEAR_CONNECTION_STATES = ["disconnected", "connected", "failed"] as const;
+
+/**
+ * Linear connection state as the daemon knows it. The Personal API key lives in
+ * daemon memory only and is never part of this contract in any direction.
+ */
+export const linearConnectionContractSchema = z.object({
+  status: z.enum(LINEAR_CONNECTION_STATES),
+  workspace_name: z.string().nullable(),
+  workspace_url_key: z.string().nullable(),
+  user_name: z.string().nullable(),
+  error_code: z.string().nullable(),
+  error_message: z.string().nullable(),
+});
+export type LinearConnectionContract = z.infer<typeof linearConnectionContractSchema>;
+
+/** Write-only submission of a Personal API key; strict so no stray field is ever accepted alongside a secret. */
+export const connectLinearRequestSchema = z.object({ api_key: z.string().min(1) }).strict();
+export type ConnectLinearRequest = z.infer<typeof connectLinearRequestSchema>;
+
+/** Why a Linear call was refused; safe to show verbatim in the UI and never derived from provider output. */
+export const LINEAR_ERROR_CODES = [
+  "linear_not_connected",
+  "linear_unauthorized",
+  "linear_rate_limited",
+  "linear_unavailable",
+  "linear_request_failed",
+  "linear_source_not_found",
+  "linear_source_already_mapped",
+  "linear_project_not_found",
+] as const;
+export type LinearErrorCode = (typeof LINEAR_ERROR_CODES)[number];
+
+/** Stable refusal code plus a user-facing daemon message. */
+export const linearErrorSchema = z.object({
+  error: z.enum(LINEAR_ERROR_CODES),
+  message: z.string(),
+});
+
+export const linearTeamContractSchema = z.object({
+  id: z.string(),
+  key: z.string(),
+  name: z.string(),
+});
+export type LinearTeamContract = z.infer<typeof linearTeamContractSchema>;
+
+/** A Linear project may span several teams, so its team ids are listed rather than owned. */
+export const linearProjectContractSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  team_ids: z.array(z.string()),
+});
+export type LinearProjectContract = z.infer<typeof linearProjectContractSchema>;
+
+/** What the connected workspace offers for mapping; requires a live connection. */
+export const linearWorkspaceContractSchema = z.object({
+  teams: z.array(linearTeamContractSchema),
+  projects: z.array(linearProjectContractSchema),
+});
+export type LinearWorkspaceContract = z.infer<typeof linearWorkspaceContractSchema>;
+
+/** Bind a Linear team, optionally narrowed to one Linear project, to an existing local project. */
+export const createIssueSourceRequestSchema = z.object({
+  project_id: z.string().min(1),
+  external_team_id: z.string().min(1),
+  external_team_key: z.string().min(1),
+  external_team_name: z.string().min(1),
+  external_project_id: z.string().optional(),
+  external_project_name: z.string().optional(),
+});
+export type CreateIssueSourceRequest = z.infer<typeof createIssueSourceRequestSchema>;
+
+/** Sync every mapped source, or just one when `source_id` is given. */
+export const syncLinearRequestSchema = z.object({
+  source_id: z.string().min(1).optional(),
+});
+export type SyncLinearRequest = z.infer<typeof syncLinearRequestSchema>;
+
+/** Outcome of one source's mirror pass: `imported` are new local rows, `updated` are refreshed ones. */
+export const issueSourceSyncResultSchema = z.object({
+  source_id: z.string(),
+  imported: z.number().int().nonnegative(),
+  updated: z.number().int().nonnegative(),
+  synced_at: z.iso.datetime(),
+});
+export type IssueSourceSyncResult = z.infer<typeof issueSourceSyncResultSchema>;
+
+export const syncLinearResponseSchema = z.object({
+  results: z.array(issueSourceSyncResultSchema),
+});
+export type SyncLinearResponse = z.infer<typeof syncLinearResponseSchema>;
+
 /** Daemon liveness/identity surface served at `GET /api/health`. */
 export const healthResponseSchema = z.object({
   status: z.literal("ok"),

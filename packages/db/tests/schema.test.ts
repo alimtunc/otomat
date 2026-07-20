@@ -18,6 +18,7 @@ const EXPECTED_TABLES = [
   "review_comments",
   "pull_requests",
   "sync_state",
+  "issue_sources",
 ];
 
 let t: TempDb | null = null;

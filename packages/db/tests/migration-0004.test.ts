@@ -8,8 +8,6 @@ import { afterEach, expect, it } from "vitest";
 import { createClient } from "#db/client";
 import { runMigrations } from "#db/migrate";
 
-import { seedReviewRun } from "./support/temp-db.js";
-
 const LEGACY_MIGRATIONS = [
   "0000_sticky_hellfire_club",
   "0001_famous_eternals",
@@ -51,7 +49,14 @@ it("upgrades a duplicate legacy pull request set through migration 0004", () => 
 
   const legacy = createClient(dbPath);
   migrate(legacy.db, { migrationsFolder: legacyMigrations });
-  seedReviewRun(legacy.db);
+  // Raw SQL, not the current Drizzle schema: this database deliberately stops at
+  // 0003, so it lacks columns later migrations added.
+  legacy.sqlite.exec(`
+    INSERT INTO projects (id, name, root_path) VALUES ('p1', 'P', '/tmp/p');
+    INSERT INTO issues (id, project_id, title, status) VALUES ('i1', 'p1', 'Issue', 'ready');
+    INSERT INTO runs (id, issue_id, status, branch, plan_json)
+    VALUES ('r1', 'i1', 'review_ready', 'otomat/run/r1', '{"version":1,"steps":[]}')
+  `);
   legacy.sqlite.exec(`
     INSERT INTO pull_requests (id, run_id, title, created_at, updated_at)
     VALUES

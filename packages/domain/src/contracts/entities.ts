@@ -26,10 +26,34 @@ export const issueContractSchema = z.object({
   body: z.string().nullable(),
   status: z.enum(ISSUE_STATES),
   source: issueSourceSchema,
+  /** Immutable identity in the source system — a Linear issue UUID. Never the human key, which can change. */
   source_external_id: z.string().nullable(),
+  /** Human-readable key such as `OTO-123`; display only, mutable upstream, never a sync identity. */
+  source_identifier: z.string().nullable(),
+  source_url: z.url().nullable(),
   synced_at: z.iso.datetime().nullable(),
 });
 export type IssueContract = z.infer<typeof issueContractSchema>;
+
+/**
+ * A configured origin issues are mirrored from: one Linear team (optionally
+ * narrowed to one Linear project) bound to an existing local Otomat project.
+ * Distinct from `IssueSource`, which names the kind of system.
+ */
+export const issueSourceContractSchema = z.object({
+  id: z.string(),
+  source: issueSourceSchema,
+  /** Local Otomat project whose repository imported issues launch runs in. */
+  project_id: z.string(),
+  external_team_id: z.string(),
+  external_team_key: z.string(),
+  external_team_name: z.string(),
+  /** Empty when the whole team is mirrored rather than one Linear project. */
+  external_project_id: z.string(),
+  external_project_name: z.string(),
+  last_synced_at: z.iso.datetime().nullable(),
+});
+export type IssueSourceContract = z.infer<typeof issueSourceContractSchema>;
 
 /** One unit of agent work inside a frozen run plan. */
 export const runPlanStepSchema = z.object({
