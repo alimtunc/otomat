@@ -19,6 +19,8 @@ const ISSUE = {
   status: "ready",
   source: "local",
   source_external_id: null,
+  source_identifier: null,
+  source_url: null,
   synced_at: null,
 };
 
@@ -380,4 +382,73 @@ it("passes the projectId filter to the runs list", async () => {
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
   await client.listRuns({ projectId: "p1" });
   expect(calledUrl).toBe("http://localhost:4319/api/runs?projectId=p1");
+});
+
+it("posts the Linear key to the write-only connect endpoint", async () => {
+  const calls: Array<{ url: string; method: string; body: unknown }> = [];
+  const fetchMock: typeof fetch = async (input, init) => {
+    calls.push({
+      url: String(input),
+      method: init?.method ?? "GET",
+      body: init?.body === undefined ? undefined : JSON.parse(String(init.body)),
+    });
+    return jsonResponse({
+      status: "connected",
+      workspace_name: "Otomat",
+      workspace_url_key: "otomat",
+      user_name: "Alim",
+      error_code: null,
+      error_message: null,
+    });
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+
+  const connection = await client.connectLinear({ api_key: "lin_api_secret" });
+
+  expect(calls).toEqual([
+    {
+      url: "http://localhost:4319/api/linear/connect",
+      method: "POST",
+      body: { api_key: "lin_api_secret" },
+    },
+  ]);
+  // The response contract has no place to carry the key back.
+  expect(JSON.stringify(connection)).not.toContain("lin_api_secret");
+  expect(connection.workspace_name).toBe("Otomat");
+});
+
+it("reads mapped issue sources and triggers a sync", async () => {
+  const urls: string[] = [];
+  const fetchMock: typeof fetch = async (input, init) => {
+    const url = String(input);
+    urls.push(`${init?.method ?? "GET"} ${url}`);
+    if (url.endsWith("/sources")) {
+      return jsonResponse([
+        {
+          id: "src-1",
+          source: "linear",
+          project_id: "p1",
+          external_team_id: "team-1",
+          external_team_key: "OTO",
+          external_team_name: "Otomat",
+          external_project_id: "",
+          external_project_name: "",
+          last_synced_at: null,
+        },
+      ]);
+    }
+    return jsonResponse({
+      results: [
+        { source_id: "src-1", imported: 2, updated: 1, synced_at: "2026-07-20T12:00:00.000Z" },
+      ],
+    });
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+
+  expect((await client.listIssueSources())[0]).toMatchObject({ external_team_key: "OTO" });
+  expect((await client.syncLinear()).results[0]).toMatchObject({ imported: 2, updated: 1 });
+  expect(urls).toEqual([
+    "GET http://localhost:4319/api/linear/sources",
+    "POST http://localhost:4319/api/linear/sync",
+  ]);
 });

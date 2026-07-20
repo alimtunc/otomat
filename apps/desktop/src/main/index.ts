@@ -3,12 +3,15 @@ import { join } from "node:path";
 import { app, BrowserWindow, ipcMain } from "electron";
 
 import { APP_ORIGIN, DEV_SERVER_ENV } from "#shared/constants";
+import { pushLinearKey } from "#shared/linear-handoff";
+import type { LinearVault } from "#shared/linear-vault";
 import { SPLASH_RETRY_CHANNEL, SPLASH_STATUS_CHANNEL, type StartupStatus } from "#shared/startup";
 import { resolveUserPath } from "#shared/user-path";
 
 import { buildCsp } from "./csp.js";
 import { DaemonController } from "./daemon.js";
 import { registerIpc, type IpcState } from "./ipc.js";
+import { createMainLinearVault } from "./linear.js";
 import { resolveAppPaths, type AppPaths } from "./paths.js";
 import { registerAppSchemePrivileged, serveAppScheme } from "./protocol.js";
 import { hardenWebContents } from "./security.js";
@@ -22,6 +25,7 @@ function describeStartupError(error: unknown): string {
 class DesktopApp {
   private readonly paths: AppPaths;
   private readonly daemon: DaemonController;
+  private readonly vault: LinearVault;
   private readonly ipcState: IpcState = { daemonUrl: "" };
   private readonly devServer: string | null;
   private splash: BrowserWindow | null = null;
@@ -34,6 +38,7 @@ class DesktopApp {
     const userPath = resolveUserPath({ platform: process.platform, env: process.env });
     process.env.PATH = userPath; // main-process git/shell calls resolve user CLIs too
     const dataDir = app.getPath("userData");
+    this.vault = createMainLinearVault(dataDir);
     this.daemon = new DaemonController({
       daemonEntry: this.paths.daemonEntry,
       dbPath: join(dataDir, "otomat.db"),
@@ -45,7 +50,7 @@ class DesktopApp {
   }
 
   onReady(): void {
-    registerIpc(this.ipcState);
+    registerIpc(this.ipcState, this.vault);
     ipcMain.on(SPLASH_RETRY_CHANNEL, () => void this.runStartup());
     app.on("web-contents-created", (_event, contents) =>
       hardenWebContents(contents, this.allowedOrigins()),
@@ -79,10 +84,22 @@ class DesktopApp {
     this.sendStatus({ phase: "launching" });
     try {
       this.ipcState.daemonUrl = await this.daemon.start();
+      await this.restoreLinearConnection();
       this.openCockpit();
       this.closeSplash();
     } catch (error) {
       this.sendStatus({ phase: "failed", message: describeStartupError(error) });
+    }
+  }
+
+  /** Re-arms the daemon with the stored key after a restart. A failure here is recoverable — the cockpit shows the integration as disconnected — so it must never block startup. */
+  private async restoreLinearConnection(): Promise<void> {
+    const apiKey = this.vault.load();
+    if (apiKey === null) return;
+    try {
+      await pushLinearKey({ daemonUrl: this.ipcState.daemonUrl, apiKey });
+    } catch (error) {
+      console.error("[otomat-desktop] restoring the Linear connection failed", error);
     }
   }
 

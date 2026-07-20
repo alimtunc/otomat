@@ -2,6 +2,9 @@ import {
   healthResponseSchema,
   githubConnectionContractSchema,
   issueContractSchema,
+  issueSourceContractSchema,
+  linearConnectionContractSchema,
+  linearWorkspaceContractSchema,
   projectContractSchema,
   pullRequestDetailSchema,
   repositoryContractSchema,
@@ -12,7 +15,10 @@ import {
   registerRepositoryResponseSchema,
   runDiffResponseSchema,
   runtimeDescriptorSchema,
+  syncLinearResponseSchema,
+  type ConnectLinearRequest,
   type CreateIssueRequest,
+  type CreateIssueSourceRequest,
   type CreateReviewCommentRequest,
   type FollowUpRunRequest,
   type PreparePullRequestRequest,
@@ -20,6 +26,7 @@ import {
   type RequestFixRequest,
   type SelectCompeteWinnerRequest,
   type StartRunRequest,
+  type SyncLinearRequest,
 } from "@otomat/domain";
 
 import { getJson, postJson, queryString } from "./http";
@@ -44,6 +51,34 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
       return githubConnectionContractSchema.parse(
         await postJson(config, "/api/github/connect", {}),
       );
+    },
+    async getLinearConnection() {
+      return linearConnectionContractSchema.parse(await getJson(config, "/api/linear/connection"));
+    },
+    /** Write-only: the key travels to the daemon and never comes back in any response. */
+    async connectLinear(request: ConnectLinearRequest) {
+      return linearConnectionContractSchema.parse(
+        await postJson(config, "/api/linear/connect", request),
+      );
+    },
+    async disconnectLinear() {
+      return linearConnectionContractSchema.parse(
+        await postJson(config, "/api/linear/disconnect", {}),
+      );
+    },
+    async getLinearWorkspace() {
+      return linearWorkspaceContractSchema.parse(await getJson(config, "/api/linear/workspace"));
+    },
+    async listIssueSources() {
+      return issueSourceContractSchema.array().parse(await getJson(config, "/api/linear/sources"));
+    },
+    async createIssueSource(request: CreateIssueSourceRequest) {
+      return issueSourceContractSchema.parse(
+        await postJson(config, "/api/linear/sources", request),
+      );
+    },
+    async syncLinear(request: SyncLinearRequest = {}) {
+      return syncLinearResponseSchema.parse(await postJson(config, "/api/linear/sync", request));
     },
     async listProjects() {
       return projectContractSchema.array().parse(await getJson(config, "/api/projects"));
