@@ -6,10 +6,9 @@ import { cn } from "../lib/utils";
 
 const LIVEDOT_STYLE_ID = "otomat-livedot";
 const LIVEDOT_CSS = `
-@keyframes otomat-livedot-pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:0;transform:scale(2.6)}}
-.otomat-livedot{position:relative}
-.otomat-livedot::after{content:"";position:absolute;inset:0;border-radius:inherit;background:inherit;animation:otomat-livedot-pulse 1.6s var(--ease) infinite}
-@media (prefers-reduced-motion:reduce){.otomat-livedot::after{display:none}}
+@keyframes otomat-livedot-breathe{0%,100%{opacity:1}50%{opacity:.4}}
+.otomat-livedot{animation:otomat-livedot-breathe 2.4s var(--ease) infinite}
+@media (prefers-reduced-motion:reduce){.otomat-livedot{animation:none}}
 `;
 
 const TONE_CLASS: Record<StatusTone, string> = toneClassMap((facets) => facets.solid);

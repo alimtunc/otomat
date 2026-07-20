@@ -1,11 +1,27 @@
-import { useCallback, useEffect, useEffectEvent, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useEffectEvent,
+  useState,
+  type ReactNode,
+} from "react";
 
 import type { Density } from "../lib/theme";
+import { useMediaQuery } from "../lib/use-media-query";
 import { cn } from "../lib/utils";
 import type { ConnectionState } from "./connection-status-indicator";
 import { OfflineBanner } from "./offline-banner";
 import { ReconnectingBar } from "./reconnecting-bar";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./resizable-panels";
+
+const SidebarCollapsedContext = createContext(false);
+
+/** Whether the enclosing AppShell renders its sidebar as the icon rail. */
+export function useSidebarCollapsed(): boolean {
+  return useContext(SidebarCollapsedContext);
+}
 
 export interface AppShellProps {
   sidebar: ReactNode;
@@ -39,8 +55,10 @@ export function AppShell({
   className,
 }: AppShellProps) {
   const controlled = collapsedProp != null;
-  const [internalCollapsed, setInternalCollapsed] = useState(false);
-  const collapsed = controlled ? collapsedProp : internalCollapsed;
+  const wide = useMediaQuery("(min-width: 64rem)");
+  // null = no explicit choice yet: follow the viewport (rail by default on narrow windows).
+  const [internalCollapsed, setInternalCollapsed] = useState<boolean | null>(null);
+  const collapsed = controlled ? collapsedProp : (internalCollapsed ?? !wide);
 
   const toggle = useCallback(() => {
     const next = !collapsed;
@@ -95,16 +113,18 @@ export function AppShell({
   );
 
   return (
-    <div
-      data-density={density}
-      className={cn("grid h-screen overflow-hidden", className)}
-      style={{
-        gridTemplateColumns: `${collapsed ? railWidth : sidebarWidth}px 1fr`,
-        gridTemplateRows: "minmax(0, 1fr)",
-      }}
-    >
-      {sidebar}
-      {content}
-    </div>
+    <SidebarCollapsedContext.Provider value={collapsed}>
+      <div
+        data-density={density}
+        className={cn("grid h-screen overflow-hidden", className)}
+        style={{
+          gridTemplateColumns: `${collapsed ? railWidth : sidebarWidth}px 1fr`,
+          gridTemplateRows: "minmax(0, 1fr)",
+        }}
+      >
+        {sidebar}
+        {content}
+      </div>
+    </SidebarCollapsedContext.Provider>
   );
 }
