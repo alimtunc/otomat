@@ -6,6 +6,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { setInputValue } from "#support/dom-events";
+
 const registerRepository = vi.fn();
 
 vi.mock("@web/api/client", () => ({
@@ -24,7 +26,14 @@ afterEach(async () => {
 });
 
 function installDesktopBridge(pickDirectory: () => Promise<string | null>): void {
-  window.otomat = { daemonUrl: "http://127.0.0.1:5000", pickDirectory };
+  window.otomat = {
+    daemonUrl: "http://127.0.0.1:5000",
+    pickDirectory,
+    linear: {
+      saveKey: async () => ({ ok: true, message: null }),
+      forgetKey: async () => ({ ok: true, message: null }),
+    },
+  };
 }
 
 function browseButton(): HTMLButtonElement | undefined {
@@ -68,12 +77,6 @@ function submitButton(): HTMLButtonElement {
   );
   if (!button) throw new Error("Register button not found");
   return button;
-}
-
-function setInputValue(input: HTMLInputElement, value: string): void {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-  setter?.call(input, value);
-  input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 describe("RegisterRepositoryForm", () => {

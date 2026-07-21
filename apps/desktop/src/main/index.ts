@@ -9,6 +9,8 @@ import { resolveUserPath } from "#shared/user-path";
 import { buildCsp } from "./csp.js";
 import { DaemonController } from "./daemon.js";
 import { registerIpc, type IpcState } from "./ipc.js";
+import { LinearCoordinator } from "./linear-coordinator.js";
+import { createMainLinearVault } from "./linear-vault-io.js";
 import { resolveAppPaths, type AppPaths } from "./paths.js";
 import { registerAppSchemePrivileged, serveAppScheme } from "./protocol.js";
 import { hardenWebContents } from "./security.js";
@@ -22,6 +24,7 @@ function describeStartupError(error: unknown): string {
 class DesktopApp {
   private readonly paths: AppPaths;
   private readonly daemon: DaemonController;
+  private readonly linear: LinearCoordinator;
   private readonly ipcState: IpcState = { daemonUrl: "" };
   private readonly devServer: string | null;
   private splash: BrowserWindow | null = null;
@@ -34,6 +37,10 @@ class DesktopApp {
     const userPath = resolveUserPath({ platform: process.platform, env: process.env });
     process.env.PATH = userPath; // main-process git/shell calls resolve user CLIs too
     const dataDir = app.getPath("userData");
+    this.linear = new LinearCoordinator(
+      createMainLinearVault(dataDir),
+      () => this.ipcState.daemonUrl,
+    );
     this.daemon = new DaemonController({
       daemonEntry: this.paths.daemonEntry,
       dbPath: join(dataDir, "otomat.db"),
@@ -45,7 +52,7 @@ class DesktopApp {
   }
 
   onReady(): void {
-    registerIpc(this.ipcState);
+    registerIpc(this.ipcState, this.linear);
     ipcMain.on(SPLASH_RETRY_CHANNEL, () => void this.runStartup());
     app.on("web-contents-created", (_event, contents) =>
       hardenWebContents(contents, this.allowedOrigins()),
@@ -79,6 +86,7 @@ class DesktopApp {
     this.sendStatus({ phase: "launching" });
     try {
       this.ipcState.daemonUrl = await this.daemon.start();
+      await this.linear.restore();
       this.openCockpit();
       this.closeSplash();
     } catch (error) {

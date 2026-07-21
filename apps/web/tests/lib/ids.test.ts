@@ -8,11 +8,16 @@ describe("shortId", () => {
 });
 
 describe("issueShortId", () => {
-  it("prefers the external id when the issue is mirrored", () => {
-    expect(issueShortId({ id: "0123456789abcdef", source_external_id: "OTO-12" })).toBe("OTO-12");
+  it("prefers the tracker's human identifier when the issue is mirrored", () => {
+    expect(issueShortId({ id: "0123456789abcdef", source_identifier: "OTO-12" })).toBe("OTO-12");
   });
 
   it("falls back to the short local id", () => {
-    expect(issueShortId({ id: "0123456789abcdef", source_external_id: null })).toBe("01234567");
+    expect(issueShortId({ id: "0123456789abcdef", source_identifier: null })).toBe("01234567");
+  });
+
+  it("never renders the external UUID as a label", () => {
+    const uuid = "0f7d1b5c-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+    expect(issueShortId({ id: uuid, source_identifier: "OTO-36" })).toBe("OTO-36");
   });
 });

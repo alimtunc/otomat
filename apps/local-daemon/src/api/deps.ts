@@ -2,6 +2,7 @@ import type { Db, RunRow } from "@otomat/db";
 import type { StartRunRequest } from "@otomat/domain";
 
 import type { GitHubService } from "#github";
+import type { LinearService } from "#linear";
 import type { ReviewService } from "#review";
 
 export interface ApiDeps {
@@ -17,5 +18,6 @@ export interface ApiDeps {
   selectCompeteWinner(runId: string, groupId: string, stepRunId: string): Promise<void>;
   abortRun(runId: string): Promise<void>;
   github: GitHubService;
+  linear: LinearService;
   review: ReviewService;
 }

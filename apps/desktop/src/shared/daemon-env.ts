@@ -26,6 +26,7 @@ export function buildDaemonEnv(options: DaemonEnvOptions): NodeJS.ProcessEnv {
     OTOMAT_DB_PATH: options.dbPath,
     OTOMAT_PROJECT_ROOT: options.projectRoot,
   };
+  delete env.OTOMAT_LINEAR_API_KEY;
   if (options.allowedOrigin !== undefined) env.OTOMAT_ALLOWED_ORIGINS = options.allowedOrigin;
   if (options.runAsNode === true) env.ELECTRON_RUN_AS_NODE = "1";
   return env;

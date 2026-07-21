@@ -24,6 +24,7 @@ import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as SettingsAboutRouteImport } from './routes/settings/about'
 import { Route as SettingsAgentsRouteImport } from './routes/settings/agents'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
+import { Route as SettingsIntegrationsRouteImport } from './routes/settings/integrations'
 import { Route as SettingsRepositoriesRouteImport } from './routes/settings/repositories'
 import { Route as SettingsRuntimesRouteImport } from './routes/settings/runtimes'
 import { Route as RunsRunIdIndexRouteImport } from './routes/runs/$runId/index'
@@ -106,6 +107,11 @@ const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
   path: '/appearance',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const SettingsIntegrationsRoute = SettingsIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 const SettingsRepositoriesRoute = SettingsRepositoriesRouteImport.update({
   id: '/repositories',
   path: '/repositories',
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/agents': typeof SettingsAgentsRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/issues/': typeof IssuesIndexRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/agents': typeof SettingsAgentsRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/issues': typeof IssuesIndexRoute
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/agents': typeof SettingsAgentsRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/issues/': typeof IssuesIndexRoute
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/agents'
     | '/settings/appearance'
+    | '/settings/integrations'
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/issues/'
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/agents'
     | '/settings/appearance'
+    | '/settings/integrations'
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/issues'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/agents'
     | '/settings/appearance'
+    | '/settings/integrations'
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/issues/'
@@ -396,6 +408,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAppearanceRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/settings/integrations': {
+      id: '/settings/integrations'
+      path: '/integrations'
+      fullPath: '/settings/integrations'
+      preLoaderRoute: typeof SettingsIntegrationsRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/settings/repositories': {
       id: '/settings/repositories'
       path: '/repositories'
@@ -445,6 +464,7 @@ interface SettingsRouteRouteChildren {
   SettingsAboutRoute: typeof SettingsAboutRoute
   SettingsAgentsRoute: typeof SettingsAgentsRoute
   SettingsAppearanceRoute: typeof SettingsAppearanceRoute
+  SettingsIntegrationsRoute: typeof SettingsIntegrationsRoute
   SettingsRepositoriesRoute: typeof SettingsRepositoriesRoute
   SettingsRuntimesRoute: typeof SettingsRuntimesRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
@@ -454,6 +474,7 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsAgentsRoute: SettingsAgentsRoute,
   SettingsAppearanceRoute: SettingsAppearanceRoute,
+  SettingsIntegrationsRoute: SettingsIntegrationsRoute,
   SettingsRepositoriesRoute: SettingsRepositoriesRoute,
   SettingsRuntimesRoute: SettingsRuntimesRoute,
   SettingsIndexRoute: SettingsIndexRoute,

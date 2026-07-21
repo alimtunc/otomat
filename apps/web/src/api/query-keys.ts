@@ -7,6 +7,11 @@
 export const queryKeys = {
   health: ["health"] as const,
   githubConnection: ["github", "connection"] as const,
+  linear: ["linear"] as const,
+  linearConnection: ["linear", "connection"] as const,
+  issueSources: ["linear", "sources"] as const,
+  linearWorkspaceFor: (workspaceId: string | null) => ["linear", "workspace", workspaceId] as const,
+  issueSourcesFor: (workspaceId: string | null) => ["linear", "sources", workspaceId] as const,
   projects: ["projects"] as const,
   repositories: ["repositories"] as const,
   runtimes: ["runtimes"] as const,

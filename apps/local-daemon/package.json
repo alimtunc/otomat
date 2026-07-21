@@ -13,10 +13,13 @@
     "#git/*": "./src/git/*.ts",
     "#github": "./src/github/index.ts",
     "#github/*": "./src/github/*.ts",
+    "#linear": "./src/linear/index.ts",
+    "#linear/*": "./src/linear/*.ts",
     "#review": "./src/review/index.ts",
     "#review/*": "./src/review/*.ts",
     "#runtime": "./src/runtime/index.ts",
     "#runtime/*": "./src/runtime/*.ts",
+    "#server": "./src/server.ts",
     "#supervisor": "./src/supervisor/index.ts",
     "#supervisor/*": "./src/supervisor/*.ts"
   },

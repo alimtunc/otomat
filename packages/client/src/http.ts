@@ -1,4 +1,4 @@
-import type { DaemonClientConfig } from "./types";
+import type { DaemonClientConfig } from "./types.js";
 
 /**
  * Thrown by HTTP helpers on a non-2xx response; `body` carries the daemon's JSON

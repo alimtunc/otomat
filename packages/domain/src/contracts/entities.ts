@@ -10,26 +10,61 @@ import { REVIEW_STATES } from "../state-machines/review.js";
 import { RUN_STATES } from "../state-machines/run.js";
 import { STEP_RUN_STATES } from "../state-machines/step-run.js";
 
-/** External systems an issue can be mirrored from. `local` is the default. */
-export const ISSUE_SOURCES = ["local", "linear", "github"] as const;
-export const issueSourceSchema = z.enum(ISSUE_SOURCES);
-export type IssueSource = (typeof ISSUE_SOURCES)[number];
+const EXTERNAL_ISSUE_SOURCES = ["linear", "github"] as const;
+export type ExternalIssueSource = (typeof EXTERNAL_ISSUE_SOURCES)[number];
+export type IssueSource = "local" | ExternalIssueSource;
 
 export const WORKTREE_STATUSES = ["active", "archived", "removed"] as const;
 export const worktreeStatusSchema = z.enum(WORKTREE_STATUSES);
 export type WorktreeStatus = (typeof WORKTREE_STATUSES)[number];
 
-export const issueContractSchema = z.object({
+const issueContractBaseSchema = z.object({
   id: z.string(),
   project_id: z.string(),
   title: z.string().min(1),
   body: z.string().nullable(),
   status: z.enum(ISSUE_STATES),
-  source: issueSourceSchema,
-  source_external_id: z.string().nullable(),
-  synced_at: z.iso.datetime().nullable(),
 });
+
+export const issueContractSchema = z.discriminatedUnion("source", [
+  issueContractBaseSchema.extend({
+    source: z.literal("local"),
+    source_external_id: z.null(),
+    source_identifier: z.null(),
+    source_url: z.null(),
+    synced_at: z.null(),
+  }),
+  issueContractBaseSchema.extend({
+    source: z.enum(EXTERNAL_ISSUE_SOURCES),
+    source_external_id: z.string().min(1),
+    source_identifier: z.string().min(1),
+    source_url: z.url().nullable(),
+    synced_at: z.iso.datetime(),
+  }),
+]);
 export type IssueContract = z.infer<typeof issueContractSchema>;
+
+const issueSourceContractBaseSchema = z.object({
+  id: z.string(),
+  project_id: z.string(),
+  source: z.enum(EXTERNAL_ISSUE_SOURCES),
+  external_team_id: z.string(),
+  external_team_key: z.string(),
+  external_team_name: z.string(),
+  last_synced_at: z.iso.datetime().nullable(),
+});
+
+export const issueSourceContractSchema = z.union([
+  issueSourceContractBaseSchema.extend({
+    external_project_id: z.literal(""),
+    external_project_name: z.literal(""),
+  }),
+  issueSourceContractBaseSchema.extend({
+    external_project_id: z.string().min(1),
+    external_project_name: z.string().min(1),
+  }),
+]);
+export type IssueSourceContract = z.infer<typeof issueSourceContractSchema>;
 
 /** One unit of agent work inside a frozen run plan. */
 export const runPlanStepSchema = z.object({

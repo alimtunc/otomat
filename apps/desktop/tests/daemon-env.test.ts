@@ -34,6 +34,21 @@ describe("buildDaemonEnv", () => {
     expect(packaged.ELECTRON_RUN_AS_NODE).toBe("1");
   });
 
+  it("never forwards a Linear credential from the parent environment", () => {
+    const env = buildDaemonEnv({
+      port: 1,
+      dbPath: "d",
+      projectRoot: "p",
+      path: "x",
+      allowedOrigin: "otomat://app",
+      runAsNode: true,
+      baseEnv: { OTOMAT_LINEAR_API_KEY: "lin_api_parent_secret" },
+    });
+
+    expect(Object.keys(env)).not.toContain("OTOMAT_LINEAR_API_KEY");
+    expect(JSON.stringify(env)).not.toContain("lin_api");
+  });
+
   it("extends the base env but overrides PATH", () => {
     const env = buildDaemonEnv({
       port: 1,

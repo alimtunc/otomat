@@ -4,6 +4,6 @@ export function shortId(id: string): string {
   return id.slice(0, 8);
 }
 
-export function issueShortId(issue: Pick<IssueContract, "id" | "source_external_id">): string {
-  return issue.source_external_id ?? shortId(issue.id);
+export function issueShortId(issue: Pick<IssueContract, "id" | "source_identifier">): string {
+  return issue.source_identifier ?? shortId(issue.id);
 }

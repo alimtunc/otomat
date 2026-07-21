@@ -7,6 +7,6 @@
  *
  * @packageDocumentation
  */
-export * from "./client";
-export { DaemonRequestError } from "./http";
-export * from "./types";
+export * from "./client.js";
+export { DaemonRequestError } from "./http.js";
+export * from "./types.js";

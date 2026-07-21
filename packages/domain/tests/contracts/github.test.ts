@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { githubConnectionContractSchema } from "#domain/contracts/api";
+import { githubConnectionContractSchema } from "#domain/contracts/github";
 
 describe("GitHub connection contract", () => {
   it("carries honest connection state without credentials", () => {

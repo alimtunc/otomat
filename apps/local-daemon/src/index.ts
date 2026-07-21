@@ -51,7 +51,13 @@ if (process.env.OTOMAT_WORKER_JOB) {
   // Re-exec'd by the supervisor to run a single session as its own process. Never starts the server.
   void runWorkerMain();
 } else if (!process.env.VITEST) {
-  const handle = startDaemon();
-  console.log(`${describeFoundation()} — listening on http://localhost:${handle.port}/api`);
-  installShutdownHandlers(handle);
+  void startDaemon()
+    .then((handle) => {
+      console.log(`${describeFoundation()} — listening on http://localhost:${handle.port}/api`);
+      installShutdownHandlers(handle);
+    })
+    .catch((error) => {
+      console.error("[otomat] daemon startup failed", error);
+      process.exit(1);
+    });
 }

@@ -1,18 +1,20 @@
 import { BrowserWindow, dialog, ipcMain } from "electron";
 
-import { DAEMON_URL_CHANNEL, PICK_DIRECTORY_CHANNEL } from "#shared/ipc-channels";
+import {
+  DAEMON_URL_CHANNEL,
+  LINEAR_FORGET_KEY_CHANNEL,
+  LINEAR_SAVE_KEY_CHANNEL,
+  PICK_DIRECTORY_CHANNEL,
+} from "#shared/ipc-channels";
+
+import type { LinearCoordinator } from "./linear-coordinator.js";
 
 /** Mutable holder so the sync handler always returns the URL resolved by the last successful daemon start. */
 export interface IpcState {
   daemonUrl: string;
 }
 
-/**
- * The entire renderer↔main contract: a synchronous read of the daemon origin (the cockpit needs
- * it before its client module initializes) and a native directory chooser. No generic filesystem
- * or process access is exposed.
- */
-export function registerIpc(state: IpcState): void {
+export function registerIpc(state: IpcState, linear: LinearCoordinator): void {
   ipcMain.on(DAEMON_URL_CHANNEL, (event) => {
     event.returnValue = state.daemonUrl;
   });
@@ -28,4 +30,8 @@ export function registerIpc(state: IpcState): void {
     if (result.canceled || result.filePaths.length === 0) return null;
     return result.filePaths[0] ?? null;
   });
+
+  ipcMain.handle(LINEAR_SAVE_KEY_CHANNEL, (_event, apiKey: unknown) => linear.save(apiKey));
+
+  ipcMain.handle(LINEAR_FORGET_KEY_CHANNEL, () => linear.forget());
 }

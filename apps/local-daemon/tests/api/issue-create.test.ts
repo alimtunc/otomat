@@ -33,6 +33,8 @@ it("creates a local backlog issue without launching a run", async () => {
     status: "backlog",
     source: "local",
     source_external_id: null,
+    source_identifier: null,
+    source_url: null,
     synced_at: null,
   });
 
