@@ -1,11 +1,11 @@
 import { expect, it } from "vitest";
 
+import { issueContractSchema, issueSourceContractSchema } from "#domain/contracts/entities";
 import {
   connectLinearRequestSchema,
   createIssueSourceRequestSchema,
   linearConnectionContractSchema,
-} from "#domain/contracts/api";
-import { issueContractSchema, issueSourceContractSchema } from "#domain/contracts/entities";
+} from "#domain/contracts/linear";
 
 it("carries honest connection state without credentials", () => {
   const connection = linearConnectionContractSchema.parse({

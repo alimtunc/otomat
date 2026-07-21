@@ -1,4 +1,4 @@
-import type { LinearErrorCode } from "./api.js";
+import type { LinearErrorCode } from "./linear.js";
 
 export type LinearVaultOperationResult =
   | { ok: true; message: null }
