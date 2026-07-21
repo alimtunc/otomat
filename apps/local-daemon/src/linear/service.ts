@@ -8,6 +8,7 @@ import {
   insertIssueSource,
   type IssueSourceRow,
   listIssueSources,
+  type NewIssueSource,
 } from "@otomat/db";
 import {
   issueSourceContractSchema,
@@ -18,7 +19,6 @@ import {
   type LinearWorkspaceContract,
 } from "@otomat/domain";
 
-import { createLinearCredentialStore } from "./credential.js";
 import { LinearError, linearError } from "./errors.js";
 import { SYNC_RESOURCE, SYNC_SOURCE, syncIssueSource } from "./sync.js";
 import type { LinearService, LinearServiceConfig, LinearViewer } from "./types.js";
@@ -59,7 +59,7 @@ function supersededRequest(): LinearError {
 }
 
 class DefaultLinearService implements LinearService {
-  private readonly credentials = createLinearCredentialStore();
+  private apiKey: string | null = null;
   private readonly idFactory: () => string;
   private readonly now: () => Date;
   private state: LinearConnectionContract = DISCONNECTED;
@@ -79,15 +79,11 @@ class DefaultLinearService implements LinearService {
     try {
       const viewer = await this.config.client.viewer(apiKey, signal);
       if (!this.isCurrent(signal)) throw supersededRequest();
-      this.credentials.set(apiKey);
+      this.apiKey = apiKey;
       this.state = connected(viewer);
     } catch (error) {
       if (!this.isCurrent(signal)) throw supersededRequest();
-      this.credentials.clear();
-      if (!(error instanceof LinearError)) {
-        this.state = DISCONNECTED;
-        throw error;
-      }
+      if (!(error instanceof LinearError)) throw error;
       this.state = failed(error);
     }
     return this.state;
@@ -104,9 +100,7 @@ class DefaultLinearService implements LinearService {
   }
 
   sources(): IssueSourceContract[] {
-    return listIssueSources(this.config.db, { source: SYNC_SOURCE }).map((row) =>
-      this.toContract(row),
-    );
+    return listIssueSources(this.config.db, SYNC_SOURCE).map((row) => this.toContract(row));
   }
 
   async createSource(request: CreateIssueSourceRequest): Promise<IssueSourceContract> {
@@ -135,9 +129,8 @@ class DefaultLinearService implements LinearService {
     );
     if (existing !== undefined) throw linearError("linear_source_already_mapped");
 
-    const id = this.idFactory();
-    insertIssueSource(this.config.db, {
-      id,
+    const row = {
+      id: this.idFactory(),
       project_id: request.project_id,
       source: SYNC_SOURCE,
       external_team_id: request.external_team_id,
@@ -145,11 +138,9 @@ class DefaultLinearService implements LinearService {
       external_team_name: team.name,
       external_project_id: externalProjectId,
       external_project_name: externalProject?.name ?? "",
-    });
-
-    const inserted = getIssueSource(this.config.db, id);
-    if (inserted === undefined) throw linearError("linear_request_failed");
-    return this.toContract(inserted);
+    } satisfies NewIssueSource;
+    insertIssueSource(this.config.db, row);
+    return this.toContract(row);
   }
 
   async sync(sourceId?: string): Promise<IssueSourceSyncResult[]> {
@@ -172,7 +163,7 @@ class DefaultLinearService implements LinearService {
     });
   }
 
-  private toContract(row: IssueSourceRow): IssueSourceContract {
+  private toContract(row: Omit<IssueSourceRow, "created_at" | "updated_at">): IssueSourceContract {
     const cursor = getSyncState(this.config.db, SYNC_SOURCE, SYNC_RESOURCE, row.id);
     return issueSourceContractSchema.parse({
       id: row.id,
@@ -191,7 +182,7 @@ class DefaultLinearService implements LinearService {
     apiKey: string;
     signal: AbortSignal;
   } {
-    const apiKey = this.credentials.get();
+    const apiKey = this.apiKey;
     if (apiKey === null) throw linearError("linear_not_connected");
     return {
       apiKey,
@@ -217,7 +208,7 @@ class DefaultLinearService implements LinearService {
   private beginCredentialChange(): AbortSignal {
     this.authorization.abort();
     this.authorization = new AbortController();
-    this.credentials.clear();
+    this.apiKey = null;
     this.state = DISCONNECTED;
     return this.authorization.signal;
   }
@@ -228,7 +219,7 @@ class DefaultLinearService implements LinearService {
 
   private resolveSources(sourceId: string | undefined): IssueSourceRow[] {
     if (sourceId === undefined) {
-      return listIssueSources(this.config.db, { source: SYNC_SOURCE });
+      return listIssueSources(this.config.db, SYNC_SOURCE);
     }
     const row = getIssueSource(this.config.db, sourceId);
     if (row === undefined || row.source !== SYNC_SOURCE)

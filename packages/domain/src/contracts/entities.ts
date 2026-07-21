@@ -11,7 +11,8 @@ import { RUN_STATES } from "../state-machines/run.js";
 import { STEP_RUN_STATES } from "../state-machines/step-run.js";
 
 const EXTERNAL_ISSUE_SOURCES = ["linear", "github"] as const;
-export type IssueSource = "local" | (typeof EXTERNAL_ISSUE_SOURCES)[number];
+export type ExternalIssueSource = (typeof EXTERNAL_ISSUE_SOURCES)[number];
+export type IssueSource = "local" | ExternalIssueSource;
 
 export const WORKTREE_STATUSES = ["active", "archived", "removed"] as const;
 export const worktreeStatusSchema = z.enum(WORKTREE_STATUSES);

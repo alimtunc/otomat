@@ -1,3 +1,4 @@
+import type { ExternalIssueSource } from "@otomat/domain";
 import { and, eq } from "drizzle-orm";
 
 import type { Db } from "../client.js";
@@ -6,7 +7,6 @@ import { touch } from "./touch.js";
 
 export type NewIssue = typeof issues.$inferInsert;
 export type IssueRow = typeof issues.$inferSelect;
-type ExternalIssueSource = Exclude<NonNullable<NewIssue["source"]>, "local">;
 
 export type LocalIssue = Omit<
   NewIssue,

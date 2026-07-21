@@ -1,5 +1,5 @@
 export { createLinearApiClient } from "./client.js";
-export { createLinearCredentialStore, takeLinearKeyFromEnv } from "./credential.js";
+export { takeLinearKeyFromEnv } from "./credential.js";
 export { LinearError, linearError } from "./errors.js";
 export { createLinearService } from "./service.js";
 export {

@@ -49,12 +49,6 @@ export interface LinearApiClient {
   issues(apiKey: string, query: LinearIssueQuery, signal?: AbortSignal): Promise<LinearIssue[]>;
 }
 
-export interface LinearCredentialStore {
-  get(): string | null;
-  set(apiKey: string): void;
-  clear(): void;
-}
-
 export interface LinearServiceConfig {
   db: Db;
   client: LinearApiClient;

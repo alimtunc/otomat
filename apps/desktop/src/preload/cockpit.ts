@@ -1,4 +1,4 @@
-import type { LinearVaultOperationResult } from "@otomat/domain";
+import type { LinearVaultOperationResult, OtomatDesktopBridge } from "@otomat/domain";
 import { contextBridge, ipcRenderer } from "electron";
 
 import {
@@ -21,4 +21,4 @@ contextBridge.exposeInMainWorld("otomat", {
     forgetKey: (): Promise<LinearVaultOperationResult> =>
       ipcRenderer.invoke(LINEAR_FORGET_KEY_CHANNEL),
   },
-});
+} satisfies OtomatDesktopBridge);

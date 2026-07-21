@@ -1,22 +1,19 @@
+import type { ExternalIssueSource } from "@otomat/domain";
 import { and, eq, or } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { issueSources } from "../schema/index.js";
 
 type IssueSourceInsert = typeof issueSources.$inferInsert;
-type ExternalIssueSource = Exclude<NonNullable<IssueSourceInsert["source"]>, "local">;
 type IssueSourceInsertBase = Omit<
   IssueSourceInsert,
-  "source" | "external_project_id" | "external_project_name"
+  "external_project_id" | "external_project_name"
 >;
 type IssueSourceProjectScope =
   | { external_project_id?: ""; external_project_name?: "" }
   | { external_project_id: string; external_project_name: string };
 
-export type NewIssueSource = IssueSourceInsertBase &
-  IssueSourceProjectScope & {
-    source: ExternalIssueSource;
-  };
+export type NewIssueSource = IssueSourceInsertBase & IssueSourceProjectScope;
 export type IssueSourceRow = typeof issueSources.$inferSelect;
 
 export function insertIssueSource(db: Db, value: NewIssueSource): void {
@@ -55,14 +52,11 @@ export function findOverlappingIssueSource(
     .get();
 }
 
-export function listIssueSources(
-  db: Db,
-  options: { source?: ExternalIssueSource } = {},
-): IssueSourceRow[] {
+export function listIssueSources(db: Db, source: ExternalIssueSource): IssueSourceRow[] {
   return db
     .select()
     .from(issueSources)
-    .where(options.source ? eq(issueSources.source, options.source) : undefined)
+    .where(eq(issueSources.source, source))
     .orderBy(issueSources.created_at, issueSources.id)
     .all();
 }

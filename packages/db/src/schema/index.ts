@@ -9,6 +9,7 @@
 import type {
   AgentSessionState,
   CompeteGroupState,
+  ExternalIssueSource,
   IssueSource,
   IssueState,
   PullRequestPublicationState,
@@ -104,7 +105,7 @@ export const issueSources = sqliteTable(
   "issue_sources",
   {
     id: text("id").primaryKey(),
-    source: text("source").$type<IssueSource>().notNull(),
+    source: text("source").$type<ExternalIssueSource>().notNull(),
     project_id: text("project_id")
       .notNull()
       .references(() => projects.id),

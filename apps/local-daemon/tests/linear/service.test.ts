@@ -368,7 +368,7 @@ it("does not persist a source after its workspace request is superseded", async 
   queueMicrotask(() => linear.disconnect());
 
   await expect(creation).rejects.toMatchObject({ code: "linear_request_superseded" });
-  expect(listIssueSources(t.db, { source: "linear" })).toEqual([]);
+  expect(listIssueSources(t.db, "linear")).toEqual([]);
 });
 
 it("refuses to sync an unknown source", async () => {

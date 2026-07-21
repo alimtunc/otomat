@@ -10,7 +10,7 @@ import { buildCsp } from "./csp.js";
 import { DaemonController } from "./daemon.js";
 import { registerIpc, type IpcState } from "./ipc.js";
 import { LinearCoordinator } from "./linear-coordinator.js";
-import { createMainLinearVault } from "./linear.js";
+import { createMainLinearVault } from "./linear-vault-io.js";
 import { resolveAppPaths, type AppPaths } from "./paths.js";
 import { registerAppSchemePrivileged, serveAppScheme } from "./protocol.js";
 import { hardenWebContents } from "./security.js";

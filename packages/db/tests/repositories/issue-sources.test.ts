@@ -45,10 +45,10 @@ it.each([{ external_project_id: "project-1" }, { external_project_name: "Project
   "rejects an incomplete project scope",
   (incompleteScope) => {
     expect(() =>
-      Reflect.apply(insertIssueSource, undefined, [
-        t.client.db,
-        { ...source(), ...incompleteScope },
-      ]),
+      insertIssueSource(t.client.db, {
+        ...source(),
+        ...incompleteScope,
+      } as unknown as NewIssueSource),
     ).toThrow("issue source project id and name must either both be set or both be empty");
   },
 );
@@ -73,16 +73,13 @@ it("allows the same external scope for different providers", () => {
   insertIssueSource(t.client.db, source());
   insertIssueSource(t.client.db, source({ id: "s2", source: "github" }));
 
-  expect(listIssueSources(t.client.db, { source: "linear" }).map((row) => row.id)).toEqual(["s1"]);
-  expect(listIssueSources(t.client.db, { source: "github" }).map((row) => row.id)).toEqual(["s2"]);
+  expect(listIssueSources(t.client.db, "linear").map((row) => row.id)).toEqual(["s1"]);
+  expect(listIssueSources(t.client.db, "github").map((row) => row.id)).toEqual(["s2"]);
 });
 
 it("lists provider mappings in stable order", () => {
   insertIssueSource(t.client.db, source());
   insertIssueSource(t.client.db, source({ id: "s2", external_team_id: "other-team" }));
 
-  expect(listIssueSources(t.client.db, { source: "linear" }).map((row) => row.id)).toEqual([
-    "s1",
-    "s2",
-  ]);
+  expect(listIssueSources(t.client.db, "linear").map((row) => row.id)).toEqual(["s1", "s2"]);
 });

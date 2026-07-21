@@ -36,7 +36,7 @@ afterEach(() => {
 });
 
 it("upgrades a legacy database through the current migrations", () => {
-  const dir = mkdtempSync(join(tmpdir(), "otomat-migration-0004-"));
+  const dir = mkdtempSync(join(tmpdir(), "otomat-legacy-upgrade-"));
   const dbPath = join(dir, "otomat.db");
   const legacyMigrations = join(dir, "legacy-migrations");
   const legacyMeta = join(legacyMigrations, "meta");
@@ -108,9 +108,7 @@ it("upgrades a legacy database through the current migrations", () => {
     .all()
     .map((column) => (column as { name: string }).name);
   expect(issueColumns).toContain("source_identifier");
-  expect(issueColumns).not.toContain("source_workspace_id");
   expect(issueSourceColumns).toContain("source");
-  expect(issueSourceColumns).not.toContain("external_workspace_id");
   const migratedIssues = migrated.sqlite
     .prepare(
       "SELECT id, source, source_external_id, source_identifier, source_url, synced_at FROM issues ORDER BY id",

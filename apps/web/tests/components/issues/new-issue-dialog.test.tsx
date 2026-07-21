@@ -5,6 +5,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { setInputValue } from "#support/dom-events";
+
 const start = vi.fn(async () => false);
 const create = vi.fn(async (_request: CreateIssueRequest) => true);
 let runtimesData: RuntimeDescriptor[] = [];
@@ -100,12 +102,6 @@ function buttonByText(text: string): HTMLButtonElement {
   );
   if (!button) throw new Error(`button "${text}" not found`);
   return button;
-}
-
-function setInputValue(input: HTMLInputElement, value: string): void {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-  setter?.call(input, value);
-  input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 function setTextareaValue(input: HTMLTextAreaElement, value: string): void {

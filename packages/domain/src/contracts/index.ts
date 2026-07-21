@@ -1,12 +1,14 @@
 /**
  * Zod contracts shared by daemon and client: HTTP request/response shapes
- * (`api`), the canonical run diff with its pin-to-SHA anchors (`diff`), and the
- * persisted entity mirrors (`entities`). Parsing a payload through these schemas
- * is what guarantees both sides agree on wire shape and invariants.
+ * (`api`), the canonical run diff with its pin-to-SHA anchors (`diff`), the
+ * persisted entity mirrors (`entities`), and the Electron shell's renderer
+ * bridge surface (`desktop`). Parsing a payload through the zod schemas is what
+ * guarantees both sides agree on wire shape and invariants.
  *
  * @packageDocumentation
  */
 export * from "./api.js";
+export * from "./desktop.js";
 export * from "./diff.js";
 export {
   agentSessionContractSchema,
@@ -30,6 +32,7 @@ export {
   worktreeStatusSchema,
   type AgentSessionContract,
   type CompeteGroupContract,
+  type ExternalIssueSource,
   type IssueContract,
   type IssueSource,
   type IssueSourceContract,

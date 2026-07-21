@@ -65,8 +65,8 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     client: createLinearApiClient(createLinearTransport()),
   });
   if (developmentLinearKey !== null) {
-    void linear.connect(developmentLinearKey).catch(() => {
-      console.error("[otomat] Linear development connection failed");
+    void linear.connect(developmentLinearKey).catch((error: unknown) => {
+      console.error("[otomat] Linear development connection failed", error);
     });
   }
 

@@ -79,10 +79,6 @@ export const linearErrorSchema = z.object({
   message: z.string(),
 });
 
-export type LinearVaultOperationResult =
-  | { ok: true; message: null }
-  | { ok: false; message: string; error_code: LinearErrorCode | null };
-
 export const linearTeamContractSchema = z.object({
   id: z.string(),
   key: z.string(),
@@ -103,26 +99,20 @@ export const linearWorkspaceContractSchema = z.object({
 });
 export type LinearWorkspaceContract = z.infer<typeof linearWorkspaceContractSchema>;
 
-const createIssueSourceBaseSchema = z
+export const createIssueSourceRequestSchema = z
   .object({
     project_id: z.string().min(1),
     external_team_id: z.string().min(1),
+    external_project_id: z.string().min(1).optional(),
   })
   .strict();
-
-export const createIssueSourceRequestSchema = z.union([
-  createIssueSourceBaseSchema.extend({
-    external_project_id: z.undefined().optional(),
-  }),
-  createIssueSourceBaseSchema.extend({
-    external_project_id: z.string().min(1),
-  }),
-]);
 export type CreateIssueSourceRequest = z.infer<typeof createIssueSourceRequestSchema>;
 
-export const syncLinearRequestSchema = z.object({
-  source_id: z.string().min(1).optional(),
-});
+export const syncLinearRequestSchema = z
+  .object({
+    source_id: z.string().min(1).optional(),
+  })
+  .strict();
 export type SyncLinearRequest = z.infer<typeof syncLinearRequestSchema>;
 
 export const issueSourceSyncResultSchema = z.object({

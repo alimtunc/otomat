@@ -34,41 +34,6 @@ interface MappingOption {
   label: string;
 }
 
-function MappingSelect({
-  label,
-  value,
-  options,
-  onValueChange,
-}: {
-  label: string;
-  value: string;
-  options: MappingOption[];
-  onValueChange: (value: string) => void;
-}) {
-  return (
-    <Select
-      items={options}
-      value={value}
-      onValueChange={(nextValue) => {
-        if (nextValue !== null) onValueChange(nextValue);
-      }}
-    >
-      <FieldControl>
-        <SelectTrigger aria-label={label}>
-          <SelectValue />
-        </SelectTrigger>
-      </FieldControl>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
 interface MappingFieldProps {
   label: string;
   value: string;
@@ -81,7 +46,26 @@ function MappingField({ label, value, options, meta, onValueChange }: MappingFie
   return (
     <Field {...fieldErrorProps(meta)}>
       <FieldLabel>{label}</FieldLabel>
-      <MappingSelect label={label} value={value} options={options} onValueChange={onValueChange} />
+      <Select
+        items={options}
+        value={value}
+        onValueChange={(nextValue) => {
+          if (nextValue !== null) onValueChange(nextValue);
+        }}
+      >
+        <FieldControl>
+          <SelectTrigger aria-label={label}>
+            <SelectValue />
+          </SelectTrigger>
+        </FieldControl>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </Field>
   );
 }

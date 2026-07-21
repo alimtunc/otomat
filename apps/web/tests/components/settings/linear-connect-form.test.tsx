@@ -1,18 +1,18 @@
-import type { LinearVaultOperationResult } from "@otomat/domain";
 // @vitest-environment happy-dom
+import type { LinearVaultOperationResult } from "@otomat/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LinearConnectForm } from "@web/components/settings/integrations/linear-connect-form";
 import { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
+
+import { setInputValue } from "#support/dom-events";
+import { mount } from "#support/mount";
 
 const connectLinear = vi.fn();
 
 vi.mock("@web/api/client", () => ({
   daemon: { connectLinear: (request: unknown) => connectLinear(request) },
 }));
-
-Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 const KEY = "lin_api_secret";
 const cleanups: Array<() => Promise<void>> = [];
@@ -39,21 +39,14 @@ function installDesktopBridge(
 }
 
 async function renderForm(connectionError: string | null = null) {
-  const container = document.createElement("div");
-  document.body.append(container);
-  const root: Root = createRoot(container);
   const client = new QueryClient();
   const invalidateQueries = vi.spyOn(client, "invalidateQueries");
-  await act(async () => {
-    root.render(
-      <QueryClientProvider client={client}>
-        <LinearConnectForm connectionError={connectionError} />
-      </QueryClientProvider>,
-    );
-  });
-  cleanups.push(async () => {
-    await act(async () => root.unmount());
-  });
+  const mounted = await mount(
+    <QueryClientProvider client={client}>
+      <LinearConnectForm connectionError={connectionError} />
+    </QueryClientProvider>,
+  );
+  cleanups.push(mounted.cleanup);
   return { invalidateQueries };
 }
 
@@ -71,12 +64,6 @@ function connectButton(): HTMLButtonElement {
   );
   if (!button) throw new Error("Connect button not found");
   return button;
-}
-
-function setInputValue(input: HTMLInputElement, value: string): void {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-  setter?.call(input, value);
-  input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 async function submitKey(value: string) {

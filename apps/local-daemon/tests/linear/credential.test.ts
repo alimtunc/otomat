@@ -1,16 +1,6 @@
 import { expect, it } from "vitest";
 
-import { createLinearCredentialStore, takeLinearKeyFromEnv } from "#linear";
-
-it("holds the key in memory and forgets it on clear", () => {
-  const store = createLinearCredentialStore();
-
-  expect(store.get()).toBeNull();
-  store.set("lin_api_secret");
-  expect(store.get()).toBe("lin_api_secret");
-  store.clear();
-  expect(store.get()).toBeNull();
-});
+import { takeLinearKeyFromEnv } from "#linear";
 
 it("removes the development key from the environment as it reads it", () => {
   const env: NodeJS.ProcessEnv = { OTOMAT_LINEAR_API_KEY: "lin_api_secret", PATH: "/usr/bin" };

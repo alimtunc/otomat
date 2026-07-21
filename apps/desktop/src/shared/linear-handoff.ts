@@ -5,12 +5,9 @@ import {
   type LinearErrorCode,
 } from "@otomat/domain";
 
-type ConnectedLinear = Extract<LinearConnectionContract, { status: "connected" }>;
-
 interface LinearHandoffOptions {
   daemonUrl: string;
   apiKey: string;
-  fetch?: typeof fetch;
 }
 
 export class LinearHandoffError extends Error {
@@ -24,8 +21,8 @@ export class LinearHandoffError extends Error {
   }
 }
 
-export async function pushLinearKey(options: LinearHandoffOptions): Promise<ConnectedLinear> {
-  const client = createDaemonClient({ baseUrl: options.daemonUrl, fetch: options.fetch ?? fetch });
+export async function pushLinearKey(options: LinearHandoffOptions): Promise<void> {
+  const client = createDaemonClient({ baseUrl: options.daemonUrl });
   let connection: LinearConnectionContract;
   try {
     connection = await client.connectLinear({ api_key: options.apiKey });
@@ -44,7 +41,6 @@ export async function pushLinearKey(options: LinearHandoffOptions): Promise<Conn
     }
     throw new Error("The daemon did not connect to Linear.");
   }
-  return connection;
 }
 
 export async function clearLinearKey(daemonUrl: string): Promise<void> {

@@ -51,26 +51,18 @@ function ConnectionQueryPanel({ query }: { query: UseQueryResult<LinearConnectio
 }
 
 function IssueSourceSetup({
-  connected,
   workspace,
   projects,
 }: {
-  connected: boolean;
-  workspace: {
-    data: LinearWorkspaceContract | undefined;
-    isPending: boolean;
-    isError: boolean;
-  };
+  workspace: UseQueryResult<LinearWorkspaceContract>;
   projects: ProjectContract[];
 }) {
-  if (!connected) return null;
   if (workspace.isPending) {
     return <Skeleton className="m-3 h-28" />;
   }
   if (workspace.isError) {
     return <ErrorState variant="inline" title="Could not load Linear teams and projects." />;
   }
-  if (workspace.data === undefined) return null;
   if (workspace.data.teams.length === 0) {
     return (
       <p className="border-t border-border-subtle p-3 text-xs text-text-tertiary">
@@ -101,11 +93,7 @@ function MappedSourcesPanel({
   projects: UseQueryResult<ProjectContract[]>;
   sources: UseQueryResult<IssueSourceContract[]>;
   connected: boolean;
-  workspace: {
-    data: LinearWorkspaceContract | undefined;
-    isPending: boolean;
-    isError: boolean;
-  };
+  workspace: UseQueryResult<LinearWorkspaceContract>;
 }) {
   if (projects.isPending) return <Skeleton className="m-3 h-10" />;
   if (projects.isError) {
@@ -114,7 +102,7 @@ function MappedSourcesPanel({
   return (
     <>
       <IssueSourcesList query={sources} projects={projects.data} />
-      <IssueSourceSetup connected={connected} workspace={workspace} projects={projects.data} />
+      {connected ? <IssueSourceSetup workspace={workspace} projects={projects.data} /> : null}
     </>
   );
 }
