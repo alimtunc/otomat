@@ -3,7 +3,7 @@ import {
   linearConnectionContractSchema,
   syncLinearResponseSchema,
 } from "@otomat/domain";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { linearError } from "#linear";
 
@@ -20,6 +20,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   t.cleanup();
 });
 
@@ -108,6 +109,23 @@ it("maps a rate limit to 409 and an outage to 503", async () => {
   expect((await request(offline, "/api/linear/workspace")).status).toBe(503);
 });
 
+it("leaves unexpected failures to the central API error handler", async () => {
+  const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const app = makeApiApp(t, {
+    linear: stubLinearService({
+      workspace: async () => {
+        throw new Error("unexpected failure");
+      },
+    }),
+  });
+
+  const response = await request(app, "/api/linear/workspace");
+
+  expect(response.status).toBe(500);
+  expect(await response.json()).toEqual({ error: "internal_error" });
+  expect(log).toHaveBeenCalledOnce();
+});
+
 it("maps an unknown source to 404 and a duplicate mapping to 409", async () => {
   const missing = makeApiApp(t, {
     linear: stubLinearService({
@@ -118,7 +136,7 @@ it("maps an unknown source to 404 and a duplicate mapping to 409", async () => {
   });
   const duplicate = makeApiApp(t, {
     linear: stubLinearService({
-      createSource: () => {
+      createSource: async () => {
         throw linearError("linear_source_already_mapped");
       },
     }),
@@ -128,8 +146,6 @@ it("maps an unknown source to 404 and a duplicate mapping to 409", async () => {
   const conflict = await post(duplicate, "/api/linear/sources", {
     project_id: "p1",
     external_team_id: "team-1",
-    external_team_key: "OTO",
-    external_team_name: "Otomat",
   });
   expect(conflict.status).toBe(409);
 });
@@ -137,8 +153,8 @@ it("maps an unknown source to 404 and a duplicate mapping to 409", async () => {
 it("serves mapped sources and sync results through their contracts", async () => {
   const source = {
     id: "src-1",
-    source: "linear" as const,
     project_id: "p1",
+    source: "linear" as const,
     external_team_id: "team-1",
     external_team_key: "OTO",
     external_team_name: "Otomat",

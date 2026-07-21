@@ -8,13 +8,15 @@ import { join } from "node:path";
 
 const PORT = 43190;
 const dir = mkdtempSync(join(tmpdir(), "otomat-smoke-"));
+const childEnv = {
+  ...process.env,
+  OTOMAT_DAEMON_PORT: String(PORT),
+  OTOMAT_DB_PATH: join(dir, "smoke.db"),
+  OTOMAT_PROJECT_ROOT: dir,
+};
+delete childEnv.OTOMAT_LINEAR_API_KEY;
 const child = spawn(process.execPath, ["dist/index.js"], {
-  env: {
-    ...process.env,
-    OTOMAT_DAEMON_PORT: String(PORT),
-    OTOMAT_DB_PATH: join(dir, "smoke.db"),
-    OTOMAT_PROJECT_ROOT: dir,
-  },
+  env: childEnv,
   stdio: ["ignore", "pipe", "pipe"],
 });
 

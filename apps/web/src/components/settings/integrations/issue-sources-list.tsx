@@ -1,6 +1,5 @@
 import type { IssueSourceContract, ProjectContract } from "@otomat/domain";
-import { EmptyState, RelativeTime, Skeleton } from "@otomat/ui";
-import { ErrorState } from "@otomat/ui";
+import { EmptyState, ErrorState, RelativeTime, Skeleton } from "@otomat/ui";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { QueryList } from "@web/components/shell/query-list";
 

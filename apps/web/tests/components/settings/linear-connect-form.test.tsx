@@ -1,3 +1,4 @@
+import type { LinearVaultOperationResult } from "@otomat/domain";
 // @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LinearConnectForm } from "@web/components/settings/integrations/linear-connect-form";
@@ -24,33 +25,36 @@ afterEach(async () => {
   delete window.otomat;
 });
 
-function installDesktopBridge(saveKey: (apiKey: string) => Promise<unknown>): void {
+function installDesktopBridge(
+  saveKey: (apiKey: string) => Promise<LinearVaultOperationResult>,
+): void {
   window.otomat = {
     daemonUrl: "http://127.0.0.1:5000",
     pickDirectory: async () => null,
     linear: {
-      vaultStatus: async () => ({ encryption_available: true, has_stored_key: false }),
-      saveKey: (apiKey: string) => saveKey(apiKey) as never,
+      saveKey,
       forgetKey: async () => ({ ok: true, message: null }),
     },
   };
 }
 
-async function renderForm() {
+async function renderForm(connectionError: string | null = null) {
   const container = document.createElement("div");
   document.body.append(container);
   const root: Root = createRoot(container);
   const client = new QueryClient();
+  const invalidateQueries = vi.spyOn(client, "invalidateQueries");
   await act(async () => {
     root.render(
       <QueryClientProvider client={client}>
-        <LinearConnectForm />
+        <LinearConnectForm connectionError={connectionError} />
       </QueryClientProvider>,
     );
   });
   cleanups.push(async () => {
     await act(async () => root.unmount());
   });
+  return { invalidateQueries };
 }
 
 function keyInput(): HTMLInputElement {
@@ -76,18 +80,19 @@ function setInputValue(input: HTMLInputElement, value: string): void {
 }
 
 async function submitKey(value: string) {
-  await renderForm();
+  const rendered = await renderForm();
   await act(async () => setInputValue(keyInput(), value));
   await act(async () => {
     connectButton().click();
   });
+  return rendered;
 }
 
 it("masks the key and never persists it in the renderer", async () => {
   connectLinear.mockResolvedValue({
     status: "connected",
+    workspace_id: "workspace-1",
     workspace_name: "Otomat",
-    workspace_url_key: "otomat",
     user_name: "Alim",
     error_code: null,
     error_message: null,
@@ -104,8 +109,8 @@ it("masks the key and never persists it in the renderer", async () => {
 it("sends the key straight to the daemon in a plain browser", async () => {
   connectLinear.mockResolvedValue({
     status: "connected",
+    workspace_id: "workspace-1",
     workspace_name: "Otomat",
-    workspace_url_key: "otomat",
     user_name: "Alim",
     error_code: null,
     error_message: null,
@@ -131,15 +136,39 @@ it("routes the key through the desktop vault when running in Electron", async ()
 it("surfaces a rejected key without clearing the form silently", async () => {
   connectLinear.mockResolvedValue({
     status: "failed",
+    workspace_id: null,
     workspace_name: null,
-    workspace_url_key: null,
     user_name: null,
     error_code: "linear_unauthorized",
     error_message: "Linear rejected the API key. Create a new key and connect again.",
   });
 
-  await submitKey("bad-key");
+  const { invalidateQueries } = await submitKey("bad-key");
 
   const alert = document.querySelector("[role='alert']");
   expect(alert?.textContent).toContain("Linear rejected the API key");
+  expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["linear"] });
+});
+
+it("shows a restored connection error once and hides it when the key changes", async () => {
+  await renderForm("Linear rejected the saved API key.");
+
+  expect(document.querySelectorAll("[role='alert']")).toHaveLength(1);
+  expect(document.body.textContent).toContain("Linear rejected the saved API key.");
+
+  await act(async () => setInputValue(keyInput(), "replacement-key"));
+
+  expect(document.querySelector("[role='alert']")).toBeNull();
+});
+
+it("silences a desktop connection superseded by a newer attempt", async () => {
+  installDesktopBridge(async () => ({
+    ok: false,
+    message: "A newer Linear connection state replaced this request.",
+    error_code: "linear_request_superseded",
+  }));
+
+  await submitKey("first-key");
+
+  expect(document.querySelector("[role='alert']")).toBeNull();
 });

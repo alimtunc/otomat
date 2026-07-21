@@ -6,25 +6,35 @@ import {
   saveSyncState,
   upsertMirroredIssue,
 } from "@otomat/db";
-import { type IssueSourceSyncResult, issueStateFromLinear } from "@otomat/domain";
+import { type IssueSourceSyncResult, type IssueState } from "@otomat/domain";
 
 import type { LinearApiClient, LinearIssue } from "./types.js";
 
 export const SYNC_SOURCE = "linear";
 export const SYNC_RESOURCE = "issues";
 
-/**
- * Rewind applied to every stored watermark. Linear orders `updatedAt` newest
- * first over a mutable field, so an issue edited mid-run can land on a page that
- * was already consumed; re-reading a short window on the next sync recovers it.
- */
 export const SYNC_OVERLAP_MS = 60_000;
 
-export interface SyncContext {
+const LINEAR_ISSUE_STATES = new Map<string, IssueState>([
+  ["triage", "backlog"],
+  ["backlog", "backlog"],
+  ["unstarted", "ready"],
+  ["started", "running"],
+  ["completed", "done"],
+  ["canceled", "canceled"],
+  ["duplicate", "canceled"],
+]);
+
+export function issueStateFromLinear(stateType: string): IssueState {
+  return LINEAR_ISSUE_STATES.get(stateType) ?? "backlog";
+}
+
+interface SyncContext {
   db: Db;
   client: LinearApiClient;
   idFactory: () => string;
   now: () => Date;
+  signal: AbortSignal;
 }
 
 function watermarkFrom(startedAt: Date, issues: LinearIssue[]): string {
@@ -32,17 +42,11 @@ function watermarkFrom(startedAt: Date, issues: LinearIssue[]): string {
     const updatedAt = Date.parse(issue.updated_at);
     return Number.isNaN(updatedAt) ? newest : Math.max(newest, updatedAt);
   }, 0);
-  // An issue updated while paging carries a timestamp past the start of the run
-  // and was never guaranteed to be seen, so the run's own start is the ceiling.
+  // Cap the cursor at the pass start so concurrent updates remain eligible next time.
   const ceiling = latest === 0 ? startedAt.getTime() : Math.min(startedAt.getTime(), latest);
   return new Date(ceiling - SYNC_OVERLAP_MS).toISOString();
 }
 
-/**
- * Mirrors one source into SQLite. The rows and the advanced watermark land in a
- * single immediate transaction, so a failed pass leaves the previous cursor in
- * place and the next sync re-reads the same window instead of skipping it.
- */
 export async function syncIssueSource(
   ctx: SyncContext,
   source: IssueSourceRow,
@@ -51,11 +55,16 @@ export async function syncIssueSource(
   const startedAt = ctx.now();
   const cursor = getSyncState(ctx.db, SYNC_SOURCE, SYNC_RESOURCE, source.id);
 
-  const issues = await ctx.client.issues(apiKey, {
-    team_id: source.external_team_id,
-    project_id: source.external_project_id,
-    updated_since: cursor?.cursor ?? null,
-  });
+  const issues = await ctx.client.issues(
+    apiKey,
+    {
+      team_id: source.external_team_id,
+      project_id: source.external_project_id,
+      updated_since: cursor?.cursor ?? null,
+    },
+    ctx.signal,
+  );
+  ctx.signal.throwIfAborted();
 
   const syncedAt = ctx.now().toISOString();
   const nextCursor = watermarkFrom(startedAt, issues);

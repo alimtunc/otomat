@@ -29,9 +29,9 @@ import {
   type SyncLinearRequest,
 } from "@otomat/domain";
 
-import { getJson, postJson, queryString } from "./http";
-import { subscribeRunEvents } from "./sse";
-import type { DaemonClientConfig, RunEventsHandlers, RunEventsSubscription } from "./types";
+import { getJson, postJson, queryString } from "./http.js";
+import { subscribeRunEvents } from "./sse.js";
+import type { DaemonClientConfig, RunEventsHandlers, RunEventsSubscription } from "./types.js";
 
 /**
  * Builds a typed daemon client bound to `config`. Each method issues one HTTP request
@@ -55,7 +55,6 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
     async getLinearConnection() {
       return linearConnectionContractSchema.parse(await getJson(config, "/api/linear/connection"));
     },
-    /** Write-only: the key travels to the daemon and never comes back in any response. */
     async connectLinear(request: ConnectLinearRequest) {
       return linearConnectionContractSchema.parse(
         await postJson(config, "/api/linear/connect", request),

@@ -1,8 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
-/** Connection state lives in daemon memory, so it is re-read on mount rather than cached for long. */
 export function useLinearConnection() {
   return useQuery({
     queryKey: queryKeys.linearConnection,
@@ -10,20 +9,26 @@ export function useLinearConnection() {
   });
 }
 
-/** Teams and projects require a live connection; disabled while disconnected so the panel shows no spurious error. */
-export function useLinearWorkspace(connected: boolean) {
+export function useLinearWorkspace(workspaceId: string | null) {
+  const client = useQueryClient();
   return useQuery({
-    queryKey: queryKeys.linearWorkspace,
-    queryFn: () => daemon.getLinearWorkspace(),
-    enabled: connected,
+    queryKey: queryKeys.linearWorkspaceFor(workspaceId),
+    queryFn: async () => {
+      try {
+        return await daemon.getLinearWorkspace();
+      } catch (error) {
+        await client.invalidateQueries({ queryKey: queryKeys.linearConnection });
+        throw error;
+      }
+    },
+    enabled: workspaceId !== null,
     staleTime: 30_000,
   });
 }
 
-/** Mapped sources come from SQLite, so they stay readable with no network. */
-export function useIssueSources() {
+export function useIssueSources(workspaceId: string | null) {
   return useQuery({
-    queryKey: queryKeys.issueSources,
+    queryKey: queryKeys.issueSourcesFor(workspaceId),
     queryFn: () => daemon.listIssueSources(),
   });
 }

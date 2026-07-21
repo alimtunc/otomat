@@ -4,8 +4,8 @@ import {
   runStreamErrorPayloadSchema,
 } from "@otomat/domain";
 
-import { resolveUrl } from "./http";
-import type { DaemonClientConfig, RunEventsHandlers, RunEventsSubscription } from "./types";
+import { resolveUrl } from "./http.js";
+import type { DaemonClientConfig, RunEventsHandlers, RunEventsSubscription } from "./types.js";
 
 /**
  * Opens an SSE stream of a run's events, routing each named frame to its handler.

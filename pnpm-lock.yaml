@@ -35,6 +35,9 @@ importers:
       '@electron/rebuild':
         specifier: ^4.0.0
         version: 4.2.0
+      '@otomat/client':
+        specifier: workspace:*
+        version: link:../../packages/client
       '@otomat/domain':
         specifier: workspace:*
         version: link:../../packages/domain

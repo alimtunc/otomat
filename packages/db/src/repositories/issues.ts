@@ -6,12 +6,23 @@ import { touch } from "./touch.js";
 
 export type NewIssue = typeof issues.$inferInsert;
 export type IssueRow = typeof issues.$inferSelect;
+type ExternalIssueSource = Exclude<NonNullable<NewIssue["source"]>, "local">;
 
-/** The mirrored fields an external tracker owns; local columns are never overwritten by a sync. */
+export type LocalIssue = Omit<
+  NewIssue,
+  "source" | "source_external_id" | "source_identifier" | "source_url" | "synced_at"
+> & {
+  source?: "local";
+  source_external_id?: null;
+  source_identifier?: null;
+  source_url?: null;
+  synced_at?: null;
+};
+
 export interface MirroredIssue {
   id: string;
   project_id: string;
-  source: NonNullable<NewIssue["source"]>;
+  source: ExternalIssueSource;
   source_external_id: string;
   source_identifier: string;
   source_url: string;
@@ -21,13 +32,13 @@ export interface MirroredIssue {
   synced_at: string;
 }
 
-export function insertIssue(db: Db, value: NewIssue): void {
+export function insertIssue(db: Db, value: LocalIssue): void {
   db.insert(issues).values(value).run();
 }
 
 export function getIssueBySourceExternalId(
   db: Db,
-  source: NonNullable<NewIssue["source"]>,
+  source: ExternalIssueSource,
   sourceExternalId: string,
 ): IssueRow | undefined {
   return db
@@ -37,11 +48,6 @@ export function getIssueBySourceExternalId(
     .get();
 }
 
-/**
- * Single sanctioned writer for mirrored issues. The `(source, source_external_id)`
- * unique index is the conflict target, so a re-sync updates the existing row
- * instead of duplicating it, and `id` is only used when the row is new.
- */
 export function upsertMirroredIssue(db: Db, value: MirroredIssue): void {
   db.insert(issues)
     .values(value)

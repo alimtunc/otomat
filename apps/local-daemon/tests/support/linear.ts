@@ -2,30 +2,28 @@ import type { LinearConnectionContract } from "@otomat/domain";
 
 import type { LinearApiClient, LinearService } from "#linear";
 
-export const DISCONNECTED_LINEAR: LinearConnectionContract = {
+type ConnectedLinear = Extract<LinearConnectionContract, { status: "connected" }>;
+
+const DISCONNECTED_LINEAR: Extract<LinearConnectionContract, { status: "disconnected" }> = {
   status: "disconnected",
+  workspace_id: null,
   workspace_name: null,
-  workspace_url_key: null,
   user_name: null,
   error_code: null,
   error_message: null,
 };
 
-export function connectedLinear(
-  overrides: Partial<LinearConnectionContract> = {},
-): LinearConnectionContract {
+export function connectedLinear(): ConnectedLinear {
   return {
     status: "connected",
+    workspace_id: "workspace-1",
     workspace_name: "Otomat",
-    workspace_url_key: "otomat",
     user_name: "Alim",
     error_code: null,
     error_message: null,
-    ...overrides,
   };
 }
 
-/** Un-overridden members throw so a missing stub fails loudly instead of fake-succeeding. */
 export function stubLinearService(overrides: Partial<LinearService> = {}): LinearService {
   return {
     connection: () => DISCONNECTED_LINEAR,
@@ -37,7 +35,7 @@ export function stubLinearService(overrides: Partial<LinearService> = {}): Linea
       throw new Error("workspace stub not configured");
     },
     sources: () => [],
-    createSource: () => {
+    createSource: async () => {
       throw new Error("createSource stub not configured");
     },
     sync: async () => {
@@ -47,7 +45,6 @@ export function stubLinearService(overrides: Partial<LinearService> = {}): Linea
   };
 }
 
-/** Queued fake transport-level client: each call shifts the next scripted result. */
 export function stubLinearApiClient(overrides: Partial<LinearApiClient> = {}): LinearApiClient {
   return {
     viewer: async () => {

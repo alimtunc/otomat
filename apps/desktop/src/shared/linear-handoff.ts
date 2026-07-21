@@ -1,40 +1,52 @@
-import { linearConnectionContractSchema, type LinearConnectionContract } from "@otomat/domain";
+import { createDaemonClient, DaemonRequestError } from "@otomat/client";
+import {
+  linearErrorSchema,
+  type LinearConnectionContract,
+  type LinearErrorCode,
+} from "@otomat/domain";
 
-export interface LinearHandoffOptions {
+type ConnectedLinear = Extract<LinearConnectionContract, { status: "connected" }>;
+
+interface LinearHandoffOptions {
   daemonUrl: string;
   apiKey: string;
   fetch?: typeof fetch;
 }
 
-/**
- * Hands the key to the daemon over loopback once it is healthy. This is the only
- * transfer path: the key is never placed in the daemon's environment, because the
- * daemon re-spreads `process.env` into every supervised agent worker.
- *
- * The daemon's own host guard accepts this request (a loopback `Host`, no
- * `Origin`), so no CORS or CSP allowance is involved.
- */
-export async function pushLinearKey(
-  options: LinearHandoffOptions,
-): Promise<LinearConnectionContract> {
-  const fetchImpl = options.fetch ?? fetch;
-  const response = await fetchImpl(`${options.daemonUrl}/api/linear/connect`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ api_key: options.apiKey }),
-  });
-  if (!response.ok) throw new Error(`daemon refused the Linear key (${response.status})`);
-  return linearConnectionContractSchema.parse(await response.json());
+export class LinearHandoffError extends Error {
+  constructor(
+    readonly code: LinearErrorCode,
+    message: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.name = "LinearHandoffError";
+  }
 }
 
-export async function clearLinearKey(
-  daemonUrl: string,
-  fetchImpl: typeof fetch = fetch,
-): Promise<void> {
-  const response = await fetchImpl(`${daemonUrl}/api/linear/disconnect`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: "{}",
-  });
-  if (!response.ok) throw new Error(`daemon refused the Linear disconnect (${response.status})`);
+export async function pushLinearKey(options: LinearHandoffOptions): Promise<ConnectedLinear> {
+  const client = createDaemonClient({ baseUrl: options.daemonUrl, fetch: options.fetch ?? fetch });
+  let connection: LinearConnectionContract;
+  try {
+    connection = await client.connectLinear({ api_key: options.apiKey });
+  } catch (error) {
+    if (error instanceof DaemonRequestError) {
+      const refusal = linearErrorSchema.safeParse(error.body);
+      if (refusal.success) {
+        throw new LinearHandoffError(refusal.data.error, refusal.data.message, { cause: error });
+      }
+    }
+    throw error;
+  }
+  if (connection.status !== "connected") {
+    if (connection.status === "failed") {
+      throw new LinearHandoffError(connection.error_code, connection.error_message);
+    }
+    throw new Error("The daemon did not connect to Linear.");
+  }
+  return connection;
+}
+
+export async function clearLinearKey(daemonUrl: string): Promise<void> {
+  await createDaemonClient({ baseUrl: daemonUrl }).disconnectLinear();
 }

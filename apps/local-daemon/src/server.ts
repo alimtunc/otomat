@@ -37,9 +37,8 @@ export interface DaemonHandle {
 }
 
 /** The daemon is the single writer: it migrates, bootstraps the project, reconciles crashed runs, then owns the supervisor. */
-export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
-  // Read and erase before anything can spawn a child: every worker inherits
-  // process.env, and the Linear key must never travel that way.
+export async function startDaemon(options: StartDaemonOptions = {}): Promise<DaemonHandle> {
+  // Remove the key before supervised workers can inherit it.
   const developmentLinearKey = takeLinearKeyFromEnv();
   const dbPath = options.dbPath ?? defaultDbPath();
   runMigrations(dbPath);
@@ -65,7 +64,11 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
     db,
     client: createLinearApiClient(createLinearTransport()),
   });
-  if (developmentLinearKey !== null) void linear.connect(developmentLinearKey);
+  if (developmentLinearKey !== null) {
+    void linear.connect(developmentLinearKey).catch(() => {
+      console.error("[otomat] Linear development connection failed");
+    });
+  }
 
   const mainScript = process.argv[1];
   if (!mainScript) throw new Error("cannot determine daemon entrypoint for worker re-exec");
@@ -105,9 +108,19 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
 
   const port = options.port ?? Number(process.env.OTOMAT_DAEMON_PORT ?? 4319);
   const hostname = process.env.OTOMAT_DAEMON_HOST ?? "127.0.0.1";
-  const server = serve({ fetch: app.fetch, port, hostname });
+  const listening = await new Promise<{
+    server: ReturnType<typeof serve>;
+    port: number;
+  }>((resolve, reject) => {
+    const server = serve({ fetch: app.fetch, port, hostname }, (address) => {
+      server.off("error", reject);
+      resolve({ server, port: address.port });
+    });
+    server.once("error", reject);
+  });
+  const { server } = listening;
   server.on("error", (error) => {
-    console.error(`[otomat] daemon failed to bind port ${port}`, error);
+    console.error(`[otomat] daemon server failed on port ${listening.port}`, error);
     process.exit(1);
   });
 
@@ -126,5 +139,5 @@ export function startDaemon(options: StartDaemonOptions = {}): DaemonHandle {
     });
   }
 
-  return { port, close };
+  return { port: listening.port, close };
 }

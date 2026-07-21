@@ -1,14 +1,17 @@
 import type { LinearWorkspaceContract } from "@otomat/domain";
-import type { ZodType } from "zod";
+import { z, type ZodType } from "zod";
 
-import { LinearError, linearError } from "./errors.js";
+import { linearError } from "./errors.js";
 import {
   buildIssueFilter,
   ISSUES_QUERY,
   issuesResponseSchema,
   LINEAR_MAX_PAGES,
+  LINEAR_NESTED_PAGE_SIZE,
   LINEAR_PAGE_SIZE,
   PROJECTS_QUERY,
+  PROJECT_TEAMS_QUERY,
+  projectTeamsResponseSchema,
   projectsResponseSchema,
   TEAMS_QUERY,
   teamsResponseSchema,
@@ -24,22 +27,25 @@ import type {
   LinearViewer,
 } from "./types.js";
 
-interface GraphQLErrorEntry {
-  extensions?: { code?: unknown; type?: unknown };
-}
+const graphQLErrorEntrySchema = z.object({
+  extensions: z
+    .object({
+      code: z.unknown().optional(),
+      type: z.unknown().optional(),
+    })
+    .optional(),
+});
 
-interface GraphQLBody {
-  data?: unknown;
-  errors?: GraphQLErrorEntry[];
-}
+const graphQLBodySchema = z.object({
+  data: z.unknown().optional(),
+  errors: z.array(graphQLErrorEntrySchema).optional(),
+});
+
+type GraphQLErrorEntry = z.infer<typeof graphQLErrorEntrySchema>;
 
 interface Page<T> {
   nodes: T[];
   pageInfo: { hasNextPage: boolean; endCursor: string | null };
-}
-
-function readBody(body: unknown): GraphQLBody {
-  return typeof body === "object" && body !== null ? (body as GraphQLBody) : {};
 }
 
 function errorCodeOf(entry: GraphQLErrorEntry): string {
@@ -49,14 +55,11 @@ function errorCodeOf(entry: GraphQLErrorEntry): string {
   return "";
 }
 
-/**
- * Linear answers a rate-limited query with HTTP 400 and an ordinary validation
- * failure with the same status, so the body's error code is the only reliable
- * signal. A 200 can also carry `errors` alongside partial `data`; a partial page
- * is rejected outright rather than mirrored.
- */
-function assertNoGraphQLFailure(response: LinearTransportResponse): void {
-  const body = readBody(response.body);
+function parseGraphQLResponse(
+  response: LinearTransportResponse,
+): z.infer<typeof graphQLBodySchema> {
+  const parsed = graphQLBodySchema.safeParse(response.body);
+  const body = parsed.success ? parsed.data : {};
   const codes = (body.errors ?? []).map(errorCodeOf);
 
   if (codes.some((code) => code.includes("ratelimit"))) throw linearError("linear_rate_limited");
@@ -65,102 +68,150 @@ function assertNoGraphQLFailure(response: LinearTransportResponse): void {
   if (response.status === 401 || response.status === 403) throw linearError("linear_unauthorized");
   if (response.status >= 500) throw linearError("linear_unavailable");
   if (codes.length > 0 || response.status >= 400) throw linearError("linear_request_failed");
+  return body;
 }
 
-export function createLinearApiClient(transport: LinearTransport): LinearApiClient {
-  async function execute<T>(
+class DefaultLinearApiClient implements LinearApiClient {
+  constructor(private readonly transport: LinearTransport) {}
+
+  private async execute<T>(
     apiKey: string,
     query: string,
     variables: Record<string, unknown>,
     schema: ZodType<T>,
+    signal?: AbortSignal,
   ): Promise<T> {
-    let response: LinearTransportResponse;
-    try {
-      response = await transport({ query, variables, apiKey });
-    } catch (error) {
-      throw error instanceof LinearError ? error : linearError("linear_unavailable");
-    }
-
-    assertNoGraphQLFailure(response);
-
-    const parsed = schema.safeParse(readBody(response.body).data);
+    signal?.throwIfAborted();
+    const response = await this.transport({ query, variables, apiKey, signal });
+    signal?.throwIfAborted();
+    const body = parseGraphQLResponse(response);
+    const parsed = schema.safeParse(body.data);
     if (!parsed.success) throw linearError("linear_request_failed");
     return parsed.data;
   }
 
-  async function paginate<TResponse, TNode>(
+  private async paginate<TResponse, TNode>(
     apiKey: string,
     query: string,
     variables: Record<string, unknown>,
     schema: ZodType<TResponse>,
     select: (response: TResponse) => Page<TNode>,
+    signal?: AbortSignal,
   ): Promise<TNode[]> {
     const nodes: TNode[] = [];
+    const seenCursors = new Set<string>();
     let after: string | null = null;
 
     for (let page = 0; page < LINEAR_MAX_PAGES; page += 1) {
-      const response = await execute(
+      signal?.throwIfAborted();
+      const response = await this.execute(
         apiKey,
         query,
         { ...variables, after, first: LINEAR_PAGE_SIZE },
         schema,
+        signal,
       );
       const { nodes: pageNodes, pageInfo } = select(response);
       nodes.push(...pageNodes);
-      if (!pageInfo.hasNextPage || pageInfo.endCursor === null) return nodes;
+      if (!pageInfo.hasNextPage) return nodes;
+      if (pageInfo.endCursor === null) throw linearError("linear_request_failed");
+      if (seenCursors.has(pageInfo.endCursor)) throw linearError("linear_request_failed");
+      seenCursors.add(pageInfo.endCursor);
       after = pageInfo.endCursor;
     }
 
     throw linearError("linear_request_failed");
   }
 
-  return {
-    async viewer(apiKey: string): Promise<LinearViewer> {
-      const response = await execute(apiKey, VIEWER_QUERY, {}, viewerResponseSchema);
-      return {
-        user_name: response.viewer.name,
-        workspace_name: response.organization.name,
-        workspace_url_key: response.organization.urlKey,
-      };
-    },
+  async viewer(apiKey: string, signal?: AbortSignal): Promise<LinearViewer> {
+    const response = await this.execute(apiKey, VIEWER_QUERY, {}, viewerResponseSchema, signal);
+    return {
+      user_name: response.viewer.name,
+      workspace_id: response.organization.id,
+      workspace_name: response.organization.name,
+    };
+  }
 
-    async workspace(apiKey: string): Promise<LinearWorkspaceContract> {
-      const teams = await paginate(apiKey, TEAMS_QUERY, {}, teamsResponseSchema, (r) => r.teams);
-      const projects = await paginate(
-        apiKey,
-        PROJECTS_QUERY,
-        {},
-        projectsResponseSchema,
-        (r) => r.projects,
-      );
-      return {
-        teams,
-        projects: projects.map((project) => ({
-          id: project.id,
-          name: project.name,
-          team_ids: project.teams.nodes.map((team) => team.id),
-        })),
-      };
-    },
+  async workspace(apiKey: string, signal?: AbortSignal): Promise<LinearWorkspaceContract> {
+    const teams = await this.paginate(
+      apiKey,
+      TEAMS_QUERY,
+      {},
+      teamsResponseSchema,
+      (response) => response.teams,
+      signal,
+    );
+    const projects = await this.paginate(
+      apiKey,
+      PROJECTS_QUERY,
+      { teamFirst: LINEAR_NESTED_PAGE_SIZE },
+      projectsResponseSchema,
+      (response) => response.projects,
+      signal,
+    );
+    const completeProjects: LinearWorkspaceContract["projects"] = [];
+    for (const project of projects) {
+      completeProjects.push({
+        id: project.id,
+        name: project.name,
+        team_ids: await this.completeProjectTeamIds(apiKey, project, signal),
+      });
+    }
+    return { teams, projects: completeProjects };
+  }
 
-    async issues(apiKey: string, query: LinearIssueQuery): Promise<LinearIssue[]> {
-      const filter = buildIssueFilter(query.team_id, query.project_id, query.updated_since);
-      const nodes = await paginate(
+  private async completeProjectTeamIds(
+    apiKey: string,
+    project: z.infer<typeof projectsResponseSchema>["projects"]["nodes"][number],
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    const teamIds = project.teams.nodes.map((team) => team.id);
+    const seenCursors = new Set<string>();
+    let { hasNextPage, endCursor } = project.teams.pageInfo;
+
+    for (let page = 1; hasNextPage && endCursor !== null && page < LINEAR_MAX_PAGES; page += 1) {
+      if (seenCursors.has(endCursor)) throw linearError("linear_request_failed");
+      seenCursors.add(endCursor);
+      const response = await this.execute(
         apiKey,
-        ISSUES_QUERY,
-        { filter },
-        issuesResponseSchema,
-        (r) => r.issues,
+        PROJECT_TEAMS_QUERY,
+        { projectId: project.id, after: endCursor, first: LINEAR_PAGE_SIZE },
+        projectTeamsResponseSchema,
+        signal,
       );
-      return nodes.map((issue) => ({
-        id: issue.id,
-        identifier: issue.identifier,
-        title: issue.title,
-        description: issue.description,
-        url: issue.url,
-        updated_at: issue.updatedAt,
-        state_type: issue.state.type,
-      }));
-    },
-  };
+      teamIds.push(...response.project.teams.nodes.map((team) => team.id));
+      ({ hasNextPage, endCursor } = response.project.teams.pageInfo);
+    }
+    if (hasNextPage) throw linearError("linear_request_failed");
+    return teamIds;
+  }
+
+  async issues(
+    apiKey: string,
+    query: LinearIssueQuery,
+    signal?: AbortSignal,
+  ): Promise<LinearIssue[]> {
+    const filter = buildIssueFilter(query.team_id, query.project_id, query.updated_since);
+    const nodes = await this.paginate(
+      apiKey,
+      ISSUES_QUERY,
+      { filter },
+      issuesResponseSchema,
+      (response) => response.issues,
+      signal,
+    );
+    return nodes.map((issue) => ({
+      id: issue.id,
+      identifier: issue.identifier,
+      title: issue.title,
+      description: issue.description,
+      url: issue.url,
+      updated_at: issue.updatedAt,
+      state_type: issue.state.type,
+    }));
+  }
+}
+
+export function createLinearApiClient(transport: LinearTransport): LinearApiClient {
+  return new DefaultLinearApiClient(transport);
 }

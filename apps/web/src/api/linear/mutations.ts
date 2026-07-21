@@ -2,6 +2,7 @@ import { DaemonRequestError } from "@otomat/client";
 import {
   linearErrorSchema,
   type CreateIssueSourceRequest,
+  type LinearErrorCode,
   type SyncLinearRequest,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
@@ -10,12 +11,33 @@ import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 
-/**
- * Submits the key once. Inside Electron it goes through the main process, which
- * validates it against the daemon and only then encrypts it with safeStorage; in
- * a plain browser it goes straight to the daemon and lives only in daemon memory
- * until the next restart.
- */
+class LinearOperationError extends Error {
+  constructor(
+    message: string,
+    readonly code: LinearErrorCode | null,
+  ) {
+    super(message);
+    this.name = "LinearOperationError";
+  }
+}
+
+function linearRefusal(error: unknown): { code: LinearErrorCode; message: string } | null {
+  if (error instanceof LinearOperationError && error.code !== null) {
+    return { code: error.code, message: error.message };
+  }
+  if (error instanceof DaemonRequestError) {
+    const refusal = linearErrorSchema.safeParse(error.body);
+    if (refusal.success) {
+      return { code: refusal.data.error, message: refusal.data.message };
+    }
+  }
+  return null;
+}
+
+export function isSupersededLinearError(error: unknown): boolean {
+  return linearRefusal(error)?.code === "linear_request_superseded";
+}
+
 export function useConnectLinear() {
   const client = useQueryClient();
   return useMutation({
@@ -24,14 +46,17 @@ export function useConnectLinear() {
       if (bridge === null) {
         const connection = await daemon.connectLinear({ api_key: apiKey });
         if (connection.status !== "connected") {
-          throw new Error(connection.error_message ?? "Linear rejected the API key.");
+          throw new LinearOperationError(
+            connection.error_message ?? "Linear rejected the API key.",
+            connection.error_code,
+          );
         }
         return;
       }
       const result = await bridge.linear.saveKey(apiKey);
-      if (!result.ok) throw new Error(result.message ?? "Saving the Linear key failed.");
+      if (!result.ok) throw new LinearOperationError(result.message, result.error_code);
     },
-    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
+    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
   });
 }
 
@@ -45,9 +70,12 @@ export function useDisconnectLinear() {
         return;
       }
       const result = await bridge.linear.forgetKey();
-      if (!result.ok) throw new Error(result.message ?? "Forgetting the Linear key failed.");
+      if (!result.ok) throw new LinearOperationError(result.message, result.error_code);
     },
-    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
+    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
+    onError: (error) => {
+      if (!isSupersededLinearError(error)) toast.error(linearErrorMessage(error));
+    },
   });
 }
 
@@ -55,7 +83,7 @@ export function useCreateIssueSource() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: CreateIssueSourceRequest) => daemon.createIssueSource(request),
-    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.issueSources }),
+    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
   });
 }
 
@@ -64,21 +92,31 @@ export function useSyncLinear() {
   return useMutation({
     mutationFn: (request: SyncLinearRequest = {}) => daemon.syncLinear(request),
     onSuccess: (response) => {
-      const imported = response.results.reduce((total, result) => total + result.imported, 0);
-      const updated = response.results.reduce((total, result) => total + result.updated, 0);
-      client.invalidateQueries({ queryKey: queryKeys.issues });
-      client.invalidateQueries({ queryKey: queryKeys.issueSources });
+      let imported = 0;
+      let updated = 0;
+      for (const syncResult of response.results) {
+        imported += syncResult.imported;
+        updated += syncResult.updated;
+      }
       toast.success(`Synced Linear — ${imported} imported, ${updated} updated.`);
     },
-    onError: (error) => toast.error(linearErrorMessage(error)),
+    onError: (error) => {
+      if (!isSupersededLinearError(error)) toast.error(linearErrorMessage(error));
+    },
+    onSettled: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: queryKeys.linearConnection }),
+        client.invalidateQueries({ queryKey: queryKeys.issueSources }),
+        client.invalidateQueries({ queryKey: queryKeys.issues }),
+      ]);
+    },
   });
 }
 
-/** Preserves the daemon's typed refusal and falls back to a connectivity message otherwise. */
 export function linearErrorMessage(error: unknown): string {
+  const refusal = linearRefusal(error);
+  if (refusal !== null) return refusal.message;
   if (error instanceof DaemonRequestError) {
-    const refusal = linearErrorSchema.safeParse(error.body);
-    if (refusal.success) return refusal.data.message;
     return "The daemon rejected the Linear request.";
   }
   return error instanceof Error ? error.message : "Could not reach the daemon.";

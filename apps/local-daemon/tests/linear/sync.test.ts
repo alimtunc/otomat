@@ -1,9 +1,11 @@
-import { getSyncState, type IssueSourceRow, listIssues } from "@otomat/db";
+import { getSyncState, type IssueSourceRow, listIssues, schema } from "@otomat/db";
+import { ISSUE_STATES } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import {
   type LinearIssue,
   type LinearIssueQuery,
+  issueStateFromLinear,
   SYNC_OVERLAP_MS,
   SYNC_RESOURCE,
   SYNC_SOURCE,
@@ -13,10 +15,29 @@ import {
 import { setupTestDb, type TestDb } from "../support/db.js";
 import { stubLinearApiClient } from "../support/linear.js";
 
+it.each([
+  ["triage", "backlog"],
+  ["backlog", "backlog"],
+  ["unstarted", "ready"],
+  ["started", "running"],
+  ["completed", "done"],
+  ["canceled", "canceled"],
+  ["duplicate", "canceled"],
+] as const)("maps Linear state %s to %s", (linearState, issueState) => {
+  expect(issueStateFromLinear(linearState)).toBe(issueState);
+  expect(ISSUE_STATES).toContain(issueState);
+});
+
+it("falls back to backlog for unknown Linear state types", () => {
+  expect(issueStateFromLinear("some_future_type")).toBe("backlog");
+  expect(issueStateFromLinear("")).toBe("backlog");
+  expect(issueStateFromLinear("In Progress")).toBe("backlog");
+});
+
 const SOURCE: IssueSourceRow = {
   id: "src-1",
-  source: "linear",
   project_id: "p1",
+  source: "linear",
   external_team_id: "team-1",
   external_team_key: "OTO",
   external_team_name: "Otomat",
@@ -55,6 +76,7 @@ function ctx(issues: LinearIssue[], capture?: (query: LinearIssueQuery) => void)
     }),
     idFactory: () => `generated-${(ids += 1)}`,
     now: () => NOW,
+    signal: new AbortController().signal,
   };
 }
 
@@ -88,7 +110,6 @@ it("rewinds the stored watermark by the overlap window", async () => {
   await syncIssueSource(ctx([linearIssue()]), SOURCE, "key");
 
   const cursor = getSyncState(t.db, SYNC_SOURCE, SYNC_RESOURCE, "src-1");
-  // The newest issue predates the run, so the ceiling is that issue's timestamp.
   expect(cursor?.cursor).toBe(
     new Date(Date.parse("2026-07-20T11:00:00.000Z") - SYNC_OVERLAP_MS).toISOString(),
   );
@@ -96,8 +117,6 @@ it("rewinds the stored watermark by the overlap window", async () => {
 });
 
 it("never advances the watermark past the start of the pass", async () => {
-  // An issue edited mid-pass reports a timestamp after the run began and may have
-  // been missed, so the run's own start bounds the watermark.
   await syncIssueSource(
     ctx([linearIssue({ updated_at: "2026-07-20T13:00:00.000Z" })]),
     SOURCE,
@@ -125,6 +144,60 @@ it("re-syncing the same issue updates the row and never duplicates it", async ()
     source_external_id: "linear-uuid-1",
     status: "done",
   });
+});
+
+it("does not conflate a legacy human identifier with the immutable UUID", async () => {
+  t.db
+    .insert(schema.issues)
+    .values({
+      id: "legacy-local-id",
+      project_id: "p1",
+      source: "linear",
+      source_external_id: "OTO-1",
+      source_identifier: "OTO-1",
+      source_url: null,
+      title: "Legacy mirror",
+      status: "ready",
+      synced_at: "2026-07-19T00:00:00.000Z",
+    })
+    .run();
+
+  const result = await syncIssueSource(ctx([linearIssue()]), SOURCE, "key");
+
+  expect(result).toMatchObject({ imported: 1, updated: 0 });
+  expect(listIssues(t.db).filter((issue) => issue.source === "linear")).toEqual([
+    expect.objectContaining({
+      id: "legacy-local-id",
+      source_external_id: "OTO-1",
+      source_url: null,
+    }),
+    expect.objectContaining({
+      source_external_id: "linear-uuid-1",
+      source_identifier: "OTO-1",
+      source_url: "https://linear.app/otomat/issue/OTO-1",
+    }),
+  ]);
+});
+
+it("keeps identical identifiers separate when immutable ids differ", async () => {
+  await syncIssueSource(ctx([linearIssue()]), SOURCE, "first-key");
+  await syncIssueSource(
+    ctx([linearIssue({ id: "other-workspace-uuid" })]),
+    { ...SOURCE, id: "src-2" },
+    "second-key",
+  );
+
+  expect(
+    listIssues(t.db)
+      .filter((issue) => issue.source === "linear")
+      .map((issue) => ({
+        externalId: issue.source_external_id,
+        identifier: issue.source_identifier,
+      })),
+  ).toEqual([
+    { externalId: "linear-uuid-1", identifier: "OTO-1" },
+    { externalId: "other-workspace-uuid", identifier: "OTO-1" },
+  ]);
 });
 
 it("sends the stored watermark as the next pass's lower bound", async () => {
@@ -156,6 +229,7 @@ it("keeps the previous cursor when the pass fails", async () => {
     }),
     idFactory: () => "unused",
     now: () => NOW,
+    signal: new AbortController().signal,
   };
   await expect(syncIssueSource(failing, SOURCE, "key")).rejects.toThrow();
 

@@ -1,16 +1,16 @@
 import { z } from "zod";
 
-/** Well under any documented Linear page cap, and cheap in query-complexity points. */
 export const LINEAR_PAGE_SIZE = 100;
 
-/** Hard bound on one sync so an unexpected cursor loop can never page forever. */
+export const LINEAR_NESTED_PAGE_SIZE = 25;
+
 export const LINEAR_MAX_PAGES = 200;
 
 export const LINEAR_API_URL = "https://api.linear.app/graphql";
 
 export const VIEWER_QUERY = `query OtomatViewer {
   viewer { name }
-  organization { name urlKey }
+  organization { id name }
 }`;
 
 export const TEAMS_QUERY = `query OtomatTeams($after: String, $first: Int!) {
@@ -20,10 +20,19 @@ export const TEAMS_QUERY = `query OtomatTeams($after: String, $first: Int!) {
   }
 }`;
 
-export const PROJECTS_QUERY = `query OtomatProjects($after: String, $first: Int!) {
+export const PROJECTS_QUERY = `query OtomatProjects($after: String, $first: Int!, $teamFirst: Int!) {
   projects(first: $first, after: $after, orderBy: updatedAt) {
-    nodes { id name teams(first: 25) { nodes { id } } }
+    nodes { id name teams(first: $teamFirst) { nodes { id } pageInfo { hasNextPage endCursor } } }
     pageInfo { hasNextPage endCursor }
+  }
+}`;
+
+export const PROJECT_TEAMS_QUERY = `query OtomatProjectTeams($projectId: String!, $after: String, $first: Int!) {
+  project(id: $projectId) {
+    teams(first: $first, after: $after) {
+      nodes { id }
+      pageInfo { hasNextPage endCursor }
+    }
   }
 }`;
 
@@ -53,7 +62,7 @@ function connection<T extends z.ZodType>(node: T) {
 
 export const viewerResponseSchema = z.object({
   viewer: z.object({ name: z.string() }),
-  organization: z.object({ name: z.string(), urlKey: z.string() }),
+  organization: z.object({ id: z.string().min(1), name: z.string() }),
 });
 
 export const teamsResponseSchema = z.object({
@@ -65,38 +74,35 @@ export const projectsResponseSchema = z.object({
     z.object({
       id: z.string(),
       name: z.string(),
-      teams: z.object({ nodes: z.array(z.object({ id: z.string() })) }),
+      teams: connection(z.object({ id: z.string() })),
     }),
   ),
+});
+
+export const projectTeamsResponseSchema = z.object({
+  project: z.object({ teams: connection(z.object({ id: z.string() })) }),
 });
 
 export const issuesResponseSchema = z.object({
   issues: connection(
     z.object({
-      id: z.string(),
-      identifier: z.string(),
-      title: z.string(),
+      id: z.string().min(1),
+      identifier: z.string().min(1),
+      title: z.string().min(1),
       description: z.string().nullable(),
-      url: z.string(),
-      updatedAt: z.string(),
-      // `WorkflowState.type` is a plain String upstream, so new values must not
-      // break the mirror.
+      url: z.url(),
+      updatedAt: z.iso.datetime(),
       state: z.object({ type: z.string() }),
     }),
   ),
 });
 
-export interface LinearIssueFilter {
+interface LinearIssueFilter {
   team: { id: { eq: string } };
   project?: { id: { eq: string } };
   updatedAt?: { gte: string };
 }
 
-/**
- * `gte`, not `gt`: Linear timestamps carry milliseconds and bulk edits share one,
- * so a strict comparison silently drops rows on the watermark boundary. Re-reading
- * the boundary is safe because every write upserts on the issue UUID.
- */
 export function buildIssueFilter(
   teamId: string,
   projectId: string,

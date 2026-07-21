@@ -26,11 +26,6 @@ export function getSyncState(
     .get();
 }
 
-/**
- * Single sanctioned writer for sync cursors. `(source, resource, external_id)`
- * is the conflict target, so the watermark advances in place and a second
- * cursor for the same scope cannot exist; `id` only applies to a new row.
- */
 export function saveSyncState(db: Db, value: NewSyncState): void {
   db.insert(syncState)
     .values(value)

@@ -16,7 +16,6 @@ it("removes the development key from the environment as it reads it", () => {
   const env: NodeJS.ProcessEnv = { OTOMAT_LINEAR_API_KEY: "lin_api_secret", PATH: "/usr/bin" };
 
   expect(takeLinearKeyFromEnv(env)).toBe("lin_api_secret");
-  // A child process spawned after this point inherits an env with no key in it.
   expect(env.OTOMAT_LINEAR_API_KEY).toBeUndefined();
   expect(Object.keys(env)).toEqual(["PATH"]);
   expect(takeLinearKeyFromEnv(env)).toBeNull();

@@ -5,10 +5,12 @@ import { safeStorage } from "electron";
 
 import { createLinearVault, type LinearVault } from "#shared/linear-vault";
 
-/** Distinctive name so the encrypted blob is never mistaken for daemon data sitting beside it. */
-export const LINEAR_VAULT_FILENAME = "linear-credential.enc";
+const LINEAR_VAULT_FILENAME = "linear-credential.enc";
 
-/** Binds the pure vault to Electron's keychain-backed safeStorage and a file under userData. */
+function hasErrorCode(error: unknown): error is Error & { code: string } {
+  return error instanceof Error && "code" in error && typeof error.code === "string";
+}
+
 export function createMainLinearVault(dataDir: string): LinearVault {
   const filePath = join(dataDir, LINEAR_VAULT_FILENAME);
   return createLinearVault({
@@ -19,7 +21,7 @@ export function createMainLinearVault(dataDir: string): LinearVault {
       try {
         return readFileSync(filePath);
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+        if (hasErrorCode(error) && error.code === "ENOENT") return null;
         throw error;
       }
     },

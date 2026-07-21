@@ -1,25 +1,129 @@
 import type { LinearWorkspaceContract, ProjectContract } from "@otomat/domain";
-import { Button, Field, FieldControl, FieldLabel, toast } from "@otomat/ui";
+import {
+  Button,
+  Field,
+  FieldControl,
+  FieldLabel,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  toast,
+} from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
-import { linearErrorMessage, useCreateIssueSource } from "@web/api/linear/mutations";
-import { fieldErrorProps } from "@web/lib/form";
+import {
+  isSupersededLinearError,
+  linearErrorMessage,
+  useCreateIssueSource,
+} from "@web/api/linear/mutations";
+import {
+  buildIssueSourceRequest,
+  WHOLE_TEAM,
+} from "@web/components/settings/integrations/issue-source-selection";
+import { fieldErrorProps, type FieldMetaLike } from "@web/lib/form";
 import { useState } from "react";
-
-const WHOLE_TEAM = "";
 
 interface IssueSourceFormProps {
   workspace: LinearWorkspaceContract;
   projects: ProjectContract[];
 }
 
-/**
- * Binds a Linear team (optionally one of its projects) to an existing local
- * project. Linear never creates a project or picks a repository: the local
- * project chosen here is what decides where an imported issue launches its run.
- */
+interface MappingOption {
+  value: string;
+  label: string;
+}
+
+function MappingSelect({
+  label,
+  value,
+  options,
+  onValueChange,
+}: {
+  label: string;
+  value: string;
+  options: MappingOption[];
+  onValueChange: (value: string) => void;
+}) {
+  return (
+    <Select
+      items={options}
+      value={value}
+      onValueChange={(nextValue) => {
+        if (nextValue !== null) onValueChange(nextValue);
+      }}
+    >
+      <FieldControl>
+        <SelectTrigger aria-label={label}>
+          <SelectValue />
+        </SelectTrigger>
+      </FieldControl>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+interface MappingFieldProps {
+  label: string;
+  value: string;
+  options: MappingOption[];
+  meta: FieldMetaLike;
+  onValueChange(value: string): void;
+}
+
+function MappingField({ label, value, options, meta, onValueChange }: MappingFieldProps) {
+  return (
+    <Field {...fieldErrorProps(meta)}>
+      <FieldLabel>{label}</FieldLabel>
+      <MappingSelect label={label} value={value} options={options} onValueChange={onValueChange} />
+    </Field>
+  );
+}
+
+function LinearProjectField({
+  workspace,
+  teamId,
+  value,
+  meta,
+  onValueChange,
+}: {
+  workspace: LinearWorkspaceContract;
+  teamId: string;
+  value: string;
+  meta: FieldMetaLike;
+  onValueChange(value: string): void;
+}) {
+  const options = [
+    { value: WHOLE_TEAM, label: "Whole team" },
+    ...workspace.projects.flatMap((project) =>
+      project.team_ids.includes(teamId) ? [{ value: project.id, label: project.name }] : [],
+    ),
+  ];
+  return (
+    <MappingField
+      label="Linear project"
+      value={value}
+      options={options}
+      meta={meta}
+      onValueChange={onValueChange}
+    />
+  );
+}
+
 export function IssueSourceForm({ workspace, projects }: IssueSourceFormProps) {
   const create = useCreateIssueSource();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const teamOptions = workspace.teams.map((team) => ({
+    value: team.id,
+    label: `${team.key} · ${team.name}`,
+  }));
+  const projectOptions = projects.map((project) => ({ value: project.id, label: project.name }));
 
   const form = useForm({
     defaultValues: {
@@ -29,24 +133,17 @@ export function IssueSourceForm({ workspace, projects }: IssueSourceFormProps) {
     },
     onSubmit: async ({ value }) => {
       setSubmitError(null);
-      const team = workspace.teams.find((entry) => entry.id === value.teamId);
-      if (team === undefined) {
-        setSubmitError("Pick a Linear team.");
+      const resolution = buildIssueSourceRequest(workspace, value);
+      if (!resolution.ok) {
+        setSubmitError(resolution.message);
         return;
       }
-      const linearProject = workspace.projects.find((entry) => entry.id === value.linearProjectId);
       try {
-        await create.mutateAsync({
-          project_id: value.projectId,
-          external_team_id: team.id,
-          external_team_key: team.key,
-          external_team_name: team.name,
-          external_project_id: linearProject?.id ?? WHOLE_TEAM,
-          external_project_name: linearProject?.name ?? WHOLE_TEAM,
-        });
-        toast.success(`Mapped ${team.key} to a local project`);
+        await create.mutateAsync(resolution.request);
+        toast.success("Mapped Linear source to a local project");
         form.reset();
       } catch (error) {
+        if (isSupersededLinearError(error)) return;
         setSubmitError(linearErrorMessage(error));
       }
     },
@@ -63,23 +160,16 @@ export function IssueSourceForm({ workspace, projects }: IssueSourceFormProps) {
       <div className="grid gap-3 sm:grid-cols-3">
         <form.Field name="teamId">
           {(field) => (
-            <Field {...fieldErrorProps(field.state.meta)}>
-              <FieldLabel>Linear team</FieldLabel>
-              <FieldControl>
-                <select
-                  className="h-7.25 w-full rounded-md border border-border-subtle bg-card px-2 text-sm text-text-secondary"
-                  value={field.state.value}
-                  aria-label="Linear team"
-                  onChange={(event) => field.handleChange(event.target.value)}
-                >
-                  {workspace.teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.key} · {team.name}
-                    </option>
-                  ))}
-                </select>
-              </FieldControl>
-            </Field>
+            <MappingField
+              label="Linear team"
+              value={field.state.value}
+              options={teamOptions}
+              meta={field.state.meta}
+              onValueChange={(teamId) => {
+                field.handleChange(teamId);
+                form.setFieldValue("linearProjectId", WHOLE_TEAM);
+              }}
+            />
           )}
         </form.Field>
 
@@ -87,26 +177,13 @@ export function IssueSourceForm({ workspace, projects }: IssueSourceFormProps) {
           {(teamId) => (
             <form.Field name="linearProjectId">
               {(field) => (
-                <Field {...fieldErrorProps(field.state.meta)}>
-                  <FieldLabel>Linear project</FieldLabel>
-                  <FieldControl>
-                    <select
-                      className="h-7.25 w-full rounded-md border border-border-subtle bg-card px-2 text-sm text-text-secondary"
-                      value={field.state.value}
-                      aria-label="Linear project"
-                      onChange={(event) => field.handleChange(event.target.value)}
-                    >
-                      <option value={WHOLE_TEAM}>Whole team</option>
-                      {workspace.projects
-                        .filter((project) => project.team_ids.includes(teamId))
-                        .map((project) => (
-                          <option key={project.id} value={project.id}>
-                            {project.name}
-                          </option>
-                        ))}
-                    </select>
-                  </FieldControl>
-                </Field>
+                <LinearProjectField
+                  workspace={workspace}
+                  teamId={teamId}
+                  value={field.state.value}
+                  meta={field.state.meta}
+                  onValueChange={field.handleChange}
+                />
               )}
             </form.Field>
           )}
@@ -114,46 +191,33 @@ export function IssueSourceForm({ workspace, projects }: IssueSourceFormProps) {
 
         <form.Field name="projectId">
           {(field) => (
-            <Field {...fieldErrorProps(field.state.meta)}>
-              <FieldLabel>Otomat project</FieldLabel>
-              <FieldControl>
-                <select
-                  className="h-7.25 w-full rounded-md border border-border-subtle bg-card px-2 text-sm text-text-secondary"
-                  value={field.state.value}
-                  aria-label="Otomat project"
-                  onChange={(event) => field.handleChange(event.target.value)}
-                >
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </FieldControl>
-            </Field>
+            <MappingField
+              label="Otomat project"
+              value={field.state.value}
+              options={projectOptions}
+              meta={field.state.meta}
+              onValueChange={field.handleChange}
+            />
           )}
         </form.Field>
       </div>
 
       <div className="flex items-center gap-2">
-        <form.Subscribe selector={(state) => state.values.projectId}>
-          {(projectId) => (
+        <form.Subscribe
+          selector={(state) => [state.values.projectId, state.values.teamId] as const}
+        >
+          {([projectId, teamId]) => (
             <Button
               type="submit"
               variant="primary"
               size="sm"
               loading={create.isPending}
-              disabled={projectId === "" || create.isPending}
+              disabled={projectId === "" || teamId === "" || create.isPending}
             >
               Map source
             </Button>
           )}
         </form.Subscribe>
-        {projects.length === 0 ? (
-          <span className="text-xs text-text-tertiary">
-            Register a repository first — a source needs a local project to import into.
-          </span>
-        ) : null}
       </div>
 
       {submitError === null ? null : (

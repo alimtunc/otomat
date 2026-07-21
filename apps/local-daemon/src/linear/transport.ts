@@ -2,43 +2,44 @@ import { linearError } from "./errors.js";
 import { LINEAR_API_URL } from "./graphql.js";
 import type { LinearTransport } from "./types.js";
 
-function headerRecord(headers: Headers): Record<string, string> {
-  const record: Record<string, string> = {};
-  headers.forEach((value, name) => {
-    record[name.toLowerCase()] = value;
-  });
-  return record;
-}
+export const LINEAR_REQUEST_TIMEOUT_MS = 10_000;
 
-/**
- * The only place the API key touches the network. A Personal API key is sent as
- * a bare `Authorization` value with no `Bearer` prefix, and no failure path
- * carries the request back out: transport faults become a fixed unavailable
- * error so the key can never reach a log or an HTTP response.
- */
-export function createLinearTransport(fetchImpl: typeof fetch = fetch): LinearTransport {
-  return async ({ query, variables, apiKey }) => {
+export function createLinearTransport(): LinearTransport {
+  return async ({ query, variables, apiKey, signal: requestSignal }) => {
     let response: Response;
+    const timeoutSignal = AbortSignal.timeout(LINEAR_REQUEST_TIMEOUT_MS);
     try {
-      response = await fetchImpl(LINEAR_API_URL, {
+      response = await fetch(LINEAR_API_URL, {
         method: "POST",
+        signal:
+          requestSignal === undefined
+            ? timeoutSignal
+            : AbortSignal.any([requestSignal, timeoutSignal]),
         headers: { "content-type": "application/json", authorization: apiKey },
         body: JSON.stringify({ query, variables }),
       });
-    } catch {
-      throw linearError("linear_unavailable");
+    } catch (error) {
+      throw linearError("linear_unavailable", error);
     }
 
-    const text = await response.text().catch(() => "");
+    let text: string;
+    try {
+      text = await response.text();
+    } catch (error) {
+      throw linearError(
+        timeoutSignal.aborted ? "linear_unavailable" : "linear_request_failed",
+        error,
+      );
+    }
     let body: unknown = null;
     if (text !== "") {
       try {
         body = JSON.parse(text);
-      } catch {
-        throw linearError("linear_request_failed");
+      } catch (error) {
+        throw linearError("linear_request_failed", error);
       }
     }
 
-    return { status: response.status, headers: headerRecord(response.headers), body };
+    return { status: response.status, body };
   };
 }

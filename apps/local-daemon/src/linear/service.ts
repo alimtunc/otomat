@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import {
-  findIssueSourceByExternalScope,
+  findOverlappingIssueSource,
   getIssueSource,
   getProject,
   getSyncState,
@@ -9,22 +9,24 @@ import {
   type IssueSourceRow,
   listIssueSources,
 } from "@otomat/db";
-import type {
-  CreateIssueSourceRequest,
-  IssueSourceContract,
-  IssueSourceSyncResult,
-  LinearConnectionContract,
+import {
+  issueSourceContractSchema,
+  type CreateIssueSourceRequest,
+  type IssueSourceContract,
+  type IssueSourceSyncResult,
+  type LinearConnectionContract,
+  type LinearWorkspaceContract,
 } from "@otomat/domain";
 
 import { createLinearCredentialStore } from "./credential.js";
-import { LinearError, linearError, safeLinearFailure } from "./errors.js";
+import { LinearError, linearError } from "./errors.js";
 import { SYNC_RESOURCE, SYNC_SOURCE, syncIssueSource } from "./sync.js";
 import type { LinearService, LinearServiceConfig, LinearViewer } from "./types.js";
 
 const DISCONNECTED: LinearConnectionContract = {
   status: "disconnected",
+  workspace_id: null,
   workspace_name: null,
-  workspace_url_key: null,
   user_name: null,
   error_code: null,
   error_message: null,
@@ -33,143 +35,208 @@ const DISCONNECTED: LinearConnectionContract = {
 function connected(viewer: LinearViewer): LinearConnectionContract {
   return {
     status: "connected",
+    workspace_id: viewer.workspace_id,
     workspace_name: viewer.workspace_name,
-    workspace_url_key: viewer.workspace_url_key,
     user_name: viewer.user_name,
     error_code: null,
     error_message: null,
   };
 }
 
-function failed(error: unknown): LinearConnectionContract {
-  const failure = safeLinearFailure(error);
+function failed(error: LinearError): LinearConnectionContract {
   return {
-    ...DISCONNECTED,
     status: "failed",
-    error_code: failure.code,
-    error_message: failure.message,
+    workspace_id: null,
+    workspace_name: null,
+    user_name: null,
+    error_code: error.code,
+    error_message: error.message,
   };
 }
 
-export function createLinearService(config: LinearServiceConfig): LinearService {
-  const credentials = config.credentials ?? createLinearCredentialStore();
-  const idFactory = config.idFactory ?? randomUUID;
-  const now = config.now ?? (() => new Date());
-  let state: LinearConnectionContract = DISCONNECTED;
+function supersededRequest(): LinearError {
+  return linearError("linear_request_superseded");
+}
 
-  function toContract(row: IssueSourceRow): IssueSourceContract {
-    const cursor = getSyncState(config.db, SYNC_SOURCE, SYNC_RESOURCE, row.id);
-    return {
+class DefaultLinearService implements LinearService {
+  private readonly credentials = createLinearCredentialStore();
+  private readonly idFactory: () => string;
+  private readonly now: () => Date;
+  private state: LinearConnectionContract = DISCONNECTED;
+  private authorization = new AbortController();
+
+  constructor(private readonly config: LinearServiceConfig) {
+    this.idFactory = config.idFactory ?? randomUUID;
+    this.now = config.now ?? (() => new Date());
+  }
+
+  connection(): LinearConnectionContract {
+    return this.state;
+  }
+
+  async connect(apiKey: string): Promise<LinearConnectionContract> {
+    const signal = this.beginCredentialChange();
+    try {
+      const viewer = await this.config.client.viewer(apiKey, signal);
+      if (!this.isCurrent(signal)) throw supersededRequest();
+      this.credentials.set(apiKey);
+      this.state = connected(viewer);
+    } catch (error) {
+      if (!this.isCurrent(signal)) throw supersededRequest();
+      this.credentials.clear();
+      if (!(error instanceof LinearError)) {
+        this.state = DISCONNECTED;
+        throw error;
+      }
+      this.state = failed(error);
+    }
+    return this.state;
+  }
+
+  disconnect(): LinearConnectionContract {
+    this.beginCredentialChange();
+    return this.state;
+  }
+
+  async workspace(): Promise<LinearWorkspaceContract> {
+    const { apiKey, signal } = this.requireAuthorization();
+    return this.authorized(signal, () => this.config.client.workspace(apiKey, signal));
+  }
+
+  sources(): IssueSourceContract[] {
+    return listIssueSources(this.config.db, { source: SYNC_SOURCE }).map((row) =>
+      this.toContract(row),
+    );
+  }
+
+  async createSource(request: CreateIssueSourceRequest): Promise<IssueSourceContract> {
+    const { apiKey, signal } = this.requireAuthorization();
+    const workspace = await this.authorized(signal, () =>
+      this.config.client.workspace(apiKey, signal),
+    );
+    if (!this.isCurrent(signal)) throw supersededRequest();
+    if (getProject(this.config.db, request.project_id) === undefined) {
+      throw linearError("linear_project_not_found");
+    }
+    const team = workspace.teams.find((candidate) => candidate.id === request.external_team_id);
+    const externalProjectId = request.external_project_id ?? "";
+    const externalProject = workspace.projects.find(
+      (candidate) =>
+        candidate.id === externalProjectId && candidate.team_ids.includes(request.external_team_id),
+    );
+    if (team === undefined || (externalProjectId !== "" && externalProject === undefined)) {
+      throw linearError("linear_source_invalid_selection");
+    }
+    const existing = findOverlappingIssueSource(
+      this.config.db,
+      SYNC_SOURCE,
+      request.external_team_id,
+      externalProjectId,
+    );
+    if (existing !== undefined) throw linearError("linear_source_already_mapped");
+
+    const id = this.idFactory();
+    insertIssueSource(this.config.db, {
+      id,
+      project_id: request.project_id,
+      source: SYNC_SOURCE,
+      external_team_id: request.external_team_id,
+      external_team_key: team.key,
+      external_team_name: team.name,
+      external_project_id: externalProjectId,
+      external_project_name: externalProject?.name ?? "",
+    });
+
+    const inserted = getIssueSource(this.config.db, id);
+    if (inserted === undefined) throw linearError("linear_request_failed");
+    return this.toContract(inserted);
+  }
+
+  async sync(sourceId?: string): Promise<IssueSourceSyncResult[]> {
+    const { apiKey, signal } = this.requireAuthorization();
+    const sources = this.resolveSources(sourceId);
+    const context = {
+      db: this.config.db,
+      client: this.config.client,
+      idFactory: this.idFactory,
+      now: this.now,
+      signal,
+    };
+
+    return this.authorized(signal, async () => {
+      const syncResults: IssueSourceSyncResult[] = [];
+      for (const source of sources) {
+        syncResults.push(await syncIssueSource(context, source, apiKey));
+      }
+      return syncResults;
+    });
+  }
+
+  private toContract(row: IssueSourceRow): IssueSourceContract {
+    const cursor = getSyncState(this.config.db, SYNC_SOURCE, SYNC_RESOURCE, row.id);
+    return issueSourceContractSchema.parse({
       id: row.id,
-      source: row.source,
       project_id: row.project_id,
+      source: row.source,
       external_team_id: row.external_team_id,
       external_team_key: row.external_team_key,
       external_team_name: row.external_team_name,
       external_project_id: row.external_project_id,
       external_project_name: row.external_project_name,
       last_synced_at: cursor?.last_synced_at ?? null,
+    });
+  }
+
+  private requireAuthorization(): {
+    apiKey: string;
+    signal: AbortSignal;
+  } {
+    const apiKey = this.credentials.get();
+    if (apiKey === null) throw linearError("linear_not_connected");
+    return {
+      apiKey,
+      signal: this.authorization.signal,
     };
   }
 
-  function requireKey(): string {
-    const apiKey = credentials.get();
-    if (apiKey === null) throw linearError("linear_not_connected");
-    return apiKey;
-  }
-
-  /** A revoked key must not leave the surface claiming it is still connected. */
-  async function authorized<T>(call: () => Promise<T>): Promise<T> {
+  private async authorized<T>(signal: AbortSignal, call: () => Promise<T>): Promise<T> {
     try {
-      return await call();
+      const response = await call();
+      if (!this.isCurrent(signal)) throw supersededRequest();
+      return response;
     } catch (error) {
+      if (!this.isCurrent(signal)) throw supersededRequest();
       if (error instanceof LinearError && error.code === "linear_unauthorized") {
-        credentials.clear();
-        state = failed(error);
+        this.beginCredentialChange();
+        this.state = failed(error);
       }
       throw error;
     }
   }
 
-  function resolveSources(sourceId: string | undefined): IssueSourceRow[] {
-    if (sourceId === undefined) return listIssueSources(config.db, { source: SYNC_SOURCE });
-    const row = getIssueSource(config.db, sourceId);
-    if (row === undefined) throw linearError("linear_source_not_found");
-    return [row];
+  private beginCredentialChange(): AbortSignal {
+    this.authorization.abort();
+    this.authorization = new AbortController();
+    this.credentials.clear();
+    this.state = DISCONNECTED;
+    return this.authorization.signal;
   }
 
-  return {
-    connection: () => state,
+  private isCurrent(signal: AbortSignal): boolean {
+    return signal === this.authorization.signal && !signal.aborted;
+  }
 
-    async connect(apiKey: string) {
-      try {
-        const viewer = await config.client.viewer(apiKey);
-        credentials.set(apiKey);
-        state = connected(viewer);
-      } catch (error) {
-        credentials.clear();
-        state = failed(error);
-      }
-      return state;
-    },
+  private resolveSources(sourceId: string | undefined): IssueSourceRow[] {
+    if (sourceId === undefined) {
+      return listIssueSources(this.config.db, { source: SYNC_SOURCE });
+    }
+    const row = getIssueSource(this.config.db, sourceId);
+    if (row === undefined || row.source !== SYNC_SOURCE)
+      throw linearError("linear_source_not_found");
+    return [row];
+  }
+}
 
-    disconnect() {
-      credentials.clear();
-      state = DISCONNECTED;
-      return state;
-    },
-
-    // `async` so a missing credential rejects like any other failure; a
-    // synchronous throw behind a Promise-typed method would slip past `.catch`.
-    async workspace() {
-      const apiKey = requireKey();
-      return authorized(() => config.client.workspace(apiKey));
-    },
-
-    sources: () => listIssueSources(config.db, { source: SYNC_SOURCE }).map(toContract),
-
-    createSource(request: CreateIssueSourceRequest) {
-      if (getProject(config.db, request.project_id) === undefined) {
-        throw linearError("linear_project_not_found");
-      }
-      const externalProjectId = request.external_project_id ?? "";
-      const existing = findIssueSourceByExternalScope(
-        config.db,
-        SYNC_SOURCE,
-        request.external_team_id,
-        externalProjectId,
-      );
-      if (existing !== undefined) throw linearError("linear_source_already_mapped");
-
-      const id = idFactory();
-      insertIssueSource(config.db, {
-        id,
-        source: SYNC_SOURCE,
-        project_id: request.project_id,
-        external_team_id: request.external_team_id,
-        external_team_key: request.external_team_key,
-        external_team_name: request.external_team_name,
-        external_project_id: externalProjectId,
-        external_project_name: request.external_project_name ?? "",
-      });
-
-      const inserted = getIssueSource(config.db, id);
-      if (inserted === undefined) throw linearError("linear_request_failed");
-      return toContract(inserted);
-    },
-
-    async sync(sourceId?: string) {
-      const apiKey = requireKey();
-      const sources = resolveSources(sourceId);
-      const ctx = { db: config.db, client: config.client, idFactory, now };
-
-      return authorized(async () => {
-        const results: IssueSourceSyncResult[] = [];
-        for (const source of sources) {
-          results.push(await syncIssueSource(ctx, source, apiKey));
-        }
-        return results;
-      });
-    },
-  };
+export function createLinearService(config: LinearServiceConfig): LinearService {
+  return new DefaultLinearService(config);
 }

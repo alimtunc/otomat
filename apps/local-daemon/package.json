@@ -19,6 +19,7 @@
     "#review/*": "./src/review/*.ts",
     "#runtime": "./src/runtime/index.ts",
     "#runtime/*": "./src/runtime/*.ts",
+    "#server": "./src/server.ts",
     "#supervisor": "./src/supervisor/index.ts",
     "#supervisor/*": "./src/supervisor/*.ts"
   },

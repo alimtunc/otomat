@@ -394,8 +394,8 @@ it("posts the Linear key to the write-only connect endpoint", async () => {
     });
     return jsonResponse({
       status: "connected",
+      workspace_id: "workspace-1",
       workspace_name: "Otomat",
-      workspace_url_key: "otomat",
       user_name: "Alim",
       error_code: null,
       error_message: null,
@@ -412,7 +412,6 @@ it("posts the Linear key to the write-only connect endpoint", async () => {
       body: { api_key: "lin_api_secret" },
     },
   ]);
-  // The response contract has no place to carry the key back.
   expect(JSON.stringify(connection)).not.toContain("lin_api_secret");
   expect(connection.workspace_name).toBe("Otomat");
 });
@@ -426,8 +425,8 @@ it("reads mapped issue sources and triggers a sync", async () => {
       return jsonResponse([
         {
           id: "src-1",
-          source: "linear",
           project_id: "p1",
+          source: "linear",
           external_team_id: "team-1",
           external_team_key: "OTO",
           external_team_name: "Otomat",

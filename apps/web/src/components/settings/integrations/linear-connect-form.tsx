@@ -1,19 +1,21 @@
 import { Button, Field, FieldControl, FieldLabel, Input, toast } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
-import { linearErrorMessage, useConnectLinear } from "@web/api/linear/mutations";
+import {
+  isSupersededLinearError,
+  linearErrorMessage,
+  useConnectLinear,
+} from "@web/api/linear/mutations";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { useState } from "react";
 
-/**
- * Submits a Personal API key. The value is held in component state only for the
- * length of the submit and is cleared straight after — it is never written to
- * localStorage, a query cache, or a URL.
- */
-export function LinearConnectForm() {
+export function LinearConnectForm({ connectionError }: { connectionError: string | null }) {
   const connect = useConnectLinear();
   const persists = desktopBridge() !== null;
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [dismissedConnectionError, setDismissedConnectionError] = useState<string | null>(null);
+  const visibleError =
+    submitError ?? (connectionError === dismissedConnectionError ? null : connectionError);
 
   const form = useForm({
     defaultValues: { apiKey: "" },
@@ -24,6 +26,7 @@ export function LinearConnectForm() {
         form.reset();
         toast.success("Connected to Linear");
       } catch (error) {
+        if (isSupersededLinearError(error)) return;
         setSubmitError(linearErrorMessage(error));
       }
     },
@@ -53,6 +56,7 @@ export function LinearConnectForm() {
                     onBlur={field.handleBlur}
                     onChange={(event) => {
                       setSubmitError(null);
+                      setDismissedConnectionError(connectionError);
                       field.handleChange(event.target.value);
                     }}
                     placeholder="lin_api_…"
@@ -84,9 +88,9 @@ export function LinearConnectForm() {
           ? "Stored encrypted on this device and held in daemon memory. Otomat never reads it back."
           : "The browser build keeps the key in daemon memory only — it is forgotten when the daemon restarts. Use the desktop app to store it encrypted."}
       </p>
-      {submitError === null ? null : (
+      {visibleError === null ? null : (
         <p role="alert" className="text-xs text-danger">
-          {submitError}
+          {visibleError}
         </p>
       )}
     </form>

@@ -7,6 +7,7 @@ import {
   type MirroredIssue,
   upsertMirroredIssue,
 } from "#db/repositories/issues";
+import { issues } from "#db/schema/index";
 
 import { createTempDb, seedProject, type TempDb } from "../support/temp-db.js";
 
@@ -53,7 +54,11 @@ it("round-trips an issue with external-mirror columns", () => {
 it("finds a mirrored issue by its immutable external id", () => {
   upsertMirroredIssue(t.client.db, mirrored());
 
-  expect(getIssueBySourceExternalId(t.client.db, "linear", LINEAR_UUID)?.id).toBe("i1");
+  expect(getIssueBySourceExternalId(t.client.db, "linear", LINEAR_UUID)).toMatchObject({
+    id: "i1",
+    source_identifier: "OTO-5",
+    source_url: "https://linear.app/otomat/issue/OTO-5",
+  });
   expect(getIssueBySourceExternalId(t.client.db, "linear", "unknown")).toBeUndefined();
   expect(getIssueBySourceExternalId(t.client.db, "github", LINEAR_UUID)).toBeUndefined();
 });
@@ -84,14 +89,35 @@ it("rejects a second row mirroring the same external issue", () => {
   upsertMirroredIssue(t.client.db, mirrored());
 
   expect(() =>
-    insertIssue(t.client.db, {
-      id: "i2",
-      project_id: "p1",
-      title: "Duplicate",
-      source: "linear",
-      source_external_id: LINEAR_UUID,
-    }),
+    t.client.db
+      .insert(issues)
+      .values({
+        id: "i2",
+        project_id: "p1",
+        title: "Duplicate",
+        source: "linear",
+        source_external_id: LINEAR_UUID,
+      })
+      .run(),
   ).toThrow(/UNIQUE/);
+});
+
+it("allows the same external issue id for different providers", () => {
+  upsertMirroredIssue(t.client.db, mirrored());
+  upsertMirroredIssue(
+    t.client.db,
+    mirrored({
+      id: "i2",
+      source: "github",
+      source_identifier: "36",
+      source_url: "https://github.com/otomat/issues/36",
+    }),
+  );
+
+  expect(t.client.sqlite.prepare("SELECT id FROM issues ORDER BY id").all()).toEqual([
+    { id: "i1" },
+    { id: "i2" },
+  ]);
 });
 
 it("keeps local issues free of the mirror uniqueness because their external id is null", () => {
