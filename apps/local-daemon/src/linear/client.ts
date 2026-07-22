@@ -3,8 +3,20 @@ import { z, type ZodType } from "zod";
 
 import { linearError } from "./errors.js";
 import {
+  ATTACHMENT_LINK_MUTATION,
+  attachmentLinkResponseSchema,
   buildIssueFilter,
+  COMMENT_CREATE_MUTATION,
+  commentCreateResponseSchema,
+  ISSUE_COMMENTS_QUERY,
+  ISSUE_EDITOR_QUERY,
+  ISSUE_SNAPSHOT_QUERY,
+  ISSUE_UPDATE_MUTATION,
   ISSUES_QUERY,
+  issueCommentsResponseSchema,
+  issueEditorResponseSchema,
+  issueSnapshotResponseSchema,
+  issueUpdateResponseSchema,
   issuesResponseSchema,
   LINEAR_MAX_PAGES,
   LINEAR_NESTED_PAGE_SIZE,
@@ -20,12 +32,35 @@ import {
 } from "./graphql.js";
 import type {
   LinearApiClient,
+  LinearAttachmentInput,
+  LinearComment,
+  LinearCommentInput,
   LinearIssue,
+  LinearIssueDetail,
+  LinearIssueEditor,
   LinearIssueQuery,
+  LinearIssueUpdate,
   LinearTransport,
   LinearTransportResponse,
   LinearViewer,
 } from "./types.js";
+
+type IssueDetailNode = z.infer<typeof issueSnapshotResponseSchema>["issue"];
+
+function toIssueDetail(node: NonNullable<IssueDetailNode>): LinearIssueDetail {
+  return {
+    external_id: node.id,
+    identifier: node.identifier,
+    title: node.title,
+    description: node.description,
+    url: node.url,
+    updated_at: node.updatedAt,
+    priority: node.priority,
+    assignee: node.assignee,
+    labels: node.labels.nodes,
+    state: node.state,
+  };
+}
 
 const graphQLErrorEntrySchema = z.object({
   extensions: z
@@ -208,7 +243,133 @@ class DefaultLinearApiClient implements LinearApiClient {
       url: issue.url,
       updated_at: issue.updatedAt,
       state_type: issue.state.type,
+      state_name: issue.state.name,
+      state_color: issue.state.color,
+      priority: issue.priority,
+      assignee_name: issue.assignee?.name ?? null,
+      labels: issue.labels.nodes,
     }));
+  }
+
+  async issueSnapshot(
+    apiKey: string,
+    issueId: string,
+    signal?: AbortSignal,
+  ): Promise<LinearIssueDetail> {
+    const response = await this.execute(
+      apiKey,
+      ISSUE_SNAPSHOT_QUERY,
+      { id: issueId, first: LINEAR_PAGE_SIZE },
+      issueSnapshotResponseSchema,
+      signal,
+    );
+    if (response.issue === null) throw linearError("linear_remote_issue_not_found");
+    return toIssueDetail(response.issue);
+  }
+
+  async issueEditor(
+    apiKey: string,
+    issueId: string,
+    signal?: AbortSignal,
+  ): Promise<LinearIssueEditor> {
+    const response = await this.execute(
+      apiKey,
+      ISSUE_EDITOR_QUERY,
+      { id: issueId, first: LINEAR_PAGE_SIZE },
+      issueEditorResponseSchema,
+      signal,
+    );
+    if (response.issue === null) throw linearError("linear_remote_issue_not_found");
+    const { team } = response.issue;
+    return {
+      issue: toIssueDetail(response.issue),
+      team: {
+        team_id: team.id,
+        states: team.states.nodes,
+        members: team.members.nodes,
+        labels: team.labels.nodes,
+      },
+    };
+  }
+
+  async updateIssue(
+    apiKey: string,
+    issueId: string,
+    input: LinearIssueUpdate,
+    signal?: AbortSignal,
+  ): Promise<LinearIssueDetail> {
+    const response = await this.execute(
+      apiKey,
+      ISSUE_UPDATE_MUTATION,
+      { id: issueId, first: LINEAR_PAGE_SIZE, input },
+      issueUpdateResponseSchema,
+      signal,
+    );
+    if (!response.issueUpdate.success || response.issueUpdate.issue === null) {
+      throw linearError("linear_request_failed");
+    }
+    return toIssueDetail(response.issueUpdate.issue);
+  }
+
+  async listComments(
+    apiKey: string,
+    issueId: string,
+    signal?: AbortSignal,
+  ): Promise<LinearComment[]> {
+    const nodes = await this.paginate(
+      apiKey,
+      ISSUE_COMMENTS_QUERY,
+      { id: issueId },
+      issueCommentsResponseSchema,
+      (response) => {
+        if (response.issue === null) throw linearError("linear_remote_issue_not_found");
+        return response.issue.comments;
+      },
+      signal,
+    );
+    return nodes.map((comment) => ({
+      id: comment.id,
+      body: comment.body,
+      author_name: comment.user?.name ?? null,
+      created_at: comment.createdAt,
+      parent_id: comment.parent?.id ?? null,
+    }));
+  }
+
+  async createComment(
+    apiKey: string,
+    input: LinearCommentInput,
+    signal?: AbortSignal,
+  ): Promise<string> {
+    const response = await this.execute(
+      apiKey,
+      COMMENT_CREATE_MUTATION,
+      { input },
+      commentCreateResponseSchema,
+      signal,
+    );
+    if (!response.commentCreate.success || response.commentCreate.comment === null) {
+      throw linearError("linear_request_failed");
+    }
+    return response.commentCreate.comment.id;
+  }
+
+  async linkAttachment(
+    apiKey: string,
+    input: LinearAttachmentInput,
+    signal?: AbortSignal,
+  ): Promise<string> {
+    const response = await this.execute(
+      apiKey,
+      ATTACHMENT_LINK_MUTATION,
+      { issueId: input.issueId, url: input.url, title: input.title },
+      attachmentLinkResponseSchema,
+      signal,
+    );
+    if (!response.attachmentLinkURL.success || response.attachmentLinkURL.attachment === null) {
+      throw linearError("linear_request_failed");
+    }
+    return response.attachmentLinkURL.attachment.id;
   }
 }
 

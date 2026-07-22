@@ -21,7 +21,8 @@ import {
 
 import { LinearError, linearError } from "./errors.js";
 import { SYNC_RESOURCE, SYNC_SOURCE, syncIssueSource } from "./sync.js";
-import type { LinearService, LinearServiceConfig, LinearViewer } from "./types.js";
+import type { LinearService, LinearServiceConfig, LinearViewer, LinearWriteback } from "./types.js";
+import { createLinearWriteback } from "./writeback.js";
 
 const DISCONNECTED: LinearConnectionContract = {
   status: "disconnected",
@@ -64,10 +65,20 @@ class DefaultLinearService implements LinearService {
   private readonly now: () => Date;
   private state: LinearConnectionContract = DISCONNECTED;
   private authorization = new AbortController();
+  readonly writeback: LinearWriteback;
 
   constructor(private readonly config: LinearServiceConfig) {
     this.idFactory = config.idFactory ?? randomUUID;
     this.now = config.now ?? (() => new Date());
+    this.writeback = createLinearWriteback({
+      db: config.db,
+      dataDir: config.dataDir,
+      client: config.client,
+      idFactory: this.idFactory,
+      now: this.now,
+      authorize: () => this.requireAuthorization(),
+      guard: (signal, call) => this.authorized(signal, call),
+    });
   }
 
   connection(): LinearConnectionContract {

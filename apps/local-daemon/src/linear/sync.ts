@@ -15,11 +15,12 @@ export const SYNC_RESOURCE = "issues";
 
 export const SYNC_OVERLAP_MS = 60_000;
 
+// "running" is never derived from Linear: only an Otomat-launched run may set it.
 const LINEAR_ISSUE_STATES = new Map<string, IssueState>([
   ["triage", "backlog"],
   ["backlog", "backlog"],
   ["unstarted", "ready"],
-  ["started", "running"],
+  ["started", "ready"],
   ["completed", "done"],
   ["canceled", "canceled"],
   ["duplicate", "canceled"],
@@ -86,6 +87,12 @@ export async function syncIssueSource(
           body: issue.description,
           status: issueStateFromLinear(issue.state_type),
           synced_at: syncedAt,
+          source_updated_at: issue.updated_at,
+          source_assignee_name: issue.assignee_name,
+          source_priority: issue.priority,
+          source_labels: issue.labels,
+          source_state_name: issue.state_name,
+          source_state_color: issue.state_color,
         });
         if (existing === undefined) imported += 1;
         else updated += 1;

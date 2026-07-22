@@ -45,7 +45,10 @@ export const ISSUES_QUERY = `query OtomatIssues($after: String, $first: Int!, $f
       description
       url
       updatedAt
-      state { type }
+      priority
+      assignee { name }
+      labels { nodes { name color } }
+      state { type name color }
     }
     pageInfo { hasNextPage endCursor }
   }
@@ -92,9 +95,143 @@ export const issuesResponseSchema = z.object({
       description: z.string().nullable(),
       url: z.url(),
       updatedAt: z.iso.datetime(),
-      state: z.object({ type: z.string() }),
+      priority: z.number().int(),
+      assignee: z.object({ name: z.string() }).nullable(),
+      labels: z.object({
+        nodes: z.array(z.object({ name: z.string(), color: z.string() })),
+      }),
+      state: z.object({ type: z.string(), name: z.string(), color: z.string() }),
     }),
   ),
+});
+
+const ISSUE_FIELDS = `id
+    identifier
+    title
+    description
+    url
+    updatedAt
+    priority
+    assignee { id name }
+    labels(first: $first) { nodes { id name color } }
+    state { id name type color }`;
+
+export const ISSUE_SNAPSHOT_QUERY = `query OtomatIssueSnapshot($id: String!, $first: Int!) {
+  issue(id: $id) {
+    ${ISSUE_FIELDS}
+  }
+}`;
+
+export const ISSUE_EDITOR_QUERY = `query OtomatIssueEditor($id: String!, $first: Int!) {
+  issue(id: $id) {
+    ${ISSUE_FIELDS}
+    team {
+      id
+      states(first: $first) { nodes { id name type color } }
+      members(first: $first) { nodes { id name } }
+      labels(first: $first) { nodes { id name color } }
+    }
+  }
+}`;
+
+export const ISSUE_UPDATE_MUTATION = `mutation OtomatIssueUpdate($id: String!, $first: Int!, $input: IssueUpdateInput!) {
+  issueUpdate(id: $id, input: $input) {
+    success
+    issue {
+      ${ISSUE_FIELDS}
+    }
+  }
+}`;
+
+export const ISSUE_COMMENTS_QUERY = `query OtomatIssueComments($id: String!, $first: Int!, $after: String) {
+  issue(id: $id) {
+    comments(first: $first, after: $after) {
+      nodes { id body createdAt user { name } parent { id } }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}`;
+
+export const COMMENT_CREATE_MUTATION = `mutation OtomatCommentCreate($input: CommentCreateInput!) {
+  commentCreate(input: $input) { success comment { id } }
+}`;
+
+export const ATTACHMENT_LINK_MUTATION = `mutation OtomatAttachmentLink($issueId: String!, $url: String!, $title: String!) {
+  attachmentLinkURL(issueId: $issueId, url: $url, title: $title) {
+    success
+    attachment { id }
+  }
+}`;
+
+const userRefSchema = z.object({ id: z.string(), name: z.string() });
+const labelRefSchema = z.object({ id: z.string(), name: z.string(), color: z.string() });
+const stateRefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.string(),
+  color: z.string(),
+});
+
+const issueDetailNodeSchema = z.object({
+  id: z.string().min(1),
+  identifier: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().nullable(),
+  url: z.url(),
+  updatedAt: z.iso.datetime(),
+  priority: z.number().int().min(0).max(4),
+  assignee: userRefSchema.nullable(),
+  labels: z.object({ nodes: z.array(labelRefSchema) }),
+  state: stateRefSchema,
+});
+
+export const issueSnapshotResponseSchema = z.object({ issue: issueDetailNodeSchema.nullable() });
+
+export const issueEditorResponseSchema = z.object({
+  issue: issueDetailNodeSchema
+    .extend({
+      team: z.object({
+        id: z.string(),
+        states: z.object({ nodes: z.array(stateRefSchema) }),
+        members: z.object({ nodes: z.array(userRefSchema) }),
+        labels: z.object({ nodes: z.array(labelRefSchema) }),
+      }),
+    })
+    .nullable(),
+});
+
+export const issueUpdateResponseSchema = z.object({
+  issueUpdate: z.object({ success: z.boolean(), issue: issueDetailNodeSchema.nullable() }),
+});
+
+export const issueCommentsResponseSchema = z.object({
+  issue: z
+    .object({
+      comments: connection(
+        z.object({
+          id: z.string(),
+          body: z.string(),
+          createdAt: z.iso.datetime(),
+          user: z.object({ name: z.string() }).nullable(),
+          parent: z.object({ id: z.string() }).nullable(),
+        }),
+      ),
+    })
+    .nullable(),
+});
+
+export const commentCreateResponseSchema = z.object({
+  commentCreate: z.object({
+    success: z.boolean(),
+    comment: z.object({ id: z.string() }).nullable(),
+  }),
+});
+
+export const attachmentLinkResponseSchema = z.object({
+  attachmentLinkURL: z.object({
+    success: z.boolean(),
+    attachment: z.object({ id: z.string() }).nullable(),
+  }),
 });
 
 interface LinearIssueFilter {

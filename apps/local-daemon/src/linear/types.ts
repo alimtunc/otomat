@@ -3,8 +3,17 @@ import type {
   CreateIssueSourceRequest,
   IssueSourceContract,
   IssueSourceSyncResult,
+  LinearCommentContract,
   LinearConnectionContract,
+  LinearEditorState,
+  LinearIssueDraft,
   LinearWorkspaceContract,
+  LinearWritebackState,
+  PublishCommentRequest,
+  PublishFieldsRequest,
+  PublishPrLinkRequest,
+  PublishStatusRequest,
+  SaveLinearDraftRequest,
 } from "@otomat/domain";
 
 export interface LinearTransportRequest {
@@ -35,6 +44,11 @@ export interface LinearIssue {
   url: string;
   updated_at: string;
   state_type: string;
+  state_name: string;
+  state_color: string;
+  priority: number;
+  assignee_name: string | null;
+  labels: { name: string; color: string }[];
 }
 
 export interface LinearIssueQuery {
@@ -43,17 +57,119 @@ export interface LinearIssueQuery {
   updated_since: string | null;
 }
 
+export interface LinearUserRef {
+  id: string;
+  name: string;
+}
+
+export interface LinearLabelRef {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface LinearStateRef {
+  id: string;
+  name: string;
+  type: string;
+  color: string;
+}
+
+/** Full single-issue read used by the editor, conflict re-reads, and reconciliation. */
+export interface LinearIssueDetail {
+  external_id: string;
+  identifier: string;
+  title: string;
+  description: string | null;
+  url: string;
+  updated_at: string;
+  priority: number;
+  assignee: LinearUserRef | null;
+  labels: LinearLabelRef[];
+  state: LinearStateRef;
+}
+
+export interface LinearIssueEditor {
+  issue: LinearIssueDetail;
+  team: {
+    team_id: string;
+    states: LinearStateRef[];
+    members: LinearUserRef[];
+    labels: LinearLabelRef[];
+  };
+}
+
+export interface LinearIssueUpdate {
+  title?: string;
+  description?: string | null;
+  priority?: number;
+  assigneeId?: string | null;
+  labelIds?: string[];
+  stateId?: string;
+}
+
+export interface LinearCommentInput {
+  id: string;
+  issueId: string;
+  body: string;
+  parentId?: string;
+}
+
+/** One remote issue comment; `parent_id` links a reply to its thread root. */
+export interface LinearComment {
+  id: string;
+  body: string;
+  author_name: string | null;
+  created_at: string;
+  parent_id: string | null;
+}
+
+export interface LinearAttachmentInput {
+  issueId: string;
+  url: string;
+  title: string;
+}
+
 export interface LinearApiClient {
   viewer(apiKey: string, signal?: AbortSignal): Promise<LinearViewer>;
   workspace(apiKey: string, signal?: AbortSignal): Promise<LinearWorkspaceContract>;
   issues(apiKey: string, query: LinearIssueQuery, signal?: AbortSignal): Promise<LinearIssue[]>;
+  issueEditor(apiKey: string, issueId: string, signal?: AbortSignal): Promise<LinearIssueEditor>;
+  issueSnapshot(apiKey: string, issueId: string, signal?: AbortSignal): Promise<LinearIssueDetail>;
+  updateIssue(
+    apiKey: string,
+    issueId: string,
+    input: LinearIssueUpdate,
+    signal?: AbortSignal,
+  ): Promise<LinearIssueDetail>;
+  listComments(apiKey: string, issueId: string, signal?: AbortSignal): Promise<LinearComment[]>;
+  createComment(apiKey: string, input: LinearCommentInput, signal?: AbortSignal): Promise<string>;
+  linkAttachment(
+    apiKey: string,
+    input: LinearAttachmentInput,
+    signal?: AbortSignal,
+  ): Promise<string>;
 }
 
 export interface LinearServiceConfig {
   db: Db;
+  dataDir: string;
   client: LinearApiClient;
   idFactory?: () => string;
   now?: () => Date;
+}
+
+export interface LinearWriteback {
+  writebackState(issueId: string): LinearWritebackState;
+  editorState(issueId: string): Promise<LinearEditorState>;
+  comments(issueId: string): Promise<LinearCommentContract[]>;
+  saveDraft(issueId: string, request: SaveLinearDraftRequest): LinearIssueDraft;
+  discardDraft(issueId: string): void;
+  publishFields(issueId: string, request: PublishFieldsRequest): Promise<LinearWritebackState>;
+  publishStatus(issueId: string, request: PublishStatusRequest): Promise<LinearWritebackState>;
+  publishComment(issueId: string, request: PublishCommentRequest): Promise<LinearWritebackState>;
+  publishPrLink(issueId: string, request: PublishPrLinkRequest): Promise<LinearWritebackState>;
+  retryWrite(writeId: string): Promise<LinearWritebackState>;
 }
 
 export interface LinearService {
@@ -64,4 +180,5 @@ export interface LinearService {
   sources(): IssueSourceContract[];
   createSource(request: CreateIssueSourceRequest): Promise<IssueSourceContract>;
   sync(sourceId?: string): Promise<IssueSourceSyncResult[]>;
+  writeback: LinearWriteback;
 }

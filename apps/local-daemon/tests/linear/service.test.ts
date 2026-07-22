@@ -67,6 +67,7 @@ let ids: number;
 function service(overrides: Parameters<typeof stubLinearApiClient>[0] = {}): LinearService {
   return createLinearService({
     db: t.db,
+    dataDir: t.dir,
     client: stubLinearApiClient({
       viewer: async () => VIEWER,
       workspace: async () => WORKSPACE,
@@ -80,6 +81,7 @@ function service(overrides: Parameters<typeof stubLinearApiClient>[0] = {}): Lin
 function serviceWithTransport(transport: LinearTransport): LinearService {
   return createLinearService({
     db: t.db,
+    dataDir: t.dir,
     client: createLinearApiClient(transport),
     idFactory: () => `src-${(ids += 1)}`,
     now: () => new Date("2026-07-20T12:00:00.000Z"),
@@ -389,6 +391,11 @@ it("syncs every mapped source and reports what landed", async () => {
         url: "https://linear.app/otomat/issue/OTO-1",
         updated_at: "2026-07-20T11:00:00.000Z",
         state_type: "unstarted",
+        state_name: "Todo",
+        state_color: "#888",
+        priority: 0,
+        assignee_name: null,
+        labels: [],
       },
     ],
   });

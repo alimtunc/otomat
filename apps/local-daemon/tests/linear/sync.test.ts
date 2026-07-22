@@ -19,7 +19,7 @@ it.each([
   ["triage", "backlog"],
   ["backlog", "backlog"],
   ["unstarted", "ready"],
-  ["started", "running"],
+  ["started", "ready"],
   ["completed", "done"],
   ["canceled", "canceled"],
   ["duplicate", "canceled"],
@@ -58,6 +58,11 @@ function linearIssue(overrides: Partial<LinearIssue> = {}): LinearIssue {
     url: "https://linear.app/otomat/issue/OTO-1",
     updated_at: "2026-07-20T11:00:00.000Z",
     state_type: "started",
+    state_name: "In Progress",
+    state_color: "#facc15",
+    priority: 2,
+    assignee_name: "Alim",
+    labels: [{ name: "Front", color: "#facc15" }],
     ...overrides,
   };
 }
@@ -101,7 +106,7 @@ it("imports issues on the first pass and records a watermark", async () => {
     source_external_id: "linear-uuid-1",
     source_identifier: "OTO-1",
     source_url: "https://linear.app/otomat/issue/OTO-1",
-    status: "running",
+    status: "ready",
   });
   expect(mirrored?.synced_at).toBe(NOW.toISOString());
 });
