@@ -8,10 +8,12 @@ import {
   FieldLabel,
   Input,
   RunStatusChip,
+  SidebarNavItem,
   ThemeProvider,
+  TimelineEventRow,
   resolveStatus,
 } from "@otomat/ui";
-import { act, type ReactNode } from "react";
+import { act, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -33,6 +35,14 @@ async function render(node: ReactNode) {
     container.remove();
   });
   return container;
+}
+
+function CustomNav({ children, ...props }: ComponentPropsWithoutRef<"button">) {
+  return (
+    <button data-testid="custom-nav" {...props}>
+      {children}
+    </button>
+  );
 }
 
 afterEach(async () => {
@@ -154,5 +164,49 @@ describe("shared UI boundaries", () => {
     expect(label?.htmlFor).toBe(input?.id);
     expect(input?.getAttribute("aria-invalid")).toBe("true");
     expect(input?.getAttribute("aria-describedby")).toBe(error?.id);
+  });
+
+  it("preserves the timeline row selection contract", async () => {
+    let selections = 0;
+    const container = await render(
+      <TimelineEventRow
+        type="run.lifecycle"
+        provenance="otomat"
+        summary="Run started"
+        at="2026-07-22T20:00:00.000Z"
+        selected
+        isNew
+        onSelect={() => {
+          selections += 1;
+        }}
+      />,
+    );
+    const row = container.querySelector<HTMLElement>("[role='button']");
+
+    expect(row?.tagName).toBe("DIV");
+    expect(row?.getAttribute("aria-current")).toBe("true");
+    expect(row?.style.background).toBe("var(--selected)");
+
+    await act(async () => {
+      row?.click();
+      row?.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }));
+    });
+
+    expect(selections).toBe(2);
+  });
+
+  it("preserves the legacy polymorphic sidebar item contract", async () => {
+    const container = await render(<SidebarNavItem icon="layers" label="Custom" as={CustomNav} />);
+
+    expect(container.querySelector("[data-testid='custom-nav']")).not.toBeNull();
+  });
+
+  it("keeps href authoritative when a sidebar link also handles clicks", async () => {
+    const container = await render(
+      <SidebarNavItem icon="layers" label="Gallery" href="/gallery.html" onClick={() => {}} />,
+    );
+    const link = container.querySelector("a");
+
+    expect(link?.getAttribute("href")).toBe("/gallery.html");
   });
 });

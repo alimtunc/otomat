@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from "react";
+import type { ElementType, ReactElement, ReactNode } from "react";
 
 import { cn } from "../lib/utils";
 import { Button } from "../primitives/button";
@@ -22,6 +22,7 @@ export interface SidebarNavItemProps {
   collapsed?: boolean;
   href?: string;
   onClick?: () => void;
+  as?: ElementType;
   render?: (props: SidebarNavItemRenderProps) => ReactNode;
 }
 
@@ -35,6 +36,7 @@ export function SidebarNavItem({
   collapsed = false,
   href,
   onClick,
+  as,
   render,
 }: SidebarNavItemProps) {
   const className = cn(
@@ -86,6 +88,19 @@ export function SidebarNavItem({
   let node: ReactNode;
   if (render) {
     node = render({ className, children: inner, "aria-current": ariaCurrent });
+  } else if (as) {
+    const Comp = as;
+    node = (
+      <Comp className={className} aria-current={ariaCurrent} onClick={onClick}>
+        {inner}
+      </Comp>
+    );
+  } else if (href !== undefined) {
+    node = (
+      <a className={className} href={href} aria-current={ariaCurrent} onClick={onClick}>
+        {inner}
+      </a>
+    );
   } else if (onClick) {
     node = (
       <Button

@@ -65,6 +65,8 @@ const SPACING_PREFIXES = [
 
 const USE_EFFECT_RE = /(?:^|[^.\w])useEffect\s*\(|\bReact\.useEffect\s*\(/;
 const IMPORT_RE = /^\s*import\b/;
+const REEXPORT_STATEMENT_RE =
+  /^export\s+(?:type\s+)?(?:\*(?:\s+as\s+\w+)?|{[\s\S]*})\s+from\s+["'][^"']+["']$/;
 // `\s` spans newlines, so this catches both `cond && <X/>` and `cond &&\n  <X/>`.
 const AND_JSX_RE = /&&\s*\(?\s*<[A-Za-z>/]/g;
 const SPACING_RE = new RegExp(`(?<![\\w-])(${SPACING_PREFIXES.join("|")})-\\[(\\d+)px\\]`, "g");
@@ -106,7 +108,9 @@ function isReexportOnlyBarrel(file, source) {
     .split(";")
     .map((statement) => statement.trim())
     .filter(Boolean);
-  return statements.length > 0 && statements.every((statement) => statement.startsWith("export "));
+  return (
+    statements.length > 0 && statements.every((statement) => REEXPORT_STATEMENT_RE.test(statement))
+  );
 }
 
 for (const dir of SOURCE_SCAN_DIRS) {

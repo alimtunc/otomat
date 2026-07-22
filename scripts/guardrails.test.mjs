@@ -117,3 +117,15 @@ test("rejects a stale baseline entry after its legacy file is removed", async ()
   assert.match(guardrails.stderr, /source-size-baseline/);
   assert.match(guardrails.stderr, /Remove its stale baseline entry/);
 });
+
+test("does not exempt an index file that exports runtime implementation", async () => {
+  const root = await createFixture({
+    "packages/client/src/index.ts": lines(251),
+  });
+
+  const guardrails = runGuardrails(root);
+
+  assert.equal(guardrails.status, 1);
+  assert.match(guardrails.stderr, /source-file-size/);
+  assert.match(guardrails.stderr, /packages\/client\/src\/index\.ts/);
+});
