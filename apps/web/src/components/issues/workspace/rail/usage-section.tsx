@@ -15,10 +15,9 @@ export function UsageSection() {
       title={
         <>
           Usage
-          <span className="font-normal text-text-tertiary">· last reported</span>
+          <span className="font-normal normal-case text-text-tertiary">· last reported</span>
         </>
       }
-      last
     >
       <RailMeta>
         <RailRow label="Model">

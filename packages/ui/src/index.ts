@@ -178,6 +178,8 @@ export {
 
 export { Avatar, type AvatarProps, type AvatarShape, type AvatarSize } from "./components/avatar";
 
+export { IssueSourceGlyph, type IssueSourceGlyphProps } from "./components/issue-source-glyph";
+
 export { Breadcrumbs, type BreadcrumbItem, type BreadcrumbsProps } from "./components/breadcrumbs";
 
 export { Chip, type ChipProps, type ChipSize } from "./components/chip";

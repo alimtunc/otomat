@@ -1,5 +1,6 @@
 import type { IssueContract, RunContract } from "@otomat/domain";
 import { IssueStatusChip } from "@otomat/ui";
+import { LinearRailSection } from "@web/components/issues/workspace/linear/linear-rail-section";
 import { FollowedRunSection } from "@web/components/issues/workspace/rail/followed-run-section";
 import { PullRequestSection } from "@web/components/issues/workspace/rail/pull-request-section";
 import {
@@ -35,8 +36,8 @@ function ExternalIdentifier({ identifier, url }: { identifier: string; url: stri
  */
 export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunContract | null }) {
   return (
-    <aside className="min-w-0 overflow-auto border-t border-border-subtle p-4 lg:border-l lg:border-t-0">
-      <RailSection title="Properties" last={run === null}>
+    <aside className="min-w-0 overflow-auto border-t border-border-subtle bg-sidebar p-4 lg:border-l lg:border-t-0">
+      <RailSection title="Properties">
         <RailMeta>
           <RailRow label="Status">
             <IssueStatusChip status={issue.status} />
@@ -44,15 +45,18 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
           <RailRow label="Source">
             <span className="text-text-secondary">{issue.source}</span>
           </RailRow>
-          <RailRow label="External id">
-            {issue.source_identifier !== null ? (
-              <ExternalIdentifier identifier={issue.source_identifier} url={issue.source_url} />
-            ) : (
-              <Unknown />
-            )}
-          </RailRow>
+          {issue.source === "linear" ? null : (
+            <RailRow label="External id">
+              {issue.source_identifier !== null ? (
+                <ExternalIdentifier identifier={issue.source_identifier} url={issue.source_url} />
+              ) : (
+                <Unknown />
+              )}
+            </RailRow>
+          )}
         </RailMeta>
       </RailSection>
+      {issue.source === "linear" ? <LinearRailSection issue={issue} run={run} /> : null}
       {run !== null ? (
         <>
           <PullRequestSection run={run} />

@@ -1,21 +1,13 @@
 import type { ReactNode } from "react";
 
-export function RailSection({
-  title,
-  last = false,
-  children,
-}: {
-  title: ReactNode;
-  last?: boolean;
-  children: ReactNode;
-}) {
+export function RailSection({ title, children }: { title: ReactNode; children: ReactNode }) {
   return (
-    <div className={last ? "pb-3.5 pt-1.5" : "mb-3.5 border-b border-border-subtle pb-3.5 pt-1.5"}>
-      <div className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+    <section className="mb-2.5 rounded-lg border border-border-subtle bg-surface-1 px-3.25 py-3 last:mb-0">
+      <div className="mb-2.5 flex items-center gap-1.5 text-micro font-semibold uppercase tracking-[0.03em] text-text-tertiary">
         {title}
       </div>
       {children}
-    </div>
+    </section>
   );
 }
 
@@ -31,7 +23,7 @@ export function RailRow({ label, children }: { label: string; children: ReactNod
   return (
     <>
       <dt className="text-xs text-text-tertiary">{label}</dt>
-      <dd className="m-0 inline-flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden justify-self-end text-foreground">
+      <dd className="m-0 flex min-w-0 items-center justify-end gap-1.5 justify-self-end text-foreground">
         {children}
       </dd>
     </>

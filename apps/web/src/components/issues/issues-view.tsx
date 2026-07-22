@@ -1,11 +1,21 @@
-import { Button, Icon, Pill, PillTabs, SegmentedControl, SegmentedItem } from "@otomat/ui";
+import { Icon, Pill, PillTabs, SegmentedControl, SegmentedItem } from "@otomat/ui";
 import { useProjectIssues } from "@web/api/issues/queries";
 import { IssuesContent } from "@web/components/issues/issues-content";
+import { IssuesFilterPopover } from "@web/components/issues/issues-filter-popover";
 import { NewIssueButton } from "@web/components/issues/new-issue-button";
 import { ProjectQueryBoundary } from "@web/components/shell/project-query-boundary";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { useSelectedProject } from "@web/components/shell/use-selected-project";
-import { applyIssuesFilter, isIssuesFilter, type IssuesFilter } from "@web/lib/issue-filters";
+import {
+  applyAdvancedFilters,
+  applyIssuesFilter,
+  assigneeOptions,
+  isIssuesFilter,
+  NO_ADVANCED_FILTERS,
+  stateOptions,
+  type AdvancedIssueFilters,
+  type IssuesFilter,
+} from "@web/lib/issue-filters";
 import { useState } from "react";
 
 type IssuesLayout = "board" | "list";
@@ -15,6 +25,7 @@ export function IssuesView() {
   const issues = useProjectIssues(selectedProject.projectId);
   const [layout, setLayout] = useState<IssuesLayout>("board");
   const [filter, setFilter] = useState<IssuesFilter>("all");
+  const [advanced, setAdvanced] = useState<AdvancedIssueFilters>(NO_ADVANCED_FILTERS);
 
   return (
     <RouteShell
@@ -54,19 +65,19 @@ export function IssuesView() {
             <Pill value="backlog">Backlog</Pill>
           </PillTabs>
           <div className="flex-1" />
-          <span title="Filters are not wired up yet">
-            <Button variant="ghost" size="sm" disabled>
-              <Icon name="wand-2" aria-hidden />
-              Filter
-            </Button>
-          </span>
+          <IssuesFilterPopover
+            filters={advanced}
+            assignees={assigneeOptions(issues.data ?? [])}
+            states={stateOptions(issues.data ?? [])}
+            onChange={setAdvanced}
+          />
           <NewIssueButton />
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
           <ProjectQueryBoundary query={selectedProject.projects}>
             <IssuesContent
               query={issues}
-              filter={(items) => applyIssuesFilter(items, filter)}
+              filter={(items) => applyAdvancedFilters(applyIssuesFilter(items, filter), advanced)}
               board={layout === "board"}
             />
           </ProjectQueryBoundary>

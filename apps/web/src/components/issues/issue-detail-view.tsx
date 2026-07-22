@@ -7,6 +7,7 @@ import { RunEventsProvider } from "@web/api/runs/run-events-provider";
 import { IssueHeader } from "@web/components/issues/issue-header";
 import { ActivityFeed } from "@web/components/issues/workspace/activity-feed";
 import { LaunchRunPopover } from "@web/components/issues/workspace/launch-run-popover";
+import { LinearCommentsSection } from "@web/components/issues/workspace/linear/comments-section";
 import { WorkspaceRail } from "@web/components/issues/workspace/rail/workspace-rail";
 import { RunStrip } from "@web/components/issues/workspace/run-strip";
 import { QueryList } from "@web/components/shell/query-list";
@@ -94,6 +95,9 @@ export function IssueDetailView() {
       <div className="min-w-0 px-8 py-6.5 lg:overflow-auto">
         <div className="flex max-w-180 flex-col gap-6">
           <IssueHeader query={issue} />
+          {issue.data?.source === "linear" ? (
+            <LinearCommentsSection issueId={issueId} runId={followedRun?.id ?? null} />
+          ) : null}
           <RunsArea
             query={runs}
             issueId={issueId}
