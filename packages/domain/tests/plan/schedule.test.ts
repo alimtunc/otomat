@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { RunPlan } from "#domain/contracts/entities";
+import type { RunPlan } from "#domain/contracts/entities/runs";
 import {
   allStepsSucceeded,
   hasActiveStep,

@@ -8,7 +8,7 @@ import {
 } from "@otomat/ui";
 import { AgentIssueForm } from "@web/components/issues/agent-issue-form";
 import { ManualIssueForm } from "@web/components/issues/manual-issue-form";
-import { WorkflowIssueForm } from "@web/components/issues/workflow-issue-form";
+import { WorkflowIssueForm } from "@web/components/issues/workflow/form";
 import { useState } from "react";
 
 const NEW_ISSUE_MODES = ["agent", "workflow", "manual"] as const;

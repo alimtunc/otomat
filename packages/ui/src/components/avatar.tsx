@@ -1,3 +1,4 @@
+import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar";
 import type { CSSProperties, HTMLAttributes } from "react";
 
 import { cn } from "../lib/utils";
@@ -57,7 +58,7 @@ export function Avatar({
   };
 
   return (
-    <span
+    <AvatarPrimitive.Root
       aria-label={name}
       title={name}
       style={mergedStyle}
@@ -69,11 +70,8 @@ export function Avatar({
       )}
       {...rest}
     >
-      {src ? (
-        <img src={src} alt="" className="size-full object-cover" />
-      ) : (
-        <span aria-hidden>{initials(name)}</span>
-      )}
-    </span>
+      {src ? <AvatarPrimitive.Image src={src} alt="" className="size-full object-cover" /> : null}
+      <AvatarPrimitive.Fallback aria-hidden>{initials(name)}</AvatarPrimitive.Fallback>
+    </AvatarPrimitive.Root>
   );
 }

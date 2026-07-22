@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { createDaemonClient } from "#client/client";
+import { createDaemonClient } from "#client/client/index";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return {

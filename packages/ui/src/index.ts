@@ -35,8 +35,28 @@ export {
 export { Badge, type BadgeProps } from "./primitives/badge";
 
 export { Button, type ButtonProps } from "./primitives/button";
+export { buttonVariants } from "./primitives/button-variants";
 
 export { Checkbox, type CheckboxProps } from "./primitives/checkbox";
+
+export { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "./primitives/collapsible";
+
+export {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxItemIndicator,
+  ComboboxList,
+  ComboboxTrigger,
+  ComboboxValue,
+  type ComboboxContentProps,
+  type ComboboxEmptyProps,
+  type ComboboxInputProps,
+  type ComboboxItemProps,
+  type ComboboxListProps,
+} from "./primitives/combobox";
 
 export {
   Command,

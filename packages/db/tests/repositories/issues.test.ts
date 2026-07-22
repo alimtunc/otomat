@@ -7,9 +7,8 @@ import {
   type MirroredIssue,
   upsertMirroredIssue,
 } from "#db/repositories/issues";
-import { issues } from "#db/schema/index";
-
-import { createTempDb, seedProject, type TempDb } from "../support/temp-db.js";
+import { issues } from "#db/schema/issues";
+import { createTempDb, seedProject, type TempDb } from "#test-support/temp-db";
 
 const LINEAR_UUID = "0f7d1b5c-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
 

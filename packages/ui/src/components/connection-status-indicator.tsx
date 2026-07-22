@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 
 import { TONE_FACETS } from "../lib/status";
 import { cn } from "../lib/utils";
+import { Button } from "../primitives/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../primitives/popover";
 import { LiveDot } from "./live-dot";
 
@@ -72,12 +73,14 @@ export function ConnectionStatusIndicator({
     <Popover>
       <PopoverTrigger
         render={
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             aria-live="polite"
             aria-label={`Connection: ${meta.label}`}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-md px-1.75 py-1 text-xs",
+              "h-auto gap-1.5 px-1.75 py-1 text-xs font-normal",
               "transition-colors hover:bg-surface-2",
               meta.triggerTextClass,
               className,
@@ -86,7 +89,7 @@ export function ConnectionStatusIndicator({
           >
             <LiveDot live={meta.live} style={{ background: meta.dotColorVar }} />
             {variant === "dot+label" ? <span>{meta.label}</span> : null}
-          </button>
+          </Button>
         }
       />
       <PopoverContent align="end" className="w-64 p-3 text-sm text-foreground">
@@ -99,12 +102,14 @@ export function ConnectionStatusIndicator({
           <dd className="text-foreground">{formatLastSync(lastSyncAt)}</dd>
         </dl>
         {onRetry ? (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={onRetry}
             disabled={state === "online"}
             className={cn(
-              "mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs",
+              "mt-3 w-full gap-1.5 px-2.5 py-1.5 text-xs",
               "bg-surface-1 transition-colors hover:bg-surface-2",
               "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface-1",
             )}
@@ -112,7 +117,7 @@ export function ConnectionStatusIndicator({
           >
             <RefreshCw className="h-3 w-3" aria-hidden={true} />
             Retry now
-          </button>
+          </Button>
         ) : null}
       </PopoverContent>
     </Popover>

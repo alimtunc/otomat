@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { TONE_FACETS } from "../lib/status";
 import { cn } from "../lib/utils";
+import { Button } from "../primitives/button";
 
 type CopyStatus = "idle" | "copied" | "error";
 
@@ -81,21 +82,23 @@ export function CopyButton({
   const text = textByStatus[status];
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="xs"
       disabled={disabled}
       onClick={copy}
       aria-label={text}
       aria-live="polite"
       data-status={status}
       className={cn(
-        "copybtn inline-flex items-center gap-1.25 text-text-secondary disabled:opacity-50 disabled:pointer-events-none hover:text-foreground",
+        "copybtn h-auto gap-1.25 border-0 p-0 font-normal text-text-secondary disabled:opacity-50 disabled:pointer-events-none hover:bg-transparent hover:text-foreground",
         className,
       )}
       style={{ transition: "color var(--motion-fast) var(--ease)" }}
     >
       <Icon size={12} aria-hidden="true" style={{ color: COLOR_BY_STATUS[status] }} />
       {showLabel ? <span className="text-xs">{text}</span> : null}
-    </button>
+    </Button>
   );
 }

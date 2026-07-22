@@ -3,15 +3,17 @@ import { useState } from "react";
 
 import { TONE_FACETS } from "../lib/status";
 import { cn } from "../lib/utils";
+import { Button } from "../primitives/button";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "../primitives/command";
-import { Popover, PopoverContent, PopoverTrigger } from "../primitives/popover";
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxItemIndicator,
+  ComboboxList,
+  ComboboxTrigger,
+} from "../primitives/combobox";
 
 export interface ProjectSummary {
   id: string;
@@ -61,17 +63,28 @@ export function ProjectSwitcher({
   const empty = !loading && projects.length === 0;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
+    <Combobox
+      items={projects}
+      value={current ?? null}
+      open={open}
+      onOpenChange={setOpen}
+      itemToStringLabel={(project) => `${project.name} ${project.repo ?? ""}`}
+      isItemEqualToValue={(project, value) => project.id === value.id}
+      onValueChange={(project) => {
+        if (project === null) return;
+        onSelect(project.id);
+        setOpen(false);
+      }}
+    >
+      <ComboboxTrigger
+        disabled={loading}
+        aria-label="Switch project"
         render={
-          <button
+          <Button
             type="button"
-            aria-label="Switch project"
-            aria-haspopup="listbox"
-            aria-expanded={open}
-            disabled={loading}
+            variant="ghost"
             className={cn(
-              "flex h-12 items-center gap-2.25 px-3 text-left hover:bg-hover",
+              "h-12 w-full justify-start gap-2.25 rounded-none border-0 px-3 text-left hover:bg-hover",
               "focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]",
               "disabled:cursor-not-allowed disabled:opacity-60",
               collapsed && "justify-center px-0",
@@ -107,61 +120,55 @@ export function ProjectSwitcher({
                 <ChevronsUpDown className="h-3.5 w-3.5 flex-none text-text-tertiary" />
               </>
             ) : null}
-          </button>
+          </Button>
         }
       />
-      <PopoverContent align="start" className="w-65 p-0">
+      <ComboboxContent align="start" className="w-65" aria-label="Select project">
+        <ComboboxInput placeholder="Find project…" aria-label="Find project" />
         {empty ? (
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              onConfigure?.();
-            }}
-            className="flex w-full items-center gap-2 px-2.5 py-3 text-sm text-text-secondary hover:bg-hover hover:text-foreground"
-          >
-            <Settings className="h-4 w-4 text-text-tertiary" />
-            Add a project in Settings
-          </button>
+          <ComboboxEmpty className="p-1.5">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setOpen(false);
+                onConfigure?.();
+              }}
+              className="h-auto w-full justify-start gap-2 px-2.5 py-3 text-sm"
+            >
+              <Settings className="h-4 w-4 text-text-tertiary" />
+              Add a project in Settings
+            </Button>
+          </ComboboxEmpty>
         ) : (
-          <Command>
-            <CommandInput placeholder="Find project…" />
-            <CommandList>
-              <CommandEmpty>No projects found.</CommandEmpty>
-              <CommandGroup>
-                {projects.map((p) => (
-                  <CommandItem
-                    key={p.id}
-                    value={`${p.name} ${p.repo ?? ""}`}
-                    onSelect={() => {
-                      onSelect(p.id);
-                      setOpen(false);
-                    }}
-                  >
-                    <ProjectGlyph name={p.name} />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm text-foreground">{p.name}</div>
-                      {p.repo ? (
-                        <div className="truncate text-micro text-text-tertiary">{p.repo}</div>
-                      ) : null}
-                    </div>
-                    {p.health ? (
-                      <span
-                        aria-hidden
-                        className="inline-block h-1.75 w-1.75 flex-none rounded-full"
-                        style={{ background: HEALTH_COLOR[p.health] }}
-                      />
+          <>
+            <ComboboxEmpty>No projects found.</ComboboxEmpty>
+            <ComboboxList>
+              {(project: ProjectSummary) => (
+                <ComboboxItem key={project.id} value={project}>
+                  <ProjectGlyph name={project.name} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm text-foreground">{project.name}</div>
+                    {project.repo ? (
+                      <div className="truncate text-micro text-text-tertiary">{project.repo}</div>
                     ) : null}
-                    {p.id === currentId ? (
-                      <Check className="h-4 w-4 flex-none text-iris-text" />
-                    ) : null}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
+                  </div>
+                  {project.health ? (
+                    <span
+                      aria-hidden
+                      className="inline-block h-1.75 w-1.75 flex-none rounded-full"
+                      style={{ background: HEALTH_COLOR[project.health] }}
+                    />
+                  ) : null}
+                  <ComboboxItemIndicator>
+                    <Check className="h-4 w-4 flex-none text-iris-text" />
+                  </ComboboxItemIndicator>
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </>
         )}
-      </PopoverContent>
-    </Popover>
+      </ComboboxContent>
+    </Combobox>
   );
 }

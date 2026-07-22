@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { pullRequestContractSchema } from "#domain/contracts/entities";
+import { pullRequestContractSchema } from "#domain/contracts/entities/pull-request";
 
 describe("pull request contract", () => {
   it("separates provider lifecycle from durable publication state", () => {

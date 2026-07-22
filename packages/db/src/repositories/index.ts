@@ -7,15 +7,12 @@
  * (fail-loud in `listRuns`, fail-separate in `listActiveRuns`).
  * @packageDocumentation
  */
-export * from "./agent-profiles.js";
-export * from "./agent-sessions.js";
-export * from "./agents.js";
+export * from "./agent/index.js";
 export * from "./compete-groups.js";
 export * from "./event-streams.js";
 export * from "./issue-sources.js";
 export * from "./issues.js";
-export * from "./linear-drafts.js";
-export * from "./linear-writes.js";
+export * from "./linear/index.js";
 export * from "./projects.js";
 export * from "./pull-requests.js";
 export * from "./repositories.js";

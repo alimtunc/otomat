@@ -6,7 +6,7 @@ import {
   competeGroupContractSchema,
   runContractSchema,
   stepRunContractSchema,
-} from "./entities.js";
+} from "./entities/runs.js";
 
 /** A run plus its persisted step/session graph; the event ledger is served by the run's SSE stream, not here. `worktree_path` is null when the run has no worktree. */
 export const runDetailSchema = z.object({

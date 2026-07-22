@@ -1,6 +1,7 @@
 import type { ElementType, ReactElement, ReactNode } from "react";
 
 import { cn } from "../lib/utils";
+import { Button } from "../primitives/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../primitives/tooltip";
 import { Icon, type IconName } from "./icon";
 import { Kbd } from "./kbd";
@@ -94,11 +95,29 @@ export function SidebarNavItem({
         {inner}
       </Comp>
     );
-  } else {
+  } else if (href !== undefined) {
     node = (
       <a className={className} href={href} aria-current={ariaCurrent} onClick={onClick}>
         {inner}
       </a>
+    );
+  } else if (onClick) {
+    node = (
+      <Button
+        type="button"
+        variant="ghost"
+        className={className}
+        aria-current={ariaCurrent}
+        onClick={onClick}
+      >
+        {inner}
+      </Button>
+    );
+  } else {
+    node = (
+      <span className={className} aria-current={ariaCurrent}>
+        {inner}
+      </span>
     );
   }
 

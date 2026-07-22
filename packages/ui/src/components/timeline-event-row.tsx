@@ -54,9 +54,9 @@ export function TimelineEventRow({
   if (isNew) background = "var(--iris-bg)";
   if (selected) background = "var(--selected)";
 
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
       onSelect?.();
     }
   };

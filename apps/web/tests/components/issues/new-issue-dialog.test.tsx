@@ -12,6 +12,12 @@ const create = vi.fn(async (_request: CreateIssueRequest) => true);
 let runtimesData: RuntimeDescriptor[] = [];
 const agentSelectProps = vi.fn();
 
+interface AgentSelectProbeProps {
+  value: string | null;
+  ariaLabel?: string;
+  compact?: boolean;
+}
+
 vi.mock("@web/api/runs/mutations", () => ({
   useStartRunAndNavigate: () => ({ start, isPending: false }),
 }));
@@ -35,9 +41,15 @@ vi.mock("@web/api/agent-profiles/queries", () => ({
 }));
 
 vi.mock("@web/components/runs/launch/launch-agent-select", () => ({
-  LaunchAgentSelect: (props: { value: string | null; ariaLabel?: string }) => {
+  LaunchAgentSelect: (props: AgentSelectProbeProps) => {
     agentSelectProps(props);
-    return <div data-testid="agent-select" data-aria-label={props.ariaLabel ?? "Agent"} />;
+    return (
+      <div
+        data-testid="agent-select"
+        data-aria-label={props.ariaLabel ?? "Agent"}
+        data-compact={props.compact || undefined}
+      />
+    );
   },
 }));
 
@@ -272,6 +284,68 @@ describe("NewIssueDialog", () => {
         ],
       },
     });
+  });
+
+  it("gives workflow agent selectors the standard control size", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+    await act(async () => buttonByText("Workflow").click());
+
+    const stepAgent = document.querySelector<HTMLElement>("[data-aria-label='Step 1 agent']");
+    const stepCall = agentSelectProps.mock.calls.find(
+      ([props]: [AgentSelectProbeProps]) => props.ariaLabel === "Step 1 agent",
+    );
+
+    expect(stepCall?.[0].compact).not.toBe(true);
+    expect(stepAgent?.parentElement?.classList.contains("w-52")).toBe(true);
+  });
+
+  it("uses the iris interaction color for selected workflow dependencies", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+    await act(async () => buttonByText("Workflow").click());
+    await act(async () => buttonByText("Add step").click());
+
+    const dependency = buttonByText("Step 1");
+    await act(async () => dependency.click());
+
+    expect(dependency.getAttribute("aria-pressed")).toBe("true");
+    expect(dependency.classList.contains("bg-iris-subtle")).toBe(true);
+    expect(dependency.classList.contains("text-iris-text")).toBe(true);
+  });
+
+  it("keeps the workflow shortcut legible on the primary action", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+    await act(async () => buttonByText("Workflow").click());
+
+    const shortcut = buttonByText("Launch workflow⌘↵").querySelector("kbd");
+
+    expect(shortcut?.classList.contains("bg-on-accent/15")).toBe(true);
+    expect(shortcut?.classList.contains("text-on-accent")).toBe(true);
+  });
+
+  it("uses the workflow glyph for compete groups", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+    await act(async () => buttonByText("Workflow").click());
+
+    const addCompeteGroup = buttonByText("Add compete group");
+    expect(addCompeteGroup.querySelector(".lucide-workflow")).not.toBeNull();
+  });
+
+  it("uses an informational notice for compete groups", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+    await act(async () => buttonByText("Workflow").click());
+
+    await act(async () => buttonByText("Add compete group").click());
+    const notice = [...document.querySelectorAll("p")].find((element) =>
+      element.textContent?.startsWith("Steps that depend on this group"),
+    );
+
+    expect(notice?.classList.contains("bg-iris-subtle")).toBe(true);
+    expect(notice?.classList.contains("text-text-secondary")).toBe(true);
   });
 
   it("blocks an agent launch when no project is selected", async () => {

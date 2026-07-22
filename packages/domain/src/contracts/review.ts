@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { reviewCommentContractSchema, reviewContractSchema } from "./entities.js";
+import { reviewCommentContractSchema, reviewContractSchema } from "./entities/reviews.js";
 
 /** A run's review surface: the review row (null before the first comment) plus every comment, newest last. */
 export const reviewDetailSchema = z.object({

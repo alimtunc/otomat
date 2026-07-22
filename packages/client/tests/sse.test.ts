@@ -1,7 +1,7 @@
 import type { EventEnvelope } from "@otomat/domain";
 import { expect, it } from "vitest";
 
-import { createDaemonClient } from "#client/client";
+import { createDaemonClient } from "#client/client/index";
 
 class FakeEventSource {
   readonly url: string;
@@ -96,7 +96,6 @@ it("routes a malformed SSE frame to onParseError instead of throwing", () => {
   });
 
   const source = sources[0];
-  // Not valid JSON, then valid JSON that fails the envelope schema.
   expect(() => source.emit("event", "{not json")).not.toThrow();
   expect(() => source.emit("event", JSON.stringify({ nope: true }))).not.toThrow();
   source.emit("event", JSON.stringify(ENVELOPE));

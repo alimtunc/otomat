@@ -10,7 +10,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "imports": {
-    "#db/*": "./src/*.ts"
+    "#db/*": "./src/*.ts",
+    "#test-support/*": "./tests/support/*.ts"
   },
   "exports": {
     ".": {

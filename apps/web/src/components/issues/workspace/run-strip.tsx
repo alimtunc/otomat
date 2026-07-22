@@ -1,5 +1,5 @@
 import type { RunContract } from "@otomat/domain";
-import { Icon, LiveDot, RunStatusChip, cn } from "@otomat/ui";
+import { Button, Icon, LiveDot, RunStatusChip, cn } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { shortId } from "@web/lib/ids";
 import { isActiveRun } from "@web/lib/run-activity";
@@ -24,11 +24,13 @@ function RunStripRow({
   const active = isActiveRun(run);
   return (
     <li className={cn("flex items-center gap-1 pr-2", followed ? "bg-selected" : "hover:bg-hover")}>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         onClick={onFollow}
         aria-pressed={followed}
-        className="flex min-w-0 flex-1 items-center gap-3 px-4 py-2.5 text-left"
+        className="h-auto min-w-0 flex-1 justify-start gap-3 rounded-none px-4 py-2.5 text-left font-normal"
       >
         <RunStatusChip status={run.status} />
         <span className="min-w-0 flex-1 truncate font-mono text-xs text-text-tertiary">
@@ -40,7 +42,7 @@ function RunStripRow({
             {badge}
           </span>
         ) : null}
-      </button>
+      </Button>
       <Link
         to="/runs/$runId"
         params={{ runId: run.id }}

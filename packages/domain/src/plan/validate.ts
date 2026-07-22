@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { isRunPlanCompeteGroup } from "../contracts/entities.js";
+import { isRunPlanCompeteGroup } from "../contracts/entities/runs.js";
 import {
   RUN_PLAN_MAX_STEPS,
   RUN_PLAN_STEP_ID_PATTERN,

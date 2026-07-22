@@ -85,7 +85,7 @@ export function AgentIssueForm({
             onClick={() => void submit()}
           >
             Create & launch
-            <Kbd className="border-[rgba(255,255,255,.4)] text-on-accent">⌘↵</Kbd>
+            <Kbd tone="on-accent">⌘↵</Kbd>
           </Button>
         }
       />

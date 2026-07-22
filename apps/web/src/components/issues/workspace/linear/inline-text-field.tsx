@@ -1,4 +1,4 @@
-import { cn } from "@otomat/ui";
+import { Input, Textarea, cn } from "@otomat/ui";
 import { useState } from "react";
 
 interface InlineTextFieldProps {
@@ -58,13 +58,13 @@ export function InlineTextField({
   }
 
   const sharedClass = cn(
-    "-mx-1.5 block w-[calc(100%+0.75rem)] resize-none rounded-md bg-surface-2/60 px-1.5 outline-none",
+    "-mx-1.5 block h-auto w-[calc(100%+0.75rem)] rounded-md border-0 bg-surface-2/60 px-1.5 py-0 font-[inherit] text-[inherit] shadow-none outline-none focus:border-transparent focus:shadow-none",
     className,
   );
 
   if (multiline) {
     return (
-      <textarea
+      <Textarea
         autoFocus
         aria-label={ariaLabel}
         value={text}
@@ -74,13 +74,13 @@ export function InlineTextField({
         onKeyDown={(event) => {
           if (event.key === "Escape") cancel();
         }}
-        className={cn(sharedClass, "field-sizing-content")}
+        className={cn(sharedClass, "field-sizing-content min-h-0 resize-none leading-[inherit]")}
       />
     );
   }
 
   return (
-    <input
+    <Input
       autoFocus
       aria-label={ariaLabel}
       value={text}
