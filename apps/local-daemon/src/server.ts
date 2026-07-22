@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { serve } from "@hono/node-server";
 import { createClient, defaultDbPath, runMigrations } from "@otomat/db";
 
+import { rescanSkills } from "#agents";
 import { createApiApp, logApiRoutes } from "#api";
 import { createRepositoryResolver } from "#git";
 import { createGitHubCli, createGitHubService, runCommand } from "#github";
@@ -48,6 +49,12 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
   const projectRoot = process.env.OTOMAT_PROJECT_ROOT ?? process.cwd();
   const defaultProjectId = ensureDefaultProject(db, projectRoot);
   const defaultRepositoryId = ensureDefaultRepository(db, defaultProjectId, projectRoot);
+  // Populate the local skills catalog from the known bounded roots at boot; never a silent whole-home scan.
+  try {
+    rescanSkills(db);
+  } catch (error) {
+    console.error("[otomat] skill discovery failed at boot", error);
+  }
   const repositories = createRepositoryResolver({
     db,
     worktreesRoot: process.env.OTOMAT_WORKTREES_ROOT ?? join(dataDir, "worktrees"),

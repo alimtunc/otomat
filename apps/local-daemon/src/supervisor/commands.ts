@@ -119,6 +119,7 @@ async function resumeCompeteGroup(
           agentSessionDir: sessionDir(state.dataDir, run.id, session.id),
           worktreePath,
           runtime: knownRuntime,
+          config: planStep.config ?? null,
         },
         providerSessionId: session.provider_session_id,
       };
@@ -211,6 +212,9 @@ async function spawnFollowUpTurn(
   if (worktreePath === null && run.plan_json.steps.some(isRunPlanCompeteGroup)) {
     throw new RunNotResumableError(`run ${runId} canonical compete worktree is unavailable`);
   }
+  // Resume uses the config frozen for this session's step — never the live profile.
+  const config =
+    executableSteps(run.plan_json).find((step) => step.id === session.step_run_id)?.config ?? null;
 
   await spawnTurn(
     state,
@@ -222,6 +226,7 @@ async function spawnFollowUpTurn(
       agentSessionDir: sessionDir(state.dataDir, runId, session.id),
       worktreePath,
       runtime,
+      config,
     },
     "resume",
     session.provider_session_id,

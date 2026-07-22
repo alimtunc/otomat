@@ -6,6 +6,7 @@ import {
 } from "@otomat/domain";
 import { Hono } from "hono";
 
+import { agentConfigErrorResponse } from "#agents";
 import { RuntimeUnavailableError, UnknownRuntimeError } from "#runtime";
 import {
   CompeteRepositoryRequiredError,
@@ -52,6 +53,10 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       if (error instanceof CompeteRepositoryRequiredError) {
         return c.json({ error: "compete_repository_required" }, 409);
       }
+      // Profile / skill / option resolution refusals raised while freezing the plan.
+      const refusal = agentConfigErrorResponse(error);
+      if (refusal)
+        return c.json({ error: refusal.error, message: refusal.message }, refusal.status);
       console.error("[otomat] launch run failed", error);
       return c.json({ error: "run_launch_failed" }, 500);
     }

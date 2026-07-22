@@ -1,4 +1,4 @@
-import type { RuntimeCapabilities } from "@otomat/domain";
+import type { ProviderOptionDescriptor, RuntimeCapabilities } from "@otomat/domain";
 
 import {
   requireProviderSession,
@@ -31,6 +31,9 @@ const CODEX_CAPABILITIES: RuntimeCapabilities = {
   diff_hints: false,
 };
 
+/** Codex exposes no user-tunable provider options today; its sandbox is a fixed constant. */
+const CODEX_PROVIDER_OPTIONS: ProviderOptionDescriptor[] = [];
+
 /** JSONL output plus the OS-level sandbox confining writes to the working directory. */
 const BASE_EXEC_ARGS = ["--json", "--sandbox", "workspace-write"];
 
@@ -39,6 +42,7 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
   readonly id = CODEX_ADAPTER_ID;
   readonly displayName = "Codex CLI";
   readonly capabilities = CODEX_CAPABILITIES;
+  readonly providerOptions = CODEX_PROVIDER_OPTIONS;
 
   /** The binary parameter is the test seam: tests point it at a stub replaying recorded frames. */
   constructor(private readonly binary: string = CODEX_BINARY) {}

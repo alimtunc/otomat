@@ -1,4 +1,8 @@
-import { RUN_PLAN_MAX_STEPS, type RuntimeDescriptor } from "@otomat/domain";
+import {
+  RUN_PLAN_MAX_STEPS,
+  type AgentProfileContract,
+  type RuntimeDescriptor,
+} from "@otomat/domain";
 import { Button, Field, FieldControl, Icon, IconButton, Input, Textarea } from "@otomat/ui";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import {
@@ -14,13 +18,14 @@ import {
 } from "@web/lib/workflow-plan";
 
 import type { WorkflowForm } from "./use-workflow-form";
-import { DependencyToggles, StepRuntimeSelect } from "./workflow-node-controls";
+import { DependencyToggles, StepAgentSelect } from "./workflow-node-controls";
 
 export interface WorkflowCompeteCardProps {
   form: WorkflowForm;
   steps: WorkflowNodeDraft[];
   index: number;
   descriptors: RuntimeDescriptor[];
+  profiles: AgentProfileContract[];
   onUpdateSteps: (update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) => void;
 }
 
@@ -29,6 +34,7 @@ export function WorkflowCompeteCard({
   steps,
   index,
   descriptors,
+  profiles,
   onUpdateSteps,
 }: WorkflowCompeteCardProps) {
   const group = steps[index];
@@ -117,14 +123,15 @@ export function WorkflowCompeteCard({
                   </Field>
                 )}
               </form.Field>
-              <div className="w-36">
-                <StepRuntimeSelect
+              <div className="w-44">
+                <StepAgentSelect
+                  profiles={profiles}
                   descriptors={descriptors}
-                  label={`${competitorLabel(competitorIndex)} runtime`}
-                  value={competitor.runtime}
-                  onValueChange={(runtime) =>
+                  label={`${competitorLabel(competitorIndex)} agent`}
+                  value={competitor.agent}
+                  onValueChange={(agent) =>
                     onUpdateSteps((value) =>
-                      updateWorkflowCompetitor(value, index, competitorIndex, { runtime }),
+                      updateWorkflowCompetitor(value, index, competitorIndex, { agent }),
                     )
                   }
                 />

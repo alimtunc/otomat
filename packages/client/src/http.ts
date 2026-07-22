@@ -53,12 +53,37 @@ export async function postJson(
   path: string,
   body: unknown,
 ): Promise<unknown> {
+  return sendJson(config, "POST", path, body);
+}
+
+/** PATCHes `body` as JSON and JSON-parses the response; throws `DaemonRequestError` on a non-2xx status. */
+export async function patchJson(
+  config: DaemonClientConfig,
+  path: string,
+  body: unknown,
+): Promise<unknown> {
+  return sendJson(config, "PATCH", path, body);
+}
+
+async function sendJson(
+  config: DaemonClientConfig,
+  method: "POST" | "PATCH",
+  path: string,
+  body: unknown,
+): Promise<unknown> {
   const doFetch = config.fetch ?? fetch;
   const res = await doFetch(resolveUrl(config, path), {
-    method: "POST",
+    method,
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new DaemonRequestError(res.status, path, await readErrorBody(res));
   return res.json();
+}
+
+/** DELETEs `path`; returns nothing (the daemon replies 204). Throws `DaemonRequestError` on a non-2xx status. */
+export async function deleteJson(config: DaemonClientConfig, path: string): Promise<void> {
+  const doFetch = config.fetch ?? fetch;
+  const res = await doFetch(resolveUrl(config, path), { method: "DELETE" });
+  if (!res.ok) throw new DaemonRequestError(res.status, path, await readErrorBody(res));
 }

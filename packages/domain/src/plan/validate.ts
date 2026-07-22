@@ -22,6 +22,8 @@ export const runPlanStepInputSchema = z
     name: planNodeNameSchema,
     /** Runtime adapter id for this step; null inherits the run's default runtime. */
     agent: z.string().min(1).nullable(),
+    /** Agent profile to resolve and freeze for this step; takes precedence over `agent`. Null/absent keeps the ad-hoc runtime path. */
+    profile_id: z.string().min(1).nullish(),
     prompt: planNodePromptSchema,
     depends_on: planDependenciesSchema,
   })
@@ -33,6 +35,8 @@ const runPlanCompetitorInputSchema = z
     id: planNodeIdSchema,
     name: planNodeNameSchema,
     agent: z.string().min(1).nullable(),
+    /** Agent profile to resolve and freeze for this candidate; takes precedence over `agent`. */
+    profile_id: z.string().min(1).nullish(),
     prompt: planNodePromptSchema,
   })
   .strict();

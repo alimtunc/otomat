@@ -1,4 +1,5 @@
 import { runPlanInputSchema } from "@otomat/domain";
+import { encodeProfileChoice, encodeRuntimeChoice } from "@web/lib/agent-choice";
 import {
   addWorkflowCompetitor,
   buildRunPlanInput,
@@ -19,20 +20,20 @@ function competeGroupAt(steps: readonly WorkflowNodeDraft[], index: number): Wor
   return node;
 }
 
-it("builds a strict compete node with per-candidate prompts and runtimes", () => {
+it("builds a strict compete node with per-candidate ad-hoc runtimes and a profile", () => {
   const group = newWorkflowCompeteGroup(1);
   group.name = "Choose implementation";
   group.competitors[0] = {
     ...group.competitors[0]!,
     name: "Direct",
     prompt: "Implement directly",
-    runtime: "codex",
+    agent: encodeRuntimeChoice("codex"),
   };
   group.competitors[1] = {
     ...group.competitors[1]!,
     name: "Layered",
     prompt: "Implement with a boundary",
-    runtime: "claude",
+    agent: encodeProfileChoice("profile-abc"),
   };
   const dependent = { ...newWorkflowStep(2), name: "Verify", prompt: "Run checks" };
   const steps = toggleWorkflowDependency([group, dependent], 1, group.key);
@@ -44,7 +45,12 @@ it("builds a strict compete node with per-candidate prompts and runtimes", () =>
     id: group.key,
     compete: [
       { name: "Direct", agent: "codex", prompt: "Implement directly" },
-      { name: "Layered", agent: "claude", prompt: "Implement with a boundary" },
+      {
+        name: "Layered",
+        agent: null,
+        profile_id: "profile-abc",
+        prompt: "Implement with a boundary",
+      },
     ],
   });
   expect(plan.steps[1]?.depends_on).toEqual([group.key]);

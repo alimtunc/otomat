@@ -16,6 +16,8 @@ import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as SettingsRouteRouteImport } from './routes/settings/route'
 import { Route as SkillsRouteImport } from './routes/skills'
 import { Route as UsageRouteImport } from './routes/usage'
+import { Route as AgentsIndexRouteImport } from './routes/agents/index'
+import { Route as AgentsProfileIdRouteImport } from './routes/agents/$profileId'
 import { Route as IssuesIndexRouteImport } from './routes/issues/index'
 import { Route as IssuesIssueIdRouteImport } from './routes/issues/$issueId'
 import { Route as RunsIndexRouteImport } from './routes/runs/index'
@@ -66,6 +68,16 @@ const UsageRoute = UsageRouteImport.update({
   id: '/usage',
   path: '/usage',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AgentsIndexRoute = AgentsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AgentsRoute,
+} as any)
+const AgentsProfileIdRoute = AgentsProfileIdRouteImport.update({
+  id: '/$profileId',
+  path: '/$profileId',
+  getParentRoute: () => AgentsRoute,
 } as any)
 const IssuesIndexRoute = IssuesIndexRouteImport.update({
   id: '/issues/',
@@ -146,12 +158,13 @@ const RunsRunIdPrRoute = RunsRunIdPrRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
-  '/agents': typeof AgentsRoute
+  '/agents': typeof AgentsRouteWithChildren
   '/inbox': typeof InboxRoute
   '/reviews': typeof ReviewsRoute
   '/skills': typeof SkillsRoute
   '/usage': typeof UsageRoute
   '/runs/$runId': typeof RunsRunIdRouteRouteWithChildren
+  '/agents/$profileId': typeof AgentsProfileIdRoute
   '/issues/$issueId': typeof IssuesIssueIdRoute
   '/settings/about': typeof SettingsAboutRoute
   '/settings/agents': typeof SettingsAgentsRoute
@@ -159,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
+  '/agents/': typeof AgentsIndexRoute
   '/issues/': typeof IssuesIndexRoute
   '/runs/': typeof RunsIndexRoute
   '/settings/': typeof SettingsIndexRoute
@@ -169,11 +183,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/agents': typeof AgentsRoute
   '/inbox': typeof InboxRoute
   '/reviews': typeof ReviewsRoute
   '/skills': typeof SkillsRoute
   '/usage': typeof UsageRoute
+  '/agents/$profileId': typeof AgentsProfileIdRoute
   '/issues/$issueId': typeof IssuesIssueIdRoute
   '/settings/about': typeof SettingsAboutRoute
   '/settings/agents': typeof SettingsAgentsRoute
@@ -181,6 +195,7 @@ export interface FileRoutesByTo {
   '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
+  '/agents': typeof AgentsIndexRoute
   '/issues': typeof IssuesIndexRoute
   '/runs': typeof RunsIndexRoute
   '/settings': typeof SettingsIndexRoute
@@ -193,12 +208,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
-  '/agents': typeof AgentsRoute
+  '/agents': typeof AgentsRouteWithChildren
   '/inbox': typeof InboxRoute
   '/reviews': typeof ReviewsRoute
   '/skills': typeof SkillsRoute
   '/usage': typeof UsageRoute
   '/runs/$runId': typeof RunsRunIdRouteRouteWithChildren
+  '/agents/$profileId': typeof AgentsProfileIdRoute
   '/issues/$issueId': typeof IssuesIssueIdRoute
   '/settings/about': typeof SettingsAboutRoute
   '/settings/agents': typeof SettingsAgentsRoute
@@ -206,6 +222,7 @@ export interface FileRoutesById {
   '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
+  '/agents/': typeof AgentsIndexRoute
   '/issues/': typeof IssuesIndexRoute
   '/runs/': typeof RunsIndexRoute
   '/settings/': typeof SettingsIndexRoute
@@ -225,6 +242,7 @@ export interface FileRouteTypes {
     | '/skills'
     | '/usage'
     | '/runs/$runId'
+    | '/agents/$profileId'
     | '/issues/$issueId'
     | '/settings/about'
     | '/settings/agents'
@@ -232,6 +250,7 @@ export interface FileRouteTypes {
     | '/settings/integrations'
     | '/settings/repositories'
     | '/settings/runtimes'
+    | '/agents/'
     | '/issues/'
     | '/runs/'
     | '/settings/'
@@ -242,11 +261,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/agents'
     | '/inbox'
     | '/reviews'
     | '/skills'
     | '/usage'
+    | '/agents/$profileId'
     | '/issues/$issueId'
     | '/settings/about'
     | '/settings/agents'
@@ -254,6 +273,7 @@ export interface FileRouteTypes {
     | '/settings/integrations'
     | '/settings/repositories'
     | '/settings/runtimes'
+    | '/agents'
     | '/issues'
     | '/runs'
     | '/settings'
@@ -271,6 +291,7 @@ export interface FileRouteTypes {
     | '/skills'
     | '/usage'
     | '/runs/$runId'
+    | '/agents/$profileId'
     | '/issues/$issueId'
     | '/settings/about'
     | '/settings/agents'
@@ -278,6 +299,7 @@ export interface FileRouteTypes {
     | '/settings/integrations'
     | '/settings/repositories'
     | '/settings/runtimes'
+    | '/agents/'
     | '/issues/'
     | '/runs/'
     | '/settings/'
@@ -290,7 +312,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
-  AgentsRoute: typeof AgentsRoute
+  AgentsRoute: typeof AgentsRouteWithChildren
   InboxRoute: typeof InboxRoute
   ReviewsRoute: typeof ReviewsRoute
   SkillsRoute: typeof SkillsRoute
@@ -351,6 +373,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/usage'
       preLoaderRoute: typeof UsageRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/agents/': {
+      id: '/agents/'
+      path: '/'
+      fullPath: '/agents/'
+      preLoaderRoute: typeof AgentsIndexRouteImport
+      parentRoute: typeof AgentsRoute
+    }
+    '/agents/$profileId': {
+      id: '/agents/$profileId'
+      path: '/$profileId'
+      fullPath: '/agents/$profileId'
+      preLoaderRoute: typeof AgentsProfileIdRouteImport
+      parentRoute: typeof AgentsRoute
     }
     '/issues/': {
       id: '/issues/'
@@ -484,6 +520,19 @@ const SettingsRouteRouteWithChildren = SettingsRouteRoute._addFileChildren(
   SettingsRouteRouteChildren,
 )
 
+interface AgentsRouteChildren {
+  AgentsProfileIdRoute: typeof AgentsProfileIdRoute
+  AgentsIndexRoute: typeof AgentsIndexRoute
+}
+
+const AgentsRouteChildren: AgentsRouteChildren = {
+  AgentsProfileIdRoute: AgentsProfileIdRoute,
+  AgentsIndexRoute: AgentsIndexRoute,
+}
+
+const AgentsRouteWithChildren =
+  AgentsRoute._addFileChildren(AgentsRouteChildren)
+
 interface RunsRunIdRouteRouteChildren {
   RunsRunIdDiffRoute: typeof RunsRunIdDiffRoute
   RunsRunIdLogsRoute: typeof RunsRunIdLogsRoute
@@ -505,7 +554,7 @@ const RunsRunIdRouteRouteWithChildren = RunsRunIdRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRouteRoute: SettingsRouteRouteWithChildren,
-  AgentsRoute: AgentsRoute,
+  AgentsRoute: AgentsRouteWithChildren,
   InboxRoute: InboxRoute,
   ReviewsRoute: ReviewsRoute,
   SkillsRoute: SkillsRoute,

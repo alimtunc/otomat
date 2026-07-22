@@ -12,6 +12,7 @@ import {
 import {
   competeGroupMachine,
   executableSteps,
+  FAKE_RUNTIME_ID,
   isRunPlanCompeteGroup,
   issueMachine,
   runMachine,
@@ -19,8 +20,10 @@ import {
   type StartRunRequest,
 } from "@otomat/domain";
 
-import { freezePlan, resolveStepRuntimes } from "./freeze-plan.js";
-import { ensureRuntimeAgent, requireAvailableRuntime } from "./runtime-selection.js";
+import { resolveAgentConfig, type AgentConfigSelector } from "#agents";
+
+import { freezePlan } from "./freeze-plan.js";
+import { ensureRuntimeAgent } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
 
 const RUN_BRANCH_PREFIX = "otomat/run/";
@@ -77,11 +80,20 @@ function insertAdHocIssue(db: Db, projectId: string, request: StartRunRequest): 
  * Materializes the run, step and session rows, freezes the plan, and acquires an
  * isolated worktree from the repository belonging to the run's issue.
  */
+/** The run default agent config: the selected profile, or an ad-hoc runtime. */
+function defaultConfigSelector(request: StartRunRequest): AgentConfigSelector {
+  return request.profile_id
+    ? { kind: "profile", profileId: request.profile_id }
+    : { kind: "runtime", runtimeId: request.runtime ?? FAKE_RUNTIME_ID };
+}
+
 export function prepareRun(state: SupervisorState, request: StartRunRequest): string {
   const { db, defaultProjectId, repositories } = state;
-  // Every effective runtime is validated before any row (issue included) is written.
-  const defaultRuntime = requireAvailableRuntime(request.runtime);
-  const stepRuntimes = resolveStepRuntimes(request, defaultRuntime);
+  // Every effective config (runtime, options, guidance, skills) is resolved and
+  // validated before any row (issue included) is written, so an unavailable
+  // runtime / unsupported option / missing skill fails before any spawn.
+  const defaultConfig = resolveAgentConfig(db, defaultConfigSelector(request));
+  const defaultRuntime = defaultConfig.runtime;
 
   const existingIssue = request.issue_id ? getIssue(db, request.issue_id) : undefined;
   if (request.issue_id && !existingIssue) throw new Error(`issue ${request.issue_id} not found`);
@@ -92,7 +104,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
 
   const runId = randomUUID();
   const branch = runBranchName(runId);
-  const plan = freezePlan(request, defaultRuntime, stepRuntimes, prompt);
+  const plan = freezePlan(db, request, defaultConfig, process.env, prompt);
   if (plan.steps.some(isRunPlanCompeteGroup) && !binding) {
     throw new CompeteRepositoryRequiredError(projectId);
   }

@@ -30,12 +30,50 @@ export type RuntimeAvailability = z.infer<typeof runtimeAvailabilitySchema>;
 export const runtimeKindSchema = z.enum(["real", "simulated"]);
 export type RuntimeKind = z.infer<typeof runtimeKindSchema>;
 
-/** One runtime adapter as reported by the daemon: identity, honest capability set, and probed availability. */
+/** The Claude Code permission modes Otomat passes verbatim to `--permission-mode`. */
+export const CLAUDE_PERMISSION_MODES = [
+  "default",
+  "acceptEdits",
+  "plan",
+  "bypassPermissions",
+] as const;
+export const claudePermissionModeSchema = z.enum(CLAUDE_PERMISSION_MODES);
+export type ClaudePermissionMode = (typeof CLAUDE_PERMISSION_MODES)[number];
+
+/** Every provider option a runtime may honestly expose. Keys map to a real, already-wired adapter flag. */
+export const PROVIDER_OPTION_KEYS = ["permission_mode"] as const;
+export const providerOptionKeySchema = z.enum(PROVIDER_OPTION_KEYS);
+export type ProviderOptionKey = (typeof PROVIDER_OPTION_KEYS)[number];
+
+/** Option values a profile/run selects. Only keys the chosen runtime advertises are accepted; the rest stay absent. */
+export const providerOptionsSchema = z.object({
+  permission_mode: claudePermissionModeSchema.optional(),
+});
+export type ProviderOptions = z.infer<typeof providerOptionsSchema>;
+
+/** One allowed value for a provider option, with a label safe to render. */
+export const providerOptionChoiceSchema = z.object({
+  value: z.string(),
+  label: z.string(),
+});
+
+/** A single tunable option the runtime actually honors, its allowed values and default. Drives honest option gating. */
+export const providerOptionDescriptorSchema = z.object({
+  key: providerOptionKeySchema,
+  label: z.string(),
+  choices: z.array(providerOptionChoiceSchema).min(1),
+  default_value: z.string(),
+});
+export type ProviderOptionDescriptor = z.infer<typeof providerOptionDescriptorSchema>;
+
+/** One runtime adapter as reported by the daemon: identity, honest capability set, probed availability, and the provider options it really supports. */
 export const runtimeDescriptorSchema = z.object({
   id: z.string(),
   display_name: z.string(),
   kind: runtimeKindSchema,
   capabilities: runtimeCapabilitiesSchema,
   availability: runtimeAvailabilitySchema,
+  /** Provider options this runtime honors; empty when it exposes none. The UI hides or disables anything not listed here. */
+  provider_options: z.array(providerOptionDescriptorSchema).default([]),
 });
 export type RuntimeDescriptor = z.infer<typeof runtimeDescriptorSchema>;

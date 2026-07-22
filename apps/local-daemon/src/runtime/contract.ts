@@ -1,5 +1,7 @@
 import {
+  providerOptionsSchema,
   RUN_TERMINAL_STATES,
+  type ProviderOptionDescriptor,
   type RuntimeCapabilities,
   type RunTerminalState,
 } from "@otomat/domain";
@@ -33,7 +35,7 @@ export const runtimeFinalStateSchema = z.object({
 });
 export type RuntimeFinalState = z.infer<typeof runtimeFinalStateSchema>;
 
-/** Inputs to a fresh run. `run_dir` is the per-run artifact directory. */
+/** Inputs to a fresh run. `run_dir` is the per-run artifact directory. `options` are the frozen provider options the adapter maps to CLI flags. */
 const runtimeRunInputSchema = z.object({
   run_id: z.string(),
   step_run_id: z.string(),
@@ -41,6 +43,7 @@ const runtimeRunInputSchema = z.object({
   prompt: z.string(),
   run_dir: z.string(),
   cwd: z.string().nullable().optional(),
+  options: providerOptionsSchema.optional(),
 });
 export type RuntimeRunInput = z.infer<typeof runtimeRunInputSchema>;
 
@@ -49,6 +52,7 @@ const runtimeResumeInputSchema = z.object({
   prompt: z.string(),
   run_dir: z.string(),
   cwd: z.string().nullable().optional(),
+  options: providerOptionsSchema.optional(),
 });
 export type RuntimeResumeInput = z.infer<typeof runtimeResumeInputSchema>;
 
@@ -71,6 +75,8 @@ export interface RuntimeAdapter {
   readonly id: RuntimeId;
   readonly displayName: string;
   readonly capabilities: RuntimeCapabilities;
+  /** Provider options this adapter honestly supports; empty when it maps none to CLI flags. */
+  readonly providerOptions: ProviderOptionDescriptor[];
   run(input: RuntimeRunInput, sink: RuntimeSink, signal: AbortSignal): Promise<RuntimeFinalState>;
   resume?(
     session: RuntimeSessionRef,

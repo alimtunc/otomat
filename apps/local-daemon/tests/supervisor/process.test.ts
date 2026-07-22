@@ -36,6 +36,7 @@ function job(): SupervisedJob {
     agentSessionDir,
     worktreePath: null,
     runtime: "fake",
+    config: null,
     mode: "run",
     providerSessionId: null,
   };

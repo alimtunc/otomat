@@ -1,28 +1,9 @@
 import { getAgent, upsertAgent, type Db, type RunRow } from "@otomat/db";
-import { executableSteps, FAKE_RUNTIME_ID } from "@otomat/domain";
+import { executableSteps } from "@otomat/domain";
 
-import {
-  createRuntimeAdapter,
-  describeRuntimeAvailability,
-  isKnownRuntimeId,
-  RuntimeUnavailableError,
-  UnknownRuntimeError,
-  type KnownRuntimeId,
-} from "#runtime";
+import { createRuntimeAdapter, requireAvailableRuntime, type KnownRuntimeId } from "#runtime";
 
-/** Validates the runtime id and refuses an unavailable one (missing CLI binary, or fake outside tests/dev) without writing anything. */
-export function requireAvailableRuntime(
-  requested: string | undefined,
-  env: NodeJS.ProcessEnv = process.env,
-): KnownRuntimeId {
-  const runtime = requested ?? FAKE_RUNTIME_ID;
-  if (!isKnownRuntimeId(runtime)) throw new UnknownRuntimeError(runtime);
-  const availability = describeRuntimeAvailability(runtime, env);
-  if (availability.status === "unavailable") {
-    throw new RuntimeUnavailableError(runtime, availability.reason);
-  }
-  return runtime;
-}
+export { requireAvailableRuntime } from "#runtime";
 
 /** Validates the runtime, refuses an unavailable one, and ensures its builtin agent row exists (FK for `runs.agent_id` / `agent_sessions.agent_id`). */
 export function ensureRuntimeAgent(

@@ -8,6 +8,8 @@ const EXPECTED_TABLES = [
   "worktrees",
   "issues",
   "agents",
+  "agent_profiles",
+  "skills",
   "runs",
   "compete_groups",
   "step_runs",

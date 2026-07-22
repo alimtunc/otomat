@@ -168,6 +168,7 @@ describe("runtime availability contract", () => {
         diff_hints: false,
       },
       availability: { status: "unavailable", reason: "binary_not_found" },
+      provider_options: [],
     };
     expect(runtimeDescriptorSchema.parse(descriptor)).toEqual(descriptor);
     const { availability: _availability, ...withoutAvailability } = descriptor;

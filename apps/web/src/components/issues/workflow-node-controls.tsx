@@ -1,56 +1,31 @@
-import type { RuntimeDescriptor } from "@otomat/domain";
-import {
-  Button,
-  cn,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@otomat/ui";
-import { isAvailableRuntime } from "@web/lib/runtimes";
+import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
+import { Button, cn } from "@otomat/ui";
+import { LaunchAgentSelect } from "@web/components/runs/launch/launch-agent-select";
 import type { WorkflowNodeDraft } from "@web/lib/workflow-plan";
 
-const DEFAULT_RUNTIME_VALUE = "__default";
-
-export function StepRuntimeSelect({
+export function StepAgentSelect({
+  profiles,
   descriptors,
   label,
   value,
   onValueChange,
 }: {
+  profiles: AgentProfileContract[];
   descriptors: RuntimeDescriptor[];
   label: string;
   value: string | null;
-  onValueChange: (runtime: string | null) => void;
+  onValueChange: (agent: string | null) => void;
 }) {
-  const items = [
-    { value: DEFAULT_RUNTIME_VALUE, label: "Run default", disabled: false },
-    ...descriptors.map((descriptor) => ({
-      value: descriptor.id,
-      label: descriptor.display_name,
-      disabled: !isAvailableRuntime(descriptor),
-    })),
-  ];
   return (
-    <Select
-      items={items}
-      value={value ?? DEFAULT_RUNTIME_VALUE}
-      onValueChange={(next) => {
-        if (next !== null) onValueChange(next === DEFAULT_RUNTIME_VALUE ? null : next);
-      }}
-    >
-      <SelectTrigger aria-label={label} className="h-7 text-xs">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {items.map((item) => (
-          <SelectItem key={item.value} value={item.value} disabled={item.disabled}>
-            {item.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <LaunchAgentSelect
+      profiles={profiles}
+      descriptors={descriptors}
+      value={value}
+      onValueChange={onValueChange}
+      includeDefault
+      compact
+      ariaLabel={label}
+    />
   );
 }
 

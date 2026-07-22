@@ -9,11 +9,12 @@ import {
   Kbd,
   Textarea,
 } from "@otomat/ui";
+import { useAgentProfiles } from "@web/api/agent-profiles/queries";
 import { useRuntimes } from "@web/api/daemon/queries";
 import { IssueFormFooter } from "@web/components/issues/issue-form-footer";
-import { RuntimePicker } from "@web/components/runs/launch/runtime-picker";
+import { LaunchAgentPicker } from "@web/components/runs/launch/launch-agent-picker";
+import { resolveAgentChoice } from "@web/lib/agent-choice";
 import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@web/lib/form";
-import { resolveRuntimeChoice } from "@web/lib/runtimes";
 import { isWorkflowNodeComplete, workflowExecutableCount } from "@web/lib/workflow-plan";
 
 import { useWorkflowForm } from "./use-workflow-form";
@@ -22,25 +23,27 @@ import { WorkflowStepCard } from "./workflow-step-card";
 
 export interface WorkflowIssueFormProps {
   projectId: string | undefined;
-  runtimeChoice: string | null;
-  onRuntimeChoice: (runtime: string) => void;
+  agentChoice: string | null;
+  onAgentChoice: (choice: string | null) => void;
   onLaunched: () => void;
   onCancel: () => void;
 }
 
 export function WorkflowIssueForm({
   projectId,
-  runtimeChoice,
-  onRuntimeChoice,
+  agentChoice,
+  onAgentChoice,
   onLaunched,
   onCancel,
 }: WorkflowIssueFormProps) {
   const runtimes = useRuntimes();
+  const profilesQuery = useAgentProfiles();
   const descriptors = runtimes.data ?? [];
-  const runtime = resolveRuntimeChoice(descriptors, runtimeChoice);
+  const profiles = profilesQuery.data ?? [];
+  const choice = resolveAgentChoice(agentChoice, profiles, descriptors);
   const { form, planError, isPending, updateSteps, addStep, addCompeteGroup } = useWorkflowForm({
     projectId,
-    runtime,
+    agentChoice: choice,
     onLaunched,
   });
 
@@ -74,10 +77,11 @@ export function WorkflowIssueForm({
             </Field>
           )}
         </form.Field>
-        <RuntimePicker
+        <LaunchAgentPicker
           descriptors={descriptors}
-          value={runtime}
-          onValueChange={onRuntimeChoice}
+          profiles={profiles}
+          value={choice}
+          onValueChange={onAgentChoice}
           isPending={runtimes.isPending}
           isError={runtimes.isError}
           isSuccess={runtimes.isSuccess}
@@ -94,6 +98,7 @@ export function WorkflowIssueForm({
                     steps={stepsField.state.value}
                     index={index}
                     descriptors={descriptors}
+                    profiles={profiles}
                     onUpdateSteps={updateSteps}
                   />
                 ) : (
@@ -103,6 +108,7 @@ export function WorkflowIssueForm({
                     steps={stepsField.state.value}
                     index={index}
                     descriptors={descriptors}
+                    profiles={profiles}
                     onUpdateSteps={updateSteps}
                   />
                 ),
@@ -159,7 +165,7 @@ export function WorkflowIssueForm({
                 variant="primary"
                 size="sm"
                 loading={isPending}
-                disabled={!(filled && runtime !== null && projectId !== undefined && !isPending)}
+                disabled={!(filled && choice !== null && projectId !== undefined && !isPending)}
               >
                 Launch workflow
                 <Kbd className="border-[rgba(255,255,255,.4)] text-on-accent">⌘↵</Kbd>

@@ -1,4 +1,5 @@
 import {
+  agentProfileContractSchema,
   healthResponseSchema,
   githubConnectionContractSchema,
   issueContractSchema,
@@ -15,6 +16,7 @@ import {
   registerRepositoryResponseSchema,
   runDiffResponseSchema,
   runtimeDescriptorSchema,
+  skillContractSchema,
   syncLinearResponseSchema,
   type ConnectLinearRequest,
   type CreateIssueRequest,
@@ -24,12 +26,14 @@ import {
   type PreparePullRequestRequest,
   type RegisterRepositoryRequest,
   type RequestFixRequest,
+  type SaveAgentProfileRequest,
   type SelectCompeteWinnerRequest,
+  type SetSkillEnabledRequest,
   type StartRunRequest,
   type SyncLinearRequest,
 } from "@otomat/domain";
 
-import { getJson, postJson, queryString } from "./http.js";
+import { deleteJson, getJson, patchJson, postJson, queryString } from "./http.js";
 import { subscribeRunEvents } from "./sse.js";
 import type { DaemonClientConfig, RunEventsHandlers, RunEventsSubscription } from "./types.js";
 
@@ -94,6 +98,38 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
     },
     async listRuntimes() {
       return runtimeDescriptorSchema.array().parse(await getJson(config, "/api/runtimes"));
+    },
+    async listAgentProfiles() {
+      return agentProfileContractSchema.array().parse(await getJson(config, "/api/agent-profiles"));
+    },
+    async createAgentProfile(request: SaveAgentProfileRequest) {
+      return agentProfileContractSchema.parse(
+        await postJson(config, "/api/agent-profiles", request),
+      );
+    },
+    async updateAgentProfile(id: string, request: SaveAgentProfileRequest) {
+      return agentProfileContractSchema.parse(
+        await patchJson(config, `/api/agent-profiles/${encodeURIComponent(id)}`, request),
+      );
+    },
+    async duplicateAgentProfile(id: string) {
+      return agentProfileContractSchema.parse(
+        await postJson(config, `/api/agent-profiles/${encodeURIComponent(id)}/duplicate`, {}),
+      );
+    },
+    async deleteAgentProfile(id: string) {
+      await deleteJson(config, `/api/agent-profiles/${encodeURIComponent(id)}`);
+    },
+    async listSkills() {
+      return skillContractSchema.array().parse(await getJson(config, "/api/skills"));
+    },
+    async scanSkills() {
+      return skillContractSchema.array().parse(await postJson(config, "/api/skills/scan", {}));
+    },
+    async setSkillEnabled(id: string, request: SetSkillEnabledRequest) {
+      return skillContractSchema.parse(
+        await patchJson(config, `/api/skills/${encodeURIComponent(id)}`, request),
+      );
     },
     async listIssues(params: { projectId?: string } = {}) {
       return issueContractSchema

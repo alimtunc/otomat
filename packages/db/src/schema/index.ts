@@ -17,6 +17,9 @@ import type {
   ReviewCommentState,
   ReviewState,
   RunState,
+  SkillInvalidReason,
+  SkillSource,
+  SkillStatus,
   StepRunState,
   WorktreeStatus,
 } from "@otomat/domain";
@@ -132,6 +135,42 @@ export const agents = sqliteTable("agents", {
   runtime: text("runtime").notNull(),
   ...timestamps,
 });
+
+// Reusable agent profiles: a user-authored runtime + provider options + system
+// guidance + activated skills. Distinct from `agents` (the built-in runtime
+// catalog). A launch freezes an immutable snapshot into runs.plan_json; editing
+// or deleting a profile never touches an existing run.
+export const agentProfiles = sqliteTable("agent_profiles", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  runtime: text("runtime").notNull(),
+  // ProviderOptions selected for this profile; validated against the runtime's advertised options at save time.
+  options_json: text("options_json", { mode: "json" }).notNull(),
+  guidance: text("guidance"),
+  // Ids of activated skills; resolved and validated at launch.
+  skill_ids_json: text("skill_ids_json", { mode: "json" }).notNull(),
+  ...timestamps,
+});
+
+// Local skills catalog: declarative instruction files discovered under known
+// roots (a registered project's tree, or the user's home skills). Otomat never
+// executes a skill. `canonical_path` is the realpath identity used for dedupe.
+export const skills = sqliteTable(
+  "skills",
+  {
+    id: text("id").primaryKey(),
+    source: text("source").$type<SkillSource>().notNull(),
+    canonical_path: text("canonical_path").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    content_hash: text("content_hash"),
+    status: text("status").$type<SkillStatus>().notNull().default("available"),
+    invalid_reason: text("invalid_reason").$type<SkillInvalidReason>(),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("skills_canonical_path_unique").on(table.canonical_path)],
+);
 
 export const runs = sqliteTable("runs", {
   id: text("id").primaryKey(),

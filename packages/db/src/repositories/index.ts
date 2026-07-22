@@ -7,6 +7,7 @@
  * (fail-loud in `listRuns`, fail-separate in `listActiveRuns`).
  * @packageDocumentation
  */
+export * from "./agent-profiles.js";
 export * from "./agent-sessions.js";
 export * from "./agents.js";
 export * from "./compete-groups.js";
@@ -19,5 +20,6 @@ export * from "./repositories.js";
 export * from "./review-comments.js";
 export * from "./reviews.js";
 export * from "./runs.js";
+export * from "./skills.js";
 export * from "./step-runs.js";
 export * from "./sync-state.js";

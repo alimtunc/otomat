@@ -5,6 +5,8 @@
   "type": "module",
   "imports": {
     "#bootstrap": "./src/bootstrap.ts",
+    "#agents": "./src/agents/index.ts",
+    "#agents/*": "./src/agents/*.ts",
     "#api": "./src/api/index.ts",
     "#api/*": "./src/api/*.ts",
     "#events": "./src/events/index.ts",

@@ -32,6 +32,7 @@ function job(mode: "run" | "resume", worktreePath: string | null = null): Superv
     agentSessionDir: dir,
     worktreePath,
     runtime: "fake",
+    config: null,
     mode,
     providerSessionId: mode === "resume" ? "ps-w1" : null,
   };

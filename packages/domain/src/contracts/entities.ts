@@ -9,6 +9,7 @@ import { REVIEW_COMMENT_STATES } from "../state-machines/review-comment.js";
 import { REVIEW_STATES } from "../state-machines/review.js";
 import { RUN_STATES } from "../state-machines/run.js";
 import { STEP_RUN_STATES } from "../state-machines/step-run.js";
+import { providerOptionsSchema } from "./runtime.js";
 
 const EXTERNAL_ISSUE_SOURCES = ["linear", "github"] as const;
 export type ExternalIssueSource = (typeof EXTERNAL_ISSUE_SOURCES)[number];
@@ -66,13 +67,76 @@ export const issueSourceContractSchema = z.union([
 ]);
 export type IssueSourceContract = z.infer<typeof issueSourceContractSchema>;
 
-/** One unit of agent work inside a frozen run plan. */
+/** Where a discovered skill came from: a registered project's tree, or the user's home skills. */
+export const SKILL_SOURCES = ["project", "user"] as const;
+export const skillSourceSchema = z.enum(SKILL_SOURCES);
+export type SkillSource = (typeof SKILL_SOURCES)[number];
+
+/** Why a discovered skill cannot be activated; safe to show verbatim in the UI. */
+export const SKILL_INVALID_REASONS = [
+  "frontmatter_missing",
+  "name_missing",
+  "unreadable",
+  "path_missing",
+] as const;
+export const skillInvalidReasonSchema = z.enum(SKILL_INVALID_REASONS);
+export type SkillInvalidReason = (typeof SKILL_INVALID_REASONS)[number];
+
+export const SKILL_STATUSES = ["available", "invalid"] as const;
+export const skillStatusSchema = z.enum(SKILL_STATUSES);
+export type SkillStatus = (typeof SKILL_STATUSES)[number];
+
+/** One discovered local skill — declarative instructions with filesystem provenance. Otomat never executes it. */
+export const skillContractSchema = z.object({
+  id: z.string(),
+  source: skillSourceSchema,
+  /** Canonical (realpath) absolute path to the skill's `SKILL.md`; stable identity across symlinks. */
+  canonical_path: z.string(),
+  name: z.string().min(1),
+  description: z.string().nullable(),
+  /** Hash of the skill file's contents; changes whenever the on-disk instructions change. Null when unreadable. */
+  content_hash: z.string().nullable(),
+  status: skillStatusSchema,
+  invalid_reason: skillInvalidReasonSchema.nullable(),
+  /** Whether this skill may be activated by a profile. */
+  enabled: z.boolean(),
+});
+export type SkillContract = z.infer<typeof skillContractSchema>;
+
+/** A skill as frozen into a run plan node at launch: identity, provenance, the exact content hash, and the captured instruction text so a resume stays reproducible even if the file later changes. */
+export const resolvedSkillSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  source: skillSourceSchema,
+  canonical_path: z.string(),
+  content_hash: z.string(),
+  /** The skill's declarative instructions captured at launch. Otomat surfaces this as text; it is never executed. */
+  instructions: z.string(),
+});
+export type ResolvedSkill = z.infer<typeof resolvedSkillSchema>;
+
+/** The effective agent configuration frozen into a run plan node at launch. Resume/follow-up/fix read this, never the live profile. */
+export const resolvedAgentConfigSchema = z.object({
+  runtime: z.string(),
+  /** Profile this config resolved from; null for an ad-hoc runtime launch. */
+  profile_id: z.string().nullable(),
+  profile_name: z.string().nullable(),
+  options: providerOptionsSchema,
+  guidance: z.string().nullable(),
+  skills: z.array(resolvedSkillSchema),
+  /** Opaque hash over the effective config; lets the UI prove a later profile edit did not alter this run. */
+  config_hash: z.string(),
+});
+export type ResolvedAgentConfig = z.infer<typeof resolvedAgentConfigSchema>;
+
+/** One unit of agent work inside a frozen run plan. `config` is absent only on runs launched before profiles existed. */
 export const runPlanStepSchema = z.object({
   id: z.string(),
   name: z.string().min(1),
   agent: z.string().nullable(),
   prompt: z.string().nullable(),
   depends_on: z.array(z.string()),
+  config: resolvedAgentConfigSchema.nullish(),
 });
 export type RunPlanStep = z.infer<typeof runPlanStepSchema>;
 
@@ -82,8 +146,21 @@ export const runPlanCompetitorSchema = z.object({
   name: z.string().min(1),
   agent: z.string().nullable(),
   prompt: z.string().nullable(),
+  config: resolvedAgentConfigSchema.nullish(),
 });
 export type RunPlanCompetitor = z.infer<typeof runPlanCompetitorSchema>;
+
+/** A reusable agent configuration a user selects when launching. Mutable — a launch freezes a snapshot into the run plan. */
+export const agentProfileContractSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  runtime: z.string(),
+  options: providerOptionsSchema,
+  guidance: z.string().nullable(),
+  /** Ids of skills this profile activates; each is resolved and validated at launch. */
+  skill_ids: z.array(z.string()),
+});
+export type AgentProfileContract = z.infer<typeof agentProfileContractSchema>;
 
 /** One dependency node whose candidates run in isolation until a user selects a winner. */
 export const runPlanCompeteGroupSchema = z.object({

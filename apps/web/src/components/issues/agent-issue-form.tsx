@@ -1,38 +1,45 @@
 import { Button, DialogBody, Kbd, Textarea } from "@otomat/ui";
+import { useAgentProfiles } from "@web/api/agent-profiles/queries";
 import { useRuntimes } from "@web/api/daemon/queries";
 import { useStartRunAndNavigate } from "@web/api/runs/mutations";
 import { IssueFormFooter } from "@web/components/issues/issue-form-footer";
-import { RuntimePicker } from "@web/components/runs/launch/runtime-picker";
-import { resolveRuntimeChoice } from "@web/lib/runtimes";
+import { LaunchAgentPicker } from "@web/components/runs/launch/launch-agent-picker";
+import { agentChoiceToRequest, resolveAgentChoice } from "@web/lib/agent-choice";
 import { useState, type KeyboardEvent } from "react";
 
 export interface AgentIssueFormProps {
   projectId: string | undefined;
-  runtimeChoice: string | null;
-  onRuntimeChoice: (runtime: string) => void;
+  agentChoice: string | null;
+  onAgentChoice: (choice: string | null) => void;
   onLaunched: () => void;
   onCancel: () => void;
 }
 
 export function AgentIssueForm({
   projectId,
-  runtimeChoice,
-  onRuntimeChoice,
+  agentChoice,
+  onAgentChoice,
   onLaunched,
   onCancel,
 }: AgentIssueFormProps) {
   const [promptText, setPromptText] = useState("");
   const { start, isPending } = useStartRunAndNavigate();
   const runtimes = useRuntimes();
+  const profilesQuery = useAgentProfiles();
   const descriptors = runtimes.data ?? [];
-  const runtime = resolveRuntimeChoice(descriptors, runtimeChoice);
+  const profiles = profilesQuery.data ?? [];
+  const choice = resolveAgentChoice(agentChoice, profiles, descriptors);
 
   const canSubmit =
-    promptText.trim().length > 0 && runtime !== null && projectId !== undefined && !isPending;
+    promptText.trim().length > 0 && choice !== null && projectId !== undefined && !isPending;
 
   async function submit() {
-    if (!canSubmit || runtime === null || projectId === undefined) return;
-    const started = await start({ prompt: promptText.trim(), runtime, project_id: projectId });
+    if (!canSubmit || choice === null || projectId === undefined) return;
+    const started = await start({
+      prompt: promptText.trim(),
+      project_id: projectId,
+      ...agentChoiceToRequest(choice),
+    });
     if (started) {
       setPromptText("");
       onLaunched();
@@ -57,10 +64,11 @@ export function AgentIssueForm({
           rows={4}
           aria-label="Issue prompt"
         />
-        <RuntimePicker
+        <LaunchAgentPicker
           descriptors={descriptors}
-          value={runtime}
-          onValueChange={onRuntimeChoice}
+          profiles={profiles}
+          value={choice}
+          onValueChange={onAgentChoice}
           isPending={runtimes.isPending}
           isError={runtimes.isError}
           isSuccess={runtimes.isSuccess}

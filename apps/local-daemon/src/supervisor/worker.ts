@@ -1,7 +1,9 @@
 import { join } from "node:path";
 
+import { resolvedAgentConfigSchema } from "@otomat/domain";
 import { z } from "zod";
 
+import { composeTurnPrompt } from "#agents";
 import { EVENTS_FILENAME } from "#events";
 import {
   createRuntimeAdapter,
@@ -26,6 +28,7 @@ const supervisedJobSchema = z.object({
     (value) => typeof value === "string" && isKnownRuntimeId(value),
     "unknown runtime",
   ),
+  config: resolvedAgentConfigSchema.nullable(),
   mode: z.enum(["run", "resume"]),
   providerSessionId: z.string().nullable(),
 }) satisfies z.ZodType<SupervisedJob>;
@@ -47,6 +50,7 @@ export async function runWorkerJob(
   signal: AbortSignal,
 ): Promise<RuntimeFinalState> {
   const adapter = createRuntimeAdapter(job.runtime);
+  const options = job.config?.options;
   // The worker owns durability: every event lands in the run's events.jsonl for the tailer/reconciliation.
   const sink = new JsonlEventSink(join(job.agentSessionDir, EVENTS_FILENAME));
   try {
@@ -60,6 +64,7 @@ export async function runWorkerJob(
           event_count: 0,
         };
       }
+      // The resumed provider session already carries the frozen guidance/skills, so only options apply here.
       return await adapter.resume(
         {
           run_id: job.runId,
@@ -67,7 +72,7 @@ export async function runWorkerJob(
           agent_session_id: job.agentSessionId,
           provider_session_id: job.providerSessionId,
         },
-        { prompt: job.prompt, run_dir: job.agentSessionDir, cwd: job.worktreePath },
+        { prompt: job.prompt, run_dir: job.agentSessionDir, cwd: job.worktreePath, options },
         sink,
         signal,
       );
@@ -77,9 +82,10 @@ export async function runWorkerJob(
         run_id: job.runId,
         step_run_id: job.stepRunId,
         agent_session_id: job.agentSessionId,
-        prompt: job.prompt,
+        prompt: composeTurnPrompt(job.prompt, job.config),
         run_dir: job.agentSessionDir,
         cwd: job.worktreePath,
+        options,
       },
       sink,
       signal,

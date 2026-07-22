@@ -1,22 +1,23 @@
-import type { RuntimeDescriptor } from "@otomat/domain";
+import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
 import { Field, FieldControl, Icon, IconButton, Input, Textarea } from "@otomat/ui";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import {
   moveWorkflowStep,
   removeWorkflowStep,
-  setWorkflowStepRuntime,
+  setWorkflowStepAgent,
   toggleWorkflowDependency,
   type WorkflowNodeDraft,
 } from "@web/lib/workflow-plan";
 
 import type { WorkflowForm } from "./use-workflow-form";
-import { DependencyToggles, StepRuntimeSelect } from "./workflow-node-controls";
+import { DependencyToggles, StepAgentSelect } from "./workflow-node-controls";
 
 export interface WorkflowStepCardProps {
   form: WorkflowForm;
   steps: WorkflowNodeDraft[];
   index: number;
   descriptors: RuntimeDescriptor[];
+  profiles: AgentProfileContract[];
   onUpdateSteps: (update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) => void;
 }
 
@@ -25,6 +26,7 @@ export function WorkflowStepCard({
   steps,
   index,
   descriptors,
+  profiles,
   onUpdateSteps,
 }: WorkflowStepCardProps) {
   const step = steps[index];
@@ -102,13 +104,14 @@ export function WorkflowStepCard({
           dependsOn={step.dependsOn}
           onToggle={(key) => onUpdateSteps((value) => toggleWorkflowDependency(value, index, key))}
         />
-        <div className="w-36">
-          <StepRuntimeSelect
+        <div className="w-44">
+          <StepAgentSelect
+            profiles={profiles}
             descriptors={descriptors}
-            label={`Step ${index + 1} runtime`}
-            value={step.runtime}
+            label={`Step ${index + 1} agent`}
+            value={step.agent}
             onValueChange={(next) =>
-              onUpdateSteps((value) => setWorkflowStepRuntime(value, index, next))
+              onUpdateSteps((value) => setWorkflowStepAgent(value, index, next))
             }
           />
         </div>
