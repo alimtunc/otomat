@@ -1,4 +1,4 @@
-import { cn } from "@otomat/ui";
+import { Button, Input, Textarea, cn } from "@otomat/ui";
 import { useState } from "react";
 
 interface InlineTextFieldProps {
@@ -37,8 +37,10 @@ export function InlineTextField({
   if (!editing) {
     const empty = value.length === 0;
     return (
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         disabled={disabled}
         aria-label={disabled ? ariaLabel : `Edit ${ariaLabel.toLowerCase()}`}
         onClick={() => {
@@ -46,25 +48,25 @@ export function InlineTextField({
           setEditing(true);
         }}
         className={cn(
-          "-mx-1.5 block w-[calc(100%+0.75rem)] whitespace-pre-wrap rounded-md px-1.5 text-left",
+          "-mx-1.5 block h-auto w-[calc(100%+0.75rem)] justify-start whitespace-pre-wrap rounded-md px-1.5 py-0 text-left font-[inherit]",
           disabled ? "" : "cursor-text transition-colors duration-100 hover:bg-surface-2/60",
           empty ? "text-text-tertiary" : "",
           className,
         )}
       >
         {empty ? placeholder : value}
-      </button>
+      </Button>
     );
   }
 
   const sharedClass = cn(
-    "-mx-1.5 block w-[calc(100%+0.75rem)] resize-none rounded-md bg-surface-2/60 px-1.5 outline-none",
+    "-mx-1.5 block h-auto w-[calc(100%+0.75rem)] rounded-md border-0 bg-surface-2/60 px-1.5 py-0 font-[inherit] text-[inherit] shadow-none outline-none focus:border-transparent focus:shadow-none",
     className,
   );
 
   if (multiline) {
     return (
-      <textarea
+      <Textarea
         autoFocus
         aria-label={ariaLabel}
         value={text}
@@ -74,13 +76,13 @@ export function InlineTextField({
         onKeyDown={(event) => {
           if (event.key === "Escape") cancel();
         }}
-        className={cn(sharedClass, "field-sizing-content")}
+        className={cn(sharedClass, "field-sizing-content min-h-0 resize-none leading-[inherit]")}
       />
     );
   }
 
   return (
-    <input
+    <Input
       autoFocus
       aria-label={ariaLabel}
       value={text}

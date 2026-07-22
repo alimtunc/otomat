@@ -86,6 +86,25 @@ gate fails instead of duplicating its policy here.
 - Default to zero comments. Add one short comment only to explain a genuinely
   non-obvious reason.
 
+### Module size and ownership
+
+- Runtime `.ts` and `.tsx` files stay at or below 250 physical lines. Generated
+  files, declarations, tests, and re-export-only `index.ts` barrels are excluded.
+  Existing exceptions live in `scripts/source-size-baseline.json`: the recorded
+  count must be lowered whenever a file shrinks and must never be raised merely
+  to make the gate pass.
+- Keep one exported public renderer or orchestrator per file. Tiny private
+  presentational units may stay with their owner; extract a unit once it owns
+  independent state, branching, tests, or reuse.
+- When three or more sibling implementation files share a stable domain or
+  repeated filename prefix, group them in a domain folder. Do not create a
+  one-file folder or mirror every hyphenated name segment mechanically.
+- Keep barrels thin: an `index.ts` re-exports a public surface or composes
+  already-owned modules; domain implementation belongs in named modules.
+
+Why: the file tree should expose domain ownership and keep each implementation
+small enough to understand, test, and change without loading unrelated concerns.
+
 ## Commands
 
 ```

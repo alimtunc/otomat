@@ -1,5 +1,6 @@
+import { Input as BaseInput } from "@base-ui/react/input";
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
 
 import { cn } from "../lib/utils";
 import { FIELD_TRANSITION } from "./styles";
@@ -33,10 +34,12 @@ const inputVariants = cva(
 
 export interface InputProps
   extends
-    Omit<ComponentPropsWithoutRef<"input">, "size">,
+    Omit<ComponentPropsWithoutRef<typeof BaseInput>, "className" | "render" | "size" | "style">,
     Pick<VariantProps<typeof inputVariants>, "density"> {
+  className?: string;
   icon?: ReactNode;
   invalid?: boolean;
+  style?: CSSProperties;
 }
 
 export function Input({
@@ -49,7 +52,7 @@ export function Input({
   ...props
 }: InputProps) {
   const field = (
-    <input
+    <BaseInput
       type={type}
       aria-invalid={invalid || undefined}
       className={cn(inputVariants({ density, hasIcon: !!icon }), className)}

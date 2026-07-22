@@ -7,7 +7,7 @@ import {
   type MirroredIssue,
   upsertMirroredIssue,
 } from "#db/repositories/issues";
-import { issues } from "#db/schema/index";
+import { issues } from "#db/schema/issues";
 
 import { createTempDb, seedProject, type TempDb } from "../support/temp-db.js";
 

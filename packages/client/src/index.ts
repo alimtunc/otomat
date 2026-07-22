@@ -7,6 +7,7 @@
  *
  * @packageDocumentation
  */
-export * from "./client.js";
-export { DaemonRequestError } from "./http.js";
-export * from "./types.js";
+export * from "./client/index.js";
+export { DaemonRequestError } from "./client/http.js";
+export * from "./client/config.js";
+export type { RunEventsHandlers, RunEventsSubscription } from "./client/events.js";

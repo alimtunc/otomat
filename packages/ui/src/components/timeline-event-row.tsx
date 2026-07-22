@@ -1,6 +1,6 @@
 import type { EventSource, EventType } from "@otomat/domain/types";
 import { format } from "date-fns";
-import type { ComponentPropsWithoutRef, KeyboardEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { toDate } from "../lib/date";
 import { EVENT_GLYPH, PROVENANCE_LABEL, PROVENANCE_VAR } from "../lib/provenance";
@@ -26,9 +26,6 @@ export interface TimelineEventRowProps {
   provenance: EventSource;
   summary: ReactNode;
   at: Date | string | number;
-  selected?: boolean;
-  isNew?: boolean;
-  onSelect?: () => void;
   children?: ReactNode;
   className?: string;
 }
@@ -38,9 +35,6 @@ export function TimelineEventRow({
   provenance,
   summary,
   at,
-  selected = false,
-  isNew = false,
-  onSelect,
   children,
   className,
 }: TimelineEventRowProps) {
@@ -48,31 +42,8 @@ export function TimelineEventRow({
   const Icon = glyph.icon;
   const tone = glyph.tone;
 
-  const interactive = Boolean(onSelect);
-
-  let background = TONE_BG[tone];
-  if (isNew) background = "var(--iris-bg)";
-  if (selected) background = "var(--selected)";
-
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      onSelect?.();
-    }
-  };
-
-  const interactiveProps: ComponentPropsWithoutRef<"div"> = interactive
-    ? {
-        role: "button",
-        tabIndex: 0,
-        "aria-current": selected ? "true" : undefined,
-        onClick: onSelect,
-        onKeyDown,
-      }
-    : { role: "listitem" };
-
   return (
-    <div
+    <li
       className={cn("group", className)}
       style={{
         display: "grid",
@@ -80,10 +51,9 @@ export function TimelineEventRow({
         gap: 10,
         padding: "6px 16px",
         alignItems: "start",
-        background,
+        background: TONE_BG[tone],
         transition: "background var(--motion-fast) var(--ease)",
       }}
-      {...interactiveProps}
     >
       <span
         aria-hidden
@@ -121,6 +91,6 @@ export function TimelineEventRow({
         </div>
         {children}
       </div>
-    </div>
+    </li>
   );
 }

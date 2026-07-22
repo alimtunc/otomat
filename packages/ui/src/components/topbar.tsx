@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { cn } from "../lib/utils";
+import { Button } from "../primitives/button";
 import { Kbd } from "./kbd";
 
 export interface TopbarProps {
@@ -34,12 +35,13 @@ export function Topbar({
       {breadcrumbs ? <div className="flex min-w-0 items-center">{breadcrumbs}</div> : null}
       <div className="flex-1" />
       {onSearch ? (
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={onSearch}
           aria-keyshortcuts="Meta+K"
           className={cn(
-            "flex h-7 w-57.5 min-w-30 flex-[0_1_230px] items-center gap-2 rounded-md border border-border bg-background px-2.25 text-sm text-text-tertiary",
+            "h-7 w-57.5 min-w-30 flex-[0_1_230px] justify-start gap-2 bg-background px-2.25 font-normal text-text-tertiary",
             "hover:border-border-strong",
             "focus-visible:[outline:2px_solid_var(--iris-ring)]",
           )}
@@ -48,7 +50,7 @@ export function Topbar({
           <Search className="h-3.5 w-3.5 flex-none" />
           <span className="flex-1 truncate text-left">{searchLabel}</span>
           <Kbd>{searchKbd}</Kbd>
-        </button>
+        </Button>
       ) : null}
       {connectionStatus ? (
         <div className="flex items-center gap-1.5 px-1.5 text-xs">{connectionStatus}</div>

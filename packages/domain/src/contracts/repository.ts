@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { projectContractSchema, repositoryContractSchema } from "./entities.js";
+import { projectContractSchema, repositoryContractSchema } from "./entities/workspace.js";
 
 /** Why a local path was refused as a repository registration; safe to show verbatim in the UI. */
 export const REPOSITORY_REGISTRATION_ERRORS = [

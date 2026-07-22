@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { issueContractSchema, issueSourceContractSchema } from "#domain/contracts/entities";
+import { issueContractSchema, issueSourceContractSchema } from "#domain/contracts/entities/issues";
 import {
   connectLinearRequestSchema,
   createIssueSourceRequestSchema,

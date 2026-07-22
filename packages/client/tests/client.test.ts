@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 
-import { createDaemonClient } from "#client/client";
-import { DaemonRequestError } from "#client/http";
+import { DaemonRequestError } from "#client/client/http";
+import { createDaemonClient } from "#client/client/index";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return {

@@ -1,5 +1,5 @@
 import type { DiffFileContract, RunDiffContract } from "@otomat/domain";
-import { cn, Icon, resolveStatus } from "@otomat/ui";
+import { Button, cn, Icon, resolveStatus } from "@otomat/ui";
 import { STATUS_LETTER } from "@web/components/runs/diff/file-tree.utils";
 import { DiffStat } from "@web/components/runs/diff/stat";
 import { PaneHeader } from "@web/components/runs/pane-header";
@@ -32,12 +32,14 @@ export function DiffFileTree({
           const active = file.path === activePath;
           return (
             <li key={file.path}>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => onSelect(file)}
                 aria-current={active ? "true" : undefined}
                 className={cn(
-                  "flex h-7 w-full items-center gap-1.75 px-3 text-xs text-text-secondary hover:bg-hover",
+                  "h-7 w-full justify-start gap-1.75 rounded-none px-3 text-xs font-normal text-text-secondary hover:bg-hover",
                   active && "bg-selected text-foreground",
                 )}
               >
@@ -58,7 +60,7 @@ export function DiffFileTree({
                 <span className="flex items-center gap-1 font-mono text-[10px] tabular-nums">
                   <DiffStat additions={file.additions} deletions={file.deletions} />
                 </span>
-              </button>
+              </Button>
             </li>
           );
         })}

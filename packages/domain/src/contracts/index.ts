@@ -68,4 +68,4 @@ export {
   type SourceLabel,
   type StepRunContract,
   type WorktreeStatus,
-} from "./entities.js";
+} from "./entities/index.js";

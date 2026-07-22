@@ -83,7 +83,6 @@ export function Sidebar({
           label="Search"
           kbd="⌘K"
           onClick={onSearch}
-          as="button"
           collapsed={collapsed}
         />
         <SidebarNavItem
@@ -91,7 +90,6 @@ export function Sidebar({
           label="New issue"
           kbd="C"
           onClick={onNewIssue}
-          as="button"
           collapsed={collapsed}
         />
         <SidebarNavItem

@@ -1,5 +1,16 @@
 // @vitest-environment happy-dom
-import { AppShell, CommandPalette, RunStatusChip, ThemeProvider, resolveStatus } from "@otomat/ui";
+import {
+  AppShell,
+  Avatar,
+  Button,
+  CommandPalette,
+  Field,
+  FieldLabel,
+  Input,
+  RunStatusChip,
+  ThemeProvider,
+  resolveStatus,
+} from "@otomat/ui";
 import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
@@ -71,5 +82,77 @@ describe("shared UI boundaries", () => {
     );
 
     expect(document.querySelector(".lucide-plus")).not.toBeNull();
+  });
+
+  it("forwards value changes through the Base UI input contract", async () => {
+    let value = "";
+    const container = await render(
+      <Input
+        aria-label="Name"
+        onValueChange={(nextValue) => {
+          value = nextValue;
+        }}
+      />,
+    );
+    const input = container.querySelector("input");
+    expect(input).not.toBeNull();
+
+    await act(async () => {
+      if (input === null) return;
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+      setter?.call(input, "Otomat");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    expect(value).toBe("Otomat");
+  });
+
+  it("keeps disabled buttons focusable through the Base UI button contract", async () => {
+    const container = await render(
+      <Button disabled focusableWhenDisabled>
+        Retry
+      </Button>,
+    );
+    const button = container.querySelector("button");
+
+    expect(button?.getAttribute("aria-disabled")).toBe("true");
+    expect(button?.hasAttribute("disabled")).toBe(false);
+  });
+
+  it("uses the canonical iris loading indicator for every button variant", async () => {
+    await render(
+      <Button variant="outline" loading>
+        Sync now
+      </Button>,
+    );
+
+    const loadingStyles =
+      document.querySelector<HTMLStyleElement>("#otomat-btn-loading")?.textContent;
+
+    expect(loadingStyles).toContain("border:2px solid var(--border-strong)");
+    expect(loadingStyles).toContain("border-top-color:var(--iris-solid)");
+    expect(loadingStyles).not.toContain("border:2px solid currentColor");
+  });
+
+  it("shows avatar initials while an image is unavailable", async () => {
+    const container = await render(<Avatar name="Ada Lovelace" src="/missing-avatar.png" />);
+
+    expect(container.textContent).toContain("AL");
+  });
+
+  it("connects a Base UI field label and external validation to its input", async () => {
+    const container = await render(
+      <Field invalid error="Name is required">
+        <FieldLabel>Name</FieldLabel>
+        <Input />
+      </Field>,
+    );
+    const label = container.querySelector("label");
+    const input = container.querySelector("input");
+    const error = container.querySelector('[role="alert"]');
+
+    expect(label?.htmlFor).toBe(input?.id);
+    expect(input?.getAttribute("aria-invalid")).toBe("true");
+    expect(input?.getAttribute("aria-describedby")).toBe(error?.id);
   });
 });

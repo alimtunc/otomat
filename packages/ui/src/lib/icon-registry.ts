@@ -36,6 +36,7 @@ import {
   Sun,
   Terminal,
   Wand2,
+  Workflow,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -78,6 +79,7 @@ export const icons = {
   sun: Sun,
   terminal: Terminal,
   "wand-2": Wand2,
+  workflow: Workflow,
   x: X,
 } satisfies Record<string, LucideIcon>;
 

@@ -1,31 +1,73 @@
 #!/usr/bin/env node
-// Frontend lint rules oxlint cannot express (useEffect / &&-JSX / Tailwind spacing),
-// over apps/web + packages/ui. Run via `pnpm guardrails`; each rule's intent lives in its report() message.
+// Architecture and frontend rules oxlint cannot express. Run via `pnpm guardrails`;
+// each rule's intent lives in its report() message.
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { basename, join, relative } from "node:path";
 
 const ROOT = process.cwd();
 const SCAN_DIRS = ["apps/web/src", "packages/ui/src"];
+const SOURCE_SCAN_DIRS = [
+  "apps/web/src",
+  "apps/local-daemon/src",
+  "apps/desktop/src",
+  "packages/client/src",
+  "packages/db/src",
+  "packages/domain/src",
+  "packages/ui/src",
+];
+const SOURCE_LINE_LIMIT = 250;
+const SOURCE_SIZE_BASELINE_PATH = join(ROOT, "scripts/source-size-baseline.json");
+const SOURCE_SIZE_BASELINE = existsSync(SOURCE_SIZE_BASELINE_PATH)
+  ? JSON.parse(readFileSync(SOURCE_SIZE_BASELINE_PATH, "utf8"))
+  : {};
 const ALLOW_EFFECT_MARKER = "otomat-allow-effect";
 
 const SPACING_PREFIXES = [
-  "max-w", "min-w", "max-h", "min-h", "size", "w", "h",
-  "gap-x", "gap-y", "gap", "space-x", "space-y",
-  "px", "py", "pt", "pr", "pb", "pl", "p",
-  "mx", "my", "mt", "mr", "mb", "ml", "m",
-  "inset-x", "inset-y", "inset", "top", "right", "bottom", "left", "start", "end",
-  "translate-x", "translate-y",
+  "max-w",
+  "min-w",
+  "max-h",
+  "min-h",
+  "size",
+  "w",
+  "h",
+  "gap-x",
+  "gap-y",
+  "gap",
+  "space-x",
+  "space-y",
+  "px",
+  "py",
+  "pt",
+  "pr",
+  "pb",
+  "pl",
+  "p",
+  "mx",
+  "my",
+  "mt",
+  "mr",
+  "mb",
+  "ml",
+  "m",
+  "inset-x",
+  "inset-y",
+  "inset",
+  "top",
+  "right",
+  "bottom",
+  "left",
+  "start",
+  "end",
+  "translate-x",
+  "translate-y",
 ];
 
 const USE_EFFECT_RE = /(?:^|[^.\w])useEffect\s*\(|\bReact\.useEffect\s*\(/;
 const IMPORT_RE = /^\s*import\b/;
 // `\s` spans newlines, so this catches both `cond && <X/>` and `cond &&\n  <X/>`.
 const AND_JSX_RE = /&&\s*\(?\s*<[A-Za-z>/]/g;
-const SPACING_RE = new RegExp(
-  `(?<![\\w-])(${SPACING_PREFIXES.join("|")})-\\[(\\d+)px\\]`,
-  "g",
-);
+const SPACING_RE = new RegExp(`(?<![\\w-])(${SPACING_PREFIXES.join("|")})-\\[(\\d+)px\\]`, "g");
 function listFiles(dir) {
   const abs = join(ROOT, dir);
   let entries;
@@ -41,6 +83,7 @@ function listFiles(dir) {
 }
 
 const violations = [];
+const checkedBaselinePaths = new Set();
 function report(file, line, col, code, message) {
   violations.push(`${relative(ROOT, file)}:${line}:${col}: error ${code}: ${message}`);
 }
@@ -48,6 +91,63 @@ function report(file, line, col, code, message) {
 function lineColAt(src, index) {
   const upto = src.slice(0, index);
   return { line: upto.split("\n").length, col: index - upto.lastIndexOf("\n") };
+}
+
+function lineCount(source) {
+  if (source.length === 0) return 0;
+  const count = source.split(/\r\n|\r|\n/).length;
+  return /(?:\r\n|\r|\n)$/.test(source) ? count - 1 : count;
+}
+
+function isReexportOnlyBarrel(file, source) {
+  if (basename(file) !== "index.ts") return false;
+  const implementation = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const statements = implementation
+    .split(";")
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+  return statements.length > 0 && statements.every((statement) => statement.startsWith("export "));
+}
+
+for (const dir of SOURCE_SCAN_DIRS) {
+  for (const file of listFiles(dir)) {
+    const source = readFileSync(file, "utf8");
+    if (isReexportOnlyBarrel(file, source)) continue;
+    const lines = lineCount(source);
+    const path = relative(ROOT, file);
+    checkedBaselinePaths.add(path);
+    const baselineLines = SOURCE_SIZE_BASELINE[path];
+    const allowedLines = baselineLines ?? SOURCE_LINE_LIMIT;
+    if (lines > allowedLines) {
+      report(
+        file,
+        allowedLines + 1,
+        1,
+        "source-file-size",
+        `Runtime source files must stay at or below ${allowedLines} lines; this file has ${lines}. Split it by responsibility.`,
+      );
+    }
+    if (baselineLines !== undefined && lines < baselineLines) {
+      report(
+        file,
+        1,
+        1,
+        "source-size-baseline",
+        `This file shrank to ${lines} lines; lower its baseline from ${baselineLines} to ${lines}.`,
+      );
+    }
+  }
+}
+
+for (const path of Object.keys(SOURCE_SIZE_BASELINE)) {
+  if (checkedBaselinePaths.has(path)) continue;
+  report(
+    join(ROOT, path),
+    1,
+    1,
+    "source-size-baseline",
+    "This runtime implementation no longer exists. Remove its stale baseline entry.",
+  );
 }
 
 for (const dir of SCAN_DIRS) {
@@ -61,8 +161,7 @@ for (const dir of SCAN_DIRS) {
         const onSameLine = text.includes(ALLOW_EFFECT_MARKER);
         let prev = i - 1;
         while (prev >= 0 && lines[prev].trim() === "") prev--;
-        const documented =
-          onSameLine || (prev >= 0 && lines[prev].includes(ALLOW_EFFECT_MARKER));
+        const documented = onSameLine || (prev >= 0 && lines[prev].includes(ALLOW_EFFECT_MARKER));
         if (!documented) {
           report(
             file,
@@ -98,7 +197,6 @@ for (const dir of SCAN_DIRS) {
         "Conditional render with `&&` is banned. Use `condition ? <Component /> : null`.",
       );
     }
-
   }
 }
 

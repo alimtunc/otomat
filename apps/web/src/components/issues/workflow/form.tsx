@@ -1,0 +1,174 @@
+import { RUN_PLAN_MAX_STEPS } from "@otomat/domain";
+import {
+  Button,
+  DialogBody,
+  Field,
+  FieldControl,
+  FieldLabel,
+  Icon,
+  Kbd,
+  Textarea,
+} from "@otomat/ui";
+import { IssueFormFooter } from "@web/components/issues/issue-form-footer";
+import { LaunchAgentPicker } from "@web/components/runs/launch/launch-agent-picker";
+import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
+import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@web/lib/form";
+import { isWorkflowNodeComplete, workflowExecutableCount } from "@web/lib/workflow-plan";
+
+import { WorkflowCompeteCard } from "./compete-card";
+import { WorkflowStepCard } from "./step-card";
+import { useWorkflowForm } from "./use-form";
+
+export interface WorkflowIssueFormProps {
+  projectId: string | undefined;
+  agentChoice: string | null;
+  onAgentChoice: (choice: string | null) => void;
+  onLaunched: () => void;
+  onCancel: () => void;
+}
+
+export function WorkflowIssueForm({
+  projectId,
+  agentChoice,
+  onAgentChoice,
+  onLaunched,
+  onCancel,
+}: WorkflowIssueFormProps) {
+  const agents = useLaunchAgentChoice(agentChoice);
+  const { descriptors, profiles, choice } = agents;
+  const { form, planError, isPending, updateSteps, addStep, addCompeteGroup } = useWorkflowForm({
+    projectId,
+    agentChoice: choice,
+    onLaunched,
+  });
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void form.handleSubmit();
+      }}
+      onKeyDown={submitOnCmdEnter(() => void form.handleSubmit())}
+    >
+      <DialogBody className="flex max-h-[62vh] flex-col gap-3 overflow-y-auto">
+        <form.Field
+          name="goal"
+          validators={{ onChange: requiredTrimmed("Describe the overall goal.") }}
+        >
+          {(field) => (
+            <Field {...fieldErrorProps(field.state.meta)}>
+              <FieldLabel>Goal</FieldLabel>
+              <FieldControl>
+                <Textarea
+                  autoFocus
+                  rows={2}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  placeholder="What should this workflow achieve? Becomes the issue."
+                  aria-label="Workflow goal"
+                />
+              </FieldControl>
+            </Field>
+          )}
+        </form.Field>
+        <LaunchAgentPicker
+          descriptors={descriptors}
+          profiles={profiles}
+          value={choice}
+          onValueChange={onAgentChoice}
+          isPending={agents.isPending}
+          isError={agents.isError}
+          isSuccess={agents.isSuccess}
+          onRetry={agents.onRetry}
+        />
+        <form.Field name="steps">
+          {(stepsField) => (
+            <div className="flex flex-col gap-2">
+              {stepsField.state.value.map((step, index) =>
+                step.kind === "compete" ? (
+                  <WorkflowCompeteCard
+                    key={step.key}
+                    form={form}
+                    steps={stepsField.state.value}
+                    index={index}
+                    descriptors={descriptors}
+                    profiles={profiles}
+                    onUpdateSteps={updateSteps}
+                  />
+                ) : (
+                  <WorkflowStepCard
+                    key={step.key}
+                    form={form}
+                    steps={stepsField.state.value}
+                    index={index}
+                    descriptors={descriptors}
+                    profiles={profiles}
+                    onUpdateSteps={updateSteps}
+                  />
+                ),
+              )}
+              <div className="flex items-center gap-2 self-start">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={workflowExecutableCount(stepsField.state.value) >= RUN_PLAN_MAX_STEPS}
+                  onClick={addStep}
+                >
+                  <Icon name="plus" aria-hidden />
+                  Add step
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    workflowExecutableCount(stepsField.state.value) > RUN_PLAN_MAX_STEPS - 2
+                  }
+                  onClick={addCompeteGroup}
+                >
+                  <Icon name="workflow" aria-hidden />
+                  Add compete group
+                </Button>
+              </div>
+            </div>
+          )}
+        </form.Field>
+        {planError === null ? null : (
+          <p role="alert" className="text-xs text-danger">
+            {planError}
+          </p>
+        )}
+        {projectId === undefined ? (
+          <p className="text-xs text-danger">Select a project before launching a workflow.</p>
+        ) : null}
+      </DialogBody>
+      <IssueFormFooter
+        onCancel={onCancel}
+        submit={
+          <form.Subscribe
+            selector={(state) =>
+              hasText(state.values.goal) &&
+              state.values.steps.length > 0 &&
+              state.values.steps.every(isWorkflowNodeComplete)
+            }
+          >
+            {(filled) => (
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                loading={isPending}
+                disabled={!(filled && choice !== null && projectId !== undefined && !isPending)}
+              >
+                Launch workflow
+                <Kbd tone="on-accent">⌘↵</Kbd>
+              </Button>
+            )}
+          </form.Subscribe>
+        }
+      />
+    </form>
+  );
+}

@@ -46,7 +46,7 @@ export type {
   ReviewContract,
   ReviewCommentContract,
   PullRequestContract,
-} from "./contracts/entities.js";
+} from "./contracts/entities/index.js";
 
 export type {
   ChangeStatus,

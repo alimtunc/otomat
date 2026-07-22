@@ -13,7 +13,7 @@
     "format": "oxfmt apps packages",
     "format:check": "oxfmt --check apps packages",
     "boundaries": "depcruise apps packages",
-    "guardrails": "node scripts/guardrails.mjs",
+    "guardrails": "node --test scripts/guardrails.test.mjs && node scripts/guardrails.mjs",
     "smoke:dist": "pnpm --filter @otomat/local-daemon smoke:dist",
     "check": "pnpm run format:check && pnpm run lint && pnpm run guardrails && pnpm run build && pnpm run typecheck && pnpm run smoke:dist && pnpm run test",
     "desktop:dev": "node apps/desktop/scripts/dev.mjs",

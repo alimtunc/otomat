@@ -50,12 +50,13 @@ describe("Sidebar", () => {
       'button[aria-label="Switch project"]',
     );
     expect(trigger?.textContent).toContain("Local workspace");
+    expect(trigger?.getAttribute("role")).toBe("combobox");
 
     await act(async () => {
       trigger?.click();
     });
 
-    const item = [...document.querySelectorAll<HTMLElement>("[cmdk-item]")].find((element) =>
+    const item = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((element) =>
       element.textContent?.includes("Local workspace"),
     );
     expect(item).toBeDefined();

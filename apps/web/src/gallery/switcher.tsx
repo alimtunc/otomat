@@ -57,13 +57,15 @@ export function Switcher() {
       <div className="flex items-center gap-2">
         <span className="text-xs text-text-tertiary">Accent</span>
         {ACCENT_SWATCHES.map((sw) => (
-          <button
+          <Button
             key={sw.hex}
             type="button"
+            variant="ghost"
+            size="xs"
             onClick={() => setCustomAccent(sw.hex)}
             aria-label={`Accent ${sw.label}`}
             title={sw.label}
-            className="size-5 rounded-full border"
+            className="size-5 rounded-full border p-0"
             style={{
               backgroundColor: sw.hex,
               borderColor:
@@ -73,13 +75,15 @@ export function Switcher() {
             }}
           />
         ))}
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="xs"
           onClick={() => setCustomAccent(null)}
-          className="text-xs text-text-tertiary hover:text-foreground"
+          className="h-auto border-0 p-0 text-xs font-normal text-text-tertiary hover:bg-transparent hover:text-foreground"
         >
           Reset
-        </button>
+        </Button>
       </div>
     </div>
   );

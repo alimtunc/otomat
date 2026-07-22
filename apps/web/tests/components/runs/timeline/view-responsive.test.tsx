@@ -93,6 +93,8 @@ describe("RunTimelineView responsive composition", () => {
     const { container, cleanup } = await renderView();
     const disclosure = container.querySelector<HTMLButtonElement>("[aria-expanded]");
     if (disclosure === null) throw new Error("no steps disclosure rendered");
+    const collapsible = disclosure.closest("[data-closed]");
+    expect(collapsible).not.toBeNull();
     expect(container.textContent).not.toContain("Run context");
     expect(container.textContent).toContain("otomat/run-1");
     expect(container.querySelector('[data-testid="timeline"]')).not.toBeNull();
@@ -101,6 +103,8 @@ describe("RunTimelineView responsive composition", () => {
     await act(async () => {
       disclosure.click();
     });
+    expect(collapsible?.hasAttribute("data-open")).toBe(true);
+    expect(disclosure.hasAttribute("data-panel-open")).toBe(true);
     expect(container.textContent).toContain("Implement");
     await cleanup();
   });

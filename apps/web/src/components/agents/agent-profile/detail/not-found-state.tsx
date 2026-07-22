@@ -1,4 +1,4 @@
-import { Button, EmptyState } from "@otomat/ui";
+import { buttonVariants, cn, EmptyState } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { CenteredState } from "@web/components/shell/centered-state";
 
@@ -10,9 +10,9 @@ export function AgentProfileNotFoundState() {
         title="Agent profile not found"
         description="It may have been deleted or duplicated under a different identifier."
         action={
-          <Button variant="outline" size="sm" render={<Link to="/agents" />}>
+          <Link to="/agents" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
             Back to agents
-          </Button>
+          </Link>
         }
       />
     </CenteredState>

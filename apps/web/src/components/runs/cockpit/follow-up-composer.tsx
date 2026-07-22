@@ -83,7 +83,7 @@ export function FollowUpComposer({ detail }: { detail: RunDetail }) {
               loading={isSubmitting || followUp.isPending}
             >
               Send follow-up
-              <Kbd className="border-[rgba(255,255,255,.4)] text-on-accent">⌘↵</Kbd>
+              <Kbd tone="on-accent">⌘↵</Kbd>
             </Button>
           )}
         </form.Subscribe>
