@@ -42,11 +42,11 @@ function LogBody({ events, filter, state, degraded }: LogListProps) {
   }
 
   return (
-    <ul aria-label="Run logs" className="min-h-0 flex-1 list-none overflow-auto py-2">
+    <div role="list" aria-label="Run logs" className="min-h-0 flex-1 overflow-auto py-2">
       {filtered.map((event) => (
         <LogRow key={event.seq} event={event} />
       ))}
-    </ul>
+    </div>
   );
 }
 

@@ -64,11 +64,9 @@ export function RunTimeline({
           Some events could not be decoded — this timeline may be incomplete.
         </div>
       ) : null}
-      <div className="flex-1 overflow-auto py-2">
+      <div className="flex-1 overflow-auto py-2" role={grouped === null ? "list" : undefined}>
         {grouped === null ? (
-          <ul className="list-none">
-            <EventRows events={events} />
-          </ul>
+          <EventRows events={events} />
         ) : (
           grouped.map((group) => {
             const label = group.stepName ?? "Run";
@@ -78,9 +76,9 @@ export function RunTimeline({
                 <div className="px-6 pb-1 pt-2.5 text-micro font-semibold uppercase tracking-wide text-text-tertiary">
                   {label}
                 </div>
-                <ul className="list-none" aria-label={label}>
+                <div role="list" aria-label={label}>
                   <EventRows events={group.events} />
-                </ul>
+                </div>
               </div>
             );
           })
