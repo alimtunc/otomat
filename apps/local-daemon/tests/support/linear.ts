@@ -1,6 +1,6 @@
 import type { LinearConnectionContract } from "@otomat/domain";
 
-import type { LinearApiClient, LinearService } from "#linear";
+import type { LinearApiClient, LinearService, LinearWriteback } from "#linear";
 
 type ConnectedLinear = Extract<LinearConnectionContract, { status: "connected" }>;
 
@@ -24,7 +24,44 @@ export function connectedLinear(): ConnectedLinear {
   };
 }
 
-export function stubLinearService(overrides: Partial<LinearService> = {}): LinearService {
+export function stubLinearWriteback(overrides: Partial<LinearWriteback> = {}): LinearWriteback {
+  return {
+    writebackState: () => ({ draft: null, writes: [] }),
+    editorState: async () => {
+      throw new Error("editorState stub not configured");
+    },
+    comments: async () => {
+      throw new Error("comments stub not configured");
+    },
+    saveDraft: () => {
+      throw new Error("saveDraft stub not configured");
+    },
+    discardDraft: () => {},
+    publishFields: async () => {
+      throw new Error("publishFields stub not configured");
+    },
+    publishStatus: async () => {
+      throw new Error("publishStatus stub not configured");
+    },
+    publishComment: async () => {
+      throw new Error("publishComment stub not configured");
+    },
+    publishPrLink: async () => {
+      throw new Error("publishPrLink stub not configured");
+    },
+    retryWrite: async () => {
+      throw new Error("retryWrite stub not configured");
+    },
+    ...overrides,
+  };
+}
+
+export function stubLinearService(
+  overrides: Partial<Omit<LinearService, "writeback">> & {
+    writeback?: Partial<LinearWriteback>;
+  } = {},
+): LinearService {
+  const { writeback, ...service } = overrides;
   return {
     connection: () => DISCONNECTED_LINEAR,
     connect: async () => {
@@ -41,7 +78,8 @@ export function stubLinearService(overrides: Partial<LinearService> = {}): Linea
     sync: async () => {
       throw new Error("sync stub not configured");
     },
-    ...overrides,
+    writeback: stubLinearWriteback(writeback),
+    ...service,
   };
 }
 
@@ -55,6 +93,24 @@ export function stubLinearApiClient(overrides: Partial<LinearApiClient> = {}): L
     },
     issues: async () => {
       throw new Error("issues stub not configured");
+    },
+    issueEditor: async () => {
+      throw new Error("issueEditor stub not configured");
+    },
+    issueSnapshot: async () => {
+      throw new Error("issueSnapshot stub not configured");
+    },
+    updateIssue: async () => {
+      throw new Error("updateIssue stub not configured");
+    },
+    listComments: async () => {
+      throw new Error("listComments stub not configured");
+    },
+    createComment: async () => {
+      throw new Error("createComment stub not configured");
+    },
+    linkAttachment: async () => {
+      throw new Error("linkAttachment stub not configured");
     },
     ...overrides,
   };

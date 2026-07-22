@@ -1,6 +1,20 @@
 import { linearError } from "./errors.js";
-import { LINEAR_API_URL } from "./graphql.js";
-import type { LinearTransport } from "./types.js";
+
+const LINEAR_API_URL = "https://api.linear.app/graphql";
+
+export interface LinearTransportRequest {
+  query: string;
+  variables: Record<string, unknown>;
+  apiKey: string;
+  signal?: AbortSignal;
+}
+
+export interface LinearTransportResponse {
+  status: number;
+  body: unknown;
+}
+
+export type LinearTransport = (request: LinearTransportRequest) => Promise<LinearTransportResponse>;
 
 export const LINEAR_REQUEST_TIMEOUT_MS = 10_000;
 

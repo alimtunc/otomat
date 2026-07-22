@@ -1,5 +1,5 @@
 import type { IssueContract } from "@otomat/domain";
-import { cn, IssueStatusChip, RelativeTime } from "@otomat/ui";
+import { Avatar, cn, IssueSourceGlyph, IssueStatusChip, RelativeTime } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { FOCUS_RING } from "@web/lib/focus";
 import { issueShortId } from "@web/lib/ids";
@@ -21,7 +21,22 @@ export function IssueRow({ issue }: { issue: IssueContract }) {
       <td className={CELL}>
         <IssueStatusChip status={issue.status} />
       </td>
-      <td className={`${CELL} text-text-secondary`}>{issue.source}</td>
+      <td className={`${CELL} text-text-secondary`}>
+        <span className="flex items-center gap-1.5">
+          <IssueSourceGlyph source={issue.source} />
+          {issue.source}
+        </span>
+      </td>
+      <td className={CELL}>
+        {issue.source_assignee_name !== null ? (
+          <span className="flex items-center gap-1.5 text-text-secondary">
+            <Avatar name={issue.source_assignee_name} size="sm" />
+            <span className="truncate">{issue.source_assignee_name}</span>
+          </span>
+        ) : (
+          <span className="text-text-tertiary">—</span>
+        )}
+      </td>
       <td className={`${CELL} text-text-tertiary`}>
         {issue.synced_at ? <RelativeTime date={issue.synced_at} addSuffix={false} /> : "—"}
       </td>

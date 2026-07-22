@@ -12,6 +12,8 @@ import type {
   ExternalIssueSource,
   IssueSource,
   IssueState,
+  LinearWriteKind,
+  LinearWriteState,
   PullRequestPublicationState,
   PullRequestState,
   ReviewCommentState,
@@ -20,6 +22,7 @@ import type {
   SkillInvalidReason,
   SkillSource,
   SkillStatus,
+  SourceLabel,
   StepRunState,
   WorktreeStatus,
 } from "@otomat/domain";
@@ -97,6 +100,14 @@ export const issues = sqliteTable(
     source_identifier: text("source_identifier"),
     source_url: text("source_url"),
     synced_at: text("synced_at"),
+    // Remote revision (Linear issue.updatedAt) at last mirror; the base for
+    // detecting concurrent remote edits before a write-back.
+    source_updated_at: text("source_updated_at"),
+    source_assignee_name: text("source_assignee_name"),
+    source_priority: integer("source_priority"),
+    source_labels: text("source_labels", { mode: "json" }).$type<SourceLabel[]>(),
+    source_state_name: text("source_state_name"),
+    source_state_color: text("source_state_color"),
     ...timestamps,
   },
   (table) => [
@@ -336,5 +347,56 @@ export const syncState = sqliteTable(
   },
   (table) => [
     uniqueIndex("sync_state_scope_unique").on(table.source, table.resource, table.external_id),
+  ],
+);
+
+// One persistent local draft per Linear-mirrored issue. Distinct from the
+// mirror, it survives offline/refresh/restart and only changes on user action.
+// `base_updated_at` is the remote revision captured at draft start (conflict base).
+export const linearIssueDrafts = sqliteTable(
+  "linear_issue_drafts",
+  {
+    id: text("id").primaryKey(),
+    issue_id: text("issue_id")
+      .notNull()
+      .references(() => issues.id),
+    base_updated_at: text("base_updated_at").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    priority: integer("priority").notNull().default(0),
+    assignee_id: text("assignee_id"),
+    label_ids: text("label_ids", { mode: "json" }).$type<string[]>().notNull(),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("linear_issue_drafts_issue_unique").on(table.issue_id)],
+);
+
+// Auditable write-back attempts. A row is persisted before the provider call
+// and carries its own idempotency identity; `payload_json` holds only approved
+// user content — never credentials. Retries are manual: there is no scheduler.
+export const linearWrites = sqliteTable(
+  "linear_writes",
+  {
+    id: text("id").primaryKey(),
+    issue_id: text("issue_id")
+      .notNull()
+      .references(() => issues.id),
+    run_id: text("run_id").references(() => runs.id),
+    kind: text("kind").$type<LinearWriteKind>().notNull(),
+    status: text("status").$type<LinearWriteState>().notNull().default("pending"),
+    idempotency_key: text("idempotency_key").notNull(),
+    payload_json: text("payload_json", { mode: "json" }).notNull(),
+    detail: text("detail"),
+    remote_id: text("remote_id"),
+    error_code: text("error_code"),
+    error_message: text("error_message"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("linear_writes_identity_unique").on(
+      table.issue_id,
+      table.kind,
+      table.idempotency_key,
+    ),
   ],
 );

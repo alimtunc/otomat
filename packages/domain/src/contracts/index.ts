@@ -37,6 +37,7 @@ export {
   SKILL_INVALID_REASONS,
   SKILL_SOURCES,
   SKILL_STATUSES,
+  sourceLabelSchema,
   stepRunContractSchema,
   WORKTREE_STATUSES,
   worktreeStatusSchema,
@@ -64,6 +65,7 @@ export {
   type SkillInvalidReason,
   type SkillSource,
   type SkillStatus,
+  type SourceLabel,
   type StepRunContract,
   type WorktreeStatus,
 } from "./entities.js";

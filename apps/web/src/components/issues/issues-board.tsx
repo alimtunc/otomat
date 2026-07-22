@@ -1,8 +1,34 @@
 import { ISSUE_STATES, type IssueContract, type IssueState } from "@otomat/domain";
-import { resolveStatus, TONE_TEXT } from "@otomat/ui";
+import { Avatar, IssueSourceGlyph, resolveStatus, TONE_TEXT } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
+import { ColorDot } from "@web/components/issues/color-dot";
+import { CountBadge } from "@web/components/issues/count-badge";
 import { FOCUS_RING } from "@web/lib/focus";
 import { issueShortId } from "@web/lib/ids";
+import { linearPriorityLabel } from "@web/lib/linear-priority";
+
+const CARD_CHIP_CLASS =
+  "inline-flex h-4.5 items-center gap-1 rounded-full border border-border-subtle px-1.75 text-micro text-text-secondary";
+
+function CardChips({ issue }: { issue: IssueContract }) {
+  const priority = issue.source_priority;
+  const showPriority = priority !== null && priority !== 0;
+  const labels = issue.source_labels ?? [];
+  if (!showPriority && labels.length === 0) return null;
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      {showPriority ? (
+        <span className={CARD_CHIP_CLASS}>{linearPriorityLabel(priority)}</span>
+      ) : null}
+      {labels.map((label) => (
+        <span key={label.name} className={CARD_CHIP_CLASS}>
+          <ColorDot color={label.color} />
+          {label.name}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 // blocked/canceled are hidden per the prototype board; the List layout still shows them.
 const HIDDEN_COLUMNS = new Set<IssueState>(["blocked", "canceled"]);
@@ -23,17 +49,27 @@ function BoardCard({ issue }: { issue: IssueContract }) {
         }}
       >
         <span className="flex items-center gap-1.75 text-xs tabular-nums text-text-tertiary">
-          <StatusIcon aria-hidden className={`h-3.25 w-3.25 ${TONE_TEXT[meta.tone]}`} />
+          <IssueSourceGlyph source={issue.source} />
           <span className="font-mono">{issueShortId(issue)}</span>
-          <span>·</span>
-          <span>{issue.source}</span>
+          {issue.source_state_name !== null ? (
+            <span className="inline-flex min-w-0 items-center gap-1 truncate">
+              <ColorDot color={issue.source_state_color} />
+              <span className="truncate text-micro">{issue.source_state_name}</span>
+            </span>
+          ) : null}
+          <span className="flex-1" />
+          {issue.source_assignee_name !== null ? (
+            <Avatar name={issue.source_assignee_name} size="sm" />
+          ) : null}
         </span>
-        <span className="text-sm font-medium leading-[1.35] text-foreground">{issue.title}</span>
-        {issue.body ? (
-          <span className="line-clamp-2 text-xs leading-[1.4] text-text-tertiary">
-            {issue.body}
-          </span>
-        ) : null}
+        <span className="flex items-start gap-1.75">
+          <StatusIcon
+            aria-hidden
+            className={`mt-0.75 h-3.25 w-3.25 shrink-0 ${TONE_TEXT[meta.tone]}`}
+          />
+          <span className="text-sm font-medium leading-[1.35] text-foreground">{issue.title}</span>
+        </span>
+        <CardChips issue={issue} />
       </Link>
     </li>
   );
@@ -51,9 +87,7 @@ export function IssuesBoard({ issues }: { issues: IssueContract[] }) {
             <header className="flex h-8 items-center gap-2 px-1 text-sm font-medium text-foreground">
               <StatusIcon aria-hidden className={`h-3.5 w-3.5 ${TONE_TEXT[meta.tone]}`} />
               {meta.label}
-              <span className="inline-flex h-4.25 min-w-4.25 items-center justify-center rounded-full bg-surface-3 px-1.25 text-micro font-medium tabular-nums text-text-secondary">
-                {columnIssues.length}
-              </span>
+              <CountBadge count={columnIssues.length} tone="neutral" />
             </header>
             <ul className="flex flex-col gap-2">
               {columnIssues.map((issue) => (

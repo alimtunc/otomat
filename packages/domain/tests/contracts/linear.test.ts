@@ -5,6 +5,13 @@ import {
   connectLinearRequestSchema,
   createIssueSourceRequestSchema,
   linearConnectionContractSchema,
+  linearEditableFieldsSchema,
+  linearIssueDraftSchema,
+  linearWriteConflictSchema,
+  linearWriteContractSchema,
+  publishCommentRequestSchema,
+  publishFieldsRequestSchema,
+  saveLinearDraftRequestSchema,
 } from "#domain/contracts/linear";
 
 it("carries honest connection state without credentials", () => {
@@ -122,6 +129,11 @@ it("separates the immutable external identity from the human identifier", () => 
     source_identifier: "OTO-36",
     source_url: "https://linear.app/otomat/issue/OTO-36",
     synced_at: "2026-07-20T10:00:00.000Z",
+    source_assignee_name: "Alim",
+    source_priority: 2,
+    source_labels: [{ name: "Front", color: "#facc15" }],
+    source_state_name: "In Progress",
+    source_state_color: "#facc15",
   });
 
   expect(issue.source_external_id).not.toBe(issue.source_identifier);
@@ -141,6 +153,11 @@ it("accepts a missing URL on mirrors migrated from the legacy schema", () => {
       source_identifier: "OTO-36",
       source_url: null,
       synced_at: "2026-07-20T10:00:00.000Z",
+      source_assignee_name: null,
+      source_priority: null,
+      source_labels: null,
+      source_state_name: null,
+      source_state_color: null,
     }).success,
   ).toBe(true);
 });
@@ -174,4 +191,111 @@ it("ties mirror metadata to the issue source", () => {
       synced_at: null,
     }).success,
   ).toBe(false);
+});
+
+const editableFields = {
+  title: "Wire write-back",
+  description: "Body",
+  priority: 2,
+  assignee_id: "user-1",
+  label_ids: ["label-1", "label-2"],
+};
+
+it("bounds editable fields and keeps assignee optional", () => {
+  expect(linearEditableFieldsSchema.safeParse(editableFields).success).toBe(true);
+  expect(
+    linearEditableFieldsSchema.safeParse({ ...editableFields, assignee_id: null, label_ids: [] })
+      .success,
+  ).toBe(true);
+  expect(linearEditableFieldsSchema.safeParse({ ...editableFields, priority: 5 }).success).toBe(
+    false,
+  );
+  expect(linearEditableFieldsSchema.safeParse({ ...editableFields, title: "   " }).success).toBe(
+    false,
+  );
+});
+
+it("keeps the draft free of smuggled credentials", () => {
+  const draft = linearIssueDraftSchema.parse({
+    ...editableFields,
+    id: "draft-1",
+    issue_id: "issue-1",
+    base_updated_at: "2026-07-21T10:00:00.000Z",
+    updated_at: "2026-07-21T10:05:00.000Z",
+    api_key: "lin_api_secret",
+  });
+  expect(JSON.stringify(draft)).not.toContain("lin_api_secret");
+});
+
+it("keeps the audit write row free of smuggled credentials or payload", () => {
+  const write = linearWriteContractSchema.parse({
+    id: "write-1",
+    issue_id: "issue-1",
+    run_id: null,
+    kind: "comment",
+    status: "sent",
+    idempotency_key: "0f7d1b5c-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
+    detail: "Ran the agent",
+    remote_id: "comment-1",
+    error_code: null,
+    error_message: null,
+    created_at: "2026-07-21T10:00:00.000Z",
+    updated_at: "2026-07-21T10:00:01.000Z",
+    api_key: "lin_api_secret",
+    payload_json: "{}",
+  });
+  expect(JSON.stringify(write)).not.toContain("lin_api_secret");
+  expect(JSON.stringify(write)).not.toContain("payload_json");
+});
+
+it("defaults a fields publish to safe and rejects unknown keys", () => {
+  expect(publishFieldsRequestSchema.parse({})).toEqual({ overwrite: false });
+  expect(publishFieldsRequestSchema.safeParse({ overwrite: true }).success).toBe(true);
+  expect(publishFieldsRequestSchema.safeParse({ force: true }).success).toBe(false);
+});
+
+it("requires a persisted client id for idempotent comments", () => {
+  expect(
+    publishCommentRequestSchema.safeParse({
+      client_id: "0f7d1b5c-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
+      body: "done",
+    }).success,
+  ).toBe(true);
+  expect(publishCommentRequestSchema.safeParse({ client_id: "nope", body: "done" }).success).toBe(
+    false,
+  );
+  expect(
+    publishCommentRequestSchema.safeParse({
+      client_id: "0f7d1b5c-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
+      body: "  ",
+    }).success,
+  ).toBe(false);
+});
+
+it("carries remote values on a write conflict for explicit resolution", () => {
+  const conflict = linearWriteConflictSchema.parse({
+    error: "linear_write_conflict",
+    message: "The remote issue changed.",
+    remote: {
+      ...editableFields,
+      external_id: "issue-uuid",
+      identifier: "OTO-37",
+      url: "https://linear.app/otomat/issue/OTO-37",
+      updated_at: "2026-07-21T12:00:00.000Z",
+      assignee: { id: "user-1", name: "Alim" },
+      labels: [{ id: "label-1", name: "Bug", color: "#f00" }],
+      state: { id: "state-1", name: "In Progress", type: "started", color: "#00f" },
+    },
+  });
+  expect(conflict.remote.updated_at).toBe("2026-07-21T12:00:00.000Z");
+});
+
+it("requires an explicit base revision when saving a draft", () => {
+  expect(
+    saveLinearDraftRequestSchema.safeParse({
+      ...editableFields,
+      base_updated_at: "2026-07-21T10:00:00.000Z",
+    }).success,
+  ).toBe(true);
+  expect(saveLinearDraftRequestSchema.safeParse(editableFields).success).toBe(false);
 });

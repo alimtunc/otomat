@@ -21,6 +21,8 @@ const EXPECTED_TABLES = [
   "pull_requests",
   "sync_state",
   "issue_sources",
+  "linear_issue_drafts",
+  "linear_writes",
 ];
 
 let t: TempDb | null = null;

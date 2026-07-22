@@ -4,8 +4,12 @@ import {
   githubConnectionContractSchema,
   issueContractSchema,
   issueSourceContractSchema,
+  linearCommentsResponseSchema,
   linearConnectionContractSchema,
+  linearEditorStateSchema,
+  linearIssueDraftSchema,
   linearWorkspaceContractSchema,
+  linearWritebackStateSchema,
   projectContractSchema,
   pullRequestDetailSchema,
   repositoryContractSchema,
@@ -24,9 +28,14 @@ import {
   type CreateReviewCommentRequest,
   type FollowUpRunRequest,
   type PreparePullRequestRequest,
+  type PublishCommentRequest,
+  type PublishFieldsRequest,
+  type PublishPrLinkRequest,
+  type PublishStatusRequest,
   type RegisterRepositoryRequest,
   type RequestFixRequest,
   type SaveAgentProfileRequest,
+  type SaveLinearDraftRequest,
   type SelectCompeteWinnerRequest,
   type SetSkillEnabledRequest,
   type StartRunRequest,
@@ -82,6 +91,76 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
     },
     async syncLinear(request: SyncLinearRequest = {}) {
       return syncLinearResponseSchema.parse(await postJson(config, "/api/linear/sync", request));
+    },
+    async getLinearWriteback(issueId: string) {
+      return linearWritebackStateSchema.parse(
+        await getJson(config, `/api/linear/issues/${encodeURIComponent(issueId)}/writeback`),
+      );
+    },
+    async getLinearEditor(issueId: string) {
+      return linearEditorStateSchema.parse(
+        await getJson(config, `/api/linear/issues/${encodeURIComponent(issueId)}/editor`),
+      );
+    },
+    async getLinearComments(issueId: string) {
+      return linearCommentsResponseSchema.parse(
+        await getJson(config, `/api/linear/issues/${encodeURIComponent(issueId)}/comments`),
+      ).comments;
+    },
+    async saveLinearDraft(issueId: string, request: SaveLinearDraftRequest) {
+      return linearIssueDraftSchema.parse(
+        await postJson(config, `/api/linear/issues/${encodeURIComponent(issueId)}/draft`, request),
+      );
+    },
+    async discardLinearDraft(issueId: string) {
+      return linearWritebackStateSchema.parse(
+        await postJson(
+          config,
+          `/api/linear/issues/${encodeURIComponent(issueId)}/discard-draft`,
+          {},
+        ),
+      );
+    },
+    async publishLinearFields(issueId: string, request: PublishFieldsRequest) {
+      return linearWritebackStateSchema.parse(
+        await postJson(
+          config,
+          `/api/linear/issues/${encodeURIComponent(issueId)}/publish-fields`,
+          request,
+        ),
+      );
+    },
+    async publishLinearStatus(issueId: string, request: PublishStatusRequest) {
+      return linearWritebackStateSchema.parse(
+        await postJson(
+          config,
+          `/api/linear/issues/${encodeURIComponent(issueId)}/publish-status`,
+          request,
+        ),
+      );
+    },
+    async publishLinearComment(issueId: string, request: PublishCommentRequest) {
+      return linearWritebackStateSchema.parse(
+        await postJson(
+          config,
+          `/api/linear/issues/${encodeURIComponent(issueId)}/publish-comment`,
+          request,
+        ),
+      );
+    },
+    async publishLinearPrLink(issueId: string, request: PublishPrLinkRequest) {
+      return linearWritebackStateSchema.parse(
+        await postJson(
+          config,
+          `/api/linear/issues/${encodeURIComponent(issueId)}/publish-pr-link`,
+          request,
+        ),
+      );
+    },
+    async retryLinearWrite(writeId: string) {
+      return linearWritebackStateSchema.parse(
+        await postJson(config, `/api/linear/writes/${encodeURIComponent(writeId)}/retry`, {}),
+      );
     },
     async listProjects() {
       return projectContractSchema.array().parse(await getJson(config, "/api/projects"));

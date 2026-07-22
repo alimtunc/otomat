@@ -22,6 +22,9 @@ const CATEGORY_BY_TYPE: Record<EventType, LogCategory> = {
   "review.comment_resolved": "control",
   "pr.created": "control",
   "pr.updated": "control",
+  "linear.status_published": "control",
+  "linear.comment_published": "control",
+  "linear.pr_link_published": "control",
   "system.reconciled": "control",
 };
 

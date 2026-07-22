@@ -60,5 +60,8 @@ export const EVENT_GLYPH: Record<EventType, EventGlyphDescriptor> = {
   "review.comment_resolved": { icon: CheckCircle2, tone: "success" },
   "pr.created": { icon: GitPullRequest, tone: "success" },
   "pr.updated": { icon: GitPullRequest, tone: "neutral" },
+  "linear.status_published": { icon: Flag, tone: "success" },
+  "linear.comment_published": { icon: MessageSquare, tone: "neutral" },
+  "linear.pr_link_published": { icon: GitPullRequest, tone: "success" },
   "system.reconciled": { icon: AlertTriangle, tone: "stale" },
 };

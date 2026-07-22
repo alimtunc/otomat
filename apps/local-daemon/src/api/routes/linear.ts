@@ -2,12 +2,17 @@ import {
   connectLinearRequestSchema,
   createIssueSourceRequestSchema,
   type LinearErrorCode,
+  publishCommentRequestSchema,
+  publishFieldsRequestSchema,
+  publishPrLinkRequestSchema,
+  publishStatusRequestSchema,
+  saveLinearDraftRequestSchema,
   syncLinearRequestSchema,
 } from "@otomat/domain";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
-import { LinearError } from "#linear";
+import { LinearError, LinearWriteConflictError } from "#linear";
 
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";
@@ -23,11 +28,19 @@ const LINEAR_ERROR_STATUS: Record<LinearErrorCode, ContentfulStatusCode> = {
   linear_source_already_mapped: 409,
   linear_source_invalid_selection: 400,
   linear_project_not_found: 400,
+  linear_issue_not_found: 404,
+  linear_remote_issue_not_found: 404,
+  linear_issue_not_writable: 400,
+  linear_write_conflict: 409,
+  linear_write_not_found: 404,
 };
 
 export function createLinearRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();
   routes.onError((error, c) => {
+    if (error instanceof LinearWriteConflictError) {
+      return c.json({ error: error.code, message: error.message, remote: error.remote }, 409);
+    }
     if (!(error instanceof LinearError)) throw error;
     return c.json({ error: error.code, message: error.message }, LINEAR_ERROR_STATUS[error.code]);
   });
@@ -50,6 +63,48 @@ export function createLinearRoutes(deps: ApiDeps): Hono {
 
   routes.post("/sync", validateJson(syncLinearRequestSchema), async (c) =>
     c.json({ results: await deps.linear.sync(c.req.valid("json").source_id) }),
+  );
+
+  routes.get("/issues/:id/writeback", (c) =>
+    c.json(deps.linear.writeback.writebackState(c.req.param("id"))),
+  );
+
+  routes.get("/issues/:id/editor", async (c) =>
+    c.json(await deps.linear.writeback.editorState(c.req.param("id"))),
+  );
+
+  routes.get("/issues/:id/comments", async (c) =>
+    c.json({ comments: await deps.linear.writeback.comments(c.req.param("id")) }),
+  );
+
+  routes.post("/issues/:id/draft", validateJson(saveLinearDraftRequestSchema), (c) =>
+    c.json(deps.linear.writeback.saveDraft(c.req.param("id"), c.req.valid("json"))),
+  );
+
+  routes.post("/issues/:id/discard-draft", (c) => {
+    const issueId = c.req.param("id");
+    deps.linear.writeback.discardDraft(issueId);
+    return c.json(deps.linear.writeback.writebackState(issueId));
+  });
+
+  routes.post("/issues/:id/publish-fields", validateJson(publishFieldsRequestSchema), async (c) =>
+    c.json(await deps.linear.writeback.publishFields(c.req.param("id"), c.req.valid("json"))),
+  );
+
+  routes.post("/issues/:id/publish-status", validateJson(publishStatusRequestSchema), async (c) =>
+    c.json(await deps.linear.writeback.publishStatus(c.req.param("id"), c.req.valid("json"))),
+  );
+
+  routes.post("/issues/:id/publish-comment", validateJson(publishCommentRequestSchema), async (c) =>
+    c.json(await deps.linear.writeback.publishComment(c.req.param("id"), c.req.valid("json"))),
+  );
+
+  routes.post("/issues/:id/publish-pr-link", validateJson(publishPrLinkRequestSchema), async (c) =>
+    c.json(await deps.linear.writeback.publishPrLink(c.req.param("id"), c.req.valid("json"))),
+  );
+
+  routes.post("/writes/:writeId/retry", async (c) =>
+    c.json(await deps.linear.writeback.retryWrite(c.req.param("writeId"))),
   );
 
   return routes;

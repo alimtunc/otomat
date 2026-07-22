@@ -17,3 +17,4 @@ export * from "./review.js";
 export * from "./review-comment.js";
 export * from "./pull-request.js";
 export * from "./pull-request-publication.js";
+export * from "./linear-write.js";

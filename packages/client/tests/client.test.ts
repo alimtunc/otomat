@@ -22,6 +22,11 @@ const ISSUE = {
   source_identifier: null,
   source_url: null,
   synced_at: null,
+  source_assignee_name: null,
+  source_priority: null,
+  source_labels: null,
+  source_state_name: null,
+  source_state_color: null,
 };
 
 const RUN = {

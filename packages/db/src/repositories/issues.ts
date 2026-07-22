@@ -1,4 +1,4 @@
-import type { ExternalIssueSource } from "@otomat/domain";
+import type { ExternalIssueSource, SourceLabel } from "@otomat/domain";
 import { and, eq } from "drizzle-orm";
 
 import type { Db } from "../client.js";
@@ -30,6 +30,12 @@ export interface MirroredIssue {
   body: string | null;
   status: NonNullable<NewIssue["status"]>;
   synced_at: string;
+  source_updated_at: string | null;
+  source_assignee_name: string | null;
+  source_priority: number | null;
+  source_labels: SourceLabel[] | null;
+  source_state_name: string | null;
+  source_state_color: string | null;
 }
 
 export function insertIssue(db: Db, value: LocalIssue): void {
@@ -61,6 +67,12 @@ export function upsertMirroredIssue(db: Db, value: MirroredIssue): void {
         source_identifier: value.source_identifier,
         source_url: value.source_url,
         synced_at: value.synced_at,
+        source_updated_at: value.source_updated_at,
+        source_assignee_name: value.source_assignee_name,
+        source_priority: value.source_priority,
+        source_labels: value.source_labels,
+        source_state_name: value.source_state_name,
+        source_state_color: value.source_state_color,
       }),
     })
     .run();

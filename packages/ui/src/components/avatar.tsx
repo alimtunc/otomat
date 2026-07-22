@@ -20,6 +20,13 @@ function initials(name: string): string {
   return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }
 
+// Deterministic per-name hue so initials stay legible on both themes.
+function nameColor(name: string): string {
+  let hash = 0;
+  for (const char of name) hash = (hash * 31 + (char.codePointAt(0) ?? 0)) | 0;
+  return `hsl(${Math.abs(hash) % 360} 48% 46%)`;
+}
+
 const SIZE_CLASS: Record<AvatarSize, string> = {
   sm: "size-4 text-[9px]",
   default: "size-5 text-[10px]",
@@ -44,7 +51,8 @@ export function Avatar({
   const shapeClass = shapeClassFor(shape, size);
 
   const mergedStyle: CSSProperties = {
-    backgroundColor: color ?? "var(--surface-3)",
+    backgroundColor: color ?? nameColor(name),
+    color: "#fff",
     ...style,
   };
 
@@ -54,7 +62,7 @@ export function Avatar({
       title={name}
       style={mergedStyle}
       className={cn(
-        "grid flex-none place-items-center overflow-hidden font-semibold text-on-accent",
+        "grid flex-none place-items-center overflow-hidden font-semibold",
         SIZE_CLASS[size],
         shapeClass,
         className,

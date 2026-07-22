@@ -69,6 +69,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
   });
   const linear = createLinearService({
     db,
+    dataDir,
     client: createLinearApiClient(createLinearTransport()),
   });
   if (developmentLinearKey !== null) {
