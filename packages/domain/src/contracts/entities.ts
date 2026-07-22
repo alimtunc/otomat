@@ -124,7 +124,7 @@ export const resolvedAgentConfigSchema = z.object({
   options: providerOptionsSchema,
   guidance: z.string().nullable(),
   skills: z.array(resolvedSkillSchema),
-  /** Opaque hash over the effective config; lets the UI prove a later profile edit did not alter this run. */
+  /** Opaque integrity fingerprint computed at freeze; stays stable across resume even if the profile is later edited. */
   config_hash: z.string(),
 });
 export type ResolvedAgentConfig = z.infer<typeof resolvedAgentConfigSchema>;

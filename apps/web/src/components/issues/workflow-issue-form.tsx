@@ -9,11 +9,9 @@ import {
   Kbd,
   Textarea,
 } from "@otomat/ui";
-import { useAgentProfiles } from "@web/api/agent-profiles/queries";
-import { useRuntimes } from "@web/api/daemon/queries";
 import { IssueFormFooter } from "@web/components/issues/issue-form-footer";
 import { LaunchAgentPicker } from "@web/components/runs/launch/launch-agent-picker";
-import { resolveAgentChoice } from "@web/lib/agent-choice";
+import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
 import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@web/lib/form";
 import { isWorkflowNodeComplete, workflowExecutableCount } from "@web/lib/workflow-plan";
 
@@ -36,11 +34,8 @@ export function WorkflowIssueForm({
   onLaunched,
   onCancel,
 }: WorkflowIssueFormProps) {
-  const runtimes = useRuntimes();
-  const profilesQuery = useAgentProfiles();
-  const descriptors = runtimes.data ?? [];
-  const profiles = profilesQuery.data ?? [];
-  const choice = resolveAgentChoice(agentChoice, profiles, descriptors);
+  const agents = useLaunchAgentChoice(agentChoice);
+  const { descriptors, profiles, choice } = agents;
   const { form, planError, isPending, updateSteps, addStep, addCompeteGroup } = useWorkflowForm({
     projectId,
     agentChoice: choice,
@@ -82,10 +77,10 @@ export function WorkflowIssueForm({
           profiles={profiles}
           value={choice}
           onValueChange={onAgentChoice}
-          isPending={runtimes.isPending}
-          isError={runtimes.isError}
-          isSuccess={runtimes.isSuccess}
-          onRetry={() => void runtimes.refetch()}
+          isPending={agents.isPending}
+          isError={agents.isError}
+          isSuccess={agents.isSuccess}
+          onRetry={agents.onRetry}
         />
         <form.Field name="steps">
           {(stepsField) => (

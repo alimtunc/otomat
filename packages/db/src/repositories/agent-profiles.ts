@@ -1,4 +1,8 @@
-import { providerOptionsSchema, type ProviderOptions } from "@otomat/domain";
+import {
+  agentProfileContractSchema,
+  providerOptionsSchema,
+  type ProviderOptions,
+} from "@otomat/domain";
 import { eq } from "drizzle-orm";
 
 import type { Db } from "../client.js";
@@ -21,18 +25,11 @@ export type AgentProfileRow = Omit<
   skill_ids_json: string[];
 };
 
-function parseSkillIds(value: unknown): string[] {
-  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
-    throw new Error("agent_profiles.skill_ids_json is corrupt");
-  }
-  return value as string[];
-}
-
 function hydrate(row: typeof agentProfiles.$inferSelect): AgentProfileRow {
   return {
     ...row,
     options_json: providerOptionsSchema.parse(row.options_json),
-    skill_ids_json: parseSkillIds(row.skill_ids_json),
+    skill_ids_json: agentProfileContractSchema.shape.skill_ids.parse(row.skill_ids_json),
   };
 }
 
@@ -40,7 +37,7 @@ export function insertAgentProfile(db: Db, value: NewAgentProfile): void {
   db.insert(agentProfiles).values(value).run();
 }
 
-/** Throws (Zod) when the row's `options_json` is corrupt; `undefined` means no row matched `id`. */
+/** Throws (Zod) when the row's `options_json` or `skill_ids_json` is corrupt; `undefined` means no row matched `id`. */
 export function getAgentProfile(db: Db, id: string): AgentProfileRow | undefined {
   const row = db.select().from(agentProfiles).where(eq(agentProfiles.id, id)).get();
   return row ? hydrate(row) : undefined;
@@ -50,16 +47,8 @@ export function listAgentProfiles(db: Db): AgentProfileRow[] {
   return db.select().from(agentProfiles).orderBy(agentProfiles.created_at).all().map(hydrate);
 }
 
-export interface AgentProfileUpdate {
-  name?: string;
-  runtime?: string;
-  options_json?: ProviderOptions;
-  guidance?: string | null;
-  skill_ids_json?: string[];
-}
-
-export function updateAgentProfile(db: Db, id: string, update: AgentProfileUpdate): void {
-  db.update(agentProfiles).set(touch(update)).where(eq(agentProfiles.id, id)).run();
+export function updateAgentProfile(db: Db, id: string, columns: Omit<NewAgentProfile, "id">): void {
+  db.update(agentProfiles).set(touch(columns)).where(eq(agentProfiles.id, id)).run();
 }
 
 export function deleteAgentProfile(db: Db, id: string): void {

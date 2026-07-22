@@ -1,10 +1,9 @@
 import type { RunContract } from "@otomat/domain";
 import { Button, Icon, Popover, PopoverContent, PopoverTrigger, toast } from "@otomat/ui";
-import { useAgentProfiles } from "@web/api/agent-profiles/queries";
-import { useRuntimes } from "@web/api/daemon/queries";
 import { startRunErrorMessage, useStartRun } from "@web/api/runs/mutations";
 import { LaunchAgentPicker } from "@web/components/runs/launch/launch-agent-picker";
-import { agentChoiceToRequest, resolveAgentChoice } from "@web/lib/agent-choice";
+import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
+import { agentChoiceToRequest } from "@web/lib/agent-choice";
 import { useState } from "react";
 
 export interface LaunchRunPopoverProps {
@@ -21,12 +20,9 @@ export function LaunchRunPopover({
 }: LaunchRunPopoverProps) {
   const [open, setOpen] = useState(false);
   const [agentChoice, setAgentChoice] = useState<string | null>(null);
-  const runtimes = useRuntimes();
-  const profilesQuery = useAgentProfiles();
+  const agents = useLaunchAgentChoice(agentChoice);
   const startRun = useStartRun();
-  const descriptors = runtimes.data ?? [];
-  const profiles = profilesQuery.data ?? [];
-  const choice = resolveAgentChoice(agentChoice, profiles, descriptors);
+  const choice = agents.choice;
 
   async function launch() {
     if (choice === null) return;
@@ -57,14 +53,14 @@ export function LaunchRunPopover({
         <div className="flex flex-col gap-3">
           <span className="text-xs font-semibold text-text-secondary">Launch a run</span>
           <LaunchAgentPicker
-            descriptors={descriptors}
-            profiles={profiles}
+            descriptors={agents.descriptors}
+            profiles={agents.profiles}
             value={choice}
             onValueChange={setAgentChoice}
-            isPending={runtimes.isPending}
-            isError={runtimes.isError}
-            isSuccess={runtimes.isSuccess}
-            onRetry={() => void runtimes.refetch()}
+            isPending={agents.isPending}
+            isError={agents.isError}
+            isSuccess={agents.isSuccess}
+            onRetry={agents.onRetry}
           />
           <Button
             variant="primary"

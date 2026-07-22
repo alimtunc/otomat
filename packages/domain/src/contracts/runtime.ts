@@ -46,13 +46,15 @@ export const providerOptionKeySchema = z.enum(PROVIDER_OPTION_KEYS);
 export type ProviderOptionKey = (typeof PROVIDER_OPTION_KEYS)[number];
 
 /** Option values a profile/run selects. Only keys the chosen runtime advertises are accepted; the rest stay absent. */
-export const providerOptionsSchema = z.object({
-  permission_mode: claudePermissionModeSchema.optional(),
-});
+export const providerOptionsSchema = z
+  .object({
+    permission_mode: claudePermissionModeSchema.optional(),
+  })
+  .strict();
 export type ProviderOptions = z.infer<typeof providerOptionsSchema>;
 
 /** One allowed value for a provider option, with a label safe to render. */
-export const providerOptionChoiceSchema = z.object({
+const providerOptionChoiceSchema = z.object({
   value: z.string(),
   label: z.string(),
 });
@@ -74,6 +76,6 @@ export const runtimeDescriptorSchema = z.object({
   capabilities: runtimeCapabilitiesSchema,
   availability: runtimeAvailabilitySchema,
   /** Provider options this runtime honors; empty when it exposes none. The UI hides or disables anything not listed here. */
-  provider_options: z.array(providerOptionDescriptorSchema).default([]),
+  provider_options: z.array(providerOptionDescriptorSchema),
 });
 export type RuntimeDescriptor = z.infer<typeof runtimeDescriptorSchema>;

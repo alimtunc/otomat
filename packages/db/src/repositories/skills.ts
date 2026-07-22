@@ -1,11 +1,10 @@
 import type { SkillInvalidReason, SkillSource, SkillStatus } from "@otomat/domain";
-import { and, eq, ne, notInArray } from "drizzle-orm";
+import { eq, notInArray } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { skills } from "../schema/index.js";
 import { touch } from "./touch.js";
 
-export type NewSkill = typeof skills.$inferInsert;
 export type SkillRow = typeof skills.$inferSelect;
 
 /** Discovered facts about one skill file, written by a rescan. Excludes id and the user's `enabled` choice, both preserved across rescans. */
@@ -23,7 +22,7 @@ export function getSkill(db: Db, id: string): SkillRow | undefined {
   return db.select().from(skills).where(eq(skills.id, id)).get();
 }
 
-export function getSkillByPath(db: Db, canonicalPath: string): SkillRow | undefined {
+function getSkillByPath(db: Db, canonicalPath: string): SkillRow | undefined {
   return db.select().from(skills).where(eq(skills.canonical_path, canonicalPath)).get();
 }
 
@@ -75,12 +74,6 @@ export function markSkillsMissing(db: Db, seenIds: string[]): void {
     invalid_reason: "path_missing" as const,
     content_hash: null,
   });
-  if (seenIds.length === 0) {
-    db.update(skills).set(missing).where(ne(skills.status, "invalid")).run();
-    return;
-  }
-  db.update(skills)
-    .set(missing)
-    .where(and(notInArray(skills.id, seenIds), ne(skills.status, "invalid")))
-    .run();
+  // notInArray(column, []) compiles to sql`true`, so the empty case needs no branch.
+  db.update(skills).set(missing).where(notInArray(skills.id, seenIds)).run();
 }

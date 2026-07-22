@@ -6,9 +6,9 @@ import {
   insertAgentProfile,
   listAgentProfiles,
   updateAgentProfile,
-} from "#db/index";
+} from "#db/repositories/agent-profiles";
 
-import { createTempDb, type TempDb } from "./support/temp-db.js";
+import { createTempDb, type TempDb } from "../support/temp-db.js";
 
 let t: TempDb | null = null;
 
@@ -43,7 +43,13 @@ it("updates and deletes a profile", () => {
     guidance: null,
     skill_ids_json: [],
   });
-  updateAgentProfile(t.client.db, "p", { name: "B", skill_ids_json: ["x"] });
+  updateAgentProfile(t.client.db, "p", {
+    name: "B",
+    runtime: "fake",
+    options_json: {},
+    guidance: null,
+    skill_ids_json: ["x"],
+  });
   expect(getAgentProfile(t.client.db, "p")?.name).toBe("B");
   expect(getAgentProfile(t.client.db, "p")?.skill_ids_json).toEqual(["x"]);
   deleteAgentProfile(t.client.db, "p");

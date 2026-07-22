@@ -1,5 +1,12 @@
 import type { RuntimeDescriptor } from "@otomat/domain";
 
+export function runtimeById(
+  descriptors: RuntimeDescriptor[],
+  runtimeId: string,
+): RuntimeDescriptor | undefined {
+  return descriptors.find((descriptor) => descriptor.id === runtimeId);
+}
+
 export function isAvailableRuntime(descriptor: RuntimeDescriptor): boolean {
   return descriptor.availability.status === "available";
 }

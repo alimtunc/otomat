@@ -8,7 +8,7 @@ import {
   ProfileNotFoundError,
   ProfileOptionUnsupportedError,
   resolveAgentConfig,
-  SkillUnavailableError,
+  SkillResolutionError,
 } from "#agents";
 
 import { setupTestDb, type TestDb } from "../support/db.js";
@@ -109,6 +109,6 @@ it("rejects a disabled skill referenced by a profile", () => {
     skill_ids_json: [skillId],
   });
   expect(() => resolveAgentConfig(t.db, { kind: "profile", profileId: "pr-3" })).toThrow(
-    SkillUnavailableError,
+    SkillResolutionError,
   );
 });

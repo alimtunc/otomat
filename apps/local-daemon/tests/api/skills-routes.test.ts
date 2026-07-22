@@ -2,10 +2,16 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { SkillContract } from "@otomat/domain";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { makeApiApp, post, request } from "../support/api.js";
+import { json, makeApiApp, patch, post, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
+
+// The scan route reads the user skills root via homedir(); pin it so the test never ingests the developer's real ~/.claude/skills.
+vi.mock("node:os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("node:os")>()),
+  homedir: () => "/otomat-test-no-home",
+}));
 
 let t: TestDb;
 
@@ -16,10 +22,6 @@ beforeEach(() => {
 afterEach(() => {
   t.cleanup();
 });
-
-async function json<T>(res: Response): Promise<T> {
-  return (await res.json()) as T;
-}
 
 it("scans the project root, lists the catalog and toggles enablement", async () => {
   const dir = join(t.dir, ".agents", "skills", "x");
@@ -37,21 +39,13 @@ it("scans the project root, lists the catalog and toggles enablement", async () 
   expect(listed.some((entry) => entry.id === skill?.id)).toBe(true);
 
   const toggled = await json<SkillContract>(
-    await request(app, `/api/skills/${skill?.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ enabled: false }),
-    }),
+    await patch(app, `/api/skills/${skill?.id}`, { enabled: false }),
   );
   expect(toggled.enabled).toBe(false);
 });
 
 it("returns 404 when toggling a skill that does not exist", async () => {
   const app = makeApiApp(t);
-  const res = await request(app, "/api/skills/ghost", {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ enabled: true }),
-  });
+  const res = await patch(app, "/api/skills/ghost", { enabled: true });
   expect(res.status).toBe(404);
 });

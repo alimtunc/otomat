@@ -1,5 +1,5 @@
 import type { SkillContract, SkillInvalidReason } from "@otomat/domain";
-import { Badge, Switch } from "@otomat/ui";
+import { Badge, Chip, Switch } from "@otomat/ui";
 import { useSetSkillEnabled } from "@web/api/skills/mutations";
 
 const INVALID_REASON_LABELS: Record<SkillInvalidReason, string> = {
@@ -20,9 +20,9 @@ export function SkillRow({ skill }: { skill: SkillContract }) {
           <span className="truncate text-sm font-medium text-foreground">{skill.name}</span>
           <Badge variant="default">{skill.source}</Badge>
           {invalid ? (
-            <Badge variant="default" className="border-danger/40 text-danger">
+            <Chip tone="danger">
               {skill.invalid_reason ? INVALID_REASON_LABELS[skill.invalid_reason] : "Invalid"}
-            </Badge>
+            </Chip>
           ) : (
             <Badge variant="iris">Available</Badge>
           )}

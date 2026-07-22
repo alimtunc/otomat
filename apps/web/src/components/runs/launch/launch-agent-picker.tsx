@@ -20,6 +20,7 @@ export function LaunchAgentPicker({
   profiles,
   value,
   onValueChange,
+  isPending,
   isError,
   isSuccess,
   onRetry,
@@ -30,8 +31,8 @@ export function LaunchAgentPicker({
         variant="compact"
         tone="error"
         icon="alert-triangle"
-        title="Couldn’t load runtimes"
-        description="The daemon didn’t return its runtime list, so a run can’t be launched."
+        title="Couldn’t load agents"
+        description="The daemon didn’t return its runtimes or profiles, so a run can’t be launched."
         action={
           <Button variant="outline" size="xs" onClick={onRetry}>
             Retry
@@ -61,6 +62,7 @@ export function LaunchAgentPicker({
       descriptors={descriptors}
       value={value}
       onValueChange={onValueChange}
+      disabled={isPending}
     />
   );
 }

@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { agentProfileContractSchema } from "./entities.js";
 import { providerOptionsSchema } from "./runtime.js";
 
 export const AGENT_PROFILE_NAME_MAX_LENGTH = 80;
@@ -27,8 +26,6 @@ export const saveAgentProfileRequestSchema = z.object({
   skill_ids: z.array(z.string().min(1)).max(AGENT_PROFILE_MAX_SKILLS).optional(),
 });
 export type SaveAgentProfileRequest = z.infer<typeof saveAgentProfileRequestSchema>;
-
-export const agentProfileResponseSchema = agentProfileContractSchema;
 
 /** Stable refusal code plus a user-facing daemon message. */
 export const agentProfileErrorSchema = z.object({

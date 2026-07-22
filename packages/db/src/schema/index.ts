@@ -136,25 +136,18 @@ export const agents = sqliteTable("agents", {
   ...timestamps,
 });
 
-// Reusable agent profiles: a user-authored runtime + provider options + system
-// guidance + activated skills. Distinct from `agents` (the built-in runtime
-// catalog). A launch freezes an immutable snapshot into runs.plan_json; editing
-// or deleting a profile never touches an existing run.
+// User-authored reusable config, distinct from `agents` (the built-in runtime catalog); a launch freezes a snapshot into runs.plan_json.
 export const agentProfiles = sqliteTable("agent_profiles", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   runtime: text("runtime").notNull(),
-  // ProviderOptions selected for this profile; validated against the runtime's advertised options at save time.
   options_json: text("options_json", { mode: "json" }).notNull(),
   guidance: text("guidance"),
-  // Ids of activated skills; resolved and validated at launch.
   skill_ids_json: text("skill_ids_json", { mode: "json" }).notNull(),
   ...timestamps,
 });
 
-// Local skills catalog: declarative instruction files discovered under known
-// roots (a registered project's tree, or the user's home skills). Otomat never
-// executes a skill. `canonical_path` is the realpath identity used for dedupe.
+// `canonical_path` is the realpath identity discovery dedupes on; skills are declarative text, never executed.
 export const skills = sqliteTable(
   "skills",
   {

@@ -23,7 +23,8 @@ export function createSkillRoutes(deps: ApiDeps): Hono {
     if (!getSkill(deps.db, id)) return c.json({ error: "skill_not_found" }, 404);
     setSkillEnabled(deps.db, id, c.req.valid("json").enabled);
     const skill = getSkill(deps.db, id);
-    return skill ? c.json(toSkill(skill)) : c.json({ error: "internal_error" }, 500);
+    if (!skill) throw new Error(`skill ${id} missing after write`);
+    return c.json(toSkill(skill));
   });
 
   return routes;

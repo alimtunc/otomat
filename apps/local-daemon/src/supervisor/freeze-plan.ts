@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type { Db } from "@otomat/db";
 import {
+  FAKE_RUNTIME_ID,
   isRunPlanCompeteGroup,
   type ResolvedAgentConfig,
   type RunPlan,
@@ -19,6 +20,13 @@ function mappedStepId(idByRequestId: ReadonlyMap<string, string>, requestId: str
   return mapped;
 }
 
+/** The run default agent config: the selected profile, or an ad-hoc runtime. */
+export function defaultConfigSelector(request: StartRunRequest): AgentConfigSelector {
+  return request.profile_id
+    ? { kind: "profile", profileId: request.profile_id }
+    : { kind: "runtime", runtimeId: request.runtime ?? FAKE_RUNTIME_ID };
+}
+
 /** A per-node selector: its own profile, its own ad-hoc runtime, or `null` to inherit the run default. */
 function nodeSelector(node: {
   agent: string | null;
@@ -29,30 +37,40 @@ function nodeSelector(node: {
   return null;
 }
 
-function configForNode(
-  db: Db,
-  selector: AgentConfigSelector | null,
-  defaultConfig: ResolvedAgentConfig,
-  env: NodeJS.ProcessEnv,
-): ResolvedAgentConfig {
-  return selector === null ? defaultConfig : resolveAgentConfig(db, selector, env);
+function selectorKey(selector: AgentConfigSelector): string {
+  return selector.kind === "profile"
+    ? `profile:${selector.profileId}`
+    : `runtime:${selector.runtimeId}`;
+}
+
+/** One resolution per distinct selector per launch (default included), so nodes sharing a profile freeze the identical snapshot. */
+function makeConfigResolver(db: Db, request: StartRunRequest, defaultConfig: ResolvedAgentConfig) {
+  const bySelector = new Map([[selectorKey(defaultConfigSelector(request)), defaultConfig]]);
+  return (selector: AgentConfigSelector | null): ResolvedAgentConfig => {
+    if (selector === null) return defaultConfig;
+    const key = selectorKey(selector);
+    const cached = bySelector.get(key);
+    if (cached) return cached;
+    const config = resolveAgentConfig(db, selector);
+    bySelector.set(key, config);
+    return config;
+  };
 }
 
 function freezeNode(
-  db: Db,
   node: RunPlanNodeInput,
   idByRequestId: ReadonlyMap<string, string>,
-  defaultConfig: ResolvedAgentConfig,
-  env: NodeJS.ProcessEnv,
+  configFor: (selector: AgentConfigSelector | null) => ResolvedAgentConfig,
 ) {
   const dependencies = node.depends_on.map((dependency) => mappedStepId(idByRequestId, dependency));
+  // `in` narrowing, not isRunPlanCompeteGroup: the guard cannot exclude the compete *input* member on the else branch.
   if ("compete" in node) {
     return {
       id: mappedStepId(idByRequestId, node.id),
       name: node.name,
       depends_on: dependencies,
       compete: node.compete.map((competitor) => {
-        const config = configForNode(db, nodeSelector(competitor), defaultConfig, env);
+        const config = configFor(nodeSelector(competitor));
         return {
           id: mappedStepId(idByRequestId, competitor.id),
           name: competitor.name,
@@ -63,7 +81,7 @@ function freezeNode(
       }),
     };
   }
-  const config = configForNode(db, nodeSelector(node), defaultConfig, env);
+  const config = configFor(nodeSelector(node));
   return {
     id: mappedStepId(idByRequestId, node.id),
     name: node.name,
@@ -75,16 +93,14 @@ function freezeNode(
 }
 
 /**
- * Freezes the launch plan: request-local ids become the generated `step_runs`
- * ids (plan step id == step_run id), and each node's effective agent config
- * (runtime, options, guidance, skills, provenance/hash) is resolved and embedded
- * so resume/follow-up/fix read the frozen snapshot, never the live profile.
+ * Freezes the launch plan: request-local ids become the generated `step_runs` ids (plan step id ==
+ * step_run id), and each node's resolved agent config is embedded so resume/follow-up/fix read the
+ * frozen snapshot, never the live profile.
  */
 export function freezePlan(
   db: Db,
   request: StartRunRequest,
   defaultConfig: ResolvedAgentConfig,
-  env: NodeJS.ProcessEnv,
   fallbackPrompt: string,
 ): RunPlan {
   if (!request.plan) {
@@ -110,10 +126,9 @@ export function freezePlan(
       for (const competitor of node.compete) idByRequestId.set(competitor.id, randomUUID());
     }
   }
+  const configFor = makeConfigResolver(db, request, defaultConfig);
   return {
     version: 1,
-    steps: request.plan.steps.map((node) =>
-      freezeNode(db, node, idByRequestId, defaultConfig, env),
-    ),
+    steps: request.plan.steps.map((node) => freezeNode(node, idByRequestId, configFor)),
   };
 }

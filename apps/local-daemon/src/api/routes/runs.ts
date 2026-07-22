@@ -6,14 +6,14 @@ import {
 } from "@otomat/domain";
 import { Hono } from "hono";
 
-import { agentConfigErrorResponse } from "#agents";
-import { RuntimeUnavailableError, UnknownRuntimeError } from "#runtime";
+import { RuntimeUnavailableError } from "#runtime";
 import {
   CompeteRepositoryRequiredError,
   ProjectNotFoundError,
   RunNotResumableError,
 } from "#supervisor";
 
+import { agentConfigErrorResponse, refusalJson } from "../agent-config-refusal.js";
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { readCompeteCandidate, readRunDetail, readRuns } from "../reads.js";
@@ -38,15 +38,17 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       const run = await deps.launchRun(c.req.valid("json"));
       return c.json(toRun(run), 201);
     } catch (error) {
-      if (error instanceof UnknownRuntimeError) {
-        return c.json({ error: "unknown_runtime" }, 400);
-      }
       if (error instanceof ProjectNotFoundError) {
         return c.json({ error: "project_not_found" }, 400);
       }
       if (error instanceof RuntimeUnavailableError) {
         return c.json(
-          { error: "runtime_unavailable", runtime: error.runtime, reason: error.reason },
+          {
+            error: "runtime_unavailable",
+            runtime: error.runtime,
+            reason: error.reason,
+            message: error.message,
+          },
           409,
         );
       }
@@ -55,8 +57,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       }
       // Profile / skill / option resolution refusals raised while freezing the plan.
       const refusal = agentConfigErrorResponse(error);
-      if (refusal)
-        return c.json({ error: refusal.error, message: refusal.message }, refusal.status);
+      if (refusal) return refusalJson(c, refusal);
       console.error("[otomat] launch run failed", error);
       return c.json({ error: "run_launch_failed" }, 500);
     }

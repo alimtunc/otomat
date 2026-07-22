@@ -31,6 +31,7 @@ export function SkillMultiSelect({
       </p>
     );
   }
+
   return (
     <div className="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-lg border border-border-subtle bg-card p-1.5">
       {skills.map((skill) => {

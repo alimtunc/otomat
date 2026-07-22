@@ -13,7 +13,7 @@ import {
   encodeProfileChoice,
   encodeRuntimeChoice,
 } from "@web/lib/agent-choice";
-import { isAvailableRuntime } from "@web/lib/runtimes";
+import { isAvailableRuntime, runtimeById } from "@web/lib/runtimes";
 
 interface ChoiceItem {
   value: string;
@@ -27,7 +27,7 @@ function buildItems(
   includeDefault: boolean,
 ): { defaultItem: ChoiceItem | null; profileItems: ChoiceItem[]; runtimeItems: ChoiceItem[] } {
   const profileItems = profiles.map((profile) => {
-    const runtime = descriptors.find((descriptor) => descriptor.id === profile.runtime);
+    const runtime = runtimeById(descriptors, profile.runtime);
     const available = runtime ? isAvailableRuntime(runtime) : false;
     return {
       value: encodeProfileChoice(profile.id),
@@ -57,6 +57,7 @@ export interface LaunchAgentSelectProps {
   /** Adds a "Run default" option that maps to `null` (inherit). Used for per-step / per-candidate selectors. */
   includeDefault?: boolean;
   compact?: boolean;
+  disabled?: boolean;
   ariaLabel?: string;
 }
 
@@ -68,6 +69,7 @@ export function LaunchAgentSelect({
   onValueChange,
   includeDefault = false,
   compact = false,
+  disabled = false,
   ariaLabel = "Agent",
 }: LaunchAgentSelectProps) {
   const { defaultItem, profileItems, runtimeItems } = buildItems(
@@ -86,7 +88,11 @@ export function LaunchAgentSelect({
         onValueChange(next === AGENT_CHOICE_DEFAULT ? null : next);
       }}
     >
-      <SelectTrigger aria-label={ariaLabel} className={compact ? "h-7 text-xs" : undefined}>
+      <SelectTrigger
+        aria-label={ariaLabel}
+        disabled={disabled}
+        className={compact ? "h-7 text-xs" : undefined}
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

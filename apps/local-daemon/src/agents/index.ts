@@ -12,4 +12,4 @@ export * from "./errors.js";
 export * from "./resolve.js";
 export { composeTurnPrompt } from "./prompt.js";
 export { rescanSkills } from "./skills/catalog.js";
-export { skillDiscoveryRoots, type SkillRoot, type SkillRootsOptions } from "./skills/roots.js";
+export type { SkillRootsOptions } from "./skills/roots.js";

@@ -3,12 +3,10 @@ import { executableSteps } from "@otomat/domain";
 
 import { createRuntimeAdapter, requireAvailableRuntime, type KnownRuntimeId } from "#runtime";
 
-export { requireAvailableRuntime } from "#runtime";
-
 /** Validates the runtime, refuses an unavailable one, and ensures its builtin agent row exists (FK for `runs.agent_id` / `agent_sessions.agent_id`). */
 export function ensureRuntimeAgent(
   db: Db,
-  requested: string | undefined,
+  requested: string,
   env: NodeJS.ProcessEnv = process.env,
 ): KnownRuntimeId {
   const runtime = requireAvailableRuntime(requested, env);

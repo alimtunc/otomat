@@ -1,5 +1,6 @@
 import {
   CLAUDE_PERMISSION_MODES,
+  type ClaudePermissionMode,
   type ProviderOptionDescriptor,
   type RuntimeCapabilities,
 } from "@otomat/domain";
@@ -33,7 +34,7 @@ const ENV_CLAUDE_PERMISSION_MODES = ["acceptEdits", "bypassPermissions"] as cons
 const DEFAULT_CLAUDE_PERMISSION_MODE = "acceptEdits";
 
 /** The daemon-wide fallback permission mode, used when a run's frozen config selects none. */
-export function claudePermissionMode(env: NodeJS.ProcessEnv = process.env): string {
+export function claudePermissionMode(env: NodeJS.ProcessEnv = process.env): ClaudePermissionMode {
   const raw = env[CLAUDE_PERMISSION_MODE_ENV];
   const known = ENV_CLAUDE_PERMISSION_MODES.find((mode) => mode === raw);
   return known ?? DEFAULT_CLAUDE_PERMISSION_MODE;
@@ -47,7 +48,7 @@ const PERMISSION_MODE_LABELS: Record<(typeof CLAUDE_PERMISSION_MODES)[number], s
 };
 
 /** Claude's only tunable provider option: the `--permission-mode` the CLI already accepts. */
-export const CLAUDE_PROVIDER_OPTIONS: ProviderOptionDescriptor[] = [
+const CLAUDE_PROVIDER_OPTIONS: ProviderOptionDescriptor[] = [
   {
     key: "permission_mode",
     label: "Permission mode",
@@ -68,7 +69,7 @@ const CLAUDE_CAPABILITIES: RuntimeCapabilities = {
   diff_hints: false,
 };
 
-function baseArgs(permissionMode: string): string[] {
+function baseArgs(permissionMode: ClaudePermissionMode): string[] {
   return ["-p", "--output-format", "stream-json", "--verbose", "--permission-mode", permissionMode];
 }
 
@@ -105,7 +106,7 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
   }
 
   /** The frozen per-run permission mode wins; otherwise the daemon-wide env fallback. */
-  private permissionMode(input: RuntimeRunInput | RuntimeResumeInput): string {
+  private permissionMode(input: RuntimeRunInput | RuntimeResumeInput): ClaudePermissionMode {
     return input.options?.permission_mode ?? claudePermissionMode();
   }
 

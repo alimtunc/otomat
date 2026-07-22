@@ -1,8 +1,7 @@
-import type { AgentProfileContract } from "@otomat/domain";
-import type { Hono } from "hono";
+import { AGENT_PROFILE_NAME_MAX_LENGTH, type AgentProfileContract } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { makeApiApp, post, request } from "../support/api.js";
+import { json, makeApiApp, patch, post, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 
 let t: TestDb;
@@ -14,18 +13,6 @@ beforeEach(() => {
 afterEach(() => {
   t.cleanup();
 });
-
-async function json<T>(res: Response): Promise<T> {
-  return (await res.json()) as T;
-}
-
-function patch(app: Hono, path: string, body: unknown): Promise<Response> {
-  return request(app, path, {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
 
 it("creates, lists, updates, duplicates and deletes a profile", async () => {
   const app = makeApiApp(t);
@@ -55,6 +42,23 @@ it("creates, lists, updates, duplicates and deletes a profile", async () => {
   expect(
     await json<AgentProfileContract[]>(await request(app, "/api/agent-profiles")),
   ).toHaveLength(1);
+});
+
+it("clamps a duplicated name to the domain length limit", async () => {
+  const app = makeApiApp(t);
+  const created = await json<AgentProfileContract>(
+    await post(app, "/api/agent-profiles", {
+      name: "x".repeat(AGENT_PROFILE_NAME_MAX_LENGTH),
+      runtime: "fake",
+    }),
+  );
+
+  const duplicated = await json<AgentProfileContract>(
+    await post(app, `/api/agent-profiles/${created.id}/duplicate`, {}),
+  );
+
+  expect(duplicated.name.length).toBeLessThanOrEqual(AGENT_PROFILE_NAME_MAX_LENGTH);
+  expect(duplicated.name.endsWith(" (copy)")).toBe(true);
 });
 
 it("refuses an unsupported provider option honestly", async () => {

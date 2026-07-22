@@ -178,6 +178,36 @@ describe("ClaudeRuntimeAdapter", () => {
     expect(final.event_count).toBe(0);
   });
 
+  it("passes the frozen permission_mode to --permission-mode on run and resume", async () => {
+    const argsFile = join(worktree, "stub-args.json");
+    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
+    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
+
+    await adapter.run(
+      { ...input(worktree), options: { permission_mode: "plan" } },
+      new MemorySink(),
+      new AbortController().signal,
+    );
+    const runArgv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    expect(runArgv[runArgv.indexOf("--permission-mode") + 1]).toBe("plan");
+
+    await adapter.resume(
+      runtimeSessionRef("sess-claude-1"),
+      {
+        prompt: "follow up",
+        run_dir: worktree,
+        cwd: worktree,
+        options: { permission_mode: "plan" },
+      },
+      new MemorySink(),
+      new AbortController().signal,
+    );
+    const resumeArgv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    expect(resumeArgv[resumeArgv.indexOf("--permission-mode") + 1]).toBe("plan");
+    expect(resumeArgv.at(-2)).toBe("--resume");
+  });
+
   it("resumes with the provider session id and refuses to resume without one", async () => {
     const argsFile = join(worktree, "stub-args.json");
     process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");

@@ -56,6 +56,8 @@ it("freezes the resolved profile config into plan_json and keeps it immutable af
   // Edit the profile and the skill file after launch — the existing run must not change.
   updateAgentProfile(fix.db, "prof", {
     name: "Changed",
+    runtime: "fake",
+    options_json: {},
     guidance: "New guidance",
     skill_ids_json: [],
   });

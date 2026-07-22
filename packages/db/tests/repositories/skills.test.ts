@@ -6,9 +6,9 @@ import {
   setSkillEnabled,
   upsertSkillByPath,
   type SkillDiscovery,
-} from "#db/index";
+} from "#db/repositories/skills";
 
-import { createTempDb, type TempDb } from "./support/temp-db.js";
+import { createTempDb, type TempDb } from "../support/temp-db.js";
 
 let t: TempDb | null = null;
 

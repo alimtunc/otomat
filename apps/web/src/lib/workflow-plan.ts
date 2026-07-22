@@ -1,6 +1,5 @@
 import type { RunPlanInput, RunPlanNodeInput } from "@otomat/domain";
-
-import { agentChoiceToRequest } from "./agent-choice.js";
+import { agentChoiceToRequest } from "@web/lib/agent-choice";
 
 export interface WorkflowCompetitorDraft {
   key: string;

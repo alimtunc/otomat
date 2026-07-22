@@ -1,10 +1,9 @@
 import { Button, DialogBody, Kbd, Textarea } from "@otomat/ui";
-import { useAgentProfiles } from "@web/api/agent-profiles/queries";
-import { useRuntimes } from "@web/api/daemon/queries";
 import { useStartRunAndNavigate } from "@web/api/runs/mutations";
 import { IssueFormFooter } from "@web/components/issues/issue-form-footer";
 import { LaunchAgentPicker } from "@web/components/runs/launch/launch-agent-picker";
-import { agentChoiceToRequest, resolveAgentChoice } from "@web/lib/agent-choice";
+import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
+import { agentChoiceToRequest } from "@web/lib/agent-choice";
 import { useState, type KeyboardEvent } from "react";
 
 export interface AgentIssueFormProps {
@@ -24,11 +23,8 @@ export function AgentIssueForm({
 }: AgentIssueFormProps) {
   const [promptText, setPromptText] = useState("");
   const { start, isPending } = useStartRunAndNavigate();
-  const runtimes = useRuntimes();
-  const profilesQuery = useAgentProfiles();
-  const descriptors = runtimes.data ?? [];
-  const profiles = profilesQuery.data ?? [];
-  const choice = resolveAgentChoice(agentChoice, profiles, descriptors);
+  const agents = useLaunchAgentChoice(agentChoice);
+  const choice = agents.choice;
 
   const canSubmit =
     promptText.trim().length > 0 && choice !== null && projectId !== undefined && !isPending;
@@ -65,14 +61,14 @@ export function AgentIssueForm({
           aria-label="Issue prompt"
         />
         <LaunchAgentPicker
-          descriptors={descriptors}
-          profiles={profiles}
+          descriptors={agents.descriptors}
+          profiles={agents.profiles}
           value={choice}
           onValueChange={onAgentChoice}
-          isPending={runtimes.isPending}
-          isError={runtimes.isError}
-          isSuccess={runtimes.isSuccess}
-          onRetry={() => void runtimes.refetch()}
+          isPending={agents.isPending}
+          isError={agents.isError}
+          isSuccess={agents.isSuccess}
+          onRetry={agents.onRetry}
         />
         {projectId === undefined ? (
           <p className="text-xs text-danger">Select a project before launching a run.</p>
