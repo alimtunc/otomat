@@ -157,28 +157,10 @@ it("upgrades a legacy database through the current migrations", () => {
     },
   ]);
   expect(() => issueContractSchema.array().parse(listIssues(migrated.db))).not.toThrow();
+  // 0009 drops the Linear watermark so the next sync backfills the new mirror columns.
   expect(
-    migrated.sqlite
-      .prepare(
-        "SELECT source, resource, external_id, cursor, last_synced_at FROM sync_state ORDER BY external_id",
-      )
-      .all(),
-  ).toEqual([
-    {
-      source: "linear",
-      resource: "issues",
-      external_id: "",
-      cursor: null,
-      last_synced_at: null,
-    },
-    {
-      source: "linear",
-      resource: "issues",
-      external_id: "source-1",
-      cursor: "cursor-3",
-      last_synced_at: "2026-03-01T00:00:00.000Z",
-    },
-  ]);
+    migrated.sqlite.prepare("SELECT source FROM sync_state WHERE source = 'linear'").all(),
+  ).toEqual([]);
   expect(() =>
     migrated.sqlite
       .prepare("INSERT INTO pull_requests (id, run_id, title) VALUES (?, ?, ?)")

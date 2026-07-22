@@ -25,6 +25,12 @@ function mirrored(overrides: Partial<MirroredIssue> = {}): MirroredIssue {
     body: null,
     status: "backlog",
     synced_at: "2026-06-18T00:00:00.000Z",
+    source_updated_at: "2026-06-18T00:00:00.000Z",
+    source_assignee_name: "Alim",
+    source_priority: 2,
+    source_labels: [{ name: "bug", color: "#eb5757" }],
+    source_state_name: "Todo",
+    source_state_color: "#e2e2e2",
     ...overrides,
   };
 }
@@ -49,6 +55,12 @@ it("round-trips an issue with external-mirror columns", () => {
   expect(issue?.source_identifier).toBe("OTO-5");
   expect(issue?.source_url).toBe("https://linear.app/otomat/issue/OTO-5");
   expect(issue?.synced_at).toBe("2026-06-18T00:00:00.000Z");
+  expect(issue?.source_updated_at).toBe("2026-06-18T00:00:00.000Z");
+  expect(issue?.source_assignee_name).toBe("Alim");
+  expect(issue?.source_priority).toBe(2);
+  expect(issue?.source_labels).toEqual([{ name: "bug", color: "#eb5757" }]);
+  expect(issue?.source_state_name).toBe("Todo");
+  expect(issue?.source_state_color).toBe("#e2e2e2");
 });
 
 it("finds a mirrored issue by its immutable external id", () => {
@@ -71,8 +83,13 @@ it("re-syncing the same external issue updates the row instead of duplicating it
       id: "i2",
       title: "Foundation, renamed",
       source_identifier: "ENG-9",
-      status: "running",
+      status: "ready",
       synced_at: "2026-06-19T00:00:00.000Z",
+      source_assignee_name: "Sam",
+      source_priority: 1,
+      source_labels: [{ name: "urgent", color: "#f2994a" }],
+      source_state_name: "In Progress",
+      source_state_color: "#f2c94c",
     }),
   );
 
@@ -81,8 +98,13 @@ it("re-syncing the same external issue updates the row instead of duplicating it
   const issue = getIssue(t.client.db, "i1");
   expect(issue?.title).toBe("Foundation, renamed");
   expect(issue?.source_identifier).toBe("ENG-9");
-  expect(issue?.status).toBe("running");
+  expect(issue?.status).toBe("ready");
   expect(issue?.synced_at).toBe("2026-06-19T00:00:00.000Z");
+  expect(issue?.source_assignee_name).toBe("Sam");
+  expect(issue?.source_priority).toBe(1);
+  expect(issue?.source_labels).toEqual([{ name: "urgent", color: "#f2994a" }]);
+  expect(issue?.source_state_name).toBe("In Progress");
+  expect(issue?.source_state_color).toBe("#f2c94c");
 });
 
 it("rejects a second row mirroring the same external issue", () => {

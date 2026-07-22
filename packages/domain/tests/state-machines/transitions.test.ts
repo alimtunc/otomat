@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { agentSessionMachine } from "#domain/state-machines/agent-session";
 import { competeGroupMachine } from "#domain/state-machines/compete-group";
 import { issueMachine } from "#domain/state-machines/issue";
+import { linearWriteMachine } from "#domain/state-machines/linear-write";
 import { IllegalTransitionError } from "#domain/state-machines/machine";
 import { pullRequestMachine } from "#domain/state-machines/pull-request";
 import { pullRequestPublicationMachine } from "#domain/state-machines/pull-request-publication";
@@ -25,6 +26,7 @@ const machines = [
   reviewCommentMachine,
   pullRequestMachine,
   pullRequestPublicationMachine,
+  linearWriteMachine,
   competeGroupMachine,
 ];
 
@@ -120,6 +122,20 @@ describe("representative illegal transitions are rejected", () => {
       );
     },
   );
+
+  it("linear_write reconciles an interrupted send to a retryable failure", () => {
+    expect(linearWriteMachine.transition("sending", "failed")).toBe("failed");
+    expect(linearWriteMachine.transition("failed", "sending")).toBe("sending");
+  });
+
+  it("linear_write cannot resurrect a confirmed write", () => {
+    expect(linearWriteMachine.isTerminal("sent")).toBe(true);
+    expect(() => linearWriteMachine.transition("sent", "sending")).toThrow(IllegalTransitionError);
+  });
+
+  it("linear_write cannot skip straight from pending to sent", () => {
+    expect(() => linearWriteMachine.transition("pending", "sent")).toThrow(IllegalTransitionError);
+  });
 });
 
 describe("RUN_TERMINAL_STATES", () => {
