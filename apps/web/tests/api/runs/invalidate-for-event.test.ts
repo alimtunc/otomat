@@ -16,24 +16,34 @@ function fakeClient() {
   return { client, keys };
 }
 
-it("invalidates only the diff cache on git.diff_updated", () => {
+it("invalidates the diff cache and completion report on git.diff_updated", () => {
   const { client, keys } = fakeClient();
   invalidateForEvent(client, "run-1", event("git.diff_updated"));
-  expect(keys).toEqual([queryKeys.runDiff("run-1")]);
+  expect(keys).toEqual([queryKeys.runCompletionReport("run-1"), queryKeys.runDiff("run-1")]);
 });
 
 it("invalidates the review cache on any review.* event", () => {
   const { client, keys } = fakeClient();
   invalidateForEvent(client, "run-1", event("review.comment_created"));
   invalidateForEvent(client, "run-1", event("review.comment_resolved"));
-  expect(keys).toEqual([queryKeys.runReview("run-1"), queryKeys.runReview("run-1")]);
+  expect(keys).toEqual([
+    queryKeys.runCompletionReport("run-1"),
+    queryKeys.runReview("run-1"),
+    queryKeys.runCompletionReport("run-1"),
+    queryKeys.runReview("run-1"),
+  ]);
 });
 
 it("invalidates the PR cache on any pr.* event", () => {
   const { client, keys } = fakeClient();
   invalidateForEvent(client, "run-1", event("pr.created"));
   invalidateForEvent(client, "run-1", event("pr.updated"));
-  expect(keys).toEqual([queryKeys.runPullRequest("run-1"), queryKeys.runPullRequest("run-1")]);
+  expect(keys).toEqual([
+    queryKeys.runCompletionReport("run-1"),
+    queryKeys.runPullRequest("run-1"),
+    queryKeys.runCompletionReport("run-1"),
+    queryKeys.runPullRequest("run-1"),
+  ]);
 });
 
 it("invalidates the run and run list on a lifecycle or reconcile event", () => {
@@ -42,8 +52,8 @@ it("invalidates the run and run list on a lifecycle or reconcile event", () => {
   expect(keys).toEqual([queryKeys.run("run-1"), queryKeys.runs]);
 });
 
-it("ignores runtime frames that carry no cross-cache consequence", () => {
-  const { client } = fakeClient();
+it("invalidates the completion report for runtime evidence", () => {
+  const { client, keys } = fakeClient();
   invalidateForEvent(client, "run-1", event("runtime.log"));
-  expect(client.invalidateQueries).not.toHaveBeenCalled();
+  expect(keys).toEqual([queryKeys.runCompletionReport("run-1")]);
 });

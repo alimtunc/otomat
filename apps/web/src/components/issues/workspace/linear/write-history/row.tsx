@@ -19,7 +19,10 @@ const STATUS_TEXT: Record<LinearWriteContract["status"], string> = {
 export function WriteRow({ issueId, write }: { issueId: string; write: LinearWriteContract }) {
   const retry = useRetryLinearWrite(issueId);
   return (
-    <li className="flex items-start justify-between gap-2 border-t border-border-subtle py-1.5 text-xs first:border-t-0">
+    <li
+      id={`linear-write-${write.id}`}
+      className="flex scroll-mt-4 items-start justify-between gap-2 border-t border-border-subtle py-1.5 text-xs first:border-t-0"
+    >
       <div className="min-w-0">
         <span className="text-text-secondary">{KIND_LABEL[write.kind]}</span>
         <span className={`ml-1.5 ${STATUS_TEXT[write.status]}`}>{write.status}</span>

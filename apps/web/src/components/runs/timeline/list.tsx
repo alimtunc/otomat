@@ -13,6 +13,7 @@ function EventRows({ events }: { events: EventEnvelope[] }) {
       {events.map((event) => (
         <TimelineEventRow
           key={event.seq}
+          id={`event-${event.seq}`}
           type={event.type}
           provenance={event.source}
           summary={eventSummary(event)}

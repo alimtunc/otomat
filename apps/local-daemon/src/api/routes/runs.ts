@@ -14,6 +14,7 @@ import {
 } from "#supervisor";
 
 import { agentConfigErrorResponse, refusalJson } from "../agent-config-refusal.js";
+import { projectRunCompletionReport } from "../completion-report.js";
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { readCompeteCandidate, readRunDetail, readRuns } from "../reads.js";
@@ -66,6 +67,11 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
   routes.get("/:id", (c) => {
     const detail = readRunDetail(deps.db, c.req.param("id"));
     return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
+  });
+
+  routes.get("/:id/report", (c) => {
+    const report = projectRunCompletionReport(deps.db, c.req.param("id"), deps.review);
+    return report ? c.json(report) : c.json({ error: "run_not_found" }, 404);
   });
 
   routes.post("/:id/resume", runGuard(deps.db), async (c) => {

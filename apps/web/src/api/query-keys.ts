@@ -28,6 +28,7 @@ export const queryKeys = {
   runsList: (projectId?: string) => ["runs", "project", projectId ?? null] as const,
   runsForIssue: (issueId: string) => ["runs", { issueId }] as const,
   run: (id: string) => ["run", id] as const,
+  runCompletionReport: (id: string) => ["run", id, "report"] as const,
   runDiff: (id: string) => ["run", id, "diff"] as const,
   competeCandidateDiff: (runId: string, groupId: string, stepId: string) =>
     ["run", runId, "compete", groupId, stepId, "diff"] as const,

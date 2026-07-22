@@ -19,7 +19,10 @@ export function ReviewCommentCard({
   const fixPending = comment.status === "open" && comment.fix_requested_at !== null;
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
+    <div
+      id={`review-comment-${comment.id}`}
+      className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3"
+    >
       <div className="flex items-center gap-2">
         {selectable ? (
           <Checkbox
