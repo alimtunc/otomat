@@ -78,6 +78,7 @@ it("maps RuntimeUnavailableError from launch to a 409 with the reason", async ()
     error: "runtime_unavailable",
     runtime: "claude",
     reason: "binary_not_found",
+    message: 'runtime "claude" is unavailable (binary_not_found)',
   });
 });
 

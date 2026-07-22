@@ -1,10 +1,12 @@
 import type { RunPlanInput, RunPlanNodeInput } from "@otomat/domain";
+import { agentChoiceToRequest } from "@web/lib/agent-choice";
 
 export interface WorkflowCompetitorDraft {
   key: string;
   name: string;
   prompt: string;
-  runtime: string | null;
+  /** Encoded agent choice (profile or ad-hoc runtime); null inherits the run default. */
+  agent: string | null;
 }
 
 export interface WorkflowStepDraft {
@@ -12,7 +14,8 @@ export interface WorkflowStepDraft {
   key: string;
   name: string;
   prompt: string;
-  runtime: string | null;
+  /** Encoded agent choice (profile or ad-hoc runtime); null inherits the run default. */
+  agent: string | null;
   /** Keys of top-level nodes this one waits for; competitors are never valid dependency targets. */
   dependsOn: string[];
 }
@@ -35,7 +38,7 @@ export function newWorkflowStep(counter: number): WorkflowStepDraft {
     key: `step-${counter}`,
     name: "",
     prompt: "",
-    runtime: null,
+    agent: null,
     dependsOn: [],
   };
 }
@@ -45,7 +48,7 @@ function newCompetitor(groupKey: string, counter: number): WorkflowCompetitorDra
     key: `${groupKey}-candidate-${counter}`,
     name: "",
     prompt: "",
-    runtime: null,
+    agent: null,
   };
 }
 
@@ -113,13 +116,13 @@ export function removeWorkflowStep(
   return sanitizeWorkflowSteps(steps.filter((_, stepIndex) => stepIndex !== index));
 }
 
-export function setWorkflowStepRuntime(
+export function setWorkflowStepAgent(
   steps: readonly WorkflowNodeDraft[],
   index: number,
-  runtime: string | null,
+  agent: string | null,
 ): WorkflowNodeDraft[] {
   return steps.map((step, stepIndex) =>
-    stepIndex === index && step.kind === "step" ? { ...step, runtime } : step,
+    stepIndex === index && step.kind === "step" ? { ...step, agent } : step,
   );
 }
 
@@ -127,7 +130,7 @@ export function updateWorkflowCompetitor(
   steps: readonly WorkflowNodeDraft[],
   stepIndex: number,
   competitorIndex: number,
-  update: Partial<Pick<WorkflowCompetitorDraft, "name" | "prompt" | "runtime">>,
+  update: Partial<Pick<WorkflowCompetitorDraft, "name" | "prompt" | "agent">>,
 ): WorkflowNodeDraft[] {
   return steps.map((step, index) => {
     if (index !== stepIndex || step.kind !== "compete") return step;
@@ -191,6 +194,14 @@ export function toggleWorkflowDependency(
   );
 }
 
+/** Decodes an agent choice into a plan node's `agent` (runtime id) and optional `profile_id`. */
+function nodeAgentFields(choice: string | null): { agent: string | null; profile_id?: string } {
+  const request = agentChoiceToRequest(choice);
+  if (request.profile_id) return { agent: null, profile_id: request.profile_id };
+  if (request.runtime) return { agent: request.runtime };
+  return { agent: null };
+}
+
 export function buildRunPlanInput(steps: readonly WorkflowNodeDraft[]): RunPlanInput {
   const nodes: RunPlanNodeInput[] = sanitizeWorkflowSteps(steps).map((step) => {
     if (step.kind === "compete") {
@@ -201,7 +212,7 @@ export function buildRunPlanInput(steps: readonly WorkflowNodeDraft[]): RunPlanI
         compete: step.competitors.map((competitor) => ({
           id: competitor.key,
           name: competitor.name.trim(),
-          agent: competitor.runtime,
+          ...nodeAgentFields(competitor.agent),
           prompt: competitor.prompt.trim(),
         })),
       };
@@ -209,7 +220,7 @@ export function buildRunPlanInput(steps: readonly WorkflowNodeDraft[]): RunPlanI
     return {
       id: step.key,
       name: step.name.trim(),
-      agent: step.runtime,
+      ...nodeAgentFields(step.agent),
       prompt: step.prompt.trim(),
       depends_on: step.dependsOn,
     };

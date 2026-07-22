@@ -1,8 +1,8 @@
-import type {
-  RuntimeAvailability,
-  RuntimeDescriptor,
-  RuntimeKind,
-  RuntimeUnavailableReason,
+import {
+  type RuntimeAvailability,
+  type RuntimeDescriptor,
+  type RuntimeKind,
+  type RuntimeUnavailableReason,
 } from "@otomat/domain";
 
 import { isFakeRuntimeEnabled, resolveBinaryPath } from "./availability.js";
@@ -71,6 +71,19 @@ export function createRuntimeAdapter(id: string): RuntimeAdapter {
   return REGISTRY[id].create();
 }
 
+/** Validates a runtime id and refuses an unavailable one (missing CLI binary, or the fake outside tests/dev) without touching state. */
+export function requireAvailableRuntime(
+  runtime: string,
+  env: NodeJS.ProcessEnv = process.env,
+): KnownRuntimeId {
+  if (!isKnownRuntimeId(runtime)) throw new UnknownRuntimeError(runtime);
+  const availability = describeRuntimeAvailability(runtime, env);
+  if (availability.status === "unavailable") {
+    throw new RuntimeUnavailableError(runtime, availability.reason);
+  }
+  return runtime;
+}
+
 /** Probes without launching the provider: PATH lookup for real CLIs, the enable flag for the fake. */
 export function describeRuntimeAvailability(
   id: KnownRuntimeId,
@@ -98,6 +111,7 @@ export function listRuntimeDescriptors(env: NodeJS.ProcessEnv = process.env): Ru
         kind: REGISTRY[id].kind,
         capabilities: adapter.capabilities,
         availability: describeRuntimeAvailability(id, env),
+        provider_options: adapter.providerOptions,
       };
     },
   );

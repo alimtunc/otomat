@@ -81,6 +81,7 @@ it("parses the runtime catalog with kind and availability", async () => {
       diff_hints: false,
     },
     availability: { status: "unavailable", reason: "binary_not_found" },
+    provider_options: [],
   };
   const fetchMock: typeof fetch = async () => jsonResponse([descriptor]);
   const client = createDaemonClient({ fetch: fetchMock });

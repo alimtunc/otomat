@@ -4,6 +4,7 @@ import { showRoutes } from "hono/dev";
 import { HTTPException } from "hono/http-exception";
 
 import type { ApiDeps } from "./deps.js";
+import { createAgentProfileRoutes } from "./routes/agent-profiles.js";
 import { createCatalogRoutes } from "./routes/catalog.js";
 import { createGitHubRoutes } from "./routes/github.js";
 import { createHealthRoutes } from "./routes/health.js";
@@ -12,6 +13,7 @@ import { createLinearRoutes } from "./routes/linear.js";
 import { createRepositoryRoutes } from "./routes/repositories.js";
 import { createReviewRoutes } from "./routes/review.js";
 import { createRunRoutes } from "./routes/runs.js";
+import { createSkillRoutes } from "./routes/skills.js";
 import { allowedOrigin, hostGuard } from "./security.js";
 
 /**
@@ -31,6 +33,8 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.route("/api", createCatalogRoutes(deps));
   app.route("/api/linear", createLinearRoutes(deps));
   app.route("/api/repositories", createRepositoryRoutes(deps));
+  app.route("/api/agent-profiles", createAgentProfileRoutes(deps));
+  app.route("/api/skills", createSkillRoutes(deps));
   app.route("/api/issues", createIssueRoutes(deps));
   app.route("/api/runs", createRunRoutes(deps));
   app.route("/api/runs", createReviewRoutes(deps));

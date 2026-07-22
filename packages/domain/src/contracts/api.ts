@@ -5,9 +5,11 @@
  *
  * @packageDocumentation
  */
+export * from "./agent-profile.js";
 export * from "./github.js";
 export * from "./health.js";
 export * from "./issue.js";
+export * from "./skill.js";
 export * from "./linear.js";
 export * from "./pull-request.js";
 export * from "./repository.js";

@@ -39,12 +39,20 @@ export function queryString(params: Record<string, string | undefined>): string 
   return `?${new URLSearchParams(entries).toString()}`;
 }
 
+async function daemonFetch(
+  config: DaemonClientConfig,
+  path: string,
+  init?: RequestInit,
+): Promise<Response> {
+  const doFetch = config.fetch ?? fetch;
+  const res = await doFetch(resolveUrl(config, path), init);
+  if (!res.ok) throw new DaemonRequestError(res.status, path, await readErrorBody(res));
+  return res;
+}
+
 /** GETs and JSON-parses `path`; throws `DaemonRequestError` on a non-2xx status. */
 export async function getJson(config: DaemonClientConfig, path: string): Promise<unknown> {
-  const doFetch = config.fetch ?? fetch;
-  const res = await doFetch(resolveUrl(config, path));
-  if (!res.ok) throw new DaemonRequestError(res.status, path, await readErrorBody(res));
-  return res.json();
+  return (await daemonFetch(config, path)).json();
 }
 
 /** POSTs `body` as JSON and JSON-parses the response; throws `DaemonRequestError` on a non-2xx status. */
@@ -53,12 +61,33 @@ export async function postJson(
   path: string,
   body: unknown,
 ): Promise<unknown> {
-  const doFetch = config.fetch ?? fetch;
-  const res = await doFetch(resolveUrl(config, path), {
-    method: "POST",
+  return sendJson(config, "POST", path, body);
+}
+
+/** PATCHes `body` as JSON and JSON-parses the response; throws `DaemonRequestError` on a non-2xx status. */
+export async function patchJson(
+  config: DaemonClientConfig,
+  path: string,
+  body: unknown,
+): Promise<unknown> {
+  return sendJson(config, "PATCH", path, body);
+}
+
+async function sendJson(
+  config: DaemonClientConfig,
+  method: "POST" | "PATCH",
+  path: string,
+  body: unknown,
+): Promise<unknown> {
+  const res = await daemonFetch(config, path, {
+    method,
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new DaemonRequestError(res.status, path, await readErrorBody(res));
   return res.json();
+}
+
+/** DELETEs `path`; returns nothing (the daemon replies 204). Throws `DaemonRequestError` on a non-2xx status. */
+export async function deleteJson(config: DaemonClientConfig, path: string): Promise<void> {
+  await daemonFetch(config, path, { method: "DELETE" });
 }

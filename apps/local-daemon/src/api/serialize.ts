@@ -1,4 +1,5 @@
 import type {
+  AgentProfileRow,
   AgentSessionRow,
   CompeteGroupRow,
   IssueRow,
@@ -8,9 +9,11 @@ import type {
   ReviewCommentRow,
   ReviewRow,
   RunRow,
+  SkillRow,
   StepRunRow,
 } from "@otomat/db";
 import {
+  agentProfileContractSchema,
   agentSessionContractSchema,
   competeGroupContractSchema,
   issueContractSchema,
@@ -21,7 +24,9 @@ import {
   reviewContractSchema,
   runContractSchema,
   runDiffResponseSchema,
+  skillContractSchema,
   stepRunContractSchema,
+  type AgentProfileContract,
   type AgentSessionContract,
   type CompeteGroupContract,
   type IssueContract,
@@ -32,6 +37,7 @@ import {
   type ReviewContract,
   type RunContract,
   type RunDiffResponse,
+  type SkillContract,
   type StepRunContract,
   type WorktreeStatus,
 } from "@otomat/domain";
@@ -40,6 +46,22 @@ import type { RunDiffResult } from "#review";
 
 export function toProject(row: ProjectRow): ProjectContract {
   return projectContractSchema.parse(row);
+}
+
+/** Maps a profile row to its wire contract, unwrapping the typed json columns. */
+export function toAgentProfile(row: AgentProfileRow): AgentProfileContract {
+  return agentProfileContractSchema.parse({
+    id: row.id,
+    name: row.name,
+    runtime: row.runtime,
+    options: row.options_json,
+    guidance: row.guidance,
+    skill_ids: row.skill_ids_json,
+  });
+}
+
+export function toSkill(row: SkillRow): SkillContract {
+  return skillContractSchema.parse(row);
 }
 
 export function toRepository(row: RepositoryRow): RepositoryContract {

@@ -1,5 +1,9 @@
 import { DaemonRequestError } from "@otomat/client";
-import type { FollowUpRunRequest, StartRunRequest } from "@otomat/domain";
+import {
+  agentProfileErrorSchema,
+  type FollowUpRunRequest,
+  type StartRunRequest,
+} from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -97,6 +101,8 @@ export function followUpErrorMessage(error: unknown): string {
 
 export function startRunErrorMessage(error: unknown): string {
   if (error instanceof DaemonRequestError) {
+    const refusal = agentProfileErrorSchema.safeParse(error.body);
+    if (refusal.success) return refusal.data.message;
     return error.status >= 500
       ? "Could not start run — the daemon failed to launch it."
       : "Could not start run — the request was rejected.";

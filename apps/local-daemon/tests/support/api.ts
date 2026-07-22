@@ -26,6 +26,18 @@ export function post(app: Hono, path: string, body: unknown): Promise<Response> 
   });
 }
 
+export function patch(app: Hono, path: string, body: unknown): Promise<Response> {
+  return request(app, path, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function json<T>(res: Response): Promise<T> {
+  return (await res.json()) as T;
+}
+
 export function runRow(id: string, overrides: Partial<RunRow> = {}): RunRow {
   return {
     id,

@@ -32,7 +32,7 @@ export function NewIssueDialog({
   projectName,
 }: NewIssueDialogProps) {
   const [mode, setMode] = useState<NewIssueMode>("agent");
-  const [runtimeChoice, setRuntimeChoice] = useState<string | null>(null);
+  const [agentChoice, setAgentChoice] = useState<string | null>(null);
   const close = () => onOpenChange(false);
 
   return (
@@ -70,8 +70,8 @@ export function NewIssueDialog({
         {mode === "agent" ? (
           <AgentIssueForm
             projectId={projectId}
-            runtimeChoice={runtimeChoice}
-            onRuntimeChoice={setRuntimeChoice}
+            agentChoice={agentChoice}
+            onAgentChoice={setAgentChoice}
             onLaunched={close}
             onCancel={close}
           />
@@ -79,8 +79,8 @@ export function NewIssueDialog({
         {mode === "workflow" ? (
           <WorkflowIssueForm
             projectId={projectId}
-            runtimeChoice={runtimeChoice}
-            onRuntimeChoice={setRuntimeChoice}
+            agentChoice={agentChoice}
+            onAgentChoice={setAgentChoice}
             onLaunched={close}
             onCancel={close}
           />

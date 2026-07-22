@@ -63,6 +63,7 @@ function insertTurn(
     agentSessionDir: sessionDir(state.dataDir, run.id, agentSessionId),
     worktreePath,
     runtime,
+    config: step.config ?? null,
   };
 }
 

@@ -1,6 +1,7 @@
 import { runPlanInputSchema } from "@otomat/domain";
 import { useForm } from "@tanstack/react-form";
 import { useStartRunAndNavigate } from "@web/api/runs/mutations";
+import { agentChoiceToRequest } from "@web/lib/agent-choice";
 import {
   buildRunPlanInput,
   newWorkflowCompeteGroup,
@@ -11,12 +12,13 @@ import { useRef, useState } from "react";
 
 export interface UseWorkflowFormOptions {
   projectId: string | undefined;
-  runtime: string | null;
+  /** The resolved run-level agent choice (profile or ad-hoc runtime), or null when none is launchable. */
+  agentChoice: string | null;
   onLaunched: () => void;
 }
 
 /** Owns the workflow launch form: values, plan validation at submit, and the step-list mutations. */
-export function useWorkflowForm({ projectId, runtime, onLaunched }: UseWorkflowFormOptions) {
+export function useWorkflowForm({ projectId, agentChoice, onLaunched }: UseWorkflowFormOptions) {
   const { start, isPending } = useStartRunAndNavigate();
   const stepCounter = useRef(1);
   const [planError, setPlanError] = useState<string | null>(null);
@@ -29,7 +31,7 @@ export function useWorkflowForm({ projectId, runtime, onLaunched }: UseWorkflowF
   const form = useForm({
     defaultValues,
     onSubmit: async ({ value }) => {
-      if (runtime === null || projectId === undefined) return;
+      if (agentChoice === null || projectId === undefined) return;
       const plan = buildRunPlanInput(value.steps);
       const parsed = runPlanInputSchema.safeParse(plan);
       if (!parsed.success) {
@@ -39,9 +41,9 @@ export function useWorkflowForm({ projectId, runtime, onLaunched }: UseWorkflowF
       setPlanError(null);
       const started = await start({
         prompt: value.goal.trim(),
-        runtime,
         plan: parsed.data,
         project_id: projectId,
+        ...agentChoiceToRequest(agentChoice),
       });
       if (started) {
         form.reset();

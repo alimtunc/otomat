@@ -19,8 +19,10 @@ import {
   type StartRunRequest,
 } from "@otomat/domain";
 
-import { freezePlan, resolveStepRuntimes } from "./freeze-plan.js";
-import { ensureRuntimeAgent, requireAvailableRuntime } from "./runtime-selection.js";
+import { resolveAgentConfig } from "#agents";
+
+import { defaultConfigSelector, freezePlan } from "./freeze-plan.js";
+import { ensureRuntimeAgent } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
 
 const RUN_BRANCH_PREFIX = "otomat/run/";
@@ -79,9 +81,9 @@ function insertAdHocIssue(db: Db, projectId: string, request: StartRunRequest): 
  */
 export function prepareRun(state: SupervisorState, request: StartRunRequest): string {
   const { db, defaultProjectId, repositories } = state;
-  // Every effective runtime is validated before any row (issue included) is written.
-  const defaultRuntime = requireAvailableRuntime(request.runtime);
-  const stepRuntimes = resolveStepRuntimes(request, defaultRuntime);
+  // Every effective config is resolved and validated before any row (issue included) is written.
+  const defaultConfig = resolveAgentConfig(db, defaultConfigSelector(request));
+  const defaultRuntime = defaultConfig.runtime;
 
   const existingIssue = request.issue_id ? getIssue(db, request.issue_id) : undefined;
   if (request.issue_id && !existingIssue) throw new Error(`issue ${request.issue_id} not found`);
@@ -92,7 +94,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
 
   const runId = randomUUID();
   const branch = runBranchName(runId);
-  const plan = freezePlan(request, defaultRuntime, stepRuntimes, prompt);
+  const plan = freezePlan(db, request, defaultConfig, prompt);
   if (plan.steps.some(isRunPlanCompeteGroup) && !binding) {
     throw new CompeteRepositoryRequiredError(projectId);
   }

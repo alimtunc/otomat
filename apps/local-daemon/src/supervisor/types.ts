@@ -1,5 +1,5 @@
 import type { Db, RunRow } from "@otomat/db";
-import type { StartRunRequest } from "@otomat/domain";
+import type { ResolvedAgentConfig, StartRunRequest } from "@otomat/domain";
 
 import type { RepositoryResolver } from "#git";
 import type { KnownRuntimeId } from "#runtime";
@@ -22,6 +22,8 @@ export interface TurnContext {
   worktreePath: string | null;
   /** Runtime adapter id the worker instantiates; persisted on the run via its agent row. */
   runtime: KnownRuntimeId;
+  /** Effective agent config frozen for this step; null on runs launched before profiles existed. Drives guidance/skills/options at the worker. */
+  config: ResolvedAgentConfig | null;
 }
 
 /** A turn the supervisor hands to a child process: a fresh run, or a follow-up that resumes a provider session. */

@@ -1,4 +1,9 @@
-import type { RuntimeCapabilities } from "@otomat/domain";
+import {
+  CLAUDE_PERMISSION_MODES,
+  type ClaudePermissionMode,
+  type ProviderOptionDescriptor,
+  type RuntimeCapabilities,
+} from "@otomat/domain";
 
 import {
   requireProviderSession,
@@ -23,17 +28,37 @@ export const CLAUDE_ADAPTER_ID = "claude";
 export const CLAUDE_BINARY = "claude";
 
 const CLAUDE_PERMISSION_MODE_ENV = "OTOMAT_CLAUDE_PERMISSION_MODE";
-const CLAUDE_PERMISSION_MODES = ["acceptEdits", "bypassPermissions"] as const;
-type ClaudePermissionMode = (typeof CLAUDE_PERMISSION_MODES)[number];
+const ENV_CLAUDE_PERMISSION_MODES = ["acceptEdits", "bypassPermissions"] as const;
 
 /** `acceptEdits` auto-approves worktree edits while headless mode auto-denies gated tools; `bypassPermissions` is an explicit per-daemon env opt-in, never the silent default. */
-const DEFAULT_CLAUDE_PERMISSION_MODE: ClaudePermissionMode = "acceptEdits";
+const DEFAULT_CLAUDE_PERMISSION_MODE = "acceptEdits";
 
+/** The daemon-wide fallback permission mode, used when a run's frozen config selects none. */
 export function claudePermissionMode(env: NodeJS.ProcessEnv = process.env): ClaudePermissionMode {
   const raw = env[CLAUDE_PERMISSION_MODE_ENV];
-  const known = CLAUDE_PERMISSION_MODES.find((mode) => mode === raw);
+  const known = ENV_CLAUDE_PERMISSION_MODES.find((mode) => mode === raw);
   return known ?? DEFAULT_CLAUDE_PERMISSION_MODE;
 }
+
+const PERMISSION_MODE_LABELS: Record<(typeof CLAUDE_PERMISSION_MODES)[number], string> = {
+  default: "Default (prompt)",
+  acceptEdits: "Accept edits",
+  plan: "Plan mode",
+  bypassPermissions: "Bypass permissions",
+};
+
+/** Claude's only tunable provider option: the `--permission-mode` the CLI already accepts. */
+const CLAUDE_PROVIDER_OPTIONS: ProviderOptionDescriptor[] = [
+  {
+    key: "permission_mode",
+    label: "Permission mode",
+    choices: CLAUDE_PERMISSION_MODES.map((mode) => ({
+      value: mode,
+      label: PERMISSION_MODE_LABELS[mode],
+    })),
+    default_value: DEFAULT_CLAUDE_PERMISSION_MODE,
+  },
+];
 
 const CLAUDE_CAPABILITIES: RuntimeCapabilities = {
   stream: true,
@@ -44,15 +69,8 @@ const CLAUDE_CAPABILITIES: RuntimeCapabilities = {
   diff_hints: false,
 };
 
-function baseArgs(): string[] {
-  return [
-    "-p",
-    "--output-format",
-    "stream-json",
-    "--verbose",
-    "--permission-mode",
-    claudePermissionMode(),
-  ];
+function baseArgs(permissionMode: ClaudePermissionMode): string[] {
+  return ["-p", "--output-format", "stream-json", "--verbose", "--permission-mode", permissionMode];
 }
 
 /** The prompt is piped over stdin so size and quoting never leak into argv. */
@@ -60,6 +78,7 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
   readonly id = CLAUDE_ADAPTER_ID;
   readonly displayName = "Claude Code";
   readonly capabilities = CLAUDE_CAPABILITIES;
+  readonly providerOptions = CLAUDE_PROVIDER_OPTIONS;
 
   /** The binary parameter is the test seam: tests point it at a stub replaying recorded frames. */
   constructor(private readonly binary: string = CLAUDE_BINARY) {}
@@ -69,7 +88,7 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
-    return runCliTurn(this.spec(baseArgs(), input, input), sink, signal);
+    return runCliTurn(this.spec(baseArgs(this.permissionMode(input)), input, input), sink, signal);
   }
 
   async resume(
@@ -78,8 +97,17 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
-    const args = [...baseArgs(), "--resume", requireProviderSession(session)];
+    const args = [
+      ...baseArgs(this.permissionMode(input)),
+      "--resume",
+      requireProviderSession(session),
+    ];
     return runCliTurn(this.spec(args, input, session), sink, signal);
+  }
+
+  /** The frozen per-run permission mode wins; otherwise the daemon-wide env fallback. */
+  private permissionMode(input: RuntimeRunInput | RuntimeResumeInput): ClaudePermissionMode {
+    return input.options?.permission_mode ?? claudePermissionMode();
   }
 
   private spec(args: string[], input: CliTurnInput, ref: TurnRef): CliTurnSpec {

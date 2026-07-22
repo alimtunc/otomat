@@ -1,9 +1,9 @@
 import type { RunContract } from "@otomat/domain";
 import { Button, Icon, Popover, PopoverContent, PopoverTrigger, toast } from "@otomat/ui";
-import { useRuntimes } from "@web/api/daemon/queries";
 import { startRunErrorMessage, useStartRun } from "@web/api/runs/mutations";
-import { RuntimePicker } from "@web/components/runs/launch/runtime-picker";
-import { resolveRuntimeChoice } from "@web/lib/runtimes";
+import { LaunchAgentPicker } from "@web/components/runs/launch/launch-agent-picker";
+import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
+import { agentChoiceToRequest } from "@web/lib/agent-choice";
 import { useState } from "react";
 
 export interface LaunchRunPopoverProps {
@@ -19,16 +19,18 @@ export function LaunchRunPopover({
   triggerLabel = "Launch run",
 }: LaunchRunPopoverProps) {
   const [open, setOpen] = useState(false);
-  const [runtimeChoice, setRuntimeChoice] = useState<string | null>(null);
-  const runtimes = useRuntimes();
+  const [agentChoice, setAgentChoice] = useState<string | null>(null);
+  const agents = useLaunchAgentChoice(agentChoice);
   const startRun = useStartRun();
-  const descriptors = runtimes.data ?? [];
-  const runtime = resolveRuntimeChoice(descriptors, runtimeChoice);
+  const choice = agents.choice;
 
   async function launch() {
-    if (runtime === null) return;
+    if (choice === null) return;
     try {
-      const run = await startRun.mutateAsync({ issue_id: issueId, runtime });
+      const run = await startRun.mutateAsync({
+        issue_id: issueId,
+        ...agentChoiceToRequest(choice),
+      });
       toast.success("Run started");
       setOpen(false);
       onLaunched(run);
@@ -50,21 +52,22 @@ export function LaunchRunPopover({
       <PopoverContent align="end" className="w-80 p-3">
         <div className="flex flex-col gap-3">
           <span className="text-xs font-semibold text-text-secondary">Launch a run</span>
-          <RuntimePicker
-            descriptors={descriptors}
-            value={runtime}
-            onValueChange={setRuntimeChoice}
-            isPending={runtimes.isPending}
-            isError={runtimes.isError}
-            isSuccess={runtimes.isSuccess}
-            onRetry={() => void runtimes.refetch()}
+          <LaunchAgentPicker
+            descriptors={agents.descriptors}
+            profiles={agents.profiles}
+            value={choice}
+            onValueChange={setAgentChoice}
+            isPending={agents.isPending}
+            isError={agents.isError}
+            isSuccess={agents.isSuccess}
+            onRetry={agents.onRetry}
           />
           <Button
             variant="primary"
             size="sm"
             className="w-full"
             loading={startRun.isPending}
-            disabled={runtime === null || startRun.isPending}
+            disabled={choice === null || startRun.isPending}
             onClick={() => void launch()}
           >
             <Icon name="play" aria-hidden />

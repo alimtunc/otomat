@@ -1,40 +1,60 @@
 import {
+  getAgentProfile,
   getCompeteGroup,
   getIssue,
   getRun,
   getStepRun,
+  listAgentProfiles,
   listAgentSessionsForRun,
   listCompeteGroupsForRun,
   listIssues,
   listProjects,
   listRepositories,
   listRuns,
+  listSkills,
   listStepRunsForRun,
   type Db,
   type StepRunRow,
 } from "@otomat/db";
 import {
+  type AgentProfileContract,
   type IssueContract,
   type ProjectContract,
   type RepositoryContract,
   type RunContract,
   type RunDetail,
+  type SkillContract,
 } from "@otomat/domain";
 
 import { findWorktreeById } from "#git/worktrees-store";
 
 import {
+  toAgentProfile,
   toAgentSession,
   toCompeteGroup,
   toIssue,
   toProject,
   toRepository,
   toRun,
+  toSkill,
   toStepRun,
 } from "./serialize.js";
 
 export function readProjects(db: Db): ProjectContract[] {
   return listProjects(db).map(toProject);
+}
+
+export function readAgentProfiles(db: Db): AgentProfileContract[] {
+  return listAgentProfiles(db).map(toAgentProfile);
+}
+
+export function readAgentProfile(db: Db, id: string): AgentProfileContract | null {
+  const row = getAgentProfile(db, id);
+  return row ? toAgentProfile(row) : null;
+}
+
+export function readSkills(db: Db): SkillContract[] {
+  return listSkills(db).map(toSkill);
 }
 
 export function readRepositories(db: Db, projectId?: string): RepositoryContract[] {

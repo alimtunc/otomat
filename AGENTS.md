@@ -18,7 +18,7 @@ modules of `apps/local-daemon`, not workspace packages.
 apps/
   web/                  React + Vite cockpit
   local-daemon/         Node backend process
-    src/{api,events,git,review,runtime,supervisor}/
+    src/{agents,api,events,git,review,runtime,supervisor}/
   desktop/              Electron shell: manages the daemon lifecycle, serves the web build
     src/{main,preload,shared}/
 packages/
@@ -35,9 +35,9 @@ Create a package only for an existing cross-app consumer, an important boundary,
 a dangerous dependency that must be isolated, or a stable interface between two
 current systems. Reuse that is merely planned is not sufficient.
 
-`api`, `events`, `git`, `review`, `runtime`, and `supervisor` stay internal to
-`apps/local-daemon` while they have no cross-app consumer. Promoting one requires
-an explicit current justification.
+`agents`, `api`, `events`, `git`, `review`, `runtime`, and `supervisor` stay
+internal to `apps/local-daemon` while they have no cross-app consumer. Promoting
+one requires an explicit current justification.
 
 ## Import boundaries
 
@@ -132,8 +132,9 @@ substitute `tsc`, ESLint, or Prettier.
 - Runtime code lives in `<module>/src`; tests mirror it in
   `<module>/tests/<domain>`, with shared test support in `<module>/tests/support`.
 - Tests and daemon modules use public Node subpath imports, never deep relative
-  imports. Daemon modules expose `#api`, `#events`, `#git`, `#review`, `#runtime`,
-  and `#supervisor`; other packages expose private `#<package>/<path>` test maps.
+  imports. Daemon modules expose `#agents`, `#api`, `#events`, `#git`, `#review`,
+  `#runtime`, and `#supervisor`; other packages expose private `#<package>/<path>`
+  test maps.
 - The daemon must work from source and from `dist`. Its production build is
   bundled by `tsdown`; `smoke:dist` protects the emitted artifact.
 - Domain types live with their owning module and are re-exported from thin

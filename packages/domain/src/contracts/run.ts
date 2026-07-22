@@ -27,6 +27,8 @@ export const startRunRequestSchema = z
     project_id: z.string().min(1).optional(),
     /** Runtime adapter id; the daemon validates it against its registry and rejects unavailable runtimes. Steps may override it per step via `plan.steps[].agent`. */
     runtime: z.string().min(1).optional(),
+    /** Agent profile resolved and frozen for the run default; per-node `profile_id` overrides it. Takes precedence over `runtime`. */
+    profile_id: z.string().min(1).optional(),
     plan: runPlanInputSchema.optional(),
   })
   .refine((value) => Boolean(value.issue_id) || Boolean(value.prompt), {

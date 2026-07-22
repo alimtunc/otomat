@@ -10,7 +10,7 @@ import { setInputValue } from "#support/dom-events";
 const start = vi.fn(async () => false);
 const create = vi.fn(async (_request: CreateIssueRequest) => true);
 let runtimesData: RuntimeDescriptor[] = [];
-const runtimeSelectProps = vi.fn();
+const agentSelectProps = vi.fn();
 
 vi.mock("@web/api/runs/mutations", () => ({
   useStartRunAndNavigate: () => ({ start, isPending: false }),
@@ -30,10 +30,14 @@ vi.mock("@web/api/daemon/queries", () => ({
   }),
 }));
 
-vi.mock("@web/components/runs/launch/runtime-select", () => ({
-  RuntimeSelect: (props: { value: string | null }) => {
-    runtimeSelectProps(props);
-    return <div data-testid="runtime-select" />;
+vi.mock("@web/api/agent-profiles/queries", () => ({
+  useAgentProfiles: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
+}));
+
+vi.mock("@web/components/runs/launch/launch-agent-select", () => ({
+  LaunchAgentSelect: (props: { value: string | null; ariaLabel?: string }) => {
+    agentSelectProps(props);
+    return <div data-testid="agent-select" data-aria-label={props.ariaLabel ?? "Agent"} />;
   },
 }));
 
@@ -59,6 +63,7 @@ function runtimeDescriptor(
     availability: available
       ? { status: "available", version: null }
       : { status: "unavailable", reason: "binary_not_found" },
+    provider_options: [],
   };
 }
 
@@ -69,7 +74,7 @@ afterEach(async () => {
   document.body.replaceChildren();
   start.mockClear();
   create.mockClear();
-  runtimeSelectProps.mockClear();
+  agentSelectProps.mockClear();
   runtimesData = [];
 });
 
@@ -129,7 +134,9 @@ describe("NewIssueDialog", () => {
       runtimeDescriptor("fake", "simulated", true),
     ];
     await renderDialog();
-    expect(runtimeSelectProps).toHaveBeenCalledWith(expect.objectContaining({ value: "codex" }));
+    expect(agentSelectProps).toHaveBeenCalledWith(
+      expect.objectContaining({ value: "runtime:codex" }),
+    );
   });
 
   it("blocks launch with an actionable empty state when no runtime is launchable", async () => {
@@ -140,7 +147,7 @@ describe("NewIssueDialog", () => {
     await renderDialog();
     expect(document.body.textContent).toContain("No agent runtime available");
     expect(buttonByText("Create & launch⌘↵").disabled).toBe(true);
-    expect(document.querySelector("[data-testid='runtime-select']")).toBeNull();
+    expect(document.querySelector("[data-testid='agent-select']")).toBeNull();
   });
 
   it("creates a manual issue for the current project and closes", async () => {
@@ -165,7 +172,7 @@ describe("NewIssueDialog", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("pins an agent launch to the current project", async () => {
+  it("pins an agent launch to the current project with the resolved runtime", async () => {
     runtimesData = [runtimeDescriptor("claude", "real", true)];
     await renderDialog();
 
@@ -185,8 +192,8 @@ describe("NewIssueDialog", () => {
 
     expect(start).toHaveBeenCalledWith({
       prompt: "implement the thing",
-      runtime: "claude",
       project_id: "p1",
+      runtime: "claude",
     });
   });
 
@@ -220,8 +227,8 @@ describe("NewIssueDialog", () => {
     ];
     expect(candidateNames).toHaveLength(2);
     expect(candidatePrompts).toHaveLength(2);
-    expect(document.querySelector("button[aria-label='Candidate A runtime']")).not.toBeNull();
-    expect(document.querySelector("button[aria-label='Candidate B runtime']")).not.toBeNull();
+    expect(document.querySelector("[data-aria-label='Candidate A agent']")).not.toBeNull();
+    expect(document.querySelector("[data-aria-label='Candidate B agent']")).not.toBeNull();
     expect(document.body.textContent).toContain(
       "Steps that depend on this group stay queued until you compare the results and select a winner.",
     );
@@ -238,8 +245,8 @@ describe("NewIssueDialog", () => {
 
     expect(start).toHaveBeenCalledWith({
       prompt: "Choose the implementation",
-      runtime: "claude",
       project_id: "p1",
+      runtime: "claude",
       plan: {
         version: 1,
         steps: [

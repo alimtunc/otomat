@@ -1,6 +1,6 @@
 import type { RuntimeDescriptor } from "@otomat/domain";
 import { Badge } from "@otomat/ui";
-import { CAPABILITY_ENTRIES } from "@web/components/settings/runtimes/capability-labels";
+import { CAPABILITY_ENTRIES } from "@web/lib/capability-labels";
 
 export function RuntimeRow({ runtime }: { runtime: RuntimeDescriptor }) {
   return (

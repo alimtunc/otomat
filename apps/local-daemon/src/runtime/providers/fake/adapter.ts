@@ -160,6 +160,7 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     permissions: true,
     diff_hints: false,
   };
+  readonly providerOptions = [];
 
   /** Monotonic per-instance turn counter: keeps event ids unique across run/resume turns. */
   private turn = 0;
