@@ -17,6 +17,7 @@
     "#github/*": "./src/github/*.ts",
     "#linear": "./src/linear/index.ts",
     "#linear/*": "./src/linear/*.ts",
+    "#test-support/*": "./tests/support/*.ts",
     "#review": "./src/review/index.ts",
     "#review/*": "./src/review/*.ts",
     "#runtime": "./src/runtime/index.ts",

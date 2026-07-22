@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { LinearCommentsSection } from "@web/components/issues/workspace/linear/comments-section";
+import { LinearCommentsSection } from "@web/components/issues/workspace/linear/comments";
 import { act, type ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 

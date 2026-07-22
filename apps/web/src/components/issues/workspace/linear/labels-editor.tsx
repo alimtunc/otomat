@@ -7,7 +7,7 @@ import {
 } from "@otomat/ui";
 import { ColorDot } from "@web/components/issues/color-dot";
 
-import type { LinearIssueEditing } from "./use-linear-issue-editing";
+import type { LinearIssueEditing } from "./use-issue-editing";
 
 const LABEL_CHIP_CLASS =
   "inline-flex h-5.5 items-center gap-1.5 rounded-full border border-border-subtle px-2 text-xs text-foreground";
@@ -16,8 +16,10 @@ export function LabelsEditor({ editing }: { editing: LinearIssueEditing }) {
   const { values, metadata, snapshot } = editing;
   if (values === null) return null;
   const known = metadata?.labels ?? snapshot?.labels ?? [];
+  const labelsById = new Map(known.map((label) => [label.id, label]));
+  const selectedIds = new Set(values.label_ids);
   const selected = values.label_ids
-    .map((id) => known.find((label) => label.id === id))
+    .map((id) => labelsById.get(id))
     .filter((label) => label !== undefined);
 
   return (
@@ -44,7 +46,7 @@ export function LabelsEditor({ editing }: { editing: LinearIssueEditing }) {
               <div className="px-2 py-1.5 text-xs text-text-tertiary">No labels on this team.</div>
             ) : (
               (metadata?.labels ?? []).map((label) => {
-                const active = values.label_ids.includes(label.id);
+                const active = selectedIds.has(label.id);
                 return (
                   <DropdownMenuCheckboxItem
                     key={label.id}

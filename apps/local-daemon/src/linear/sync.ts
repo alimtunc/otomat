@@ -8,7 +8,7 @@ import {
 } from "@otomat/db";
 import { type IssueSourceSyncResult, type IssueState } from "@otomat/domain";
 
-import type { LinearApiClient, LinearIssue } from "./types.js";
+import type { LinearApiClient, LinearIssue } from "./client/types.js";
 
 export const SYNC_SOURCE = "linear";
 export const SYNC_RESOURCE = "issues";

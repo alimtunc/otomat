@@ -1,6 +1,6 @@
 import { ErrorState, IssueSourceGlyph, Skeleton } from "@otomat/ui";
 import type { useIssue } from "@web/api/issues/queries";
-import { LinearIssueHeader } from "@web/components/issues/workspace/linear/linear-issue-header";
+import { LinearIssueHeader } from "@web/components/issues/workspace/linear/header";
 import { issueShortId } from "@web/lib/ids";
 
 export function IssueHeader({ query }: { query: ReturnType<typeof useIssue> }) {

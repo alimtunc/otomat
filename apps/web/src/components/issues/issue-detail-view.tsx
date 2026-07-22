@@ -7,7 +7,7 @@ import { RunEventsProvider } from "@web/api/runs/run-events-provider";
 import { IssueHeader } from "@web/components/issues/issue-header";
 import { ActivityFeed } from "@web/components/issues/workspace/activity-feed";
 import { LaunchRunPopover } from "@web/components/issues/workspace/launch-run-popover";
-import { LinearCommentsSection } from "@web/components/issues/workspace/linear/comments-section";
+import { LinearCommentsSection } from "@web/components/issues/workspace/linear/comments";
 import { WorkspaceRail } from "@web/components/issues/workspace/rail/workspace-rail";
 import { RunStrip } from "@web/components/issues/workspace/run-strip";
 import { QueryList } from "@web/components/shell/query-list";

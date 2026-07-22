@@ -1,7 +1,7 @@
 import { Button } from "@otomat/ui";
 
 import { ConflictDialog } from "./conflict-dialog";
-import type { LinearIssueEditing } from "./use-linear-issue-editing";
+import type { LinearIssueEditing } from "./use-issue-editing";
 
 export function DraftBar({ editing }: { editing: LinearIssueEditing }) {
   const { draft, conflict, values } = editing;

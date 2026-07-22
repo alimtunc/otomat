@@ -1,6 +1,6 @@
 import type { IssueContract, RunContract } from "@otomat/domain";
 import { IssueStatusChip } from "@otomat/ui";
-import { LinearRailSection } from "@web/components/issues/workspace/linear/linear-rail-section";
+import { LinearRailSection } from "@web/components/issues/workspace/linear/rail-section";
 import { FollowedRunSection } from "@web/components/issues/workspace/rail/followed-run-section";
 import { PullRequestSection } from "@web/components/issues/workspace/rail/pull-request-section";
 import {

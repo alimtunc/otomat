@@ -2,7 +2,7 @@
 import { DaemonRequestError } from "@otomat/client";
 import type { IssueContract, LinearIssueSnapshot } from "@otomat/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { LinearIssueHeader } from "@web/components/issues/workspace/linear/linear-issue-header";
+import { LinearIssueHeader } from "@web/components/issues/workspace/linear/header";
 import { act, type ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 

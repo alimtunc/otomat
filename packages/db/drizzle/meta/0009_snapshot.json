@@ -162,12 +162,8 @@
           "name": "agent_sessions_step_run_id_step_runs_id_fk",
           "tableFrom": "agent_sessions",
           "tableTo": "step_runs",
-          "columnsFrom": [
-            "step_run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["step_run_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -175,12 +171,8 @@
           "name": "agent_sessions_agent_id_agents_id_fk",
           "tableFrom": "agent_sessions",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -309,10 +301,7 @@
       "indexes": {
         "compete_groups_run_idx_unique": {
           "name": "compete_groups_run_idx_unique",
-          "columns": [
-            "run_id",
-            "idx"
-          ],
+          "columns": ["run_id", "idx"],
           "isUnique": true
         }
       },
@@ -321,12 +310,8 @@
           "name": "compete_groups_run_id_runs_id_fk",
           "tableFrom": "compete_groups",
           "tableTo": "runs",
-          "columnsFrom": [
-            "run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -390,12 +375,8 @@
           "name": "event_streams_run_id_runs_id_fk",
           "tableFrom": "event_streams",
           "tableTo": "runs",
-          "columnsFrom": [
-            "run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -485,11 +466,7 @@
       "indexes": {
         "issue_sources_external_unique": {
           "name": "issue_sources_external_unique",
-          "columns": [
-            "source",
-            "external_team_id",
-            "external_project_id"
-          ],
+          "columns": ["source", "external_team_id", "external_project_id"],
           "isUnique": true
         }
       },
@@ -498,12 +475,8 @@
           "name": "issue_sources_project_id_projects_id_fk",
           "tableFrom": "issue_sources",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -649,10 +622,7 @@
       "indexes": {
         "issues_source_external_id_unique": {
           "name": "issues_source_external_id_unique",
-          "columns": [
-            "source",
-            "source_external_id"
-          ],
+          "columns": ["source", "source_external_id"],
           "isUnique": true
         }
       },
@@ -661,12 +631,8 @@
           "name": "issues_project_id_projects_id_fk",
           "tableFrom": "issues",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -755,9 +721,7 @@
       "indexes": {
         "linear_issue_drafts_issue_unique": {
           "name": "linear_issue_drafts_issue_unique",
-          "columns": [
-            "issue_id"
-          ],
+          "columns": ["issue_id"],
           "isUnique": true
         }
       },
@@ -766,12 +730,8 @@
           "name": "linear_issue_drafts_issue_id_issues_id_fk",
           "tableFrom": "linear_issue_drafts",
           "tableTo": "issues",
-          "columnsFrom": [
-            "issue_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["issue_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -881,11 +841,7 @@
       "indexes": {
         "linear_writes_identity_unique": {
           "name": "linear_writes_identity_unique",
-          "columns": [
-            "issue_id",
-            "kind",
-            "idempotency_key"
-          ],
+          "columns": ["issue_id", "kind", "idempotency_key"],
           "isUnique": true
         }
       },
@@ -894,12 +850,8 @@
           "name": "linear_writes_issue_id_issues_id_fk",
           "tableFrom": "linear_writes",
           "tableTo": "issues",
-          "columnsFrom": [
-            "issue_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["issue_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -907,12 +859,8 @@
           "name": "linear_writes_run_id_runs_id_fk",
           "tableFrom": "linear_writes",
           "tableTo": "runs",
-          "columnsFrom": [
-            "run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -965,9 +913,7 @@
       "indexes": {
         "projects_root_path_unique": {
           "name": "projects_root_path_unique",
-          "columns": [
-            "root_path"
-          ],
+          "columns": ["root_path"],
           "isUnique": true
         }
       },
@@ -1108,9 +1054,7 @@
       "indexes": {
         "pull_requests_run_id_unique": {
           "name": "pull_requests_run_id_unique",
-          "columns": [
-            "run_id"
-          ],
+          "columns": ["run_id"],
           "isUnique": true
         }
       },
@@ -1119,12 +1063,8 @@
           "name": "pull_requests_run_id_runs_id_fk",
           "tableFrom": "pull_requests",
           "tableTo": "runs",
-          "columnsFrom": [
-            "run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1195,12 +1135,8 @@
           "name": "repositories_project_id_projects_id_fk",
           "tableFrom": "repositories",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1300,12 +1236,8 @@
           "name": "review_comments_review_id_reviews_id_fk",
           "tableFrom": "review_comments",
           "tableTo": "reviews",
-          "columnsFrom": [
-            "review_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["review_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1362,12 +1294,8 @@
           "name": "reviews_run_id_runs_id_fk",
           "tableFrom": "reviews",
           "tableTo": "runs",
-          "columnsFrom": [
-            "run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1473,12 +1401,8 @@
           "name": "runs_issue_id_issues_id_fk",
           "tableFrom": "runs",
           "tableTo": "issues",
-          "columnsFrom": [
-            "issue_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["issue_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1486,12 +1410,8 @@
           "name": "runs_repository_id_repositories_id_fk",
           "tableFrom": "runs",
           "tableTo": "repositories",
-          "columnsFrom": [
-            "repository_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["repository_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1499,12 +1419,8 @@
           "name": "runs_worktree_id_worktrees_id_fk",
           "tableFrom": "runs",
           "tableTo": "worktrees",
-          "columnsFrom": [
-            "worktree_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["worktree_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1512,12 +1428,8 @@
           "name": "runs_agent_id_agents_id_fk",
           "tableFrom": "runs",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1611,10 +1523,7 @@
       "indexes": {
         "runtime_events_run_seq_unique": {
           "name": "runtime_events_run_seq_unique",
-          "columns": [
-            "run_id",
-            "seq"
-          ],
+          "columns": ["run_id", "seq"],
           "isUnique": true
         }
       },
@@ -1623,12 +1532,8 @@
           "name": "runtime_events_run_id_runs_id_fk",
           "tableFrom": "runtime_events",
           "tableTo": "runs",
-          "columnsFrom": [
-            "run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1636,12 +1541,8 @@
           "name": "runtime_events_step_run_id_step_runs_id_fk",
           "tableFrom": "runtime_events",
           "tableTo": "step_runs",
-          "columnsFrom": [
-            "step_run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["step_run_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1649,12 +1550,8 @@
           "name": "runtime_events_agent_session_id_agent_sessions_id_fk",
           "tableFrom": "runtime_events",
           "tableTo": "agent_sessions",
-          "columnsFrom": [
-            "agent_session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_session_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1751,9 +1648,7 @@
       "indexes": {
         "skills_canonical_path_unique": {
           "name": "skills_canonical_path_unique",
-          "columns": [
-            "canonical_path"
-          ],
+          "columns": ["canonical_path"],
           "isUnique": true
         }
       },
@@ -1835,10 +1730,7 @@
       "indexes": {
         "step_runs_run_idx_unique": {
           "name": "step_runs_run_idx_unique",
-          "columns": [
-            "run_id",
-            "idx"
-          ],
+          "columns": ["run_id", "idx"],
           "isUnique": true
         }
       },
@@ -1847,12 +1739,8 @@
           "name": "step_runs_run_id_runs_id_fk",
           "tableFrom": "step_runs",
           "tableTo": "runs",
-          "columnsFrom": [
-            "run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1860,12 +1748,8 @@
           "name": "step_runs_compete_group_id_compete_groups_id_fk",
           "tableFrom": "step_runs",
           "tableTo": "compete_groups",
-          "columnsFrom": [
-            "compete_group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["compete_group_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1873,12 +1757,8 @@
           "name": "step_runs_worktree_id_worktrees_id_fk",
           "tableFrom": "step_runs",
           "tableTo": "worktrees",
-          "columnsFrom": [
-            "worktree_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["worktree_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1953,11 +1833,7 @@
       "indexes": {
         "sync_state_scope_unique": {
           "name": "sync_state_scope_unique",
-          "columns": [
-            "source",
-            "resource",
-            "external_id"
-          ],
+          "columns": ["source", "resource", "external_id"],
           "isUnique": true
         }
       },
@@ -2039,9 +1915,7 @@
       "indexes": {
         "worktrees_owner_active_unique": {
           "name": "worktrees_owner_active_unique",
-          "columns": [
-            "owner_token"
-          ],
+          "columns": ["owner_token"],
           "isUnique": true,
           "where": "status = 'active'"
         }
@@ -2051,12 +1925,8 @@
           "name": "worktrees_repository_id_repositories_id_fk",
           "tableFrom": "worktrees",
           "tableTo": "repositories",
-          "columnsFrom": [
-            "repository_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["repository_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }

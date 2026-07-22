@@ -6,6 +6,7 @@ import {
   getProject,
   getSyncState,
   insertIssueSource,
+  type Db,
   type IssueSourceRow,
   listIssueSources,
   type NewIssueSource,
@@ -19,10 +20,30 @@ import {
   type LinearWorkspaceContract,
 } from "@otomat/domain";
 
+import type { LinearApiClient, LinearViewer } from "./client/types.js";
 import { LinearError, linearError } from "./errors.js";
 import { SYNC_RESOURCE, SYNC_SOURCE, syncIssueSource } from "./sync.js";
-import type { LinearService, LinearServiceConfig, LinearViewer, LinearWriteback } from "./types.js";
-import { createLinearWriteback } from "./writeback.js";
+import { createLinearWriteback } from "./writeback/index.js";
+import type { LinearWriteback } from "./writeback/types.js";
+
+export interface LinearServiceConfig {
+  db: Db;
+  dataDir: string;
+  client: LinearApiClient;
+  idFactory?: () => string;
+  now?: () => Date;
+}
+
+export interface LinearService {
+  connection(): LinearConnectionContract;
+  connect(apiKey: string): Promise<LinearConnectionContract>;
+  disconnect(): LinearConnectionContract;
+  workspace(): Promise<LinearWorkspaceContract>;
+  sources(): IssueSourceContract[];
+  createSource(request: CreateIssueSourceRequest): Promise<IssueSourceContract>;
+  sync(sourceId?: string): Promise<IssueSourceSyncResult[]>;
+  writeback: LinearWriteback;
+}
 
 const DISCONNECTED: LinearConnectionContract = {
   status: "disconnected",
