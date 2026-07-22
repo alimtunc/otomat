@@ -68,6 +68,33 @@ test("accepts an oversized legacy file at its ratcheted baseline", async () => {
   assert.equal(guardrails.status, 0, guardrails.stderr);
 });
 
+test("accepts a runtime source file at exactly 250 lines", async () => {
+  const root = await createFixture({
+    "apps/web/src/at-limit.ts": lines(250),
+  });
+
+  const guardrails = runGuardrails(root);
+
+  assert.equal(guardrails.status, 0, guardrails.stderr);
+});
+
+test("requires removing the baseline entry once a legacy file fits the limit", async () => {
+  const root = await createFixture({
+    "packages/domain/src/legacy.ts": lines(240),
+    "scripts/source-size-baseline.json": `${JSON.stringify(
+      { "packages/domain/src/legacy.ts": 275 },
+      null,
+      2,
+    )}\n`,
+  });
+
+  const guardrails = runGuardrails(root);
+
+  assert.equal(guardrails.status, 1);
+  assert.match(guardrails.stderr, /source-size-baseline/);
+  assert.match(guardrails.stderr, /remove its baseline entry/);
+});
+
 test("requires lowering the baseline when a legacy file shrinks", async () => {
   const root = await createFixture({
     "packages/domain/src/legacy.ts": lines(260),

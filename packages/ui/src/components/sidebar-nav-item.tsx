@@ -115,9 +115,9 @@ export function SidebarNavItem({
     );
   } else {
     node = (
-      <a className={className} href={href} aria-current={ariaCurrent} onClick={onClick}>
+      <span className={className} aria-current={ariaCurrent}>
         {inner}
-      </a>
+      </span>
     );
   }
 

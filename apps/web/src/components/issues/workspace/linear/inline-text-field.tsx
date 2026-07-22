@@ -1,4 +1,4 @@
-import { Button, Input, Textarea, cn } from "@otomat/ui";
+import { Input, Textarea, cn } from "@otomat/ui";
 import { useState } from "react";
 
 interface InlineTextFieldProps {
@@ -37,10 +37,8 @@ export function InlineTextField({
   if (!editing) {
     const empty = value.length === 0;
     return (
-      <Button
+      <button
         type="button"
-        variant="ghost"
-        size="sm"
         disabled={disabled}
         aria-label={disabled ? ariaLabel : `Edit ${ariaLabel.toLowerCase()}`}
         onClick={() => {
@@ -48,14 +46,14 @@ export function InlineTextField({
           setEditing(true);
         }}
         className={cn(
-          "-mx-1.5 block h-auto w-[calc(100%+0.75rem)] justify-start whitespace-pre-wrap rounded-md px-1.5 py-0 text-left font-[inherit]",
+          "-mx-1.5 block w-[calc(100%+0.75rem)] whitespace-pre-wrap rounded-md px-1.5 text-left",
           disabled ? "" : "cursor-text transition-colors duration-100 hover:bg-surface-2/60",
           empty ? "text-text-tertiary" : "",
           className,
         )}
       >
         {empty ? placeholder : value}
-      </Button>
+      </button>
     );
   }
 

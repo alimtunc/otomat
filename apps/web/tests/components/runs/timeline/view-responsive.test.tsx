@@ -95,6 +95,9 @@ describe("RunTimelineView responsive composition", () => {
     if (disclosure === null) throw new Error("no steps disclosure rendered");
     const collapsible = disclosure.closest("[data-closed]");
     expect(collapsible).not.toBeNull();
+    const chevron = disclosure.querySelector(".lucide-chevron-down");
+    expect(chevron?.getAttribute("class")).toContain("group-data-[closed]/steps:-rotate-90");
+    expect(chevron?.closest('[class*="group/steps"]')).toBe(collapsible);
     expect(container.textContent).not.toContain("Run context");
     expect(container.textContent).toContain("otomat/run-1");
     expect(container.querySelector('[data-testid="timeline"]')).not.toBeNull();

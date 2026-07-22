@@ -80,7 +80,13 @@ function listFiles(dir) {
   }
   return entries
     .map((e) => join(abs, e))
-    .filter((p) => /\.(ts|tsx)$/.test(p) && !/\.d\.ts$/.test(p) && !/routeTree\.gen\.ts$/.test(p))
+    .filter(
+      (p) =>
+        /\.(ts|tsx)$/.test(p) &&
+        !/\.test\.tsx?$/.test(p) &&
+        !/\.d\.ts$/.test(p) &&
+        !/routeTree\.gen\.ts$/.test(p),
+    )
     .filter((p) => statSync(p).isFile());
 }
 
@@ -121,7 +127,7 @@ for (const dir of SOURCE_SCAN_DIRS) {
     const path = relative(ROOT, file);
     checkedBaselinePaths.add(path);
     const baselineLines = SOURCE_SIZE_BASELINE[path];
-    const allowedLines = baselineLines ?? SOURCE_LINE_LIMIT;
+    const allowedLines = Math.max(baselineLines ?? 0, SOURCE_LINE_LIMIT);
     if (lines > allowedLines) {
       report(
         file,
@@ -131,7 +137,15 @@ for (const dir of SOURCE_SCAN_DIRS) {
         `Runtime source files must stay at or below ${allowedLines} lines; this file has ${lines}. Split it by responsibility.`,
       );
     }
-    if (baselineLines !== undefined && lines < baselineLines) {
+    if (baselineLines !== undefined && lines <= SOURCE_LINE_LIMIT) {
+      report(
+        file,
+        1,
+        1,
+        "source-size-baseline",
+        `This file now fits the ${SOURCE_LINE_LIMIT}-line limit; remove its baseline entry.`,
+      );
+    } else if (baselineLines !== undefined && lines < baselineLines) {
       report(
         file,
         1,

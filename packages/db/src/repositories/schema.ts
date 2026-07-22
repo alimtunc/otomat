@@ -1,2 +1,2 @@
-// This shallow bridge keeps emitted imports inside dist; #db resolves back to src at runtime.
+// oxlint bans ../../ imports and #db/* resolves to src in emitted dist; nested repositories reach the schema barrel through this alias.
 export * from "../schema/index.js";

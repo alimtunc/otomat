@@ -6,7 +6,7 @@ import { FOCUS_RING } from "@web/lib/focus";
 export function StepsDisclosure({ detail }: { detail: RunDetail }) {
   const stepCount = detail.run.plan_json.steps.length;
   return (
-    <Collapsible className="flex-none border-b border-border-subtle bg-sidebar">
+    <Collapsible className="group/steps flex-none border-b border-border-subtle bg-sidebar">
       <CollapsibleTrigger
         render={
           <Button
@@ -14,7 +14,7 @@ export function StepsDisclosure({ detail }: { detail: RunDetail }) {
             variant="ghost"
             size="sm"
             className={cn(
-              "group h-8.5 w-full justify-start rounded-none px-3.5 text-micro font-semibold uppercase tracking-[0.04em] text-text-tertiary hover:text-foreground",
+              "h-8.5 w-full justify-start rounded-none px-3.5 text-micro font-semibold uppercase tracking-[0.04em] text-text-tertiary hover:text-foreground",
               FOCUS_RING,
             )}
           />
@@ -23,7 +23,7 @@ export function StepsDisclosure({ detail }: { detail: RunDetail }) {
         <Icon
           name="chevron-down"
           aria-hidden
-          className="h-3.5 w-3.5 group-data-[closed]:-rotate-90"
+          className="h-3.5 w-3.5 group-data-[closed]/steps:-rotate-90"
         />
         Steps &amp; sessions
         <span className="ml-auto font-mono text-[10px] font-normal">
