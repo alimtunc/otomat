@@ -7,7 +7,7 @@ import {
   DataSafetyError,
   isSqliteContentError,
   type DataSafetyErrorCode,
-  preserveDataSafetyFailure,
+  preserveClassifiedFailure,
   throwIfUnclassifiedFailure,
 } from "./errors.js";
 import { assertDatabaseIntegrity } from "./integrity.js";
@@ -26,10 +26,11 @@ function removePaths(paths: string[]): void {
 function portableDatabaseError(
   code: Extract<DataSafetyErrorCode, "invalid_backup" | "restore_failed">,
   message: string,
+  options?: ErrorOptions,
 ): DataSafetyError {
   return code === "invalid_backup"
-    ? new DataSafetyError("invalid_backup", message)
-    : new DataSafetyError("restore_failed", message);
+    ? new DataSafetyError("invalid_backup", message, options)
+    : new DataSafetyError("restore_failed", message, options);
 }
 
 export function removeDatabaseSidecars(path: string): void {
@@ -66,7 +67,7 @@ export function removeOrphanedDatabaseArtifacts(
   }
 }
 
-export function validatePortableDatabase(
+function validatePortableDatabase(
   path: string,
   label: string,
   code: Extract<DataSafetyErrorCode, "invalid_backup" | "restore_failed">,
@@ -91,7 +92,7 @@ export function validatePortableDatabase(
   if (validationFailures.length > 0) {
     const [primary, ...secondary] = validationFailures;
     const classifiedPrimary = isSqliteContentError(primary)
-      ? portableDatabaseError(code, `${label} is structurally corrupt.`)
+      ? portableDatabaseError(code, `${label} is structurally corrupt.`, { cause: primary })
       : primary;
     throwIfMigrationRuntimeFailure(
       classifiedPrimary,
@@ -103,12 +104,7 @@ export function validatePortableDatabase(
       secondary,
       `${label} validation and handle cleanup both failed.`,
     );
-    throw preserveDataSafetyFailure(
-      classifiedPrimary,
-      secondary,
-      code,
-      `${label} could not be validated safely.`,
-    );
+    throw preserveClassifiedFailure(classifiedPrimary, secondary);
   }
 }
 
@@ -156,12 +152,7 @@ export function finalizePortableDatabase(path: string, label: string): void {
       secondary,
       `${label} checkpoint and handle cleanup both failed.`,
     );
-    throw preserveDataSafetyFailure(
-      primary,
-      secondary,
-      "invalid_backup",
-      `${label} could not be finalized safely.`,
-    );
+    throw preserveClassifiedFailure(primary, secondary);
   }
   removeDatabaseSidecars(path);
 

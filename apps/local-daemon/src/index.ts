@@ -59,7 +59,13 @@ if (process.env[MAINTENANCE_ACTION_ENV] === MAINTENANCE_RESTORE_ACTION) {
     process.exitCode = 1;
   } else {
     void runRestoreMaintenance(defaultDbPath(), backupPath)
-      .then((report) => console.log(report))
+      .then((preservedPath) =>
+        console.log(
+          preservedPath === null
+            ? "[otomat] database restored"
+            : `[otomat] database restored; previous state kept at ${preservedPath}`,
+        ),
+      )
       .catch((error) => {
         console.error(formatStartupDiagnostic(error));
         process.exitCode = 1;

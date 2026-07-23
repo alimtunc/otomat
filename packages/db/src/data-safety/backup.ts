@@ -8,7 +8,7 @@ import {
   MANAGED_BACKUP_FILENAME_SUFFIX,
 } from "@otomat/domain";
 
-import { createClient } from "../client.js";
+import { createClient, type DbClient } from "../client.js";
 import {
   assertSufficientDiskSpace,
   availableDiskBytes,
@@ -55,7 +55,7 @@ export async function createConsistentBackup(
       { cause: error },
     );
   }
-  let source: ReturnType<typeof createClient> | null = null;
+  let source: DbClient | null = null;
   const backupName = `${backupPrefix}${timestampForPath(now)}-${randomUUID()}${MANAGED_BACKUP_FILENAME_SUFFIX}`;
   const backupPath = join(backupsDir, backupName);
   const temporaryPath = `${backupPath}.partial`;

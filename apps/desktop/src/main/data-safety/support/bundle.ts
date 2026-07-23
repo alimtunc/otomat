@@ -1,6 +1,6 @@
 import type { SchemaMetadataContract } from "@otomat/domain";
 
-import { redactLogText } from "./redaction.js";
+import { redactLogText } from "../redaction.js";
 
 export interface SupportBundleVersions {
   desktop: string;

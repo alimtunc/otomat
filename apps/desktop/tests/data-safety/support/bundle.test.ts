@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { buildSupportBundle } from "#main/data-safety/support-bundle";
+import { buildSupportBundle } from "#main/data-safety/support/bundle";
 
 it("contains only versions, health, schema metadata and already-redacted logs", () => {
   const health = {

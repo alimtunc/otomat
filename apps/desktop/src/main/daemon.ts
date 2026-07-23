@@ -14,6 +14,7 @@ import { findFreeLoopbackPort } from "#shared/ports";
 import { terminateChild } from "#shared/terminate";
 
 import { DaemonOutputCapture } from "./data-safety/daemon-output.js";
+import { combineFailures } from "./data-safety/failure-composition.js";
 
 export interface DaemonControllerOptions {
   /** Node entry to run (packaged bundle, or the repo's built dist in dev). */
@@ -111,18 +112,14 @@ export class DaemonController {
         cleanupFailure = stopError;
       }
       const startupFailure = spawnError ?? error;
-      const cause =
-        cleanupFailure === null
-          ? startupFailure
-          : new AggregateError(
-              [startupFailure, cleanupFailure],
-              "Daemon startup and process cleanup both failed.",
-            );
+      const cause = combineFailures(
+        cleanupFailure === null ? [startupFailure] : [startupFailure, cleanupFailure],
+        "Daemon startup and process cleanup both failed.",
+      );
       if (active.output.diagnostic !== null) {
         throw new DaemonStartupError(active.output.diagnostic, { cause });
       }
-      if (cleanupFailure !== null) throw cause;
-      throw startupFailure;
+      throw cause;
     }
     child.off("exit", onEarlyExit);
     child.off("error", onSpawnError);

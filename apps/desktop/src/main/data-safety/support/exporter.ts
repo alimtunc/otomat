@@ -6,7 +6,7 @@ import {
   buildSupportBundle,
   type SupportBundleHealth,
   type SupportBundleVersions,
-} from "./support-bundle.js";
+} from "./bundle.js";
 
 interface SupportBundleExporterOptions {
   versions: SupportBundleVersions;

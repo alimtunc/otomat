@@ -11,7 +11,7 @@ export const RECOVERABLE_DATA_SAFETY_ERROR_CODES = [
   "restore_failed",
 ] as const;
 
-export const DATA_SAFETY_ERROR_CODES = [
+const DATA_SAFETY_ERROR_CODES = [
   ...PLAIN_DATA_SAFETY_ERROR_CODES,
   ...RECOVERABLE_DATA_SAFETY_ERROR_CODES,
   "low_disk",
@@ -50,7 +50,7 @@ export function isUuidV4(value: string): boolean {
   return UUID_V4_PATTERN.test(value);
 }
 
-export function isSanitizedIsoTimestamp(value: string): boolean {
+function isSanitizedIsoTimestamp(value: string): boolean {
   const match = SANITIZED_ISO_TIMESTAMP_PATTERN.exec(value);
   if (match === null) return false;
   const isoTimestamp = `${match[1]}:${match[2]}:${match[3]}`;

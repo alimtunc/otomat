@@ -2,18 +2,12 @@ import { join } from "node:path";
 
 import { app, dialog } from "electron";
 
-import {
-  DATA_RETENTION_POLICY,
-  exportSupportBundle,
-  type RotatingLog,
-} from "./data-safety/index.js";
-import { writeSupportBundleAtomically } from "./data-safety/support-bundle-file.js";
+import { DATA_RETENTION_POLICY, exportSupportBundle } from "./data-safety/index.js";
+import { writeSupportBundleAtomically } from "./data-safety/support/bundle-file.js";
 
 interface DesktopSupportOptions {
   daemonUrl(): string;
-  desktopLog(): RotatingLog | null;
-  daemonLog(): RotatingLog | null;
-  startupLog(): string;
+  logs(): { desktop: string; daemon: string };
   log(message: string): void;
 }
 
@@ -31,10 +25,7 @@ export class DesktopSupport {
           arch: process.arch,
         },
         daemonUrl: this.options.daemonUrl,
-        readLogs: () => ({
-          desktop: `${this.options.startupLog()}${this.options.desktopLog()?.read() ?? ""}`,
-          daemon: this.options.daemonLog()?.read() ?? "",
-        }),
+        readLogs: () => this.options.logs(),
         chooseDestination: async () => {
           const selected = await dialog.showSaveDialog({
             title: "Export Otomat Support Bundle",

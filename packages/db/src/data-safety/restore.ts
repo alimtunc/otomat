@@ -7,6 +7,7 @@ import {
   DataSafetyError,
   inspectPathAfterFailure,
   isSqliteContentError,
+  preserveClassifiedFailure,
   preserveDataSafetyFailure,
   throwIfUnclassifiedFailure,
 } from "./errors.js";
@@ -21,6 +22,7 @@ import {
 import {
   existingDatabaseArtifacts,
   preserveAndInstallRestore,
+  type RestoreArtifact,
   type RestoreInstallation,
 } from "./restore-installation.js";
 import { createRestoreTemporaryPath, removeOrphanedRestoreCopies } from "./restore-paths.js";
@@ -37,7 +39,7 @@ async function createValidatedRestoreCopy(
   dbPath: string,
   backupPath: string,
   temporaryPath: string,
-): Promise<ReturnType<typeof existingDatabaseArtifacts>> {
+): Promise<RestoreArtifact[]> {
   const currentArtifacts = existingDatabaseArtifacts(dbPath);
   let source: DbClient;
   try {
@@ -91,12 +93,7 @@ async function createValidatedRestoreCopy(
       secondary,
       "Backup validation and handle cleanup both failed.",
     );
-    throw preserveDataSafetyFailure(
-      classifiedPrimary,
-      secondary,
-      "invalid_backup",
-      "The backup could not be opened safely.",
-    );
+    throw preserveClassifiedFailure(classifiedPrimary, secondary);
   }
   const stagingFailures: unknown[] = [];
   try {
@@ -130,15 +127,13 @@ async function createValidatedRestoreCopy(
       "Migration metadata and staged restore cleanup both failed.",
     );
     throwIfUnclassifiedFailure(error, cleanupFailures, "Restore staging and cleanup both failed.");
-    throw preserveDataSafetyFailure(
+    throw preserveClassifiedFailure(
       new DataSafetyError(
         "restore_failed",
         "The staged restore copy could not be finalized safely.",
         { cause: error },
       ),
       cleanupFailures,
-      "restore_failed",
-      "The staged restore copy could not be finalized safely.",
     );
   }
   return currentArtifacts;
@@ -152,7 +147,7 @@ export async function restoreDatabaseBackup(
   removeOrphanedRestoreCopies(dbPath);
   assertManagedBackup(dbPath, backupPath);
   const temporaryPath = createRestoreTemporaryPath(dbPath);
-  let currentArtifacts: ReturnType<typeof existingDatabaseArtifacts>;
+  let currentArtifacts: RestoreArtifact[];
   try {
     currentArtifacts = await createValidatedRestoreCopy(dbPath, backupPath, temporaryPath);
   } catch (error) {

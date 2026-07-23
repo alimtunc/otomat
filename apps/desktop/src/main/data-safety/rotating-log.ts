@@ -36,6 +36,11 @@ function existingLogBytes(path: string): number {
   return stats.size;
 }
 
+/** The archive slot must be a regular file before rotation unlinks or renames it. */
+function assertRegularLogFile(path: string): void {
+  existingLogBytes(path);
+}
+
 function appendLogEntry(path: string, entry: Buffer): void {
   const descriptor = openSync(
     path,
@@ -113,7 +118,7 @@ export class RotatingLog {
       return;
     }
     const lastArchive = `${this.path}.${this.options.archives}`;
-    existingLogBytes(lastArchive);
+    assertRegularLogFile(lastArchive);
     rmSync(lastArchive, { force: true });
     for (let archive = this.options.archives - 1; archive >= 1; archive -= 1) {
       const source = `${this.path}.${archive}`;

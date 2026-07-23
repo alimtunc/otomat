@@ -1,8 +1,10 @@
 /**
  * Zod contracts shared by daemon and client: HTTP request/response shapes
  * (`api`), the canonical run diff with its pin-to-SHA anchors (`diff`), the
- * persisted entity mirrors (`entities`), and the Electron shell's renderer
- * bridge surface (`desktop`). Parsing a payload through the zod schemas is what
+ * persisted entity mirrors (`entities`), the local data-safety error taxonomy
+ * and managed-artifact grammar (`data-safety`), and the Electron shell's
+ * renderer bridge surface (`desktop`). Parsing a payload through the zod
+ * schemas is what
  * guarantees both sides agree on wire shape and invariants.
  *
  * @packageDocumentation

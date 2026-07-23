@@ -5,24 +5,12 @@ import { readMigrationFiles } from "drizzle-orm/migrator";
 import { migrationsFolder } from "../migrations-folder.js";
 import { DataSafetyError } from "./errors.js";
 
-export class MigrationMetadataReadError extends Error {
+/** Otomat's own migration assets or catalog could not be read; never a user-data fault. */
+export class MigrationRuntimeError extends Error {
   constructor(message: string, options: ErrorOptions) {
     super(message, options);
-    this.name = "MigrationMetadataReadError";
+    this.name = "MigrationRuntimeError";
   }
-}
-
-export class MigrationAssetsReadError extends Error {
-  constructor(options: ErrorOptions) {
-    super("The bundled database migration assets could not be read.", options);
-    this.name = "MigrationAssetsReadError";
-  }
-}
-
-export function isMigrationRuntimeError(
-  error: unknown,
-): error is MigrationAssetsReadError | MigrationMetadataReadError {
-  return error instanceof MigrationAssetsReadError || error instanceof MigrationMetadataReadError;
 }
 
 export function throwIfMigrationRuntimeFailure(
@@ -30,13 +18,11 @@ export function throwIfMigrationRuntimeFailure(
   secondary: unknown[],
   message: string,
 ): void {
-  if (!isMigrationRuntimeError(primary)) return;
+  if (!(primary instanceof MigrationRuntimeError)) return;
   if (secondary.length === 0) throw primary;
-  const cause = new AggregateError([primary, ...secondary], message, { cause: primary });
-  if (primary instanceof MigrationAssetsReadError) {
-    throw new MigrationAssetsReadError({ cause });
-  }
-  throw new MigrationMetadataReadError(primary.message, { cause });
+  throw new MigrationRuntimeError(primary.message, {
+    cause: new AggregateError([primary, ...secondary], message, { cause: primary }),
+  });
 }
 
 function migrationTablePresent(sqlite: Database.Database): boolean {
@@ -47,7 +33,7 @@ function migrationTablePresent(sqlite: Database.Database): boolean {
       .pluck()
       .get("__drizzle_migrations");
   } catch (error) {
-    throw new MigrationMetadataReadError("The migration catalog could not be read.", {
+    throw new MigrationRuntimeError("The migration catalog could not be read.", {
       cause: error,
     });
   }
@@ -62,7 +48,7 @@ function migrationTablePresent(sqlite: Database.Database): boolean {
   try {
     columns = sqlite.pragma("table_info('__drizzle_migrations')");
   } catch (error) {
-    throw new MigrationMetadataReadError("The migration table metadata could not be read.", {
+    throw new MigrationRuntimeError("The migration table metadata could not be read.", {
       cause: error,
     });
   }
@@ -125,9 +111,8 @@ function readAppliedMigrations(sqlite: Database.Database): {
       .prepare("SELECT hash, created_at FROM __drizzle_migrations ORDER BY created_at")
       .all();
   } catch (error) {
-    if (error instanceof DataSafetyError || error instanceof MigrationMetadataReadError)
-      throw error;
-    throw new MigrationMetadataReadError("The database migration history could not be read.", {
+    if (error instanceof DataSafetyError || error instanceof MigrationRuntimeError) throw error;
+    throw new MigrationRuntimeError("The database migration history could not be read.", {
       cause: error,
     });
   }
@@ -178,7 +163,9 @@ export function inspectMigrationHistory(sqlite: Database.Database): {
   try {
     available = readMigrationFiles({ migrationsFolder });
   } catch (error) {
-    throw new MigrationAssetsReadError({ cause: error });
+    throw new MigrationRuntimeError("The bundled database migration assets could not be read.", {
+      cause: error,
+    });
   }
   const incompatible =
     applied.length > available.length ||
