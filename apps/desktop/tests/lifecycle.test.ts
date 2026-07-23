@@ -1,4 +1,12 @@
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -66,4 +74,83 @@ it.skipIf(!existsSync(DAEMON_ENTRY))(
     expect(isAlive(pid)).toBe(false);
   },
   30_000,
+);
+
+it.skipIf(!existsSync(DAEMON_ENTRY))(
+  "surfaces a structured corruption diagnostic without replacing the database",
+  async () => {
+    dir = mkdtempSync(join(tmpdir(), "otomat-desktop-corrupt-"));
+    const dbPath = join(dir, "otomat.db");
+    const corruptBytes = Buffer.from("not a sqlite database");
+    writeFileSync(dbPath, corruptBytes);
+    const controller = new DaemonController({
+      daemonEntry: DAEMON_ENTRY,
+      dbPath,
+      projectRoot: dir,
+      userPath: process.env.PATH ?? "",
+      packaged: false,
+      electronBinary: process.execPath,
+      baseEnv: envWithoutVitest(),
+    });
+
+    await expect(controller.start()).rejects.toMatchObject({
+      diagnostic: expect.objectContaining({ code: "database_corrupt" }),
+    });
+    expect(controller.running).toBe(false);
+    expect(readFileSync(dbPath)).toEqual(corruptBytes);
+  },
+  30_000,
+);
+
+it.skipIf(!existsSync(DAEMON_ENTRY))(
+  "restores a confirmed backup through maintenance mode and restarts with the saved data",
+  async () => {
+    dir = mkdtempSync(join(tmpdir(), "otomat-desktop-restore-"));
+    const dbPath = join(dir, "otomat.db");
+    const controller = new DaemonController({
+      daemonEntry: DAEMON_ENTRY,
+      dbPath,
+      projectRoot: dir,
+      userPath: process.env.PATH ?? "",
+      packaged: false,
+      electronBinary: process.execPath,
+      baseEnv: envWithoutVitest(),
+    });
+
+    const firstUrl = await controller.start();
+    const before = await fetch(`${firstUrl}/api/issues`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: "local-default", title: "Before backup" }),
+    });
+    expect(before.status).toBe(201);
+    await controller.stop();
+
+    const backupsDir = join(dir, "backups");
+    mkdirSync(backupsDir);
+    const backupPath = join(
+      backupsDir,
+      "otomat-backup-2026-07-23T10-00-00.000Z-123e4567-e89b-42d3-a456-426614174000.sqlite",
+    );
+    copyFileSync(dbPath, backupPath);
+
+    const secondUrl = await controller.start();
+    const after = await fetch(`${secondUrl}/api/issues`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: "local-default", title: "After backup" }),
+    });
+    expect(after.status).toBe(201);
+    await controller.stop();
+
+    await controller.restoreBackup(backupPath);
+    const restoredUrl = await controller.start();
+    const issues = (await (await fetch(`${restoredUrl}/api/issues`)).json()) as {
+      title: string;
+    }[];
+    expect(issues.map((issue) => issue.title)).toContain("Before backup");
+    expect(issues.map((issue) => issue.title)).not.toContain("After backup");
+    await controller.stop();
+  },
+  60_000,
 );

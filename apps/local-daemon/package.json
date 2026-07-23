@@ -9,6 +9,8 @@
     "#agents/*": "./src/agents/*.ts",
     "#api": "./src/api/index.ts",
     "#api/*": "./src/api/*.ts",
+    "#data-safety": "./src/data-safety/index.ts",
+    "#data-safety/*": "./src/data-safety/*.ts",
     "#events": "./src/events/index.ts",
     "#events/*": "./src/events/*.ts",
     "#git": "./src/git/index.ts",

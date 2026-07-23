@@ -1,5 +1,5 @@
 import type { Db, RunRow } from "@otomat/db";
-import type { StartRunRequest } from "@otomat/domain";
+import type { SchemaMetadataContract, StartRunRequest } from "@otomat/domain";
 
 import type { GitHubService } from "#github";
 import type { LinearService } from "#linear";
@@ -11,6 +11,7 @@ export interface ApiDeps {
   version: string;
   startedAt: string;
   dbPath: string;
+  schemaMetadata(): SchemaMetadataContract;
   launchRun(request: StartRunRequest): Promise<RunRow>;
   resumeRun(runId: string): Promise<RunRow>;
   fixRun(runId: string, prompt: string): Promise<RunRow>;

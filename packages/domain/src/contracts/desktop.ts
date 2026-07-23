@@ -1,4 +1,42 @@
+import { z } from "zod";
+
+import {
+  PLAIN_DATA_SAFETY_ERROR_CODES,
+  RECOVERABLE_DATA_SAFETY_ERROR_CODES,
+} from "./data-safety.js";
 import type { LinearErrorCode } from "./linear.js";
+
+const startupDiagnosticBase = z.object({
+  message: z.string().min(1),
+});
+
+const plainStartupDiagnosticSchema = startupDiagnosticBase.extend({
+  code: z.enum([...PLAIN_DATA_SAFETY_ERROR_CODES, "data_directory_invalid", "startup_failed"]),
+  backup_path: z.null(),
+  available_bytes: z.null(),
+  required_bytes: z.null(),
+});
+
+const recoverableStartupDiagnosticSchema = startupDiagnosticBase.extend({
+  code: z.enum(RECOVERABLE_DATA_SAFETY_ERROR_CODES),
+  backup_path: z.string().nullable(),
+  available_bytes: z.null(),
+  required_bytes: z.null(),
+});
+
+const lowDiskStartupDiagnosticSchema = startupDiagnosticBase.extend({
+  code: z.literal("low_disk"),
+  backup_path: z.null(),
+  available_bytes: z.number().int().nonnegative(),
+  required_bytes: z.number().int().nonnegative(),
+});
+
+export const desktopStartupDiagnosticSchema = z.discriminatedUnion("code", [
+  plainStartupDiagnosticSchema,
+  recoverableStartupDiagnosticSchema,
+  lowDiskStartupDiagnosticSchema,
+]);
+export type DesktopStartupDiagnostic = z.infer<typeof desktopStartupDiagnosticSchema>;
 
 export type LinearVaultOperationResult =
   | { ok: true; message: null }
