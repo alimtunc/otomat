@@ -30,6 +30,7 @@ import {
   type AgentSessionContract,
   type CompeteGroupContract,
   type IssueContract,
+  type IssueExecution,
   type ProjectContract,
   type PullRequestContract,
   type RepositoryContract,
@@ -68,8 +69,8 @@ export function toRepository(row: RepositoryRow): RepositoryContract {
   return repositoryContractSchema.parse(row);
 }
 
-export function toIssue(row: IssueRow): IssueContract {
-  return issueContractSchema.parse(row);
+export function toIssue(row: IssueRow, execution: IssueExecution): IssueContract {
+  return issueContractSchema.parse({ ...row, execution });
 }
 
 export function toRun(row: RunRow): RunContract {
