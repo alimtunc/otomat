@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 
-import type { SupportBundleHealth } from "#main/data-safety/support-bundle";
-import { exportSupportBundle } from "#main/data-safety/support-exporter";
+import type { SupportBundleHealth } from "#main/data-safety/support/bundle";
+import { exportSupportBundle } from "#main/data-safety/support/exporter";
 
 const HEALTH = {
   status: "ok",

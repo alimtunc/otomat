@@ -28,7 +28,7 @@ vi.mock("node:fs", async (importOriginal) => {
   };
 });
 
-import { writeSupportBundleAtomically } from "#main/data-safety/support-bundle-file";
+import { writeSupportBundleAtomically } from "#main/data-safety/support/bundle-file";
 
 let scratch: string | null = null;
 

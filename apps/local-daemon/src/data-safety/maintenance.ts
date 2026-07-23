@@ -1,9 +1,10 @@
 import { restoreDatabaseBackup } from "@otomat/db";
 
-export async function runRestoreMaintenance(dbPath: string, backupPath: string): Promise<string> {
+/** Returns the directory holding the replaced database, or null when there was none. */
+export async function runRestoreMaintenance(
+  dbPath: string,
+  backupPath: string,
+): Promise<string | null> {
   const restored = await restoreDatabaseBackup(dbPath, backupPath);
-  return `[otomat-maintenance] ${JSON.stringify({
-    action: "restore",
-    ...(restored.preservedPath === null ? {} : { preserved_path: restored.preservedPath }),
-  })}`;
+  return restored.preservedPath;
 }

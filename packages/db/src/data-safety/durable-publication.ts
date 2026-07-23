@@ -1,7 +1,7 @@
 import { closeSync, constants, fsyncSync, linkSync, openSync, renameSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 
-import { collectCleanupFailure } from "./errors.js";
+import { collectCleanupFailure, throwCollectedFailures } from "./errors.js";
 
 function durablePublicationFailure(
   synchronizationFailure: unknown,
@@ -23,10 +23,7 @@ export function syncManagedPath(path: string): void {
     failures.push(error);
   }
   collectCleanupFailure(failures, () => closeSync(descriptor));
-  if (failures.length === 1) throw failures[0];
-  if (failures.length > 1) {
-    throw new AggregateError(failures, "Path synchronization and handle cleanup both failed.");
-  }
+  throwCollectedFailures(failures, "Path synchronization and handle cleanup both failed.");
 }
 
 export function publishPathDurably(source: string, destination: string): void {

@@ -49,7 +49,7 @@ vi.mock("#db/data-safety/portable-database", async (importOriginal) => {
 });
 
 import { createConsistentBackup } from "#db/data-safety/backup";
-import { MigrationAssetsReadError } from "#db/data-safety/metadata";
+import { MigrationRuntimeError } from "#db/data-safety/metadata";
 import { prepareDatabase } from "#db/data-safety/prepare";
 import { restoreDatabaseBackup } from "#db/data-safety/restore";
 
@@ -126,6 +126,6 @@ it("does not present migration-assets failure as a repeatable restore action", a
   injectedFailure.migrationAssets = true;
 
   await expect(restoreDatabaseBackup(dbPath, backupPath)).rejects.toBeInstanceOf(
-    MigrationAssetsReadError,
+    MigrationRuntimeError,
   );
 });

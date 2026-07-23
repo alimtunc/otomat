@@ -4,7 +4,7 @@ import { dirname, resolve } from "node:path";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 
 import { createClient } from "./client.js";
-import { collectCleanupFailure } from "./data-safety/errors.js";
+import { collectCleanupFailure, throwCollectedFailures } from "./data-safety/errors.js";
 import { migrationsFolder } from "./migrations-folder.js";
 
 /** Resolved DB file path: `OTOMAT_DB_PATH` when set, else `.data/otomat.db` under the current working directory. */
@@ -21,10 +21,7 @@ function applyMigrations(dbPath: string, fileMustExist: boolean): void {
     failures.push(error);
   }
   collectCleanupFailure(failures, () => sqlite.close());
-  if (failures.length === 1) throw failures[0];
-  if (failures.length > 1) {
-    throw new AggregateError(failures, "Database migration and handle cleanup both failed.");
-  }
+  throwCollectedFailures(failures, "Database migration and handle cleanup both failed.");
 }
 
 export function runMigrations(dbPath: string): void {

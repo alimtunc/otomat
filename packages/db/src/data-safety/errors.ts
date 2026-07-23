@@ -19,7 +19,7 @@ interface LowDiskDataSafetyErrorOptions extends ErrorOptions {
   requiredBytes: number;
 }
 
-export type DataSafetyErrorDetails =
+type DataSafetyErrorDetails =
   | {
       code: PlainDataSafetyErrorCode;
       backupPath: null;
@@ -101,6 +101,41 @@ export class DataSafetyError extends Error {
   }
 }
 
+function aggregateCause(failures: unknown[]): unknown {
+  return failures.length === 1
+    ? failures[0]
+    : new AggregateError(failures, "The data-safety operation and its cleanup both failed.");
+}
+
+/** Settles a failure already classified as a `DataSafetyError`, keeping its code and message. */
+export function preserveClassifiedFailure(
+  source: DataSafetyError,
+  secondaryFailures: unknown[],
+  options: RecoverableDataSafetyErrorOptions = {},
+): DataSafetyError {
+  const needsKnownBackupPath =
+    isRecoverableDataSafetyErrorCode(source.code) &&
+    source.backupPath === null &&
+    options.backupPath != null;
+  if (secondaryFailures.length === 0 && !needsKnownBackupPath) return source;
+  const cause = aggregateCause([source, ...secondaryFailures]);
+  const details = source.details;
+  if (details.code === "low_disk") {
+    return new DataSafetyError("low_disk", source.message, {
+      availableBytes: details.availableBytes,
+      requiredBytes: details.requiredBytes,
+      cause,
+    });
+  }
+  if (isRecoverableDataSafetyErrorCode(details.code)) {
+    return new DataSafetyError(details.code, source.message, {
+      backupPath: details.backupPath ?? options.backupPath,
+      cause,
+    });
+  }
+  return new DataSafetyError(details.code, source.message, { cause });
+}
+
 export function preserveDataSafetyFailure(
   primary: unknown,
   secondaryFailures: unknown[],
@@ -108,40 +143,27 @@ export function preserveDataSafetyFailure(
   fallbackMessage: string,
   options: RecoverableDataSafetyErrorOptions = {},
 ): DataSafetyError {
-  const source = primary instanceof DataSafetyError ? primary : null;
-  const needsKnownBackupPath =
-    source !== null &&
-    isRecoverableDataSafetyErrorCode(source.code) &&
-    source.backupPath === null &&
-    options.backupPath != null;
-  if (secondaryFailures.length === 0 && source !== null && !needsKnownBackupPath) return source;
-  const failures = [primary, ...secondaryFailures];
-  const cause =
-    failures.length === 1
-      ? failures[0]
-      : new AggregateError(failures, "The data-safety operation and its cleanup both failed.");
-  if (source?.details.code === "low_disk") {
-    return new DataSafetyError("low_disk", source.message, {
-      availableBytes: source.details.availableBytes,
-      requiredBytes: source.details.requiredBytes,
+  if (primary instanceof DataSafetyError) {
+    return preserveClassifiedFailure(primary, secondaryFailures, options);
+  }
+  const cause = aggregateCause([primary, ...secondaryFailures]);
+  if (isRecoverableDataSafetyErrorCode(fallbackCode)) {
+    return new DataSafetyError(fallbackCode, fallbackMessage, {
+      backupPath: options.backupPath,
       cause,
     });
   }
-  const code = source?.code ?? fallbackCode;
-  const message = source?.message ?? fallbackMessage;
-  if (code === "low_disk") {
-    throw new Error("A low-disk failure reached non-capacity recovery.", { cause });
-  }
-  if (isRecoverableDataSafetyErrorCode(code)) {
-    return new DataSafetyError(code, message, {
-      backupPath: source?.backupPath ?? options.backupPath,
-      cause,
-    });
-  }
-  if (isPlainDataSafetyErrorCode(code)) {
-    return new DataSafetyError(code, message, { cause });
+  if (isPlainDataSafetyErrorCode(fallbackCode)) {
+    return new DataSafetyError(fallbackCode, fallbackMessage, { cause });
   }
   throw new Error("An unknown data-safety error reached recovery.", { cause });
+}
+
+/** Rethrows a lone failure by identity so its classification survives; aggregates several. */
+export function throwCollectedFailures(failures: unknown[], message: string): void {
+  if (failures.length === 0) return;
+  if (failures.length === 1) throw failures[0];
+  throw new AggregateError(failures, message);
 }
 
 export function collectCleanupFailure(failures: unknown[], cleanup: () => void): void {
@@ -156,7 +178,7 @@ export function throwIfUnclassifiedFailure(
   primary: unknown,
   secondaryFailures: unknown[],
   message: string,
-): void {
+): asserts primary is DataSafetyError {
   if (primary instanceof DataSafetyError) return;
   if (secondaryFailures.length === 0) throw primary;
   throw new AggregateError([primary, ...secondaryFailures], message, { cause: primary });

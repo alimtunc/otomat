@@ -17,12 +17,15 @@ const SENSITIVE_ASSIGNMENT = new RegExp(
   `(\\b${CREDENTIAL_FIELD_PATTERN}\\b\\s*[:=]\\s*)("(?:\\\\.|[^"\\\\])*"|'(?:\\\\.|[^'\\\\])*'|[^\\s,}]+)`,
   "gi",
 );
+// The `[REDACTED]` placeholder must not re-open a structured match: log text is
+// redacted again on read and on bundle export, and a second pass would eat the
+// rest of the line, destroying the diagnostics that shared it.
 const STRUCTURED_CREDENTIAL_TO_LINE_END = new RegExp(
-  `((?:"${CREDENTIAL_FIELD_PATTERN}"|'${CREDENTIAL_FIELD_PATTERN}'|\\b${CREDENTIAL_FIELD_PATTERN}\\b)\\s*[:=]\\s*)[\\[{][^\\r\\n]*`,
+  `((?:"${CREDENTIAL_FIELD_PATTERN}"|'${CREDENTIAL_FIELD_PATTERN}'|\\b${CREDENTIAL_FIELD_PATTERN}\\b)\\s*[:=]\\s*)(?:\\{|\\[(?!REDACTED\\]))[^\\r\\n]*`,
   "gi",
 );
 const PROMPT_TO_LINE_END = new RegExp(
-  `((?:"${PROMPT_FIELD_PATTERN}"|'${PROMPT_FIELD_PATTERN}'|\\b${PROMPT_FIELD_PATTERN}\\b)\\s*[:=]\\s*|--prompt\\s+)[^\\r\\n]*`,
+  `((?:"${PROMPT_FIELD_PATTERN}"|'${PROMPT_FIELD_PATTERN}'|\\b${PROMPT_FIELD_PATTERN}\\b)\\s*[:=]\\s*|--prompt\\s+)(?!\\s*\\[REDACTED\\]$)[^\\r\\n]*`,
   "gi",
 );
 

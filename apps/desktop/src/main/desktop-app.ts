@@ -9,7 +9,6 @@ import { resolveUserPath } from "#shared/user-path";
 
 import { buildCsp } from "./csp.js";
 import { findLatestManagedBackup } from "./data-safety/index.js";
-import { redactLogText } from "./data-safety/redaction.js";
 import { createDesktopRuntime, type DesktopRuntime } from "./desktop-runtime.js";
 import { DesktopSupport } from "./desktop-support.js";
 import { registerIpc, type IpcState } from "./ipc.js";
@@ -18,6 +17,7 @@ import { resolveAppPaths, type AppPaths } from "./paths.js";
 import { serveAppScheme } from "./protocol.js";
 import { hardenWebContents } from "./security.js";
 import { describeStartupFailure, isRecoverableStartupDiagnostic } from "./startup-failure.js";
+import { StartupLogSink } from "./startup-log-sink.js";
 import { createCockpitWindow, createSplashWindow } from "./windows.js";
 
 function unavailableLinear(): LinearVaultOperationResult {
@@ -37,9 +37,8 @@ export class DesktopApp {
   private cockpit: BrowserWindow | null = null;
   private isQuitting = false;
   private operation: "restoring" | "starting" | null = null;
-  private reportedLogFailure = false;
   private readonly rejectedBackupPaths = new Set<string>();
-  private startupLog = "";
+  private readonly log = new StartupLogSink(() => this.runtime?.desktopLog ?? null);
 
   constructor() {
     this.devServer = process.env[DEV_SERVER_ENV] ?? null;
@@ -49,10 +48,11 @@ export class DesktopApp {
     this.userData = app.getPath("userData");
     this.support = new DesktopSupport({
       daemonUrl: () => this.ipcState.daemonUrl,
-      desktopLog: () => this.runtime?.desktopLog ?? null,
-      daemonLog: () => this.runtime?.daemonLog ?? null,
-      startupLog: () => this.startupLog,
-      log: (message) => this.logDesktop(message),
+      logs: () => ({
+        desktop: `${this.log.read()}${this.runtime?.desktopLog.read() ?? ""}`,
+        daemon: this.runtime?.daemonLog.read() ?? "",
+      }),
+      log: (message) => this.log.write(message),
     });
   }
 
@@ -99,7 +99,7 @@ export class DesktopApp {
       })
       .catch(() => {
         this.isQuitting = false;
-        this.logDesktop("Daemon stop failed; desktop shutdown remains blocked for retry.");
+        this.log.write("Daemon stop failed; desktop shutdown remains blocked for retry.");
       });
     return true;
   }
@@ -125,7 +125,7 @@ export class DesktopApp {
     } catch (error) {
       this.ipcState.daemonUrl = "";
       this.diagnostic = this.withAvailableBackup(describeStartupFailure(error));
-      this.logDesktop(`${this.diagnostic.code}: ${this.diagnostic.message}`);
+      this.log.write(`${this.diagnostic.code}: ${this.diagnostic.message}`);
       this.sendStatus({ phase: "failed", diagnostic: this.diagnostic });
     } finally {
       if (this.operation === "starting") this.operation = null;
@@ -171,31 +171,16 @@ export class DesktopApp {
       const restoreDiagnostic = describeStartupFailure(error);
       if (restoreDiagnostic.code === "invalid_backup") {
         this.rejectedBackupPaths.add(backupPath);
-        this.logDesktop(`${restoreDiagnostic.code}: ${restoreDiagnostic.message}`);
+        this.log.write(`${restoreDiagnostic.code}: ${restoreDiagnostic.message}`);
         this.diagnostic = this.withAvailableBackup({ ...diagnostic, backup_path: null });
       } else {
         this.diagnostic = this.withAvailableBackup(restoreDiagnostic);
       }
-      this.logDesktop(`${this.diagnostic.code}: ${this.diagnostic.message}`);
+      this.log.write(`${this.diagnostic.code}: ${this.diagnostic.message}`);
       this.sendStatus({ phase: "failed", diagnostic: this.diagnostic });
     } finally {
       if (this.operation === "restoring") this.operation = null;
     }
-  }
-
-  private logDesktop(message: string): void {
-    if (this.runtime !== null) {
-      try {
-        this.runtime.desktopLog.write(message);
-        return;
-      } catch {
-        if (!this.reportedLogFailure) {
-          this.reportedLogFailure = true;
-          console.error("[otomat-desktop] desktop log write failed");
-        }
-      }
-    }
-    this.startupLog = `${this.startupLog}${redactLogText(message).trimEnd()}\n`.slice(-65_536);
   }
 
   private withAvailableBackup(diagnostic: DesktopStartupDiagnostic): DesktopStartupDiagnostic {
@@ -216,7 +201,7 @@ export class DesktopApp {
         ),
       };
     } catch {
-      this.logDesktop("Managed backup discovery failed.");
+      this.log.write("Managed backup discovery failed.");
       return diagnostic;
     }
   }
@@ -240,7 +225,8 @@ export class DesktopApp {
     if (this.devServer === null) return [APP_ORIGIN];
     try {
       return [new URL(this.devServer).origin];
-    } catch {
+    } catch (error) {
+      this.log.write(`Ignored an invalid ${DEV_SERVER_ENV} value: ${String(error)}`);
       return [];
     }
   }

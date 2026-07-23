@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { copyFileSync, readdirSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -33,7 +33,10 @@ it("restores a managed backup without starting the HTTP daemon", async () => {
   changed.sqlite.prepare("UPDATE evidence SET value = ?").run("after");
   changed.sqlite.close();
 
-  await expect(runRestoreMaintenance(dbPath, backupPath)).resolves.toContain('"action":"restore"');
+  const preservedPath = await runRestoreMaintenance(dbPath, backupPath);
+  if (preservedPath === null) throw new Error("Restore did not report a preserved database");
+  expect(preservedPath).toContain("pre-restore-");
+  expect(readdirSync(preservedPath)).toContain("otomat.db");
   const restored = createClient(dbPath);
   try {
     expect(restored.sqlite.prepare("SELECT value FROM evidence").pluck().get()).toBe("before");
