@@ -40,7 +40,13 @@ describe("CockpitTabs", () => {
     const { container, cleanup } = await mount(<CockpitTabs runId="run-1" />);
 
     const anchors = [...container.querySelectorAll("a")];
-    expect(anchors.map((anchor) => anchor.textContent)).toEqual(["Timeline", "Logs", "Diff", "PR"]);
+    expect(anchors.map((anchor) => anchor.textContent)).toEqual([
+      "Timeline",
+      "Report",
+      "Logs",
+      "Diff",
+      "PR",
+    ]);
     expect(container.querySelectorAll("button")).toHaveLength(0);
     for (const anchor of anchors) {
       expect(anchor.hasAttribute("type")).toBe(false);

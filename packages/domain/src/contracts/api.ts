@@ -6,6 +6,7 @@
  * @packageDocumentation
  */
 export * from "./agent-profile.js";
+export * from "./completion-report.js";
 export * from "./github.js";
 export * from "./health.js";
 export * from "./issue.js";

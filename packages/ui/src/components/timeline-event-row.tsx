@@ -22,6 +22,7 @@ function EventTime({ at }: { at: Date | string | number }) {
 }
 
 export interface TimelineEventRowProps {
+  id?: string;
   type: EventType;
   provenance: EventSource;
   summary: ReactNode;
@@ -34,6 +35,7 @@ export interface TimelineEventRowProps {
 }
 
 export function TimelineEventRow({
+  id,
   type,
   provenance,
   summary,
@@ -73,6 +75,7 @@ export function TimelineEventRow({
 
   return (
     <div
+      id={id}
       className={cn("group", className)}
       style={{
         display: "grid",

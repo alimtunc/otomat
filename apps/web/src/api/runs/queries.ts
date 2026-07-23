@@ -48,3 +48,10 @@ export function useRunDetail(runId: string) {
     },
   });
 }
+
+export function useRunCompletionReport(runId: string) {
+  return useQuery({
+    queryKey: queryKeys.runCompletionReport(runId),
+    queryFn: () => daemon.getRunCompletionReport(runId),
+  });
+}

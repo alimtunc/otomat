@@ -10,6 +10,11 @@ export interface ReadRunEventsOptions {
   limit?: number;
 }
 
+export interface RunEventProjection {
+  events: EventEnvelope[];
+  corruptEventCount: number;
+}
+
 /**
  * Reads a run's persisted events in `seq` order — the projection OTO-9 serves
  * over SSE. The persisted ledger, never the adapter's in-memory state, is the
@@ -21,6 +26,14 @@ export function readRunEvents(
   runId: string,
   options: ReadRunEventsOptions = {},
 ): EventEnvelope[] {
+  return readRunEventProjection(db, runId, options).events;
+}
+
+export function readRunEventProjection(
+  db: Db,
+  runId: string,
+  options: ReadRunEventsOptions = {},
+): RunEventProjection {
   const where =
     options.afterSeq === undefined
       ? eq(runtimeEvents.run_id, runId)
@@ -28,7 +41,11 @@ export function readRunEvents(
 
   const base = db.select().from(runtimeEvents).where(where).orderBy(asc(runtimeEvents.seq));
   const rows = options.limit === undefined ? base.all() : base.limit(options.limit).all();
-  return rows.map(toEnvelope).filter((event): event is EventEnvelope => event !== null);
+  const events = rows.map(toEnvelope);
+  return {
+    events: events.filter((event): event is EventEnvelope => event !== null),
+    corruptEventCount: events.filter((event) => event === null).length,
+  };
 }
 
 function toEnvelope(row: typeof runtimeEvents.$inferSelect): EventEnvelope | null {

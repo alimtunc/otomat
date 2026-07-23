@@ -4,7 +4,6 @@
   "apps/local-daemon/src/github/publication.ts": 457,
   "apps/local-daemon/src/linear/service.ts": 265,
   "apps/local-daemon/src/runtime/providers/fake/adapter.ts": 258,
-  "apps/web/src/lib/test-evidence.ts": 252,
   "packages/domain/src/contracts/linear.ts": 263,
   "packages/ui/src/lib/status.ts": 278
 }

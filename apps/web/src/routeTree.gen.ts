@@ -33,6 +33,7 @@ import { Route as RunsRunIdIndexRouteImport } from './routes/runs/$runId/index'
 import { Route as RunsRunIdDiffRouteImport } from './routes/runs/$runId/diff'
 import { Route as RunsRunIdLogsRouteImport } from './routes/runs/$runId/logs'
 import { Route as RunsRunIdPrRouteImport } from './routes/runs/$runId/pr'
+import { Route as RunsRunIdReportRouteImport } from './routes/runs/$runId/report'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -154,6 +155,11 @@ const RunsRunIdPrRoute = RunsRunIdPrRouteImport.update({
   path: '/pr',
   getParentRoute: () => RunsRunIdRouteRoute,
 } as any)
+const RunsRunIdReportRoute = RunsRunIdReportRouteImport.update({
+  id: '/report',
+  path: '/report',
+  getParentRoute: () => RunsRunIdRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -179,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
+  '/runs/$runId/report': typeof RunsRunIdReportRoute
   '/runs/$runId/': typeof RunsRunIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -202,6 +209,7 @@ export interface FileRoutesByTo {
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
+  '/runs/$runId/report': typeof RunsRunIdReportRoute
   '/runs/$runId': typeof RunsRunIdIndexRoute
 }
 export interface FileRoutesById {
@@ -229,6 +237,7 @@ export interface FileRoutesById {
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
+  '/runs/$runId/report': typeof RunsRunIdReportRoute
   '/runs/$runId/': typeof RunsRunIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -257,6 +266,7 @@ export interface FileRouteTypes {
     | '/runs/$runId/diff'
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
+    | '/runs/$runId/report'
     | '/runs/$runId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/runs/$runId/diff'
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
+    | '/runs/$runId/report'
     | '/runs/$runId'
   id:
     | '__root__'
@@ -306,6 +317,7 @@ export interface FileRouteTypes {
     | '/runs/$runId/diff'
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
+    | '/runs/$runId/report'
     | '/runs/$runId/'
   fileRoutesById: FileRoutesById
 }
@@ -493,6 +505,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsRunIdPrRouteImport
       parentRoute: typeof RunsRunIdRouteRoute
     }
+    '/runs/$runId/report': {
+      id: '/runs/$runId/report'
+      path: '/report'
+      fullPath: '/runs/$runId/report'
+      preLoaderRoute: typeof RunsRunIdReportRouteImport
+      parentRoute: typeof RunsRunIdRouteRoute
+    }
   }
 }
 
@@ -537,6 +556,7 @@ interface RunsRunIdRouteRouteChildren {
   RunsRunIdDiffRoute: typeof RunsRunIdDiffRoute
   RunsRunIdLogsRoute: typeof RunsRunIdLogsRoute
   RunsRunIdPrRoute: typeof RunsRunIdPrRoute
+  RunsRunIdReportRoute: typeof RunsRunIdReportRoute
   RunsRunIdIndexRoute: typeof RunsRunIdIndexRoute
 }
 
@@ -544,6 +564,7 @@ const RunsRunIdRouteRouteChildren: RunsRunIdRouteRouteChildren = {
   RunsRunIdDiffRoute: RunsRunIdDiffRoute,
   RunsRunIdLogsRoute: RunsRunIdLogsRoute,
   RunsRunIdPrRoute: RunsRunIdPrRoute,
+  RunsRunIdReportRoute: RunsRunIdReportRoute,
   RunsRunIdIndexRoute: RunsRunIdIndexRoute,
 }
 

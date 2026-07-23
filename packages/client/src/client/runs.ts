@@ -1,5 +1,6 @@
 import {
   runContractSchema,
+  runCompletionReportResponseSchema,
   runDetailSchema,
   runDiffResponseSchema,
   type FollowUpRunRequest,
@@ -19,6 +20,11 @@ export function createRunsClient(config: DaemonClientConfig) {
     },
     async getRun(id: string) {
       return runDetailSchema.parse(await getJson(config, `/api/runs/${encodeURIComponent(id)}`));
+    },
+    async getRunCompletionReport(id: string) {
+      return runCompletionReportResponseSchema.parse(
+        await getJson(config, `/api/runs/${encodeURIComponent(id)}/report`),
+      );
     },
     async startRun(request: StartRunRequest) {
       return runContractSchema.parse(await postJson(config, "/api/runs", request));

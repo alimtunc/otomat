@@ -3,6 +3,7 @@ import { Link, useMatchRoute } from "@tanstack/react-router";
 
 const COCKPIT_TABS = [
   { value: "timeline", icon: "list-tree", to: "/runs/$runId", label: "Timeline" },
+  { value: "report", icon: "list-todo", to: "/runs/$runId/report", label: "Report" },
   { value: "logs", icon: "terminal", to: "/runs/$runId/logs", label: "Logs" },
   { value: "diff", icon: "git-compare", to: "/runs/$runId/diff", label: "Diff" },
   { value: "pr", icon: "git-pull-request", to: "/runs/$runId/pr", label: "PR" },
