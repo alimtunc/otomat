@@ -8,6 +8,7 @@
  * @packageDocumentation
  */
 export * from "./api.js";
+export * from "./data-safety.js";
 export * from "./desktop.js";
 export * from "./diff.js";
 export {

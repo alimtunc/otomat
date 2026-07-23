@@ -11,17 +11,17 @@ const SECURE_WEB_PREFERENCES = {
 } as const;
 
 /** Small frameless window shown immediately while the daemon boots; it never touches the daemon. */
-export function createSplashWindow(paths: AppPaths): BrowserWindow {
+export async function createSplashWindow(paths: AppPaths): Promise<BrowserWindow> {
   const window = new BrowserWindow({
     width: 460,
-    height: 300,
+    height: 420,
     resizable: false,
     frame: false,
     title: "Otomat",
     backgroundColor: "#0b0b0e",
     webPreferences: { ...SECURE_WEB_PREFERENCES, preload: paths.splashPreload },
   });
-  void window.loadFile(paths.splashHtml);
+  await window.loadFile(paths.splashHtml);
   return window;
 }
 

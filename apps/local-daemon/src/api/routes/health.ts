@@ -13,6 +13,7 @@ export function createHealthRoutes(deps: ApiDeps): Hono {
       version: deps.version,
       started_at: deps.startedAt,
       db_path: deps.dbPath,
+      schema: deps.schemaMetadata(),
     };
     return c.json(body);
   });

@@ -17,14 +17,15 @@ apps/
       api/             # HTTP routes + SSE handlers          (OTO-9)
       events/          # event ledger + stream-to-file tailer (OTO-7)
       git/             # worktree/branch lifecycle + diff      (OTO-8)
+      data-safety/     # startup diagnostics + restore maintenance mode (OTO-29)
       review/          # review slice: diff snapshot + comment anchoring (OTO-11)
       runtime/         # runtime adapter contract + fake adapter (OTO-6)
       supervisor/      # process supervisor + pid reconciliation (OTO-10)
       index.ts server.ts bootstrap.ts   # composition root / entrypoint
-    tests/             # api/ events/ git/ runtime/ supervisor/ + support/
+    tests/             # agents/ api/ data-safety/ events/ git/ runtime/ supervisor/ + support/
   desktop/             # Electron alpha shell: manages the local-daemon lifecycle, serves the web build
     src/
-      main/            # app lifecycle, daemon spawn, app:// protocol, windows, secure IPC
+      main/            # app lifecycle, daemon spawn, data layout/recovery, logs, support export
       preload/         # contextBridge preloads (cockpit + splash)
       shared/          # pure lifecycle logic (free port, PATH resolve, health poll, env, terminate)
 
@@ -63,9 +64,9 @@ Why each current package qualifies:
 | `client`          | Typed daemon API/SSE client reused by `web` and future frontend apps.             |
 | `tooling`         | Shared build/lint/test/boundary config.                                           |
 
-Why `api`, `events`, `git`, `runtime` are **not** packages: each was consumed only
+Why `api`, `data-safety`, `events`, `git`, `runtime` are **not** packages: each was consumed only
 by the local daemon (and each other) — no frontend or cross-app consumer — so they
-are internal daemon modules, consumed through `#api`/`#events`/`#git`/`#runtime`
+are internal daemon modules, consumed through `#api`/`#data-safety`/`#events`/`#git`/`#runtime`
 subpath imports. `supervisor` (OTO-10) and `review` (OTO-11) live the same way
 under `apps/local-daemon/src/<module>`, consumed through `#supervisor`/`#review`.
 
@@ -78,7 +79,9 @@ under `apps/local-daemon/src/<module>`, consumed through `#supervisor`/`#review`
 | `apps/local-daemon/src/runtime`   | OTO-6                    | Push-sink adapter contract and fake adapter.                          |
 | `apps/local-daemon/src/events`    | OTO-7                    | Append-only event store, stream-to-file ingestion, projections.       |
 | `apps/local-daemon/src/git`       | OTO-8                    | Worktree/branch ownership, canonical diff, cleanup primitives.        |
+| `apps/local-daemon/src/data-safety` | OTO-29                 | Safe startup diagnostics and the one-shot restore maintenance mode.   |
 | `apps/local-daemon/src/api`       | OTO-9                    | Local daemon routes and SSE surface.                                  |
+| `apps/desktop/src/main/data-safety` | OTO-29                 | Versioned data layout, redacted rotating logs, support bundle export. |
 | `apps/local-daemon/src/supervisor`| OTO-10                   | Process supervision, pid reconciliation (lands as a daemon module).   |
 | `apps/local-daemon/src/review`    | OTO-11                   | Review slice: server-side diff snapshot, comment anchoring, fix-resume.|
 | `packages/domain`                 | OTO-5                    | Pure TS. Canonical types, state machines, event envelope, contracts.  |
