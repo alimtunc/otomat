@@ -16,17 +16,14 @@ import { inspectMigrationHistory, throwIfMigrationRuntimeFailure } from "./metad
 import {
   finalizePortableDatabase,
   removeDatabaseArtifacts,
-  removeOrphanedDatabaseArtifacts,
   removeDatabaseSidecars,
 } from "./portable-database.js";
 import {
-  databaseArtifactBytes,
   existingDatabaseArtifacts,
   preserveAndInstallRestore,
   type RestoreInstallation,
 } from "./restore-installation.js";
-import { createRestoreTemporaryPath, isRestoreTemporaryName } from "./restore-paths.js";
-import { AmbiguousRestoreJournalError, recoverInterruptedRestore } from "./restore-recovery.js";
+import { createRestoreTemporaryPath, removeOrphanedRestoreCopies } from "./restore-paths.js";
 
 function closeRestoreSource(source: DbClient, backupPath: string, failures: unknown[]): void {
   const failureCount = failures.length;
@@ -40,9 +37,8 @@ async function createValidatedRestoreCopy(
   dbPath: string,
   backupPath: string,
   temporaryPath: string,
-  ambiguousRestoreCopies: readonly string[] | null,
 ): Promise<ReturnType<typeof existingDatabaseArtifacts>> {
-  const currentArtifacts = existingDatabaseArtifacts(dbPath, ambiguousRestoreCopies);
+  const currentArtifacts = existingDatabaseArtifacts(dbPath);
   let source: DbClient;
   try {
     source = createClient(backupPath, { readonly: true, fileMustExist: true });
@@ -106,11 +102,7 @@ async function createValidatedRestoreCopy(
   try {
     assertSufficientDiskSpace(
       availableDiskBytes(dirname(dbPath)),
-      requiredRestoreBytes(
-        source.sqlite,
-        databaseArtifactBytes(currentArtifacts),
-        hasPendingMigrations,
-      ),
+      requiredRestoreBytes(source.sqlite, hasPendingMigrations),
     );
     await source.sqlite.backup(temporaryPath);
   } catch (error) {
@@ -157,37 +149,12 @@ export async function restoreDatabaseBackup(
   backupPath: string,
   now = new Date(),
 ): Promise<RestoreInstallation> {
-  let ambiguousRestoreCopies: string[] | null = null;
-  try {
-    recoverInterruptedRestore(dbPath);
-  } catch (error) {
-    if (!(error instanceof AmbiguousRestoreJournalError)) throw error;
-    ambiguousRestoreCopies = error.restoreCopies;
-  }
+  removeOrphanedRestoreCopies(dbPath);
   assertManagedBackup(dbPath, backupPath);
-  const databaseDirectory = dirname(dbPath);
-  if (ambiguousRestoreCopies === null) {
-    try {
-      removeOrphanedDatabaseArtifacts(databaseDirectory, (filename) =>
-        isRestoreTemporaryName(dbPath, filename),
-      );
-    } catch (error) {
-      throw new DataSafetyError(
-        "restore_failed",
-        "Interrupted restore copies could not be cleaned before restoration.",
-        { backupPath, cause: error },
-      );
-    }
-  }
   const temporaryPath = createRestoreTemporaryPath(dbPath);
   let currentArtifacts: ReturnType<typeof existingDatabaseArtifacts>;
   try {
-    currentArtifacts = await createValidatedRestoreCopy(
-      dbPath,
-      backupPath,
-      temporaryPath,
-      ambiguousRestoreCopies,
-    );
+    currentArtifacts = await createValidatedRestoreCopy(dbPath, backupPath, temporaryPath);
   } catch (error) {
     const cleanupFailures: unknown[] = [];
     collectCleanupFailure(cleanupFailures, () => removeDatabaseArtifacts(temporaryPath));
@@ -208,7 +175,6 @@ export async function restoreDatabaseBackup(
     artifacts: currentArtifacts,
     backupPath,
     dbPath,
-    journalPublication: ambiguousRestoreCopies === null ? "create" : "replace",
     now,
     temporaryPath,
   });

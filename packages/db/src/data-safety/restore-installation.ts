@@ -1,28 +1,17 @@
 import { randomUUID } from "node:crypto";
-import { chmodSync, copyFileSync, lstatSync, mkdirSync, rmSync } from "node:fs";
+import { chmodSync, lstatSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 
 import { MANAGED_BACKUPS_DIRECTORY_NAME } from "@otomat/domain";
 
-import {
-  PathReplacementSyncError,
-  publishPathDurably,
-  replacePathDurably,
-  syncManagedPath,
-} from "./durable-publication.js";
+import { publishPathDurably, replacePathDurably, syncManagedPath } from "./durable-publication.js";
 import { collectCleanupFailure, DataSafetyError, preserveDataSafetyFailure } from "./errors.js";
 import { assertManagedBackupsDirectory } from "./managed-backups-directory.js";
-import { removeDatabaseArtifacts, removeDatabaseSidecars } from "./portable-database.js";
-import {
-  removeRestoreJournal,
-  restoreJournalPath,
-  writeRestoreJournal,
-} from "./restore-journal.js";
+import { removeDatabaseArtifacts } from "./portable-database.js";
 
 export interface RestoreArtifact {
   source: string;
   name: string;
-  size: number;
 }
 
 export interface RestoreInstallation {
@@ -33,30 +22,13 @@ export interface RestoreInstallationPlan {
   artifacts: RestoreArtifact[];
   backupPath: string;
   dbPath: string;
-  journalPublication: "create" | "replace";
   now: Date;
   temporaryPath: string;
 }
 
-export function finishInstalledRestore(dbPath: string): void {
-  removeDatabaseSidecars(dbPath);
-  syncManagedPath(dirname(dbPath));
-  removeRestoreJournal(dbPath);
-}
-
-export function existingDatabaseArtifacts(
-  dbPath: string,
-  ambiguousRestoreCopies: readonly string[] | null = null,
-): RestoreArtifact[] {
+export function existingDatabaseArtifacts(dbPath: string): RestoreArtifact[] {
   const artifacts: RestoreArtifact[] = [];
-  const sources = [dbPath, `${dbPath}-wal`, `${dbPath}-shm`];
-  if (ambiguousRestoreCopies !== null) {
-    sources.push(restoreJournalPath(dbPath));
-    for (const restoreCopy of ambiguousRestoreCopies) {
-      sources.push(restoreCopy, `${restoreCopy}-wal`, `${restoreCopy}-shm`);
-    }
-  }
-  for (const source of sources) {
+  for (const source of [dbPath, `${dbPath}-wal`, `${dbPath}-shm`]) {
     const stats = lstatSync(source, { throwIfNoEntry: false });
     if (stats === undefined) continue;
     if (!stats.isFile() || stats.isSymbolicLink()) {
@@ -65,24 +37,16 @@ export function existingDatabaseArtifacts(
         "The current database artifacts are not regular managed files.",
       );
     }
-    artifacts.push({ source, name: basename(source), size: stats.size });
-  }
-  if (
-    ambiguousRestoreCopies !== null &&
-    !artifacts.some((artifact) => artifact.source === restoreJournalPath(dbPath))
-  ) {
-    throw new DataSafetyError(
-      "restore_failed",
-      "The ambiguous restore journal disappeared before preservation.",
-    );
+    artifacts.push({ source, name: basename(source) });
   }
   return artifacts;
 }
 
-export function databaseArtifactBytes(artifacts: RestoreArtifact[]): number {
-  return artifacts.reduce((total, artifact) => total + artifact.size, 0);
-}
-
+/**
+ * Moves the current database and its sidecars aside as one set. A crash after any
+ * move leaves no database rather than a database stripped of its WAL, so recovery
+ * is an explicit `database_missing` prompt instead of a silently older database.
+ */
 function preserveDatabaseArtifacts(
   dbPath: string,
   artifacts: RestoreArtifact[],
@@ -95,25 +59,33 @@ function preserveDatabaseArtifacts(
     `pre-restore-${now.toISOString().replaceAll(":", "-")}-${randomUUID()}`,
   );
   const partialPath = `${preservedPath}.partial`;
+  const moved: RestoreArtifact[] = [];
   try {
     assertManagedBackupsDirectory(dirname(preservedPath));
-    mkdirSync(partialPath);
+    mkdirSync(partialPath, { mode: 0o700 });
     for (const artifact of artifacts) {
-      const destination = join(partialPath, artifact.name);
-      copyFileSync(artifact.source, destination);
-      chmodSync(destination, 0o600);
-      syncManagedPath(destination);
+      renameSync(artifact.source, join(partialPath, artifact.name));
+      moved.push(artifact);
     }
+    syncManagedPath(dirname(dbPath));
     publishPathDurably(partialPath, preservedPath);
     return preservedPath;
   } catch (error) {
-    const cleanupFailures: unknown[] = [];
-    collectCleanupFailure(cleanupFailures, () =>
-      rmSync(partialPath, { recursive: true, force: true }),
-    );
+    const rollbackFailures: unknown[] = [];
+    for (const artifact of moved.toReversed()) {
+      collectCleanupFailure(rollbackFailures, () =>
+        renameSync(join(partialPath, artifact.name), artifact.source),
+      );
+    }
+    // Only an emptied staging directory is removable; a partial rollback still holds user data.
+    if (rollbackFailures.length === 0) {
+      collectCleanupFailure(rollbackFailures, () =>
+        rmSync(partialPath, { recursive: true, force: true }),
+      );
+    }
     throw preserveDataSafetyFailure(
       error,
-      cleanupFailures,
+      rollbackFailures,
       "restore_failed",
       "The current database state could not be preserved.",
     );
@@ -123,6 +95,9 @@ function preserveDatabaseArtifacts(
 export function preserveAndInstallRestore(plan: RestoreInstallationPlan): RestoreInstallation {
   let preservedPath: string | null;
   try {
+    // Prove the staged copy is on disk before the current database is moved aside.
+    syncManagedPath(plan.temporaryPath);
+    chmodSync(plan.temporaryPath, 0o600);
     preservedPath = preserveDatabaseArtifacts(plan.dbPath, plan.artifacts, plan.now);
   } catch (error) {
     const cleanupFailures: unknown[] = [];
@@ -131,50 +106,22 @@ export function preserveAndInstallRestore(plan: RestoreInstallationPlan): Restor
       error,
       cleanupFailures,
       "restore_failed",
-      "Database restoration failed before journal publication.",
+      "Database restoration failed before the current database was preserved.",
       { backupPath: plan.backupPath },
     );
   }
-  let installed = false;
   try {
-    writeRestoreJournal(plan.dbPath, plan.temporaryPath, plan.journalPublication);
-    syncManagedPath(plan.temporaryPath);
-    chmodSync(plan.temporaryPath, 0o600);
     replacePathDurably(plan.temporaryPath, plan.dbPath);
-    installed = true;
-    finishInstalledRestore(plan.dbPath);
-    return { preservedPath };
   } catch (error) {
-    if (error instanceof PathReplacementSyncError) installed = true;
-    if (installed) {
-      throw preserveDataSafetyFailure(
-        error,
-        [],
-        "restore_failed",
-        "The restored database was installed but its recovery journal remains.",
-        { backupPath: plan.backupPath },
-      );
-    }
-    if (plan.journalPublication === "replace") {
-      throw preserveDataSafetyFailure(
-        error,
-        [],
-        "restore_failed",
-        "The explicit restore is journaled for recovery after installation failed.",
-        { backupPath: plan.backupPath },
-      );
-    }
-    const rollbackFailures: unknown[] = [];
-    collectCleanupFailure(rollbackFailures, () => removeRestoreJournal(plan.dbPath));
-    if (rollbackFailures.length === 0) {
-      collectCleanupFailure(rollbackFailures, () => removeDatabaseArtifacts(plan.temporaryPath));
-    }
+    const cleanupFailures: unknown[] = [];
+    collectCleanupFailure(cleanupFailures, () => removeDatabaseArtifacts(plan.temporaryPath));
     throw preserveDataSafetyFailure(
       error,
-      rollbackFailures,
+      cleanupFailures,
       "restore_failed",
-      "Database restoration failed.",
+      "The validated restore copy could not be installed. The preserved database is in the backups directory.",
       { backupPath: plan.backupPath },
     );
   }
+  return { preservedPath };
 }

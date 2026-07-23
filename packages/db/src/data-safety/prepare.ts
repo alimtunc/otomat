@@ -21,7 +21,7 @@ import { cleanupInterruptedInitializations, initializeDatabase } from "./initial
 import { assertDatabaseIntegrity } from "./integrity.js";
 import { inspectMigrationHistory, throwIfMigrationRuntimeFailure } from "./metadata.js";
 import { removeOrphanedDatabaseArtifacts } from "./portable-database.js";
-import { recoverInterruptedRestore } from "./restore-recovery.js";
+import { removeOrphanedRestoreCopies } from "./restore-paths.js";
 
 function databaseMarkerPath(dbPath: string): string {
   return `${dbPath}${DATABASE_INITIALIZED_MARKER_SUFFIX}`;
@@ -147,7 +147,7 @@ function inspectExistingDatabase(dbPath: string): { pending: boolean } {
 }
 
 export async function prepareDatabase(dbPath: string): Promise<void> {
-  recoverInterruptedRestore(dbPath);
+  removeOrphanedRestoreCopies(dbPath);
   cleanupInterruptedInitializations(dbPath);
   const markerPath = databaseMarkerPath(dbPath);
   const markerExists = databaseMarkerExists(markerPath);

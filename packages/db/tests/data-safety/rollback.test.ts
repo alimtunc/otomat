@@ -1,40 +1,25 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-const renameFailure = vi.hoisted(() => ({
-  failPreservationCopy: false,
-  installDestination: "",
-  journalRemovalPath: "",
-  rollbackDestination: "",
-}));
+const injected = vi.hoisted(() => ({ preservationTarget: "", installDestination: "" }));
 
 vi.mock("node:fs", async (importOriginal) => {
   const original = await importOriginal<typeof import("node:fs")>();
   return {
     ...original,
-    copyFileSync: (from: string, to: string): void => {
-      if (
-        to === renameFailure.rollbackDestination ||
-        (renameFailure.failPreservationCopy && to.includes("pre-restore-"))
-      ) {
-        throw new Error(`injected copy failure for ${to}`);
-      }
-      original.copyFileSync(from, to);
-    },
     renameSync: (from: string, to: string): void => {
-      if (to === renameFailure.installDestination || to === renameFailure.rollbackDestination) {
+      if (
+        to === injected.installDestination ||
+        (injected.preservationTarget !== "" &&
+          to.includes("pre-restore-") &&
+          to.endsWith(injected.preservationTarget))
+      ) {
         throw new Error(`injected rename failure for ${to}`);
       }
       original.renameSync(from, to);
-    },
-    rmSync: (...args: Parameters<typeof original.rmSync>): void => {
-      if (args[0] === renameFailure.journalRemovalPath) {
-        throw new Error(`injected journal removal failure for ${String(args[0])}`);
-      }
-      original.rmSync(...args);
     },
   };
 });
@@ -46,45 +31,50 @@ import { restoreDatabaseBackup } from "#db/data-safety/restore";
 
 let scratch: string | null = null;
 
+function preservedDirectory(root: string): string {
+  const name = readdirSync(join(root, "backups")).find((entry) => entry.startsWith("pre-restore-"));
+  if (name === undefined) throw new Error("Restore did not preserve the current database");
+  return join(root, "backups", name);
+}
+
+function stagedRestoreCopies(root: string): string[] {
+  return readdirSync(root).filter((name) => name.startsWith("otomat.db.restore-"));
+}
+
 afterEach(() => {
-  renameFailure.failPreservationCopy = false;
-  renameFailure.installDestination = "";
-  renameFailure.journalRemovalPath = "";
-  renameFailure.rollbackDestination = "";
+  injected.preservationTarget = "";
+  injected.installDestination = "";
   if (scratch !== null) rmSync(scratch, { recursive: true, force: true });
   scratch = null;
 });
 
-it("removes the staged restore copy when current-state preservation fails", async () => {
+it("returns the current database to its place when preservation fails part-way", async () => {
   scratch = mkdtempSync(join(tmpdir(), "otomat-preservation-failure-"));
   const dbPath = join(scratch, "otomat.db");
   await prepareDatabase(dbPath);
+  const live = createClient(dbPath, { fileMustExist: true });
+  live.sqlite.exec("CREATE TABLE evidence (value TEXT NOT NULL)");
+  live.sqlite.prepare("INSERT INTO evidence (value) VALUES (?)").run("preserved");
+  live.sqlite.close();
   const backupPath = await createConsistentBackup(dbPath, join(scratch, "backups"));
-  renameFailure.failPreservationCopy = true;
+  injected.preservationTarget = "otomat.db-wal";
 
   await expect(restoreDatabaseBackup(dbPath, backupPath)).rejects.toMatchObject({
     code: "restore_failed",
   });
-  expect(existsSync(`${dbPath}.restore-journal`)).toBe(false);
-  expect(readdirSync(scratch).some((name) => name.startsWith("otomat.db.restore-"))).toBe(false);
+  const reopened = createClient(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    expect(reopened.sqlite.prepare("SELECT value FROM evidence").pluck().get()).toBe("preserved");
+  } finally {
+    reopened.sqlite.close();
+  }
+  expect(stagedRestoreCopies(scratch)).toEqual([]);
+  expect(readdirSync(join(scratch, "backups")).some((name) => name.includes("pre-restore-"))).toBe(
+    false,
+  );
 });
 
-it("retains the restore copy when rollback cannot remove its journal", async () => {
-  scratch = mkdtempSync(join(tmpdir(), "otomat-restore-journal-rollback-"));
-  const dbPath = join(scratch, "otomat.db");
-  await prepareDatabase(dbPath);
-  const backupPath = await createConsistentBackup(dbPath, join(scratch, "backups"));
-  renameFailure.installDestination = dbPath;
-  renameFailure.journalRemovalPath = `${dbPath}.restore-journal`;
-
-  await expect(restoreDatabaseBackup(dbPath, backupPath)).rejects.toMatchObject({
-    code: "restore_failed",
-  });
-  expect(existsSync(`${dbPath}.restore-journal`)).toBe(true);
-  expect(readdirSync(scratch).some((name) => name.startsWith("otomat.db.restore-"))).toBe(true);
-});
-
-it("keeps the canonical database when atomic restore installation fails", async () => {
+it("keeps the whole current database in the backups directory when installation fails", async () => {
   scratch = mkdtempSync(join(tmpdir(), "otomat-restore-rollback-"));
   const dbPath = join(scratch, "otomat.db");
   await prepareDatabase(dbPath);
@@ -93,69 +83,42 @@ it("keeps the canonical database when atomic restore installation fails", async 
   live.sqlite.prepare("INSERT INTO evidence (value) VALUES (?)").run("preserved");
   live.sqlite.close();
   const backupPath = await createConsistentBackup(dbPath, join(scratch, "backups"));
-  renameFailure.installDestination = dbPath;
+  injected.installDestination = dbPath;
 
   await expect(restoreDatabaseBackup(dbPath, backupPath)).rejects.toMatchObject({
     code: "restore_failed",
+    backupPath,
   });
-  expect(existsSync(dbPath)).toBe(true);
-  const reopened = createClient(dbPath, { readonly: true, fileMustExist: true });
+  const preserved = createClient(join(preservedDirectory(scratch), "otomat.db"), {
+    readonly: true,
+    fileMustExist: true,
+  });
   try {
-    expect(reopened.sqlite.prepare("SELECT value FROM evidence").pluck().get()).toBe("preserved");
+    expect(preserved.sqlite.prepare("SELECT value FROM evidence").pluck().get()).toBe("preserved");
   } finally {
-    reopened.sqlite.close();
+    preserved.sqlite.close();
   }
-  expect(readdirSync(scratch).some((name) => name.includes(".restore-"))).toBe(false);
+  expect(stagedRestoreCopies(scratch)).toEqual([]);
 });
 
-it("leaves current sidecars untouched when atomic installation fails", async () => {
-  scratch = mkdtempSync(join(tmpdir(), "otomat-restore-rollback-failure-"));
-  const dbPath = join(scratch, "otomat.db");
-  await prepareDatabase(dbPath);
-  const live = createClient(dbPath, { fileMustExist: true });
-  live.sqlite.exec("CREATE TABLE evidence (value TEXT NOT NULL)");
-  live.sqlite.close();
-  const backupPath = await createConsistentBackup(dbPath, join(scratch, "backups"));
-  const walPath = `${dbPath}-wal`;
-  const shmPath = `${dbPath}-shm`;
-  writeFileSync(walPath, "preserve this sidecar");
-  writeFileSync(shmPath, "restore this sidecar");
-  renameFailure.installDestination = dbPath;
-
-  await expect(restoreDatabaseBackup(dbPath, backupPath)).rejects.toMatchObject({
-    code: "restore_failed",
-  });
-  expect(existsSync(dbPath)).toBe(true);
-  const preservedDirectory = readdirSync(join(scratch, "backups")).find((name) =>
-    name.startsWith("pre-restore-"),
-  );
-  if (preservedDirectory === undefined) throw new Error("Restore did not preserve its sidecar");
-  expect(readFileSync(join(scratch, "backups", preservedDirectory, "otomat.db-wal"), "utf8")).toBe(
-    "preserve this sidecar",
-  );
-  expect(readFileSync(walPath, "utf8")).toBe("preserve this sidecar");
-  expect(readFileSync(shmPath, "utf8")).toBe("restore this sidecar");
-});
-
-it("keeps a recovery journal when explicit ambiguous-state installation fails", async () => {
-  scratch = mkdtempSync(join(tmpdir(), "otomat-ambiguous-install-failure-"));
+it("reports the interrupted restore as a missing database instead of a silent reset", async () => {
+  scratch = mkdtempSync(join(tmpdir(), "otomat-interrupted-install-"));
   const dbPath = join(scratch, "otomat.db");
   await prepareDatabase(dbPath);
   const backupPath = await createConsistentBackup(dbPath, join(scratch, "backups"));
   const originalBytes = readFileSync(dbPath);
-  writeFileSync(`${dbPath}-wal`, "ambiguous wal");
-  writeFileSync(`${dbPath}.restore-journal`, "unreadable journal");
-  renameFailure.installDestination = dbPath;
+  injected.installDestination = dbPath;
 
   await expect(restoreDatabaseBackup(dbPath, backupPath)).rejects.toMatchObject({
     code: "restore_failed",
   });
-  expect(readFileSync(dbPath)).toEqual(originalBytes);
-  expect(readFileSync(`${dbPath}-wal`, "utf8")).toBe("ambiguous wal");
-  expect(existsSync(`${dbPath}.restore-journal`)).toBe(true);
-  expect(readdirSync(scratch).some((name) => name.startsWith("otomat.db.restore-"))).toBe(true);
+  await expect(prepareDatabase(dbPath)).rejects.toMatchObject({ code: "database_missing" });
+  expect(readFileSync(join(preservedDirectory(scratch), "otomat.db"))).toEqual(originalBytes);
 
-  renameFailure.installDestination = "";
+  injected.installDestination = "";
+  await expect(restoreDatabaseBackup(dbPath, backupPath)).resolves.toMatchObject({
+    preservedPath: null,
+  });
+  expect(existsSync(dbPath)).toBe(true);
   await expect(prepareDatabase(dbPath)).resolves.toBeUndefined();
-  expect(existsSync(`${dbPath}.restore-journal`)).toBe(false);
 });

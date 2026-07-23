@@ -90,25 +90,19 @@ it("removes only orphaned initialization-marker partials during startup", async 
   expect(existsSync(unrelated)).toBe(true);
 });
 
-it("cleans restore copies left before journal publication during startup", async () => {
-  scratch = mkdtempSync(join(tmpdir(), "otomat-pre-journal-crash-"));
+it("cleans interrupted restore copies during startup", async () => {
+  scratch = mkdtempSync(join(tmpdir(), "otomat-pre-install-crash-"));
   const dbPath = join(scratch, "otomat.db");
   const restoreCopy = `${dbPath}.restore-${TEST_UUID_V4}.partial`;
-  const journalPartial = `${dbPath}.restore-journal.${TEST_UUID_V4}.partial`;
   const nearRestoreCopy = `${dbPath}.restore-${TEST_UUID_V5}.partial`;
-  const nearJournalPartial = `${dbPath}.restore-journal.${TEST_UUID_V5}.partial`;
   writeFileSync(restoreCopy, "unfinished restore copy");
   writeFileSync(`${restoreCopy}-wal`, "unfinished sidecar");
-  writeFileSync(journalPartial, "unfinished journal");
   writeFileSync(nearRestoreCopy, "preserve");
-  writeFileSync(nearJournalPartial, "preserve");
 
   await expect(prepareDatabase(dbPath)).resolves.toBeUndefined();
   expect(existsSync(restoreCopy)).toBe(false);
   expect(existsSync(`${restoreCopy}-wal`)).toBe(false);
-  expect(existsSync(journalPartial)).toBe(false);
   expect(readFileSync(nearRestoreCopy, "utf8")).toBe("preserve");
-  expect(readFileSync(nearJournalPartial, "utf8")).toBe("preserve");
 });
 
 it("treats an existing empty database as damaged instead of initializing over it", async () => {
@@ -133,7 +127,7 @@ it("reports available and required bytes when disk space is insufficient", () =>
   );
 });
 
-it("reserves enough restore capacity for a missing database and pending migrations", async () => {
+it("reserves enough restore capacity for the staged copy and pending migrations", async () => {
   scratch = mkdtempSync(join(tmpdir(), "otomat-restore-capacity-formula-"));
   const dbPath = join(scratch, "otomat.db");
   await prepareDatabase(dbPath);
@@ -141,10 +135,10 @@ it("reserves enough restore capacity for a missing database and pending migratio
   try {
     const databaseSize = databaseBytes(backup.sqlite);
     expect(requiredPreMigrationBytes(backup.sqlite)).toBe(3 * databaseSize + 16 * 1024 * 1024);
-    expect(requiredRestoreBytes(backup.sqlite, 0, true)).toBe(
+    expect(requiredRestoreBytes(backup.sqlite, true)).toBe(
       databaseSize + requiredPreMigrationBytes(backup.sqlite),
     );
-    expect(requiredRestoreBytes(backup.sqlite, 0, false)).toBe(databaseBytes(backup.sqlite));
+    expect(requiredRestoreBytes(backup.sqlite, false)).toBe(databaseBytes(backup.sqlite));
   } finally {
     backup.sqlite.close();
   }
