@@ -9,6 +9,12 @@ function okBody() {
     version: "0.1.0",
     started_at: "2026-07-19T00:00:00.000Z",
     db_path: "/db/otomat.db",
+    schema: {
+      migration_count: 10,
+      latest_migration_at: 1_784_742_886_678,
+      page_count: 42,
+      page_size: 4096,
+    },
   };
 }
 
@@ -62,5 +68,29 @@ describe("waitForHealth", () => {
       waitForHealth({ url: "http://x/api/health", fetch: doFetch, signal: controller.signal }),
     ).rejects.toThrow(/exited before/);
     expect(doFetch).not.toHaveBeenCalled();
+  });
+
+  it("bounds a health request that accepts a connection without responding", async () => {
+    const doFetch = vi.fn(
+      async (
+        _input: Parameters<typeof globalThis.fetch>[0],
+        init?: RequestInit,
+      ): Promise<Response> =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), {
+            once: true,
+          });
+        }),
+    );
+
+    await expect(
+      waitForHealth({
+        url: "http://x/api/health",
+        fetch: doFetch,
+        timeoutMs: 1,
+        intervalMs: 0,
+      }),
+    ).rejects.toThrow(/timed out/);
+    expect(doFetch).toHaveBeenCalledTimes(1);
   });
 });

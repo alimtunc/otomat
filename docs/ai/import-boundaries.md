@@ -8,6 +8,7 @@ convention. Config: [`packages/tooling/dependency-cruiser.cjs`](../../packages/t
 
 ```text
 apps/web          -> frontend packages + packages/domain
+apps/desktop      -> packages/client + packages/domain, Electron/Node in its own main process
 apps/local-daemon -> packages/db + packages/domain, and its own internal modules
 packages/domain   -> no app-specific packages
 frontend packages -> packages/domain only
@@ -34,11 +35,11 @@ Grouping:
 ## Daemon-internal modules
 
 The daemon-only backend lives inside `apps/local-daemon/src/<module>`:
-`agents`, `api`, `events`, `git`, `review`, `runtime`, `supervisor`. They are
+`agents`, `api`, `data-safety`, `events`, `git`, `review`, `runtime`, `supervisor`. They are
 **not** packages and carry no `@otomat/*` specifier. Inside the daemon:
 
 - a module is consumed through its public index via a Node subpath import —
-  `#agents`, `#api`, `#events`, `#git`, `#review`, `#runtime`, `#supervisor` (or
+  `#agents`, `#api`, `#data-safety`, `#events`, `#git`, `#review`, `#runtime`, `#supervisor` (or
   `#api/<file>` for a specific file);
 - imports within a module stay shallow-relative;
 - deep relative imports (`../../…`) are banned by oxlint everywhere.
@@ -58,12 +59,19 @@ apps/web
 apps/local-daemon
   -> packages/domain
   -> packages/db
-  -> #agents / #api / #events / #git / #review / #runtime / #supervisor   (its own internal modules)
+  -> #agents / #api / #data-safety / #events / #git / #review / #runtime / #supervisor
+     (its own internal modules)
+
+apps/desktop
+  -> packages/domain
+  -> packages/client
+  -> its own #main / #preload / #shared modules and Electron/Node APIs
 ```
 
-Future apps (`desktop`, `mobile`) follow `apps/web`: `domain`, `ui`, `client`
-(+ a daemon launcher for `desktop`). They never import a backend package or reach
-into `apps/local-daemon`.
+The desktop main process launches the daemon as a child process and communicates
+through its HTTP contract and narrow preload IPC bridges. It never imports
+`packages/db`, imports daemon source, or writes business state directly. Future
+mobile code follows the frontend boundary: `domain`, `ui`, and `client`.
 
 ## Package Rules
 
@@ -95,6 +103,13 @@ Frontend packages (`ui`, `client`):
 - composes `db` + `domain` + its internal modules;
 - must not import frontend UI packages.
 
+`apps/desktop`:
+
+- may import `domain`, `client`, Electron, and Node APIs in its own process;
+- must not import `db` or daemon source;
+- owns only desktop lifecycle, local data layout, process launch, diagnostics,
+  logs, support export, and narrow renderer IPC.
+
 `packages/tooling`:
 
 - may be referenced by workspace config; must not own product behavior.
@@ -106,6 +121,8 @@ These must fail the boundary lint:
 ```text
 apps/web          -> packages/db
 apps/web          -> apps/local-daemon
+apps/desktop      -> packages/db
+apps/desktop      -> apps/local-daemon
 packages/ui       -> packages/db
 packages/client   -> apps/local-daemon
 packages/db       -> packages/ui

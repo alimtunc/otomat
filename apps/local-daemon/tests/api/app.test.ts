@@ -44,7 +44,35 @@ it("serves daemon health", async () => {
   const res = await request(makeApiApp(t), "/api/health");
   expect(res.status).toBe(200);
   const body = (await res.json()) as HealthResponse;
-  expect(body).toMatchObject({ status: "ok", name: "test-daemon", version: "9.9.9" });
+  expect(body).toMatchObject({
+    status: "ok",
+    name: "test-daemon",
+    version: "9.9.9",
+    schema: {
+      migration_count: 10,
+      latest_migration_at: 1_784_742_886_678,
+    },
+  });
+});
+
+it("reads current schema metadata for every health response", async () => {
+  let pageCount = 1;
+  const app = makeApiApp(t, {
+    schemaMetadata: () => ({
+      migration_count: 10,
+      latest_migration_at: 1_784_742_886_678,
+      page_count: pageCount,
+      page_size: 4096,
+    }),
+  });
+
+  expect(
+    ((await (await request(app, "/api/health")).json()) as HealthResponse).schema.page_count,
+  ).toBe(1);
+  pageCount = 2;
+  expect(
+    ((await (await request(app, "/api/health")).json()) as HealthResponse).schema.page_count,
+  ).toBe(2);
 });
 
 it("lists projects and issues from SQLite", async () => {

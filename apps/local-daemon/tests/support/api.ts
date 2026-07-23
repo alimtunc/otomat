@@ -67,6 +67,12 @@ export function makeApiApp(
     name: "test-daemon",
     version: "9.9.9",
     startedAt: "2026-07-05T00:00:00.000Z",
+    schemaMetadata: () => ({
+      migration_count: 10,
+      latest_migration_at: 1_784_742_886_678,
+      page_count: 1,
+      page_size: 4096,
+    }),
     launchRun: async () => {
       throw new Error("launchRun stub not configured");
     },

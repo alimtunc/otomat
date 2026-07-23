@@ -81,6 +81,18 @@
         margin: 0 0 16px;
         word-break: break-word;
       }
+      .diagnostic-code {
+        color: var(--muted);
+        font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+        font-size: 11px;
+        margin-bottom: 10px;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+      }
       button {
         -webkit-app-region: no-drag;
         appearance: none;
@@ -96,6 +108,19 @@
       button:hover {
         filter: brightness(1.08);
       }
+      button:focus-visible {
+        outline: 2px solid var(--fg);
+        outline-offset: 2px;
+      }
+      button.secondary {
+        background: transparent;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .spinner {
+          animation: none;
+          border-top-color: var(--muted);
+        }
+      }
       [hidden] {
         display: none !important;
       }
@@ -110,26 +135,60 @@
         <div class="status">Starting the local daemon…</div>
       </section>
 
+      <section id="restoring" hidden>
+        <div class="spinner"></div>
+        <div class="status">Restoring the selected backup and restarting…</div>
+      </section>
+
       <section id="failed" hidden>
-        <div class="error-title">Couldn't start the local daemon</div>
+        <div class="error-title">Otomat needs attention</div>
+        <div class="diagnostic-code" id="code"></div>
         <pre class="detail" id="detail"></pre>
-        <button id="retry" type="button">Retry</button>
+        <div class="actions">
+          <button id="retry" type="button">Retry</button>
+          <button id="restore" type="button" hidden>Restore Backup</button>
+          <button class="secondary" id="export" type="button">Export Support Bundle</button>
+          <button class="secondary" id="policy" type="button">Data Policy</button>
+        </div>
       </section>
     </main>
 
     <script>
       const launching = document.getElementById("launching");
+      const restoring = document.getElementById("restoring");
       const failed = document.getElementById("failed");
+      const code = document.getElementById("code");
       const detail = document.getElementById("detail");
       const retry = document.getElementById("retry");
+      const restore = document.getElementById("restore");
+      const exportButton = document.getElementById("export");
+      const policy = document.getElementById("policy");
 
+      function setActionsDisabled(disabled) {
+        retry.disabled = disabled;
+        restore.disabled = disabled;
+        exportButton.disabled = disabled;
+        policy.disabled = disabled;
+      }
       function showLaunching() {
+        setActionsDisabled(true);
         failed.hidden = true;
+        restoring.hidden = true;
         launching.hidden = false;
       }
-      function showFailed(message) {
-        detail.textContent = message || "The daemon exited before it became ready.";
+      function showRestoring() {
+        setActionsDisabled(true);
+        failed.hidden = true;
         launching.hidden = true;
+        restoring.hidden = false;
+      }
+      function showFailed(diagnostic) {
+        setActionsDisabled(false);
+        code.textContent = diagnostic.code;
+        detail.textContent = diagnostic.message;
+        restore.hidden = !diagnostic.backup_path;
+        launching.hidden = true;
+        restoring.hidden = true;
         failed.hidden = false;
       }
 
@@ -137,10 +196,17 @@
         showLaunching();
         window.otomatSplash.retry();
       });
+      restore.addEventListener("click", () => {
+        showRestoring();
+        window.otomatSplash.restore();
+      });
+      exportButton.addEventListener("click", () => window.otomatSplash.exportSupportBundle());
+      policy.addEventListener("click", () => window.otomatSplash.showDataPolicy());
 
       window.otomatSplash.onStatus((status) => {
         if (status.phase === "launching") showLaunching();
-        else showFailed(status.message);
+        else if (status.phase === "restoring") showRestoring();
+        else showFailed(status.diagnostic);
       });
     </script>
   </body>
