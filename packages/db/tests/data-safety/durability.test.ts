@@ -6,12 +6,9 @@ import { afterEach, expect, it, vi } from "vitest";
 
 const injectedFailure = vi.hoisted(() => ({
   directory: "",
-  directorySyncCalls: 0,
   descriptor: null as number | null,
-  failDirectorySyncAt: null as number | null,
   failEveryDirectorySync: false,
   failRestoreCopy: false,
-  installDestination: "",
   restoreCopyDescriptor: null as number | null,
 }));
 
@@ -30,14 +27,8 @@ vi.mock("node:fs", async (importOriginal) => {
       }
     },
     fsyncSync: (descriptor: number): void => {
-      if (descriptor === injectedFailure.descriptor) {
-        injectedFailure.directorySyncCalls += 1;
-        if (
-          injectedFailure.failEveryDirectorySync ||
-          injectedFailure.directorySyncCalls === injectedFailure.failDirectorySyncAt
-        ) {
-          throw new Error("injected directory synchronization failure");
-        }
+      if (descriptor === injectedFailure.descriptor && injectedFailure.failEveryDirectorySync) {
+        throw new Error("injected directory synchronization failure");
       }
       if (injectedFailure.failRestoreCopy && descriptor === injectedFailure.restoreCopyDescriptor) {
         throw new Error("injected restore-copy synchronization failure");
@@ -47,20 +38,10 @@ vi.mock("node:fs", async (importOriginal) => {
     openSync: (path: string, flags: string | number, mode?: number): number => {
       const descriptor = original.openSync(path, flags, mode);
       if (path === injectedFailure.directory) injectedFailure.descriptor = descriptor;
-      if (
-        path.includes(".restore-") &&
-        !path.includes(".restore-journal") &&
-        path.endsWith(".partial")
-      ) {
+      if (path.includes(".restore-") && path.endsWith(".partial")) {
         injectedFailure.restoreCopyDescriptor = descriptor;
       }
       return descriptor;
-    },
-    renameSync: (source: string, destination: string): void => {
-      if (destination === injectedFailure.installDestination) {
-        throw new Error("injected restore installation failure");
-      }
-      original.renameSync(source, destination);
     },
   };
 });
@@ -74,19 +55,16 @@ let scratch: string | null = null;
 
 afterEach(() => {
   injectedFailure.directory = "";
-  injectedFailure.directorySyncCalls = 0;
   injectedFailure.descriptor = null;
-  injectedFailure.failDirectorySyncAt = null;
   injectedFailure.failEveryDirectorySync = false;
   injectedFailure.failRestoreCopy = false;
-  injectedFailure.installDestination = "";
   injectedFailure.restoreCopyDescriptor = null;
   if (scratch !== null) rmSync(scratch, { recursive: true, force: true });
   scratch = null;
 });
 
-it("does not remove current sidecars when restore-journal publication is not durable", async () => {
-  scratch = mkdtempSync(join(tmpdir(), "otomat-journal-durability-"));
+it("returns the current database and its sidecars when preservation is not durable", async () => {
+  scratch = mkdtempSync(join(tmpdir(), "otomat-preservation-durability-"));
   const dbPath = join(scratch, "otomat.db");
   await prepareDatabase(dbPath);
   const backupPath = await createConsistentBackup(dbPath, join(scratch, "backups"));
@@ -102,30 +80,9 @@ it("does not remove current sidecars when restore-journal publication is not dur
   await expect(restoreDatabaseBackup(dbPath, backupPath)).rejects.toMatchObject({
     code: "restore_failed",
   });
+  expect(existsSync(dbPath)).toBe(true);
   expect(readFileSync(walPath, "utf8")).toBe("current wal");
   expect(readFileSync(shmPath, "utf8")).toBe("current shm");
-});
-
-it("retains the staged restore when journal cleanup is not durable", async () => {
-  scratch = mkdtempSync(join(tmpdir(), "otomat-rollback-durability-"));
-  const dbPath = join(scratch, "otomat.db");
-  await prepareDatabase(dbPath);
-  const backupPath = await createConsistentBackup(dbPath, join(scratch, "backups"));
-  const walPath = `${dbPath}-wal`;
-  const shmPath = `${dbPath}-shm`;
-  writeFileSync(walPath, "current wal");
-  writeFileSync(shmPath, "current shm");
-  injectedFailure.directory = scratch;
-  injectedFailure.failDirectorySyncAt = 2;
-  injectedFailure.installDestination = dbPath;
-
-  await expect(restoreDatabaseBackup(dbPath, backupPath)).rejects.toMatchObject({
-    code: "restore_failed",
-  });
-  expect(readFileSync(walPath, "utf8")).toBe("current wal");
-  expect(readFileSync(shmPath, "utf8")).toBe("current shm");
-  expect(existsSync(`${dbPath}.restore-journal`)).toBe(false);
-  expect(readdirSync(scratch).some((name) => name.startsWith("otomat.db.restore-"))).toBe(true);
 });
 
 it("does not declare initialization successful when marker publication is not durable", async () => {
@@ -143,7 +100,7 @@ it("does not declare initialization successful when marker publication is not du
   expect(existsSync(`${dbPath}.initialized`)).toBe(true);
 });
 
-it("synchronizes the restore copy before removing current sidecars", async () => {
+it("synchronizes the restore copy before moving the current database aside", async () => {
   scratch = mkdtempSync(join(tmpdir(), "otomat-restore-copy-durability-"));
   const dbPath = join(scratch, "otomat.db");
   await prepareDatabase(dbPath);
@@ -157,8 +114,12 @@ it("synchronizes the restore copy before removing current sidecars", async () =>
   await expect(restoreDatabaseBackup(dbPath, backupPath)).rejects.toMatchObject({
     code: "restore_failed",
   });
+  expect(existsSync(dbPath)).toBe(true);
   expect(readFileSync(walPath, "utf8")).toBe("current wal");
   expect(readFileSync(shmPath, "utf8")).toBe("current shm");
+  expect(readdirSync(join(scratch, "backups")).some((name) => name.includes("pre-restore-"))).toBe(
+    false,
+  );
 });
 
 it("fails backup creation when a new backups directory is not durable", async () => {
@@ -172,32 +133,4 @@ it("fails backup creation when a new backups directory is not durable", async ()
     code: "backup_failed",
   });
   expect(readdirSync(join(scratch, "backups"))).toEqual([]);
-});
-
-it("recognizes an installed restore by inode and removes old sidecars on recovery", async () => {
-  scratch = mkdtempSync(join(tmpdir(), "otomat-post-rename-recovery-"));
-  const dbPath = join(scratch, "otomat.db");
-  await prepareDatabase(dbPath);
-  const backupPath = await createConsistentBackup(dbPath, join(scratch, "backups"));
-  writeFileSync(`${dbPath}-wal`, "old wal");
-  writeFileSync(`${dbPath}-shm`, "old shm");
-  injectedFailure.directory = scratch;
-  injectedFailure.failDirectorySyncAt = 2;
-
-  await expect(restoreDatabaseBackup(dbPath, backupPath)).rejects.toMatchObject({
-    code: "restore_failed",
-  });
-  expect(existsSync(`${dbPath}.restore-journal`)).toBe(true);
-  expect(existsSync(`${dbPath}-wal`)).toBe(true);
-
-  injectedFailure.failDirectorySyncAt = null;
-  injectedFailure.directorySyncCalls = 0;
-  await expect(prepareDatabase(dbPath)).resolves.toBeUndefined();
-  expect(existsSync(`${dbPath}.restore-journal`)).toBe(false);
-  if (existsSync(`${dbPath}-wal`)) {
-    expect(readFileSync(`${dbPath}-wal`, "utf8")).not.toBe("old wal");
-  }
-  if (existsSync(`${dbPath}-shm`)) {
-    expect(readFileSync(`${dbPath}-shm`, "utf8")).not.toBe("old shm");
-  }
 });

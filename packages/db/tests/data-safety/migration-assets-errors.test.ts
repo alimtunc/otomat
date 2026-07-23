@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -52,8 +52,6 @@ import { createConsistentBackup } from "#db/data-safety/backup";
 import { MigrationAssetsReadError } from "#db/data-safety/metadata";
 import { prepareDatabase } from "#db/data-safety/prepare";
 import { restoreDatabaseBackup } from "#db/data-safety/restore";
-import { writeRestoreJournal } from "#db/data-safety/restore-journal";
-import { TEST_UUID_V4 } from "#test-support/generated-artifact-names";
 
 let scratch: string | null = null;
 
@@ -130,18 +128,4 @@ it("does not present migration-assets failure as a repeatable restore action", a
   await expect(restoreDatabaseBackup(dbPath, backupPath)).rejects.toBeInstanceOf(
     MigrationAssetsReadError,
   );
-});
-
-it("retains a journaled restore copy when migration assets are temporarily unavailable", async () => {
-  scratch = mkdtempSync(join(tmpdir(), "otomat-recovery-assets-"));
-  const dbPath = join(scratch, "otomat.db");
-  await prepareDatabase(dbPath);
-  const temporaryPath = `${dbPath}.restore-${TEST_UUID_V4}.partial`;
-  copyFileSync(dbPath, temporaryPath);
-  writeRestoreJournal(dbPath, temporaryPath);
-  injectedFailure.migrationAssets = true;
-
-  await expect(prepareDatabase(dbPath)).rejects.toBeInstanceOf(MigrationAssetsReadError);
-  expect(existsSync(temporaryPath)).toBe(true);
-  expect(existsSync(`${dbPath}.restore-journal`)).toBe(true);
 });

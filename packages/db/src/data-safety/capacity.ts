@@ -21,16 +21,18 @@ export function requiredPreMigrationBytes(sqlite: Database.Database): number {
   return 3 * databaseBytes(sqlite) + MIGRATION_HEADROOM_BYTES;
 }
 
+/**
+ * The current database is moved aside rather than copied, so only the staged copy
+ * needs new space — plus the pre-migration reserve when the backup still has
+ * pending migrations to apply after the restart.
+ */
 export function requiredRestoreBytes(
   backup: Database.Database,
-  currentArtifactBytes: number,
   hasPendingMigrations: boolean,
 ): number {
   const backupBytes = databaseBytes(backup);
-  const installationPeak = backupBytes + currentArtifactBytes;
-  if (!hasPendingMigrations) return installationPeak;
-  const restartMigrationPeak = backupBytes + requiredPreMigrationBytes(backup);
-  return Math.max(installationPeak, restartMigrationPeak);
+  if (!hasPendingMigrations) return backupBytes;
+  return backupBytes + requiredPreMigrationBytes(backup);
 }
 
 export function assertSufficientDiskSpace(availableBytes: number, requiredBytes: number): void {

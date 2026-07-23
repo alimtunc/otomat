@@ -14,15 +14,6 @@ function durablePublicationFailure(
   );
 }
 
-export class PathReplacementSyncError extends Error {
-  constructor(cause: unknown) {
-    super("The replacement was installed but its directory entry could not be synchronized.", {
-      cause,
-    });
-    this.name = "PathReplacementSyncError";
-  }
-}
-
 export function syncManagedPath(path: string): void {
   const descriptor = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   const failures: unknown[] = [];
@@ -56,11 +47,7 @@ export function publishPathDurably(source: string, destination: string): void {
 export function replacePathDurably(source: string, destination: string): void {
   syncManagedPath(source);
   renameSync(source, destination);
-  try {
-    syncManagedPath(dirname(destination));
-  } catch (error) {
-    throw new PathReplacementSyncError(error);
-  }
+  syncManagedPath(dirname(destination));
 }
 
 export function publishNewPathDurably(source: string, destination: string): void {
