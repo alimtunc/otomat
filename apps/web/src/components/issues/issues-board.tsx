@@ -3,6 +3,7 @@ import { Avatar, IssueSourceGlyph, resolveStatus, TONE_TEXT } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { ColorDot } from "@web/components/issues/color-dot";
 import { CountBadge } from "@web/components/issues/count-badge";
+import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { FOCUS_RING } from "@web/lib/focus";
 import { issueShortId } from "@web/lib/ids";
 import { linearPriorityLabel } from "@web/lib/linear-priority";
@@ -33,6 +34,11 @@ function CardChips({ issue }: { issue: IssueContract }) {
 // blocked/canceled are hidden per the prototype board; the List layout still shows them.
 const HIDDEN_COLUMNS = new Set<IssueState>(["blocked", "canceled"]);
 const BOARD_COLUMNS = ISSUE_STATES.filter((status) => !HIDDEN_COLUMNS.has(status));
+
+/** Live execution wins the card's column (Running/Reviewing/PR open); otherwise it falls back to the source status. */
+function boardColumnFor(issue: IssueContract): IssueState {
+  return issue.execution.state === "none" ? issue.status : issue.execution.state;
+}
 
 function BoardCard({ issue }: { issue: IssueContract }) {
   const meta = resolveStatus("issue", issue.status);
@@ -69,7 +75,10 @@ function BoardCard({ issue }: { issue: IssueContract }) {
           />
           <span className="text-sm font-medium leading-[1.35] text-foreground">{issue.title}</span>
         </span>
-        <CardChips issue={issue} />
+        <span className="flex flex-wrap items-center gap-1">
+          <IssueExecutionChip execution={issue.execution} />
+          <CardChips issue={issue} />
+        </span>
       </Link>
     </li>
   );
@@ -81,7 +90,7 @@ export function IssuesBoard({ issues }: { issues: IssueContract[] }) {
       {BOARD_COLUMNS.map((status) => {
         const meta = resolveStatus("issue", status);
         const StatusIcon = meta.icon;
-        const columnIssues = issues.filter((issue) => issue.status === status);
+        const columnIssues = issues.filter((issue) => boardColumnFor(issue) === status);
         return (
           <section key={status} aria-label={meta.label} className="flex min-h-0 flex-col gap-2">
             <header className="flex h-8 items-center gap-2 px-1 text-sm font-medium text-foreground">
