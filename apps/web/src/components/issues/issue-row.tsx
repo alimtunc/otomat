@@ -1,6 +1,7 @@
 import type { IssueContract } from "@otomat/domain";
 import { Avatar, cn, IssueSourceGlyph, IssueStatusChip, RelativeTime } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
+import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { FOCUS_RING } from "@web/lib/focus";
 import { issueShortId } from "@web/lib/ids";
 import { CELL } from "@web/lib/table";
@@ -19,7 +20,10 @@ export function IssueRow({ issue }: { issue: IssueContract }) {
         </Link>
       </td>
       <td className={CELL}>
-        <IssueStatusChip status={issue.status} />
+        <span className="flex items-center gap-1.5">
+          <IssueStatusChip status={issue.status} />
+          <IssueExecutionChip execution={issue.execution} />
+        </span>
       </td>
       <td className={`${CELL} text-text-secondary`}>
         <span className="flex items-center gap-1.5">

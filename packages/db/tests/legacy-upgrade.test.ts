@@ -156,7 +156,15 @@ it("upgrades a legacy database through the current migrations", () => {
       synced_at: "2026-04-01T12:34:56.000Z",
     },
   ]);
-  expect(() => issueContractSchema.array().parse(listIssues(migrated.db))).not.toThrow();
+  // `execution` is a daemon-side projection, not a persisted column; attach the no-runs default as toIssue does.
+  expect(() =>
+    issueContractSchema.array().parse(
+      listIssues(migrated.db).map((row) => ({
+        ...row,
+        execution: { state: "none", run_id: null },
+      })),
+    ),
+  ).not.toThrow();
   // 0009 drops the Linear watermark so the next sync backfills the new mirror columns.
   expect(
     migrated.sqlite.prepare("SELECT source FROM sync_state WHERE source = 'linear'").all(),

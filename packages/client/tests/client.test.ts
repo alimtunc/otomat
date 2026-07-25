@@ -17,6 +17,7 @@ const ISSUE = {
   title: "First",
   body: null,
   status: "ready",
+  execution: { state: "none", run_id: null },
   source: "local",
   source_external_id: null,
   source_identifier: null,

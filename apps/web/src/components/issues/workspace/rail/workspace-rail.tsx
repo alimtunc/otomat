@@ -1,5 +1,6 @@
 import type { IssueContract, RunContract } from "@otomat/domain";
 import { IssueStatusChip } from "@otomat/ui";
+import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { LinearRailSection } from "@web/components/issues/workspace/linear/rail-section";
 import { FollowedRunSection } from "@web/components/issues/workspace/rail/followed-run-section";
 import { PullRequestSection } from "@web/components/issues/workspace/rail/pull-request-section";
@@ -41,6 +42,13 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
         <RailMeta>
           <RailRow label="Status">
             <IssueStatusChip status={issue.status} />
+          </RailRow>
+          <RailRow label="Execution">
+            {issue.execution.state === "none" ? (
+              <span className="text-xs text-text-tertiary">No active run</span>
+            ) : (
+              <IssueExecutionChip execution={issue.execution} />
+            )}
           </RailRow>
           <RailRow label="Source">
             <span className="text-text-secondary">{issue.source}</span>

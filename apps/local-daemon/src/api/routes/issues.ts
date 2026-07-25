@@ -1,13 +1,12 @@
 import { randomUUID } from "node:crypto";
 
-import { getIssue, getProject, insertIssue } from "@otomat/db";
+import { getProject, insertIssue } from "@otomat/db";
 import { createIssueRequestSchema, issueMachine } from "@otomat/domain";
 import { Hono } from "hono";
 
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";
 import { readIssue, readIssues } from "../reads.js";
-import { toIssue } from "../serialize.js";
 
 /** Mounted at `/api/issues`. */
 export function createIssueRoutes(deps: ApiDeps): Hono {
@@ -29,9 +28,9 @@ export function createIssueRoutes(deps: ApiDeps): Hono {
       status: issueMachine.initial,
       source: "local",
     });
-    const issue = getIssue(deps.db, id);
+    const issue = readIssue(deps.db, id);
     if (!issue) return c.json({ error: "issue_create_failed" }, 500);
-    return c.json(toIssue(issue), 201);
+    return c.json(issue, 201);
   });
 
   routes.get("/:id", (c) => {

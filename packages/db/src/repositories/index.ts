@@ -10,6 +10,7 @@
 export * from "./agent/index.js";
 export * from "./compete-groups.js";
 export * from "./event-streams.js";
+export * from "./issue-execution.js";
 export * from "./issue-sources.js";
 export * from "./issues.js";
 export * from "./linear/index.js";

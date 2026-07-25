@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { ISSUE_STATES } from "../entity-states.js";
+import { issueExecutionSchema } from "./issue-execution.js";
 
 const EXTERNAL_ISSUE_SOURCES = ["linear", "github"] as const;
 export type ExternalIssueSource = (typeof EXTERNAL_ISSUE_SOURCES)[number];
@@ -15,6 +16,7 @@ const issueContractBaseSchema = z.object({
   title: z.string().min(1),
   body: z.string().nullable(),
   status: z.enum(ISSUE_STATES),
+  execution: issueExecutionSchema,
 });
 
 export const issueContractSchema = z.discriminatedUnion("source", [
