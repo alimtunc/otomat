@@ -20,10 +20,14 @@ export function IssueRow({ issue }: { issue: IssueContract }) {
         </Link>
       </td>
       <td className={CELL}>
-        <span className="flex items-center gap-1.5">
-          <IssueStatusChip status={issue.status} />
+        <IssueStatusChip status={issue.status} />
+      </td>
+      <td className={CELL}>
+        {issue.execution.state === "none" ? (
+          <span className="text-text-tertiary">—</span>
+        ) : (
           <IssueExecutionChip execution={issue.execution} />
-        </span>
+        )}
       </td>
       <td className={`${CELL} text-text-secondary`}>
         <span className="flex items-center gap-1.5">

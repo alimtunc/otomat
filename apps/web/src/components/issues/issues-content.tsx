@@ -16,7 +16,8 @@ function IssuesTable({ issues }: { issues: IssueContract[] }) {
         <tr>
           <th className={`${HEAD_CELL} w-22.5`}>ID</th>
           <th className={HEAD_CELL}>Title</th>
-          <th className={`${HEAD_CELL} w-35`}>Status</th>
+          <th className={`${HEAD_CELL} w-27.5`}>Status</th>
+          <th className={`${HEAD_CELL} w-27.5`}>Execution</th>
           <th className={`${HEAD_CELL} w-22.5`}>Source</th>
           <th className={`${HEAD_CELL} w-35`}>Assignee</th>
           <th className={`${HEAD_CELL} w-27.5`}>Updated</th>

@@ -1,9 +1,8 @@
 import { ISSUE_STATES, type IssueContract, type IssueState } from "@otomat/domain";
-import { Avatar, IssueSourceGlyph, resolveStatus, TONE_TEXT } from "@otomat/ui";
+import { Avatar, IssueSourceGlyph, IssueStatusChip, resolveStatus, TONE_TEXT } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { ColorDot } from "@web/components/issues/color-dot";
 import { CountBadge } from "@web/components/issues/count-badge";
-import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { FOCUS_RING } from "@web/lib/focus";
 import { issueShortId } from "@web/lib/ids";
 import { linearPriorityLabel } from "@web/lib/linear-priority";
@@ -40,9 +39,16 @@ function boardColumnFor(issue: IssueContract): IssueState {
   return issue.execution.state === "none" ? issue.status : issue.execution.state;
 }
 
+/** When execution took over the column, the source status is otherwise lost — surface it, unless a Linear mirror already shows it in the header. */
+function divergentSourceStatus(issue: IssueContract): IssueState | null {
+  if (boardColumnFor(issue) === issue.status || issue.source_state_name !== null) return null;
+  return issue.status;
+}
+
 function BoardCard({ issue }: { issue: IssueContract }) {
-  const meta = resolveStatus("issue", issue.status);
+  const meta = resolveStatus("issue", boardColumnFor(issue));
   const StatusIcon = meta.icon;
+  const sourceStatus = divergentSourceStatus(issue);
   return (
     <li>
       <Link
@@ -76,7 +82,7 @@ function BoardCard({ issue }: { issue: IssueContract }) {
           <span className="text-sm font-medium leading-[1.35] text-foreground">{issue.title}</span>
         </span>
         <span className="flex flex-wrap items-center gap-1">
-          <IssueExecutionChip execution={issue.execution} />
+          {sourceStatus !== null ? <IssueStatusChip status={sourceStatus} /> : null}
           <CardChips issue={issue} />
         </span>
       </Link>
@@ -85,12 +91,15 @@ function BoardCard({ issue }: { issue: IssueContract }) {
 }
 
 export function IssuesBoard({ issues }: { issues: IssueContract[] }) {
+  const columns = BOARD_COLUMNS.map((status) => ({
+    status,
+    meta: resolveStatus("issue", status),
+    issues: issues.filter((issue) => boardColumnFor(issue) === status),
+  })).filter((column) => column.issues.length > 0);
   return (
     <div className="grid h-full auto-cols-[300px] grid-flow-col items-start gap-3.5 overflow-x-auto px-4.5 py-4">
-      {BOARD_COLUMNS.map((status) => {
-        const meta = resolveStatus("issue", status);
+      {columns.map(({ status, meta, issues: columnIssues }) => {
         const StatusIcon = meta.icon;
-        const columnIssues = issues.filter((issue) => boardColumnFor(issue) === status);
         return (
           <section key={status} aria-label={meta.label} className="flex min-h-0 flex-col gap-2">
             <header className="flex h-8 items-center gap-2 px-1 text-sm font-medium text-foreground">
