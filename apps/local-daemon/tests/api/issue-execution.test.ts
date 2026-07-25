@@ -16,11 +16,11 @@ afterEach(() => {
   t.cleanup();
 });
 
+/** Omitting `createdAt` exercises the production path: `insertRun` never sets it, so SQLite's CURRENT_TIMESTAMP does. */
 function addRun(
   db: Db,
   run: { id: string; status: RunState; issueId?: string; createdAt?: string },
 ): void {
-  const at = run.createdAt ?? "2026-01-01T00:00:00.000Z";
   db.insert(schema.runs)
     .values({
       id: run.id,
@@ -28,8 +28,7 @@ function addRun(
       status: run.status,
       branch: `otomat/${run.id}`,
       plan_json: { version: 1, steps: [] },
-      created_at: at,
-      updated_at: at,
+      ...(run.createdAt ? { created_at: run.createdAt, updated_at: run.createdAt } : {}),
     })
     .run();
 }
@@ -64,7 +63,6 @@ it("surfaces an active run as running without touching the source status", () =>
   const issue = readI1(t.db);
   expect(issue.execution).toEqual({ state: "running", run_id: "r1" });
   expect(issue.status).toBe("backlog");
-  // and the same via the list read
   const listed = readIssues(t.db, "p1").find((entry) => entry.id === "i1");
   expect(listed?.execution).toEqual({ state: "running", run_id: "r1" });
 });
@@ -89,9 +87,9 @@ it("does not treat a merged or not-yet-created PR as open", () => {
 });
 
 it("keeps live work ahead of an older terminal run with an open PR", () => {
-  addRun(t.db, { id: "old", status: "completed", createdAt: "2026-01-01T00:00:00.000Z" });
+  addRun(t.db, { id: "old", status: "completed", createdAt: "2026-01-01 00:00:00" });
   addPullRequest(t.db, { id: "pr1", runId: "old", status: "open", publication: "created" });
-  addRun(t.db, { id: "new", status: "running", createdAt: "2026-01-02T00:00:00.000Z" });
+  addRun(t.db, { id: "new", status: "running", createdAt: "2026-01-02 00:00:00" });
   expect(readI1(t.db).execution).toEqual({ state: "running", run_id: "new" });
 });
 

@@ -7,6 +7,8 @@ export function invalidateForEvent(client: QueryClient, runId: string, event: Ev
   if (event.type === "run.lifecycle" || event.type === "system.reconciled") {
     client.invalidateQueries({ queryKey: queryKeys.run(runId) });
     client.invalidateQueries({ queryKey: queryKeys.runs });
+    // Each issue's execution state is projected from these rows, so its caches go stale with them.
+    client.invalidateQueries({ queryKey: queryKeys.issues });
     return;
   }
   client.invalidateQueries({ queryKey: queryKeys.runCompletionReport(runId) });
@@ -20,6 +22,7 @@ export function invalidateForEvent(client: QueryClient, runId: string, event: Ev
   }
   if (event.type.startsWith("pr.")) {
     client.invalidateQueries({ queryKey: queryKeys.runPullRequest(runId) });
+    client.invalidateQueries({ queryKey: queryKeys.issues });
     return;
   }
 }

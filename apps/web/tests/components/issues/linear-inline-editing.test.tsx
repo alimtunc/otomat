@@ -31,6 +31,7 @@ const ISSUE: IssueContract = {
   title: "Mirror",
   body: "Body",
   status: "ready",
+  execution: { state: "none", run_id: null },
   source: "linear",
   source_external_id: "ext-1",
   source_identifier: "OTO-99",

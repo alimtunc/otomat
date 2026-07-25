@@ -1,4 +1,4 @@
-import type { IssueContract, IssueState } from "@otomat/domain";
+import type { IssueContract, IssueExecution, IssueState } from "@otomat/domain";
 import { ISSUE_STATES } from "@otomat/domain";
 import {
   activeAdvancedFilterCount,
@@ -9,13 +9,16 @@ import {
 } from "@web/lib/issue-filters";
 import { describe, expect, it } from "vitest";
 
-function issue(status: IssueState): IssueContract {
+const NO_EXECUTION: IssueExecution = { state: "none", run_id: null };
+
+function issue(status: IssueState, execution: IssueExecution = NO_EXECUTION): IssueContract {
   return {
     id: `issue-${status}`,
     project_id: "project-1",
     title: status,
     body: null,
     status,
+    execution,
     source: "local",
     source_external_id: null,
     source_identifier: null,
@@ -36,6 +39,7 @@ function linearIssue(id: string, assignee: string | null, priority: number): Iss
     title: id,
     body: null,
     status: "ready",
+    execution: NO_EXECUTION,
     source: "linear",
     source_external_id: `ext-${id}`,
     source_identifier: `OTO-${id}`,
@@ -49,7 +53,7 @@ function linearIssue(id: string, assignee: string | null, priority: number): Iss
   };
 }
 
-const ALL = ISSUE_STATES.map(issue);
+const ALL = ISSUE_STATES.map((status) => issue(status));
 
 describe("applyIssuesFilter", () => {
   it("returns everything for 'all'", () => {
@@ -64,6 +68,12 @@ describe("applyIssuesFilter", () => {
   it("keeps only backlog for 'backlog'", () => {
     const statuses = applyIssuesFilter(ALL, "backlog").map((i) => i.status);
     expect(statuses).toEqual(["backlog"]);
+  });
+
+  it("counts a locally running issue as active even while its source status says backlog", () => {
+    const running = issue("backlog", { state: "running", run_id: "run-1" });
+    expect(applyIssuesFilter([running], "active")).toEqual([running]);
+    expect(applyIssuesFilter([running], "backlog")).toEqual([]);
   });
 });
 

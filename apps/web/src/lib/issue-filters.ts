@@ -9,9 +9,16 @@ export function isIssuesFilter(value: string): value is IssuesFilter {
 
 const ACTIVE_STATES = new Set<IssueState>(["ready", "running", "reviewing", "pr_open"]);
 
+/** A local run makes an issue active whatever the source says, so the pills agree with the board's execution columns. */
+function isActive(issue: IssueContract): boolean {
+  return issue.execution.state !== "none" || ACTIVE_STATES.has(issue.status);
+}
+
 export function applyIssuesFilter(issues: IssueContract[], filter: IssuesFilter): IssueContract[] {
-  if (filter === "active") return issues.filter((issue) => ACTIVE_STATES.has(issue.status));
-  if (filter === "backlog") return issues.filter((issue) => issue.status === "backlog");
+  if (filter === "active") return issues.filter(isActive);
+  if (filter === "backlog") {
+    return issues.filter((issue) => issue.status === "backlog" && !isActive(issue));
+  }
   return issues;
 }
 
