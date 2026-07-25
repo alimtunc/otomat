@@ -1,8 +1,9 @@
-import { ISSUE_STATES, type IssueContract, type IssueState } from "@otomat/domain";
+import type { IssueContract } from "@otomat/domain";
 import { Avatar, IssueSourceGlyph, IssueStatusChip, resolveStatus, TONE_TEXT } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { ColorDot } from "@web/components/issues/color-dot";
 import { CountBadge } from "@web/components/issues/count-badge";
+import { boardColumnFor, divergentSourceStatus, visibleBoardColumns } from "@web/lib/board-columns";
 import { FOCUS_RING } from "@web/lib/focus";
 import { issueShortId } from "@web/lib/ids";
 import { linearPriorityLabel } from "@web/lib/linear-priority";
@@ -28,21 +29,6 @@ function CardChips({ issue }: { issue: IssueContract }) {
       ))}
     </span>
   );
-}
-
-// blocked/canceled are hidden per the prototype board; the List layout still shows them.
-const HIDDEN_COLUMNS = new Set<IssueState>(["blocked", "canceled"]);
-const BOARD_COLUMNS = ISSUE_STATES.filter((status) => !HIDDEN_COLUMNS.has(status));
-
-/** Live execution wins the card's column (Running/Reviewing/PR open); otherwise it falls back to the source status. */
-function boardColumnFor(issue: IssueContract): IssueState {
-  return issue.execution.state === "none" ? issue.status : issue.execution.state;
-}
-
-/** When execution took over the column, the source status is otherwise lost — surface it, unless a Linear mirror already shows it in the header. */
-function divergentSourceStatus(issue: IssueContract): IssueState | null {
-  if (boardColumnFor(issue) === issue.status || issue.source_state_name !== null) return null;
-  return issue.status;
 }
 
 function BoardCard({ issue }: { issue: IssueContract }) {
@@ -91,14 +77,18 @@ function BoardCard({ issue }: { issue: IssueContract }) {
 }
 
 export function IssuesBoard({ issues }: { issues: IssueContract[] }) {
-  const columns = BOARD_COLUMNS.map((status) => ({
-    status,
-    meta: resolveStatus("issue", status),
-    issues: issues.filter((issue) => boardColumnFor(issue) === status),
-  })).filter((column) => column.issues.length > 0);
+  const columns = visibleBoardColumns(issues);
+  if (columns.length === 0) {
+    return (
+      <p className="px-4.5 py-6 text-sm text-text-tertiary">
+        These issues aren’t shown on the board — switch to List to see them.
+      </p>
+    );
+  }
   return (
     <div className="grid h-full auto-cols-[300px] grid-flow-col items-start gap-3.5 overflow-x-auto px-4.5 py-4">
-      {columns.map(({ status, meta, issues: columnIssues }) => {
+      {columns.map(({ status, issues: columnIssues }) => {
+        const meta = resolveStatus("issue", status);
         const StatusIcon = meta.icon;
         return (
           <section key={status} aria-label={meta.label} className="flex min-h-0 flex-col gap-2">
