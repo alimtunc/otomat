@@ -7,15 +7,10 @@ import { issues, pullRequests, runs } from "../schema/index.js";
 /** Evidence for the per-issue execution projection; `issue_id` groups the rows the domain reducer consumes. */
 export type IssueExecutionEvidenceRow = IssueExecutionEvidence & { issue_id: string };
 
-/** A pull request counts as "open" only once really created on the provider and not yet merged or closed. */
-function isOpenPr(publication: string | null, status: string | null): boolean {
-  return publication === "created" && (status === "open" || status === "draft");
-}
-
 /**
- * One query returning every run (with its optional pull-request status) for the
- * selected issues, so the daemon projects each issue's execution state without
- * an N+1. Terminal runs are included; the domain reducer filters them.
+ * One query returning every run with its optional pull request for the selected
+ * issues, so the daemon projects each issue's execution state without an N+1.
+ * Rows are raw persisted facts; `projectIssueExecution` owns the interpretation.
  */
 export function listIssueExecutionEvidence(
   db: Db,
@@ -37,12 +32,5 @@ export function listIssueExecutionEvidence(
     .innerJoin(issues, eq(runs.issue_id, issues.id))
     .leftJoin(pullRequests, eq(pullRequests.run_id, runs.id))
     .where(filters.length > 0 ? and(...filters) : undefined)
-    .all()
-    .map((row) => ({
-      issue_id: row.issue_id,
-      run_id: row.run_id,
-      run_status: row.run_status,
-      run_created_at: row.run_created_at,
-      pr_open: isOpenPr(row.pr_publication, row.pr_status),
-    }));
+    .all();
 }
