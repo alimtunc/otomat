@@ -1,6 +1,6 @@
 import type { DiffFileContract, RunDiffContract } from "@otomat/domain";
 import { Button, cn, Icon, resolveStatus } from "@otomat/ui";
-import { STATUS_LETTER } from "@web/components/runs/diff/file-tree.utils";
+import { STATUS_LETTER } from "@web/components/runs/diff/files/tree.utils";
 import { DiffStat } from "@web/components/runs/diff/stat";
 import { PaneHeader } from "@web/components/runs/pane-header";
 

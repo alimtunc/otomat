@@ -1,8 +1,8 @@
 # Otomat Import Boundaries
 
 These rules define the dependency boundaries for the Otomat monorepo. They are
-enforced by tooling (`dependency-cruiser`, run inside `pnpm build`), not only by
-convention. Config: [`packages/tooling/dependency-cruiser.cjs`](../../packages/tooling/dependency-cruiser.cjs).
+enforced by tooling (`scripts/import-boundaries.mjs`, run inside `pnpm build`),
+not only by convention. Config: [`scripts/import-boundaries.mjs`](../../scripts/import-boundaries.mjs).
 
 ## Conceptual Layers
 
@@ -34,12 +34,13 @@ Grouping:
 ## Daemon-internal modules
 
 The daemon-only backend lives inside `apps/local-daemon/src/<module>`:
-`agents`, `api`, `events`, `git`, `review`, `runtime`, `supervisor`. They are
+`agents`, `api`, `events`, `git`, `github`, `linear`, `review`, `runtime`,
+`supervisor`. They are
 **not** packages and carry no `@otomat/*` specifier. Inside the daemon:
 
 - a module is consumed through its public index via a Node subpath import —
-  `#agents`, `#api`, `#events`, `#git`, `#review`, `#runtime`, `#supervisor` (or
-  `#api/<file>` for a specific file);
+  `#agents`, `#api`, `#events`, `#git`, `#github`, `#linear`, `#review`,
+  `#runtime`, `#supervisor` (or `#api/<file>` for a specific file);
 - imports within a module stay shallow-relative;
 - deep relative imports (`../../…`) are banned by oxlint everywhere.
 
@@ -58,7 +59,7 @@ apps/web
 apps/local-daemon
   -> packages/domain
   -> packages/db
-  -> #agents / #api / #events / #git / #review / #runtime / #supervisor   (its own internal modules)
+  -> #agents / #api / #events / #git / #github / #linear / #review / #runtime / #supervisor
 ```
 
 Future apps (`desktop`, `mobile`) follow `apps/web`: `domain`, `ui`, `client`
@@ -118,5 +119,5 @@ packages/domain   -> React
 A new package must earn its place (multiple consumers, a boundary to protect, a
 heavy dependency to isolate, a stable cross-world interface, or planned cross-app
 reuse). When that bar is met, add its name to the `BACKEND`/`FRONTEND` regex in
-`dependency-cruiser.cjs` and record the justification in the owning ticket. Until
+`scripts/import-boundaries.mjs` and record the justification in the owning ticket. Until
 then, daemon-only code stays a module inside `apps/local-daemon`.

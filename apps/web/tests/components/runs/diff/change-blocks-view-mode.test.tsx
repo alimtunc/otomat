@@ -2,8 +2,8 @@
 import type { DiffFileContract } from "@otomat/domain";
 import { ThemeProvider } from "@otomat/ui";
 import { changeBlockRows } from "@web/components/runs/diff/diff-nav";
-import { DiffFileCard } from "@web/components/runs/diff/file-card";
-import { diffFileDomId } from "@web/components/runs/diff/file-card.utils";
+import { DiffFileCard } from "@web/components/runs/diff/files/card";
+import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
 import { describe, expect, it } from "vitest";
 
 import { stubDiffCanvas } from "#support/diff-dom";

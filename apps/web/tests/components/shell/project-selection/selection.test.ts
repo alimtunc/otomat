@@ -2,7 +2,7 @@ import {
   readSelectedProjectId,
   resolveSelectedProjectId,
   writeSelectedProjectId,
-} from "@web/components/shell/project-selection";
+} from "@web/components/shell/project-selection/selection";
 import { describe, expect, it } from "vitest";
 
 import { memoryStorage } from "#support/storage";

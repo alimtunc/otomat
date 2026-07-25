@@ -92,7 +92,7 @@ requests. Dependency updates are managed by Dependabot
 
 - **Type check + emit:** `tsgo` (`@typescript/native-preview`), not `tsc`.
 - **Lint:** `oxlint`. **Format:** `oxfmt`. No ESLint, no Prettier.
-- **Boundaries:** `dependency-cruiser` (runs inside `pnpm build`).
+- **Boundaries:** `scripts/import-boundaries.mjs`, a dep-free graph check (runs inside `pnpm build`).
 - **Git hooks:** `lefthook`.
 
 See [`AGENTS.md`](AGENTS.md) for the contributor and agent guide: import

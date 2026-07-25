@@ -1,6 +1,6 @@
 import { Button, DialogBody, Kbd, Textarea } from "@otomat/ui";
 import { useStartRunAndNavigate } from "@web/api/runs/mutations";
-import { IssueFormFooter } from "@web/components/issues/issue-form-footer";
+import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { LaunchAgentPicker } from "@web/components/runs/launch/launch-agent-picker";
 import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
 import { agentChoiceToRequest } from "@web/lib/agent-choice";

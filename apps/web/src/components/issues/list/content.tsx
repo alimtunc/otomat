@@ -1,8 +1,8 @@
 import type { IssueContract } from "@otomat/domain";
 import { EmptyState } from "@otomat/ui";
 import type { useIssues } from "@web/api/issues/queries";
-import { IssueRow } from "@web/components/issues/issue-row";
-import { IssuesBoard } from "@web/components/issues/issues-board";
+import { IssueRow } from "@web/components/issues/issue/row";
+import { IssuesBoard } from "@web/components/issues/list/board";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";

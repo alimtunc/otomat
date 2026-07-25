@@ -1,11 +1,11 @@
 import { Icon, Pill, PillTabs, SegmentedControl, SegmentedItem } from "@otomat/ui";
 import { useProjectIssues } from "@web/api/issues/queries";
-import { IssuesContent } from "@web/components/issues/issues-content";
 import { IssuesFilterPopover } from "@web/components/issues/issues-filter-popover";
+import { IssuesContent } from "@web/components/issues/list/content";
 import { NewIssueButton } from "@web/components/issues/new-issue-button";
-import { ProjectQueryBoundary } from "@web/components/shell/project-query-boundary";
+import { ProjectQueryBoundary } from "@web/components/shell/project-selection/query-boundary";
+import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
 import { RouteShell } from "@web/components/shell/route-shell";
-import { useSelectedProject } from "@web/components/shell/use-selected-project";
 import {
   applyAdvancedFilters,
   applyIssuesFilter,

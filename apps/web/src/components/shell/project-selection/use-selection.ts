@@ -1,7 +1,7 @@
 import type { ProjectSummary } from "@otomat/ui";
 import { useSelector } from "@tanstack/react-store";
-import { resolveSelectedProjectId } from "@web/components/shell/project-selection";
-import { projectSelectionStore } from "@web/components/shell/project-selection-store";
+import { resolveSelectedProjectId } from "@web/components/shell/project-selection/selection";
+import { projectSelectionStore } from "@web/components/shell/project-selection/store";
 
 export interface ProjectSelection {
   currentProjectId: string | undefined;

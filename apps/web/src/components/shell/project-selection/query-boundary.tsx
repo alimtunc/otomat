@@ -1,6 +1,5 @@
+import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
 import type { ReactNode } from "react";
-
-import { DaemonUnreachableState } from "./daemon-unreachable-state";
 
 interface ProjectQueryBoundaryProps {
   query: {

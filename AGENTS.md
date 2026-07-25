@@ -60,7 +60,7 @@ smoke test, and all tests. Never bypass or weaken a gate to make a change pass.
 
 The machine-enforced rules live in `.oxlintrc.json`,
 `packages/tooling/oxlintrc.base.json`, `scripts/guardrails.mjs`, and
-`packages/tooling/dependency-cruiser.cjs`. Read the relevant configuration when a
+`scripts/import-boundaries.mjs`. Read the relevant configuration when a
 gate fails instead of duplicating its policy here.
 
 ## Code quality
@@ -132,8 +132,9 @@ never imports the daemon or a backend package.
 ## Toolchain
 
 Use the scripts in `package.json`; they are the source of truth. This repository
-uses `tsgo`, `oxlint`, `oxfmt`, Vitest, Lefthook, and dependency-cruiser. Do not
-substitute `tsc`, ESLint, or Prettier.
+uses `tsgo`, `oxlint`, `oxfmt`, Vitest, and Lefthook, with a dep-free import-
+boundary gate (`scripts/import-boundaries.mjs`). Do not substitute `tsc`, ESLint,
+or Prettier.
 
 ## Conventions
 
@@ -151,7 +152,8 @@ substitute `tsc`, ESLint, or Prettier.
 - Runtime code lives in `<module>/src`; tests mirror it in
   `<module>/tests/<domain>`, with shared test support in `<module>/tests/support`.
 - Tests and daemon modules use public Node subpath imports, never deep relative
-  imports. Daemon modules expose `#agents`, `#api`, `#events`, `#git`, `#review`,
+  imports. Daemon modules expose `#agents`, `#api`, `#events`, `#git`, `#github`,
+  `#linear`, `#review`,
   `#runtime`, and `#supervisor`; other packages expose private `#<package>/<path>`
   test maps.
 - The daemon must work from source and from `dist`. Its production build is

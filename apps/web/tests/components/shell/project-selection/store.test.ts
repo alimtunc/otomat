@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { readSelectedProjectId } from "@web/components/shell/project-selection";
-import { projectSelectionStore } from "@web/components/shell/project-selection-store";
+import { readSelectedProjectId } from "@web/components/shell/project-selection/selection";
+import { projectSelectionStore } from "@web/components/shell/project-selection/store";
 import { describe, expect, it } from "vitest";
 
 describe("project selection store", () => {

@@ -9,7 +9,7 @@ import {
   Kbd,
   Textarea,
 } from "@otomat/ui";
-import { IssueFormFooter } from "@web/components/issues/issue-form-footer";
+import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { LaunchAgentPicker } from "@web/components/runs/launch/launch-agent-picker";
 import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
 import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@web/lib/form";

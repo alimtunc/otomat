@@ -4,7 +4,7 @@ import { useParams } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
 import { useRunsForIssue } from "@web/api/runs/queries";
 import { RunEventsProvider } from "@web/api/runs/run-events-provider";
-import { IssueHeader } from "@web/components/issues/issue-header";
+import { IssueHeader } from "@web/components/issues/issue/header";
 import { ActivityFeed } from "@web/components/issues/workspace/activity-feed";
 import { LaunchRunPopover } from "@web/components/issues/workspace/launch-run-popover";
 import { LinearCommentsSection } from "@web/components/issues/workspace/linear/comments";
