@@ -5,7 +5,7 @@ import {
   diffFileDomId,
   extendDataFor,
   unrenderableNote,
-} from "@web/components/runs/diff/file-card.utils";
+} from "@web/components/runs/diff/files/card.utils";
 import { DiffStat } from "@web/components/runs/diff/stat";
 import type { DiffViewMode } from "@web/components/runs/diff/view-prefs";
 import { ReviewCommentCard } from "@web/components/runs/review/comment-card";

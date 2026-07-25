@@ -6,7 +6,7 @@ import {
   clampBlockIndex,
   revealAndFocus,
 } from "@web/components/runs/diff/diff-nav";
-import { diffFileDomId } from "@web/components/runs/diff/file-card.utils";
+import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
 import { useEffect, useEffectEvent } from "react";
 
 export interface DiffKeyboardNavOptions {

@@ -2,7 +2,7 @@ import type { ProjectSummary } from "@otomat/ui";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useDaemonStatus, useHealth, useProjects } from "@web/api/daemon/queries";
 import { useProjectRuns } from "@web/api/runs/queries";
-import { useProjectSelection } from "@web/components/shell/use-project-selection";
+import { useProjectSelection } from "@web/components/shell/project-selection/use-selection";
 import { isProjectScopedDetail } from "@web/lib/project-navigation";
 import { isReviewable, isRunning } from "@web/lib/run-filters";
 

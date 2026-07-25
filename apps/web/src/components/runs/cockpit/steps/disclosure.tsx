@@ -1,6 +1,6 @@
 import type { RunDetail } from "@otomat/domain";
 import { Button, cn, Collapsible, CollapsiblePanel, CollapsibleTrigger, Icon } from "@otomat/ui";
-import { StepsList } from "@web/components/runs/cockpit/steps-list";
+import { StepsList } from "@web/components/runs/cockpit/steps/list";
 import { FOCUS_RING } from "@web/lib/focus";
 
 export function StepsDisclosure({ detail }: { detail: RunDetail }) {

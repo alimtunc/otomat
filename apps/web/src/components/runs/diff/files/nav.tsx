@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@otomat/ui";
 import { adjacentFile } from "@web/components/runs/diff/diff-nav";
-import { STATUS_LETTER } from "@web/components/runs/diff/file-tree.utils";
+import { STATUS_LETTER } from "@web/components/runs/diff/files/tree.utils";
 
 export function DiffFileNav({
   diff,

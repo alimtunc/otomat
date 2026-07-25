@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import type { DiffFileContract } from "@otomat/domain";
 import { revealAndFocus } from "@web/components/runs/diff/diff-nav";
-import { diffFileDomId } from "@web/components/runs/diff/file-card.utils";
+import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
 import { useDiffKeyboardNav } from "@web/components/runs/diff/use-diff-keyboard-nav";
 import { act, useState } from "react";
 import { describe, expect, it } from "vitest";

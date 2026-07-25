@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import type { DiffFileContract } from "@otomat/domain";
 import { ThemeProvider } from "@otomat/ui";
-import { DiffFileCard, type DiffFileCardProps } from "@web/components/runs/diff/file-card";
+import { DiffFileCard, type DiffFileCardProps } from "@web/components/runs/diff/files/card";
 import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
 

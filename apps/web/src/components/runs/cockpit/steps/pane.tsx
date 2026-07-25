@@ -1,5 +1,5 @@
 import type { RunDetail } from "@otomat/domain";
-import { StepsList } from "@web/components/runs/cockpit/steps-list";
+import { StepsList } from "@web/components/runs/cockpit/steps/list";
 import { PaneHeader } from "@web/components/runs/pane-header";
 
 export function StepsPane({ detail }: { detail: RunDetail }) {

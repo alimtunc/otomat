@@ -1,7 +1,7 @@
 import { Button, DialogBody, Field, FieldControl, FieldLabel, Input, Textarea } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import { useCreateIssueAndNavigate } from "@web/api/issues/mutations";
-import { IssueFormFooter } from "@web/components/issues/issue-form-footer";
+import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { fieldErrorProps } from "@web/lib/form";
 
 export interface ManualIssueFormProps {
