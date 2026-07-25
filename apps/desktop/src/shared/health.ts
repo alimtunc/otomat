@@ -2,6 +2,8 @@ import { healthResponseSchema } from "@otomat/domain";
 
 import { HEALTH_INTERVAL_MS, HEALTH_TIMEOUT_MS } from "#shared/constants";
 
+import { withAbortTimeout } from "./abort-timeout.js";
+
 export interface WaitForHealthOptions {
   /** Full health URL, e.g. `http://127.0.0.1:PORT/api/health`. */
   url: string;
@@ -34,13 +36,19 @@ export async function waitForHealth(options: WaitForHealthOptions): Promise<void
   while (now() < deadline) {
     if (options.signal?.aborted) throw new Error("daemon exited before it became healthy");
     try {
-      const res = await doFetch(options.url, options.signal ? { signal: options.signal } : {});
-      if (res.ok) {
-        healthResponseSchema.parse(await res.json());
-        return;
-      }
-      lastError = new Error(`health responded ${res.status}`);
+      const remainingMs = Math.max(1, deadline - now());
+      const status = await withAbortTimeout(remainingMs, options.signal, async (signal) => {
+        const response = await doFetch(options.url, { signal });
+        if (!response.ok) return response.status;
+        healthResponseSchema.parse(await response.json());
+        return null;
+      });
+      if (status === null) return;
+      lastError = new Error(`health responded ${status}`);
     } catch (error) {
+      if (options.signal?.aborted === true) {
+        throw new Error("daemon exited before it became healthy", { cause: error });
+      }
       lastError = error;
     }
     await sleep(intervalMs);

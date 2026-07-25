@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createIssueRequestSchema,
   followUpRunRequestSchema,
+  healthResponseSchema,
   registerRepositoryRequestSchema,
   repositoryRegistrationErrorSchema,
   runDetailSchema,
@@ -11,6 +12,33 @@ import {
   selectCompeteWinnerRequestSchema,
   startRunRequestSchema,
 } from "#domain/contracts/api";
+
+it("requires safe schema metadata on daemon health", () => {
+  const health = healthResponseSchema.parse({
+    status: "ok",
+    name: "otomat-local-daemon",
+    version: "0.1.0",
+    started_at: "2026-07-23T10:00:00.000Z",
+    db_path: "/tmp/otomat.db",
+    schema: {
+      migration_count: 10,
+      latest_migration_at: 1_784_742_886_678,
+      page_count: 42,
+      page_size: 4096,
+    },
+  });
+
+  expect(health.schema.migration_count).toBe(10);
+  expect(
+    healthResponseSchema.safeParse({
+      status: "ok",
+      name: "otomat-local-daemon",
+      version: "0.1.0",
+      started_at: "2026-07-23T10:00:00.000Z",
+      db_path: "/tmp/otomat.db",
+    }).success,
+  ).toBe(false);
+});
 
 const RUN = {
   id: "run-1",

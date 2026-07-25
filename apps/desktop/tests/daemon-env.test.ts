@@ -49,6 +49,22 @@ describe("buildDaemonEnv", () => {
     expect(JSON.stringify(env)).not.toContain("lin_api");
   });
 
+  it("never inherits a restore action into a normal daemon start", () => {
+    const env = buildDaemonEnv({
+      port: 1,
+      dbPath: "d",
+      projectRoot: "p",
+      path: "x",
+      baseEnv: {
+        OTOMAT_MAINTENANCE_ACTION: "restore",
+        OTOMAT_RESTORE_BACKUP: "/untrusted/backup.sqlite",
+      },
+    });
+
+    expect(env.OTOMAT_MAINTENANCE_ACTION).toBeUndefined();
+    expect(env.OTOMAT_RESTORE_BACKUP).toBeUndefined();
+  });
+
   it("extends the base env but overrides PATH", () => {
     const env = buildDaemonEnv({
       port: 1,

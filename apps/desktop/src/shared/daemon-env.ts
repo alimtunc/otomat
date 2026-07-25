@@ -1,3 +1,5 @@
+import { MAINTENANCE_ACTION_ENV, RESTORE_BACKUP_ENV } from "@otomat/domain";
+
 import { DAEMON_HOST } from "#shared/constants";
 
 export interface DaemonEnvOptions {
@@ -27,6 +29,8 @@ export function buildDaemonEnv(options: DaemonEnvOptions): NodeJS.ProcessEnv {
     OTOMAT_PROJECT_ROOT: options.projectRoot,
   };
   delete env.OTOMAT_LINEAR_API_KEY;
+  delete env[MAINTENANCE_ACTION_ENV];
+  delete env[RESTORE_BACKUP_ENV];
   if (options.allowedOrigin !== undefined) env.OTOMAT_ALLOWED_ORIGINS = options.allowedOrigin;
   if (options.runAsNode === true) env.ELECTRON_RUN_AS_NODE = "1";
   return env;
