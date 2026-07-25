@@ -2,11 +2,7 @@ import type { EventEnvelope } from "@otomat/domain";
 import { Spinner } from "@otomat/ui";
 import { eventSummary } from "@web/components/runs/timeline/event-summary";
 
-/**
- * Shown while the run is genuinely executing. The hint is the last ledger event
- * the daemon persisted, so the row reports what the agent is doing rather than
- * implying progress the stream has not proven.
- */
+/** The hint is the last persisted ledger event, so the row never implies progress the stream has not proven. */
 export function WorkingRow({ latest }: { latest: EventEnvelope | null }) {
   return (
     <div role="listitem" className="flex items-center gap-2.5 px-6 py-3" aria-live="polite">

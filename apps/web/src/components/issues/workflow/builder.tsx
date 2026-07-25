@@ -16,21 +16,12 @@ export interface WorkflowPlanBuilderProps {
 
 /** The plan editor itself — default agent, ordered steps, dependencies and compete groups — shared by every workflow launch surface. */
 export function WorkflowPlanBuilder({ agents, onAgentChoice, workflow }: WorkflowPlanBuilderProps) {
-  const { descriptors, profiles, choice } = agents;
+  const { descriptors, profiles } = agents;
   const { form, planError, updateSteps, addStep, addCompeteGroup } = workflow;
 
   return (
     <>
-      <LaunchAgentPicker
-        descriptors={descriptors}
-        profiles={profiles}
-        value={choice}
-        onValueChange={onAgentChoice}
-        isPending={agents.isPending}
-        isError={agents.isError}
-        isSuccess={agents.isSuccess}
-        onRetry={agents.onRetry}
-      />
+      <LaunchAgentPicker agents={agents} onValueChange={onAgentChoice} />
       <form.Field name="steps">
         {(stepsField) => (
           <div className="flex flex-col gap-2">

@@ -4,13 +4,6 @@ export function isActiveRun(run: RunContract): boolean {
   return !isRunTerminal(run.status);
 }
 
-/** States with a provider turn genuinely in flight; a resting run is still active but is not working. */
-const WORKING_STATES: ReadonlySet<RunState> = new Set<RunState>(["queued", "preparing", "running"]);
-
-export function isRunWorking(run: RunContract): boolean {
-  return WORKING_STATES.has(run.status);
-}
-
 export function isRunState(value: unknown): value is RunState {
   return typeof value === "string" && (RUN_STATES as readonly string[]).includes(value);
 }

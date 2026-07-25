@@ -8,6 +8,7 @@ import { eventSummary } from "@web/components/runs/timeline/event-summary";
 export function LogRow({ event }: { event: EventEnvelope }) {
   return (
     <TimelineEventRow
+      id={`event-${event.seq}`}
       type={event.type}
       provenance={event.source}
       summary={eventSummary(event)}

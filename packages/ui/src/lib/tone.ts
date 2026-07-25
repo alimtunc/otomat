@@ -1,4 +1,12 @@
-import type { StatusTone } from "./status";
+export type StatusTone =
+  | "neutral"
+  | "iris"
+  | "success"
+  | "warning"
+  | "danger"
+  | "review"
+  | "stale"
+  | "ghost";
 
 export interface ToneFacets {
   text: string;

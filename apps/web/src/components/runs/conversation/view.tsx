@@ -11,7 +11,7 @@ import { ConversationThread } from "@web/components/runs/conversation/thread";
 import { PaneHeader } from "@web/components/runs/pane-header";
 import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
 
-export function RunTimelineView() {
+export function RunConversationView() {
   const { runId } = useParams({ from: "/runs/$runId/" });
   const detail = useRunDetail(runId);
   const stream = useRunEventStream();

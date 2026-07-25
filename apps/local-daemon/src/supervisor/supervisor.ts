@@ -34,7 +34,7 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     reconcile: () => {
       const now = new Date().toISOString();
       // Resolve delivery claims first so the run settles below can judge them from turn evidence.
-      reconcileContributionClaims(state.db, now);
+      reconcileContributionClaims(state.db, state.dataDir, now);
       const recovered = recoverCompeteSelections(state);
       const report = reconcileRuns(state.db, state.dataDir, now);
       const reconciled = [...recovered, ...report.reconciled];

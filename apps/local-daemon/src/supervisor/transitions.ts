@@ -5,6 +5,7 @@ import {
   updateStepRunStatus,
   type AgentSessionRow,
   type Db,
+  type RunContributionRow,
   type StepRunRow,
 } from "@otomat/db";
 import {
@@ -12,15 +13,25 @@ import {
   competeGroupMachine,
   drivePath,
   isRunTerminal,
+  runContributionMachine,
   runMachine,
   stepRunMachine,
   type AgentSessionState,
   type CompeteGroupState,
+  type RunContributionState,
   type RunState,
   type StepRunState,
 } from "@otomat/domain";
 
 import type { Targets } from "./classify.js";
+
+/** A batch can hold rows in different states, so the machine validates each edge before the write lands. */
+export function assertContributionTransitions(
+  rows: readonly RunContributionRow[],
+  to: RunContributionState,
+): void {
+  for (const row of rows) runContributionMachine.transition(row.status, to);
+}
 
 /** Walks the run to `to` along the shortest legal path, stamping `completed_at` on a terminal landing. */
 export function driveRunTo(db: Db, runId: string, from: RunState, to: RunState, now: string): void {

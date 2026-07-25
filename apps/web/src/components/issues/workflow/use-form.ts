@@ -1,6 +1,5 @@
 import { runPlanInputSchema, type RunContract, type StartRunRequest } from "@otomat/domain";
 import { useForm } from "@tanstack/react-form";
-import { useNavigate } from "@tanstack/react-router";
 import { useLaunchRun } from "@web/api/runs/mutations";
 import { agentChoiceToRequest } from "@web/lib/agent-choice";
 import {
@@ -28,7 +27,13 @@ const WORKFLOW_DEFAULT_VALUES: { goal: string; steps: WorkflowNodeDraft[] } = {
   steps: [newWorkflowStep(1)],
 };
 
-/** Null when the target cannot be launched on yet, so the caller can explain why instead of posting. */
+/** The one reason a target cannot be launched on yet, or null when it can — shown by the form and enforced on submit. */
+export function workflowLaunchBlocker(target: WorkflowLaunchTarget): string | null {
+  return target.kind === "project" && target.projectId === undefined
+    ? "Select a project before launching a workflow."
+    : null;
+}
+
 function targetRequest(
   target: WorkflowLaunchTarget,
   goal: string,
@@ -41,7 +46,6 @@ function targetRequest(
 /** Owns workflow values, submit-time plan validation, and step-list mutations. */
 export function useWorkflowForm({ target, agentChoice, onLaunched }: UseWorkflowFormOptions) {
   const { launch, isPending } = useLaunchRun();
-  const navigate = useNavigate();
   const stepCounter = useRef(1);
   const [planError, setPlanError] = useState<string | null>(null);
 
@@ -63,8 +67,6 @@ export function useWorkflowForm({ target, agentChoice, onLaunched }: UseWorkflow
       });
       if (!run) return;
       form.reset();
-      // A workflow launched from its issue is followed in place; one that created its issue is not on screen yet.
-      if (target.kind === "project") navigate({ to: "/runs/$runId", params: { runId: run.id } });
       onLaunched(run);
     },
   });

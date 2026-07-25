@@ -1,4 +1,9 @@
+import { randomUUID } from "node:crypto";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
 import {
+  claimRunContributions,
   getRun,
   listAgentSessionsForRun,
   listRunContributions,
@@ -7,6 +12,7 @@ import {
 } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
+import { sessionDir } from "#events";
 import { RunContributionNotRetriableError } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
@@ -201,12 +207,20 @@ it("treats a crash-time claim as delivered only when its worker was really launc
     stepStatus: "running",
     sessionStatus: "active",
     providerSessionId: "ps-unclaimed",
+    // A resumable session always carries a pid from an earlier turn, so only the gate can tell the two apart.
+    pid: 5353,
+    pgid: 5353,
   });
 
   const claimed = await supervisor.contribute("claimed", "carried by the lost worker");
   const dropped = await supervisor.contribute("unclaimed", "never handed over");
-  claimContribution(claimed.id, launched.agentSessionId);
-  claimContribution(dropped.id, neverLaunched.agentSessionId);
+  // Reproduces the claim a crash leaves behind: recorded session, still queued.
+  claimRunContributions(fix.db, [claimed.id], launched.agentSessionId);
+  claimRunContributions(fix.db, [dropped.id], neverLaunched.agentSessionId);
+  // Only the launched worker took its start gate; the other never got one.
+  const gateDir = sessionDir(fix.dataDir, "claimed", launched.agentSessionId);
+  mkdirSync(gateDir, { recursive: true });
+  writeFileSync(join(gateDir, `.worker-started-${randomUUID()}`), "ready");
 
   makeSupervisor(fix, "complete").supervisor.reconcile();
 
@@ -220,13 +234,6 @@ it("treats a crash-time claim as delivered only when its worker was really launc
     delivered_at: null,
   });
 });
-
-function claimContribution(contributionId: string, agentSessionId: string): void {
-  // Reproduces the claim a crash leaves behind: recorded session, still queued.
-  fix.client.sqlite
-    .prepare("update run_contributions set agent_session_id = ? where id = ?")
-    .run(agentSessionId, contributionId);
-}
 
 it("marks delivered messages failed when the turn carrying them fails", async () => {
   const { supervisor } = makeSupervisor(fix, "fail");

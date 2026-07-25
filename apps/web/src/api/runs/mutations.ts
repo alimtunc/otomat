@@ -7,7 +7,6 @@ import {
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
@@ -83,6 +82,8 @@ function useContributionMutation<TVariables>(
   return useMutation({
     mutationFn,
     onSuccess: () => {
+      // A message the daemon only re-queues emits no ledger event, so the SSE path cannot refresh this cache.
+      client.invalidateQueries({ queryKey: queryKeys.runContributions(runId) });
       client.invalidateQueries({ queryKey: queryKeys.run(runId) });
       client.invalidateQueries({ queryKey: queryKeys.runs });
     },
@@ -106,10 +107,10 @@ export function useRetryRunContribution(runId: string) {
 
 /** Explicit "deliver now" for messages a daemon restart left queued; the daemon never resumes a run on its own at boot. */
 export function useDeliverRunContributions(runId: string) {
-  return useContributionMutation(runId, () => daemon.deliverRunContributions(runId));
+  return useContributionMutation<void>(runId, () => daemon.deliverRunContributions(runId));
 }
 
-export function contributionErrorMessage(error: unknown): string {
+function contributionErrorMessage(error: unknown): string {
   if (error instanceof DaemonRequestError) {
     if (error.status === 409) {
       return "Could not send this message — the daemon refused it as already delivered.";
@@ -121,7 +122,7 @@ export function contributionErrorMessage(error: unknown): string {
   return "Could not send this message — is the daemon running?";
 }
 
-export function startRunErrorMessage(error: unknown): string {
+function startRunErrorMessage(error: unknown): string {
   if (error instanceof DaemonRequestError) {
     const refusal = agentProfileErrorSchema.safeParse(error.body);
     if (refusal.success) return refusal.data.message;
@@ -138,11 +139,7 @@ export interface LaunchRun {
   isPending: boolean;
 }
 
-/**
- * Starts a run and toasts the outcome, leaving the caller to decide where the
- * user goes: an issue workspace follows the new run in place, a creation dialog
- * navigates to it.
- */
+/** Toasts the outcome and hands the run back; where the user goes next belongs to the surface that launched it. */
 export function useLaunchRun(): LaunchRun {
   const startRun = useStartRun();
 
@@ -158,24 +155,4 @@ export function useLaunchRun(): LaunchRun {
   }
 
   return { launch, isPending: startRun.isPending };
-}
-
-export interface StartRunAndNavigate {
-  /** Resolves true when the run started and navigation fired; false when it failed (an error toast was shown). */
-  start: (request: StartRunRequest) => Promise<boolean>;
-  isPending: boolean;
-}
-
-/** Starts a run and navigates to its detail route on success. */
-export function useStartRunAndNavigate(): StartRunAndNavigate {
-  const { launch, isPending } = useLaunchRun();
-  const navigate = useNavigate();
-
-  async function start(request: StartRunRequest): Promise<boolean> {
-    const run = await launch(request);
-    if (run) navigate({ to: "/runs/$runId", params: { runId: run.id } });
-    return run !== null;
-  }
-
-  return { start, isPending };
 }

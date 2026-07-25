@@ -3,28 +3,38 @@ import { randomUUID } from "node:crypto";
 import {
   appendRunContribution,
   claimRunContributions,
-  getAgentSession,
+  failRunContributionDelivery,
   getRun,
   getRunContribution,
   listClaimedRunContributions,
-  listRunContributionsByStatus,
-  markRunContributionsFailed,
+  listQueuedRunContributions,
   markRunContributionsSent,
-  releaseRunContributionClaim,
+  releaseRunContributionClaims,
   requeueRunContribution,
   type Db,
   type RunContributionRow,
+  type RunRow,
 } from "@otomat/db";
-import { canFollowUpRun } from "@otomat/domain";
+import { canFollowUpRun, isRunContributionRetriable } from "@otomat/domain";
 
-import { emitLedgerEvent } from "#events";
+import { emitLedgerEvent, sessionDir } from "#events";
 import { buildRuntimeEvent } from "#runtime";
 
 import { buildContributionPrompt } from "./contribution-prompt.js";
 import { spawnTurn } from "./lifecycle.js";
-import { resolveResumeTurn, RunNotResumableError } from "./resume.js";
+import { resolveResumeTurn, RunNotResumableError, type ResumeTurn } from "./resume.js";
+import { clearWorkerStartEvidence, workerConsumedStartGate } from "./start-gate.js";
 import { hasRunActivity, type SupervisorState } from "./state.js";
+import { assertContributionTransitions } from "./transitions.js";
 import { SUPERVISOR_ADAPTER } from "./types.js";
+
+/** No such message on this run — a bad id, not a conflict. */
+export class RunContributionNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RunContributionNotFoundError";
+  }
+}
 
 /** A retry the caller got wrong: the contribution is not failed, or it already reached the provider. */
 export class RunContributionNotRetriableError extends Error {
@@ -57,53 +67,72 @@ function emitContributionEvent(state: SupervisorState, row: RunContributionRow):
   );
 }
 
-function emitForIds(state: SupervisorState, ids: readonly string[]): void {
-  for (const id of ids) {
-    const row = getRunContribution(state.db, id);
-    if (row) emitContributionEvent(state, row);
-  }
+/** The row is written by this module before every read, so an absent one is corruption, not an expected state. */
+function requireRunContribution(state: SupervisorState, id: string): RunContributionRow {
+  const row = getRunContribution(state.db, id);
+  if (!row) throw new Error(`contribution ${id} vanished from its own run`);
+  return row;
 }
 
-/**
- * Hands the run's queued messages to one resume turn, in send order. It is the
- * single delivery mechanism: the contribution API, the post-settle chain and an
- * explicit "deliver now" all call it, and it is a no-op while the run is busy or
- * has no resting session to resume — those messages simply stay queued.
- */
+function emitContributionEvents(state: SupervisorState, ids: readonly string[]): void {
+  for (const id of ids) emitContributionEvent(state, requireRunContribution(state, id));
+}
+
+/** Claims the batch, hands it to one resume turn, and resolves it from what the spawn actually did. */
+async function sendBatch(
+  state: SupervisorState,
+  run: RunRow,
+  queued: readonly RunContributionRow[],
+): Promise<void> {
+  const ids = queued.map((row) => row.id);
+  let turn: ResumeTurn;
+  try {
+    turn = resolveResumeTurn(state, run, buildContributionPrompt(queued.map((row) => row.body)));
+  } catch (error) {
+    if (!(error instanceof RunNotResumableError)) throw error;
+    assertContributionTransitions(queued, "failed");
+    failRunContributionDelivery(state.db, ids, reason(error));
+    emitContributionEvents(state, ids);
+    return;
+  }
+
+  // Before the claim is durable, so a crash while waiting for a slot leaves no stale proof of an earlier turn.
+  clearWorkerStartEvidence(turn.context.agentSessionDir);
+  claimRunContributions(state.db, ids, turn.context.agentSessionId);
+  let started: boolean;
+  try {
+    started = await spawnTurn(state, turn.context, "resume", turn.providerSessionId);
+  } catch (error) {
+    // `spawnTurn` only throws before the worker starts, so nothing reached the provider and a retry cannot duplicate it.
+    assertContributionTransitions(queued, "failed");
+    failRunContributionDelivery(state.db, ids, reason(error));
+    emitContributionEvents(state, ids);
+    return;
+  }
+  if (!started) {
+    // `false` means no worker ever started, so the batch is honestly still queued.
+    releaseRunContributionClaims(state.db, ids);
+    return;
+  }
+  assertContributionTransitions(queued, "sent");
+  markRunContributionsSent(state.db, ids, new Date().toISOString());
+  emitContributionEvents(state, ids);
+}
+
+/** The single delivery mechanism — API, post-settle chain and "deliver now" all land here; a busy or unresumable run just keeps its queue. */
 export async function deliverQueuedContributions(
   state: SupervisorState,
   runId: string,
 ): Promise<void> {
   if (state.shuttingDown || state.aborting.has(runId) || state.delivering.has(runId)) return;
-  const queued = listRunContributionsByStatus(state.db, runId, "queued");
+  const queued = listQueuedRunContributions(state.db, runId);
   if (queued.length === 0) return;
   const run = getRun(state.db, runId);
   if (!run || !canFollowUpRun(run.status) || hasRunActivity(state, runId)) return;
 
-  const ids = queued.map((row) => row.id);
   state.delivering.add(runId);
   try {
-    let turn;
-    try {
-      turn = resolveResumeTurn(state, run, buildContributionPrompt(queued.map((row) => row.body)));
-    } catch (error) {
-      if (!(error instanceof RunNotResumableError)) throw error;
-      markRunContributionsFailed(state.db, ids, reason(error));
-      emitForIds(state, ids);
-      return;
-    }
-
-    claimRunContributions(state.db, ids, turn.context.agentSessionId);
-    try {
-      await spawnTurn(state, turn.context, "resume", turn.providerSessionId);
-    } catch (error) {
-      // The turn never launched, so nothing reached the provider and a retry cannot duplicate it.
-      markRunContributionsFailed(state.db, ids, reason(error));
-      emitForIds(state, ids);
-      return;
-    }
-    markRunContributionsSent(state.db, ids, new Date().toISOString());
-    emitForIds(state, ids);
+    await sendBatch(state, run, queued);
   } finally {
     state.delivering.delete(runId);
   }
@@ -118,7 +147,7 @@ export async function contributeToRun(
   const row = appendRunContribution(state.db, { id: randomUUID(), run_id: runId, body });
   emitContributionEvent(state, row);
   await deliverQueuedContributions(state, runId);
-  return getRunContribution(state.db, row.id) ?? row;
+  return requireRunContribution(state, row.id);
 }
 
 /** Re-queues a failed message that never reached the provider, then retries the run's queue. */
@@ -129,35 +158,36 @@ export async function retryRunContribution(
 ): Promise<RunContributionRow> {
   const row = getRunContribution(state.db, contributionId);
   if (!row || row.run_id !== runId) {
-    throw new RunContributionNotRetriableError(`contribution ${contributionId} is not on this run`);
+    throw new RunContributionNotFoundError(`contribution ${contributionId} is not on this run`);
   }
-  if (row.status !== "failed") {
+  if (!isRunContributionRetriable(row)) {
     throw new RunContributionNotRetriableError(
-      `contribution ${contributionId} is ${row.status}, not failed`,
+      row.delivered_at === null
+        ? `contribution ${contributionId} is ${row.status}, not failed`
+        : `contribution ${contributionId} already reached the agent and must not be sent twice`,
     );
   }
-  if (row.delivered_at !== null) {
-    throw new RunContributionNotRetriableError(
-      `contribution ${contributionId} already reached the agent and must not be sent twice`,
-    );
-  }
+  assertContributionTransitions([row], "queued");
   requeueRunContribution(state.db, contributionId);
   await deliverQueuedContributions(state, runId);
-  return getRunContribution(state.db, contributionId) ?? row;
+  return requireRunContribution(state, contributionId);
 }
 
 /**
- * Boot pass over claims a crash left behind. A claimed session with a recorded
- * pid proves its worker was launched carrying the batch, so those messages are
- * `sent` and the run's settle resolves them; without a pid nothing was launched
- * and the claim is dropped so the message stays honestly queued.
+ * Boot pass over claims a crash left behind. The turn's own start gate is the
+ * evidence: only a gate the worker took proves the batch reached a provider, so
+ * anything else returns the messages to the queue instead of burying them as
+ * delivered. A session row's `pid` survives every turn and can prove nothing.
  */
-export function reconcileContributionClaims(db: Db, now: string): void {
+export function reconcileContributionClaims(db: Db, dataDir: string, now: string): void {
   for (const row of listClaimedRunContributions(db)) {
     const sessionId = row.agent_session_id;
     if (sessionId === null) continue;
-    const session = getAgentSession(db, sessionId);
-    if (session && session.pid !== null) markRunContributionsSent(db, [row.id], now);
-    else releaseRunContributionClaim(db, row.id);
+    if (!workerConsumedStartGate(sessionDir(dataDir, row.run_id, sessionId))) {
+      releaseRunContributionClaims(db, [row.id]);
+      continue;
+    }
+    assertContributionTransitions([row], "sent");
+    markRunContributionsSent(db, [row.id], now);
   }
 }

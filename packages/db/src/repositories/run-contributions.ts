@@ -1,11 +1,11 @@
 import type { RunContributionState } from "@otomat/domain";
-import { and, eq, inArray, max, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, max, sql } from "drizzle-orm";
+import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core";
 
 import type { Db } from "../client.js";
 import { runContributions } from "../schema/index.js";
 import { touch } from "./touch.js";
 
-export type NewRunContribution = typeof runContributions.$inferInsert;
 export type RunContributionRow = typeof runContributions.$inferSelect;
 
 export interface AppendRunContribution {
@@ -14,11 +14,7 @@ export interface AppendRunContribution {
   body: string;
 }
 
-/**
- * Appends one contribution at the end of the run's FIFO queue. The read of the
- * current tail and the insert share one immediate transaction, so two concurrent
- * posts get distinct `seq` values instead of colliding on the unique index.
- */
+/** The tail read and the insert share one immediate transaction, so concurrent posts get distinct `seq` values. */
 export function appendRunContribution(db: Db, value: AppendRunContribution): RunContributionRow {
   return db.transaction(
     () => {
@@ -51,15 +47,12 @@ export function listRunContributions(db: Db, runId: string): RunContributionRow[
     .all();
 }
 
-export function listRunContributionsByStatus(
-  db: Db,
-  runId: string,
-  status: RunContributionState,
-): RunContributionRow[] {
+/** The run's undelivered queue in send order; one delivery turn carries the whole batch. */
+export function listQueuedRunContributions(db: Db, runId: string): RunContributionRow[] {
   return db
     .select()
     .from(runContributions)
-    .where(and(eq(runContributions.run_id, runId), eq(runContributions.status, status)))
+    .where(and(eq(runContributions.run_id, runId), eq(runContributions.status, "queued")))
     .orderBy(runContributions.seq)
     .all();
 }
@@ -69,12 +62,7 @@ export function listClaimedRunContributions(db: Db): RunContributionRow[] {
   return db
     .select()
     .from(runContributions)
-    .where(
-      and(
-        eq(runContributions.status, "queued"),
-        sql`${runContributions.agent_session_id} is not null`,
-      ),
-    )
+    .where(and(eq(runContributions.status, "queued"), isNotNull(runContributions.agent_session_id)))
     .orderBy(runContributions.run_id, runContributions.seq)
     .all();
 }
@@ -82,7 +70,7 @@ export function listClaimedRunContributions(db: Db): RunContributionRow[] {
 function patchRunContributions(
   db: Db,
   ids: readonly string[],
-  set: Partial<NewRunContribution>,
+  set: SQLiteUpdateSetSource<typeof runContributions>,
 ): void {
   if (ids.length === 0) return;
   db.update(runContributions)
@@ -97,17 +85,11 @@ export function claimRunContributions(
   ids: readonly string[],
   agentSessionId: string,
 ): void {
-  if (ids.length === 0) return;
-  db.update(runContributions)
-    .set(
-      touch({
-        agent_session_id: agentSessionId,
-        attempts: sql`${runContributions.attempts} + 1`,
-        error: null,
-      }),
-    )
-    .where(inArray(runContributions.id, [...ids]))
-    .run();
+  patchRunContributions(db, ids, {
+    agent_session_id: agentSessionId,
+    attempts: sql`${runContributions.attempts} + 1`,
+    error: null,
+  });
 }
 
 /** Marks a claimed batch delivered once its turn is launched — the only path to `sent`. */
@@ -125,14 +107,14 @@ export function markRunContributionsSettled(
   patchRunContributions(db, ids, { status, settled_at: at, error });
 }
 
-/** A delivery that never launched: the claim is dropped so the message can be retried without duplicating a provider effect. */
-export function markRunContributionsFailed(db: Db, ids: readonly string[], error: string): void {
+/** A delivery that never launched: `settled_at` stays null and the claim is dropped, so the message is still retriable. */
+export function failRunContributionDelivery(db: Db, ids: readonly string[], error: string): void {
   patchRunContributions(db, ids, { status: "failed", agent_session_id: null, error });
 }
 
-/** Drops a claim whose turn is proven never to have launched, returning the contribution to the queue. */
-export function releaseRunContributionClaim(db: Db, id: string): void {
-  patchRunContributions(db, [id], { agent_session_id: null });
+/** Drops a claim whose turn is proven never to have launched, returning the contributions to the queue. */
+export function releaseRunContributionClaims(db: Db, ids: readonly string[]): void {
+  patchRunContributions(db, ids, { agent_session_id: null });
 }
 
 /** Re-queues a failed contribution for another delivery attempt. */

@@ -41,7 +41,7 @@ describe("CockpitTabs", () => {
 
     const anchors = [...container.querySelectorAll("a")];
     expect(anchors.map((anchor) => anchor.textContent)).toEqual([
-      "Timeline",
+      "Conversation",
       "Report",
       "Logs",
       "Diff",
@@ -65,16 +65,16 @@ describe("CockpitTabs", () => {
   it("marks the index route active from its own match, not the fallback", async () => {
     currentRoute = "/runs/$runId";
     const { container, cleanup } = await mount(<CockpitTabs runId="run-1" />);
-    expect(pressedTabLabel(container)).toBe("Timeline");
+    expect(pressedTabLabel(container)).toBe("Conversation");
     expect(queriedRoutes).toContain("/runs/$runId");
     expect(queriedRoutes).not.toContain("/runs/$runId/pr");
     await cleanup();
   });
 
-  it("falls back to the timeline tab on a cockpit URL that matches no tab", async () => {
+  it("falls back to the conversation tab on a cockpit URL that matches no tab", async () => {
     currentRoute = null;
     const { container, cleanup } = await mount(<CockpitTabs runId="run-1" />);
-    expect(pressedTabLabel(container)).toBe("Timeline");
+    expect(pressedTabLabel(container)).toBe("Conversation");
     expect(queriedRoutes).toContain("/runs/$runId/pr");
     await cleanup();
   });

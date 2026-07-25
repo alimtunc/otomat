@@ -9,10 +9,10 @@ import {
   SegmentedControl,
   SegmentedItem,
 } from "@otomat/ui";
+import { WorkflowLaunchForm } from "@web/components/issues/workflow/form";
 import { SingleRunLaunchForm } from "@web/components/issues/workspace/launch/single-run-form";
-import { IssueWorkflowForm } from "@web/components/issues/workspace/launch/workflow-form";
 import { issueShortId } from "@web/lib/ids";
-import { useState } from "react";
+import { useState, type ComponentPropsWithoutRef } from "react";
 
 const LAUNCH_MODES = ["single", "workflow"] as const;
 type LaunchMode = (typeof LAUNCH_MODES)[number];
@@ -22,21 +22,22 @@ function isLaunchMode(value: string): value is LaunchMode {
 }
 
 export interface LaunchRunDialogProps {
-  issue: IssueContract;
+  /** Undefined while the issue is still loading: the trigger stays on screen, disabled, instead of vanishing. */
+  issue: IssueContract | undefined;
   onLaunched: (run: RunContract) => void;
-  triggerLabel?: string;
 }
 
-/**
- * The one surface that launches work on an existing issue: a single agent turn
- * or a multi-step workflow, both frozen into the same `plan` contract and both
- * followed in place on the issue workspace.
- */
-export function LaunchRunDialog({
-  issue,
-  onLaunched,
-  triggerLabel = "Launch run",
-}: LaunchRunDialogProps) {
+function LaunchTrigger(props: ComponentPropsWithoutRef<typeof Button>) {
+  return (
+    <Button variant="primary" size="sm" {...props}>
+      <Icon name="play" aria-hidden />
+      Launch run
+    </Button>
+  );
+}
+
+/** The one surface that launches work on an existing issue: a single agent turn or a workflow, both frozen into the same `plan` contract. */
+export function LaunchRunDialog({ issue, onLaunched }: LaunchRunDialogProps) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<LaunchMode>("single");
   const [agentChoice, setAgentChoice] = useState<string | null>(null);
@@ -52,16 +53,12 @@ export function LaunchRunDialog({
     onLaunched(run);
   }
 
+  if (issue === undefined)
+    return <LaunchTrigger disabled title="Available once this issue has loaded" />;
+
   return (
     <Dialog open={open} onOpenChange={openChange}>
-      <DialogTrigger
-        render={
-          <Button variant="primary" size="sm">
-            <Icon name="play" aria-hidden />
-            {triggerLabel}
-          </Button>
-        }
-      />
+      <DialogTrigger render={<LaunchTrigger />} />
       <DialogContent aria-label="Launch on this issue">
         <DialogHeader>
           <div className="flex items-center justify-between gap-3">
@@ -96,8 +93,8 @@ export function LaunchRunDialog({
             onCancel={() => openChange(false)}
           />
         ) : (
-          <IssueWorkflowForm
-            issueId={issue.id}
+          <WorkflowLaunchForm
+            target={{ kind: "issue", issueId: issue.id }}
             agentChoice={agentChoice}
             onAgentChoice={setAgentChoice}
             onLaunched={launched}

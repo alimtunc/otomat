@@ -4,12 +4,7 @@ export const RUN_CONTRIBUTION_STATES = ["queued", "sent", "completed", "failed"]
 
 export type RunContributionState = (typeof RUN_CONTRIBUTION_STATES)[number];
 
-/**
- * A user message on a run. `sent` requires persisted evidence that a turn
- * carrying it was launched, so it is never reached from a UI click. `failed`
- * re-queues only when nothing was ever delivered — a contribution the provider
- * already received must not be replayed.
- */
+/** `sent` requires persisted evidence that a turn carrying the message was launched, so it is never reached from a UI click. */
 export const runContributionMachine = defineMachine<RunContributionState>({
   name: "run_contribution",
   initial: "queued",
@@ -21,7 +16,10 @@ export const runContributionMachine = defineMachine<RunContributionState>({
   },
 });
 
-/** States whose contribution still owes the run a delivery attempt. */
-export function isRunContributionPending(status: RunContributionState): boolean {
-  return status === "queued";
+/** A failed message is retriable only while nothing was ever handed to the provider. */
+export function isRunContributionRetriable(contribution: {
+  status: RunContributionState;
+  delivered_at: string | null;
+}): boolean {
+  return contribution.status === "failed" && contribution.delivered_at === null;
 }

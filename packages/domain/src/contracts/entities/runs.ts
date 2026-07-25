@@ -61,15 +61,11 @@ export const runContractSchema = z.object({
   branch: z.string(),
   plan_json: runPlanSchema,
   /** Last time the daemon wrote this run row; the honest "last activity" of a collapsed run. */
-  updated_at: z.string(),
+  updated_at: z.iso.datetime(),
 });
 export type RunContract = z.infer<typeof runContractSchema>;
 
-/**
- * One user message on a run. `status` is the delivery lifecycle, never a read
- * receipt: `sent` is only reached once `delivered_at` records that a turn
- * carrying this message was launched.
- */
+/** `status` is the delivery lifecycle, never a read receipt: `sent` needs `delivered_at` to prove a carrying turn was launched. */
 export const runContributionContractSchema = z.object({
   id: z.string(),
   run_id: z.string(),
@@ -79,12 +75,12 @@ export const runContributionContractSchema = z.object({
   status: z.enum(RUN_CONTRIBUTION_STATES),
   /** Agent session the delivering turn resumes; stamped when the delivery is claimed. */
   agent_session_id: z.string().nullable(),
-  delivered_at: z.string().nullable(),
+  delivered_at: z.iso.datetime().nullable(),
   /** When the carrying turn settled, resolving this message to `completed` or `failed`. */
-  settled_at: z.string().nullable(),
+  settled_at: z.iso.datetime().nullable(),
   attempts: z.number().int().nonnegative(),
   error: z.string().nullable(),
-  created_at: z.string(),
+  created_at: z.iso.datetime(),
 });
 export type RunContributionContract = z.infer<typeof runContributionContractSchema>;
 

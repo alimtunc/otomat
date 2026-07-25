@@ -1,13 +1,24 @@
-import { canFollowUpRun, type RunContract, type RunContributionContract } from "@otomat/domain";
+import {
+  canFollowUpRun,
+  isRunTerminal,
+  type RunContract,
+  type RunContributionContract,
+} from "@otomat/domain";
 import { Button } from "@otomat/ui";
 import { useDeliverRunContributions } from "@web/api/runs/mutations";
-import { queuedCount } from "@web/lib/conversation";
+import { queuedCount } from "@web/lib/run-contribution";
 
-/**
- * The honest status of messages still waiting. A resting run with a queue is the
- * post-restart case: the daemon never resumes a run on its own at boot, so
- * delivery needs an explicit action rather than a silent background spawn.
- */
+function queuedNote(status: RunContract["status"], label: string): string {
+  if (isRunTerminal(status)) {
+    return `${label} still queued and will never be delivered — this run is finished.`;
+  }
+  if (canFollowUpRun(status)) {
+    return `${label} waiting — this run is paused, so delivery needs an explicit resume.`;
+  }
+  return `${label} queued and will be delivered at this run's next safe turn.`;
+}
+
+/** A resting run with a queue is the post-restart case: the daemon never resumes a run on its own at boot. */
 export function QueuedBanner({
   run,
   contributions,
@@ -24,18 +35,14 @@ export function QueuedBanner({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle bg-surface-2 px-6 py-2">
-      <p className="text-xs text-text-secondary">
-        {resting
-          ? `${label} waiting — this run is paused, so delivery needs an explicit resume.`
-          : `${label} queued and will be delivered at this run's next safe turn.`}
-      </p>
+      <p className="text-xs text-text-secondary">{queuedNote(run.status, label)}</p>
       {resting ? (
         <Button
           type="button"
           variant="outline"
           size="xs"
           loading={deliver.isPending}
-          onClick={() => deliver.mutate(undefined)}
+          onClick={() => deliver.mutate()}
         >
           Deliver now
         </Button>

@@ -1,54 +1,14 @@
-import type { EventEnvelope, RunDetail } from "@otomat/domain";
-import { EmptyState, TimelineEventRow } from "@otomat/ui";
+import { isRunWorking, type EventEnvelope, type RunDetail } from "@otomat/domain";
+import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
 import { useRunContributions } from "@web/api/runs/queries";
 import type { RunStreamState } from "@web/api/runs/run-events-provider";
-import { ActivityGroup } from "@web/components/runs/conversation/activity-group";
-import { AgentMessage } from "@web/components/runs/conversation/agent-message";
 import { ConversationComposer } from "@web/components/runs/conversation/composer";
-import { ConversationMessage } from "@web/components/runs/conversation/message";
 import { QueuedBanner } from "@web/components/runs/conversation/queued-banner";
+import { ThreadItem } from "@web/components/runs/conversation/thread-item";
 import { WorkingRow } from "@web/components/runs/conversation/working-row";
-import { eventDetail } from "@web/components/runs/timeline/event-detail/event-detail";
-import { eventSummary } from "@web/components/runs/timeline/event-summary";
-import { buildConversation, type ConversationItem } from "@web/lib/conversation";
-import { isRunWorking } from "@web/lib/run-activity";
+import { buildConversation } from "@web/lib/conversation";
 
-function ThreadItem({ item, runId }: { item: ConversationItem; runId: string }) {
-  if (item.kind === "step") {
-    return (
-      <div className="px-6 pb-1 pt-3 text-micro font-semibold uppercase tracking-wide text-text-tertiary">
-        {item.name}
-      </div>
-    );
-  }
-  if (item.kind === "message") {
-    return <ConversationMessage runId={runId} contribution={item.contribution} />;
-  }
-  if (item.kind === "agent") {
-    return <AgentMessage event={item.event} text={item.text} />;
-  }
-  if (item.kind === "activity") {
-    return <ActivityGroup events={item.events} counts={item.counts} />;
-  }
-  return (
-    <TimelineEventRow
-      id={`event-${item.event.seq}`}
-      type={item.event.type}
-      provenance={item.event.source}
-      summary={eventSummary(item.event)}
-      at={item.event.occurred_at}
-    >
-      {eventDetail(item.event)}
-    </TimelineEventRow>
-  );
-}
-
-/**
- * One run's conversation, followed by a composer scoped to that run: the user's
- * messages, the agent's replies and the milestones that carry proof, with the
- * tool/log traffic between them folded into collapsed groups. Ordering comes
- * from the ledger, delivery state from the contributions read model.
- */
+/** Ordering comes from the ledger, delivery state from the contributions read model. */
 export function ConversationThread({
   detail,
   events,
@@ -61,12 +21,33 @@ export function ConversationThread({
   degraded: boolean;
 }) {
   const contributions = useRunContributions(detail.run.id);
-  const items = buildConversation(events, contributions.data?.contributions ?? [], detail.steps);
-  const working = isRunWorking(detail.run);
+
+  if (contributions.isPending) {
+    return (
+      <div className="flex flex-col gap-2 p-6">
+        <Skeleton height={14} width="55%" />
+        <Skeleton height={14} width="35%" />
+      </div>
+    );
+  }
+
+  if (contributions.isError) {
+    return (
+      <ErrorState
+        variant="inline"
+        title="Couldn’t load this conversation"
+        onRetry={() => void contributions.refetch()}
+      />
+    );
+  }
+
+  const messages = contributions.data.contributions;
+  const items = buildConversation(events, messages, detail.steps);
+  const working = isRunWorking(detail.run.status);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <QueuedBanner run={detail.run} contributions={contributions.data?.contributions ?? []} />
+      <QueuedBanner run={detail.run} contributions={messages} />
       {degraded ? (
         <div
           aria-live="polite"

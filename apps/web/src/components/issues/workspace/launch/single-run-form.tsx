@@ -60,16 +60,7 @@ export function SingleRunLaunchForm({
         <p className="text-xs text-text-tertiary">
           Prefilled from this issue and sent as-is — the agent receives exactly this text.
         </p>
-        <LaunchAgentPicker
-          descriptors={agents.descriptors}
-          profiles={agents.profiles}
-          value={agents.choice}
-          onValueChange={onAgentChoice}
-          isPending={agents.isPending}
-          isError={agents.isError}
-          isSuccess={agents.isSuccess}
-          onRetry={agents.onRetry}
-        />
+        <LaunchAgentPicker agents={agents} onValueChange={onAgentChoice} />
       </DialogBody>
       <IssueFormFooter
         onCancel={onCancel}

@@ -4,7 +4,9 @@ function evidenceUrl(report: RunCompletionReport, evidence: CompletionEvidence):
   const run = encodeURIComponent(report.run.id);
   switch (evidence.source) {
     case "timeline":
-      return `otomat://app/runs/${run}${evidence.seq === null ? "" : `#event-${evidence.seq}`}`;
+      return evidence.seq === null
+        ? `otomat://app/runs/${run}`
+        : `otomat://app/runs/${run}/logs#event-${evidence.seq}`;
     case "diff":
       return `otomat://app/runs/${run}/diff${
         evidence.file_path === null ? "" : `#diff-file-${encodeURIComponent(evidence.file_path)}`

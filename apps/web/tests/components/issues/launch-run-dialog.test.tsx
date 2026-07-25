@@ -149,9 +149,7 @@ it("launches a multi-step workflow on the existing issue without inventing a sec
   await click("Workflow");
   await click("Add step");
 
-  const names = [
-    ...document.querySelectorAll<HTMLInputElement>("input[aria-label$=' name']"),
-  ] as HTMLInputElement[];
+  const names = [...document.querySelectorAll<HTMLInputElement>("input[aria-label$=' name']")];
   await act(async () => {
     setInputValue(names[0]!, "Plan");
     setInputValue(names[1]!, "Build");

@@ -11,6 +11,8 @@ export function invalidateForEvent(client: QueryClient, runId: string, event: Ev
   if (event.type === "run.lifecycle" || event.type === "system.reconciled") {
     client.invalidateQueries({ queryKey: queryKeys.run(runId) });
     client.invalidateQueries({ queryKey: queryKeys.runs });
+    // Settling a turn resolves the messages it carried without emitting a contribution event of its own.
+    client.invalidateQueries({ queryKey: queryKeys.runContributions(runId) });
     // Each issue's execution state is projected from these rows, so its caches go stale with them.
     client.invalidateQueries({ queryKey: queryKeys.issues });
     return;

@@ -11,6 +11,7 @@ import { startSessionTail } from "#events";
 
 import { waitForWorkerIdentity } from "./identity.js";
 import { settleRun } from "./settle/index.js";
+import { clearWorkerStartEvidence } from "./start-gate.js";
 import { notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveRunTo, driveSessionTo, driveStepTo } from "./transitions.js";
 import type { ProcessExit, SessionProcess, TurnContext } from "./types.js";
@@ -55,8 +56,8 @@ function trackTurn(
   ctx: TurnContext,
   proc: SessionProcess,
   release: () => void,
+  tail: ReturnType<typeof startSessionTail>,
 ): void {
-  const tail = startSessionTail(state.db, state.dataDir, ctx.runId, ctx.agentSessionId);
   const monitor = proc.exited
     .then((exit) => {
       if (!state.aborting.has(ctx.runId)) settleLive(state, ctx, exit);
@@ -89,13 +90,16 @@ function trackTurn(
  * Throws when the run is already claiming or in-flight. A spawn failure kills any child
  * and settles the run before rethrowing. The run/step/session rows must already exist
  * (via `prepareRun`).
+ *
+ * Resolves `false` on every path that ends without a started worker, so a caller
+ * holding a claim can tell "nothing reached the provider" from "the turn is live".
  */
 export async function spawnTurn(
   state: SupervisorState,
   ctx: TurnContext,
   mode: "run" | "resume",
   providerSessionId: string | null,
-): Promise<void> {
+): Promise<boolean> {
   const { db, slots, inflight, claiming, aborting } = state;
   if (claiming.has(ctx.agentSessionId) || inflight.has(ctx.agentSessionId)) {
     throw new Error(`session ${ctx.agentSessionId} is already starting`);
@@ -110,6 +114,7 @@ export async function spawnTurn(
   };
 
   let proc: SessionProcess | undefined;
+  let tail: ReturnType<typeof startSessionTail> | undefined;
   try {
     // A slot can take a while to free; an abort/cancel may have landed meanwhile.
     const current = getRun(db, ctx.runId);
@@ -120,10 +125,12 @@ export async function spawnTurn(
       state.shuttingDown
     ) {
       release();
-      return;
+      return false;
     }
 
     advanceToRunning(state, ctx);
+    // Wipe the previous turn's gate trace first, so what this one leaves behind speaks only for itself.
+    clearWorkerStartEvidence(ctx.agentSessionDir);
     proc = state.spawn({ ...ctx, mode, providerSessionId });
     state.starting.set(ctx.agentSessionId, {
       runId: ctx.runId,
@@ -148,13 +155,17 @@ export async function spawnTurn(
         settleLive(state, ctx, exit);
       }
       release();
-      return;
+      return false;
     }
+    // Nothing may throw between `proc.start()` and `return true`: a caller holding a delivery claim reads a throw as "the provider never saw it".
+    tail = startSessionTail(state.db, state.dataDir, ctx.runId, ctx.agentSessionId);
     proc.start();
     state.starting.delete(ctx.agentSessionId);
-    trackTurn(state, ctx, proc, release);
+    trackTurn(state, ctx, proc, release, tail);
+    return true;
   } catch (error) {
     release();
+    tail?.stop();
     // A turn that failed mid-flight must not leave a live child or a phantom "running" row.
     if (proc) {
       proc.kill("SIGKILL");

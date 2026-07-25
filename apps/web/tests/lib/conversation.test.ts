@@ -1,30 +1,8 @@
-import type { RunContributionContract } from "@otomat/domain";
-import {
-  buildConversation,
-  describeActivity,
-  isRetriable,
-  queuedCount,
-} from "@web/lib/conversation";
+import { buildConversation, describeActivity } from "@web/lib/conversation";
 import { expect, it } from "vitest";
 
+import { contribution } from "#support/contribution";
 import { envelope } from "#support/envelope";
-
-function contribution(overrides: Partial<RunContributionContract> = {}): RunContributionContract {
-  return {
-    id: "c1",
-    run_id: "run-1",
-    seq: 0,
-    body: "keep going",
-    status: "queued",
-    agent_session_id: null,
-    delivered_at: null,
-    settled_at: null,
-    attempts: 0,
-    error: null,
-    created_at: "2026-01-01T00:00:00.000Z",
-    ...overrides,
-  };
-}
 
 function anchor(seq: number, contributionId: string) {
   return envelope({ seq, type: "run.contribution", payload: { contribution_id: contributionId } });
@@ -156,31 +134,13 @@ it("drops an anchor whose contribution the read model does not know", () => {
 });
 
 it("says exactly how much a group folds", () => {
-  expect(describeActivity({ tools: 2, permissions: 2, thinking: 0, logs: 3, other: 0 }, 7)).toBe(
+  expect(describeActivity({ tools: 2, permissions: 2, thinking: 0, logs: 3, other: 0 })).toBe(
     "7 steps · 2 tools · 2 permissions · 3 logs",
   );
-  expect(describeActivity({ tools: 2, permissions: 1, thinking: 0, logs: 3, other: 0 }, 6)).toBe(
+  expect(describeActivity({ tools: 2, permissions: 1, thinking: 0, logs: 3, other: 0 })).toBe(
     "6 steps · 2 tools · 1 permission · 3 logs",
   );
-  expect(describeActivity({ tools: 1, permissions: 0, thinking: 0, logs: 0, other: 0 }, 1)).toBe(
+  expect(describeActivity({ tools: 1, permissions: 0, thinking: 0, logs: 0, other: 0 })).toBe(
     "1 step · 1 tool",
   );
-});
-
-it("offers a retry only for a failure that never reached the provider", () => {
-  expect(isRetriable(contribution({ status: "failed" }))).toBe(true);
-  expect(
-    isRetriable(contribution({ status: "failed", delivered_at: "2026-01-01T00:00:01.000Z" })),
-  ).toBe(false);
-  expect(isRetriable(contribution({ status: "sent" }))).toBe(false);
-});
-
-it("counts only the messages still waiting", () => {
-  expect(
-    queuedCount([
-      contribution({ id: "a", status: "queued" }),
-      contribution({ id: "b", status: "sent" }),
-      contribution({ id: "c", status: "queued" }),
-    ]),
-  ).toBe(2);
 });

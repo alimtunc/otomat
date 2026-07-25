@@ -1,9 +1,4 @@
-/**
- * The prompt a delivery turn carries. A lone message is passed through verbatim
- * so a single contribution reads exactly like the user typed it; a batch keeps
- * every message intact and labels its send order, because the agent must be able
- * to tell what arrived while it was working and in which sequence.
- */
+/** A lone message goes through verbatim; a batch is labelled so the agent can tell what arrived, and in which order. */
 export function buildContributionPrompt(bodies: readonly string[]): string {
   const [only] = bodies;
   if (only === undefined) throw new Error("a contribution batch needs at least one message");

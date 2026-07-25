@@ -37,10 +37,7 @@ export const startRunRequestSchema = z
   });
 export type StartRunRequest = z.infer<typeof startRunRequestSchema>;
 
-/**
- * Post one user message to a run's conversation. It is persisted as `queued`
- * whatever the run is doing; the daemon delivers it on the run's next safe turn.
- */
+/** Post one user message to a run's conversation; it is persisted as `queued` whatever the run is doing. */
 export const createRunContributionRequestSchema = z
   .object({ body: z.string().trim().min(1) })
   .strict();

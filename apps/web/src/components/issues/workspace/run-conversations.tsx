@@ -8,11 +8,11 @@ import { isActiveRun } from "@web/lib/run-activity";
 function SectionHeader({
   run,
   expanded,
-  onToggle,
+  onSelect,
 }: {
   run: RunContract;
   expanded: boolean;
-  onToggle: () => void;
+  onSelect: () => void;
 }) {
   return (
     <div
@@ -22,8 +22,8 @@ function SectionHeader({
         type="button"
         variant="ghost"
         size="sm"
-        onClick={onToggle}
-        aria-expanded={expanded}
+        onClick={onSelect}
+        aria-pressed={expanded}
         className="h-auto min-w-0 flex-1 justify-start gap-3 rounded-none px-4 py-2.5 text-left font-normal"
       >
         <Icon name={expanded ? "chevron-down" : "chevron-right"} aria-hidden />
@@ -47,11 +47,7 @@ function SectionHeader({
   );
 }
 
-/**
- * One conversation section per run, oldest first. The followed run is expanded
- * and streams live; the others stay collapsed on their status and last activity,
- * because only the followed run holds an SSE connection.
- */
+/** Only the followed run holds an SSE connection, so the others stay collapsed on their last known status. */
 export function RunConversations({
   runs,
   followedRunId,
@@ -64,17 +60,17 @@ export function RunConversations({
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-sm font-semibold text-text-secondary">Conversations</h2>
-      <div className="flex flex-col divide-y divide-border-subtle rounded-lg border border-border-subtle">
+      <ul className="flex flex-col divide-y divide-border-subtle rounded-lg border border-border-subtle">
         {runs.map((run) => {
           const expanded = run.id === followedRunId;
           return (
-            <div key={run.id} className="flex flex-col">
-              <SectionHeader run={run} expanded={expanded} onToggle={() => onFollow(run.id)} />
+            <li key={run.id} className="flex flex-col">
+              <SectionHeader run={run} expanded={expanded} onSelect={() => onFollow(run.id)} />
               {expanded ? <ConversationSection runId={run.id} /> : null}
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </div>
   );
 }

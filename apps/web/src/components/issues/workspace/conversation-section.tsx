@@ -3,10 +3,7 @@ import { useRunDetail } from "@web/api/runs/queries";
 import { useRunEventStream } from "@web/api/runs/run-events-provider";
 import { ConversationThread } from "@web/components/runs/conversation/thread";
 
-/**
- * The expanded run's conversation. It reads the enclosing run event stream, so it
- * only ever renders for the followed run — the one the workspace holds open.
- */
+/** Reads the enclosing run event stream, so it only ever renders for the followed run. */
 export function ConversationSection({ runId }: { runId: string }) {
   const detail = useRunDetail(runId);
   const stream = useRunEventStream();

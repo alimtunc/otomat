@@ -8,12 +8,12 @@ import {
   claimRunContributions,
   listClaimedRunContributions,
   listRunContributions,
-  listRunContributionsByStatus,
+  listQueuedRunContributions,
   listRunContributionsForSession,
-  markRunContributionsFailed,
+  failRunContributionDelivery,
   markRunContributionsSent,
   markRunContributionsSettled,
-  releaseRunContributionClaim,
+  releaseRunContributionClaims,
   requeueRunContribution,
 } from "#db/repositories/run-contributions";
 import { insertRun } from "#db/repositories/runs";
@@ -73,7 +73,7 @@ it("starts every message queued, undelivered and unattempted", () => {
 
 it("records a claim without leaving `queued`, and counts the attempt", () => {
   appendRunContribution(t.client.db, { id: "c1", run_id: "r1", body: "hello" });
-  markRunContributionsFailed(t.client.db, ["c1"], "no session");
+  failRunContributionDelivery(t.client.db, ["c1"], "no session");
   claimRunContributions(t.client.db, ["c1"], "r1-session");
 
   const claimed = listClaimedRunContributions(t.client.db);
@@ -105,7 +105,7 @@ it("marks a claimed batch sent, then settles it from the carrying turn", () => {
 it("drops the claim on a failure so nothing points at a turn that never ran", () => {
   appendRunContribution(t.client.db, { id: "c1", run_id: "r1", body: "one" });
   claimRunContributions(t.client.db, ["c1"], "r1-session");
-  markRunContributionsFailed(t.client.db, ["c1"], "spawn failed");
+  failRunContributionDelivery(t.client.db, ["c1"], "spawn failed");
 
   const [row] = listRunContributions(t.client.db, "r1");
   expect(row).toMatchObject({
@@ -119,8 +119,8 @@ it("drops the claim on a failure so nothing points at a turn that never ran", ()
 it("returns a released claim to the queue and clears its settled evidence on requeue", () => {
   appendRunContribution(t.client.db, { id: "c1", run_id: "r1", body: "one" });
   claimRunContributions(t.client.db, ["c1"], "r1-session");
-  releaseRunContributionClaim(t.client.db, "c1");
-  expect(listRunContributionsByStatus(t.client.db, "r1", "queued")[0]?.agent_session_id).toBeNull();
+  releaseRunContributionClaims(t.client.db, ["c1"]);
+  expect(listQueuedRunContributions(t.client.db, "r1")[0]?.agent_session_id).toBeNull();
 
   markRunContributionsSent(t.client.db, ["c1"], "2026-07-25T10:00:00.000Z");
   markRunContributionsSettled(t.client.db, ["c1"], "failed", "2026-07-25T10:01:00.000Z", "boom");

@@ -1,8 +1,7 @@
 import type { ComponentPropsWithoutRef } from "react";
 
 import { injectStyleOnce } from "../lib/inject-style";
-import type { StatusTone } from "../lib/status";
-import { toneClassMap } from "../lib/tone";
+import { toneClassMap, type StatusTone } from "../lib/tone";
 import { cn } from "../lib/utils";
 
 const LIVEDOT_STYLE_ID = "otomat-livedot";

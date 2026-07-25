@@ -4,7 +4,9 @@ function evidenceHref(runId: string, issueId: string, evidence: CompletionEviden
   const encodedRun = encodeURIComponent(runId);
   switch (evidence.source) {
     case "timeline":
-      return `/runs/${encodedRun}${evidence.seq === null ? "" : `#event-${evidence.seq}`}`;
+      return evidence.seq === null
+        ? `/runs/${encodedRun}`
+        : `/runs/${encodedRun}/logs#event-${evidence.seq}`;
     case "diff":
       return `/runs/${encodedRun}/diff${
         evidence.file_path === null ? "" : `#diff-file-${encodeURIComponent(evidence.file_path)}`

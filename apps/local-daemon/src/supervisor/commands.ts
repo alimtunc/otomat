@@ -13,7 +13,7 @@ import { sessionDir } from "#events";
 import { scheduleTurn, startNextReadyStep } from "./advance.js";
 import { prepareRun } from "./prepare.js";
 import {
-  requireFollowUpableRun,
+  requireResumableRun,
   requireResumableRuntime,
   requireRunRow,
   RunNotResumableError,
@@ -36,7 +36,7 @@ export async function startRun(state: SupervisorState, request: StartRunRequest)
 
 /** Resumes an `awaiting_human` run: an interrupted step resumes its own session, a run paused between steps starts the next ready step, a torn follow-up turn resumes the latest session. */
 export async function resumeRun(state: SupervisorState, runId: string): Promise<RunRow> {
-  const run = requireFollowUpableRun(state, runId, ["awaiting_human"]);
+  const run = requireResumableRun(state, runId, ["awaiting_human"]);
   const steps = listStepRunsForRun(state.db, runId);
   const interruptedGroup = listCompeteGroupsForRun(state.db, runId).find(
     (group) => group.status === "awaiting_human",
@@ -128,6 +128,6 @@ export async function fixRun(
   runId: string,
   prompt: string,
 ): Promise<RunRow> {
-  const run = requireFollowUpableRun(state, runId, ["review_ready"]);
+  const run = requireResumableRun(state, runId, ["review_ready"]);
   return spawnResumeTurn(state, run, prompt);
 }

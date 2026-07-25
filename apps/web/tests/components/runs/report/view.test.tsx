@@ -147,7 +147,7 @@ it("renders a responsive evidence-backed report with factual next actions", asyn
   expect(
     container.querySelector('a[href="/runs/run-1/diff#diff-file-src%2Freport.ts"]'),
   ).not.toBeNull();
-  expect(container.querySelector('a[href="/runs/run-1#event-8"]')).not.toBeNull();
+  expect(container.querySelector('a[href="/runs/run-1/logs#event-8"]')).not.toBeNull();
   expect(container.querySelector("[data-report-grid]")?.className).toContain("grid-cols-1");
 
   await cleanup();

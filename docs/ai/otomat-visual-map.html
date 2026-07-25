@@ -1585,7 +1585,8 @@
                 <span class="from">launch dialog</span><span class="verb">freezes</span
                 ><span class="to">runs.plan_json</span
                 ><span class="why"
-                  >Single run et workflow passent par le même <code>StartRunRequest.plan</code> ; il
+                  >Single run envoie un <code>prompt</code>, Workflow un <code>plan</code> ;
+                  <code>freezePlan</code> fige les deux dans le même <code>runs.plan_json</code> — il
                   n’existe pas de second format de plan.</span
                 >
               </div>
@@ -1972,7 +1973,7 @@
                 <summary>
                   <span class="trace-id">TRACE/C</span
                   ><span class="trace-title"
-                    ><b>Review, fix et follow-up</b
+                    ><b>Review et fix</b
                     ><span>diff canonique → anchor SHA → prompt → même session provider</span></span
                   >
                 </summary>
@@ -2003,8 +2004,9 @@
                       <span class="seq">seq 003</span><span class="loc">spawnResumeTurn</span
                       ><span class="action"
                         >Réutilise runtime, worktree, step/session et
-                        <code>provider_session_id</code> ; c’est le seul moteur de reprise, partagé
-                        avec la livraison des contributions (TRACE/F).</span
+                        <code>provider_session_id</code> ; wrapper resume/fix au-dessus de
+                        <code>resolveResumeTurn</code> + <code>spawnTurn('resume')</code>, le moteur
+                        que la livraison des contributions partage (TRACE/F).</span
                       >
                     </div>
                     <div class="trace-node">
@@ -2020,7 +2022,7 @@
                     ><span class="branch">Aucun commentaire fixable → 409</span
                     ><span class="branch">État non resumable ou session provider absente → 409</span
                     ><span class="branch"
-                      >Un runtime sans resume ne reçoit pas de faux follow-up</span
+                      >Un runtime sans resume ne reçoit pas de faux fix turn</span
                     >
                   </div>
                 </div>
@@ -2207,11 +2209,13 @@
                       >
                     </div>
                     <div class="trace-node">
-                      <span class="seq">seq 004</span><span class="loc">spawnResumeTurn</span
+                      <span class="seq">seq 004</span
+                      ><span class="loc">resolveResumeTurn + spawnTurn('resume')</span
                       ><span class="action"
                         >Même session provider, même worktree, même run : la livraison ne crée pas
-                        une seconde voie de reprise. Au retour, la batch passe <code>sent</code> avec
-                        <code>delivered_at</code>.</span
+                        une seconde voie de reprise. Elle appelle les deux séparément parce que le
+                        claim est estampillé entre les deux. Au retour, la batch passe
+                        <code>sent</code> avec <code>delivered_at</code>.</span
                       >
                     </div>
                     <div class="trace-node">

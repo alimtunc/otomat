@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import type { RunDetail } from "@otomat/domain";
-import { RunTimelineView } from "@web/components/runs/timeline/view";
+import { RunConversationView } from "@web/components/runs/conversation/view";
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -61,20 +61,20 @@ vi.mock("@web/api/runs/mutations", () => ({
 }));
 
 vi.mock("@web/components/runs/conversation/thread", () => ({
-  ConversationThread: () => <div data-testid="timeline" />,
+  ConversationThread: () => <div data-testid="conversation" />,
 }));
 
 vi.mock("@web/components/runs/compete/comparison", () => ({
   CompeteComparison: () => <div data-testid="compete" />,
 }));
 
-const renderView = () => mount(<RunTimelineView />);
+const renderView = () => mount(<RunConversationView />);
 
 afterEach(() => {
   wide = true;
 });
 
-describe("RunTimelineView responsive composition", () => {
+describe("RunConversationView responsive composition", () => {
   it("keeps the three-pane rails on wide viewports", async () => {
     wide = true;
     const { container, cleanup } = await renderView();
@@ -96,7 +96,7 @@ describe("RunTimelineView responsive composition", () => {
     expect(chevron?.closest('[class*="group/steps"]')).toBe(collapsible);
     expect(container.textContent).not.toContain("Run context");
     expect(container.textContent).toContain("otomat/run-1");
-    expect(container.querySelector('[data-testid="timeline"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="conversation"]')).not.toBeNull();
 
     await act(async () => {
       disclosure.click();

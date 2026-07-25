@@ -1,11 +1,7 @@
-import type { LinearDraftRow, LinearWriteRow } from "@otomat/db";
+import { sqliteToIso, type LinearDraftRow, type LinearWriteRow } from "@otomat/db";
 import type { LinearIssueDraft, LinearIssueSnapshot, LinearWriteContract } from "@otomat/domain";
 
 import type { LinearIssueDetail } from "../client/types.js";
-
-function sqliteToIso(timestamp: string): string {
-  return timestamp.includes("T") ? timestamp : `${timestamp.replace(" ", "T")}Z`;
-}
 
 export function snapshotToContract(detail: LinearIssueDetail): LinearIssueSnapshot {
   return {

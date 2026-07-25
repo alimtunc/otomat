@@ -48,7 +48,7 @@ export interface SupervisorState {
   delivering: Set<string>;
   /** Prevents turns queued on the semaphore from spawning while daemon shutdown drains live workers. */
   shuttingDown: boolean;
-  /** Wired by `createSupervisor` to the plan scheduler; the exit monitor chains it after a live settle. Injected to keep `lifecycle` free of a module cycle. */
+  /** Wired by `createSupervisor` to advance the plan then flush the run's queued contributions; injected to keep `lifecycle` free of a module cycle. */
   advance: ((runId: string) => Promise<void>) | null;
 }
 

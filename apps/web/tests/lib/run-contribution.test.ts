@@ -1,6 +1,8 @@
 import type { RunDetail, RunState, RuntimeDescriptor } from "@otomat/domain";
-import { resolveContributionGate } from "@web/lib/run-contribution";
+import { queuedCount, resolveContributionGate } from "@web/lib/run-contribution";
 import { expect, it } from "vitest";
+
+import { contribution } from "#support/contribution";
 
 function detail(status: RunState, providerSessionId: string | null = "ps-1"): RunDetail {
   return {
@@ -106,4 +108,71 @@ it("refuses a run that has not started an agent session yet", () => {
   expect(resolveContributionGate(pending, [CLAUDE], "online").note).toContain(
     "has not started an agent session",
   );
+});
+
+it("resolves the runtime from the selected competitor, not from a later losing session", () => {
+  const runDetail = detail("awaiting_human");
+  runDetail.steps = [
+    {
+      id: "winner",
+      run_id: "run-1",
+      idx: 0,
+      name: "Winner",
+      status: "succeeded",
+      compete_group_id: "group-1",
+      worktree_id: "worktree-winner",
+      branch: "candidate/winner",
+      worktree_status: "archived",
+    },
+    {
+      id: "loser",
+      run_id: "run-1",
+      idx: 1,
+      name: "Loser",
+      status: "succeeded",
+      compete_group_id: "group-1",
+      worktree_id: "worktree-loser",
+      branch: "candidate/loser",
+      worktree_status: "archived",
+    },
+  ];
+  runDetail.sessions = [
+    {
+      id: "winner-session",
+      step_run_id: "winner",
+      agent_id: "claude",
+      status: "awaiting_input",
+      provider_session_id: "provider-winner",
+    },
+    {
+      id: "loser-session",
+      step_run_id: "loser",
+      agent_id: "unregistered-runtime",
+      status: "completed",
+      provider_session_id: "provider-loser",
+    },
+  ];
+  runDetail.compete_groups = [
+    {
+      id: "group-1",
+      run_id: "run-1",
+      idx: 0,
+      name: "Choose",
+      status: "selected",
+      winner_step_run_id: "winner",
+      base_head_sha: "base",
+    },
+  ];
+
+  expect(resolveContributionGate(runDetail, [CLAUDE], "online").enabled).toBe(true);
+});
+
+it("counts only the messages still waiting", () => {
+  expect(
+    queuedCount([
+      contribution({ id: "a", status: "queued" }),
+      contribution({ id: "b", status: "sent" }),
+      contribution({ id: "c", status: "queued" }),
+    ]),
+  ).toBe(2);
 });

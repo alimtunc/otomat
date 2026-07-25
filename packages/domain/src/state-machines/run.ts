@@ -65,3 +65,17 @@ const runFollowUpSet: ReadonlySet<string> = new Set(RUN_FOLLOW_UP_STATES);
 export function canFollowUpRun(status: string): status is RunFollowUpState {
   return runFollowUpSet.has(status);
 }
+
+/** States with a provider turn genuinely in flight. `awaiting_permission` and `awaiting_selection` are in neither this set nor the resting one: the turn is blocked on an answer. */
+export const RUN_WORKING_STATES = [
+  "queued",
+  "preparing",
+  "running",
+] as const satisfies readonly RunState[];
+export type RunWorkingState = (typeof RUN_WORKING_STATES)[number];
+
+const runWorkingSet: ReadonlySet<string> = new Set(RUN_WORKING_STATES);
+
+export function isRunWorking(status: string): status is RunWorkingState {
+  return runWorkingSet.has(status);
+}

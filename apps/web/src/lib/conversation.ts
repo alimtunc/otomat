@@ -28,15 +28,6 @@ export interface ConversationStep {
   name: string;
 }
 
-/** A failed message is retriable only while nothing was ever handed to the provider. */
-export function isRetriable(contribution: RunContributionContract): boolean {
-  return contribution.status === "failed" && contribution.delivered_at === null;
-}
-
-export function queuedCount(contributions: readonly RunContributionContract[]): number {
-  return contributions.reduce((count, item) => count + (item.status === "queued" ? 1 : 0), 0);
-}
-
 /** The assistant's own words. Reasoning is not the answer the user is waiting for, so it stays grouped. */
 function agentText(event: EventEnvelope): string | null {
   if (event.type !== "runtime.message" || event.payload["thinking"] === true) return null;
@@ -65,28 +56,19 @@ function plural(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
-export function describeActivity(counts: ActivityCounts, total: number): string {
+export function describeActivity(counts: ActivityCounts): string {
   const parts: string[] = [];
   if (counts.tools > 0) parts.push(plural(counts.tools, "tool"));
   if (counts.permissions > 0) parts.push(plural(counts.permissions, "permission"));
   if (counts.thinking > 0) parts.push(`${counts.thinking} reasoning`);
   if (counts.logs > 0) parts.push(plural(counts.logs, "log"));
   if (counts.other > 0) parts.push(`${counts.other} other`);
+  const total = counts.tools + counts.permissions + counts.thinking + counts.logs + counts.other;
   const detail = parts.length > 0 ? ` · ${parts.join(" · ")}` : "";
   return `${plural(total, "step")}${detail}`;
 }
 
-/**
- * One run's thread, reduced to what a reader follows: their own messages, the
- * agent's replies, and the milestones that carry proof. Tool calls, logs,
- * reasoning and permission round-trips fold into one collapsed group per run of
- * them, so the conversation stays readable without hiding anything.
- *
- * Ordering comes from the ledger — each message is anchored at the
- * `run.contribution` event written when the user sent it — while delivery state
- * comes from the contributions read model. A message the stream has not carried
- * yet closes the thread in send order instead of disappearing.
- */
+/** Ordering comes from the ledger via each message's `run.contribution` anchor; a message the stream has not carried yet closes the thread. */
 export function buildConversation(
   events: readonly EventEnvelope[],
   contributions: readonly RunContributionContract[],

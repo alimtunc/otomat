@@ -2,10 +2,16 @@ import {
   canFollowUpRun,
   isRunTerminal,
   selectLatestResumableSession,
+  type AgentSessionContract,
+  type RunContributionContract,
   type RunDetail,
   type RuntimeDescriptor,
 } from "@otomat/domain";
 import type { ConnectionState } from "@otomat/ui";
+
+export function queuedCount(contributions: readonly RunContributionContract[]): number {
+  return contributions.reduce((count, item) => count + (item.status === "queued" ? 1 : 0), 0);
+}
 
 export interface ContributionGate {
   enabled: boolean;
@@ -22,11 +28,13 @@ function blocked(note: string): ContributionGate {
   return { enabled: false, note, queues: false };
 }
 
+/** The resume would reuse the resumable session's runtime, so a losing compete candidate must never decide the gate. */
 function runtimeFor(
-  detail: RunDetail,
+  sessions: readonly AgentSessionContract[],
+  resumable: AgentSessionContract | null,
   descriptors: RuntimeDescriptor[],
 ): RuntimeDescriptor | undefined {
-  const agentId = detail.sessions.at(-1)?.agent_id;
+  const agentId = resumable?.agent_id ?? sessions.at(-1)?.agent_id;
   return descriptors.find((descriptor) => descriptor.id === agentId);
 }
 
@@ -53,7 +61,11 @@ export function resolveContributionGate(
   if (descriptors === undefined) {
     return blocked("Checking runtime availability…");
   }
-  const runtime = runtimeFor(detail, descriptors);
+  const resting = canFollowUpRun(detail.run.status);
+  const resumable =
+    selectLatestResumableSession(detail.sessions, detail.steps, detail.compete_groups) ?? null;
+  // A working run's delivering session is not chosen yet, so only a resting run can name the runtime a resume would reuse.
+  const runtime = runtimeFor(detail.sessions, resting ? resumable : null, descriptors);
   if (!runtime) {
     return blocked("This run's runtime is not registered on the daemon.");
   }
@@ -63,10 +75,10 @@ export function resolveContributionGate(
   if (runtime.availability.status !== "available") {
     return blocked(`${runtime.display_name} is not available on this machine.`);
   }
-  if (!canFollowUpRun(detail.run.status)) {
+  if (!resting) {
     return { enabled: true, note: QUEUEING_NOTE, queues: true };
   }
-  if (!selectLatestResumableSession(detail.sessions, detail.steps, detail.compete_groups)) {
+  if (resumable === null) {
     return blocked("No provider session to resume yet.");
   }
   return { enabled: true, note: RESTING_NOTE, queues: false };

@@ -1,16 +1,11 @@
-import type { RunContributionContract } from "@otomat/domain";
+import { isRunContributionRetriable, type RunContributionContract } from "@otomat/domain";
 import { Button, RelativeTime, RunContributionStatusChip } from "@otomat/ui";
 import { useRetryRunContribution } from "@web/api/runs/mutations";
-import { isRetriable } from "@web/lib/conversation";
 
 const DELIVERED_FAILURE_HINT =
   "This message already reached the agent, so it is never sent twice — write a new one instead.";
 
-/**
- * One user message with its honest delivery state. Retry appears only for a
- * failure that never reached the provider; a failure after delivery says so and
- * offers nothing that would replay the same instruction.
- */
+/** Retry appears only for a failure that never reached the provider, so nothing here can replay an instruction. */
 export function ConversationMessage({
   runId,
   contribution,
@@ -19,7 +14,7 @@ export function ConversationMessage({
   contribution: RunContributionContract;
 }) {
   const retry = useRetryRunContribution(runId);
-  const retriable = isRetriable(contribution);
+  const retriable = isRunContributionRetriable(contribution);
 
   return (
     <div role="listitem" className="flex flex-col gap-1.5 px-6 py-3">

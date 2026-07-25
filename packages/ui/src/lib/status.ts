@@ -43,15 +43,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 
-export type StatusTone =
-  | "neutral"
-  | "iris"
-  | "success"
-  | "warning"
-  | "danger"
-  | "review"
-  | "stale"
-  | "ghost";
+import type { StatusTone } from "./tone";
 
 export type StatusKind =
   | "issue"

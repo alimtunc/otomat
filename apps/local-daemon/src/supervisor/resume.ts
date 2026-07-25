@@ -59,7 +59,7 @@ export function requireRunRow(db: Db, runId: string, when: "spawn" | "resume"): 
   return row;
 }
 
-export function requireFollowUpableRun(
+export function requireResumableRun(
   state: SupervisorState,
   runId: string,
   allowedStatuses: readonly RunState[],

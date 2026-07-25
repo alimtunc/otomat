@@ -16,7 +16,7 @@ import {
   Terminal,
 } from "lucide-react";
 
-import type { StatusTone } from "./status";
+import type { StatusTone } from "./tone";
 
 export const PROVENANCE_VAR: Record<EventSource, string> = {
   otomat: "var(--prov-otomat)",
