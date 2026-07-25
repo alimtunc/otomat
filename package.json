@@ -12,7 +12,7 @@
     "lint": "oxlint apps packages",
     "format": "oxfmt apps packages",
     "format:check": "oxfmt --check apps packages",
-    "boundaries": "depcruise apps packages",
+    "boundaries": "node scripts/import-boundaries.mjs",
     "guardrails": "node --test scripts/guardrails.test.mjs && node scripts/guardrails.mjs",
     "smoke:dist": "pnpm --filter @otomat/local-daemon smoke:dist",
     "check": "pnpm run format:check && pnpm run lint && pnpm run guardrails && pnpm run build && pnpm run typecheck && pnpm run smoke:dist && pnpm run test",
@@ -24,7 +24,6 @@
   "devDependencies": {
     "@otomat/tooling": "workspace:*",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
-    "dependency-cruiser": "18.1.0",
     "lefthook": "^2.1.10",
     "oxfmt": "~0.59.0",
     "oxlint": "^1.74.0"
