@@ -59,3 +59,9 @@ it("invalidates the completion report for runtime evidence", () => {
   invalidateForEvent(client, "run-1", event("runtime.log"));
   expect(keys).toEqual([queryKeys.runCompletionReport("run-1")]);
 });
+
+it("invalidates only the run's conversation on a contribution event", () => {
+  const { client, keys } = fakeClient();
+  invalidateForEvent(client, "run-1", event("run.contribution"));
+  expect(keys).toEqual([queryKeys.runContributions("run-1")]);
+});

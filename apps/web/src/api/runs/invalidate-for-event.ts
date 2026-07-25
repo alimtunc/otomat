@@ -4,6 +4,10 @@ import { queryKeys } from "@web/api/query-keys";
 
 /** The event-driven sync policy: maps a run ledger event to the REST caches it invalidates. */
 export function invalidateForEvent(client: QueryClient, runId: string, event: EventEnvelope): void {
+  if (event.type === "run.contribution") {
+    client.invalidateQueries({ queryKey: queryKeys.runContributions(runId) });
+    return;
+  }
   if (event.type === "run.lifecycle" || event.type === "system.reconciled") {
     client.invalidateQueries({ queryKey: queryKeys.run(runId) });
     client.invalidateQueries({ queryKey: queryKeys.runs });

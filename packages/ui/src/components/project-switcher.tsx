@@ -1,7 +1,7 @@
 import { Check, ChevronsUpDown, FolderGit2, Settings } from "lucide-react";
 import { useState } from "react";
 
-import { TONE_FACETS } from "../lib/status";
+import { TONE_FACETS } from "../lib/tone";
 import { cn } from "../lib/utils";
 import { Button } from "../primitives/button";
 import {

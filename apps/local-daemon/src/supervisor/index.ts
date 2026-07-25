@@ -9,7 +9,8 @@
  * @packageDocumentation
  */
 export * from "./types.js";
-export { RunNotResumableError } from "./commands.js";
+export { RunNotResumableError } from "./resume.js";
+export { RunContributionNotRetriableError } from "./contributions.js";
 export { CompeteRepositoryRequiredError, ProjectNotFoundError } from "./prepare.js";
 export { buildTerminalMarker } from "./markers.js";
 export { createReexecSpawn, isProcessAlive, killProcessGroup } from "./process.js";

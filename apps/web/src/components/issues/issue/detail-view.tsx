@@ -1,15 +1,14 @@
-import type { RunContract } from "@otomat/domain";
+import type { IssueContract, RunContract } from "@otomat/domain";
 import { EmptyState, ErrorState, IssueStatusChip, Skeleton } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
 import { useRunsForIssue } from "@web/api/runs/queries";
 import { RunEventsProvider } from "@web/api/runs/run-events-provider";
 import { IssueHeader } from "@web/components/issues/issue/header";
-import { ActivityFeed } from "@web/components/issues/workspace/activity-feed";
-import { LaunchRunPopover } from "@web/components/issues/workspace/launch-run-popover";
+import { LaunchRunDialog } from "@web/components/issues/workspace/launch/dialog";
 import { LinearCommentsSection } from "@web/components/issues/workspace/linear/comments";
 import { WorkspaceRail } from "@web/components/issues/workspace/rail/workspace-rail";
-import { RunStrip } from "@web/components/issues/workspace/run-strip";
+import { RunConversations } from "@web/components/issues/workspace/run-conversations";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { issueShortId, shortId } from "@web/lib/ids";
@@ -17,10 +16,10 @@ import { resolveFollowedRun } from "@web/lib/run-activity";
 import { useState } from "react";
 
 function NoRunsEmptyState({
-  issueId,
+  issue,
   onLaunched,
 }: {
-  issueId: string;
+  issue: IssueContract | undefined;
   onLaunched: (run: RunContract) => void;
 }) {
   return (
@@ -30,7 +29,7 @@ function NoRunsEmptyState({
         variant="inline"
         title="No runs yet"
         description="This issue has no agent activity. Launch a run to follow its live ledger here."
-        action={<LaunchRunPopover issueId={issueId} onLaunched={onLaunched} />}
+        action={issue ? <LaunchRunDialog issue={issue} onLaunched={onLaunched} /> : null}
       />
     </div>
   );
@@ -38,12 +37,12 @@ function NoRunsEmptyState({
 
 function RunsArea({
   query,
-  issueId,
+  issue,
   followedRun,
   onFollow,
 }: {
   query: ReturnType<typeof useRunsForIssue>;
-  issueId: string;
+  issue: IssueContract | undefined;
   followedRun: RunContract | null;
   onFollow: (run: RunContract) => void;
 }) {
@@ -58,28 +57,26 @@ function RunsArea({
           onRetry={() => void query.refetch()}
         />
       }
-      empty={<NoRunsEmptyState issueId={issueId} onLaunched={onFollow} />}
+      empty={<NoRunsEmptyState issue={issue} onLaunched={onFollow} />}
     >
       {(runs) => (
-        <>
-          <RunStrip
-            runs={runs}
-            followedRunId={followedRun?.id ?? null}
-            onFollow={(runId) => {
-              const run = runs.find((candidate) => candidate.id === runId);
-              if (run) onFollow(run);
-            }}
-          />
-          {followedRun ? <ActivityFeed run={followedRun} /> : null}
-        </>
+        <RunConversations
+          runs={runs}
+          followedRunId={followedRun?.id ?? null}
+          onFollow={(runId) => {
+            const run = runs.find((candidate) => candidate.id === runId);
+            if (run) onFollow(run);
+          }}
+        />
       )}
     </QueryList>
   );
 }
 
 /**
- * Issue workspace: issue prose, its real runs, and the followed run's ledger
- * activity — one SSE stream for the followed run feeds the feed and the rail.
+ * Issue workspace: issue prose and one conversation section per run — the
+ * followed run expanded on its live thread and composer, the others collapsed.
+ * A single SSE stream for the followed run feeds that thread and the rail.
  */
 export function IssueDetailView() {
   const { issueId } = useParams({ from: "/issues/$issueId" });
@@ -100,7 +97,7 @@ export function IssueDetailView() {
           ) : null}
           <RunsArea
             query={runs}
-            issueId={issueId}
+            issue={issue.data}
             followedRun={followedRun}
             onFollow={(run) => setSelectedRunId(run.id)}
           />
@@ -119,7 +116,9 @@ export function IssueDetailView() {
       ]}
       breadcrumbExtra={issue.data ? <IssueStatusChip status={issue.data.status} /> : null}
       actions={
-        <LaunchRunPopover issueId={issueId} onLaunched={(run) => setSelectedRunId(run.id)} />
+        issue.data ? (
+          <LaunchRunDialog issue={issue.data} onLaunched={(run) => setSelectedRunId(run.id)} />
+        ) : null
       }
     >
       {followedRun ? <RunEventsProvider runId={followedRun.id}>{body}</RunEventsProvider> : body}

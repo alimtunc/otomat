@@ -26,11 +26,12 @@ export { PROVENANCE_LABEL, PROVENANCE_VAR } from "./lib/provenance";
 
 export {
   resolveStatus,
-  TONE_TEXT,
   type StatusDescriptor,
   type StatusKind,
   type StatusTone,
 } from "./lib/status";
+
+export { TONE_TEXT } from "./lib/tone";
 
 export { Badge, type BadgeProps } from "./primitives/badge";
 
@@ -300,6 +301,7 @@ export {
   PRStatusBadge,
   ReviewCommentStatusChip,
   ReviewStatusChip,
+  RunContributionStatusChip,
   RunStatusChip,
   StatusChip,
   StepStatusChip,

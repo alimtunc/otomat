@@ -15,6 +15,7 @@ import {
   canFollowUpRun,
   runMachine,
 } from "#domain/state-machines/run";
+import { runContributionMachine } from "#domain/state-machines/run-contribution";
 import { stepRunMachine } from "#domain/state-machines/step-run";
 
 const machines = [
@@ -28,6 +29,7 @@ const machines = [
   pullRequestPublicationMachine,
   linearWriteMachine,
   competeGroupMachine,
+  runContributionMachine,
 ];
 
 describe.each(machines.map((machine) => [machine.name, machine] as const))(
@@ -77,6 +79,16 @@ describe("representative illegal transitions are rejected", () => {
     );
     expect(competeGroupMachine.transition("awaiting_selection", "promoting")).toBe("promoting");
     expect(competeGroupMachine.transition("promoting", "selected")).toBe("selected");
+  });
+
+  it("run_contribution cannot be marked sent from a settled state", () => {
+    expect(() => runContributionMachine.transition("completed", "sent")).toThrow(
+      IllegalTransitionError,
+    );
+    expect(() => runContributionMachine.transition("failed", "sent")).toThrow(
+      IllegalTransitionError,
+    );
+    expect(runContributionMachine.transition("failed", "queued")).toBe("queued");
   });
 
   it("step_run cannot skip queued -> succeeded", () => {

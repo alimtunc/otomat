@@ -44,6 +44,8 @@ export interface SupervisorState {
   pending: Set<Promise<void>>;
   /** Run-level scheduler guard; sessions within one compete group remain independently claimable. */
   advancing: Set<string>;
+  /** Run-level delivery guard so two contribution posts never batch the same queue twice. */
+  delivering: Set<string>;
   /** Prevents turns queued on the semaphore from spawning while daemon shutdown drains live workers. */
   shuttingDown: boolean;
   /** Wired by `createSupervisor` to the plan scheduler; the exit monitor chains it after a live settle. Injected to keep `lifecycle` free of a module cycle. */
@@ -65,6 +67,7 @@ export function createState(config: SupervisorConfig): SupervisorState {
     claiming: new Map(),
     pending: new Set(),
     advancing: new Set(),
+    delivering: new Set(),
     shuttingDown: false,
     advance: null,
   };

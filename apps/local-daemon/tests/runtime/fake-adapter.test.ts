@@ -56,7 +56,7 @@ describe("FakeRuntimeAdapter.run", () => {
     expect(final.status).toBe("completed");
     expect(final.provider_session_id).toBe("fake-session-sess-1");
     expect(final.usage).not.toBeNull();
-    expect(sink.events).toHaveLength(10);
+    expect(sink.events).toHaveLength(12);
     expect(final.event_count).toBe(sink.events.length);
   });
 
@@ -68,6 +68,16 @@ describe("FakeRuntimeAdapter.run", () => {
     }
     const tiers = new Set(sink.events.map((e) => e.payload.fidelity));
     expect([...tiers].toSorted()).toEqual([...EVENT_FIDELITY].toSorted());
+  });
+
+  it("emits an assistant message so a conversation surface has something to show", async () => {
+    const sink = new MemorySink();
+    await adapter.run(input(), sink, liveSignal());
+    const messages = sink.events.filter((event) => event.type === "runtime.message");
+
+    expect(messages.map((event) => event.payload.thinking)).toEqual([true, undefined]);
+    expect(messages.at(-1)?.payload.text).toContain("do the thing");
+    expect(messages.every((event) => event.payload.role === "assistant")).toBe(true);
   });
 
   it("labels every event as test data and never as a real provider", async () => {
@@ -117,9 +127,9 @@ describe("FakeRuntimeAdapter.run", () => {
 
     const runSink = new MemorySink();
     await stepped.run(input(), runSink, liveSignal());
-    expect(runSink.events).toHaveLength(10);
+    expect(runSink.events).toHaveLength(12);
     expect(runSink.events.map((event) => event.occurred_at)).toEqual(
-      Array.from({ length: 10 }, (_, index) => new Date(RUN_EPOCH_MS + index * 1000).toISOString()),
+      Array.from({ length: 12 }, (_, index) => new Date(RUN_EPOCH_MS + index * 1000).toISOString()),
     );
 
     const resumeSink = new MemorySink();
@@ -129,10 +139,10 @@ describe("FakeRuntimeAdapter.run", () => {
       resumeSink,
       liveSignal(),
     );
-    expect(resumeSink.events).toHaveLength(5);
+    expect(resumeSink.events).toHaveLength(6);
     expect(resumeSink.events.map((event) => event.occurred_at)).toEqual(
-      Array.from({ length: 5 }, (_, index) =>
-        new Date(RUN_EPOCH_MS + (10 + index) * 1000).toISOString(),
+      Array.from({ length: 6 }, (_, index) =>
+        new Date(RUN_EPOCH_MS + (12 + index) * 1000).toISOString(),
       ),
     );
   });

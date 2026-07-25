@@ -2,7 +2,7 @@ import { formatDistanceToNow } from "date-fns";
 import { RefreshCw, Wifi, WifiOff } from "lucide-react";
 import type { ComponentType } from "react";
 
-import { TONE_FACETS } from "../lib/status";
+import { TONE_FACETS } from "../lib/tone";
 import { cn } from "../lib/utils";
 import { Button } from "../primitives/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../primitives/popover";

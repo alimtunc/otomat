@@ -63,6 +63,11 @@ emit("runtime.log", "otomat", {
 if (behavior === "complete") {
   marker("completed");
   process.exit(0);
+} else if (behavior === "slow") {
+  // Long enough for the parent to observe a live turn before this one settles.
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  marker("completed");
+  process.exit(0);
 } else if (behavior === "fail") {
   marker("failed");
   process.exit(1);

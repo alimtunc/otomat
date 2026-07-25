@@ -8,6 +8,7 @@ import type {
   RepositoryRow,
   ReviewCommentRow,
   ReviewRow,
+  RunContributionRow,
   RunRow,
   SkillRow,
   StepRunRow,
@@ -23,6 +24,7 @@ import {
   reviewCommentContractSchema,
   reviewContractSchema,
   runContractSchema,
+  runContributionContractSchema,
   runDiffResponseSchema,
   skillContractSchema,
   stepRunContractSchema,
@@ -37,6 +39,7 @@ import {
   type ReviewCommentContract,
   type ReviewContract,
   type RunContract,
+  type RunContributionContract,
   type RunDiffResponse,
   type SkillContract,
   type StepRunContract,
@@ -73,8 +76,24 @@ export function toIssue(row: IssueRow, execution: IssueExecution): IssueContract
   return issueContractSchema.parse({ ...row, execution });
 }
 
+/** SQLite's `CURRENT_TIMESTAMP` is `YYYY-MM-DD HH:MM:SS` in UTC; the wire contracts carry ISO-8601 instants. */
+function toIsoInstant<T extends string | null>(value: T): T {
+  if (value === null || value.includes("T")) return value;
+  const parsed = new Date(`${value.replace(" ", "T")}Z`);
+  return (Number.isNaN(parsed.getTime()) ? value : parsed.toISOString()) as T;
+}
+
 export function toRun(row: RunRow): RunContract {
-  return runContractSchema.parse(row);
+  return runContractSchema.parse({ ...row, updated_at: toIsoInstant(row.updated_at) });
+}
+
+export function toRunContribution(row: RunContributionRow): RunContributionContract {
+  return runContributionContractSchema.parse({
+    ...row,
+    created_at: toIsoInstant(row.created_at),
+    delivered_at: toIsoInstant(row.delivered_at),
+    settled_at: toIsoInstant(row.settled_at),
+  });
 }
 
 /** A compete candidate carries the branch and status of its own isolated worktree; a plain step has none. */

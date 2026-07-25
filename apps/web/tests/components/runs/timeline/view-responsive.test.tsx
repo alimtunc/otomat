@@ -60,12 +60,8 @@ vi.mock("@web/api/runs/mutations", () => ({
   useResumeRun: () => ({ mutate: () => {}, isPending: false }),
 }));
 
-vi.mock("@web/components/runs/timeline/list", () => ({
-  RunTimeline: () => <div data-testid="timeline" />,
-}));
-
-vi.mock("@web/components/runs/cockpit/follow-up-composer", () => ({
-  FollowUpComposer: () => <div data-testid="composer" />,
+vi.mock("@web/components/runs/conversation/thread", () => ({
+  ConversationThread: () => <div data-testid="timeline" />,
 }));
 
 vi.mock("@web/components/runs/compete/comparison", () => ({
@@ -101,7 +97,6 @@ describe("RunTimelineView responsive composition", () => {
     expect(container.textContent).not.toContain("Run context");
     expect(container.textContent).toContain("otomat/run-1");
     expect(container.querySelector('[data-testid="timeline"]')).not.toBeNull();
-    expect(container.querySelector('[data-testid="composer"]')).not.toBeNull();
 
     await act(async () => {
       disclosure.click();

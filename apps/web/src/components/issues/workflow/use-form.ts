@@ -1,6 +1,7 @@
-import { runPlanInputSchema } from "@otomat/domain";
+import { runPlanInputSchema, type RunContract, type StartRunRequest } from "@otomat/domain";
 import { useForm } from "@tanstack/react-form";
-import { useStartRunAndNavigate } from "@web/api/runs/mutations";
+import { useNavigate } from "@tanstack/react-router";
+import { useLaunchRun } from "@web/api/runs/mutations";
 import { agentChoiceToRequest } from "@web/lib/agent-choice";
 import {
   buildRunPlanInput,
@@ -10,11 +11,16 @@ import {
 } from "@web/lib/workflow-plan";
 import { useRef, useState } from "react";
 
+/** What the workflow runs on: an existing issue, or a new issue created from the goal. */
+export type WorkflowLaunchTarget =
+  | { kind: "issue"; issueId: string }
+  | { kind: "project"; projectId: string | undefined };
+
 export interface UseWorkflowFormOptions {
-  projectId: string | undefined;
+  target: WorkflowLaunchTarget;
   /** The resolved run-level agent choice (profile or ad-hoc runtime), or null when none is launchable. */
   agentChoice: string | null;
-  onLaunched: () => void;
+  onLaunched: (run: RunContract) => void;
 }
 
 const WORKFLOW_DEFAULT_VALUES: { goal: string; steps: WorkflowNodeDraft[] } = {
@@ -22,33 +28,44 @@ const WORKFLOW_DEFAULT_VALUES: { goal: string; steps: WorkflowNodeDraft[] } = {
   steps: [newWorkflowStep(1)],
 };
 
+/** Null when the target cannot be launched on yet, so the caller can explain why instead of posting. */
+function targetRequest(
+  target: WorkflowLaunchTarget,
+  goal: string,
+): Pick<StartRunRequest, "issue_id" | "prompt" | "project_id"> | null {
+  if (target.kind === "issue") return { issue_id: target.issueId };
+  if (target.projectId === undefined) return null;
+  return { prompt: goal.trim(), project_id: target.projectId };
+}
+
 /** Owns workflow values, submit-time plan validation, and step-list mutations. */
-export function useWorkflowForm({ projectId, agentChoice, onLaunched }: UseWorkflowFormOptions) {
-  const { start, isPending } = useStartRunAndNavigate();
+export function useWorkflowForm({ target, agentChoice, onLaunched }: UseWorkflowFormOptions) {
+  const { launch, isPending } = useLaunchRun();
+  const navigate = useNavigate();
   const stepCounter = useRef(1);
   const [planError, setPlanError] = useState<string | null>(null);
 
   const form = useForm({
     defaultValues: WORKFLOW_DEFAULT_VALUES,
     onSubmit: async ({ value }) => {
-      if (agentChoice === null || projectId === undefined) return;
-      const plan = buildRunPlanInput(value.steps);
-      const parsed = runPlanInputSchema.safeParse(plan);
+      const request = agentChoice === null ? null : targetRequest(target, value.goal);
+      if (agentChoice === null || request === null) return;
+      const parsed = runPlanInputSchema.safeParse(buildRunPlanInput(value.steps));
       if (!parsed.success) {
         setPlanError(parsed.error.issues[0]?.message ?? "The workflow plan is invalid.");
         return;
       }
       setPlanError(null);
-      const started = await start({
-        prompt: value.goal.trim(),
+      const run = await launch({
+        ...request,
         plan: parsed.data,
-        project_id: projectId,
         ...agentChoiceToRequest(agentChoice),
       });
-      if (started) {
-        form.reset();
-        onLaunched();
-      }
+      if (!run) return;
+      form.reset();
+      // A workflow launched from its issue is followed in place; one that created its issue is not on screen yet.
+      if (target.kind === "project") navigate({ to: "/runs/$runId", params: { runId: run.id } });
+      onLaunched(run);
     },
   });
 
@@ -71,3 +88,4 @@ export function useWorkflowForm({ projectId, agentChoice, onLaunched }: UseWorkf
 }
 
 export type WorkflowForm = ReturnType<typeof useWorkflowForm>["form"];
+export type UseWorkflowFormResult = ReturnType<typeof useWorkflowForm>;

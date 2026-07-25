@@ -1,4 +1,4 @@
-import type { Db, RunRow } from "@otomat/db";
+import type { Db, RunContributionRow, RunRow } from "@otomat/db";
 import type { ResolvedAgentConfig, StartRunRequest } from "@otomat/domain";
 
 import type { RepositoryResolver } from "#git";
@@ -72,8 +72,12 @@ export interface Supervisor {
   resume(runId: string): Promise<RunRow>;
   /** Spawn a follow-up fix turn on a review-ready run with a caller-built prompt. */
   fix(runId: string, prompt: string): Promise<RunRow>;
-  /** Resume a resting run (`awaiting_human` or `review_ready`) with the user's own follow-up prompt. */
-  followUp(runId: string, prompt: string): Promise<RunRow>;
+  /** Persist one user message on the run as `queued`, then deliver it if the run is already resting. */
+  contribute(runId: string, body: string): Promise<RunContributionRow>;
+  /** Re-queue a failed message that never reached the provider and retry the run's queue. */
+  retryContribution(runId: string, contributionId: string): Promise<RunContributionRow>;
+  /** Explicit "deliver now" for messages left queued by a restart; a no-op while the run is busy. */
+  deliverContributions(runId: string): Promise<void>;
   /** Reserve, promote and archive one succeeded competitor, then unlock dependent work. */
   selectWinner(runId: string, groupId: string, stepRunId: string): Promise<void>;
   /** Kill the run's process group and write the canonical canceled state + a ledger event. No fake success. */

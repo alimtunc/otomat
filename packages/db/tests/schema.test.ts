@@ -15,6 +15,7 @@ const EXPECTED_TABLES = [
   "step_runs",
   "agent_sessions",
   "event_streams",
+  "run_contributions",
   "runtime_events",
   "reviews",
   "review_comments",

@@ -45,6 +45,7 @@ export interface EventGlyphDescriptor {
 
 export const EVENT_GLYPH: Record<EventType, EventGlyphDescriptor> = {
   "run.lifecycle": { icon: Flag, tone: "neutral" },
+  "run.contribution": { icon: MessageSquare, tone: "iris" },
   "step.lifecycle": { icon: GitCommitHorizontal, tone: "neutral" },
   "session.lifecycle": { icon: Play, tone: "neutral" },
   "compete.lifecycle": { icon: GitCompare, tone: "warning" },

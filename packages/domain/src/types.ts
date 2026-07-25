@@ -11,6 +11,7 @@
  */
 export type { IssueState } from "./state-machines/issue.js";
 export type { RunState, RunTerminalState } from "./state-machines/run.js";
+export type { RunContributionState } from "./state-machines/run-contribution.js";
 export type { StepRunState } from "./state-machines/step-run.js";
 export type { AgentSessionState } from "./state-machines/agent-session.js";
 export type { CompeteGroupState } from "./state-machines/compete-group.js";
@@ -31,6 +32,7 @@ export type {
   ResolvedAgentConfig,
   ResolvedSkill,
   RunContract,
+  RunContributionContract,
   RunPlan,
   RunPlanCompeteGroup,
   RunPlanCompetitor,

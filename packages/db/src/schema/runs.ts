@@ -1,4 +1,10 @@
-import type { AgentSessionState, CompeteGroupState, RunState, StepRunState } from "@otomat/domain";
+import type {
+  AgentSessionState,
+  CompeteGroupState,
+  RunContributionState,
+  RunState,
+  StepRunState,
+} from "@otomat/domain";
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
@@ -84,6 +90,28 @@ export const agentSessions = sqliteTable("agent_sessions", {
   exit_signal: text("exit_signal"),
   ...timestamps,
 });
+
+export const runContributions = sqliteTable(
+  "run_contributions",
+  {
+    id: text("id").primaryKey(),
+    run_id: text("run_id")
+      .notNull()
+      .references(() => runs.id),
+    // FIFO order of the conversation; created_at has second granularity, so it cannot rank a burst.
+    seq: integer("seq").notNull(),
+    body: text("body").notNull(),
+    status: text("status").$type<RunContributionState>().notNull().default("queued"),
+    // Stamped when a delivery is claimed, so a daemon crash mid-spawn leaves the claim auditable.
+    agent_session_id: text("agent_session_id").references(() => agentSessions.id),
+    delivered_at: text("delivered_at"),
+    settled_at: text("settled_at"),
+    attempts: integer("attempts").notNull().default(0),
+    error: text("error"),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("run_contributions_run_seq_unique").on(table.run_id, table.seq)],
+);
 
 export const runtimeEvents = sqliteTable(
   "runtime_events",
