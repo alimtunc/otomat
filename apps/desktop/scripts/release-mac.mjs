@@ -1,6 +1,5 @@
-// Distributable macOS artifact: Developer ID signed, notarized, stapled, then verified before it is
-// allowed to exist as a release. Fails closed when any Apple credential is missing — it never falls
-// back to the unsigned build, so a release can never be an unsigned artifact wearing release clothes.
+// Distributable macOS artifact: Developer ID signed, notarized, stapled, then verified. Fails closed
+// on a missing credential; it never falls back to the unsigned build.
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -11,20 +10,26 @@ import { createArtifactManifest, describeArtifact } from "./release/metadata.mjs
 import { renderReleaseNotes } from "./release/notes.mjs";
 import { preflight } from "./release/preflight.mjs";
 
-/** Streams output: notarytool and stapler report progress and never name the signing identity. */
+/** Streams progress. Never reports argv or a spawn error: they carry the App Store Connect ids. */
 function runStreamed(command, args) {
-  execFileSync(command, args, { stdio: "inherit" });
-  return "";
-}
-
-/** Captures output: codesign and spctl name the signing identity, so it is parsed, never printed. */
-function runCaptured(command, args) {
-  const result = spawnSync(command, args, { encoding: "utf8" });
-  if (result.error !== undefined) throw result.error;
+  const result = spawnSync(command, args, { stdio: "inherit" });
+  if (result.error !== undefined) throw new Error(`\`${command}\` could not be started.`);
   if (result.status !== 0) {
     throw new Error(`\`${command} ${args[0]}\` exited with code ${String(result.status)}.`);
   }
-  return `${result.stdout}${result.stderr}`;
+}
+
+/** Captures output so it can be parsed. `allowFailure` is for tools that report a verdict by code. */
+function runCaptured(command, args, options = {}) {
+  const result = spawnSync(command, args, { encoding: "utf8" });
+  if (result.error !== undefined) throw result.error;
+  const output = `${result.stdout}${result.stderr}`;
+  if (result.status !== 0 && options.allowFailure !== true) {
+    throw new Error(
+      `\`${command} ${args[0]}\` exited with code ${String(result.status)}.\n${output}`,
+    );
+  }
+  return output;
 }
 
 function changesSincePreviousTag() {
@@ -68,7 +73,7 @@ console.log("\nVerifying the artifact a clean machine will see…");
 for (const check of verifySignedRelease({
   appPath: built.appPath,
   dmgPath: built.dmgPath,
-  teamId: resolved.signing.teamId,
+  teamId: signing.teamId,
   run: runCaptured,
 })) {
   console.log(`  ok — ${check}`);

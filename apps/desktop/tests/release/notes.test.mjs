@@ -36,11 +36,3 @@ it("says so plainly when there is no previous tag to compare against", () => {
     "First packaged alpha build.",
   );
 });
-
-it("never presents an unnotarized build as distributable", () => {
-  const unsigned = { ...manifest(), notarized: false };
-
-  expect(renderReleaseNotes({ manifest: unsigned, changes: [] })).toContain(
-    "Unsigned local build — not distributable.",
-  );
-});

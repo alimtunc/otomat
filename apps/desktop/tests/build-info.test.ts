@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { developmentBuildInfo, parseBuildInfo } from "#shared/build-info";
+import { parseBuildInfo, unidentifiedBuildInfo } from "#shared/build-info";
 
 const PACKAGED = {
   version: "0.1.0-alpha.1",
@@ -28,10 +28,10 @@ it("refuses metadata that cannot identify the build", () => {
   expect(() => parseBuildInfo("null")).toThrow(/not an object/);
 });
 
-it("claims no commit and no signature when running from a checkout", () => {
-  const info = developmentBuildInfo("0.1.0-alpha.1", "43.2.0");
+it("claims no commit and no signature when the build cannot identify itself", () => {
+  const info = unidentifiedBuildInfo("0.1.0-alpha.1", "43.2.0");
 
-  expect(info.commit).toBe("unpackaged");
+  expect(info.commit).toBe("unknown");
   expect(info.signed).toBe(false);
   expect(info.version).toBe("0.1.0-alpha.1");
 });

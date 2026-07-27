@@ -61,11 +61,12 @@ into a throwaway keychain from `CSC_LINK` / `CSC_KEY_PASSWORD`.
 3. Tag it: `git tag v<version> && git push origin v<version>`. The tag and the packaged version must
    agree — the pipeline refuses the build otherwise.
 
-`.github/workflows/release-macos.yml` then runs `pnpm desktop:preflight` — every credential present,
-an architecture this runner can build, a tag that agrees with the version — before anything
-expensive. It then runs `pnpm check`, builds, signs with the hardened runtime
-and the entitlements in `apps/desktop/build/entitlements.mac.plist`, notarizes and staples the app
-and the DMG, and only then verifies that:
+`.github/workflows/release-macos.yml` runs `pnpm check` first, while no Apple credential exists on
+the runner yet. It then decodes the App Store Connect key and runs `pnpm desktop:preflight` — every
+credential present, an architecture this runner can build, a tag that agrees with the version —
+before anything expensive. It then builds, signs with the hardened runtime and the entitlements in
+`apps/desktop/build/entitlements.mac.plist`, notarizes and staples the app and the DMG, and only
+then verifies that:
 
 - the app's signature is internally consistent (`codesign --verify --deep --strict`);
 - it is signed by a *Developer ID Application* certificate belonging to `APPLE_TEAM_ID`, with the
@@ -73,12 +74,15 @@ and the DMG, and only then verifies that:
 - Gatekeeper accepts it as `source=Notarized Developer ID` (`spctl --assess`);
 - both the app and the DMG carry a stapled ticket (`stapler validate`).
 
-Any failed check fails the job before anything is published. The prerelease is then created from
+Any failed check fails the job before anything is published. `pnpm desktop:smoke` then installs the
+DMG and exercises the artifact, and only after that is the prerelease created from
 `release-notes.md` with the DMG and `manifest.json` attached. `manifest.json` ties the download to a
 commit, a version, an architecture, an Electron version and a sha256.
 
 Running the workflow manually (*Run workflow*) does everything **except** publishing, which is how
-you exercise the pipeline without creating a release.
+you exercise the pipeline without creating a release. `ci.yml` also packages and smokes the
+*unsigned* artifact on every push to `main`, so a packaging regression surfaces before a release
+needs it.
 
 ## Verifying on a clean Mac
 
@@ -107,8 +111,10 @@ second user account):
 ## Uninstall and rollback
 
 - Uninstall the app: move `Otomat.app` to the Trash.
-- Remove its data: delete `~/Library/Application Support/Otomat`. Nothing Otomat owns lives anywhere
-  else — no global daemon, no launch agent, no `/usr/local` install.
+- Remove its data: delete `~/Library/Application Support/Otomat`. Otomat installs nothing else — no
+  global daemon, no launch agent, no `/usr/local` install. It does leave the branches and
+  `git worktree` registrations it created *inside the repositories you added*; run
+  `git worktree prune` there.
 - Roll back: install the previous DMG over the current one. The data directory is left in place, and
   Otomat refuses to start on a data layout newer than it understands rather than migrating downward,
   so a rollback across a layout change means restoring a backup from

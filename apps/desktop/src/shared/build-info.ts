@@ -11,7 +11,7 @@ export interface BuildInfo {
   signed: boolean;
 }
 
-const UNPACKAGED = "unpackaged";
+const UNIDENTIFIED = "unknown";
 
 function readString(record: Record<string, unknown>, field: string): string {
   const value = record[field];
@@ -42,13 +42,13 @@ export function parseBuildInfo(contents: string): BuildInfo {
   return { ...info, signed: record.signed };
 }
 
-/** Stand-in for a checkout run: there is no packaged artifact, so there is no commit to claim. */
-export function developmentBuildInfo(version: string, electron: string): BuildInfo {
+/** A build that cannot name its own commit: a checkout run, or unreadable packaged metadata. */
+export function unidentifiedBuildInfo(version: string, electron: string): BuildInfo {
   return {
     version,
-    commit: UNPACKAGED,
-    commit_short: UNPACKAGED,
-    committed_at: UNPACKAGED,
+    commit: UNIDENTIFIED,
+    commit_short: UNIDENTIFIED,
+    committed_at: UNIDENTIFIED,
     arch: process.arch,
     platform: process.platform,
     electron,

@@ -1,18 +1,21 @@
-// Install / launch / shutdown smoke for the packaged macOS artifact. It installs the app the way a
-// user does — mount the DMG, copy the bundle out, eject — then proves the installed copy boots its
-// own daemon (native module under Electron's ABI, migrations, health) and shuts it down cleanly.
-// Works for both the ad-hoc local artifact and a signed release. Run after `pnpm desktop:package`.
+// Install / launch / shutdown smoke for the packaged macOS artifact, ad-hoc or signed alike.
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { PRODUCT_NAME, RELEASE_OUT } from "./mac-build.mjs";
+import { APP_ID } from "./release/metadata.mjs";
+
+/** `lipo` names architectures the Mach-O way; `process.arch` uses Node's. */
+const MACH_O_ARCH = { arm64: "arm64", x64: "x86_64" };
 
 const DAEMON_PORT = 43_191;
 const HEALTH_TIMEOUT_MS = 45_000;
 const LAUNCH_TIMEOUT_MS = 90_000;
 const SHUTDOWN_TIMEOUT_MS = 20_000;
+const ORPHAN_GRACE_MS = 3_000;
 
 const temporaries = [];
 let mountPoint = null;
@@ -47,6 +50,18 @@ function locateDmg() {
   return join(RELEASE_OUT, candidates[0]);
 }
 
+/** A listener left by an earlier run would answer the health poll and turn the gate green. */
+function assertPortFree(port) {
+  return new Promise((resolve, reject) => {
+    const probe = createServer();
+    probe.once("error", () =>
+      reject(new Error(`something already listens on 127.0.0.1:${String(port)}; stop it first.`)),
+    );
+    probe.once("listening", () => probe.close(() => resolve()));
+    probe.listen(port, "127.0.0.1");
+  });
+}
+
 /** Installs the app the way a user does: mount, copy out with ditto (signatures survive), eject. */
 function installFromDmg(dmgPath) {
   mountPoint = temporaryDir("otomat-dmg-");
@@ -63,7 +78,7 @@ function assertBundleLayout(appPath) {
   const plist = JSON.parse(
     capture("plutil", ["-convert", "json", "-o", "-", join(appPath, "Contents", "Info.plist")]),
   );
-  if (plist.CFBundleIdentifier !== "com.otomat.desktop") {
+  if (plist.CFBundleIdentifier !== APP_ID) {
     throw new Error(`installed bundle identifier is ${String(plist.CFBundleIdentifier)}.`);
   }
   if (plist.CFBundleName !== PRODUCT_NAME) {
@@ -83,8 +98,9 @@ function assertBundleLayout(appPath) {
   const binding = join(daemonDir, "node_modules/better-sqlite3/build/Release/better_sqlite3.node");
   if (!existsSync(binding))
     throw new Error(`the installed app ships no SQLite binding at ${binding}.`);
-  if (!capture("file", [binding]).includes(process.arch)) {
-    throw new Error(`the shipped SQLite binding is not a ${process.arch} Mach-O object.`);
+  const expected = MACH_O_ARCH[process.arch];
+  if (capture("lipo", ["-archs", binding]).trim() !== expected) {
+    throw new Error(`the shipped SQLite binding is not a ${expected} Mach-O object.`);
   }
 
   capture("codesign", ["--verify", "--deep", "--strict", appPath]);
@@ -118,10 +134,23 @@ async function awaitExit(child, label) {
 
 /** A child environment that cannot reach the developer's own Otomat state or credentials. */
 function isolatedEnv(overrides) {
-  const env = { ...process.env, ...overrides };
-  delete env.OTOMAT_LINEAR_API_KEY;
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("OTOMAT_") && overrides[key] === undefined) delete env[key];
+  }
   if (overrides.ELECTRON_RUN_AS_NODE === undefined) delete env.ELECTRON_RUN_AS_NODE;
-  return env;
+  return { ...env, ...overrides };
+}
+
+/** Electron's own helpers are children too, so a survivor needs a grace period before it is one. */
+async function survivingPids(pids) {
+  const deadline = Date.now() + ORPHAN_GRACE_MS;
+  let surviving = pids.filter(alive);
+  while (surviving.length > 0 && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    surviving = surviving.filter(alive);
+  }
+  return surviving;
 }
 
 /** The daemon the installed app owns, booted through the app's own Electron binary as Node. */
@@ -144,9 +173,7 @@ async function smokeDaemon(appPath) {
 
   try {
     const health = await until("the packaged daemon", HEALTH_TIMEOUT_MS, async () => {
-      if (child.exitCode !== null) {
-        throw new Error(`the packaged daemon exited early:\n${output}`);
-      }
+      if (child.exitCode !== null) throw new Error("the packaged daemon exited early.");
       const response = await fetch(`http://127.0.0.1:${DAEMON_PORT}/api/health`).catch(() => null);
       return response?.ok === true ? await response.json() : null;
     });
@@ -154,7 +181,7 @@ async function smokeDaemon(appPath) {
       throw new Error(`unexpected health body: ${JSON.stringify(health)}`);
   } catch (error) {
     child.kill("SIGKILL");
-    throw error;
+    throw new Error(`${error.message}\n${output}`, { cause: error });
   }
 
   child.kill("SIGTERM");
@@ -181,21 +208,21 @@ async function smokeApp(appPath) {
 
   try {
     await until("the launched app", LAUNCH_TIMEOUT_MS, async () => {
-      if (child.exitCode !== null) throw new Error(`the app exited during launch:\n${output}`);
+      if (child.exitCode !== null) throw new Error("the app exited during launch.");
       return existsSync(join(userData, "otomat.db")) ? true : null;
     });
   } catch (error) {
     child.kill("SIGKILL");
-    throw error;
+    throw new Error(`${error.message}\n${output}`, { cause: error });
   }
 
-  const daemonPids = childPids(child.pid);
+  const spawnedPids = childPids(child.pid);
   child.kill("SIGTERM");
   await awaitExit(child, "the launched app");
-  const orphans = daemonPids.filter(alive);
+  const orphans = await survivingPids(spawnedPids);
   if (orphans.length > 0) {
     for (const pid of orphans) spawnSync("kill", ["-9", pid]);
-    throw new Error(`quitting the app left ${String(orphans.length)} daemon process(es) running.`);
+    throw new Error(`quitting the app left ${String(orphans.length)} child process(es) running.`);
   }
 }
 
@@ -205,6 +232,7 @@ function cleanup() {
 }
 
 try {
+  await assertPortFree(DAEMON_PORT);
   const dmgPath = locateDmg();
   console.log(`Installing ${dmgPath}…`);
   const appPath = installFromDmg(dmgPath);

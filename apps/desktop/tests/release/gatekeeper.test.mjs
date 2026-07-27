@@ -32,8 +32,13 @@ source=Notarized Developer ID
 origin=Developer ID Application: Otomat (${TEAM_ID})
 `;
 
+// Real `spctl` prints no `source=` line when it rejects, and exits non-zero.
 const REJECTED = `/Applications/Otomat.app: rejected
-source=Unnotarized Developer ID
+`;
+
+const SIGNED_BUT_UNNOTARIZED = `/Applications/Otomat.app: accepted
+source=Developer ID
+origin=Developer ID Application: Otomat (${TEAM_ID})
 `;
 
 function runner(overrides = {}) {
@@ -69,6 +74,10 @@ it("reads the signing facts a Developer ID bundle states", () => {
 it("reads whether Gatekeeper accepts the bundle as notarized", () => {
   expect(readGatekeeperFacts(ACCEPTED)).toEqual({ accepted: true, notarized: true });
   expect(readGatekeeperFacts(REJECTED)).toEqual({ accepted: false, notarized: false });
+  expect(readGatekeeperFacts(SIGNED_BUT_UNNOTARIZED)).toEqual({
+    accepted: true,
+    notarized: false,
+  });
 });
 
 it("passes every check on a signed, hardened, notarized and stapled artifact", () => {
@@ -101,8 +110,27 @@ it("refuses an artifact signed by another team", () => {
   expect(() => verify({ codesign: otherTeam })).toThrow(/different team identifier/);
 });
 
-it("refuses an artifact Gatekeeper does not see as notarized", () => {
+it("refuses an artifact Gatekeeper rejects", () => {
   expect(() => verify({ spctl: REJECTED })).toThrow(/Gatekeeper rejects the app/);
+});
+
+it("refuses a Developer ID artifact Gatekeeper does not see as notarized", () => {
+  expect(() => verify({ spctl: SIGNED_BUT_UNNOTARIZED })).toThrow(
+    /does not see the app as notarized/,
+  );
+});
+
+it("reads the Gatekeeper verdict from spctl's output, which exits non-zero when it rejects", () => {
+  const run = runner();
+  verifySignedRelease({
+    appPath: "/tmp/Otomat.app",
+    dmgPath: "/tmp/Otomat.dmg",
+    teamId: TEAM_ID,
+    run,
+  });
+
+  const spctl = run.mock.calls.find(([command]) => command === "spctl");
+  expect(spctl[2]).toEqual({ allowFailure: true });
 });
 
 it("submits the DMG for notarization and staples the ticket onto it", () => {

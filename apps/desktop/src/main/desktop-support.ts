@@ -17,7 +17,7 @@ export class DesktopSupport {
 
   async exportBundle(): Promise<void> {
     try {
-      const build = readBuildInfo();
+      const build = readBuildInfo(this.options.log);
       const exported = await exportSupportBundle({
         versions: {
           desktop: build.version,

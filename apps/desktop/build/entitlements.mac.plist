@@ -7,7 +7,7 @@
     <true/>
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
     <true/>
-    <!-- The daemon child loads better-sqlite3.node from app.asar.unpacked via ELECTRON_RUN_AS_NODE. -->
+    <!-- electron-builder's default for apps loading native modules from outside the bundle seal. -->
     <key>com.apple.security.cs.disable-library-validation</key>
     <true/>
   </dict>

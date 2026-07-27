@@ -14,17 +14,14 @@ function renderArtifacts(artifacts) {
 }
 
 /**
- * @param {{ manifest: object, changes: string[] }} input
+ * @param {{ manifest: object, changes: string[] }} input — a manifest of the notarized release
  */
 export function renderReleaseNotes(input) {
-  const { build, artifacts, notarized } = input.manifest;
-  const signature = notarized
-    ? "Signed with a Developer ID certificate and notarized by Apple."
-    : "Unsigned local build — not distributable.";
+  const { build, artifacts } = input.manifest;
   return [
     `## Otomat ${build.version} — macOS alpha (${build.arch})`,
     "",
-    signature,
+    "Signed with a Developer ID certificate and notarized by Apple.",
     "",
     `- commit \`${build.commit}\``,
     `- committed ${build.committed_at}`,
@@ -39,7 +36,7 @@ export function renderReleaseNotes(input) {
     "### Verify what you downloaded",
     "",
     "```sh",
-    `shasum -a 256 ${artifacts[0]?.name ?? "Otomat.dmg"}`,
+    `shasum -a 256 ${artifacts[0].name}`,
     "spctl --assess --type execute -vv /Applications/Otomat.app",
     "```",
     "",
@@ -47,7 +44,9 @@ export function renderReleaseNotes(input) {
     "",
     "### Uninstall and rollback",
     "",
-    `Otomat keeps every byte it owns under \`${USER_DATA_DIR}\`.`,
+    `Otomat installs nothing outside \`${USER_DATA_DIR}\` — no global daemon, no launch agent. It`,
+    "does leave the branches and `git worktree` registrations it created inside the repositories you",
+    "added; run `git worktree prune` there.",
     "",
     "- Uninstall the app: move `Otomat.app` to the Trash.",
     `- Remove its data too: delete \`${USER_DATA_DIR}\`.`,

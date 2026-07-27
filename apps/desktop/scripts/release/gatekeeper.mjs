@@ -1,15 +1,14 @@
-// Everything the release talks to on the macOS signing services: notarize + staple the DMG, then
-// prove the artifact a clean machine will see is signed, hardened, notarized and stapled.
-// Command output is parsed, never echoed: it carries the signing identity's common name.
+// Notarize + staple the DMG, then prove the artifact a clean machine will see is signed, hardened,
+// notarized and stapled.
 
 /** Facts `codesign -dv --verbose=4` states about a bundle. */
 export function readSignatureFacts(codesignOutput) {
-  const teamIdentifier = /^TeamIdentifier=(\S+)$/m.exec(codesignOutput)?.[1] ?? null;
   const flags = /^CodeDirectory .*\bflags=(\S+)/m.exec(codesignOutput)?.[1] ?? "";
   return {
     developerId: /^Authority=Developer ID Application:/m.test(codesignOutput),
     hardenedRuntime: flags.includes("runtime"),
-    teamIdentifier: teamIdentifier === "not set" ? null : teamIdentifier,
+    // `TeamIdentifier=not set` cannot match, so an unsigned bundle reads as null.
+    teamIdentifier: /^TeamIdentifier=(\S+)$/m.exec(codesignOutput)?.[1] ?? null,
   };
 }
 
@@ -30,7 +29,7 @@ function assert(condition, message) {
  * offline. electron-builder has already notarized and stapled the `.app` the DMG carries.
  *
  * @param {{ dmgPath: string, signing: { apiKeyPath: string, apiKeyId: string, apiIssuer: string },
- *   run: (command: string, args: string[]) => string }} input
+ *   run: (command: string, args: string[]) => void }} input
  */
 export function notarizeAndStapleDmg(input) {
   input.run("xcrun", [
@@ -52,7 +51,7 @@ export function notarizeAndStapleDmg(input) {
 
 /**
  * @param {{ appPath: string, dmgPath: string, teamId: string,
- *   run: (command: string, args: string[]) => string }} input
+ *   run: (command: string, args: string[], options?: { allowFailure?: boolean }) => string }} input
  * @returns {string[]} the checks that passed, in order
  */
 export function verifySignedRelease(input) {
@@ -72,8 +71,11 @@ export function verifySignedRelease(input) {
   );
   passed.push("app is Developer ID signed, hardened, and owned by the configured team");
 
+  // spctl exits non-zero on rejection, so its verdict has to be read from the output, not the code.
   const gatekeeper = readGatekeeperFacts(
-    input.run("spctl", ["--assess", "--type", "execute", "-vvv", input.appPath]),
+    input.run("spctl", ["--assess", "--type", "execute", "-vvv", input.appPath], {
+      allowFailure: true,
+    }),
   );
   assert(gatekeeper.accepted, "Gatekeeper rejects the app.");
   assert(gatekeeper.notarized, "Gatekeeper does not see the app as notarized.");

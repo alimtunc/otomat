@@ -2,6 +2,11 @@
   "extends": ["./packages/tooling/oxlintrc.base.json"],
   "overrides": [
     {
+      "files": ["**/*.mjs", "**/*.cjs"],
+      "env": { "node": true, "es2024": true },
+      "rules": { "no-undef": "error" }
+    },
+    {
       "files": ["apps/web/**"],
       "rules": {
         "no-restricted-imports": [

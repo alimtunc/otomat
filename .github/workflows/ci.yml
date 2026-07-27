@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -36,6 +39,7 @@ jobs:
   # can produce it. Run it on main so a packaging regression surfaces before a release needs it.
   package-macos:
     if: github.event_name == 'push'
+    needs: check
     runs-on: macos-15
     timeout-minutes: 60
     steps:

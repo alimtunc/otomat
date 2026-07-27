@@ -11,6 +11,8 @@ import { basename } from "node:path";
  */
 export const SUPPORTED_RELEASE_ARCHS = ["arm64"];
 
+export const APP_ID = "com.otomat.desktop";
+
 export function assertReleasableArch(arch) {
   if (SUPPORTED_RELEASE_ARCHS.includes(arch)) return;
   throw new Error(
@@ -70,7 +72,7 @@ export function describeArtifact(path) {
 export function createArtifactManifest(input) {
   return {
     product: "Otomat",
-    app_id: "com.otomat.desktop",
+    app_id: APP_ID,
     build: input.buildInfo,
     notarized: input.notarized,
     artifacts: input.artifacts,
