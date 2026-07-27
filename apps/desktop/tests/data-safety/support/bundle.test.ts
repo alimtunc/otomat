@@ -13,6 +13,8 @@ it("contains only versions, health, schema metadata and already-redacted logs", 
   const serialized = buildSupportBundle({
     versions: {
       desktop: "0.0.0",
+      commit: "1111111111111111111111111111111111111111",
+      signed: false,
       electron: "43.0.0",
       node: "24.0.0",
       platform: "darwin",
@@ -42,6 +44,8 @@ it("redacts CR-only prompt continuations", () => {
   const serialized = buildSupportBundle({
     versions: {
       desktop: "0.0.0",
+      commit: "1111111111111111111111111111111111111111",
+      signed: false,
       electron: "43.0.0",
       node: "24.0.0",
       platform: "darwin",

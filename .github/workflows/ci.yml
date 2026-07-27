@@ -31,3 +31,30 @@ jobs:
       # Same gate as `pnpm check` locally, kept as one step so CI can never drift from it.
       - name: Check
         run: pnpm check
+
+  # The unsigned artifact is the substrate the signed release is built from, and only a macOS host
+  # can produce it. Run it on main so a packaging regression surfaces before a release needs it.
+  package-macos:
+    if: github.event_name == 'push'
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Package the unsigned desktop artifact
+        run: pnpm desktop:package
+
+      - name: Smoke the packaged artifact
+        run: pnpm desktop:smoke

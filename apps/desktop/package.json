@@ -1,6 +1,6 @@
 {
   "name": "@otomat/desktop",
-  "version": "0.0.0",
+  "version": "0.1.0-alpha.1",
   "private": true,
   "type": "module",
   "main": "dist/main/index.js",
@@ -8,15 +8,15 @@
     "#shared/*": "./src/shared/*.ts",
     "#main/*": "./src/main/*.ts",
     "#preload/*": "./src/preload/*.ts",
-    "#scripts/*": "./scripts/*.mjs"
+    "#scripts/*": "./scripts/*.mjs",
+    "#release/*": "./scripts/release/*.mjs"
   },
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run",
     "start": "electron .",
-    "prepare-daemon": "node scripts/prepare-daemon.mjs",
-    "package:mac": "node scripts/package-mac.mjs"
+    "prepare-daemon": "node scripts/prepare-daemon.mjs"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.0",
