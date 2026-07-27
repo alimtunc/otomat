@@ -65,6 +65,34 @@ describe("buildDaemonEnv", () => {
     expect(env.OTOMAT_RESTORE_BACKUP).toBeUndefined();
   });
 
+  it("never inherits a worktrees root or a CORS allowlist from the launching shell", () => {
+    const baseEnv = {
+      OTOMAT_WORKTREES_ROOT: "/somewhere/shared/worktrees",
+      OTOMAT_ALLOWED_ORIGINS: "https://evil.example",
+    };
+
+    const dev = buildDaemonEnv({
+      port: 1,
+      dbPath: "/u/otomat.db",
+      projectRoot: "/u",
+      path: "x",
+      baseEnv,
+    });
+    expect(dev.OTOMAT_WORKTREES_ROOT).toBeUndefined();
+    expect(dev.OTOMAT_ALLOWED_ORIGINS).toBeUndefined();
+
+    const packaged = buildDaemonEnv({
+      port: 1,
+      dbPath: "/u/otomat.db",
+      projectRoot: "/u",
+      path: "x",
+      allowedOrigin: "otomat://app",
+      baseEnv,
+    });
+    expect(packaged.OTOMAT_WORKTREES_ROOT).toBeUndefined();
+    expect(packaged.OTOMAT_ALLOWED_ORIGINS).toBe("otomat://app");
+  });
+
   it("extends the base env but overrides PATH", () => {
     const env = buildDaemonEnv({
       port: 1,

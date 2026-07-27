@@ -1,13 +1,18 @@
-// Dev runner for the desktop shell: builds the daemon + desktop main/preload, starts the Vite
-// dev server, then launches Electron pointed at it (Electron still spawns and manages the daemon
-// on a free port). The classic two-terminal `pnpm dev` + `pnpm back` flow is untouched.
+// Dev runner for the desktop shell: builds the daemon + desktop main/preload, starts a Vite dev
+// server on a port reserved for this session, then launches Electron pointed at that exact URL
+// (Electron still spawns and manages the daemon on a free port, against a per-worktree data root).
+// The classic two-terminal `pnpm dev` + `pnpm back` flow is untouched.
 import { spawn } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { DEV_SERVER_ENV, electronEnv, planDevServer, viteArgs } from "./dev-session.mjs";
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, "..", "..", "..");
-const DEV_SERVER = process.env.OTOMAT_DESKTOP_DEV_SERVER ?? "http://localhost:5173";
+const WEB_DIR = join(REPO_ROOT, "apps", "web");
+const VITE_BIN = join(WEB_DIR, "node_modules", ".bin", "vite");
+const DEV_SERVER_TIMEOUT_MS = 30_000;
 
 function buildOnce(cmd, args) {
   return new Promise((resolve, reject) => {
@@ -18,15 +23,18 @@ function buildOnce(cmd, args) {
   });
 }
 
-async function waitFor(url, timeoutMs) {
+async function waitForDevServer(url, timeoutMs, failure) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    const dead = failure();
+    if (dead !== null) throw new Error(`${url} never came up: ${dead}`);
     try {
-      await fetch(url);
-      return;
+      const response = await fetch(url);
+      if (response.ok) return;
     } catch {
-      await new Promise((r) => setTimeout(r, 250));
+      // The server is not listening yet; the deadline above bounds the wait.
     }
+    await new Promise((r) => setTimeout(r, 250));
   }
   throw new Error(`dev server ${url} did not come up within ${timeoutMs}ms`);
 }
@@ -34,27 +42,44 @@ async function waitFor(url, timeoutMs) {
 await buildOnce("pnpm", ["--filter", "@otomat/local-daemon", "build"]);
 await buildOnce("pnpm", ["--filter", "@otomat/desktop", "build"]);
 
-const vite = spawn("pnpm", ["--filter", "@otomat/web", "dev"], {
-  cwd: REPO_ROOT,
-  stdio: "inherit",
-});
-await waitFor(DEV_SERVER, 30_000);
+const plan = await planDevServer({ env: process.env });
+
+let vite = null;
+let viteFailure = null;
+if (plan.managed) {
+  vite = spawn(VITE_BIN, viteArgs(plan.port), { cwd: WEB_DIR, stdio: "inherit" });
+  vite.on("exit", (code) => (viteFailure = `vite exited with code ${code}`));
+  vite.on("error", (error) => (viteFailure = `vite could not be started: ${error.message}`));
+} else {
+  console.log(`[otomat-desktop] using the ${DEV_SERVER_ENV} override at ${plan.url}`);
+}
+function stopVite() {
+  vite?.kill("SIGTERM");
+}
+try {
+  await waitForDevServer(plan.url, DEV_SERVER_TIMEOUT_MS, () => viteFailure);
+} catch (error) {
+  stopVite();
+  throw error;
+}
+console.log(`[otomat-desktop] dev server ready at ${plan.url}`);
 
 const electron = spawn("pnpm", ["--filter", "@otomat/desktop", "exec", "electron", "."], {
   cwd: REPO_ROOT,
   stdio: "inherit",
-  env: { ...process.env, OTOMAT_DESKTOP_DEV_SERVER: DEV_SERVER },
+  env: electronEnv(process.env, plan.url),
 });
 
+electron.on("exit", (code) => {
+  stopVite();
+  process.exit(code ?? 0);
+});
+
+// Leaving Vite behind would hold this session's reserved port against the next run.
 function shutdown() {
   electron.kill("SIGTERM");
-  vite.kill("SIGTERM");
+  stopVite();
+  process.exit(0);
 }
-electron.on("exit", () => {
-  vite.kill("SIGTERM");
-  process.exit(0);
-});
-process.on("SIGINT", () => {
-  shutdown();
-  process.exit(0);
-});
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
