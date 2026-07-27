@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createIssueRequestSchema,
-  followUpRunRequestSchema,
+  createRunContributionRequestSchema,
   healthResponseSchema,
   registerRepositoryRequestSchema,
   repositoryRegistrationErrorSchema,
@@ -46,6 +46,7 @@ const RUN = {
   status: "running",
   branch: "otomat/run/run-1",
   plan_json: { version: 1, steps: [] },
+  updated_at: "2026-07-25T10:00:00.000Z",
 };
 
 describe("runDetailSchema", () => {
@@ -152,16 +153,16 @@ describe("createIssueRequestSchema", () => {
   });
 });
 
-describe("followUpRunRequestSchema", () => {
-  it("accepts a prompt and trims it", () => {
-    expect(followUpRunRequestSchema.parse({ prompt: "  continue with tests  " })).toEqual({
-      prompt: "continue with tests",
+describe("createRunContributionRequestSchema", () => {
+  it("accepts a body and trims it", () => {
+    expect(createRunContributionRequestSchema.parse({ body: "  continue with tests  " })).toEqual({
+      body: "continue with tests",
     });
   });
 
-  it("rejects a blank or missing prompt", () => {
-    expect(followUpRunRequestSchema.safeParse({ prompt: "   " }).success).toBe(false);
-    expect(followUpRunRequestSchema.safeParse({}).success).toBe(false);
+  it("rejects a blank or missing body", () => {
+    expect(createRunContributionRequestSchema.safeParse({ body: "   " }).success).toBe(false);
+    expect(createRunContributionRequestSchema.safeParse({}).success).toBe(false);
   });
 });
 

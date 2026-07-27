@@ -19,6 +19,7 @@ import {
   type SettleEvidence,
   type SettleOptions,
 } from "./context.js";
+import { resolveSessionContributions } from "./contributions.js";
 import { settleIdleRun } from "./idle.js";
 import { settleFromWholeLedger } from "./ledger.js";
 import { recordObservedExit, reapProcesses } from "./reap.js";
@@ -83,6 +84,9 @@ export function settleRun(
     turnSession.provider_session_id === null
   ) {
     updateAgentSessionProvider(db, turnSession.id, providerSessionId);
+  }
+  if (turnSession !== null) {
+    resolveSessionContributions(db, turnSession.id, classification, options.now);
   }
 
   if (plan === null || turnSession === null) return settleFromWholeLedger(ctx, evidence);

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content="turkit visual-map" />
-    <meta name="otomat-baseline" content="528920cf45cfdb7bd12e3f307da4cdfd5106432f" />
+    <meta name="otomat-baseline" content="cc586afda56ffac3a864a4f86f7472c1ee8484ff" />
     <meta
       name="description"
       content="Atlas autonome de l’architecture stable d’Otomat : topology, flux, données, runtime, boundaries et points d’entrée."
@@ -1582,6 +1582,23 @@
                 >
               </div>
               <div class="edge-row">
+                <span class="from">launch dialog</span><span class="verb">freezes</span
+                ><span class="to">runs.plan_json</span
+                ><span class="why"
+                  >Single run envoie un <code>prompt</code>, Workflow un <code>plan</code> ;
+                  <code>freezePlan</code> fige les deux dans le même <code>runs.plan_json</code> — il
+                  n’existe pas de second format de plan.</span
+                >
+              </div>
+              <div class="edge-row">
+                <span class="from">conversation composer</span><span class="verb">queues</span
+                ><span class="to">run_contributions</span
+                ><span class="why"
+                  >Le message est persisté <code>queued</code> même pendant un tour ; la livraison
+                  s'accroche à la transition suivante.</span
+                >
+              </div>
+              <div class="edge-row">
                 <span class="from">review/github</span><span class="verb">emit</span
                 ><span class="to">ledger</span
                 ><span class="why"
@@ -1680,7 +1697,24 @@
                     <div class="field"><b>provider_session_id</b><span>resume</span></div>
                     <div class="field"><b>pid · pgid · exit</b><span>reconcile</span></div>
                   </article>
+                  <article class="table-card">
+                    <div class="table-name">run_contributions</div>
+                    <div class="field"><b>id</b><span class="key">PK</span></div>
+                    <div class="field">
+                      <b>run_id · agent_session_id</b><span class="fk">FK · claim</span>
+                    </div>
+                    <div class="field"><b>run_id + seq</b><span>unique FIFO</span></div>
+                    <div class="field"><b>body · status</b><span>queued→sent→…</span></div>
+                    <div class="field"><b>delivered_at</b><span>proof, not a click</span></div>
+                    <div class="field"><b>attempts · error</b><span>retry surface</span></div>
+                  </article>
                 </div>
+                <p style="margin: 10px 0 0; color: var(--paper-faint); font-size: 10px">
+                  Une contribution est écrite <b>queued</b> quoi que fasse la run. Elle ne passe
+                  <b>sent</b> qu’après <code>delivered_at</code>, c’est-à-dire après le lancement
+                  prouvé du turn qui la porte — jamais au clic. Un échec sans
+                  <code>delivered_at</code> est rejouable ; avec, il ne l’est plus.
+                </p>
               </div>
               <div class="db-group">
                 <h3>Evidence ledger</h3>
@@ -1757,6 +1791,8 @@
               <div class="relation">step_runs.worktree_id → worktrees.id</div>
               <div class="relation">agent_sessions.step_run_id → step_runs.id</div>
               <div class="relation">agent_sessions.agent_id → agents.id</div>
+              <div class="relation">run_contributions.run_id → runs.id</div>
+              <div class="relation">run_contributions.agent_session_id → agent_sessions.id</div>
               <div class="relation">event_streams.run_id → runs.id</div>
               <div class="relation">runtime_events.run_id → runs.id</div>
               <div class="relation">runtime_events.step_run_id → step_runs.id</div>
@@ -1771,7 +1807,7 @@
             <div class="section-head">
               <div>
                 <span class="eyebrow">Static execution traces</span>
-                <h2>Cinq chemins à connaître</h2>
+                <h2>Six chemins à connaître</h2>
               </div>
               <p>
                 Chaque trace part d’un command ou d’une action visible, traverse les vrais symbols,
@@ -1864,10 +1900,12 @@
                 <div class="trace-body">
                   <div class="trace-flow">
                     <div class="trace-node">
-                      <span class="seq">seq 000</span><span class="loc">useStartRun</span
+                      <span class="seq">seq 000</span><span class="loc">LaunchRunDialog</span
                       ><span class="action"
-                        >La mutation appelle le typed client puis invalide listes et issue
-                        concernée.</span
+                        >Une seule surface depuis l’issue : <b>Single run</b> affiche et envoie le
+                        prompt réel, <b>Workflow</b> compose le même <code>plan</code> ;
+                        <code>useLaunchRun</code> appelle le typed client puis invalide listes et
+                        issue concernée.</span
                       >
                     </div>
                     <div class="trace-node">
@@ -1935,7 +1973,7 @@
                 <summary>
                   <span class="trace-id">TRACE/C</span
                   ><span class="trace-title"
-                    ><b>Review, fix et follow-up</b
+                    ><b>Review et fix</b
                     ><span>diff canonique → anchor SHA → prompt → même session provider</span></span
                   >
                 </summary>
@@ -1963,11 +2001,12 @@
                       >
                     </div>
                     <div class="trace-node">
-                      <span class="seq">seq 003</span><span class="loc">spawnFollowUpTurn</span
+                      <span class="seq">seq 003</span><span class="loc">spawnResumeTurn</span
                       ><span class="action"
                         >Réutilise runtime, worktree, step/session et
-                        <code>provider_session_id</code> ; le prompt peut aussi venir directement du
-                        user follow-up.</span
+                        <code>provider_session_id</code> ; wrapper resume/fix au-dessus de
+                        <code>resolveResumeTurn</code> + <code>spawnTurn('resume')</code>, le moteur
+                        que la livraison des contributions partage (TRACE/F).</span
                       >
                     </div>
                     <div class="trace-node">
@@ -1983,7 +2022,7 @@
                     ><span class="branch">Aucun commentaire fixable → 409</span
                     ><span class="branch">État non resumable ou session provider absente → 409</span
                     ><span class="branch"
-                      >Un runtime sans resume ne reçoit pas de faux follow-up</span
+                      >Un runtime sans resume ne reçoit pas de faux fix turn</span
                     >
                   </div>
                 </div>
@@ -2064,11 +2103,11 @@
                 <div class="trace-body">
                   <div class="trace-flow">
                     <div class="trace-node">
-                      <span class="seq">seq 000</span><span class="loc">WorkflowIssueForm</span
+                      <span class="seq">seq 000</span><span class="loc">WorkflowPlanBuilder</span
                       ><span class="action"
-                        >TanStack Form construit un groupe de deux candidats minimum ; prompts et
-                        runtimes restent propres à chaque candidat et les dépendances ciblent le
-                        groupe.</span
+                        >Le même builder sert la création d’issue et le lancement depuis une issue
+                        existante : un groupe de deux candidats minimum, prompts et runtimes propres
+                        à chaque candidat, dépendances ciblant le groupe.</span
                       >
                     </div>
                     <div class="trace-node">
@@ -2117,6 +2156,91 @@
                     ><span class="branch">Candidat interrompu → resume explicite de sa session</span
                     ><span class="branch"
                       >Aucun candidat réussi → group/run failed ou awaiting_human</span
+                    >
+                  </div>
+                </div>
+              </details>
+              <details class="trace" open>
+                <summary>
+                  <span class="trace-id">TRACE/F</span
+                  ><span class="trace-title"
+                    ><b>Conversation par run et contributions en queue</b
+                    ><span
+                      >composer → row queued → claim → même session provider → sent → settle</span
+                    ></span
+                  >
+                </summary>
+                <div class="trace-body">
+                  <div class="trace-flow">
+                    <div class="trace-node">
+                      <span class="seq">seq 000</span
+                      ><span class="loc">ConversationComposer</span
+                      ><span class="action"
+                        >Reste utilisable pendant l’exécution ;
+                        <code>resolveContributionGate</code> annonce si le message part maintenant ou
+                        attend le prochain tour sûr.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 001</span
+                      ><span class="loc">POST /runs/:id/contributions</span
+                      ><span class="action"
+                        ><code>appendRunContribution</code> écrit la row <code>queued</code> avec son
+                        <code>seq</code> FIFO dans une transaction immediate, puis émet un
+                        <code>run.contribution</code> qui ancre le message dans le ledger.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 002</span
+                      ><span class="loc">deliverQueuedContributions</span
+                      ><span class="action"
+                        >Seul mécanisme de livraison, appelé par le POST, par la chaîne post-settle
+                        et par un « deliver now » explicite. No-op tant que la run travaille : les
+                        messages restent honnêtement <code>queued</code>.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 003</span
+                      ><span class="loc">buildContributionPrompt + claim</span
+                      ><span class="action"
+                        >Regroupe la queue dans l’ordre d’envoi en un seul prompt, puis stampe le
+                        claim (<code>agent_session_id</code>, <code>attempts</code>) avant le spawn —
+                        un crash laisse donc une trace auditable.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 004</span
+                      ><span class="loc">resolveResumeTurn + spawnTurn('resume')</span
+                      ><span class="action"
+                        >Même session provider, même worktree, même run : la livraison ne crée pas
+                        une seconde voie de reprise. Elle appelle les deux séparément parce que le
+                        claim est estampillé entre les deux. Au retour, la batch passe
+                        <code>sent</code> avec <code>delivered_at</code>.</span
+                      >
+                    </div>
+                    <div class="trace-node">
+                      <span class="seq">seq 005</span
+                      ><span class="loc">settle/contributions.ts</span
+                      ><span class="action"
+                        >Le settle du tour porteur résout la batch : <code>completed</code> si le
+                        tour a réussi, <code>failed</code> s’il a échoué/annulé, et
+                        <code>sent</code> conservé si le tour est seulement interrompu.</span
+                      >
+                    </div>
+                  </div>
+                  <div class="branches">
+                    <span class="branch"
+                      >Run occupée → message persisté <code>queued</code>, aucun steering mid-turn
+                      simulé</span
+                    ><span class="branch"
+                      >Aucune session resumable → <code>failed</code> avec la raison, rejouable</span
+                    ><span class="branch"
+                      >Boot ne spawn jamais → l’UI demande une reprise explicite</span
+                    ><span class="branch"
+                      >Claim sans pid → relâché en <code>queued</code> ; claim avec pid →
+                      <code>sent</code>, jamais rejoué</span
+                    ><span class="branch"
+                      ><code>delivered_at</code> non nul → retry refusé en 409</span
                     >
                   </div>
                 </div>
@@ -2680,7 +2804,7 @@
                   >apps/local-daemon/src/supervisor/supervisor.ts</a
                 >
                 <h3>Façade supervisor</h3>
-                <p>Start, resume, fix, follow-up, abort, reconcile et settle.</p>
+                <p>Start, resume, fix, contribute/retry/deliver, abort, reconcile et settle.</p>
               </article>
               <article class="key-card">
                 <a href="../../apps/local-daemon/src/supervisor/lifecycle.ts"
@@ -2695,6 +2819,20 @@
                 >
                 <h3>Plan scheduler</h3>
                 <p>Node prêt, groupe compete, worktrees candidats et scheduling parallèle.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../apps/local-daemon/src/supervisor/contributions.ts"
+                  >apps/local-daemon/src/supervisor/contributions.ts</a
+                >
+                <h3>Contribution delivery</h3>
+                <p>Queue durable, batch FIFO, claim avant spawn et reconciliation des claims.</p>
+              </article>
+              <article class="key-card">
+                <a href="../../apps/web/src/components/issues/workspace/launch/dialog.tsx"
+                  >apps/web/src/components/issues/workspace/launch/dialog.tsx</a
+                >
+                <h3>Launch surface</h3>
+                <p>Single run avec prompt explicite ou workflow, sur une issue existante.</p>
               </article>
               <article class="key-card">
                 <a href="../../apps/local-daemon/src/supervisor/promotion.ts"

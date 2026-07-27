@@ -2,22 +2,23 @@ import type { RunDetail } from "@otomat/domain";
 import { Button, Field, FieldControl, Kbd, Textarea } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import { useDaemonStatus, useRuntimes } from "@web/api/daemon/queries";
-import { useFollowUpRun } from "@web/api/runs/mutations";
-import { resolveFollowUpGate } from "@web/lib/follow-up";
+import { useCreateRunContribution } from "@web/api/runs/mutations";
 import { fieldErrorProps } from "@web/lib/form";
+import { resolveContributionGate } from "@web/lib/run-contribution";
 import type { KeyboardEvent } from "react";
 
-export function FollowUpComposer({ detail }: { detail: RunDetail }) {
-  const followUp = useFollowUpRun(detail.run.id);
+/** Run-scoped composer. It stays usable while the agent works: the message is persisted and queued for the next safe turn. */
+export function ConversationComposer({ detail }: { detail: RunDetail }) {
+  const contribute = useCreateRunContribution(detail.run.id);
   const { connectionState } = useDaemonStatus();
   const runtimes = useRuntimes();
-  const gate = resolveFollowUpGate(detail, runtimes.data, connectionState);
+  const gate = resolveContributionGate(detail, runtimes.data, connectionState);
 
   const form = useForm({
-    defaultValues: { prompt: "" },
+    defaultValues: { body: "" },
     onSubmit: async ({ value }) => {
       try {
-        await followUp.mutateAsync({ prompt: value.prompt.trim() });
+        await contribute.mutateAsync({ body: value.body.trim() });
         form.reset();
       } catch {
         // The mutation's onError toast reports it; the draft stays for retry.
@@ -30,7 +31,7 @@ export function FollowUpComposer({ detail }: { detail: RunDetail }) {
     void form.handleSubmit();
   }
 
-  function onPromptKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+  function onBodyKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
       submitIfPossible();
@@ -39,7 +40,7 @@ export function FollowUpComposer({ detail }: { detail: RunDetail }) {
 
   return (
     <form
-      aria-label="Run follow-up"
+      aria-label="Run message"
       className="flex flex-col gap-2 border-t border-border-subtle p-3"
       onSubmit={(event) => {
         event.preventDefault();
@@ -47,10 +48,10 @@ export function FollowUpComposer({ detail }: { detail: RunDetail }) {
       }}
     >
       <form.Field
-        name="prompt"
+        name="body"
         validators={{
           onChange: ({ value }) =>
-            value.trim().length === 0 ? "Write a follow-up before sending." : undefined,
+            value.trim().length === 0 ? "Write a message before sending." : undefined,
         }}
       >
         {(field) => (
@@ -61,18 +62,16 @@ export function FollowUpComposer({ detail }: { detail: RunDetail }) {
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.value)}
-                onKeyDown={onPromptKeyDown}
-                placeholder="Send a follow-up to this run's agent…"
-                aria-label="Follow-up prompt"
+                onKeyDown={onBodyKeyDown}
+                placeholder="Send a message to this run's agent…"
+                aria-label="Run message"
               />
             </FieldControl>
           </Field>
         )}
       </form.Field>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-text-tertiary">
-          {gate.reason ?? "Resumes the same agent session as a new turn on this run."}
-        </p>
+        <p className="text-xs text-text-tertiary">{gate.note}</p>
         <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting] as const}>
           {([canSubmit, isSubmitting]) => (
             <Button
@@ -80,9 +79,9 @@ export function FollowUpComposer({ detail }: { detail: RunDetail }) {
               variant="primary"
               size="xs"
               disabled={!gate.enabled || !canSubmit}
-              loading={isSubmitting || followUp.isPending}
+              loading={isSubmitting || contribute.isPending}
             >
-              Send follow-up
+              {gate.queues ? "Queue message" : "Send message"}
               <Kbd tone="on-accent">⌘↵</Kbd>
             </Button>
           )}

@@ -49,6 +49,14 @@ export function useRunDetail(runId: string) {
   });
 }
 
+/** A run's conversation. Event-driven: the run's ledger stream invalidates it on every contribution change. */
+export function useRunContributions(runId: string) {
+  return useQuery({
+    queryKey: queryKeys.runContributions(runId),
+    queryFn: () => daemon.listRunContributions(runId),
+  });
+}
+
 export function useRunCompletionReport(runId: string) {
   return useQuery({
     queryKey: queryKeys.runCompletionReport(runId),

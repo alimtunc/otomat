@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { CreateIssueRequest, RuntimeDescriptor } from "@otomat/domain";
+import type { CreateIssueRequest, RunContract, RuntimeDescriptor } from "@otomat/domain";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -7,7 +7,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { setInputValue } from "#support/dom-events";
 
-const start = vi.fn(async () => false);
+const launch = vi.fn(async () => ({ id: "run-1" }) as RunContract);
+const navigate = vi.fn();
 const create = vi.fn(async (_request: CreateIssueRequest) => true);
 let runtimesData: RuntimeDescriptor[] = [];
 const agentSelectProps = vi.fn();
@@ -19,8 +20,10 @@ interface AgentSelectProbeProps {
 }
 
 vi.mock("@web/api/runs/mutations", () => ({
-  useStartRunAndNavigate: () => ({ start, isPending: false }),
+  useLaunchRun: () => ({ launch, isPending: false }),
 }));
+
+vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
 
 vi.mock("@web/api/issues/mutations", () => ({
   useCreateIssueAndNavigate: () => ({ create, isPending: false }),
@@ -84,7 +87,8 @@ const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
   document.body.replaceChildren();
-  start.mockClear();
+  launch.mockClear();
+  navigate.mockClear();
   create.mockClear();
   agentSelectProps.mockClear();
   runtimesData = [];
@@ -180,7 +184,7 @@ describe("NewIssueDialog", () => {
     });
 
     expect(create).toHaveBeenCalledWith({ project_id: "p1", title: "Ship the CSV parser" });
-    expect(start).not.toHaveBeenCalled();
+    expect(launch).not.toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
@@ -202,11 +206,12 @@ describe("NewIssueDialog", () => {
       buttonByText("Create & launch⌘↵").click();
     });
 
-    expect(start).toHaveBeenCalledWith({
+    expect(launch).toHaveBeenCalledWith({
       prompt: "implement the thing",
       project_id: "p1",
       runtime: "claude",
     });
+    expect(navigate).toHaveBeenCalledWith({ to: "/runs/$runId", params: { runId: "run-1" } });
   });
 
   it("builds a valid compete group and explains that dependents wait for the winner", async () => {
@@ -255,7 +260,7 @@ describe("NewIssueDialog", () => {
     });
     await act(async () => buttonByText("Launch workflow⌘↵").click());
 
-    expect(start).toHaveBeenCalledWith({
+    expect(launch).toHaveBeenCalledWith({
       prompt: "Choose the implementation",
       project_id: "p1",
       runtime: "claude",
@@ -284,6 +289,8 @@ describe("NewIssueDialog", () => {
         ],
       },
     });
+    // The workflow created its own issue, so the run is nowhere on screen yet.
+    expect(navigate).toHaveBeenCalledWith({ to: "/runs/$runId", params: { runId: "run-1" } });
   });
 
   it("gives workflow agent selectors the standard control size", async () => {
@@ -354,6 +361,6 @@ describe("NewIssueDialog", () => {
 
     expect(buttonByText("Create & launch⌘↵").disabled).toBe(true);
     expect(document.body.textContent).toContain("Select a project before launching a run.");
-    expect(start).not.toHaveBeenCalled();
+    expect(launch).not.toHaveBeenCalled();
   });
 });

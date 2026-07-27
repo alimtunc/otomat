@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
-import { toneClassMap, type StatusTone } from "../lib/status";
+import { toneClassMap, type StatusTone } from "../lib/tone";
 import { cn } from "../lib/utils";
 
 export type ChipSize = "sm" | "lg";

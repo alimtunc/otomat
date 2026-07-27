@@ -48,14 +48,25 @@ it("invalidates the PR and issue caches on any pr.* event", () => {
   ]);
 });
 
-it("invalidates the run, run list, and issue execution caches on a lifecycle or reconcile event", () => {
+it("invalidates the run, run list, conversation, and issue execution caches on a lifecycle or reconcile event", () => {
   const { client, keys } = fakeClient();
   invalidateForEvent(client, "run-1", event("run.lifecycle"));
-  expect(keys).toEqual([queryKeys.run("run-1"), queryKeys.runs, queryKeys.issues]);
+  expect(keys).toEqual([
+    queryKeys.run("run-1"),
+    queryKeys.runs,
+    queryKeys.runContributions("run-1"),
+    queryKeys.issues,
+  ]);
 });
 
 it("invalidates the completion report for runtime evidence", () => {
   const { client, keys } = fakeClient();
   invalidateForEvent(client, "run-1", event("runtime.log"));
   expect(keys).toEqual([queryKeys.runCompletionReport("run-1")]);
+});
+
+it("invalidates only the run's conversation on a contribution event", () => {
+  const { client, keys } = fakeClient();
+  invalidateForEvent(client, "run-1", event("run.contribution"));
+  expect(keys).toEqual([queryKeys.runContributions("run-1")]);
 });

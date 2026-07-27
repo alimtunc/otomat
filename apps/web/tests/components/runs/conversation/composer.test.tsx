@@ -1,17 +1,22 @@
-import type { FollowUpRunRequest, RunDetail, RunState, RuntimeDescriptor } from "@otomat/domain";
+import type {
+  CreateRunContributionRequest,
+  RunDetail,
+  RunState,
+  RuntimeDescriptor,
+} from "@otomat/domain";
 // @vitest-environment happy-dom
 import type { ConnectionState } from "@otomat/ui";
-import { FollowUpComposer } from "@web/components/runs/cockpit/follow-up-composer";
+import { ConversationComposer } from "@web/components/runs/conversation/composer";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const mutateAsync = vi.fn(async (_request: FollowUpRunRequest) => ({}));
+const mutateAsync = vi.fn(async (_request: CreateRunContributionRequest) => ({}));
 let connectionState: ConnectionState = "online";
 let runtimesData: RuntimeDescriptor[] | undefined;
 
 vi.mock("@web/api/runs/mutations", () => ({
-  useFollowUpRun: () => ({ mutateAsync, isPending: false }),
+  useCreateRunContribution: () => ({ mutateAsync, isPending: false }),
 }));
 
 vi.mock("@web/api/daemon/queries", () => ({
@@ -32,6 +37,7 @@ function runDetail(status: RunState, providerSessionId: string | null = "ps-1"):
         version: 1,
         steps: [{ id: "s1", name: "Agent turn", agent: "claude", prompt: "p", depends_on: [] }],
       },
+      updated_at: "2026-07-25T10:00:00.000Z",
     },
     steps: [
       {
@@ -93,7 +99,7 @@ async function renderComposer(detail: RunDetail) {
   document.body.append(container);
   const root: Root = createRoot(container);
   await act(async () => {
-    root.render(<FollowUpComposer detail={detail} />);
+    root.render(<ConversationComposer detail={detail} />);
   });
   cleanups.push(async () => {
     await act(async () => root.unmount());
@@ -102,15 +108,15 @@ async function renderComposer(detail: RunDetail) {
 
 function promptTextarea(): HTMLTextAreaElement {
   const textarea = document.querySelector<HTMLTextAreaElement>(
-    "textarea[aria-label='Follow-up prompt']",
+    "textarea[aria-label='Run message']",
   );
-  if (!textarea) throw new Error("follow-up textarea not found");
+  if (!textarea) throw new Error("run message textarea not found");
   return textarea;
 }
 
 function sendButton(): HTMLButtonElement {
   const button = [...document.querySelectorAll("button")].find((candidate) =>
-    candidate.textContent?.includes("Send follow-up"),
+    candidate.textContent?.includes("message"),
   );
   if (!button) throw new Error("send button not found");
   return button;
@@ -125,7 +131,7 @@ async function typePrompt(value: string) {
   });
 }
 
-describe("FollowUpComposer", () => {
+describe("ConversationComposer", () => {
   it("sends the trimmed prompt on Cmd+Enter and clears the draft", async () => {
     runtimesData = [claudeDescriptor()];
     await renderComposer(runDetail("awaiting_human"));
@@ -137,7 +143,7 @@ describe("FollowUpComposer", () => {
       );
     });
 
-    expect(mutateAsync).toHaveBeenCalledWith({ prompt: "add error handling" });
+    expect(mutateAsync).toHaveBeenCalledWith({ body: "add error handling" });
     expect(promptTextarea().value).toBe("");
   });
 
@@ -150,10 +156,10 @@ describe("FollowUpComposer", () => {
       sendButton().click();
     });
 
-    expect(mutateAsync).toHaveBeenCalledWith({ prompt: "rename the helper" });
+    expect(mutateAsync).toHaveBeenCalledWith({ body: "rename the helper" });
   });
 
-  it("does not submit a blank prompt", async () => {
+  it("does not submit a blank message", async () => {
     runtimesData = [claudeDescriptor()];
     await renderComposer(runDetail("awaiting_human"));
     await typePrompt("   ");
@@ -167,10 +173,14 @@ describe("FollowUpComposer", () => {
     expect(mutateAsync).not.toHaveBeenCalled();
   });
 
-  it("disables the action and ignores Cmd+Enter while the run is active", async () => {
+  it("queues a message sent while the run is active instead of refusing it", async () => {
     runtimesData = [claudeDescriptor()];
     await renderComposer(runDetail("running"));
-    await typePrompt("too early");
+    await typePrompt("also add tests");
+
+    expect(sendButton().disabled).toBe(false);
+    expect(sendButton().textContent).toContain("Queue message");
+    expect(document.body.textContent).toContain("queued for its next safe turn");
 
     await act(async () => {
       promptTextarea().dispatchEvent(
@@ -178,9 +188,15 @@ describe("FollowUpComposer", () => {
       );
     });
 
-    expect(mutateAsync).not.toHaveBeenCalled();
+    expect(mutateAsync).toHaveBeenCalledWith({ body: "also add tests" });
+  });
+
+  it("refuses a message on a finished run", async () => {
+    runtimesData = [claudeDescriptor()];
+    await renderComposer(runDetail("completed"));
+
     expect(sendButton().disabled).toBe(true);
-    expect(document.body.textContent).toContain("The agent is working");
+    expect(document.body.textContent).toContain("This run is finished");
   });
 
   it("disables the action while the daemon is offline", async () => {

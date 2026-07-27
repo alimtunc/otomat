@@ -5,6 +5,7 @@ import {
   agentSessionContractSchema,
   competeGroupContractSchema,
   runContractSchema,
+  runContributionContractSchema,
   stepRunContractSchema,
 } from "./entities/runs.js";
 
@@ -36,11 +37,18 @@ export const startRunRequestSchema = z
   });
 export type StartRunRequest = z.infer<typeof startRunRequestSchema>;
 
-/** Send the user's own prompt as a follow-up turn resuming the run's existing provider session. */
-export const followUpRunRequestSchema = z.object({
-  prompt: z.string().trim().min(1),
+/** Post one user message to a run's conversation; it is persisted as `queued` whatever the run is doing. */
+export const createRunContributionRequestSchema = z
+  .object({ body: z.string().trim().min(1) })
+  .strict();
+export type CreateRunContributionRequest = z.infer<typeof createRunContributionRequestSchema>;
+
+/** A run's conversation contributions, oldest first. */
+export const runContributionsResponseSchema = z.object({
+  run_id: z.string(),
+  contributions: z.array(runContributionContractSchema),
 });
-export type FollowUpRunRequest = z.infer<typeof followUpRunRequestSchema>;
+export type RunContributionsResponse = z.infer<typeof runContributionsResponseSchema>;
 
 /** Select one succeeded competitor explicitly; the daemon rejects premature or conflicting choices. */
 export const selectCompeteWinnerRequestSchema = z

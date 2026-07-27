@@ -19,9 +19,9 @@ apps/
     events/             Append-only event ledger + live tailer
     git/                Worktree/branch lifecycle + canonical diff
     github/             GitHub CLI integration + PR publication
-    review/             Diff snapshots, comments, fix and follow-up
+    review/             Diff snapshots, comments and fix turns
     runtime/            Codex, Claude and deterministic fake adapters
-    supervisor/         Process lifecycle, reconciliation and resume
+    supervisor/         Process lifecycle, reconciliation, resume and run conversations
   desktop/              Electron alpha shell: manages the daemon lifecycle, serves the web build
 packages/
   domain/               Pure TS: types, state machines, event envelope, contracts

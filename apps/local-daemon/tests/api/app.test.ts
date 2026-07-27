@@ -1,12 +1,18 @@
 import { schema, type Db } from "@otomat/db";
-import type { HealthResponse, RunContract, RunDetail, StartRunRequest } from "@otomat/domain";
+import type {
+  HealthResponse,
+  RunContract,
+  RunContributionContract,
+  RunDetail,
+  StartRunRequest,
+} from "@otomat/domain";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import type { RuntimeEvent } from "#runtime";
-import { CompeteRepositoryRequiredError, RunNotResumableError } from "#supervisor";
+import { CompeteRepositoryRequiredError, RunContributionNotRetriableError } from "#supervisor";
 
-import { makeApiApp, post, request, runRow } from "../support/api.js";
+import { contributionRow, makeApiApp, post, request, runRow } from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
 import { appendEvents } from "../support/ledger.js";
 import { stubReviewService } from "../support/review.js";
@@ -237,46 +243,48 @@ it("returns 404 resuming an unknown run", async () => {
   expect(res.status).toBe(404);
 });
 
-it("delegates a follow-up to the supervisor with the trimmed prompt", async () => {
+it("delegates a contribution to the supervisor with the trimmed body", async () => {
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
-  let received: { id: string; prompt: string } | null = null;
+  let received: { id: string; body: string } | null = null;
   const app = makeApiApp(t, {
-    followUpRun: async (id, prompt) => {
-      received = { id, prompt };
-      return runRow(id, { status: "running" });
+    contributeToRun: async (id, body) => {
+      received = { id, body };
+      return contributionRow(id, { body });
     },
   });
-  const res = await post(app, `/api/runs/${runId}/follow-up`, { prompt: "  keep going  " });
-  expect(res.status).toBe(200);
-  expect(received).toEqual({ id: runId, prompt: "keep going" });
-  expect(((await res.json()) as RunContract).status).toBe("running");
+  const res = await post(app, `/api/runs/${runId}/contributions`, { body: "  keep going  " });
+  expect(res.status).toBe(201);
+  expect(received).toEqual({ id: runId, body: "keep going" });
+  const contribution = (await res.json()) as RunContributionContract;
+  expect(contribution.status).toBe("queued");
+  expect(contribution.delivered_at).toBeNull();
 });
 
-it("rejects a follow-up with a blank prompt", async () => {
+it("rejects a contribution with a blank body", async () => {
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
-  const res = await post(makeApiApp(t), `/api/runs/${runId}/follow-up`, { prompt: "   " });
+  const res = await post(makeApiApp(t), `/api/runs/${runId}/contributions`, { body: "   " });
   expect(res.status).toBe(400);
   expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
 });
 
-it("returns 404 following up an unknown run", async () => {
-  const res = await post(makeApiApp(t), "/api/runs/nope/follow-up", { prompt: "p" });
+it("returns 404 contributing to an unknown run", async () => {
+  const res = await post(makeApiApp(t), "/api/runs/nope/contributions", { body: "p" });
   expect(res.status).toBe(404);
 });
 
-it("maps RunNotResumableError to 409 run_not_resumable on follow-up", async () => {
+it("maps a non-retriable contribution to 409 rather than replaying a delivered message", async () => {
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
   const app = makeApiApp(t, {
-    followUpRun: async () => {
-      throw new RunNotResumableError("nope");
+    retryRunContribution: async () => {
+      throw new RunContributionNotRetriableError("already reached the agent");
     },
   });
-  const res = await post(app, `/api/runs/${runId}/follow-up`, { prompt: "p" });
+  const res = await post(app, `/api/runs/${runId}/contributions/c1/retry`, {});
   expect(res.status).toBe(409);
-  expect(((await res.json()) as { error: string }).error).toBe("run_not_resumable");
+  expect(((await res.json()) as { error: string }).error).toBe("run_contribution_not_retriable");
 });
 
 it("delegates abort to the supervisor and returns the run detail", async () => {

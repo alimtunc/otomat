@@ -20,6 +20,7 @@ export type EventSource = (typeof EVENT_SOURCES)[number];
 /** Normalized event families. Raw provider frames are preserved via `raw_ref`. */
 export const EVENT_TYPES = [
   "run.lifecycle",
+  "run.contribution",
   "step.lifecycle",
   "session.lifecycle",
   "compete.lifecycle",

@@ -252,3 +252,23 @@ it("boot after a step's marker landed but before its settle: no replay of that s
   expect(spawn.calls).toBe(1);
   expect(spawn.jobs[0]?.stepRunId).toBe("s2");
 });
+
+it("launches a workflow on an existing issue: one issue, its plan frozen as given", async () => {
+  const { supervisor, spawn } = makeSupervisor(fix, "complete");
+
+  const run = await supervisor.start({ issue_id: "i1", plan: THREE_STEPS });
+  await supervisor.settle();
+
+  expect(run.issue_id).toBe("i1");
+  // A plan launched from an issue must not fabricate the ad-hoc issue a prompt-only launch needs.
+  expect(listIssues(fix.db).map((issue) => issue.id)).toEqual(["i1"]);
+
+  const steps = listStepRunsForRun(fix.db, run.id);
+  expect(steps.map((step) => step.name)).toEqual(["Plan", "Implement", "Verify"]);
+
+  const planSteps = getRun(fix.db, run.id)?.plan_json.steps ?? [];
+  expect(planSteps.map((step) => step.id)).toEqual(steps.map((step) => step.id));
+  expect(planSteps[2]?.depends_on).toEqual([planSteps[1]?.id]);
+  // The issue title never overwrites a step prompt: the frozen plan is what the composer sent.
+  expect(spawn.jobs.map((job) => job.prompt)).toEqual(["plan it", "build it", "check it"]);
+});

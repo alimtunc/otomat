@@ -1,12 +1,12 @@
 import { DaemonRequestError } from "@otomat/client";
 import {
   agentProfileErrorSchema,
-  type FollowUpRunRequest,
+  type CreateRunContributionRequest,
+  type RunContract,
   type StartRunRequest,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
@@ -74,32 +74,55 @@ export function useSelectCompeteWinner(runId: string, groupId: string) {
   });
 }
 
-/** Sends a user follow-up prompt as a new resume turn. On success invalidates the run's detail and the runs list; toasts on failure. */
-export function useFollowUpRun(runId: string) {
+function useContributionMutation<TVariables>(
+  runId: string,
+  mutationFn: (variables: TVariables) => Promise<unknown>,
+) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (request: FollowUpRunRequest) => daemon.followUpRun(runId, request),
+    mutationFn,
     onSuccess: () => {
+      // A message the daemon only re-queues emits no ledger event, so the SSE path cannot refresh this cache.
+      client.invalidateQueries({ queryKey: queryKeys.runContributions(runId) });
       client.invalidateQueries({ queryKey: queryKeys.run(runId) });
       client.invalidateQueries({ queryKey: queryKeys.runs });
     },
-    onError: (error) => toast.error(followUpErrorMessage(error)),
+    onError: (error) => toast.error(contributionErrorMessage(error)),
   });
 }
 
-export function followUpErrorMessage(error: unknown): string {
-  if (error instanceof DaemonRequestError) {
-    if (error.status === 409) {
-      return "Could not send follow-up — the run is no longer resumable.";
-    }
-    return error.status >= 500
-      ? "Could not send follow-up — the daemon failed to resume the run."
-      : "Could not send follow-up — the request was rejected.";
-  }
-  return "Could not send follow-up — is the daemon running?";
+/** Posts a message to the run's conversation. The daemon persists it whatever the run is doing, so success never implies delivery. */
+export function useCreateRunContribution(runId: string) {
+  return useContributionMutation(runId, (request: CreateRunContributionRequest) =>
+    daemon.createRunContribution(runId, request),
+  );
 }
 
-export function startRunErrorMessage(error: unknown): string {
+/** Retries one failed message that never reached the agent. */
+export function useRetryRunContribution(runId: string) {
+  return useContributionMutation(runId, (contributionId: string) =>
+    daemon.retryRunContribution(runId, contributionId),
+  );
+}
+
+/** Explicit "deliver now" for messages a daemon restart left queued; the daemon never resumes a run on its own at boot. */
+export function useDeliverRunContributions(runId: string) {
+  return useContributionMutation<void>(runId, () => daemon.deliverRunContributions(runId));
+}
+
+function contributionErrorMessage(error: unknown): string {
+  if (error instanceof DaemonRequestError) {
+    if (error.status === 409) {
+      return "Could not send this message — the daemon refused it as already delivered.";
+    }
+    return error.status >= 500
+      ? "Could not send this message — the daemon failed to record it."
+      : "Could not send this message — the request was rejected.";
+  }
+  return "Could not send this message — is the daemon running?";
+}
+
+function startRunErrorMessage(error: unknown): string {
   if (error instanceof DaemonRequestError) {
     const refusal = agentProfileErrorSchema.safeParse(error.body);
     if (refusal.success) return refusal.data.message;
@@ -110,32 +133,26 @@ export function startRunErrorMessage(error: unknown): string {
   return "Could not start run — is the daemon running?";
 }
 
-export interface StartRunAndNavigate {
-  /** Resolves true when the run started and navigation fired; false when it failed (an error toast was shown). */
-  start: (request: StartRunRequest) => Promise<boolean>;
+export interface LaunchRun {
+  /** Resolves the started run, or null when the daemon refused it (an error toast was shown). */
+  launch: (request: StartRunRequest) => Promise<RunContract | null>;
   isPending: boolean;
 }
 
-/**
- * Starts a run and, on success, toasts and navigates to its detail route; on
- * failure shows an error toast keyed to the daemon response. `start` resolves
- * true/false accordingly.
- */
-export function useStartRunAndNavigate(): StartRunAndNavigate {
+/** Toasts the outcome and hands the run back; where the user goes next belongs to the surface that launched it. */
+export function useLaunchRun(): LaunchRun {
   const startRun = useStartRun();
-  const navigate = useNavigate();
 
-  async function start(request: StartRunRequest): Promise<boolean> {
+  async function launch(request: StartRunRequest): Promise<RunContract | null> {
     try {
       const run = await startRun.mutateAsync(request);
       toast.success("Run started");
-      navigate({ to: "/runs/$runId", params: { runId: run.id } });
-      return true;
+      return run;
     } catch (error) {
       toast.error(startRunErrorMessage(error));
-      return false;
+      return null;
     }
   }
 
-  return { start, isPending: startRun.isPending };
+  return { launch, isPending: startRun.isPending };
 }

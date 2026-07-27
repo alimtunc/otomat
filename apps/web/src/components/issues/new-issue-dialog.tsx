@@ -1,3 +1,4 @@
+import type { RunContract } from "@otomat/domain";
 import {
   Dialog,
   DialogContent,
@@ -6,9 +7,10 @@ import {
   SegmentedControl,
   SegmentedItem,
 } from "@otomat/ui";
+import { useNavigate } from "@tanstack/react-router";
 import { AgentIssueForm } from "@web/components/issues/agent-issue-form";
 import { ManualIssueForm } from "@web/components/issues/manual-issue-form";
-import { WorkflowIssueForm } from "@web/components/issues/workflow/form";
+import { WorkflowLaunchForm } from "@web/components/issues/workflow/form";
 import { useState } from "react";
 
 const NEW_ISSUE_MODES = ["agent", "workflow", "manual"] as const;
@@ -33,7 +35,14 @@ export function NewIssueDialog({
 }: NewIssueDialogProps) {
   const [mode, setMode] = useState<NewIssueMode>("agent");
   const [agentChoice, setAgentChoice] = useState<string | null>(null);
+  const navigate = useNavigate();
   const close = () => onOpenChange(false);
+
+  /** This dialog creates the issue, so the new run is not on screen yet — follow it on its own route. */
+  function launched(run: RunContract) {
+    close();
+    navigate({ to: "/runs/$runId", params: { runId: run.id } });
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -72,16 +81,16 @@ export function NewIssueDialog({
             projectId={projectId}
             agentChoice={agentChoice}
             onAgentChoice={setAgentChoice}
-            onLaunched={close}
+            onLaunched={launched}
             onCancel={close}
           />
         ) : null}
         {mode === "workflow" ? (
-          <WorkflowIssueForm
-            projectId={projectId}
+          <WorkflowLaunchForm
+            target={{ kind: "project", projectId }}
             agentChoice={agentChoice}
             onAgentChoice={setAgentChoice}
-            onLaunched={close}
+            onLaunched={launched}
             onCancel={close}
           />
         ) : null}

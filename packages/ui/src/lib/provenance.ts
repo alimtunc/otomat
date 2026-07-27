@@ -16,7 +16,7 @@ import {
   Terminal,
 } from "lucide-react";
 
-import type { StatusTone } from "./status";
+import type { StatusTone } from "./tone";
 
 export const PROVENANCE_VAR: Record<EventSource, string> = {
   otomat: "var(--prov-otomat)",
@@ -45,6 +45,7 @@ export interface EventGlyphDescriptor {
 
 export const EVENT_GLYPH: Record<EventType, EventGlyphDescriptor> = {
   "run.lifecycle": { icon: Flag, tone: "neutral" },
+  "run.contribution": { icon: MessageSquare, tone: "iris" },
   "step.lifecycle": { icon: GitCommitHorizontal, tone: "neutral" },
   "session.lifecycle": { icon: Play, tone: "neutral" },
   "compete.lifecycle": { icon: GitCompare, tone: "warning" },

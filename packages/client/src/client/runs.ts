@@ -1,9 +1,11 @@
 import {
   runContractSchema,
   runCompletionReportResponseSchema,
+  runContributionContractSchema,
+  runContributionsResponseSchema,
   runDetailSchema,
   runDiffResponseSchema,
-  type FollowUpRunRequest,
+  type CreateRunContributionRequest,
   type SelectCompeteWinnerRequest,
   type StartRunRequest,
 } from "@otomat/domain";
@@ -34,9 +36,28 @@ export function createRunsClient(config: DaemonClientConfig) {
         await postJson(config, `/api/runs/${encodeURIComponent(id)}/resume`, {}),
       );
     },
-    async followUpRun(id: string, request: FollowUpRunRequest) {
-      return runContractSchema.parse(
-        await postJson(config, `/api/runs/${encodeURIComponent(id)}/follow-up`, request),
+    async listRunContributions(id: string) {
+      return runContributionsResponseSchema.parse(
+        await getJson(config, `/api/runs/${encodeURIComponent(id)}/contributions`),
+      );
+    },
+    async createRunContribution(id: string, request: CreateRunContributionRequest) {
+      return runContributionContractSchema.parse(
+        await postJson(config, `/api/runs/${encodeURIComponent(id)}/contributions`, request),
+      );
+    },
+    async deliverRunContributions(id: string) {
+      return runContributionsResponseSchema.parse(
+        await postJson(config, `/api/runs/${encodeURIComponent(id)}/contributions/deliver`, {}),
+      );
+    },
+    async retryRunContribution(id: string, contributionId: string) {
+      return runContributionContractSchema.parse(
+        await postJson(
+          config,
+          `/api/runs/${encodeURIComponent(id)}/contributions/${encodeURIComponent(contributionId)}/retry`,
+          {},
+        ),
       );
     },
     async abortRun(id: string) {

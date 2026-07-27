@@ -9,6 +9,7 @@ function run(id: string, status: RunContract["status"]): RunContract {
     status,
     branch: `otomat/run/${id}`,
     plan_json: { version: 1, steps: [] },
+    updated_at: "2026-07-25T10:00:00.000Z",
   };
 }
 

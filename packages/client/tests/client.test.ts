@@ -36,6 +36,21 @@ const RUN = {
   status: "running",
   branch: "b",
   plan_json: { version: 1, steps: [] },
+  updated_at: "2026-07-25T10:00:00.000Z",
+};
+
+const CONTRIBUTION = {
+  id: "contribution-1",
+  run_id: "run-1",
+  seq: 0,
+  body: "keep going",
+  status: "queued",
+  agent_session_id: null,
+  delivered_at: null,
+  settled_at: null,
+  attempts: 0,
+  error: null,
+  created_at: "2026-07-25T10:00:00.000Z",
 };
 
 it("parses a typed list response", async () => {
@@ -129,20 +144,48 @@ it("posts resume to the run's resume endpoint", async () => {
   expect(result.id).toBe("run-1");
 });
 
-it("posts a follow-up prompt to the run's follow-up endpoint", async () => {
+it("posts a message to the run's contributions endpoint and parses its queued state", async () => {
   let calledUrl = "";
   let captured: { method?: string; body?: unknown } = {};
   const fetchMock: typeof fetch = async (input, init) => {
     calledUrl = String(input);
     captured = { method: init?.method, body: init?.body };
-    return jsonResponse(RUN);
+    return jsonResponse(CONTRIBUTION, 201);
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
-  const result = await client.followUpRun("run-1", { prompt: "keep going" });
-  expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/follow-up");
+  const result = await client.createRunContribution("run-1", { body: "keep going" });
+  expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/contributions");
   expect(captured.method).toBe("POST");
-  expect(JSON.parse(String(captured.body))).toEqual({ prompt: "keep going" });
-  expect(result.id).toBe("run-1");
+  expect(JSON.parse(String(captured.body))).toEqual({ body: "keep going" });
+  expect(result.status).toBe("queued");
+  expect(result.delivered_at).toBeNull();
+});
+
+it("retries one contribution through its own endpoint", async () => {
+  let calledUrl = "";
+  const fetchMock: typeof fetch = async (input) => {
+    calledUrl = String(input);
+    return jsonResponse({ ...CONTRIBUTION, status: "queued", attempts: 1 });
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+  const result = await client.retryRunContribution("run-1", "contribution-1");
+  expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/contributions/contribution-1/retry");
+  expect(result.attempts).toBe(1);
+});
+
+it("lists a run's contributions in send order", async () => {
+  let calledUrl = "";
+  const fetchMock: typeof fetch = async (input) => {
+    calledUrl = String(input);
+    return jsonResponse({
+      run_id: "run-1",
+      contributions: [CONTRIBUTION, { ...CONTRIBUTION, id: "contribution-2", seq: 1 }],
+    });
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+  const result = await client.listRunContributions("run-1");
+  expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/contributions");
+  expect(result.contributions.map((entry) => entry.seq)).toEqual([0, 1]);
 });
 
 it("posts abort and parses the returned run detail", async () => {

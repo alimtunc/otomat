@@ -11,6 +11,7 @@ import {
   listIssues,
   listProjects,
   listRepositories,
+  listRunContributions,
   listRuns,
   listSkills,
   listStepRunsForRun,
@@ -26,6 +27,7 @@ import {
   type ProjectContract,
   type RepositoryContract,
   type RunContract,
+  type RunContributionsResponse,
   type RunDetail,
   type SkillContract,
 } from "@otomat/domain";
@@ -40,6 +42,7 @@ import {
   toProject,
   toRepository,
   toRun,
+  toRunContribution,
   toSkill,
   toStepRun,
 } from "./serialize.js";
@@ -111,6 +114,10 @@ export function readRunDetail(db: Db, runId: string): RunDetail | null {
     compete_groups: listCompeteGroupsForRun(db, runId).map(toCompeteGroup),
     worktree_path: worktree?.path ?? null,
   };
+}
+
+export function readRunContributions(db: Db, runId: string): RunContributionsResponse {
+  return { run_id: runId, contributions: listRunContributions(db, runId).map(toRunContribution) };
 }
 
 /** The candidate step of one compete group, or null when either id does not belong to the run. */

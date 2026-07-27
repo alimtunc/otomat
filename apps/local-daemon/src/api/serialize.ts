@@ -8,10 +8,12 @@ import type {
   RepositoryRow,
   ReviewCommentRow,
   ReviewRow,
+  RunContributionRow,
   RunRow,
   SkillRow,
   StepRunRow,
 } from "@otomat/db";
+import { sqliteToIso } from "@otomat/db";
 import {
   agentProfileContractSchema,
   agentSessionContractSchema,
@@ -23,6 +25,7 @@ import {
   reviewCommentContractSchema,
   reviewContractSchema,
   runContractSchema,
+  runContributionContractSchema,
   runDiffResponseSchema,
   skillContractSchema,
   stepRunContractSchema,
@@ -37,6 +40,7 @@ import {
   type ReviewCommentContract,
   type ReviewContract,
   type RunContract,
+  type RunContributionContract,
   type RunDiffResponse,
   type SkillContract,
   type StepRunContract,
@@ -73,8 +77,21 @@ export function toIssue(row: IssueRow, execution: IssueExecution): IssueContract
   return issueContractSchema.parse({ ...row, execution });
 }
 
+function toIsoInstant(value: string | null): string | null {
+  return value === null ? null : sqliteToIso(value);
+}
+
 export function toRun(row: RunRow): RunContract {
-  return runContractSchema.parse(row);
+  return runContractSchema.parse({ ...row, updated_at: sqliteToIso(row.updated_at) });
+}
+
+export function toRunContribution(row: RunContributionRow): RunContributionContract {
+  return runContributionContractSchema.parse({
+    ...row,
+    created_at: sqliteToIso(row.created_at),
+    delivered_at: toIsoInstant(row.delivered_at),
+    settled_at: toIsoInstant(row.settled_at),
+  });
 }
 
 /** A compete candidate carries the branch and status of its own isolated worktree; a plain step has none. */

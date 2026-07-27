@@ -5,6 +5,13 @@ function lifecycleSummary(event: EventEnvelope): string | null {
   return typeof finalStatus === "string" ? `run ${finalStatus}` : null;
 }
 
+function contributionSummary(event: EventEnvelope): string | null {
+  const status = event.payload["status"];
+  const body = event.payload["body"];
+  if (typeof status !== "string" || typeof body !== "string") return null;
+  return `your message (${status}) · ${body}`;
+}
+
 function commentSummary(event: EventEnvelope): string | null {
   const filePath = event.payload["file_path"];
   const line = event.payload["line"];
@@ -17,6 +24,8 @@ function typedSummary(event: EventEnvelope): string | null {
   switch (event.type) {
     case "run.lifecycle":
       return lifecycleSummary(event);
+    case "run.contribution":
+      return contributionSummary(event);
     case "git.diff_updated":
       return "canonical git diff updated";
     case "runtime.usage":

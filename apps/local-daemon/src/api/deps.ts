@@ -1,4 +1,4 @@
-import type { Db, RunRow } from "@otomat/db";
+import type { Db, RunContributionRow, RunRow } from "@otomat/db";
 import type { SchemaMetadataContract, StartRunRequest } from "@otomat/domain";
 
 import type { GitHubService } from "#github";
@@ -15,7 +15,9 @@ export interface ApiDeps {
   launchRun(request: StartRunRequest): Promise<RunRow>;
   resumeRun(runId: string): Promise<RunRow>;
   fixRun(runId: string, prompt: string): Promise<RunRow>;
-  followUpRun(runId: string, prompt: string): Promise<RunRow>;
+  contributeToRun(runId: string, body: string): Promise<RunContributionRow>;
+  retryRunContribution(runId: string, contributionId: string): Promise<RunContributionRow>;
+  deliverRunContributions(runId: string): Promise<void>;
   selectCompeteWinner(runId: string, groupId: string, stepRunId: string): Promise<void>;
   abortRun(runId: string): Promise<void>;
   github: GitHubService;

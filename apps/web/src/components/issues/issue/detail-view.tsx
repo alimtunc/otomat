@@ -5,24 +5,17 @@ import { useIssue } from "@web/api/issues/queries";
 import { useRunsForIssue } from "@web/api/runs/queries";
 import { RunEventsProvider } from "@web/api/runs/run-events-provider";
 import { IssueHeader } from "@web/components/issues/issue/header";
-import { ActivityFeed } from "@web/components/issues/workspace/activity-feed";
-import { LaunchRunPopover } from "@web/components/issues/workspace/launch-run-popover";
+import { LaunchRunDialog } from "@web/components/issues/workspace/launch/dialog";
 import { LinearCommentsSection } from "@web/components/issues/workspace/linear/comments";
 import { WorkspaceRail } from "@web/components/issues/workspace/rail/workspace-rail";
-import { RunStrip } from "@web/components/issues/workspace/run-strip";
+import { RunConversations } from "@web/components/issues/workspace/run-conversations";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { issueShortId, shortId } from "@web/lib/ids";
 import { resolveFollowedRun } from "@web/lib/run-activity";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
-function NoRunsEmptyState({
-  issueId,
-  onLaunched,
-}: {
-  issueId: string;
-  onLaunched: (run: RunContract) => void;
-}) {
+function NoRunsEmptyState({ launchAction }: { launchAction: ReactNode }) {
   return (
     <div className="rounded-lg border border-border-subtle bg-card">
       <EmptyState
@@ -30,7 +23,7 @@ function NoRunsEmptyState({
         variant="inline"
         title="No runs yet"
         description="This issue has no agent activity. Launch a run to follow its live ledger here."
-        action={<LaunchRunPopover issueId={issueId} onLaunched={onLaunched} />}
+        action={launchAction}
       />
     </div>
   );
@@ -38,14 +31,14 @@ function NoRunsEmptyState({
 
 function RunsArea({
   query,
-  issueId,
+  launchAction,
   followedRun,
   onFollow,
 }: {
   query: ReturnType<typeof useRunsForIssue>;
-  issueId: string;
+  launchAction: ReactNode;
   followedRun: RunContract | null;
-  onFollow: (run: RunContract) => void;
+  onFollow: (runId: string) => void;
 }) {
   return (
     <QueryList
@@ -58,29 +51,16 @@ function RunsArea({
           onRetry={() => void query.refetch()}
         />
       }
-      empty={<NoRunsEmptyState issueId={issueId} onLaunched={onFollow} />}
+      empty={<NoRunsEmptyState launchAction={launchAction} />}
     >
       {(runs) => (
-        <>
-          <RunStrip
-            runs={runs}
-            followedRunId={followedRun?.id ?? null}
-            onFollow={(runId) => {
-              const run = runs.find((candidate) => candidate.id === runId);
-              if (run) onFollow(run);
-            }}
-          />
-          {followedRun ? <ActivityFeed run={followedRun} /> : null}
-        </>
+        <RunConversations runs={runs} followedRunId={followedRun?.id ?? null} onFollow={onFollow} />
       )}
     </QueryList>
   );
 }
 
-/**
- * Issue workspace: issue prose, its real runs, and the followed run's ledger
- * activity — one SSE stream for the followed run feeds the feed and the rail.
- */
+/** A single SSE stream, opened for the followed run, feeds both its thread and the rail. */
 export function IssueDetailView() {
   const { issueId } = useParams({ from: "/issues/$issueId" });
   const issue = useIssue(issueId);
@@ -89,6 +69,9 @@ export function IssueDetailView() {
   const followedRun = resolveFollowedRun(runs.data ?? [], selectedRunId);
 
   const idLabel = issue.data ? issueShortId(issue.data) : shortId(issueId);
+  const launchAction = (
+    <LaunchRunDialog issue={issue.data} onLaunched={(run) => setSelectedRunId(run.id)} />
+  );
 
   const body = (
     <div className="grid grid-cols-1 lg:h-full lg:min-h-0 lg:grid-cols-[1fr_300px]">
@@ -100,9 +83,9 @@ export function IssueDetailView() {
           ) : null}
           <RunsArea
             query={runs}
-            issueId={issueId}
+            launchAction={launchAction}
             followedRun={followedRun}
-            onFollow={(run) => setSelectedRunId(run.id)}
+            onFollow={setSelectedRunId}
           />
         </div>
       </div>
@@ -118,9 +101,7 @@ export function IssueDetailView() {
         { label: idLabel, current: true },
       ]}
       breadcrumbExtra={issue.data ? <IssueStatusChip status={issue.data.status} /> : null}
-      actions={
-        <LaunchRunPopover issueId={issueId} onLaunched={(run) => setSelectedRunId(run.id)} />
-      }
+      actions={launchAction}
     >
       {followedRun ? <RunEventsProvider runId={followedRun.id}>{body}</RunEventsProvider> : body}
     </RouteShell>

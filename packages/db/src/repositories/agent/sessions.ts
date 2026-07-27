@@ -13,6 +13,10 @@ export function insertAgentSession(db: Db, value: NewAgentSession): void {
   db.insert(agentSessions).values(value).run();
 }
 
+export function getAgentSession(db: Db, id: string): AgentSessionRow | undefined {
+  return db.select().from(agentSessions).where(eq(agentSessions.id, id)).get();
+}
+
 export function listAgentSessionsForRun(db: Db, runId: string): AgentSessionRow[] {
   return db
     .select(getTableColumns(agentSessions))

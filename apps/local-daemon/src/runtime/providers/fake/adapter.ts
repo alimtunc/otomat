@@ -10,10 +10,11 @@ import {
   type RuntimeResumeInput,
   type RuntimeRunInput,
   type RuntimeSessionRef,
-  type RuntimeUsage,
 } from "#runtime/contract";
-import type { EventFidelity, RuntimeEvent } from "#runtime/events";
+import type { RuntimeEvent } from "#runtime/events";
 import type { RuntimeSink } from "#runtime/sinks";
+
+import { abortSpec, FAKE_USAGE, resumeSpecs, runSpecs, type EventSpec } from "./turn-specs.js";
 
 export const FAKE_ADAPTER_ID = FAKE_RUNTIME_ID;
 
@@ -36,32 +37,6 @@ function writeFakeWork(cwd: string | null | undefined, prompt: string, followUp:
     return;
   }
   writeFileSync(file, `# Fake implementation\n\n## Prompt\n\n${prompt}\n`);
-}
-
-const FAKE_USAGE: RuntimeUsage = {
-  model: "fake-model-v1",
-  input_tokens: 128,
-  output_tokens: 64,
-  total_tokens: 192,
-  cost_usd: 0,
-};
-
-interface EventSpec {
-  type: RuntimeEvent["type"];
-  fidelity: EventFidelity;
-  data: Record<string, unknown>;
-}
-
-function log(text: string, stream: "stdout" | "stderr" = "stdout"): EventSpec {
-  return { type: "runtime.log", fidelity: "raw_log", data: { stream, text } };
-}
-
-function toolCall(
-  tool: string,
-  args: Record<string, unknown>,
-  result: Record<string, unknown>,
-): EventSpec {
-  return { type: "runtime.tool_call", fidelity: "parsed", data: { tool, args, result } };
 }
 
 interface TurnContext {
@@ -99,46 +74,6 @@ function buildEvent(
     },
     raw_ref: null,
   };
-}
-
-function runSpecs(prompt: string, providerSession: string): EventSpec[] {
-  return [
-    {
-      type: "runtime.provider_session",
-      fidelity: "native",
-      data: {
-        provider_session_id: providerSession,
-        frame: { kind: "session.created", session: providerSession, model: FAKE_USAGE.model },
-      },
-    },
-    log("[fake] session started"),
-    log(`[fake] received prompt: ${prompt}`),
-    toolCall("read_file", { path: "README.md" }, { ok: true, bytes: 42 }),
-    {
-      type: "runtime.permission_request",
-      fidelity: "parsed",
-      data: { request_id: "perm-1", action: "write_file", path: "src/index.ts" },
-    },
-    {
-      type: "runtime.permission_response",
-      fidelity: "parsed",
-      data: { request_id: "perm-1", decision: "approved", auto: true },
-    },
-    log("[fake] applying changes"),
-    toolCall("write_file", { path: "src/index.ts" }, { ok: true, bytes: 17 }),
-    { type: "runtime.usage", fidelity: "parsed", data: { usage: FAKE_USAGE } },
-    log("[fake] done"),
-  ];
-}
-
-function resumeSpecs(prompt: string, providerSession: string): EventSpec[] {
-  return [
-    log(`[fake] resumed session ${providerSession}`),
-    log(`[fake] follow-up: ${prompt}`),
-    toolCall("edit_file", { path: "src/index.ts" }, { ok: true, bytes: 9 }),
-    { type: "runtime.usage", fidelity: "parsed", data: { usage: FAKE_USAGE } },
-    log("[fake] done"),
-  ];
 }
 
 /**
@@ -241,10 +176,6 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
       event_count: emitted,
     };
   }
-}
-
-function abortSpec(): EventSpec {
-  return log("[fake] aborted", "stderr");
 }
 
 function canceledState(providerSession: string, emitted: number): RuntimeFinalState {

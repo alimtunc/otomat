@@ -7,6 +7,7 @@ import { TARGETS } from "./classify.js";
 import { eventsForSession, findFinalStatus } from "./evidence.js";
 import { buildTerminalMarker } from "./markers.js";
 import { terminateGracefully } from "./process.js";
+import { resolveSessionContributions } from "./settle/contributions.js";
 import { resolveTurnSession, settleRun } from "./settle/index.js";
 import { notifyAfterSettle, processesForRun, type SupervisorState } from "./state.js";
 import { driveIdleRunTo, driveRunConvergence } from "./transitions.js";
@@ -63,6 +64,8 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
       TARGETS.canceled,
       now,
     );
+    // A forced cancel never reaches `settleRun`, so the messages the killed turn carried are resolved here.
+    for (const session of sessions) resolveSessionContributions(db, session.id, "canceled", now);
 
     const ref = {
       runId,

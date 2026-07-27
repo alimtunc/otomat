@@ -1,30 +1,16 @@
-import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
 import { Button, EmptyState } from "@otomat/ui";
 import { LaunchAgentSelect } from "@web/components/runs/launch/launch-agent-select";
+import type { LaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
 import { hasLaunchableRuntime } from "@web/lib/runtimes";
 
 export interface LaunchAgentPickerProps {
-  descriptors: RuntimeDescriptor[];
-  profiles: AgentProfileContract[];
-  value: string | null;
+  agents: LaunchAgentChoice;
   onValueChange: (value: string | null) => void;
-  isPending: boolean;
-  isError: boolean;
-  isSuccess: boolean;
-  onRetry: () => void;
 }
 
 /** Run-level agent chooser (profile or ad-hoc runtime) with an actionable empty/error state when no runtime is available. */
-export function LaunchAgentPicker({
-  descriptors,
-  profiles,
-  value,
-  onValueChange,
-  isPending,
-  isError,
-  isSuccess,
-  onRetry,
-}: LaunchAgentPickerProps) {
+export function LaunchAgentPicker({ agents, onValueChange }: LaunchAgentPickerProps) {
+  const { descriptors, profiles, choice, isPending, isError, isSuccess, onRetry } = agents;
   if (isError) {
     return (
       <EmptyState
@@ -60,7 +46,7 @@ export function LaunchAgentPicker({
     <LaunchAgentSelect
       profiles={profiles}
       descriptors={descriptors}
-      value={value}
+      value={choice}
       onValueChange={onValueChange}
       disabled={isPending}
     />

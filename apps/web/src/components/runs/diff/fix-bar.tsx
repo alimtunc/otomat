@@ -12,7 +12,7 @@ export function DiffFixBar({ runStatus, selection }: DiffFixBarProps) {
   const fixable = runStatus === "review_ready" && count > 0 && !selection.isFixPending;
   const hint =
     runStatus === "review_ready"
-      ? "A follow-up run gets {comment, original hunk, current file}."
+      ? "A fix turn gets {comment, original hunk, current file}."
       : "Fix is available once the run is review-ready.";
 
   return (

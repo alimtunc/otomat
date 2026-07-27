@@ -1,7 +1,7 @@
 import { Check, Copy, X, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { TONE_FACETS } from "../lib/status";
+import { TONE_FACETS } from "../lib/tone";
 import { cn } from "../lib/utils";
 import { Button } from "../primitives/button";
 

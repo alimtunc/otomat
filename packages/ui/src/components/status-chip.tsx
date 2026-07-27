@@ -4,6 +4,7 @@ import type {
   PullRequestState,
   ReviewCommentState,
   ReviewState,
+  RunContributionState,
   RunState,
   StepRunState,
 } from "@otomat/domain/types";
@@ -59,6 +60,10 @@ export function IssueStatusChip(props: PresetStatusChipProps<IssueState>) {
 
 export function RunStatusChip(props: PresetStatusChipProps<RunState>) {
   return <StatusChip kind="run" {...props} />;
+}
+
+export function RunContributionStatusChip(props: PresetStatusChipProps<RunContributionState>) {
+  return <StatusChip kind="runContribution" {...props} />;
 }
 
 export function StepStatusChip(props: PresetStatusChipProps<StepRunState>) {

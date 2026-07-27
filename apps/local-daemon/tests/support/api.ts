@@ -1,4 +1,4 @@
-import type { RunRow } from "@otomat/db";
+import type { RunContributionRow, RunRow } from "@otomat/db";
 import type { Hono } from "hono";
 
 import { createApiApp } from "#api/app";
@@ -56,6 +56,27 @@ export function runRow(id: string, overrides: Partial<RunRow> = {}): RunRow {
   };
 }
 
+export function contributionRow(
+  runId: string,
+  overrides: Partial<RunContributionRow> = {},
+): RunContributionRow {
+  return {
+    id: "contribution-1",
+    run_id: runId,
+    seq: 0,
+    body: "keep going",
+    status: "queued",
+    agent_session_id: null,
+    delivered_at: null,
+    settled_at: null,
+    attempts: 0,
+    error: null,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
 /** ApiDeps app over the shared TestDb; un-overridden run commands throw, never fake-succeed. */
 export function makeApiApp(
   t: Pick<TestDb, "db" | "dbPath">,
@@ -82,8 +103,14 @@ export function makeApiApp(
     fixRun: async () => {
       throw new Error("fixRun stub not configured");
     },
-    followUpRun: async () => {
-      throw new Error("followUpRun stub not configured");
+    contributeToRun: async () => {
+      throw new Error("contributeToRun stub not configured");
+    },
+    retryRunContribution: async () => {
+      throw new Error("retryRunContribution stub not configured");
+    },
+    deliverRunContributions: async () => {
+      throw new Error("deliverRunContributions stub not configured");
     },
     selectCompeteWinner: async () => {
       throw new Error("selectCompeteWinner stub not configured");

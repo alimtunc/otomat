@@ -75,9 +75,15 @@ export function scheduleTurn(
 ): Promise<void> {
   let pending: Promise<void>;
   pending = spawnTurn(state, ctx, mode, providerSessionId)
-    .catch((error) => {
-      console.error(`[otomat] run ${ctx.runId} competitor ${ctx.stepRunId} failed to start`, error);
-    })
+    .then(
+      () => undefined,
+      (error: unknown) => {
+        console.error(
+          `[otomat] run ${ctx.runId} competitor ${ctx.stepRunId} failed to start`,
+          error,
+        );
+      },
+    )
     .finally(() => state.pending.delete(pending));
   state.pending.add(pending);
   return pending;

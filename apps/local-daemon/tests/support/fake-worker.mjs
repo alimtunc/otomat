@@ -1,5 +1,5 @@
 // Pure Node with no workspace imports so the spawned child survives independent of the test process; behavior via FAKE_WORKER_BEHAVIOR.
-import { appendFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const job = JSON.parse(process.env.OTOMAT_WORKER_JOB);
@@ -15,7 +15,8 @@ while (!existsSync(startGate) && Date.now() < deadline) {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
 if (!existsSync(startGate)) process.exit(1);
-unlinkSync(startGate);
+// Mirrors the real gate: taking it renames rather than deletes, so boot can prove this worker ran.
+renameSync(startGate, join(job.agentSessionDir, `.worker-started-${startToken}`));
 
 const provider = `fake-session-${job.agentSessionId}`;
 let n = 0;
@@ -61,6 +62,11 @@ emit("runtime.log", "otomat", {
 });
 
 if (behavior === "complete") {
+  marker("completed");
+  process.exit(0);
+} else if (behavior === "slow") {
+  // Long enough for the parent to observe a live turn before this one settles.
+  await new Promise((resolve) => setTimeout(resolve, 400));
   marker("completed");
   process.exit(0);
 } else if (behavior === "fail") {

@@ -381,7 +381,7 @@ it("reserves exactly one winner when two selections race", async () => {
   await supervisor.settle();
 });
 
-it("keeps follow-up turns on the selected provider session and canonical worktree", async () => {
+it("keeps delivery turns on the selected provider session and canonical worktree", async () => {
   const { supervisor, spawn } = makeCompeteSupervisor();
   const groupOnlyPlan = { ...COMPETE_PLAN, steps: [COMPETE_PLAN.steps[0]!] };
   const run = await supervisor.start({ prompt: "the goal", plan: groupOnlyPlan });
@@ -394,7 +394,7 @@ it("keeps follow-up turns on the selected provider session and canonical worktre
   expect(getRun(fix.db, run.id)?.status).toBe("review_ready");
   const winnerJob = spawn.jobs.find((job) => job.stepRunId === winner.id);
 
-  await supervisor.followUp(run.id, "refine the winner");
+  await supervisor.contribute(run.id, "refine the winner");
   await supervisor.settle();
 
   expect(spawn.jobs.at(-1)).toMatchObject({
@@ -408,7 +408,7 @@ it("keeps follow-up turns on the selected provider session and canonical worktre
   expect(getRun(fix.db, run.id)?.status).toBe("review_ready");
 });
 
-it("refuses a selected winner follow-up when its canonical worktree is unavailable", async () => {
+it("fails a message on a selected winner whose canonical worktree is unavailable", async () => {
   const first = makeCompeteSupervisor();
   const groupOnlyPlan = { ...COMPETE_PLAN, steps: [COMPETE_PLAN.steps[0]!] };
   const run = await first.supervisor.start({ prompt: "the goal", plan: groupOnlyPlan });
@@ -427,9 +427,9 @@ it("refuses a selected winner follow-up when its canonical worktree is unavailab
     repositories: UNAVAILABLE_REPOSITORIES,
   });
 
-  await expect(blocked.followUp(run.id, "continue winner")).rejects.toBeInstanceOf(
-    RunNotResumableError,
-  );
+  const refused = await blocked.contribute(run.id, "continue winner");
+  expect(refused.status).toBe("failed");
+  expect(refused.delivered_at).toBeNull();
   expect(blockedSpawn.calls).toBe(0);
   expect(getRun(fix.db, run.id)?.status).toBe("review_ready");
 });

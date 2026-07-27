@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   AGENT_SESSION_STATES,
   COMPETE_GROUP_STATES,
+  RUN_CONTRIBUTION_STATES,
   RUN_STATES,
   STEP_RUN_STATES,
 } from "../entity-states.js";
@@ -59,8 +60,29 @@ export const runContractSchema = z.object({
   status: z.enum(RUN_STATES),
   branch: z.string(),
   plan_json: runPlanSchema,
+  /** Last time the daemon wrote this run row; the honest "last activity" of a collapsed run. */
+  updated_at: z.iso.datetime(),
 });
 export type RunContract = z.infer<typeof runContractSchema>;
+
+/** `status` is the delivery lifecycle, never a read receipt: `sent` needs `delivered_at` to prove a carrying turn was launched. */
+export const runContributionContractSchema = z.object({
+  id: z.string(),
+  run_id: z.string(),
+  /** FIFO position within the run; a batched turn carries its messages in ascending order. */
+  seq: z.number().int().nonnegative(),
+  body: z.string().min(1),
+  status: z.enum(RUN_CONTRIBUTION_STATES),
+  /** Agent session the delivering turn resumes; stamped when the delivery is claimed. */
+  agent_session_id: z.string().nullable(),
+  delivered_at: z.iso.datetime().nullable(),
+  /** When the carrying turn settled, resolving this message to `completed` or `failed`. */
+  settled_at: z.iso.datetime().nullable(),
+  attempts: z.number().int().nonnegative(),
+  error: z.string().nullable(),
+  created_at: z.iso.datetime(),
+});
+export type RunContributionContract = z.infer<typeof runContributionContractSchema>;
 
 export const stepRunContractSchema = z.object({
   id: z.string(),

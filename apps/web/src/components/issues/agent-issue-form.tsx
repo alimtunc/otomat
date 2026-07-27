@@ -1,5 +1,6 @@
+import type { RunContract } from "@otomat/domain";
 import { Button, DialogBody, Kbd, Textarea } from "@otomat/ui";
-import { useStartRunAndNavigate } from "@web/api/runs/mutations";
+import { useLaunchRun } from "@web/api/runs/mutations";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { LaunchAgentPicker } from "@web/components/runs/launch/launch-agent-picker";
 import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
@@ -10,7 +11,7 @@ export interface AgentIssueFormProps {
   projectId: string | undefined;
   agentChoice: string | null;
   onAgentChoice: (choice: string | null) => void;
-  onLaunched: () => void;
+  onLaunched: (run: RunContract) => void;
   onCancel: () => void;
 }
 
@@ -22,7 +23,7 @@ export function AgentIssueForm({
   onCancel,
 }: AgentIssueFormProps) {
   const [promptText, setPromptText] = useState("");
-  const { start, isPending } = useStartRunAndNavigate();
+  const { launch, isPending } = useLaunchRun();
   const agents = useLaunchAgentChoice(agentChoice);
   const choice = agents.choice;
 
@@ -31,14 +32,14 @@ export function AgentIssueForm({
 
   async function submit() {
     if (!canSubmit || choice === null || projectId === undefined) return;
-    const started = await start({
+    const run = await launch({
       prompt: promptText.trim(),
       project_id: projectId,
       ...agentChoiceToRequest(choice),
     });
-    if (started) {
+    if (run) {
       setPromptText("");
-      onLaunched();
+      onLaunched(run);
     }
   }
 
@@ -60,16 +61,7 @@ export function AgentIssueForm({
           rows={4}
           aria-label="Issue prompt"
         />
-        <LaunchAgentPicker
-          descriptors={agents.descriptors}
-          profiles={agents.profiles}
-          value={choice}
-          onValueChange={onAgentChoice}
-          isPending={agents.isPending}
-          isError={agents.isError}
-          isSuccess={agents.isSuccess}
-          onRetry={agents.onRetry}
-        />
+        <LaunchAgentPicker agents={agents} onValueChange={onAgentChoice} />
         {projectId === undefined ? (
           <p className="text-xs text-danger">Select a project before launching a run.</p>
         ) : null}

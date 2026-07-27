@@ -10,6 +10,7 @@
 export * from "./agent/index.js";
 export * from "./compete-groups.js";
 export * from "./event-streams.js";
+export * from "./instants.js";
 export * from "./issue-execution.js";
 export * from "./issue-sources.js";
 export * from "./issues.js";
@@ -19,6 +20,7 @@ export * from "./pull-requests.js";
 export * from "./repositories.js";
 export * from "./review-comments.js";
 export * from "./reviews.js";
+export * from "./run-contributions.js";
 export * from "./runs.js";
 export * from "./skills.js";
 export * from "./step-runs.js";

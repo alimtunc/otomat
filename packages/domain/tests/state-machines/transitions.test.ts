@@ -12,9 +12,16 @@ import { reviewCommentMachine } from "#domain/state-machines/review-comment";
 import {
   RUN_FOLLOW_UP_STATES,
   RUN_TERMINAL_STATES,
+  RUN_WORKING_STATES,
   canFollowUpRun,
+  isRunTerminal,
+  isRunWorking,
   runMachine,
 } from "#domain/state-machines/run";
+import {
+  isRunContributionRetriable,
+  runContributionMachine,
+} from "#domain/state-machines/run-contribution";
 import { stepRunMachine } from "#domain/state-machines/step-run";
 
 const machines = [
@@ -28,6 +35,7 @@ const machines = [
   pullRequestPublicationMachine,
   linearWriteMachine,
   competeGroupMachine,
+  runContributionMachine,
 ];
 
 describe.each(machines.map((machine) => [machine.name, machine] as const))(
@@ -77,6 +85,24 @@ describe("representative illegal transitions are rejected", () => {
     );
     expect(competeGroupMachine.transition("awaiting_selection", "promoting")).toBe("promoting");
     expect(competeGroupMachine.transition("promoting", "selected")).toBe("selected");
+  });
+
+  it("run_contribution cannot be marked sent from a settled state", () => {
+    expect(() => runContributionMachine.transition("completed", "sent")).toThrow(
+      IllegalTransitionError,
+    );
+    expect(() => runContributionMachine.transition("failed", "sent")).toThrow(
+      IllegalTransitionError,
+    );
+    expect(runContributionMachine.transition("failed", "queued")).toBe("queued");
+  });
+
+  it("run_contribution retry is refused once anything reached the provider", () => {
+    expect(isRunContributionRetriable({ status: "failed", delivered_at: null })).toBe(true);
+    expect(
+      isRunContributionRetriable({ status: "failed", delivered_at: "2026-07-25T10:00:00.000Z" }),
+    ).toBe(false);
+    expect(isRunContributionRetriable({ status: "sent", delivered_at: null })).toBe(false);
   });
 
   it("step_run cannot skip queued -> succeeded", () => {
@@ -154,5 +180,18 @@ describe("RUN_FOLLOW_UP_STATES", () => {
   it("excludes terminal and active states", () => {
     expect(canFollowUpRun("running")).toBe(false);
     for (const status of RUN_TERMINAL_STATES) expect(canFollowUpRun(status)).toBe(false);
+  });
+});
+
+describe("RUN_WORKING_STATES", () => {
+  it.each(RUN_WORKING_STATES)("%s is working and never resting or terminal", (status) => {
+    expect(isRunWorking(status)).toBe(true);
+    expect(canFollowUpRun(status)).toBe(false);
+    expect(isRunTerminal(status)).toBe(false);
+  });
+
+  it("excludes every resting and terminal state", () => {
+    for (const status of RUN_FOLLOW_UP_STATES) expect(isRunWorking(status)).toBe(false);
+    for (const status of RUN_TERMINAL_STATES) expect(isRunWorking(status)).toBe(false);
   });
 });
