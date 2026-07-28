@@ -4,6 +4,9 @@ import { redactLogText } from "../redaction.js";
 
 export interface SupportBundleVersions {
   desktop: string;
+  /** Commit the installed build was packaged from; ties a bug report to a downloadable artifact. */
+  commit: string;
+  signed: boolean;
   electron: string;
   node: string;
   platform: string;

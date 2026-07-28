@@ -119,6 +119,9 @@ pnpm check         # run the complete PR gate, including smoke:dist
 pnpm db:migrate    # apply Drizzle migrations to local SQLite
 pnpm desktop:dev      # run the Electron shell in dev (Vite + a spawned daemon)
 pnpm desktop:package  # build the unsigned macOS .app/.dmg
+pnpm desktop:preflight # check the release inputs without building anything
+pnpm desktop:release  # build the signed, notarized macOS release (needs Apple credentials)
+pnpm desktop:smoke    # install/launch/shutdown smoke on the packaged artifact
 ```
 
 After a schema change, regenerate migrations with
@@ -127,7 +130,10 @@ After a schema change, regenerate migrations with
 The desktop shell (`apps/desktop`) composes existing builds: it launches the
 `local-daemon` on a free loopback port, waits for `/api/health`, then serves the
 packaged `apps/web` build over an `app://` scheme with the daemon URL injected. It
-never imports the daemon or a backend package.
+never imports the daemon or a backend package. Distribution is documented in
+[`docs/release/macos-alpha.md`](docs/release/macos-alpha.md): the local build is
+ad-hoc signed and undistributable, and the release build fails closed rather than
+falling back to it when Apple credentials are missing.
 
 ## Toolchain
 

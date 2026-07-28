@@ -23,6 +23,8 @@ function exporter(
   return {
     versions: {
       desktop: "0.0.0",
+      commit: "1111111111111111111111111111111111111111",
+      signed: false,
       electron: "43.0.0",
       node: "24.0.0",
       platform: "darwin",

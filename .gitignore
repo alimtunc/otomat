@@ -3,7 +3,7 @@ dist/
 *.tsbuildinfo
 .data/
 .daemon/
-release/
+apps/desktop/release/
 *.db
 *.db-shm
 *.db-wal
@@ -18,3 +18,5 @@ CONTEXT.md
 docs/**
 !docs/ai/
 !docs/ai/otomat-visual-map.html
+!docs/release/
+!docs/release/**

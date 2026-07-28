@@ -17,7 +17,10 @@
     "smoke:dist": "pnpm --filter @otomat/local-daemon smoke:dist",
     "check": "pnpm run format:check && pnpm run lint && pnpm run guardrails && pnpm run build && pnpm run typecheck && pnpm run smoke:dist && pnpm run test",
     "desktop:dev": "node apps/desktop/scripts/dev.mjs",
-    "desktop:package": "pnpm --filter @otomat/desktop package:mac",
+    "desktop:package": "node apps/desktop/scripts/package-mac.mjs",
+    "desktop:preflight": "node apps/desktop/scripts/release-preflight.mjs",
+    "desktop:release": "node apps/desktop/scripts/release-mac.mjs",
+    "desktop:smoke": "node apps/desktop/scripts/smoke-packaged.mjs",
     "db:migrate": "pnpm --filter @otomat/db run migrate",
     "prepare": "lefthook install"
   },

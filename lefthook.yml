@@ -2,10 +2,10 @@ pre-commit:
   parallel: true
   commands:
     oxlint:
-      glob: "*.{ts,tsx,js,jsx,cjs}"
+      glob: "*.{ts,tsx,js,jsx,cjs,mjs}"
       run: pnpm exec oxlint {staged_files}
     oxfmt:
-      glob: "*.{ts,tsx,js,jsx,cjs,json}"
+      glob: "*.{ts,tsx,js,jsx,cjs,mjs,json}"
       run: pnpm exec oxfmt --check {staged_files}
 
 pre-push:

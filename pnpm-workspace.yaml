@@ -1,6 +1,11 @@
 packages:
   - "apps/*"
   - "packages/*"
+# Desktop packaging runs `pnpm deploy --legacy`, which flips the enableGlobalVirtualStore value
+# recorded in node_modules/.modules.yaml. The default pre-run check reacts to that by attempting a
+# headless `install --production`, which aborts and breaks every `pnpm run` after a build. Warn
+# about a stale install instead of acting on it.
+verifyDepsBeforeRun: warn
 allowBuilds:
   better-sqlite3: true
   electron: true

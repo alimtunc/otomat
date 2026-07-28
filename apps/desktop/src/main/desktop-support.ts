@@ -2,6 +2,7 @@ import { join } from "node:path";
 
 import { app, dialog } from "electron";
 
+import { readBuildInfo } from "./build-info.js";
 import { DATA_RETENTION_POLICY, exportSupportBundle } from "./data-safety/index.js";
 import { writeSupportBundleAtomically } from "./data-safety/support/bundle-file.js";
 
@@ -16,9 +17,12 @@ export class DesktopSupport {
 
   async exportBundle(): Promise<void> {
     try {
+      const build = readBuildInfo(this.options.log);
       const exported = await exportSupportBundle({
         versions: {
-          desktop: app.getVersion(),
+          desktop: build.version,
+          commit: build.commit,
+          signed: build.signed,
           electron: process.versions.electron ?? "unknown",
           node: process.versions.node,
           platform: process.platform,
