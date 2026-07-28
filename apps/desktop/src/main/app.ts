@@ -9,15 +9,15 @@ import { resolveUserPath } from "#shared/user-path";
 
 import { buildCsp } from "./csp.js";
 import { findLatestManagedBackup } from "./data-safety/index.js";
-import { createDesktopRuntime, type DesktopRuntime } from "./desktop-runtime.js";
-import { DesktopSupport } from "./desktop-support.js";
 import { registerIpc, type IpcState } from "./ipc.js";
 import { installApplicationMenu } from "./menu.js";
 import type { AppPaths } from "./paths.js";
 import { serveAppScheme } from "./protocol.js";
+import { createDesktopRuntime, type DesktopRuntime } from "./runtime.js";
 import { hardenWebContents } from "./security.js";
 import { describeStartupFailure, isRecoverableStartupDiagnostic } from "./startup-failure.js";
 import { StartupLogSink } from "./startup-log-sink.js";
+import { DesktopSupport } from "./support.js";
 import { createCockpitWindow, createSplashWindow } from "./windows.js";
 
 function unavailableLinear(): LinearVaultOperationResult {

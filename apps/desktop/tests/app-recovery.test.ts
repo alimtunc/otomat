@@ -27,10 +27,10 @@ vi.mock("electron", () => ({
   dialog: { showMessageBox: async () => ({ response: 1 }) },
   ipcMain: { handle: vi.fn(), on: vi.fn() },
 }));
-vi.mock("#main/desktop-runtime", () => ({
+vi.mock("#main/runtime", () => ({
   createDesktopRuntime: () => harness.runtime,
 }));
-vi.mock("#main/desktop-support", () => ({
+vi.mock("#main/support", () => ({
   DesktopSupport: class {
     exportBundle(): Promise<void> {
       return Promise.resolve();
@@ -73,7 +73,7 @@ vi.mock("#main/windows", () => ({
 }));
 vi.mock("#shared/user-path", () => ({ resolveUserPath: () => "/usr/bin" }));
 
-import { DesktopApp } from "#main/desktop-app";
+import { DesktopApp } from "#main/app";
 import type { AppPaths } from "#main/paths";
 
 const DEV_PATHS: AppPaths = {

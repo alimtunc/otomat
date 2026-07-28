@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { DesktopApp } from "#main/desktop-app";
+import { DesktopApp } from "#main/app";
 import type { AppPaths } from "#main/paths";
 import { DEV_SERVER_ENV } from "#shared/constants";
 
@@ -24,7 +24,7 @@ vi.mock("electron", () => ({
   dialog: { showMessageBox: vi.fn() },
   ipcMain: { handle: vi.fn(), on: vi.fn() },
 }));
-vi.mock("#main/desktop-runtime", () => ({
+vi.mock("#main/runtime", () => ({
   createDesktopRuntime: () => ({
     dataDirectory: { root: "/unused", dbPath: "/unused/otomat.db", backupsDir: "/unused/backups" },
     desktopLog: { write: vi.fn(), read: () => "" },
@@ -33,7 +33,7 @@ vi.mock("#main/desktop-runtime", () => ({
     linear: { restore: async () => {} },
   }),
 }));
-vi.mock("#main/desktop-support", () => ({
+vi.mock("#main/support", () => ({
   DesktopSupport: class {
     exportBundle(): Promise<void> {
       return Promise.resolve();

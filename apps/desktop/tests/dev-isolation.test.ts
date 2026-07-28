@@ -4,9 +4,9 @@ import { dirname, join, sep } from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { createDesktopRuntime } from "#main/desktop-runtime";
 import { resolveDevDataRoot } from "#main/dev-data-root";
 import type { AppPaths } from "#main/paths";
+import { createDesktopRuntime } from "#main/runtime";
 import { buildDaemonEnv } from "#shared/daemon-env";
 
 vi.mock("electron", () => ({
