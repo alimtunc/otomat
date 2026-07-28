@@ -15,4 +15,5 @@ export { scrubGitEnv } from "./git-cli.js";
 export { detectDefaultBranch } from "./repo.js";
 export * from "./probe.js";
 export * from "./resolver.js";
+export * from "./service-contract.js";
 export * from "./service.js";

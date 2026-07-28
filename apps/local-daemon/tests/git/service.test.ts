@@ -6,7 +6,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { WorktreeConflictError, WorktreeNotFoundError } from "#git/errors";
 import { branchExists } from "#git/repo";
-import { createGitWorktreeService, type GitWorktreeService } from "#git/service";
+import { createGitWorktreeService } from "#git/service";
+import { type GitWorktreeService } from "#git/service-contract";
 import { listWorktrees } from "#git/worktree-cli";
 
 import { setupGitDb, setupTestRepo, type GitTestDb, type TestRepo } from "../support/git.js";
