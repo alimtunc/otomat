@@ -1,5 +1,6 @@
 import type { RunContract } from "@otomat/domain";
 import { useRunEventStream } from "@web/api/runs/run-event-stream";
+import { Mono } from "@web/components/issues/workspace/rail/mono";
 import {
   RailMeta,
   RailRow,
@@ -8,11 +9,6 @@ import {
 import { Unknown } from "@web/components/issues/workspace/rail/unknown";
 import { requestedRunModels, resolvedModelLabel } from "@web/lib/model-choice";
 import { latestReportedUsage } from "@web/lib/run/usage";
-import type { ReactNode } from "react";
-
-function Mono({ children }: { children: ReactNode }) {
-  return <span className="truncate font-mono text-xs text-text-secondary">{children}</span>;
-}
 
 /** Separate rows on purpose: a request is not evidence, so a provider that reports nothing stays empty rather than echoing the request back. */
 export function ModelSection({ run }: { run: RunContract }) {

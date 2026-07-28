@@ -4,6 +4,7 @@ import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { LinearRailSection } from "@web/components/issues/workspace/linear/rail-section";
 import { FollowedRunSection } from "@web/components/issues/workspace/rail/followed-run-section";
 import { ModelSection } from "@web/components/issues/workspace/rail/model-section";
+import { Mono } from "@web/components/issues/workspace/rail/mono";
 import { PullRequestSection } from "@web/components/issues/workspace/rail/pull-request-section";
 import {
   RailMeta,
@@ -14,9 +15,7 @@ import { Unknown } from "@web/components/issues/workspace/rail/unknown";
 import { UsageSection } from "@web/components/issues/workspace/rail/usage-section";
 
 function ExternalIdentifier({ identifier, url }: { identifier: string; url: string | null }) {
-  const label = (
-    <span className="truncate font-mono text-xs text-text-secondary">{identifier}</span>
-  );
+  const label = <Mono>{identifier}</Mono>;
   return url === null ? (
     label
   ) : (

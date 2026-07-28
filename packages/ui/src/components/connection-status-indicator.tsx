@@ -1,12 +1,11 @@
 import { formatDistanceToNow } from "date-fns";
-import { RefreshCw, Wifi, WifiOff } from "lucide-react";
-import type { ComponentType } from "react";
+import { RefreshCw } from "lucide-react";
 
 import type { ConnectionState } from "../lib/connection-state";
-import { TONE_FACETS } from "../lib/tone";
 import { cn } from "../lib/utils";
 import { Button } from "../primitives/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../primitives/popover";
+import { STATE_META } from "./connection-status-meta";
 import { LiveDot } from "./live-dot";
 
 export interface ConnectionStatusIndicatorProps {
@@ -16,42 +15,6 @@ export interface ConnectionStatusIndicatorProps {
   variant?: "dot" | "dot+label";
   className?: string;
 }
-
-interface StateMeta {
-  label: string;
-  icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
-  dotColorVar: string;
-  textClass: string;
-  triggerTextClass: string;
-  live: boolean;
-}
-
-const STATE_META: Record<ConnectionState, StateMeta> = {
-  online: {
-    label: "Online",
-    icon: Wifi,
-    dotColorVar: TONE_FACETS.success.cssVar,
-    textClass: TONE_FACETS.success.text,
-    triggerTextClass: "text-text-secondary",
-    live: false,
-  },
-  reconnecting: {
-    label: "Reconnecting…",
-    icon: RefreshCw,
-    dotColorVar: TONE_FACETS.warning.cssVar,
-    textClass: TONE_FACETS.warning.text,
-    triggerTextClass: "text-text-secondary",
-    live: true,
-  },
-  offline: {
-    label: "Offline · cached",
-    icon: WifiOff,
-    dotColorVar: TONE_FACETS.ghost.cssVar,
-    textClass: TONE_FACETS.danger.text,
-    triggerTextClass: "text-text-tertiary",
-    live: false,
-  },
-};
 
 function formatLastSync(lastSyncAt: Date | number | null | undefined): string {
   if (lastSyncAt == null) return "never";

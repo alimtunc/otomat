@@ -3,6 +3,7 @@ import { Button, CopyButton, Icon, RunStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useRunReview } from "@web/api/reviews/queries";
 import { useRunDetail, useRunDiff } from "@web/api/runs/queries";
+import { Mono } from "@web/components/issues/workspace/rail/mono";
 import {
   RailMeta,
   RailRow,
@@ -33,16 +34,12 @@ export function FollowedRunSection({ run }: { run: RunContract }) {
           <RunStatusChip status={run.status} />
         </RailRow>
         <RailRow label="Branch">
-          <span className="truncate font-mono text-xs text-text-secondary" title={run.branch}>
-            {run.branch}
-          </span>
+          <Mono title={run.branch}>{run.branch}</Mono>
           <CopyButton value={run.branch} />
         </RailRow>
         <RailRow label="Worktree">
           {worktreePath !== null ? (
-            <span className="truncate font-mono text-xs text-text-secondary" title={worktreePath}>
-              …/{worktreePath.split("/").at(-1)}
-            </span>
+            <Mono title={worktreePath}>…/{worktreePath.split("/").at(-1)}</Mono>
           ) : (
             <Unknown />
           )}
