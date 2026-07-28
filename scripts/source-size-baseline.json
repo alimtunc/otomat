@@ -2,6 +2,5 @@
   "apps/local-daemon/src/git/service.ts": 340,
   "apps/local-daemon/src/github/cli.ts": 350,
   "apps/local-daemon/src/github/publication.ts": 457,
-  "apps/local-daemon/src/linear/service.ts": 265,
-  "packages/domain/src/contracts/linear.ts": 263
+  "apps/local-daemon/src/linear/service.ts": 265
 }
