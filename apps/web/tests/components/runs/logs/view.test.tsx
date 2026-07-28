@@ -54,7 +54,7 @@ vi.mock("@web/api/runs/queries", () => ({
   useRunDetail: () => ({ isPending: false, isError: false, data: detail }),
 }));
 
-vi.mock("@web/api/runs/run-events-provider", () => ({
+vi.mock("@web/api/runs/run-event-stream", () => ({
   useRunEventStream: () => ({ events: streamEvents, state: "open", degraded: false }),
 }));
 

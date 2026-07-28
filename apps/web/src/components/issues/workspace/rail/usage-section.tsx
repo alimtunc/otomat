@@ -1,4 +1,4 @@
-import { useRunEventStream } from "@web/api/runs/run-events-provider";
+import { useRunEventStream } from "@web/api/runs/run-event-stream";
 import {
   RailMeta,
   RailRow,

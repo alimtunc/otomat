@@ -1,7 +1,7 @@
 import { Skeleton, useMediaQuery, WIDE_VIEWPORT_MEDIA_QUERY } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useRunDetail } from "@web/api/runs/queries";
-import { useRunEventStream } from "@web/api/runs/run-events-provider";
+import { useRunEventStream } from "@web/api/runs/run-event-stream";
 import { ContextPane } from "@web/components/runs/cockpit/context-pane";
 import { ContextStrip } from "@web/components/runs/cockpit/context-strip";
 import { StepsDisclosure } from "@web/components/runs/cockpit/steps/disclosure";

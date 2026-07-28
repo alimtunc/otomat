@@ -1,10 +1,8 @@
 import { AlertTriangle, CheckCircle2, Info, Loader2, XCircle } from "lucide-react";
 import { type CSSProperties } from "react";
-import { Toaster as SonnerToaster, toast } from "sonner";
+import { Toaster as SonnerToaster } from "sonner";
 
 import { useTheme } from "../lib/theme";
-
-export { toast };
 
 export type ToasterProps = {
   position?:

@@ -1,6 +1,6 @@
 import { ErrorState, Skeleton } from "@otomat/ui";
 import { useRunDetail } from "@web/api/runs/queries";
-import { useRunEventStream } from "@web/api/runs/run-events-provider";
+import { useRunEventStream } from "@web/api/runs/run-event-stream";
 import { ConversationThread } from "@web/components/runs/conversation/thread";
 
 /** Reads the enclosing run event stream, so it only ever renders for the followed run. */

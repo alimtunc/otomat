@@ -1,9 +1,4 @@
 {
-  "apps/web/src/api/runs/run-events-provider.tsx": [
-    "RunEventStream",
-    "RunStreamState",
-    "useRunEventStream"
-  ],
   "apps/web/src/components/issues/workflow/node-controls.tsx": [
     "DependencyToggles",
     "NodeAgentFields"
@@ -17,13 +12,6 @@
   ],
   "apps/web/src/components/runs/cockpit/steps/row.tsx": ["DependencyNote", "StepRow"],
   "apps/web/src/components/runs/report/section.tsx": ["FactEvidence", "ReportSection"],
-  "apps/web/src/components/runs/timeline/event-detail/event-detail.tsx": ["eventDetail"],
-  "apps/web/src/components/settings/integrations/issue-source-form/mapping-field.tsx": [
-    "MappingOption"
-  ],
-  "apps/web/src/router.tsx": ["router"],
-  "packages/ui/src/components/app-shell.tsx": ["useSidebarCollapsed"],
-  "packages/ui/src/components/resizable-panels.tsx": ["PanelImperativeHandle"],
   "packages/ui/src/components/status-chip.tsx": [
     "DiffFileStatusChip",
     "IssueStatusChip",
@@ -35,7 +23,5 @@
     "RunStatusChip",
     "StatusChip",
     "StepStatusChip"
-  ],
-  "packages/ui/src/components/toaster.tsx": ["toast"],
-  "packages/ui/src/lib/theme/provider.tsx": ["useTheme"]
+  ]
 }

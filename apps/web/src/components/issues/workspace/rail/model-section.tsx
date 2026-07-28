@@ -1,5 +1,5 @@
 import type { RunContract } from "@otomat/domain";
-import { useRunEventStream } from "@web/api/runs/run-events-provider";
+import { useRunEventStream } from "@web/api/runs/run-event-stream";
 import {
   Mono,
   RailMeta,

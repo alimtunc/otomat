@@ -1,7 +1,7 @@
 import { isRunWorking, type EventEnvelope, type RunDetail } from "@otomat/domain";
 import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
 import { useRunContributions } from "@web/api/runs/queries";
-import type { RunStreamState } from "@web/api/runs/run-events-provider";
+import type { RunStreamState } from "@web/api/runs/run-event-stream";
 import { ConversationComposer } from "@web/components/runs/conversation/composer";
 import { QueuedBanner } from "@web/components/runs/conversation/queued-banner";
 import { ThreadItem } from "@web/components/runs/conversation/thread-item";

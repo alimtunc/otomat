@@ -1,6 +1,6 @@
 import type { EventEnvelope } from "@otomat/domain";
 import { EmptyState } from "@otomat/ui";
-import type { RunStreamState } from "@web/api/runs/run-events-provider";
+import type { RunStreamState } from "@web/api/runs/run-event-stream";
 import { matchesLogFilter, type LogFilter } from "@web/components/runs/logs/log-filters";
 import { LogRow } from "@web/components/runs/logs/log-row";
 import { emptyTimelineContent } from "@web/components/runs/timeline/copy";
