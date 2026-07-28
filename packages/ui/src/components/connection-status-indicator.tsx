@@ -2,13 +2,12 @@ import { formatDistanceToNow } from "date-fns";
 import { RefreshCw, Wifi, WifiOff } from "lucide-react";
 import type { ComponentType } from "react";
 
+import type { ConnectionState } from "../lib/connection-state";
 import { TONE_FACETS } from "../lib/tone";
 import { cn } from "../lib/utils";
 import { Button } from "../primitives/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../primitives/popover";
 import { LiveDot } from "./live-dot";
-
-export type ConnectionState = "online" | "reconnecting" | "offline";
 
 export interface ConnectionStatusIndicatorProps {
   state: ConnectionState;

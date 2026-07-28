@@ -1,8 +1,15 @@
 import type { EventEnvelope } from "@otomat/domain";
-import { Button, cn, Collapsible, CollapsiblePanel, CollapsibleTrigger, Icon } from "@otomat/ui";
+import {
+  Button,
+  cn,
+  Collapsible,
+  CollapsiblePanel,
+  CollapsibleTrigger,
+  FOCUS_RING,
+  Icon,
+} from "@otomat/ui";
 import { LedgerEventRow } from "@web/components/runs/conversation/ledger-event-row";
 import { describeActivity, type ActivityCounts } from "@web/lib/conversation";
-import { FOCUS_RING } from "@web/lib/focus";
 
 /** Collapsed by default and never dropped: the summary states exactly how much work is folded away. */
 export function ActivityGroup({

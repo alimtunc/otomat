@@ -4,10 +4,8 @@ import { useAgentProfiles } from "@web/api/agent-profiles/queries";
 import { useRuntimes } from "@web/api/daemon/queries";
 import { AgentProfileDialog } from "@web/components/agents/agent-profile/dialog/agent-profile-dialog";
 import { AgentProfileListContent } from "@web/components/agents/agent-profile/list/content";
-import {
-  AgentProfileFilters,
-  type ProfileFilter,
-} from "@web/components/agents/agent-profile/list/filters";
+import { AgentProfileFilters } from "@web/components/agents/agent-profile/list/filters";
+import { type ProfileFilter } from "@web/components/agents/agent-profile/list/profile-filter";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { useState } from "react";
 

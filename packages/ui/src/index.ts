@@ -9,7 +9,11 @@
  */
 export { cn } from "./lib/utils";
 export { isEditableTarget } from "./lib/keyboard";
-export { useMediaQuery, WIDE_VIEWPORT_MEDIA_QUERY } from "./lib/use-media-query";
+export { FOCUS_RING } from "./lib/focus";
+export { useMediaQuery } from "./lib/use-media-query";
+export { WIDE_VIEWPORT_MEDIA_QUERY } from "./lib/viewport";
+export type { ConnectionState } from "./lib/connection-state";
+export type { ProjectSummary } from "./lib/project-summary";
 
 export {
   ThemeProvider,
@@ -217,7 +221,6 @@ export {
 
 export {
   ConnectionStatusIndicator,
-  type ConnectionState,
   type ConnectionStatusIndicatorProps,
 } from "./components/connection-status-indicator";
 
@@ -257,11 +260,7 @@ export { OfflineBanner, type OfflineBannerProps } from "./components/offline-ban
 
 export { Pill, PillTabs, type PillProps, type PillTabsProps } from "./components/pill-tabs";
 
-export {
-  ProjectSwitcher,
-  type ProjectSummary,
-  type ProjectSwitcherProps,
-} from "./components/project-switcher";
+export { ProjectSwitcher, type ProjectSwitcherProps } from "./components/project-switcher";
 
 export { ReconnectingBar, type ReconnectingBarProps } from "./components/reconnecting-bar";
 

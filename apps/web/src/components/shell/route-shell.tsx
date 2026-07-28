@@ -1,14 +1,15 @@
 import {
   AppShell,
+  type BreadcrumbItem,
   Breadcrumbs,
   CommandPalette,
   ConnectionStatusIndicator,
+  FOCUS_RING,
   Icon,
+  type IconName,
   Topbar,
   useCommandPalette,
   useTheme,
-  type BreadcrumbItem,
-  type IconName,
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
@@ -18,7 +19,6 @@ import { Sidebar } from "@web/components/shell/sidebar";
 import { useNewIssueShortcut } from "@web/components/shell/use-new-issue-shortcut";
 import { usePaletteGroups } from "@web/components/shell/use-palette-groups";
 import { useShellData } from "@web/components/shell/use-shell-data";
-import { FOCUS_RING } from "@web/lib/focus";
 import { useCallback, useState, type ReactNode } from "react";
 
 export interface RouteShellProps {

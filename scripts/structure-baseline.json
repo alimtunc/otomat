@@ -1,0 +1,9 @@
+{
+  "barrels": [
+    "apps/local-daemon/src/linear/client/index.ts",
+    "apps/local-daemon/src/linear/writeback/index.ts",
+    "apps/local-daemon/src/supervisor/settle/index.ts",
+    "packages/client/src/client/index.ts"
+  ],
+  "domainFolders": ["apps/desktop/src/main#desktop"]
+}

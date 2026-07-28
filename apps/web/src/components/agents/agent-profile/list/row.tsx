@@ -1,9 +1,8 @@
 import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
-import { AgentAvatar, Chip, ProviderMark } from "@otomat/ui";
+import { AgentAvatar, Chip, FOCUS_RING, ProviderMark } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { AgentProfileRowActions } from "@web/components/agents/agent-profile/list/row-actions";
 import { storedPermissionModeLabel } from "@web/lib/agent-choice";
-import { FOCUS_RING } from "@web/lib/focus";
 import { runtimeById, runtimeMark } from "@web/lib/runtimes";
 import { CELL } from "@web/lib/table";
 

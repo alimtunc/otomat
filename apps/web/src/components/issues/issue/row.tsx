@@ -1,8 +1,14 @@
 import type { IssueContract } from "@otomat/domain";
-import { Avatar, cn, IssueSourceGlyph, IssueStatusChip, RelativeTime } from "@otomat/ui";
+import {
+  Avatar,
+  cn,
+  FOCUS_RING,
+  IssueSourceGlyph,
+  IssueStatusChip,
+  RelativeTime,
+} from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { IssueExecutionChip } from "@web/components/issues/execution-chip";
-import { FOCUS_RING } from "@web/lib/focus";
 import { issueShortId } from "@web/lib/ids";
 import { CELL } from "@web/lib/table";
 

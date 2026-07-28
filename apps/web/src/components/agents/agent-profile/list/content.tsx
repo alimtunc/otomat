@@ -5,7 +5,7 @@ import { useRuntimes } from "@web/api/daemon/queries";
 import {
   matchesProfileFilter,
   type ProfileFilter,
-} from "@web/components/agents/agent-profile/list/filters";
+} from "@web/components/agents/agent-profile/list/profile-filter";
 import { AgentProfileList } from "@web/components/agents/agent-profile/list/table";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";

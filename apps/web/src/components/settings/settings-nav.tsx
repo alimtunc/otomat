@@ -1,6 +1,5 @@
-import { cn, Icon, type IconName } from "@otomat/ui";
+import { cn, FOCUS_RING, Icon, type IconName } from "@otomat/ui";
 import { Link, useMatchRoute } from "@tanstack/react-router";
-import { FOCUS_RING } from "@web/lib/focus";
 
 interface SettingsSection {
   to: string;

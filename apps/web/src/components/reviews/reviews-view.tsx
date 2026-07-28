@@ -1,4 +1,4 @@
-import { EmptyState, Icon, RunStatusChip } from "@otomat/ui";
+import { EmptyState, FOCUS_RING, Icon, RunStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useProjectRuns } from "@web/api/runs/queries";
 import { CenteredState } from "@web/components/shell/centered-state";
@@ -8,9 +8,8 @@ import { ProjectQueryBoundary } from "@web/components/shell/project-selection/qu
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
-import { FOCUS_RING } from "@web/lib/focus";
 import { shortId } from "@web/lib/ids";
-import { isReviewable } from "@web/lib/run-filters";
+import { isReviewable } from "@web/lib/run/filters";
 
 const EMPTY = (
   <CenteredState>

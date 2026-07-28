@@ -12,7 +12,7 @@ import { RunConversations } from "@web/components/issues/workspace/run-conversat
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { issueShortId, shortId } from "@web/lib/ids";
-import { resolveFollowedRun } from "@web/lib/run-activity";
+import { resolveFollowedRun } from "@web/lib/run/activity";
 import { useState, type ReactNode } from "react";
 
 function NoRunsEmptyState({ launchAction }: { launchAction: ReactNode }) {

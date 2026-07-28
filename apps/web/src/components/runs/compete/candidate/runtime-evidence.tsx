@@ -2,7 +2,7 @@ import type { EventEnvelope } from "@otomat/domain";
 import { EvidenceSection } from "@web/components/runs/compete/evidence-section";
 import { UsageDetail } from "@web/components/runs/timeline/event-detail/usage-detail";
 import { eventSummary } from "@web/components/runs/timeline/event-summary";
-import { latestUsageEvent, parseReportedUsage } from "@web/lib/run-usage";
+import { latestUsageEvent, parseReportedUsage } from "@web/lib/run/usage";
 
 export function CandidateProviderUsage({ events }: { events: readonly EventEnvelope[] }) {
   const usage = latestUsageEvent(events);

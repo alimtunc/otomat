@@ -8,7 +8,7 @@ import {
   Unknown,
 } from "@web/components/issues/workspace/rail/rail-primitives";
 import { requestedRunModels, resolvedModelLabel } from "@web/lib/model-choice";
-import { latestReportedUsage } from "@web/lib/run-usage";
+import { latestReportedUsage } from "@web/lib/run/usage";
 
 /** Separate rows on purpose: a request is not evidence, so a provider that reports nothing stays empty rather than echoing the request back. */
 export function ModelSection({ run }: { run: RunContract }) {

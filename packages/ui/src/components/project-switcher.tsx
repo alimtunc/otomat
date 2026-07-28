@@ -1,6 +1,8 @@
 import { Check, ChevronsUpDown, FolderGit2, Settings } from "lucide-react";
 import { useState } from "react";
 
+import { FOCUS_RING } from "../lib/focus";
+import type { ProjectSummary } from "../lib/project-summary";
 import { TONE_FACETS } from "../lib/tone";
 import { cn } from "../lib/utils";
 import { Button } from "../primitives/button";
@@ -14,14 +16,6 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from "../primitives/combobox";
-
-export interface ProjectSummary {
-  id: string;
-  name: string;
-  repo?: string;
-  branch?: string;
-  health?: "healthy" | "degraded" | "unknown";
-}
 
 const HEALTH_COLOR: Record<NonNullable<ProjectSummary["health"]>, string> = {
   healthy: TONE_FACETS.success.cssVar,
@@ -85,7 +79,8 @@ export function ProjectSwitcher({
             variant="ghost"
             className={cn(
               "h-12 w-full justify-start gap-2.25 rounded-none border-0 px-3 text-left hover:bg-hover",
-              "focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]",
+              FOCUS_RING,
+              "focus-visible:outline-offset-[-2px]",
               "disabled:cursor-not-allowed disabled:opacity-60",
               collapsed && "justify-center px-0",
             )}

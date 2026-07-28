@@ -7,7 +7,7 @@ import { countMatching, LOG_FILTERS, type LogFilter } from "@web/components/runs
 import { SessionsPanel } from "@web/components/runs/logs/sessions-panel";
 import { PaneHeader } from "@web/components/runs/pane-header";
 import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
-import { STREAM_LABEL } from "@web/lib/run-stream";
+import { STREAM_LABEL } from "@web/lib/run/stream";
 import { useState } from "react";
 
 export function RunLogsView() {

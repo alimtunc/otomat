@@ -2,7 +2,7 @@ import type { RunState } from "@otomat/domain";
 import { Button, Icon } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useAbortRun, useResumeRun } from "@web/api/runs/mutations";
-import { canAbortRun, canResumeRun } from "@web/lib/run-actions";
+import { canAbortRun, canResumeRun } from "@web/lib/run/actions";
 
 export interface RunActionButtonsProps {
   runId: string;

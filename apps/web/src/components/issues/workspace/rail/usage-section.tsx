@@ -5,7 +5,7 @@ import {
   RailSection,
   Unknown,
 } from "@web/components/issues/workspace/rail/rail-primitives";
-import { formatCostUsd, formatTokenCount, latestReportedUsage } from "@web/lib/run-usage";
+import { formatCostUsd, formatTokenCount, latestReportedUsage } from "@web/lib/run/usage";
 
 export function UsageSection() {
   const stream = useRunEventStream();
