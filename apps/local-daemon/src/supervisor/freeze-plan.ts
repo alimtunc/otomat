@@ -4,6 +4,7 @@ import type { Db } from "@otomat/db";
 import {
   FAKE_RUNTIME_ID,
   isRunPlanCompeteGroup,
+  type ModelSelection,
   type ResolvedAgentConfig,
   type RunPlan,
   type RunPlanNodeInput,
@@ -37,22 +38,36 @@ function nodeSelector(node: {
   return null;
 }
 
-function selectorKey(selector: AgentConfigSelector): string {
-  return selector.kind === "profile"
-    ? `profile:${selector.profileId}`
-    : `runtime:${selector.runtimeId}`;
+function configKey(selector: AgentConfigSelector, model: ModelSelection | undefined): string {
+  const source =
+    selector.kind === "profile" ? `profile:${selector.profileId}` : `runtime:${selector.runtimeId}`;
+  if (model === undefined) return `${source}|inherit`;
+  return `${source}|${model.kind === "provider_default" ? "provider_default" : `model:${model.id}`}`;
 }
 
-/** One resolution per distinct selector per launch (default included), so nodes sharing a profile freeze the identical snapshot. */
-function makeConfigResolver(db: Db, request: StartRunRequest, defaultConfig: ResolvedAgentConfig) {
-  const bySelector = new Map([[selectorKey(defaultConfigSelector(request)), defaultConfig]]);
-  return (selector: AgentConfigSelector | null): ResolvedAgentConfig => {
-    if (selector === null) return defaultConfig;
-    const key = selectorKey(selector);
-    const cached = bySelector.get(key);
+/** The effective config of one node: its own agent and model, each falling back to the run default. */
+type ConfigResolver = (
+  selector: AgentConfigSelector | null,
+  model: ModelSelection | undefined,
+) => ResolvedAgentConfig;
+
+/** One resolution per distinct agent+model pair per launch (default included), so nodes sharing a choice freeze the identical snapshot. */
+function makeConfigResolver(
+  db: Db,
+  request: StartRunRequest,
+  defaultConfig: ResolvedAgentConfig,
+): ConfigResolver {
+  const defaultSelector = defaultConfigSelector(request);
+  const byKey = new Map([[configKey(defaultSelector, request.model), defaultConfig]]);
+  return (selector, model) => {
+    // A node that inherits the agent still inherits the launch-level model override.
+    const effectiveSelector = selector ?? defaultSelector;
+    const effectiveModel = model ?? (selector === null ? request.model : undefined);
+    const key = configKey(effectiveSelector, effectiveModel);
+    const cached = byKey.get(key);
     if (cached) return cached;
-    const config = resolveAgentConfig(db, selector);
-    bySelector.set(key, config);
+    const config = resolveAgentConfig(db, effectiveSelector, { model: effectiveModel });
+    byKey.set(key, config);
     return config;
   };
 }
@@ -60,7 +75,7 @@ function makeConfigResolver(db: Db, request: StartRunRequest, defaultConfig: Res
 function freezeNode(
   node: RunPlanNodeInput,
   idByRequestId: ReadonlyMap<string, string>,
-  configFor: (selector: AgentConfigSelector | null) => ResolvedAgentConfig,
+  configFor: ConfigResolver,
 ) {
   const dependencies = node.depends_on.map((dependency) => mappedStepId(idByRequestId, dependency));
   // `in` narrowing, not isRunPlanCompeteGroup: the guard cannot exclude the compete *input* member on the else branch.
@@ -70,7 +85,7 @@ function freezeNode(
       name: node.name,
       depends_on: dependencies,
       compete: node.compete.map((competitor) => {
-        const config = configFor(nodeSelector(competitor));
+        const config = configFor(nodeSelector(competitor), competitor.model);
         return {
           id: mappedStepId(idByRequestId, competitor.id),
           name: competitor.name,
@@ -81,7 +96,7 @@ function freezeNode(
       }),
     };
   }
-  const config = configFor(nodeSelector(node));
+  const config = configFor(nodeSelector(node), node.model);
   return {
     id: mappedStepId(idByRequestId, node.id),
     name: node.name,

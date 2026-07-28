@@ -16,6 +16,8 @@ export const agentProfiles = sqliteTable("agent_profiles", {
   name: text("name").notNull(),
   runtime: text("runtime").notNull(),
   options_json: text("options_json", { mode: "json" }).notNull(),
+  // Null requests the provider's own default model; provenance is resolved at launch, never stored here.
+  model: text("model"),
   guidance: text("guidance"),
   skill_ids_json: text("skill_ids_json", { mode: "json" }).notNull(),
   ...timestamps,

@@ -8,6 +8,7 @@ import {
   runContributionContractSchema,
   stepRunContractSchema,
 } from "./entities/runs.js";
+import { modelSelectionSchema } from "./runtime-model.js";
 
 /** A run plus its persisted step/session graph; the event ledger is served by the run's SSE stream, not here. `worktree_path` is null when the run has no worktree. */
 export const runDetailSchema = z.object({
@@ -30,6 +31,8 @@ export const startRunRequestSchema = z
     runtime: z.string().min(1).optional(),
     /** Agent profile resolved and frozen for the run default; per-node `profile_id` overrides it. Takes precedence over `runtime`. */
     profile_id: z.string().min(1).optional(),
+    /** Per-launch model override for the run default config; absent inherits the profile's model. */
+    model: modelSelectionSchema.optional(),
     plan: runPlanInputSchema.optional(),
   })
   .refine((value) => Boolean(value.issue_id) || Boolean(value.prompt), {

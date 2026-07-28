@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { isRunPlanCompeteGroup } from "../contracts/entities/runs.js";
+import { modelSelectionSchema } from "../contracts/runtime-model.js";
 import {
   RUN_PLAN_MAX_STEPS,
   RUN_PLAN_STEP_ID_PATTERN,
@@ -24,6 +25,8 @@ export const runPlanStepInputSchema = z
     agent: z.string().min(1).nullable(),
     /** Agent profile to resolve and freeze for this step; takes precedence over `agent`. Null/absent keeps the ad-hoc runtime path. */
     profile_id: z.string().min(1).nullish(),
+    /** Model override for this step alone; absent inherits the model of whatever config this step resolves to. */
+    model: modelSelectionSchema.optional(),
     prompt: planNodePromptSchema,
     depends_on: planDependenciesSchema,
   })
@@ -37,6 +40,8 @@ const runPlanCompetitorInputSchema = z
     agent: z.string().min(1).nullable(),
     /** Agent profile to resolve and freeze for this candidate; takes precedence over `agent`. */
     profile_id: z.string().min(1).nullish(),
+    /** Model override for this candidate alone; absent inherits the model of whatever config it resolves to. */
+    model: modelSelectionSchema.optional(),
     prompt: planNodePromptSchema,
   })
   .strict();

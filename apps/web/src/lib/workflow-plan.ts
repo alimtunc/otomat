@@ -1,88 +1,10 @@
-import type { RunPlanInput, RunPlanNodeInput } from "@otomat/domain";
+import type { ModelSelection, RunPlanInput, RunPlanNodeInput } from "@otomat/domain";
 import { agentChoiceToRequest } from "@web/lib/agent-choice";
-
-export interface WorkflowCompetitorDraft {
-  key: string;
-  name: string;
-  prompt: string;
-  /** Encoded agent choice (profile or ad-hoc runtime); null inherits the run default. */
-  agent: string | null;
-}
-
-export interface WorkflowStepDraft {
-  kind: "step";
-  key: string;
-  name: string;
-  prompt: string;
-  /** Encoded agent choice (profile or ad-hoc runtime); null inherits the run default. */
-  agent: string | null;
-  /** Keys of top-level nodes this one waits for; competitors are never valid dependency targets. */
-  dependsOn: string[];
-}
-
-/** Compete nodes own at least two executable competitors. */
-export interface WorkflowCompeteDraft {
-  kind: "compete";
-  key: string;
-  name: string;
-  dependsOn: string[];
-  competitors: WorkflowCompetitorDraft[];
-}
-
-/** One top-level dependency node. */
-export type WorkflowNodeDraft = WorkflowStepDraft | WorkflowCompeteDraft;
-
-export function newWorkflowStep(counter: number): WorkflowStepDraft {
-  return {
-    kind: "step",
-    key: `step-${counter}`,
-    name: "",
-    prompt: "",
-    agent: null,
-    dependsOn: [],
-  };
-}
-
-function newCompetitor(groupKey: string, counter: number): WorkflowCompetitorDraft {
-  return {
-    key: `${groupKey}-candidate-${counter}`,
-    name: "",
-    prompt: "",
-    agent: null,
-  };
-}
-
-export function newWorkflowCompeteGroup(counter: number): WorkflowCompeteDraft {
-  const key = `compete-${counter}`;
-  return {
-    kind: "compete",
-    key,
-    name: "",
-    dependsOn: [],
-    competitors: [newCompetitor(key, 1), newCompetitor(key, 2)],
-  };
-}
-
-/** The single identifier a competitor is known by in the form — shown and announced. */
-export function competitorLabel(competitorIndex: number): string {
-  return `Candidate ${String.fromCharCode(65 + competitorIndex)}`;
-}
-
-export function workflowExecutableCount(steps: readonly WorkflowNodeDraft[]): number {
-  return steps.reduce(
-    (count, step) => count + (step.kind === "compete" ? step.competitors.length : 1),
-    0,
-  );
-}
-
-export function isWorkflowNodeComplete(step: WorkflowNodeDraft): boolean {
-  if (!step.name.trim()) return false;
-  if (step.kind === "step") return Boolean(step.prompt.trim());
-  return (
-    step.competitors.length >= 2 &&
-    step.competitors.every((competitor) => competitor.name.trim() && competitor.prompt.trim())
-  );
-}
+import {
+  newCompetitor,
+  type WorkflowCompetitorDraft,
+  type WorkflowNodeDraft,
+} from "@web/lib/workflow-draft";
 
 /** Keeps every dependency pointing at an earlier, still-existing top-level node. */
 function sanitizeWorkflowSteps(steps: readonly WorkflowNodeDraft[]): WorkflowNodeDraft[] {
@@ -121,16 +43,42 @@ export function setWorkflowStepAgent(
   index: number,
   agent: string | null,
 ): WorkflowNodeDraft[] {
+  // Another agent lists other models, so a kept selection would silently become a custom one.
   return steps.map((step, stepIndex) =>
-    stepIndex === index && step.kind === "step" ? { ...step, agent } : step,
+    stepIndex === index && step.kind === "step" ? { ...step, agent, model: undefined } : step,
   );
 }
 
-export function updateWorkflowCompetitor(
+/** Nodes without their own agent follow the run default, so a run-level agent change orphans their kept models. */
+export function clearInheritedNodeModels(steps: readonly WorkflowNodeDraft[]): WorkflowNodeDraft[] {
+  return steps.map((step) => {
+    if (step.kind === "compete") {
+      return {
+        ...step,
+        competitors: step.competitors.map((competitor) =>
+          competitor.agent === null ? { ...competitor, model: undefined } : competitor,
+        ),
+      };
+    }
+    return step.agent === null ? { ...step, model: undefined } : step;
+  });
+}
+
+export function setWorkflowStepModel(
+  steps: readonly WorkflowNodeDraft[],
+  index: number,
+  model: ModelSelection | undefined,
+): WorkflowNodeDraft[] {
+  return steps.map((step, stepIndex) =>
+    stepIndex === index && step.kind === "step" ? { ...step, model } : step,
+  );
+}
+
+function patchCompetitor(
   steps: readonly WorkflowNodeDraft[],
   stepIndex: number,
   competitorIndex: number,
-  update: Partial<Pick<WorkflowCompetitorDraft, "name" | "prompt" | "agent">>,
+  update: Partial<Omit<WorkflowCompetitorDraft, "key">>,
 ): WorkflowNodeDraft[] {
   return steps.map((step, index) => {
     if (index !== stepIndex || step.kind !== "compete") return step;
@@ -141,6 +89,26 @@ export function updateWorkflowCompetitor(
       ),
     };
   });
+}
+
+/** Changing the agent goes through `setWorkflowCompetitorAgent` so the model reset cannot be skipped. */
+export function updateWorkflowCompetitor(
+  steps: readonly WorkflowNodeDraft[],
+  stepIndex: number,
+  competitorIndex: number,
+  update: Partial<Pick<WorkflowCompetitorDraft, "name" | "prompt" | "model">>,
+): WorkflowNodeDraft[] {
+  return patchCompetitor(steps, stepIndex, competitorIndex, update);
+}
+
+export function setWorkflowCompetitorAgent(
+  steps: readonly WorkflowNodeDraft[],
+  stepIndex: number,
+  competitorIndex: number,
+  agent: string | null,
+): WorkflowNodeDraft[] {
+  // Another agent lists other models, so a kept selection would silently become a custom one.
+  return patchCompetitor(steps, stepIndex, competitorIndex, { agent, model: undefined });
 }
 
 export function addWorkflowCompetitor(
@@ -213,6 +181,7 @@ export function buildRunPlanInput(steps: readonly WorkflowNodeDraft[]): RunPlanI
           id: competitor.key,
           name: competitor.name.trim(),
           ...nodeAgentFields(competitor.agent),
+          model: competitor.model,
           prompt: competitor.prompt.trim(),
         })),
       };
@@ -221,6 +190,7 @@ export function buildRunPlanInput(steps: readonly WorkflowNodeDraft[]): RunPlanI
       id: step.key,
       name: step.name.trim(),
       ...nodeAgentFields(step.agent),
+      model: step.model,
       prompt: step.prompt.trim(),
       depends_on: step.dependsOn,
     };

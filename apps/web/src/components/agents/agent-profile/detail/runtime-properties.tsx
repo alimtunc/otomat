@@ -1,6 +1,7 @@
 import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
-import { Chip, Icon, MetaList } from "@otomat/ui";
+import { Chip, Icon, MetaList, ProviderMark } from "@otomat/ui";
 import { permissionModeOption, storedPermissionModeLabel } from "@web/lib/agent-choice";
+import { runtimeMark } from "@web/lib/runtimes";
 
 export function RuntimeProperties({
   profile,
@@ -11,16 +12,26 @@ export function RuntimeProperties({
 }) {
   const permissionOption = permissionModeOption(descriptor?.provider_options);
   const permissionLabel = storedPermissionModeLabel(profile, descriptor) ?? "Runtime default";
+  const mark = runtimeMark(profile.runtime);
   const items = [
     {
       key: "runtime",
       label: "Runtime",
       value: (
         <span className="inline-flex items-center gap-1.5 text-text-secondary">
-          <Icon name="cpu" aria-hidden className="size-3.25 text-text-tertiary" />
+          {mark ? (
+            <ProviderMark name={mark} />
+          ) : (
+            <Icon name="cpu" aria-hidden className="size-3.25 text-text-tertiary" />
+          )}
           {descriptor?.display_name ?? profile.runtime}
         </span>
       ),
+    },
+    {
+      key: "model",
+      label: "Model",
+      value: <Chip tone="ghost">{profile.model ?? "Default"}</Chip>,
     },
   ];
 

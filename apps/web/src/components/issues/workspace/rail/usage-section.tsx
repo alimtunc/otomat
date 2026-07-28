@@ -20,13 +20,6 @@ export function UsageSection() {
       }
     >
       <RailMeta>
-        <RailRow label="Model">
-          {usage?.model != null ? (
-            <span className="truncate font-mono text-xs text-text-secondary">{usage.model}</span>
-          ) : (
-            <Unknown />
-          )}
-        </RailRow>
         <RailRow label="Input">
           {usage?.inputTokens != null ? (
             <span className="font-mono text-xs tabular-nums text-text-secondary">

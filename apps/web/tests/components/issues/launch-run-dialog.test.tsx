@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { IssueContract, RunContract, RuntimeDescriptor } from "@otomat/domain";
+import type { IssueContract, ModelSelection, RunContract, RuntimeDescriptor } from "@otomat/domain";
 import { LaunchRunDialog } from "@web/components/issues/workspace/launch/dialog";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -7,10 +7,17 @@ import { afterEach, expect, it, vi } from "vitest";
 import { setInputValue, setTextareaValue } from "#support/dom-events";
 import { findButton } from "#support/dom-queries";
 import { mount } from "#support/mount";
+import { modelCatalogQueryResult } from "#support/runtime-models";
 
 const launch = vi.fn(async () => ({ id: "run-1" }) as RunContract);
 const navigate = vi.fn();
 const onLaunched = vi.fn();
+const modelSelectProps = vi.fn();
+
+interface ModelSelectProbeProps {
+  runtimeId: string | null;
+  onValueChange: (value: ModelSelection | undefined) => void;
+}
 
 vi.mock("@web/api/runs/mutations", () => ({
   useLaunchRun: () => ({ launch, isPending: false }),
@@ -42,6 +49,7 @@ vi.mock("@web/api/daemon/queries", () => ({
     isSuccess: true,
     refetch: vi.fn(),
   }),
+  useRuntimeModels: () => modelCatalogQueryResult(),
 }));
 
 vi.mock("@web/api/agent-profiles/queries", () => ({
@@ -50,6 +58,17 @@ vi.mock("@web/api/agent-profiles/queries", () => ({
 
 vi.mock("@web/components/runs/launch/launch-agent-select", () => ({
   LaunchAgentSelect: () => <div data-testid="agent-select" />,
+}));
+
+vi.mock("@web/components/runs/launch/model-select", () => ({
+  ModelSelect: (props: ModelSelectProbeProps) => {
+    modelSelectProps(props);
+    return (
+      <button type="button" onClick={() => props.onValueChange({ kind: "model", id: "opus" })}>
+        pick opus
+      </button>
+    );
+  },
 }));
 
 const ISSUE: IssueContract = {
@@ -79,6 +98,7 @@ afterEach(async () => {
   launch.mockClear();
   navigate.mockClear();
   onLaunched.mockClear();
+  modelSelectProps.mockClear();
 });
 
 function click(text: string) {
@@ -131,6 +151,24 @@ it("sends the prompt on screen, edits included, and follows the run in place", a
   expect(onLaunched).toHaveBeenCalledWith({ id: "run-1" });
   // The run belongs to the issue already on screen; navigating away would lose the workspace.
   expect(navigate).not.toHaveBeenCalled();
+});
+
+it("sends the per-launch model override, listed against the agent's own runtime", async () => {
+  await openDialog();
+
+  expect(modelSelectProps).toHaveBeenCalledWith(
+    expect.objectContaining({ runtimeId: "claude", value: undefined }),
+  );
+
+  await click("pick opus");
+  await click("Launch run⌘↵");
+
+  expect(launch).toHaveBeenCalledWith({
+    issue_id: "issue-1",
+    prompt: "Ship the CSV parser\n\nQuoting breaks on nested commas.",
+    runtime: "claude",
+    model: { kind: "model", id: "opus" },
+  });
 });
 
 it("reopens on the single run, since closing discarded whatever was composed", async () => {

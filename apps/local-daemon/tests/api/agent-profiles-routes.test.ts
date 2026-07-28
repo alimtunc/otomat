@@ -74,6 +74,38 @@ it("refuses an unsupported provider option honestly", async () => {
   expect(body.message).toBeTypeOf("string");
 });
 
+it("stores a model the runtime lists, carries it through a duplicate, and refuses an unlisted one", async () => {
+  const app = makeApiApp(t);
+
+  const created = await json<AgentProfileContract>(
+    await post(app, "/api/agent-profiles", { name: "P", runtime: "fake", model: "fake-fast" }),
+  );
+  expect(created.model).toBe("fake-fast");
+
+  const duplicated = await json<AgentProfileContract>(
+    await post(app, `/api/agent-profiles/${created.id}/duplicate`, {}),
+  );
+  expect(duplicated.model).toBe("fake-fast");
+
+  const refused = await post(app, "/api/agent-profiles", {
+    name: "Q",
+    runtime: "fake",
+    model: "gpt-5",
+  });
+  expect(refused.status).toBe(400);
+  const body = await json<{ error: string; message: string }>(refused);
+  expect(body.error).toBe("model_unknown");
+  expect(body.message).toContain("gpt-5");
+});
+
+it("defaults a profile with no model to the provider default", async () => {
+  const app = makeApiApp(t);
+  const created = await json<AgentProfileContract>(
+    await post(app, "/api/agent-profiles", { name: "P", runtime: "fake" }),
+  );
+  expect(created.model).toBeNull();
+});
+
 it("refuses an unknown runtime", async () => {
   const app = makeApiApp(t);
   const res = await post(app, "/api/agent-profiles", { name: "P", runtime: "made-up" });

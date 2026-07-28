@@ -3,7 +3,8 @@ import { Button, DialogBody, Field, FieldControl, FieldLabel, Kbd, Textarea } fr
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
 import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@web/lib/form";
-import { isWorkflowNodeComplete } from "@web/lib/workflow-plan";
+import { isCompleteModelSelection } from "@web/lib/model-choice";
+import { isWorkflowNodeComplete } from "@web/lib/workflow-draft";
 
 import { WorkflowPlanBuilder } from "./builder";
 import {
@@ -93,6 +94,7 @@ export function WorkflowLaunchForm({
           <form.Subscribe
             selector={(state) =>
               (target.kind === "issue" || hasText(state.values.goal)) &&
+              isCompleteModelSelection(state.values.model) &&
               state.values.steps.length > 0 &&
               state.values.steps.every(isWorkflowNodeComplete)
             }

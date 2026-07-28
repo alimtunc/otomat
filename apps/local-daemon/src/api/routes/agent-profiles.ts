@@ -28,6 +28,7 @@ function profileColumns(request: SaveAgentProfileRequest) {
     name: request.name,
     runtime: request.runtime,
     options_json: request.options ?? {},
+    model: request.model ?? null,
     guidance: request.guidance ?? null,
     skill_ids_json: request.skill_ids ?? [],
   };
@@ -53,12 +54,13 @@ function savedProfile(db: Db, id: string) {
   return profile;
 }
 
-/** Validates the runtime, options and referenced skills; returns an honest refusal or null. */
+/** Validates the runtime, options, model and referenced skills; returns an honest refusal or null. */
 function refuseInvalid(db: Db, request: SaveAgentProfileRequest) {
   try {
     validateProfileInput(db, {
       runtime: request.runtime,
       options: request.options ?? {},
+      model: request.model ?? null,
       skill_ids: request.skill_ids ?? [],
     });
     return null;
@@ -104,6 +106,7 @@ export function createAgentProfileRoutes(deps: ApiDeps): Hono {
       name: copyName(source.name),
       runtime: source.runtime,
       options_json: source.options_json,
+      model: source.model,
       guidance: source.guidance,
       skill_ids_json: source.skill_ids_json,
     });

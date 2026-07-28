@@ -1,10 +1,11 @@
-import type { RunContract } from "@otomat/domain";
+import type { ModelSelection, RunContract } from "@otomat/domain";
 import { Button, DialogBody, Kbd, Textarea } from "@otomat/ui";
 import { useLaunchRun } from "@web/api/runs/mutations";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
-import { LaunchAgentPicker } from "@web/components/runs/launch/launch-agent-picker";
+import { LaunchAgentModelFields } from "@web/components/runs/launch/launch-agent-model-fields";
 import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
 import { agentChoiceToRequest } from "@web/lib/agent-choice";
+import { isCompleteModelSelection } from "@web/lib/model-choice";
 import { useState, type KeyboardEvent } from "react";
 
 export interface AgentIssueFormProps {
@@ -23,12 +24,17 @@ export function AgentIssueForm({
   onCancel,
 }: AgentIssueFormProps) {
   const [promptText, setPromptText] = useState("");
+  const [model, setModel] = useState<ModelSelection | undefined>(undefined);
   const { launch, isPending } = useLaunchRun();
   const agents = useLaunchAgentChoice(agentChoice);
   const choice = agents.choice;
 
   const canSubmit =
-    promptText.trim().length > 0 && choice !== null && projectId !== undefined && !isPending;
+    promptText.trim().length > 0 &&
+    choice !== null &&
+    projectId !== undefined &&
+    isCompleteModelSelection(model) &&
+    !isPending;
 
   async function submit() {
     if (!canSubmit || choice === null || projectId === undefined) return;
@@ -36,6 +42,7 @@ export function AgentIssueForm({
       prompt: promptText.trim(),
       project_id: projectId,
       ...agentChoiceToRequest(choice),
+      model,
     });
     if (run) {
       setPromptText("");
@@ -61,7 +68,12 @@ export function AgentIssueForm({
           rows={4}
           aria-label="Issue prompt"
         />
-        <LaunchAgentPicker agents={agents} onValueChange={onAgentChoice} />
+        <LaunchAgentModelFields
+          agents={agents}
+          model={model}
+          onAgentChoice={onAgentChoice}
+          onModelChange={setModel}
+        />
         {projectId === undefined ? (
           <p className="text-xs text-danger">Select a project before launching a run.</p>
         ) : null}

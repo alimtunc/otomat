@@ -1,6 +1,14 @@
 import type { RuntimeDescriptor } from "@otomat/domain";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@otomat/ui";
-import { isAvailableRuntime, isRealRuntime } from "@web/lib/runtimes";
+import {
+  ProviderMark,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@otomat/ui";
+import { ProviderOptionRow } from "@web/components/runs/launch/provider-option-row";
+import { isAvailableRuntime, isRealRuntime, runtimeMark } from "@web/lib/runtimes";
 
 function runtimeItemLabel(descriptor: RuntimeDescriptor): string {
   const devSuffix = isRealRuntime(descriptor) ? "" : " (dev only)";
@@ -23,7 +31,9 @@ export function RuntimeSelect({
     value: descriptor.id,
     label: runtimeItemLabel(descriptor),
     disabled: !isAvailableRuntime(descriptor),
+    mark: runtimeMark(descriptor.id),
   }));
+  const selectedMark = items.find((item) => item.value === value)?.mark ?? null;
 
   return (
     <Select
@@ -34,12 +44,15 @@ export function RuntimeSelect({
       }}
     >
       <SelectTrigger aria-label="Runtime" disabled={disabled}>
-        <SelectValue />
+        <span className="flex min-w-0 items-center gap-2">
+          {selectedMark ? <ProviderMark name={selectedMark} /> : null}
+          <SelectValue className="truncate" />
+        </span>
       </SelectTrigger>
       <SelectContent>
         {items.map((item) => (
           <SelectItem key={item.value} value={item.value} disabled={item.disabled}>
-            {item.label}
+            <ProviderOptionRow mark={item.mark} label={item.label} />
           </SelectItem>
         ))}
       </SelectContent>

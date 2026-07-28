@@ -182,6 +182,8 @@ export {
 } from "./primitives/tooltip";
 
 export { AgentAvatar, type AgentAvatarProps } from "./components/agent-avatar";
+export { ProviderMark, type ProviderMarkProps } from "./components/provider-mark";
+export type { ProviderMarkName } from "./lib/provider-mark-art";
 
 export { AppShell, useSidebarCollapsed, type AppShellProps } from "./components/app-shell";
 

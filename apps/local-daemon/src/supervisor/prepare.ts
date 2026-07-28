@@ -82,7 +82,9 @@ function insertAdHocIssue(db: Db, projectId: string, request: StartRunRequest): 
 export function prepareRun(state: SupervisorState, request: StartRunRequest): string {
   const { db, defaultProjectId, repositories } = state;
   // Every effective config is resolved and validated before any row (issue included) is written.
-  const defaultConfig = resolveAgentConfig(db, defaultConfigSelector(request));
+  const defaultConfig = resolveAgentConfig(db, defaultConfigSelector(request), {
+    model: request.model,
+  });
   const defaultRuntime = defaultConfig.runtime;
 
   const existingIssue = request.issue_id ? getIssue(db, request.issue_id) : undefined;

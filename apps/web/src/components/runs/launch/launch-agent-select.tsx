@@ -1,5 +1,7 @@
 import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
 import {
+  ProviderMark,
+  type ProviderMarkName,
   Select,
   SelectContent,
   SelectGroup,
@@ -8,17 +10,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@otomat/ui";
+import { ProviderOptionRow } from "@web/components/runs/launch/provider-option-row";
 import {
   AGENT_CHOICE_DEFAULT,
   encodeProfileChoice,
   encodeRuntimeChoice,
 } from "@web/lib/agent-choice";
-import { isAvailableRuntime, runtimeById } from "@web/lib/runtimes";
+import { isAvailableRuntime, runtimeById, runtimeMark } from "@web/lib/runtimes";
 
 interface ChoiceItem {
   value: string;
   label: string;
   disabled: boolean;
+  mark: ProviderMarkName | null;
 }
 
 function buildItems(
@@ -33,16 +37,18 @@ function buildItems(
       value: encodeProfileChoice(profile.id),
       label: available ? profile.name : `${profile.name} — runtime unavailable`,
       disabled: !available,
+      mark: runtimeMark(profile.runtime),
     };
   });
   const runtimeItems = descriptors.map((descriptor) => ({
     value: encodeRuntimeChoice(descriptor.id),
-    label: `${descriptor.display_name} (ad-hoc)`,
+    label: descriptor.display_name,
     disabled: !isAvailableRuntime(descriptor),
+    mark: runtimeMark(descriptor.id),
   }));
   return {
     defaultItem: includeDefault
-      ? { value: AGENT_CHOICE_DEFAULT, label: "Run default", disabled: false }
+      ? { value: AGENT_CHOICE_DEFAULT, label: "Run default", disabled: false, mark: null }
       : null,
     profileItems,
     runtimeItems,
@@ -78,6 +84,7 @@ export function LaunchAgentSelect({
     includeDefault,
   );
   const items = [...(defaultItem ? [defaultItem] : []), ...profileItems, ...runtimeItems];
+  const selected = items.find((item) => item.value === (value ?? AGENT_CHOICE_DEFAULT));
 
   return (
     <Select
@@ -93,27 +100,32 @@ export function LaunchAgentSelect({
         disabled={disabled}
         className={compact ? "h-7 text-xs" : undefined}
       >
-        <SelectValue />
+        <span className="flex min-w-0 items-center gap-2">
+          {selected?.mark ? <ProviderMark name={selected.mark} /> : null}
+          <SelectValue className="truncate" />
+        </span>
       </SelectTrigger>
       <SelectContent>
         {defaultItem ? (
-          <SelectItem value={defaultItem.value}>{defaultItem.label}</SelectItem>
+          <SelectItem value={defaultItem.value}>
+            <ProviderOptionRow mark={defaultItem.mark} label={defaultItem.label} />
+          </SelectItem>
         ) : null}
         {profileItems.length > 0 ? (
           <SelectGroup>
             <SelectLabel>Profiles</SelectLabel>
             {profileItems.map((item) => (
               <SelectItem key={item.value} value={item.value} disabled={item.disabled}>
-                {item.label}
+                <ProviderOptionRow mark={item.mark} label={item.label} />
               </SelectItem>
             ))}
           </SelectGroup>
         ) : null}
         <SelectGroup>
-          <SelectLabel>Runtimes (ad-hoc)</SelectLabel>
+          <SelectLabel>Runtimes</SelectLabel>
           {runtimeItems.map((item) => (
             <SelectItem key={item.value} value={item.value} disabled={item.disabled}>
-              {item.label}
+              <ProviderOptionRow mark={item.mark} label={item.label} />
             </SelectItem>
           ))}
         </SelectGroup>

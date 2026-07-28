@@ -51,6 +51,8 @@ export async function runWorkerJob(
 ): Promise<RuntimeFinalState> {
   const adapter = createRuntimeAdapter(job.runtime);
   const options = job.config?.options;
+  // The plan's frozen model, not the live profile: a resume sends exactly what the initial turn did.
+  const model = job.config?.model?.id ?? null;
   // The worker owns durability: every event lands in the run's events.jsonl for the tailer/reconciliation.
   const sink = new JsonlEventSink(join(job.agentSessionDir, EVENTS_FILENAME));
   try {
@@ -72,7 +74,7 @@ export async function runWorkerJob(
           agent_session_id: job.agentSessionId,
           provider_session_id: job.providerSessionId,
         },
-        { prompt: job.prompt, run_dir: job.agentSessionDir, cwd: job.worktreePath, options },
+        { prompt: job.prompt, run_dir: job.agentSessionDir, cwd: job.worktreePath, options, model },
         sink,
         signal,
       );
@@ -86,6 +88,7 @@ export async function runWorkerJob(
         run_dir: job.agentSessionDir,
         cwd: job.worktreePath,
         options,
+        model,
       },
       sink,
       signal,

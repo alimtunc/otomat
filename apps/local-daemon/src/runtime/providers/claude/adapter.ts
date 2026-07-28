@@ -22,6 +22,7 @@ import type {
 import type { RuntimeSink } from "#runtime/sinks";
 
 import { ClaudeFrameMapper } from "./frames.js";
+import { CLAUDE_MODEL_SUPPORT } from "./models.js";
 
 export const CLAUDE_ADAPTER_ID = "claude";
 
@@ -69,16 +70,13 @@ const CLAUDE_CAPABILITIES: RuntimeCapabilities = {
   diff_hints: false,
 };
 
-function baseArgs(permissionMode: ClaudePermissionMode): string[] {
-  return ["-p", "--output-format", "stream-json", "--verbose", "--permission-mode", permissionMode];
-}
-
 /** The prompt is piped over stdin so size and quoting never leak into argv. */
 export class ClaudeRuntimeAdapter implements RuntimeAdapter {
   readonly id = CLAUDE_ADAPTER_ID;
   readonly displayName = "Claude Code";
   readonly capabilities = CLAUDE_CAPABILITIES;
   readonly providerOptions = CLAUDE_PROVIDER_OPTIONS;
+  readonly models = CLAUDE_MODEL_SUPPORT;
 
   /** The binary parameter is the test seam: tests point it at a stub replaying recorded frames. */
   constructor(private readonly binary: string = CLAUDE_BINARY) {}
@@ -88,7 +86,7 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
-    return runCliTurn(this.spec(baseArgs(this.permissionMode(input)), input, input), sink, signal);
+    return runCliTurn(this.spec(this.turnArgs(input), input, input), sink, signal);
   }
 
   async resume(
@@ -97,12 +95,21 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
-    const args = [
-      ...baseArgs(this.permissionMode(input)),
-      "--resume",
-      requireProviderSession(session),
-    ];
+    const args = [...this.turnArgs(input), "--resume", requireProviderSession(session)];
     return runCliTurn(this.spec(args, input, session), sink, signal);
+  }
+
+  private turnArgs(input: RuntimeRunInput | RuntimeResumeInput): string[] {
+    const args = [
+      "-p",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--permission-mode",
+      this.permissionMode(input),
+    ];
+    if (input.model != null) args.push("--model", input.model);
+    return args;
   }
 
   /** The frozen per-run permission mode wins; otherwise the daemon-wide env fallback. */

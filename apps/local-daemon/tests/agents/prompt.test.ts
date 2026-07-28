@@ -8,6 +8,7 @@ const base: ResolvedAgentConfig = {
   profile_id: null,
   profile_name: null,
   options: {},
+  model: null,
   guidance: null,
   skills: [],
   config_hash: "h",

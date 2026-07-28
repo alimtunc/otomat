@@ -1,12 +1,13 @@
-import type { IssueContract, RunContract } from "@otomat/domain";
+import type { IssueContract, ModelSelection, RunContract } from "@otomat/domain";
 import { Button, DialogBody, Field, FieldControl, FieldLabel, Kbd, Textarea } from "@otomat/ui";
 import { useLaunchRun } from "@web/api/runs/mutations";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
-import { LaunchAgentPicker } from "@web/components/runs/launch/launch-agent-picker";
+import { LaunchAgentModelFields } from "@web/components/runs/launch/launch-agent-model-fields";
 import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
 import { agentChoiceToRequest } from "@web/lib/agent-choice";
 import { hasText, submitOnCmdEnter } from "@web/lib/form";
 import { issueLaunchPrompt } from "@web/lib/issue-prompt";
+import { isCompleteModelSelection } from "@web/lib/model-choice";
 import { useState } from "react";
 
 export interface SingleRunLaunchFormProps {
@@ -26,9 +27,11 @@ export function SingleRunLaunchForm({
   onCancel,
 }: SingleRunLaunchFormProps) {
   const [prompt, setPrompt] = useState(() => issueLaunchPrompt(issue));
+  const [model, setModel] = useState<ModelSelection | undefined>(undefined);
   const agents = useLaunchAgentChoice(agentChoice);
   const { launch, isPending } = useLaunchRun();
-  const canSubmit = hasText(prompt) && agents.choice !== null && !isPending;
+  const canSubmit =
+    hasText(prompt) && agents.choice !== null && isCompleteModelSelection(model) && !isPending;
 
   async function submit() {
     if (!canSubmit || agents.choice === null) return;
@@ -36,6 +39,7 @@ export function SingleRunLaunchForm({
       issue_id: issue.id,
       prompt: prompt.trim(),
       ...agentChoiceToRequest(agents.choice),
+      model,
     });
     if (run) onLaunched(run);
   }
@@ -60,7 +64,12 @@ export function SingleRunLaunchForm({
         <p className="text-xs text-text-tertiary">
           Prefilled from this issue and sent as-is — the agent receives exactly this text.
         </p>
-        <LaunchAgentPicker agents={agents} onValueChange={onAgentChoice} />
+        <LaunchAgentModelFields
+          agents={agents}
+          model={model}
+          onAgentChoice={onAgentChoice}
+          onModelChange={setModel}
+        />
       </DialogBody>
       <IssueFormFooter
         onCancel={onCancel}

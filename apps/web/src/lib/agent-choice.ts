@@ -47,6 +47,17 @@ export function agentChoiceToRequest(choice: string | null): AgentRequestFields 
   return decoded.kind === "profile" ? { profile_id: decoded.id } : { runtime: decoded.id };
 }
 
+/** The runtime a choice will launch on — a profile's runtime or the ad-hoc runtime itself — so its model catalog can be fetched. */
+export function agentChoiceRuntimeId(
+  choice: string | null,
+  profiles: AgentProfileContract[],
+): string | null {
+  const decoded = decodeAgentChoice(choice);
+  if (decoded === null) return null;
+  if (decoded.kind === "runtime") return decoded.id;
+  return profiles.find((profile) => profile.id === decoded.id)?.runtime ?? null;
+}
+
 function runtimeAvailable(descriptors: RuntimeDescriptor[], runtimeId: string): boolean {
   const descriptor = runtimeById(descriptors, runtimeId);
   return descriptor ? isAvailableRuntime(descriptor) : false;
@@ -141,6 +152,7 @@ export function requestForProfile(
     name: profile.name,
     runtime: profile.runtime,
     options: supportsPermissionMode ? { permission_mode: permissionMode } : {},
+    model: profile.model,
     guidance: profile.guidance,
     skill_ids: profile.skill_ids,
     ...changes,

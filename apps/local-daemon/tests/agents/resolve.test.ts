@@ -9,6 +9,7 @@ import {
   ProfileOptionUnsupportedError,
   resolveAgentConfig,
   SkillResolutionError,
+  validateProfileInput,
 } from "#agents";
 
 import { setupTestDb, type TestDb } from "../support/db.js";
@@ -86,6 +87,41 @@ it("rejects an option the runtime does not support", () => {
   expect(() => resolveAgentConfig(t.db, { kind: "profile", profileId: "pr-2" })).toThrow(
     ProfileOptionUnsupportedError,
   );
+});
+
+it("layers a launch override on top of the profile's own model", () => {
+  insertAgentProfile(t.db, {
+    id: "pr-model",
+    name: "P",
+    runtime: "fake",
+    options_json: {},
+    model: "fake-fast",
+    guidance: null,
+    skill_ids_json: [],
+  });
+
+  const fromProfile = resolveAgentConfig(t.db, { kind: "profile", profileId: "pr-model" });
+  expect(fromProfile.model).toEqual({ id: "fake-fast", source: "static" });
+
+  const overridden = resolveAgentConfig(
+    t.db,
+    { kind: "profile", profileId: "pr-model" },
+    { model: { kind: "provider_default" } },
+  );
+  expect(overridden.model).toBeNull();
+  // The model is part of the frozen identity, so the same profile under two models never shares a hash.
+  expect(overridden.config_hash).not.toBe(fromProfile.config_hash);
+});
+
+it("validates a profile's model against the runtime before it is persisted", () => {
+  expect(() =>
+    validateProfileInput(t.db, {
+      runtime: "fake",
+      options: {},
+      model: "gpt-5",
+      skill_ids: [],
+    }),
+  ).toThrow(/gpt-5/);
 });
 
 it("rejects a disabled skill referenced by a profile", () => {

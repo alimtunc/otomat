@@ -1,16 +1,20 @@
 import { runPlanInputSchema } from "@otomat/domain";
 import { encodeProfileChoice, encodeRuntimeChoice } from "@web/lib/agent-choice";
 import {
-  addWorkflowCompetitor,
-  buildRunPlanInput,
-  moveWorkflowStep,
   newWorkflowCompeteGroup,
   newWorkflowStep,
-  removeWorkflowCompetitor,
-  toggleWorkflowDependency,
   workflowExecutableCount,
   type WorkflowCompeteDraft,
   type WorkflowNodeDraft,
+} from "@web/lib/workflow-draft";
+import {
+  addWorkflowCompetitor,
+  buildRunPlanInput,
+  clearInheritedNodeModels,
+  moveWorkflowStep,
+  removeWorkflowCompetitor,
+  setWorkflowCompetitorAgent,
+  toggleWorkflowDependency,
 } from "@web/lib/workflow-plan";
 import { expect, it } from "vitest";
 
@@ -54,6 +58,41 @@ it("builds a strict compete node with per-candidate ad-hoc runtimes and a profil
     ],
   });
   expect(plan.steps[1]?.depends_on).toEqual([group.key]);
+});
+
+it("drops the model of every node that inherits the run agent when that agent changes", () => {
+  const step = { ...newWorkflowStep(1), model: { kind: "model", id: "opus" } as const };
+  const pinned = {
+    ...newWorkflowStep(2),
+    agent: encodeRuntimeChoice("codex"),
+    model: { kind: "model", id: "gpt-5.6-sol" } as const,
+  };
+  const group = newWorkflowCompeteGroup(3);
+  group.competitors[0] = {
+    ...group.competitors[0]!,
+    model: { kind: "model", id: "opus" } as const,
+  };
+
+  const cleared = clearInheritedNodeModels([step, pinned, group]);
+
+  expect(cleared[0]).toMatchObject({ model: undefined });
+  expect(cleared[1]).toMatchObject({ model: { id: "gpt-5.6-sol" } });
+  expect(competeGroupAt(cleared, 2).competitors[0]?.model).toBeUndefined();
+});
+
+it("clears a competitor's model whenever its agent changes", () => {
+  const group = newWorkflowCompeteGroup(1);
+  group.competitors[0] = {
+    ...group.competitors[0]!,
+    model: { kind: "model", id: "opus" } as const,
+  };
+
+  const changed = setWorkflowCompetitorAgent([group], 0, 0, encodeRuntimeChoice("codex"));
+
+  expect(competeGroupAt(changed, 0).competitors[0]).toMatchObject({
+    agent: encodeRuntimeChoice("codex"),
+    model: undefined,
+  });
 });
 
 it("keeps compete groups valid and dependencies top-level while editing", () => {

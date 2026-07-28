@@ -1,5 +1,5 @@
 import type { ConnectionState } from "@otomat/ui";
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
@@ -50,5 +50,14 @@ export function useRuntimes() {
     queryKey: queryKeys.runtimes,
     queryFn: () => daemon.listRuntimes(),
     staleTime: 30_000,
+  });
+}
+
+/** One runtime's model catalog; fetched only once a runtime is chosen, because the daemon probes the installed binary to build it. */
+export function useRuntimeModels(runtimeId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.runtimeModels(runtimeId),
+    queryFn: runtimeId === null ? skipToken : () => daemon.runtimeModels(runtimeId),
+    staleTime: 60_000,
   });
 }
