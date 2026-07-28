@@ -7,7 +7,8 @@
   "imports": {
     "#shared/*": "./src/shared/*.ts",
     "#main/*": "./src/main/*.ts",
-    "#preload/*": "./src/preload/*.ts"
+    "#preload/*": "./src/preload/*.ts",
+    "#scripts/*": "./scripts/*.mjs"
   },
   "scripts": {
     "build": "tsdown",

@@ -69,6 +69,26 @@ pnpm desktop:package   # build an unsigned macOS .app + .dmg into apps/desktop/r
 - The artifact is **unsigned** and macOS-only — Gatekeeper needs a right-click → Open on first
   launch. Auto-update, signing/notarization, and Windows/Linux builds are out of scope for the alpha.
 
+### Dev sessions are isolated per worktree
+
+`pnpm desktop:dev` runs the daemon it just built from the invoking checkout, and keeps everything
+else that session touches to itself, so several worktrees can run at once:
+
+- `userData` is a per-worktree root under `<appData>/Otomat Dev/<checkout>-<hash of its real path>`,
+  keyed by the canonical worktree path. The SQLite database, run artifacts, generated git worktrees,
+  logs, and Electron's single-instance lock all live there — never inside the checkout, and never in
+  the packaged app's own `userData`, which is untouched.
+- Vite is started on a port reserved for that session and pinned with `--strictPort`; Electron is
+  handed that exact URL. A session never falls back to a default port, so it cannot attach to
+  another worktree's dev server.
+
+Two documented overrides, both dev-only and ignored once packaged:
+
+| Variable | Effect |
+| --- | --- |
+| `OTOMAT_DESKTOP_DEV_DATA_ROOT` | Absolute path to use as the session's data root instead of the derived one — e.g. scratch data for a throwaway session. |
+| `OTOMAT_DESKTOP_DEV_SERVER` | `http(s)` URL of a dev server that is already running. The runner then starts no Vite of its own and Electron loads that origin. |
+
 The classic two-terminal flow (`pnpm dev` + `pnpm back`) is unchanged.
 
 ## Quality gates

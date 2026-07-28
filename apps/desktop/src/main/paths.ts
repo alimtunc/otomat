@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 
 import { app } from "electron";
 
+import { resolveDevDataRoot } from "./dev-data-root.js";
+
 /** Directory of the built main entry: `dist/main` in both dev and the packaged asar. */
 const MAIN_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -15,6 +17,8 @@ export interface AppPaths {
   splashHtml: string;
   cockpitPreload: string;
   splashPreload: string;
+  /** Per-worktree userData in dev; null when packaged, where the app keeps its production location. */
+  devDataRoot: string | null;
 }
 
 export function resolveAppPaths(): AppPaths {
@@ -32,6 +36,7 @@ export function resolveAppPaths(): AppPaths {
       splashHtml: join(app.getAppPath(), "resources", "splash.html"),
       cockpitPreload,
       splashPreload,
+      devDataRoot: null,
     };
   }
 
@@ -44,5 +49,10 @@ export function resolveAppPaths(): AppPaths {
     splashHtml: join(MAIN_DIR, "..", "..", "resources", "splash.html"),
     cockpitPreload,
     splashPreload,
+    devDataRoot: resolveDevDataRoot({
+      repoRoot,
+      appData: app.getPath("appData"),
+      env: process.env,
+    }),
   };
 }

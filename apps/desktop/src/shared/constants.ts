@@ -21,3 +21,9 @@ export const USER_PATH_TIMEOUT_MS = 2_000;
 
 /** Dev-only: when set, the main process loads this URL (Vite dev server) instead of the app scheme. */
 export const DEV_SERVER_ENV = "OTOMAT_DESKTOP_DEV_SERVER";
+
+/** Dev-only: overrides the per-worktree data root (SQLite, runs, worktrees, logs). Ignored once packaged. */
+export const DEV_DATA_ROOT_ENV = "OTOMAT_DESKTOP_DEV_DATA_ROOT";
+
+/** Parent directory of every dev data root, kept apart from the packaged app's own userData. */
+export const DEV_DATA_DIRECTORY_NAME = "Otomat Dev";

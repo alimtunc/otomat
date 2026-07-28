@@ -44,13 +44,6 @@ vi.mock("#main/ipc", () => ({
   },
 }));
 vi.mock("#main/menu", () => ({ installApplicationMenu: vi.fn() }));
-vi.mock("#main/paths", () => ({
-  resolveAppPaths: () => ({
-    packaged: false,
-    webDist: null,
-    daemonEntry: "/tmp/daemon.js",
-  }),
-}));
 vi.mock("#main/protocol", () => ({ serveAppScheme: vi.fn() }));
 vi.mock("#main/security", () => ({ hardenWebContents: vi.fn() }));
 vi.mock("#main/startup-failure", async (importOriginal) => ({
@@ -81,6 +74,17 @@ vi.mock("#main/windows", () => ({
 vi.mock("#shared/user-path", () => ({ resolveUserPath: () => "/usr/bin" }));
 
 import { DesktopApp } from "#main/desktop-app";
+import type { AppPaths } from "#main/paths";
+
+const DEV_PATHS: AppPaths = {
+  packaged: false,
+  daemonEntry: "/tmp/daemon.js",
+  webDist: null,
+  splashHtml: "/tmp/splash.html",
+  cockpitPreload: "/tmp/cockpit.cjs",
+  splashPreload: "/tmp/splash.cjs",
+  devDataRoot: "/tmp/otomat-dev-root",
+};
 
 let scratch: string | null = null;
 
@@ -152,7 +156,7 @@ it("offers the next managed backup after the daemon rejects the newest candidate
     linear: { restore: async () => {} },
   };
 
-  const desktop = new DesktopApp();
+  const desktop = new DesktopApp(DEV_PATHS);
   await desktop.onReady();
   if (harness.actions === null) throw new Error("Desktop IPC actions were not registered.");
 
@@ -182,7 +186,7 @@ it("keeps shutdown blocked and allows retry when daemon stop fails", async () =>
     },
     linear: { restore: async () => {} },
   };
-  const desktop = new DesktopApp();
+  const desktop = new DesktopApp(DEV_PATHS);
   await desktop.onReady();
   const quit = vi.fn();
 

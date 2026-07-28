@@ -13,7 +13,7 @@ import { createDesktopRuntime, type DesktopRuntime } from "./desktop-runtime.js"
 import { DesktopSupport } from "./desktop-support.js";
 import { registerIpc, type IpcState } from "./ipc.js";
 import { installApplicationMenu } from "./menu.js";
-import { resolveAppPaths, type AppPaths } from "./paths.js";
+import type { AppPaths } from "./paths.js";
 import { serveAppScheme } from "./protocol.js";
 import { hardenWebContents } from "./security.js";
 import { describeStartupFailure, isRecoverableStartupDiagnostic } from "./startup-failure.js";
@@ -25,7 +25,6 @@ function unavailableLinear(): LinearVaultOperationResult {
 }
 
 export class DesktopApp {
-  private readonly paths: AppPaths;
   private readonly ipcState: IpcState = { daemonUrl: "" };
   private readonly devServer: string | null;
   private readonly userPath: string;
@@ -40,9 +39,9 @@ export class DesktopApp {
   private readonly rejectedBackupPaths = new Set<string>();
   private readonly log = new StartupLogSink(() => this.runtime?.desktopLog ?? null);
 
-  constructor() {
-    this.devServer = process.env[DEV_SERVER_ENV] ?? null;
-    this.paths = resolveAppPaths();
+  constructor(private readonly paths: AppPaths) {
+    const devServer = process.env[DEV_SERVER_ENV]?.trim() ?? "";
+    this.devServer = devServer === "" ? null : devServer;
     this.userPath = resolveUserPath({ platform: process.platform, env: process.env });
     process.env.PATH = this.userPath;
     this.userData = app.getPath("userData");
