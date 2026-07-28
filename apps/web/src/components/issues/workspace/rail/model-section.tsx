@@ -1,12 +1,12 @@
 import type { RunContract } from "@otomat/domain";
-import { useRunEventStream } from "@web/api/runs/run-events-provider";
+import { useRunEventStream } from "@web/api/runs/run-event-stream";
+import { Mono } from "@web/components/issues/workspace/rail/mono";
 import {
-  Mono,
   RailMeta,
   RailRow,
   RailSection,
-  Unknown,
 } from "@web/components/issues/workspace/rail/rail-primitives";
+import { Unknown } from "@web/components/issues/workspace/rail/unknown";
 import { requestedRunModels, resolvedModelLabel } from "@web/lib/model-choice";
 import { latestReportedUsage } from "@web/lib/run/usage";
 

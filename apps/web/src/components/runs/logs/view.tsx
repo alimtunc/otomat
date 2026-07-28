@@ -1,7 +1,7 @@
 import { Pill, PillTabs, Skeleton } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useRunDetail } from "@web/api/runs/queries";
-import { useRunEventStream } from "@web/api/runs/run-events-provider";
+import { useRunEventStream } from "@web/api/runs/run-event-stream";
 import { LogList } from "@web/components/runs/logs/list";
 import { countMatching, LOG_FILTERS, type LogFilter } from "@web/components/runs/logs/log-filters";
 import { SessionsPanel } from "@web/components/runs/logs/sessions-panel";

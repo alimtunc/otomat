@@ -8,7 +8,7 @@ import { mount } from "#support/mount";
 
 let streamEvents: EventEnvelope[] = [];
 
-vi.mock("@web/api/runs/run-events-provider", () => ({
+vi.mock("@web/api/runs/run-event-stream", () => ({
   useRunEventStream: () => ({ events: streamEvents }),
 }));
 

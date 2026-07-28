@@ -6,7 +6,7 @@ import {
 } from "@otomat/ui";
 import { usePublishLinearStatus } from "@web/api/linear/writeback";
 import { ColorDot } from "@web/components/issues/color-dot";
-import { Unknown } from "@web/components/issues/workspace/rail/rail-primitives";
+import { Unknown } from "@web/components/issues/workspace/rail/unknown";
 
 import type { LinearIssueEditing } from "../use-issue-editing";
 import { Trigger } from "./trigger";

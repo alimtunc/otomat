@@ -189,7 +189,8 @@ export { AgentAvatar, type AgentAvatarProps } from "./components/agent-avatar";
 export { ProviderMark, type ProviderMarkProps } from "./components/provider-mark";
 export type { ProviderMarkName } from "./lib/provider-mark-art";
 
-export { AppShell, useSidebarCollapsed, type AppShellProps } from "./components/app-shell";
+export { AppShell, type AppShellProps } from "./components/app-shell";
+export { useSidebarCollapsed } from "./lib/sidebar-collapsed";
 
 export { AppSidebar, type AppSidebarProps } from "./components/app-sidebar";
 
@@ -291,6 +292,8 @@ export {
 
 export { Spinner, type SpinnerProps } from "./components/spinner";
 
+export { StatusChip, type StatusChipProps } from "./components/status-chip";
+
 export {
   DiffFileStatusChip,
   IssueStatusChip,
@@ -299,14 +302,13 @@ export {
   ReviewStatusChip,
   RunContributionStatusChip,
   RunStatusChip,
-  StatusChip,
   StepStatusChip,
   type PresetStatusChipProps,
-  type StatusChipProps,
-} from "./components/status-chip";
+} from "./components/status-chips";
 
 export { TimelineEventRow, type TimelineEventRowProps } from "./components/timeline-event-row";
 
-export { toast, Toaster, type ToasterProps } from "./components/toaster";
+export { Toaster, type ToasterProps } from "./components/toaster";
+export { toast } from "sonner";
 
 export { Topbar, type TopbarProps } from "./components/topbar";

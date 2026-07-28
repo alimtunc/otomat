@@ -1,6 +1,7 @@
 import { getProject, getRepository, getRun, listRepositories, type Db } from "@otomat/db";
 
-import { createGitWorktreeService, type GitWorktreeService } from "./service.js";
+import type { GitWorktreeService } from "./service-contract.js";
+import { createGitWorktreeService } from "./service.js";
 
 /** Ties a persisted repository id to the worktree service operating on its root. */
 export interface RepositoryBinding {

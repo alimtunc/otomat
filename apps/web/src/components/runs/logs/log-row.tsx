@@ -1,7 +1,7 @@
 import type { EventEnvelope } from "@otomat/domain";
 import { TimelineEventRow } from "@otomat/ui";
 import { isErrorLogEvent } from "@web/components/runs/logs/log-filters";
-import { eventDetail } from "@web/components/runs/timeline/event-detail/event-detail";
+import { EventDetail } from "@web/components/runs/timeline/event-detail/event-detail";
 import { JsonDisclosure } from "@web/components/runs/timeline/event-detail/json-disclosure";
 import { eventSummary } from "@web/components/runs/timeline/event-summary";
 
@@ -20,7 +20,7 @@ export function LogRow({ event }: { event: EventEnvelope }) {
           {isErrorLogEvent(event) ? " · error" : ""}
           {event.raw_ref !== null ? ` · raw ${event.raw_ref}` : ""}
         </span>
-        {eventDetail(event)}
+        <EventDetail event={event} />
         <JsonDisclosure label="payload" value={event.payload} />
       </div>
     </TimelineEventRow>

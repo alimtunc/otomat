@@ -1,6 +1,6 @@
 import { app } from "electron";
 
-import { DesktopApp } from "./desktop-app.js";
+import { DesktopApp } from "./app.js";
 import { applyDevDataRoot } from "./dev-data-root.js";
 import { resolveAppPaths } from "./paths.js";
 import { registerAppSchemePrivileged } from "./protocol.js";

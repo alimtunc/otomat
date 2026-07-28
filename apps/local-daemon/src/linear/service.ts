@@ -20,7 +20,8 @@ import {
   type LinearWorkspaceContract,
 } from "@otomat/domain";
 
-import type { LinearApiClient, LinearViewer } from "./client/types.js";
+import type { LinearApiClient } from "./client/types.js";
+import { connected, DISCONNECTED, failed } from "./connection-state.js";
 import { LinearError, linearError } from "./errors.js";
 import { SYNC_RESOURCE, SYNC_SOURCE, syncIssueSource } from "./sync.js";
 import { createLinearWriteback } from "./writeback/index.js";
@@ -43,37 +44,6 @@ export interface LinearService {
   createSource(request: CreateIssueSourceRequest): Promise<IssueSourceContract>;
   sync(sourceId?: string): Promise<IssueSourceSyncResult[]>;
   writeback: LinearWriteback;
-}
-
-const DISCONNECTED: LinearConnectionContract = {
-  status: "disconnected",
-  workspace_id: null,
-  workspace_name: null,
-  user_name: null,
-  error_code: null,
-  error_message: null,
-};
-
-function connected(viewer: LinearViewer): LinearConnectionContract {
-  return {
-    status: "connected",
-    workspace_id: viewer.workspace_id,
-    workspace_name: viewer.workspace_name,
-    user_name: viewer.user_name,
-    error_code: null,
-    error_message: null,
-  };
-}
-
-function failed(error: LinearError): LinearConnectionContract {
-  return {
-    status: "failed",
-    workspace_id: null,
-    workspace_name: null,
-    user_name: null,
-    error_code: error.code,
-    error_message: error.message,
-  };
 }
 
 function supersededRequest(): LinearError {

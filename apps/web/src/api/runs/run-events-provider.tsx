@@ -4,18 +4,8 @@ import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 import { mergeEvent } from "@web/api/runs/events";
 import { invalidateForEvent } from "@web/api/runs/invalidate-for-event";
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-
-export type RunStreamState = "connecting" | "open" | "closed" | "error";
-
-export interface RunEventStream {
-  events: EventEnvelope[];
-  state: RunStreamState;
-  /** At least one SSE frame failed to decode: the stream is alive but the timeline may have gaps. */
-  degraded: boolean;
-}
-
-const RunEventsContext = createContext<RunEventStream | null>(null);
+import { RunEventsContext, type RunStreamState } from "@web/api/runs/run-event-stream";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export interface RunEventsProviderProps {
   runId: string;
@@ -65,11 +55,4 @@ export function RunEventsProvider({ runId, children }: RunEventsProviderProps) {
       {children}
     </RunEventsContext.Provider>
   );
-}
-
-/** Reads the enclosing RunEventsProvider's stream. Throws when used outside a provider. */
-export function useRunEventStream(): RunEventStream {
-  const stream = useContext(RunEventsContext);
-  if (stream === null) throw new Error("useRunEventStream must be used within a RunEventsProvider");
-  return stream;
 }

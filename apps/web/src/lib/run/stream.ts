@@ -1,4 +1,4 @@
-import type { RunStreamState } from "@web/api/runs/run-events-provider";
+import type { RunStreamState } from "@web/api/runs/run-event-stream";
 
 export const STREAM_LABEL: Record<RunStreamState, string> = {
   connecting: "connecting…",

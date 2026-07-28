@@ -11,7 +11,7 @@ import {
 } from "@web/lib/workflow-plan";
 
 import { WorkflowCompetitorCard } from "./competitor-card";
-import { DependencyToggles } from "./node-controls";
+import { DependencyToggles } from "./dependency-toggles";
 import type { WorkflowForm } from "./use-form";
 
 export interface WorkflowCompeteCardProps {

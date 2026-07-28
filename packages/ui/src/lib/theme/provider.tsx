@@ -1,11 +1,10 @@
-import { createContext, type ReactNode, use, useEffect, useMemo, useReducer } from "react";
+import { type ReactNode, useEffect, useMemo, useReducer } from "react";
 
+import { ThemeContext } from "./context";
 import { applyTheme } from "./dom";
 import { themeReducer } from "./reducer";
 import { readStored, writeStored } from "./storage";
 import type { Accent, Density, Theme, ThemeContextValue } from "./types";
-
-const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export interface ThemeProviderProps {
   children: ReactNode;
@@ -41,13 +40,4 @@ export function ThemeProvider({ children }: ThemeProviderProps): ReactNode {
   const value = useMemo<ThemeContextValue>(() => ({ ...state, ...actions }), [state, actions]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
-}
-
-/** Reads theme state plus its setters from context. Throws when called outside a `ThemeProvider`. */
-export function useTheme(): ThemeContextValue {
-  const ctx = use(ThemeContext);
-  if (!ctx) {
-    throw new Error("useTheme must be used within a ThemeProvider");
-  }
-  return ctx;
 }

@@ -2,7 +2,8 @@ import { isRunPlanCompeteGroup, type RunDetail } from "@otomat/domain";
 import { CompeteGroupRow } from "@web/components/runs/cockpit/compete-group-row";
 import { stepDependencyNames } from "@web/lib/run/plan";
 
-import { DependencyNote, StepRow } from "./row";
+import { DependencyNote } from "./dependency-note";
+import { StepRow } from "./row";
 
 export function StepsList({ detail }: { detail: RunDetail }) {
   const multiNode = detail.run.plan_json.steps.length > 1;

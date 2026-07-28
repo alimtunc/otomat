@@ -5,7 +5,6 @@ import {
   Separator,
   useDefaultLayout,
   type GroupProps,
-  type PanelImperativeHandle,
   type PanelProps,
   type SeparatorProps,
 } from "react-resizable-panels";
@@ -93,4 +92,4 @@ export function ResizableHandle({
   );
 }
 
-export type { PanelImperativeHandle };
+export type { PanelImperativeHandle } from "react-resizable-panels";

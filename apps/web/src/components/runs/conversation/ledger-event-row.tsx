@@ -1,6 +1,6 @@
 import type { EventEnvelope } from "@otomat/domain";
 import { TimelineEventRow } from "@otomat/ui";
-import { eventDetail } from "@web/components/runs/timeline/event-detail/event-detail";
+import { EventDetail } from "@web/components/runs/timeline/event-detail/event-detail";
 import { eventSummary } from "@web/components/runs/timeline/event-summary";
 
 export function LedgerEventRow({ event }: { event: EventEnvelope }) {
@@ -12,7 +12,7 @@ export function LedgerEventRow({ event }: { event: EventEnvelope }) {
       summary={eventSummary(event)}
       at={event.occurred_at}
     >
-      {eventDetail(event)}
+      <EventDetail event={event} />
     </TimelineEventRow>
   );
 }

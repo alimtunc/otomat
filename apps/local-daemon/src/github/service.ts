@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { createGitHubConnectionService } from "./connection.js";
-import { createPullRequestPublisher } from "./publication.js";
+import { createPullRequestPublisher } from "./publication/index.js";
 import type { GitHubService, GitHubServiceConfig } from "./types.js";
 
 export { GitHubPublicationError } from "./errors.js";

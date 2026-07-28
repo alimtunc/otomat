@@ -1,15 +1,8 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useEffectEvent,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useEffectEvent, useState, type ReactNode } from "react";
 
 import type { ConnectionState } from "../lib/connection-state";
 import { isEditableTarget } from "../lib/keyboard";
+import { SidebarCollapsedContext } from "../lib/sidebar-collapsed";
 import type { Density } from "../lib/theme";
 import { useMediaQuery } from "../lib/use-media-query";
 import { cn } from "../lib/utils";
@@ -17,12 +10,6 @@ import { WIDE_VIEWPORT_MEDIA_QUERY } from "../lib/viewport";
 import { OfflineBanner } from "./offline-banner";
 import { ReconnectingBar } from "./reconnecting-bar";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./resizable-panels";
-
-const SidebarCollapsedContext = createContext(false);
-
-export function useSidebarCollapsed(): boolean {
-  return useContext(SidebarCollapsedContext);
-}
 
 export interface AppShellProps {
   sidebar: ReactNode;
