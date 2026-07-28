@@ -1,20 +1,7 @@
 import type { AgentProfileContract } from "@otomat/domain";
 import { Badge, Pill, PillTabs } from "@otomat/ui";
 
-export type ProfileFilter = "all" | "skills" | "instructions";
-
-function isProfileFilter(value: string): value is ProfileFilter {
-  return value === "all" || value === "skills" || value === "instructions";
-}
-
-export function matchesProfileFilter(
-  profile: AgentProfileContract,
-  filter: ProfileFilter,
-): boolean {
-  if (filter === "skills") return profile.skill_ids.length > 0;
-  if (filter === "instructions") return Boolean(profile.guidance?.trim());
-  return true;
-}
+import { isProfileFilter, matchesProfileFilter, type ProfileFilter } from "./profile-filter";
 
 export function AgentProfileFilters({
   profiles,

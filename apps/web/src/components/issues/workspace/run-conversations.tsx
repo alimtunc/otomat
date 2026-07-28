@@ -3,7 +3,7 @@ import { Button, Icon, LiveDot, RelativeTime, RunStatusChip, cn } from "@otomat/
 import { Link } from "@tanstack/react-router";
 import { ConversationSection } from "@web/components/issues/workspace/conversation-section";
 import { shortId } from "@web/lib/ids";
-import { isActiveRun } from "@web/lib/run-activity";
+import { isActiveRun } from "@web/lib/run/activity";
 
 function SectionHeader({
   run,

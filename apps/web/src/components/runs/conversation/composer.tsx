@@ -4,7 +4,7 @@ import { useForm } from "@tanstack/react-form";
 import { useDaemonStatus, useRuntimes } from "@web/api/daemon/queries";
 import { useCreateRunContribution } from "@web/api/runs/mutations";
 import { fieldErrorProps } from "@web/lib/form";
-import { resolveContributionGate } from "@web/lib/run-contribution";
+import { resolveContributionGate } from "@web/lib/run/contribution";
 import type { KeyboardEvent } from "react";
 
 /** Run-scoped composer. It stays usable while the agent works: the message is persisted and queued for the next safe turn. */

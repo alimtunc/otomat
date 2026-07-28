@@ -1,6 +1,6 @@
 import { DiffModeEnum, DiffView, SplitSide } from "@git-diff-view/react";
 import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
-import { Button, Checkbox, DiffFileStatusChip, useTheme } from "@otomat/ui";
+import { Button, Checkbox, DiffFileStatusChip, FOCUS_RING, useTheme } from "@otomat/ui";
 import {
   diffFileDomId,
   extendDataFor,
@@ -10,7 +10,6 @@ import { DiffStat } from "@web/components/runs/diff/stat";
 import type { DiffViewMode } from "@web/components/runs/diff/view-prefs";
 import { ReviewCommentCard } from "@web/components/runs/review/comment-card";
 import { ReviewCommentForm } from "@web/components/runs/review/comment-form";
-import { FOCUS_RING } from "@web/lib/focus";
 import { useMemo } from "react";
 
 export interface DiffFileCardProps {

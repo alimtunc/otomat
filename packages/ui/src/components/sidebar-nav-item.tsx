@@ -1,5 +1,6 @@
 import type { ElementType, ReactElement, ReactNode } from "react";
 
+import { FOCUS_RING } from "../lib/focus";
 import { cn } from "../lib/utils";
 import { Button } from "../primitives/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../primitives/tooltip";
@@ -42,7 +43,8 @@ export function SidebarNavItem({
   const className = cn(
     "group flex h-7.25 items-center gap-2.25 rounded-md px-2 text-sm font-[450]",
     "text-text-secondary hover:bg-hover hover:text-foreground",
-    "focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:outline-offset-[-2px]",
+    FOCUS_RING,
+    "focus-visible:outline-offset-[-2px]",
     active && "bg-selected text-foreground",
     collapsed && "justify-center px-0",
   );

@@ -3,9 +3,9 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
+  FOCUS_RING,
   Icon,
 } from "@otomat/ui";
-import { FOCUS_RING } from "@web/lib/focus";
 import type { ReactNode } from "react";
 
 export interface MultiSelectItem<T extends string> {

@@ -65,18 +65,9 @@ gate fails instead of duplicating its policy here.
 
 ## Code quality
 
-- Search for an existing helper before writing one. Extract repeated code at its
-  third occurrence, not before; two policies that merely coincide stay separate.
-- Prefer intent-revealing names. Avoid generic names such as `data`, `info`,
-  `util`, `helper`, `temp`, or `result` when the role is knowable.
-- Treat roughly 40 lines, three nesting levels, and five parameters as prompts to
-  split a function, not targets to game.
-- Before adding a branch, mode, flag, or layer, look for a state or ownership
-  model that deletes the special case.
-- A renderer renders, a hook orchestrates, and a utility computes. Split a unit
-  that branches on more than two distinct shapes or modes.
-- Do not add single-call-site wrappers, one-method services, extension points,
-  config knobs, or polymorphic parameters without a consumer today.
+- Extract repeated logic at its third occurrence, not before; two policies that
+  merely coincide stay separate. No single-call-site wrappers, one-method
+  services, extension points, or config knobs without a consumer today.
 - Never swallow errors. Avoid `catch {}`, `.catch(() => {})`, and optional
   chaining that hides error-created absence. Expose useful loading, error, and
   empty states.
@@ -86,24 +77,34 @@ gate fails instead of duplicating its policy here.
 - Default to zero comments. Add one short comment only to explain a genuinely
   non-obvious reason.
 
-### Module size and ownership
+### File ownership (enforced by `pnpm guardrails`)
 
-- Runtime `.ts` and `.tsx` files stay at or below 250 physical lines. Generated
-  files, declarations, tests, and re-export-only `index.ts` barrels are excluded.
-  Existing exceptions live in `scripts/source-size-baseline.json`: the recorded
-  count must be lowered whenever a file shrinks and must never be raised merely
-  to make the gate pass.
-- Keep one exported public renderer or orchestrator per file. Tiny private
-  presentational units may stay with their owner; extract a unit once it owns
-  independent state, branching, tests, or reuse.
-- When three or more sibling implementation files share a stable domain or
-  repeated filename prefix, group them in a domain folder. Do not create a
-  one-file folder or mirror every hyphenated name segment mechanically.
-- Keep barrels thin: an `index.ts` re-exports a public surface or composes
-  already-owned modules; domain implementation belongs in named modules.
+- A `.tsx` file exports exactly one component, plus at most its compound
+  subcomponents (`Card` → `CardHeader`) and their `*Props` types. Helper
+  functions, constant tables, data shapes, and unrelated components each live in
+  their own module.
+  - Bad: `status-chip.tsx` exporting `StatusChip` plus 8 preset chips.
+  - Bad: `project-switcher.tsx` exporting the `ProjectSummary` data shape.
+  - Good: `lib/provider-mark-art.ts` — one data table plus its type.
+- A `use-*.ts` file exports exactly one hook plus its option/result types. A
+  pure function both the hook and a component need goes in a sibling `.ts`
+  module, imported by both.
+- Non-exported single-consumer constants and helpers (≤10 lines) may sit above
+  their component. The moment a second file needs one, move it to the owning
+  domain module — never export it from a `.tsx` or `use-*` file.
+- An `index.ts` barrel contains re-export statements only.
+- Three or more sibling files sharing a domain prefix (`run-*.ts`) become a
+  domain folder (`run/`). Never create a one-file folder.
+- Runtime `.ts` and `.tsx` files stay at or below 250 physical lines. Exceptions
+  live in `scripts/source-size-baseline.json`, `scripts/export-shape-baseline.json`,
+  and `scripts/structure-baseline.json`; entries only shrink — CI rejects new or
+  raised entries.
+- Shared UI helpers live in `packages/ui/src/lib`; domain types live with their
+  owning module and are re-exported through thin barrels.
 
-Why: the file tree should expose domain ownership and keep each implementation
-small enough to understand, test, and change without loading unrelated concerns.
+Why: a file that owns one thing can be understood, tested, and replaced without
+loading unrelated concerns; the gates check shape so prose only has to carry
+judgment.
 
 ## Commands
 
@@ -142,6 +143,29 @@ uses `tsgo`, `oxlint`, `oxfmt`, Vitest, and Lefthook, with a dep-free import-
 boundary gate (`scripts/import-boundaries.mjs`). Do not substitute `tsc`, ESLint,
 or Prettier.
 
+## Verify as you go
+
+Fastest loop first, full gate last:
+
+```
+pnpm --filter @otomat/local-daemon test tests/api/app.test.ts   # one file, seconds
+pnpm --filter @otomat/local-daemon test                         # one package
+pnpm typecheck && pnpm lint && pnpm guardrails                  # cross-cutting
+pnpm check                                                      # before "done"
+```
+
+Gotcha: `pnpm --filter X test -- path` (with `--`) silently runs the whole suite;
+pass the path without `--`. Apps typecheck against package `dist`, not src — after
+changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
+
+## Environment gotchas
+
+- `pnpm install` exits 1 when native builds are ignored; if `better-sqlite3`
+  bindings are missing, run its `prebuild-install` manually. CI is authoritative.
+- The pre-push hook typechecks against `packages/domain/dist`, not src — run
+  `pnpm build` before pushing a contract change.
+- Parallel `pnpm install` across worktrees can race (ENOTEMPTY); retry serially.
+
 ## Conventions
 
 - TypeScript only, using idiomatic async/await and try/catch. Do not introduce
@@ -169,29 +193,14 @@ or Prettier.
   their use. Shared UI helpers belong in `packages/ui/src/lib`; components and
   primitives do not.
 
-## Working protocol
+## Protocol
 
-- Before editing, inspect git status, the relevant implementation and tests, and
-  the acceptance criteria. Preserve unrelated user changes.
-- For multi-step work, maintain a plan with one active step. Work in bounded,
-  verifiable checkpoints and update the plan when evidence changes it.
-- Keep requirements, decisions, and final evidence in the main thread. Delegate
-  only independent exploration, log analysis, or tests; never give two agents
-  overlapping write scope.
-- Continue until the stated outcome and definition of done are satisfied. Do not
-  stop after scaffolding, a partial implementation, or a passing typecheck.
-- Diagnose failures with evidence. Separate regressions caused by the change from
-  reproducible baseline failures, and never silently ignore either.
-
-## Scope discipline and definition of done
-
-- Work one ticket at a time on its branch. Do not create files, packages, modes,
-  or abstractions outside the ticket's acceptance criteria.
-- When a tracker is connected and write access is authorized, set the issue to
-  `In Progress` at the start. Otherwise continue locally and report the missing
-  tracker update; do not block implementation on unavailable integration.
-- Before reporting completion, satisfy every acceptance criterion, run targeted
-  tests, then run `pnpm check`. If an environment or reproducible baseline failure
-  prevents a gate, report the exact command and failure.
+- Work one ticket at a time on its branch, inside its acceptance criteria.
+  Preserve unrelated local changes.
+- When a tracker is connected with write access, set the issue to `In Progress`
+  at the start; otherwise continue locally and report the gap.
+- Done = every acceptance criterion satisfied and `pnpm check` green. Separate
+  regressions caused by the change from reproducible baseline failures; if an
+  environment failure blocks a gate, report the exact command and output.
 - Do not commit, push, open a PR, or change tracker state beyond `In Progress`
   unless the user explicitly asks. Propose the commit only after verification.

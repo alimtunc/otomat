@@ -1,6 +1,6 @@
 import { isRunPlanCompeteGroup, type RunDetail } from "@otomat/domain";
 import { CompeteGroupRow } from "@web/components/runs/cockpit/compete-group-row";
-import { stepDependencyNames } from "@web/lib/run-plan";
+import { stepDependencyNames } from "@web/lib/run/plan";
 
 import { DependencyNote, StepRow } from "./row";
 

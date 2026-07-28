@@ -1,5 +1,5 @@
 import type { RunContract } from "@otomat/domain";
-import { cn, EmptyState, RunStatusChip } from "@otomat/ui";
+import { cn, EmptyState, FOCUS_RING, RunStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useProjectRuns } from "@web/api/runs/queries";
 import { CenteredState } from "@web/components/shell/centered-state";
@@ -9,7 +9,6 @@ import { ProjectQueryBoundary } from "@web/components/shell/project-selection/qu
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
-import { FOCUS_RING } from "@web/lib/focus";
 import { shortId } from "@web/lib/ids";
 import { CELL, HEAD_CELL, TABLE } from "@web/lib/table";
 

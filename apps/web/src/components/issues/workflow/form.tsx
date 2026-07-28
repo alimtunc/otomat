@@ -7,12 +7,8 @@ import { isCompleteModelSelection } from "@web/lib/model-choice";
 import { isWorkflowNodeComplete } from "@web/lib/workflow-draft";
 
 import { WorkflowPlanBuilder } from "./builder";
-import {
-  useWorkflowForm,
-  workflowLaunchBlocker,
-  type WorkflowForm,
-  type WorkflowLaunchTarget,
-} from "./use-form";
+import { workflowLaunchBlocker, type WorkflowLaunchTarget } from "./launch-target";
+import { useWorkflowForm, type WorkflowForm } from "./use-form";
 
 export interface WorkflowLaunchFormProps {
   target: WorkflowLaunchTarget;

@@ -1,10 +1,16 @@
 import type { IssueContract } from "@otomat/domain";
-import { Avatar, IssueSourceGlyph, IssueStatusChip, resolveStatus, TONE_TEXT } from "@otomat/ui";
+import {
+  Avatar,
+  FOCUS_RING,
+  IssueSourceGlyph,
+  IssueStatusChip,
+  resolveStatus,
+  TONE_TEXT,
+} from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { ColorDot } from "@web/components/issues/color-dot";
 import { CountBadge } from "@web/components/issues/count-badge";
 import { boardColumnFor, divergentSourceStatus, visibleBoardColumns } from "@web/lib/board-columns";
-import { FOCUS_RING } from "@web/lib/focus";
 import { issueShortId } from "@web/lib/ids";
 import { linearPriorityLabel } from "@web/lib/linear-priority";
 

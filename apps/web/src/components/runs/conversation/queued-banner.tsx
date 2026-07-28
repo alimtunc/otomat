@@ -6,7 +6,7 @@ import {
 } from "@otomat/domain";
 import { Button } from "@otomat/ui";
 import { useDeliverRunContributions } from "@web/api/runs/mutations";
-import { queuedCount } from "@web/lib/run-contribution";
+import { queuedCount } from "@web/lib/run/contribution";
 
 function queuedNote(status: RunContract["status"], label: string): string {
   if (isRunTerminal(status)) {

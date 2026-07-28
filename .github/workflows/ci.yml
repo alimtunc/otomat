@@ -35,6 +35,12 @@ jobs:
       - name: Check
         run: pnpm check
 
+      # Needs a base ref, so it lives in CI rather than `pnpm check`.
+      - name: Baseline anti-ratchet
+        run: |
+          git fetch --no-tags --depth=1 origin main
+          node scripts/baseline-anti-ratchet.mjs origin/main
+
   # The unsigned artifact is the substrate the signed release is built from, and only a macOS host
   # can produce it. Run it on main so a packaging regression surfaces before a release needs it.
   package-macos:

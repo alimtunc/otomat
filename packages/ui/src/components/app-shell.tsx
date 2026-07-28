@@ -8,11 +8,12 @@ import {
   type ReactNode,
 } from "react";
 
+import type { ConnectionState } from "../lib/connection-state";
 import { isEditableTarget } from "../lib/keyboard";
 import type { Density } from "../lib/theme";
-import { useMediaQuery, WIDE_VIEWPORT_MEDIA_QUERY } from "../lib/use-media-query";
+import { useMediaQuery } from "../lib/use-media-query";
 import { cn } from "../lib/utils";
-import type { ConnectionState } from "./connection-status-indicator";
+import { WIDE_VIEWPORT_MEDIA_QUERY } from "../lib/viewport";
 import { OfflineBanner } from "./offline-banner";
 import { ReconnectingBar } from "./reconnecting-bar";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./resizable-panels";

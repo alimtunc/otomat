@@ -156,3 +156,130 @@ test("does not exempt an index file that exports runtime implementation", async 
   assert.match(guardrails.stderr, /source-file-size/);
   assert.match(guardrails.stderr, /packages\/client\/src\/index\.ts/);
 });
+
+test("rejects a helper exported from a component file", async () => {
+  const root = await createFixture({
+    "apps/web/src/widget.tsx": [
+      "export function Widget() { return null; }",
+      'export function formatWidget() { return ""; }',
+    ].join("\n"),
+  });
+
+  const guardrails = runGuardrails(root);
+
+  assert.equal(guardrails.status, 1);
+  assert.match(guardrails.stderr, /export-shape/);
+  assert.match(guardrails.stderr, /formatWidget/);
+});
+
+test("rejects unrelated components sharing one file", async () => {
+  const root = await createFixture({
+    "apps/web/src/widget.tsx": [
+      "export function Widget() { return null; }",
+      "export function Gadget() { return null; }",
+    ].join("\n"),
+  });
+
+  const guardrails = runGuardrails(root);
+
+  assert.equal(guardrails.status, 1);
+  assert.match(guardrails.stderr, /unrelated components share this file/);
+});
+
+test("accepts a compound component family with anchored types", async () => {
+  const root = await createFixture({
+    "apps/web/src/card.tsx": [
+      "export interface CardProps { title?: string }",
+      "export function Card() { return null; }",
+      "export function CardHeader() { return null; }",
+      "export type CardTone = 'flat' | 'raised';",
+    ].join("\n"),
+  });
+
+  const guardrails = runGuardrails(root);
+
+  assert.equal(guardrails.status, 0, guardrails.stderr);
+});
+
+test("accepts a baselined export-shape violation and rejects a stale one", async () => {
+  const files = {
+    "apps/web/src/widget.tsx": [
+      "export function Widget() { return null; }",
+      'export function formatWidget() { return ""; }',
+    ].join("\n"),
+  };
+  const allowed = await createFixture({
+    ...files,
+    "scripts/export-shape-baseline.json": `${JSON.stringify(
+      { "apps/web/src/widget.tsx": ["formatWidget"] },
+      null,
+      2,
+    )}\n`,
+  });
+  const stale = await createFixture({
+    ...files,
+    "scripts/export-shape-baseline.json": `${JSON.stringify(
+      { "apps/web/src/widget.tsx": ["formatWidget", "legacyHelper"] },
+      null,
+      2,
+    )}\n`,
+  });
+
+  assert.equal(runGuardrails(allowed).status, 0);
+  const guardrails = runGuardrails(stale);
+  assert.equal(guardrails.status, 1);
+  assert.match(guardrails.stderr, /export-shape-baseline/);
+  assert.match(guardrails.stderr, /legacyHelper/);
+});
+
+test("rejects a non-hook export from a use-* module", async () => {
+  const root = await createFixture({
+    "apps/web/src/use-thing.ts": [
+      "export function useThing() { return 1; }",
+      "export const THING_LIMIT = 2;",
+    ].join("\n"),
+  });
+
+  const guardrails = runGuardrails(root);
+
+  assert.equal(guardrails.status, 1);
+  assert.match(guardrails.stderr, /export-shape/);
+  assert.match(guardrails.stderr, /THING_LIMIT/);
+});
+
+test("rejects an index.ts holding implementation, except entrypoints", async () => {
+  const impure = await createFixture({
+    "apps/web/src/widgets/index.ts": "export const widgetCount = 1;",
+  });
+  const entrypoint = await createFixture({
+    "apps/local-daemon/src/index.ts": "const port = 4319;\nconsole.log(port);",
+  });
+
+  const guardrails = runGuardrails(impure);
+  assert.equal(guardrails.status, 1);
+  assert.match(guardrails.stderr, /barrel-purity/);
+  assert.equal(runGuardrails(entrypoint).status, 0);
+});
+
+test("rejects three same-prefix siblings unless the cluster is baselined", async () => {
+  const files = {
+    "apps/web/src/lib/foo-alpha.ts": "export const alpha = 1;",
+    "apps/web/src/lib/foo-beta.ts": "export const beta = 2;",
+    "apps/web/src/lib/foo-gamma.ts": "export const gamma = 3;",
+  };
+  const bare = await createFixture(files);
+  const baselined = await createFixture({
+    ...files,
+    "scripts/structure-baseline.json": `${JSON.stringify(
+      { domainFolders: ["apps/web/src/lib#foo"] },
+      null,
+      2,
+    )}\n`,
+  });
+
+  const guardrails = runGuardrails(bare);
+  assert.equal(guardrails.status, 1);
+  assert.match(guardrails.stderr, /domain-folder/);
+  assert.match(guardrails.stderr, /`foo\/` domain folder/);
+  assert.equal(runGuardrails(baselined).status, 0);
+});

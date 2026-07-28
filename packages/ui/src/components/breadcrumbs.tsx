@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import { Fragment, type ReactNode } from "react";
 
+import { FOCUS_RING } from "../lib/focus";
 import { cn } from "../lib/utils";
 
 export interface BreadcrumbItem {
@@ -38,7 +39,7 @@ export function Breadcrumbs({ items, className, renderLink }: BreadcrumbsProps) 
           content = (
             <a
               href={item.href}
-              className="truncate hover:text-foreground focus-visible:[outline:2px_solid_var(--iris-ring)] focus-visible:rounded-sm"
+              className={cn("truncate hover:text-foreground focus-visible:rounded-sm", FOCUS_RING)}
               style={{ transition: "color var(--motion-fast) var(--ease)" }}
             >
               {text}

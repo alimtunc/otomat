@@ -1,4 +1,4 @@
-import { formatCostUsd, formatTokenCount, latestReportedUsage } from "@web/lib/run-usage";
+import { formatCostUsd, formatTokenCount, latestReportedUsage } from "@web/lib/run/usage";
 import { expect, it } from "vitest";
 
 import { envelope } from "#support/envelope";

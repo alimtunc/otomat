@@ -1,5 +1,5 @@
 import type { EventEnvelope } from "@otomat/domain";
-import { formatCostUsd, formatTokenCount, parseReportedUsage } from "@web/lib/run-usage";
+import { formatCostUsd, formatTokenCount, parseReportedUsage } from "@web/lib/run/usage";
 
 export function UsageDetail({ event }: { event: EventEnvelope }) {
   const usage = parseReportedUsage(event.payload);

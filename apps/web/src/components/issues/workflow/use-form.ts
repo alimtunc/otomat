@@ -1,9 +1,4 @@
-import {
-  runPlanInputSchema,
-  type ModelSelection,
-  type RunContract,
-  type StartRunRequest,
-} from "@otomat/domain";
+import { runPlanInputSchema, type ModelSelection, type RunContract } from "@otomat/domain";
 import { useForm } from "@tanstack/react-form";
 import { useLaunchRun } from "@web/api/runs/mutations";
 import { agentChoiceToRequest } from "@web/lib/agent-choice";
@@ -15,10 +10,7 @@ import {
 import { buildRunPlanInput } from "@web/lib/workflow-plan";
 import { useRef, useState } from "react";
 
-/** What the workflow runs on: an existing issue, or a new issue created from the goal. */
-export type WorkflowLaunchTarget =
-  | { kind: "issue"; issueId: string }
-  | { kind: "project"; projectId: string | undefined };
+import { targetRequest, type WorkflowLaunchTarget } from "./launch-target";
 
 export interface UseWorkflowFormOptions {
   target: WorkflowLaunchTarget;
@@ -39,22 +31,6 @@ const WORKFLOW_DEFAULT_VALUES: WorkflowFormValues = {
   model: undefined,
   steps: [newWorkflowStep(1)],
 };
-
-/** The one reason a target cannot be launched on yet, or null when it can — shown by the form and enforced on submit. */
-export function workflowLaunchBlocker(target: WorkflowLaunchTarget): string | null {
-  return target.kind === "project" && target.projectId === undefined
-    ? "Select a project before launching a workflow."
-    : null;
-}
-
-function targetRequest(
-  target: WorkflowLaunchTarget,
-  goal: string,
-): Pick<StartRunRequest, "issue_id" | "prompt" | "project_id"> | null {
-  if (target.kind === "issue") return { issue_id: target.issueId };
-  if (target.projectId === undefined) return null;
-  return { prompt: goal.trim(), project_id: target.projectId };
-}
 
 /** Owns workflow values, submit-time plan validation, and step-list mutations. */
 export function useWorkflowForm({ target, agentChoice, onLaunched }: UseWorkflowFormOptions) {

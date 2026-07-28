@@ -1,5 +1,5 @@
 import type { RunDetail, RunState, RuntimeDescriptor } from "@otomat/domain";
-import { queuedCount, resolveContributionGate } from "@web/lib/run-contribution";
+import { queuedCount, resolveContributionGate } from "@web/lib/run/contribution";
 import { expect, it } from "vitest";
 
 import { contribution } from "#support/contribution";

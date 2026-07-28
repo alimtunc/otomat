@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { FOCUS_RING } from "../lib/focus";
 import { cn } from "../lib/utils";
 import { Button } from "../primitives/button";
 import { Kbd } from "./kbd";
@@ -43,7 +44,7 @@ export function Topbar({
           className={cn(
             "h-7 w-57.5 min-w-30 flex-[0_1_230px] justify-start gap-2 bg-background px-2.25 font-normal text-text-tertiary",
             "hover:border-border-strong",
-            "focus-visible:[outline:2px_solid_var(--iris-ring)]",
+            FOCUS_RING,
           )}
           style={{ transition: "border-color var(--motion-fast) var(--ease)" }}
         >

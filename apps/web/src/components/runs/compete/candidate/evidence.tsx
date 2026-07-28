@@ -6,7 +6,7 @@ import type {
 } from "@otomat/domain";
 import { Badge, Button, cn, Icon, StepStatusChip } from "@otomat/ui";
 import { EvidenceSection } from "@web/components/runs/compete/evidence-section";
-import { eventsForStep } from "@web/lib/run-plan";
+import { eventsForStep } from "@web/lib/run/plan";
 import { collectTestEvidence } from "@web/lib/test-evidence";
 import { useMemo } from "react";
 

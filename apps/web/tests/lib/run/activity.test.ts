@@ -1,5 +1,5 @@
 import type { RunContract } from "@otomat/domain";
-import { isActiveRun, resolveFollowedRun } from "@web/lib/run-activity";
+import { isActiveRun, resolveFollowedRun } from "@web/lib/run/activity";
 import { expect, it } from "vitest";
 
 function run(id: string, status: RunContract["status"]): RunContract {

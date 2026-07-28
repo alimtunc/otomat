@@ -1,6 +1,6 @@
 import type { EventEnvelope } from "@otomat/domain";
 import { RunStatusChip } from "@otomat/ui";
-import { isRunState } from "@web/lib/run-activity";
+import { isRunState } from "@web/lib/run/activity";
 
 export function LifecycleDetail({ event }: { event: EventEnvelope }) {
   const finalStatus = event.payload["final_status"];
