@@ -14,9 +14,11 @@ import type {
   RuntimeRunInput,
   RuntimeSessionRef,
 } from "#runtime/contract";
+import type { RuntimeModelSupport } from "#runtime/models/support";
 import type { RuntimeSink } from "#runtime/sinks";
 
 import { CodexFrameMapper } from "./frames.js";
+import { codexModelSupport } from "./models.js";
 
 export const CODEX_ADAPTER_ID = "codex";
 
@@ -47,12 +49,16 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
   /** The binary parameter is the test seam: tests point it at a stub replaying recorded frames. */
   constructor(private readonly binary: string = CODEX_BINARY) {}
 
+  get models(): RuntimeModelSupport {
+    return codexModelSupport(this.binary);
+  }
+
   async run(
     input: RuntimeRunInput,
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
-    const args = ["exec", ...BASE_EXEC_ARGS, "-"];
+    const args = ["exec", ...this.execArgs(input), "-"];
     return runCliTurn(this.spec(args, input, input), sink, signal);
   }
 
@@ -62,9 +68,14 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
-    // `--json`/`--sandbox` are `exec`-level flags; the real CLI rejects them after the `resume` subcommand.
-    const args = ["exec", ...BASE_EXEC_ARGS, "resume", requireProviderSession(session), "-"];
+    // `--json`/`--sandbox`/`--model` are `exec`-level flags; the real CLI rejects them after the `resume` subcommand.
+    const args = ["exec", ...this.execArgs(input), "resume", requireProviderSession(session), "-"];
     return runCliTurn(this.spec(args, input, session), sink, signal);
+  }
+
+  private execArgs(input: RuntimeRunInput | RuntimeResumeInput): string[] {
+    const model = input.model ?? null;
+    return model === null ? [...BASE_EXEC_ARGS] : [...BASE_EXEC_ARGS, "--model", model];
   }
 
   private spec(args: string[], input: CliTurnInput, ref: TurnRef): CliTurnSpec {

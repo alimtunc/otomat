@@ -1,30 +1,53 @@
-import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
+import type { ModelSelection } from "@otomat/domain";
 import { Button, cn } from "@otomat/ui";
 import { LaunchAgentSelect } from "@web/components/runs/launch/launch-agent-select";
-import type { WorkflowNodeDraft } from "@web/lib/workflow-plan";
+import { ModelSelect } from "@web/components/runs/launch/model-select";
+import type { LaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
+import { agentChoiceRuntimeId } from "@web/lib/agent-choice";
+import { AGENT_MODEL_LABEL, RUN_MODEL_LABEL } from "@web/lib/model-choice";
+import type { WorkflowNodeDraft } from "@web/lib/workflow-draft";
 
-export function StepAgentSelect({
-  profiles,
-  descriptors,
+/** The agent and model of one plan node, each defaulting to the run-level choice. */
+export function NodeAgentFields({
+  agents,
   label,
-  value,
-  onValueChange,
+  agent,
+  model,
+  onAgentChange,
+  onModelChange,
 }: {
-  profiles: AgentProfileContract[];
-  descriptors: RuntimeDescriptor[];
+  agents: LaunchAgentChoice;
   label: string;
-  value: string | null;
-  onValueChange: (agent: string | null) => void;
+  agent: string | null;
+  model: ModelSelection | undefined;
+  onAgentChange: (agent: string | null) => void;
+  onModelChange: (model: ModelSelection | undefined) => void;
 }) {
+  // A node without its own agent runs on the run default, so that is the runtime whose models it lists.
+  const runtimeId = agentChoiceRuntimeId(agent ?? agents.choice, agents.profiles);
   return (
-    <LaunchAgentSelect
-      profiles={profiles}
-      descriptors={descriptors}
-      value={value}
-      onValueChange={onValueChange}
-      includeDefault
-      ariaLabel={label}
-    />
+    <div className="flex flex-wrap items-center justify-end gap-1.5">
+      <div className="w-52 min-w-0">
+        <LaunchAgentSelect
+          profiles={agents.profiles}
+          descriptors={agents.descriptors}
+          value={agent}
+          onValueChange={onAgentChange}
+          includeDefault
+          ariaLabel={`${label} agent`}
+        />
+      </div>
+      <div className="w-52 min-w-0">
+        <ModelSelect
+          compact
+          runtimeId={runtimeId}
+          value={model}
+          onValueChange={onModelChange}
+          inheritLabel={agent === null ? RUN_MODEL_LABEL : AGENT_MODEL_LABEL}
+          ariaLabel={`${label} model`}
+        />
+      </div>
+    </div>
   );
 }
 

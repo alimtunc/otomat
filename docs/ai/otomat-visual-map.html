@@ -1591,6 +1591,17 @@
                 >
               </div>
               <div class="edge-row">
+                <span class="from">model catalog</span><span class="verb">freezes</span
+                ><span class="to">plan config.model</span
+                ><span class="why"
+                  >Le catalogue vient du binaire installé (<code>codex debug models --bundled</code>)
+                  ou du set statique documenté ; <code>resolveModelSelection</code> fige
+                  <code>{ id, source }</code> dans le plan, et chaque tour — initial, resume,
+                  follow-up, fix — repasse ce même modèle en argv. Le modèle reporté par le provider
+                  reste une évidence séparée, jamais réécrite par la demande.</span
+                >
+              </div>
+              <div class="edge-row">
                 <span class="from">conversation composer</span><span class="verb">queues</span
                 ><span class="to">run_contributions</span
                 ><span class="why"
@@ -2521,6 +2532,22 @@
                       class="path-link"
                       href="../../apps/local-daemon/tests/runtime/codex-adapter.test.ts"
                       >tests/runtime/codex-adapter.test.ts</a
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Changer le catalogue ou la sélection de modèle</td>
+                  <td>
+                    <a class="path-link" href="../../apps/local-daemon/src/runtime/models/catalog.ts"
+                      >runtime/models/catalog.ts</a
+                    >
+                    + <code>models/resolve.ts</code> + <code>providers/&lt;id&gt;/models.ts</code>
+                  </td>
+                  <td>
+                    <a
+                      class="path-link"
+                      href="../../apps/local-daemon/tests/runtime/model-catalog.test.ts"
+                      >tests/runtime/model-catalog.test.ts</a
                     >
                   </td>
                 </tr>

@@ -15,6 +15,7 @@ export const queryKeys = {
   projects: ["projects"] as const,
   repositories: ["repositories"] as const,
   runtimes: ["runtimes"] as const,
+  runtimeModels: (runtimeId: string | null) => ["runtimes", runtimeId, "models"] as const,
   agentProfiles: ["agent-profiles"] as const,
   skills: ["skills"] as const,
   issues: ["issues"] as const,

@@ -1,10 +1,10 @@
 import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
-import { AgentAvatar, Chip } from "@otomat/ui";
+import { AgentAvatar, Chip, ProviderMark } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { AgentProfileRowActions } from "@web/components/agents/agent-profile/list/row-actions";
 import { storedPermissionModeLabel } from "@web/lib/agent-choice";
 import { FOCUS_RING } from "@web/lib/focus";
-import { runtimeById } from "@web/lib/runtimes";
+import { runtimeById, runtimeMark } from "@web/lib/runtimes";
 import { CELL } from "@web/lib/table";
 
 export function AgentProfileRow({
@@ -18,6 +18,7 @@ export function AgentProfileRow({
 }) {
   const descriptor = runtimeById(descriptors, profile.runtime);
   const optionLabel = storedPermissionModeLabel(profile, descriptor);
+  const mark = runtimeMark(profile.runtime);
 
   return (
     <tr className="relative transition-colors hover:bg-hover">
@@ -37,7 +38,10 @@ export function AgentProfileRow({
         </Link>
       </td>
       <td className={CELL}>
-        <Chip tone="neutral">{descriptor?.display_name ?? profile.runtime}</Chip>
+        <Chip tone="neutral">
+          {mark ? <ProviderMark name={mark} /> : null}
+          {descriptor?.display_name ?? profile.runtime}
+        </Chip>
       </td>
       <td className={`${CELL} font-mono text-xs text-text-secondary tabular-nums`}>
         {profile.skill_ids.length}

@@ -4,6 +4,7 @@ import {
   encodeProfileChoice,
   encodeRuntimeChoice,
   isUsableAgentChoice,
+  requestForProfile,
   resolveAgentChoice,
 } from "@web/lib/agent-choice";
 import { expect, it } from "vitest";
@@ -43,6 +44,13 @@ const profile = (id: string, runtimeId: string): AgentProfileContract => ({
 
 it("maps a profile choice to a profile_id request field", () => {
   expect(agentChoiceToRequest(encodeProfileChoice("p1"))).toEqual({ profile_id: "p1" });
+});
+
+it("round-trips the stored model through an unrelated profile edit", () => {
+  const stored = { ...profile("p1", "claude"), model: "opus" };
+  const request = requestForProfile(stored, runtime("claude", true), { guidance: "tuned" });
+  expect(request.model).toBe("opus");
+  expect(request.guidance).toBe("tuned");
 });
 
 it("maps a runtime choice to a runtime request field", () => {

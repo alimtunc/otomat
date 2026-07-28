@@ -45,6 +45,17 @@ describe("FakeRuntimeAdapter contract", () => {
       "stream",
     ]);
   });
+
+  it("never echoes a requested model back as reported usage", async () => {
+    const sink = new MemorySink();
+
+    const final = await adapter.run({ ...input(), model: "fake-fast" }, sink, liveSignal());
+
+    // Usage is provider evidence: it keeps what the turn reported, not what the launch asked for.
+    expect(final.usage?.model).toBe("fake-model-v1");
+    const usageEvent = sink.events.find((event) => event.type === "runtime.usage");
+    expect(JSON.stringify(usageEvent?.payload)).not.toContain("fake-fast");
+  });
 });
 
 describe("FakeRuntimeAdapter.run", () => {

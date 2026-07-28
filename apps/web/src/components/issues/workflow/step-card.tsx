@@ -1,23 +1,23 @@
-import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
 import { Field, FieldControl, Icon, IconButton, Input, Textarea } from "@otomat/ui";
+import type { LaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
+import { type WorkflowNodeDraft } from "@web/lib/workflow-draft";
 import {
   moveWorkflowStep,
   removeWorkflowStep,
   setWorkflowStepAgent,
+  setWorkflowStepModel,
   toggleWorkflowDependency,
-  type WorkflowNodeDraft,
 } from "@web/lib/workflow-plan";
 
-import { DependencyToggles, StepAgentSelect } from "./node-controls";
+import { DependencyToggles, NodeAgentFields } from "./node-controls";
 import type { WorkflowForm } from "./use-form";
 
 export interface WorkflowStepCardProps {
   form: WorkflowForm;
   steps: WorkflowNodeDraft[];
   index: number;
-  descriptors: RuntimeDescriptor[];
-  profiles: AgentProfileContract[];
+  agents: LaunchAgentChoice;
   onUpdateSteps: (update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) => void;
 }
 
@@ -25,8 +25,7 @@ export function WorkflowStepCard({
   form,
   steps,
   index,
-  descriptors,
-  profiles,
+  agents,
   onUpdateSteps,
 }: WorkflowStepCardProps) {
   const step = steps[index];
@@ -104,17 +103,18 @@ export function WorkflowStepCard({
           dependsOn={step.dependsOn}
           onToggle={(key) => onUpdateSteps((value) => toggleWorkflowDependency(value, index, key))}
         />
-        <div className="w-52 shrink-0">
-          <StepAgentSelect
-            profiles={profiles}
-            descriptors={descriptors}
-            label={`Step ${index + 1} agent`}
-            value={step.agent}
-            onValueChange={(next) =>
-              onUpdateSteps((value) => setWorkflowStepAgent(value, index, next))
-            }
-          />
-        </div>
+        <NodeAgentFields
+          agents={agents}
+          label={`Step ${index + 1}`}
+          agent={step.agent}
+          model={step.model}
+          onAgentChange={(next) =>
+            onUpdateSteps((value) => setWorkflowStepAgent(value, index, next))
+          }
+          onModelChange={(next) =>
+            onUpdateSteps((value) => setWorkflowStepModel(value, index, next))
+          }
+        />
       </div>
     </div>
   );

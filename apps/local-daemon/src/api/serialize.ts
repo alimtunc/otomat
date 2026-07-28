@@ -60,6 +60,7 @@ export function toAgentProfile(row: AgentProfileRow): AgentProfileContract {
     name: row.name,
     runtime: row.runtime,
     options: row.options_json,
+    model: row.model,
     guidance: row.guidance,
     skill_ids: row.skill_ids_json,
   });

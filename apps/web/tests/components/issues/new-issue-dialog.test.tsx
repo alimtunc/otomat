@@ -6,6 +6,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { setInputValue } from "#support/dom-events";
+import { modelCatalogQueryResult } from "#support/runtime-models";
 
 const launch = vi.fn(async () => ({ id: "run-1" }) as RunContract);
 const navigate = vi.fn();
@@ -37,6 +38,7 @@ vi.mock("@web/api/daemon/queries", () => ({
     isSuccess: true,
     refetch: vi.fn(),
   }),
+  useRuntimeModels: () => modelCatalogQueryResult(),
 }));
 
 vi.mock("@web/api/agent-profiles/queries", () => ({

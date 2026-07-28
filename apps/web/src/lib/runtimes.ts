@@ -1,4 +1,15 @@
 import type { RuntimeDescriptor } from "@otomat/domain";
+import type { ProviderMarkName } from "@otomat/ui";
+
+/** Which provider a runtime speaks to, so its rows carry that provider's mark. Unknown runtimes stay unmarked rather than borrowing someone else's logo. */
+const RUNTIME_MARKS: Partial<Record<string, ProviderMarkName>> = {
+  claude: "claude",
+  codex: "openai",
+};
+
+export function runtimeMark(runtimeId: string | null): ProviderMarkName | null {
+  return runtimeId === null ? null : (RUNTIME_MARKS[runtimeId] ?? null);
+}
 
 export function runtimeById(
   descriptors: RuntimeDescriptor[],

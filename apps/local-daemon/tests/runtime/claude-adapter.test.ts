@@ -208,6 +208,34 @@ describe("ClaudeRuntimeAdapter", () => {
     expect(resumeArgv.at(-2)).toBe("--resume");
   });
 
+  it("passes the frozen model on the initial turn and the resume, and none by default", async () => {
+    const argsFile = join(worktree, "stub-args.json");
+    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
+    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
+
+    await adapter.run(
+      { ...input(worktree), model: "opus" },
+      new MemorySink(),
+      new AbortController().signal,
+    );
+    const runArgv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    expect(runArgv[runArgv.indexOf("--model") + 1]).toBe("opus");
+
+    await adapter.resume(
+      runtimeSessionRef("sess-claude-1"),
+      { prompt: "follow up", run_dir: worktree, cwd: worktree, model: "opus" },
+      new MemorySink(),
+      new AbortController().signal,
+    );
+    const resumeArgv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    expect(resumeArgv[resumeArgv.indexOf("--model") + 1]).toBe("opus");
+    expect(resumeArgv.at(-2)).toBe("--resume");
+
+    await adapter.run(input(worktree), new MemorySink(), new AbortController().signal);
+    expect(JSON.parse(readFileSync(argsFile, "utf8"))).not.toContain("--model");
+  });
+
   it("resumes with the provider session id and refuses to resume without one", async () => {
     const argsFile = join(worktree, "stub-args.json");
     process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");

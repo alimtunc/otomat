@@ -1,7 +1,8 @@
-import type {
-  AgentProfileContract,
-  RuntimeDescriptor,
-  SaveAgentProfileRequest,
+import {
+  modelSelectionFromId,
+  type AgentProfileContract,
+  type RuntimeDescriptor,
+  type SaveAgentProfileRequest,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
@@ -11,6 +12,7 @@ import {
   useUpdateAgentProfile,
 } from "@web/api/agent-profiles/mutations";
 import { supportedPermissionMode } from "@web/lib/agent-choice";
+import { profileModelFromSelection } from "@web/lib/model-choice";
 import { resolveRuntimeChoice } from "@web/lib/runtimes";
 import { useState } from "react";
 
@@ -37,6 +39,7 @@ export function useAgentProfileForm({
         defaultRuntime,
         profile?.options.permission_mode,
       ),
+      model: modelSelectionFromId(profile?.model ?? null),
       guidance: profile?.guidance ?? "",
       skillIds: profile?.skill_ids ?? [],
     },
@@ -51,6 +54,7 @@ export function useAgentProfileForm({
         name: value.name.trim(),
         runtime: value.runtime,
         options: permissionMode ? { permission_mode: permissionMode } : {},
+        model: profileModelFromSelection(value.model),
         guidance: value.guidance.trim() ? value.guidance.trim() : null,
         skill_ids: value.skillIds,
       };

@@ -1,11 +1,14 @@
 import type { RuntimeDescriptor } from "@otomat/domain";
-import { Badge } from "@otomat/ui";
+import { Badge, ProviderMark } from "@otomat/ui";
 import { CAPABILITY_ENTRIES } from "@web/lib/capability-labels";
+import { runtimeMark } from "@web/lib/runtimes";
 
 export function RuntimeRow({ runtime }: { runtime: RuntimeDescriptor }) {
+  const mark = runtimeMark(runtime.id);
   return (
     <div className="flex flex-col gap-2 px-4 py-3">
-      <div className="flex items-baseline gap-2">
+      <div className="flex items-center gap-2">
+        {mark ? <ProviderMark name={mark} className="size-5" /> : null}
         <span className="text-sm font-medium text-foreground">{runtime.display_name}</span>
         <span className="text-micro text-text-tertiary">{runtime.id}</span>
       </div>

@@ -34,3 +34,7 @@ export function RailRow({ label, children }: { label: string; children: ReactNod
 export function Unknown() {
   return <span className="text-text-tertiary">—</span>;
 }
+
+export function Mono({ children }: { children: ReactNode }) {
+  return <span className="truncate font-mono text-xs text-text-secondary">{children}</span>;
+}

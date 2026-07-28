@@ -145,7 +145,7 @@ describe("CodexRuntimeAdapter", () => {
     expect(final.status).toBe("completed");
 
     const argv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
-    // Shape verified against the real codex CLI: exec-level flags must precede the resume subcommand.
+    // Exec-level flags must precede the resume subcommand; the real CLI rejects them after it.
     expect(argv).toEqual([
       "exec",
       "--json",
@@ -164,6 +164,50 @@ describe("CodexRuntimeAdapter", () => {
         new AbortController().signal,
       ),
     ).rejects.toThrow(/no provider session/);
+  });
+
+  it("keeps the model an exec-level flag, before the resume subcommand, and sends none by default", async () => {
+    const argsFile = join(worktree, "stub-args.json");
+    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
+    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    const adapter = new CodexRuntimeAdapter(STUB_BIN);
+
+    await adapter.run(
+      { ...input(worktree), model: "gpt-5.6-sol" },
+      new MemorySink(),
+      new AbortController().signal,
+    );
+    expect(JSON.parse(readFileSync(argsFile, "utf8"))).toEqual([
+      "exec",
+      "--json",
+      "--sandbox",
+      "workspace-write",
+      "--model",
+      "gpt-5.6-sol",
+      "-",
+    ]);
+
+    await adapter.resume(
+      runtimeSessionRef("thread-codex-1"),
+      { prompt: "follow up", run_dir: worktree, cwd: worktree, model: "gpt-5.6-sol" },
+      new MemorySink(),
+      new AbortController().signal,
+    );
+    // `--model` is an exec-level flag, so it precedes `resume` like the other ones.
+    expect(JSON.parse(readFileSync(argsFile, "utf8"))).toEqual([
+      "exec",
+      "--json",
+      "--sandbox",
+      "workspace-write",
+      "--model",
+      "gpt-5.6-sol",
+      "resume",
+      "thread-codex-1",
+      "-",
+    ]);
+
+    await adapter.run(input(worktree), new MemorySink(), new AbortController().signal);
+    expect(JSON.parse(readFileSync(argsFile, "utf8"))).not.toContain("--model");
   });
 
   it("streams stderr lines as raw_log evidence", async () => {

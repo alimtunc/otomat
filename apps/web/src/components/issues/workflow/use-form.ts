@@ -1,13 +1,18 @@
-import { runPlanInputSchema, type RunContract, type StartRunRequest } from "@otomat/domain";
+import {
+  runPlanInputSchema,
+  type ModelSelection,
+  type RunContract,
+  type StartRunRequest,
+} from "@otomat/domain";
 import { useForm } from "@tanstack/react-form";
 import { useLaunchRun } from "@web/api/runs/mutations";
 import { agentChoiceToRequest } from "@web/lib/agent-choice";
 import {
-  buildRunPlanInput,
   newWorkflowCompeteGroup,
   newWorkflowStep,
   type WorkflowNodeDraft,
-} from "@web/lib/workflow-plan";
+} from "@web/lib/workflow-draft";
+import { buildRunPlanInput } from "@web/lib/workflow-plan";
 import { useRef, useState } from "react";
 
 /** What the workflow runs on: an existing issue, or a new issue created from the goal. */
@@ -22,8 +27,16 @@ export interface UseWorkflowFormOptions {
   onLaunched: (run: RunContract) => void;
 }
 
-const WORKFLOW_DEFAULT_VALUES: { goal: string; steps: WorkflowNodeDraft[] } = {
+interface WorkflowFormValues {
+  goal: string;
+  /** Run-level model override; undefined keeps the agent's own model. Steps without their own model inherit it. */
+  model: ModelSelection | undefined;
+  steps: WorkflowNodeDraft[];
+}
+
+const WORKFLOW_DEFAULT_VALUES: WorkflowFormValues = {
   goal: "",
+  model: undefined,
   steps: [newWorkflowStep(1)],
 };
 
@@ -64,6 +77,7 @@ export function useWorkflowForm({ target, agentChoice, onLaunched }: UseWorkflow
         ...request,
         plan: parsed.data,
         ...agentChoiceToRequest(agentChoice),
+        model: value.model,
       });
       if (!run) return;
       form.reset();

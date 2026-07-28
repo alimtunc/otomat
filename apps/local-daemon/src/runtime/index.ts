@@ -4,7 +4,9 @@
  * every event through a `RuntimeSink` in emission order; the runtime never
  * allocates `seq` — the ledger assigns it downstream at persistence time.
  * `cli/` holds the shared CLI turn infrastructure, `providers/<id>/` one folder
- * per supported runtime, and `registry.ts` the catalog everything derives from.
+ * per supported runtime, `models/` the per-runtime model catalog with its
+ * provenance and selection rules, and `registry.ts` the catalog everything
+ * derives from.
  *
  * @packageDocumentation
  */
@@ -12,6 +14,8 @@ export { isFakeRuntimeEnabled, resolveBinaryPath } from "./availability.js";
 export { asString } from "./cli/frame-guards.js";
 export * from "./contract.js";
 export * from "./events.js";
+export { describeRuntimeModelCatalog } from "./models/catalog.js";
+export { ModelSelectionRefusedError, resolveModelSelection } from "./models/resolve.js";
 export * from "./providers/fake/adapter.js";
 export * from "./registry.js";
 export * from "./sinks.js";

@@ -1,4 +1,5 @@
 import {
+  modelIdSchema,
   providerOptionsSchema,
   RUN_TERMINAL_STATES,
   type ProviderOptionDescriptor,
@@ -7,6 +8,7 @@ import {
 } from "@otomat/domain";
 import { z } from "zod";
 
+import type { RuntimeModelSupport } from "./models/support.js";
 import type { RuntimeSink } from "./sinks.js";
 
 export type RuntimeId = string;
@@ -44,6 +46,8 @@ const runtimeRunInputSchema = z.object({
   run_dir: z.string(),
   cwd: z.string().nullable().optional(),
   options: providerOptionsSchema.optional(),
+  /** Frozen model id for the turn; absent or null sends no model flag and lets the provider default apply. */
+  model: modelIdSchema.nullish(),
 });
 export type RuntimeRunInput = z.infer<typeof runtimeRunInputSchema>;
 
@@ -53,6 +57,7 @@ const runtimeResumeInputSchema = z.object({
   run_dir: z.string(),
   cwd: z.string().nullable().optional(),
   options: providerOptionsSchema.optional(),
+  model: modelIdSchema.nullish(),
 });
 export type RuntimeResumeInput = z.infer<typeof runtimeResumeInputSchema>;
 
@@ -77,6 +82,8 @@ export interface RuntimeAdapter {
   readonly capabilities: RuntimeCapabilities;
   /** Provider options this adapter honestly supports; empty when it maps none to CLI flags. */
   readonly providerOptions: ProviderOptionDescriptor[];
+  /** How this adapter handles model selection: whether it passes a model flag, and where its catalog comes from. */
+  readonly models: RuntimeModelSupport;
   run(input: RuntimeRunInput, sink: RuntimeSink, signal: AbortSignal): Promise<RuntimeFinalState>;
   resume?(
     session: RuntimeSessionRef,

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { modelIdSchema, resolvedModelSchema } from "../runtime-model.js";
 import { providerOptionsSchema } from "../runtime.js";
 
 /** Where a discovered skill came from: a registered project's tree, or the user's home skills. */
@@ -57,6 +58,8 @@ export const resolvedAgentConfigSchema = z.object({
   profile_id: z.string().nullable(),
   profile_name: z.string().nullable(),
   options: providerOptionsSchema,
+  /** Model requested for every turn of this step, with the provenance it was resolved from. Null sends no model flag. Absent on plans frozen before model selection existed. */
+  model: resolvedModelSchema.nullable().default(null),
   guidance: z.string().nullable(),
   skills: z.array(resolvedSkillSchema),
   /** Integrity fingerprint computed at freeze and stable across resume. */
@@ -70,6 +73,8 @@ export const agentProfileContractSchema = z.object({
   name: z.string().min(1),
   runtime: z.string(),
   options: providerOptionsSchema,
+  /** The profile's model default, applied unless a launch or plan node overrides it. Null requests the provider default. */
+  model: modelIdSchema.nullable().default(null),
   guidance: z.string().nullable(),
   /** Ids of skills resolved and validated at launch. */
   skill_ids: z.array(z.string()),

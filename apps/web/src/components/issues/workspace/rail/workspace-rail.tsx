@@ -3,6 +3,7 @@ import { IssueStatusChip } from "@otomat/ui";
 import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { LinearRailSection } from "@web/components/issues/workspace/linear/rail-section";
 import { FollowedRunSection } from "@web/components/issues/workspace/rail/followed-run-section";
+import { ModelSection } from "@web/components/issues/workspace/rail/model-section";
 import { PullRequestSection } from "@web/components/issues/workspace/rail/pull-request-section";
 import {
   RailMeta,
@@ -69,6 +70,7 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
         <>
           <PullRequestSection run={run} />
           <FollowedRunSection run={run} />
+          <ModelSection run={run} />
           <UsageSection />
         </>
       ) : null}

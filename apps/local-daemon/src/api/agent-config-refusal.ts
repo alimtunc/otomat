@@ -2,7 +2,7 @@ import type { AgentProfileError } from "@otomat/domain";
 import type { Context, Env } from "hono";
 
 import { ProfileNotFoundError, ProfileOptionUnsupportedError, SkillResolutionError } from "#agents";
-import { UnknownRuntimeError } from "#runtime";
+import { ModelSelectionRefusedError, UnknownRuntimeError } from "#runtime";
 
 export interface AgentConfigErrorResponse {
   status: 400 | 404 | 409;
@@ -24,6 +24,9 @@ export function agentConfigErrorResponse(error: unknown): AgentConfigErrorRespon
   }
   if (error instanceof ProfileOptionUnsupportedError) {
     return { status: 400, error: "option_unsupported", message: error.message };
+  }
+  if (error instanceof ModelSelectionRefusedError) {
+    return { status: 400, error: error.code, message: error.message };
   }
   if (error instanceof SkillResolutionError) {
     return {

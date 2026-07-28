@@ -14,6 +14,7 @@ import {
 import type { RuntimeEvent } from "#runtime/events";
 import type { RuntimeSink } from "#runtime/sinks";
 
+import { FAKE_MODEL_SUPPORT } from "./models.js";
 import { abortSpec, FAKE_USAGE, resumeSpecs, runSpecs, type EventSpec } from "./turn-specs.js";
 
 export const FAKE_ADAPTER_ID = FAKE_RUNTIME_ID;
@@ -96,6 +97,7 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     diff_hints: false,
   };
   readonly providerOptions = [];
+  readonly models = FAKE_MODEL_SUPPORT;
 
   /** Monotonic per-instance turn counter: keeps event ids unique across run/resume turns. */
   private turn = 0;

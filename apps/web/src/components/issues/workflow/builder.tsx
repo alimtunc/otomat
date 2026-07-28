@@ -1,8 +1,9 @@
 import { RUN_PLAN_MAX_STEPS } from "@otomat/domain";
 import { Button, Icon } from "@otomat/ui";
-import { LaunchAgentPicker } from "@web/components/runs/launch/launch-agent-picker";
+import { LaunchAgentModelFields } from "@web/components/runs/launch/launch-agent-model-fields";
 import type { LaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
-import { workflowExecutableCount } from "@web/lib/workflow-plan";
+import { workflowExecutableCount } from "@web/lib/workflow-draft";
+import { clearInheritedNodeModels } from "@web/lib/workflow-plan";
 
 import { WorkflowCompeteCard } from "./compete-card";
 import { WorkflowStepCard } from "./step-card";
@@ -16,12 +17,24 @@ export interface WorkflowPlanBuilderProps {
 
 /** The plan editor itself — default agent, ordered steps, dependencies and compete groups — shared by every workflow launch surface. */
 export function WorkflowPlanBuilder({ agents, onAgentChoice, workflow }: WorkflowPlanBuilderProps) {
-  const { descriptors, profiles } = agents;
   const { form, planError, updateSteps, addStep, addCompeteGroup } = workflow;
 
   return (
     <>
-      <LaunchAgentPicker agents={agents} onValueChange={onAgentChoice} />
+      <form.Subscribe selector={(state) => state.values.model}>
+        {(model) => (
+          <LaunchAgentModelFields
+            agents={agents}
+            model={model}
+            onAgentChoice={(choice) => {
+              updateSteps(clearInheritedNodeModels);
+              onAgentChoice(choice);
+            }}
+            onModelChange={(next) => form.setFieldValue("model", next)}
+            modelAriaLabel="Workflow model"
+          />
+        )}
+      </form.Subscribe>
       <form.Field name="steps">
         {(stepsField) => (
           <div className="flex flex-col gap-2">
@@ -32,8 +45,7 @@ export function WorkflowPlanBuilder({ agents, onAgentChoice, workflow }: Workflo
                   form={form}
                   steps={stepsField.state.value}
                   index={index}
-                  descriptors={descriptors}
-                  profiles={profiles}
+                  agents={agents}
                   onUpdateSteps={updateSteps}
                 />
               ) : (
@@ -42,8 +54,7 @@ export function WorkflowPlanBuilder({ agents, onAgentChoice, workflow }: Workflo
                   form={form}
                   steps={stepsField.state.value}
                   index={index}
-                  descriptors={descriptors}
-                  profiles={profiles}
+                  agents={agents}
                   onUpdateSteps={updateSteps}
                 />
               ),
