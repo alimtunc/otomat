@@ -10,7 +10,8 @@ import {
   toggleWorkflowDependency,
 } from "@web/lib/workflow-plan";
 
-import { DependencyToggles, NodeAgentFields } from "./node-controls";
+import { DependencyToggles } from "./dependency-toggles";
+import { NodeAgentFields } from "./node-agent-fields";
 import type { WorkflowForm } from "./use-form";
 
 export interface WorkflowStepCardProps {

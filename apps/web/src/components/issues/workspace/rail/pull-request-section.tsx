@@ -6,8 +6,8 @@ import {
   RailMeta,
   RailRow,
   RailSection,
-  Unknown,
 } from "@web/components/issues/workspace/rail/rail-primitives";
+import { Unknown } from "@web/components/issues/workspace/rail/unknown";
 
 export function PullRequestSection({ run }: { run: RunContract }) {
   const pr = useRunPullRequest(run.id);

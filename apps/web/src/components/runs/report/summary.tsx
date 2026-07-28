@@ -1,7 +1,7 @@
 import type { RunCompletionReport } from "@otomat/domain";
 import { RunStatusChip } from "@otomat/ui";
 
-import { FactEvidence } from "./section";
+import { FactEvidence } from "./fact-evidence";
 import { sentence } from "./sentence";
 
 export function ReportSummary({ report }: { report: RunCompletionReport }) {

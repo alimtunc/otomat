@@ -5,7 +5,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@otomat/ui";
-import { Unknown } from "@web/components/issues/workspace/rail/rail-primitives";
+import { Unknown } from "@web/components/issues/workspace/rail/unknown";
 
 import { UNASSIGNED } from "../editable-fields";
 import type { LinearIssueEditing } from "../use-issue-editing";

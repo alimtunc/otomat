@@ -1,17 +1,4 @@
 {
-  "apps/web/src/components/issues/workflow/node-controls.tsx": [
-    "DependencyToggles",
-    "NodeAgentFields"
-  ],
-  "apps/web/src/components/issues/workspace/rail/rail-primitives.tsx": [
-    "Mono",
-    "RailMeta",
-    "RailRow",
-    "RailSection",
-    "Unknown"
-  ],
-  "apps/web/src/components/runs/cockpit/steps/row.tsx": ["DependencyNote", "StepRow"],
-  "apps/web/src/components/runs/report/section.tsx": ["FactEvidence", "ReportSection"],
   "packages/ui/src/components/status-chip.tsx": [
     "DiffFileStatusChip",
     "IssueStatusChip",

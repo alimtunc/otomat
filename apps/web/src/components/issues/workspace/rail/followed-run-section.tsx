@@ -7,8 +7,8 @@ import {
   RailMeta,
   RailRow,
   RailSection,
-  Unknown,
 } from "@web/components/issues/workspace/rail/rail-primitives";
+import { Unknown } from "@web/components/issues/workspace/rail/unknown";
 import { shortId } from "@web/lib/ids";
 
 export function FollowedRunSection({ run }: { run: RunContract }) {

@@ -8,7 +8,7 @@ import {
   updateWorkflowCompetitor,
 } from "@web/lib/workflow-plan";
 
-import { NodeAgentFields } from "./node-controls";
+import { NodeAgentFields } from "./node-agent-fields";
 import type { WorkflowForm } from "./use-form";
 
 export function WorkflowCompetitorCard({

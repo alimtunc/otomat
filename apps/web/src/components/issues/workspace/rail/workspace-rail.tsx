@@ -9,8 +9,8 @@ import {
   RailMeta,
   RailRow,
   RailSection,
-  Unknown,
 } from "@web/components/issues/workspace/rail/rail-primitives";
+import { Unknown } from "@web/components/issues/workspace/rail/unknown";
 import { UsageSection } from "@web/components/issues/workspace/rail/usage-section";
 
 function ExternalIdentifier({ identifier, url }: { identifier: string; url: string | null }) {

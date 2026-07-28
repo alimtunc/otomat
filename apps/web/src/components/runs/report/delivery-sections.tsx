@@ -1,6 +1,7 @@
 import type { RunCompletionReport } from "@otomat/domain";
 
-import { FactEvidence, ReportSection } from "./section";
+import { FactEvidence } from "./fact-evidence";
+import { ReportSection } from "./section";
 import { sentence } from "./sentence";
 
 function DiffFacts({ report }: { report: RunCompletionReport }) {

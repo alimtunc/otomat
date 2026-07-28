@@ -1,6 +1,7 @@
 import type { RunDetail, RunPlanCompeteGroup } from "@otomat/domain";
 import { Icon, LiveDot, resolveStatus, TONE_TEXT } from "@otomat/ui";
-import { DependencyNote, StepRow } from "@web/components/runs/cockpit/steps/row";
+import { DependencyNote } from "@web/components/runs/cockpit/steps/dependency-note";
+import { StepRow } from "@web/components/runs/cockpit/steps/row";
 
 export function CompeteGroupRow({
   detail,
