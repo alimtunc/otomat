@@ -1,4 +1,5 @@
-export { createGitHubCli, parseGitHubRemoteUrl } from "./cli.js";
+export { createGitHubCli } from "./cli.js";
+export { parseGitHubRemoteUrl } from "./parse.js";
 export { GitHubCliError } from "./errors.js";
 export { runCommand } from "./process.js";
 export { createGitHubService, GitHubPublicationError } from "./service.js";
