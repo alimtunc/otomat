@@ -1,14 +1,1 @@
-{
-  "packages/ui/src/components/status-chip.tsx": [
-    "DiffFileStatusChip",
-    "IssueStatusChip",
-    "PRStatusBadge",
-    "PresetStatusChipProps",
-    "ReviewCommentStatusChip",
-    "ReviewStatusChip",
-    "RunContributionStatusChip",
-    "RunStatusChip",
-    "StatusChip",
-    "StepStatusChip"
-  ]
-}
+{}

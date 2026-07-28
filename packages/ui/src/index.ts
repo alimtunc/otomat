@@ -292,6 +292,8 @@ export {
 
 export { Spinner, type SpinnerProps } from "./components/spinner";
 
+export { StatusChip, type StatusChipProps } from "./components/status-chip";
+
 export {
   DiffFileStatusChip,
   IssueStatusChip,
@@ -300,11 +302,9 @@ export {
   ReviewStatusChip,
   RunContributionStatusChip,
   RunStatusChip,
-  StatusChip,
   StepStatusChip,
   type PresetStatusChipProps,
-  type StatusChipProps,
-} from "./components/status-chip";
+} from "./components/status-chips";
 
 export { TimelineEventRow, type TimelineEventRowProps } from "./components/timeline-event-row";
 
