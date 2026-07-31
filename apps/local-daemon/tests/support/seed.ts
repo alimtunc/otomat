@@ -1,10 +1,15 @@
-import { schema, type Db } from "@otomat/db";
+import { join } from "node:path";
+
+import { getRepository, schema, type Db } from "@otomat/db";
 import type { AgentSessionState, RunState, StepRunState } from "@otomat/domain";
 
 export interface SeedRunOptions {
   runId: string;
   issueId?: string;
-  repositoryId?: string;
+  /** Omitted uses `repo-1` when the fixture seeded it; explicit `null` seeds a legacy run recorded before a worktree was guaranteed. */
+  repositoryId?: string | null;
+  /** Worktree the run owns. Pass the id of one a test acquired for real; omitted seeds a bare row. */
+  worktreeId?: string;
   runStatus: RunState;
   stepStatus: StepRunState;
   sessionStatus: AgentSessionState;
@@ -37,9 +42,40 @@ export interface SeedWorkflowStep {
 export interface SeedWorkflowOptions {
   runId: string;
   issueId?: string;
-  repositoryId?: string;
+  /** Omitted uses `repo-1` when the fixture seeded it; explicit `null` seeds a legacy run recorded before a worktree was guaranteed. */
+  repositoryId?: string | null;
+  /** Worktree the run owns. Pass the id of one a test acquired for real; omitted seeds a bare row. */
+  worktreeId?: string;
   runStatus: RunState;
   steps: SeedWorkflowStep[];
+}
+
+function resolveSeedRepository(db: Db, requested: string | null | undefined): string | null {
+  if (requested === null) return null;
+  if (requested === undefined) return getRepository(db, "repo-1") ? "repo-1" : null;
+  if (!getRepository(db, requested)) {
+    throw new Error(`seed: repository ${requested} is not seeded in this database`);
+  }
+  return requested;
+}
+
+/** Mirrors the worktree every launched run owns. The directory is never created: these fixtures reproduce crash leftovers, where the row outlives it. */
+function seedWorktree(db: Db, runId: string, repositoryId: string): string {
+  const id = `${runId}-worktree`;
+  db.insert(schema.worktrees)
+    .values({
+      id,
+      repository_id: repositoryId,
+      path: join("/tmp/otomat-seeded-worktrees", runId),
+      branch: `otomat/run/${runId}`,
+      head_sha: "",
+      base_sha: "",
+      base_ref: "main",
+      owner_token: runId,
+      status: "active",
+    })
+    .run();
+  return id;
 }
 
 /** Seeds a multi-step run (plan + step rows, sessions only where given) in arbitrary crash-leftover states; the returned lookup throws on an unknown step id. */
@@ -48,11 +84,17 @@ export function seedWorkflowRun(
   options: SeedWorkflowOptions,
 ): (stepId: string) => SeededRun {
   const refs = new Map<string, SeededRun>();
+  const repositoryId = resolveSeedRepository(db, options.repositoryId);
+  const worktreeId =
+    repositoryId === null
+      ? null
+      : (options.worktreeId ?? seedWorktree(db, options.runId, repositoryId));
   db.insert(schema.runs)
     .values({
       id: options.runId,
       issue_id: options.issueId ?? "i1",
-      repository_id: options.repositoryId ?? null,
+      repository_id: repositoryId,
+      worktree_id: worktreeId,
       status: options.runStatus,
       branch: `otomat/run/${options.runId}`,
       plan_json: {
@@ -111,6 +153,7 @@ export function seedRun(db: Db, options: SeedRunOptions): SeededRun {
     runId: options.runId,
     issueId: options.issueId,
     repositoryId: options.repositoryId,
+    worktreeId: options.worktreeId,
     runStatus: options.runStatus,
     steps: [
       {

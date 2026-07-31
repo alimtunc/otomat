@@ -14,6 +14,9 @@ export const queryKeys = {
   issueSourcesFor: (workspaceId: string | null) => ["linear", "sources", workspaceId] as const,
   projects: ["projects"] as const,
   repositories: ["repositories"] as const,
+  repositoriesFor: (projectId?: string) => ["repositories", "project", projectId ?? null] as const,
+  repositoryBranches: (repositoryId: string | null) =>
+    ["repositories", repositoryId, "branches"] as const,
   runtimes: ["runtimes"] as const,
   runtimeModels: (runtimeId: string | null) => ["runtimes", runtimeId, "models"] as const,
   agentProfiles: ["agent-profiles"] as const,

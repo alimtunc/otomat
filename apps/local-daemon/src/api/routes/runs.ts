@@ -1,13 +1,13 @@
 import { CompeteWinnerConflictError } from "@otomat/db";
-import { selectCompeteWinnerRequestSchema, startRunRequestSchema } from "@otomat/domain";
+import {
+  selectCompeteWinnerRequestSchema,
+  startRunRequestSchema,
+  type RunLaunchError,
+} from "@otomat/domain";
 import { Hono } from "hono";
 
 import { RuntimeUnavailableError } from "#runtime";
-import {
-  CompeteRepositoryRequiredError,
-  ProjectNotFoundError,
-  RunNotResumableError,
-} from "#supervisor";
+import { LaunchRefusedError, RunNotResumableError } from "#supervisor";
 
 import { agentConfigErrorResponse, refusalJson } from "../agent-config-refusal.js";
 import { projectRunCompletionReport } from "../completion-report.js";
@@ -16,6 +16,15 @@ import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { readCompeteCandidate, readRunDetail, readRuns } from "../reads.js";
 import { toRun, toRunDiffResponse } from "../serialize.js";
 import { streamRunEvents } from "../sse.js";
+
+const LAUNCH_REFUSAL_STATUS: Record<RunLaunchError, 400 | 409> = {
+  project_not_found: 400,
+  project_mismatch: 400,
+  base_branch_not_found: 400,
+  repository_required: 409,
+  repository_unavailable: 409,
+  worktree_unavailable: 409,
+};
 
 /** Mounted at `/api/runs`. Holds the run reads, the run commands (start/resume/abort), and the SSE stream. */
 export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
@@ -35,8 +44,10 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       const run = await deps.launchRun(c.req.valid("json"));
       return c.json(toRun(run), 201);
     } catch (error) {
-      if (error instanceof ProjectNotFoundError) {
-        return c.json({ error: "project_not_found" }, 400);
+      if (error instanceof LaunchRefusedError) {
+        // 409 for state the caller must change (register/repair a repository), 400 for a bad request.
+        const status = LAUNCH_REFUSAL_STATUS[error.code];
+        return c.json({ error: error.code, message: error.message }, status);
       }
       if (error instanceof RuntimeUnavailableError) {
         return c.json(
@@ -48,9 +59,6 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
           },
           409,
         );
-      }
-      if (error instanceof CompeteRepositoryRequiredError) {
-        return c.json({ error: "compete_repository_required" }, 409);
       }
       // Profile / skill / option resolution refusals raised while freezing the plan.
       const refusal = agentConfigErrorResponse(error);

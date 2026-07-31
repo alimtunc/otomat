@@ -3,10 +3,8 @@ import { existsSync } from "node:fs";
 import { getIssue, schema } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { ProjectNotFoundError } from "#supervisor";
-
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
-import { setupTestRepo, type TestRepo } from "../support/git.js";
+import { branches, setupTestRepo, type TestRepo } from "../support/git.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
@@ -46,14 +44,6 @@ afterEach(() => {
   fix.cleanup();
 });
 
-function branches(repo: TestRepo): string[] {
-  return repo
-    .git("branch", "--format=%(refname:short)")
-    .split("\n")
-    .map((b) => b.trim())
-    .filter(Boolean);
-}
-
 it("runs two issues in two repositories concurrently without cross-repo leakage", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "complete");
 
@@ -92,16 +82,27 @@ it("pins an ad-hoc launch to its selected project's repository", async () => {
 
 it("rejects an ad-hoc launch on an unknown project before writing anything", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "complete");
-  await expect(supervisor.start({ prompt: "x", project_id: "ghost" })).rejects.toThrow(
-    ProjectNotFoundError,
-  );
+  await expect(supervisor.start({ prompt: "x", project_id: "ghost" })).rejects.toMatchObject({
+    name: "LaunchRefusedError",
+    code: "project_not_found",
+  });
   expect(spawn.calls).toBe(0);
 });
 
-it("ignores project_id when an issue already pins the project", async () => {
+it("refuses a project_id that disagrees with the issue's own project", async () => {
+  const { supervisor, spawn } = makeSupervisor(fix, "complete");
+
+  await expect(supervisor.start({ issue_id: "ia", project_id: "pb" })).rejects.toMatchObject({
+    name: "LaunchRefusedError",
+    code: "project_mismatch",
+  });
+  expect(spawn.calls).toBe(0);
+});
+
+it("accepts a project_id that agrees with the issue's own project", async () => {
   const { supervisor } = makeSupervisor(fix, "complete");
 
-  const run = await supervisor.start({ issue_id: "ia", project_id: "ghost" });
+  const run = await supervisor.start({ issue_id: "ia", project_id: "pa" });
   await supervisor.settle();
 
   expect(run.repository_id).toBe("ra");

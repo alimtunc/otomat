@@ -28,7 +28,7 @@ export interface CliTurnSpec {
   command: string;
   args: string[];
   prompt: string;
-  cwd: string | null | undefined;
+  cwd: string;
   ref: TurnRef;
   createMapper(emitter: TurnEmitter): ProviderFrameMapper;
 }
@@ -47,7 +47,7 @@ export function requireProviderSession(session: {
   return session.provider_session_id;
 }
 
-/** Shared CLI turn lifecycle: worktree guard (a real provider never falls back to another directory), line-parsed stdout through the mapper, honest final state — the provider's own result wins even over an abort race, never a fake success. */
+/** Shared CLI turn lifecycle: worktree existence guard (a real provider never falls back to another directory), line-parsed stdout through the mapper, honest final state — the provider's own result wins even over an abort race, never a fake success. */
 export async function runCliTurn(
   spec: CliTurnSpec,
   sink: RuntimeSink,
@@ -56,10 +56,9 @@ export async function runCliTurn(
   const emitter = new TurnEmitter(sink, spec.adapter, spec.source, spec.ref);
   const mapper = spec.createMapper(emitter);
 
-  if (!spec.cwd || !existsSync(spec.cwd)) {
-    const message = spec.cwd
-      ? `worktree ${spec.cwd} does not exist`
-      : "a real runtime requires the run's worktree and none was provided";
+  // The launch guarantees a worktree; this catches one deleted between launch and spawn.
+  if (!existsSync(spec.cwd)) {
+    const message = `worktree ${spec.cwd} does not exist`;
     emitter.daemonLog(message);
     return failedState(message, mapper.outcome, emitter.emitted);
   }

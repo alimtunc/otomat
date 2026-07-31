@@ -38,6 +38,9 @@ export const worktrees = sqliteTable(
     path: text("path").notNull(),
     branch: text("branch").notNull(),
     head_sha: text("head_sha"),
+    // Immutable fork point ("" on rows written before it was recorded); head_sha moves with every snapshot.
+    base_sha: text("base_sha").notNull().default(""),
+    base_ref: text("base_ref").notNull().default(""),
     // The partial index makes mutable worktree ownership exclusive.
     owner_token: text("owner_token"),
     status: text("status").$type<WorktreeStatus>().notNull().default("active"),

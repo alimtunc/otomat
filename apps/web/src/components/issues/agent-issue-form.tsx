@@ -3,13 +3,15 @@ import { Button, DialogBody, Kbd, Textarea } from "@otomat/ui";
 import { useLaunchRun } from "@web/api/runs/mutations";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { LaunchAgentModelFields } from "@web/components/runs/launch/launch-agent-model-fields";
+import { LaunchTargetFields } from "@web/components/runs/launch/launch-target-fields";
 import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
+import type { LaunchTargetState } from "@web/components/runs/launch/use-launch-target";
 import { agentChoiceToRequest } from "@web/lib/agent-choice";
 import { isCompleteModelSelection } from "@web/lib/model-choice";
 import { useState, type KeyboardEvent } from "react";
 
 export interface AgentIssueFormProps {
-  projectId: string | undefined;
+  target: Extract<LaunchTargetState, { status: "ready" }>;
   agentChoice: string | null;
   onAgentChoice: (choice: string | null) => void;
   onLaunched: (run: RunContract) => void;
@@ -17,7 +19,7 @@ export interface AgentIssueFormProps {
 }
 
 export function AgentIssueForm({
-  projectId,
+  target,
   agentChoice,
   onAgentChoice,
   onLaunched,
@@ -32,15 +34,15 @@ export function AgentIssueForm({
   const canSubmit =
     promptText.trim().length > 0 &&
     choice !== null &&
-    projectId !== undefined &&
     isCompleteModelSelection(model) &&
     !isPending;
 
   async function submit() {
-    if (!canSubmit || choice === null || projectId === undefined) return;
+    if (!canSubmit || choice === null) return;
     const run = await launch({
       prompt: promptText.trim(),
-      project_id: projectId,
+      project_id: target.repository.project_id,
+      base_branch: target.baseBranch,
       ...agentChoiceToRequest(choice),
       model,
     });
@@ -74,9 +76,7 @@ export function AgentIssueForm({
           onAgentChoice={onAgentChoice}
           onModelChange={setModel}
         />
-        {projectId === undefined ? (
-          <p className="text-xs text-danger">Select a project before launching a run.</p>
-        ) : null}
+        <LaunchTargetFields target={target} disabled={isPending} />
       </DialogBody>
       <IssueFormFooter
         onCancel={onCancel}

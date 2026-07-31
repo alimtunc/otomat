@@ -48,6 +48,7 @@ describe("EventTailer", () => {
         agent_session_id: t.agentSessionId,
         prompt: "do the thing",
         run_dir: t.dir,
+        cwd: t.dir,
       },
       sink,
       new AbortController().signal,

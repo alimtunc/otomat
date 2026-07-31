@@ -69,11 +69,17 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
 
   function diffInputs(row: WorktreeRow): { gitCwd: string; base: string; tree: string } {
     if (row.status === "active") {
-      const base = mergeBase(row.path, "HEAD", defaultBranch) ?? revParse(row.path, defaultBranch);
+      // Rows written before fork points were recorded fall back to the default-branch merge base.
+      const base =
+        row.base_sha === ""
+          ? (mergeBase(row.path, "HEAD", defaultBranch) ?? revParse(row.path, defaultBranch))
+          : row.base_sha;
       return { gitCwd: row.path, base, tree: worktreeStateTree(row.path, base) };
     }
     const base =
-      mergeBase(repoRoot, row.branch, defaultBranch) ?? revParse(repoRoot, defaultBranch);
+      row.base_sha === ""
+        ? (mergeBase(repoRoot, row.branch, defaultBranch) ?? revParse(repoRoot, defaultBranch))
+        : row.base_sha;
     return { gitCwd: repoRoot, base, tree: revParse(repoRoot, `${row.branch}^{tree}`) };
   }
 
@@ -104,7 +110,8 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
         throw new WorktreeConflictError(`worktree path ${path} is already in use`);
       }
 
-      const baseSha = revParse(repoRoot, input.baseRef ?? defaultBranch);
+      const baseRef = input.baseRef ?? defaultBranch;
+      const baseSha = revParse(repoRoot, baseRef);
       mkdirSync(worktreesRoot, { recursive: true });
       addWorktree(repoRoot, { worktreePath: path, branch: input.branch, baseRef: baseSha });
 
@@ -116,6 +123,8 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
           path,
           branch: input.branch,
           head_sha: baseSha,
+          base_sha: baseSha,
+          base_ref: baseRef,
           owner_token: input.owner,
           status: "active",
         });

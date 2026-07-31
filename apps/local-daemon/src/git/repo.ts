@@ -1,4 +1,5 @@
 import { runGit } from "./git-cli.js";
+import { tryRealpath } from "./probe.js";
 
 /** Resolves a ref (branch, tag, sha, `<ref>^{tree}`, ...) to its object id. */
 export function revParse(repoPath: string, ref: string): string {
@@ -54,6 +55,46 @@ export function branchExists(repoPath: string, branch: string): boolean {
     allowFailure: true,
   });
   return res.exitCode === 0;
+}
+
+/**
+ * Whether `repoPath` is still the root of a git repository. Deliberately weaker
+ * than {@link probeLocalRepository}: forking a worktree needs a repository root,
+ * not the attached HEAD that registration insists on.
+ */
+export function isRepositoryRoot(repoPath: string): boolean {
+  const canonical = tryRealpath(repoPath);
+  if (canonical === null) return false;
+  // `git` cannot even be spawned in a directory that vanished or is unreadable,
+  // which is the same answer as "not a repository root", not a daemon failure.
+  let toplevel: string;
+  try {
+    const result = runGit(["rev-parse", "--show-toplevel"], {
+      cwd: canonical,
+      allowFailure: true,
+    });
+    if (result.exitCode !== 0) return false;
+    toplevel = result.stdout.trim();
+  } catch {
+    return false;
+  }
+  return toplevel !== "" && tryRealpath(toplevel) === canonical;
+}
+
+/** Local branch names, most recently committed first, so a base-branch picker leads with live work. */
+export function listBranches(repoPath: string): string[] {
+  const res = runGit(
+    ["for-each-ref", "--sort=-committerdate", "--format=%(refname:short)", "refs/heads"],
+    {
+      cwd: repoPath,
+      allowFailure: true,
+    },
+  );
+  if (res.exitCode !== 0) return [];
+  return res.stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
 }
 
 /** Deletes a local branch (`-D`, force). No-op tolerant when the branch is gone. */

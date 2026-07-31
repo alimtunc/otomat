@@ -11,6 +11,7 @@ import {
 } from "@otomat/ui";
 import { WorkflowLaunchForm } from "@web/components/issues/workflow/form";
 import { SingleRunLaunchForm } from "@web/components/issues/workspace/launch/single-run-form";
+import { LaunchTargetGate } from "@web/components/runs/launch/launch-target-gate";
 import { issueShortId } from "@web/lib/ids";
 import { useState, type ComponentPropsWithoutRef } from "react";
 
@@ -84,23 +85,29 @@ export function LaunchRunDialog({ issue, onLaunched }: LaunchRunDialogProps) {
             </SegmentedControl>
           </div>
         </DialogHeader>
-        {mode === "single" ? (
-          <SingleRunLaunchForm
-            issue={issue}
-            agentChoice={agentChoice}
-            onAgentChoice={setAgentChoice}
-            onLaunched={launched}
-            onCancel={() => openChange(false)}
-          />
-        ) : (
-          <WorkflowLaunchForm
-            target={{ kind: "issue", issueId: issue.id }}
-            agentChoice={agentChoice}
-            onAgentChoice={setAgentChoice}
-            onLaunched={launched}
-            onCancel={() => openChange(false)}
-          />
-        )}
+        <LaunchTargetGate projectId={issue.project_id} issue={issue}>
+          {(target) =>
+            mode === "single" ? (
+              <SingleRunLaunchForm
+                issue={issue}
+                target={target}
+                agentChoice={agentChoice}
+                onAgentChoice={setAgentChoice}
+                onLaunched={launched}
+                onCancel={() => openChange(false)}
+              />
+            ) : (
+              <WorkflowLaunchForm
+                target={{ kind: "issue", issueId: issue.id }}
+                worktreeTarget={target}
+                agentChoice={agentChoice}
+                onAgentChoice={setAgentChoice}
+                onLaunched={launched}
+                onCancel={() => openChange(false)}
+              />
+            )
+          }
+        </LaunchTargetGate>
       </DialogContent>
     </Dialog>
   );

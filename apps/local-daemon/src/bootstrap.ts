@@ -3,7 +3,6 @@ import { basename } from "node:path";
 import {
   getProject,
   getProjectByRootPath,
-  getRepository,
   insertProject,
   insertRepository,
   listRepositories,
@@ -19,8 +18,9 @@ export const DEFAULT_REPOSITORY_ID = "local-default-repo";
 
 /**
  * Anchors the daemon's boot root to a project row and returns its id. A root
- * already registered through Settings wins over the legacy default project;
- * otherwise the default project is created or re-anchored after a move.
+ * registered through Settings wins; once the default project owns a repository
+ * its root is frozen — re-anchoring would silently point existing runs at a
+ * different checkout.
  */
 export function ensureDefaultProject(db: Db, rootPath: string): string {
   const canonical = tryRealpath(rootPath) ?? rootPath;
@@ -29,7 +29,10 @@ export function ensureDefaultProject(db: Db, rootPath: string): string {
 
   const existing = getProject(db, DEFAULT_PROJECT_ID);
   if (existing) {
-    if (existing.root_path !== canonical) updateProjectRootPath(db, DEFAULT_PROJECT_ID, canonical);
+    const owned = listRepositories(db, { projectId: DEFAULT_PROJECT_ID }).length > 0;
+    if (!owned && existing.root_path !== canonical) {
+      updateProjectRootPath(db, DEFAULT_PROJECT_ID, canonical);
+    }
     return DEFAULT_PROJECT_ID;
   }
 
@@ -39,38 +42,31 @@ export function ensureDefaultProject(db: Db, rootPath: string): string {
 
 /**
  * Ensures the project's repository row exists with a fresh default branch.
- * Returns null when no usable repository row can be established; worktree
- * services are created later by the repository resolver, never here.
+ * Worktree services are created later by the repository resolver, never here.
+ * The project's own root is the source of truth: a registration may have moved
+ * it off the boot root.
  */
-export function ensureDefaultRepository(
-  db: Db,
-  projectId: string,
-  rootPath: string,
-): string | null {
-  const canonical = tryRealpath(rootPath) ?? rootPath;
+export function ensureDefaultRepository(db: Db, projectId: string): void {
+  const project = getProject(db, projectId);
+  if (!project) throw new Error(`project ${projectId} disappeared during boot`);
+  const canonical = project.root_path;
   const defaultBranch = detectDefaultBranch(canonical);
-  if (defaultBranch === null) {
-    console.log(`[otomat] ${canonical} is not a usable git repository; runs will have no diff`);
-    return null;
-  }
 
-  if (projectId !== DEFAULT_PROJECT_ID) {
-    // A registered boot root already owns its repository; refresh it instead of duplicating it.
-    const [repository] = listRepositories(db, { projectId });
-    if (!repository) return null;
-    if (repository.default_branch !== defaultBranch) {
-      updateRepositoryDefaultBranch(db, repository.id, defaultBranch);
-    }
-    return repository.id;
-  }
-
-  const existing = getRepository(db, DEFAULT_REPOSITORY_ID);
+  const [existing] = listRepositories(db, { projectId });
   if (existing) {
-    if (existing.default_branch !== defaultBranch) {
-      updateRepositoryDefaultBranch(db, DEFAULT_REPOSITORY_ID, defaultBranch);
+    if (defaultBranch !== null && existing.default_branch !== defaultBranch) {
+      updateRepositoryDefaultBranch(db, existing.id, defaultBranch);
     }
-    return DEFAULT_REPOSITORY_ID;
+    return;
   }
+
+  if (defaultBranch === null) {
+    console.log(
+      `[otomat] ${canonical} is not a usable git repository; register one to launch runs`,
+    );
+    return;
+  }
+  if (projectId !== DEFAULT_PROJECT_ID) return;
 
   insertRepository(db, {
     id: DEFAULT_REPOSITORY_ID,
@@ -78,5 +74,4 @@ export function ensureDefaultRepository(
     name: basename(canonical),
     default_branch: defaultBranch,
   });
-  return DEFAULT_REPOSITORY_ID;
 }

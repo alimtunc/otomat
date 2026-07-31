@@ -18,8 +18,8 @@ export interface TurnContext {
   prompt: string;
   /** Evidence dir of the agent session, reused by every turn of that session. */
   agentSessionDir: string;
-  /** Isolated working dir the turn mutates; null when the project has no git repository. */
-  worktreePath: string | null;
+  /** Isolated working dir the turn mutates. Always present: a run that cannot own one is refused at launch. */
+  worktreePath: string;
   /** Runtime adapter id the worker instantiates; persisted on the run via its agent row. */
   runtime: KnownRuntimeId;
   /** Effective agent config frozen for this step; null on runs launched before profiles existed. Drives guidance/skills/options at the worker. */
@@ -59,7 +59,7 @@ export interface SupervisorConfig {
   spawn: SpawnSession;
   /** Max concurrent session processes. Defaults to {@link DEFAULT_CONCURRENCY}. */
   concurrency?: number;
-  /** A project without a usable repository yields runs with no worktree or diff. */
+  /** Resolves the repository a run forks its worktree from; a project without one cannot be launched on. */
   repositories: RepositoryResolver;
   /** Fires after any settle (live, abort, boot) so review anchors/diff projections can react. */
   afterSettle?: (outcome: ReconcileOutcome) => void;

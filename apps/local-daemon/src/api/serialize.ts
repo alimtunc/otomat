@@ -70,8 +70,8 @@ export function toSkill(row: SkillRow): SkillContract {
   return skillContractSchema.parse(row);
 }
 
-export function toRepository(row: RepositoryRow): RepositoryContract {
-  return repositoryContractSchema.parse(row);
+export function toRepository(row: RepositoryRow, available: boolean): RepositoryContract {
+  return repositoryContractSchema.parse({ ...row, available });
 }
 
 export function toIssue(row: IssueRow, execution: IssueExecution): IssueContract {

@@ -15,24 +15,18 @@ import {
 } from "#review";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
-import { anchorProjectRoot, seedRepository } from "../support/db.js";
-import { setupTestRepo, type TestRepo } from "../support/git.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-review";
 const BRANCH = "otomat/run/r-review";
 
 let fix: DaemonTestDb;
-let repo: TestRepo;
 let worktrees: GitWorktreeService;
 let review: ReviewService;
 let worktreePath = "";
 
 beforeEach(() => {
   fix = setupDaemonDb();
-  repo = setupTestRepo();
-  seedRepository(fix.db, repo.defaultBranch);
-  anchorProjectRoot(fix.db, repo.root);
   const repositories = createRepositoryResolver({
     db: fix.db,
     worktreesRoot: join(fix.dataDir, "worktrees"),
@@ -42,20 +36,21 @@ beforeEach(() => {
   worktrees = binding.service;
   review = createReviewService({ db: fix.db, dataDir: fix.dataDir, repositories });
 
+  const acquired = worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
+  worktreePath = acquired.path;
   seedRun(fix.db, {
     runId: RUN_ID,
     repositoryId: "repo-1",
+    worktreeId: acquired.id,
     runStatus: "review_ready",
     stepStatus: "succeeded",
     sessionStatus: "terminated",
     providerSessionId: "ps-review",
   });
-  worktreePath = worktrees.acquire({ owner: RUN_ID, branch: BRANCH }).path;
   writeFileSync(join(worktreePath, "notes.md"), "alpha\nbeta\ngamma\n");
 });
 
 afterEach(() => {
-  repo.cleanup();
   fix.cleanup();
 });
 
@@ -79,6 +74,7 @@ it("computes the real git diff for the run's worktree and null without one", () 
 
   seedRun(fix.db, {
     runId: "r-bare",
+    repositoryId: null,
     runStatus: "review_ready",
     stepStatus: "succeeded",
     sessionStatus: "terminated",
@@ -119,6 +115,7 @@ it("rejects a stale anchor and a run without a diff — no silent re-anchoring",
 
   seedRun(fix.db, {
     runId: "r-bare2",
+    repositoryId: null,
     runStatus: "review_ready",
     stepStatus: "succeeded",
     sessionStatus: "terminated",

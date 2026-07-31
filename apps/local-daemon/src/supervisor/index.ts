@@ -11,7 +11,7 @@
 export * from "./types.js";
 export { RunNotResumableError } from "./resume.js";
 export { RunContributionNotFoundError, RunContributionNotRetriableError } from "./contributions.js";
-export { CompeteRepositoryRequiredError, ProjectNotFoundError } from "./prepare.js";
+export { LaunchRefusedError } from "./launch-target.js";
 export { buildTerminalMarker } from "./markers.js";
 export { createReexecSpawn, isProcessAlive, killProcessGroup } from "./process.js";
 export { WORKER_START_TOKEN_ENV } from "./start-gate.js";

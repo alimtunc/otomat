@@ -8,7 +8,12 @@ import { desktopBridge } from "@web/lib/desktop-bridge";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { useState } from "react";
 
-export function RegisterRepositoryForm() {
+export interface RegisterRepositoryFormProps {
+  /** Attaches the path to an existing repository-less project instead of creating a new one. */
+  projectId?: string;
+}
+
+export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProps) {
   const register = useRegisterRepository();
   const bridge = desktopBridge();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -18,7 +23,10 @@ export function RegisterRepositoryForm() {
     onSubmit: async ({ value }) => {
       setSubmitError(null);
       try {
-        const registered = await register.mutateAsync({ path: value.path.trim() });
+        const registered = await register.mutateAsync({
+          path: value.path.trim(),
+          ...(projectId === undefined ? {} : { project_id: projectId }),
+        });
         toast.success(`Registered ${registered.project.name}`);
         form.reset();
       } catch (error) {

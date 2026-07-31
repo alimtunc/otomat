@@ -1,9 +1,10 @@
+import { getIssue, schema } from "@otomat/db";
 import type { IssueContract, RuntimeDescriptor } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { RuntimeUnavailableError } from "#runtime";
 
-import { makeApiApp, post, request } from "../support/api.js";
+import { makeApiApp, patch, post, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 
 let t: TestDb;
@@ -96,4 +97,50 @@ it("serves the runtime catalog with probed availability and hides fake in produc
   vi.stubEnv("OTOMAT_ENABLE_FAKE_RUNTIME", "");
   const prod = (await (await request(app, "/api/runtimes")).json()) as RuntimeDescriptor[];
   expect(prod.map((d) => d.id)).toEqual(["claude", "codex"]);
+});
+
+it("re-points a local issue at another project so its runs fork from that repository", async () => {
+  const app = makeApiApp(t);
+  t.db.insert(schema.projects).values({ id: "p2", name: "Second", root_path: "/tmp/p2" }).run();
+  const created = (await (
+    await post(app, "/api/issues", { project_id: "p1", title: "Moves" })
+  ).json()) as IssueContract;
+
+  const res = await patch(app, `/api/issues/${created.id}/project`, { project_id: "p2" });
+  expect(res.status).toBe(200);
+  expect((await res.json()) as IssueContract).toMatchObject({ id: created.id, project_id: "p2" });
+  expect(getIssue(t.db, created.id)?.project_id).toBe("p2");
+});
+
+it("refuses to move an issue to an unknown project, or a mirrored issue at all", async () => {
+  const app = makeApiApp(t);
+  const created = (await (
+    await post(app, "/api/issues", { project_id: "p1", title: "Stays" })
+  ).json()) as IssueContract;
+
+  const ghost = await patch(app, `/api/issues/${created.id}/project`, { project_id: "nope" });
+  expect(ghost.status).toBe(400);
+  expect((await ghost.json()) as { error: string }).toMatchObject({ error: "project_not_found" });
+
+  t.db.insert(schema.projects).values({ id: "p2", name: "Second", root_path: "/tmp/p2" }).run();
+  t.db
+    .insert(schema.issues)
+    .values({
+      id: "i-mirrored",
+      project_id: "p1",
+      title: "Synced",
+      status: "ready",
+      source: "linear",
+      source_external_id: "lin-9",
+      source_identifier: "OTO-9",
+      synced_at: "2026-07-29T00:00:00.000Z",
+    })
+    .run();
+  const mirrored = await patch(app, "/api/issues/i-mirrored/project", { project_id: "p2" });
+  expect(mirrored.status).toBe(409);
+  expect((await mirrored.json()) as { error: string }).toMatchObject({ error: "issue_not_local" });
+  expect(getIssue(t.db, "i-mirrored")?.project_id).toBe("p1");
+
+  const missing = await patch(app, "/api/issues/ghost/project", { project_id: "p2" });
+  expect(missing.status).toBe(404);
 });

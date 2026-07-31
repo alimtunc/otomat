@@ -26,7 +26,10 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-const input = () => runtimeRunInput({ run_dir: dir, prompt: "do the thing" });
+/** Absent on purpose: these cases assert the event stream, not the worktree edits. */
+const cwd = () => join(dir, "worktree");
+
+const input = () => runtimeRunInput({ run_dir: dir, cwd: cwd(), prompt: "do the thing" });
 
 const sessionRef = () => runtimeSessionRef("fake-session-sess-1");
 
@@ -146,7 +149,7 @@ describe("FakeRuntimeAdapter.run", () => {
     const resumeSink = new MemorySink();
     await stepped.resume(
       sessionRef(),
-      { prompt: "follow up", run_dir: dir },
+      { prompt: "follow up", run_dir: dir, cwd: cwd() },
       resumeSink,
       liveSignal(),
     );
@@ -178,12 +181,12 @@ describe("FakeRuntimeAdapter.run", () => {
     const sinkA = new MemorySink();
     const sinkB = new MemorySink();
     await new FakeRuntimeAdapter(fixedClock).run(
-      runtimeRunInput({ run_dir: dir, agent_session_id: "sess-1" }),
+      runtimeRunInput({ run_dir: dir, cwd: cwd(), agent_session_id: "sess-1" }),
       sinkA,
       liveSignal(),
     );
     await new FakeRuntimeAdapter(fixedClock).run(
-      runtimeRunInput({ run_dir: dir, agent_session_id: "sess-2" }),
+      runtimeRunInput({ run_dir: dir, cwd: cwd(), agent_session_id: "sess-2" }),
       sinkB,
       liveSignal(),
     );
@@ -201,7 +204,7 @@ describe("FakeRuntimeAdapter.run", () => {
     );
     await new FakeRuntimeAdapter(fixedClock, null, "worker-b").resume(
       sessionRef(),
-      { prompt: "resume", run_dir: dir },
+      { prompt: "resume", run_dir: dir, cwd: cwd() },
       resumedTurn,
       liveSignal(),
     );
@@ -214,12 +217,12 @@ describe("FakeRuntimeAdapter.run", () => {
     const first = new MemorySink();
     const second = new MemorySink();
     const firstFinal = await new FakeRuntimeAdapter(fixedClock).run(
-      runtimeRunInput({ run_dir: dir, agent_session_id: "candidate-a" }),
+      runtimeRunInput({ run_dir: dir, cwd: cwd(), agent_session_id: "candidate-a" }),
       first,
       liveSignal(),
     );
     const secondFinal = await new FakeRuntimeAdapter(fixedClock).run(
-      runtimeRunInput({ run_dir: dir, agent_session_id: "candidate-b" }),
+      runtimeRunInput({ run_dir: dir, cwd: cwd(), agent_session_id: "candidate-b" }),
       second,
       liveSignal(),
     );
@@ -252,7 +255,7 @@ describe("FakeRuntimeAdapter.resume", () => {
     const sink = new MemorySink();
     const final = await adapter.resume(
       sessionRef(),
-      { prompt: "follow up", run_dir: dir },
+      { prompt: "follow up", run_dir: dir, cwd: cwd() },
       sink,
       liveSignal(),
     );
@@ -270,7 +273,12 @@ describe("FakeRuntimeAdapter.resume", () => {
     const firstTurn = readEventsJsonl(path);
 
     const second = new JsonlEventSink(path);
-    await adapter.resume(sessionRef(), { prompt: "more", run_dir: dir }, second, liveSignal());
+    await adapter.resume(
+      sessionRef(),
+      { prompt: "more", run_dir: dir, cwd: cwd() },
+      second,
+      liveSignal(),
+    );
     second.close();
 
     const onDisk = readEventsJsonl(path);

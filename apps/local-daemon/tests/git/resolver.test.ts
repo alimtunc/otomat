@@ -6,19 +6,15 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import { createRepositoryResolver, type RepositoryResolver } from "#git/resolver";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
-import { anchorProjectRoot, seedRepository } from "../support/db.js";
-import { setupTestRepo, type TestRepo } from "../support/git.js";
+import { anchorProjectRoot } from "../support/db.js";
+import { setupTestRepo } from "../support/git.js";
 import { seedRun } from "../support/seed.js";
 
 let fix: DaemonTestDb;
-let repo: TestRepo;
 let resolver: RepositoryResolver;
 
 beforeEach(() => {
   fix = setupDaemonDb();
-  repo = setupTestRepo();
-  seedRepository(fix.db, repo.defaultBranch);
-  anchorProjectRoot(fix.db, repo.root);
   resolver = createRepositoryResolver({
     db: fix.db,
     worktreesRoot: join(fix.dataDir, "worktrees"),
@@ -26,16 +22,16 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  repo.cleanup();
   fix.cleanup();
 });
 
-it("resolves a repository id to a working service and caches the binding", () => {
+it("resolves a repository id to a working service", () => {
   const binding = resolver.forRepository("repo-1");
   expect(binding?.repositoryId).toBe("repo-1");
   const worktree = binding?.service.acquire({ owner: "run-x", branch: "otomat/run/run-x" });
   expect(worktree?.branch).toBe("otomat/run/run-x");
-  expect(resolver.forRepository("repo-1")).toBe(binding);
+  // A second binding sees the same worktree: the state lives in the rows, not the service.
+  expect(resolver.forRepository("repo-1")?.service.get("run-x")?.id).toBe(worktree?.id);
 });
 
 it("returns null for a null id, an unknown repository, and a project without repository", () => {
@@ -45,15 +41,23 @@ it("returns null for a null id, an unknown repository, and a project without rep
   expect(resolver.forProject("p2")).toBeNull();
 });
 
-it("does not bind repositories for a project rejected by the boot probe", () => {
-  const unavailable = createRepositoryResolver({
-    db: fix.db,
-    worktreesRoot: join(fix.dataDir, "worktrees"),
-    unavailableProjectIds: new Set(["p1"]),
-  });
+it("forks from the project's current root after a registration moves it", () => {
+  const moved = setupTestRepo();
+  try {
+    expect(resolver.forRepository("repo-1")?.rootPath).toBe(fix.repo.root);
 
-  expect(unavailable.forProject("p1")).toBeNull();
-  expect(unavailable.forRepository("repo-1")).toBeNull();
+    anchorProjectRoot(fix.db, moved.root);
+    const after = resolver.forRepository("repo-1");
+
+    expect(after?.rootPath).toBe(moved.root);
+    // The service must follow too, or the run's worktree lands in the old checkout.
+    expect(
+      after?.service.acquire({ owner: "run-moved", branch: "otomat/run/run-moved" }).path,
+    ).toContain(fix.dataDir);
+    expect(moved.git("branch", "--format=%(refname:short)")).toContain("otomat/run/run-moved");
+  } finally {
+    moved.cleanup();
+  }
 });
 
 it("resolves a project to its main repository", () => {
@@ -70,6 +74,7 @@ it("resolves a run through its stamped repository_id, and to null without one", 
   });
   seedRun(fix.db, {
     runId: "r-bare",
+    repositoryId: null,
     runStatus: "running",
     stepStatus: "running",
     sessionStatus: "active",

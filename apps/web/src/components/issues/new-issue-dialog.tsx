@@ -11,6 +11,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { AgentIssueForm } from "@web/components/issues/agent-issue-form";
 import { ManualIssueForm } from "@web/components/issues/manual-issue-form";
 import { WorkflowLaunchForm } from "@web/components/issues/workflow/form";
+import { LaunchTargetGate } from "@web/components/runs/launch/launch-target-gate";
 import { useState } from "react";
 
 const NEW_ISSUE_MODES = ["agent", "workflow", "manual"] as const;
@@ -76,23 +77,29 @@ export function NewIssueDialog({
             </SegmentedControl>
           </div>
         </DialogHeader>
-        {mode === "agent" ? (
-          <AgentIssueForm
-            projectId={projectId}
-            agentChoice={agentChoice}
-            onAgentChoice={setAgentChoice}
-            onLaunched={launched}
-            onCancel={close}
-          />
-        ) : null}
-        {mode === "workflow" ? (
-          <WorkflowLaunchForm
-            target={{ kind: "project", projectId }}
-            agentChoice={agentChoice}
-            onAgentChoice={setAgentChoice}
-            onLaunched={launched}
-            onCancel={close}
-          />
+        {mode === "agent" || mode === "workflow" ? (
+          <LaunchTargetGate projectId={projectId}>
+            {(target) =>
+              mode === "agent" ? (
+                <AgentIssueForm
+                  target={target}
+                  agentChoice={agentChoice}
+                  onAgentChoice={setAgentChoice}
+                  onLaunched={launched}
+                  onCancel={close}
+                />
+              ) : (
+                <WorkflowLaunchForm
+                  target={{ kind: "project", projectId: target.repository.project_id }}
+                  worktreeTarget={target}
+                  agentChoice={agentChoice}
+                  onAgentChoice={setAgentChoice}
+                  onLaunched={launched}
+                  onCancel={close}
+                />
+              )
+            }
+          </LaunchTargetGate>
         ) : null}
         {mode === "manual" ? (
           <ManualIssueForm projectId={projectId} onCreated={close} onCancel={close} />

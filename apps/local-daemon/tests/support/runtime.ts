@@ -2,7 +2,7 @@ import type { RuntimeRunInput, RuntimeSessionRef } from "#runtime/contract";
 
 /** Canonical run-input fabricator for adapter tests; override what the case cares about. */
 export function runtimeRunInput(
-  overrides: Partial<RuntimeRunInput> & Pick<RuntimeRunInput, "run_dir">,
+  overrides: Partial<RuntimeRunInput> & Pick<RuntimeRunInput, "run_dir" | "cwd">,
 ): RuntimeRunInput {
   return {
     run_id: "run-1",

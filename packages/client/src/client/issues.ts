@@ -1,7 +1,11 @@
-import { issueContractSchema, type CreateIssueRequest } from "@otomat/domain";
+import {
+  issueContractSchema,
+  type CreateIssueRequest,
+  type MoveIssueProjectRequest,
+} from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { getJson, postJson, queryString } from "./http.js";
+import { getJson, patchJson, postJson, queryString } from "./http.js";
 
 export function createIssuesClient(config: DaemonClientConfig) {
   return {
@@ -12,6 +16,11 @@ export function createIssuesClient(config: DaemonClientConfig) {
     },
     async createIssue(request: CreateIssueRequest) {
       return issueContractSchema.parse(await postJson(config, "/api/issues", request));
+    },
+    async moveIssueProject(id: string, request: MoveIssueProjectRequest) {
+      return issueContractSchema.parse(
+        await patchJson(config, `/api/issues/${encodeURIComponent(id)}/project`, request),
+      );
     },
     async getIssue(id: string) {
       return issueContractSchema.parse(

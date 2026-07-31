@@ -19,8 +19,7 @@ import {
 } from "#github";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
-import { seedRepository } from "../support/db.js";
-import { setupTestRepo, stubRepositoryResolver, type TestRepo } from "../support/git.js";
+import { stubRepositoryResolver, type TestRepo } from "../support/git.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-github";
@@ -109,8 +108,7 @@ describe("GitHubService", () => {
 
   beforeEach(() => {
     fix = setupDaemonDb();
-    repo = setupTestRepo();
-    seedRepository(fix.db, repo.defaultBranch);
+    repo = fix.repo;
     worktrees = createGitWorktreeService({
       db: fix.db,
       repositoryId: "repo-1",
@@ -118,19 +116,20 @@ describe("GitHubService", () => {
       defaultBranch: repo.defaultBranch,
       worktreesRoot: join(fix.dataDir, "worktrees"),
     });
+    const acquired = worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
+    worktreePath = acquired.path;
     seedRun(fix.db, {
       runId: RUN_ID,
+      worktreeId: acquired.id,
       runStatus: "review_ready",
       stepStatus: "succeeded",
       sessionStatus: "terminated",
     });
-    worktreePath = worktrees.acquire({ owner: RUN_ID, branch: BRANCH }).path;
     writeFileSync(join(worktreePath, "change.txt"), "first\n");
     cli = new FakeGitHubCli();
   });
 
   afterEach(() => {
-    repo.cleanup();
     fix.cleanup();
   });
 
