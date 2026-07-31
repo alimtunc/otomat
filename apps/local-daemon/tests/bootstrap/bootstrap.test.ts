@@ -2,9 +2,10 @@ import { mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { getProject, getRepository, schema } from "@otomat/db";
+import { getProject, getRepository, listRepositories, schema } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
+import { registerLocalRepository } from "#api/repository-registration";
 import {
   DEFAULT_PROJECT_ID,
   DEFAULT_REPOSITORY_ID,
@@ -31,7 +32,7 @@ afterEach(() => {
   t.cleanup();
 });
 
-it("creates the default project on a canonical root and re-anchors it when the boot root moves", () => {
+it("creates the default project on a canonical root and re-anchors it while it owns no repository", () => {
   const link = join(scratch, "root-link");
   symlinkSync(repo.root, link);
 
@@ -40,6 +41,32 @@ it("creates the default project on a canonical root and re-anchors it when the b
 
   expect(ensureDefaultProject(t.db, scratch)).toBe(DEFAULT_PROJECT_ID);
   expect(getProject(t.db, DEFAULT_PROJECT_ID)?.root_path).toBe(realpathSync(scratch));
+});
+
+it("freezes the default project's root once it owns a repository, whatever the boot root is", () => {
+  // The production order: the boot also materializes the repository, which binds the root.
+  ensureDefaultRepository(t.db, ensureDefaultProject(t.db, repo.root));
+  expect(getRepository(t.db, DEFAULT_REPOSITORY_ID)).toBeDefined();
+
+  const elsewhere = setupTestRepo();
+  try {
+    expect(ensureDefaultProject(t.db, elsewhere.root)).toBe(DEFAULT_PROJECT_ID);
+    expect(getProject(t.db, DEFAULT_PROJECT_ID)?.root_path).toBe(realpathSync(repo.root));
+  } finally {
+    elsewhere.cleanup();
+  }
+});
+
+it("keeps a repository registered onto the default project when the daemon reboots", () => {
+  // The user booted outside a git repository, then registered one through the blocked launch.
+  ensureDefaultRepository(t.db, ensureDefaultProject(t.db, scratch));
+  expect(getRepository(t.db, DEFAULT_REPOSITORY_ID)).toBeUndefined();
+
+  const registered = registerLocalRepository(t.db, repo.root, DEFAULT_PROJECT_ID);
+  expect(registered.ok).toBe(true);
+
+  expect(ensureDefaultProject(t.db, scratch)).toBe(DEFAULT_PROJECT_ID);
+  expect(getProject(t.db, DEFAULT_PROJECT_ID)?.root_path).toBe(realpathSync(repo.root));
 });
 
 it("reuses a registered project owning the boot root instead of creating the default one", () => {
@@ -54,17 +81,18 @@ it("reuses a registered project owning the boot root instead of creating the def
 
 it("creates the default repository row with the detected branch and refreshes it across boots", () => {
   const projectId = ensureDefaultProject(t.db, repo.root);
-  expect(ensureDefaultRepository(t.db, projectId, repo.root)).toBe(DEFAULT_REPOSITORY_ID);
+  ensureDefaultRepository(t.db, projectId);
   expect(getRepository(t.db, DEFAULT_REPOSITORY_ID)?.default_branch).toBe("main");
 
   repo.git("checkout", "-b", "trunk");
-  expect(ensureDefaultRepository(t.db, projectId, repo.root)).toBe(DEFAULT_REPOSITORY_ID);
+  ensureDefaultRepository(t.db, projectId);
   expect(getRepository(t.db, DEFAULT_REPOSITORY_ID)?.default_branch).toBe("trunk");
 });
 
-it("returns null for a non-git boot root", () => {
+it("writes no repository row for a non-git boot root", () => {
   const projectId = ensureDefaultProject(t.db, scratch);
-  expect(ensureDefaultRepository(t.db, projectId, scratch)).toBeNull();
+  ensureDefaultRepository(t.db, projectId);
+  expect(listRepositories(t.db, { projectId })).toHaveLength(0);
   expect(getRepository(t.db, DEFAULT_REPOSITORY_ID)).toBeUndefined();
 });
 
@@ -80,10 +108,11 @@ it("reuses the registered project's repository when booting from a registered ro
 
   const projectId = ensureDefaultProject(t.db, repo.root);
   expect(projectId).toBe("registered");
-  expect(ensureDefaultRepository(t.db, projectId, repo.root)).toBe("registered-repo");
+  ensureDefaultRepository(t.db, projectId);
+  expect(listRepositories(t.db, { projectId }).map((row) => row.id)).toEqual(["registered-repo"]);
   expect(getRepository(t.db, DEFAULT_REPOSITORY_ID)).toBeUndefined();
 
   repo.git("checkout", "-b", "trunk");
-  expect(ensureDefaultRepository(t.db, projectId, repo.root)).toBe("registered-repo");
+  ensureDefaultRepository(t.db, projectId);
   expect(getRepository(t.db, "registered-repo")?.default_branch).toBe("trunk");
 });

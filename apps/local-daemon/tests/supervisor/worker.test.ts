@@ -23,7 +23,7 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-function job(mode: "run" | "resume", worktreePath: string | null = null): SupervisedJob {
+function job(mode: "run" | "resume", worktreePath = join(dir, "missing-worktree")): SupervisedJob {
   return {
     runId: "w1",
     stepRunId: "s1",
@@ -87,7 +87,14 @@ it("writes a real file on a run turn and appends on a resume turn", async () => 
   }
 });
 
-it("leaves the filesystem untouched when the job has no worktree", async () => {
+it("leaves the filesystem untouched when the job's worktree no longer exists", async () => {
   await runWorkerJob(job("run"), new AbortController().signal);
   expect(existsSync(join(dir, "fake-implementation.md"))).toBe(false);
+});
+
+it("rejects a serialized job that carries no worktree", () => {
+  const { worktreePath: _dropped, ...withoutWorktree } = job("run");
+  expect(() => parseJob({ [WORKER_JOB_ENV]: JSON.stringify(withoutWorktree) })).toThrow(
+    /worktreePath/,
+  );
 });

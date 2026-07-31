@@ -1,5 +1,9 @@
 import { DaemonRequestError } from "@otomat/client";
-import type { CreateIssueRequest } from "@otomat/domain";
+import {
+  issueProjectMoveErrorSchema,
+  type CreateIssueRequest,
+  type MoveIssueProjectRequest,
+} from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -15,6 +19,28 @@ export function useCreateIssue() {
       client.invalidateQueries({ queryKey: queryKeys.issues });
     },
   });
+}
+
+/** Re-points an issue at another project, refreshing the issue and every project-scoped list. */
+export function useMoveIssueProject(issueId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: MoveIssueProjectRequest) => daemon.moveIssueProject(issueId, request),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: queryKeys.issues });
+      client.invalidateQueries({ queryKey: queryKeys.repositories });
+    },
+  });
+}
+
+/** Preserves the daemon's typed refusal and falls back to a connectivity message otherwise. */
+export function moveIssueProjectErrorMessage(error: unknown): string {
+  if (error instanceof DaemonRequestError) {
+    const refusal = issueProjectMoveErrorSchema.safeParse(error.body);
+    if (refusal.success) return refusal.data.message;
+    return "Could not move this issue — the daemon rejected the request.";
+  }
+  return "Could not move this issue — is the daemon running?";
 }
 
 function createIssueErrorMessage(error: unknown): string {

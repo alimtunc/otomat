@@ -26,7 +26,9 @@ afterEach(() => {
   teardownStubHarness(worktree);
 });
 
-const input = (cwd: string | null) => runtimeRunInput({ run_dir: worktree, cwd });
+const input = (cwd: string) => runtimeRunInput({ run_dir: worktree, cwd });
+
+const MISSING_WORKTREE = "/nonexistent/otomat-worktree";
 
 describe("CodexRuntimeAdapter", () => {
   it("maps a recorded codex --json turn onto runtime events and a completed final state", async () => {
@@ -105,14 +107,14 @@ describe("CodexRuntimeAdapter", () => {
     expect(final.event_count).toBe(sink.events.length);
   });
 
-  it("fails honestly when the run has no worktree", async () => {
+  it("fails honestly when the run's worktree is gone", async () => {
     const adapter = new CodexRuntimeAdapter("/nonexistent/codex-binary");
     const sink = new MemorySink();
 
-    const final = await adapter.run(input(null), sink, new AbortController().signal);
+    const final = await adapter.run(input(MISSING_WORKTREE), sink, new AbortController().signal);
 
     expect(final.status).toBe("failed");
-    expect(final.error?.message).toMatch(/requires the run's worktree/);
+    expect(final.error?.message).toMatch(/worktree .* does not exist/);
   });
 
   it("fails with an [otomat] diagnostic when the binary cannot be spawned", async () => {

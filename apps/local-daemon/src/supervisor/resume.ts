@@ -7,12 +7,7 @@ import {
   type Db,
   type RunRow,
 } from "@otomat/db";
-import {
-  executableSteps,
-  isRunPlanCompeteGroup,
-  selectLatestResumableSession,
-  type RunState,
-} from "@otomat/domain";
+import { executableSteps, selectLatestResumableSession, type RunState } from "@otomat/domain";
 
 import { sessionDir } from "#events";
 import { createRuntimeAdapter, isKnownRuntimeId, type KnownRuntimeId } from "#runtime";
@@ -87,10 +82,11 @@ export function resolveResumeTurn(state: SupervisorState, run: RunRow, prompt: s
   if (!session) throw new RunNotResumableError(`run ${runId} has no provider session to resume`);
 
   const runtime = requireResumableRuntime(db, run, session);
-  const worktreePath =
-    state.repositories.forRepository(run.repository_id)?.service.get(runId)?.path ?? null;
-  if (worktreePath === null && run.plan_json.steps.some(isRunPlanCompeteGroup)) {
-    throw new RunNotResumableError(`run ${runId} canonical compete worktree is unavailable`);
+  const worktreePath = state.repositories
+    .forRepository(run.repository_id)
+    ?.service.get(runId)?.path;
+  if (worktreePath === undefined) {
+    throw new RunNotResumableError(`run ${runId} worktree is unavailable`);
   }
   // Resume uses the config frozen for this session's step — never the live profile.
   const config =

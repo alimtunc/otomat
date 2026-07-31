@@ -82,6 +82,14 @@ export function getIssue(db: Db, id: string): IssueRow | undefined {
   return db.select().from(issues).where(eq(issues.id, id)).get();
 }
 
+/** Re-points a local issue at another project; mirrored issues are refused by the caller. */
+export function updateIssueProject(db: Db, id: string, projectId: string): void {
+  db.update(issues)
+    .set(touch({ project_id: projectId }))
+    .where(eq(issues.id, id))
+    .run();
+}
+
 export function listIssues(db: Db, options: { projectId?: string } = {}): IssueRow[] {
   return db
     .select()

@@ -12,14 +12,25 @@ export const REPOSITORY_REGISTRATION_ERRORS = [
   "head_detached",
   "default_branch_undetectable",
   "repository_already_registered",
+  "project_not_found",
+  "project_already_has_repository",
 ] as const;
 export type RepositoryRegistrationError = (typeof REPOSITORY_REGISTRATION_ERRORS)[number];
 
 /** Local filesystem path submitted for repository registration. */
 export const registerRepositoryRequestSchema = z.object({
   path: z.string().trim().min(1),
+  /** Attaches the path to this existing project so its issues stay bound to it, instead of creating a new project. */
+  project_id: z.string().min(1).optional(),
 });
 export type RegisterRepositoryRequest = z.infer<typeof registerRepositoryRequestSchema>;
+
+/** Local branches a run can fork from, newest-committed first, with the repository's own default. */
+export const repositoryBranchesResponseSchema = z.object({
+  default_branch: z.string(),
+  branches: z.array(z.string()),
+});
+export type RepositoryBranchesResponse = z.infer<typeof repositoryBranchesResponseSchema>;
 
 /** Successful registration materializes both the project and its repository. */
 export const registerRepositoryResponseSchema = z.object({

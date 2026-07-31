@@ -1,6 +1,7 @@
 import {
   projectContractSchema,
   registerRepositoryResponseSchema,
+  repositoryBranchesResponseSchema,
   repositoryContractSchema,
   type RegisterRepositoryRequest,
 } from "@otomat/domain";
@@ -17,6 +18,11 @@ export function createWorkspaceClient(config: DaemonClientConfig) {
       return repositoryContractSchema
         .array()
         .parse(await getJson(config, `/api/repositories${queryString(params)}`));
+    },
+    async listRepositoryBranches(repositoryId: string) {
+      return repositoryBranchesResponseSchema.parse(
+        await getJson(config, `/api/repositories/${encodeURIComponent(repositoryId)}/branches`),
+      );
     },
     async registerRepository(request: RegisterRepositoryRequest) {
       return registerRepositoryResponseSchema.parse(

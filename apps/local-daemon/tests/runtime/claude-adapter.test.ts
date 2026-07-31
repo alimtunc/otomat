@@ -27,7 +27,9 @@ afterEach(() => {
   teardownStubHarness(worktree);
 });
 
-const input = (cwd: string | null) => runtimeRunInput({ run_dir: worktree, cwd });
+const input = (cwd: string) => runtimeRunInput({ run_dir: worktree, cwd });
+
+const MISSING_WORKTREE = "/nonexistent/otomat-worktree";
 
 describe("ClaudeRuntimeAdapter", () => {
   it("maps a recorded stream-json turn onto runtime events and a completed final state", async () => {
@@ -78,14 +80,14 @@ describe("ClaudeRuntimeAdapter", () => {
     expect(rawLog?.payload["text"]).toBe("plain text noise the CLI printed outside JSON");
   });
 
-  it("fails honestly when the run has no worktree, without spawning the provider", async () => {
+  it("fails honestly when the run's worktree is gone, without spawning the provider", async () => {
     const adapter = new ClaudeRuntimeAdapter("/nonexistent/claude-binary");
     const sink = new MemorySink();
 
-    const final = await adapter.run(input(null), sink, new AbortController().signal);
+    const final = await adapter.run(input(MISSING_WORKTREE), sink, new AbortController().signal);
 
     expect(final.status).toBe("failed");
-    expect(final.error?.message).toMatch(/requires the run's worktree/);
+    expect(final.error?.message).toMatch(/worktree .* does not exist/);
     expect(final.event_count).toBe(sink.events.length);
   });
 

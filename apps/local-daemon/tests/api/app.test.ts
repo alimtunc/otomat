@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import type { RuntimeEvent } from "#runtime";
-import { CompeteRepositoryRequiredError, RunContributionNotRetriableError } from "#supervisor";
+import { LaunchRefusedError, RunContributionNotRetriableError } from "#supervisor";
 
 import { contributionRow, makeApiApp, post, request, runRow } from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
@@ -211,16 +211,31 @@ it("delegates start-run to the injected launchRun dep", async () => {
   expect(((await res.json()) as RunContract).id).toBe("run-x");
 });
 
-it("returns a conflict when compete cannot obtain isolated repository worktrees", async () => {
+it("returns a conflict with the refusal code when the project has no usable repository", async () => {
   const app = makeApiApp(t, {
     launchRun: async () => {
-      throw new CompeteRepositoryRequiredError("p1");
+      throw new LaunchRefusedError("repository_required", "project p1 has no repository to run in");
     },
   });
   const res = await post(app, "/api/runs", { prompt: "goal" });
 
   expect(res.status).toBe(409);
-  expect(await res.json()).toEqual({ error: "compete_repository_required" });
+  expect(await res.json()).toEqual({
+    error: "repository_required",
+    message: "project p1 has no repository to run in",
+  });
+});
+
+it("returns a bad request when the requested base branch does not exist", async () => {
+  const app = makeApiApp(t, {
+    launchRun: async () => {
+      throw new LaunchRefusedError("base_branch_not_found", 'branch "ghost" does not exist in /r');
+    },
+  });
+  const res = await post(app, "/api/runs", { prompt: "goal", base_branch: "ghost" });
+
+  expect(res.status).toBe(400);
+  expect((await res.json()) as { error: string }).toMatchObject({ error: "base_branch_not_found" });
 });
 
 it("delegates resume to the supervisor for a known run", async () => {

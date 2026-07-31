@@ -30,8 +30,8 @@ function delay(ms: number): Promise<void> {
 }
 
 /** The fake turn leaves real edits in its `cwd` worktree so the canonical git diff has honest content to show. */
-function writeFakeWork(cwd: string | null | undefined, prompt: string, followUp: boolean): void {
-  if (!cwd || !existsSync(cwd)) return;
+function writeFakeWork(cwd: string, prompt: string, followUp: boolean): void {
+  if (!existsSync(cwd)) return;
   const file = join(cwd, FAKE_WORK_FILENAME);
   if (followUp && existsSync(file)) {
     appendFileSync(file, `\n## Follow-up turn\n\n${prompt}\n`);

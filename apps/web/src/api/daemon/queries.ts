@@ -40,8 +40,21 @@ export function useProjects() {
   return useQuery({ queryKey: queryKeys.projects, queryFn: () => daemon.listProjects() });
 }
 
-export function useRepositories() {
-  return useQuery({ queryKey: queryKeys.repositories, queryFn: () => daemon.listRepositories() });
+export function useRepositories(projectId?: string) {
+  return useQuery({
+    queryKey:
+      projectId === undefined ? queryKeys.repositories : queryKeys.repositoriesFor(projectId),
+    queryFn: () => daemon.listRepositories(projectId === undefined ? {} : { projectId }),
+  });
+}
+
+/** Base-branch candidates for one repository; the daemon reads them from the real repo, so this is never cached long. */
+export function useRepositoryBranches(repositoryId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.repositoryBranches(repositoryId),
+    queryFn: repositoryId === null ? skipToken : () => daemon.listRepositoryBranches(repositoryId),
+    staleTime: 15_000,
+  });
 }
 
 /** The daemon's runtime catalog with probed availability; short staleTime so installing a CLI shows up without a daemon restart. */

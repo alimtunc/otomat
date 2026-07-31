@@ -10,23 +10,44 @@ import {
 } from "./entities/runs.js";
 import { modelSelectionSchema } from "./runtime-model.js";
 
-/** A run plus its persisted step/session graph; the event ledger is served by the run's SSE stream, not here. `worktree_path` is null when the run has no worktree. */
+/** A run plus its persisted step/session graph; the event ledger is served by the run's SSE stream, not here. `worktree_path` and `base_branch` are null only on runs recorded before a worktree was guaranteed. */
 export const runDetailSchema = z.object({
   run: runContractSchema,
   steps: z.array(stepRunContractSchema),
   sessions: z.array(agentSessionContractSchema),
   compete_groups: z.array(competeGroupContractSchema),
   worktree_path: z.string().nullable(),
+  /** Branch the run's worktree forked from. */
+  base_branch: z.string().nullable(),
 });
 export type RunDetail = z.infer<typeof runDetailSchema>;
+
+/** Why a launch was refused before any run row was written; every code is caller-fixable. */
+export const RUN_LAUNCH_ERRORS = [
+  "project_not_found",
+  "project_mismatch",
+  "repository_required",
+  "repository_unavailable",
+  "base_branch_not_found",
+  "worktree_unavailable",
+] as const;
+export type RunLaunchError = (typeof RUN_LAUNCH_ERRORS)[number];
+
+/** Stable refusal code plus a user-facing daemon message. */
+export const runLaunchErrorSchema = z.object({
+  error: z.enum(RUN_LAUNCH_ERRORS),
+  message: z.string(),
+});
 
 /** Launch from an issue or an ad-hoc prompt (one required); an optional `plan` replaces the implicit single step. */
 export const startRunRequestSchema = z
   .object({
     issue_id: z.string().min(1).optional(),
     prompt: z.string().min(1).optional(),
-    /** Project for an ad-hoc run and its anchor issue; ignored when `issue_id` already pins it. */
+    /** Project the run executes in; an ad-hoc run without one uses the daemon's boot project. With `issue_id` it must match the issue's project. */
     project_id: z.string().min(1).optional(),
+    /** Branch the run's dedicated worktree forks from; absent uses the repository's default branch. */
+    base_branch: z.string().trim().min(1).optional(),
     /** Runtime adapter id; the daemon validates it against its registry and rejects unavailable runtimes. Steps may override it per step via `plan.steps[].agent`. */
     runtime: z.string().min(1).optional(),
     /** Agent profile resolved and frozen for the run default; per-node `profile_id` overrides it. Takes precedence over `runtime`. */

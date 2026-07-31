@@ -23,7 +23,7 @@ const supervisedJobSchema = z.object({
   agentSessionId: z.string(),
   prompt: z.string(),
   agentSessionDir: z.string(),
-  worktreePath: z.string().nullable(),
+  worktreePath: z.string().min(1),
   runtime: z.custom<KnownRuntimeId>(
     (value) => typeof value === "string" && isKnownRuntimeId(value),
     "unknown runtime",

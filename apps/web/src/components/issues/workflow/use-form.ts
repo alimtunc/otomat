@@ -16,6 +16,8 @@ export interface UseWorkflowFormOptions {
   target: WorkflowLaunchTarget;
   /** The resolved run-level agent choice (profile or ad-hoc runtime), or null when none is launchable. */
   agentChoice: string | null;
+  /** Branch the run's worktree forks from, resolved by the launch gate. */
+  baseBranch: string;
   onLaunched: (run: RunContract) => void;
 }
 
@@ -33,7 +35,12 @@ const WORKFLOW_DEFAULT_VALUES: WorkflowFormValues = {
 };
 
 /** Owns workflow values, submit-time plan validation, and step-list mutations. */
-export function useWorkflowForm({ target, agentChoice, onLaunched }: UseWorkflowFormOptions) {
+export function useWorkflowForm({
+  target,
+  agentChoice,
+  baseBranch,
+  onLaunched,
+}: UseWorkflowFormOptions) {
   const { launch, isPending } = useLaunchRun();
   const stepCounter = useRef(1);
   const [planError, setPlanError] = useState<string | null>(null);
@@ -41,8 +48,7 @@ export function useWorkflowForm({ target, agentChoice, onLaunched }: UseWorkflow
   const form = useForm({
     defaultValues: WORKFLOW_DEFAULT_VALUES,
     onSubmit: async ({ value }) => {
-      const request = agentChoice === null ? null : targetRequest(target, value.goal);
-      if (agentChoice === null || request === null) return;
+      if (agentChoice === null) return;
       const parsed = runPlanInputSchema.safeParse(buildRunPlanInput(value.steps));
       if (!parsed.success) {
         setPlanError(parsed.error.issues[0]?.message ?? "The workflow plan is invalid.");
@@ -50,7 +56,8 @@ export function useWorkflowForm({ target, agentChoice, onLaunched }: UseWorkflow
       }
       setPlanError(null);
       const run = await launch({
-        ...request,
+        ...targetRequest(target, value.goal),
+        base_branch: baseBranch,
         plan: parsed.data,
         ...agentChoiceToRequest(agentChoice),
         model: value.model,

@@ -8,8 +8,6 @@ import { createGitWorktreeService, type GitWorktreeService } from "#git";
 import { RunNotResumableError, type ReconcileOutcome } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
-import { anchorProjectRoot } from "../support/db.js";
-import { setupTestRepo, type TestRepo } from "../support/git.js";
 import { seedRun } from "../support/seed.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
@@ -86,27 +84,16 @@ it("notifies afterSettle when a turn settles live", async () => {
 });
 
 describe("worktree acquisition", () => {
-  let repo: TestRepo;
   let service: GitWorktreeService;
 
   beforeEach(() => {
-    repo = setupTestRepo();
-    fix.db
-      .insert(schema.repositories)
-      .values({ id: "repo-1", project_id: "p1", name: "R", default_branch: repo.defaultBranch })
-      .run();
-    anchorProjectRoot(fix.db, repo.root);
     service = createGitWorktreeService({
       db: fix.db,
-      repositoryId: "repo-1",
-      repoRoot: repo.root,
-      defaultBranch: repo.defaultBranch,
+      repositoryId: fix.repositoryId,
+      repoRoot: fix.repo.root,
+      defaultBranch: fix.repo.defaultBranch,
       worktreesRoot: join(fix.dataDir, "worktrees"),
     });
-  });
-
-  afterEach(() => {
-    repo.cleanup();
   });
 
   it("acquires an isolated worktree in the project's repository and threads its path into the job", async () => {
@@ -124,12 +111,16 @@ describe("worktree acquisition", () => {
   });
 });
 
-it("runs without a worktree when the project has no repository", async () => {
+it("refuses to launch in a project with no repository instead of running without a worktree", async () => {
+  fix.db
+    .insert(schema.projects)
+    .values({ id: "p-bare", name: "Bare", root_path: "/tmp/p-bare" })
+    .run();
   const { supervisor, spawn } = makeSupervisor(fix, "complete");
-  const run = await supervisor.start({ prompt: "no git here" });
-  await supervisor.settle();
 
-  expect(run.repository_id).toBeNull();
-  expect(run.worktree_id).toBeNull();
-  expect(spawn.jobs[0]?.worktreePath).toBeNull();
+  await expect(
+    supervisor.start({ prompt: "no git here", project_id: "p-bare" }),
+  ).rejects.toMatchObject({ name: "LaunchRefusedError", code: "repository_required" });
+  expect(spawn.calls).toBe(0);
+  expect(fix.db.select().from(schema.runs).all()).toHaveLength(0);
 });

@@ -50,12 +50,20 @@ const RUN = {
 };
 
 describe("runDetailSchema", () => {
-  it("carries the run's worktree path and accepts null when it has none", () => {
+  it("carries the run's worktree path and base branch, and accepts null for legacy runs", () => {
     const base = { run: RUN, steps: [], sessions: [], compete_groups: [] };
-    const withPath = runDetailSchema.parse({ ...base, worktree_path: "/tmp/wt" });
+    const withPath = runDetailSchema.parse({
+      ...base,
+      worktree_path: "/tmp/wt",
+      base_branch: "develop",
+    });
     expect(withPath.worktree_path).toBe("/tmp/wt");
-    expect(runDetailSchema.parse({ ...base, worktree_path: null }).worktree_path).toBeNull();
+    expect(withPath.base_branch).toBe("develop");
+    const legacy = runDetailSchema.parse({ ...base, worktree_path: null, base_branch: null });
+    expect(legacy.worktree_path).toBeNull();
+    expect(legacy.base_branch).toBeNull();
     expect(runDetailSchema.safeParse(base).success).toBe(false);
+    expect(runDetailSchema.safeParse({ ...base, worktree_path: null }).success).toBe(false);
   });
 
   it("rejects omitted compete and candidate worktree fields", () => {
@@ -72,6 +80,7 @@ describe("runDetailSchema", () => {
       ],
       sessions: [],
       worktree_path: null,
+      base_branch: null,
     };
 
     expect(runDetailSchema.safeParse(detail).success).toBe(false);
@@ -109,6 +118,7 @@ describe("runDetailSchema", () => {
         },
       ],
       worktree_path: "/tmp/canonical",
+      base_branch: "main",
     });
 
     expect(detail.compete_groups[0]?.status).toBe("awaiting_selection");

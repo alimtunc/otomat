@@ -6,6 +6,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { setInputValue } from "#support/dom-events";
+import { repositoriesQueryResult, repositoryBranchesQueryResult } from "#support/launch-target";
 import { modelCatalogQueryResult } from "#support/runtime-models";
 
 const launch = vi.fn(async () => ({ id: "run-1" }) as RunContract);
@@ -39,6 +40,8 @@ vi.mock("@web/api/daemon/queries", () => ({
     refetch: vi.fn(),
   }),
   useRuntimeModels: () => modelCatalogQueryResult(),
+  useRepositories: () => repositoriesQueryResult(),
+  useRepositoryBranches: () => repositoryBranchesQueryResult(),
 }));
 
 vi.mock("@web/api/agent-profiles/queries", () => ({
@@ -211,6 +214,7 @@ describe("NewIssueDialog", () => {
     expect(launch).toHaveBeenCalledWith({
       prompt: "implement the thing",
       project_id: "p1",
+      base_branch: "main",
       runtime: "claude",
     });
     expect(navigate).toHaveBeenCalledWith({ to: "/runs/$runId", params: { runId: "run-1" } });
@@ -265,6 +269,7 @@ describe("NewIssueDialog", () => {
     expect(launch).toHaveBeenCalledWith({
       prompt: "Choose the implementation",
       project_id: "p1",
+      base_branch: "main",
       runtime: "claude",
       plan: {
         version: 1,
@@ -357,12 +362,12 @@ describe("NewIssueDialog", () => {
     expect(notice?.classList.contains("text-text-secondary")).toBe(true);
   });
 
-  it("blocks an agent launch when no project is selected", async () => {
+  it("blocks an agent launch before the form exists when no project is selected", async () => {
     runtimesData = [runtimeDescriptor("claude", "real", true)];
     await renderDialog(() => undefined, { withProject: false });
 
-    expect(buttonByText("Create & launch⌘↵").disabled).toBe(true);
-    expect(document.body.textContent).toContain("Select a project before launching a run.");
+    expect(document.body.textContent).toContain("No project selected");
+    expect(document.querySelector("textarea")).toBeNull();
     expect(launch).not.toHaveBeenCalled();
   });
 });

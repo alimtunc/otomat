@@ -1,17 +1,20 @@
 import type { RunContract } from "@otomat/domain";
 import { Button, DialogBody, Field, FieldControl, FieldLabel, Kbd, Textarea } from "@otomat/ui";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
+import { LaunchTargetFields } from "@web/components/runs/launch/launch-target-fields";
 import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
+import type { LaunchTargetState } from "@web/components/runs/launch/use-launch-target";
 import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@web/lib/form";
 import { isCompleteModelSelection } from "@web/lib/model-choice";
 import { isWorkflowNodeComplete } from "@web/lib/workflow-draft";
 
 import { WorkflowPlanBuilder } from "./builder";
-import { workflowLaunchBlocker, type WorkflowLaunchTarget } from "./launch-target";
+import { type WorkflowLaunchTarget } from "./launch-target";
 import { useWorkflowForm, type WorkflowForm } from "./use-form";
 
 export interface WorkflowLaunchFormProps {
   target: WorkflowLaunchTarget;
+  worktreeTarget: Extract<LaunchTargetState, { status: "ready" }>;
   agentChoice: string | null;
   onAgentChoice: (choice: string | null) => void;
   onLaunched: (run: RunContract) => void;
@@ -61,15 +64,20 @@ function WorkflowTargetIntro({
 /** Composes a multi-step workflow, on an issue that already exists or on a goal that creates one. */
 export function WorkflowLaunchForm({
   target,
+  worktreeTarget,
   agentChoice,
   onAgentChoice,
   onLaunched,
   onCancel,
 }: WorkflowLaunchFormProps) {
   const agents = useLaunchAgentChoice(agentChoice);
-  const workflow = useWorkflowForm({ target, agentChoice: agents.choice, onLaunched });
+  const workflow = useWorkflowForm({
+    target,
+    agentChoice: agents.choice,
+    baseBranch: worktreeTarget.baseBranch,
+    onLaunched,
+  });
   const { form, isPending } = workflow;
-  const blocker = workflowLaunchBlocker(target);
 
   return (
     <form
@@ -82,7 +90,7 @@ export function WorkflowLaunchForm({
       <DialogBody className="flex max-h-[62vh] flex-col gap-3 overflow-y-auto">
         <WorkflowTargetIntro target={target} form={form} />
         <WorkflowPlanBuilder agents={agents} onAgentChoice={onAgentChoice} workflow={workflow} />
-        {blocker === null ? null : <p className="text-xs text-danger">{blocker}</p>}
+        <LaunchTargetFields target={worktreeTarget} disabled={isPending} />
       </DialogBody>
       <IssueFormFooter
         onCancel={onCancel}
@@ -101,7 +109,7 @@ export function WorkflowLaunchForm({
                 variant="primary"
                 size="sm"
                 loading={isPending}
-                disabled={!(filled && agents.choice !== null && blocker === null && !isPending)}
+                disabled={!(filled && agents.choice !== null && !isPending)}
               >
                 Launch workflow
                 <Kbd tone="on-accent">⌘↵</Kbd>

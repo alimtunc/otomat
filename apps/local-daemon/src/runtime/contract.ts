@@ -44,7 +44,8 @@ const runtimeRunInputSchema = z.object({
   agent_session_id: z.string(),
   prompt: z.string(),
   run_dir: z.string(),
-  cwd: z.string().nullable().optional(),
+  /** Worktree the turn executes in; a run that cannot own one is refused at launch, so it is never absent. */
+  cwd: z.string().min(1),
   options: providerOptionsSchema.optional(),
   /** Frozen model id for the turn; absent or null sends no model flag and lets the provider default apply. */
   model: modelIdSchema.nullish(),
@@ -55,7 +56,7 @@ export type RuntimeRunInput = z.infer<typeof runtimeRunInputSchema>;
 const runtimeResumeInputSchema = z.object({
   prompt: z.string(),
   run_dir: z.string(),
-  cwd: z.string().nullable().optional(),
+  cwd: z.string().min(1),
   options: providerOptionsSchema.optional(),
   model: modelIdSchema.nullish(),
 });

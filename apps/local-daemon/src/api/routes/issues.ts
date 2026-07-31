@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { getProject, insertIssue } from "@otomat/db";
-import { createIssueRequestSchema, issueMachine } from "@otomat/domain";
+import { getIssue, getProject, insertIssue, updateIssueProject } from "@otomat/db";
+import {
+  createIssueRequestSchema,
+  issueMachine,
+  moveIssueProjectRequestSchema,
+} from "@otomat/domain";
 import { Hono } from "hono";
 
 import type { ApiDeps } from "../deps.js";
@@ -36,6 +40,31 @@ export function createIssueRoutes(deps: ApiDeps): Hono {
   routes.get("/:id", (c) => {
     const issue = readIssue(deps.db, c.req.param("id"));
     return issue ? c.json(issue) : c.json({ error: "issue_not_found" }, 404);
+  });
+
+  routes.patch("/:id/project", validateJson(moveIssueProjectRequestSchema), (c) => {
+    const id = c.req.param("id");
+    const issue = getIssue(deps.db, id);
+    if (!issue)
+      return c.json({ error: "issue_not_found", message: "This issue no longer exists." }, 404);
+    if (issue.source !== "local") {
+      return c.json(
+        {
+          error: "issue_not_local",
+          message: `A ${issue.source} issue belongs to its tracker connection; the next sync would revert the move.`,
+        },
+        409,
+      );
+    }
+    const { project_id } = c.req.valid("json");
+    if (!getProject(deps.db, project_id)) {
+      return c.json({ error: "project_not_found", message: "This project no longer exists." }, 400);
+    }
+    updateIssueProject(deps.db, id, project_id);
+    const moved = readIssue(deps.db, id);
+    if (!moved)
+      return c.json({ error: "issue_not_found", message: "This issue no longer exists." }, 404);
+    return c.json(moved);
   });
 
   return routes;

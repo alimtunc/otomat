@@ -196,6 +196,7 @@ it("posts abort and parses the returned run detail", async () => {
     sessions: [],
     compete_groups: [],
     worktree_path: null,
+    base_branch: null,
   };
   const fetchMock: typeof fetch = async (input) => {
     calledUrl = String(input);
@@ -243,6 +244,7 @@ it("fetches candidate evidence and posts an explicit compete winner", async () =
     sessions: [],
     compete_groups: [],
     worktree_path: null,
+    base_branch: null,
   };
   const fetchMock: typeof fetch = async (input, init) => {
     calls.push({ url: String(input), body: init?.body });
@@ -392,6 +394,7 @@ it("registers a repository and parses the project + repository pair", async () =
     name: "otomat",
     remote_url: null,
     default_branch: "main",
+    available: true,
   };
   let calledUrl = "";
   let lastBody: unknown;

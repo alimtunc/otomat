@@ -5,21 +5,15 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import { ModelSelectionRefusedError } from "#runtime";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
-import { anchorProjectRoot, seedRepository } from "../support/db.js";
-import { setupTestRepo, type TestRepo } from "../support/git.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
-/** Only the compete case needs a real repository; the other launches never reach worktree creation. */
-let repo: TestRepo | null = null;
 
 beforeEach(() => {
   fix = setupDaemonDb();
-  repo = null;
 });
 
 afterEach(() => {
-  repo?.cleanup();
   fix.cleanup();
 });
 
@@ -107,10 +101,6 @@ it("gives each plan step its own model while an untouched step inherits the laun
 });
 
 it("freezes a distinct model per competitor of a compete group", async () => {
-  repo = setupTestRepo();
-  anchorProjectRoot(fix.db, repo.root);
-  seedRepository(fix.db, repo.defaultBranch);
-
   const { run } = await launch({
     prompt: "goal",
     runtime: "fake",

@@ -1,6 +1,7 @@
 import { DaemonRequestError } from "@otomat/client";
 import {
   agentProfileErrorSchema,
+  runLaunchErrorSchema,
   type CreateRunContributionRequest,
   type RunContract,
   type StartRunRequest,
@@ -124,6 +125,8 @@ function contributionErrorMessage(error: unknown): string {
 
 function startRunErrorMessage(error: unknown): string {
   if (error instanceof DaemonRequestError) {
+    const launchRefusal = runLaunchErrorSchema.safeParse(error.body);
+    if (launchRefusal.success) return launchRefusal.data.message;
     const refusal = agentProfileErrorSchema.safeParse(error.body);
     if (refusal.success) return refusal.data.message;
     return error.status >= 500

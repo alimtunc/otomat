@@ -3,7 +3,9 @@ import { Button, DialogBody, Field, FieldControl, FieldLabel, Kbd, Textarea } fr
 import { useLaunchRun } from "@web/api/runs/mutations";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { LaunchAgentModelFields } from "@web/components/runs/launch/launch-agent-model-fields";
+import { LaunchTargetFields } from "@web/components/runs/launch/launch-target-fields";
 import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
+import type { LaunchTargetState } from "@web/components/runs/launch/use-launch-target";
 import { agentChoiceToRequest } from "@web/lib/agent-choice";
 import { hasText, submitOnCmdEnter } from "@web/lib/form";
 import { issueLaunchPrompt } from "@web/lib/issue-prompt";
@@ -12,6 +14,7 @@ import { useState } from "react";
 
 export interface SingleRunLaunchFormProps {
   issue: IssueContract;
+  target: Extract<LaunchTargetState, { status: "ready" }>;
   agentChoice: string | null;
   onAgentChoice: (choice: string | null) => void;
   onLaunched: (run: RunContract) => void;
@@ -21,6 +24,7 @@ export interface SingleRunLaunchFormProps {
 /** One agent turn on this issue, with the prompt it starts from on screen and editable. */
 export function SingleRunLaunchForm({
   issue,
+  target,
   agentChoice,
   onAgentChoice,
   onLaunched,
@@ -38,6 +42,7 @@ export function SingleRunLaunchForm({
     const run = await launch({
       issue_id: issue.id,
       prompt: prompt.trim(),
+      base_branch: target.baseBranch,
       ...agentChoiceToRequest(agents.choice),
       model,
     });
@@ -70,6 +75,7 @@ export function SingleRunLaunchForm({
           onAgentChoice={onAgentChoice}
           onModelChange={setModel}
         />
+        <LaunchTargetFields target={target} disabled={isPending} />
       </DialogBody>
       <IssueFormFooter
         onCancel={onCancel}

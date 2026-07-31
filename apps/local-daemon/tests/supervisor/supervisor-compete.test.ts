@@ -11,30 +11,19 @@ import {
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createRepositoryResolver, type RepositoryResolver } from "#git";
-import {
-  CompeteRepositoryRequiredError,
-  createSupervisor,
-  RunNotResumableError,
-} from "#supervisor";
+import { createSupervisor, RunNotResumableError } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
-import { anchorProjectRoot, seedRepository } from "../support/db.js";
-import { setupTestRepo, type TestRepo } from "../support/git.js";
 import { providerSessionEvent, writeRunEvents } from "../support/run-event-fixtures.js";
 import { deadPid, workerSpawn } from "../support/spawn.js";
 
 let fix: DaemonTestDb;
-let repo: TestRepo;
 
 beforeEach(() => {
   fix = setupDaemonDb();
-  repo = setupTestRepo();
-  anchorProjectRoot(fix.db, repo.root);
-  seedRepository(fix.db, repo.defaultBranch);
 });
 
 afterEach(() => {
-  repo.cleanup();
   fix.cleanup();
 });
 
@@ -164,7 +153,7 @@ it("rejects a compete launch before writing rows when the project has no reposit
 
   await expect(
     supervisor.start({ issue_id: "i-no-repo", plan: COMPETE_PLAN }),
-  ).rejects.toBeInstanceOf(CompeteRepositoryRequiredError);
+  ).rejects.toMatchObject({ name: "LaunchRefusedError", code: "repository_required" });
   expect(fix.db.select().from(schema.runs).all()).toHaveLength(0);
   expect(fix.db.select().from(schema.stepRuns).all()).toHaveLength(0);
   expect(fix.db.select().from(schema.competeGroups).all()).toHaveLength(0);
@@ -324,7 +313,7 @@ it("finishes a reserved promotion after restart without auto-running dependents"
     spawn: blockedSpawn,
     repositories: UNAVAILABLE_REPOSITORIES,
   });
-  await expect(blocked.resume(run.id)).rejects.toThrow(/canonical worktree/);
+  await expect(blocked.resume(run.id)).rejects.toThrow(/cannot continue without its worktree/);
   expect(blockedSpawn.calls).toBe(0);
   expect(getRun(fix.db, run.id)?.status).toBe("awaiting_human");
 

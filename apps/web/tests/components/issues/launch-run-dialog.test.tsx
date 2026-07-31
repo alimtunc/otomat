@@ -6,6 +6,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { setInputValue, setTextareaValue } from "#support/dom-events";
 import { findButton } from "#support/dom-queries";
+import { repositoriesQueryResult, repositoryBranchesQueryResult } from "#support/launch-target";
 import { mount } from "#support/mount";
 import { modelCatalogQueryResult } from "#support/runtime-models";
 
@@ -50,6 +51,8 @@ vi.mock("@web/api/daemon/queries", () => ({
     refetch: vi.fn(),
   }),
   useRuntimeModels: () => modelCatalogQueryResult(),
+  useRepositories: () => repositoriesQueryResult(),
+  useRepositoryBranches: () => repositoryBranchesQueryResult(),
 }));
 
 vi.mock("@web/api/agent-profiles/queries", () => ({
@@ -146,6 +149,7 @@ it("sends the prompt on screen, edits included, and follows the run in place", a
   expect(launch).toHaveBeenCalledWith({
     issue_id: "issue-1",
     prompt: "Only fix the quoting",
+    base_branch: "main",
     runtime: "claude",
   });
   expect(onLaunched).toHaveBeenCalledWith({ id: "run-1" });
@@ -166,6 +170,7 @@ it("sends the per-launch model override, listed against the agent's own runtime"
   expect(launch).toHaveBeenCalledWith({
     issue_id: "issue-1",
     prompt: "Ship the CSV parser\n\nQuoting breaks on nested commas.",
+    base_branch: "main",
     runtime: "claude",
     model: { kind: "model", id: "opus" },
   });
@@ -199,6 +204,7 @@ it("launches a multi-step workflow on the existing issue without inventing a sec
 
   expect(launch).toHaveBeenCalledWith({
     issue_id: "issue-1",
+    base_branch: "main",
     runtime: "claude",
     plan: {
       version: 1,
@@ -209,4 +215,20 @@ it("launches a multi-step workflow on the existing issue without inventing a sec
     },
   });
   expect(navigate).not.toHaveBeenCalled();
+});
+
+it("sends the base branch the user picked instead of the repository default", async () => {
+  await openDialog();
+  const trigger = document.querySelector<HTMLElement>("button[aria-label='Base branch']");
+  if (!trigger) throw new Error("base branch select not found");
+  await act(async () => trigger.click());
+  const option = [...document.querySelectorAll<HTMLElement>("[role='option']")].find(
+    (item) => item.textContent?.trim() === "develop",
+  );
+  if (!option) throw new Error("develop option not found");
+  await act(async () => option.click());
+
+  await click("Launch run⌘↵");
+
+  expect(launch).toHaveBeenCalledWith(expect.objectContaining({ base_branch: "develop" }));
 });

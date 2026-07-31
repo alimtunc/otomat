@@ -1,5 +1,8 @@
+import { getProject, getRepository } from "@otomat/db";
 import { registerRepositoryRequestSchema, type RepositoryRegistrationError } from "@otomat/domain";
 import { Hono } from "hono";
+
+import { isRepositoryRoot, listBranches } from "#git";
 
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";
@@ -17,7 +20,14 @@ const REGISTRATION_MESSAGES: Record<RepositoryRegistrationError, string> = {
   default_branch_undetectable:
     "Could not detect a default branch; make an initial commit on a branch first.",
   repository_already_registered: "This repository is already registered.",
+  project_not_found: "This project no longer exists.",
+  project_already_has_repository: "This project already has a repository.",
 };
+
+const CONFLICT_ERRORS: ReadonlySet<RepositoryRegistrationError> = new Set([
+  "repository_already_registered",
+  "project_already_has_repository",
+]);
 
 /** Repository reads plus the local-path registration mutation, mounted at `/api/repositories`. */
 export function createRepositoryRoutes(deps: ApiDeps): Hono {
@@ -26,15 +36,36 @@ export function createRepositoryRoutes(deps: ApiDeps): Hono {
   routes.get("/", (c) => c.json(readRepositories(deps.db, c.req.query("projectId"))));
 
   routes.post("/", validateJson(registerRepositoryRequestSchema), (c) => {
-    const result = registerLocalRepository(deps.db, c.req.valid("json").path);
+    const { path, project_id } = c.req.valid("json");
+    const result = registerLocalRepository(deps.db, path, project_id);
     if (!result.ok) {
-      const status = result.error === "repository_already_registered" ? 409 : 400;
+      const status = CONFLICT_ERRORS.has(result.error) ? 409 : 400;
       return c.json({ error: result.error, message: REGISTRATION_MESSAGES[result.error] }, status);
     }
     return c.json(
-      { project: toProject(result.project), repository: toRepository(result.repository) },
+      { project: toProject(result.project), repository: toRepository(result.repository, true) },
       201,
     );
+  });
+
+  /** Branches a run can fork from. 409 rather than an empty list so an unusable root is legible. */
+  routes.get("/:id/branches", (c) => {
+    const repository = getRepository(deps.db, c.req.param("id"));
+    if (!repository) return c.json({ error: "repository_not_found" }, 404);
+    const project = getProject(deps.db, repository.project_id);
+    if (!project || !isRepositoryRoot(project.root_path)) {
+      return c.json(
+        {
+          error: "repository_unavailable",
+          message: "This repository's path is gone or is no longer a git repository.",
+        },
+        409,
+      );
+    }
+    return c.json({
+      default_branch: repository.default_branch,
+      branches: listBranches(project.root_path),
+    });
   });
 
   return routes;

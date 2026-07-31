@@ -13,7 +13,6 @@ import {
 } from "@otomat/db";
 import {
   agentSessionMachine,
-  isRunPlanCompeteGroup,
   readyPlanWork,
   runMachine,
   type RunPlanCompetitor,
@@ -29,11 +28,11 @@ import { hasRunActivity, notifyAfterSettle, type SupervisorState } from "./state
 import { driveCompeteGroupTo, driveIdleRunTo } from "./transitions.js";
 import type { TurnContext } from "./types.js";
 
-function canonicalWorktreePath(state: SupervisorState, run: RunRow): string | null {
-  const path =
-    state.repositories.forRepository(run.repository_id)?.service.get(run.id)?.path ?? null;
-  if (path === null && run.plan_json.steps.some(isRunPlanCompeteGroup)) {
-    throw new Error(`run ${run.id} compete continuation requires its canonical worktree`);
+/** Every turn runs in the run's own worktree; a missing one fails the step here, never at the provider. */
+function canonicalWorktreePath(state: SupervisorState, run: RunRow): string {
+  const path = state.repositories.forRepository(run.repository_id)?.service.get(run.id)?.path;
+  if (path === undefined) {
+    throw new Error(`run ${run.id} cannot continue without its worktree`);
   }
   return path;
 }
@@ -42,7 +41,7 @@ function insertTurn(
   state: SupervisorState,
   run: RunRow,
   step: RunPlanCompetitor,
-  worktreePath: string | null,
+  worktreePath: string,
 ): TurnContext {
   if (step.agent === null || step.prompt === null) {
     throw new Error(`run ${run.id} frozen plan step ${step.id} is missing its agent or prompt`);

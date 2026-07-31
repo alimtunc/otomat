@@ -6,6 +6,9 @@ import { createGitWorktreeService } from "./service.js";
 /** Ties a persisted repository id to the worktree service operating on its root. */
 export interface RepositoryBinding {
   repositoryId: string;
+  /** Main working tree the run's worktree forks from; the base-branch check runs here. */
+  rootPath: string;
+  defaultBranch: string;
   service: GitWorktreeService;
 }
 
@@ -15,16 +18,16 @@ export interface RepositoryResolverConfig {
   worktreesRoot: string;
   /** Overrides worktree id generation, primarily for deterministic tests. */
   idFactory?: () => string;
-  /** Projects rejected during boot probing must never receive a worktree service. */
-  unavailableProjectIds?: ReadonlySet<string>;
 }
 
 /**
  * The single owner of repository-id to root-path to worktree-service resolution.
- * Bindings are cached because repository registrations are insert-only within a process.
+ * Every call reads the rows and builds a fresh binding: registering or repairing
+ * a repository moves a project's root, and any cached verdict or service would
+ * go on forking from the old one.
  */
 export interface RepositoryResolver {
-  /** Returns null for null ids and for unknown or unavailable repository rows. */
+  /** Returns null for null ids and for unknown repository rows. */
   forRepository(repositoryId: string | null): RepositoryBinding | null;
   /** Resolves the project's main repository, or null when it has none. */
   forProject(projectId: string): RepositoryBinding | null;
@@ -34,21 +37,18 @@ export interface RepositoryResolver {
 
 export function createRepositoryResolver(config: RepositoryResolverConfig): RepositoryResolver {
   const { db, worktreesRoot } = config;
-  const cache = new Map<string, RepositoryBinding>();
 
   function forRepository(repositoryId: string | null): RepositoryBinding | null {
     if (repositoryId === null) return null;
-    const cached = cache.get(repositoryId);
-    if (cached) return cached;
-
     const repository = getRepository(db, repositoryId);
     if (!repository) return null;
     const project = getProject(db, repository.project_id);
     if (!project) return null;
-    if (config.unavailableProjectIds?.has(project.id)) return null;
 
-    const binding: RepositoryBinding = {
+    return {
       repositoryId,
+      rootPath: project.root_path,
+      defaultBranch: repository.default_branch,
       service: createGitWorktreeService({
         db,
         repositoryId,
@@ -58,8 +58,6 @@ export function createRepositoryResolver(config: RepositoryResolverConfig): Repo
         ...(config.idFactory ? { idFactory: config.idFactory } : {}),
       }),
     };
-    cache.set(repositoryId, binding);
-    return binding;
   }
 
   return {

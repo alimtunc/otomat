@@ -34,7 +34,7 @@ function job(): SupervisedJob {
     agentSessionId: "session-gate",
     prompt: "do not run before release",
     agentSessionDir,
-    worktreePath: null,
+    worktreePath: "/tmp/otomat-test-worktree",
     runtime: "fake",
     config: null,
     mode: "run",

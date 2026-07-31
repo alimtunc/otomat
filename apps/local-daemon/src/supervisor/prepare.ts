@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 
 import {
   getIssue,
-  getProject,
   insertCompeteGroup,
   insertIssue,
   insertRun,
@@ -16,12 +15,21 @@ import {
   issueMachine,
   runMachine,
   stepRunMachine,
+  type RunPlan,
   type StartRunRequest,
 } from "@otomat/domain";
 
 import { resolveAgentConfig } from "#agents";
+import {
+  GitCommandError,
+  WorktreeConflictError,
+  type AcquireWorktreeInput,
+  type GitWorktreeService,
+  type WorktreeRecord,
+} from "#git";
 
 import { defaultConfigSelector, freezePlan } from "./freeze-plan.js";
+import { LaunchRefusedError, resolveLaunchTarget } from "./launch-target.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
 
@@ -35,29 +43,6 @@ function runBranchName(runId: string): string {
 function firstLine(text: string): string {
   const [first = ""] = text.split("\n");
   return first.trim().slice(0, 120);
-}
-
-/** An explicit project id that matches no row: a caller error, not a daemon failure. */
-export class ProjectNotFoundError extends Error {
-  constructor(projectId: string) {
-    super(`project ${projectId} not found`);
-    this.name = "ProjectNotFoundError";
-  }
-}
-
-/** Compete candidates require isolated Git worktrees and cannot run in a repository-less project. */
-export class CompeteRepositoryRequiredError extends Error {
-  constructor(projectId: string) {
-    super(`project ${projectId} needs a usable Git repository for compete groups`);
-    this.name = "CompeteRepositoryRequiredError";
-  }
-}
-
-/** Ad-hoc launches pin an explicit valid project; otherwise they use the boot workspace. */
-function resolveProjectId(db: Db, defaultProjectId: string, request: StartRunRequest): string {
-  if (!request.project_id) return defaultProjectId;
-  if (!getProject(db, request.project_id)) throw new ProjectNotFoundError(request.project_id);
-  return request.project_id;
 }
 
 /** Creates the issue that anchors a prompt-only launch and returns its id. */
@@ -75,12 +60,42 @@ function insertAdHocIssue(db: Db, projectId: string, request: StartRunRequest): 
   return issueId;
 }
 
-/**
- * Materializes the run, step and session rows, freezes the plan, and acquires an
- * isolated worktree from the repository belonging to the run's issue.
- */
+function insertPlanRows(db: Db, runId: string, plan: RunPlan): void {
+  let executableIndex = 0;
+  plan.steps.forEach((node, nodeIndex) => {
+    if (isRunPlanCompeteGroup(node)) {
+      insertCompeteGroup(db, {
+        id: node.id,
+        run_id: runId,
+        idx: nodeIndex,
+        name: node.name,
+        status: competeGroupMachine.initial,
+      });
+      for (const competitor of node.compete) {
+        insertStepRun(db, {
+          id: competitor.id,
+          run_id: runId,
+          idx: executableIndex++,
+          name: competitor.name,
+          status: stepRunMachine.initial,
+          compete_group_id: node.id,
+        });
+      }
+      return;
+    }
+    insertStepRun(db, {
+      id: node.id,
+      run_id: runId,
+      idx: executableIndex++,
+      name: node.name,
+      status: stepRunMachine.initial,
+    });
+  });
+}
+
+/** A launched run always owns a worktree: every precondition refuses before any row is written. */
 export function prepareRun(state: SupervisorState, request: StartRunRequest): string {
-  const { db, defaultProjectId, repositories } = state;
+  const { db } = state;
   // Every effective config is resolved and validated before any row (issue included) is written.
   const defaultConfig = resolveAgentConfig(db, defaultConfigSelector(request), {
     model: request.model,
@@ -89,27 +104,23 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
 
   const existingIssue = request.issue_id ? getIssue(db, request.issue_id) : undefined;
   if (request.issue_id && !existingIssue) throw new Error(`issue ${request.issue_id} not found`);
-  const projectId = existingIssue?.project_id ?? resolveProjectId(db, defaultProjectId, request);
   const prompt = request.prompt ?? existingIssue?.title ?? "";
-  // The issue owns the project, so issue-based launches always resolve that project's repository.
-  const binding = repositories.forProject(projectId);
 
   const runId = randomUUID();
   const branch = runBranchName(runId);
   const plan = freezePlan(db, request, defaultConfig, prompt);
-  if (plan.steps.some(isRunPlanCompeteGroup) && !binding) {
-    throw new CompeteRepositoryRequiredError(projectId);
-  }
+  // Runtime availability is a cheap PATH probe; it answers before the repository is touched.
   for (const step of executableSteps(plan)) ensureRuntimeAgent(db, step.agent ?? defaultRuntime);
   ensureRuntimeAgent(db, defaultRuntime);
-  const issueId = existingIssue?.id ?? insertAdHocIssue(db, projectId, request);
+  const { projectId, binding, baseRef } = resolveLaunchTarget(state, request, existingIssue);
 
-  // Acquired before the run row exists so a git failure aborts the launch cleanly (no phantom run).
-  const worktree = binding ? binding.service.acquire({ owner: runId, branch }) : null;
+  // Acquired before the run's rows exist so a git failure aborts the launch cleanly (no phantom run).
+  const worktree = acquireRunWorktree(binding.service, { owner: runId, branch, baseRef });
 
   try {
     db.transaction(
       () => {
+        const issueId = existingIssue?.id ?? insertAdHocIssue(db, projectId, request);
         insertRun(db, {
           id: runId,
           issue_id: issueId,
@@ -117,53 +128,53 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
           status: runMachine.initial,
           branch,
           plan_json: plan,
-          repository_id: binding?.repositoryId ?? null,
-          worktree_id: worktree?.id ?? null,
+          repository_id: binding.repositoryId,
+          worktree_id: worktree.id,
         });
-        let executableIndex = 0;
-        plan.steps.forEach((node, nodeIndex) => {
-          if (isRunPlanCompeteGroup(node)) {
-            insertCompeteGroup(db, {
-              id: node.id,
-              run_id: runId,
-              idx: nodeIndex,
-              name: node.name,
-              status: competeGroupMachine.initial,
-            });
-            for (const competitor of node.compete) {
-              insertStepRun(db, {
-                id: competitor.id,
-                run_id: runId,
-                idx: executableIndex++,
-                name: competitor.name,
-                status: stepRunMachine.initial,
-                compete_group_id: node.id,
-              });
-            }
-            return;
-          }
-          insertStepRun(db, {
-            id: node.id,
-            run_id: runId,
-            idx: executableIndex++,
-            name: node.name,
-            status: stepRunMachine.initial,
-          });
-        });
+        insertPlanRows(db, runId, plan);
       },
       { behavior: "immediate" },
     );
   } catch (error) {
     // The rows never landed — roll back the worktree acquired above so no orphan dir/branch leaks.
-    if (worktree) {
-      try {
-        binding?.service.cleanup(runId);
-      } catch (cleanupError) {
-        console.error(`[otomat] worktree rollback for aborted run ${runId} failed`, cleanupError);
-      }
+    try {
+      binding.service.cleanup(runId);
+    } catch (cleanupError) {
+      console.error(`[otomat] worktree rollback for aborted run ${runId} failed`, cleanupError);
     }
     throw error;
   }
 
   return runId;
+}
+
+/** Node reports an unwritable or full data dir with a `syscall`; the launch cannot proceed, but the daemon is not broken. */
+function isSystemError(error: unknown): boolean {
+  return error instanceof Error && "syscall" in error && typeof error.syscall === "string";
+}
+
+/**
+ * Turns an acquire failure the user can act on — git refused, the branch is
+ * taken, the worktrees dir is unwritable — into a typed launch refusal carrying
+ * the reason. Anything else is a daemon bug and keeps its own stack rather than
+ * being reported as a repository the caller should go repair.
+ */
+function acquireRunWorktree(
+  service: GitWorktreeService,
+  input: AcquireWorktreeInput,
+): WorktreeRecord {
+  try {
+    return service.acquire(input);
+  } catch (error) {
+    const actionable =
+      error instanceof GitCommandError ||
+      error instanceof WorktreeConflictError ||
+      isSystemError(error);
+    if (!actionable) throw error;
+    throw new LaunchRefusedError(
+      "worktree_unavailable",
+      `could not create the run's worktree: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
+  }
 }

@@ -15,6 +15,7 @@ import {
   listRuns,
   listSkills,
   listStepRunsForRun,
+  getProject,
   type Db,
   type IssueExecutionEvidenceRow,
   type StepRunRow,
@@ -32,6 +33,7 @@ import {
   type SkillContract,
 } from "@otomat/domain";
 
+import { isRepositoryRoot } from "#git";
 import { findWorktreeById } from "#git/worktrees-store";
 
 import {
@@ -64,8 +66,12 @@ export function readSkills(db: Db): SkillContract[] {
   return listSkills(db).map(toSkill);
 }
 
+/** Probed per read so a root that moved or stopped being a git repository is never offered as a launch target. */
 export function readRepositories(db: Db, projectId?: string): RepositoryContract[] {
-  return listRepositories(db, { projectId }).map(toRepository);
+  return listRepositories(db, { projectId }).map((row) => {
+    const project = getProject(db, row.project_id);
+    return toRepository(row, project !== undefined && isRepositoryRoot(project.root_path));
+  });
 }
 
 /** Groups the flat evidence rows by issue so each issue gets one deterministic projection. */
@@ -113,6 +119,8 @@ export function readRunDetail(db: Db, runId: string): RunDetail | null {
     sessions: listAgentSessionsForRun(db, runId).map(toAgentSession),
     compete_groups: listCompeteGroupsForRun(db, runId).map(toCompeteGroup),
     worktree_path: worktree?.path ?? null,
+    base_branch:
+      worktree?.base_ref === undefined || worktree.base_ref === "" ? null : worktree.base_ref,
   };
 }
 

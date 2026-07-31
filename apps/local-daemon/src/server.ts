@@ -79,7 +79,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     const dataDir = dirname(dbPath);
     const projectRoot = process.env.OTOMAT_PROJECT_ROOT ?? process.cwd();
     const defaultProjectId = ensureDefaultProject(db, projectRoot);
-    const defaultRepositoryId = ensureDefaultRepository(db, defaultProjectId, projectRoot);
+    ensureDefaultRepository(db, defaultProjectId);
     try {
       rescanSkills(db);
     } catch (error) {
@@ -88,9 +88,6 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     const repositories = createRepositoryResolver({
       db,
       worktreesRoot: process.env.OTOMAT_WORKTREES_ROOT ?? join(dataDir, "worktrees"),
-      ...(defaultRepositoryId === null
-        ? { unavailableProjectIds: new Set([defaultProjectId]) }
-        : {}),
     });
     const review = createReviewService({ db, dataDir, repositories });
     const github = createGitHubService({
