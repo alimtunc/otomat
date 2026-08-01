@@ -1,0 +1,148 @@
+import type { RemoteHostStatus } from "@otomat/domain";
+import { expect, it, vi } from "vitest";
+
+import { RemoteHostSession } from "#main/remote/session";
+import type { SshScriptResult } from "#main/remote/ssh";
+import type { SshTunnelOptions, TunnelHandle } from "#main/remote/tunnel";
+
+const STARTED: SshScriptResult = { code: 0, stdout: "OTOMAT_REMOTE:STARTED:100\n", stderr: "" };
+
+class FakeTunnel implements TunnelHandle {
+  running = false;
+  stopped = false;
+  constructor(readonly options: SshTunnelOptions) {}
+  start(): void {
+    this.running = true;
+  }
+  stop(): Promise<void> {
+    this.running = false;
+    this.stopped = true;
+    this.options.onExit({ code: null, stderrTail: "", expected: true });
+    return Promise.resolve();
+  }
+  drop(stderrTail: string): void {
+    this.running = false;
+    this.options.onExit({ code: 255, stderrTail, expected: false });
+  }
+}
+
+function harness(overrides?: {
+  runScript?: () => Promise<SshScriptResult>;
+  health?: () => Promise<void>;
+}) {
+  const statuses: RemoteHostStatus[] = [];
+  const tunnels: FakeTunnel[] = [];
+  const retries: Array<() => void> = [];
+  const runScript = vi.fn(overrides?.runScript ?? (() => Promise.resolve(STARTED)));
+  const health = vi.fn(overrides?.health ?? (() => Promise.resolve()));
+  const session = new RemoteHostSession({
+    alias: "otomat-vps",
+    log: () => {},
+    onStatus: (status) => statuses.push(status),
+    runScript,
+    createTunnel: (options) => {
+      const tunnel = new FakeTunnel(options);
+      tunnels.push(tunnel);
+      return tunnel;
+    },
+    health,
+    reservePort: () => Promise.resolve(45_000),
+    scheduleRetry: (callback) => {
+      retries.push(callback);
+      return 0 as unknown as NodeJS.Timeout;
+    },
+  });
+  return { session, statuses, tunnels, retries, runScript, health };
+}
+
+function phases(statuses: RemoteHostStatus[]): string[] {
+  return statuses.map((status) => status.phase);
+}
+
+it("declares connected only after a health response came back through the tunnel", async () => {
+  const { session, statuses, tunnels, health } = harness();
+  const status = await session.connect(false);
+  expect(status.phase).toBe("connected");
+  expect(phases(statuses)).toEqual([
+    "checking_host",
+    "starting_daemon",
+    "opening_tunnel",
+    "connected",
+  ]);
+  expect(session.url).toBe("http://127.0.0.1:45000");
+  expect(tunnels).toHaveLength(1);
+  expect(health).toHaveBeenCalledWith(
+    expect.objectContaining({ url: "http://127.0.0.1:45000/api/health" }),
+  );
+});
+
+it("surfaces an ssh failure as an honest error without retrying interactively", async () => {
+  const { session, retries } = harness({
+    runScript: () =>
+      Promise.resolve({ code: 255, stdout: "", stderr: "Permission denied (publickey)" }),
+  });
+  const status = await session.connect(false);
+  expect(status).toMatchObject({ phase: "error", code: "ssh_unreachable" });
+  expect(status.detail).toContain("Permission denied");
+  expect(retries).toHaveLength(0);
+});
+
+it("reports a missing remote daemon install verbatim", async () => {
+  const { session } = harness({
+    runScript: () =>
+      Promise.resolve({
+        code: 0,
+        stdout: "OTOMAT_REMOTE:NO_DAEMON:/home/u/.otomat/daemon/dist/index.js\n",
+        stderr: "",
+      }),
+  });
+  const status = await session.connect(false);
+  expect(status).toMatchObject({ phase: "error", code: "daemon_missing" });
+  expect(status.detail).toContain("/home/u/.otomat/daemon/dist/index.js");
+});
+
+it("tears the tunnel down when health never answers", async () => {
+  const { session, tunnels } = harness({
+    health: () => Promise.reject(new Error("daemon health check timed out after 15000ms")),
+  });
+  const status = await session.connect(false);
+  expect(status).toMatchObject({ phase: "error", code: "health_failed" });
+  expect(tunnels[0]?.stopped).toBe(true);
+});
+
+it("keeps cycling through reconnecting on background failures until the host recovers", async () => {
+  const runScript = vi
+    .fn<() => Promise<SshScriptResult>>()
+    .mockResolvedValueOnce({ code: 255, stdout: "", stderr: "no route to host" })
+    .mockResolvedValue(STARTED);
+  const { session, statuses, retries } = harness({ runScript });
+  const status = await session.connect(true);
+  expect(status.phase).toBe("reconnecting");
+  expect(retries).toHaveLength(1);
+  retries[0]?.();
+  await vi.waitFor(() => expect(session.status.phase).toBe("connected"));
+  expect(phases(statuses)).toContain("reconnecting");
+});
+
+it("re-enters the reconnect loop on an unexpected tunnel drop, keeping the same local port", async () => {
+  const { session, tunnels, retries } = harness();
+  await session.connect(false);
+  tunnels[0]?.drop("connection reset");
+  expect(session.status.phase).toBe("reconnecting");
+  expect(retries).toHaveLength(1);
+  retries[0]?.();
+  await vi.waitFor(() => expect(session.status.phase).toBe("connected"));
+  expect(session.url).toBe("http://127.0.0.1:45000");
+  expect(tunnels).toHaveLength(2);
+});
+
+it("stops reconnecting once disposed", async () => {
+  const { session, retries } = harness({
+    runScript: () => Promise.resolve({ code: 255, stdout: "", stderr: "down" }),
+  });
+  await session.connect(true);
+  expect(retries).toHaveLength(1);
+  await session.dispose();
+  retries[0]?.();
+  expect(session.status.phase).toBe("disconnected");
+});

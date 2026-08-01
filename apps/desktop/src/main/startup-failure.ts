@@ -5,7 +5,41 @@ import {
 } from "@otomat/domain";
 
 import { DaemonStartupError } from "./daemon.js";
-import { DataDirectoryError } from "./data-safety/index.js";
+import { DataDirectoryError, findLatestManagedBackup } from "./data-safety/index.js";
+
+export interface BackupDiscoveryContext {
+  backupsDir: string;
+  dbFileName: string;
+  rejectedBackupPaths: Set<string>;
+  log(message: string): void;
+}
+
+/** Fills `backup_path` on recoverable diagnostics from the newest managed backup, if any survives the rejected set. */
+export function attachAvailableBackup(
+  diagnostic: DesktopStartupDiagnostic,
+  context: BackupDiscoveryContext | null,
+): DesktopStartupDiagnostic {
+  if (
+    context === null ||
+    !isRecoverableStartupDiagnostic(diagnostic) ||
+    diagnostic.backup_path !== null
+  ) {
+    return diagnostic;
+  }
+  try {
+    return {
+      ...diagnostic,
+      backup_path: findLatestManagedBackup(
+        context.backupsDir,
+        context.dbFileName,
+        context.rejectedBackupPaths,
+      ),
+    };
+  } catch {
+    context.log("Managed backup discovery failed.");
+    return diagnostic;
+  }
+}
 
 export function isRecoverableStartupDiagnostic(
   diagnostic: DesktopStartupDiagnostic,

@@ -1,5 +1,7 @@
 import { join } from "node:path";
 
+import type { RemoteHostStatus } from "@otomat/domain";
+
 import { DaemonController } from "./daemon.js";
 import {
   prepareDataDirectory,
@@ -9,6 +11,7 @@ import {
 import { LinearCoordinator } from "./linear-coordinator.js";
 import { createMainLinearVault } from "./linear-vault-io.js";
 import type { AppPaths } from "./paths.js";
+import { ExecutionHostManager } from "./remote/manager.js";
 
 const LOG_MAX_BYTES = 1024 * 1024;
 const LOG_ARCHIVES = 3;
@@ -19,6 +22,7 @@ export interface DesktopRuntime {
   daemonLog: RotatingLog;
   daemon: DaemonController;
   linear: LinearCoordinator;
+  hosts: ExecutionHostManager;
 }
 
 interface DesktopRuntimeOptions {
@@ -26,6 +30,9 @@ interface DesktopRuntimeOptions {
   userData: string;
   userPath: string;
   daemonUrl(): string;
+  localDaemonUrl(): string;
+  onRemoteStatus(status: RemoteHostStatus): void;
+  applyRendererUrl(url: string): void;
 }
 
 export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRuntime {
@@ -51,5 +58,12 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     electronBinary: process.execPath,
     writeLog: (stream, text) => daemonLog.write(`[${stream}] ${text}`),
   });
-  return { dataDirectory, desktopLog, daemonLog, daemon, linear };
+  const hosts = new ExecutionHostManager({
+    dataDir: dataDirectory.root,
+    log: (message) => desktopLog.write(message),
+    localDaemonUrl: options.localDaemonUrl,
+    onRemoteStatus: options.onRemoteStatus,
+    applyRendererUrl: options.applyRendererUrl,
+  });
+  return { dataDirectory, desktopLog, daemonLog, daemon, linear, hosts };
 }

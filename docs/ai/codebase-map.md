@@ -26,6 +26,7 @@ apps/
   desktop/             # Electron alpha shell: manages the local-daemon lifecycle, serves the web build
     src/
       main/            # app lifecycle, daemon spawn, data layout/recovery, logs, support export
+        remote/        # remote execution host: ssh tunnel, remote daemon start-or-verify, host selection
       preload/         # contextBridge preloads (cockpit + splash)
       shared/          # pure lifecycle logic (free port, PATH resolve, health poll, env, terminate)
 

@@ -16,6 +16,9 @@ export interface RegisterRepositoryFormProps {
 export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProps) {
   const register = useRegisterRepository();
   const bridge = desktopBridge();
+  // The native picker browses this machine; on a remote host the path lives on that host instead.
+  const remoteHost = bridge !== null && bridge.executionHostId === "remote";
+  const remoteAlias = bridge?.executionHostSshAlias ?? "the remote host";
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm({
@@ -57,7 +60,13 @@ export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProp
     >
       <form.Field
         name="path"
-        validators={{ onChange: requiredTrimmed("Enter the absolute path of a local repository.") }}
+        validators={{
+          onChange: requiredTrimmed(
+            remoteHost
+              ? `Enter the absolute path of a repository on ${remoteAlias}.`
+              : "Enter the absolute path of a local repository.",
+          ),
+        }}
       >
         {(field) => (
           <Field {...fieldErrorProps(field.state.meta)}>
@@ -72,13 +81,17 @@ export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProp
                       setSubmitError(null);
                       field.handleChange(event.target.value);
                     }}
-                    placeholder="/absolute/path/to/repository"
+                    placeholder={
+                      remoteHost
+                        ? `/absolute/path/on/${remoteAlias}`
+                        : "/absolute/path/to/repository"
+                    }
                     aria-label="Repository path"
                     spellCheck={false}
                   />
                 </FieldControl>
               </div>
-              {bridge === null ? null : (
+              {bridge === null || remoteHost ? null : (
                 <Button
                   type="button"
                   variant="outline"

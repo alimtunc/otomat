@@ -9,6 +9,7 @@ interface SettingsSection {
 
 const SECTIONS: SettingsSection[] = [
   { to: "/settings/repositories", label: "Repositories", icon: "folder" },
+  { to: "/settings/host", label: "Execution host", icon: "monitor" },
   { to: "/settings/integrations", label: "Integrations", icon: "plug" },
   { to: "/settings/runtimes", label: "Runtimes", icon: "cpu" },
   { to: "/settings/agents", label: "Agents", icon: "bot" },

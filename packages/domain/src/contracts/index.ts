@@ -13,6 +13,7 @@ export * from "./api.js";
 export * from "./data-safety.js";
 export * from "./desktop.js";
 export * from "./diff.js";
+export * from "./execution-host.js";
 export {
   agentProfileContractSchema,
   agentSessionContractSchema,

@@ -69,4 +69,19 @@ export class DesktopSupport {
       detail: DATA_RETENTION_POLICY,
     });
   }
+
+  async confirmRestore(): Promise<boolean> {
+    const confirmation = await dialog.showMessageBox({
+      type: "warning",
+      title: "Restore Otomat data?",
+      message: "Restore the last known backup?",
+      detail:
+        "The current database and its WAL files will be preserved in the backups directory before restoration. Otomat will then restart its local daemon.",
+      buttons: ["Cancel", "Restore Backup"],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    });
+    return confirmation.response === 1;
+  }
 }

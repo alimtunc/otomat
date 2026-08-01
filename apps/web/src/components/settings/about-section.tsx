@@ -2,6 +2,7 @@ import { type ConnectionState } from "@otomat/ui";
 import { useDaemonStatus, useHealth } from "@web/api/daemon/queries";
 import { AboutRow } from "@web/components/settings/about-row";
 import { SectionHeading } from "@web/components/settings/section-heading";
+import { desktopBridge } from "@web/lib/desktop-bridge";
 
 const DAEMON_STATUS_LABELS: Record<ConnectionState, string> = {
   online: "Connected",
@@ -12,6 +13,11 @@ const DAEMON_STATUS_LABELS: Record<ConnectionState, string> = {
 export function AboutSection() {
   const health = useHealth();
   const { connectionState } = useDaemonStatus();
+  const bridge = desktopBridge();
+  const hostLabel =
+    bridge?.executionHostId === "remote"
+      ? `Remote · ${bridge.executionHostSshAlias ?? "ssh"}`
+      : "Local";
   return (
     <div>
       <SectionHeading title="About" description="Version, daemon status and diagnostics." />
@@ -25,6 +31,7 @@ export function AboutSection() {
           value={<span className="font-mono">{health.data?.version ?? "—"}</span>}
         />
         <AboutRow label="Daemon" value={DAEMON_STATUS_LABELS[connectionState]} />
+        <AboutRow label="Execution host" value={hostLabel} />
         {health.isSuccess ? (
           <AboutRow
             label="Database"

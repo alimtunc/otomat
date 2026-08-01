@@ -17,6 +17,11 @@ const harness = vi.hoisted(() => ({
       restoreBackup(path: string): Promise<void>;
     };
     linear: { restore(): Promise<void> };
+    hosts: {
+      bootActivate(): Promise<string | null>;
+      shutdown(): Promise<void>;
+      hasActiveSession: boolean;
+    };
   } | null,
   userData: "",
 }));
@@ -36,6 +41,9 @@ vi.mock("#main/support", () => ({
       return Promise.resolve();
     }
     showDataPolicy(): void {}
+    confirmRestore(): Promise<boolean> {
+      return Promise.resolve(true);
+    }
   },
 }));
 vi.mock("#main/ipc", () => ({
@@ -154,6 +162,7 @@ it("offers the next managed backup after the daemon rejects the newest candidate
       restoreBackup,
     },
     linear: { restore: async () => {} },
+    hosts: { bootActivate: async () => null, shutdown: async () => {}, hasActiveSession: false },
   };
 
   const desktop = new DesktopApp(DEV_PATHS);
@@ -185,6 +194,7 @@ it("keeps shutdown blocked and allows retry when daemon stop fails", async () =>
       restoreBackup: async () => {},
     },
     linear: { restore: async () => {} },
+    hosts: { bootActivate: async () => null, shutdown: async () => {}, hasActiveSession: false },
   };
   const desktop = new DesktopApp(DEV_PATHS);
   await desktop.onReady();

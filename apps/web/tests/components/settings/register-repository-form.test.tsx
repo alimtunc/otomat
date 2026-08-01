@@ -6,6 +6,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { setInputValue } from "#support/dom-events";
 
 const registerRepository = vi.fn();
@@ -26,14 +27,7 @@ afterEach(async () => {
 });
 
 function installDesktopBridge(pickDirectory: () => Promise<string | null>): void {
-  window.otomat = {
-    daemonUrl: "http://127.0.0.1:5000",
-    pickDirectory,
-    linear: {
-      saveKey: async () => ({ ok: true, message: null }),
-      forgetKey: async () => ({ ok: true, message: null }),
-    },
-  };
+  window.otomat = fakeDesktopBridge({ pickDirectory });
 }
 
 function browseButton(): HTMLButtonElement | undefined {
@@ -135,6 +129,17 @@ describe("RegisterRepositoryForm", () => {
   it("hides the native Browse button when no desktop bridge is present", async () => {
     await renderForm();
     expect(browseButton()).toBeUndefined();
+  });
+
+  it("hides the native Browse button and asks for a host path when the remote host is active", async () => {
+    window.otomat = fakeDesktopBridge({
+      executionHostId: "remote",
+      executionHostSshAlias: "otomat-vps",
+    });
+    await renderForm();
+
+    expect(browseButton()).toBeUndefined();
+    expect(pathInput().placeholder).toContain("otomat-vps");
   });
 
   it("fills the path from the native picker when the desktop bridge is present", async () => {

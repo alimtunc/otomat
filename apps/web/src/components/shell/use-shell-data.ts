@@ -3,12 +3,15 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useDaemonStatus, useHealth, useProjects } from "@web/api/daemon/queries";
 import { useProjectRuns } from "@web/api/runs/queries";
 import { useProjectSelection } from "@web/components/shell/project-selection/use-selection";
+import { desktopBridge } from "@web/lib/desktop-bridge";
 import { isProjectScopedDetail } from "@web/lib/project-navigation";
 import { isReviewable, isRunning } from "@web/lib/run/filters";
 
 export function useShellData() {
   const { connectionState, lastSyncAt, retry } = useDaemonStatus();
   const health = useHealth();
+  const bridge = desktopBridge();
+  const hostAlias = bridge?.executionHostId === "remote" ? bridge.executionHostSshAlias : null;
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const projectsQuery = useProjects();
@@ -33,6 +36,7 @@ export function useShellData() {
     lastSyncAt,
     retry,
     daemonVersion: health.data?.version,
+    hostAlias,
     projects,
     currentProjectId,
     selectProject,

@@ -1,0 +1,64 @@
+import type {
+  ExecutionHostId,
+  ExecutionHostOperationResult,
+  ExecutionHostSnapshot,
+} from "@otomat/domain";
+
+import type { ExecutionHostManager } from "./manager.js";
+
+export interface ExecutionHostSync {
+  id: ExecutionHostId;
+  ssh_alias: string | null;
+}
+
+/** Renderer-facing host actions; every call degrades honestly while the runtime is still booting. */
+export interface ExecutionHostIpcActions {
+  sync(): ExecutionHostSync;
+  snapshot(): ExecutionHostSnapshot;
+  select(id: unknown): Promise<ExecutionHostOperationResult>;
+  configureRemote(sshAlias: unknown): ExecutionHostOperationResult;
+  listAliases(): string[];
+}
+
+const NOT_READY: ExecutionHostOperationResult = {
+  ok: false,
+  message: "The desktop runtime is not ready yet.",
+};
+
+export function buildExecutionHostActions(
+  manager: () => ExecutionHostManager | null,
+): ExecutionHostIpcActions {
+  return {
+    sync: () => {
+      const hosts = manager();
+      if (hosts === null) return { id: "local", ssh_alias: null };
+      return { id: hosts.activeHostId, ssh_alias: hosts.remoteSshAlias };
+    },
+    snapshot: () => {
+      const hosts = manager();
+      if (hosts === null) {
+        return {
+          hosts: [{ id: "local", label: "Local", kind: "local" }],
+          active_id: "local",
+          remote_ssh_alias: null,
+          remote_status: null,
+        };
+      }
+      return hosts.snapshot();
+    },
+    select: async (id: unknown) => {
+      const hosts = manager();
+      if (hosts === null) return NOT_READY;
+      if (id !== "local" && id !== "remote") {
+        return { ok: false, message: "Unknown execution host." };
+      }
+      return hosts.select(id);
+    },
+    configureRemote: (sshAlias: unknown) => {
+      const hosts = manager();
+      if (hosts === null) return NOT_READY;
+      return hosts.configureRemote(sshAlias);
+    },
+    listAliases: () => manager()?.listAliases() ?? [],
+  };
+}

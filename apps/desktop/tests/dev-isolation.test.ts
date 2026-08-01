@@ -64,6 +64,9 @@ function sessionFor(worktree: string, appData: string): { root: string; env: Nod
     userData: root,
     userPath: "/usr/bin",
     daemonUrl: () => "",
+    localDaemonUrl: () => "",
+    onRemoteStatus: () => {},
+    applyRendererUrl: () => {},
   });
   expect(runtime.dataDirectory.root).toBe(root);
   return {

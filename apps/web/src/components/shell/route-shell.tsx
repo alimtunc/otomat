@@ -77,6 +77,7 @@ export function RouteShell({
           active={active}
           online={shell.connectionState === "online"}
           daemonVersion={shell.daemonVersion}
+          hostAlias={shell.hostAlias ?? undefined}
           projects={shell.projects}
           currentProjectId={shell.currentProjectId}
           onProjectSelect={shell.selectProject}
