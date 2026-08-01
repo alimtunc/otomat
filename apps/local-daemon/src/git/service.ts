@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { collectChangedFiles, computeCanonicalDiff, worktreeStateTree } from "./diff.js";
 import { WorktreeConflictError, WorktreeNotFoundError } from "./errors.js";
+import { toRecord } from "./record.js";
 import {
   branchExists,
   deleteBranch,
@@ -14,7 +15,6 @@ import {
   revParse,
 } from "./repo.js";
 import type { GitWorktreeService, GitWorktreeServiceConfig } from "./service-contract.js";
-import type { WorktreeRecord } from "./types.js";
 import { addWorktree, pruneWorktrees, removeWorktree } from "./worktree-cli.js";
 import { isDirty, snapshotWorktree } from "./worktree-snapshot.js";
 import {
@@ -34,19 +34,6 @@ function worktreeDirName(owner: string): string {
   const safe = owner.replace(/[^a-zA-Z0-9._-]/g, "-").slice(0, 64);
   const hash = createHash("sha256").update(owner).digest("hex").slice(0, 8);
   return `${safe}-${hash}`;
-}
-
-function toRecord(row: WorktreeRow): WorktreeRecord {
-  return {
-    id: row.id,
-    owner: row.owner_token ?? "",
-    repositoryId: row.repository_id,
-    path: row.path,
-    branch: row.branch,
-    headSha: row.head_sha ?? "",
-    baseRef: row.base_ref,
-    status: row.status,
-  };
 }
 
 /**
@@ -117,9 +104,12 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       try {
         addWorktree(repoRoot, { worktreePath: path, branch: input.branch, baseRef: baseSha });
       } catch (error) {
-        // `git worktree add -b` creates the branch before the checkout, so a failure
-        // leaves it behind; undo it or a refused launch litters the user's repository.
+        // `git worktree add -b` creates the branch before the checkout, and a registered
+        // worktree makes `git branch -D` refuse: undo the whole git side, or a refused
+        // launch litters the user's repository with a dead branch.
+        removeWorktree(repoRoot, path);
         deleteBranch(repoRoot, input.branch);
+        pruneWorktrees(repoRoot);
         throw error;
       }
 
@@ -145,9 +135,16 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
         throw error;
       }
 
-      const inserted = findActiveByOwner(db, input.owner);
-      if (!inserted) throw new Error(`worktree ${id} disappeared right after its insert`);
-      return toRecord(inserted);
+      return {
+        id,
+        owner: input.owner,
+        repositoryId,
+        path,
+        branch: input.branch,
+        headSha: baseSha,
+        baseRef,
+        status: "active",
+      };
     },
 
     get(owner) {

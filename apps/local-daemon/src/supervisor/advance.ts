@@ -108,10 +108,10 @@ async function startCompeteGroup(
     updateCompeteGroupBase(state.db, group.id, binding.service.snapshot(run.id).headSha);
   }
 
-  // Every worktree is acquired before a single session row is written: a competitor
-  // that failed halfway would otherwise leave a live session on a failed group, which
-  // boot reconciliation cannot settle without an illegal transition.
+  // Sessions are written only once every worktree exists, and atomically: a live session
+  // on a failed group is a state boot reconciliation cannot settle legally.
   const acquired: { competitor: RunPlanCompetitor; worktree: WorktreeRecord }[] = [];
+  let contexts: TurnContext[];
   try {
     for (const competitor of unstarted) {
       acquired.push({
@@ -123,17 +123,28 @@ async function startCompeteGroup(
         }),
       });
     }
+    contexts = state.db.transaction(
+      () =>
+        acquired.map(({ competitor, worktree }) => {
+          attachStepWorktree(state.db, competitor.id, worktree.id);
+          return insertTurn(state, run, competitor, worktree.path);
+        }),
+      { behavior: "immediate" },
+    );
   } catch (error) {
     for (const { competitor } of acquired) {
-      if (binding.service.get(competitor.id)) binding.service.cleanup(competitor.id);
+      try {
+        binding.service.cleanup(competitor.id);
+      } catch (cleanupError) {
+        console.error(
+          `[otomat] worktree rollback for competitor ${competitor.id} failed`,
+          cleanupError,
+        );
+      }
     }
     driveCompeteGroupTo(state.db, group.id, group.status, "failed");
     throw error;
   }
-  const contexts: TurnContext[] = acquired.map(({ competitor, worktree }) => {
-    attachStepWorktree(state.db, competitor.id, worktree.id);
-    return insertTurn(state, run, competitor, worktree.path);
-  });
   if (group.status === "queued" || group.status === "awaiting_human") {
     driveCompeteGroupTo(state.db, group.id, group.status, "running");
   }

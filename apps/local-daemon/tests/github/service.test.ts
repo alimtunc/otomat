@@ -1,8 +1,15 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { getPullRequestForRun, getRun, insertPullRequest, updatePullRequest } from "@otomat/db";
+import {
+  getPullRequestForRun,
+  getRun,
+  insertPullRequest,
+  schema,
+  updatePullRequest,
+} from "@otomat/db";
 import type { GitHubConnectionContract } from "@otomat/domain";
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
@@ -433,6 +440,29 @@ describe("GitHubService", () => {
     // show every commit `release/v1` carries that the reviewer never saw.
     expect(cli.createInput?.base).toBe("release/v1");
     expect(result.row.base_ref).toBe("release/v1");
+  });
+
+  it("falls back to the repository default for a worktree recorded before fork refs", async () => {
+    const acquired = worktrees.acquire({ owner: "r-legacy", branch: "otomat/run/r-legacy" });
+    fix.db
+      .update(schema.worktrees)
+      .set({ base_ref: "" })
+      .where(eq(schema.worktrees.id, acquired.id))
+      .run();
+    seedRun(fix.db, {
+      runId: "r-legacy",
+      worktreeId: acquired.id,
+      runStatus: "review_ready",
+      stepStatus: "succeeded",
+      sessionStatus: "terminated",
+    });
+    writeFileSync(join(acquired.path, "change.txt"), "legacy work\n");
+    const legacy = getRun(fix.db, "r-legacy");
+    if (!legacy) throw new Error("seeded legacy run missing");
+
+    await service().publish(legacy, { title: "Ship it", body: "Details" });
+
+    expect(cli.createInput?.base).toBe(repo.defaultBranch);
   });
 
   it("reports an unknown change comparison instead of a false up-to-date state", async () => {

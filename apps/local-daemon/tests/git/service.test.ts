@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { WorktreeConflictError, WorktreeNotFoundError } from "#git/errors";
+import { GitCommandError, WorktreeConflictError, WorktreeNotFoundError } from "#git/errors";
 import { branchExists } from "#git/repo";
 import { createGitWorktreeService } from "#git/service";
 import { type GitWorktreeService } from "#git/service-contract";
@@ -116,9 +116,12 @@ describe("GitWorktreeService", () => {
     mkdirSync(wt.path, { recursive: true });
     writeFileSync(join(wt.path, "leftover.txt"), "from a previous crash\n");
 
-    expect(() => env.service.acquire({ owner: "step-1", branch: "feat-doomed" })).toThrow();
+    expect(() => env.service.acquire({ owner: "step-1", branch: "feat-doomed" })).toThrow(
+      GitCommandError,
+    );
     expect(branchExists(env.repo.root, "feat-doomed")).toBe(false);
     expect(env.service.get("step-1")).toBeUndefined();
+    expect(listWorktrees(env.repo.root)).toHaveLength(1);
   });
 
   it("lists changed files and computes a stable canonical diff from git", () => {
