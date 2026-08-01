@@ -132,8 +132,11 @@ class PullRequestPublisher implements PullRequestPublicationService {
         cwd: context.worktree.path,
         repository: context.remote.repository,
         head: context.worktree.branch,
+        // The branch the run forked from is the only base its reviewed diff matches;
+        // runs recorded before fork refs were tracked fall back to the repository default.
         base:
-          getRepository(this.config.db, context.worktree.repositoryId)?.default_branch ?? "main",
+          context.worktree.baseRef ||
+          (getRepository(this.config.db, context.worktree.repositoryId)?.default_branch ?? "main"),
       },
     };
   }

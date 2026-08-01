@@ -44,6 +44,7 @@ function toRecord(row: WorktreeRow): WorktreeRecord {
     path: row.path,
     branch: row.branch,
     headSha: row.head_sha ?? "",
+    baseRef: row.base_ref,
     status: row.status,
   };
 }
@@ -113,7 +114,14 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       const baseRef = input.baseRef ?? defaultBranch;
       const baseSha = revParse(repoRoot, baseRef);
       mkdirSync(worktreesRoot, { recursive: true });
-      addWorktree(repoRoot, { worktreePath: path, branch: input.branch, baseRef: baseSha });
+      try {
+        addWorktree(repoRoot, { worktreePath: path, branch: input.branch, baseRef: baseSha });
+      } catch (error) {
+        // `git worktree add -b` creates the branch before the checkout, so a failure
+        // leaves it behind; undo it or a refused launch litters the user's repository.
+        deleteBranch(repoRoot, input.branch);
+        throw error;
+      }
 
       const id = idFactory();
       try {
@@ -137,15 +145,9 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
         throw error;
       }
 
-      return {
-        id,
-        owner: input.owner,
-        repositoryId,
-        path,
-        branch: input.branch,
-        headSha: baseSha,
-        status: "active",
-      };
+      const inserted = findActiveByOwner(db, input.owner);
+      if (!inserted) throw new Error(`worktree ${id} disappeared right after its insert`);
+      return toRecord(inserted);
     },
 
     get(owner) {

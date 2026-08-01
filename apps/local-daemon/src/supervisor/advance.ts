@@ -19,6 +19,7 @@ import {
 } from "@otomat/domain";
 
 import { emitLedgerEvent, sessionDir } from "#events";
+import type { WorktreeRecord } from "#git";
 
 import { spawnTurn } from "./lifecycle.js";
 import { buildTerminalMarker } from "./markers.js";
@@ -107,26 +108,32 @@ async function startCompeteGroup(
     updateCompeteGroupBase(state.db, group.id, binding.service.snapshot(run.id).headSha);
   }
 
-  const acquiredOwners: string[] = [];
-  let contexts: TurnContext[];
+  // Every worktree is acquired before a single session row is written: a competitor
+  // that failed halfway would otherwise leave a live session on a failed group, which
+  // boot reconciliation cannot settle without an illegal transition.
+  const acquired: { competitor: RunPlanCompetitor; worktree: WorktreeRecord }[] = [];
   try {
-    contexts = unstarted.map((competitor) => {
-      const worktree = binding.service.acquire({
-        owner: competitor.id,
-        branch: `${run.branch}--compete-${competitor.id}`,
-        baseRef: run.branch,
+    for (const competitor of unstarted) {
+      acquired.push({
+        competitor,
+        worktree: binding.service.acquire({
+          owner: competitor.id,
+          branch: `${run.branch}--compete-${competitor.id}`,
+          baseRef: run.branch,
+        }),
       });
-      acquiredOwners.push(competitor.id);
-      attachStepWorktree(state.db, competitor.id, worktree.id);
-      return insertTurn(state, run, competitor, worktree.path);
-    });
+    }
   } catch (error) {
-    for (const owner of acquiredOwners) {
-      if (binding.service.get(owner)) binding.service.cleanup(owner);
+    for (const { competitor } of acquired) {
+      if (binding.service.get(competitor.id)) binding.service.cleanup(competitor.id);
     }
     driveCompeteGroupTo(state.db, group.id, group.status, "failed");
     throw error;
   }
+  const contexts: TurnContext[] = acquired.map(({ competitor, worktree }) => {
+    attachStepWorktree(state.db, competitor.id, worktree.id);
+    return insertTurn(state, run, competitor, worktree.path);
+  });
   if (group.status === "queued" || group.status === "awaiting_human") {
     driveCompeteGroupTo(state.db, group.id, group.status, "running");
   }

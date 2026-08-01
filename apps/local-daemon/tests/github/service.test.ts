@@ -44,6 +44,7 @@ class FakeGitHubCli implements GitHubCli {
     baseRef: "main",
     lifecycle: "open",
   };
+  createInput: PullRequestCreateInput | null = null;
   resolveError: GitHubCliError | null = null;
   pushError: GitHubCliError | null = null;
   createError: GitHubCliError | null = null;
@@ -87,9 +88,11 @@ class FakeGitHubCli implements GitHubCli {
     return this.provider;
   }
 
-  async createPullRequest(_input: PullRequestCreateInput): Promise<void> {
+  async createPullRequest(input: PullRequestCreateInput): Promise<void> {
     this.createCalls += 1;
+    this.createInput = input;
     if (this.createError) throw this.createError;
+    this.provider = { ...this.provider, headRef: input.head, baseRef: input.base };
     this.providerExists = true;
   }
 
@@ -404,6 +407,32 @@ describe("GitHubService", () => {
       "created",
     ]);
     expect(events.at(-1)?.source).toBe("github");
+  });
+
+  it("opens the pull request against the branch the run forked from, not the repository default", async () => {
+    repo.git("branch", "release/v1");
+    const acquired = worktrees.acquire({
+      owner: "r-release",
+      branch: "otomat/run/r-release",
+      baseRef: "release/v1",
+    });
+    seedRun(fix.db, {
+      runId: "r-release",
+      worktreeId: acquired.id,
+      runStatus: "review_ready",
+      stepStatus: "succeeded",
+      sessionStatus: "terminated",
+    });
+    writeFileSync(join(acquired.path, "change.txt"), "release work\n");
+    const released = getRun(fix.db, "r-release");
+    if (!released) throw new Error("seeded release run missing");
+
+    const result = await service().publish(released, { title: "Ship it", body: "Details" });
+
+    // The reviewed diff is computed against `release/v1`; a PR based on `main` would
+    // show every commit `release/v1` carries that the reviewer never saw.
+    expect(cli.createInput?.base).toBe("release/v1");
+    expect(result.row.base_ref).toBe("release/v1");
   });
 
   it("reports an unknown change comparison instead of a false up-to-date state", async () => {

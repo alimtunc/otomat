@@ -334,3 +334,64 @@ it("launches from a repository whose HEAD is detached, forking from an explicit 
   expect(existsSync(spawn.jobs[0]?.worktreePath ?? "")).toBe(true);
   expect(findActiveByOwner(fix.db, run.id)?.base_ref).toBe("main");
 });
+
+/** Real acquires until `failAfter` of them have run, then a disk-level failure. */
+function resolverFailingAfter(failAfter: number, error: Error): RepositoryResolver {
+  const resolver = createRepositoryResolver({
+    db: fix.db,
+    worktreesRoot: join(fix.dataDir, "worktrees"),
+  });
+  const binding = resolver.forRepository(fix.repositoryId);
+  if (!binding) throw new Error("expected a repository binding");
+  let acquires = 0;
+  const failing: RepositoryResolver = {
+    forRepository: () => ({
+      ...binding,
+      service: {
+        ...binding.service,
+        acquire: (input) => {
+          acquires += 1;
+          if (acquires > failAfter) throw error;
+          return binding.service.acquire(input);
+        },
+      },
+    }),
+    forProject: () => failing.forRepository(fix.repositoryId),
+    forRun: () => failing.forRepository(fix.repositoryId),
+  };
+  return failing;
+}
+
+it("writes no session when a compete group cannot acquire every competitor worktree", async () => {
+  const diskFull = Object.assign(new Error("ENOSPC: no space left on device, mkdir"), {
+    syscall: "mkdir",
+  });
+  // The run's own worktree and the first competitor's succeed; the second fails.
+  const { supervisor, spawn } = makeSupervisor(fix, "complete", {
+    repositories: resolverFailingAfter(2, diskFull),
+  });
+  const plan = {
+    version: 1 as const,
+    steps: [
+      {
+        id: "approach",
+        name: "Choose",
+        depends_on: [],
+        compete: [
+          { id: "direct", name: "Direct", agent: null, prompt: "direct" },
+          { id: "layered", name: "Layered", agent: null, prompt: "layered" },
+        ],
+      },
+    ],
+  };
+
+  await expect(supervisor.start({ prompt: "compete", plan })).rejects.toBe(diskFull);
+  await supervisor.settle();
+
+  expect(spawn.calls).toBe(0);
+  // A session on a step of a now-failed group is a state no boot pass can settle.
+  expect(fix.db.select().from(schema.agentSessions).all()).toHaveLength(0);
+  expect(fix.db.select().from(schema.competeGroups).all()[0]?.status).toBe("failed");
+  const { supervisor: rebooted } = makeSupervisor(fix, "complete");
+  expect(() => rebooted.reconcile()).not.toThrow();
+});

@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -97,6 +97,28 @@ describe("GitWorktreeService", () => {
     expect(() => env.service.acquire({ owner: "owner-b", branch: "shared" })).toThrow(
       WorktreeConflictError,
     );
+  });
+
+  it("records the ref it forked from so callers never re-derive the base branch", () => {
+    env.repo.git("branch", "release/v1");
+    const wt = env.service.acquire({ owner: "step-1", branch: "feat-r", baseRef: "release/v1" });
+
+    expect(wt.baseRef).toBe("release/v1");
+    expect(env.service.get("step-1")?.baseRef).toBe("release/v1");
+    expect(env.service.acquire({ owner: "step-2", branch: "feat-d" }).baseRef).toBe("main");
+  });
+
+  it("leaves no branch behind when git cannot check the working directory out", () => {
+    const wt = env.service.acquire({ owner: "step-1", branch: "feat-doomed" });
+    env.service.cleanup("step-1");
+    // A crash can leave the working directory behind; `git worktree add` then refuses,
+    // but only after `-b` has already created the branch in the user's repository.
+    mkdirSync(wt.path, { recursive: true });
+    writeFileSync(join(wt.path, "leftover.txt"), "from a previous crash\n");
+
+    expect(() => env.service.acquire({ owner: "step-1", branch: "feat-doomed" })).toThrow();
+    expect(branchExists(env.repo.root, "feat-doomed")).toBe(false);
+    expect(env.service.get("step-1")).toBeUndefined();
   });
 
   it("lists changed files and computes a stable canonical diff from git", () => {
