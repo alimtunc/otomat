@@ -95,7 +95,11 @@ function assertBundleLayout(appPath) {
     if (!existsSync(path)) throw new Error(`the installed app is missing its ${label} at ${path}.`);
   }
 
-  const binding = join(daemonDir, "node_modules/better-sqlite3/build/Release/better_sqlite3.node");
+  // The prebuilt N-API binary better-sqlite3 resolves first, and the only one prepare-daemon keeps.
+  const binding = join(
+    daemonDir,
+    `node_modules/better-sqlite3/prebuilds/darwin-${process.arch}.node`,
+  );
   if (!existsSync(binding))
     throw new Error(`the installed app ships no SQLite binding at ${binding}.`);
   const expected = MACH_O_ARCH[process.arch];

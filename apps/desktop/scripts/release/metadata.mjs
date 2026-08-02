@@ -6,8 +6,8 @@ import { basename } from "node:path";
 
 /**
  * Alpha architecture policy: one artifact per architecture, each built on a host of that
- * architecture. better-sqlite3 is compiled against Electron's ABI during packaging and the
- * pipeline never cross-compiles, so an architecture is releasable only from its own runner.
+ * architecture. Packaging keeps the build host's better-sqlite3 binary and the pipeline never
+ * cross-compiles, so an architecture is releasable only from its own runner.
  */
 export const SUPPORTED_RELEASE_ARCHS = ["arm64"];
 

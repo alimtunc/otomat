@@ -17,8 +17,8 @@ secret to configure.
 ## Architecture policy
 
 The alpha ships **Apple Silicon (`arm64`) only**, one artifact per architecture, each built on a
-host of that architecture. `better-sqlite3` is recompiled against Electron's ABI during packaging
-and the pipeline never cross-compiles, so a release is only valid from a runner matching its
+host of that architecture. Packaging keeps the build host's `better-sqlite3` binary and the
+pipeline never cross-compiles, so a release is only valid from a runner matching its
 target. Adding Intel or a universal binary means adding a runner of that architecture and extending
 `SUPPORTED_RELEASE_ARCHS` in `apps/desktop/scripts/release/metadata.mjs` — not a build flag.
 

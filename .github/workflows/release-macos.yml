@@ -16,8 +16,8 @@ concurrency:
 
 jobs:
   release:
-    # Apple Silicon only, and never cross-compiled: better-sqlite3 is rebuilt for Electron's ABI on
-    # the build host, so an architecture is releasable only from a runner of that architecture.
+    # Apple Silicon only, and never cross-compiled: the app ships the build host's better-sqlite3
+    # binary, so an architecture is releasable only from a runner of that architecture.
     runs-on: macos-15
     timeout-minutes: 90
     permissions:

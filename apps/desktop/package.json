@@ -19,7 +19,6 @@
     "prepare-daemon": "node scripts/prepare-daemon.mjs"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.0",
     "@otomat/client": "workspace:*",
     "@otomat/domain": "workspace:*",
     "@types/node": "^26.1.1",
