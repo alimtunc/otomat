@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { collectChangedFiles, computeCanonicalDiff, worktreeStateTree } from "./diff.js";
 import { WorktreeConflictError, WorktreeNotFoundError } from "./errors.js";
+import { toRecord } from "./record.js";
 import {
   branchExists,
   deleteBranch,
@@ -14,7 +15,6 @@ import {
   revParse,
 } from "./repo.js";
 import type { GitWorktreeService, GitWorktreeServiceConfig } from "./service-contract.js";
-import type { WorktreeRecord } from "./types.js";
 import { addWorktree, pruneWorktrees, removeWorktree } from "./worktree-cli.js";
 import { isDirty, snapshotWorktree } from "./worktree-snapshot.js";
 import {
@@ -34,18 +34,6 @@ function worktreeDirName(owner: string): string {
   const safe = owner.replace(/[^a-zA-Z0-9._-]/g, "-").slice(0, 64);
   const hash = createHash("sha256").update(owner).digest("hex").slice(0, 8);
   return `${safe}-${hash}`;
-}
-
-function toRecord(row: WorktreeRow): WorktreeRecord {
-  return {
-    id: row.id,
-    owner: row.owner_token ?? "",
-    repositoryId: row.repository_id,
-    path: row.path,
-    branch: row.branch,
-    headSha: row.head_sha ?? "",
-    status: row.status,
-  };
 }
 
 /**
@@ -113,7 +101,16 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       const baseRef = input.baseRef ?? defaultBranch;
       const baseSha = revParse(repoRoot, baseRef);
       mkdirSync(worktreesRoot, { recursive: true });
-      addWorktree(repoRoot, { worktreePath: path, branch: input.branch, baseRef: baseSha });
+      try {
+        addWorktree(repoRoot, { worktreePath: path, branch: input.branch, baseRef: baseSha });
+      } catch (error) {
+        // `git worktree add -b` creates the branch before the checkout, and a registered
+        // worktree makes `git branch -D` refuse. Path-scoped: a repo-wide prune would
+        // unregister a sound worktree whose directory is merely unreachable.
+        removeWorktree(repoRoot, path);
+        deleteBranch(repoRoot, input.branch);
+        throw error;
+      }
 
       const id = idFactory();
       try {
@@ -144,6 +141,7 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
         path,
         branch: input.branch,
         headSha: baseSha,
+        baseRef,
         status: "active",
       };
     },

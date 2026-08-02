@@ -43,5 +43,7 @@ export interface WorktreeRecord {
   branch: string;
   /** Recorded HEAD sha (the fork point at acquire; the latest snapshot/archive tip afterward). */
   headSha: string;
+  /** Branch this worktree forked from; `""` on rows recorded before fork refs were tracked. */
+  baseRef: string;
   status: WorktreeStatus;
 }

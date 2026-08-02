@@ -132,10 +132,23 @@ class PullRequestPublisher implements PullRequestPublicationService {
         cwd: context.worktree.path,
         repository: context.remote.repository,
         head: context.worktree.branch,
-        base:
-          getRepository(this.config.db, context.worktree.repositoryId)?.default_branch ?? "main",
+        base: this.requireBaseBranch(context.worktree),
       },
     };
+  }
+
+  /** The branch the run forked from is the only base its reviewed diff matches. */
+  private requireBaseBranch(worktree: WorktreeRecord): string {
+    if (worktree.baseRef) return worktree.baseRef;
+    // Worktrees recorded before fork refs were tracked carry no base ref.
+    const repository = getRepository(this.config.db, worktree.repositoryId);
+    if (!repository) {
+      throw new GitHubPublicationError(
+        "repository_missing",
+        "The run's worktree points at a repository that no longer exists.",
+      );
+    }
+    return repository.default_branch;
   }
 
   private persistConnectionState(

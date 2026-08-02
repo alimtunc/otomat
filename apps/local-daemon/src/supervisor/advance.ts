@@ -19,6 +19,7 @@ import {
 } from "@otomat/domain";
 
 import { emitLedgerEvent, sessionDir } from "#events";
+import type { WorktreeRecord } from "#git";
 
 import { spawnTurn } from "./lifecycle.js";
 import { buildTerminalMarker } from "./markers.js";
@@ -107,22 +108,39 @@ async function startCompeteGroup(
     updateCompeteGroupBase(state.db, group.id, binding.service.snapshot(run.id).headSha);
   }
 
-  const acquiredOwners: string[] = [];
+  // Sessions are written only once every worktree exists, and atomically: a live session
+  // on a failed group is a state boot reconciliation cannot settle legally.
+  const acquired: { competitor: RunPlanCompetitor; worktree: WorktreeRecord }[] = [];
   let contexts: TurnContext[];
   try {
-    contexts = unstarted.map((competitor) => {
-      const worktree = binding.service.acquire({
-        owner: competitor.id,
-        branch: `${run.branch}--compete-${competitor.id}`,
-        baseRef: run.branch,
+    for (const competitor of unstarted) {
+      acquired.push({
+        competitor,
+        worktree: binding.service.acquire({
+          owner: competitor.id,
+          branch: `${run.branch}--compete-${competitor.id}`,
+          baseRef: run.branch,
+        }),
       });
-      acquiredOwners.push(competitor.id);
-      attachStepWorktree(state.db, competitor.id, worktree.id);
-      return insertTurn(state, run, competitor, worktree.path);
-    });
+    }
+    contexts = state.db.transaction(
+      () =>
+        acquired.map(({ competitor, worktree }) => {
+          attachStepWorktree(state.db, competitor.id, worktree.id);
+          return insertTurn(state, run, competitor, worktree.path);
+        }),
+      { behavior: "immediate" },
+    );
   } catch (error) {
-    for (const owner of acquiredOwners) {
-      if (binding.service.get(owner)) binding.service.cleanup(owner);
+    for (const { competitor } of acquired) {
+      try {
+        binding.service.cleanup(competitor.id);
+      } catch (cleanupError) {
+        console.error(
+          `[otomat] worktree rollback for competitor ${competitor.id} failed`,
+          cleanupError,
+        );
+      }
     }
     driveCompeteGroupTo(state.db, group.id, group.status, "failed");
     throw error;
