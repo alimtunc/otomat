@@ -1,6 +1,7 @@
 import type {
   ExecutionHostId,
   ExecutionHostOperationResult,
+  ExecutionHostProjectsEntry,
   ExecutionHostSnapshot,
   LinearVaultOperationResult,
   OtomatDesktopBridge,
@@ -13,6 +14,7 @@ import {
   DAEMON_URL_CHANNEL,
   EXECUTION_HOST_ALIASES_CHANNEL,
   EXECUTION_HOST_CONFIGURE_CHANNEL,
+  EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_SELECT_CHANNEL,
   EXECUTION_HOST_SNAPSHOT_CHANNEL,
   EXECUTION_HOST_STATUS_CHANNEL,
@@ -44,6 +46,8 @@ contextBridge.exposeInMainWorld("otomat", {
     configureRemote: (sshAlias: string): Promise<ExecutionHostOperationResult> =>
       ipcRenderer.invoke(EXECUTION_HOST_CONFIGURE_CHANNEL, sshAlias),
     listSshAliases: (): Promise<string[]> => ipcRenderer.invoke(EXECUTION_HOST_ALIASES_CHANNEL),
+    listProjects: (): Promise<ExecutionHostProjectsEntry[]> =>
+      ipcRenderer.invoke(EXECUTION_HOST_PROJECTS_CHANNEL),
     onRemoteStatus: (listener: (status: RemoteHostStatus) => void): (() => void) => {
       const wrapped = (_event: IpcRendererEvent, status: RemoteHostStatus): void =>
         listener(status);

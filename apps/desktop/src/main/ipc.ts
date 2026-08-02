@@ -5,6 +5,7 @@ import {
   DAEMON_URL_CHANNEL,
   EXECUTION_HOST_ALIASES_CHANNEL,
   EXECUTION_HOST_CONFIGURE_CHANNEL,
+  EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_SELECT_CHANNEL,
   EXECUTION_HOST_SNAPSHOT_CHANNEL,
   EXECUTION_HOST_SYNC_CHANNEL,
@@ -51,6 +52,7 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
     actions.executionHost.configureRemote(sshAlias),
   );
   ipcMain.handle(EXECUTION_HOST_ALIASES_CHANNEL, () => actions.executionHost.listAliases());
+  ipcMain.handle(EXECUTION_HOST_PROJECTS_CHANNEL, () => actions.executionHost.listProjects());
 
   ipcMain.handle(PICK_DIRECTORY_CHANNEL, async (event) => {
     const window = BrowserWindow.fromWebContents(event.sender);

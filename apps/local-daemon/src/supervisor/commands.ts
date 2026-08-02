@@ -22,15 +22,22 @@ import {
 import type { SupervisorState } from "./state.js";
 import { driveCompeteGroupTo } from "./transitions.js";
 import type { TurnContext } from "./types.js";
+import { repositoryInitCommands, scheduleWorktreeInit } from "./worktree-init.js";
 
 /**
  * Starts a fresh run. Side effect: when the request omits `issue_id`, a local `issue`
  * row is created from the prompt (its first line as the title) to anchor the run.
+ * Repositories with init commands return while init streams in the background.
  */
 export async function startRun(state: SupervisorState, request: StartRunRequest): Promise<RunRow> {
   const runId = prepareRun(state, request);
   const run = requireRunRow(state.db, runId, "spawn");
-  await startNextReadyStep(state, run);
+  const initCommands = repositoryInitCommands(state.db, run.repository_id);
+  if (initCommands.length > 0) {
+    scheduleWorktreeInit(state, run, initCommands);
+  } else {
+    await startNextReadyStep(state, run);
+  }
   return requireRunRow(state.db, runId, "spawn");
 }
 

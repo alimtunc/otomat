@@ -75,6 +75,9 @@ export function stubLinearService(
     createSource: async () => {
       throw new Error("createSource stub not configured");
     },
+    deleteSource: () => {
+      throw new Error("deleteSource stub not configured");
+    },
     sync: async () => {
       throw new Error("sync stub not configured");
     },

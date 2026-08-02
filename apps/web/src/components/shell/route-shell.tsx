@@ -79,7 +79,7 @@ export function RouteShell({
           daemonVersion={shell.daemonVersion}
           hostAlias={shell.hostAlias ?? undefined}
           projects={shell.projects}
-          currentProjectId={shell.currentProjectId}
+          currentProjectId={shell.currentSwitcherId}
           onProjectSelect={shell.selectProject}
           onSearch={() => palette.setOpen(true)}
           onNewIssue={openNewIssue}

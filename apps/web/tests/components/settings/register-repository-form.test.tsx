@@ -83,6 +83,7 @@ describe("RegisterRepositoryForm", () => {
         name: "otomat",
         remote_url: null,
         default_branch: "main",
+        init_commands: [],
       },
     });
     await renderForm();

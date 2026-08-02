@@ -1,0 +1,1 @@
+ALTER TABLE `repositories` ADD `init_commands_json` text DEFAULT '[]' NOT NULL;

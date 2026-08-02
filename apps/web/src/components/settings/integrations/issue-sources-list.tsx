@@ -1,14 +1,18 @@
 import type { IssueSourceContract, ProjectContract } from "@otomat/domain";
-import { EmptyState, ErrorState, RelativeTime, Skeleton } from "@otomat/ui";
+import { Button, EmptyState, ErrorState, RelativeTime, Skeleton } from "@otomat/ui";
 import type { UseQueryResult } from "@tanstack/react-query";
+import { useDeleteIssueSource } from "@web/api/linear/mutations";
 import { QueryList } from "@web/components/shell/query-list";
 
 interface IssueSourcesListProps {
   query: UseQueryResult<IssueSourceContract[]>;
   projects: ProjectContract[];
+  /** Shows an Unmap action per row; issues already imported stay, they just stop syncing. */
+  removable?: boolean;
 }
 
-export function IssueSourcesList({ query, projects }: IssueSourcesListProps) {
+export function IssueSourcesList({ query, projects, removable = false }: IssueSourcesListProps) {
+  const remove = useDeleteIssueSource();
   return (
     <QueryList
       query={query}
@@ -44,6 +48,17 @@ export function IssueSourcesList({ query, projects }: IssueSourcesListProps) {
                   <RelativeTime date={source.last_synced_at} />
                 )}
               </span>
+              {removable ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  loading={remove.isPending && remove.variables === source.id}
+                  onClick={() => remove.mutate(source.id)}
+                >
+                  Unmap
+                </Button>
+              ) : null}
             </li>
           ))}
         </ul>

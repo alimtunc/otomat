@@ -87,6 +87,16 @@ export function useCreateIssueSource() {
   });
 }
 
+export function useDeleteIssueSource() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (sourceId: string) => daemon.deleteIssueSource(sourceId),
+    onSuccess: () => toast.success("Source unmapped — its issues stop syncing."),
+    onError: (error) => toast.error(linearErrorMessage(error)),
+    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
+  });
+}
+
 export function useSyncLinear() {
   const client = useQueryClient();
   return useMutation({

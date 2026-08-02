@@ -18,7 +18,7 @@ import {
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { getJson, postJson } from "./http.js";
+import { deleteJson, getJson, postJson, queryString } from "./http.js";
 
 export function createLinearClient(config: DaemonClientConfig) {
   return {
@@ -38,13 +38,18 @@ export function createLinearClient(config: DaemonClientConfig) {
     async getLinearWorkspace() {
       return linearWorkspaceContractSchema.parse(await getJson(config, "/api/linear/workspace"));
     },
-    async listIssueSources() {
-      return issueSourceContractSchema.array().parse(await getJson(config, "/api/linear/sources"));
+    async listIssueSources(params: { projectId?: string } = {}) {
+      return issueSourceContractSchema
+        .array()
+        .parse(await getJson(config, `/api/linear/sources${queryString(params)}`));
     },
     async createIssueSource(request: CreateIssueSourceRequest) {
       return issueSourceContractSchema.parse(
         await postJson(config, "/api/linear/sources", request),
       );
+    },
+    async deleteIssueSource(sourceId: string) {
+      await deleteJson(config, `/api/linear/sources/${encodeURIComponent(sourceId)}`);
     },
     async syncLinear(request: SyncLinearRequest = {}) {
       return syncLinearResponseSchema.parse(await postJson(config, "/api/linear/sync", request));

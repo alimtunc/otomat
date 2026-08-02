@@ -4,6 +4,8 @@ import { z } from "zod";
 import { GitHubCliError } from "./errors.js";
 import {
   authStatusFailed,
+  MINIMUM_GH_VERSION,
+  outdatedGhVersion,
   parseAuthStatus,
   parseGitHubRemoteUrl,
   parsePullRequestJson,
@@ -33,6 +35,7 @@ async function cliAvailability(run: CommandRunner): Promise<GitHubConnectionCont
     return {
       status: "not_installed",
       login: null,
+      device_authorization: null,
       error_code: "github_cli_missing",
       error_message: "Install GitHub CLI to connect Otomat to GitHub.",
     };
@@ -41,8 +44,19 @@ async function cliAvailability(run: CommandRunner): Promise<GitHubConnectionCont
     return {
       status: "failed",
       login: null,
+      device_authorization: null,
       error_code: "github_cli_failed",
       error_message: "GitHub CLI could not be started.",
+    };
+  }
+  const outdated = outdatedGhVersion(version.stdout);
+  if (outdated) {
+    return {
+      status: "cli_outdated",
+      login: null,
+      device_authorization: null,
+      error_code: "github_cli_outdated",
+      error_message: `GitHub CLI ${outdated} is too old; Otomat needs ${MINIMUM_GH_VERSION} or newer.`,
     };
   }
   return null;
@@ -64,22 +78,24 @@ class CommandGitHubCli implements GitHubCli {
       : parseAuthStatus(metadata.stdout);
   }
 
-  async login(): Promise<GitHubConnectionContract> {
+  async loginWithToken(token: string): Promise<GitHubConnectionContract> {
     const loginResult = await this.run({
       command: "gh",
-      args: [
-        "auth",
-        "login",
-        "--hostname",
-        "github.com",
-        "--web",
-        "--clipboard",
-        "--git-protocol",
-        "https",
-      ],
+      args: ["auth", "login", "--hostname", "github.com", "--with-token"],
       cwd: process.cwd(),
+      stdin: token,
     });
     assertCommandSucceeded(loginResult, "github_login_failed", "GitHub login did not complete.");
+    const setupResult = await this.run({
+      command: "gh",
+      args: ["auth", "setup-git", "--hostname", "github.com"],
+      cwd: process.cwd(),
+    });
+    assertCommandSucceeded(
+      setupResult,
+      "github_git_credentials_failed",
+      "Git could not be configured to use the GitHub login.",
+    );
     return this.connection();
   }
 
@@ -106,7 +122,7 @@ class CommandGitHubCli implements GitHubCli {
   async push(cwd: string, remote: string, branch: string): Promise<void> {
     const pushResult = await this.run({
       command: "git",
-      args: ["push", "--set-upstream", remote, `HEAD:refs/heads/${branch}`],
+      args: ["push", "--no-verify", "--set-upstream", remote, `HEAD:refs/heads/${branch}`],
       cwd,
     });
     assertCommandSucceeded(

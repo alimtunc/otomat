@@ -32,6 +32,14 @@ export interface ProjectSwitcherProps {
   onConfigure?: () => void;
 }
 
+function HostTag({ tag }: { tag: string }) {
+  return (
+    <span className="flex-none rounded border border-border-subtle bg-surface-2 px-1 py-px font-mono text-[10px] leading-4 text-text-tertiary">
+      {tag}
+    </span>
+  );
+}
+
 function ProjectGlyph({ name }: { name: string }) {
   return (
     <div
@@ -98,6 +106,7 @@ export function ProjectSwitcher({
                     <span className="truncate">
                       {loading ? "Loading…" : (current?.name ?? "No project")}
                     </span>
+                    {current?.tag ? <HostTag tag={current.tag} /> : null}
                     {current?.health ? (
                       <output
                         aria-label={`repo ${current.health}`}
@@ -143,7 +152,10 @@ export function ProjectSwitcher({
                 <ComboboxItem key={project.id} value={project}>
                   <ProjectGlyph name={project.name} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm text-foreground">{project.name}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate text-sm text-foreground">{project.name}</span>
+                      {project.tag ? <HostTag tag={project.tag} /> : null}
+                    </div>
                     {project.repo ? (
                       <div className="truncate text-micro text-text-tertiary">{project.repo}</div>
                     ) : null}

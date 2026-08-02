@@ -1,4 +1,7 @@
 export { createGitHubCli } from "./cli.js";
+export { createGitHubConnectionService } from "./connection.js";
+export { createDeviceAuthorization } from "./device-flow.js";
+export type { DeviceAuthorization, DeviceAuthorizationStart } from "./device-flow.js";
 export { parseGitHubRemoteUrl } from "./parse.js";
 export { GitHubCliError } from "./errors.js";
 export { runCommand } from "./process.js";

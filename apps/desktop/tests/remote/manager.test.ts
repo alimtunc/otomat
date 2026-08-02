@@ -42,6 +42,7 @@ function makeManager(options?: {
   dataDir?: string;
   connectResult?: RemoteHostStatus;
   localUrl?: string;
+  fetchImpl?: typeof fetch;
 }) {
   const dataDir = options?.dataDir ?? scratch();
   const applied: string[] = [];
@@ -58,8 +59,13 @@ function makeManager(options?: {
       return session;
     },
     listAliases: () => ["otomat-vps"],
+    ...(options?.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
   });
   return { manager, applied, sessions, dataDir };
+}
+
+function projectsResponse(projects: unknown): Response {
+  return { ok: true, json: async () => projects } as Response;
 }
 
 it("refuses to select the remote host before an alias is configured", async () => {
@@ -116,13 +122,14 @@ it("refuses to switch to a local daemon that is not running", async () => {
   expect(applied).toEqual([]);
 });
 
-it("switching back to local disposes the tunnel session but persists the choice", async () => {
+it("switching back to local keeps the tunnel alive for the aggregated switcher", async () => {
   const { manager, applied, sessions, dataDir } = makeManager();
   manager.configureRemote("otomat-vps");
   await manager.select("remote");
   const result = await manager.select("local");
   expect(result).toEqual({ ok: true });
-  expect(sessions[0]?.disposeCount).toBe(1);
+  expect(sessions[0]?.disposeCount).toBe(0);
+  expect(sessions[0]?.status.phase).toBe("connected");
   expect(applied.at(-1)).toBe("http://127.0.0.1:49152");
   expect(readExecutionHostsConfig(dataDir).active).toBe("local");
 });
@@ -154,6 +161,70 @@ it("blocks changing the alias while the remote host is active", async () => {
   const result = manager.configureRemote("other-host");
   expect(result).toEqual({
     ok: false,
-    message: expect.stringContaining("Switch to the local host"),
+    message: expect.stringContaining("Switch to a local project"),
+  });
+});
+
+it("warms the remote tunnel at boot even when a local project is active", async () => {
+  const dataDir = scratch();
+  writeExecutionHostsConfig(dataDir, {
+    version: 1,
+    remote: { ssh_alias: "otomat-vps" },
+    active: "local",
+  });
+  const { manager, sessions } = makeManager({ dataDir });
+  expect(await manager.bootActivate()).toBeNull();
+  expect(sessions).toHaveLength(1);
+  expect(sessions[0]?.lastRetryFlag).toBe(true);
+  expect(manager.activeHostId).toBe("local");
+});
+
+it("aggregates both hosts' project catalogs for the switcher", async () => {
+  const fetched: string[] = [];
+  const { manager } = makeManager({
+    fetchImpl: async (input) => {
+      const url = String(input);
+      fetched.push(url);
+      return projectsResponse([
+        {
+          id: "local-default",
+          name: url.includes("49152") ? "Local workspace" : "VPS workspace",
+          root_path: url.includes("49152") ? "/home/dev/repo" : "/root/repos/scratch",
+        },
+      ]);
+    },
+  });
+  manager.configureRemote("otomat-vps");
+
+  const entries = await manager.listProjects();
+
+  expect(entries).toHaveLength(2);
+  expect(entries[0]).toMatchObject({
+    host: { id: "local", kind: "local" },
+    active: true,
+    projects: [{ id: "local-default", name: "Local workspace" }],
+  });
+  expect(entries[1]).toMatchObject({
+    host: { id: "remote", label: "otomat-vps", kind: "ssh" },
+    active: false,
+    status: { phase: "connected" },
+    projects: [{ id: "local-default", name: "VPS workspace" }],
+  });
+  expect(fetched.some((url) => url.includes("45010"))).toBe(true);
+});
+
+it("reports an unreachable remote host as projects: null, never an error", async () => {
+  const { manager } = makeManager({
+    connectResult: { phase: "error", code: "ssh_unreachable", detail: "no route" },
+    fetchImpl: async () => projectsResponse([]),
+  });
+  manager.configureRemote("otomat-vps");
+
+  const entries = await manager.listProjects();
+
+  expect(entries[1]).toMatchObject({
+    host: { id: "remote" },
+    projects: null,
+    status: { phase: "error", code: "ssh_unreachable" },
   });
 });

@@ -55,14 +55,19 @@ export function createLinearRoutes(deps: ApiDeps): Hono {
 
   routes.get("/workspace", async (c) => c.json(await deps.linear.workspace()));
 
-  routes.get("/sources", (c) => c.json(deps.linear.sources()));
+  routes.get("/sources", (c) => c.json(deps.linear.sources(c.req.query("projectId"))));
 
   routes.post("/sources", validateJson(createIssueSourceRequestSchema), async (c) =>
     c.json(await deps.linear.createSource(c.req.valid("json")), 201),
   );
 
+  routes.delete("/sources/:id", (c) => {
+    deps.linear.deleteSource(c.req.param("id"));
+    return c.body(null, 204);
+  });
+
   routes.post("/sync", validateJson(syncLinearRequestSchema), async (c) =>
-    c.json({ results: await deps.linear.sync(c.req.valid("json").source_id) }),
+    c.json({ results: await deps.linear.sync(c.req.valid("json")) }),
   );
 
   routes.get("/issues/:id/writeback", (c) =>

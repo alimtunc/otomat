@@ -20,6 +20,7 @@ export function fakeDesktopBridge(
       select: () => Promise.resolve({ ok: true as const }),
       configureRemote: () => Promise.resolve({ ok: true as const }),
       listSshAliases: () => Promise.resolve([]),
+      listProjects: () => Promise.resolve([]),
       onRemoteStatus: () => () => {},
     },
     linear: {

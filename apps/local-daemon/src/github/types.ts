@@ -7,6 +7,8 @@ import type {
 
 import type { RepositoryResolver } from "#git";
 
+import type { DeviceAuthorization } from "./device-flow.js";
+
 export interface CommandRequest {
   command: string;
   args: string[];
@@ -34,6 +36,7 @@ export interface GitHubServiceConfig {
   /** Per-run resolution ensures publication pushes from the run's own repository. */
   repositories: RepositoryResolver;
   cli: GitHubCli;
+  deviceAuthorization?: DeviceAuthorization;
   idFactory?: () => string;
 }
 
@@ -81,7 +84,7 @@ export interface PullRequestUpdateInput {
 
 export interface GitHubCli {
   connection(): Promise<GitHubConnectionContract>;
-  login(): Promise<GitHubConnectionContract>;
+  loginWithToken(token: string): Promise<GitHubConnectionContract>;
   resolveRemote(cwd: string): Promise<GitHubRemote>;
   push(cwd: string, remote: string, branch: string): Promise<void>;
   findPullRequest(input: PullRequestSelector): Promise<GitHubPullRequest | null>;

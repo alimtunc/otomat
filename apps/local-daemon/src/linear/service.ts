@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  deleteIssueSource,
+  deleteSyncState,
   findOverlappingIssueSource,
   getIssueSource,
   getProject,
@@ -18,6 +20,7 @@ import {
   type IssueSourceSyncResult,
   type LinearConnectionContract,
   type LinearWorkspaceContract,
+  type SyncLinearRequest,
 } from "@otomat/domain";
 
 import type { LinearApiClient } from "./client/types.js";
@@ -40,9 +43,10 @@ export interface LinearService {
   connect(apiKey: string): Promise<LinearConnectionContract>;
   disconnect(): LinearConnectionContract;
   workspace(): Promise<LinearWorkspaceContract>;
-  sources(): IssueSourceContract[];
+  sources(projectId?: string): IssueSourceContract[];
   createSource(request: CreateIssueSourceRequest): Promise<IssueSourceContract>;
-  sync(sourceId?: string): Promise<IssueSourceSyncResult[]>;
+  deleteSource(sourceId: string): void;
+  sync(request?: SyncLinearRequest): Promise<IssueSourceSyncResult[]>;
   writeback: LinearWriteback;
 }
 
@@ -101,8 +105,19 @@ class DefaultLinearService implements LinearService {
     return this.authorized(signal, () => this.config.client.workspace(apiKey, signal));
   }
 
-  sources(): IssueSourceContract[] {
-    return listIssueSources(this.config.db, SYNC_SOURCE).map((row) => this.toContract(row));
+  sources(projectId?: string): IssueSourceContract[] {
+    return listIssueSources(this.config.db, SYNC_SOURCE, { projectId }).map((row) =>
+      this.toContract(row),
+    );
+  }
+
+  deleteSource(sourceId: string): void {
+    const row = getIssueSource(this.config.db, sourceId);
+    if (row === undefined || row.source !== SYNC_SOURCE) {
+      throw linearError("linear_source_not_found");
+    }
+    deleteIssueSource(this.config.db, sourceId);
+    deleteSyncState(this.config.db, SYNC_SOURCE, SYNC_RESOURCE, sourceId);
   }
 
   async createSource(request: CreateIssueSourceRequest): Promise<IssueSourceContract> {
@@ -145,9 +160,9 @@ class DefaultLinearService implements LinearService {
     return this.toContract(row);
   }
 
-  async sync(sourceId?: string): Promise<IssueSourceSyncResult[]> {
+  async sync(request: SyncLinearRequest = {}): Promise<IssueSourceSyncResult[]> {
     const { apiKey, signal } = this.requireAuthorization();
-    const sources = this.resolveSources(sourceId);
+    const sources = this.resolveSources(request);
     const context = {
       db: this.config.db,
       client: this.config.client,
@@ -219,11 +234,11 @@ class DefaultLinearService implements LinearService {
     return signal === this.authorization.signal && !signal.aborted;
   }
 
-  private resolveSources(sourceId: string | undefined): IssueSourceRow[] {
-    if (sourceId === undefined) {
-      return listIssueSources(this.config.db, SYNC_SOURCE);
+  private resolveSources(request: SyncLinearRequest): IssueSourceRow[] {
+    if (request.source_id === undefined) {
+      return listIssueSources(this.config.db, SYNC_SOURCE, { projectId: request.project_id });
     }
-    const row = getIssueSource(this.config.db, sourceId);
+    const row = getIssueSource(this.config.db, request.source_id);
     if (row === undefined || row.source !== SYNC_SOURCE)
       throw linearError("linear_source_not_found");
     return [row];

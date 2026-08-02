@@ -19,10 +19,17 @@ desktop app stays the UI. This document is the contract for that mode.
   127.0.0.1:<local>:127.0.0.1:4319`, and the daemon's loopback `Host`-header
   guard and CORS behavior apply unchanged.
 - **No state synchronization.** The local and remote daemons own separate
-  SQLite databases. When the remote host is selected, the cockpit reads only the
+  SQLite databases. When the remote host is active, the cockpit reads only the
   remote daemon's persistent state; switching hosts reloads the renderer against
   the other daemon. A failed remote connection never silently falls back to the
   local daemon — the selection is unchanged and the failure is shown.
+- **The host follows the project.** The project switcher aggregates both hosts'
+  project catalogs (fetched by the main process, badged per host); picking a
+  project on the other host persists the choice and re-points the renderer at
+  that host's daemon. There is no separate host switch in Settings — it only
+  manages the host list and the SSH alias. When an alias is configured, the
+  tunnel is warmed in the background at boot (and kept alive on a switch to
+  local) so the other host's projects stay listable.
 
 ## Host conventions
 
@@ -67,7 +74,7 @@ Everything lives in `apps/desktop/src/main/remote/`:
 | `bootstrap-status.ts`   | resolving one start-or-verify round trip into a typed failure or the running-daemon detail |
 | `tunnel.ts`             | the `ssh -N -L` child (loopback→loopback, `ExitOnForwardFailure`)    |
 | `session.ts`            | phase machine: checking_host → starting_daemon → opening_tunnel → connected, reconnect loop with capped backoff |
-| `manager.ts`            | persisted selection, explicit switching, boot re-activation          |
+| `manager.ts`            | persisted selection, project-driven switching, boot re-activation, aggregated per-host project listing |
 | `ipc-actions.ts`        | renderer-facing IPC actions with honest not-ready fallbacks          |
 
 `connected` is declared only after a schema-valid `/api/health` response came
@@ -79,14 +86,15 @@ that keeps trying until the user acts or the app quits.
 The renderer learns the active host synchronously at preload
 (`window.otomat.executionHostId` / `executionHostSshAlias`) and the daemon URL
 is simply the tunnel's local origin, so the web app's existing health polling,
-offline banner, and SSE resume behave identically for both hosts. Host
-selection UI lives in Settings → Execution host; the repository form asks for a
-path on the host (the native folder picker is local-only and hidden).
+offline banner, and SSE resume behave identically for both hosts. Hosts are
+managed in Settings → Execution hosts (alias only — the active host follows the
+project picked in the switcher); the repository form asks for a path on the
+host (the native folder picker is local-only and hidden).
 
 ## Known V1 limits
 
 - The Linear key vault pushes credentials to the **local** daemon only; the
   remote daemon has no Linear connection.
-- One remote host; changing the alias requires switching back to local first.
+- One remote host; changing the alias requires switching to a local project first.
 - `Include` directives in `~/.ssh/config` are not parsed for alias suggestions
   (such aliases still work when typed).

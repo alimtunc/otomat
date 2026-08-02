@@ -2,11 +2,14 @@ import type {
   ExecutionHostDescriptor,
   ExecutionHostId,
   ExecutionHostOperationResult,
+  ExecutionHostProjectsEntry,
   ExecutionHostSnapshot,
+  ProjectContract,
   RemoteHostErrorCode,
   RemoteHostStatus,
 } from "@otomat/domain";
 
+import { fetchProjectCatalog } from "./host-projects.js";
 import {
   DEFAULT_EXECUTION_HOSTS_CONFIG,
   readExecutionHostsConfig,
@@ -33,6 +36,7 @@ export interface ExecutionHostManagerOptions {
   applyRendererUrl(url: string): void;
   createSession?: (options: RemoteSessionOptions) => RemoteSessionHandle;
   listAliases?: typeof listSshConfigAliases;
+  fetchImpl?: typeof fetch;
 }
 
 // Switching is always explicit: a failed remote connection never falls back to the local daemon — the selection stays untouched and the failure is returned verbatim.
@@ -88,7 +92,10 @@ export class ExecutionHostManager {
     }
     if (this.session !== null && this.session.alias !== alias) {
       if (this.activeHostId === "remote") {
-        return { ok: false, message: "Switch to the local host before changing the remote alias." };
+        return {
+          ok: false,
+          message: "Switch to a local project before changing the remote alias.",
+        };
       }
       const stale = this.session;
       this.session = null;
@@ -100,6 +107,8 @@ export class ExecutionHostManager {
     }
     this.config = { ...this.config, remote: { ssh_alias: alias } };
     this.persist();
+    // Warm the tunnel right away so the aggregated switcher can list this host's projects.
+    this.ensureBackgroundRemote();
     return { ok: true };
   }
 
@@ -116,11 +125,42 @@ export class ExecutionHostManager {
   /** Boot with the remote host active: reserve the tunnel's local port so the renderer URL is stable from the first paint, then connect in the background (self-healing retry). */
   async bootActivate(): Promise<string | null> {
     const alias = this.remoteSshAlias;
-    if (this.activeHostId !== "remote" || alias === null) return null;
+    if (alias === null) return null;
+    if (this.activeHostId !== "remote") {
+      // Local project active: still warm the tunnel so the switcher can list the remote host's projects.
+      this.ensureBackgroundRemote();
+      return null;
+    }
     this.session ??= this.createSession(alias);
     await this.session.ensureLocalPort();
     void this.session.connect(true);
     return this.session.url;
+  }
+
+  /** Every configured host with its project catalog; an unreachable daemon yields `projects: null`, never an error. */
+  async listProjects(): Promise<ExecutionHostProjectsEntry[]> {
+    const localUrl = this.options.localDaemonUrl();
+    const entries: ExecutionHostProjectsEntry[] = [
+      {
+        host: { id: "local", label: "Local", kind: "local" },
+        active: this.activeHostId === "local",
+        status: null,
+        projects: localUrl === "" ? null : await this.fetchProjects(localUrl),
+      },
+    ];
+    const alias = this.remoteSshAlias;
+    if (alias !== null) {
+      this.ensureBackgroundRemote();
+      const session = this.session;
+      const url = session !== null && session.status.phase === "connected" ? session.url : null;
+      entries.push({
+        host: { id: "remote", label: alias, kind: "ssh" },
+        active: this.activeHostId === "remote",
+        status: session?.status ?? { phase: "disconnected", detail: null },
+        projects: url === null ? null : await this.fetchProjects(url),
+      });
+    }
+    return entries;
   }
 
   async shutdown(): Promise<void> {
@@ -147,17 +187,25 @@ export class ExecutionHostManager {
     return { ok: true };
   }
 
+  /** The remote session stays alive on a switch to local: the aggregated switcher keeps listing (and switching back to) the remote host without a reconnect. */
   private async selectLocal(): Promise<ExecutionHostOperationResult> {
     const url = this.options.localDaemonUrl();
     if (url === "") return errorResult("local_daemon_unavailable");
-    if (this.session !== null) {
-      await this.session.dispose();
-      this.session = null;
-    }
     this.config = { ...this.config, active: "local" };
     this.persist();
     this.options.applyRendererUrl(url);
     return { ok: true };
+  }
+
+  private ensureBackgroundRemote(): void {
+    const alias = this.remoteSshAlias;
+    if (alias === null || this.session !== null) return;
+    this.session = this.createSession(alias);
+    void this.session.connect(true);
+  }
+
+  private fetchProjects(baseUrl: string): Promise<ProjectContract[] | null> {
+    return fetchProjectCatalog(baseUrl, this.options.fetchImpl ?? fetch, this.options.log);
   }
 
   private createSession(alias: string): RemoteSessionHandle {

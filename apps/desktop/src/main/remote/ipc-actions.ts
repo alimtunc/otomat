@@ -1,6 +1,7 @@
 import {
   isExecutionHostId,
   type ExecutionHostOperationResult,
+  type ExecutionHostProjectsEntry,
   type ExecutionHostSnapshot,
 } from "@otomat/domain";
 
@@ -15,6 +16,7 @@ export interface ExecutionHostIpcActions {
   select(id: unknown): Promise<ExecutionHostOperationResult>;
   configureRemote(sshAlias: unknown): ExecutionHostOperationResult;
   listAliases(): string[];
+  listProjects(): Promise<ExecutionHostProjectsEntry[]>;
 }
 
 const NOT_READY: ExecutionHostOperationResult = {
@@ -55,5 +57,6 @@ export function buildExecutionHostActions(
       return hosts.configureRemote(sshAlias);
     },
     listAliases: () => manager()?.listAliases() ?? [],
+    listProjects: async () => manager()?.listProjects() ?? [],
   };
 }

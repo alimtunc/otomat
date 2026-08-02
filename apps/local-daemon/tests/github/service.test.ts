@@ -28,6 +28,7 @@ const BRANCH = `otomat/run/${RUN_ID}`;
 const connected: GitHubConnectionContract = {
   status: "connected",
   login: "octocat",
+  device_authorization: null,
   error_code: null,
   error_message: null,
 };
@@ -60,7 +61,7 @@ class FakeGitHubCli implements GitHubCli {
     return this.connectionValue;
   }
 
-  async login(): Promise<GitHubConnectionContract> {
+  async loginWithToken(): Promise<GitHubConnectionContract> {
     this.loginCalls += 1;
     this.connectionValue = connected;
     return this.connectionValue;
@@ -158,6 +159,7 @@ describe("GitHubService", () => {
     await expect(service().connection()).resolves.toEqual({
       status: "failed",
       login: null,
+      device_authorization: null,
       error_code: "github_auth_response_invalid",
       error_message: "GitHub auth response was invalid.",
     });
@@ -169,6 +171,7 @@ describe("GitHubService", () => {
     await expect(service().connection()).resolves.toEqual({
       status: "failed",
       login: null,
+      device_authorization: null,
       error_code: "github_connection_failed",
       error_message: "GitHub connection failed unexpectedly.",
     });
@@ -178,6 +181,7 @@ describe("GitHubService", () => {
     cli.connectionValue = {
       status: "disconnected",
       login: null,
+      device_authorization: null,
       error_code: "github_auth_required",
       error_message: "Sign in to GitHub to continue.",
     };
@@ -198,6 +202,7 @@ describe("GitHubService", () => {
     cli.connectionValue = {
       status: "failed",
       login: null,
+      device_authorization: null,
       error_code: "github_auth_status_failed",
       error_message: "GitHub authentication status could not be read.",
     };
@@ -219,6 +224,7 @@ describe("GitHubService", () => {
     cli.connectionValue = {
       status: "disconnected",
       login: null,
+      device_authorization: null,
       error_code: "github_auth_required",
       error_message: "Sign in to GitHub to continue.",
     };
@@ -475,6 +481,7 @@ describe("GitHubService", () => {
       cli.connectionValue = {
         status: "disconnected",
         login: null,
+        device_authorization: null,
         error_code: "github_auth_required",
         error_message: "Sign in to GitHub to continue.",
       };

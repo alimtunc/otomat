@@ -333,6 +333,7 @@ it("reads connection state and starts delegated GitHub login", async () => {
     return jsonResponse({
       status: init?.method === "POST" ? "connecting" : "connected",
       login: init?.method === "POST" ? null : "octocat",
+      device_authorization: null,
       error_code: null,
       error_message: null,
     });
@@ -394,6 +395,7 @@ it("registers a repository and parses the project + repository pair", async () =
     name: "otomat",
     remote_url: null,
     default_branch: "main",
+    init_commands: [],
     available: true,
   };
   let calledUrl = "";

@@ -3,6 +3,7 @@ import type { GitHubConnectionContract, PullRequestContract } from "@otomat/doma
 interface PullRequestViewModel {
   connectionLabel: string;
   showConnect: boolean;
+  deviceAuthorization: { code: string; url: string } | null;
   actionLabel: string;
   actionDisabled: boolean;
   actionPending: boolean;
@@ -45,8 +46,13 @@ const PENDING_PUBLICATION_MODELS = {
 
 function connectionLabel(connection: GitHubConnectionContract): string {
   if (connection.status === "connected") return `Connected as ${connection.login ?? "GitHub user"}`;
-  if (connection.status === "connecting") return "Connecting to GitHub…";
+  if (connection.status === "connecting") {
+    return connection.device_authorization
+      ? "Waiting for GitHub sign-in…"
+      : "Connecting to GitHub…";
+  }
   if (connection.status === "not_installed") return "GitHub CLI not installed";
+  if (connection.status === "cli_outdated") return "GitHub CLI too old";
   if (connection.status === "failed") return "GitHub connection failed";
   return "GitHub not connected";
 }
@@ -151,9 +157,11 @@ export function pullRequestViewModel(
   const connected = connection.status === "connected";
   const providerLink = link(pullRequest);
   const publication = publicationModel(pullRequest, canPublish, connected, hasDraftChanges);
+  const device = connection.device_authorization;
   return {
     connectionLabel: connectionLabel(connection),
     showConnect: connection.status === "disconnected" || connection.status === "failed",
+    deviceAuthorization: device ? { code: device.user_code, url: device.verification_url } : null,
     ...publication,
     actionDisabled: !connected || !canPublish || publication.actionDisabled,
     errorMessage: pullRequest?.error_message ?? connection.error_message,

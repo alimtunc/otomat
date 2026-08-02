@@ -1,3 +1,5 @@
+import type { ProjectContract } from "./entities/workspace.js";
+
 // The remote daemon stays loopback-bound on its host; the shell stores only the `~/.ssh/config` alias, never credentials.
 export const EXECUTION_HOST_IDS = ["local", "remote"] as const;
 
@@ -50,3 +52,11 @@ export type ExecutionHostOperationResult =
   | { ok: true }
   | { ok: false; status: RemoteHostStatus }
   | { ok: false; message: string };
+
+/** One host's project catalog for the aggregated switcher; `projects` is null while the host's daemon is unreachable. */
+export interface ExecutionHostProjectsEntry {
+  host: ExecutionHostDescriptor;
+  active: boolean;
+  status: RemoteHostStatus | null;
+  projects: ProjectContract[] | null;
+}

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { ExecutionHostId, ExecutionHostSnapshot, RemoteHostStatus } from "@otomat/domain";
+import type { ExecutionHostSnapshot, RemoteHostStatus } from "@otomat/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ExecutionHostSection } from "@web/components/settings/execution-host/section";
 import { act } from "react";
@@ -35,12 +35,6 @@ async function renderSection() {
   return mounted;
 }
 
-function hostSelectButtons(): HTMLButtonElement[] {
-  return [...document.querySelectorAll("button")].filter(
-    (candidate) => candidate.textContent?.trim() === "Use this host",
-  );
-}
-
 function twoHostSnapshot(overrides: Partial<ExecutionHostSnapshot> = {}): ExecutionHostSnapshot {
   return {
     hosts: [
@@ -59,42 +53,19 @@ it("explains that hosts are desktop-managed when no bridge is present", async ()
   expect(document.body.textContent).toContain("Managed by the desktop app");
 });
 
-it("lists both hosts, marks the active one, and switches on demand", async () => {
-  const select = vi.fn<(id: ExecutionHostId) => Promise<{ ok: true }>>(() =>
-    Promise.resolve({ ok: true as const }),
-  );
+it("lists both hosts and marks the active one, without a manual switch", async () => {
   const bridge = fakeDesktopBridge();
   bridge.executionHost.snapshot = () => Promise.resolve(twoHostSnapshot());
-  bridge.executionHost.select = select;
   window.otomat = bridge;
   await renderSection();
 
   expect(document.body.textContent).toContain("otomat-vps");
   expect(document.body.textContent).toContain("Active");
-  const buttons = hostSelectButtons();
-  expect(buttons).toHaveLength(1);
-  await act(async () => {
-    buttons[0]?.click();
-  });
-  expect(select).toHaveBeenCalledWith("remote");
-});
-
-it("shows the selection failure instead of pretending to be connected", async () => {
-  const bridge = fakeDesktopBridge();
-  bridge.executionHost.snapshot = () => Promise.resolve(twoHostSnapshot());
-  bridge.executionHost.select = () =>
-    Promise.resolve({
-      ok: false as const,
-      status: { phase: "error" as const, code: "ssh_unreachable" as const, detail: "no route" },
-    });
-  window.otomat = bridge;
-  await renderSection();
-
-  await act(async () => {
-    hostSelectButtons()[0]?.click();
-  });
-  expect(document.body.textContent).toContain("could not be reached over SSH");
-  expect(document.body.textContent).toContain("no route");
+  // The host follows the selected project; Settings only manages the host list.
+  const switchButtons = [...document.querySelectorAll("button")].filter(
+    (candidate) => candidate.textContent?.trim() === "Use this host",
+  );
+  expect(switchButtons).toHaveLength(0);
 });
 
 it("surfaces a snapshot failure instead of an endless skeleton", async () => {

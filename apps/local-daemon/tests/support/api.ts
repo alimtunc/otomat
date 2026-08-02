@@ -34,6 +34,10 @@ export function patch(app: Hono, path: string, body: unknown): Promise<Response>
   });
 }
 
+export function del(app: Hono, path: string): Promise<Response> {
+  return request(app, path, { method: "DELETE" });
+}
+
 export async function json<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }

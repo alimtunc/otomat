@@ -10,7 +10,7 @@ export function useConnectGitHub() {
     mutationFn: () => daemon.connectGitHub(),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: queryKeys.githubConnection });
-      toast.success("GitHub login opened in your browser");
+      toast.success("GitHub sign-in started — enter the code shown in the PR panel");
     },
     onError: () => toast.error("Could not start GitHub login — is the daemon running?"),
   });

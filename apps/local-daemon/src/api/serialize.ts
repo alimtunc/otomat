@@ -71,7 +71,11 @@ export function toSkill(row: SkillRow): SkillContract {
 }
 
 export function toRepository(row: RepositoryRow, available: boolean): RepositoryContract {
-  return repositoryContractSchema.parse({ ...row, available });
+  return repositoryContractSchema.parse({
+    ...row,
+    init_commands: row.init_commands_json,
+    available,
+  });
 }
 
 export function toIssue(row: IssueRow, execution: IssueExecution): IssueContract {

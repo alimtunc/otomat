@@ -52,11 +52,22 @@ export function findOverlappingIssueSource(
     .get();
 }
 
-export function listIssueSources(db: Db, source: ExternalIssueSource): IssueSourceRow[] {
+export function listIssueSources(
+  db: Db,
+  source: ExternalIssueSource,
+  options: { projectId?: string } = {},
+): IssueSourceRow[] {
+  const scope = options.projectId
+    ? and(eq(issueSources.source, source), eq(issueSources.project_id, options.projectId))
+    : eq(issueSources.source, source);
   return db
     .select()
     .from(issueSources)
-    .where(eq(issueSources.source, source))
+    .where(scope)
     .orderBy(issueSources.created_at, issueSources.id)
     .all();
+}
+
+export function deleteIssueSource(db: Db, id: string): void {
+  db.delete(issueSources).where(eq(issueSources.id, id)).run();
 }

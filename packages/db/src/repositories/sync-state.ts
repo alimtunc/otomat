@@ -26,6 +26,23 @@ export function getSyncState(
     .get();
 }
 
+export function deleteSyncState(
+  db: Db,
+  source: string,
+  resource: string,
+  externalId: string,
+): void {
+  db.delete(syncState)
+    .where(
+      and(
+        eq(syncState.source, source),
+        eq(syncState.resource, resource),
+        eq(syncState.external_id, externalId),
+      ),
+    )
+    .run();
+}
+
 export function saveSyncState(db: Db, value: NewSyncState): void {
   db.insert(syncState)
     .values(value)

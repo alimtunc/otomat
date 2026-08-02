@@ -7,6 +7,7 @@ import {
 import type {
   ExecutionHostId,
   ExecutionHostOperationResult,
+  ExecutionHostProjectsEntry,
   ExecutionHostSnapshot,
   RemoteHostStatus,
 } from "./execution-host.js";
@@ -67,6 +68,8 @@ export interface OtomatDesktopBridge {
     select(id: ExecutionHostId): Promise<ExecutionHostOperationResult>;
     configureRemote(sshAlias: string): Promise<ExecutionHostOperationResult>;
     listSshAliases(): Promise<string[]>;
+    /** Every configured host with its project catalog, fetched by the main process so the renderer never talks to the inactive daemon directly. */
+    listProjects(): Promise<ExecutionHostProjectsEntry[]>;
     /** Subscribes to live remote-connection status; returns the unsubscribe function. */
     onRemoteStatus(listener: (status: RemoteHostStatus) => void): () => void;
   };

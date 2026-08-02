@@ -1,5 +1,4 @@
 import type {
-  ExecutionHostId,
   ExecutionHostOperationResult,
   ExecutionHostSnapshot,
   RemoteHostStatus,
@@ -21,9 +20,8 @@ export interface UseExecutionHostResult {
   aliases: string[];
   /** Live remote status pushed by the main process, falling back to the snapshot's. */
   remoteStatus: RemoteHostStatus | null;
-  pending: ExecutionHostId | "configure" | null;
+  pending: "configure" | null;
   actionError: string | null;
-  select(id: ExecutionHostId): Promise<void>;
   configureRemote(sshAlias: string): Promise<boolean>;
 }
 
@@ -31,7 +29,7 @@ export function useExecutionHost(): UseExecutionHostResult {
   const bridge = desktopBridge();
   const client = useQueryClient();
   const [liveStatus, setLiveStatus] = useState<RemoteHostStatus | null>(null);
-  const [pending, setPending] = useState<ExecutionHostId | "configure" | null>(null);
+  const [pending, setPending] = useState<"configure" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const snapshot = useQuery({
@@ -61,21 +59,6 @@ export function useExecutionHost(): UseExecutionHostResult {
     });
   }, [bridge, client]);
 
-  async function select(id: ExecutionHostId): Promise<void> {
-    if (bridge === null) return;
-    setActionError(null);
-    setPending(id);
-    try {
-      const result = await bridge.executionHost.select(id);
-      if (!result.ok) setActionError(failureMessage(result));
-    } catch (error) {
-      setActionError(String(error));
-    } finally {
-      setPending(null);
-      void client.invalidateQueries({ queryKey: ["execution-host"] });
-    }
-  }
-
   async function configureRemote(sshAlias: string): Promise<boolean> {
     if (bridge === null) return false;
     setActionError(null);
@@ -103,7 +86,6 @@ export function useExecutionHost(): UseExecutionHostResult {
     remoteStatus: liveStatus ?? snapshot.data?.remote_status ?? null,
     pending,
     actionError,
-    select,
     configureRemote,
   };
 }

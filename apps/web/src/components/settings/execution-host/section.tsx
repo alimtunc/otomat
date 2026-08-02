@@ -1,4 +1,4 @@
-import type { ExecutionHostDescriptor, ExecutionHostId, RemoteHostStatus } from "@otomat/domain";
+import type { ExecutionHostDescriptor, RemoteHostStatus } from "@otomat/domain";
 import {
   Badge,
   Button,
@@ -37,14 +37,10 @@ function HostRow({
   host,
   active,
   status,
-  pending,
-  onSelect,
 }: {
   host: ExecutionHostDescriptor;
   active: boolean;
   status: RemoteHostStatus | null;
-  pending: boolean;
-  onSelect: (id: ExecutionHostId) => void;
 }) {
   return (
     <div className="flex items-start gap-3 p-4">
@@ -63,18 +59,6 @@ function HostRow({
         </div>
         {host.kind === "ssh" ? <RemoteStatusLine status={status} /> : null}
       </div>
-      {active ? null : (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          loading={pending}
-          disabled={pending}
-          onClick={() => onSelect(host.id)}
-        >
-          Use this host
-        </Button>
-      )}
     </div>
   );
 }
@@ -121,8 +105,8 @@ export function ExecutionHostSection() {
   return (
     <div>
       <SectionHeading
-        title="Execution host"
-        description="Where repositories live and runs execute: this machine, or a server you own reached over an SSH tunnel. The remote daemon stays bound to loopback — only the tunnel reaches it, and Otomat never stores SSH credentials."
+        title="Execution hosts"
+        description="Where repositories live and runs execute: this machine, or a server you own reached over an SSH tunnel. The active host follows the project you pick in the switcher. The remote daemon stays bound to loopback — only the tunnel reaches it, and Otomat never stores SSH credentials."
       />
       {snapshot === undefined ? (
         <Skeleton height={80} />
@@ -135,8 +119,6 @@ export function ExecutionHostSection() {
                 host={entry}
                 active={snapshot.active_id === entry.id}
                 status={host.remoteStatus}
-                pending={host.pending === entry.id}
-                onSelect={(id) => void host.select(id)}
               />
             ))}
           </div>

@@ -73,6 +73,23 @@ export function PullRequestForm({
               <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface-2 p-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">{model.connectionLabel}</p>
+                  {model.deviceAuthorization ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Enter code{" "}
+                      <code className="font-mono font-semibold text-foreground">
+                        {model.deviceAuthorization.code}
+                      </code>{" "}
+                      at{" "}
+                      <a
+                        className="underline"
+                        href={model.deviceAuthorization.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {model.deviceAuthorization.url}
+                      </a>
+                    </p>
+                  ) : null}
                   {model.errorMessage ? (
                     <p className="mt-1 text-xs text-danger">{model.errorMessage}</p>
                   ) : null}

@@ -9,3 +9,4 @@ export const EXECUTION_HOST_SELECT_CHANNEL = "otomat:execution-host-select";
 export const EXECUTION_HOST_CONFIGURE_CHANNEL = "otomat:execution-host-configure";
 export const EXECUTION_HOST_ALIASES_CHANNEL = "otomat:execution-host-aliases";
 export const EXECUTION_HOST_STATUS_CHANNEL = "otomat:execution-host-status";
+export const EXECUTION_HOST_PROJECTS_CHANNEL = "otomat:execution-host-projects";

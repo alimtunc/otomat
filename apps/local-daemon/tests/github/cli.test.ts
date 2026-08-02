@@ -49,9 +49,24 @@ describe("GitHub CLI adapter", () => {
     await expect(cli.connection()).resolves.toEqual({
       status: "not_installed",
       login: null,
+      device_authorization: null,
       error_code: "github_cli_missing",
       error_message: "Install GitHub CLI to connect Otomat to GitHub.",
     });
+  });
+
+  it("reports an outdated GitHub CLI instead of a connection failure", async () => {
+    const runner = fakeRunner([ok("gh version 2.45.0 (2024-01-15)\n")]);
+    const cli = createGitHubCli(runner.run);
+
+    await expect(cli.connection()).resolves.toEqual({
+      status: "cli_outdated",
+      login: null,
+      device_authorization: null,
+      error_code: "github_cli_outdated",
+      error_message: "GitHub CLI 2.45.0 is too old; Otomat needs 2.63.0 or newer.",
+    });
+    expect(runner.requests).toHaveLength(1);
   });
 
   it("prefers a GitHub origin over other GitHub remotes", async () => {
@@ -102,6 +117,7 @@ describe("GitHub CLI adapter", () => {
     await expect(cli.connection()).resolves.toEqual({
       status: "connected",
       login: "octocat",
+      device_authorization: null,
       error_code: null,
       error_message: null,
     });
@@ -163,6 +179,7 @@ describe("GitHub CLI adapter", () => {
     await expect(cli.connection()).resolves.toEqual({
       status: "disconnected",
       login: null,
+      device_authorization: null,
       error_code: "github_auth_required",
       error_message: "Sign in to GitHub to continue.",
     });
@@ -177,8 +194,54 @@ describe("GitHub CLI adapter", () => {
     await expect(createGitHubCli(runner.run).connection()).resolves.toEqual({
       status: "failed",
       login: null,
+      device_authorization: null,
       error_code: "github_auth_status_failed",
       error_message: "GitHub authentication status could not be read.",
+    });
+  });
+
+  it("pushes the run branch without invoking repository pre-push hooks", async () => {
+    const runner = fakeRunner([ok()]);
+    const cli = createGitHubCli(runner.run);
+
+    await cli.push("/repo", "origin", "otomat/run/r1");
+
+    expect(runner.requests[0]).toMatchObject({
+      command: "git",
+      cwd: "/repo",
+      args: ["push", "--no-verify", "--set-upstream", "origin", "HEAD:refs/heads/otomat/run/r1"],
+    });
+  });
+
+  it("signs in with a device-flow token and configures git credentials", async () => {
+    const runner = fakeRunner([
+      ok(),
+      ok(),
+      ok("gh version 2.96.0\n"),
+      ok(
+        JSON.stringify({
+          hosts: {
+            "github.com": [
+              { state: "success", active: true, host: "github.com", login: "octocat" },
+            ],
+          },
+        }),
+      ),
+    ]);
+    const cli = createGitHubCli(runner.run);
+
+    await expect(cli.loginWithToken("gho_token")).resolves.toMatchObject({
+      status: "connected",
+      login: "octocat",
+    });
+    expect(runner.requests[0]).toMatchObject({
+      command: "gh",
+      args: ["auth", "login", "--hostname", "github.com", "--with-token"],
+      stdin: "gho_token",
+    });
+    expect(runner.requests[1]).toMatchObject({
+      command: "gh",
+      args: ["auth", "setup-git", "--hostname", "github.com"],
     });
   });
 

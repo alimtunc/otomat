@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { listProjects, listRepositories } from "@otomat/db";
+import { getIssue, getRun, listProjects, listRepositories } from "@otomat/db";
 import {
   registerRepositoryResponseSchema,
   repositoryBranchesResponseSchema,
@@ -12,9 +12,10 @@ import {
 import type { Hono } from "hono";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { makeApiApp, post, request } from "../support/api.js";
+import { del, json, makeApiApp, patch, post, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 import { setupTestRepo, type TestRepo } from "../support/git.js";
+import { seedRun } from "../support/seed.js";
 
 let t: TestDb;
 let repo: TestRepo;
@@ -220,4 +221,79 @@ it("keeps reporting a detached-HEAD repository as available, since a launch fork
   expect((await request(app, `/api/repositories/${created.repository.id}/branches`)).status).toBe(
     200,
   );
+});
+
+it("deletes an idle repository with its runs and owning project", async () => {
+  const app = makeApiApp(t);
+  const created = await registerRepo(app, repo.root);
+  seedRun(t.db, {
+    runId: "r-del",
+    repositoryId: created.repository.id,
+    runStatus: "completed",
+    stepStatus: "succeeded",
+    sessionStatus: "terminated",
+  });
+
+  const res = await del(app, `/api/repositories/${created.repository.id}`);
+  expect(res.status).toBe(204);
+
+  expect(listRepositories(t.db, { projectId: created.project.id })).toHaveLength(0);
+  expect(registeredProjects()).toHaveLength(0);
+  expect(getRun(t.db, "r-del")).toBeUndefined();
+  expect(getIssue(t.db, "i1")).toBeDefined();
+});
+
+it("refuses to delete a repository while one of its runs is active", async () => {
+  const app = makeApiApp(t);
+  const created = await registerRepo(app, repo.root);
+  seedRun(t.db, {
+    runId: "r-live",
+    repositoryId: created.repository.id,
+    runStatus: "running",
+    stepStatus: "running",
+    sessionStatus: "active",
+  });
+
+  const res = await del(app, `/api/repositories/${created.repository.id}`);
+  expect(res.status).toBe(409);
+  expect(await json<{ error: string }>(res)).toMatchObject({
+    error: "repository_has_active_runs",
+  });
+  expect(listRepositories(t.db, { projectId: created.project.id })).toHaveLength(1);
+});
+
+it("reports an unknown repository deletion as not found", async () => {
+  const app = makeApiApp(t);
+  expect((await del(app, "/api/repositories/nope")).status).toBe(404);
+});
+
+it("stores worktree init commands per repository and serves them back", async () => {
+  const app = makeApiApp(t);
+  const created = await registerRepo(app, repo.root);
+  expect(created.repository.init_commands).toEqual([]);
+
+  const res = await patch(app, `/api/repositories/${created.repository.id}`, {
+    init_commands: ["pnpm install", "pnpm build"],
+  });
+  expect(res.status).toBe(200);
+  expect(repositoryContractSchema.parse(await res.json()).init_commands).toEqual([
+    "pnpm install",
+    "pnpm build",
+  ]);
+
+  const listed = await listRepos(app, created.project.id);
+  expect(listed[0]?.init_commands).toEqual(["pnpm install", "pnpm build"]);
+});
+
+it("rejects blank init commands and unknown repositories", async () => {
+  const app = makeApiApp(t);
+  const created = await registerRepo(app, repo.root);
+
+  const blank = await patch(app, `/api/repositories/${created.repository.id}`, {
+    init_commands: ["  "],
+  });
+  expect(blank.status).toBe(400);
+
+  const missing = await patch(app, "/api/repositories/nope", { init_commands: [] });
+  expect(missing.status).toBe(404);
 });

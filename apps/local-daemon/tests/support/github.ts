@@ -30,12 +30,14 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
     connection: async () => ({
       status: "disconnected",
       login: null,
+      device_authorization: null,
       error_code: "github_auth_required",
       error_message: "Sign in to GitHub to continue.",
     }),
     connect: () => ({
       status: "connecting",
       login: null,
+      device_authorization: null,
       error_code: null,
       error_message: null,
     }),

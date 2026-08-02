@@ -34,6 +34,7 @@ it("serves GitHub connection state and starts the delegated login", async () => 
       connection: async () => ({
         status: "connected",
         login: "octocat",
+        device_authorization: null,
         error_code: null,
         error_message: null,
       }),
@@ -42,6 +43,7 @@ it("serves GitHub connection state and starts the delegated login", async () => 
         return {
           status: "connecting",
           login: null,
+          device_authorization: null,
           error_code: null,
           error_message: null,
         };
