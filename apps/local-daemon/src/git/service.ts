@@ -105,11 +105,10 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
         addWorktree(repoRoot, { worktreePath: path, branch: input.branch, baseRef: baseSha });
       } catch (error) {
         // `git worktree add -b` creates the branch before the checkout, and a registered
-        // worktree makes `git branch -D` refuse: undo the whole git side, or a refused
-        // launch litters the user's repository with a dead branch.
+        // worktree makes `git branch -D` refuse. Path-scoped: a repo-wide prune would
+        // unregister a sound worktree whose directory is merely unreachable.
         removeWorktree(repoRoot, path);
         deleteBranch(repoRoot, input.branch);
-        pruneWorktrees(repoRoot);
         throw error;
       }
 
