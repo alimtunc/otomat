@@ -22,6 +22,7 @@ import {
   type RemoteSessionOptions,
 } from "./session.js";
 import { listSshConfigAliases } from "./ssh-config-aliases.js";
+import { StaleDaemonRefresher } from "./stale-daemon.js";
 
 function errorResult(code: RemoteHostErrorCode): ExecutionHostOperationResult {
   return { ok: false, status: { phase: "error", code, detail: null } };
@@ -46,9 +47,15 @@ export class ExecutionHostManager {
   private config: ExecutionHostsConfig;
   private session: RemoteSessionHandle | null = null;
   private switching = false;
+  private readonly staleRefresher: StaleDaemonRefresher;
 
   constructor(private readonly options: ExecutionHostManagerOptions) {
     this.config = this.readConfig();
+    this.staleRefresher = new StaleDaemonRefresher({
+      expectedBuild: options.expectedBuild ?? null,
+      fetchImpl: options.fetchImpl ?? fetch,
+      log: options.log,
+    });
   }
 
   get activeHostId(): ExecutionHostId {
@@ -96,10 +103,7 @@ export class ExecutionHostManager {
     }
     if (this.session !== null && this.session.alias !== alias) {
       if (this.activeHostId === "remote") {
-        return {
-          ok: false,
-          message: "Switch to a local project before changing the remote alias.",
-        };
+        return { ok: false, message: "Switch to a local project before changing the alias." };
       }
       const stale = this.session;
       this.session = null;
@@ -149,7 +153,7 @@ export class ExecutionHostManager {
         host: { id: "local", label: "Local", kind: "local" },
         active: this.activeHostId === "local",
         status: null,
-        projects: localUrl === "" ? null : await this.fetchProjects(localUrl),
+        projects: localUrl === "" ? null : await this.fetchCatalog(localUrl),
       },
     ];
     const alias = this.remoteSshAlias;
@@ -161,8 +165,10 @@ export class ExecutionHostManager {
         host: { id: "remote", label: alias, kind: "ssh" },
         active: this.activeHostId === "remote",
         status: session?.status ?? { phase: "disconnected", detail: null },
-        projects: url === null ? null : await this.fetchProjects(url),
+        projects: url === null ? null : await this.fetchCatalog(url),
       });
+      // Piggybacks on the switcher's poll: a redeployed-but-stale daemon restarts itself once idle.
+      void this.staleRefresher.maybeRefresh(session);
     }
     return entries;
   }
@@ -208,7 +214,7 @@ export class ExecutionHostManager {
     void this.session.connect(true);
   }
 
-  private fetchProjects(baseUrl: string): Promise<ProjectContract[] | null> {
+  private fetchCatalog(baseUrl: string): Promise<ProjectContract[] | null> {
     return fetchProjectCatalog(baseUrl, this.options.fetchImpl ?? fetch, this.options.log);
   }
 

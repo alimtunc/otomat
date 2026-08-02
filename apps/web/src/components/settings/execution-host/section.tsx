@@ -127,11 +127,12 @@ export function ExecutionHostSection() {
           snapshot.remote_build !== snapshot.expected_build ? (
             <p role="alert" className="text-xs text-warning">
               The remote daemon runs build {snapshot.remote_build} but this app expects{" "}
-              {snapshot.expected_build}. Redeploy the daemon on the host (
+              {snapshot.expected_build}. Otomat restarts it automatically once it has no active
+              runs; if this warning persists, the deployed files are still the old build — redeploy
+              on the host:{" "}
               <code className="font-mono">
                 pnpm --filter @otomat/local-daemon deploy --prod --legacy ~/.otomat/daemon
               </code>
-              ), stop it, and reconnect.
             </p>
           ) : null}
           <form

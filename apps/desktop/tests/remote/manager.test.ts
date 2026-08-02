@@ -13,6 +13,7 @@ class FakeSession implements RemoteSessionHandle {
   url: string | null = null;
   remoteBuild: string | null = null;
   disposeCount = 0;
+  refreshCount = 0;
   lastRetryFlag: boolean | null = null;
   constructor(
     readonly alias: string,
@@ -30,6 +31,10 @@ class FakeSession implements RemoteSessionHandle {
       this.remoteBuild = "fff9999";
     }
     return Promise.resolve(this.status);
+  }
+  refreshDaemon(): Promise<RemoteHostStatus> {
+    this.refreshCount += 1;
+    return this.connect(false);
   }
   dispose(): Promise<void> {
     this.disposeCount += 1;
@@ -243,4 +248,26 @@ it("reports an unreachable remote host as projects: null, never an error", async
     projects: null,
     status: { phase: "error", code: "ssh_unreachable" },
   });
+});
+
+it("restarts a stale idle remote daemon from the switcher poll, once per build", async () => {
+  const { manager, sessions } = makeManager({
+    expectedBuild: "abc1234",
+    fetchImpl: async (input) =>
+      projectsResponse(
+        String(input).endsWith("/api/runs")
+          ? [{ status: "review_ready" }]
+          : [{ id: "p", name: "P", root_path: "/tmp/p" }],
+      ),
+  });
+  manager.configureRemote("otomat-vps");
+  await manager.listProjects();
+  await manager.listProjects();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(sessions[0]?.refreshCount).toBe(1);
+
+  await manager.listProjects();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(sessions[0]?.refreshCount).toBe(1);
 });

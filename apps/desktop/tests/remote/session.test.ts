@@ -2,7 +2,7 @@ import type { HealthResponse, RemoteHostStatus } from "@otomat/domain";
 import { expect, it, vi } from "vitest";
 
 import { RemoteHostSession } from "#main/remote/session";
-import type { SshScriptResult } from "#main/remote/ssh";
+import type { RunSshScriptOptions, SshScriptResult } from "#main/remote/ssh";
 import type { SshTunnelOptions, TunnelHandle } from "#main/remote/tunnel";
 
 const STARTED: SshScriptResult = { code: 0, stdout: "OTOMAT_REMOTE:STARTED:100\n", stderr: "" };
@@ -43,7 +43,9 @@ function harness(overrides?: {
   const statuses: RemoteHostStatus[] = [];
   const tunnels: FakeTunnel[] = [];
   const retries: Array<() => void> = [];
-  const runScript = vi.fn(overrides?.runScript ?? (() => Promise.resolve(STARTED)));
+  const runScript = vi.fn<(request: RunSshScriptOptions) => Promise<SshScriptResult>>(
+    overrides?.runScript ?? (() => Promise.resolve(STARTED)),
+  );
   const health = vi.fn(overrides?.health ?? (() => Promise.resolve(HEALTHY)));
   const session = new RemoteHostSession({
     alias: "otomat-vps",
@@ -156,4 +158,19 @@ it("stops reconnecting once disposed", async () => {
   await session.dispose();
   retries[0]?.();
   expect(session.status.phase).toBe("disconnected");
+});
+
+it("refreshDaemon stops the remote daemon then reconnects on the same port", async () => {
+  const { session, runScript, tunnels } = harness();
+  await session.connect(false);
+
+  const status = await session.refreshDaemon();
+
+  expect(status.phase).toBe("connected");
+  expect(session.url).toBe("http://127.0.0.1:45000");
+  const scripts = runScript.mock.calls.map(([request]) => request.script);
+  expect(scripts.some((script) => script.includes("OTOMAT_REMOTE:STOPPED"))).toBe(true);
+  expect(tunnels).toHaveLength(2);
+  expect(tunnels[0]?.stopped).toBe(true);
+  expect(tunnels[1]?.running).toBe(true);
 });

@@ -44,6 +44,33 @@ export function startOrVerifyDaemonScript(): string {
   ].join("\n");
 }
 
+/**
+ * Stops the pidfile-tracked daemon (SIGTERM, bounded wait, then SIGKILL) so the
+ * next start-or-verify boots whatever the deploy directory now holds. Kills by
+ * pid, never by pattern, so the remote shell can never match itself.
+ */
+export function stopDaemonScript(): string {
+  return [
+    "set -u",
+    'OTOMAT_HOME="$HOME/.otomat"',
+    'PID_FILE="$OTOMAT_HOME/daemon.pid"',
+    'if [ -f "$PID_FILE" ]; then',
+    '  PID="$(cat "$PID_FILE")"',
+    '  if kill -0 "$PID" 2>/dev/null; then',
+    '    kill "$PID" 2>/dev/null',
+    "    for _ in 1 2 3 4 5 6 7 8 9 10; do",
+    '      kill -0 "$PID" 2>/dev/null || break',
+    "      sleep 1",
+    "    done",
+    '    kill -9 "$PID" 2>/dev/null',
+    "  fi",
+    '  rm -f "$PID_FILE"',
+    "fi",
+    `echo "${TOKEN_PREFIX}STOPPED:-"`,
+    "",
+  ].join("\n");
+}
+
 export type RemoteBootstrapOutcome =
   | { kind: "running"; pid: number }
   | { kind: "started"; pid: number }

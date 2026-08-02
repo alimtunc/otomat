@@ -83,11 +83,16 @@ function run(command, args, dryRun) {
   console.log(`  ${dryRun ? "would run" : "$"} ${command} ${args.join(" ")}`);
   if (dryRun) return true;
   const result = spawnSync(command, args, { stdio: "inherit" });
-  return result.status === 0;
+  if (result.status !== 0) {
+    console.error(`  ${command} exited with ${result.status ?? String(result.signal)}`);
+    return false;
+  }
+  return true;
 }
 
+// [d]aemon: the bracket keeps pkill -f from matching this command line's own remote shell.
 const REMOTE_RESET =
-  'pkill -f "daemon/dist/index.js" 2>/dev/null; sleep 1; ' +
+  'pkill -f "[d]aemon/dist/index.js" 2>/dev/null; sleep 1; ' +
   "rm -rf ~/.otomat/data ~/.otomat/daemon.pid ~/.otomat/daemon.log; " +
   'echo "remote data reset (deploy kept)"';
 

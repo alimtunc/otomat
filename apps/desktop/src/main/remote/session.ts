@@ -9,7 +9,11 @@ import {
   type BootstrapResolution,
   type RemoteErrorStatus,
 } from "./bootstrap-status.js";
-import { REMOTE_DAEMON_PORT, startOrVerifyDaemonScript } from "./daemon-bootstrap.js";
+import {
+  REMOTE_DAEMON_PORT,
+  startOrVerifyDaemonScript,
+  stopDaemonScript,
+} from "./daemon-bootstrap.js";
 import { runSshScript } from "./ssh.js";
 import { SshTunnel, type SshTunnelOptions, type TunnelHandle } from "./tunnel.js";
 
@@ -36,6 +40,8 @@ export interface RemoteSessionHandle {
   readonly remoteBuild: string | null;
   ensureLocalPort(): Promise<number>;
   connect(retryOnFailure: boolean): Promise<RemoteHostStatus>;
+  /** Stops the remote daemon and reconnects on the same local port, so a redeployed entry actually boots. */
+  refreshDaemon(): Promise<RemoteHostStatus>;
   dispose(): Promise<void>;
 }
 
@@ -81,6 +87,22 @@ export class RemoteHostSession implements RemoteSessionHandle {
     this.cancelRetry();
     this.inFlight = this.attempt(retryOnFailure).finally(() => (this.inFlight = null));
     return this.inFlight;
+  }
+
+  async refreshDaemon(): Promise<RemoteHostStatus> {
+    if (this.disposed || this.inFlight !== null) return this.currentStatus;
+    this.cancelRetry();
+    const run = this.options.runScript ?? runSshScript;
+    await run({
+      alias: this.options.alias,
+      script: stopDaemonScript(),
+      timeoutMs: BOOTSTRAP_TIMEOUT_MS,
+    });
+    const tunnel = this.tunnel;
+    this.tunnel = null;
+    if (tunnel !== null) await tunnel.stop();
+    this.setStatus({ phase: "disconnected", detail: null });
+    return this.connect(false);
   }
 
   async dispose(): Promise<void> {

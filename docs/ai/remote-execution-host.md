@@ -50,6 +50,12 @@ survives disconnects and app quits; quitting the desktop app closes the tunnel
 but **never stops the remote daemon**. After a host reboot, the next connect
 starts it again.
 
+Updates: the daemon dist bakes its git commit in at build time and reports it
+from `/api/health`; the desktop compares it to the build it expects and warns in
+Settings on a mismatch. After the files are redeployed, the desktop restarts the
+stale daemon **automatically once it has no active runs** — never with work in
+flight — so the only manual step is the redeploy itself.
+
 Deploying the daemon onto the host (from a checkout, on the host or any
 same-arch Linux):
 
@@ -75,6 +81,7 @@ Everything lives in `apps/desktop/src/main/remote/`:
 | `tunnel.ts`             | the `ssh -N -L` child (loopback→loopback, `ExitOnForwardFailure`)    |
 | `session.ts`            | phase machine: checking_host → starting_daemon → opening_tunnel → connected, reconnect loop with capped backoff |
 | `manager.ts`            | persisted selection, project-driven switching, boot re-activation, aggregated per-host project listing |
+| `stale-daemon.ts`       | restarts a redeployed-but-stale remote daemon once it is idle (never with a run in flight; one attempt per observed build) |
 | `ipc-actions.ts`        | renderer-facing IPC actions with honest not-ready fallbacks          |
 
 `connected` is declared only after a schema-valid `/api/health` response came

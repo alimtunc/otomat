@@ -4,6 +4,7 @@ import {
   parseBootstrapOutput,
   REMOTE_DAEMON_PORT,
   startOrVerifyDaemonScript,
+  stopDaemonScript,
 } from "#main/remote/daemon-bootstrap";
 
 it("keeps the remote daemon loopback-bound with the packaged renderer origin allowed", () => {
@@ -57,3 +58,12 @@ it.each(["", "no token at all", "OTOMAT_REMOTE:STARTED:not-a-pid", "OTOMAT_REMOT
     expect(parseBootstrapOutput(stdout)).toBeNull();
   },
 );
+
+it("stops by pidfile pid only — never by pattern — and clears the pidfile", () => {
+  const script = stopDaemonScript();
+  expect(script).toContain('PID="$(cat "$PID_FILE")"');
+  expect(script).toContain("kill -9");
+  expect(script).toContain('rm -f "$PID_FILE"');
+  expect(script).not.toContain("pkill");
+  expect(script).toContain("OTOMAT_REMOTE:STOPPED");
+});
