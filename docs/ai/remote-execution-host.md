@@ -64,6 +64,7 @@ Everything lives in `apps/desktop/src/main/remote/`:
 | `ssh-config-aliases.ts` | concrete `Host` alias suggestions from `~/.ssh/config`               |
 | `ssh.ts`                | one-shot remote scripts over `ssh <alias> bash -ls` (script on stdin)|
 | `daemon-bootstrap.ts`   | the start-or-verify script and its single-token outcome parser       |
+| `bootstrap-status.ts`   | resolving one start-or-verify round trip into a typed failure or the running-daemon detail |
 | `tunnel.ts`             | the `ssh -N -L` child (loopback→loopback, `ExitOnForwardFailure`)    |
 | `session.ts`            | phase machine: checking_host → starting_daemon → opening_tunnel → connected, reconnect loop with capped backoff |
 | `manager.ts`            | persisted selection, explicit switching, boot re-activation          |

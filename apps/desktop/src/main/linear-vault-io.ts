@@ -3,13 +3,10 @@ import { join } from "node:path";
 
 import { safeStorage } from "electron";
 
+import { hasErrorCode } from "#shared/fs-errors";
 import { createLinearVault, type LinearVault } from "#shared/linear-vault";
 
 const LINEAR_VAULT_FILENAME = "linear-credential.enc";
-
-function hasErrorCode(error: unknown): error is Error & { code: string } {
-  return error instanceof Error && "code" in error && typeof error.code === "string";
-}
 
 export function createMainLinearVault(dataDir: string): LinearVault {
   const filePath = join(dataDir, LINEAR_VAULT_FILENAME);

@@ -1,8 +1,6 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { readFileSync, writeFileSync } from "node:fs";
 
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
 import {
   DEFAULT_EXECUTION_HOSTS_CONFIG,
@@ -10,18 +8,11 @@ import {
   readExecutionHostsConfig,
   writeExecutionHostsConfig,
 } from "#main/remote/hosts-config";
-
-const scratchDirs: string[] = [];
+import { scratchDir } from "#support/scratch-dir";
 
 function scratch(): string {
-  const dir = mkdtempSync(join(tmpdir(), "otomat-hosts-config-"));
-  scratchDirs.push(dir);
-  return dir;
+  return scratchDir("otomat-hosts-config-");
 }
-
-afterEach(() => {
-  for (const dir of scratchDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
-});
 
 it("returns the local-only default when no config file exists", () => {
   expect(readExecutionHostsConfig(scratch())).toEqual(DEFAULT_EXECUTION_HOSTS_CONFIG);

@@ -105,7 +105,7 @@ export class DesktopApp {
     this.isQuitting = true;
     runtime.hosts
       .shutdown()
-      .catch(() => this.log.write("Tunnel stop failed during quit."))
+      .catch((error: unknown) => this.log.write(`Tunnel stop failed during quit: ${String(error)}`))
       .then(() => (runtime.daemon.running === true ? runtime.daemon.stop() : undefined))
       .then(() => {
         this.isQuitting = false;

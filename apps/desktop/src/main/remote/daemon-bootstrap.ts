@@ -2,15 +2,7 @@ export const REMOTE_DAEMON_PORT = 4319;
 
 const TOKEN_PREFIX = "OTOMAT_REMOTE:";
 
-/**
- * One round-trip start-or-verify for the remote daemon. Conventions on the host:
- * daemon deployed at `~/.otomat/daemon/dist/index.js`, data under `~/.otomat/data`
- * (SQLite, run ledger, worktrees), pidfile and log beside them. The daemon binds
- * loopback only; `nohup` + closed stdio detaches it from the ssh session so it
- * survives disconnects, and reboots are covered by re-running this at every
- * connect. Every outcome is a single `OTOMAT_REMOTE:` token so login-shell noise
- * never breaks parsing.
- */
+// Host conventions live in docs/ai/remote-execution-host.md; every outcome is a single OTOMAT_REMOTE: token so login-shell noise never breaks parsing.
 export function startOrVerifyDaemonScript(): string {
   return [
     "set -u",

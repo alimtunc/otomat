@@ -1,24 +1,16 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
 import { listSshConfigAliases } from "#main/remote/ssh-config-aliases";
-
-const scratchDirs: string[] = [];
+import { scratchDir } from "#support/scratch-dir";
 
 function configWith(content: string): string {
-  const dir = mkdtempSync(join(tmpdir(), "otomat-ssh-config-"));
-  scratchDirs.push(dir);
-  const path = join(dir, "config");
+  const path = join(scratchDir("otomat-ssh-config-"), "config");
   writeFileSync(path, content);
   return path;
 }
-
-afterEach(() => {
-  for (const dir of scratchDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
-});
 
 it("lists concrete Host aliases, skipping patterns and keyword lookalikes", () => {
   const path = configWith(

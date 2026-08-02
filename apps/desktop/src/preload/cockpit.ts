@@ -8,6 +8,7 @@ import type {
 } from "@otomat/domain";
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
+import { isExecutionHostSync } from "#shared/execution-host-sync";
 import {
   DAEMON_URL_CHANNEL,
   EXECUTION_HOST_ALIASES_CHANNEL,
@@ -26,14 +27,7 @@ const daemonUrl: unknown = ipcRenderer.sendSync(DAEMON_URL_CHANNEL);
 if (typeof daemonUrl !== "string") throw new Error("Invalid daemon URL from the main process");
 
 const hostSync: unknown = ipcRenderer.sendSync(EXECUTION_HOST_SYNC_CHANNEL);
-if (
-  typeof hostSync !== "object" ||
-  hostSync === null ||
-  !("id" in hostSync) ||
-  (hostSync.id !== "local" && hostSync.id !== "remote") ||
-  !("ssh_alias" in hostSync) ||
-  (typeof hostSync.ssh_alias !== "string" && hostSync.ssh_alias !== null)
-) {
+if (!isExecutionHostSync(hostSync)) {
   throw new Error("Invalid execution-host state from the main process");
 }
 

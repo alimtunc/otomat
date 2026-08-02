@@ -3,7 +3,12 @@ import type { RemoteHostStatus } from "@otomat/domain";
 import { waitForHealth } from "#shared/health";
 import { findFreeLoopbackPort } from "#shared/ports";
 
-import { resolveBootstrapResult, trimDetail } from "./bootstrap-status.js";
+import {
+  resolveBootstrapResult,
+  trimDetail,
+  type BootstrapResolution,
+  type RemoteErrorStatus,
+} from "./bootstrap-status.js";
 import { REMOTE_DAEMON_PORT, startOrVerifyDaemonScript } from "./daemon-bootstrap.js";
 import { runSshScript } from "./ssh.js";
 import { SshTunnel, type SshTunnelOptions, type TunnelHandle } from "./tunnel.js";
@@ -32,17 +37,7 @@ export interface RemoteSessionHandle {
   dispose(): Promise<void>;
 }
 
-interface AttemptFailure {
-  status: RemoteHostStatus & { phase: "error" };
-}
-
-/**
- * One remote host connection: verify/start the daemon over ssh, tunnel a stable
- * local loopback port to its loopback port, and declare `connected` only after a
- * schema-valid health response came back through that tunnel. An unexpected
- * tunnel drop enters an honest `reconnecting` loop with capped backoff; the
- * remote daemon itself is never stopped from here — durability is the point.
- */
+// `connected` is declared only after a health response came back through the tunnel; the remote daemon is never stopped from here — durability is the point.
 export class RemoteHostSession implements RemoteSessionHandle {
   private currentStatus: RemoteHostStatus = { phase: "disconnected", detail: null };
   private localPort: number | null = null;
@@ -94,9 +89,9 @@ export class RemoteHostSession implements RemoteSessionHandle {
     try {
       const localPort = await this.ensureLocalPort();
       const bootstrap = await this.bootstrapDaemon();
-      if ("status" in bootstrap) return this.settleFailure(bootstrap.status, retryOnFailure);
+      if ("failure" in bootstrap) return this.settleFailure(bootstrap.failure, retryOnFailure);
       const tunnelFailure = await this.openTunnel(localPort);
-      if (tunnelFailure !== null) return this.settleFailure(tunnelFailure.status, retryOnFailure);
+      if (tunnelFailure !== null) return this.settleFailure(tunnelFailure, retryOnFailure);
       this.retryAttempt = 0;
       this.setStatus({ phase: "connected", detail: bootstrap.detail });
       return this.currentStatus;
@@ -108,7 +103,7 @@ export class RemoteHostSession implements RemoteSessionHandle {
     }
   }
 
-  private async bootstrapDaemon(): Promise<AttemptFailure | { detail: string }> {
+  private async bootstrapDaemon(): Promise<BootstrapResolution> {
     this.setStatus({ phase: "checking_host", detail: `ssh ${this.options.alias}` });
     const run = this.options.runScript ?? runSshScript;
     const result = await run({
@@ -117,12 +112,12 @@ export class RemoteHostSession implements RemoteSessionHandle {
       timeoutMs: BOOTSTRAP_TIMEOUT_MS,
     });
     const resolution = resolveBootstrapResult(result);
-    if (resolution.failure !== null) return { status: resolution.failure };
+    if ("failure" in resolution) return resolution;
     this.setStatus({ phase: "starting_daemon", detail: resolution.detail });
-    return { detail: resolution.detail };
+    return resolution;
   }
 
-  private async openTunnel(localPort: number): Promise<AttemptFailure | null> {
+  private async openTunnel(localPort: number): Promise<RemoteErrorStatus | null> {
     this.setStatus({ phase: "opening_tunnel", detail: `127.0.0.1:${localPort}` });
     const abort = new AbortController();
     let exitDetail: string | null = null;
@@ -152,13 +147,9 @@ export class RemoteHostSession implements RemoteSessionHandle {
       this.tunnel = null;
       await tunnel.stop();
       if (exitDetail !== null) {
-        return {
-          status: { phase: "error", code: "tunnel_failed", detail: trimDetail(exitDetail) },
-        };
+        return { phase: "error", code: "tunnel_failed", detail: trimDetail(exitDetail) };
       }
-      return {
-        status: { phase: "error", code: "health_failed", detail: trimDetail(String(error)) },
-      };
+      return { phase: "error", code: "health_failed", detail: trimDetail(String(error)) };
     }
   }
 
@@ -170,10 +161,7 @@ export class RemoteHostSession implements RemoteSessionHandle {
     this.scheduleRetry();
   }
 
-  private settleFailure(
-    status: RemoteHostStatus & { phase: "error" },
-    retryOnFailure: boolean,
-  ): RemoteHostStatus {
+  private settleFailure(status: RemoteErrorStatus, retryOnFailure: boolean): RemoteHostStatus {
     if (this.disposed) return this.currentStatus;
     if (retryOnFailure) {
       this.setStatus({

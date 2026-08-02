@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import type { ExecutionHostId } from "@otomat/domain";
 
+import { hasErrorCode } from "#shared/fs-errors";
+
 const CONFIG_FILENAME = "execution-hosts.json";
 
 /** Persisted host selection. Stores only the `~/.ssh/config` alias name — never credentials. */
@@ -27,10 +29,6 @@ function isExecutionHostsConfig(value: unknown): value is ExecutionHostsConfig {
   if (typeof config.remote !== "object") return false;
   const remote = config.remote as Record<string, unknown>;
   return typeof remote.ssh_alias === "string" && remote.ssh_alias.length > 0;
-}
-
-function hasErrorCode(error: unknown): error is Error & { code: string } {
-  return error instanceof Error && "code" in error && typeof error.code === "string";
 }
 
 export function executionHostsConfigPath(dataDir: string): string {

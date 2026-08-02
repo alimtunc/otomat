@@ -1,15 +1,12 @@
-import type {
-  ExecutionHostId,
-  ExecutionHostOperationResult,
-  ExecutionHostSnapshot,
+import {
+  isExecutionHostId,
+  type ExecutionHostOperationResult,
+  type ExecutionHostSnapshot,
 } from "@otomat/domain";
 
-import type { ExecutionHostManager } from "./manager.js";
+import type { ExecutionHostSync } from "#shared/execution-host-sync";
 
-export interface ExecutionHostSync {
-  id: ExecutionHostId;
-  ssh_alias: string | null;
-}
+import type { ExecutionHostManager } from "./manager.js";
 
 /** Renderer-facing host actions; every call degrades honestly while the runtime is still booting. */
 export interface ExecutionHostIpcActions {
@@ -49,9 +46,7 @@ export function buildExecutionHostActions(
     select: async (id: unknown) => {
       const hosts = manager();
       if (hosts === null) return NOT_READY;
-      if (id !== "local" && id !== "remote") {
-        return { ok: false, message: "Unknown execution host." };
-      }
+      if (!isExecutionHostId(id)) return { ok: false, message: "Unknown execution host." };
       return hosts.select(id);
     },
     configureRemote: (sshAlias: unknown) => {

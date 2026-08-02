@@ -2,21 +2,10 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-function hasErrorCode(error: unknown): error is Error & { code: string } {
-  return error instanceof Error && "code" in error && typeof error.code === "string";
-}
+import { hasErrorCode } from "#shared/fs-errors";
 
-export function defaultSshConfigPath(): string {
-  return join(homedir(), ".ssh", "config");
-}
-
-/**
- * Concrete `Host` aliases from the user's ssh config, offered as suggestions when
- * configuring the remote host. Pattern entries (`*`, `?`, `!`) are skipped and
- * `Include` directives are not followed — an alias defined there still works, it
- * just is not suggested.
- */
-export function listSshConfigAliases(configPath = defaultSshConfigPath()): string[] {
+// Pattern entries (*, ?, !) are skipped and Include files are not followed — aliases there still work, they just are not suggested.
+export function listSshConfigAliases(configPath = join(homedir(), ".ssh", "config")): string[] {
   let text: string;
   try {
     text = readFileSync(configPath, "utf8");

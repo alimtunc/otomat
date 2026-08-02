@@ -8,6 +8,7 @@
     "#shared/*": "./src/shared/*.ts",
     "#main/*": "./src/main/*.ts",
     "#preload/*": "./src/preload/*.ts",
+    "#support/*": "./tests/support/*.ts",
     "#scripts/*": "./scripts/*.mjs",
     "#release/*": "./scripts/release/*.mjs"
   },

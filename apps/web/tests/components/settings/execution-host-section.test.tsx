@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { ExecutionHostId, RemoteHostStatus } from "@otomat/domain";
+import type { ExecutionHostId, ExecutionHostSnapshot, RemoteHostStatus } from "@otomat/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ExecutionHostSection } from "@web/components/settings/execution-host/section";
 import { act } from "react";
@@ -35,10 +35,23 @@ async function renderSection() {
   return mounted;
 }
 
-function useHostButtons(): HTMLButtonElement[] {
+function hostSelectButtons(): HTMLButtonElement[] {
   return [...document.querySelectorAll("button")].filter(
     (candidate) => candidate.textContent?.trim() === "Use this host",
   );
+}
+
+function twoHostSnapshot(overrides: Partial<ExecutionHostSnapshot> = {}): ExecutionHostSnapshot {
+  return {
+    hosts: [
+      { id: "local", label: "Local", kind: "local" },
+      { id: "remote", label: "otomat-vps", kind: "ssh" },
+    ],
+    active_id: "local",
+    remote_ssh_alias: "otomat-vps",
+    remote_status: null,
+    ...overrides,
+  };
 }
 
 it("explains that hosts are desktop-managed when no bridge is present", async () => {
@@ -51,23 +64,14 @@ it("lists both hosts, marks the active one, and switches on demand", async () =>
     Promise.resolve({ ok: true as const }),
   );
   const bridge = fakeDesktopBridge();
-  bridge.executionHost.snapshot = () =>
-    Promise.resolve({
-      hosts: [
-        { id: "local" as const, label: "Local", kind: "local" as const },
-        { id: "remote" as const, label: "otomat-vps", kind: "ssh" as const },
-      ],
-      active_id: "local" as const,
-      remote_ssh_alias: "otomat-vps",
-      remote_status: null,
-    });
+  bridge.executionHost.snapshot = () => Promise.resolve(twoHostSnapshot());
   bridge.executionHost.select = select;
   window.otomat = bridge;
   await renderSection();
 
   expect(document.body.textContent).toContain("otomat-vps");
   expect(document.body.textContent).toContain("Active");
-  const buttons = useHostButtons();
+  const buttons = hostSelectButtons();
   expect(buttons).toHaveLength(1);
   await act(async () => {
     buttons[0]?.click();
@@ -75,27 +79,32 @@ it("lists both hosts, marks the active one, and switches on demand", async () =>
   expect(select).toHaveBeenCalledWith("remote");
 });
 
-it("shows the selection failure verbatim instead of pretending to be connected", async () => {
+it("shows the selection failure instead of pretending to be connected", async () => {
   const bridge = fakeDesktopBridge();
-  bridge.executionHost.snapshot = () =>
-    Promise.resolve({
-      hosts: [
-        { id: "local" as const, label: "Local", kind: "local" as const },
-        { id: "remote" as const, label: "otomat-vps", kind: "ssh" as const },
-      ],
-      active_id: "local" as const,
-      remote_ssh_alias: "otomat-vps",
-      remote_status: null,
-    });
+  bridge.executionHost.snapshot = () => Promise.resolve(twoHostSnapshot());
   bridge.executionHost.select = () =>
-    Promise.resolve({ ok: false as const, message: "Could not reach the host over SSH." });
+    Promise.resolve({
+      ok: false as const,
+      status: { phase: "error" as const, code: "ssh_unreachable" as const, detail: "no route" },
+    });
   window.otomat = bridge;
   await renderSection();
 
   await act(async () => {
-    useHostButtons()[0]?.click();
+    hostSelectButtons()[0]?.click();
   });
-  expect(document.body.textContent).toContain("Could not reach the host over SSH.");
+  expect(document.body.textContent).toContain("could not be reached over SSH");
+  expect(document.body.textContent).toContain("no route");
+});
+
+it("surfaces a snapshot failure instead of an endless skeleton", async () => {
+  const bridge = fakeDesktopBridge();
+  bridge.executionHost.snapshot = () => Promise.reject(new Error("bridge unavailable"));
+  window.otomat = bridge;
+  await renderSection();
+
+  expect(document.body.textContent).toContain("Could not load the execution-host state");
+  expect(document.body.textContent).toContain("bridge unavailable");
 });
 
 it("renders live remote status pushed by the main process", async () => {
@@ -105,15 +114,9 @@ it("renders live remote status pushed by the main process", async () => {
     executionHostSshAlias: "otomat-vps",
   });
   bridge.executionHost.snapshot = () =>
-    Promise.resolve({
-      hosts: [
-        { id: "local" as const, label: "Local", kind: "local" as const },
-        { id: "remote" as const, label: "otomat-vps", kind: "ssh" as const },
-      ],
-      active_id: "remote" as const,
-      remote_ssh_alias: "otomat-vps",
-      remote_status: { phase: "connected" as const, detail: null },
-    });
+    Promise.resolve(
+      twoHostSnapshot({ active_id: "remote", remote_status: { phase: "connected", detail: null } }),
+    );
   bridge.executionHost.onRemoteStatus = (listener) => {
     push = listener;
     return () => {};

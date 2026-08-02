@@ -4,7 +4,7 @@ import {
   registerRepositoryErrorMessage,
   useRegisterRepository,
 } from "@web/api/repositories/mutations";
-import { desktopBridge } from "@web/lib/desktop-bridge";
+import { desktopBridge, remoteHostAlias } from "@web/lib/desktop-bridge";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { useState } from "react";
 
@@ -17,8 +17,7 @@ export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProp
   const register = useRegisterRepository();
   const bridge = desktopBridge();
   // The native picker browses this machine; on a remote host the path lives on that host instead.
-  const remoteHost = bridge !== null && bridge.executionHostId === "remote";
-  const remoteAlias = bridge?.executionHostSshAlias ?? "the remote host";
+  const remoteAlias = remoteHostAlias();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm({
@@ -62,9 +61,9 @@ export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProp
         name="path"
         validators={{
           onChange: requiredTrimmed(
-            remoteHost
-              ? `Enter the absolute path of a repository on ${remoteAlias}.`
-              : "Enter the absolute path of a local repository.",
+            remoteAlias === null
+              ? "Enter the absolute path of a local repository."
+              : `Enter the absolute path of a repository on ${remoteAlias}.`,
           ),
         }}
       >
@@ -82,16 +81,16 @@ export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProp
                       field.handleChange(event.target.value);
                     }}
                     placeholder={
-                      remoteHost
-                        ? `/absolute/path/on/${remoteAlias}`
-                        : "/absolute/path/to/repository"
+                      remoteAlias === null
+                        ? "/absolute/path/to/repository"
+                        : `/absolute/path/on/${remoteAlias}`
                     }
                     aria-label="Repository path"
                     spellCheck={false}
                   />
                 </FieldControl>
               </div>
-              {bridge === null || remoteHost ? null : (
+              {bridge === null || remoteAlias !== null ? null : (
                 <Button
                   type="button"
                   variant="outline"

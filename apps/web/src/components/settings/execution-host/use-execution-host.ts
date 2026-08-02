@@ -1,7 +1,18 @@
-import type { ExecutionHostId, ExecutionHostSnapshot, RemoteHostStatus } from "@otomat/domain";
+import type {
+  ExecutionHostId,
+  ExecutionHostOperationResult,
+  ExecutionHostSnapshot,
+  RemoteHostStatus,
+} from "@otomat/domain";
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 import { useEffect, useState } from "react";
+
+import { describeRemoteStatus } from "./status-labels";
+
+function failureMessage(result: Extract<ExecutionHostOperationResult, { ok: false }>): string {
+  return "status" in result ? describeRemoteStatus(result.status) : result.message;
+}
 
 export interface UseExecutionHostResult {
   /** False in a plain browser, where hosts are managed by the desktop app only. */
@@ -56,7 +67,7 @@ export function useExecutionHost(): UseExecutionHostResult {
     setPending(id);
     try {
       const result = await bridge.executionHost.select(id);
-      if (!result.ok) setActionError(result.message);
+      if (!result.ok) setActionError(failureMessage(result));
     } catch (error) {
       setActionError(String(error));
     } finally {
@@ -72,7 +83,7 @@ export function useExecutionHost(): UseExecutionHostResult {
     try {
       const result = await bridge.executionHost.configureRemote(sshAlias);
       if (!result.ok) {
-        setActionError(result.message);
+        setActionError(failureMessage(result));
         return false;
       }
       return true;

@@ -101,7 +101,22 @@ export function ExecutionHostSection() {
   }
 
   const snapshot = host.snapshot.data;
+  const snapshotError = host.snapshot.error;
   const alias = aliasDraft ?? snapshot?.remote_ssh_alias ?? "";
+
+  if (snapshotError !== null) {
+    return (
+      <div>
+        <SectionHeading
+          title="Execution host"
+          description="Where repositories live and runs execute."
+        />
+        <p role="alert" className="text-xs text-danger">
+          Could not load the execution-host state: {snapshotError.message}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>

@@ -1,11 +1,11 @@
-/**
- * Execution-host contracts for the desktop shell: which daemon the cockpit talks
- * to (the locally spawned one, or a user-owned remote host reached over an SSH
- * tunnel) and the honest lifecycle states of that remote connection. The remote
- * daemon stays loopback-bound on its host; the shell only ever stores the
- * `~/.ssh/config` alias name, never credentials.
- */
-export type ExecutionHostId = "local" | "remote";
+// The remote daemon stays loopback-bound on its host; the shell stores only the `~/.ssh/config` alias, never credentials.
+export const EXECUTION_HOST_IDS = ["local", "remote"] as const;
+
+export type ExecutionHostId = (typeof EXECUTION_HOST_IDS)[number];
+
+export function isExecutionHostId(value: unknown): value is ExecutionHostId {
+  return EXECUTION_HOST_IDS.some((id) => id === value);
+}
 
 export type RemoteHostErrorCode =
   | "not_configured"
@@ -45,4 +45,8 @@ export interface ExecutionHostSnapshot {
   remote_status: RemoteHostStatus | null;
 }
 
-export type ExecutionHostOperationResult = { ok: true } | { ok: false; message: string };
+// Failures carry the structured remote status when one exists (the web catalog owns its wording) or contextual prose.
+export type ExecutionHostOperationResult =
+  | { ok: true }
+  | { ok: false; status: RemoteHostStatus }
+  | { ok: false; message: string };

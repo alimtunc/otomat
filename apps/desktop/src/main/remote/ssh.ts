@@ -1,11 +1,6 @@
 import { spawn } from "node:child_process";
 
-/**
- * `BatchMode=yes` makes ssh fail instead of ever prompting (passwords, host-key
- * questions): authentication must come from the user's own config/agent, and an
- * unknown host key surfaces as an honest error telling the user to connect once
- * manually.
- */
+// BatchMode makes ssh fail instead of ever prompting: auth and host keys must already work from the user's own config/agent.
 export const SSH_BATCH_ARGS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10"] as const;
 
 export interface SshScriptResult {
@@ -18,19 +13,12 @@ export interface RunSshScriptOptions {
   alias: string;
   script: string;
   timeoutMs: number;
-  spawnImpl?: typeof spawn;
 }
 
-/**
- * Runs a script on the remote host as `ssh <alias> bash -ls`, delivering the
- * script over stdin so no remote-quoting layer is involved. The login shell
- * (`-l`) resolves the user's PATH (nvm, ~/.local/bin) like an interactive
- * session would.
- */
+/** The script travels over stdin (no remote-quoting layer); `bash -ls` resolves the user's login PATH like an interactive session. */
 export function runSshScript(options: RunSshScriptOptions): Promise<SshScriptResult> {
-  const doSpawn = options.spawnImpl ?? spawn;
   return new Promise((resolve, reject) => {
-    const child = doSpawn("ssh", [...SSH_BATCH_ARGS, options.alias, "bash", "-ls"], {
+    const child = spawn("ssh", [...SSH_BATCH_ARGS, options.alias, "bash", "-ls"], {
       stdio: ["pipe", "pipe", "pipe"],
     });
     let stdout = "";

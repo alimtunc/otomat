@@ -1,13 +1,10 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
 import type { RemoteHostStatus } from "@otomat/domain";
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
 import { readExecutionHostsConfig, writeExecutionHostsConfig } from "#main/remote/hosts-config";
 import { ExecutionHostManager } from "#main/remote/manager";
 import type { RemoteSessionHandle } from "#main/remote/session";
+import { scratchDir } from "#support/scratch-dir";
 
 const CONNECTED: RemoteHostStatus = { phase: "connected", detail: null };
 
@@ -37,12 +34,8 @@ class FakeSession implements RemoteSessionHandle {
   }
 }
 
-const scratchDirs: string[] = [];
-
 function scratch(): string {
-  const dir = mkdtempSync(join(tmpdir(), "otomat-hosts-manager-"));
-  scratchDirs.push(dir);
-  return dir;
+  return scratchDir("otomat-hosts-manager-");
 }
 
 function makeManager(options?: {
@@ -69,14 +62,13 @@ function makeManager(options?: {
   return { manager, applied, sessions, dataDir };
 }
 
-afterEach(() => {
-  for (const dir of scratchDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
-});
-
 it("refuses to select the remote host before an alias is configured", async () => {
   const { manager, applied } = makeManager();
   const result = await manager.select("remote");
-  expect(result).toEqual({ ok: false, message: expect.stringContaining("Configure") });
+  expect(result).toEqual({
+    ok: false,
+    status: { phase: "error", code: "not_configured", detail: null },
+  });
   expect(applied).toEqual([]);
 });
 
@@ -105,8 +97,10 @@ it("keeps the local selection and never re-points the renderer when the remote c
   });
   manager.configureRemote("otomat-vps");
   const result = await manager.select("remote");
-  expect(result.ok).toBe(false);
-  if (!result.ok) expect(result.message).toContain("Could not reach the host over SSH");
+  expect(result).toEqual({
+    ok: false,
+    status: { phase: "error", code: "ssh_unreachable", detail: "no route" },
+  });
   expect(applied).toEqual([]);
   expect(manager.activeHostId).toBe("local");
   expect(readExecutionHostsConfig(dataDir).active).toBe("local");
@@ -115,7 +109,10 @@ it("keeps the local selection and never re-points the renderer when the remote c
 it("refuses to switch to a local daemon that is not running", async () => {
   const { manager, applied } = makeManager({ localUrl: "" });
   const result = await manager.select("local");
-  expect(result).toEqual({ ok: false, message: expect.stringContaining("local daemon") });
+  expect(result).toEqual({
+    ok: false,
+    status: { phase: "error", code: "local_daemon_unavailable", detail: null },
+  });
   expect(applied).toEqual([]);
 });
 
@@ -155,6 +152,8 @@ it("blocks changing the alias while the remote host is active", async () => {
   manager.configureRemote("otomat-vps");
   await manager.select("remote");
   const result = manager.configureRemote("other-host");
-  expect(result.ok).toBe(false);
-  if (!result.ok) expect(result.message).toContain("Switch to the local host");
+  expect(result).toEqual({
+    ok: false,
+    message: expect.stringContaining("Switch to the local host"),
+  });
 });

@@ -20,23 +20,8 @@ import {
 } from "./session.js";
 import { listSshConfigAliases } from "./ssh-config-aliases.js";
 
-const ERROR_MESSAGES: Record<RemoteHostErrorCode, string> = {
-  not_configured: "Configure the remote host's SSH alias first.",
-  ssh_unreachable: "Could not reach the host over SSH.",
-  daemon_missing: "The Otomat daemon is not installed on the host.",
-  node_missing: "Node.js was not found on the host.",
-  node_too_old: "The host's Node.js is older than version 22.",
-  daemon_start_failed: "The remote daemon did not start.",
-  tunnel_failed: "The SSH tunnel closed unexpectedly.",
-  health_failed: "The remote daemon never answered its health check through the tunnel.",
-  switch_in_progress: "A host switch is already in progress.",
-  local_daemon_unavailable: "The local daemon is not running.",
-};
-
-function describeStatus(status: RemoteHostStatus): string {
-  const base =
-    status.phase === "error" ? ERROR_MESSAGES[status.code] : `Connection is ${status.phase}.`;
-  return status.detail === null ? base : `${base} (${status.detail})`;
+function errorResult(code: RemoteHostErrorCode): ExecutionHostOperationResult {
+  return { ok: false, status: { phase: "error", code, detail: null } };
 }
 
 export interface ExecutionHostManagerOptions {
@@ -50,11 +35,7 @@ export interface ExecutionHostManagerOptions {
   listAliases?: typeof listSshConfigAliases;
 }
 
-/**
- * Owns the persisted host selection and the single remote session. Switching is
- * always explicit: a failed remote connection never falls back to the local
- * daemon — the selection stays untouched and the failure is returned verbatim.
- */
+// Switching is always explicit: a failed remote connection never falls back to the local daemon — the selection stays untouched and the failure is returned verbatim.
 export class ExecutionHostManager {
   private config: ExecutionHostsConfig;
   private session: RemoteSessionHandle | null = null;
@@ -111,7 +92,11 @@ export class ExecutionHostManager {
       }
       const stale = this.session;
       this.session = null;
-      void stale.dispose();
+      stale
+        .dispose()
+        .catch((error: unknown) =>
+          this.options.log(`Stale remote session dispose failed: ${String(error)}`),
+        );
     }
     this.config = { ...this.config, remote: { ssh_alias: alias } };
     this.persist();
@@ -119,7 +104,7 @@ export class ExecutionHostManager {
   }
 
   async select(id: ExecutionHostId): Promise<ExecutionHostOperationResult> {
-    if (this.switching) return { ok: false, message: ERROR_MESSAGES.switch_in_progress };
+    if (this.switching) return errorResult("switch_in_progress");
     this.switching = true;
     try {
       return id === "remote" ? await this.selectRemote() : await this.selectLocal();
@@ -128,11 +113,7 @@ export class ExecutionHostManager {
     }
   }
 
-  /**
-   * At boot with the remote host active: reserve the tunnel's local port so the
-   * renderer URL is stable from the first paint, then connect in the background
-   * (self-healing retry). Returns the renderer URL, or null when local is active.
-   */
+  /** Boot with the remote host active: reserve the tunnel's local port so the renderer URL is stable from the first paint, then connect in the background (self-healing retry). */
   async bootActivate(): Promise<string | null> {
     const alias = this.remoteSshAlias;
     if (this.activeHostId !== "remote" || alias === null) return null;
@@ -150,16 +131,16 @@ export class ExecutionHostManager {
 
   private async selectRemote(): Promise<ExecutionHostOperationResult> {
     const alias = this.remoteSshAlias;
-    if (alias === null) return { ok: false, message: ERROR_MESSAGES.not_configured };
+    if (alias === null) return errorResult("not_configured");
     if (this.session !== null && this.session.alias !== alias) {
       await this.session.dispose();
       this.session = null;
     }
     this.session ??= this.createSession(alias);
     const status = await this.session.connect(false);
-    if (status.phase !== "connected") return { ok: false, message: describeStatus(status) };
+    if (status.phase !== "connected") return { ok: false, status };
     const url = this.session.url;
-    if (url === null) return { ok: false, message: ERROR_MESSAGES.tunnel_failed };
+    if (url === null) return errorResult("tunnel_failed");
     this.config = { ...this.config, active: "remote" };
     this.persist();
     this.options.applyRendererUrl(url);
@@ -168,7 +149,7 @@ export class ExecutionHostManager {
 
   private async selectLocal(): Promise<ExecutionHostOperationResult> {
     const url = this.options.localDaemonUrl();
-    if (url === "") return { ok: false, message: ERROR_MESSAGES.local_daemon_unavailable };
+    if (url === "") return errorResult("local_daemon_unavailable");
     if (this.session !== null) {
       await this.session.dispose();
       this.session = null;

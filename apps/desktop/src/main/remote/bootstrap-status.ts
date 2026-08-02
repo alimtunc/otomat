@@ -9,10 +9,7 @@ export function trimDetail(text: string): string {
   return text.trim().split(/\r?\n/).slice(-3).join(" · ").slice(0, 300);
 }
 
-export interface BootstrapResolution {
-  failure: RemoteErrorStatus | null;
-  detail: string;
-}
+export type BootstrapResolution = { failure: RemoteErrorStatus } | { detail: string };
 
 /** Turns one start-or-verify round trip into either a typed failure or the running-daemon detail. */
 export function resolveBootstrapResult(result: SshScriptResult): BootstrapResolution {
@@ -23,7 +20,6 @@ export function resolveBootstrapResult(result: SshScriptResult): BootstrapResolu
         code: "ssh_unreachable",
         detail: trimDetail(result.stderr) || `ssh exited with code ${String(result.code)}`,
       },
-      detail: "",
     };
   }
   const outcome = parseBootstrapOutput(result.stdout);
@@ -34,7 +30,6 @@ export function resolveBootstrapResult(result: SshScriptResult): BootstrapResolu
         code: "daemon_start_failed",
         detail: trimDetail(result.stderr) || "The start-or-verify script reported nothing.",
       },
-      detail: "",
     };
   }
   switch (outcome.kind) {
@@ -45,22 +40,15 @@ export function resolveBootstrapResult(result: SshScriptResult): BootstrapResolu
           code: "daemon_start_failed",
           detail: trimDetail(outcome.logTail),
         },
-        detail: "",
       };
     case "daemon_missing":
-      return {
-        failure: { phase: "error", code: "daemon_missing", detail: outcome.entry },
-        detail: "",
-      };
+      return { failure: { phase: "error", code: "daemon_missing", detail: outcome.entry } };
     case "node_missing":
-      return { failure: { phase: "error", code: "node_missing", detail: null }, detail: "" };
+      return { failure: { phase: "error", code: "node_missing", detail: null } };
     case "node_too_old":
-      return {
-        failure: { phase: "error", code: "node_too_old", detail: outcome.version },
-        detail: "",
-      };
+      return { failure: { phase: "error", code: "node_too_old", detail: outcome.version } };
     case "running":
     case "started":
-      return { failure: null, detail: `daemon ${outcome.kind} (pid ${outcome.pid})` };
+      return { detail: `daemon ${outcome.kind} (pid ${outcome.pid})` };
   }
 }
