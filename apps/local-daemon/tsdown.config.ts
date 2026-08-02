@@ -3,10 +3,13 @@ import { execSync } from "node:child_process";
 import { defineConfig } from "tsdown";
 
 // The dist self-identifies its commit so a deployed daemon can be compared to
-// the app connecting to it; a build outside git stays unstamped.
+// the app connecting to it; a build outside git stays unstamped. Sliced to 7
+// (not `--short`, whose length follows the local git's abbreviation) to match
+// the desktop's expected-build derivation exactly.
 function buildSha(): string | null {
   try {
-    return execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim() || null;
+    const sha = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
+    return sha === "" ? null : sha.slice(0, 7);
   } catch {
     return null;
   }

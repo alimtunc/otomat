@@ -57,3 +57,28 @@ export function writeExecutionHostsConfig(dataDir: string, config: ExecutionHost
   writeFileSync(temp, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
   renameSync(temp, path);
 }
+
+/** Unreadable or invalid content falls back to the defaults, logged — boot never wedges on this file. */
+export function readExecutionHostsConfigSafe(
+  dataDir: string,
+  log: (message: string) => void,
+): ExecutionHostsConfig {
+  try {
+    return readExecutionHostsConfig(dataDir);
+  } catch (error) {
+    log(`Execution-hosts config unreadable, using defaults: ${String(error)}`);
+    return DEFAULT_EXECUTION_HOSTS_CONFIG;
+  }
+}
+
+export function writeExecutionHostsConfigSafe(
+  dataDir: string,
+  config: ExecutionHostsConfig,
+  log: (message: string) => void,
+): void {
+  try {
+    writeExecutionHostsConfig(dataDir, config);
+  } catch (error) {
+    log(`Could not persist the execution-hosts config: ${String(error)}`);
+  }
+}

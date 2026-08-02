@@ -10,8 +10,10 @@ export function startOrVerifyDaemonScript(): string {
     'ENTRY="$OTOMAT_HOME/daemon/dist/index.js"',
     'PID_FILE="$OTOMAT_HOME/daemon.pid"',
     'mkdir -p "$OTOMAT_HOME/data"',
-    'if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then',
-    `  echo "${TOKEN_PREFIX}RUNNING:$(cat "$PID_FILE")"`,
+    'PID="$(cat "$PID_FILE" 2>/dev/null || true)"',
+    // The pid must still be the daemon: after a reboot or crash the pidfile can name a recycled pid, which would otherwise block the restart forever.
+    'if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null && grep -aqF "$ENTRY" "/proc/$PID/cmdline" 2>/dev/null; then',
+    `  echo "${TOKEN_PREFIX}RUNNING:$PID"`,
     "  exit 0",
     "fi",
     'if [ ! -f "$ENTRY" ]; then',
@@ -47,7 +49,8 @@ export function startOrVerifyDaemonScript(): string {
 /**
  * Stops the pidfile-tracked daemon (SIGTERM, bounded wait, then SIGKILL) so the
  * next start-or-verify boots whatever the deploy directory now holds. Kills by
- * pid, never by pattern, so the remote shell can never match itself.
+ * pid, never by pattern, so the remote shell can never match itself — and only
+ * after the pid's cmdline proves it is still the daemon, never a recycled pid.
  */
 export function stopDaemonScript(): string {
   return [
@@ -56,7 +59,7 @@ export function stopDaemonScript(): string {
     'PID_FILE="$OTOMAT_HOME/daemon.pid"',
     'if [ -f "$PID_FILE" ]; then',
     '  PID="$(cat "$PID_FILE")"',
-    '  if kill -0 "$PID" 2>/dev/null; then',
+    '  if kill -0 "$PID" 2>/dev/null && grep -aqF "$OTOMAT_HOME/daemon/dist/index.js" "/proc/$PID/cmdline" 2>/dev/null; then',
     '    kill "$PID" 2>/dev/null',
     "    for _ in 1 2 3 4 5 6 7 8 9 10; do",
     '      kill -0 "$PID" 2>/dev/null || break',

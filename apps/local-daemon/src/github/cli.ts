@@ -65,6 +65,10 @@ async function cliAvailability(run: CommandRunner): Promise<GitHubConnectionCont
 class CommandGitHubCli implements GitHubCli {
   constructor(private readonly run: CommandRunner) {}
 
+  availability(): Promise<GitHubConnectionContract | null> {
+    return cliAvailability(this.run);
+  }
+
   async connection(): Promise<GitHubConnectionContract> {
     const unavailable = await cliAvailability(this.run);
     if (unavailable) return unavailable;

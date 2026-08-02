@@ -13,13 +13,14 @@ export function resolveExpectedBuild(log: (message: string) => void): string | n
   try {
     const info = readBuildInfo(log);
     if (info.commit_short !== "unknown") return info.commit_short;
-    const result = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
+    const result = spawnSync("git", ["rev-parse", "HEAD"], {
       cwd: app.getAppPath(),
       encoding: "utf8",
     });
     if (result.status !== 0) return null;
     const sha = result.stdout.trim();
-    return sha === "" ? null : sha;
+    // Sliced to 7 to match both the packaged commit_short and the daemon's baked sha.
+    return sha === "" ? null : sha.slice(0, 7);
   } catch (error) {
     log(`Expected build could not be resolved: ${String(error)}`);
     return null;

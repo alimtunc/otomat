@@ -84,6 +84,8 @@ export interface PullRequestUpdateInput {
 
 export interface GitHubCli {
   connection(): Promise<GitHubConnectionContract>;
+  /** Null when gh can run; otherwise the not_installed/cli_outdated/failed contract. */
+  availability(): Promise<GitHubConnectionContract | null>;
   loginWithToken(token: string): Promise<GitHubConnectionContract>;
   resolveRemote(cwd: string): Promise<GitHubRemote>;
   push(cwd: string, remote: string, branch: string): Promise<void>;

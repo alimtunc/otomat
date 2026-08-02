@@ -49,6 +49,29 @@ it("restarts a stale daemon once it is idle, a single time per observed build", 
   expect(session.refreshCount).toBe(1);
 });
 
+it("retries the restart on a later poll when the refresh attempt throws", async () => {
+  const fetchImpl = vi.fn(async () => runsResponse([]));
+  const session = connectedSession("old0000");
+  let attempts = 0;
+  session.refreshDaemon = () => {
+    attempts += 1;
+    if (attempts === 1) return Promise.reject(new Error("ssh timed out"));
+    session.remoteBuild = "abc1234";
+    return Promise.resolve({ phase: "connected", detail: null } as RemoteHostStatus);
+  };
+  const stale = refresher(fetchImpl);
+
+  await stale.maybeRefresh(session);
+  expect(attempts).toBe(1);
+
+  await stale.maybeRefresh(session);
+  expect(attempts).toBe(2);
+
+  session.remoteBuild = "abc1234";
+  await stale.maybeRefresh(session);
+  expect(attempts).toBe(2);
+});
+
 it("never restarts while a run is working or awaiting permission", async () => {
   for (const busy of ["queued", "preparing", "running", "awaiting_permission"]) {
     const fetchImpl = vi.fn(async () => runsResponse(["review_ready", busy]));

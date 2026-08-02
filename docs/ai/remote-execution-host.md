@@ -44,7 +44,8 @@ The desktop's start-or-verify step (one ssh round trip at every connect) expects
 ```
 
 Requirements on the host: Linux with `bash`, Node.js >= 22 on the login-shell
-PATH, `git`, and the agent CLIs (`claude`, `codex`) for the runtimes you intend
+PATH, `git`, the GitHub CLI (`gh` >= 2.63) for GitHub connection and PR
+publication, and the agent CLIs (`claude`, `codex`) for the runtimes you intend
 to use. The daemon is started with `nohup`, detached from the ssh session, so it
 survives disconnects and app quits; quitting the desktop app closes the tunnel
 but **never stops the remote daemon**. After a host reboot, the next connect
@@ -54,7 +55,9 @@ Updates: the daemon dist bakes its git commit in at build time and reports it
 from `/api/health`; the desktop compares it to the build it expects and warns in
 Settings on a mismatch. After the files are redeployed, the desktop restarts the
 stale daemon **automatically once it has no active runs** — never with work in
-flight — so the only manual step is the redeploy itself. While the active host's
+flight — so the only manual step is the redeploy itself. (The idle check runs
+just before the stop; a resume racing it inside that window can still be cut
+and is settled honestly at the daemon's next boot.) While the active host's
 daemon is stale, the cockpit **pauses new run launches** (existing runs keep
 working and stay resumable): launching would starve the idle restart and speak a
 newer API than the old daemon knows.
@@ -92,6 +95,7 @@ Everything lives in `apps/desktop/src/main/remote/`:
 | `bootstrap-status.ts`   | resolving one start-or-verify round trip into a typed failure or the running-daemon detail |
 | `tunnel.ts`             | the `ssh -N -L` child (loopback→loopback, `ExitOnForwardFailure`)    |
 | `session.ts`            | phase machine: checking_host → starting_daemon → opening_tunnel → connected, reconnect loop with capped backoff |
+| `host-projects.ts`      | one host's schema-valid project catalog fetch; unreachable yields null, logged |
 | `manager.ts`            | persisted selection, project-driven switching, boot re-activation, aggregated per-host project listing |
 | `stale-daemon.ts`       | restarts a redeployed-but-stale remote daemon once it is idle (never with a run in flight; one attempt per observed build) |
 | `ipc-actions.ts`        | renderer-facing IPC actions with honest not-ready fallbacks          |

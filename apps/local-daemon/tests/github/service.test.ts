@@ -61,6 +61,10 @@ class FakeGitHubCli implements GitHubCli {
     return this.connectionValue;
   }
 
+  async availability(): Promise<GitHubConnectionContract | null> {
+    return null;
+  }
+
   async loginWithToken(): Promise<GitHubConnectionContract> {
     this.loginCalls += 1;
     this.connectionValue = connected;

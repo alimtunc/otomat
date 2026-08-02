@@ -67,7 +67,11 @@ export function ProjectSourcesPanel({ project }: { project: ProjectContract }) {
               </p>
             ) : (
               <div className="border-t border-border-subtle">
-                <IssueSourceForm key={workspaceId} workspace={data} projects={[project]} />
+                <IssueSourceForm
+                  key={`${workspaceId}:${project.id}`}
+                  workspace={data}
+                  projects={[project]}
+                />
               </div>
             )
           }

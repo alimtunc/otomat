@@ -93,16 +93,21 @@ export class RemoteHostSession implements RemoteSessionHandle {
     if (this.disposed || this.inFlight !== null) return this.currentStatus;
     this.cancelRetry();
     const run = this.options.runScript ?? runSshScript;
-    await run({
+    const stop = await run({
       alias: this.options.alias,
       script: stopDaemonScript(),
       timeoutMs: BOOTSTRAP_TIMEOUT_MS,
     });
+    if (stop.code !== 0) {
+      // Nothing was torn down yet: the session keeps serving the old daemon and the caller may retry.
+      throw new Error(`remote daemon stop exited ${String(stop.code)}: ${trimDetail(stop.stderr)}`);
+    }
     const tunnel = this.tunnel;
     this.tunnel = null;
     if (tunnel !== null) await tunnel.stop();
     this.setStatus({ phase: "disconnected", detail: null });
-    return this.connect(false);
+    // The daemon is down now, so a failed reconnect must keep retrying, not settle on `error`.
+    return this.connect(true);
   }
 
   async dispose(): Promise<void> {
@@ -118,9 +123,17 @@ export class RemoteHostSession implements RemoteSessionHandle {
     try {
       const localPort = await this.ensureLocalPort();
       const bootstrap = await this.bootstrapDaemon();
+      // Disposed mid-flight: stop before spawning a tunnel nobody would ever stop.
+      if (this.disposed) return this.settleDisposed();
       if ("failure" in bootstrap) return this.settleFailure(bootstrap.failure, retryOnFailure);
       const tunnelFailure = await this.openTunnel(localPort);
       if (tunnelFailure !== null) return this.settleFailure(tunnelFailure, retryOnFailure);
+      if (this.disposed) {
+        const tunnel = this.tunnel;
+        this.tunnel = null;
+        if (tunnel !== null) await tunnel.stop();
+        return this.settleDisposed();
+      }
       this.retryAttempt = 0;
       this.setStatus({ phase: "connected", detail: bootstrap.detail });
       return this.currentStatus;
@@ -181,6 +194,11 @@ export class RemoteHostSession implements RemoteSessionHandle {
       }
       return { phase: "error", code: "health_failed", detail: trimDetail(String(error)) };
     }
+  }
+
+  private settleDisposed(): RemoteHostStatus {
+    this.setStatus({ phase: "disconnected", detail: null });
+    return this.currentStatus;
   }
 
   private onTunnelDropped(detail: string): void {

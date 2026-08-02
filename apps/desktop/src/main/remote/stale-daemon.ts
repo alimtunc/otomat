@@ -34,8 +34,9 @@ export class StaleDaemonRefresher {
       this.options.log(
         `Remote daemon build ${build} differs from expected ${expected}; restarting it while idle.`,
       );
-      this.handledBuild = build;
       await session.refreshDaemon();
+      // Only a delivered restart consumes this build's one attempt; a thrown stop leaves it open for the next poll.
+      this.handledBuild = build;
     } catch (error) {
       this.options.log(`Stale remote daemon refresh failed: ${String(error)}`);
     } finally {

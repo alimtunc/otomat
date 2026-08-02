@@ -94,6 +94,40 @@ it.each(["", "  ", "two words", "-oProxyCommand=evil"])("rejects the alias %j", 
   expect(manager.configureRemote(alias).ok).toBe(false);
 });
 
+it("refuses an alias change while a host switch is in flight", async () => {
+  let release: (status: RemoteHostStatus) => void = () => {};
+  const manager = new ExecutionHostManager({
+    dataDir: scratch(),
+    log: () => {},
+    localDaemonUrl: () => "http://127.0.0.1:49152",
+    onRemoteStatus: () => {},
+    applyRendererUrl: () => {},
+    expectedBuild: null,
+    createSession: (sessionOptions) => {
+      const session = new FakeSession(sessionOptions.alias, CONNECTED);
+      session.connect = () =>
+        new Promise((resolve) => {
+          release = (status) => {
+            session.status = status;
+            session.url = "http://127.0.0.1:45010";
+            resolve(status);
+          };
+        });
+      return session;
+    },
+    listAliases: () => ["otomat-vps"],
+  });
+  expect(manager.configureRemote("otomat-vps").ok).toBe(true);
+
+  const pending = manager.select("remote");
+  const blocked = manager.configureRemote("other-host");
+  expect(blocked.ok).toBe(false);
+
+  release(CONNECTED);
+  await expect(pending).resolves.toEqual({ ok: true });
+  expect(manager.remoteSshAlias).toBe("otomat-vps");
+});
+
 it("connects, persists the selection, and re-points the renderer on success", async () => {
   const { manager, applied, sessions, dataDir } = makeManager();
   expect(manager.configureRemote("otomat-vps")).toEqual({ ok: true });

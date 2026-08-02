@@ -160,6 +160,58 @@ it("stops reconnecting once disposed", async () => {
   expect(session.status.phase).toBe("disconnected");
 });
 
+it("refreshDaemon enters the reconnect loop when the daemon does not come back at once", async () => {
+  const runScript = vi
+    .fn<() => Promise<SshScriptResult>>()
+    .mockResolvedValueOnce(STARTED)
+    .mockResolvedValueOnce({ code: 0, stdout: "OTOMAT_REMOTE:STOPPED:-\n", stderr: "" })
+    .mockResolvedValueOnce({ code: 255, stdout: "", stderr: "no route to host" })
+    .mockResolvedValue(STARTED);
+  const { session, retries } = harness({ runScript });
+  await session.connect(false);
+
+  const status = await session.refreshDaemon();
+
+  expect(status.phase).toBe("reconnecting");
+  expect(retries).toHaveLength(1);
+  retries[0]?.();
+  await vi.waitFor(() => expect(session.status.phase).toBe("connected"));
+});
+
+it("refreshDaemon keeps the session serving when the stop script fails", async () => {
+  const runScript = vi
+    .fn<() => Promise<SshScriptResult>>()
+    .mockResolvedValueOnce(STARTED)
+    .mockResolvedValueOnce({ code: 255, stdout: "", stderr: "ssh: connect refused" });
+  const { session, tunnels } = harness({ runScript });
+  await session.connect(false);
+
+  await expect(session.refreshDaemon()).rejects.toThrow("remote daemon stop exited 255");
+
+  expect(session.status.phase).toBe("connected");
+  expect(tunnels[0]?.running).toBe(true);
+});
+
+it("never leaves a tunnel behind when disposed mid-connect", async () => {
+  let releaseBootstrap: (result: SshScriptResult) => void = () => {};
+  const runScript = vi.fn(
+    () =>
+      new Promise<SshScriptResult>((resolve) => {
+        releaseBootstrap = resolve;
+      }),
+  );
+  const { session, tunnels } = harness({ runScript });
+  const pending = session.connect(false);
+  await vi.waitFor(() => expect(runScript).toHaveBeenCalled());
+  const disposal = session.dispose();
+  releaseBootstrap(STARTED);
+  const status = await pending;
+  await disposal;
+
+  expect(status.phase).toBe("disconnected");
+  expect(tunnels).toHaveLength(0);
+});
+
 it("refreshDaemon stops the remote daemon then reconnects on the same port", async () => {
   const { session, runScript, tunnels } = harness();
   await session.connect(false);

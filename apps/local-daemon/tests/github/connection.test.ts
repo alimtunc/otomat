@@ -38,6 +38,7 @@ function fakeCli(): GitHubCli & { tokens: string[] } {
   return {
     tokens,
     connection: async () => current,
+    availability: async () => null,
     loginWithToken: async (token: string) => {
       tokens.push(token);
       current = CONNECTED;
@@ -101,6 +102,37 @@ describe("GitHub connection service", () => {
 
     await expect(service.connection()).resolves.toEqual(CONNECTED);
     expect(cli.tokens).toEqual(["gho_token"]);
+  });
+
+  it("fails before starting the device grant when gh cannot run", async () => {
+    const cli = fakeCli();
+    cli.availability = async () => ({
+      status: "not_installed",
+      login: null,
+      device_authorization: null,
+      error_code: "github_cli_missing",
+      error_message: "Install GitHub CLI to connect Otomat to GitHub.",
+    });
+    let starts = 0;
+    const device = manualDevice();
+    const countingDevice: DeviceAuthorization = {
+      start: async () => {
+        starts += 1;
+        return device.start();
+      },
+      awaitToken: device.awaitToken,
+    };
+    const service = createGitHubConnectionService(cli, countingDevice);
+
+    service.connect();
+    await settle();
+
+    expect(starts).toBe(0);
+    expect(cli.tokens).toEqual([]);
+    await expect(service.connection()).resolves.toMatchObject({
+      status: "not_installed",
+      error_code: "github_cli_missing",
+    });
   });
 
   it("keeps a sticky failure when the sign-in is denied", async () => {

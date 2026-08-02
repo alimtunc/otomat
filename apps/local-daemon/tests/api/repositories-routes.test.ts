@@ -262,6 +262,32 @@ it("refuses to delete a repository while one of its runs is active", async () =>
   expect(listRepositories(t.db, { projectId: created.project.id })).toHaveLength(1);
 });
 
+it("refuses deletion while an active run reaches the project through one of its issues", async () => {
+  const app = makeApiApp(t);
+  const created = await registerRepo(app, repo.root);
+  const issueRes = await post(app, "/api/issues", {
+    project_id: created.project.id,
+    title: "Moved into this project",
+  });
+  expect(issueRes.status).toBe(201);
+  const issue = await json<{ id: string }>(issueRes);
+  seedRun(t.db, {
+    runId: "r-linked",
+    issueId: issue.id,
+    repositoryId: null,
+    runStatus: "running",
+    stepStatus: "running",
+    sessionStatus: "active",
+  });
+
+  const res = await del(app, `/api/repositories/${created.repository.id}`);
+  expect(res.status).toBe(409);
+  expect(await json<{ error: string }>(res)).toMatchObject({
+    error: "repository_has_active_runs",
+  });
+  expect(getRun(t.db, "r-linked")).toBeDefined();
+});
+
 it("reports an unknown repository deletion as not found", async () => {
   const app = makeApiApp(t);
   expect((await del(app, "/api/repositories/nope")).status).toBe(404);

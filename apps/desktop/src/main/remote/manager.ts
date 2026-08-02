@@ -11,9 +11,8 @@ import type {
 
 import { fetchProjectCatalog } from "./host-projects.js";
 import {
-  DEFAULT_EXECUTION_HOSTS_CONFIG,
-  readExecutionHostsConfig,
-  writeExecutionHostsConfig,
+  readExecutionHostsConfigSafe,
+  writeExecutionHostsConfigSafe,
   type ExecutionHostsConfig,
 } from "./hosts-config.js";
 import {
@@ -50,7 +49,7 @@ export class ExecutionHostManager {
   private readonly staleRefresher: StaleDaemonRefresher;
 
   constructor(private readonly options: ExecutionHostManagerOptions) {
-    this.config = this.readConfig();
+    this.config = readExecutionHostsConfigSafe(options.dataDir, options.log);
     this.staleRefresher = new StaleDaemonRefresher({
       expectedBuild: options.expectedBuild ?? null,
       fetchImpl: options.fetchImpl ?? fetch,
@@ -94,6 +93,9 @@ export class ExecutionHostManager {
   }
 
   configureRemote(sshAlias: unknown): ExecutionHostOperationResult {
+    if (this.switching) {
+      return { ok: false, message: "A host switch is in progress. Try again in a moment." };
+    }
     if (typeof sshAlias !== "string" || sshAlias.trim() === "") {
       return { ok: false, message: "Enter an SSH alias from ~/.ssh/config." };
     }
@@ -186,10 +188,12 @@ export class ExecutionHostManager {
       await this.session.dispose();
       this.session = null;
     }
-    this.session ??= this.createSession(alias);
-    const status = await this.session.connect(false);
+    const session = (this.session ??= this.createSession(alias));
+    const status = await session.connect(false);
+    // The session field can only have moved under us via shutdown; never point the renderer at it.
+    if (this.session !== session) return errorResult("switch_in_progress");
     if (status.phase !== "connected") return { ok: false, status };
-    const url = this.session.url;
+    const url = session.url;
     if (url === null) return errorResult("tunnel_failed");
     this.config = { ...this.config, active: "remote" };
     this.persist();
@@ -229,20 +233,7 @@ export class ExecutionHostManager {
     });
   }
 
-  private readConfig(): ExecutionHostsConfig {
-    try {
-      return readExecutionHostsConfig(this.options.dataDir);
-    } catch (error) {
-      this.options.log(`Execution-hosts config unreadable, using defaults: ${String(error)}`);
-      return DEFAULT_EXECUTION_HOSTS_CONFIG;
-    }
-  }
-
   private persist(): void {
-    try {
-      writeExecutionHostsConfig(this.options.dataDir, this.config);
-    } catch (error) {
-      this.options.log(`Could not persist the execution-hosts config: ${String(error)}`);
-    }
+    writeExecutionHostsConfigSafe(this.options.dataDir, this.config, this.options.log);
   }
 }

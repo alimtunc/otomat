@@ -47,9 +47,10 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     maxBytes: LOG_MAX_BYTES,
     archives: LOG_ARCHIVES,
   });
+  // The vault is local state, so the key only ever reaches the local daemon — never a remote host over the tunnel (docs/ai/remote-execution-host.md, Known V1 limits).
   const linear = new LinearCoordinator(
     createMainLinearVault(dataDirectory.root),
-    options.daemonUrl,
+    options.localDaemonUrl,
   );
   const daemon = new DaemonController({
     daemonEntry: options.paths.daemonEntry,

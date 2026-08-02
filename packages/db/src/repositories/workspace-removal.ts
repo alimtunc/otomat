@@ -23,14 +23,31 @@ import {
   worktrees,
 } from "../schema/index.js";
 
-/** Gate for deletion: reads run status directly so corrupt plans cannot hide an active run. */
+/**
+ * Gate for deletion: reads run status directly so corrupt plans cannot hide an
+ * active run, over the same run set the cascade deletes — including runs that
+ * reached this project's issues from another repository.
+ */
 export function repositoryHasActiveRuns(db: Db, repositoryId: string): boolean {
+  const runFilters: SQL[] = [eq(runs.repository_id, repositoryId)];
+  const repository = db
+    .select({ project_id: repositories.project_id })
+    .from(repositories)
+    .where(eq(repositories.id, repositoryId))
+    .get();
+  if (repository) {
+    const issueIds = db
+      .select({ id: issues.id })
+      .from(issues)
+      .where(eq(issues.project_id, repository.project_id))
+      .all()
+      .map((row) => row.id);
+    if (issueIds.length > 0) runFilters.push(inArray(runs.issue_id, issueIds));
+  }
   const row = db
     .select({ id: runs.id })
     .from(runs)
-    .where(
-      and(eq(runs.repository_id, repositoryId), notInArray(runs.status, [...RUN_TERMINAL_STATES])),
-    )
+    .where(and(or(...runFilters), notInArray(runs.status, [...RUN_TERMINAL_STATES])))
     .limit(1)
     .get();
   return row !== undefined;

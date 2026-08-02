@@ -2,6 +2,7 @@
 import { IntegrationsSection } from "@web/components/settings/integrations/section";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { mount, type Mounted } from "#support/mount";
 
 let connectionState: Record<string, unknown>;
@@ -41,6 +42,7 @@ beforeEach(() => {
 afterEach(async () => {
   await rendered?.cleanup();
   rendered = null;
+  delete window.otomat;
   document.body.replaceChildren();
 });
 
@@ -61,6 +63,19 @@ it("does not render stale connection controls after a background connection erro
   const container = await renderSection();
 
   expect(container.textContent).toContain("Could not read the Linear connection.");
+  expect(container.textContent).not.toContain("Connected as");
+});
+
+it("replaces the Linear panel with a local-only note while a remote host is active", async () => {
+  window.otomat = fakeDesktopBridge({
+    executionHostId: "remote",
+    executionHostSshAlias: "otomat-vps",
+  });
+
+  const container = await renderSection();
+
+  expect(container.textContent).toContain("Linear connects on the local daemon only.");
+  expect(container.querySelector("[data-testid='linear-connect-form']")).toBeNull();
   expect(container.textContent).not.toContain("Connected as");
 });
 

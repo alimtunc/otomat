@@ -71,12 +71,24 @@ export function useShellData() {
     }
     // Cross-host: persist the choice so the reloaded renderer restores it, then re-point at that host's daemon.
     const previous = currentProjectId;
+    if (isProjectScopedDetail(pathname)) void navigate({ to: "/issues" });
     writeSelectedProjectId(target.projectId);
-    void bridge.executionHost.select(target.hostId).then((result) => {
-      if (result.ok) return;
-      if (previous !== undefined) writeSelectedProjectId(previous);
-      toast.error("message" in result ? result.message : describeRemoteStatus(result.status));
-    });
+    void bridge.executionHost
+      .select(target.hostId)
+      .then((result) => {
+        if (result.ok) return;
+        // A concurrent switch owns the persisted choice; only a real failure rolls it back.
+        const concurrent =
+          "status" in result &&
+          result.status.phase === "error" &&
+          result.status.code === "switch_in_progress";
+        if (!concurrent && previous !== undefined) writeSelectedProjectId(previous);
+        toast.error("message" in result ? result.message : describeRemoteStatus(result.status));
+      })
+      .catch((error: unknown) => {
+        if (previous !== undefined) writeSelectedProjectId(previous);
+        toast.error(error instanceof Error ? error.message : "Switching hosts failed.");
+      });
   }
 
   return {

@@ -45,6 +45,8 @@ export function runSshScript(options: RunSshScriptOptions): Promise<SshScriptRes
       clearTimeout(timer);
       resolve({ code, stdout, stderr });
     });
+    // A fast ssh exit (bad alias, auth refusal) can EPIPE the queued write; 'close' already carries the real failure.
+    child.stdin?.on("error", () => {});
     child.stdin?.end(options.script);
   });
 }
