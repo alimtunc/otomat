@@ -54,7 +54,10 @@ Updates: the daemon dist bakes its git commit in at build time and reports it
 from `/api/health`; the desktop compares it to the build it expects and warns in
 Settings on a mismatch. After the files are redeployed, the desktop restarts the
 stale daemon **automatically once it has no active runs** — never with work in
-flight — so the only manual step is the redeploy itself.
+flight — so the only manual step is the redeploy itself. While the active host's
+daemon is stale, the cockpit **pauses new run launches** (existing runs keep
+working and stay resumable): launching would starve the idle restart and speak a
+newer API than the old daemon knows.
 
 Deploying the daemon onto the host (from a checkout, on the host or any
 same-arch Linux):
