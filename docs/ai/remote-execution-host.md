@@ -64,8 +64,17 @@ same-arch Linux):
 
 ```bash
 pnpm install && pnpm build
+rm -rf ~/.otomat/daemon
 pnpm --filter @otomat/local-daemon deploy --prod --legacy ~/.otomat/daemon
+find ~/.otomat/daemon -type f -links +1 \
+  -exec sh -c 'cp -p "$1" "$1.t" && mv "$1.t" "$1"' _ {} \;
 ```
+
+The `find` pass is not optional when the checkout lives on the same filesystem:
+`pnpm deploy` hardlinks workspace package files into the target, so a later
+`pnpm build` in the checkout mutates the deployed daemon **in place** — new
+files never appear while shared ones change, leaving a torn deploy that crashes
+at import time. Breaking the links gives the deploy its own inodes.
 
 If the deploy machine's architecture differs from the host's, run the deploy on
 the host itself (`better-sqlite3` is a native module).
