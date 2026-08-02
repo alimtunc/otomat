@@ -118,6 +118,7 @@ pnpm format        # write oxfmt formatting
 pnpm guardrails    # run frontend-specific static checks
 pnpm check         # run the complete PR gate, including smoke:dist
 pnpm db:migrate    # apply Drizzle migrations to local SQLite
+pnpm clean:data    # wipe this checkout's dev data (--vps <alias>, --repo <path>, --dry-run)
 pnpm desktop:dev      # run the Electron shell in dev (Vite + a spawned daemon)
 pnpm desktop:package  # build the unsigned macOS .app/.dmg
 pnpm desktop:preflight # check the release inputs without building anything

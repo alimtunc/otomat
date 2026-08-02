@@ -22,6 +22,7 @@
     "desktop:release": "node apps/desktop/scripts/release-mac.mjs",
     "desktop:smoke": "node apps/desktop/scripts/smoke-packaged.mjs",
     "db:migrate": "pnpm --filter @otomat/db run migrate",
+    "clean:data": "node scripts/clean-dev-data.mjs",
     "prepare": "lefthook install"
   },
   "devDependencies": {
