@@ -18,6 +18,7 @@ it("requires safe schema metadata on daemon health", () => {
     status: "ok",
     name: "otomat-local-daemon",
     version: "0.1.0",
+    build: "abc1234",
     started_at: "2026-07-23T10:00:00.000Z",
     db_path: "/tmp/otomat.db",
     schema: {

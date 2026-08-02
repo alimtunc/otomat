@@ -29,6 +29,8 @@ interface DesktopRuntimeOptions {
   paths: AppPaths;
   userData: string;
   userPath: string;
+  /** Build this app expects on every host (packaged commit or dev checkout HEAD); null when unidentifiable. */
+  expectedBuild: string | null;
   daemonUrl(): string;
   localDaemonUrl(): string;
   onRemoteStatus(status: RemoteHostStatus): void;
@@ -56,6 +58,7 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     userPath: options.userPath,
     packaged: options.paths.packaged,
     electronBinary: process.execPath,
+    ...(options.expectedBuild === null ? {} : { buildSha: options.expectedBuild }),
     writeLog: (stream, text) => daemonLog.write(`[${stream}] ${text}`),
   });
   const hosts = new ExecutionHostManager({
@@ -64,6 +67,7 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     localDaemonUrl: options.localDaemonUrl,
     onRemoteStatus: options.onRemoteStatus,
     applyRendererUrl: options.applyRendererUrl,
+    expectedBuild: options.expectedBuild,
   });
   return { dataDirectory, desktopLog, daemonLog, daemon, linear, hosts };
 }

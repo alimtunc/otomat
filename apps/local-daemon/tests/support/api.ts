@@ -91,6 +91,7 @@ export function makeApiApp(
     dbPath: t.dbPath,
     name: "test-daemon",
     version: "9.9.9",
+    build: "abc1234",
     startedAt: "2026-07-05T00:00:00.000Z",
     schemaMetadata: () => ({
       migration_count: 10,

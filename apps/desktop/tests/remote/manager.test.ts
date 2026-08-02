@@ -11,6 +11,7 @@ const CONNECTED: RemoteHostStatus = { phase: "connected", detail: null };
 class FakeSession implements RemoteSessionHandle {
   status: RemoteHostStatus = { phase: "disconnected", detail: null };
   url: string | null = null;
+  remoteBuild: string | null = null;
   disposeCount = 0;
   lastRetryFlag: boolean | null = null;
   constructor(
@@ -24,7 +25,10 @@ class FakeSession implements RemoteSessionHandle {
   connect(retryOnFailure: boolean): Promise<RemoteHostStatus> {
     this.lastRetryFlag = retryOnFailure;
     this.status = this.connectResult;
-    if (this.connectResult.phase === "connected") this.url = "http://127.0.0.1:45010";
+    if (this.connectResult.phase === "connected") {
+      this.url = "http://127.0.0.1:45010";
+      this.remoteBuild = "fff9999";
+    }
     return Promise.resolve(this.status);
   }
   dispose(): Promise<void> {
@@ -42,6 +46,7 @@ function makeManager(options?: {
   dataDir?: string;
   connectResult?: RemoteHostStatus;
   localUrl?: string;
+  expectedBuild?: string | null;
   fetchImpl?: typeof fetch;
 }) {
   const dataDir = options?.dataDir ?? scratch();
@@ -53,6 +58,7 @@ function makeManager(options?: {
     localDaemonUrl: () => options?.localUrl ?? "http://127.0.0.1:49152",
     onRemoteStatus: () => {},
     applyRendererUrl: (url) => applied.push(url),
+    expectedBuild: options?.expectedBuild ?? null,
     createSession: (sessionOptions) => {
       const session = new FakeSession(sessionOptions.alias, options?.connectResult ?? CONNECTED);
       sessions.push(session);
@@ -163,6 +169,16 @@ it("blocks changing the alias while the remote host is active", async () => {
     ok: false,
     message: expect.stringContaining("Switch to a local project"),
   });
+});
+
+it("surfaces the remote daemon's build next to the app's expected build", async () => {
+  const { manager } = makeManager({ expectedBuild: "abc1234" });
+  manager.configureRemote("otomat-vps");
+  await manager.select("remote");
+
+  const snapshot = manager.snapshot();
+  expect(snapshot.expected_build).toBe("abc1234");
+  expect(snapshot.remote_build).toBe("fff9999");
 });
 
 it("warms the remote tunnel at boot even when a local project is active", async () => {

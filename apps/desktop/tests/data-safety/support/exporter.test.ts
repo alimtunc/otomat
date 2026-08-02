@@ -7,6 +7,7 @@ const HEALTH = {
   status: "ok",
   name: "otomat-local-daemon",
   version: "0.1.0",
+  build: null,
   started_at: "2026-07-23T10:00:00.000Z",
   db_path: "/Users/private/Otomat/otomat.db",
   schema: {

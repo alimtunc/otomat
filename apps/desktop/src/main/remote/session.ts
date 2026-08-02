@@ -32,6 +32,8 @@ export interface RemoteSessionHandle {
   readonly alias: string;
   readonly status: RemoteHostStatus;
   readonly url: string | null;
+  /** Build the remote daemon reported on the last healthy connect; null before one or for an unstamped daemon. */
+  readonly remoteBuild: string | null;
   ensureLocalPort(): Promise<number>;
   connect(retryOnFailure: boolean): Promise<RemoteHostStatus>;
   dispose(): Promise<void>;
@@ -46,11 +48,16 @@ export class RemoteHostSession implements RemoteSessionHandle {
   private inFlight: Promise<RemoteHostStatus> | null = null;
   private retryTimer: NodeJS.Timeout | null = null;
   private retryAttempt = 0;
+  private lastRemoteBuild: string | null = null;
 
   constructor(private readonly options: RemoteSessionOptions) {}
 
   get alias(): string {
     return this.options.alias;
+  }
+
+  get remoteBuild(): string | null {
+    return this.lastRemoteBuild;
   }
 
   get status(): RemoteHostStatus {
@@ -137,11 +144,12 @@ export class RemoteHostSession implements RemoteSessionHandle {
     this.tunnel = tunnel;
     tunnel.start();
     try {
-      await (this.options.health ?? waitForHealth)({
+      const health = await (this.options.health ?? waitForHealth)({
         url: `http://127.0.0.1:${localPort}/api/health`,
         timeoutMs: TUNNEL_HEALTH_TIMEOUT_MS,
         signal: abort.signal,
       });
+      this.lastRemoteBuild = health.build;
       return null;
     } catch (error) {
       this.tunnel = null;

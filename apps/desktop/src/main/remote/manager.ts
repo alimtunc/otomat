@@ -34,6 +34,8 @@ export interface ExecutionHostManagerOptions {
   onRemoteStatus(status: RemoteHostStatus): void;
   /** Points the renderer at a new daemon origin and reloads it. */
   applyRendererUrl(url: string): void;
+  /** Build this app expects on every host; surfaced so a stale remote daemon deploy is visible. */
+  expectedBuild?: string | null;
   createSession?: (options: RemoteSessionOptions) => RemoteSessionHandle;
   listAliases?: typeof listSshConfigAliases;
   fetchImpl?: typeof fetch;
@@ -70,6 +72,8 @@ export class ExecutionHostManager {
       active_id: this.activeHostId,
       remote_ssh_alias: alias,
       remote_status: this.session?.status ?? null,
+      remote_build: this.session?.remoteBuild ?? null,
+      expected_build: this.options.expectedBuild ?? null,
     };
   }
 

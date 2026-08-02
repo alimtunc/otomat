@@ -16,6 +16,8 @@ export function fakeDesktopBridge(
           active_id: "local" as const,
           remote_ssh_alias: null,
           remote_status: null,
+          remote_build: null,
+          expected_build: null,
         }),
       select: () => Promise.resolve({ ok: true as const }),
       configureRemote: () => Promise.resolve({ ok: true as const }),

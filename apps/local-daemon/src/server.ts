@@ -24,6 +24,7 @@ import { createReviewService } from "#review";
 import { createReexecSpawn, createSupervisor } from "#supervisor";
 
 import { ensureDefaultProject, ensureDefaultRepository } from "./bootstrap.js";
+import { daemonBuild } from "./build-info.js";
 
 export const DAEMON_NAME = "otomat-local-daemon";
 export const DAEMON_VERSION = "0.1.0";
@@ -127,6 +128,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       db,
       name: DAEMON_NAME,
       version: DAEMON_VERSION,
+      build: daemonBuild(),
       startedAt: new Date().toISOString(),
       dbPath,
       schemaMetadata: () => readSchemaMetadata(sqlite),

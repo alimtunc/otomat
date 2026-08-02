@@ -41,6 +41,8 @@ export function buildExecutionHostActions(
           active_id: "local",
           remote_ssh_alias: null,
           remote_status: null,
+          remote_build: null,
+          expected_build: null,
         };
       }
       return hosts.snapshot();

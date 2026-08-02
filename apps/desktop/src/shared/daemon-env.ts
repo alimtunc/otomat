@@ -16,6 +16,8 @@ export interface DaemonEnvOptions {
   baseEnv?: NodeJS.ProcessEnv;
   /** Run the child as Node under the Electron binary (packaged app has no standalone node). */
   runAsNode?: boolean;
+  /** Build the shell knows itself to be; an unstamped daemon bundle reports it from `/api/health`. */
+  buildSha?: string;
 }
 
 /** Builds the environment for the spawned daemon child from the shell-managed knobs the daemon already reads. */
@@ -35,7 +37,9 @@ export function buildDaemonEnv(options: DaemonEnvOptions): NodeJS.ProcessEnv {
   // session's data root and widen the daemon's CORS allowlist behind the app's back.
   delete env.OTOMAT_WORKTREES_ROOT;
   delete env.OTOMAT_ALLOWED_ORIGINS;
+  delete env.OTOMAT_BUILD_SHA;
   if (options.allowedOrigin !== undefined) env.OTOMAT_ALLOWED_ORIGINS = options.allowedOrigin;
   if (options.runAsNode === true) env.ELECTRON_RUN_AS_NODE = "1";
+  if (options.buildSha !== undefined) env.OTOMAT_BUILD_SHA = options.buildSha;
   return env;
 }

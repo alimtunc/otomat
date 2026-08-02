@@ -44,6 +44,8 @@ function twoHostSnapshot(overrides: Partial<ExecutionHostSnapshot> = {}): Execut
     active_id: "local",
     remote_ssh_alias: "otomat-vps",
     remote_status: null,
+    remote_build: null,
+    expected_build: null,
     ...overrides,
   };
 }
@@ -101,6 +103,27 @@ it("renders live remote status pushed by the main process", async () => {
   });
   expect(document.body.textContent).toContain("Reconnecting…");
   expect(document.body.textContent).toContain("connection reset");
+});
+
+it("warns when the remote daemon build differs from the app's expected build", async () => {
+  const bridge = fakeDesktopBridge();
+  bridge.executionHost.snapshot = () =>
+    Promise.resolve(twoHostSnapshot({ remote_build: "aaa1111", expected_build: "bbb2222" }));
+  window.otomat = bridge;
+  await renderSection();
+
+  expect(document.body.textContent).toContain("runs build aaa1111");
+  expect(document.body.textContent).toContain("expects bbb2222");
+});
+
+it("stays quiet when the remote daemon build matches", async () => {
+  const bridge = fakeDesktopBridge();
+  bridge.executionHost.snapshot = () =>
+    Promise.resolve(twoHostSnapshot({ remote_build: "aaa1111", expected_build: "aaa1111" }));
+  window.otomat = bridge;
+  await renderSection();
+
+  expect(document.body.textContent).not.toContain("Redeploy the daemon");
 });
 
 it("saves the configured alias", async () => {

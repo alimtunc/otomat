@@ -29,6 +29,8 @@ export interface DaemonControllerOptions {
   electronBinary: string;
   /** Env the daemon child extends; defaults to the app's env (tests override to strip inherited VITEST). */
   baseEnv?: NodeJS.ProcessEnv;
+  /** Build the shell expects; forwarded so an unstamped dev daemon still reports it. */
+  buildSha?: string;
   writeLog?: (stream: "stdout" | "stderr", text: string) => void;
 }
 
@@ -80,6 +82,7 @@ export class DaemonController {
       allowedOrigin: this.options.packaged ? APP_ORIGIN : undefined,
       baseEnv: this.options.baseEnv ?? process.env,
       runAsNode: this.options.packaged,
+      ...(this.options.buildSha === undefined ? {} : { buildSha: this.options.buildSha }),
     });
     const command = this.options.packaged ? this.options.electronBinary : "node";
     const child = spawn(command, [this.options.daemonEntry], {
@@ -145,6 +148,7 @@ export class DaemonController {
       allowedOrigin: this.options.packaged ? APP_ORIGIN : undefined,
       baseEnv: this.options.baseEnv ?? process.env,
       runAsNode: this.options.packaged,
+      ...(this.options.buildSha === undefined ? {} : { buildSha: this.options.buildSha }),
     });
     env[MAINTENANCE_ACTION_ENV] = MAINTENANCE_RESTORE_ACTION;
     env[RESTORE_BACKUP_ENV] = backupPath;

@@ -63,6 +63,7 @@ function sessionFor(worktree: string, appData: string): { root: string; env: Nod
     paths: devPaths(root),
     userData: root,
     userPath: "/usr/bin",
+    expectedBuild: null,
     daemonUrl: () => "",
     localDaemonUrl: () => "",
     onRemoteStatus: () => {},

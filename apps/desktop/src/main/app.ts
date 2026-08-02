@@ -13,6 +13,7 @@ import { SPLASH_RETRY_CHANNEL, SPLASH_STATUS_CHANNEL, type StartupStatus } from 
 import { resolveUserPath } from "#shared/user-path";
 
 import { buildCsp } from "./csp.js";
+import { resolveExpectedBuild } from "./expected-build.js";
 import { registerIpc, type IpcState } from "./ipc.js";
 import { installApplicationMenu } from "./menu.js";
 import type { AppPaths } from "./paths.js";
@@ -127,6 +128,7 @@ export class DesktopApp {
         paths: this.paths,
         userData: this.userData,
         userPath: this.userPath,
+        expectedBuild: resolveExpectedBuild((message) => this.log.write(message)),
         daemonUrl: () => this.ipcState.daemonUrl,
         localDaemonUrl: () => this.localDaemonUrl,
         onRemoteStatus: (status) => this.sendRemoteStatus(status),

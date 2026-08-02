@@ -122,6 +122,18 @@ export function ExecutionHostSection() {
               />
             ))}
           </div>
+          {snapshot.remote_build !== null &&
+          snapshot.expected_build !== null &&
+          snapshot.remote_build !== snapshot.expected_build ? (
+            <p role="alert" className="text-xs text-warning">
+              The remote daemon runs build {snapshot.remote_build} but this app expects{" "}
+              {snapshot.expected_build}. Redeploy the daemon on the host (
+              <code className="font-mono">
+                pnpm --filter @otomat/local-daemon deploy --prod --legacy ~/.otomat/daemon
+              </code>
+              ), stop it, and reconnect.
+            </p>
+          ) : null}
           <form
             className="flex flex-col gap-2 rounded-lg border border-border-subtle bg-card p-4"
             onSubmit={(event) => {

@@ -11,6 +11,7 @@ export function createHealthRoutes(deps: ApiDeps): Hono {
       status: "ok",
       name: deps.name,
       version: deps.version,
+      build: deps.build,
       started_at: deps.startedAt,
       db_path: deps.dbPath,
       schema: deps.schemaMetadata(),

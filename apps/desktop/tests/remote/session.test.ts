@@ -1,4 +1,4 @@
-import type { RemoteHostStatus } from "@otomat/domain";
+import type { HealthResponse, RemoteHostStatus } from "@otomat/domain";
 import { expect, it, vi } from "vitest";
 
 import { RemoteHostSession } from "#main/remote/session";
@@ -6,6 +6,16 @@ import type { SshScriptResult } from "#main/remote/ssh";
 import type { SshTunnelOptions, TunnelHandle } from "#main/remote/tunnel";
 
 const STARTED: SshScriptResult = { code: 0, stdout: "OTOMAT_REMOTE:STARTED:100\n", stderr: "" };
+
+const HEALTHY: HealthResponse = {
+  status: "ok",
+  name: "otomat-local-daemon",
+  version: "0.1.0",
+  build: "abc1234",
+  started_at: "2026-07-19T00:00:00.000Z",
+  db_path: "/root/.otomat/data/otomat.db",
+  schema: { migration_count: 14, latest_migration_at: null, page_count: 1, page_size: 4096 },
+};
 
 class FakeTunnel implements TunnelHandle {
   running = false;
@@ -28,13 +38,13 @@ class FakeTunnel implements TunnelHandle {
 
 function harness(overrides?: {
   runScript?: () => Promise<SshScriptResult>;
-  health?: () => Promise<void>;
+  health?: () => Promise<HealthResponse>;
 }) {
   const statuses: RemoteHostStatus[] = [];
   const tunnels: FakeTunnel[] = [];
   const retries: Array<() => void> = [];
   const runScript = vi.fn(overrides?.runScript ?? (() => Promise.resolve(STARTED)));
-  const health = vi.fn(overrides?.health ?? (() => Promise.resolve()));
+  const health = vi.fn(overrides?.health ?? (() => Promise.resolve(HEALTHY)));
   const session = new RemoteHostSession({
     alias: "otomat-vps",
     log: () => {},
@@ -70,6 +80,7 @@ it("declares connected only after a health response came back through the tunnel
     "connected",
   ]);
   expect(session.url).toBe("http://127.0.0.1:45000");
+  expect(session.remoteBuild).toBe("abc1234");
   expect(tunnels).toHaveLength(1);
   expect(health).toHaveBeenCalledWith(
     expect.objectContaining({ url: "http://127.0.0.1:45000/api/health" }),

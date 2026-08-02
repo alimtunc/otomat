@@ -45,6 +45,10 @@ export interface ExecutionHostSnapshot {
   active_id: ExecutionHostId;
   remote_ssh_alias: string | null;
   remote_status: RemoteHostStatus | null;
+  /** Build the remote daemon reported on its last healthy connect; null before one or when unstamped. */
+  remote_build: string | null;
+  /** Build this app expects on every host (packaged commit or dev checkout HEAD); null when unidentifiable. */
+  expected_build: string | null;
 }
 
 // Failures carry the structured remote status when one exists (the web catalog owns its wording) or contextual prose.
