@@ -160,8 +160,9 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
 
 ## Environment gotchas
 
-- `pnpm install` exits 1 when native builds are ignored; if `better-sqlite3`
-  bindings are missing, run its `prebuild-install` manually. CI is authoritative.
+- `pnpm install` exits 1 when native builds are ignored; `better-sqlite3` ships
+  its own N-API prebuilds, so `pnpm rebuild better-sqlite3` restores a missing
+  binary. CI is authoritative.
 - The pre-push hook typechecks against `packages/domain/dist`, not src — run
   `pnpm build` before pushing a contract change.
 - Parallel `pnpm install` across worktrees can race (ENOTEMPTY); retry serially.

@@ -1,12 +1,10 @@
 // Prepares the daemon for packaging into `.daemon`:
 //  1. build the daemon (normal dist — deps stay external);
 //  2. `pnpm deploy` a self-contained copy (all workspace + npm deps) into `.daemon`;
-//  3. hoist better-sqlite3's native closure to the TOP-LEVEL node_modules — pnpm co-locates it
-//     under a private `.pnpm` dir that survives symlinks but NOT the symlink-flattening the app
-//     bundle needs, so `@otomat/db`'s `import "better-sqlite3"` would otherwise be unresolvable.
-// package-mac.mjs dereferences `.daemon` into real files (asar cannot ship the pnpm symlink farm)
-// and rebuilds better-sqlite3 for Electron's ABI on that ephemeral copy — never here, so the
-// shared pnpm store (hardlinked into `.daemon`) is never mutated to Electron's ABI.
+//  3. hoist better-sqlite3 to the TOP-LEVEL node_modules — pnpm co-locates it under a private
+//     `.pnpm` dir that survives symlinks but NOT the symlink-flattening the app bundle needs, so
+//     `@otomat/db`'s `import "better-sqlite3"` would otherwise be unresolvable.
+// package-mac.mjs dereferences `.daemon` into real files (asar cannot ship the pnpm symlink farm).
 //
 // Build tools are invoked directly (never `pnpm run`, whose verify-deps pre-check runs a
 // headless-incompatible `install --production`). `pnpm deploy` is not a `pnpm run`; CI=true only
@@ -48,12 +46,22 @@ if (!existsSync(join(STAGE, "dist", "index.js"))) {
   throw new Error(`daemon deploy missing dist/index.js at ${STAGE}`);
 }
 
-// 3. Hoist better-sqlite3's runtime closure to the top level so it resolves after flattening.
-for (const dep of ["better-sqlite3", "bindings", "file-uri-to-path"]) {
-  cpSync(storePkgDir(dep), join(STAGE, "node_modules", dep), {
-    recursive: true,
-    dereference: true,
-  });
+// 3. Hoist better-sqlite3 to the top level so it resolves after flattening. Since v13 it carries no
+// runtime dependency: its N-API binaries ship inside the package under `prebuilds/`.
+cpSync(storePkgDir("better-sqlite3"), join(STAGE, "node_modules", "better-sqlite3"), {
+  recursive: true,
+  dereference: true,
+});
+
+// 4. Keep only the binary this host loads. The package ships one per platform, and the foreign ones
+// are dead weight the bundle would still have to carry and sign.
+const prebuilds = join(STAGE, "node_modules", "better-sqlite3", "prebuilds");
+const hostBinary = `${process.platform}-${process.arch}.node`;
+if (!existsSync(join(prebuilds, hostBinary))) {
+  throw new Error(`better-sqlite3 ships no prebuilt binary for ${hostBinary}`);
+}
+for (const file of readdirSync(prebuilds)) {
+  if (file !== hostBinary) rmSync(join(prebuilds, file));
 }
 
 console.log(`Daemon prepared at ${STAGE}`);
