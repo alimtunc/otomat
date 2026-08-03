@@ -65,6 +65,12 @@ class FakeGitHubCli implements GitHubCli {
     return null;
   }
 
+  baseExists = true;
+
+  async remoteBranchExists(): Promise<boolean> {
+    return this.baseExists;
+  }
+
   async loginWithToken(): Promise<GitHubConnectionContract> {
     this.loginCalls += 1;
     this.connectionValue = connected;
@@ -374,6 +380,24 @@ describe("GitHubService", () => {
       number: null,
       url: null,
     });
+  });
+
+  it("names a missing base branch instead of relaying GitHub's raw create failure", async () => {
+    cli.createError = new GitHubCliError(
+      "github_pr_create_failed",
+      "GitHub could not create the pull request. (GraphQL: Base ref must be a branch)",
+    );
+    cli.baseExists = false;
+
+    const result = await service().publish(run(), { title: "Ship it", body: "Details" });
+
+    expect(result.row).toMatchObject({
+      publication_status: "failed",
+      error_code: "github_base_branch_missing",
+      number: null,
+      url: null,
+    });
+    expect(result.row.error_message).toContain("does not exist on GitHub");
   });
 
   it("snapshots, pushes, creates, persists and emits only confirmed metadata", async () => {

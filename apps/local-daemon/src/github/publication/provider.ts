@@ -1,7 +1,7 @@
 import type { PullRequestPatch, PullRequestRow } from "@otomat/db";
 
 import { normalizePullRequestBody } from "../body.js";
-import { GitHubPublicationError } from "../errors.js";
+import { GitHubCliError, GitHubPublicationError } from "../errors.js";
 import type { GitHubCli, GitHubPullRequest, PullRequestSelector } from "../types.js";
 import type { PublicationStore } from "./store.js";
 import type { ProviderResult, PublicationRequest } from "./types.js";
@@ -40,11 +40,26 @@ async function createProvider(
   request: PublicationRequest,
 ): Promise<ProviderResult> {
   row = store.transition(row, "creating", {}, "github");
-  await cli.createPullRequest({
-    ...selector,
-    title: request.title,
-    body: request.body,
-  });
+  try {
+    await cli.createPullRequest({
+      ...selector,
+      title: request.title,
+      body: request.body,
+    });
+  } catch (error) {
+    // A base recorded from a never-pushed local branch is the one create failure the user can only fix upstream — name it.
+    if (
+      error instanceof GitHubCliError &&
+      error.code === "github_pr_create_failed" &&
+      !(await cli.remoteBranchExists(selector.cwd, selector.repository, selector.base))
+    ) {
+      throw new GitHubPublicationError(
+        "github_base_branch_missing",
+        `The base branch ${selector.base} does not exist on GitHub. Push it, or relaunch the run from a branch that is on the remote.`,
+      );
+    }
+    throw error;
+  }
   const provider = await cli.findPullRequest(selector);
   if (provider === null) {
     throw new GitHubPublicationError(

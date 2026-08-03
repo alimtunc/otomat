@@ -72,6 +72,16 @@ class CommandGitHubCli implements GitHubCli {
     return cliAvailability(this.run);
   }
 
+  async remoteBranchExists(cwd: string, repository: string, branch: string): Promise<boolean> {
+    const result = await this.run({
+      command: "gh",
+      args: ["api", `repos/${repository}/branches/${encodeURIComponent(branch)}`],
+      cwd,
+    });
+    if (result.exitCode === 0 && !result.errorCode) return true;
+    return !result.stderr.includes("HTTP 404");
+  }
+
   async connection(): Promise<GitHubConnectionContract> {
     const unavailable = await cliAvailability(this.run);
     if (unavailable) return unavailable;

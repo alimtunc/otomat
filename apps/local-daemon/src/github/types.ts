@@ -86,6 +86,8 @@ export interface GitHubCli {
   connection(): Promise<GitHubConnectionContract>;
   /** Null when gh can run; otherwise the not_installed/cli_outdated/failed contract. */
   availability(): Promise<GitHubConnectionContract | null>;
+  /** False only on a definite GitHub 404 — a failed create then reads as "base branch missing", never on a transport blip. */
+  remoteBranchExists(cwd: string, repository: string, branch: string): Promise<boolean>;
   loginWithToken(token: string): Promise<GitHubConnectionContract>;
   resolveRemote(cwd: string): Promise<GitHubRemote>;
   push(cwd: string, remote: string, branch: string): Promise<void>;

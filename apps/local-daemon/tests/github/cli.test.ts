@@ -292,6 +292,23 @@ describe("GitHub CLI adapter", () => {
     expect(runner.requests).toHaveLength(3);
   });
 
+  it("reads a branch as missing only on a definite GitHub 404", async () => {
+    const runner = fakeRunner([
+      ok("{}"),
+      { stdout: "", stderr: "gh: Not Found (HTTP 404)", exitCode: 1 },
+      { stdout: "", stderr: "error connecting to api.github.com", exitCode: 1 },
+    ]);
+    const cli = createGitHubCli(runner.run, () => Promise.resolve());
+
+    await expect(cli.remoteBranchExists("/repo", "acme/otomat", "main")).resolves.toBe(true);
+    await expect(cli.remoteBranchExists("/repo", "acme/otomat", "gone")).resolves.toBe(false);
+    await expect(cli.remoteBranchExists("/repo", "acme/otomat", "main")).resolves.toBe(true);
+    expect(runner.requests[1]).toMatchObject({
+      command: "gh",
+      args: ["api", "repos/acme/otomat/branches/gone"],
+    });
+  });
+
   it("creates with body on stdin then reads structured provider metadata", async () => {
     const provider = {
       number: 42,
