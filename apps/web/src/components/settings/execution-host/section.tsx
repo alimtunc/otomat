@@ -11,7 +11,7 @@ import {
   Skeleton,
 } from "@otomat/ui";
 import { SectionHeading } from "@web/components/settings/section-heading";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { describeRemoteStatus } from "./status-labels";
 import { useExecutionHost } from "./use-execution-host";
@@ -37,10 +37,12 @@ function HostRow({
   host,
   active,
   status,
+  action,
 }: {
   host: ExecutionHostDescriptor;
   active: boolean;
   status: RemoteHostStatus | null;
+  action?: ReactNode;
 }) {
   return (
     <div className="flex items-start gap-3 p-4">
@@ -59,6 +61,7 @@ function HostRow({
         </div>
         {host.kind === "ssh" ? <RemoteStatusLine status={status} /> : null}
       </div>
+      {action}
     </div>
   );
 }
@@ -66,6 +69,7 @@ function HostRow({
 export function ExecutionHostSection() {
   const host = useExecutionHost();
   const [aliasDraft, setAliasDraft] = useState<string | null>(null);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
 
   if (!host.isDesktop) {
     return (
@@ -113,15 +117,59 @@ export function ExecutionHostSection() {
       ) : (
         <div className="flex flex-col gap-4">
           <div className="divide-y divide-border-subtle rounded-lg border border-border-subtle bg-card">
-            {snapshot.hosts.map((entry) => (
-              <HostRow
-                key={entry.id}
-                host={entry}
-                active={snapshot.active_id === entry.id}
-                status={host.remoteStatus}
-              />
-            ))}
+            {snapshot.hosts.map((entry) => {
+              let action: ReactNode;
+              if (entry.kind === "ssh" && confirmingRemove) {
+                action = (
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="destructive"
+                      size="xs"
+                      loading={host.pending === "remove"}
+                      onClick={() =>
+                        void host.removeRemote().then((removed) => {
+                          if (removed) setConfirmingRemove(false);
+                          setAliasDraft(null);
+                        })
+                      }
+                    >
+                      Remove host
+                    </Button>
+                    <Button
+                      autoFocus
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => setConfirmingRemove(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                );
+              } else if (entry.kind === "ssh") {
+                action = (
+                  <Button variant="ghost" size="xs" onClick={() => setConfirmingRemove(true)}>
+                    Remove
+                  </Button>
+                );
+              }
+              return (
+                <HostRow
+                  key={entry.id}
+                  host={entry}
+                  active={snapshot.active_id === entry.id}
+                  status={host.remoteStatus}
+                  action={action}
+                />
+              );
+            })}
           </div>
+          {confirmingRemove ? (
+            <p role="alert" className="text-xs text-warning">
+              Removing the host closes the tunnel and forgets the SSH alias — its projects leave the
+              switcher. Nothing is deleted on the server: the daemon, its projects and runs stay
+              under ~/.otomat there, and adding the alias again brings them back.
+            </p>
+          ) : null}
           {snapshot.remote_build !== null &&
           snapshot.expected_build !== null &&
           snapshot.remote_build !== snapshot.expected_build ? (

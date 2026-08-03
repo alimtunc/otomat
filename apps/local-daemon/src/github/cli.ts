@@ -1,7 +1,12 @@
 import type { GitHubConnectionContract } from "@otomat/domain";
 import { z } from "zod";
 
-import { GitHubCliError } from "./errors.js";
+import {
+  assertCommandSucceeded,
+  assertPublicationSucceeded,
+  createPullRequestWithRetry,
+  defaultSleep,
+} from "./cli-commands.js";
 import {
   authStatusFailed,
   MINIMUM_GH_VERSION,
@@ -15,7 +20,6 @@ import {
   toPullRequest,
 } from "./parse.js";
 import type {
-  CommandResult,
   CommandRunner,
   GitHubCli,
   GitHubPullRequest,
@@ -24,10 +28,6 @@ import type {
   PullRequestSelector,
   PullRequestUpdateInput,
 } from "./types.js";
-
-function assertCommandSucceeded(result: CommandResult, code: string, message: string): void {
-  if (result.exitCode !== 0 || result.errorCode) throw new GitHubCliError(code, message);
-}
 
 async function cliAvailability(run: CommandRunner): Promise<GitHubConnectionContract | null> {
   const version = await run({ command: "gh", args: ["--version"], cwd: process.cwd() });
@@ -63,7 +63,10 @@ async function cliAvailability(run: CommandRunner): Promise<GitHubConnectionCont
 }
 
 class CommandGitHubCli implements GitHubCli {
-  constructor(private readonly run: CommandRunner) {}
+  constructor(
+    private readonly run: CommandRunner,
+    private readonly sleep: (ms: number) => Promise<void>,
+  ) {}
 
   availability(): Promise<GitHubConnectionContract | null> {
     return cliAvailability(this.run);
@@ -105,7 +108,7 @@ class CommandGitHubCli implements GitHubCli {
 
   async resolveRemote(cwd: string): Promise<GitHubRemote> {
     const names = await this.run({ command: "git", args: ["remote"], cwd });
-    assertCommandSucceeded(names, "git_remote_list_failed", "Git remotes could not be read.");
+    assertPublicationSucceeded(names, "git_remote_list_failed", "Git remotes could not be read.");
     const candidates: GitHubRemote[] = [];
     for (const name of names.stdout
       .split("\n")
@@ -129,7 +132,7 @@ class CommandGitHubCli implements GitHubCli {
       args: ["push", "--no-verify", "--set-upstream", remote, `HEAD:refs/heads/${branch}`],
       cwd,
     });
-    assertCommandSucceeded(
+    assertPublicationSucceeded(
       pushResult,
       "github_push_failed",
       "The run branch could not be pushed to GitHub.",
@@ -157,7 +160,7 @@ class CommandGitHubCli implements GitHubCli {
       ],
       cwd: input.cwd,
     });
-    assertCommandSucceeded(
+    assertPublicationSucceeded(
       pullRequestResult,
       "github_pr_lookup_failed",
       "GitHub pull requests could not be queried.",
@@ -178,7 +181,7 @@ class CommandGitHubCli implements GitHubCli {
       args: ["pr", "view", String(number), "--repo", repository, "--json", PR_JSON_FIELDS],
       cwd,
     });
-    assertCommandSucceeded(
+    assertPublicationSucceeded(
       pullRequestResult,
       "github_pr_lookup_failed",
       "The GitHub pull request could not be read.",
@@ -186,31 +189,8 @@ class CommandGitHubCli implements GitHubCli {
     return parsePullRequestJson(pullRequestResult.stdout, toPullRequest);
   }
 
-  async createPullRequest(input: PullRequestCreateInput): Promise<void> {
-    const createResult = await this.run({
-      command: "gh",
-      args: [
-        "pr",
-        "create",
-        "--repo",
-        input.repository,
-        "--base",
-        input.base,
-        "--head",
-        input.head,
-        "--title",
-        input.title,
-        "--body-file",
-        "-",
-      ],
-      cwd: input.cwd,
-      stdin: input.body,
-    });
-    assertCommandSucceeded(
-      createResult,
-      "github_pr_create_failed",
-      "GitHub could not create the pull request.",
-    );
+  createPullRequest(input: PullRequestCreateInput): Promise<void> {
+    return createPullRequestWithRetry(this.run, this.sleep, input);
   }
 
   async updatePullRequest(input: PullRequestUpdateInput): Promise<void> {
@@ -230,7 +210,7 @@ class CommandGitHubCli implements GitHubCli {
       cwd: input.cwd,
       stdin: input.body,
     });
-    assertCommandSucceeded(
+    assertPublicationSucceeded(
       updateResult,
       "github_pr_update_failed",
       "GitHub could not update the pull request.",
@@ -238,6 +218,9 @@ class CommandGitHubCli implements GitHubCli {
   }
 }
 
-export function createGitHubCli(run: CommandRunner): GitHubCli {
-  return new CommandGitHubCli(run);
+export function createGitHubCli(
+  run: CommandRunner,
+  sleep: (ms: number) => Promise<void> = defaultSleep,
+): GitHubCli {
+  return new CommandGitHubCli(run, sleep);
 }

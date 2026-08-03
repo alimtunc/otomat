@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { getIssue, getRun, listProjects, listRepositories } from "@otomat/db";
 import {
+  projectContractSchema,
   registerRepositoryResponseSchema,
   repositoryBranchesResponseSchema,
   repositoryContractSchema,
@@ -50,6 +51,17 @@ async function listRepos(app: Hono, projectId: string) {
   const res = await request(app, `/api/repositories?projectId=${projectId}`);
   return repositoryContractSchema.array().parse(await res.json());
 }
+
+it("marks only projects holding a repository, so the switcher can hide bootstrap ghosts", async () => {
+  const app = makeApiApp(t);
+  const created = await registerRepo(app, repo.root);
+
+  const res = await request(app, "/api/projects");
+  const projects = projectContractSchema.array().parse(await res.json());
+
+  expect(projects.find((project) => project.id === created.project.id)?.has_repository).toBe(true);
+  expect(projects.find((project) => project.id === "p1")?.has_repository).toBe(false);
+});
 
 it("registers a repository root as a project + repository pair", async () => {
   const app = makeApiApp(t);

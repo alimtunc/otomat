@@ -245,6 +245,53 @@ describe("GitHub CLI adapter", () => {
     });
   });
 
+  it("retries pull request creation while the just-pushed branch propagates", async () => {
+    const raceFailure: CommandResult = {
+      stdout: "",
+      stderr: "GraphQL: No commits between main and otomat/run/r1 (createPullRequest)",
+      exitCode: 1,
+    };
+    const runner = fakeRunner([raceFailure, ok("https://github.com/acme/otomat/pull/7\n")]);
+    const cli = createGitHubCli(runner.run, () => Promise.resolve());
+
+    await cli.createPullRequest({
+      cwd: "/repo",
+      repository: "acme/otomat",
+      head: "otomat/run/r1",
+      base: "main",
+      title: "Ship it",
+      body: "Details",
+    });
+
+    expect(runner.requests).toHaveLength(2);
+    expect(runner.requests[1]?.args).toContain("create");
+  });
+
+  it("surfaces gh's own reason when creation keeps failing", async () => {
+    const failure: CommandResult = {
+      stdout: "",
+      stderr: "GraphQL: No commits between main and otomat/run/r1 (createPullRequest)",
+      exitCode: 1,
+    };
+    const runner = fakeRunner([failure, failure, failure]);
+    const cli = createGitHubCli(runner.run, () => Promise.resolve());
+
+    await expect(
+      cli.createPullRequest({
+        cwd: "/repo",
+        repository: "acme/otomat",
+        head: "otomat/run/r1",
+        base: "main",
+        title: "Ship it",
+        body: "Details",
+      }),
+    ).rejects.toMatchObject({
+      code: "github_pr_create_failed",
+      message: expect.stringContaining("No commits between main and otomat/run/r1") as string,
+    });
+    expect(runner.requests).toHaveLength(3);
+  });
+
   it("creates with body on stdin then reads structured provider metadata", async () => {
     const provider = {
       number: 42,

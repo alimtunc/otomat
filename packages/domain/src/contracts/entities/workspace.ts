@@ -8,6 +8,8 @@ export const projectContractSchema = z.object({
   id: z.string(),
   name: z.string().min(1),
   root_path: z.string(),
+  /** False for the auto-created bootstrap project until a repository is registered; defaulted so pre-field daemons' projects stay visible. */
+  has_repository: z.boolean().default(true),
 });
 export type ProjectContract = z.infer<typeof projectContractSchema>;
 

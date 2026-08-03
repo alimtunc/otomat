@@ -53,7 +53,10 @@ export function createRepositoryRoutes(deps: ApiDeps): Hono {
       return c.json({ error: result.error, message: REGISTRATION_MESSAGES[result.error] }, status);
     }
     return c.json(
-      { project: toProject(result.project), repository: toRepository(result.repository, true) },
+      {
+        project: toProject(result.project, true),
+        repository: toRepository(result.repository, true),
+      },
       201,
     );
   });

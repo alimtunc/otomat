@@ -20,16 +20,17 @@ export interface UseExecutionHostResult {
   aliases: string[];
   /** Live remote status pushed by the main process, falling back to the snapshot's. */
   remoteStatus: RemoteHostStatus | null;
-  pending: "configure" | null;
+  pending: "configure" | "remove" | null;
   actionError: string | null;
   configureRemote(sshAlias: string): Promise<boolean>;
+  removeRemote(): Promise<boolean>;
 }
 
 export function useExecutionHost(): UseExecutionHostResult {
   const bridge = desktopBridge();
   const client = useQueryClient();
   const [liveStatus, setLiveStatus] = useState<RemoteHostStatus | null>(null);
-  const [pending, setPending] = useState<"configure" | null>(null);
+  const [pending, setPending] = useState<"configure" | "remove" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const snapshot = useQuery({
@@ -59,12 +60,15 @@ export function useExecutionHost(): UseExecutionHostResult {
     });
   }, [bridge, client]);
 
-  async function configureRemote(sshAlias: string): Promise<boolean> {
+  async function runHostAction(
+    kind: "configure" | "remove",
+    action: () => Promise<ExecutionHostOperationResult>,
+  ): Promise<boolean> {
     if (bridge === null) return false;
     setActionError(null);
-    setPending("configure");
+    setPending(kind);
     try {
-      const result = await bridge.executionHost.configureRemote(sshAlias);
+      const result = await action();
       if (!result.ok) {
         setActionError(failureMessage(result));
         return false;
@@ -86,6 +90,15 @@ export function useExecutionHost(): UseExecutionHostResult {
     remoteStatus: liveStatus ?? snapshot.data?.remote_status ?? null,
     pending,
     actionError,
-    configureRemote,
+    configureRemote: (sshAlias: string) =>
+      runHostAction("configure", () => {
+        if (bridge === null) throw new Error("The desktop bridge is not available.");
+        return bridge.executionHost.configureRemote(sshAlias);
+      }),
+    removeRemote: () =>
+      runHostAction("remove", () => {
+        if (bridge === null) throw new Error("The desktop bridge is not available.");
+        return bridge.executionHost.removeRemote();
+      }),
   };
 }

@@ -1,4 +1,15 @@
-import { projectContractSchema, type ProjectContract } from "@otomat/domain";
+import {
+  projectContractSchema,
+  registerRepositoryResponseSchema,
+  repositoryRegistrationErrorSchema,
+  type ExecutionHostId,
+  type ExecutionHostProjectsEntry,
+  type ExecutionHostRegisterProjectResult,
+  type ProjectContract,
+} from "@otomat/domain";
+
+import type { RemoteSessionHandle } from "./session.js";
+import { StaleDaemonRefresher } from "./stale-daemon.js";
 
 /** One host's project catalog over plain HTTP; unreachable or invalid reads null (logged), never an error. */
 export async function fetchProjectCatalog(
@@ -18,5 +29,110 @@ export async function fetchProjectCatalog(
   } catch (error) {
     log(`Could not list projects from ${baseUrl}: ${String(error)}`);
     return null;
+  }
+}
+
+export interface HostCatalogOptions {
+  localDaemonUrl(): string;
+  activeHostId(): ExecutionHostId;
+  remoteSshAlias(): string | null;
+  /** The manager's live remote session; null while none exists. */
+  remoteSession(): RemoteSessionHandle | null;
+  /** Creates/warms the background remote session so its catalog stays listable. */
+  warmRemote(): void;
+  expectedBuild: string | null;
+  fetchImpl: typeof fetch;
+  log(message: string): void;
+}
+
+/** Aggregated per-host project catalog and host-scoped daemon operations, split out of the manager so it owns selection only. */
+export class HostCatalog {
+  private readonly staleRefresher: StaleDaemonRefresher;
+
+  constructor(private readonly options: HostCatalogOptions) {
+    this.staleRefresher = new StaleDaemonRefresher({
+      expectedBuild: options.expectedBuild,
+      fetchImpl: options.fetchImpl,
+      log: options.log,
+    });
+  }
+
+  /** Every configured host with its project catalog; an unreachable daemon yields `projects: null`, never an error. */
+  async listProjects(): Promise<ExecutionHostProjectsEntry[]> {
+    const localUrl = this.options.localDaemonUrl();
+    const entries: ExecutionHostProjectsEntry[] = [
+      {
+        host: { id: "local", label: "Local", kind: "local" },
+        active: this.options.activeHostId() === "local",
+        status: null,
+        projects: localUrl === "" ? null : await this.fetchCatalog(localUrl),
+      },
+    ];
+    const alias = this.options.remoteSshAlias();
+    if (alias !== null) {
+      this.options.warmRemote();
+      const session = this.options.remoteSession();
+      const url = session !== null && session.status.phase === "connected" ? session.url : null;
+      entries.push({
+        host: { id: "remote", label: alias, kind: "ssh" },
+        active: this.options.activeHostId() === "remote",
+        status: session?.status ?? { phase: "disconnected", detail: null },
+        projects: url === null ? null : await this.fetchCatalog(url),
+      });
+      // Piggybacks on the switcher's poll: a redeployed-but-stale daemon restarts itself once idle.
+      void this.staleRefresher.maybeRefresh(session);
+    }
+    return entries;
+  }
+
+  /** Registers a repository path on the chosen host's daemon; failures come back as honest prose, never a throw. */
+  async registerProject(
+    hostId: ExecutionHostId,
+    path: string,
+  ): Promise<ExecutionHostRegisterProjectResult> {
+    if (path.trim() === "") return { ok: false, message: "Enter a repository path on the host." };
+    const target = this.resolveBaseUrl(hostId);
+    if ("message" in target) return { ok: false, message: target.message };
+    try {
+      const response = await this.options.fetchImpl(`${target.url}/api/repositories`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ path: path.trim() }),
+      });
+      const payload: unknown = await response.json();
+      if (response.status === 201) {
+        return { ok: true, project: registerRepositoryResponseSchema.parse(payload).project };
+      }
+      const refusal = repositoryRegistrationErrorSchema.safeParse(payload);
+      return {
+        ok: false,
+        message: refusal.success
+          ? refusal.data.message
+          : `The daemon refused the registration (HTTP ${response.status}).`,
+      };
+    } catch (error) {
+      this.options.log(`Register on ${hostId} failed: ${String(error)}`);
+      return { ok: false, message: `Could not reach the ${hostId} daemon: ${String(error)}` };
+    }
+  }
+
+  private resolveBaseUrl(hostId: ExecutionHostId): { url: string } | { message: string } {
+    if (hostId === "local") {
+      const url = this.options.localDaemonUrl();
+      return url === "" ? { message: "The local daemon is not running yet." } : { url };
+    }
+    if (this.options.remoteSshAlias() === null) {
+      return { message: "No remote host is configured." };
+    }
+    this.options.warmRemote();
+    const session = this.options.remoteSession();
+    if (session === null || session.status.phase !== "connected" || session.url === null) {
+      return { message: "The remote host is not connected yet. Try again once its tunnel is up." };
+    }
+    return { url: session.url };
+  }
+
+  private fetchCatalog(baseUrl: string): Promise<ProjectContract[] | null> {
+    return fetchProjectCatalog(baseUrl, this.options.fetchImpl, this.options.log);
   }
 }

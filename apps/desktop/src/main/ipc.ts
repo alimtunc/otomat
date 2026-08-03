@@ -6,6 +6,8 @@ import {
   EXECUTION_HOST_ALIASES_CHANNEL,
   EXECUTION_HOST_CONFIGURE_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
+  EXECUTION_HOST_REGISTER_PROJECT_CHANNEL,
+  EXECUTION_HOST_REMOVE_CHANNEL,
   EXECUTION_HOST_SELECT_CHANNEL,
   EXECUTION_HOST_SNAPSHOT_CHANNEL,
   EXECUTION_HOST_SYNC_CHANNEL,
@@ -50,6 +52,11 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
   );
   ipcMain.handle(EXECUTION_HOST_CONFIGURE_CHANNEL, (_event, sshAlias: unknown) =>
     actions.executionHost.configureRemote(sshAlias),
+  );
+  ipcMain.handle(EXECUTION_HOST_REMOVE_CHANNEL, () => actions.executionHost.removeRemote());
+  ipcMain.handle(
+    EXECUTION_HOST_REGISTER_PROJECT_CHANNEL,
+    (_event, hostId: unknown, path: unknown) => actions.executionHost.registerProject(hostId, path),
   );
   ipcMain.handle(EXECUTION_HOST_ALIASES_CHANNEL, () => actions.executionHost.listAliases());
   ipcMain.handle(EXECUTION_HOST_PROJECTS_CHANNEL, () => actions.executionHost.listProjects());

@@ -3,13 +3,13 @@ import type {
   ExecutionHostId,
   ExecutionHostOperationResult,
   ExecutionHostProjectsEntry,
+  ExecutionHostRegisterProjectResult,
   ExecutionHostSnapshot,
-  ProjectContract,
   RemoteHostErrorCode,
   RemoteHostStatus,
 } from "@otomat/domain";
 
-import { fetchProjectCatalog } from "./host-projects.js";
+import { HostCatalog } from "./host-projects.js";
 import {
   readExecutionHostsConfigSafe,
   writeExecutionHostsConfigSafe,
@@ -21,7 +21,6 @@ import {
   type RemoteSessionOptions,
 } from "./session.js";
 import { listSshConfigAliases } from "./ssh-config-aliases.js";
-import { StaleDaemonRefresher } from "./stale-daemon.js";
 
 function errorResult(code: RemoteHostErrorCode): ExecutionHostOperationResult {
   return { ok: false, status: { phase: "error", code, detail: null } };
@@ -46,11 +45,16 @@ export class ExecutionHostManager {
   private config: ExecutionHostsConfig;
   private session: RemoteSessionHandle | null = null;
   private switching = false;
-  private readonly staleRefresher: StaleDaemonRefresher;
+  private readonly catalog: HostCatalog;
 
   constructor(private readonly options: ExecutionHostManagerOptions) {
     this.config = readExecutionHostsConfigSafe(options.dataDir, options.log);
-    this.staleRefresher = new StaleDaemonRefresher({
+    this.catalog = new HostCatalog({
+      localDaemonUrl: options.localDaemonUrl,
+      activeHostId: () => this.activeHostId,
+      remoteSshAlias: () => this.remoteSshAlias,
+      remoteSession: () => this.session,
+      warmRemote: () => this.ensureBackgroundRemote(),
       expectedBuild: options.expectedBuild ?? null,
       fetchImpl: options.fetchImpl ?? fetch,
       log: options.log,
@@ -147,32 +151,37 @@ export class ExecutionHostManager {
     return this.session.url;
   }
 
-  /** Every configured host with its project catalog; an unreachable daemon yields `projects: null`, never an error. */
-  async listProjects(): Promise<ExecutionHostProjectsEntry[]> {
-    const localUrl = this.options.localDaemonUrl();
-    const entries: ExecutionHostProjectsEntry[] = [
-      {
-        host: { id: "local", label: "Local", kind: "local" },
-        active: this.activeHostId === "local",
-        status: null,
-        projects: localUrl === "" ? null : await this.fetchCatalog(localUrl),
-      },
-    ];
-    const alias = this.remoteSshAlias;
-    if (alias !== null) {
-      this.ensureBackgroundRemote();
-      const session = this.session;
-      const url = session !== null && session.status.phase === "connected" ? session.url : null;
-      entries.push({
-        host: { id: "remote", label: alias, kind: "ssh" },
-        active: this.activeHostId === "remote",
-        status: session?.status ?? { phase: "disconnected", detail: null },
-        projects: url === null ? null : await this.fetchCatalog(url),
-      });
-      // Piggybacks on the switcher's poll: a redeployed-but-stale daemon restarts itself once idle.
-      void this.staleRefresher.maybeRefresh(session);
+  listProjects(): Promise<ExecutionHostProjectsEntry[]> {
+    return this.catalog.listProjects();
+  }
+
+  registerProject(
+    hostId: ExecutionHostId,
+    path: string,
+  ): Promise<ExecutionHostRegisterProjectResult> {
+    return this.catalog.registerProject(hostId, path);
+  }
+
+  /** Forgets the remote host: tunnel closed, alias cleared; the daemon and its data stay on the server. */
+  removeRemote(): ExecutionHostOperationResult {
+    if (this.switching) {
+      return { ok: false, message: "A host switch is in progress. Try again in a moment." };
     }
-    return entries;
+    if (this.activeHostId === "remote") {
+      return { ok: false, message: "Switch to a local project before removing the host." };
+    }
+    const session = this.session;
+    this.session = null;
+    if (session !== null) {
+      session
+        .dispose()
+        .catch((error: unknown) =>
+          this.options.log(`Removed host session dispose failed: ${String(error)}`),
+        );
+    }
+    this.config = { ...this.config, remote: null, active: "local" };
+    this.persist();
+    return { ok: true };
   }
 
   async shutdown(): Promise<void> {
@@ -216,10 +225,6 @@ export class ExecutionHostManager {
     if (alias === null || this.session !== null) return;
     this.session = this.createSession(alias);
     void this.session.connect(true);
-  }
-
-  private fetchCatalog(baseUrl: string): Promise<ProjectContract[] | null> {
-    return fetchProjectCatalog(baseUrl, this.options.fetchImpl ?? fetch, this.options.log);
   }
 
   private createSession(alias: string): RemoteSessionHandle {

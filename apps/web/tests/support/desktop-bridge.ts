@@ -21,6 +21,17 @@ export function fakeDesktopBridge(
         }),
       select: () => Promise.resolve({ ok: true as const }),
       configureRemote: () => Promise.resolve({ ok: true as const }),
+      removeRemote: () => Promise.resolve({ ok: true as const }),
+      registerProject: () =>
+        Promise.resolve({
+          ok: true as const,
+          project: {
+            id: "p-new",
+            name: "new-project",
+            root_path: "/tmp/new-project",
+            has_repository: true,
+          },
+        }),
       listSshAliases: () => Promise.resolve([]),
       listProjects: () => Promise.resolve([]),
       onRemoteStatus: () => () => {},

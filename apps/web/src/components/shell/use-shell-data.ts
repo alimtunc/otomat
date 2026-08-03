@@ -29,11 +29,14 @@ export function useShellData() {
   const projectsQuery = useProjects();
   const hostProjects = useHostProjects();
 
-  const projects: ProjectSummary[] = (projectsQuery.data ?? []).map((project) => ({
-    id: project.id,
-    name: project.name,
-    repo: lastPathSegment(project.root_path),
-  }));
+  // The auto-created bootstrap project has no repository and nothing can run in it; it never reaches the switcher.
+  const projects: ProjectSummary[] = (projectsQuery.data ?? [])
+    .filter((project) => project.has_repository)
+    .map((project) => ({
+      id: project.id,
+      name: project.name,
+      repo: lastPathSegment(project.root_path),
+    }));
 
   const { currentProjectId, selectProject: select } = useProjectSelection(projects);
   const currentProject = projects.find((project) => project.id === currentProjectId);
@@ -52,14 +55,24 @@ export function useShellData() {
     ...hostEntries
       .filter((entry) => !entry.active)
       .flatMap((entry) =>
-        (entry.projects ?? []).map((project) => ({
-          id: projectSwitcherKey(entry.host.id, project.id),
-          name: project.name,
-          repo: lastPathSegment(project.root_path),
-          tag: entry.host.label,
-        })),
+        (entry.projects ?? [])
+          .filter((project) => project.has_repository)
+          .map((project) => ({
+            id: projectSwitcherKey(entry.host.id, project.id),
+            name: project.name,
+            repo: lastPathSegment(project.root_path),
+            tag: entry.host.label,
+          })),
       ),
   ];
+  const hostOptions =
+    hostEntries.length > 0
+      ? hostEntries.map((entry) => ({
+          id: entry.host.id,
+          label: entry.host.label,
+          active: entry.active,
+        }))
+      : [{ id: "local" as const, label: "Local", active: true }];
 
   // A detail view shows one entity of the old project; switching leaves it for the new project's issues.
   function selectProject(switcherId: string): void {
@@ -97,6 +110,7 @@ export function useShellData() {
     retry,
     daemonVersion: health.data?.version,
     hostAlias,
+    hostOptions,
     projects: switcherProjects,
     currentProjectId,
     currentSwitcherId:

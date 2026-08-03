@@ -25,6 +25,7 @@ interface SidebarProps {
   projects: ProjectSummary[];
   currentProjectId?: string;
   onProjectSelect: (id: string) => void;
+  onAddProject?: () => void;
   onSearch: () => void;
   onNewIssue: () => void;
   hasLiveRun?: boolean;
@@ -57,6 +58,7 @@ export function Sidebar({
   projects,
   currentProjectId,
   onProjectSelect,
+  onAddProject,
   onSearch,
   onNewIssue,
   hasLiveRun = false,
@@ -69,6 +71,7 @@ export function Sidebar({
       currentId={currentProjectId}
       onSelect={onProjectSelect}
       collapsed={collapsed}
+      {...(onAddProject === undefined ? {} : { onAddProject })}
     />
   );
   const footer = (

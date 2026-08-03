@@ -1,5 +1,5 @@
 import type { RemoteHostStatus } from "@otomat/domain";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import { readExecutionHostsConfig, writeExecutionHostsConfig } from "#main/remote/hosts-config";
 import { ExecutionHostManager } from "#main/remote/manager";
@@ -126,6 +126,122 @@ it("refuses an alias change while a host switch is in flight", async () => {
   release(CONNECTED);
   await expect(pending).resolves.toEqual({ ok: true });
   expect(manager.remoteSshAlias).toBe("otomat-vps");
+});
+
+it("removes the remote host: session disposed, alias cleared, server untouched", async () => {
+  const { manager, sessions, dataDir } = makeManager();
+  manager.configureRemote("otomat-vps");
+
+  const result = manager.removeRemote();
+
+  expect(result).toEqual({ ok: true });
+  expect(manager.remoteSshAlias).toBeNull();
+  expect(sessions[0]?.disposeCount).toBe(1);
+  expect(sessions[0]?.refreshCount).toBe(0);
+  expect(readExecutionHostsConfig(dataDir)).toEqual({
+    version: 1,
+    remote: null,
+    active: "local",
+  });
+  expect(await manager.listProjects()).toHaveLength(1);
+});
+
+it("refuses to remove the host while a remote project is active", async () => {
+  const { manager } = makeManager();
+  manager.configureRemote("otomat-vps");
+  await manager.select("remote");
+
+  const result = manager.removeRemote();
+
+  expect(result).toMatchObject({ ok: false });
+  expect(manager.remoteSshAlias).toBe("otomat-vps");
+  expect(manager.activeHostId).toBe("remote");
+});
+
+it("registers a project on the local daemon and returns the created project", async () => {
+  const project = { id: "p-new", name: "app", root_path: "/repos/app", has_repository: true };
+  const fetchImpl = vi.fn(
+    async () =>
+      ({
+        status: 201,
+        ok: true,
+        json: async () => ({
+          project,
+          repository: {
+            id: "r-new",
+            project_id: "p-new",
+            name: "app",
+            remote_url: null,
+            default_branch: "main",
+            init_commands: [],
+            available: true,
+          },
+        }),
+      }) as Response,
+  );
+  const { manager } = makeManager({ fetchImpl });
+
+  const result = await manager.registerProject("local", "/repos/app");
+
+  expect(result).toEqual({ ok: true, project });
+  expect(fetchImpl).toHaveBeenCalledWith(
+    "http://127.0.0.1:49152/api/repositories",
+    expect.objectContaining({ method: "POST", body: JSON.stringify({ path: "/repos/app" }) }),
+  );
+});
+
+it("registers on the remote daemon through the tunnel once connected, and refuses before", async () => {
+  const fetchImpl = vi.fn(
+    async () =>
+      ({
+        status: 201,
+        ok: true,
+        json: async () => ({
+          project: { id: "p-vps", name: "vps-app", root_path: "/srv/app", has_repository: true },
+          repository: {
+            id: "r-vps",
+            project_id: "p-vps",
+            name: "vps-app",
+            remote_url: null,
+            default_branch: "main",
+            init_commands: [],
+            available: true,
+          },
+        }),
+      }) as Response,
+  );
+  const { manager, sessions } = makeManager({ fetchImpl });
+
+  const unconfigured = await manager.registerProject("remote", "/srv/app");
+  expect(unconfigured).toMatchObject({ ok: false });
+
+  manager.configureRemote("otomat-vps");
+  await manager.select("remote");
+  await manager.select("local");
+  expect(sessions[0]?.status.phase).toBe("connected");
+
+  const result = await manager.registerProject("remote", "/srv/app");
+  expect(result).toMatchObject({ ok: true, project: { id: "p-vps" } });
+  expect(fetchImpl).toHaveBeenCalledWith(
+    "http://127.0.0.1:45010/api/repositories",
+    expect.objectContaining({ method: "POST" }),
+  );
+});
+
+it("surfaces the daemon's registration refusal verbatim", async () => {
+  const fetchImpl = vi.fn(
+    async () =>
+      ({
+        status: 400,
+        ok: false,
+        json: async () => ({ error: "path_not_git_repository", message: "Not a git repository." }),
+      }) as Response,
+  );
+  const { manager } = makeManager({ fetchImpl });
+
+  const result = await manager.registerProject("local", "/tmp/not-a-repo");
+
+  expect(result).toEqual({ ok: false, message: "Not a git repository." });
 });
 
 it("connects, persists the selection, and re-points the renderer on success", async () => {

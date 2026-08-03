@@ -8,6 +8,7 @@ import type {
   ExecutionHostId,
   ExecutionHostOperationResult,
   ExecutionHostProjectsEntry,
+  ExecutionHostRegisterProjectResult,
   ExecutionHostSnapshot,
   RemoteHostStatus,
 } from "./execution-host.js";
@@ -67,6 +68,13 @@ export interface OtomatDesktopBridge {
     snapshot(): Promise<ExecutionHostSnapshot>;
     select(id: ExecutionHostId): Promise<ExecutionHostOperationResult>;
     configureRemote(sshAlias: string): Promise<ExecutionHostOperationResult>;
+    /** Forgets the remote host: closes the tunnel and clears the alias. Nothing on the server is touched. */
+    removeRemote(): Promise<ExecutionHostOperationResult>;
+    /** Registers a repository path on the chosen host's daemon and returns the created project. */
+    registerProject(
+      hostId: ExecutionHostId,
+      path: string,
+    ): Promise<ExecutionHostRegisterProjectResult>;
     listSshAliases(): Promise<string[]>;
     /** Every configured host with its project catalog, fetched by the main process so the renderer never talks to the inactive daemon directly. */
     listProjects(): Promise<ExecutionHostProjectsEntry[]>;

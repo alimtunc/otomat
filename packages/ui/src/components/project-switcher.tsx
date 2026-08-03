@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown, FolderGit2, Settings } from "lucide-react";
+import { Check, ChevronsUpDown, FolderGit2, Plus, Settings } from "lucide-react";
 import { useState } from "react";
 
 import { FOCUS_RING } from "../lib/focus";
@@ -30,6 +30,8 @@ export interface ProjectSwitcherProps {
   collapsed?: boolean;
   loading?: boolean;
   onConfigure?: () => void;
+  /** Renders an "Add project…" footer action; also replaces the empty-state hint when provided. */
+  onAddProject?: () => void;
 }
 
 function HostTag({ tag }: { tag: string }) {
@@ -59,6 +61,7 @@ export function ProjectSwitcher({
   collapsed = false,
   loading = false,
   onConfigure,
+  onAddProject,
 }: ProjectSwitcherProps) {
   const [open, setOpen] = useState(false);
   const current = projects.find((p) => p.id === currentId);
@@ -136,12 +139,17 @@ export function ProjectSwitcher({
               variant="ghost"
               onClick={() => {
                 setOpen(false);
-                onConfigure?.();
+                if (onAddProject) onAddProject();
+                else onConfigure?.();
               }}
               className="h-auto w-full justify-start gap-2 px-2.5 py-3 text-sm"
             >
-              <Settings className="h-4 w-4 text-text-tertiary" />
-              Add a project in Settings
+              {onAddProject ? (
+                <Plus className="h-4 w-4 text-text-tertiary" />
+              ) : (
+                <Settings className="h-4 w-4 text-text-tertiary" />
+              )}
+              {onAddProject ? "Add project…" : "Add a project in Settings"}
             </Button>
           </ComboboxEmpty>
         ) : (
@@ -173,6 +181,22 @@ export function ProjectSwitcher({
                 </ComboboxItem>
               )}
             </ComboboxList>
+            {onAddProject ? (
+              <div className="border-t border-border-subtle p-1.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setOpen(false);
+                    onAddProject();
+                  }}
+                  className="h-auto w-full justify-start gap-2 px-2.5 py-2 text-sm"
+                >
+                  <Plus className="h-4 w-4 text-text-tertiary" />
+                  Add project…
+                </Button>
+              </div>
+            ) : null}
           </>
         )}
       </ComboboxContent>

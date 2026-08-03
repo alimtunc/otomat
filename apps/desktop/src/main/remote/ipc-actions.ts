@@ -2,6 +2,7 @@ import {
   isExecutionHostId,
   type ExecutionHostOperationResult,
   type ExecutionHostProjectsEntry,
+  type ExecutionHostRegisterProjectResult,
   type ExecutionHostSnapshot,
 } from "@otomat/domain";
 
@@ -15,14 +16,15 @@ export interface ExecutionHostIpcActions {
   snapshot(): ExecutionHostSnapshot;
   select(id: unknown): Promise<ExecutionHostOperationResult>;
   configureRemote(sshAlias: unknown): ExecutionHostOperationResult;
+  removeRemote(): ExecutionHostOperationResult;
+  registerProject(hostId: unknown, path: unknown): Promise<ExecutionHostRegisterProjectResult>;
   listAliases(): string[];
   listProjects(): Promise<ExecutionHostProjectsEntry[]>;
 }
 
-const NOT_READY: ExecutionHostOperationResult = {
-  ok: false,
-  message: "The desktop runtime is not ready yet.",
-};
+const NOT_READY_MESSAGE = "The desktop runtime is not ready yet.";
+
+const NOT_READY: ExecutionHostOperationResult = { ok: false, message: NOT_READY_MESSAGE };
 
 export function buildExecutionHostActions(
   manager: () => ExecutionHostManager | null,
@@ -57,6 +59,18 @@ export function buildExecutionHostActions(
       const hosts = manager();
       if (hosts === null) return NOT_READY;
       return hosts.configureRemote(sshAlias);
+    },
+    removeRemote: () => {
+      const hosts = manager();
+      if (hosts === null) return NOT_READY;
+      return hosts.removeRemote();
+    },
+    registerProject: async (hostId: unknown, path: unknown) => {
+      const hosts = manager();
+      if (hosts === null) return { ok: false, message: NOT_READY_MESSAGE };
+      if (!isExecutionHostId(hostId)) return { ok: false, message: "Unknown execution host." };
+      if (typeof path !== "string") return { ok: false, message: "Enter a repository path." };
+      return hosts.registerProject(hostId, path);
     },
     listAliases: () => manager()?.listAliases() ?? [],
     listProjects: async () => manager()?.listProjects() ?? [],

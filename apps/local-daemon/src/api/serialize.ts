@@ -49,8 +49,8 @@ import {
 
 import type { RunDiffResult } from "#review";
 
-export function toProject(row: ProjectRow): ProjectContract {
-  return projectContractSchema.parse(row);
+export function toProject(row: ProjectRow, hasRepository: boolean): ProjectContract {
+  return projectContractSchema.parse({ ...row, has_repository: hasRepository });
 }
 
 /** Maps a profile row to its wire contract, unwrapping the typed json columns. */

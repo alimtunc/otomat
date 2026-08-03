@@ -15,6 +15,7 @@ import { Link } from "@tanstack/react-router";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
 import type { ShellSection } from "@web/components/shell/nav-items";
 import { NewIssueContext } from "@web/components/shell/new-issue-context";
+import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
 import { Sidebar } from "@web/components/shell/sidebar";
 import { useNewIssueShortcut } from "@web/components/shell/use-new-issue-shortcut";
 import { usePaletteGroups } from "@web/components/shell/use-palette-groups";
@@ -46,6 +47,7 @@ export function RouteShell({
   const shell = useShellData();
   const palette = useCommandPalette();
   const [newIssueOpen, setNewIssueOpen] = useState(false);
+  const [addProjectOpen, setAddProjectOpen] = useState(false);
   const openNewIssue = useCallback(() => setNewIssueOpen(true), []);
   const paletteGroups = usePaletteGroups({ onNewIssue: openNewIssue });
   useNewIssueShortcut(openNewIssue);
@@ -81,6 +83,7 @@ export function RouteShell({
           projects={shell.projects}
           currentProjectId={shell.currentSwitcherId}
           onProjectSelect={shell.selectProject}
+          onAddProject={() => setAddProjectOpen(true)}
           onSearch={() => palette.setOpen(true)}
           onNewIssue={openNewIssue}
           hasLiveRun={shell.hasLiveRun}
@@ -134,6 +137,12 @@ export function RouteShell({
         onOpenChange={setNewIssueOpen}
         projectId={shell.currentProjectId}
         projectName={shell.projectLabel}
+      />
+      <AddProjectDialog
+        open={addProjectOpen}
+        onOpenChange={setAddProjectOpen}
+        hosts={shell.hostOptions}
+        onSelect={shell.selectProject}
       />
     </AppShell>
   );

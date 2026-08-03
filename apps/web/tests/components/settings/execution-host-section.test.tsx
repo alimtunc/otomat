@@ -126,6 +126,57 @@ it("stays quiet when the remote daemon build matches", async () => {
   expect(document.body.textContent).not.toContain("Redeploy the daemon");
 });
 
+it("removes the host after an explicit confirm, warning what actually happens", async () => {
+  const removeRemote = vi.fn(() => Promise.resolve({ ok: true as const }));
+  const bridge = fakeDesktopBridge();
+  bridge.executionHost.snapshot = () => Promise.resolve(twoHostSnapshot());
+  bridge.executionHost.removeRemote = removeRemote;
+  window.otomat = bridge;
+  await renderSection();
+
+  const remove = [...document.querySelectorAll("button")].find(
+    (candidate) => candidate.textContent?.trim() === "Remove",
+  );
+  await act(async () => {
+    remove?.click();
+  });
+
+  expect(removeRemote).not.toHaveBeenCalled();
+  expect(document.body.textContent).toContain("Nothing is deleted on the server");
+
+  const confirm = [...document.querySelectorAll("button")].find(
+    (candidate) => candidate.textContent?.trim() === "Remove host",
+  );
+  await act(async () => {
+    confirm?.click();
+  });
+  expect(removeRemote).toHaveBeenCalledTimes(1);
+});
+
+it("surfaces the refusal when the host cannot be removed while active", async () => {
+  const bridge = fakeDesktopBridge();
+  bridge.executionHost.snapshot = () => Promise.resolve(twoHostSnapshot({ active_id: "remote" }));
+  bridge.executionHost.removeRemote = () =>
+    Promise.resolve({ ok: false as const, message: "Switch to a local project first." });
+  window.otomat = bridge;
+  await renderSection();
+
+  const remove = [...document.querySelectorAll("button")].find(
+    (candidate) => candidate.textContent?.trim() === "Remove",
+  );
+  await act(async () => {
+    remove?.click();
+  });
+  const confirm = [...document.querySelectorAll("button")].find(
+    (candidate) => candidate.textContent?.trim() === "Remove host",
+  );
+  await act(async () => {
+    confirm?.click();
+  });
+
+  expect(document.body.textContent).toContain("Switch to a local project first.");
+});
+
 it("saves the configured alias", async () => {
   const configureRemote = vi.fn(() => Promise.resolve({ ok: true as const }));
   const bridge = fakeDesktopBridge();

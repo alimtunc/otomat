@@ -2,6 +2,7 @@ import type {
   ExecutionHostId,
   ExecutionHostOperationResult,
   ExecutionHostProjectsEntry,
+  ExecutionHostRegisterProjectResult,
   ExecutionHostSnapshot,
   LinearVaultOperationResult,
   OtomatDesktopBridge,
@@ -15,6 +16,8 @@ import {
   EXECUTION_HOST_ALIASES_CHANNEL,
   EXECUTION_HOST_CONFIGURE_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
+  EXECUTION_HOST_REGISTER_PROJECT_CHANNEL,
+  EXECUTION_HOST_REMOVE_CHANNEL,
   EXECUTION_HOST_SELECT_CHANNEL,
   EXECUTION_HOST_SNAPSHOT_CHANNEL,
   EXECUTION_HOST_STATUS_CHANNEL,
@@ -45,6 +48,13 @@ contextBridge.exposeInMainWorld("otomat", {
       ipcRenderer.invoke(EXECUTION_HOST_SELECT_CHANNEL, id),
     configureRemote: (sshAlias: string): Promise<ExecutionHostOperationResult> =>
       ipcRenderer.invoke(EXECUTION_HOST_CONFIGURE_CHANNEL, sshAlias),
+    removeRemote: (): Promise<ExecutionHostOperationResult> =>
+      ipcRenderer.invoke(EXECUTION_HOST_REMOVE_CHANNEL),
+    registerProject: (
+      hostId: ExecutionHostId,
+      path: string,
+    ): Promise<ExecutionHostRegisterProjectResult> =>
+      ipcRenderer.invoke(EXECUTION_HOST_REGISTER_PROJECT_CHANNEL, hostId, path),
     listSshAliases: (): Promise<string[]> => ipcRenderer.invoke(EXECUTION_HOST_ALIASES_CHANNEL),
     listProjects: (): Promise<ExecutionHostProjectsEntry[]> =>
       ipcRenderer.invoke(EXECUTION_HOST_PROJECTS_CHANNEL),

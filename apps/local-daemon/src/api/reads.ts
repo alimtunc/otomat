@@ -50,7 +50,8 @@ import {
 } from "./serialize.js";
 
 export function readProjects(db: Db): ProjectContract[] {
-  return listProjects(db).map(toProject);
+  const withRepository = new Set(listRepositories(db).map((row) => row.project_id));
+  return listProjects(db).map((row) => toProject(row, withRepository.has(row.id)));
 }
 
 export function readAgentProfiles(db: Db): AgentProfileContract[] {
