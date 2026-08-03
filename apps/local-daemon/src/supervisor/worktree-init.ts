@@ -4,17 +4,10 @@ import { runMachine } from "@otomat/domain";
 import { emitLedgerEvent } from "#events";
 
 import { startNextReadyStep } from "./advance.js";
-import { emitInitLog, runInitCommandBatch } from "./init-commands.js";
+import { emitInitLog, runInitCommandBatch, runStillLive } from "./init-commands.js";
 import { buildTerminalMarker } from "./markers.js";
 import { hasRunActivity, notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveIdleRunTo, driveRunTo } from "./transitions.js";
-
-/** True when the run may keep initializing; anything settled elsewhere stops silently. */
-function runStillPreparing(state: SupervisorState, runId: string): boolean {
-  const current = getRun(state.db, runId);
-  if (!current || runMachine.isTerminal(current.status)) return false;
-  return !state.aborting.has(runId) && !state.shuttingDown;
-}
 
 async function performWorktreeInit(
   state: SupervisorState,
@@ -32,7 +25,7 @@ async function performWorktreeInit(
     worktreePath,
     commands,
     label: null,
-    shouldContinue: () => runStillPreparing(state, run.id),
+    shouldContinue: () => runStillLive(state, run.id),
   });
 }
 

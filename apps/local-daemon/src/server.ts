@@ -29,10 +29,17 @@ import { createReviewService } from "#review";
 import { createReexecSpawn, createSupervisor } from "#supervisor";
 
 import { ensureDefaultProject, ensureDefaultRepository } from "./bootstrap.js";
-import { daemonBuild } from "./build-info.js";
 
 export const DAEMON_NAME = "otomat-local-daemon";
 export const DAEMON_VERSION = "0.1.0";
+
+// The dist bundle bakes the git commit in at build time (tsdown define); a
+// source run reads the env the desktop shell injects, and reports null when
+// neither is present.
+function daemonBuild(): string | null {
+  const sha = process.env.OTOMAT_BUILD_SHA;
+  return sha === undefined || sha === "" ? null : sha;
+}
 
 export interface StartDaemonOptions {
   port?: number;

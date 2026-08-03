@@ -10,7 +10,7 @@ import { agentSessionMachine, runMachine, stepRunMachine } from "@otomat/domain"
 import { startSessionTail } from "#events";
 
 import { waitForWorkerIdentity } from "./identity.js";
-import { runInitCommandBatch } from "./init-commands.js";
+import { runInitCommandBatch, runStillLive } from "./init-commands.js";
 import { settleRun } from "./settle/index.js";
 import { clearWorkerStartEvidence } from "./start-gate.js";
 import { notifyAfterSettle, type SupervisorState } from "./state.js";
@@ -118,13 +118,7 @@ export async function spawnTurn(
   let tail: ReturnType<typeof startSessionTail> | undefined;
   try {
     // A slot can take a while to free; an abort/cancel may have landed meanwhile.
-    const current = getRun(db, ctx.runId);
-    if (
-      !current ||
-      runMachine.isTerminal(current.status) ||
-      aborting.has(ctx.runId) ||
-      state.shuttingDown
-    ) {
+    if (!runStillLive(state, ctx.runId)) {
       release();
       return false;
     }
@@ -136,15 +130,7 @@ export async function spawnTurn(
         worktreePath: ctx.worktreePath,
         commands: ctx.worktreeInit.commands,
         label: ctx.worktreeInit.label,
-        shouldContinue: () => {
-          const live = getRun(db, ctx.runId);
-          return (
-            live !== undefined &&
-            !runMachine.isTerminal(live.status) &&
-            !aborting.has(ctx.runId) &&
-            !state.shuttingDown
-          );
-        },
+        shouldContinue: () => runStillLive(state, ctx.runId),
       });
       if (!initialized) {
         release();

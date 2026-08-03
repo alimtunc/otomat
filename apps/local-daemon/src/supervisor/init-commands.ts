@@ -1,4 +1,5 @@
-import { getRepository, type Db } from "@otomat/db";
+import { getRepository, getRun, type Db } from "@otomat/db";
+import { runMachine } from "@otomat/domain";
 
 import { emitLedgerEvent } from "#events";
 import { buildRuntimeEvent } from "#runtime";
@@ -42,6 +43,13 @@ export interface InitCommandBatch {
   label: string | null;
   /** Re-checked between commands; false stops the batch silently — the state that settled the run owns the outcome. */
   shouldContinue: () => boolean;
+}
+
+/** True when the run may keep going; anything settled elsewhere stops the caller silently. */
+export function runStillLive(state: SupervisorState, runId: string): boolean {
+  const current = getRun(state.db, runId);
+  if (!current || runMachine.isTerminal(current.status)) return false;
+  return !state.aborting.has(runId) && !state.shuttingDown;
 }
 
 /**
