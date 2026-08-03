@@ -7,7 +7,10 @@ import {
   parseProjectSwitcherKey,
   projectSwitcherKey,
 } from "@web/components/shell/project-selection/host-key";
-import { writeSelectedProjectId } from "@web/components/shell/project-selection/selection";
+import {
+  selectableProjects,
+  writeSelectedProjectId,
+} from "@web/components/shell/project-selection/selection";
 import { useProjectSelection } from "@web/components/shell/project-selection/use-selection";
 import { useHostProjects } from "@web/components/shell/use-host-projects";
 import { desktopBridge, remoteHostAlias } from "@web/lib/desktop-bridge";
@@ -30,13 +33,13 @@ export function useShellData() {
   const hostProjects = useHostProjects();
 
   // The auto-created bootstrap project has no repository and nothing can run in it; it never reaches the switcher.
-  const projects: ProjectSummary[] = (projectsQuery.data ?? [])
-    .filter((project) => project.has_repository)
-    .map((project) => ({
+  const projects: ProjectSummary[] = selectableProjects(projectsQuery.data ?? []).map(
+    (project) => ({
       id: project.id,
       name: project.name,
       repo: lastPathSegment(project.root_path),
-    }));
+    }),
+  );
 
   const { currentProjectId, selectProject: select } = useProjectSelection(projects);
   const currentProject = projects.find((project) => project.id === currentProjectId);
@@ -55,14 +58,12 @@ export function useShellData() {
     ...hostEntries
       .filter((entry) => !entry.active)
       .flatMap((entry) =>
-        (entry.projects ?? [])
-          .filter((project) => project.has_repository)
-          .map((project) => ({
-            id: projectSwitcherKey(entry.host.id, project.id),
-            name: project.name,
-            repo: lastPathSegment(project.root_path),
-            tag: entry.host.label,
-          })),
+        selectableProjects(entry.projects ?? []).map((project) => ({
+          id: projectSwitcherKey(entry.host.id, project.id),
+          name: project.name,
+          repo: lastPathSegment(project.root_path),
+          tag: entry.host.label,
+        })),
       ),
   ];
   const hostOptions =
