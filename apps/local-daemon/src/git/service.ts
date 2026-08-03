@@ -43,6 +43,7 @@ function toRecord(row: WorktreeRow): WorktreeRecord {
     repositoryId: row.repository_id,
     path: row.path,
     branch: row.branch,
+    baseRef: row.base_ref === "" ? null : row.base_ref,
     headSha: row.head_sha ?? "",
     status: row.status,
   };
@@ -143,6 +144,7 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
         repositoryId,
         path,
         branch: input.branch,
+        baseRef,
         headSha: baseSha,
         status: "active",
       };

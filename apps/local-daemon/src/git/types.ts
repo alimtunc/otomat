@@ -41,6 +41,8 @@ export interface WorktreeRecord {
   repositoryId: string;
   path: string;
   branch: string;
+  /** Branch the worktree forked from at acquire; null on legacy rows recorded before it was kept. */
+  baseRef: string | null;
   /** Recorded HEAD sha (the fork point at acquire; the latest snapshot/archive tip afterward). */
   headSha: string;
   status: WorktreeStatus;

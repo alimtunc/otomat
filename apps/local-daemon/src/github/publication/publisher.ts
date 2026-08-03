@@ -132,8 +132,11 @@ class PullRequestPublisher implements PullRequestPublicationService {
         cwd: context.worktree.path,
         repository: context.remote.repository,
         head: context.worktree.branch,
+        // The PR targets the run's frozen fork point; the repository default only covers legacy worktrees that never recorded one.
         base:
-          getRepository(this.config.db, context.worktree.repositoryId)?.default_branch ?? "main",
+          context.worktree.baseRef ??
+          getRepository(this.config.db, context.worktree.repositoryId)?.default_branch ??
+          "main",
       },
     };
   }

@@ -98,8 +98,11 @@ class FakeGitHubCli implements GitHubCli {
     return this.provider;
   }
 
-  async createPullRequest(_input: PullRequestCreateInput): Promise<void> {
+  lastCreateInput: PullRequestCreateInput | null = null;
+
+  async createPullRequest(input: PullRequestCreateInput): Promise<void> {
     this.createCalls += 1;
+    this.lastCreateInput = input;
     if (this.createError) throw this.createError;
     this.providerExists = true;
   }
@@ -380,6 +383,31 @@ describe("GitHubService", () => {
       number: null,
       url: null,
     });
+  });
+
+  it("targets the run's frozen fork branch, never the repository default", async () => {
+    repo.git("branch", "feature-base");
+    const forked = worktrees.acquire({
+      owner: "run-forked",
+      branch: "otomat/run/run-forked",
+      baseRef: "feature-base",
+    });
+    seedRun(fix.db, {
+      runId: "run-forked",
+      worktreeId: forked.id,
+      runStatus: "review_ready",
+      stepStatus: "succeeded",
+      sessionStatus: "terminated",
+    });
+    writeFileSync(join(forked.path, "change.txt"), "forked\n");
+    cli.provider = { ...cli.provider, headRef: "otomat/run/run-forked", baseRef: "feature-base" };
+
+    const forkedRun = getRun(fix.db, "run-forked");
+    if (!forkedRun) throw new Error("seeded run missing");
+    const result = await service().publish(forkedRun, { title: "Ship it", body: "Details" });
+
+    expect(result.row.publication_status).toBe("created");
+    expect(cli.lastCreateInput?.base).toBe("feature-base");
   });
 
   it("names a missing base branch instead of relaying GitHub's raw create failure", async () => {
