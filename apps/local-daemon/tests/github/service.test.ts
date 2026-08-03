@@ -82,8 +82,11 @@ class FakeGitHubCli implements GitHubCli {
     return this.remote;
   }
 
-  async push(): Promise<void> {
+  pushedBranches: string[] = [];
+
+  async push(_cwd: string, _remote: string, branch: string): Promise<void> {
     this.pushCalls += 1;
+    this.pushedBranches.push(branch);
     if (this.pushError) throw this.pushError;
   }
 
@@ -383,6 +386,21 @@ describe("GitHubService", () => {
       number: null,
       url: null,
     });
+  });
+
+  it("ships a first publish under the requested head branch", async () => {
+    cli.provider = { ...cli.provider, headRef: "feat/add-note" };
+
+    const result = await service().publish(run(), {
+      title: "Ship it",
+      body: "Details",
+      head_ref: "feat/add-note",
+    });
+
+    expect(result.row.publication_status).toBe("created");
+    expect(cli.pushedBranches).toEqual(["feat/add-note"]);
+    expect(cli.lastCreateInput?.head).toBe("feat/add-note");
+    expect(result.row.head_ref).toBe("feat/add-note");
   });
 
   it("targets the run's frozen fork branch, never the repository default", async () => {

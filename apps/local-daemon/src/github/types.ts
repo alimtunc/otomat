@@ -2,12 +2,29 @@ import type { Db, PullRequestRow, RunRow } from "@otomat/db";
 import type {
   GitHubConnectionContract,
   PreparePullRequestRequest,
+  PullRequestDraft,
   PullRequestState,
 } from "@otomat/domain";
 
 import type { RepositoryResolver } from "#git";
 
 import type { DeviceAuthorization } from "./device-flow.js";
+
+export interface PullRequestDraftInput {
+  /** Runtime id of the run's own agent; only CLIs with a non-interactive print mode can draft. */
+  runtime: string;
+  cwd: string;
+  /** What the run set out to do — issue title and/or the launch prompt. */
+  objective: string;
+  /** One line per changed file, `path +a -d`. */
+  diffStat: string[];
+  /** Concatenated per-file patches; truncated to a fixed budget by the drafter. */
+  patch: string;
+}
+
+export interface PullRequestDrafter {
+  draft(input: PullRequestDraftInput): Promise<PullRequestDraft>;
+}
 
 export interface CommandRequest {
   command: string;
@@ -36,6 +53,8 @@ export interface GitHubServiceConfig {
   /** Per-run resolution ensures publication pushes from the run's own repository. */
   repositories: RepositoryResolver;
   cli: GitHubCli;
+  /** Drafts PR metadata with the run's own agent CLI; absent disables the draft endpoint honestly. */
+  drafter?: PullRequestDrafter;
   deviceAuthorization?: DeviceAuthorization;
   idFactory?: () => string;
 }
@@ -45,6 +64,7 @@ export interface GitHubService {
   connect(): GitHubConnectionContract;
   getPullRequest(runId: string): PullRequestView | null;
   publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView>;
+  draftPullRequest(run: RunRow): Promise<PullRequestDraft>;
 }
 
 export interface GitHubRemote {

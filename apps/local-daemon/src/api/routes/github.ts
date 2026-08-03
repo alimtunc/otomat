@@ -20,6 +20,17 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
     });
   });
 
+  routes.post("/runs/:id/pr/draft", runGuard(deps.db), async (c) => {
+    try {
+      return c.json(await deps.github.draftPullRequest(c.get("run")));
+    } catch (error) {
+      if (error instanceof GitHubPublicationError) {
+        return c.json({ error: error.code, message: error.message }, 409);
+      }
+      throw error;
+    }
+  });
+
   routes.post(
     "/runs/:id/pr",
     validateJson(preparePullRequestRequestSchema),

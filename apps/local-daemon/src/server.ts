@@ -13,7 +13,12 @@ import {
 import { rescanSkills } from "#agents";
 import { createApiApp, logApiRoutes } from "#api";
 import { createRepositoryResolver } from "#git";
-import { createGitHubCli, createGitHubService, runCommand } from "#github";
+import {
+  createGitHubCli,
+  createGitHubService,
+  createPullRequestDrafter,
+  runCommand,
+} from "#github";
 import {
   createLinearApiClient,
   createLinearService,
@@ -96,6 +101,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       dataDir,
       repositories,
       cli: createGitHubCli(runCommand),
+      drafter: createPullRequestDrafter(runCommand),
     });
     const linear = createLinearService({
       db,

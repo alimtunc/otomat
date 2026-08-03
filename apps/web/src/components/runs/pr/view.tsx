@@ -1,6 +1,10 @@
 import { ErrorState } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
-import { useConnectGitHub, usePreparePullRequest } from "@web/api/prs/mutations";
+import {
+  useConnectGitHub,
+  useDraftPullRequest,
+  usePreparePullRequest,
+} from "@web/api/prs/mutations";
 import { useGitHubConnection, useRunPullRequest } from "@web/api/prs/queries";
 import { useRunDetail } from "@web/api/runs/queries";
 import { PullRequestForm } from "@web/components/runs/pr/form";
@@ -15,6 +19,7 @@ export function RunPrView() {
   const connectionQuery = useGitHubConnection();
   const connect = useConnectGitHub();
   const prepare = usePreparePullRequest(runId);
+  const draft = useDraftPullRequest(runId);
 
   if (runQuery.isPending || prQuery.isPending || connectionQuery.isPending) {
     return <DetailSkeleton blockClassName="h-40 w-full max-w-2xl" />;
@@ -50,8 +55,16 @@ export function RunPrView() {
             return false;
           }
         }}
+        onDraft={async () => {
+          try {
+            return await draft.mutateAsync();
+          } catch {
+            return null;
+          }
+        }}
         onConnect={() => connect.mutate()}
         isPending={prepare.isPending}
+        isDrafting={draft.isPending}
         isConnecting={connect.isPending || connectionQuery.data.status === "connecting"}
         canPublish={runQuery.data.run.status === "review_ready"}
       />

@@ -45,6 +45,9 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
     publish: async () => {
       throw new Error("publish stub not configured");
     },
+    draftPullRequest: async () => {
+      throw new Error("draft stub not configured");
+    },
     ...overrides,
   };
 }

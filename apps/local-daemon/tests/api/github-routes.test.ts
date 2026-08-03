@@ -112,3 +112,37 @@ it("maps an invalid run state to a conflict", async () => {
   expect(response.status).toBe(409);
   expect(await response.json()).toEqual({ error: "run_not_review_ready" });
 });
+
+it("drafts PR metadata with the run's agent and surfaces drafting refusals", async () => {
+  const app = makeApiApp(t, {
+    github: stubGitHubService({
+      draftPullRequest: async () => ({
+        title: "Add note.md",
+        body: "Adds the note.",
+        branch: "feat/add-note",
+      }),
+    }),
+  });
+
+  const res = await post(app, `/api/runs/${RUN_ID}/pr/draft`, {});
+  expect(res.status).toBe(200);
+  expect(await res.json()).toEqual({
+    title: "Add note.md",
+    body: "Adds the note.",
+    branch: "feat/add-note",
+  });
+
+  const refusing = makeApiApp(t, {
+    github: stubGitHubService({
+      draftPullRequest: async () => {
+        throw new GitHubPublicationError("pr_draft_failed", "The run has no changes to describe.");
+      },
+    }),
+  });
+  const refused = await post(refusing, `/api/runs/${RUN_ID}/pr/draft`, {});
+  expect(refused.status).toBe(409);
+  expect(await refused.json()).toEqual({
+    error: "pr_draft_failed",
+    message: "The run has no changes to describe.",
+  });
+});

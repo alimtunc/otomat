@@ -1,5 +1,6 @@
 export { createGitHubCli } from "./cli.js";
 export { createGitHubConnectionService } from "./connection.js";
+export { createPullRequestDrafter, sanitizeBranchName } from "./draft.js";
 export { createDeviceAuthorization } from "./device-flow.js";
 export type { DeviceAuthorization, DeviceAuthorizationStart } from "./device-flow.js";
 export { parseGitHubRemoteUrl } from "./parse.js";
@@ -17,6 +18,8 @@ export type {
   GitHubServiceConfig,
   PullRequestView,
   PullRequestCreateInput,
+  PullRequestDrafter,
+  PullRequestDraftInput,
   PullRequestSelector,
   PullRequestUpdateInput,
 } from "./types.js";

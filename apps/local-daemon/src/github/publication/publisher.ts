@@ -123,7 +123,12 @@ class PullRequestPublisher implements PullRequestPublicationService {
     const snapshot = context.worktrees.snapshot(context.run.id);
     // Re-read after snapshot(): the commit moves the tree, and this diff is the published anchor.
     const diff = context.worktrees.diff(context.run.id);
-    await this.config.cli.push(context.worktree.path, context.remote.name, context.worktree.branch);
+    // An existing PR's head is its identity; only a first publish may pick a nicer remote name.
+    const head =
+      row.number !== null
+        ? (row.head_ref ?? context.worktree.branch)
+        : (context.request.head_ref ?? row.head_ref ?? context.worktree.branch);
+    await this.config.cli.push(context.worktree.path, context.remote.name, head);
     return {
       row,
       headSha: snapshot.headSha,
@@ -131,7 +136,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
       selector: {
         cwd: context.worktree.path,
         repository: context.remote.repository,
-        head: context.worktree.branch,
+        head,
         // The PR targets the run's frozen fork point; the repository default only covers legacy worktrees that never recorded one.
         base:
           context.worktree.baseRef ??
