@@ -20,13 +20,12 @@
     "prepare-daemon": "node scripts/prepare-daemon.mjs"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.0",
     "@otomat/client": "workspace:*",
     "@otomat/domain": "workspace:*",
     "@types/node": "^26.1.1",
     "electron": "^43.2.0",
     "electron-builder": "^26.0.0",
-    "tsdown": "^0.22.13",
+    "tsdown": "^0.22.14",
     "vitest": "^4.1.10"
   }
 }

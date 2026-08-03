@@ -5,7 +5,13 @@ import { schema, updateIssueProject } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { registerLocalRepository } from "#api/repository-registration";
-import { createRepositoryResolver, GitCommandError, type RepositoryResolver } from "#git";
+import {
+  createRepositoryResolver,
+  GitCommandError,
+  type AcquireWorktreeInput,
+  type GitWorktreeService,
+  type RepositoryResolver,
+} from "#git";
 import { findActiveByOwner } from "#git/worktrees-store";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
@@ -27,6 +33,21 @@ const TWO_STEP_PLAN = {
   steps: [
     { id: "s1", name: "Plan", agent: null, prompt: "plan it", depends_on: [] },
     { id: "s2", name: "Build", agent: null, prompt: "build it", depends_on: ["s1"] },
+  ],
+};
+
+const COMPETE_PLAN = {
+  version: 1 as const,
+  steps: [
+    {
+      id: "approach",
+      name: "Choose",
+      depends_on: [],
+      compete: [
+        { id: "direct", name: "Direct", agent: null, prompt: "direct" },
+        { id: "layered", name: "Layered", agent: null, prompt: "layered" },
+      ],
+    },
   ],
 };
 
@@ -224,28 +245,36 @@ it("defaults the fork point to the repository's default branch when none is requ
   expect(worktree?.base_sha).toBe(fix.repo.git("rev-parse", fix.repo.defaultBranch).trim());
 });
 
-/** A resolver whose `acquire` always throws, to drive the launch's failure handling. */
-function resolverFailingWith(error: Error): RepositoryResolver {
+/** A resolver whose `acquire` is `decorate`d, to drive the launch's failure handling. */
+function resolverAcquiring(
+  decorate: (real: GitWorktreeService["acquire"]) => GitWorktreeService["acquire"],
+): RepositoryResolver {
   const resolver = createRepositoryResolver({
     db: fix.db,
     worktreesRoot: join(fix.dataDir, "worktrees"),
   });
   const binding = resolver.forRepository(fix.repositoryId);
   if (!binding) throw new Error("expected a repository binding");
-  const failing: RepositoryResolver = {
+  const wrapped: RepositoryResolver = {
     forRepository: () => ({
       ...binding,
-      service: {
-        ...binding.service,
-        acquire: () => {
-          throw error;
-        },
-      },
+      service: { ...binding.service, acquire: decorate(binding.service.acquire) },
     }),
-    forProject: () => failing.forRepository(fix.repositoryId),
-    forRun: () => failing.forRepository(fix.repositoryId),
+    forProject: () => wrapped.forRepository(fix.repositoryId),
+    forRun: () => wrapped.forRepository(fix.repositoryId),
   };
-  return failing;
+  return wrapped;
+}
+
+/** A resolver whose `acquire` throws for the inputs `shouldFail` selects. */
+function resolverFailingWith(
+  error: Error,
+  shouldFail: (input: AcquireWorktreeInput) => boolean = () => true,
+): RepositoryResolver {
+  return resolverAcquiring((real) => (input) => {
+    if (shouldFail(input)) throw error;
+    return real(input);
+  });
 }
 
 it("turns a git-level worktree failure into a refusal, writing no run and no issue", async () => {
@@ -333,4 +362,62 @@ it("launches from a repository whose HEAD is detached, forking from an explicit 
 
   expect(existsSync(spawn.jobs[0]?.worktreePath ?? "")).toBe(true);
   expect(findActiveByOwner(fix.db, run.id)?.base_ref).toBe("main");
+});
+
+it("writes no session when a compete group cannot acquire every competitor worktree", async () => {
+  const diskFull = Object.assign(new Error("ENOSPC: no space left on device, mkdir"), {
+    syscall: "mkdir",
+  });
+  // Competitor ids are minted at freeze time, so the failing one is selected by rank:
+  // the run's own worktree and the first competitor succeed, the second competitor fails.
+  let competitors = 0;
+  const { supervisor, spawn } = makeSupervisor(fix, "complete", {
+    repositories: resolverFailingWith(diskFull, (input) => {
+      if (!input.branch.includes("--compete-")) return false;
+      competitors += 1;
+      return competitors > 1;
+    }),
+  });
+  await expect(supervisor.start({ prompt: "compete", plan: COMPETE_PLAN })).rejects.toBe(diskFull);
+  await supervisor.settle();
+
+  expect(spawn.calls).toBe(0);
+  // A session on a step of a now-failed group is a state no boot pass can settle.
+  expect(fix.db.select().from(schema.agentSessions).all()).toHaveLength(0);
+  expect(fix.db.select().from(schema.competeGroups).all()[0]?.status).toBe("failed");
+  expect(branches(fix.repo).filter((name) => name.includes("--compete-"))).toEqual([]);
+  expect(
+    fix.db
+      .select()
+      .from(schema.worktrees)
+      .all()
+      .filter((row) => row.status === "active" && row.branch.includes("--compete-")),
+  ).toEqual([]);
+  const { supervisor: rebooted } = makeSupervisor(fix, "complete");
+  expect(() => rebooted.reconcile()).not.toThrow();
+});
+
+it("rolls a compete group back whole when writing its sessions fails", async () => {
+  let competitors = 0;
+  const { supervisor, spawn } = makeSupervisor(fix, "complete", {
+    // The second competitor's worktree is real but reported under an id no row carries, so
+    // attaching it violates the FK: it stands for any failure of the session-writing phase.
+    repositories: resolverAcquiring((real) => (input) => {
+      const worktree = real(input);
+      if (!input.branch.includes("--compete-")) return worktree;
+      competitors += 1;
+      return competitors > 1 ? { ...worktree, id: "no-such-worktree" } : worktree;
+    }),
+  });
+
+  await expect(supervisor.start({ prompt: "compete", plan: COMPETE_PLAN })).rejects.toThrow();
+  await supervisor.settle();
+
+  expect(spawn.calls).toBe(0);
+  // The first competitor's session and worktree attachment must roll back with the group.
+  expect(fix.db.select().from(schema.agentSessions).all()).toHaveLength(0);
+  expect(fix.db.select().from(schema.competeGroups).all()[0]?.status).toBe("failed");
+  expect(branches(fix.repo).filter((name) => name.includes("--compete-"))).toEqual([]);
+  const { supervisor: rebooted } = makeSupervisor(fix, "complete");
+  expect(() => rebooted.reconcile()).not.toThrow();
 });

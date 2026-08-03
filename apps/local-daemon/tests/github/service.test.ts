@@ -1,8 +1,15 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { getPullRequestForRun, getRun, insertPullRequest, updatePullRequest } from "@otomat/db";
+import {
+  getPullRequestForRun,
+  getRun,
+  insertPullRequest,
+  schema,
+  updatePullRequest,
+} from "@otomat/db";
 import type { GitHubConnectionContract } from "@otomat/domain";
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
@@ -45,6 +52,7 @@ class FakeGitHubCli implements GitHubCli {
     baseRef: "main",
     lifecycle: "open",
   };
+  createInput: PullRequestCreateInput | null = null;
   resolveError: GitHubCliError | null = null;
   pushError: GitHubCliError | null = null;
   createError: GitHubCliError | null = null;
@@ -101,12 +109,11 @@ class FakeGitHubCli implements GitHubCli {
     return this.provider;
   }
 
-  lastCreateInput: PullRequestCreateInput | null = null;
-
   async createPullRequest(input: PullRequestCreateInput): Promise<void> {
     this.createCalls += 1;
-    this.lastCreateInput = input;
+    this.createInput = input;
     if (this.createError) throw this.createError;
+    this.provider = { ...this.provider, headRef: input.head, baseRef: input.base };
     this.providerExists = true;
   }
 
@@ -399,7 +406,7 @@ describe("GitHubService", () => {
 
     expect(result.row.publication_status).toBe("created");
     expect(cli.pushedBranches).toEqual(["feat/add-note"]);
-    expect(cli.lastCreateInput?.head).toBe("feat/add-note");
+    expect(cli.createInput?.head).toBe("feat/add-note");
     expect(result.row.head_ref).toBe("feat/add-note");
   });
 
@@ -425,7 +432,7 @@ describe("GitHubService", () => {
     const result = await service().publish(forkedRun, { title: "Ship it", body: "Details" });
 
     expect(result.row.publication_status).toBe("created");
-    expect(cli.lastCreateInput?.base).toBe("feature-base");
+    expect(cli.createInput?.base).toBe("feature-base");
   });
 
   it("names a missing base branch instead of relaying GitHub's raw create failure", async () => {
@@ -484,6 +491,55 @@ describe("GitHubService", () => {
       "created",
     ]);
     expect(events.at(-1)?.source).toBe("github");
+  });
+
+  it("opens the pull request against the branch the run forked from, not the repository default", async () => {
+    repo.git("branch", "release/v1");
+    const acquired = worktrees.acquire({
+      owner: "r-release",
+      branch: "otomat/run/r-release",
+      baseRef: "release/v1",
+    });
+    seedRun(fix.db, {
+      runId: "r-release",
+      worktreeId: acquired.id,
+      runStatus: "review_ready",
+      stepStatus: "succeeded",
+      sessionStatus: "terminated",
+    });
+    writeFileSync(join(acquired.path, "change.txt"), "release work\n");
+    const released = getRun(fix.db, "r-release");
+    if (!released) throw new Error("seeded release run missing");
+
+    const result = await service().publish(released, { title: "Ship it", body: "Details" });
+
+    // The reviewed diff is computed against `release/v1`; a PR based on `main` would
+    // show every commit `release/v1` carries that the reviewer never saw.
+    expect(cli.createInput?.base).toBe("release/v1");
+    expect(result.row.base_ref).toBe("release/v1");
+  });
+
+  it("falls back to the repository default for a worktree recorded before fork refs", async () => {
+    const acquired = worktrees.acquire({ owner: "r-legacy", branch: "otomat/run/r-legacy" });
+    fix.db
+      .update(schema.worktrees)
+      .set({ base_ref: "" })
+      .where(eq(schema.worktrees.id, acquired.id))
+      .run();
+    seedRun(fix.db, {
+      runId: "r-legacy",
+      worktreeId: acquired.id,
+      runStatus: "review_ready",
+      stepStatus: "succeeded",
+      sessionStatus: "terminated",
+    });
+    writeFileSync(join(acquired.path, "change.txt"), "legacy work\n");
+    const legacy = getRun(fix.db, "r-legacy");
+    if (!legacy) throw new Error("seeded legacy run missing");
+
+    await service().publish(legacy, { title: "Ship it", body: "Details" });
+
+    expect(cli.createInput?.base).toBe(repo.defaultBranch);
   });
 
   it("reports an unknown change comparison instead of a false up-to-date state", async () => {
