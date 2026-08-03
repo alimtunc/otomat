@@ -8,8 +8,6 @@ import type {
 
 import type { RepositoryResolver } from "#git";
 
-import type { DeviceAuthorization } from "./device-flow.js";
-
 export interface PullRequestDraftInput {
   /** Runtime id of the run's own agent; only CLIs with a non-interactive print mode can draft. */
   runtime: string;
@@ -57,7 +55,6 @@ export interface GitHubServiceConfig {
   cli: GitHubCli;
   /** Drafts PR metadata with the run's own agent CLI; absent disables the draft endpoint honestly. */
   drafter?: PullRequestDrafter;
-  deviceAuthorization?: DeviceAuthorization;
   idFactory?: () => string;
 }
 

@@ -11,10 +11,7 @@ export { GitHubPublicationError } from "./errors.js";
 
 export function createGitHubService(config: GitHubServiceConfig): GitHubService {
   const normalizedConfig = { ...config, idFactory: config.idFactory ?? randomUUID };
-  const connection = createGitHubConnectionService(
-    config.cli,
-    config.deviceAuthorization ?? createDeviceAuthorization(),
-  );
+  const connection = createGitHubConnectionService(config.cli, createDeviceAuthorization());
   const publisher = createPullRequestPublisher(normalizedConfig);
   return {
     ...connection,

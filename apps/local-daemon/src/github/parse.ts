@@ -110,24 +110,34 @@ export function parseGitHubRemoteUrl(url: string): { repository: string } | null
   }
 }
 
-function disconnected(): GitHubConnectionContract {
+export function connectionProblem(
+  status: GitHubConnectionContract["status"],
+  code: string,
+  message: string,
+): GitHubConnectionContract {
   return {
-    status: "disconnected",
+    status,
     login: null,
     device_authorization: null,
-    error_code: "github_auth_required",
-    error_message: "Sign in to GitHub to continue.",
+    error_code: code,
+    error_message: message,
   };
 }
 
+function disconnected(): GitHubConnectionContract {
+  return connectionProblem(
+    "disconnected",
+    "github_auth_required",
+    "Sign in to GitHub to continue.",
+  );
+}
+
 export function authStatusFailed(): GitHubConnectionContract {
-  return {
-    status: "failed",
-    login: null,
-    device_authorization: null,
-    error_code: "github_auth_status_failed",
-    error_message: "GitHub authentication status could not be read.",
-  };
+  return connectionProblem(
+    "failed",
+    "github_auth_status_failed",
+    "GitHub authentication status could not be read.",
+  );
 }
 
 export function parseAuthStatus(stdout: string): GitHubConnectionContract {

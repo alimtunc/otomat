@@ -2,6 +2,7 @@ import type { GitHubConnectionContract, GitHubDeviceAuthorization } from "@otoma
 
 import type { DeviceAuthorization } from "./device-flow.js";
 import { safeGitHubFailure } from "./errors.js";
+import { connectionProblem } from "./parse.js";
 import type { GitHubCli } from "./types.js";
 
 interface GitHubConnectionService {
@@ -22,13 +23,7 @@ function failedConnection(error: unknown): GitHubConnectionContract {
     code: "github_connection_failed",
     message: "GitHub connection failed unexpectedly.",
   });
-  return {
-    status: "failed",
-    login: null,
-    device_authorization: null,
-    error_code: failure.code,
-    error_message: failure.message,
-  };
+  return connectionProblem("failed", failure.code, failure.message);
 }
 
 export function createGitHubConnectionService(

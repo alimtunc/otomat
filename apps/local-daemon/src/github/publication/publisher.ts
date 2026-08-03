@@ -6,10 +6,9 @@ import type { GitWorktreeService, WorktreeRecord } from "#git";
 import { normalizePullRequestBody } from "../body.js";
 import { GitHubPublicationError } from "../errors.js";
 import type { PullRequestSelector, PullRequestView } from "../types.js";
-import { ensureProvider, metadataMatches, providerPatch } from "./provider.js";
+import { ensureProvider, providerPatch, refreshExistingPullRequest } from "./provider.js";
 import { PublicationStore } from "./store.js";
 import type {
-  ExistingPullRequestResult,
   ProviderResult,
   PublicationConfig,
   PublicationContext,
@@ -62,47 +61,6 @@ class PullRequestPublisher implements PullRequestPublicationService {
       throw new GitHubPublicationError("diff_empty", "The run has no changes to publish.");
     }
     return { worktrees, worktree };
-  }
-
-  private async refreshExisting(
-    row: PullRequestRow,
-    context: PublicationContext,
-  ): Promise<ExistingPullRequestResult> {
-    if (row.number === null || row.url === null) {
-      return { row, completedView: null, provider: null };
-    }
-    const provider = await this.config.cli.viewPullRequest(
-      context.worktree.path,
-      context.remote.repository,
-      row.number,
-    );
-    row = this.store.reconcileLifecycle(row, provider.lifecycle);
-    const hasPublishedSnapshot = row.published_head_sha !== null && row.published_diff_sha !== null;
-    if (hasPublishedSnapshot) row = this.store.reconcilePublication(row, "created");
-    if (provider.lifecycle === "merged" || provider.lifecycle === "closed") {
-      row = this.store.patch(
-        row,
-        {
-          head_ref: provider.headRef,
-          base_ref: provider.baseRef,
-          error_code: null,
-          error_message: null,
-        },
-        "github",
-      );
-      return { row, completedView: this.store.view(row), provider };
-    }
-    const current = this.store.view(row);
-    return {
-      row,
-      completedView:
-        hasPublishedSnapshot &&
-        current.hasUnpublishedChanges === false &&
-        metadataMatches(provider, context.request)
-          ? current
-          : null,
-      provider,
-    };
   }
 
   private async pushSnapshot(
@@ -221,7 +179,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
       }
       const remote = await this.config.cli.resolveRemote(worktree.path);
       const context = { run, worktrees, worktree, remote, request: publicationRequest };
-      const existing = await this.refreshExisting(row, context);
+      const existing = await refreshExistingPullRequest(this.store, this.config.cli, row, context);
       row = existing.row;
       if (existing.completedView) return existing.completedView;
       const pushed = await this.pushSnapshot(row, context);

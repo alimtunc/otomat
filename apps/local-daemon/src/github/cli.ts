@@ -9,6 +9,7 @@ import {
 } from "./cli-commands.js";
 import {
   authStatusFailed,
+  connectionProblem,
   MINIMUM_GH_VERSION,
   outdatedGhVersion,
   parseAuthStatus,
@@ -32,32 +33,22 @@ import type {
 async function cliAvailability(run: CommandRunner): Promise<GitHubConnectionContract | null> {
   const version = await run({ command: "gh", args: ["--version"], cwd: process.cwd() });
   if (version.errorCode === "ENOENT") {
-    return {
-      status: "not_installed",
-      login: null,
-      device_authorization: null,
-      error_code: "github_cli_missing",
-      error_message: "Install GitHub CLI to connect Otomat to GitHub.",
-    };
+    return connectionProblem(
+      "not_installed",
+      "github_cli_missing",
+      "Install GitHub CLI to connect Otomat to GitHub.",
+    );
   }
   if (version.exitCode !== 0 || version.errorCode) {
-    return {
-      status: "failed",
-      login: null,
-      device_authorization: null,
-      error_code: "github_cli_failed",
-      error_message: "GitHub CLI could not be started.",
-    };
+    return connectionProblem("failed", "github_cli_failed", "GitHub CLI could not be started.");
   }
   const outdated = outdatedGhVersion(version.stdout);
   if (outdated) {
-    return {
-      status: "cli_outdated",
-      login: null,
-      device_authorization: null,
-      error_code: "github_cli_outdated",
-      error_message: `GitHub CLI ${outdated} is too old; Otomat needs ${MINIMUM_GH_VERSION} or newer.`,
-    };
+    return connectionProblem(
+      "cli_outdated",
+      "github_cli_outdated",
+      `GitHub CLI ${outdated} is too old; Otomat needs ${MINIMUM_GH_VERSION} or newer.`,
+    );
   }
   return null;
 }
