@@ -1,6 +1,6 @@
 import type { RemoteHostErrorCode, RemoteHostPhase, RemoteHostStatus } from "@otomat/domain";
 
-export const REMOTE_PHASE_LABELS: Record<RemoteHostPhase, string> = {
+const REMOTE_PHASE_LABELS: Record<RemoteHostPhase, string> = {
   disconnected: "Disconnected",
   checking_host: "Checking host over SSH…",
   starting_daemon: "Starting the remote daemon…",
@@ -10,7 +10,7 @@ export const REMOTE_PHASE_LABELS: Record<RemoteHostPhase, string> = {
   error: "Connection failed",
 };
 
-export const REMOTE_ERROR_MESSAGES: Record<RemoteHostErrorCode, string> = {
+const REMOTE_ERROR_MESSAGES: Record<RemoteHostErrorCode, string> = {
   not_configured: "Configure the SSH alias first.",
   ssh_unreachable:
     "The host could not be reached over SSH. Check that connecting with `ssh` works from a terminal (keys, agent, host key already accepted).",

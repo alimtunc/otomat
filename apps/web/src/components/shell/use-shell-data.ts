@@ -1,125 +1,20 @@
-import { toast, type ProjectSummary } from "@otomat/ui";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { useDaemonStatus, useHealth, useProjects } from "@web/api/daemon/queries";
+import { useDaemonStatus, useHealth } from "@web/api/daemon/queries";
 import { useProjectRuns } from "@web/api/runs/queries";
-import { describeRemoteStatus } from "@web/components/settings/execution-host/status-labels";
-import {
-  parseProjectSwitcherKey,
-  projectSwitcherKey,
-} from "@web/components/shell/project-selection/host-key";
-import {
-  selectableProjects,
-  writeSelectedProjectId,
-} from "@web/components/shell/project-selection/selection";
-import { useProjectSelection } from "@web/components/shell/project-selection/use-selection";
-import { useHostProjects } from "@web/components/shell/use-host-projects";
-import { desktopBridge, remoteHostAlias } from "@web/lib/desktop-bridge";
-import { isProjectScopedDetail } from "@web/lib/project-navigation";
+import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
 import { isReviewable, isRunning } from "@web/lib/run/filters";
-
-function lastPathSegment(rootPath: string): string | undefined {
-  return rootPath.split("/").filter(Boolean).at(-1);
-}
 
 export function useShellData() {
   const { connectionState, lastSyncAt, retry } = useDaemonStatus();
   const health = useHealth();
-  const bridge = desktopBridge();
-  const activeHostId = bridge?.executionHostId ?? "local";
-  const hostAlias = remoteHostAlias();
-  const navigate = useNavigate();
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const projectsQuery = useProjects();
-  const hostProjects = useHostProjects();
-
-  // The auto-created bootstrap project has no repository and nothing can run in it; it never reaches the switcher.
-  const projects: ProjectSummary[] = selectableProjects(projectsQuery.data ?? []).map(
-    (project) => ({
-      id: project.id,
-      name: project.name,
-      repo: lastPathSegment(project.root_path),
-    }),
-  );
-
-  const { currentProjectId, selectProject: select } = useProjectSelection(projects);
-  const currentProject = projects.find((project) => project.id === currentProjectId);
-  const runs = useProjectRuns(currentProjectId);
-
-  const hostEntries = hostProjects.data ?? [];
-  const multiHost = hostEntries.length > 1;
-  const activeHostLabel =
-    hostEntries.find((entry) => entry.active)?.host.label ?? hostAlias ?? "Local";
-  const switcherProjects: ProjectSummary[] = [
-    ...projects.map((project) => ({
-      ...project,
-      id: projectSwitcherKey(activeHostId, project.id),
-      tag: multiHost ? activeHostLabel : undefined,
-    })),
-    ...hostEntries
-      .filter((entry) => !entry.active)
-      .flatMap((entry) =>
-        selectableProjects(entry.projects ?? []).map((project) => ({
-          id: projectSwitcherKey(entry.host.id, project.id),
-          name: project.name,
-          repo: lastPathSegment(project.root_path),
-          tag: entry.host.label,
-        })),
-      ),
-  ];
-  const hostOptions =
-    hostEntries.length > 0
-      ? hostEntries.map((entry) => ({
-          id: entry.host.id,
-          label: entry.host.label,
-          active: entry.active,
-        }))
-      : [{ id: "local" as const, label: "Local", active: true }];
-
-  // A detail view shows one entity of the old project; switching leaves it for the new project's issues.
-  function selectProject(switcherId: string): void {
-    const target = parseProjectSwitcherKey(switcherId, activeHostId);
-    if (target.hostId === activeHostId || bridge === null) {
-      select(target.projectId);
-      if (isProjectScopedDetail(pathname)) navigate({ to: "/issues" });
-      return;
-    }
-    // Cross-host: persist the choice so the reloaded renderer restores it, then re-point at that host's daemon.
-    const previous = currentProjectId;
-    if (isProjectScopedDetail(pathname)) void navigate({ to: "/issues" });
-    writeSelectedProjectId(target.projectId);
-    void bridge.executionHost
-      .select(target.hostId)
-      .then((result) => {
-        if (result.ok) return;
-        // A concurrent switch owns the persisted choice; only a real failure rolls it back.
-        const concurrent =
-          "status" in result &&
-          result.status.phase === "error" &&
-          result.status.code === "switch_in_progress";
-        if (!concurrent && previous !== undefined) writeSelectedProjectId(previous);
-        toast.error("message" in result ? result.message : describeRemoteStatus(result.status));
-      })
-      .catch((error: unknown) => {
-        if (previous !== undefined) writeSelectedProjectId(previous);
-        toast.error(error instanceof Error ? error.message : "Switching hosts failed.");
-      });
-  }
+  const switcher = useProjectSwitcher();
+  const runs = useProjectRuns(switcher.currentProjectId);
 
   return {
     connectionState,
     lastSyncAt,
     retry,
     daemonVersion: health.data?.version,
-    hostAlias,
-    hostOptions,
-    projects: switcherProjects,
-    currentProjectId,
-    currentSwitcherId:
-      currentProjectId === undefined
-        ? undefined
-        : projectSwitcherKey(activeHostId, currentProjectId),
-    selectProject,
-    projectLabel: currentProject?.repo ?? currentProject?.name,
+    ...switcher,
     hasLiveRun: (runs.data ?? []).some(isRunning),
     reviewCount: (runs.data ?? []).filter(isReviewable).length,
   };

@@ -1,6 +1,7 @@
 import type {
   ExecutionHostOperationResult,
   ExecutionHostSnapshot,
+  OtomatDesktopBridge,
   RemoteHostStatus,
 } from "@otomat/domain";
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
@@ -9,8 +10,15 @@ import { useEffect, useState } from "react";
 
 import { describeRemoteStatus } from "./status-labels";
 
+const EXECUTION_HOST_KEY = ["execution-host"] as const;
+
 function failureMessage(result: Extract<ExecutionHostOperationResult, { ok: false }>): string {
   return "status" in result ? describeRemoteStatus(result.status) : result.message;
+}
+
+function requireBridge(bridge: OtomatDesktopBridge | null): OtomatDesktopBridge {
+  if (bridge === null) throw new Error("The desktop bridge is not available.");
+  return bridge;
 }
 
 export interface UseExecutionHostResult {
@@ -34,20 +42,14 @@ export function useExecutionHost(): UseExecutionHostResult {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const snapshot = useQuery({
-    queryKey: ["execution-host"],
-    queryFn: () => {
-      if (bridge === null) throw new Error("The desktop bridge is not available.");
-      return bridge.executionHost.snapshot();
-    },
+    queryKey: EXECUTION_HOST_KEY,
+    queryFn: () => requireBridge(bridge).executionHost.snapshot(),
     enabled: bridge !== null,
   });
 
   const aliasesQuery = useQuery({
     queryKey: ["execution-host-aliases"],
-    queryFn: () => {
-      if (bridge === null) throw new Error("The desktop bridge is not available.");
-      return bridge.executionHost.listSshAliases();
-    },
+    queryFn: () => requireBridge(bridge).executionHost.listSshAliases(),
     enabled: bridge !== null,
   });
 
@@ -56,7 +58,7 @@ export function useExecutionHost(): UseExecutionHostResult {
     if (bridge === null) return;
     return bridge.executionHost.onRemoteStatus((status) => {
       setLiveStatus(status);
-      void client.invalidateQueries({ queryKey: ["execution-host"] });
+      void client.invalidateQueries({ queryKey: EXECUTION_HOST_KEY });
     });
   }, [bridge, client]);
 
@@ -79,7 +81,7 @@ export function useExecutionHost(): UseExecutionHostResult {
       return false;
     } finally {
       setPending(null);
-      void client.invalidateQueries({ queryKey: ["execution-host"] });
+      void client.invalidateQueries({ queryKey: EXECUTION_HOST_KEY });
     }
   }
 
@@ -91,14 +93,10 @@ export function useExecutionHost(): UseExecutionHostResult {
     pending,
     actionError,
     configureRemote: (sshAlias: string) =>
-      runHostAction("configure", () => {
-        if (bridge === null) throw new Error("The desktop bridge is not available.");
-        return bridge.executionHost.configureRemote(sshAlias);
-      }),
+      runHostAction("configure", () =>
+        requireBridge(bridge).executionHost.configureRemote(sshAlias),
+      ),
     removeRemote: () =>
-      runHostAction("remove", () => {
-        if (bridge === null) throw new Error("The desktop bridge is not available.");
-        return bridge.executionHost.removeRemote();
-      }),
+      runHostAction("remove", () => requireBridge(bridge).executionHost.removeRemote()),
   };
 }

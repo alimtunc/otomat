@@ -29,7 +29,6 @@ export interface ProjectSwitcherProps {
   onSelect: (id: string) => void;
   collapsed?: boolean;
   loading?: boolean;
-  onConfigure?: () => void;
   /** Renders an "Add project…" footer action; also replaces the empty-state hint when provided. */
   onAddProject?: () => void;
 }
@@ -60,7 +59,6 @@ export function ProjectSwitcher({
   onSelect,
   collapsed = false,
   loading = false,
-  onConfigure,
   onAddProject,
 }: ProjectSwitcherProps) {
   const [open, setOpen] = useState(false);
@@ -139,8 +137,7 @@ export function ProjectSwitcher({
               variant="ghost"
               onClick={() => {
                 setOpen(false);
-                if (onAddProject) onAddProject();
-                else onConfigure?.();
+                onAddProject?.();
               }}
               className="h-auto w-full justify-start gap-2 px-2.5 py-3 text-sm"
             >
