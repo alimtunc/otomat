@@ -101,7 +101,16 @@ export class HostCatalog {
       });
       const payload: unknown = await response.json();
       if (response.status === 201) {
-        return { ok: true, project: registerRepositoryResponseSchema.parse(payload).project };
+        const created = registerRepositoryResponseSchema.safeParse(payload);
+        if (!created.success) {
+          // The project exists on the daemon; only this response was unreadable (likely version skew).
+          return {
+            ok: false,
+            message:
+              "The daemon registered the repository but answered in an unknown format; refresh the project list.",
+          };
+        }
+        return { ok: true, project: created.data.project };
       }
       const refusal = repositoryRegistrationErrorSchema.safeParse(payload);
       return {

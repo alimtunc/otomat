@@ -21,6 +21,17 @@ describe("GitHub connection contract", () => {
     });
   });
 
+  it("parses a pre-field daemon payload without device_authorization", () => {
+    expect(
+      githubConnectionContractSchema.parse({
+        status: "disconnected",
+        login: null,
+        error_code: null,
+        error_message: null,
+      }).device_authorization,
+    ).toBeNull();
+  });
+
   it("surfaces the device sign-in code while a headless login is pending", () => {
     expect(
       githubConnectionContractSchema.parse({

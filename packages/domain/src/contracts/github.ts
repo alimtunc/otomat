@@ -18,7 +18,8 @@ export type GitHubDeviceAuthorization = z.infer<typeof githubDeviceAuthorization
 export const githubConnectionContractSchema = z.object({
   status: z.enum(GITHUB_CONNECTION_STATES),
   login: z.string().nullable(),
-  device_authorization: githubDeviceAuthorizationSchema.nullable(),
+  /** Defaulted so a pre-field daemon's connection payload still parses. */
+  device_authorization: githubDeviceAuthorizationSchema.nullable().default(null),
   error_code: z.string().nullable(),
   error_message: z.string().nullable(),
 });

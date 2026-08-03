@@ -410,6 +410,30 @@ describe("GitHubService", () => {
     expect(result.row.head_ref).toBe("feat/add-note");
   });
 
+  it("keeps the chosen head branch across a failed create so a retry targets it", async () => {
+    cli.createError = new GitHubCliError(
+      "github_pr_create_failed",
+      "GitHub could not create the pull request.",
+    );
+    const github = service();
+
+    const failed = await github.publish(run(), {
+      title: "Ship it",
+      body: "Details",
+      head_ref: "feat/add-note",
+    });
+    expect(failed.row.publication_status).toBe("failed");
+    expect(failed.row.head_ref).toBe("feat/add-note");
+
+    cli.createError = null;
+    cli.provider = { ...cli.provider, headRef: "feat/add-note" };
+    const retried = await github.publish(run(), { title: "Ship it", body: "Details" });
+
+    expect(retried.row.publication_status).toBe("created");
+    expect(cli.pushedBranches).toEqual(["feat/add-note", "feat/add-note"]);
+    expect(cli.createInput?.head).toBe("feat/add-note");
+  });
+
   it("targets the run's frozen fork branch, never the repository default", async () => {
     repo.git("branch", "feature-base");
     const forked = worktrees.acquire({

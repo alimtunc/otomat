@@ -49,6 +49,28 @@ it("waits for child exit and preserves output after stdin closes early", async (
   }
 });
 
+it("kills a child that outlives its timeout and reports timed_out", async () => {
+  const result = await runCommand({
+    command: process.execPath,
+    args: ["-e", "setTimeout(()=>{},10_000)"],
+    cwd: process.cwd(),
+    timeoutMs: 100,
+  });
+
+  expect(result).toMatchObject({ exitCode: null, errorCode: "timed_out" });
+});
+
+it("leaves a child that finishes within its timeout untouched", async () => {
+  const result = await runCommand({
+    command: process.execPath,
+    args: ["-e", "process.stdout.write('quick')"],
+    cwd: process.cwd(),
+    timeoutMs: 5_000,
+  });
+
+  expect(result).toEqual({ stdout: "quick", stderr: "", exitCode: 0 });
+});
+
 it("decodes a multibyte stdout character split across chunks", async () => {
   const result = await runCommand({
     command: process.execPath,

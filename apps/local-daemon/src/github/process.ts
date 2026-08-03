@@ -38,9 +38,11 @@ export function runCommand(request: CommandRequest): Promise<CommandResult> {
       shell: false,
       stdio: ["pipe", "pipe", "pipe"],
     });
+    let timer: NodeJS.Timeout | null = null;
     const finish = (exitCode: number | null, errorCode?: string) => {
       if (settled) return;
       settled = true;
+      if (timer !== null) clearTimeout(timer);
       resolve({
         stdout: stdout.finish(),
         stderr: stderr.finish(),
@@ -48,6 +50,12 @@ export function runCommand(request: CommandRequest): Promise<CommandResult> {
         ...(errorCode ? { errorCode } : {}),
       });
     };
+    if (request.timeoutMs !== undefined) {
+      timer = setTimeout(() => {
+        child.kill("SIGKILL");
+        finish(null, "timed_out");
+      }, request.timeoutMs);
+    }
 
     child.stdout.on("data", (chunk: Buffer) => stdout.write(chunk));
     child.stderr.on("data", (chunk: Buffer) => stderr.write(chunk));

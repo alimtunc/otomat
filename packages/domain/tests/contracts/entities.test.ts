@@ -1,6 +1,22 @@
 import { describe, expect, it } from "vitest";
 
 import { pullRequestContractSchema } from "#domain/contracts/entities/pull-request";
+import { repositoryContractSchema } from "#domain/contracts/entities/workspace";
+
+describe("repository contract", () => {
+  it("parses a pre-field daemon payload without init_commands", () => {
+    expect(
+      repositoryContractSchema.parse({
+        id: "r1",
+        project_id: "p1",
+        name: "app",
+        remote_url: null,
+        default_branch: "main",
+        available: true,
+      }).init_commands,
+    ).toEqual([]);
+  });
+});
 
 describe("pull request contract", () => {
   it("separates provider lifecycle from durable publication state", () => {

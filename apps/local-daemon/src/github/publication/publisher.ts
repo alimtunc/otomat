@@ -109,12 +109,19 @@ class PullRequestPublisher implements PullRequestPublicationService {
     row: PullRequestRow,
     context: PublicationContext,
   ): Promise<PushedSnapshot> {
+    // An existing PR's head is its identity; only a first publish may pick a nicer remote name.
+    const head =
+      row.number !== null
+        ? (row.head_ref ?? context.worktree.branch)
+        : (context.request.head_ref ?? row.head_ref ?? context.worktree.branch);
     row = this.store.transition(
       row,
       "pushing",
       {
         title: context.request.title,
         body: context.request.normalizedBody,
+        // Persisted before the push so a retry after a failed create targets the same branch.
+        head_ref: head,
         error_code: null,
         error_message: null,
       },
@@ -123,11 +130,6 @@ class PullRequestPublisher implements PullRequestPublicationService {
     const snapshot = context.worktrees.snapshot(context.run.id);
     // Re-read after snapshot(): the commit moves the tree, and this diff is the published anchor.
     const diff = context.worktrees.diff(context.run.id);
-    // An existing PR's head is its identity; only a first publish may pick a nicer remote name.
-    const head =
-      row.number !== null
-        ? (row.head_ref ?? context.worktree.branch)
-        : (context.request.head_ref ?? row.head_ref ?? context.worktree.branch);
     await this.config.cli.push(context.worktree.path, context.remote.name, head);
     return {
       row,

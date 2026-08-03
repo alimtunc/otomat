@@ -11,6 +11,7 @@ import type {
 } from "./types.js";
 
 const PATCH_BUDGET_CHARS = 40_000;
+const DRAFT_TIMEOUT_MS = 180_000;
 
 const draftOutputSchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -118,9 +119,16 @@ export function createPullRequestDrafter(run: CommandRunner): PullRequestDrafter
         args: invocation.args,
         cwd: input.cwd,
         stdin: draftPrompt(input),
+        timeoutMs: DRAFT_TIMEOUT_MS,
       });
+      if (result.errorCode === "timed_out") {
+        throw new GitHubPublicationError(
+          "pr_draft_failed",
+          `The agent did not answer within ${String(DRAFT_TIMEOUT_MS / 1000)} seconds.`,
+        );
+      }
       if (result.exitCode !== 0 || result.errorCode) {
-        const detail = result.stderr.trim().split("\n").at(-1) ?? "";
+        const detail = result.stderr.trim().split("\n").at(-1) || (result.errorCode ?? "");
         throw new GitHubPublicationError(
           "pr_draft_failed",
           `The agent could not draft the pull request${detail === "" ? "." : ` (${detail.slice(0, 200)})`}`,

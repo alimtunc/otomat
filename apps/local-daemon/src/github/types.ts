@@ -31,6 +31,8 @@ export interface CommandRequest {
   args: string[];
   cwd: string;
   stdin?: string;
+  /** Kills the child and resolves with `errorCode: "timed_out"` when it outlives this. */
+  timeoutMs?: number;
 }
 
 export interface CommandResult {

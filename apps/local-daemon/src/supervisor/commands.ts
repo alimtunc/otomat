@@ -61,6 +61,16 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
     return spawnResumeTurn(state, run, prompt);
   }
 
+  // No session ever started: the daemon died during (or right after) worktree init, and
+  // nothing recorded whether it finished — re-run it before any agent sees the checkout.
+  if (listAgentSessionsForRun(state.db, runId).length === 0) {
+    const initCommands = repositoryInitCommands(state.db, run.repository_id);
+    if (initCommands.length > 0) {
+      scheduleWorktreeInit(state, run, initCommands);
+      return requireRunRow(state.db, runId, "resume");
+    }
+  }
+
   const started = await startNextReadyStep(state, run);
   if (started) return requireRunRow(state.db, runId, "resume");
 

@@ -30,6 +30,13 @@ desktop app stays the UI. This document is the contract for that mode.
   manages the host list and the SSH alias. When an alias is configured, the
   tunnel is warmed in the background at boot (and kept alive on a switch to
   local) so the other host's projects stay listable.
+- **Projects are managed from the switcher, on either host.** "Add project…"
+  registers a repository path on the chosen host's daemon over its HTTP API,
+  with honest typed refusals while that host's tunnel is not connected yet.
+  Projects whose daemon reports `has_repository: false` (the auto-created
+  bootstrap project before any repository is registered) are hidden from the
+  switcher. "Remove host" only forgets the alias and closes the tunnel — the
+  remote daemon and its data stay on the server.
 
 ## Host conventions
 
@@ -95,8 +102,8 @@ Everything lives in `apps/desktop/src/main/remote/`:
 | `bootstrap-status.ts`   | resolving one start-or-verify round trip into a typed failure or the running-daemon detail |
 | `tunnel.ts`             | the `ssh -N -L` child (loopback→loopback, `ExitOnForwardFailure`)    |
 | `session.ts`            | phase machine: checking_host → starting_daemon → opening_tunnel → connected, reconnect loop with capped backoff |
-| `host-projects.ts`      | one host's schema-valid project catalog fetch; unreachable yields null, logged |
-| `manager.ts`            | persisted selection, project-driven switching, boot re-activation, aggregated per-host project listing |
+| `host-projects.ts`      | `HostCatalog`: aggregated per-host catalog listing + project registration over the host daemon's HTTP API; an unreachable host yields null, logged |
+| `manager.ts`            | persisted selection, project-driven switching, boot re-activation, host configure/remove |
 | `stale-daemon.ts`       | restarts a redeployed-but-stale remote daemon once it is idle (never with a run in flight; one attempt per observed build) |
 | `ipc-actions.ts`        | renderer-facing IPC actions with honest not-ready fallbacks          |
 

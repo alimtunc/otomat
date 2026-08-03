@@ -228,6 +228,43 @@ it("registers on the remote daemon through the tunnel once connected, and refuse
   );
 });
 
+it("names an unreadable 201 body instead of blaming connectivity", async () => {
+  const fetchImpl = vi.fn(
+    async () =>
+      ({
+        status: 201,
+        ok: true,
+        json: async () => ({ project: { id: "p-new" } }),
+      }) as Response,
+  );
+  const { manager } = makeManager({ fetchImpl });
+
+  const result = await manager.registerProject("local", "/repos/app");
+
+  expect(result).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("unknown format") as string,
+  });
+});
+
+it("re-arms a session settled on error at the next background warm-up", async () => {
+  const { manager, sessions } = makeManager({
+    connectResult: { phase: "error", code: "ssh_unreachable", detail: null },
+  });
+  manager.configureRemote("otomat-vps");
+  const session = sessions[0];
+  expect(session?.status.phase).toBe("error");
+
+  const failed = await manager.select("remote");
+  expect(failed).toMatchObject({ ok: false });
+  expect(session?.lastRetryFlag).toBe(false);
+
+  await manager.listProjects();
+
+  expect(session?.lastRetryFlag).toBe(true);
+  expect(sessions).toHaveLength(1);
+});
+
 it("surfaces the daemon's registration refusal verbatim", async () => {
   const fetchImpl = vi.fn(
     async () =>

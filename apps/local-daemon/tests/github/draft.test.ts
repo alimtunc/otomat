@@ -76,6 +76,25 @@ describe("pull request drafter", () => {
     });
   });
 
+  it("bounds the agent invocation and names the deadline when it expires", async () => {
+    const fake = runner([{ stdout: "", stderr: "", exitCode: null, errorCode: "timed_out" }]);
+
+    await expect(createPullRequestDrafter(fake.run).draft(INPUT)).rejects.toMatchObject({
+      code: "pr_draft_failed",
+      message: expect.stringContaining("did not answer within") as string,
+    });
+    expect(fake.requests[0]?.timeoutMs).toBeGreaterThan(0);
+  });
+
+  it("names the spawn error code when the agent fails without stderr", async () => {
+    const fake = runner([{ stdout: "", stderr: "", exitCode: null, errorCode: "ENOENT" }]);
+
+    await expect(createPullRequestDrafter(fake.run).draft(INPUT)).rejects.toMatchObject({
+      code: "pr_draft_failed",
+      message: expect.stringContaining("ENOENT") as string,
+    });
+  });
+
   it("rejects output without a parsable JSON draft", async () => {
     const fake = runner([{ stdout: "I could not decide.", stderr: "", exitCode: 0 }]);
 

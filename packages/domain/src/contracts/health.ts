@@ -13,7 +13,7 @@ export const healthResponseSchema = z.object({
   status: z.literal("ok"),
   name: z.string(),
   version: z.string(),
-  /** Git commit the daemon was built from (baked into the dist bundle); null for an unstamped source run. Defaulted so a daemon deployed before the field existed still parses — and can then be auto-restarted. */
+  /** Git commit the daemon was built from (baked into the dist bundle); null for an unstamped source run. Defaulted so a daemon deployed before the field existed still parses; a null build is never treated as stale, so such a daemon is not auto-restarted. */
   build: z.string().nullable().default(null),
   started_at: z.iso.datetime(),
   db_path: z.string(),

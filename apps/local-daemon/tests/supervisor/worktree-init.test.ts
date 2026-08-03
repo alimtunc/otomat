@@ -57,6 +57,30 @@ it("fails the run honestly when an init command exits non-zero, never spawning t
   expect(terminal?.payload).toMatchObject({ phase: "final", final_status: "failed" });
 });
 
+it("re-runs init on resume when the daemon died before any agent started", async () => {
+  updateRepositoryInitCommands(fix.db, "repo-1", ["sleep 0.5", "echo second-command"]);
+  const first = makeSupervisor(fix, "complete");
+
+  const run = await first.supervisor.start({ prompt: "interrupted init" });
+  expect(run.status).toBe("preparing");
+  await first.supervisor.shutdown(0);
+  expect(getRun(fix.db, run.id)?.status).toBe("preparing");
+  expect(first.spawn.calls).toBe(0);
+
+  const second = makeSupervisor(fix, "complete");
+  second.supervisor.reconcile();
+  expect(getRun(fix.db, run.id)?.status).toBe("awaiting_human");
+
+  const resumed = await second.supervisor.resume(run.id);
+  expect(resumed.status).toBe("preparing");
+  expect(await waitFor(() => getRun(fix.db, run.id)?.status === "review_ready")).toBe(true);
+  expect(second.spawn.calls).toBe(1);
+
+  const texts = logTexts(run.id);
+  expect(texts.filter((text) => text.includes("worktree init: $ sleep 0.5"))).toHaveLength(2);
+  expect(texts).toContain("second-command");
+});
+
 it("launches immediately when the repository has no init commands", async () => {
   const { supervisor } = makeSupervisor(fix, "complete");
 

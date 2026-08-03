@@ -19,8 +19,8 @@ export const repositoryContractSchema = z.object({
   name: z.string().min(1),
   remote_url: z.string().nullable(),
   default_branch: z.string(),
-  /** Shell commands the daemon runs in every fresh run worktree before the first agent turn. */
-  init_commands: z.array(z.string()),
+  /** Shell commands the daemon runs in every fresh run worktree before the first agent turn; defaulted so pre-field daemons' repositories still parse. */
+  init_commands: z.array(z.string()).default([]),
   /** Whether the daemon can still fork a worktree from it right now; a moved or deleted root reads false. */
   available: z.boolean(),
 });

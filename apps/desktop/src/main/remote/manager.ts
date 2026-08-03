@@ -222,9 +222,15 @@ export class ExecutionHostManager {
 
   private ensureBackgroundRemote(): void {
     const alias = this.remoteSshAlias;
-    if (alias === null || this.session !== null) return;
-    this.session = this.createSession(alias);
-    void this.session.connect(true);
+    if (alias === null) return;
+    if (this.session === null) {
+      this.session = this.createSession(alias);
+      void this.session.connect(true);
+      return;
+    }
+    // A failed explicit switch settles the session on `error` with its retry loop canceled;
+    // the next warm-up re-arms it so the host keeps healing in the background.
+    if (this.session.status.phase === "error") void this.session.connect(true);
   }
 
   private createSession(alias: string): RemoteSessionHandle {
