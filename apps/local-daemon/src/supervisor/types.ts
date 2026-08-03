@@ -22,6 +22,8 @@ export interface TurnContext {
   worktreePath: string;
   /** Runtime adapter id the worker instantiates; persisted on the run via its agent row. */
   runtime: KnownRuntimeId;
+  /** Repository init commands to run in `worktreePath` before the provider spawns. Compete candidates only: the run's canonical worktree is initialized at launch. */
+  worktreeInit?: { commands: string[]; label: string };
   /** Effective agent config frozen for this step; null on runs launched before profiles existed. Drives guidance/skills/options at the worker. */
   config: ResolvedAgentConfig | null;
 }

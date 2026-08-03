@@ -7,9 +7,11 @@ import {
   listCompeteGroupsForRun,
   listStepRunsForRun,
   schema,
+  updateRepositoryInitCommands,
 } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
+import { readRunEvents } from "#events";
 import { createRepositoryResolver, type RepositoryResolver } from "#git";
 import { createSupervisor, RunNotResumableError } from "#supervisor";
 
@@ -55,12 +57,16 @@ const UNAVAILABLE_REPOSITORIES: RepositoryResolver = {
   forRun: () => null,
 };
 
-function makeCompeteSupervisor(behavior: Parameters<typeof workerSpawn>[0] = "complete"): {
+function makeCompeteSupervisor(
+  behavior: Parameters<typeof workerSpawn>[0] = "complete",
+  onJob?: (job: Parameters<ReturnType<typeof workerSpawn>>[0]) => void,
+): {
   supervisor: ReturnType<typeof createSupervisor>;
   spawn: ReturnType<typeof workerSpawn>;
 } {
   const worker = workerSpawn(behavior);
   const spawn = (job: Parameters<typeof worker>[0]) => {
+    onJob?.(job);
     if (job.prompt !== "verify" && job.worktreePath) {
       const choice = job.prompt.includes("Candidate instructions:\nlayered") ? "layered" : "direct";
       writeFileSync(join(job.worktreePath, "choice.txt"), `${choice}\n`);
@@ -138,6 +144,81 @@ it("runs competitors in isolated worktrees, waits for a winner, then continues o
   ).toSatisfy((worktrees: Array<{ status: string }>) =>
     worktrees.every((worktree) => worktree.status === "archived"),
   );
+});
+
+it("initializes every candidate worktree before its agent starts", async () => {
+  updateRepositoryInitCommands(fix.db, "repo-1", ["touch init-marker"]);
+  const markerAtSpawn = new Map<string, boolean>();
+  const { supervisor, spawn } = makeCompeteSupervisor("complete", (job) => {
+    markerAtSpawn.set(job.stepRunId, existsSync(join(job.worktreePath, "init-marker")));
+  });
+
+  const run = await supervisor.start({ prompt: "the goal", plan: COMPETE_PLAN });
+  await supervisor.settle();
+
+  expect(getRun(fix.db, run.id)?.status).toBe("awaiting_selection");
+  expect(spawn.calls).toBe(2);
+  expect(markerAtSpawn.size).toBe(2);
+  expect([...markerAtSpawn.values()]).toEqual([true, true]);
+
+  const texts = readRunEvents(fix.db, run.id)
+    .filter((event) => event.type === "runtime.log")
+    .map((event) => (event.payload as { text?: string }).text ?? "");
+  expect(texts).toContain("[otomat] worktree init: $ touch init-marker");
+  expect(texts).toContain("[otomat] worktree init [Direct]: $ touch init-marker");
+  expect(texts).toContain("[otomat] worktree init [Layered]: $ touch init-marker");
+});
+
+it("fails only the candidate whose init fails, keeping the group selectable", async () => {
+  // The canonical worktree always initializes before any candidate, so the sentinel marks it; candidates then race for the atomic mkdir and exactly one init fails.
+  const sentinel = join(fix.dataDir, "canonical-init-done");
+  const gate = join(fix.dataDir, "init-gate");
+  updateRepositoryInitCommands(fix.db, "repo-1", [
+    `[ -e "${sentinel}" ] || { touch "${sentinel}"; exit 0; }; mkdir "${gate}" 2>/dev/null || exit 7`,
+  ]);
+  const { supervisor, spawn } = makeCompeteSupervisor();
+
+  const run = await supervisor.start({ prompt: "the goal", plan: COMPETE_PLAN });
+  await supervisor.settle();
+
+  expect(getRun(fix.db, run.id)?.status).toBe("awaiting_selection");
+  expect(spawn.calls).toBe(1);
+  const [group] = listCompeteGroupsForRun(fix.db, run.id);
+  expect(group?.status).toBe("awaiting_selection");
+  const candidates = listStepRunsForRun(fix.db, run.id).filter(
+    (step) => step.compete_group_id === group?.id,
+  );
+  expect(candidates.map((step) => step.status).toSorted()).toEqual(["stale", "succeeded"]);
+
+  const winner = candidates.find((step) => step.status === "succeeded");
+  if (!group || !winner) throw new Error("expected a selectable compete group");
+  await supervisor.selectWinner(run.id, group.id, winner.id);
+  await supervisor.settle();
+
+  expect(getRun(fix.db, run.id)?.status).toBe("review_ready");
+  expect(spawn.calls).toBe(2);
+});
+
+it("fails the run when every candidate's init fails, never spawning an agent", async () => {
+  // The canonical init passes and plants the sentinel; every candidate init then sees it and fails.
+  const sentinel = join(fix.dataDir, "canonical-init-done");
+  updateRepositoryInitCommands(fix.db, "repo-1", [
+    `[ ! -e "${sentinel}" ] || exit 3`,
+    `touch "${sentinel}"`,
+  ]);
+  const { supervisor, spawn } = makeCompeteSupervisor();
+
+  const run = await supervisor.start({ prompt: "the goal", plan: COMPETE_PLAN });
+  await supervisor.settle();
+
+  expect(getRun(fix.db, run.id)?.status).toBe("failed");
+  expect(spawn.calls).toBe(0);
+  expect(listCompeteGroupsForRun(fix.db, run.id)[0]?.status).toBe("failed");
+  const steps = listStepRunsForRun(fix.db, run.id);
+  expect(steps.filter((step) => step.compete_group_id !== null).map((step) => step.status)).toEqual(
+    ["stale", "stale"],
+  );
+  expect(steps.find((step) => step.compete_group_id === null)?.status).toBe("canceled");
 });
 
 it("rejects a compete launch before writing rows when the project has no repository", async () => {

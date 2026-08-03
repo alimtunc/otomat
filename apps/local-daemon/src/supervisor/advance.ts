@@ -20,6 +20,7 @@ import {
 
 import { emitLedgerEvent, sessionDir } from "#events";
 
+import { repositoryInitCommands } from "./init-commands.js";
 import { spawnTurn } from "./lifecycle.js";
 import { buildTerminalMarker } from "./markers.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
@@ -107,6 +108,8 @@ async function startCompeteGroup(
     updateCompeteGroupBase(state.db, group.id, binding.service.snapshot(run.id).headSha);
   }
 
+  // Candidates fork from tracked files only, so each fresh worktree re-runs the repository's init commands before its agent starts.
+  const initCommands = repositoryInitCommands(state.db, run.repository_id);
   const acquiredOwners: string[] = [];
   let contexts: TurnContext[];
   try {
@@ -118,7 +121,10 @@ async function startCompeteGroup(
       });
       acquiredOwners.push(competitor.id);
       attachStepWorktree(state.db, competitor.id, worktree.id);
-      return insertTurn(state, run, competitor, worktree.path);
+      const ctx = insertTurn(state, run, competitor, worktree.path);
+      return initCommands.length === 0
+        ? ctx
+        : { ...ctx, worktreeInit: { commands: initCommands, label: competitor.name } };
     });
   } catch (error) {
     for (const owner of acquiredOwners) {

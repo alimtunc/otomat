@@ -1,43 +1,13 @@
-import { getRepository, getRun, listStepRunsForRun, type Db, type RunRow } from "@otomat/db";
+import { getRun, listStepRunsForRun, type RunRow } from "@otomat/db";
 import { runMachine } from "@otomat/domain";
 
 import { emitLedgerEvent } from "#events";
-import { buildRuntimeEvent } from "#runtime";
-import { runCliProcess } from "#runtime/cli/process-runner";
 
 import { startNextReadyStep } from "./advance.js";
+import { emitInitLog, runInitCommandBatch } from "./init-commands.js";
 import { buildTerminalMarker } from "./markers.js";
 import { hasRunActivity, notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveIdleRunTo, driveRunTo } from "./transitions.js";
-import { SUPERVISOR_ADAPTER } from "./types.js";
-
-export function repositoryInitCommands(db: Db, repositoryId: string | null): string[] {
-  if (repositoryId === null) return [];
-  return getRepository(db, repositoryId)?.init_commands_json ?? [];
-}
-
-function emitInitLog(
-  state: SupervisorState,
-  runId: string,
-  stream: "stdout" | "stderr",
-  text: string,
-): void {
-  emitLedgerEvent(
-    state.db,
-    state.dataDir,
-    runId,
-    buildRuntimeEvent({
-      runId,
-      kind: "runtime.log",
-      type: "runtime.log",
-      source: "otomat",
-      adapter: SUPERVISOR_ADAPTER,
-      fidelity: "raw_log",
-      occurredAt: new Date().toISOString(),
-      payload: { stream, text },
-    }),
-  );
-}
 
 /** True when the run may keep initializing; anything settled elsewhere stops silently. */
 function runStillPreparing(state: SupervisorState, runId: string): boolean {
@@ -58,25 +28,12 @@ async function performWorktreeInit(
     throw new Error(`run ${run.id} cannot run worktree init without its worktree`);
   }
   driveRunTo(state.db, run.id, run.status, "preparing", new Date().toISOString());
-  for (const command of commands) {
-    if (!runStillPreparing(state, run.id)) return false;
-    emitInitLog(state, run.id, "stderr", `[otomat] worktree init: $ ${command}`);
-    const exit = await runCliProcess({
-      command: "bash",
-      args: ["-lc", command],
-      cwd: worktreePath,
-      stdin: "",
-      signal: new AbortController().signal,
-      onStdoutLine: (line) => emitInitLog(state, run.id, "stdout", line),
-      onStderrLine: (line) => emitInitLog(state, run.id, "stderr", line),
-    });
-    if (exit.code !== 0) {
-      const outcome =
-        exit.code === null ? `signal ${exit.signal ?? "unknown"}` : `exit ${exit.code}`;
-      throw new Error(`worktree init command \`${command}\` failed (${outcome})`);
-    }
-  }
-  return runStillPreparing(state, run.id);
+  return runInitCommandBatch(state, run.id, {
+    worktreePath,
+    commands,
+    label: null,
+    shouldContinue: () => runStillPreparing(state, run.id),
+  });
 }
 
 function failWorktreeInit(state: SupervisorState, runId: string, error: unknown): void {

@@ -11,6 +11,7 @@ import { executableSteps, isRunPlanCompeteGroup, type StartRunRequest } from "@o
 import { sessionDir } from "#events";
 
 import { scheduleTurn, startNextReadyStep } from "./advance.js";
+import { repositoryInitCommands } from "./init-commands.js";
 import { prepareRun } from "./prepare.js";
 import {
   requireResumableRun,
@@ -22,7 +23,7 @@ import {
 import type { SupervisorState } from "./state.js";
 import { driveCompeteGroupTo } from "./transitions.js";
 import type { TurnContext } from "./types.js";
-import { repositoryInitCommands, scheduleWorktreeInit } from "./worktree-init.js";
+import { scheduleWorktreeInit } from "./worktree-init.js";
 
 /**
  * Starts a fresh run. Side effect: when the request omits `issue_id`, a local `issue`

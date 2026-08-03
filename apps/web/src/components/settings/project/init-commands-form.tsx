@@ -29,7 +29,7 @@ export function InitCommandsForm({ repository }: { repository: RepositoryContrac
         );
       }}
     >
-      <Field hint="One shell command per line, run in the run's fresh worktree before the agent starts (compete candidate worktrees skip them). A failing command fails the run.">
+      <Field hint="One shell command per line, run in every fresh worktree — the run's and each compete candidate's — before the agent starts. A failing command fails the run, or just that candidate.">
         <FieldLabel>Worktree init commands</FieldLabel>
         <FieldControl>
           <Textarea

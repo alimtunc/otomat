@@ -10,6 +10,7 @@ import { agentSessionMachine, runMachine, stepRunMachine } from "@otomat/domain"
 import { startSessionTail } from "#events";
 
 import { waitForWorkerIdentity } from "./identity.js";
+import { runInitCommandBatch } from "./init-commands.js";
 import { settleRun } from "./settle/index.js";
 import { clearWorkerStartEvidence } from "./start-gate.js";
 import { notifyAfterSettle, type SupervisorState } from "./state.js";
@@ -129,6 +130,27 @@ export async function spawnTurn(
     }
 
     advanceToRunning(state, ctx);
+    // A compete candidate's fresh worktree initializes here, inside the slot; a failing command lands in the catch below and settles the candidate like any other spawn failure.
+    if (ctx.worktreeInit !== undefined) {
+      const initialized = await runInitCommandBatch(state, ctx.runId, {
+        worktreePath: ctx.worktreePath,
+        commands: ctx.worktreeInit.commands,
+        label: ctx.worktreeInit.label,
+        shouldContinue: () => {
+          const live = getRun(db, ctx.runId);
+          return (
+            live !== undefined &&
+            !runMachine.isTerminal(live.status) &&
+            !aborting.has(ctx.runId) &&
+            !state.shuttingDown
+          );
+        },
+      });
+      if (!initialized) {
+        release();
+        return false;
+      }
+    }
     // Wipe the previous turn's gate trace first, so what this one leaves behind speaks only for itself.
     clearWorkerStartEvidence(ctx.agentSessionDir);
     proc = state.spawn({ ...ctx, mode, providerSessionId });
