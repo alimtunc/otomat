@@ -129,7 +129,6 @@ export class DesktopApp {
         userData: this.userData,
         userPath: this.userPath,
         expectedBuild: resolveExpectedBuild((message) => this.log.write(message)),
-        daemonUrl: () => this.ipcState.daemonUrl,
         localDaemonUrl: () => this.localDaemonUrl,
         onRemoteStatus: (status) => this.sendRemoteStatus(status),
         applyRendererUrl: (url) => this.applyRendererUrl(url),

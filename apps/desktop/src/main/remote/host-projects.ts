@@ -12,7 +12,7 @@ import type { RemoteSessionHandle } from "./session.js";
 import { StaleDaemonRefresher } from "./stale-daemon.js";
 
 /** One host's project catalog over plain HTTP; unreachable or invalid reads null (logged), never an error. */
-export async function fetchProjectCatalog(
+async function fetchProjectCatalog(
   baseUrl: string,
   fetchImpl: typeof fetch,
   log: (message: string) => void,

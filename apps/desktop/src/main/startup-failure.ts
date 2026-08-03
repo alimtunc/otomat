@@ -41,7 +41,7 @@ export function attachAvailableBackup(
   }
 }
 
-export function isRecoverableStartupDiagnostic(
+function isRecoverableStartupDiagnostic(
   diagnostic: DesktopStartupDiagnostic,
 ): diagnostic is Extract<DesktopStartupDiagnostic, { code: RecoverableDataSafetyErrorCode }> {
   return (

@@ -102,9 +102,7 @@ export class RemoteHostSession implements RemoteSessionHandle {
       // Nothing was torn down yet: the session keeps serving the old daemon and the caller may retry.
       throw new Error(`remote daemon stop exited ${String(stop.code)}: ${trimDetail(stop.stderr)}`);
     }
-    const tunnel = this.tunnel;
-    this.tunnel = null;
-    if (tunnel !== null) await tunnel.stop();
+    await this.stopTunnel();
     this.setStatus({ phase: "disconnected", detail: null });
     // The daemon is down now, so a failed reconnect must keep retrying, not settle on `error`.
     return this.connect(true);
@@ -113,10 +111,14 @@ export class RemoteHostSession implements RemoteSessionHandle {
   async dispose(): Promise<void> {
     this.disposed = true;
     this.cancelRetry();
+    await this.stopTunnel();
+    this.setStatus({ phase: "disconnected", detail: null });
+  }
+
+  private async stopTunnel(): Promise<void> {
     const tunnel = this.tunnel;
     this.tunnel = null;
     if (tunnel !== null) await tunnel.stop();
-    this.setStatus({ phase: "disconnected", detail: null });
   }
 
   private async attempt(retryOnFailure: boolean): Promise<RemoteHostStatus> {
@@ -129,9 +131,7 @@ export class RemoteHostSession implements RemoteSessionHandle {
       const tunnelFailure = await this.openTunnel(localPort);
       if (tunnelFailure !== null) return this.settleFailure(tunnelFailure, retryOnFailure);
       if (this.disposed) {
-        const tunnel = this.tunnel;
-        this.tunnel = null;
-        if (tunnel !== null) await tunnel.stop();
+        await this.stopTunnel();
         return this.settleDisposed();
       }
       this.retryAttempt = 0;

@@ -31,7 +31,6 @@ interface DesktopRuntimeOptions {
   userPath: string;
   /** Build this app expects on every host (packaged commit or dev checkout HEAD); null when unidentifiable. */
   expectedBuild: string | null;
-  daemonUrl(): string;
   localDaemonUrl(): string;
   onRemoteStatus(status: RemoteHostStatus): void;
   applyRendererUrl(url: string): void;
