@@ -2,28 +2,30 @@ import { randomUUID } from "node:crypto";
 
 import {
   findOverlappingIssueSource,
-  getIssueSource,
   getProject,
-  getSyncState,
   insertIssueSource,
   type Db,
-  type IssueSourceRow,
-  listIssueSources,
   type NewIssueSource,
 } from "@otomat/db";
 import {
-  issueSourceContractSchema,
   type CreateIssueSourceRequest,
   type IssueSourceContract,
   type IssueSourceSyncResult,
   type LinearConnectionContract,
   type LinearWorkspaceContract,
+  type SyncLinearRequest,
 } from "@otomat/domain";
 
 import type { LinearApiClient } from "./client/types.js";
 import { connected, DISCONNECTED, failed } from "./connection-state.js";
 import { LinearError, linearError } from "./errors.js";
-import { SYNC_RESOURCE, SYNC_SOURCE, syncIssueSource } from "./sync.js";
+import {
+  deleteSourceMapping,
+  listSourceContracts,
+  resolveSyncSources,
+  sourceContract,
+} from "./sources.js";
+import { SYNC_SOURCE, syncIssueSource } from "./sync.js";
 import { createLinearWriteback } from "./writeback/index.js";
 import type { LinearWriteback } from "./writeback/types.js";
 
@@ -40,9 +42,10 @@ export interface LinearService {
   connect(apiKey: string): Promise<LinearConnectionContract>;
   disconnect(): LinearConnectionContract;
   workspace(): Promise<LinearWorkspaceContract>;
-  sources(): IssueSourceContract[];
+  sources(projectId?: string): IssueSourceContract[];
   createSource(request: CreateIssueSourceRequest): Promise<IssueSourceContract>;
-  sync(sourceId?: string): Promise<IssueSourceSyncResult[]>;
+  deleteSource(sourceId: string): void;
+  sync(request?: SyncLinearRequest): Promise<IssueSourceSyncResult[]>;
   writeback: LinearWriteback;
 }
 
@@ -101,8 +104,12 @@ class DefaultLinearService implements LinearService {
     return this.authorized(signal, () => this.config.client.workspace(apiKey, signal));
   }
 
-  sources(): IssueSourceContract[] {
-    return listIssueSources(this.config.db, SYNC_SOURCE).map((row) => this.toContract(row));
+  sources(projectId?: string): IssueSourceContract[] {
+    return listSourceContracts(this.config.db, projectId);
+  }
+
+  deleteSource(sourceId: string): void {
+    deleteSourceMapping(this.config.db, sourceId);
   }
 
   async createSource(request: CreateIssueSourceRequest): Promise<IssueSourceContract> {
@@ -142,12 +149,12 @@ class DefaultLinearService implements LinearService {
       external_project_name: externalProject?.name ?? "",
     } satisfies NewIssueSource;
     insertIssueSource(this.config.db, row);
-    return this.toContract(row);
+    return sourceContract(this.config.db, row);
   }
 
-  async sync(sourceId?: string): Promise<IssueSourceSyncResult[]> {
+  async sync(request: SyncLinearRequest = {}): Promise<IssueSourceSyncResult[]> {
     const { apiKey, signal } = this.requireAuthorization();
-    const sources = this.resolveSources(sourceId);
+    const sources = resolveSyncSources(this.config.db, request);
     const context = {
       db: this.config.db,
       client: this.config.client,
@@ -162,21 +169,6 @@ class DefaultLinearService implements LinearService {
         syncResults.push(await syncIssueSource(context, source, apiKey));
       }
       return syncResults;
-    });
-  }
-
-  private toContract(row: Omit<IssueSourceRow, "created_at" | "updated_at">): IssueSourceContract {
-    const cursor = getSyncState(this.config.db, SYNC_SOURCE, SYNC_RESOURCE, row.id);
-    return issueSourceContractSchema.parse({
-      id: row.id,
-      project_id: row.project_id,
-      source: row.source,
-      external_team_id: row.external_team_id,
-      external_team_key: row.external_team_key,
-      external_team_name: row.external_team_name,
-      external_project_id: row.external_project_id,
-      external_project_name: row.external_project_name,
-      last_synced_at: cursor?.last_synced_at ?? null,
     });
   }
 
@@ -217,16 +209,6 @@ class DefaultLinearService implements LinearService {
 
   private isCurrent(signal: AbortSignal): boolean {
     return signal === this.authorization.signal && !signal.aborted;
-  }
-
-  private resolveSources(sourceId: string | undefined): IssueSourceRow[] {
-    if (sourceId === undefined) {
-      return listIssueSources(this.config.db, SYNC_SOURCE);
-    }
-    const row = getIssueSource(this.config.db, sourceId);
-    if (row === undefined || row.source !== SYNC_SOURCE)
-      throw linearError("linear_source_not_found");
-    return [row];
   }
 }
 

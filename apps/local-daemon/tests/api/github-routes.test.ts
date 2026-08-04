@@ -6,7 +6,7 @@ import { GitHubPublicationError } from "#github";
 
 import { makeApiApp, post, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
-import { pullRequestRow, stubGitHubService } from "../support/github.js";
+import { CONNECTED_GITHUB, pullRequestRow, stubGitHubService } from "../support/github.js";
 
 const RUN_ID = "run-github-api";
 let t: TestDb;
@@ -31,17 +31,13 @@ it("serves GitHub connection state and starts the delegated login", async () => 
   let connects = 0;
   const app = makeApiApp(t, {
     github: stubGitHubService({
-      connection: async () => ({
-        status: "connected",
-        login: "octocat",
-        error_code: null,
-        error_message: null,
-      }),
+      connection: async () => CONNECTED_GITHUB,
       connect: () => {
         connects += 1;
         return {
           status: "connecting",
           login: null,
+          device_authorization: null,
           error_code: null,
           error_message: null,
         };
@@ -109,4 +105,38 @@ it("maps an invalid run state to a conflict", async () => {
   const response = await post(app, `/api/runs/${RUN_ID}/pr`, { title: "Ship", body: "" });
   expect(response.status).toBe(409);
   expect(await response.json()).toEqual({ error: "run_not_review_ready" });
+});
+
+it("drafts PR metadata with the run's agent and surfaces drafting refusals", async () => {
+  const app = makeApiApp(t, {
+    github: stubGitHubService({
+      draftPullRequest: async () => ({
+        title: "Add note.md",
+        body: "Adds the note.",
+        branch: "feat/add-note",
+      }),
+    }),
+  });
+
+  const res = await post(app, `/api/runs/${RUN_ID}/pr/draft`, {});
+  expect(res.status).toBe(200);
+  expect(await res.json()).toEqual({
+    title: "Add note.md",
+    body: "Adds the note.",
+    branch: "feat/add-note",
+  });
+
+  const refusing = makeApiApp(t, {
+    github: stubGitHubService({
+      draftPullRequest: async () => {
+        throw new GitHubPublicationError("pr_draft_failed", "The run has no changes to describe.");
+      },
+    }),
+  });
+  const refused = await post(refusing, `/api/runs/${RUN_ID}/pr/draft`, {});
+  expect(refused.status).toBe(409);
+  expect(await refused.json()).toEqual({
+    error: "pr_draft_failed",
+    message: "The run has no changes to describe.",
+  });
 });

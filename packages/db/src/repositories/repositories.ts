@@ -15,6 +15,13 @@ export function getRepository(db: Db, id: string): RepositoryRow | undefined {
   return db.select().from(repositories).where(eq(repositories.id, id)).get();
 }
 
+export function updateRepositoryInitCommands(db: Db, id: string, commands: string[]): void {
+  db.update(repositories)
+    .set(touch({ init_commands_json: commands }))
+    .where(eq(repositories.id, id))
+    .run();
+}
+
 /** Refreshes the branch detected at boot without replacing the repository row. */
 export function updateRepositoryDefaultBranch(db: Db, id: string, defaultBranch: string): void {
   db.update(repositories)

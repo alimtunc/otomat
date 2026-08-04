@@ -1,8 +1,21 @@
+import { DaemonRequestError } from "@otomat/client";
 import type { PreparePullRequestRequest } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
+
+function draftErrorMessage(error: unknown): string {
+  if (
+    error instanceof DaemonRequestError &&
+    typeof error.body === "object" &&
+    error.body !== null
+  ) {
+    const message = (error.body as { message?: unknown }).message;
+    if (typeof message === "string" && message !== "") return message;
+  }
+  return "Could not draft the pull request — is the daemon running?";
+}
 
 export function useConnectGitHub() {
   const client = useQueryClient();
@@ -10,9 +23,17 @@ export function useConnectGitHub() {
     mutationFn: () => daemon.connectGitHub(),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: queryKeys.githubConnection });
-      toast.success("GitHub login opened in your browser");
+      toast.success("GitHub sign-in started — enter the code shown in the PR panel");
     },
     onError: () => toast.error("Could not start GitHub login — is the daemon running?"),
+  });
+}
+
+/** No cache to refresh: the drafted metadata lands in the form, which stays editable. */
+export function useDraftPullRequest(runId: string) {
+  return useMutation({
+    mutationFn: () => daemon.draftPullRequest(runId),
+    onError: (error) => toast.error(draftErrorMessage(error)),
   });
 }
 

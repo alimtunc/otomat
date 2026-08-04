@@ -11,6 +11,7 @@ import { executableSteps, isRunPlanCompeteGroup, type StartRunRequest } from "@o
 import { sessionDir } from "#events";
 
 import { scheduleTurn, startNextReadyStep } from "./advance.js";
+import { repositoryInitCommands } from "./init-commands.js";
 import { prepareRun } from "./prepare.js";
 import {
   requireResumableRun,
@@ -22,15 +23,18 @@ import {
 import type { SupervisorState } from "./state.js";
 import { driveCompeteGroupTo } from "./transitions.js";
 import type { TurnContext } from "./types.js";
+import { scheduleWorktreeInit } from "./worktree-init.js";
 
-/**
- * Starts a fresh run. Side effect: when the request omits `issue_id`, a local `issue`
- * row is created from the prompt (its first line as the title) to anchor the run.
- */
+/** Omitting `issue_id` creates a local issue from the prompt; init commands stream in the background. */
 export async function startRun(state: SupervisorState, request: StartRunRequest): Promise<RunRow> {
   const runId = prepareRun(state, request);
   const run = requireRunRow(state.db, runId, "spawn");
-  await startNextReadyStep(state, run);
+  const initCommands = repositoryInitCommands(state.db, run.repository_id);
+  if (initCommands.length > 0) {
+    scheduleWorktreeInit(state, run, initCommands);
+  } else {
+    await startNextReadyStep(state, run);
+  }
   return requireRunRow(state.db, runId, "spawn");
 }
 
@@ -51,6 +55,16 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
       executableSteps(run.plan_json).find((step) => step.id === interrupted.id)?.prompt ?? null;
     if (prompt === null) throw new Error(`run ${runId} has no plan step to resume`);
     return spawnResumeTurn(state, run, prompt);
+  }
+
+  // No session ever started: the daemon died during (or right after) worktree init, and
+  // nothing recorded whether it finished — re-run it before any agent sees the checkout.
+  if (listAgentSessionsForRun(state.db, runId).length === 0) {
+    const initCommands = repositoryInitCommands(state.db, run.repository_id);
+    if (initCommands.length > 0) {
+      scheduleWorktreeInit(state, run, initCommands);
+      return requireRunRow(state.db, runId, "resume");
+    }
   }
 
   const started = await startNextReadyStep(state, run);

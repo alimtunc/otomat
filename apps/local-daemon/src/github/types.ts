@@ -2,16 +2,35 @@ import type { Db, PullRequestRow, RunRow } from "@otomat/db";
 import type {
   GitHubConnectionContract,
   PreparePullRequestRequest,
+  PullRequestDraft,
   PullRequestState,
 } from "@otomat/domain";
 
 import type { RepositoryResolver } from "#git";
+
+export interface PullRequestDraftInput {
+  /** Runtime id of the run's own agent; only CLIs with a non-interactive print mode can draft. */
+  runtime: string;
+  cwd: string;
+  /** What the run set out to do — issue title and/or the launch prompt. */
+  objective: string;
+  /** One line per changed file, `path +a -d`. */
+  diffStat: string[];
+  /** Concatenated per-file patches; truncated to a fixed budget by the drafter. */
+  patch: string;
+}
+
+export interface PullRequestDrafter {
+  draft(input: PullRequestDraftInput): Promise<PullRequestDraft>;
+}
 
 export interface CommandRequest {
   command: string;
   args: string[];
   cwd: string;
   stdin?: string;
+  /** Kills the child and resolves with `errorCode: "timed_out"` when it outlives this. */
+  timeoutMs?: number;
 }
 
 export interface CommandResult {
@@ -34,6 +53,8 @@ export interface GitHubServiceConfig {
   /** Per-run resolution ensures publication pushes from the run's own repository. */
   repositories: RepositoryResolver;
   cli: GitHubCli;
+  /** Drafts PR metadata with the run's own agent CLI; absent disables the draft endpoint honestly. */
+  drafter?: PullRequestDrafter;
   idFactory?: () => string;
 }
 
@@ -42,6 +63,7 @@ export interface GitHubService {
   connect(): GitHubConnectionContract;
   getPullRequest(runId: string): PullRequestView | null;
   publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView>;
+  draftPullRequest(run: RunRow): Promise<PullRequestDraft>;
 }
 
 export interface GitHubRemote {
@@ -81,7 +103,11 @@ export interface PullRequestUpdateInput {
 
 export interface GitHubCli {
   connection(): Promise<GitHubConnectionContract>;
-  login(): Promise<GitHubConnectionContract>;
+  /** Null when gh can run; otherwise the not_installed/cli_outdated/failed contract. */
+  availability(): Promise<GitHubConnectionContract | null>;
+  /** False only on a definite GitHub 404 — a failed create then reads as "base branch missing", never on a transport blip. */
+  remoteBranchExists(cwd: string, repository: string, branch: string): Promise<boolean>;
+  loginWithToken(token: string): Promise<GitHubConnectionContract>;
   resolveRemote(cwd: string): Promise<GitHubRemote>;
   push(cwd: string, remote: string, branch: string): Promise<void>;
   findPullRequest(input: PullRequestSelector): Promise<GitHubPullRequest | null>;

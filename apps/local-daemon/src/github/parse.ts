@@ -32,6 +32,24 @@ const authStatusSchema = z.object({
 
 export const PR_JSON_FIELDS = "number,url,title,body,headRefName,baseRefName,state,isDraft";
 
+/** `gh auth status --json hosts` appeared in 2.63.0; older gh exits 1 on it. */
+export const MINIMUM_GH_VERSION = "2.63.0";
+
+export function outdatedGhVersion(stdout: string): string | null {
+  const match = /gh version (\d+)\.(\d+)\.(\d+)/.exec(stdout);
+  if (!match) return null;
+  const found = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const required = MINIMUM_GH_VERSION.split(".").map(Number);
+  for (let index = 0; index < 3; index += 1) {
+    const foundPart = found[index] ?? 0;
+    const requiredPart = required[index] ?? 0;
+    if (foundPart !== requiredPart) {
+      return foundPart < requiredPart ? `${match[1]}.${match[2]}.${match[3]}` : null;
+    }
+  }
+  return null;
+}
+
 function lifecycle(state: "OPEN" | "CLOSED" | "MERGED", draft: boolean): PullRequestState {
   if (state === "MERGED") return "merged";
   if (state === "CLOSED") return "closed";
@@ -92,22 +110,34 @@ export function parseGitHubRemoteUrl(url: string): { repository: string } | null
   }
 }
 
-function disconnected(): GitHubConnectionContract {
+export function connectionProblem(
+  status: GitHubConnectionContract["status"],
+  code: string,
+  message: string,
+): GitHubConnectionContract {
   return {
-    status: "disconnected",
+    status,
     login: null,
-    error_code: "github_auth_required",
-    error_message: "Sign in to GitHub to continue.",
+    device_authorization: null,
+    error_code: code,
+    error_message: message,
   };
 }
 
+function disconnected(): GitHubConnectionContract {
+  return connectionProblem(
+    "disconnected",
+    "github_auth_required",
+    "Sign in to GitHub to continue.",
+  );
+}
+
 export function authStatusFailed(): GitHubConnectionContract {
-  return {
-    status: "failed",
-    login: null,
-    error_code: "github_auth_status_failed",
-    error_message: "GitHub authentication status could not be read.",
-  };
+  return connectionProblem(
+    "failed",
+    "github_auth_status_failed",
+    "GitHub authentication status could not be read.",
+  );
 }
 
 export function parseAuthStatus(stdout: string): GitHubConnectionContract {
@@ -117,7 +147,13 @@ export function parseAuthStatus(stdout: string): GitHubConnectionContract {
       (candidate) => candidate.active && candidate.state === "success",
     );
     return account
-      ? { status: "connected", login: account.login, error_code: null, error_message: null }
+      ? {
+          status: "connected",
+          login: account.login,
+          device_authorization: null,
+          error_code: null,
+          error_message: null,
+        }
       : disconnected();
   } catch {
     throw new GitHubCliError("github_auth_response_invalid", "GitHub auth response was invalid.");

@@ -27,17 +27,11 @@ import {
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { stubRepositoryResolver, type TestRepo } from "../support/git.js";
+import { CONNECTED_GITHUB as connected, DISCONNECTED_GITHUB } from "../support/github.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-github";
 const BRANCH = `otomat/run/${RUN_ID}`;
-
-const connected: GitHubConnectionContract = {
-  status: "connected",
-  login: "octocat",
-  error_code: null,
-  error_message: null,
-};
 
 class FakeGitHubCli implements GitHubCli {
   connectionValue: GitHubConnectionContract = connected;
@@ -68,7 +62,17 @@ class FakeGitHubCli implements GitHubCli {
     return this.connectionValue;
   }
 
-  async login(): Promise<GitHubConnectionContract> {
+  async availability(): Promise<GitHubConnectionContract | null> {
+    return null;
+  }
+
+  baseExists = true;
+
+  async remoteBranchExists(): Promise<boolean> {
+    return this.baseExists;
+  }
+
+  async loginWithToken(): Promise<GitHubConnectionContract> {
     this.loginCalls += 1;
     this.connectionValue = connected;
     return this.connectionValue;
@@ -79,8 +83,11 @@ class FakeGitHubCli implements GitHubCli {
     return this.remote;
   }
 
-  async push(): Promise<void> {
+  pushedBranches: string[] = [];
+
+  async push(_cwd: string, _remote: string, branch: string): Promise<void> {
     this.pushCalls += 1;
+    this.pushedBranches.push(branch);
     if (this.pushError) throw this.pushError;
   }
 
@@ -168,6 +175,7 @@ describe("GitHubService", () => {
     await expect(service().connection()).resolves.toEqual({
       status: "failed",
       login: null,
+      device_authorization: null,
       error_code: "github_auth_response_invalid",
       error_message: "GitHub auth response was invalid.",
     });
@@ -179,18 +187,14 @@ describe("GitHubService", () => {
     await expect(service().connection()).resolves.toEqual({
       status: "failed",
       login: null,
+      device_authorization: null,
       error_code: "github_connection_failed",
       error_message: "GitHub connection failed unexpectedly.",
     });
   });
 
   it("persists not_configured without touching git when authentication is missing", async () => {
-    cli.connectionValue = {
-      status: "disconnected",
-      login: null,
-      error_code: "github_auth_required",
-      error_message: "Sign in to GitHub to continue.",
-    };
+    cli.connectionValue = DISCONNECTED_GITHUB;
 
     const result = await service().publish(run(), { title: "Ship it", body: "Details" });
 
@@ -208,6 +212,7 @@ describe("GitHubService", () => {
     cli.connectionValue = {
       status: "failed",
       login: null,
+      device_authorization: null,
       error_code: "github_auth_status_failed",
       error_message: "GitHub authentication status could not be read.",
     };
@@ -226,12 +231,7 @@ describe("GitHubService", () => {
   it("restores a created publication after reconnecting without new changes", async () => {
     const github = service();
     await github.publish(run(), { title: "Ship it", body: "Details" });
-    cli.connectionValue = {
-      status: "disconnected",
-      login: null,
-      error_code: "github_auth_required",
-      error_message: "Sign in to GitHub to continue.",
-    };
+    cli.connectionValue = DISCONNECTED_GITHUB;
     const disconnected = await github.publish(run(), { title: "Ship it", body: "Details" });
     expect(disconnected.row.publication_status).toBe("not_configured");
 
@@ -374,6 +374,88 @@ describe("GitHubService", () => {
       number: null,
       url: null,
     });
+  });
+
+  it("ships a first publish under the requested head branch", async () => {
+    cli.provider = { ...cli.provider, headRef: "feat/add-note" };
+
+    const result = await service().publish(run(), {
+      title: "Ship it",
+      body: "Details",
+      head_ref: "feat/add-note",
+    });
+
+    expect(result.row.publication_status).toBe("created");
+    expect(cli.pushedBranches).toEqual(["feat/add-note"]);
+    expect(cli.createInput?.head).toBe("feat/add-note");
+    expect(result.row.head_ref).toBe("feat/add-note");
+  });
+
+  it("keeps the chosen head branch across a failed create so a retry targets it", async () => {
+    cli.createError = new GitHubCliError(
+      "github_pr_create_failed",
+      "GitHub could not create the pull request.",
+    );
+    const github = service();
+
+    const failed = await github.publish(run(), {
+      title: "Ship it",
+      body: "Details",
+      head_ref: "feat/add-note",
+    });
+    expect(failed.row.publication_status).toBe("failed");
+    expect(failed.row.head_ref).toBe("feat/add-note");
+
+    cli.createError = null;
+    cli.provider = { ...cli.provider, headRef: "feat/add-note" };
+    const retried = await github.publish(run(), { title: "Ship it", body: "Details" });
+
+    expect(retried.row.publication_status).toBe("created");
+    expect(cli.pushedBranches).toEqual(["feat/add-note", "feat/add-note"]);
+    expect(cli.createInput?.head).toBe("feat/add-note");
+  });
+
+  it("targets the run's frozen fork branch, never the repository default", async () => {
+    repo.git("branch", "feature-base");
+    const forked = worktrees.acquire({
+      owner: "run-forked",
+      branch: "otomat/run/run-forked",
+      baseRef: "feature-base",
+    });
+    seedRun(fix.db, {
+      runId: "run-forked",
+      worktreeId: forked.id,
+      runStatus: "review_ready",
+      stepStatus: "succeeded",
+      sessionStatus: "terminated",
+    });
+    writeFileSync(join(forked.path, "change.txt"), "forked\n");
+    cli.provider = { ...cli.provider, headRef: "otomat/run/run-forked", baseRef: "feature-base" };
+
+    const forkedRun = getRun(fix.db, "run-forked");
+    if (!forkedRun) throw new Error("seeded run missing");
+    const result = await service().publish(forkedRun, { title: "Ship it", body: "Details" });
+
+    expect(result.row.publication_status).toBe("created");
+    expect(cli.createInput?.base).toBe("feature-base");
+  });
+
+  it("names a missing base branch instead of relaying GitHub's raw create failure", async () => {
+    cli.createError = new GitHubCliError(
+      "github_pr_create_failed",
+      "GitHub could not create the pull request. (GraphQL: Base ref must be a branch)",
+    );
+    cli.baseExists = false;
+
+    const result = await service().publish(run(), { title: "Ship it", body: "Details" });
+
+    expect(result.row).toMatchObject({
+      publication_status: "failed",
+      error_code: "github_base_branch_missing",
+      number: null,
+      url: null,
+    });
+    expect(result.row.error_message).toContain("does not exist on GitHub");
   });
 
   it("snapshots, pushes, creates, persists and emits only confirmed metadata", async () => {
@@ -531,12 +613,7 @@ describe("GitHubService", () => {
   it.each(["pushing", "creating"] as const)(
     "recovers an interrupted %s publication after daemon restart",
     async (publicationStatus) => {
-      cli.connectionValue = {
-        status: "disconnected",
-        login: null,
-        error_code: "github_auth_required",
-        error_message: "Sign in to GitHub to continue.",
-      };
+      cli.connectionValue = DISCONNECTED_GITHUB;
       await service().publish(run(), { title: "Ship it", body: "Details" });
       const row = getPullRequestForRun(fix.db, RUN_ID);
       if (!row) throw new Error("local pull request missing");

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 const connected: GitHubConnectionContract = {
   status: "connected",
   login: "octocat",
+  device_authorization: null,
   error_code: null,
   error_message: null,
 };
@@ -37,6 +38,7 @@ describe("pullRequestViewModel", () => {
       {
         status: "disconnected",
         login: null,
+        device_authorization: null,
         error_code: "github_auth_required",
         error_message: "Sign in to GitHub to continue.",
       },
@@ -47,6 +49,48 @@ describe("pullRequestViewModel", () => {
       connectionLabel: "GitHub not connected",
       showConnect: true,
       actionDisabled: true,
+    });
+  });
+
+  it("surfaces the device sign-in code while waiting for GitHub", () => {
+    const model = pullRequestViewModel(
+      {
+        status: "connecting",
+        login: null,
+        device_authorization: {
+          user_code: "ABCD-1234",
+          verification_url: "https://github.com/login/device",
+        },
+        error_code: null,
+        error_message: null,
+      },
+      null,
+    );
+
+    expect(model).toMatchObject({
+      connectionLabel: "Waiting for GitHub sign-in…",
+      showConnect: false,
+      deviceAuthorization: { code: "ABCD-1234", url: "https://github.com/login/device" },
+    });
+  });
+
+  it("reports an outdated GitHub CLI without offering to connect", () => {
+    const model = pullRequestViewModel(
+      {
+        status: "cli_outdated",
+        login: null,
+        device_authorization: null,
+        error_code: "github_cli_outdated",
+        error_message: "GitHub CLI 2.45.0 is too old; Otomat needs 2.63.0 or newer.",
+      },
+      null,
+    );
+
+    expect(model).toMatchObject({
+      connectionLabel: "GitHub CLI too old",
+      showConnect: false,
+      actionDisabled: true,
+      errorMessage: "GitHub CLI 2.45.0 is too old; Otomat needs 2.63.0 or newer.",
     });
   });
 

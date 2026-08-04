@@ -13,7 +13,12 @@ import {
 import { rescanSkills } from "#agents";
 import { createApiApp, logApiRoutes } from "#api";
 import { createRepositoryResolver } from "#git";
-import { createGitHubCli, createGitHubService, runCommand } from "#github";
+import {
+  createGitHubCli,
+  createGitHubService,
+  createPullRequestDrafter,
+  runCommand,
+} from "#github";
 import {
   createLinearApiClient,
   createLinearService,
@@ -28,6 +33,14 @@ import { ensureDefaultProject, ensureDefaultRepository } from "./bootstrap.js";
 export const DAEMON_NAME = "otomat-local-daemon";
 export const DAEMON_VERSION = "0.1.0";
 
+// The dist bundle bakes the git commit in at build time (tsdown define); a
+// source run reads the env the desktop shell injects, and reports null when
+// neither is present.
+function daemonBuild(): string | null {
+  const sha = process.env.OTOMAT_BUILD_SHA;
+  return sha === undefined || sha === "" ? null : sha;
+}
+
 export interface StartDaemonOptions {
   port?: number;
   dbPath?: string;
@@ -40,7 +53,7 @@ export interface CloseOptions {
 
 export interface DaemonHandle {
   port: number;
-  /** Stops accepting connections, settles in-flight runs, and closes SQLite; rejects with every shutdown failure preserved. */
+  /** Rejects with every shutdown failure preserved. */
   close(options?: CloseOptions): Promise<void>;
 }
 
@@ -95,6 +108,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       dataDir,
       repositories,
       cli: createGitHubCli(runCommand),
+      drafter: createPullRequestDrafter(runCommand),
     });
     const linear = createLinearService({
       db,
@@ -127,6 +141,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       db,
       name: DAEMON_NAME,
       version: DAEMON_VERSION,
+      build: daemonBuild(),
       startedAt: new Date().toISOString(),
       dbPath,
       schemaMetadata: () => readSchemaMetadata(sqlite),

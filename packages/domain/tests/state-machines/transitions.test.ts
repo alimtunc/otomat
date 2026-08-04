@@ -77,6 +77,10 @@ describe("representative illegal transitions are rejected", () => {
     expect(() => runMachine.transition("completed", "running")).toThrow(IllegalTransitionError);
   });
 
+  it("run resumed before its init finished re-enters preparing", () => {
+    expect(runMachine.transition("awaiting_human", "preparing")).toBe("preparing");
+  });
+
   it("run and compete group wait for an explicit winner", () => {
     expect(runMachine.transition("running", "awaiting_selection")).toBe("awaiting_selection");
     expect(runMachine.transition("awaiting_selection", "running")).toBe("running");

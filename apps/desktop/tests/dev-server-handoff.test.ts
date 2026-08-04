@@ -1,12 +1,9 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
 import { afterEach, expect, it, vi } from "vitest";
 
 import { DesktopApp } from "#main/app";
 import type { AppPaths } from "#main/paths";
 import { DEV_SERVER_ENV } from "#shared/constants";
+import { scratchDir } from "#support/scratch-dir";
 
 const harness = vi.hoisted(() => ({
   cockpitUrls: [] as (string | null)[],
@@ -31,6 +28,7 @@ vi.mock("#main/runtime", () => ({
     daemonLog: { write: vi.fn(), read: () => "" },
     daemon: { running: false, start: async () => "http://127.0.0.1:49152", stop: vi.fn() },
     linear: { restore: async () => {} },
+    hosts: { bootActivate: async () => null, shutdown: async () => {}, hasActiveSession: false },
   }),
 }));
 vi.mock("#main/support", () => ({
@@ -77,12 +75,8 @@ function devPaths(devDataRoot: string | null): AppPaths {
 
 async function startDesktop(url: string | null): Promise<void> {
   if (url !== null) vi.stubEnv(DEV_SERVER_ENV, url);
-  const scratch = mkdtempSync(join(tmpdir(), "otomat-handoff-"));
-  try {
-    await new DesktopApp(devPaths(scratch)).onReady();
-  } finally {
-    rmSync(scratch, { recursive: true, force: true });
-  }
+  const scratch = scratchDir("otomat-handoff-");
+  await new DesktopApp(devPaths(scratch)).onReady();
 }
 
 afterEach(() => {

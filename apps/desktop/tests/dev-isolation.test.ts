@@ -1,13 +1,12 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { dirname, join, sep } from "node:path";
 
-import { afterEach, expect, it, vi } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import { resolveDevDataRoot } from "#main/dev-data-root";
 import type { AppPaths } from "#main/paths";
 import { createDesktopRuntime } from "#main/runtime";
 import { buildDaemonEnv } from "#shared/daemon-env";
+import { scratchDir } from "#support/scratch-dir";
 
 vi.mock("electron", () => ({
   safeStorage: {
@@ -16,14 +15,6 @@ vi.mock("electron", () => ({
     decryptString: () => "",
   },
 }));
-
-const scratchDirs: string[] = [];
-
-function scratch(prefix: string): string {
-  const dir = mkdtempSync(join(tmpdir(), prefix));
-  scratchDirs.push(dir);
-  return dir;
-}
 
 function devPaths(devDataRoot: string): AppPaths {
   return {
@@ -63,7 +54,10 @@ function sessionFor(worktree: string, appData: string): { root: string; env: Nod
     paths: devPaths(root),
     userData: root,
     userPath: "/usr/bin",
-    daemonUrl: () => "",
+    expectedBuild: null,
+    localDaemonUrl: () => "",
+    onRemoteStatus: () => {},
+    applyRendererUrl: () => {},
   });
   expect(runtime.dataDirectory.root).toBe(root);
   return {
@@ -78,14 +72,10 @@ function sessionFor(worktree: string, appData: string): { root: string; env: Nod
   };
 }
 
-afterEach(() => {
-  for (const dir of scratchDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
-});
-
 it("gives two dev worktrees disjoint databases, run files, and generated git worktrees", () => {
-  const appData = scratch("otomat-appdata-");
-  const first = sessionFor(scratch("otomat-worktree-a-"), appData);
-  const second = sessionFor(scratch("otomat-worktree-b-"), appData);
+  const appData = scratchDir("otomat-appdata-");
+  const first = sessionFor(scratchDir("otomat-worktree-a-"), appData);
+  const second = sessionFor(scratchDir("otomat-worktree-b-"), appData);
 
   const firstStorage = daemonStorage(first.env);
   const secondStorage = daemonStorage(second.env);
@@ -98,8 +88,8 @@ it("gives two dev worktrees disjoint databases, run files, and generated git wor
 });
 
 it("keeps every daemon artifact inside the session's own dev root", () => {
-  const appData = scratch("otomat-appdata-");
-  const worktree = scratch("otomat-worktree-");
+  const appData = scratchDir("otomat-appdata-");
+  const worktree = scratchDir("otomat-worktree-");
   const session = sessionFor(worktree, appData);
   const storage = daemonStorage(session.env);
 

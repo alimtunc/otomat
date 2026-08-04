@@ -1,8 +1,9 @@
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
+
+import { scratchDir } from "#support/scratch-dir";
 
 const harness = vi.hoisted(() => ({
   actions: null as { restoreBackup(): Promise<void> } | null,
@@ -17,6 +18,11 @@ const harness = vi.hoisted(() => ({
       restoreBackup(path: string): Promise<void>;
     };
     linear: { restore(): Promise<void> };
+    hosts: {
+      bootActivate(): Promise<string | null>;
+      shutdown(): Promise<void>;
+      hasActiveSession: boolean;
+    };
   } | null,
   userData: "",
 }));
@@ -36,6 +42,9 @@ vi.mock("#main/support", () => ({
       return Promise.resolve();
     }
     showDataPolicy(): void {}
+    confirmRestore(): Promise<boolean> {
+      return Promise.resolve(true);
+    }
   },
 }));
 vi.mock("#main/ipc", () => ({
@@ -86,18 +95,14 @@ const DEV_PATHS: AppPaths = {
   devDataRoot: "/tmp/otomat-dev-root",
 };
 
-let scratch: string | null = null;
-
 afterEach(() => {
   harness.actions = null;
   harness.runtime = null;
   harness.userData = "";
-  if (scratch !== null) rmSync(scratch, { recursive: true, force: true });
-  scratch = null;
 });
 
 it("offers the next managed backup after the daemon rejects the newest candidate", async () => {
-  scratch = mkdtempSync(join(tmpdir(), "otomat-desktop-backup-fallback-"));
+  const scratch = scratchDir("otomat-desktop-backup-fallback-");
   const dbPath = join(scratch, "otomat.db");
   const backupsDir = join(scratch, "backups");
   mkdirSync(backupsDir);
@@ -154,6 +159,7 @@ it("offers the next managed backup after the daemon rejects the newest candidate
       restoreBackup,
     },
     linear: { restore: async () => {} },
+    hosts: { bootActivate: async () => null, shutdown: async () => {}, hasActiveSession: false },
   };
 
   const desktop = new DesktopApp(DEV_PATHS);
@@ -185,6 +191,7 @@ it("keeps shutdown blocked and allows retry when daemon stop fails", async () =>
       restoreBackup: async () => {},
     },
     linear: { restore: async () => {} },
+    hosts: { bootActivate: async () => null, shutdown: async () => {}, hasActiveSession: false },
   };
   const desktop = new DesktopApp(DEV_PATHS);
   await desktop.onReady();

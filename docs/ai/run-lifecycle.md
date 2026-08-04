@@ -46,6 +46,33 @@ sequenceDiagram
     SUP-->>UI: notifyAfterSettle → SSE
 ```
 
+## Init du worktree — les `init_commands` du repository
+
+Quand le repository déclare des `init_commands`, `startRun` passe par
+`scheduleWorktreeInit` : la requête de lancement répond immédiatement (run en
+`preparing`), les commandes s'exécutent en arrière-plan dans le worktree frais
+(sortie streamée dans le ledger), puis le premier step démarre. Une commande qui
+échoue fait échouer la run **sans jamais spawner l'agent**. Les worktrees des
+candidats compete forkent depuis les fichiers trackés seulement : chaque
+candidat rejoue les mêmes commandes avant son agent (`worktreeInit` posé par
+`startCompeteGroup`) ; un échec rend ce candidat `stale` et le groupe reste
+sélectionnable, tous en échec fait échouer la run sans spawn. Un resume d'une
+run sans aucune session (daemon mort pendant l'init) repasse par `preparing` et
+rejoue l'init — l'arête `awaiting_human → preparing` du `runMachine` existe
+pour ça.
+
+## Pull request — draft IA et publication
+
+`POST /api/runs/:id/pr/draft` fait rédiger titre/description/branche par le
+runtime de la run (`claude -p`, one-shot sans outils, JSON strict, patch borné à
+40 Ko, 180 s max ; `codex` refuse honnêtement). La branche proposée est
+slugifiée et ne peut jamais être `otomat/run/*`. À la publication
+(`POST /api/runs/:id/pr`), le `head_ref` optionnel ne renomme que la branche
+**distante** ; il est persisté dès le push (un retry après un `pr create` échoué
+cible la même branche) et verrouillé dès que la PR existe (`number != null`). La
+base de la PR est toujours le fork gelé de la run (`WorktreeRecord.baseRef`),
+jamais la branche par défaut du repository.
+
 ## Reprises & abort — greffent sur la même `spawnTurn`
 
 ```mermaid
@@ -84,6 +111,7 @@ stateDiagram-v2
     running --> review_ready
     awaiting_permission --> running
     awaiting_human --> running
+    awaiting_human --> preparing
     awaiting_selection --> running
     review_ready --> running
     review_ready --> completed
@@ -105,6 +133,8 @@ stateDiagram-v2
 | Livraison des contributions | [`supervisor/contributions.ts`](../../apps/local-daemon/src/supervisor/contributions.ts) |
 | Commandes du supervisor | [`supervisor/commands.ts`](../../apps/local-daemon/src/supervisor/commands.ts) |
 | Matérialisation (rows · plan · worktree) | [`supervisor/prepare.ts`](../../apps/local-daemon/src/supervisor/prepare.ts) |
+| Init du worktree (commandes du repository) | [`supervisor/worktree-init.ts`](../../apps/local-daemon/src/supervisor/worktree-init.ts) · [`supervisor/init-commands.ts`](../../apps/local-daemon/src/supervisor/init-commands.ts) |
+| Draft & publication de la PR | [`github/draft.ts`](../../apps/local-daemon/src/github/draft.ts) · [`github/publication/publisher.ts`](../../apps/local-daemon/src/github/publication/publisher.ts) |
 | Exécution (spawn · activation · tail) | [`supervisor/lifecycle.ts`](../../apps/local-daemon/src/supervisor/lifecycle.ts) |
 | Worker enfant (durable) | [`supervisor/worker.ts`](../../apps/local-daemon/src/supervisor/worker.ts) |
 | Finalisation (live · abort · boot) | [`supervisor/settle.ts`](../../apps/local-daemon/src/supervisor/settle.ts) |

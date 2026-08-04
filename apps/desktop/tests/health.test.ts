@@ -7,6 +7,7 @@ function okBody() {
     status: "ok",
     name: "otomat-local-daemon",
     version: "0.1.0",
+    build: "abc1234",
     started_at: "2026-07-19T00:00:00.000Z",
     db_path: "/db/otomat.db",
     schema: {
@@ -25,7 +26,7 @@ describe("waitForHealth", () => {
     const doFetch = vi.fn(async () => new Response(JSON.stringify(okBody()), { status: 200 }));
     await expect(
       waitForHealth({ url: "http://x/api/health", fetch: doFetch, sleep: noSleep }),
-    ).resolves.toBeUndefined();
+    ).resolves.toMatchObject({ status: "ok", build: "abc1234" });
     expect(doFetch).toHaveBeenCalledTimes(1);
   });
 
@@ -38,7 +39,7 @@ describe("waitForHealth", () => {
     });
     await expect(
       waitForHealth({ url: "http://x/api/health", fetch: doFetch, sleep: noSleep }),
-    ).resolves.toBeUndefined();
+    ).resolves.toMatchObject({ status: "ok" });
     expect(doFetch).toHaveBeenCalledTimes(3);
   });
 

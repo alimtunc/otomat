@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown, FolderGit2, Settings } from "lucide-react";
+import { Check, ChevronsUpDown, FolderGit2, Plus, Settings } from "lucide-react";
 import { useState } from "react";
 
 import { FOCUS_RING } from "../lib/focus";
@@ -16,6 +16,8 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from "../primitives/combobox";
+import { HostTag } from "./host-tag";
+import { ProjectGlyph } from "./project-glyph";
 
 const HEALTH_COLOR: Record<NonNullable<ProjectSummary["health"]>, string> = {
   healthy: TONE_FACETS.success.cssVar,
@@ -29,19 +31,8 @@ export interface ProjectSwitcherProps {
   onSelect: (id: string) => void;
   collapsed?: boolean;
   loading?: boolean;
-  onConfigure?: () => void;
-}
-
-function ProjectGlyph({ name }: { name: string }) {
-  return (
-    <div
-      className="grid h-6 w-6 flex-none place-items-center rounded-md text-[13px] font-bold text-on-accent"
-      style={{ background: "linear-gradient(160deg,var(--iris-hover),var(--iris-active))" }}
-      aria-hidden
-    >
-      {name.slice(0, 1).toUpperCase()}
-    </div>
-  );
+  /** Renders an "Add project…" footer action; also replaces the empty-state hint when provided. */
+  onAddProject?: () => void;
 }
 
 export function ProjectSwitcher({
@@ -50,7 +41,7 @@ export function ProjectSwitcher({
   onSelect,
   collapsed = false,
   loading = false,
-  onConfigure,
+  onAddProject,
 }: ProjectSwitcherProps) {
   const [open, setOpen] = useState(false);
   const current = projects.find((p) => p.id === currentId);
@@ -98,6 +89,7 @@ export function ProjectSwitcher({
                     <span className="truncate">
                       {loading ? "Loading…" : (current?.name ?? "No project")}
                     </span>
+                    {current?.tag ? <HostTag tag={current.tag} /> : null}
                     {current?.health ? (
                       <output
                         aria-label={`repo ${current.health}`}
@@ -127,12 +119,16 @@ export function ProjectSwitcher({
               variant="ghost"
               onClick={() => {
                 setOpen(false);
-                onConfigure?.();
+                onAddProject?.();
               }}
               className="h-auto w-full justify-start gap-2 px-2.5 py-3 text-sm"
             >
-              <Settings className="h-4 w-4 text-text-tertiary" />
-              Add a project in Settings
+              {onAddProject ? (
+                <Plus className="h-4 w-4 text-text-tertiary" />
+              ) : (
+                <Settings className="h-4 w-4 text-text-tertiary" />
+              )}
+              {onAddProject ? "Add project…" : "Add a project in Settings"}
             </Button>
           </ComboboxEmpty>
         ) : (
@@ -143,7 +139,10 @@ export function ProjectSwitcher({
                 <ComboboxItem key={project.id} value={project}>
                   <ProjectGlyph name={project.name} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm text-foreground">{project.name}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate text-sm text-foreground">{project.name}</span>
+                      {project.tag ? <HostTag tag={project.tag} /> : null}
+                    </div>
                     {project.repo ? (
                       <div className="truncate text-micro text-text-tertiary">{project.repo}</div>
                     ) : null}
@@ -161,6 +160,22 @@ export function ProjectSwitcher({
                 </ComboboxItem>
               )}
             </ComboboxList>
+            {onAddProject ? (
+              <div className="border-t border-border-subtle p-1.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setOpen(false);
+                    onAddProject();
+                  }}
+                  className="h-auto w-full justify-start gap-2 px-2.5 py-2 text-sm"
+                >
+                  <Plus className="h-4 w-4 text-text-tertiary" />
+                  Add project…
+                </Button>
+              </div>
+            ) : null}
           </>
         )}
       </ComboboxContent>

@@ -9,6 +9,7 @@ export function repository(overrides: Partial<RepositoryContract> = {}): Reposit
     name: "otomat",
     remote_url: null,
     default_branch: "main",
+    init_commands: [],
     available: true,
     ...overrides,
   };

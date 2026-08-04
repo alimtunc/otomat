@@ -1,6 +1,8 @@
-import type { GitHubConnectionContract } from "@otomat/domain";
+import type { GitHubConnectionContract, GitHubDeviceAuthorization } from "@otomat/domain";
 
+import type { DeviceAuthorization } from "./device-flow.js";
 import { safeGitHubFailure } from "./errors.js";
+import { connectionProblem } from "./parse.js";
 import type { GitHubCli } from "./types.js";
 
 interface GitHubConnectionService {
@@ -11,6 +13,7 @@ interface GitHubConnectionService {
 const CONNECTING: GitHubConnectionContract = {
   status: "connecting",
   login: null,
+  device_authorization: null,
   error_code: null,
   error_message: null,
 };
@@ -20,21 +23,35 @@ function failedConnection(error: unknown): GitHubConnectionContract {
     code: "github_connection_failed",
     message: "GitHub connection failed unexpectedly.",
   });
-  return {
-    status: "failed",
-    login: null,
-    error_code: failure.code,
-    error_message: failure.message,
-  };
+  return connectionProblem("failed", failure.code, failure.message);
 }
 
-export function createGitHubConnectionService(cli: GitHubCli): GitHubConnectionService {
+export function createGitHubConnectionService(
+  cli: GitHubCli,
+  device: DeviceAuthorization,
+): GitHubConnectionService {
   let login: Promise<GitHubConnectionContract> | null = null;
   let loginFailure: GitHubConnectionContract | null = null;
+  let pendingAuthorization: GitHubDeviceAuthorization | null = null;
+
+  // The sign-in verification code is only obtainable mid-login, so it is
+  // surfaced through the polled `connecting` contract instead of a push channel.
+  async function performLogin(): Promise<GitHubConnectionContract> {
+    // A gh that cannot run must fail before GitHub mints a code and a token nobody could store.
+    const unavailable = await cli.availability();
+    if (unavailable) return unavailable;
+    const start = await device.start();
+    pendingAuthorization = {
+      user_code: start.userCode,
+      verification_url: start.verificationUrl,
+    };
+    const token = await device.awaitToken(start);
+    return cli.loginWithToken(token);
+  }
 
   return {
     async connection() {
-      if (login) return CONNECTING;
+      if (login) return { ...CONNECTING, device_authorization: pendingAuthorization };
       try {
         const status = await cli.connection();
         if (status.status === "connected") loginFailure = null;
@@ -46,8 +63,7 @@ export function createGitHubConnectionService(cli: GitHubCli): GitHubConnectionS
     connect() {
       if (!login) {
         loginFailure = null;
-        login = cli
-          .login()
+        login = performLogin()
           .then((status) => {
             if (status.status !== "connected") loginFailure = status;
             return status;
@@ -58,6 +74,7 @@ export function createGitHubConnectionService(cli: GitHubCli): GitHubConnectionS
           })
           .finally(() => {
             login = null;
+            pendingAuthorization = null;
           });
       }
       return CONNECTING;

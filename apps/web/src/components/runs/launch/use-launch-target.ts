@@ -3,7 +3,11 @@ import { useRepositories, useRepositoryBranches } from "@web/api/daemon/queries"
 import { useState } from "react";
 
 /** Why a project cannot be launched on, in the order the UI must resolve it. */
-export type LaunchTargetBlocker = "no_project" | "no_repository" | "repository_unavailable";
+export type LaunchTargetBlocker =
+  | "no_project"
+  | "no_repository"
+  | "repository_unavailable"
+  | "daemon_update_pending";
 
 export type LaunchTargetState =
   | { status: "loading" }

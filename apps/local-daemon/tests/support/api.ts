@@ -34,6 +34,10 @@ export function patch(app: Hono, path: string, body: unknown): Promise<Response>
   });
 }
 
+export function del(app: Hono, path: string): Promise<Response> {
+  return request(app, path, { method: "DELETE" });
+}
+
 export async function json<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
@@ -87,6 +91,7 @@ export function makeApiApp(
     dbPath: t.dbPath,
     name: "test-daemon",
     version: "9.9.9",
+    build: "abc1234",
     startedAt: "2026-07-05T00:00:00.000Z",
     schemaMetadata: () => ({
       migration_count: 10,

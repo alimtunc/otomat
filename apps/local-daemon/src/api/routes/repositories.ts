@@ -1,5 +1,15 @@
-import { getProject, getRepository } from "@otomat/db";
-import { registerRepositoryRequestSchema, type RepositoryRegistrationError } from "@otomat/domain";
+import {
+  deleteRepositoryCascade,
+  getProject,
+  getRepository,
+  repositoryHasActiveRuns,
+  updateRepositoryInitCommands,
+} from "@otomat/db";
+import {
+  registerRepositoryRequestSchema,
+  updateRepositoryRequestSchema,
+  type RepositoryRegistrationError,
+} from "@otomat/domain";
 import { Hono } from "hono";
 
 import { isRepositoryRoot, listBranches } from "#git";
@@ -29,7 +39,6 @@ const CONFLICT_ERRORS: ReadonlySet<RepositoryRegistrationError> = new Set([
   "project_already_has_repository",
 ]);
 
-/** Repository reads plus the local-path registration mutation, mounted at `/api/repositories`. */
 export function createRepositoryRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();
 
@@ -43,9 +52,44 @@ export function createRepositoryRoutes(deps: ApiDeps): Hono {
       return c.json({ error: result.error, message: REGISTRATION_MESSAGES[result.error] }, status);
     }
     return c.json(
-      { project: toProject(result.project), repository: toRepository(result.repository, true) },
+      {
+        project: toProject(result.project, true),
+        repository: toRepository(result.repository, true),
+      },
       201,
     );
+  });
+
+  routes.patch("/:id", validateJson(updateRepositoryRequestSchema), (c) => {
+    const repository = getRepository(deps.db, c.req.param("id"));
+    if (!repository) return c.json({ error: "repository_not_found" }, 404);
+    updateRepositoryInitCommands(deps.db, repository.id, c.req.valid("json").init_commands);
+    const updated = getRepository(deps.db, repository.id);
+    if (!updated) return c.json({ error: "repository_not_found" }, 404);
+    const project = getProject(deps.db, updated.project_id);
+    return c.json(toRepository(updated, project ? isRepositoryRoot(project.root_path) : false));
+  });
+
+  /** Removes the repository, its runs, and the owning project; refused while a run is active. */
+  routes.delete("/:id", (c) => {
+    const repository = getRepository(deps.db, c.req.param("id"));
+    if (!repository) {
+      return c.json(
+        { error: "repository_not_found", message: "This repository is no longer registered." },
+        404,
+      );
+    }
+    if (repositoryHasActiveRuns(deps.db, repository.id)) {
+      return c.json(
+        {
+          error: "repository_has_active_runs",
+          message: "Finish or abort this repository's active runs before deleting it.",
+        },
+        409,
+      );
+    }
+    deleteRepositoryCascade(deps.db, repository.id);
+    return c.body(null, 204);
   });
 
   /** Branches a run can fork from. 409 rather than an empty list so an unusable root is legible. */

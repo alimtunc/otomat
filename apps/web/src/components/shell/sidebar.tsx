@@ -20,9 +20,12 @@ interface SidebarProps {
   active: ShellSection;
   online: boolean;
   daemonVersion?: string;
+  /** SSH alias of the active remote execution host; absent when running against the local daemon. */
+  hostAlias?: string;
   projects: ProjectSummary[];
   currentProjectId?: string;
   onProjectSelect: (id: string) => void;
+  onAddProject?: () => void;
   onSearch: () => void;
   onNewIssue: () => void;
   hasLiveRun?: boolean;
@@ -51,9 +54,11 @@ export function Sidebar({
   active,
   online,
   daemonVersion,
+  hostAlias,
   projects,
   currentProjectId,
   onProjectSelect,
+  onAddProject,
   onSearch,
   onNewIssue,
   hasLiveRun = false,
@@ -66,10 +71,12 @@ export function Sidebar({
       currentId={currentProjectId}
       onSelect={onProjectSelect}
       collapsed={collapsed}
+      {...(onAddProject === undefined ? {} : { onAddProject })}
     />
   );
   const footer = (
     <SidebarDaemonStatus
+      daemonId={hostAlias}
       online={online}
       version={daemonVersion && `v${daemonVersion}`}
       collapsed={collapsed}

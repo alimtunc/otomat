@@ -5,6 +5,7 @@ import { LinearConnectForm } from "@web/components/settings/integrations/linear-
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { setInputValue } from "#support/dom-events";
 import { mount } from "#support/mount";
 
@@ -28,14 +29,12 @@ afterEach(async () => {
 function installDesktopBridge(
   saveKey: (apiKey: string) => Promise<LinearVaultOperationResult>,
 ): void {
-  window.otomat = {
-    daemonUrl: "http://127.0.0.1:5000",
-    pickDirectory: async () => null,
+  window.otomat = fakeDesktopBridge({
     linear: {
       saveKey,
       forgetKey: async () => ({ ok: true, message: null }),
     },
-  };
+  });
 }
 
 async function renderForm(connectionError: string | null = null) {

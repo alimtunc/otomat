@@ -23,6 +23,11 @@ export const repositories = sqliteTable("repositories", {
   name: text("name").notNull(),
   remote_url: text("remote_url"),
   default_branch: text("default_branch").notNull().default("main"),
+  // Shell commands the daemon runs in every fresh worktree — the run's at launch and each compete candidate's — before the agent starts.
+  init_commands_json: text("init_commands_json", { mode: "json" })
+    .$type<string[]>()
+    .notNull()
+    .default(sql`'[]'`),
   ...timestamps,
 });
 

@@ -6,6 +6,7 @@ import {
   type LaunchTargetState,
 } from "@web/components/runs/launch/use-launch-target";
 import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
+import { useDaemonUpdatePending } from "@web/components/shell/use-daemon-update-pending";
 import type { ReactNode } from "react";
 
 export interface LaunchTargetGateProps {
@@ -22,6 +23,14 @@ export interface LaunchTargetGateProps {
  * never started without the worktree it is supposed to work in.
  */
 export function LaunchTargetGate({ projectId, issue, children }: LaunchTargetGateProps) {
+  const updatePending = useDaemonUpdatePending();
+  if (updatePending) {
+    return (
+      <DialogBody>
+        <LaunchBlockedPanel projectId={projectId ?? null} blocker="daemon_update_pending" />
+      </DialogBody>
+    );
+  }
   if (projectId === undefined) {
     return (
       <DialogBody>

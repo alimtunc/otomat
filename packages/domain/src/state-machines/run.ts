@@ -30,7 +30,8 @@ export const runMachine = defineMachine<RunState>({
       "canceled",
     ],
     awaiting_permission: ["running", "failed", "canceled"],
-    awaiting_human: ["running", "failed", "canceled"],
+    // `preparing`: resuming a run whose worktree init never completed re-runs the init.
+    awaiting_human: ["running", "preparing", "failed", "canceled"],
     awaiting_selection: ["running", "failed", "canceled"],
     review_ready: ["completed", "running", "failed", "canceled"],
     completed: [],

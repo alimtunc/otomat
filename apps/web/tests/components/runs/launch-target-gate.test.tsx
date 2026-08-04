@@ -1,8 +1,10 @@
 // @vitest-environment happy-dom
 import type { IssueContract, RepositoryContract } from "@otomat/domain";
 import { LaunchTargetGate } from "@web/components/runs/launch/launch-target-gate";
+import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { fakeDesktopBridge } from "#support/desktop-bridge";
 import {
   repositoriesQueryResult,
   repository,
@@ -150,4 +152,34 @@ it("surfaces a retryable error instead of silently allowing a launch", async () 
 
   expect(launchable).not.toHaveBeenCalled();
   expect(document.body.textContent).toContain("Couldn’t load this project’s repository");
+});
+
+it("pauses new launches while the active daemon waits for its update", async () => {
+  const bridge = fakeDesktopBridge({ executionHostId: "remote", executionHostSshAlias: "vps" });
+  bridge.executionHost.snapshot = () =>
+    Promise.resolve({
+      hosts: [
+        { id: "local" as const, label: "Local", kind: "local" as const },
+        { id: "remote" as const, label: "vps", kind: "ssh" as const },
+      ],
+      active_id: "remote" as const,
+      remote_ssh_alias: "vps",
+      remote_status: { phase: "connected" as const, detail: null },
+      remote_build: "old0000",
+      expected_build: "new1111",
+    });
+  window.otomat = bridge;
+  try {
+    await renderGate("p1", ISSUE);
+    // The pending state lands on the first async snapshot round trip; the form must be gone after it.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(document.body.textContent).toContain("Daemon update pending");
+    expect(document.body.textContent).not.toContain("Launch run");
+    expect(document.querySelector("input[aria-label='Repository path']")).toBeNull();
+  } finally {
+    delete window.otomat;
+  }
 });

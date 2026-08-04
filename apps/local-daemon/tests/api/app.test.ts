@@ -54,6 +54,7 @@ it("serves daemon health", async () => {
     status: "ok",
     name: "test-daemon",
     version: "9.9.9",
+    build: "abc1234",
     schema: {
       migration_count: 10,
       latest_migration_at: 1_784_742_886_678,

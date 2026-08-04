@@ -87,6 +87,8 @@ export type CreateIssueSourceRequest = z.infer<typeof createIssueSourceRequestSc
 export const syncLinearRequestSchema = z
   .object({
     source_id: z.string().min(1).optional(),
+    /** Restricts the sync to one project's mapped sources; ignored when `source_id` is given. */
+    project_id: z.string().min(1).optional(),
   })
   .strict();
 export type SyncLinearRequest = z.infer<typeof syncLinearRequestSchema>;

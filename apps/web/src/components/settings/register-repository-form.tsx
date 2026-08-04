@@ -4,7 +4,7 @@ import {
   registerRepositoryErrorMessage,
   useRegisterRepository,
 } from "@web/api/repositories/mutations";
-import { desktopBridge } from "@web/lib/desktop-bridge";
+import { desktopBridge, remoteHostAlias } from "@web/lib/desktop-bridge";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { useState } from "react";
 
@@ -16,6 +16,8 @@ export interface RegisterRepositoryFormProps {
 export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProps) {
   const register = useRegisterRepository();
   const bridge = desktopBridge();
+  // The native picker browses this machine; on a remote host the path lives on that host instead.
+  const remoteAlias = remoteHostAlias();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm({
@@ -57,7 +59,13 @@ export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProp
     >
       <form.Field
         name="path"
-        validators={{ onChange: requiredTrimmed("Enter the absolute path of a local repository.") }}
+        validators={{
+          onChange: requiredTrimmed(
+            remoteAlias === null
+              ? "Enter the absolute path of a local repository."
+              : `Enter the absolute path of a repository on ${remoteAlias}.`,
+          ),
+        }}
       >
         {(field) => (
           <Field {...fieldErrorProps(field.state.meta)}>
@@ -72,13 +80,17 @@ export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProp
                       setSubmitError(null);
                       field.handleChange(event.target.value);
                     }}
-                    placeholder="/absolute/path/to/repository"
+                    placeholder={
+                      remoteAlias === null
+                        ? "/absolute/path/to/repository"
+                        : `/absolute/path/on/${remoteAlias}`
+                    }
                     aria-label="Repository path"
                     spellCheck={false}
                   />
                 </FieldControl>
               </div>
-              {bridge === null ? null : (
+              {bridge === null || remoteAlias !== null ? null : (
                 <Button
                   type="button"
                   variant="outline"

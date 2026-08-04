@@ -1,42 +1,20 @@
-import type { ProjectSummary } from "@otomat/ui";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { useDaemonStatus, useHealth, useProjects } from "@web/api/daemon/queries";
+import { useDaemonStatus, useHealth } from "@web/api/daemon/queries";
 import { useProjectRuns } from "@web/api/runs/queries";
-import { useProjectSelection } from "@web/components/shell/project-selection/use-selection";
-import { isProjectScopedDetail } from "@web/lib/project-navigation";
+import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
 import { isReviewable, isRunning } from "@web/lib/run/filters";
 
 export function useShellData() {
   const { connectionState, lastSyncAt, retry } = useDaemonStatus();
   const health = useHealth();
-  const navigate = useNavigate();
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const projectsQuery = useProjects();
+  const switcher = useProjectSwitcher();
+  const runs = useProjectRuns(switcher.currentProjectId);
 
-  const projects: ProjectSummary[] = (projectsQuery.data ?? []).map((project) => ({
-    id: project.id,
-    name: project.name,
-    repo: project.root_path.split("/").filter(Boolean).at(-1),
-  }));
-
-  const { currentProjectId, selectProject: select } = useProjectSelection(projects);
-  const currentProject = projects.find((project) => project.id === currentProjectId);
-  const runs = useProjectRuns(currentProjectId);
-
-  // A detail view shows one entity of the old project; switching leaves it for the new project's issues.
-  function selectProject(projectId: string): void {
-    select(projectId);
-    if (isProjectScopedDetail(pathname)) navigate({ to: "/issues" });
-  }
   return {
     connectionState,
     lastSyncAt,
     retry,
     daemonVersion: health.data?.version,
-    projects,
-    currentProjectId,
-    selectProject,
-    projectLabel: currentProject?.repo ?? currentProject?.name,
+    ...switcher,
     hasLiveRun: (runs.data ?? []).some(isRunning),
     reviewCount: (runs.data ?? []).filter(isReviewable).length,
   };

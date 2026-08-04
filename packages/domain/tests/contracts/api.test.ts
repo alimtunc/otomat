@@ -18,6 +18,7 @@ it("requires safe schema metadata on daemon health", () => {
     status: "ok",
     name: "otomat-local-daemon",
     version: "0.1.0",
+    build: "abc1234",
     started_at: "2026-07-23T10:00:00.000Z",
     db_path: "/tmp/otomat.db",
     schema: {
@@ -38,6 +39,24 @@ it("requires safe schema metadata on daemon health", () => {
       db_path: "/tmp/otomat.db",
     }).success,
   ).toBe(false);
+});
+
+it("defaults a missing build to null so a pre-stamp daemon deploy still connects", () => {
+  const health = healthResponseSchema.parse({
+    status: "ok",
+    name: "otomat-local-daemon",
+    version: "0.1.0",
+    started_at: "2026-07-23T10:00:00.000Z",
+    db_path: "/tmp/otomat.db",
+    schema: {
+      migration_count: 10,
+      latest_migration_at: null,
+      page_count: 42,
+      page_size: 4096,
+    },
+  });
+
+  expect(health.build).toBeNull();
 });
 
 const RUN = {

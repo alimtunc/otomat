@@ -9,6 +9,7 @@ export interface ApiDeps {
   db: Db;
   name: string;
   version: string;
+  build: string | null;
   startedAt: string;
   dbPath: string;
   schemaMetadata(): SchemaMetadataContract;

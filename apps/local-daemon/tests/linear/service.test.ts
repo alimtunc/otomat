@@ -1,4 +1,10 @@
-import { getSyncState, insertIssueSource, listIssues, listIssueSources } from "@otomat/db";
+import {
+  getSyncState,
+  insertIssueSource,
+  insertProject,
+  listIssues,
+  listIssueSources,
+} from "@otomat/db";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import {
@@ -355,7 +361,7 @@ it("lists and syncs only Linear mappings", async () => {
   await linear.connect("lin_api_secret");
 
   expect(linear.sources().map((source) => source.id)).toEqual([linearSource.id]);
-  await expect(linear.sync(githubSource.id)).rejects.toMatchObject({
+  await expect(linear.sync({ source_id: githubSource.id })).rejects.toMatchObject({
     code: "linear_source_not_found",
   });
 });
@@ -377,7 +383,9 @@ it("refuses to sync an unknown source", async () => {
   const linear = service();
   await linear.connect("lin_api_secret");
 
-  await expect(linear.sync("missing")).rejects.toMatchObject({ code: "linear_source_not_found" });
+  await expect(linear.sync({ source_id: "missing" })).rejects.toMatchObject({
+    code: "linear_source_not_found",
+  });
 });
 
 it("syncs every mapped source and reports what landed", async () => {
@@ -554,4 +562,47 @@ it("cancels sibling operations when one discovers a revoked key", async () => {
   expect(issueRequests).toBe(1);
   expect(listIssues(t.db).filter((issue) => issue.source === "linear")).toEqual([]);
   expect(getSyncState(t.db, SYNC_SOURCE, SYNC_RESOURCE, source.id)).toBeUndefined();
+});
+
+it("scopes source listing and sync to a single project when asked", async () => {
+  insertProject(t.db, { id: "p2", name: "Second", root_path: "/tmp/otomat-p2" });
+  const linear = service({ issues: async () => [] });
+  await linear.connect("lin_api_secret");
+  await linear.createSource({ project_id: "p1", ...TEAM });
+  await linear.createSource({ project_id: "p2", external_team_id: "team-2" });
+
+  expect(linear.sources()).toHaveLength(2);
+  expect(linear.sources("p1").map((source) => source.project_id)).toEqual(["p1"]);
+
+  const results = await linear.sync({ project_id: "p2" });
+  expect(results).toHaveLength(1);
+});
+
+it("unmaps a source, drops its cursor, and frees the team for a new mapping", async () => {
+  const linear = service({ issues: async () => [] });
+  await linear.connect("lin_api_secret");
+  const source = await linear.createSource({ project_id: "p1", ...TEAM });
+  await linear.sync({ source_id: source.id });
+  expect(getSyncState(t.db, SYNC_SOURCE, SYNC_RESOURCE, source.id)).toBeDefined();
+
+  linear.deleteSource(source.id);
+
+  expect(linear.sources()).toHaveLength(0);
+  expect(getSyncState(t.db, SYNC_SOURCE, SYNC_RESOURCE, source.id)).toBeUndefined();
+  expect(() => linear.deleteSource(source.id)).toThrow(
+    expect.objectContaining({ code: "linear_source_not_found" }),
+  );
+  await expect(linear.createSource({ project_id: "p1", ...TEAM })).resolves.toMatchObject({
+    external_team_id: "team-1",
+  });
+});
+
+it("refuses to unmap a non-Linear source", async () => {
+  const githubSource = persistSource("github");
+  const linear = service();
+  await linear.connect("lin_api_secret");
+
+  expect(() => linear.deleteSource(githubSource.id)).toThrow(
+    expect.objectContaining({ code: "linear_source_not_found" }),
+  );
 });
