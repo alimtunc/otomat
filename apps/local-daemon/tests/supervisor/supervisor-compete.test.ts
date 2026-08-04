@@ -18,6 +18,7 @@ import { createSupervisor, RunNotResumableError } from "#supervisor";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { providerSessionEvent, writeRunEvents } from "../support/run-event-fixtures.js";
 import { deadPid, workerSpawn } from "../support/spawn.js";
+import { makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
 
@@ -338,18 +339,7 @@ it("reconciles torn competitors but refuses to resume them without repository wo
     providerSessionEvent(refs[0]!, "provider-a"),
     providerSessionEvent(refs[1]!, "provider-b"),
   ]);
-  const worker = workerSpawn("complete");
-  const supervisor = createSupervisor({
-    db: fix.db,
-    dataDir: fix.dataDir,
-    defaultProjectId: "p1",
-    spawn: worker,
-    concurrency: 2,
-    repositories: createRepositoryResolver({
-      db: fix.db,
-      worktreesRoot: join(fix.dataDir, "worktrees"),
-    }),
-  });
+  const { supervisor, spawn: worker } = makeSupervisor(fix, "complete", { concurrency: 2 });
 
   const report = supervisor.reconcile();
 
@@ -386,12 +376,7 @@ it("finishes a reserved promotion after restart without auto-running dependents"
   });
   expect(getRun(fix.db, run.id)?.status).toBe("awaiting_human");
 
-  const blockedSpawn = workerSpawn("complete");
-  const blocked = createSupervisor({
-    db: fix.db,
-    dataDir: fix.dataDir,
-    defaultProjectId: "p1",
-    spawn: blockedSpawn,
+  const { supervisor: blocked, spawn: blockedSpawn } = makeSupervisor(fix, "complete", {
     repositories: UNAVAILABLE_REPOSITORIES,
   });
   await expect(blocked.resume(run.id)).rejects.toThrow(/cannot continue without its worktree/);
@@ -412,11 +397,7 @@ it("fails a reserved promotion instead of selecting it when the repository is un
   const winner = listStepRunsForRun(fix.db, run.id).find((step) => step.name === "Direct");
   if (!group || !winner) throw new Error("expected winner candidate");
   claimCompeteWinner(fix.db, group.id, winner.id);
-  const restarted = createSupervisor({
-    db: fix.db,
-    dataDir: fix.dataDir,
-    defaultProjectId: "p1",
-    spawn: workerSpawn("complete"),
+  const { supervisor: restarted } = makeSupervisor(fix, "complete", {
     repositories: UNAVAILABLE_REPOSITORIES,
   });
 
@@ -488,12 +469,7 @@ it("fails a message on a selected winner whose canonical worktree is unavailable
   if (!group || !winner) throw new Error("expected winner candidate");
   await first.supervisor.selectWinner(run.id, group.id, winner.id);
 
-  const blockedSpawn = workerSpawn("complete");
-  const blocked = createSupervisor({
-    db: fix.db,
-    dataDir: fix.dataDir,
-    defaultProjectId: "p1",
-    spawn: blockedSpawn,
+  const { supervisor: blocked, spawn: blockedSpawn } = makeSupervisor(fix, "complete", {
     repositories: UNAVAILABLE_REPOSITORIES,
   });
 

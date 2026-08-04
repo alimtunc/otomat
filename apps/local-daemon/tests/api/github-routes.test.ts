@@ -6,7 +6,7 @@ import { GitHubPublicationError } from "#github";
 
 import { makeApiApp, post, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
-import { pullRequestRow, stubGitHubService } from "../support/github.js";
+import { CONNECTED_GITHUB, pullRequestRow, stubGitHubService } from "../support/github.js";
 
 const RUN_ID = "run-github-api";
 let t: TestDb;
@@ -31,13 +31,7 @@ it("serves GitHub connection state and starts the delegated login", async () => 
   let connects = 0;
   const app = makeApiApp(t, {
     github: stubGitHubService({
-      connection: async () => ({
-        status: "connected",
-        login: "octocat",
-        device_authorization: null,
-        error_code: null,
-        error_message: null,
-      }),
+      connection: async () => CONNECTED_GITHUB,
       connect: () => {
         connects += 1;
         return {

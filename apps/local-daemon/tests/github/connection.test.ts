@@ -1,4 +1,3 @@
-import type { GitHubConnectionContract } from "@otomat/domain";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,21 +7,10 @@ import {
   type GitHubCli,
 } from "#github";
 
-const CONNECTED: GitHubConnectionContract = {
-  status: "connected",
-  login: "octocat",
-  device_authorization: null,
-  error_code: null,
-  error_message: null,
-};
-
-const DISCONNECTED: GitHubConnectionContract = {
-  status: "disconnected",
-  login: null,
-  device_authorization: null,
-  error_code: "github_auth_required",
-  error_message: "Sign in to GitHub to continue.",
-};
+import {
+  CONNECTED_GITHUB as CONNECTED,
+  DISCONNECTED_GITHUB as DISCONNECTED,
+} from "../support/github.js";
 
 const START: DeviceAuthorizationStart = {
   deviceCode: "dev-1",

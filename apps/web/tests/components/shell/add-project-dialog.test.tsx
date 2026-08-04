@@ -6,6 +6,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { setInputValue } from "#support/dom-events";
+import { findButton } from "#support/dom-queries";
 import { mount } from "#support/mount";
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -41,9 +42,7 @@ function pathInput(): HTMLInputElement {
 }
 
 function submitButton(): HTMLButtonElement {
-  const button = [...document.querySelectorAll("button")].find(
-    (candidate) => candidate.textContent?.trim() === "Add project",
-  );
+  const button = findButton("Add project");
   if (button === undefined) throw new Error("submit button not found");
   return button;
 }
@@ -61,9 +60,7 @@ it("registers on the chosen host and hands the new project's switcher key to sel
   const onSelect = vi.fn();
   await renderDialog(onSelect);
 
-  const remoteTab = [...document.querySelectorAll("button")].find(
-    (candidate) => candidate.textContent?.trim() === "otomat-vps",
-  );
+  const remoteTab = findButton("otomat-vps");
   await act(async () => {
     remoteTab?.click();
   });

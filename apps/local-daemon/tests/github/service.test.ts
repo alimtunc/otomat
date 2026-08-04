@@ -27,18 +27,11 @@ import {
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { stubRepositoryResolver, type TestRepo } from "../support/git.js";
+import { CONNECTED_GITHUB as connected, DISCONNECTED_GITHUB } from "../support/github.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-github";
 const BRANCH = `otomat/run/${RUN_ID}`;
-
-const connected: GitHubConnectionContract = {
-  status: "connected",
-  login: "octocat",
-  device_authorization: null,
-  error_code: null,
-  error_message: null,
-};
 
 class FakeGitHubCli implements GitHubCli {
   connectionValue: GitHubConnectionContract = connected;
@@ -201,13 +194,7 @@ describe("GitHubService", () => {
   });
 
   it("persists not_configured without touching git when authentication is missing", async () => {
-    cli.connectionValue = {
-      status: "disconnected",
-      login: null,
-      device_authorization: null,
-      error_code: "github_auth_required",
-      error_message: "Sign in to GitHub to continue.",
-    };
+    cli.connectionValue = DISCONNECTED_GITHUB;
 
     const result = await service().publish(run(), { title: "Ship it", body: "Details" });
 
@@ -244,13 +231,7 @@ describe("GitHubService", () => {
   it("restores a created publication after reconnecting without new changes", async () => {
     const github = service();
     await github.publish(run(), { title: "Ship it", body: "Details" });
-    cli.connectionValue = {
-      status: "disconnected",
-      login: null,
-      device_authorization: null,
-      error_code: "github_auth_required",
-      error_message: "Sign in to GitHub to continue.",
-    };
+    cli.connectionValue = DISCONNECTED_GITHUB;
     const disconnected = await github.publish(run(), { title: "Ship it", body: "Details" });
     expect(disconnected.row.publication_status).toBe("not_configured");
 
@@ -632,13 +613,7 @@ describe("GitHubService", () => {
   it.each(["pushing", "creating"] as const)(
     "recovers an interrupted %s publication after daemon restart",
     async (publicationStatus) => {
-      cli.connectionValue = {
-        status: "disconnected",
-        login: null,
-        device_authorization: null,
-        error_code: "github_auth_required",
-        error_message: "Sign in to GitHub to continue.",
-      };
+      cli.connectionValue = DISCONNECTED_GITHUB;
       await service().publish(run(), { title: "Ship it", body: "Details" });
       const row = getPullRequestForRun(fix.db, RUN_ID);
       if (!row) throw new Error("local pull request missing");

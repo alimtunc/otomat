@@ -1,6 +1,23 @@
 import type { PullRequestRow } from "@otomat/db";
+import type { GitHubConnectionContract } from "@otomat/domain";
 
 import type { GitHubService } from "#github";
+
+export const CONNECTED_GITHUB: GitHubConnectionContract = {
+  status: "connected",
+  login: "octocat",
+  device_authorization: null,
+  error_code: null,
+  error_message: null,
+};
+
+export const DISCONNECTED_GITHUB: GitHubConnectionContract = {
+  status: "disconnected",
+  login: null,
+  device_authorization: null,
+  error_code: "github_auth_required",
+  error_message: "Sign in to GitHub to continue.",
+};
 
 export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullRequestRow {
   return {
@@ -27,13 +44,7 @@ export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullReq
 
 export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHubService {
   return {
-    connection: async () => ({
-      status: "disconnected",
-      login: null,
-      device_authorization: null,
-      error_code: "github_auth_required",
-      error_message: "Sign in to GitHub to continue.",
-    }),
+    connection: async () => DISCONNECTED_GITHUB,
     connect: () => ({
       status: "connecting",
       login: null,

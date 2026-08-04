@@ -7,6 +7,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { setInputValue } from "#support/dom-events";
+import { findButton } from "#support/dom-queries";
 import { mount } from "#support/mount";
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -134,9 +135,7 @@ it("removes the host after an explicit confirm, warning what actually happens", 
   window.otomat = bridge;
   await renderSection();
 
-  const remove = [...document.querySelectorAll("button")].find(
-    (candidate) => candidate.textContent?.trim() === "Remove",
-  );
+  const remove = findButton("Remove");
   await act(async () => {
     remove?.click();
   });
@@ -144,9 +143,7 @@ it("removes the host after an explicit confirm, warning what actually happens", 
   expect(removeRemote).not.toHaveBeenCalled();
   expect(document.body.textContent).toContain("Nothing is deleted on the server");
 
-  const confirm = [...document.querySelectorAll("button")].find(
-    (candidate) => candidate.textContent?.trim() === "Remove host",
-  );
+  const confirm = findButton("Remove host");
   await act(async () => {
     confirm?.click();
   });
@@ -161,15 +158,11 @@ it("surfaces the refusal when the host cannot be removed while active", async ()
   window.otomat = bridge;
   await renderSection();
 
-  const remove = [...document.querySelectorAll("button")].find(
-    (candidate) => candidate.textContent?.trim() === "Remove",
-  );
+  const remove = findButton("Remove");
   await act(async () => {
     remove?.click();
   });
-  const confirm = [...document.querySelectorAll("button")].find(
-    (candidate) => candidate.textContent?.trim() === "Remove host",
-  );
+  const confirm = findButton("Remove host");
   await act(async () => {
     confirm?.click();
   });
@@ -191,9 +184,7 @@ it("saves the configured alias", async () => {
   await act(async () => {
     setInputValue(input, "otomat-vps");
   });
-  const save = [...document.querySelectorAll("button")].find(
-    (candidate) => candidate.textContent?.trim() === "Save",
-  );
+  const save = findButton("Save");
   await act(async () => {
     save?.click();
   });
