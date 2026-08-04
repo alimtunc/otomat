@@ -53,7 +53,7 @@ export interface CloseOptions {
 
 export interface DaemonHandle {
   port: number;
-  /** Stops accepting connections, settles in-flight runs, and closes SQLite; rejects with every shutdown failure preserved. */
+  /** Rejects with every shutdown failure preserved. */
   close(options?: CloseOptions): Promise<void>;
 }
 

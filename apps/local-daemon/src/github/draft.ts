@@ -74,7 +74,6 @@ const DRAFT_COMMANDS: Record<string, { command: string; args: string[] }> = {
   claude: { command: "claude", args: ["-p", "--output-format", "text"] },
 };
 
-/** Assembles what the drafting agent sees: the run's objective, its worktree, and the current diff. */
 export function buildPullRequestDraftInput(
   config: Pick<GitHubServiceConfig, "db" | "repositories">,
   run: RunRow,

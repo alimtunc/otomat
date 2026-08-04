@@ -57,7 +57,6 @@ export type ExecutionHostOperationResult =
   | { ok: false; status: RemoteHostStatus }
   | { ok: false; message: string };
 
-/** Outcome of registering a repository path on a chosen host's daemon through the desktop main process. */
 export type ExecutionHostRegisterProjectResult =
   | { ok: true; project: ProjectContract }
   | { ok: false; message: string };

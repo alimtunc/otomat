@@ -70,7 +70,6 @@ export interface OtomatDesktopBridge {
     configureRemote(sshAlias: string): Promise<ExecutionHostOperationResult>;
     /** Forgets the remote host: closes the tunnel and clears the alias. Nothing on the server is touched. */
     removeRemote(): Promise<ExecutionHostOperationResult>;
-    /** Registers a repository path on the chosen host's daemon and returns the created project. */
     registerProject(
       hostId: ExecutionHostId,
       path: string,

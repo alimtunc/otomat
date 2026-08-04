@@ -17,7 +17,6 @@ export const REPOSITORY_REGISTRATION_ERRORS = [
 ] as const;
 export type RepositoryRegistrationError = (typeof REPOSITORY_REGISTRATION_ERRORS)[number];
 
-/** Local filesystem path submitted for repository registration. */
 export const registerRepositoryRequestSchema = z.object({
   path: z.string().trim().min(1),
   /** Attaches the path to this existing project so its issues stay bound to it, instead of creating a new project. */

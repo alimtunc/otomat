@@ -10,7 +10,6 @@ export const SUPERVISOR_ADAPTER = "otomat-supervisor";
 /** Env var carrying the serialized job to a re-exec'd worker process. */
 export const WORKER_JOB_ENV = "OTOMAT_WORKER_JOB";
 
-/** The run/step/session ids and prompt a single turn drives, plus the artifact dir its whole session shares. */
 export interface TurnContext {
   runId: string;
   stepRunId: string;
@@ -20,21 +19,18 @@ export interface TurnContext {
   agentSessionDir: string;
   /** Isolated working dir the turn mutates. Always present: a run that cannot own one is refused at launch. */
   worktreePath: string;
-  /** Runtime adapter id the worker instantiates; persisted on the run via its agent row. */
   runtime: KnownRuntimeId;
   /** Repository init commands to run in `worktreePath` before the provider spawns. Compete candidates only: the run's canonical worktree is initialized at launch. */
   worktreeInit?: { commands: string[]; label: string };
-  /** Effective agent config frozen for this step; null on runs launched before profiles existed. Drives guidance/skills/options at the worker. */
+  /** Frozen for this step; null on runs launched before profiles existed. */
   config: ResolvedAgentConfig | null;
 }
 
-/** A turn the supervisor hands to a child process: a fresh run, or a follow-up that resumes a provider session. */
 export interface SupervisedJob extends TurnContext {
   mode: "run" | "resume";
   providerSessionId: string | null;
 }
 
-/** How a child process ended, as observed by its parent. */
 export interface ProcessExit {
   code: number | null;
   signal: string | null;
@@ -59,7 +55,6 @@ export interface SupervisorConfig {
   dataDir: string;
   defaultProjectId: string;
   spawn: SpawnSession;
-  /** Max concurrent session processes. Defaults to {@link DEFAULT_CONCURRENCY}. */
   concurrency?: number;
   /** Resolves the repository a run forks its worktree from; a project without one cannot be launched on. */
   repositories: RepositoryResolver;
@@ -72,7 +67,6 @@ export interface Supervisor {
   start(request: StartRunRequest): Promise<RunRow>;
   /** Resume a human-waiting run on an explicit action — spawns a `resume` turn, never auto-runs. */
   resume(runId: string): Promise<RunRow>;
-  /** Spawn a follow-up fix turn on a review-ready run with a caller-built prompt. */
   fix(runId: string, prompt: string): Promise<RunRow>;
   /** Persist one user message on the run as `queued`, then deliver it if the run is already resting. */
   contribute(runId: string, body: string): Promise<RunContributionRow>;
@@ -92,7 +86,6 @@ export interface Supervisor {
   shutdown(graceMs: number): Promise<void>;
 }
 
-/** Outcome of classifying one crashed/aborted run against the durable ledger + process liveness. */
 export type ReconcileClassification = "completed" | "interrupted" | "failed" | "canceled";
 
 export interface ReconcileOutcome {

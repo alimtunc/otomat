@@ -25,11 +25,7 @@ import { driveCompeteGroupTo } from "./transitions.js";
 import type { TurnContext } from "./types.js";
 import { scheduleWorktreeInit } from "./worktree-init.js";
 
-/**
- * Starts a fresh run. Side effect: when the request omits `issue_id`, a local `issue`
- * row is created from the prompt (its first line as the title) to anchor the run.
- * Repositories with init commands return while init streams in the background.
- */
+/** Omitting `issue_id` creates a local issue from the prompt; init commands stream in the background. */
 export async function startRun(state: SupervisorState, request: StartRunRequest): Promise<RunRow> {
   const runId = prepareRun(state, request);
   const run = requireRunRow(state.db, runId, "spawn");

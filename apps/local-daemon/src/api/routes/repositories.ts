@@ -39,7 +39,6 @@ const CONFLICT_ERRORS: ReadonlySet<RepositoryRegistrationError> = new Set([
   "project_already_has_repository",
 ]);
 
-/** Repository reads plus the local-path registration mutation, mounted at `/api/repositories`. */
 export function createRepositoryRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();
 
@@ -61,7 +60,6 @@ export function createRepositoryRoutes(deps: ApiDeps): Hono {
     );
   });
 
-  /** Per-repository settings; today that is only the worktree init commands. */
   routes.patch("/:id", validateJson(updateRepositoryRequestSchema), (c) => {
     const repository = getRepository(deps.db, c.req.param("id"));
     if (!repository) return c.json({ error: "repository_not_found" }, 404);

@@ -2,7 +2,6 @@ import { z } from "zod";
 
 import { pullRequestContractSchema } from "./entities/pull-request.js";
 
-/** Publish or update the run's GitHub pull request. */
 export const preparePullRequestRequestSchema = z.object({
   title: z.string().min(1),
   body: z.string(),
