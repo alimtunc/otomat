@@ -1,7 +1,7 @@
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { ExecutionHostId } from "@otomat/domain";
+import { isExecutionHostId, type ExecutionHostId } from "@otomat/domain";
 
 import { hasErrorCode } from "#shared/fs-errors";
 
@@ -24,7 +24,7 @@ function isExecutionHostsConfig(value: unknown): value is ExecutionHostsConfig {
   if (typeof value !== "object" || value === null) return false;
   const config = value as Record<string, unknown>;
   if (config.version !== 1) return false;
-  if (config.active !== "local" && config.active !== "remote") return false;
+  if (!isExecutionHostId(config.active)) return false;
   if (config.remote === null) return config.active === "local";
   if (typeof config.remote !== "object") return false;
   const remote = config.remote as Record<string, unknown>;
