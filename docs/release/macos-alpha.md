@@ -7,7 +7,7 @@ Otomat has two macOS builds and they are not interchangeable.
 | Signature | ad-hoc (`codesign --sign -`) | Developer ID Application |
 | Notarized | no | yes, app and DMG, both stapled |
 | Apple credentials | none | all of them, or it refuses to build |
-| Runs on another Mac | no | yes, with no Gatekeeper bypass |
+| Runs on another Mac | only with the explicit Gatekeeper override below | yes, with no Gatekeeper bypass |
 | Purpose | local development | distribution |
 
 The unsigned build never reads a credential, and the signed build never falls back to an unsigned
@@ -21,6 +21,37 @@ host of that architecture. Packaging keeps the build host's `better-sqlite3` bin
 pipeline never cross-compiles, so a release is only valid from a runner matching its
 target. Adding Intel or a universal binary means adding a runner of that architecture and extending
 `SUPPORTED_RELEASE_ARCHS` in `apps/desktop/scripts/release/metadata.mjs` — not a build flag.
+
+## PR preview builds
+
+Every pull request to `main` packages this same unsigned artifact once its `pnpm check` gate is
+green: CI runs `pnpm desktop:package` on an Apple Silicon runner, exercises the result with
+`pnpm desktop:smoke`, and only then uploads the DMG as a workflow artifact named
+`otomat-pr-<number>-macos-arm64-<short-sha>`, kept for 7 days. The embedded `build-info.json`
+names the PR's head commit, not the merge commit CI tests elsewhere. No Apple secret is read or
+required: the preview is ad-hoc signed and not notarized, and the signed workflow in
+`.github/workflows/release-macos.yml` remains the only distribution path.
+
+To test a preview on an Apple Silicon Mac — no checkout, Node or pnpm required:
+
+1. On the PR's CI run (*Checks → CI → Summary*), download the `otomat-pr-…` artifact; the run
+   summary links it directly.
+2. Unzip the download, open the DMG inside, and drag **Otomat** into **Applications**.
+3. A plain launch is refused — macOS reports the app as damaged or unverifiable, because the
+   preview is neither Developer ID signed nor notarized. That refusal is Gatekeeper working as
+   intended; the explicit opt-in for an internal build is stripping its quarantine flag:
+
+   ```sh
+   xattr -dr com.apple.quarantine /Applications/Otomat.app
+   ```
+
+4. Launch Otomat from Finder. To confirm which build is running, export a support bundle
+   (*Data Safety → Export Support Bundle…*): `versions.commit` must start with the short SHA in
+   the artifact name.
+
+A preview is for the team's own test hardware only. Handing someone a DMG plus quarantine-stripping
+instructions is exactly the pattern the signed pipeline exists to replace — share builds through a
+release, never through a preview artifact.
 
 ## One-time Apple setup
 
@@ -82,7 +113,8 @@ commit, a version, an architecture, an Electron version and a sha256.
 Running the workflow manually (*Run workflow*) does everything **except** publishing, which is how
 you exercise the pipeline without creating a release. `ci.yml` also packages and smokes the
 *unsigned* artifact on every push to `main`, so a packaging regression surfaces before a release
-needs it.
+needs it, and on every pull request, where the DMG is uploaded as a
+[PR preview build](#pr-preview-builds).
 
 ## Verifying on a clean Mac
 
@@ -125,5 +157,6 @@ second user account):
 `pnpm desktop:dev` runs the shell against the Vite dev server with a daemon built from source.
 `pnpm desktop:package` produces the ad-hoc signed artifact for testing the packaged shape on your
 own machine; packaging needs a macOS host and refuses any other platform. That artifact is not
-distributable: on any other Mac macOS refuses it, which is the intended outcome — sharing a build
-means going through the signed pipeline.
+distributable: on any other Mac, Gatekeeper refuses it unless the tester applies the explicit
+override documented for [PR preview builds](#pr-preview-builds) — sharing a build with users means
+going through the signed pipeline.
