@@ -12,7 +12,7 @@ function parseCommands(value: string): string[] {
 
 export function InitCommandsForm({ repository }: { repository: RepositoryContract }) {
   const update = useUpdateRepository();
-  const [value, setValue] = useState(repository.init_commands.join("\n"));
+  const [value, setValue] = useState(() => repository.init_commands.join("\n"));
   const dirty = parseCommands(value).join("\n") !== repository.init_commands.join("\n");
 
   return (

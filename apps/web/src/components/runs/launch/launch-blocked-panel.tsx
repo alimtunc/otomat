@@ -28,11 +28,7 @@ const DESCRIPTIONS: Record<LaunchTargetBlocker, string> = {
     "The registered path is gone or is no longer a git repository, so no worktree can be created from it.",
 };
 
-/**
- * Replaces the launch form when no worktree could be created. It offers what
- * actually unblocks the launch — point the issue at a project that is ready, or
- * give this project a repository — instead of failing after the run exists.
- */
+/** Replaces the launch form with what unblocks it: move the issue, or register a repository. */
 export function LaunchBlockedPanel({ projectId, blocker, issue }: LaunchBlockedPanelProps) {
   return (
     <div className="flex flex-col gap-4">

@@ -1,70 +1,11 @@
-import type { ExecutionHostDescriptor, RemoteHostStatus } from "@otomat/domain";
-import {
-  Badge,
-  Button,
-  EmptyState,
-  Field,
-  FieldControl,
-  FieldLabel,
-  Icon,
-  Input,
-  Skeleton,
-} from "@otomat/ui";
+import { Button, EmptyState, Field, FieldControl, FieldLabel, Input, Skeleton } from "@otomat/ui";
 import { SectionHeading } from "@web/components/settings/section-heading";
 import { useState, type ReactNode } from "react";
 
-import { describeRemoteStatus } from "./status-labels";
+import { HostRow } from "./host-row";
 import { useExecutionHost } from "./use-execution-host";
 
 const ALIAS_DATALIST_ID = "execution-host-ssh-aliases";
-
-const STATUS_TONES: Partial<Record<RemoteHostStatus["phase"], string>> = {
-  connected: "text-text-secondary",
-  error: "text-danger",
-};
-
-function RemoteStatusLine({ status }: { status: RemoteHostStatus | null }) {
-  if (status === null) return null;
-  const tone = STATUS_TONES[status.phase] ?? "text-text-tertiary";
-  return (
-    <p role="status" className={`text-xs ${tone}`}>
-      {describeRemoteStatus(status)}
-    </p>
-  );
-}
-
-function HostRow({
-  host,
-  active,
-  status,
-  action,
-}: {
-  host: ExecutionHostDescriptor;
-  active: boolean;
-  status: RemoteHostStatus | null;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="flex items-start gap-3 p-4">
-      <Icon
-        name={host.kind === "ssh" ? "terminal" : "monitor"}
-        aria-hidden
-        className="mt-0.5 h-4 w-4 text-text-tertiary"
-      />
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-foreground">{host.label}</span>
-          <span className="text-xs text-text-tertiary">
-            {host.kind === "ssh" ? "SSH tunnel · daemon on the host" : "This machine"}
-          </span>
-          {active ? <Badge>Active</Badge> : null}
-        </div>
-        {host.kind === "ssh" ? <RemoteStatusLine status={status} /> : null}
-      </div>
-      {action}
-    </div>
-  );
-}
 
 export function ExecutionHostSection() {
   const host = useExecutionHost();

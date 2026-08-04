@@ -9,7 +9,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
-/** Registers a local repository and refreshes both project and repository catalogs. */
 export function useRegisterRepository() {
   const client = useQueryClient();
   return useMutation({
@@ -21,7 +20,6 @@ export function useRegisterRepository() {
   });
 }
 
-/** Saves per-repository settings (worktree init commands) and refreshes the catalog. */
 export function useUpdateRepository() {
   const client = useQueryClient();
   return useMutation({
@@ -33,7 +31,6 @@ export function useUpdateRepository() {
   });
 }
 
-/** Deletes a repository (and its project) and refreshes every project-scoped catalog. */
 export function useDeleteRepository() {
   const client = useQueryClient();
   return useMutation({
@@ -47,7 +44,6 @@ export function useDeleteRepository() {
   });
 }
 
-/** Surfaces the daemon's refusal (e.g. active runs) and falls back to connectivity. */
 export function deleteRepositoryErrorMessage(error: unknown): string {
   if (error instanceof DaemonRequestError) {
     const refusal = repositoryDeletionErrorSchema.safeParse(error.body);
@@ -57,7 +53,6 @@ export function deleteRepositoryErrorMessage(error: unknown): string {
   return "Could not delete the repository — is the daemon running?";
 }
 
-/** Preserves typed daemon refusals and falls back to a connectivity message otherwise. */
 export function registerRepositoryErrorMessage(error: unknown): string {
   if (error instanceof DaemonRequestError) {
     const refusal = repositoryRegistrationErrorSchema.safeParse(error.body);

@@ -29,7 +29,7 @@ export function useConnectGitHub() {
   });
 }
 
-/** Asks the run's own agent to draft the PR title, description, and branch; the form stays editable. */
+/** No cache to refresh: the drafted metadata lands in the form, which stays editable. */
 export function useDraftPullRequest(runId: string) {
   return useMutation({
     mutationFn: () => daemon.draftPullRequest(runId),

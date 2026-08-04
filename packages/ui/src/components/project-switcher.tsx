@@ -16,6 +16,8 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from "../primitives/combobox";
+import { HostTag } from "./host-tag";
+import { ProjectGlyph } from "./project-glyph";
 
 const HEALTH_COLOR: Record<NonNullable<ProjectSummary["health"]>, string> = {
   healthy: TONE_FACETS.success.cssVar,
@@ -31,26 +33,6 @@ export interface ProjectSwitcherProps {
   loading?: boolean;
   /** Renders an "Add project…" footer action; also replaces the empty-state hint when provided. */
   onAddProject?: () => void;
-}
-
-function HostTag({ tag }: { tag: string }) {
-  return (
-    <span className="flex-none rounded border border-border-subtle bg-surface-2 px-1 py-px font-mono text-[10px] leading-4 text-text-tertiary">
-      {tag}
-    </span>
-  );
-}
-
-function ProjectGlyph({ name }: { name: string }) {
-  return (
-    <div
-      className="grid h-6 w-6 flex-none place-items-center rounded-md text-[13px] font-bold text-on-accent"
-      style={{ background: "linear-gradient(160deg,var(--iris-hover),var(--iris-active))" }}
-      aria-hidden
-    >
-      {name.slice(0, 1).toUpperCase()}
-    </div>
-  );
 }
 
 export function ProjectSwitcher({
