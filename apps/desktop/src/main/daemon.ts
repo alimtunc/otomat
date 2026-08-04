@@ -17,19 +17,14 @@ import { DaemonOutputCapture } from "./data-safety/daemon-output.js";
 import { combineFailures } from "./data-safety/failure-composition.js";
 
 export interface DaemonControllerOptions {
-  /** Node entry to run (packaged bundle, or the repo's built dist in dev). */
   daemonEntry: string;
-  /** SQLite path under userData; its dir holds runs + worktrees. */
   dbPath: string;
   projectRoot: string;
-  /** Resolved PATH so the daemon finds user CLIs from a Finder launch. */
   userPath: string;
   packaged: boolean;
-  /** Electron binary path; used to run the daemon as Node in the packaged app (no standalone node). */
   electronBinary: string;
-  /** Env the daemon child extends; defaults to the app's env (tests override to strip inherited VITEST). */
+  /** Tests override to strip inherited VITEST env. */
   baseEnv?: NodeJS.ProcessEnv;
-  /** Build the shell expects; forwarded so an unstamped dev daemon still reports it. */
   buildSha?: string;
   writeLog?: (stream: "stdout" | "stderr", text: string) => void;
 }
@@ -52,7 +47,6 @@ interface ActiveChild {
 
 const OUTPUT_DRAIN_TIMEOUT_MS = 1000;
 
-/** Owns the single daemon child: starts it on a fresh loopback port, waits for health, stops it bounded. */
 export class DaemonController {
   private active: ActiveChild | null = null;
   private restoreOperation: Promise<void> | null = null;
@@ -67,7 +61,6 @@ export class DaemonController {
     return this.active?.child.pid;
   }
 
-  /** Spawns the daemon, resolves its origin once `/api/health` answers; rejects if it dies or times out. */
   async start(): Promise<string> {
     if (this.restoreOperation !== null) {
       throw new Error("The database restore process is still running.");

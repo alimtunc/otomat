@@ -1,7 +1,7 @@
 import type { RemoteHostStatus } from "@otomat/domain";
 import { expect, it, vi } from "vitest";
 
-import { readExecutionHostsConfig, writeExecutionHostsConfig } from "#main/remote/hosts-config";
+import { readExecutionHostsConfig, writeExecutionHostsConfig } from "#main/remote/host/config";
 import { ExecutionHostManager } from "#main/remote/manager";
 import type { RemoteSessionHandle } from "#main/remote/session";
 import { scratchDir } from "#support/scratch-dir";

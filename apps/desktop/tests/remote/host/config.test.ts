@@ -7,7 +7,7 @@ import {
   executionHostsConfigPath,
   readExecutionHostsConfig,
   writeExecutionHostsConfig,
-} from "#main/remote/hosts-config";
+} from "#main/remote/host/config";
 import { scratchDir } from "#support/scratch-dir";
 
 function scratch(): string {

@@ -5,7 +5,7 @@ import {
   REMOTE_DAEMON_PORT,
   startOrVerifyDaemonScript,
   stopDaemonScript,
-} from "#main/remote/daemon-bootstrap";
+} from "#main/remote/bootstrap/scripts";
 
 it("keeps the remote daemon loopback-bound with the packaged renderer origin allowed", () => {
   const script = startOrVerifyDaemonScript();

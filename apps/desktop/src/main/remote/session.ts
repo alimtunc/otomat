@@ -4,18 +4,18 @@ import { waitForHealth } from "#shared/health";
 import { findFreeLoopbackPort } from "#shared/ports";
 
 import {
+  REMOTE_DAEMON_PORT,
+  startOrVerifyDaemonScript,
+  stopDaemonScript,
+} from "./bootstrap/scripts.js";
+import {
   resolveBootstrapResult,
   trimDetail,
   type BootstrapResolution,
   type RemoteErrorStatus,
-} from "./bootstrap-status.js";
-import {
-  REMOTE_DAEMON_PORT,
-  startOrVerifyDaemonScript,
-  stopDaemonScript,
-} from "./daemon-bootstrap.js";
-import { runSshScript } from "./ssh.js";
-import { SshTunnel, type SshTunnelOptions, type TunnelHandle } from "./tunnel.js";
+} from "./bootstrap/status.js";
+import { runSshScript } from "./ssh/script.js";
+import { SshTunnel, type SshTunnelOptions, type TunnelHandle } from "./ssh/tunnel.js";
 
 const BOOTSTRAP_TIMEOUT_MS = 30_000;
 const TUNNEL_HEALTH_TIMEOUT_MS = 15_000;
@@ -36,11 +36,9 @@ export interface RemoteSessionHandle {
   readonly alias: string;
   readonly status: RemoteHostStatus;
   readonly url: string | null;
-  /** Build the remote daemon reported on the last healthy connect; null before one or for an unstamped daemon. */
   readonly remoteBuild: string | null;
   ensureLocalPort(): Promise<number>;
   connect(retryOnFailure: boolean): Promise<RemoteHostStatus>;
-  /** Stops the remote daemon and reconnects on the same local port, so a redeployed entry actually boots. */
   refreshDaemon(): Promise<RemoteHostStatus>;
   dispose(): Promise<void>;
 }

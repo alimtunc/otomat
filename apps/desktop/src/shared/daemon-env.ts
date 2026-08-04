@@ -10,9 +10,8 @@ export interface DaemonEnvOptions {
   projectRoot: string;
   /** Resolved PATH so the daemon finds user CLIs even from a Finder launch. */
   path: string;
-  /** Renderer origin to add to the daemon's CORS allowlist (packaged app scheme); omit in dev (loopback origins are auto-allowed). */
+  /** Renderer origin to add to the daemon's CORS allowlist; omit in dev (loopback origins are auto-allowed). */
   allowedOrigin?: string;
-  /** Env to extend — the app's own env, so the daemon keeps HOME etc. */
   baseEnv?: NodeJS.ProcessEnv;
   /** Run the child as Node under the Electron binary (packaged app has no standalone node). */
   runAsNode?: boolean;
@@ -20,7 +19,6 @@ export interface DaemonEnvOptions {
   buildSha?: string;
 }
 
-/** Builds the environment for the spawned daemon child from the shell-managed knobs the daemon already reads. */
 export function buildDaemonEnv(options: DaemonEnvOptions): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     ...options.baseEnv,

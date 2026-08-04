@@ -9,18 +9,18 @@ import type {
   RemoteHostStatus,
 } from "@otomat/domain";
 
-import { HostCatalog } from "./host-projects.js";
 import {
   readExecutionHostsConfigSafe,
   writeExecutionHostsConfigSafe,
   type ExecutionHostsConfig,
-} from "./hosts-config.js";
+} from "./host/config.js";
+import { HostCatalog } from "./host/projects.js";
 import {
   RemoteHostSession,
   type RemoteSessionHandle,
   type RemoteSessionOptions,
 } from "./session.js";
-import { listSshConfigAliases } from "./ssh-config-aliases.js";
+import { listSshConfigAliases } from "./ssh/config-aliases.js";
 
 function errorResult(code: RemoteHostErrorCode): ExecutionHostOperationResult {
   return { ok: false, status: { phase: "error", code, detail: null } };
@@ -31,9 +31,7 @@ export interface ExecutionHostManagerOptions {
   log(message: string): void;
   localDaemonUrl(): string;
   onRemoteStatus(status: RemoteHostStatus): void;
-  /** Points the renderer at a new daemon origin and reloads it. */
   applyRendererUrl(url: string): void;
-  /** Build this app expects on every host; surfaced so a stale remote daemon deploy is visible. */
   expectedBuild?: string | null;
   createSession?: (options: RemoteSessionOptions) => RemoteSessionHandle;
   listAliases?: typeof listSshConfigAliases;
@@ -121,7 +119,6 @@ export class ExecutionHostManager {
     }
     this.config = { ...this.config, remote: { ssh_alias: alias } };
     this.persist();
-    // Warm the tunnel right away so the aggregated switcher can list this host's projects.
     this.ensureBackgroundRemote();
     return { ok: true };
   }
@@ -136,12 +133,11 @@ export class ExecutionHostManager {
     }
   }
 
-  /** Boot with the remote host active: reserve the tunnel's local port so the renderer URL is stable from the first paint, then connect in the background (self-healing retry). */
+  /** Reserves the tunnel port first so the renderer URL is stable, then connects in the background. */
   async bootActivate(): Promise<string | null> {
     const alias = this.remoteSshAlias;
     if (alias === null) return null;
     if (this.activeHostId !== "remote") {
-      // Local project active: still warm the tunnel so the switcher can list the remote host's projects.
       this.ensureBackgroundRemote();
       return null;
     }
@@ -162,7 +158,6 @@ export class ExecutionHostManager {
     return this.catalog.registerProject(hostId, path);
   }
 
-  /** Forgets the remote host: tunnel closed, alias cleared; the daemon and its data stay on the server. */
   removeRemote(): ExecutionHostOperationResult {
     if (this.switching) {
       return { ok: false, message: "A host switch is in progress. Try again in a moment." };
@@ -210,7 +205,7 @@ export class ExecutionHostManager {
     return { ok: true };
   }
 
-  /** The remote session stays alive on a switch to local: the aggregated switcher keeps listing (and switching back to) the remote host without a reconnect. */
+  /** The remote session survives a switch to local, so the switcher keeps listing that host. */
   private async selectLocal(): Promise<ExecutionHostOperationResult> {
     const url = this.options.localDaemonUrl();
     if (url === "") return errorResult("local_daemon_unavailable");

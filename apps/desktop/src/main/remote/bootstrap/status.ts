@@ -1,7 +1,7 @@
 import type { RemoteHostStatus } from "@otomat/domain";
 
-import { parseBootstrapOutput } from "./daemon-bootstrap.js";
-import type { SshScriptResult } from "./ssh.js";
+import type { SshScriptResult } from "../ssh/script.js";
+import { parseBootstrapOutput } from "./scripts.js";
 
 export type RemoteErrorStatus = RemoteHostStatus & { phase: "error" };
 

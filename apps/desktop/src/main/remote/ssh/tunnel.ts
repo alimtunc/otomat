@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 
 import { terminateChild } from "#shared/terminate";
 
-import { SSH_BATCH_ARGS } from "./ssh.js";
+import { SSH_BATCH_ARGS } from "./script.js";
 
 const STDERR_TAIL_LIMIT = 600;
 const STOP_GRACE_MS = 2_000;

@@ -8,8 +8,8 @@ import {
   type ProjectContract,
 } from "@otomat/domain";
 
-import type { RemoteSessionHandle } from "./session.js";
-import { StaleDaemonRefresher } from "./stale-daemon.js";
+import type { RemoteSessionHandle } from "../session.js";
+import { StaleDaemonRefresher } from "../stale-daemon.js";
 
 /** One host's project catalog over plain HTTP; unreachable or invalid reads null (logged), never an error. */
 async function fetchProjectCatalog(
@@ -36,16 +36,13 @@ export interface HostCatalogOptions {
   localDaemonUrl(): string;
   activeHostId(): ExecutionHostId;
   remoteSshAlias(): string | null;
-  /** The manager's live remote session; null while none exists. */
   remoteSession(): RemoteSessionHandle | null;
-  /** Creates/warms the background remote session so its catalog stays listable. */
   warmRemote(): void;
   expectedBuild: string | null;
   fetchImpl: typeof fetch;
   log(message: string): void;
 }
 
-/** Aggregated per-host project catalog and host-scoped daemon operations, split out of the manager so it owns selection only. */
 export class HostCatalog {
   private readonly staleRefresher: StaleDaemonRefresher;
 
@@ -57,7 +54,6 @@ export class HostCatalog {
     });
   }
 
-  /** Every configured host with its project catalog; an unreachable daemon yields `projects: null`, never an error. */
   async listProjects(): Promise<ExecutionHostProjectsEntry[]> {
     const localUrl = this.options.localDaemonUrl();
     const entries: ExecutionHostProjectsEntry[] = [
@@ -85,7 +81,7 @@ export class HostCatalog {
     return entries;
   }
 
-  /** Registers a repository path on the chosen host's daemon; failures come back as honest prose, never a throw. */
+  /** Failures come back as prose in the result, never as a throw. */
   async registerProject(
     hostId: ExecutionHostId,
     path: string,

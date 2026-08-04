@@ -82,26 +82,35 @@ export type RemoteBootstrapOutcome =
   | { kind: "node_missing" }
   | { kind: "node_too_old"; version: string };
 
+function liveDaemon(kind: "running" | "started", detail: string): RemoteBootstrapOutcome | null {
+  const pid = Number.parseInt(detail, 10);
+  return Number.isInteger(pid) && pid > 0 ? { kind, pid } : null;
+}
+
 /** Last `OTOMAT_REMOTE:` token wins; null means the script never reported (treated as a start failure). */
 export function parseBootstrapOutput(stdout: string): RemoteBootstrapOutcome | null {
-  const tokenLine = stdout
+  const token = stdout
     .split(/\r?\n/)
     .filter((line) => line.startsWith(TOKEN_PREFIX))
-    .at(-1);
-  if (tokenLine === undefined) return null;
-  const rest = tokenLine.slice(TOKEN_PREFIX.length);
-  const separator = rest.indexOf(":");
-  if (separator === -1) return null;
-  const kind = rest.slice(0, separator);
-  const detail = rest.slice(separator + 1);
-  if (kind === "RUNNING" || kind === "STARTED") {
-    const pid = Number.parseInt(detail, 10);
-    if (!Number.isInteger(pid) || pid <= 0) return null;
-    return { kind: kind === "RUNNING" ? "running" : "started", pid };
+    .at(-1)
+    ?.slice(TOKEN_PREFIX.length);
+  const separator = token?.indexOf(":") ?? -1;
+  if (token === undefined || separator === -1) return null;
+  const detail = token.slice(separator + 1);
+  switch (token.slice(0, separator)) {
+    case "RUNNING":
+      return liveDaemon("running", detail);
+    case "STARTED":
+      return liveDaemon("started", detail);
+    case "START_FAILED":
+      return { kind: "start_failed", logTail: detail.trim() };
+    case "NO_DAEMON":
+      return { kind: "daemon_missing", entry: detail };
+    case "NO_NODE":
+      return { kind: "node_missing" };
+    case "NODE_TOO_OLD":
+      return { kind: "node_too_old", version: detail };
+    default:
+      return null;
   }
-  if (kind === "START_FAILED") return { kind: "start_failed", logTail: detail.trim() };
-  if (kind === "NO_DAEMON") return { kind: "daemon_missing", entry: detail };
-  if (kind === "NO_NODE") return { kind: "node_missing" };
-  if (kind === "NODE_TOO_OLD") return { kind: "node_too_old", version: detail };
-  return null;
 }

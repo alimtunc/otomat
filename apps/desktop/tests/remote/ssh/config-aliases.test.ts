@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { expect, it } from "vitest";
 
-import { listSshConfigAliases } from "#main/remote/ssh-config-aliases";
+import { listSshConfigAliases } from "#main/remote/ssh/config-aliases";
 import { scratchDir } from "#support/scratch-dir";
 
 function configWith(content: string): string {

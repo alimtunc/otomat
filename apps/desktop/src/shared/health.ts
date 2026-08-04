@@ -5,12 +5,10 @@ import { HEALTH_INTERVAL_MS, HEALTH_TIMEOUT_MS } from "#shared/constants";
 import { withAbortTimeout } from "./abort-timeout.js";
 
 export interface WaitForHealthOptions {
-  /** Full health URL, e.g. `http://127.0.0.1:PORT/api/health`. */
   url: string;
   fetch?: typeof fetch;
   timeoutMs?: number;
   intervalMs?: number;
-  /** Aborts the wait early (e.g. the daemon process died before it ever answered). */
   signal?: AbortSignal;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
@@ -19,12 +17,7 @@ export interface WaitForHealthOptions {
 const defaultSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Polls `/api/health` until it answers 200 with a body matching the domain contract, or the
- * timeout elapses / the signal aborts. Resolves with the first healthy body (so callers can read
- * the daemon's identity); rejects with the last transport/status error as `cause` so startup can
- * show an honest, safe detail.
- */
+/** Rejects with the last transport/status error as `cause` so startup can show an honest detail. */
 export async function waitForHealth(options: WaitForHealthOptions): Promise<HealthResponse> {
   const doFetch = options.fetch ?? fetch;
   const timeoutMs = options.timeoutMs ?? HEALTH_TIMEOUT_MS;

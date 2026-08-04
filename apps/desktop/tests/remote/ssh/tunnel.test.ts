@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 
 import { expect, it, vi } from "vitest";
 
-import { SshTunnel, tunnelArgs, type TunnelExitInfo } from "#main/remote/tunnel";
+import { SshTunnel, tunnelArgs, type TunnelExitInfo } from "#main/remote/ssh/tunnel";
 
 class FakeSshChild extends EventEmitter {
   stderr = new EventEmitter();

@@ -2,8 +2,8 @@ import type { HealthResponse, RemoteHostStatus } from "@otomat/domain";
 import { expect, it, vi } from "vitest";
 
 import { RemoteHostSession } from "#main/remote/session";
-import type { RunSshScriptOptions, SshScriptResult } from "#main/remote/ssh";
-import type { SshTunnelOptions, TunnelHandle } from "#main/remote/tunnel";
+import type { RunSshScriptOptions, SshScriptResult } from "#main/remote/ssh/script";
+import type { SshTunnelOptions, TunnelHandle } from "#main/remote/ssh/tunnel";
 
 const STARTED: SshScriptResult = { code: 0, stdout: "OTOMAT_REMOTE:STARTED:100\n", stderr: "" };
 
