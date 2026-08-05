@@ -124,5 +124,6 @@ second user account):
 
 `pnpm desktop:dev` runs the shell against the Vite dev server with a daemon built from source.
 `pnpm desktop:package` produces the ad-hoc signed artifact for testing the packaged shape on your
-own machine. That artifact is not distributable: on any other Mac macOS refuses it, which is the
-intended outcome — sharing a build means going through the signed pipeline.
+own machine; packaging needs a macOS host and refuses any other platform. That artifact is not
+distributable: on any other Mac macOS refuses it, which is the intended outcome — sharing a build
+means going through the signed pipeline.

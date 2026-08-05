@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 
 import {
+  assertMacHost,
   assertReleasableArch,
   assertTagMatchesVersion,
   createArtifactManifest,
@@ -16,6 +17,11 @@ const BUILD = {
   electronVersion: "43.2.0",
   signed: true,
 };
+
+it("refuses to package anywhere but macOS", () => {
+  expect(() => assertMacHost("darwin")).not.toThrow();
+  expect(() => assertMacHost("linux")).toThrow(/this one is linux/);
+});
 
 it("releases only the architectures the pipeline can actually build", () => {
   for (const arch of SUPPORTED_RELEASE_ARCHS) {
