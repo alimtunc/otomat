@@ -20,7 +20,7 @@ async function renderPanel(expectedBuild: string | null = "92584b0") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const mounted = await mount(
     <QueryClientProvider client={client}>
-      <InstancesPanel configured expectedBuild={expectedBuild} remoteBuild={null} />
+      <InstancesPanel sshAlias="otomat-vps" expectedBuild={expectedBuild} remoteBuild={null} />
     </QueryClientProvider>,
   );
   cleanups.push(mounted.cleanup);
@@ -34,6 +34,7 @@ async function renderPanel(expectedBuild: string | null = "92584b0") {
 }
 
 it("lists instances with stop and delete controls", async () => {
+  const stopInstance = vi.fn(() => Promise.resolve({ ok: true as const }));
   const deleteInstance = vi.fn(() => Promise.resolve({ ok: true as const }));
   window.otomat = fakeDesktopBridge();
   window.otomat.executionHost.listInstances = () =>
@@ -41,13 +42,17 @@ it("lists instances with stop and delete controls", async () => {
       ok: true as const,
       instances: [{ build: "92584b0", running: true, size_kb: 2048, port: 43123 }],
     });
+  window.otomat.executionHost.stopInstance = stopInstance;
   window.otomat.executionHost.deleteInstance = deleteInstance;
 
   await renderPanel();
 
   expect(document.body.textContent).toContain("92584b0");
   expect(document.body.textContent).toContain("port 43123");
-  expect(findButton("Stop")).toBeDefined();
+  await act(async () => {
+    findButton("Stop")?.click();
+  });
+  expect(stopInstance).toHaveBeenCalledWith("92584b0");
   await act(async () => {
     findButton("Delete")?.click();
   });

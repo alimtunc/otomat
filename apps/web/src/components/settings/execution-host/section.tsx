@@ -174,7 +174,7 @@ export function ExecutionHostSection() {
             </p>
           )}
           <InstancesPanel
-            configured={snapshot.remote_ssh_alias !== null}
+            sshAlias={snapshot.remote_ssh_alias}
             expectedBuild={snapshot.expected_build}
             remoteBuild={snapshot.remote_build}
           />

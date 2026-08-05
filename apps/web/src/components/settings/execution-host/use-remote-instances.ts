@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 import { useState } from "react";
 
+import { describeRemoteStatus } from "./status-labels";
+
 export interface UseRemoteInstancesResult {
   available: boolean;
   instances: RemoteInstanceEntry[] | undefined;
@@ -15,25 +17,22 @@ export interface UseRemoteInstancesResult {
 }
 
 function failureMessage(result: ExecutionHostOperationResult & { ok: false }): string {
-  if ("message" in result) return result.message;
-  return `${result.status.phase === "error" ? result.status.code : result.status.phase}${
-    result.status.detail === null ? "" : `: ${result.status.detail}`
-  }`;
+  return "status" in result ? describeRemoteStatus(result.status) : result.message;
 }
 
-export function useRemoteInstances(configured: boolean): UseRemoteInstancesResult {
+export function useRemoteInstances(sshAlias: string | null): UseRemoteInstancesResult {
   const bridge = desktopBridge();
   const client = useQueryClient();
   const [pending, setPending] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const available = bridge !== null && configured;
+  const available = bridge !== null && sshAlias !== null;
 
   const query = useQuery({
-    queryKey: ["remote-instances"],
+    // Keyed by alias so switching hosts drops the previous host's listing instead of showing it.
+    queryKey: ["remote-instances", sshAlias],
     enabled: available,
     queryFn: async () => {
-      const result = await (bridge?.executionHost.listInstances() ??
-        Promise.resolve({ ok: false as const, message: "Desktop bridge unavailable." }));
+      const result = await requireBridge().listInstances();
       if (!result.ok) throw new Error(result.message);
       return result.instances;
     },
@@ -50,7 +49,7 @@ export function useRemoteInstances(configured: boolean): UseRemoteInstancesResul
           setActionError(failureMessage(result));
           return;
         }
-        void client.invalidateQueries({ queryKey: ["remote-instances"] });
+        void client.invalidateQueries({ queryKey: ["remote-instances", sshAlias] });
       },
       (cause: unknown) => {
         setPending(null);
@@ -62,7 +61,7 @@ export function useRemoteInstances(configured: boolean): UseRemoteInstancesResul
   return {
     available,
     instances: query.data,
-    listError: query.error === null ? null : String(query.error.message),
+    listError: query.error === null ? null : query.error.message,
     pending,
     actionError,
     stop: (build) => runAction(`stop:${build}`, () => requireBridge().stopInstance(build)),

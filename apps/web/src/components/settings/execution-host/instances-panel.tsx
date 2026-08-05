@@ -5,14 +5,13 @@ import { InstanceRow } from "./instance-row";
 import { useRemoteInstances } from "./use-remote-instances";
 
 export interface InstancesPanelProps {
-  /** True when an SSH alias is configured; the panel hides itself otherwise. */
-  configured: boolean;
+  sshAlias: string | null;
   expectedBuild: string | null;
   remoteBuild: string | null;
 }
 
-export function InstancesPanel({ configured, expectedBuild, remoteBuild }: InstancesPanelProps) {
-  const state = useRemoteInstances(configured);
+export function InstancesPanel({ sshAlias, expectedBuild, remoteBuild }: InstancesPanelProps) {
+  const state = useRemoteInstances(sshAlias);
   if (!state.available) return null;
   const stale = expectedBuild !== null && remoteBuild !== null && expectedBuild !== remoteBuild;
 
