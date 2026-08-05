@@ -1,17 +1,25 @@
 import { describe, expect, it } from "vitest";
 
-import { instanceDeployment, STABLE_DEPLOYMENT } from "#main/remote/bootstrap/scripts";
+import {
+  instanceDeployment,
+  STABLE_DEPLOYMENT,
+  type RemoteDeployment,
+} from "#main/remote/bootstrap/scripts";
 import { RemoteInstanceActions } from "#main/remote/instances/actions";
 import type { RunSshScriptOptions, SshScriptResult } from "#main/remote/ssh/script";
 
 function actionsWith(
   respond: (options: RunSshScriptOptions) => SshScriptResult,
-  overrides: { alias?: string | null; expectedBuild?: string | null } = {},
+  overrides: {
+    alias?: string | null;
+    expectedBuild?: string | null;
+    deployment?: RemoteDeployment;
+  } = {},
 ): { actions: RemoteInstanceActions; scripts: string[] } {
   const scripts: string[] = [];
   const actions = new RemoteInstanceActions({
     alias: () => (overrides.alias === undefined ? "otomat-vps" : overrides.alias),
-    deployment: STABLE_DEPLOYMENT,
+    deployment: overrides.deployment ?? STABLE_DEPLOYMENT,
     expectedBuild: overrides.expectedBuild === undefined ? "92584b0" : overrides.expectedBuild,
     repo: "alimtunc/otomat",
     log: () => {},
@@ -54,13 +62,46 @@ describe("RemoteInstanceActions", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("refuses an instance key that is not a build identifier", async () => {
-    const { actions, scripts } = actionsWith(() => ok(""));
+  it.each(["stop", "remove"] as const)(
+    "refuses an instance key that is not a build identifier for %s",
+    async (method) => {
+      const { actions, scripts } = actionsWith(() => ok(""));
 
-    const result = await actions.remove("$(rm -rf ~)");
+      const result = await actions[method]("$(rm -rf ~)");
 
-    expect(result.ok).toBe(false);
-    expect(scripts).toHaveLength(0);
+      expect(result.ok).toBe(false);
+      expect(scripts).toHaveLength(0);
+    },
+  );
+
+  it.each(["stop", "remove"] as const)(
+    "refuses to %s the instance this app itself is attached to",
+    async (method) => {
+      const { actions, scripts } = actionsWith(() => ok(""), {
+        deployment: instanceDeployment("92584b0"),
+      });
+
+      const refused = await actions[method]("92584b0");
+      const allowed = await actions.stop("dec9431");
+
+      expect(refused.ok).toBe(false);
+      expect("message" in refused && refused.message).toMatch(/own instance/);
+      expect(allowed).toEqual({ ok: true });
+      expect(scripts).toHaveLength(1);
+    },
+  );
+
+  it("filters host directories that are not instances out of the listing", async () => {
+    const { actions } = actionsWith(() =>
+      ok(
+        "OTOMAT_INSTANCE:backup:no:512\nOTOMAT_INSTANCE:92584b0:yes:2048\nOTOMAT_INSTANCES_END:-\n",
+      ),
+    );
+
+    const result = await actions.list();
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.instances.map((entry) => entry.build)).toEqual(["92584b0"]);
   });
 
   it("stops an instance through its own deployment, never the stable one", async () => {

@@ -38,6 +38,21 @@ describe("deployDaemonScript", () => {
     expect(script).toContain("otomat-daemon-92584b0-linux-x64");
     expect(script).toContain("repos/alimtunc/otomat/actions/artifacts");
   });
+
+  it("guards the lookup and the swap so a failure never reads as deployed", () => {
+    const script = deployDaemonScript({
+      deployment: STABLE_DEPLOYMENT,
+      build: "92584b0",
+      repo: "alimtunc/otomat",
+    });
+
+    expect(script).toContain('if ! ID="$(gh api');
+    expect(script).toContain('if ! mv "$TMP/x/daemon"');
+    expect(script).toContain('if ! mv "$OTOMAT_HOME/daemon.next"');
+    expect(script.lastIndexOf('rm -rf "$OTOMAT_HOME/daemon.prev"')).toBeGreaterThan(
+      script.indexOf('if ! mv "$OTOMAT_HOME/daemon.next"'),
+    );
+  });
 });
 
 describe("parseDeployOutput", () => {

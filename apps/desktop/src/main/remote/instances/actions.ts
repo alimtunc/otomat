@@ -1,4 +1,8 @@
-import type { ExecutionHostOperationResult, RemoteInstanceListResult } from "@otomat/domain";
+import type {
+  ExecutionHostOperationResult,
+  RemoteInstanceEntry,
+  RemoteInstanceListResult,
+} from "@otomat/domain";
 
 import {
   instanceDeployment,
@@ -23,6 +27,13 @@ const INSTANCE_KEY = /^([0-9a-f]{7}|unknown)$/;
 const INVALID_KEY: ExecutionHostOperationResult = {
   ok: false,
   message: "Unknown instance identifier.",
+};
+
+// Stopping or deleting the deployment this very app is attached to would strand its session
+// as "connected" on a dead daemon, then let the retry loop resurrect what was just removed.
+const OWN_INSTANCE: ExecutionHostOperationResult = {
+  ok: false,
+  message: "This build's own instance; quit this preview app or manage it from the stable install.",
 };
 
 export interface RemoteInstanceActionsOptions {
@@ -52,15 +63,22 @@ export class RemoteInstanceActions {
       if (result.code !== 0) return { ok: false, message: scriptFailure(result) };
       const rows = parseInstanceList(result.stdout);
       if (rows === null) return { ok: false, message: "The instance listing never completed." };
-      return {
-        ok: true,
-        instances: rows.map((row) => ({
+      const instances: RemoteInstanceEntry[] = [];
+      for (const row of rows) {
+        // A stray directory under instances/ is not stoppable or deletable; listing it would
+        // offer actions that INSTANCE_KEY refuses forever.
+        if (!INSTANCE_KEY.test(row.build)) {
+          this.options.log(`Ignored a non-instance directory on the host: ${row.build}`);
+          continue;
+        }
+        instances.push({
           build: row.build,
           running: row.running,
           size_kb: row.sizeKb,
           port: instanceDeployment(row.build).port,
-        })),
-      };
+        });
+      }
+      return { ok: true, instances };
     } catch (error) {
       return { ok: false, message: trimDetail(String(error)) };
     }
@@ -68,11 +86,17 @@ export class RemoteInstanceActions {
 
   stop(build: unknown): Promise<ExecutionHostOperationResult> {
     if (typeof build !== "string" || !INSTANCE_KEY.test(build)) return Promise.resolve(INVALID_KEY);
+    if (instanceDeployment(build).homeSuffix === this.options.deployment.homeSuffix) {
+      return Promise.resolve(OWN_INSTANCE);
+    }
     return this.operate(stopDaemonScript(instanceDeployment(build)), SCRIPT_TIMEOUT_MS);
   }
 
   remove(build: unknown): Promise<ExecutionHostOperationResult> {
     if (typeof build !== "string" || !INSTANCE_KEY.test(build)) return Promise.resolve(INVALID_KEY);
+    if (instanceDeployment(build).homeSuffix === this.options.deployment.homeSuffix) {
+      return Promise.resolve(OWN_INSTANCE);
+    }
     return this.operate(deleteInstanceScript(build), SCRIPT_TIMEOUT_MS);
   }
 
