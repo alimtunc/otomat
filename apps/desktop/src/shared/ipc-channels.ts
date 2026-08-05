@@ -14,3 +14,7 @@ export const EXECUTION_HOST_STATUS_CHANNEL = "otomat:execution-host-status";
 export const EXECUTION_HOST_PROJECTS_CHANNEL = "otomat:execution-host-projects";
 export const PREVIEW_SYNC_CHANNEL = "otomat:preview-sync";
 export const PREVIEW_SANDBOX_RESET_CHANNEL = "otomat:preview-sandbox-reset";
+export const EXECUTION_HOST_INSTANCES_CHANNEL = "otomat:execution-host-instances";
+export const EXECUTION_HOST_STOP_INSTANCE_CHANNEL = "otomat:execution-host-stop-instance";
+export const EXECUTION_HOST_DELETE_INSTANCE_CHANNEL = "otomat:execution-host-delete-instance";
+export const EXECUTION_HOST_UPDATE_DAEMON_CHANNEL = "otomat:execution-host-update-daemon";

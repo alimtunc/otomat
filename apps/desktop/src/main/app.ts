@@ -72,7 +72,10 @@ export class DesktopApp {
       exportSupportBundle: () => this.support.exportBundle(),
       showDataPolicy: () => this.support.showDataPolicy(),
       resetSandbox: () => this.runtime?.sandbox.reset() ?? Promise.resolve(SANDBOX_NOT_READY),
-      executionHost: buildExecutionHostActions(() => this.runtime?.hosts ?? null),
+      executionHost: buildExecutionHostActions(
+        () => this.runtime?.hosts ?? null,
+        () => this.runtime?.instances ?? null,
+      ),
     });
     ipcMain.on(SPLASH_RETRY_CHANNEL, () => void this.runStartup());
     app.on("web-contents-created", (_event, contents) =>

@@ -105,6 +105,25 @@ The tarball's files own their inodes, so the hardlink `find` pass above does not
 apply. The artifact is only a file — nothing starts a daemon from it, and the
 idle restart above applies unchanged.
 
+## Test instances
+
+A packaged preview build never touches `~/.otomat`: it targets its own
+deployment under `~/.otomat/instances/<sha7>/` — keyed by the build it expects,
+`unknown` for an unidentifiable one — with a port derived from the same key
+(`instanceDeployment` in `bootstrap/scripts.ts`). The entire connect machinery
+(start-or-verify, tunnel, stale refresh) applies unchanged to that deployment,
+so testing an artifact runs beside the daemon real work runs on, never inside
+it.
+
+*Settings → Execution hosts → Deployments on this host* lists the instances
+(build, running state, port, size) with explicit **Stop** and **Delete**
+actions, and a deploy button that installs the CI bundle for the app's own
+build onto its own target: in the stable app that updates `~/.otomat/daemon`
+(the idle restart then boots it, never with a run in flight), in a preview it
+provisions or refreshes the instance. The deploy runs `gh` on the host —
+already authenticated there — so no artifact ever transits the desktop, and
+nothing on this panel starts a daemon or runs on a timer.
+
 ## Desktop implementation
 
 Everything lives in `apps/desktop/src/main/remote/`:

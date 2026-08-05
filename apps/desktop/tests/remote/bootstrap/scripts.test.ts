@@ -2,21 +2,21 @@ import { expect, it } from "vitest";
 
 import {
   parseBootstrapOutput,
-  REMOTE_DAEMON_PORT,
+  STABLE_DEPLOYMENT,
   startOrVerifyDaemonScript,
   stopDaemonScript,
 } from "#main/remote/bootstrap/scripts";
 
 it("keeps the remote daemon loopback-bound with the packaged renderer origin allowed", () => {
-  const script = startOrVerifyDaemonScript();
+  const script = startOrVerifyDaemonScript(STABLE_DEPLOYMENT);
   expect(script).toContain("OTOMAT_DAEMON_HOST=127.0.0.1");
-  expect(script).toContain(`OTOMAT_DAEMON_PORT=${REMOTE_DAEMON_PORT}`);
+  expect(script).toContain(`OTOMAT_DAEMON_PORT=${STABLE_DEPLOYMENT.port}`);
   expect(script).toContain("OTOMAT_ALLOWED_ORIGINS=otomat://app");
   expect(script).not.toContain("0.0.0.0");
 });
 
 it("detaches the daemon, verifies it survived boot, and records a pidfile", () => {
-  const script = startOrVerifyDaemonScript();
+  const script = startOrVerifyDaemonScript(STABLE_DEPLOYMENT);
   expect(script).toContain("nohup node");
   expect(script).toContain("< /dev/null &");
   expect(script).toContain('kill -0 "$DAEMON_PID"');
@@ -60,7 +60,7 @@ it.each(["", "no token at all", "OTOMAT_REMOTE:STARTED:not-a-pid", "OTOMAT_REMOT
 );
 
 it("stops by pidfile pid only — never by pattern — and clears the pidfile", () => {
-  const script = stopDaemonScript();
+  const script = stopDaemonScript(STABLE_DEPLOYMENT);
   expect(script).toContain('PID="$(cat "$PID_FILE")"');
   expect(script).toContain("kill -9");
   expect(script).toContain('rm -f "$PID_FILE"');

@@ -11,6 +11,7 @@ import type {
   ExecutionHostRegisterProjectResult,
   ExecutionHostSnapshot,
   RemoteHostStatus,
+  RemoteInstanceListResult,
 } from "./execution-host.js";
 import type { LinearErrorCode } from "./linear.js";
 
@@ -83,6 +84,12 @@ export interface OtomatDesktopBridge {
     listProjects(): Promise<ExecutionHostProjectsEntry[]>;
     /** Subscribes to live remote-connection status; returns the unsubscribe function. */
     onRemoteStatus(listener: (status: RemoteHostStatus) => void): () => void;
+    /** Preview daemons under `~/.otomat/instances` on the remote host. */
+    listInstances(): Promise<RemoteInstanceListResult>;
+    stopInstance(build: string): Promise<ExecutionHostOperationResult>;
+    deleteInstance(build: string): Promise<ExecutionHostOperationResult>;
+    /** Deploys the CI bundle for this app's expected build to its own remote target; nothing starts automatically. */
+    updateRemoteDaemon(): Promise<ExecutionHostOperationResult>;
   };
   linear: {
     saveKey(apiKey: string): Promise<LinearVaultOperationResult>;

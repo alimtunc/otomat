@@ -58,7 +58,11 @@ removes every trace of preview testing. On first launch it seeds a sandbox: a di
 fixture repository (`test-repo` inside that data folder) registered with a handful of ready-made
 issues, so there is something to launch runs against immediately. *Settings → Sandbox → Reset
 test data* wipes the database, runs, worktrees and the fixture repository, then reseeds —
-every test session can start from the same known state.
+every test session can start from the same known state. Pointed at a remote execution host, a
+preview targets its own isolated daemon under `~/.otomat/instances/<short-sha>` there —
+provisioned on demand from the PR's daemon-bundle artifact and controlled (stop, delete, deploy)
+from *Settings → Execution hosts* — so testing an artifact never disturbs the stable daemon
+([test instances](../ai/remote-execution-host.md#test-instances)).
 
 A preview is for the team's own test hardware only. Handing someone a DMG plus quarantine-stripping
 instructions is exactly the pattern the signed pipeline exists to replace — share builds through a

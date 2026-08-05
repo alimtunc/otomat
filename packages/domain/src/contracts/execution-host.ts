@@ -61,6 +61,18 @@ export type ExecutionHostRegisterProjectResult =
   | { ok: true; project: ProjectContract }
   | { ok: false; message: string };
 
+/** One preview daemon under `~/.otomat/instances/<build>` on the remote host. */
+export interface RemoteInstanceEntry {
+  build: string;
+  running: boolean;
+  size_kb: number;
+  port: number;
+}
+
+export type RemoteInstanceListResult =
+  | { ok: true; instances: RemoteInstanceEntry[] }
+  | { ok: false; message: string };
+
 /** One host's project catalog for the aggregated switcher; `projects` is null while the host's daemon is unreachable. */
 export interface ExecutionHostProjectsEntry {
   host: ExecutionHostDescriptor;
