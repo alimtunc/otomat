@@ -84,12 +84,18 @@ describe("waitForHealth", () => {
         }),
     );
 
+    // Virtual clock keeps the attempt count deterministic; the abort unblocking the fetch is real.
+    let clock = 0;
     await expect(
       waitForHealth({
         url: "http://x/api/health",
         fetch: doFetch,
-        timeoutMs: 1,
-        intervalMs: 0,
+        now: () => clock,
+        sleep: async (ms) => {
+          clock += ms;
+        },
+        timeoutMs: 20,
+        intervalMs: 20,
       }),
     ).rejects.toThrow(/timed out/);
     expect(doFetch).toHaveBeenCalledTimes(1);

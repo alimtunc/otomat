@@ -13,6 +13,15 @@ export const SUPPORTED_RELEASE_ARCHS = ["arm64"];
 
 export const APP_ID = "com.otomat.desktop";
 
+/** Assembling and signing a `.app` shells out to Apple's toolchain, which only macOS has. */
+export function assertMacHost(platform) {
+  if (platform === "darwin") return;
+  throw new Error(
+    `Packaging Otomat needs a macOS host; this one is ${platform}. ` +
+      "Build it on a Mac, or let the macOS CI job produce the artifact.",
+  );
+}
+
 export function assertReleasableArch(arch) {
   if (SUPPORTED_RELEASE_ARCHS.includes(arch)) return;
   throw new Error(

@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { APP_ID, createBuildInfo, readProductVersion } from "./release/metadata.mjs";
+import { APP_ID, assertMacHost, createBuildInfo, readProductVersion } from "./release/metadata.mjs";
 
 const require = createRequire(import.meta.url);
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -17,8 +17,7 @@ export const REPO = join(DESKTOP, "..", "..");
 export const RELEASE_OUT = join(DESKTOP, "release");
 export const PRODUCT_NAME = "Otomat";
 
-const WEB_DIR = join(REPO, "apps", "web");
-const WEB_DIST = join(WEB_DIR, "dist");
+const WEB_DIST = join(REPO, "apps", "web", "dist");
 
 function run(command, args, cwd = REPO) {
   console.log(`$ ${command} ${args.join(" ")}`);
@@ -42,9 +41,9 @@ export function resolveBuildInfo({ signed }) {
 }
 
 function buildInputs() {
-  // Invoked directly, not through `pnpm run`, whose verify-deps pre-check is headless-incompatible.
-  run(join(WEB_DIR, "node_modules", ".bin", "vite"), ["build"], WEB_DIR);
-  run(join(DESKTOP, "node_modules", ".bin", "tsdown"), [], DESKTOP);
+  // CI packages from a fresh checkout and apps compile against package `dist`, so run the root
+  // build first; `verifyDepsBeforeRun: warn` keeps `pnpm run` viable headless.
+  run("pnpm", ["run", "build"]);
   run(process.execPath, [join(DESKTOP, "scripts", "prepare-daemon.mjs")], DESKTOP);
 
   for (const [label, path] of [
@@ -137,6 +136,7 @@ function locateArtifacts(version, arch) {
  * @returns {{ appPath: string, dmgPath: string, releaseDir: string }}
  */
 export function buildMacApp(input) {
+  assertMacHost(process.platform);
   buildInputs();
   const stage = assembleStage(input.buildInfo);
 
