@@ -54,7 +54,11 @@ To test a preview on an Apple Silicon Mac — no checkout, Node or pnpm required
 
 A preview keeps its data in `~/Library/Application Support/Otomat Preview`, beside — never
 inside — the stable install's data, so both apps run side by side and deleting that one folder
-removes every trace of preview testing.
+removes every trace of preview testing. On first launch it seeds a sandbox: a disposable
+fixture repository (`test-repo` inside that data folder) registered with a handful of ready-made
+issues, so there is something to launch runs against immediately. *Settings → Sandbox → Reset
+test data* wipes the database, runs, worktrees and the fixture repository, then reseeds —
+every test session can start from the same known state.
 
 A preview is for the team's own test hardware only. Handing someone a DMG plus quarantine-stripping
 instructions is exactly the pattern the signed pipeline exists to replace — share builds through a

@@ -12,3 +12,5 @@ export const EXECUTION_HOST_REGISTER_PROJECT_CHANNEL = "otomat:execution-host-re
 export const EXECUTION_HOST_ALIASES_CHANNEL = "otomat:execution-host-aliases";
 export const EXECUTION_HOST_STATUS_CHANNEL = "otomat:execution-host-status";
 export const EXECUTION_HOST_PROJECTS_CHANNEL = "otomat:execution-host-projects";
+export const PREVIEW_SYNC_CHANNEL = "otomat:preview-sync";
+export const PREVIEW_SANDBOX_RESET_CHANNEL = "otomat:preview-sandbox-reset";

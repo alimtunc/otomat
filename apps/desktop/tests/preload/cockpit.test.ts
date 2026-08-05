@@ -1,6 +1,10 @@
 import { afterEach, expect, it, vi } from "vitest";
 
-import { DAEMON_URL_CHANNEL, EXECUTION_HOST_SYNC_CHANNEL } from "#shared/ipc-channels";
+import {
+  DAEMON_URL_CHANNEL,
+  EXECUTION_HOST_SYNC_CHANNEL,
+  PREVIEW_SYNC_CHANNEL,
+} from "#shared/ipc-channels";
 
 afterEach(() => {
   vi.doUnmock("electron");
@@ -37,10 +41,22 @@ it("rejects an invalid execution-host state before exposing the cockpit bridge",
   expect(exposeInMainWorld).not.toHaveBeenCalled();
 });
 
+it("rejects an invalid preview flag before exposing the cockpit bridge", async () => {
+  const { exposeInMainWorld } = mockElectron((channel) => {
+    if (channel === DAEMON_URL_CHANNEL) return "http://127.0.0.1:4319";
+    if (channel === EXECUTION_HOST_SYNC_CHANNEL) return { id: "local", ssh_alias: null };
+    return "yes";
+  });
+
+  await expect(import("#preload/cockpit")).rejects.toThrow(/preview flag/i);
+  expect(exposeInMainWorld).not.toHaveBeenCalled();
+});
+
 it("exposes the daemon URL and execution-host identity synchronously", async () => {
   const { exposeInMainWorld } = mockElectron((channel) => {
     if (channel === DAEMON_URL_CHANNEL) return "http://127.0.0.1:45010";
     if (channel === EXECUTION_HOST_SYNC_CHANNEL) return { id: "remote", ssh_alias: "otomat-vps" };
+    if (channel === PREVIEW_SYNC_CHANNEL) return true;
     return undefined;
   });
 
@@ -52,6 +68,8 @@ it("exposes the daemon URL and execution-host identity synchronously", async () 
       executionHostId: "remote",
       executionHostSshAlias: "otomat-vps",
       executionHost: expect.objectContaining({ snapshot: expect.any(Function) }),
+      preview: true,
+      sandbox: expect.objectContaining({ reset: expect.any(Function) }),
     }),
   );
 });

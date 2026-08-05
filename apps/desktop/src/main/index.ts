@@ -4,7 +4,7 @@ import { DesktopApp } from "./app.js";
 import { readBuildInfo } from "./build-info.js";
 import { applyDevDataRoot } from "./dev-data-root.js";
 import { resolveAppPaths } from "./paths.js";
-import { resolvePreviewDataRoot } from "./preview-data-root.js";
+import { resolvePreviewDataRoot } from "./preview/data-root.js";
 import { registerAppSchemePrivileged } from "./protocol.js";
 
 registerAppSchemePrivileged();

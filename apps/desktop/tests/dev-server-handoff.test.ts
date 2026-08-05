@@ -29,6 +29,7 @@ vi.mock("#main/runtime", () => ({
     daemon: { running: false, start: async () => "http://127.0.0.1:49152", stop: vi.fn() },
     linear: { restore: async () => {} },
     hosts: { bootActivate: async () => null, shutdown: async () => {}, hasActiveSession: false },
+    sandbox: { ensure: async () => {} },
   }),
 }));
 vi.mock("#main/support", () => ({
@@ -42,7 +43,8 @@ vi.mock("#main/support", () => ({
 vi.mock("#main/ipc", () => ({ registerIpc: vi.fn() }));
 vi.mock("#main/menu", () => ({ installApplicationMenu: vi.fn() }));
 vi.mock("#main/protocol", () => ({ serveAppScheme: vi.fn() }));
-vi.mock("#main/security", () => ({
+vi.mock("#main/security", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("#main/security")>()),
   hardenWebContents: (_contents: unknown, origins: string[]) =>
     harness.hardenedOrigins.push(origins),
 }));
@@ -67,6 +69,7 @@ function devPaths(devDataRoot: string | null): AppPaths {
     daemonEntry: "/unused/daemon/index.js",
     webDist: null,
     splashHtml: "/unused/splash.html",
+    sandboxTemplateDir: "/tmp/otomat-sandbox-template",
     cockpitPreload: "/unused/cockpit.cjs",
     splashPreload: "/unused/splash.cjs",
     devDataRoot,

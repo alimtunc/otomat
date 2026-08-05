@@ -2,7 +2,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { resolvePreviewDataRoot } from "#main/preview-data-root";
+import { resolvePreviewDataRoot } from "#main/preview/data-root";
 
 describe("resolvePreviewDataRoot", () => {
   it("gives a packaged unsigned build its own root beside the stable install", () => {

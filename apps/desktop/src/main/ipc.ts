@@ -1,4 +1,4 @@
-import type { LinearVaultOperationResult } from "@otomat/domain";
+import type { LinearVaultOperationResult, PreviewSandboxResetResult } from "@otomat/domain";
 import { BrowserWindow, dialog, ipcMain } from "electron";
 
 import {
@@ -14,6 +14,8 @@ import {
   LINEAR_FORGET_KEY_CHANNEL,
   LINEAR_SAVE_KEY_CHANNEL,
   PICK_DIRECTORY_CHANNEL,
+  PREVIEW_SANDBOX_RESET_CHANNEL,
+  PREVIEW_SYNC_CHANNEL,
 } from "#shared/ipc-channels";
 import {
   SPLASH_EXPORT_SUPPORT_CHANNEL,
@@ -26,6 +28,8 @@ import type { ExecutionHostIpcActions } from "./remote/ipc-actions.js";
 /** Mutable holder so the sync handler always returns the URL resolved by the last successful daemon start. */
 export interface IpcState {
   daemonUrl: string;
+  /** True for a packaged preview build; static per process. */
+  preview: boolean;
 }
 
 export interface IpcActions {
@@ -34,6 +38,7 @@ export interface IpcActions {
   restoreBackup(): Promise<void>;
   exportSupportBundle(): Promise<void>;
   showDataPolicy(): Promise<void>;
+  resetSandbox(): Promise<PreviewSandboxResetResult>;
   executionHost: ExecutionHostIpcActions;
 }
 
@@ -42,9 +47,15 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
     event.returnValue = state.daemonUrl;
   });
 
+  ipcMain.on(PREVIEW_SYNC_CHANNEL, (event) => {
+    event.returnValue = state.preview;
+  });
+
   ipcMain.on(EXECUTION_HOST_SYNC_CHANNEL, (event) => {
     event.returnValue = actions.executionHost.sync();
   });
+
+  ipcMain.handle(PREVIEW_SANDBOX_RESET_CHANNEL, () => actions.resetSandbox());
 
   ipcMain.handle(EXECUTION_HOST_SNAPSHOT_CHANNEL, () => actions.executionHost.snapshot());
   ipcMain.handle(EXECUTION_HOST_SELECT_CHANNEL, (_event, id: unknown) =>

@@ -90,6 +90,7 @@ const DEV_PATHS: AppPaths = {
   daemonEntry: "/tmp/daemon.js",
   webDist: null,
   splashHtml: "/tmp/splash.html",
+  sandboxTemplateDir: "/tmp/otomat-sandbox-template",
   cockpitPreload: "/tmp/cockpit.cjs",
   splashPreload: "/tmp/splash.cjs",
   devDataRoot: "/tmp/otomat-dev-root",

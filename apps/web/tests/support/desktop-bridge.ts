@@ -40,6 +40,10 @@ export function fakeDesktopBridge(
       saveKey: () => Promise.resolve({ ok: true as const, message: null }),
       forgetKey: () => Promise.resolve({ ok: true as const, message: null }),
     },
+    preview: false,
+    sandbox: {
+      reset: () => Promise.resolve({ ok: true as const, message: null }),
+    },
     ...overrides,
   };
 }

@@ -1,5 +1,21 @@
 import { shell, type WebContents } from "electron";
 
+import { APP_ORIGIN, DEV_SERVER_ENV } from "#shared/constants";
+
+/** Origins a renderer may navigate within: the packaged app scheme, or the dev server's. */
+export function resolveAllowedOrigins(
+  devServer: string | null,
+  log: (message: string) => void,
+): string[] {
+  if (devServer === null) return [APP_ORIGIN];
+  try {
+    return [new URL(devServer).origin];
+  } catch (error) {
+    log(`Ignored an invalid ${DEV_SERVER_ENV} value: ${String(error)}`);
+    return [];
+  }
+}
+
 function isSafeExternal(url: string): boolean {
   try {
     const { protocol } = new URL(url);

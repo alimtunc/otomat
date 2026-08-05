@@ -50,6 +50,10 @@ export type LinearVaultOperationResult =
   | { ok: true; message: null }
   | { ok: false; message: string; error_code: LinearErrorCode | null };
 
+export type PreviewSandboxResetResult =
+  | { ok: true; message: null }
+  | { ok: false; message: string };
+
 /**
  * The narrow surface the Electron desktop shell exposes to the renderer through
  * `contextBridge` as `window.otomat`. Absent in the browser (dev/web), where the
@@ -83,5 +87,11 @@ export interface OtomatDesktopBridge {
   linear: {
     saveKey(apiKey: string): Promise<LinearVaultOperationResult>;
     forgetKey(): Promise<LinearVaultOperationResult>;
+  };
+  /** True for a packaged preview (unsigned build); the sandbox surface is only shown — and its reset only honored — when true. */
+  readonly preview: boolean;
+  sandbox: {
+    /** Stops the local daemon, wipes the sandbox data and fixture repository, restarts and reseeds. */
+    reset(): Promise<PreviewSandboxResetResult>;
   };
 }

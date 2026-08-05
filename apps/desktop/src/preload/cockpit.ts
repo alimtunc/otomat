@@ -6,6 +6,7 @@ import type {
   ExecutionHostSnapshot,
   LinearVaultOperationResult,
   OtomatDesktopBridge,
+  PreviewSandboxResetResult,
   RemoteHostStatus,
 } from "@otomat/domain";
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
@@ -25,6 +26,8 @@ import {
   LINEAR_FORGET_KEY_CHANNEL,
   LINEAR_SAVE_KEY_CHANNEL,
   PICK_DIRECTORY_CHANNEL,
+  PREVIEW_SANDBOX_RESET_CHANNEL,
+  PREVIEW_SYNC_CHANNEL,
 } from "#shared/ipc-channels";
 
 // Resolved synchronously so `window.otomat.daemonUrl` exists before the client module reads it.
@@ -34,6 +37,11 @@ if (typeof daemonUrl !== "string") throw new Error("Invalid daemon URL from the 
 const hostSync: unknown = ipcRenderer.sendSync(EXECUTION_HOST_SYNC_CHANNEL);
 if (!isExecutionHostSync(hostSync)) {
   throw new Error("Invalid execution-host state from the main process");
+}
+
+const preview: unknown = ipcRenderer.sendSync(PREVIEW_SYNC_CHANNEL);
+if (typeof preview !== "boolean") {
+  throw new Error("Invalid preview flag from the main process");
 }
 
 contextBridge.exposeInMainWorld("otomat", {
@@ -70,5 +78,10 @@ contextBridge.exposeInMainWorld("otomat", {
       ipcRenderer.invoke(LINEAR_SAVE_KEY_CHANNEL, apiKey),
     forgetKey: (): Promise<LinearVaultOperationResult> =>
       ipcRenderer.invoke(LINEAR_FORGET_KEY_CHANNEL),
+  },
+  preview,
+  sandbox: {
+    reset: (): Promise<PreviewSandboxResetResult> =>
+      ipcRenderer.invoke(PREVIEW_SANDBOX_RESET_CHANNEL),
   },
 } satisfies OtomatDesktopBridge);
