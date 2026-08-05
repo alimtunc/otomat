@@ -128,19 +128,21 @@ nothing on this panel starts a daemon or runs on a timer.
 
 Everything lives in `apps/desktop/src/main/remote/`:
 
-| Module                  | Owns                                                                |
-| ----------------------- | ------------------------------------------------------------------- |
-| `hosts-config.ts`       | `execution-hosts.json` (alias + active selection), atomic writes     |
-| `ssh-config-aliases.ts` | concrete `Host` alias suggestions from `~/.ssh/config`               |
-| `ssh.ts`                | one-shot remote scripts over `ssh <alias> bash -ls` (script on stdin)|
-| `daemon-bootstrap.ts`   | the start-or-verify script and its single-token outcome parser       |
-| `bootstrap-status.ts`   | resolving one start-or-verify round trip into a typed failure or the running-daemon detail |
-| `tunnel.ts`             | the `ssh -N -L` child (loopback→loopback, `ExitOnForwardFailure`)    |
-| `session.ts`            | phase machine: checking_host → starting_daemon → opening_tunnel → connected, reconnect loop with capped backoff |
-| `host-projects.ts`      | `HostCatalog`: aggregated per-host catalog listing + project registration over the host daemon's HTTP API; an unreachable host yields null, logged |
-| `manager.ts`            | persisted selection, project-driven switching, boot re-activation, host configure/remove |
-| `stale-daemon.ts`       | restarts a redeployed-but-stale remote daemon once it is idle (never with a run in flight; one attempt per observed build) |
-| `ipc-actions.ts`        | renderer-facing IPC actions with honest not-ready fallbacks          |
+| Module                   | Owns                                                                |
+| ------------------------ | ------------------------------------------------------------------- |
+| `host/config.ts`         | `execution-hosts.json` (alias + active selection), atomic writes     |
+| `ssh/config-aliases.ts`  | concrete `Host` alias suggestions from `~/.ssh/config`               |
+| `ssh/script.ts`          | one-shot remote scripts over `ssh <alias> bash -ls` (script on stdin)|
+| `bootstrap/scripts.ts`   | the start-or-verify and stop scripts, plus `instanceDeployment` (per-build home + port) |
+| `bootstrap/status.ts`    | resolving one start-or-verify round trip into a typed failure or the running-daemon detail |
+| `ssh/tunnel.ts`          | the `ssh -N -L` child (loopback→loopback, `ExitOnForwardFailure`)    |
+| `session.ts`             | phase machine: checking_host → starting_daemon → opening_tunnel → connected, reconnect loop with capped backoff |
+| `host/projects.ts`       | `HostCatalog`: aggregated per-host catalog listing + project registration over the host daemon's HTTP API; an unreachable host yields null, logged |
+| `manager.ts`             | persisted selection, project-driven switching, boot re-activation, host configure/remove |
+| `stale-daemon.ts`        | restarts a redeployed-but-stale remote daemon once it is idle (never with a run in flight; one attempt per observed build) |
+| `instances/scripts.ts`   | deploy/list/delete scripts for `~/.otomat/instances`; a listing counts only with its END token |
+| `instances/actions.ts`   | one-shot list/stop/delete/deploy actions; keys regex-validated before any interpolation, never on a timer |
+| `ipc-actions.ts`         | renderer-facing IPC actions with honest not-ready fallbacks          |
 
 `connected` is declared only after a schema-valid `/api/health` response came
 back **through the tunnel**. The tunnel's local port is reserved once per
