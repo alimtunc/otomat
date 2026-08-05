@@ -13,14 +13,17 @@ const paths = resolveAppPaths();
 // Before the lock: Electron keys the single-instance lock on userData, so a shared userData
 // would make the second instance quit into the first one instead of running isolated. Dev
 // worktrees split per checkout; packaged previews (unsigned builds, including unidentifiable
-// ones — when in doubt, stay out of the stable data) split beside the stable install.
+// ones — when in doubt, stay out of the stable data) split beside the stable install. An
+// explicit --user-data-dir (the packaged smoke, a second test profile) outranks both splits.
 applyDevDataRoot(
-  paths.devDataRoot ??
-    resolvePreviewDataRoot({
-      packaged: paths.packaged,
-      signed: readBuildInfo((message) => console.error(`[otomat-desktop] ${message}`)).signed,
-      appData: app.getPath("appData"),
-    }),
+  app.commandLine.hasSwitch("user-data-dir")
+    ? null
+    : (paths.devDataRoot ??
+        resolvePreviewDataRoot({
+          packaged: paths.packaged,
+          signed: readBuildInfo((message) => console.error(`[otomat-desktop] ${message}`)).signed,
+          appData: app.getPath("appData"),
+        })),
   app,
 );
 
