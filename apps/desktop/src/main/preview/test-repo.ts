@@ -1,5 +1,5 @@
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 // Explicit identity and no signing: the fixture commit must succeed on a machine with no
@@ -19,12 +19,25 @@ const GIT_OPTIONS = [
  * runs. Returns false when the repository already exists.
  */
 export function ensureTestRepo(dir: string, templateDir: string): boolean {
-  if (existsSync(join(dir, ".git"))) return false;
+  if (existsSync(join(dir, ".git"))) {
+    if (hasCommit(dir)) return false;
+    // A creation killed between init and commit would otherwise fail registration on every boot.
+    rmSync(dir, { recursive: true, force: true });
+  }
   copyTemplate(templateDir, dir);
   git(dir, ["init", "-b", "main"]);
   git(dir, ["add", "."]);
   git(dir, ["commit", "-m", "Seed the sandbox repository"]);
   return true;
+}
+
+// spawnSync, not execFileSync: a missing HEAD must read as false, not throw.
+function hasCommit(dir: string): boolean {
+  const probe = spawnSync("git", [...GIT_OPTIONS, "rev-parse", "--verify", "HEAD"], {
+    cwd: dir,
+    stdio: "ignore",
+  });
+  return probe.status === 0;
 }
 
 // File-by-file because the template may live inside the app's asar archive, where Electron

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -33,6 +33,21 @@ describe("ensureTestRepo", () => {
       encoding: "utf8",
     }).trim();
     expect(branch).toBe("main");
+    const status = execFileSync("git", ["status", "--porcelain"], {
+      cwd: dir,
+      encoding: "utf8",
+    }).trim();
+    expect(status).toBe("");
+  });
+
+  it("rebuilds a repository whose creation died before the first commit", () => {
+    const dir = join(scratch(), "test-repo");
+    mkdirSync(dir, { recursive: true });
+    execFileSync("git", ["init", "-b", "main"], { cwd: dir, stdio: "pipe" });
+
+    expect(ensureTestRepo(dir, TEMPLATE_DIR)).toBe(true);
+
+    execFileSync("git", ["rev-parse", "--verify", "HEAD"], { cwd: dir, stdio: "pipe" });
     const status = execFileSync("git", ["status", "--porcelain"], {
       cwd: dir,
       encoding: "utf8",
