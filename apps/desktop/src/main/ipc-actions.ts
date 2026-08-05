@@ -1,13 +1,22 @@
-import type { LinearDeliverySnapshot, PreviewSandboxResetResult } from "@otomat/domain";
+import type {
+  LinearDeliverySnapshot,
+  LinearVaultOperationResult,
+  PreviewSandboxResetResult,
+} from "@otomat/domain";
 
 import type { IpcActions } from "./ipc.js";
-import { unavailableLinear } from "./linear/coordinator.js";
 import { SANDBOX_NOT_READY } from "./preview/sandbox.js";
 import { buildExecutionHostActions } from "./remote/ipc-actions.js";
 import type { DesktopRuntime } from "./runtime.js";
 import type { DesktopSupport } from "./support.js";
 
 const NO_DELIVERY: LinearDeliverySnapshot = { stored: false, hosts: [] };
+
+const NOT_READY: LinearVaultOperationResult = {
+  ok: false,
+  message: "The desktop runtime is not ready yet.",
+  error_code: null,
+};
 
 export interface IpcActionContext {
   runtime(): DesktopRuntime | null;
@@ -20,10 +29,8 @@ export interface IpcActionContext {
 /** Every renderer-facing action, bound to the runtime and degrading honestly before it exists. */
 export function buildIpcActions(context: IpcActionContext): IpcActions {
   return {
-    saveLinearKey: (apiKey) =>
-      context.runtime()?.linear.save(apiKey) ?? Promise.resolve(unavailableLinear()),
-    forgetLinearKey: () =>
-      context.runtime()?.linear.forget() ?? Promise.resolve(unavailableLinear()),
+    saveLinearKey: (apiKey) => context.runtime()?.linear.save(apiKey) ?? Promise.resolve(NOT_READY),
+    forgetLinearKey: () => context.runtime()?.linear.forget() ?? Promise.resolve(NOT_READY),
     linearDelivery: () => context.runtime()?.linear.snapshot() ?? NO_DELIVERY,
     restoreBackup: () => context.restoreBackup(),
     exportSupportBundle: () => context.support.exportBundle(),

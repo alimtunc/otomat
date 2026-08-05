@@ -143,10 +143,11 @@ export class DesktopApp {
       });
       this.localDaemonUrl = await this.runtime.daemon.start();
       this.ipcState.daemonUrl = this.localDaemonUrl;
-      await this.runtime.linear.reconcile();
       await this.runtime.sandbox.ensure(this.localDaemonUrl);
       const remoteUrl = await this.runtime.hosts.bootActivate();
       if (remoteUrl !== null) this.ipcState.daemonUrl = remoteUrl;
+      // Resolving Linear targets warms the remote session, so it must not precede bootActivate's port reservation.
+      await this.runtime.linear.reconcile();
       this.rejectedBackupPaths.clear();
       this.diagnostic = null;
       this.openCockpit();

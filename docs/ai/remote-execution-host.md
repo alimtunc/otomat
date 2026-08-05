@@ -198,6 +198,9 @@ host (the native folder picker is local-only and hidden).
 
 ## Known V1 limits
 
+- Removing the remote host — or repointing its alias — drops it from the Linear
+  fan-out before anything revokes it, so that daemon keeps the key in memory
+  until it restarts. Disconnect Linear first.
 - One remote host; changing the alias requires switching to a local project first.
 - `Include` directives in `~/.ssh/config` are not parsed for alias suggestions
   (such aliases still work when typed).

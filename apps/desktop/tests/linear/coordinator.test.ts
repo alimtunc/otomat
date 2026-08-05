@@ -317,3 +317,121 @@ it("publishes every delivery change so the cockpit never shows a stale host", as
     ],
   });
 });
+
+it("puts the vaulted key back on every host when a rotation is refused", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  routeDaemons([local, remote]);
+  const vault = memoryVault();
+  const app = harness(vault, [reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
+  await app.coordinator.save("good-key");
+  local.rejects = "rotated-key";
+  remote.rejects = "rotated-key";
+
+  const refused = await app.coordinator.save("rotated-key");
+
+  expect(refused).toEqual({
+    ok: false,
+    message: "Linear rejected the API key.",
+    error_code: "linear_unauthorized",
+  });
+  expect(vault.stored()).toBe("good-key");
+  // The refused push already cleared both daemons, so the key still in the vault must go back.
+  expect(local.connected).toBe(true);
+  expect(remote.connected).toBe(true);
+  expect(app.state("local")).toBe("delivered");
+  expect(app.state("remote")).toBe("delivered");
+});
+
+it("clears every daemon it just fed when the vault refuses the key", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  routeDaemons([local, remote]);
+  const vault: LinearVault = {
+    clear: vi.fn(),
+    load: () => null,
+    save: () => {
+      throw new Error("keychain unavailable");
+    },
+  };
+  const app = harness(vault, [reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
+
+  await expect(app.coordinator.save("lin_api_key")).resolves.toEqual({
+    ok: false,
+    message: "keychain unavailable",
+    error_code: null,
+  });
+
+  expect(local.disconnectCount).toBe(1);
+  expect(remote.disconnectCount).toBe(1);
+  expect(local.connected).toBe(false);
+  expect(remote.connected).toBe(false);
+  expect(app.state("remote")).toBe("cleared");
+});
+
+it("reports the host whose key could not be rolled back", async () => {
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  routeDaemons([local, remote]);
+  const vault: LinearVault = {
+    clear: vi.fn(),
+    load: () => null,
+    save: () => {
+      // The remote host drops in the same moment the vault write fails.
+      routeDaemons([local]);
+      throw new Error("keychain unavailable");
+    },
+  };
+  const app = harness(vault, [reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
+
+  const saved = await app.coordinator.save("lin_api_key");
+
+  expect(saved.ok).toBe(false);
+  expect(saved.message).toContain("could not be rolled back");
+  expect(local.connected).toBe(false);
+  expect(remote.connected).toBe(true);
+  expect(app.state("remote")).toBe("pending_revocation");
+  expect(log).toHaveBeenCalled();
+});
+
+it("stops reporting a host as delivered once its daemon stops answering", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  routeDaemons([local, remote]);
+  const app = harness(memoryVault(), [
+    reachable("local", LOCAL_URL),
+    reachable("remote", REMOTE_URL),
+  ]);
+  await app.coordinator.save("lin_api_key");
+  expect(app.state("remote")).toBe("delivered");
+
+  // The tunnel still looks up to the host manager, but the daemon behind it is gone.
+  routeDaemons([local]);
+  await app.coordinator.reconcile();
+
+  expect(app.state("remote")).toBe("pending_restore");
+});
+
+it("still owes a revocation to a host whose daemon stops answering", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  routeDaemons([local, remote]);
+  const app = harness(memoryVault(), [
+    reachable("local", LOCAL_URL),
+    reachable("remote", REMOTE_URL),
+  ]);
+  await app.coordinator.save("lin_api_key");
+
+  app.setTargets([reachable("local", LOCAL_URL), unreachable("remote", HOST_DOWN)]);
+  await app.coordinator.forget();
+  expect(app.state("remote")).toBe("pending_revocation");
+
+  // The tunnel is back, but the daemon behind it does not answer: the key may still be live there.
+  app.setTargets([reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
+  routeDaemons([local]);
+  await app.coordinator.reconcile();
+
+  expect(app.state("remote")).toBe("pending_revocation");
+  expect(remote.disconnectCount).toBe(0);
+});
