@@ -120,6 +120,9 @@ jobs:
           name: ${{ steps.bundle.outputs.name }}
           path: ${{ runner.temp }}/otomat-daemon-*.tar.gz
           if-no-files-found: error
+          # Re-runs share the run's artifact namespace; without this a green run re-run for a flaky
+          # test fails its upload with a 409 on the identically named artifact.
+          overwrite: true
           retention-days: 7
 
   # The unsigned artifact is the substrate the signed release is built from, and only a macOS host
@@ -176,6 +179,8 @@ jobs:
           name: ${{ steps.preview.outputs.name }}
           path: apps/desktop/release/*.dmg
           if-no-files-found: error
+          # Same 409-on-re-run hazard as the daemon bundle: the name repeats across attempts.
+          overwrite: true
           retention-days: 7
 
       - name: Describe the preview in the run summary
