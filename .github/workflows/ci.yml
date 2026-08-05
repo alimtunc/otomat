@@ -41,6 +41,87 @@ jobs:
           git fetch --no-tags --depth=1 origin main
           node scripts/baseline-anti-ratchet.mjs origin/main
 
+  # The exact self-contained deploy the remote execution host runs
+  # (docs/ai/remote-execution-host.md), published as a plain artifact so updating a host — or
+  # provisioning a test instance — is a download instead of a build on the host. An artifact is
+  # only a file: nothing anywhere starts a daemon from it. Pushes to main build it too, so the
+  # merged commit's bundle exists when a host needs updating.
+  daemon-bundle:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      artifact-name: ${{ steps.bundle.outputs.name }}
+      artifact-url: ${{ steps.upload.outputs.artifact-url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Same head-SHA checkout as package-macos: the dist bakes its commit at build time and
+          # the desktop treats a daemon whose build differs from its own as stale — a merge-commit
+          # SHA would trip that comparison on every connect.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy the self-contained daemon
+        run: |
+          pnpm --filter "@otomat/local-daemon..." run build
+          pnpm --filter @otomat/local-daemon deploy --prod --legacy "$RUNNER_TEMP/daemon"
+
+      # Boots the deploy itself (not the workspace dist smoke:dist already covers): its imports
+      # must resolve inside the deployed tree, and its /api/health build must name this commit.
+      - name: Smoke the deployed daemon
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          data="$RUNNER_TEMP/daemon-smoke"
+          mkdir -p "$data"
+          OTOMAT_DAEMON_PORT=43190 OTOMAT_DB_PATH="$data/smoke.db" OTOMAT_PROJECT_ROOT="$data" \
+            node "$RUNNER_TEMP/daemon/dist/index.js" > "$data/daemon.log" 2>&1 &
+          daemon_pid=$!
+          health=""
+          for _ in $(seq 1 40); do
+            if health=$(curl -fsS "http://127.0.0.1:43190/api/health" 2>/dev/null); then break; fi
+            sleep 0.5
+          done
+          kill "$daemon_pid" 2>/dev/null || true
+          if [ -z "$health" ]; then
+            echo "deployed daemon never served /api/health"
+            cat "$data/daemon.log"
+            exit 1
+          fi
+          echo "$health"
+          test "$(echo "$health" | jq -r .build)" = "${HEAD_SHA:0:7}"
+
+      - name: Name and pack the bundle
+        id: bundle
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          name="otomat-daemon-${HEAD_SHA:0:7}-linux-x64"
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+          tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/${name}.tar.gz" daemon
+
+      - name: Upload the bundle
+        id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.bundle.outputs.name }}
+          path: ${{ runner.temp }}/otomat-daemon-*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
   # The unsigned artifact is the substrate the signed release is built from, and only a macOS host
   # can produce it. Pushes to main keep it as a packaging-regression gate; pull requests also upload
   # the DMG as an internal preview — ad-hoc signed, never notarized, never a release
@@ -50,6 +131,9 @@ jobs:
     needs: check
     runs-on: macos-15
     timeout-minutes: 60
+    outputs:
+      artifact-name: ${{ steps.preview.outputs.name }}
+      artifact-url: ${{ steps.upload.outputs.artifact-url }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -112,3 +196,49 @@ jobs:
             echo "> **Internal preview.** Ad-hoc signed — neither Developer ID signed nor notarized —"
             echo "> and not distributable. Install steps for a test Mac: [PR preview builds](${DOC_URL})."
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Puts the download links where a reviewer looks first. This is the workflow's only
+  # write-capable token, and the job runs no checked-out code — one bare gh api call. A fork or
+  # dependabot PR is skipped: their tokens stay read-only whatever permissions are requested.
+  preview-comment:
+    needs: [daemon-bundle, package-macos]
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Upsert the preview comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DMG_NAME: ${{ needs.package-macos.outputs.artifact-name }}
+          DMG_URL: ${{ needs.package-macos.outputs.artifact-url }}
+          BUNDLE_NAME: ${{ needs.daemon-bundle.outputs.artifact-name }}
+          BUNDLE_URL: ${{ needs.daemon-bundle.outputs.artifact-url }}
+          DOC_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}/docs/release/macos-alpha.md#pr-preview-builds
+        run: |
+          set -euo pipefail
+          {
+            echo "<!-- otomat-preview-artifacts -->"
+            echo "### Preview builds — \`${HEAD_SHA:0:7}\`"
+            echo ""
+            echo "| Artifact | Download |"
+            echo "| --- | --- |"
+            echo "| macOS app (arm64 DMG) | [\`${DMG_NAME}\`](${DMG_URL}) |"
+            echo "| Daemon bundle (linux-x64) | [\`${BUNDLE_NAME}\`](${BUNDLE_URL}) |"
+            echo ""
+            echo "Kept 7 days. Ad-hoc signed, never notarized — install steps: [PR preview builds](${DOC_URL})."
+          } > body.md
+          existing=$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate \
+            --jq '[.[] | select(.body | startswith("<!-- otomat-preview-artifacts -->")) | .id][0] // empty')
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/${REPO}/issues/comments/${existing}" -F body=@body.md > /dev/null
+          else
+            gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" -F body=@body.md > /dev/null
+          fi

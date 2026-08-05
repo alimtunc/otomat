@@ -30,12 +30,15 @@ green: CI runs `pnpm desktop:package` on an Apple Silicon runner, exercises the 
 `otomat-pr-<number>-macos-arm64-<short-sha>`, kept for 7 days. The embedded `build-info.json`
 names the PR's head commit, not the merge commit CI tests elsewhere. No Apple secret is read or
 required: the preview is ad-hoc signed and not notarized, and the signed workflow in
-`.github/workflows/release-macos.yml` remains the only distribution path.
+`.github/workflows/release-macos.yml` remains the only distribution path. A companion
+`daemon-bundle` job publishes the same commit's linux-x64 daemon deploy for the
+[remote execution host](../ai/remote-execution-host.md), and a sticky PR comment links both
+downloads (downloading an artifact requires being signed in to GitHub).
 
 To test a preview on an Apple Silicon Mac — no checkout, Node or pnpm required:
 
-1. On the PR's CI run (*Checks → CI → Summary*), download the `otomat-pr-…` artifact; the run
-   summary links it directly.
+1. Download the `otomat-pr-…` artifact from the link in the PR's preview comment, or from the CI
+   run's *Summary*.
 2. Unzip the download, open the DMG inside, and drag **Otomat** into **Applications**.
 3. A plain launch is refused — macOS reports the app as damaged or unverifiable, because the
    preview is neither Developer ID signed nor notarized. That refusal is Gatekeeper working as

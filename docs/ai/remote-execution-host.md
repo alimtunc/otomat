@@ -89,6 +89,22 @@ at import time. Breaking the links gives the deploy its own inodes.
 If the deploy machine's architecture differs from the host's, run the deploy on
 the host itself (`better-sqlite3` is a native module).
 
+CI publishes this exact deploy for linux-x64 on every pull request and push to
+`main` (the `daemon-bundle` job): an artifact named
+`otomat-daemon-<short-sha>-linux-x64`, kept 7 days, boot-smoked to `/api/health`
+before upload. On a host with `gh` authenticated, updating is a download instead
+of a build:
+
+```bash
+gh run download <run-id> -R <owner>/<repo> -n otomat-daemon-<short-sha>-linux-x64 -D /tmp/otomat-daemon
+rm -rf ~/.otomat/daemon
+tar -xzf /tmp/otomat-daemon/otomat-daemon-<short-sha>-linux-x64.tar.gz -C ~/.otomat
+```
+
+The tarball's files own their inodes, so the hardlink `find` pass above does not
+apply. The artifact is only a file — nothing starts a daemon from it, and the
+idle restart above applies unchanged.
+
 ## Desktop implementation
 
 Everything lives in `apps/desktop/src/main/remote/`:
