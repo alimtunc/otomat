@@ -33,6 +33,8 @@ function installDesktopBridge(
     linear: {
       saveKey,
       forgetKey: async () => ({ ok: true, message: null }),
+      delivery: async () => ({ stored: false, hosts: [] }),
+      onDelivery: () => () => {},
     },
   });
 }

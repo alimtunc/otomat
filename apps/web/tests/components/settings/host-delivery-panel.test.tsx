@@ -1,0 +1,95 @@
+// @vitest-environment happy-dom
+import type { LinearDeliverySnapshot } from "@otomat/domain";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { HostDeliveryPanel } from "@web/components/settings/integrations/host-delivery-panel";
+import { act } from "react";
+import { afterEach, expect, it } from "vitest";
+
+import { fakeDesktopBridge } from "#support/desktop-bridge";
+import { mount, type Mounted } from "#support/mount";
+
+let rendered: Mounted | null = null;
+
+const CONNECTED_LOCAL = {
+  host_id: "local" as const,
+  label: "Local",
+  state: "delivered" as const,
+  detail: null,
+};
+
+afterEach(async () => {
+  await rendered?.cleanup();
+  rendered = null;
+  delete window.otomat;
+  document.body.replaceChildren();
+});
+
+async function renderPanel(delivery: LinearDeliverySnapshot): Promise<HTMLElement> {
+  window.otomat = fakeDesktopBridge({
+    linear: {
+      saveKey: () => Promise.resolve({ ok: true, message: null }),
+      forgetKey: () => Promise.resolve({ ok: true, message: null }),
+      delivery: () => Promise.resolve(delivery),
+      onDelivery: () => () => {},
+    },
+  });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  rendered = await mount(
+    <QueryClientProvider client={client}>
+      <HostDeliveryPanel />
+    </QueryClientProvider>,
+  );
+  // React Query dispatches fetch results on a macrotask; flush two timer ticks before asserting.
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  return rendered.container;
+}
+
+it("says which host is still waiting for the key, and why", async () => {
+  const container = await renderPanel({
+    stored: true,
+    hosts: [
+      CONNECTED_LOCAL,
+      {
+        host_id: "remote",
+        label: "otomat-vps",
+        state: "pending_restore",
+        detail: "otomat-vps is not connected yet.",
+      },
+    ],
+  });
+
+  expect(container.textContent).toContain("otomat-vps");
+  expect(container.textContent).toContain("Waiting to receive the key");
+  expect(container.textContent).toContain("otomat-vps is not connected yet.");
+});
+
+it("keeps a pending revocation visible after the key is forgotten", async () => {
+  const container = await renderPanel({
+    stored: false,
+    hosts: [
+      { host_id: "local", label: "Local", state: "cleared", detail: null },
+      {
+        host_id: "remote",
+        label: "otomat-vps",
+        state: "pending_revocation",
+        detail: "otomat-vps is not connected yet.",
+      },
+    ],
+  });
+
+  expect(container.textContent).toContain("Waiting to revoke the key");
+});
+
+it("stays out of the way when no key is stored and nothing is owed", async () => {
+  const container = await renderPanel({
+    stored: false,
+    hosts: [{ host_id: "local", label: "Local", state: "cleared", detail: null }],
+  });
+
+  expect(container.textContent).toBe("");
+});

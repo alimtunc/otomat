@@ -1,4 +1,8 @@
-import type { LinearVaultOperationResult, PreviewSandboxResetResult } from "@otomat/domain";
+import type {
+  LinearDeliverySnapshot,
+  LinearVaultOperationResult,
+  PreviewSandboxResetResult,
+} from "@otomat/domain";
 import { BrowserWindow, dialog, ipcMain } from "electron";
 
 import {
@@ -15,6 +19,7 @@ import {
   EXECUTION_HOST_STOP_INSTANCE_CHANNEL,
   EXECUTION_HOST_SYNC_CHANNEL,
   EXECUTION_HOST_UPDATE_DAEMON_CHANNEL,
+  LINEAR_DELIVERY_CHANNEL,
   LINEAR_FORGET_KEY_CHANNEL,
   LINEAR_SAVE_KEY_CHANNEL,
   PICK_DIRECTORY_CHANNEL,
@@ -39,6 +44,7 @@ export interface IpcState {
 export interface IpcActions {
   saveLinearKey(apiKey: unknown): Promise<LinearVaultOperationResult>;
   forgetLinearKey(): Promise<LinearVaultOperationResult>;
+  linearDelivery(): LinearDeliverySnapshot;
   restoreBackup(): Promise<void>;
   exportSupportBundle(): Promise<void>;
   showDataPolicy(): Promise<void>;
@@ -103,6 +109,7 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
   );
 
   ipcMain.handle(LINEAR_FORGET_KEY_CHANNEL, () => actions.forgetLinearKey());
+  ipcMain.handle(LINEAR_DELIVERY_CHANNEL, () => actions.linearDelivery());
   ipcMain.handle(SPLASH_RESTORE_CHANNEL, () => actions.restoreBackup());
   ipcMain.handle(SPLASH_EXPORT_SUPPORT_CHANNEL, () => actions.exportSupportBundle());
   ipcMain.handle(SPLASH_SHOW_POLICY_CHANNEL, () => actions.showDataPolicy());

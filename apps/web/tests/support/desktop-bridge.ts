@@ -43,6 +43,8 @@ export function fakeDesktopBridge(
     linear: {
       saveKey: () => Promise.resolve({ ok: true as const, message: null }),
       forgetKey: () => Promise.resolve({ ok: true as const, message: null }),
+      delivery: () => Promise.resolve({ stored: false, hosts: [] }),
+      onDelivery: () => () => {},
     },
     preview: false,
     sandbox: {

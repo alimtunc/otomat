@@ -21,7 +21,7 @@ import {
   type RemoteSessionHandle,
   type RemoteSessionOptions,
 } from "./session.js";
-import { listSshConfigAliases } from "./ssh/config-aliases.js";
+import { listSshConfigAliases, normalizeSshAlias } from "./ssh/config-aliases.js";
 
 function errorResult(code: RemoteHostErrorCode): ExecutionHostOperationResult {
   return { ok: false, status: { phase: "error", code, detail: null } };
@@ -101,13 +101,9 @@ export class ExecutionHostManager {
     if (this.switching) {
       return { ok: false, message: "A host switch is in progress. Try again in a moment." };
     }
-    if (typeof sshAlias !== "string" || sshAlias.trim() === "") {
-      return { ok: false, message: "Enter an SSH alias from ~/.ssh/config." };
-    }
-    const alias = sshAlias.trim();
-    if (/\s/.test(alias) || alias.startsWith("-")) {
-      return { ok: false, message: "The SSH alias must be a single word." };
-    }
+    const normalized = normalizeSshAlias(sshAlias);
+    if (!("alias" in normalized)) return { ok: false, message: normalized.message };
+    const alias = normalized.alias;
     if (this.session !== null && this.session.alias !== alias) {
       if (this.activeHostId === "remote") {
         return { ok: false, message: "Switch to a local project before changing the alias." };
@@ -152,6 +148,11 @@ export class ExecutionHostManager {
 
   listProjects(): Promise<ExecutionHostProjectsEntry[]> {
     return this.catalog.listProjects();
+  }
+
+  /** Where that host's daemon answers, or why it cannot be reached — the Linear fan-out reads this. */
+  daemonUrl(hostId: ExecutionHostId): { url: string } | { message: string } {
+    return this.catalog.resolveBaseUrl(hostId);
   }
 
   registerProject(

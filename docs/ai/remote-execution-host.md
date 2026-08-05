@@ -124,6 +124,44 @@ provisions or refreshes the instance. The deploy runs `gh` on the host —
 already authenticated there — so no artifact ever transits the desktop, and
 nothing on this panel starts a daemon or runs on a timer.
 
+## Linear across hosts
+
+The Linear workspace is connected **once for the app**, not per host. The
+Personal API key is stored only in this Mac's Electron `safeStorage` vault
+(`linear-credential.enc` in the app data root) — never in SQLite, never in a log
+or support bundle, and never on the server. Each host's daemon receives it over
+that host's own HTTP API (`POST /api/linear/connect`, through the SSH tunnel for
+a remote host) and keeps it **in memory only**, so nothing ever puts the key in
+an ssh command, its arguments, its environment, or a remote script.
+
+`LinearCoordinator` (`main/linear/coordinator.ts`) owns the fan-out over a
+serialized queue, against the target list `main/linear/targets.ts` derives from
+the host manager — the local daemon, plus the configured remote host when its
+tunnel is up. Its rules:
+
+- **Save** pushes to every reachable host and stores the key only once at least
+  one daemon validated it against Linear. An unreachable host does not fail the
+  save; it is left `pending_restore` and served on its next connection.
+- **Reconcile** runs at boot, when a fresh local daemon starts, and every time a
+  remote host reaches `connected`. It reads each daemon's own
+  `/api/linear/connection` first — the only thing that survives that daemon's
+  restart — then delivers the vault key, or revokes what is still there when the
+  vault is empty. Revocation is applied before anything re-exposes Linear on
+  that host.
+- **Forget** erases the vault and disconnects every reachable host. A host that
+  could not be reached is recorded `pending_revocation` and the result says so:
+  the app never claims a complete disconnection while a known host is still
+  owed one.
+- Per-host state (`delivered`, `cleared`, `pending_restore`,
+  `pending_revocation`, `unavailable`) is pushed to the cockpit and shown under
+  *Settings → Integrations*. A confirmed state is only ever reported for a host
+  that answered; an unreachable host reports what it is still owed.
+
+Import stays a per-project act on that project's own host: teams, projects and
+issues come from the daemon the cockpit is pointed at, which is the daemon of
+the project picked in the switcher. The two SQLite databases are never synced,
+copied or merged, and a run always executes on the host owning its project.
+
 ## Desktop implementation
 
 Everything lives in `apps/desktop/src/main/remote/`:
@@ -160,8 +198,6 @@ host (the native folder picker is local-only and hidden).
 
 ## Known V1 limits
 
-- The Linear key vault pushes credentials to the **local** daemon only; the
-  remote daemon has no Linear connection.
 - One remote host; changing the alias requires switching to a local project first.
 - `Include` directives in `~/.ssh/config` are not parsed for alias suggestions
   (such aliases still work when typed).

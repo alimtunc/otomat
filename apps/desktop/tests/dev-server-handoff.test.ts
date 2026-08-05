@@ -27,7 +27,7 @@ vi.mock("#main/runtime", () => ({
     desktopLog: { write: vi.fn(), read: () => "" },
     daemonLog: { write: vi.fn(), read: () => "" },
     daemon: { running: false, start: async () => "http://127.0.0.1:49152", stop: vi.fn() },
-    linear: { restore: async () => {} },
+    linear: { reconcile: async () => {} },
     hosts: { bootActivate: async () => null, shutdown: async () => {}, hasActiveSession: false },
     sandbox: { ensure: async () => {} },
   }),

@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { IntegrationsSection } from "@web/components/settings/integrations/section";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
@@ -47,7 +48,12 @@ afterEach(async () => {
 });
 
 async function renderSection(): Promise<HTMLElement> {
-  rendered = await mount(<IntegrationsSection />);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  rendered = await mount(
+    <QueryClientProvider client={client}>
+      <IntegrationsSection />
+    </QueryClientProvider>,
+  );
   return rendered.container;
 }
 
@@ -66,17 +72,29 @@ it("does not render stale connection controls after a background connection erro
   expect(container.textContent).not.toContain("Connected as");
 });
 
-it("replaces the Linear panel with a local-only note while a remote host is active", async () => {
+it("manages Linear from a project on the remote host too", async () => {
   window.otomat = fakeDesktopBridge({
     executionHostId: "remote",
     executionHostSshAlias: "otomat-vps",
   });
+  connectionState = {
+    data: {
+      status: "disconnected",
+      workspace_id: null,
+      workspace_name: null,
+      user_name: null,
+      error_code: null,
+      error_message: null,
+    },
+    isPending: false,
+    isError: false,
+    isSuccess: true,
+  };
 
   const container = await renderSection();
 
-  expect(container.textContent).toContain("Linear connects on the local daemon only.");
-  expect(container.querySelector("[data-testid='linear-connect-form']")).toBeNull();
-  expect(container.textContent).not.toContain("Connected as");
+  expect(container.querySelector("[data-testid='linear-connect-form']")).not.toBeNull();
+  expect(container.textContent).not.toContain("local daemon only");
 });
 
 it("delegates a failed connection message to the connection form", async () => {
