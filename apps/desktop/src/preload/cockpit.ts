@@ -9,6 +9,7 @@ import type {
   PreviewSandboxResetResult,
   RemoteHostStatus,
   RemoteInstanceListResult,
+  RemoteRepositoryListResult,
 } from "@otomat/domain";
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
@@ -22,6 +23,7 @@ import {
   EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_REGISTER_PROJECT_CHANNEL,
   EXECUTION_HOST_REMOVE_CHANNEL,
+  EXECUTION_HOST_REPOSITORIES_CHANNEL,
   EXECUTION_HOST_SELECT_CHANNEL,
   EXECUTION_HOST_SNAPSHOT_CHANNEL,
   EXECUTION_HOST_STATUS_CHANNEL,
@@ -69,6 +71,8 @@ contextBridge.exposeInMainWorld("otomat", {
     ): Promise<ExecutionHostRegisterProjectResult> =>
       ipcRenderer.invoke(EXECUTION_HOST_REGISTER_PROJECT_CHANNEL, hostId, path),
     listSshAliases: (): Promise<string[]> => ipcRenderer.invoke(EXECUTION_HOST_ALIASES_CHANNEL),
+    listRemoteRepositories: (): Promise<RemoteRepositoryListResult> =>
+      ipcRenderer.invoke(EXECUTION_HOST_REPOSITORIES_CHANNEL),
     listProjects: (): Promise<ExecutionHostProjectsEntry[]> =>
       ipcRenderer.invoke(EXECUTION_HOST_PROJECTS_CHANNEL),
     onRemoteStatus: (listener: (status: RemoteHostStatus) => void): (() => void) => {

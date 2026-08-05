@@ -1,3 +1,4 @@
+import { getPullRequestForRun } from "@otomat/db";
 import { preparePullRequestRequestSchema } from "@otomat/domain";
 import { Hono } from "hono";
 
@@ -13,8 +14,10 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
   routes.get("/github/connection", async (c) => c.json(await deps.github.connection()));
   routes.post("/github/connect", (c) => c.json(deps.github.connect(), 202));
 
-  routes.get("/runs/:id/pr", runGuard(deps.db), (c) => {
-    const result = deps.github.getPullRequest(c.get("run").id);
+  // Reading the panel is what notices a merge: the daemon re-reads the pull request from GitHub
+  // and, when it comes back merged, settles the run before answering. Pull-based, never a poller.
+  routes.get("/runs/:id/pr", runGuard(deps.db), async (c) => {
+    const result = await deps.github.getPullRequest(c.get("run").id);
     return c.json({
       pull_request: result ? toPullRequest(result.row, result.hasUnpublishedChanges) : null,
     });
@@ -37,7 +40,8 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
     runGuard(deps.db),
     async (c) => {
       const run = c.get("run");
-      const existed = deps.github.getPullRequest(run.id) !== null;
+      // The stored row alone answers "created or updated"; publishing does its own provider read.
+      const existed = getPullRequestForRun(deps.db, run.id) !== undefined;
       try {
         const result = await deps.github.publish(run, c.req.valid("json"));
         return c.json(

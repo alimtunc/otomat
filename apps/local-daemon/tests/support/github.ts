@@ -52,7 +52,7 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
       error_code: null,
       error_message: null,
     }),
-    getPullRequest: () => null,
+    getPullRequest: async () => null,
     publish: async () => {
       throw new Error("publish stub not configured");
     },

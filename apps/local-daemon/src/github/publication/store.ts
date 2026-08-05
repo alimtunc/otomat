@@ -15,6 +15,7 @@ import {
 } from "@otomat/domain";
 
 import { emitLedgerEvent } from "#events";
+import { closeMergedRun } from "#supervisor";
 
 import { GitHubPublicationError, safeGitHubFailure } from "../errors.js";
 import { buildPullRequestEvent, type PullRequestEventType } from "../events.js";
@@ -82,11 +83,17 @@ export class PublicationStore {
     return this.patch(row, { ...values, publication_status: status }, source, type);
   }
 
+  /** Landing on `merged` settles the run in the same breath: worktree, branch and issue. */
   reconcileLifecycle(row: PullRequestRow, status: PullRequestState): PullRequestRow {
     let current = row;
+    let merged = false;
     drivePath(pullRequestMachine, row.status, status, (next) => {
       current = this.patch(current, { status: next }, "github");
+      merged ||= next === "merged";
     });
+    if (merged) {
+      closeMergedRun({ db: this.config.db, repositories: this.config.repositories }, row.run_id);
+    }
     return current;
   }
 
@@ -125,6 +132,8 @@ export class PublicationStore {
 
   view(row: PullRequestRow): PullRequestView {
     if (!row.published_diff_sha) return { row, hasUnpublishedChanges: false };
+    // A merged pull request has nothing left to publish, and the merge took its worktree.
+    if (row.status === "merged") return { row, hasUnpublishedChanges: false };
     const service = this.config.repositories.forRun(row.run_id)?.service;
     if (!service) return { row, hasUnpublishedChanges: null };
     try {

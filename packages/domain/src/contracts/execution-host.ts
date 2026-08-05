@@ -73,6 +73,18 @@ export type RemoteInstanceListResult =
   | { ok: true; instances: RemoteInstanceEntry[] }
   | { ok: false; message: string };
 
+/** One git repository found under the remote host's `$HOME`. */
+export interface RemoteRepositoryEntry {
+  /** Absolute path of the working tree on the host. */
+  path: string;
+  /** Path relative to the host's `$HOME`, for a listing that reads without the home prefix. */
+  label: string;
+}
+
+export type RemoteRepositoryListResult =
+  | { ok: true; repositories: RemoteRepositoryEntry[] }
+  | { ok: false; message: string };
+
 /** One host's project catalog for the aggregated switcher; `projects` is null while the host's daemon is unreachable. */
 export interface ExecutionHostProjectsEntry {
   host: ExecutionHostDescriptor;

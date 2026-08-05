@@ -5,11 +5,12 @@ import type {
   ExecutionHostProjectsEntry,
   ExecutionHostRegisterProjectResult,
   ExecutionHostSnapshot,
-  RemoteHostErrorCode,
   RemoteHostStatus,
 } from "@otomat/domain";
 
 import { STABLE_DEPLOYMENT, type RemoteDeployment } from "./bootstrap/scripts.js";
+import { errorResult } from "./bootstrap/status.js";
+import { safeSshAliases, validateSshAlias } from "./host/alias.js";
 import {
   readExecutionHostsConfigSafe,
   writeExecutionHostsConfigSafe,
@@ -23,15 +24,13 @@ import {
 } from "./session.js";
 import { listSshConfigAliases } from "./ssh/config-aliases.js";
 
-function errorResult(code: RemoteHostErrorCode): ExecutionHostOperationResult {
-  return { ok: false, status: { phase: "error", code, detail: null } };
-}
-
 export interface ExecutionHostManagerOptions {
   dataDir: string;
   log(message: string): void;
   localDaemonUrl(): string;
   onRemoteStatus(status: RemoteHostStatus): void;
+  /** Fires whenever a session reaches `connected`, with the tunnel's local origin. */
+  onRemoteConnected?(alias: string, url: string): void;
   applyRendererUrl(url: string): void;
   expectedBuild?: string | null;
   /** Daemon location and port this app targets on the host; the stable deployment when omitted. */
@@ -89,25 +88,16 @@ export class ExecutionHostManager {
   }
 
   listAliases(): string[] {
-    try {
-      return (this.options.listAliases ?? listSshConfigAliases)();
-    } catch (error) {
-      this.options.log(`Could not read ~/.ssh/config aliases: ${String(error)}`);
-      return [];
-    }
+    return safeSshAliases(this.options.listAliases ?? listSshConfigAliases, this.options.log);
   }
 
   configureRemote(sshAlias: unknown): ExecutionHostOperationResult {
     if (this.switching) {
       return { ok: false, message: "A host switch is in progress. Try again in a moment." };
     }
-    if (typeof sshAlias !== "string" || sshAlias.trim() === "") {
-      return { ok: false, message: "Enter an SSH alias from ~/.ssh/config." };
-    }
-    const alias = sshAlias.trim();
-    if (/\s/.test(alias) || alias.startsWith("-")) {
-      return { ok: false, message: "The SSH alias must be a single word." };
-    }
+    const validated = validateSshAlias(sshAlias);
+    if ("message" in validated) return { ok: false, message: validated.message };
+    const { alias } = validated;
     if (this.session !== null && this.session.alias !== alias) {
       if (this.activeHostId === "remote") {
         return { ok: false, message: "Switch to a local project before changing the alias." };
@@ -239,8 +229,16 @@ export class ExecutionHostManager {
       alias,
       deployment: this.options.deployment ?? STABLE_DEPLOYMENT,
       log: this.options.log,
-      onStatus: (status) => this.options.onRemoteStatus(status),
+      onStatus: (status) => this.announce(alias, status),
     });
+  }
+
+  /** Callers store the handle before connecting; a superseded session never speaks for the host. */
+  private announce(alias: string, status: RemoteHostStatus): void {
+    this.options.onRemoteStatus(status);
+    const session = this.session;
+    const url = session !== null && session.alias === alias ? session.url : null;
+    if (status.phase === "connected" && url !== null) this.options.onRemoteConnected?.(alias, url);
   }
 
   private persist(): void {

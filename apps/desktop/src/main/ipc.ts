@@ -10,6 +10,7 @@ import {
   EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_REGISTER_PROJECT_CHANNEL,
   EXECUTION_HOST_REMOVE_CHANNEL,
+  EXECUTION_HOST_REPOSITORIES_CHANNEL,
   EXECUTION_HOST_SELECT_CHANNEL,
   EXECUTION_HOST_SNAPSHOT_CHANNEL,
   EXECUTION_HOST_STOP_INSTANCE_CHANNEL,
@@ -74,6 +75,9 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
     (_event, hostId: unknown, path: unknown) => actions.executionHost.registerProject(hostId, path),
   );
   ipcMain.handle(EXECUTION_HOST_ALIASES_CHANNEL, () => actions.executionHost.listAliases());
+  ipcMain.handle(EXECUTION_HOST_REPOSITORIES_CHANNEL, () =>
+    actions.executionHost.listRemoteRepositories(),
+  );
   ipcMain.handle(EXECUTION_HOST_PROJECTS_CHANNEL, () => actions.executionHost.listProjects());
   ipcMain.handle(EXECUTION_HOST_INSTANCES_CHANNEL, () => actions.executionHost.listInstances());
   ipcMain.handle(EXECUTION_HOST_STOP_INSTANCE_CHANNEL, (_event, build: unknown) =>

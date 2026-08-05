@@ -4,10 +4,18 @@ import { join } from "node:path";
 import { DATABASE_INITIALIZED_MARKER_SUFFIX, type PreviewSandboxResetResult } from "@otomat/domain";
 
 import { prepareDataDirectory, type ManagedDataDirectory } from "../data-safety/index.js";
+import { runSshScript } from "../remote/ssh/script.js";
+import {
+  parseSandboxRepoOutput,
+  readSandboxTemplate,
+  sandboxRepoScript,
+  type SandboxRepoOutcome,
+} from "./remote-repo.js";
 import { seedSandbox } from "./seed.js";
 import { ensureTestRepo } from "./test-repo.js";
 
 const SANDBOX_REPO_DIRECTORY = "test-repo";
+const REMOTE_SCRIPT_TIMEOUT_MS = 30_000;
 
 export const SANDBOX_NOT_READY: PreviewSandboxResetResult = {
   ok: false,
@@ -30,8 +38,11 @@ export interface PreviewSandboxDeps {
   daemon: SandboxDaemon;
   /** Re-points the renderer at the restarted daemon whenever a reset started one. */
   onDaemonStarted(url: string): void;
+  /** `~`-relative home of this preview's own instance on the host; its sandbox lives inside it. */
+  remoteHomeSuffix: string;
   log(message: string): void;
   fetchImpl?: typeof fetch;
+  runScript?: typeof runSshScript;
 }
 
 /**
@@ -40,6 +51,7 @@ export interface PreviewSandboxDeps {
  */
 export class PreviewSandbox {
   private resetting = false;
+  private remote: { alias: string; done: Promise<void> } | null = null;
 
   constructor(private readonly deps: PreviewSandboxDeps) {}
 
@@ -51,6 +63,54 @@ export class PreviewSandbox {
     } catch (error) {
       this.deps.log(`Preview sandbox setup failed: ${String(error)}`);
     }
+  }
+
+  /**
+   * Gives this preview's instance the same test bed on the host: the fixture repository inside
+   * the instance directory (so deleting the instance takes it along) plus its seeded issues,
+   * filed through the tunnel. Runs once per connected session; a reconnect changes nothing.
+   */
+  ensureRemote(alias: string, daemonUrl: string): Promise<void> {
+    if (!this.deps.enabled) return Promise.resolve();
+    const pending = this.remote;
+    if (pending !== null && pending.alias === alias) return pending.done;
+    const done = this.ensureRemoteNow(alias, daemonUrl).catch((error: unknown) => {
+      // Cleared so the next connect retries: a host that was still booting must not stay unseeded.
+      if (this.remote?.alias === alias) this.remote = null;
+      this.deps.log(`Remote sandbox setup failed: ${String(error)}`);
+    });
+    this.remote = { alias, done };
+    return done;
+  }
+
+  private async ensureRemoteNow(alias: string, daemonUrl: string): Promise<void> {
+    const script = sandboxRepoScript(
+      this.deps.remoteHomeSuffix,
+      readSandboxTemplate(this.deps.templateDir),
+    );
+    const result = await (this.deps.runScript ?? runSshScript)({
+      alias,
+      script,
+      timeoutMs: REMOTE_SCRIPT_TIMEOUT_MS,
+    });
+    if (result.code !== 0) {
+      throw new Error(`ssh exited with code ${String(result.code)}: ${result.stderr.trim()}`);
+    }
+    const outcome = parseSandboxRepoOutput(result.stdout);
+    if (outcome === null) throw new Error("The remote sandbox script reported nothing.");
+    if (outcome.kind !== "ready") throw new Error(describeRemoteFailure(outcome));
+    const seeded = await seedSandbox({
+      daemonUrl,
+      repoPath: outcome.path,
+      // The host already canonicalized the path; there is no local file to resolve.
+      realpath: (path) => path,
+      ...(this.deps.fetchImpl === undefined ? {} : { fetchImpl: this.deps.fetchImpl }),
+    });
+    this.deps.log(
+      seeded.seeded
+        ? `Remote sandbox ready at ${outcome.path}: ${seeded.issues} issues.`
+        : `Remote sandbox already seeded at ${outcome.path}.`,
+    );
   }
 
   async reset(): Promise<PreviewSandboxResetResult> {
@@ -109,4 +169,10 @@ export class PreviewSandbox {
     ];
     for (const target of targets) rmSync(target, { recursive: true, force: true });
   }
+}
+
+function describeRemoteFailure(outcome: Exclude<SandboxRepoOutcome, { kind: "ready" }>): string {
+  return outcome.kind === "git_missing"
+    ? "The host has no `git`; install it to give this instance a sandbox repository."
+    : `The host could not create the sandbox repository: ${outcome.detail}`;
 }

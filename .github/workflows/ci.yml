@@ -156,10 +156,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Empty on a push to main, which packages the stable identity unchanged.
       - name: Package the unsigned desktop artifact
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: pnpm desktop:package
 
       - name: Smoke the packaged artifact
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: pnpm desktop:smoke
 
       - name: Name the preview artifact

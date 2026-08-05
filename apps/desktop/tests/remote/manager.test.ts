@@ -18,6 +18,7 @@ class FakeSession implements RemoteSessionHandle {
   constructor(
     readonly alias: string,
     private readonly connectResult: RemoteHostStatus,
+    private readonly onStatus: (status: RemoteHostStatus) => void = () => {},
   ) {}
   ensureLocalPort(): Promise<number> {
     this.url = "http://127.0.0.1:45010";
@@ -30,6 +31,7 @@ class FakeSession implements RemoteSessionHandle {
       this.url = "http://127.0.0.1:45010";
       this.remoteBuild = "fff9999";
     }
+    this.onStatus(this.status);
     return Promise.resolve(this.status);
   }
   refreshDaemon(): Promise<RemoteHostStatus> {
@@ -57,22 +59,28 @@ function makeManager(options?: {
   const dataDir = options?.dataDir ?? scratch();
   const applied: string[] = [];
   const sessions: FakeSession[] = [];
+  const connected: Array<{ alias: string; url: string }> = [];
   const manager = new ExecutionHostManager({
     dataDir,
     log: () => {},
     localDaemonUrl: () => options?.localUrl ?? "http://127.0.0.1:49152",
     onRemoteStatus: () => {},
+    onRemoteConnected: (alias, url) => connected.push({ alias, url }),
     applyRendererUrl: (url) => applied.push(url),
     expectedBuild: options?.expectedBuild ?? null,
     createSession: (sessionOptions) => {
-      const session = new FakeSession(sessionOptions.alias, options?.connectResult ?? CONNECTED);
+      const session = new FakeSession(
+        sessionOptions.alias,
+        options?.connectResult ?? CONNECTED,
+        sessionOptions.onStatus,
+      );
       sessions.push(session);
       return session;
     },
     listAliases: () => ["otomat-vps"],
     ...(options?.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
   });
-  return { manager, applied, sessions, dataDir };
+  return { manager, applied, sessions, connected, dataDir };
 }
 
 function projectsResponse(projects: unknown): Response {
@@ -293,6 +301,21 @@ it("connects, persists the selection, and re-points the renderer on success", as
     remote: { ssh_alias: "otomat-vps" },
     active: "remote",
   });
+});
+
+it("announces a connected session with its tunnel origin, and never a failed one", async () => {
+  const { manager, connected } = makeManager();
+  manager.configureRemote("otomat-vps");
+  await manager.select("remote");
+  // Every announcement carries this host's own tunnel origin; the sandbox de-duplicates them.
+  expect(connected[0]).toEqual({ alias: "otomat-vps", url: "http://127.0.0.1:45010" });
+
+  const failed = makeManager({
+    connectResult: { phase: "error", code: "ssh_unreachable", detail: "no route" },
+  });
+  failed.manager.configureRemote("otomat-vps");
+  await failed.manager.select("remote");
+  expect(failed.connected).toEqual([]);
 });
 
 it("keeps the local selection and never re-points the renderer when the remote connect fails", async () => {

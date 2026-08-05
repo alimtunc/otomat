@@ -10,6 +10,7 @@ export const EXECUTION_HOST_CONFIGURE_CHANNEL = "otomat:execution-host-configure
 export const EXECUTION_HOST_REMOVE_CHANNEL = "otomat:execution-host-remove";
 export const EXECUTION_HOST_REGISTER_PROJECT_CHANNEL = "otomat:execution-host-register-project";
 export const EXECUTION_HOST_ALIASES_CHANNEL = "otomat:execution-host-aliases";
+export const EXECUTION_HOST_REPOSITORIES_CHANNEL = "otomat:execution-host-repositories";
 export const EXECUTION_HOST_STATUS_CHANNEL = "otomat:execution-host-status";
 export const EXECUTION_HOST_PROJECTS_CHANNEL = "otomat:execution-host-projects";
 export const PREVIEW_SYNC_CHANNEL = "otomat:preview-sync";

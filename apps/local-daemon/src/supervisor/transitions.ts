@@ -1,6 +1,7 @@
 import {
   updateAgentSessionStatus,
   updateCompeteGroupStatus,
+  updateIssueStatus,
   updateRunStatus,
   updateStepRunStatus,
   type AgentSessionRow,
@@ -13,11 +14,13 @@ import {
   competeGroupMachine,
   drivePath,
   isRunTerminal,
+  issueMachine,
   runContributionMachine,
   runMachine,
   stepRunMachine,
   type AgentSessionState,
   type CompeteGroupState,
+  type IssueState,
   type RunContributionState,
   type RunState,
   type StepRunState,
@@ -54,6 +57,18 @@ export function driveSessionTo(
   drivePath(agentSessionMachine, from, to, (state) =>
     updateAgentSessionStatus(db, sessionId, state),
   );
+}
+
+/**
+ * Walks the issue to `to` along the shortest legal path and stores where it lands. A terminal
+ * issue — merged into `done`, or canceled — has no legal path out, so the machine refuses with
+ * `IllegalTransitionError` and nothing is written: that refusal is how a closed issue stops
+ * accepting new work.
+ */
+export function driveIssueTo(db: Db, issueId: string, from: IssueState, to: IssueState): void {
+  let landed = from;
+  drivePath(issueMachine, from, to, (state) => (landed = state));
+  if (landed !== from) updateIssueStatus(db, issueId, landed);
 }
 
 export function driveCompeteGroupTo(

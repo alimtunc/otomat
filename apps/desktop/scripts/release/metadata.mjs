@@ -11,7 +11,37 @@ import { basename } from "node:path";
  */
 export const SUPPORTED_RELEASE_ARCHS = ["arm64"];
 
-export const APP_ID = "com.otomat.desktop";
+const APP_ID = "com.otomat.desktop";
+
+const PRODUCT_NAME = "Otomat";
+
+/**
+ * `PR_NUMBER` as an integer, or null when unset. A malformed value fails the build instead of
+ * silently producing an artifact that claims to be the stable app.
+ */
+export function readPrNumber(env) {
+  const raw = (env.PR_NUMBER ?? "").trim();
+  if (raw === "") return null;
+  if (!/^[1-9][0-9]{0,6}$/.test(raw)) {
+    throw new Error(`PR_NUMBER must be a pull request number; got "${raw}".`);
+  }
+  return Number.parseInt(raw, 10);
+}
+
+/**
+ * What a build calls itself. A preview packaged for a pull request gets its own product name and
+ * bundle identifier, so two PRs — and the stable install — coexist on one Mac with nothing shared:
+ * distinct `.app`, distinct single-instance lock, distinct userData (resolved from `pr_number` in
+ * the shipped build-info). `pr === null` is the stable identity the release pipeline builds.
+ */
+export function resolveBuildIdentity(pr) {
+  if (pr === null) return { pr: null, productName: PRODUCT_NAME, appId: APP_ID };
+  return {
+    pr,
+    productName: `${PRODUCT_NAME} PR ${String(pr)}`,
+    appId: `${APP_ID}.pr${String(pr)}`,
+  };
+}
 
 /** Assembling and signing a `.app` shells out to Apple's toolchain, which only macOS has. */
 export function assertMacHost(platform) {
@@ -51,7 +81,7 @@ export function readProductVersion(packageJsonPath) {
 
 /**
  * @param {{ version: string, commit: string, committedAt: string, arch: string,
- *   electronVersion: string, signed: boolean }} input
+ *   electronVersion: string, signed: boolean, pr?: number | null }} input
  */
 export function createBuildInfo(input) {
   return {
@@ -63,6 +93,8 @@ export function createBuildInfo(input) {
     platform: "darwin",
     electron: input.electronVersion,
     signed: input.signed,
+    // The pull request this preview was packaged for; null for the stable and release builds.
+    pr_number: input.pr ?? null,
   };
 }
 
@@ -80,7 +112,7 @@ export function describeArtifact(path) {
  */
 export function createArtifactManifest(input) {
   return {
-    product: "Otomat",
+    product: PRODUCT_NAME,
     app_id: APP_ID,
     build: input.buildInfo,
     notarized: input.notarized,

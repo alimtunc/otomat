@@ -1,7 +1,8 @@
-import { writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  getIssue,
   getPullRequestForRun,
   getRun,
   insertPullRequest,
@@ -98,7 +99,10 @@ class FakeGitHubCli implements GitHubCli {
     return this.providerExists && matchesSelector ? this.provider : null;
   }
 
+  viewError: GitHubCliError | null = null;
+
   async viewPullRequest(): Promise<GitHubPullRequest> {
+    if (this.viewError) throw this.viewError;
     return this.provider;
   }
 
@@ -556,7 +560,9 @@ describe("GitHubService", () => {
       },
     };
 
-    expect(service(brokenWorktrees).getPullRequest(RUN_ID)?.hasUnpublishedChanges).toBeNull();
+    const viewed = await service(brokenWorktrees).getPullRequest(RUN_ID);
+
+    expect(viewed?.hasUnpublishedChanges).toBeNull();
   });
 
   it("adopts an existing provider PR and never creates a duplicate", async () => {
@@ -622,7 +628,7 @@ describe("GitHubService", () => {
       cli.connectionValue = connected;
       cli.providerExists = publicationStatus === "creating";
       const restarted = service();
-      expect(restarted.getPullRequest(RUN_ID)?.row).toMatchObject({
+      expect((await restarted.getPullRequest(RUN_ID))?.row).toMatchObject({
         publication_status: "failed",
         error_code: "github_publication_interrupted",
       });
@@ -643,7 +649,7 @@ describe("GitHubService", () => {
     await github.publish(run(), { title: "Ship it", body: "Details" });
     writeFileSync(join(worktreePath, "change.txt"), "first\nsecond\n");
 
-    expect(github.getPullRequest(RUN_ID)?.hasUnpublishedChanges).toBe(true);
+    expect((await github.getPullRequest(RUN_ID))?.hasUnpublishedChanges).toBe(true);
     const updated = await github.publish(run(), { title: "Ship it better", body: "New body" });
 
     expect(updated.row).toMatchObject({
@@ -705,6 +711,31 @@ describe("GitHubService", () => {
     expect(cli.pushCalls).toBe(1);
     expect(cli.createCalls).toBe(1);
     expect(cli.updateCalls).toBe(0);
+  });
+
+  it("notices a merge when the PR panel is read, and settles the run there", async () => {
+    const github = service();
+    await github.publish(run(), { title: "Ship it", body: "Details" });
+    cli.provider = { ...cli.provider, lifecycle: "merged" };
+
+    const viewed = await github.getPullRequest(RUN_ID);
+
+    expect(viewed?.row).toMatchObject({ status: "merged", number: 42 });
+    expect(viewed?.hasUnpublishedChanges).toBe(false);
+    expect(existsSync(worktreePath)).toBe(false);
+    expect(getIssue(fix.db, "i1")?.status).toBe("done");
+  });
+
+  it("leaves the stored pull request alone when GitHub cannot be reached", async () => {
+    const github = service();
+    await github.publish(run(), { title: "Ship it", body: "Details" });
+    cli.viewError = new GitHubCliError("github_pr_view_failed", "gh is offline.");
+
+    const viewed = await github.getPullRequest(RUN_ID);
+
+    expect(viewed?.row).toMatchObject({ status: "open", number: 42 });
+    expect(existsSync(worktreePath)).toBe(true);
+    expect(getIssue(fix.db, "i1")?.status).not.toBe("done");
   });
 
   it("keeps a closed pull request terminal when it is reopened on GitHub", async () => {

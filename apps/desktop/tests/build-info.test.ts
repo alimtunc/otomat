@@ -14,7 +14,15 @@ const PACKAGED = {
 };
 
 it("reads the metadata packaging wrote into the app", () => {
-  expect(parseBuildInfo(JSON.stringify(PACKAGED))).toEqual(PACKAGED);
+  expect(parseBuildInfo(JSON.stringify(PACKAGED))).toEqual({ ...PACKAGED, pr_number: null });
+});
+
+it("carries the pull request a preview was packaged for", () => {
+  expect(parseBuildInfo(JSON.stringify({ ...PACKAGED, pr_number: 77 })).pr_number).toBe(77);
+  expect(parseBuildInfo(JSON.stringify({ ...PACKAGED, pr_number: null })).pr_number).toBeNull();
+  expect(() => parseBuildInfo(JSON.stringify({ ...PACKAGED, pr_number: "77" }))).toThrow(
+    /pr_number is not a pull request number/,
+  );
 });
 
 it("refuses metadata that cannot identify the build", () => {

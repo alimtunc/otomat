@@ -31,10 +31,35 @@ class PullRequestPublisher implements PullRequestPublicationService {
     this.store = new PublicationStore(config);
   }
 
-  get(runId: string): PullRequestView | null {
-    let row = getPullRequestForRun(this.config.db, runId);
-    if (row && !this.publications.has(runId)) row = this.store.recoverInterrupted(row);
-    return row ? this.store.view(row) : null;
+  /**
+   * The panel read is where a merge is noticed: an open pull request is re-read from GitHub, and
+   * a merged one settles the run (worktree, branch, issue) on the way out. A provider that cannot
+   * be reached leaves the stored row untouched — the panel shows what is known, never a guess.
+   */
+  async get(runId: string): Promise<PullRequestView | null> {
+    const stored = getPullRequestForRun(this.config.db, runId);
+    if (!stored) return null;
+    // A publication in flight is already talking to GitHub; this read must not race its push.
+    if (this.publications.has(runId)) return this.store.view(stored);
+    return this.store.view(await this.refreshLifecycle(this.store.recoverInterrupted(stored)));
+  }
+
+  /**
+   * One `gh pr view` for a pull request the daemon still believes is live. The run's repository
+   * root is the cwd, not its worktree: the worktree is exactly what a merge takes away.
+   */
+  private async refreshLifecycle(row: PullRequestRow): Promise<PullRequestRow> {
+    if (row.number === null || (row.status !== "open" && row.status !== "draft")) return row;
+    const rootPath = this.config.repositories.forRun(row.run_id)?.rootPath;
+    if (rootPath === undefined) return row;
+    try {
+      const { repository } = await this.config.cli.resolveRemote(rootPath);
+      const provider = await this.config.cli.viewPullRequest(rootPath, repository, row.number);
+      return this.store.reconcileLifecycle(row, provider.lifecycle);
+    } catch (error) {
+      console.error(`[otomat] pull request refresh for run ${row.run_id} failed`, error);
+      return row;
+    }
   }
 
   publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView> {

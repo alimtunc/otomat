@@ -23,6 +23,8 @@ export interface SeedSandboxOptions {
   daemonUrl: string;
   repoPath: string;
   fetchImpl?: typeof fetch;
+  /** Canonicalizer for `repoPath`; a remote sandbox path is already canonical and has no local file. */
+  realpath?: (path: string) => string;
 }
 
 export interface SeedSandboxResult {
@@ -64,7 +66,7 @@ async function reconcile(
   fetchImpl: typeof fetch,
 ): Promise<SeedSandboxResult> {
   // The daemon canonicalizes registered roots, so compare realpath to realpath.
-  const rootPath = realpathSync(options.repoPath);
+  const rootPath = (options.realpath ?? realpathSync)(options.repoPath);
   const projects = recordsOf(await getJson(fetchImpl, `${options.daemonUrl}/api/projects`));
   const project = projects.find((entry) => entry.root_path === rootPath);
   if (project === undefined || typeof project.id !== "string" || project.id === "") {

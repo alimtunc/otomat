@@ -6,7 +6,11 @@ import { join } from "node:path";
 
 import { buildMacApp, resolveBuildInfo, REPO } from "./mac-build.mjs";
 import { notarizeAndStapleDmg, verifySignedRelease } from "./release/gatekeeper.mjs";
-import { createArtifactManifest, describeArtifact } from "./release/metadata.mjs";
+import {
+  createArtifactManifest,
+  describeArtifact,
+  resolveBuildIdentity,
+} from "./release/metadata.mjs";
 import { renderReleaseNotes } from "./release/notes.mjs";
 import { preflight } from "./release/preflight.mjs";
 
@@ -64,7 +68,8 @@ console.log(
   `Releasing Otomat ${buildInfo.version} (${buildInfo.commit_short}, ${buildInfo.arch}).`,
 );
 
-const built = buildMacApp({ buildInfo, signing });
+// The stable identity, passed explicitly: a release is never renamed by a stray PR_NUMBER.
+const built = buildMacApp({ buildInfo, signing, identity: resolveBuildIdentity(null) });
 
 console.log("\nNotarizing the DMG…");
 notarizeAndStapleDmg({ dmgPath: built.dmgPath, signing, run: runStreamed });

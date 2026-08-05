@@ -1,4 +1,5 @@
 import {
+  getIssue,
   getRun,
   listAgentSessionsForRun,
   listCompeteGroupsForRun,
@@ -15,6 +16,7 @@ import { createRuntimeAdapter, isKnownRuntimeId, type KnownRuntimeId } from "#ru
 import { spawnTurn } from "./lifecycle.js";
 import { runtimeForRun } from "./runtime-selection.js";
 import { hasRunActivity, type SupervisorState } from "./state.js";
+import { driveIssueTo } from "./transitions.js";
 import type { TurnContext } from "./types.js";
 
 /** A resume the caller got wrong (bad state, concurrent turn, no session) — a conflict, not a daemon fault. */
@@ -67,7 +69,19 @@ export function requireResumableRun(
   if (hasRunActivity(state, runId)) {
     throw new RunNotResumableError(`run ${runId} is already running`);
   }
+  reopenIssue(state.db, run);
   return run;
+}
+
+/**
+ * Every resume is another iteration on the run's issue, so the issue goes back to `running` —
+ * from `pr_open` through `reviewing`, the path that keeps addressing PR comments legal. An issue
+ * the machine cannot move (merged into `done`, or canceled) refuses with `IllegalTransitionError`:
+ * closed work does not quietly reopen.
+ */
+function reopenIssue(db: Db, run: RunRow): void {
+  const issue = getIssue(db, run.issue_id);
+  if (issue) driveIssueTo(db, issue.id, issue.status, "running");
 }
 
 /** Resolves the run's latest resumable session into a spawnable turn without touching any row. */

@@ -72,9 +72,11 @@ it("serves and publishes the durable PR through the GitHub module", async () => 
     published_head_sha: "abc123",
     published_diff_sha: "diff123",
   });
+  // The route reads "created or updated" from the stored row, so the publish below answers 200.
+  t.db.insert(schema.pullRequests).values(row).run();
   const app = makeApiApp(t, {
     github: stubGitHubService({
-      getPullRequest: () => ({ row, hasUnpublishedChanges: false }),
+      getPullRequest: async () => ({ row, hasUnpublishedChanges: false }),
       publish: async () => ({ row, hasUnpublishedChanges: false }),
     }),
   });

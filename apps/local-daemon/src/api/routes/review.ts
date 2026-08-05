@@ -1,4 +1,8 @@
-import { createReviewCommentRequestSchema, requestFixRequestSchema } from "@otomat/domain";
+import {
+  createReviewCommentRequestSchema,
+  IllegalTransitionError,
+  requestFixRequestSchema,
+} from "@otomat/domain";
 import { Hono } from "hono";
 
 import { CommentsNotFixableError, DiffUnavailableError, ReviewAnchorStaleError } from "#review";
@@ -68,6 +72,10 @@ export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
         }
         if (error instanceof RunNotResumableError) {
           return c.json({ error: "run_not_fixable" }, 409);
+        }
+        // The issue closed with its merge; the state machine is the one refusing, verbatim.
+        if (error instanceof IllegalTransitionError && error.machine === "issue") {
+          return c.json({ error: "issue_closed", message: error.message }, 409);
         }
         console.error(`[otomat] fix request on run ${run.id} failed`, error);
         return c.json({ error: "fix_request_failed" }, 500);

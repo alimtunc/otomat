@@ -5,10 +5,12 @@ import {
   type ExecutionHostRegisterProjectResult,
   type ExecutionHostSnapshot,
   type RemoteInstanceListResult,
+  type RemoteRepositoryListResult,
 } from "@otomat/domain";
 
 import type { ExecutionHostSync } from "#shared/execution-host-sync";
 
+import { listRemoteRepositories } from "./host/repos.js";
 import type { RemoteInstanceActions } from "./instances/actions.js";
 import type { ExecutionHostManager } from "./manager.js";
 
@@ -21,6 +23,7 @@ export interface ExecutionHostIpcActions {
   removeRemote(): ExecutionHostOperationResult;
   registerProject(hostId: unknown, path: unknown): Promise<ExecutionHostRegisterProjectResult>;
   listAliases(): string[];
+  listRemoteRepositories(): Promise<RemoteRepositoryListResult>;
   listProjects(): Promise<ExecutionHostProjectsEntry[]>;
   listInstances(): Promise<RemoteInstanceListResult>;
   stopInstance(build: unknown): Promise<ExecutionHostOperationResult>;
@@ -80,6 +83,11 @@ export function buildExecutionHostActions(
       return hosts.registerProject(hostId, path);
     },
     listAliases: () => manager()?.listAliases() ?? [],
+    listRemoteRepositories: async () => {
+      const hosts = manager();
+      if (hosts === null) return { ok: false, message: NOT_READY_MESSAGE };
+      return listRemoteRepositories(hosts.remoteSshAlias);
+    },
     listProjects: async () => manager()?.listProjects() ?? [],
     listInstances: async () => instances()?.list() ?? { ok: false, message: NOT_READY_MESSAGE },
     stopInstance: async (build: unknown) => instances()?.stop(build) ?? NOT_READY,

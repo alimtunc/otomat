@@ -1,4 +1,5 @@
 import type { RemoteDeployment } from "../bootstrap/scripts.js";
+import { lastToken } from "../ssh/tokens.js";
 
 const DEPLOY_PREFIX = "OTOMAT_DEPLOY:";
 const INSTANCE_PREFIX = "OTOMAT_INSTANCE:";
@@ -79,15 +80,10 @@ export type DeployOutcome =
 
 /** Last `OTOMAT_DEPLOY:` token wins; null means the script never reported. */
 export function parseDeployOutput(stdout: string): DeployOutcome | null {
-  const token = stdout
-    .split(/\r?\n/)
-    .filter((line) => line.startsWith(DEPLOY_PREFIX))
-    .at(-1)
-    ?.slice(DEPLOY_PREFIX.length);
-  const separator = token?.indexOf(":") ?? -1;
-  if (token === undefined || separator === -1) return null;
-  const detail = token.slice(separator + 1);
-  switch (token.slice(0, separator)) {
+  const token = lastToken(stdout, DEPLOY_PREFIX);
+  if (token === null) return null;
+  const { detail } = token;
+  switch (token.kind) {
     case "DEPLOYED":
       return { kind: "deployed", build: detail };
     case "NO_GH":
