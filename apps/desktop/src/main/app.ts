@@ -71,19 +71,20 @@ export class DesktopApp {
       restoreBackup: () => this.restoreBackup(),
       exportSupportBundle: () => this.support.exportBundle(),
       showDataPolicy: () => this.support.showDataPolicy(),
-      resetSandbox: () => this.runtime?.sandbox.reset() ?? Promise.resolve(SANDBOX_NOT_READY),
+      resetSandbox: async () => {
+        const result = await (this.runtime?.sandbox.reset() ?? Promise.resolve(SANDBOX_NOT_READY));
+        // Reload only after success: a failure must leave the page alive to show the message.
+        if (result.ok) this.cockpit?.webContents.reload();
+        return result;
+      },
       executionHost: buildExecutionHostActions(
         () => this.runtime?.hosts ?? null,
         () => this.runtime?.instances ?? null,
       ),
     });
     ipcMain.on(SPLASH_RETRY_CHANNEL, () => void this.runStartup());
-    app.on("web-contents-created", (_event, contents) =>
-      hardenWebContents(
-        contents,
-        resolveAllowedOrigins(this.devServer, (message) => this.log.write(message)),
-      ),
-    );
+    const origins = resolveAllowedOrigins(this.devServer, (message) => this.log.write(message));
+    app.on("web-contents-created", (_event, contents) => hardenWebContents(contents, origins));
     if (this.paths.packaged && this.paths.webDist !== null) {
       serveAppScheme(this.paths.webDist, () => buildCsp(this.ipcState.daemonUrl));
     }
@@ -139,7 +140,9 @@ export class DesktopApp {
         applyRendererUrl: (url) => this.applyRendererUrl(url),
         onSandboxDaemonStarted: (url) => {
           this.localDaemonUrl = url;
-          this.applyRendererUrl(url);
+          void this.runtime?.linear.restore();
+          // An active remote session keeps the tunnel URL; only the local view re-points.
+          if (this.runtime?.hosts.activeHostId !== "remote") this.ipcState.daemonUrl = url;
         },
       });
       this.localDaemonUrl = await this.runtime.daemon.start();

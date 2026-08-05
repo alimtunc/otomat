@@ -54,7 +54,10 @@ vi.mock("#main/ipc", () => ({
 }));
 vi.mock("#main/menu", () => ({ installApplicationMenu: vi.fn() }));
 vi.mock("#main/protocol", () => ({ serveAppScheme: vi.fn() }));
-vi.mock("#main/security", () => ({ hardenWebContents: vi.fn() }));
+vi.mock("#main/security", () => ({
+  hardenWebContents: vi.fn(),
+  resolveAllowedOrigins: vi.fn(() => []),
+}));
 vi.mock("#main/startup-failure", async (importOriginal) => ({
   ...(await importOriginal<typeof import("#main/startup-failure")>()),
   describeStartupFailure: (error: { diagnostic?: unknown }) =>

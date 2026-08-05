@@ -47,15 +47,18 @@ afterEach(() => {
 
 describe("PreviewSandbox", () => {
   it("refuses everything outside preview builds", async () => {
+    const directory = layout();
     const daemon = fakeDaemon();
     const sandbox = new PreviewSandbox({
       enabled: false,
-      dataDirectory: layout(),
+      dataDirectory: directory,
       templateDir: TEMPLATE_DIR,
       daemon,
       onDaemonStarted: vi.fn(),
       log: () => {},
-      fetchImpl: okFetch(),
+      fetchImpl: (() => {
+        throw new Error("fetch must not run outside previews");
+      }) as unknown as typeof fetch,
     });
 
     await sandbox.ensure("http://127.0.0.1:4319");
@@ -63,6 +66,25 @@ describe("PreviewSandbox", () => {
 
     expect(result.ok).toBe(false);
     expect(daemon.stop).not.toHaveBeenCalled();
+    expect(existsSync(join(directory.root, "test-repo"))).toBe(false);
+  });
+
+  it("degrades a boot-time seeding failure to a log line", async () => {
+    const log = vi.fn();
+    const sandbox = new PreviewSandbox({
+      enabled: true,
+      dataDirectory: layout(),
+      templateDir: TEMPLATE_DIR,
+      daemon: fakeDaemon(),
+      onDaemonStarted: vi.fn(),
+      log,
+      fetchImpl: (() =>
+        Promise.resolve(new Response("boom", { status: 500 }))) as unknown as typeof fetch,
+    });
+
+    await expect(sandbox.ensure("http://127.0.0.1:4319")).resolves.toBeUndefined();
+
+    expect(log).toHaveBeenCalledWith(expect.stringMatching(/Preview sandbox setup failed/));
   });
 
   it("reset wipes the test state, restarts, reseeds and re-points the renderer", async () => {
@@ -88,6 +110,7 @@ describe("PreviewSandbox", () => {
     expect(daemon.stop).toHaveBeenCalledOnce();
     expect(existsSync(directory.dbPath)).toBe(false);
     expect(existsSync(join(directory.root, "runs"))).toBe(false);
+    expect(existsSync(join(directory.root, "worktrees"))).toBe(false);
     expect(existsSync(join(directory.root, "test-repo", ".git"))).toBe(true);
     expect(onDaemonStarted).toHaveBeenCalledWith("http://127.0.0.1:43999");
   });
