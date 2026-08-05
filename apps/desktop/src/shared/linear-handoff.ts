@@ -46,3 +46,8 @@ export async function pushLinearKey(options: LinearHandoffOptions): Promise<void
 export async function clearLinearKey(daemonUrl: string): Promise<void> {
   await createDaemonClient({ baseUrl: daemonUrl }).disconnectLinear();
 }
+
+/** That daemon's own view of its Linear credential — the only thing that survives its restarts. */
+export function readLinearConnection(daemonUrl: string): Promise<LinearConnectionContract> {
+  return createDaemonClient({ baseUrl: daemonUrl }).getLinearConnection();
+}

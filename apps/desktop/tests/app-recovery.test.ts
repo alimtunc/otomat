@@ -17,7 +17,7 @@ const harness = vi.hoisted(() => ({
       stop(): Promise<void>;
       restoreBackup(path: string): Promise<void>;
     };
-    linear: { restore(): Promise<void> };
+    linear: { reconcile(): Promise<void> };
     hosts: {
       bootActivate(): Promise<string | null>;
       shutdown(): Promise<void>;
@@ -162,7 +162,7 @@ it("offers the next managed backup after the daemon rejects the newest candidate
       stop: async () => {},
       restoreBackup,
     },
-    linear: { restore: async () => {} },
+    linear: { reconcile: async () => {} },
     hosts: { bootActivate: async () => null, shutdown: async () => {}, hasActiveSession: false },
   };
 
@@ -194,7 +194,7 @@ it("keeps shutdown blocked and allows retry when daemon stop fails", async () =>
       stop,
       restoreBackup: async () => {},
     },
-    linear: { restore: async () => {} },
+    linear: { reconcile: async () => {} },
     hosts: { bootActivate: async () => null, shutdown: async () => {}, hasActiveSession: false },
   };
   const desktop = new DesktopApp(DEV_PATHS);

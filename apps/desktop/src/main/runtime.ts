@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import type { RemoteHostStatus } from "@otomat/domain";
+import type { LinearDeliverySnapshot, RemoteHostStatus } from "@otomat/domain";
 
 import { OTOMAT_GITHUB_REPO } from "#shared/constants";
 
@@ -10,8 +10,9 @@ import {
   RotatingLog,
   type ManagedDataDirectory,
 } from "./data-safety/index.js";
-import { LinearCoordinator } from "./linear-coordinator.js";
-import { createMainLinearVault } from "./linear-vault-io.js";
+import { LinearCoordinator } from "./linear/coordinator.js";
+import { linearTargets } from "./linear/targets.js";
+import { createMainLinearVault } from "./linear/vault-io.js";
 import type { AppPaths } from "./paths.js";
 import { PreviewSandbox } from "./preview/sandbox.js";
 import { instanceDeployment, STABLE_DEPLOYMENT } from "./remote/bootstrap/scripts.js";
@@ -42,6 +43,7 @@ interface DesktopRuntimeOptions {
   preview: boolean;
   localDaemonUrl(): string;
   onRemoteStatus(status: RemoteHostStatus): void;
+  onLinearDelivery(snapshot: LinearDeliverySnapshot): void;
   applyRendererUrl(url: string): void;
   onSandboxDaemonStarted(url: string): void;
 }
@@ -56,11 +58,6 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     maxBytes: LOG_MAX_BYTES,
     archives: LOG_ARCHIVES,
   });
-  // The vault is local state, so the key only ever reaches the local daemon — never a remote host over the tunnel (docs/ai/remote-execution-host.md, Known V1 limits).
-  const linear = new LinearCoordinator(
-    createMainLinearVault(dataDirectory.root),
-    options.localDaemonUrl,
-  );
   const daemon = new DaemonController({
     daemonEntry: options.paths.daemonEntry,
     dbPath: dataDirectory.dbPath,
@@ -94,6 +91,13 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     applyRendererUrl: options.applyRendererUrl,
     expectedBuild: options.expectedBuild,
     deployment,
+  });
+  // One connection for the app: the key stays in this machine's vault and is handed
+  // to each host's daemon in memory, the remote one through its SSH tunnel.
+  const linear = new LinearCoordinator({
+    vault: createMainLinearVault(dataDirectory.root),
+    targets: () => linearTargets(hosts),
+    onDelivery: options.onLinearDelivery,
   });
   const instances = new RemoteInstanceActions({
     alias: () => hosts.remoteSshAlias,

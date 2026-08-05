@@ -144,6 +144,11 @@ export class ExecutionHostManager {
     return this.catalog.listProjects();
   }
 
+  /** Where that host's daemon answers, or why it cannot be reached — the Linear fan-out reads this. */
+  daemonUrl(hostId: ExecutionHostId): { url: string } | { message: string } {
+    return this.catalog.resolveBaseUrl(hostId);
+  }
+
   registerProject(
     hostId: ExecutionHostId,
     path: string,

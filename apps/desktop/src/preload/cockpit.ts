@@ -4,6 +4,7 @@ import type {
   ExecutionHostProjectsEntry,
   ExecutionHostRegisterProjectResult,
   ExecutionHostSnapshot,
+  LinearDeliverySnapshot,
   LinearVaultOperationResult,
   OtomatDesktopBridge,
   PreviewSandboxResetResult,
@@ -30,6 +31,8 @@ import {
   EXECUTION_HOST_STOP_INSTANCE_CHANNEL,
   EXECUTION_HOST_SYNC_CHANNEL,
   EXECUTION_HOST_UPDATE_DAEMON_CHANNEL,
+  LINEAR_DELIVERY_CHANNEL,
+  LINEAR_DELIVERY_STATUS_CHANNEL,
   LINEAR_FORGET_KEY_CHANNEL,
   LINEAR_SAVE_KEY_CHANNEL,
   PICK_DIRECTORY_CHANNEL,
@@ -95,6 +98,13 @@ contextBridge.exposeInMainWorld("otomat", {
       ipcRenderer.invoke(LINEAR_SAVE_KEY_CHANNEL, apiKey),
     forgetKey: (): Promise<LinearVaultOperationResult> =>
       ipcRenderer.invoke(LINEAR_FORGET_KEY_CHANNEL),
+    delivery: (): Promise<LinearDeliverySnapshot> => ipcRenderer.invoke(LINEAR_DELIVERY_CHANNEL),
+    onDelivery: (listener: (snapshot: LinearDeliverySnapshot) => void): (() => void) => {
+      const wrapped = (_event: IpcRendererEvent, snapshot: LinearDeliverySnapshot): void =>
+        listener(snapshot);
+      ipcRenderer.on(LINEAR_DELIVERY_STATUS_CHANNEL, wrapped);
+      return () => ipcRenderer.off(LINEAR_DELIVERY_STATUS_CHANNEL, wrapped);
+    },
   },
   preview,
   sandbox: {

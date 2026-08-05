@@ -121,7 +121,8 @@ export class HostCatalog {
     }
   }
 
-  private resolveBaseUrl(hostId: ExecutionHostId): { url: string } | { message: string } {
+  /** That host's daemon base URL, or why it cannot be reached; asking warms an idle remote host. */
+  resolveBaseUrl(hostId: ExecutionHostId): { url: string } | { message: string } {
     if (hostId === "local") {
       const url = this.options.localDaemonUrl();
       return url === "" ? { message: "The local daemon is not running yet." } : { url };

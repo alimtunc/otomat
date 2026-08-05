@@ -1,7 +1,17 @@
 import { afterEach, expect, it, vi } from "vitest";
 
-import { LinearCoordinator } from "#main/linear-coordinator";
+import { LinearCoordinator } from "#main/linear/coordinator";
 import type { LinearVault } from "#shared/linear-vault";
+import {
+  FakeDaemon,
+  harness,
+  LOCAL_URL,
+  memoryVault,
+  reachable,
+  REMOTE_URL,
+  routeDaemons,
+  unreachable,
+} from "#support/linear-daemons";
 
 const CONNECTED = {
   status: "connected",
@@ -11,6 +21,8 @@ const CONNECTED = {
   error_code: null,
   error_message: null,
 } as const;
+
+const HOST_DOWN = "otomat-vps is not connected yet.";
 
 function uninitializedDeferred(): never {
   throw new Error("Deferred promise did not initialize");
@@ -24,14 +36,12 @@ function deferred<T>() {
   return { promise, resolve: resolvePromise };
 }
 
-function memoryVault() {
-  let stored: string | null = null;
-  const vault: LinearVault = {
-    clear: () => (stored = null),
-    load: () => stored,
-    save: (apiKey) => (stored = apiKey),
-  };
-  return { vault, stored: () => stored };
+function localOnly(vault: LinearVault): LinearCoordinator {
+  return new LinearCoordinator({
+    vault,
+    targets: () => [reachable("local", LOCAL_URL)],
+    onDelivery: () => undefined,
+  });
 }
 
 afterEach(() => {
@@ -55,8 +65,8 @@ it("serializes save then forget so a delayed connect cannot restore a forgotten 
       }),
     );
   vi.stubGlobal("fetch", fetch);
-  const memory = memoryVault();
-  const coordinator = new LinearCoordinator(memory.vault, () => "http://127.0.0.1:4319");
+  const vault = memoryVault();
+  const coordinator = localOnly(vault);
 
   const save = coordinator.save("first-key");
   const forget = coordinator.forget();
@@ -66,10 +76,10 @@ it("serializes save then forget so a delayed connect cannot restore a forgotten 
   await expect(save).resolves.toEqual({ ok: true, message: null });
   await expect(forget).resolves.toEqual({ ok: true, message: null });
   expect(fetch).toHaveBeenCalledTimes(2);
-  expect(memory.stored()).toBeNull();
+  expect(vault.stored()).toBeNull();
 });
 
-it("reports a vault deletion failure without disconnecting the daemon", async () => {
+it("reports a vault deletion failure without disconnecting any daemon", async () => {
   const fetch = vi.fn();
   vi.stubGlobal("fetch", fetch);
   const vault: LinearVault = {
@@ -79,9 +89,8 @@ it("reports a vault deletion failure without disconnecting the daemon", async ()
     load: () => null,
     save: vi.fn(),
   };
-  const coordinator = new LinearCoordinator(vault, () => "http://127.0.0.1:4319");
 
-  await expect(coordinator.forget()).resolves.toEqual({
+  await expect(localOnly(vault).forget()).resolves.toEqual({
     ok: false,
     message: "keychain unavailable",
     error_code: null,
@@ -104,9 +113,8 @@ it("never persists a key when the daemon rejects its superseded connection", asy
   );
   const save = vi.fn();
   const vault: LinearVault = { clear: vi.fn(), load: () => null, save };
-  const coordinator = new LinearCoordinator(vault, () => "http://127.0.0.1:4319");
 
-  await expect(coordinator.save("first-key")).resolves.toEqual({
+  await expect(localOnly(vault).save("first-key")).resolves.toEqual({
     ok: false,
     message: "A newer Linear connection state replaced this request.",
     error_code: "linear_request_superseded",
@@ -124,11 +132,188 @@ it("logs the restoration cause without rejecting desktop startup", async () => {
     },
     save: vi.fn(),
   };
-  const coordinator = new LinearCoordinator(vault, () => "http://127.0.0.1:4319");
 
-  await expect(coordinator.restore()).resolves.toBeUndefined();
+  await expect(localOnly(vault).reconcile()).resolves.toBeUndefined();
   expect(log).toHaveBeenCalledWith(
     "[otomat-desktop] restoring the Linear connection failed",
     decryptionError,
   );
+});
+
+it("hands one saved key to every reachable host", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  routeDaemons([local, remote]);
+  const vault = memoryVault();
+  const app = harness(vault, [reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
+
+  await expect(app.coordinator.save("lin_api_key")).resolves.toEqual({ ok: true, message: null });
+
+  expect(local.connectCount).toBe(1);
+  expect(remote.connectCount).toBe(1);
+  expect(vault.stored()).toBe("lin_api_key");
+  expect(app.state("local")).toBe("delivered");
+  expect(app.state("remote")).toBe("delivered");
+});
+
+it("restores the vaulted key on every host at boot", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  routeDaemons([local, remote]);
+  const app = harness(memoryVault("lin_api_key"), [
+    reachable("local", LOCAL_URL),
+    reachable("remote", REMOTE_URL),
+  ]);
+
+  await app.coordinator.reconcile();
+
+  expect(local.connectCount).toBe(1);
+  expect(remote.connectCount).toBe(1);
+  expect(app.state("remote")).toBe("delivered");
+});
+
+it("revokes a key a daemon kept from an earlier desktop session", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  // The VPS daemon outlives the app: it still holds a key this machine has forgotten.
+  remote.connected = true;
+  routeDaemons([local, remote]);
+  const app = harness(memoryVault(), [
+    reachable("local", LOCAL_URL),
+    reachable("remote", REMOTE_URL),
+  ]);
+
+  await app.coordinator.reconcile();
+
+  expect(remote.disconnectCount).toBe(1);
+  expect(remote.connected).toBe(false);
+  expect(local.disconnectCount).toBe(0);
+  expect(app.state("remote")).toBe("cleared");
+});
+
+it("keeps Linear working locally while the remote host is down, and delivers it on reconnect", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  routeDaemons([local, remote]);
+  const app = harness(memoryVault(), [
+    reachable("local", LOCAL_URL),
+    unreachable("remote", HOST_DOWN),
+  ]);
+
+  await expect(app.coordinator.save("lin_api_key")).resolves.toEqual({ ok: true, message: null });
+  expect(local.connected).toBe(true);
+  expect(remote.connectCount).toBe(0);
+  expect(app.state("local")).toBe("delivered");
+  expect(app.state("remote")).toBe("pending_restore");
+
+  app.setTargets([reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
+  await app.coordinator.reconcile();
+
+  expect(remote.connectCount).toBe(1);
+  expect(app.state("remote")).toBe("delivered");
+});
+
+it("re-delivers to a remote daemon that restarted, and leaves a healthy one alone", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  routeDaemons([local, remote]);
+  const app = harness(memoryVault(), [
+    reachable("local", LOCAL_URL),
+    reachable("remote", REMOTE_URL),
+  ]);
+  await app.coordinator.save("lin_api_key");
+
+  await app.coordinator.reconcile();
+  expect(remote.connectCount).toBe(1);
+
+  // The VPS daemon restarted: it answers again, with no credential in memory.
+  remote.connected = false;
+  await app.coordinator.reconcile();
+
+  expect(remote.connectCount).toBe(2);
+  expect(app.state("remote")).toBe("delivered");
+});
+
+it("replaces a key the remote host still holds after it was rotated offline", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  routeDaemons([local, remote]);
+  const app = harness(memoryVault(), [
+    reachable("local", LOCAL_URL),
+    reachable("remote", REMOTE_URL),
+  ]);
+  await app.coordinator.save("first-key");
+
+  app.setTargets([reachable("local", LOCAL_URL), unreachable("remote", HOST_DOWN)]);
+  await app.coordinator.save("second-key");
+  expect(remote.connectCount).toBe(1);
+
+  app.setTargets([reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
+  await app.coordinator.reconcile();
+
+  // The daemon still reported `connected` from the first key: the rotation must overwrite it.
+  expect(remote.connectCount).toBe(2);
+  expect(app.state("remote")).toBe("delivered");
+});
+
+it("refuses a save no daemon could validate instead of storing an unchecked key", async () => {
+  routeDaemons([]);
+  const vault = memoryVault();
+  const app = harness(vault, [
+    unreachable("local", "The local daemon is not running yet."),
+    unreachable("remote", HOST_DOWN),
+  ]);
+
+  await expect(app.coordinator.save("lin_api_key")).resolves.toEqual({
+    ok: false,
+    message: "No daemon could take the Linear key. Check that a host is reachable, then retry.",
+    error_code: null,
+  });
+  expect(vault.stored()).toBeNull();
+  expect(app.state("local")).toBe("unavailable");
+});
+
+it("reports a partial disconnect and revokes on the host's next connection", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  routeDaemons([local, remote]);
+  const vault = memoryVault();
+  const app = harness(vault, [reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
+  await app.coordinator.save("lin_api_key");
+
+  app.setTargets([reachable("local", LOCAL_URL), unreachable("remote", HOST_DOWN)]);
+  const forgotten = await app.coordinator.forget();
+
+  expect(forgotten.ok).toBe(false);
+  expect(forgotten.message).toContain("otomat-vps");
+  expect(vault.stored()).toBeNull();
+  expect(local.connected).toBe(false);
+  expect(remote.connected).toBe(true);
+  expect(app.state("remote")).toBe("pending_revocation");
+
+  app.setTargets([reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
+  await app.coordinator.reconcile();
+
+  expect(remote.disconnectCount).toBe(1);
+  expect(remote.connected).toBe(false);
+  expect(app.state("remote")).toBe("cleared");
+});
+
+it("publishes every delivery change so the cockpit never shows a stale host", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  routeDaemons([local]);
+  const app = harness(memoryVault(), [
+    reachable("local", LOCAL_URL),
+    unreachable("remote", HOST_DOWN),
+  ]);
+
+  await app.coordinator.save("lin_api_key");
+
+  expect(app.deliveries.at(-1)).toEqual({
+    stored: true,
+    hosts: [
+      { host_id: "local", label: "Local", state: "delivered", detail: null },
+      { host_id: "remote", label: "otomat-vps", state: "pending_restore", detail: HOST_DOWN },
+    ],
+  });
 });
