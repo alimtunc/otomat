@@ -52,6 +52,10 @@ To test a preview on an Apple Silicon Mac — no checkout, Node or pnpm required
    (*Data Safety → Export Support Bundle…*): `versions.commit` must start with the short SHA in
    the artifact name.
 
+A preview keeps its data in `~/Library/Application Support/Otomat Preview`, beside — never
+inside — the stable install's data, so both apps run side by side and deleting that one folder
+removes every trace of preview testing.
+
 A preview is for the team's own test hardware only. Handing someone a DMG plus quarantine-stripping
 instructions is exactly the pattern the signed pipeline exists to replace — share builds through a
 release, never through a preview artifact.
