@@ -1,19 +1,25 @@
-import type { LinearVaultOperationResult } from "@otomat/domain";
+import type { LinearVaultOperationResult, PreviewSandboxResetResult } from "@otomat/domain";
 import { BrowserWindow, dialog, ipcMain } from "electron";
 
 import {
   DAEMON_URL_CHANNEL,
   EXECUTION_HOST_ALIASES_CHANNEL,
   EXECUTION_HOST_CONFIGURE_CHANNEL,
+  EXECUTION_HOST_DELETE_INSTANCE_CHANNEL,
+  EXECUTION_HOST_INSTANCES_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_REGISTER_PROJECT_CHANNEL,
   EXECUTION_HOST_REMOVE_CHANNEL,
   EXECUTION_HOST_SELECT_CHANNEL,
   EXECUTION_HOST_SNAPSHOT_CHANNEL,
+  EXECUTION_HOST_STOP_INSTANCE_CHANNEL,
   EXECUTION_HOST_SYNC_CHANNEL,
+  EXECUTION_HOST_UPDATE_DAEMON_CHANNEL,
   LINEAR_FORGET_KEY_CHANNEL,
   LINEAR_SAVE_KEY_CHANNEL,
   PICK_DIRECTORY_CHANNEL,
+  PREVIEW_SANDBOX_RESET_CHANNEL,
+  PREVIEW_SYNC_CHANNEL,
 } from "#shared/ipc-channels";
 import {
   SPLASH_EXPORT_SUPPORT_CHANNEL,
@@ -26,6 +32,8 @@ import type { ExecutionHostIpcActions } from "./remote/ipc-actions.js";
 /** Mutable holder so the sync handler always returns the URL resolved by the last successful daemon start. */
 export interface IpcState {
   daemonUrl: string;
+  /** True for a packaged preview build; static per process. */
+  preview: boolean;
 }
 
 export interface IpcActions {
@@ -34,6 +42,7 @@ export interface IpcActions {
   restoreBackup(): Promise<void>;
   exportSupportBundle(): Promise<void>;
   showDataPolicy(): Promise<void>;
+  resetSandbox(): Promise<PreviewSandboxResetResult>;
   executionHost: ExecutionHostIpcActions;
 }
 
@@ -42,9 +51,15 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
     event.returnValue = state.daemonUrl;
   });
 
+  ipcMain.on(PREVIEW_SYNC_CHANNEL, (event) => {
+    event.returnValue = state.preview;
+  });
+
   ipcMain.on(EXECUTION_HOST_SYNC_CHANNEL, (event) => {
     event.returnValue = actions.executionHost.sync();
   });
+
+  ipcMain.handle(PREVIEW_SANDBOX_RESET_CHANNEL, () => actions.resetSandbox());
 
   ipcMain.handle(EXECUTION_HOST_SNAPSHOT_CHANNEL, () => actions.executionHost.snapshot());
   ipcMain.handle(EXECUTION_HOST_SELECT_CHANNEL, (_event, id: unknown) =>
@@ -60,6 +75,16 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
   );
   ipcMain.handle(EXECUTION_HOST_ALIASES_CHANNEL, () => actions.executionHost.listAliases());
   ipcMain.handle(EXECUTION_HOST_PROJECTS_CHANNEL, () => actions.executionHost.listProjects());
+  ipcMain.handle(EXECUTION_HOST_INSTANCES_CHANNEL, () => actions.executionHost.listInstances());
+  ipcMain.handle(EXECUTION_HOST_STOP_INSTANCE_CHANNEL, (_event, build: unknown) =>
+    actions.executionHost.stopInstance(build),
+  );
+  ipcMain.handle(EXECUTION_HOST_DELETE_INSTANCE_CHANNEL, (_event, build: unknown) =>
+    actions.executionHost.deleteInstance(build),
+  );
+  ipcMain.handle(EXECUTION_HOST_UPDATE_DAEMON_CHANNEL, () =>
+    actions.executionHost.updateRemoteDaemon(),
+  );
 
   ipcMain.handle(PICK_DIRECTORY_CHANNEL, async (event) => {
     const window = BrowserWindow.fromWebContents(event.sender);

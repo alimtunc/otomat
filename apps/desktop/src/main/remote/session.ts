@@ -4,9 +4,9 @@ import { waitForHealth } from "#shared/health";
 import { findFreeLoopbackPort } from "#shared/ports";
 
 import {
-  REMOTE_DAEMON_PORT,
   startOrVerifyDaemonScript,
   stopDaemonScript,
+  type RemoteDeployment,
 } from "./bootstrap/scripts.js";
 import {
   resolveBootstrapResult,
@@ -23,6 +23,8 @@ const RECONNECT_DELAYS_MS = [1_000, 2_000, 5_000, 10_000, 15_000];
 
 export interface RemoteSessionOptions {
   alias: string;
+  /** Daemon location and port on the host. */
+  deployment: RemoteDeployment;
   log(message: string): void;
   onStatus(status: RemoteHostStatus): void;
   runScript?: typeof runSshScript;
@@ -93,7 +95,7 @@ export class RemoteHostSession implements RemoteSessionHandle {
     const run = this.options.runScript ?? runSshScript;
     const stop = await run({
       alias: this.options.alias,
-      script: stopDaemonScript(),
+      script: stopDaemonScript(this.options.deployment),
       timeoutMs: BOOTSTRAP_TIMEOUT_MS,
     });
     if (stop.code !== 0) {
@@ -148,7 +150,7 @@ export class RemoteHostSession implements RemoteSessionHandle {
     const run = this.options.runScript ?? runSshScript;
     const result = await run({
       alias: this.options.alias,
-      script: startOrVerifyDaemonScript(),
+      script: startOrVerifyDaemonScript(this.options.deployment),
       timeoutMs: BOOTSTRAP_TIMEOUT_MS,
     });
     const resolution = resolveBootstrapResult(result);
@@ -166,7 +168,7 @@ export class RemoteHostSession implements RemoteSessionHandle {
     const tunnel = createTunnel({
       alias: this.options.alias,
       localPort,
-      remotePort: REMOTE_DAEMON_PORT,
+      remotePort: this.options.deployment.port,
       onExit: (info) => {
         if (info.expected || this.disposed) return;
         exitDetail = info.stderrTail || `ssh tunnel exited with code ${String(info.code)}`;

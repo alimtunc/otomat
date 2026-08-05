@@ -31,6 +31,7 @@ import { Route as SettingsIntegrationsRouteImport } from './routes/settings/inte
 import { Route as SettingsProjectRouteImport } from './routes/settings/project'
 import { Route as SettingsRepositoriesRouteImport } from './routes/settings/repositories'
 import { Route as SettingsRuntimesRouteImport } from './routes/settings/runtimes'
+import { Route as SettingsSandboxRouteImport } from './routes/settings/sandbox'
 import { Route as RunsRunIdIndexRouteImport } from './routes/runs/$runId/index'
 import { Route as RunsRunIdDiffRouteImport } from './routes/runs/$runId/diff'
 import { Route as RunsRunIdLogsRouteImport } from './routes/runs/$runId/logs'
@@ -147,6 +148,11 @@ const SettingsRuntimesRoute = SettingsRuntimesRouteImport.update({
   path: '/runtimes',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const SettingsSandboxRoute = SettingsSandboxRouteImport.update({
+  id: '/sandbox',
+  path: '/sandbox',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 const RunsRunIdIndexRoute = RunsRunIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -192,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/settings/project': typeof SettingsProjectRoute
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
+  '/settings/sandbox': typeof SettingsSandboxRoute
   '/agents/': typeof AgentsIndexRoute
   '/issues/': typeof IssuesIndexRoute
   '/runs/': typeof RunsIndexRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/settings/project': typeof SettingsProjectRoute
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
+  '/settings/sandbox': typeof SettingsSandboxRoute
   '/agents': typeof AgentsIndexRoute
   '/issues': typeof IssuesIndexRoute
   '/runs': typeof RunsIndexRoute
@@ -248,6 +256,7 @@ export interface FileRoutesById {
   '/settings/project': typeof SettingsProjectRoute
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
+  '/settings/sandbox': typeof SettingsSandboxRoute
   '/agents/': typeof AgentsIndexRoute
   '/issues/': typeof IssuesIndexRoute
   '/runs/': typeof RunsIndexRoute
@@ -279,6 +288,7 @@ export interface FileRouteTypes {
     | '/settings/project'
     | '/settings/repositories'
     | '/settings/runtimes'
+    | '/settings/sandbox'
     | '/agents/'
     | '/issues/'
     | '/runs/'
@@ -305,6 +315,7 @@ export interface FileRouteTypes {
     | '/settings/project'
     | '/settings/repositories'
     | '/settings/runtimes'
+    | '/settings/sandbox'
     | '/agents'
     | '/issues'
     | '/runs'
@@ -334,6 +345,7 @@ export interface FileRouteTypes {
     | '/settings/project'
     | '/settings/repositories'
     | '/settings/runtimes'
+    | '/settings/sandbox'
     | '/agents/'
     | '/issues/'
     | '/runs/'
@@ -515,6 +527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRuntimesRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/settings/sandbox': {
+      id: '/settings/sandbox'
+      path: '/sandbox'
+      fullPath: '/settings/sandbox'
+      preLoaderRoute: typeof SettingsSandboxRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/runs/$runId/': {
       id: '/runs/$runId/'
       path: '/'
@@ -562,6 +581,7 @@ interface SettingsRouteRouteChildren {
   SettingsProjectRoute: typeof SettingsProjectRoute
   SettingsRepositoriesRoute: typeof SettingsRepositoriesRoute
   SettingsRuntimesRoute: typeof SettingsRuntimesRoute
+  SettingsSandboxRoute: typeof SettingsSandboxRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
@@ -574,6 +594,7 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsProjectRoute: SettingsProjectRoute,
   SettingsRepositoriesRoute: SettingsRepositoriesRoute,
   SettingsRuntimesRoute: SettingsRuntimesRoute,
+  SettingsSandboxRoute: SettingsSandboxRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 

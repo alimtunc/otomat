@@ -22,6 +22,7 @@ function devPaths(devDataRoot: string): AppPaths {
     daemonEntry: "/nonexistent/daemon/index.js",
     webDist: null,
     splashHtml: "/nonexistent/splash.html",
+    sandboxTemplateDir: "/tmp/otomat-sandbox-template",
     cockpitPreload: "/nonexistent/cockpit.cjs",
     splashPreload: "/nonexistent/splash.cjs",
     devDataRoot,
@@ -55,9 +56,11 @@ function sessionFor(worktree: string, appData: string): { root: string; env: Nod
     userData: root,
     userPath: "/usr/bin",
     expectedBuild: null,
+    preview: false,
     localDaemonUrl: () => "",
     onRemoteStatus: () => {},
     applyRendererUrl: () => {},
+    onSandboxDaemonStarted: () => {},
   });
   expect(runtime.dataDirectory.root).toBe(root);
   return {

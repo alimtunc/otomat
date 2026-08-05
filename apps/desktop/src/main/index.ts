@@ -1,16 +1,31 @@
 import { app } from "electron";
 
 import { DesktopApp } from "./app.js";
+import { readBuildInfo } from "./build-info.js";
 import { applyDevDataRoot } from "./dev-data-root.js";
 import { resolveAppPaths } from "./paths.js";
+import { resolvePreviewDataRoot } from "./preview/data-root.js";
 import { registerAppSchemePrivileged } from "./protocol.js";
 
 registerAppSchemePrivileged();
 
 const paths = resolveAppPaths();
-// Before the lock: Electron keys the single-instance lock on userData, so a shared dev userData
-// would make the second worktree's shell quit into the first one instead of running isolated.
-applyDevDataRoot(paths.devDataRoot, app);
+// Before the lock: Electron keys the single-instance lock on userData, so a shared userData
+// would make the second instance quit into the first one instead of running isolated. Dev
+// worktrees split per checkout; packaged previews (unsigned builds, including unidentifiable
+// ones — when in doubt, stay out of the stable data) split beside the stable install. An
+// explicit --user-data-dir (the packaged smoke, a second test profile) outranks both splits.
+applyDevDataRoot(
+  app.commandLine.hasSwitch("user-data-dir")
+    ? null
+    : (paths.devDataRoot ??
+        resolvePreviewDataRoot({
+          packaged: paths.packaged,
+          signed: readBuildInfo((message) => console.error(`[otomat-desktop] ${message}`)).signed,
+          appData: app.getPath("appData"),
+        })),
+  app,
+);
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();

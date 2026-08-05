@@ -6,7 +6,9 @@ import type {
   ExecutionHostSnapshot,
   LinearVaultOperationResult,
   OtomatDesktopBridge,
+  PreviewSandboxResetResult,
   RemoteHostStatus,
+  RemoteInstanceListResult,
 } from "@otomat/domain";
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
@@ -15,16 +17,22 @@ import {
   DAEMON_URL_CHANNEL,
   EXECUTION_HOST_ALIASES_CHANNEL,
   EXECUTION_HOST_CONFIGURE_CHANNEL,
+  EXECUTION_HOST_DELETE_INSTANCE_CHANNEL,
+  EXECUTION_HOST_INSTANCES_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_REGISTER_PROJECT_CHANNEL,
   EXECUTION_HOST_REMOVE_CHANNEL,
   EXECUTION_HOST_SELECT_CHANNEL,
   EXECUTION_HOST_SNAPSHOT_CHANNEL,
   EXECUTION_HOST_STATUS_CHANNEL,
+  EXECUTION_HOST_STOP_INSTANCE_CHANNEL,
   EXECUTION_HOST_SYNC_CHANNEL,
+  EXECUTION_HOST_UPDATE_DAEMON_CHANNEL,
   LINEAR_FORGET_KEY_CHANNEL,
   LINEAR_SAVE_KEY_CHANNEL,
   PICK_DIRECTORY_CHANNEL,
+  PREVIEW_SANDBOX_RESET_CHANNEL,
+  PREVIEW_SYNC_CHANNEL,
 } from "#shared/ipc-channels";
 
 // Resolved synchronously so `window.otomat.daemonUrl` exists before the client module reads it.
@@ -34,6 +42,11 @@ if (typeof daemonUrl !== "string") throw new Error("Invalid daemon URL from the 
 const hostSync: unknown = ipcRenderer.sendSync(EXECUTION_HOST_SYNC_CHANNEL);
 if (!isExecutionHostSync(hostSync)) {
   throw new Error("Invalid execution-host state from the main process");
+}
+
+const preview: unknown = ipcRenderer.sendSync(PREVIEW_SYNC_CHANNEL);
+if (typeof preview !== "boolean") {
+  throw new Error("Invalid preview flag from the main process");
 }
 
 contextBridge.exposeInMainWorld("otomat", {
@@ -64,11 +77,24 @@ contextBridge.exposeInMainWorld("otomat", {
       ipcRenderer.on(EXECUTION_HOST_STATUS_CHANNEL, wrapped);
       return () => ipcRenderer.off(EXECUTION_HOST_STATUS_CHANNEL, wrapped);
     },
+    listInstances: (): Promise<RemoteInstanceListResult> =>
+      ipcRenderer.invoke(EXECUTION_HOST_INSTANCES_CHANNEL),
+    stopInstance: (build: string): Promise<ExecutionHostOperationResult> =>
+      ipcRenderer.invoke(EXECUTION_HOST_STOP_INSTANCE_CHANNEL, build),
+    deleteInstance: (build: string): Promise<ExecutionHostOperationResult> =>
+      ipcRenderer.invoke(EXECUTION_HOST_DELETE_INSTANCE_CHANNEL, build),
+    updateRemoteDaemon: (): Promise<ExecutionHostOperationResult> =>
+      ipcRenderer.invoke(EXECUTION_HOST_UPDATE_DAEMON_CHANNEL),
   },
   linear: {
     saveKey: (apiKey: string): Promise<LinearVaultOperationResult> =>
       ipcRenderer.invoke(LINEAR_SAVE_KEY_CHANNEL, apiKey),
     forgetKey: (): Promise<LinearVaultOperationResult> =>
       ipcRenderer.invoke(LINEAR_FORGET_KEY_CHANNEL),
+  },
+  preview,
+  sandbox: {
+    reset: (): Promise<PreviewSandboxResetResult> =>
+      ipcRenderer.invoke(PREVIEW_SANDBOX_RESET_CHANNEL),
   },
 } satisfies OtomatDesktopBridge);

@@ -1,5 +1,6 @@
 import { cn, FOCUS_RING, Icon, type IconName } from "@otomat/ui";
 import { Link, useMatchRoute } from "@tanstack/react-router";
+import { desktopBridge } from "@web/lib/desktop-bridge";
 
 interface SettingsSection {
   to: string;
@@ -31,6 +32,20 @@ const GROUPS: SettingsGroup[] = [
   },
 ];
 
+const SANDBOX_SECTION: SettingsSection = {
+  to: "/settings/sandbox",
+  label: "Sandbox",
+  icon: "wand-2",
+};
+
+/** The sandbox entry exists only in packaged preview builds; everyone else keeps the static nav. */
+function navGroups(): SettingsGroup[] {
+  if (desktopBridge()?.preview !== true) return GROUPS;
+  return GROUPS.map((group) =>
+    group.label === "Global" ? { ...group, sections: [...group.sections, SANDBOX_SECTION] } : group,
+  );
+}
+
 export function SettingsNav() {
   const matchRoute = useMatchRoute();
   return (
@@ -38,7 +53,7 @@ export function SettingsNav() {
       aria-label="Settings sections"
       className="w-52 flex-none overflow-auto border-r border-border-subtle bg-sidebar px-2 py-4"
     >
-      {GROUPS.map((group) => (
+      {navGroups().map((group) => (
         <div key={group.label} className="pb-3">
           <div className="px-2.5 pb-1 pt-1 text-micro font-semibold tracking-[0.03em] text-text-tertiary">
             {group.label}

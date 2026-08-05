@@ -4,10 +4,12 @@ import {
   type ExecutionHostProjectsEntry,
   type ExecutionHostRegisterProjectResult,
   type ExecutionHostSnapshot,
+  type RemoteInstanceListResult,
 } from "@otomat/domain";
 
 import type { ExecutionHostSync } from "#shared/execution-host-sync";
 
+import type { RemoteInstanceActions } from "./instances/actions.js";
 import type { ExecutionHostManager } from "./manager.js";
 
 /** Renderer-facing host actions; every call degrades honestly while the runtime is still booting. */
@@ -20,6 +22,10 @@ export interface ExecutionHostIpcActions {
   registerProject(hostId: unknown, path: unknown): Promise<ExecutionHostRegisterProjectResult>;
   listAliases(): string[];
   listProjects(): Promise<ExecutionHostProjectsEntry[]>;
+  listInstances(): Promise<RemoteInstanceListResult>;
+  stopInstance(build: unknown): Promise<ExecutionHostOperationResult>;
+  deleteInstance(build: unknown): Promise<ExecutionHostOperationResult>;
+  updateRemoteDaemon(): Promise<ExecutionHostOperationResult>;
 }
 
 const NOT_READY_MESSAGE = "The desktop runtime is not ready yet.";
@@ -28,6 +34,7 @@ const NOT_READY: ExecutionHostOperationResult = { ok: false, message: NOT_READY_
 
 export function buildExecutionHostActions(
   manager: () => ExecutionHostManager | null,
+  instances: () => RemoteInstanceActions | null,
 ): ExecutionHostIpcActions {
   return {
     sync: () => {
@@ -74,5 +81,9 @@ export function buildExecutionHostActions(
     },
     listAliases: () => manager()?.listAliases() ?? [],
     listProjects: async () => manager()?.listProjects() ?? [],
+    listInstances: async () => instances()?.list() ?? { ok: false, message: NOT_READY_MESSAGE },
+    stopInstance: async (build: unknown) => instances()?.stop(build) ?? NOT_READY,
+    deleteInstance: async (build: unknown) => instances()?.remove(build) ?? NOT_READY,
+    updateRemoteDaemon: async () => instances()?.updateDaemon() ?? NOT_READY,
   };
 }

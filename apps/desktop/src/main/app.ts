@@ -1,26 +1,25 @@
 import { basename } from "node:path";
 
-import type {
-  DesktopStartupDiagnostic,
-  LinearVaultOperationResult,
-  RemoteHostStatus,
-} from "@otomat/domain";
+import type { DesktopStartupDiagnostic, RemoteHostStatus } from "@otomat/domain";
 import { app, BrowserWindow, ipcMain } from "electron";
 
-import { APP_ORIGIN, DEV_SERVER_ENV } from "#shared/constants";
+import { DEV_SERVER_ENV } from "#shared/constants";
 import { EXECUTION_HOST_STATUS_CHANNEL } from "#shared/ipc-channels";
 import { SPLASH_RETRY_CHANNEL, SPLASH_STATUS_CHANNEL, type StartupStatus } from "#shared/startup";
 import { resolveUserPath } from "#shared/user-path";
 
+import { readBuildInfo } from "./build-info.js";
 import { buildCsp } from "./csp.js";
 import { resolveExpectedBuild } from "./expected-build.js";
 import { registerIpc, type IpcState } from "./ipc.js";
+import { unavailableLinear } from "./linear-coordinator.js";
 import { installApplicationMenu } from "./menu.js";
 import type { AppPaths } from "./paths.js";
+import { SANDBOX_NOT_READY } from "./preview/sandbox.js";
 import { serveAppScheme } from "./protocol.js";
 import { buildExecutionHostActions } from "./remote/ipc-actions.js";
 import { createDesktopRuntime, type DesktopRuntime } from "./runtime.js";
-import { hardenWebContents } from "./security.js";
+import { hardenWebContents, resolveAllowedOrigins } from "./security.js";
 import {
   attachAvailableBackup,
   describeStartupFailure,
@@ -30,12 +29,8 @@ import { StartupLogSink } from "./startup-log-sink.js";
 import { DesktopSupport } from "./support.js";
 import { createCockpitWindow, createSplashWindow } from "./windows.js";
 
-function unavailableLinear(): LinearVaultOperationResult {
-  return { ok: false, message: "The local daemon is not available.", error_code: null };
-}
-
 export class DesktopApp {
-  private readonly ipcState: IpcState = { daemonUrl: "" };
+  private readonly ipcState: IpcState = { daemonUrl: "", preview: false };
   private readonly devServer: string | null;
   private readonly userPath: string;
   private readonly userData: string;
@@ -56,6 +51,8 @@ export class DesktopApp {
     this.userPath = resolveUserPath({ platform: process.platform, env: process.env });
     process.env.PATH = this.userPath;
     this.userData = app.getPath("userData");
+    this.ipcState.preview =
+      paths.packaged && !readBuildInfo((message) => this.log.write(message)).signed;
     this.support = new DesktopSupport({
       daemonUrl: () => this.ipcState.daemonUrl,
       logs: () => ({
@@ -74,12 +71,20 @@ export class DesktopApp {
       restoreBackup: () => this.restoreBackup(),
       exportSupportBundle: () => this.support.exportBundle(),
       showDataPolicy: () => this.support.showDataPolicy(),
-      executionHost: buildExecutionHostActions(() => this.runtime?.hosts ?? null),
+      resetSandbox: async () => {
+        const result = await (this.runtime?.sandbox.reset() ?? Promise.resolve(SANDBOX_NOT_READY));
+        // Reload only after success: a failure must leave the page alive to show the message.
+        if (result.ok) this.cockpit?.webContents.reload();
+        return result;
+      },
+      executionHost: buildExecutionHostActions(
+        () => this.runtime?.hosts ?? null,
+        () => this.runtime?.instances ?? null,
+      ),
     });
     ipcMain.on(SPLASH_RETRY_CHANNEL, () => void this.runStartup());
-    app.on("web-contents-created", (_event, contents) =>
-      hardenWebContents(contents, this.allowedOrigins()),
-    );
+    const origins = resolveAllowedOrigins(this.devServer, (message) => this.log.write(message));
+    app.on("web-contents-created", (_event, contents) => hardenWebContents(contents, origins));
     if (this.paths.packaged && this.paths.webDist !== null) {
       serveAppScheme(this.paths.webDist, () => buildCsp(this.ipcState.daemonUrl));
     }
@@ -129,13 +134,21 @@ export class DesktopApp {
         userData: this.userData,
         userPath: this.userPath,
         expectedBuild: resolveExpectedBuild((message) => this.log.write(message)),
+        preview: this.ipcState.preview,
         localDaemonUrl: () => this.localDaemonUrl,
         onRemoteStatus: (status) => this.sendRemoteStatus(status),
         applyRendererUrl: (url) => this.applyRendererUrl(url),
+        onSandboxDaemonStarted: (url) => {
+          this.localDaemonUrl = url;
+          void this.runtime?.linear.restore();
+          // An active remote session keeps the tunnel URL; only the local view re-points.
+          if (this.runtime?.hosts.activeHostId !== "remote") this.ipcState.daemonUrl = url;
+        },
       });
       this.localDaemonUrl = await this.runtime.daemon.start();
       this.ipcState.daemonUrl = this.localDaemonUrl;
       await this.runtime.linear.restore();
+      await this.runtime.sandbox.ensure(this.localDaemonUrl);
       const remoteUrl = await this.runtime.hosts.bootActivate();
       if (remoteUrl !== null) this.ipcState.daemonUrl = remoteUrl;
       this.rejectedBackupPaths.clear();
@@ -232,15 +245,5 @@ export class DesktopApp {
   private sendStatus(status: StartupStatus): void {
     if (this.splash === null || this.splash.isDestroyed()) return;
     this.splash.webContents.send(SPLASH_STATUS_CHANNEL, status);
-  }
-
-  private allowedOrigins(): string[] {
-    if (this.devServer === null) return [APP_ORIGIN];
-    try {
-      return [new URL(this.devServer).origin];
-    } catch (error) {
-      this.log.write(`Ignored an invalid ${DEV_SERVER_ENV} value: ${String(error)}`);
-      return [];
-    }
   }
 }

@@ -1,12 +1,35 @@
-export const REMOTE_DAEMON_PORT = 4319;
+/** Where a daemon lives on the host — a path under `$HOME` — and the loopback port it binds. */
+export interface RemoteDeployment {
+  homeSuffix: string;
+  port: number;
+}
+
+/** The stable app's daemon: the conventions documented in docs/ai/remote-execution-host.md. */
+export const STABLE_DEPLOYMENT: RemoteDeployment = { homeSuffix: ".otomat", port: 4319 };
+
+const INSTANCE_PORT_BASE = 43100;
+const INSTANCE_PORT_SPAN = 900;
+
+/**
+ * A preview build's own isolated daemon on the host, keyed by the build it expects: data,
+ * pidfile and port all disjoint from the stable deployment, so testing an artifact never
+ * touches the daemon real work runs on. An unidentifiable build shares one "unknown" slot
+ * rather than ever falling back to the stable deployment.
+ */
+export function instanceDeployment(build: string | null): RemoteDeployment {
+  const key = build !== null && /^[0-9a-f]{7}$/.test(build) ? build : "unknown";
+  let hash = 0;
+  for (const char of key) hash = (hash * 31 + (char.codePointAt(0) ?? 0)) % INSTANCE_PORT_SPAN;
+  return { homeSuffix: `.otomat/instances/${key}`, port: INSTANCE_PORT_BASE + hash };
+}
 
 const TOKEN_PREFIX = "OTOMAT_REMOTE:";
 
 // Host conventions live in docs/ai/remote-execution-host.md; every outcome is a single OTOMAT_REMOTE: token so login-shell noise never breaks parsing.
-export function startOrVerifyDaemonScript(): string {
+export function startOrVerifyDaemonScript(deployment: RemoteDeployment): string {
   return [
     "set -u",
-    'OTOMAT_HOME="$HOME/.otomat"',
+    `OTOMAT_HOME="$HOME/${deployment.homeSuffix}"`,
     'ENTRY="$OTOMAT_HOME/daemon/dist/index.js"',
     'PID_FILE="$OTOMAT_HOME/daemon.pid"',
     'mkdir -p "$OTOMAT_HOME/data"',
@@ -29,7 +52,7 @@ export function startOrVerifyDaemonScript(): string {
     `  echo "${TOKEN_PREFIX}NODE_TOO_OLD:$(node --version)"`,
     "  exit 0",
     "fi",
-    `OTOMAT_DAEMON_HOST=127.0.0.1 OTOMAT_DAEMON_PORT=${REMOTE_DAEMON_PORT} \\`,
+    `OTOMAT_DAEMON_HOST=127.0.0.1 OTOMAT_DAEMON_PORT=${deployment.port} \\`,
     '  OTOMAT_DB_PATH="$OTOMAT_HOME/data/otomat.db" \\',
     '  OTOMAT_PROJECT_ROOT="$OTOMAT_HOME/data" \\',
     "  OTOMAT_ALLOWED_ORIGINS=otomat://app \\",
@@ -52,10 +75,10 @@ export function startOrVerifyDaemonScript(): string {
  * pid, never by pattern, so the remote shell can never match itself — and only
  * after the pid's cmdline proves it is still the daemon, never a recycled pid.
  */
-export function stopDaemonScript(): string {
+export function stopDaemonScript(deployment: RemoteDeployment): string {
   return [
     "set -u",
-    'OTOMAT_HOME="$HOME/.otomat"',
+    `OTOMAT_HOME="$HOME/${deployment.homeSuffix}"`,
     'PID_FILE="$OTOMAT_HOME/daemon.pid"',
     'if [ -f "$PID_FILE" ]; then',
     '  PID="$(cat "$PID_FILE")"',

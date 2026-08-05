@@ -15,6 +15,8 @@ export interface AppPaths {
   /** Directory the packaged renderer is served from (index.html + assets); null in dev (Vite dev server). */
   webDist: string | null;
   splashHtml: string;
+  /** Template the preview sandbox's fixture repository is created from. */
+  sandboxTemplateDir: string;
   cockpitPreload: string;
   splashPreload: string;
   /** Per-worktree userData in dev; null when packaged, where the app keeps its production location. */
@@ -34,6 +36,7 @@ export function resolveAppPaths(): AppPaths {
       daemonEntry: join(daemonDir, "dist", "index.js"),
       webDist: join(process.resourcesPath, "web"),
       splashHtml: join(app.getAppPath(), "resources", "splash.html"),
+      sandboxTemplateDir: join(app.getAppPath(), "resources", "sandbox"),
       cockpitPreload,
       splashPreload,
       devDataRoot: null,
@@ -47,6 +50,7 @@ export function resolveAppPaths(): AppPaths {
     daemonEntry: join(repoRoot, "apps", "local-daemon", "dist", "index.js"),
     webDist: null,
     splashHtml: join(MAIN_DIR, "..", "..", "resources", "splash.html"),
+    sandboxTemplateDir: join(MAIN_DIR, "..", "..", "resources", "sandbox"),
     cockpitPreload,
     splashPreload,
     devDataRoot: resolveDevDataRoot({

@@ -101,3 +101,8 @@ export class LinearCoordinator {
     }
   }
 }
+
+/** The result every Linear IPC action degrades to while the runtime is still booting. */
+export function unavailableLinear(): LinearVaultOperationResult {
+  return { ok: false, message: "The local daemon is not available.", error_code: null };
+}

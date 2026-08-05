@@ -11,6 +11,7 @@ import type {
   ExecutionHostRegisterProjectResult,
   ExecutionHostSnapshot,
   RemoteHostStatus,
+  RemoteInstanceListResult,
 } from "./execution-host.js";
 import type { LinearErrorCode } from "./linear.js";
 
@@ -50,6 +51,10 @@ export type LinearVaultOperationResult =
   | { ok: true; message: null }
   | { ok: false; message: string; error_code: LinearErrorCode | null };
 
+export type PreviewSandboxResetResult =
+  | { ok: true; message: null }
+  | { ok: false; message: string };
+
 /**
  * The narrow surface the Electron desktop shell exposes to the renderer through
  * `contextBridge` as `window.otomat`. Absent in the browser (dev/web), where the
@@ -79,9 +84,21 @@ export interface OtomatDesktopBridge {
     listProjects(): Promise<ExecutionHostProjectsEntry[]>;
     /** Subscribes to live remote-connection status; returns the unsubscribe function. */
     onRemoteStatus(listener: (status: RemoteHostStatus) => void): () => void;
+    /** Preview daemons under `~/.otomat/instances` on the remote host. */
+    listInstances(): Promise<RemoteInstanceListResult>;
+    stopInstance(build: string): Promise<ExecutionHostOperationResult>;
+    deleteInstance(build: string): Promise<ExecutionHostOperationResult>;
+    /** Deploys the CI bundle for this app's expected build to its own remote target; nothing starts automatically. */
+    updateRemoteDaemon(): Promise<ExecutionHostOperationResult>;
   };
   linear: {
     saveKey(apiKey: string): Promise<LinearVaultOperationResult>;
     forgetKey(): Promise<LinearVaultOperationResult>;
+  };
+  /** True for a packaged preview (unsigned build); the sandbox surface is only shown — and its reset only honored — when true. */
+  readonly preview: boolean;
+  sandbox: {
+    /** Stops the local daemon, wipes the sandbox data and fixture repository, restarts and reseeds. */
+    reset(): Promise<PreviewSandboxResetResult>;
   };
 }

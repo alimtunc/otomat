@@ -9,6 +9,7 @@ import type {
   RemoteHostStatus,
 } from "@otomat/domain";
 
+import { STABLE_DEPLOYMENT, type RemoteDeployment } from "./bootstrap/scripts.js";
 import {
   readExecutionHostsConfigSafe,
   writeExecutionHostsConfigSafe,
@@ -33,6 +34,8 @@ export interface ExecutionHostManagerOptions {
   onRemoteStatus(status: RemoteHostStatus): void;
   applyRendererUrl(url: string): void;
   expectedBuild?: string | null;
+  /** Daemon location and port this app targets on the host; the stable deployment when omitted. */
+  deployment?: RemoteDeployment;
   createSession?: (options: RemoteSessionOptions) => RemoteSessionHandle;
   listAliases?: typeof listSshConfigAliases;
   fetchImpl?: typeof fetch;
@@ -234,6 +237,7 @@ export class ExecutionHostManager {
       ((options: RemoteSessionOptions) => new RemoteHostSession(options));
     return create({
       alias,
+      deployment: this.options.deployment ?? STABLE_DEPLOYMENT,
       log: this.options.log,
       onStatus: (status) => this.options.onRemoteStatus(status),
     });

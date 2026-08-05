@@ -1,6 +1,7 @@
 import type { HealthResponse, RemoteHostStatus } from "@otomat/domain";
 import { expect, it, vi } from "vitest";
 
+import { STABLE_DEPLOYMENT } from "#main/remote/bootstrap/scripts";
 import { RemoteHostSession } from "#main/remote/session";
 import type { RunSshScriptOptions, SshScriptResult } from "#main/remote/ssh/script";
 import type { SshTunnelOptions, TunnelHandle } from "#main/remote/ssh/tunnel";
@@ -49,6 +50,7 @@ function harness(overrides?: {
   const health = vi.fn(overrides?.health ?? (() => Promise.resolve(HEALTHY)));
   const session = new RemoteHostSession({
     alias: "otomat-vps",
+    deployment: STABLE_DEPLOYMENT,
     log: () => {},
     onStatus: (status) => statuses.push(status),
     runScript,

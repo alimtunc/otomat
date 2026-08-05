@@ -3,6 +3,7 @@ import { SectionHeading } from "@web/components/settings/section-heading";
 import { useState, type ReactNode } from "react";
 
 import { HostRow } from "./host-row";
+import { InstancesPanel } from "./instances-panel";
 import { useExecutionHost } from "./use-execution-host";
 
 const ALIAS_DATALIST_ID = "execution-host-ssh-aliases";
@@ -117,11 +118,8 @@ export function ExecutionHostSection() {
             <p role="alert" className="text-xs text-warning">
               The remote daemon runs build {snapshot.remote_build} but this app expects{" "}
               {snapshot.expected_build}. Otomat restarts it automatically once it has no active
-              runs; if this warning persists, the deployed files are still the old build — redeploy
-              on the host:{" "}
-              <code className="font-mono">
-                pnpm --filter @otomat/local-daemon deploy --prod --legacy ~/.otomat/daemon
-              </code>
+              runs; if this warning persists, the deployed files are still the old build — use the
+              deploy button below, or redeploy on the host from a checkout.
             </p>
           ) : null}
           <form
@@ -175,6 +173,11 @@ export function ExecutionHostSection() {
               {host.actionError}
             </p>
           )}
+          <InstancesPanel
+            sshAlias={snapshot.remote_ssh_alias}
+            expectedBuild={snapshot.expected_build}
+            remoteBuild={snapshot.remote_build}
+          />
         </div>
       )}
     </div>
