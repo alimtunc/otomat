@@ -116,9 +116,13 @@ export class LinearCoordinator {
     return { ok: true, message: null };
   }
 
-  /** No daemon took the key, so nothing is stored: the connection never happened. */
-  private refuseSave(refusal: LinearHandoffError | null): LinearVaultOperationResult {
-    this.publish();
+  /** No daemon took the new key, so nothing new is stored. */
+  private async refuseSave(
+    refusal: LinearHandoffError | null,
+  ): Promise<LinearVaultOperationResult> {
+    // A refused push already cleared the key each daemon held, so a rotation must put the vaulted one back.
+    if (this.stored) await this.reconcileNow();
+    else this.publish();
     if (refusal !== null) return { ok: false, message: refusal.message, error_code: refusal.code };
     return {
       ok: false,
@@ -211,8 +215,12 @@ export class LinearCoordinator {
       daemonHoldsKey = (await readLinearConnection(url)).status === "connected";
     } catch (error) {
       const detail = describeFailure(error, "Reading the Linear connection failed.");
-      const known = this.records.get(id) ?? holdsNothing();
-      this.records.set(id, { ...known, detail });
+      // A host that did not answer cannot be reported as delivered; only a pending revocation survives.
+      const known = this.records.get(id);
+      this.records.set(
+        id,
+        known?.revokePending === true ? mayHoldKey(detail) : holdsNothing(detail),
+      );
       return;
     }
     // Revocation runs before anything can re-expose Linear on this host.
@@ -238,9 +246,4 @@ export class LinearCoordinator {
       this.records.set(id, mayHoldKey(describeFailure(error, "Disconnecting Linear failed.")));
     }
   }
-}
-
-/** The result every Linear IPC action degrades to while the runtime is still booting. */
-export function unavailableLinear(): LinearVaultOperationResult {
-  return { ok: false, message: "The desktop runtime is not ready yet.", error_code: null };
 }

@@ -1,7 +1,8 @@
-import type {
-  ExecutionHostId,
-  LinearDeliverySnapshot,
-  LinearHostDeliveryState,
+import {
+  connectLinearRequestSchema,
+  type ExecutionHostId,
+  type LinearDeliverySnapshot,
+  type LinearHostDeliveryState,
 } from "@otomat/domain";
 import { vi } from "vitest";
 
@@ -30,6 +31,15 @@ const DISCONNECTED = {
   error_message: null,
 } as const;
 
+const REFUSED = {
+  status: "failed",
+  workspace_id: null,
+  workspace_name: null,
+  user_name: null,
+  error_code: "linear_unauthorized",
+  error_message: "Linear rejected the API key.",
+} as const;
+
 const LABELS: Record<ExecutionHostId, string> = { local: "Local", remote: "otomat-vps" };
 
 export function reachable(id: ExecutionHostId, url: string): LinearDaemonTarget {
@@ -45,21 +55,28 @@ export class FakeDaemon {
   connected = false;
   connectCount = 0;
   disconnectCount = 0;
+  /** The one key Linear refuses; every other key is accepted. */
+  rejects: string | null = null;
 
   constructor(readonly url: string) {}
 
-  handle(path: string): Response {
+  handle(path: string, body: RequestInit["body"]): Response {
     if (path === "/api/linear/connection") {
       return Response.json(this.connected ? CONNECTED : DISCONNECTED);
     }
     if (path === "/api/linear/connect") {
       this.connectCount += 1;
-      this.connected = true;
-      return Response.json(CONNECTED);
+      const { api_key } = connectLinearRequestSchema.parse(JSON.parse(String(body)));
+      // The daemon clears its credential before validating, so a refusal leaves it holding nothing.
+      this.connected = api_key !== this.rejects;
+      return Response.json(this.connected ? CONNECTED : REFUSED);
     }
-    this.disconnectCount += 1;
-    this.connected = false;
-    return Response.json(DISCONNECTED);
+    if (path === "/api/linear/disconnect") {
+      this.disconnectCount += 1;
+      this.connected = false;
+      return Response.json(DISCONNECTED);
+    }
+    throw new Error(`FakeDaemon has no route for ${path}`);
   }
 }
 
@@ -67,13 +84,13 @@ export class FakeDaemon {
 export function routeDaemons(daemons: FakeDaemon[]): void {
   vi.stubGlobal(
     "fetch",
-    vi.fn((input: RequestInfo | URL) => {
+    vi.fn((input: Parameters<typeof fetch>[0], init?: RequestInit) => {
       const url = new URL(String(input));
       const daemon = daemons.find((candidate) => candidate.url === url.origin);
       if (daemon === undefined) {
         return Promise.reject(new TypeError(`fetch failed: no daemon at ${url.origin}`));
       }
-      return Promise.resolve(daemon.handle(url.pathname));
+      return Promise.resolve(daemon.handle(url.pathname, init?.body));
     }),
   );
 }
