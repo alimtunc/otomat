@@ -14,8 +14,7 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
   routes.get("/github/connection", async (c) => c.json(await deps.github.connection()));
   routes.post("/github/connect", (c) => c.json(deps.github.connect(), 202));
 
-  // Reading the panel is what notices a merge: the daemon re-reads the pull request from GitHub
-  // and, when it comes back merged, settles the run before answering. Pull-based, never a poller.
+  // This GET carries write side effects: a merge observed here settles worktree, branch and issue.
   routes.get("/runs/:id/pr", runGuard(deps.db), async (c) => {
     const result = await deps.github.getPullRequest(c.get("run").id);
     return c.json({

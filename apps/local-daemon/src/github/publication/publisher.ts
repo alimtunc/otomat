@@ -31,11 +31,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
     this.store = new PublicationStore(config);
   }
 
-  /**
-   * The panel read is where a merge is noticed: an open pull request is re-read from GitHub, and
-   * a merged one settles the run (worktree, branch, issue) on the way out. A provider that cannot
-   * be reached leaves the stored row untouched — the panel shows what is known, never a guess.
-   */
+  /** A read with write side effects: noticing a merge here settles the run's worktree and issue. */
   async get(runId: string): Promise<PullRequestView | null> {
     const stored = getPullRequestForRun(this.config.db, runId);
     if (!stored) return null;
@@ -44,10 +40,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
     return this.store.view(await this.refreshLifecycle(this.store.recoverInterrupted(stored)));
   }
 
-  /**
-   * One `gh pr view` for a pull request the daemon still believes is live. The run's repository
-   * root is the cwd, not its worktree: the worktree is exactly what a merge takes away.
-   */
+  /** The repository root is the cwd, not the worktree: a merge is exactly what takes that away. */
   private async refreshLifecycle(row: PullRequestRow): Promise<PullRequestRow> {
     if (row.number === null || (row.status !== "open" && row.status !== "draft")) return row;
     const rootPath = this.config.repositories.forRun(row.run_id)?.rootPath;

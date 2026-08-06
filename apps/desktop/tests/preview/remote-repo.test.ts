@@ -12,6 +12,8 @@ const TEMPLATE_DIR = fileURLToPath(new URL("../../resources/sandbox", import.met
 const HOME_SUFFIX = ".otomat/instances/92584b0";
 const DELIMITER = "OTOMAT_SANDBOX_EOF";
 
+const template = (path: string, contents = "") => [{ path, contents }];
+
 describe("readSandboxTemplate", () => {
   it("reads the shipped fixture file by file, nested paths included", () => {
     const files = readSandboxTemplate(TEMPLATE_DIR);
@@ -48,12 +50,10 @@ describe("sandboxRepoScript", () => {
   });
 
   it("refuses to interpolate a home suffix or a template path it did not validate", () => {
-    const files = (path: string, contents = "") => [{ path, contents }];
-
     expect(() => sandboxRepoScript(".otomat", [])).toThrow(/home suffix/);
     expect(() => sandboxRepoScript('.otomat/instances/x"; rm -rf ~', [])).toThrow(/home suffix/);
-    expect(() => sandboxRepoScript(HOME_SUFFIX, files("../escape.js"))).toThrow(/template path/);
-    expect(() => sandboxRepoScript(HOME_SUFFIX, files("ok.js", DELIMITER))).toThrow(/heredoc/);
+    expect(() => sandboxRepoScript(HOME_SUFFIX, template("../escape.js"))).toThrow(/template path/);
+    expect(() => sandboxRepoScript(HOME_SUFFIX, template("ok.js", DELIMITER))).toThrow(/heredoc/);
   });
 });
 

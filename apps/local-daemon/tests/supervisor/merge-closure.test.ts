@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { getIssue, updateIssueStatus } from "@otomat/db";
+import { getIssue, getRun, updateIssueStatus } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createGitWorktreeService, type GitWorktreeService } from "#git";
@@ -46,12 +46,13 @@ function config() {
   return { db: fix.db, repositories: stubRepositoryResolver(worktrees, fix.repositoryId) };
 }
 
-it("releases the worktree and its branch, and closes the issue", () => {
+it("releases the worktree and its branch, and closes the run and its issue", () => {
   closeMergedRun(config(), RUN_ID);
 
   expect(existsSync(worktreePath)).toBe(false);
   expect(branches(fix.repo)).not.toContain(BRANCH);
   expect(worktrees.list({ status: "removed" }).map((row) => row.owner)).toContain(RUN_ID);
+  expect(getRun(fix.db, RUN_ID)?.status).toBe("completed");
   expect(getIssue(fix.db, "i1")?.status).toBe("done");
 });
 

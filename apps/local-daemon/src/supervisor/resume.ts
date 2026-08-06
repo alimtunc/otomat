@@ -73,12 +73,7 @@ export function requireResumableRun(
   return run;
 }
 
-/**
- * Every resume is another iteration on the run's issue, so the issue goes back to `running` —
- * from `pr_open` through `reviewing`, the path that keeps addressing PR comments legal. An issue
- * the machine cannot move (merged into `done`, or canceled) refuses with `IllegalTransitionError`:
- * closed work does not quietly reopen.
- */
+/** Runs before any worktree work so a closed issue refuses the resume rather than reopening. */
 function reopenIssue(db: Db, run: RunRow): void {
   const issue = getIssue(db, run.issue_id);
   if (issue) driveIssueTo(db, issue.id, issue.status, "running");

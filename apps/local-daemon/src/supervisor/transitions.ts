@@ -60,10 +60,8 @@ export function driveSessionTo(
 }
 
 /**
- * Walks the issue to `to` along the shortest legal path and stores where it lands. A terminal
- * issue — merged into `done`, or canceled — has no legal path out, so the machine refuses with
- * `IllegalTransitionError` and nothing is written: that refusal is how a closed issue stops
- * accepting new work.
+ * Walks the issue to `to` and stores only where it lands; a terminal issue has no legal path out,
+ * so the machine's refusal is what stops new work.
  */
 export function driveIssueTo(db: Db, issueId: string, from: IssueState, to: IssueState): void {
   let landed = from;

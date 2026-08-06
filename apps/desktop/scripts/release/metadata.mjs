@@ -29,10 +29,9 @@ export function readPrNumber(env) {
 }
 
 /**
- * What a build calls itself. A preview packaged for a pull request gets its own product name and
- * bundle identifier, so two PRs — and the stable install — coexist on one Mac with nothing shared:
- * distinct `.app`, distinct single-instance lock, distinct userData (resolved from `pr_number` in
- * the shipped build-info). `pr === null` is the stable identity the release pipeline builds.
+ * A distinct product name and bundle id per PR keeps the `.app` bundles apart; the `pr_number`
+ * shipped in build-info is what splits userData, and with it Electron's single-instance lock —
+ * see `resolvePreviewDataRoot`.
  */
 export function resolveBuildIdentity(pr) {
   if (pr === null) return { pr: null, productName: PRODUCT_NAME, appId: APP_ID };
@@ -93,7 +92,6 @@ export function createBuildInfo(input) {
     platform: "darwin",
     electron: input.electronVersion,
     signed: input.signed,
-    // The pull request this preview was packaged for; null for the stable and release builds.
     pr_number: input.pr ?? null,
   };
 }

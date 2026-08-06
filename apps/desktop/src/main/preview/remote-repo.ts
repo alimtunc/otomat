@@ -39,10 +39,8 @@ export function readSandboxTemplate(dir: string, prefix = ""): SandboxTemplateFi
 }
 
 /**
- * Creates the instance's fixture repository at `<home suffix>/test-repo` on the host: the same
- * files as the local sandbox, committed on `main` with an explicit identity. Already-committed
- * repositories are left untouched, so a reconnect costs one round trip and changes nothing. The
- * READY token carries the canonical path the daemon will register.
+ * The fixture lives inside the instance home so deleting the instance takes it along; an
+ * already-committed repository is left untouched, so a reconnect costs one round trip.
  */
 export function sandboxRepoScript(homeSuffix: string, files: SandboxTemplateFile[]): string {
   if (!HOME_SUFFIX.test(homeSuffix)) {

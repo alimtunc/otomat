@@ -1,6 +1,6 @@
 import type { RemoteRepositoryEntry, RemoteRepositoryListResult } from "@otomat/domain";
 
-import { trimDetail } from "../bootstrap/status.js";
+import { scriptFailure, trimDetail } from "../bootstrap/status.js";
 import { runSshScript, type SshScriptResult } from "../ssh/script.js";
 
 const HOME_PREFIX = "OTOMAT_REPO_HOME:";
@@ -28,19 +28,13 @@ const PRUNED = [
   "Library",
 ];
 
-/**
- * Lists the host's git working trees, one line per repository, bounded by depth and by the
- * prune list so the walk stays cheap on a home directory of any size. The END token proves the
- * listing ran to completion; nothing here reads or writes anything but directory names.
- */
 export function listRepositoriesScript(): string {
   const prune = PRUNED.map((name) => `-name ${name}`).join(" -o ");
   return [
     "set -u",
     `echo "${HOME_PREFIX}$HOME"`,
-    // `.git` is printed and pruned first, so a repository's own object store is never walked;
-    // unreadable directories are the expected noise of a home walk, and the END token below
-    // still proves the listing itself ran to completion.
+    // `.git` is pruned as it is printed, so a repository's own object store is never walked; the
+    // discarded stderr is the unreadable-directory noise of a home walk, not a lost failure.
     `find "$HOME" -maxdepth 4 \\( -type d -name .git -print -prune \\) -o \\( -type d \\( ${prune} \\) -prune \\) 2>/dev/null |`,
     "  while IFS= read -r gitdir; do",
     '    repo="$(dirname "$gitdir")"',
@@ -69,7 +63,6 @@ export function parseRepositoryList(stdout: string): RemoteRepositoryEntry[] | n
   return [...entries.values()].toSorted((left, right) => left.label.localeCompare(right.label));
 }
 
-/** One-shot listing over ssh; failures come back as prose, never as an empty list. */
 export async function listRemoteRepositories(
   alias: string | null,
   runScript: typeof runSshScript = runSshScript,
@@ -82,12 +75,7 @@ export async function listRemoteRepositories(
   } catch (error) {
     return { ok: false, message: trimDetail(String(error)) };
   }
-  if (result.code !== 0) {
-    return {
-      ok: false,
-      message: trimDetail(result.stderr) || `ssh exited with code ${String(result.code)}`,
-    };
-  }
+  if (result.code !== 0) return { ok: false, message: scriptFailure(result) };
   const repositories = parseRepositoryList(result.stdout);
   if (repositories === null) {
     return { ok: false, message: "The repository listing never completed." };

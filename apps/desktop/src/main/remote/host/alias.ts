@@ -2,10 +2,7 @@ import type { listSshConfigAliases } from "../ssh/config-aliases.js";
 
 export type SshAliasValidation = { alias: string } | { message: string };
 
-/**
- * A configured alias goes straight into `ssh`'s argv, so it must be one concrete word: no
- * whitespace to split on, and never a leading `-` that ssh would read as a flag.
- */
+/** The alias goes straight into `ssh`'s argv, where a space splits it and a leading `-` is a flag. */
 export function validateSshAlias(value: unknown): SshAliasValidation {
   if (typeof value !== "string" || value.trim() === "") {
     return { message: "Enter an SSH alias from ~/.ssh/config." };

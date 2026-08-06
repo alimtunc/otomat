@@ -3,17 +3,13 @@ import { cn } from "@otomat/ui";
 import { useRemoteRepositories } from "./use-remote-repositories";
 
 export interface RemoteRepositoryPickerProps {
-  /** Currently chosen path; a row is highlighted when it matches. */
   value: string;
   onSelect(path: string): void;
-  /** False while the dialog shows another host, so no ssh listing is started. */
+  /** False through the dialog's exit transition, where the subtree is still mounted. */
   enabled: boolean;
 }
 
-/**
- * The remote host's git repositories, listed over ssh so registering one is a click instead of a
- * typed path. A failed or truncated listing says so and leaves the path field to type into.
- */
+/** A failed listing must not block the path field: registering by hand stays possible. */
 export function RemoteRepositoryPicker({ value, onSelect, enabled }: RemoteRepositoryPickerProps) {
   const { repositories, error } = useRemoteRepositories(enabled);
 

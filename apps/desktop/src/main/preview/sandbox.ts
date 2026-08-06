@@ -65,11 +65,7 @@ export class PreviewSandbox {
     }
   }
 
-  /**
-   * Gives this preview's instance the same test bed on the host: the fixture repository inside
-   * the instance directory (so deleting the instance takes it along) plus its seeded issues,
-   * filed through the tunnel. Runs once per connected session; a reconnect changes nothing.
-   */
+  /** The manager announces every `connected` status, so the per-alias memo collapses repeats. */
   ensureRemote(alias: string, daemonUrl: string): Promise<void> {
     if (!this.deps.enabled) return Promise.resolve();
     const pending = this.remote;

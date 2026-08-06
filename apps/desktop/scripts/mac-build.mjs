@@ -127,8 +127,8 @@ function locateArtifacts(productName) {
     existsSync(join(RELEASE_OUT, entry, `${productName}.app`)),
   );
   if (appDir === undefined) throw new Error(`no ${productName}.app under ${RELEASE_OUT}`);
-  // The output directory is rebuilt for every run, so its one DMG is this build's — and how
-  // electron-builder spells a product name with spaces stays its business.
+  // The output directory is rebuilt every run, so its single DMG is this build's, whatever
+  // electron-builder decided to call a product name containing spaces.
   const dmgs = entries.filter((entry) => entry.endsWith(".dmg"));
   if (dmgs.length !== 1) {
     throw new Error(`expected exactly one DMG in ${RELEASE_OUT}, found ${String(dmgs.length)}`);
@@ -140,9 +140,6 @@ function locateArtifacts(productName) {
 }
 
 /**
- * The identity is always explicit: the release pipeline passes the stable one, so no environment
- * variable can ever rename a signed build.
- *
  * @param {{ buildInfo: object, signing: { teamId: string } | null,
  *   identity: { pr: number | null, productName: string, appId: string } }} input
  * @returns {{ appPath: string, dmgPath: string, releaseDir: string }}

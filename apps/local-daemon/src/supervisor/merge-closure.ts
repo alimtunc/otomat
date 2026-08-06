@@ -1,29 +1,27 @@
 import { getIssue, getRun, type Db } from "@otomat/db";
-import { issueMachine } from "@otomat/domain";
+import { isRunTerminal, issueMachine } from "@otomat/domain";
 
 import { WorktreeNotFoundError, type RepositoryResolver } from "#git";
 
-import { driveIssueTo } from "./transitions.js";
+import { driveIssueTo, driveRunTo } from "./transitions.js";
 
 export interface MergeClosureConfig {
   db: Db;
   repositories: RepositoryResolver;
 }
 
-/**
- * What a merged pull request settles, in one event: the run's worktree and its local
- * `otomat/run/*` branch go (the merge is upstream now, so nothing is lost), and the issue lands
- * on `done`. Pull-based by design — only an explicit read of a run's PR panel gets here, never a
- * scheduler — and idempotent: a run whose worktree is already gone, or an issue already terminal,
- * is left alone.
- */
+/** Discarding the worktree and its local branch is safe because the merge is upstream already. */
 export function closeMergedRun(config: MergeClosureConfig, runId: string): void {
   const run = getRun(config.db, runId);
   if (!run) return;
   releaseWorktree(config, runId);
+  // A run left at `review_ready` still projects as `reviewing`, which would drag the merged
+  // issue's card back a column and keep publish and fix offered on work that already shipped.
+  if (!isRunTerminal(run.status)) {
+    driveRunTo(config.db, runId, run.status, "completed", new Date().toISOString());
+  }
   const issue = getIssue(config.db, run.issue_id);
-  // `done` is terminal: from here a resume or a relaunch is refused by the machine, which is the
-  // point — the work shipped. A canceled issue is terminal too and keeps the state its user chose.
+  // A terminal issue keeps the state its user chose; `done` is what later refuses a resume.
   if (issue && !issueMachine.isTerminal(issue.status)) {
     driveIssueTo(config.db, issue.id, issue.status, "done");
   }
