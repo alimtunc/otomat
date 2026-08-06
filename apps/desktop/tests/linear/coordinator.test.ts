@@ -3,6 +3,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import { LinearCoordinator } from "#main/linear/coordinator";
 import type { LinearVault } from "#shared/linear-vault";
 import {
+  CONNECTED,
+  DISCONNECTED,
   FakeDaemon,
   harness,
   LOCAL_URL,
@@ -12,15 +14,6 @@ import {
   routeDaemons,
   unreachable,
 } from "#support/linear-daemons";
-
-const CONNECTED = {
-  status: "connected",
-  workspace_id: "workspace-1",
-  workspace_name: "Otomat",
-  user_name: "Alim",
-  error_code: null,
-  error_message: null,
-} as const;
 
 const HOST_DOWN = "otomat-vps is not connected yet.";
 
@@ -54,16 +47,7 @@ it("serializes save then forget so a delayed connect cannot restore a forgotten 
   const fetch = vi
     .fn<typeof globalThis.fetch>()
     .mockImplementationOnce(() => connectResponse.promise)
-    .mockResolvedValueOnce(
-      Response.json({
-        status: "disconnected",
-        workspace_id: null,
-        workspace_name: null,
-        user_name: null,
-        error_code: null,
-        error_message: null,
-      }),
-    );
+    .mockResolvedValueOnce(Response.json(DISCONNECTED));
   vi.stubGlobal("fetch", fetch);
   const vault = memoryVault();
   const coordinator = localOnly(vault);
@@ -151,9 +135,16 @@ it("hands one saved key to every reachable host", async () => {
 
   expect(local.connectCount).toBe(1);
   expect(remote.connectCount).toBe(1);
+  expect(local.key).toBe("lin_api_key");
+  expect(remote.key).toBe("lin_api_key");
   expect(vault.stored()).toBe("lin_api_key");
   expect(app.state("local")).toBe("delivered");
   expect(app.state("remote")).toBe("delivered");
+
+  // A host that stops answering can no longer be reported as delivered, only as unreachable.
+  app.setTargets([reachable("local", LOCAL_URL), unreachable("remote", HOST_DOWN)]);
+  await app.coordinator.reconcile();
+  expect(app.state("remote")).toBe("unavailable");
 });
 
 it("restores the vaulted key on every host at boot", async () => {
@@ -253,6 +244,7 @@ it("replaces a key the remote host still holds after it was rotated offline", as
 
   // The daemon still reported `connected` from the first key: the rotation must overwrite it.
   expect(remote.connectCount).toBe(2);
+  expect(remote.key).toBe("second-key");
   expect(app.state("remote")).toBe("delivered");
 });
 

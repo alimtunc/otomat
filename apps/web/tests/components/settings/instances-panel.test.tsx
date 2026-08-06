@@ -1,12 +1,11 @@
 // @vitest-environment happy-dom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { InstancesPanel } from "@web/components/settings/execution-host/instances-panel";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { findButton } from "#support/dom-queries";
-import { mount } from "#support/mount";
+import { mountWithQuery } from "#support/mount";
 
 const cleanups: Array<() => Promise<void>> = [];
 
@@ -17,20 +16,10 @@ afterEach(async () => {
 });
 
 async function renderPanel(expectedBuild: string | null = "92584b0") {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const mounted = await mount(
-    <QueryClientProvider client={client}>
-      <InstancesPanel sshAlias="otomat-vps" expectedBuild={expectedBuild} remoteBuild={null} />
-    </QueryClientProvider>,
+  const mounted = await mountWithQuery(
+    <InstancesPanel sshAlias="otomat-vps" expectedBuild={expectedBuild} remoteBuild={null} />,
   );
   cleanups.push(mounted.cleanup);
-  // React Query dispatches fetch results on a macrotask; flush two timer ticks before asserting.
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
 }
 
 it("lists instances with stop and delete controls", async () => {

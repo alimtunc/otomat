@@ -145,15 +145,17 @@ nothing on this panel starts a daemon or runs on a timer.
 The Linear workspace is connected **once for the app**, not per host. The
 Personal API key is stored only in this Mac's Electron `safeStorage` vault
 (`linear-credential.enc` in the app data root) — never in SQLite, never in a log
-or support bundle, and never on the server. Each host's daemon receives it over
+or support bundle, and never written to disk on the server. Each host's daemon
+receives it over
 that host's own HTTP API (`POST /api/linear/connect`, through the SSH tunnel for
 a remote host) and keeps it **in memory only**, so nothing ever puts the key in
 an ssh command, its arguments, its environment, or a remote script.
 
 `LinearCoordinator` (`main/linear/coordinator.ts`) owns the fan-out over a
 serialized queue, against the target list `main/linear/targets.ts` derives from
-the host manager — the local daemon, plus the configured remote host when its
-tunnel is up. Its rules:
+the host manager — the local daemon, plus the configured remote host whenever an
+alias is set, carrying the reason it cannot be reached while its tunnel is down.
+Its rules:
 
 - **Save** pushes to every reachable host and stores the key only once at least
   one daemon validated it against Linear. An unreachable host does not fail the

@@ -92,8 +92,6 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     expectedBuild: options.expectedBuild,
     deployment,
   });
-  // One connection for the app: the key stays in this machine's vault and is handed
-  // to each host's daemon in memory, the remote one through its SSH tunnel.
   const linear = new LinearCoordinator({
     vault: createMainLinearVault(dataDirectory.root),
     targets: () => linearTargets(hosts),
