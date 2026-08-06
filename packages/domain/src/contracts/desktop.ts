@@ -51,12 +51,7 @@ export type LinearVaultOperationResult =
   | { ok: true; message: null }
   | { ok: false; message: string; error_code: LinearErrorCode | null };
 
-/**
- * How far the one Linear key held in the desktop vault has got on a single
- * execution host's daemon. `delivered` and `cleared` are states that host's
- * daemon confirmed; the others are what Otomat still owes it, or the admission
- * that the host could not be reached at all.
- */
+/** `delivered` and `cleared` are confirmed by that host's daemon; the rest is what Otomat still owes it, or could not ask. */
 export type LinearHostDeliveryState =
   | "delivered"
   | "cleared"
@@ -68,11 +63,10 @@ export interface LinearHostDelivery {
   host_id: ExecutionHostId;
   label: string;
   state: LinearHostDeliveryState;
-  /** Why the host is not in line with the vault; null when nothing is owed to it. */
+  /** The last failure this host reported, or why it could not be reached; null when there is none. */
   detail: string | null;
 }
 
-/** The app-wide Linear connection, plus where its key currently stands on each host. */
 export interface LinearDeliverySnapshot {
   /** True while this machine's vault holds a key — independent of any execution host. */
   stored: boolean;

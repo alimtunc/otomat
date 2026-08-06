@@ -13,7 +13,7 @@ import type { LinearVault } from "#shared/linear-vault";
 export const LOCAL_URL = "http://127.0.0.1:4319";
 export const REMOTE_URL = "http://127.0.0.1:45010";
 
-const CONNECTED = {
+export const CONNECTED = {
   status: "connected",
   workspace_id: "workspace-1",
   workspace_name: "Otomat",
@@ -22,7 +22,7 @@ const CONNECTED = {
   error_message: null,
 } as const;
 
-const DISCONNECTED = {
+export const DISCONNECTED = {
   status: "disconnected",
   workspace_id: null,
   workspace_name: null,
@@ -55,6 +55,8 @@ export class FakeDaemon {
   connected = false;
   connectCount = 0;
   disconnectCount = 0;
+  /** The key this daemon currently holds in memory; null once it holds none. */
+  key: string | null = null;
   /** The one key Linear refuses; every other key is accepted. */
   rejects: string | null = null;
 
@@ -69,11 +71,13 @@ export class FakeDaemon {
       const { api_key } = connectLinearRequestSchema.parse(JSON.parse(String(body)));
       // The daemon clears its credential before validating, so a refusal leaves it holding nothing.
       this.connected = api_key !== this.rejects;
+      this.key = this.connected ? api_key : null;
       return Response.json(this.connected ? CONNECTED : REFUSED);
     }
     if (path === "/api/linear/disconnect") {
       this.disconnectCount += 1;
       this.connected = false;
+      this.key = null;
       return Response.json(DISCONNECTED);
     }
     throw new Error(`FakeDaemon has no route for ${path}`);
@@ -115,6 +119,7 @@ export interface CoordinatorHarness {
   setTargets(targets: LinearDaemonTarget[]): void;
   /** Every snapshot the coordinator pushed to the renderer, in order. */
   deliveries: LinearDeliverySnapshot[];
+  /** Read from the last pushed snapshot, so asserting a state also proves the cockpit was told. */
   state(hostId: ExecutionHostId): LinearHostDeliveryState | undefined;
 }
 
@@ -130,6 +135,6 @@ export function harness(vault: LinearVault, targets: LinearDaemonTarget[]): Coor
     coordinator,
     setTargets: (next) => (current = next),
     deliveries,
-    state: (hostId) => coordinator.snapshot().hosts.find((host) => host.host_id === hostId)?.state,
+    state: (hostId) => deliveries.at(-1)?.hosts.find((host) => host.host_id === hostId)?.state,
   };
 }

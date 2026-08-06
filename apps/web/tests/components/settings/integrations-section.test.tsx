@@ -1,10 +1,9 @@
 // @vitest-environment happy-dom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { IntegrationsSection } from "@web/components/settings/integrations/section";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { fakeDesktopBridge } from "#support/desktop-bridge";
-import { mount, type Mounted } from "#support/mount";
+import { mountWithQuery, type Mounted } from "#support/mount";
 
 let connectionState: Record<string, unknown>;
 
@@ -48,12 +47,7 @@ afterEach(async () => {
 });
 
 async function renderSection(): Promise<HTMLElement> {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  rendered = await mount(
-    <QueryClientProvider client={client}>
-      <IntegrationsSection />
-    </QueryClientProvider>,
-  );
+  rendered = await mountWithQuery(<IntegrationsSection />);
   return rendered.container;
 }
 

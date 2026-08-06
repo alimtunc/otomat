@@ -87,7 +87,6 @@ describe("ensureTestRepo", () => {
     }
 
     expect(git(dir, ["rev-parse", "--abbrev-ref", "HEAD"])).toBe("main");
-    // The surrounding repository keeps its empty index, its config, and gains no commit.
     expect(git(outer, ["diff", "--cached", "--name-only"])).toBe("");
     expect(git(outer, ["config", "core.bare"])).toBe("false");
     expect(() => git(outer, ["rev-parse", "--verify", "HEAD"])).toThrow();

@@ -10,11 +10,13 @@ const STATES: Record<LinearHostDeliveryState, { label: string; tone: string }> =
   unavailable: { label: "Unavailable", tone: "text-text-tertiary" },
 };
 
-/** Per-host delivery of the one vaulted key: a host that is down says so, instead of claiming a connection. */
+/** A host that is down says what it is still owed, instead of claiming a connection. */
 export function HostDeliveryPanel() {
   const delivery = useLinearDelivery();
   if (delivery === null) return null;
-  const owed = delivery.hosts.some((host) => host.state !== "cleared");
+  const owed = delivery.hosts.some(
+    (host) => host.state === "pending_restore" || host.state === "pending_revocation",
+  );
   if (!delivery.stored && !owed) return null;
 
   return (

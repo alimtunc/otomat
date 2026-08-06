@@ -15,7 +15,7 @@ import {
   writeExecutionHostsConfigSafe,
   type ExecutionHostsConfig,
 } from "./host/config.js";
-import { HostCatalog } from "./host/projects.js";
+import { HostCatalog, type ResolvedDaemonUrl } from "./host/projects.js";
 import {
   RemoteHostSession,
   type RemoteSessionHandle,
@@ -150,8 +150,7 @@ export class ExecutionHostManager {
     return this.catalog.listProjects();
   }
 
-  /** Where that host's daemon answers, or why it cannot be reached — the Linear fan-out reads this. */
-  daemonUrl(hostId: ExecutionHostId): { url: string } | { message: string } {
+  daemonUrl(hostId: ExecutionHostId): ResolvedDaemonUrl {
     return this.catalog.resolveBaseUrl(hostId);
   }
 

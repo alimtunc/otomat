@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
 import type { ExecutionHostSnapshot, RemoteHostStatus } from "@otomat/domain";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ExecutionHostSection } from "@web/components/settings/execution-host/section";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -8,7 +7,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { setInputValue } from "#support/dom-events";
 import { findButton } from "#support/dom-queries";
-import { mount } from "#support/mount";
+import { mountWithQuery } from "#support/mount";
 
 const cleanups: Array<() => Promise<void>> = [];
 
@@ -19,20 +18,8 @@ afterEach(async () => {
 });
 
 async function renderSection() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const mounted = await mount(
-    <QueryClientProvider client={client}>
-      <ExecutionHostSection />
-    </QueryClientProvider>,
-  );
+  const mounted = await mountWithQuery(<ExecutionHostSection />);
   cleanups.push(mounted.cleanup);
-  // React Query dispatches fetch results on a macrotask; flush two timer ticks before asserting.
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
   return mounted;
 }
 

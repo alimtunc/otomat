@@ -1,11 +1,10 @@
 import type {
   ExecutionHostOperationResult,
   ExecutionHostSnapshot,
-  OtomatDesktopBridge,
   RemoteHostStatus,
 } from "@otomat/domain";
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
-import { desktopBridge } from "@web/lib/desktop-bridge";
+import { desktopBridge, requireDesktopBridge } from "@web/lib/desktop-bridge";
 import { useEffect, useState } from "react";
 
 import { describeRemoteStatus } from "./status-labels";
@@ -14,11 +13,6 @@ const EXECUTION_HOST_KEY = ["execution-host"] as const;
 
 function failureMessage(result: Extract<ExecutionHostOperationResult, { ok: false }>): string {
   return "status" in result ? describeRemoteStatus(result.status) : result.message;
-}
-
-function requireBridge(bridge: OtomatDesktopBridge | null): OtomatDesktopBridge {
-  if (bridge === null) throw new Error("The desktop bridge is not available.");
-  return bridge;
 }
 
 export interface UseExecutionHostResult {
@@ -43,13 +37,13 @@ export function useExecutionHost(): UseExecutionHostResult {
 
   const snapshot = useQuery({
     queryKey: EXECUTION_HOST_KEY,
-    queryFn: () => requireBridge(bridge).executionHost.snapshot(),
+    queryFn: () => requireDesktopBridge(bridge).executionHost.snapshot(),
     enabled: bridge !== null,
   });
 
   const aliasesQuery = useQuery({
     queryKey: ["execution-host-aliases"],
-    queryFn: () => requireBridge(bridge).executionHost.listSshAliases(),
+    queryFn: () => requireDesktopBridge(bridge).executionHost.listSshAliases(),
     enabled: bridge !== null,
   });
 
@@ -94,9 +88,9 @@ export function useExecutionHost(): UseExecutionHostResult {
     actionError,
     configureRemote: (sshAlias: string) =>
       runHostAction("configure", () =>
-        requireBridge(bridge).executionHost.configureRemote(sshAlias),
+        requireDesktopBridge(bridge).executionHost.configureRemote(sshAlias),
       ),
     removeRemote: () =>
-      runHostAction("remove", () => requireBridge(bridge).executionHost.removeRemote()),
+      runHostAction("remove", () => requireDesktopBridge(bridge).executionHost.removeRemote()),
   };
 }
