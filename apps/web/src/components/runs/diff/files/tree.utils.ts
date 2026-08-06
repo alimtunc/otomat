@@ -83,14 +83,10 @@ export function buildDiffFileTree(files: readonly DiffFileContract[]): DiffTreeN
   return toNodes(root);
 }
 
-/**
- * Flattens the tree to the rows a collapsed state actually shows. The active file's
- * folders always open, so keyboard navigation can never land on a hidden row.
- */
+/** Flattens the tree to the rows a collapsed state actually shows. */
 export function visibleTreeRows(
   nodes: readonly DiffTreeNode[],
   collapsed: ReadonlySet<string>,
-  activePath: string | null,
 ): DiffTreeRow[] {
   const rows: DiffTreeRow[] = [];
   const walk = (level: readonly DiffTreeNode[], depth: number) => {
@@ -99,12 +95,23 @@ export function visibleTreeRows(
         rows.push({ node, depth, expanded: true });
         continue;
       }
-      const holdsActive = activePath !== null && activePath.startsWith(`${node.path}/`);
-      const expanded = !collapsed.has(node.path) || holdsActive;
+      const expanded = !collapsed.has(node.path);
       rows.push({ node, depth, expanded });
       if (expanded) walk(node.children, depth + 1);
     }
   };
   walk(nodes, 0);
   return rows;
+}
+
+/**
+ * Reopens the folders holding `path`, so navigating to a file can never land on a hidden
+ * row. Returns the same set when nothing was hiding it, leaving the caller's state untouched.
+ */
+export function expandAncestors(collapsed: ReadonlySet<string>, path: string): ReadonlySet<string> {
+  const hiding = [...collapsed].filter((directory) => path.startsWith(`${directory}/`));
+  if (hiding.length === 0) return collapsed;
+  const next = new Set(collapsed);
+  for (const directory of hiding) next.delete(directory);
+  return next;
 }

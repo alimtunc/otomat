@@ -137,6 +137,47 @@ describe("changed-file browser", () => {
     await cleanup();
   });
 
+  it("collapses a folder that holds the active file instead of ignoring the click", async () => {
+    const { container, cleanup } = await mount(<Harness initialMode="tree" />);
+    const path = "docs/ai/codebase-map.md";
+
+    await act(async () => {
+      fileRow(container, path).click();
+    });
+    const folder = () => container.querySelector<HTMLButtonElement>('button[title="docs/ai"]');
+    const opened = folder();
+    if (opened === null) throw new Error("no folder row rendered");
+
+    await act(async () => {
+      opened.click();
+    });
+
+    expect(folder()?.getAttribute("aria-expanded")).toBe("false");
+    expect(container.querySelector(`button[title="${path}"]`)).toBeNull();
+    await cleanup();
+  });
+
+  it("reopens a collapsed folder when navigation moves into it", async () => {
+    const { container, cleanup } = await mount(<Harness initialMode="tree" />);
+    const folder = () => container.querySelector<HTMLButtonElement>('button[title="docs/ai"]');
+    const opened = folder();
+    if (opened === null) throw new Error("no folder row rendered");
+
+    await act(async () => {
+      opened.click();
+    });
+    expect(folder()?.getAttribute("aria-expanded")).toBe("false");
+
+    await press("j");
+    await press("j");
+    await press("j");
+
+    expect(folder()?.getAttribute("aria-expanded")).toBe("true");
+    const revealed = fileRow(container, "docs/ai/codebase-map.md");
+    expect(revealed.getAttribute("aria-current")).toBe("true");
+    await cleanup();
+  });
+
   it("carries the active file and the reviewed marks across a mode change", async () => {
     const { container, cleanup } = await mount(<Harness initialMode="files" />);
     const path = "docs/ai/codebase-map.md";

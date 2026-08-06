@@ -3,7 +3,11 @@ import { Button, Icon } from "@otomat/ui";
 import { diffFileLabels } from "@web/components/runs/diff/files/path";
 import { DiffFileRow } from "@web/components/runs/diff/files/row";
 import { INDENT_REM, ROW_PADDING_REM } from "@web/components/runs/diff/files/row.utils";
-import { buildDiffFileTree, visibleTreeRows } from "@web/components/runs/diff/files/tree.utils";
+import {
+  buildDiffFileTree,
+  expandAncestors,
+  visibleTreeRows,
+} from "@web/components/runs/diff/files/tree.utils";
 import { useMemo, useState } from "react";
 
 export interface DiffFileTreeProps {
@@ -16,8 +20,17 @@ export interface DiffFileTreeProps {
 /** Tree mode: real folders, foldable, with single-child folder runs shown as one row. */
 export function DiffFileTree({ files, activePath, reviewedPaths, onSelect }: DiffFileTreeProps) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set<string>());
+  const [revealed, setRevealed] = useState(activePath);
   const nodes = useMemo(() => buildDiffFileTree(files), [files]);
-  const rows = visibleTreeRows(nodes, collapsed, activePath);
+
+  // Arriving at a file reopens the folders hiding it; collapsing stays the reader's decision,
+  // so the chevron cannot report a state the rows contradict.
+  if (revealed !== activePath) {
+    setRevealed(activePath);
+    if (activePath !== null) setCollapsed(expandAncestors(collapsed, activePath));
+  }
+
+  const rows = visibleTreeRows(nodes, collapsed);
 
   function toggle(path: string): void {
     const next = new Set(collapsed);
