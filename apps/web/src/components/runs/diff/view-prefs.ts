@@ -1,7 +1,6 @@
 import { readStored, writeStored } from "@web/lib/storage";
 
 export type DiffViewMode = "unified" | "split";
-/** How the changed-file sidebar is laid out: a flat list, or real folders. */
 export type DiffBrowserMode = "files" | "tree";
 
 const VIEW_MODE_KEY = "otomat.diff-view-mode";

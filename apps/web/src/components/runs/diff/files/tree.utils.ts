@@ -66,7 +66,6 @@ function toNodes(current: Draft): DiffTreeNode[] {
   return nodes.toSorted(byTreeOrder);
 }
 
-/** Folds the flat changed-file list into real folders, collapsing single-child folder runs. */
 export function buildDiffFileTree(files: readonly DiffFileContract[]): DiffTreeNode[] {
   const root = draft("");
   for (const file of files) {
@@ -83,7 +82,6 @@ export function buildDiffFileTree(files: readonly DiffFileContract[]): DiffTreeN
   return toNodes(root);
 }
 
-/** Flattens the tree to the rows a collapsed state actually shows. */
 export function visibleTreeRows(
   nodes: readonly DiffTreeNode[],
   collapsed: ReadonlySet<string>,
@@ -104,10 +102,7 @@ export function visibleTreeRows(
   return rows;
 }
 
-/**
- * Reopens the folders holding `path`, so navigating to a file can never land on a hidden
- * row. Returns the same set when nothing was hiding it, leaving the caller's state untouched.
- */
+// Returns the same set when nothing was hiding the path, so the caller's setState bails out.
 export function expandAncestors(collapsed: ReadonlySet<string>, path: string): ReadonlySet<string> {
   const hiding = [...collapsed].filter((directory) => path.startsWith(`${directory}/`));
   if (hiding.length === 0) return collapsed;

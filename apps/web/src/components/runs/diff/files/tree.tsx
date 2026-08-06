@@ -17,7 +17,6 @@ export interface DiffFileTreeProps {
   onSelect: (file: DiffFileContract) => void;
 }
 
-/** Tree mode: real folders, foldable, with single-child folder runs shown as one row. */
 export function DiffFileTree({ files, activePath, reviewedPaths, onSelect }: DiffFileTreeProps) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set<string>());
   const [revealed, setRevealed] = useState(activePath);

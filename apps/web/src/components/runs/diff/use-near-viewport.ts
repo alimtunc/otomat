@@ -20,11 +20,7 @@ export interface NearViewport {
   near: boolean;
 }
 
-/**
- * Whether an element has come within a screen of the viewport, latched once it has.
- * Syntax highlighting costs one synchronous pass per file, so cards that have never
- * been near the viewport must not make a large diff pay for it up front.
- */
+// Latched: highlighting costs a synchronous pass per file, so a large diff must not pay up front.
 export function useNearViewport(): NearViewport {
   const [node, setNode] = useState<HTMLElement | null>(null);
   // Without the API there is nothing to wait for; colour everything rather than nothing.

@@ -9,7 +9,6 @@ export interface DiffFileListProps {
   onSelect: (file: DiffFileContract) => void;
 }
 
-/** Flat mode: one row per changed file, in the canonical order git emitted them. */
 export function DiffFileList({ files, activePath, reviewedPaths, onSelect }: DiffFileListProps) {
   return (
     <ul className="py-1">

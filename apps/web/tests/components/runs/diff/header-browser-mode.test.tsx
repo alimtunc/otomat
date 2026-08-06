@@ -5,23 +5,13 @@ import type { DiffBrowserMode } from "@web/components/runs/diff/view-prefs";
 import { act } from "react";
 import { describe, expect, it } from "vitest";
 
+import { diffFile } from "#support/diff-file";
 import { findButton } from "#support/dom-queries";
 import { mount } from "#support/mount";
 
 const diff: RunDiffContract = {
   base: "base-sha",
-  files: [
-    {
-      path: "src/index.ts",
-      old_path: null,
-      status: "modified",
-      additions: 1,
-      deletions: 0,
-      binary: false,
-      patch: "",
-      sha: "file-sha",
-    },
-  ],
+  files: [diffFile({ path: "src/index.ts", sha: "file-sha" })],
   additions: 1,
   deletions: 0,
   sha: "diff-sha",

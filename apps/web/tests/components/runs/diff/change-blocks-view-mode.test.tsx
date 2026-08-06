@@ -1,5 +1,4 @@
 // @vitest-environment happy-dom
-import type { DiffFileContract } from "@otomat/domain";
 import { ThemeProvider } from "@otomat/ui";
 import { changeBlockRows } from "@web/components/runs/diff/diff-nav";
 import { DiffFileCard } from "@web/components/runs/diff/files/card";
@@ -7,6 +6,7 @@ import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
 import { describe, expect, it } from "vitest";
 
 import { stubDiffCanvas } from "#support/diff-dom";
+import { diffFile } from "#support/diff-file";
 import { mount } from "#support/mount";
 
 stubDiffCanvas();
@@ -29,16 +29,12 @@ index 0000001..0000002 100644
  line twelve
 `;
 
-const file: DiffFileContract = {
+const file = diffFile({
   path: "src/index.ts",
-  old_path: null,
-  status: "modified",
-  additions: 1,
   deletions: 2,
-  binary: false,
   patch: TWO_CHANGE_PATCH,
   sha: "file-sha",
-};
+});
 
 function renderCard(mode: "unified" | "split") {
   return mount(

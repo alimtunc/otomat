@@ -1,21 +1,9 @@
-import type { DiffFileContract } from "@otomat/domain";
 import { adjacentFile, clampBlockIndex } from "@web/components/runs/diff/diff-nav";
 import { describe, expect, it } from "vitest";
 
-function file(path: string): DiffFileContract {
-  return {
-    path,
-    old_path: null,
-    status: "modified",
-    additions: 1,
-    deletions: 0,
-    binary: false,
-    patch: "",
-    sha: `sha-${path}`,
-  };
-}
+import { diffFile } from "#support/diff-file";
 
-const files = [file("a.ts"), file("b.ts"), file("c.ts")];
+const files = [diffFile({ path: "a.ts" }), diffFile({ path: "b.ts" }), diffFile({ path: "c.ts" })];
 
 describe("adjacentFile", () => {
   it("starts at the first file when stepping forward with no active file", () => {

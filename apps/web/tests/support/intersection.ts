@@ -6,7 +6,6 @@ interface Subscription {
 }
 
 export interface IntersectionStub {
-  /** Reports every currently observed element as intersecting. */
   reveal: () => void;
   restore: () => void;
 }
@@ -28,16 +27,8 @@ export function stubIntersectionObserver(): IntersectionStub {
       this.subscription.targets.add(target);
     }
 
-    unobserve(target: Element): void {
-      this.subscription.targets.delete(target);
-    }
-
     disconnect(): void {
       this.subscription.targets.clear();
-    }
-
-    takeRecords(): [] {
-      return [];
     }
   }
 

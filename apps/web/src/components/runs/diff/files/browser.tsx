@@ -13,7 +13,6 @@ export interface DiffFileBrowserProps {
   onSelect: (file: DiffFileContract) => void;
 }
 
-/** The changed-file sidebar. Files and Tree render the same rows over the same state. */
 export function DiffFileBrowser({
   diff,
   mode,

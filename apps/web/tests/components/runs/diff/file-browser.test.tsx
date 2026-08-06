@@ -1,37 +1,29 @@
 // @vitest-environment happy-dom
-import type { DiffFileContract, RunDiffContract } from "@otomat/domain";
+import type { RunDiffContract } from "@otomat/domain";
 import { DiffFileBrowser } from "@web/components/runs/diff/files/browser";
 import { useDiffKeyboardNav } from "@web/components/runs/diff/use-diff-keyboard-nav";
 import type { DiffBrowserMode } from "@web/components/runs/diff/view-prefs";
 import { act, useState } from "react";
 import { describe, expect, it } from "vitest";
 
+import { diffFile } from "#support/diff-file";
 import { mount } from "#support/mount";
 
-function file(path: string, oldPath: string | null = null): DiffFileContract {
-  return {
-    path,
-    old_path: oldPath,
-    status: oldPath === null ? "modified" : "renamed",
-    additions: 3,
-    deletions: 1,
-    binary: false,
-    patch: "",
-    sha: `sha-${path}`,
-  };
-}
-
 const FILES = [
-  file("apps/web/src/components/runs/diff/files/card.tsx"),
-  file("apps/web/src/components/runs/diff/files/row.tsx", "packages/ui/src/line.tsx"),
-  file("docs/ai/codebase-map.md"),
+  diffFile({ path: "apps/web/src/components/runs/diff/files/card.tsx" }),
+  diffFile({
+    path: "apps/web/src/components/runs/diff/files/row.tsx",
+    old_path: "packages/ui/src/line.tsx",
+    status: "renamed",
+  }),
+  diffFile({ path: "docs/ai/codebase-map.md" }),
 ];
 
 const diff: RunDiffContract = {
   base: "base-sha",
   files: FILES,
-  additions: 9,
-  deletions: 3,
+  additions: 3,
+  deletions: 0,
   sha: "diff-sha",
 };
 

@@ -3,15 +3,16 @@ import type { DiffFileContract } from "@otomat/domain";
 import { ThemeProvider, useTheme } from "@otomat/ui";
 import { DiffFileCard } from "@web/components/runs/diff/files/card";
 import { act } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { stubDiffCanvas } from "#support/diff-dom";
+import { diffFile } from "#support/diff-file";
 import { stubIntersectionObserver, type IntersectionStub } from "#support/intersection";
 import { mount } from "#support/mount";
 
 stubDiffCanvas();
 
-function patch(path: string, added: string): string {
+function patch(path: string): string {
   return `diff --git a/${path} b/${path}
 index 0000001..0000002 100644
 --- a/${path}
@@ -19,21 +20,12 @@ index 0000001..0000002 100644
 @@ -1,2 +1,2 @@
  first line
 -second line
-+${added}
++const answer = 42;
 `;
 }
 
 function file(overrides: Partial<DiffFileContract> & { path: string }): DiffFileContract {
-  return {
-    old_path: null,
-    status: "modified",
-    additions: 1,
-    deletions: 1,
-    binary: false,
-    patch: patch(overrides.path, "const answer = 42;"),
-    sha: `sha-${overrides.path}`,
-    ...overrides,
-  };
+  return diffFile({ patch: patch(overrides.path), ...overrides });
 }
 
 function Card({ entry }: { entry: DiffFileContract }) {
@@ -65,16 +57,18 @@ function renderCard(entry: DiffFileContract) {
   );
 }
 
-let observer: IntersectionStub | null = null;
+let observer: IntersectionStub;
+
+beforeEach(() => {
+  observer = stubIntersectionObserver();
+});
 
 afterEach(() => {
-  observer?.restore();
-  observer = null;
+  observer.restore();
 });
 
 describe("diff card syntax highlighting", () => {
   it("leaves an off-screen card uncoloured so a large diff does not pay for it up front", async () => {
-    observer = stubIntersectionObserver();
     const { container, cleanup } = await renderCard(file({ path: "src/index.ts" }));
 
     expect(container.querySelector(".hljs-keyword")).toBeNull();
@@ -82,11 +76,10 @@ describe("diff card syntax highlighting", () => {
   });
 
   it("colours a TypeScript card once it reaches the viewport", async () => {
-    observer = stubIntersectionObserver();
     const { container, cleanup } = await renderCard(file({ path: "src/index.ts" }));
 
     await act(async () => {
-      observer?.reveal();
+      observer.reveal();
     });
 
     const keywords = [...container.querySelectorAll(".hljs-keyword")].map(
@@ -97,12 +90,11 @@ describe("diff card syntax highlighting", () => {
   });
 
   it("shows an unknown extension as plain text instead of inventing a language", async () => {
-    observer = stubIntersectionObserver();
     const entry = file({ path: "assets/thing.zzz" });
     const { container, cleanup } = await renderCard(entry);
 
     await act(async () => {
-      observer?.reveal();
+      observer.reveal();
     });
 
     expect(container.querySelector(".hljs-keyword")).toBeNull();
@@ -111,12 +103,11 @@ describe("diff card syntax highlighting", () => {
   });
 
   it("keeps a rename readable, colouring each side by its own name", async () => {
-    observer = stubIntersectionObserver();
     const entry = file({ path: "src/index.ts", old_path: "src/index.js", status: "renamed" });
     const { container, cleanup } = await renderCard(entry);
 
     await act(async () => {
-      observer?.reveal();
+      observer.reveal();
     });
 
     expect(container.textContent).toContain("src/index.js → src/index.ts");
@@ -125,12 +116,11 @@ describe("diff card syntax highlighting", () => {
   });
 
   it("follows the Otomat theme, so the palette stays readable in light and dark", async () => {
-    observer = stubIntersectionObserver();
     const { container, cleanup } = await renderCard(file({ path: "src/index.ts" }));
     const wrapper = () => container.querySelector(".diff-tailwindcss-wrapper");
 
     await act(async () => {
-      observer?.reveal();
+      observer.reveal();
     });
     const before = wrapper()?.getAttribute("data-theme");
 
@@ -145,12 +135,11 @@ describe("diff card syntax highlighting", () => {
   });
 
   it("says so plainly for a binary file rather than rendering an empty diff", async () => {
-    observer = stubIntersectionObserver();
     const entry = file({ path: "assets/logo.png", binary: true, patch: "" });
     const { container, cleanup } = await renderCard(entry);
 
     await act(async () => {
-      observer?.reveal();
+      observer.reveal();
     });
 
     expect(container.textContent).toContain("Binary file — no textual diff.");

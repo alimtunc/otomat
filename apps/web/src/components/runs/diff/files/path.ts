@@ -25,10 +25,6 @@ export interface DiffFileLabels {
   full: string;
 }
 
-/**
- * Splits a changed file into the basename a row always shows and the secondary
- * detail it may ellipsize, keeping renames legible in both halves.
- */
 export function diffFileLabels(file: Pick<DiffFileContract, "path" | "old_path">): DiffFileLabels {
   const name = baseName(file.path);
   const directory = directoryName(file.path);
