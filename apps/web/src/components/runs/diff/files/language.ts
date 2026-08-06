@@ -1,0 +1,103 @@
+import type { DiffHighlighterLang } from "@git-diff-view/react";
+import { baseName } from "@web/components/runs/diff/files/path";
+
+/** Names the highlighter cannot infer from an extension, keyed by lowercased basename. */
+const BY_FILENAME: Record<string, DiffHighlighterLang> = {
+  ".bashrc": "bash",
+  ".gitconfig": "ini",
+  ".npmrc": "ini",
+  ".profile": "bash",
+  ".zshrc": "bash",
+  dockerfile: "dockerfile",
+  gnumakefile: "makefile",
+  makefile: "makefile",
+};
+
+const BY_EXTENSION: Record<string, DiffHighlighterLang> = {
+  bash: "bash",
+  c: "c",
+  cc: "cpp",
+  cfg: "ini",
+  cjs: "javascript",
+  cpp: "cpp",
+  cs: "csharp",
+  css: "css",
+  cts: "typescript",
+  cxx: "cpp",
+  dart: "dart",
+  diff: "diff",
+  erl: "erlang",
+  ex: "elixir",
+  exs: "elixir",
+  go: "go",
+  gql: "graphql",
+  graphql: "graphql",
+  h: "c",
+  handlebars: "handlebars",
+  hbs: "handlebars",
+  hh: "cpp",
+  hpp: "cpp",
+  hs: "haskell",
+  htm: "xml",
+  html: "xml",
+  ini: "ini",
+  java: "java",
+  js: "javascript",
+  json: "json",
+  jsonc: "json",
+  jsx: "jsx",
+  kt: "kotlin",
+  kts: "kotlin",
+  less: "less",
+  lock: "plaintext",
+  log: "plaintext",
+  lua: "lua",
+  markdown: "markdown",
+  md: "markdown",
+  mjs: "javascript",
+  mts: "typescript",
+  nix: "nix",
+  patch: "diff",
+  php: "php",
+  pl: "perl",
+  pm: "perl",
+  properties: "properties",
+  proto: "protobuf",
+  ps1: "powershell",
+  py: "python",
+  pyi: "python",
+  r: "r",
+  rb: "ruby",
+  rs: "rust",
+  scala: "scala",
+  scss: "scss",
+  sh: "bash",
+  sql: "sql",
+  svg: "xml",
+  swift: "swift",
+  tex: "latex",
+  toml: "ini",
+  ts: "typescript",
+  tsx: "tsx",
+  txt: "plaintext",
+  vim: "vim",
+  vue: "vue",
+  wat: "wasm",
+  xml: "xml",
+  yaml: "yaml",
+  yml: "yaml",
+  zsh: "bash",
+};
+
+/**
+ * The highlighter language for one side of a diff. Unrecognised names resolve to
+ * `plaintext` — a registered grammar — so the renderer never guesses a language.
+ */
+export function diffLanguage(fileName: string): DiffHighlighterLang {
+  const base = baseName(fileName).toLowerCase();
+  const byName = BY_FILENAME[base];
+  if (byName !== undefined) return byName;
+  const dot = base.lastIndexOf(".");
+  if (dot < 1) return "plaintext";
+  return BY_EXTENSION[base.slice(dot + 1)] ?? "plaintext";
+}

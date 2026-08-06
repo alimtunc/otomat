@@ -1,13 +1,16 @@
 import type { ReviewState, RunDiffContract } from "@otomat/domain";
 import { Icon, Kbd, ReviewStatusChip, SegmentedControl, SegmentedItem } from "@otomat/ui";
 import { DiffSummary } from "@web/components/runs/diff/summary";
-import type { DiffViewMode } from "@web/components/runs/diff/view-prefs";
+import type { DiffBrowserMode, DiffViewMode } from "@web/components/runs/diff/view-prefs";
 
 export interface RunDiffHeaderProps {
   diff: RunDiffContract;
   reviewStatus: ReviewState | null;
   mode: DiffViewMode;
   onModeChange: (mode: DiffViewMode) => void;
+  /** null when the layout has no file sidebar to switch, so no control is offered. */
+  browserMode: DiffBrowserMode | null;
+  onBrowserModeChange: (mode: DiffBrowserMode) => void;
   reviewedCount: number;
 }
 
@@ -16,6 +19,8 @@ export function RunDiffHeader({
   reviewStatus,
   mode,
   onModeChange,
+  browserMode,
+  onBrowserModeChange,
   reviewedCount,
 }: RunDiffHeaderProps) {
   return (
@@ -37,6 +42,23 @@ export function RunDiffHeader({
         </span>
       ) : null}
       <span className="ml-auto flex items-center gap-2.5">
+        {browserMode === null ? null : (
+          <SegmentedControl
+            type="single"
+            value={browserMode}
+            onValueChange={(value) => {
+              if (value === "files" || value === "tree") onBrowserModeChange(value);
+            }}
+            aria-label="File browser mode"
+          >
+            <SegmentedItem value="files" icon={<Icon name="list" />}>
+              Files
+            </SegmentedItem>
+            <SegmentedItem value="tree" icon={<Icon name="list-tree" />}>
+              Tree
+            </SegmentedItem>
+          </SegmentedControl>
+        )}
         <SegmentedControl
           type="single"
           value={mode}

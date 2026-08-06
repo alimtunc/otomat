@@ -1,20 +1,31 @@
 import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
-import { EmptyState, ErrorState, useMediaQuery, WIDE_VIEWPORT_MEDIA_QUERY } from "@otomat/ui";
+import {
+  EmptyState,
+  ErrorState,
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+  useMediaQuery,
+  WIDE_VIEWPORT_MEDIA_QUERY,
+} from "@otomat/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
 import { useAddReviewComment } from "@web/api/reviews/mutations";
 import { useRunReview } from "@web/api/reviews/queries";
 import { useRunDetail, useRunDiff } from "@web/api/runs/queries";
 import { revealAndFocus } from "@web/components/runs/diff/diff-nav";
+import { DiffFileBrowser } from "@web/components/runs/diff/files/browser";
 import { DiffFileCard } from "@web/components/runs/diff/files/card";
 import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
 import { DiffFileNav } from "@web/components/runs/diff/files/nav";
-import { DiffFileTree } from "@web/components/runs/diff/files/tree";
 import { DiffFixBar } from "@web/components/runs/diff/fix-bar";
 import { RunDiffHeader } from "@web/components/runs/diff/header";
 import { useDiffKeyboardNav } from "@web/components/runs/diff/use-diff-keyboard-nav";
 import { useReviewedFiles } from "@web/components/runs/diff/use-reviewed-files";
-import { diffViewModeStore } from "@web/components/runs/diff/view-prefs-store";
+import {
+  diffBrowserModeStore,
+  diffViewModeStore,
+} from "@web/components/runs/diff/view-prefs-store";
 import { ArchivedComments } from "@web/components/runs/review/archived-comments";
 import { partitionComments } from "@web/components/runs/review/partition";
 import { useReviewSelection } from "@web/components/runs/review/use-selection";
@@ -33,6 +44,7 @@ export function RunDiffView() {
   const [activePath, setActivePath] = useState<string | null>(null);
   const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
   const mode = useSelector(diffViewModeStore);
+  const browserMode = useSelector(diffBrowserModeStore);
   const diff = diffQuery.data?.diff ?? null;
   const reviewed = useReviewedFiles(runId, diff?.sha ?? "");
 
@@ -86,7 +98,7 @@ export function RunDiffView() {
   }
 
   const cards = (
-    <div className="min-w-0 overflow-auto p-4">
+    <div className="min-h-0 min-w-0 flex-1 overflow-auto p-4">
       <div className="flex flex-col gap-3">
         {diff.files.map((file) => (
           <DiffFileCard
@@ -106,39 +118,57 @@ export function RunDiffView() {
     </div>
   );
 
-  const navProps = {
-    diff,
-    activePath,
-    reviewedPaths: reviewed.paths,
-    onSelect: jumpToFile,
-  };
+  const emptyRegion = (
+    <div className="flex min-h-0 flex-1 flex-col overflow-auto">
+      <CenteredState fill="flex">
+        <EmptyState
+          icon="git-compare"
+          title="No changes yet"
+          description="The canonical git diff appears once a run produces changes. Diffs are never fabricated."
+        />
+      </CenteredState>
+      {archived.length > 0 ? (
+        <div className="p-4">
+          <ArchivedComments comments={archived} selection={selection} />
+        </div>
+      ) : null}
+    </div>
+  );
 
-  const filesRegion =
-    diff.files.length === 0 ? (
-      <div className="flex min-h-0 flex-1 flex-col overflow-auto">
-        <CenteredState fill="flex">
-          <EmptyState
-            icon="git-compare"
-            title="No changes yet"
-            description="The canonical git diff appears once a run produces changes. Diffs are never fabricated."
-          />
-        </CenteredState>
-        {archived.length > 0 ? (
-          <div className="p-4">
-            <ArchivedComments comments={archived} selection={selection} />
-          </div>
-        ) : null}
-      </div>
-    ) : (
-      <div
-        className={
-          wide ? "grid min-h-0 flex-1 grid-cols-[240px_1fr]" : "flex min-h-0 flex-1 flex-col"
-        }
+  const browsedRegion = wide ? (
+    <ResizablePanelGroup autoSaveId="otomat.diff-files" className="min-h-0 flex-1">
+      <ResizablePanel
+        id="files"
+        defaultSize={264}
+        minSize={168}
+        maxSize="40%"
+        collapsible
+        className="border-r border-border-subtle"
       >
-        {wide ? <DiffFileTree {...navProps} /> : <DiffFileNav {...navProps} />}
+        <DiffFileBrowser
+          diff={diff}
+          mode={browserMode}
+          activePath={activePath}
+          reviewedPaths={reviewed.paths}
+          onSelect={jumpToFile}
+        />
+      </ResizablePanel>
+      <ResizableHandle />
+      <ResizablePanel id="diff" minSize="40%">
         {cards}
-      </div>
-    );
+      </ResizablePanel>
+    </ResizablePanelGroup>
+  ) : (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <DiffFileNav
+        diff={diff}
+        activePath={activePath}
+        reviewedPaths={reviewed.paths}
+        onSelect={jumpToFile}
+      />
+      {cards}
+    </div>
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -147,9 +177,11 @@ export function RunDiffView() {
         reviewStatus={reviewQuery.data.review?.status ?? null}
         mode={mode}
         onModeChange={diffViewModeStore.actions.set}
+        browserMode={wide && diff.files.length > 0 ? browserMode : null}
+        onBrowserModeChange={diffBrowserModeStore.actions.set}
         reviewedCount={diff.files.filter((file) => reviewed.paths.has(file.path)).length}
       />
-      {filesRegion}
+      {diff.files.length === 0 ? emptyRegion : browsedRegion}
       <DiffFixBar runStatus={runQuery.data?.run.status} selection={selection} />
     </div>
   );

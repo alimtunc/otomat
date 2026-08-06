@@ -6,7 +6,10 @@ import {
   extendDataFor,
   unrenderableNote,
 } from "@web/components/runs/diff/files/card.utils";
+import { diffLanguage } from "@web/components/runs/diff/files/language";
+import { diffFileLabels } from "@web/components/runs/diff/files/path";
 import { DiffStat } from "@web/components/runs/diff/stat";
+import { useNearViewport } from "@web/components/runs/diff/use-near-viewport";
 import type { DiffViewMode } from "@web/components/runs/diff/view-prefs";
 import { ReviewCommentCard } from "@web/components/runs/review/comment-card";
 import { ReviewCommentForm } from "@web/components/runs/review/comment-form";
@@ -34,17 +37,17 @@ export function DiffFileCard({
   onToggleComment,
 }: DiffFileCardProps) {
   const { theme } = useTheme();
-  const data = useMemo(
-    () => ({
-      oldFile: { fileName: file.old_path ?? file.path },
-      newFile: { fileName: file.path },
+  const viewport = useNearViewport();
+  const data = useMemo(() => {
+    const oldPath = file.old_path ?? file.path;
+    return {
+      oldFile: { fileName: oldPath, fileLang: diffLanguage(oldPath) },
+      newFile: { fileName: file.path, fileLang: diffLanguage(file.path) },
       hunks: [file.patch],
-    }),
-    [file.path, file.old_path, file.patch],
-  );
+    };
+  }, [file.path, file.old_path, file.patch]);
   const extendData = useMemo(() => extendDataFor(commentsByLine), [commentsByLine]);
 
-  const renamedFrom = file.old_path !== null && file.old_path !== file.path ? file.old_path : null;
   const note = unrenderableNote(file);
 
   const cardBody =
@@ -57,7 +60,7 @@ export function DiffFileCard({
           extendData={extendData}
           diffViewMode={mode === "split" ? DiffModeEnum.Split : DiffModeEnum.Unified}
           diffViewTheme={theme}
-          diffViewHighlight={false}
+          diffViewHighlight={viewport.near}
           diffViewFontSize={12}
           diffViewAddWidget
           renderWidgetLine={({ side, lineNumber, onClose }) =>
@@ -95,6 +98,7 @@ export function DiffFileCard({
 
   return (
     <section
+      ref={viewport.ref}
       id={diffFileDomId(file)}
       tabIndex={-1}
       aria-label={file.path}
@@ -102,9 +106,7 @@ export function DiffFileCard({
     >
       <header className="flex h-9 items-center gap-2.5 border-b border-border bg-surface-1 px-3.5 font-mono text-xs">
         <DiffFileStatusChip status={file.status} showLabel={false} />
-        <span className="min-w-0 truncate">
-          {renamedFrom ? `${renamedFrom} → ${file.path}` : file.path}
-        </span>
+        <span className="min-w-0 truncate">{diffFileLabels(file).full}</span>
         <span className="ml-auto flex items-center gap-3">
           <DiffStat additions={file.additions} deletions={file.deletions} />
           <label className="flex cursor-pointer select-none items-center gap-1.5 font-sans text-xs text-text-secondary">

@@ -1,70 +1,68 @@
-import type { DiffFileContract, RunDiffContract } from "@otomat/domain";
-import { Button, cn, Icon, resolveStatus } from "@otomat/ui";
-import { STATUS_LETTER } from "@web/components/runs/diff/files/tree.utils";
-import { DiffStat } from "@web/components/runs/diff/stat";
-import { PaneHeader } from "@web/components/runs/pane-header";
+import type { DiffFileContract } from "@otomat/domain";
+import { Button, Icon } from "@otomat/ui";
+import { diffFileLabels } from "@web/components/runs/diff/files/path";
+import { DiffFileRow } from "@web/components/runs/diff/files/row";
+import { INDENT_REM, ROW_PADDING_REM } from "@web/components/runs/diff/files/row.utils";
+import { buildDiffFileTree, visibleTreeRows } from "@web/components/runs/diff/files/tree.utils";
+import { useMemo, useState } from "react";
 
-export function DiffFileTree({
-  diff,
-  activePath,
-  reviewedPaths,
-  onSelect,
-}: {
-  diff: RunDiffContract;
+export interface DiffFileTreeProps {
+  files: readonly DiffFileContract[];
   activePath: string | null;
   reviewedPaths: ReadonlySet<string>;
   onSelect: (file: DiffFileContract) => void;
-}) {
+}
+
+/** Tree mode: real folders, foldable, with single-child folder runs shown as one row. */
+export function DiffFileTree({ files, activePath, reviewedPaths, onSelect }: DiffFileTreeProps) {
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set<string>());
+  const nodes = useMemo(() => buildDiffFileTree(files), [files]);
+  const rows = visibleTreeRows(nodes, collapsed, activePath);
+
+  function toggle(path: string): void {
+    const next = new Set(collapsed);
+    if (!next.delete(path)) next.add(path);
+    setCollapsed(next);
+  }
+
   return (
-    <nav
-      aria-label="Changed files"
-      className="min-h-0 overflow-auto border-r border-border-subtle bg-sidebar"
-    >
-      <PaneHeader className="bg-sidebar">
-        Files
-        <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] font-normal normal-case">
-          <DiffStat additions={diff.additions} deletions={diff.deletions} />
-        </span>
-      </PaneHeader>
-      <ul className="py-1">
-        {diff.files.map((file) => {
-          const status = STATUS_LETTER[file.status];
-          const active = file.path === activePath;
+    <ul className="py-1">
+      {rows.map(({ node, depth, expanded }) => {
+        if (node.kind === "file") {
           return (
-            <li key={file.path}>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => onSelect(file)}
-                aria-current={active ? "true" : undefined}
-                className={cn(
-                  "h-7 w-full justify-start gap-1.75 rounded-none px-3 text-xs font-normal text-text-secondary hover:bg-hover",
-                  active && "bg-selected text-foreground",
-                )}
-              >
-                <span
-                  aria-label={resolveStatus("diffFile", file.status).label}
-                  className={cn("w-3 text-center font-mono text-[10px]", status.className)}
-                >
-                  {status.letter}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-left">{file.path}</span>
-                {reviewedPaths.has(file.path) ? (
-                  <Icon
-                    name="check"
-                    aria-label="Reviewed"
-                    className="h-3 w-3 shrink-0 text-success"
-                  />
-                ) : null}
-                <span className="flex items-center gap-1 font-mono text-[10px] tabular-nums">
-                  <DiffStat additions={file.additions} deletions={file.deletions} />
-                </span>
-              </Button>
+            <li key={node.file.path}>
+              <DiffFileRow
+                file={node.file}
+                active={node.file.path === activePath}
+                reviewed={reviewedPaths.has(node.file.path)}
+                detail={diffFileLabels(node.file).move ?? ""}
+                indent={depth}
+                onSelect={onSelect}
+              />
             </li>
           );
-        })}
-      </ul>
-    </nav>
+        }
+        return (
+          <li key={`folder:${node.path}`}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              title={node.path}
+              aria-expanded={expanded}
+              onClick={() => toggle(node.path)}
+              style={{ paddingLeft: `${ROW_PADDING_REM + depth * INDENT_REM}rem` }}
+              className="h-7 w-full justify-start gap-1.5 rounded-none pr-3 text-xs font-normal text-text-secondary hover:bg-hover"
+            >
+              <Icon
+                name={expanded ? "chevron-down" : "chevron-right"}
+                className="h-3 w-3 shrink-0 text-text-tertiary"
+              />
+              <span className="min-w-0 flex-1 truncate text-left">{node.label}</span>
+            </Button>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
