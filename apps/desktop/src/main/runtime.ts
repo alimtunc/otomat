@@ -75,22 +75,25 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
   const deployment = options.preview
     ? instanceDeployment(options.expectedBuild)
     : STABLE_DEPLOYMENT;
-  const hosts = new ExecutionHostManager({
-    dataDir: dataDirectory.root,
-    log: (message) => desktopLog.write(message),
-    localDaemonUrl: options.localDaemonUrl,
-    onRemoteStatus: options.onRemoteStatus,
-    applyRendererUrl: options.applyRendererUrl,
-    expectedBuild: options.expectedBuild,
-    deployment,
-  });
   const sandbox = new PreviewSandbox({
     enabled: options.preview,
     dataDirectory,
     templateDir: options.paths.sandboxTemplateDir,
     daemon,
     onDaemonStarted: options.onSandboxDaemonStarted,
+    remoteHomeSuffix: deployment.homeSuffix,
     log: (message) => desktopLog.write(message),
+  });
+  const hosts = new ExecutionHostManager({
+    dataDir: dataDirectory.root,
+    log: (message) => desktopLog.write(message),
+    localDaemonUrl: options.localDaemonUrl,
+    onRemoteStatus: options.onRemoteStatus,
+    // A preview's instance gets the same test bed as its local sandbox, once its tunnel is up.
+    onRemoteConnected: (alias, url) => void sandbox.ensureRemote(alias, url),
+    applyRendererUrl: options.applyRendererUrl,
+    expectedBuild: options.expectedBuild,
+    deployment,
   });
   const instances = new RemoteInstanceActions({
     alias: () => hosts.remoteSshAlias,

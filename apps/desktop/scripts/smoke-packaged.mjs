@@ -5,8 +5,14 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { PRODUCT_NAME, RELEASE_OUT } from "./mac-build.mjs";
-import { APP_ID } from "./release/metadata.mjs";
+import { RELEASE_OUT } from "./mac-build.mjs";
+import { readPrNumber, resolveBuildIdentity } from "./release/metadata.mjs";
+
+// The same `PR_NUMBER` the packaging step read: the smoke installs and launches the artifact
+// under the name that build actually carries.
+const { productName: PRODUCT_NAME, appId: APP_ID } = resolveBuildIdentity(
+  readPrNumber(process.env),
+);
 
 /** `lipo` names architectures the Mach-O way; `process.arch` uses Node's. */
 const MACH_O_ARCH = { arm64: "arm64", x64: "x86_64" };

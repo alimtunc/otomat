@@ -61,7 +61,8 @@ export interface GitHubServiceConfig {
 export interface GitHubService {
   connection(): Promise<GitHubConnectionContract>;
   connect(): GitHubConnectionContract;
-  getPullRequest(runId: string): PullRequestView | null;
+  /** Re-reads a live pull request from the provider, settling the run when it turns out merged. */
+  getPullRequest(runId: string): Promise<PullRequestView | null>;
   publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView>;
   draftPullRequest(run: RunRow): Promise<PullRequestDraft>;
 }

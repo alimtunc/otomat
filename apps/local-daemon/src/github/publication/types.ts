@@ -15,7 +15,8 @@ export type PublicationConfig = Omit<GitHubServiceConfig, "idFactory"> & {
 };
 
 export interface PullRequestPublicationService {
-  get(runId: string): PullRequestView | null;
+  /** Refreshes a live pull request from the provider before answering; see `PullRequestPublisher.get`. */
+  get(runId: string): Promise<PullRequestView | null>;
   publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView>;
 }
 

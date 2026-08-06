@@ -1,4 +1,5 @@
-import { getRun } from "@otomat/db";
+import { getIssue, getRun, updateIssueStatus } from "@otomat/db";
+import { IllegalTransitionError } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
@@ -45,6 +46,39 @@ it("refuses to resume a run that is not human-waiting (no double-spawn)", async 
 
   await expect(supervisor.resume("rr")).rejects.toThrow();
   expect(spawn.calls).toBe(0);
+});
+
+it("puts the issue back to work, from an open pull request through reviewing", async () => {
+  const { supervisor } = makeSupervisor(fix, "complete");
+  seedRun(fix.db, {
+    runId: "rpr",
+    runStatus: "awaiting_human",
+    stepStatus: "awaiting_human",
+    sessionStatus: "awaiting_input",
+    providerSessionId: "ps-rpr",
+  });
+  updateIssueStatus(fix.db, "i1", "pr_open");
+
+  await supervisor.resume("rpr");
+  await supervisor.settle();
+
+  expect(getIssue(fix.db, "i1")?.status).toBe("running");
+});
+
+it("refuses to resume a run whose issue closed with its merge", async () => {
+  const { supervisor, spawn } = makeSupervisor(fix, "complete");
+  seedRun(fix.db, {
+    runId: "rdone",
+    runStatus: "awaiting_human",
+    stepStatus: "awaiting_human",
+    sessionStatus: "awaiting_input",
+    providerSessionId: "ps-rdone",
+  });
+  updateIssueStatus(fix.db, "i1", "done");
+
+  await expect(supervisor.resume("rdone")).rejects.toThrow(IllegalTransitionError);
+  expect(spawn.calls).toBe(0);
+  expect(getIssue(fix.db, "i1")?.status).toBe("done");
 });
 
 it("rejects a concurrent second resume of the same run (no double-spawn)", async () => {

@@ -73,6 +73,27 @@ cible la même branche) et verrouillé dès que la PR existe (`number != null`).
 base de la PR est toujours le fork gelé de la run (`WorktreeRecord.baseRef`),
 jamais la branche par défaut du repository.
 
+### Clôture au merge — sur consultation, jamais sur horloge
+
+`GET /api/runs/:id/pr` relit la PR chez le provider (`gh pr view`, cwd = racine
+du repository, jamais le worktree) tant que la ligne stockée est `open`/`draft`.
+C'est **la consultation du panneau** qui détecte le merge : ni webhook, ni
+scheduler, ni polling de fond. Un provider injoignable laisse la ligne stockée
+intacte (l'échec est loggé, jamais deviné), et une publication en vol court-
+circuite la relecture pour ne pas courir contre son propre push.
+
+Quand la réconciliation atteint `merged`, le même événement solde la run
+(`closeMergedRun`) : `cleanup()` du service git — worktree, branche locale
+`otomat/run/*`, `git worktree prune` —, la run non terminale rejoint `completed`
+(sans quoi elle continuerait à se projeter en `reviewing`, ramenant la carte en
+arrière et laissant publish/fix ouverts), puis l'issue rejoint `done` par
+`issueMachine`. `done` est terminal : toute reprise ultérieure (`resume`,
+`fix`) est refusée par `IllegalTransitionError`, que les routes rendent en
+`409 issue_closed`. Une issue déjà terminale (annulée) n'est pas touchée.
+
+Tant que la PR reste ouverte, rien n'est nettoyé : le worktree survit et
+`pr_open → reviewing → running` reste le chemin d'une reprise sur commentaires.
+
 ## Reprises & abort — greffent sur la même `spawnTurn`
 
 ```mermaid
@@ -135,6 +156,7 @@ stateDiagram-v2
 | Matérialisation (rows · plan · worktree) | [`supervisor/prepare.ts`](../../apps/local-daemon/src/supervisor/prepare.ts) |
 | Init du worktree (commandes du repository) | [`supervisor/worktree-init.ts`](../../apps/local-daemon/src/supervisor/worktree-init.ts) · [`supervisor/init-commands.ts`](../../apps/local-daemon/src/supervisor/init-commands.ts) |
 | Draft & publication de la PR | [`github/draft.ts`](../../apps/local-daemon/src/github/draft.ts) · [`github/publication/publisher.ts`](../../apps/local-daemon/src/github/publication/publisher.ts) |
+| Clôture au merge (worktree · branche · issue) | [`supervisor/merge-closure.ts`](../../apps/local-daemon/src/supervisor/merge-closure.ts) |
 | Exécution (spawn · activation · tail) | [`supervisor/lifecycle.ts`](../../apps/local-daemon/src/supervisor/lifecycle.ts) |
 | Worker enfant (durable) | [`supervisor/worker.ts`](../../apps/local-daemon/src/supervisor/worker.ts) |
 | Finalisation (live · abort · boot) | [`supervisor/settle.ts`](../../apps/local-daemon/src/supervisor/settle.ts) |

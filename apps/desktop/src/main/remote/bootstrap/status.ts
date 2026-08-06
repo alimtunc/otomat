@@ -1,12 +1,26 @@
-import type { RemoteHostStatus } from "@otomat/domain";
+import type {
+  ExecutionHostOperationResult,
+  RemoteHostErrorCode,
+  RemoteHostStatus,
+} from "@otomat/domain";
 
 import type { SshScriptResult } from "../ssh/script.js";
 import { parseBootstrapOutput } from "./scripts.js";
 
 export type RemoteErrorStatus = RemoteHostStatus & { phase: "error" };
 
+/** A coded remote failure as an operation result; the web catalog owns the wording. */
+export function errorResult(code: RemoteHostErrorCode): ExecutionHostOperationResult {
+  return { ok: false, status: { phase: "error", code, detail: null } };
+}
+
 export function trimDetail(text: string): string {
   return text.trim().split(/\r?\n/).slice(-3).join(" · ").slice(0, 300);
+}
+
+/** A one-shot ssh script that exited nonzero: its own stderr when it said anything, else the code. */
+export function scriptFailure(result: SshScriptResult): string {
+  return trimDetail(result.stderr) || `ssh exited with code ${String(result.code)}`;
 }
 
 export type BootstrapResolution = { failure: RemoteErrorStatus } | { detail: string };
@@ -18,7 +32,7 @@ export function resolveBootstrapResult(result: SshScriptResult): BootstrapResolu
       failure: {
         phase: "error",
         code: "ssh_unreachable",
-        detail: trimDetail(result.stderr) || `ssh exited with code ${String(result.code)}`,
+        detail: scriptFailure(result),
       },
     };
   }

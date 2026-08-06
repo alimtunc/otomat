@@ -31,10 +31,28 @@ class PullRequestPublisher implements PullRequestPublicationService {
     this.store = new PublicationStore(config);
   }
 
-  get(runId: string): PullRequestView | null {
-    let row = getPullRequestForRun(this.config.db, runId);
-    if (row && !this.publications.has(runId)) row = this.store.recoverInterrupted(row);
-    return row ? this.store.view(row) : null;
+  /** A read with write side effects: noticing a merge here settles the run's worktree and issue. */
+  async get(runId: string): Promise<PullRequestView | null> {
+    const stored = getPullRequestForRun(this.config.db, runId);
+    if (!stored) return null;
+    // A publication in flight is already talking to GitHub; this read must not race its push.
+    if (this.publications.has(runId)) return this.store.view(stored);
+    return this.store.view(await this.refreshLifecycle(this.store.recoverInterrupted(stored)));
+  }
+
+  /** The repository root is the cwd, not the worktree: a merge is exactly what takes that away. */
+  private async refreshLifecycle(row: PullRequestRow): Promise<PullRequestRow> {
+    if (row.number === null || (row.status !== "open" && row.status !== "draft")) return row;
+    const rootPath = this.config.repositories.forRun(row.run_id)?.rootPath;
+    if (rootPath === undefined) return row;
+    try {
+      const { repository } = await this.config.cli.resolveRemote(rootPath);
+      const provider = await this.config.cli.viewPullRequest(rootPath, repository, row.number);
+      return this.store.reconcileLifecycle(row, provider.lifecycle);
+    } catch (error) {
+      console.error(`[otomat] pull request refresh for run ${row.run_id} failed`, error);
+      return row;
+    }
   }
 
   publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView> {

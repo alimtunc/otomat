@@ -6,6 +6,8 @@ import {
   assertTagMatchesVersion,
   createArtifactManifest,
   createBuildInfo,
+  readPrNumber,
+  resolveBuildIdentity,
   SUPPORTED_RELEASE_ARCHS,
 } from "#release/metadata";
 
@@ -54,7 +56,31 @@ it("ties the build to its commit", () => {
     platform: "darwin",
     electron: "43.2.0",
     signed: true,
+    pr_number: null,
   });
+  expect(createBuildInfo({ ...BUILD, signed: false, pr: 77 }).pr_number).toBe(77);
+});
+
+it("reads PR_NUMBER, or fails rather than silently packaging the stable identity", () => {
+  expect(readPrNumber({})).toBeNull();
+  expect(readPrNumber({ PR_NUMBER: "" })).toBeNull();
+  expect(readPrNumber({ PR_NUMBER: " 77 " })).toBe(77);
+  expect(() => readPrNumber({ PR_NUMBER: "main" })).toThrow(/pull request number/);
+  expect(() => readPrNumber({ PR_NUMBER: "0" })).toThrow(/pull request number/);
+});
+
+it("names a preview after its pull request and leaves the stable identity alone", () => {
+  expect(resolveBuildIdentity(null)).toEqual({
+    pr: null,
+    productName: "Otomat",
+    appId: "com.otomat.desktop",
+  });
+  expect(resolveBuildIdentity(77)).toEqual({
+    pr: 77,
+    productName: "Otomat PR 77",
+    appId: "com.otomat.desktop.pr77",
+  });
+  expect(resolveBuildIdentity(78).appId).not.toBe(resolveBuildIdentity(77).appId);
 });
 
 it("publishes the artifact identity alongside the build identity", () => {

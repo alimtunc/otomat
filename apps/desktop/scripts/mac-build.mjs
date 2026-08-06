@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { APP_ID, assertMacHost, createBuildInfo, readProductVersion } from "./release/metadata.mjs";
+import { assertMacHost, createBuildInfo, readProductVersion } from "./release/metadata.mjs";
 
 const require = createRequire(import.meta.url);
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -15,7 +15,6 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 export const DESKTOP = join(HERE, "..");
 export const REPO = join(DESKTOP, "..", "..");
 export const RELEASE_OUT = join(DESKTOP, "release");
-export const PRODUCT_NAME = "Otomat";
 
 const WEB_DIST = join(REPO, "apps", "web", "dist");
 
@@ -29,7 +28,7 @@ function git(args) {
 }
 
 /** The identity every artifact of this build carries: version, commit, architecture, Electron. */
-export function resolveBuildInfo({ signed }) {
+export function resolveBuildInfo({ signed, pr = null }) {
   return createBuildInfo({
     version: readProductVersion(join(DESKTOP, "package.json")),
     commit: git(["rev-parse", "HEAD"]),
@@ -37,6 +36,7 @@ export function resolveBuildInfo({ signed }) {
     arch: process.arch,
     electronVersion: require("electron/package.json").version,
     signed,
+    pr,
   });
 }
 
@@ -55,7 +55,7 @@ function buildInputs() {
   }
 }
 
-function assembleStage(buildInfo) {
+function assembleStage(buildInfo, identity) {
   const stage = mkdtempSync(join(tmpdir(), "otomat-pack-"));
   cpSync(join(DESKTOP, "dist"), join(stage, "dist"), { recursive: true });
   cpSync(join(DESKTOP, "resources"), join(stage, "resources"), { recursive: true });
@@ -70,7 +70,7 @@ function assembleStage(buildInfo) {
     `${JSON.stringify(
       {
         name: "otomat-desktop",
-        productName: PRODUCT_NAME,
+        productName: identity.productName,
         version: buildInfo.version,
         main: "dist/main/index.js",
         private: true,
@@ -82,7 +82,7 @@ function assembleStage(buildInfo) {
   return stage;
 }
 
-function builderConfig({ buildInfo, signing }) {
+function builderConfig({ buildInfo, signing, identity }) {
   const mac =
     signing === null
       ? { identity: null, hardenedRuntime: false }
@@ -95,8 +95,8 @@ function builderConfig({ buildInfo, signing }) {
           notarize: true,
         };
   return {
-    appId: APP_ID,
-    productName: PRODUCT_NAME,
+    appId: identity.appId,
+    productName: identity.productName,
     copyright: `Copyright © ${buildInfo.committed_at.slice(0, 4)} Otomat`,
     electronVersion: buildInfo.electron,
     npmRebuild: false,
@@ -121,24 +121,34 @@ function builderConfig({ buildInfo, signing }) {
   };
 }
 
-function locateArtifacts(version, arch) {
-  const appDir = readdirSync(RELEASE_OUT).find((entry) =>
-    existsSync(join(RELEASE_OUT, entry, `${PRODUCT_NAME}.app`)),
+function locateArtifacts(productName) {
+  const entries = readdirSync(RELEASE_OUT);
+  const appDir = entries.find((entry) =>
+    existsSync(join(RELEASE_OUT, entry, `${productName}.app`)),
   );
-  if (appDir === undefined) throw new Error(`no ${PRODUCT_NAME}.app under ${RELEASE_OUT}`);
-  const dmgPath = join(RELEASE_OUT, `${PRODUCT_NAME}-${version}-${arch}.dmg`);
-  if (!existsSync(dmgPath)) throw new Error(`no DMG at ${dmgPath}`);
-  return { appPath: join(RELEASE_OUT, appDir, `${PRODUCT_NAME}.app`), dmgPath };
+  if (appDir === undefined) throw new Error(`no ${productName}.app under ${RELEASE_OUT}`);
+  // The output directory is rebuilt every run, so its single DMG is this build's, whatever
+  // electron-builder decided to call a product name containing spaces.
+  const dmgs = entries.filter((entry) => entry.endsWith(".dmg"));
+  if (dmgs.length !== 1) {
+    throw new Error(`expected exactly one DMG in ${RELEASE_OUT}, found ${String(dmgs.length)}`);
+  }
+  return {
+    appPath: join(RELEASE_OUT, appDir, `${productName}.app`),
+    dmgPath: join(RELEASE_OUT, dmgs[0]),
+  };
 }
 
 /**
- * @param {{ buildInfo: object, signing: { teamId: string } | null }} input
+ * @param {{ buildInfo: object, signing: { teamId: string } | null,
+ *   identity: { pr: number | null, productName: string, appId: string } }} input
  * @returns {{ appPath: string, dmgPath: string, releaseDir: string }}
  */
 export function buildMacApp(input) {
   assertMacHost(process.platform);
+  const { identity } = input;
   buildInputs();
-  const stage = assembleStage(input.buildInfo);
+  const stage = assembleStage(input.buildInfo, identity);
 
   try {
     writeFileSync(
@@ -157,8 +167,5 @@ export function buildMacApp(input) {
     rmSync(stage, { recursive: true, force: true });
   }
 
-  return {
-    ...locateArtifacts(input.buildInfo.version, input.buildInfo.arch),
-    releaseDir: RELEASE_OUT,
-  };
+  return { ...locateArtifacts(identity.productName), releaseDir: RELEASE_OUT };
 }

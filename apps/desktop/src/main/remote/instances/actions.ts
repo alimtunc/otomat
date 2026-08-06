@@ -9,7 +9,7 @@ import {
   stopDaemonScript,
   type RemoteDeployment,
 } from "../bootstrap/scripts.js";
-import { trimDetail } from "../bootstrap/status.js";
+import { scriptFailure, trimDetail } from "../bootstrap/status.js";
 import { runSshScript, type SshScriptResult } from "../ssh/script.js";
 import {
   deleteInstanceScript,
@@ -142,10 +142,6 @@ export class RemoteInstanceActions {
   private run(alias: string, script: string, timeoutMs: number): Promise<SshScriptResult> {
     return (this.options.runScript ?? runSshScript)({ alias, script, timeoutMs });
   }
-}
-
-function scriptFailure(result: SshScriptResult): string {
-  return trimDetail(result.stderr) || `ssh exited with code ${String(result.code)}`;
 }
 
 function describeDeployFailure(

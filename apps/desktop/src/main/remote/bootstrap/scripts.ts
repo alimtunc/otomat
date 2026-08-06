@@ -1,3 +1,5 @@
+import { lastToken } from "../ssh/tokens.js";
+
 /** Where a daemon lives on the host — a path under `$HOME` — and the loopback port it binds. */
 export interface RemoteDeployment {
   homeSuffix: string;
@@ -112,15 +114,10 @@ function liveDaemon(kind: "running" | "started", detail: string): RemoteBootstra
 
 /** Last `OTOMAT_REMOTE:` token wins; null means the script never reported (treated as a start failure). */
 export function parseBootstrapOutput(stdout: string): RemoteBootstrapOutcome | null {
-  const token = stdout
-    .split(/\r?\n/)
-    .filter((line) => line.startsWith(TOKEN_PREFIX))
-    .at(-1)
-    ?.slice(TOKEN_PREFIX.length);
-  const separator = token?.indexOf(":") ?? -1;
-  if (token === undefined || separator === -1) return null;
-  const detail = token.slice(separator + 1);
-  switch (token.slice(0, separator)) {
+  const token = lastToken(stdout, TOKEN_PREFIX);
+  if (token === null) return null;
+  const { detail } = token;
+  switch (token.kind) {
     case "RUNNING":
       return liveDaemon("running", detail);
     case "STARTED":

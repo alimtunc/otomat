@@ -1,4 +1,4 @@
-import type { ExternalIssueSource, SourceLabel } from "@otomat/domain";
+import type { ExternalIssueSource, IssueState, SourceLabel } from "@otomat/domain";
 import { and, eq } from "drizzle-orm";
 
 import type { Db } from "../client.js";
@@ -80,6 +80,11 @@ export function upsertMirroredIssue(db: Db, value: MirroredIssue): void {
 
 export function getIssue(db: Db, id: string): IssueRow | undefined {
   return db.select().from(issues).where(eq(issues.id, id)).get();
+}
+
+/** Persists one issue state; callers validate the edge through `issueMachine` first. */
+export function updateIssueStatus(db: Db, id: string, status: IssueState): void {
+  db.update(issues).set(touch({ status })).where(eq(issues.id, id)).run();
 }
 
 /** Re-points a local issue at another project; mirrored issues are refused by the caller. */

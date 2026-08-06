@@ -1,5 +1,6 @@
 import { CompeteWinnerConflictError } from "@otomat/db";
 import {
+  IllegalTransitionError,
   selectCompeteWinnerRequestSchema,
   startRunRequestSchema,
   type RunLaunchError,
@@ -85,6 +86,10 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
     } catch (error) {
       if (error instanceof RunNotResumableError) {
         return c.json({ error: "run_not_resumable" }, 409);
+      }
+      // The issue closed with its merge; the state machine is the one refusing, verbatim.
+      if (error instanceof IllegalTransitionError && error.machine === "issue") {
+        return c.json({ error: "issue_closed", message: error.message }, 409);
       }
       console.error(`[otomat] resume run ${run.id} failed`, error);
       return c.json({ error: "run_resume_failed" }, 500);

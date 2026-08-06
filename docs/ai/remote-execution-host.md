@@ -32,7 +32,12 @@ desktop app stays the UI. This document is the contract for that mode.
   local) so the other host's projects stay listable.
 - **Projects are managed from the switcher, on either host.** "Add project…"
   registers a repository path on the chosen host's daemon over its HTTP API,
-  with honest typed refusals while that host's tunnel is not connected yet.
+  with honest typed refusals while that host's tunnel is not connected yet. For
+  the remote host it first offers the host's own git working trees, listed over
+  one bounded ssh round trip (`host/repos.ts`: `find` under `$HOME`, depth ≤ 4,
+  heavy directories pruned, END token). Picking one fills the path; the free
+  path field stays for anything the walk cannot see. A listing that never
+  completed is an error, never an empty list.
   Projects whose daemon reports `has_repository: false` (the auto-created
   bootstrap project before any repository is registered) are hidden from the
   switcher. "Remove host" only forgets the alias and closes the tunnel — the
@@ -115,6 +120,17 @@ deployment under `~/.otomat/instances/<sha7>/` — keyed by the build it expects
 so testing an artifact runs beside the daemon real work runs on, never inside
 it.
 
+An instance also gets the preview's sandbox: on the first connect, the desktop
+creates the same fixture repository as the local sandbox **inside the instance
+directory** (`~/.otomat/instances/<sha7>/test-repo`, one ssh script — files by
+heredoc, `git init -b main` and a commit under an explicit identity) and seeds
+its issues through the tunnel with the daemon's public HTTP API. Both halves are
+idempotent (an already committed repository is left alone; a 409 registration
+means the issues are already there), so a reconnect costs one round trip and
+changes nothing. Because everything lives inside the instance directory —
+daemon, data, worktrees, fixture repository — **Delete** on the panel below
+removes every trace of that build from the host in one action.
+
 *Settings → Execution hosts → Deployments on this host* lists the instances
 (build, running state, port, size) with explicit **Stop** and **Delete**
 actions, and a deploy button that installs the CI bundle for the app's own
@@ -138,6 +154,8 @@ Everything lives in `apps/desktop/src/main/remote/`:
 | `ssh/tunnel.ts`          | the `ssh -N -L` child (loopback→loopback, `ExitOnForwardFailure`)    |
 | `session.ts`             | phase machine: checking_host → starting_daemon → opening_tunnel → connected, reconnect loop with capped backoff |
 | `host/projects.ts`       | `HostCatalog`: aggregated per-host catalog listing + project registration over the host daemon's HTTP API; an unreachable host yields null, logged |
+| `host/alias.ts`          | ssh alias validation (one concrete word, never a leading `-`) and the alias listing that degrades to empty when `~/.ssh/config` cannot be read |
+| `host/repos.ts`          | the bounded `$HOME` git-repository walk behind the remote picker; a listing counts only with its END token |
 | `manager.ts`             | persisted selection, project-driven switching, boot re-activation, host configure/remove |
 | `stale-daemon.ts`        | restarts a redeployed-but-stale remote daemon once it is idle (never with a run in flight; one attempt per observed build) |
 | `instances/scripts.ts`   | deploy/list/delete scripts for `~/.otomat/instances`; a listing counts only with its END token |
@@ -155,8 +173,9 @@ The renderer learns the active host synchronously at preload
 is simply the tunnel's local origin, so the web app's existing health polling,
 offline banner, and SSE resume behave identically for both hosts. Hosts are
 managed in Settings → Execution hosts (alias only — the active host follows the
-project picked in the switcher); the repository form asks for a path on the
-host (the native folder picker is local-only and hidden).
+project picked in the switcher); the repository form lists the host's own
+repositories and keeps a path field (the native folder picker is local-only and
+hidden).
 
 ## Known V1 limits
 

@@ -22,6 +22,7 @@ import {
   useRegisterRepository,
 } from "@web/api/repositories/mutations";
 import { projectSwitcherKey } from "@web/components/shell/project-selection/host-key";
+import { RemoteRepositoryPicker } from "@web/components/shell/project-selection/remote-repository-picker";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 import { useState } from "react";
 
@@ -125,6 +126,12 @@ export function AddProjectDialog({ open, onOpenChange, hosts, onSelect }: AddPro
                     </SegmentedItem>
                   ))}
                 </SegmentedControl>
+              </Field>
+            ) : null}
+            {bridge !== null && hostId === "remote" ? (
+              <Field hint="Git repositories found under the host's home directory.">
+                <FieldLabel>Repository on {hostLabel}</FieldLabel>
+                <RemoteRepositoryPicker value={path} onSelect={setPath} enabled={open} />
               </Field>
             ) : null}
             <Field hint="Absolute path of an existing git repository on that host.">

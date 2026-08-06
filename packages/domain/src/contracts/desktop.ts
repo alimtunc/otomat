@@ -12,6 +12,7 @@ import type {
   ExecutionHostSnapshot,
   RemoteHostStatus,
   RemoteInstanceListResult,
+  RemoteRepositoryListResult,
 } from "./execution-host.js";
 import type { LinearErrorCode } from "./linear.js";
 
@@ -80,6 +81,8 @@ export interface OtomatDesktopBridge {
       path: string,
     ): Promise<ExecutionHostRegisterProjectResult>;
     listSshAliases(): Promise<string[]>;
+    /** Git working trees found under the remote host's `$HOME`; a truncated listing is a failure, never an empty list. */
+    listRemoteRepositories(): Promise<RemoteRepositoryListResult>;
     /** Every configured host with its project catalog, fetched by the main process so the renderer never talks to the inactive daemon directly. */
     listProjects(): Promise<ExecutionHostProjectsEntry[]>;
     /** Subscribes to live remote-connection status; returns the unsubscribe function. */

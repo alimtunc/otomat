@@ -25,11 +25,16 @@ target. Adding Intel or a universal binary means adding a runner of that archite
 ## PR preview builds
 
 Every pull request to `main` packages this same unsigned artifact once its `pnpm check` gate is
-green: CI runs `pnpm desktop:package` on an Apple Silicon runner, exercises the result with
-`pnpm desktop:smoke`, and only then uploads the DMG as a workflow artifact named
+green: CI runs `pnpm desktop:package` on an Apple Silicon runner with `PR_NUMBER` set, exercises
+the result with `pnpm desktop:smoke`, and only then uploads the DMG as a workflow artifact named
 `otomat-pr-<number>-macos-arm64-<short-sha>`, kept for 7 days. The embedded `build-info.json`
-names the PR's head commit, not the merge commit CI tests elsewhere. No Apple secret is read or
-required: the preview is ad-hoc signed and not notarized, and the signed workflow in
+names the PR's head commit, not the merge commit CI tests elsewhere. `PR_NUMBER` also names the
+build after its pull request — **Otomat PR 77.app**, bundle id `com.otomat.desktop.pr77`, data in
+`Otomat Preview PR 77` — so two previews under test and the stable install coexist on one Mac
+sharing no app, no single-instance lock and no data. A malformed `PR_NUMBER` fails the build
+rather than quietly packaging the stable identity, and `pnpm desktop:release` passes the stable
+identity explicitly, so no environment variable can rename a signed build. No Apple secret is read
+or required: the preview is ad-hoc signed and not notarized, and the signed workflow in
 `.github/workflows/release-macos.yml` remains the only distribution path. A companion
 `daemon-bundle` job publishes the same commit's linux-x64 daemon deploy for the
 [remote execution host](../ai/remote-execution-host.md), and a sticky PR comment links both
@@ -39,29 +44,33 @@ To test a preview on an Apple Silicon Mac — no checkout, Node or pnpm required
 
 1. Download the `otomat-pr-…` artifact from the link in the PR's preview comment, or from the CI
    run's *Summary*.
-2. Unzip the download, open the DMG inside, and drag **Otomat** into **Applications**.
+2. Unzip the download, open the DMG inside, and drag **Otomat PR &lt;number&gt;** into
+   **Applications**.
 3. A plain launch is refused — macOS reports the app as damaged or unverifiable, because the
    preview is neither Developer ID signed nor notarized. That refusal is Gatekeeper working as
    intended; the explicit opt-in for an internal build is stripping its quarantine flag:
 
    ```sh
-   xattr -dr com.apple.quarantine /Applications/Otomat.app
+   xattr -dr com.apple.quarantine "/Applications/Otomat PR 77.app"
    ```
 
-4. Launch Otomat from Finder. To confirm which build is running, export a support bundle
+4. Launch it from Finder. To confirm which build is running, export a support bundle
    (*Data Safety → Export Support Bundle…*): `versions.commit` must start with the short SHA in
-   the artifact name.
+   the artifact name — each preview's bundle names its own commit.
 
-A preview keeps its data in `~/Library/Application Support/Otomat Preview`, beside — never
-inside — the stable install's data, so both apps run side by side and deleting that one folder
-removes every trace of preview testing. On first launch it seeds a sandbox: a disposable
-fixture repository (`test-repo` inside that data folder) registered with a handful of ready-made
-issues, so there is something to launch runs against immediately. *Settings → Sandbox → Reset
-test data* wipes the database, runs, worktrees and the fixture repository, then reseeds —
+A preview keeps its data in `~/Library/Application Support/Otomat Preview PR <number>`, beside —
+never inside — the stable install's data (a preview built without a PR number uses
+`Otomat Preview`). Several previews and the stable app therefore run side by side, and deleting
+that one folder removes every trace of testing that PR. On first launch it seeds a sandbox: a
+disposable fixture repository (`test-repo` inside that data folder) registered with a handful of
+ready-made issues, so there is something to launch runs against immediately. *Settings → Sandbox →
+Reset test data* wipes the database, runs, worktrees and the fixture repository, then reseeds —
 every test session can start from the same known state. Pointed at a remote execution host, a
 preview targets its own isolated daemon under `~/.otomat/instances/<short-sha>` there —
-provisioned on demand from the PR's daemon-bundle artifact and controlled (stop, delete, deploy)
-from *Settings → Execution hosts* — so testing an artifact never disturbs the stable daemon
+provisioned on demand from the PR's daemon-bundle artifact, given the same fixture repository and
+issues inside that directory on connect, and controlled (stop, delete, deploy) from *Settings →
+Execution hosts*, where **Delete** removes daemon, data, worktrees and fixture in one action — so
+testing an artifact never disturbs the stable daemon
 ([test instances](../ai/remote-execution-host.md#test-instances)).
 
 A preview is for the team's own test hardware only. Handing someone a DMG plus quarantine-stripping
