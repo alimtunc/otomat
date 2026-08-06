@@ -13,6 +13,23 @@ const GIT_OPTIONS = [
   "commit.gpgsign=false",
 ];
 
+// Repo-location vars a parent process (notably a `pre-push` hook) exports; left in the child
+// env they aim these cwd-scoped calls at that repo, re-initializing it and staging into it.
+const GIT_ISOLATION_ENV_VARS = [
+  "GIT_DIR",
+  "GIT_WORK_TREE",
+  "GIT_INDEX_FILE",
+  "GIT_COMMON_DIR",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_PREFIX",
+];
+
+function fixtureEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  for (const key of GIT_ISOLATION_ENV_VARS) delete env[key];
+  return env;
+}
+
 /**
  * Creates the sandbox fixture repository from the shipped template — a tiny dependency-free
  * Node project committed on `main`, so the daemon accepts it for registration and worktree
@@ -36,6 +53,7 @@ function hasCommit(dir: string): boolean {
   const probe = spawnSync("git", [...GIT_OPTIONS, "rev-parse", "--verify", "HEAD"], {
     cwd: dir,
     stdio: "ignore",
+    env: fixtureEnv(),
   });
   return probe.status === 0;
 }
@@ -53,5 +71,5 @@ function copyTemplate(from: string, to: string): void {
 }
 
 function git(cwd: string, args: string[]): void {
-  execFileSync("git", [...GIT_OPTIONS, ...args], { cwd, stdio: "pipe" });
+  execFileSync("git", [...GIT_OPTIONS, ...args], { cwd, stdio: "pipe", env: fixtureEnv() });
 }
