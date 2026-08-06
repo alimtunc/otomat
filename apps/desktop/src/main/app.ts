@@ -1,23 +1,24 @@
 import { basename } from "node:path";
 
-import type { DesktopStartupDiagnostic, RemoteHostStatus } from "@otomat/domain";
+import type { DesktopStartupDiagnostic } from "@otomat/domain";
 import { app, BrowserWindow, ipcMain } from "electron";
 
 import { DEV_SERVER_ENV } from "#shared/constants";
-import { EXECUTION_HOST_STATUS_CHANNEL } from "#shared/ipc-channels";
+import {
+  EXECUTION_HOST_STATUS_CHANNEL,
+  LINEAR_DELIVERY_STATUS_CHANNEL,
+} from "#shared/ipc-channels";
 import { SPLASH_RETRY_CHANNEL, SPLASH_STATUS_CHANNEL, type StartupStatus } from "#shared/startup";
 import { resolveUserPath } from "#shared/user-path";
 
 import { readBuildInfo } from "./build-info.js";
 import { buildCsp } from "./csp.js";
 import { resolveExpectedBuild } from "./expected-build.js";
+import { buildIpcActions } from "./ipc-actions.js";
 import { registerIpc, type IpcState } from "./ipc.js";
-import { unavailableLinear } from "./linear-coordinator.js";
 import { installApplicationMenu } from "./menu.js";
 import type { AppPaths } from "./paths.js";
-import { SANDBOX_NOT_READY } from "./preview/sandbox.js";
 import { serveAppScheme } from "./protocol.js";
-import { buildExecutionHostActions } from "./remote/ipc-actions.js";
 import { createDesktopRuntime, type DesktopRuntime } from "./runtime.js";
 import { hardenWebContents, resolveAllowedOrigins } from "./security.js";
 import {
@@ -64,24 +65,13 @@ export class DesktopApp {
   }
 
   async onReady(): Promise<void> {
-    registerIpc(this.ipcState, {
-      saveLinearKey: (apiKey) =>
-        this.runtime?.linear.save(apiKey) ?? Promise.resolve(unavailableLinear()),
-      forgetLinearKey: () => this.runtime?.linear.forget() ?? Promise.resolve(unavailableLinear()),
+    const actions = buildIpcActions({
+      runtime: () => this.runtime,
+      support: this.support,
       restoreBackup: () => this.restoreBackup(),
-      exportSupportBundle: () => this.support.exportBundle(),
-      showDataPolicy: () => this.support.showDataPolicy(),
-      resetSandbox: async () => {
-        const result = await (this.runtime?.sandbox.reset() ?? Promise.resolve(SANDBOX_NOT_READY));
-        // Reload only after success: a failure must leave the page alive to show the message.
-        if (result.ok) this.cockpit?.webContents.reload();
-        return result;
-      },
-      executionHost: buildExecutionHostActions(
-        () => this.runtime?.hosts ?? null,
-        () => this.runtime?.instances ?? null,
-      ),
+      reloadCockpit: () => this.cockpit?.webContents.reload(),
     });
+    registerIpc(this.ipcState, actions);
     ipcMain.on(SPLASH_RETRY_CHANNEL, () => void this.runStartup());
     const origins = resolveAllowedOrigins(this.devServer, (message) => this.log.write(message));
     app.on("web-contents-created", (_event, contents) => hardenWebContents(contents, origins));
@@ -136,21 +126,28 @@ export class DesktopApp {
         expectedBuild: resolveExpectedBuild((message) => this.log.write(message)),
         preview: this.ipcState.preview,
         localDaemonUrl: () => this.localDaemonUrl,
-        onRemoteStatus: (status) => this.sendRemoteStatus(status),
+        onRemoteStatus: (status) => {
+          this.sendToCockpit(EXECUTION_HOST_STATUS_CHANNEL, status);
+          // A host that just answered may lack the Linear key, or still hold a revoked one.
+          if (status.phase === "connected") void this.runtime?.linear.reconcile();
+        },
+        onLinearDelivery: (delivery) =>
+          this.sendToCockpit(LINEAR_DELIVERY_STATUS_CHANNEL, delivery),
         applyRendererUrl: (url) => this.applyRendererUrl(url),
         onSandboxDaemonStarted: (url) => {
           this.localDaemonUrl = url;
-          void this.runtime?.linear.restore();
+          void this.runtime?.linear.reconcile();
           // An active remote session keeps the tunnel URL; only the local view re-points.
           if (this.runtime?.hosts.activeHostId !== "remote") this.ipcState.daemonUrl = url;
         },
       });
       this.localDaemonUrl = await this.runtime.daemon.start();
       this.ipcState.daemonUrl = this.localDaemonUrl;
-      await this.runtime.linear.restore();
       await this.runtime.sandbox.ensure(this.localDaemonUrl);
       const remoteUrl = await this.runtime.hosts.bootActivate();
       if (remoteUrl !== null) this.ipcState.daemonUrl = remoteUrl;
+      // Resolving Linear targets warms the remote session, so it must not precede bootActivate's port reservation.
+      await this.runtime.linear.reconcile();
       this.rejectedBackupPaths.clear();
       this.diagnostic = null;
       this.openCockpit();
@@ -226,10 +223,10 @@ export class DesktopApp {
     this.cockpit?.webContents.reload();
   }
 
-  private sendRemoteStatus(status: RemoteHostStatus): void {
+  private sendToCockpit(channel: string, payload: unknown): void {
     const contents = this.cockpit?.webContents;
     if (contents === undefined || contents.isDestroyed()) return;
-    contents.send(EXECUTION_HOST_STATUS_CHANNEL, status);
+    contents.send(channel, payload);
   }
 
   private openCockpit(): void {

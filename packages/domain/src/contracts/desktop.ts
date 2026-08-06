@@ -52,6 +52,28 @@ export type LinearVaultOperationResult =
   | { ok: true; message: null }
   | { ok: false; message: string; error_code: LinearErrorCode | null };
 
+/** `delivered` and `cleared` are confirmed by that host's daemon; the rest is what Otomat still owes it, or could not ask. */
+export type LinearHostDeliveryState =
+  | "delivered"
+  | "cleared"
+  | "pending_restore"
+  | "pending_revocation"
+  | "unavailable";
+
+export interface LinearHostDelivery {
+  host_id: ExecutionHostId;
+  label: string;
+  state: LinearHostDeliveryState;
+  /** The last failure this host reported, or why it could not be reached; null when there is none. */
+  detail: string | null;
+}
+
+export interface LinearDeliverySnapshot {
+  /** True while this machine's vault holds a key — independent of any execution host. */
+  stored: boolean;
+  hosts: LinearHostDelivery[];
+}
+
 export type PreviewSandboxResetResult =
   | { ok: true; message: null }
   | { ok: false; message: string };
@@ -95,8 +117,14 @@ export interface OtomatDesktopBridge {
     updateRemoteDaemon(): Promise<ExecutionHostOperationResult>;
   };
   linear: {
+    /** Connects the workspace for the whole app: the key is vaulted here and handed to every host's daemon. */
     saveKey(apiKey: string): Promise<LinearVaultOperationResult>;
+    /** Erases the vault and revokes the key on every reachable host; unreachable ones stay pending. */
     forgetKey(): Promise<LinearVaultOperationResult>;
+    /** Where the vault key stands on each execution host right now. */
+    delivery(): Promise<LinearDeliverySnapshot>;
+    /** Subscribes to delivery changes pushed by the main process; returns the unsubscribe function. */
+    onDelivery(listener: (snapshot: LinearDeliverySnapshot) => void): () => void;
   };
   /** True for a packaged preview (unsigned build); the sandbox surface is only shown — and its reset only honored — when true. */
   readonly preview: boolean;

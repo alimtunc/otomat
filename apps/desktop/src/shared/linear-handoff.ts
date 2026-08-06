@@ -46,3 +46,7 @@ export async function pushLinearKey(options: LinearHandoffOptions): Promise<void
 export async function clearLinearKey(daemonUrl: string): Promise<void> {
   await createDaemonClient({ baseUrl: daemonUrl }).disconnectLinear();
 }
+
+export function readLinearConnection(daemonUrl: string): Promise<LinearConnectionContract> {
+  return createDaemonClient({ baseUrl: daemonUrl }).getLinearConnection();
+}

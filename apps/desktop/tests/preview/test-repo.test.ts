@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,6 +9,10 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { ensureTestRepo } from "#main/preview/test-repo";
 
 const TEMPLATE_DIR = fileURLToPath(new URL("../../resources/sandbox", import.meta.url));
+
+function git(cwd: string, args: string[]): string {
+  return execFileSync("git", args, { cwd, encoding: "utf8", stdio: "pipe" }).trim();
+}
 
 const scratchDirs: string[] = [];
 
@@ -36,67 +40,52 @@ describe("ensureTestRepo", () => {
 
     expect(ensureTestRepo(dir, TEMPLATE_DIR)).toBe(true);
 
-    const branch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
-      cwd: dir,
-      encoding: "utf8",
-    }).trim();
-    expect(branch).toBe("main");
-    const status = execFileSync("git", ["status", "--porcelain"], {
-      cwd: dir,
-      encoding: "utf8",
-    }).trim();
-    expect(status).toBe("");
+    expect(git(dir, ["rev-parse", "--abbrev-ref", "HEAD"])).toBe("main");
+    expect(git(dir, ["status", "--porcelain"])).toBe("");
   });
 
   it("rebuilds a repository whose creation died before the first commit", () => {
     const dir = join(scratch(), "test-repo");
     mkdirSync(dir, { recursive: true });
-    execFileSync("git", ["init", "-b", "main"], { cwd: dir, stdio: "pipe" });
+    git(dir, ["init", "-b", "main"]);
 
     expect(ensureTestRepo(dir, TEMPLATE_DIR)).toBe(true);
 
-    execFileSync("git", ["rev-parse", "--verify", "HEAD"], { cwd: dir, stdio: "pipe" });
-    const status = execFileSync("git", ["status", "--porcelain"], {
-      cwd: dir,
-      encoding: "utf8",
-    }).trim();
-    expect(status).toBe("");
-  });
-
-  it("ignores the git environment a hook exports instead of committing into that repository", () => {
-    const outer = join(scratch(), "outer");
-    mkdirSync(outer, { recursive: true });
-    execFileSync("git", ["init", "-b", "main"], { cwd: outer, stdio: "pipe" });
-    const dir = join(scratch(), "test-repo");
-    process.env.GIT_DIR = join(outer, ".git");
-    process.env.GIT_INDEX_FILE = join(outer, ".git", "index");
-
-    try {
-      expect(ensureTestRepo(dir, TEMPLATE_DIR)).toBe(true);
-    } finally {
-      delete process.env.GIT_DIR;
-      delete process.env.GIT_INDEX_FILE;
-    }
-
-    const branch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
-      cwd: dir,
-      encoding: "utf8",
-    }).trim();
-    expect(branch).toBe("main");
-    const outerHead = spawnSync("git", ["rev-parse", "--verify", "HEAD"], {
-      cwd: outer,
-      stdio: "ignore",
-    });
-    expect(outerHead.status).not.toBe(0);
+    git(dir, ["rev-parse", "--verify", "HEAD"]);
+    expect(git(dir, ["status", "--porcelain"])).toBe("");
   });
 
   it("leaves an existing repository untouched", () => {
     const dir = join(scratch(), "test-repo");
     ensureTestRepo(dir, TEMPLATE_DIR);
-    const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: dir, encoding: "utf8" });
+    const head = git(dir, ["rev-parse", "HEAD"]);
 
     expect(ensureTestRepo(dir, TEMPLATE_DIR)).toBe(false);
 
-    expect(execFileSync("git", ["rev-parse", "HEAD"], { cwd: dir, encoding: "utf8" })).toBe(head);
+    expect(git(dir, ["rev-parse", "HEAD"])).toBe(head);
+  });
+
+  it("ignores the git environment a hook exports instead of committing into that repository", () => {
+    const outer = join(scratch(), "outer");
+    mkdirSync(outer, { recursive: true });
+    git(outer, ["init", "-b", "main"]);
+    const dir = join(scratch(), "test-repo");
+
+    // Exactly what `git push` exports to the pre-push hook that runs this suite.
+    process.env.GIT_DIR = join(outer, ".git");
+    process.env.GIT_WORK_TREE = outer;
+    process.env.GIT_INDEX_FILE = join(outer, ".git", "index");
+    try {
+      expect(ensureTestRepo(dir, TEMPLATE_DIR)).toBe(true);
+    } finally {
+      delete process.env.GIT_DIR;
+      delete process.env.GIT_WORK_TREE;
+      delete process.env.GIT_INDEX_FILE;
+    }
+
+    expect(git(dir, ["rev-parse", "--abbrev-ref", "HEAD"])).toBe("main");
+    expect(git(outer, ["diff", "--cached", "--name-only"])).toBe("");
+    expect(git(outer, ["config", "core.bare"])).toBe("false");
+    expect(() => git(outer, ["rev-parse", "--verify", "HEAD"])).toThrow();
   });
 });

@@ -59,6 +59,7 @@ function sessionFor(worktree: string, appData: string): { root: string; env: Nod
     preview: false,
     localDaemonUrl: () => "",
     onRemoteStatus: () => {},
+    onLinearDelivery: () => {},
     applyRendererUrl: () => {},
     onSandboxDaemonStarted: () => {},
   });

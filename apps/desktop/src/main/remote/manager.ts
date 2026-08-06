@@ -16,13 +16,15 @@ import {
   writeExecutionHostsConfigSafe,
   type ExecutionHostsConfig,
 } from "./host/config.js";
-import { HostCatalog } from "./host/projects.js";
+import { HostCatalog, type ResolvedDaemonUrl } from "./host/projects.js";
 import {
   RemoteHostSession,
   type RemoteSessionHandle,
   type RemoteSessionOptions,
 } from "./session.js";
 import { listSshConfigAliases } from "./ssh/config-aliases.js";
+
+const SWITCH_IN_PROGRESS = "A host switch is in progress. Try again in a moment.";
 
 export interface ExecutionHostManagerOptions {
   dataDir: string;
@@ -92,9 +94,7 @@ export class ExecutionHostManager {
   }
 
   configureRemote(sshAlias: unknown): ExecutionHostOperationResult {
-    if (this.switching) {
-      return { ok: false, message: "A host switch is in progress. Try again in a moment." };
-    }
+    if (this.switching) return { ok: false, message: SWITCH_IN_PROGRESS };
     const validated = validateSshAlias(sshAlias);
     if ("message" in validated) return { ok: false, message: validated.message };
     const { alias } = validated;
@@ -144,6 +144,10 @@ export class ExecutionHostManager {
     return this.catalog.listProjects();
   }
 
+  daemonUrl(hostId: ExecutionHostId): ResolvedDaemonUrl {
+    return this.catalog.resolveBaseUrl(hostId);
+  }
+
   registerProject(
     hostId: ExecutionHostId,
     path: string,
@@ -152,9 +156,7 @@ export class ExecutionHostManager {
   }
 
   removeRemote(): ExecutionHostOperationResult {
-    if (this.switching) {
-      return { ok: false, message: "A host switch is in progress. Try again in a moment." };
-    }
+    if (this.switching) return { ok: false, message: SWITCH_IN_PROGRESS };
     if (this.activeHostId === "remote") {
       return { ok: false, message: "Switch to a local project before removing the host." };
     }

@@ -29,12 +29,9 @@ afterEach(async () => {
 function installDesktopBridge(
   saveKey: (apiKey: string) => Promise<LinearVaultOperationResult>,
 ): void {
-  window.otomat = fakeDesktopBridge({
-    linear: {
-      saveKey,
-      forgetKey: async () => ({ ok: true, message: null }),
-    },
-  });
+  const bridge = fakeDesktopBridge();
+  bridge.linear.saveKey = saveKey;
+  window.otomat = bridge;
 }
 
 async function renderForm(connectionError: string | null = null) {

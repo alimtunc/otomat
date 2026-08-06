@@ -11,6 +11,9 @@ import {
 import type { RemoteSessionHandle } from "../session.js";
 import { StaleDaemonRefresher } from "../stale-daemon.js";
 
+/** Where a host's daemon answers, or why it cannot be reached. */
+export type ResolvedDaemonUrl = { url: string } | { message: string };
+
 /** One host's project catalog over plain HTTP; unreachable or invalid reads null (logged), never an error. */
 async function fetchProjectCatalog(
   baseUrl: string,
@@ -121,7 +124,8 @@ export class HostCatalog {
     }
   }
 
-  private resolveBaseUrl(hostId: ExecutionHostId): { url: string } | { message: string } {
+  /** Asking warms an idle remote host. */
+  resolveBaseUrl(hostId: ExecutionHostId): ResolvedDaemonUrl {
     if (hostId === "local") {
       const url = this.options.localDaemonUrl();
       return url === "" ? { message: "The local daemon is not running yet." } : { url };
