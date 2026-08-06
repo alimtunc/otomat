@@ -1,5 +1,4 @@
 // @vitest-environment happy-dom
-import type { DiffFileContract } from "@otomat/domain";
 import { revealAndFocus } from "@web/components/runs/diff/diff-nav";
 import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
 import { useDiffKeyboardNav } from "@web/components/runs/diff/use-diff-keyboard-nav";
@@ -7,22 +6,10 @@ import { act, useState } from "react";
 import { describe, expect, it } from "vitest";
 
 import { diffLineRow } from "#support/diff-dom";
+import { diffFile } from "#support/diff-file";
 import { mount } from "#support/mount";
 
-function file(path: string): DiffFileContract {
-  return {
-    path,
-    old_path: null,
-    status: "modified",
-    additions: 1,
-    deletions: 0,
-    binary: false,
-    patch: "",
-    sha: `sha-${path}`,
-  };
-}
-
-const files = [file("a.ts"), file("b.ts")];
+const files = [diffFile({ path: "a.ts" }), diffFile({ path: "b.ts" })];
 
 /** Context rows separate the changed rows so each `+` starts its own contiguous block. */
 function cardMarkup(path: string, ids: readonly string[]): string {

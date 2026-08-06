@@ -1,25 +1,21 @@
 // @vitest-environment happy-dom
-import type { DiffFileContract } from "@otomat/domain";
 import { ThemeProvider } from "@otomat/ui";
 import { DiffFileCard, type DiffFileCardProps } from "@web/components/runs/diff/files/card";
 import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { MODIFIED_FILE_PATCH, stubDiffCanvas } from "#support/diff-dom";
+import { diffFile } from "#support/diff-file";
 import { mount } from "#support/mount";
 
 stubDiffCanvas();
 
-const file: DiffFileContract = {
+const file = diffFile({
   path: "src/index.ts",
-  old_path: null,
-  status: "modified",
-  additions: 1,
   deletions: 1,
-  binary: false,
   patch: MODIFIED_FILE_PATCH,
   sha: "file-sha",
-};
+});
 
 function renderCard(overrides: Partial<DiffFileCardProps> = {}) {
   return mount(

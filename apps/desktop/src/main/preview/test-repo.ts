@@ -31,10 +31,21 @@ export function ensureTestRepo(dir: string, templateDir: string): boolean {
   return true;
 }
 
+// A git hook exports GIT_DIR, GIT_INDEX_FILE and friends; inheriting them would aim these
+// commands at the surrounding repository instead of the fixture. GIT_EXEC_PATH stays because
+// git needs it to find its own subcommands.
+function fixtureEnv(): NodeJS.ProcessEnv {
+  const entries = Object.entries(process.env).filter(
+    ([key]) => !key.startsWith("GIT_") || key === "GIT_EXEC_PATH",
+  );
+  return Object.fromEntries(entries);
+}
+
 // spawnSync, not execFileSync: a missing HEAD must read as false, not throw.
 function hasCommit(dir: string): boolean {
   const probe = spawnSync("git", [...GIT_OPTIONS, "rev-parse", "--verify", "HEAD"], {
     cwd: dir,
+    env: fixtureEnv(),
     stdio: "ignore",
   });
   return probe.status === 0;
@@ -53,5 +64,5 @@ function copyTemplate(from: string, to: string): void {
 }
 
 function git(cwd: string, args: string[]): void {
-  execFileSync("git", [...GIT_OPTIONS, ...args], { cwd, stdio: "pipe" });
+  execFileSync("git", [...GIT_OPTIONS, ...args], { cwd, env: fixtureEnv(), stdio: "pipe" });
 }
