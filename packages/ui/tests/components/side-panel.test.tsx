@@ -213,6 +213,18 @@ describe("side panels", () => {
     expect(storedSize(FILES_GROUP, "files")).toBeCloseTo(asPercent(FILES_DEFAULT_WIDTH), 0);
   });
 
+  it("mounts against a stored layout that names fewer panels than the group renders", async () => {
+    window.localStorage.setItem(
+      `react-resizable-panels:${FILES_GROUP}`,
+      JSON.stringify({ diff: 100 }),
+    );
+
+    const container = await render(<FileBrowser />);
+
+    expect(container.textContent).toContain("file list");
+    expect(separatorOf(container).getAttribute("aria-label")).toBe("Resize Changed files");
+  });
+
   it("restores a persisted width on the next mount", async () => {
     const first = await render(<FileBrowser />);
     await press(separatorOf(first), "ArrowRight");
