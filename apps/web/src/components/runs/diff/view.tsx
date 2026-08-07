@@ -2,10 +2,11 @@ import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
 import {
   EmptyState,
   ErrorState,
-  ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
+  SidePanel,
   useMediaQuery,
+  usePanelGroupLayout,
   WIDE_VIEWPORT_MEDIA_QUERY,
 } from "@otomat/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
@@ -43,6 +44,7 @@ export function RunDiffView() {
   const selection = useReviewSelection(runId);
   const [activePath, setActivePath] = useState<string | null>(null);
   const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
+  const filesLayout = usePanelGroupLayout("otomat.run-diff");
   const mode = useSelector(diffViewModeStore);
   const browserMode = useSelector(diffBrowserModeStore);
   const diff = diffQuery.data?.diff ?? null;
@@ -136,14 +138,14 @@ export function RunDiffView() {
   );
 
   const browsedRegion = wide ? (
-    <ResizablePanelGroup autoSaveId="otomat.diff-files" className="min-h-0 flex-1">
-      <ResizablePanel
-        id="files"
+    <ResizablePanelGroup {...filesLayout} className="min-h-0 flex-1">
+      <SidePanel
+        id="diff-files"
+        label="Changed files"
+        side="left"
         defaultSize={264}
         minSize={168}
         maxSize="40%"
-        collapsible
-        className="border-r border-border-subtle"
       >
         <DiffFileBrowser
           diff={diff}
@@ -152,8 +154,7 @@ export function RunDiffView() {
           reviewedPaths={reviewed.paths}
           onSelect={jumpToFile}
         />
-      </ResizablePanel>
-      <ResizableHandle />
+      </SidePanel>
       <ResizablePanel id="diff" minSize="40%">
         {cards}
       </ResizablePanel>

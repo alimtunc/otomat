@@ -11,6 +11,8 @@ export { cn } from "./lib/utils";
 export { isEditableTarget } from "./lib/keyboard";
 export { FOCUS_RING } from "./lib/focus";
 export { useMediaQuery } from "./lib/use-media-query";
+export { usePanelGroupLayout, type PanelGroupLayout } from "./lib/use-panel-group-layout";
+export { useSidePanel, type SidePanelState } from "./lib/side-panel-context";
 export { WIDE_VIEWPORT_MEDIA_QUERY } from "./lib/viewport";
 export type { ConnectionState } from "./lib/connection-state";
 export type { ProjectSummary } from "./lib/project-summary";
@@ -267,15 +269,7 @@ export { ReconnectingBar, type ReconnectingBarProps } from "./components/reconne
 
 export { RelativeTime, type RelativeTimeProps } from "./components/relative-time";
 
-export {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-  type PanelImperativeHandle,
-  type ResizableHandleProps,
-  type ResizablePanelGroupProps,
-  type ResizablePanelProps,
-} from "./components/resizable-panels";
+export { ResizablePanel, ResizablePanelGroup } from "./primitives/resizable";
 
 export {
   SegmentedControl,
@@ -289,6 +283,10 @@ export {
   type SidebarNavItemProps,
   type SidebarNavItemRenderProps,
 } from "./components/sidebar-nav-item";
+
+export { SidePanel, type SidePanelProps } from "./components/side-panel";
+
+export { SidePanelToggle, type SidePanelToggleProps } from "./components/side-panel-toggle";
 
 export { Spinner, type SpinnerProps } from "./components/spinner";
 

@@ -90,7 +90,11 @@ Frontend packages (`ui`, `client`):
 - may import `packages/domain`;
 - must not import `db` or reach into `apps/local-daemon`;
 - must not call Linear/GitHub directly. External API mirroring belongs to the
-  local daemon.
+  local daemon;
+- own `react-resizable-panels` in `packages/ui/src/primitives/resizable.tsx` and
+  nowhere else. Everything else composes the `Resizable*` primitive (and the
+  `SidePanel` built on it) so tokens, keyboard behavior, and persistence stay in
+  one place.
 
 `packages/db`:
 

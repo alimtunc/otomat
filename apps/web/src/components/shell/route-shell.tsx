@@ -91,7 +91,6 @@ export function RouteShell({
         />
       }
       rightPanel={rightPanel}
-      rightPanelAutoSaveId="otomat.cockpit"
       topbar={topbar}
     >
       <NewIssueContext.Provider value={openNewIssue}>

@@ -1,5 +1,16 @@
 import type { RunContract } from "@otomat/domain";
-import { EmptyState, ErrorState, IssueStatusChip, Skeleton } from "@otomat/ui";
+import {
+  EmptyState,
+  ErrorState,
+  IssueStatusChip,
+  ResizablePanel,
+  ResizablePanelGroup,
+  SidePanel,
+  Skeleton,
+  useMediaQuery,
+  usePanelGroupLayout,
+  WIDE_VIEWPORT_MEDIA_QUERY,
+} from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
 import { useRunsForIssue } from "@web/api/runs/queries";
@@ -67,29 +78,54 @@ export function IssueDetailView() {
   const runs = useRunsForIssue(issueId);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const followedRun = resolveFollowedRun(runs.data ?? [], selectedRunId);
+  const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
+  const railLayout = usePanelGroupLayout("otomat.issue-detail");
 
   const idLabel = issue.data ? issueShortId(issue.data) : shortId(issueId);
   const launchAction = (
     <LaunchRunDialog issue={issue.data} onLaunched={(run) => setSelectedRunId(run.id)} />
   );
 
-  const body = (
-    <div className="grid grid-cols-1 lg:h-full lg:min-h-0 lg:grid-cols-[1fr_300px]">
-      <div className="min-w-0 px-8 py-6.5 lg:overflow-auto">
-        <div className="flex max-w-180 flex-col gap-6">
-          <IssueHeader query={issue} />
-          {issue.data?.source === "linear" ? (
-            <LinearCommentsSection issueId={issueId} runId={followedRun?.id ?? null} />
-          ) : null}
-          <RunsArea
-            query={runs}
-            launchAction={launchAction}
-            followedRun={followedRun}
-            onFollow={setSelectedRunId}
-          />
-        </div>
+  const main = (
+    <div className="min-h-0 min-w-0 flex-1 overflow-auto px-8 py-6.5">
+      <div className="flex max-w-180 flex-col gap-6">
+        <IssueHeader query={issue} />
+        {issue.data?.source === "linear" ? (
+          <LinearCommentsSection issueId={issueId} runId={followedRun?.id ?? null} />
+        ) : null}
+        <RunsArea
+          query={runs}
+          launchAction={launchAction}
+          followedRun={followedRun}
+          onFollow={setSelectedRunId}
+        />
       </div>
-      {issue.data ? <WorkspaceRail issue={issue.data} run={followedRun} /> : <div />}
+    </div>
+  );
+  const rail = issue.data ? <WorkspaceRail issue={issue.data} run={followedRun} /> : null;
+
+  const body = wide ? (
+    <ResizablePanelGroup {...railLayout} className="h-full min-h-0">
+      <ResizablePanel id="issue" minSize="40%">
+        {main}
+      </ResizablePanel>
+      {rail === null ? null : (
+        <SidePanel
+          id="issue-rail"
+          label="Issue details"
+          side="right"
+          defaultSize={300}
+          minSize={240}
+          maxSize="36%"
+        >
+          {rail}
+        </SidePanel>
+      )}
+    </ResizablePanelGroup>
+  ) : (
+    <div>
+      {main}
+      {rail}
     </div>
   );
 
