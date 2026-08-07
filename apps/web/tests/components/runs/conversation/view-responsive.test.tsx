@@ -80,7 +80,7 @@ describe("RunConversationView responsive composition", () => {
     const { container, cleanup } = await renderView();
     expect(container.textContent).toContain("Steps & sessions");
     expect(container.textContent).toContain("Run context");
-    expect(container.querySelector("[aria-expanded]")).toBeNull();
+    expect(container.querySelector('[class*="group/steps"]')).toBeNull();
     await cleanup();
   });
 

@@ -34,7 +34,10 @@ export function AgentProfileDetail({
       <Tabs defaultValue="instructions" className="min-h-full">
         <TabsList className="sticky top-0 z-[3] overflow-x-auto bg-background px-4.5">
           <TabsTrigger value="instructions">Instructions</TabsTrigger>
-          <TabsTrigger value="skills" badge={<Chip tone="neutral">{profile.skill_ids.length}</Chip>}>
+          <TabsTrigger
+            value="skills"
+            badge={<Chip tone="neutral">{profile.skill_ids.length}</Chip>}
+          >
             Skills
           </TabsTrigger>
         </TabsList>

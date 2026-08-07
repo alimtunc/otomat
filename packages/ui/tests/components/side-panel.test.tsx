@@ -14,15 +14,28 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
-// happy-dom runs no layout engine, and the library derives every constraint from the
-// group's measured size, so give elements a stable one.
+// happy-dom runs no layout engine, and the library measures a group as the sum of its
+// panels' offsets, so size every element to a share of a group of PANELS_PER_GROUP.
 const GROUP_SIZE = 1000;
+const PANELS_PER_GROUP = 2;
 for (const property of ["offsetWidth", "offsetHeight"]) {
   Object.defineProperty(HTMLElement.prototype, property, {
     configurable: true,
-    get: () => GROUP_SIZE,
+    get: () => GROUP_SIZE / PANELS_PER_GROUP,
   });
 }
+
+// happy-dom ships no `ariaDisabled`, and the library reads `!== null` as "disabled",
+// which would leave every separator inert.
+Object.defineProperty(Element.prototype, "ariaDisabled", {
+  configurable: true,
+  get(this: Element) {
+    return this.getAttribute("aria-disabled");
+  },
+});
+
+// Base UI's scroll area drives its transitions off the Web Animations API.
+Element.prototype.getAnimations = () => [];
 
 // A wide viewport with a fine pointer, so the shell starts with its sidebar open.
 window.matchMedia = ((query: string) => ({

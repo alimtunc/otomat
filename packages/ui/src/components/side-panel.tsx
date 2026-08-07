@@ -60,8 +60,7 @@ export function SidePanel({
     onCollapsedChange?.(next);
   }
 
-  // otomat-allow-effect: the collapsed state lives in the library's layout, so every change
-  // — restored flag, keyboard shortcut, toggle — reaches it through the imperative panel API.
+  // otomat-allow-effect: only the library's imperative panel API can change collapsed state.
   useEffect(() => {
     const panel = panelRef.current;
     if (panel === null || panel.isCollapsed() === collapsed) return;
