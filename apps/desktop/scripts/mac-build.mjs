@@ -27,8 +27,8 @@ function git(args) {
   return execFileSync("git", args, { cwd: REPO, encoding: "utf8" }).trim();
 }
 
-/** The identity every artifact of this build carries: version, commit, architecture, Electron. */
-export function resolveBuildInfo({ signed, pr = null }) {
+/** The identity every artifact of this build carries: channel, version, commit, arch, Electron. */
+export function resolveBuildInfo({ signed, channel, pr = null }) {
   return createBuildInfo({
     version: readProductVersion(join(DESKTOP, "package.json")),
     commit: git(["rev-parse", "HEAD"]),
@@ -36,6 +36,7 @@ export function resolveBuildInfo({ signed, pr = null }) {
     arch: process.arch,
     electronVersion: require("electron/package.json").version,
     signed,
+    channel,
     pr,
   });
 }
@@ -166,6 +167,13 @@ export function buildMacApp(input) {
   } finally {
     rmSync(stage, { recursive: true, force: true });
   }
+
+  // The same metadata the app ships, next to the artifacts: the smoke and CI read the channel and
+  // the commit of a build without having to open its asar.
+  writeFileSync(
+    join(RELEASE_OUT, "build-info.json"),
+    `${JSON.stringify(input.buildInfo, null, 2)}\n`,
+  );
 
   return { ...locateArtifacts(identity.productName), releaseDir: RELEASE_OUT };
 }

@@ -21,7 +21,7 @@ const harness = vi.hoisted(() => ({
     hosts: {
       bootActivate(): Promise<string | null>;
       shutdown(): Promise<void>;
-      hasActiveSession: boolean;
+      remoteSession: null;
     };
   } | null,
   userData: "",
@@ -87,6 +87,7 @@ vi.mock("#shared/user-path", () => ({ resolveUserPath: () => "/usr/bin" }));
 
 import { DesktopApp } from "#main/app";
 import type { AppPaths } from "#main/paths";
+import { devBuildInfo } from "#shared/build-info";
 
 const DEV_PATHS: AppPaths = {
   packaged: false,
@@ -163,10 +164,10 @@ it("offers the next managed backup after the daemon rejects the newest candidate
       restoreBackup,
     },
     linear: { reconcile: async () => {} },
-    hosts: { bootActivate: async () => null, shutdown: async () => {}, hasActiveSession: false },
+    hosts: { bootActivate: async () => null, shutdown: async () => {}, remoteSession: null },
   };
 
-  const desktop = new DesktopApp(DEV_PATHS);
+  const desktop = new DesktopApp(DEV_PATHS, devBuildInfo("0.0.0", "43.2.0"));
   await desktop.onReady();
   if (harness.actions === null) throw new Error("Desktop IPC actions were not registered.");
 
@@ -195,9 +196,9 @@ it("keeps shutdown blocked and allows retry when daemon stop fails", async () =>
       restoreBackup: async () => {},
     },
     linear: { reconcile: async () => {} },
-    hosts: { bootActivate: async () => null, shutdown: async () => {}, hasActiveSession: false },
+    hosts: { bootActivate: async () => null, shutdown: async () => {}, remoteSession: null },
   };
-  const desktop = new DesktopApp(DEV_PATHS);
+  const desktop = new DesktopApp(DEV_PATHS, devBuildInfo("0.0.0", "43.2.0"));
   await desktop.onReady();
   const quit = vi.fn();
 

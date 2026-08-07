@@ -1,11 +1,56 @@
 import { expect, it } from "vitest";
 
 import {
+  deploymentForChannel,
+  instanceDeployment,
+  keepsDataAcrossBuilds,
+  LOCAL_DEPLOYMENT,
   parseBootstrapOutput,
   STABLE_DEPLOYMENT,
   startOrVerifyDaemonScript,
   stopDaemonScript,
 } from "#main/remote/bootstrap/scripts";
+
+it("keeps one deployment per channel, and the local one across commits", () => {
+  const first = deploymentForChannel("local", "1111111");
+  const second = deploymentForChannel("local", "2222222");
+
+  expect(first).toEqual(LOCAL_DEPLOYMENT);
+  expect(second).toEqual(first);
+  expect(first.homeSuffix).toBe(".otomat/local");
+  expect(first.homeSuffix).not.toBe(STABLE_DEPLOYMENT.homeSuffix);
+  expect(first.port).not.toBe(STABLE_DEPLOYMENT.port);
+});
+
+it("isolates a preview per build and a channel-less build from every channel with data", () => {
+  const preview = deploymentForChannel("preview", "1111111");
+  const other = deploymentForChannel("preview", "2222222");
+  const unknown = deploymentForChannel("unknown", "1111111");
+
+  expect(preview).toEqual(instanceDeployment("1111111"));
+  expect(preview.homeSuffix).not.toBe(other.homeSuffix);
+  // Whatever a build with unreadable metadata thinks its commit is, it stays in the shared slot.
+  expect(unknown).toEqual(instanceDeployment(null));
+  expect(unknown.homeSuffix).toBe(".otomat/instances/unknown");
+  for (const isolated of [preview, other, unknown]) {
+    expect(isolated.homeSuffix).not.toBe(STABLE_DEPLOYMENT.homeSuffix);
+    expect(isolated.homeSuffix).not.toBe(LOCAL_DEPLOYMENT.homeSuffix);
+  }
+});
+
+it("drives the host's real daemon from a checkout and from the signed app alike", () => {
+  expect(deploymentForChannel("dev", null)).toEqual(STABLE_DEPLOYMENT);
+  expect(deploymentForChannel("stable", "1111111")).toEqual(STABLE_DEPLOYMENT);
+});
+
+it("protects every deployment that holds data, whichever channel picked it", () => {
+  for (const channel of ["dev", "stable", "local"] as const) {
+    expect(keepsDataAcrossBuilds(deploymentForChannel(channel, "1111111"))).toBe(true);
+  }
+  for (const channel of ["preview", "unknown"] as const) {
+    expect(keepsDataAcrossBuilds(deploymentForChannel(channel, "1111111"))).toBe(false);
+  }
+});
 
 it("keeps the remote daemon loopback-bound with the packaged renderer origin allowed", () => {
   const script = startOrVerifyDaemonScript(STABLE_DEPLOYMENT);

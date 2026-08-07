@@ -1,3 +1,5 @@
+import type { DesktopChannel } from "#shared/channel";
+
 import { lastToken } from "../ssh/tokens.js";
 
 /** Where a daemon lives on the host — a path under `$HOME` — and the loopback port it binds. */
@@ -8,6 +10,9 @@ export interface RemoteDeployment {
 
 /** The stable app's daemon: the conventions documented in docs/ai/remote-execution-host.md. */
 export const STABLE_DEPLOYMENT: RemoteDeployment = { homeSuffix: ".otomat", port: 4319 };
+
+/** The local channel's own daemon: one deployment for every ad-hoc package, never the stable one. */
+export const LOCAL_DEPLOYMENT: RemoteDeployment = { homeSuffix: ".otomat/local", port: 4320 };
 
 const INSTANCE_PORT_BASE = 43100;
 const INSTANCE_PORT_SPAN = 900;
@@ -23,6 +28,42 @@ export function instanceDeployment(build: string | null): RemoteDeployment {
   let hash = 0;
   for (const char of key) hash = (hash * 31 + (char.codePointAt(0) ?? 0)) % INSTANCE_PORT_SPAN;
   return { homeSuffix: `.otomat/instances/${key}`, port: INSTANCE_PORT_BASE + hash };
+}
+
+/**
+ * The daemon this app targets on a host. `local` and `stable` keep one deployment each, so their
+ * data survives every new build; a preview is isolated per build, and a build that could not name
+ * its channel shares the same "unknown" slot as one that could not name its commit.
+ */
+export function deploymentForChannel(
+  channel: DesktopChannel,
+  build: string | null,
+): RemoteDeployment {
+  switch (channel) {
+    // A checkout drives the host's real daemon: that is how the deployment itself is exercised.
+    case "dev":
+    case "stable":
+      return STABLE_DEPLOYMENT;
+    case "local":
+      return LOCAL_DEPLOYMENT;
+    case "preview":
+      return instanceDeployment(build);
+    case "unknown":
+      return instanceDeployment(null);
+  }
+}
+
+/**
+ * Deployments whose database outlives the bundle installed in them, so an update has to back it up,
+ * verify the new daemon and be able to roll back. Keyed by the deployment rather than by the channel
+ * that chose it: `dev` and `stable` drive the same `~/.otomat`, and a checkout must not swap a
+ * bundle under the daemon real work runs on just because it is a checkout.
+ */
+export function keepsDataAcrossBuilds(deployment: RemoteDeployment): boolean {
+  return (
+    deployment.homeSuffix === STABLE_DEPLOYMENT.homeSuffix ||
+    deployment.homeSuffix === LOCAL_DEPLOYMENT.homeSuffix
+  );
 }
 
 const TOKEN_PREFIX = "OTOMAT_REMOTE:";

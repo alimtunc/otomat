@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, realpathSync } from "node:fs";
+import { realpathSync } from "node:fs";
 import { basename, isAbsolute, join, resolve } from "node:path";
 
 import { DEV_DATA_DIRECTORY_NAME, DEV_DATA_ROOT_ENV } from "#shared/constants";
@@ -13,11 +13,6 @@ export interface DevDataRootOptions {
   /** Electron's `appData` directory — the parent of the packaged app's own userData. */
   appData: string;
   env: NodeJS.ProcessEnv;
-}
-
-/** Anything that can receive the derived root; `Electron.App` satisfies it. */
-export interface UserDataTarget {
-  setPath(name: "userData", value: string): void;
 }
 
 /**
@@ -34,13 +29,6 @@ export function resolveDevDataRoot(options: DevDataRootOptions): string {
   }
   const worktree = realpathSync.native(resolve(options.repoRoot));
   return join(options.appData, DEV_DATA_DIRECTORY_NAME, worktreeKey(worktree));
-}
-
-/** Creates the root and points userData at it; must run before Electron reads either. */
-export function applyDevDataRoot(root: string | null, target: UserDataTarget): void {
-  if (root === null) return;
-  mkdirSync(root, { recursive: true, mode: 0o700 });
-  target.setPath("userData", root);
 }
 
 function worktreeKey(worktree: string): string {

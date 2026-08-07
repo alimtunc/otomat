@@ -3,6 +3,7 @@ import { basename } from "node:path";
 import type { DesktopStartupDiagnostic } from "@otomat/domain";
 import { app, BrowserWindow, ipcMain } from "electron";
 
+import type { BuildInfo } from "#shared/build-info";
 import { DEV_SERVER_ENV } from "#shared/constants";
 import {
   EXECUTION_HOST_STATUS_CHANNEL,
@@ -11,7 +12,6 @@ import {
 import { SPLASH_RETRY_CHANNEL, SPLASH_STATUS_CHANNEL, type StartupStatus } from "#shared/startup";
 import { resolveUserPath } from "#shared/user-path";
 
-import { readBuildInfo } from "./build-info.js";
 import { buildCsp } from "./csp.js";
 import { resolveExpectedBuild } from "./expected-build.js";
 import { buildIpcActions } from "./ipc-actions.js";
@@ -31,7 +31,7 @@ import { DesktopSupport } from "./support.js";
 import { createCockpitWindow, createSplashWindow } from "./windows.js";
 
 export class DesktopApp {
-  private readonly ipcState: IpcState = { daemonUrl: "", preview: false };
+  private readonly ipcState: IpcState;
   private readonly devServer: string | null;
   private readonly userPath: string;
   private readonly userData: string;
@@ -46,14 +46,17 @@ export class DesktopApp {
   private readonly rejectedBackupPaths = new Set<string>();
   private readonly log = new StartupLogSink(() => this.runtime?.desktopLog ?? null);
 
-  constructor(private readonly paths: AppPaths) {
+  constructor(
+    private readonly paths: AppPaths,
+    private readonly buildInfo: BuildInfo,
+  ) {
     const devServer = process.env[DEV_SERVER_ENV]?.trim() ?? "";
     this.devServer = devServer === "" ? null : devServer;
     this.userPath = resolveUserPath({ platform: process.platform, env: process.env });
     process.env.PATH = this.userPath;
     this.userData = app.getPath("userData");
-    this.ipcState.preview =
-      paths.packaged && !readBuildInfo((message) => this.log.write(message)).signed;
+    // The sandbox is a preview's test bed; no other channel ever seeds fixtures.
+    this.ipcState = { daemonUrl: "", preview: buildInfo.channel === "preview" };
     this.support = new DesktopSupport({
       daemonUrl: () => this.ipcState.daemonUrl,
       logs: () => ({
@@ -97,7 +100,7 @@ export class DesktopApp {
     if (this.isQuitting) return true;
     const runtime = this.runtime;
     if (runtime === null) return false;
-    if (runtime.daemon.running !== true && !runtime.hosts.hasActiveSession) return false;
+    if (runtime.daemon.running !== true && runtime.hosts.remoteSession === null) return false;
     this.isQuitting = true;
     runtime.hosts
       .shutdown()
@@ -123,8 +126,8 @@ export class DesktopApp {
         paths: this.paths,
         userData: this.userData,
         userPath: this.userPath,
-        expectedBuild: resolveExpectedBuild((message) => this.log.write(message)),
-        preview: this.ipcState.preview,
+        expectedBuild: resolveExpectedBuild(this.buildInfo, (message) => this.log.write(message)),
+        channel: this.buildInfo.channel,
         localDaemonUrl: () => this.localDaemonUrl,
         onRemoteStatus: (status) => {
           this.sendToCockpit(EXECUTION_HOST_STATUS_CHANNEL, status);
@@ -167,15 +170,8 @@ export class DesktopApp {
   private async restoreBackup(): Promise<void> {
     const diagnostic = this.diagnostic;
     const backupPath = diagnostic?.backup_path;
-    if (
-      diagnostic === null ||
-      backupPath === null ||
-      backupPath === undefined ||
-      this.runtime === null ||
-      this.operation !== null
-    ) {
-      return;
-    }
+    if (diagnostic === null || this.runtime === null || this.operation !== null) return;
+    if (backupPath === null || backupPath === undefined) return;
     this.operation = "restoring";
     try {
       if (!(await this.support.confirmRestore())) {

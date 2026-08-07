@@ -1,10 +1,10 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, statSync, symlinkSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { applyDevDataRoot, resolveDevDataRoot } from "#main/dev-data-root";
+import { resolveDevDataRoot } from "#main/dev-data-root";
 
 const scratchDirs: string[] = [];
 
@@ -83,26 +83,5 @@ describe("resolveDevDataRoot", () => {
     expect(devRootFor(worktree, appData, { OTOMAT_DESKTOP_DEV_DATA_ROOT: "  " })).toBe(
       devRootFor(worktree, appData),
     );
-  });
-});
-
-describe("applyDevDataRoot", () => {
-  it("creates the root privately and points userData at it", () => {
-    const root = join(scratch("otomat-apply-"), "Otomat Dev", "checkout-abc123");
-    const assigned: [string, string][] = [];
-
-    applyDevDataRoot(root, { setPath: (name, value) => assigned.push([name, value]) });
-
-    expect(assigned).toEqual([["userData", root]]);
-    expect(existsSync(root)).toBe(true);
-    expect(statSync(root).mode & 0o777).toBe(0o700);
-  });
-
-  it("leaves userData alone when there is no dev root", () => {
-    const assigned: string[] = [];
-
-    applyDevDataRoot(null, { setPath: (name) => assigned.push(name) });
-
-    expect(assigned).toEqual([]);
   });
 });

@@ -28,5 +28,12 @@ export const DEV_DATA_ROOT_ENV = "OTOMAT_DESKTOP_DEV_DATA_ROOT";
 /** Parent directory of every dev data root, kept apart from the packaged app's own userData. */
 export const DEV_DATA_DIRECTORY_NAME = "Otomat Dev";
 
+/**
+ * Where a channel's data root is created, instead of Electron's `appData`. The packaged smokes set
+ * it so a gate never opens a real profile; a packaged build honours it too, since the smoke has to
+ * exercise the artifact it ships rather than a variant of it.
+ */
+export const APP_DATA_ROOT_ENV = "OTOMAT_DESKTOP_APP_DATA";
+
 /** GitHub repository whose CI publishes the `otomat-daemon-<sha7>-linux-x64` bundles. */
 export const OTOMAT_GITHUB_REPO = "alimtunc/otomat";

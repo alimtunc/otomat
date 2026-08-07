@@ -1,3 +1,5 @@
+import { isPackagedChannel, type DesktopChannel } from "#shared/channel";
+
 /** Identity of the build a user is actually running, written into the app at packaging time. */
 export interface BuildInfo {
   version: string;
@@ -9,8 +11,10 @@ export interface BuildInfo {
   electron: string;
   /** True only for a Developer ID signed, notarized release. */
   signed: boolean;
-  /** Pull request this preview was packaged for; null for stable, release and dev builds. */
+  /** Pull request this preview was packaged for; null on every other channel. */
   pr_number: number | null;
+  /** Distribution channel: what this build's identity, data roots and upgrade path are. */
+  channel: DesktopChannel;
 }
 
 const UNIDENTIFIED = "unknown";
@@ -38,13 +42,29 @@ export function parseBuildInfo(contents: string): BuildInfo {
     platform: readString(record, "platform"),
     electron: readString(record, "electron"),
   };
-  if (typeof record.signed !== "boolean") {
+  const signed: unknown = record.signed;
+  if (typeof signed !== "boolean") {
     throw new Error("The build metadata field signed is missing.");
   }
-  return { ...info, signed: record.signed, pr_number: readPrNumber(record.pr_number) };
+  const channel: unknown = record.channel;
+  if (!isPackagedChannel(channel)) {
+    throw new Error("The build metadata field channel is not a distribution channel.");
+  }
+  // Signature is a trust property of its own: a stable build that carries none is invalid, never
+  // something else that happens to be unsigned.
+  if (channel === "stable" && !signed) {
+    throw new Error("The build metadata claims the stable channel without a signature.");
+  }
+  const prNumber = readPrNumber(record.pr_number);
+  if (channel === "preview" && prNumber === null) {
+    throw new Error("The build metadata claims the preview channel without a pull request.");
+  }
+  if (channel !== "preview" && prNumber !== null) {
+    throw new Error("The build metadata carries a pull request outside the preview channel.");
+  }
+  return { ...info, signed, pr_number: prNumber, channel };
 }
 
-/** Absent in artifacts packaged before previews were named after their pull request. */
 function readPrNumber(value: unknown): number | null {
   if (value === undefined || value === null) return null;
   if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
@@ -53,8 +73,7 @@ function readPrNumber(value: unknown): number | null {
   return value;
 }
 
-/** A build that cannot name its own commit: a checkout run, or unreadable packaged metadata. */
-export function unidentifiedBuildInfo(version: string, electron: string): BuildInfo {
+function anonymousBuildInfo(version: string, electron: string, channel: DesktopChannel): BuildInfo {
   return {
     version,
     commit: UNIDENTIFIED,
@@ -65,5 +84,19 @@ export function unidentifiedBuildInfo(version: string, electron: string): BuildI
     electron,
     signed: false,
     pr_number: null,
+    channel,
   };
+}
+
+/** A checkout run: no packaged metadata exists, and the dev channel expects none. */
+export function devBuildInfo(version: string, electron: string): BuildInfo {
+  return anonymousBuildInfo(version, electron, "dev");
+}
+
+/**
+ * A packaged build whose metadata is missing or invalid. It names no commit and claims no channel,
+ * so every location it resolves is the isolated `unknown` one — never `local` or `stable` data.
+ */
+export function unidentifiedBuildInfo(version: string, electron: string): BuildInfo {
+  return anonymousBuildInfo(version, electron, "unknown");
 }

@@ -53,7 +53,7 @@ export function deployDaemonScript(options: DeployDaemonScriptOptions): string {
     "  exit 0",
     "fi",
     'mkdir -p "$OTOMAT_HOME"',
-    'rm -rf "$OTOMAT_HOME/daemon.next" "$OTOMAT_HOME/daemon.prev"',
+    'rm -rf "$OTOMAT_HOME/daemon.next" "$OTOMAT_HOME/daemon.prev" "$OTOMAT_HOME/daemon.failed"',
     // Guarded swap: an unguarded mv chain would report DEPLOYED after destroying the only daemon.
     `if ! mv "$TMP/x/daemon" "$OTOMAT_HOME/daemon.next" 2>"$TMP/err"; then`,
     `  echo "${DEPLOY_PREFIX}EXTRACT_FAILED:$(tail -c 160 "$TMP/err" | tr '\\n' ' ')"`,
@@ -65,7 +65,8 @@ export function deployDaemonScript(options: DeployDaemonScriptOptions): string {
     `  echo "${DEPLOY_PREFIX}EXTRACT_FAILED:$(tail -c 160 "$TMP/err" | tr '\\n' ' ')"`,
     "  exit 0",
     "fi",
-    'rm -rf "$OTOMAT_HOME/daemon.prev"',
+    // `daemon.prev` stays: it is what an upgrade rolls back to when the new one does not boot.
+    // The next deploy clears it, so at most one displaced bundle is ever kept.
     `echo "${DEPLOY_PREFIX}DEPLOYED:${options.build}"`,
     "",
   ].join("\n");
@@ -77,6 +78,22 @@ export type DeployOutcome =
   | { kind: "artifact_not_found"; name: string }
   | { kind: "download_failed"; detail: string }
   | { kind: "extract_failed"; detail: string };
+
+/** A deploy that did not happen, as a clause a caller can put in its own sentence. */
+export function describeDeployFailure(
+  outcome: Exclude<DeployOutcome, { kind: "deployed" }>,
+): string {
+  switch (outcome.kind) {
+    case "gh_missing":
+      return "the host has no `gh` CLI; install and authenticate it to deploy from CI artifacts";
+    case "artifact_not_found":
+      return `no CI artifact is named ${outcome.name} (artifacts expire after 7 days; re-run the workflow to rebuild it)`;
+    case "download_failed":
+      return `the artifact download failed on the host: ${outcome.detail}`;
+    case "extract_failed":
+      return `the artifact could not be extracted on the host: ${outcome.detail}`;
+  }
+}
 
 /** Last `OTOMAT_DEPLOY:` token wins; null means the script never reported. */
 export function parseDeployOutput(stdout: string): DeployOutcome | null {

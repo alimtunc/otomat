@@ -156,16 +156,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Empty on a push to main, which packages the stable identity unchanged.
+      # A pull request packages the `preview` channel, named after its PR; a push to main packages
+      # the `local` channel, whose data roots are the same across commits. Neither can produce
+      # `stable` — only `pnpm desktop:release` passes that channel.
       - name: Package the unsigned desktop artifact
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          OTOMAT_CHANNEL: ${{ github.event_name == 'pull_request' && 'preview' || 'local' }}
         run: pnpm desktop:package
 
       - name: Smoke the packaged artifact
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          OTOMAT_CHANNEL: ${{ github.event_name == 'pull_request' && 'preview' || 'local' }}
         run: pnpm desktop:smoke
+
+      # Packages the merge commit a second time and launches both builds: the promise that a local
+      # package keeps its profile across commits is only worth what an actual second build shows.
+      - name: Smoke the local channel across two commits
+        if: github.event_name == 'push'
+        run: pnpm desktop:smoke:local
 
       - name: Name the preview artifact
         id: preview

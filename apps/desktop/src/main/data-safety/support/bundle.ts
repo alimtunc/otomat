@@ -6,6 +6,8 @@ export interface SupportBundleVersions {
   desktop: string;
   /** Commit the installed build was packaged from; ties a bug report to a downloadable artifact. */
   commit: string;
+  /** Distribution channel of the running build; it names which data and host deployment this is. */
+  channel: string;
   signed: boolean;
   electron: string;
   node: string;

@@ -12,6 +12,7 @@ function manifest() {
       arch: "arm64",
       electronVersion: "43.2.0",
       signed: true,
+      channel: "stable",
     }),
     notarized: true,
     artifacts: [{ name: "Otomat-0.1.0-alpha.1-arm64.dmg", bytes: 120_000_000, sha256: "d34db33f" }],

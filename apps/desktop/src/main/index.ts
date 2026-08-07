@@ -2,10 +2,10 @@ import { app } from "electron";
 
 import { DesktopApp } from "./app.js";
 import { readBuildInfo } from "./build-info.js";
-import { applyDevDataRoot } from "./dev-data-root.js";
+import { resolveChannelDataRoot } from "./channel-data-root.js";
 import { resolveAppPaths } from "./paths.js";
-import { resolvePreviewDataRoot } from "./preview/data-root.js";
 import { registerAppSchemePrivileged } from "./protocol.js";
+import { applyUserDataRoot } from "./user-data-root.js";
 
 registerAppSchemePrivileged();
 
@@ -13,19 +13,18 @@ const paths = resolveAppPaths();
 const buildInfo = readBuildInfo((message) => console.error(`[otomat-desktop] ${message}`));
 // Before the lock: Electron keys the single-instance lock on userData, so a shared userData
 // would make the second instance quit into the first one instead of running isolated. Dev
-// worktrees split per checkout; packaged previews (unsigned builds, including unidentifiable
-// ones — when in doubt, stay out of the stable data) split beside the stable install, and once
-// more per pull request. An explicit --user-data-dir (the packaged smoke, a second test profile)
-// outranks both splits.
-applyDevDataRoot(
+// worktrees split per checkout; every other channel splits by the channel the build declared —
+// a build that declared none lands in `unknown`, never in stable or local data. An explicit
+// --user-data-dir (the packaged smoke, a second test profile) outranks both splits.
+applyUserDataRoot(
   app.commandLine.hasSwitch("user-data-dir")
     ? null
     : (paths.devDataRoot ??
-        resolvePreviewDataRoot({
-          packaged: paths.packaged,
-          signed: buildInfo.signed,
+        resolveChannelDataRoot({
+          channel: buildInfo.channel,
           prNumber: buildInfo.pr_number,
           appData: app.getPath("appData"),
+          env: process.env,
         })),
   app,
 );
@@ -44,7 +43,7 @@ if (!app.requestSingleInstanceLock()) {
   app
     .whenReady()
     .then(async () => {
-      desktop = new DesktopApp(paths);
+      desktop = new DesktopApp(paths, buildInfo);
       await desktop.onReady();
     })
     .catch(() => {
