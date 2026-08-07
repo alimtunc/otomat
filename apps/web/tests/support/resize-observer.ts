@@ -30,7 +30,9 @@ export function stubResizeObserver(): ResizeObserverStub {
 
   return {
     resize() {
-      for (const callback of [...callbacks]) callback();
+      /** Snapshot: a callback may observe or disconnect while this loop runs. */
+      const live = [...callbacks];
+      for (const callback of live) callback();
     },
     restore() {
       Object.assign(globalThis, { ResizeObserver: original });
