@@ -22,6 +22,7 @@ export class DesktopSupport {
         versions: {
           desktop: build.version,
           commit: build.commit,
+          channel: build.channel,
           signed: build.signed,
           electron: process.versions.electron ?? "unknown",
           node: process.versions.node,

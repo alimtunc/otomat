@@ -15,6 +15,15 @@ const APP_ID = "com.otomat.desktop";
 
 const PRODUCT_NAME = "Otomat";
 
+const CHANNEL_ENV = "OTOMAT_CHANNEL";
+
+/**
+ * The channels a packaged build may declare, mirroring `PackagedChannel` in
+ * `apps/desktop/src/shared/channel.ts`; the round-trip test in `tests/release/metadata.test.mjs`
+ * keeps this writer and that reader from drifting.
+ */
+export const PACKAGED_CHANNELS = ["preview", "local", "stable"];
+
 /**
  * `PR_NUMBER` as an integer, or null when unset. A malformed value fails the build instead of
  * silently producing an artifact that claims to be the stable app.
@@ -29,9 +38,30 @@ export function readPrNumber(env) {
 }
 
 /**
- * A distinct product name and bundle id per PR keeps the `.app` bundles apart; the `pr_number`
- * shipped in build-info is what splits userData, and with it Electron's single-instance lock —
- * see `resolvePreviewDataRoot`.
+ * The channel this packaging run declares. `PR_NUMBER` means a PR preview; anything else
+ * `pnpm desktop:package` builds is the ad-hoc `local` channel, whose data roots are stable across
+ * commits. `stable` is never reached from here — `pnpm desktop:release` passes it explicitly, so no
+ * environment variable can promote an unsigned build into the signed app's data.
+ */
+export function resolvePackagedChannel(env, pr) {
+  const raw = (env[CHANNEL_ENV] ?? "").trim();
+  if (raw !== "" && !PACKAGED_CHANNELS.includes(raw)) {
+    throw new Error(`${CHANNEL_ENV} must be one of ${PACKAGED_CHANNELS.join(", ")}; got "${raw}".`);
+  }
+  if (pr !== null) {
+    if (raw === "" || raw === "preview") return "preview";
+    throw new Error(`PR_NUMBER packages a preview, which ${CHANNEL_ENV}=${raw} contradicts.`);
+  }
+  if (raw === "preview") {
+    throw new Error("A preview is named after its pull request; set PR_NUMBER to package one.");
+  }
+  return raw === "" ? "local" : raw;
+}
+
+/**
+ * A distinct product name and bundle id per PR keeps the `.app` bundles apart; the `channel` and
+ * `pr_number` shipped in build-info are what split userData, and with it Electron's
+ * single-instance lock — see `resolveChannelDataRoot`.
  */
 export function resolveBuildIdentity(pr) {
   if (pr === null) return { pr: null, productName: PRODUCT_NAME, appId: APP_ID };
@@ -79,10 +109,25 @@ export function readProductVersion(packageJsonPath) {
 }
 
 /**
+ * The metadata shipped inside the app. The invariants the runtime parser enforces are checked here
+ * too, so packaging can never emit a build the app would have to refuse.
+ *
  * @param {{ version: string, commit: string, committedAt: string, arch: string,
- *   electronVersion: string, signed: boolean, pr?: number | null }} input
+ *   electronVersion: string, signed: boolean, channel: string, pr?: number | null }} input
  */
 export function createBuildInfo(input) {
+  const pr = input.pr ?? null;
+  if (!PACKAGED_CHANNELS.includes(input.channel)) {
+    throw new Error(`A build must declare a channel; got "${input.channel}".`);
+  }
+  if (input.channel === "stable" && !input.signed) {
+    throw new Error(
+      "A stable build must be Developer ID signed; `pnpm desktop:release` is the only way to produce one.",
+    );
+  }
+  if ((input.channel === "preview") !== (pr !== null)) {
+    throw new Error(`Channel ${input.channel} and PR_NUMBER ${String(pr)} disagree.`);
+  }
   return {
     version: input.version,
     commit: input.commit,
@@ -92,7 +137,8 @@ export function createBuildInfo(input) {
     platform: "darwin",
     electron: input.electronVersion,
     signed: input.signed,
-    pr_number: input.pr ?? null,
+    pr_number: pr,
+    channel: input.channel,
   };
 }
 

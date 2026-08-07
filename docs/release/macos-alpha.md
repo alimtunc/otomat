@@ -14,6 +14,39 @@ The unsigned build never reads a credential, and the signed build never falls ba
 artifact: `pnpm desktop:release` exits before building when any Apple input is missing, naming the
 secret to configure.
 
+## Distribution channels
+
+Every packaged build declares a channel in its `build-info.json`, and the channel — never the
+signature — decides the name it installs under, the data it opens, and the daemon it drives on a
+remote host. Signing stays a separate trust property: a build claiming `stable` without a Developer
+ID signature is invalid metadata and is refused, not downgraded to something else.
+
+| Channel | Built by | Bundle | Data root under `~/Library/Application Support` | Daemon on a remote host |
+| --- | --- | --- | --- | --- |
+| `dev` | `pnpm desktop:dev` | — | `Otomat Dev/<worktree>` | `~/.otomat` |
+| `preview` | CI on a pull request | `Otomat PR <n>.app`, `com.otomat.desktop.pr<n>` | `Otomat Preview PR <n>` | `~/.otomat/instances/<short-sha>` |
+| `local` | `pnpm desktop:package` | `Otomat.app`, `com.otomat.desktop` | `Otomat Local` | `~/.otomat/local` |
+| `stable` | `pnpm desktop:release` | `Otomat.app`, `com.otomat.desktop` | `Otomat` | `~/.otomat` |
+
+`pnpm desktop:package` builds `local`, or `preview` when `PR_NUMBER` names a pull request.
+`OTOMAT_CHANNEL` can state either explicitly — CI does, one per event — and the build fails when it
+contradicts `PR_NUMBER`, or when it asks for a `preview` without one. It can never produce `stable`:
+`pnpm desktop:release` passes that channel itself, alongside the stable identity, so no environment
+variable reaches a signed build. A checkout drives `~/.otomat` on a host deliberately: exercising
+the real deployment is what a checkout is for, and its local data is already split per worktree.
+
+A packaged build whose metadata is missing, unreadable, or names no channel runs as `unknown`: its
+data is `Otomat Unknown` and `~/.otomat/instances/unknown`, so a broken artifact can never open the
+database of a working one. Databases left under `~/.otomat/instances/<short-sha>` by builds from
+before channels existed are neither migrated nor deleted — the first `local` start begins from an
+empty database, and the old instances are removed from *Settings → Execution hosts*.
+
+Two `local` packages built from two commits of `main` therefore open the same profile: the app is
+replaced, its data is not. `pnpm desktop:smoke:local` checks exactly that on a Mac — it launches the
+package in `apps/desktop/release`, packages the next commit, launches that one against the same
+scratch `appData`, and fails unless both opened the same root and the same database file. CI runs it
+on every push to `main`.
+
 ## Architecture policy
 
 The alpha ships **Apple Silicon (`arm64`) only**, one artifact per architecture, each built on a
@@ -25,10 +58,11 @@ target. Adding Intel or a universal binary means adding a runner of that archite
 ## PR preview builds
 
 Every pull request to `main` packages this same unsigned artifact once its `pnpm check` gate is
-green: CI runs `pnpm desktop:package` on an Apple Silicon runner with `PR_NUMBER` set, exercises
-the result with `pnpm desktop:smoke`, and only then uploads the DMG as a workflow artifact named
-`otomat-pr-<number>-macos-arm64-<short-sha>`, kept for 7 days. The embedded `build-info.json`
-names the PR's head commit, not the merge commit CI tests elsewhere. `PR_NUMBER` also names the
+green: CI runs `pnpm desktop:package` on an Apple Silicon runner with `PR_NUMBER` and
+`OTOMAT_CHANNEL=preview` set, exercises the result with `pnpm desktop:smoke`, and only then uploads
+the DMG as a workflow artifact named `otomat-pr-<number>-macos-arm64-<short-sha>`, kept for 7 days.
+The embedded `build-info.json` names the PR's head commit, not the merge commit CI tests
+elsewhere. `PR_NUMBER` also names the
 build after its pull request — **Otomat PR 77.app**, bundle id `com.otomat.desktop.pr77`, data in
 `Otomat Preview PR 77` — so two previews under test and the stable install coexist on one Mac
 sharing no app, no single-instance lock and no data. A malformed `PR_NUMBER` fails the build
@@ -56,12 +90,14 @@ To test a preview on an Apple Silicon Mac — no checkout, Node or pnpm required
 
 4. Launch it from Finder. To confirm which build is running, export a support bundle
    (*Data Safety → Export Support Bundle…*): `versions.commit` must start with the short SHA in
-   the artifact name — each preview's bundle names its own commit.
+   the artifact name, and `versions.channel` must read `preview` — each bundle names its own
+   commit and the channel whose data it opened.
 
 A preview keeps its data in `~/Library/Application Support/Otomat Preview PR <number>`, beside —
-never inside — the stable install's data (a preview built without a PR number uses
-`Otomat Preview`). Several previews and the stable app therefore run side by side, and deleting
-that one folder removes every trace of testing that PR. On first launch it seeds a sandbox: a
+never inside — the stable install's data or an ad-hoc `local` package's
+([distribution channels](#distribution-channels)). Several previews and the stable app therefore
+run side by side, and deleting that one folder removes every trace of testing that PR. On first
+launch it seeds a sandbox: a
 disposable fixture repository (`test-repo` inside that data folder) registered with a handful of
 ready-made issues, so there is something to launch runs against immediately. *Settings → Sandbox →
 Reset test data* wipes the database, runs, worktrees and the fixture repository, then reseeds —
@@ -180,7 +216,11 @@ second user account):
 
 `pnpm desktop:dev` runs the shell against the Vite dev server with a daemon built from source.
 `pnpm desktop:package` produces the ad-hoc signed artifact for testing the packaged shape on your
-own machine; packaging needs a macOS host and refuses any other platform. That artifact is not
+own machine — the `local` channel, whose profile survives every rebuild, so installing a newer one
+keeps the projects, repositories, issues, runs and reviews of the previous.
+`pnpm desktop:smoke:local` proves that on a clean checkout; it commits an empty commit, packages
+it, and resets the branch, so it refuses to run on a dirty working tree. Packaging needs a macOS
+host and refuses any other platform. That artifact is not
 distributable: on any other Mac, Gatekeeper refuses it unless the tester applies the explicit
 override documented for [PR preview builds](#pr-preview-builds) — sharing a build with users means
 going through the signed pipeline.

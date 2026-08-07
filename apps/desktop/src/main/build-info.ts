@@ -3,15 +3,21 @@ import { join } from "node:path";
 
 import { app } from "electron";
 
-import { parseBuildInfo, unidentifiedBuildInfo, type BuildInfo } from "#shared/build-info";
+import {
+  devBuildInfo,
+  parseBuildInfo,
+  unidentifiedBuildInfo,
+  type BuildInfo,
+} from "#shared/build-info";
 
 /**
  * Packaging writes `build-info.json` beside the main bundle. Unreadable metadata degrades to an
- * unidentified build instead of failing its only caller, the support bundle.
+ * unidentified build — the `unknown` channel, isolated from every other channel's data — instead
+ * of failing startup or guessing which channel this artifact belongs to.
  */
 export function readBuildInfo(log: (message: string) => void): BuildInfo {
   const electron = process.versions.electron ?? "unknown";
-  if (!app.isPackaged) return unidentifiedBuildInfo(app.getVersion(), electron);
+  if (!app.isPackaged) return devBuildInfo(app.getVersion(), electron);
   try {
     return parseBuildInfo(readFileSync(join(app.getAppPath(), "build-info.json"), "utf8"));
   } catch (error) {

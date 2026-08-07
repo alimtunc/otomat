@@ -1,18 +1,27 @@
 // Install / launch / shutdown smoke for the packaged macOS artifact, ad-hoc or signed alike.
-import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createServer } from "node:net";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { RELEASE_OUT } from "./mac-build.mjs";
-import { readPrNumber, resolveBuildIdentity } from "./release/metadata.mjs";
+import { RELEASE_OUT } from "../mac-build.mjs";
+import { PACKAGED_CHANNELS, readPrNumber, resolveBuildIdentity } from "../release/metadata.mjs";
+import {
+  awaitExit,
+  capture,
+  childPids,
+  cleanup,
+  installFromDmg,
+  isolatedEnv,
+  survivingPids,
+  temporaryDir,
+  until,
+} from "./harness.mjs";
 
 // The same `PR_NUMBER` the packaging step read: the smoke installs and launches the artifact
 // under the name that build actually carries.
-const { productName: PRODUCT_NAME, appId: APP_ID } = resolveBuildIdentity(
-  readPrNumber(process.env),
-);
+const PR_NUMBER = readPrNumber(process.env);
+const { productName: PRODUCT_NAME, appId: APP_ID } = resolveBuildIdentity(PR_NUMBER);
 
 /** `lipo` names architectures the Mach-O way; `process.arch` uses Node's. */
 const MACH_O_ARCH = { arm64: "arm64", x64: "x86_64" };
@@ -20,30 +29,36 @@ const MACH_O_ARCH = { arm64: "arm64", x64: "x86_64" };
 const DAEMON_PORT = 43_191;
 const HEALTH_TIMEOUT_MS = 45_000;
 const LAUNCH_TIMEOUT_MS = 90_000;
-const SHUTDOWN_TIMEOUT_MS = 20_000;
-const ORPHAN_GRACE_MS = 3_000;
 
-const temporaries = [];
-let mountPoint = null;
-
-function temporaryDir(prefix) {
-  const dir = mkdtempSync(join(tmpdir(), prefix));
-  temporaries.push(dir);
-  return dir;
-}
-
-function capture(command, args) {
-  return execFileSync(command, args, { encoding: "utf8" });
-}
-
-async function until(description, timeoutMs, satisfied) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const outcome = await satisfied();
-    if (outcome !== null) return outcome;
-    await new Promise((resolve) => setTimeout(resolve, 250));
+/**
+ * The metadata the artifact carries: the channel decides which data roots and which remote
+ * deployment the app will open, so a build that drifted from its intent must fail here rather than
+ * in a user's profile. `OTOMAT_CHANNEL` states the intent when a caller has one — CI does, per
+ * event; `pnpm desktop:release` names its channel in the artifact itself.
+ */
+function assertBuildMetadata() {
+  const path = join(RELEASE_OUT, "build-info.json");
+  if (!existsSync(path)) {
+    throw new Error(`no build-info.json in ${RELEASE_OUT}. Run \`pnpm desktop:package\` first.`);
   }
-  throw new Error(`${description} did not happen within ${timeoutMs}ms.`);
+  const info = JSON.parse(readFileSync(path, "utf8"));
+  if (!PACKAGED_CHANNELS.includes(info.channel)) {
+    throw new Error(`the artifact declares no channel: ${String(info.channel)}.`);
+  }
+  const expected = (process.env.OTOMAT_CHANNEL ?? "").trim();
+  if (expected !== "" && info.channel !== expected) {
+    throw new Error(`the artifact declares channel ${String(info.channel)}, not ${expected}.`);
+  }
+  if (info.channel === "stable" && info.signed !== true) {
+    throw new Error("the artifact claims the stable channel without a signature.");
+  }
+  if ((info.pr_number ?? null) !== PR_NUMBER) {
+    throw new Error(`the artifact names PR ${String(info.pr_number)}, not ${String(PR_NUMBER)}.`);
+  }
+  if (typeof info.commit_short !== "string" || info.commit_short.length !== 7) {
+    throw new Error(`the artifact does not name its commit: ${String(info.commit_short)}.`);
+  }
+  return info;
 }
 
 function locateDmg() {
@@ -66,18 +81,6 @@ function assertPortFree(port) {
     probe.once("listening", () => probe.close(() => resolve()));
     probe.listen(port, "127.0.0.1");
   });
-}
-
-/** Installs the app the way a user does: mount, copy out with ditto (signatures survive), eject. */
-function installFromDmg(dmgPath) {
-  mountPoint = temporaryDir("otomat-dmg-");
-  capture("hdiutil", ["attach", dmgPath, "-nobrowse", "-readonly", "-mountpoint", mountPoint]);
-  const applications = temporaryDir("otomat-apps-");
-  const installed = join(applications, `${PRODUCT_NAME}.app`);
-  capture("ditto", [join(mountPoint, `${PRODUCT_NAME}.app`), installed]);
-  capture("hdiutil", ["detach", mountPoint]);
-  mountPoint = null;
-  return installed;
 }
 
 function assertBundleLayout(appPath) {
@@ -117,54 +120,8 @@ function assertBundleLayout(appPath) {
   return `${String(plist.CFBundleShortVersionString)} (${String(plist.CFBundleVersion)})`;
 }
 
-function childPids(pid) {
-  const result = spawnSync("pgrep", ["-P", String(pid)], { encoding: "utf8" });
-  return result.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-}
-
-function alive(pid) {
-  return spawnSync("kill", ["-0", pid]).status === 0;
-}
-
-async function awaitExit(child, label) {
-  const exited = new Promise((resolve) =>
-    child.once("exit", (code, signal) => resolve({ code, signal })),
-  );
-  const timer = new Promise((resolve) => setTimeout(() => resolve(null), SHUTDOWN_TIMEOUT_MS));
-  const outcome = await Promise.race([exited, timer]);
-  if (outcome === null) {
-    child.kill("SIGKILL");
-    throw new Error(`${label} ignored SIGTERM for ${SHUTDOWN_TIMEOUT_MS}ms.`);
-  }
-  return outcome;
-}
-
-/** A child environment that cannot reach the developer's own Otomat state or credentials. */
-function isolatedEnv(overrides) {
-  const env = { ...process.env };
-  for (const key of Object.keys(env)) {
-    if (key.startsWith("OTOMAT_") && overrides[key] === undefined) delete env[key];
-  }
-  if (overrides.ELECTRON_RUN_AS_NODE === undefined) delete env.ELECTRON_RUN_AS_NODE;
-  return { ...env, ...overrides };
-}
-
-/** Electron's own helpers are children too, so a survivor needs a grace period before it is one. */
-async function survivingPids(pids) {
-  const deadline = Date.now() + ORPHAN_GRACE_MS;
-  let surviving = pids.filter(alive);
-  while (surviving.length > 0 && Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    surviving = surviving.filter(alive);
-  }
-  return surviving;
-}
-
 /** The daemon the installed app owns, booted through the app's own Electron binary as Node. */
-async function smokeDaemon(appPath) {
+async function smokeDaemon(appPath, expectedBuild) {
   const dataDir = temporaryDir("otomat-daemon-");
   const entry = join(appPath, "Contents/Resources/app.asar.unpacked/daemon/dist/index.js");
   const child = spawn(join(appPath, "Contents", "MacOS", PRODUCT_NAME), [entry], {
@@ -189,6 +146,10 @@ async function smokeDaemon(appPath) {
     });
     if (health.status !== "ok")
       throw new Error(`unexpected health body: ${JSON.stringify(health)}`);
+    // The shipped daemon must be the commit the app claims, or the app would call its own host stale.
+    if (health.build !== expectedBuild) {
+      throw new Error(`the packaged daemon reports build ${String(health.build)}.`);
+    }
   } catch (error) {
     child.kill("SIGKILL");
     throw new Error(`${error.message}\n${output}`, { cause: error });
@@ -236,18 +197,15 @@ async function smokeApp(appPath) {
   }
 }
 
-function cleanup() {
-  if (mountPoint !== null) spawnSync("hdiutil", ["detach", mountPoint, "-force"]);
-  for (const dir of temporaries) rmSync(dir, { recursive: true, force: true });
-}
-
 try {
   await assertPortFree(DAEMON_PORT);
+  const buildInfo = assertBuildMetadata();
+  console.log(`  ok — ${buildInfo.channel} build ${buildInfo.commit_short}`);
   const dmgPath = locateDmg();
   console.log(`Installing ${dmgPath}…`);
-  const appPath = installFromDmg(dmgPath);
+  const appPath = installFromDmg(dmgPath, PRODUCT_NAME);
   console.log(`  ok — installed ${PRODUCT_NAME}.app version ${assertBundleLayout(appPath)}`);
-  await smokeDaemon(appPath);
+  await smokeDaemon(appPath, buildInfo.commit_short);
   console.log("  ok — the installed daemon boots, serves /api/health and stops on SIGTERM");
   await smokeApp(appPath);
   console.log(

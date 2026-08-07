@@ -51,7 +51,9 @@ function changesSincePreviousTag() {
     .filter((subject) => subject.trim().length > 0);
 }
 
-const buildInfo = resolveBuildInfo({ signed: true });
+// The stable channel, passed explicitly: `OTOMAT_CHANNEL` can neither reach a release nor keep one
+// out of the production data roots, and unsigned metadata claiming `stable` fails the build.
+const buildInfo = resolveBuildInfo({ signed: true, channel: "stable" });
 let signing;
 try {
   signing = preflight({

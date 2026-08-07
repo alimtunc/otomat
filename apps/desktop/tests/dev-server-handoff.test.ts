@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { DesktopApp } from "#main/app";
 import type { AppPaths } from "#main/paths";
+import { devBuildInfo } from "#shared/build-info";
 import { DEV_SERVER_ENV } from "#shared/constants";
 import { scratchDir } from "#support/scratch-dir";
 
@@ -28,7 +29,7 @@ vi.mock("#main/runtime", () => ({
     daemonLog: { write: vi.fn(), read: () => "" },
     daemon: { running: false, start: async () => "http://127.0.0.1:49152", stop: vi.fn() },
     linear: { reconcile: async () => {} },
-    hosts: { bootActivate: async () => null, shutdown: async () => {}, hasActiveSession: false },
+    hosts: { bootActivate: async () => null, shutdown: async () => {}, remoteSession: null },
     sandbox: { ensure: async () => {} },
   }),
 }));
@@ -79,7 +80,7 @@ function devPaths(devDataRoot: string | null): AppPaths {
 async function startDesktop(url: string | null): Promise<void> {
   if (url !== null) vi.stubEnv(DEV_SERVER_ENV, url);
   const scratch = scratchDir("otomat-handoff-");
-  await new DesktopApp(devPaths(scratch)).onReady();
+  await new DesktopApp(devPaths(scratch), devBuildInfo("0.0.0", "43.2.0")).onReady();
 }
 
 afterEach(() => {

@@ -63,6 +63,22 @@ survives disconnects and app quits; quitting the desktop app closes the tunnel
 but **never stops the remote daemon**. After a host reboot, the next connect
 starts it again.
 
+Which daemon a desktop app drives is decided by its channel
+([distribution channels](../release/macos-alpha.md#distribution-channels)), never by its signature:
+
+| Channel | Deployment | Port |
+| --- | --- | --- |
+| `stable`, `dev` | `~/.otomat` | 4319 |
+| `local` | `~/.otomat/local` | 4320 |
+| `preview` | `~/.otomat/instances/<sha7>` | derived from the sha |
+| `unknown` | `~/.otomat/instances/unknown` | derived from `unknown` |
+
+`local` and `stable` keep one deployment each, so their databases outlive every new build of the
+app; a preview is isolated per build, and a packaged build that could not name its channel shares
+the `unknown` slot rather than ever falling back to a deployment that holds real work. A dev
+checkout drives `~/.otomat` on purpose: exercising the real deployment is what a checkout is for,
+and it takes the same protected upgrade path the stable app does on that deployment.
+
 Updates: the daemon dist bakes its git commit in at build time and reports it
 from `/api/health`; the desktop compares it to the build it expects and warns in
 Settings on a mismatch. After the files are redeployed, the desktop restarts the
@@ -110,9 +126,39 @@ The tarball's files own their inodes, so the hardlink `find` pass above does not
 apply. The artifact is only a file — nothing starts a daemon from it, and the
 idle restart above applies unchanged.
 
+## Upgrading a deployment that keeps its data
+
+On `~/.otomat` and `~/.otomat/local` — the deployments `stable`, `dev` and `local` drive — the
+deploy button in *Settings → Execution hosts* upgrades the deployment the app is attached to
+instead of replacing it: the database in it has to survive. The deployment decides, not the
+channel that picked it (`keepsDataAcrossBuilds` in `bootstrap/scripts.ts`), so a checkout cannot
+swap a bundle under the daemon real work runs on just by being a checkout.
+`remote/upgrade/daemon.ts` runs the whole sequence and refuses the moment a step is not certain:
+
+0. **Is there a daemon at all?** When the session is not connected, one script looks for the
+   deployment's entry file — it starts, stops and reads nothing else. Only an answer that says
+   *absent* licenses a plain first install (nothing to stop, no database of ours to protect, the
+   same provisioning a preview instance gets). *Present*, or a host that cannot say, is refused.
+1. **No run in flight.** `/api/runs` is read through the tunnel. Busy, refusing, unreadable and
+   unreachable all count as "not idle" — an absent answer is never taken for an empty one.
+2. **Stop**, by pidfile pid whose `cmdline` still proves it is that daemon.
+3. **Back up**, in the same round trip so the copy is taken from a stopped database:
+   `otomat.db` plus any `-wal`/`-shm` into `<deployment>/backups/upgrade-<timestamp>/`, flushed with
+   `sync`. Nothing prunes it. A backup that fails ends the upgrade with the old daemon restarted.
+4. **Swap** the CI bundle in atomically, keeping the bundle it displaced as `daemon.prev`.
+5. **Migrate**, by restarting: the new daemon runs the same data-safety policy as the local one —
+   pre-migration backup, then a refusal rather than a partial schema.
+6. **Verify**: `connected` again, and `/api/health` naming the build that was just installed.
+7. **Roll back** otherwise: `daemon.prev` goes back (the bundle that failed is kept as
+   `daemon.failed` for a support bundle), the session reconnects to it, and the failure names the
+   backup path. Every failure after step 2 leaves a running daemon.
+
+A preview instance is provisioned rather than upgraded: its data is a test bed, so the deploy only
+installs the bundle and the instance's next connect boots it.
+
 ## Test instances
 
-A packaged preview build never touches `~/.otomat`: it targets its own
+A packaged preview build never touches `~/.otomat` or `~/.otomat/local`: it targets its own
 deployment under `~/.otomat/instances/<sha7>/` — keyed by the build it expects,
 `unknown` for an unidentifiable one — with a port derived from the same key
 (`instanceDeployment` in `bootstrap/scripts.ts`). The entire connect machinery
@@ -134,11 +180,11 @@ removes every trace of that build from the host in one action.
 *Settings → Execution hosts → Deployments on this host* lists the instances
 (build, running state, port, size) with explicit **Stop** and **Delete**
 actions, and a deploy button that installs the CI bundle for the app's own
-build onto its own target: in the stable app that updates `~/.otomat/daemon`
-(the idle restart then boots it, never with a run in flight), in a preview it
-provisions or refreshes the instance. The deploy runs `gh` on the host —
-already authenticated there — so no artifact ever transits the desktop, and
-nothing on this panel starts a daemon or runs on a timer.
+build onto its own target: in a preview it provisions or refreshes the
+instance and nothing is started, on a deployment that keeps its data it runs
+the in-place upgrade above. The deploy runs `gh` on the host — already
+authenticated there — so no artifact ever transits the desktop, and nothing on
+this panel runs on a timer.
 
 ## Linear across hosts
 
@@ -189,7 +235,9 @@ Everything lives in `apps/desktop/src/main/remote/`:
 | `host/config.ts`         | `execution-hosts.json` (alias + active selection), atomic writes     |
 | `ssh/config-aliases.ts`  | concrete `Host` alias suggestions from `~/.ssh/config`               |
 | `ssh/script.ts`          | one-shot remote scripts over `ssh <alias> bash -ls` (script on stdin)|
-| `bootstrap/scripts.ts`   | the start-or-verify and stop scripts, plus `instanceDeployment` (per-build home + port) |
+| `bootstrap/scripts.ts`   | the start-or-verify and stop scripts, `deploymentForChannel` (which home + port a channel drives) and `keepsDataAcrossBuilds` (which of them an update must protect) |
+| `idle.ts`                | the one idle predicate every stop goes through; unreachable is never idle |
+| `deploy.ts`              | the one CI-bundle install both the preview deploy and the in-place upgrade run; starts nothing |
 | `bootstrap/status.ts`    | resolving one start-or-verify round trip into a typed failure or the running-daemon detail |
 | `ssh/tunnel.ts`          | the `ssh -N -L` child (loopback→loopback, `ExitOnForwardFailure`)    |
 | `session.ts`             | phase machine: checking_host → starting_daemon → opening_tunnel → connected, reconnect loop with capped backoff |
@@ -200,6 +248,8 @@ Everything lives in `apps/desktop/src/main/remote/`:
 | `stale-daemon.ts`        | restarts a redeployed-but-stale remote daemon once it is idle (never with a run in flight; one attempt per observed build) |
 | `instances/scripts.ts`   | deploy/list/delete scripts for `~/.otomat/instances`; a listing counts only with its END token |
 | `instances/actions.ts`   | one-shot list/stop/delete/deploy actions; keys regex-validated before any interpolation, never on a timer |
+| `upgrade/scripts.ts`     | the pre-upgrade database backup and the bundle rollback, with their parsers |
+| `upgrade/daemon.ts`      | the in-place upgrade of a `local` or `stable` deployment, end to end |
 | `ipc-actions.ts`         | renderer-facing IPC actions with honest not-ready fallbacks          |
 
 `connected` is declared only after a schema-valid `/api/health` response came

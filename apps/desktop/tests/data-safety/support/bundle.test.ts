@@ -14,6 +14,7 @@ it("contains only versions, health, schema metadata and already-redacted logs", 
     versions: {
       desktop: "0.0.0",
       commit: "1111111111111111111111111111111111111111",
+      channel: "local",
       signed: false,
       electron: "43.0.0",
       node: "24.0.0",
@@ -45,6 +46,7 @@ it("redacts CR-only prompt continuations", () => {
     versions: {
       desktop: "0.0.0",
       commit: "1111111111111111111111111111111111111111",
+      channel: "local",
       signed: false,
       electron: "43.0.0",
       node: "24.0.0",

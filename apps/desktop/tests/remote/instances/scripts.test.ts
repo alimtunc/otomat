@@ -49,9 +49,20 @@ describe("deployDaemonScript", () => {
     expect(script).toContain('if ! ID="$(gh api');
     expect(script).toContain('if ! mv "$TMP/x/daemon"');
     expect(script).toContain('if ! mv "$OTOMAT_HOME/daemon.next"');
-    expect(script.lastIndexOf('rm -rf "$OTOMAT_HOME/daemon.prev"')).toBeGreaterThan(
-      script.indexOf('if ! mv "$OTOMAT_HOME/daemon.next"'),
-    );
+  });
+
+  it("keeps the bundle it displaced, so an upgrade has something to roll back to", () => {
+    const script = deployDaemonScript({
+      deployment: STABLE_DEPLOYMENT,
+      build: "92584b0",
+      repo: "alimtunc/otomat",
+    });
+    const swap = script.indexOf('if ! mv "$OTOMAT_HOME/daemon.next"');
+
+    expect(script).toContain('mv "$OTOMAT_HOME/daemon" "$OTOMAT_HOME/daemon.prev"');
+    // The only cleanup of a previous bundle is the one before this deploy's own swap.
+    expect(script.lastIndexOf('rm -rf "$OTOMAT_HOME/daemon.next"')).toBeLessThan(swap);
+    expect(script.slice(swap)).not.toContain("rm -rf");
   });
 });
 

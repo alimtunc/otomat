@@ -1,13 +1,16 @@
 // Local development artifact: ad-hoc signed, never distributable, never touches Apple credentials.
 // The distributable build is `pnpm desktop:release` (see docs/release/macos-alpha.md).
 import { buildMacApp, resolveBuildInfo } from "./mac-build.mjs";
-import { readPrNumber, resolveBuildIdentity } from "./release/metadata.mjs";
+import { readPrNumber, resolveBuildIdentity, resolvePackagedChannel } from "./release/metadata.mjs";
 
 // `PR_NUMBER` (CI, on a pull request) names the preview after its PR so several previews and the
-// stable install coexist on one Mac, sharing no app, no lock and no data.
-const identity = resolveBuildIdentity(readPrNumber(process.env));
+// stable install coexist on one Mac, sharing no app, no lock and no data. Without it this is the
+// `local` channel: the same identity as the stable app, but its own data roots, kept across commits.
+const pr = readPrNumber(process.env);
+const identity = resolveBuildIdentity(pr);
+const channel = resolvePackagedChannel(process.env, pr);
 const built = buildMacApp({
-  buildInfo: resolveBuildInfo({ signed: false, pr: identity.pr }),
+  buildInfo: resolveBuildInfo({ signed: false, channel, pr }),
   signing: null,
   identity,
 });
@@ -15,6 +18,7 @@ const built = buildMacApp({
 console.log(`\nUnsigned artifact written to ${built.releaseDir}`);
 console.log(`  app: ${built.appPath}`);
 console.log(`  dmg: ${built.dmgPath}`);
+console.log(`  channel: ${channel}`);
 if (identity.pr !== null) {
   console.log(`  identity: ${identity.productName} (${identity.appId})`);
 }

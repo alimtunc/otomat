@@ -56,7 +56,7 @@ function sessionFor(worktree: string, appData: string): { root: string; env: Nod
     userData: root,
     userPath: "/usr/bin",
     expectedBuild: null,
-    preview: false,
+    channel: "dev",
     localDaemonUrl: () => "",
     onRemoteStatus: () => {},
     onLinearDelivery: () => {},

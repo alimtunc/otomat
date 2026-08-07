@@ -25,6 +25,7 @@ function exporter(
     versions: {
       desktop: "0.0.0",
       commit: "1111111111111111111111111111111111111111",
+      channel: "local",
       signed: false,
       electron: "43.0.0",
       node: "24.0.0",

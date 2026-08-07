@@ -20,7 +20,8 @@
     "desktop:package": "node apps/desktop/scripts/package-mac.mjs",
     "desktop:preflight": "node apps/desktop/scripts/release-preflight.mjs",
     "desktop:release": "node apps/desktop/scripts/release-mac.mjs",
-    "desktop:smoke": "node apps/desktop/scripts/smoke-packaged.mjs",
+    "desktop:smoke": "node apps/desktop/scripts/smoke/packaged.mjs",
+    "desktop:smoke:local": "node apps/desktop/scripts/smoke/local-upgrade.mjs",
     "db:migrate": "pnpm --filter @otomat/db run migrate",
     "clean:data": "node scripts/clean-dev-data.mjs",
     "prepare": "lefthook install"

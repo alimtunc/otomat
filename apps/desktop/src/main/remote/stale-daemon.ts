@@ -1,7 +1,5 @@
+import { remoteIsIdle } from "./idle.js";
 import type { RemoteSessionHandle } from "./session.js";
-
-/** States with a live or pending provider process; a restart would cut real work. */
-const BUSY_RUN_STATUSES = new Set(["queued", "preparing", "running", "awaiting_permission"]);
 
 export interface StaleDaemonRefresherOptions {
   /** Build this app expects; null disables refreshing entirely. */
@@ -30,7 +28,12 @@ export class StaleDaemonRefresher {
     if (build === null || build === expected || build === this.handledBuild) return;
     this.refreshing = true;
     try {
-      if (!(await this.remoteIsIdle(session.url))) return;
+      const idle = await remoteIsIdle({
+        baseUrl: session.url,
+        fetchImpl: this.options.fetchImpl,
+        log: this.options.log,
+      });
+      if (!idle) return;
       this.options.log(
         `Remote daemon build ${build} differs from expected ${expected}; restarting it while idle.`,
       );
@@ -41,22 +44,6 @@ export class StaleDaemonRefresher {
       this.options.log(`Stale remote daemon refresh failed: ${String(error)}`);
     } finally {
       this.refreshing = false;
-    }
-  }
-
-  private async remoteIsIdle(baseUrl: string): Promise<boolean> {
-    try {
-      const response = await this.options.fetchImpl(`${baseUrl}/api/runs`);
-      if (!response.ok) return false;
-      const payload: unknown = await response.json();
-      if (!Array.isArray(payload)) return false;
-      return !payload.some((run) =>
-        BUSY_RUN_STATUSES.has((run as { status?: string }).status ?? ""),
-      );
-    } catch (error) {
-      // Unreachable is not idle: when in doubt, never restart.
-      this.options.log(`Remote idle check failed: ${String(error)}`);
-      return false;
     }
   }
 }

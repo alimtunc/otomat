@@ -71,8 +71,9 @@ export class ExecutionHostManager {
     return this.config.remote?.ssh_alias ?? null;
   }
 
-  get hasActiveSession(): boolean {
-    return this.session !== null;
+  /** The live session, or null when this host has none yet — never a superseded one. */
+  get remoteSession(): RemoteSessionHandle | null {
+    return this.session;
   }
 
   snapshot(): ExecutionHostSnapshot {
