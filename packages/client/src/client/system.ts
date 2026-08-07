@@ -1,11 +1,12 @@
 import {
   healthResponseSchema,
+  providerOptionSetSchema,
   runtimeDescriptorSchema,
   runtimeModelCatalogSchema,
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { getJson } from "./http.js";
+import { getJson, queryString } from "./http.js";
 
 export function createSystemClient(config: DaemonClientConfig) {
   return {
@@ -20,6 +21,11 @@ export function createSystemClient(config: DaemonClientConfig) {
       return runtimeModelCatalogSchema.parse(
         await getJson(config, `/api/runtimes/${encodeURIComponent(runtimeId)}/models`),
       );
+    },
+    /** The options the installed binary announces for this runtime and model; omitting the model asks for the provider default's set. */
+    async runtimeProviderOptions(runtimeId: string, model?: string) {
+      const path = `/api/runtimes/${encodeURIComponent(runtimeId)}/options${queryString({ model })}`;
+      return providerOptionSetSchema.parse(await getJson(config, path));
     },
   };
 }

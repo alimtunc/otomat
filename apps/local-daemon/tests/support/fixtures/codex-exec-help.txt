@@ -1,0 +1,40 @@
+Run Codex non-interactively
+
+Usage: codex exec [OPTIONS] [PROMPT]
+
+Arguments:
+  [PROMPT]
+          Initial instructions for the model. If not provided as an argument (or
+          if `-` is used), instructions are read from stdin
+
+Options:
+  -m, --model <MODEL>
+          Model the agent should use
+
+      --json
+          Print events to stdout as JSONL
+
+  -s, --sandbox <SANDBOX_MODE>
+          Select the sandbox policy to use when executing model-generated shell
+          commands
+
+          [possible values: read-only, workspace-write, danger-full-access]
+
+  -a, --ask-for-approval <APPROVAL_POLICY>
+          Configure when the model requires human approval before executing a
+          command
+
+          [possible values: untrusted, on-failure, on-request, never]
+
+  -c, --config <key=value>
+          Override a configuration value that would otherwise be loaded from
+          `~/.codex/config.toml`
+
+      --full-auto
+          Convenience alias for low-friction sandboxed automatic execution
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+Commands:
+  resume  Resume a previous session

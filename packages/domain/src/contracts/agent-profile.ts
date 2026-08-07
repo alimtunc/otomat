@@ -1,7 +1,7 @@
 import { z } from "zod";
 
+import { providerOptionsSchema } from "./provider-options.js";
 import { MODEL_SELECTION_ERRORS, modelIdSchema } from "./runtime-model.js";
-import { providerOptionsSchema } from "./runtime.js";
 
 export const AGENT_PROFILE_NAME_MAX_LENGTH = 80;
 export const AGENT_PROFILE_GUIDANCE_MAX_LENGTH = 20_000;

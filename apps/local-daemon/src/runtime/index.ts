@@ -5,8 +5,9 @@
  * allocates `seq` — the ledger assigns it downstream at persistence time.
  * `cli/` holds the shared CLI turn infrastructure, `providers/<id>/` one folder
  * per supported runtime, `models/` the per-runtime model catalog with its
- * provenance and selection rules, and `registry.ts` the catalog everything
- * derives from.
+ * provenance and selection rules, `probe/` the bounded, credential-free reads of
+ * an installed binary that feature-detection is built on, and `registry.ts` the
+ * catalog everything derives from.
  *
  * @packageDocumentation
  */
@@ -16,6 +17,8 @@ export * from "./contract.js";
 export * from "./events.js";
 export { describeRuntimeModelCatalog } from "./models/catalog.js";
 export { ModelSelectionRefusedError, resolveModelSelection } from "./models/resolve.js";
+export { clearProviderProbeCache } from "./probe/cache.js";
+export { describeProviderOptions } from "./provider-options.js";
 export * from "./providers/fake/adapter.js";
 export * from "./registry.js";
 export * from "./sinks.js";

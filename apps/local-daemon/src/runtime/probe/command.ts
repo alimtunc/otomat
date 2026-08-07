@@ -1,9 +1,9 @@
 import { spawnSync } from "node:child_process";
 
-import type { ModelDiscoveryStatus } from "@otomat/domain";
+import type { ProbeStatus } from "@otomat/domain";
 
-const DISCOVERY_TIMEOUT_MS = 10_000;
-const DISCOVERY_MAX_BUFFER = 16 * 1024 * 1024;
+const PROBE_TIMEOUT_MS = 10_000;
+const PROBE_MAX_BUFFER = 16 * 1024 * 1024;
 const DETAIL_MAX_LENGTH = 200;
 
 /** Argument-parser refusals: this provider version has no such listing, which is a capability answer, not a failure. */
@@ -16,16 +16,16 @@ const UNSUPPORTED_MARKERS = [
   "is not a valid",
 ];
 
-export type ProbeOutcome =
+export type ProbeResult =
   | { status: "ok"; stdout: string }
-  | { status: Exclude<ModelDiscoveryStatus, "ok">; detail: string };
+  | { status: Exclude<ProbeStatus, "ok">; detail: string };
 
 export function firstMeaningfulLine(text: string): string {
   const line = text.split("\n").find((candidate) => candidate.trim().length > 0) ?? "";
   return line.trim().slice(0, DETAIL_MAX_LENGTH);
 }
 
-function classifyFailure(stderr: string, exitCode: number | null): ProbeOutcome {
+function classifyFailure(stderr: string, exitCode: number | null): ProbeResult {
   const detail = firstMeaningfulLine(stderr) || `exited with code ${String(exitCode)}`;
   const unsupported = UNSUPPORTED_MARKERS.some((marker) =>
     stderr.toLowerCase().includes(marker.toLowerCase()),
@@ -33,12 +33,12 @@ function classifyFailure(stderr: string, exitCode: number | null): ProbeOutcome 
   return { status: unsupported ? "unsupported" : "failed", detail };
 }
 
-/** Runs a provider's own listing command: it never inspects credentials or configuration homes, and any non-zero exit becomes an honest unsupported/failed answer instead of a guess. */
-export function probeProviderCommand(binary: string, args: readonly string[]): ProbeOutcome {
+/** Runs a provider's own listing or help command: it never inspects credentials or configuration homes, and any non-zero exit becomes an honest unsupported/failed answer instead of a guess. */
+export function probeProviderCommand(binary: string, args: readonly string[]): ProbeResult {
   const result = spawnSync(binary, args, {
     encoding: "utf8",
-    timeout: DISCOVERY_TIMEOUT_MS,
-    maxBuffer: DISCOVERY_MAX_BUFFER,
+    timeout: PROBE_TIMEOUT_MS,
+    maxBuffer: PROBE_MAX_BUFFER,
   });
 
   if (result.error) return { status: "failed", detail: result.error.message };

@@ -1,4 +1,4 @@
-import type { ProviderOptionDescriptor, RuntimeCapabilities } from "@otomat/domain";
+import type { RuntimeCapabilities } from "@otomat/domain";
 
 import {
   requireProviderSession,
@@ -10,6 +10,7 @@ import type { TurnRef } from "#runtime/cli/turn-emitter";
 import type {
   RuntimeAdapter,
   RuntimeFinalState,
+  RuntimeOptionSupport,
   RuntimeResumeInput,
   RuntimeRunInput,
   RuntimeSessionRef,
@@ -19,6 +20,7 @@ import type { RuntimeSink } from "#runtime/sinks";
 
 import { CodexFrameMapper } from "./frames.js";
 import { codexModelSupport } from "./models.js";
+import { CODEX_DEFAULT_SANDBOX, codexOptionSupport } from "./options.js";
 
 export const CODEX_ADAPTER_ID = "codex";
 
@@ -33,24 +35,27 @@ const CODEX_CAPABILITIES: RuntimeCapabilities = {
   diff_hints: false,
 };
 
-/** Codex exposes no user-tunable provider options today; its sandbox is a fixed constant. */
-const CODEX_PROVIDER_OPTIONS: ProviderOptionDescriptor[] = [];
-
-/** JSONL output plus the OS-level sandbox confining writes to the working directory. */
-const BASE_EXEC_ARGS = ["--json", "--sandbox", "workspace-write"];
+/** The official config override for the reasoning level; the TOML string keeps the value a value, never a flag. */
+function reasoningEffortOverride(level: string): string[] {
+  return ["-c", `model_reasoning_effort="${level}"`];
+}
 
 /** The prompt is piped over stdin (`-`) so size and quoting never leak into argv. */
 export class CodexRuntimeAdapter implements RuntimeAdapter {
   readonly id = CODEX_ADAPTER_ID;
   readonly displayName = "Codex CLI";
   readonly capabilities = CODEX_CAPABILITIES;
-  readonly providerOptions = CODEX_PROVIDER_OPTIONS;
 
   /** The binary parameter is the test seam: tests point it at a stub replaying recorded frames. */
   constructor(private readonly binary: string = CODEX_BINARY) {}
 
   get models(): RuntimeModelSupport {
     return codexModelSupport(this.binary);
+  }
+
+  /** The bundled catalog publishes reasoning levels per model, so the selection changes what may be offered. */
+  describeOptions(model: string | null): RuntimeOptionSupport {
+    return codexOptionSupport(this.binary, model);
   }
 
   async run(
@@ -68,14 +73,23 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
-    // `--json`/`--sandbox`/`--model` are `exec`-level flags; the real CLI rejects them after the `resume` subcommand.
+    // Every configured flag is `exec`-level; the real CLI rejects them after the `resume` subcommand.
     const args = ["exec", ...this.execArgs(input), "resume", requireProviderSession(session), "-"];
     return runCliTurn(this.spec(args, input, session), sink, signal);
   }
 
+  /** JSONL output plus the frozen sandbox, approval policy, reasoning level and model, in that order. */
   private execArgs(input: RuntimeRunInput | RuntimeResumeInput): string[] {
-    const model = input.model ?? null;
-    return model === null ? [...BASE_EXEC_ARGS] : [...BASE_EXEC_ARGS, "--model", model];
+    const options = input.options ?? {};
+    const args = ["--json", "--sandbox", options.sandbox ?? CODEX_DEFAULT_SANDBOX];
+    if (options.approval_policy !== undefined) {
+      args.push("--ask-for-approval", options.approval_policy);
+    }
+    if (options.reasoning_effort !== undefined) {
+      args.push(...reasoningEffortOverride(options.reasoning_effort));
+    }
+    if (input.model != null) args.push("--model", input.model);
+    return args;
   }
 
   private spec(args: string[], input: CliTurnInput, ref: TurnRef): CliTurnSpec {

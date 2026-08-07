@@ -14,7 +14,9 @@
       "description": "Latest frontier agentic coding model.",
       "visibility": "list",
       "supported_in_api": true,
-      "priority": 1
+      "priority": 1,
+      "default_reasoning_level": "medium",
+      "supported_reasoning_levels": ["low", "medium", "high", "xhigh", "max", "ultra"]
     },
     {
       "slug": "gpt-5.4-mini",
@@ -22,7 +24,9 @@
       "description": "Retired.",
       "visibility": "hide",
       "supported_in_api": true,
-      "priority": 23
+      "priority": 23,
+      "default_reasoning_level": "low",
+      "supported_reasoning_levels": ["low", "medium"]
     },
     {
       "slug": "--dangerous",

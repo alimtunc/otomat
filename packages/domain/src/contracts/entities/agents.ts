@@ -1,7 +1,7 @@
 import { z } from "zod";
 
+import { providerOptionsSchema } from "../provider-options.js";
 import { modelIdSchema, resolvedModelSchema } from "../runtime-model.js";
-import { providerOptionsSchema } from "../runtime.js";
 
 /** Where a discovered skill came from: a registered project's tree, or the user's home skills. */
 export const SKILL_SOURCES = ["project", "user"] as const;

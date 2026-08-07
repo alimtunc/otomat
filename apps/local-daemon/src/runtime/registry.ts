@@ -111,7 +111,6 @@ export function listRuntimeDescriptors(env: NodeJS.ProcessEnv = process.env): Ru
         kind: REGISTRY[id].kind,
         capabilities: adapter.capabilities,
         availability: describeRuntimeAvailability(id, env),
-        provider_options: adapter.providerOptions,
       };
     },
   );

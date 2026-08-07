@@ -80,7 +80,6 @@ function claudeDescriptor(): RuntimeDescriptor {
       diff_hints: false,
     },
     availability: { status: "available", version: null },
-    provider_options: [],
   };
 }
 

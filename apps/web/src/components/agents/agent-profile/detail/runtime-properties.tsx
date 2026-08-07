@@ -1,6 +1,8 @@
 import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
-import { Chip, Icon, MetaList, ProviderMark } from "@otomat/ui";
-import { permissionModeOption, storedPermissionModeLabel } from "@web/lib/agent-choice";
+import { Chip, Icon, MetaList, ProviderMark, type MetaListItem } from "@otomat/ui";
+import { useRuntimeProviderOptions } from "@web/api/daemon/queries";
+import { providerOptionKeyLabel, providerOptionValueLabel } from "@web/lib/provider-option-labels";
+import { effectiveProviderOptionLabel, unofferedProviderOptions } from "@web/lib/provider-options";
 import { runtimeMark } from "@web/lib/runtimes";
 
 export function RuntimeProperties({
@@ -10,10 +12,9 @@ export function RuntimeProperties({
   profile: AgentProfileContract;
   descriptor: RuntimeDescriptor | undefined;
 }) {
-  const permissionOption = permissionModeOption(descriptor?.provider_options);
-  const permissionLabel = storedPermissionModeLabel(profile, descriptor) ?? "Runtime default";
+  const detected = useRuntimeProviderOptions(profile.runtime, profile.model);
   const mark = runtimeMark(profile.runtime);
-  const items = [
+  const items: MetaListItem[] = [
     {
       key: "runtime",
       label: "Runtime",
@@ -35,11 +36,23 @@ export function RuntimeProperties({
     },
   ];
 
-  if (permissionOption) {
+  // Same descriptors as the editor, so the two surfaces never disagree about what is effective.
+  for (const option of detected.data?.options ?? []) {
     items.push({
-      key: "options",
-      label: "Options",
-      value: <Chip tone="ghost">{permissionLabel}</Chip>,
+      key: option.key,
+      label: providerOptionKeyLabel(option.key),
+      value: (
+        <Chip tone="ghost">
+          {effectiveProviderOptionLabel(option, profile.options[option.key] ?? null)}
+        </Chip>
+      ),
+    });
+  }
+  for (const stored of unofferedProviderOptions(profile.options, detected.data)) {
+    items.push({
+      key: stored.key,
+      label: providerOptionKeyLabel(stored.key),
+      value: <Chip tone="warning">{providerOptionValueLabel(stored.value)} — not offered</Chip>,
     });
   }
 

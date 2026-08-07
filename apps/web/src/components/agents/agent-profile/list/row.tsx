@@ -2,7 +2,8 @@ import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
 import { AgentAvatar, Chip, FOCUS_RING, ProviderMark } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { AgentProfileRowActions } from "@web/components/agents/agent-profile/list/row-actions";
-import { storedPermissionModeLabel } from "@web/lib/agent-choice";
+import { providerOptionKeyLabel, providerOptionValueLabel } from "@web/lib/provider-option-labels";
+import { storedProviderOptions } from "@web/lib/provider-options";
 import { runtimeById, runtimeMark } from "@web/lib/runtimes";
 import { CELL } from "@web/lib/table";
 
@@ -16,7 +17,7 @@ export function AgentProfileRow({
   onEdit: (profile: AgentProfileContract) => void;
 }) {
   const descriptor = runtimeById(descriptors, profile.runtime);
-  const optionLabel = storedPermissionModeLabel(profile, descriptor);
+  const options = storedProviderOptions(profile.options);
   const mark = runtimeMark(profile.runtime);
 
   return (
@@ -46,8 +47,14 @@ export function AgentProfileRow({
         {profile.skill_ids.length}
       </td>
       <td className={CELL}>
-        {optionLabel ? (
-          <Chip tone="ghost">{optionLabel}</Chip>
+        {options.length > 0 ? (
+          <span className="flex flex-wrap gap-1">
+            {options.map((option) => (
+              <Chip key={option.key} tone="ghost">
+                {providerOptionKeyLabel(option.key)}: {providerOptionValueLabel(option.value)}
+              </Chip>
+            ))}
+          </span>
         ) : (
           <span className="text-text-tertiary">—</span>
         )}

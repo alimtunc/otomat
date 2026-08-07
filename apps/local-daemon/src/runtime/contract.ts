@@ -2,6 +2,7 @@ import {
   modelIdSchema,
   providerOptionsSchema,
   RUN_TERMINAL_STATES,
+  type BinaryProbe,
   type ProviderOptionDescriptor,
   type RuntimeCapabilities,
   type RunTerminalState,
@@ -62,6 +63,16 @@ const runtimeResumeInputSchema = z.object({
 });
 export type RuntimeResumeInput = z.infer<typeof runtimeResumeInputSchema>;
 
+/**
+ * What an adapter feature-detected from the installed binary for one model: the
+ * probe's verdict and the options it may honestly offer. A non-`ok` detection
+ * carries no options, and the runtime still launches on its provider defaults.
+ */
+export interface RuntimeOptionSupport {
+  detection: BinaryProbe;
+  options: ProviderOptionDescriptor[];
+}
+
 /** Handle to a started session, used by out-of-band `abort`/`resume`. */
 const runtimeSessionRefSchema = z.object({
   run_id: z.string(),
@@ -81,8 +92,8 @@ export interface RuntimeAdapter {
   readonly id: RuntimeId;
   readonly displayName: string;
   readonly capabilities: RuntimeCapabilities;
-  /** Provider options this adapter honestly supports; empty when it maps none to CLI flags. */
-  readonly providerOptions: ProviderOptionDescriptor[];
+  /** What the installed binary accepts for `model`, feature-detected per call. Never a union assumed valid across CLI versions. */
+  describeOptions(model: string | null): RuntimeOptionSupport;
   /** How this adapter handles model selection: whether it passes a model flag, and where its catalog comes from. */
   readonly models: RuntimeModelSupport;
   run(input: RuntimeRunInput, sink: RuntimeSink, signal: AbortSignal): Promise<RuntimeFinalState>;

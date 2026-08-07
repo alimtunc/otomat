@@ -75,17 +75,36 @@ it("throws when the profile does not exist", () => {
   );
 });
 
-it("rejects an option the runtime does not support", () => {
+it("rejects an option the installed runtime does not announce, saying why", () => {
   insertAgentProfile(t.db, {
     id: "pr-2",
     name: "P",
     runtime: "fake",
-    options_json: { permission_mode: "plan" },
+    // A mode a past CLI accepted: only what the installed one announces may reach argv.
+    options_json: { permission_mode: "default" },
     guidance: null,
     skill_ids_json: [],
   });
   expect(() => resolveAgentConfig(t.db, { kind: "profile", profileId: "pr-2" })).toThrow(
     ProfileOptionUnsupportedError,
+  );
+  expect(() => resolveAgentConfig(t.db, { kind: "profile", profileId: "pr-2" })).toThrow(
+    /permission_mode/,
+  );
+});
+
+it("resolves a profile that overrides nothing without probing the runtime at all", () => {
+  insertAgentProfile(t.db, {
+    id: "pr-defaults",
+    name: "P",
+    runtime: "fake",
+    options_json: {},
+    guidance: null,
+    skill_ids_json: [],
+  });
+
+  expect(resolveAgentConfig(t.db, { kind: "profile", profileId: "pr-defaults" }).options).toEqual(
+    {},
   );
 });
 

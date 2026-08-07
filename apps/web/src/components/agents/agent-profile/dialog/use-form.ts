@@ -1,6 +1,7 @@
 import {
   modelSelectionFromId,
   type AgentProfileContract,
+  type ProviderOptions,
   type RuntimeDescriptor,
   type SaveAgentProfileRequest,
 } from "@otomat/domain";
@@ -11,7 +12,6 @@ import {
   useCreateAgentProfile,
   useUpdateAgentProfile,
 } from "@web/api/agent-profiles/mutations";
-import { supportedPermissionMode } from "@web/lib/agent-choice";
 import { profileModelFromSelection } from "@web/lib/model-choice";
 import { resolveRuntimeChoice } from "@web/lib/runtimes";
 import { useState } from "react";
@@ -29,31 +29,24 @@ export function useAgentProfileForm({
   const update = useUpdateAgentProfile();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const defaultRuntime = profile?.runtime ?? resolveRuntimeChoice(descriptors, null) ?? "";
+  // Stored as-is: whether the installed CLI still announces a value is the option fields' answer, and the daemon's gate.
+  const defaultOptions: ProviderOptions = profile?.options ?? {};
 
   const form = useForm({
     defaultValues: {
       name: profile?.name ?? "",
       runtime: defaultRuntime,
-      permissionMode: supportedPermissionMode(
-        descriptors,
-        defaultRuntime,
-        profile?.options.permission_mode,
-      ),
+      options: defaultOptions,
       model: modelSelectionFromId(profile?.model ?? null),
       guidance: profile?.guidance ?? "",
       skillIds: profile?.skill_ids ?? [],
     },
     onSubmit: async ({ value }) => {
       setSubmitError(null);
-      const permissionMode = supportedPermissionMode(
-        descriptors,
-        value.runtime,
-        value.permissionMode,
-      );
       const request: SaveAgentProfileRequest = {
         name: value.name.trim(),
         runtime: value.runtime,
-        options: permissionMode ? { permission_mode: permissionMode } : {},
+        options: value.options,
         model: profileModelFromSelection(value.model),
         guidance: value.guidance.trim() ? value.guidance.trim() : null,
         skill_ids: value.skillIds,

@@ -21,7 +21,15 @@ if (process.env.OTOMAT_STUB_STDERR) {
   process.stderr.write(`${process.env.OTOMAT_STUB_STDERR}\n`);
 }
 
-const fixture = process.env.OTOMAT_STUB_FIXTURE;
+// OTOMAT_STUB_FIXTURES maps a joined argv ("exec --help") to its own fixture, so one stub can answer several probes in a single test.
+function fixtureForArgv() {
+  const byArgv = process.env.OTOMAT_STUB_FIXTURES;
+  if (!byArgv) return process.env.OTOMAT_STUB_FIXTURE;
+  const map = JSON.parse(byArgv);
+  return map[process.argv.slice(2).join(" ")] ?? process.env.OTOMAT_STUB_FIXTURE;
+}
+
+const fixture = fixtureForArgv();
 if (fixture) {
   const lines = readFileSync(fixture, "utf8")
     .split("\n")

@@ -212,6 +212,53 @@ describe("CodexRuntimeAdapter", () => {
     expect(JSON.parse(readFileSync(argsFile, "utf8"))).not.toContain("--model");
   });
 
+  it("sends the frozen sandbox, approval and reasoning level before `resume`", async () => {
+    const argsFile = join(worktree, "stub-args.json");
+    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
+    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    const adapter = new CodexRuntimeAdapter(STUB_BIN);
+    const options = { sandbox: "read-only", approval_policy: "never", reasoning_effort: "xhigh" };
+
+    await adapter.resume(
+      runtimeSessionRef("thread-codex-1"),
+      { prompt: "follow up", run_dir: worktree, cwd: worktree, options, model: "gpt-5.6-sol" },
+      new MemorySink(),
+      new AbortController().signal,
+    );
+
+    // Every configured flag is exec-level, so all of them precede the resume subcommand.
+    expect(JSON.parse(readFileSync(argsFile, "utf8"))).toEqual([
+      "exec",
+      "--json",
+      "--sandbox",
+      "read-only",
+      "--ask-for-approval",
+      "never",
+      "-c",
+      'model_reasoning_effort="xhigh"',
+      "--model",
+      "gpt-5.6-sol",
+      "resume",
+      "thread-codex-1",
+      "-",
+    ]);
+  });
+
+  it("keeps the worktree sandbox and sends no override by default", async () => {
+    const argsFile = join(worktree, "stub-args.json");
+    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
+    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+
+    await new CodexRuntimeAdapter(STUB_BIN).run(
+      input(worktree),
+      new MemorySink(),
+      new AbortController().signal,
+    );
+
+    const argv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    expect(argv).toEqual(["exec", "--json", "--sandbox", "workspace-write", "-"]);
+  });
+
   it("streams stderr lines as raw_log evidence", async () => {
     process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
     process.env["OTOMAT_STUB_STDERR"] = "WARN model config fallback";

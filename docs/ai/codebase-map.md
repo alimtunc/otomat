@@ -19,7 +19,9 @@ apps/
       git/             # worktree/branch lifecycle + diff      (OTO-8)
       data-safety/     # startup diagnostics + restore maintenance mode (OTO-29)
       review/          # review slice: diff snapshot + comment anchoring (OTO-11)
-      runtime/         # runtime adapter contract + fake adapter (OTO-6)
+      runtime/         # adapter contract, provider adapters, model + option feature detection (OTO-6)
+        probe/         # bounded, credential-free reads of an installed provider binary
+        providers/     # one folder per runtime: adapter, frames, models, options
       supervisor/      # process supervisor + pid reconciliation (OTO-10)
       index.ts server.ts bootstrap.ts   # composition root / entrypoint
     tests/             # agents/ api/ data-safety/ events/ git/ runtime/ supervisor/ + support/
@@ -95,6 +97,24 @@ under `apps/local-daemon/src/<module>`, consumed through `#supervisor`/`#review`
 Integrations (Linear/GitHub) start as daemon modules when the local loop needs
 them; review pinning (OTO-11) already landed as `apps/local-daemon/src/review`.
 Promote a module to `packages/*` only if a real cross-app consumer appears.
+
+## Provider Capability Detection
+
+Otomat never ships a union of runtime options assumed valid across CLI versions.
+`runtime/probe` runs the installed binary's own `--help` and bundled catalog —
+locally, bounded, with no credentials or network — and caches each answer by the
+binary's path, size and mtime, so a CLI upgrade re-probes on the next launch.
+Each provider's `options.ts` turns that output into `ProviderOptionDescriptor`s
+for the runtime and, where the provider scopes them that way, the selected model
+(Codex publishes reasoning levels per model). A non-`ok` detection carries no
+options and the runtime still launches on its provider defaults.
+
+Those descriptors are the single source for three gates: the daemon refuses a
+profile option the installed binary does not announce (`option_unsupported`, in
+`agents/resolve.ts`), `GET /api/runtimes/:id/options` serves them to the cockpit,
+and the profile surfaces render fields from them without any per-provider branch.
+The effective options are frozen into the run plan at launch and replayed
+verbatim on resume and follow-up.
 
 ## Frontend Stack Direction
 

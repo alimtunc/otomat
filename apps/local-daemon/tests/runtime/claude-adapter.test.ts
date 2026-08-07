@@ -210,6 +210,31 @@ describe("ClaudeRuntimeAdapter", () => {
     expect(resumeArgv.at(-2)).toBe("--resume");
   });
 
+  it("passes the frozen effort before the session flags, and none by default", async () => {
+    const argsFile = join(worktree, "stub-args.json");
+    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
+    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
+    const options = { permission_mode: "auto", effort: "xhigh" };
+
+    await adapter.resume(
+      runtimeSessionRef("sess-claude-1"),
+      { prompt: "follow up", run_dir: worktree, cwd: worktree, options },
+      new MemorySink(),
+      new AbortController().signal,
+    );
+
+    const argv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    expect(argv[argv.indexOf("--permission-mode") + 1]).toBe("auto");
+    expect(argv[argv.indexOf("--effort") + 1]).toBe("xhigh");
+    // Configuration precedes the session flags; the CLI reads `--resume <id>` as the tail.
+    expect(argv.indexOf("--effort")).toBeLessThan(argv.indexOf("--resume"));
+    expect(argv.at(-2)).toBe("--resume");
+
+    await adapter.run(input(worktree), new MemorySink(), new AbortController().signal);
+    expect(JSON.parse(readFileSync(argsFile, "utf8"))).not.toContain("--effort");
+  });
+
   it("passes the frozen model on the initial turn and the resume, and none by default", async () => {
     const argsFile = join(worktree, "stub-args.json");
     process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");

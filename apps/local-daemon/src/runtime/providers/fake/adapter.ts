@@ -7,6 +7,7 @@ import { FAKE_RUNTIME_ID, type RuntimeCapabilities } from "@otomat/domain";
 import {
   type RuntimeAdapter,
   type RuntimeFinalState,
+  type RuntimeOptionSupport,
   type RuntimeResumeInput,
   type RuntimeRunInput,
   type RuntimeSessionRef,
@@ -96,7 +97,6 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     permissions: true,
     diff_hints: false,
   };
-  readonly providerOptions = [];
   readonly models = FAKE_MODEL_SUPPORT;
 
   /** Monotonic per-instance turn counter: keeps event ids unique across run/resume turns. */
@@ -109,6 +109,13 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     instanceId: string = randomUUID(),
   ) {
     this.instanceId = instanceId;
+  }
+
+  describeOptions(_model: string | null): RuntimeOptionSupport {
+    return {
+      detection: { status: "unsupported", detail: "The fake runtime maps no provider options." },
+      options: [],
+    };
   }
 
   async run(

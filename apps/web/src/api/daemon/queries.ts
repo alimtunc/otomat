@@ -74,3 +74,15 @@ export function useRuntimeModels(runtimeId: string | null) {
     staleTime: 60_000,
   });
 }
+
+/** What the installed CLI announces for this runtime and model. Model-scoped because Codex publishes its reasoning levels per model. */
+export function useRuntimeProviderOptions(runtimeId: string | null, model: string | null) {
+  return useQuery({
+    queryKey: queryKeys.runtimeOptions(runtimeId, model),
+    queryFn:
+      runtimeId === null
+        ? skipToken
+        : () => daemon.runtimeProviderOptions(runtimeId, model ?? undefined),
+    staleTime: 60_000,
+  });
+}

@@ -83,7 +83,6 @@ function runtimeDescriptor(
     availability: available
       ? { status: "available", version: null }
       : { status: "unavailable", reason: "binary_not_found" },
-    provider_options: [],
   };
 }
 
