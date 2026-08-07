@@ -1,12 +1,15 @@
 import type { RunDetail } from "@otomat/domain";
-import { RunStatusChip } from "@otomat/ui";
+import { RunStatusChip, SidePanelToggle } from "@otomat/ui";
 import { RunActionButtons } from "@web/components/runs/cockpit/run-action-buttons";
 import { PaneHeader } from "@web/components/runs/pane-header";
 
 export function ContextPane({ detail }: { detail: RunDetail }) {
   return (
-    <div className="min-h-0 min-w-0 overflow-auto border-l border-border-subtle">
-      <PaneHeader>Run context</PaneHeader>
+    <div className="min-h-0 min-w-0 flex-1 overflow-auto">
+      <PaneHeader>
+        Run context
+        <SidePanelToggle className="-mr-1.5 ml-auto" />
+      </PaneHeader>
       <div className="p-4">
         <dl className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2.25 rounded-lg border border-border-subtle bg-surface-1 p-3.5 text-sm">
           <dt className="text-xs text-text-tertiary">state</dt>

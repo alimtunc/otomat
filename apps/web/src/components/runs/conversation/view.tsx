@@ -1,4 +1,12 @@
-import { Skeleton, useMediaQuery, WIDE_VIEWPORT_MEDIA_QUERY } from "@otomat/ui";
+import {
+  ResizablePanel,
+  ResizablePanelGroup,
+  SidePanel,
+  Skeleton,
+  useMediaQuery,
+  usePanelGroupLayout,
+  WIDE_VIEWPORT_MEDIA_QUERY,
+} from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useRunDetail } from "@web/api/runs/queries";
 import { useRunEventStream } from "@web/api/runs/run-event-stream";
@@ -16,6 +24,7 @@ export function RunConversationView() {
   const detail = useRunDetail(runId);
   const stream = useRunEventStream();
   const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
+  const panesLayout = usePanelGroupLayout("otomat.run-conversation");
 
   if (detail.isPending) {
     return (
@@ -69,10 +78,30 @@ export function RunConversationView() {
   }
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-[226px_1fr_270px]">
-      <StepsPane detail={detail.data} />
-      <div className="flex min-h-0 min-w-0 flex-col">{middle}</div>
-      <ContextPane detail={detail.data} />
-    </div>
+    <ResizablePanelGroup {...panesLayout} className="h-full min-h-0">
+      <SidePanel
+        id="run-steps"
+        label="Steps"
+        side="left"
+        defaultSize={226}
+        minSize={180}
+        maxSize="30%"
+      >
+        <StepsPane detail={detail.data} />
+      </SidePanel>
+      <ResizablePanel id="conversation" minSize="30%">
+        {middle}
+      </ResizablePanel>
+      <SidePanel
+        id="run-context"
+        label="Run context"
+        side="right"
+        defaultSize={270}
+        minSize={220}
+        maxSize="34%"
+      >
+        <ContextPane detail={detail.data} />
+      </SidePanel>
+    </ResizablePanelGroup>
   );
 }

@@ -1,4 +1,5 @@
 import type { DiffFileContract, RunDiffContract } from "@otomat/domain";
+import { SidePanelToggle } from "@otomat/ui";
 import { DiffFileList } from "@web/components/runs/diff/files/list";
 import { DiffFileTree } from "@web/components/runs/diff/files/tree";
 import { DiffStat } from "@web/components/runs/diff/stat";
@@ -28,6 +29,7 @@ export function DiffFileBrowser({
         <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] font-normal normal-case">
           <DiffStat additions={diff.additions} deletions={diff.deletions} />
         </span>
+        <SidePanelToggle className="-mr-1.5" />
       </PaneHeader>
       {mode === "tree" ? <DiffFileTree {...rowProps} /> : <DiffFileList {...rowProps} />}
     </nav>

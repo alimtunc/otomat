@@ -1,5 +1,5 @@
 import type { IssueContract, RunContract } from "@otomat/domain";
-import { IssueStatusChip } from "@otomat/ui";
+import { cn, IssueStatusChip, SidePanelToggle, useSidePanel } from "@otomat/ui";
 import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { LinearRailSection } from "@web/components/issues/workspace/linear/rail-section";
 import { FollowedRunSection } from "@web/components/issues/workspace/rail/followed-run-section";
@@ -36,9 +36,22 @@ function ExternalIdentifier({ identifier, url }: { identifier: string; url: stri
  * only the issue's properties.
  */
 export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunContract | null }) {
+  const panel = useSidePanel();
   return (
-    <aside className="min-w-0 overflow-auto border-t border-border-subtle bg-sidebar p-4 lg:border-l lg:border-t-0">
-      <RailSection title="Properties">
+    <aside
+      className={cn(
+        "min-h-0 min-w-0 flex-1 overflow-auto bg-sidebar p-4",
+        panel === null ? "border-t border-border-subtle" : null,
+      )}
+    >
+      <RailSection
+        title={
+          <>
+            Properties
+            <SidePanelToggle className="-mr-1.5 ml-auto" />
+          </>
+        }
+      >
         <RailMeta>
           <RailRow label="Status">
             <IssueStatusChip status={issue.status} />

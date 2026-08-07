@@ -2,14 +2,23 @@ import { useCallback, useEffect, useEffectEvent, useState, type ReactNode } from
 
 import type { ConnectionState } from "../lib/connection-state";
 import { isEditableTarget } from "../lib/keyboard";
+import { readPanelCollapsed, writePanelCollapsed } from "../lib/panel-collapsed-storage";
 import { SidebarCollapsedContext } from "../lib/sidebar-collapsed";
 import type { Density } from "../lib/theme";
 import { useMediaQuery } from "../lib/use-media-query";
+import { usePanelGroupLayout } from "../lib/use-panel-group-layout";
 import { cn } from "../lib/utils";
 import { WIDE_VIEWPORT_MEDIA_QUERY } from "../lib/viewport";
+import { ResizablePanel, ResizablePanelGroup } from "../primitives/resizable";
 import { OfflineBanner } from "./offline-banner";
 import { ReconnectingBar } from "./reconnecting-bar";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./resizable-panels";
+import { SidePanel } from "./side-panel";
+
+const SIDEBAR_PANEL_ID = "sidebar";
+const SIDEBAR_MIN_WIDTH = 200;
+// A percentage, so the sidebar cannot crowd the main content out of a narrow window.
+const SIDEBAR_MAX_WIDTH = "32%";
+const SHELL_LAYOUT_ID = "otomat.shell";
 
 export interface AppShellProps {
   sidebar: ReactNode;
@@ -23,7 +32,6 @@ export interface AppShellProps {
   toggleKey?: string | null;
   sidebarWidth?: number;
   railWidth?: number;
-  rightPanelAutoSaveId?: string;
   className?: string;
 }
 
@@ -39,22 +47,28 @@ export function AppShell({
   toggleKey = "[",
   sidebarWidth = 236,
   railWidth = 56,
-  rightPanelAutoSaveId,
   className,
 }: AppShellProps) {
   const controlled = collapsedProp != null;
   const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
-  // null = no explicit choice yet: follow the viewport (rail by default on narrow windows).
-  const [internalCollapsed, setInternalCollapsed] = useState<boolean | null>(null);
+  // null = no stored or in-session choice yet: follow the viewport (rail on narrow windows).
+  const [internalCollapsed, setInternalCollapsed] = useState<boolean | null>(() =>
+    readPanelCollapsed(SIDEBAR_PANEL_ID),
+  );
   const collapsed = controlled ? collapsedProp : (internalCollapsed ?? !wide);
+  const shellLayout = usePanelGroupLayout(SHELL_LAYOUT_ID);
+  const rightLayout = usePanelGroupLayout(`${SHELL_LAYOUT_ID}.right`);
 
-  const toggle = useCallback(() => {
-    const next = !collapsed;
-    if (!controlled) setInternalCollapsed(next);
-    onCollapsedChange?.(next);
-  }, [collapsed, controlled, onCollapsedChange]);
+  const setCollapsed = useCallback(
+    (next: boolean) => {
+      writePanelCollapsed(SIDEBAR_PANEL_ID, next);
+      if (!controlled) setInternalCollapsed(next);
+      onCollapsedChange?.(next);
+    },
+    [controlled, onCollapsedChange],
+  );
 
-  const onToggle = useEffectEvent(toggle);
+  const onToggle = useEffectEvent(() => setCollapsed(!collapsed));
 
   // otomat-allow-effect: subscribe a global keydown listener for the sidebar toggle shortcut.
   useEffect(() => {
@@ -70,27 +84,26 @@ export function AppShell({
   }, [toggleKey]);
 
   const content = (
-    <main className="flex min-h-0 min-w-0 flex-col bg-background">
+    <main className="flex h-full min-h-0 min-w-0 flex-col bg-background">
       {topbar}
       {connectionState === "reconnecting" ? <ReconnectingBar /> : null}
       {connectionState === "offline" ? <OfflineBanner /> : null}
       <div className="min-h-0 flex-1 overflow-hidden">
         {rightPanel ? (
-          <ResizablePanelGroup autoSaveId={rightPanelAutoSaveId} className="h-full">
-            <ResizablePanel id="main" minSize="30%" className="overflow-auto">
+          <ResizablePanelGroup {...rightLayout} className="h-full">
+            <ResizablePanel id="content" minSize="30%" className="overflow-auto">
               {children}
             </ResizablePanel>
-            <ResizableHandle />
-            <ResizablePanel
+            <SidePanel
               id="right"
+              label="Details"
+              side="right"
               defaultSize="26%"
               minSize="16%"
               maxSize="42%"
-              collapsible
-              className="overflow-auto border-l border-border-subtle"
             >
               {rightPanel}
-            </ResizablePanel>
+            </SidePanel>
           </ResizablePanelGroup>
         ) : (
           <div className="h-full overflow-auto">{children}</div>
@@ -101,16 +114,26 @@ export function AppShell({
 
   return (
     <SidebarCollapsedContext.Provider value={collapsed}>
-      <div
-        data-density={density}
-        className={cn("grid h-screen overflow-hidden", className)}
-        style={{
-          gridTemplateColumns: `${collapsed ? railWidth : sidebarWidth}px 1fr`,
-          gridTemplateRows: "minmax(0, 1fr)",
-        }}
-      >
-        {sidebar}
-        {content}
+      <div data-density={density} className={cn("h-screen overflow-hidden", className)}>
+        <ResizablePanelGroup {...shellLayout}>
+          <SidePanel
+            id={SIDEBAR_PANEL_ID}
+            label="Sidebar"
+            side="left"
+            defaultSize={sidebarWidth}
+            minSize={SIDEBAR_MIN_WIDTH}
+            maxSize={SIDEBAR_MAX_WIDTH}
+            collapsedSize={railWidth}
+            collapsed={collapsed}
+            onCollapsedChange={setCollapsed}
+            rail={sidebar}
+          >
+            {sidebar}
+          </SidePanel>
+          <ResizablePanel id="main" minSize="40%">
+            {content}
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </SidebarCollapsedContext.Provider>
   );

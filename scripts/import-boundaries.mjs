@@ -14,6 +14,8 @@ import { dirname, join, relative, resolve } from "node:path";
 
 const ROOT = process.cwd();
 const HEAVY_LIBS = ["react", "react-dom", "better-sqlite3", "drizzle-orm", "drizzle-kit"];
+// Libraries a single module owns, so their behavior is composed in exactly one place.
+const OWNED_LIBS = new Map([["react-resizable-panels", "packages/ui/src/primitives/resizable.tsx"]]);
 const BACKEND_PKGS = new Set(["db", "supervisor", "integrations", "review"]);
 const FRONTEND_PKGS = new Set(["ui", "client", "domains"]);
 const NODE_BUILTINS = new Set([
@@ -170,6 +172,15 @@ for (const file of sourceFiles) {
 
     if (layer === "domain" && target.kind === "external" && HEAVY_LIBS.includes(base)) {
       report(file, line, "domain-no-heavy-libs", `packages/domain must not import ${base}.`);
+    }
+    const owner = OWNED_LIBS.get(base);
+    if (target.kind === "external" && owner !== undefined && relative(ROOT, file) !== owner) {
+      report(
+        file,
+        line,
+        "owned-lib",
+        `${base} may only be imported by ${owner}; use what that module re-exports.`,
+      );
     }
     if (layer === "domain" && target.kind === "core") {
       report(file, line, "domain-no-node-core", `packages/domain must stay Node-agnostic: ${specifier}.`);
