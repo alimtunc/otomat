@@ -1,0 +1,39 @@
+type ResizeCallback = () => void;
+
+export interface ResizeObserverStub {
+  /** Fire every live observer, as a browser does after a layout change. */
+  resize: () => void;
+  restore: () => void;
+}
+
+/** happy-dom has no layout, so its ResizeObserver never fires; this one fires on demand. */
+export function stubResizeObserver(): ResizeObserverStub {
+  const callbacks = new Set<ResizeCallback>();
+  const original = globalThis.ResizeObserver;
+
+  class Stub {
+    private readonly callback: ResizeCallback;
+
+    constructor(callback: ResizeCallback) {
+      this.callback = callback;
+      callbacks.add(callback);
+    }
+
+    observe(): void {}
+
+    disconnect(): void {
+      callbacks.delete(this.callback);
+    }
+  }
+
+  Object.assign(globalThis, { ResizeObserver: Stub });
+
+  return {
+    resize() {
+      for (const callback of [...callbacks]) callback();
+    },
+    restore() {
+      Object.assign(globalThis, { ResizeObserver: original });
+    },
+  };
+}

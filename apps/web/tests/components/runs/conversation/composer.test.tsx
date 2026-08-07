@@ -12,6 +12,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mutateAsync = vi.fn(async (_request: CreateRunContributionRequest) => ({}));
+const onSent = vi.fn();
 let connectionState: ConnectionState = "online";
 let runtimesData: RuntimeDescriptor[] | undefined;
 
@@ -90,6 +91,7 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
   document.body.replaceChildren();
   mutateAsync.mockClear();
+  onSent.mockClear();
   connectionState = "online";
   runtimesData = undefined;
 });
@@ -99,7 +101,7 @@ async function renderComposer(detail: RunDetail) {
   document.body.append(container);
   const root: Root = createRoot(container);
   await act(async () => {
-    root.render(<ConversationComposer detail={detail} />);
+    root.render(<ConversationComposer detail={detail} onSent={onSent} />);
   });
   cleanups.push(async () => {
     await act(async () => root.unmount());
@@ -145,6 +147,23 @@ describe("ConversationComposer", () => {
 
     expect(mutateAsync).toHaveBeenCalledWith({ body: "add error handling" });
     expect(promptTextarea().value).toBe("");
+    expect(onSent).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the draft and reports no send when the mutation fails", async () => {
+    runtimesData = [claudeDescriptor()];
+    mutateAsync.mockRejectedValueOnce(new Error("daemon refused the message"));
+    await renderComposer(runDetail("awaiting_human"));
+    await typePrompt("add error handling");
+
+    await act(async () => {
+      promptTextarea().dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", metaKey: true, bubbles: true }),
+      );
+    });
+
+    expect(promptTextarea().value).toBe("add error handling");
+    expect(onSent).not.toHaveBeenCalled();
   });
 
   it("submits via the button on a review-ready run", async () => {

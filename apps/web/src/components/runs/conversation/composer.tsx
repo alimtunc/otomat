@@ -8,7 +8,13 @@ import { resolveContributionGate } from "@web/lib/run/contribution";
 import type { KeyboardEvent } from "react";
 
 /** Run-scoped composer. It stays usable while the agent works: the message is persisted and queued for the next safe turn. */
-export function ConversationComposer({ detail }: { detail: RunDetail }) {
+export function ConversationComposer({
+  detail,
+  onSent,
+}: {
+  detail: RunDetail;
+  onSent: () => void;
+}) {
   const contribute = useCreateRunContribution(detail.run.id);
   const { connectionState } = useDaemonStatus();
   const runtimes = useRuntimes();
@@ -19,10 +25,12 @@ export function ConversationComposer({ detail }: { detail: RunDetail }) {
     onSubmit: async ({ value }) => {
       try {
         await contribute.mutateAsync({ body: value.body.trim() });
-        form.reset();
       } catch {
         // The mutation's onError toast reports it; the draft stays for retry.
+        return;
       }
+      form.reset();
+      onSent();
     },
   });
 
