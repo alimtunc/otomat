@@ -3,8 +3,10 @@ import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
 import { useRunContributions } from "@web/api/runs/queries";
 import type { RunStreamState } from "@web/api/runs/run-event-stream";
 import { ConversationComposer } from "@web/components/runs/conversation/composer";
+import { JumpToLatest } from "@web/components/runs/conversation/jump-to-latest";
 import { QueuedBanner } from "@web/components/runs/conversation/queued-banner";
 import { ThreadItem } from "@web/components/runs/conversation/thread-item";
+import { useThreadAutoscroll } from "@web/components/runs/conversation/use-thread-autoscroll";
 import { WorkingRow } from "@web/components/runs/conversation/working-row";
 import { buildConversation } from "@web/lib/conversation";
 
@@ -21,6 +23,7 @@ export function ConversationThread({
   degraded: boolean;
 }) {
   const contributions = useRunContributions(detail.run.id);
+  const autoscroll = useThreadAutoscroll(detail.run.id);
 
   if (contributions.isPending) {
     return (
@@ -71,18 +74,24 @@ export function ConversationThread({
           />
         </div>
       ) : (
-        <div
-          role="list"
-          aria-label="Run conversation"
-          className="min-h-0 flex-1 overflow-auto py-1"
-        >
-          {items.map((item) => (
-            <ThreadItem key={item.key} item={item} runId={detail.run.id} />
-          ))}
-          {working ? <WorkingRow latest={events.at(-1) ?? null} /> : null}
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <div ref={autoscroll.viewportRef} className="min-h-0 flex-1 overflow-auto">
+            <div
+              ref={autoscroll.contentRef}
+              role="list"
+              aria-label="Run conversation"
+              className="py-1"
+            >
+              {items.map((item) => (
+                <ThreadItem key={item.key} item={item} runId={detail.run.id} />
+              ))}
+              {working ? <WorkingRow latest={events.at(-1) ?? null} /> : null}
+            </div>
+          </div>
+          {autoscroll.pinned ? null : <JumpToLatest onClick={autoscroll.jumpToLatest} />}
         </div>
       )}
-      <ConversationComposer detail={detail} />
+      <ConversationComposer detail={detail} onSent={autoscroll.jumpToLatest} />
     </div>
   );
 }
