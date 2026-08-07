@@ -40,6 +40,16 @@ function NoRunsEmptyState({ launchAction }: { launchAction: ReactNode }) {
   );
 }
 
+function RailPlaceholder() {
+  return (
+    <div className="flex flex-col gap-3 px-3.5 py-3">
+      <Skeleton height={18} />
+      <Skeleton height={18} width="70%" />
+      <Skeleton height={18} width="85%" />
+    </div>
+  );
+}
+
 function RunsArea({
   query,
   launchAction,
@@ -109,18 +119,16 @@ export function IssueDetailView() {
       <ResizablePanel id="issue" minSize="40%">
         {main}
       </ResizablePanel>
-      {rail === null ? null : (
-        <SidePanel
-          id="issue-rail"
-          label="Issue details"
-          side="right"
-          defaultSize={300}
-          minSize={240}
-          maxSize="36%"
-        >
-          {rail}
-        </SidePanel>
-      )}
+      <SidePanel
+        id="issue-rail"
+        label="Issue details"
+        side="right"
+        defaultSize={300}
+        minSize={240}
+        maxSize="36%"
+      >
+        {rail ?? <RailPlaceholder />}
+      </SidePanel>
     </ResizablePanelGroup>
   ) : (
     <div>
