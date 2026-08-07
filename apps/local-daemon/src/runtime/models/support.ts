@@ -1,7 +1,7 @@
-import type { ModelDiscovery, RuntimeModel } from "@otomat/domain";
+import type { BinaryProbe, RuntimeModel } from "@otomat/domain";
 
 export interface ModelDiscoveryResult {
-  discovery: ModelDiscovery;
+  discovery: BinaryProbe;
   /** Non-empty only when `discovery.status` is `ok`; a failed probe never yields entries. */
   models: RuntimeModel[];
 }

@@ -20,7 +20,6 @@ function descriptor(
       diff_hints: false,
     },
     availability,
-    provider_options: [],
   };
 }
 

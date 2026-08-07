@@ -1,17 +1,11 @@
-import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
+import type { AgentProfileContract } from "@otomat/domain";
 import { ErrorState } from "@otomat/ui";
 import { useSkills } from "@web/api/skills/queries";
 import { SkillsPanelContent } from "@web/components/agents/agent-profile/detail/skills-panel-content";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 
-export function SkillsPanel({
-  profile,
-  descriptor,
-}: {
-  profile: AgentProfileContract;
-  descriptor: RuntimeDescriptor | undefined;
-}) {
+export function SkillsPanel({ profile }: { profile: AgentProfileContract }) {
   const skills = useSkills();
 
   return (
@@ -26,9 +20,7 @@ export function SkillsPanel({
         />
       }
     >
-      {(catalog) => (
-        <SkillsPanelContent profile={profile} descriptor={descriptor} skills={catalog} />
-      )}
+      {(catalog) => <SkillsPanelContent profile={profile} skills={catalog} />}
     </QueryBoundary>
   );
 }

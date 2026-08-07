@@ -5,11 +5,12 @@ import {
   type ModelSelection,
   type ProviderOptions,
   type ResolvedAgentConfig,
+  type ResolvedModel,
   type ResolvedSkill,
 } from "@otomat/domain";
 
 import {
-  createRuntimeAdapter,
+  describeProviderOptions,
   isKnownRuntimeId,
   requireAvailableRuntime,
   resolveModelSelection,
@@ -45,19 +46,34 @@ export interface AgentConfigOverrides {
 
 const SKILL_INSTRUCTIONS_MAX_LENGTH = 64_000;
 
-function validateOptions(runtime: KnownRuntimeId, options: ProviderOptions): void {
-  const descriptors = createRuntimeAdapter(runtime).providerOptions;
-  for (const [key, value] of Object.entries(options)) {
-    if (value === undefined) continue;
-    const descriptor = descriptors.find((candidate) => candidate.key === key);
+/**
+ * Every selected option is checked against what the installed binary announced
+ * for this runtime and model, so a key or value it does not offer — including a
+ * mode retired by a CLI upgrade — is refused before it can reach argv. Only what
+ * the probe actually answers is enforced: `ok` and `unsupported` are answers, a
+ * `failed` probe is ignorance and must not turn a working profile into a refused
+ * one. Selecting nothing skips the probe entirely.
+ */
+function validateOptions(
+  runtime: KnownRuntimeId,
+  model: ResolvedModel | null,
+  options: ProviderOptions,
+): void {
+  const selected = Object.entries(options).filter(([, value]) => value !== undefined);
+  if (selected.length === 0) return;
+
+  const support = describeProviderOptions(runtime, model?.id ?? null);
+  if (support.detection.status === "failed") return;
+  for (const [key, value] of selected) {
+    const descriptor = support.options.find((candidate) => candidate.key === key);
     if (!descriptor) {
       throw new ProfileOptionUnsupportedError(
-        `runtime "${runtime}" does not support the "${key}" option`,
+        `runtime "${runtime}" does not offer the "${key}" option here: ${support.detection.detail}`,
       );
     }
     if (!descriptor.choices.some((choice) => choice.value === value)) {
       throw new ProfileOptionUnsupportedError(
-        `runtime "${runtime}" does not support "${key}" value "${String(value)}"`,
+        `runtime "${runtime}" does not accept "${key}" value "${String(value)}"; pick one of ${descriptor.choices.map((choice) => choice.value).join(", ")}`,
       );
     }
   }
@@ -66,8 +82,8 @@ function validateOptions(runtime: KnownRuntimeId, options: ProviderOptions): voi
 /** Static save-time validation: the runtime is known, its options and model are supported, and every referenced skill exists. Availability and skill files are checked at launch. */
 export function validateProfileInput(db: Db, input: ProfileInput): void {
   if (!isKnownRuntimeId(input.runtime)) throw new UnknownRuntimeError(input.runtime);
-  validateOptions(input.runtime, input.options);
-  resolveModelSelection(input.runtime, modelSelectionFromId(input.model));
+  const model = resolveModelSelection(input.runtime, modelSelectionFromId(input.model));
+  validateOptions(input.runtime, model, input.options);
   for (const skillId of input.skill_ids) {
     if (!getSkill(db, skillId)) {
       throw new SkillResolutionError("skill_unknown", `skill ${skillId} is not in the catalog`);
@@ -151,13 +167,18 @@ export function resolveAgentConfig(
   const profile = getAgentProfile(db, selector.profileId);
   if (!profile) throw new ProfileNotFoundError(selector.profileId);
   const runtime = requireAvailableRuntime(profile.runtime);
-  validateOptions(runtime, profile.options_json);
+  // The launch model decides which options are legal, so it is resolved before they are checked.
+  const model = resolveModelSelection(
+    runtime,
+    overrides.model ?? modelSelectionFromId(profile.model),
+  );
+  validateOptions(runtime, model, profile.options_json);
   return finalize({
     runtime,
     profile_id: profile.id,
     profile_name: profile.name,
     options: profile.options_json,
-    model: resolveModelSelection(runtime, overrides.model ?? modelSelectionFromId(profile.model)),
+    model,
     guidance: profile.guidance,
     skills: resolveSkills(db, profile.skill_ids_json),
   });

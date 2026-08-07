@@ -1,4 +1,4 @@
-import type { AgentProfileContract, RuntimeDescriptor, SkillContract } from "@otomat/domain";
+import type { AgentProfileContract, SkillContract } from "@otomat/domain";
 import { Chip, EmptyState, toast } from "@otomat/ui";
 import { agentProfileErrorMessage, useUpdateAgentProfile } from "@web/api/agent-profiles/mutations";
 import { ActivatedSkillCard } from "@web/components/agents/agent-profile/detail/activated-skill-card";
@@ -8,11 +8,9 @@ import { useState } from "react";
 
 export function SkillsPanelContent({
   profile,
-  descriptor,
   skills,
 }: {
   profile: AgentProfileContract;
-  descriptor: RuntimeDescriptor | undefined;
   skills: SkillContract[];
 }) {
   const update = useUpdateAgentProfile();
@@ -28,7 +26,7 @@ export function SkillsPanelContent({
     try {
       await update.mutateAsync({
         id: profile.id,
-        request: requestForProfile(profile, descriptor, { skill_ids: skillIds }),
+        request: requestForProfile(profile, { skill_ids: skillIds }),
       });
       toast.success(selected ? "Skill removed" : "Skill added");
     } catch (error) {

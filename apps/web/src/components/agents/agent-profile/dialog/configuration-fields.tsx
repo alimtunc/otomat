@@ -1,5 +1,6 @@
 import { PROVIDER_DEFAULT_MODEL, type RuntimeDescriptor, type SkillContract } from "@otomat/domain";
 import { Field, FieldControl, FieldLabel } from "@otomat/ui";
+import { ProviderOptionsFields } from "@web/components/agents/agent-profile/dialog/provider-options-fields";
 import { RuntimeFields } from "@web/components/agents/agent-profile/dialog/runtime-fields";
 import { SkillsField } from "@web/components/agents/agent-profile/dialog/skills-field";
 import type { AgentProfileFormApi } from "@web/components/agents/agent-profile/dialog/use-form";
@@ -21,15 +22,13 @@ export function AgentProfileConfigurationFields({
           <RuntimeFields
             descriptors={descriptors}
             runtime={values.runtime}
-            permissionMode={values.permissionMode}
             onRuntimeChange={(runtime) => {
               form.setFieldValue("runtime", runtime);
               // Another runtime lists other models, so a kept id would silently become a custom one.
               form.setFieldValue("model", PROVIDER_DEFAULT_MODEL);
+              // Its options are another CLI's flags entirely; none of them carries over.
+              form.setFieldValue("options", {});
             }}
-            onPermissionModeChange={(permissionMode) =>
-              form.setFieldValue("permissionMode", permissionMode)
-            }
           />
           <Field>
             <FieldLabel>Model</FieldLabel>
@@ -43,6 +42,12 @@ export function AgentProfileConfigurationFields({
               />
             </FieldControl>
           </Field>
+          <ProviderOptionsFields
+            runtime={values.runtime || null}
+            model={values.model.kind === "model" ? values.model.id : null}
+            options={values.options}
+            onOptionsChange={(options) => form.setFieldValue("options", options)}
+          />
           <SkillsField
             skills={skills}
             selectedIds={values.skillIds}

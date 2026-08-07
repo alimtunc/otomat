@@ -29,7 +29,6 @@ function runtime(
     availability: available
       ? { status: "available", version: null }
       : { status: "unavailable", reason: "binary_not_found" },
-    provider_options: [],
   };
 }
 
@@ -46,10 +45,15 @@ it("maps a profile choice to a profile_id request field", () => {
   expect(agentChoiceToRequest(encodeProfileChoice("p1"))).toEqual({ profile_id: "p1" });
 });
 
-it("round-trips the stored model through an unrelated profile edit", () => {
-  const stored = { ...profile("p1", "claude"), model: "opus" };
-  const request = requestForProfile(stored, runtime("claude", true), { guidance: "tuned" });
+it("round-trips the stored model and options through an unrelated profile edit", () => {
+  const stored = {
+    ...profile("p1", "claude"),
+    model: "opus",
+    options: { permission_mode: "acceptEdits" },
+  };
+  const request = requestForProfile(stored, { guidance: "tuned" });
   expect(request.model).toBe("opus");
+  expect(request.options).toEqual({ permission_mode: "acceptEdits" });
   expect(request.guidance).toBe("tuned");
 });
 

@@ -54,7 +54,6 @@ const CLAUDE: RuntimeDescriptor = {
     diff_hints: false,
   },
   availability: { status: "available", version: null },
-  provider_options: [],
 };
 
 it("queues rather than refuses while the agent is working, even before a provider session exists", () => {

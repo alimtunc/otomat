@@ -1,8 +1,9 @@
-import { modelIdSchema, type RuntimeModel } from "@otomat/domain";
+import { modelIdSchema, type BinaryProbe, type RuntimeModel } from "@otomat/domain";
 import { z } from "zod";
 
-import { firstMeaningfulLine, probeProviderCommand } from "#runtime/models/discovery";
 import type { ModelDiscoveryResult, RuntimeModelSupport } from "#runtime/models/support";
+import { cachedProviderProbe } from "#runtime/probe/cache";
+import { firstMeaningfulLine } from "#runtime/probe/command";
 
 /** `--bundled` dumps the catalog shipped inside the installed binary: no network call, no account lookup. */
 const CODEX_MODEL_LIST_ARGS = ["debug", "models", "--bundled"] as const;
@@ -20,11 +21,21 @@ const codexCatalogSchema = z.object({
       description: z.string().nullish(),
       visibility: z.string().nullish(),
       priority: z.number().nullish(),
+      /** The reasoning level this model runs at when no override is sent. */
+      default_reasoning_level: z.string().nullish(),
+      /** Every reasoning level this model accepts; absent on a catalog that does not publish them. */
+      supported_reasoning_levels: z.array(z.string()).nullish(),
     }),
   ),
 });
 
-type CodexCatalogEntry = z.infer<typeof codexCatalogSchema>["models"][number];
+export type CodexCatalogEntry = z.infer<typeof codexCatalogSchema>["models"][number];
+
+/** The installed binary's bundled catalog, or an honest probe verdict and no entries. */
+export interface CodexBundledCatalog {
+  probe: BinaryProbe;
+  entries: CodexCatalogEntry[];
+}
 
 function toRuntimeModel(entry: CodexCatalogEntry): RuntimeModel | null {
   const id = modelIdSchema.safeParse(entry.slug);
@@ -37,7 +48,7 @@ function toRuntimeModel(entry: CodexCatalogEntry): RuntimeModel | null {
   };
 }
 
-function parseCatalog(stdout: string): { models: RuntimeModel[] } | { error: string } {
+function parseCatalog(stdout: string): { entries: CodexCatalogEntry[] } | { error: string } {
   let payload: unknown;
   try {
     payload = JSON.parse(stdout);
@@ -47,34 +58,41 @@ function parseCatalog(stdout: string): { models: RuntimeModel[] } | { error: str
   const parsed = codexCatalogSchema.safeParse(payload);
   if (!parsed.success) return { error: z.prettifyError(parsed.error) };
   return {
-    models: parsed.data.models
-      .filter((entry) => entry.visibility === LISTED_VISIBILITY)
-      .toSorted(
-        (left, right) =>
-          (left.priority ?? Number.MAX_SAFE_INTEGER) - (right.priority ?? Number.MAX_SAFE_INTEGER),
-      )
-      .map(toRuntimeModel)
-      .filter((model): model is RuntimeModel => model !== null),
+    entries: parsed.data.models.toSorted(
+      (left, right) =>
+        (left.priority ?? Number.MAX_SAFE_INTEGER) - (right.priority ?? Number.MAX_SAFE_INTEGER),
+    ),
   };
 }
 
 /** Feature-detected against the installed binary: an older Codex without the listing degrades to an honest unsupported catalog. */
-export function discoverCodexModels(binary: string): ModelDiscoveryResult {
-  const outcome = probeProviderCommand(binary, CODEX_MODEL_LIST_ARGS);
-  if (outcome.status !== "ok") {
-    return { discovery: { status: outcome.status, detail: outcome.detail }, models: [] };
+export function codexBundledCatalog(binary: string): CodexBundledCatalog {
+  const probe = cachedProviderProbe(binary, CODEX_MODEL_LIST_ARGS);
+  if (probe.status !== "ok") {
+    return { probe: { status: probe.status, detail: probe.detail }, entries: [] };
   }
-  const parsed = parseCatalog(outcome.stdout);
+  const parsed = parseCatalog(probe.stdout);
   if ("error" in parsed) {
     return {
-      discovery: {
+      probe: {
         status: "failed",
         detail: `codex returned a model catalog Otomat cannot read: ${firstMeaningfulLine(parsed.error)}`,
       },
-      models: [],
+      entries: [],
     };
   }
-  return { discovery: { status: "ok", detail: CODEX_DISCOVERY_DETAIL }, models: parsed.models };
+  return { probe: { status: "ok", detail: CODEX_DISCOVERY_DETAIL }, entries: parsed.entries };
+}
+
+export function discoverCodexModels(binary: string): ModelDiscoveryResult {
+  const { probe, entries } = codexBundledCatalog(binary);
+  return {
+    discovery: probe,
+    models: entries
+      .filter((entry) => entry.visibility === LISTED_VISIBILITY)
+      .map(toRuntimeModel)
+      .filter((model): model is RuntimeModel => model !== null),
+  };
 }
 
 /** Codex ships no Otomat-maintained static set: its own binary is the only honest source, and anything else is an explicit manual identifier. */

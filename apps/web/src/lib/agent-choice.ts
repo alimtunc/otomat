@@ -1,10 +1,7 @@
-import {
-  CLAUDE_PERMISSION_MODES,
-  type AgentProfileContract,
-  type ClaudePermissionMode,
-  type ProviderOptionDescriptor,
-  type RuntimeDescriptor,
-  type SaveAgentProfileRequest,
+import type {
+  AgentProfileContract,
+  RuntimeDescriptor,
+  SaveAgentProfileRequest,
 } from "@otomat/domain";
 import { isAvailableRuntime, resolveRuntimeChoice, runtimeById } from "@web/lib/runtimes";
 
@@ -89,69 +86,20 @@ export function resolveAgentChoice(
   return fallback ? encodeRuntimeChoice(fallback) : null;
 }
 
-/** The provider options a runtime honestly supports, for capability-gating a profile form. */
-export function runtimeProviderOptions(
-  descriptors: RuntimeDescriptor[],
-  runtimeId: string | null,
-): ProviderOptionDescriptor[] {
-  if (runtimeId === null) return [];
-  return runtimeById(descriptors, runtimeId)?.provider_options ?? [];
-}
-
-export function permissionModeOption(
-  providerOptions: ProviderOptionDescriptor[] | undefined,
-): ProviderOptionDescriptor | undefined {
-  return providerOptions?.find((option) => option.key === "permission_mode");
-}
-
-/** The display label for a selected option value; falls back to the raw value when the descriptor no longer lists it. */
-function providerOptionChoiceLabel(option: ProviderOptionDescriptor, value: string): string {
-  return option.choices.find((choice) => choice.value === value)?.label ?? value;
-}
-
-export type PermissionModeValue = ClaudePermissionMode | "";
-
-function isClaudePermissionMode(value: string): value is ClaudePermissionMode {
-  return CLAUDE_PERMISSION_MODES.some((mode) => mode === value);
-}
-
-/** The stored value while the chosen runtime's descriptor still advertises it; "" (runtime default) otherwise. */
-export function supportedPermissionMode(
-  descriptors: RuntimeDescriptor[],
-  runtime: string,
-  value: string | undefined,
-): PermissionModeValue {
-  if (!value || !isClaudePermissionMode(value)) return "";
-  const permissionOption = permissionModeOption(runtimeProviderOptions(descriptors, runtime));
-  return permissionOption?.choices.some((choice) => choice.value === value) ? value : "";
-}
-
-/** The label of the profile's stored permission mode, or null when none is stored or the runtime no longer advertises the option. */
-export function storedPermissionModeLabel(
-  profile: AgentProfileContract,
-  descriptor: RuntimeDescriptor | undefined,
-): string | null {
-  const value = profile.options.permission_mode;
-  if (!value) return null;
-  const option = permissionModeOption(descriptor?.provider_options);
-  if (!option) return null;
-  return providerOptionChoiceLabel(option, value);
-}
-
-/** A stored permission_mode the descriptor no longer advertises is dropped so the daemon's option gate accepts the unrelated edit. */
+/**
+ * An unrelated edit resubmits the profile exactly as stored. Its provider
+ * options are the daemon's to accept or refuse against the installed CLI, never
+ * this surface's to quietly rewrite; a stale one surfaces as a refusal the user
+ * fixes in the profile editor.
+ */
 export function requestForProfile(
   profile: AgentProfileContract,
-  descriptor: RuntimeDescriptor | undefined,
   changes: Partial<Pick<SaveAgentProfileRequest, "guidance" | "skill_ids">>,
 ): SaveAgentProfileRequest {
-  const permissionMode = profile.options.permission_mode;
-  const option = permissionModeOption(descriptor?.provider_options);
-  const supportsPermissionMode = option?.choices.some((choice) => choice.value === permissionMode);
-
   return {
     name: profile.name,
     runtime: profile.runtime,
-    options: supportsPermissionMode ? { permission_mode: permissionMode } : {},
+    options: profile.options,
     model: profile.model,
     guidance: profile.guidance,
     skill_ids: profile.skill_ids,

@@ -29,14 +29,10 @@ export function AgentProfileDetail({
             </TabsTrigger>
           </TabsList>
           <TabsContent value="instructions" className="p-4.5">
-            <InstructionsPanel
-              key={`${profile.id}:${profile.guidance ?? ""}`}
-              profile={profile}
-              descriptor={descriptor}
-            />
+            <InstructionsPanel key={`${profile.id}:${profile.guidance ?? ""}`} profile={profile} />
           </TabsContent>
           <TabsContent value="skills" className="p-4.5">
-            <SkillsPanel profile={profile} descriptor={descriptor} />
+            <SkillsPanel profile={profile} />
           </TabsContent>
         </Tabs>
       </div>

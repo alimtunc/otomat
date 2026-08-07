@@ -42,7 +42,6 @@ vi.mock("@web/api/daemon/queries", () => ({
           diff_hints: false,
         },
         availability: { status: "available", version: null },
-        provider_options: [],
       } satisfies RuntimeDescriptor,
     ],
     isPending: false,

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { binaryProbeSchema } from "./probe.js";
+
 export const MODEL_ID_MAX_LENGTH = 128;
 
 /** A model id is passed verbatim as a CLI argument value, so a leading dash or whitespace would turn it into another flag. */
@@ -32,23 +34,12 @@ export const runtimeModelSchema = z.object({
 });
 export type RuntimeModel = z.infer<typeof runtimeModelSchema>;
 
-/** Only `ok` produces `discovered` entries; `unsupported` and `failed` never invent one. */
-export const MODEL_DISCOVERY_STATUSES = ["ok", "unsupported", "failed"] as const;
-export const modelDiscoveryStatusSchema = z.enum(MODEL_DISCOVERY_STATUSES);
-export type ModelDiscoveryStatus = (typeof MODEL_DISCOVERY_STATUSES)[number];
-
-export const modelDiscoverySchema = z.object({
-  status: modelDiscoveryStatusSchema,
-  detail: z.string(),
-});
-export type ModelDiscovery = z.infer<typeof modelDiscoverySchema>;
-
-/** What a runtime honestly offers for model selection right now. Never an entitlement list. */
+/** What a runtime honestly offers for model selection right now. Never an entitlement list. Only an `ok` discovery produces `discovered` entries. */
 export const runtimeModelCatalogSchema = z.object({
   runtime: z.string(),
   /** Whether an identifier outside `models` may be entered by hand. */
   allows_custom: z.boolean(),
-  discovery: modelDiscoverySchema,
+  discovery: binaryProbeSchema,
   models: z.array(runtimeModelSchema),
 });
 export type RuntimeModelCatalog = z.infer<typeof runtimeModelCatalogSchema>;
