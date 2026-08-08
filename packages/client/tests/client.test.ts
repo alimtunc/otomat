@@ -3,10 +3,11 @@ import { expect, it, vi } from "vitest";
 import { DaemonRequestError } from "#client/client/http";
 import { createDaemonClient } from "#client/client/index";
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return {
     ok: status >= 200 && status < 300,
     status,
+    headers: new Headers(headers),
     json: async () => body,
   } as unknown as Response;
 }

@@ -5,6 +5,11 @@ import {
   RECOVERABLE_DATA_SAFETY_ERROR_CODES,
 } from "./data-safety.js";
 import type {
+  ErrorDiagnostic,
+  ProblemReportDraft,
+  SupportBundleExportResult,
+} from "./diagnostics.js";
+import type {
   ExecutionHostId,
   ExecutionHostOperationResult,
   ExecutionHostProjectsEntry,
@@ -78,6 +83,13 @@ export type PreviewSandboxResetResult =
   | { ok: true; message: null }
   | { ok: false; message: string };
 
+/** Identity of the running shell build, so a copied diagnostic names the artifact it came from. */
+export interface DesktopBuildSummary {
+  version: string;
+  commit: string;
+  channel: string;
+}
+
 /**
  * The narrow surface the Electron desktop shell exposes to the renderer through
  * `contextBridge` as `window.otomat`. Absent in the browser (dev/web), where the
@@ -90,6 +102,8 @@ export interface OtomatDesktopBridge {
   readonly executionHostId: ExecutionHostId;
   /** Configured `~/.ssh/config` alias of the remote host, or null when none is configured. */
   readonly executionHostSshAlias: string | null;
+  /** Version, commit and channel of this shell build, read at page load. */
+  readonly build: DesktopBuildSummary;
   /** Opens the native directory chooser; resolves to the absolute path, or null when canceled. */
   pickDirectory(): Promise<string | null>;
   executionHost: {
@@ -125,6 +139,12 @@ export interface OtomatDesktopBridge {
     delivery(): Promise<LinearDeliverySnapshot>;
     /** Subscribes to delivery changes pushed by the main process; returns the unsubscribe function. */
     onDelivery(listener: (snapshot: LinearDeliverySnapshot) => void): () => void;
+  };
+  support: {
+    /** Writes the local support bundle, with this incident attached, to a path the user picks. */
+    exportBundle(diagnostic: ErrorDiagnostic): Promise<SupportBundleExportResult>;
+    /** Opens the prepared draft in the user's browser. Nothing is sent; the user posts it or not. */
+    openReportDraft(draft: ProblemReportDraft): Promise<void>;
   };
   /** True for a packaged preview (unsigned build); the sandbox surface is only shown — and its reset only honored — when true. */
   readonly preview: boolean;

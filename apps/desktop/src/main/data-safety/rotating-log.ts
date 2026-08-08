@@ -10,8 +10,9 @@ import {
   writeFileSync,
 } from "node:fs";
 
+import { redactLogText } from "@otomat/domain";
+
 import { combineFailures } from "./failure-composition.js";
-import { redactLogText } from "./redaction.js";
 
 export interface RotatingLogOptions {
   maxBytes: number;

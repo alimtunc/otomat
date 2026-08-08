@@ -56,7 +56,15 @@ export class DesktopApp {
     process.env.PATH = this.userPath;
     this.userData = app.getPath("userData");
     // The sandbox is a preview's test bed; no other channel ever seeds fixtures.
-    this.ipcState = { daemonUrl: "", preview: buildInfo.channel === "preview" };
+    this.ipcState = {
+      daemonUrl: "",
+      preview: buildInfo.channel === "preview",
+      build: {
+        version: buildInfo.version,
+        commit: buildInfo.commit_short,
+        channel: buildInfo.channel,
+      },
+    };
     this.support = new DesktopSupport({
       daemonUrl: () => this.ipcState.daemonUrl,
       logs: () => ({
@@ -83,7 +91,7 @@ export class DesktopApp {
     }
     this.splash = await createSplashWindow(this.paths);
     installApplicationMenu({
-      exportSupportBundle: () => this.support.exportBundle(),
+      exportSupportBundle: () => this.support.exportBundleWithFeedback(),
       showDataPolicy: () => this.support.showDataPolicy(),
     });
     await this.runStartup();

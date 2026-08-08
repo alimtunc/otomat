@@ -2,11 +2,11 @@ import { Pill, PillTabs, Skeleton } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useRunDetail } from "@web/api/runs/queries";
 import { useRunEventStream } from "@web/api/runs/run-event-stream";
+import { ErrorReport } from "@web/components/diagnostics/error-report";
 import { LogList } from "@web/components/runs/logs/list";
 import { countMatching, LOG_FILTERS, type LogFilter } from "@web/components/runs/logs/log-filters";
 import { SessionsPanel } from "@web/components/runs/logs/sessions-panel";
 import { PaneHeader } from "@web/components/runs/pane-header";
-import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
 import { STREAM_LABEL } from "@web/lib/run/stream";
 import { useState } from "react";
 
@@ -27,8 +27,9 @@ export function RunLogsView() {
 
   if (detail.isError) {
     return (
-      <DaemonUnreachableState
-        title="Couldn’t load this run"
+      <ErrorReport
+        error={detail.error}
+        context="Couldn’t load this run"
         onRetry={() => void detail.refetch()}
       />
     );

@@ -10,12 +10,11 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { redactLogText, scanSensitiveValues } from "@otomat/domain";
 import { afterEach, expect, it } from "vitest";
 
 import { RedactedLineBuffer } from "#main/data-safety/redacted-line-buffer";
-import { redactLogText } from "#main/data-safety/redaction";
 import { RotatingLog } from "#main/data-safety/rotating-log";
-import { scanSensitiveValues } from "#main/data-safety/sensitive-value-scanner";
 import { parseStartupDiagnosticLine } from "#main/data-safety/startup-diagnostic";
 
 let scratch: string | null = null;

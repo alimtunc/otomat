@@ -2,8 +2,8 @@ import type { RunContract } from "@otomat/domain";
 import { cn, EmptyState, FOCUS_RING, RunStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useProjectRuns } from "@web/api/runs/queries";
+import { ErrorReport } from "@web/components/diagnostics/error-report";
 import { CenteredState } from "@web/components/shell/centered-state";
-import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { ProjectQueryBoundary } from "@web/components/shell/project-selection/query-boundary";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
@@ -51,8 +51,9 @@ export function RunsView() {
           query={runs}
           pending={<ListSkeleton rows={3} height={40} />}
           error={
-            <DaemonUnreachableState
-              title="Couldn’t load runs"
+            <ErrorReport
+              error={runs.error}
+              context="Couldn’t load runs"
               onRetry={() => void runs.refetch()}
             />
           }

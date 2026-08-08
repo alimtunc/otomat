@@ -1,11 +1,11 @@
 import type { IssueContract } from "@otomat/domain";
 import { DialogBody, Skeleton } from "@otomat/ui";
+import { ErrorReport } from "@web/components/diagnostics/error-report";
 import { LaunchBlockedPanel } from "@web/components/runs/launch/launch-blocked-panel";
 import {
   useLaunchTarget,
   type LaunchTargetState,
 } from "@web/components/runs/launch/use-launch-target";
-import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
 import { useDaemonUpdatePending } from "@web/components/shell/use-daemon-update-pending";
 import type { ReactNode } from "react";
 
@@ -66,8 +66,9 @@ function ResolvedLaunchTargetGate({
   if (target.status === "error") {
     return (
       <DialogBody>
-        <DaemonUnreachableState
-          title="Couldn’t load this project’s repository"
+        <ErrorReport
+          error={target.error}
+          context="Couldn’t load this project’s repository"
           onRetry={target.retry}
         />
       </DialogBody>

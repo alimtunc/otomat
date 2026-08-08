@@ -235,7 +235,7 @@ it("refreshes persisted rows and shouts when a partially applied sync rejects", 
 
 it("silences a sync canceled by a newer connection state", async () => {
   syncLinear.mockRejectedValue(
-    new DaemonRequestError(409, "/api/linear/sync", {
+    new DaemonRequestError(409, "POST", "/api/linear/sync", {
       error: "linear_request_superseded",
       message: "A newer Linear connection state replaced this request.",
     }),

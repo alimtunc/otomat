@@ -62,7 +62,7 @@ async function launchOnce() {
 
 it("shows the daemon's own launch-refusal message rather than a generic rejection", async () => {
   startRun.mockRejectedValue(
-    new DaemonRequestError(409, "/api/runs", {
+    new DaemonRequestError(409, "POST", "/api/runs", {
       error: "repository_required",
       message: "project local-default has no repository to run in",
     }),
@@ -78,7 +78,7 @@ it("shows the daemon's own launch-refusal message rather than a generic rejectio
 
 it("shows the base-branch refusal verbatim so the user can pick another branch", async () => {
   startRun.mockRejectedValue(
-    new DaemonRequestError(400, "/api/runs", {
+    new DaemonRequestError(400, "POST", "/api/runs", {
       error: "base_branch_not_found",
       message: 'branch "ghost" does not exist in /repo',
     }),
@@ -92,7 +92,9 @@ it("shows the base-branch refusal verbatim so the user can pick another branch",
 });
 
 it("falls back to a generic message for an unrecognised refusal body", async () => {
-  startRun.mockRejectedValue(new DaemonRequestError(400, "/api/runs", { error: "who_knows" }));
+  startRun.mockRejectedValue(
+    new DaemonRequestError(400, "POST", "/api/runs", { error: "who_knows" }),
+  );
 
   await launchOnce();
 
@@ -102,7 +104,9 @@ it("falls back to a generic message for an unrecognised refusal body", async () 
 });
 
 it("blames the daemon rather than the request when the launch fails server-side", async () => {
-  startRun.mockRejectedValue(new DaemonRequestError(500, "/api/runs", { error: "internal_error" }));
+  startRun.mockRejectedValue(
+    new DaemonRequestError(500, "POST", "/api/runs", { error: "internal_error" }),
+  );
 
   await launchOnce();
 

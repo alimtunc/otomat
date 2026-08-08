@@ -1,4 +1,8 @@
-import { healthResponseSchema } from "@otomat/domain";
+import {
+  healthResponseSchema,
+  type ErrorDiagnostic,
+  type SupportBundleExportResult,
+} from "@otomat/domain";
 
 import { withAbortTimeout } from "#shared/abort-timeout";
 
@@ -14,15 +18,15 @@ interface SupportBundleExporterOptions {
   readLogs(): { desktop: string; daemon: string };
   chooseDestination(): Promise<string | null>;
   write(path: string, contents: string): void | Promise<void>;
+  /** Incident the export was triggered from; omitted when the user exported from the menu. */
+  incident?: ErrorDiagnostic | null;
   fetch?: typeof fetch;
   healthTimeoutMs?: number;
 }
 
-export type SupportExportResult = { status: "canceled" } | { status: "written"; path: string };
-
 export async function exportSupportBundle(
   options: SupportBundleExporterOptions,
-): Promise<SupportExportResult> {
+): Promise<SupportBundleExportResult> {
   const destination = await options.chooseDestination();
   if (destination === null) return { status: "canceled" };
 
@@ -63,6 +67,7 @@ export async function exportSupportBundle(
       versions: options.versions,
       health,
       schema,
+      incident: options.incident ?? null,
       logs: options.readLogs(),
     }),
   );

@@ -44,7 +44,7 @@ afterEach(async () => {
 
 it("refreshes the whole Linear state when source validation changes authorization", async () => {
   createIssueSource.mockRejectedValue(
-    new DaemonRequestError(409, "/api/linear/sources", {
+    new DaemonRequestError(409, "POST", "/api/linear/sources", {
       error: "linear_request_superseded",
       message: "A newer Linear connection state replaced this request.",
     }),

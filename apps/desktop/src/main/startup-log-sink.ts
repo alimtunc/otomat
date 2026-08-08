@@ -1,5 +1,6 @@
+import { redactLogText } from "@otomat/domain";
+
 import type { RotatingLog } from "./data-safety/index.js";
-import { redactLogText } from "./data-safety/redaction.js";
 
 const MAX_BUFFERED_CHARACTERS = 65_536;
 

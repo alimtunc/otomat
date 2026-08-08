@@ -136,7 +136,7 @@ it("publishes the draft from the bar and overwrites only after an explicit confl
   getLinearWriteback.mockResolvedValue({ draft: DRAFT, writes: [] });
   publishLinearFields
     .mockRejectedValueOnce(
-      new DaemonRequestError(409, "/api/linear/issues/li/publish-fields", {
+      new DaemonRequestError(409, "POST", "/api/linear/issues/li/publish-fields", {
         error: "linear_write_conflict",
         message: "The Linear issue changed since you started editing.",
         remote: { ...SNAPSHOT, title: "Changed remotely", updated_at: "2026-07-21T09:00:00.000Z" },

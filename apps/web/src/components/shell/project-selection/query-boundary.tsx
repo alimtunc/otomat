@@ -1,9 +1,10 @@
-import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
+import { ErrorReport } from "@web/components/diagnostics/error-report";
 import type { ReactNode } from "react";
 
 interface ProjectQueryBoundaryProps {
   query: {
     isError: boolean;
+    error: unknown;
     refetch: () => Promise<unknown>;
   };
   children: ReactNode;
@@ -13,7 +14,11 @@ interface ProjectQueryBoundaryProps {
 export function ProjectQueryBoundary({ query, children }: ProjectQueryBoundaryProps) {
   if (query.isError) {
     return (
-      <DaemonUnreachableState title="Couldn’t load projects" onRetry={() => void query.refetch()} />
+      <ErrorReport
+        error={query.error}
+        context="Couldn’t load projects"
+        onRetry={() => void query.refetch()}
+      />
     );
   }
   return children;

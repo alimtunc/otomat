@@ -18,6 +18,7 @@ apps/
       events/          # event ledger + stream-to-file tailer (OTO-7)
       git/             # worktree/branch lifecycle + diff      (OTO-8)
       data-safety/     # startup diagnostics + restore maintenance mode (OTO-29)
+      diagnostics/     # correlation-id request log + bounded redacted excerpt   (OTO-52)
       review/          # review slice: diff snapshot + comment anchoring (OTO-11)
       runtime/         # adapter contract, provider adapters, model + option feature detection (OTO-6)
         probe/         # bounded, credential-free reads of an installed provider binary
@@ -67,11 +68,12 @@ Why each current package qualifies:
 | `client`          | Typed daemon API/SSE client reused by `web` and future frontend apps.             |
 | `tooling`         | Shared build/lint/test/boundary config.                                           |
 
-Why `api`, `data-safety`, `events`, `git`, `runtime` are **not** packages: each was consumed only
-by the local daemon (and each other) — no frontend or cross-app consumer — so they
-are internal daemon modules, consumed through `#api`/`#data-safety`/`#events`/`#git`/`#runtime`
-subpath imports. `supervisor` (OTO-10) and `review` (OTO-11) live the same way
-under `apps/local-daemon/src/<module>`, consumed through `#supervisor`/`#review`.
+Why `api`, `data-safety`, `diagnostics`, `events`, `git`, `runtime` are **not** packages: each was
+consumed only by the local daemon (and each other) — no frontend or cross-app consumer — so they
+are internal daemon modules, consumed through
+`#api`/`#data-safety`/`#diagnostics`/`#events`/`#git`/`#runtime` subpath imports.
+`supervisor` (OTO-10) and `review` (OTO-11) live the same way under
+`apps/local-daemon/src/<module>`, consumed through `#supervisor`/`#review`.
 
 ## Ticket Ownership
 
@@ -83,6 +85,9 @@ under `apps/local-daemon/src/<module>`, consumed through `#supervisor`/`#review`
 | `apps/local-daemon/src/events`    | OTO-7                    | Append-only event store, stream-to-file ingestion, projections.       |
 | `apps/local-daemon/src/git`       | OTO-8                    | Worktree/branch ownership, canonical diff, cleanup primitives.        |
 | `apps/local-daemon/src/data-safety` | OTO-29                 | Safe startup diagnostics and the one-shot restore maintenance mode.   |
+| `apps/local-daemon/src/diagnostics` | OTO-52                 | Correlation ids on `/api`, and the bounded redacted excerpt a host serves. |
+| `apps/web/src/components/diagnostics` | OTO-52               | Classified error report: details, host log excerpt, copy/export/report. |
+| `packages/domain/src/redaction`   | OTO-29, OTO-52           | The one log redactor; shared by the shell, the daemon and the cockpit. |
 | `apps/local-daemon/src/api`       | OTO-9                    | Local daemon routes and SSE surface.                                  |
 | `apps/desktop/src/main/data-safety` | OTO-29                 | Versioned data layout, redacted rotating logs, support bundle export. |
 | `apps/desktop/scripts`            | OTO-21, OTO-30           | macOS packaging: ad-hoc local build, signed/notarized release, packaged smoke. |
@@ -135,6 +140,27 @@ connection, project and foreground transitions, the Issues view for stale entry
 and the explicit **Refresh issues** control). A sync always names a project, and
 the daemon refuses a project it does not own rather than reporting an empty
 success — that is what keeps a VPS project from silently reading local state.
+
+## Error Diagnostics
+
+Otomat never shows a bare error string. Every incident is classified first —
+`renderer`, `daemon`, or `transport` — because the three have different evidence:
+a renderer exception appears in no daemon log, and a transport failure never
+reached a host at all. `packages/client` makes the distinction real: a non-2xx
+answer throws `DaemonRequestError` carrying the daemon's correlation id, and a
+request that never landed throws `DaemonTransportError`.
+
+The daemon stamps `x-otomat-correlation-id` on every `/api` response and keeps a
+bounded, redacted ring of what it recorded about the failures.
+`GET /api/diagnostics/logs?correlation_id=…` serves only the lines for that one
+request; there is no route for an unfiltered log, the database, or run output.
+
+`redactLogText` (`packages/domain/src/redaction`) is the single redactor: the
+shell's rotating logs and support bundle, the daemon's ring, and the cockpit's
+message and stack all pass through it, and it is idempotent so re-redacting on
+export never destroys the surrounding diagnostics. Copy, export and report are
+explicit user actions — the report previews its exact text and only opens a
+draft once confirmed. There is no telemetry and no automatic send.
 
 ## Frontend Stack Direction
 

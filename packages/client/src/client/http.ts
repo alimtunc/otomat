@@ -1,20 +1,49 @@
+import { CORRELATION_ID_HEADER } from "@otomat/domain";
+
 import type { DaemonClientConfig } from "./config.js";
 
 /**
  * Thrown by HTTP helpers on a non-2xx response; `body` carries the daemon's JSON
- * error payload when one was provided.
+ * error payload when one was provided, and `correlationId` the id that daemon stamped
+ * on the response, which is what its diagnostics excerpt is keyed by.
  */
 export class DaemonRequestError extends Error {
   readonly status: number;
+  readonly method: string;
   readonly path: string;
   readonly body: unknown;
+  readonly correlationId: string | null;
 
-  constructor(status: number, path: string, body: unknown = null) {
+  constructor(
+    status: number,
+    method: string,
+    path: string,
+    body: unknown = null,
+    correlationId: string | null = null,
+  ) {
     super(`Daemon request to ${path} failed with status ${status}`);
     this.name = "DaemonRequestError";
     this.status = status;
+    this.method = method;
     this.path = path;
     this.body = body;
+    this.correlationId = correlationId;
+  }
+}
+
+/**
+ * Thrown when the request never reached a daemon at all — the host is down, the SSH tunnel is
+ * closed, or the origin is wrong. It is a distinct class because no daemon log can explain it.
+ */
+export class DaemonTransportError extends Error {
+  readonly method: string;
+  readonly path: string;
+
+  constructor(method: string, path: string, cause: unknown) {
+    super(`Daemon request to ${path} could not reach the host`, { cause });
+    this.name = "DaemonTransportError";
+    this.method = method;
+    this.path = path;
   }
 }
 
@@ -44,8 +73,22 @@ async function daemonFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const doFetch = config.fetch ?? fetch;
-  const res = await doFetch(resolveUrl(config, path), init);
-  if (!res.ok) throw new DaemonRequestError(res.status, path, await readErrorBody(res));
+  const method = init?.method ?? "GET";
+  let res: Response;
+  try {
+    res = await doFetch(resolveUrl(config, path), init);
+  } catch (error) {
+    throw new DaemonTransportError(method, path, error);
+  }
+  if (!res.ok) {
+    throw new DaemonRequestError(
+      res.status,
+      method,
+      path,
+      await readErrorBody(res),
+      res.headers.get(CORRELATION_ID_HEADER),
+    );
+  }
   return res;
 }
 

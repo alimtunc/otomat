@@ -10,7 +10,7 @@ import {
   repository,
   repositoryBranchesQueryResult,
 } from "#support/launch-target";
-import { mount } from "#support/mount";
+import { mountWithQuery } from "#support/mount";
 
 let repositories: RepositoryContract[] = [repository()];
 let repositoriesFailed = false;
@@ -28,6 +28,7 @@ vi.mock("@web/api/daemon/queries", () => ({
         ),
   useRepositoryBranches: () => repositoryBranchesQueryResult(),
   useProjects: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
+  useHealth: () => ({ data: undefined, isPending: false, isError: false, isSuccess: false }),
 }));
 
 vi.mock("@web/api/repositories/mutations", () => ({
@@ -72,7 +73,7 @@ afterEach(async () => {
 });
 
 async function renderGate(projectId: string | undefined, issue?: IssueContract) {
-  const mounted = await mount(
+  const mounted = await mountWithQuery(
     <LaunchTargetGate projectId={projectId} issue={issue}>
       {(target) => {
         launchable(target);

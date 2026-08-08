@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 describe("registerRepositoryErrorMessage", () => {
   it("surfaces the daemon's safe refusal message verbatim", () => {
-    const error = new DaemonRequestError(409, "/api/repositories", {
+    const error = new DaemonRequestError(409, "POST", "/api/repositories", {
       error: "repository_already_registered",
       message: "This repository is already registered.",
     });
@@ -12,7 +12,9 @@ describe("registerRepositoryErrorMessage", () => {
   });
 
   it("falls back honestly when the body is not a refusal payload", () => {
-    const error = new DaemonRequestError(500, "/api/repositories", { error: "internal_error" });
+    const error = new DaemonRequestError(500, "POST", "/api/repositories", {
+      error: "internal_error",
+    });
     expect(registerRepositoryErrorMessage(error)).toBe(
       "Could not register the repository — the daemon rejected the request.",
     );
