@@ -11,7 +11,7 @@ export type LaunchTargetBlocker =
 
 export type LaunchTargetState =
   | { status: "loading" }
-  | { status: "error"; retry: () => void }
+  | { status: "error"; error: unknown; retry: () => void }
   | { status: "blocked"; blocker: LaunchTargetBlocker }
   | {
       status: "ready";
@@ -38,7 +38,11 @@ export function useLaunchTarget(projectId: string): LaunchTargetState {
 
   if (repositories.isPending) return { status: "loading" };
   if (repositories.isError) {
-    return { status: "error", retry: () => void repositories.refetch() };
+    return {
+      status: "error",
+      error: repositories.error,
+      retry: () => void repositories.refetch(),
+    };
   }
   if (repository === null) return { status: "blocked", blocker: "no_repository" };
   if (usable === null) return { status: "blocked", blocker: "repository_unavailable" };

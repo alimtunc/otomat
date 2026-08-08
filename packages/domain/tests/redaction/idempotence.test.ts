@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { redactLogText } from "#main/data-safety/redaction";
+import { redactLogText } from "#domain/redaction/redact";
 
 const CASES = [
   "token=ghp_abcdef1234 listening on port 4319",

@@ -1,6 +1,9 @@
-import type { SchemaMetadataContract } from "@otomat/domain";
-
-import { redactLogText } from "../redaction.js";
+import {
+  redactLogText,
+  type DaemonLogEntry,
+  type ErrorDiagnostic,
+  type SchemaMetadataContract,
+} from "@otomat/domain";
 
 export interface SupportBundleVersions {
   desktop: string;
@@ -23,9 +26,28 @@ export interface SupportBundleInput {
   versions: SupportBundleVersions;
   health: SupportBundleHealth;
   schema: SchemaMetadataContract | null;
+  /** The incident this export was triggered from; absent for a bundle exported from the menu. */
+  incident?: ErrorDiagnostic | null;
   logs: {
     desktop: string;
     daemon: string;
+  };
+}
+
+function redactedEntry(entry: DaemonLogEntry): DaemonLogEntry {
+  return { ...entry, message: redactLogText(entry.message) };
+}
+
+// The renderer already redacted this; redaction is idempotent, and the bundle is the artifact a
+// user hands to someone else, so it is not the place to trust an upstream promise.
+function redactedIncident(incident: ErrorDiagnostic): ErrorDiagnostic {
+  return {
+    ...incident,
+    message: redactLogText(incident.message),
+    stack: incident.stack === null ? null : redactLogText(incident.stack),
+    component_stack:
+      incident.component_stack === null ? null : redactLogText(incident.component_stack),
+    daemon_log: incident.daemon_log === null ? null : incident.daemon_log.map(redactedEntry),
   };
 }
 
@@ -39,11 +61,13 @@ export function buildSupportBundle(input: SupportBundleInput): string {
           started_at: input.health.started_at,
         }
       : { status: input.health.status, detail: input.health.detail };
+  const incident = input.incident ?? null;
   return `${JSON.stringify(
     {
       versions: input.versions,
       health,
       schema: input.schema,
+      ...(incident === null ? {} : { incident: redactedIncident(incident) }),
       logs: {
         desktop: redactLogText(input.logs.desktop),
         daemon: redactLogText(input.logs.daemon),

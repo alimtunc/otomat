@@ -10,6 +10,7 @@ import {
 import { useParams } from "@tanstack/react-router";
 import { useRunDetail } from "@web/api/runs/queries";
 import { useRunEventStream } from "@web/api/runs/run-event-stream";
+import { ErrorReport } from "@web/components/diagnostics/error-report";
 import { ContextPane } from "@web/components/runs/cockpit/context-pane";
 import { ContextStrip } from "@web/components/runs/cockpit/context-strip";
 import { StepsDisclosure } from "@web/components/runs/cockpit/steps/disclosure";
@@ -17,7 +18,6 @@ import { StepsPane } from "@web/components/runs/cockpit/steps/pane";
 import { CompeteComparison } from "@web/components/runs/compete/comparison";
 import { ConversationThread } from "@web/components/runs/conversation/thread";
 import { PaneHeader } from "@web/components/runs/pane-header";
-import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
 
 export function RunConversationView() {
   const { runId } = useParams({ from: "/runs/$runId/" });
@@ -37,8 +37,9 @@ export function RunConversationView() {
 
   if (detail.isError) {
     return (
-      <DaemonUnreachableState
-        title="Couldn’t load this run"
+      <ErrorReport
+        error={detail.error}
+        context="Couldn’t load this run"
         onRetry={() => void detail.refetch()}
       />
     );

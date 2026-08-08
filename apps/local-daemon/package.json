@@ -11,6 +11,8 @@
     "#api/*": "./src/api/*.ts",
     "#data-safety": "./src/data-safety/index.ts",
     "#data-safety/*": "./src/data-safety/*.ts",
+    "#diagnostics": "./src/diagnostics/index.ts",
+    "#diagnostics/*": "./src/diagnostics/*.ts",
     "#events": "./src/events/index.ts",
     "#events/*": "./src/events/*.ts",
     "#git": "./src/git/index.ts",

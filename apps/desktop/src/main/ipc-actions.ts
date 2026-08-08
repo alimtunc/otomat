@@ -1,7 +1,10 @@
-import type {
-  LinearDeliverySnapshot,
-  LinearVaultOperationResult,
-  PreviewSandboxResetResult,
+import {
+  errorDiagnosticSchema,
+  problemReportDraftSchema,
+  type LinearDeliverySnapshot,
+  type LinearVaultOperationResult,
+  type PreviewSandboxResetResult,
+  type SupportBundleExportResult,
 } from "@otomat/domain";
 
 import type { IpcActions } from "./ipc.js";
@@ -16,6 +19,11 @@ const NOT_READY: LinearVaultOperationResult = {
   ok: false,
   message: "The desktop runtime is not ready yet.",
   error_code: null,
+};
+
+const REJECTED_DIAGNOSTIC: SupportBundleExportResult = {
+  status: "failed",
+  message: "The diagnostic could not be read, so nothing was written.",
 };
 
 export interface IpcActionContext {
@@ -33,7 +41,16 @@ export function buildIpcActions(context: IpcActionContext): IpcActions {
     forgetLinearKey: () => context.runtime()?.linear.forget() ?? Promise.resolve(NOT_READY),
     linearDelivery: () => context.runtime()?.linear.snapshot() ?? NO_DELIVERY,
     restoreBackup: () => context.restoreBackup(),
-    exportSupportBundle: () => context.support.exportBundle(),
+    exportSupportBundle: () => context.support.exportBundleWithFeedback(),
+    exportSupportBundleFor: async (diagnostic: unknown): Promise<SupportBundleExportResult> => {
+      const parsed = errorDiagnosticSchema.safeParse(diagnostic);
+      if (!parsed.success) return REJECTED_DIAGNOSTIC;
+      return context.support.exportBundle(parsed.data);
+    },
+    openReportDraft: async (draft: unknown): Promise<void> => {
+      // A malformed draft is never opened: this is the one path that leaves the app.
+      await context.support.openReportDraft(problemReportDraftSchema.parse(draft));
+    },
     showDataPolicy: () => context.support.showDataPolicy(),
     resetSandbox: async (): Promise<PreviewSandboxResetResult> => {
       const reset = context.runtime()?.sandbox.reset();

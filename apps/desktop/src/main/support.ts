@@ -1,6 +1,11 @@
 import { join } from "node:path";
 
-import { app, dialog } from "electron";
+import type {
+  ErrorDiagnostic,
+  ProblemReportDraft,
+  SupportBundleExportResult,
+} from "@otomat/domain";
+import { app, dialog, shell } from "electron";
 
 import { readBuildInfo } from "./build-info.js";
 import { DATA_RETENTION_POLICY, exportSupportBundle } from "./data-safety/index.js";
@@ -12,10 +17,26 @@ interface DesktopSupportOptions {
   log(message: string): void;
 }
 
+const ISSUE_DRAFT_URL = "https://github.com/alimtunc/otomat/issues/new";
+// GitHub rejects a request line beyond roughly 8 KB; a draft that would be refused is worse than
+// a shorter one, so the body is cut here rather than by the server.
+const MAX_DRAFT_BODY_CHARACTERS = 6_000;
+
+function issueDraftUrl(draft: ProblemReportDraft): string {
+  const url = new URL(ISSUE_DRAFT_URL);
+  url.searchParams.set("title", draft.title);
+  url.searchParams.set("body", draft.body.slice(0, MAX_DRAFT_BODY_CHARACTERS));
+  return url.toString();
+}
+
+function failureMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export class DesktopSupport {
   constructor(private readonly options: DesktopSupportOptions) {}
 
-  async exportBundle(): Promise<void> {
+  async exportBundle(incident: ErrorDiagnostic | null = null): Promise<SupportBundleExportResult> {
     try {
       const build = readBuildInfo(this.options.log);
       const exported = await exportSupportBundle({
@@ -43,23 +64,39 @@ export class DesktopSupport {
           return selected.canceled ? null : (selected.filePath ?? null);
         },
         write: writeSupportBundleAtomically,
+        incident,
       });
-      if (exported.status === "written") {
-        await dialog.showMessageBox({
-          type: "info",
-          title: "Support Bundle Exported",
-          message: "The local support bundle was exported.",
-          detail: exported.path,
-        });
-      }
-    } catch {
-      this.options.log("Support bundle export failed.");
+      return exported;
+    } catch (error) {
+      this.options.log(`Support bundle export failed: ${failureMessage(error)}`);
+      return { status: "failed", message: "The support bundle could not be exported." };
+    }
+  }
+
+  /** The menu and splash have no renderer to report into, so the outcome is a native dialog. */
+  async exportBundleWithFeedback(): Promise<void> {
+    const exported = await this.exportBundle();
+    if (exported.status === "written") {
+      await dialog.showMessageBox({
+        type: "info",
+        title: "Support Bundle Exported",
+        message: "The local support bundle was exported.",
+        detail: exported.path,
+      });
+      return;
+    }
+    if (exported.status === "failed") {
       await dialog.showMessageBox({
         type: "error",
         title: "Support Bundle Failed",
-        message: "The support bundle could not be exported.",
+        message: exported.message,
       });
     }
+  }
+
+  /** Called only after the renderer's preview dialog was confirmed; it opens a draft, never posts. */
+  async openReportDraft(draft: ProblemReportDraft): Promise<void> {
+    await shell.openExternal(issueDraftUrl(draft));
   }
 
   async showDataPolicy(): Promise<void> {

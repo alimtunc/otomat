@@ -1,8 +1,8 @@
 import { EmptyState, FOCUS_RING, Icon, RunStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useProjectRuns } from "@web/api/runs/queries";
+import { ErrorReport } from "@web/components/diagnostics/error-report";
 import { CenteredState } from "@web/components/shell/centered-state";
-import { DaemonUnreachableState } from "@web/components/shell/daemon-unreachable-state";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { ProjectQueryBoundary } from "@web/components/shell/project-selection/query-boundary";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
@@ -36,8 +36,9 @@ export function ReviewsView() {
           query={runs}
           pending={<ListSkeleton rows={2} height={48} />}
           error={
-            <DaemonUnreachableState
-              title="Couldn’t load reviews"
+            <ErrorReport
+              error={runs.error}
+              context="Couldn’t load reviews"
               onRetry={() => void runs.refetch()}
             />
           }

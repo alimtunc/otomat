@@ -1,4 +1,5 @@
 import {
+  daemonLogExcerptSchema,
   healthResponseSchema,
   providerOptionSetSchema,
   runtimeDescriptorSchema,
@@ -12,6 +13,11 @@ export function createSystemClient(config: DaemonClientConfig) {
   return {
     async health() {
       return healthResponseSchema.parse(await getJson(config, "/api/health"));
+    },
+    /** What the active host recorded for one failing request; already redacted on that host. */
+    async daemonLogExcerpt(correlationId: string) {
+      const path = `/api/diagnostics/logs${queryString({ correlation_id: correlationId })}`;
+      return daemonLogExcerptSchema.parse(await getJson(config, path));
     },
     async listRuntimes() {
       return runtimeDescriptorSchema.array().parse(await getJson(config, "/api/runtimes"));

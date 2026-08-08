@@ -1,11 +1,14 @@
 import type {
+  DesktopBuildSummary,
   LinearDeliverySnapshot,
   LinearVaultOperationResult,
   PreviewSandboxResetResult,
+  SupportBundleExportResult,
 } from "@otomat/domain";
 import { BrowserWindow, dialog, ipcMain } from "electron";
 
 import {
+  BUILD_SYNC_CHANNEL,
   DAEMON_URL_CHANNEL,
   EXECUTION_HOST_ALIASES_CHANNEL,
   EXECUTION_HOST_CONFIGURE_CHANNEL,
@@ -26,6 +29,8 @@ import {
   PICK_DIRECTORY_CHANNEL,
   PREVIEW_SANDBOX_RESET_CHANNEL,
   PREVIEW_SYNC_CHANNEL,
+  SUPPORT_EXPORT_CHANNEL,
+  SUPPORT_REPORT_DRAFT_CHANNEL,
 } from "#shared/ipc-channels";
 import {
   SPLASH_EXPORT_SUPPORT_CHANNEL,
@@ -40,6 +45,8 @@ export interface IpcState {
   daemonUrl: string;
   /** True for a packaged preview build; static per process. */
   preview: boolean;
+  /** Identity of this build, so a copied diagnostic names the artifact it came from. */
+  build: DesktopBuildSummary;
 }
 
 export interface IpcActions {
@@ -48,6 +55,8 @@ export interface IpcActions {
   linearDelivery(): LinearDeliverySnapshot;
   restoreBackup(): Promise<void>;
   exportSupportBundle(): Promise<void>;
+  exportSupportBundleFor(diagnostic: unknown): Promise<SupportBundleExportResult>;
+  openReportDraft(draft: unknown): Promise<void>;
   showDataPolicy(): Promise<void>;
   resetSandbox(): Promise<PreviewSandboxResetResult>;
   executionHost: ExecutionHostIpcActions;
@@ -61,6 +70,17 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
   ipcMain.on(PREVIEW_SYNC_CHANNEL, (event) => {
     event.returnValue = state.preview;
   });
+
+  ipcMain.on(BUILD_SYNC_CHANNEL, (event) => {
+    event.returnValue = state.build;
+  });
+
+  ipcMain.handle(SUPPORT_EXPORT_CHANNEL, (_event, diagnostic: unknown) =>
+    actions.exportSupportBundleFor(diagnostic),
+  );
+  ipcMain.handle(SUPPORT_REPORT_DRAFT_CHANNEL, (_event, draft: unknown) =>
+    actions.openReportDraft(draft),
+  );
 
   ipcMain.on(EXECUTION_HOST_SYNC_CHANNEL, (event) => {
     event.returnValue = actions.executionHost.sync();

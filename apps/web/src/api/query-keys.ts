@@ -6,6 +6,8 @@
  */
 export const queryKeys = {
   health: ["health"] as const,
+  daemonLogExcerpt: (correlationId: string | null) =>
+    ["diagnostics", "logs", correlationId] as const,
   githubConnection: ["github", "connection"] as const,
   linear: ["linear"] as const,
   linearConnection: ["linear", "connection"] as const,

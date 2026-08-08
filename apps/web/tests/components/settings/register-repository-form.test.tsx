@@ -102,7 +102,7 @@ describe("RegisterRepositoryForm", () => {
 
   it("shows the daemon's refusal message on error and keeps the input", async () => {
     registerRepository.mockRejectedValue(
-      new DaemonRequestError(400, "/api/repositories", {
+      new DaemonRequestError(400, "POST", "/api/repositories", {
         error: "head_detached",
         message: "The repository's HEAD is detached; check out a branch first.",
       }),

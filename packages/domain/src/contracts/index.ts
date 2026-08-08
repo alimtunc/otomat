@@ -2,7 +2,8 @@
  * Zod contracts shared by daemon and client: HTTP request/response shapes
  * (`api`), the canonical run diff with its pin-to-SHA anchors (`diff`), the
  * persisted entity mirrors (`entities`), the local data-safety error taxonomy
- * and managed-artifact grammar (`data-safety`), and the Electron shell's
+ * and managed-artifact grammar (`data-safety`), the incident report shared by
+ * renderer, daemon and shell (`diagnostics`), and the Electron shell's
  * renderer bridge surface (`desktop`). Parsing a payload through the zod
  * schemas is what
  * guarantees both sides agree on wire shape and invariants.
@@ -12,6 +13,7 @@
 export * from "./api.js";
 export * from "./data-safety.js";
 export * from "./desktop.js";
+export * from "./diagnostics.js";
 export * from "./diff.js";
 export * from "./execution-host.js";
 export {

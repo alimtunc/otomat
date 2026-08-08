@@ -46,7 +46,7 @@ const REMOTE: LinearIssueSnapshot = {
 };
 
 function conflictError(): DaemonRequestError {
-  return new DaemonRequestError(409, "/api/linear/issues/li/publish-fields", {
+  return new DaemonRequestError(409, "POST", "/api/linear/issues/li/publish-fields", {
     error: "linear_write_conflict",
     message: "The Linear issue changed since you started editing.",
     remote: REMOTE,
@@ -85,7 +85,9 @@ afterEach(async () => {
 
 it("parses the remote snapshot from a write-conflict response", () => {
   expect(linearWriteConflict(conflictError())?.remote.title).toBe("Changed remotely");
-  expect(linearWriteConflict(new DaemonRequestError(500, "/x", { error: "boom" }))).toBeNull();
+  expect(
+    linearWriteConflict(new DaemonRequestError(500, "POST", "/x", { error: "boom" })),
+  ).toBeNull();
   expect(linearWriteConflict(new Error("nope"))).toBeNull();
 });
 

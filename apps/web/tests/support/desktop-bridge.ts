@@ -8,6 +8,7 @@ export function fakeDesktopBridge(
     daemonUrl: "http://127.0.0.1:5000",
     executionHostId: "local",
     executionHostSshAlias: null,
+    build: { version: "0.0.0", commit: "abc1234", channel: "local" },
     pickDirectory: () => Promise.resolve(null),
     executionHost: {
       snapshot: () =>
@@ -46,6 +47,10 @@ export function fakeDesktopBridge(
       forgetKey: () => Promise.resolve({ ok: true as const, message: null }),
       delivery: () => Promise.resolve({ stored: false, hosts: [] }),
       onDelivery: () => () => {},
+    },
+    support: {
+      exportBundle: () => Promise.resolve({ status: "written" as const, path: "/tmp/bundle.json" }),
+      openReportDraft: () => Promise.resolve(),
     },
     preview: false,
     sandbox: {

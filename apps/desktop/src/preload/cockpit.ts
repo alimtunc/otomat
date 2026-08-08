@@ -1,4 +1,5 @@
 import type {
+  ErrorDiagnostic,
   ExecutionHostId,
   ExecutionHostOperationResult,
   ExecutionHostProjectsEntry,
@@ -8,14 +9,18 @@ import type {
   LinearVaultOperationResult,
   OtomatDesktopBridge,
   PreviewSandboxResetResult,
+  ProblemReportDraft,
   RemoteHostStatus,
   RemoteInstanceListResult,
   RemoteRepositoryListResult,
+  SupportBundleExportResult,
 } from "@otomat/domain";
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
+import { isDesktopBuildSummary } from "#shared/build-summary";
 import { isExecutionHostSync } from "#shared/execution-host-sync";
 import {
+  BUILD_SYNC_CHANNEL,
   DAEMON_URL_CHANNEL,
   EXECUTION_HOST_ALIASES_CHANNEL,
   EXECUTION_HOST_CONFIGURE_CHANNEL,
@@ -38,6 +43,8 @@ import {
   PICK_DIRECTORY_CHANNEL,
   PREVIEW_SANDBOX_RESET_CHANNEL,
   PREVIEW_SYNC_CHANNEL,
+  SUPPORT_EXPORT_CHANNEL,
+  SUPPORT_REPORT_DRAFT_CHANNEL,
 } from "#shared/ipc-channels";
 
 // Resolved synchronously so `window.otomat.daemonUrl` exists before the client module reads it.
@@ -54,10 +61,16 @@ if (typeof preview !== "boolean") {
   throw new Error("Invalid preview flag from the main process");
 }
 
+const buildSummary: unknown = ipcRenderer.sendSync(BUILD_SYNC_CHANNEL);
+if (!isDesktopBuildSummary(buildSummary)) {
+  throw new Error("Invalid build metadata from the main process");
+}
+
 contextBridge.exposeInMainWorld("otomat", {
   daemonUrl,
   executionHostId: hostSync.id,
   executionHostSshAlias: hostSync.ssh_alias,
+  build: buildSummary,
   pickDirectory: (): Promise<string | null> => ipcRenderer.invoke(PICK_DIRECTORY_CHANNEL),
   executionHost: {
     snapshot: (): Promise<ExecutionHostSnapshot> =>
@@ -105,6 +118,12 @@ contextBridge.exposeInMainWorld("otomat", {
       ipcRenderer.on(LINEAR_DELIVERY_STATUS_CHANNEL, wrapped);
       return () => ipcRenderer.off(LINEAR_DELIVERY_STATUS_CHANNEL, wrapped);
     },
+  },
+  support: {
+    exportBundle: (diagnostic: ErrorDiagnostic): Promise<SupportBundleExportResult> =>
+      ipcRenderer.invoke(SUPPORT_EXPORT_CHANNEL, diagnostic),
+    openReportDraft: (draft: ProblemReportDraft): Promise<void> =>
+      ipcRenderer.invoke(SUPPORT_REPORT_DRAFT_CHANNEL, draft),
   },
   preview,
   sandbox: {

@@ -1,11 +1,12 @@
-import { splitLogText, withoutLineEnding } from "./log-lines.js";
-import { redactLogText } from "./redaction.js";
 import {
   advanceAuthorizationContinuation,
   type AuthorizationContinuation,
+  redactLogText,
   scanSensitiveValues,
   type SensitiveValueState,
-} from "./sensitive-value-scanner.js";
+  splitLogText,
+  withoutLineEnding,
+} from "@otomat/domain";
 
 const MAX_PENDING_LINE_CHARACTERS = 64 * 1024;
 const MAX_LEXICAL_CONTEXT_CHARACTERS = 512;
