@@ -15,6 +15,7 @@ import { useState } from "react";
 export function useIssueSourceForm(
   workspace: LinearWorkspaceContract,
   projects: ProjectContract[],
+  onCreated?: () => void,
 ) {
   const create = useCreateIssueSource();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -35,6 +36,7 @@ export function useIssueSourceForm(
         await create.mutateAsync(resolution.request);
         toast.success("Mapped Linear source to a local project");
         form.reset();
+        onCreated?.();
       } catch (error) {
         if (isSupersededLinearError(error)) return;
         setSubmitError(linearErrorMessage(error));

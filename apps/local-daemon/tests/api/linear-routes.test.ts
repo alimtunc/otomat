@@ -2,6 +2,7 @@ import {
   issueSourceContractSchema,
   linearConnectionContractSchema,
   linearIssueDraftSchema,
+  linearSyncStatusSchema,
   type LinearIssueSnapshot,
   syncLinearResponseSchema,
 } from "@otomat/domain";
@@ -181,6 +182,54 @@ it("serves mapped sources and sync results through their contracts", async () =>
     imported: 2,
     updated: 1,
   });
+});
+
+it("serves one project's sync status and refuses a project it does not own", async () => {
+  const asked: string[] = [];
+  const app = makeApiApp(t, {
+    linear: stubLinearService({
+      syncStatus: (projectId) => {
+        asked.push(projectId);
+        if (projectId !== "p1") throw linearError("linear_project_not_found");
+        return {
+          project_id: "p1",
+          sources: 1,
+          running: false,
+          last_synced_at: "2026-07-20T12:00:00.000Z",
+          last_result: { imported: 2, updated: 1 },
+          last_error: null,
+        };
+      },
+    }),
+  });
+
+  const served = await request(app, "/api/linear/sync-status?projectId=p1");
+  expect(linearSyncStatusSchema.parse(await served.json())).toMatchObject({
+    sources: 1,
+    last_result: { imported: 2, updated: 1 },
+  });
+
+  const foreign = await request(app, "/api/linear/sync-status?projectId=vps-project");
+  expect(foreign.status).toBe(400);
+  expect(await foreign.json()).toMatchObject({ error: "linear_project_not_found" });
+  expect((await request(app, "/api/linear/sync-status")).status).toBe(400);
+  expect(asked).toEqual(["p1", "vps-project"]);
+});
+
+it("passes a full reconciliation through and rejects an unknown sync flag", async () => {
+  const requests: unknown[] = [];
+  const app = makeApiApp(t, {
+    linear: stubLinearService({
+      sync: async (payload) => {
+        requests.push(payload);
+        return [];
+      },
+    }),
+  });
+
+  expect((await post(app, "/api/linear/sync", { project_id: "p1", full: true })).status).toBe(200);
+  expect((await post(app, "/api/linear/sync", { project_id: "p1", reset: true })).status).toBe(400);
+  expect(requests).toEqual([{ project_id: "p1", full: true }]);
 });
 
 const REMOTE_SNAPSHOT: LinearIssueSnapshot = {

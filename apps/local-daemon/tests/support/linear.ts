@@ -81,6 +81,9 @@ export function stubLinearService(
     sync: async () => {
       throw new Error("sync stub not configured");
     },
+    syncStatus: () => {
+      throw new Error("syncStatus stub not configured");
+    },
     writeback: stubLinearWriteback(writeback),
     ...service,
   };

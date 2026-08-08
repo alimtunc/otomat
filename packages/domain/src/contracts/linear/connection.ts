@@ -89,6 +89,8 @@ export const syncLinearRequestSchema = z
     source_id: z.string().min(1).optional(),
     /** Restricts the sync to one project's mapped sources; ignored when `source_id` is given. */
     project_id: z.string().min(1).optional(),
+    /** Ignores the stored watermark and re-reads every issue, repairing a cursor that drifted. */
+    full: z.boolean().optional(),
   })
   .strict();
 export type SyncLinearRequest = z.infer<typeof syncLinearRequestSchema>;
@@ -105,3 +107,28 @@ export const syncLinearResponseSchema = z.object({
   results: z.array(issueSourceSyncResultSchema),
 });
 export type SyncLinearResponse = z.infer<typeof syncLinearResponseSchema>;
+
+/** One project's Linear freshness, as the daemon that owns that project knows it. */
+export const linearSyncStatusSchema = z.object({
+  project_id: z.string().min(1),
+  /** Linear sources mapped to this project; zero means there is nothing to refresh. */
+  sources: z.number().int().nonnegative(),
+  running: z.boolean(),
+  /** Oldest success across the project's sources; null while any of them has never synced. */
+  last_synced_at: z.iso.datetime().nullable(),
+  /** What the last completed pass wrote, or null when none has completed since the daemon started. */
+  last_result: z
+    .object({
+      imported: z.number().int().nonnegative(),
+      updated: z.number().int().nonnegative(),
+    })
+    .nullable(),
+  /** The failure that ended the last pass, cleared by the next success. */
+  last_error: z
+    .object({
+      code: z.enum(LINEAR_ERROR_CODES).nullable(),
+      message: z.string().min(1),
+    })
+    .nullable(),
+});
+export type LinearSyncStatusContract = z.infer<typeof linearSyncStatusSchema>;

@@ -12,6 +12,7 @@ import {
   type IssueSourceContract,
   type IssueSourceSyncResult,
   type LinearConnectionContract,
+  type LinearSyncStatusContract,
   type LinearWorkspaceContract,
   type SyncLinearRequest,
 } from "@otomat/domain";
@@ -22,9 +23,11 @@ import { LinearError, linearError } from "./errors.js";
 import {
   deleteSourceMapping,
   listSourceContracts,
+  projectSyncStatus,
   resolveSyncSources,
   sourceContract,
 } from "./sources.js";
+import { LinearSyncRuns, syncScope } from "./sync-runs.js";
 import { SYNC_SOURCE, syncIssueSource } from "./sync.js";
 import { createLinearWriteback } from "./writeback/index.js";
 import type { LinearWriteback } from "./writeback/types.js";
@@ -46,6 +49,7 @@ export interface LinearService {
   createSource(request: CreateIssueSourceRequest): Promise<IssueSourceContract>;
   deleteSource(sourceId: string): void;
   sync(request?: SyncLinearRequest): Promise<IssueSourceSyncResult[]>;
+  syncStatus(projectId: string): LinearSyncStatusContract;
   writeback: LinearWriteback;
 }
 
@@ -59,6 +63,7 @@ class DefaultLinearService implements LinearService {
   private readonly now: () => Date;
   private state: LinearConnectionContract = DISCONNECTED;
   private authorization = new AbortController();
+  private readonly runs = new LinearSyncRuns();
   readonly writeback: LinearWriteback;
 
   constructor(private readonly config: LinearServiceConfig) {
@@ -155,21 +160,35 @@ class DefaultLinearService implements LinearService {
   async sync(request: SyncLinearRequest = {}): Promise<IssueSourceSyncResult[]> {
     const { apiKey, signal } = this.requireAuthorization();
     const sources = resolveSyncSources(this.config.db, request);
+    const full = request.full === true;
     const context = {
       db: this.config.db,
       client: this.config.client,
       idFactory: this.idFactory,
       now: this.now,
       signal,
+      full,
     };
 
-    return this.authorized(signal, async () => {
-      const syncResults: IssueSourceSyncResult[] = [];
-      for (const source of sources) {
-        syncResults.push(await syncIssueSource(context, source, apiKey));
-      }
-      return syncResults;
-    });
+    const results: IssueSourceSyncResult[] = [];
+    try {
+      await this.authorized(signal, async () => {
+        for (const source of sources) {
+          results.push(
+            await this.runs.pass(source.id, full, () => syncIssueSource(context, source, apiKey)),
+          );
+        }
+      });
+    } catch (error) {
+      this.runs.failed(syncScope(request, sources, results), error);
+      throw error;
+    }
+    this.runs.succeeded(syncScope(request, sources, results));
+    return results;
+  }
+
+  syncStatus(projectId: string): LinearSyncStatusContract {
+    return projectSyncStatus(this.config.db, this.runs, projectId);
   }
 
   private requireAuthorization(): {

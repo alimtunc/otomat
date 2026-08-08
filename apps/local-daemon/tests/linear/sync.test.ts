@@ -70,7 +70,7 @@ function linearIssue(overrides: Partial<LinearIssue> = {}): LinearIssue {
 let t: TestDb;
 let ids: number;
 
-function ctx(issues: LinearIssue[], capture?: (query: LinearIssueQuery) => void) {
+function ctx(issues: LinearIssue[], capture?: (query: LinearIssueQuery) => void, full = false) {
   return {
     db: t.db,
     client: stubLinearApiClient({
@@ -82,6 +82,7 @@ function ctx(issues: LinearIssue[], capture?: (query: LinearIssueQuery) => void)
     idFactory: () => `generated-${(ids += 1)}`,
     now: () => NOW,
     signal: new AbortController().signal,
+    full,
   };
 }
 
@@ -235,6 +236,7 @@ it("keeps the previous cursor when the pass fails", async () => {
     idFactory: () => "unused",
     now: () => NOW,
     signal: new AbortController().signal,
+    full: false,
   };
   await expect(syncIssueSource(failing, SOURCE, "key")).rejects.toThrow();
 

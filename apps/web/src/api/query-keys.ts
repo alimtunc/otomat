@@ -12,6 +12,8 @@ export const queryKeys = {
   issueSources: ["linear", "sources"] as const,
   linearWorkspaceFor: (workspaceId: string | null) => ["linear", "workspace", workspaceId] as const,
   issueSourcesFor: (workspaceId: string | null) => ["linear", "sources", workspaceId] as const,
+  linearSyncStatus: (projectId: string) => ["linear", "sync-status", projectId] as const,
+  linearSync: (projectId: string) => ["linear", "sync", projectId] as const,
   projects: ["projects"] as const,
   repositories: ["repositories"] as const,
   repositoriesFor: (projectId?: string) => ["repositories", "project", projectId ?? null] as const,

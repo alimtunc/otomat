@@ -1,8 +1,9 @@
 import type { ProjectContract } from "@otomat/domain";
-import { Button, ErrorState, Skeleton } from "@otomat/ui";
+import { ErrorState, Skeleton } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-import { useSyncLinear } from "@web/api/linear/mutations";
 import { useIssueSources, useLinearConnection, useLinearWorkspace } from "@web/api/linear/queries";
+import { useProjectLinearSync } from "@web/api/linear/use-project-sync";
+import { LinearSyncControl } from "@web/components/issues/linear-sync/control";
 import { IssueSourceForm } from "@web/components/settings/integrations/issue-source-form";
 import { IssueSourcesList } from "@web/components/settings/integrations/issue-sources-list";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
@@ -16,12 +17,11 @@ export function ProjectSourcesPanel({ project }: { project: ProjectContract }) {
       : null;
   const sources = useIssueSources(workspaceId);
   const workspace = useLinearWorkspace(workspaceId);
-  const sync = useSyncLinear();
+  const sync = useProjectLinearSync(project.id);
   const projectSources = {
     ...sources,
     data: sources.data?.filter((source) => source.project_id === project.id),
   } as typeof sources;
-  const canSync = (projectSources.data?.length ?? 0) > 0;
 
   if (workspaceId === null) {
     return (
@@ -42,16 +42,7 @@ export function ProjectSourcesPanel({ project }: { project: ProjectContract }) {
     <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-foreground">Linear sources</h2>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          loading={sync.isPending}
-          disabled={!canSync || sync.isPending}
-          onClick={() => sync.mutate({ project_id: project.id })}
-        >
-          Sync this project
-        </Button>
+        <LinearSyncControl sync={sync} />
       </div>
       <div className="rounded-lg border border-border-subtle bg-card">
         <IssueSourcesList query={projectSources} projects={[project]} removable />
@@ -71,6 +62,7 @@ export function ProjectSourcesPanel({ project }: { project: ProjectContract }) {
                   key={`${workspaceId}:${project.id}`}
                   workspace={data}
                   projects={[project]}
+                  onCreated={() => sync.refresh({ announce: true })}
                 />
               </div>
             )
