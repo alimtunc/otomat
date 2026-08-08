@@ -8,6 +8,7 @@ import {
   runContributionContractSchema,
   stepRunContractSchema,
 } from "./entities/runs.js";
+import { providerOptionValueSchema } from "./provider-options.js";
 import { modelSelectionSchema } from "./runtime-model.js";
 
 /** A run plus its persisted step/session graph; the event ledger is served by the run's SSE stream, not here. `worktree_path` and `base_branch` are null only on runs recorded before a worktree was guaranteed. */
@@ -54,6 +55,8 @@ export const startRunRequestSchema = z
     profile_id: z.string().min(1).optional(),
     /** Per-launch model override for the run default config; absent inherits the profile's model. */
     model: modelSelectionSchema.optional(),
+    /** Per-launch effort level applied to every node that inherits it; absent keeps the effort each resolved agent carries. */
+    effort: providerOptionValueSchema.optional(),
     plan: runPlanInputSchema.optional(),
   })
   .refine((value) => Boolean(value.issue_id) || Boolean(value.prompt), {

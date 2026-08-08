@@ -1,4 +1,4 @@
-import type { ModelSelection } from "@otomat/domain";
+import type { EffortSelection, ModelSelection } from "@otomat/domain";
 import { isCompleteModelSelection } from "@web/lib/model-choice";
 
 export interface WorkflowCompetitorDraft {
@@ -9,6 +9,8 @@ export interface WorkflowCompetitorDraft {
   agent: string | null;
   /** Model for this candidate alone; undefined inherits the model of whatever agent it resolves to. */
   model?: ModelSelection;
+  /** Effort for this candidate alone; undefined inherits the run's, `agent_default` keeps its agent's own. */
+  effort?: EffortSelection;
 }
 
 export interface WorkflowStepDraft {
@@ -20,6 +22,8 @@ export interface WorkflowStepDraft {
   agent: string | null;
   /** Model for this step alone; undefined inherits the model of whatever agent it resolves to. */
   model?: ModelSelection;
+  /** Effort for this step alone; undefined inherits the run's, `agent_default` keeps its agent's own. */
+  effort?: EffortSelection;
   /** Keys of top-level nodes this one waits for; competitors are never valid dependency targets. */
   dependsOn: string[];
 }

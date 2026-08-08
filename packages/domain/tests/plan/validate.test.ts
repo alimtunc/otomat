@@ -50,6 +50,26 @@ describe("runPlanInputSchema", () => {
     expect(parsed.steps.map((planStep) => planStep.id)).toEqual(["plan", "implement", "verify"]);
   });
 
+  it("carries a per-node effort and refuses one that could be read as another CLI argument", () => {
+    const parsed = runPlanInputSchema.parse({
+      version: 1,
+      steps: [
+        { ...step("plan"), effort: { kind: "agent_default" } },
+        { ...step("implement", ["plan"]), effort: { kind: "level", value: "ultra" } },
+        step("verify", ["implement"]),
+      ],
+    });
+    // A step that names no effort keeps no key at all, so inheriting reads as absent.
+    const efforts = parsed.steps.map((planStep) => ("effort" in planStep ? planStep.effort : null));
+    expect(efforts).toEqual([{ kind: "agent_default" }, { kind: "level", value: "ultra" }, null]);
+    expect(
+      runPlanInputSchema.safeParse({
+        version: 1,
+        steps: [{ ...step("plan"), effort: { kind: "level", value: "--effort" } }],
+      }).success,
+    ).toBe(false);
+  });
+
   it("accepts a diamond dependency graph", () => {
     const result = runPlanInputSchema.safeParse({
       version: 1,

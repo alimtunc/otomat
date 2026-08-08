@@ -16,6 +16,7 @@ import type { RuntimeEvent } from "#runtime/events";
 import type { RuntimeSink } from "#runtime/sinks";
 
 import { FAKE_MODEL_SUPPORT } from "./models.js";
+import { fakeOptionSupport } from "./options.js";
 import { abortSpec, FAKE_USAGE, resumeSpecs, runSpecs, type EventSpec } from "./turn-specs.js";
 
 export const FAKE_ADAPTER_ID = FAKE_RUNTIME_ID;
@@ -111,11 +112,9 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     this.instanceId = instanceId;
   }
 
-  describeOptions(_model: string | null): RuntimeOptionSupport {
-    return {
-      detection: { status: "unsupported", detail: "The fake runtime maps no provider options." },
-      options: [],
-    };
+  /** Simulated, but model-scoped like the real providers, so the effort path is exercised without a CLI. */
+  describeOptions(model: string | null): RuntimeOptionSupport {
+    return fakeOptionSupport(model);
   }
 
   async run(

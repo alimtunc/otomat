@@ -1,11 +1,13 @@
 import { Field, FieldControl, Icon, IconButton, Input, Textarea } from "@otomat/ui";
 import type { LaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
+import type { ResolvedEffort } from "@web/lib/effort-choice";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { competitorLabel, type WorkflowNodeDraft } from "@web/lib/workflow-draft";
 import {
   removeWorkflowCompetitor,
   setWorkflowCompetitorAgent,
-  updateWorkflowCompetitor,
+  setWorkflowCompetitorEffort,
+  setWorkflowCompetitorModel,
 } from "@web/lib/workflow-plan";
 
 import { NodeAgentFields } from "./node-agent-fields";
@@ -17,6 +19,8 @@ export function WorkflowCompetitorCard({
   groupIndex,
   competitorIndex,
   agents,
+  runEffort,
+  runModelId,
   onUpdateSteps,
 }: {
   form: WorkflowForm;
@@ -24,6 +28,8 @@ export function WorkflowCompetitorCard({
   groupIndex: number;
   competitorIndex: number;
   agents: LaunchAgentChoice;
+  runEffort: ResolvedEffort;
+  runModelId: string | null;
   onUpdateSteps: (update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) => void;
 }) {
   const group = steps[groupIndex];
@@ -62,6 +68,9 @@ export function WorkflowCompetitorCard({
           label={label}
           agent={competitor.agent}
           model={competitor.model}
+          effort={competitor.effort}
+          runEffort={runEffort}
+          runModelId={runModelId}
           onAgentChange={(agent) =>
             onUpdateSteps((value) =>
               setWorkflowCompetitorAgent(value, groupIndex, competitorIndex, agent),
@@ -69,7 +78,12 @@ export function WorkflowCompetitorCard({
           }
           onModelChange={(model) =>
             onUpdateSteps((value) =>
-              updateWorkflowCompetitor(value, groupIndex, competitorIndex, { model }),
+              setWorkflowCompetitorModel(value, groupIndex, competitorIndex, model),
+            )
+          }
+          onEffortChange={(effort) =>
+            onUpdateSteps((value) =>
+              setWorkflowCompetitorEffort(value, groupIndex, competitorIndex, effort),
             )
           }
         />

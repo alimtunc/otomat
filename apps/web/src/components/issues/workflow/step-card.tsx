@@ -1,11 +1,13 @@
 import { Field, FieldControl, Icon, IconButton, Input, Textarea } from "@otomat/ui";
 import type { LaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
+import type { ResolvedEffort } from "@web/lib/effort-choice";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { type WorkflowNodeDraft } from "@web/lib/workflow-draft";
 import {
   moveWorkflowStep,
   removeWorkflowStep,
   setWorkflowStepAgent,
+  setWorkflowStepEffort,
   setWorkflowStepModel,
   toggleWorkflowDependency,
 } from "@web/lib/workflow-plan";
@@ -19,6 +21,8 @@ export interface WorkflowStepCardProps {
   steps: WorkflowNodeDraft[];
   index: number;
   agents: LaunchAgentChoice;
+  runEffort: ResolvedEffort;
+  runModelId: string | null;
   onUpdateSteps: (update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) => void;
 }
 
@@ -27,6 +31,8 @@ export function WorkflowStepCard({
   steps,
   index,
   agents,
+  runEffort,
+  runModelId,
   onUpdateSteps,
 }: WorkflowStepCardProps) {
   const step = steps[index];
@@ -109,11 +115,17 @@ export function WorkflowStepCard({
           label={`Step ${index + 1}`}
           agent={step.agent}
           model={step.model}
+          effort={step.effort}
+          runEffort={runEffort}
+          runModelId={runModelId}
           onAgentChange={(next) =>
             onUpdateSteps((value) => setWorkflowStepAgent(value, index, next))
           }
           onModelChange={(next) =>
             onUpdateSteps((value) => setWorkflowStepModel(value, index, next))
+          }
+          onEffortChange={(next) =>
+            onUpdateSteps((value) => setWorkflowStepEffort(value, index, next))
           }
         />
       </div>

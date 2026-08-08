@@ -112,9 +112,16 @@ options and the runtime still launches on its provider defaults.
 Those descriptors are the single source for three gates: the daemon refuses a
 profile option the installed binary does not announce (`option_unsupported`, in
 `agents/resolve.ts`), `GET /api/runtimes/:id/options` serves them to the cockpit,
-and the profile surfaces render fields from them without any per-provider branch.
-The effective options are frozen into the run plan at launch and replayed
-verbatim on resume and follow-up.
+and the profile and launch surfaces render fields from them without any
+per-provider branch. The effective options are frozen into the run plan at launch
+and replayed verbatim on resume and follow-up.
+
+Effort is the one option a launch also sets per run and per plan node, under
+whichever key the runtime announces it by (`effortOptionDescriptor`). A node
+names its own level, inherits the run's, or keeps the level of the agent it
+resolves to; `supervisor/freeze-plan.ts` collapses those three into the one level
+frozen into the node's config, and the workflow launcher shows the resolved level
+with its provenance beside every step.
 
 ## Linear Issue Freshness
 

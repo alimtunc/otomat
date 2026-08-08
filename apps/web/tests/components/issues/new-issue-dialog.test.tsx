@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { setInputValue } from "#support/dom-events";
 import { repositoriesQueryResult, repositoryBranchesQueryResult } from "#support/launch-target";
 import { modelCatalogQueryResult } from "#support/runtime-models";
+import { providerOptionSetQueryResult } from "#support/runtime-options";
 
 const launch = vi.fn(async () => ({ id: "run-1" }) as RunContract);
 const navigate = vi.fn();
@@ -40,6 +41,7 @@ vi.mock("@web/api/daemon/queries", () => ({
     refetch: vi.fn(),
   }),
   useRuntimeModels: () => modelCatalogQueryResult(),
+  useRuntimeProviderOptions: () => providerOptionSetQueryResult(),
   useRepositories: () => repositoriesQueryResult(),
   useRepositoryBranches: () => repositoryBranchesQueryResult(),
 }));
