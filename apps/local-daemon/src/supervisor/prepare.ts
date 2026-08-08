@@ -99,6 +99,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
   // Every effective config is resolved and validated before any row (issue included) is written.
   const defaultConfig = resolveAgentConfig(db, defaultConfigSelector(request), {
     model: request.model,
+    effort: request.effort,
   });
   const defaultRuntime = defaultConfig.runtime;
 

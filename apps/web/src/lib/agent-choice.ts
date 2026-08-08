@@ -44,6 +44,16 @@ export function agentChoiceToRequest(choice: string | null): AgentRequestFields 
   return decoded.kind === "profile" ? { profile_id: decoded.id } : { runtime: decoded.id };
 }
 
+/** The saved profile a choice resolves to; null for an ad-hoc runtime, an inherit choice, or a profile that no longer exists. */
+export function agentChoiceProfile(
+  choice: string | null,
+  profiles: AgentProfileContract[],
+): AgentProfileContract | null {
+  const decoded = decodeAgentChoice(choice);
+  if (decoded === null || decoded.kind === "runtime") return null;
+  return profiles.find((profile) => profile.id === decoded.id) ?? null;
+}
+
 /** The runtime a choice will launch on — a profile's runtime or the ad-hoc runtime itself — so its model catalog can be fetched. */
 export function agentChoiceRuntimeId(
   choice: string | null,
@@ -52,7 +62,7 @@ export function agentChoiceRuntimeId(
   const decoded = decodeAgentChoice(choice);
   if (decoded === null) return null;
   if (decoded.kind === "runtime") return decoded.id;
-  return profiles.find((profile) => profile.id === decoded.id)?.runtime ?? null;
+  return agentChoiceProfile(choice, profiles)?.runtime ?? null;
 }
 
 function runtimeAvailable(descriptors: RuntimeDescriptor[], runtimeId: string): boolean {

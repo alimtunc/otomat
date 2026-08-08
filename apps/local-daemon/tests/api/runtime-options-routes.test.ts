@@ -14,7 +14,7 @@ afterEach(() => {
   t.cleanup();
 });
 
-it("serves an honest, contract-shaped option set for a runtime that tunes nothing", async () => {
+it("serves an honest, contract-shaped option set when nothing is tunable yet", async () => {
   const app = makeApiApp(t);
 
   const res = await request(app, "/api/runtimes/fake/options");
@@ -27,7 +27,7 @@ it("serves an honest, contract-shaped option set for a runtime that tunes nothin
   expect(set.options).toEqual([]);
 });
 
-it("scopes the option set to the requested model", async () => {
+it("scopes the option set to the requested model, whose levels it publishes", async () => {
   const app = makeApiApp(t);
 
   const set = await json<ProviderOptionSet>(
@@ -35,6 +35,8 @@ it("scopes the option set to the requested model", async () => {
   );
 
   expect(set.model).toBe("fake-fast");
+  const effort = set.options.find((option) => option.key === "effort");
+  expect(effort?.choices.map((choice) => choice.value)).toEqual(["low", "medium"]);
 });
 
 it("404s on a runtime the daemon does not know", async () => {

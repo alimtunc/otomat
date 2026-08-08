@@ -1,4 +1,8 @@
-import type { ProviderOptionDescriptor, ProviderOptionKey } from "@otomat/domain";
+import {
+  effortOptionDescriptor,
+  type ProviderOptionDescriptor,
+  type ProviderOptionKey,
+} from "@otomat/domain";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ClaudeRuntimeAdapter } from "#runtime/providers/claude/adapter";
@@ -91,6 +95,17 @@ describe("claude provider options", () => {
     const support = new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null);
 
     expect(values(descriptor(support.options, "permission_mode"))).not.toContain("default");
+  });
+
+  it("sends an effort as `--effort`, and never invents a level the help page omits", () => {
+    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
+
+    const effort = effortOptionDescriptor(
+      new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null).options,
+    );
+
+    expect(effort?.key).toBe("effort");
+    expect(values(effort ?? undefined)).not.toContain("ultra");
   });
 
   it("offers an older release only what that release documents", () => {
@@ -186,6 +201,17 @@ describe("codex provider options", () => {
 
     expect(values(reasoning)).toEqual(["low", "medium", "high", "xhigh", "max", "ultra"]);
     expect(reasoning?.default_value).toBe("medium");
+  });
+
+  it("sends an effort as `model_reasoning_effort`, including `ultra` when the model announces it", () => {
+    codexFixtures();
+
+    const effort = effortOptionDescriptor(
+      new CodexRuntimeAdapter(STUB_BIN).describeOptions("gpt-5.6-sol").options,
+    );
+
+    expect(effort?.key).toBe("reasoning_effort");
+    expect(values(effort ?? undefined)).toContain("ultra");
   });
 
   it("offers no reasoning field for a model the catalog does not describe", () => {

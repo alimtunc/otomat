@@ -1,9 +1,15 @@
-import type { ModelSelection, RunPlanInput, RunPlanNodeInput } from "@otomat/domain";
+import type {
+  EffortSelection,
+  ModelSelection,
+  RunPlanInput,
+  RunPlanNodeInput,
+} from "@otomat/domain";
 import { agentChoiceToRequest } from "@web/lib/agent-choice";
 import {
   newCompetitor,
   type WorkflowCompetitorDraft,
   type WorkflowNodeDraft,
+  type WorkflowStepDraft,
 } from "@web/lib/workflow-draft";
 
 /** Keeps every dependency pointing at an earlier, still-existing top-level node. */
@@ -43,24 +49,38 @@ export function setWorkflowStepAgent(
   index: number,
   agent: string | null,
 ): WorkflowNodeDraft[] {
-  // Another agent lists other models, so a kept selection would silently become a custom one.
+  // Another agent lists other models and announces other effort levels, so both selections return to inherit.
   return steps.map((step, stepIndex) =>
-    stepIndex === index && step.kind === "step" ? { ...step, agent, model: undefined } : step,
+    stepIndex === index && step.kind === "step"
+      ? { ...step, agent, model: undefined, effort: undefined }
+      : step,
   );
 }
 
-/** Nodes without their own agent follow the run default, so a run-level agent change orphans their kept models. */
-export function clearInheritedNodeModels(steps: readonly WorkflowNodeDraft[]): WorkflowNodeDraft[] {
+/** A selection is reset when what scopes it changes: the model follows the agent, the effort level follows both. */
+function inheritedOverrides(
+  node: Pick<WorkflowStepDraft, "agent" | "model" | "effort">,
+  changed: "agent" | "model",
+): Pick<WorkflowStepDraft, "model" | "effort"> {
+  if (node.agent !== null) return { model: node.model, effort: node.effort };
+  if (changed === "agent") return { model: undefined, effort: undefined };
+  return { model: node.model, effort: node.model === undefined ? undefined : node.effort };
+}
+
+/** Nodes without their own agent follow the run default, so a run-level change orphans what they kept under it. */
+export function clearInheritedNodeOverrides(
+  steps: readonly WorkflowNodeDraft[],
+  changed: "agent" | "model",
+): WorkflowNodeDraft[] {
   return steps.map((step) => {
-    if (step.kind === "compete") {
-      return {
-        ...step,
-        competitors: step.competitors.map((competitor) =>
-          competitor.agent === null ? { ...competitor, model: undefined } : competitor,
-        ),
-      };
-    }
-    return step.agent === null ? { ...step, model: undefined } : step;
+    if (step.kind === "step") return { ...step, ...inheritedOverrides(step, changed) };
+    return {
+      ...step,
+      competitors: step.competitors.map((competitor) => ({
+        ...competitor,
+        ...inheritedOverrides(competitor, changed),
+      })),
+    };
   });
 }
 
@@ -69,8 +89,19 @@ export function setWorkflowStepModel(
   index: number,
   model: ModelSelection | undefined,
 ): WorkflowNodeDraft[] {
+  // Reasoning levels are published per model, so a kept level may not exist under the new one.
   return steps.map((step, stepIndex) =>
-    stepIndex === index && step.kind === "step" ? { ...step, model } : step,
+    stepIndex === index && step.kind === "step" ? { ...step, model, effort: undefined } : step,
+  );
+}
+
+export function setWorkflowStepEffort(
+  steps: readonly WorkflowNodeDraft[],
+  index: number,
+  effort: EffortSelection | undefined,
+): WorkflowNodeDraft[] {
+  return steps.map((step, stepIndex) =>
+    stepIndex === index && step.kind === "step" ? { ...step, effort } : step,
   );
 }
 
@@ -91,24 +122,37 @@ function patchCompetitor(
   });
 }
 
-/** Changing the agent goes through `setWorkflowCompetitorAgent` so the model reset cannot be skipped. */
-export function updateWorkflowCompetitor(
-  steps: readonly WorkflowNodeDraft[],
-  stepIndex: number,
-  competitorIndex: number,
-  update: Partial<Pick<WorkflowCompetitorDraft, "name" | "prompt" | "model">>,
-): WorkflowNodeDraft[] {
-  return patchCompetitor(steps, stepIndex, competitorIndex, update);
-}
-
 export function setWorkflowCompetitorAgent(
   steps: readonly WorkflowNodeDraft[],
   stepIndex: number,
   competitorIndex: number,
   agent: string | null,
 ): WorkflowNodeDraft[] {
-  // Another agent lists other models, so a kept selection would silently become a custom one.
-  return patchCompetitor(steps, stepIndex, competitorIndex, { agent, model: undefined });
+  // Another agent lists other models and announces other effort levels, so both selections return to inherit.
+  return patchCompetitor(steps, stepIndex, competitorIndex, {
+    agent,
+    model: undefined,
+    effort: undefined,
+  });
+}
+
+export function setWorkflowCompetitorModel(
+  steps: readonly WorkflowNodeDraft[],
+  stepIndex: number,
+  competitorIndex: number,
+  model: ModelSelection | undefined,
+): WorkflowNodeDraft[] {
+  // Reasoning levels are published per model, so a kept level may not exist under the new one.
+  return patchCompetitor(steps, stepIndex, competitorIndex, { model, effort: undefined });
+}
+
+export function setWorkflowCompetitorEffort(
+  steps: readonly WorkflowNodeDraft[],
+  stepIndex: number,
+  competitorIndex: number,
+  effort: EffortSelection | undefined,
+): WorkflowNodeDraft[] {
+  return patchCompetitor(steps, stepIndex, competitorIndex, { effort });
 }
 
 export function addWorkflowCompetitor(
@@ -182,6 +226,7 @@ export function buildRunPlanInput(steps: readonly WorkflowNodeDraft[]): RunPlanI
           name: competitor.name.trim(),
           ...nodeAgentFields(competitor.agent),
           model: competitor.model,
+          effort: competitor.effort,
           prompt: competitor.prompt.trim(),
         })),
       };
@@ -191,6 +236,7 @@ export function buildRunPlanInput(steps: readonly WorkflowNodeDraft[]): RunPlanI
       name: step.name.trim(),
       ...nodeAgentFields(step.agent),
       model: step.model,
+      effort: step.effort,
       prompt: step.prompt.trim(),
       depends_on: step.dependsOn,
     };

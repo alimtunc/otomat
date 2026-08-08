@@ -1,4 +1,10 @@
-import { runPlanInputSchema, type ModelSelection, type RunContract } from "@otomat/domain";
+import {
+  AGENT_DEFAULT_EFFORT,
+  runPlanInputSchema,
+  type EffortSelection,
+  type ModelSelection,
+  type RunContract,
+} from "@otomat/domain";
 import { useForm } from "@tanstack/react-form";
 import { useLaunchRun } from "@web/api/runs/mutations";
 import { agentChoiceToRequest } from "@web/lib/agent-choice";
@@ -25,12 +31,15 @@ interface WorkflowFormValues {
   goal: string;
   /** Run-level model override; undefined keeps the agent's own model. Steps without their own model inherit it. */
   model: ModelSelection | undefined;
+  /** Run-level effort; `agent_default` keeps whatever each resolved agent carries. Steps inherit it unless they say otherwise. */
+  effort: EffortSelection;
   steps: WorkflowNodeDraft[];
 }
 
 const WORKFLOW_DEFAULT_VALUES: WorkflowFormValues = {
   goal: "",
   model: undefined,
+  effort: AGENT_DEFAULT_EFFORT,
   steps: [newWorkflowStep(1)],
 };
 
@@ -61,6 +70,7 @@ export function useWorkflowForm({
         plan: parsed.data,
         ...agentChoiceToRequest(agentChoice),
         model: value.model,
+        effort: value.effort.kind === "level" ? value.effort.value : undefined,
       });
       if (!run) return;
       form.reset();

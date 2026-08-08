@@ -104,6 +104,15 @@ export function modelSelectionFromValue(
   return { kind: "model", id: current?.kind === "model" ? current.id : "" };
 }
 
+/** The model id whatever depends on the model is scoped to: the selection's own, else the one it inherits. Null asks for the provider's default set. */
+export function effectiveModelId(
+  selection: ModelSelection | undefined,
+  inherited: string | null,
+): string | null {
+  if (selection === undefined) return inherited;
+  return selection.kind === "model" ? selection.id : null;
+}
+
 /** Whether a selection can be submitted: inherit and default always can, a model needs an id the daemon will accept. */
 export function isCompleteModelSelection(selection: ModelSelection | undefined): boolean {
   if (selection === undefined || selection.kind === "provider_default") return true;

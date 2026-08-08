@@ -4,6 +4,7 @@ import type { Db } from "@otomat/db";
 import {
   FAKE_RUNTIME_ID,
   isRunPlanCompeteGroup,
+  type EffortSelection,
   type ModelSelection,
   type ResolvedAgentConfig,
   type RunPlan,
@@ -38,35 +39,64 @@ function nodeSelector(node: {
   return null;
 }
 
-function configKey(selector: AgentConfigSelector, model: ModelSelection | undefined): string {
-  const source =
-    selector.kind === "profile" ? `profile:${selector.profileId}` : `runtime:${selector.runtimeId}`;
-  if (model === undefined) return `${source}|inherit`;
-  return `${source}|${model.kind === "provider_default" ? "provider_default" : `model:${model.id}`}`;
+function modelKey(model: ModelSelection | undefined): string {
+  if (model === undefined) return "inherit";
+  return model.kind === "provider_default" ? "provider_default" : `model:${model.id}`;
 }
 
-/** The effective config of one node: its own agent and model, each falling back to the run default. */
+function configKey(
+  selector: AgentConfigSelector,
+  model: ModelSelection | undefined,
+  effort: string | undefined,
+): string {
+  const source =
+    selector.kind === "profile" ? `profile:${selector.profileId}` : `runtime:${selector.runtimeId}`;
+  return `${source}|${modelKey(model)}|${effort === undefined ? "agent" : `level:${effort}`}`;
+}
+
+/**
+ * The level one node really runs at: its own when it names one, the launch-level
+ * one when it inherits, and none — the resolved agent's own — when it asks for
+ * the agent default. Unlike the model, an inheriting node takes the launch
+ * effort even with its own agent: the plan says "same as run" explicitly.
+ */
+function effortLevel(
+  node: EffortSelection | undefined,
+  launch: string | undefined,
+): string | undefined {
+  if (node === undefined) return launch;
+  return node.kind === "level" ? node.value : undefined;
+}
+
+/** The effective config of one node: its own agent, model and effort, each falling back to the run default. */
 type ConfigResolver = (
   selector: AgentConfigSelector | null,
   model: ModelSelection | undefined,
+  effort: EffortSelection | undefined,
 ) => ResolvedAgentConfig;
 
-/** One resolution per distinct agent+model pair per launch (default included), so nodes sharing a choice freeze the identical snapshot. */
+/** One resolution per distinct agent+model+effort triple per launch (default included), so nodes sharing a choice freeze the identical snapshot. */
 function makeConfigResolver(
   db: Db,
   request: StartRunRequest,
   defaultConfig: ResolvedAgentConfig,
 ): ConfigResolver {
   const defaultSelector = defaultConfigSelector(request);
-  const byKey = new Map([[configKey(defaultSelector, request.model), defaultConfig]]);
-  return (selector, model) => {
+  const byKey = new Map([
+    [configKey(defaultSelector, request.model, request.effort), defaultConfig],
+  ]);
+  return (selector, model, effort) => {
     // A node that inherits the agent still inherits the launch-level model override.
     const effectiveSelector = selector ?? defaultSelector;
     const effectiveModel = model ?? (selector === null ? request.model : undefined);
-    const key = configKey(effectiveSelector, effectiveModel);
+    const effectiveEffort = effortLevel(effort, request.effort);
+    const key = configKey(effectiveSelector, effectiveModel, effectiveEffort);
     const cached = byKey.get(key);
     if (cached) return cached;
-    const config = resolveAgentConfig(db, effectiveSelector, { model: effectiveModel });
+    const config = resolveAgentConfig(db, effectiveSelector, {
+      model: effectiveModel,
+      effort: effectiveEffort,
+    });
     byKey.set(key, config);
     return config;
   };
@@ -85,7 +115,7 @@ function freezeNode(
       name: node.name,
       depends_on: dependencies,
       compete: node.compete.map((competitor) => {
-        const config = configFor(nodeSelector(competitor), competitor.model);
+        const config = configFor(nodeSelector(competitor), competitor.model, competitor.effort);
         return {
           id: mappedStepId(idByRequestId, competitor.id),
           name: competitor.name,
@@ -96,7 +126,7 @@ function freezeNode(
       }),
     };
   }
-  const config = configFor(nodeSelector(node), node.model);
+  const config = configFor(nodeSelector(node), node.model, node.effort);
   return {
     id: mappedStepId(idByRequestId, node.id),
     name: node.name,

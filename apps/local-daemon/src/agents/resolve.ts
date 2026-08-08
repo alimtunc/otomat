@@ -1,9 +1,12 @@
 import { getAgentProfile, getSkill, type Db } from "@otomat/db";
 import {
+  effortOptionDescriptor,
   modelSelectionFromId,
   PROVIDER_DEFAULT_MODEL,
   type ModelSelection,
+  type ProviderOptionKey,
   type ProviderOptions,
+  type ProviderOptionSet,
   type ResolvedAgentConfig,
   type ResolvedModel,
   type ResolvedSkill,
@@ -42,6 +45,8 @@ export interface ProfileInput {
 export interface AgentConfigOverrides {
   /** Explicit model for this launch or plan node; absent inherits the selected config's own model. */
   model?: ModelSelection;
+  /** Explicit effort level for this launch or plan node; absent keeps the effort the selected config already carries. */
+  effort?: string;
 }
 
 const SKILL_INSTRUCTIONS_MAX_LENGTH = 64_000;
@@ -52,19 +57,16 @@ const SKILL_INSTRUCTIONS_MAX_LENGTH = 64_000;
  * mode retired by a CLI upgrade — is refused before it can reach argv. Only what
  * the probe actually answers is enforced: `ok` and `unsupported` are answers, a
  * `failed` probe is ignorance and must not turn a working profile into a refused
- * one. Selecting nothing skips the probe entirely.
+ * one.
  */
 function validateOptions(
   runtime: KnownRuntimeId,
-  model: ResolvedModel | null,
+  support: ProviderOptionSet,
   options: ProviderOptions,
 ): void {
-  const selected = Object.entries(options).filter(([, value]) => value !== undefined);
-  if (selected.length === 0) return;
-
-  const support = describeProviderOptions(runtime, model?.id ?? null);
   if (support.detection.status === "failed") return;
-  for (const [key, value] of selected) {
+  for (const [key, value] of Object.entries(options)) {
+    if (value === undefined) continue;
     const descriptor = support.options.find((candidate) => candidate.key === key);
     if (!descriptor) {
       throw new ProfileOptionUnsupportedError(
@@ -73,17 +75,51 @@ function validateOptions(
     }
     if (!descriptor.choices.some((choice) => choice.value === value)) {
       throw new ProfileOptionUnsupportedError(
-        `runtime "${runtime}" does not accept "${key}" value "${String(value)}"; pick one of ${descriptor.choices.map((choice) => choice.value).join(", ")}`,
+        `runtime "${runtime}" does not accept "${key}" value "${value}"; pick one of ${descriptor.choices.map((choice) => choice.value).join(", ")}`,
       );
     }
   }
+}
+
+/**
+ * The key this runtime and model announce an effort under — `--effort` for one
+ * provider, `model_reasoning_effort` for another. A pair that announces no effort
+ * at all (an older Claude Code, a Codex model the catalog publishes no levels
+ * for, an unreadable CLI) cannot honor the request, so it is refused rather than
+ * dropped behind the caller's back.
+ */
+function effortOptionKey(runtime: KnownRuntimeId, support: ProviderOptionSet): ProviderOptionKey {
+  const descriptor = effortOptionDescriptor(support.options);
+  if (!descriptor) {
+    throw new ProfileOptionUnsupportedError(
+      `runtime "${runtime}" announces no effort level here: ${support.detection.detail}`,
+    );
+  }
+  return descriptor.key;
+}
+
+/** The options a config really sends: its own, plus the requested effort, each checked against the installed binary. Selecting nothing skips the probe entirely. */
+function resolveOptions(
+  runtime: KnownRuntimeId,
+  model: ResolvedModel | null,
+  options: ProviderOptions,
+  effort: string | undefined,
+): ProviderOptions {
+  const selected = Object.values(options).some((value) => value !== undefined);
+  if (!selected && effort === undefined) return options;
+
+  const support = describeProviderOptions(runtime, model?.id ?? null);
+  const merged: ProviderOptions = { ...options };
+  if (effort !== undefined) merged[effortOptionKey(runtime, support)] = effort;
+  validateOptions(runtime, support, merged);
+  return merged;
 }
 
 /** Static save-time validation: the runtime is known, its options and model are supported, and every referenced skill exists. Availability and skill files are checked at launch. */
 export function validateProfileInput(db: Db, input: ProfileInput): void {
   if (!isKnownRuntimeId(input.runtime)) throw new UnknownRuntimeError(input.runtime);
   const model = resolveModelSelection(input.runtime, modelSelectionFromId(input.model));
-  validateOptions(input.runtime, model, input.options);
+  resolveOptions(input.runtime, model, input.options, undefined);
   for (const skillId of input.skill_ids) {
     if (!getSkill(db, skillId)) {
       throw new SkillResolutionError("skill_unknown", `skill ${skillId} is not in the catalog`);
@@ -154,12 +190,13 @@ export function resolveAgentConfig(
 ): ResolvedAgentConfig {
   if (selector.kind === "runtime") {
     const runtime = requireAvailableRuntime(selector.runtimeId);
+    const model = resolveModelSelection(runtime, overrides.model ?? PROVIDER_DEFAULT_MODEL);
     return finalize({
       runtime,
       profile_id: null,
       profile_name: null,
-      options: {},
-      model: resolveModelSelection(runtime, overrides.model ?? PROVIDER_DEFAULT_MODEL),
+      options: resolveOptions(runtime, model, {}, overrides.effort),
+      model,
       guidance: null,
       skills: [],
     });
@@ -172,12 +209,11 @@ export function resolveAgentConfig(
     runtime,
     overrides.model ?? modelSelectionFromId(profile.model),
   );
-  validateOptions(runtime, model, profile.options_json);
   return finalize({
     runtime,
     profile_id: profile.id,
     profile_name: profile.name,
-    options: profile.options_json,
+    options: resolveOptions(runtime, model, profile.options_json, overrides.effort),
     model,
     guidance: profile.guidance,
     skills: resolveSkills(db, profile.skill_ids_json),
