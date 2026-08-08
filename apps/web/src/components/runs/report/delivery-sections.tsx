@@ -1,4 +1,5 @@
 import type { RunCompletionReport } from "@otomat/domain";
+import { Markdown } from "@otomat/ui";
 
 import { FactEvidence } from "./fact-evidence";
 import { ReportSection } from "./section";
@@ -50,7 +51,7 @@ function ReviewAndPublication({ report }: { report: RunCompletionReport }) {
               </code>
               <FactEvidence report={report} evidence={comment.evidence[0]} />
             </div>
-            <p className="mt-1 text-text-secondary">{comment.body}</p>
+            <Markdown value={comment.body} className="mt-1 text-text-secondary" />
           </div>
         ))}
       </div>

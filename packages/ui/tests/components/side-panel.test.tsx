@@ -8,11 +8,10 @@ import {
   SidePanelToggle,
   usePanelGroupLayout,
 } from "@otomat/ui";
-import { act, type ReactNode } from "react";
-import { createRoot } from "react-dom/client";
+import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+import { render, unmountAll } from "#test-support/render";
 
 // happy-dom runs no layout engine, and the library measures a group as the sum of its
 // panels' offsets, so size every element to a share of a group of PANELS_PER_GROUP.
@@ -52,28 +51,6 @@ const FILES_DEFAULT_WIDTH = 264;
 // AppShell's default railWidth, which its sidebar collapses to.
 const SHELL_RAIL_WIDTH = 56;
 const asPercent = (px: number) => (px / GROUP_SIZE) * 100;
-
-const mounted: Array<() => Promise<void>> = [];
-
-async function render(node: ReactNode) {
-  const container = document.createElement("div");
-  document.body.append(container);
-  const root = createRoot(container);
-  await act(async () => {
-    root.render(node);
-  });
-  mounted.push(async () => {
-    await act(async () => {
-      root.unmount();
-    });
-    container.remove();
-  });
-  return container;
-}
-
-async function unmountAll() {
-  for (const cleanup of mounted.splice(0)) await cleanup();
-}
 
 function storedSize(groupId: string, panelId: string): number {
   const raw = window.localStorage.getItem(`react-resizable-panels:${groupId}`);

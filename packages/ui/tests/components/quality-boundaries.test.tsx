@@ -13,29 +13,10 @@ import {
   TimelineEventRow,
   resolveStatus,
 } from "@otomat/ui";
-import { act, type ComponentPropsWithoutRef, type ReactNode } from "react";
-import { createRoot } from "react-dom/client";
+import { act, type ComponentPropsWithoutRef } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-
-const mounted: Array<() => Promise<void>> = [];
-
-async function render(node: ReactNode) {
-  const container = document.createElement("div");
-  document.body.append(container);
-  const root = createRoot(container);
-  await act(async () => {
-    root.render(node);
-  });
-  mounted.push(async () => {
-    await act(async () => {
-      root.unmount();
-    });
-    container.remove();
-  });
-  return container;
-}
+import { render, unmountAll } from "#test-support/render";
 
 function CustomNav({ children, ...props }: ComponentPropsWithoutRef<"button">) {
   return (
@@ -45,9 +26,7 @@ function CustomNav({ children, ...props }: ComponentPropsWithoutRef<"button">) {
   );
 }
 
-afterEach(async () => {
-  for (const cleanup of mounted.splice(0)) await cleanup();
-});
+afterEach(unmountAll);
 
 describe("shared UI boundaries", () => {
   it("leaves toast infrastructure to the application root", async () => {

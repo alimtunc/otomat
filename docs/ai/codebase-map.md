@@ -188,6 +188,18 @@ primitives), lucide-react, sonner, zod, `@git-diff-view/react` for diffs, xterm 
 terminal/session surfaces, and zustand only when a local UI store is actually
 needed.
 
+Markdown from Linear and from agents renders through `packages/ui`'s `Markdown`
+component, which compiles `markdown-to-jsx` into React elements — never
+`dangerouslySetInnerHTML`. Three settings carry the policy: raw HTML parsing is
+off so untrusted markup stays literal text, frontmatter detection is off so a
+body opening on `---` keeps its content, and streaming suppression is off
+because it drops the characters of an unclosed `**` instead of showing them.
+Every destination, image included, passes the `lib/markdown/href.ts` allowlist
+through `MarkdownLink`; an image renders as a link because Linear's uploads need
+credentials the cockpit does not send. `lib/markdown/open-fence.ts` is the one
+thing a compiler cannot tell us — it sees a finished document — so an unclosed
+fence can be labelled as still arriving.
+
 ## Offline-First Direction
 
 For V1, the local daemon is the offline cache: it mirrors external state into

@@ -1,4 +1,5 @@
 import type { RunCompletionReport } from "@otomat/domain";
+import { Markdown } from "@otomat/ui";
 
 import { FactEvidence } from "./fact-evidence";
 import { ReportSection } from "./section";
@@ -17,7 +18,7 @@ export function ReportMessages({ report }: { report: RunCompletionReport }) {
                 key={`${message.code}-${message.message}-${JSON.stringify(message.evidence)}`}
                 className="flex items-start gap-2"
               >
-                <span className="min-w-0 flex-1">{message.message}</span>
+                <Markdown value={message.message} className="flex-1" />
                 <FactEvidence report={report} evidence={message.evidence[0]} />
               </li>
             ))}
@@ -34,7 +35,7 @@ export function ReportMessages({ report }: { report: RunCompletionReport }) {
                 key={`${action.code}-${action.message}-${JSON.stringify(action.evidence)}`}
                 className="flex items-start gap-2"
               >
-                <span className="min-w-0 flex-1">{action.message}</span>
+                <Markdown value={action.message} className="flex-1" />
                 <FactEvidence report={report} evidence={action.evidence[0]} />
               </li>
             ))}

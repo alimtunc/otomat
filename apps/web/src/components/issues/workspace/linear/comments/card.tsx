@@ -1,5 +1,5 @@
 import type { LinearCommentContract } from "@otomat/domain";
-import { Avatar, Button, RelativeTime } from "@otomat/ui";
+import { Avatar, Button, Markdown, RelativeTime } from "@otomat/ui";
 
 export function Card({
   comment,
@@ -24,9 +24,7 @@ export function Card({
           </Button>
         ) : null}
       </header>
-      <p className="mt-1.5 whitespace-pre-wrap text-sm leading-[1.6] text-foreground">
-        {comment.body}
-      </p>
+      <Markdown value={comment.body} className="mt-1.5 text-sm text-foreground" />
     </article>
   );
 }

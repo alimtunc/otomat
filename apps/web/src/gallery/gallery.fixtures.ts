@@ -55,3 +55,38 @@ export const CARD_RUN: CardRunFixture = {
   added: 124,
   removed: 6,
 };
+
+export const MARKDOWN_SAMPLE = [
+  "# Completion report",
+  "",
+  "The run finished. See [the diff](https://otomat.dev/runs/r3/diff) and *check* the",
+  "**open comments** before merging.",
+  "",
+  "## Checks",
+  "",
+  "- [x] `pnpm check` is green",
+  "- [ ] PR opened",
+  "  - nested detail",
+  "",
+  "| Gate | State |",
+  "| --- | --- |",
+  "| `pnpm check` | passing |",
+  "| deploy | ~~blocked~~ |",
+  "",
+  "> Evidence is persisted; nothing here is AI-authored narrative.",
+  "",
+  "```ts",
+  'const branch = "otomat/run/a-very-long-branch-name-that-overflows-the-block-width";',
+  "```",
+  "",
+  "---",
+  "",
+  "Plain text keeps its\nline breaks.",
+].join("\n");
+
+export const MARKDOWN_STREAMING_SAMPLE = [
+  "Applying the **fix to `packages/",
+  "",
+  "```sh",
+  "pnpm --filter @otomat/ui test",
+].join("\n");

@@ -1,5 +1,5 @@
 import { isRunContributionRetriable, type RunContributionContract } from "@otomat/domain";
-import { Button, RelativeTime, RunContributionStatusChip } from "@otomat/ui";
+import { Button, Markdown, RelativeTime, RunContributionStatusChip } from "@otomat/ui";
 import { useRetryRunContribution } from "@web/api/runs/mutations";
 
 const DELIVERED_FAILURE_HINT =
@@ -23,9 +23,10 @@ export function ConversationMessage({
         <RelativeTime date={contribution.created_at} className="text-xs" />
         <RunContributionStatusChip status={contribution.status} size="sm" />
       </div>
-      <p className="whitespace-pre-wrap rounded-lg border border-border-subtle bg-card px-3 py-2 text-sm text-text-primary">
-        {contribution.body}
-      </p>
+      <Markdown
+        value={contribution.body}
+        className="rounded-lg border border-border-subtle bg-card px-3 py-2 text-sm"
+      />
       {contribution.error === null ? null : (
         <p className="text-xs text-danger">{contribution.error}</p>
       )}
