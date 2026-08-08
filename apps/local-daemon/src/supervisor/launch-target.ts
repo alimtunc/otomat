@@ -4,16 +4,21 @@ import type { RunLaunchError, StartRunRequest } from "@otomat/domain";
 import { branchExists, isRepositoryRoot, type RepositoryBinding } from "#git";
 
 import type { SupervisorState } from "./state.js";
+import { issueWorkspace } from "./workspace.js";
 
 /** A launch refused before any row is written, carrying the wire code the API returns verbatim. */
 export class LaunchRefusedError extends Error {
+  /** The run the caller should act on instead; set only when the refusal names one. */
+  readonly runId: string | null;
+
   constructor(
     readonly code: RunLaunchError,
     message: string,
-    options?: ErrorOptions,
+    options?: ErrorOptions & { runId?: string },
   ) {
     super(message, options);
     this.name = "LaunchRefusedError";
+    this.runId = options?.runId ?? null;
   }
 }
 
@@ -76,12 +81,28 @@ function requireBinding(state: SupervisorState, projectId: string): RepositoryBi
   return binding;
 }
 
+/**
+ * An issue keeps one canonical workspace until its work is merged or abandoned,
+ * so a second launch would fork a competing worktree off the same issue. The
+ * caller is sent to the run that holds it, where a step can be appended instead.
+ */
+function refuseSecondWorkspace(state: SupervisorState, issue: IssueRow): void {
+  const workspace = issueWorkspace(state.db, issue.id);
+  if (workspace.state !== "open") return;
+  throw new LaunchRefusedError(
+    "issue_workspace_open",
+    `issue ${issue.id} already works in ${workspace.branch}; add a step to that run instead of starting a second workspace`,
+    { runId: workspace.run_id },
+  );
+}
+
 /** Every refusal is a typed `LaunchRefusedError` thrown before the launch writes any row. */
 export function resolveLaunchTarget(
   state: SupervisorState,
   request: StartRunRequest,
   issue: IssueRow | undefined,
 ): LaunchTarget {
+  if (issue) refuseSecondWorkspace(state, issue);
   const projectId = resolveProjectId(state.db, state.defaultProjectId, request, issue);
   const binding = requireBinding(state, projectId);
   const baseRef = request.base_branch ?? binding.defaultBranch;

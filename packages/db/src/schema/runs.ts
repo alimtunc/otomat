@@ -23,7 +23,8 @@ export const runs = sqliteTable("runs", {
   agent_id: text("agent_id").references(() => agents.id),
   status: text("status").$type<RunState>().notNull().default("queued"),
   branch: text("branch").notNull(),
-  // The launch plan is immutable; there is deliberately no workflow_revisions table.
+  // Frozen at launch, then append-only: revisions add a node and are journaled in the run ledger,
+  // so there is deliberately no workflow_revisions table.
   plan_json: text("plan_json", { mode: "json" }).notNull(),
   started_at: text("started_at"),
   completed_at: text("completed_at"),

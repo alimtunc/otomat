@@ -176,8 +176,14 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
   transitions throw `IllegalTransitionError`; centralization keeps invariants and
   failure behavior identical for every caller.
 - The daemon is the only canonical writer. Do not add schedulers, leases, outbox
-  or idempotency tables. `runs.plan_json` is frozen at launch so ordering and
-  recovery remain deterministic.
+  or idempotency tables. `runs.plan_json` is frozen at launch and then append-only
+  (`appendPlanStep`): a revision adds a node and is journaled as `run.plan_revised`,
+  never rewriting or dropping a launched one, so ordering and recovery stay
+  deterministic and the history stays auditable.
+- An issue owns one canonical workspace — one run, one branch, one worktree —
+  while its work is unmerged. New work on it appends a step to that run; a second
+  launch is refused (`issue_workspace_open`) rather than forking a competing
+  worktree. Merging closes the workspace and the next launch starts a fresh cycle.
 
 ## Source and test layout
 

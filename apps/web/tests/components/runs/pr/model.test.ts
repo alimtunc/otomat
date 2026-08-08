@@ -214,7 +214,7 @@ describe("pullRequestAcceptedSubmission", () => {
           title: "Old title",
           body: "Old body",
         }),
-        { title: "New title", body: "New body" },
+        { title: "New title", body: "New body", mode: "draft" },
       ),
     ).toBe(false);
   });
@@ -224,7 +224,30 @@ describe("pullRequestAcceptedSubmission", () => {
       pullRequestAcceptedSubmission(pullRequest({ title: "Ship it", body: null }), {
         title: "Ship it",
         body: "",
+        mode: "draft",
       }),
+    ).toBe(true);
+  });
+
+  it("rejects a PR GitHub still holds as a draft after a ready submission", () => {
+    expect(
+      pullRequestAcceptedSubmission(
+        pullRequest({ title: "Ship it", body: null, status: "draft" }),
+        {
+          title: "Ship it",
+          body: "",
+          mode: "ready",
+        },
+      ),
+    ).toBe(false);
+  });
+
+  it("accepts a merged PR, which is past the draft/ready question", () => {
+    expect(
+      pullRequestAcceptedSubmission(
+        pullRequest({ title: "Ship it", body: null, status: "merged" }),
+        { title: "Ship it", body: "", mode: "ready" },
+      ),
     ).toBe(true);
   });
 });

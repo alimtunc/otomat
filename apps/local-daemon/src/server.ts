@@ -147,7 +147,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       schemaMetadata: () => readSchemaMetadata(sqlite),
       launchRun: supervisor.start,
       resumeRun: supervisor.resume,
-      fixRun: supervisor.fix,
+      appendRunStep: supervisor.appendStep,
       contributeToRun: supervisor.contribute,
       retryRunContribution: supervisor.retryContribution,
       deliverRunContributions: supervisor.deliverContributions,

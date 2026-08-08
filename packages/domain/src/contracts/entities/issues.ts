@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { ISSUE_STATES } from "../entity-states.js";
 import { issueExecutionSchema } from "./issue-execution.js";
+import { CLOSED_ISSUE_WORKSPACE, issueWorkspaceSchema } from "./issue-workspace.js";
 
 const EXTERNAL_ISSUE_SOURCES = ["linear", "github"] as const;
 export type ExternalIssueSource = (typeof EXTERNAL_ISSUE_SOURCES)[number];
@@ -17,6 +18,8 @@ const issueContractBaseSchema = z.object({
   body: z.string().nullable(),
   status: z.enum(ISSUE_STATES),
   execution: issueExecutionSchema,
+  /** Defaulted so a pre-field daemon's issue payload still parses as "no workspace to reuse". */
+  workspace: issueWorkspaceSchema.default(CLOSED_ISSUE_WORKSPACE),
 });
 
 export const issueContractSchema = z.discriminatedUnion("source", [

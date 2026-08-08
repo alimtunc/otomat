@@ -1,5 +1,6 @@
 import { CompeteWinnerConflictError } from "@otomat/db";
 import {
+  appendRunStepRequestSchema,
   IllegalTransitionError,
   selectCompeteWinnerRequestSchema,
   startRunRequestSchema,
@@ -17,6 +18,7 @@ import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { readCompeteCandidate, readRunDetail, readRuns } from "../reads.js";
 import { toRun, toRunDiffResponse } from "../serialize.js";
 import { streamRunEvents } from "../sse.js";
+import { appendStepSelector, stepAppendErrorResponse } from "../step-append.js";
 
 const LAUNCH_REFUSAL_STATUS: Record<RunLaunchError, 400 | 409> = {
   project_not_found: 400,
@@ -25,6 +27,7 @@ const LAUNCH_REFUSAL_STATUS: Record<RunLaunchError, 400 | 409> = {
   repository_required: 409,
   repository_unavailable: 409,
   worktree_unavailable: 409,
+  issue_workspace_open: 409,
 };
 
 /** Mounted at `/api/runs`. Holds the run reads, the run commands (start/resume/abort), and the SSE stream. */
@@ -48,7 +51,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       if (error instanceof LaunchRefusedError) {
         // 409 for state the caller must change (register/repair a repository), 400 for a bad request.
         const status = LAUNCH_REFUSAL_STATUS[error.code];
-        return c.json({ error: error.code, message: error.message }, status);
+        return c.json({ error: error.code, message: error.message, run_id: error.runId }, status);
       }
       if (error instanceof RuntimeUnavailableError) {
         return c.json(
@@ -95,6 +98,33 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       return c.json({ error: "run_resume_failed" }, 500);
     }
   });
+
+  // Append-only: this adds a plan node, so it can never rewrite or drop a launched step.
+  routes.post(
+    "/:id/steps",
+    validateJson(appendRunStepRequestSchema),
+    runGuard(deps.db),
+    async (c) => {
+      const run = c.get("run");
+      const request = c.req.valid("json");
+      try {
+        const updated = await deps.appendRunStep(run.id, {
+          name: request.name,
+          prompt: request.prompt,
+          selector: appendStepSelector(request),
+          ...(request.model ? { model: request.model } : {}),
+          dependsOn: request.depends_on,
+          origin: "user",
+        });
+        return c.json(toRun(updated), 201);
+      } catch (error) {
+        const refusal = stepAppendErrorResponse(c, error);
+        if (refusal) return refusal;
+        console.error(`[otomat] appending a step to run ${run.id} failed`, error);
+        return c.json({ error: "step_append_failed" }, 500);
+      }
+    },
+  );
 
   routes.get("/:id/compete-groups/:groupId/candidates/:stepId/diff", runGuard(deps.db), (c) => {
     const run = c.get("run");

@@ -1,4 +1,5 @@
 import type { PullRequestPatch, PullRequestRow } from "@otomat/db";
+import type { PullRequestPublicationMode } from "@otomat/domain";
 
 import { normalizePullRequestBody } from "../body.js";
 import { GitHubCliError, GitHubPublicationError } from "../errors.js";
@@ -16,6 +17,29 @@ function metadataMatches(provider: GitHubPullRequest, request: PublicationReques
     provider.title === request.title &&
     normalizePullRequestBody(provider.body) === request.normalizedBody
   );
+}
+
+/** A merged or closed pull request has no draft flag left to argue with; only a live one can disagree. */
+function modeMatches(provider: GitHubPullRequest, mode: PullRequestPublicationMode): boolean {
+  if (provider.lifecycle !== "draft" && provider.lifecycle !== "open") return true;
+  return (provider.lifecycle === "draft") === (mode === "draft");
+}
+
+/** Applies the explicitly requested Draft/Ready mode, then re-reads GitHub so the stored state is the provider's answer, not our intent. */
+async function applyPublicationMode(
+  cli: GitHubCli,
+  provider: GitHubPullRequest,
+  selector: PullRequestSelector,
+  mode: PullRequestPublicationMode,
+): Promise<GitHubPullRequest> {
+  if (modeMatches(provider, mode)) return provider;
+  await cli.setPullRequestMode({
+    cwd: selector.cwd,
+    repository: selector.repository,
+    number: provider.number,
+    draft: mode === "draft",
+  });
+  return cli.viewPullRequest(selector.cwd, selector.repository, provider.number);
 }
 
 export async function refreshExistingPullRequest(
@@ -54,7 +78,8 @@ export async function refreshExistingPullRequest(
     completedView:
       hasPublishedSnapshot &&
       current.hasUnpublishedChanges === false &&
-      metadataMatches(provider, context.request)
+      metadataMatches(provider, context.request) &&
+      modeMatches(provider, context.request.mode)
         ? current
         : null,
     provider,
@@ -93,6 +118,7 @@ async function createProvider(
       ...selector,
       title: request.title,
       body: request.body,
+      draft: request.mode === "draft",
     });
   } catch (error) {
     // A base recorded from a never-pushed local branch is the one create failure the user can only fix upstream — name it.
@@ -145,6 +171,7 @@ export async function ensureProvider(
 ): Promise<ProviderResult> {
   const provider = knownProvider ?? (await cli.findPullRequest(selector));
   if (provider === null) return createProvider(store, cli, row, selector, request);
-  if (row.number === null) return { row, provider };
-  return { row, provider: await updateProvider(cli, provider, selector, request) };
+  const refreshed =
+    row.number === null ? provider : await updateProvider(cli, provider, selector, request);
+  return { row, provider: await applyPublicationMode(cli, refreshed, selector, request.mode) };
 }

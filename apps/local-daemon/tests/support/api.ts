@@ -105,8 +105,8 @@ export function makeApiApp(
     resumeRun: async () => {
       throw new Error("resumeRun stub not configured");
     },
-    fixRun: async () => {
-      throw new Error("fixRun stub not configured");
+    appendRunStep: async () => {
+      throw new Error("appendRunStep stub not configured");
     },
     contributeToRun: async () => {
       throw new Error("contributeToRun stub not configured");

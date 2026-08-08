@@ -5,6 +5,7 @@ import {
   runContributionsResponseSchema,
   runDetailSchema,
   runDiffResponseSchema,
+  type AppendRunStepRequest,
   type CreateRunContributionRequest,
   type SelectCompeteWinnerRequest,
   type StartRunRequest,
@@ -34,6 +35,11 @@ export function createRunsClient(config: DaemonClientConfig) {
     async resumeRun(id: string) {
       return runContractSchema.parse(
         await postJson(config, `/api/runs/${encodeURIComponent(id)}/resume`, {}),
+      );
+    },
+    async appendRunStep(id: string, request: AppendRunStepRequest) {
+      return runContractSchema.parse(
+        await postJson(config, `/api/runs/${encodeURIComponent(id)}/steps`, request),
       );
     },
     async listRunContributions(id: string) {

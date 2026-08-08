@@ -4,6 +4,7 @@ import type { SchemaMetadataContract, StartRunRequest } from "@otomat/domain";
 import type { GitHubService } from "#github";
 import type { LinearService } from "#linear";
 import type { ReviewService } from "#review";
+import type { AppendStepInput } from "#supervisor";
 
 export interface ApiDeps {
   db: Db;
@@ -15,7 +16,7 @@ export interface ApiDeps {
   schemaMetadata(): SchemaMetadataContract;
   launchRun(request: StartRunRequest): Promise<RunRow>;
   resumeRun(runId: string): Promise<RunRow>;
-  fixRun(runId: string, prompt: string): Promise<RunRow>;
+  appendRunStep(runId: string, input: AppendStepInput): Promise<RunRow>;
   contributeToRun(runId: string, body: string): Promise<RunContributionRow>;
   retryRunContribution(runId: string, contributionId: string): Promise<RunContributionRow>;
   deliverRunContributions(runId: string): Promise<void>;

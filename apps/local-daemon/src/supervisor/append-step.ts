@@ -1,0 +1,91 @@
+import { randomUUID } from "node:crypto";
+
+import {
+  getIssue,
+  insertStepRun,
+  listStepRunsForRun,
+  updateRunPlan,
+  type RunRow,
+} from "@otomat/db";
+import { appendPlanStep, stepRunMachine, type RunPlanStep } from "@otomat/domain";
+
+import { resolveAgentConfig } from "#agents";
+import { emitLedgerEvent } from "#events";
+
+import { startNextReadyStep } from "./advance.js";
+import { buildPlanRevisedEvent } from "./plan-revision.js";
+import { requireRunRow } from "./resume.js";
+import { ensureRuntimeAgent } from "./runtime-selection.js";
+import { hasRunActivity, type SupervisorState } from "./state.js";
+import { driveIssueTo } from "./transitions.js";
+import type { AppendStepInput } from "./types.js";
+import { requireOpenWorkspace } from "./workspace.js";
+
+function nextStepIndex(state: SupervisorState, runId: string): number {
+  const indexes = listStepRunsForRun(state.db, runId).map((step) => step.idx);
+  return indexes.length === 0 ? 0 : Math.max(...indexes) + 1;
+}
+
+/**
+ * Appends a step to a launched run and starts it when the workspace is free.
+ *
+ * Every refusal happens before any write: the run must still hold its issue's
+ * workspace (a merge, an abort or a failure closes it), the issue must accept
+ * running again — a merged issue is `done`, and the issue machine is what says
+ * no — and the agent config must resolve. The step then runs in the run's own
+ * worktree, against the same history, with its own step/session rows and
+ * conversation. While a turn is in flight the step stays `queued`: the post-turn
+ * chain starts it, so nothing ever runs twice in one worktree.
+ */
+export async function appendRunStep(
+  state: SupervisorState,
+  runId: string,
+  input: AppendStepInput,
+): Promise<RunRow> {
+  const { db } = state;
+  const run = requireRunRow(db, runId, "append");
+  requireOpenWorkspace(db, run);
+
+  const config = resolveAgentConfig(db, input.selector, { model: input.model });
+  ensureRuntimeAgent(db, config.runtime);
+
+  const step: RunPlanStep = {
+    id: randomUUID(),
+    name: input.name,
+    agent: config.runtime,
+    prompt: input.prompt,
+    depends_on: [...input.dependsOn],
+    config,
+  };
+  const plan = appendPlanStep(run.plan_json, step);
+  const idx = nextStepIndex(state, runId);
+
+  // Last guard before the first write: a merged issue is `done`, and the machine is what refuses.
+  const issue = getIssue(db, run.issue_id);
+  if (issue) driveIssueTo(db, issue.id, issue.status, "running");
+
+  db.transaction(
+    () => {
+      updateRunPlan(db, runId, plan);
+      insertStepRun(db, {
+        id: step.id,
+        run_id: runId,
+        idx,
+        name: step.name,
+        status: stepRunMachine.initial,
+      });
+    },
+    { behavior: "immediate" },
+  );
+  emitLedgerEvent(
+    db,
+    state.dataDir,
+    runId,
+    buildPlanRevisedEvent(runId, step, config, input.origin, new Date().toISOString()),
+  );
+
+  if (!hasRunActivity(state, runId)) {
+    await startNextReadyStep(state, requireRunRow(db, runId, "append"));
+  }
+  return requireRunRow(db, runId, "append");
+}

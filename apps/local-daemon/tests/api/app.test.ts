@@ -10,7 +10,12 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import type { RuntimeEvent } from "#runtime";
-import { LaunchRefusedError, RunContributionNotRetriableError } from "#supervisor";
+import {
+  LaunchRefusedError,
+  RunContributionNotRetriableError,
+  RunWorkspaceClosedError,
+  type AppendStepInput,
+} from "#supervisor";
 
 import { contributionRow, makeApiApp, post, request, runRow } from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
@@ -224,6 +229,25 @@ it("returns a conflict with the refusal code when the project has no usable repo
   expect(await res.json()).toEqual({
     error: "repository_required",
     message: "project p1 has no repository to run in",
+    run_id: null,
+  });
+});
+
+it("sends a second launch on an unmerged issue back to the run that holds its workspace", async () => {
+  const app = makeApiApp(t, {
+    launchRun: async () => {
+      throw new LaunchRefusedError("issue_workspace_open", "issue i1 already works in b", {
+        runId: "run-holding",
+      });
+    },
+  });
+  const res = await post(app, "/api/runs", { issue_id: "i1" });
+
+  expect(res.status).toBe(409);
+  expect(await res.json()).toEqual({
+    error: "issue_workspace_open",
+    message: "issue i1 already works in b",
+    run_id: "run-holding",
   });
 });
 
@@ -256,6 +280,67 @@ it("delegates resume to the supervisor for a known run", async () => {
 
 it("returns 404 resuming an unknown run", async () => {
   const res = await request(makeApiApp(t), "/api/runs/nope/resume", { method: "POST" });
+  expect(res.status).toBe(404);
+});
+
+it("appends a step with the agent the caller chose, never an inherited one", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  let received: AppendStepInput | null = null;
+  const app = makeApiApp(t, {
+    appendRunStep: async (_id, input) => {
+      received = input;
+      return runRow(runId);
+    },
+  });
+
+  const res = await post(app, `/api/runs/${runId}/steps`, {
+    name: "Address review",
+    prompt: "rename beta",
+    profile_id: "p-reviewer",
+    depends_on: [],
+  });
+
+  expect(res.status).toBe(201);
+  expect(received).toEqual({
+    name: "Address review",
+    prompt: "rename beta",
+    selector: { kind: "profile", profileId: "p-reviewer" },
+    dependsOn: [],
+    origin: "user",
+  });
+});
+
+it("rejects an appended step with no agent, and maps a closed workspace to 409", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+
+  const noAgent = await post(makeApiApp(t), `/api/runs/${runId}/steps`, {
+    name: "Address review",
+    prompt: "rename beta",
+  });
+  expect(noAgent.status).toBe(400);
+
+  const closed = makeApiApp(t, {
+    appendRunStep: async () => {
+      throw new RunWorkspaceClosedError("merged");
+    },
+  });
+  const res = await post(closed, `/api/runs/${runId}/steps`, {
+    name: "Address review",
+    prompt: "rename beta",
+    runtime: "fake",
+  });
+  expect(res.status).toBe(409);
+  expect(((await res.json()) as { error: string }).error).toBe("workspace_closed");
+});
+
+it("returns 404 appending a step to an unknown run", async () => {
+  const res = await post(makeApiApp(t), "/api/runs/nope/steps", {
+    name: "Address review",
+    prompt: "rename beta",
+    runtime: "fake",
+  });
   expect(res.status).toBe(404);
 });
 

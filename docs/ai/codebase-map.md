@@ -87,7 +87,7 @@ under `apps/local-daemon/src/<module>`, consumed through `#supervisor`/`#review`
 | `apps/desktop/src/main/data-safety` | OTO-29                 | Versioned data layout, redacted rotating logs, support bundle export. |
 | `apps/desktop/scripts`            | OTO-21, OTO-30           | macOS packaging: ad-hoc local build, signed/notarized release, packaged smoke. |
 | `apps/local-daemon/src/supervisor`| OTO-10                   | Process supervision, pid reconciliation (lands as a daemon module).   |
-| `apps/local-daemon/src/review`    | OTO-11                   | Review slice: server-side diff snapshot, comment anchoring, fix-resume.|
+| `apps/local-daemon/src/review`    | OTO-11                   | Review slice: server-side diff snapshot, comment anchoring, fix-step context.|
 | `packages/domain`                 | OTO-5                    | Pure TS. Canonical types, state machines, event envelope, contracts.  |
 | `packages/db`                     | OTO-5                    | SQLite driver isolation, Drizzle schema, migrations, repositories.    |
 | `packages/ui`                     | OTO-9                    | UI primitives/design system (Base UI/Tailwind/lucide).                |
@@ -115,6 +115,25 @@ profile option the installed binary does not announce (`option_unsupported`, in
 and the profile surfaces render fields from them without any per-provider branch.
 The effective options are frozen into the run plan at launch and replayed
 verbatim on resume and follow-up.
+
+## Issue Workspace and Plan Revisions
+
+An issue owns one canonical workspace while its work is unmerged: the run that
+still holds a non-terminal status and an `active` worktree row. `projectIssueWorkspace`
+reduces the same evidence the execution projection reads, so the daemon and the
+cockpit answer "where does this issue work?" identically. A second launch on that
+issue is refused with `issue_workspace_open` before any row is written; new work
+appends a step instead. Merging drives the run terminal and releases the worktree,
+which closes the workspace and lets the next launch start a fresh cycle.
+
+`runs.plan_json` is frozen at launch and then append-only. `appendPlanStep` copies
+every launched node untouched and may only add one whose dependencies already
+exist, so the graph stays acyclic and `readyPlanWork`/`settleRun` keep reading the
+same shape. Each revision is journaled as a `run.plan_revised` ledger event
+carrying its origin, the step it added and the agent config frozen for it. A
+review fix is one of these revisions: `review/fix.ts` freezes the selected
+comments, their pinned hunks, the current files and the current diff sha into the
+step's prompt, and the step waits on the nodes that produced that diff.
 
 ## Frontend Stack Direction
 

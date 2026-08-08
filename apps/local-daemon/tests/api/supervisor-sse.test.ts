@@ -44,7 +44,7 @@ it(
     const app = makeApiApp(fix, {
       launchRun: supervisor.start,
       resumeRun: supervisor.resume,
-      fixRun: supervisor.fix,
+      appendRunStep: supervisor.appendStep,
       abortRun: supervisor.abort,
     });
 

@@ -20,6 +20,7 @@ export type {
   PullRequestCreateInput,
   PullRequestDrafter,
   PullRequestDraftInput,
+  PullRequestModeInput,
   PullRequestSelector,
   PullRequestUpdateInput,
 } from "./types.js";

@@ -8,7 +8,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import type { CanonicalDiff } from "#git";
 import { CommentsNotFixableError, DiffUnavailableError, ReviewAnchorStaleError } from "#review";
-import { RunNotResumableError } from "#supervisor";
+import { RunWorkspaceClosedError, type AppendStepInput } from "#supervisor";
 
 import { makeApiApp, post, request, runRow } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
@@ -159,40 +159,56 @@ it("maps stale anchors and missing diffs to 409 conflicts", async () => {
   expect(((await bareRes.json()) as { error: string }).error).toBe("diff_unavailable");
 });
 
-it("orchestrates a fix request: prepare, spawn the turn, then mark", async () => {
+it("orchestrates a fix request: prepare, append the step, then mark", async () => {
   const calls: string[] = [];
-  let fixPrompt = "";
+  let appended: AppendStepInput | null = null;
   let marked: string[] = [];
   const app = makeApiApp(t, {
     review: stubReviewService({
       prepareFix: (_run, commentIds) => {
         calls.push("prepare");
-        return { prompt: "built fix prompt", commentIds };
+        return { prompt: "built fix prompt", commentIds, dependsOn: ["step-1"] };
       },
       markFixRequested: (_runId, commentIds) => {
         calls.push("mark");
         marked = commentIds;
       },
     }),
-    fixRun: async (_runId, prompt) => {
-      calls.push("spawn");
-      fixPrompt = prompt;
+    appendRunStep: async (_runId, input) => {
+      calls.push("append");
+      appended = input;
       return runRow(RUN_ID);
     },
   });
 
-  const res = await post(app, `/api/runs/${RUN_ID}/review/fix`, { comment_ids: ["c1", "c2"] });
-  expect(res.status).toBe(200);
-  expect(calls).toEqual(["prepare", "spawn", "mark"]);
-  expect(fixPrompt).toBe("built fix prompt");
+  const res = await post(app, `/api/runs/${RUN_ID}/review/fix`, {
+    comment_ids: ["c1", "c2"],
+    profile_id: "p-reviewer",
+  });
+  expect(res.status).toBe(201);
+  expect(calls).toEqual(["prepare", "append", "mark"]);
+  expect(appended).toMatchObject({
+    name: "Fix review comments",
+    prompt: "built fix prompt",
+    selector: { kind: "profile", profileId: "p-reviewer" },
+    dependsOn: ["step-1"],
+    origin: "review_fix",
+  });
   expect(marked).toEqual(["c1", "c2"]);
   expect(((await res.json()) as RunContract).status).toBe("running");
 });
 
-it("rejects an empty fix selection with 400 and maps conflicts to 409", async () => {
-  expect(
-    (await post(makeApiApp(t), `/api/runs/${RUN_ID}/review/fix`, { comment_ids: [] })).status,
-  ).toBe(400);
+it("refuses a fix with no explicit agent, and maps conflicts to 409", async () => {
+  const noAgent = await post(makeApiApp(t), `/api/runs/${RUN_ID}/review/fix`, {
+    comment_ids: ["c1"],
+  });
+  expect(noAgent.status).toBe(400);
+
+  const emptySelection = await post(makeApiApp(t), `/api/runs/${RUN_ID}/review/fix`, {
+    comment_ids: [],
+    runtime: "fake",
+  });
+  expect(emptySelection.status).toBe(400);
 
   const notFixable = makeApiApp(t, {
     review: stubReviewService({
@@ -201,21 +217,25 @@ it("rejects an empty fix selection with 400 and maps conflicts to 409", async ()
       },
     }),
   });
-  const nfRes = await post(notFixable, `/api/runs/${RUN_ID}/review/fix`, { comment_ids: ["c9"] });
+  const nfRes = await post(notFixable, `/api/runs/${RUN_ID}/review/fix`, {
+    comment_ids: ["c9"],
+    runtime: "fake",
+  });
   expect(nfRes.status).toBe(409);
   expect(((await nfRes.json()) as { error: string }).error).toBe("comments_not_fixable");
 
-  const notResumable = makeApiApp(t, {
+  const closed = makeApiApp(t, {
     review: stubReviewService({
-      prepareFix: (_run, commentIds) => ({ prompt: "p", commentIds }),
+      prepareFix: (_run, commentIds) => ({ prompt: "p", commentIds, dependsOn: [] }),
     }),
-    fixRun: async () => {
-      throw new RunNotResumableError("busy");
+    appendRunStep: async () => {
+      throw new RunWorkspaceClosedError("merged");
     },
   });
-  const nrRes = await post(notResumable, `/api/runs/${RUN_ID}/review/fix`, {
+  const closedRes = await post(closed, `/api/runs/${RUN_ID}/review/fix`, {
     comment_ids: ["c1"],
+    runtime: "fake",
   });
-  expect(nrRes.status).toBe(409);
-  expect(((await nrRes.json()) as { error: string }).error).toBe("run_not_fixable");
+  expect(closedRes.status).toBe(409);
+  expect(((await closedRes.json()) as { error: string }).error).toBe("workspace_closed");
 });

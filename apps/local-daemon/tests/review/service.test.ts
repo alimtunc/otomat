@@ -140,6 +140,10 @@ it("builds the fix context from comment + original hunk + current file", () => {
   expect(preparation.prompt).toContain("+beta");
   expect(preparation.prompt).toContain("alpha\nbeta\ngamma");
   expect(preparation.prompt).toContain(BRANCH);
+  // The diff the comment was made against is frozen with it, named by its sha.
+  expect(preparation.prompt).toContain(anchor.sha);
+  // The fix waits on the succeeded step that produced that diff.
+  expect(preparation.dependsOn).toEqual([`${RUN_ID}-step`]);
 
   expect(() => review.prepareFix(run(), ["nope"])).toThrow(CommentsNotFixableError);
 });

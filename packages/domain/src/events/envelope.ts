@@ -21,6 +21,7 @@ export type EventSource = (typeof EVENT_SOURCES)[number];
 export const EVENT_TYPES = [
   "run.lifecycle",
   "run.contribution",
+  "run.plan_revised",
   "step.lifecycle",
   "session.lifecycle",
   "compete.lifecycle",

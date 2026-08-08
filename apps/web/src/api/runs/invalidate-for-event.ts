@@ -8,7 +8,11 @@ export function invalidateForEvent(client: QueryClient, runId: string, event: Ev
     client.invalidateQueries({ queryKey: queryKeys.runContributions(runId) });
     return;
   }
-  if (event.type === "run.lifecycle" || event.type === "system.reconciled") {
+  if (
+    event.type === "run.lifecycle" ||
+    event.type === "run.plan_revised" ||
+    event.type === "system.reconciled"
+  ) {
     client.invalidateQueries({ queryKey: queryKeys.run(runId) });
     client.invalidateQueries({ queryKey: queryKeys.runs });
     // Settling a turn resolves the messages it carried without emitting a contribution event of its own.

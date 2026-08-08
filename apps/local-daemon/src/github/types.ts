@@ -92,6 +92,8 @@ export interface PullRequestSelector {
 export interface PullRequestCreateInput extends PullRequestSelector {
   title: string;
   body: string;
+  /** Creates the pull request as a draft; `false` opens it ready for review. */
+  draft: boolean;
 }
 
 export interface PullRequestUpdateInput {
@@ -100,6 +102,14 @@ export interface PullRequestUpdateInput {
   number: number;
   title: string;
   body: string;
+}
+
+export interface PullRequestModeInput {
+  cwd: string;
+  repository: string;
+  number: number;
+  /** True converts an open pull request back to a draft; false marks a draft ready for review. */
+  draft: boolean;
 }
 
 export interface GitHubCli {
@@ -115,4 +125,6 @@ export interface GitHubCli {
   viewPullRequest(cwd: string, repository: string, number: number): Promise<GitHubPullRequest>;
   createPullRequest(input: PullRequestCreateInput): Promise<void>;
   updatePullRequest(input: PullRequestUpdateInput): Promise<void>;
+  /** Flips the draft flag of an existing pull request. Never merges and never touches branch protections. */
+  setPullRequestMode(input: PullRequestModeInput): Promise<void>;
 }
