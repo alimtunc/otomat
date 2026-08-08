@@ -22,6 +22,7 @@ import {
 } from "@otomat/db";
 import {
   projectIssueExecution,
+  projectIssueWorkspace,
   type AgentProfileContract,
   type IssueContract,
   type IssueExecutionEvidence,
@@ -90,15 +91,17 @@ function groupExecutionEvidence(
 
 export function readIssues(db: Db, projectId?: string): IssueContract[] {
   const evidence = groupExecutionEvidence(listIssueExecutionEvidence(db, { projectId }));
-  return listIssues(db, { projectId }).map((row) =>
-    toIssue(row, projectIssueExecution(evidence.get(row.id) ?? [])),
-  );
+  return listIssues(db, { projectId }).map((row) => {
+    const rows = evidence.get(row.id) ?? [];
+    return toIssue(row, projectIssueExecution(rows), projectIssueWorkspace(rows));
+  });
 }
 
 export function readIssue(db: Db, id: string): IssueContract | null {
   const row = getIssue(db, id);
   if (!row) return null;
-  return toIssue(row, projectIssueExecution(listIssueExecutionEvidence(db, { issueId: id })));
+  const evidence = listIssueExecutionEvidence(db, { issueId: id });
+  return toIssue(row, projectIssueExecution(evidence), projectIssueWorkspace(evidence));
 }
 
 export function readRuns(

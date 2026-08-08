@@ -34,6 +34,7 @@ import {
   type CompeteGroupContract,
   type IssueContract,
   type IssueExecution,
+  type IssueWorkspace,
   type ProjectContract,
   type PullRequestContract,
   type RepositoryContract,
@@ -78,8 +79,12 @@ export function toRepository(row: RepositoryRow, available: boolean): Repository
   });
 }
 
-export function toIssue(row: IssueRow, execution: IssueExecution): IssueContract {
-  return issueContractSchema.parse({ ...row, execution });
+export function toIssue(
+  row: IssueRow,
+  execution: IssueExecution,
+  workspace: IssueWorkspace,
+): IssueContract {
+  return issueContractSchema.parse({ ...row, execution, workspace });
 }
 
 function toIsoInstant(value: string | null): string | null {

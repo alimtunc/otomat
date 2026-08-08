@@ -27,8 +27,11 @@ export interface ReviewDetailResult {
 }
 
 export interface FixPreparation {
+  /** The frozen fix context: the selected comments, their pinned hunks, the current files and diff. */
   prompt: string;
   commentIds: string[];
+  /** Plan node ids that produced the reviewed diff; the appended fix step depends on them. */
+  dependsOn: string[];
 }
 
 export interface RunSettledOutcome {

@@ -135,13 +135,3 @@ async function resumeCompeteGroup(
   await launches[0];
   return requireRunRow(state.db, run.id, "resume");
 }
-
-/** A fix turn is an honest resume: same provider session, a new prompt built from the review comments. */
-export async function fixRun(
-  state: SupervisorState,
-  runId: string,
-  prompt: string,
-): Promise<RunRow> {
-  const run = requireResumableRun(state, runId, ["review_ready"]);
-  return spawnResumeTurn(state, run, prompt);
-}

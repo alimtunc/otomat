@@ -26,6 +26,7 @@ import type {
   GitHubPullRequest,
   GitHubRemote,
   PullRequestCreateInput,
+  PullRequestModeInput,
   PullRequestSelector,
   PullRequestUpdateInput,
 } from "./types.js";
@@ -192,6 +193,25 @@ class CommandGitHubCli implements GitHubCli {
 
   createPullRequest(input: PullRequestCreateInput): Promise<void> {
     return createPullRequestWithRetry(this.run, this.sleep, input);
+  }
+
+  async setPullRequestMode(input: PullRequestModeInput): Promise<void> {
+    const modeResult = await this.run({
+      command: "gh",
+      args: [
+        "pr",
+        "ready",
+        String(input.number),
+        "--repo",
+        input.repository,
+        ...(input.draft ? ["--undo"] : []),
+      ],
+      cwd: input.cwd,
+    });
+    const message = input.draft
+      ? "GitHub could not convert the pull request back to a draft."
+      : "GitHub could not mark the pull request ready for review.";
+    assertPublicationSucceeded(modeResult, "github_pr_mode_failed", message);
   }
 
   async updatePullRequest(input: PullRequestUpdateInput): Promise<void> {

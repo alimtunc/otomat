@@ -2,6 +2,7 @@ import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { schema, updateIssueProject } from "@otomat/db";
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { registerLocalRepository } from "#api/repository-registration";
@@ -59,6 +60,16 @@ function seedProject(id: string, rootPath: string, repositoryId?: string): void 
       .values({ id: repositoryId, project_id: id, name: id, default_branch: "main" })
       .run();
   }
+}
+
+/** Mirrors a merge: the run lands terminal and gives its worktree back, closing the issue's workspace. */
+function closeWorkspace(runId: string): void {
+  fix.db
+    .update(schema.worktrees)
+    .set({ status: "removed" })
+    .where(eq(schema.worktrees.owner_token, runId))
+    .run();
+  fix.db.update(schema.runs).set({ status: "completed" }).where(eq(schema.runs.id, runId)).run();
 }
 
 it("gives a single ad-hoc run its own worktree on a dedicated branch, never the user's checkout", async () => {
@@ -148,6 +159,8 @@ it("follows the issue to its new project once the issue is moved", async () => {
     await supervisor.settle();
     expect(before.repository_id).toBe(fix.repositoryId);
 
+    // The issue only takes a second launch once its first workspace is closed.
+    closeWorkspace(before.id);
     updateIssueProject(fix.db, "i-move", "p-moved");
     const after = await supervisor.start({ issue_id: "i-move" });
     await supervisor.settle();

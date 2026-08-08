@@ -1,6 +1,11 @@
-import type { GitHubConnectionContract, PullRequestContract } from "@otomat/domain";
+import {
+  PULL_REQUEST_PUBLICATION_MODES,
+  type GitHubConnectionContract,
+  type PullRequestContract,
+  type PullRequestPublicationMode,
+} from "@otomat/domain";
 
-interface PullRequestViewModel {
+export interface PullRequestViewModel {
   connectionLabel: string;
   showConnect: boolean;
   deviceAuthorization: { code: string; url: string } | null;
@@ -13,15 +18,35 @@ interface PullRequestViewModel {
   linkUrl: string | null;
 }
 
+export function isPullRequestPublicationMode(value: string): value is PullRequestPublicationMode {
+  return (PULL_REQUEST_PUBLICATION_MODES as readonly string[]).includes(value);
+}
+
+/** How GitHub currently holds the pull request; a merged or closed one is past the draft/ready question. */
+function publishedMode(pullRequest: PullRequestContract): PullRequestPublicationMode | null {
+  if (pullRequest.status === "draft") return "draft";
+  if (pullRequest.status === "open") return "ready";
+  return null;
+}
+
+/** What the form starts on: the mode GitHub already holds, else a draft. */
+export function initialPublicationMode(
+  pullRequest: PullRequestContract | null,
+): PullRequestPublicationMode {
+  if (pullRequest === null) return "draft";
+  return publishedMode(pullRequest) ?? "draft";
+}
+
+/** Accepted only when GitHub reports back exactly what was submitted, mode included. */
 export function pullRequestAcceptedSubmission(
   pullRequest: PullRequestContract | null,
-  submission: { title: string; body: string },
+  submission: { title: string; body: string; mode: PullRequestPublicationMode },
 ): boolean {
-  return (
-    pullRequest !== null &&
-    pullRequest.title === submission.title &&
-    (pullRequest.body ?? "") === submission.body
-  );
+  if (pullRequest === null) return false;
+  if (pullRequest.title !== submission.title) return false;
+  if ((pullRequest.body ?? "") !== submission.body) return false;
+  const mode = publishedMode(pullRequest);
+  return mode === null || mode === submission.mode;
 }
 
 type PublicationModel = Pick<
@@ -95,10 +120,19 @@ function createdModel(
   };
 }
 
-function newModel(canPublish: boolean, connected: boolean): PublicationModel {
+/** The action says which of the two publications it will perform, so the choice is never implicit. */
+function createLabel(mode: PullRequestPublicationMode): string {
+  return mode === "draft" ? "Create draft PR" : "Create PR ready for review";
+}
+
+function newModel(
+  canPublish: boolean,
+  connected: boolean,
+  mode: PullRequestPublicationMode,
+): PublicationModel {
   const stateLabel = canPublish && connected ? "Ready to publish" : "Run not ready for publication";
   return {
-    actionLabel: "Prepare PR",
+    actionLabel: createLabel(mode),
     actionDisabled: !canPublish,
     actionPending: false,
     stateLabel: canPublish && !connected ? "Not configured" : stateLabel,
@@ -129,8 +163,9 @@ function publicationModel(
   canPublish: boolean,
   connected: boolean,
   hasDraftChanges: boolean,
+  mode: PullRequestPublicationMode,
 ): PublicationModel {
-  if (pullRequest === null) return newModel(canPublish, connected);
+  if (pullRequest === null) return newModel(canPublish, connected, mode);
   if (pullRequest.status === "merged" || pullRequest.status === "closed") {
     return terminalModel(pullRequest.status);
   }
@@ -141,7 +176,7 @@ function publicationModel(
   }
   if (pullRequest.publication_status === "failed") return failedModel(pullRequest, canPublish);
   return {
-    actionLabel: "Prepare PR",
+    actionLabel: createLabel(mode),
     actionDisabled: !canPublish,
     actionPending: false,
     stateLabel: "Not configured",
@@ -153,10 +188,11 @@ export function pullRequestViewModel(
   pullRequest: PullRequestContract | null,
   canPublish = true,
   hasDraftChanges = false,
+  mode: PullRequestPublicationMode = "draft",
 ): PullRequestViewModel {
   const connected = connection.status === "connected";
   const providerLink = link(pullRequest);
-  const publication = publicationModel(pullRequest, canPublish, connected, hasDraftChanges);
+  const publication = publicationModel(pullRequest, canPublish, connected, hasDraftChanges, mode);
   const device = connection.device_authorization;
   return {
     connectionLabel: connectionLabel(connection),

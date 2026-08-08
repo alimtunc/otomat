@@ -49,6 +49,7 @@ function attemptCreate(run: CommandRunner, input: PullRequestCreateInput): Promi
       input.title,
       "--body-file",
       "-",
+      ...(input.draft ? ["--draft"] : []),
     ],
     cwd: input.cwd,
     stdin: input.body,

@@ -50,7 +50,7 @@ export function requireResumableRuntime(
   return runtime;
 }
 
-export function requireRunRow(db: Db, runId: string, when: "spawn" | "resume"): RunRow {
+export function requireRunRow(db: Db, runId: string, when: "spawn" | "resume" | "append"): RunRow {
   const row = getRun(db, runId);
   if (!row) throw new Error(`run vanished immediately after ${when}`);
   return row;

@@ -72,6 +72,14 @@ export function listActiveRuns(db: Db): ActiveRuns {
   return active;
 }
 
+/** Persists an append-only plan revision. The caller builds the new plan with `appendPlanStep`, which is what forbids rewriting an existing node. */
+export function updateRunPlan(db: Db, id: string, plan: RunPlan): void {
+  db.update(runs)
+    .set(touch({ plan_json: plan }))
+    .where(eq(runs.id, id))
+    .run();
+}
+
 export interface RunStatusUpdate {
   status: RunState;
   started_at?: string;

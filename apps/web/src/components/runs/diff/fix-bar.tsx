@@ -1,5 +1,6 @@
-import type { RunState } from "@otomat/domain";
-import { Button, Icon } from "@otomat/ui";
+import { isRunTerminal, type RunState } from "@otomat/domain";
+import { Button } from "@otomat/ui";
+import { ReviewFixStepDialog } from "@web/components/runs/review/fix-step-dialog";
 import type { ReviewSelection } from "@web/components/runs/review/use-selection";
 
 export interface DiffFixBarProps {
@@ -9,11 +10,10 @@ export interface DiffFixBarProps {
 
 export function DiffFixBar({ runStatus, selection }: DiffFixBarProps) {
   const count = selection.selectedIds.size;
-  const fixable = runStatus === "review_ready" && count > 0 && !selection.isFixPending;
-  const hint =
-    runStatus === "review_ready"
-      ? "A fix turn gets {comment, original hunk, current file}."
-      : "Fix is available once the run is review-ready.";
+  const workspaceOpen = runStatus !== undefined && !isRunTerminal(runStatus);
+  const hint = workspaceOpen
+    ? "A fix step freezes the comments, their pinned hunks and the current diff as its context."
+    : "Fix is available while this issue’s workspace is still open.";
 
   return (
     <footer className="flex h-12 flex-none items-center gap-2.5 border-t border-border-subtle bg-surface-1 px-4.5">
@@ -25,16 +25,7 @@ export function DiffFixBar({ runStatus, selection }: DiffFixBarProps) {
         <Button variant="ghost" size="sm" disabled={count === 0} onClick={selection.clear}>
           Clear
         </Button>
-        <Button
-          variant="primary"
-          size="sm"
-          disabled={!fixable}
-          loading={selection.isFixPending}
-          onClick={selection.submitFix}
-        >
-          <Icon name="wand-2" aria-hidden />
-          Fix selected comments
-        </Button>
+        <ReviewFixStepDialog selection={selection} disabled={!workspaceOpen || count === 0} />
       </span>
     </footer>
   );

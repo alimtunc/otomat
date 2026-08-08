@@ -1,13 +1,17 @@
 import type { IssueExecution, IssueExecutionState } from "../contracts/entities/issue-execution.js";
+import type { WorktreeStatus } from "../contracts/entities/workspace.js";
 import type { PullRequestPublicationState } from "../state-machines/pull-request-publication.js";
 import type { PullRequestState } from "../state-machines/pull-request.js";
 import { isRunTerminal, type RunState } from "../state-machines/run.js";
 
-/** One persisted run's contribution to its issue's execution state, as stored. */
+/** One persisted run's contribution to its issue's execution and workspace state, as stored. */
 export interface IssueExecutionEvidence {
   run_id: string;
   run_status: RunState;
   run_created_at: string;
+  run_branch: string;
+  /** `active` while the run still holds its worktree; null when it never had one. */
+  worktree_status: WorktreeStatus | null;
   pr_status: PullRequestState | null;
   pr_publication: PullRequestPublicationState | null;
 }

@@ -1,5 +1,12 @@
 // @vitest-environment happy-dom
-import type { IssueContract, ModelSelection, RunContract, RuntimeDescriptor } from "@otomat/domain";
+import {
+  CLOSED_ISSUE_WORKSPACE,
+  type AppendRunStepRequest,
+  type IssueContract,
+  type ModelSelection,
+  type RunContract,
+  type RuntimeDescriptor,
+} from "@otomat/domain";
 import { LaunchRunDialog } from "@web/components/issues/workspace/launch/dialog";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -21,8 +28,19 @@ interface ModelSelectProbeProps {
   onValueChange: (value: ModelSelection | undefined) => void;
 }
 
+const appendStep = vi.fn(
+  (_request: AppendRunStepRequest, options?: { onSuccess?: (run: RunContract) => void }) => {
+    options?.onSuccess?.({ id: "run-7" } as RunContract);
+  },
+);
+const appendTarget = vi.fn();
+
 vi.mock("@web/api/runs/mutations", () => ({
   useLaunchRun: () => ({ launch, isPending: false }),
+  useAppendRunStep: (runId: string) => {
+    appendTarget(runId);
+    return { mutate: appendStep, isPending: false };
+  },
 }));
 
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
@@ -82,6 +100,7 @@ const ISSUE: IssueContract = {
   body: "Quoting breaks on nested commas.",
   status: "ready",
   execution: { state: "none", run_id: null },
+  workspace: CLOSED_ISSUE_WORKSPACE,
   source: "local",
   source_external_id: null,
   source_identifier: null,
@@ -103,6 +122,8 @@ afterEach(async () => {
   navigate.mockClear();
   onLaunched.mockClear();
   modelSelectProps.mockClear();
+  appendStep.mockClear();
+  appendTarget.mockClear();
 });
 
 function click(text: string) {
@@ -114,12 +135,18 @@ function click(text: string) {
 async function openDialog(issue: IssueContract = ISSUE) {
   const mounted = await mount(<LaunchRunDialog issue={issue} onLaunched={onLaunched} />);
   cleanups.push(mounted.cleanup);
-  await click("Launch run");
+  await click(issue.workspace.state === "open" ? "Add step" : "Launch run");
 }
 
 function textarea(label: string): HTMLTextAreaElement {
   const found = document.querySelector<HTMLTextAreaElement>(`textarea[aria-label='${label}']`);
   if (!found) throw new Error(`textarea "${label}" not found`);
+  return found;
+}
+
+function input(label: string): HTMLInputElement {
+  const found = document.querySelector<HTMLInputElement>(`input[aria-label='${label}']`);
+  if (!found) throw new Error(`input "${label}" not found`);
   return found;
 }
 
@@ -232,4 +259,54 @@ it("sends the base branch the user picked instead of the repository default", as
   await click("Launch run⌘↵");
 
   expect(launch).toHaveBeenCalledWith(expect.objectContaining({ base_branch: "develop" }));
+});
+
+const CONTINUING: IssueContract = {
+  ...ISSUE,
+  workspace: { state: "open", run_id: "run-7", branch: "otomat/run/3a1be0dd", busy: false },
+};
+
+it("grows the open workspace instead of offering a second launch", async () => {
+  await openDialog(CONTINUING);
+
+  const labels = [...document.querySelectorAll("button")].map((button) => button.textContent);
+  expect(labels).not.toContain("Single run");
+  expect(labels).not.toContain("Workflow");
+  expect(document.body.textContent).toContain("otomat/run/3a1be0dd");
+  expect(appendTarget).toHaveBeenCalledWith("run-7");
+});
+
+it("refuses to append until the step has both a name and a prompt", async () => {
+  await openDialog(CONTINUING);
+  const submit = findButton("Add step⌘↵");
+  expect(submit?.disabled).toBe(true);
+
+  await act(async () => setInputValue(input("Step name"), "Address the failing test"));
+  expect(findButton("Add step⌘↵")?.disabled).toBe(true);
+
+  await act(async () => setTextareaValue(textarea("Step prompt"), "fix the parser"));
+  expect(findButton("Add step⌘↵")?.disabled).toBe(false);
+});
+
+it("appends the step on the agent the user picked and follows the run it joined", async () => {
+  await openDialog(CONTINUING);
+  await act(async () => {
+    setInputValue(input("Step name"), "  Address the failing test  ");
+    setTextareaValue(textarea("Step prompt"), "  fix the parser  ");
+  });
+  await click("pick opus");
+  await click("Add step⌘↵");
+
+  expect(appendStep).toHaveBeenCalledWith(
+    {
+      name: "Address the failing test",
+      prompt: "fix the parser",
+      runtime: "claude",
+      model: { kind: "model", id: "opus" },
+      depends_on: [],
+    },
+    expect.anything(),
+  );
+  expect(onLaunched).toHaveBeenCalledWith({ id: "run-7" });
+  expect(launch).not.toHaveBeenCalled();
 });

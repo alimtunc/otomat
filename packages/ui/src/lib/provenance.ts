@@ -9,6 +9,7 @@ import {
   GitCompare,
   GitCommitHorizontal,
   GitPullRequest,
+  ListPlus,
   type LucideIcon,
   MessageSquare,
   Play,
@@ -46,6 +47,7 @@ export interface EventGlyphDescriptor {
 export const EVENT_GLYPH: Record<EventType, EventGlyphDescriptor> = {
   "run.lifecycle": { icon: Flag, tone: "neutral" },
   "run.contribution": { icon: MessageSquare, tone: "iris" },
+  "run.plan_revised": { icon: ListPlus, tone: "iris" },
   "step.lifecycle": { icon: GitCommitHorizontal, tone: "neutral" },
   "session.lifecycle": { icon: Play, tone: "neutral" },
   "compete.lifecycle": { icon: GitCompare, tone: "warning" },

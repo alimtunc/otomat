@@ -261,6 +261,7 @@ describe("GitHub CLI adapter", () => {
       base: "main",
       title: "Ship it",
       body: "Details",
+      draft: false,
     });
 
     expect(runner.requests).toHaveLength(2);
@@ -284,6 +285,7 @@ describe("GitHub CLI adapter", () => {
         base: "main",
         title: "Ship it",
         body: "Details",
+        draft: false,
       }),
     ).rejects.toMatchObject({
       code: "github_pr_create_failed",
@@ -330,6 +332,7 @@ describe("GitHub CLI adapter", () => {
       base: "main",
       title: "Ship it",
       body: "Details",
+      draft: false,
     });
     await expect(
       cli.findPullRequest({
@@ -357,6 +360,63 @@ describe("GitHub CLI adapter", () => {
         "--body-file",
         "-",
       ],
+    });
+  });
+
+  it("passes --draft only when the publication asks for a draft", async () => {
+    const runner = fakeRunner([ok(""), ok("")]);
+    const cli = createGitHubCli(runner.run);
+    const input = {
+      cwd: "/repo",
+      repository: "acme/otomat",
+      head: "otomat/run/r1",
+      base: "main",
+      title: "Ship it",
+      body: "Details",
+    };
+
+    await cli.createPullRequest({ ...input, draft: true });
+    await cli.createPullRequest({ ...input, draft: false });
+
+    expect(runner.requests[0]?.args).toContain("--draft");
+    expect(runner.requests[1]?.args).not.toContain("--draft");
+  });
+
+  it("marks a pull request ready for review, and undoes it for a draft", async () => {
+    const runner = fakeRunner([ok(""), ok("")]);
+    const cli = createGitHubCli(runner.run);
+    const input = { cwd: "/repo", repository: "acme/otomat", number: 42 };
+
+    await cli.setPullRequestMode({ ...input, draft: false });
+    await cli.setPullRequestMode({ ...input, draft: true });
+
+    expect(runner.requests[0]?.args).toEqual(["pr", "ready", "42", "--repo", "acme/otomat"]);
+    expect(runner.requests[1]?.args).toEqual([
+      "pr",
+      "ready",
+      "42",
+      "--repo",
+      "acme/otomat",
+      "--undo",
+    ]);
+  });
+
+  it("surfaces gh's own reason when a mode change is refused", async () => {
+    const runner = fakeRunner([
+      { stdout: "", stderr: "pull request is in merge queue", exitCode: 1 },
+    ]);
+    const cli = createGitHubCli(runner.run);
+
+    await expect(
+      cli.setPullRequestMode({
+        cwd: "/repo",
+        repository: "acme/otomat",
+        number: 42,
+        draft: false,
+      }),
+    ).rejects.toMatchObject({
+      code: "github_pr_mode_failed",
+      message: expect.stringContaining("merge queue") as string,
     });
   });
 });

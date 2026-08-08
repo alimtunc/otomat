@@ -39,6 +39,7 @@ function fakeCli(): GitHubCli & { tokens: string[] } {
     viewPullRequest: () => Promise.reject(new Error("not used")),
     createPullRequest: () => Promise.reject(new Error("not used")),
     updatePullRequest: () => Promise.reject(new Error("not used")),
+    setPullRequestMode: () => Promise.reject(new Error("not used")),
   };
 }
 

@@ -47,7 +47,7 @@ export function isRunPlanCompeteGroup(node: RunPlanNode): node is RunPlanCompete
   return "compete" in node;
 }
 
-/** `runs.plan_json` — the plan frozen at launch. There are no workflow revisions. */
+/** `runs.plan_json` — frozen at launch, then append-only: a revision may add a node, never rewrite or drop one. */
 export const runPlanSchema = z.object({
   version: z.literal(1),
   steps: z.array(runPlanNodeSchema),

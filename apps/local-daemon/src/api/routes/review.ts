@@ -1,16 +1,16 @@
 import {
   createReviewCommentRequestSchema,
-  IllegalTransitionError,
+  FIX_REVIEW_COMMENTS_STEP_NAME,
   requestFixRequestSchema,
 } from "@otomat/domain";
 import { Hono } from "hono";
 
 import { CommentsNotFixableError, DiffUnavailableError, ReviewAnchorStaleError } from "#review";
-import { RunNotResumableError } from "#supervisor";
 
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { toReview, toReviewComment, toRun, toRunDiffResponse } from "../serialize.js";
+import { appendStepSelector, stepAppendErrorResponse } from "../step-append.js";
 
 export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
@@ -55,28 +55,33 @@ export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
     },
   );
 
+  // A fix is an appended step, not a resumed session: it carries its own frozen
+  // comment/diff context and the agent the user picked for it.
   routes.post(
     "/:id/review/fix",
     validateJson(requestFixRequestSchema),
     runGuard(deps.db),
     async (c) => {
       const run = c.get("run");
+      const request = c.req.valid("json");
       try {
-        const preparation = deps.review.prepareFix(run, c.req.valid("json").comment_ids);
-        const updated = await deps.fixRun(run.id, preparation.prompt);
+        const preparation = deps.review.prepareFix(run, request.comment_ids);
+        const updated = await deps.appendRunStep(run.id, {
+          name: request.name ?? FIX_REVIEW_COMMENTS_STEP_NAME,
+          prompt: preparation.prompt,
+          selector: appendStepSelector(request),
+          ...(request.model ? { model: request.model } : {}),
+          dependsOn: preparation.dependsOn,
+          origin: "review_fix",
+        });
         deps.review.markFixRequested(run.id, preparation.commentIds);
-        return c.json(toRun(updated));
+        return c.json(toRun(updated), 201);
       } catch (error) {
         if (error instanceof CommentsNotFixableError) {
           return c.json({ error: "comments_not_fixable" }, 409);
         }
-        if (error instanceof RunNotResumableError) {
-          return c.json({ error: "run_not_fixable" }, 409);
-        }
-        // The issue closed with its merge; the state machine is the one refusing, verbatim.
-        if (error instanceof IllegalTransitionError && error.machine === "issue") {
-          return c.json({ error: "issue_closed", message: error.message }, 409);
-        }
+        const refusal = stepAppendErrorResponse(c, error);
+        if (refusal) return refusal;
         console.error(`[otomat] fix request on run ${run.id} failed`, error);
         return c.json({ error: "fix_request_failed" }, 500);
       }

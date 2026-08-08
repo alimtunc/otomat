@@ -1,8 +1,23 @@
 import type { Db, RunContributionRow, RunRow } from "@otomat/db";
-import type { ResolvedAgentConfig, StartRunRequest } from "@otomat/domain";
+import type { ModelSelection, ResolvedAgentConfig, StartRunRequest } from "@otomat/domain";
 
+import type { AgentConfigSelector } from "#agents";
 import type { RepositoryResolver } from "#git";
 import type { KnownRuntimeId } from "#runtime";
+
+/** What asked for a plan revision; kept on the journaled event so the history reads honestly. */
+export type PlanRevisionOrigin = "user" | "review_fix";
+
+/** One append-only plan revision: a named step, an explicitly chosen agent, and what it waits on. */
+export interface AppendStepInput {
+  name: string;
+  prompt: string;
+  /** The agent the user picked for this step; never inherited from the last session. */
+  selector: AgentConfigSelector;
+  model?: ModelSelection;
+  dependsOn: readonly string[];
+  origin: PlanRevisionOrigin;
+}
 
 /** Identifies the supervisor as the event source so its markers are never shown as a provider result. */
 export const SUPERVISOR_ADAPTER = "otomat-supervisor";
@@ -67,7 +82,8 @@ export interface Supervisor {
   start(request: StartRunRequest): Promise<RunRow>;
   /** Resume a human-waiting run on an explicit action — spawns a `resume` turn, never auto-runs. */
   resume(runId: string): Promise<RunRow>;
-  fix(runId: string, prompt: string): Promise<RunRow>;
+  /** Append one step to the run's plan and start it once the workspace is free; refused once the workspace closes. */
+  appendStep(runId: string, input: AppendStepInput): Promise<RunRow>;
   /** Persist one user message on the run as `queued`, then deliver it if the run is already resting. */
   contribute(runId: string, body: string): Promise<RunContributionRow>;
   /** Re-queue a failed message that never reached the provider and retry the run's queue. */

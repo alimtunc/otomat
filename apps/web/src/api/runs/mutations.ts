@@ -2,6 +2,8 @@ import { DaemonRequestError } from "@otomat/client";
 import {
   agentProfileErrorSchema,
   runLaunchErrorSchema,
+  runStepAppendErrorSchema,
+  type AppendRunStepRequest,
   type CreateRunContributionRequest,
   type RunContract,
   type StartRunRequest,
@@ -51,6 +53,33 @@ export function useResumeRun(runId: string) {
     () => daemon.resumeRun(runId),
     "Could not resume run — it may no longer be resumable.",
   );
+}
+
+function appendStepErrorMessage(error: unknown): string {
+  if (error instanceof DaemonRequestError) {
+    const refusal = runStepAppendErrorSchema.safeParse(error.body);
+    if (refusal.success) return refusal.data.message;
+    const profile = agentProfileErrorSchema.safeParse(error.body);
+    if (profile.success) return profile.data.message;
+    return error.status >= 500
+      ? "Could not add the step — the daemon failed to record it."
+      : "Could not add the step — the request was rejected.";
+  }
+  return "Could not add the step — is the daemon running?";
+}
+
+/** Appends a step to the issue's canonical run; the daemon runs it in that same workspace. */
+export function useAppendRunStep(runId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: AppendRunStepRequest) => daemon.appendRunStep(runId, request),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: queryKeys.run(runId) });
+      client.invalidateQueries({ queryKey: queryKeys.runs });
+      client.invalidateQueries({ queryKey: queryKeys.issues });
+    },
+    onError: (error) => toast.error(appendStepErrorMessage(error)),
+  });
 }
 
 export function useSelectCompeteWinner(runId: string, groupId: string) {

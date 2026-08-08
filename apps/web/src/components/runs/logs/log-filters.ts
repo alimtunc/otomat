@@ -8,6 +8,7 @@ export type LogFilter = "all" | LogCategory | "error";
 const CATEGORY_BY_TYPE: Record<EventType, LogCategory> = {
   "run.lifecycle": "control",
   "run.contribution": "control",
+  "run.plan_revised": "control",
   "step.lifecycle": "control",
   "session.lifecycle": "control",
   "compete.lifecycle": "control",

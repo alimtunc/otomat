@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { RUN_PLAN_STEP_NAME_MAX_LENGTH, RUN_PLAN_STEP_PROMPT_MAX_LENGTH } from "../plan/limits.js";
 import { runPlanInputSchema } from "../plan/validate.js";
 import {
   agentSessionContractSchema,
@@ -31,13 +32,15 @@ export const RUN_LAUNCH_ERRORS = [
   "repository_unavailable",
   "base_branch_not_found",
   "worktree_unavailable",
+  "issue_workspace_open",
 ] as const;
 export type RunLaunchError = (typeof RUN_LAUNCH_ERRORS)[number];
 
-/** Stable refusal code plus a user-facing daemon message. */
+/** Stable refusal code plus a user-facing daemon message. `run_id` names the workspace holder on `issue_workspace_open`. */
 export const runLaunchErrorSchema = z.object({
   error: z.enum(RUN_LAUNCH_ERRORS),
   message: z.string(),
+  run_id: z.string().min(1).nullable().default(null),
 });
 
 /** Launch from an issue or an ad-hoc prompt (one required); an optional `plan` replaces the implicit single step. */
@@ -63,6 +66,39 @@ export const startRunRequestSchema = z
     message: "Provide either issue_id or prompt",
   });
 export type StartRunRequest = z.infer<typeof startRunRequestSchema>;
+
+/** Append one step to a launched run's plan. The agent is chosen explicitly here — an appended step never inherits the last session's config. */
+export const appendRunStepRequestSchema = z
+  .object({
+    name: z.string().trim().min(1).max(RUN_PLAN_STEP_NAME_MAX_LENGTH),
+    prompt: z.string().trim().min(1).max(RUN_PLAN_STEP_PROMPT_MAX_LENGTH),
+    /** Agent profile to resolve and freeze for this step; takes precedence over `runtime`. */
+    profile_id: z.string().min(1).optional(),
+    /** Ad-hoc runtime adapter id, used when no profile is selected. */
+    runtime: z.string().min(1).optional(),
+    /** Model override for this step alone; absent inherits the model of the config it resolves to. */
+    model: modelSelectionSchema.optional(),
+    /** Existing plan node ids this step waits on; an empty list runs it as soon as the workspace is free. */
+    depends_on: z.array(z.string().min(1)).default([]),
+  })
+  .strict()
+  .refine((value) => Boolean(value.profile_id) || Boolean(value.runtime), {
+    message: "Provide either profile_id or runtime",
+  });
+export type AppendRunStepRequest = z.infer<typeof appendRunStepRequestSchema>;
+
+/** Why a step could not be appended. `workspace_closed` and `issue_closed` are the merge guard; `invalid_revision` is a plan the append would have broken. */
+export const RUN_STEP_APPEND_ERRORS = [
+  "workspace_closed",
+  "issue_closed",
+  "invalid_revision",
+] as const;
+export type RunStepAppendError = (typeof RUN_STEP_APPEND_ERRORS)[number];
+
+export const runStepAppendErrorSchema = z.object({
+  error: z.enum(RUN_STEP_APPEND_ERRORS),
+  message: z.string(),
+});
 
 /** Post one user message to a run's conversation; it is persisted as `queued` whatever the run is doing. */
 export const createRunContributionRequestSchema = z

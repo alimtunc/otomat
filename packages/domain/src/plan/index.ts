@@ -1,9 +1,11 @@
 /**
- * Run plan V1: strict launch-time validation (`validate`) and deterministic,
- * status-driven scheduling helpers (`schedule`) over the frozen `runs.plan_json`.
+ * Run plan V1: strict launch-time validation (`validate`), the single append-only
+ * revision a launched plan accepts (`append`), and deterministic, status-driven
+ * scheduling helpers (`schedule`) over `runs.plan_json`.
  *
  * @packageDocumentation
  */
+export * from "./append.js";
 export * from "./limits.js";
 export * from "./resume.js";
 export * from "./schedule.js";

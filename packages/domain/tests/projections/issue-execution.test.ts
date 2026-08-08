@@ -14,6 +14,8 @@ function ev(over: Partial<IssueExecutionEvidence> & { run_id: string }): IssueEx
   return {
     run_status: "completed",
     run_created_at: AT("1"),
+    run_branch: `otomat/run/${over.run_id}`,
+    worktree_status: "active",
     pr_status: null,
     pr_publication: null,
     ...over,

@@ -1,6 +1,7 @@
 import { abortRun } from "./abort.js";
 import { advanceRun } from "./advance.js";
-import { fixRun, resumeRun, startRun } from "./commands.js";
+import { appendRunStep } from "./append-step.js";
+import { resumeRun, startRun } from "./commands.js";
 import {
   contributeToRun,
   deliverQueuedContributions,
@@ -23,7 +24,7 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
   return {
     start: (request) => startRun(state, request),
     resume: (runId) => resumeRun(state, runId),
-    fix: (runId, prompt) => fixRun(state, runId, prompt),
+    appendStep: (runId, input) => appendRunStep(state, runId, input),
     contribute: (runId, body) => contributeToRun(state, runId, body),
     retryContribution: (runId, contributionId) =>
       retryRunContribution(state, runId, contributionId),
