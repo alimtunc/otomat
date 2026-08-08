@@ -9,12 +9,14 @@ import { useIssueSourceForm } from "./use-form";
 export interface IssueSourceFormProps {
   workspace: LinearWorkspaceContract;
   projects: ProjectContract[];
+  onCreated?: () => void;
 }
 
-export function IssueSourceForm({ workspace, projects }: IssueSourceFormProps) {
+export function IssueSourceForm({ workspace, projects, onCreated }: IssueSourceFormProps) {
   const { form, pending, submitError, teamOptions, projectOptions } = useIssueSourceForm(
     workspace,
     projects,
+    onCreated,
   );
 
   return (

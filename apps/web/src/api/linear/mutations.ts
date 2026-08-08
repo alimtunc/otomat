@@ -3,7 +3,6 @@ import {
   linearErrorSchema,
   type CreateIssueSourceRequest,
   type LinearErrorCode,
-  type SyncLinearRequest,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -94,32 +93,6 @@ export function useDeleteIssueSource() {
     onSuccess: () => toast.success("Source unmapped — its issues stop syncing."),
     onError: (error) => toast.error(linearErrorMessage(error)),
     onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
-  });
-}
-
-export function useSyncLinear() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (request: SyncLinearRequest = {}) => daemon.syncLinear(request),
-    onSuccess: (response) => {
-      let imported = 0;
-      let updated = 0;
-      for (const syncResult of response.results) {
-        imported += syncResult.imported;
-        updated += syncResult.updated;
-      }
-      toast.success(`Synced Linear — ${imported} imported, ${updated} updated.`);
-    },
-    onError: (error) => {
-      if (!isSupersededLinearError(error)) toast.error(linearErrorMessage(error));
-    },
-    onSettled: async () => {
-      await Promise.all([
-        client.invalidateQueries({ queryKey: queryKeys.linearConnection }),
-        client.invalidateQueries({ queryKey: queryKeys.issueSources }),
-        client.invalidateQueries({ queryKey: queryKeys.issues }),
-      ]);
-    },
   });
 }
 

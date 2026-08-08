@@ -1,6 +1,8 @@
 import { Icon, Pill, PillTabs, SegmentedControl, SegmentedItem } from "@otomat/ui";
 import { useProjectIssues } from "@web/api/issues/queries";
+import { useProjectLinearSync } from "@web/api/linear/use-project-sync";
 import { IssuesFilterPopover } from "@web/components/issues/issues-filter-popover";
+import { LinearSyncControl } from "@web/components/issues/linear-sync/control";
 import { IssuesContent } from "@web/components/issues/list/content";
 import { NewIssueButton } from "@web/components/issues/new-issue-button";
 import { ProjectQueryBoundary } from "@web/components/shell/project-selection/query-boundary";
@@ -16,16 +18,23 @@ import {
   type AdvancedIssueFilters,
   type IssuesFilter,
 } from "@web/lib/issue-filters";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type IssuesLayout = "board" | "list";
 
 export function IssuesView() {
   const selectedProject = useSelectedProject();
   const issues = useProjectIssues(selectedProject.projectId);
+  const sync = useProjectLinearSync(selectedProject.projectId);
   const [layout, setLayout] = useState<IssuesLayout>("board");
   const [filter, setFilter] = useState<IssuesFilter>("all");
   const [advanced, setAdvanced] = useState<AdvancedIssueFilters>(NO_ADVANCED_FILTERS);
+
+  const { refreshIfStale } = sync;
+  // otomat-allow-effect: entering this view is navigation, not render output.
+  useEffect(() => {
+    refreshIfStale();
+  }, [refreshIfStale]);
 
   return (
     <RouteShell
@@ -65,6 +74,7 @@ export function IssuesView() {
             <Pill value="backlog">Backlog</Pill>
           </PillTabs>
           <div className="flex-1" />
+          <LinearSyncControl sync={sync} />
           <IssuesFilterPopover
             filters={advanced}
             assignees={assigneeOptions(issues.data ?? [])}

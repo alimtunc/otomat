@@ -36,6 +36,7 @@ interface SyncContext {
   idFactory: () => string;
   now: () => Date;
   signal: AbortSignal;
+  full: boolean;
 }
 
 function watermarkFrom(startedAt: Date, issues: LinearIssue[]): string {
@@ -61,7 +62,7 @@ export async function syncIssueSource(
     {
       team_id: source.external_team_id,
       project_id: source.external_project_id,
-      updated_since: cursor?.cursor ?? null,
+      updated_since: ctx.full ? null : (cursor?.cursor ?? null),
     },
     ctx.signal,
   );

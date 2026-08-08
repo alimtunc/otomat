@@ -8,7 +8,9 @@ import { mount, type Mounted } from "#support/mount";
 let connectionState: Record<string, unknown>;
 let sourcesState: Record<string, unknown>;
 let workspaceState: Record<string, unknown>;
-const syncMutate = vi.fn();
+let syncSources: number;
+const syncRefresh = vi.fn();
+const createdCallbacks: (() => void)[] = [];
 
 const PROJECT: ProjectContract = { id: "p1", name: "Otomat", root_path: "/tmp/otomat" };
 
@@ -24,17 +26,37 @@ vi.mock("@web/api/linear/queries", () => ({
 
 vi.mock("@web/api/linear/mutations", () => ({
   useDeleteIssueSource: () => ({ isPending: false, mutate: vi.fn(), variables: undefined }),
-  useSyncLinear: () => ({ isPending: false, mutate: syncMutate }),
+}));
+
+vi.mock("@web/api/linear/use-project-sync", () => ({
+  useProjectLinearSync: (projectId: string | undefined) => ({
+    status: {
+      project_id: projectId ?? "",
+      sources: syncSources,
+      running: false,
+      last_synced_at: null,
+      last_result: null,
+      last_error: null,
+    },
+    running: false,
+    refresh: syncRefresh,
+    refreshIfStale: vi.fn(),
+  }),
 }));
 
 vi.mock("@web/components/settings/integrations/issue-source-form", () => ({
-  IssueSourceForm: () => <div data-testid="issue-source-form" />,
+  IssueSourceForm: ({ onCreated }: { onCreated?: () => void }) => {
+    if (onCreated !== undefined) createdCallbacks.push(onCreated);
+    return <div data-testid="issue-source-form" />;
+  },
 }));
 
 let rendered: Mounted | null = null;
 
 beforeEach(() => {
-  syncMutate.mockClear();
+  syncRefresh.mockClear();
+  createdCallbacks.length = 0;
+  syncSources = 1;
   connectionState = {
     data: {
       status: "connected",
@@ -108,23 +130,33 @@ it("lists only the selected project's sources, with an unmap action", async () =
 
 it("syncs only this project's sources", async () => {
   const container = await renderPanel();
-  const button = [...container.querySelectorAll("button")].find(
-    (candidate) => candidate.textContent?.trim() === "Sync this project",
+  const button = [...container.querySelectorAll("button")].find((candidate) =>
+    candidate.textContent?.includes("Refresh issues"),
   );
   button?.click();
 
-  expect(syncMutate).toHaveBeenCalledWith({ project_id: "p1" });
+  expect(syncRefresh).toHaveBeenCalledWith({ announce: true });
 });
 
 it("disables sync when the project has no mapped sources", async () => {
   sourcesState = { data: [], isPending: false, isError: false, isSuccess: true };
+  syncSources = 0;
 
   const container = await renderPanel();
-  const button = [...container.querySelectorAll("button")].find(
-    (candidate) => candidate.textContent?.trim() === "Sync this project",
+  const button = [...container.querySelectorAll("button")].find((candidate) =>
+    candidate.textContent?.includes("Refresh issues"),
   );
 
   expect(button?.disabled).toBe(true);
+});
+
+it("starts the first import as soon as a mapping is saved", async () => {
+  await renderPanel();
+
+  expect(createdCallbacks).toHaveLength(1);
+  createdCallbacks[0]?.();
+
+  expect(syncRefresh).toHaveBeenCalledWith({ announce: true });
 });
 
 it("mounts the mapping form pinned to the selected project", async () => {

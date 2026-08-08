@@ -70,6 +70,14 @@ export function createLinearRoutes(deps: ApiDeps): Hono {
     c.json({ results: await deps.linear.sync(c.req.valid("json")) }),
   );
 
+  routes.get("/sync-status", (c) => {
+    const projectId = c.req.query("projectId");
+    if (projectId === undefined || projectId === "") {
+      return c.json({ error: "invalid_request", message: "projectId is required." }, 400);
+    }
+    return c.json(deps.linear.syncStatus(projectId));
+  });
+
   routes.get("/issues/:id/writeback", (c) =>
     c.json(deps.linear.writeback.writebackState(c.req.param("id"))),
   );

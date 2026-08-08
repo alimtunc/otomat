@@ -49,3 +49,28 @@ it("does not show a source creation superseded by a newer connection", async () 
   await vi.waitFor(() => expect(createIssueSource).toHaveBeenCalledOnce());
   expect(rendered.container.querySelector("[role='alert']")).toBeNull();
 });
+
+it("announces a saved mapping so its first import can start", async () => {
+  createIssueSource.mockResolvedValue({ id: "src-1" });
+  const onCreated = vi.fn();
+  const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  rendered = await mount(
+    <QueryClientProvider client={client}>
+      <IssueSourceForm
+        workspace={{
+          teams: [{ id: "team-1", key: "OTO", name: "Otomat" }],
+          projects: [],
+        }}
+        projects={[{ id: "p1", name: "Local", root_path: "/tmp/local" }]}
+        onCreated={onCreated}
+      />
+    </QueryClientProvider>,
+  );
+
+  const button = [...rendered.container.querySelectorAll("button")].find(
+    (candidate) => candidate.textContent?.trim() === "Map source",
+  );
+  button?.click();
+
+  await vi.waitFor(() => expect(onCreated).toHaveBeenCalledOnce());
+});

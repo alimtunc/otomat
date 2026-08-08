@@ -4,6 +4,7 @@ import {
   linearConnectionContractSchema,
   linearEditorStateSchema,
   linearIssueDraftSchema,
+  linearSyncStatusSchema,
   linearWorkspaceContractSchema,
   linearWritebackStateSchema,
   syncLinearResponseSchema,
@@ -53,6 +54,11 @@ export function createLinearClient(config: DaemonClientConfig) {
     },
     async syncLinear(request: SyncLinearRequest = {}) {
       return syncLinearResponseSchema.parse(await postJson(config, "/api/linear/sync", request));
+    },
+    async getLinearSyncStatus(projectId: string) {
+      return linearSyncStatusSchema.parse(
+        await getJson(config, `/api/linear/sync-status${queryString({ projectId })}`),
+      );
     },
     async getLinearWriteback(issueId: string) {
       return linearWritebackStateSchema.parse(

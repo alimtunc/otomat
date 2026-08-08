@@ -116,6 +116,19 @@ and the profile surfaces render fields from them without any per-provider branch
 The effective options are frozen into the run plan at launch and replayed
 verbatim on resume and follow-up.
 
+## Linear Issue Freshness
+
+The mirror is refreshed by app-driven incremental reads, not webhooks; the
+comparison, the trade-offs and the missed-event recovery are recorded in
+[`linear-issue-sync.md`](linear-issue-sync.md). The daemon owns the mechanism
+(`linear/sync.ts` reads by cursor, `linear/sync-runs.ts` deduplicates concurrent
+passes and remembers how the last one ended, `GET /api/linear/sync-status` serves
+it per project); the cockpit owns the triggers (`use-linear-auto-sync.ts` for
+connection, project and foreground transitions, the Issues view for stale entry
+and the explicit **Refresh issues** control). A sync always names a project, and
+the daemon refuses a project it does not own rather than reporting an empty
+success — that is what keeps a VPS project from silently reading local state.
+
 ## Frontend Stack Direction
 
 React, Vite, TanStack Router/Query/Form, Tailwind, Base UI (shadcn-style

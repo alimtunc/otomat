@@ -21,6 +21,12 @@ vi.mock("@web/components/settings/integrations/linear-connect-form", () => ({
   ),
 }));
 
+vi.mock("@web/components/settings/integrations/onboarding-panel", () => ({
+  LinearOnboardingPanel: ({ workspaceId }: { workspaceId: string }) => (
+    <div data-testid="linear-onboarding" data-workspace-id={workspaceId} />
+  ),
+}));
+
 let rendered: Mounted | null = null;
 
 beforeEach(() => {
@@ -55,6 +61,33 @@ it("shows the connected workspace identity", async () => {
   const container = await renderSection();
 
   expect(container.textContent).toContain("Connected as Alim");
+});
+
+it("asks what a connected workspace still needs before an issue can appear", async () => {
+  const container = await renderSection();
+
+  const onboarding = container.querySelector("[data-testid='linear-onboarding']");
+  expect(onboarding?.getAttribute("data-workspace-id")).toBe("workspace-1");
+});
+
+it("keeps the onboarding path out of the way while nothing is connected", async () => {
+  connectionState = {
+    data: {
+      status: "disconnected",
+      workspace_id: null,
+      workspace_name: null,
+      user_name: null,
+      error_code: null,
+      error_message: null,
+    },
+    isPending: false,
+    isError: false,
+    isSuccess: true,
+  };
+
+  const container = await renderSection();
+
+  expect(container.querySelector("[data-testid='linear-onboarding']")).toBeNull();
 });
 
 it("does not render stale connection controls after a background connection error", async () => {
