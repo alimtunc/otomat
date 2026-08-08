@@ -1,4 +1,4 @@
-import { ErrorState, IssueSourceGlyph, Skeleton } from "@otomat/ui";
+import { ErrorState, IssueSourceGlyph, Markdown, Skeleton } from "@otomat/ui";
 import type { useIssue } from "@web/api/issues/queries";
 import { LinearIssueHeader } from "@web/components/issues/workspace/linear/header";
 import { issueShortId } from "@web/lib/ids";
@@ -35,9 +35,7 @@ export function IssueHeader({ query }: { query: ReturnType<typeof useIssue> }) {
           <span className="font-mono">{issueShortId(issue)}</span>
         </div>
       </div>
-      {issue.body ? (
-        <p className="whitespace-pre-wrap text-sm leading-[1.65] text-foreground">{issue.body}</p>
-      ) : null}
+      {issue.body ? <Markdown value={issue.body} className="text-sm text-foreground" /> : null}
     </div>
   );
 }

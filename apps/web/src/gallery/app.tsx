@@ -5,6 +5,7 @@ import { ButtonsSection } from "./sections/buttons";
 import { CardsSection } from "./sections/cards";
 import { DropdownsSection } from "./sections/dropdowns";
 import { InputsSection } from "./sections/inputs";
+import { MarkdownSection } from "./sections/markdown";
 import { ProvenanceSection } from "./sections/provenance";
 import { StatusChipsSection } from "./sections/status-chips";
 import { SurfacesSection } from "./sections/surfaces";
@@ -33,6 +34,7 @@ export function GalleryApp() {
         <TabsSection />
         <AvatarsSection />
         <CardsSection />
+        <MarkdownSection />
       </div>
       <Toaster />
     </div>

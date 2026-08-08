@@ -1,4 +1,4 @@
-import { Input, Textarea, cn } from "@otomat/ui";
+import { Button, Input, Markdown, Textarea, cn } from "@otomat/ui";
 import { useState } from "react";
 
 interface InlineTextFieldProps {
@@ -34,17 +34,40 @@ export function InlineTextField({
     setText(value);
   }
 
+  function startEditing(): void {
+    setText(value);
+    setEditing(true);
+  }
+
   if (!editing) {
     const empty = value.length === 0;
+    // A rendered description holds links and code blocks, so it cannot live inside the
+    // click-to-edit button; the edit affordance sits beside it instead.
+    if (multiline && !empty) {
+      return (
+        <div className="group -mx-1.5 flex flex-col items-start gap-2 px-1.5">
+          <Markdown value={value} className={className} />
+          {disabled ? null : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              aria-label={`Edit ${ariaLabel.toLowerCase()}`}
+              onClick={startEditing}
+              className="text-text-tertiary group-hover:text-foreground"
+            >
+              Edit
+            </Button>
+          )}
+        </div>
+      );
+    }
     return (
       <button
         type="button"
         disabled={disabled}
         aria-label={disabled ? ariaLabel : `Edit ${ariaLabel.toLowerCase()}`}
-        onClick={() => {
-          setText(value);
-          setEditing(true);
-        }}
+        onClick={startEditing}
         className={cn(
           "-mx-1.5 block w-[calc(100%+0.75rem)] whitespace-pre-wrap rounded-md px-1.5 text-left",
           disabled ? "" : "cursor-text transition-colors duration-100 hover:bg-surface-2/60",

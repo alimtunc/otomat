@@ -10,6 +10,10 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "imports": {
+    "#ui/*": "./src/*.ts",
+    "#test-support/*": "./tests/support/*.ts"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -32,6 +36,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
     "lucide-react": "^1.29.0",
+    "markdown-to-jsx": "^9.10.2",
     "react-resizable-panels": "^4.12.2",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0"

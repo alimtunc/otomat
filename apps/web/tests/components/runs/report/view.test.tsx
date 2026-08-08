@@ -63,7 +63,7 @@ const RESPONSE: RunCompletionReportResponse = {
           id: "comment-1",
           file_path: "src/report.ts",
           line: 12,
-          body: "Rename this.",
+          body: "Rename this to `resolveReport`.",
           evidence: [{ source: "review", comment_id: "comment-1" }],
         },
       ],
@@ -149,6 +149,16 @@ it("renders a responsive evidence-backed report with factual next actions", asyn
   ).not.toBeNull();
   expect(container.querySelector('a[href="/runs/run-1/logs#event-8"]')).not.toBeNull();
   expect(container.querySelector("[data-report-grid]")?.className).toContain("grid-cols-1");
+
+  await cleanup();
+});
+
+it("renders report prose through the shared Markdown renderer", async () => {
+  const { container, cleanup } = await mount(<RunCompletionReportView />);
+
+  const code = [...container.querySelectorAll("code")].map((node) => node.textContent);
+  expect(code).toContain("resolveReport");
+  expect(container.textContent).not.toContain("`resolveReport`");
 
   await cleanup();
 });

@@ -255,6 +255,8 @@ export { Kbd, type KbdProps } from "./components/kbd";
 
 export { LiveDot, type LiveDotProps } from "./components/live-dot";
 
+export { Markdown, type MarkdownProps } from "./components/markdown";
+
 export { MetaList, type MetaListItem, type MetaListProps } from "./components/meta-list";
 
 export { NavSection, type NavSectionProps } from "./components/nav-section";
