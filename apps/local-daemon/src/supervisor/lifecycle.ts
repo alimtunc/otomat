@@ -69,7 +69,6 @@ function trackTurn(
       state.inflight.delete(ctx.agentSessionId);
       release();
     })
-    // Chained after the slot release so the next plan step can claim it; a no-op unless the run is still `running` with a ready step.
     .then(() => {
       if (state.aborting.has(ctx.runId)) return;
       return state.advance?.(ctx.runId);
@@ -117,14 +116,12 @@ export async function spawnTurn(
   let proc: SessionProcess | undefined;
   let tail: ReturnType<typeof startSessionTail> | undefined;
   try {
-    // A slot can take a while to free; an abort/cancel may have landed meanwhile.
     if (!runStillLive(state, ctx.runId)) {
       release();
       return false;
     }
 
     advanceToRunning(state, ctx);
-    // A compete candidate's fresh worktree initializes here, inside the slot; a failing command lands in the catch below and settles the candidate like any other spawn failure.
     if (ctx.worktreeInit !== undefined) {
       const initialized = await runInitCommandBatch(state, ctx.runId, {
         worktreePath: ctx.worktreePath,
@@ -137,7 +134,6 @@ export async function spawnTurn(
         return false;
       }
     }
-    // Wipe the previous turn's gate trace first, so what this one leaves behind speaks only for itself.
     clearWorkerStartEvidence(ctx.agentSessionDir);
     proc = state.spawn({ ...ctx, mode, providerSessionId });
     state.starting.set(ctx.agentSessionId, {
@@ -146,7 +142,6 @@ export async function spawnTurn(
       turn: { agentSessionId: ctx.agentSessionId },
     });
     recordAgentSessionProcess(db, ctx.agentSessionId, { pid: proc.pid, pgid: proc.pgid });
-    // Stamp the process identity next to its pid so a later boot proves the group is still ours before killing it.
     if (!(await waitForWorkerIdentity(ctx.agentSessionDir, proc.pid, proc.pgid))) {
       throw new Error(`worker ${proc.pid} exited before its identity could be recorded`);
     }
@@ -165,7 +160,6 @@ export async function spawnTurn(
       release();
       return false;
     }
-    // Nothing may throw between `proc.start()` and `return true`: a caller holding a delivery claim reads a throw as "the provider never saw it".
     tail = startSessionTail(state.db, state.dataDir, ctx.runId, ctx.agentSessionId);
     proc.start();
     state.starting.delete(ctx.agentSessionId);
@@ -174,7 +168,6 @@ export async function spawnTurn(
   } catch (error) {
     release();
     tail?.stop();
-    // A turn that failed mid-flight must not leave a live child or a phantom "running" row.
     if (proc) {
       proc.kill("SIGKILL");
       await proc.exited;

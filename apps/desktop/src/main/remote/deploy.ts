@@ -7,7 +7,6 @@ import {
 } from "./instances/scripts.js";
 import type { runSshScript } from "./ssh/script.js";
 
-// The artifact download does real network work on the host; give it room.
 const DEPLOY_TIMEOUT_MS = 180_000;
 
 export interface DeployBundleOptions {

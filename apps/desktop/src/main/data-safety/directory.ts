@@ -1,34 +1,17 @@
-import { randomUUID } from "node:crypto";
-import {
-  closeSync,
-  constants,
-  fstatSync,
-  lstatSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  statfsSync,
-  type Stats,
-  writeFileSync,
-} from "node:fs";
+import { lstatSync, mkdirSync, statfsSync, type Stats } from "node:fs";
 import { dirname, join } from "node:path";
 
-import {
-  DATABASE_INITIALIZED_MARKER_SUFFIX,
-  isUuidV4,
-  MANAGED_BACKUPS_DIRECTORY_NAME,
-} from "@otomat/domain";
+import { DATABASE_INITIALIZED_MARKER_SUFFIX, MANAGED_BACKUPS_DIRECTORY_NAME } from "@otomat/domain";
 
 import { DataDirectoryError } from "./data-directory-error.js";
-import { publishPathDurably, syncManagedPath } from "./durable-publication.js";
-import { combineFailures } from "./failure-composition.js";
+import { syncManagedPath } from "./durable-publication.js";
+import {
+  cleanupInterruptedManifestCopies,
+  createManifest,
+  MANIFEST_FILENAME,
+  readManifest,
+} from "./layout-manifest.js";
 
-const DATA_LAYOUT_VERSION = 1;
-const MANIFEST_FILENAME = "data-layout.json";
-const MANIFEST_TEMPORARY_PREFIX = `${MANIFEST_FILENAME}.`;
-const MANIFEST_TEMPORARY_SUFFIX = ".partial";
 const MINIMUM_STARTUP_BYTES = 16 * 1024 * 1024;
 
 export interface ManagedDataDirectory {
@@ -37,11 +20,6 @@ export interface ManagedDataDirectory {
   backupsDir: string;
   logsDir: string;
   manifestPath: string;
-}
-
-interface DataLayoutManifest {
-  version: number;
-  created_at: string;
 }
 
 function assertExistingPathType(path: string, kind: "directory" | "file"): boolean {
@@ -64,56 +42,6 @@ function assertExistingPathType(path: string, kind: "directory" | "file"): boole
   );
 }
 
-function readManifest(path: string): DataLayoutManifest {
-  let parsed: unknown;
-  let descriptor: number | null = null;
-  const failures: unknown[] = [];
-  try {
-    descriptor = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
-    if (!fstatSync(descriptor).isFile()) throw new Error("Manifest is not a regular file.");
-    parsed = JSON.parse(readFileSync(descriptor, "utf8"));
-  } catch (error) {
-    failures.push(error);
-  }
-  if (descriptor !== null) {
-    try {
-      closeSync(descriptor);
-    } catch (error) {
-      failures.push(error);
-    }
-  }
-  if (failures.length > 0) {
-    throw new DataDirectoryError(
-      "invalid_structure",
-      `The data layout manifest at ${path} could not be read safely. No data was changed.`,
-      {
-        cause: combineFailures(failures, "Manifest read and handle cleanup both failed."),
-      },
-    );
-  }
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    !("version" in parsed) ||
-    typeof parsed.version !== "number" ||
-    !("created_at" in parsed) ||
-    typeof parsed.created_at !== "string" ||
-    Number.isNaN(Date.parse(parsed.created_at))
-  ) {
-    throw new DataDirectoryError(
-      "invalid_structure",
-      `The data layout manifest at ${path} has an invalid structure. No data was changed.`,
-    );
-  }
-  if (parsed.version !== DATA_LAYOUT_VERSION) {
-    throw new DataDirectoryError(
-      "unsupported_layout",
-      `Data layout version ${parsed.version} is not supported by this Otomat build. No data was changed.`,
-    );
-  }
-  return { version: parsed.version, created_at: parsed.created_at };
-}
-
 function assertStartupCapacity(root: string): void {
   const stats = statfsSync(root);
   const availableBytes = stats.bavail * stats.bsize;
@@ -123,58 +51,6 @@ function assertStartupCapacity(root: string): void {
     `Otomat needs at least ${MINIMUM_STARTUP_BYTES} free bytes to start safely; ${availableBytes} are available. No data was changed.`,
     { availableBytes, requiredBytes: MINIMUM_STARTUP_BYTES },
   );
-}
-
-function createManifest(path: string): void {
-  const temporaryPath = `${path}.${randomUUID()}.partial`;
-  try {
-    writeFileSync(
-      temporaryPath,
-      `${JSON.stringify({
-        version: DATA_LAYOUT_VERSION,
-        created_at: new Date().toISOString(),
-      })}\n`,
-      { flag: "wx", mode: 0o600 },
-    );
-    publishPathDurably(temporaryPath, path);
-  } catch (error) {
-    try {
-      rmSync(temporaryPath, { force: true });
-    } catch (cleanupError) {
-      const failure = new Error("The data layout manifest and its temporary file both failed.", {
-        cause: error,
-      });
-      Object.defineProperty(failure, "cleanupFailures", { value: [cleanupError] });
-      throw failure;
-    }
-    throw error;
-  }
-}
-
-function cleanupInterruptedManifestCopies(root: string): void {
-  try {
-    for (const entry of readdirSync(root, { withFileTypes: true })) {
-      if (
-        !entry.name.startsWith(MANIFEST_TEMPORARY_PREFIX) ||
-        !entry.name.endsWith(MANIFEST_TEMPORARY_SUFFIX) ||
-        !isUuidV4(
-          entry.name.slice(MANIFEST_TEMPORARY_PREFIX.length, -MANIFEST_TEMPORARY_SUFFIX.length),
-        )
-      ) {
-        continue;
-      }
-      if (!entry.isFile() && !entry.isSymbolicLink()) {
-        throw new Error(`Managed manifest temporary path ${entry.name} is not a regular file.`);
-      }
-      rmSync(join(root, entry.name), { force: true });
-    }
-  } catch (error) {
-    throw new DataDirectoryError(
-      "invalid_structure",
-      "Interrupted data layout manifest copies could not be cleaned safely.",
-      { cause: error },
-    );
-  }
 }
 
 export function prepareDataDirectory(root: string): ManagedDataDirectory {

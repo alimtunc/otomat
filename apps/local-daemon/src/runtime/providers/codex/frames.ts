@@ -104,7 +104,6 @@ export class CodexFrameMapper implements ProviderFrameMapper {
       });
       return;
     }
-    // Unknown item types are preserved verbatim, never invented as successful tool results.
     if (frameType === "item.completed") {
       this.emitter.emit("runtime.log", "native", { frame });
     }

@@ -6,7 +6,6 @@ import { cn } from "../lib/utils";
 export const Popover = PopoverPrimitive.Root;
 export const PopoverTrigger = PopoverPrimitive.Trigger;
 export const PopoverPortal = PopoverPrimitive.Portal;
-export const PopoverClose = PopoverPrimitive.Close;
 
 export interface PopoverContentProps extends ComponentPropsWithRef<typeof PopoverPrimitive.Popup> {
   align?: PopoverPrimitive.Positioner.Props["align"];

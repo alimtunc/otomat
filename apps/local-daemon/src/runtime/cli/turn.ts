@@ -56,7 +56,6 @@ export async function runCliTurn(
   const emitter = new TurnEmitter(sink, spec.adapter, spec.source, spec.ref);
   const mapper = spec.createMapper(emitter);
 
-  // The launch guarantees a worktree; this catches one deleted between launch and spawn.
   if (!existsSync(spec.cwd)) {
     const message = `worktree ${spec.cwd} does not exist`;
     emitter.daemonLog(message);
@@ -72,7 +71,6 @@ export async function runCliTurn(
       dispatch();
     } catch (error) {
       dispatchError ??= error instanceof Error ? error.message : String(error);
-      // The evidence pipeline is dead from the first throw; kill the child instead of letting it work on unrecorded.
       dispatchAbort.abort();
     }
   };
@@ -132,7 +130,6 @@ function finalStateFromExit(
       event_count: emitter.emitted,
     };
   }
-  // The process ended without a result frame: log the daemon's verdict so the failure is legible in the ledger, not just a bare `failed` status.
   const message = `${adapter} exited (${exit.signal ?? exit.code ?? "unknown"}) without reporting a result`;
   emitter.daemonLog(message);
   return failedState(message, outcome, emitter.emitted);

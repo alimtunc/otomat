@@ -20,11 +20,9 @@ export const modelIdSchema = z
 /** None of these is a claim about what the user's account may actually call. */
 export const MODEL_SOURCES = ["discovered", "static", "manual"] as const;
 export const modelSourceSchema = z.enum(MODEL_SOURCES);
-export type ModelSource = (typeof MODEL_SOURCES)[number];
 
 /** A catalog only ever lists provider-known entries; a typed identifier never joins it. */
 export const catalogModelSourceSchema = modelSourceSchema.exclude(["manual"]);
-export type CatalogModelSource = z.infer<typeof catalogModelSourceSchema>;
 
 export const runtimeModelSchema = z.object({
   id: modelIdSchema,

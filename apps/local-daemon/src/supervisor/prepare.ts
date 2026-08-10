@@ -96,7 +96,6 @@ function insertPlanRows(db: Db, runId: string, plan: RunPlan): void {
 /** A launched run always owns a worktree: every precondition refuses before any row is written. */
 export function prepareRun(state: SupervisorState, request: StartRunRequest): string {
   const { db } = state;
-  // Every effective config is resolved and validated before any row (issue included) is written.
   const defaultConfig = resolveAgentConfig(db, defaultConfigSelector(request), {
     model: request.model,
     effort: request.effort,
@@ -110,12 +109,10 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
   const runId = randomUUID();
   const branch = runBranchName(runId);
   const plan = freezePlan(db, request, defaultConfig, prompt);
-  // Runtime availability is a cheap PATH probe; it answers before the repository is touched.
   for (const step of executableSteps(plan)) ensureRuntimeAgent(db, step.agent ?? defaultRuntime);
   ensureRuntimeAgent(db, defaultRuntime);
   const { projectId, binding, baseRef } = resolveLaunchTarget(state, request, existingIssue);
 
-  // Acquired before the run's rows exist so a git failure aborts the launch cleanly (no phantom run).
   const worktree = acquireRunWorktree(binding.service, { owner: runId, branch, baseRef });
 
   try {
@@ -137,7 +134,6 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
       { behavior: "immediate" },
     );
   } catch (error) {
-    // The rows never landed — roll back the worktree acquired above so no orphan dir/branch leaks.
     try {
       binding.service.cleanup(runId);
     } catch (cleanupError) {

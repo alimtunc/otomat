@@ -28,7 +28,6 @@ export function ConversationSection({ runId }: { runId: string }) {
   }
 
   return (
-    // The workspace column scrolls as a whole, so the thread is capped here rather than filling.
     <div className="flex max-h-150 flex-col">
       <ConversationThread
         detail={detail.data}

@@ -57,7 +57,6 @@ export function sandboxRepoScript(homeSuffix: string, files: SandboxTemplateFile
     `  echo "${TOKEN_PREFIX}NO_GIT:-"`,
     "  exit 0",
     "fi",
-    // A creation killed between init and commit would otherwise fail registration on every connect.
     'rm -rf "$DIR"',
     'mkdir -p "$DIR"',
     'LOG="$(mktemp)"',

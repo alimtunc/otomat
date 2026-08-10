@@ -43,7 +43,6 @@ export function resolveAppPaths(): AppPaths {
     };
   }
 
-  // Dev: main lives at <repo>/apps/desktop/dist/main.
   const repoRoot = resolve(MAIN_DIR, "..", "..", "..", "..");
   return {
     packaged: false,

@@ -5,7 +5,8 @@ import { basename, dirname, join } from "node:path";
 import { runMigrations } from "../migrate.js";
 import { isUuidV4ArtifactName } from "./artifact-names.js";
 import { publishNewPathDurably } from "./durable-publication.js";
-import { collectCleanupFailure, DataSafetyError, preserveDataSafetyFailure } from "./errors.js";
+import { DataSafetyError } from "./errors.js";
+import { collectCleanupFailure, preserveDataSafetyFailure } from "./failures.js";
 import {
   finalizePortableDatabase,
   removeDatabaseArtifacts,

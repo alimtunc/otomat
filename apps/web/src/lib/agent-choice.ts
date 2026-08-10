@@ -5,7 +5,6 @@ import type {
 } from "@otomat/domain";
 import { isAvailableRuntime, resolveRuntimeChoice, runtimeById } from "@web/lib/runtimes";
 
-// A launch selection is encoded as a single string: a saved profile or an ad-hoc runtime; `null` means "inherit the run default" for a per-node selection.
 const PROFILE_PREFIX = "profile:";
 const RUNTIME_PREFIX = "runtime:";
 

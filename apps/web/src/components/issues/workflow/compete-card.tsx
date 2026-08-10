@@ -4,12 +4,12 @@ import type { LaunchAgentChoice } from "@web/components/runs/launch/use-launch-a
 import type { ResolvedEffort } from "@web/lib/effort-choice";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { workflowExecutableCount, type WorkflowNodeDraft } from "@web/lib/workflow-draft";
+import { addWorkflowCompetitor } from "@web/lib/workflow/competitors";
 import {
-  addWorkflowCompetitor,
   moveWorkflowStep,
   removeWorkflowStep,
   toggleWorkflowDependency,
-} from "@web/lib/workflow-plan";
+} from "@web/lib/workflow/steps";
 
 import { WorkflowCompetitorCard } from "./competitor-card";
 import { DependencyToggles } from "./dependency-toggles";

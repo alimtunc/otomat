@@ -24,7 +24,7 @@ export function connectedLinear(): ConnectedLinear {
   };
 }
 
-export function stubLinearWriteback(overrides: Partial<LinearWriteback> = {}): LinearWriteback {
+function stubLinearWriteback(overrides: Partial<LinearWriteback> = {}): LinearWriteback {
   return {
     writebackState: () => ({ draft: null, writes: [] }),
     editorState: async () => {

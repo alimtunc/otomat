@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const pageInfoSchema = z.object({
+const pageInfoSchema = z.object({
   hasNextPage: z.boolean(),
   endCursor: z.string().nullable(),
 });

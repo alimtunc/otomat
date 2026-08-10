@@ -6,7 +6,8 @@ import { DATABASE_INITIALIZED_MARKER_SUFFIX } from "@otomat/domain";
 
 import { isUuidV4ArtifactName } from "./artifact-names.js";
 import { publishPathDurably } from "./durable-publication.js";
-import { collectCleanupFailure, DataSafetyError, preserveDataSafetyFailure } from "./errors.js";
+import { DataSafetyError } from "./errors.js";
+import { collectCleanupFailure, preserveDataSafetyFailure } from "./failures.js";
 import { removeOrphanedDatabaseArtifacts } from "./portable-database.js";
 
 export function databaseMarkerPath(dbPath: string): string {

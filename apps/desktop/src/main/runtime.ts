@@ -69,8 +69,6 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     ...(options.expectedBuild === null ? {} : { buildSha: options.expectedBuild }),
     writeLog: (stream, text) => daemonLog.write(`[${stream}] ${text}`),
   });
-  // Each channel targets its own daemon on the host: previews an instance per build, the local
-  // package `~/.otomat/local`, the stable app `~/.otomat`.
   const deployment = deploymentForChannel(options.channel, options.expectedBuild);
   const sandbox = new PreviewSandbox({
     enabled: options.channel === "preview",
@@ -86,7 +84,6 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     log: (message) => desktopLog.write(message),
     localDaemonUrl: options.localDaemonUrl,
     onRemoteStatus: options.onRemoteStatus,
-    // A preview's instance gets the same test bed as its local sandbox, once its tunnel is up.
     onRemoteConnected: (alias, url) => void sandbox.ensureRemote(alias, url),
     applyRendererUrl: options.applyRendererUrl,
     expectedBuild: options.expectedBuild,

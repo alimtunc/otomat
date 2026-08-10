@@ -35,7 +35,6 @@ class PullRequestPublisher implements PullRequestPublicationService {
   async get(runId: string): Promise<PullRequestView | null> {
     const stored = getPullRequestForRun(this.config.db, runId);
     if (!stored) return null;
-    // A publication in flight is already talking to GitHub; this read must not race its push.
     if (this.publications.has(runId)) return this.store.view(stored);
     return this.store.view(await this.refreshLifecycle(this.store.recoverInterrupted(stored)));
   }
@@ -85,7 +84,6 @@ class PullRequestPublisher implements PullRequestPublicationService {
     row: PullRequestRow,
     context: PublicationContext,
   ): Promise<PushedSnapshot> {
-    // An existing PR's head is its identity; only a first publish may pick a nicer remote name.
     const head =
       row.number !== null
         ? (row.head_ref ?? context.worktree.branch)
@@ -96,7 +94,6 @@ class PullRequestPublisher implements PullRequestPublicationService {
       {
         title: context.request.title,
         body: context.request.normalizedBody,
-        // Persisted before the push so a retry after a failed create targets the same branch.
         head_ref: head,
         error_code: null,
         error_message: null,
@@ -104,7 +101,6 @@ class PullRequestPublisher implements PullRequestPublicationService {
       "git",
     );
     const snapshot = context.worktrees.snapshot(context.run.id);
-    // Re-read after snapshot(): the commit moves the tree, and this diff is the published anchor.
     const diff = context.worktrees.diff(context.run.id);
     await this.config.cli.push(context.worktree.path, context.remote.name, head);
     return {
@@ -123,7 +119,6 @@ class PullRequestPublisher implements PullRequestPublicationService {
   /** The branch the run forked from is the only base its reviewed diff matches. */
   private requireBaseBranch(worktree: WorktreeRecord): string {
     if (worktree.baseRef) return worktree.baseRef;
-    // Worktrees recorded before fork refs were tracked carry no base ref.
     const repository = getRepository(this.config.db, worktree.repositoryId);
     if (!repository) {
       throw new GitHubPublicationError(

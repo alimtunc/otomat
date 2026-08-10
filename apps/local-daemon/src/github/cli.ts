@@ -1,17 +1,16 @@
 import type { GitHubConnectionContract } from "@otomat/domain";
 import { z } from "zod";
 
+import { cliAvailability } from "./availability.js";
 import {
   assertCommandSucceeded,
   assertPublicationSucceeded,
+  commandSucceeded,
   createPullRequestWithRetry,
   defaultSleep,
 } from "./cli-commands.js";
 import {
   authStatusFailed,
-  connectionProblem,
-  MINIMUM_GH_VERSION,
-  outdatedGhVersion,
   parseAuthStatus,
   parseGitHubRemoteUrl,
   parsePullRequestJson,
@@ -31,29 +30,6 @@ import type {
   PullRequestUpdateInput,
 } from "./types.js";
 
-async function cliAvailability(run: CommandRunner): Promise<GitHubConnectionContract | null> {
-  const version = await run({ command: "gh", args: ["--version"], cwd: process.cwd() });
-  if (version.errorCode === "ENOENT") {
-    return connectionProblem(
-      "not_installed",
-      "github_cli_missing",
-      "Install GitHub CLI to connect Otomat to GitHub.",
-    );
-  }
-  if (version.exitCode !== 0 || version.errorCode) {
-    return connectionProblem("failed", "github_cli_failed", "GitHub CLI could not be started.");
-  }
-  const outdated = outdatedGhVersion(version.stdout);
-  if (outdated) {
-    return connectionProblem(
-      "cli_outdated",
-      "github_cli_outdated",
-      `GitHub CLI ${outdated} is too old; Otomat needs ${MINIMUM_GH_VERSION} or newer.`,
-    );
-  }
-  return null;
-}
-
 class CommandGitHubCli implements GitHubCli {
   constructor(
     private readonly run: CommandRunner,
@@ -64,13 +40,14 @@ class CommandGitHubCli implements GitHubCli {
     return cliAvailability(this.run);
   }
 
+  /** True unless GitHub definitively answered 404: an unreachable or refused lookup errs on the branch existing. */
   async remoteBranchExists(cwd: string, repository: string, branch: string): Promise<boolean> {
     const result = await this.run({
       command: "gh",
       args: ["api", `repos/${repository}/branches/${encodeURIComponent(branch)}`],
       cwd,
     });
-    if (result.exitCode === 0 && !result.errorCode) return true;
+    if (commandSucceeded(result)) return true;
     return !result.stderr.includes("HTTP 404");
   }
 
@@ -82,9 +59,7 @@ class CommandGitHubCli implements GitHubCli {
       args: ["auth", "status", "--hostname", "github.com", "--json", "hosts"],
       cwd: process.cwd(),
     });
-    return metadata.exitCode !== 0 || metadata.errorCode
-      ? authStatusFailed()
-      : parseAuthStatus(metadata.stdout);
+    return commandSucceeded(metadata) ? parseAuthStatus(metadata.stdout) : authStatusFailed();
   }
 
   async loginWithToken(token: string): Promise<GitHubConnectionContract> {
@@ -121,7 +96,7 @@ class CommandGitHubCli implements GitHubCli {
         args: ["remote", "get-url", "--push", name],
         cwd,
       });
-      if (remoteResult.exitCode !== 0 || remoteResult.errorCode) continue;
+      if (!commandSucceeded(remoteResult)) continue;
       const parsed = parseGitHubRemoteUrl(remoteResult.stdout.trim());
       if (parsed) candidates.push({ name, repository: parsed.repository });
     }

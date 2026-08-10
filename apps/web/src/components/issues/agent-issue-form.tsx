@@ -1,6 +1,6 @@
 import type { ModelSelection, RunContract } from "@otomat/domain";
 import { Button, DialogBody, Kbd, Textarea } from "@otomat/ui";
-import { useLaunchRun } from "@web/api/runs/mutations";
+import { useLaunchRun } from "@web/api/runs/use-launch-run";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { LaunchAgentModelFields } from "@web/components/runs/launch/launch-agent-model-fields";
 import { LaunchTargetFields } from "@web/components/runs/launch/launch-target-fields";

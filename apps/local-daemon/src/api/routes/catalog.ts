@@ -31,14 +31,12 @@ export function createCatalogRoutes(deps: ApiDeps): Hono {
 
   routes.get("/runtimes", (c) => c.json(listRuntimeDescriptors()));
 
-  // Probes the installed provider binary, so it stays out of the runtime list every surface polls.
   routes.get("/runtimes/:id/models", (c) => {
     const id = c.req.param("id");
     const runtime = listedRuntime(id);
     return runtime === null ? unknownRuntime(c, id) : c.json(describeRuntimeModelCatalog(runtime));
   });
 
-  // Feature-detected from the installed binary, and model-scoped: Codex publishes reasoning levels per model.
   routes.get("/runtimes/:id/options", (c) => {
     const id = c.req.param("id");
     const runtime = listedRuntime(id);

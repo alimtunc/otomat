@@ -26,7 +26,6 @@ export function ConversationComposer({
       try {
         await contribute.mutateAsync({ body: value.body.trim() });
       } catch {
-        // The mutation's onError toast reports it; the draft stays for retry.
         return;
       }
       form.reset();

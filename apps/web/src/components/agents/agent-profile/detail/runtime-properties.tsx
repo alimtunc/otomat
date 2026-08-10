@@ -36,7 +36,6 @@ export function RuntimeProperties({
     },
   ];
 
-  // Same descriptors as the editor, so the two surfaces never disagree about what is effective.
   for (const option of detected.data?.options ?? []) {
     items.push({
       key: option.key,

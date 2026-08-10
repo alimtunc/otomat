@@ -10,7 +10,6 @@ export const agents = sqliteTable("agents", {
   ...timestamps,
 });
 
-// Profiles are user-authored; runs freeze their launch snapshot into plan_json.
 export const agentProfiles = sqliteTable("agent_profiles", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -23,7 +22,6 @@ export const agentProfiles = sqliteTable("agent_profiles", {
   ...timestamps,
 });
 
-// Discovery deduplicates on realpath; skill content is declarative and never executed here.
 export const skills = sqliteTable(
   "skills",
   {

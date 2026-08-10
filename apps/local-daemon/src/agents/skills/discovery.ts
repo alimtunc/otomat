@@ -75,8 +75,6 @@ function discoverInRoot(root: SkillRoot): SkillDiscovery[] {
   }
   const found: SkillDiscovery[] = [];
   for (const name of names) {
-    // A directory entry is a skill only when `<name>/SKILL.md` resolves; realpath also
-    // canonicalizes symlinks and rejects missing paths, so non-dirs fall through here.
     const canonicalPath = tryRealpath(join(canonicalRoot, name, SKILL_FILENAME));
     if (canonicalPath === null) continue;
     found.push(describeSkill(root.source, name, canonicalPath));

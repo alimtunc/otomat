@@ -51,9 +51,7 @@ export async function runWorkerJob(
 ): Promise<RuntimeFinalState> {
   const adapter = createRuntimeAdapter(job.runtime);
   const options = job.config?.options;
-  // The plan's frozen model, not the live profile: a resume sends exactly what the initial turn did.
   const model = job.config?.model?.id ?? null;
-  // The worker owns durability: every event lands in the run's events.jsonl for the tailer/reconciliation.
   const sink = new JsonlEventSink(join(job.agentSessionDir, EVENTS_FILENAME));
   try {
     if (job.mode === "resume") {
@@ -66,7 +64,6 @@ export async function runWorkerJob(
           event_count: 0,
         };
       }
-      // The resumed provider session already carries the frozen guidance/skills, so only options apply here.
       return await adapter.resume(
         {
           run_id: job.runId,

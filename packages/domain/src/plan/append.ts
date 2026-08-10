@@ -1,6 +1,7 @@
 import type { RunPlan, RunPlanStep } from "../contracts/entities/runs.js";
+import { InvalidRunPlanError } from "./execution-order.js";
 import { RUN_PLAN_MAX_STEPS } from "./limits.js";
-import { executableSteps, InvalidRunPlanError } from "./schedule.js";
+import { executableSteps } from "./schedule.js";
 
 /**
  * The one legal revision of a launched plan: append a frozen step. Existing

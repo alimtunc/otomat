@@ -58,7 +58,6 @@ export function backupDatabaseScript(deployment: RemoteDeployment): string {
     "    exit 0",
     "  fi",
     "done",
-    // The copy has to survive a crash between here and the swap that follows it.
     "sync",
     `echo "${BACKUP_PREFIX}BACKED_UP:$DEST"`,
     "",
@@ -102,7 +101,6 @@ export function rollbackDaemonScript(deployment: RemoteDeployment): string {
     'rm -rf "$OTOMAT_HOME/daemon.failed"',
     'if [ -d "$OTOMAT_HOME/daemon" ]; then mv "$OTOMAT_HOME/daemon" "$OTOMAT_HOME/daemon.failed"; fi',
     'if ! ERR="$(mv "$OTOMAT_HOME/daemon.prev" "$OTOMAT_HOME/daemon" 2>&1)"; then',
-    // The failed bundle goes back rather than leaving the deployment with no daemon at all.
     '  if [ -d "$OTOMAT_HOME/daemon.failed" ]; then mv "$OTOMAT_HOME/daemon.failed" "$OTOMAT_HOME/daemon"; fi',
     `  echo "${ROLLBACK_PREFIX}FAILED:$(printf '%s' "$ERR" | tr '\\n' ' ' | cut -c1-160)"`,
     "  exit 0",

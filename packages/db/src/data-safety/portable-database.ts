@@ -2,16 +2,16 @@ import { lstatSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 import { createClient } from "../client.js";
+import { DataSafetyError, type DataSafetyErrorCode } from "./errors.js";
 import {
   collectCleanupFailure,
-  DataSafetyError,
   isSqliteContentError,
-  type DataSafetyErrorCode,
   preserveClassifiedFailure,
   throwIfUnclassifiedFailure,
-} from "./errors.js";
+} from "./failures.js";
 import { assertDatabaseIntegrity } from "./integrity.js";
-import { inspectMigrationHistory, throwIfMigrationRuntimeFailure } from "./metadata.js";
+import { inspectMigrationHistory } from "./metadata.js";
+import { throwIfMigrationRuntimeFailure } from "./migration-runtime-error.js";
 
 function removePaths(paths: string[]): void {
   const failures: unknown[] = [];

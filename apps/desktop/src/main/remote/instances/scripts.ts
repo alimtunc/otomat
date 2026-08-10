@@ -30,7 +30,6 @@ export function deployDaemonScript(options: DeployDaemonScriptOptions): string {
     "fi",
     'TMP="$(mktemp -d)"',
     "trap 'rm -rf \"$TMP\"' EXIT",
-    // A failing lookup (gh unauthenticated, host offline) must not read as "artifact expired".
     `if ! ID="$(gh api "repos/${options.repo}/actions/artifacts?name=$NAME&per_page=1" --jq '.artifacts[0].id' 2>"$TMP/err")"; then`,
     `  echo "${DEPLOY_PREFIX}DOWNLOAD_FAILED:$(tail -c 160 "$TMP/err" | tr '\\n' ' ')"`,
     "  exit 0",
@@ -54,7 +53,6 @@ export function deployDaemonScript(options: DeployDaemonScriptOptions): string {
     "fi",
     'mkdir -p "$OTOMAT_HOME"',
     'rm -rf "$OTOMAT_HOME/daemon.next" "$OTOMAT_HOME/daemon.prev" "$OTOMAT_HOME/daemon.failed"',
-    // Guarded swap: an unguarded mv chain would report DEPLOYED after destroying the only daemon.
     `if ! mv "$TMP/x/daemon" "$OTOMAT_HOME/daemon.next" 2>"$TMP/err"; then`,
     `  echo "${DEPLOY_PREFIX}EXTRACT_FAILED:$(tail -c 160 "$TMP/err" | tr '\\n' ' ')"`,
     "  exit 0",
@@ -65,8 +63,6 @@ export function deployDaemonScript(options: DeployDaemonScriptOptions): string {
     `  echo "${DEPLOY_PREFIX}EXTRACT_FAILED:$(tail -c 160 "$TMP/err" | tr '\\n' ' ')"`,
     "  exit 0",
     "fi",
-    // `daemon.prev` stays: it is what an upgrade rolls back to when the new one does not boot.
-    // The next deploy clears it, so at most one displaced bundle is ever kept.
     `echo "${DEPLOY_PREFIX}DEPLOYED:${options.build}"`,
     "",
   ].join("\n");
@@ -127,7 +123,6 @@ export function listInstancesScript(): string {
     '    KEY="$(basename "$dir")"',
     '    PID="$(cat "$dir/daemon.pid" 2>/dev/null || true)"',
     "    RUNNING=no",
-    // The pid must still be this instance's daemon, never a recycled pid or another instance.
     '    if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null && grep -aqF "$dir" "/proc/$PID/cmdline" 2>/dev/null; then RUNNING=yes; fi',
     '    SIZE="$(du -sk "$dir" 2>/dev/null | cut -f1)"',
     `    echo "${INSTANCE_PREFIX}\${KEY}:\${RUNNING}:\${SIZE:-0}"`,

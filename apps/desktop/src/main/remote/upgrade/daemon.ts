@@ -59,7 +59,6 @@ export async function upgradeRemoteDaemon(
   try {
     return await swapBundle(options);
   } catch (error) {
-    // A round trip that threw may have left the daemon stopped; bring one back before reporting.
     const phase = await reconnect(options);
     return {
       ok: false,
@@ -105,11 +104,9 @@ async function swapBundle(
 ): Promise<ExecutionHostOperationResult> {
   const stopped = await options.runScript({
     alias: options.alias,
-    // One round trip: the backup is only consistent once the daemon that writes it is down.
     script: `${stopDaemonScript(options.deployment)}${backupDatabaseScript(options.deployment)}`,
     timeoutMs: SCRIPT_TIMEOUT_MS,
   });
-  // Nothing was swapped yet, so the daemon the session still points at is the one to bring back.
   if (stopped.code !== 0) return restart(options, scriptFailure(stopped));
   const backup = parseBackupOutput(stopped.stdout);
   if (backup === null) {

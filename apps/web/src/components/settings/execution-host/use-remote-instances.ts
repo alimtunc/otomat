@@ -28,7 +28,6 @@ export function useRemoteInstances(sshAlias: string | null): UseRemoteInstancesR
   const available = bridge !== null && sshAlias !== null;
 
   const query = useQuery({
-    // Keyed by alias so switching hosts drops the previous host's listing instead of showing it.
     queryKey: ["remote-instances", sshAlias],
     enabled: available,
     queryFn: async () => {

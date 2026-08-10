@@ -3,7 +3,6 @@ import type { ComponentPropsWithRef } from "react";
 
 import { cn } from "../lib/utils";
 
-export const TooltipProvider = TooltipPrimitive.Provider;
 export const Tooltip = TooltipPrimitive.Root;
 export const TooltipTrigger = TooltipPrimitive.Trigger;
 export const TooltipPortal = TooltipPrimitive.Portal;

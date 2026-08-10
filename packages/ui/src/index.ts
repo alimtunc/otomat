@@ -44,58 +44,16 @@ export { Checkbox, type CheckboxProps } from "./primitives/checkbox";
 export { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "./primitives/collapsible";
 
 export {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxItemIndicator,
-  ComboboxList,
-  ComboboxTrigger,
-  ComboboxValue,
-  type ComboboxContentProps,
-  type ComboboxEmptyProps,
-  type ComboboxInputProps,
-  type ComboboxItemProps,
-  type ComboboxListProps,
-} from "./primitives/combobox";
-
-export {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandItemId,
-  CommandItemRight,
-  CommandList,
-  CommandSeparator,
-  type CommandEmptyProps,
-  type CommandGroupProps,
-  type CommandInputProps,
-  type CommandItemIdProps,
-  type CommandItemProps,
-  type CommandItemRightProps,
-  type CommandListProps,
-  type CommandProps,
-  type CommandSeparatorProps,
-} from "./primitives/command";
-
-export {
   Dialog,
   DialogBody,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogOverlay,
-  DialogPortal,
   DialogTitle,
   DialogTrigger,
   type DialogContentProps,
   type DialogDescriptionProps,
-  type DialogOverlayProps,
   type DialogSectionProps,
   type DialogTitleProps,
 } from "./primitives/dialog";
@@ -104,17 +62,12 @@ export {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuPortal,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
   type DropdownMenuCheckboxItemProps,
   type DropdownMenuContentProps,
@@ -123,27 +76,16 @@ export {
   type DropdownMenuRadioItemProps,
   type DropdownMenuSeparatorProps,
   type DropdownMenuShortcutProps,
-  type DropdownMenuSubContentProps,
-  type DropdownMenuSubTriggerProps,
 } from "./primitives/dropdown-menu";
 
 export { Input, type InputProps } from "./primitives/input";
 
 export {
   Popover,
-  PopoverClose,
   PopoverContent,
-  PopoverPortal,
   PopoverTrigger,
   type PopoverContentProps,
 } from "./primitives/popover";
-
-export {
-  ScrollArea,
-  ScrollBar,
-  type ScrollAreaProps,
-  type ScrollBarProps,
-} from "./primitives/scroll-area";
 
 export {
   Select,
@@ -151,13 +93,11 @@ export {
   SelectGroup,
   SelectItem,
   SelectLabel,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
   type SelectContentProps,
   type SelectItemProps,
   type SelectLabelProps,
-  type SelectSeparatorProps,
   type SelectTriggerProps,
 } from "./primitives/select";
 
@@ -182,7 +122,6 @@ export {
   Tooltip,
   TooltipContent,
   TooltipPortal,
-  TooltipProvider,
   TooltipTrigger,
   type TooltipContentProps,
 } from "./primitives/tooltip";
@@ -261,13 +200,9 @@ export { MetaList, type MetaListItem, type MetaListProps } from "./components/me
 
 export { NavSection, type NavSectionProps } from "./components/nav-section";
 
-export { OfflineBanner, type OfflineBannerProps } from "./components/offline-banner";
-
 export { Pill, PillTabs, type PillProps, type PillTabsProps } from "./components/pill-tabs";
 
 export { ProjectSwitcher, type ProjectSwitcherProps } from "./components/project-switcher";
-
-export { ReconnectingBar, type ReconnectingBarProps } from "./components/reconnecting-bar";
 
 export { RelativeTime, type RelativeTimeProps } from "./components/relative-time";
 

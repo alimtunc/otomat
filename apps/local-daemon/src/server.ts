@@ -29,33 +29,17 @@ import { createReviewService } from "#review";
 import { createReexecSpawn, createSupervisor } from "#supervisor";
 
 import { ensureDefaultProject, ensureDefaultRepository } from "./bootstrap.js";
+import {
+  DAEMON_NAME,
+  DAEMON_VERSION,
+  daemonBuild,
+  type CloseOptions,
+  type DaemonHandle,
+  type StartDaemonOptions,
+} from "./server-contract.js";
 
-export const DAEMON_NAME = "otomat-local-daemon";
-export const DAEMON_VERSION = "0.1.0";
-
-// The dist bundle bakes the git commit in at build time (tsdown define); a
-// source run reads the env the desktop shell injects, and reports null when
-// neither is present.
-function daemonBuild(): string | null {
-  const sha = process.env.OTOMAT_BUILD_SHA;
-  return sha === undefined || sha === "" ? null : sha;
-}
-
-export interface StartDaemonOptions {
-  port?: number;
-  dbPath?: string;
-}
-
-export interface CloseOptions {
-  /** SIGTERM then (after this many ms) SIGKILL every in-flight worker before settling, so shutdown never blocks on a live run. Omitted → wait for runs to settle themselves. */
-  terminateInFlightMs?: number;
-}
-
-export interface DaemonHandle {
-  port: number;
-  /** Rejects with every shutdown failure preserved. */
-  close(options?: CloseOptions): Promise<void>;
-}
+export { DAEMON_NAME, DAEMON_VERSION } from "./server-contract.js";
+export type { CloseOptions, DaemonHandle, StartDaemonOptions } from "./server-contract.js";
 
 function daemonStartupCleanupFailure(operation: unknown, cleanup: unknown): Error {
   return new Error("Daemon startup failed and its SQLite handle could not be closed.", {
@@ -68,7 +52,6 @@ function daemonStartupCleanupFailure(operation: unknown, cleanup: unknown): Erro
 
 /** The daemon is the single writer: it migrates, bootstraps the project, reconciles crashed runs, then owns the supervisor. */
 export async function startDaemon(options: StartDaemonOptions = {}): Promise<DaemonHandle> {
-  // Remove the key before supervised workers can inherit it.
   const developmentLinearKey = takeLinearKeyFromEnv();
   const dbPath = options.dbPath ?? defaultDbPath();
   await prepareDatabase(dbPath);

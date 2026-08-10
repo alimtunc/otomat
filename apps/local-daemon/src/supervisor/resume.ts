@@ -97,7 +97,6 @@ export function resolveResumeTurn(state: SupervisorState, run: RunRow, prompt: s
   if (worktreePath === undefined) {
     throw new RunNotResumableError(`run ${runId} worktree is unavailable`);
   }
-  // Resume uses the config frozen for this session's step — never the live profile.
   const config =
     executableSteps(run.plan_json).find((step) => step.id === session.step_run_id)?.config ?? null;
 

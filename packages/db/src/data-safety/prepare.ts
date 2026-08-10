@@ -5,8 +5,9 @@ import { MANAGED_BACKUPS_DIRECTORY_NAME } from "@otomat/domain";
 
 import { runPendingMigrations } from "../migrate.js";
 import { createConsistentBackup } from "./backup.js";
-import { DataSafetyError, inspectPathAfterFailure } from "./errors.js";
+import { DataSafetyError } from "./errors.js";
 import { inspectExistingDatabase } from "./existing-database.js";
+import { inspectPathAfterFailure } from "./failures.js";
 import { cleanupInterruptedInitializations, initializeDatabase } from "./initialize.js";
 import {
   databaseMarkerExists,

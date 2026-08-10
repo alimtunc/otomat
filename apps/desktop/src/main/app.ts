@@ -55,7 +55,6 @@ export class DesktopApp {
     this.userPath = resolveUserPath({ platform: process.platform, env: process.env });
     process.env.PATH = this.userPath;
     this.userData = app.getPath("userData");
-    // The sandbox is a preview's test bed; no other channel ever seeds fixtures.
     this.ipcState = {
       daemonUrl: "",
       preview: buildInfo.channel === "preview",
@@ -118,9 +117,11 @@ export class DesktopApp {
         this.isQuitting = false;
         done();
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         this.isQuitting = false;
-        this.log.write("Daemon stop failed; desktop shutdown remains blocked for retry.");
+        this.log.write(
+          `Daemon stop failed during quit: ${String(error)}; desktop shutdown remains blocked for retry.`,
+        );
       });
     return true;
   }
@@ -139,7 +140,6 @@ export class DesktopApp {
         localDaemonUrl: () => this.localDaemonUrl,
         onRemoteStatus: (status) => {
           this.sendToCockpit(EXECUTION_HOST_STATUS_CHANNEL, status);
-          // A host that just answered may lack the Linear key, or still hold a revoked one.
           if (status.phase === "connected") void this.runtime?.linear.reconcile();
         },
         onLinearDelivery: (delivery) =>
@@ -148,7 +148,6 @@ export class DesktopApp {
         onSandboxDaemonStarted: (url) => {
           this.localDaemonUrl = url;
           void this.runtime?.linear.reconcile();
-          // An active remote session keeps the tunnel URL; only the local view re-points.
           if (this.runtime?.hosts.activeHostId !== "remote") this.ipcState.daemonUrl = url;
         },
       });
@@ -157,7 +156,6 @@ export class DesktopApp {
       await this.runtime.sandbox.ensure(this.localDaemonUrl);
       const remoteUrl = await this.runtime.hosts.bootActivate();
       if (remoteUrl !== null) this.ipcState.daemonUrl = remoteUrl;
-      // Resolving Linear targets warms the remote session, so it must not precede bootActivate's port reservation.
       await this.runtime.linear.reconcile();
       this.rejectedBackupPaths.clear();
       this.diagnostic = null;

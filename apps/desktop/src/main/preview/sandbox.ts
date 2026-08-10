@@ -71,7 +71,6 @@ export class PreviewSandbox {
     const pending = this.remote;
     if (pending !== null && pending.alias === alias) return pending.done;
     const done = this.ensureRemoteNow(alias, daemonUrl).catch((error: unknown) => {
-      // Cleared so the next connect retries: a host that was still booting must not stay unseeded.
       if (this.remote?.alias === alias) this.remote = null;
       this.deps.log(`Remote sandbox setup failed: ${String(error)}`);
     });
@@ -98,7 +97,6 @@ export class PreviewSandbox {
     const seeded = await seedSandbox({
       daemonUrl,
       repoPath: outcome.path,
-      // The host already canonicalized the path; there is no local file to resolve.
       realpath: (path) => path,
       ...(this.deps.fetchImpl === undefined ? {} : { fetchImpl: this.deps.fetchImpl }),
     });
@@ -114,8 +112,6 @@ export class PreviewSandbox {
       return { ok: false, message: "Sandbox reset is only available in preview builds." };
     }
     if (this.resetting) return { ok: false, message: "A reset is already running." };
-    // No splash-phase operation can be in flight: the cockpit that triggers this only exists
-    // after startup finished, and a concurrent reset is refused above.
     this.resetting = true;
     let url: string | null = null;
     try {

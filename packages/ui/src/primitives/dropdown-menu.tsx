@@ -1,5 +1,5 @@
 import { Menu } from "@base-ui/react/menu";
-import { Check, ChevronRight, Circle } from "lucide-react";
+import { Check, Circle } from "lucide-react";
 import type { ComponentPropsWithRef, ReactNode } from "react";
 
 import { cn } from "../lib/utils";
@@ -13,9 +13,6 @@ import {
 
 export const DropdownMenu = Menu.Root;
 export const DropdownMenuTrigger = Menu.Trigger;
-export const DropdownMenuGroup = Menu.Group;
-export const DropdownMenuPortal = Menu.Portal;
-export const DropdownMenuSub = Menu.SubmenuRoot;
 export const DropdownMenuRadioGroup = Menu.RadioGroup;
 
 export type DropdownMenuContentProps = ComponentPropsWithRef<typeof Menu.Popup> & {
@@ -121,51 +118,4 @@ export type DropdownMenuShortcutProps = {
 
 export function DropdownMenuShortcut({ className, children }: DropdownMenuShortcutProps) {
   return <span className={cn(MENU_SHORTCUT_CLASS, className)}>{children}</span>;
-}
-
-export type DropdownMenuSubTriggerProps = ComponentPropsWithRef<typeof Menu.SubmenuTrigger> & {
-  inset?: boolean;
-};
-
-export function DropdownMenuSubTrigger({
-  className,
-  inset,
-  children,
-  ref,
-  ...props
-}: DropdownMenuSubTriggerProps) {
-  return (
-    <Menu.SubmenuTrigger
-      ref={ref}
-      className={cn(
-        itemClass,
-        "data-[popup-open]:bg-hover data-[popup-open]:text-foreground",
-        inset && "pl-7",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      <ChevronRight className="ml-auto" />
-    </Menu.SubmenuTrigger>
-  );
-}
-
-export type DropdownMenuSubContentProps = ComponentPropsWithRef<typeof Menu.Popup> & {
-  sideOffset?: number;
-};
-
-export function DropdownMenuSubContent({
-  className,
-  sideOffset = 6,
-  ref,
-  ...props
-}: DropdownMenuSubContentProps) {
-  return (
-    <Menu.Portal>
-      <Menu.Positioner sideOffset={sideOffset} style={{ zIndex: "var(--z-popover)" }}>
-        <Menu.Popup ref={ref} className={cn(contentClass, className)} {...props} />
-      </Menu.Positioner>
-    </Menu.Portal>
-  );
 }

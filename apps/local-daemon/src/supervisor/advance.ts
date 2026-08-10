@@ -1,33 +1,25 @@
-import { randomUUID } from "node:crypto";
-
 import {
   attachStepWorktree,
   getCompeteGroup,
   getRun,
-  insertAgentSession,
   listAgentSessionsForRun,
   listCompeteGroupsForRun,
   listStepRunsForRun,
   updateCompeteGroupBase,
   type RunRow,
 } from "@otomat/db";
-import {
-  agentSessionMachine,
-  readyPlanWork,
-  runMachine,
-  type RunPlanCompetitor,
-} from "@otomat/domain";
+import { readyPlanWork, runMachine, type RunPlanCompetitor } from "@otomat/domain";
 
-import { emitLedgerEvent, sessionDir } from "#events";
+import { emitLedgerEvent } from "#events";
 import type { WorktreeRecord } from "#git";
 
 import { repositoryInitCommands } from "./init-commands.js";
 import { spawnTurn } from "./lifecycle.js";
 import { buildTerminalMarker } from "./markers.js";
-import { ensureRuntimeAgent } from "./runtime-selection.js";
 import { competeGroupStatuses, stepStatuses } from "./settle/context.js";
 import { hasRunActivity, notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveCompeteGroupTo, driveIdleRunTo } from "./transitions.js";
+import { insertTurn, scheduleTurn } from "./turn-scheduling.js";
 import type { TurnContext } from "./types.js";
 
 /** Every turn runs in the run's own worktree; a missing one fails the step here, never at the provider. */
@@ -37,57 +29,6 @@ function canonicalWorktreePath(state: SupervisorState, run: RunRow): string {
     throw new Error(`run ${run.id} cannot continue without its worktree`);
   }
   return path;
-}
-
-function insertTurn(
-  state: SupervisorState,
-  run: RunRow,
-  step: RunPlanCompetitor,
-  worktreePath: string,
-): TurnContext {
-  if (step.agent === null || step.prompt === null) {
-    throw new Error(`run ${run.id} frozen plan step ${step.id} is missing its agent or prompt`);
-  }
-  const runtime = ensureRuntimeAgent(state.db, step.agent);
-  const agentSessionId = randomUUID();
-  insertAgentSession(state.db, {
-    id: agentSessionId,
-    step_run_id: step.id,
-    agent_id: runtime,
-    status: agentSessionMachine.initial,
-  });
-  return {
-    runId: run.id,
-    stepRunId: step.id,
-    agentSessionId,
-    prompt: step.prompt,
-    agentSessionDir: sessionDir(state.dataDir, run.id, agentSessionId),
-    worktreePath,
-    runtime,
-    config: step.config ?? null,
-  };
-}
-
-export function scheduleTurn(
-  state: SupervisorState,
-  ctx: TurnContext,
-  mode: "run" | "resume" = "run",
-  providerSessionId: string | null = null,
-): Promise<void> {
-  let pending: Promise<void>;
-  pending = spawnTurn(state, ctx, mode, providerSessionId)
-    .then(
-      () => undefined,
-      (error: unknown) => {
-        console.error(
-          `[otomat] run ${ctx.runId} competitor ${ctx.stepRunId} failed to start`,
-          error,
-        );
-      },
-    )
-    .finally(() => state.pending.delete(pending));
-  state.pending.add(pending);
-  return pending;
 }
 
 async function startCompeteGroup(
@@ -109,10 +50,7 @@ async function startCompeteGroup(
     updateCompeteGroupBase(state.db, group.id, binding.service.snapshot(run.id).headSha);
   }
 
-  // Candidates fork from tracked files only, so each fresh worktree re-runs the repository's init commands before its agent starts.
   const initCommands = repositoryInitCommands(state.db, run.repository_id);
-  // Sessions are written only once every worktree exists, and atomically: a live session
-  // on a failed group is a state boot reconciliation cannot settle legally.
   const acquired: { competitor: RunPlanCompetitor; worktree: WorktreeRecord }[] = [];
   let contexts: TurnContext[];
   try {

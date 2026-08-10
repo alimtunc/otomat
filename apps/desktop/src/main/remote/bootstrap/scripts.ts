@@ -40,7 +40,6 @@ export function deploymentForChannel(
   build: string | null,
 ): RemoteDeployment {
   switch (channel) {
-    // A checkout drives the host's real daemon: that is how the deployment itself is exercised.
     case "dev":
     case "stable":
       return STABLE_DEPLOYMENT;
@@ -77,7 +76,6 @@ export function startOrVerifyDaemonScript(deployment: RemoteDeployment): string 
     'PID_FILE="$OTOMAT_HOME/daemon.pid"',
     'mkdir -p "$OTOMAT_HOME/data"',
     'PID="$(cat "$PID_FILE" 2>/dev/null || true)"',
-    // The pid must still be the daemon: after a reboot or crash the pidfile can name a recycled pid, which would otherwise block the restart forever.
     'if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null && grep -aqF "$ENTRY" "/proc/$PID/cmdline" 2>/dev/null; then',
     `  echo "${TOKEN_PREFIX}RUNNING:$PID"`,
     "  exit 0",

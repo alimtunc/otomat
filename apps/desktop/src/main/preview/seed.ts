@@ -65,7 +65,6 @@ async function reconcile(
   options: SeedSandboxOptions,
   fetchImpl: typeof fetch,
 ): Promise<SeedSandboxResult> {
-  // The daemon canonicalizes registered roots, so compare realpath to realpath.
   const rootPath = (options.realpath ?? realpathSync)(options.repoPath);
   const projects = recordsOf(await getJson(fetchImpl, `${options.daemonUrl}/api/projects`));
   const project = projects.find((entry) => entry.root_path === rootPath);

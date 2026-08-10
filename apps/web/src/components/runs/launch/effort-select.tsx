@@ -57,7 +57,6 @@ export function EffortSelect({
 }: EffortSelectProps) {
   const detected = useRuntimeProviderOptions(runtimeId, modelId);
   const descriptor = effortOptionDescriptor(detected.data?.options ?? []);
-  // Before the daemon answers, a level it has not listed yet is not a level it dropped.
   const items = effortChoiceItems(descriptor, value, {
     offerRun,
     answered: detected.data !== undefined,

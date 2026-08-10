@@ -1,7 +1,7 @@
 import { closeSync, constants, fsyncSync, linkSync, openSync, renameSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 
-import { collectCleanupFailure, throwCollectedFailures } from "./errors.js";
+import { collectCleanupFailure, throwCollectedFailures } from "./failures.js";
 
 function durablePublicationFailure(
   synchronizationFailure: unknown,

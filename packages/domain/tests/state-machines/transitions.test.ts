@@ -14,6 +14,7 @@ import {
   RUN_TERMINAL_STATES,
   RUN_WORKING_STATES,
   canFollowUpRun,
+  isRunBusy,
   isRunTerminal,
   isRunWorking,
   runMachine,
@@ -197,5 +198,17 @@ describe("RUN_WORKING_STATES", () => {
   it("excludes every resting and terminal state", () => {
     for (const status of RUN_FOLLOW_UP_STATES) expect(isRunWorking(status)).toBe(false);
     for (const status of RUN_TERMINAL_STATES) expect(isRunWorking(status)).toBe(false);
+  });
+});
+
+describe("isRunBusy", () => {
+  it.each([...RUN_WORKING_STATES, "awaiting_permission"])("%s occupies the worktree", (status) => {
+    expect(isRunBusy(status)).toBe(true);
+  });
+
+  it("treats selection-blocked, resting and terminal states as not busy", () => {
+    expect(isRunBusy("awaiting_selection")).toBe(false);
+    for (const status of RUN_FOLLOW_UP_STATES) expect(isRunBusy(status)).toBe(false);
+    for (const status of RUN_TERMINAL_STATES) expect(isRunBusy(status)).toBe(false);
   });
 });

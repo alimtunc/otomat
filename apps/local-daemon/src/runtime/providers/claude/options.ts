@@ -40,7 +40,6 @@ function permissionModeDescriptor(help: string, fallback: string): ProviderOptio
     key: "permission_mode",
     description: "How Claude Code decides whether a tool call may proceed.",
     choices: values.map(permissionModeChoice),
-    // Otomat passes its own fallback when a profile picks nothing, so name it rather than let the field read as "untouched".
     default_value: values.includes(fallback) ? fallback : null,
   };
 }

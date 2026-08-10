@@ -27,11 +27,9 @@ const optionalValue = providerOptionValueSchema.optional();
  */
 export const providerOptionsSchema = z
   .object({
-    // Claude Code
     permission_mode: optionalValue,
     effort: optionalValue,
 
-    // Codex
     sandbox: optionalValue,
     approval_policy: optionalValue,
     reasoning_effort: optionalValue,

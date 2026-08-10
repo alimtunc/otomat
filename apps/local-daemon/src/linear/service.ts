@@ -4,7 +4,6 @@ import {
   findOverlappingIssueSource,
   getProject,
   insertIssueSource,
-  type Db,
   type NewIssueSource,
 } from "@otomat/db";
 import {
@@ -17,9 +16,9 @@ import {
   type SyncLinearRequest,
 } from "@otomat/domain";
 
-import type { LinearApiClient } from "./client/types.js";
 import { connected, DISCONNECTED, failed } from "./connection-state.js";
 import { LinearError, linearError } from "./errors.js";
+import type { LinearService, LinearServiceConfig } from "./service-contract.js";
 import {
   deleteSourceMapping,
   listSourceContracts,
@@ -31,27 +30,6 @@ import { LinearSyncRuns, syncScope } from "./sync-runs.js";
 import { SYNC_SOURCE, syncIssueSource } from "./sync.js";
 import { createLinearWriteback } from "./writeback/index.js";
 import type { LinearWriteback } from "./writeback/types.js";
-
-export interface LinearServiceConfig {
-  db: Db;
-  dataDir: string;
-  client: LinearApiClient;
-  idFactory?: () => string;
-  now?: () => Date;
-}
-
-export interface LinearService {
-  connection(): LinearConnectionContract;
-  connect(apiKey: string): Promise<LinearConnectionContract>;
-  disconnect(): LinearConnectionContract;
-  workspace(): Promise<LinearWorkspaceContract>;
-  sources(projectId?: string): IssueSourceContract[];
-  createSource(request: CreateIssueSourceRequest): Promise<IssueSourceContract>;
-  deleteSource(sourceId: string): void;
-  sync(request?: SyncLinearRequest): Promise<IssueSourceSyncResult[]>;
-  syncStatus(projectId: string): LinearSyncStatusContract;
-  writeback: LinearWriteback;
-}
 
 function supersededRequest(): LinearError {
   return linearError("linear_request_superseded");

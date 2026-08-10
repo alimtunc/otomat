@@ -1,6 +1,5 @@
 import type { ProjectContract } from "./entities/workspace.js";
 
-// The remote daemon stays loopback-bound on its host; the shell stores only the `~/.ssh/config` alias, never credentials.
 export const EXECUTION_HOST_IDS = ["local", "remote"] as const;
 
 export type ExecutionHostId = (typeof EXECUTION_HOST_IDS)[number];
@@ -51,7 +50,6 @@ export interface ExecutionHostSnapshot {
   expected_build: string | null;
 }
 
-// Failures carry the structured remote status when one exists (the web catalog owns its wording) or contextual prose.
 export type ExecutionHostOperationResult =
   | { ok: true }
   | { ok: false; status: RemoteHostStatus }

@@ -85,7 +85,6 @@ export class LinearCoordinator {
       return { ok: false, message: "Provide a Linear Personal API key.", error_code: null };
     }
     const normalizedKey = apiKey.trim();
-    // A new key invalidates what every host was told before, reachable or not.
     this.records.clear();
     const accepted: { id: ExecutionHostId; url: string }[] = [];
     let refusal: LinearHandoffError | null = null;
@@ -120,7 +119,6 @@ export class LinearCoordinator {
   private async refuseSave(
     refusal: LinearHandoffError | null,
   ): Promise<LinearVaultOperationResult> {
-    // A refused push already cleared the key each daemon held, so a rotation must put the vaulted one back.
     if (this.stored) await this.reconcileNow();
     else this.publish();
     if (refusal !== null) return { ok: false, message: refusal.message, error_code: refusal.code };
@@ -166,7 +164,6 @@ export class LinearCoordinator {
     for (const target of this.options.targets()) {
       const url = target.url;
       if (url === null) {
-        // An unreachable host may still hold the key: assume it does until it says otherwise.
         this.records.set(target.id, mayHoldKey(target.unavailable));
         pending.push(target.label);
         continue;
@@ -211,11 +208,9 @@ export class LinearCoordinator {
   ): Promise<void> {
     let daemonHoldsKey: boolean;
     try {
-      // A daemon's own connection state is the only thing that survives its restarts.
       daemonHoldsKey = (await readLinearConnection(url)).status === "connected";
     } catch (error) {
       const detail = describeFailure(error, "Reading the Linear connection failed.");
-      // A host that did not answer cannot be reported as delivered; only a pending revocation survives.
       const known = this.records.get(id);
       this.records.set(
         id,
@@ -223,7 +218,6 @@ export class LinearCoordinator {
       );
       return;
     }
-    // Revocation runs before anything can re-expose Linear on this host.
     if (apiKey === null) return this.revokeOn(id, url, daemonHoldsKey);
     if (daemonHoldsKey && this.records.get(id)?.holdsCurrentKey === true) return;
     try {

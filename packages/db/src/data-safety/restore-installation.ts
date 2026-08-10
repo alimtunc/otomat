@@ -5,7 +5,8 @@ import { basename, dirname, join } from "node:path";
 import { MANAGED_BACKUPS_DIRECTORY_NAME } from "@otomat/domain";
 
 import { publishPathDurably, replacePathDurably, syncManagedPath } from "./durable-publication.js";
-import { collectCleanupFailure, DataSafetyError, preserveDataSafetyFailure } from "./errors.js";
+import { DataSafetyError } from "./errors.js";
+import { collectCleanupFailure, preserveDataSafetyFailure } from "./failures.js";
 import { assertManagedBackupsDirectory } from "./managed-backups-directory.js";
 import { removeDatabaseArtifacts } from "./portable-database.js";
 
@@ -77,7 +78,6 @@ function preserveDatabaseArtifacts(
         renameSync(join(partialPath, artifact.name), artifact.source),
       );
     }
-    // Only an emptied staging directory is removable; a partial rollback still holds user data.
     if (rollbackFailures.length === 0) {
       collectCleanupFailure(rollbackFailures, () =>
         rmSync(partialPath, { recursive: true, force: true }),
@@ -95,7 +95,6 @@ function preserveDatabaseArtifacts(
 export function preserveAndInstallRestore(plan: RestoreInstallationPlan): RestoreInstallation {
   let preservedPath: string | null;
   try {
-    // Prove the staged copy is on disk before the current database is moved aside.
     syncManagedPath(plan.temporaryPath);
     chmodSync(plan.temporaryPath, 0o600);
     preservedPath = preserveDatabaseArtifacts(plan.dbPath, plan.artifacts, plan.now);

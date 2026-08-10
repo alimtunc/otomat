@@ -3,7 +3,6 @@
  * one-shot restore maintenance, a re-exec'd supervised worker, or the HTTP
  * daemon. Only the HTTP mode migrates, bootstraps, reconciles crashed runs, and
  * binds a server; it is skipped under `VITEST`.
- * Public entry: `startDaemon` (re-exported from `./server.js`).
  *
  * @packageDocumentation
  */
@@ -19,11 +18,7 @@ import { runWorkerMain } from "#supervisor";
 
 import { DAEMON_NAME, DAEMON_VERSION, startDaemon, type DaemonHandle } from "./server.js";
 
-export { startDaemon } from "./server.js";
-export type { DaemonHandle, StartDaemonOptions } from "./server.js";
-export { ensureDefaultProject, DEFAULT_PROJECT_ID } from "./bootstrap.js";
-
-export function describeFoundation(): string {
+function describeFoundation(): string {
   return `[otomat] ${DAEMON_NAME} ${DAEMON_VERSION} — db ${defaultDbPath()}`;
 }
 
@@ -72,7 +67,6 @@ if (process.env[MAINTENANCE_ACTION_ENV] === MAINTENANCE_RESTORE_ACTION) {
       });
   }
 } else if (process.env.OTOMAT_WORKER_JOB) {
-  // Re-exec'd by the supervisor to run a single session as its own process. Never starts the server.
   void runWorkerMain();
 } else if (!process.env.VITEST) {
   void startDaemon()

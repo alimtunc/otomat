@@ -85,8 +85,6 @@ export class LinearSyncRuns {
   }
 
   failed(scope: Map<string, IssueSourceSyncResult[]>, cause: unknown): void {
-    // A superseded pass reports a credential change, not a sync failure: the
-    // connection state already carries it, and the replacement key resyncs.
     if (cause instanceof LinearError && cause.code === "linear_request_superseded") return;
     const error = {
       code: cause instanceof LinearError ? cause.code : null,

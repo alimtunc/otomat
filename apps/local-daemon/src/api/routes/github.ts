@@ -14,7 +14,6 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
   routes.get("/github/connection", async (c) => c.json(await deps.github.connection()));
   routes.post("/github/connect", (c) => c.json(deps.github.connect(), 202));
 
-  // This GET carries write side effects: a merge observed here settles worktree, branch and issue.
   routes.get("/runs/:id/pr", runGuard(deps.db), async (c) => {
     const result = await deps.github.getPullRequest(c.get("run").id);
     return c.json({
@@ -39,7 +38,6 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
     runGuard(deps.db),
     async (c) => {
       const run = c.get("run");
-      // The stored row alone answers "created or updated"; publishing does its own provider read.
       const existed = getPullRequestForRun(deps.db, run.id) !== undefined;
       try {
         const result = await deps.github.publish(run, c.req.valid("json"));

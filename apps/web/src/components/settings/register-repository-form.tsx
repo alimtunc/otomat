@@ -16,7 +16,6 @@ export interface RegisterRepositoryFormProps {
 export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProps) {
   const register = useRegisterRepository();
   const bridge = desktopBridge();
-  // The native picker browses this machine; on a remote host the path lives on that host instead.
   const remoteAlias = remoteHostAlias();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -41,7 +40,7 @@ export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProp
     if (bridge === null) return;
     try {
       const picked = await bridge.pickDirectory();
-      if (picked === null) return; // canceled: create nothing, leave the typed path untouched
+      if (picked === null) return;
       setSubmitError(null);
       form.setFieldValue("path", picked);
     } catch {

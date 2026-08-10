@@ -29,7 +29,6 @@ export function useAgentProfileForm({
   const update = useUpdateAgentProfile();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const defaultRuntime = profile?.runtime ?? resolveRuntimeChoice(descriptors, null) ?? "";
-  // Stored as-is: whether the installed CLI still announces a value is the option fields' answer, and the daemon's gate.
   const defaultOptions: ProviderOptions = profile?.options ?? {};
 
   const form = useForm({

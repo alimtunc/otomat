@@ -21,7 +21,6 @@ function initials(name: string): string {
   return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }
 
-// Deterministic per-name hue so initials stay legible on both themes.
 function nameColor(name: string): string {
   let hash = 0;
   for (const char of name) hash = (hash * 31 + (char.codePointAt(0) ?? 0)) | 0;

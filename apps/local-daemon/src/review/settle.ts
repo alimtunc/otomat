@@ -59,7 +59,6 @@ function resolveSettledComments(
     if (comment.fix_requested_at !== null) {
       resolveComment(ctx, runId, comment, "addressed", now);
     } else if (diff !== null && fileShas.get(comment.file_path) !== comment.diff_sha) {
-      // The diff moved under an unaddressed anchor; never migrate it live.
       resolveComment(ctx, runId, comment, "outdated", now);
     }
   }

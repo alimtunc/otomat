@@ -15,7 +15,6 @@ export function createSkillRoutes(deps: ApiDeps): Hono {
 
   routes.get("/", (c) => c.json(readSkills(deps.db)));
 
-  // Explicit rescan of the known roots only (never a silent whole-home scan).
   routes.post("/scan", (c) => c.json(rescanSkills(deps.db).map(toSkill)));
 
   routes.patch("/:id", validateJson(setSkillEnabledRequestSchema), (c) => {

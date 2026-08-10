@@ -90,8 +90,12 @@ export function AddProjectDialog({ open, onOpenChange, hosts, onSelect }: AddPro
 
   async function browse(): Promise<void> {
     if (bridge === null) return;
-    const picked = await bridge.pickDirectory();
-    if (picked !== null) setPath(picked);
+    try {
+      const picked = await bridge.pickDirectory();
+      if (picked !== null) setPath(picked);
+    } catch {
+      setError("Could not open the folder picker.");
+    }
   }
 
   return (

@@ -25,8 +25,6 @@ const INVALID_KEY: ExecutionHostOperationResult = {
   message: "Unknown instance identifier.",
 };
 
-// Stopping or deleting the deployment this very app is attached to would strand its session
-// as "connected" on a dead daemon, then let the retry loop resurrect what was just removed.
 const OWN_INSTANCE: ExecutionHostOperationResult = {
   ok: false,
   message: "This build's own instance; quit this preview app or manage it from the stable install.",
@@ -68,8 +66,6 @@ export class RemoteInstanceActions {
       if (rows === null) return { ok: false, message: "The instance listing never completed." };
       const instances: RemoteInstanceEntry[] = [];
       for (const row of rows) {
-        // A stray directory under instances/ is not stoppable or deletable; listing it would
-        // offer actions that INSTANCE_KEY refuses forever.
         if (!INSTANCE_KEY.test(row.build)) {
           this.options.log(`Ignored a non-instance directory on the host: ${row.build}`);
           continue;

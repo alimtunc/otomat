@@ -64,7 +64,6 @@ export function resolveContributionGate(
   const resting = canFollowUpRun(detail.run.status);
   const resumable =
     selectLatestResumableSession(detail.sessions, detail.steps, detail.compete_groups) ?? null;
-  // A working run's delivering session is not chosen yet, so only a resting run can name the runtime a resume would reuse.
   const runtime = runtimeFor(detail.sessions, resting ? resumable : null, descriptors);
   if (!runtime) {
     return blocked("This run's runtime is not registered on the daemon.");

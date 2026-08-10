@@ -15,12 +15,12 @@ import {
   requiredPreMigrationBytes,
 } from "./capacity.js";
 import { publishPathDurably, syncManagedPath } from "./durable-publication.js";
+import { DataSafetyError } from "./errors.js";
 import {
   collectCleanupFailure,
-  DataSafetyError,
   inspectPathAfterFailure,
   preserveDataSafetyFailure,
-} from "./errors.js";
+} from "./failures.js";
 import { assertDatabaseIntegrity } from "./integrity.js";
 import { ensureManagedBackupsDirectory } from "./managed-backups-directory.js";
 import {

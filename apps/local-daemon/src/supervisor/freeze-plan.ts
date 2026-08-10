@@ -86,7 +86,6 @@ function makeConfigResolver(
     [configKey(defaultSelector, request.model, request.effort), defaultConfig],
   ]);
   return (selector, model, effort) => {
-    // A node that inherits the agent still inherits the launch-level model override.
     const effectiveSelector = selector ?? defaultSelector;
     const effectiveModel = model ?? (selector === null ? request.model : undefined);
     const effectiveEffort = effortLevel(effort, request.effort);

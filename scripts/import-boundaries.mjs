@@ -16,8 +16,8 @@ const ROOT = process.cwd();
 const HEAVY_LIBS = ["react", "react-dom", "better-sqlite3", "drizzle-orm", "drizzle-kit"];
 // Libraries a single module owns, so their behavior is composed in exactly one place.
 const OWNED_LIBS = new Map([["react-resizable-panels", "packages/ui/src/primitives/resizable.tsx"]]);
-const BACKEND_PKGS = new Set(["db", "supervisor", "integrations", "review"]);
-const FRONTEND_PKGS = new Set(["ui", "client", "domains"]);
+const BACKEND_PKGS = new Set(["db"]);
+const FRONTEND_PKGS = new Set(["ui", "client"]);
 const NODE_BUILTINS = new Set([
   "assert", "buffer", "child_process", "cluster", "console", "crypto", "dgram",
   "dns", "events", "fs", "http", "http2", "https", "net", "os", "path",

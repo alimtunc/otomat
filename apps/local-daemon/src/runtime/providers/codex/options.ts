@@ -52,7 +52,6 @@ function sandboxDescriptor(help: string): ProviderOptionDescriptor | null {
       description: SANDBOX_DESCRIPTIONS[value] ?? null,
       dangerous: DANGEROUS_SANDBOXES.has(value),
     })),
-    // Otomat has always confined Codex to the worktree, so that is what applies with no override.
     default_value: values.includes(CODEX_DEFAULT_SANDBOX) ? CODEX_DEFAULT_SANDBOX : null,
   };
 }
@@ -68,7 +67,6 @@ function approvalDescriptor(help: string): ProviderOptionDescriptor | null {
       description: APPROVAL_DESCRIPTIONS[value] ?? null,
       dangerous: false,
     })),
-    // Otomat sends no `--ask-for-approval`, so the installed CLI's own default stands.
     default_value: null,
   };
 }

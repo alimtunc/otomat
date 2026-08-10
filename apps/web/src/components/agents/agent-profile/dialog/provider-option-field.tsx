@@ -61,7 +61,6 @@ export function ProviderOptionField({
           onValueChange={(next) => {
             if (next === null) return;
             const chosen = next === RUNTIME_DEFAULT_OPTION ? null : next;
-            // A boundary-removing value is never stored on a single click.
             const dangerous = descriptor.choices.some(
               (choice) => choice.value === chosen && choice.dangerous,
             );

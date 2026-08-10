@@ -6,7 +6,7 @@ import {
   startRunRequestSchema,
   type RunLaunchError,
 } from "@otomat/domain";
-import { Hono } from "hono";
+import { Hono, type Context, type Env } from "hono";
 
 import { RuntimeUnavailableError } from "#runtime";
 import { LaunchRefusedError, RunNotResumableError } from "#supervisor";
@@ -16,7 +16,8 @@ import { projectRunCompletionReport } from "../completion-report.js";
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { readCompeteCandidate, readRunDetail, readRuns } from "../reads.js";
-import { toRun, toRunDiffResponse } from "../serialize.js";
+import { toRunDiffResponse } from "../serialize-run-diff.js";
+import { toRun } from "../serialize.js";
 import { streamRunEvents } from "../sse.js";
 import { appendStepSelector, stepAppendErrorResponse } from "../step-append.js";
 
@@ -34,6 +35,11 @@ const LAUNCH_REFUSAL_STATUS: Record<RunLaunchError, 400 | 409> = {
 export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
 
+  const runDetailJson = <E extends Env>(c: Context<E>, runId: string) => {
+    const detail = readRunDetail(deps.db, runId);
+    return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
+  };
+
   routes.get("/", (c) =>
     c.json(
       readRuns(deps.db, {
@@ -49,7 +55,6 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       return c.json(toRun(run), 201);
     } catch (error) {
       if (error instanceof LaunchRefusedError) {
-        // 409 for state the caller must change (register/repair a repository), 400 for a bad request.
         const status = LAUNCH_REFUSAL_STATUS[error.code];
         return c.json({ error: error.code, message: error.message, run_id: error.runId }, status);
       }
@@ -64,7 +69,6 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
           409,
         );
       }
-      // Profile / skill / option resolution refusals raised while freezing the plan.
       const refusal = agentConfigErrorResponse(error);
       if (refusal) return refusalJson(c, refusal);
       console.error("[otomat] launch run failed", error);
@@ -72,10 +76,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
     }
   });
 
-  routes.get("/:id", (c) => {
-    const detail = readRunDetail(deps.db, c.req.param("id"));
-    return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
-  });
+  routes.get("/:id", (c) => runDetailJson(c, c.req.param("id")));
 
   routes.get("/:id/report", (c) => {
     const report = projectRunCompletionReport(deps.db, c.req.param("id"), deps.review);
@@ -90,7 +91,6 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       if (error instanceof RunNotResumableError) {
         return c.json({ error: "run_not_resumable" }, 409);
       }
-      // The issue closed with its merge; the state machine is the one refusing, verbatim.
       if (error instanceof IllegalTransitionError && error.machine === "issue") {
         return c.json({ error: "issue_closed", message: error.message }, 409);
       }
@@ -99,7 +99,6 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
     }
   });
 
-  // Append-only: this adds a plan node, so it can never rewrite or drop a launched step.
   routes.post(
     "/:id/steps",
     validateJson(appendRunStepRequestSchema),
@@ -155,8 +154,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
           c.req.param("groupId"),
           c.req.valid("json").step_run_id,
         );
-        const detail = readRunDetail(deps.db, run.id);
-        return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
+        return runDetailJson(c, run.id);
       } catch (error) {
         if (error instanceof CompeteWinnerConflictError) {
           return c.json({ error: "compete_winner_conflict", message: error.message }, 409);
@@ -175,8 +173,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       console.error(`[otomat] abort run ${run.id} failed`, error);
       return c.json({ error: "run_abort_failed" }, 500);
     }
-    const detail = readRunDetail(deps.db, run.id);
-    return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
+    return runDetailJson(c, run.id);
   });
 
   routes.get("/:id/events", runGuard(deps.db), (c) => streamRunEvents(c, deps.db, c.get("run").id));

@@ -15,7 +15,6 @@ export const SYNC_RESOURCE = "issues";
 
 export const SYNC_OVERLAP_MS = 60_000;
 
-// "running" is never derived from Linear: only an Otomat-launched run may set it.
 const LINEAR_ISSUE_STATES = new Map<string, IssueState>([
   ["triage", "backlog"],
   ["backlog", "backlog"],
@@ -44,7 +43,6 @@ function watermarkFrom(startedAt: Date, issues: LinearIssue[]): string {
     const updatedAt = Date.parse(issue.updated_at);
     return Number.isNaN(updatedAt) ? newest : Math.max(newest, updatedAt);
   }, 0);
-  // Cap the cursor at the pass start so concurrent updates remain eligible next time.
   const ceiling = latest === 0 ? startedAt.getTime() : Math.min(startedAt.getTime(), latest);
   return new Date(ceiling - SYNC_OVERLAP_MS).toISOString();
 }

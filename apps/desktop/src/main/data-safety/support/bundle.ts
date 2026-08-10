@@ -38,8 +38,6 @@ function redactedEntry(entry: DaemonLogEntry): DaemonLogEntry {
   return { ...entry, message: redactLogText(entry.message) };
 }
 
-// The renderer already redacted this; redaction is idempotent, and the bundle is the artifact a
-// user hands to someone else, so it is not the place to trust an upstream promise.
 function redactedIncident(incident: ErrorDiagnostic): ErrorDiagnostic {
   return {
     ...incident,

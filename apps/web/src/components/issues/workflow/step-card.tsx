@@ -10,7 +10,7 @@ import {
   setWorkflowStepEffort,
   setWorkflowStepModel,
   toggleWorkflowDependency,
-} from "@web/lib/workflow-plan";
+} from "@web/lib/workflow/steps";
 
 import { DependencyToggles } from "./dependency-toggles";
 import { NodeAgentFields } from "./node-agent-fields";
