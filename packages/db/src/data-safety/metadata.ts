@@ -4,26 +4,7 @@ import { readMigrationFiles } from "drizzle-orm/migrator";
 
 import { migrationsFolder } from "../migrations-folder.js";
 import { DataSafetyError } from "./errors.js";
-
-/** Otomat's own migration assets or catalog could not be read; never a user-data fault. */
-export class MigrationRuntimeError extends Error {
-  constructor(message: string, options: ErrorOptions) {
-    super(message, options);
-    this.name = "MigrationRuntimeError";
-  }
-}
-
-export function throwIfMigrationRuntimeFailure(
-  primary: unknown,
-  secondary: unknown[],
-  message: string,
-): void {
-  if (!(primary instanceof MigrationRuntimeError)) return;
-  if (secondary.length === 0) throw primary;
-  throw new MigrationRuntimeError(primary.message, {
-    cause: new AggregateError([primary, ...secondary], message, { cause: primary }),
-  });
-}
+import { MigrationRuntimeError } from "./migration-runtime-error.js";
 
 function migrationTablePresent(sqlite: Database.Database): boolean {
   let objectType: unknown;

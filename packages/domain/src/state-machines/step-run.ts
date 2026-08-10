@@ -1,7 +1,5 @@
 import { defineMachine } from "./machine.js";
 
-// No `leased` state by design: Otomat is a single-writer supervisor, not a
-// scheduler.
 export const STEP_RUN_STATES = [
   "queued",
   "starting",

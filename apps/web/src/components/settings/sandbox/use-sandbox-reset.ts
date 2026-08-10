@@ -19,7 +19,6 @@ export function useSandboxReset(): UseSandboxResetResult {
     setError(null);
     void bridge.sandbox.reset().then(
       (result) => {
-        // On success the main process reloads this window; stay pending until it does.
         if (!result.ok) {
           setError(result.message);
           setPending(false);

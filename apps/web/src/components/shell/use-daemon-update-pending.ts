@@ -28,7 +28,6 @@ export function useDaemonUpdatePending(): boolean {
             snapshot.remote_build !== snapshot.expected_build,
         );
       } catch {
-        // An unreadable snapshot cannot prove an update is pending; launches stay open.
         if (!disposed) setPending(false);
       }
     };

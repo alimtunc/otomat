@@ -2,7 +2,7 @@
 import { DaemonRequestError } from "@otomat/client";
 import type { RunContract } from "@otomat/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useLaunchRun } from "@web/api/runs/mutations";
+import { useLaunchRun } from "@web/api/runs/use-launch-run";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { mount, type Mounted } from "#support/mount";

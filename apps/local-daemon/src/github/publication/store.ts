@@ -132,7 +132,6 @@ export class PublicationStore {
 
   view(row: PullRequestRow): PullRequestView {
     if (!row.published_diff_sha) return { row, hasUnpublishedChanges: false };
-    // A merged pull request has nothing left to publish, and the merge took its worktree.
     if (row.status === "merged") return { row, hasUnpublishedChanges: false };
     const service = this.config.repositories.forRun(row.run_id)?.service;
     if (!service) return { row, hasUnpublishedChanges: null };
@@ -142,7 +141,6 @@ export class PublicationStore {
         hasUnpublishedChanges: service.diff(row.run_id).sha !== row.published_diff_sha,
       };
     } catch (error) {
-      // Unknown beats a false up-to-date claim, but the failure must stay visible.
       console.error(`[otomat] diff comparison for run ${row.run_id} failed`, error);
       return { row, hasUnpublishedChanges: null };
     }

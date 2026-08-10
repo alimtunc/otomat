@@ -57,7 +57,6 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
 
   function diffInputs(row: WorktreeRow): { gitCwd: string; base: string; tree: string } {
     if (row.status === "active") {
-      // Rows written before fork points were recorded fall back to the default-branch merge base.
       const base =
         row.base_sha === ""
           ? (mergeBase(row.path, "HEAD", defaultBranch) ?? revParse(row.path, defaultBranch))
@@ -126,8 +125,6 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
           status: "active",
         });
       } catch (error) {
-        // The partial unique index rejected a duplicate active owner; undo the git
-        // side fully — the working dir AND the branch `addWorktree -b` just created.
         removeWorktree(repoRoot, path);
         deleteBranch(repoRoot, input.branch);
         pruneWorktrees(repoRoot);
@@ -220,7 +217,6 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
         snapshotWorktree(row.path, `otomat: archive snapshot for ${owner}`);
         head = headSha(row.path);
       } else {
-        // Working dir vanished (crash/manual rm): converge anyway from the branch tip.
         head = revParse(repoRoot, row.branch);
       }
       removeWorktree(repoRoot, row.path);

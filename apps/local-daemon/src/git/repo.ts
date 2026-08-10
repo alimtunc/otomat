@@ -12,7 +12,7 @@ export function headSha(repoPath: string): string {
 }
 
 /** Short symbolic name of the checked-out branch (e.g. `main`). */
-export function currentBranch(repoPath: string): string {
+function currentBranch(repoPath: string): string {
   return runGit(["rev-parse", "--abbrev-ref", "HEAD"], { cwd: repoPath }).stdout.trim();
 }
 

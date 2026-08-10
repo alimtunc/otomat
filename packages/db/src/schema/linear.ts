@@ -5,7 +5,6 @@ import { issues } from "./issues.js";
 import { runs } from "./runs.js";
 import { timestamps } from "./shared.js";
 
-// The local draft survives offline refreshes and records the remote conflict base.
 export const linearIssueDrafts = sqliteTable(
   "linear_issue_drafts",
   {
@@ -24,7 +23,6 @@ export const linearIssueDrafts = sqliteTable(
   (table) => [uniqueIndex("linear_issue_drafts_issue_unique").on(table.issue_id)],
 );
 
-// Attempts are persisted before provider calls; retries are manual and payloads exclude credentials.
 export const linearWrites = sqliteTable(
   "linear_writes",
   {

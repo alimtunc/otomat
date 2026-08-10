@@ -31,8 +31,6 @@ export function reapProcesses(
     if (options.mode !== "boot" || session.pid === null || session.pid <= 1) continue;
     if (agentSessionMachine.isTerminal(session.status)) continue;
     if (!isProcessAlive(session.pid)) continue;
-    // The pid is alive — but after a long downtime the OS may have reused it. Only signal when the
-    // process identity still proves it is our worker; otherwise leave it and settle from the ledger.
     if (!isReapableWorker(sessionDir(dataDir, runId, session.id), session.pid)) {
       console.error(
         `[otomat] session ${session.id}: pid ${session.pid} is alive but its identity is unproven ` +

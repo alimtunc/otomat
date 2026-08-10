@@ -32,7 +32,6 @@ import {
   GitPullRequestClosed,
   GitPullRequestDraft,
   Hand,
-  type LucideIcon,
   Loader,
   MessageCircleQuestion,
   MessageSquare,
@@ -43,30 +42,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 
-import type { StatusTone } from "./tone";
-
-export type StatusKind =
-  | "issue"
-  | "run"
-  | "runContribution"
-  | "step"
-  | "session"
-  | "compete"
-  | "review"
-  | "reviewComment"
-  | "pr"
-  | "diffFile";
-
-// icon (LucideIcon) is the web binding layer; kept in ui on purpose, not in @otomat/domain.
-export interface StatusDescriptor {
-  tone: StatusTone;
-  icon: LucideIcon;
-  label: string;
-  /** True for in-progress states that should render a live/animated indicator. */
-  live?: boolean;
-}
-
-type StatusMap<K extends string> = Record<K, StatusDescriptor>;
+import type { KindStatusMap, StatusKind, StatusMap } from "./types";
 
 const ISSUE_STATUS: StatusMap<IssueState> = {
   backlog: { tone: "neutral", icon: Circle, label: "Backlog" },
@@ -160,20 +136,7 @@ const DIFF_FILE_STATUS: StatusMap<ChangeStatus> = {
   type_changed: { tone: "neutral", icon: FileType, label: "Type changed" },
 };
 
-export interface KindStatusMap {
-  issue: IssueState;
-  run: RunState;
-  runContribution: RunContributionState;
-  step: StepRunState;
-  session: AgentSessionState;
-  compete: CompeteGroupState;
-  review: ReviewState;
-  reviewComment: ReviewCommentState;
-  pr: PullRequestState;
-  diffFile: ChangeStatus;
-}
-
-const STATUS_REGISTRY: { [K in StatusKind]: StatusMap<KindStatusMap[K]> } = {
+export const STATUS_REGISTRY: { [K in StatusKind]: StatusMap<KindStatusMap[K]> } = {
   issue: ISSUE_STATUS,
   run: RUN_STATUS,
   runContribution: RUN_CONTRIBUTION_STATUS,
@@ -185,11 +148,3 @@ const STATUS_REGISTRY: { [K in StatusKind]: StatusMap<KindStatusMap[K]> } = {
   pr: PR_STATUS,
   diffFile: DIFF_FILE_STATUS,
 };
-
-/** Resolves the visual descriptor (tone, icon, label) for a domain status; total over every state of each `StatusKind`. */
-export function resolveStatus<K extends StatusKind>(
-  kind: K,
-  status: KindStatusMap[K],
-): StatusDescriptor {
-  return STATUS_REGISTRY[kind][status];
-}

@@ -64,7 +64,6 @@ export function ModelSelect({
   compact = false,
 }: ModelSelectProps) {
   const catalog = useRuntimeModels(runtimeId);
-  // Custom is a mode the user entered, not a fact derivable from the value: a typed identifier may pass through catalog ids without leaving the field.
   const [customMode, setCustomMode] = useState(false);
   const listedValue = modelSelectValue(value, catalog.data);
   const isCustom = customMode ? value?.kind === "model" : listedValue === MODEL_CUSTOM_VALUE;

@@ -2,18 +2,19 @@ import { dirname } from "node:path";
 
 import { createClient, type DbClient } from "../client.js";
 import { assertSufficientDiskSpace, availableDiskBytes, requiredRestoreBytes } from "./capacity.js";
+import { DataSafetyError } from "./errors.js";
 import {
   collectCleanupFailure,
-  DataSafetyError,
   inspectPathAfterFailure,
   isSqliteContentError,
   preserveClassifiedFailure,
   preserveDataSafetyFailure,
   throwIfUnclassifiedFailure,
-} from "./errors.js";
+} from "./failures.js";
 import { assertDatabaseIntegrity } from "./integrity.js";
 import { assertManagedBackup } from "./managed-backups-directory.js";
-import { inspectMigrationHistory, throwIfMigrationRuntimeFailure } from "./metadata.js";
+import { inspectMigrationHistory } from "./metadata.js";
+import { throwIfMigrationRuntimeFailure } from "./migration-runtime-error.js";
 import {
   finalizePortableDatabase,
   removeDatabaseArtifacts,

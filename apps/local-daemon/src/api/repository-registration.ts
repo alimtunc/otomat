@@ -46,8 +46,6 @@ function attachToProject(db: Db, projectId: string, probe: RepositoryProbeOk): R
   const project = getProject(db, projectId);
   if (!project) return { ok: false, error: "project_not_found" };
   const [existing] = listRepositories(db, { projectId });
-  // An existing repository whose root is gone is repaired, not duplicated —
-  // otherwise the only fix the blocked launch offers could never be applied.
   if (existing && isRepositoryRoot(project.root_path)) {
     return { ok: false, error: "project_already_has_repository" };
   }
@@ -113,7 +111,6 @@ export function registerLocalRepository(
     );
   } catch (error) {
     if (isUniqueViolation(error)) {
-      // A concurrent registration won the unique-root race; the transaction wrote no partial row.
       return { ok: false, error: "repository_already_registered" };
     }
     throw error;

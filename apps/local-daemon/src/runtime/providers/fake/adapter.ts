@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { appendFileSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { FAKE_RUNTIME_ID, type RuntimeCapabilities } from "@otomat/domain";
+import type { RuntimeCapabilities } from "@otomat/domain";
 
 import {
   type RuntimeAdapter,
@@ -12,14 +12,20 @@ import {
   type RuntimeRunInput,
   type RuntimeSessionRef,
 } from "#runtime/contract";
-import type { RuntimeEvent } from "#runtime/events";
 import type { RuntimeSink } from "#runtime/sinks";
 
 import { FAKE_MODEL_SUPPORT } from "./models.js";
 import { fakeOptionSupport } from "./options.js";
+import {
+  buildEvent,
+  canceledState,
+  FAKE_ADAPTER_ID,
+  providerSessionId,
+  type TurnContext,
+} from "./turn-events.js";
 import { abortSpec, FAKE_USAGE, resumeSpecs, runSpecs, type EventSpec } from "./turn-specs.js";
 
-export const FAKE_ADAPTER_ID = FAKE_RUNTIME_ID;
+export { FAKE_ADAPTER_ID } from "./turn-events.js";
 
 const FAKE_WORK_FILENAME = "fake-implementation.md";
 
@@ -40,43 +46,6 @@ function writeFakeWork(cwd: string, prompt: string, followUp: boolean): void {
     return;
   }
   writeFileSync(file, `# Fake implementation\n\n## Prompt\n\n${prompt}\n`);
-}
-
-interface TurnContext {
-  run_id: string;
-  step_run_id: string;
-  agent_session_id: string;
-  provider_session_id: string;
-}
-
-function providerSessionId(agentSessionId: string): string {
-  return `fake-session-${agentSessionId}`;
-}
-
-function buildEvent(
-  ctx: TurnContext,
-  turn: number,
-  index: number,
-  spec: EventSpec,
-  occurredAtMs: number,
-  instanceId: string,
-): RuntimeEvent {
-  return {
-    id: `${ctx.agent_session_id}:${instanceId}:${turn}:${index}`,
-    run_id: ctx.run_id,
-    step_run_id: ctx.step_run_id,
-    agent_session_id: ctx.agent_session_id,
-    type: spec.type,
-    source: "otomat",
-    occurred_at: new Date(occurredAtMs).toISOString(),
-    payload: {
-      fidelity: spec.fidelity,
-      adapter: FAKE_ADAPTER_ID,
-      test_adapter: true,
-      ...spec.data,
-    },
-    raw_ref: null,
-  };
 }
 
 /**
@@ -171,7 +140,6 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
       }
       sink.emit(buildEvent(ctx, turn, emitted, spec, this.clock(), this.instanceId));
       emitted += 1;
-      // Parks each candidate after its first event so a test can hold a whole compete group mid-turn.
       if (emitted === 1 && this.barrierPath) {
         while (!signal.aborted && !existsSync(this.barrierPath)) await delay(10);
       }
@@ -184,14 +152,4 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
       event_count: emitted,
     };
   }
-}
-
-function canceledState(providerSession: string, emitted: number): RuntimeFinalState {
-  return {
-    status: "canceled",
-    provider_session_id: providerSession,
-    usage: null,
-    error: null,
-    event_count: emitted,
-  };
 }

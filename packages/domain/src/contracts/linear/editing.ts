@@ -19,7 +19,6 @@ export const linearEditableFieldsSchema = z.object({
   assignee_id: z.string().min(1).nullable(),
   label_ids: z.array(z.string().min(1)),
 });
-export type LinearEditableFields = z.infer<typeof linearEditableFieldsSchema>;
 
 export const linearUserRefSchema = z.object({ id: z.string(), name: z.string() });
 export const linearLabelRefSchema = z.object({

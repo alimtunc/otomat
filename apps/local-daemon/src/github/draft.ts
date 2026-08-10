@@ -2,6 +2,7 @@ import { getIssue, type RunRow } from "@otomat/db";
 import type { PullRequestDraft } from "@otomat/domain";
 import { z } from "zod";
 
+import { commandSucceeded } from "./cli-commands.js";
 import { GitHubPublicationError } from "./errors.js";
 import type {
   CommandRunner,
@@ -126,7 +127,7 @@ export function createPullRequestDrafter(run: CommandRunner): PullRequestDrafter
           `The agent did not answer within ${String(DRAFT_TIMEOUT_MS / 1000)} seconds.`,
         );
       }
-      if (result.exitCode !== 0 || result.errorCode) {
+      if (!commandSucceeded(result)) {
         const detail = result.stderr.trim().split("\n").at(-1) || (result.errorCode ?? "");
         throw new GitHubPublicationError(
           "pr_draft_failed",

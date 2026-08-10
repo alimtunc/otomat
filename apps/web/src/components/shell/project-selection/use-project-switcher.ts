@@ -69,7 +69,6 @@ export function useProjectSwitcher() {
         }))
       : [{ id: "local" as const, label: "Local", active: true }];
 
-  // A detail view shows one entity of the old project; switching leaves it for the new project's issues.
   function selectProject(switcherId: string): void {
     const target = parseProjectSwitcherKey(switcherId, activeHostId);
     if (target.hostId === activeHostId || bridge === null) {
@@ -77,7 +76,6 @@ export function useProjectSwitcher() {
       if (isProjectScopedDetail(pathname)) navigate({ to: "/issues" });
       return;
     }
-    // Cross-host: persist the choice so the reloaded renderer restores it, then re-point at that host's daemon.
     const previous = currentProjectId;
     if (isProjectScopedDetail(pathname)) void navigate({ to: "/issues" });
     writeSelectedProjectId(target.projectId);
@@ -85,7 +83,6 @@ export function useProjectSwitcher() {
       .select(target.hostId)
       .then((result) => {
         if (result.ok) return;
-        // A concurrent switch owns the persisted choice; only a real failure rolls it back.
         const concurrent =
           "status" in result &&
           result.status.phase === "error" &&

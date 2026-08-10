@@ -35,8 +35,8 @@ export function attachAvailableBackup(
         context.rejectedBackupPaths,
       ),
     };
-  } catch {
-    context.log("Managed backup discovery failed.");
+  } catch (error) {
+    context.log(`Managed backup discovery failed: ${String(error)}`);
     return diagnostic;
   }
 }

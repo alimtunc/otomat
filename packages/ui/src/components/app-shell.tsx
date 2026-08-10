@@ -16,7 +16,6 @@ import { SidePanel } from "./side-panel";
 
 const SIDEBAR_PANEL_ID = "sidebar";
 const SIDEBAR_MIN_WIDTH = 200;
-// A percentage, so the sidebar cannot crowd the main content out of a narrow window.
 const SIDEBAR_MAX_WIDTH = "32%";
 const SHELL_LAYOUT_ID = "otomat.shell";
 
@@ -51,7 +50,6 @@ export function AppShell({
 }: AppShellProps) {
   const controlled = collapsedProp != null;
   const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
-  // null = no stored or in-session choice yet: follow the viewport (rail on narrow windows).
   const [internalCollapsed, setInternalCollapsed] = useState<boolean | null>(() =>
     readPanelCollapsed(SIDEBAR_PANEL_ID),
   );

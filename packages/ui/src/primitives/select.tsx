@@ -107,13 +107,3 @@ export function SelectLabel({ className, ...props }: SelectLabelProps) {
     />
   );
 }
-
-export interface SelectSeparatorProps extends ComponentPropsWithoutRef<
-  typeof SelectPrimitive.Separator
-> {}
-
-export function SelectSeparator({ className, ...props }: SelectSeparatorProps) {
-  return (
-    <SelectPrimitive.Separator className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />
-  );
-}

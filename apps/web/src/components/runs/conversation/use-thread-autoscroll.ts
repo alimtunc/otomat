@@ -32,8 +32,7 @@ export function useThreadAutoscroll(runId: string): ThreadAutoscroll {
     setPinned(next);
   }, []);
 
-  // otomat-allow-effect: scroll position lives in the DOM, and only an observer can see
-  // an item, the Working row or the composer change height and follow it.
+  // otomat-allow-effect: scroll position lives in the DOM; only an observer can track it.
   useLayoutEffect(() => {
     if (viewport === null || content === null) return;
 
@@ -43,8 +42,6 @@ export function useThreadAutoscroll(runId: string): ThreadAutoscroll {
     const onScroll = () => {
       const distance = viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop;
       const atBottom = distance <= PIN_THRESHOLD_PX;
-      // Only a move away from the bottom unpins: a smooth jump reports every position it
-      // passes through, and each one would otherwise read as the reader scrolling up.
       const receding = distance > lastDistanceRef.current;
       lastDistanceRef.current = distance;
       if (atBottom || receding) pin(atBottom);

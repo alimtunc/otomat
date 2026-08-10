@@ -70,7 +70,6 @@ export function modelChoiceItems(
     { value: MODEL_PROVIDER_DEFAULT_VALUE, label: PROVIDER_DEFAULT_LABEL },
     ...catalogModelItems(catalog),
   ];
-  // An identifier the catalog cannot confirm still owns the trigger, or the picker would read as Default while submitting a model.
   if (
     options.selected === MODEL_CUSTOM_VALUE &&
     !items.some((item) => item.value === MODEL_CUSTOM_VALUE)

@@ -59,7 +59,6 @@ export function settleRun(
 
   if (plan !== null && turnSession === null) return settleIdleRun(ctx, plan);
 
-  // A multi-step ledger holds one terminal marker per turn — only this session's slice is evidence for this settle.
   const scoped = turnSession === null ? events : eventsForSession(events, turnSession.id);
   const finalStatus = findFinalStatus(scoped);
   const providerSessionId = findProviderSessionId(scoped);

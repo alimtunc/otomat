@@ -28,7 +28,7 @@ packages/tooling    # tooling
 Grouping:
 
 - shared: `domain`
-- frontend: `ui`, `client` (and a future `domains`)
+- frontend: `ui`, `client`
 - backend: `db` (the only backend package)
 - tooling: `tooling`
 

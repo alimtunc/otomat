@@ -4,7 +4,7 @@ import { dirname, resolve } from "node:path";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 
 import { createClient } from "./client.js";
-import { collectCleanupFailure, throwCollectedFailures } from "./data-safety/errors.js";
+import { collectCleanupFailure, throwCollectedFailures } from "./data-safety/failures.js";
 import { migrationsFolder } from "./migrations-folder.js";
 
 /** Resolved DB file path: `OTOMAT_DB_PATH` when set, else `.data/otomat.db` under the current working directory. */

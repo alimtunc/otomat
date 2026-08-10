@@ -36,11 +36,14 @@ const appendStep = vi.fn(
 const appendTarget = vi.fn();
 
 vi.mock("@web/api/runs/mutations", () => ({
-  useLaunchRun: () => ({ launch, isPending: false }),
   useAppendRunStep: (runId: string) => {
     appendTarget(runId);
     return { mutate: appendStep, isPending: false };
   },
+}));
+
+vi.mock("@web/api/runs/use-launch-run", () => ({
+  useLaunchRun: () => ({ launch, isPending: false }),
 }));
 
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));

@@ -1,8 +1,12 @@
 import { GitHubCliError } from "./errors.js";
 import type { CommandResult, CommandRunner, PullRequestCreateInput } from "./types.js";
 
+export function commandSucceeded(result: CommandResult): boolean {
+  return result.exitCode === 0 && !result.errorCode;
+}
+
 export function assertCommandSucceeded(result: CommandResult, code: string, message: string): void {
-  if (result.exitCode !== 0 || result.errorCode) throw new GitHubCliError(code, message);
+  if (!commandSucceeded(result)) throw new GitHubCliError(code, message);
 }
 
 /** Last output line of a failed command, bounded; null when it printed nothing. */
@@ -23,7 +27,7 @@ export function assertPublicationSucceeded(
   code: string,
   message: string,
 ): void {
-  if (result.exitCode === 0 && !result.errorCode) return;
+  if (commandSucceeded(result)) return;
   const detail = commandFailureDetail(result);
   throw new GitHubCliError(code, detail === null ? message : `${message} (${detail})`);
 }
@@ -64,7 +68,7 @@ export async function createPullRequestWithRetry(
 ): Promise<void> {
   let createResult = await attemptCreate(run, input);
   for (const delay of CREATE_RETRY_DELAYS_MS) {
-    if (createResult.exitCode === 0 && !createResult.errorCode) return;
+    if (commandSucceeded(createResult)) return;
     console.error(
       `[otomat] gh pr create failed (${commandFailureDetail(createResult) ?? "no output"}); retrying in ${delay}ms`,
     );

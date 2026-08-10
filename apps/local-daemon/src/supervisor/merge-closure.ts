@@ -15,13 +15,10 @@ export function closeMergedRun(config: MergeClosureConfig, runId: string): void 
   const run = getRun(config.db, runId);
   if (!run) return;
   releaseWorktree(config, runId);
-  // A run left at `review_ready` still projects as `reviewing`, which would drag the merged
-  // issue's card back a column and keep publish and fix offered on work that already shipped.
   if (!isRunTerminal(run.status)) {
     driveRunTo(config.db, runId, run.status, "completed", new Date().toISOString());
   }
   const issue = getIssue(config.db, run.issue_id);
-  // A terminal issue keeps the state its user chose; `done` is what later refuses a resume.
   if (issue && !issueMachine.isTerminal(issue.status)) {
     driveIssueTo(config.db, issue.id, issue.status, "done");
   }

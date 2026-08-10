@@ -21,7 +21,6 @@ const GIT_OPTIONS = [
 export function ensureTestRepo(dir: string, templateDir: string): boolean {
   if (existsSync(join(dir, ".git"))) {
     if (hasCommit(dir)) return false;
-    // A creation killed between init and commit would otherwise fail registration on every boot.
     rmSync(dir, { recursive: true, force: true });
   }
   copyTemplate(templateDir, dir);

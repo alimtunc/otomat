@@ -9,7 +9,6 @@ const REPOS_END = "OTOMAT_REPOS_END:-";
 
 const SCRIPT_TIMEOUT_MS = 30_000;
 
-// Directories that hold no project of the user's own but cost the most to walk.
 const PRUNED = [
   "node_modules",
   ".cache",
@@ -33,8 +32,6 @@ export function listRepositoriesScript(): string {
   return [
     "set -u",
     `echo "${HOME_PREFIX}$HOME"`,
-    // `.git` is pruned as it is printed, so a repository's own object store is never walked; the
-    // discarded stderr is the unreadable-directory noise of a home walk, not a lost failure.
     `find "$HOME" -maxdepth 4 \\( -type d -name .git -print -prune \\) -o \\( -type d \\( ${prune} \\) -prune \\) 2>/dev/null |`,
     "  while IFS= read -r gitdir; do",
     '    repo="$(dirname "$gitdir")"',
@@ -56,7 +53,6 @@ export function parseRepositoryList(stdout: string): RemoteRepositoryEntry[] | n
   for (const line of lines) {
     if (!line.startsWith(REPO_PREFIX)) continue;
     const label = line.slice(REPO_PREFIX.length).trim();
-    // A `.git` directly in $HOME reports the home itself — an absolute path, and no project root.
     if (label === "" || label.startsWith("/")) continue;
     entries.set(label, { path: `${home}/${label}`, label });
   }

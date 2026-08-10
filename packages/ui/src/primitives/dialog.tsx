@@ -19,7 +19,6 @@ import {
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogPortal = DialogPrimitive.Portal;
-export const DialogClose = DialogPrimitive.Close;
 
 export interface DialogOverlayProps extends ComponentPropsWithRef<
   typeof DialogPrimitive.Backdrop

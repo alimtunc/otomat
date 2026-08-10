@@ -53,8 +53,6 @@ export function deleteSourceMapping(db: Db, sourceId: string): void {
 
 export function resolveSyncSources(db: Db, request: SyncLinearRequest): IssueSourceRow[] {
   if (request.source_id === undefined) {
-    // A project this daemon does not own must refuse, never quietly sync nothing:
-    // the cockpit points at one daemon per host and would read that as success.
     requireProject(db, request.project_id);
     return listIssueSources(db, SYNC_SOURCE, { projectId: request.project_id });
   }

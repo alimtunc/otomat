@@ -49,7 +49,7 @@ vi.mock("#db/data-safety/portable-database", async (importOriginal) => {
 });
 
 import { createConsistentBackup } from "#db/data-safety/backup";
-import { MigrationRuntimeError } from "#db/data-safety/metadata";
+import { MigrationRuntimeError } from "#db/data-safety/migration-runtime-error";
 import { prepareDatabase } from "#db/data-safety/prepare";
 import { restoreDatabaseBackup } from "#db/data-safety/restore";
 

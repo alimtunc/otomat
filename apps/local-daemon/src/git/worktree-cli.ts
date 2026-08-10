@@ -41,7 +41,7 @@ export function listWorktrees(repoPath: string): GitWorktreeEntry[] {
   return parseWorktreeList(out);
 }
 
-export function parseWorktreeList(porcelain: string): GitWorktreeEntry[] {
+function parseWorktreeList(porcelain: string): GitWorktreeEntry[] {
   const entries: GitWorktreeEntry[] = [];
   let current: GitWorktreeEntry | null = null;
 

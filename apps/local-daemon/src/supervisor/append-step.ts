@@ -60,7 +60,6 @@ export async function appendRunStep(
   const plan = appendPlanStep(run.plan_json, step);
   const idx = nextStepIndex(state, runId);
 
-  // Last guard before the first write: a merged issue is `done`, and the machine is what refuses.
   const issue = getIssue(db, run.issue_id);
   if (issue) driveIssueTo(db, issue.id, issue.status, "running");
 

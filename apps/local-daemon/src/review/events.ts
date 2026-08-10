@@ -5,7 +5,7 @@ import type { CanonicalDiff } from "#git";
 import { buildRuntimeEvent, type RuntimeEvent } from "#runtime";
 
 /** Identifies the review module as the event emitter — control-plane facts, never provider output. */
-export const REVIEW_ADAPTER = "otomat-review";
+const REVIEW_ADAPTER = "otomat-review";
 
 /** A comment leaves `open` for one of these reasons; carried on `review.comment_resolved`. */
 export type CommentResolution = "addressed" | "outdated";

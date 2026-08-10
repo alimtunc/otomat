@@ -1,0 +1,50 @@
+import type {
+  AgentSessionState,
+  ChangeStatus,
+  CompeteGroupState,
+  IssueState,
+  PullRequestState,
+  ReviewCommentState,
+  ReviewState,
+  RunContributionState,
+  RunState,
+  StepRunState,
+} from "@otomat/domain/types";
+import type { LucideIcon } from "lucide-react";
+
+import type { StatusTone } from "../tone";
+
+export type StatusKind =
+  | "issue"
+  | "run"
+  | "runContribution"
+  | "step"
+  | "session"
+  | "compete"
+  | "review"
+  | "reviewComment"
+  | "pr"
+  | "diffFile";
+
+export interface StatusDescriptor {
+  tone: StatusTone;
+  icon: LucideIcon;
+  label: string;
+  /** True for in-progress states that should render a live/animated indicator. */
+  live?: boolean;
+}
+
+export type StatusMap<K extends string> = Record<K, StatusDescriptor>;
+
+export interface KindStatusMap {
+  issue: IssueState;
+  run: RunState;
+  runContribution: RunContributionState;
+  step: StepRunState;
+  session: AgentSessionState;
+  compete: CompeteGroupState;
+  review: ReviewState;
+  reviewComment: ReviewCommentState;
+  pr: PullRequestState;
+  diffFile: ChangeStatus;
+}

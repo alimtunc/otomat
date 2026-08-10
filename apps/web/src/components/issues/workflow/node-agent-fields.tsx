@@ -35,11 +35,9 @@ export function NodeAgentFields({
   onModelChange,
   onEffortChange,
 }: NodeAgentFieldsProps) {
-  // A node without its own agent runs on the run default, so that is the runtime whose models it lists.
   const choice = agent ?? agents.choice;
   const runtimeId = agentChoiceRuntimeId(choice, agents.profiles);
   const profile = agentChoiceProfile(choice, agents.profiles);
-  // Reasoning levels follow the model, and a node's model follows its own agent unless it inherits the run's.
   const modelId = effectiveModelId(model, agent === null ? runModelId : (profile?.model ?? null));
 
   return (

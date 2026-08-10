@@ -12,8 +12,6 @@ export function useRemoteRepositories(enabled: boolean): UseRemoteRepositoriesRe
   const bridge = desktopBridge();
   const query = useQuery({
     queryKey: ["execution-host", "repositories"],
-    // The key cannot name the host the main process resolves, so the listing is dropped on close:
-    // a reopened dialog must never offer the previous alias's paths while it refetches.
     gcTime: 0,
     enabled: enabled && bridge !== null,
     queryFn: async () => {

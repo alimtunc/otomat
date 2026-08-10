@@ -67,7 +67,6 @@ function announcedValues(entry: string): string[] {
  * CLI argument are dropped.
  */
 export function helpFlagValues(help: string, flag: string): string[] | null {
-  // Compiled once for the whole page rather than once per entry it walks past.
   const declaresFlag = new RegExp(`(^|[\\s,])${flag}([\\s,=]|$)`);
   const entry = helpEntries(help).find((candidate) => declaresFlag.test(candidate));
   if (entry === undefined) return null;

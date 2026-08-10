@@ -93,7 +93,6 @@ export const RUN_STEP_APPEND_ERRORS = [
   "issue_closed",
   "invalid_revision",
 ] as const;
-export type RunStepAppendError = (typeof RUN_STEP_APPEND_ERRORS)[number];
 
 export const runStepAppendErrorSchema = z.object({
   error: z.enum(RUN_STEP_APPEND_ERRORS),

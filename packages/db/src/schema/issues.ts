@@ -19,7 +19,6 @@ export const issues = sqliteTable(
     source_identifier: text("source_identifier"),
     source_url: text("source_url"),
     synced_at: text("synced_at"),
-    // The last remote revision is the conflict-detection base for write-back.
     source_updated_at: text("source_updated_at"),
     source_assignee_name: text("source_assignee_name"),
     source_priority: integer("source_priority"),

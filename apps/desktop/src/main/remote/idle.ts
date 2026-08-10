@@ -1,5 +1,4 @@
-/** States with a live or pending provider process; stopping the daemon would cut real work. */
-const BUSY_RUN_STATUSES = new Set(["queued", "preparing", "running", "awaiting_permission"]);
+import { isRunBusy } from "@otomat/domain";
 
 export interface RemoteIdleOptions {
   /** Origin of the remote daemon through the tunnel. */
@@ -19,7 +18,14 @@ export async function remoteIsIdle(options: RemoteIdleOptions): Promise<boolean>
     if (!response.ok) return false;
     const payload: unknown = await response.json();
     if (!Array.isArray(payload)) return false;
-    return !payload.some((run) => BUSY_RUN_STATUSES.has((run as { status?: string }).status ?? ""));
+    return !payload.some(
+      (run) =>
+        typeof run === "object" &&
+        run !== null &&
+        "status" in run &&
+        typeof run.status === "string" &&
+        isRunBusy(run.status),
+    );
   } catch (error) {
     options.log(`Remote idle check failed: ${String(error)}`);
     return false;

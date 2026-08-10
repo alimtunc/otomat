@@ -26,7 +26,6 @@ import {
   reviewContractSchema,
   runContractSchema,
   runContributionContractSchema,
-  runDiffResponseSchema,
   skillContractSchema,
   stepRunContractSchema,
   type AgentProfileContract,
@@ -42,13 +41,10 @@ import {
   type ReviewContract,
   type RunContract,
   type RunContributionContract,
-  type RunDiffResponse,
   type SkillContract,
   type StepRunContract,
   type WorktreeStatus,
 } from "@otomat/domain";
-
-import type { RunDiffResult } from "#review";
 
 export function toProject(row: ProjectRow, hasRepository: boolean): ProjectContract {
   return projectContractSchema.parse({ ...row, has_repository: hasRepository });
@@ -153,32 +149,5 @@ export function toPullRequest(
     error_code: row.error_code,
     error_message: row.error_message,
     has_unpublished_changes: hasUnpublishedChanges,
-  });
-}
-
-/** Maps a `RunDiffResult` to its wire contract, remapping camelCase fields to snake_case; `diff` is null when the result carries no computed diff. */
-export function toRunDiffResponse(runId: string, result: RunDiffResult): RunDiffResponse {
-  const diff = result.diff;
-  return runDiffResponseSchema.parse({
-    run_id: runId,
-    computed_at: result.computedAt,
-    diff: diff
-      ? {
-          base: diff.base,
-          additions: diff.additions,
-          deletions: diff.deletions,
-          sha: diff.sha,
-          files: diff.files.map((file) => ({
-            path: file.path,
-            old_path: file.oldPath,
-            status: file.status,
-            additions: file.additions,
-            deletions: file.deletions,
-            binary: file.binary,
-            patch: file.patch,
-            sha: file.sha,
-          })),
-        }
-      : null,
   });
 }

@@ -30,7 +30,6 @@ export const runMachine = defineMachine<RunState>({
       "canceled",
     ],
     awaiting_permission: ["running", "failed", "canceled"],
-    // `preparing`: resuming a run whose worktree init never completed re-runs the init.
     awaiting_human: ["running", "preparing", "failed", "canceled"],
     awaiting_selection: ["running", "failed", "canceled"],
     review_ready: ["completed", "running", "failed", "canceled"],
@@ -79,4 +78,9 @@ const runWorkingSet: ReadonlySet<string> = new Set(RUN_WORKING_STATES);
 
 export function isRunWorking(status: string): status is RunWorkingState {
   return runWorkingSet.has(status);
+}
+
+/** A provider turn is live, or blocked mid-turn on a permission answer; either way the run still occupies its worktree. */
+export function isRunBusy(status: string): boolean {
+  return isRunWorking(status) || status === "awaiting_permission";
 }

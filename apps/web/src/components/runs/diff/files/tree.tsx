@@ -22,8 +22,6 @@ export function DiffFileTree({ files, activePath, reviewedPaths, onSelect }: Dif
   const [revealed, setRevealed] = useState(activePath);
   const nodes = useMemo(() => buildDiffFileTree(files), [files]);
 
-  // Arriving at a file reopens the folders hiding it; collapsing stays the reader's decision,
-  // so the chevron cannot report a state the rows contradict.
   if (revealed !== activePath) {
     setRevealed(activePath);
     if (activePath !== null) setCollapsed(expandAncestors(collapsed, activePath));

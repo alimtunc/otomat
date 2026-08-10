@@ -28,7 +28,6 @@ function defaultReadLoginPath(shell: string): string | null {
     });
     return out.trim() === "" ? null : out;
   } catch {
-    // Shell missing, non-interactive, or timed out: fall back to the process PATH + known dirs.
     return null;
   }
 }

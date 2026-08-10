@@ -60,14 +60,12 @@ export const linearTeamContractSchema = z.object({
   key: z.string(),
   name: z.string(),
 });
-export type LinearTeamContract = z.infer<typeof linearTeamContractSchema>;
 
 export const linearProjectContractSchema = z.object({
   id: z.string(),
   name: z.string(),
   team_ids: z.array(z.string()),
 });
-export type LinearProjectContract = z.infer<typeof linearProjectContractSchema>;
 
 export const linearWorkspaceContractSchema = z.object({
   teams: z.array(linearTeamContractSchema),
@@ -106,7 +104,6 @@ export type IssueSourceSyncResult = z.infer<typeof issueSourceSyncResultSchema>;
 export const syncLinearResponseSchema = z.object({
   results: z.array(issueSourceSyncResultSchema),
 });
-export type SyncLinearResponse = z.infer<typeof syncLinearResponseSchema>;
 
 /** One project's Linear freshness, as the daemon that owns that project knows it. */
 export const linearSyncStatusSchema = z.object({

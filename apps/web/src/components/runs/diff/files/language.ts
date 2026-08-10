@@ -89,7 +89,6 @@ const BY_EXTENSION: Record<string, DiffHighlighterLang> = {
   zsh: "bash",
 };
 
-// Unrecognised names resolve to plaintext, a registered grammar, so the renderer never guesses.
 export function diffLanguage(fileName: string): DiffHighlighterLang {
   const base = baseName(fileName).toLowerCase();
   const byName = BY_FILENAME[base];

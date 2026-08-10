@@ -5,7 +5,6 @@ import {
   type BinaryProbe,
   type ProviderOptionDescriptor,
   type RuntimeCapabilities,
-  type RunTerminalState,
 } from "@otomat/domain";
 import { z } from "zod";
 
@@ -25,9 +24,7 @@ export const runtimeUsageSchema = z.object({
 export type RuntimeUsage = z.infer<typeof runtimeUsageSchema>;
 
 /** Terminal outcomes a runtime can return: the run machine's terminal states. */
-export const RUNTIME_FINAL_STATUSES = RUN_TERMINAL_STATES;
-const runtimeFinalStatusSchema = z.enum(RUNTIME_FINAL_STATUSES);
-export type RuntimeFinalStatus = RunTerminalState;
+const runtimeFinalStatusSchema = z.enum(RUN_TERMINAL_STATES);
 
 export const runtimeFinalStateSchema = z.object({
   status: runtimeFinalStatusSchema,

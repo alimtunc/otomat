@@ -22,7 +22,7 @@ interface AgentSelectProbeProps {
   compact?: boolean;
 }
 
-vi.mock("@web/api/runs/mutations", () => ({
+vi.mock("@web/api/runs/use-launch-run", () => ({
   useLaunchRun: () => ({ launch, isPending: false }),
 }));
 

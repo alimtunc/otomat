@@ -31,7 +31,7 @@ export function IssuesView() {
   const [advanced, setAdvanced] = useState<AdvancedIssueFilters>(NO_ADVANCED_FILTERS);
 
   const { refreshIfStale } = sync;
-  // otomat-allow-effect: entering this view is navigation, not render output.
+  // otomat-allow-effect: fires on entry and each sync-status change; the staleness guard bounds it.
   useEffect(() => {
     refreshIfStale();
   }, [refreshIfStale]);

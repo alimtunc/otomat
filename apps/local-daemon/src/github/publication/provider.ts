@@ -121,7 +121,6 @@ async function createProvider(
       draft: request.mode === "draft",
     });
   } catch (error) {
-    // A base recorded from a never-pushed local branch is the one create failure the user can only fix upstream — name it.
     if (
       error instanceof GitHubCliError &&
       error.code === "github_pr_create_failed" &&

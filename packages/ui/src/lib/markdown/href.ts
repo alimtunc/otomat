@@ -14,7 +14,6 @@ export function safeHref(raw: string): string | null {
     const url = new URL(value, RELATIVE_BASE);
     return SAFE_PROTOCOLS.has(url.protocol) ? value : null;
   } catch {
-    // A destination the URL parser rejects has no safe interpretation.
     return null;
   }
 }

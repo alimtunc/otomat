@@ -23,8 +23,6 @@ export const runs = sqliteTable("runs", {
   agent_id: text("agent_id").references(() => agents.id),
   status: text("status").$type<RunState>().notNull().default("queued"),
   branch: text("branch").notNull(),
-  // Frozen at launch, then append-only: revisions add a node and are journaled in the run ledger,
-  // so there is deliberately no workflow_revisions table.
   plan_json: text("plan_json", { mode: "json" }).notNull(),
   started_at: text("started_at"),
   completed_at: text("completed_at"),
@@ -84,7 +82,6 @@ export const agentSessions = sqliteTable("agent_sessions", {
   agent_id: text("agent_id").references(() => agents.id),
   status: text("status").$type<AgentSessionState>().notNull().default("created"),
   provider_session_id: text("provider_session_id"),
-  // Persisted process ids let boot reconciliation probe children after a daemon crash.
   pid: integer("pid"),
   pgid: integer("pgid"),
   exit_code: integer("exit_code"),
@@ -103,7 +100,6 @@ export const runContributions = sqliteTable(
     seq: integer("seq").notNull(),
     body: text("body").notNull(),
     status: text("status").$type<RunContributionState>().notNull().default("queued"),
-    // Stamped when a delivery is claimed, so a daemon crash mid-spawn leaves the claim auditable.
     agent_session_id: text("agent_session_id").references(() => agentSessions.id),
     delivered_at: text("delivered_at"),
     settled_at: text("settled_at"),

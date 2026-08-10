@@ -102,7 +102,6 @@ export function visibleTreeRows(
   return rows;
 }
 
-// Returns the same set when nothing was hiding the path, so the caller's setState bails out.
 export function expandAncestors(collapsed: ReadonlySet<string>, path: string): ReadonlySet<string> {
   const hiding = [...collapsed].filter((directory) => path.startsWith(`${directory}/`));
   if (hiding.length === 0) return collapsed;

@@ -49,7 +49,6 @@ export function useLaunchTarget(projectId: string): LaunchTargetState {
 
   const available = branches.data?.branches ?? [];
   const fallback = branches.data?.default_branch ?? usable.default_branch;
-  // A pick made against another repository is dropped rather than carried over.
   const picked = override !== null && available.includes(override) ? override : fallback;
 
   return {

@@ -99,12 +99,10 @@ export class RemoteHostSession implements RemoteSessionHandle {
       timeoutMs: BOOTSTRAP_TIMEOUT_MS,
     });
     if (stop.code !== 0) {
-      // Nothing was torn down yet: the session keeps serving the old daemon and the caller may retry.
       throw new Error(`remote daemon stop exited ${String(stop.code)}: ${trimDetail(stop.stderr)}`);
     }
     await this.stopTunnel();
     this.setStatus({ phase: "disconnected", detail: null });
-    // The daemon is down now, so a failed reconnect must keep retrying, not settle on `error`.
     return this.connect(true);
   }
 
@@ -125,7 +123,6 @@ export class RemoteHostSession implements RemoteSessionHandle {
     try {
       const localPort = await this.ensureLocalPort();
       const bootstrap = await this.bootstrapDaemon();
-      // Disposed mid-flight: stop before spawning a tunnel nobody would ever stop.
       if (this.disposed) return this.settleDisposed();
       if ("failure" in bootstrap) return this.settleFailure(bootstrap.failure, retryOnFailure);
       const tunnelFailure = await this.openTunnel(localPort);

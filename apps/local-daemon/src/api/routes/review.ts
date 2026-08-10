@@ -9,7 +9,8 @@ import { CommentsNotFixableError, DiffUnavailableError, ReviewAnchorStaleError }
 
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
-import { toReview, toReviewComment, toRun, toRunDiffResponse } from "../serialize.js";
+import { toRunDiffResponse } from "../serialize-run-diff.js";
+import { toReview, toReviewComment, toRun } from "../serialize.js";
 import { appendStepSelector, stepAppendErrorResponse } from "../step-append.js";
 
 export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
@@ -55,8 +56,6 @@ export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
     },
   );
 
-  // A fix is an appended step, not a resumed session: it carries its own frozen
-  // comment/diff context and the agent the user picked for it.
   routes.post(
     "/:id/review/fix",
     validateJson(requestFixRequestSchema),

@@ -10,7 +10,7 @@ import { executableSteps, isRunPlanCompeteGroup, type StartRunRequest } from "@o
 
 import { sessionDir } from "#events";
 
-import { scheduleTurn, startNextReadyStep } from "./advance.js";
+import { startNextReadyStep } from "./advance.js";
 import { repositoryInitCommands } from "./init-commands.js";
 import { prepareRun } from "./prepare.js";
 import {
@@ -22,6 +22,7 @@ import {
 } from "./resume.js";
 import type { SupervisorState } from "./state.js";
 import { driveCompeteGroupTo } from "./transitions.js";
+import { scheduleTurn } from "./turn-scheduling.js";
 import type { TurnContext } from "./types.js";
 import { scheduleWorktreeInit } from "./worktree-init.js";
 
@@ -57,8 +58,6 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
     return spawnResumeTurn(state, run, prompt);
   }
 
-  // No session ever started: the daemon died during (or right after) worktree init, and
-  // nothing recorded whether it finished — re-run it before any agent sees the checkout.
   if (listAgentSessionsForRun(state.db, runId).length === 0) {
     const initCommands = repositoryInitCommands(state.db, run.repository_id);
     if (initCommands.length > 0) {

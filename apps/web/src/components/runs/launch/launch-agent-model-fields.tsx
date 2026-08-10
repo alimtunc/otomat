@@ -27,7 +27,6 @@ export function LaunchAgentModelFields({
         <LaunchAgentPicker
           agents={agents}
           onValueChange={(choice) => {
-            // Another agent lists other models, so the override returns to the agent default.
             onModelChange(undefined);
             onAgentChoice(choice);
           }}

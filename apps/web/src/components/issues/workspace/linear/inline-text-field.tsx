@@ -41,8 +41,6 @@ export function InlineTextField({
 
   if (!editing) {
     const empty = value.length === 0;
-    // A rendered description holds links and code blocks, so it cannot live inside the
-    // click-to-edit button; the edit affordance sits beside it instead.
     if (multiline && !empty) {
       return (
         <div className="group -mx-1.5 flex flex-col items-start gap-2 px-1.5">

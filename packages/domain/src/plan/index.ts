@@ -6,7 +6,9 @@
  * @packageDocumentation
  */
 export * from "./append.js";
+export * from "./execution-order.js";
 export * from "./limits.js";
+export * from "./node-input.js";
 export * from "./resume.js";
 export * from "./schedule.js";
 export * from "./validate.js";

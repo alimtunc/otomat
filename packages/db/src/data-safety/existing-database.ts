@@ -1,16 +1,17 @@
 import { lstatSync } from "node:fs";
 
 import { createClient, type DbClient } from "../client.js";
+import { DataSafetyError } from "./errors.js";
 import {
   collectCleanupFailure,
-  DataSafetyError,
   inspectPathAfterFailure,
   isSqliteContentError,
   preserveClassifiedFailure,
   throwIfUnclassifiedFailure,
-} from "./errors.js";
+} from "./failures.js";
 import { assertDatabaseIntegrity } from "./integrity.js";
-import { inspectMigrationHistory, throwIfMigrationRuntimeFailure } from "./metadata.js";
+import { inspectMigrationHistory } from "./metadata.js";
+import { throwIfMigrationRuntimeFailure } from "./migration-runtime-error.js";
 
 export function inspectExistingDatabase(dbPath: string): { pending: boolean } {
   let stats;

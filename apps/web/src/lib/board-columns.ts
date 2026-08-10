@@ -1,8 +1,7 @@
 import { ISSUE_STATES, type IssueContract, type IssueState } from "@otomat/domain";
 
-// blocked/canceled are hidden per the prototype board; the List layout still shows them.
 const HIDDEN_COLUMNS = new Set<IssueState>(["blocked", "canceled"]);
-export const BOARD_COLUMNS = ISSUE_STATES.filter((status) => !HIDDEN_COLUMNS.has(status));
+const BOARD_COLUMNS = ISSUE_STATES.filter((status) => !HIDDEN_COLUMNS.has(status));
 
 /** Live execution wins the card's column (Running/Reviewing/PR open); otherwise it falls back to the source status. */
 export function boardColumnFor(issue: IssueContract): IssueState {

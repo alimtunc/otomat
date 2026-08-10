@@ -8,7 +8,7 @@ import {
   setWorkflowCompetitorAgent,
   setWorkflowCompetitorEffort,
   setWorkflowCompetitorModel,
-} from "@web/lib/workflow-plan";
+} from "@web/lib/workflow/competitors";
 
 import { NodeAgentFields } from "./node-agent-fields";
 import type { WorkflowForm } from "./use-form";

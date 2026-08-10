@@ -28,7 +28,6 @@ export function PlaceholderView({
       breadcrumbs={[{ label, current: true }]}
       actions={
         action ? (
-          // The span carries the tooltip: the disabled button has pointer-events-none.
           <span title={action.disabledReason}>
             <Button variant="primary" size="sm" disabled>
               <Icon name="plus" aria-hidden />

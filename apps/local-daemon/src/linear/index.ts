@@ -2,7 +2,7 @@ export { createLinearApiClient } from "./client/index.js";
 export { takeLinearKeyFromEnv } from "./credential.js";
 export { LinearError, LinearWriteConflictError, linearError } from "./errors.js";
 export { createLinearService } from "./service.js";
-export type { LinearService, LinearServiceConfig } from "./service.js";
+export type { LinearService, LinearServiceConfig } from "./service-contract.js";
 export {
   issueStateFromLinear,
   SYNC_OVERLAP_MS,

@@ -145,7 +145,6 @@ export function recoverCompeteSelections(state: SupervisorState): ReconcileOutco
         });
       } catch (error) {
         console.error(`[otomat] compete winner recovery failed for group ${group.id}`, error);
-        // Re-read: a throw after a successful promote must not overwrite the `selected` row it just wrote.
         const stalled = getCompeteGroup(state.db, group.id);
         if (stalled?.status !== "promoting") continue;
         driveCompeteGroupTo(state.db, group.id, stalled.status, "failed");

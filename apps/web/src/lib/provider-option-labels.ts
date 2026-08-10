@@ -29,7 +29,6 @@ function sentenceCase(value: string): string {
     const lower = word.toLowerCase();
     sentence += sentence === "" ? lower.charAt(0).toUpperCase() + lower.slice(1) : ` ${lower}`;
   }
-  // A value with no word character at all is shown exactly as the CLI spelled it.
   return sentence === "" ? value : sentence;
 }
 

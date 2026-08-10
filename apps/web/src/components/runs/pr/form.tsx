@@ -67,7 +67,6 @@ export function PullRequestForm({
   });
 
   const terminal = pullRequest?.status === "merged" || pullRequest?.status === "closed";
-  // Once the PR exists on GitHub its head branch is its identity; only a first publish may rename.
   const branchLocked = pullRequest?.number !== null && pullRequest?.number !== undefined;
 
   async function fillFromDraft(): Promise<void> {
@@ -91,7 +90,6 @@ export function PullRequestForm({
       >
         {([canSubmit, isDirty, mode]) => {
           const model = pullRequestViewModel(connection, pullRequest, canPublish, isDirty, mode);
-          // actionPending never depends on hasDraftChanges, so fieldsDisabled matches the pre-isDirty value.
           const fieldsDisabled = terminal || model.actionPending || isPending;
           return (
             <>

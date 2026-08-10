@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { RunPlan } from "#domain/contracts/entities/runs";
+import { InvalidRunPlanError, planExecutionOrder } from "#domain/plan/execution-order";
 import {
   allStepsSucceeded,
   hasActiveStep,
-  InvalidRunPlanError,
-  planExecutionOrder,
   planOutcome,
   readyPlanWork,
 } from "#domain/plan/schedule";

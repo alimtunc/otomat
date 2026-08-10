@@ -15,7 +15,6 @@ const OVERRIDES: MarkdownToJSX.Overrides = {
   h4: { props: { className: "text-sm font-semibold text-foreground" } },
   h5: { props: { className: "text-sm font-semibold text-text-secondary" } },
   h6: { props: { className: "text-xs font-semibold uppercase text-text-secondary" } },
-  // Single newlines carry meaning in agent output, so the paragraph keeps them.
   p: { props: { className: "whitespace-pre-wrap" } },
   a: { component: MarkdownLink },
   strong: { props: { className: "font-semibold" } },

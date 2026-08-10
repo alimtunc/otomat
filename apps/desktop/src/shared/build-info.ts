@@ -50,8 +50,6 @@ export function parseBuildInfo(contents: string): BuildInfo {
   if (!isPackagedChannel(channel)) {
     throw new Error("The build metadata field channel is not a distribution channel.");
   }
-  // Signature is a trust property of its own: a stable build that carries none is invalid, never
-  // something else that happens to be unsigned.
   if (channel === "stable" && !signed) {
     throw new Error("The build metadata claims the stable channel without a signature.");
   }

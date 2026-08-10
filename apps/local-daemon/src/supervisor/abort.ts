@@ -45,7 +45,6 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
     const events = readRunEvents(db, runId);
     const scoped = active === null ? events : eventsForSession(events, active.id);
 
-    // Worker finished before/during the abort — honor its marker, never overwrite with a fake cancel.
     if (handles.length <= 1 && findFinalStatus(scoped) !== null) {
       notifyAfterSettle(
         state,
@@ -64,7 +63,6 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
       TARGETS.canceled,
       now,
     );
-    // A forced cancel never reaches `settleRun`, so the messages the killed turn carried are resolved here.
     for (const session of sessions) resolveSessionContributions(db, session.id, "canceled", now);
 
     const ref = {

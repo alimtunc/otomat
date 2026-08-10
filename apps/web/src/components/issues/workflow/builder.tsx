@@ -7,7 +7,7 @@ import { agentChoiceProfile, agentChoiceRuntimeId } from "@web/lib/agent-choice"
 import { agentEffort, resolveRunEffort } from "@web/lib/effort-choice";
 import { effectiveModelId } from "@web/lib/model-choice";
 import { workflowExecutableCount } from "@web/lib/workflow-draft";
-import { clearInheritedNodeOverrides } from "@web/lib/workflow-plan";
+import { clearInheritedNodeOverrides } from "@web/lib/workflow/steps";
 
 import { WorkflowCompeteCard } from "./compete-card";
 import { WorkflowStepCard } from "./step-card";

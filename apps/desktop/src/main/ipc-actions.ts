@@ -48,14 +48,12 @@ export function buildIpcActions(context: IpcActionContext): IpcActions {
       return context.support.exportBundle(parsed.data);
     },
     openReportDraft: async (draft: unknown): Promise<void> => {
-      // A malformed draft is never opened: this is the one path that leaves the app.
       await context.support.openReportDraft(problemReportDraftSchema.parse(draft));
     },
     showDataPolicy: () => context.support.showDataPolicy(),
     resetSandbox: async (): Promise<PreviewSandboxResetResult> => {
       const reset = context.runtime()?.sandbox.reset();
       const result = await (reset ?? Promise.resolve(SANDBOX_NOT_READY));
-      // Reload only after success: a failure must leave the page alive to show the message.
       if (result.ok) context.reloadCockpit();
       return result;
     },

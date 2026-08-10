@@ -73,16 +73,12 @@ export function useProjectLinearSync(projectId: string | undefined): ProjectLine
   const refresh = useCallback(
     (options: ProjectLinearSyncOptions = {}) => {
       if (projectId === undefined) return;
-      // The mutation cache is the cross-component lock: two triggers firing in the
-      // same commit would both read a pending flag captured before either ran.
       if (client.isMutating({ mutationKey: queryKeys.linearSync(projectId) }) > 0) return;
       mutate({ project_id: projectId, full: options.full === true, announce: options.announce });
     },
     [client, mutate, projectId],
   );
 
-  // An automatic pass with no key to use would only record a failure nobody asked for;
-  // pressing Refresh while disconnected still earns the real refusal.
   const refreshIfStale = useCallback(() => {
     if (!connected || status === null || status.sources === 0 || status.running) return;
     const syncedAt = status.last_synced_at;

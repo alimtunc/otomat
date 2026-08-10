@@ -9,15 +9,17 @@ import {
 } from "@web/lib/workflow-draft";
 import {
   addWorkflowCompetitor,
-  buildRunPlanInput,
-  clearInheritedNodeOverrides,
-  moveWorkflowStep,
   removeWorkflowCompetitor,
   setWorkflowCompetitorAgent,
+} from "@web/lib/workflow/competitors";
+import { buildRunPlanInput } from "@web/lib/workflow/plan-input";
+import {
+  clearInheritedNodeOverrides,
+  moveWorkflowStep,
   setWorkflowStepEffort,
   setWorkflowStepModel,
   toggleWorkflowDependency,
-} from "@web/lib/workflow-plan";
+} from "@web/lib/workflow/steps";
 import { expect, it } from "vitest";
 
 function competeGroupAt(steps: readonly WorkflowNodeDraft[], index: number): WorkflowCompeteDraft {

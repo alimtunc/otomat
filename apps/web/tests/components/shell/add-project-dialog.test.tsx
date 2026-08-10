@@ -94,6 +94,20 @@ it("shows the daemon's refusal and keeps the dialog open", async () => {
   expect(onSelect).not.toHaveBeenCalled();
 });
 
+it("surfaces a folder-picker failure instead of rejecting silently", async () => {
+  window.otomat = fakeDesktopBridge({
+    pickDirectory: () => Promise.reject(new Error("picker crashed")),
+  });
+  await renderDialog(vi.fn());
+
+  const browseButton = findButton("Browse…");
+  await act(async () => {
+    browseButton?.click();
+  });
+
+  expect(document.body.textContent).toContain("Could not open the folder picker.");
+});
+
 it("refuses an empty path before calling any host", async () => {
   const registerProject = vi.fn();
   const bridge = fakeDesktopBridge();

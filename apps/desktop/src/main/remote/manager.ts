@@ -190,7 +190,6 @@ export class ExecutionHostManager {
     }
     const session = (this.session ??= this.createSession(alias));
     const status = await session.connect(false);
-    // The session field can only have moved under us via shutdown; never point the renderer at it.
     if (this.session !== session) return errorResult("switch_in_progress");
     if (status.phase !== "connected") return { ok: false, status };
     const url = session.url;
@@ -219,8 +218,6 @@ export class ExecutionHostManager {
       void this.session.connect(true);
       return;
     }
-    // A failed explicit switch settles the session on `error` with its retry loop canceled;
-    // the next warm-up re-arms it so the host keeps healing in the background.
     if (this.session.status.phase === "error") void this.session.connect(true);
   }
 

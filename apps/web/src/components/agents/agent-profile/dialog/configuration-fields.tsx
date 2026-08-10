@@ -24,9 +24,7 @@ export function AgentProfileConfigurationFields({
             runtime={values.runtime}
             onRuntimeChange={(runtime) => {
               form.setFieldValue("runtime", runtime);
-              // Another runtime lists other models, so a kept id would silently become a custom one.
               form.setFieldValue("model", PROVIDER_DEFAULT_MODEL);
-              // Its options are another CLI's flags entirely; none of them carries over.
               form.setFieldValue("options", {});
             }}
           />

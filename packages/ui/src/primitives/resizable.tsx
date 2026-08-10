@@ -60,7 +60,6 @@ export function ResizableHandle({ className, ...props }: SeparatorProps) {
   );
 }
 
-// Re-exported so this module stays the only importer of the panel library.
 export {
   useDefaultLayout,
   usePanelRef,

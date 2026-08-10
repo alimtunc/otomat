@@ -78,7 +78,6 @@ export class HostCatalog {
         status: session?.status ?? { phase: "disconnected", detail: null },
         projects: url === null ? null : await this.fetchCatalog(url),
       });
-      // Piggybacks on the switcher's poll: a redeployed-but-stale daemon restarts itself once idle.
       void this.staleRefresher.maybeRefresh(session);
     }
     return entries;
@@ -102,7 +101,6 @@ export class HostCatalog {
       if (response.status === 201) {
         const created = registerRepositoryResponseSchema.safeParse(payload);
         if (!created.success) {
-          // The project exists on the daemon; only this response was unreadable (likely version skew).
           return {
             ok: false,
             message:

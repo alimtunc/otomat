@@ -23,7 +23,6 @@ export interface NearViewport {
 // Latched: highlighting costs a synchronous pass per file, so a large diff must not pay up front.
 export function useNearViewport(): NearViewport {
   const [node, setNode] = useState<HTMLElement | null>(null);
-  // Without the API there is nothing to wait for; colour everything rather than nothing.
   const [near, setNear] = useState(() => typeof IntersectionObserver === "undefined");
 
   // otomat-allow-effect: an IntersectionObserver subscription has no declarative equivalent.

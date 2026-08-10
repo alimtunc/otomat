@@ -2,7 +2,7 @@ import {
   CLOSED_ISSUE_WORKSPACE,
   type IssueWorkspace,
 } from "../contracts/entities/issue-workspace.js";
-import { isRunTerminal, isRunWorking } from "../state-machines/run.js";
+import { isRunBusy, isRunTerminal } from "../state-machines/run.js";
 import type { IssueExecutionEvidence } from "./issue-execution.js";
 
 /**
@@ -13,11 +13,6 @@ import type { IssueExecutionEvidence } from "./issue-execution.js";
  */
 function holdsWorkspace(row: IssueExecutionEvidence): boolean {
   return !isRunTerminal(row.run_status) && row.worktree_status === "active";
-}
-
-/** A provider turn is live, or blocked mid-turn on a permission answer; either way the worktree is not free. */
-function isBusy(row: IssueExecutionEvidence): boolean {
-  return isRunWorking(row.run_status) || row.run_status === "awaiting_permission";
 }
 
 function outranks(candidate: IssueExecutionEvidence, best: IssueExecutionEvidence): boolean {
@@ -35,5 +30,10 @@ export function projectIssueWorkspace(rows: readonly IssueExecutionEvidence[]): 
     if (best === null || outranks(row, best)) best = row;
   }
   if (best === null) return CLOSED_ISSUE_WORKSPACE;
-  return { state: "open", run_id: best.run_id, branch: best.run_branch, busy: isBusy(best) };
+  return {
+    state: "open",
+    run_id: best.run_id,
+    branch: best.run_branch,
+    busy: isRunBusy(best.run_status),
+  };
 }

@@ -31,8 +31,6 @@ export function buildDaemonEnv(options: DaemonEnvOptions): NodeJS.ProcessEnv {
   delete env.OTOMAT_LINEAR_API_KEY;
   delete env[MAINTENANCE_ACTION_ENV];
   delete env[RESTORE_BACKUP_ENV];
-  // Inheriting either from the launching shell would move generated git worktrees out of this
-  // session's data root and widen the daemon's CORS allowlist behind the app's back.
   delete env.OTOMAT_WORKTREES_ROOT;
   delete env.OTOMAT_ALLOWED_ORIGINS;
   delete env.OTOMAT_BUILD_SHA;

@@ -11,7 +11,8 @@ import {
   requiredPreMigrationBytes,
   requiredRestoreBytes,
 } from "#db/data-safety/capacity";
-import { DataSafetyError, preserveDataSafetyFailure } from "#db/data-safety/errors";
+import { DataSafetyError } from "#db/data-safety/errors";
+import { preserveDataSafetyFailure } from "#db/data-safety/failures";
 import { readSchemaMetadata } from "#db/data-safety/metadata";
 import { prepareDatabase } from "#db/data-safety/prepare";
 import { TEST_UUID_V4, TEST_UUID_V5 } from "#test-support/generated-artifact-names";

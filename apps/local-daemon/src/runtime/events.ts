@@ -11,7 +11,7 @@ import { z } from "zod";
  * - `native`: a provider-native frame preserved as-is (highest fidelity).
  */
 export const EVENT_FIDELITY = ["raw_log", "parsed", "native"] as const;
-export const eventFidelitySchema = z.enum(EVENT_FIDELITY);
+const eventFidelitySchema = z.enum(EVENT_FIDELITY);
 export type EventFidelity = (typeof EVENT_FIDELITY)[number];
 
 /**
@@ -24,8 +24,6 @@ export const runtimeEventPayloadSchema = z.looseObject({
   adapter: z.string(),
   test_adapter: z.boolean().optional(),
 });
-
-export type RuntimeEventPayload = z.infer<typeof runtimeEventPayloadSchema>;
 
 /**
  * What a runtime pushes into the sink. It is the canonical Otomat event

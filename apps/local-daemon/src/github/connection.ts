@@ -37,7 +37,6 @@ export function createGitHubConnectionService(
   // The sign-in verification code is only obtainable mid-login, so it is
   // surfaced through the polled `connecting` contract instead of a push channel.
   async function performLogin(): Promise<GitHubConnectionContract> {
-    // A gh that cannot run must fail before GitHub mints a code and a token nobody could store.
     const unavailable = await cli.availability();
     if (unavailable) return unavailable;
     const start = await device.start();

@@ -20,7 +20,6 @@ export const reviewComments = sqliteTable("review_comments", {
     .references(() => reviews.id),
   file_path: text("file_path").notNull(),
   line: integer("line").notNull(),
-  // The immutable file diff SHA keeps the comment anchored to what the reviewer saw.
   diff_sha: text("diff_sha").notNull(),
   body: text("body").notNull(),
   status: text("status").$type<ReviewCommentState>().notNull().default("open"),

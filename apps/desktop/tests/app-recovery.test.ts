@@ -205,7 +205,7 @@ it("keeps shutdown blocked and allows retry when daemon stop fails", async () =>
   expect(desktop.beginQuitIfNeeded(quit)).toBe(true);
   await vi.waitFor(() =>
     expect(writeDesktopLog).toHaveBeenCalledWith(
-      "Daemon stop failed; desktop shutdown remains blocked for retry.",
+      "Daemon stop failed during quit: Error: still running; desktop shutdown remains blocked for retry.",
     ),
   );
   expect(quit).not.toHaveBeenCalled();
