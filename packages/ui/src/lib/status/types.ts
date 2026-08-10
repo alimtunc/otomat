@@ -12,8 +12,7 @@ import type {
 } from "@otomat/domain/types";
 import type { LucideIcon } from "lucide-react";
 
-import { STATUS_REGISTRY } from "./status-registry";
-import type { StatusTone } from "./tone";
+import type { StatusTone } from "../tone";
 
 export type StatusKind =
   | "issue"
@@ -48,12 +47,4 @@ export interface KindStatusMap {
   reviewComment: ReviewCommentState;
   pr: PullRequestState;
   diffFile: ChangeStatus;
-}
-
-/** Resolves the visual descriptor (tone, icon, label) for a domain status; total over every state of each `StatusKind`. */
-export function resolveStatus<K extends StatusKind>(
-  kind: K,
-  status: KindStatusMap[K],
-): StatusDescriptor {
-  return STATUS_REGISTRY[kind][status];
 }

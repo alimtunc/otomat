@@ -42,7 +42,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 
-import type { KindStatusMap, StatusKind, StatusMap } from "./status";
+import type { KindStatusMap, StatusKind, StatusMap } from "./types";
 
 const ISSUE_STATUS: StatusMap<IssueState> = {
   backlog: { tone: "neutral", icon: Circle, label: "Backlog" },

@@ -5,16 +5,12 @@ import {
   type PullRequestPublicationMode,
 } from "@otomat/domain";
 
-import { publicationModel } from "./publication-model";
+import { publicationModel, type PublicationModel } from "./publication-model";
 
-export interface PullRequestViewModel {
+export interface PullRequestViewModel extends PublicationModel {
   connectionLabel: string;
   showConnect: boolean;
   deviceAuthorization: { code: string; url: string } | null;
-  actionLabel: string;
-  actionDisabled: boolean;
-  actionPending: boolean;
-  stateLabel: string;
   errorMessage: string | null;
   linkLabel: string | null;
   linkUrl: string | null;

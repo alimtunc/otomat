@@ -1,11 +1,11 @@
 import type { PullRequestContract, PullRequestPublicationMode } from "@otomat/domain";
 
-import type { PullRequestViewModel } from "./model";
-
-type PublicationModel = Pick<
-  PullRequestViewModel,
-  "actionLabel" | "actionDisabled" | "actionPending" | "stateLabel"
->;
+export interface PublicationModel {
+  actionLabel: string;
+  actionDisabled: boolean;
+  actionPending: boolean;
+  stateLabel: string;
+}
 
 const PENDING_PUBLICATION_MODELS = {
   pushing: {
