@@ -1,6 +1,8 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
+import { StaleNotice } from "./stale-notice";
+
 interface QueryListProps<T> {
   query: UseQueryResult<T[]>;
   pending: ReactNode;
@@ -9,10 +11,23 @@ interface QueryListProps<T> {
   children: (data: T[]) => ReactNode;
 }
 
-/** The pending → error → empty → items ladder every list boundary shares; slots keep each list's own markup. */
+/**
+ * The pending → error → empty → items ladder every list boundary shares; slots keep each list's
+ * own markup. Items retained from a previous fetch outlive a failed refresh: they render under a
+ * stale notice with Retry instead of the blocking error slot.
+ */
 export function QueryList<T>({ query, pending, error, empty, children }: QueryListProps<T>) {
-  if (query.isPending) return pending;
-  if (query.isError) return error;
-  if (query.data.length === 0) return empty;
-  return children(query.data);
+  if (query.data === undefined) return query.isError ? error : pending;
+  return (
+    <>
+      {query.isError ? (
+        <StaleNotice
+          dataUpdatedAt={query.dataUpdatedAt}
+          refreshing={query.isFetching}
+          onRetry={() => void query.refetch()}
+        />
+      ) : null}
+      {query.data.length === 0 ? empty : children(query.data)}
+    </>
+  );
 }
