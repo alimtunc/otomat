@@ -23,6 +23,14 @@ export interface DiffFile extends ChangedFile {
   sha: string;
 }
 
+/** Renames and copies read their base side from `oldPath`, not from `path`. */
+export type DiffFilePaths = Pick<ChangedFile, "path" | "oldPath">;
+
+export interface DiffFileBlobs {
+  base: string | null;
+  head: string | null;
+}
+
 export interface CanonicalDiff {
   /** Sha the diff is computed against (the worktree's fork point). */
   base: string;

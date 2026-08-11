@@ -14,6 +14,27 @@ export class ReviewAnchorStaleError extends Error {
   }
 }
 
+export class FileNotInDiffError extends Error {
+  constructor(filePath: string) {
+    super(`${filePath} is not part of the current diff`);
+    this.name = "FileNotInDiffError";
+  }
+}
+
+export class FileNotExpandableError extends Error {
+  constructor(filePath: string) {
+    super(`${filePath} has no textual content to expand`);
+    this.name = "FileNotExpandableError";
+  }
+}
+
+export class FileTooLargeError extends Error {
+  constructor(filePath: string) {
+    super(`${filePath} is too large to expand`);
+    this.name = "FileTooLargeError";
+  }
+}
+
 /** The fix selection contains unknown or non-open comments. */
 export class CommentsNotFixableError extends Error {
   constructor(message: string) {

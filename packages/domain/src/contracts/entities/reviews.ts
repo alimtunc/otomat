@@ -14,7 +14,8 @@ export const reviewCommentContractSchema = z.object({
   id: z.string(),
   review_id: z.string(),
   file_path: z.string(),
-  line: z.number().int().nonnegative(),
+  /** Null pins the comment to the whole file at `diff_sha` instead of one new-side line. */
+  line: z.number().int().nonnegative().nullable(),
   diff_sha: z.string(),
   body: z.string(),
   status: z.enum(REVIEW_COMMENT_STATES),

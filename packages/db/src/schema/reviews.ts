@@ -19,7 +19,7 @@ export const reviewComments = sqliteTable("review_comments", {
     .notNull()
     .references(() => reviews.id),
   file_path: text("file_path").notNull(),
-  line: integer("line").notNull(),
+  line: integer("line"),
   diff_sha: text("diff_sha").notNull(),
   body: text("body").notNull(),
   status: text("status").$type<ReviewCommentState>().notNull().default("open"),

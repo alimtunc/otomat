@@ -201,6 +201,7 @@ describe("run completion report projection", () => {
           commentRow({ id: "z-comment", review_id: "review-1", status: "open" }),
           commentRow({ id: "a-comment", review_id: "review-1", status: "open" }),
         ],
+        fixAuthority: { kind: "otomat", reason: "Otomat owns this branch." },
       }),
     });
 

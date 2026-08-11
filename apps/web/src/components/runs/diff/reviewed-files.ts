@@ -3,21 +3,14 @@ import { readStored, writeStored } from "@web/lib/storage";
 const REVIEWED_KEY = "otomat.reviewed-files";
 const MAX_REVIEWED_RUNS = 40;
 
-interface ReviewedFilesEntry {
-  sha: string;
-  paths: string[];
-}
+/** `path -> the DiffFile.sha that was reviewed`; a file keeps its mark while its patch is unchanged. */
+export type ReviewedFingerprints = Record<string, string>;
 
-type ReviewedFilesByRun = Record<string, ReviewedFilesEntry>;
+type ReviewedFilesByRun = Record<string, ReviewedFingerprints>;
 
-function isReviewedFilesEntry(value: unknown): value is ReviewedFilesEntry {
+function isFingerprints(value: unknown): value is ReviewedFingerprints {
   if (typeof value !== "object" || value === null) return false;
-  const entry = value as Record<string, unknown>;
-  return (
-    typeof entry.sha === "string" &&
-    Array.isArray(entry.paths) &&
-    entry.paths.every((path) => typeof path === "string")
-  );
+  return Object.values(value).every((sha) => typeof sha === "string");
 }
 
 function readAllReviewedFiles(storage?: Pick<Storage, "getItem"> | null): ReviewedFilesByRun {
@@ -32,34 +25,53 @@ function readAllReviewedFiles(storage?: Pick<Storage, "getItem"> | null): Review
   if (typeof parsed !== "object" || parsed === null) return {};
   const byRun: ReviewedFilesByRun = {};
   for (const [runId, entry] of Object.entries(parsed)) {
-    if (isReviewedFilesEntry(entry)) byRun[runId] = entry;
+    if (isFingerprints(entry)) byRun[runId] = entry;
   }
   return byRun;
 }
 
-/** Reviewed paths for a run, valid only for the given diff sha: a new diff never inherits old marks. */
-export function readReviewedFiles(
+export function readReviewedFingerprints(
   runId: string,
-  sha: string,
   storage?: Pick<Storage, "getItem"> | null,
-): ReadonlySet<string> {
-  const entry = readAllReviewedFiles(storage)[runId];
-  if (entry === undefined || entry.sha !== sha) return new Set();
-  return new Set(entry.paths);
+): ReviewedFingerprints {
+  return readAllReviewedFiles(storage)[runId] ?? {};
 }
 
-export function writeReviewedFiles(
+export function writeReviewedFingerprints(
   runId: string,
-  sha: string,
-  paths: ReadonlySet<string>,
+  fingerprints: ReviewedFingerprints,
   storage?: (Pick<Storage, "getItem"> & Pick<Storage, "setItem">) | null,
 ): void {
   const byRun = readAllReviewedFiles(storage);
   delete byRun[runId];
-  if (paths.size > 0) byRun[runId] = { sha, paths: [...paths] };
+  if (Object.keys(fingerprints).length > 0) byRun[runId] = fingerprints;
   const runIds = Object.keys(byRun);
   for (const staleRunId of runIds.slice(0, Math.max(0, runIds.length - MAX_REVIEWED_RUNS))) {
     delete byRun[staleRunId];
   }
   writeStored(REVIEWED_KEY, JSON.stringify(byRun), storage);
+}
+
+export function reviewedPaths(
+  fingerprints: ReviewedFingerprints,
+  files: readonly { path: string; sha: string }[],
+): ReadonlySet<string> {
+  const reviewed = new Set<string>();
+  for (const file of files) {
+    if (fingerprints[file.path] === file.sha) reviewed.add(file.path);
+  }
+  return reviewed;
+}
+
+/** Drops marks for files no longer in the diff so a long-lived run's entry stays bounded. */
+export function pruneFingerprints(
+  fingerprints: ReviewedFingerprints,
+  files: readonly { path: string }[],
+): ReviewedFingerprints {
+  const live = new Set(files.map((file) => file.path));
+  const kept: ReviewedFingerprints = {};
+  for (const [path, sha] of Object.entries(fingerprints)) {
+    if (live.has(path)) kept[path] = sha;
+  }
+  return kept;
 }

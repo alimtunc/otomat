@@ -3,11 +3,13 @@ import { ThemeProvider } from "@otomat/ui";
 import { changeBlockRows } from "@web/components/runs/diff/diff-nav";
 import { DiffFileCard } from "@web/components/runs/diff/files/card";
 import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
+import { DEFAULT_DIFF_PREFS } from "@web/components/runs/diff/prefs/prefs";
 import { describe, expect, it } from "vitest";
 
+import { diffFileCardProps } from "#support/diff-card";
 import { stubDiffCanvas } from "#support/diff-dom";
 import { diffFile } from "#support/diff-file";
-import { mount } from "#support/mount";
+import { mountWithQuery } from "#support/mount";
 
 stubDiffCanvas();
 
@@ -37,18 +39,9 @@ const file = diffFile({
 });
 
 function renderCard(mode: "unified" | "split") {
-  return mount(
+  return mountWithQuery(
     <ThemeProvider>
-      <DiffFileCard
-        file={file}
-        mode={mode}
-        reviewed={false}
-        onReviewedChange={() => {}}
-        commentsByLine={new Map()}
-        onAddComment={async () => {}}
-        selectedCommentIds={new Set()}
-        onToggleComment={() => {}}
-      />
+      <DiffFileCard {...diffFileCardProps({ file, prefs: { ...DEFAULT_DIFF_PREFS, mode } })} />
     </ThemeProvider>,
   );
 }

@@ -1,27 +1,29 @@
 import type { ReviewState, RunDiffContract } from "@otomat/domain";
-import { Icon, Kbd, ReviewStatusChip, SegmentedControl, SegmentedItem } from "@otomat/ui";
+import { Kbd, ReviewStatusChip } from "@otomat/ui";
+import { DiffPrefsPopover } from "@web/components/runs/diff/prefs/popover";
+import type { DiffPrefs } from "@web/components/runs/diff/prefs/prefs";
 import { DiffSummary } from "@web/components/runs/diff/summary";
-import type { DiffBrowserMode, DiffViewMode } from "@web/components/runs/diff/view-prefs";
+
+const ACTIVE_PATH_CLASS = "min-w-0 truncate font-mono text-xs text-text-secondary";
 
 export interface RunDiffHeaderProps {
   diff: RunDiffContract;
   reviewStatus: ReviewState | null;
-  mode: DiffViewMode;
-  onModeChange: (mode: DiffViewMode) => void;
-  /** null when the layout has no file sidebar to switch, so no control is offered. */
-  browserMode: DiffBrowserMode | null;
-  onBrowserModeChange: (mode: DiffBrowserMode) => void;
+  prefs: DiffPrefs;
+  onPrefsChange: (patch: Partial<DiffPrefs>) => void;
+  browsable: boolean;
   reviewedCount: number;
+  activePath: string | null;
 }
 
 export function RunDiffHeader({
   diff,
   reviewStatus,
-  mode,
-  onModeChange,
-  browserMode,
-  onBrowserModeChange,
+  prefs,
+  onPrefsChange,
+  browsable,
   reviewedCount,
+  activePath,
 }: RunDiffHeaderProps) {
   return (
     <header className="flex h-10.5 flex-none items-center gap-2.5 border-b border-border-subtle px-4.5">
@@ -31,6 +33,11 @@ export function RunDiffHeader({
           {reviewedCount}/{diff.files.length} reviewed
         </span>
       ) : null}
+      {activePath === null ? null : (
+        <span className={ACTIVE_PATH_CLASS} title={activePath}>
+          {activePath}
+        </span>
+      )}
       {diff.files.length > 0 ? (
         <span className="hidden items-center gap-1.5 text-[10px] text-text-tertiary xl:flex">
           <Kbd>j</Kbd>
@@ -42,39 +49,8 @@ export function RunDiffHeader({
         </span>
       ) : null}
       <span className="ml-auto flex items-center gap-2.5">
-        {browserMode === null ? null : (
-          <SegmentedControl
-            type="single"
-            value={browserMode}
-            onValueChange={(value) => {
-              if (value === "files" || value === "tree") onBrowserModeChange(value);
-            }}
-            aria-label="File browser mode"
-          >
-            <SegmentedItem value="files" icon={<Icon name="list" />}>
-              Files
-            </SegmentedItem>
-            <SegmentedItem value="tree" icon={<Icon name="list-tree" />}>
-              Tree
-            </SegmentedItem>
-          </SegmentedControl>
-        )}
-        <SegmentedControl
-          type="single"
-          value={mode}
-          onValueChange={(value) => {
-            if (value === "unified" || value === "split") onModeChange(value);
-          }}
-          aria-label="Diff view mode"
-        >
-          <SegmentedItem value="unified" icon={<Icon name="rows-3" />}>
-            Unified
-          </SegmentedItem>
-          <SegmentedItem value="split" icon={<Icon name="columns-3" />}>
-            Split
-          </SegmentedItem>
-        </SegmentedControl>
-        <DiffSummary diff={diff} />
+        <DiffPrefsPopover prefs={prefs} onChange={onPrefsChange} browsable={browsable} />
+        {prefs.stats ? <DiffSummary diff={diff} /> : null}
       </span>
     </header>
   );

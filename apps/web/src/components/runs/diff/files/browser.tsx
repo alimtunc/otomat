@@ -1,10 +1,7 @@
 import type { DiffFileContract, RunDiffContract } from "@otomat/domain";
-import { SidePanelToggle } from "@otomat/ui";
 import { DiffFileList } from "@web/components/runs/diff/files/list";
 import { DiffFileTree } from "@web/components/runs/diff/files/tree";
-import { DiffStat } from "@web/components/runs/diff/stat";
-import type { DiffBrowserMode } from "@web/components/runs/diff/view-prefs";
-import { PaneHeader } from "@web/components/runs/pane-header";
+import type { DiffBrowserMode } from "@web/components/runs/diff/prefs/prefs";
 
 export interface DiffFileBrowserProps {
   diff: RunDiffContract;
@@ -23,14 +20,7 @@ export function DiffFileBrowser({
 }: DiffFileBrowserProps) {
   const rowProps = { files: diff.files, activePath, reviewedPaths, onSelect };
   return (
-    <nav aria-label="Changed files" className="min-h-0 flex-1 overflow-auto bg-sidebar">
-      <PaneHeader className="bg-sidebar">
-        {mode === "tree" ? "Tree" : "Files"}
-        <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] font-normal normal-case">
-          <DiffStat additions={diff.additions} deletions={diff.deletions} />
-        </span>
-        <SidePanelToggle className="-mr-1.5" />
-      </PaneHeader>
+    <nav aria-label="Changed files" className="min-h-0 flex-1 overflow-auto">
       {mode === "tree" ? <DiffFileTree {...rowProps} /> : <DiffFileList {...rowProps} />}
     </nav>
   );

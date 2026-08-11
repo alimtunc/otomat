@@ -12,7 +12,7 @@ const reportOpenCommentSchema = z
   .object({
     id: z.string(),
     file_path: z.string(),
-    line: z.number().int().nonnegative(),
+    line: z.number().int().nonnegative().nullable(),
     body: z.string(),
     evidence: reportEvidenceSchema,
   })

@@ -1,4 +1,11 @@
-import { readReviewedFiles, writeReviewedFiles } from "@web/components/runs/diff/reviewed-files";
+import type { DiffFileContract } from "@otomat/domain";
+import {
+  pruneFingerprints,
+  readReviewedFingerprints,
+  reviewedPaths,
+  writeReviewedFingerprints,
+  type ReviewedFingerprints,
+} from "@web/components/runs/diff/reviewed-files";
 import { useMemo, useState } from "react";
 
 export interface ReviewedFiles {
@@ -6,31 +13,24 @@ export interface ReviewedFiles {
   setReviewed: (path: string, reviewed: boolean) => void;
 }
 
-interface ReviewedMarks {
-  runId: string;
-  sha: string;
-  paths: ReadonlySet<string>;
-}
-
-export function useReviewedFiles(runId: string, sha: string): ReviewedFiles {
-  const [marks, setMarks] = useState<ReviewedMarks>(() => ({
+export function useReviewedFiles(runId: string, files: DiffFileContract[]): ReviewedFiles {
+  const [marks, setMarks] = useState<{ runId: string; fingerprints: ReviewedFingerprints }>(() => ({
     runId,
-    sha,
-    paths: readReviewedFiles(runId, sha),
+    fingerprints: readReviewedFingerprints(runId),
   }));
 
-  const paths = useMemo(() => {
-    if (marks.runId === runId && marks.sha === sha) return marks.paths;
-    return readReviewedFiles(runId, sha);
-  }, [marks, runId, sha]);
+  const stored = marks.runId === runId ? marks.fingerprints : readReviewedFingerprints(runId);
+  const paths = useMemo(() => reviewedPaths(stored, files), [stored, files]);
 
-  function setReviewed(path: string, reviewedNow: boolean): void {
-    const next = new Set(paths);
-    if (reviewedNow) next.add(path);
-    else next.delete(path);
-    setMarks({ runId, sha, paths: next });
-    writeReviewedFiles(runId, sha, next);
-  }
+  const setReviewed = (path: string, reviewedNow: boolean): void => {
+    const file = files.find((candidate) => candidate.path === path);
+    if (file === undefined) return;
+    const next = pruneFingerprints(stored, files);
+    if (reviewedNow) next[path] = file.sha;
+    else delete next[path];
+    setMarks({ runId, fingerprints: next });
+    writeReviewedFingerprints(runId, next);
+  };
 
   return { paths, setReviewed };
 }

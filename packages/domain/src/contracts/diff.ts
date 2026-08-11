@@ -46,3 +46,22 @@ export const runDiffResponseSchema = z.object({
   diff: runDiffContractSchema.nullable(),
 });
 export type RunDiffResponse = z.infer<typeof runDiffResponseSchema>;
+
+/** The exact base and head blobs behind one diff file, so context can be expanded without guessing. */
+export const diffFileBlobsResponseSchema = z.object({
+  base_content: z.string().nullable(),
+  head_content: z.string().nullable(),
+});
+export type DiffFileBlobsResponse = z.infer<typeof diffFileBlobsResponseSchema>;
+
+/** Why the daemon could not hand back a file's blobs; each one is a state the UI states plainly. */
+export const DIFF_FILE_BLOBS_ERRORS = [
+  "diff_unavailable",
+  "file_not_in_diff",
+  "file_not_expandable",
+  "blobs_anchor_stale",
+  "file_too_large",
+] as const;
+export type DiffFileBlobsError = (typeof DIFF_FILE_BLOBS_ERRORS)[number];
+
+export const diffFileBlobsErrorSchema = z.object({ error: z.enum(DIFF_FILE_BLOBS_ERRORS) });

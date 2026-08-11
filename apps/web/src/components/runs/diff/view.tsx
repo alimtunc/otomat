@@ -14,25 +14,28 @@ import { useSelector } from "@tanstack/react-store";
 import { useAddReviewComment } from "@web/api/reviews/mutations";
 import { useRunReview } from "@web/api/reviews/queries";
 import { useRunDetail, useRunDiff } from "@web/api/runs/queries";
+import { DiffFileCards } from "@web/components/runs/diff/cards";
 import { revealAndFocus } from "@web/components/runs/diff/diff-nav";
-import { DiffFileBrowser } from "@web/components/runs/diff/files/browser";
-import { DiffFileCard } from "@web/components/runs/diff/files/card";
 import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
 import { DiffFileNav } from "@web/components/runs/diff/files/nav";
 import { DiffFixBar } from "@web/components/runs/diff/fix-bar";
 import { RunDiffHeader } from "@web/components/runs/diff/header";
+import { diffPrefsStore } from "@web/components/runs/diff/prefs/store";
+import { DiffSidebar } from "@web/components/runs/diff/sidebar";
+import { useActiveDiffFile } from "@web/components/runs/diff/use-active-file";
+import { useCollapsedFiles } from "@web/components/runs/diff/use-collapsed-files";
 import { useDiffKeyboardNav } from "@web/components/runs/diff/use-diff-keyboard-nav";
 import { useReviewedFiles } from "@web/components/runs/diff/use-reviewed-files";
-import {
-  diffBrowserModeStore,
-  diffViewModeStore,
-} from "@web/components/runs/diff/view-prefs-store";
-import { ArchivedComments } from "@web/components/runs/review/archived-comments";
+import { hideReviewedFiles, sortDiffFiles } from "@web/components/runs/diff/visible-files";
+import { reviewCommentDomId } from "@web/components/runs/review/comment/anchor";
+import { DetachedComments } from "@web/components/runs/review/detached-comments";
 import { partitionComments } from "@web/components/runs/review/partition";
 import { useReviewSelection } from "@web/components/runs/review/use-selection";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
-import { useState } from "react";
+
+const NO_FILES: DiffFileContract[] = [];
+const NO_COMMENTS: ReviewCommentContract[] = [];
 
 export function RunDiffView() {
   const { runId } = useParams({ from: "/runs/$runId/diff" });
@@ -42,26 +45,40 @@ export function RunDiffView() {
   const reviewQuery = useRunReview(runId);
   const addComment = useAddReviewComment(runId);
   const selection = useReviewSelection(runId);
-  const [activePath, setActivePath] = useState<string | null>(null);
+  const active = useActiveDiffFile(runId);
+  const collapsed = useCollapsedFiles();
   const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
   const filesLayout = usePanelGroupLayout("otomat.run-diff");
-  const mode = useSelector(diffViewModeStore);
-  const browserMode = useSelector(diffBrowserModeStore);
+  const prefs = useSelector(diffPrefsStore);
   const diff = diffQuery.data?.diff ?? null;
-  const reviewed = useReviewedFiles(runId, diff?.sha ?? "");
+  const files = diff?.files ?? NO_FILES;
+  const reviewed = useReviewedFiles(runId, files);
+  const ordered = sortDiffFiles(files, prefs.sort);
+  const partition = partitionComments(diff, reviewQuery.data?.comments ?? NO_COMMENTS);
+  const visible = hideReviewedFiles(ordered, {
+    hideReviewed: prefs.hideReviewed,
+    reviewedPaths: reviewed.paths,
+    commentedPaths: partition.commentedPaths,
+  });
 
-  function jumpToFile(file: DiffFileContract) {
-    setActivePath(file.path);
-    const card = document.getElementById(diffFileDomId(file));
+  const revealFile = (path: string): void => {
+    active.select(path);
+    collapsed.set(path, false);
+    const card = document.getElementById(diffFileDomId({ path }));
     if (card !== null) revealAndFocus(card, "start");
-  }
+  };
+
+  const toggleReviewed = (path: string, next: boolean): void => {
+    reviewed.setReviewed(path, next);
+    collapsed.set(path, next);
+  };
 
   useDiffKeyboardNav({
-    enabled: diff !== null && diff.files.length > 0,
-    files: diff?.files ?? [],
-    activePath,
-    onJumpToFile: jumpToFile,
-    onToggleReviewed: (path) => reviewed.setReviewed(path, !reviewed.paths.has(path)),
+    enabled: ordered.length > 0,
+    files: visible.files,
+    activePath: active.path,
+    onJumpToFile: (file) => revealFile(file.path),
+    onToggleReviewed: (path) => toggleReviewed(path, !reviewed.paths.has(path)),
     onExit: () => void navigate({ to: "/runs/$runId", params: { runId } }),
   });
 
@@ -81,7 +98,19 @@ export function RunDiffView() {
     );
   }
 
-  const { anchored, archived } = partitionComments(diff, reviewQuery.data.comments);
+  const review = reviewQuery.data;
+
+  const selectComment = (comment: ReviewCommentContract): void => {
+    if (partition.anchoredIds.has(comment.id)) {
+      active.select(comment.file_path);
+      collapsed.set(comment.file_path, false);
+    }
+    // The anchor only exists once the card it lives in has rendered expanded.
+    requestAnimationFrame(() => {
+      const target = document.getElementById(reviewCommentDomId(comment.id));
+      if (target !== null) revealAndFocus(target, "center");
+    });
+  };
 
   if (diff === null) {
     return (
@@ -95,29 +124,31 @@ export function RunDiffView() {
     );
   }
 
-  async function submitComment(filePath: string, diffSha: string, line: number, body: string) {
+  const submitComment = async (
+    filePath: string,
+    diffSha: string,
+    line: number | null,
+    body: string,
+  ): Promise<void> => {
     await addComment.mutateAsync({ file_path: filePath, diff_sha: diffSha, line, body });
-  }
+  };
 
   const cards = (
-    <div className="min-h-0 min-w-0 flex-1 overflow-auto p-4">
-      <div className="flex flex-col gap-3">
-        {diff.files.map((file) => (
-          <DiffFileCard
-            key={file.path}
-            file={file}
-            mode={mode}
-            reviewed={reviewed.paths.has(file.path)}
-            onReviewedChange={(next) => reviewed.setReviewed(file.path, next)}
-            commentsByLine={anchored.get(file.path) ?? new Map<number, ReviewCommentContract[]>()}
-            onAddComment={(line, body) => submitComment(file.path, file.sha, line, body)}
-            selectedCommentIds={selection.selectedIds}
-            onToggleComment={selection.toggle}
-          />
-        ))}
-        <ArchivedComments comments={archived} selection={selection} />
-      </div>
-    </div>
+    <DiffFileCards
+      runId={runId}
+      files={visible.files}
+      hiddenCount={visible.hiddenCount}
+      onShowHidden={() => diffPrefsStore.actions.set({ hideReviewed: false })}
+      prefs={prefs}
+      reviewedPaths={reviewed.paths}
+      onReviewedChange={toggleReviewed}
+      collapsed={collapsed}
+      activePath={active.path}
+      onActivate={active.select}
+      comments={partition}
+      selection={selection}
+      onAddComment={(file, line, body) => submitComment(file.path, file.sha, line, body)}
+    />
   );
 
   const emptyRegion = (
@@ -129,9 +160,9 @@ export function RunDiffView() {
           description="The canonical git diff appears once a run produces changes. Diffs are never fabricated."
         />
       </CenteredState>
-      {archived.length > 0 ? (
+      {partition.detached.length > 0 ? (
         <div className="p-4">
-          <ArchivedComments comments={archived} selection={selection} />
+          <DetachedComments comments={partition.detached} selection={selection} />
         </div>
       ) : null}
     </div>
@@ -147,12 +178,16 @@ export function RunDiffView() {
         minSize={168}
         maxSize="40%"
       >
-        <DiffFileBrowser
+        <DiffSidebar
           diff={diff}
-          mode={browserMode}
-          activePath={activePath}
+          browserMode={prefs.browser}
+          stats={prefs.stats}
+          activePath={active.path}
           reviewedPaths={reviewed.paths}
-          onSelect={jumpToFile}
+          onSelectFile={(file) => revealFile(file.path)}
+          comments={review.comments}
+          anchoredCommentIds={partition.anchoredIds}
+          onSelectComment={selectComment}
         />
       </SidePanel>
       <ResizablePanel id="diff" minSize="40%">
@@ -163,9 +198,9 @@ export function RunDiffView() {
     <div className="flex min-h-0 flex-1 flex-col">
       <DiffFileNav
         diff={diff}
-        activePath={activePath}
+        activePath={active.path}
         reviewedPaths={reviewed.paths}
-        onSelect={jumpToFile}
+        onSelect={(file) => revealFile(file.path)}
       />
       {cards}
     </div>
@@ -175,15 +210,19 @@ export function RunDiffView() {
     <div className="flex h-full min-h-0 flex-col">
       <RunDiffHeader
         diff={diff}
-        reviewStatus={reviewQuery.data.review?.status ?? null}
-        mode={mode}
-        onModeChange={diffViewModeStore.actions.set}
-        browserMode={wide && diff.files.length > 0 ? browserMode : null}
-        onBrowserModeChange={diffBrowserModeStore.actions.set}
+        reviewStatus={review.review?.status ?? null}
+        prefs={prefs}
+        onPrefsChange={diffPrefsStore.actions.set}
+        browsable={wide && diff.files.length > 0}
         reviewedCount={diff.files.filter((file) => reviewed.paths.has(file.path)).length}
+        activePath={active.path}
       />
       {diff.files.length === 0 ? emptyRegion : browsedRegion}
-      <DiffFixBar runStatus={runQuery.data?.run.status} selection={selection} />
+      <DiffFixBar
+        runStatus={runQuery.data?.run.status}
+        authority={review.fix_authority}
+        selection={selection}
+      />
     </div>
   );
 }
