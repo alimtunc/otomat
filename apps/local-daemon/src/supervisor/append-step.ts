@@ -12,7 +12,7 @@ import { appendPlanStep, stepRunMachine, type RunPlanStep } from "@otomat/domain
 import { resolveAgentConfig } from "#agents";
 import { emitLedgerEvent } from "#events";
 
-import { startNextReadyStep } from "./advance.js";
+import { scheduleNextStep } from "./advance.js";
 import { signalIssueLifecycle } from "./issue-lifecycle.js";
 import { buildPlanRevisedEvent } from "./plan-revision.js";
 import { requireRunRow } from "./resume.js";
@@ -86,7 +86,7 @@ export async function appendRunStep(
   if (issue) signalIssueLifecycle(state.syncIssueLifecycle, issue.id, "in_progress", runId);
 
   if (!hasRunActivity(state, runId)) {
-    await startNextReadyStep(state, requireRunRow(db, runId, "append"));
+    scheduleNextStep(state, requireRunRow(db, runId, "append"));
   }
   return requireRunRow(db, runId, "append");
 }

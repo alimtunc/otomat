@@ -12,6 +12,26 @@ import {
 import { providerOptionValueSchema } from "./provider-options.js";
 import { modelSelectionSchema } from "./runtime-model.js";
 
+/** Place in the daemon's FIFO wait line for a session slot, observed at one instant. */
+export const runQueuePositionSchema = z.object({
+  /** 1-based rank among the turns waiting for a slot; 1 is next to start. */
+  position: z.number().int().positive(),
+  active_sessions: z.number().int().nonnegative(),
+  max_concurrent_sessions: z.number().int().positive(),
+});
+export type RunQueuePosition = z.infer<typeof runQueuePositionSchema>;
+
+/** Why a run is making no progress right now, or null while one of its turns is live. */
+export const runWaitSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("concurrency_limit"), ...runQueuePositionSchema.shape }),
+  z.object({
+    kind: z.literal("workflow_dependency"),
+    /** Names of the plan nodes that must finish first, in plan order. */
+    blocked_by: z.array(z.string()).min(1),
+  }),
+]);
+export type RunWait = z.infer<typeof runWaitSchema>;
+
 /** A run plus its persisted step/session graph; the event ledger is served by the run's SSE stream, not here. `worktree_path` and `base_branch` are null only on runs recorded before a worktree was guaranteed. */
 export const runDetailSchema = z.object({
   run: runContractSchema,
@@ -21,8 +41,17 @@ export const runDetailSchema = z.object({
   worktree_path: z.string().nullable(),
   /** Branch the run's worktree forked from. */
   base_branch: z.string().nullable(),
+  /** Live scheduler view, defaulted so a daemon deployed before the field existed still parses. */
+  wait: runWaitSchema.nullable().default(null),
 });
 export type RunDetail = z.infer<typeof runDetailSchema>;
+
+/** A launch answers once the run and its frozen plan are durable; `wait` is set when no slot was taken yet. */
+export const runLaunchResponseSchema = z.object({
+  run: runContractSchema,
+  wait: runWaitSchema.nullable(),
+});
+export type RunLaunchResponse = z.infer<typeof runLaunchResponseSchema>;
 
 /** Why a launch was refused before any run row was written; every code is caller-fixable. */
 export const RUN_LAUNCH_ERRORS = [

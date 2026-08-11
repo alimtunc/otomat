@@ -4,6 +4,7 @@ import type { RunPlan } from "#domain/contracts/entities/runs";
 import { InvalidRunPlanError, planExecutionOrder } from "#domain/plan/execution-order";
 import {
   allStepsSucceeded,
+  blockingPlanDependencies,
   hasActiveStep,
   planOutcome,
   readyPlanWork,
@@ -67,6 +68,38 @@ const competePlan: RunPlan = {
     },
   ],
 };
+
+describe("blockingPlanDependencies", () => {
+  it("names the unfinished nodes a queued step waits on, in plan order", () => {
+    const blockers = blockingPlanDependencies(
+      diamond,
+      statuses({ root: "succeeded", left: "awaiting_human", right: "succeeded" }),
+      new Map(),
+    );
+
+    expect(blockers.map((node) => node.id)).toEqual(["left"]);
+  });
+
+  it("is empty once every dependency has succeeded", () => {
+    const blockers = blockingPlanDependencies(
+      diamond,
+      statuses({ root: "succeeded", left: "succeeded", right: "succeeded" }),
+      new Map(),
+    );
+
+    expect(blockers).toEqual([]);
+  });
+
+  it("counts an unselected compete group as the blocker of the step behind it", () => {
+    const blockers = blockingPlanDependencies(
+      competePlan,
+      statuses({ plan: "succeeded", "candidate-a": "succeeded", "candidate-b": "succeeded" }),
+      new Map([["implementation", "awaiting_selection" as const]]),
+    );
+
+    expect(blockers.map((node) => node.id)).toEqual(["implementation"]);
+  });
+});
 
 describe("planExecutionOrder", () => {
   it("orders dependencies first and breaks ties by plan position", () => {

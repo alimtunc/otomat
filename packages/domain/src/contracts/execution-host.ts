@@ -1,3 +1,4 @@
+import type { AgentCapacity } from "./capacity.js";
 import type { ProjectContract } from "./entities/workspace.js";
 
 export const EXECUTION_HOST_IDS = ["local", "remote"] as const;
@@ -57,6 +58,11 @@ export type ExecutionHostOperationResult =
 
 export type ExecutionHostRegisterProjectResult =
   | { ok: true; project: ProjectContract }
+  | { ok: false; message: string };
+
+/** One host's session capacity as its own daemon reports it; a host that could not answer carries the reason. */
+export type ExecutionHostCapacityResult =
+  | { ok: true; capacity: AgentCapacity }
   | { ok: false; message: string };
 
 /** One preview daemon under `~/.otomat/instances/<build>` on the remote host. */

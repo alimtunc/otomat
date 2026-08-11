@@ -18,6 +18,7 @@ import { createRepositoryRoutes } from "./routes/repositories.js";
 import { createReviewRoutes } from "./routes/review.js";
 import { createRunContributionRoutes } from "./routes/run-contributions.js";
 import { createRunRoutes } from "./routes/runs.js";
+import { createSettingsRoutes } from "./routes/settings.js";
 import { createSkillRoutes } from "./routes/skills.js";
 import { allowedOrigin, hostGuard } from "./security.js";
 
@@ -41,6 +42,7 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.route("/api", createGitHubRoutes(deps));
   app.route("/api", createCatalogRoutes(deps));
   app.route("/api/linear", createLinearRoutes(deps));
+  app.route("/api/settings", createSettingsRoutes(deps));
   app.route("/api/repositories", createRepositoryRoutes(deps));
   app.route("/api/agent-profiles", createAgentProfileRoutes(deps));
   app.route("/api/skills", createSkillRoutes(deps));

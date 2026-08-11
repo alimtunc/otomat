@@ -43,6 +43,7 @@ it(
     const { supervisor } = makeSupervisor(fix, "linger");
     const app = makeApiApp(fix, {
       launchRun: supervisor.start,
+      runWait: supervisor.waitFor,
       resumeRun: supervisor.resume,
       appendRunStep: supervisor.appendStep,
       abortRun: supervisor.abort,
@@ -54,7 +55,7 @@ it(
       body: JSON.stringify({ prompt: "integration turn" }),
     });
     expect(started.status).toBe(201);
-    const run = (await started.json()) as { id: string };
+    const { run } = (await started.json()) as { run: { id: string } };
 
     const sse = await app.request(`/api/runs/${run.id}/events`, {
       headers: { Host: "127.0.0.1" },

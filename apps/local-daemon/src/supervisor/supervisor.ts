@@ -1,6 +1,7 @@
 import { abortRun } from "./abort.js";
 import { advanceRun } from "./advance.js";
 import { appendRunStep } from "./append-step.js";
+import { agentCapacity, runWait, setAgentCapacity } from "./capacity.js";
 import { resumeRun, startRun } from "./commands.js";
 import {
   contributeToRun,
@@ -22,6 +23,9 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
   };
   return {
     start: (request) => startRun(state, request),
+    waitFor: (runId) => runWait(state, runId),
+    capacity: () => agentCapacity(state),
+    setCapacity: (maxConcurrentSessions) => setAgentCapacity(state, maxConcurrentSessions),
     resume: (runId) => resumeRun(state, runId),
     appendStep: (runId, input) => appendRunStep(state, runId, input),
     contribute: (runId, body) => contributeToRun(state, runId, body),

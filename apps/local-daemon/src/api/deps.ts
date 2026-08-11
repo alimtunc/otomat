@@ -1,5 +1,10 @@
 import type { Db, RunContributionRow, RunRow } from "@otomat/db";
-import type { SchemaMetadataContract, StartRunRequest } from "@otomat/domain";
+import type {
+  AgentCapacity,
+  RunWait,
+  SchemaMetadataContract,
+  StartRunRequest,
+} from "@otomat/domain";
 
 import type { GitHubService } from "#github";
 import type { LinearService } from "#linear";
@@ -15,6 +20,9 @@ export interface ApiDeps {
   dbPath: string;
   schemaMetadata(): SchemaMetadataContract;
   launchRun(request: StartRunRequest): Promise<RunRow>;
+  runWait(runId: string): RunWait | null;
+  agentCapacity(): AgentCapacity;
+  setAgentCapacity(maxConcurrentSessions: number): AgentCapacity;
   resumeRun(runId: string): Promise<RunRow>;
   appendRunStep(runId: string, input: AppendStepInput): Promise<RunRow>;
   contributeToRun(runId: string, body: string): Promise<RunContributionRow>;

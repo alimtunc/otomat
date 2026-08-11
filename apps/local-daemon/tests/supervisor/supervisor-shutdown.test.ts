@@ -5,6 +5,7 @@ import { createRepositoryResolver } from "#git";
 import { createSupervisor, isProcessAlive, type SpawnSession, type Supervisor } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { waitFor } from "../support/poll.js";
 import { workerSpawn } from "../support/spawn.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
@@ -23,8 +24,9 @@ it("shutdown terminates every in-flight worker and drains to a settled state", a
 
   const first = await supervisor.start({ prompt: "long task a" });
   const second = await supervisor.start({ prompt: "long task b" });
-  expect(getRun(fix.db, first.id)?.status).toBe("running");
-  expect(getRun(fix.db, second.id)?.status).toBe("running");
+  for (const id of [first.id, second.id]) {
+    expect(await waitFor(() => getRun(fix.db, id)?.status === "running")).toBe(true);
+  }
 
   await supervisor.shutdown(50);
   await supervisor.settle();

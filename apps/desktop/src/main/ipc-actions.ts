@@ -60,6 +60,7 @@ export function buildIpcActions(context: IpcActionContext): IpcActions {
     executionHost: buildExecutionHostActions(
       () => context.runtime()?.hosts ?? null,
       () => context.runtime()?.instances ?? null,
+      () => context.runtime()?.capacity ?? null,
     ),
   };
 }

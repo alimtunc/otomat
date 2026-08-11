@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  agentCapacitySchema,
   createIssueRequestSchema,
   createRunContributionRequestSchema,
   healthResponseSchema,
   registerRepositoryRequestSchema,
   repositoryRegistrationErrorSchema,
   runDetailSchema,
+  runLaunchResponseSchema,
   runtimeAvailabilitySchema,
   runtimeDescriptorSchema,
   selectCompeteWinnerRequestSchema,
   startRunRequestSchema,
+  updateAgentCapacityRequestSchema,
 } from "#domain/contracts/api";
 
 it("requires safe schema metadata on daemon health", () => {
@@ -68,7 +71,85 @@ const RUN = {
   updated_at: "2026-07-25T10:00:00.000Z",
 };
 
+describe("runLaunchResponseSchema", () => {
+  it("carries the durable run plus the wait that keeps it out of a slot", () => {
+    const queued = runLaunchResponseSchema.parse({
+      run: { ...RUN, status: "queued" },
+      wait: {
+        kind: "concurrency_limit",
+        position: 2,
+        active_sessions: 4,
+        max_concurrent_sessions: 4,
+      },
+    });
+
+    expect(queued.wait).toMatchObject({ kind: "concurrency_limit", position: 2 });
+    expect(runLaunchResponseSchema.parse({ run: RUN, wait: null }).wait).toBeNull();
+  });
+
+  it("rejects a wait with no reason and a position that is not a place in line", () => {
+    expect(runLaunchResponseSchema.safeParse({ run: RUN }).success).toBe(false);
+    expect(
+      runLaunchResponseSchema.safeParse({
+        run: RUN,
+        wait: { kind: "workflow_dependency", blocked_by: [] },
+      }).success,
+    ).toBe(false);
+    expect(
+      runLaunchResponseSchema.safeParse({
+        run: RUN,
+        wait: {
+          kind: "concurrency_limit",
+          position: 0,
+          active_sessions: 4,
+          max_concurrent_sessions: 4,
+        },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("agent capacity", () => {
+  it("accepts only a positive whole number of sessions", () => {
+    expect(updateAgentCapacityRequestSchema.parse({ max_concurrent_sessions: 6 })).toEqual({
+      max_concurrent_sessions: 6,
+    });
+    for (const value of [0, -1, 1.5, "6", null]) {
+      const refused = updateAgentCapacityRequestSchema.safeParse({
+        max_concurrent_sessions: value,
+      });
+      expect(refused.success).toBe(false);
+    }
+    expect(
+      updateAgentCapacityRequestSchema.safeParse({ max_concurrent_sessions: 6, extra: 1 }).success,
+    ).toBe(false);
+  });
+
+  it("lets a host report more active sessions than its lowered cap", () => {
+    expect(
+      agentCapacitySchema.parse({
+        max_concurrent_sessions: 1,
+        active_sessions: 2,
+        waiting_sessions: 3,
+      }),
+    ).toEqual({ max_concurrent_sessions: 1, active_sessions: 2, waiting_sessions: 3 });
+  });
+});
+
 describe("runDetailSchema", () => {
+  it("defaults `wait` to null so a daemon deployed before the field still parses", () => {
+    const detail = runDetailSchema.parse({
+      run: RUN,
+      steps: [],
+      sessions: [],
+      compete_groups: [],
+      worktree_path: null,
+      base_branch: null,
+    });
+
+    expect(detail.wait).toBeNull();
+  });
+
   it("carries the run's worktree path and base branch, and accepts null for legacy runs", () => {
     const base = { run: RUN, steps: [], sessions: [], compete_groups: [] };
     const withPath = runDetailSchema.parse({

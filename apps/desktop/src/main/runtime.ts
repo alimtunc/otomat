@@ -17,6 +17,7 @@ import { createMainLinearVault } from "./linear/vault-io.js";
 import type { AppPaths } from "./paths.js";
 import { PreviewSandbox } from "./preview/sandbox.js";
 import { deploymentForChannel } from "./remote/bootstrap/scripts.js";
+import { HostCapacityActions } from "./remote/host/capacity.js";
 import { RemoteInstanceActions } from "./remote/instances/actions.js";
 import { ExecutionHostManager } from "./remote/manager.js";
 
@@ -32,6 +33,7 @@ export interface DesktopRuntime {
   hosts: ExecutionHostManager;
   sandbox: PreviewSandbox;
   instances: RemoteInstanceActions;
+  capacity: HostCapacityActions;
 }
 
 interface DesktopRuntimeOptions {
@@ -102,5 +104,19 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     session: () => hosts.remoteSession,
     log: (message) => desktopLog.write(message),
   });
-  return { dataDirectory, desktopLog, daemonLog, daemon, linear, hosts, sandbox, instances };
+  const capacity = new HostCapacityActions({
+    daemonUrl: (hostId) => hosts.daemonUrl(hostId),
+    log: (message) => desktopLog.write(message),
+  });
+  return {
+    dataDirectory,
+    desktopLog,
+    daemonLog,
+    daemon,
+    linear,
+    hosts,
+    sandbox,
+    instances,
+    capacity,
+  };
 }

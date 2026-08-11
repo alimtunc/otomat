@@ -1,13 +1,10 @@
-import { getRun, listStepRunsForRun, type RunRow } from "@otomat/db";
-import { runMachine } from "@otomat/domain";
-
-import { emitLedgerEvent } from "#events";
+import { getRun, type RunRow } from "@otomat/db";
 
 import { startNextReadyStep } from "./advance.js";
-import { emitInitLog, runInitCommandBatch, runStillLive } from "./init-commands.js";
-import { buildTerminalMarker } from "./markers.js";
-import { hasRunActivity, notifyAfterSettle, type SupervisorState } from "./state.js";
-import { driveIdleRunTo, driveRunTo } from "./transitions.js";
+import { failIdleRun, failureReason } from "./fail-run.js";
+import { runInitCommandBatch, runStillLive } from "./init-commands.js";
+import { trackPending, type SupervisorState } from "./state.js";
+import { driveRunTo } from "./transitions.js";
 
 async function performWorktreeInit(
   state: SupervisorState,
@@ -29,28 +26,6 @@ async function performWorktreeInit(
   });
 }
 
-function failWorktreeInit(state: SupervisorState, runId: string, error: unknown): void {
-  const current = getRun(state.db, runId);
-  if (!current || runMachine.isTerminal(current.status) || hasRunActivity(state, runId)) return;
-  const reason = error instanceof Error ? error.message : String(error);
-  const now = new Date().toISOString();
-  emitInitLog(state, runId, "stderr", `[otomat] ${reason}`);
-  driveIdleRunTo(state.db, current, "failed", listStepRunsForRun(state.db, runId), now);
-  emitLedgerEvent(
-    state.db,
-    state.dataDir,
-    runId,
-    buildTerminalMarker({ runId, stepRunId: null, agentSessionId: null }, "failed", null, 0, now),
-  );
-  notifyAfterSettle(state, {
-    runId,
-    classification: "failed",
-    reason,
-    orphanTerminated: false,
-    providerSessionId: null,
-  });
-}
-
 /**
  * Runs the repository's init commands in the fresh run worktree, streaming
  * their output to the run log, then starts the first plan step. The launch
@@ -63,19 +38,18 @@ export function scheduleWorktreeInit(
   run: RunRow,
   commands: string[],
 ): Promise<void> {
-  let pending: Promise<void>;
-  pending = performWorktreeInit(state, run, commands)
-    .then(async (ready) => {
-      if (!ready) return;
-      const current = getRun(state.db, run.id);
-      if (!current) return;
-      await startNextReadyStep(state, current);
-    })
-    .catch((error: unknown) => {
-      console.error(`[otomat] run ${run.id} worktree init failed`, error);
-      failWorktreeInit(state, run.id, error);
-    })
-    .finally(() => state.pending.delete(pending));
-  state.pending.add(pending);
-  return pending;
+  return trackPending(
+    state,
+    performWorktreeInit(state, run, commands)
+      .then(async (ready) => {
+        if (!ready) return;
+        const current = getRun(state.db, run.id);
+        if (!current) return;
+        await startNextReadyStep(state, current);
+      })
+      .catch((error: unknown) => {
+        console.error(`[otomat] run ${run.id} worktree init failed`, error);
+        failIdleRun(state, run.id, failureReason(error));
+      }),
+  );
 }

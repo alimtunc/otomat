@@ -33,6 +33,20 @@ export function fakeDesktopBridge(
             has_repository: true,
           },
         }),
+      readCapacity: () =>
+        Promise.resolve({
+          ok: true as const,
+          capacity: { max_concurrent_sessions: 4, active_sessions: 0, waiting_sessions: 0 },
+        }),
+      writeCapacity: (_hostId, maxConcurrentSessions) =>
+        Promise.resolve({
+          ok: true as const,
+          capacity: {
+            max_concurrent_sessions: maxConcurrentSessions,
+            active_sessions: 0,
+            waiting_sessions: 0,
+          },
+        }),
       listSshAliases: () => Promise.resolve([]),
       listRemoteRepositories: () => Promise.resolve({ ok: true as const, repositories: [] }),
       listProjects: () => Promise.resolve([]),

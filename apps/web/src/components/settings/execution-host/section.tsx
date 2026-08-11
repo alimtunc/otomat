@@ -2,6 +2,7 @@ import { Button, EmptyState, Field, FieldControl, FieldLabel, Input, Skeleton } 
 import { SectionHeading } from "@web/components/settings/section-heading";
 import { useState, type ReactNode } from "react";
 
+import { HostCapacityField } from "./host-capacity-field";
 import { HostRow } from "./host-row";
 import { InstancesPanel } from "./instances-panel";
 import { useExecutionHost } from "./use-execution-host";
@@ -26,6 +27,9 @@ export function ExecutionHostSection() {
           title="Managed by the desktop app"
           description="In the browser the cockpit always talks to the daemon it was started against. Host selection lives in the Otomat desktop app."
         />
+        <div className="mt-4 rounded-lg border border-border-subtle bg-card p-4">
+          <HostCapacityField hostId="local" hostLabel="this daemon" />
+        </div>
       </div>
     );
   }
@@ -95,13 +99,17 @@ export function ExecutionHostSection() {
                 );
               }
               return (
-                <HostRow
-                  key={entry.id}
-                  host={entry}
-                  active={snapshot.active_id === entry.id}
-                  status={host.remoteStatus}
-                  action={action}
-                />
+                <div key={entry.id}>
+                  <HostRow
+                    host={entry}
+                    active={snapshot.active_id === entry.id}
+                    status={host.remoteStatus}
+                    action={action}
+                  />
+                  <div className="pr-4 pb-4 pl-11">
+                    <HostCapacityField hostId={entry.id} hostLabel={entry.label} />
+                  </div>
+                </div>
               );
             })}
           </div>

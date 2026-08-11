@@ -200,6 +200,28 @@ review fix is one of these revisions: `review/fix.ts` freezes the selected
 comments, their pinned hunks, the current files and the current diff sha into the
 step's prompt, and the step waits on the nodes that produced that diff.
 
+## Session Capacity and the Launch Queue
+
+A launch answers as soon as the run and its frozen plan are durable. Claiming a
+session slot happens behind that answer: `supervisor/advance.ts:scheduleNextStep`
+tracks the work in `state.pending` so shutdown and `settle` still observe it, and
+a scheduling failure fails the run through `supervisor/fail-run.ts` — with the
+reason written into the run's ledger, since the launcher has already been told the
+run exists. A saturated host therefore returns `201` with a `queued` run instead
+of holding the request open, and `POST /api/runs` carries the `wait` that explains
+it (`concurrency_limit` with the place in line, or `workflow_dependency` naming
+the plan nodes still to finish). The same `wait` rides on the run detail, so the
+cockpit distinguishes `queued` from `running` rather than showing a spinner.
+
+The bound is each host's own setting, not a client preference: `daemon_settings`
+holds `max_concurrent_sessions` (default 4) in that daemon's database, served and
+changed through `GET`/`PUT /api/settings/capacity`. `supervisor/semaphore.ts`
+resizes live — raising the cap hands the freed slots to the head of the FIFO queue
+at once, lowering it never touches a holder and only gates the next start. In the
+desktop shell, `remote/host/capacity.ts` relays the read and the write to the host
+the operator is configuring; an unreachable host or a refused write comes back as
+a message, never as a value shown as applied.
+
 ## Frontend Stack Direction
 
 React, Vite, TanStack Router/Query/Form, Tailwind, Base UI (shadcn-style

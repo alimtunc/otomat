@@ -6,6 +6,7 @@ import { findActiveByOwner } from "#git/worktrees-store";
 import { issueWorkspace } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { waitFor } from "../support/poll.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
@@ -83,6 +84,7 @@ it("reports a workspace busy while its run still owns a live turn", async () => 
   const { supervisor } = makeSupervisor(fix, "linger");
   const run = await supervisor.start({ issue_id: "i-work" });
 
+  expect(await waitFor(() => issueWorkspace(fix.db, "i-work").busy)).toBe(true);
   expect(issueWorkspace(fix.db, "i-work")).toMatchObject({ run_id: run.id, busy: true });
 
   await supervisor.abort(run.id);

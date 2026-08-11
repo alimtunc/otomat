@@ -15,6 +15,7 @@ import {
   EXECUTION_HOST_DELETE_INSTANCE_CHANNEL,
   EXECUTION_HOST_INSTANCES_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
+  EXECUTION_HOST_READ_CAPACITY_CHANNEL,
   EXECUTION_HOST_REGISTER_PROJECT_CHANNEL,
   EXECUTION_HOST_REMOVE_CHANNEL,
   EXECUTION_HOST_REPOSITORIES_CHANNEL,
@@ -23,6 +24,7 @@ import {
   EXECUTION_HOST_STOP_INSTANCE_CHANNEL,
   EXECUTION_HOST_SYNC_CHANNEL,
   EXECUTION_HOST_UPDATE_DAEMON_CHANNEL,
+  EXECUTION_HOST_WRITE_CAPACITY_CHANNEL,
   LINEAR_DELIVERY_CHANNEL,
   LINEAR_FORGET_KEY_CHANNEL,
   LINEAR_SAVE_KEY_CHANNEL,
@@ -99,6 +101,14 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
   ipcMain.handle(
     EXECUTION_HOST_REGISTER_PROJECT_CHANNEL,
     (_event, hostId: unknown, path: unknown) => actions.executionHost.registerProject(hostId, path),
+  );
+  ipcMain.handle(EXECUTION_HOST_READ_CAPACITY_CHANNEL, (_event, hostId: unknown) =>
+    actions.executionHost.readCapacity(hostId),
+  );
+  ipcMain.handle(
+    EXECUTION_HOST_WRITE_CAPACITY_CHANNEL,
+    (_event, hostId: unknown, maxConcurrentSessions: unknown) =>
+      actions.executionHost.writeCapacity(hostId, maxConcurrentSessions),
   );
   ipcMain.handle(EXECUTION_HOST_ALIASES_CHANNEL, () => actions.executionHost.listAliases());
   ipcMain.handle(EXECUTION_HOST_REPOSITORIES_CHANNEL, () =>

@@ -1,13 +1,15 @@
 import {
+  agentCapacitySchema,
   daemonLogExcerptSchema,
   healthResponseSchema,
   providerOptionSetSchema,
   runtimeDescriptorSchema,
   runtimeModelCatalogSchema,
+  type UpdateAgentCapacityRequest,
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { getJson, queryString } from "./http.js";
+import { getJson, putJson, queryString } from "./http.js";
 
 export function createSystemClient(config: DaemonClientConfig) {
   return {
@@ -18,6 +20,12 @@ export function createSystemClient(config: DaemonClientConfig) {
     async daemonLogExcerpt(correlationId: string) {
       const path = `/api/diagnostics/logs${queryString({ correlation_id: correlationId })}`;
       return daemonLogExcerptSchema.parse(await getJson(config, path));
+    },
+    async agentCapacity() {
+      return agentCapacitySchema.parse(await getJson(config, "/api/settings/capacity"));
+    },
+    async setAgentCapacity(request: UpdateAgentCapacityRequest) {
+      return agentCapacitySchema.parse(await putJson(config, "/api/settings/capacity", request));
     },
     async listRuntimes() {
       return runtimeDescriptorSchema.array().parse(await getJson(config, "/api/runtimes"));

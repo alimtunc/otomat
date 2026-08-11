@@ -6,6 +6,7 @@ import { createRepositoryResolver } from "#git";
 import { createSupervisor, isProcessAlive, type SpawnSession, type Supervisor } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { waitFor } from "../support/poll.js";
 import {
   completedMarker,
   providerSessionEvent,
@@ -30,7 +31,7 @@ it("aborts a running process to a canonical canceled state with a recorded event
   const { supervisor } = makeSupervisor(fix, "linger");
 
   const run = await supervisor.start({ prompt: "long task" });
-  expect(run.status).toBe("running");
+  expect(await waitFor(() => getRun(fix.db, run.id)?.status === "running")).toBe(true);
 
   await supervisor.abort(run.id);
   await supervisor.settle();
@@ -69,7 +70,7 @@ it("abort honors a worker that already completed, never faking a cancel", async 
 it("does not spawn a worker for a run aborted while queued on the semaphore", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "linger", { concurrency: 1 });
   const holder = await supervisor.start({ prompt: "holds the only slot" });
-  expect(getRun(fix.db, holder.id)?.status).toBe("running");
+  expect(await waitFor(() => getRun(fix.db, holder.id)?.status === "running")).toBe(true);
 
   seedRun(fix.db, {
     runId: "rqa",
@@ -122,6 +123,8 @@ it("never releases a spawned worker when abort lands during durable startup", as
   const run = await supervisor.start({ prompt: "abort in the start gate" });
   if (!aborting) throw new Error("abort did not start during spawn");
   await aborting;
+  // The launch answered before the spawn, so the kill path is still pending work.
+  await supervisor.settle();
 
   expect(released).toBe(0);
   expect(isProcessAlive(workerPid)).toBe(false);

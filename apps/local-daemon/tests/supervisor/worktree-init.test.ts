@@ -85,7 +85,7 @@ it("launches immediately when the repository has no init commands", async () => 
   const { supervisor } = makeSupervisor(fix, "complete");
 
   const run = await supervisor.start({ prompt: "no init" });
-  expect(run.status).toBe("running");
+  expect(run.status).toBe("queued");
   expect(await waitFor(() => getRun(fix.db, run.id)?.status === "review_ready")).toBe(true);
   expect(logTexts(run.id).some((text) => text.includes("worktree init"))).toBe(false);
 });

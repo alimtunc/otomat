@@ -1,5 +1,6 @@
 import {
   isExecutionHostId,
+  type ExecutionHostCapacityResult,
   type ExecutionHostOperationResult,
   type ExecutionHostProjectsEntry,
   type ExecutionHostRegisterProjectResult,
@@ -10,6 +11,7 @@ import {
 
 import type { ExecutionHostSync } from "#shared/execution-host-sync";
 
+import type { HostCapacityActions } from "./host/capacity.js";
 import { listRemoteRepositories } from "./host/repos.js";
 import type { RemoteInstanceActions } from "./instances/actions.js";
 import type { ExecutionHostManager } from "./manager.js";
@@ -22,6 +24,11 @@ export interface ExecutionHostIpcActions {
   configureRemote(sshAlias: unknown): ExecutionHostOperationResult;
   removeRemote(): ExecutionHostOperationResult;
   registerProject(hostId: unknown, path: unknown): Promise<ExecutionHostRegisterProjectResult>;
+  readCapacity(hostId: unknown): Promise<ExecutionHostCapacityResult>;
+  writeCapacity(
+    hostId: unknown,
+    maxConcurrentSessions: unknown,
+  ): Promise<ExecutionHostCapacityResult>;
   listAliases(): string[];
   listRemoteRepositories(): Promise<RemoteRepositoryListResult>;
   listProjects(): Promise<ExecutionHostProjectsEntry[]>;
@@ -38,6 +45,7 @@ const NOT_READY: ExecutionHostOperationResult = { ok: false, message: NOT_READY_
 export function buildExecutionHostActions(
   manager: () => ExecutionHostManager | null,
   instances: () => RemoteInstanceActions | null,
+  capacity: () => HostCapacityActions | null,
 ): ExecutionHostIpcActions {
   return {
     sync: () => {
@@ -81,6 +89,25 @@ export function buildExecutionHostActions(
       if (!isExecutionHostId(hostId)) return { ok: false, message: "Unknown execution host." };
       if (typeof path !== "string") return { ok: false, message: "Enter a repository path." };
       return hosts.registerProject(hostId, path);
+    },
+    readCapacity: async (hostId: unknown) => {
+      const actions = capacity();
+      if (actions === null) return { ok: false, message: NOT_READY_MESSAGE };
+      if (!isExecutionHostId(hostId)) return { ok: false, message: "Unknown execution host." };
+      return actions.read(hostId);
+    },
+    writeCapacity: async (hostId: unknown, maxConcurrentSessions: unknown) => {
+      const actions = capacity();
+      if (actions === null) return { ok: false, message: NOT_READY_MESSAGE };
+      if (!isExecutionHostId(hostId)) return { ok: false, message: "Unknown execution host." };
+      if (
+        typeof maxConcurrentSessions !== "number" ||
+        !Number.isInteger(maxConcurrentSessions) ||
+        maxConcurrentSessions < 1
+      ) {
+        return { ok: false, message: "Enter a whole number of sessions, 1 or more." };
+      }
+      return actions.write(hostId, maxConcurrentSessions);
     },
     listAliases: () => manager()?.listAliases() ?? [],
     listRemoteRepositories: async () => {

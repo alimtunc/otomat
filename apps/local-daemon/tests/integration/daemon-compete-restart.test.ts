@@ -7,7 +7,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createClient, listAgentSessionsForRun, listStepRunsForRun, type Db } from "@otomat/db";
-import { runContractSchema, runDetailSchema, type RunDetail } from "@otomat/domain";
+import { runDetailSchema, runLaunchResponseSchema, type RunDetail } from "@otomat/domain";
 import { expect, it } from "vitest";
 
 import { readRunEvents, sessionDir } from "#events";
@@ -170,7 +170,7 @@ it(
         body: JSON.stringify({ prompt: "restart proof", runtime: "fake", plan: COMPETE_PLAN }),
       });
       expect(launchResponse.status).toBe(201);
-      const launchedRun = runContractSchema.parse(await launchResponse.json());
+      const launchedRun = runLaunchResponseSchema.parse(await launchResponse.json()).run;
 
       const { originalSessions, persistedEvents } = await withDatabase(dbPath, async (db) => {
         expect(

@@ -7,7 +7,7 @@ import { sessionDir } from "#events";
 
 import { spawnTurn } from "./lifecycle.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
-import type { SupervisorState } from "./state.js";
+import { trackPending, type SupervisorState } from "./state.js";
 import type { TurnContext } from "./types.js";
 
 export function insertTurn(
@@ -45,9 +45,9 @@ export function scheduleTurn(
   mode: "run" | "resume" = "run",
   providerSessionId: string | null = null,
 ): Promise<void> {
-  let pending: Promise<void>;
-  pending = spawnTurn(state, ctx, mode, providerSessionId)
-    .then(
+  return trackPending(
+    state,
+    spawnTurn(state, ctx, mode, providerSessionId).then(
       () => undefined,
       (error: unknown) => {
         console.error(
@@ -55,8 +55,6 @@ export function scheduleTurn(
           error,
         );
       },
-    )
-    .finally(() => state.pending.delete(pending));
-  state.pending.add(pending);
-  return pending;
+    ),
+  );
 }

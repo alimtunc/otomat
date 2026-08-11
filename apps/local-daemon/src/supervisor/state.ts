@@ -1,17 +1,11 @@
-import type { Db } from "@otomat/db";
+import { readMaxConcurrentSessions, type Db } from "@otomat/db";
 import type { LinearLifecycleSync } from "@otomat/domain";
 
 import type { EventTailer } from "#events";
 import type { RepositoryResolver } from "#git";
 
 import { Semaphore } from "./semaphore.js";
-import {
-  DEFAULT_CONCURRENCY,
-  type ReconcileOutcome,
-  type SessionProcess,
-  type SpawnSession,
-  type SupervisorConfig,
-} from "./types.js";
+import type { ReconcileOutcome, SessionProcess, SpawnSession, SupervisorConfig } from "./types.js";
 
 interface StartingProcess {
   runId: string;
@@ -42,6 +36,8 @@ export interface SupervisorState {
   aborting: Set<string>;
   /** Session ids reserved between the spawn guard and `inflight.set`. */
   claiming: Map<string, string>;
+  /** Sessions queued for a slot, keyed by session id in FIFO order — the same order the semaphore hands slots out in. */
+  waiting: Map<string, string>;
   /** Launches waiting for a global concurrency slot or completing their spawn bookkeeping. */
   pending: Set<Promise<void>>;
   /** Run-level scheduler guard; sessions within one compete group remain independently claimable. */
@@ -63,11 +59,12 @@ export function createState(config: SupervisorConfig): SupervisorState {
     repositories: config.repositories,
     afterSettle: config.afterSettle ?? null,
     syncIssueLifecycle: config.syncIssueLifecycle ?? null,
-    slots: new Semaphore(config.concurrency ?? DEFAULT_CONCURRENCY),
+    slots: new Semaphore(readMaxConcurrentSessions(config.db)),
     inflight: new Map(),
     starting: new Map(),
     aborting: new Set(),
     claiming: new Map(),
+    waiting: new Map(),
     pending: new Set(),
     advancing: new Set(),
     delivering: new Set(),
@@ -79,6 +76,14 @@ export function createState(config: SupervisorConfig): SupervisorState {
 export function hasRunActivity(state: SupervisorState, runId: string): boolean {
   if ([...state.inflight.values()].some((handle) => handle.runId === runId)) return true;
   return [...state.claiming.values()].some((claimRunId) => claimRunId === runId);
+}
+
+/** Tracks background work in `state.pending` so `settle`/`shutdown` observe it. `work` must handle its own failures. */
+export function trackPending(state: SupervisorState, work: Promise<void>): Promise<void> {
+  let pending: Promise<void>;
+  pending = work.finally(() => state.pending.delete(pending));
+  state.pending.add(pending);
+  return pending;
 }
 
 export function processesForRun(

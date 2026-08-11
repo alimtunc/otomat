@@ -20,8 +20,9 @@ afterEach(() => {
 it("runs a fake turn to completion in a real child process", async () => {
   const { supervisor } = makeSupervisor(fix, "complete");
 
+  // The launch answers on durable rows: the first step claims its slot behind it.
   const run = await supervisor.start({ prompt: "implement the thing" });
-  expect(run.status).toBe("running");
+  expect(run.status).toBe("queued");
 
   await supervisor.settle();
 
