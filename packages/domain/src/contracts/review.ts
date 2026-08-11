@@ -4,17 +4,25 @@ import { RUN_PLAN_STEP_NAME_MAX_LENGTH } from "../plan/limits.js";
 import { reviewCommentContractSchema, reviewContractSchema } from "./entities/reviews.js";
 import { modelSelectionSchema } from "./runtime-model.js";
 
+/** `reason` is user-facing: review-only is always explained, never a silently disabled button. */
+export const reviewFixAuthoritySchema = z.object({
+  kind: z.enum(["otomat", "external"]),
+  reason: z.string(),
+});
+export type ReviewFixAuthority = z.infer<typeof reviewFixAuthoritySchema>;
+
 /** A run's review surface: the review row (null before the first comment) plus every comment, newest last. */
 export const reviewDetailSchema = z.object({
   review: reviewContractSchema.nullable(),
   comments: z.array(reviewCommentContractSchema),
+  fix_authority: reviewFixAuthoritySchema,
 });
 export type ReviewDetail = z.infer<typeof reviewDetailSchema>;
 
 /** Create a comment pinned to the diff the reviewer is looking at; the daemon verifies the anchor. */
 export const createReviewCommentRequestSchema = z.object({
   file_path: z.string().min(1),
-  line: z.number().int().nonnegative(),
+  line: z.number().int().nonnegative().nullable(),
   diff_sha: z.string().min(1),
   body: z.string().min(1),
 });

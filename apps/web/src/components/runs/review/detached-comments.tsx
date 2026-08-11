@@ -1,14 +1,14 @@
 import type { ReviewCommentContract } from "@otomat/domain";
-import { ReviewCommentCard } from "@web/components/runs/review/comment-card";
+import { commentFallbackReason } from "@web/components/runs/review/comment/anchor";
+import { ReviewCommentCard } from "@web/components/runs/review/comment/card";
 import type { ReviewSelection } from "@web/components/runs/review/use-selection";
 
-export interface ArchivedCommentsProps {
+export interface DetachedCommentsProps {
   comments: ReviewCommentContract[];
   selection: ReviewSelection;
 }
 
-/** Comments no longer anchored to the live diff — rendered from their snapshot, still selectable for a fix. */
-export function ArchivedComments({ comments, selection }: ArchivedCommentsProps) {
+export function DetachedComments({ comments, selection }: DetachedCommentsProps) {
   if (comments.length === 0) return null;
   return (
     <section className="flex flex-col gap-2">
@@ -19,7 +19,7 @@ export function ArchivedComments({ comments, selection }: ArchivedCommentsProps)
         <ReviewCommentCard
           key={comment.id}
           comment={comment}
-          showSnapshot
+          fallbackReason={commentFallbackReason(comment)}
           selected={selection.selectedIds.has(comment.id)}
           onSelectedChange={(selected) => selection.toggle(comment.id, selected)}
         />

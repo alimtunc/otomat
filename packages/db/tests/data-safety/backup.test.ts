@@ -1,4 +1,5 @@
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -86,6 +87,8 @@ it("retains a usable backup when a pending migration fails", async () => {
     WHERE created_at = (SELECT MAX(created_at) FROM __drizzle_migrations);
   `);
   current.sqlite.close();
+  // Read-only forces the replay to fail whatever the newest migration does; a rebuild replays cleanly.
+  chmodSync(dbPath, 0o400);
 
   let failure: DataSafetyError | null = null;
   try {

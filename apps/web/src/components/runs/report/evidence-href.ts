@@ -1,4 +1,5 @@
 import type { CompletionEvidence } from "@otomat/domain";
+import { reviewCommentDomId } from "@web/components/runs/review/comment/anchor";
 
 export function evidenceHref(runId: string, issueId: string, evidence: CompletionEvidence): string {
   const encodedRun = encodeURIComponent(runId);
@@ -13,7 +14,7 @@ export function evidenceHref(runId: string, issueId: string, evidence: Completio
       }`;
     case "review":
       return `/runs/${encodedRun}/diff${
-        evidence.comment_id === null ? "" : `#review-comment-${evidence.comment_id}`
+        evidence.comment_id === null ? "" : `#${reviewCommentDomId(evidence.comment_id)}`
       }`;
     case "pull_request":
       return evidence.url ?? `/runs/${encodedRun}/pr`;

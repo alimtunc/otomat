@@ -80,10 +80,14 @@ it("serves an honest null diff when the run has no worktree", async () => {
   expect(((await res.json()) as RunDiffResponse).diff).toBeNull();
 });
 
-it("serves the review surface with serialized comments", async () => {
+it("serves the review surface with serialized comments and the fix authority", async () => {
   const app = makeApiApp(t, {
     review: stubReviewService({
-      getReviewDetail: () => ({ review: reviewRow(), comments: [commentRow()] }),
+      getReviewDetail: () => ({
+        review: reviewRow(),
+        comments: [commentRow()],
+        fixAuthority: { kind: "external", reason: "Otomat does not own this branch." },
+      }),
     }),
   });
   const res = await request(app, `/api/runs/${RUN_ID}/review`);
@@ -91,6 +95,37 @@ it("serves the review surface with serialized comments", async () => {
   expect(body.review?.status).toBe("in_review");
   expect(body.comments[0]).toMatchObject({ id: "c1", diff_sha: "sha-1", status: "open" });
   expect(body.comments[0]).not.toHaveProperty("created_at");
+  expect(body.fix_authority).toEqual({
+    kind: "external",
+    reason: "Otomat does not own this branch.",
+  });
+});
+
+it("hands back the exact base and head blobs behind one file of the diff", async () => {
+  const app = makeApiApp(t, {
+    review: stubReviewService({
+      getFileBlobs: () => ({ base: "alpha\n", head: "alpha\nbeta\n" }),
+    }),
+  });
+  const res = await request(
+    app,
+    `/api/runs/${RUN_ID}/diff/file?path=${encodeURIComponent("src/thing.ts")}&sha=sha-1`,
+  );
+  expect(res.status).toBe(200);
+  expect(await res.json()).toEqual({ base_content: "alpha\n", head_content: "alpha\nbeta\n" });
+});
+
+it("refuses blobs read against a moved anchor instead of expanding the wrong context", async () => {
+  const app = makeApiApp(t, {
+    review: stubReviewService({
+      getFileBlobs: () => {
+        throw new ReviewAnchorStaleError("src/thing.ts");
+      },
+    }),
+  });
+  const res = await request(app, `/api/runs/${RUN_ID}/diff/file?path=src/thing.ts&sha=old`);
+  expect(res.status).toBe(409);
+  expect(((await res.json()) as { error: string }).error).toBe("blobs_anchor_stale");
 });
 
 it("creates a pinned comment and returns 201", async () => {

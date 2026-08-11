@@ -7,9 +7,18 @@
  * anchor is marked `outdated` on settle. {@link createReviewService} is the entry point.
  * @packageDocumentation
  */
-export { CommentsNotFixableError, DiffUnavailableError, ReviewAnchorStaleError } from "./errors.js";
+export {
+  CommentsNotFixableError,
+  DiffUnavailableError,
+  FileNotExpandableError,
+  FileNotInDiffError,
+  FileTooLargeError,
+  ReviewAnchorStaleError,
+} from "./errors.js";
 export { createReviewService } from "./service.js";
 export type {
+  FileBlobsRequest,
+  FileBlobsResult,
   FixPreparation,
   ReviewDetailResult,
   ReviewService,

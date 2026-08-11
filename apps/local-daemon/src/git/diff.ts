@@ -5,7 +5,13 @@ import { join } from "node:path";
 
 import { parseNameStatusZ, parseNumstatZ, splitPatchByFile } from "./diff-parse.js";
 import { runGit } from "./git-cli.js";
-import type { CanonicalDiff, ChangedFile, DiffFile } from "./types.js";
+import type {
+  CanonicalDiff,
+  ChangedFile,
+  DiffFile,
+  DiffFileBlobs,
+  DiffFilePaths,
+} from "./types.js";
 
 const QUOTEPATH_OFF = ["-c", "core.quotepath=false"];
 
@@ -74,5 +80,22 @@ export function computeCanonicalDiff(gitCwd: string, base: string, tree: string)
     additions: files.reduce((sum, f) => sum + f.additions, 0),
     deletions: files.reduce((sum, f) => sum + f.deletions, 0),
     sha: sha256(patch),
+  };
+}
+
+function readBlob(gitCwd: string, ref: string, path: string): string | null {
+  const result = runGit(["show", `${ref}:${path}`], { cwd: gitCwd, allowFailure: true });
+  return result.exitCode === 0 ? result.stdout : null;
+}
+
+export function readFileBlobs(
+  gitCwd: string,
+  base: string,
+  tree: string,
+  paths: DiffFilePaths,
+): DiffFileBlobs {
+  return {
+    base: readBlob(gitCwd, base, paths.oldPath ?? paths.path),
+    head: readBlob(gitCwd, tree, paths.path),
   };
 }

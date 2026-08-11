@@ -2,7 +2,12 @@ import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { collectChangedFiles, computeCanonicalDiff, worktreeStateTree } from "./diff.js";
+import {
+  collectChangedFiles,
+  computeCanonicalDiff,
+  readFileBlobs,
+  worktreeStateTree,
+} from "./diff.js";
 import { WorktreeConflictError, WorktreeNotFoundError } from "./errors.js";
 import { toRecord } from "./record.js";
 import {
@@ -160,6 +165,11 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
     diff(owner) {
       const { gitCwd, base, tree } = diffInputs(resolve(owner));
       return computeCanonicalDiff(gitCwd, base, tree);
+    },
+
+    fileBlobs(owner, paths) {
+      const { gitCwd, base, tree } = diffInputs(resolve(owner));
+      return readFileBlobs(gitCwd, base, tree, paths);
     },
 
     snapshot(owner) {

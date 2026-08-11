@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import type { RunDiffContract } from "@otomat/domain";
 import { DiffFileBrowser } from "@web/components/runs/diff/files/browser";
+import type { DiffBrowserMode } from "@web/components/runs/diff/prefs/prefs";
 import { useDiffKeyboardNav } from "@web/components/runs/diff/use-diff-keyboard-nav";
-import type { DiffBrowserMode } from "@web/components/runs/diff/view-prefs";
 import { act, useState } from "react";
 import { describe, expect, it } from "vitest";
 

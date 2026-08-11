@@ -1,3 +1,4 @@
+import { getFileBlobs } from "./blobs.js";
 import { addComment, getReviewDetail } from "./comments.js";
 import { getWorktreeDiff } from "./diff.js";
 import { markFixRequested, prepareFix } from "./fix.js";
@@ -11,6 +12,7 @@ export function createReviewService(config: ReviewServiceConfig): ReviewService 
     getWorktreeDiff: (run, owner) => getWorktreeDiff(ctx, run.id, owner),
     getReviewDetail: (runId) => getReviewDetail(ctx, runId),
     addComment: (run, request) => addComment(ctx, run.id, request),
+    getFileBlobs: (run, request) => getFileBlobs(ctx, run.id, request),
     prepareFix: (run, commentIds) => prepareFix(ctx, run, commentIds),
     markFixRequested: (runId, commentIds) => markFixRequested(ctx, runId, commentIds),
     onRunSettled: (outcome) => onRunSettled(ctx, outcome),

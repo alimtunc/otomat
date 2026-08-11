@@ -1,6 +1,13 @@
 import type { Db } from "@otomat/db";
 
-import type { CanonicalDiff, ChangedFile, WorktreeRecord, WorktreeStatus } from "./types.js";
+import type {
+  CanonicalDiff,
+  ChangedFile,
+  DiffFileBlobs,
+  DiffFilePaths,
+  WorktreeRecord,
+  WorktreeStatus,
+} from "./types.js";
 
 export interface GitWorktreeServiceConfig {
   db: Db;
@@ -64,6 +71,11 @@ export interface GitWorktreeService {
    * WorktreeNotFoundError when neither exists.
    */
   diff(owner: string): CanonicalDiff;
+  /**
+   * Whole-file text on both sides of the owner's diff, read from the same base
+   * and tree `diff` uses — the exact blobs a reviewer expands context against.
+   */
+  fileBlobs(owner: string, paths: DiffFilePaths): DiffFileBlobs;
   /** Commits outstanding changes and records the new branch tip without removing the active worktree. */
   snapshot(owner: string): WorktreeRecord;
   /** Fast-forwards the clean canonical owner from one candidate forked at `expectedBaseSha`. */

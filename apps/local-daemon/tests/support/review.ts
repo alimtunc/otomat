@@ -34,9 +34,16 @@ export function commentRow(overrides: Partial<ReviewCommentRow> = {}): ReviewCom
 export function stubReviewService(overrides: Partial<ReviewService> = {}): ReviewService {
   return {
     getWorktreeDiff: () => ({ computedAt: "2026-07-05T00:00:00.000Z", diff: null }),
-    getReviewDetail: () => ({ review: null, comments: [] }),
+    getReviewDetail: () => ({
+      review: null,
+      comments: [],
+      fixAuthority: { kind: "otomat", reason: "Otomat owns this branch." },
+    }),
     addComment: () => {
       throw new Error("addComment stub not configured");
+    },
+    getFileBlobs: () => {
+      throw new Error("getFileBlobs stub not configured");
     },
     prepareFix: () => {
       throw new Error("prepareFix stub not configured");

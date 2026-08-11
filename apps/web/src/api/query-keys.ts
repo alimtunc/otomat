@@ -41,6 +41,8 @@ export const queryKeys = {
   runCompletionReport: (id: string) => ["run", id, "report"] as const,
   runContributions: (id: string) => ["run", id, "contributions"] as const,
   runDiff: (id: string) => ["run", id, "diff"] as const,
+  runDiffFileBlobs: (id: string, path: string, sha: string) =>
+    ["run", id, "diff", "file", path, sha] as const,
   competeCandidateDiff: (runId: string, groupId: string, stepId: string) =>
     ["run", runId, "compete", groupId, stepId, "diff"] as const,
   runReview: (id: string) => ["run", id, "review"] as const,

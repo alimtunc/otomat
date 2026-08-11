@@ -308,6 +308,7 @@ it("fetches the review surface and posts a pinned comment", async () => {
     return jsonResponse({
       review: { id: "rv1", run_id: "run-1", status: "in_review" },
       comments: [COMMENT],
+      fix_authority: { kind: "otomat", reason: "Otomat owns this branch." },
     });
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });

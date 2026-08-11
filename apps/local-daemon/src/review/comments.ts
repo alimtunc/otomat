@@ -17,6 +17,7 @@ import {
 
 import { emitLedgerEvent } from "#events";
 
+import { getFixAuthority } from "./authority.js";
 import { computeDiff } from "./diff.js";
 import { DiffUnavailableError, ReviewAnchorStaleError } from "./errors.js";
 import { buildCommentCreatedEvent } from "./events.js";
@@ -37,21 +38,14 @@ function ensureReview(ctx: ReviewContext, runId: string): ReviewRow {
   );
 }
 
-/** The run's review row (null until the first comment creates it) and all its comments. */
 export function getReviewDetail(ctx: ReviewContext, runId: string): ReviewDetailResult {
   return {
     review: getReviewForRun(ctx.db, runId) ?? null,
     comments: listReviewCommentsForRun(ctx.db, runId),
+    fixAuthority: getFixAuthority(ctx, runId),
   };
 }
 
-/**
- * Pins a comment to the live diff: the request's `diff_sha` must still match the
- * file's current `DiffFile.sha`. Captures the covering hunk (or the whole patch) as
- * `hunk_snapshot`, creates the review on the first comment, drives it to `in_review`,
- * and emits `review.comment_created`. Throws DiffUnavailableError when the run has no
- * worktree diff, and ReviewAnchorStaleError when the path/sha no longer matches.
- */
 export function addComment(
   ctx: ReviewContext,
   runId: string,
@@ -67,6 +61,9 @@ export function addComment(
   const now = new Date().toISOString();
   const review = ensureReview(ctx, runId);
   const id = randomUUID();
+  // A whole-file comment captures no snapshot: a stale anchor must not fall back to the whole patch.
+  const hunkSnapshot =
+    request.line === null ? "" : (extractHunkForLine(file.patch, request.line) ?? "");
   insertReviewComment(ctx.db, {
     id,
     review_id: review.id,
@@ -75,7 +72,7 @@ export function addComment(
     diff_sha: request.diff_sha,
     body: request.body,
     status: reviewCommentMachine.initial,
-    hunk_snapshot: extractHunkForLine(file.patch, request.line) ?? file.patch,
+    hunk_snapshot: hunkSnapshot,
   });
   if (review.status !== "in_review") driveReviewTo(ctx, review, "in_review");
 

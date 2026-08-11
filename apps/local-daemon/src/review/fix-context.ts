@@ -28,14 +28,17 @@ function truncate(text: string): string {
 function renderComment(context: FixCommentContext, index: number): string {
   const { comment, currentFile } = context;
   const current = currentFile === null ? "(file no longer exists)" : truncate(currentFile);
+  const anchor = comment.line === null ? "Scope: whole file" : `Line: ${comment.line}`;
+  const snapshot =
+    comment.hunk_snapshot === ""
+      ? []
+      : ["", `Original hunk (pinned at diff ${comment.diff_sha}):`, comment.hunk_snapshot];
   return [
     `--- Review comment ${index + 1} ---`,
     `File: ${comment.file_path}`,
-    `Line: ${comment.line}`,
+    anchor,
     `Comment: ${comment.body}`,
-    "",
-    `Original hunk (pinned at diff ${comment.diff_sha}):`,
-    comment.hunk_snapshot,
+    ...snapshot,
     "",
     "Current file content:",
     current,

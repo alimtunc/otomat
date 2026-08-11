@@ -9,6 +9,7 @@ import { createRepositoryResolver, type GitWorktreeService } from "#git";
 import {
   createReviewService,
   DiffUnavailableError,
+  FileNotInDiffError,
   ReviewAnchorStaleError,
   CommentsNotFixableError,
   type ReviewService,
@@ -124,6 +125,60 @@ it("rejects a stale anchor and a run without a diff — no silent re-anchoring",
   expect(
     () => bare && review.addComment(bare, { file_path: "x", line: 0, diff_sha: "s", body: "b" }),
   ).toThrow(DiffUnavailableError);
+});
+
+it("pins a whole-file comment without capturing a hunk snapshot", () => {
+  const anchor = currentAnchor();
+  const comment = review.addComment(run(), {
+    file_path: "notes.md",
+    line: null,
+    diff_sha: anchor.sha,
+    body: "This file needs a header.",
+  });
+
+  expect(comment.line).toBeNull();
+  expect(comment.hunk_snapshot).toBe("");
+  expect(review.getReviewDetail(RUN_ID).comments.map((c) => c.id)).toEqual([comment.id]);
+});
+
+it("serves the exact base and head blobs of a live diff file", () => {
+  const blobs = review.getFileBlobs(run(), { path: "notes.md", sha: currentAnchor().sha });
+
+  expect(blobs.base).toBeNull();
+  expect(blobs.head).toBe("alpha\nbeta\ngamma\n");
+});
+
+it("refuses blobs read against a moved anchor", () => {
+  expect(() => review.getFileBlobs(run(), { path: "notes.md", sha: "moved" })).toThrow(
+    ReviewAnchorStaleError,
+  );
+});
+
+it("refuses a path that is not part of the current diff", () => {
+  expect(() => review.getFileBlobs(run(), { path: "absent.md", sha: currentAnchor().sha })).toThrow(
+    FileNotInDiffError,
+  );
+});
+
+it("reads a modified file's base side from the fork point, not from the worktree", () => {
+  writeFileSync(join(worktreePath, "README.md"), "# base\nplus a line\n");
+  const file = review.getWorktreeDiff(run()).diff?.files.find((f) => f.path === "README.md");
+  if (!file) throw new Error("expected README.md in the diff");
+
+  const blobs = review.getFileBlobs(run(), { path: "README.md", sha: file.sha });
+
+  expect(blobs.base).toBe("# base\n");
+  expect(blobs.head).toBe("# base\nplus a line\n");
+});
+
+it("grants fix authority only while Otomat still holds the run's worktree", () => {
+  expect(review.getReviewDetail(RUN_ID).fixAuthority.kind).toBe("otomat");
+
+  worktrees.cleanup(RUN_ID);
+
+  const authority = review.getReviewDetail(RUN_ID).fixAuthority;
+  expect(authority.kind).toBe("external");
+  expect(authority.reason).toContain(BRANCH);
 });
 
 it("builds the fix context from comment + original hunk + current file", () => {

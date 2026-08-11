@@ -200,6 +200,38 @@ review fix is one of these revisions: `review/fix.ts` freezes the selected
 comments, their pinned hunks, the current files and the current diff sha into the
 step's prompt, and the step waits on the nodes that produced that diff.
 
+## Reviewing a Diff
+
+The reviewer never reconciles a moved anchor, so every surface it builds is
+pinned to a `DiffFile.sha`. Reviewed marks are stored per file as the sha they
+were given at (`runs/diff/reviewed-files.ts`): a refresh keeps every file whose patch
+is byte-identical and only the files a new head really touched come back unread.
+`Hide reviewed` filters on that set but never withholds a file carrying an
+unresolved comment, and always says how many it is holding back — a reviewer who
+cannot see a file must at least know it exists.
+
+Context expansion reads the real thing rather than guessing around the patch:
+`GET /api/runs/:id/diff/file` verifies the caller's sha against the live diff and
+answers with the exact base and head blobs, refusing a moved anchor, a binary
+file, or one past a byte cap instead of shipping a truncated "full file". The web
+card only hands those blobs to `@git-diff-view` while they belong to the sha it
+is rendering — the query key carries it — because content paired with a stale or
+empty patch is what turns a real diff into a neutral, unchanged-looking file.
+
+A comment pins to `(file_path, line, diff_sha)` where `line` is null for a
+whole-file comment. Line comments capture their covering hunk; a whole-file
+comment captures none, so a stale anchor falls back to a short, named excerpt
+rather than the entire patch. `runs/review/partition.ts` splits comments into the ones
+the live diff can place exactly and the ones that can only be shown at a
+fallback, and the Comments rail states which is which before the reader clicks.
+
+`review/authority.ts` answers, explicitly, whether Otomat may point an agent at
+the branch under review: it must still hold a live worktree for the run, and a
+pull request tracking someone else's head ref is read-only however healthy the
+local repository looks. The verdict rides on the review detail with the sentence
+the cockpit shows, so review-only is explained rather than being a silently
+missing button.
+
 ## Session Capacity and the Launch Queue
 
 A launch answers as soon as the run and its frozen plan are durable. Claiming a

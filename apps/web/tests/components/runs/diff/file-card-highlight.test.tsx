@@ -5,10 +5,11 @@ import { DiffFileCard } from "@web/components/runs/diff/files/card";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { diffFileCardProps } from "#support/diff-card";
 import { stubDiffCanvas } from "#support/diff-dom";
 import { diffFile } from "#support/diff-file";
 import { stubIntersectionObserver, type IntersectionStub } from "#support/intersection";
-import { mount } from "#support/mount";
+import { mountWithQuery } from "#support/mount";
 
 stubDiffCanvas();
 
@@ -35,22 +36,13 @@ function Card({ entry }: { entry: DiffFileContract }) {
       <button type="button" data-testid="toggle-theme" onClick={toggleTheme}>
         toggle theme
       </button>
-      <DiffFileCard
-        file={entry}
-        mode="unified"
-        reviewed={false}
-        onReviewedChange={() => {}}
-        commentsByLine={new Map()}
-        onAddComment={async () => {}}
-        selectedCommentIds={new Set()}
-        onToggleComment={() => {}}
-      />
+      <DiffFileCard {...diffFileCardProps({ file: entry })} />
     </div>
   );
 }
 
 function renderCard(entry: DiffFileContract) {
-  return mount(
+  return mountWithQuery(
     <ThemeProvider>
       <Card entry={entry} />
     </ThemeProvider>,
