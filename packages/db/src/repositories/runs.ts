@@ -1,4 +1,4 @@
-import { RUN_TERMINAL_STATES, runPlanSchema, type RunPlan, type RunState } from "@otomat/domain";
+import { RUN_SETTLED_STATES, runPlanSchema, type RunPlan, type RunState } from "@otomat/domain";
 import { and, eq, notInArray, type SQL } from "drizzle-orm";
 
 import type { Db } from "../client.js";
@@ -59,7 +59,7 @@ export function listActiveRuns(db: Db): ActiveRuns {
   for (const row of db
     .select()
     .from(runs)
-    .where(notInArray(runs.status, [...RUN_TERMINAL_STATES]))
+    .where(notInArray(runs.status, [...RUN_SETTLED_STATES]))
     .orderBy(runs.created_at)
     .all()) {
     const parsed = runPlanSchema.safeParse(row.plan_json);
@@ -83,9 +83,17 @@ export function updateRunPlan(db: Db, id: string, plan: RunPlan): void {
 export interface RunStatusUpdate {
   status: RunState;
   started_at?: string;
-  completed_at?: string;
+  /** Null clears the stamp a settled run carried, so a resumed run never reports a completion time. */
+  completed_at?: string | null;
 }
 
 export function updateRunStatus(db: Db, id: string, update: RunStatusUpdate): void {
   db.update(runs).set(touch(update)).where(eq(runs.id, id)).run();
+}
+
+export function markRunAbandoned(db: Db, id: string, abandonedAt: string): void {
+  db.update(runs)
+    .set(touch({ abandoned_at: abandonedAt }))
+    .where(eq(runs.id, id))
+    .run();
 }

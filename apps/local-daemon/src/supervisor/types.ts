@@ -4,8 +4,10 @@ import type {
   LinearLifecycleSync,
   ModelSelection,
   ResolvedAgentConfig,
+  RunResumePlan,
   RunWait,
   StartRunRequest,
+  WorkspaceClosureFacts,
 } from "@otomat/domain";
 
 import type { AgentConfigSelector } from "#agents";
@@ -94,8 +96,14 @@ export interface Supervisor {
   capacity(): AgentCapacity;
   /** Persist and apply a new cap: raising it drains the queue at once, lowering it only gates the next start. */
   setCapacity(maxConcurrentSessions: number): AgentCapacity;
-  /** Resume a human-waiting run on an explicit action — spawns a `resume` turn, never auto-runs. */
+  /** Resume a resting or stopped run on an explicit action — never auto-runs. */
   resume(runId: string): Promise<RunRow>;
+  /** What that resume would do, so the cockpit shows native reattachment or a recovery session before it runs. */
+  resumePlan(runId: string): RunResumePlan;
+  /** Close the issue's work cycle by hand; refused while a turn is live, and it deletes nothing in git. */
+  abandon(runId: string): RunRow;
+  /** The branch, commits, uncommitted work and diff an abandon would leave behind; null for an unknown run. */
+  workspaceClosure(runId: string): WorkspaceClosureFacts | null;
   /** Append one step to the run's plan and start it once the workspace is free; refused once the workspace closes. */
   appendStep(runId: string, input: AppendStepInput): Promise<RunRow>;
   /** Persist one user message on the run as `queued`, then deliver it if the run is already resting. */

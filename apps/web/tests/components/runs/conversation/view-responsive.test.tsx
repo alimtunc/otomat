@@ -50,6 +50,11 @@ const detail: RunDetail = {
 
 vi.mock("@web/api/runs/queries", () => ({
   useRunDetail: () => ({ isPending: false, isError: false, data: detail }),
+  useRunWorkspace: () => ({ data: undefined, isPending: true, isError: false, refetch: vi.fn() }),
+}));
+
+vi.mock("@web/api/issues/queries", () => ({
+  useIssue: () => ({ isPending: false, isError: false, data: undefined }),
 }));
 
 vi.mock("@web/api/runs/run-event-stream", () => ({
@@ -59,6 +64,7 @@ vi.mock("@web/api/runs/run-event-stream", () => ({
 vi.mock("@web/api/runs/mutations", () => ({
   useAbortRun: () => ({ mutate: () => {}, isPending: false }),
   useResumeRun: () => ({ mutate: () => {}, isPending: false }),
+  useAbandonWorkspace: () => ({ mutate: () => {}, isPending: false }),
 }));
 
 vi.mock("@web/components/runs/conversation/thread", () => ({
@@ -88,8 +94,10 @@ describe("RunConversationView responsive composition", () => {
   it("stacks a context strip and steps disclosure on narrow viewports", async () => {
     wide = false;
     const { container, cleanup } = await renderView();
-    const disclosure = container.querySelector<HTMLButtonElement>("[aria-expanded]");
-    if (disclosure === null) throw new Error("no steps disclosure rendered");
+    const disclosure = [...container.querySelectorAll<HTMLButtonElement>("[aria-expanded]")].find(
+      (button) => button.closest("[data-closed]") !== null,
+    );
+    if (disclosure === undefined) throw new Error("no steps disclosure rendered");
     const collapsible = disclosure.closest("[data-closed]");
     expect(collapsible).not.toBeNull();
     const chevron = disclosure.querySelector(".lucide-chevron-down");

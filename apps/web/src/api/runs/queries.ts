@@ -1,4 +1,4 @@
-import { isRunTerminal } from "@otomat/domain";
+import { isRunSettled } from "@otomat/domain";
 import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
@@ -35,8 +35,8 @@ export function useCompeteCandidateDiff(runId: string, groupId: string, stepId: 
 }
 
 /**
- * Fetches one run's detail and polls it every 1.5s until the run reaches a
- * terminal status, then stops refetching.
+ * Fetches one run's detail and polls it every 1.5s until the run settles, then
+ * stops refetching; resuming a settled run invalidates the query and restarts it.
  */
 export function useRunDetail(runId: string) {
   return useQuery({
@@ -44,8 +44,18 @@ export function useRunDetail(runId: string) {
     queryFn: () => daemon.getRun(runId),
     refetchInterval: (query) => {
       const status = query.state.data?.run.status;
-      return status && isRunTerminal(status) ? false : 1_500;
+      return status && isRunSettled(status) ? false : 1_500;
     },
+  });
+}
+
+/** What abandoning this run's workspace would leave behind. Read on demand — the confirmation must show the branch as it is now, not as it was cached. */
+export function useRunWorkspace(runId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.runWorkspace(runId),
+    queryFn: () => daemon.getRunWorkspace(runId),
+    enabled,
+    staleTime: 0,
   });
 }
 

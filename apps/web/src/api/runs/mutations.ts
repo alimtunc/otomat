@@ -1,43 +1,70 @@
 import { DaemonRequestError } from "@otomat/client";
 import {
   agentProfileErrorSchema,
+  runResumeErrorSchema,
   runStepAppendErrorSchema,
+  workspaceAbandonErrorSchema,
   type AppendRunStepRequest,
   type CreateRunContributionRequest,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
-function useRunCommand(runId: string, command: () => Promise<unknown>, errorMessage: string) {
+/** Every cycle command drops the same caches: the issue's join in, because it decides what can still be continued. */
+function invalidateRunCycleCaches(client: QueryClient, runId: string): void {
+  client.invalidateQueries({ queryKey: queryKeys.run(runId) });
+  client.invalidateQueries({ queryKey: queryKeys.runs });
+  client.invalidateQueries({ queryKey: queryKeys.issues });
+}
+
+export function useAbortRun(runId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: command,
-    onSuccess: () => {
-      client.invalidateQueries({ queryKey: queryKeys.run(runId) });
-      client.invalidateQueries({ queryKey: queryKeys.runs });
-    },
-    onError: () => toast.error(errorMessage),
+    mutationFn: () => daemon.abortRun(runId),
+    onSuccess: () => invalidateRunCycleCaches(client, runId),
+    onError: () => toast.error("Could not cancel this run — is the daemon running?"),
   });
 }
 
-/** Aborts the run. On success invalidates its detail and the runs list; toasts on failure. */
-export function useAbortRun(runId: string) {
-  return useRunCommand(
-    runId,
-    () => daemon.abortRun(runId),
-    "Could not abort run — is the daemon running?",
-  );
+export function useResumeRun(runId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => daemon.resumeRun(runId),
+    onSuccess: () => invalidateRunCycleCaches(client, runId),
+    onError: (error) => toast.error(resumeErrorMessage(error)),
+  });
 }
 
-/** Resumes the run. On success invalidates its detail and the runs list; toasts on failure. */
-export function useResumeRun(runId: string) {
-  return useRunCommand(
-    runId,
-    () => daemon.resumeRun(runId),
-    "Could not resume run — it may no longer be resumable.",
-  );
+function resumeErrorMessage(error: unknown): string {
+  if (!(error instanceof DaemonRequestError)) {
+    return "Could not resume this run — is the daemon running?";
+  }
+  const refusal = runResumeErrorSchema.safeParse(error.body);
+  if (refusal.success) return refusal.data.message;
+  return "Could not resume this run — the daemon refused it.";
+}
+
+export function useAbandonWorkspace(runId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => daemon.abandonRunWorkspace(runId),
+    onSuccess: () => {
+      invalidateRunCycleCaches(client, runId);
+      toast.success("Workspace abandoned — the next launch starts a fresh cycle.");
+    },
+    onError: (error) => toast.error(abandonErrorMessage(error)),
+  });
+}
+
+function abandonErrorMessage(error: unknown): string {
+  if (!(error instanceof DaemonRequestError)) {
+    return "Could not abandon this workspace — is the daemon running?";
+  }
+  const refusal = workspaceAbandonErrorSchema.safeParse(error.body);
+  if (refusal.success) return refusal.data.message;
+  return "Could not abandon this workspace — the daemon refused it.";
 }
 
 function appendStepErrorMessage(error: unknown): string {
@@ -58,11 +85,7 @@ export function useAppendRunStep(runId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: AppendRunStepRequest) => daemon.appendRunStep(runId, request),
-    onSuccess: () => {
-      client.invalidateQueries({ queryKey: queryKeys.run(runId) });
-      client.invalidateQueries({ queryKey: queryKeys.runs });
-      client.invalidateQueries({ queryKey: queryKeys.issues });
-    },
+    onSuccess: () => invalidateRunCycleCaches(client, runId),
     onError: (error) => toast.error(appendStepErrorMessage(error)),
   });
 }

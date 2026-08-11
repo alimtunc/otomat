@@ -1,4 +1,4 @@
-import type { RunTerminalState } from "@otomat/domain";
+import type { RunSettledState } from "@otomat/domain";
 
 import { buildRuntimeEvent, type RuntimeEvent } from "#runtime";
 
@@ -13,7 +13,7 @@ export interface SessionRef {
 /** Durable completion sentinel a worker appends as the last `events.jsonl` line, so a restarted daemon can tell a finished run from a torn one. */
 export function buildTerminalMarker(
   ref: SessionRef,
-  finalStatus: RunTerminalState,
+  finalStatus: RunSettledState,
   providerSessionId: string | null,
   eventCount: number,
   occurredAt: string,
@@ -33,6 +33,23 @@ export function buildTerminalMarker(
       provider_session_id: providerSessionId,
       event_count: eventCount,
     },
+  });
+}
+
+/** Audit trail of the one manual closure: the cycle ends here, and the branch it names stays on disk. */
+export function buildAbandonedEvent(
+  runId: string,
+  branch: string,
+  occurredAt: string,
+): RuntimeEvent {
+  return buildRuntimeEvent({
+    runId,
+    kind: "abandoned",
+    type: "run.lifecycle",
+    source: "otomat",
+    adapter: SUPERVISOR_ADAPTER,
+    occurredAt,
+    payload: { phase: "abandoned", branch },
   });
 }
 

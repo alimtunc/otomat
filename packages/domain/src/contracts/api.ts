@@ -21,3 +21,4 @@ export * from "./review.js";
 export * from "./run.js";
 export * from "./runtime.js";
 export * from "./runtime-model.js";
+export * from "./workspace-closure.js";

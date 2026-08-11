@@ -1,5 +1,5 @@
 import { getIssue, getRun, type Db } from "@otomat/db";
-import { isRunTerminal, issueMachine, type LinearLifecycleSync } from "@otomat/domain";
+import { isRunSettled, issueMachine, type LinearLifecycleSync } from "@otomat/domain";
 
 import { WorktreeNotFoundError, type RepositoryResolver } from "#git";
 
@@ -18,7 +18,7 @@ export function closeMergedRun(config: MergeClosureConfig, runId: string): void 
   const run = getRun(config.db, runId);
   if (!run) return;
   releaseWorktree(config, runId);
-  if (!isRunTerminal(run.status)) {
+  if (!isRunSettled(run.status)) {
     driveRunTo(config.db, runId, run.status, "completed", new Date().toISOString());
   }
   const issue = getIssue(config.db, run.issue_id);

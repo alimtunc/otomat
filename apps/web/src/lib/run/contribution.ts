@@ -1,6 +1,7 @@
 import {
   canFollowUpRun,
-  isRunTerminal,
+  isRunResumable,
+  isRunSettled,
   selectLatestResumableSession,
   type AgentSessionContract,
   type RunContributionContract,
@@ -52,8 +53,12 @@ export function resolveContributionGate(
   if (connectionState !== "online") {
     return blocked("Daemon offline — reconnect to send a message.");
   }
-  if (isRunTerminal(detail.run.status)) {
-    return blocked("This run is finished — its session can no longer be resumed.");
+  if (isRunSettled(detail.run.status)) {
+    return blocked(
+      isRunResumable(detail.run.status)
+        ? "This run has stopped — resume it to continue the conversation."
+        : "This run is finished — its session can no longer be resumed.",
+    );
   }
   if (detail.sessions.length === 0) {
     return blocked("This run has not started an agent session yet.");

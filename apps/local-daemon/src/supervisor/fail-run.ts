@@ -1,5 +1,5 @@
 import { getRun, listStepRunsForRun } from "@otomat/db";
-import { runMachine } from "@otomat/domain";
+import { isRunSettled } from "@otomat/domain";
 
 import { emitLedgerEvent } from "#events";
 
@@ -19,7 +19,7 @@ export function failureReason(error: unknown): string {
  */
 export function failIdleRun(state: SupervisorState, runId: string, reason: string): void {
   const current = getRun(state.db, runId);
-  if (!current || runMachine.isTerminal(current.status) || hasRunActivity(state, runId)) return;
+  if (!current || isRunSettled(current.status) || hasRunActivity(state, runId)) return;
   const now = new Date().toISOString();
   emitSupervisorLog(state, runId, "stderr", `[otomat] ${reason}`);
   driveIdleRunTo(state.db, current, "failed", listStepRunsForRun(state.db, runId), now);

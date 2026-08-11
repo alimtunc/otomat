@@ -1,4 +1,4 @@
-import type { AgentSessionState, RunState, RunTerminalState, StepRunState } from "@otomat/domain";
+import type { AgentSessionState, RunState, RunSettledState, StepRunState } from "@otomat/domain";
 
 import type { ReconcileClassification } from "./types.js";
 
@@ -18,7 +18,7 @@ export const TARGETS: Record<ReconcileClassification, Targets> = {
 
 /** Classifies a torn run from durable evidence: an explicit terminal marker wins; absent that, a known provider session means `interrupted` (resumable); otherwise `failed`. */
 export function classify(
-  finalStatus: RunTerminalState | null,
+  finalStatus: RunSettledState | null,
   providerSessionId: string | null,
 ): ReconcileClassification {
   if (finalStatus !== null) return finalStatus;

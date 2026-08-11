@@ -183,13 +183,38 @@ draft once confirmed. There is no telemetry and no automatic send.
 
 ## Issue Workspace and Plan Revisions
 
-An issue owns one canonical workspace while its work is unmerged: the run that
-still holds a non-terminal status and an `active` worktree row. `projectIssueWorkspace`
-reduces the same evidence the execution projection reads, so the daemon and the
-cockpit answer "where does this issue work?" identically. A second launch on that
-issue is refused with `issue_workspace_open` before any row is written; new work
-appends a step instead. Merging drives the run terminal and releases the worktree,
-which closes the workspace and lets the next launch start a fresh cycle.
+An issue owns one canonical workspace while its work is unmerged: the run whose
+worktree row is still `active`, that has not been abandoned, and that a merge has
+not driven to `completed`. `projectIssueWorkspace` reduces the same evidence the
+execution projection reads, so the daemon and the cockpit answer "where does this
+issue work?" identically. A second launch on that issue is refused with
+`issue_workspace_open` before any row is written; new work appends a step instead.
+
+A failure, a cancel, a lost session or a provider quota error therefore does
+**not** close the cycle: the branch, the worktree and the diff are still there, so
+`failed` and `canceled` are resting states the run machine can leave through
+`preparing`, and the step machine requeues any step that stopped without
+succeeding. `RUN_SETTLED_STATES`/`isRunSettled` is the "execution has stopped"
+predicate everything else reads (`completed_at` is stamped there and cleared when
+a resume reopens the row); only `completed` is machine-terminal, because only a
+confirmed merge reaches it.
+
+`supervisor/resume-plan.ts` holds the one decision behind both `GET /api/runs/:id`
+and `POST /api/runs/:id/resume`, so the cockpit can never announce a mode the
+command then declines to take: reopen an interrupted competition, reattach the
+provider session (`native`), open a recovery session on the same step and worktree
+with the run's durable context (`recovery`, built by `recovery-prompt.ts`), or
+start the plan's next node (`next_step`). A recovery session is a new
+`agent_sessions` row on the same step — a failed session row cannot be reopened,
+and the honest signal that the provider conversation restarted.
+
+Two things close the cycle. A confirmed merge drives the run to `completed` and
+releases the worktree (`merge-closure.ts`). An abandon stamps `runs.abandoned_at`
+and stops the plan (`supervisor/abandon.ts`) — it deletes no branch, no worktree
+and no commit, which is why `GET /api/runs/:id/workspace` serves the branch,
+commits, uncommitted files, diff and pull request as an inventory of what stays
+reachable rather than a list of what is about to be lost. Abandoning is refused
+while a turn is live: cancel first, so a workspace never has two writers.
 
 `runs.plan_json` is frozen at launch and then append-only. `appendPlanStep` copies
 every launched node untouched and may only add one whose dependencies already

@@ -54,6 +54,7 @@ export function runRow(id: string, overrides: Partial<RunRow> = {}): RunRow {
     plan_json: { version: 1, steps: [] },
     started_at: null,
     completed_at: null,
+    abandoned_at: null,
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z",
     ...overrides,
@@ -114,6 +115,11 @@ export function makeApiApp(
     resumeRun: async () => {
       throw new Error("resumeRun stub not configured");
     },
+    runResumePlan: () => ({ mode: "unavailable", reason: "resume plan stub not configured" }),
+    abandonWorkspace: () => {
+      throw new Error("abandonWorkspace stub not configured");
+    },
+    workspaceClosure: () => null,
     appendRunStep: async () => {
       throw new Error("appendRunStep stub not configured");
     },

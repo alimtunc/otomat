@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { IssueContract } from "@otomat/domain";
+import { CLOSED_ISSUE_WORKSPACE, type IssueContract } from "@otomat/domain";
 import { IssueDetailView } from "@web/components/issues/issue/detail-view";
 import { act, useSyncExternalStore } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -50,6 +50,7 @@ const issue: IssueContract = {
   body: null,
   status: "ready",
   execution: { state: "none", run_id: null },
+  workspace: CLOSED_ISSUE_WORKSPACE,
   source: "local",
   source_external_id: null,
   source_identifier: null,

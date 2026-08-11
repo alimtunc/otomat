@@ -11,7 +11,7 @@ export function ContextStrip({ detail }: { detail: RunDetail }) {
       <span className="min-w-0 flex-1 truncate font-mono text-xs text-text-tertiary">
         {detail.run.branch}
       </span>
-      <RunActionButtons runId={detail.run.id} status={detail.run.status} />
+      <RunActionButtons runId={detail.run.id} issueId={detail.run.issue_id} />
     </div>
   );
 }

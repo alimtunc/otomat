@@ -1,5 +1,5 @@
 import { getRepository, getRun, type Db } from "@otomat/db";
-import { runMachine } from "@otomat/domain";
+import { isRunSettled } from "@otomat/domain";
 
 import { runCliProcess } from "#runtime/cli/process-runner";
 
@@ -23,7 +23,7 @@ export interface InitCommandBatch {
 /** True when the run may keep going; anything settled elsewhere stops the caller silently. */
 export function runStillLive(state: SupervisorState, runId: string): boolean {
   const current = getRun(state.db, runId);
-  if (!current || runMachine.isTerminal(current.status)) return false;
+  if (!current || isRunSettled(current.status)) return false;
   return !state.aborting.has(runId) && !state.shuttingDown;
 }
 

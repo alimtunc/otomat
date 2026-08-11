@@ -101,3 +101,31 @@ export function listBranches(repoPath: string): string[] {
 export function deleteBranch(repoPath: string, branch: string): void {
   runGit(["branch", "-D", branch], { cwd: repoPath, allowFailure: true });
 }
+
+export interface CommitSummary {
+  sha: string;
+  subject: string;
+}
+
+// The unit separator: a commit subject can hold anything a tab or a pipe could.
+const FIELD_SEPARATOR = "\x1f";
+
+/** Commits reachable from `ref` but not from `base`, newest first. An unreadable range throws rather than reporting an empty branch. */
+export function commitsSince(repoPath: string, base: string, ref: string): CommitSummary[] {
+  const res = runGit(["log", "--format=%H%x1f%s", `${base}..${ref}`], { cwd: repoPath });
+  return res.stdout
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => {
+      const [sha = "", subject = ""] = line.split(FIELD_SEPARATOR);
+      return { sha, subject };
+    });
+}
+
+/** Paths carrying uncommitted work — staged, unstaged or untracked — in the worktree at `repoPath`. */
+export function uncommittedPaths(repoPath: string): string[] {
+  return runGit(["status", "--porcelain"], { cwd: repoPath })
+    .stdout.split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => line.slice(3));
+}

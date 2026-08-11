@@ -223,7 +223,10 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
 - An issue owns one canonical workspace — one run, one branch, one worktree —
   while its work is unmerged. New work on it appends a step to that run; a second
   launch is refused (`issue_workspace_open`) rather than forking a competing
-  worktree. Merging closes the workspace and the next launch starts a fresh cycle.
+  worktree. A failure, a cancel or a lost provider session leaves that cycle open
+  and resumable; only a confirmed merge or an explicit abandon closes it, and the
+  next launch then starts a fresh cycle. Abandoning stamps the run and stops the
+  plan — it never deletes a branch, a worktree or a commit.
 
 ## Source and test layout
 

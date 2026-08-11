@@ -1,8 +1,8 @@
 import type { AgentSessionRow, StepRunRow } from "@otomat/db";
 import {
   allStepsSucceeded,
+  isStepSettled,
   readyPlanWork,
-  stepRunMachine,
   type RunPlan,
   type RunState,
   type StepRunState,
@@ -108,8 +108,7 @@ function settleCompeteTurn(
   }
 
   const projected = stepStatuses(ctx.steps);
-  if (!stepRunMachine.isTerminal(turnStep.status))
-    projected.set(turnStep.id, evidence.targets.step);
+  if (!isStepSettled(turnStep.status)) projected.set(turnStep.id, evidence.targets.step);
   const candidateStates = ctx.steps
     .filter((step) => step.compete_group_id === group.id)
     .map((step) => projected.get(step.id) ?? step.status);
@@ -122,13 +121,13 @@ function settleCompeteTurn(
 
   ctx.db.transaction(
     () => {
-      if (!stepRunMachine.isTerminal(turnStep.status)) {
+      if (!isStepSettled(turnStep.status)) {
         driveStepTo(ctx.db, turnStep.id, turnStep.status, evidence.targets.step);
       }
       driveSessionTo(ctx.db, turnSession.id, turnSession.status, evidence.targets.session);
       if (groupTarget === "failed") {
         for (const step of ctx.steps) {
-          if (step.compete_group_id !== group.id && !stepRunMachine.isTerminal(step.status)) {
+          if (step.compete_group_id !== group.id && !isStepSettled(step.status)) {
             driveStepTo(ctx.db, step.id, step.status, "canceled");
           }
         }
@@ -157,7 +156,7 @@ export function settleTurn(
   }
 
   const projected = stepStatuses(ctx.steps);
-  if (turnStep !== null && !stepRunMachine.isTerminal(turnStep.status)) {
+  if (turnStep !== null && !isStepSettled(turnStep.status)) {
     projected.set(turnStep.id, targets.step);
   }
   const resolution = resolveRunTarget(ctx, classification, plan, projected, ctx.options.mode);

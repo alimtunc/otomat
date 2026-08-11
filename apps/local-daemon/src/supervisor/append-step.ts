@@ -1,12 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  getIssue,
-  insertStepRun,
-  listStepRunsForRun,
-  updateRunPlan,
-  type RunRow,
-} from "@otomat/db";
+import { insertStepRun, listStepRunsForRun, updateRunPlan, type RunRow } from "@otomat/db";
 import { appendPlanStep, stepRunMachine, type RunPlanStep } from "@otomat/domain";
 
 import { resolveAgentConfig } from "#agents";
@@ -15,10 +9,9 @@ import { emitLedgerEvent } from "#events";
 import { scheduleNextStep } from "./advance.js";
 import { signalIssueLifecycle } from "./issue-lifecycle.js";
 import { buildPlanRevisedEvent } from "./plan-revision.js";
-import { requireRunRow } from "./resume.js";
+import { reopenIssue, reopenSettledRun, requireRunRow } from "./resume.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
 import { hasRunActivity, type SupervisorState } from "./state.js";
-import { driveIssueTo } from "./transitions.js";
 import type { AppendStepInput } from "./types.js";
 import { requireOpenWorkspace } from "./workspace.js";
 
@@ -31,12 +24,13 @@ function nextStepIndex(state: SupervisorState, runId: string): number {
  * Appends a step to a launched run and starts it when the workspace is free.
  *
  * Every refusal happens before any write: the run must still hold its issue's
- * workspace (a merge, an abort or a failure closes it), the issue must accept
+ * workspace (only a merge or an abandon closes it), the issue must accept
  * running again — a merged issue is `done`, and the issue machine is what says
  * no — and the agent config must resolve. The step then runs in the run's own
  * worktree, against the same history, with its own step/session rows and
- * conversation. While a turn is in flight the step stays `queued`: the post-turn
- * chain starts it, so nothing ever runs twice in one worktree.
+ * conversation. A stopped cycle is reopened for it; while a turn is in flight
+ * the step stays `queued` and the post-turn chain starts it, so nothing ever
+ * runs twice in one worktree.
  */
 export async function appendRunStep(
   state: SupervisorState,
@@ -61,8 +55,7 @@ export async function appendRunStep(
   const plan = appendPlanStep(run.plan_json, step);
   const idx = nextStepIndex(state, runId);
 
-  const issue = getIssue(db, run.issue_id);
-  if (issue) driveIssueTo(db, issue.id, issue.status, "running");
+  const issue = reopenIssue(db, run);
 
   db.transaction(
     () => {
@@ -86,7 +79,7 @@ export async function appendRunStep(
   if (issue) signalIssueLifecycle(state.syncIssueLifecycle, issue.id, "in_progress", runId);
 
   if (!hasRunActivity(state, runId)) {
-    scheduleNextStep(state, requireRunRow(db, runId, "append"));
+    scheduleNextStep(state, reopenSettledRun(state, requireRunRow(db, runId, "append")));
   }
   return requireRunRow(db, runId, "append");
 }
