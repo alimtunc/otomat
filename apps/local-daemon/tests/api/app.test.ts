@@ -1,9 +1,9 @@
 import { schema, type Db } from "@otomat/db";
 import type {
   HealthResponse,
-  RunContract,
   RunContributionContract,
   RunDetail,
+  RunLaunchResponse,
   StartRunRequest,
 } from "@otomat/domain";
 import { eq } from "drizzle-orm";
@@ -109,7 +109,20 @@ it("composes run detail with steps and sessions (events come over SSE, not detai
   expect(detail.steps).toHaveLength(1);
   expect(detail.sessions).toHaveLength(1);
   expect(detail.worktree_path).toBeNull();
+  expect(detail.wait).toBeNull();
   expect(detail).not.toHaveProperty("events");
+});
+
+it("tells the cockpit why a queued run is not moving", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  const app = makeApiApp(t, {
+    runWait: () => ({ kind: "workflow_dependency", blocked_by: ["Implement"] }),
+  });
+
+  const detail = (await (await request(app, `/api/runs/${runId}`)).json()) as RunDetail;
+
+  expect(detail.wait).toEqual({ kind: "workflow_dependency", blocked_by: ["Implement"] });
 });
 
 it("exposes the run's worktree path on its detail", async () => {
@@ -214,7 +227,29 @@ it("delegates start-run to the injected launchRun dep", async () => {
   const res = await post(app, "/api/runs", { prompt: "do it" });
   expect(res.status).toBe(201);
   expect(received).toEqual({ prompt: "do it" });
-  expect(((await res.json()) as RunContract).id).toBe("run-x");
+  expect((await res.json()) as RunLaunchResponse).toMatchObject({
+    run: { id: "run-x" },
+    wait: null,
+  });
+});
+
+it("answers a saturated launch with the run and the place it is queued at", async () => {
+  const app = makeApiApp(t, {
+    launchRun: async () => runRow("run-queued", { status: "queued" }),
+    runWait: () => ({
+      kind: "concurrency_limit",
+      position: 2,
+      active_sessions: 4,
+      max_concurrent_sessions: 4,
+    }),
+  });
+  const res = await post(app, "/api/runs", { prompt: "the fifth one" });
+
+  expect(res.status).toBe(201);
+  expect((await res.json()) as RunLaunchResponse).toMatchObject({
+    run: { id: "run-queued", status: "queued" },
+    wait: { kind: "concurrency_limit", position: 2, max_concurrent_sessions: 4 },
+  });
 });
 
 it("returns a conflict with the refusal code when the project has no usable repository", async () => {

@@ -102,6 +102,15 @@ export function makeApiApp(
     launchRun: async () => {
       throw new Error("launchRun stub not configured");
     },
+    runWait: () => null,
+    agentCapacity: () => ({
+      max_concurrent_sessions: 4,
+      active_sessions: 0,
+      waiting_sessions: 0,
+    }),
+    setAgentCapacity: () => {
+      throw new Error("setAgentCapacity stub not configured");
+    },
     resumeRun: async () => {
       throw new Error("resumeRun stub not configured");
     },

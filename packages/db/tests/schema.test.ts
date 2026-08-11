@@ -24,6 +24,7 @@ const EXPECTED_TABLES = [
   "issue_sources",
   "linear_issue_drafts",
   "linear_writes",
+  "daemon_settings",
 ];
 
 let t: TempDb | null = null;

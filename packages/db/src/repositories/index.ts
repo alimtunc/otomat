@@ -9,6 +9,7 @@
  */
 export * from "./agent/index.js";
 export * from "./compete-groups.js";
+export * from "./daemon-settings.js";
 export * from "./event-streams.js";
 export * from "./instants.js";
 export * from "./issue-execution.js";

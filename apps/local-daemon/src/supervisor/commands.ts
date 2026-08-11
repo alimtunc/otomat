@@ -10,7 +10,7 @@ import { executableSteps, isRunPlanCompeteGroup, type StartRunRequest } from "@o
 
 import { sessionDir } from "#events";
 
-import { startNextReadyStep } from "./advance.js";
+import { scheduleNextStep, startNextReadyStep } from "./advance.js";
 import { repositoryInitCommands } from "./init-commands.js";
 import { signalIssueLifecycle } from "./issue-lifecycle.js";
 import { prepareRun } from "./prepare.js";
@@ -27,17 +27,18 @@ import { scheduleTurn } from "./turn-scheduling.js";
 import type { TurnContext } from "./types.js";
 import { scheduleWorktreeInit } from "./worktree-init.js";
 
-/** Omitting `issue_id` creates a local issue from the prompt; init commands stream in the background. */
+/**
+ * Omitting `issue_id` creates a local issue from the prompt. Every precondition is
+ * checked before any row is written, so a refusal still throws here; past that point
+ * the launch answers and worktree init and the first step continue in the background.
+ */
 export async function startRun(state: SupervisorState, request: StartRunRequest): Promise<RunRow> {
   const runId = prepareRun(state, request);
   const run = requireRunRow(state.db, runId, "spawn");
   signalIssueLifecycle(state.syncIssueLifecycle, run.issue_id, "in_progress", runId);
   const initCommands = repositoryInitCommands(state.db, run.repository_id);
-  if (initCommands.length > 0) {
-    scheduleWorktreeInit(state, run, initCommands);
-  } else {
-    await startNextReadyStep(state, run);
-  }
+  if (initCommands.length > 0) scheduleWorktreeInit(state, run, initCommands);
+  else scheduleNextStep(state, run);
   return requireRunRow(state.db, runId, "spawn");
 }
 

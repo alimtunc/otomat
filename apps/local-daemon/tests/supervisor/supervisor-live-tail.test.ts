@@ -21,7 +21,7 @@ it("ingests events into the ledger while the child is still running (live tail)"
   const { supervisor } = makeSupervisor(fix, "linger");
 
   const run = await supervisor.start({ prompt: "long running" });
-  expect(run.status).toBe("running");
+  expect(await waitFor(() => getRun(fix.db, run.id)?.status === "running")).toBe(true);
 
   // Without a live tailer these events would only reach the ledger at exit.
   const appeared = await waitFor(() => readRunEvents(fix.db, run.id).length >= 2);

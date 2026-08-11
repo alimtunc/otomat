@@ -3,12 +3,14 @@ import {
   agentProfileErrorSchema,
   runLaunchErrorSchema,
   type RunContract,
+  type RunLaunchResponse,
   type StartRunRequest,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
+import { describeRunWait } from "@web/lib/run/wait-copy";
 
 /** Starts a run. On success invalidates the issues and runs caches. */
 function useStartRun() {
@@ -35,8 +37,16 @@ function startRunErrorMessage(error: unknown): string {
   return "Could not start run — is the daemon running?";
 }
 
+function toastLaunched(launched: RunLaunchResponse): void {
+  if (launched.wait === null) {
+    toast.success("Run started");
+    return;
+  }
+  toast.info("Run queued", { description: describeRunWait(launched.wait) });
+}
+
 export interface LaunchRun {
-  /** Resolves the started run, or null when the daemon refused it (an error toast was shown). */
+  /** Resolves the launched run, or null when the daemon refused it (an error toast was shown). */
   launch: (request: StartRunRequest) => Promise<RunContract | null>;
   isPending: boolean;
 }
@@ -47,9 +57,9 @@ export function useLaunchRun(): LaunchRun {
 
   async function launch(request: StartRunRequest): Promise<RunContract | null> {
     try {
-      const run = await startRun.mutateAsync(request);
-      toast.success("Run started");
-      return run;
+      const launched = await startRun.mutateAsync(request);
+      toastLaunched(launched);
+      return launched.run;
     } catch (error) {
       toast.error(startRunErrorMessage(error));
       return null;

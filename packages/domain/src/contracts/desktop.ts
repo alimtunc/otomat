@@ -10,6 +10,7 @@ import type {
   SupportBundleExportResult,
 } from "./diagnostics.js";
 import type {
+  ExecutionHostCapacityResult,
   ExecutionHostId,
   ExecutionHostOperationResult,
   ExecutionHostProjectsEntry,
@@ -116,6 +117,13 @@ export interface OtomatDesktopBridge {
       hostId: ExecutionHostId,
       path: string,
     ): Promise<ExecutionHostRegisterProjectResult>;
+    /** Reads one host's session cap from that host's own daemon; the desktop shell keeps no copy of it. */
+    readCapacity(hostId: ExecutionHostId): Promise<ExecutionHostCapacityResult>;
+    /** Saves the cap on the host that enforces it; an unreachable or refusing host comes back `ok: false`. */
+    writeCapacity(
+      hostId: ExecutionHostId,
+      maxConcurrentSessions: number,
+    ): Promise<ExecutionHostCapacityResult>;
     listSshAliases(): Promise<string[]>;
     /** Git working trees found under the remote host's `$HOME`; a truncated listing is a failure, never an empty list. */
     listRemoteRepositories(): Promise<RemoteRepositoryListResult>;

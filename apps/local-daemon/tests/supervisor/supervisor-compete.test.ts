@@ -8,6 +8,7 @@ import {
   listStepRunsForRun,
   schema,
   updateRepositoryInitCommands,
+  writeMaxConcurrentSessions,
 } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -74,13 +75,13 @@ function makeCompeteSupervisor(
     }
     return worker(job);
   };
+  writeMaxConcurrentSessions(fix.db, 2);
   return {
     supervisor: createSupervisor({
       db: fix.db,
       dataDir: fix.dataDir,
       defaultProjectId: "p1",
       spawn,
-      concurrency: 2,
       repositories: createRepositoryResolver({
         db: fix.db,
         worktreesRoot: join(fix.dataDir, "worktrees"),

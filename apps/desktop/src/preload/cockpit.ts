@@ -1,5 +1,6 @@
 import type {
   ErrorDiagnostic,
+  ExecutionHostCapacityResult,
   ExecutionHostId,
   ExecutionHostOperationResult,
   ExecutionHostProjectsEntry,
@@ -27,6 +28,7 @@ import {
   EXECUTION_HOST_DELETE_INSTANCE_CHANNEL,
   EXECUTION_HOST_INSTANCES_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
+  EXECUTION_HOST_READ_CAPACITY_CHANNEL,
   EXECUTION_HOST_REGISTER_PROJECT_CHANNEL,
   EXECUTION_HOST_REMOVE_CHANNEL,
   EXECUTION_HOST_REPOSITORIES_CHANNEL,
@@ -36,6 +38,7 @@ import {
   EXECUTION_HOST_STOP_INSTANCE_CHANNEL,
   EXECUTION_HOST_SYNC_CHANNEL,
   EXECUTION_HOST_UPDATE_DAEMON_CHANNEL,
+  EXECUTION_HOST_WRITE_CAPACITY_CHANNEL,
   LINEAR_DELIVERY_CHANNEL,
   LINEAR_DELIVERY_STATUS_CHANNEL,
   LINEAR_FORGET_KEY_CHANNEL,
@@ -86,6 +89,13 @@ contextBridge.exposeInMainWorld("otomat", {
       path: string,
     ): Promise<ExecutionHostRegisterProjectResult> =>
       ipcRenderer.invoke(EXECUTION_HOST_REGISTER_PROJECT_CHANNEL, hostId, path),
+    readCapacity: (hostId: ExecutionHostId): Promise<ExecutionHostCapacityResult> =>
+      ipcRenderer.invoke(EXECUTION_HOST_READ_CAPACITY_CHANNEL, hostId),
+    writeCapacity: (
+      hostId: ExecutionHostId,
+      maxConcurrentSessions: number,
+    ): Promise<ExecutionHostCapacityResult> =>
+      ipcRenderer.invoke(EXECUTION_HOST_WRITE_CAPACITY_CHANNEL, hostId, maxConcurrentSessions),
     listSshAliases: (): Promise<string[]> => ipcRenderer.invoke(EXECUTION_HOST_ALIASES_CHANNEL),
     listRemoteRepositories: (): Promise<RemoteRepositoryListResult> =>
       ipcRenderer.invoke(EXECUTION_HOST_REPOSITORIES_CHANNEL),

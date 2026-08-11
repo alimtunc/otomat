@@ -100,12 +100,15 @@ export async function spawnTurn(
   mode: "run" | "resume",
   providerSessionId: string | null,
 ): Promise<boolean> {
-  const { db, slots, inflight, claiming, aborting } = state;
+  const { db, slots, inflight, claiming, waiting, aborting } = state;
   if (claiming.has(ctx.agentSessionId) || inflight.has(ctx.agentSessionId)) {
     throw new Error(`session ${ctx.agentSessionId} is already starting`);
   }
   claiming.set(ctx.agentSessionId, ctx.runId);
+  // Recorded before the await so the queue a caller reports is the queue that drains.
+  if (!slots.free) waiting.set(ctx.agentSessionId, ctx.runId);
   await slots.acquire();
+  waiting.delete(ctx.agentSessionId);
   let released = false;
   const release = (): void => {
     if (released) return;

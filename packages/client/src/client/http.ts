@@ -112,9 +112,17 @@ export async function patchJson(
   return sendJson(config, "PATCH", path, body);
 }
 
+export async function putJson(
+  config: DaemonClientConfig,
+  path: string,
+  body: unknown,
+): Promise<unknown> {
+  return sendJson(config, "PUT", path, body);
+}
+
 async function sendJson(
   config: DaemonClientConfig,
-  method: "POST" | "PATCH",
+  method: "POST" | "PATCH" | "PUT",
   path: string,
   body: unknown,
 ): Promise<unknown> {

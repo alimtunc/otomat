@@ -74,8 +74,13 @@ gate fails instead of duplicating its policy here.
 - Cast only after validation or in narrow idioms such as `as const` and
   `as unknown`. Define each union or enum once, and type contractual values as
   non-null.
-- Default to zero comments. Add one short comment only to explain a genuinely
-  non-obvious reason.
+- Default to zero comments. A comment earns its place only by explaining a
+  non-obvious _reason_ — an ordering constraint, an invariant, a rejected
+  alternative. Never restate the code, narrate what a function does, or argue a
+  design in prose; design rationale belongs in `docs/ai/codebase-map.md`. One
+  line is the norm, and a fact is written in exactly one place — not repeated on
+  every layer that forwards it. Exported symbols get no exemption: a signature
+  that already reads clearly gets no doc comment.
 
 ### File ownership (enforced by `pnpm guardrails`)
 

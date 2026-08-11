@@ -45,6 +45,7 @@ const detail: RunDetail = {
   sessions: [],
   compete_groups: [],
   worktree_path: null,
+  wait: null,
 };
 
 vi.mock("@web/api/runs/queries", () => ({

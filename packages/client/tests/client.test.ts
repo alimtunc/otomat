@@ -116,17 +116,41 @@ it("throws DaemonRequestError on a non-2xx response", async () => {
   await expect(client.getRun("missing")).rejects.toBeInstanceOf(DaemonRequestError);
 });
 
-it("posts a start-run request body", async () => {
+it("posts a start-run request body and reads back the run with its wait, if any", async () => {
   let captured: { method?: string; body?: unknown } = {};
+  const wait = {
+    kind: "concurrency_limit",
+    position: 1,
+    active_sessions: 4,
+    max_concurrent_sessions: 4,
+  };
   const fetchMock: typeof fetch = async (_input, init) => {
     captured = { method: init?.method, body: init?.body };
-    return jsonResponse(RUN, 201);
+    return jsonResponse({ run: { ...RUN, status: "queued" }, wait }, 201);
   };
   const client = createDaemonClient({ fetch: fetchMock });
   const result = await client.startRun({ prompt: "go" });
   expect(captured.method).toBe("POST");
   expect(JSON.parse(String(captured.body))).toEqual({ prompt: "go" });
-  expect(result.id).toBe("run-1");
+  expect(result.run.id).toBe("run-1");
+  expect(result.wait).toEqual(wait);
+});
+
+it("reads and writes this host's agent-session capacity", async () => {
+  const capacity = { max_concurrent_sessions: 6, active_sessions: 1, waiting_sessions: 0 };
+  let captured: { url?: string; method?: string; body?: unknown } = {};
+  const fetchMock: typeof fetch = async (input, init) => {
+    captured = { url: String(input), method: init?.method, body: init?.body };
+    return jsonResponse(capacity);
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+
+  expect(await client.agentCapacity()).toEqual(capacity);
+  expect(captured.url).toBe("http://localhost:4319/api/settings/capacity");
+
+  expect(await client.setAgentCapacity({ max_concurrent_sessions: 6 })).toEqual(capacity);
+  expect(captured.method).toBe("PUT");
+  expect(JSON.parse(String(captured.body))).toEqual({ max_concurrent_sessions: 6 });
 });
 
 it("posts resume to the run's resume endpoint", async () => {

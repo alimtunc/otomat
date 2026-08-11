@@ -3,6 +3,7 @@ import {
   type RunPlan,
   type RunPlanCompeteGroup,
   type RunPlanCompetitor,
+  type RunPlanNode,
   type RunPlanStep,
 } from "../contracts/entities/runs.js";
 import type { CompeteGroupState } from "../state-machines/compete-group.js";
@@ -95,6 +96,25 @@ export function readyPlanWork(
     if (competitors.length > 0) return { kind: "compete", group: node, competitors };
   }
   return null;
+}
+
+/** Plan nodes that still-queued work waits on, in plan order; empty when no unfinished dependency holds it back. */
+export function blockingPlanDependencies(
+  plan: RunPlan,
+  statuses: PlanStepStatuses,
+  groupStatuses: PlanCompeteGroupStatuses,
+): RunPlanNode[] {
+  const blocking = new Set<string>();
+  for (const node of plan.steps) {
+    const pending = isRunPlanCompeteGroup(node)
+      ? (groupStatuses.get(node.id) ?? "queued") === "queued"
+      : statusOf(statuses, node.id) === "queued";
+    if (!pending) continue;
+    for (const dependency of node.depends_on) {
+      if (!dependencySucceeded(plan, dependency, statuses, groupStatuses)) blocking.add(dependency);
+    }
+  }
+  return plan.steps.filter((node) => blocking.has(node.id));
 }
 
 export function allStepsSucceeded(

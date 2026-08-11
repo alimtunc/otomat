@@ -8,17 +8,16 @@ import {
   updateCompeteGroupBase,
   type RunRow,
 } from "@otomat/db";
-import { readyPlanWork, runMachine, type RunPlanCompetitor } from "@otomat/domain";
+import { readyPlanWork, type RunPlanCompetitor } from "@otomat/domain";
 
-import { emitLedgerEvent } from "#events";
 import type { WorktreeRecord } from "#git";
 
+import { failIdleRun, failureReason } from "./fail-run.js";
 import { repositoryInitCommands } from "./init-commands.js";
 import { spawnTurn } from "./lifecycle.js";
-import { buildTerminalMarker } from "./markers.js";
 import { competeGroupStatuses, stepStatuses } from "./settle/context.js";
-import { hasRunActivity, notifyAfterSettle, type SupervisorState } from "./state.js";
-import { driveCompeteGroupTo, driveIdleRunTo } from "./transitions.js";
+import { hasRunActivity, trackPending, type SupervisorState } from "./state.js";
+import { driveCompeteGroupTo } from "./transitions.js";
 import { insertTurn, scheduleTurn } from "./turn-scheduling.js";
 import type { TurnContext } from "./types.js";
 
@@ -115,6 +114,19 @@ export async function startNextReadyStep(state: SupervisorState, run: RunRow): P
   return true;
 }
 
+/** Background variant of `startNextReadyStep`: the caller never waits for a slot, and a failure fails the run. */
+export function scheduleNextStep(state: SupervisorState, run: RunRow): Promise<void> {
+  return trackPending(
+    state,
+    startNextReadyStep(state, run)
+      .then(() => undefined)
+      .catch((error: unknown) => {
+        console.error(`[otomat] run ${run.id} failed to start its next step`, error);
+        failIdleRun(state, run.id, `next work failed to start: ${failureReason(error)}`);
+      }),
+  );
+}
+
 /** Live chain after completed work. Run-level scheduling is serialized while sibling sessions remain concurrent. */
 export async function advanceRun(state: SupervisorState, runId: string): Promise<void> {
   const run = getRun(state.db, runId);
@@ -128,24 +140,7 @@ export async function advanceRun(state: SupervisorState, runId: string): Promise
     await startNextReadyStep(state, run);
   } catch (error) {
     console.error(`[otomat] run ${runId} failed to start its next work`, error);
-    const current = getRun(state.db, runId);
-    if (!current || runMachine.isTerminal(current.status) || hasRunActivity(state, runId)) return;
-    const now = new Date().toISOString();
-    driveIdleRunTo(state.db, current, "failed", listStepRunsForRun(state.db, runId), now);
-    const ref = { runId, stepRunId: null, agentSessionId: null };
-    emitLedgerEvent(
-      state.db,
-      state.dataDir,
-      runId,
-      buildTerminalMarker(ref, "failed", null, 0, now),
-    );
-    notifyAfterSettle(state, {
-      runId,
-      classification: "failed",
-      reason: `next work failed to start: ${error instanceof Error ? error.message : String(error)}`,
-      orphanTerminated: false,
-      providerSessionId: null,
-    });
+    failIdleRun(state, runId, `next work failed to start: ${failureReason(error)}`);
   } finally {
     state.advancing.delete(runId);
   }

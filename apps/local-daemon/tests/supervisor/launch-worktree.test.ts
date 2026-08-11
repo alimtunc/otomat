@@ -1,11 +1,12 @@
 import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { schema, updateIssueProject } from "@otomat/db";
+import { getRun, schema, updateIssueProject } from "@otomat/db";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { registerLocalRepository } from "#api/repository-registration";
+import { readRunEvents } from "#events";
 import {
   createRepositoryResolver,
   GitCommandError,
@@ -51,6 +52,12 @@ const COMPETE_PLAN = {
     },
   ],
 };
+
+function logTexts(runId: string): string[] {
+  return readRunEvents(fix.db, runId)
+    .filter((event) => event.type === "runtime.log")
+    .map((event) => (event.payload as { text?: string }).text ?? "");
+}
 
 function seedProject(id: string, rootPath: string, repositoryId?: string): void {
   fix.db.insert(schema.projects).values({ id, name: id, root_path: rootPath }).run();
@@ -391,9 +398,12 @@ it("writes no session when a compete group cannot acquire every competitor workt
       return competitors > 1;
     }),
   });
-  await expect(supervisor.start({ prompt: "compete", plan: COMPETE_PLAN })).rejects.toBe(diskFull);
+  // The launch already answered on durable rows, so the acquire failure lands on the run itself.
+  const run = await supervisor.start({ prompt: "compete", plan: COMPETE_PLAN });
   await supervisor.settle();
 
+  expect(getRun(fix.db, run.id)?.status).toBe("failed");
+  expect(logTexts(run.id).some((text) => text.includes("ENOSPC"))).toBe(true);
   expect(spawn.calls).toBe(0);
   // A session on a step of a now-failed group is a state no boot pass can settle.
   expect(fix.db.select().from(schema.agentSessions).all()).toHaveLength(0);
@@ -423,9 +433,10 @@ it("rolls a compete group back whole when writing its sessions fails", async () 
     }),
   });
 
-  await expect(supervisor.start({ prompt: "compete", plan: COMPETE_PLAN })).rejects.toThrow();
+  const run = await supervisor.start({ prompt: "compete", plan: COMPETE_PLAN });
   await supervisor.settle();
 
+  expect(getRun(fix.db, run.id)?.status).toBe("failed");
   expect(spawn.calls).toBe(0);
   // The first competitor's session and worktree attachment must roll back with the group.
   expect(fix.db.select().from(schema.agentSessions).all()).toHaveLength(0);

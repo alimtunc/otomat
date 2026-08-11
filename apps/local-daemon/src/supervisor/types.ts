@@ -1,8 +1,10 @@
 import type { Db, RunContributionRow, RunRow } from "@otomat/db";
 import type {
+  AgentCapacity,
   LinearLifecycleSync,
   ModelSelection,
   ResolvedAgentConfig,
+  RunWait,
   StartRunRequest,
 } from "@otomat/domain";
 
@@ -75,7 +77,6 @@ export interface SupervisorConfig {
   dataDir: string;
   defaultProjectId: string;
   spawn: SpawnSession;
-  concurrency?: number;
   /** Resolves the repository a run forks its worktree from; a project without one cannot be launched on. */
   repositories: RepositoryResolver;
   /** Fires after any settle (live, abort, boot) so review anchors/diff projections can react. */
@@ -85,8 +86,14 @@ export interface SupervisorConfig {
 }
 
 export interface Supervisor {
-  /** Create the run/step/session rows, then spawn and track the session process. Returns once it is running. */
+  /** Create the run/step/session rows and return once they are durable; the first step claims its slot in the background. */
   start(request: StartRunRequest): Promise<RunRow>;
+  /** Why a run is not progressing right now — this host's session cap, or a plan dependency — or null while it is. */
+  waitFor(runId: string): RunWait | null;
+  /** This host's session cap and what it is doing with it right now. */
+  capacity(): AgentCapacity;
+  /** Persist and apply a new cap: raising it drains the queue at once, lowering it only gates the next start. */
+  setCapacity(maxConcurrentSessions: number): AgentCapacity;
   /** Resume a human-waiting run on an explicit action — spawns a `resume` turn, never auto-runs. */
   resume(runId: string): Promise<RunRow>;
   /** Append one step to the run's plan and start it once the workspace is free; refused once the workspace closes. */
@@ -123,5 +130,3 @@ export interface ReconcileOutcome {
 export interface ReconcileReport {
   reconciled: ReconcileOutcome[];
 }
-
-export const DEFAULT_CONCURRENCY = 4;

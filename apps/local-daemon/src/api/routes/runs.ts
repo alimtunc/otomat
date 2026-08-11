@@ -1,4 +1,4 @@
-import { CompeteWinnerConflictError } from "@otomat/db";
+import { CompeteWinnerConflictError, getRun } from "@otomat/db";
 import {
   appendRunStepRequestSchema,
   IllegalTransitionError,
@@ -36,7 +36,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
 
   const runDetailJson = <E extends Env>(c: Context<E>, runId: string) => {
-    const detail = readRunDetail(deps.db, runId);
+    const detail = readRunDetail(deps.db, runId, deps.runWait(runId));
     return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
   };
 
@@ -51,8 +51,10 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
 
   routes.post("/", validateJson(startRunRequestSchema), async (c) => {
     try {
-      const run = await deps.launchRun(c.req.valid("json"));
-      return c.json(toRun(run), 201);
+      const launched = await deps.launchRun(c.req.valid("json"));
+      // Re-read with the wait in the same tick, so the status and the reason it is queued agree.
+      const run = getRun(deps.db, launched.id) ?? launched;
+      return c.json({ run: toRun(run), wait: deps.runWait(run.id) }, 201);
     } catch (error) {
       if (error instanceof LaunchRefusedError) {
         const status = LAUNCH_REFUSAL_STATUS[error.code];

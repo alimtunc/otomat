@@ -1,39 +1,14 @@
 import { getRepository, getRun, type Db } from "@otomat/db";
 import { runMachine } from "@otomat/domain";
 
-import { emitLedgerEvent } from "#events";
-import { buildRuntimeEvent } from "#runtime";
 import { runCliProcess } from "#runtime/cli/process-runner";
 
+import { emitSupervisorLog } from "./run-log.js";
 import type { SupervisorState } from "./state.js";
-import { SUPERVISOR_ADAPTER } from "./types.js";
 
 export function repositoryInitCommands(db: Db, repositoryId: string | null): string[] {
   if (repositoryId === null) return [];
   return getRepository(db, repositoryId)?.init_commands_json ?? [];
-}
-
-export function emitInitLog(
-  state: SupervisorState,
-  runId: string,
-  stream: "stdout" | "stderr",
-  text: string,
-): void {
-  emitLedgerEvent(
-    state.db,
-    state.dataDir,
-    runId,
-    buildRuntimeEvent({
-      runId,
-      kind: "runtime.log",
-      type: "runtime.log",
-      source: "otomat",
-      adapter: SUPERVISOR_ADAPTER,
-      fidelity: "raw_log",
-      occurredAt: new Date().toISOString(),
-      payload: { stream, text },
-    }),
-  );
 }
 
 export interface InitCommandBatch {
@@ -64,15 +39,15 @@ export async function runInitCommandBatch(
   const prefix = batch.label === null ? "worktree init" : `worktree init [${batch.label}]`;
   for (const command of batch.commands) {
     if (!batch.shouldContinue()) return false;
-    emitInitLog(state, runId, "stderr", `[otomat] ${prefix}: $ ${command}`);
+    emitSupervisorLog(state, runId, "stderr", `[otomat] ${prefix}: $ ${command}`);
     const exit = await runCliProcess({
       command: "bash",
       args: ["-lc", command],
       cwd: batch.worktreePath,
       stdin: "",
       signal: new AbortController().signal,
-      onStdoutLine: (line) => emitInitLog(state, runId, "stdout", line),
-      onStderrLine: (line) => emitInitLog(state, runId, "stderr", line),
+      onStdoutLine: (line) => emitSupervisorLog(state, runId, "stdout", line),
+      onStderrLine: (line) => emitSupervisorLog(state, runId, "stderr", line),
     });
     if (exit.code !== 0) {
       const outcome =

@@ -31,6 +31,7 @@ import {
   type RunContract,
   type RunContributionsResponse,
   type RunDetail,
+  type RunWait,
   type SkillContract,
 } from "@otomat/domain";
 
@@ -111,7 +112,8 @@ export function readRuns(
   return listRuns(db, options).map(toRun);
 }
 
-export function readRunDetail(db: Db, runId: string): RunDetail | null {
+/** `wait` comes from the live scheduler, not the rows: a `queued` run must say what it is queued behind. */
+export function readRunDetail(db: Db, runId: string, wait: RunWait | null): RunDetail | null {
   const run = getRun(db, runId);
   if (!run) return null;
   const worktree = run.worktree_id ? findWorktreeById(db, run.worktree_id) : undefined;
@@ -125,6 +127,7 @@ export function readRunDetail(db: Db, runId: string): RunDetail | null {
     worktree_path: worktree?.path ?? null,
     base_branch:
       worktree?.base_ref === undefined || worktree.base_ref === "" ? null : worktree.base_ref,
+    wait,
   };
 }
 
