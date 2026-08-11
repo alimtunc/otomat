@@ -2,18 +2,14 @@ import type { LinearWriteContract, LinearWriteKind } from "@otomat/domain";
 import { Button, toast } from "@otomat/ui";
 import { linearWriteConflict, useRetryLinearWrite } from "@web/api/linear/writeback";
 
+import { WRITE_STATUS_TEXT } from "../write-status-text";
+
 const KIND_LABEL: Record<LinearWriteKind, string> = {
   fields: "Fields",
   status: "Status",
   comment: "Comment",
   pr_link: "PR link",
-};
-
-const STATUS_TEXT: Record<LinearWriteContract["status"], string> = {
-  pending: "text-text-tertiary",
-  sending: "text-iris-text",
-  sent: "text-success",
-  failed: "text-danger",
+  lifecycle: "Status sync",
 };
 
 export function WriteRow({ issueId, write }: { issueId: string; write: LinearWriteContract }) {
@@ -25,7 +21,7 @@ export function WriteRow({ issueId, write }: { issueId: string; write: LinearWri
     >
       <div className="min-w-0">
         <span className="text-text-secondary">{KIND_LABEL[write.kind]}</span>
-        <span className={`ml-1.5 ${STATUS_TEXT[write.status]}`}>{write.status}</span>
+        <span className={`ml-1.5 ${WRITE_STATUS_TEXT[write.status]}`}>{write.status}</span>
         {write.detail ? <div className="truncate text-text-tertiary">{write.detail}</div> : null}
         {write.status === "failed" && write.error_message ? (
           <div className="text-danger">{write.error_message}</div>

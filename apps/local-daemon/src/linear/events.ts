@@ -7,13 +7,17 @@ const LINEAR_ADAPTER = "otomat-linear";
 
 export type LinearWriteEventType = Extract<
   EventType,
-  "linear.status_published" | "linear.comment_published" | "linear.pr_link_published"
+  | "linear.status_published"
+  | "linear.comment_published"
+  | "linear.pr_link_published"
+  | "linear.lifecycle_synced"
 >;
 
 const EVENT_TYPE_BY_KIND: Partial<Record<LinearWriteKind, LinearWriteEventType>> = {
   status: "linear.status_published",
   comment: "linear.comment_published",
   pr_link: "linear.pr_link_published",
+  lifecycle: "linear.lifecycle_synced",
 };
 
 /** Field edits are issue-level and carry no run, so only publish kinds map to a ledger type. */

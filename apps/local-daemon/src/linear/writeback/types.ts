@@ -3,6 +3,7 @@ import type {
   LinearCommentContract,
   LinearEditorState,
   LinearIssueDraft,
+  LinearLifecyclePhase,
   LinearWriteKind,
   LinearWritebackState,
   PublishCommentRequest,
@@ -10,6 +11,7 @@ import type {
   PublishPrLinkRequest,
   PublishStatusRequest,
   SaveLinearDraftRequest,
+  TrackerStateRef,
 } from "@otomat/domain";
 
 import type { LinearApiClient } from "../client/types.js";
@@ -43,6 +45,14 @@ export interface PendingSpec {
   detail: string;
 }
 
+export interface PublishLifecycleRequest {
+  phase: LinearLifecyclePhase;
+  target: TrackerStateRef;
+  run_id: string;
+  /** Set only by a retry, so the failed attempt is re-armed instead of a second one being recorded. */
+  key?: string;
+}
+
 export interface LinearFieldsPayload {
   title: string;
   description: string | null;
@@ -61,5 +71,10 @@ export interface LinearWriteback {
   publishStatus(issueId: string, request: PublishStatusRequest): Promise<LinearWritebackState>;
   publishComment(issueId: string, request: PublishCommentRequest): Promise<LinearWritebackState>;
   publishPrLink(issueId: string, request: PublishPrLinkRequest): Promise<LinearWritebackState>;
+  /** Asserts one lifecycle phase against the live remote state; never deduped, so a drifted issue is reopened. */
+  publishLifecycle(
+    issueId: string,
+    request: PublishLifecycleRequest,
+  ): Promise<LinearWritebackState>;
   retryWrite(writeId: string): Promise<LinearWritebackState>;
 }

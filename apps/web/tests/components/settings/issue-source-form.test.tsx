@@ -33,7 +33,7 @@ it("does not show a source creation superseded by a newer connection", async () 
     <QueryClientProvider client={client}>
       <IssueSourceForm
         workspace={{
-          teams: [{ id: "team-1", key: "OTO", name: "Otomat" }],
+          teams: [{ id: "team-1", key: "OTO", name: "Otomat", states: [] }],
           projects: [],
         }}
         projects={[{ id: "p1", name: "Local", root_path: "/tmp/local" }]}
@@ -58,7 +58,7 @@ it("announces a saved mapping so its first import can start", async () => {
     <QueryClientProvider client={client}>
       <IssueSourceForm
         workspace={{
-          teams: [{ id: "team-1", key: "OTO", name: "Otomat" }],
+          teams: [{ id: "team-1", key: "OTO", name: "Otomat", states: [] }],
           projects: [],
         }}
         projects={[{ id: "p1", name: "Local", root_path: "/tmp/local" }]}

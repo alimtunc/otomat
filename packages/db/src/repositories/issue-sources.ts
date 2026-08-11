@@ -3,6 +3,7 @@ import { and, eq, or } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { issueSources } from "../schema/index.js";
+import { touch } from "./touch.js";
 
 type IssueSourceInsert = typeof issueSources.$inferInsert;
 type IssueSourceInsertBase = Omit<
@@ -15,6 +16,10 @@ type IssueSourceProjectScope =
 
 export type NewIssueSource = IssueSourceInsertBase & IssueSourceProjectScope;
 export type IssueSourceRow = typeof issueSources.$inferSelect;
+export type IssueSourceLifecyclePatch = Pick<
+  IssueSourceRow,
+  "in_progress_state_id" | "in_progress_state_name" | "done_state_id" | "done_state_name"
+>;
 
 export function insertIssueSource(db: Db, value: NewIssueSource): void {
   const externalProjectId = value.external_project_id ?? "";
@@ -66,6 +71,14 @@ export function listIssueSources(
     .where(scope)
     .orderBy(issueSources.created_at, issueSources.id)
     .all();
+}
+
+export function updateIssueSourceLifecycle(
+  db: Db,
+  id: string,
+  patch: IssueSourceLifecyclePatch,
+): void {
+  db.update(issueSources).set(touch(patch)).where(eq(issueSources.id, id)).run();
 }
 
 export function deleteIssueSource(db: Db, id: string): void {

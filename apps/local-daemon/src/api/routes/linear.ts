@@ -8,6 +8,7 @@ import {
   publishStatusRequestSchema,
   saveLinearDraftRequestSchema,
   syncLinearRequestSchema,
+  updateIssueSourceRequestSchema,
 } from "@otomat/domain";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -27,6 +28,7 @@ const LINEAR_ERROR_STATUS: Record<LinearErrorCode, ContentfulStatusCode> = {
   linear_source_not_found: 404,
   linear_source_already_mapped: 409,
   linear_source_invalid_selection: 400,
+  linear_source_state_invalid: 400,
   linear_project_not_found: 400,
   linear_issue_not_found: 404,
   linear_remote_issue_not_found: 404,
@@ -59,6 +61,10 @@ export function createLinearRoutes(deps: ApiDeps): Hono {
 
   routes.post("/sources", validateJson(createIssueSourceRequestSchema), async (c) =>
     c.json(await deps.linear.createSource(c.req.valid("json")), 201),
+  );
+
+  routes.patch("/sources/:id", validateJson(updateIssueSourceRequestSchema), async (c) =>
+    c.json(await deps.linear.updateSource(c.req.param("id"), c.req.valid("json"))),
   );
 
   routes.delete("/sources/:id", (c) => {

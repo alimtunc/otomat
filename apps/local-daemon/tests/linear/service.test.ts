@@ -29,8 +29,16 @@ const VIEWER = {
 
 const WORKSPACE = {
   teams: [
-    { id: "team-1", key: "OTO", name: "Otomat" },
-    { id: "team-2", key: "ENG", name: "Engineering" },
+    {
+      id: "team-1",
+      key: "OTO",
+      name: "Otomat",
+      states: [
+        { id: "s-doing", name: "Doing" },
+        { id: "s-shipped", name: "Shipped" },
+      ],
+    },
+    { id: "team-2", key: "ENG", name: "Engineering", states: [] },
   ],
   projects: [
     { id: "proj-1", name: "V1 Alpha", team_ids: ["team-1"] },
@@ -260,6 +268,47 @@ it("maps a source onto an existing local project and refuses a duplicate", async
     code: "linear_source_already_mapped",
   });
   expect(linear.sources()).toHaveLength(1);
+});
+
+it("stores a lifecycle mapping picked from the source's own team workflow", async () => {
+  const linear = service();
+  await linear.connect("lin_api_secret");
+  const created = await linear.createSource({ project_id: "p1", ...TEAM });
+  expect(created.lifecycle).toEqual({ in_progress: null, done: null });
+
+  const mapped = await linear.updateSource(created.id, {
+    in_progress_state_id: "s-doing",
+    done_state_id: "s-shipped",
+  });
+
+  expect(mapped.lifecycle).toEqual({
+    in_progress: { id: "s-doing", name: "Doing" },
+    done: { id: "s-shipped", name: "Shipped" },
+  });
+  expect(linear.sources()[0]?.lifecycle.done).toEqual({ id: "s-shipped", name: "Shipped" });
+
+  const cleared = await linear.updateSource(created.id, {
+    in_progress_state_id: "s-doing",
+    done_state_id: null,
+  });
+  expect(cleared.lifecycle.done).toBeNull();
+});
+
+it("refuses a lifecycle state that belongs to another team, and an unknown source", async () => {
+  const linear = service();
+  await linear.connect("lin_api_secret");
+  const created = await linear.createSource({ project_id: "p1", ...TEAM });
+
+  await expect(
+    linear.updateSource(created.id, {
+      in_progress_state_id: "s-foreign",
+      done_state_id: null,
+    }),
+  ).rejects.toMatchObject({ code: "linear_source_state_invalid" });
+  await expect(
+    linear.updateSource("src-nope", { in_progress_state_id: null, done_state_id: null }),
+  ).rejects.toMatchObject({ code: "linear_source_not_found" });
+  expect(linear.sources()[0]?.lifecycle.in_progress).toBeNull();
 });
 
 it("refuses a source pointing at a project that does not exist locally", async () => {

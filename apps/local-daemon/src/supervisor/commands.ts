@@ -12,6 +12,7 @@ import { sessionDir } from "#events";
 
 import { startNextReadyStep } from "./advance.js";
 import { repositoryInitCommands } from "./init-commands.js";
+import { signalIssueLifecycle } from "./issue-lifecycle.js";
 import { prepareRun } from "./prepare.js";
 import {
   requireResumableRun,
@@ -30,6 +31,7 @@ import { scheduleWorktreeInit } from "./worktree-init.js";
 export async function startRun(state: SupervisorState, request: StartRunRequest): Promise<RunRow> {
   const runId = prepareRun(state, request);
   const run = requireRunRow(state.db, runId, "spawn");
+  signalIssueLifecycle(state.syncIssueLifecycle, run.issue_id, "in_progress", runId);
   const initCommands = repositoryInitCommands(state.db, run.repository_id);
   if (initCommands.length > 0) {
     scheduleWorktreeInit(state, run, initCommands);

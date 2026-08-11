@@ -11,20 +11,25 @@ import {
   type IssueSourceContract,
   type IssueSourceSyncResult,
   type LinearConnectionContract,
+  type LinearLifecycleSignal,
   type LinearSyncStatusContract,
   type LinearWorkspaceContract,
   type SyncLinearRequest,
+  type UpdateIssueSourceRequest,
 } from "@otomat/domain";
 
 import { connected, DISCONNECTED, failed } from "./connection-state.js";
 import { LinearError, linearError } from "./errors.js";
+import { resolveLifecycleTarget } from "./lifecycle.js";
 import type { LinearService, LinearServiceConfig } from "./service-contract.js";
 import {
   deleteSourceMapping,
   listSourceContracts,
   projectSyncStatus,
+  requireSourceRow,
   resolveSyncSources,
   sourceContract,
+  updateSourceLifecycle,
 } from "./sources.js";
 import { LinearSyncRuns, syncScope } from "./sync-runs.js";
 import { SYNC_SOURCE, syncIssueSource } from "./sync.js";
@@ -132,7 +137,30 @@ class DefaultLinearService implements LinearService {
       external_project_name: externalProject?.name ?? "",
     } satisfies NewIssueSource;
     insertIssueSource(this.config.db, row);
-    return sourceContract(this.config.db, row);
+    return sourceContract(this.config.db, requireSourceRow(this.config.db, row.id));
+  }
+
+  async updateSource(
+    sourceId: string,
+    request: UpdateIssueSourceRequest,
+  ): Promise<IssueSourceContract> {
+    const { apiKey, signal } = this.requireAuthorization();
+    const workspace = await this.authorized(signal, () =>
+      this.config.client.workspace(apiKey, signal),
+    );
+    return updateSourceLifecycle(this.config.db, workspace, sourceId, request);
+  }
+
+  /** Skipping leaves no trace: a recorded failure would claim a write Otomat never could attempt. */
+  async syncIssueLifecycle(signal: LinearLifecycleSignal): Promise<void> {
+    if (this.state.status !== "connected") return;
+    const target = resolveLifecycleTarget(this.config.db, signal.issue_id, signal.phase);
+    if (target === null) return;
+    await this.writeback.publishLifecycle(signal.issue_id, {
+      phase: signal.phase,
+      target,
+      run_id: signal.run_id,
+    });
   }
 
   async sync(request: SyncLinearRequest = {}): Promise<IssueSourceSyncResult[]> {

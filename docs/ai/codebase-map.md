@@ -140,6 +140,26 @@ and the explicit **Refresh issues** control). A sync always names a project, and
 the daemon refuses a project it does not own rather than reporting an empty
 success — that is what keeps a VPS project from silently reading local state.
 
+## Linear Run-Lifecycle Mirror
+
+The daemon's own canonical transitions drive the linked Linear issue, never the
+UI. Creating a run signals `in_progress` the moment its row is durable — before
+any concurrency slot, so a `queued` run still marks its issue started — and
+appending a step re-asserts it, which is what reopens an issue somebody closed in
+Linear while the work is unmerged. Only `closeMergedRun` signals `done`, so a
+completed, failed, canceled, interrupted or review-waiting run never closes
+anything (`supervisor/issue-lifecycle.ts` carries the signal; `linear/lifecycle.ts`
+resolves and applies it).
+
+Which state a phase means is per source, not per Otomat: `issue_sources` stores
+the team's own `in_progress`/`done` workflow states, picked in Settings from the
+live workspace, and an unmapped phase writes nothing rather than guessing a label.
+Every assertion is one `lifecycle` row in the Linear write ledger — asserted
+against the live remote state, so a matching issue costs no mutation — which is
+what gives the cockpit a last sync state, a target state name, an actionable error
+and a Retry, and what makes `linear.lifecycle_synced` refresh the rail without a
+navigation.
+
 ## Error Diagnostics
 
 Otomat never shows a bare error string. Every incident is classified first —

@@ -48,6 +48,29 @@ it("invalidates the PR and issue caches on any pr.* event", () => {
   ]);
 });
 
+it("refreshes the synced issue's Linear caches so the cockpit needs no navigation", () => {
+  const { client, keys } = fakeClient();
+  invalidateForEvent(
+    client,
+    "run-1",
+    envelope({ type: "linear.lifecycle_synced", payload: { issue_id: "li" } }),
+  );
+  expect(keys).toEqual([
+    queryKeys.runCompletionReport("run-1"),
+    queryKeys.linearWriteback("li"),
+    queryKeys.linearEditor("li"),
+    queryKeys.linearComments("li"),
+    queryKeys.issue("li"),
+    queryKeys.issues,
+  ]);
+});
+
+it("drops no cache for a Linear event that names no issue", () => {
+  const { client, keys } = fakeClient();
+  invalidateForEvent(client, "run-1", event("linear.status_published"));
+  expect(keys).toEqual([queryKeys.runCompletionReport("run-1")]);
+});
+
 it("invalidates the run, run list, conversation, and issue execution caches on a lifecycle or reconcile event", () => {
   const { client, keys } = fakeClient();
   invalidateForEvent(client, "run-1", event("run.lifecycle"));

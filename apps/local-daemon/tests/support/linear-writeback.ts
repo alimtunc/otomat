@@ -1,7 +1,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { schema, type Db, upsertMirroredIssue } from "@otomat/db";
+import {
+  insertIssueSource,
+  schema,
+  type Db,
+  type IssueSourceLifecyclePatch,
+  upsertMirroredIssue,
+} from "@otomat/db";
 import type { SaveLinearDraftRequest } from "@otomat/domain";
 
 import {
@@ -30,6 +36,8 @@ export interface LinearWritebackTest {
   readLedger: (runId: string) => string;
   seedLinearIssue: (updatedAt?: string) => void;
   seedRun: () => void;
+  /** Maps the OTO team onto project p1, optionally with a lifecycle status mapping. */
+  seedSource: (lifecycle?: Partial<IssueSourceLifecyclePatch>) => void;
 }
 
 export function linearDetail(overrides: Partial<LinearIssueDetail> = {}): LinearIssueDetail {
@@ -100,6 +108,18 @@ export function setupLinearWritebackTest(): LinearWritebackTest {
       .run();
   }
 
+  function seedSource(lifecycle: Partial<IssueSourceLifecyclePatch> = {}): void {
+    insertIssueSource(testDb.db, {
+      id: "src-1",
+      project_id: "p1",
+      source: "linear",
+      external_team_id: "team-1",
+      external_team_key: "OTO",
+      external_team_name: "Otomat",
+      ...lifecycle,
+    });
+  }
+
   function createService(client: LinearApiClient): LinearService {
     return createLinearService({
       db: testDb.db,
@@ -138,5 +158,6 @@ export function setupLinearWritebackTest(): LinearWritebackTest {
     readLedger,
     seedLinearIssue,
     seedRun,
+    seedSource,
   };
 }

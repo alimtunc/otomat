@@ -52,7 +52,7 @@ function withClient(node: ReactNode): ReactNode {
 
 it("renders threads and posts a reply carrying its parent id", async () => {
   getLinearComments.mockResolvedValue([ROOT, REPLY]);
-  publishLinearComment.mockResolvedValue({ draft: null, writes: [] });
+  publishLinearComment.mockResolvedValue({ draft: null, writes: [], lifecycle: null });
 
   rendered = await mount(withClient(<LinearCommentsSection issueId="li" runId="r1" />));
 
@@ -81,7 +81,7 @@ it("renders threads and posts a reply carrying its parent id", async () => {
 
 it("posts a top-level comment without a parent", async () => {
   getLinearComments.mockResolvedValue([]);
-  publishLinearComment.mockResolvedValue({ draft: null, writes: [] });
+  publishLinearComment.mockResolvedValue({ draft: null, writes: [], lifecycle: null });
 
   rendered = await mount(withClient(<LinearCommentsSection issueId="li" runId={null} />));
 

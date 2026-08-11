@@ -92,7 +92,14 @@ export class PublicationStore {
       merged ||= next === "merged";
     });
     if (merged) {
-      closeMergedRun({ db: this.config.db, repositories: this.config.repositories }, row.run_id);
+      closeMergedRun(
+        {
+          db: this.config.db,
+          repositories: this.config.repositories,
+          syncIssueLifecycle: this.config.syncIssueLifecycle,
+        },
+        row.run_id,
+      );
     }
     return current;
   }

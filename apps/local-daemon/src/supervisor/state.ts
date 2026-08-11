@@ -1,4 +1,5 @@
 import type { Db } from "@otomat/db";
+import type { LinearLifecycleSync } from "@otomat/domain";
 
 import type { EventTailer } from "#events";
 import type { RepositoryResolver } from "#git";
@@ -32,6 +33,7 @@ export interface SupervisorState {
   spawn: SpawnSession;
   repositories: RepositoryResolver;
   afterSettle: ((outcome: ReconcileOutcome) => void) | null;
+  syncIssueLifecycle: LinearLifecycleSync | null;
   slots: Semaphore;
   inflight: Map<string, InflightProcess>;
   /** Spawned but gated workers whose durable identity is still being recorded. */
@@ -60,6 +62,7 @@ export function createState(config: SupervisorConfig): SupervisorState {
     spawn: config.spawn,
     repositories: config.repositories,
     afterSettle: config.afterSettle ?? null,
+    syncIssueLifecycle: config.syncIssueLifecycle ?? null,
     slots: new Semaphore(config.concurrency ?? DEFAULT_CONCURRENCY),
     inflight: new Map(),
     starting: new Map(),

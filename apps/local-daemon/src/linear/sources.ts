@@ -7,23 +7,25 @@ import {
   type Db,
   type IssueSourceRow,
   listIssueSources,
+  updateIssueSourceLifecycle,
 } from "@otomat/db";
 import {
   issueSourceContractSchema,
   linearSyncStatusSchema,
   type IssueSourceContract,
   type LinearSyncStatusContract,
+  type LinearWorkflowState,
+  type LinearWorkspaceContract,
   type SyncLinearRequest,
+  type UpdateIssueSourceRequest,
 } from "@otomat/domain";
 
 import { linearError } from "./errors.js";
+import { sourceLifecycle } from "./lifecycle.js";
 import type { LinearSyncRuns } from "./sync-runs.js";
 import { SYNC_RESOURCE, SYNC_SOURCE } from "./sync.js";
 
-export function sourceContract(
-  db: Db,
-  row: Omit<IssueSourceRow, "created_at" | "updated_at">,
-): IssueSourceContract {
+export function sourceContract(db: Db, row: IssueSourceRow): IssueSourceContract {
   const cursor = getSyncState(db, SYNC_SOURCE, SYNC_RESOURCE, row.id);
   return issueSourceContractSchema.parse({
     id: row.id,
@@ -35,6 +37,7 @@ export function sourceContract(
     external_project_id: row.external_project_id,
     external_project_name: row.external_project_name,
     last_synced_at: cursor?.last_synced_at ?? null,
+    lifecycle: sourceLifecycle(row),
   });
 }
 
@@ -42,13 +45,48 @@ export function listSourceContracts(db: Db, projectId?: string): IssueSourceCont
   return listIssueSources(db, SYNC_SOURCE, { projectId }).map((row) => sourceContract(db, row));
 }
 
-export function deleteSourceMapping(db: Db, sourceId: string): void {
+export function requireSourceRow(db: Db, sourceId: string): IssueSourceRow {
   const row = getIssueSource(db, sourceId);
   if (row === undefined || row.source !== SYNC_SOURCE) {
     throw linearError("linear_source_not_found");
   }
+  return row;
+}
+
+export function deleteSourceMapping(db: Db, sourceId: string): void {
+  requireSourceRow(db, sourceId);
   deleteIssueSource(db, sourceId);
   deleteSyncState(db, SYNC_SOURCE, SYNC_RESOURCE, sourceId);
+}
+
+function requireTeamState(
+  states: readonly LinearWorkflowState[],
+  stateId: string | null,
+): LinearWorkflowState | null {
+  if (stateId === null) return null;
+  const state = states.find((candidate) => candidate.id === stateId);
+  if (state === undefined) throw linearError("linear_source_state_invalid");
+  return state;
+}
+
+export function updateSourceLifecycle(
+  db: Db,
+  workspace: LinearWorkspaceContract,
+  sourceId: string,
+  request: UpdateIssueSourceRequest,
+): IssueSourceContract {
+  const row = requireSourceRow(db, sourceId);
+  const team = workspace.teams.find((candidate) => candidate.id === row.external_team_id);
+  if (team === undefined) throw linearError("linear_source_invalid_selection");
+  const inProgress = requireTeamState(team.states, request.in_progress_state_id);
+  const done = requireTeamState(team.states, request.done_state_id);
+  updateIssueSourceLifecycle(db, sourceId, {
+    in_progress_state_id: inProgress?.id ?? null,
+    in_progress_state_name: inProgress?.name ?? null,
+    done_state_id: done?.id ?? null,
+    done_state_name: done?.name ?? null,
+  });
+  return sourceContract(db, requireSourceRow(db, sourceId));
 }
 
 export function resolveSyncSources(db: Db, request: SyncLinearRequest): IssueSourceRow[] {
@@ -56,9 +94,7 @@ export function resolveSyncSources(db: Db, request: SyncLinearRequest): IssueSou
     requireProject(db, request.project_id);
     return listIssueSources(db, SYNC_SOURCE, { projectId: request.project_id });
   }
-  const row = getIssueSource(db, request.source_id);
-  if (row === undefined || row.source !== SYNC_SOURCE) throw linearError("linear_source_not_found");
-  return [row];
+  return [requireSourceRow(db, request.source_id)];
 }
 
 /** One project's Linear freshness: persisted watermarks plus this process's live passes. */

@@ -4,9 +4,11 @@ import type {
   IssueSourceContract,
   IssueSourceSyncResult,
   LinearConnectionContract,
+  LinearLifecycleSignal,
   LinearSyncStatusContract,
   LinearWorkspaceContract,
   SyncLinearRequest,
+  UpdateIssueSourceRequest,
 } from "@otomat/domain";
 
 import type { LinearApiClient } from "./client/types.js";
@@ -27,8 +29,12 @@ export interface LinearService {
   workspace(): Promise<LinearWorkspaceContract>;
   sources(projectId?: string): IssueSourceContract[];
   createSource(request: CreateIssueSourceRequest): Promise<IssueSourceContract>;
+  /** Rewrites one source's lifecycle mapping against its own team's live workflow states. */
+  updateSource(sourceId: string, request: UpdateIssueSourceRequest): Promise<IssueSourceContract>;
   deleteSource(sourceId: string): void;
   sync(request?: SyncLinearRequest): Promise<IssueSourceSyncResult[]>;
   syncStatus(projectId: string): LinearSyncStatusContract;
+  /** Mirrors one canonical run-lifecycle change onto the linked issue; a no-op without write right or mapping. */
+  syncIssueLifecycle(signal: LinearLifecycleSignal): Promise<void>;
   writeback: LinearWriteback;
 }

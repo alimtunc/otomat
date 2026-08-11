@@ -6,8 +6,8 @@ import { expect, it } from "vitest";
 
 const WORKSPACE = {
   teams: [
-    { id: "team-1", key: "OTO", name: "Otomat" },
-    { id: "team-2", key: "ENG", name: "Engineering" },
+    { id: "team-1", key: "OTO", name: "Otomat", states: [] },
+    { id: "team-2", key: "ENG", name: "Engineering", states: [] },
   ],
   projects: [
     { id: "project-1", name: "Cockpit", team_ids: ["team-1"] },

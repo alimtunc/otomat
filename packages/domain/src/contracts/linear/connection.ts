@@ -10,6 +10,7 @@ export const LINEAR_ERROR_CODES = [
   "linear_source_not_found",
   "linear_source_already_mapped",
   "linear_source_invalid_selection",
+  "linear_source_state_invalid",
   "linear_project_not_found",
   "linear_issue_not_found",
   "linear_remote_issue_not_found",
@@ -55,11 +56,19 @@ export const linearErrorSchema = z.object({
   message: z.string(),
 });
 
+export const linearWorkflowStateSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+});
+export type LinearWorkflowState = z.infer<typeof linearWorkflowStateSchema>;
+
 export const linearTeamContractSchema = z.object({
   id: z.string(),
   key: z.string(),
   name: z.string(),
+  states: z.array(linearWorkflowStateSchema),
 });
+export type LinearTeamContract = z.infer<typeof linearTeamContractSchema>;
 
 export const linearProjectContractSchema = z.object({
   id: z.string(),
@@ -81,6 +90,15 @@ export const createIssueSourceRequestSchema = z
   })
   .strict();
 export type CreateIssueSourceRequest = z.infer<typeof createIssueSourceRequestSchema>;
+
+/** PATCH /sources/:id — the whole lifecycle mapping is rewritten; null unmaps a phase. */
+export const updateIssueSourceRequestSchema = z
+  .object({
+    in_progress_state_id: z.string().min(1).nullable(),
+    done_state_id: z.string().min(1).nullable(),
+  })
+  .strict();
+export type UpdateIssueSourceRequest = z.infer<typeof updateIssueSourceRequestSchema>;
 
 export const syncLinearRequestSchema = z
   .object({

@@ -1,3 +1,4 @@
+export { invalidateWriteback } from "./cache";
 export { useDiscardLinearDraft, useSaveLinearDraft } from "./drafts";
 export { linearWriteConflict } from "./errors";
 export {

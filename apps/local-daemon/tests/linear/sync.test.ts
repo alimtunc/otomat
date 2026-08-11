@@ -43,6 +43,10 @@ const SOURCE: IssueSourceRow = {
   external_team_name: "Otomat",
   external_project_id: "",
   external_project_name: "",
+  in_progress_state_id: null,
+  in_progress_state_name: null,
+  done_state_id: null,
+  done_state_name: null,
   created_at: "2026-07-20T00:00:00.000Z",
   updated_at: "2026-07-20T00:00:00.000Z",
 };

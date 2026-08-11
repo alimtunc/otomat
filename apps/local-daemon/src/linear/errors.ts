@@ -29,6 +29,7 @@ const LINEAR_ERROR_MESSAGES: Record<LinearErrorCode, string> = {
   linear_source_not_found: "That Linear source is not mapped.",
   linear_source_already_mapped: "That Linear team or project is already mapped.",
   linear_source_invalid_selection: "That team or project is not available in this workspace.",
+  linear_source_state_invalid: "That workflow state does not belong to this source's Linear team.",
   linear_project_not_found: "That local project does not exist.",
   linear_issue_not_found: "That Linear issue is not mirrored locally.",
   linear_remote_issue_not_found: "That issue no longer exists on Linear.",

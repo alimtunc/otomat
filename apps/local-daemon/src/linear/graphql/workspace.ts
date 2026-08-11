@@ -7,10 +7,24 @@ export const VIEWER_QUERY = `query OtomatViewer {
   organization { id name }
 }`;
 
-export const TEAMS_QUERY = `query OtomatTeams($after: String, $first: Int!) {
+export const TEAMS_QUERY = `query OtomatTeams($after: String, $first: Int!, $stateFirst: Int!) {
   teams(first: $first, after: $after, orderBy: updatedAt) {
-    nodes { id key name }
+    nodes {
+      id
+      key
+      name
+      states(first: $stateFirst) { nodes { id name } pageInfo { hasNextPage endCursor } }
+    }
     pageInfo { hasNextPage endCursor }
+  }
+}`;
+
+export const TEAM_STATES_QUERY = `query OtomatTeamStates($teamId: String!, $after: String, $first: Int!) {
+  team(id: $teamId) {
+    states(first: $first, after: $after) {
+      nodes { id name }
+      pageInfo { hasNextPage endCursor }
+    }
   }
 }`;
 
@@ -35,8 +49,24 @@ export const viewerResponseSchema = z.object({
   organization: z.object({ id: z.string().min(1), name: z.string() }),
 });
 
+const workflowStateNodeSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+});
+
 export const teamsResponseSchema = z.object({
-  teams: connection(z.object({ id: z.string(), key: z.string(), name: z.string() })),
+  teams: connection(
+    z.object({
+      id: z.string(),
+      key: z.string(),
+      name: z.string(),
+      states: connection(workflowStateNodeSchema),
+    }),
+  ),
+});
+
+export const teamStatesResponseSchema = z.object({
+  team: z.object({ states: connection(workflowStateNodeSchema) }),
 });
 
 export const projectsResponseSchema = z.object({

@@ -37,6 +37,7 @@ export const EVENT_TYPES = [
   "review.comment_resolved",
   "pr.created",
   "pr.updated",
+  "linear.lifecycle_synced",
   "linear.status_published",
   "linear.comment_published",
   "linear.pr_link_published",

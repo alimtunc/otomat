@@ -51,6 +51,7 @@ function source(projectId: string): IssueSourceContract {
     external_project_id: "",
     external_project_name: "",
     last_synced_at: null,
+    lifecycle: { in_progress: null, done: null },
   };
 }
 

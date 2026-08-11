@@ -1,6 +1,7 @@
 import type { Db, PullRequestRow, RunRow } from "@otomat/db";
 import type {
   GitHubConnectionContract,
+  LinearLifecycleSync,
   PreparePullRequestRequest,
   PullRequestDraft,
   PullRequestState,
@@ -55,6 +56,8 @@ export interface GitHubServiceConfig {
   cli: GitHubCli;
   /** Drafts PR metadata with the run's own agent CLI; absent disables the draft endpoint honestly. */
   drafter?: PullRequestDrafter;
+  /** Carried to merge closure; the GitHub service itself never calls it. */
+  syncIssueLifecycle?: LinearLifecycleSync;
   idFactory?: () => string;
 }
 

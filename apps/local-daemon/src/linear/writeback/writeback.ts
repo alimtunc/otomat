@@ -9,14 +9,20 @@ import type {
 import { linearError } from "../errors.js";
 import { discardDraft, saveDraft } from "./drafts.js";
 import { LinearWriteLedger } from "./ledger.js";
-import { parseCommentPayload, parsePrLinkPayload, parseStatusPayload } from "./payloads.js";
+import {
+  parseCommentPayload,
+  parseLifecyclePayload,
+  parsePrLinkPayload,
+  parseStatusPayload,
+} from "./payloads.js";
 import { publishComment } from "./publishers/comment.js";
 import { publishFields } from "./publishers/fields.js";
+import { publishLifecycle } from "./publishers/lifecycle.js";
 import { publishPrLink } from "./publishers/pr-link.js";
 import { publishStatus } from "./publishers/status.js";
 import { comments, editorState } from "./readers.js";
 import { writebackState } from "./state.js";
-import type { LinearWriteback, LinearWritebackConfig } from "./types.js";
+import type { LinearWriteback, LinearWritebackConfig, PublishLifecycleRequest } from "./types.js";
 
 class DefaultLinearWriteback implements LinearWriteback {
   private readonly ledger: LinearWriteLedger;
@@ -65,12 +71,27 @@ class DefaultLinearWriteback implements LinearWriteback {
     return this.writebackState(issueId);
   }
 
+  async publishLifecycle(issueId: string, request: PublishLifecycleRequest) {
+    await publishLifecycle(this.config, this.ledger, issueId, request);
+    return this.writebackState(issueId);
+  }
+
   async retryWrite(writeId: string) {
     const write = this.ledger.find(writeId);
     if (!write) throw linearError("linear_write_not_found");
     if (write.status === "sent") return this.writebackState(write.issue_id);
     const runId = write.run_id;
     switch (write.kind) {
+      case "lifecycle": {
+        const payload = parseLifecyclePayload(write.payload_json);
+        if (runId === null) throw new Error(`linear lifecycle write ${writeId} lost its run`);
+        return this.publishLifecycle(write.issue_id, {
+          phase: payload.phase,
+          target: { id: payload.state_id, name: payload.state_name },
+          run_id: runId,
+          key: write.idempotency_key,
+        });
+      }
       case "status":
         return this.publishStatus(write.issue_id, {
           state_id: parseStatusPayload(write.payload_json).state_id,
