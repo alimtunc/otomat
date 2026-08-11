@@ -65,22 +65,35 @@ gate fails instead of duplicating its policy here.
 
 ## Code quality
 
+Non-negotiable for every coding agent and harness that changes this repository,
+on first attempts, added steps, and follow-ups alike.
+
+- Default to zero comments. A new comment is justified only by a non-obvious
+  _reason_ the code cannot express: an invariant, an ordering constraint, an
+  external limitation or workaround, a rejected alternative. Never restate the
+  code, narrate what a function does, or argue a design in prose; design
+  rationale belongs in `docs/ai/codebase-map.md`. One line is the norm, and a
+  fact is written in exactly one place — not repeated on every layer that
+  forwards it. Exported symbols get no exemption: a signature that already
+  reads clearly gets no doc comment, and JSDoc that restates one is noise.
+  Directives a gate relies on (`oxlint-disable-*`, `@ts-expect-error`) are tool
+  configuration, not prose — keep them, with their reason attached.
 - Extract repeated logic at its third occurrence, not before; two policies that
   merely coincide stay separate. No single-call-site wrappers, one-method
   services, extension points, or config knobs without a consumer today.
+- Separate concerns: a function or module owns one responsibility. Mixing
+  transport, domain logic, and rendering in one place is a defect even when it
+  works; split along the seams the module layout already draws.
+- Write idiomatic React: reuse the primitives in `packages/ui` and the frontend
+  stack already in place instead of hand-rolling alternatives; keep state where
+  it is used and derive values instead of mirroring them; add memoization,
+  context, or an abstraction layer only for a need that exists today.
 - Never swallow errors. Avoid `catch {}`, `.catch(() => {})`, and optional
   chaining that hides error-created absence. Expose useful loading, error, and
   empty states.
 - Cast only after validation or in narrow idioms such as `as const` and
   `as unknown`. Define each union or enum once, and type contractual values as
   non-null.
-- Default to zero comments. A comment earns its place only by explaining a
-  non-obvious _reason_ — an ordering constraint, an invariant, a rejected
-  alternative. Never restate the code, narrate what a function does, or argue a
-  design in prose; design rationale belongs in `docs/ai/codebase-map.md`. One
-  line is the norm, and a fact is written in exactly one place — not repeated on
-  every layer that forwards it. Exported symbols get no exemption: a signature
-  that already reads clearly gets no doc comment.
 
 ### File ownership (enforced by `pnpm guardrails`)
 
@@ -110,6 +123,23 @@ gate fails instead of duplicating its policy here.
 Why: a file that owns one thing can be understood, tested, and replaced without
 loading unrelated concerns; the gates check shape so prose only has to carry
 judgment.
+
+### Final diff pass (mandatory)
+
+Before declaring any change done, re-read the full diff and check each point.
+Fix what fails; report anything left as an explicit open violation, never
+silently.
+
+1. Comments — every new comment passes the rule above; delete the rest. Report
+   `New comments: <n>`, with `file:line — justification` for each one kept.
+2. Duplication — nothing in the diff repeats existing code or another hunk of
+   the same diff.
+3. Concerns — no file gained a second responsibility; new helpers landed in
+   their owning module, not where they were first needed.
+4. Ownership — the file-ownership rules above hold without new baseline
+   entries.
+5. Over-engineering — every abstraction, option, and export introduced has a
+   consumer today.
 
 ## Commands
 
@@ -217,8 +247,9 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
   Preserve unrelated local changes.
 - When a tracker is connected with write access, set the issue to `In Progress`
   at the start; otherwise continue locally and report the gap.
-- Done = every acceptance criterion satisfied and `pnpm check` green. Separate
-  regressions caused by the change from reproducible baseline failures; if an
-  environment failure blocks a gate, report the exact command and output.
+- Done = every acceptance criterion satisfied, the final diff pass reported,
+  and `pnpm check` green. Separate regressions caused by the change from
+  reproducible baseline failures; if an environment failure blocks a gate,
+  report the exact command and output.
 - Do not commit, push, open a PR, or change tracker state beyond `In Progress`
   unless the user explicitly asks. Propose the commit only after verification.
