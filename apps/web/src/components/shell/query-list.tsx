@@ -1,7 +1,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-import { QueryStaleNotice } from "./query-stale-notice";
+import { StaleNotice } from "./stale-notice";
 
 interface QueryListProps<T> {
   query: UseQueryResult<T[]>;
@@ -21,7 +21,7 @@ export function QueryList<T>({ query, pending, error, empty, children }: QueryLi
   return (
     <>
       {query.isError ? (
-        <QueryStaleNotice
+        <StaleNotice
           dataUpdatedAt={query.dataUpdatedAt}
           refreshing={query.isFetching}
           onRetry={() => void query.refetch()}

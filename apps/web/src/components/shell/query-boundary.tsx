@@ -1,12 +1,14 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-import { QueryStaleNotice } from "./query-stale-notice";
+import { StaleNotice } from "./stale-notice";
 
 interface QueryBoundaryProps<T> {
   query: UseQueryResult<T>;
   pending: ReactNode;
   error: ReactNode;
+  /** "block" prefers the error slot over retained data, for controls that must not act on stale state. */
+  staleData?: "keep" | "block";
   children: (data: T) => ReactNode;
 }
 
@@ -15,12 +17,19 @@ interface QueryBoundaryProps<T> {
  * list-shaped sibling. Data retained from a previous fetch outlives a failed refresh: it renders
  * under a stale notice with Retry instead of the blocking error slot.
  */
-export function QueryBoundary<T>({ query, pending, error, children }: QueryBoundaryProps<T>) {
+export function QueryBoundary<T>({
+  query,
+  pending,
+  error,
+  staleData = "keep",
+  children,
+}: QueryBoundaryProps<T>) {
   if (query.data === undefined) return query.isError ? error : pending;
+  if (query.isError && staleData === "block") return error;
   return (
     <>
       {query.isError ? (
-        <QueryStaleNotice
+        <StaleNotice
           dataUpdatedAt={query.dataUpdatedAt}
           refreshing={query.isFetching}
           onRetry={() => void query.refetch()}

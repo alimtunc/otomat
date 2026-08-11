@@ -1,5 +1,5 @@
 import { ErrorReport } from "@web/components/diagnostics/error-report";
-import { QueryStaleNotice } from "@web/components/shell/query-stale-notice";
+import { StaleNotice } from "@web/components/shell/stale-notice";
 import type { ReactNode } from "react";
 
 interface ProjectQueryBoundaryProps {
@@ -32,7 +32,7 @@ export function ProjectQueryBoundary({ query, children }: ProjectQueryBoundaryPr
   return (
     <>
       {query.isError ? (
-        <QueryStaleNotice
+        <StaleNotice
           dataUpdatedAt={query.dataUpdatedAt}
           refreshing={query.isFetching}
           onRetry={() => void query.refetch()}

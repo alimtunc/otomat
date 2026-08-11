@@ -40,6 +40,7 @@ export function LinearConnectionPanel({
       query={query}
       pending={<Skeleton className="h-14" />}
       error={<ErrorState variant="inline" title="Could not read the Linear connection." />}
+      staleData="block"
     >
       {(connection) =>
         connection.status === "connected" ? (

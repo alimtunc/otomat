@@ -30,9 +30,14 @@ afterEach(async () => {
   document.body.replaceChildren();
 });
 
-async function render(query: UseQueryResult<string>) {
+async function render(query: UseQueryResult<string>, staleData?: "keep" | "block") {
   const mounted = await mount(
-    <QueryBoundary query={query} pending={<p>pending-slot</p>} error={<p>error-slot</p>}>
+    <QueryBoundary
+      query={query}
+      pending={<p>pending-slot</p>}
+      error={<p>error-slot</p>}
+      staleData={staleData}
+    >
       {(data) => <p>{data}</p>}
     </QueryBoundary>,
   );
@@ -66,6 +71,12 @@ it("retries a failed refresh from the stale notice", async () => {
     retry?.click();
   });
   expect(refetch).toHaveBeenCalledTimes(1);
+});
+
+it("blocks retained data with the error slot when stale data is opted out", async () => {
+  const container = await render(fakeQuery({ data: "issue-42", isError: true }), "block");
+  expect(container.textContent).toContain("error-slot");
+  expect(container.textContent).not.toContain("issue-42");
 });
 
 it("renders data with no notice while the query is healthy", async () => {
