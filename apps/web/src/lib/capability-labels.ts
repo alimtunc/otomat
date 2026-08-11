@@ -1,15 +1,29 @@
-import type { RuntimeDescriptor } from "@otomat/domain";
+import type { RuntimeCapabilities, RuntimeSteeringMode } from "@otomat/domain";
 
-type CapabilityKey = keyof RuntimeDescriptor["capabilities"];
+export interface CapabilityEntry {
+  key: keyof RuntimeCapabilities;
+  label: string;
+  supported: boolean;
+}
 
-const CAPABILITY_LABELS = {
-  stream: "Stream",
-  send_message: "Send message",
-  abort: "Abort",
-  resume: "Resume",
-  permissions: "Permissions",
-  diff_hints: "Diff hints",
-} satisfies Record<CapabilityKey, string>;
+/** Steering is a guarantee level, not a yes/no, so the label names the level the CLI actually offers. */
+const STEERING_LABELS = {
+  turn_boundary: "Steering at next turn",
+  unsupported: "Steering",
+} satisfies Record<RuntimeSteeringMode, string>;
 
-export const CAPABILITY_ENTRIES: ReadonlyArray<{ key: CapabilityKey; label: string }> =
-  Object.entries(CAPABILITY_LABELS).map(([key, label]) => ({ key: key as CapabilityKey, label }));
+/** The `satisfies` is the guarantee: a capability added to the schema fails the build here instead of vanishing from the list. */
+export function capabilityEntries(capabilities: RuntimeCapabilities): CapabilityEntry[] {
+  return Object.values({
+    steering: {
+      key: "steering",
+      label: STEERING_LABELS[capabilities.steering],
+      supported: capabilities.steering !== "unsupported",
+    },
+    stream: { key: "stream", label: "Stream", supported: capabilities.stream },
+    abort: { key: "abort", label: "Abort", supported: capabilities.abort },
+    resume: { key: "resume", label: "Resume", supported: capabilities.resume },
+    permissions: { key: "permissions", label: "Permissions", supported: capabilities.permissions },
+    diff_hints: { key: "diff_hints", label: "Diff hints", supported: capabilities.diff_hints },
+  } satisfies Record<keyof RuntimeCapabilities, CapabilityEntry>);
+}

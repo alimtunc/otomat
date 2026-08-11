@@ -1,14 +1,19 @@
 import { createRunContributionRequestSchema } from "@otomat/domain";
 import { Hono } from "hono";
 
-import { RunContributionNotFoundError, RunContributionNotRetriableError } from "#supervisor";
+import {
+  RunContributionNotCancelableError,
+  RunContributionNotFoundError,
+  RunContributionNotRetriableError,
+  RunContributionStepClosedError,
+} from "#supervisor";
 
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { readRunContributions } from "../reads.js";
 import { toRunContribution } from "../serialize.js";
 
-/** Mounted at `/api/runs`. The run conversation surface: a post always persists the message and returns its honest delivery state. */
+/** Mounted at `/api/runs`. The step conversation surface: a post always persists the message and returns its honest delivery state. */
 export function createRunContributionRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
 
@@ -22,10 +27,17 @@ export function createRunContributionRoutes(deps: ApiDeps): Hono<RunEnv> {
     runGuard(deps.db),
     async (c) => {
       const run = c.get("run");
+      const { step_run_id, body } = c.req.valid("json");
       try {
-        const row = await deps.contributeToRun(run.id, c.req.valid("json").body);
+        const row = await deps.contributeToRun(run.id, step_run_id, body);
         return c.json(toRunContribution(row), 201);
       } catch (error) {
+        if (error instanceof RunContributionNotFoundError) {
+          return c.json({ error: "run_contribution_step_not_found", message: error.message }, 404);
+        }
+        if (error instanceof RunContributionStepClosedError) {
+          return c.json({ error: "run_contribution_step_closed", message: error.message }, 409);
+        }
         console.error(`[otomat] contribution on run ${run.id} failed`, error);
         return c.json({ error: "run_contribution_failed" }, 500);
       }
@@ -57,6 +69,23 @@ export function createRunContributionRoutes(deps: ApiDeps): Hono<RunEnv> {
       }
       console.error(`[otomat] contribution retry on run ${run.id} failed`, error);
       return c.json({ error: "run_contribution_retry_failed" }, 500);
+    }
+  });
+
+  routes.post("/:id/contributions/:contributionId/cancel", runGuard(deps.db), (c) => {
+    const run = c.get("run");
+    try {
+      const row = deps.cancelRunContribution(run.id, c.req.param("contributionId"));
+      return c.json(toRunContribution(row));
+    } catch (error) {
+      if (error instanceof RunContributionNotFoundError) {
+        return c.json({ error: "run_contribution_not_found", message: error.message }, 404);
+      }
+      if (error instanceof RunContributionNotCancelableError) {
+        return c.json({ error: "run_contribution_not_cancelable", message: error.message }, 409);
+      }
+      console.error(`[otomat] contribution cancel on run ${run.id} failed`, error);
+      return c.json({ error: "run_contribution_cancel_failed" }, 500);
     }
   });
 

@@ -446,7 +446,7 @@ it("keeps delivery turns on the selected provider session and canonical worktree
   expect(getRun(fix.db, run.id)?.status).toBe("review_ready");
   const winnerJob = spawn.jobs.find((job) => job.stepRunId === winner.id);
 
-  await supervisor.contribute(run.id, "refine the winner");
+  await supervisor.contribute(run.id, winner.id, "refine the winner");
   await supervisor.settle();
 
   expect(spawn.jobs.at(-1)).toMatchObject({
@@ -474,7 +474,7 @@ it("fails a message on a selected winner whose canonical worktree is unavailable
     repositories: UNAVAILABLE_REPOSITORIES,
   });
 
-  const refused = await blocked.contribute(run.id, "continue winner");
+  const refused = await blocked.contribute(run.id, winner.id, "continue winner");
   expect(refused.status).toBe("failed");
   expect(refused.delivered_at).toBeNull();
   expect(blockedSpawn.calls).toBe(0);

@@ -61,7 +61,7 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
   readonly displayName = "Fake Runtime (test adapter)";
   readonly capabilities: RuntimeCapabilities = {
     stream: true,
-    send_message: true,
+    steering: "turn_boundary",
     abort: true,
     resume: true,
     permissions: true,

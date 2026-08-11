@@ -12,7 +12,9 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import type { RuntimeEvent } from "#runtime";
 import {
   LaunchRefusedError,
+  RunContributionNotCancelableError,
   RunContributionNotRetriableError,
+  RunContributionStepClosedError,
   RunWorkspaceClosedError,
   type AppendStepInput,
 } from "#supervisor";
@@ -379,35 +381,77 @@ it("returns 404 appending a step to an unknown run", async () => {
   expect(res.status).toBe(404);
 });
 
-it("delegates a contribution to the supervisor with the trimmed body", async () => {
+it("delegates a contribution to the supervisor with its step and the trimmed body", async () => {
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
-  let received: { id: string; body: string } | null = null;
+  let received: { id: string; stepRunId: string; body: string } | null = null;
   const app = makeApiApp(t, {
-    contributeToRun: async (id, body) => {
-      received = { id, body };
-      return contributionRow(id, { body });
+    contributeToRun: async (id, stepRunId, body) => {
+      received = { id, stepRunId, body };
+      return contributionRow(id, { step_run_id: stepRunId, body });
     },
   });
-  const res = await post(app, `/api/runs/${runId}/contributions`, { body: "  keep going  " });
+  const res = await post(app, `/api/runs/${runId}/contributions`, {
+    step_run_id: "step-1",
+    body: "  keep going  ",
+  });
   expect(res.status).toBe(201);
-  expect(received).toEqual({ id: runId, body: "keep going" });
+  expect(received).toEqual({ id: runId, stepRunId: "step-1", body: "keep going" });
   const contribution = (await res.json()) as RunContributionContract;
   expect(contribution.status).toBe("queued");
+  expect(contribution.step_run_id).toBe("step-1");
   expect(contribution.delivered_at).toBeNull();
 });
 
-it("rejects a contribution with a blank body", async () => {
+it("rejects a contribution with a blank body or no step", async () => {
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
-  const res = await post(makeApiApp(t), `/api/runs/${runId}/contributions`, { body: "   " });
-  expect(res.status).toBe(400);
-  expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
+  const blank = await post(makeApiApp(t), `/api/runs/${runId}/contributions`, {
+    step_run_id: "step-1",
+    body: "   ",
+  });
+  expect(blank.status).toBe(400);
+  expect(((await blank.json()) as { error: string }).error).toBe("invalid_request");
+
+  const unrouted = await post(makeApiApp(t), `/api/runs/${runId}/contributions`, { body: "hi" });
+  expect(unrouted.status).toBe(400);
 });
 
 it("returns 404 contributing to an unknown run", async () => {
-  const res = await post(makeApiApp(t), "/api/runs/nope/contributions", { body: "p" });
+  const res = await post(makeApiApp(t), "/api/runs/nope/contributions", {
+    step_run_id: "step-1",
+    body: "p",
+  });
   expect(res.status).toBe(404);
+});
+
+it("maps a step that will not run again to 409 rather than accepting a message for it", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  const app = makeApiApp(t, {
+    contributeToRun: async () => {
+      throw new RunContributionStepClosedError("step is canceled");
+    },
+  });
+  const res = await post(app, `/api/runs/${runId}/contributions`, {
+    step_run_id: "step-1",
+    body: "keep going",
+  });
+  expect(res.status).toBe(409);
+  expect(((await res.json()) as { error: string }).error).toBe("run_contribution_step_closed");
+});
+
+it("maps a non-cancelable contribution to 409 rather than pretending it was withdrawn", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  const app = makeApiApp(t, {
+    cancelRunContribution: () => {
+      throw new RunContributionNotCancelableError("already on its way");
+    },
+  });
+  const res = await post(app, `/api/runs/${runId}/contributions/c1/cancel`, {});
+  expect(res.status).toBe(409);
+  expect(((await res.json()) as { error: string }).error).toBe("run_contribution_not_cancelable");
 });
 
 it("maps a non-retriable contribution to 409 rather than replaying a delivered message", async () => {

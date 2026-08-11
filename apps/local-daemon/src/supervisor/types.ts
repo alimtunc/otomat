@@ -98,10 +98,12 @@ export interface Supervisor {
   resume(runId: string): Promise<RunRow>;
   /** Append one step to the run's plan and start it once the workspace is free; refused once the workspace closes. */
   appendStep(runId: string, input: AppendStepInput): Promise<RunRow>;
-  /** Persist one user message on the run as `queued`, then deliver it if the run is already resting. */
-  contribute(runId: string, body: string): Promise<RunContributionRow>;
+  /** Persist one user message on an explicitly selected step as `queued`, then deliver it if that step can take it now. */
+  contribute(runId: string, stepRunId: string, body: string): Promise<RunContributionRow>;
   /** Re-queue a failed message that never reached the provider and retry the run's queue. */
   retryContribution(runId: string, contributionId: string): Promise<RunContributionRow>;
+  /** Withdraw a message no turn has claimed yet; it stays in the conversation as `canceled`. */
+  cancelContribution(runId: string, contributionId: string): RunContributionRow;
   /** Explicit "deliver now" for messages left queued by a restart; a no-op while the run is busy. */
   deliverContributions(runId: string): Promise<void>;
   /** Reserve, promote and archive one succeeded competitor, then unlock dependent work. */

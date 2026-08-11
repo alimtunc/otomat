@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import { ProfileOptionUnsupportedError } from "#agents";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { firstStepOf } from "../support/seed.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
@@ -219,7 +220,7 @@ it("resumes with the effort frozen at launch, not the one the profile carries no
     skill_ids_json: [],
   });
 
-  await supervisor.contribute(run.id, "keep going");
+  await supervisor.contribute(run.id, firstStepOf(fix.db, run.id), "keep going");
   await supervisor.settle();
 
   const resume = spawn.jobs[1];

@@ -36,6 +36,7 @@ vi.mock("@web/api/runs/queries", () => ({
 vi.mock("@web/api/runs/mutations", () => ({
   useCreateRunContribution: () => ({ mutateAsync, isPending: false }),
   useRetryRunContribution: () => ({ mutate: vi.fn(), isPending: false }),
+  useCancelRunContribution: () => ({ mutate: vi.fn(), isPending: false }),
   useDeliverRunContributions: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
@@ -58,7 +59,7 @@ function claudeDescriptor(): RuntimeDescriptor {
     kind: "real",
     capabilities: {
       stream: true,
-      send_message: true,
+      steering: "turn_boundary",
       abort: true,
       resume: true,
       permissions: false,
@@ -112,7 +113,7 @@ function runDetail(runId: string, status: RunState): RunDetail {
 function messages(count: number): RunContributionContract[] {
   const list: RunContributionContract[] = [];
   for (let index = 0; index < count; index += 1) {
-    list.push(contribution({ id: `c${index}`, status: "completed", body: `line ${index}` }));
+    list.push(contribution({ id: `c${index}`, status: "acknowledged", body: `line ${index}` }));
   }
   return list;
 }
@@ -340,7 +341,7 @@ describe("run conversation autoscroll", () => {
       );
     });
 
-    expect(mutateAsync).toHaveBeenCalledWith({ body: "please rebase" });
+    expect(mutateAsync).toHaveBeenCalledWith({ step_run_id: "s1", body: "please rebase" });
     expect(scroll.top()).toBe(scroll.maxTop());
     expect(viewportElement().contains(promptTextarea())).toBe(false);
   });

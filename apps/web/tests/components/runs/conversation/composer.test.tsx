@@ -74,7 +74,7 @@ function claudeDescriptor(): RuntimeDescriptor {
     kind: "real",
     capabilities: {
       stream: true,
-      send_message: true,
+      steering: "turn_boundary",
       abort: true,
       resume: true,
       permissions: false,
@@ -144,7 +144,7 @@ describe("ConversationComposer", () => {
       );
     });
 
-    expect(mutateAsync).toHaveBeenCalledWith({ body: "add error handling" });
+    expect(mutateAsync).toHaveBeenCalledWith({ step_run_id: "s1", body: "add error handling" });
     expect(promptTextarea().value).toBe("");
     expect(onSent).toHaveBeenCalledTimes(1);
   });
@@ -174,7 +174,7 @@ describe("ConversationComposer", () => {
       sendButton().click();
     });
 
-    expect(mutateAsync).toHaveBeenCalledWith({ body: "rename the helper" });
+    expect(mutateAsync).toHaveBeenCalledWith({ step_run_id: "s1", body: "rename the helper" });
   });
 
   it("does not submit a blank message", async () => {
@@ -198,7 +198,7 @@ describe("ConversationComposer", () => {
 
     expect(sendButton().disabled).toBe(false);
     expect(sendButton().textContent).toContain("Queue message");
-    expect(document.body.textContent).toContain("queued for its next safe turn");
+    expect(document.body.textContent).toContain("next safe turn");
 
     await act(async () => {
       promptTextarea().dispatchEvent(
@@ -206,7 +206,7 @@ describe("ConversationComposer", () => {
       );
     });
 
-    expect(mutateAsync).toHaveBeenCalledWith({ body: "also add tests" });
+    expect(mutateAsync).toHaveBeenCalledWith({ step_run_id: "s1", body: "also add tests" });
   });
 
   it("refuses a message on a finished run", async () => {

@@ -12,10 +12,13 @@ function queuedNote(status: RunContract["status"], label: string): string {
   if (isRunTerminal(status)) {
     return `${label} still queued and will never be delivered — this run is finished.`;
   }
+  if (status === "queued" || status === "preparing") {
+    return `${label} waiting for capacity and will be delivered in this run's first turn.`;
+  }
   if (canFollowUpRun(status)) {
     return `${label} waiting — this run is paused, so delivery needs an explicit resume.`;
   }
-  return `${label} queued and will be delivered at this run's next safe turn.`;
+  return `${label} queued and will be delivered at the next safe turn.`;
 }
 
 /** A resting run with a queue is the post-restart case: the daemon never resumes a run on its own at boot. */

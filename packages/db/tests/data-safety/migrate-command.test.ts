@@ -21,9 +21,10 @@ it("routes the migration command through safe preparation before applying pendin
   const dbPath = join(scratch, "otomat.db");
   runMigrations(dbPath);
   const client = createClient(dbPath, { fileMustExist: true });
+  // Replaying from 0001 always collides on `ADD COLUMN`; the oldest row stays so the backup keeps a migration history.
   client.sqlite.exec(`
     DELETE FROM __drizzle_migrations
-    WHERE created_at = (SELECT MAX(created_at) FROM __drizzle_migrations)
+    WHERE created_at > (SELECT MIN(created_at) FROM __drizzle_migrations)
   `);
   client.sqlite.close();
   process.env.OTOMAT_DB_PATH = dbPath;

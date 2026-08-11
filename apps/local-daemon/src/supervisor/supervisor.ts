@@ -4,11 +4,12 @@ import { appendRunStep } from "./append-step.js";
 import { agentCapacity, runWait, setAgentCapacity } from "./capacity.js";
 import { resumeRun, startRun } from "./commands.js";
 import {
+  cancelRunContribution,
   contributeToRun,
   deliverQueuedContributions,
   reconcileContributionClaims,
   retryRunContribution,
-} from "./contributions.js";
+} from "./contribution/index.js";
 import { terminateGracefully } from "./process.js";
 import { recoverCompeteSelections, selectCompeteWinner } from "./promotion.js";
 import { reconcileRuns } from "./reconcile.js";
@@ -28,9 +29,11 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     setCapacity: (maxConcurrentSessions) => setAgentCapacity(state, maxConcurrentSessions),
     resume: (runId) => resumeRun(state, runId),
     appendStep: (runId, input) => appendRunStep(state, runId, input),
-    contribute: (runId, body) => contributeToRun(state, runId, body),
+    contribute: (runId, stepRunId, body) => contributeToRun(state, runId, stepRunId, body),
     retryContribution: (runId, contributionId) =>
       retryRunContribution(state, runId, contributionId),
+    cancelContribution: (runId, contributionId) =>
+      cancelRunContribution(state, runId, contributionId),
     deliverContributions: (runId) => deliverQueuedContributions(state, runId),
     selectWinner: (runId, groupId, stepRunId) =>
       selectCompeteWinner(state, runId, groupId, stepRunId),

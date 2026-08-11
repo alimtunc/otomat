@@ -25,8 +25,9 @@ export interface ApiDeps {
   setAgentCapacity(maxConcurrentSessions: number): AgentCapacity;
   resumeRun(runId: string): Promise<RunRow>;
   appendRunStep(runId: string, input: AppendStepInput): Promise<RunRow>;
-  contributeToRun(runId: string, body: string): Promise<RunContributionRow>;
+  contributeToRun(runId: string, stepRunId: string, body: string): Promise<RunContributionRow>;
   retryRunContribution(runId: string, contributionId: string): Promise<RunContributionRow>;
+  cancelRunContribution(runId: string, contributionId: string): RunContributionRow;
   deliverRunContributions(runId: string): Promise<void>;
   selectCompeteWinner(runId: string, groupId: string, stepRunId: string): Promise<void>;
   abortRun(runId: string): Promise<void>;

@@ -43,6 +43,7 @@ const RUN = {
 const CONTRIBUTION = {
   id: "contribution-1",
   run_id: "run-1",
+  step_run_id: "step-1",
   seq: 0,
   body: "keep going",
   status: "queued",
@@ -96,7 +97,7 @@ it("parses the runtime catalog with kind and availability", async () => {
     kind: "real",
     capabilities: {
       stream: true,
-      send_message: true,
+      steering: "turn_boundary",
       abort: true,
       resume: true,
       permissions: false,
@@ -177,10 +178,16 @@ it("posts a message to the run's contributions endpoint and parses its queued st
     return jsonResponse(CONTRIBUTION, 201);
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
-  const result = await client.createRunContribution("run-1", { body: "keep going" });
+  const result = await client.createRunContribution("run-1", {
+    step_run_id: "step-1",
+    body: "keep going",
+  });
   expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/contributions");
   expect(captured.method).toBe("POST");
-  expect(JSON.parse(String(captured.body))).toEqual({ body: "keep going" });
+  expect(JSON.parse(String(captured.body))).toEqual({
+    step_run_id: "step-1",
+    body: "keep going",
+  });
   expect(result.status).toBe("queued");
   expect(result.delivered_at).toBeNull();
 });
@@ -195,6 +202,27 @@ it("retries one contribution through its own endpoint", async () => {
   const result = await client.retryRunContribution("run-1", "contribution-1");
   expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/contributions/contribution-1/retry");
   expect(result.attempts).toBe(1);
+});
+
+it("cancels one contribution through its own endpoint", async () => {
+  let calledUrl = "";
+  let method = "";
+  const fetchMock: typeof fetch = async (input, init) => {
+    calledUrl = String(input);
+    method = String(init?.method);
+    return jsonResponse({
+      ...CONTRIBUTION,
+      status: "canceled",
+      settled_at: "2026-07-25T10:01:00.000Z",
+    });
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+  const result = await client.cancelRunContribution("run-1", "contribution-1");
+  expect(calledUrl).toBe(
+    "http://localhost:4319/api/runs/run-1/contributions/contribution-1/cancel",
+  );
+  expect(method).toBe("POST");
+  expect(result.status).toBe("canceled");
 });
 
 it("lists a run's contributions in send order", async () => {

@@ -57,7 +57,7 @@ vi.mock("@web/api/daemon/queries", () => ({
         kind: "real",
         capabilities: {
           stream: true,
-          send_message: true,
+          steering: "turn_boundary",
           abort: true,
           resume: true,
           permissions: false,

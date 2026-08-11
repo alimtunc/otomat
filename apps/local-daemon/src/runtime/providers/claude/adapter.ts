@@ -40,7 +40,7 @@ export function claudePermissionMode(env: NodeJS.ProcessEnv = process.env): stri
 
 const CLAUDE_CAPABILITIES: RuntimeCapabilities = {
   stream: true,
-  send_message: true,
+  steering: "turn_boundary",
   abort: true,
   resume: true,
   permissions: false,

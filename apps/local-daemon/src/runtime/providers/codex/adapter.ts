@@ -28,7 +28,7 @@ export const CODEX_BINARY = "codex";
 
 const CODEX_CAPABILITIES: RuntimeCapabilities = {
   stream: true,
-  send_message: true,
+  steering: "turn_boundary",
   abort: true,
   resume: true,
   permissions: false,

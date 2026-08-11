@@ -1,6 +1,6 @@
 import type { RuntimeDescriptor } from "@otomat/domain";
 import { Badge, ProviderMark } from "@otomat/ui";
-import { CAPABILITY_ENTRIES } from "@web/lib/capability-labels";
+import { capabilityEntries } from "@web/lib/capability-labels";
 import { runtimeMark } from "@web/lib/runtimes";
 
 export function RuntimeRow({ runtime }: { runtime: RuntimeDescriptor }) {
@@ -13,9 +13,9 @@ export function RuntimeRow({ runtime }: { runtime: RuntimeDescriptor }) {
         <span className="text-micro text-text-tertiary">{runtime.id}</span>
       </div>
       <div className="flex flex-wrap gap-1.5">
-        {CAPABILITY_ENTRIES.map(({ key, label }) => (
-          <Badge key={key} variant={runtime.capabilities[key] ? "iris" : "default"}>
-            {runtime.capabilities[key] ? label : `No ${label.toLowerCase()}`}
+        {capabilityEntries(runtime.capabilities).map(({ key, label, supported }) => (
+          <Badge key={key} variant={supported ? "iris" : "default"}>
+            {supported ? label : `No ${label.toLowerCase()}`}
           </Badge>
         ))}
       </div>

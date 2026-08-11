@@ -20,6 +20,7 @@ import {
   runMachine,
 } from "#domain/state-machines/run";
 import {
+  isRunContributionCancelable,
   isRunContributionRetriable,
   runContributionMachine,
 } from "#domain/state-machines/run-contribution";
@@ -92,14 +93,24 @@ describe("representative illegal transitions are rejected", () => {
     expect(competeGroupMachine.transition("promoting", "selected")).toBe("selected");
   });
 
-  it("run_contribution cannot be marked sent from a settled state", () => {
-    expect(() => runContributionMachine.transition("completed", "sent")).toThrow(
+  it("run_contribution cannot be marked delivered from a settled state", () => {
+    expect(() => runContributionMachine.transition("acknowledged", "delivered")).toThrow(
       IllegalTransitionError,
     );
-    expect(() => runContributionMachine.transition("failed", "sent")).toThrow(
+    expect(() => runContributionMachine.transition("failed", "delivered")).toThrow(
+      IllegalTransitionError,
+    );
+    expect(() => runContributionMachine.transition("canceled", "queued")).toThrow(
       IllegalTransitionError,
     );
     expect(runContributionMachine.transition("failed", "queued")).toBe("queued");
+  });
+
+  it("run_contribution reaches acknowledged only through delivered", () => {
+    expect(() => runContributionMachine.transition("queued", "acknowledged")).toThrow(
+      IllegalTransitionError,
+    );
+    expect(runContributionMachine.transition("delivered", "acknowledged")).toBe("acknowledged");
   });
 
   it("run_contribution retry is refused once anything reached the provider", () => {
@@ -107,7 +118,15 @@ describe("representative illegal transitions are rejected", () => {
     expect(
       isRunContributionRetriable({ status: "failed", delivered_at: "2026-07-25T10:00:00.000Z" }),
     ).toBe(false);
-    expect(isRunContributionRetriable({ status: "sent", delivered_at: null })).toBe(false);
+    expect(isRunContributionRetriable({ status: "delivered", delivered_at: null })).toBe(false);
+  });
+
+  it("run_contribution cancel is refused once a turn claimed it", () => {
+    const pending = { status: "queued", agent_session_id: null, delivered_at: null } as const;
+    expect(isRunContributionCancelable(pending)).toBe(true);
+    expect(isRunContributionCancelable({ ...pending, agent_session_id: "s1" })).toBe(false);
+    expect(isRunContributionCancelable({ ...pending, status: "failed" })).toBe(true);
+    expect(isRunContributionCancelable({ ...pending, status: "delivered" })).toBe(false);
   });
 
   it("step_run cannot skip queued -> succeeded", () => {

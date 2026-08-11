@@ -44,7 +44,7 @@ describe("FakeRuntimeAdapter contract", () => {
       "diff_hints",
       "permissions",
       "resume",
-      "send_message",
+      "steering",
       "stream",
     ]);
   });

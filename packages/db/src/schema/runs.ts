@@ -96,6 +96,9 @@ export const runContributions = sqliteTable(
     run_id: text("run_id")
       .notNull()
       .references(() => runs.id),
+    step_run_id: text("step_run_id")
+      .notNull()
+      .references(() => stepRuns.id),
     // FIFO order of the conversation; created_at has second granularity, so it cannot rank a burst.
     seq: integer("seq").notNull(),
     body: text("body").notNull(),

@@ -67,6 +67,15 @@ export function createRunsClient(config: DaemonClientConfig) {
         ),
       );
     },
+    async cancelRunContribution(id: string, contributionId: string) {
+      return runContributionContractSchema.parse(
+        await postJson(
+          config,
+          `/api/runs/${encodeURIComponent(id)}/contributions/${encodeURIComponent(contributionId)}/cancel`,
+          {},
+        ),
+      );
+    },
     async abortRun(id: string) {
       return runDetailSchema.parse(
         await postJson(config, `/api/runs/${encodeURIComponent(id)}/abort`, {}),
