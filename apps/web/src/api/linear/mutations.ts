@@ -3,6 +3,7 @@ import {
   linearErrorSchema,
   type CreateIssueSourceRequest,
   type LinearErrorCode,
+  type UpdateIssueSourceRequest,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -82,6 +83,17 @@ export function useCreateIssueSource() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: CreateIssueSourceRequest) => daemon.createIssueSource(request),
+    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
+  });
+}
+
+export function useUpdateIssueSource() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: { sourceId: string; request: UpdateIssueSourceRequest }) =>
+      daemon.updateIssueSource(variables.sourceId, variables.request),
+    onSuccess: () => toast.success("Updated the Linear status mapping."),
+    onError: (error) => toast.error(linearErrorMessage(error)),
     onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
   });
 }

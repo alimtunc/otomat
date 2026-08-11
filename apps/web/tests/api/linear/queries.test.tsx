@@ -36,12 +36,12 @@ afterEach(async () => {
 
 it("does not reuse workspace data after the connection identity changes", async () => {
   let resolveWorkspaceB!: (value: {
-    teams: { id: string; key: string; name: string }[];
+    teams: { id: string; key: string; name: string; states: [] }[];
     projects: [];
   }) => void;
   getLinearWorkspace
     .mockResolvedValueOnce({
-      teams: [{ id: "team-a", key: "A", name: "Workspace A" }],
+      teams: [{ id: "team-a", key: "A", name: "Workspace A", states: [] }],
       projects: [],
     })
     .mockReturnValueOnce(
@@ -62,7 +62,7 @@ it("does not reuse workspace data after the connection identity changes", async 
   await vi.waitFor(() => expect(rendered?.container.textContent).toContain("Loading"));
   expect(rendered.container.textContent).not.toContain("Workspace A");
   resolveWorkspaceB({
-    teams: [{ id: "team-b", key: "B", name: "Workspace B" }],
+    teams: [{ id: "team-b", key: "B", name: "Workspace B", states: [] }],
     projects: [],
   });
   await vi.waitFor(() => expect(rendered?.container.textContent).toContain("Workspace B"));

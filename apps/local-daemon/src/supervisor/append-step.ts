@@ -13,6 +13,7 @@ import { resolveAgentConfig } from "#agents";
 import { emitLedgerEvent } from "#events";
 
 import { startNextReadyStep } from "./advance.js";
+import { signalIssueLifecycle } from "./issue-lifecycle.js";
 import { buildPlanRevisedEvent } from "./plan-revision.js";
 import { requireRunRow } from "./resume.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
@@ -82,6 +83,7 @@ export async function appendRunStep(
     runId,
     buildPlanRevisedEvent(runId, step, config, input.origin, new Date().toISOString()),
   );
+  if (issue) signalIssueLifecycle(state.syncIssueLifecycle, issue.id, "in_progress", runId);
 
   if (!hasRunActivity(state, runId)) {
     await startNextReadyStep(state, requireRunRow(db, runId, "append"));

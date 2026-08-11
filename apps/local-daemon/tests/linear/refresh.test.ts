@@ -17,8 +17,8 @@ import { stubLinearApiClient } from "../support/linear.js";
 const VIEWER = { user_name: "Alim", workspace_id: "workspace-1", workspace_name: "Otomat" };
 const WORKSPACE = {
   teams: [
-    { id: "team-1", key: "OTO", name: "Otomat" },
-    { id: "team-2", key: "ENG", name: "Engineering" },
+    { id: "team-1", key: "OTO", name: "Otomat", states: [] },
+    { id: "team-2", key: "ENG", name: "Engineering", states: [] },
   ],
   projects: [],
 };

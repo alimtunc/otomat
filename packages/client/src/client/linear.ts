@@ -16,10 +16,11 @@ import {
   type PublishStatusRequest,
   type SaveLinearDraftRequest,
   type SyncLinearRequest,
+  type UpdateIssueSourceRequest,
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { deleteJson, getJson, postJson, queryString } from "./http.js";
+import { deleteJson, getJson, patchJson, postJson, queryString } from "./http.js";
 
 export function createLinearClient(config: DaemonClientConfig) {
   return {
@@ -47,6 +48,11 @@ export function createLinearClient(config: DaemonClientConfig) {
     async createIssueSource(request: CreateIssueSourceRequest) {
       return issueSourceContractSchema.parse(
         await postJson(config, "/api/linear/sources", request),
+      );
+    },
+    async updateIssueSource(sourceId: string, request: UpdateIssueSourceRequest) {
+      return issueSourceContractSchema.parse(
+        await patchJson(config, `/api/linear/sources/${encodeURIComponent(sourceId)}`, request),
       );
     },
     async deleteIssueSource(sourceId: string) {

@@ -172,6 +172,11 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
 
 - TypeScript only, using idiomatic async/await and try/catch. Do not introduce
   Effect; the project has one async/error model to keep control flow legible.
+- A callable declared inside a function body is an arrow function bound to a
+  `const` (`const save = (phase: Phase): void => { … }`), never a nested
+  `function` declaration: it reads as a value closing over local state and
+  cannot be called above its own definition. `function` declarations stay at
+  module level, where the repo uses them for exported components and helpers.
 - Domain state changes go through `packages/domain/src/state-machines`. Illegal
   transitions throw `IllegalTransitionError`; centralization keeps invariants and
   failure behavior identical for every caller.

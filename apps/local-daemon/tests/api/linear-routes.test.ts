@@ -10,7 +10,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { linearError, LinearWriteConflictError } from "#linear";
 
-import { makeApiApp, post, request } from "../support/api.js";
+import { makeApiApp, patch, post, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 import { connectedLinear, stubLinearService } from "../support/linear.js";
 
@@ -164,6 +164,7 @@ it("serves mapped sources and sync results through their contracts", async () =>
     external_project_id: "",
     external_project_name: "",
     last_synced_at: null,
+    lifecycle: { in_progress: null, done: null },
   };
   const app = makeApiApp(t, {
     linear: stubLinearService({
@@ -182,6 +183,56 @@ it("serves mapped sources and sync results through their contracts", async () =>
     imported: 2,
     updated: 1,
   });
+});
+
+it("rewrites a source status mapping and refuses a state from another team", async () => {
+  const updates: unknown[] = [];
+  const app = makeApiApp(t, {
+    linear: stubLinearService({
+      updateSource: async (sourceId, payload) => {
+        updates.push({ sourceId, payload });
+        if (payload.done_state_id === "foreign-state") {
+          throw linearError("linear_source_state_invalid");
+        }
+        return {
+          id: sourceId,
+          project_id: "p1",
+          source: "linear" as const,
+          external_team_id: "team-1",
+          external_team_key: "OTO",
+          external_team_name: "Otomat",
+          external_project_id: "" as const,
+          external_project_name: "" as const,
+          last_synced_at: null,
+          lifecycle: {
+            in_progress: { id: "s-doing", name: "Doing" },
+            done: { id: "s-shipped", name: "Shipped" },
+          },
+        };
+      },
+    }),
+  });
+
+  const saved = await patch(app, "/api/linear/sources/src-1", {
+    in_progress_state_id: "s-doing",
+    done_state_id: "s-shipped",
+  });
+  expect(saved.status).toBe(200);
+  expect(issueSourceContractSchema.parse(await saved.json()).lifecycle).toEqual({
+    in_progress: { id: "s-doing", name: "Doing" },
+    done: { id: "s-shipped", name: "Shipped" },
+  });
+
+  const refused = await patch(app, "/api/linear/sources/src-1", {
+    in_progress_state_id: null,
+    done_state_id: "foreign-state",
+  });
+  expect(refused.status).toBe(400);
+  expect(await refused.json()).toMatchObject({ error: "linear_source_state_invalid" });
+
+  const malformed = await patch(app, "/api/linear/sources/src-1", { done_state_id: "s-shipped" });
+  expect(malformed.status).toBe(400);
+  expect(updates).toHaveLength(2);
 });
 
 it("serves one project's sync status and refuses a project it does not own", async () => {

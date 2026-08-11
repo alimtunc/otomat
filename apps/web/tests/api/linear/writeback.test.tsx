@@ -110,7 +110,7 @@ it("does not toast a fields conflict but still refreshes the writeback state", a
 });
 
 it("confirms a published status and refreshes the mirror", async () => {
-  publishLinearStatus.mockResolvedValue({ draft: null, writes: [] });
+  publishLinearStatus.mockResolvedValue({ draft: null, writes: [], lifecycle: null });
   const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   const invalidateQueries = vi.spyOn(client, "invalidateQueries");
   rendered = await mount(

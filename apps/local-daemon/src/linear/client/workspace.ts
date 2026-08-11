@@ -1,4 +1,4 @@
-import type { LinearWorkspaceContract } from "@otomat/domain";
+import type { LinearWorkflowState, LinearWorkspaceContract } from "@otomat/domain";
 import { z } from "zod";
 
 import { linearError } from "../errors.js";
@@ -7,7 +7,9 @@ import {
   PROJECT_TEAMS_QUERY,
   projectTeamsResponseSchema,
   projectsResponseSchema,
+  TEAM_STATES_QUERY,
   TEAMS_QUERY,
+  teamStatesResponseSchema,
   teamsResponseSchema,
   VIEWER_QUERY,
   viewerResponseSchema,
@@ -22,6 +24,7 @@ import type { LinearApiClient } from "./types.js";
 
 type WorkspaceOperations = Pick<LinearApiClient, "viewer" | "workspace">;
 type ProjectNode = z.infer<typeof projectsResponseSchema>["projects"]["nodes"][number];
+type TeamNode = z.infer<typeof teamsResponseSchema>["teams"]["nodes"][number];
 
 async function completeProjectTeamIds(
   executor: GraphQLExecutor,
@@ -50,6 +53,34 @@ async function completeProjectTeamIds(
   return teamIds;
 }
 
+/** A truncated workflow would silently hide the very state a lifecycle mapping needs, so it is paged out in full. */
+async function completeTeamStates(
+  executor: GraphQLExecutor,
+  apiKey: string,
+  team: TeamNode,
+  signal?: AbortSignal,
+): Promise<LinearWorkflowState[]> {
+  const states = [...team.states.nodes];
+  const seenCursors = new Set<string>();
+  let { hasNextPage, endCursor } = team.states.pageInfo;
+
+  for (let page = 1; hasNextPage && endCursor !== null && page < LINEAR_MAX_PAGES; page += 1) {
+    if (seenCursors.has(endCursor)) throw linearError("linear_request_failed");
+    seenCursors.add(endCursor);
+    const response = await executor.execute(
+      apiKey,
+      TEAM_STATES_QUERY,
+      { teamId: team.id, after: endCursor, first: LINEAR_PAGE_SIZE },
+      teamStatesResponseSchema,
+      signal,
+    );
+    states.push(...response.team.states.nodes);
+    ({ hasNextPage, endCursor } = response.team.states.pageInfo);
+  }
+  if (hasNextPage) throw linearError("linear_request_failed");
+  return states;
+}
+
 export function createWorkspaceOperations(executor: GraphQLExecutor): WorkspaceOperations {
   return {
     async viewer(apiKey, signal) {
@@ -67,14 +98,23 @@ export function createWorkspaceOperations(executor: GraphQLExecutor): WorkspaceO
       };
     },
     async workspace(apiKey, signal) {
-      const teams = await executor.paginate(
+      const teamNodes = await executor.paginate(
         apiKey,
         TEAMS_QUERY,
-        {},
+        { stateFirst: LINEAR_NESTED_PAGE_SIZE },
         teamsResponseSchema,
         (response) => response.teams,
         signal,
       );
+      const teams: LinearWorkspaceContract["teams"] = [];
+      for (const team of teamNodes) {
+        teams.push({
+          id: team.id,
+          key: team.key,
+          name: team.name,
+          states: await completeTeamStates(executor, apiKey, team, signal),
+        });
+      }
       const projects = await executor.paginate(
         apiKey,
         PROJECTS_QUERY,

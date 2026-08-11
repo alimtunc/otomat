@@ -45,7 +45,12 @@ export function ProjectSourcesPanel({ project }: { project: ProjectContract }) {
         <LinearSyncControl sync={sync} />
       </div>
       <div className="rounded-lg border border-border-subtle bg-card">
-        <IssueSourcesList query={projectSources} projects={[project]} removable />
+        <IssueSourcesList
+          query={projectSources}
+          projects={[project]}
+          teams={workspace.data?.teams ?? []}
+          removable
+        />
         <QueryBoundary
           query={workspace}
           pending={<Skeleton className="m-3 h-28" />}

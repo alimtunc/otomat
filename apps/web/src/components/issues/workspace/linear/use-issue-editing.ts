@@ -1,6 +1,7 @@
 import type {
   LinearIssueDraft,
   LinearIssueSnapshot,
+  LinearLifecycleSyncState,
   LinearTeamMetadata,
   LinearWriteContract,
 } from "@otomat/domain";
@@ -23,6 +24,8 @@ export interface LinearIssueEditing {
   metadata: LinearTeamMetadata | null;
   draft: LinearIssueDraft | null;
   writes: LinearWriteContract[];
+  /** Latest run-lifecycle mirror, or null while the daemon has never synced this issue. */
+  lifecycle: LinearLifecycleSyncState | null;
   editorOffline: boolean;
   writebackOffline: boolean;
   canEdit: boolean;
@@ -79,6 +82,7 @@ export function useLinearIssueEditing(issueId: string): LinearIssueEditing {
     metadata: editor.data?.team_metadata ?? null,
     draft,
     writes: writeback.data?.writes ?? [],
+    lifecycle: writeback.data?.lifecycle ?? null,
     editorOffline: editor.isError,
     writebackOffline: writeback.isError && writeback.data === undefined,
     canEdit: values !== null && base !== null,

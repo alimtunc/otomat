@@ -9,6 +9,7 @@ import {
   prepareDatabase,
   readSchemaMetadata,
 } from "@otomat/db";
+import type { LinearLifecycleSync } from "@otomat/domain";
 
 import { rescanSkills } from "#agents";
 import { createApiApp, logApiRoutes } from "#api";
@@ -86,13 +87,6 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       worktreesRoot: process.env.OTOMAT_WORKTREES_ROOT ?? join(dataDir, "worktrees"),
     });
     const review = createReviewService({ db, dataDir, repositories });
-    const github = createGitHubService({
-      db,
-      dataDir,
-      repositories,
-      cli: createGitHubCli(runCommand),
-      drafter: createPullRequestDrafter(runCommand),
-    });
     const linear = createLinearService({
       db,
       dataDir,
@@ -103,6 +97,19 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
         console.error("[otomat] Linear development connection failed", error);
       });
     }
+    const syncIssueLifecycle: LinearLifecycleSync = (signal) => {
+      void linear.syncIssueLifecycle(signal).catch((error: unknown) => {
+        console.error(`[otomat] Linear lifecycle sync for issue ${signal.issue_id} failed`, error);
+      });
+    };
+    const github = createGitHubService({
+      db,
+      dataDir,
+      repositories,
+      cli: createGitHubCli(runCommand),
+      drafter: createPullRequestDrafter(runCommand),
+      syncIssueLifecycle,
+    });
 
     const mainScript = process.argv[1];
     if (!mainScript) throw new Error("cannot determine daemon entrypoint for worker re-exec");
@@ -113,6 +120,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       spawn: createReexecSpawn(mainScript),
       repositories,
       afterSettle: review.onRunSettled,
+      syncIssueLifecycle,
     });
 
     const report = supervisor.reconcile();

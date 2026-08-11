@@ -2,8 +2,9 @@ import { z } from "zod";
 
 import { LINEAR_WRITE_STATES } from "../entity-states.js";
 import { linearIssueDraftSchema, linearIssueSnapshotSchema } from "./editing.js";
+import { linearLifecycleSyncStateSchema } from "./lifecycle.js";
 
-export const LINEAR_WRITE_KINDS = ["fields", "status", "comment", "pr_link"] as const;
+export const LINEAR_WRITE_KINDS = ["fields", "status", "comment", "pr_link", "lifecycle"] as const;
 export const linearWriteKindSchema = z.enum(LINEAR_WRITE_KINDS);
 export type LinearWriteKind = z.infer<typeof linearWriteKindSchema>;
 
@@ -28,6 +29,7 @@ export type LinearWriteContract = z.infer<typeof linearWriteContractSchema>;
 export const linearWritebackStateSchema = z.object({
   draft: linearIssueDraftSchema.nullable(),
   writes: z.array(linearWriteContractSchema),
+  lifecycle: linearLifecycleSyncStateSchema.nullable().default(null),
 });
 export type LinearWritebackState = z.infer<typeof linearWritebackStateSchema>;
 

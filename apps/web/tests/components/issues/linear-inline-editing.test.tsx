@@ -21,7 +21,7 @@ vi.mock("@web/api/client", () => ({
     getLinearWriteback: (id: string) => getLinearWriteback(id),
     saveLinearDraft: (id: string, request: unknown) => saveLinearDraft(id, request),
     publishLinearFields: (id: string, request: unknown) => publishLinearFields(id, request),
-    discardLinearDraft: () => Promise.resolve({ draft: null, writes: [] }),
+    discardLinearDraft: () => Promise.resolve({ draft: null, writes: [], lifecycle: null }),
   },
 }));
 
@@ -99,7 +99,7 @@ afterEach(async () => {
 
 it("commits an inline title edit to the local draft", async () => {
   getLinearEditor.mockResolvedValue(EDITOR);
-  getLinearWriteback.mockResolvedValue({ draft: null, writes: [] });
+  getLinearWriteback.mockResolvedValue({ draft: null, writes: [], lifecycle: null });
   saveLinearDraft.mockResolvedValue(DRAFT);
 
   rendered = await mount(withClient(<LinearIssueHeader issue={ISSUE} />));
@@ -133,7 +133,7 @@ it("commits an inline title edit to the local draft", async () => {
 
 it("publishes the draft from the bar and overwrites only after an explicit conflict confirmation", async () => {
   getLinearEditor.mockResolvedValue(EDITOR);
-  getLinearWriteback.mockResolvedValue({ draft: DRAFT, writes: [] });
+  getLinearWriteback.mockResolvedValue({ draft: DRAFT, writes: [], lifecycle: null });
   publishLinearFields
     .mockRejectedValueOnce(
       new DaemonRequestError(409, "POST", "/api/linear/issues/li/publish-fields", {
@@ -142,7 +142,7 @@ it("publishes the draft from the bar and overwrites only after an explicit confl
         remote: { ...SNAPSHOT, title: "Changed remotely", updated_at: "2026-07-21T09:00:00.000Z" },
       }),
     )
-    .mockResolvedValueOnce({ draft: null, writes: [] });
+    .mockResolvedValueOnce({ draft: null, writes: [], lifecycle: null });
 
   rendered = await mount(withClient(<LinearIssueHeader issue={ISSUE} />));
 

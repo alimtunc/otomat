@@ -46,6 +46,11 @@ export const issueSources = sqliteTable(
     // Empty strings let SQLite enforce uniqueness for whole-team mappings.
     external_project_id: text("external_project_id").notNull().default(""),
     external_project_name: text("external_project_name").notNull().default(""),
+    // Null keeps a phase unmapped, so the daemon writes nothing rather than guessing a state name.
+    in_progress_state_id: text("in_progress_state_id"),
+    in_progress_state_name: text("in_progress_state_name"),
+    done_state_id: text("done_state_id"),
+    done_state_name: text("done_state_name"),
     ...timestamps,
   },
   (table) => [

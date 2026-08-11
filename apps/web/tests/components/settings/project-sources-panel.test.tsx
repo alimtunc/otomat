@@ -24,8 +24,11 @@ vi.mock("@web/api/linear/queries", () => ({
   useLinearWorkspace: () => workspaceState,
 }));
 
+const updateSource = vi.fn();
+
 vi.mock("@web/api/linear/mutations", () => ({
   useDeleteIssueSource: () => ({ isPending: false, mutate: vi.fn(), variables: undefined }),
+  useUpdateIssueSource: () => ({ isPending: false, mutate: updateSource, variables: undefined }),
 }));
 
 vi.mock("@web/api/linear/use-project-sync", () => ({
@@ -55,6 +58,7 @@ let rendered: Mounted | null = null;
 
 beforeEach(() => {
   syncRefresh.mockClear();
+  updateSource.mockClear();
   createdCallbacks.length = 0;
   syncSources = 1;
   connectionState = {
@@ -82,6 +86,7 @@ beforeEach(() => {
         external_project_id: "",
         external_project_name: "",
         last_synced_at: null,
+        lifecycle: { in_progress: null, done: null },
       },
       {
         id: "source-2",
@@ -93,6 +98,7 @@ beforeEach(() => {
         external_project_id: "",
         external_project_name: "",
         last_synced_at: null,
+        lifecycle: { in_progress: null, done: null },
       },
     ],
     isPending: false,
@@ -100,7 +106,17 @@ beforeEach(() => {
     isSuccess: true,
   };
   workspaceState = {
-    data: { teams: [{ id: "team-1", key: "OTO", name: "Otomat" }], projects: [] },
+    data: {
+      teams: [
+        {
+          id: "team-1",
+          key: "OTO",
+          name: "Otomat",
+          states: [{ id: "s-doing", name: "Doing" }],
+        },
+      ],
+      projects: [],
+    },
     isPending: false,
     isError: false,
   };
@@ -126,6 +142,25 @@ it("lists only the selected project's sources, with an unmap action", async () =
     (candidate) => candidate.textContent?.trim() === "Unmap",
   );
   expect(unmap).toBeDefined();
+});
+
+it("offers the source's own Linear statuses for the run and merge phases", async () => {
+  const container = await renderPanel();
+
+  const labels = [...container.querySelectorAll("[aria-label]")].map((node) =>
+    node.getAttribute("aria-label"),
+  );
+  expect(labels).toContain("Run started");
+  expect(labels).toContain("Pull request merged");
+});
+
+it("says so instead of guessing when the team's statuses are unavailable", async () => {
+  workspaceState = { data: undefined, isPending: true, isError: false };
+
+  const container = await renderPanel();
+
+  expect(container.textContent).toContain("run mapping cannot be changed");
+  expect(updateSource).not.toHaveBeenCalled();
 });
 
 it("syncs only this project's sources", async () => {

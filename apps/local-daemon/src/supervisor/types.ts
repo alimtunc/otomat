@@ -1,5 +1,10 @@
 import type { Db, RunContributionRow, RunRow } from "@otomat/db";
-import type { ModelSelection, ResolvedAgentConfig, StartRunRequest } from "@otomat/domain";
+import type {
+  LinearLifecycleSync,
+  ModelSelection,
+  ResolvedAgentConfig,
+  StartRunRequest,
+} from "@otomat/domain";
 
 import type { AgentConfigSelector } from "#agents";
 import type { RepositoryResolver } from "#git";
@@ -75,6 +80,8 @@ export interface SupervisorConfig {
   repositories: RepositoryResolver;
   /** Fires after any settle (live, abort, boot) so review anchors/diff projections can react. */
   afterSettle?: (outcome: ReconcileOutcome) => void;
+  /** Mirrors a durably created run onto the linked tracker issue; omitted leaves the daemon tracker-silent. */
+  syncIssueLifecycle?: LinearLifecycleSync;
 }
 
 export interface Supervisor {

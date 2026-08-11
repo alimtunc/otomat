@@ -26,7 +26,7 @@ export function connectedLinear(): ConnectedLinear {
 
 function stubLinearWriteback(overrides: Partial<LinearWriteback> = {}): LinearWriteback {
   return {
-    writebackState: () => ({ draft: null, writes: [] }),
+    writebackState: () => ({ draft: null, writes: [], lifecycle: null }),
     editorState: async () => {
       throw new Error("editorState stub not configured");
     },
@@ -48,6 +48,9 @@ function stubLinearWriteback(overrides: Partial<LinearWriteback> = {}): LinearWr
     },
     publishPrLink: async () => {
       throw new Error("publishPrLink stub not configured");
+    },
+    publishLifecycle: async () => {
+      throw new Error("publishLifecycle stub not configured");
     },
     retryWrite: async () => {
       throw new Error("retryWrite stub not configured");
@@ -75,6 +78,9 @@ export function stubLinearService(
     createSource: async () => {
       throw new Error("createSource stub not configured");
     },
+    updateSource: async () => {
+      throw new Error("updateSource stub not configured");
+    },
     deleteSource: () => {
       throw new Error("deleteSource stub not configured");
     },
@@ -84,6 +90,7 @@ export function stubLinearService(
     syncStatus: () => {
       throw new Error("syncStatus stub not configured");
     },
+    syncIssueLifecycle: async () => {},
     writeback: stubLinearWriteback(writeback),
     ...service,
   };

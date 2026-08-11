@@ -3,6 +3,7 @@ import { Button, Skeleton } from "@otomat/ui";
 import { RailMeta, RailSection } from "@web/components/issues/workspace/rail/rail-primitives";
 
 import { LabelsEditor } from "../labels-editor";
+import { LifecycleSync } from "../lifecycle-sync";
 import { LinearPropertyRows } from "../property-rows";
 import { useLinearIssueEditing } from "../use-issue-editing";
 import { WriteHistory } from "../write-history";
@@ -17,6 +18,7 @@ export function LinearRailSection({
   run: RunContract | null;
 }) {
   const editing = useLinearIssueEditing(issue.id);
+  const pinnedWriteId = editing.lifecycle?.write_id ?? null;
 
   function body() {
     if (editing.editorOffline) {
@@ -63,7 +65,15 @@ export function LinearRailSection({
             </Button>
           </div>
         ) : (
-          <WriteHistory issueId={issue.id} writes={editing.writes} />
+          <>
+            {editing.lifecycle === null ? null : (
+              <LifecycleSync issueId={issue.id} lifecycle={editing.lifecycle} />
+            )}
+            <WriteHistory
+              issueId={issue.id}
+              writes={editing.writes.filter((write) => write.id !== pinnedWriteId)}
+            />
+          </>
         )}
       </div>
     </RailSection>

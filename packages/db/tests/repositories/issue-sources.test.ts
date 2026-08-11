@@ -5,6 +5,7 @@ import {
   getIssueSource,
   insertIssueSource,
   listIssueSources,
+  updateIssueSourceLifecycle,
   type NewIssueSource,
 } from "#db/repositories/issue-sources";
 
@@ -52,6 +53,30 @@ it.each([{ external_project_id: "project-1" }, { external_project_name: "Project
     ).toThrow("issue source project id and name must either both be set or both be empty");
   },
 );
+
+it("stores a lifecycle mapping and clears it back to unmapped", () => {
+  insertIssueSource(t.client.db, source());
+  expect(getIssueSource(t.client.db, "s1")?.done_state_id).toBeNull();
+
+  updateIssueSourceLifecycle(t.client.db, "s1", {
+    in_progress_state_id: "s-doing",
+    in_progress_state_name: "Doing",
+    done_state_id: "s-shipped",
+    done_state_name: "Shipped",
+  });
+  expect(getIssueSource(t.client.db, "s1")).toMatchObject({
+    in_progress_state_name: "Doing",
+    done_state_id: "s-shipped",
+  });
+
+  updateIssueSourceLifecycle(t.client.db, "s1", {
+    in_progress_state_id: "s-doing",
+    in_progress_state_name: "Doing",
+    done_state_id: null,
+    done_state_name: null,
+  });
+  expect(getIssueSource(t.client.db, "s1")?.done_state_name).toBeNull();
+});
 
 it("finds mappings whose scopes overlap", () => {
   insertIssueSource(t.client.db, source());

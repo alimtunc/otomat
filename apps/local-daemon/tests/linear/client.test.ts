@@ -31,6 +31,20 @@ function fakeTransport(responses: LinearTransportResponse[]): {
   };
 }
 
+const LAST_PAGE = { hasNextPage: false, endCursor: null };
+
+function teamNode(
+  id: string,
+  key: string,
+  name: string,
+  states: { nodes: unknown[]; pageInfo: { hasNextPage: boolean; endCursor: string | null } } = {
+    nodes: [],
+    pageInfo: LAST_PAGE,
+  },
+) {
+  return { id, key, name, states };
+}
+
 function issuePage(
   ids: string[],
   hasNextPage: boolean,
@@ -76,11 +90,8 @@ it("follows nested project team pages", async () => {
   const fake = fakeTransport([
     ok({
       teams: {
-        nodes: [
-          { id: "team-1", key: "ONE", name: "One" },
-          { id: "team-101", key: "LATE", name: "Late" },
-        ],
-        pageInfo: { hasNextPage: false, endCursor: null },
+        nodes: [teamNode("team-1", "ONE", "One"), teamNode("team-101", "LATE", "Late")],
+        pageInfo: LAST_PAGE,
       },
     }),
     ok({
@@ -117,13 +128,43 @@ it("follows nested project team pages", async () => {
   });
 });
 
-it("rejects a repeated nested project team cursor without replaying it", async () => {
+it("follows nested team workflow-state pages so no mappable status is hidden", async () => {
   const fake = fakeTransport([
     ok({
       teams: {
-        nodes: [{ id: "team-1", key: "ONE", name: "One" }],
-        pageInfo: { hasNextPage: false, endCursor: null },
+        nodes: [
+          teamNode("team-1", "ONE", "One", {
+            nodes: [{ id: "state-1", name: "Todo" }],
+            pageInfo: { hasNextPage: true, endCursor: "state-page-1" },
+          }),
+        ],
+        pageInfo: LAST_PAGE,
       },
+    }),
+    ok({
+      team: {
+        states: {
+          nodes: [{ id: "state-2", name: "Shipped" }],
+          pageInfo: LAST_PAGE,
+        },
+      },
+    }),
+    ok({ projects: { nodes: [], pageInfo: LAST_PAGE } }),
+  ]);
+
+  const workspace = await createLinearApiClient(fake.transport).workspace(KEY);
+
+  expect(workspace.teams[0]?.states.map((state) => state.id)).toEqual(["state-1", "state-2"]);
+  expect(fake.requests[0]).toMatchObject({ variables: { first: 100, stateFirst: 25 } });
+  expect(fake.requests[1]).toMatchObject({
+    variables: { teamId: "team-1", after: "state-page-1", first: 100 },
+  });
+});
+
+it("rejects a repeated nested project team cursor without replaying it", async () => {
+  const fake = fakeTransport([
+    ok({
+      teams: { nodes: [teamNode("team-1", "ONE", "One")], pageInfo: LAST_PAGE },
     }),
     ok({
       projects: {
