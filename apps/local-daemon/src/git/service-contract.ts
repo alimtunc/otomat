@@ -1,5 +1,6 @@
 import type { Db } from "@otomat/db";
 
+import { WorktreeNotFoundError } from "./errors.js";
 import type {
   CanonicalDiff,
   ChangedFile,
@@ -93,4 +94,14 @@ export interface GitWorktreeService {
    * Throws WorktreeNotFoundError when no active or archived worktree is tracked.
    */
   cleanup(owner: string, options?: CleanupOptions): void;
+}
+
+/** The owner's canonical diff, or null when its worktree is gone; any other git failure propagates. */
+export function diffOrNull(service: GitWorktreeService, owner: string): CanonicalDiff | null {
+  try {
+    return service.diff(owner);
+  } catch (error) {
+    if (error instanceof WorktreeNotFoundError) return null;
+    throw error;
+  }
 }

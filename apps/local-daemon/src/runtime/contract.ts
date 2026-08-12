@@ -1,7 +1,7 @@
 import {
   modelIdSchema,
   providerOptionsSchema,
-  RUN_TERMINAL_STATES,
+  RUN_SETTLED_STATES,
   type BinaryProbe,
   type ProviderOptionDescriptor,
   type RuntimeCapabilities,
@@ -23,8 +23,8 @@ export const runtimeUsageSchema = z.object({
 });
 export type RuntimeUsage = z.infer<typeof runtimeUsageSchema>;
 
-/** Terminal outcomes a runtime can return: the run machine's terminal states. */
-const runtimeFinalStatusSchema = z.enum(RUN_TERMINAL_STATES);
+/** Final outcomes a runtime can return: the run machine's settled states. */
+const runtimeFinalStatusSchema = z.enum(RUN_SETTLED_STATES);
 
 export const runtimeFinalStateSchema = z.object({
   status: runtimeFinalStatusSchema,

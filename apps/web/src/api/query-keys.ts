@@ -43,6 +43,7 @@ export const queryKeys = {
   runDiff: (id: string) => ["run", id, "diff"] as const,
   runDiffFileBlobs: (id: string, path: string, sha: string) =>
     ["run", id, "diff", "file", path, sha] as const,
+  runWorkspace: (id: string) => ["run", id, "workspace"] as const,
   competeCandidateDiff: (runId: string, groupId: string, stepId: string) =>
     ["run", runId, "compete", groupId, stepId, "diff"] as const,
   runReview: (id: string) => ["run", id, "review"] as const,

@@ -27,6 +27,7 @@ export function listIssueExecutionEvidence(
       run_status: runs.status,
       run_created_at: runs.created_at,
       run_branch: runs.branch,
+      run_abandoned_at: runs.abandoned_at,
       worktree_status: worktrees.status,
       pr_status: pullRequests.status,
       pr_publication: pullRequests.publication_status,

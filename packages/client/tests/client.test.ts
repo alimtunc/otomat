@@ -240,6 +240,41 @@ it("lists a run's contributions in send order", async () => {
   expect(result.contributions.map((entry) => entry.seq)).toEqual([0, 1]);
 });
 
+it("reads what abandoning a workspace would leave behind, then confirms it", async () => {
+  const calls: Array<{ url: string; method?: string }> = [];
+  const summary = {
+    run_id: "run-1",
+    branch: "otomat/run/run-1",
+    base_branch: "main",
+    worktree_path: "/tmp/wt",
+    commits: [{ sha: "abc1234", subject: "Wire the thing" }],
+    commit_count: 1,
+    uncommitted_files: 2,
+    changed_files: 3,
+    additions: 40,
+    deletions: 4,
+    pull_request: null,
+    blocker: null,
+  };
+  const fetchMock: typeof fetch = async (input, init) => {
+    calls.push({ url: String(input), ...(init?.method ? { method: init.method } : {}) });
+    return jsonResponse(init?.method === "POST" ? { ...RUN, status: "canceled" } : summary);
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+
+  const read = await client.getRunWorkspace("run-1");
+  const abandoned = await client.abandonRunWorkspace("run-1");
+
+  expect(calls[0]?.url).toBe("http://localhost:4319/api/runs/run-1/workspace");
+  expect(calls[1]).toEqual({
+    url: "http://localhost:4319/api/runs/run-1/abandon",
+    method: "POST",
+  });
+  expect(read.commits).toHaveLength(1);
+  expect(read.blocker).toBeNull();
+  expect(abandoned.status).toBe("canceled");
+});
+
 it("posts abort and parses the returned run detail", async () => {
   let calledUrl = "";
   const detail = {

@@ -6,6 +6,7 @@ import { readRunEvents } from "#events";
 import { RunWorkspaceClosedError, type AppendStepInput, type ReconcileOutcome } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { waitFor } from "../support/poll.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
@@ -112,6 +113,39 @@ it("refuses an unknown dependency instead of writing an unschedulable plan", asy
 
   expect(getRun(fix.db, run.id)?.plan_json.steps).toEqual(before);
   expect(listStepRunsForRun(fix.db, run.id)).toHaveLength(before.length);
+});
+
+it("extends the cycle of a failed run in its own worktree, without a second one", async () => {
+  const { supervisor, spawn } = makeSupervisor(fix, ["fail", "complete"]);
+  const run = await supervisor.start({ issue_id: "i-work" });
+  await supervisor.settle();
+  expect(getRun(fix.db, run.id)?.status).toBe("failed");
+
+  const appended = await supervisor.appendStep(run.id, FIX_STEP);
+  await supervisor.settle();
+
+  expect(appended.branch).toBe(run.branch);
+  expect(spawn.jobs[1]?.worktreePath).toBe(spawn.jobs[0]?.worktreePath);
+  expect(fix.db.select().from(schema.worktrees).all()).toHaveLength(1);
+});
+
+it("never puts a second writer in the workspace: an appended step waits for the live turn", async () => {
+  const { supervisor, spawn } = makeSupervisor(fix, "linger");
+  const run = await supervisor.start({ issue_id: "i-work" });
+  await waitFor(() => spawn.calls === 1);
+
+  const appended = await supervisor.appendStep(run.id, FIX_STEP);
+  const step = appended.plan_json.steps.at(-1);
+  if (!step) throw new Error("expected an appended step");
+
+  // The step is durable but unstarted: the post-turn chain owns starting it.
+  expect(spawn.calls).toBe(1);
+  expect(listStepRunsForRun(fix.db, run.id).find((row) => row.id === step.id)?.status).toBe(
+    "queued",
+  );
+
+  await supervisor.abort(run.id);
+  await supervisor.settle();
 });
 
 it("refuses a step once the workspace is released, leaving the plan untouched", async () => {

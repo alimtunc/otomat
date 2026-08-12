@@ -20,6 +20,7 @@ import { LaunchRunDialog } from "@web/components/issues/workspace/launch/dialog"
 import { LinearCommentsSection } from "@web/components/issues/workspace/linear/comments";
 import { WorkspaceRail } from "@web/components/issues/workspace/rail/workspace-rail";
 import { RunConversations } from "@web/components/issues/workspace/run-conversations";
+import { RunActionsMenu } from "@web/components/runs/actions/run-actions-menu";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { issueShortId, shortId } from "@web/lib/ids";
@@ -95,6 +96,8 @@ export function IssueDetailView() {
   const launchAction = (
     <LaunchRunDialog issue={issue.data} onLaunched={(run) => setSelectedRunId(run.id)} />
   );
+  // The header acts on the issue's canonical cycle, not on whichever old run is being read.
+  const cycleRunId = issue.data?.workspace.run_id ?? followedRun?.id ?? null;
 
   const main = (
     <div className="min-h-0 min-w-0 flex-1 overflow-auto px-8 py-6.5">
@@ -145,7 +148,12 @@ export function IssueDetailView() {
         { label: idLabel, current: true },
       ]}
       breadcrumbExtra={issue.data ? <IssueStatusChip status={issue.data.status} /> : null}
-      actions={launchAction}
+      actions={
+        <>
+          {launchAction}
+          {cycleRunId ? <RunActionsMenu runId={cycleRunId} /> : null}
+        </>
+      }
     >
       {followedRun ? <RunEventsProvider runId={followedRun.id}>{body}</RunEventsProvider> : body}
     </RouteShell>

@@ -1,18 +1,18 @@
-import { isRunTerminal, type ReviewFixAuthority, type RunState } from "@otomat/domain";
+import type { ReviewFixAuthority } from "@otomat/domain";
 import { Button, Chip } from "@otomat/ui";
 import { ReviewFixStepDialog } from "@web/components/runs/review/fix-step-dialog";
 import type { ReviewSelection } from "@web/components/runs/review/use-selection";
 
 export interface DiffFixBarProps {
-  runStatus: RunState | undefined;
+  /** Whether this run still owns its issue's workspace; a fix is one more step in that same cycle. */
+  workspaceOpen: boolean;
   authority: ReviewFixAuthority;
   selection: ReviewSelection;
 }
 
-export function DiffFixBar({ runStatus, authority, selection }: DiffFixBarProps) {
+export function DiffFixBar({ workspaceOpen, authority, selection }: DiffFixBarProps) {
   const count = selection.selectedIds.size;
   const owned = authority.kind === "otomat";
-  const workspaceOpen = runStatus !== undefined && !isRunTerminal(runStatus);
   const ownedHint = workspaceOpen
     ? "A fix step freezes the comments, their pinned hunks and the current diff as its context."
     : "Fix is available while this issue’s workspace is still open.";

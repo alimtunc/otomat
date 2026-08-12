@@ -5,7 +5,7 @@ import {
   type listStepRunsForRun,
 } from "@otomat/db";
 import {
-  isRunTerminal,
+  isRunSettled,
   reportStepSchema,
   type CompletionEvidence,
   type EventEnvelope,
@@ -55,7 +55,7 @@ function projectRun(
     branch: run.branch,
     status: run.status,
     outcome,
-    terminal: isRunTerminal(run.status),
+    terminal: isRunSettled(run.status),
     evidence: timeline(lifecycle?.seq ?? null),
   };
 }

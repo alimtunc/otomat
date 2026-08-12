@@ -137,7 +137,7 @@ describe("agent capacity", () => {
 });
 
 describe("runDetailSchema", () => {
-  it("defaults `wait` to null so a daemon deployed before the field still parses", () => {
+  it("defaults the live fields so a daemon deployed before them still parses", () => {
     const detail = runDetailSchema.parse({
       run: RUN,
       steps: [],
@@ -148,6 +148,28 @@ describe("runDetailSchema", () => {
     });
 
     expect(detail.wait).toBeNull();
+    expect(detail.resume.mode).toBe("unavailable");
+    expect(detail.holds_workspace).toBe(false);
+  });
+
+  it("carries the resume mode the daemon resolved, including its fallback reason", () => {
+    const base = { run: RUN, steps: [], sessions: [], compete_groups: [] };
+    const recovery = runDetailSchema.parse({
+      ...base,
+      worktree_path: "/tmp/wt",
+      base_branch: "main",
+      resume: { mode: "recovery", reason: "No provider session was recorded for this step" },
+      holds_workspace: true,
+    });
+    expect(recovery.resume).toEqual({
+      mode: "recovery",
+      reason: "No provider session was recorded for this step",
+    });
+    expect(recovery.holds_workspace).toBe(true);
+    expect(
+      runDetailSchema.safeParse({ ...base, worktree_path: null, base_branch: null, resume: {} })
+        .success,
+    ).toBe(false);
   });
 
   it("carries the run's worktree path and base branch, and accepts null for legacy runs", () => {

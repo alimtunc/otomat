@@ -1,4 +1,4 @@
-import { isRunTerminal, type EventEnvelope, type RunTerminalState } from "@otomat/domain";
+import { isRunSettled, type EventEnvelope, type RunSettledState } from "@otomat/domain";
 
 import { asString } from "#runtime";
 
@@ -21,12 +21,12 @@ export function eventsForSession(
 }
 
 /** Final-status of the last terminal marker in the ledger, or null if the run never wrote one. */
-export function findFinalStatus(events: readonly EventEnvelope[]): RunTerminalState | null {
+export function findFinalStatus(events: readonly EventEnvelope[]): RunSettledState | null {
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i];
     if (event && isSupervisorFinal(event)) {
       const status = asString(event.payload["final_status"]);
-      if (status !== null && isRunTerminal(status)) return status;
+      if (status !== null && isRunSettled(status)) return status;
     }
   }
   return null;

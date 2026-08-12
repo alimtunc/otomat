@@ -1,3 +1,4 @@
+import { abandonWorkspace } from "./abandon.js";
 import { abortRun } from "./abort.js";
 import { advanceRun } from "./advance.js";
 import { appendRunStep } from "./append-step.js";
@@ -14,8 +15,10 @@ import {
 import { terminateGracefully } from "./process.js";
 import { recoverCompeteSelections, selectCompeteWinner } from "./promotion.js";
 import { reconcileRuns } from "./reconcile.js";
+import { runResumePlan } from "./resume-plan.js";
 import { createState, notifyAfterSettle } from "./state.js";
 import type { Supervisor, SupervisorConfig } from "./types.js";
+import { workspaceClosureFacts } from "./workspace-summary.js";
 
 export function createSupervisor(config: SupervisorConfig): Supervisor {
   const state = createState(config);
@@ -30,6 +33,9 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     capacity: () => agentCapacity(state),
     setCapacity: (maxConcurrentSessions) => setAgentCapacity(state, maxConcurrentSessions),
     resume: (runId) => resumeRun(state, runId),
+    resumePlan: (runId) => runResumePlan(state, runId),
+    abandon: (runId) => abandonWorkspace(state, runId),
+    workspaceClosure: (runId) => workspaceClosureFacts(state, runId),
     appendStep: (runId, input) => appendRunStep(state, runId, input),
     contribute: (runId, stepRunId, body) => contributeToRun(state, runId, stepRunId, body),
     retryContribution: (runId, contributionId) =>

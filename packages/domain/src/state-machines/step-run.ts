@@ -14,6 +14,7 @@ export const STEP_RUN_STATES = [
 
 export type StepRunState = (typeof STEP_RUN_STATES)[number];
 
+/** A step that stopped without succeeding requeues on resume — its work is still owed; only `succeeded` is final, since reopening it would replay delivered work. */
 export const stepRunMachine = defineMachine<StepRunState>({
   name: "step_run",
   initial: "queued",
@@ -24,8 +25,23 @@ export const stepRunMachine = defineMachine<StepRunState>({
     awaiting_permission: ["running", "failed", "canceled", "stale"],
     awaiting_human: ["running", "failed", "canceled", "stale"],
     succeeded: [],
-    failed: [],
-    canceled: [],
-    stale: [],
+    failed: ["queued"],
+    canceled: ["queued"],
+    stale: ["queued"],
   },
 });
+
+/** Step states with no work in flight; a settle leaves them alone, and only an explicit resume requeues one. */
+export const STEP_RUN_SETTLED_STATES = [
+  "succeeded",
+  "failed",
+  "canceled",
+  "stale",
+] as const satisfies readonly StepRunState[];
+export type StepRunSettledState = (typeof STEP_RUN_SETTLED_STATES)[number];
+
+const stepSettledSet: ReadonlySet<string> = new Set(STEP_RUN_SETTLED_STATES);
+
+export function isStepSettled(status: string): status is StepRunSettledState {
+  return stepSettledSet.has(status);
+}

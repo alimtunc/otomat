@@ -1,4 +1,4 @@
-import { RUN_TERMINAL_STATES } from "@otomat/domain";
+import { RUN_SETTLED_STATES } from "@otomat/domain";
 import { and, eq, inArray, notInArray, or, type SQL } from "drizzle-orm";
 
 import type { Db } from "../client.js";
@@ -47,7 +47,7 @@ export function repositoryHasActiveRuns(db: Db, repositoryId: string): boolean {
   const row = db
     .select({ id: runs.id })
     .from(runs)
-    .where(and(or(...runFilters), notInArray(runs.status, [...RUN_TERMINAL_STATES])))
+    .where(and(or(...runFilters), notInArray(runs.status, [...RUN_SETTLED_STATES])))
     .limit(1)
     .get();
   return row !== undefined;

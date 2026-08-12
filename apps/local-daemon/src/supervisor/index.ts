@@ -12,6 +12,7 @@
  */
 export * from "./types.js";
 export { RunNotResumableError } from "./resume.js";
+export { WorkspaceAbandonRefusedError } from "./abandon.js";
 export { issueWorkspace, RunWorkspaceClosedError } from "./workspace.js";
 export {
   RunContributionNotCancelableError,

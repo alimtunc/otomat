@@ -1,5 +1,5 @@
 import { getRun, type Db } from "@otomat/db";
-import { isRunTerminal, type RunEndPayload, type RunStreamErrorPayload } from "@otomat/domain";
+import { isRunSettled, type RunEndPayload, type RunStreamErrorPayload } from "@otomat/domain";
 import type { Context } from "hono";
 import { streamSSE } from "hono/streaming";
 
@@ -40,7 +40,7 @@ export function streamRunEvents(c: Context, db: Db, runId: string) {
         }
 
         const run = getRun(db, runId);
-        if (!run || (isRunTerminal(run.status) && events.length === 0)) {
+        if (!run || (isRunSettled(run.status) && events.length === 0)) {
           const status = run?.status ?? "canceled";
           await stream.writeSSE({
             event: "end",

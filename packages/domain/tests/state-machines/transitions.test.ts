@@ -11,11 +11,13 @@ import { reviewMachine } from "#domain/state-machines/review";
 import { reviewCommentMachine } from "#domain/state-machines/review-comment";
 import {
   RUN_FOLLOW_UP_STATES,
-  RUN_TERMINAL_STATES,
+  RUN_RESUMABLE_STATES,
+  RUN_SETTLED_STATES,
   RUN_WORKING_STATES,
   canFollowUpRun,
   isRunBusy,
-  isRunTerminal,
+  isRunResumable,
+  isRunSettled,
   isRunWorking,
   runMachine,
 } from "#domain/state-machines/run";
@@ -24,7 +26,11 @@ import {
   isRunContributionRetriable,
   runContributionMachine,
 } from "#domain/state-machines/run-contribution";
-import { stepRunMachine } from "#domain/state-machines/step-run";
+import {
+  isStepSettled,
+  STEP_RUN_SETTLED_STATES,
+  stepRunMachine,
+} from "#domain/state-machines/step-run";
 
 // Widened so the heterogeneous list has one call signature; each machine's own states stay checked at its definition.
 const machines: StateMachine<string>[] = [
@@ -189,10 +195,39 @@ describe("representative illegal transitions are rejected", () => {
   });
 });
 
-describe("RUN_TERMINAL_STATES", () => {
-  it("matches the run machine's terminal states", () => {
+describe("RUN_SETTLED_STATES", () => {
+  it("covers every run state with no execution left in flight", () => {
+    expect([...RUN_SETTLED_STATES].toSorted()).toEqual(["canceled", "completed", "failed"]);
+    for (const state of RUN_SETTLED_STATES) expect(isRunSettled(state)).toBe(true);
+  });
+
+  it("leaves only a merged run truly terminal, because a stop can be resumed", () => {
     const derived = runMachine.states.filter((state) => runMachine.isTerminal(state));
-    expect([...RUN_TERMINAL_STATES].toSorted()).toEqual(derived.toSorted());
+    expect(derived).toEqual(["completed"]);
+  });
+});
+
+describe("RUN_RESUMABLE_STATES", () => {
+  it.each(RUN_RESUMABLE_STATES)("%s can be reopened through preparing", (status) => {
+    expect(isRunResumable(status)).toBe(true);
+    expect(() => runMachine.transition(status, "preparing")).not.toThrow();
+  });
+
+  it("never reopens a merged run", () => {
+    expect(isRunResumable("completed")).toBe(false);
+    expect(() => runMachine.transition("completed", "preparing")).toThrow(IllegalTransitionError);
+  });
+});
+
+describe("STEP_RUN_SETTLED_STATES", () => {
+  it("requeues every stopped step but never a succeeded one", () => {
+    for (const state of STEP_RUN_SETTLED_STATES) expect(isStepSettled(state)).toBe(true);
+    expect(stepRunMachine.states.filter((state) => stepRunMachine.isTerminal(state))).toEqual([
+      "succeeded",
+    ]);
+    for (const state of ["failed", "canceled", "stale"] as const) {
+      expect(stepRunMachine.canTransition(state, "queued")).toBe(true);
+    }
   });
 });
 
@@ -204,7 +239,7 @@ describe("RUN_FOLLOW_UP_STATES", () => {
 
   it("excludes terminal and active states", () => {
     expect(canFollowUpRun("running")).toBe(false);
-    for (const status of RUN_TERMINAL_STATES) expect(canFollowUpRun(status)).toBe(false);
+    for (const status of RUN_SETTLED_STATES) expect(canFollowUpRun(status)).toBe(false);
   });
 });
 
@@ -212,12 +247,12 @@ describe("RUN_WORKING_STATES", () => {
   it.each(RUN_WORKING_STATES)("%s is working and never resting or terminal", (status) => {
     expect(isRunWorking(status)).toBe(true);
     expect(canFollowUpRun(status)).toBe(false);
-    expect(isRunTerminal(status)).toBe(false);
+    expect(isRunSettled(status)).toBe(false);
   });
 
   it("excludes every resting and terminal state", () => {
     for (const status of RUN_FOLLOW_UP_STATES) expect(isRunWorking(status)).toBe(false);
-    for (const status of RUN_TERMINAL_STATES) expect(isRunWorking(status)).toBe(false);
+    for (const status of RUN_SETTLED_STATES) expect(isRunWorking(status)).toBe(false);
   });
 });
 
@@ -229,6 +264,6 @@ describe("isRunBusy", () => {
   it("treats selection-blocked, resting and terminal states as not busy", () => {
     expect(isRunBusy("awaiting_selection")).toBe(false);
     for (const status of RUN_FOLLOW_UP_STATES) expect(isRunBusy(status)).toBe(false);
-    for (const status of RUN_TERMINAL_STATES) expect(isRunBusy(status)).toBe(false);
+    for (const status of RUN_SETTLED_STATES) expect(isRunBusy(status)).toBe(false);
   });
 });

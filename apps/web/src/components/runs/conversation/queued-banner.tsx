@@ -1,6 +1,7 @@
 import {
   canFollowUpRun,
-  isRunTerminal,
+  isRunResumable,
+  isRunSettled,
   type RunContract,
   type RunContributionContract,
 } from "@otomat/domain";
@@ -9,8 +10,10 @@ import { useDeliverRunContributions } from "@web/api/runs/mutations";
 import { queuedCount } from "@web/lib/run/contribution";
 
 function queuedNote(status: RunContract["status"], label: string): string {
-  if (isRunTerminal(status)) {
-    return `${label} still queued and will never be delivered — this run is finished.`;
+  if (isRunSettled(status)) {
+    return isRunResumable(status)
+      ? `${label} still queued — this run stopped, so delivery waits for an explicit resume.`
+      : `${label} still queued and will never be delivered — this run is finished.`;
   }
   if (status === "queued" || status === "preparing") {
     return `${label} waiting for capacity and will be delivered in this run's first turn.`;

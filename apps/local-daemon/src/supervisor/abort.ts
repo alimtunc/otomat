@@ -1,5 +1,5 @@
 import { getRun, listAgentSessionsForRun, listStepRunsForRun, type RunRow } from "@otomat/db";
-import { runMachine } from "@otomat/domain";
+import { isRunSettled } from "@otomat/domain";
 
 import { drainRunEvents, drainSessionEvents, emitLedgerEvent, readRunEvents } from "#events";
 
@@ -26,7 +26,7 @@ function cancelRemainder(state: SupervisorState, run: RunRow, now: string): void
 export async function abortRun(state: SupervisorState, runId: string): Promise<void> {
   const { db, dataDir } = state;
   const run = getRun(db, runId);
-  if (!run || runMachine.isTerminal(run.status)) return;
+  if (!run || isRunSettled(run.status)) return;
 
   state.aborting.add(runId);
   try {
@@ -37,7 +37,7 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
     drainRunEvents(db, dataDir, runId);
 
     const current = getRun(db, runId);
-    if (!current || runMachine.isTerminal(current.status)) return;
+    if (!current || isRunSettled(current.status)) return;
 
     const sessions = listAgentSessionsForRun(db, runId);
     for (const session of sessions) drainSessionEvents(db, dataDir, runId, session.id);

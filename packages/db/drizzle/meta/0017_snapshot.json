@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "7c93f5a1-24be-4f0d-9a17-5e6c2d84b3f0",
+  "id": "dc6db968-a27a-418f-a879-dd8b0c997a3d",
   "prevId": "9c31f0a8-7b64-4d21-a0f5-1c8e6b2d4a70",
   "tables": {
     "agent_profiles": {
@@ -1403,13 +1403,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "step_run_id": {
-          "name": "step_run_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "seq": {
           "name": "seq",
           "type": "integer",
@@ -1502,15 +1495,6 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "run_contributions_step_run_id_step_runs_id_fk": {
-          "name": "run_contributions_step_run_id_step_runs_id_fk",
-          "tableFrom": "run_contributions",
-          "tableTo": "step_runs",
-          "columnsFrom": ["step_run_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "run_contributions_agent_session_id_agent_sessions_id_fk": {
           "name": "run_contributions_agent_session_id_agent_sessions_id_fk",
           "tableFrom": "run_contributions",
@@ -1594,6 +1578,13 @@
         },
         "completed_at": {
           "name": "completed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "abandoned_at": {
+          "name": "abandoned_at",
           "type": "text",
           "primaryKey": false,
           "notNull": false,

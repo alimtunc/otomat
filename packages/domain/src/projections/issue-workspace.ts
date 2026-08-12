@@ -2,17 +2,13 @@ import {
   CLOSED_ISSUE_WORKSPACE,
   type IssueWorkspace,
 } from "../contracts/entities/issue-workspace.js";
-import { isRunBusy, isRunTerminal } from "../state-machines/run.js";
+import { isRunBusy } from "../state-machines/run.js";
 import type { IssueExecutionEvidence } from "./issue-execution.js";
 
-/**
- * A run holds its issue's workspace while it is not terminal and still owns an
- * active worktree. Both halves matter: a merge drives the run terminal *and*
- * releases the worktree, and a worktree released any other way must not leave a
- * workspace pointing at a directory that is gone.
- */
+/** Only the two explicit closures end a cycle — a confirmed merge (`completed`) or an abandon stamp — and a workspace must never point at a worktree that is gone. */
 function holdsWorkspace(row: IssueExecutionEvidence): boolean {
-  return !isRunTerminal(row.run_status) && row.worktree_status === "active";
+  if (row.worktree_status !== "active") return false;
+  return row.run_abandoned_at === null && row.run_status !== "completed";
 }
 
 function outranks(candidate: IssueExecutionEvidence, best: IssueExecutionEvidence): boolean {
@@ -34,6 +30,7 @@ export function projectIssueWorkspace(rows: readonly IssueExecutionEvidence[]): 
     state: "open",
     run_id: best.run_id,
     branch: best.run_branch,
+    run_status: best.run_status,
     busy: isRunBusy(best.run_status),
   };
 }

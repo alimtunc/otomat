@@ -6,7 +6,7 @@ import {
 } from "@otomat/db";
 import {
   blockingPlanDependencies,
-  runMachine,
+  isRunSettled,
   type AgentCapacity,
   type RunQueuePosition,
   type RunWait,
@@ -44,7 +44,7 @@ export function runQueuePosition(state: SupervisorState, runId: string): RunQueu
 /** A run with a live turn, or one that has simply stopped, reports null and lets its status speak for itself. */
 export function runWait(state: SupervisorState, runId: string): RunWait | null {
   const run = getRun(state.db, runId);
-  if (!run || runMachine.isTerminal(run.status)) return null;
+  if (!run || isRunSettled(run.status)) return null;
 
   const queued = runQueuePosition(state, runId);
   if (queued !== null) return { kind: "concurrency_limit", ...queued };

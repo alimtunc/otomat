@@ -1,7 +1,8 @@
 import {
   canFollowUpRun,
   executableSteps,
-  isRunTerminal,
+  isRunResumable,
+  isRunSettled,
   resolveStepContributionRoute,
   type RunContributionContract,
   type RunDetail,
@@ -87,8 +88,12 @@ export function resolveContributionGate(
   if (connectionState !== "online") {
     return blocked("Daemon offline — reconnect to send a message.");
   }
-  if (isRunTerminal(detail.run.status)) {
-    return blocked("This run is finished — its session can no longer be resumed.");
+  if (isRunSettled(detail.run.status)) {
+    return blocked(
+      isRunResumable(detail.run.status)
+        ? "This run has stopped — resume it to continue the conversation."
+        : "This run is finished — its session can no longer be resumed.",
+    );
   }
   if (descriptors === undefined) {
     return blocked("Checking runtime availability…");

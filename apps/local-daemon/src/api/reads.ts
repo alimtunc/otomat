@@ -31,6 +31,7 @@ import {
   type RunContract,
   type RunContributionsResponse,
   type RunDetail,
+  type RunResumePlan,
   type RunWait,
   type SkillContract,
 } from "@otomat/domain";
@@ -112,11 +113,17 @@ export function readRuns(
   return listRuns(db, options).map(toRun);
 }
 
-/** `wait` comes from the live scheduler, not the rows: a `queued` run must say what it is queued behind. */
-export function readRunDetail(db: Db, runId: string, wait: RunWait | null): RunDetail | null {
+/** The live view of one run: `wait` and `resume` come from the scheduler rather than the rows, so a `queued` run says what it waits on and a stopped one says what resuming it would do. */
+export function readRunDetail(
+  db: Db,
+  runId: string,
+  live: { wait: RunWait | null; resume: RunResumePlan },
+): RunDetail | null {
   const run = getRun(db, runId);
   if (!run) return null;
   const worktree = run.worktree_id ? findWorktreeById(db, run.worktree_id) : undefined;
+  const evidence = listIssueExecutionEvidence(db, { issueId: run.issue_id });
+  const workspace = projectIssueWorkspace(evidence);
   return {
     run: toRun(run),
     steps: listStepRunsForRun(db, runId).map((step) =>
@@ -127,7 +134,9 @@ export function readRunDetail(db: Db, runId: string, wait: RunWait | null): RunD
     worktree_path: worktree?.path ?? null,
     base_branch:
       worktree?.base_ref === undefined || worktree.base_ref === "" ? null : worktree.base_ref,
-    wait,
+    wait: live.wait,
+    resume: live.resume,
+    holds_workspace: workspace.state === "open" && workspace.run_id === runId,
   };
 }
 
