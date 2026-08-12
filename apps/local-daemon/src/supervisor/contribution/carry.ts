@@ -12,7 +12,6 @@ import type { SupervisorState } from "../state.js";
 import { assertContributionTransitions } from "../transitions.js";
 import { emitContributionEvents } from "./events.js";
 
-/** What the spawn actually did with the batch its turn was carrying. */
 export type CarryOutcome =
   | { kind: "delivered" }
   | { kind: "released" }

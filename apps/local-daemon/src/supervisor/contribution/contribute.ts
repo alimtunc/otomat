@@ -74,7 +74,6 @@ function assertStepAcceptsContributions(
   }
 }
 
-/** Persists one user message on its step as `queued` — always — then tries to deliver it right away. */
 export async function contributeToRun(
   state: SupervisorState,
   runId: string,
@@ -105,7 +104,6 @@ function requireOwnContribution(
   return row;
 }
 
-/** Re-queues a failed message that never reached the provider, then retries the run's queue. */
 export async function retryRunContribution(
   state: SupervisorState,
   runId: string,
@@ -126,7 +124,6 @@ export async function retryRunContribution(
   return requireRunContribution(state, contributionId);
 }
 
-/** Withdraws a message no turn ever carried. The row stays in the conversation as `canceled`. */
 export function cancelRunContribution(
   state: SupervisorState,
   runId: string,

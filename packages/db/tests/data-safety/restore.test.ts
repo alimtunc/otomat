@@ -81,10 +81,8 @@ it("replaces the database from a validated backup and preserves the replaced cop
   const reopened = createClient(dbPath);
   try {
     expect(reopened.sqlite.prepare("SELECT value FROM evidence").pluck().get()).toBe("before");
-    const { preservedPath } = restored;
-    if (preservedPath === null) throw new Error("a restore must preserve the previous database");
-    expect(preservedPath).toContain("pre-restore-");
-    expect(readdirSync(preservedPath)).toContain("otomat.db");
+    expect(restored.preservedPath).toContain("pre-restore-");
+    expect(readdirSync(restored.preservedPath)).toContain("otomat.db");
   } finally {
     reopened.sqlite.close();
   }

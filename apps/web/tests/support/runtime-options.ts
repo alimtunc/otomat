@@ -1,8 +1,6 @@
 import type { ProviderOptionSet } from "@otomat/domain";
 import { vi } from "vitest";
 
-import type { MockedQueryResult } from "./query-result.js";
-
 /** The options a runtime and model announce, for surfaces that render an effort or option picker. Announces none by default, so a surface under test invents no level. */
 export function providerOptionSet(overrides: Partial<ProviderOptionSet> = {}): ProviderOptionSet {
   return {
@@ -15,9 +13,7 @@ export function providerOptionSet(overrides: Partial<ProviderOptionSet> = {}): P
 }
 
 /** What `useRuntimeProviderOptions` resolves to in a mocked `@web/api/daemon/queries`; called from inside the hook so the module mock stays hoistable. */
-export function providerOptionSetQueryResult(
-  set: ProviderOptionSet = providerOptionSet(),
-): MockedQueryResult<ProviderOptionSet> {
+export function providerOptionSetQueryResult(set: ProviderOptionSet = providerOptionSet()) {
   return {
     data: set,
     isPending: false,

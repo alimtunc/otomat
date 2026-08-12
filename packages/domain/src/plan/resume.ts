@@ -1,4 +1,4 @@
-import { stepRunMachine, type StepRunState } from "../state-machines/step-run.js";
+import { isStepSettled, type StepRunState } from "../state-machines/step-run.js";
 
 interface ResumableSession {
   step_run_id: string;
@@ -17,26 +17,11 @@ interface ResumableCompeteGroup {
 }
 
 /** A candidate its group decided against: the worktree is archived, so no turn of it will ever run again. */
-export function isCompeteLoser(
-  step: ResumableStep,
-  groups: readonly ResumableCompeteGroup[],
-): boolean {
+function isCompeteLoser(step: ResumableStep, groups: readonly ResumableCompeteGroup[]): boolean {
   if (step.compete_group_id === null) return false;
   const group = groups.find((candidate) => candidate.id === step.compete_group_id);
   if (!group || group.winner_step_run_id === null) return false;
   return group.winner_step_run_id !== step.id;
-}
-
-/**
- * Stricter than {@link isCompeteLoser} on purpose: a resume re-enters the run's
- * one canonical session, so an undecided candidate is ambiguous, not merely open.
- */
-function isResumableCandidate(
-  step: ResumableStep,
-  groups: readonly ResumableCompeteGroup[],
-): boolean {
-  if (step.compete_group_id === null) return true;
-  return groups.some((group) => group.winner_step_run_id === step.id);
 }
 
 /** The session a follow-up on this step would resume: the newest one the provider can still be re-entered through. */
@@ -57,8 +42,8 @@ export function resolveStepContributionRoute<Session extends ResumableSession>(
 ): StepContributionRoute | null {
   if (isCompeteLoser(step, groups)) return null;
   if (latestSessionForStep(sessions, step.id)) return "steering";
-  // A terminal step that never opened a session has no first turn left to carry anything.
-  return stepRunMachine.isTerminal(step.status) ? null : "first_turn";
+  // A settled step that never opened a session has no first turn left to carry anything.
+  return isStepSettled(step.status) ? null : "first_turn";
 }
 
 /** The latest resumable session on the furthest eligible step; losing compete candidates are excluded. */
@@ -68,12 +53,17 @@ export function selectLatestResumableSession<Session extends ResumableSession>(
   groups: readonly ResumableCompeteGroup[],
 ): Session | undefined {
   const stepById = new Map(steps.map((step) => [step.id, step]));
+  const winnerStepIds = new Set(
+    groups.flatMap((group) =>
+      group.winner_step_run_id === null ? [] : [group.winner_step_run_id],
+    ),
+  );
   let latest: Session | undefined;
   let latestStepIndex = -1;
   for (const session of sessions) {
     if (session.provider_session_id === null) continue;
     const step = stepById.get(session.step_run_id);
-    if (step && !isResumableCandidate(step, groups)) continue;
+    if (step?.compete_group_id && !winnerStepIds.has(step.id)) continue;
     const stepIndex = step?.idx ?? -1;
     if (stepIndex >= latestStepIndex) {
       latest = session;

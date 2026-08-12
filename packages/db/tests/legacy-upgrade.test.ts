@@ -184,7 +184,7 @@ interface JournalEntry {
   breakpoints: boolean;
 }
 
-const STEERING_MIGRATION = "0017_run_contribution_steering";
+const STEERING_MIGRATION = "0018_run_contribution_steering";
 
 /** Stages the schema as it stood the migration before `tag`, so a data migration can be exercised on real prior rows. */
 function migrateUpToExcluding(dir: string, dbPath: string, tag: string): void {

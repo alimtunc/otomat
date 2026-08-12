@@ -120,7 +120,7 @@ it("treats an existing empty database as damaged instead of initializing over it
 
 it("reports available and required bytes when disk space is insufficient", () => {
   expect(() => assertSufficientDiskSpace(1024, 4096)).toThrow(
-    expect.objectContaining({
+    expect.objectContaining<DataSafetyError>({
       code: "low_disk",
       availableBytes: 1024,
       requiredBytes: 4096,

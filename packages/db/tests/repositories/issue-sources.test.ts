@@ -12,8 +12,6 @@ import {
 import { createTempDb, seedProject, type TempDb } from "../support/temp-db.js";
 
 function source(overrides: Partial<NewIssueSource> = {}): NewIssueSource {
-  // Both project fields are resolved to definite strings, which is the branch of the union an insert must land in.
-  const { external_project_id = "", external_project_name = "", ...rest } = overrides;
   return {
     id: "s1",
     project_id: "p1",
@@ -21,9 +19,7 @@ function source(overrides: Partial<NewIssueSource> = {}): NewIssueSource {
     external_team_id: "team-uuid",
     external_team_key: "OTO",
     external_team_name: "Otomat",
-    ...rest,
-    external_project_id,
-    external_project_name,
+    ...overrides,
   };
 }
 

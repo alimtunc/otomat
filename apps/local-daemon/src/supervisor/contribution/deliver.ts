@@ -12,9 +12,9 @@ import {
 } from "@otomat/db";
 import {
   canFollowUpRun,
+  isRunSettled,
   latestSessionForStep,
   resolveStepContributionRoute,
-  runMachine,
 } from "@otomat/domain";
 
 import { createRuntimeAdapter, type KnownRuntimeId } from "#runtime";
@@ -151,10 +151,10 @@ export async function deliverQueuedContributions(
   }
 }
 
-/** A terminal run produces no further turn, so its unclaimed queue is withdrawn rather than left waiting forever. */
+/** A settled run starts no further turn on its own, so its unclaimed queue is withdrawn rather than left waiting forever. */
 export function cancelUndeliverableContributions(state: SupervisorState, runId: string): void {
   const run = getRun(state.db, runId);
-  if (!run || !runMachine.isTerminal(run.status)) return;
+  if (!run || !isRunSettled(run.status)) return;
   const now = new Date().toISOString();
   for (const row of listClaimableRunContributions(state.db, runId)) {
     assertContributionTransitions([row], "canceled");
