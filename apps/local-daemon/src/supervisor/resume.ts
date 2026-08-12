@@ -84,7 +84,7 @@ export function resolveSessionResumeTurn(
   state: SupervisorState,
   run: RunRow,
   session: AgentSessionRow,
-  prompt: string,
+  prompt: string | null,
 ): ResumeTurn {
   const { db } = state;
   const runId = run.id;

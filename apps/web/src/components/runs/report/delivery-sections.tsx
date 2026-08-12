@@ -1,5 +1,6 @@
 import type { RunCompletionReport } from "@otomat/domain";
 import { Markdown } from "@otomat/ui";
+import { commentAnchorLabel } from "@web/components/runs/review/comment/anchor";
 
 import { FactEvidence } from "./fact-evidence";
 import { ReportSection } from "./section";
@@ -46,9 +47,7 @@ function ReviewAndPublication({ report }: { report: RunCompletionReport }) {
         {report.review.open_comments.map((comment) => (
           <div key={comment.id} className="mt-2 border-l-2 border-iris/35 pl-3">
             <div className="flex items-center gap-2">
-              <code className="text-xs">
-                {comment.file_path}:{comment.line}
-              </code>
+              <code className="text-xs">{commentAnchorLabel(comment)}</code>
               <FactEvidence report={report} evidence={comment.evidence[0]} />
             </div>
             <Markdown value={comment.body} className="mt-1 text-text-secondary" />

@@ -67,10 +67,11 @@ function renderReview(report: RunCompletionReport): string[] {
     return [`Review: ${report.review.state}; no open comments`];
   return [
     `Review: ${report.review.open_comments.length} open of ${report.review.total_comments}`,
-    ...report.review.open_comments.map(
-      (comment) =>
-        `- ${evidenceLink(report, `${comment.file_path}:${comment.line}`, comment.evidence[0])} — ${comment.body}`,
-    ),
+    ...report.review.open_comments.map((comment) => {
+      const anchor =
+        comment.line === null ? comment.file_path : `${comment.file_path}:${comment.line}`;
+      return `- ${evidenceLink(report, anchor, comment.evidence[0])} — ${comment.body}`;
+    }),
   ];
 }
 

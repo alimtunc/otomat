@@ -336,6 +336,7 @@ it("fetches the review surface and posts a pinned comment", async () => {
     return jsonResponse({
       review: { id: "rv1", run_id: "run-1", status: "in_review" },
       comments: [COMMENT],
+      fix_authority: { kind: "otomat", reason: "Otomat owns this branch." },
     });
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
@@ -434,9 +435,13 @@ it("reads and publishes the run pull request", async () => {
 
   expect((await client.getPullRequest("run-1")).pull_request).toBeNull();
 
-  const prepared = await client.preparePullRequest("run-1", { title: "First slice", body: "" });
+  const prepared = await client.preparePullRequest("run-1", {
+    title: "First slice",
+    body: "",
+    mode: "draft",
+  });
   expect(prepared.pull_request?.publication_status).toBe("not_configured");
-  expect(lastBody).toEqual({ title: "First slice", body: "" });
+  expect(lastBody).toEqual({ title: "First slice", body: "", mode: "draft" });
 });
 
 it("registers a repository and parses the project + repository pair", async () => {

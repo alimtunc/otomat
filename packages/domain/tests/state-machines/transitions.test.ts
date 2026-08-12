@@ -4,7 +4,7 @@ import { agentSessionMachine } from "#domain/state-machines/agent-session";
 import { competeGroupMachine } from "#domain/state-machines/compete-group";
 import { issueMachine } from "#domain/state-machines/issue";
 import { linearWriteMachine } from "#domain/state-machines/linear-write";
-import { IllegalTransitionError } from "#domain/state-machines/machine";
+import { IllegalTransitionError, type StateMachine } from "#domain/state-machines/machine";
 import { pullRequestMachine } from "#domain/state-machines/pull-request";
 import { pullRequestPublicationMachine } from "#domain/state-machines/pull-request-publication";
 import { reviewMachine } from "#domain/state-machines/review";
@@ -26,7 +26,8 @@ import {
 } from "#domain/state-machines/run-contribution";
 import { stepRunMachine } from "#domain/state-machines/step-run";
 
-const machines = [
+// Widened so the heterogeneous list has one call signature; each machine's own states stay checked at its definition.
+const machines: StateMachine<string>[] = [
   issueMachine,
   runMachine,
   stepRunMachine,

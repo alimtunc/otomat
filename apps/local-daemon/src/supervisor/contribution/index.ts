@@ -7,5 +7,5 @@ export {
   RunContributionNotRetriableError,
   RunContributionStepClosedError,
 } from "./contribute.js";
-export { deliverQueuedContributions } from "./deliver.js";
+export { cancelUndeliverableContributions, deliverQueuedContributions } from "./deliver.js";
 export { reconcileContributionClaims } from "./reconcile.js";

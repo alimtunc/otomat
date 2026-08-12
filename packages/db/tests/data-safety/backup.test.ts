@@ -1,4 +1,5 @@
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -79,14 +80,15 @@ it("retains a usable backup when a pending migration fails", async () => {
   const dbPath = join(scratch, "otomat.db");
   runMigrations(dbPath);
   const current = createClient(dbPath);
-  // Replaying from 0001 always collides on `ADD COLUMN`; the oldest row stays so the backup keeps a migration history.
   current.sqlite.exec(`
     INSERT INTO projects (id, name, root_path)
     VALUES ('proof-project', 'Proof', '/tmp/proof');
     DELETE FROM __drizzle_migrations
-    WHERE created_at > (SELECT MIN(created_at) FROM __drizzle_migrations);
+    WHERE created_at = (SELECT MAX(created_at) FROM __drizzle_migrations);
   `);
   current.sqlite.close();
+  // Read-only forces the replay to fail whatever the newest migration does; a rebuild replays cleanly.
+  chmodSync(dbPath, 0o400);
 
   let failure: DataSafetyError | null = null;
   try {

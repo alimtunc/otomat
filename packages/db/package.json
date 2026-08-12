@@ -21,7 +21,7 @@
   },
   "scripts": {
     "build": "tsgo -p tsconfig.json",
-    "typecheck": "tsgo -p tsconfig.json --noEmit",
+    "typecheck": "tsgo -p tsconfig.json --noEmit && tsgo -p tsconfig.test.json",
     "test": "vitest run",
     "generate": "drizzle-kit generate",
     "migrate": "tsx src/bin/migrate.ts"

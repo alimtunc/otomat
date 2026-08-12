@@ -4,6 +4,7 @@ import { runMachine } from "@otomat/domain";
 import { drainRunEvents, drainSessionEvents, emitLedgerEvent, readRunEvents } from "#events";
 
 import { TARGETS } from "./classify.js";
+import { cancelUndeliverableContributions } from "./contribution/deliver.js";
 import { eventsForSession, findFinalStatus } from "./evidence.js";
 import { buildTerminalMarker } from "./markers.js";
 import { terminateGracefully } from "./process.js";
@@ -84,6 +85,7 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
       providerSessionId,
     });
   } finally {
+    cancelUndeliverableContributions(state, runId);
     state.aborting.delete(runId);
   }
 }

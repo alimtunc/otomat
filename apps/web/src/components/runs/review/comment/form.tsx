@@ -1,10 +1,11 @@
 import { Button, Field, FieldControl, Textarea } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
+import { commentAnchorLabel } from "@web/components/runs/review/comment/anchor";
 import { fieldErrorProps } from "@web/lib/form";
 
 export interface ReviewCommentFormProps {
   filePath: string;
-  line: number;
+  line: number | null;
   onSubmit: (body: string) => Promise<void>;
   onClose: () => void;
 }
@@ -17,6 +18,8 @@ export function ReviewCommentForm({ filePath, line, onSubmit, onClose }: ReviewC
       onClose();
     },
   });
+  const placeholder =
+    line === null ? "What should change in this file?" : "What should change on this line?";
 
   return (
     <form
@@ -28,7 +31,7 @@ export function ReviewCommentForm({ filePath, line, onSubmit, onClose }: ReviewC
       }}
     >
       <p className="font-mono text-xs text-text-tertiary">
-        Comment pinned to {filePath}:{line}
+        Comment pinned to {commentAnchorLabel({ file_path: filePath, line })}
       </p>
       <form.Field
         name="body"
@@ -46,7 +49,7 @@ export function ReviewCommentForm({ filePath, line, onSubmit, onClose }: ReviewC
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.value)}
-                placeholder="What should change on this line?"
+                placeholder={placeholder}
                 aria-label="Review comment"
               />
             </FieldControl>

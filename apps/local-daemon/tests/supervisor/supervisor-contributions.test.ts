@@ -201,6 +201,20 @@ it("fails a message the run cannot deliver and keeps it retriable", async () => 
   expect(spawn.calls).toBe(0);
 });
 
+it("withdraws a message the run can no longer carry once it is aborted", async () => {
+  const { supervisor } = makeSupervisor(fix, "linger");
+  const run = await supervisor.start({ prompt: "do the work" });
+  const queued = await supervisor.contribute(run.id, firstStepOf(fix.db, run.id), "never mind");
+  expect(queued.status).toBe("queued");
+
+  await supervisor.abort(run.id);
+  await supervisor.settle();
+
+  const [row] = contributions(run.id);
+  expect(row?.status).toBe("canceled");
+  expect(row?.delivered_at).toBeNull();
+});
+
 it("fails an unreachable step's batch and still delivers the step that can take one", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "complete");
   seedWorkflowRun(fix.db, {

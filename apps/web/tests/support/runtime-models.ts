@@ -1,6 +1,8 @@
 import type { RuntimeModelCatalog } from "@otomat/domain";
 import { vi } from "vitest";
 
+import type { MockedQueryResult } from "./query-result.js";
+
 /** A runtime model catalog with the shape the daemon returns, for surfaces that render a model picker. */
 export function modelCatalog(overrides: Partial<RuntimeModelCatalog> = {}): RuntimeModelCatalog {
   return {
@@ -13,7 +15,9 @@ export function modelCatalog(overrides: Partial<RuntimeModelCatalog> = {}): Runt
 }
 
 /** What `useRuntimeModels` resolves to in a mocked `@web/api/daemon/queries`; called from inside the hook so the module mock stays hoistable. */
-export function modelCatalogQueryResult(catalog: RuntimeModelCatalog = modelCatalog()) {
+export function modelCatalogQueryResult(
+  catalog: RuntimeModelCatalog = modelCatalog(),
+): MockedQueryResult<RuntimeModelCatalog> {
   return {
     data: catalog,
     isPending: false,

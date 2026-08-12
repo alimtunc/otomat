@@ -1,4 +1,5 @@
 import {
+  diffFileBlobsResponseSchema,
   reviewCommentContractSchema,
   reviewDetailSchema,
   runContractSchema,
@@ -7,13 +8,19 @@ import {
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { getJson, postJson } from "./http.js";
+import { getJson, postJson, queryString } from "./http.js";
 
 export function createReviewsClient(config: DaemonClientConfig) {
   return {
     async getRunReview(id: string) {
       return reviewDetailSchema.parse(
         await getJson(config, `/api/runs/${encodeURIComponent(id)}/review`),
+      );
+    },
+    async getDiffFileBlobs(id: string, path: string, sha: string) {
+      const run = encodeURIComponent(id);
+      return diffFileBlobsResponseSchema.parse(
+        await getJson(config, `/api/runs/${run}/diff/file${queryString({ path, sha })}`),
       );
     },
     async addReviewComment(id: string, request: CreateReviewCommentRequest) {

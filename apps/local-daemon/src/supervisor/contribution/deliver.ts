@@ -1,5 +1,5 @@
 import {
-  claimRunContributions,
+  cancelRunContribution as writeRunContributionCanceled,
   failRunContributionDelivery,
   getRun,
   listAgentSessionsForRun,
@@ -10,17 +10,21 @@ import {
   type RunContributionRow,
   type RunRow,
 } from "@otomat/db";
-import { canFollowUpRun, isCompeteLoser, latestSessionForStep } from "@otomat/domain";
+import {
+  canFollowUpRun,
+  latestSessionForStep,
+  resolveStepContributionRoute,
+  runMachine,
+} from "@otomat/domain";
 
 import { createRuntimeAdapter, type KnownRuntimeId } from "#runtime";
 
 import { failureReason } from "../fail-run.js";
 import { spawnTurn } from "../lifecycle.js";
 import { resolveSessionResumeTurn, RunNotResumableError, type ResumeTurn } from "../resume.js";
-import { clearWorkerStartEvidence } from "../start-gate.js";
 import { hasRunActivity, type SupervisorState } from "../state.js";
 import { assertContributionTransitions } from "../transitions.js";
-import { emitContributionEvents } from "./events.js";
+import { emitContributionEvent, emitContributionEvents, requireRunContribution } from "./events.js";
 
 /** A runtime with no steering channel cannot take a follow-up at all; saying so beats queueing forever. */
 function requireSteerableRuntime(runtime: KnownRuntimeId, runId: string): void {
@@ -38,34 +42,43 @@ function steerableSessionForStep(
   return latestSessionForStep(resumable, stepRunId);
 }
 
-/** Claims the batch, hands it to one resume turn of its own step, and lets the spawn resolve it. */
+function failBatch(
+  state: SupervisorState,
+  batch: readonly RunContributionRow[],
+  reason: string,
+): void {
+  if (batch.length === 0) return;
+  const ids = batch.map((row) => row.id);
+  assertContributionTransitions(batch, "failed");
+  failRunContributionDelivery(state.db, ids, reason);
+  emitContributionEvents(state, ids);
+}
+
+/** Hands the step's queue to one resume turn of its own session; `spawnTurn` claims it and resolves it from what the spawn did. */
 async function sendBatch(
   state: SupervisorState,
   run: RunRow,
   session: AgentSessionRow,
   batch: readonly RunContributionRow[],
 ): Promise<void> {
-  const ids = batch.map((row) => row.id);
   let turn: ResumeTurn;
   try {
-    // The batch is the whole prompt here; the spawn composes it from what it finds claimed.
-    turn = resolveSessionResumeTurn(state, run, session, "");
+    turn = resolveSessionResumeTurn(state, run, session, null);
     requireSteerableRuntime(turn.context.runtime, run.id);
   } catch (error) {
     if (!(error instanceof RunNotResumableError)) throw error;
-    assertContributionTransitions(batch, "failed");
-    failRunContributionDelivery(state.db, ids, failureReason(error));
-    emitContributionEvents(state, ids);
+    failBatch(state, batch, failureReason(error));
     return;
   }
 
-  clearWorkerStartEvidence(turn.context.agentSessionDir);
-  claimRunContributions(state.db, ids, turn.context.agentSessionId);
   try {
     await spawnTurn(state, turn.context, "resume", turn.providerSessionId);
   } catch (error) {
-    // The spawn already resolved the carried batch as failed; the run's own settle reports the turn.
-    console.error(`[otomat] contribution delivery on run ${run.id} could not start`, error);
+    // `spawnTurn` resolves whatever it claimed; a throw before that leaves rows queued, and silence would strand them.
+    const stranded = batch
+      .map((row) => requireRunContribution(state, row.id))
+      .filter((row) => row.status === "queued" && row.agent_session_id === null);
+    failBatch(state, stranded, failureReason(error));
   }
 }
 
@@ -84,16 +97,24 @@ function nextDeliveryTarget(
   const groups = listCompeteGroupsForRun(db, runId);
   for (const row of queued) {
     const step = steps.find((candidate) => candidate.id === row.step_run_id);
-    if (!step || isCompeteLoser(step, groups)) continue;
-    const session = steerableSessionForStep(sessions, step.id);
-    if (session) return { kind: "send", stepRunId: step.id, session };
-    if (latestSessionForStep(sessions, step.id)) {
+    if (!step) continue;
+    // One routing rule for accepting a message and for delivering it, so the two can never disagree.
+    const route = resolveStepContributionRoute(step, sessions, groups);
+    if (route === null) {
       return {
         kind: "unreachable",
         stepRunId: step.id,
-        reason: `step ${step.id} has no provider session to resume`,
+        reason: `step ${step.id} is ${step.status} and will not run another turn`,
       };
     }
+    if (route === "first_turn") continue;
+    const session = steerableSessionForStep(sessions, step.id);
+    if (session) return { kind: "send", stepRunId: step.id, session };
+    return {
+      kind: "unreachable",
+      stepRunId: step.id,
+      reason: `step ${step.id} has no provider session to resume`,
+    };
   }
   return null;
 }
@@ -125,10 +146,19 @@ export async function deliverQueuedContributions(
       return;
     }
 
-    const ids = batch.map((row) => row.id);
-    assertContributionTransitions(batch, "failed");
-    failRunContributionDelivery(state.db, ids, target.reason);
-    emitContributionEvents(state, ids);
+    failBatch(state, batch, target.reason);
     queued = listClaimableRunContributions(state.db, runId);
+  }
+}
+
+/** A terminal run produces no further turn, so its unclaimed queue is withdrawn rather than left waiting forever. */
+export function cancelUndeliverableContributions(state: SupervisorState, runId: string): void {
+  const run = getRun(state.db, runId);
+  if (!run || !runMachine.isTerminal(run.status)) return;
+  const now = new Date().toISOString();
+  for (const row of listClaimableRunContributions(state.db, runId)) {
+    assertContributionTransitions([row], "canceled");
+    writeRunContributionCanceled(state.db, row.id, now);
+    emitContributionEvent(state, requireRunContribution(state, row.id));
   }
 }

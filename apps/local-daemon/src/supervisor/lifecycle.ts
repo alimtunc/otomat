@@ -146,7 +146,6 @@ export async function spawnTurn(
       ctx.prompt,
       carried.map((row) => row.body),
     );
-    if (prompt.length === 0) throw new Error(`turn ${ctx.agentSessionId} has no prompt to run`);
     proc = state.spawn({ ...ctx, prompt, mode, providerSessionId });
     state.starting.set(ctx.agentSessionId, {
       runId: ctx.runId,

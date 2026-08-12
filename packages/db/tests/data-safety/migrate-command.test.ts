@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -21,12 +21,13 @@ it("routes the migration command through safe preparation before applying pendin
   const dbPath = join(scratch, "otomat.db");
   runMigrations(dbPath);
   const client = createClient(dbPath, { fileMustExist: true });
-  // Replaying from 0001 always collides on `ADD COLUMN`; the oldest row stays so the backup keeps a migration history.
   client.sqlite.exec(`
     DELETE FROM __drizzle_migrations
-    WHERE created_at > (SELECT MIN(created_at) FROM __drizzle_migrations)
+    WHERE created_at = (SELECT MAX(created_at) FROM __drizzle_migrations)
   `);
   client.sqlite.close();
+  // Read-only forces the replay to fail whatever the newest migration does; a rebuild replays cleanly.
+  chmodSync(dbPath, 0o400);
   process.env.OTOMAT_DB_PATH = dbPath;
 
   await expect(import("#db/bin/migrate")).rejects.toMatchObject({

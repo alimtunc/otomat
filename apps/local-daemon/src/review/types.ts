@@ -1,5 +1,5 @@
 import type { Db, ReviewCommentRow, ReviewRow, RunRow } from "@otomat/db";
-import type { CreateReviewCommentRequest } from "@otomat/domain";
+import type { CreateReviewCommentRequest, ReviewFixAuthority } from "@otomat/domain";
 
 import type { CanonicalDiff, RepositoryResolver } from "#git";
 import type { ReconcileClassification } from "#supervisor";
@@ -24,6 +24,18 @@ export interface RunDiffResult {
 export interface ReviewDetailResult {
   review: ReviewRow | null;
   comments: ReviewCommentRow[];
+  fixAuthority: ReviewFixAuthority;
+}
+
+export interface FileBlobsRequest {
+  path: string;
+  /** The `DiffFile.sha` the reviewer is looking at; a mismatch is refused, never reconciled. */
+  sha: string;
+}
+
+export interface FileBlobsResult {
+  base: string | null;
+  head: string | null;
 }
 
 export interface FixPreparation {
@@ -45,6 +57,7 @@ export interface ReviewService {
   getReviewDetail(runId: string): ReviewDetailResult;
   /** Verifies the anchor against the live diff and captures the hunk snapshot before persisting. */
   addComment(run: Pick<RunRow, "id">, request: CreateReviewCommentRequest): ReviewCommentRow;
+  getFileBlobs(run: Pick<RunRow, "id">, request: FileBlobsRequest): FileBlobsResult;
   /** Builds the fix prompt without mutating anything; the caller spawns the turn, then marks. */
   prepareFix(run: RunRow, commentIds: string[]): FixPreparation;
   /** Stamps the selected comments and drives the review to `changes_requested`. */

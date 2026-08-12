@@ -1,10 +1,12 @@
 import type { ReviewCommentContract, RunDiffContract } from "@otomat/domain";
 
 export interface PartitionedComments {
-  /** Open comments still matching the live diff, grouped by file path then by line. */
-  anchored: Map<string, Map<number, ReviewCommentContract[]>>;
-  /** Comments detached from the live diff (closed, or whose anchor sha no longer matches a live file); rendered against their snapshot. */
-  archived: ReviewCommentContract[];
+  byLine: Map<string, Map<number, ReviewCommentContract[]>>;
+  byFile: Map<string, ReviewCommentContract[]>;
+  detached: ReviewCommentContract[];
+  /** Files carrying at least one placeable open comment; Hide reviewed must not swallow them. */
+  commentedPaths: ReadonlySet<string>;
+  anchoredIds: ReadonlySet<string>;
 }
 
 function isAnchored(diff: RunDiffContract | null, comment: ReviewCommentContract): boolean {
@@ -14,25 +16,36 @@ function isAnchored(diff: RunDiffContract | null, comment: ReviewCommentContract
   );
 }
 
-/** Anchors are immutable: a comment either matches the live diff exactly or renders against its snapshot. */
+/** Anchors are immutable: a comment either matches the live diff exactly or falls back to its pin. */
 export function partitionComments(
   diff: RunDiffContract | null,
   comments: ReviewCommentContract[],
 ): PartitionedComments {
-  const anchored = new Map<string, Map<number, ReviewCommentContract[]>>();
-  const archived: ReviewCommentContract[] = [];
+  const byLine = new Map<string, Map<number, ReviewCommentContract[]>>();
+  const byFile = new Map<string, ReviewCommentContract[]>();
+  const detached: ReviewCommentContract[] = [];
+  const commentedPaths = new Set<string>();
+  const anchoredIds = new Set<string>();
 
   for (const comment of comments) {
     if (!isAnchored(diff, comment)) {
-      archived.push(comment);
+      detached.push(comment);
       continue;
     }
-    const byLine = anchored.get(comment.file_path) ?? new Map<number, ReviewCommentContract[]>();
-    const atLine = byLine.get(comment.line) ?? [];
+    commentedPaths.add(comment.file_path);
+    anchoredIds.add(comment.id);
+    if (comment.line === null) {
+      const onFile = byFile.get(comment.file_path) ?? [];
+      onFile.push(comment);
+      byFile.set(comment.file_path, onFile);
+      continue;
+    }
+    const lines = byLine.get(comment.file_path) ?? new Map<number, ReviewCommentContract[]>();
+    const atLine = lines.get(comment.line) ?? [];
     atLine.push(comment);
-    byLine.set(comment.line, atLine);
-    anchored.set(comment.file_path, byLine);
+    lines.set(comment.line, atLine);
+    byLine.set(comment.file_path, lines);
   }
 
-  return { anchored, archived };
+  return { byLine, byFile, detached, commentedPaths, anchoredIds };
 }

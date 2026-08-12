@@ -5,6 +5,7 @@ import { agentCapacity, runWait, setAgentCapacity } from "./capacity.js";
 import { resumeRun, startRun } from "./commands.js";
 import {
   cancelRunContribution,
+  cancelUndeliverableContributions,
   contributeToRun,
   deliverQueuedContributions,
   reconcileContributionClaims,
@@ -21,6 +22,7 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
   state.advance = async (runId) => {
     await advanceRun(state, runId);
     await deliverQueuedContributions(state, runId);
+    cancelUndeliverableContributions(state, runId);
   };
   return {
     start: (request) => startRun(state, request),

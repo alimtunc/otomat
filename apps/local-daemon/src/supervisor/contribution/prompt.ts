@@ -19,8 +19,11 @@ function carriedHeader(count: number): string {
 }
 
 /** Messages that arrived before the turn could start ride along with its prompt instead of waiting for a further turn. */
-export function withCarriedContributions(base: string, bodies: readonly string[]): string {
+export function withCarriedContributions(base: string | null, bodies: readonly string[]): string {
+  if (base === null || base.length === 0) {
+    if (bodies.length === 0) throw new Error("a turn needs either a prompt or a carried message");
+    return buildContributionPrompt(bodies);
+  }
   if (bodies.length === 0) return base;
-  if (base.length === 0) return buildContributionPrompt(bodies);
   return [base, "", carriedHeader(bodies.length), "", buildContributionPrompt(bodies)].join("\n");
 }

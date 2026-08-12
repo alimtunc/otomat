@@ -315,11 +315,11 @@
       <h3>contributions <span class="tag resume">resting</span></h3>
       <div class="chain">
         <span class="arrow">POST</span> /:id/contributions <span class="arrow">·</span> /contributions/deliver <span class="arrow">·</span> post-settle<br>
-        <span class="arrow">→</span> <b>deliverQueuedContributions</b> <span class="arrow">(prompt = batch FIFO)</span><br>
-        <span class="arrow">→</span> resolveResumeTurn <span class="arrow">→</span> claim<br>
+        <span class="arrow">→</span> <b>deliverQueuedContributions</b> <span class="arrow">(batch d'une seule étape)</span><br>
+        <span class="arrow">→</span> resolveSessionResumeTurn <span class="arrow">→</span> claim<br>
         <span class="arrow">→</span> spawnTurn('resume')
       </div>
-      <p>Les messages en file partent au prochain tour sûr ; <code>sent</code> exige un worker réellement lancé.</p>
+      <p>Les messages en file partent au prochain tour sûr ; <code>delivered</code> exige un worker réellement lancé.</p>
     </div>
     <div class="card">
       <h3>abort / crash <span class="tag abort">terminal</span></h3>

@@ -36,7 +36,8 @@ export interface TurnContext {
   runId: string;
   stepRunId: string;
   agentSessionId: string;
-  prompt: string;
+  /** `null` when the turn has no prompt of its own and runs on the batch it carries. */
+  prompt: string | null;
   /** Evidence dir of the agent session, reused by every turn of that session. */
   agentSessionDir: string;
   /** Isolated working dir the turn mutates. Always present: a run that cannot own one is refused at launch. */
@@ -48,7 +49,9 @@ export interface TurnContext {
   config: ResolvedAgentConfig | null;
 }
 
-export interface SupervisedJob extends TurnContext {
+/** A job is a turn whose prompt is already composed, so the worker never has to ask what to run. */
+export interface SupervisedJob extends Omit<TurnContext, "prompt"> {
+  prompt: string;
   mode: "run" | "resume";
   providerSessionId: string | null;
 }

@@ -196,7 +196,7 @@ it("refuses a run whose every step is a losing compete candidate", () => {
       id: "loser-session",
       step_run_id: "loser",
       agent_id: "claude",
-      status: "completed",
+      status: "terminated",
       provider_session_id: "provider-loser",
     },
   ];
@@ -253,7 +253,7 @@ it("routes to the selected competitor, never to a later losing session", () => {
       id: "loser-session",
       step_run_id: "loser",
       agent_id: "unregistered-runtime",
-      status: "completed",
+      status: "terminated",
       provider_session_id: "provider-loser",
     },
   ];
