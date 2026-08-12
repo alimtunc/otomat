@@ -3,7 +3,7 @@ import { listRunContributionsForSession, markRunContributionsSettled, type Db } 
 import { assertContributionTransitions } from "../transitions.js";
 import type { ReconcileClassification } from "../types.js";
 
-/** An interrupted turn keeps its messages `sent`: the agent did receive them and the turn can still be resumed. */
+/** An interrupted turn keeps its messages `delivered`: the agent did receive them and the turn can still be resumed. */
 export function resolveSessionContributions(
   db: Db,
   agentSessionId: string,
@@ -12,13 +12,13 @@ export function resolveSessionContributions(
 ): void {
   if (classification === "interrupted") return;
   const delivered = listRunContributionsForSession(db, agentSessionId).filter(
-    (row) => row.status === "sent",
+    (row) => row.status === "delivered",
   );
   if (delivered.length === 0) return;
   const ids = delivered.map((row) => row.id);
   if (classification === "completed") {
-    assertContributionTransitions(delivered, "completed");
-    markRunContributionsSettled(db, ids, "completed", now);
+    assertContributionTransitions(delivered, "acknowledged");
+    markRunContributionsSettled(db, ids, "acknowledged", now);
     return;
   }
   assertContributionTransitions(delivered, "failed");

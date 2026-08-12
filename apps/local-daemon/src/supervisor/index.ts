@@ -14,7 +14,12 @@ export * from "./types.js";
 export { RunNotResumableError } from "./resume.js";
 export { WorkspaceAbandonRefusedError } from "./abandon.js";
 export { issueWorkspace, RunWorkspaceClosedError } from "./workspace.js";
-export { RunContributionNotFoundError, RunContributionNotRetriableError } from "./contributions.js";
+export {
+  RunContributionNotCancelableError,
+  RunContributionNotFoundError,
+  RunContributionNotRetriableError,
+  RunContributionStepClosedError,
+} from "./contribution/index.js";
 export { LaunchRefusedError } from "./launch-target.js";
 export { closeMergedRun, type MergeClosureConfig } from "./merge-closure.js";
 export { buildTerminalMarker } from "./markers.js";

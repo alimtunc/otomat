@@ -15,7 +15,14 @@ if (process.env.OTOMAT_STUB_ENV_FILE) {
 }
 
 // Drain stdin (the adapter pipes the prompt) so the parent never blocks on a full pipe.
-process.stdin.resume();
+const stdinFile = process.env.OTOMAT_STUB_STDIN_FILE;
+if (stdinFile) {
+  const chunks = [];
+  for await (const chunk of process.stdin) chunks.push(chunk);
+  writeFileSync(stdinFile, Buffer.concat(chunks));
+} else {
+  process.stdin.resume();
+}
 
 if (process.env.OTOMAT_STUB_STDERR) {
   process.stderr.write(`${process.env.OTOMAT_STUB_STDERR}\n`);

@@ -2016,7 +2016,7 @@
                       ><span class="action"
                         >Réutilise runtime, worktree, step/session et
                         <code>provider_session_id</code> ; wrapper resume/fix au-dessus de
-                        <code>resolveResumeTurn</code> + <code>spawnTurn('resume')</code>, le moteur
+                        <code>resolveSessionResumeTurn</code> + <code>spawnTurn('resume')</code>, le moteur
                         que la livraison des contributions partage (TRACE/F).</span
                       >
                     </div>
@@ -2221,7 +2221,7 @@
                     </div>
                     <div class="trace-node">
                       <span class="seq">seq 004</span
-                      ><span class="loc">resolveResumeTurn + spawnTurn('resume')</span
+                      ><span class="loc">resolveSessionResumeTurn + spawnTurn('resume')</span
                       ><span class="action"
                         >Même session provider, même worktree, même run : la livraison ne crée pas
                         une seconde voie de reprise. Elle appelle les deux séparément parce que le
@@ -2848,8 +2848,8 @@
                 <p>Node prêt, groupe compete, worktrees candidats et scheduling parallèle.</p>
               </article>
               <article class="key-card">
-                <a href="../../apps/local-daemon/src/supervisor/contributions.ts"
-                  >apps/local-daemon/src/supervisor/contributions.ts</a
+                <a href="../../apps/local-daemon/src/supervisor/contribution/deliver.ts"
+                  >apps/local-daemon/src/supervisor/contribution/deliver.ts</a
                 >
                 <h3>Contribution delivery</h3>
                 <p>Queue durable, batch FIFO, claim avant spawn et reconciliation des claims.</p>

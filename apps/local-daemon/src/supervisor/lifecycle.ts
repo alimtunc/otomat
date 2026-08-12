@@ -9,6 +9,13 @@ import { agentSessionMachine, isRunSettled, stepRunMachine } from "@otomat/domai
 
 import { startSessionTail } from "#events";
 
+import {
+  carriedContributions,
+  claimStepContributions,
+  resolveCarriedContributions,
+} from "./contribution/carry.js";
+import { withCarriedContributions } from "./contribution/prompt.js";
+import { failureReason } from "./fail-run.js";
 import { waitForWorkerIdentity } from "./identity.js";
 import { runInitCommandBatch, runStillLive } from "./init-commands.js";
 import { settleRun } from "./settle/index.js";
@@ -90,16 +97,13 @@ function trackTurn(
  * Throws when the run is already claiming or in-flight. A spawn failure kills any child
  * and settles the run before rethrowing. The run/step/session rows must already exist
  * (via `prepareRun`).
- *
- * Resolves `false` on every path that ends without a started worker, so a caller
- * holding a claim can tell "nothing reached the provider" from "the turn is live".
  */
 export async function spawnTurn(
   state: SupervisorState,
   ctx: TurnContext,
   mode: "run" | "resume",
   providerSessionId: string | null,
-): Promise<boolean> {
+): Promise<void> {
   const { db, slots, inflight, claiming, waiting, aborting } = state;
   if (claiming.has(ctx.agentSessionId) || inflight.has(ctx.agentSessionId)) {
     throw new Error(`session ${ctx.agentSessionId} is already starting`);
@@ -115,14 +119,15 @@ export async function spawnTurn(
     released = true;
     slots.release();
   };
+  const abandon = (): void => {
+    resolveCarriedContributions(state, ctx.agentSessionId, { kind: "released" });
+    release();
+  };
 
   let proc: SessionProcess | undefined;
   let tail: ReturnType<typeof startSessionTail> | undefined;
   try {
-    if (!runStillLive(state, ctx.runId)) {
-      release();
-      return false;
-    }
+    if (!runStillLive(state, ctx.runId)) return abandon();
 
     advanceToRunning(state, ctx);
     if (ctx.worktreeInit !== undefined) {
@@ -132,13 +137,16 @@ export async function spawnTurn(
         label: ctx.worktreeInit.label,
         shouldContinue: () => runStillLive(state, ctx.runId),
       });
-      if (!initialized) {
-        release();
-        return false;
-      }
+      if (!initialized) return abandon();
     }
     clearWorkerStartEvidence(ctx.agentSessionDir);
-    proc = state.spawn({ ...ctx, mode, providerSessionId });
+    claimStepContributions(state, ctx.stepRunId, ctx.agentSessionId);
+    const carried = carriedContributions(state, ctx.agentSessionId);
+    const prompt = withCarriedContributions(
+      ctx.prompt,
+      carried.map((row) => row.body),
+    );
+    proc = state.spawn({ ...ctx, prompt, mode, providerSessionId });
     state.starting.set(ctx.agentSessionId, {
       runId: ctx.runId,
       proc,
@@ -160,14 +168,14 @@ export async function spawnTurn(
       if (readyRun && !isRunSettled(readyRun.status) && !aborting.has(ctx.runId)) {
         settleLive(state, ctx, exit);
       }
-      release();
-      return false;
+      return abandon();
     }
     tail = startSessionTail(state.db, state.dataDir, ctx.runId, ctx.agentSessionId);
     proc.start();
+    // The released worker is the evidence, and it must land before the exit monitor can settle the batch.
+    resolveCarriedContributions(state, ctx.agentSessionId, { kind: "delivered" });
     state.starting.delete(ctx.agentSessionId);
     trackTurn(state, ctx, proc, release, tail);
-    return true;
   } catch (error) {
     release();
     tail?.stop();
@@ -175,6 +183,10 @@ export async function spawnTurn(
       proc.kill("SIGKILL");
       await proc.exited;
     }
+    resolveCarriedContributions(state, ctx.agentSessionId, {
+      kind: "failed",
+      reason: failureReason(error),
+    });
     if (!aborting.has(ctx.runId)) settleLive(state, ctx);
     throw error;
   } finally {

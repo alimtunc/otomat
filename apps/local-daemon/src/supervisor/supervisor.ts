@@ -5,11 +5,13 @@ import { appendRunStep } from "./append-step.js";
 import { agentCapacity, runWait, setAgentCapacity } from "./capacity.js";
 import { resumeRun, startRun } from "./commands.js";
 import {
+  cancelRunContribution,
+  cancelUndeliverableContributions,
   contributeToRun,
   deliverQueuedContributions,
   reconcileContributionClaims,
   retryRunContribution,
-} from "./contributions.js";
+} from "./contribution/index.js";
 import { terminateGracefully } from "./process.js";
 import { recoverCompeteSelections, selectCompeteWinner } from "./promotion.js";
 import { reconcileRuns } from "./reconcile.js";
@@ -23,6 +25,7 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
   state.advance = async (runId) => {
     await advanceRun(state, runId);
     await deliverQueuedContributions(state, runId);
+    cancelUndeliverableContributions(state, runId);
   };
   return {
     start: (request) => startRun(state, request),
@@ -34,9 +37,11 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     abandon: (runId) => abandonWorkspace(state, runId),
     workspaceClosure: (runId) => workspaceClosureFacts(state, runId),
     appendStep: (runId, input) => appendRunStep(state, runId, input),
-    contribute: (runId, body) => contributeToRun(state, runId, body),
+    contribute: (runId, stepRunId, body) => contributeToRun(state, runId, stepRunId, body),
     retryContribution: (runId, contributionId) =>
       retryRunContribution(state, runId, contributionId),
+    cancelContribution: (runId, contributionId) =>
+      cancelRunContribution(state, runId, contributionId),
     deliverContributions: (runId) => deliverQueuedContributions(state, runId),
     selectWinner: (runId, groupId, stepRunId) =>
       selectCompeteWinner(state, runId, groupId, stepRunId),

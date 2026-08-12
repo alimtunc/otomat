@@ -70,9 +70,10 @@ const RUN_STATUS: StatusMap<RunState> = {
 
 const RUN_CONTRIBUTION_STATUS: StatusMap<RunContributionState> = {
   queued: { tone: "neutral", icon: Clock, label: "Queued" },
-  sent: { tone: "iris", icon: Send, label: "Sent" },
-  completed: { tone: "success", icon: CheckCircle2, label: "Completed" },
+  delivered: { tone: "iris", icon: Send, label: "Delivered" },
+  acknowledged: { tone: "success", icon: CheckCircle2, label: "Acknowledged" },
   failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
+  canceled: { tone: "neutral", icon: Ban, label: "Canceled" },
 };
 
 const STEP_STATUS: StatusMap<StepRunState> = {

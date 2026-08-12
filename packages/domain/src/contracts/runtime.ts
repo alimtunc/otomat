@@ -3,11 +3,15 @@ import { z } from "zod";
 /** Wire id of the built-in deterministic fake runtime — a simulated runtime for tests and explicit development only. */
 export const FAKE_RUNTIME_ID = "fake";
 
+/** How far a runtime can carry a message that arrives while it works; a boundary is promised, never a read receipt. */
+export const RUNTIME_STEERING_MODES = ["turn_boundary", "unsupported"] as const;
+export const runtimeSteeringModeSchema = z.enum(RUNTIME_STEERING_MODES);
+export type RuntimeSteeringMode = z.infer<typeof runtimeSteeringModeSchema>;
+
 /** Optional behaviors a runtime may advertise; absent ones degrade silently in the UI. Single source for the daemon registry and the wire contract. */
 export const runtimeCapabilitiesSchema = z.object({
   stream: z.boolean(),
-  /** Follow-up between turns via `resume`, never mid-turn steering. */
-  send_message: z.boolean(),
+  steering: runtimeSteeringModeSchema,
   abort: z.boolean(),
   resume: z.boolean(),
   permissions: z.boolean(),

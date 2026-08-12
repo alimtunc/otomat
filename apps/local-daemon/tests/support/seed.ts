@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { getRepository, schema, type Db } from "@otomat/db";
+import { getRepository, listStepRunsForRun, schema, type Db } from "@otomat/db";
 import type { AgentSessionState, RunState, StepRunState } from "@otomat/domain";
 
 export interface SeedRunOptions {
@@ -172,4 +172,10 @@ export function seedRun(db: Db, options: SeedRunOptions): SeededRun {
     ],
   });
   return lookup(stepRunId);
+}
+
+export function firstStepOf(db: Db, runId: string): string {
+  const [step] = listStepRunsForRun(db, runId);
+  if (!step) throw new Error(`run ${runId} has no step`);
+  return step.id;
 }

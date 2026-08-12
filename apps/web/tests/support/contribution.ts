@@ -6,6 +6,7 @@ export function contribution(
   return {
     id: "c1",
     run_id: "run-1",
+    step_run_id: "s1",
     seq: 0,
     body: "keep going",
     status: "queued",

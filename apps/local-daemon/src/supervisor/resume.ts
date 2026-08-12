@@ -86,17 +86,15 @@ export function reopenSettledRun(state: SupervisorState, run: RunRow): RunRow {
   return requireRunRow(state.db, run.id, "resume");
 }
 
-/** Resolves the run's latest resumable session into a spawnable turn without touching any row. */
-export function resolveResumeTurn(state: SupervisorState, run: RunRow, prompt: string): ResumeTurn {
+/** Resolves one explicit session into a spawnable turn without touching any row. */
+export function resolveSessionResumeTurn(
+  state: SupervisorState,
+  run: RunRow,
+  session: AgentSessionRow,
+  prompt: string | null,
+): ResumeTurn {
   const { db } = state;
   const runId = run.id;
-  const session = selectLatestResumableSession(
-    listAgentSessionsForRun(db, runId),
-    listStepRunsForRun(db, runId),
-    listCompeteGroupsForRun(db, runId),
-  );
-  if (!session) throw new RunNotResumableError(`run ${runId} has no provider session to resume`);
-
   const runtime = requireResumableRuntime(db, run, session);
   const worktreePath = requireWorktreePath(state, run);
   const config =
@@ -117,13 +115,20 @@ export function resolveResumeTurn(state: SupervisorState, run: RunRow, prompt: s
   };
 }
 
-/** Spawns the resolved resume turn; the run row is re-read once the worker is live. */
+/** Spawns a resume turn on the run's latest resumable session; the run row is re-read once the worker is live. */
 export async function spawnResumeTurn(
   state: SupervisorState,
   run: RunRow,
   prompt: string,
 ): Promise<RunRow> {
-  const turn = resolveResumeTurn(state, run, prompt);
+  const { db } = state;
+  const session = selectLatestResumableSession(
+    listAgentSessionsForRun(db, run.id),
+    listStepRunsForRun(db, run.id),
+    listCompeteGroupsForRun(db, run.id),
+  );
+  if (!session) throw new RunNotResumableError(`run ${run.id} has no provider session to resume`);
+  const turn = resolveSessionResumeTurn(state, run, session, prompt);
   await spawnTurn(state, turn.context, "resume", turn.providerSessionId);
   return requireRunRow(state.db, run.id, "resume");
 }

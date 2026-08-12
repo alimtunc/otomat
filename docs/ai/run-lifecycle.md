@@ -105,8 +105,8 @@ flowchart LR
       C["messages en file"] -->|POST /:id/contributions · /contributions/deliver · settle| deliver["deliverQueuedContributions"]
       resumeRun --> sft["spawnResumeTurn<br/>(même provider session)"]
       fixRun -->|prompt = commentaires| sft
-      sft --> spawnTurn["spawnTurn('resume')"]
-      deliver -->|prompt = batch FIFO| rrt["resolveResumeTurn<br/>(claim entre resolve et spawn)"]
+      sft --> spawnTurn["spawnTurn('resume')<br/>prompt = base + batch porté"]
+      deliver -->|batch d'une seule étape| rrt["resolveSessionResumeTurn<br/>(claim entre resolve et spawn)"]
       rrt --> spawnTurn
     end
     subgraph AB["Abort / crash"]
@@ -151,7 +151,7 @@ stateDiagram-v2
 | Rôle | Fichier |
 | --- | --- |
 | Surface HTTP (start · resume · abort · fix · contributions · SSE) | [`api/routes/runs.ts`](../../apps/local-daemon/src/api/routes/runs.ts) · [`review.ts`](../../apps/local-daemon/src/api/routes/review.ts) · [`run-contributions.ts`](../../apps/local-daemon/src/api/routes/run-contributions.ts) |
-| Livraison des contributions | [`supervisor/contributions.ts`](../../apps/local-daemon/src/supervisor/contributions.ts) |
+| Livraison des contributions | [`supervisor/contribution/deliver.ts`](../../apps/local-daemon/src/supervisor/contribution/deliver.ts) |
 | Commandes du supervisor | [`supervisor/commands.ts`](../../apps/local-daemon/src/supervisor/commands.ts) |
 | Matérialisation (rows · plan · worktree) | [`supervisor/prepare.ts`](../../apps/local-daemon/src/supervisor/prepare.ts) |
 | Init du worktree (commandes du repository) | [`supervisor/worktree-init.ts`](../../apps/local-daemon/src/supervisor/worktree-init.ts) · [`supervisor/init-commands.ts`](../../apps/local-daemon/src/supervisor/init-commands.ts) |

@@ -7,7 +7,7 @@ import { fieldErrorProps } from "@web/lib/form";
 import { resolveContributionGate } from "@web/lib/run/contribution";
 import type { KeyboardEvent } from "react";
 
-/** Run-scoped composer. It stays usable while the agent works: the message is persisted and queued for the next safe turn. */
+/** Step-scoped composer. It stays usable while the agent works: the message is persisted and waits for that step's next turn. */
 export function ConversationComposer({
   detail,
   onSent,
@@ -19,12 +19,14 @@ export function ConversationComposer({
   const { connectionState } = useDaemonStatus();
   const runtimes = useRuntimes();
   const gate = resolveContributionGate(detail, runtimes.data, connectionState);
+  const stepRunId = gate.stepRunId;
 
   const form = useForm({
     defaultValues: { body: "" },
     onSubmit: async ({ value }) => {
+      if (stepRunId === null) return;
       try {
-        await contribute.mutateAsync({ body: value.body.trim() });
+        await contribute.mutateAsync({ step_run_id: stepRunId, body: value.body.trim() });
       } catch {
         return;
       }
@@ -34,7 +36,7 @@ export function ConversationComposer({
   });
 
   function submitIfPossible() {
-    if (!gate.enabled) return;
+    if (stepRunId === null) return;
     void form.handleSubmit();
   }
 
@@ -70,7 +72,11 @@ export function ConversationComposer({
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.value)}
                 onKeyDown={onBodyKeyDown}
-                placeholder="Send a message to this run's agent…"
+                placeholder={
+                  gate.stepName === null
+                    ? "Send a message to this run's agent…"
+                    : `Send a message to ${gate.stepName}…`
+                }
                 aria-label="Run message"
               />
             </FieldControl>
@@ -85,7 +91,7 @@ export function ConversationComposer({
               type="submit"
               variant="primary"
               size="xs"
-              disabled={!gate.enabled || !canSubmit}
+              disabled={stepRunId === null || !canSubmit}
               loading={isSubmitting || contribute.isPending}
             >
               {gate.queues ? "Queue message" : "Send message"}

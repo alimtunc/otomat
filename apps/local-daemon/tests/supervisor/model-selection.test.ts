@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import { ModelSelectionRefusedError } from "#runtime";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { firstStepOf } from "../support/seed.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
@@ -164,7 +165,7 @@ it("resumes with the model frozen at launch, not the one the profile carries now
     skill_ids_json: [],
   });
 
-  await supervisor.contribute(run.id, "keep going");
+  await supervisor.contribute(run.id, firstStepOf(fix.db, run.id), "keep going");
   await supervisor.settle();
 
   const resume = spawn.jobs[1];

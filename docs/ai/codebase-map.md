@@ -128,6 +128,39 @@ resolves to; `supervisor/freeze-plan.ts` collapses those three into the one leve
 frozen into the node's config, and the workflow launcher shows the resolved level
 with its provenance beside every step.
 
+## Run Steering and Deferred Messages
+
+A user message is a durable intention attached to one **step**, never to the run
+at large: steps own separate conversations, so `run_contributions.step_run_id` is
+`NOT NULL` and the composer posts an explicitly resolved step id. Its lifecycle is
+`queued → delivered → acknowledged`, with `failed` and `canceled` as the other
+landings. `delivered` requires persisted evidence that a turn carrying the message
+was launched, and `acknowledged` requires that turn to have finished — neither is
+ever reached from a UI click, so the cockpit cannot claim a message was read.
+
+Delivery has one mechanism. `supervisor/lifecycle.ts` claims the target step's
+pending queue inside `spawnTurn`, after the start gate is cleared and before the
+provider is spawned, and composes the effective prompt with
+`withCarriedContributions`. Every turn therefore carries whatever was waiting for
+its step: a message sent while the run waits for capacity rides the step's *first*
+turn, and a message sent to a live session rides its next one.
+`contribution/deliver.ts` only adds the case where the queue is the entire reason
+to spawn — a resting run's follow-up — and it claims first so the same spawn path
+resolves it.
+
+Because the claim is the unit of delivery, restart recovery is a question about
+one turn: `contribution/reconcile.ts` promotes a crash-time claim to `delivered`
+only when that turn's own start gate was consumed, and returns it to the queue
+otherwise. That is what makes a replay idempotent — a message is never delivered
+twice, and never buried as delivered by a worker that never ran.
+
+`RuntimeCapabilities.steering` is a guarantee level (`turn_boundary` or
+`unsupported`), not a boolean, because no supported CLI can interrupt a turn in
+flight. Claude Code and Codex both resume a recorded session with a new prompt, so
+both declare `turn_boundary` and owe the same product contract; the label names
+the level instead of a bare yes/no, and a runtime that declared `unsupported`
+would be refused at the composer instead of queueing forever.
+
 ## Linear Issue Freshness
 
 The mirror is refreshed by app-driven incremental reads, not webhooks; missed

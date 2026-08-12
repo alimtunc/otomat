@@ -30,8 +30,9 @@ export interface ApiDeps {
   abandonWorkspace(runId: string): RunRow;
   workspaceClosure(runId: string): WorkspaceClosureFacts | null;
   appendRunStep(runId: string, input: AppendStepInput): Promise<RunRow>;
-  contributeToRun(runId: string, body: string): Promise<RunContributionRow>;
+  contributeToRun(runId: string, stepRunId: string, body: string): Promise<RunContributionRow>;
   retryRunContribution(runId: string, contributionId: string): Promise<RunContributionRow>;
+  cancelRunContribution(runId: string, contributionId: string): RunContributionRow;
   deliverRunContributions(runId: string): Promise<void>;
   selectCompeteWinner(runId: string, groupId: string, stepRunId: string): Promise<void>;
   abortRun(runId: string): Promise<void>;

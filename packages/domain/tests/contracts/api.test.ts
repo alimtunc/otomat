@@ -287,14 +287,26 @@ describe("createIssueRequestSchema", () => {
 
 describe("createRunContributionRequestSchema", () => {
   it("accepts a body and trims it", () => {
-    expect(createRunContributionRequestSchema.parse({ body: "  continue with tests  " })).toEqual({
-      body: "continue with tests",
-    });
+    expect(
+      createRunContributionRequestSchema.parse({
+        step_run_id: "s1",
+        body: "  continue with tests  ",
+      }),
+    ).toEqual({ step_run_id: "s1", body: "continue with tests" });
   });
 
   it("rejects a blank or missing body", () => {
-    expect(createRunContributionRequestSchema.safeParse({ body: "   " }).success).toBe(false);
-    expect(createRunContributionRequestSchema.safeParse({}).success).toBe(false);
+    expect(
+      createRunContributionRequestSchema.safeParse({ step_run_id: "s1", body: "   " }).success,
+    ).toBe(false);
+    expect(createRunContributionRequestSchema.safeParse({ step_run_id: "s1" }).success).toBe(false);
+  });
+
+  it("refuses a message that names no step, so delivery is never left to guess", () => {
+    expect(createRunContributionRequestSchema.safeParse({ body: "continue" }).success).toBe(false);
+    expect(
+      createRunContributionRequestSchema.safeParse({ step_run_id: "", body: "continue" }).success,
+    ).toBe(false);
   });
 });
 
@@ -322,7 +334,7 @@ describe("runtime availability contract", () => {
       kind: "real",
       capabilities: {
         stream: true,
-        send_message: true,
+        steering: "turn_boundary",
         abort: true,
         resume: true,
         permissions: false,

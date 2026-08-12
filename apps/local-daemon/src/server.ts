@@ -147,6 +147,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       appendRunStep: supervisor.appendStep,
       contributeToRun: supervisor.contribute,
       retryRunContribution: supervisor.retryContribution,
+      cancelRunContribution: supervisor.cancelContribution,
       deliverRunContributions: supervisor.deliverContributions,
       selectCompeteWinner: supervisor.selectWinner,
       abortRun: supervisor.abort,

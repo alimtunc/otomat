@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -174,4 +174,79 @@ it("upgrades a legacy database through the current migrations", () => {
       .prepare("INSERT INTO pull_requests (id, run_id, title) VALUES (?, ?, ?)")
       .run("duplicate", "r1", "Duplicate"),
   ).toThrow();
+});
+
+interface JournalEntry {
+  idx: number;
+  version: string;
+  when: number;
+  tag: string;
+  breakpoints: boolean;
+}
+
+const STEERING_MIGRATION = "0018_run_contribution_steering";
+
+/** Stages the schema as it stood the migration before `tag`, so a data migration can be exercised on real prior rows. */
+function migrateUpToExcluding(dir: string, dbPath: string, tag: string): void {
+  const journal = JSON.parse(
+    readFileSync(new URL("../drizzle/meta/_journal.json", import.meta.url), "utf8"),
+  ) as { entries: JournalEntry[] };
+  const target = journal.entries.find((entry) => entry.tag === tag);
+  if (!target) throw new Error(`migration ${tag} is not in the journal`);
+  const entries = journal.entries.filter((entry) => entry.idx < target.idx);
+
+  const folder = join(dir, `before-${tag}`);
+  const meta = join(folder, "meta");
+  mkdirSync(meta, { recursive: true });
+  for (const entry of entries) {
+    copyFileSync(
+      new URL(`../drizzle/${entry.tag}.sql`, import.meta.url),
+      join(folder, `${entry.tag}.sql`),
+    );
+  }
+  writeFileSync(
+    join(meta, "_journal.json"),
+    JSON.stringify({ version: "7", dialect: "sqlite", entries }),
+  );
+
+  const prior = createClient(dbPath);
+  migrate(prior.db, { migrationsFolder: folder });
+  prior.sqlite.exec(`
+    INSERT INTO projects (id, name, root_path) VALUES ('p1', 'P', '/tmp/p');
+    INSERT INTO issues (id, project_id, title, status) VALUES ('i1', 'p1', 'Issue', 'ready');
+    INSERT INTO runs (id, issue_id, status, branch, plan_json)
+    VALUES ('r1', 'i1', 'review_ready', 'otomat/run/r1', '{"version":1,"steps":[]}');
+    INSERT INTO step_runs (id, run_id, idx, name, status)
+    VALUES ('s1', 'r1', 0, 'First', 'succeeded'), ('s2', 'r1', 1, 'Second', 'succeeded');
+    INSERT INTO agent_sessions (id, step_run_id, status) VALUES ('as1', 's1', 'terminated');
+    INSERT INTO run_contributions (id, run_id, seq, body, status, agent_session_id, delivered_at)
+    VALUES
+      ('c-session', 'r1', 0, 'carried by a turn', 'sent', 'as1', '2026-07-01T00:00:00.000Z'),
+      ('c-orphan', 'r1', 1, 'never claimed', 'completed', NULL, NULL);
+  `);
+  prior.sqlite.close();
+}
+
+it("gives every pre-steering message a step and renames its delivery status", () => {
+  const dir = mkdtempSync(join(tmpdir(), "otomat-steering-upgrade-"));
+  const dbPath = join(dir, "otomat.db");
+  migrateUpToExcluding(dir, dbPath, STEERING_MIGRATION);
+
+  runMigrations(dbPath);
+  const migrated = createClient(dbPath);
+  cleanup = () => {
+    migrated.sqlite.close();
+    rmSync(dir, { recursive: true, force: true });
+  };
+
+  expect(
+    migrated.sqlite
+      .prepare("SELECT id, step_run_id, status FROM run_contributions ORDER BY seq")
+      .all(),
+  ).toEqual([
+    // Its own session names the step; `sent` was renamed to `delivered`.
+    { id: "c-session", step_run_id: "s1", status: "delivered" },
+    // No session to name one, so it falls back to the run's furthest step; `completed` became `acknowledged`.
+    { id: "c-orphan", step_run_id: "s2", status: "acknowledged" },
+  ]);
 });

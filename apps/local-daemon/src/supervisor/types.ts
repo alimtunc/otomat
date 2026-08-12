@@ -38,7 +38,8 @@ export interface TurnContext {
   runId: string;
   stepRunId: string;
   agentSessionId: string;
-  prompt: string;
+  /** `null` when the turn has no prompt of its own and runs on the batch it carries. */
+  prompt: string | null;
   /** Evidence dir of the agent session, reused by every turn of that session. */
   agentSessionDir: string;
   /** Isolated working dir the turn mutates. Always present: a run that cannot own one is refused at launch. */
@@ -50,7 +51,9 @@ export interface TurnContext {
   config: ResolvedAgentConfig | null;
 }
 
-export interface SupervisedJob extends TurnContext {
+/** A job is a turn whose prompt is already composed, so the worker never has to ask what to run. */
+export interface SupervisedJob extends Omit<TurnContext, "prompt"> {
+  prompt: string;
   mode: "run" | "resume";
   providerSessionId: string | null;
 }
@@ -106,10 +109,12 @@ export interface Supervisor {
   workspaceClosure(runId: string): WorkspaceClosureFacts | null;
   /** Append one step to the run's plan and start it once the workspace is free; refused once the workspace closes. */
   appendStep(runId: string, input: AppendStepInput): Promise<RunRow>;
-  /** Persist one user message on the run as `queued`, then deliver it if the run is already resting. */
-  contribute(runId: string, body: string): Promise<RunContributionRow>;
+  /** Persist one user message on an explicitly selected step as `queued`, then deliver it if that step can take it now. */
+  contribute(runId: string, stepRunId: string, body: string): Promise<RunContributionRow>;
   /** Re-queue a failed message that never reached the provider and retry the run's queue. */
   retryContribution(runId: string, contributionId: string): Promise<RunContributionRow>;
+  /** Withdraw a message no turn has claimed yet; it stays in the conversation as `canceled`. */
+  cancelContribution(runId: string, contributionId: string): RunContributionRow;
   /** Explicit "deliver now" for messages left queued by a restart; a no-op while the run is busy. */
   deliverContributions(runId: string): Promise<void>;
   /** Reserve, promote and archive one succeeded competitor, then unlock dependent work. */

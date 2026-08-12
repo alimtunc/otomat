@@ -154,9 +154,9 @@ export const runStepAppendErrorSchema = z.object({
   message: z.string(),
 });
 
-/** Post one user message to a run's conversation; it is persisted as `queued` whatever the run is doing. */
+/** Post one user message to a step's conversation; it is persisted as `queued` whatever the run is doing. */
 export const createRunContributionRequestSchema = z
-  .object({ body: z.string().trim().min(1) })
+  .object({ step_run_id: z.string().min(1), body: z.string().trim().min(1) })
   .strict();
 export type CreateRunContributionRequest = z.infer<typeof createRunContributionRequestSchema>;
 

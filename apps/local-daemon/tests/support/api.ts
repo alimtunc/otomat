@@ -68,6 +68,7 @@ export function contributionRow(
   return {
     id: "contribution-1",
     run_id: runId,
+    step_run_id: `${runId}-step`,
     seq: 0,
     body: "keep going",
     status: "queued",
@@ -128,6 +129,9 @@ export function makeApiApp(
     },
     retryRunContribution: async () => {
       throw new Error("retryRunContribution stub not configured");
+    },
+    cancelRunContribution: () => {
+      throw new Error("cancelRunContribution stub not configured");
     },
     deliverRunContributions: async () => {
       throw new Error("deliverRunContributions stub not configured");

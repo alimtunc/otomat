@@ -65,10 +65,11 @@ export const runContractSchema = z.object({
 });
 export type RunContract = z.infer<typeof runContractSchema>;
 
-/** `status` is the delivery lifecycle, never a read receipt: `sent` needs `delivered_at` to prove a carrying turn was launched. */
+/** `status` is the delivery lifecycle, never a read receipt. */
 export const runContributionContractSchema = z.object({
   id: z.string(),
   run_id: z.string(),
+  step_run_id: z.string(),
   /** FIFO position within the run; a batched turn carries its messages in ascending order. */
   seq: z.number().int().nonnegative(),
   body: z.string().min(1),
@@ -76,7 +77,7 @@ export const runContributionContractSchema = z.object({
   /** Agent session the delivering turn resumes; stamped when the delivery is claimed. */
   agent_session_id: z.string().nullable(),
   delivered_at: z.iso.datetime().nullable(),
-  /** When the carrying turn settled, resolving this message to `completed` or `failed`. */
+  /** When the carrying turn settled, resolving this message to `acknowledged` or `failed`. */
   settled_at: z.iso.datetime().nullable(),
   attempts: z.number().int().nonnegative(),
   error: z.string().nullable(),

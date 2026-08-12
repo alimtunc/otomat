@@ -76,7 +76,7 @@ function runtimeDescriptor(
     kind,
     capabilities: {
       stream: true,
-      send_message: true,
+      steering: "turn_boundary",
       abort: true,
       resume: true,
       permissions: false,

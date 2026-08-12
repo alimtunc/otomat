@@ -1,5 +1,5 @@
 import type { RunContributionState } from "@otomat/domain";
-import { and, eq, inArray, isNotNull, max, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, max, sql } from "drizzle-orm";
 import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core";
 
 import type { Db } from "../client.js";
@@ -11,6 +11,7 @@ export type RunContributionRow = typeof runContributions.$inferSelect;
 export interface AppendRunContribution {
   id: string;
   run_id: string;
+  step_run_id: string;
   body: string;
 }
 
@@ -47,12 +48,28 @@ export function listRunContributions(db: Db, runId: string): RunContributionRow[
     .all();
 }
 
-/** The run's undelivered queue in send order; one delivery turn carries the whole batch. */
-export function listQueuedRunContributions(db: Db, runId: string): RunContributionRow[] {
+/** Queued and unclaimed: a claimed row is already riding a turn being spawned, so a second claim would deliver it twice. */
+const claimable = and(
+  eq(runContributions.status, "queued"),
+  isNull(runContributions.agent_session_id),
+);
+
+/** The run's undelivered queue in send order, across every step. */
+export function listClaimableRunContributions(db: Db, runId: string): RunContributionRow[] {
   return db
     .select()
     .from(runContributions)
-    .where(and(eq(runContributions.run_id, runId), eq(runContributions.status, "queued")))
+    .where(and(eq(runContributions.run_id, runId), claimable))
+    .orderBy(runContributions.seq)
+    .all();
+}
+
+/** One step's queue in send order; a delivery turn carries exactly its own step's batch. */
+export function listClaimableStepContributions(db: Db, stepRunId: string): RunContributionRow[] {
+  return db
+    .select()
+    .from(runContributions)
+    .where(and(eq(runContributions.step_run_id, stepRunId), claimable))
     .orderBy(runContributions.seq)
     .all();
 }
@@ -92,15 +109,15 @@ export function claimRunContributions(
   });
 }
 
-/** Marks a claimed batch delivered once its turn is launched — the only path to `sent`. */
-export function markRunContributionsSent(db: Db, ids: readonly string[], at: string): void {
-  patchRunContributions(db, ids, { status: "sent", delivered_at: at });
+/** Marks a claimed batch delivered once its turn is launched — the only path to `delivered`. */
+export function markRunContributionsDelivered(db: Db, ids: readonly string[], at: string): void {
+  patchRunContributions(db, ids, { status: "delivered", delivered_at: at });
 }
 
 export function markRunContributionsSettled(
   db: Db,
   ids: readonly string[],
-  status: Extract<RunContributionState, "completed" | "failed">,
+  status: Extract<RunContributionState, "acknowledged" | "failed">,
   at: string,
   error: string | null = null,
 ): void {
@@ -125,6 +142,11 @@ export function requeueRunContribution(db: Db, id: string): void {
     error: null,
     settled_at: null,
   });
+}
+
+/** Withdraws a message no turn ever carried; `error` is left alone so a prior delivery failure keeps its reason. */
+export function cancelRunContribution(db: Db, id: string, at: string): void {
+  patchRunContributions(db, [id], { status: "canceled", settled_at: at });
 }
 
 /** Contributions handed to one session, oldest first; the settle path resolves them from that turn's outcome. */

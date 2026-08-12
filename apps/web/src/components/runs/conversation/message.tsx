@@ -1,6 +1,10 @@
-import { isRunContributionRetriable, type RunContributionContract } from "@otomat/domain";
+import {
+  isRunContributionCancelable,
+  isRunContributionRetriable,
+  type RunContributionContract,
+} from "@otomat/domain";
 import { Button, Markdown, RelativeTime, RunContributionStatusChip } from "@otomat/ui";
-import { useRetryRunContribution } from "@web/api/runs/mutations";
+import { useCancelRunContribution, useRetryRunContribution } from "@web/api/runs/mutations";
 
 const DELIVERED_FAILURE_HINT =
   "This message already reached the agent, so it is never sent twice — write a new one instead.";
@@ -14,7 +18,9 @@ export function ConversationMessage({
   contribution: RunContributionContract;
 }) {
   const retry = useRetryRunContribution(runId);
+  const cancel = useCancelRunContribution(runId);
   const retriable = isRunContributionRetriable(contribution);
+  const cancelable = isRunContributionCancelable(contribution);
 
   return (
     <div role="listitem" className="flex flex-col gap-1.5 px-6 py-3">
@@ -33,17 +39,30 @@ export function ConversationMessage({
       {contribution.status === "failed" && !retriable ? (
         <p className="text-xs text-text-tertiary">{DELIVERED_FAILURE_HINT}</p>
       ) : null}
-      {retriable ? (
-        <div>
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            loading={retry.isPending}
-            onClick={() => retry.mutate(contribution.id)}
-          >
-            Retry delivery
-          </Button>
+      {retriable || cancelable ? (
+        <div className="flex flex-wrap gap-2">
+          {retriable ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              loading={retry.isPending}
+              onClick={() => retry.mutate(contribution.id)}
+            >
+              Retry delivery
+            </Button>
+          ) : null}
+          {cancelable ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              loading={cancel.isPending}
+              onClick={() => cancel.mutate(contribution.id)}
+            >
+              Cancel message
+            </Button>
+          ) : null}
         </div>
       ) : null}
     </div>

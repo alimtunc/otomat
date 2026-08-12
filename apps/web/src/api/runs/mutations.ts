@@ -142,6 +142,12 @@ export function useRetryRunContribution(runId: string) {
   );
 }
 
+export function useCancelRunContribution(runId: string) {
+  return useContributionMutation(runId, (contributionId: string) =>
+    daemon.cancelRunContribution(runId, contributionId),
+  );
+}
+
 /** Explicit "deliver now" for messages a daemon restart left queued; the daemon never resumes a run on its own at boot. */
 export function useDeliverRunContributions(runId: string) {
   return useContributionMutation<void>(runId, () => daemon.deliverRunContributions(runId));
@@ -150,11 +156,11 @@ export function useDeliverRunContributions(runId: string) {
 function contributionErrorMessage(error: unknown): string {
   if (error instanceof DaemonRequestError) {
     if (error.status === 409) {
-      return "Could not send this message — the daemon refused it as already delivered.";
+      return "The daemon refused this — the run moved on since this view loaded.";
     }
     return error.status >= 500
-      ? "Could not send this message — the daemon failed to record it."
-      : "Could not send this message — the request was rejected.";
+      ? "The daemon failed to record this message."
+      : "The daemon rejected this request.";
   }
-  return "Could not send this message — is the daemon running?";
+  return "Could not reach the daemon — is it running?";
 }
