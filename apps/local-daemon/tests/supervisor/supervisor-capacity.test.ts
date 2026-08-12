@@ -64,6 +64,24 @@ it("answers a saturated launch at once with a queued run naming its place in lin
   await supervisor.settle();
 });
 
+it("aborting a queued run removes its waiter at once, without granting it a slot first", async () => {
+  const { supervisor, spawn } = makeSupervisor(fix, "linger", { concurrency: 1 });
+  const holder = await supervisor.start({ prompt: "holds the only slot" });
+  expect(await waitFor(() => spawn.calls === 1)).toBe(true);
+  const queued = await supervisor.start({ prompt: "waits in line" });
+  expect(supervisor.waitFor(queued.id)).toMatchObject({ position: 1 });
+
+  await supervisor.abort(queued.id);
+
+  expect(supervisor.capacity().waiting_sessions).toBe(0);
+  expect(getRun(fix.db, queued.id)?.status).toBe("canceled");
+  expect(getRun(fix.db, holder.id)?.status).toBe("running");
+
+  await supervisor.abort(holder.id);
+  await supervisor.settle();
+  expect(spawn.calls).toBe(1);
+});
+
 it("drains the queue in launch order as slots free up", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "linger", { concurrency: 1 });
   const first = await supervisor.start({ prompt: "a" });

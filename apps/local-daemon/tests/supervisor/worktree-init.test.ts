@@ -81,6 +81,22 @@ it("re-runs init on resume when the daemon died before any agent started", async
   expect(texts).toContain("second-command");
 });
 
+it("abort interrupts a running init command instead of waiting it out", async () => {
+  updateRepositoryInitCommands(fix.db, "repo-1", ["sleep 30"]);
+  const { supervisor, spawn } = makeSupervisor(fix, "complete");
+
+  const run = await supervisor.start({ prompt: "hung init" });
+  expect(await waitFor(() => logTexts(run.id).some((text) => text.includes("$ sleep 30")))).toBe(
+    true,
+  );
+
+  await supervisor.abort(run.id);
+  await supervisor.settle();
+
+  expect(getRun(fix.db, run.id)?.status).toBe("canceled");
+  expect(spawn.calls).toBe(0);
+}, 10_000);
+
 it("launches immediately when the repository has no init commands", async () => {
   const { supervisor } = makeSupervisor(fix, "complete");
 

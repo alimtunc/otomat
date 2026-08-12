@@ -65,6 +65,10 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     },
     shutdown: async (graceMs) => {
       state.shuttingDown = true;
+      for (const controllers of state.initInterrupts.values()) {
+        for (const controller of controllers) controller.abort();
+      }
+      for (const sessionId of state.slots.queued()) state.slots.cancel(sessionId);
       await Promise.all(
         [...state.starting.values(), ...state.inflight.values()].map((handle) =>
           terminateGracefully(handle.proc, graceMs),
