@@ -41,13 +41,7 @@ it(
   { timeout: 20_000 },
   async () => {
     const { supervisor } = makeSupervisor(fix, "linger");
-    const app = makeApiApp(fix, {
-      launchRun: supervisor.start,
-      runWait: supervisor.waitFor,
-      resumeRun: supervisor.resume,
-      appendRunStep: supervisor.appendStep,
-      abortRun: supervisor.abort,
-    });
+    const app = makeApiApp(fix, { supervisor });
 
     const started = await app.request("/api/runs", {
       method: "POST",

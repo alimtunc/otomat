@@ -256,7 +256,10 @@ same shape. Each revision is journaled as a `run.plan_revised` ledger event
 carrying its origin, the step it added and the agent config frozen for it. A
 review fix is one of these revisions: `review/fix.ts` freezes the selected
 comments, their pinned hunks, the current files and the current diff sha into the
-step's prompt, and the step waits on the nodes that produced that diff.
+step's prompt, and the step waits on the nodes that produced that diff. It is
+refused (`workspace_busy`) while a turn is in flight, so the fix step is always
+the workspace's next settlement and settle can credit it with the stamped
+comments.
 
 ## Reviewing a Diff
 
@@ -271,7 +274,10 @@ cannot see a file must at least know it exists.
 Context expansion reads the real thing rather than guessing around the patch:
 `GET /api/runs/:id/diff/file` verifies the caller's sha against the live diff and
 answers with the exact base and head blobs, refusing a moved anchor, a binary
-file, or one past a byte cap instead of shipping a truncated "full file". The web
+file, or one past a byte cap instead of shipping a truncated "full file".
+Verification and blobs come from one captured `{base, tree}` snapshot
+(`diffSnapshot`), so the expanded content always matches the patch it is served
+with even while the agent keeps writing. The web
 card only hands those blobs to `@git-diff-view` while they belong to the sha it
 is rendering — the query key carries it — because content paired with a stale or
 empty patch is what turns a real diff into a neutral, unchanged-looking file.

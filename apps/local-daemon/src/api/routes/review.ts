@@ -1,11 +1,8 @@
-import {
-  createReviewCommentRequestSchema,
-  FIX_REVIEW_COMMENTS_STEP_NAME,
-  requestFixRequestSchema,
-} from "@otomat/domain";
+import { createReviewCommentRequestSchema, requestFixRequestSchema } from "@otomat/domain";
 import { Hono } from "hono";
 
 import { CommentsNotFixableError, DiffUnavailableError, ReviewAnchorStaleError } from "#review";
+import { ReviewFixBusyError } from "#supervisor";
 
 import type { ApiDeps } from "../deps.js";
 import { diffFileBlobsErrorResponse, toDiffFileBlobsResponse } from "../diff-file-blobs.js";
@@ -80,20 +77,19 @@ export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
       const run = c.get("run");
       const request = c.req.valid("json");
       try {
-        const preparation = deps.review.prepareFix(run, request.comment_ids);
-        const updated = await deps.appendRunStep(run.id, {
-          name: request.name ?? FIX_REVIEW_COMMENTS_STEP_NAME,
-          prompt: preparation.prompt,
+        const updated = await deps.review.requestFix(run, {
+          commentIds: request.comment_ids,
           selector: appendStepSelector(request),
           ...(request.model ? { model: request.model } : {}),
-          dependsOn: preparation.dependsOn,
-          origin: "review_fix",
+          ...(request.name ? { name: request.name } : {}),
         });
-        deps.review.markFixRequested(run.id, preparation.commentIds);
         return c.json(toRun(updated), 201);
       } catch (error) {
         if (error instanceof CommentsNotFixableError) {
           return c.json({ error: "comments_not_fixable" }, 409);
+        }
+        if (error instanceof ReviewFixBusyError) {
+          return c.json({ error: "workspace_busy", message: error.message }, 409);
         }
         const refusal = stepAppendErrorResponse(c, error);
         if (refusal) return refusal;

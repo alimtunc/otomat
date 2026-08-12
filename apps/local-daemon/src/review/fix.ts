@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import {
   getIssue,
   getReviewForRun,
@@ -11,29 +8,19 @@ import {
   type RunRow,
 } from "@otomat/db";
 import {
+  FIX_REVIEW_COMMENTS_STEP_NAME,
   isRunPlanCompeteGroup,
   type CompeteGroupState,
   type RunPlanNode,
   type StepRunState,
 } from "@otomat/domain";
 
-import { computeDiff } from "./diff.js";
+import { diffSnapshotOrNull } from "#git";
+
 import { CommentsNotFixableError } from "./errors.js";
 import { buildFixPrompt, type FixCommentContext } from "./fix-context.js";
 import { driveReviewTo } from "./transitions.js";
-import type { FixPreparation, ReviewContext } from "./types.js";
-
-/** Current worktree content of a commented file, or null when the run has no worktree / the file is gone. */
-function readCurrentFile(ctx: ReviewContext, runId: string, filePath: string): string | null {
-  const worktree = ctx.repositories.forRun(runId)?.service.get(runId);
-  if (!worktree) return null;
-  try {
-    return readFileSync(join(worktree.path, filePath), "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw error;
-  }
-}
+import type { FixPreparation, FixRequest, ReviewContext } from "./types.js";
 
 /** A node whose work is already in the worktree: a succeeded step, or a compete group with a winner. */
 function producedTheDiff(
@@ -55,10 +42,14 @@ function diffProducingNodes(ctx: ReviewContext, run: RunRow): string[] {
   return produced.map((node) => node.id);
 }
 
-/** Freezes the fix context of the selected open comments; mutates nothing (the caller appends the step, then marks). */
-export function prepareFix(ctx: ReviewContext, run: RunRow, commentIds: string[]): FixPreparation {
+/** Freezes the fix context of the selected open comments; mutates nothing. */
+function prepareFix(ctx: ReviewContext, run: RunRow, commentIds: string[]): FixPreparation {
   const comments = listReviewCommentsForRun(ctx.db, run.id);
   const byId = new Map(comments.map((comment) => [comment.id, comment]));
+  // One captured snapshot: the prompt's diff and every "current file" come from the same tree,
+  // and a commented path that is a symlink stays the symlink's target text, never a host file.
+  const binding = ctx.repositories.forRun(run.id);
+  const snapshot = binding === null ? null : diffSnapshotOrNull(binding.service, run.id);
   const selected: FixCommentContext[] = [];
   for (const commentId of commentIds) {
     const comment = byId.get(commentId);
@@ -66,7 +57,13 @@ export function prepareFix(ctx: ReviewContext, run: RunRow, commentIds: string[]
     if (comment.status !== "open") {
       throw new CommentsNotFixableError(`comment ${commentId} is ${comment.status}, not open`);
     }
-    selected.push({ comment, currentFile: readCurrentFile(ctx, run.id, comment.file_path) });
+    selected.push({
+      comment,
+      currentFile:
+        snapshot === null
+          ? null
+          : snapshot.fileBlobs({ path: comment.file_path, oldPath: null }).head,
+    });
   }
 
   const issue = getIssue(ctx.db, run.issue_id);
@@ -75,7 +72,7 @@ export function prepareFix(ctx: ReviewContext, run: RunRow, commentIds: string[]
       issueTitle: issue?.title ?? "Local run",
       issueBody: issue?.body ?? null,
       branch: run.branch,
-      diff: computeDiff(ctx, run.id),
+      diff: snapshot?.diff ?? null,
       comments: selected,
     }),
     commentIds,
@@ -88,11 +85,34 @@ export function prepareFix(ctx: ReviewContext, run: RunRow, commentIds: string[]
  * `changes_requested`. The drive is a no-op when the run has no review or it is
  * already `changes_requested`. Does not validate the comment ids — prepareFix does.
  */
-export function markFixRequested(ctx: ReviewContext, runId: string, commentIds: string[]): void {
+function markFixRequested(ctx: ReviewContext, runId: string, commentIds: string[]): void {
   const now = new Date().toISOString();
   for (const commentId of commentIds) setReviewCommentFixRequested(ctx.db, commentId, now);
   const review = getReviewForRun(ctx.db, runId);
   if (review && review.status !== "changes_requested") {
     driveReviewTo(ctx, review, "changes_requested");
   }
+}
+
+/**
+ * The selected open comments become one appended fix step. Order is the
+ * invariant: freeze context, append the step, then stamp — a failed append
+ * leaves every comment unstamped and the review untouched.
+ */
+export async function requestFix(
+  ctx: ReviewContext,
+  run: RunRow,
+  request: FixRequest,
+): Promise<RunRow> {
+  const preparation = prepareFix(ctx, run, request.commentIds);
+  const updated = await ctx.appendRunStep(run.id, {
+    name: request.name ?? FIX_REVIEW_COMMENTS_STEP_NAME,
+    prompt: preparation.prompt,
+    selector: request.selector,
+    ...(request.model ? { model: request.model } : {}),
+    dependsOn: preparation.dependsOn,
+    origin: "review_fix",
+  });
+  markFixRequested(ctx, run.id, preparation.commentIds);
+  return updated;
 }

@@ -1,10 +1,10 @@
 import {
-  agentCapacitySchema,
-  type ExecutionHostCapacityResult,
-  type ExecutionHostId,
-} from "@otomat/domain";
-
-const CAPACITY_PATH = "/api/settings/capacity";
+  createDaemonClient,
+  DaemonRequestError,
+  DaemonTransportError,
+  type DaemonClient,
+} from "@otomat/client";
+import type { AgentCapacity, ExecutionHostCapacityResult, ExecutionHostId } from "@otomat/domain";
 
 export interface HostCapacityActionsOptions {
   /** Where that host's daemon answers, or why it cannot be reached; asking warms an idle remote host. */
@@ -18,43 +18,45 @@ export class HostCapacityActions {
   constructor(private readonly options: HostCapacityActionsOptions) {}
 
   read(hostId: ExecutionHostId): Promise<ExecutionHostCapacityResult> {
-    return this.request(hostId, undefined);
+    return this.request(hostId, (client) => client.agentCapacity());
   }
 
   write(
     hostId: ExecutionHostId,
     maxConcurrentSessions: number,
   ): Promise<ExecutionHostCapacityResult> {
-    return this.request(hostId, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ max_concurrent_sessions: maxConcurrentSessions }),
-    });
+    return this.request(hostId, (client) =>
+      client.setAgentCapacity({ max_concurrent_sessions: maxConcurrentSessions }),
+    );
   }
 
   private async request(
     hostId: ExecutionHostId,
-    init: RequestInit | undefined,
+    call: (client: DaemonClient) => Promise<AgentCapacity>,
   ): Promise<ExecutionHostCapacityResult> {
     const target = this.options.daemonUrl(hostId);
     if ("message" in target) return { ok: false, message: target.message };
-    const fetchImpl = this.options.fetchImpl ?? fetch;
+    const client = createDaemonClient({
+      baseUrl: target.url,
+      ...(this.options.fetchImpl === undefined ? {} : { fetch: this.options.fetchImpl }),
+    });
     try {
-      const response = await fetchImpl(`${target.url}${CAPACITY_PATH}`, init);
-      if (!response.ok) {
+      return { ok: true, capacity: await call(client) };
+    } catch (error) {
+      if (error instanceof DaemonRequestError) {
         return {
           ok: false,
-          message: `The ${hostId} daemon refused the capacity change (HTTP ${response.status}).`,
+          message: `The ${hostId} daemon refused the capacity change (HTTP ${error.status}).`,
         };
       }
-      const parsed = agentCapacitySchema.safeParse(await response.json());
-      if (!parsed.success) {
-        return { ok: false, message: `The ${hostId} daemon answered in an unknown format.` };
+      if (error instanceof DaemonTransportError) {
+        this.options.log(`Capacity request to ${hostId} failed: ${String(error.cause)}`);
+        return {
+          ok: false,
+          message: `Could not reach the ${hostId} daemon: ${String(error.cause)}`,
+        };
       }
-      return { ok: true, capacity: parsed.data };
-    } catch (error) {
-      this.options.log(`Capacity request to ${hostId} failed: ${String(error)}`);
-      return { ok: false, message: `Could not reach the ${hostId} daemon: ${String(error)}` };
+      return { ok: false, message: `The ${hostId} daemon answered in an unknown format.` };
     }
   }
 }

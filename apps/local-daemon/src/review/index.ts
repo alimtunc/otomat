@@ -19,7 +19,7 @@ export { createReviewService } from "./service.js";
 export type {
   FileBlobsRequest,
   FileBlobsResult,
-  FixPreparation,
+  FixRequest,
   ReviewDetailResult,
   ReviewService,
   ReviewServiceConfig,

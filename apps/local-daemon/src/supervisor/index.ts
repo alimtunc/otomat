@@ -11,6 +11,7 @@
  * @packageDocumentation
  */
 export * from "./types.js";
+export { ReviewFixBusyError } from "./append-step.js";
 export { RunNotResumableError } from "./resume.js";
 export { WorkspaceAbandonRefusedError } from "./abandon.js";
 export { issueWorkspace, RunWorkspaceClosedError } from "./workspace.js";

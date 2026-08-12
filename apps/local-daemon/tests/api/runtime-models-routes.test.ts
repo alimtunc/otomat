@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { ModelSelectionRefusedError } from "#runtime";
 
-import { json, makeApiApp, post, request } from "../support/api.js";
+import { json, makeApiApp, post, request, stubSupervisor } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 
 let t: TestDb;
@@ -42,9 +42,14 @@ it("404s on a runtime the daemon does not know", async () => {
 
 it("refuses a launch whose model the runtime does not list", async () => {
   const app = makeApiApp(t, {
-    launchRun: async () => {
-      throw new ModelSelectionRefusedError("model_unknown", 'runtime "fake" does not list "gpt-5"');
-    },
+    supervisor: stubSupervisor({
+      start: async () => {
+        throw new ModelSelectionRefusedError(
+          "model_unknown",
+          'runtime "fake" does not list "gpt-5"',
+        );
+      },
+    }),
   });
 
   const res = await post(app, "/api/runs", {

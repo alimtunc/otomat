@@ -8,11 +8,11 @@ import { validateJson } from "../guards.js";
 export function createSettingsRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();
 
-  routes.get("/capacity", (c) => c.json(deps.agentCapacity()));
+  routes.get("/capacity", (c) => c.json(deps.supervisor.capacity()));
 
   routes.put("/capacity", validateJson(updateAgentCapacityRequestSchema), (c) => {
     const { max_concurrent_sessions } = c.req.valid("json");
-    return c.json(deps.setAgentCapacity(max_concurrent_sessions));
+    return c.json(deps.supervisor.setCapacity(max_concurrent_sessions));
   });
 
   return routes;

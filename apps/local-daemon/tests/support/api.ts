@@ -3,6 +3,7 @@ import type { Hono } from "hono";
 
 import { createApiApp } from "#api/app";
 import type { ApiDeps } from "#api/deps";
+import type { Supervisor } from "#supervisor";
 
 import type { TestDb } from "./db.js";
 import { stubGitHubService } from "./github.js";
@@ -83,7 +84,56 @@ export function contributionRow(
   };
 }
 
-/** ApiDeps app over the shared TestDb; un-overridden run commands throw, never fake-succeed. */
+/** Un-overridden commands throw, never fake-succeed. */
+export function stubSupervisor(overrides: Partial<Supervisor> = {}): Supervisor {
+  return {
+    start: async () => {
+      throw new Error("start stub not configured");
+    },
+    waitFor: () => null,
+    capacity: () => ({
+      max_concurrent_sessions: 4,
+      active_sessions: 0,
+      waiting_sessions: 0,
+    }),
+    setCapacity: () => {
+      throw new Error("setCapacity stub not configured");
+    },
+    resume: async () => {
+      throw new Error("resume stub not configured");
+    },
+    resumePlan: () => ({ mode: "unavailable", reason: "resume plan stub not configured" }),
+    abandon: () => {
+      throw new Error("abandon stub not configured");
+    },
+    workspaceClosure: () => null,
+    appendStep: async () => {
+      throw new Error("appendStep stub not configured");
+    },
+    contribute: async () => {
+      throw new Error("contribute stub not configured");
+    },
+    retryContribution: async () => {
+      throw new Error("retryContribution stub not configured");
+    },
+    cancelContribution: () => {
+      throw new Error("cancelContribution stub not configured");
+    },
+    deliverContributions: async () => {
+      throw new Error("deliverContributions stub not configured");
+    },
+    selectWinner: async () => {
+      throw new Error("selectWinner stub not configured");
+    },
+    abort: async () => {},
+    reconcile: () => ({ reconciled: [] }),
+    settle: async () => {},
+    shutdown: async () => {},
+    ...overrides,
+  };
+}
+
+/** ApiDeps app over the shared TestDb; see {@link stubSupervisor} for the run-command defaults. */
 export function makeApiApp(
   t: Pick<TestDb, "db" | "dbPath">,
   overrides: Partial<ApiDeps> = {},
@@ -101,45 +151,7 @@ export function makeApiApp(
       page_count: 1,
       page_size: 4096,
     }),
-    launchRun: async () => {
-      throw new Error("launchRun stub not configured");
-    },
-    runWait: () => null,
-    agentCapacity: () => ({
-      max_concurrent_sessions: 4,
-      active_sessions: 0,
-      waiting_sessions: 0,
-    }),
-    setAgentCapacity: () => {
-      throw new Error("setAgentCapacity stub not configured");
-    },
-    resumeRun: async () => {
-      throw new Error("resumeRun stub not configured");
-    },
-    runResumePlan: () => ({ mode: "unavailable", reason: "resume plan stub not configured" }),
-    abandonWorkspace: () => {
-      throw new Error("abandonWorkspace stub not configured");
-    },
-    workspaceClosure: () => null,
-    appendRunStep: async () => {
-      throw new Error("appendRunStep stub not configured");
-    },
-    contributeToRun: async () => {
-      throw new Error("contributeToRun stub not configured");
-    },
-    retryRunContribution: async () => {
-      throw new Error("retryRunContribution stub not configured");
-    },
-    cancelRunContribution: () => {
-      throw new Error("cancelRunContribution stub not configured");
-    },
-    deliverRunContributions: async () => {
-      throw new Error("deliverRunContributions stub not configured");
-    },
-    selectCompeteWinner: async () => {
-      throw new Error("selectCompeteWinner stub not configured");
-    },
-    abortRun: async () => {},
+    supervisor: stubSupervisor(),
     github: stubGitHubService(),
     linear: stubLinearService(),
     review: stubReviewService(),

@@ -11,18 +11,15 @@ import type {
 import { STABLE_DEPLOYMENT, type RemoteDeployment } from "./bootstrap/scripts.js";
 import { errorResult } from "./bootstrap/status.js";
 import { safeSshAliases, validateSshAlias } from "./host/alias.js";
-import {
-  readExecutionHostsConfigSafe,
-  writeExecutionHostsConfigSafe,
-  type ExecutionHostsConfig,
-} from "./host/config.js";
 import { HostCatalog, type ResolvedDaemonUrl } from "./host/projects.js";
+import { HostSelection } from "./host/selection.js";
 import {
   RemoteHostSession,
   type RemoteSessionHandle,
   type RemoteSessionOptions,
 } from "./session.js";
 import { listSshConfigAliases } from "./ssh/config-aliases.js";
+import { StaleDaemonRefresher } from "./stale-daemon.js";
 
 const SWITCH_IN_PROGRESS = "A host switch is in progress. Try again in a moment.";
 
@@ -44,19 +41,24 @@ export interface ExecutionHostManagerOptions {
 
 // Switching is always explicit: a failed remote connection never falls back to the local daemon — the selection stays untouched and the failure is returned verbatim.
 export class ExecutionHostManager {
-  private config: ExecutionHostsConfig;
+  private readonly selection: HostSelection;
   private session: RemoteSessionHandle | null = null;
   private switching = false;
   private readonly catalog: HostCatalog;
+  private readonly staleRefresher: StaleDaemonRefresher;
 
   constructor(private readonly options: ExecutionHostManagerOptions) {
-    this.config = readExecutionHostsConfigSafe(options.dataDir, options.log);
+    this.selection = new HostSelection(options.dataDir, options.log);
     this.catalog = new HostCatalog({
       localDaemonUrl: options.localDaemonUrl,
       activeHostId: () => this.activeHostId,
       remoteSshAlias: () => this.remoteSshAlias,
       remoteSession: () => this.session,
       warmRemote: () => this.ensureBackgroundRemote(),
+      fetchImpl: options.fetchImpl ?? fetch,
+      log: options.log,
+    });
+    this.staleRefresher = new StaleDaemonRefresher({
       expectedBuild: options.expectedBuild ?? null,
       fetchImpl: options.fetchImpl ?? fetch,
       log: options.log,
@@ -64,11 +66,11 @@ export class ExecutionHostManager {
   }
 
   get activeHostId(): ExecutionHostId {
-    return this.config.active === "remote" && this.config.remote !== null ? "remote" : "local";
+    return this.selection.activeHostId;
   }
 
   get remoteSshAlias(): string | null {
-    return this.config.remote?.ssh_alias ?? null;
+    return this.selection.remoteSshAlias;
   }
 
   /** The live session, or null when this host has none yet — never a superseded one. */
@@ -111,10 +113,10 @@ export class ExecutionHostManager {
           this.options.log(`Stale remote session dispose failed: ${String(error)}`),
         );
     }
-    this.config = { ...this.config, remote: { ssh_alias: alias } };
-    this.persist();
+    const committed = this.selection.commit({ remote: { ssh_alias: alias } });
+    if (!committed.ok) return committed;
     this.ensureBackgroundRemote();
-    return { ok: true };
+    return committed;
   }
 
   async select(id: ExecutionHostId): Promise<ExecutionHostOperationResult> {
@@ -161,6 +163,8 @@ export class ExecutionHostManager {
     if (this.activeHostId === "remote") {
       return { ok: false, message: "Switch to a local project before removing the host." };
     }
+    const committed = this.selection.commit({ remote: null, active: "local" });
+    if (!committed.ok) return committed;
     const session = this.session;
     this.session = null;
     if (session !== null) {
@@ -170,9 +174,7 @@ export class ExecutionHostManager {
           this.options.log(`Removed host session dispose failed: ${String(error)}`),
         );
     }
-    this.config = { ...this.config, remote: null, active: "local" };
-    this.persist();
-    return { ok: true };
+    return committed;
   }
 
   async shutdown(): Promise<void> {
@@ -194,20 +196,20 @@ export class ExecutionHostManager {
     if (status.phase !== "connected") return { ok: false, status };
     const url = session.url;
     if (url === null) return errorResult("tunnel_failed");
-    this.config = { ...this.config, active: "remote" };
-    this.persist();
+    const committed = this.selection.commit({ active: "remote" });
+    if (!committed.ok) return committed;
     this.options.applyRendererUrl(url);
-    return { ok: true };
+    return committed;
   }
 
   /** The remote session survives a switch to local, so the switcher keeps listing that host. */
   private async selectLocal(): Promise<ExecutionHostOperationResult> {
     const url = this.options.localDaemonUrl();
     if (url === "") return errorResult("local_daemon_unavailable");
-    this.config = { ...this.config, active: "local" };
-    this.persist();
+    const committed = this.selection.commit({ active: "local" });
+    if (!committed.ok) return committed;
     this.options.applyRendererUrl(url);
-    return { ok: true };
+    return committed;
   }
 
   private ensureBackgroundRemote(): void {
@@ -237,11 +239,11 @@ export class ExecutionHostManager {
   private announce(alias: string, status: RemoteHostStatus): void {
     this.options.onRemoteStatus(status);
     const session = this.session;
-    const url = session !== null && session.alias === alias ? session.url : null;
-    if (status.phase === "connected" && url !== null) this.options.onRemoteConnected?.(alias, url);
-  }
-
-  private persist(): void {
-    writeExecutionHostsConfigSafe(this.options.dataDir, this.config, this.options.log);
+    const current = session !== null && session.alias === alias ? session : null;
+    if (status.phase !== "connected") return;
+    if (current?.url != null) this.options.onRemoteConnected?.(alias, current.url);
+    // Build verification is host lifecycle — it may restart the daemon and reconnect the
+    // tunnel — so it hangs off the connected transition, never off a catalog read.
+    void this.staleRefresher.maybeRefresh(current);
   }
 }

@@ -7,8 +7,13 @@ import type {
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import type { CanonicalDiff } from "#git";
-import { CommentsNotFixableError, DiffUnavailableError, ReviewAnchorStaleError } from "#review";
-import { RunWorkspaceClosedError, type AppendStepInput } from "#supervisor";
+import {
+  CommentsNotFixableError,
+  DiffUnavailableError,
+  ReviewAnchorStaleError,
+  type FixRequest,
+} from "#review";
+import { ReviewFixBusyError, RunWorkspaceClosedError } from "#supervisor";
 
 import { makeApiApp, post, request, runRow } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
@@ -194,26 +199,15 @@ it("maps stale anchors and missing diffs to 409 conflicts", async () => {
   expect(((await bareRes.json()) as { error: string }).error).toBe("diff_unavailable");
 });
 
-it("orchestrates a fix request: prepare, append the step, then mark", async () => {
-  const calls: string[] = [];
-  let appended: AppendStepInput | null = null;
-  let marked: string[] = [];
+it("delegates the fix request with the parsed selection and returns the updated run", async () => {
+  let received: { runId: string; request: FixRequest } | null = null;
   const app = makeApiApp(t, {
     review: stubReviewService({
-      prepareFix: (_run, commentIds) => {
-        calls.push("prepare");
-        return { prompt: "built fix prompt", commentIds, dependsOn: ["step-1"] };
-      },
-      markFixRequested: (_runId, commentIds) => {
-        calls.push("mark");
-        marked = commentIds;
+      requestFix: async (run, request) => {
+        received = { runId: run.id, request };
+        return runRow(RUN_ID);
       },
     }),
-    appendRunStep: async (_runId, input) => {
-      calls.push("append");
-      appended = input;
-      return runRow(RUN_ID);
-    },
   });
 
   const res = await post(app, `/api/runs/${RUN_ID}/review/fix`, {
@@ -221,15 +215,13 @@ it("orchestrates a fix request: prepare, append the step, then mark", async () =
     profile_id: "p-reviewer",
   });
   expect(res.status).toBe(201);
-  expect(calls).toEqual(["prepare", "append", "mark"]);
-  expect(appended).toMatchObject({
-    name: "Fix review comments",
-    prompt: "built fix prompt",
-    selector: { kind: "profile", profileId: "p-reviewer" },
-    dependsOn: ["step-1"],
-    origin: "review_fix",
+  expect(received).toEqual({
+    runId: RUN_ID,
+    request: {
+      commentIds: ["c1", "c2"],
+      selector: { kind: "profile", profileId: "p-reviewer" },
+    },
   });
-  expect(marked).toEqual(["c1", "c2"]);
   expect(((await res.json()) as RunContract).status).toBe("running");
 });
 
@@ -245,32 +237,27 @@ it("refuses a fix with no explicit agent, and maps conflicts to 409", async () =
   });
   expect(emptySelection.status).toBe(400);
 
-  const notFixable = makeApiApp(t, {
-    review: stubReviewService({
-      prepareFix: () => {
-        throw new CommentsNotFixableError("comment c9 not found on run");
-      },
-    }),
-  });
-  const nfRes = await post(notFixable, `/api/runs/${RUN_ID}/review/fix`, {
-    comment_ids: ["c9"],
-    runtime: "fake",
-  });
-  expect(nfRes.status).toBe(409);
-  expect(((await nfRes.json()) as { error: string }).error).toBe("comments_not_fixable");
-
-  const closed = makeApiApp(t, {
-    review: stubReviewService({
-      prepareFix: (_run, commentIds) => ({ prompt: "p", commentIds, dependsOn: [] }),
-    }),
-    appendRunStep: async () => {
-      throw new RunWorkspaceClosedError("merged");
+  const conflicts = [
+    {
+      error: new CommentsNotFixableError("comment c9 not found on run"),
+      code: "comments_not_fixable",
     },
-  });
-  const closedRes = await post(closed, `/api/runs/${RUN_ID}/review/fix`, {
-    comment_ids: ["c1"],
-    runtime: "fake",
-  });
-  expect(closedRes.status).toBe(409);
-  expect(((await closedRes.json()) as { error: string }).error).toBe("workspace_closed");
+    { error: new RunWorkspaceClosedError("merged"), code: "workspace_closed" },
+    { error: new ReviewFixBusyError(RUN_ID), code: "workspace_busy" },
+  ];
+  for (const conflict of conflicts) {
+    const app = makeApiApp(t, {
+      review: stubReviewService({
+        requestFix: async () => {
+          throw conflict.error;
+        },
+      }),
+    });
+    const res = await post(app, `/api/runs/${RUN_ID}/review/fix`, {
+      comment_ids: ["c1"],
+      runtime: "fake",
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toBe(conflict.code);
+  }
 });

@@ -45,10 +45,9 @@ export function stubReviewService(overrides: Partial<ReviewService> = {}): Revie
     getFileBlobs: () => {
       throw new Error("getFileBlobs stub not configured");
     },
-    prepareFix: () => {
-      throw new Error("prepareFix stub not configured");
+    requestFix: async () => {
+      throw new Error("requestFix stub not configured");
     },
-    markFixRequested: () => {},
     onRunSettled: () => {},
     ...overrides,
   };

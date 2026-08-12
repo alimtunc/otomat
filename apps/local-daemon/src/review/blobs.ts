@@ -1,4 +1,5 @@
-import { computeDiff } from "./diff.js";
+import { diffSnapshotOrNull } from "#git";
+
 import {
   DiffUnavailableError,
   FileNotExpandableError,
@@ -17,16 +18,16 @@ export function getFileBlobs(
   runId: string,
   request: FileBlobsRequest,
 ): FileBlobsResult {
-  const diff = computeDiff(ctx, runId);
   const binding = ctx.repositories.forRun(runId);
-  if (diff === null || binding === null) throw new DiffUnavailableError(runId);
+  const snapshot = binding === null ? null : diffSnapshotOrNull(binding.service, runId);
+  if (snapshot === null) throw new DiffUnavailableError(runId);
 
-  const file = diff.files.find((candidate) => candidate.path === request.path);
+  const file = snapshot.diff.files.find((candidate) => candidate.path === request.path);
   if (!file) throw new FileNotInDiffError(request.path);
   if (file.sha !== request.sha) throw new ReviewAnchorStaleError(request.path);
   if (file.binary) throw new FileNotExpandableError(request.path);
 
-  const blobs = binding.service.fileBlobs(runId, { path: file.path, oldPath: file.oldPath });
+  const blobs = snapshot.fileBlobs({ path: file.path, oldPath: file.oldPath });
   const bytes = Buffer.byteLength(blobs.base ?? "") + Buffer.byteLength(blobs.head ?? "");
   if (bytes > MAX_BLOB_BYTES) throw new FileTooLargeError(file.path);
   return { base: blobs.base, head: blobs.head };

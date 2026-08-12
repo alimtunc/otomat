@@ -5,6 +5,7 @@ import {
   claimCompeteWinner,
   getRun,
   listCompeteGroupsForRun,
+  listRunContributions,
   listStepRunsForRun,
   schema,
   updateRepositoryInitCommands,
@@ -431,6 +432,38 @@ it("reserves exactly one winner when two selections race", async () => {
   expect(settled.filter((outcome) => outcome.status === "rejected")).toHaveLength(1);
   expect(listCompeteGroupsForRun(fix.db, run.id)[0]?.winner_step_run_id).toBe(candidates[0]!.id);
   await supervisor.settle();
+});
+
+it("routes messages queued during selection once the winner is chosen", async () => {
+  const { supervisor, spawn } = makeCompeteSupervisor();
+  const groupOnlyPlan = { ...COMPETE_PLAN, steps: [COMPETE_PLAN.steps[0]!] };
+  const run = await supervisor.start({ prompt: "the goal", plan: groupOnlyPlan });
+  await supervisor.settle();
+  const [group] = listCompeteGroupsForRun(fix.db, run.id);
+  const candidates = listStepRunsForRun(fix.db, run.id).filter(
+    (step) => step.compete_group_id === group?.id,
+  );
+  const winner = candidates.find((step) => step.name === "Direct");
+  const loser = candidates.find((step) => step.name === "Layered");
+  if (!group || !winner || !loser) throw new Error("expected both candidates");
+
+  const forWinner = await supervisor.contribute(run.id, winner.id, "polish the direct approach");
+  const forLoser = await supervisor.contribute(run.id, loser.id, "polish the layered approach");
+  expect(forWinner.status).toBe("queued");
+  expect(forLoser.status).toBe("queued");
+
+  await supervisor.selectWinner(run.id, group.id, winner.id);
+  await supervisor.settle();
+
+  const contributions = listRunContributions(fix.db, run.id);
+  expect(contributions.find((row) => row.id === forWinner.id)?.status).toBe("acknowledged");
+  expect(contributions.find((row) => row.id === forLoser.id)?.status).toBe("failed");
+  expect(spawn.jobs.at(-1)).toMatchObject({
+    mode: "resume",
+    stepRunId: winner.id,
+    prompt: "polish the direct approach",
+  });
+  expect(getRun(fix.db, run.id)?.status).toBe("review_ready");
 });
 
 it("keeps delivery turns on the selected provider session and canonical worktree", async () => {

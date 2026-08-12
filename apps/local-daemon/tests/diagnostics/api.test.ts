@@ -1,7 +1,7 @@
 import { CORRELATION_ID_HEADER, type DaemonLogExcerpt } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { json, makeApiApp, post, request } from "../support/api.js";
+import { json, makeApiApp, post, request, stubSupervisor } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 
 let t: TestDb;
@@ -56,9 +56,11 @@ it("keeps the redacted daemon stack behind an unhandled failure", async () => {
 
 it("keeps the refusal a route answered with, so a handled 500 is still traceable", async () => {
   const app = makeApiApp(t, {
-    launchRun: async () => {
-      throw new Error("supervisor unavailable");
-    },
+    supervisor: stubSupervisor({
+      start: async () => {
+        throw new Error("supervisor unavailable");
+      },
+    }),
   });
   const failure = await post(app, "/api/runs", VALID_PLAN);
   expect(failure.status).toBe(500);
@@ -70,9 +72,11 @@ it("keeps the refusal a route answered with, so a handled 500 is still traceable
 
 it("never returns another request's lines", async () => {
   const app = makeApiApp(t, {
-    launchRun: async () => {
-      throw new Error("supervisor unavailable");
-    },
+    supervisor: stubSupervisor({
+      start: async () => {
+        throw new Error("supervisor unavailable");
+      },
+    }),
   });
   const first = await post(app, "/api/runs", VALID_PLAN);
   const second = await post(app, "/api/runs", VALID_PLAN);

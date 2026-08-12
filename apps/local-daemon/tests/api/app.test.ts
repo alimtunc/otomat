@@ -22,7 +22,14 @@ import {
   type AppendStepInput,
 } from "#supervisor";
 
-import { contributionRow, makeApiApp, post, request, runRow } from "../support/api.js";
+import {
+  contributionRow,
+  makeApiApp,
+  post,
+  request,
+  runRow,
+  stubSupervisor,
+} from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
 import { appendEvents } from "../support/ledger.js";
 import { stubReviewService } from "../support/review.js";
@@ -122,7 +129,9 @@ it("tells the cockpit why a queued run is not moving", async () => {
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
   const app = makeApiApp(t, {
-    runWait: () => ({ kind: "workflow_dependency", blocked_by: ["Implement"] }),
+    supervisor: stubSupervisor({
+      waitFor: () => ({ kind: "workflow_dependency", blocked_by: ["Implement"] }),
+    }),
   });
 
   const detail = (await (await request(app, `/api/runs/${runId}`)).json()) as RunDetail;
@@ -158,10 +167,12 @@ it("rejects a start-run request with neither issue_id nor prompt", async () => {
 it("rejects a cyclic run plan with 400 before the launch dep ever runs", async () => {
   let launched = 0;
   const app = makeApiApp(t, {
-    launchRun: async () => {
-      launched += 1;
-      return runRow("run-x");
-    },
+    supervisor: stubSupervisor({
+      start: async () => {
+        launched += 1;
+        return runRow("run-x");
+      },
+    }),
   });
   const res = await post(app, "/api/runs", {
     prompt: "goal",
@@ -204,10 +215,12 @@ it("rejects duplicate step ids and unknown dependencies with 400", async () => {
 it("delegates a valid multi-step plan to launchRun untouched", async () => {
   let received: StartRunRequest | null = null;
   const app = makeApiApp(t, {
-    launchRun: async (req) => {
-      received = req;
-      return runRow("run-plan");
-    },
+    supervisor: stubSupervisor({
+      start: async (req) => {
+        received = req;
+        return runRow("run-plan");
+      },
+    }),
   });
   const plan = {
     version: 1,
@@ -224,10 +237,12 @@ it("delegates a valid multi-step plan to launchRun untouched", async () => {
 it("delegates start-run to the injected launchRun dep", async () => {
   let received: StartRunRequest | null = null;
   const app = makeApiApp(t, {
-    launchRun: async (req) => {
-      received = req;
-      return runRow("run-x");
-    },
+    supervisor: stubSupervisor({
+      start: async (req) => {
+        received = req;
+        return runRow("run-x");
+      },
+    }),
   });
   const res = await post(app, "/api/runs", { prompt: "do it" });
   expect(res.status).toBe(201);
@@ -240,12 +255,14 @@ it("delegates start-run to the injected launchRun dep", async () => {
 
 it("answers a saturated launch with the run and the place it is queued at", async () => {
   const app = makeApiApp(t, {
-    launchRun: async () => runRow("run-queued", { status: "queued" }),
-    runWait: () => ({
-      kind: "concurrency_limit",
-      position: 2,
-      active_sessions: 4,
-      max_concurrent_sessions: 4,
+    supervisor: stubSupervisor({
+      start: async () => runRow("run-queued", { status: "queued" }),
+      waitFor: () => ({
+        kind: "concurrency_limit",
+        position: 2,
+        active_sessions: 4,
+        max_concurrent_sessions: 4,
+      }),
     }),
   });
   const res = await post(app, "/api/runs", { prompt: "the fifth one" });
@@ -259,9 +276,14 @@ it("answers a saturated launch with the run and the place it is queued at", asyn
 
 it("returns a conflict with the refusal code when the project has no usable repository", async () => {
   const app = makeApiApp(t, {
-    launchRun: async () => {
-      throw new LaunchRefusedError("repository_required", "project p1 has no repository to run in");
-    },
+    supervisor: stubSupervisor({
+      start: async () => {
+        throw new LaunchRefusedError(
+          "repository_required",
+          "project p1 has no repository to run in",
+        );
+      },
+    }),
   });
   const res = await post(app, "/api/runs", { prompt: "goal" });
 
@@ -275,11 +297,13 @@ it("returns a conflict with the refusal code when the project has no usable repo
 
 it("sends a second launch on an unmerged issue back to the run that holds its workspace", async () => {
   const app = makeApiApp(t, {
-    launchRun: async () => {
-      throw new LaunchRefusedError("issue_workspace_open", "issue i1 already works in b", {
-        runId: "run-holding",
-      });
-    },
+    supervisor: stubSupervisor({
+      start: async () => {
+        throw new LaunchRefusedError("issue_workspace_open", "issue i1 already works in b", {
+          runId: "run-holding",
+        });
+      },
+    }),
   });
   const res = await post(app, "/api/runs", { issue_id: "i1" });
 
@@ -293,9 +317,14 @@ it("sends a second launch on an unmerged issue back to the run that holds its wo
 
 it("returns a bad request when the requested base branch does not exist", async () => {
   const app = makeApiApp(t, {
-    launchRun: async () => {
-      throw new LaunchRefusedError("base_branch_not_found", 'branch "ghost" does not exist in /r');
-    },
+    supervisor: stubSupervisor({
+      start: async () => {
+        throw new LaunchRefusedError(
+          "base_branch_not_found",
+          'branch "ghost" does not exist in /r',
+        );
+      },
+    }),
   });
   const res = await post(app, "/api/runs", { prompt: "goal", base_branch: "ghost" });
 
@@ -308,10 +337,12 @@ it("delegates resume to the supervisor for a known run", async () => {
   seedTerminalRun(t.db, runId);
   let resumed = "";
   const app = makeApiApp(t, {
-    resumeRun: async (id) => {
-      resumed = id;
-      return runRow(id);
-    },
+    supervisor: stubSupervisor({
+      resume: async (id) => {
+        resumed = id;
+        return runRow(id);
+      },
+    }),
   });
   const res = await request(app, `/api/runs/${runId}/resume`, { method: "POST" });
   expect(res.status).toBe(200);
@@ -327,9 +358,11 @@ it("carries the daemon's own reason when a resume is refused", async () => {
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
   const app = makeApiApp(t, {
-    resumeRun: async () => {
-      throw new RunNotResumableError("run cannot be resumed: a turn is already running");
-    },
+    supervisor: stubSupervisor({
+      resume: async () => {
+        throw new RunNotResumableError("run cannot be resumed: a turn is already running");
+      },
+    }),
   });
 
   const res = await request(app, `/api/runs/${runId}/resume`, { method: "POST" });
@@ -345,7 +378,9 @@ it("tells the cockpit what a resume would do before it runs", async () => {
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
   const app = makeApiApp(t, {
-    runResumePlan: () => ({ mode: "recovery", reason: "No provider session was recorded" }),
+    supervisor: stubSupervisor({
+      resumePlan: () => ({ mode: "recovery", reason: "No provider session was recorded" }),
+    }),
   });
 
   const detail = (await (await request(app, `/api/runs/${runId}`)).json()) as RunDetail;
@@ -360,25 +395,27 @@ it("serves what abandoning would leave behind, and refuses while the run is acti
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
   const app = makeApiApp(t, {
-    workspaceClosure: () => ({
-      run_id: runId,
-      branch: "otomat/run/run-detail",
-      base_branch: "main",
-      worktree_path: "/tmp/wt",
-      commits: [{ sha: "abc1234", subject: "Wire the thing" }],
-      commit_count: 1,
-      uncommitted_files: 2,
-      changed_files: 3,
-      additions: 40,
-      deletions: 4,
-      blocker: "run_active",
+    supervisor: stubSupervisor({
+      workspaceClosure: () => ({
+        run_id: runId,
+        branch: "otomat/run/run-detail",
+        base_branch: "main",
+        worktree_path: "/tmp/wt",
+        commits: [{ sha: "abc1234", subject: "Wire the thing" }],
+        commit_count: 1,
+        uncommitted_files: 2,
+        changed_files: 3,
+        additions: 40,
+        deletions: 4,
+        blocker: "run_active",
+      }),
+      abandon: () => {
+        throw new WorkspaceAbandonRefusedError(
+          "run_active",
+          "cancel the run before abandoning its workspace",
+        );
+      },
     }),
-    abandonWorkspace: () => {
-      throw new WorkspaceAbandonRefusedError(
-        "run_active",
-        "cancel the run before abandoning its workspace",
-      );
-    },
   });
 
   const summary = (await (
@@ -397,10 +434,12 @@ it("abandons the workspace on an explicit confirmation", async () => {
   seedTerminalRun(t.db, runId);
   let abandoned = "";
   const app = makeApiApp(t, {
-    abandonWorkspace: (id) => {
-      abandoned = id;
-      return runRow(id, { status: "canceled", abandoned_at: "2026-08-11T00:00:00.000Z" });
-    },
+    supervisor: stubSupervisor({
+      abandon: (id) => {
+        abandoned = id;
+        return runRow(id, { status: "canceled", abandoned_at: "2026-08-11T00:00:00.000Z" });
+      },
+    }),
   });
 
   const res = await request(app, `/api/runs/${runId}/abandon`, { method: "POST" });
@@ -414,10 +453,12 @@ it("appends a step with the agent the caller chose, never an inherited one", asy
   seedTerminalRun(t.db, runId);
   let received: AppendStepInput | null = null;
   const app = makeApiApp(t, {
-    appendRunStep: async (_id, input) => {
-      received = input;
-      return runRow(runId);
-    },
+    supervisor: stubSupervisor({
+      appendStep: async (_id, input) => {
+        received = input;
+        return runRow(runId);
+      },
+    }),
   });
 
   const res = await post(app, `/api/runs/${runId}/steps`, {
@@ -448,9 +489,11 @@ it("rejects an appended step with no agent, and maps a closed workspace to 409",
   expect(noAgent.status).toBe(400);
 
   const closed = makeApiApp(t, {
-    appendRunStep: async () => {
-      throw new RunWorkspaceClosedError("merged");
-    },
+    supervisor: stubSupervisor({
+      appendStep: async () => {
+        throw new RunWorkspaceClosedError("merged");
+      },
+    }),
   });
   const res = await post(closed, `/api/runs/${runId}/steps`, {
     name: "Address review",
@@ -475,10 +518,12 @@ it("delegates a contribution to the supervisor with its step and the trimmed bod
   seedTerminalRun(t.db, runId);
   let received: { id: string; stepRunId: string; body: string } | null = null;
   const app = makeApiApp(t, {
-    contributeToRun: async (id, stepRunId, body) => {
-      received = { id, stepRunId, body };
-      return contributionRow(id, { step_run_id: stepRunId, body });
-    },
+    supervisor: stubSupervisor({
+      contribute: async (id, stepRunId, body) => {
+        received = { id, stepRunId, body };
+        return contributionRow(id, { step_run_id: stepRunId, body });
+      },
+    }),
   });
   const res = await post(app, `/api/runs/${runId}/contributions`, {
     step_run_id: "step-1",
@@ -518,9 +563,11 @@ it("maps a step that will not run again to 409 rather than accepting a message f
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
   const app = makeApiApp(t, {
-    contributeToRun: async () => {
-      throw new RunContributionStepClosedError("step is canceled");
-    },
+    supervisor: stubSupervisor({
+      contribute: async () => {
+        throw new RunContributionStepClosedError("step is canceled");
+      },
+    }),
   });
   const res = await post(app, `/api/runs/${runId}/contributions`, {
     step_run_id: "step-1",
@@ -534,9 +581,11 @@ it("maps a non-cancelable contribution to 409 rather than pretending it was with
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
   const app = makeApiApp(t, {
-    cancelRunContribution: () => {
-      throw new RunContributionNotCancelableError("already on its way");
-    },
+    supervisor: stubSupervisor({
+      cancelContribution: () => {
+        throw new RunContributionNotCancelableError("already on its way");
+      },
+    }),
   });
   const res = await post(app, `/api/runs/${runId}/contributions/c1/cancel`, {});
   expect(res.status).toBe(409);
@@ -547,9 +596,11 @@ it("maps a non-retriable contribution to 409 rather than replaying a delivered m
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
   const app = makeApiApp(t, {
-    retryRunContribution: async () => {
-      throw new RunContributionNotRetriableError("already reached the agent");
-    },
+    supervisor: stubSupervisor({
+      retryContribution: async () => {
+        throw new RunContributionNotRetriableError("already reached the agent");
+      },
+    }),
   });
   const res = await post(app, `/api/runs/${runId}/contributions/c1/retry`, {});
   expect(res.status).toBe(409);
@@ -560,7 +611,9 @@ it("delegates abort to the supervisor and returns the run detail", async () => {
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
   let aborted = "";
-  const app = makeApiApp(t, { abortRun: async (id) => void (aborted = id) });
+  const app = makeApiApp(t, {
+    supervisor: stubSupervisor({ abort: async (id) => void (aborted = id) }),
+  });
   const res = await request(app, `/api/runs/${runId}/abort`, { method: "POST" });
   expect(res.status).toBe(200);
   expect(aborted).toBe(runId);
@@ -633,9 +686,11 @@ it("serves isolated candidate diff evidence and delegates explicit winner select
         return { computedAt: "2026-07-05T00:00:00.000Z", diff: null };
       },
     },
-    selectCompeteWinner: async (selectedRunId, groupId, stepRunId) => {
-      selected = { runId: selectedRunId, groupId, stepRunId };
-    },
+    supervisor: stubSupervisor({
+      selectWinner: async (selectedRunId, groupId, stepRunId) => {
+        selected = { runId: selectedRunId, groupId, stepRunId };
+      },
+    }),
   });
 
   const diff = await request(

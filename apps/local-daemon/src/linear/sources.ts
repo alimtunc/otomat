@@ -1,17 +1,21 @@
 import {
   deleteIssueSource,
   deleteSyncState,
+  findOverlappingIssueSource,
   getIssueSource,
   getProject,
   getSyncState,
+  insertIssueSource,
   type Db,
   type IssueSourceRow,
+  type NewIssueSource,
   listIssueSources,
   updateIssueSourceLifecycle,
 } from "@otomat/db";
 import {
   issueSourceContractSchema,
   linearSyncStatusSchema,
+  type CreateIssueSourceRequest,
   type IssueSourceContract,
   type LinearSyncStatusContract,
   type LinearWorkflowState,
@@ -57,6 +61,46 @@ export function deleteSourceMapping(db: Db, sourceId: string): void {
   requireSourceRow(db, sourceId);
   deleteIssueSource(db, sourceId);
   deleteSyncState(db, SYNC_SOURCE, SYNC_RESOURCE, sourceId);
+}
+
+export function createSourceMapping(
+  db: Db,
+  workspace: LinearWorkspaceContract,
+  id: string,
+  request: CreateIssueSourceRequest,
+): IssueSourceContract {
+  if (getProject(db, request.project_id) === undefined) {
+    throw linearError("linear_project_not_found");
+  }
+  const team = workspace.teams.find((candidate) => candidate.id === request.external_team_id);
+  const externalProjectId = request.external_project_id ?? "";
+  const externalProject = workspace.projects.find(
+    (candidate) =>
+      candidate.id === externalProjectId && candidate.team_ids.includes(request.external_team_id),
+  );
+  if (team === undefined || (externalProjectId !== "" && externalProject === undefined)) {
+    throw linearError("linear_source_invalid_selection");
+  }
+  const existing = findOverlappingIssueSource(
+    db,
+    SYNC_SOURCE,
+    request.external_team_id,
+    externalProjectId,
+  );
+  if (existing !== undefined) throw linearError("linear_source_already_mapped");
+
+  const row = {
+    id,
+    project_id: request.project_id,
+    source: SYNC_SOURCE,
+    external_team_id: request.external_team_id,
+    external_team_key: team.key,
+    external_team_name: team.name,
+    external_project_id: externalProjectId,
+    external_project_name: externalProject?.name ?? "",
+  } satisfies NewIssueSource;
+  insertIssueSource(db, row);
+  return sourceContract(db, requireSourceRow(db, row.id));
 }
 
 function requireTeamState(

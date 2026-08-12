@@ -129,6 +129,57 @@ it("reopens an issue closed in Linear when another step is added to unmerged wor
   expect(writes.every((write) => write.status === "sent")).toBe(true);
 });
 
+it("lands overlapping assertions for one issue in signal order, so done stays final", async () => {
+  test.seedSource({ ...DOING, ...SHIPPED });
+  let remote = linearDetail();
+  const stateUpdates: string[] = [];
+  let releaseFirst: () => void = () => {};
+  const firstGate = new Promise<void>((resolve) => {
+    releaseFirst = resolve;
+  });
+  const updateIssue = vi.fn(async (_key: string, _id: string, input: { stateId?: string }) => {
+    if (stateUpdates.length === 0) await firstGate;
+    stateUpdates.push(input.stateId ?? "");
+    remote = linearDetail({ state: input.stateId === "s-doing" ? STARTED : COMPLETED });
+    return remote;
+  });
+  const service = await test.connectedService({
+    issueSnapshot: async () => remote,
+    updateIssue,
+  });
+
+  const first = service.syncIssueLifecycle({ issue_id: "li", phase: "in_progress", run_id: "r1" });
+  const second = service.syncIssueLifecycle({ issue_id: "li", phase: "done", run_id: "r1" });
+  releaseFirst();
+  await Promise.all([first, second]);
+
+  expect(stateUpdates).toEqual(["s-doing", "s-shipped"]);
+  expect(getIssue(test.db, "li")?.status).toBe("done");
+  expect(getIssue(test.db, "li")?.source_state_name).toBe("Shipped");
+});
+
+it("keeps asserting after an earlier failed assertion for the same issue", async () => {
+  test.seedSource({ ...DOING, ...SHIPPED });
+  let failFirst = true;
+  const service = await test.connectedService({
+    issueSnapshot: async () => linearDetail(),
+    updateIssue: async () => {
+      if (failFirst) {
+        failFirst = false;
+        throw new Error("boom");
+      }
+      return linearDetail({ state: COMPLETED });
+    },
+  });
+
+  await expect(
+    service.syncIssueLifecycle({ issue_id: "li", phase: "in_progress", run_id: "r1" }),
+  ).rejects.toThrow();
+  await service.syncIssueLifecycle({ issue_id: "li", phase: "done", run_id: "r1" });
+
+  expect(getIssue(test.db, "li")?.status).toBe("done");
+});
+
 it("keeps a refused write visible and retryable without claiming success", async () => {
   test.seedSource(DOING);
   let authorized = false;

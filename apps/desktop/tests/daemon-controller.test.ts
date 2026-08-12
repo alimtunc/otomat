@@ -106,6 +106,19 @@ it("drains a diagnostic emitted after exit before reporting startup failure", as
   });
 });
 
+it("stops reporting a crashed daemon as running, so a restart can start it again", async () => {
+  const harness = await createControllerHarness();
+  await harness.controller.start();
+  expect(harness.controller.running).toBe(true);
+
+  harness.children[0]?.emit("close", 1);
+
+  await vi.waitFor(() => expect(harness.controller.running).toBe(false));
+  await harness.controller.start();
+  expect(harness.spawn).toHaveBeenCalledTimes(2);
+  expect(harness.controller.running).toBe(true);
+});
+
 it("does not spawn restore maintenance when the active daemon cannot be terminated", async () => {
   const harness = await createControllerHarness(undefined, async () => {
     throw new Error("daemon remained alive");

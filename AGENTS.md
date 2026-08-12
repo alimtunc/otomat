@@ -87,10 +87,16 @@ on first attempts, added steps, and follow-ups alike.
 - Write idiomatic React: reuse the primitives in `packages/ui` and the frontend
   stack already in place instead of hand-rolling alternatives; keep state where
   it is used and derive values instead of mirroring them; add memoization,
-  context, or an abstraction layer only for a need that exists today.
+  context, or an abstraction layer only for a need that exists today. A failed
+  refresh with retained query data renders the data behind the stale-notice
+  boundary (`QueryBoundary`/`QueryList`); a blocking error state is only for a
+  query with no data. A mutation that returns the created entity seeds the
+  caches it invalidates with that entity before invalidating them.
 - Never swallow errors. Avoid `catch {}`, `.catch(() => {})`, and optional
-  chaining that hides error-created absence. Expose useful loading, error, and
-  empty states.
+  chaining that hides error-created absence. Logging is not handling: an
+  operation that catches a failure and still acknowledges success has swallowed
+  it — persist first, then acknowledge, and carry the failure in the returned
+  result. Expose useful loading, error, and empty states.
 - Cast only after validation or in narrow idioms such as `as const` and
   `as unknown`. Define each union or enum once, and type contractual values as
   non-null.
@@ -227,6 +233,22 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
   and resumable; only a confirmed merge or an explicit abandon closes it, and the
   next launch then starts a fresh cycle. Abandoning stamps the run and stops the
   plan — it never deletes a branch, a worktree or a commit.
+- Queries answer, commands mutate: a read operation (list/get/status) never
+  triggers lifecycle side effects. Deliberately unawaited work is dispatched
+  from a state transition or an explicit command, and concurrent writes to one
+  external resource are ordered per resource with an in-memory chain — the
+  daemon is a single process.
+- When a behavior has a composed sequence (advance → deliver queued
+  contributions → cancel undeliverable), every path that needs it invokes the
+  whole composition; re-assembling a subset is how queues silently stall.
+- Everything one response derives from a worktree — diff, anchor validation,
+  expanded blobs, prompt context — reads from a single captured `{base, tree}`
+  snapshot (`diffSnapshot`). Never pair content from two separately computed
+  trees, and never read worktree files through `fs` into provider prompts: a
+  changed path can be a symlink to a host file.
+- The API layer consumes daemon modules through their service seams
+  (`Supervisor`, `ReviewService`, `LinearService`, …); `ApiDeps` carries module
+  handles, never re-declared per-method fields.
 
 ## Source and test layout
 

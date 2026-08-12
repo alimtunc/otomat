@@ -1,7 +1,13 @@
+import { mkdirSync, rmSync } from "node:fs";
+
 import type { RemoteHostStatus } from "@otomat/domain";
 import { expect, it, vi } from "vitest";
 
-import { readExecutionHostsConfig, writeExecutionHostsConfig } from "#main/remote/host/config";
+import {
+  executionHostsConfigPath,
+  readExecutionHostsConfig,
+  writeExecutionHostsConfig,
+} from "#main/remote/host/config";
 import { ExecutionHostManager } from "#main/remote/manager";
 import type { RemoteSessionHandle } from "#main/remote/session";
 import { scratchDir } from "#support/scratch-dir";
@@ -154,6 +160,37 @@ it("removes the remote host: session disposed, alias cleared, server untouched",
   expect(await manager.listProjects()).toHaveLength(1);
 });
 
+it("keeps the previous selection in force when the config cannot be persisted", async () => {
+  const dataDir = scratch();
+  const { manager, applied, sessions } = makeManager({ dataDir });
+  expect(manager.configureRemote("otomat-vps").ok).toBe(true);
+  // A directory at the config path makes every later write fail.
+  rmSync(executionHostsConfigPath(dataDir));
+  mkdirSync(executionHostsConfigPath(dataDir));
+
+  const selected = await manager.select("remote");
+  expect(selected.ok).toBe(false);
+  expect(selected).toMatchObject({ message: expect.stringContaining("saved") });
+  expect(manager.activeHostId).toBe("local");
+  expect(applied).toEqual([]);
+
+  const removed = manager.removeRemote();
+  expect(removed.ok).toBe(false);
+  expect(manager.snapshot().remote_ssh_alias).toBe("otomat-vps");
+  expect(sessions[0]?.disposeCount).toBe(0);
+});
+
+it("does not confirm an alias the disk never recorded", () => {
+  const dataDir = scratch();
+  mkdirSync(executionHostsConfigPath(dataDir));
+  const { manager } = makeManager({ dataDir });
+
+  const result = manager.configureRemote("otomat-vps");
+
+  expect(result.ok).toBe(false);
+  expect(manager.snapshot().remote_ssh_alias).toBeNull();
+});
+
 it("refuses to remove the host while a remote project is active", async () => {
   const { manager } = makeManager();
   manager.configureRemote("otomat-vps");
@@ -279,6 +316,7 @@ it("surfaces the daemon's registration refusal verbatim", async () => {
       ({
         status: 400,
         ok: false,
+        headers: new Headers(),
         json: async () => ({ error: "path_not_git_repository", message: "Not a git repository." }),
       }) as Response,
   );
@@ -460,7 +498,7 @@ it("reports an unreachable remote host as projects: null, never an error", async
   });
 });
 
-it("restarts a stale idle remote daemon from the switcher poll, once per build", async () => {
+it("restarts a stale idle remote daemon when its session connects, once per build", async () => {
   const { manager, sessions } = makeManager({
     expectedBuild: "abc1234",
     fetchImpl: async (input) =>
@@ -471,12 +509,11 @@ it("restarts a stale idle remote daemon from the switcher poll, once per build",
       ),
   });
   manager.configureRemote("otomat-vps");
-  await manager.listProjects();
-  await manager.listProjects();
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   expect(sessions[0]?.refreshCount).toBe(1);
 
+  // A catalog read is pure: it warms the healthy session but never restarts the daemon again.
   await manager.listProjects();
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(sessions[0]?.refreshCount).toBe(1);

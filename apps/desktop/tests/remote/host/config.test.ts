@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { expect, it } from "vitest";
 
@@ -7,6 +7,7 @@ import {
   executionHostsConfigPath,
   readExecutionHostsConfig,
   writeExecutionHostsConfig,
+  writeExecutionHostsConfigSafe,
 } from "#main/remote/host/config";
 import { scratchDir } from "#support/scratch-dir";
 
@@ -35,6 +36,22 @@ it("stores only the alias name, never credentials", () => {
   const raw = readFileSync(executionHostsConfigPath(dir), "utf8");
   expect(raw).not.toMatch(/key|password|token|secret/i);
   expect(JSON.parse(raw)).toEqual({ version: 1, remote: { ssh_alias: "vps" }, active: "local" });
+});
+
+it("reports a failed safe write instead of pretending it stuck", () => {
+  const dir = scratch();
+  mkdirSync(executionHostsConfigPath(dir));
+  const messages: string[] = [];
+
+  const failed = writeExecutionHostsConfigSafe(dir, DEFAULT_EXECUTION_HOSTS_CONFIG, (message) =>
+    messages.push(message),
+  );
+
+  expect(failed.ok).toBe(false);
+  expect(messages).toHaveLength(1);
+  expect(
+    writeExecutionHostsConfigSafe(scratch(), DEFAULT_EXECUTION_HOSTS_CONFIG, () => {}),
+  ).toEqual({ ok: true });
 });
 
 it("throws on unparseable content instead of silently defaulting", () => {
