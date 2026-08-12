@@ -5,7 +5,7 @@ import {
   recordAgentSessionProcess,
   updateRunStatus,
 } from "@otomat/db";
-import { agentSessionMachine, runMachine, stepRunMachine } from "@otomat/domain";
+import { agentSessionMachine, isRunSettled, stepRunMachine } from "@otomat/domain";
 
 import { startSessionTail } from "#events";
 
@@ -17,7 +17,7 @@ import { notifyAfterSettle, type SupervisorState } from "./state.js";
 import { driveRunTo, driveSessionTo, driveStepTo } from "./transitions.js";
 import type { ProcessExit, SessionProcess, TurnContext } from "./types.js";
 
-/** Advances only the turn's own step/session — siblings keep their state, and a follow-up's already-terminal rows are never reopened. */
+/** Advances only the turn's own step/session — siblings keep their state. The step machine decides what may reopen: a stopped step goes back to work, a succeeded one is left as delivered. */
 function advanceToRunning(state: SupervisorState, ctx: TurnContext): void {
   const { db } = state;
   const now = new Date().toISOString();
@@ -151,13 +151,13 @@ export async function spawnTurn(
     const readyRun = getRun(db, ctx.runId);
     if (
       !readyRun ||
-      runMachine.isTerminal(readyRun.status) ||
+      isRunSettled(readyRun.status) ||
       aborting.has(ctx.runId) ||
       state.shuttingDown
     ) {
       proc.kill("SIGKILL");
       const exit = await proc.exited;
-      if (readyRun && !runMachine.isTerminal(readyRun.status) && !aborting.has(ctx.runId)) {
+      if (readyRun && !isRunSettled(readyRun.status) && !aborting.has(ctx.runId)) {
         settleLive(state, ctx, exit);
       }
       release();

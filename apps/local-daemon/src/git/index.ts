@@ -11,7 +11,15 @@ export * from "./types.js";
 export * from "./errors.js";
 export * from "./diff.js";
 export { scrubGitEnv } from "./git-cli.js";
-export { branchExists, detectDefaultBranch, isRepositoryRoot, listBranches } from "./repo.js";
+export {
+  branchExists,
+  commitsSince,
+  detectDefaultBranch,
+  isRepositoryRoot,
+  listBranches,
+  uncommittedPaths,
+  type CommitSummary,
+} from "./repo.js";
 export * from "./probe.js";
 export * from "./resolver.js";
 export * from "./service-contract.js";

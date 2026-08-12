@@ -1,4 +1,4 @@
-import { CompeteWinnerConflictError, getRun } from "@otomat/db";
+import { CompeteWinnerConflictError, getPullRequestForRun, getRun } from "@otomat/db";
 import {
   appendRunStepRequestSchema,
   IllegalTransitionError,
@@ -9,7 +9,11 @@ import {
 import { Hono, type Context, type Env } from "hono";
 
 import { RuntimeUnavailableError } from "#runtime";
-import { LaunchRefusedError, RunNotResumableError } from "#supervisor";
+import {
+  LaunchRefusedError,
+  RunNotResumableError,
+  WorkspaceAbandonRefusedError,
+} from "#supervisor";
 
 import { agentConfigErrorResponse, refusalJson } from "../agent-config-refusal.js";
 import { projectRunCompletionReport } from "../completion-report.js";
@@ -17,7 +21,7 @@ import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { readCompeteCandidate, readRunDetail, readRuns } from "../reads.js";
 import { toRunDiffResponse } from "../serialize-run-diff.js";
-import { toRun } from "../serialize.js";
+import { toPullRequest, toRun } from "../serialize.js";
 import { streamRunEvents } from "../sse.js";
 import { appendStepSelector, stepAppendErrorResponse } from "../step-append.js";
 
@@ -36,7 +40,10 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
 
   const runDetailJson = <E extends Env>(c: Context<E>, runId: string) => {
-    const detail = readRunDetail(deps.db, runId, deps.runWait(runId));
+    const detail = readRunDetail(deps.db, runId, {
+      wait: deps.runWait(runId),
+      resume: deps.runResumePlan(runId),
+    });
     return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
   };
 
@@ -91,13 +98,42 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       return c.json(toRun(await deps.resumeRun(run.id)));
     } catch (error) {
       if (error instanceof RunNotResumableError) {
-        return c.json({ error: "run_not_resumable" }, 409);
+        return c.json({ error: "run_not_resumable", message: error.message }, 409);
       }
       if (error instanceof IllegalTransitionError && error.machine === "issue") {
         return c.json({ error: "issue_closed", message: error.message }, 409);
       }
       console.error(`[otomat] resume run ${run.id} failed`, error);
       return c.json({ error: "run_resume_failed" }, 500);
+    }
+  });
+
+  routes.get("/:id/workspace", runGuard(deps.db), (c) => {
+    const run = c.get("run");
+    try {
+      const facts = deps.workspaceClosure(run.id);
+      if (!facts) return c.json({ error: "run_not_found" }, 404);
+      const pullRequest = getPullRequestForRun(deps.db, run.id);
+      return c.json({
+        ...facts,
+        pull_request: pullRequest ? toPullRequest(pullRequest, null) : null,
+      });
+    } catch (error) {
+      console.error(`[otomat] reading the workspace of run ${run.id} failed`, error);
+      return c.json({ error: "workspace_summary_failed" }, 500);
+    }
+  });
+
+  routes.post("/:id/abandon", runGuard(deps.db), (c) => {
+    const run = c.get("run");
+    try {
+      return c.json(toRun(deps.abandonWorkspace(run.id)));
+    } catch (error) {
+      if (error instanceof WorkspaceAbandonRefusedError) {
+        return c.json({ error: error.code, message: error.message }, 409);
+      }
+      console.error(`[otomat] abandoning the workspace of run ${run.id} failed`, error);
+      return c.json({ error: "workspace_abandon_failed" }, 500);
     }
   });
 

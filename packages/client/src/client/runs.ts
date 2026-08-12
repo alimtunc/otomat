@@ -6,6 +6,7 @@ import {
   runDetailSchema,
   runDiffResponseSchema,
   runLaunchResponseSchema,
+  workspaceClosureSummarySchema,
   type AppendRunStepRequest,
   type CreateRunContributionRequest,
   type SelectCompeteWinnerRequest,
@@ -36,6 +37,16 @@ export function createRunsClient(config: DaemonClientConfig) {
     async resumeRun(id: string) {
       return runContractSchema.parse(
         await postJson(config, `/api/runs/${encodeURIComponent(id)}/resume`, {}),
+      );
+    },
+    async getRunWorkspace(id: string) {
+      return workspaceClosureSummarySchema.parse(
+        await getJson(config, `/api/runs/${encodeURIComponent(id)}/workspace`),
+      );
+    },
+    async abandonRunWorkspace(id: string) {
+      return runContractSchema.parse(
+        await postJson(config, `/api/runs/${encodeURIComponent(id)}/abandon`, {}),
       );
     },
     async appendRunStep(id: string, request: AppendRunStepRequest) {

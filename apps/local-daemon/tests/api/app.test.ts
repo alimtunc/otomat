@@ -5,6 +5,7 @@ import type {
   RunDetail,
   RunLaunchResponse,
   StartRunRequest,
+  WorkspaceClosureSummary,
 } from "@otomat/domain";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -13,7 +14,9 @@ import type { RuntimeEvent } from "#runtime";
 import {
   LaunchRefusedError,
   RunContributionNotRetriableError,
+  RunNotResumableError,
   RunWorkspaceClosedError,
+  WorkspaceAbandonRefusedError,
   type AppendStepInput,
 } from "#supervisor";
 
@@ -316,6 +319,92 @@ it("delegates resume to the supervisor for a known run", async () => {
 it("returns 404 resuming an unknown run", async () => {
   const res = await request(makeApiApp(t), "/api/runs/nope/resume", { method: "POST" });
   expect(res.status).toBe(404);
+});
+
+it("carries the daemon's own reason when a resume is refused", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  const app = makeApiApp(t, {
+    resumeRun: async () => {
+      throw new RunNotResumableError("run cannot be resumed: a turn is already running");
+    },
+  });
+
+  const res = await request(app, `/api/runs/${runId}/resume`, { method: "POST" });
+
+  expect(res.status).toBe(409);
+  expect((await res.json()) as { error: string; message: string }).toMatchObject({
+    error: "run_not_resumable",
+    message: expect.stringContaining("already running"),
+  });
+});
+
+it("tells the cockpit what a resume would do before it runs", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  const app = makeApiApp(t, {
+    runResumePlan: () => ({ mode: "recovery", reason: "No provider session was recorded" }),
+  });
+
+  const detail = (await (await request(app, `/api/runs/${runId}`)).json()) as RunDetail;
+
+  expect(detail.resume).toEqual({
+    mode: "recovery",
+    reason: "No provider session was recorded",
+  });
+});
+
+it("serves what abandoning would leave behind, and refuses while the run is active", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  const app = makeApiApp(t, {
+    workspaceClosure: () => ({
+      run_id: runId,
+      branch: "otomat/run/run-detail",
+      base_branch: "main",
+      worktree_path: "/tmp/wt",
+      commits: [{ sha: "abc1234", subject: "Wire the thing" }],
+      commit_count: 1,
+      uncommitted_files: 2,
+      changed_files: 3,
+      additions: 40,
+      deletions: 4,
+      blocker: "run_active",
+    }),
+    abandonWorkspace: () => {
+      throw new WorkspaceAbandonRefusedError(
+        "run_active",
+        "cancel the run before abandoning its workspace",
+      );
+    },
+  });
+
+  const summary = (await (
+    await request(app, `/api/runs/${runId}/workspace`)
+  ).json()) as WorkspaceClosureSummary;
+  expect(summary).toMatchObject({ commit_count: 1, uncommitted_files: 2, blocker: "run_active" });
+  expect(summary.pull_request).toBeNull();
+
+  const refused = await request(app, `/api/runs/${runId}/abandon`, { method: "POST" });
+  expect(refused.status).toBe(409);
+  expect((await refused.json()) as { error: string }).toMatchObject({ error: "run_active" });
+});
+
+it("abandons the workspace on an explicit confirmation", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  let abandoned = "";
+  const app = makeApiApp(t, {
+    abandonWorkspace: (id) => {
+      abandoned = id;
+      return runRow(id, { status: "canceled", abandoned_at: "2026-08-11T00:00:00.000Z" });
+    },
+  });
+
+  const res = await request(app, `/api/runs/${runId}/abandon`, { method: "POST" });
+
+  expect(res.status).toBe(200);
+  expect(abandoned).toBe(runId);
 });
 
 it("appends a step with the agent the caller chose, never an inherited one", async () => {

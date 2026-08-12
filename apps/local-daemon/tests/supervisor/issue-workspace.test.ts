@@ -42,8 +42,51 @@ it("projects the issue's open workspace onto the run that holds its branch", asy
     state: "open",
     run_id: run.id,
     branch: run.branch,
+    run_status: "review_ready",
     busy: false,
   });
+});
+
+it("keeps the cycle open after a cancel, and refuses a second launch until it is abandoned", async () => {
+  const { supervisor } = makeSupervisor(fix, "linger");
+  const run = await supervisor.start({ issue_id: "i-work" });
+  expect(await waitFor(() => issueWorkspace(fix.db, "i-work").busy)).toBe(true);
+
+  await supervisor.abort(run.id);
+  await supervisor.settle();
+
+  expect(issueWorkspace(fix.db, "i-work")).toMatchObject({
+    state: "open",
+    run_id: run.id,
+    run_status: "canceled",
+    busy: false,
+  });
+  await expect(supervisor.start({ issue_id: "i-work" })).rejects.toMatchObject({
+    code: "issue_workspace_open",
+  });
+
+  supervisor.abandon(run.id);
+  expect(issueWorkspace(fix.db, "i-work").state).toBe("closed");
+  const fresh = await supervisor.start({ issue_id: "i-work" });
+  expect(fresh.id).not.toBe(run.id);
+  await supervisor.abort(fresh.id);
+  await supervisor.settle();
+});
+
+it("refuses to abandon a workspace whose run is still working, and leaves git untouched when it does", async () => {
+  const { supervisor } = makeSupervisor(fix, "linger");
+  const run = await supervisor.start({ issue_id: "i-work" });
+  expect(await waitFor(() => issueWorkspace(fix.db, "i-work").busy)).toBe(true);
+
+  expect(() => supervisor.abandon(run.id)).toThrowError(/cancel the run/);
+
+  await supervisor.abort(run.id);
+  await supervisor.settle();
+  const before = fix.db.select().from(schema.worktrees).all();
+  supervisor.abandon(run.id);
+
+  expect(fix.db.select().from(schema.worktrees).all()).toEqual(before);
+  expect(listRuns(fix.db, { issueId: "i-work" })).toHaveLength(1);
 });
 
 it("refuses a second launch on an unmerged issue, naming the run that holds its workspace", async () => {

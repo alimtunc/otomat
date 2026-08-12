@@ -26,6 +26,8 @@ export const runs = sqliteTable("runs", {
   plan_json: text("plan_json", { mode: "json" }).notNull(),
   started_at: text("started_at"),
   completed_at: text("completed_at"),
+  // The one manual closure of an issue's work cycle: stamped, never inferred.
+  abandoned_at: text("abandoned_at"),
   ...timestamps,
 });
 

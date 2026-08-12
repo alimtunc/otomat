@@ -1,18 +1,16 @@
-import type { RunState } from "@otomat/domain";
 import { Button, Icon } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-import { useAbortRun, useResumeRun } from "@web/api/runs/mutations";
-import { canAbortRun, canResumeRun } from "@web/lib/run/actions";
+import { AddStepDialog } from "@web/components/runs/actions/add-step-dialog";
+import { RunActionsMenu } from "@web/components/runs/actions/run-actions-menu";
 
 export interface RunActionButtonsProps {
   runId: string;
-  status: RunState;
+  issueId: string;
   stretch?: boolean;
 }
 
-export function RunActionButtons({ runId, status, stretch = false }: RunActionButtonsProps) {
-  const abort = useAbortRun(runId);
-  const resume = useResumeRun(runId);
+/** The cockpit's action row: read the diff, extend the open cycle, or act on the run itself. */
+export function RunActionButtons({ runId, issueId, stretch = false }: RunActionButtonsProps) {
   const className = stretch ? "flex-1" : undefined;
 
   return (
@@ -27,29 +25,8 @@ export function RunActionButtons({ runId, status, stretch = false }: RunActionBu
           </Link>
         }
       />
-      {canResumeRun(status) ? (
-        <Button
-          size="sm"
-          variant="outline"
-          className={className}
-          loading={resume.isPending}
-          onClick={() => resume.mutate()}
-        >
-          Resume
-        </Button>
-      ) : null}
-      {canAbortRun(status) ? (
-        <Button
-          size="sm"
-          variant="destructive"
-          className={className}
-          loading={abort.isPending}
-          onClick={() => abort.mutate()}
-        >
-          <Icon name="square" aria-hidden />
-          Stop
-        </Button>
-      ) : null}
+      <AddStepDialog issueId={issueId} stretch={stretch} />
+      <RunActionsMenu runId={runId} stretch={stretch} />
     </>
   );
 }

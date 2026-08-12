@@ -219,7 +219,7 @@ export function RunDiffView() {
       />
       {diff.files.length === 0 ? emptyRegion : browsedRegion}
       <DiffFixBar
-        runStatus={runQuery.data?.run.status}
+        workspaceOpen={runQuery.data?.holds_workspace === true}
         authority={review.fix_authority}
         selection={selection}
       />

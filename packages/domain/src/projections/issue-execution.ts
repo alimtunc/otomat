@@ -2,7 +2,7 @@ import type { IssueExecution, IssueExecutionState } from "../contracts/entities/
 import type { WorktreeStatus } from "../contracts/entities/workspace.js";
 import type { PullRequestPublicationState } from "../state-machines/pull-request-publication.js";
 import type { PullRequestState } from "../state-machines/pull-request.js";
-import { isRunTerminal, type RunState } from "../state-machines/run.js";
+import { isRunSettled, type RunState } from "../state-machines/run.js";
 
 /** One persisted run's contribution to its issue's execution and workspace state, as stored. */
 export interface IssueExecutionEvidence {
@@ -12,6 +12,8 @@ export interface IssueExecutionEvidence {
   run_branch: string;
   /** `active` while the run still holds its worktree; null when it never had one. */
   worktree_status: WorktreeStatus | null;
+  /** When the operator explicitly abandoned this run's workspace; null while the cycle is still continuable. */
+  run_abandoned_at: string | null;
   pr_status: PullRequestState | null;
   pr_publication: PullRequestPublicationState | null;
 }
@@ -35,7 +37,7 @@ function hasOpenPullRequest(evidence: IssueExecutionEvidence): boolean {
 
 /** A run is "running" (active work) while it is neither terminal nor resting at review_ready. */
 function classifyEvidence(evidence: IssueExecutionEvidence): ExecutionKind | null {
-  if (!isRunTerminal(evidence.run_status) && evidence.run_status !== "review_ready") {
+  if (!isRunSettled(evidence.run_status) && evidence.run_status !== "review_ready") {
     return "running";
   }
   if (hasOpenPullRequest(evidence)) return "pr_open";

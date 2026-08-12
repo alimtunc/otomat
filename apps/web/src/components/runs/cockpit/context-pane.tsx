@@ -1,7 +1,8 @@
-import type { RunDetail } from "@otomat/domain";
+import { isRunResumable, type RunDetail } from "@otomat/domain";
 import { RunStatusChip, SidePanelToggle } from "@otomat/ui";
 import { RunActionButtons } from "@web/components/runs/cockpit/run-action-buttons";
 import { PaneHeader } from "@web/components/runs/pane-header";
+import { resumeModeNote } from "@web/lib/run/resume-mode";
 
 export function ContextPane({ detail }: { detail: RunDetail }) {
   return (
@@ -21,9 +22,12 @@ export function ContextPane({ detail }: { detail: RunDetail }) {
             {detail.run.branch}
           </dd>
         </dl>
-        <div className="mt-3.5 flex gap-2">
-          <RunActionButtons runId={detail.run.id} status={detail.run.status} stretch />
+        <div className="mt-3.5 flex flex-wrap gap-2">
+          <RunActionButtons runId={detail.run.id} issueId={detail.run.issue_id} stretch />
         </div>
+        {isRunResumable(detail.run.status) ? (
+          <p className="mt-2.5 text-xs text-text-tertiary">{resumeModeNote(detail.resume)}</p>
+        ) : null}
       </div>
     </div>
   );

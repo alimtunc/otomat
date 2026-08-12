@@ -13,7 +13,8 @@ import {
   agentSessionMachine,
   competeGroupMachine,
   drivePath,
-  isRunTerminal,
+  isRunSettled,
+  isStepSettled,
   issueMachine,
   runContributionMachine,
   runMachine,
@@ -36,11 +37,13 @@ export function assertContributionTransitions(
   for (const row of rows) runContributionMachine.transition(row.status, to);
 }
 
-/** Walks the run to `to` along the shortest legal path, stamping `completed_at` on a terminal landing. */
+/** Walks the run to `to` along the shortest legal path; `completed_at` is stamped on a settled landing and cleared when a resume reopens the run. */
 export function driveRunTo(db: Db, runId: string, from: RunState, to: RunState, now: string): void {
   drivePath(runMachine, from, to, (state) => {
-    const completedAt = isRunTerminal(state) ? { completed_at: now } : {};
-    updateRunStatus(db, runId, { status: state, ...completedAt });
+    updateRunStatus(db, runId, {
+      status: state,
+      completed_at: isRunSettled(state) ? now : null,
+    });
   });
 }
 
@@ -87,7 +90,7 @@ function driveStepsAndSessionsTo(
   sessionTarget: AgentSessionState,
 ): void {
   for (const step of steps) {
-    if (!stepRunMachine.isTerminal(step.status)) driveStepTo(db, step.id, step.status, stepTarget);
+    if (!isStepSettled(step.status)) driveStepTo(db, step.id, step.status, stepTarget);
   }
   for (const session of sessions) {
     if (!agentSessionMachine.isTerminal(session.status))
@@ -106,14 +109,14 @@ export function driveTurnConvergence(
 ): void {
   db.transaction(
     () => {
-      if (turn.step && !stepRunMachine.isTerminal(turn.step.status)) {
+      if (turn.step && !isStepSettled(turn.step.status)) {
         driveStepTo(db, turn.step.id, turn.step.status, targets.step);
       }
       if (turn.session && !agentSessionMachine.isTerminal(turn.session.status)) {
         driveSessionTo(db, turn.session.id, turn.session.status, targets.session);
       }
       for (const step of cancelSteps) {
-        if (!stepRunMachine.isTerminal(step.status)) {
+        if (!isStepSettled(step.status)) {
           driveStepTo(db, step.id, step.status, "canceled");
         }
       }

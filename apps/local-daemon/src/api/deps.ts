@@ -1,9 +1,11 @@
 import type { Db, RunContributionRow, RunRow } from "@otomat/db";
 import type {
   AgentCapacity,
+  RunResumePlan,
   RunWait,
   SchemaMetadataContract,
   StartRunRequest,
+  WorkspaceClosureFacts,
 } from "@otomat/domain";
 
 import type { GitHubService } from "#github";
@@ -24,6 +26,9 @@ export interface ApiDeps {
   agentCapacity(): AgentCapacity;
   setAgentCapacity(maxConcurrentSessions: number): AgentCapacity;
   resumeRun(runId: string): Promise<RunRow>;
+  runResumePlan(runId: string): RunResumePlan;
+  abandonWorkspace(runId: string): RunRow;
+  workspaceClosure(runId: string): WorkspaceClosureFacts | null;
   appendRunStep(runId: string, input: AppendStepInput): Promise<RunRow>;
   contributeToRun(runId: string, body: string): Promise<RunContributionRow>;
   retryRunContribution(runId: string, contributionId: string): Promise<RunContributionRow>;

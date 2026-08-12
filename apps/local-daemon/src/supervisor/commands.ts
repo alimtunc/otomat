@@ -1,25 +1,28 @@
 import {
-  listCompeteGroupsForRun,
+  getRun,
   listAgentSessionsForRun,
   listStepRunsForRun,
   type CompeteGroupRow,
   type RunRow,
   type StepRunRow,
 } from "@otomat/db";
-import { executableSteps, isRunPlanCompeteGroup, type StartRunRequest } from "@otomat/domain";
+import { executableSteps, type StartRunRequest } from "@otomat/domain";
 
 import { sessionDir } from "#events";
 
 import { scheduleNextStep, startNextReadyStep } from "./advance.js";
+import { failIdleRun, failureReason } from "./fail-run.js";
 import { repositoryInitCommands } from "./init-commands.js";
 import { signalIssueLifecycle } from "./issue-lifecycle.js";
 import { prepareRun } from "./prepare.js";
+import { resolveResumeAction } from "./resume-plan.js";
+import { spawnReopenTurn } from "./resume-turn.js";
 import {
-  requireResumableRun,
+  reopenIssue,
+  reopenSettledRun,
   requireResumableRuntime,
   requireRunRow,
   RunNotResumableError,
-  spawnResumeTurn,
 } from "./resume.js";
 import type { SupervisorState } from "./state.js";
 import { driveCompeteGroupTo } from "./transitions.js";
@@ -42,45 +45,48 @@ export async function startRun(state: SupervisorState, request: StartRunRequest)
   return requireRunRow(state.db, runId, "spawn");
 }
 
-/** Resumes an `awaiting_human` run: an interrupted step resumes its own session, a run paused between steps starts the next ready step, a torn follow-up turn resumes the latest session. */
-export async function resumeRun(state: SupervisorState, runId: string): Promise<RunRow> {
-  const run = requireResumableRun(state, runId, ["awaiting_human"]);
-  const steps = listStepRunsForRun(state.db, runId);
-  const interruptedGroup = listCompeteGroupsForRun(state.db, runId).find(
-    (group) => group.status === "awaiting_human",
-  );
-  if (interruptedGroup) {
-    return resumeCompeteGroup(state, run, interruptedGroup, steps);
-  }
-  const interrupted = steps.find((step) => step.status === "awaiting_human");
-
-  if (interrupted) {
-    const prompt =
-      executableSteps(run.plan_json).find((step) => step.id === interrupted.id)?.prompt ?? null;
-    if (prompt === null) throw new Error(`run ${runId} has no plan step to resume`);
-    return spawnResumeTurn(state, run, prompt);
-  }
-
-  if (listAgentSessionsForRun(state.db, runId).length === 0) {
+/** A run paused between steps owes the plan its next node; a worktree that never ran anything is initialized first. */
+async function startNextPlanNode(state: SupervisorState, run: RunRow): Promise<RunRow> {
+  if (listAgentSessionsForRun(state.db, run.id).length === 0) {
     const initCommands = repositoryInitCommands(state.db, run.repository_id);
     if (initCommands.length > 0) {
       scheduleWorktreeInit(state, run, initCommands);
-      return requireRunRow(state.db, runId, "resume");
+      return requireRunRow(state.db, run.id, "resume");
     }
   }
-
-  const started = await startNextReadyStep(state, run);
-  if (started) return requireRunRow(state.db, runId, "resume");
-
-  const lastNode = run.plan_json.steps.at(-1);
-  let lastPrompt: string | null = null;
-  if (lastNode) {
-    lastPrompt = isRunPlanCompeteGroup(lastNode)
-      ? (lastNode.compete.at(-1)?.prompt ?? null)
-      : lastNode.prompt;
+  if (!(await startNextReadyStep(state, run))) {
+    throw new RunNotResumableError(`run ${run.id} has no step left to start`);
   }
-  if (lastPrompt === null) throw new RunNotResumableError(`run ${runId} has no step to resume`);
-  return spawnResumeTurn(state, run, lastPrompt);
+  return requireRunRow(state.db, run.id, "resume");
+}
+
+/** Resumes a run on an explicit user action, never on its own; `resolveResumeAction` is the single decision, so what the cockpit announced is what runs. */
+export async function resumeRun(state: SupervisorState, runId: string): Promise<RunRow> {
+  const stopped = getRun(state.db, runId);
+  if (!stopped) throw new RunNotResumableError(`run ${runId} not found`);
+  const action = resolveResumeAction(state, stopped);
+  if (action.kind === "unavailable") {
+    throw new RunNotResumableError(`run ${runId} cannot be resumed: ${action.reason}`);
+  }
+
+  reopenIssue(state.db, stopped);
+  const run = reopenSettledRun(state, stopped);
+  signalIssueLifecycle(state.syncIssueLifecycle, run.issue_id, "in_progress", runId);
+
+  try {
+    if (action.kind === "compete_group") {
+      const steps = listStepRunsForRun(state.db, runId);
+      return await resumeCompeteGroup(state, run, action.group, steps);
+    }
+    if (action.kind === "next_step") return await startNextPlanNode(state, run);
+    return await spawnReopenTurn(state, run, action);
+  } catch (error) {
+    // A reopened run that never reached a worker must not be left resting in `preparing`.
+    if (run.status !== stopped.status) {
+      failIdleRun(state, runId, `resume failed: ${failureReason(error)}`);
+    }
+    throw error;
+  }
 }
 
 async function resumeCompeteGroup(

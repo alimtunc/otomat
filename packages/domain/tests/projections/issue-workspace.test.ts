@@ -6,13 +6,14 @@ import { projectIssueWorkspace } from "#domain/projections/issue-workspace";
 // Runs are inserted without an explicit timestamp, so the stored shape is SQLite's CURRENT_TIMESTAMP, not ISO-8601.
 const AT = (day: string) => `2026-01-0${day} 00:00:00`;
 
-const CLOSED = { state: "closed", run_id: null, branch: null, busy: false };
+const CLOSED = { state: "closed", run_id: null, branch: null, run_status: null, busy: false };
 
 function ev(over: Partial<IssueExecutionEvidence> & { run_id: string }): IssueExecutionEvidence {
   return {
     run_status: "review_ready",
     run_created_at: AT("1"),
     run_branch: `otomat/run/${over.run_id}`,
+    run_abandoned_at: null,
     worktree_status: "active",
     pr_status: null,
     pr_publication: null,
@@ -29,14 +30,25 @@ it("names the branch of the run that still holds an active worktree", () => {
     state: "open",
     run_id: "r1",
     branch: "otomat/run/r1",
+    run_status: "review_ready",
     busy: false,
   });
 });
 
-it("closes the workspace once the run reaches a terminal state", () => {
-  for (const run_status of ["completed", "failed", "canceled"] as const) {
-    expect(projectIssueWorkspace([ev({ run_id: "r1", run_status })])).toEqual(CLOSED);
+it("keeps the workspace open after a failure or a cancel, so the cycle can be resumed", () => {
+  for (const run_status of ["failed", "canceled"] as const) {
+    expect(projectIssueWorkspace([ev({ run_id: "r1", run_status })])).toMatchObject({
+      state: "open",
+      run_id: "r1",
+      run_status,
+      busy: false,
+    });
   }
+});
+
+it("closes the workspace on a merge and on an explicit abandon", () => {
+  expect(projectIssueWorkspace([ev({ run_id: "r1", run_status: "completed" })])).toEqual(CLOSED);
+  expect(projectIssueWorkspace([ev({ run_id: "r1", run_abandoned_at: AT("2") })])).toEqual(CLOSED);
 });
 
 it("closes the workspace once the worktree is released or never existed", () => {

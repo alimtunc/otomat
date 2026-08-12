@@ -32,6 +32,20 @@ export const runWaitSchema = z.discriminatedUnion("kind", [
 ]);
 export type RunWait = z.infer<typeof runWaitSchema>;
 
+/** What **Resume run** would actually do, resolved before the user commits to it; a fallback is shown as itself, never behind one hopeful label. */
+export const runResumePlanSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("native") }),
+  z.object({ mode: z.literal("recovery"), reason: z.string() }),
+  z.object({ mode: z.literal("next_step"), step_name: z.string() }),
+  z.object({ mode: z.literal("unavailable"), reason: z.string() }),
+]);
+export type RunResumePlan = z.infer<typeof runResumePlanSchema>;
+
+const UNKNOWN_RESUME_PLAN: RunResumePlan = {
+  mode: "unavailable",
+  reason: "This daemon does not report resume capability",
+};
+
 /** A run plus its persisted step/session graph; the event ledger is served by the run's SSE stream, not here. `worktree_path` and `base_branch` are null only on runs recorded before a worktree was guaranteed. */
 export const runDetailSchema = z.object({
   run: runContractSchema,
@@ -43,6 +57,10 @@ export const runDetailSchema = z.object({
   base_branch: z.string().nullable(),
   /** Live scheduler view, defaulted so a daemon deployed before the field existed still parses. */
   wait: runWaitSchema.nullable().default(null),
+  /** Defaulted for the same reason as `wait`: an older daemon reports no resume capability rather than a false one. */
+  resume: runResumePlanSchema.default(UNKNOWN_RESUME_PLAN),
+  /** Whether this run still owns its issue's canonical workspace, so it can take a new step or be abandoned. Defaults false: a daemon that cannot answer must not have an action offered on its behalf. */
+  holds_workspace: z.boolean().default(false),
 });
 export type RunDetail = z.infer<typeof runDetailSchema>;
 
@@ -115,6 +133,14 @@ export const appendRunStepRequestSchema = z
     message: "Provide either profile_id or runtime",
   });
 export type AppendRunStepRequest = z.infer<typeof appendRunStepRequestSchema>;
+
+/** Why a resume was refused. Both are caller-fixable, and the daemon's own sentence says which precondition failed. */
+export const RUN_RESUME_ERRORS = ["run_not_resumable", "issue_closed"] as const;
+
+export const runResumeErrorSchema = z.object({
+  error: z.enum(RUN_RESUME_ERRORS),
+  message: z.string(),
+});
 
 /** Why a step could not be appended. `workspace_closed` and `issue_closed` are the merge guard; `invalid_revision` is a plan the append would have broken. */
 export const RUN_STEP_APPEND_ERRORS = [

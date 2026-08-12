@@ -1,4 +1,4 @@
-import { WorktreeNotFoundError, type CanonicalDiff } from "#git";
+import { diffOrNull, type CanonicalDiff } from "#git";
 
 import type { ReviewContext, RunDiffResult } from "./types.js";
 
@@ -10,12 +10,7 @@ export function computeDiff(
 ): CanonicalDiff | null {
   const binding = ctx.repositories.forRun(runId);
   if (binding === null) return null;
-  try {
-    return binding.service.diff(owner);
-  } catch (error) {
-    if (error instanceof WorktreeNotFoundError) return null;
-    throw error;
-  }
+  return diffOrNull(binding.service, owner);
 }
 
 /** A worktree's canonical diff plus its compute timestamp; `diff` is null when the owner has no worktree. */

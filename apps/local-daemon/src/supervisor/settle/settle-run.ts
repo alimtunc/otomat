@@ -5,7 +5,7 @@ import {
   updateAgentSessionProvider,
   type Db,
 } from "@otomat/db";
-import { runMachine } from "@otomat/domain";
+import { isRunSettled } from "@otomat/domain";
 
 import { drainRunEvents, drainSessionEvents, readRunEvents } from "#events";
 
@@ -32,7 +32,7 @@ export function settleRun(
   run: SettleableRun,
   options: SettleOptions,
 ): ReconcileOutcome | null {
-  if (runMachine.isTerminal(run.status)) return null;
+  if (isRunSettled(run.status)) return null;
 
   drainRunEvents(db, dataDir, run.id);
 

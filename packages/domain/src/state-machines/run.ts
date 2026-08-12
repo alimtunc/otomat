@@ -15,6 +15,7 @@ export const RUN_STATES = [
 
 export type RunState = (typeof RUN_STATES)[number];
 
+/** `failed` and `canceled` are rests, not ends: an explicit resume reopens the run through `preparing`, and only a merged `completed` has no way out. */
 export const runMachine = defineMachine<RunState>({
   name: "run",
   initial: "queued",
@@ -34,23 +35,23 @@ export const runMachine = defineMachine<RunState>({
     awaiting_selection: ["running", "failed", "canceled"],
     review_ready: ["completed", "running", "failed", "canceled"],
     completed: [],
-    failed: [],
-    canceled: [],
+    failed: ["preparing"],
+    canceled: ["preparing"],
   },
 });
 
-/** Terminal run states (no outgoing edges); guarded against drift in transitions.test.ts. */
-export const RUN_TERMINAL_STATES = [
+/** Run states with no execution left in flight; landing on one stamps `completed_at`. */
+export const RUN_SETTLED_STATES = [
   "completed",
   "failed",
   "canceled",
 ] as const satisfies readonly RunState[];
-export type RunTerminalState = (typeof RUN_TERMINAL_STATES)[number];
+export type RunSettledState = (typeof RUN_SETTLED_STATES)[number];
 
-const runTerminalSet: ReadonlySet<string> = new Set(RUN_TERMINAL_STATES);
+const runSettledSet: ReadonlySet<string> = new Set(RUN_SETTLED_STATES);
 
-export function isRunTerminal(status: string): status is RunTerminalState {
-  return runTerminalSet.has(status);
+export function isRunSettled(status: string): status is RunSettledState {
+  return runSettledSet.has(status);
 }
 
 /** Resting states a user follow-up can resume from: the run awaits an explicit human action, not a process. */
@@ -64,6 +65,20 @@ const runFollowUpSet: ReadonlySet<string> = new Set(RUN_FOLLOW_UP_STATES);
 
 export function canFollowUpRun(status: string): status is RunFollowUpState {
   return runFollowUpSet.has(status);
+}
+
+/** States an explicit **Resume run** reopens; `completed` is the merged end of the cycle and stays closed. */
+export const RUN_RESUMABLE_STATES = [
+  "awaiting_human",
+  "failed",
+  "canceled",
+] as const satisfies readonly RunState[];
+export type RunResumableState = (typeof RUN_RESUMABLE_STATES)[number];
+
+const runResumableSet: ReadonlySet<string> = new Set(RUN_RESUMABLE_STATES);
+
+export function isRunResumable(status: string): status is RunResumableState {
+  return runResumableSet.has(status);
 }
 
 /** States with a provider turn genuinely in flight. `awaiting_permission` and `awaiting_selection` are in neither this set nor the resting one: the turn is blocked on an answer. */
