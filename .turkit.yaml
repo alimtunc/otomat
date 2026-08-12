@@ -12,6 +12,10 @@ rules:
     - AGENTS.md
 workflow:
   token_budget: normal
+review:
+  strictness: strict
+  # allow-why-only mirrors AGENTS.md: a one-line non-obvious *why* is legal, everything else is P0.
+  comments: allow-why-only
 output:
   style: compact
   language: auto
