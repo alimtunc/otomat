@@ -1,12 +1,6 @@
 import { randomUUID } from "node:crypto";
 
 import {
-  findOverlappingIssueSource,
-  getProject,
-  insertIssueSource,
-  type NewIssueSource,
-} from "@otomat/db";
-import {
   type CreateIssueSourceRequest,
   type IssueSourceContract,
   type IssueSourceSyncResult,
@@ -23,16 +17,15 @@ import { LinearError, linearError } from "./errors.js";
 import { resolveLifecycleTarget } from "./lifecycle.js";
 import type { LinearService, LinearServiceConfig } from "./service-contract.js";
 import {
+  createSourceMapping,
   deleteSourceMapping,
   listSourceContracts,
   projectSyncStatus,
-  requireSourceRow,
   resolveSyncSources,
-  sourceContract,
   updateSourceLifecycle,
 } from "./sources.js";
 import { LinearSyncRuns, syncScope } from "./sync-runs.js";
-import { SYNC_SOURCE, syncIssueSource } from "./sync.js";
+import { syncIssueSource } from "./sync.js";
 import { createLinearWriteback } from "./writeback/index.js";
 import type { LinearWriteback } from "./writeback/types.js";
 
@@ -47,6 +40,8 @@ class DefaultLinearService implements LinearService {
   private state: LinearConnectionContract = DISCONNECTED;
   private authorization = new AbortController();
   private readonly runs = new LinearSyncRuns();
+  /** Per-issue tails so overlapping lifecycle round-trips land in signal order. */
+  private readonly lifecycleChains = new Map<string, Promise<void>>();
   readonly writeback: LinearWriteback;
 
   constructor(private readonly config: LinearServiceConfig) {
@@ -106,38 +101,7 @@ class DefaultLinearService implements LinearService {
       this.config.client.workspace(apiKey, signal),
     );
     if (!this.isCurrent(signal)) throw supersededRequest();
-    if (getProject(this.config.db, request.project_id) === undefined) {
-      throw linearError("linear_project_not_found");
-    }
-    const team = workspace.teams.find((candidate) => candidate.id === request.external_team_id);
-    const externalProjectId = request.external_project_id ?? "";
-    const externalProject = workspace.projects.find(
-      (candidate) =>
-        candidate.id === externalProjectId && candidate.team_ids.includes(request.external_team_id),
-    );
-    if (team === undefined || (externalProjectId !== "" && externalProject === undefined)) {
-      throw linearError("linear_source_invalid_selection");
-    }
-    const existing = findOverlappingIssueSource(
-      this.config.db,
-      SYNC_SOURCE,
-      request.external_team_id,
-      externalProjectId,
-    );
-    if (existing !== undefined) throw linearError("linear_source_already_mapped");
-
-    const row = {
-      id: this.idFactory(),
-      project_id: request.project_id,
-      source: SYNC_SOURCE,
-      external_team_id: request.external_team_id,
-      external_team_key: team.key,
-      external_team_name: team.name,
-      external_project_id: externalProjectId,
-      external_project_name: externalProject?.name ?? "",
-    } satisfies NewIssueSource;
-    insertIssueSource(this.config.db, row);
-    return sourceContract(this.config.db, requireSourceRow(this.config.db, row.id));
+    return createSourceMapping(this.config.db, workspace, this.idFactory(), request);
   }
 
   async updateSource(
@@ -156,11 +120,26 @@ class DefaultLinearService implements LinearService {
     if (this.state.status !== "connected") return;
     const target = resolveLifecycleTarget(this.config.db, signal.issue_id, signal.phase);
     if (target === null) return;
-    await this.writeback.publishLifecycle(signal.issue_id, {
-      phase: signal.phase,
-      target,
-      run_id: signal.run_id,
+    // Chained per issue so a slow earlier assertion can never land after (and undo) a later
+    // one; in memory on purpose — the daemon is the single writer, a restart serializes.
+    const tail = this.lifecycleChains.get(signal.issue_id) ?? Promise.resolve();
+    const link = tail.then(async () => {
+      await this.writeback.publishLifecycle(signal.issue_id, {
+        phase: signal.phase,
+        target,
+        run_id: signal.run_id,
+      });
     });
+    // The stored tail never rejects: a failed assertion is the ledger's to report, not a dam.
+    const settled: Promise<void> = link
+      .catch(() => undefined)
+      .then(() => {
+        if (this.lifecycleChains.get(signal.issue_id) === settled) {
+          this.lifecycleChains.delete(signal.issue_id);
+        }
+      });
+    this.lifecycleChains.set(signal.issue_id, settled);
+    return link;
   }
 
   async sync(request: SyncLinearRequest = {}): Promise<IssueSourceSyncResult[]> {

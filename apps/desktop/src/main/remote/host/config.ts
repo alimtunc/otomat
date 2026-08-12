@@ -71,14 +71,19 @@ export function readExecutionHostsConfigSafe(
   }
 }
 
+export type ExecutionHostsConfigWriteResult = { ok: true } | { ok: false; message: string };
+
+/** A failed write is logged and returned; the caller must not confirm a selection the disk never recorded. */
 export function writeExecutionHostsConfigSafe(
   dataDir: string,
   config: ExecutionHostsConfig,
   log: (message: string) => void,
-): void {
+): ExecutionHostsConfigWriteResult {
   try {
     writeExecutionHostsConfig(dataDir, config);
+    return { ok: true };
   } catch (error) {
     log(`Could not persist the execution-hosts config: ${String(error)}`);
+    return { ok: false, message: "The host selection could not be saved to disk." };
   }
 }

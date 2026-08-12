@@ -4,6 +4,7 @@
 
 import { relative } from "node:path";
 
+import { checkDesktopDaemonHttp } from "./guardrails/desktop-daemon-http.mjs";
 import { checkExportShape } from "./guardrails/export-shape.mjs";
 import { checkFrontendIdioms } from "./guardrails/frontend-idioms.mjs";
 import { checkSourceSize } from "./guardrails/source-size.mjs";
@@ -20,6 +21,7 @@ checkSourceSize(ROOT, report);
 checkFrontendIdioms(ROOT, report);
 checkExportShape(ROOT, report);
 checkStructure(ROOT, report);
+checkDesktopDaemonHttp(ROOT, report);
 
 if (violations.length > 0) {
   console.error(`Frontend guardrails: ${violations.length} violation(s)\n`);

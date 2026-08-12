@@ -47,6 +47,12 @@ export interface WorktreePromotion {
   canonical: WorktreeRecord;
 }
 
+export interface DiffSnapshot {
+  diff: CanonicalDiff;
+  /** Whole-file text on both sides of `diff`, read from the captured base and tree. */
+  fileBlobs(paths: DiffFilePaths): DiffFileBlobs;
+}
+
 export interface GitWorktreeService {
   /**
    * Forks a new worktree on a dedicated `branch` for `owner`. Idempotent when
@@ -73,10 +79,11 @@ export interface GitWorktreeService {
    */
   diff(owner: string): CanonicalDiff;
   /**
-   * Whole-file text on both sides of the owner's diff, read from the same base
-   * and tree `diff` uses — the exact blobs a reviewer expands context against.
+   * The diff plus whole-file reads captured from one `{base, tree}` pair, so
+   * expanded content always matches the diff it is served with even while the
+   * worktree keeps changing. Resolves like `diff`.
    */
-  fileBlobs(owner: string, paths: DiffFilePaths): DiffFileBlobs;
+  diffSnapshot(owner: string): DiffSnapshot;
   /** Commits outstanding changes and records the new branch tip without removing the active worktree. */
   snapshot(owner: string): WorktreeRecord;
   /** Fast-forwards the clean canonical owner from one candidate forked at `expectedBaseSha`. */
@@ -100,6 +107,19 @@ export interface GitWorktreeService {
 export function diffOrNull(service: GitWorktreeService, owner: string): CanonicalDiff | null {
   try {
     return service.diff(owner);
+  } catch (error) {
+    if (error instanceof WorktreeNotFoundError) return null;
+    throw error;
+  }
+}
+
+/** The owner's diff snapshot, or null when its worktree is gone; any other git failure propagates. */
+export function diffSnapshotOrNull(
+  service: GitWorktreeService,
+  owner: string,
+): DiffSnapshot | null {
+  try {
+    return service.diffSnapshot(owner);
   } catch (error) {
     if (error instanceof WorktreeNotFoundError) return null;
     throw error;

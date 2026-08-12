@@ -1,17 +1,10 @@
-import type { Db, RunContributionRow, RunRow } from "@otomat/db";
-import type {
-  AgentCapacity,
-  RunResumePlan,
-  RunWait,
-  SchemaMetadataContract,
-  StartRunRequest,
-  WorkspaceClosureFacts,
-} from "@otomat/domain";
+import type { Db } from "@otomat/db";
+import type { SchemaMetadataContract } from "@otomat/domain";
 
 import type { GitHubService } from "#github";
 import type { LinearService } from "#linear";
 import type { ReviewService } from "#review";
-import type { AppendStepInput } from "#supervisor";
+import type { Supervisor } from "#supervisor";
 
 export interface ApiDeps {
   db: Db;
@@ -21,21 +14,7 @@ export interface ApiDeps {
   startedAt: string;
   dbPath: string;
   schemaMetadata(): SchemaMetadataContract;
-  launchRun(request: StartRunRequest): Promise<RunRow>;
-  runWait(runId: string): RunWait | null;
-  agentCapacity(): AgentCapacity;
-  setAgentCapacity(maxConcurrentSessions: number): AgentCapacity;
-  resumeRun(runId: string): Promise<RunRow>;
-  runResumePlan(runId: string): RunResumePlan;
-  abandonWorkspace(runId: string): RunRow;
-  workspaceClosure(runId: string): WorkspaceClosureFacts | null;
-  appendRunStep(runId: string, input: AppendStepInput): Promise<RunRow>;
-  contributeToRun(runId: string, stepRunId: string, body: string): Promise<RunContributionRow>;
-  retryRunContribution(runId: string, contributionId: string): Promise<RunContributionRow>;
-  cancelRunContribution(runId: string, contributionId: string): RunContributionRow;
-  deliverRunContributions(runId: string): Promise<void>;
-  selectCompeteWinner(runId: string, groupId: string, stepRunId: string): Promise<void>;
-  abortRun(runId: string): Promise<void>;
+  supervisor: Supervisor;
   github: GitHubService;
   linear: LinearService;
   review: ReviewService;

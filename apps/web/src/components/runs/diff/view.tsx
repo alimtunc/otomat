@@ -33,6 +33,7 @@ import { partitionComments } from "@web/components/runs/review/partition";
 import { useReviewSelection } from "@web/components/runs/review/use-selection";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
+import { StaleNotice } from "@web/components/shell/stale-notice";
 
 const NO_FILES: DiffFileContract[] = [];
 const NO_COMMENTS: ReviewCommentContract[] = [];
@@ -82,23 +83,27 @@ export function RunDiffView() {
     onExit: () => void navigate({ to: "/runs/$runId", params: { runId } }),
   });
 
+  const retryBoth = (): void => {
+    void diffQuery.refetch();
+    void reviewQuery.refetch();
+  };
+
   if (diffQuery.isPending || reviewQuery.isPending) return <DetailSkeleton blocks={2} />;
-  if (diffQuery.isError || reviewQuery.isError) {
+  const review = reviewQuery.data;
+  // Two queries share this view, so QueryBoundary's ladder is applied by hand:
+  // block only when a failing query has nothing retained to show.
+  if (diffQuery.data === undefined || review === undefined) {
     return (
       <CenteredState>
         <ErrorState
           title="Could not load the diff"
           description="The daemon did not answer or the git diff failed. Check the daemon logs."
-          onRetry={() => {
-            void diffQuery.refetch();
-            void reviewQuery.refetch();
-          }}
+          onRetry={retryBoth}
         />
       </CenteredState>
     );
   }
-
-  const review = reviewQuery.data;
+  const refreshFailed = diffQuery.isError || reviewQuery.isError;
 
   const selectComment = (comment: ReviewCommentContract): void => {
     if (partition.anchoredIds.has(comment.id)) {
@@ -208,6 +213,13 @@ export function RunDiffView() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      {refreshFailed ? (
+        <StaleNotice
+          dataUpdatedAt={Math.min(diffQuery.dataUpdatedAt, reviewQuery.dataUpdatedAt)}
+          refreshing={diffQuery.isFetching || reviewQuery.isFetching}
+          onRetry={retryBoth}
+        />
+      ) : null}
       <RunDiffHeader
         diff={diff}
         reviewStatus={review.review?.status ?? null}

@@ -27,7 +27,7 @@ import {
   takeLinearKeyFromEnv,
 } from "#linear";
 import { createReviewService } from "#review";
-import { createReexecSpawn, createSupervisor } from "#supervisor";
+import { createReexecSpawn, createSupervisor, type Supervisor } from "#supervisor";
 
 import { ensureDefaultProject, ensureDefaultRepository } from "./bootstrap.js";
 import {
@@ -86,7 +86,20 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       db,
       worktreesRoot: process.env.OTOMAT_WORKTREES_ROOT ?? join(dataDir, "worktrees"),
     });
-    const review = createReviewService({ db, dataDir, repositories });
+    // Review needs the supervisor's append capability while the supervisor needs review's
+    // settle hook; the same late binding `state.advance` uses inside the supervisor.
+    let appendStepTarget: Supervisor | null = null;
+    const review = createReviewService({
+      db,
+      dataDir,
+      repositories,
+      appendRunStep: (runId, input) => {
+        if (appendStepTarget === null) {
+          return Promise.reject(new Error("review fix requested before the supervisor started"));
+        }
+        return appendStepTarget.appendStep(runId, input);
+      },
+    });
     const linear = createLinearService({
       db,
       dataDir,
@@ -122,6 +135,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       afterSettle: review.onRunSettled,
       syncIssueLifecycle,
     });
+    appendStepTarget = supervisor;
 
     const report = supervisor.reconcile();
     if (report.reconciled.length > 0) {
@@ -136,21 +150,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       startedAt: new Date().toISOString(),
       dbPath,
       schemaMetadata: () => readSchemaMetadata(sqlite),
-      launchRun: supervisor.start,
-      runWait: supervisor.waitFor,
-      agentCapacity: supervisor.capacity,
-      setAgentCapacity: supervisor.setCapacity,
-      resumeRun: supervisor.resume,
-      runResumePlan: supervisor.resumePlan,
-      abandonWorkspace: supervisor.abandon,
-      workspaceClosure: supervisor.workspaceClosure,
-      appendRunStep: supervisor.appendStep,
-      contributeToRun: supervisor.contribute,
-      retryRunContribution: supervisor.retryContribution,
-      cancelRunContribution: supervisor.cancelContribution,
-      deliverRunContributions: supervisor.deliverContributions,
-      selectCompeteWinner: supervisor.selectWinner,
-      abortRun: supervisor.abort,
+      supervisor,
       github,
       linear,
       review,

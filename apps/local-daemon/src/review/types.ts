@@ -1,8 +1,13 @@
 import type { Db, ReviewCommentRow, ReviewRow, RunRow } from "@otomat/db";
-import type { CreateReviewCommentRequest, ReviewFixAuthority } from "@otomat/domain";
+import type {
+  CreateReviewCommentRequest,
+  ModelSelection,
+  ReviewFixAuthority,
+} from "@otomat/domain";
 
+import type { AgentConfigSelector } from "#agents";
 import type { CanonicalDiff, RepositoryResolver } from "#git";
-import type { ReconcileClassification } from "#supervisor";
+import type { AppendStepInput, ReconcileClassification } from "#supervisor";
 
 export interface ReviewServiceConfig {
   db: Db;
@@ -10,6 +15,8 @@ export interface ReviewServiceConfig {
   dataDir: string;
   /** A run without a repository has no diff or review-comment surface. */
   repositories: RepositoryResolver;
+  /** The supervisor's append capability; late-bound in the composition root because each side needs the other. */
+  appendRunStep(runId: string, input: AppendStepInput): Promise<RunRow>;
 }
 
 /** Shared handles every review operation threads through — the module's equivalent of SupervisorState. */
@@ -46,6 +53,13 @@ export interface FixPreparation {
   dependsOn: string[];
 }
 
+export interface FixRequest {
+  commentIds: string[];
+  selector: AgentConfigSelector;
+  model?: ModelSelection;
+  name?: string;
+}
+
 export interface RunSettledOutcome {
   runId: string;
   classification: ReconcileClassification;
@@ -58,10 +72,8 @@ export interface ReviewService {
   /** Verifies the anchor against the live diff and captures the hunk snapshot before persisting. */
   addComment(run: Pick<RunRow, "id">, request: CreateReviewCommentRequest): ReviewCommentRow;
   getFileBlobs(run: Pick<RunRow, "id">, request: FileBlobsRequest): FileBlobsResult;
-  /** Builds the fix prompt without mutating anything; the caller spawns the turn, then marks. */
-  prepareFix(run: RunRow, commentIds: string[]): FixPreparation;
-  /** Stamps the selected comments and drives the review to `changes_requested`. */
-  markFixRequested(runId: string, commentIds: string[]): void;
+  /** The selected open comments become one appended fix step; refused while a turn is in flight. */
+  requestFix(run: RunRow, request: FixRequest): Promise<RunRow>;
   /** Post-settle hook: refreshes the diff projection and resolves comment anchors. */
   onRunSettled(outcome: RunSettledOutcome): void;
 }

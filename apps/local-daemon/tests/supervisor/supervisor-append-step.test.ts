@@ -3,7 +3,12 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
-import { RunWorkspaceClosedError, type AppendStepInput, type ReconcileOutcome } from "#supervisor";
+import {
+  ReviewFixBusyError,
+  RunWorkspaceClosedError,
+  type AppendStepInput,
+  type ReconcileOutcome,
+} from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { waitFor } from "../support/poll.js";
@@ -129,12 +134,26 @@ it("extends the cycle of a failed run in its own worktree, without a second one"
   expect(fix.db.select().from(schema.worktrees).all()).toHaveLength(1);
 });
 
-it("never puts a second writer in the workspace: an appended step waits for the live turn", async () => {
+it("refuses a review fix while a turn is in flight — the fix must be the next settlement", async () => {
+  const { supervisor, spawn } = makeSupervisor(fix, "linger");
+  const run = await supervisor.start({ issue_id: "i-work" });
+  await waitFor(() => spawn.calls === 1);
+  const before = getRun(fix.db, run.id)?.plan_json.steps ?? [];
+
+  await expect(supervisor.appendStep(run.id, FIX_STEP)).rejects.toThrow(ReviewFixBusyError);
+  expect(getRun(fix.db, run.id)?.plan_json.steps).toEqual(before);
+  expect(listStepRunsForRun(fix.db, run.id)).toHaveLength(before.length);
+
+  await supervisor.abort(run.id);
+  await supervisor.settle();
+});
+
+it("never puts a second writer in the workspace: an appended user step waits for the live turn", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "linger");
   const run = await supervisor.start({ issue_id: "i-work" });
   await waitFor(() => spawn.calls === 1);
 
-  const appended = await supervisor.appendStep(run.id, FIX_STEP);
+  const appended = await supervisor.appendStep(run.id, { ...FIX_STEP, origin: "user" });
   const step = appended.plan_json.steps.at(-1);
   if (!step) throw new Error("expected an appended step");
 

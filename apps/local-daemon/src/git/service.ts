@@ -167,9 +167,12 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       return computeCanonicalDiff(gitCwd, base, tree);
     },
 
-    fileBlobs(owner, paths) {
+    diffSnapshot(owner) {
       const { gitCwd, base, tree } = diffInputs(resolve(owner));
-      return readFileBlobs(gitCwd, base, tree, paths);
+      return {
+        diff: computeCanonicalDiff(gitCwd, base, tree),
+        fileBlobs: (paths) => readFileBlobs(gitCwd, base, tree, paths),
+      };
     },
 
     snapshot(owner) {

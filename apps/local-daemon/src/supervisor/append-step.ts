@@ -20,6 +20,14 @@ function nextStepIndex(state: SupervisorState, runId: string): number {
   return indexes.length === 0 ? 0 : Math.max(...indexes) + 1;
 }
 
+/** Settle credits any completed turn with the stamped comments, so the fix must be the next settlement. */
+export class ReviewFixBusyError extends Error {
+  constructor(runId: string) {
+    super(`run ${runId} has a turn in flight; request the fix once it settles`);
+    this.name = "ReviewFixBusyError";
+  }
+}
+
 /**
  * Appends a step to a launched run and starts it when the workspace is free.
  *
@@ -40,6 +48,9 @@ export async function appendRunStep(
   const { db } = state;
   const run = requireRunRow(db, runId, "append");
   requireOpenWorkspace(db, run);
+  if (input.origin === "review_fix" && hasRunActivity(state, runId)) {
+    throw new ReviewFixBusyError(runId);
+  }
 
   const config = resolveAgentConfig(db, input.selector, { model: input.model });
   ensureRuntimeAgent(db, config.runtime);

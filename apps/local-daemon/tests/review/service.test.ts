@@ -1,4 +1,4 @@
-import { appendFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { getReviewComment, getReviewForRun, getRun } from "@otomat/db";
@@ -13,17 +13,22 @@ import {
   ReviewAnchorStaleError,
   CommentsNotFixableError,
   type ReviewService,
+  type ReviewServiceConfig,
 } from "#review";
+import type { AppendStepInput } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-review";
 const BRANCH = "otomat/run/r-review";
+const FIX_AGENT = { kind: "runtime", runtimeId: "fake" } as const;
 
 let fix: DaemonTestDb;
 let worktrees: GitWorktreeService;
 let review: ReviewService;
+let reviewConfig: ReviewServiceConfig;
+let appended: AppendStepInput[] = [];
 let worktreePath = "";
 
 beforeEach(() => {
@@ -35,7 +40,19 @@ beforeEach(() => {
   const binding = repositories.forRepository("repo-1");
   if (!binding) throw new Error("repo-1 binding missing");
   worktrees = binding.service;
-  review = createReviewService({ db: fix.db, dataDir: fix.dataDir, repositories });
+  appended = [];
+  reviewConfig = {
+    db: fix.db,
+    dataDir: fix.dataDir,
+    repositories,
+    appendRunStep: async (runId, input) => {
+      appended.push(input);
+      const row = getRun(fix.db, runId);
+      if (!row) throw new Error(`run ${runId} missing`);
+      return row;
+    },
+  };
+  review = createReviewService(reviewConfig);
 
   const acquired = worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
   worktreePath = acquired.path;
@@ -181,7 +198,7 @@ it("grants fix authority only while Otomat still holds the run's worktree", () =
   expect(authority.reason).toContain(BRANCH);
 });
 
-it("builds the fix context from comment + original hunk + current file", () => {
+it("appends one fix step carrying comment + original hunk + current file", async () => {
   const anchor = currentAnchor();
   const comment = review.addComment(run(), {
     file_path: "notes.md",
@@ -190,20 +207,48 @@ it("builds the fix context from comment + original hunk + current file", () => {
     body: "beta should be delta",
   });
 
-  const preparation = review.prepareFix(run(), [comment.id]);
-  expect(preparation.prompt).toContain("beta should be delta");
-  expect(preparation.prompt).toContain("+beta");
-  expect(preparation.prompt).toContain("alpha\nbeta\ngamma");
-  expect(preparation.prompt).toContain(BRANCH);
-  // The diff the comment was made against is frozen with it, named by its sha.
-  expect(preparation.prompt).toContain(anchor.sha);
-  // The fix waits on the succeeded step that produced that diff.
-  expect(preparation.dependsOn).toEqual([`${RUN_ID}-step`]);
+  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT });
 
-  expect(() => review.prepareFix(run(), ["nope"])).toThrow(CommentsNotFixableError);
+  const step = appended[0];
+  if (!step) throw new Error("expected an appended fix step");
+  expect(step.name).toBe("Fix review comments");
+  expect(step.origin).toBe("review_fix");
+  expect(step.selector).toEqual(FIX_AGENT);
+  expect(step.prompt).toContain("beta should be delta");
+  expect(step.prompt).toContain("+beta");
+  expect(step.prompt).toContain("alpha\nbeta\ngamma");
+  expect(step.prompt).toContain(BRANCH);
+  // The diff the comment was made against is frozen with it, named by its sha.
+  expect(step.prompt).toContain(anchor.sha);
+  // The fix waits on the succeeded step that produced that diff.
+  expect(step.dependsOn).toEqual([`${RUN_ID}-step`]);
+
+  await expect(
+    review.requestFix(run(), { commentIds: ["nope"], selector: FIX_AGENT }),
+  ).rejects.toThrow(CommentsNotFixableError);
 });
 
-it("stamps fix-requested comments and drives the review to changes_requested", () => {
+it("keeps a symlinked path's fix context to the link target text, never the host file", async () => {
+  const secretPath = join(fix.dataDir, "secret.txt");
+  writeFileSync(secretPath, "TOP-SECRET\n");
+  symlinkSync(secretPath, join(worktreePath, "leak"));
+
+  const anchor = review.getWorktreeDiff(run()).diff?.files.find((f) => f.path === "leak");
+  if (!anchor) throw new Error("expected leak in the diff");
+  const comment = review.addComment(run(), {
+    file_path: "leak",
+    line: null,
+    diff_sha: anchor.sha,
+    body: "What does this point at?",
+  });
+
+  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT });
+  const step = appended[0];
+  expect(step?.prompt).not.toContain("TOP-SECRET");
+  expect(step?.prompt).toContain(secretPath);
+});
+
+it("stamps fix-requested comments and drives the review to changes_requested", async () => {
   const anchor = currentAnchor();
   const comment = review.addComment(run(), {
     file_path: "notes.md",
@@ -212,12 +257,35 @@ it("stamps fix-requested comments and drives the review to changes_requested", (
     body: "fix me",
   });
 
-  review.markFixRequested(RUN_ID, [comment.id]);
+  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT });
   expect(getReviewComment(fix.db, comment.id)?.fix_requested_at).not.toBeNull();
   expect(getReviewForRun(fix.db, RUN_ID)?.status).toBe("changes_requested");
 });
 
-it("on a completed settle: emits git.diff_updated, marks fixed comments addressed and moved anchors outdated", () => {
+it("stamps nothing when the step append fails, so the request can be retried", async () => {
+  const anchor = currentAnchor();
+  const comment = review.addComment(run(), {
+    file_path: "notes.md",
+    line: 2,
+    diff_sha: anchor.sha,
+    body: "fix me",
+  });
+  const failing = createReviewService({
+    ...reviewConfig,
+    appendRunStep: async () => {
+      throw new Error("append exploded");
+    },
+  });
+
+  await expect(
+    failing.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT }),
+  ).rejects.toThrow("append exploded");
+
+  expect(getReviewComment(fix.db, comment.id)?.fix_requested_at).toBeNull();
+  expect(getReviewForRun(fix.db, RUN_ID)?.status).toBe("in_review");
+});
+
+it("on a completed settle: emits git.diff_updated, marks fixed comments addressed and moved anchors outdated", async () => {
   const anchor = currentAnchor();
   const requested = review.addComment(run(), {
     file_path: "notes.md",
@@ -231,7 +299,7 @@ it("on a completed settle: emits git.diff_updated, marks fixed comments addresse
     diff_sha: anchor.sha,
     body: "just a note",
   });
-  review.markFixRequested(RUN_ID, [requested.id]);
+  await review.requestFix(run(), { commentIds: [requested.id], selector: FIX_AGENT });
 
   // The "fix turn" really edits the worktree, so both anchors leave the live diff.
   appendFileSync(join(worktreePath, "notes.md"), "delta\n");
@@ -267,7 +335,7 @@ it("keeps untouched anchors open across a completed settle", () => {
   expect(getReviewForRun(fix.db, RUN_ID)?.status).toBe("in_review");
 });
 
-it("releases pending fix requests when the turn does not complete", () => {
+it("releases pending fix requests when the turn does not complete", async () => {
   const anchor = currentAnchor();
   const comment = review.addComment(run(), {
     file_path: "notes.md",
@@ -275,7 +343,7 @@ it("releases pending fix requests when the turn does not complete", () => {
     diff_sha: anchor.sha,
     body: "fix me",
   });
-  review.markFixRequested(RUN_ID, [comment.id]);
+  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT });
 
   review.onRunSettled({ runId: RUN_ID, classification: "interrupted" });
 

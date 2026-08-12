@@ -1,7 +1,7 @@
 import type { AgentCapacity } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { json, makeApiApp, request } from "../support/api.js";
+import { json, makeApiApp, request, stubSupervisor } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 
 let t: TestDb;
@@ -15,7 +15,10 @@ afterEach(() => {
 });
 
 function put(path: string, body: unknown, capacity?: AgentCapacity) {
-  const app = makeApiApp(t, capacity ? { setAgentCapacity: () => capacity } : {});
+  const app = makeApiApp(
+    t,
+    capacity ? { supervisor: stubSupervisor({ setCapacity: () => capacity }) } : {},
+  );
   return request(app, path, {
     method: "PUT",
     headers: { "content-type": "application/json" },
@@ -25,10 +28,12 @@ function put(path: string, body: unknown, capacity?: AgentCapacity) {
 
 it("serves the cap this daemon is applying, with what it is doing with it", async () => {
   const app = makeApiApp(t, {
-    agentCapacity: () => ({
-      max_concurrent_sessions: 4,
-      active_sessions: 4,
-      waiting_sessions: 1,
+    supervisor: stubSupervisor({
+      capacity: () => ({
+        max_concurrent_sessions: 4,
+        active_sessions: 4,
+        waiting_sessions: 1,
+      }),
     }),
   });
 

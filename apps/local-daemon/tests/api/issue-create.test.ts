@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { RuntimeUnavailableError } from "#runtime";
 
-import { makeApiApp, patch, post, request } from "../support/api.js";
+import { makeApiApp, patch, post, request, stubSupervisor } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 
 let t: TestDb;
@@ -69,9 +69,11 @@ it("rejects an issue for an unknown project", async () => {
 
 it("maps RuntimeUnavailableError from launch to a 409 with the reason", async () => {
   const app = makeApiApp(t, {
-    launchRun: async () => {
-      throw new RuntimeUnavailableError("claude", "binary_not_found");
-    },
+    supervisor: stubSupervisor({
+      start: async () => {
+        throw new RuntimeUnavailableError("claude", "binary_not_found");
+      },
+    }),
   });
   const res = await post(app, "/api/runs", { prompt: "do it", runtime: "claude" });
   expect(res.status).toBe(409);

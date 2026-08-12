@@ -72,7 +72,11 @@ apps/desktop
 
 The desktop main process launches the daemon as a child process and communicates
 through its HTTP contract and narrow preload IPC bridges. It never imports
-`packages/db`, imports daemon source, or writes business state directly. Future
+`packages/db`, imports daemon source, or writes business state directly. It
+speaks the daemon HTTP contract only through `@otomat/client`; the bespoke
+`/api/*` fetches that remain (boot/health probes, preview seeding, the
+stale-build idle check) are allowlisted in
+`scripts/guardrails/desktop-daemon-http.mjs`, and that list only shrinks. Future
 mobile code follows the frontend boundary: `domain`, `ui`, and `client`.
 
 ## Package Rules

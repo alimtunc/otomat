@@ -29,7 +29,7 @@ export function createRunContributionRoutes(deps: ApiDeps): Hono<RunEnv> {
       const run = c.get("run");
       const { step_run_id, body } = c.req.valid("json");
       try {
-        const row = await deps.contributeToRun(run.id, step_run_id, body);
+        const row = await deps.supervisor.contribute(run.id, step_run_id, body);
         return c.json(toRunContribution(row), 201);
       } catch (error) {
         if (error instanceof RunContributionNotFoundError) {
@@ -47,7 +47,7 @@ export function createRunContributionRoutes(deps: ApiDeps): Hono<RunEnv> {
   routes.post("/:id/contributions/deliver", runGuard(deps.db), async (c) => {
     const run = c.get("run");
     try {
-      await deps.deliverRunContributions(run.id);
+      await deps.supervisor.deliverContributions(run.id);
     } catch (error) {
       console.error(`[otomat] contribution delivery on run ${run.id} failed`, error);
       return c.json({ error: "run_contribution_delivery_failed" }, 500);
@@ -58,7 +58,7 @@ export function createRunContributionRoutes(deps: ApiDeps): Hono<RunEnv> {
   routes.post("/:id/contributions/:contributionId/retry", runGuard(deps.db), async (c) => {
     const run = c.get("run");
     try {
-      const row = await deps.retryRunContribution(run.id, c.req.param("contributionId"));
+      const row = await deps.supervisor.retryContribution(run.id, c.req.param("contributionId"));
       return c.json(toRunContribution(row));
     } catch (error) {
       if (error instanceof RunContributionNotFoundError) {
@@ -75,7 +75,7 @@ export function createRunContributionRoutes(deps: ApiDeps): Hono<RunEnv> {
   routes.post("/:id/contributions/:contributionId/cancel", runGuard(deps.db), (c) => {
     const run = c.get("run");
     try {
-      const row = deps.cancelRunContribution(run.id, c.req.param("contributionId"));
+      const row = deps.supervisor.cancelContribution(run.id, c.req.param("contributionId"));
       return c.json(toRunContribution(row));
     } catch (error) {
       if (error instanceof RunContributionNotFoundError) {

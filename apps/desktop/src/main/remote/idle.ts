@@ -11,6 +11,9 @@ export interface RemoteIdleOptions {
  * Whether the remote daemon currently has no run in flight. Every caller uses the answer to decide
  * whether it may stop that daemon, so an absent answer — unreachable host, refusal, unreadable
  * body — is never idle: when in doubt, leave the daemon alone.
+ *
+ * Deliberately not `@otomat/client`: the peer is a possibly stale build whose run rows may not
+ * match this app's contracts, and a strict parse would leave such a daemon unjudgeable forever.
  */
 export async function remoteIsIdle(options: RemoteIdleOptions): Promise<boolean> {
   try {

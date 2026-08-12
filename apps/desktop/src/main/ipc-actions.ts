@@ -52,7 +52,16 @@ export function buildIpcActions(context: IpcActionContext): IpcActions {
     },
     showDataPolicy: () => context.support.showDataPolicy(),
     resetSandbox: async (): Promise<PreviewSandboxResetResult> => {
-      const reset = context.runtime()?.sandbox.reset();
+      const runtime = context.runtime();
+      // In remote mode the renderer shows remote data; wiping the off-screen local
+      // sandbox would report a success the user cannot see anywhere.
+      if (runtime?.hosts.activeHostId === "remote") {
+        return {
+          ok: false,
+          message: "Reset test data only resets the local sandbox. Switch to the Local host first.",
+        };
+      }
+      const reset = runtime?.sandbox.reset();
       const result = await (reset ?? Promise.resolve(SANDBOX_NOT_READY));
       if (result.ok) context.reloadCockpit();
       return result;

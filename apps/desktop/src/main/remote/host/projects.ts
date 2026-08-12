@@ -1,6 +1,5 @@
+import { createDaemonClient, DaemonRequestError, DaemonTransportError } from "@otomat/client";
 import {
-  projectContractSchema,
-  registerRepositoryResponseSchema,
   repositoryRegistrationErrorSchema,
   type ExecutionHostId,
   type ExecutionHostProjectsEntry,
@@ -9,31 +8,9 @@ import {
 } from "@otomat/domain";
 
 import type { RemoteSessionHandle } from "../session.js";
-import { StaleDaemonRefresher } from "../stale-daemon.js";
 
 /** Where a host's daemon answers, or why it cannot be reached. */
 export type ResolvedDaemonUrl = { url: string } | { message: string };
-
-/** One host's project catalog over plain HTTP; unreachable or invalid reads null (logged), never an error. */
-async function fetchProjectCatalog(
-  baseUrl: string,
-  fetchImpl: typeof fetch,
-  log: (message: string) => void,
-): Promise<ProjectContract[] | null> {
-  try {
-    const response = await fetchImpl(`${baseUrl}/api/projects`);
-    if (!response.ok) return null;
-    const parsed = projectContractSchema.array().safeParse(await response.json());
-    if (!parsed.success) {
-      log(`Host at ${baseUrl} returned an invalid project list`);
-      return null;
-    }
-    return parsed.data;
-  } catch (error) {
-    log(`Could not list projects from ${baseUrl}: ${String(error)}`);
-    return null;
-  }
-}
 
 export interface HostCatalogOptions {
   localDaemonUrl(): string;
@@ -41,21 +18,12 @@ export interface HostCatalogOptions {
   remoteSshAlias(): string | null;
   remoteSession(): RemoteSessionHandle | null;
   warmRemote(): void;
-  expectedBuild: string | null;
   fetchImpl: typeof fetch;
   log(message: string): void;
 }
 
 export class HostCatalog {
-  private readonly staleRefresher: StaleDaemonRefresher;
-
-  constructor(private readonly options: HostCatalogOptions) {
-    this.staleRefresher = new StaleDaemonRefresher({
-      expectedBuild: options.expectedBuild,
-      fetchImpl: options.fetchImpl,
-      log: options.log,
-    });
-  }
+  constructor(private readonly options: HostCatalogOptions) {}
 
   async listProjects(): Promise<ExecutionHostProjectsEntry[]> {
     const localUrl = this.options.localDaemonUrl();
@@ -78,7 +46,6 @@ export class HostCatalog {
         status: session?.status ?? { phase: "disconnected", detail: null },
         projects: url === null ? null : await this.fetchCatalog(url),
       });
-      void this.staleRefresher.maybeRefresh(session);
     }
     return entries;
   }
@@ -91,34 +58,32 @@ export class HostCatalog {
     if (path.trim() === "") return { ok: false, message: "Enter a repository path on the host." };
     const target = this.resolveBaseUrl(hostId);
     if ("message" in target) return { ok: false, message: target.message };
+    const client = createDaemonClient({ baseUrl: target.url, fetch: this.options.fetchImpl });
     try {
-      const response = await this.options.fetchImpl(`${target.url}/api/repositories`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ path: path.trim() }),
-      });
-      const payload: unknown = await response.json();
-      if (response.status === 201) {
-        const created = registerRepositoryResponseSchema.safeParse(payload);
-        if (!created.success) {
-          return {
-            ok: false,
-            message:
-              "The daemon registered the repository but answered in an unknown format; refresh the project list.",
-          };
-        }
-        return { ok: true, project: created.data.project };
+      const created = await client.registerRepository({ path: path.trim() });
+      return { ok: true, project: created.project };
+    } catch (error) {
+      if (error instanceof DaemonRequestError) {
+        const refusal = repositoryRegistrationErrorSchema.safeParse(error.body);
+        return {
+          ok: false,
+          message: refusal.success
+            ? refusal.data.message
+            : `The daemon refused the registration (HTTP ${error.status}).`,
+        };
       }
-      const refusal = repositoryRegistrationErrorSchema.safeParse(payload);
+      if (error instanceof DaemonTransportError) {
+        this.options.log(`Register on ${hostId} failed: ${String(error.cause)}`);
+        return {
+          ok: false,
+          message: `Could not reach the ${hostId} daemon: ${String(error.cause)}`,
+        };
+      }
       return {
         ok: false,
-        message: refusal.success
-          ? refusal.data.message
-          : `The daemon refused the registration (HTTP ${response.status}).`,
+        message:
+          "The daemon registered the repository but answered in an unknown format; refresh the project list.",
       };
-    } catch (error) {
-      this.options.log(`Register on ${hostId} failed: ${String(error)}`);
-      return { ok: false, message: `Could not reach the ${hostId} daemon: ${String(error)}` };
     }
   }
 
@@ -139,7 +104,19 @@ export class HostCatalog {
     return { url: session.url };
   }
 
-  private fetchCatalog(baseUrl: string): Promise<ProjectContract[] | null> {
-    return fetchProjectCatalog(baseUrl, this.options.fetchImpl, this.options.log);
+  /** Unreachable, refused or invalid reads null (never a throw), so one dead host cannot blank the switcher. */
+  private async fetchCatalog(baseUrl: string): Promise<ProjectContract[] | null> {
+    const client = createDaemonClient({ baseUrl, fetch: this.options.fetchImpl });
+    try {
+      return await client.listProjects();
+    } catch (error) {
+      if (error instanceof DaemonRequestError) return null;
+      if (error instanceof DaemonTransportError) {
+        this.options.log(`Could not list projects from ${baseUrl}: ${String(error.cause)}`);
+        return null;
+      }
+      this.options.log(`Host at ${baseUrl} returned an invalid project list`);
+      return null;
+    }
   }
 }

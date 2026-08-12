@@ -176,6 +176,11 @@ export class DaemonController {
     const output = new DaemonOutputCapture(this.options.writeLog);
     const active = { child, output, closed: output.attach(child) };
     this.active = active;
+    // A daemon that dies on its own must stop reading as running, or restart stays
+    // refused forever; the identity guard keeps an old exit off a replacement child.
+    void active.closed.then(() => {
+      if (this.active === active) this.active = null;
+    });
     return active;
   }
 

@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import type { RunContract, RunLaunchResponse } from "@otomat/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { queryKeys } from "@web/api/query-keys";
 import { useLaunchRun } from "@web/api/runs/use-launch-run";
 import { afterEach, expect, it, vi } from "vitest";
 
@@ -68,6 +69,7 @@ async function launchOnce(response: RunLaunchResponse) {
     </QueryClientProvider>,
   );
   rendered.container.querySelector("button")?.click();
+  return client;
 }
 
 it("says a saturated launch is queued, with the place and the host's limit", async () => {
@@ -97,4 +99,13 @@ it("only says a run started once its first step took a slot", async () => {
     expect(toastSuccess).toHaveBeenCalledWith("Run started");
   });
   expect(toastInfo).not.toHaveBeenCalled();
+});
+
+it("seeds the issue's run list with the confirmed run before any refetch lands", async () => {
+  const client = await launchOnce({ run: RUN, wait: null });
+
+  await vi.waitFor(() => {
+    expect(launched).toMatchObject({ id: "run-1" });
+  });
+  expect(client.getQueryData<RunContract[]>(queryKeys.runsForIssue("i-1"))).toEqual([RUN]);
 });

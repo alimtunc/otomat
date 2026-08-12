@@ -11,7 +11,6 @@ import {
 } from "@otomat/db";
 import { allStepsSucceeded, readyPlanWork } from "@otomat/domain";
 
-import { advanceRun } from "./advance.js";
 import { competeGroupStatuses, stepStatuses } from "./settle/context.js";
 import { hasRunActivity, type SupervisorState } from "./state.js";
 import { driveCompeteGroupTo, driveRunTo } from "./transitions.js";
@@ -55,15 +54,16 @@ function finishSelectedGroup(state: SupervisorState, run: RunRow): void {
   }
 }
 
-/** Archives every candidate worktree, then chains the dependent work the selection just unblocked. */
+/** Archives every candidate worktree, rests a satisfied run, then runs the post-turn composition so the queues the selection suppressed get routed. */
 async function unlockAfterSelection(
   state: SupervisorState,
   run: RunRow,
   groupId: string,
 ): Promise<void> {
   archiveCandidates(state, run, groupId);
-  await advanceRun(state, run.id);
+  // Resting must precede the composition: delivery only routes on a follow-up state.
   finishSelectedGroup(state, run);
+  await state.advance?.(run.id);
 }
 
 /** Atomically reserves one succeeded candidate, fast-forwards canonical, archives every candidate and unlocks dependents. */

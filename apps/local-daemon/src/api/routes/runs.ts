@@ -41,8 +41,8 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
 
   const runDetailJson = <E extends Env>(c: Context<E>, runId: string) => {
     const detail = readRunDetail(deps.db, runId, {
-      wait: deps.runWait(runId),
-      resume: deps.runResumePlan(runId),
+      wait: deps.supervisor.waitFor(runId),
+      resume: deps.supervisor.resumePlan(runId),
     });
     return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
   };
@@ -58,10 +58,10 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
 
   routes.post("/", validateJson(startRunRequestSchema), async (c) => {
     try {
-      const launched = await deps.launchRun(c.req.valid("json"));
+      const launched = await deps.supervisor.start(c.req.valid("json"));
       // Re-read with the wait in the same tick, so the status and the reason it is queued agree.
       const run = getRun(deps.db, launched.id) ?? launched;
-      return c.json({ run: toRun(run), wait: deps.runWait(run.id) }, 201);
+      return c.json({ run: toRun(run), wait: deps.supervisor.waitFor(run.id) }, 201);
     } catch (error) {
       if (error instanceof LaunchRefusedError) {
         const status = LAUNCH_REFUSAL_STATUS[error.code];
@@ -95,7 +95,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
   routes.post("/:id/resume", runGuard(deps.db), async (c) => {
     const run = c.get("run");
     try {
-      return c.json(toRun(await deps.resumeRun(run.id)));
+      return c.json(toRun(await deps.supervisor.resume(run.id)));
     } catch (error) {
       if (error instanceof RunNotResumableError) {
         return c.json({ error: "run_not_resumable", message: error.message }, 409);
@@ -111,7 +111,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
   routes.get("/:id/workspace", runGuard(deps.db), (c) => {
     const run = c.get("run");
     try {
-      const facts = deps.workspaceClosure(run.id);
+      const facts = deps.supervisor.workspaceClosure(run.id);
       if (!facts) return c.json({ error: "run_not_found" }, 404);
       const pullRequest = getPullRequestForRun(deps.db, run.id);
       return c.json({
@@ -127,7 +127,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
   routes.post("/:id/abandon", runGuard(deps.db), (c) => {
     const run = c.get("run");
     try {
-      return c.json(toRun(deps.abandonWorkspace(run.id)));
+      return c.json(toRun(deps.supervisor.abandon(run.id)));
     } catch (error) {
       if (error instanceof WorkspaceAbandonRefusedError) {
         return c.json({ error: error.code, message: error.message }, 409);
@@ -145,7 +145,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       const run = c.get("run");
       const request = c.req.valid("json");
       try {
-        const updated = await deps.appendRunStep(run.id, {
+        const updated = await deps.supervisor.appendStep(run.id, {
           name: request.name,
           prompt: request.prompt,
           selector: appendStepSelector(request),
@@ -187,7 +187,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
     async (c) => {
       const run = c.get("run");
       try {
-        await deps.selectCompeteWinner(
+        await deps.supervisor.selectWinner(
           run.id,
           c.req.param("groupId"),
           c.req.valid("json").step_run_id,
@@ -206,7 +206,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
   routes.post("/:id/abort", runGuard(deps.db), async (c) => {
     const run = c.get("run");
     try {
-      await deps.abortRun(run.id);
+      await deps.supervisor.abort(run.id);
     } catch (error) {
       console.error(`[otomat] abort run ${run.id} failed`, error);
       return c.json({ error: "run_abort_failed" }, 500);
