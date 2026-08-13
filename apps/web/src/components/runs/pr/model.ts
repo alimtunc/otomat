@@ -86,7 +86,7 @@ export function pullRequestViewModel(
     showConnect: connection.status === "disconnected" || connection.status === "failed",
     deviceAuthorization: device ? { code: device.user_code, url: device.verification_url } : null,
     ...publication,
-    actionDisabled: !connected || !canPublish || publication.actionDisabled,
+    actionDisabled: !connected || publication.actionDisabled,
     errorMessage: pullRequest?.error_message ?? connection.error_message,
     linkLabel: providerLink.label,
     linkUrl: providerLink.url,

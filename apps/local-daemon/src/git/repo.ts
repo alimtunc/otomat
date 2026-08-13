@@ -24,6 +24,14 @@ export function mergeBase(repoPath: string, a: string, b: string): string | null
   return sha === "" ? null : sha;
 }
 
+/** Whether the object store already holds `sha` as a commit — a remote sha it lacks cannot be compared without fetching. */
+export function hasCommit(repoPath: string, sha: string): boolean {
+  return (
+    runGit(["cat-file", "-e", `${sha}^{commit}`], { cwd: repoPath, allowFailure: true })
+      .exitCode === 0
+  );
+}
+
 export function isAncestor(repoPath: string, ancestor: string, descendant: string): boolean {
   return (
     runGit(["merge-base", "--is-ancestor", ancestor, descendant], {

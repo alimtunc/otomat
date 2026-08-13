@@ -9,27 +9,21 @@ import {
   schema,
   updatePullRequest,
 } from "@otomat/db";
-import type { GitHubConnectionContract, PreparePullRequestRequest } from "@otomat/domain";
+import type { PreparePullRequestRequest } from "@otomat/domain";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
 import { createGitWorktreeService, type GitWorktreeService } from "#git";
-import {
-  createGitHubService,
-  GitHubCliError,
-  type GitHubCli,
-  type GitHubPullRequest,
-  type GitHubRemote,
-  type PullRequestCreateInput,
-  type PullRequestModeInput,
-  type PullRequestSelector,
-  type PullRequestUpdateInput,
-} from "#github";
+import { createGitHubService, GitHubCliError } from "#github";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { stubRepositoryResolver, type TestRepo } from "../support/git.js";
-import { CONNECTED_GITHUB as connected, DISCONNECTED_GITHUB } from "../support/github.js";
+import {
+  CONNECTED_GITHUB as connected,
+  DISCONNECTED_GITHUB,
+  FakeGitHubCli,
+} from "../support/github.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-github";
@@ -46,106 +40,6 @@ const DRAFT_REQUEST: PreparePullRequestRequest = {
   body: "Details",
   mode: "draft",
 };
-
-class FakeGitHubCli implements GitHubCli {
-  connectionValue: GitHubConnectionContract = connected;
-  remote: GitHubRemote = { name: "origin", repository: "acme/otomat" };
-  provider: GitHubPullRequest = {
-    number: 42,
-    url: "https://github.com/acme/otomat/pull/42",
-    title: "Ship it",
-    body: "Details",
-    headRef: BRANCH,
-    baseRef: "main",
-    lifecycle: "open",
-  };
-  createInput: PullRequestCreateInput | null = null;
-  resolveError: GitHubCliError | null = null;
-  pushError: GitHubCliError | null = null;
-  createError: GitHubCliError | null = null;
-  connectionError: Error | null = null;
-  providerExists = false;
-  loginCalls = 0;
-  pushCalls = 0;
-  findCalls = 0;
-  createCalls = 0;
-  updateCalls = 0;
-
-  async connection(): Promise<GitHubConnectionContract> {
-    if (this.connectionError) throw this.connectionError;
-    return this.connectionValue;
-  }
-
-  async availability(): Promise<GitHubConnectionContract | null> {
-    return null;
-  }
-
-  baseExists = true;
-
-  async remoteBranchExists(): Promise<boolean> {
-    return this.baseExists;
-  }
-
-  async loginWithToken(): Promise<GitHubConnectionContract> {
-    this.loginCalls += 1;
-    this.connectionValue = connected;
-    return this.connectionValue;
-  }
-
-  async resolveRemote(): Promise<GitHubRemote> {
-    if (this.resolveError) throw this.resolveError;
-    return this.remote;
-  }
-
-  pushedBranches: string[] = [];
-
-  async push(_cwd: string, _remote: string, branch: string): Promise<void> {
-    this.pushCalls += 1;
-    this.pushedBranches.push(branch);
-    if (this.pushError) throw this.pushError;
-  }
-
-  async findPullRequest(input: PullRequestSelector): Promise<GitHubPullRequest | null> {
-    this.findCalls += 1;
-    const matchesSelector =
-      this.provider.headRef === input.head && this.provider.baseRef === input.base;
-    return this.providerExists && matchesSelector ? this.provider : null;
-  }
-
-  viewError: GitHubCliError | null = null;
-
-  async viewPullRequest(): Promise<GitHubPullRequest> {
-    if (this.viewError) throw this.viewError;
-    return this.provider;
-  }
-
-  async createPullRequest(input: PullRequestCreateInput): Promise<void> {
-    this.createCalls += 1;
-    this.createInput = input;
-    if (this.createError) throw this.createError;
-    this.provider = {
-      ...this.provider,
-      headRef: input.head,
-      baseRef: input.base,
-      lifecycle: input.draft ? "draft" : "open",
-    };
-    this.providerExists = true;
-  }
-
-  async updatePullRequest(input: PullRequestUpdateInput): Promise<void> {
-    this.updateCalls += 1;
-    this.provider = { ...this.provider, title: input.title, body: input.body || null };
-  }
-
-  modeInputs: PullRequestModeInput[] = [];
-  modeError: GitHubCliError | null = null;
-
-  async setPullRequestMode(input: PullRequestModeInput): Promise<void> {
-    this.modeInputs.push(input);
-    if (this.modeError) throw this.modeError;
-    this.provider = { ...this.provider, lifecycle: input.draft ? "draft" : "open" };
-  }
-}
 
 describe("GitHubService", () => {
   let fix: DaemonTestDb;
@@ -175,6 +69,7 @@ describe("GitHubService", () => {
     });
     writeFileSync(join(worktreePath, "change.txt"), "first\n");
     cli = new FakeGitHubCli();
+    cli.provider = { ...cli.provider, headRef: BRANCH };
   });
 
   afterEach(() => {
@@ -278,7 +173,7 @@ describe("GitHubService", () => {
     expect(cli.updateCalls).toBe(0);
   });
 
-  it("publishes a fresh snapshot before marking a migrated provider row created", async () => {
+  it("adopts a migrated provider row as created without pushing anything", async () => {
     insertPullRequest(fix.db, {
       id: "pr-legacy",
       run_id: RUN_ID,
@@ -300,10 +195,10 @@ describe("GitHubService", () => {
       id: "pr-legacy",
       publication_status: "created",
       number: 42,
+      published_head_sha: null,
+      published_diff_sha: null,
     });
-    expect(result.row.published_head_sha).not.toBeNull();
-    expect(result.row.published_diff_sha).not.toBeNull();
-    expect(cli.pushCalls).toBe(1);
+    expect(cli.pushCalls).toBe(0);
     expect(cli.createCalls).toBe(0);
   });
 
@@ -503,7 +398,7 @@ describe("GitHubService", () => {
     });
     expect(result.row.published_head_sha).toBe(worktrees.get(RUN_ID)?.headSha);
     expect(result.row.published_diff_sha).toBe(worktrees.diff(RUN_ID).sha);
-    expect(result.hasUnpublishedChanges).toBe(false);
+    expect(result.sync).toMatchObject({ state: "in_sync", dirty: false });
     expect(repo.git("-C", worktreePath, "status", "--porcelain").trim()).toBe("");
     expect(cli.pushCalls).toBe(1);
     expect(cli.createCalls).toBe(1);
@@ -573,18 +468,15 @@ describe("GitHubService", () => {
     expect(cli.createInput?.base).toBe(repo.defaultBranch);
   });
 
-  it("reports an unknown change comparison instead of a false up-to-date state", async () => {
+  it("reports an unavailable comparison instead of a false up-to-date state", async () => {
     await service().publish(run(), READY_REQUEST);
-    const brokenWorktrees: GitWorktreeService = {
-      ...worktrees,
-      diff() {
-        throw new Error("git unavailable");
-      },
+    cli.remoteHead = async () => {
+      throw new GitHubCliError("github_remote_head_failed", "gh is offline.");
     };
 
-    const viewed = await service(brokenWorktrees).getPullRequest(RUN_ID);
+    const viewed = await service().getPullRequest(RUN_ID);
 
-    expect(viewed?.hasUnpublishedChanges).toBeNull();
+    expect(viewed?.sync).toMatchObject({ state: "unavailable", ahead: [], replaced: [] });
   });
 
   it("adopts an existing provider PR and never creates a duplicate", async () => {
@@ -667,12 +559,15 @@ describe("GitHubService", () => {
     },
   );
 
-  it("updates the same open PR when the worktree changes", async () => {
+  it("updates the details of an open PR without publishing the workspace's later work", async () => {
     const github = service();
     await github.publish(run(), READY_REQUEST);
     writeFileSync(join(worktreePath, "change.txt"), "first\nsecond\n");
 
-    expect((await github.getPullRequest(RUN_ID))?.hasUnpublishedChanges).toBe(true);
+    expect((await github.getPullRequest(RUN_ID))?.sync).toMatchObject({
+      state: "in_sync",
+      dirty: true,
+    });
     const updated = await github.publish(run(), {
       title: "Ship it better",
       body: "New body",
@@ -686,8 +581,8 @@ describe("GitHubService", () => {
       title: "Ship it better",
       body: "New body",
     });
-    expect(updated.hasUnpublishedChanges).toBe(false);
-    expect(cli.pushCalls).toBe(2);
+    expect(updated.sync).toMatchObject({ dirty: true });
+    expect(cli.pushCalls).toBe(1);
     expect(cli.createCalls).toBe(1);
     expect(cli.updateCalls).toBe(1);
   });
@@ -749,7 +644,7 @@ describe("GitHubService", () => {
     const viewed = await github.getPullRequest(RUN_ID);
 
     expect(viewed?.row).toMatchObject({ status: "merged", number: 42 });
-    expect(viewed?.hasUnpublishedChanges).toBe(false);
+    expect(viewed?.sync).toBeNull();
     expect(existsSync(worktreePath)).toBe(false);
     expect(getIssue(fix.db, "i1")?.status).toBe("done");
   });

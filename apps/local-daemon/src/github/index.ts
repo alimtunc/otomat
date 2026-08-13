@@ -11,6 +11,7 @@ export type {
   CommandRequest,
   CommandResult,
   CommandRunner,
+  ForcePushWithLeaseInput,
   GitHubCli,
   GitHubPullRequest,
   GitHubRemote,

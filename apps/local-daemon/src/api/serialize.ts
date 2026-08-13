@@ -128,10 +128,7 @@ export function toReviewComment(row: ReviewCommentRow): ReviewCommentContract {
   return reviewCommentContractSchema.parse(row);
 }
 
-export function toPullRequest(
-  row: PullRequestRow,
-  hasUnpublishedChanges: boolean | null,
-): PullRequestContract {
+export function toPullRequest(row: PullRequestRow): PullRequestContract {
   return pullRequestContractSchema.parse({
     id: row.id,
     run_id: row.run_id,
@@ -148,6 +145,5 @@ export function toPullRequest(
     published_diff_sha: row.published_diff_sha,
     error_code: row.error_code,
     error_message: row.error_message,
-    has_unpublished_changes: hasUnpublishedChanges,
   });
 }

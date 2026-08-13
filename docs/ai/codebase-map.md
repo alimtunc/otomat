@@ -321,6 +321,44 @@ local repository looks. The verdict rides on the review detail with the sentence
 the cockpit shows, so review-only is explained rather than being a silently
 missing button.
 
+## Publishing to a Pull Request
+
+Two different things can be published to a pull request, so they are two
+commands. `publish` opens it, or edits title/body/Draft-Ready on one that
+exists; `pushCommits` moves commits onto its head branch. Opening one is the
+single path that commits the workspace on the user's behalf, which is what they
+asked for by opening it; every later push moves commits that already exist.
+Neither command triggers the other, and only opening one waits on
+`review_ready` — a pull request outlives
+the launch state that produced it, so a finished, failed or cancelled run may
+still push to its own open pull request as long as the workspace and branch are
+real (`publication/workspace.ts` resolves exactly that, and nothing else).
+
+Only a commit can be pushed, so only a commit can stand as evidence of what was
+published: `published_head_sha` is the commit Otomat pushed and
+`published_diff_sha` is `commitDiff` of that commit against the run's fork
+point, never the working tree. That is what makes uncommitted work impossible to
+misreport — a push cannot move it, so no push can clear it. `publication/sync.ts`
+answers the live question separately, comparing the workspace against
+`git ls-remote` on the pull request's head: `in_sync`, `ahead` (with the commits),
+`diverged` (with the commits a rewrite would drop), or `unavailable` when the
+comparison genuinely could not be made. It fetches the remote head only when the
+object store lacks it, which is precisely the case someone else pushed. The
+cockpit therefore never says "unpublished changes" without saying whether they
+are pushable commits or uncommitted work.
+
+A rewrite has exactly one path. `push` is always a plain fast-forward push, and a
+rejected non-fast-forward becomes `github_push_rejected` rather than a retry with
+force. The lease is a separate, explicit request carrying `expected_remote_sha` —
+the head the user was shown — which is re-read and matched before
+`--force-with-lease=refs/heads/<head>:<sha>` runs, so a branch that moved in
+between fails the lease with nothing overwritten. `publication/push.ts` refuses
+the rewrite outright for a base or default branch, a branch GitHub reports
+protected (an unreadable answer counts as protected), a merged or closed pull
+request, and a head the pull request no longer ships. A push failure records its
+code on the row without unwinding `publication_status`: the pull request was
+created and still is.
+
 ## Session Capacity and the Launch Queue
 
 A launch answers as soon as the run and its frozen plan are durable. Claiming a

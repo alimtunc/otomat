@@ -19,7 +19,6 @@ import { closeMergedRun } from "#supervisor";
 
 import { GitHubPublicationError, safeGitHubFailure } from "../errors.js";
 import { buildPullRequestEvent, type PullRequestEventType } from "../events.js";
-import type { PullRequestView } from "../types.js";
 import type { PublicationConfig } from "./types.js";
 
 /** Row persistence, ledger emission, and state-machine reconciliation for one publication. */
@@ -126,6 +125,17 @@ export class PublicationStore {
     );
   }
 
+  /** Publication status is left alone: the pull request was created and still is — only this push did not land. */
+  recordPushFailure(row: PullRequestRow, error: unknown): GitHubPublicationError {
+    console.error(`[otomat] push for run ${row.run_id} failed`, error);
+    const failure = safeGitHubFailure(error, {
+      code: "github_push_failed",
+      message: "The commits could not be pushed to GitHub.",
+    });
+    this.patch(row, { error_code: failure.code, error_message: failure.message }, "github");
+    return new GitHubPublicationError(failure.code, failure.message);
+  }
+
   recoverInterrupted(row: PullRequestRow): PullRequestRow {
     if (row.publication_status !== "pushing" && row.publication_status !== "creating") return row;
     return this.failure(
@@ -135,21 +145,5 @@ export class PublicationStore {
         "The previous GitHub publication was interrupted. Retry to reconcile it safely.",
       ),
     );
-  }
-
-  view(row: PullRequestRow): PullRequestView {
-    if (!row.published_diff_sha) return { row, hasUnpublishedChanges: false };
-    if (row.status === "merged") return { row, hasUnpublishedChanges: false };
-    const service = this.config.repositories.forRun(row.run_id)?.service;
-    if (!service) return { row, hasUnpublishedChanges: null };
-    try {
-      return {
-        row,
-        hasUnpublishedChanges: service.diff(row.run_id).sha !== row.published_diff_sha,
-      };
-    } catch (error) {
-      console.error(`[otomat] diff comparison for run ${row.run_id} failed`, error);
-      return { row, hasUnpublishedChanges: null };
-    }
   }
 }

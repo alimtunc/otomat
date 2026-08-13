@@ -3,7 +3,12 @@ import type { PullRequestPublicationMode } from "@otomat/domain";
 
 import { normalizePullRequestBody } from "../body.js";
 import { GitHubCliError, GitHubPublicationError } from "../errors.js";
-import type { GitHubCli, GitHubPullRequest, PullRequestSelector } from "../types.js";
+import type {
+  GitHubCli,
+  GitHubPullRequest,
+  GitHubRepositoryTarget,
+  PullRequestSelector,
+} from "../types.js";
 import type { PublicationStore } from "./store.js";
 import type {
   ExistingPullRequestResult,
@@ -29,17 +34,17 @@ function modeMatches(provider: GitHubPullRequest, mode: PullRequestPublicationMo
 async function applyPublicationMode(
   cli: GitHubCli,
   provider: GitHubPullRequest,
-  selector: PullRequestSelector,
+  target: GitHubRepositoryTarget,
   mode: PullRequestPublicationMode,
 ): Promise<GitHubPullRequest> {
   if (modeMatches(provider, mode)) return provider;
   await cli.setPullRequestMode({
-    cwd: selector.cwd,
-    repository: selector.repository,
+    cwd: target.cwd,
+    repository: target.repository,
     number: provider.number,
     draft: mode === "draft",
   });
-  return cli.viewPullRequest(selector.cwd, selector.repository, provider.number);
+  return cli.viewPullRequest(target.cwd, target.repository, provider.number);
 }
 
 export async function refreshExistingPullRequest(
@@ -49,16 +54,14 @@ export async function refreshExistingPullRequest(
   context: PublicationContext,
 ): Promise<ExistingPullRequestResult> {
   if (row.number === null || row.url === null) {
-    return { row, completedView: null, provider: null };
+    return { row, done: false, provider: null };
   }
   const provider = await cli.viewPullRequest(
-    context.worktree.path,
-    context.remote.repository,
+    context.workspace.worktree.path,
+    context.workspace.remote.repository,
     row.number,
   );
-  row = store.reconcileLifecycle(row, provider.lifecycle);
-  const hasPublishedSnapshot = row.published_head_sha !== null && row.published_diff_sha !== null;
-  if (hasPublishedSnapshot) row = store.reconcilePublication(row, "created");
+  row = store.reconcilePublication(store.reconcileLifecycle(row, provider.lifecycle), "created");
   if (provider.lifecycle === "merged" || provider.lifecycle === "closed") {
     row = store.patch(
       row,
@@ -70,26 +73,17 @@ export async function refreshExistingPullRequest(
       },
       "github",
     );
-    return { row, completedView: store.view(row), provider };
+    return { row, done: true, provider };
   }
-  const current = store.view(row);
   return {
     row,
-    completedView:
-      hasPublishedSnapshot &&
-      current.hasUnpublishedChanges === false &&
-      metadataMatches(provider, context.request) &&
-      modeMatches(provider, context.request.mode)
-        ? current
-        : null,
+    done: metadataMatches(provider, context.request) && modeMatches(provider, context.request.mode),
     provider,
   };
 }
 
-export function providerPatch(
-  provider: GitHubPullRequest,
-  snapshot: { headSha: string; diffSha: string },
-): PullRequestPatch {
+/** Mirrors what GitHub answered, never what was asked for; publication evidence is added only by a path that pushed. */
+export function providerPatch(provider: GitHubPullRequest): PullRequestPatch {
   return {
     provider: "github",
     number: provider.number,
@@ -98,8 +92,6 @@ export function providerPatch(
     body: normalizePullRequestBody(provider.body),
     head_ref: provider.headRef,
     base_ref: provider.baseRef,
-    published_head_sha: snapshot.headSha,
-    published_diff_sha: snapshot.diffSha,
     error_code: null,
     error_message: null,
   };
@@ -143,21 +135,25 @@ async function createProvider(
   return { row, provider };
 }
 
-async function updateProvider(
+/** Title, body and Draft/Ready of a pull request that already exists — the branch it ships is untouched. */
+export async function updateDetails(
   cli: GitHubCli,
   provider: GitHubPullRequest,
-  selector: PullRequestSelector,
+  target: GitHubRepositoryTarget,
   request: PublicationRequest,
 ): Promise<GitHubPullRequest> {
-  if (metadataMatches(provider, request)) return provider;
-  await cli.updatePullRequest({
-    cwd: selector.cwd,
-    repository: selector.repository,
-    number: provider.number,
-    title: request.title,
-    body: request.body,
-  });
-  return cli.viewPullRequest(selector.cwd, selector.repository, provider.number);
+  let refreshed = provider;
+  if (!metadataMatches(provider, request)) {
+    await cli.updatePullRequest({
+      cwd: target.cwd,
+      repository: target.repository,
+      number: provider.number,
+      title: request.title,
+      body: request.body,
+    });
+    refreshed = await cli.viewPullRequest(target.cwd, target.repository, provider.number);
+  }
+  return applyPublicationMode(cli, refreshed, target, request.mode);
 }
 
 export async function ensureProvider(
@@ -166,11 +162,8 @@ export async function ensureProvider(
   row: PullRequestRow,
   selector: PullRequestSelector,
   request: PublicationRequest,
-  knownProvider: GitHubPullRequest | null,
 ): Promise<ProviderResult> {
-  const provider = knownProvider ?? (await cli.findPullRequest(selector));
-  if (provider === null) return createProvider(store, cli, row, selector, request);
-  const refreshed =
-    row.number === null ? provider : await updateProvider(cli, provider, selector, request);
-  return { row, provider: await applyPublicationMode(cli, refreshed, selector, request.mode) };
+  const existing = await cli.findPullRequest(selector);
+  if (existing === null) return createProvider(store, cli, row, selector, request);
+  return { row, provider: await applyPublicationMode(cli, existing, selector, request.mode) };
 }

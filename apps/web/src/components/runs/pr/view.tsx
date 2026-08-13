@@ -9,6 +9,7 @@ import { useGitHubConnection, useRunPullRequest } from "@web/api/prs/queries";
 import { useRunDetail } from "@web/api/runs/queries";
 import { PullRequestForm } from "@web/components/runs/pr/form";
 import { pullRequestAcceptedSubmission } from "@web/components/runs/pr/model";
+import { PullRequestSyncPanel } from "@web/components/runs/pr/sync/panel";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
 
@@ -39,9 +40,14 @@ export function RunPrView() {
   }
 
   const pullRequest = prQuery.data.pull_request;
+  const sync = prQuery.data.sync;
+  const headRef = pullRequest?.head_ref ?? null;
 
   return (
-    <div className="p-4">
+    <div className="flex max-w-2xl flex-col gap-4 p-4">
+      {headRef !== null && sync !== null ? (
+        <PullRequestSyncPanel runId={runId} headRef={headRef} sync={sync} />
+      ) : null}
       <PullRequestForm
         key={`${pullRequest?.id ?? "new"}:${pullRequest?.publication_status ?? "none"}:${pullRequest?.status ?? "none"}`}
         pullRequest={pullRequest}

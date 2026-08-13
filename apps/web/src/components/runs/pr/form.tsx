@@ -79,7 +79,7 @@ export function PullRequestForm({
 
   return (
     <form
-      className="flex max-w-2xl flex-col gap-4"
+      className="flex flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();
@@ -95,9 +95,7 @@ export function PullRequestForm({
             <>
               <div className="flex items-center gap-2">
                 {pullRequest ? <PRStatusBadge status={pullRequest.status} /> : null}
-                <Chip tone={model.stateLabel === "Up to date" ? "success" : "neutral"}>
-                  {model.stateLabel}
-                </Chip>
+                <Chip>{model.stateLabel}</Chip>
                 {branch ? <Chip tone="ghost">{branch}</Chip> : null}
               </div>
               <PullRequestConnectionPanel

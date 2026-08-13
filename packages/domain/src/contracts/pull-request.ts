@@ -24,8 +24,38 @@ export const pullRequestDraftSchema = z.object({
 });
 export type PullRequestDraft = z.infer<typeof pullRequestDraftSchema>;
 
-/** `pull_request` is null while no PR has been prepared for the run. */
+export const pullRequestCommitSchema = z.object({
+  sha: z.string(),
+  subject: z.string(),
+});
+export type PullRequestCommit = z.infer<typeof pullRequestCommitSchema>;
+
+/** How the run's workspace stands against the branch the pull request actually shows on GitHub. */
+export const pullRequestSyncSchema = z.object({
+  state: z.enum(["in_sync", "ahead", "diverged", "unavailable"]),
+  /** Uncommitted work in the workspace; a push moves commits, so this stays local until it is committed. */
+  dirty: z.boolean(),
+  local_head_sha: z.string().nullable(),
+  remote_head_sha: z.string().nullable(),
+  /** Local commits the pull request branch does not carry yet. */
+  ahead: z.array(pullRequestCommitSchema),
+  /** Remote commits a force push would drop from the pull request branch. */
+  replaced: z.array(pullRequestCommitSchema),
+});
+export type PullRequestSync = z.infer<typeof pullRequestSyncSchema>;
+
+/** `pull_request` is null while no PR has been prepared; `sync` is null while none is published to compare against. */
 export const pullRequestDetailSchema = z.object({
   pull_request: pullRequestContractSchema.nullable(),
+  sync: pullRequestSyncSchema.nullable(),
 });
 export type PullRequestDetail = z.infer<typeof pullRequestDetailSchema>;
+
+export const pushPullRequestRequestSchema = z.object({
+  /** The remote head the user was shown, replayed as a lease: absent, the push may only fast-forward. */
+  expected_remote_sha: z
+    .string()
+    .regex(/^[0-9a-f]{40}$/)
+    .optional(),
+});
+export type PushPullRequestRequest = z.infer<typeof pushPullRequestRequestSchema>;

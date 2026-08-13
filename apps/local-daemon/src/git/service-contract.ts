@@ -84,6 +84,8 @@ export interface GitWorktreeService {
    * worktree keeps changing. Resolves like `diff`.
    */
   diffSnapshot(owner: string): DiffSnapshot;
+  /** Canonical diff of `commit` against the owner's fork point: only a commit can stand for what a push published. */
+  commitDiff(owner: string, commit: string): CanonicalDiff;
   /** Commits outstanding changes and records the new branch tip without removing the active worktree. */
   snapshot(owner: string): WorktreeRecord;
   /** Fast-forwards the clean canonical owner from one candidate forked at `expectedBaseSha`. */

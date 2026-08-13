@@ -1,5 +1,10 @@
 import { schema } from "@otomat/db";
-import type { GitHubConnectionContract, PullRequestDetail } from "@otomat/domain";
+import type {
+  GitHubConnectionContract,
+  PullRequestDetail,
+  PullRequestSync,
+  PushPullRequestRequest,
+} from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { GitHubPublicationError } from "#github";
@@ -74,18 +79,25 @@ it("serves and publishes the durable PR through the GitHub module", async () => 
   });
   // The route reads "created or updated" from the stored row, so the publish below answers 200.
   t.db.insert(schema.pullRequests).values(row).run();
+  const sync: PullRequestSync = {
+    state: "ahead",
+    dirty: true,
+    local_head_sha: "abc123",
+    remote_head_sha: "def456",
+    ahead: [{ sha: "abc123", subject: "follow up" }],
+    replaced: [],
+  };
   const app = makeApiApp(t, {
     github: stubGitHubService({
-      getPullRequest: async () => ({ row, hasUnpublishedChanges: false }),
-      publish: async () => ({ row, hasUnpublishedChanges: false }),
+      getPullRequest: async () => ({ row, sync }),
+      publish: async () => ({ row, sync }),
     }),
   });
 
   const fetched = await request(app, `/api/runs/${RUN_ID}/pr`);
-  expect(((await fetched.json()) as PullRequestDetail).pull_request).toMatchObject({
-    number: 42,
-    has_unpublished_changes: false,
-  });
+  const detail = (await fetched.json()) as PullRequestDetail;
+  expect(detail.pull_request).toMatchObject({ number: 42 });
+  expect(detail.sync).toEqual(sync);
 
   const published = await post(app, `/api/runs/${RUN_ID}/pr`, {
     title: "Ship it",
@@ -93,6 +105,65 @@ it("serves and publishes the durable PR through the GitHub module", async () => 
   });
   expect(published.status).toBe(200);
   expect(((await published.json()) as PullRequestDetail).pull_request?.url).toBe(row.url);
+});
+
+it("pushes commits through the GitHub module and answers with the published comparison", async () => {
+  const row = pullRequestRow({
+    id: "pr1",
+    run_id: RUN_ID,
+    number: 42,
+    url: "https://github.com/acme/otomat/pull/42",
+    status: "open",
+    publication_status: "created",
+    head_ref: `otomat/run/${RUN_ID}`,
+    base_ref: "main",
+    published_head_sha: "abc123",
+    published_diff_sha: "diff123",
+  });
+  const requests: PushPullRequestRequest[] = [];
+  const app = makeApiApp(t, {
+    github: stubGitHubService({
+      pushCommits: async (_runId, sent) => {
+        requests.push(sent);
+        return {
+          row,
+          sync: {
+            state: "in_sync",
+            dirty: false,
+            local_head_sha: "abc123",
+            remote_head_sha: "abc123",
+            ahead: [],
+            replaced: [],
+          },
+        };
+      },
+    }),
+  });
+
+  const response = await post(app, `/api/runs/${RUN_ID}/pr/push`, {
+    expected_remote_sha: "a".repeat(40),
+  });
+
+  expect(response.status).toBe(200);
+  expect(((await response.json()) as PullRequestDetail).sync?.state).toBe("in_sync");
+  expect(requests).toEqual([{ expected_remote_sha: "a".repeat(40) }]);
+});
+
+it("maps a refused push to an actionable conflict", async () => {
+  const app = makeApiApp(t, {
+    github: stubGitHubService({
+      pushCommits: async () => {
+        throw new GitHubPublicationError("github_push_rejected", "The remote branch diverged.");
+      },
+    }),
+  });
+
+  const response = await post(app, `/api/runs/${RUN_ID}/pr/push`, {});
+  expect(response.status).toBe(409);
+  expect(await response.json()).toEqual({
+    error: "github_push_rejected",
+    message: "The remote branch diverged.",
+  });
 });
 
 it("maps an invalid run state to a conflict", async () => {
@@ -106,7 +177,10 @@ it("maps an invalid run state to a conflict", async () => {
 
   const response = await post(app, `/api/runs/${RUN_ID}/pr`, { title: "Ship", body: "" });
   expect(response.status).toBe(409);
-  expect(await response.json()).toEqual({ error: "run_not_review_ready" });
+  expect(await response.json()).toEqual({
+    error: "run_not_review_ready",
+    message: "Not ready.",
+  });
 });
 
 it("drafts PR metadata with the run's agent and surfaces drafting refusals", async () => {

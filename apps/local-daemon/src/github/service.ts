@@ -17,6 +17,7 @@ export function createGitHubService(config: GitHubServiceConfig): GitHubService 
     ...connection,
     getPullRequest: (runId) => publisher.get(runId),
     publish: (run, request) => publisher.publish(run, request),
+    pushCommits: (runId, request) => publisher.pushCommits(runId, request),
     draftPullRequest: (run) => {
       const drafter = config.drafter;
       if (drafter === undefined) {

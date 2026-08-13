@@ -213,6 +213,77 @@ describe("GitHub CLI adapter", () => {
     });
   });
 
+  it("names a rejected fast-forward apart from any other push failure", async () => {
+    const runner = fakeRunner([
+      {
+        stdout: "",
+        stderr: "! [rejected] main -> main (non-fast-forward)\nUpdates were rejected",
+        exitCode: 1,
+      },
+    ]);
+    const cli = createGitHubCli(runner.run);
+
+    await expect(cli.push("/repo", "origin", "otomat/run/r1")).rejects.toMatchObject({
+      code: "github_push_rejected",
+    });
+  });
+
+  it("leases the force push to the exact remote ref and sha, never a bare force", async () => {
+    const runner = fakeRunner([ok()]);
+    const cli = createGitHubCli(runner.run);
+
+    await cli.forcePushWithLease({
+      cwd: "/repo",
+      remote: "origin",
+      branch: "otomat/run/r1",
+      expectedRemoteSha: "a".repeat(40),
+    });
+
+    expect(runner.requests[0]?.args).toEqual([
+      "push",
+      "--no-verify",
+      `--force-with-lease=refs/heads/otomat/run/r1:${"a".repeat(40)}`,
+      "origin",
+      "HEAD:refs/heads/otomat/run/r1",
+    ]);
+  });
+
+  it("reports a stale lease as its own failure so nothing is retried blindly", async () => {
+    const runner = fakeRunner([
+      { stdout: "", stderr: "! [rejected] r1 -> r1 (stale info)", exitCode: 1 },
+    ]);
+    const cli = createGitHubCli(runner.run);
+
+    await expect(
+      cli.forcePushWithLease({
+        cwd: "/repo",
+        remote: "origin",
+        branch: "otomat/run/r1",
+        expectedRemoteSha: "a".repeat(40),
+      }),
+    ).rejects.toMatchObject({ code: "github_push_lease_stale" });
+  });
+
+  it("reads the remote head, and reports an absent branch as absent rather than failed", async () => {
+    const sha = "b".repeat(40);
+    const runner = fakeRunner([
+      ok(`${sha}\trefs/heads/otomat/run/r1\n`),
+      { stdout: "", stderr: "", exitCode: 2 },
+    ]);
+    const cli = createGitHubCli(runner.run);
+
+    await expect(cli.remoteHead("/repo", "origin", "otomat/run/r1")).resolves.toBe(sha);
+    await expect(cli.remoteHead("/repo", "origin", "gone")).resolves.toBeNull();
+  });
+
+  it("treats an unreadable branch as protected so a rewrite fails closed", async () => {
+    const runner = fakeRunner([ok("false\n"), { stdout: "", stderr: "HTTP 403", exitCode: 1 }]);
+    const cli = createGitHubCli(runner.run);
+
+    await expect(cli.remoteBranchProtected("/repo", "acme/otomat", "main")).resolves.toBe(false);
+    await expect(cli.remoteBranchProtected("/repo", "acme/otomat", "main")).resolves.toBe(true);
+  });
+
   it("signs in with a device-flow token and configures git credentials", async () => {
     const runner = fakeRunner([
       ok(),

@@ -30,7 +30,9 @@ export function buildPullRequestEvent(
       base_ref: row.base_ref,
       number: row.number,
       url: row.url,
+      published_head_sha: row.published_head_sha,
       error_code: row.error_code,
+      error_message: row.error_message,
     },
   });
 }

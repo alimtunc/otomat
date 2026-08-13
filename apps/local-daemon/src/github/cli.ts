@@ -12,15 +12,15 @@ import {
 import {
   authStatusFailed,
   parseAuthStatus,
-  parseGitHubRemoteUrl,
   parsePullRequestJson,
   PR_JSON_FIELDS,
   providerPullRequestSchema,
-  selectRemote,
   toPullRequest,
 } from "./parse.js";
+import { fetchBranch, forcePushWithLease, push, remoteHead, resolveRemote } from "./remote.js";
 import type {
   CommandRunner,
+  ForcePushWithLeaseInput,
   GitHubCli,
   GitHubPullRequest,
   GitHubRemote,
@@ -49,6 +49,22 @@ class CommandGitHubCli implements GitHubCli {
     });
     if (commandSucceeded(result)) return true;
     return !result.stderr.includes("HTTP 404");
+  }
+
+  /** Guards a rewrite, so the opposite default to `remoteBranchExists`: an unreadable answer counts as protected. */
+  async remoteBranchProtected(cwd: string, repository: string, branch: string): Promise<boolean> {
+    const result = await this.run({
+      command: "gh",
+      args: [
+        "api",
+        `repos/${repository}/branches/${encodeURIComponent(branch)}`,
+        "--jq",
+        ".protected",
+      ],
+      cwd,
+    });
+    if (!commandSucceeded(result)) return true;
+    return result.stdout.trim() !== "false";
   }
 
   async connection(): Promise<GitHubConnectionContract> {
@@ -83,37 +99,24 @@ class CommandGitHubCli implements GitHubCli {
     return this.connection();
   }
 
-  async resolveRemote(cwd: string): Promise<GitHubRemote> {
-    const names = await this.run({ command: "git", args: ["remote"], cwd });
-    assertPublicationSucceeded(names, "git_remote_list_failed", "Git remotes could not be read.");
-    const candidates: GitHubRemote[] = [];
-    for (const name of names.stdout
-      .split("\n")
-      .map((value) => value.trim())
-      .filter(Boolean)) {
-      const remoteResult = await this.run({
-        command: "git",
-        args: ["remote", "get-url", "--push", name],
-        cwd,
-      });
-      if (!commandSucceeded(remoteResult)) continue;
-      const parsed = parseGitHubRemoteUrl(remoteResult.stdout.trim());
-      if (parsed) candidates.push({ name, repository: parsed.repository });
-    }
-    return selectRemote(candidates);
+  resolveRemote(cwd: string): Promise<GitHubRemote> {
+    return resolveRemote(this.run, cwd);
   }
 
-  async push(cwd: string, remote: string, branch: string): Promise<void> {
-    const pushResult = await this.run({
-      command: "git",
-      args: ["push", "--no-verify", "--set-upstream", remote, `HEAD:refs/heads/${branch}`],
-      cwd,
-    });
-    assertPublicationSucceeded(
-      pushResult,
-      "github_push_failed",
-      "The run branch could not be pushed to GitHub.",
-    );
+  push(cwd: string, remote: string, branch: string): Promise<void> {
+    return push(this.run, cwd, remote, branch);
+  }
+
+  forcePushWithLease(input: ForcePushWithLeaseInput): Promise<void> {
+    return forcePushWithLease(this.run, input);
+  }
+
+  remoteHead(cwd: string, remote: string, branch: string): Promise<string | null> {
+    return remoteHead(this.run, cwd, remote, branch);
+  }
+
+  fetchBranch(cwd: string, remote: string, branch: string): Promise<void> {
+    return fetchBranch(this.run, cwd, remote, branch);
   }
 
   async findPullRequest(input: PullRequestSelector): Promise<GitHubPullRequest | null> {

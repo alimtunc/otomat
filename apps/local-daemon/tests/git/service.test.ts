@@ -153,6 +153,21 @@ describe("GitWorktreeService", () => {
     );
   });
 
+  it("diffs a commit against the fork point, leaving uncommitted work out of it", () => {
+    const wt = env.service.acquire({ owner: "committed", branch: "feat-commit" });
+    writeFileSync(join(wt.path, "file.txt"), "committed\n");
+    const commit = env.service.snapshot("committed").headSha;
+    writeFileSync(join(wt.path, "file.txt"), "committed\nuncommitted\n");
+
+    const atCommit = env.service.commitDiff("committed", commit);
+
+    expect(atCommit.files.find((f) => f.path === "file.txt")?.patch).not.toContain("uncommitted");
+    expect(env.service.diff("committed").files.find((f) => f.path === "file.txt")?.patch).toContain(
+      "uncommitted",
+    );
+    expect(atCommit.sha).not.toBe(env.service.diff("committed").sha);
+  });
+
   it("snapshots dirty work without removing the active worktree", () => {
     const wt = env.service.acquire({ owner: "publisher", branch: "feat-publish" });
     writeFileSync(join(wt.path, "published.txt"), "ready\n");

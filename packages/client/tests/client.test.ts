@@ -456,15 +456,14 @@ it("reads and publishes the run pull request", async () => {
     published_diff_sha: null,
     error_code: null,
     error_message: null,
-    has_unpublished_changes: false,
   };
   let lastBody: unknown;
   const fetchMock: typeof fetch = async (_input, init) => {
     if (init?.method === "POST") {
       lastBody = JSON.parse(String(init.body));
-      return jsonResponse({ pull_request: PR }, 201);
+      return jsonResponse({ pull_request: PR, sync: null }, 201);
     }
-    return jsonResponse({ pull_request: null });
+    return jsonResponse({ pull_request: null, sync: null });
   };
   const client = createDaemonClient({ fetch: fetchMock });
 
@@ -477,6 +476,30 @@ it("reads and publishes the run pull request", async () => {
   });
   expect(prepared.pull_request?.publication_status).toBe("not_configured");
   expect(lastBody).toEqual({ title: "First slice", body: "", mode: "draft" });
+});
+
+it("pushes the run's commits and parses the published comparison", async () => {
+  const SYNC = {
+    state: "in_sync",
+    dirty: true,
+    local_head_sha: "a".repeat(40),
+    remote_head_sha: "a".repeat(40),
+    ahead: [],
+    replaced: [],
+  };
+  let lastBody: unknown;
+  const fetchMock: typeof fetch = async (_input, init) => {
+    lastBody = JSON.parse(String(init?.body));
+    return jsonResponse({ pull_request: null, sync: SYNC });
+  };
+  const client = createDaemonClient({ fetch: fetchMock });
+
+  const pushed = await client.pushPullRequestCommits("run-1", {
+    expected_remote_sha: "b".repeat(40),
+  });
+
+  expect(pushed.sync).toEqual(SYNC);
+  expect(lastBody).toEqual({ expected_remote_sha: "b".repeat(40) });
 });
 
 it("registers a repository and parses the project + repository pair", async () => {
