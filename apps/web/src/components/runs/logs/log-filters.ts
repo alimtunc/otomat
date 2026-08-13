@@ -22,6 +22,7 @@ const CATEGORY_BY_TYPE: Record<EventType, LogCategory> = {
   "git.diff_updated": "control",
   "review.comment_created": "control",
   "review.comment_resolved": "control",
+  "review.comment_published": "control",
   "pr.created": "control",
   "pr.updated": "control",
   "linear.lifecycle_synced": "control",

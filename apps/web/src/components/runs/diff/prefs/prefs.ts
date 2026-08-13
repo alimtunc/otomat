@@ -1,3 +1,4 @@
+import { REVIEW_COMMENT_DESTINATIONS, type ReviewCommentDestination } from "@otomat/domain";
 import { asBoolean, asMember, asRecord } from "@web/lib/coerce";
 import { readStored, writeStored } from "@web/lib/storage";
 
@@ -12,6 +13,7 @@ export interface DiffPrefs {
   wrap: boolean;
   stats: boolean;
   hideReviewed: boolean;
+  commentDestination: ReviewCommentDestination;
 }
 
 export const DEFAULT_DIFF_PREFS: DiffPrefs = {
@@ -21,6 +23,7 @@ export const DEFAULT_DIFF_PREFS: DiffPrefs = {
   wrap: false,
   stats: true,
   hideReviewed: false,
+  commentDestination: "agent",
 };
 
 const PREFS_KEY = "otomat.diff-prefs";
@@ -43,6 +46,9 @@ export function readDiffPrefs(storage?: Pick<Storage, "getItem"> | null): DiffPr
     wrap: asBoolean(stored.wrap) ?? DEFAULT_DIFF_PREFS.wrap,
     stats: asBoolean(stored.stats) ?? DEFAULT_DIFF_PREFS.stats,
     hideReviewed: asBoolean(stored.hideReviewed) ?? DEFAULT_DIFF_PREFS.hideReviewed,
+    commentDestination:
+      asMember(stored.commentDestination, REVIEW_COMMENT_DESTINATIONS) ??
+      DEFAULT_DIFF_PREFS.commentDestination,
   };
 }
 

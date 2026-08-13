@@ -8,6 +8,9 @@
  * @packageDocumentation
  */
 export {
+  CommentDestinationUnavailableError,
+  CommentPublicationFailedError,
+  CommentRangeInvalidError,
   CommentsNotFixableError,
   DiffUnavailableError,
   FileNotExpandableError,
@@ -20,6 +23,7 @@ export type {
   FileBlobsRequest,
   FileBlobsResult,
   FixRequest,
+  PullRequestCommentInput,
   ReviewDetailResult,
   ReviewService,
   ReviewServiceConfig,

@@ -17,6 +17,7 @@ export type { AgentSessionState } from "./state-machines/agent-session.js";
 export type { CompeteGroupState } from "./state-machines/compete-group.js";
 export type { ReviewState } from "./state-machines/review.js";
 export type { ReviewCommentState } from "./state-machines/review-comment.js";
+export type { ReviewCommentPublicationState } from "./state-machines/review-comment-publication.js";
 export type { PullRequestState } from "./state-machines/pull-request.js";
 export type { PullRequestPublicationState } from "./state-machines/pull-request-publication.js";
 

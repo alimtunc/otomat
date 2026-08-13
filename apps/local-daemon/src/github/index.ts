@@ -24,4 +24,5 @@ export type {
   PullRequestModeInput,
   PullRequestSelector,
   PullRequestUpdateInput,
+  ReviewCommentCreateInput,
 } from "./types.js";

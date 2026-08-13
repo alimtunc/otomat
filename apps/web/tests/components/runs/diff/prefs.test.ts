@@ -16,6 +16,7 @@ describe("reviewer preferences", () => {
       wrap: false,
       stats: true,
       hideReviewed: false,
+      commentDestination: "agent",
     });
   });
 
@@ -29,6 +30,7 @@ describe("reviewer preferences", () => {
         wrap: true,
         stats: false,
         hideReviewed: true,
+        commentDestination: "pr_review",
       },
       storage,
     );
@@ -40,6 +42,7 @@ describe("reviewer preferences", () => {
       wrap: true,
       stats: false,
       hideReviewed: true,
+      commentDestination: "pr_review",
     });
   });
 

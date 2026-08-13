@@ -11,11 +11,12 @@ import {
 } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
-import { useAddReviewComment } from "@web/api/reviews/mutations";
+import { useAddReviewComment, usePublishReviewComment } from "@web/api/reviews/mutations";
 import { useRunReview } from "@web/api/reviews/queries";
 import { useRunDetail, useRunDiff } from "@web/api/runs/queries";
 import { DiffFileCards } from "@web/components/runs/diff/cards";
 import { revealAndFocus } from "@web/components/runs/diff/diff-nav";
+import { DiffEmptyRegion } from "@web/components/runs/diff/empty-region";
 import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
 import { DiffFileNav } from "@web/components/runs/diff/files/nav";
 import { DiffFixBar } from "@web/components/runs/diff/fix-bar";
@@ -28,7 +29,7 @@ import { useDiffKeyboardNav } from "@web/components/runs/diff/use-diff-keyboard-
 import { useReviewedFiles } from "@web/components/runs/diff/use-reviewed-files";
 import { hideReviewedFiles, sortDiffFiles } from "@web/components/runs/diff/visible-files";
 import { reviewCommentDomId } from "@web/components/runs/review/comment/anchor";
-import { DetachedComments } from "@web/components/runs/review/detached-comments";
+import type { DiffFileCommentActions } from "@web/components/runs/review/file-comments";
 import { partitionComments } from "@web/components/runs/review/partition";
 import { useReviewSelection } from "@web/components/runs/review/use-selection";
 import { CenteredState } from "@web/components/shell/centered-state";
@@ -46,6 +47,7 @@ export function RunDiffView() {
   const diffQuery = useRunDiff(runId);
   const reviewQuery = useRunReview(runId);
   const addComment = useAddReviewComment(runId);
+  const publishComment = usePublishReviewComment(runId);
   const selection = useReviewSelection(runId);
   const active = useActiveDiffFile(runId);
   const collapsed = useCollapsedFiles();
@@ -130,13 +132,20 @@ export function RunDiffView() {
     );
   }
 
-  const submitComment = async (
-    filePath: string,
-    diffSha: string,
-    line: number | null,
-    body: string,
-  ): Promise<void> => {
-    await addComment.mutateAsync({ file_path: filePath, diff_sha: diffSha, line, body });
+  const commentActions: DiffFileCommentActions = {
+    add: async (file, comment) => {
+      await addComment.mutateAsync({ ...comment, file_path: file.path, diff_sha: file.sha });
+    },
+    toggle: selection.toggle,
+    publish: (commentId) => publishComment.mutate(commentId),
+    reveal: selectComment,
+  };
+  const fileCommentsInput = {
+    partition,
+    selectedIds: selection.selectedIds,
+    destinations: review.destinations,
+    preferredDestination: prefs.commentDestination,
+    publishingId: publishComment.isPending ? publishComment.variables : null,
   };
 
   const cards = (
@@ -151,27 +160,18 @@ export function RunDiffView() {
       collapsed={collapsed}
       activePath={active.path}
       onActivate={active.select}
-      comments={partition}
-      selection={selection}
-      onAddComment={(file, line, body) => submitComment(file.path, file.sha, line, body)}
+      comments={fileCommentsInput}
+      commentActions={commentActions}
     />
   );
 
   const emptyRegion = (
-    <div className="flex min-h-0 flex-1 flex-col overflow-auto">
-      <CenteredState fill="flex">
-        <EmptyState
-          icon="git-compare"
-          title="No changes yet"
-          description="The canonical git diff appears once a run produces changes. Diffs are never fabricated."
-        />
-      </CenteredState>
-      {partition.detached.length > 0 ? (
-        <div className="p-4">
-          <DetachedComments comments={partition.detached} selection={selection} />
-        </div>
-      ) : null}
-    </div>
+    <DiffEmptyRegion
+      detached={partition.detached}
+      selection={selection}
+      onPublish={commentActions.publish}
+      publishingId={fileCommentsInput.publishingId}
+    />
   );
 
   const browsedRegion = wide ? (

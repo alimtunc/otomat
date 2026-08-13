@@ -8,6 +8,9 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import type { CanonicalDiff } from "#git";
 import {
+  CommentDestinationUnavailableError,
+  CommentPublicationFailedError,
+  CommentRangeInvalidError,
   CommentsNotFixableError,
   DiffUnavailableError,
   ReviewAnchorStaleError,
@@ -92,6 +95,7 @@ it("serves the review surface with serialized comments and the fix authority", a
         review: reviewRow(),
         comments: [commentRow()],
         fixAuthority: { kind: "external", reason: "Otomat does not own this branch." },
+        destinations: { pr_review: false, reason: "This run has no pull request yet." },
       }),
     }),
   });
@@ -137,7 +141,7 @@ it("creates a pinned comment and returns 201", async () => {
   let received: unknown;
   const app = makeApiApp(t, {
     review: stubReviewService({
-      addComment: (_run, req) => {
+      addComment: async (_run, req) => {
         received = req;
         return commentRow();
       },
@@ -151,11 +155,14 @@ it("creates a pinned comment and returns 201", async () => {
   });
   expect(res.status).toBe(201);
   expect(((await res.json()) as ReviewCommentContract).id).toBe("c1");
+  // Absent side and destination are defaulted by the contract, never left undefined.
   expect(received).toEqual({
     file_path: "src/thing.ts",
+    side: "new",
     line: 12,
     diff_sha: "sha-1",
     body: "Rename this.",
+    destination: "agent",
   });
 });
 
@@ -165,10 +172,89 @@ it("rejects an invalid comment body with 400", async () => {
   expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
 });
 
+it("explains a refused range and an unreachable destination instead of failing blankly", async () => {
+  const ranged = makeApiApp(t, {
+    review: stubReviewService({
+      addComment: async () => {
+        throw new CommentRangeInvalidError("Lines 4–11 of this file are not.");
+      },
+    }),
+  });
+  const rangeRes = await post(ranged, `/api/runs/${RUN_ID}/review/comments`, {
+    file_path: "src/thing.ts",
+    start_line: 4,
+    line: 11,
+    diff_sha: "sha-1",
+    body: "x",
+  });
+  expect(rangeRes.status).toBe(422);
+  expect(await rangeRes.json()).toEqual({
+    error: "comment_range_invalid",
+    message: "Lines 4–11 of this file are not.",
+  });
+
+  const unreachable = makeApiApp(t, {
+    review: stubReviewService({
+      addComment: async () => {
+        throw new CommentDestinationUnavailableError("This run has no pull request yet.");
+      },
+    }),
+  });
+  const destRes = await post(unreachable, `/api/runs/${RUN_ID}/review/comments`, {
+    file_path: "src/thing.ts",
+    line: 11,
+    diff_sha: "sha-1",
+    destination: "pr_review",
+    body: "x",
+  });
+  expect(destRes.status).toBe(409);
+  expect(await destRes.json()).toEqual({
+    error: "comment_destination_unavailable",
+    message: "This run has no pull request yet.",
+  });
+});
+
+it("publishes one PR-review comment and reports a GitHub refusal as a bad gateway", async () => {
+  let publishedId = "";
+  const app = makeApiApp(t, {
+    review: stubReviewService({
+      publishComment: async (_run, commentId) => {
+        publishedId = commentId;
+        return commentRow({
+          destination: "pr_review",
+          publication_status: "published",
+          external_url: "https://gh/pr/7#r1",
+        });
+      },
+    }),
+  });
+  const res = await post(app, `/api/runs/${RUN_ID}/review/comments/c1/publish`, {});
+  expect(res.status).toBe(200);
+  expect(publishedId).toBe("c1");
+  expect((await res.json()) as ReviewCommentContract).toMatchObject({
+    publication_status: "published",
+    external_url: "https://gh/pr/7#r1",
+  });
+
+  const failing = makeApiApp(t, {
+    review: stubReviewService({
+      publishComment: async () => {
+        throw new CommentPublicationFailedError("GitHub refused the review comment. (HTTP 422)");
+      },
+    }),
+  });
+  const failed = await post(failing, `/api/runs/${RUN_ID}/review/comments/c1/publish`, {});
+  expect(failed.status).toBe(502);
+  expect(await failed.json()).toEqual({
+    error: "comment_publication_failed",
+    message: "GitHub refused the review comment. (HTTP 422)",
+  });
+});
+
 it("maps stale anchors and missing diffs to 409 conflicts", async () => {
   const stale = makeApiApp(t, {
     review: stubReviewService({
-      addComment: () => {
+      addComment: async () => {
         throw new ReviewAnchorStaleError("src/thing.ts");
       },
     }),
@@ -184,7 +270,7 @@ it("maps stale anchors and missing diffs to 409 conflicts", async () => {
 
   const bare = makeApiApp(t, {
     review: stubReviewService({
-      addComment: () => {
+      addComment: async () => {
         throw new DiffUnavailableError(RUN_ID);
       },
     }),

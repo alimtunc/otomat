@@ -202,6 +202,7 @@ describe("run completion report projection", () => {
           commentRow({ id: "a-comment", review_id: "review-1", status: "open" }),
         ],
         fixAuthority: { kind: "otomat", reason: "Otomat owns this branch." },
+        destinations: { pr_review: false, reason: "This run has no pull request yet." },
       }),
     });
 

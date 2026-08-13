@@ -1,12 +1,21 @@
-import { DiffModeEnum, DiffView, SplitSide, type DiffFile } from "@git-diff-view/react";
+import {
+  DiffModeEnum,
+  DiffViewWithMultiSelect,
+  SplitSide,
+  type DiffFile,
+} from "@git-diff-view/react";
 import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
-import { Button, useTheme } from "@otomat/ui";
+import { useTheme } from "@otomat/ui";
 import { extendDataFor, unrenderableNote } from "@web/components/runs/diff/files/card.utils";
 import { diffLanguage } from "@web/components/runs/diff/files/language";
 import type { FileBlobsContext } from "@web/components/runs/diff/files/use-file-blobs";
 import type { DiffViewMode } from "@web/components/runs/diff/prefs/prefs";
 import { ReviewCommentCard } from "@web/components/runs/review/comment/card";
-import { ReviewCommentForm } from "@web/components/runs/review/comment/form";
+import { ReviewCommentComposer } from "@web/components/runs/review/comment/composer";
+import type {
+  DiffFileCommentActions,
+  DiffFileComments,
+} from "@web/components/runs/review/file-comments";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 interface DiffViewHandle {
@@ -20,10 +29,8 @@ export interface DiffFileCardBodyProps {
   highlight: boolean;
   context: FileBlobsContext | null;
   expandAll: boolean;
-  commentsByLine: Map<number, ReviewCommentContract[]>;
-  onAddComment: (line: number, body: string) => Promise<void>;
-  selectedCommentIds: ReadonlySet<string>;
-  onToggleComment: (commentId: string, selected: boolean) => void;
+  comments: DiffFileComments;
+  commentActions: DiffFileCommentActions;
 }
 
 export function DiffFileCardBody({
@@ -33,10 +40,8 @@ export function DiffFileCardBody({
   highlight,
   context,
   expandAll,
-  commentsByLine,
-  onAddComment,
-  selectedCommentIds,
-  onToggleComment,
+  comments,
+  commentActions,
 }: DiffFileCardBodyProps) {
   const { theme } = useTheme();
   const handle = useRef<DiffViewHandle | null>(null);
@@ -60,7 +65,7 @@ export function DiffFileCardBody({
       hunks: [file.patch],
     };
   }, [file.path, file.old_path, file.patch, context]);
-  const extendData = useMemo(() => extendDataFor(commentsByLine), [commentsByLine]);
+  const extendData = useMemo(() => extendDataFor(comments.byLine), [comments.byLine]);
 
   // otomat-allow-effect: expansion lives only on @git-diff-view's imperative instance.
   useEffect(() => {
@@ -73,7 +78,7 @@ export function DiffFileCardBody({
 
   return (
     <div className="otomat-review-diff overflow-hidden rounded-b-md">
-      <DiffView<ReviewCommentContract[]>
+      <DiffViewWithMultiSelect<ReviewCommentContract[]>
         ref={attach}
         data={data}
         extendData={extendData}
@@ -83,31 +88,28 @@ export function DiffFileCardBody({
         diffViewWrap={wrap}
         diffViewFontSize={12}
         diffViewAddWidget
-        renderWidgetLine={({ side, lineNumber, onClose }) =>
-          side === SplitSide.new ? (
-            <ReviewCommentForm
-              filePath={file.path}
-              line={lineNumber}
-              onSubmit={(body) => onAddComment(lineNumber, body)}
-              onClose={onClose}
-            />
-          ) : (
-            <div className="flex items-center gap-2 border-y border-border bg-surface-2 p-3 text-xs text-text-tertiary">
-              Comments pin to the new side of the diff.
-              <Button variant="ghost" size="xs" onClick={onClose}>
-                Close
-              </Button>
-            </div>
-          )
-        }
-        renderExtendLine={({ data: comments }) => (
+        renderWidgetLine={({ side, lineNumber, fromLineNumber, onClose }) => (
+          <ReviewCommentComposer
+            file={file}
+            side={side === SplitSide.old ? "old" : "new"}
+            line={lineNumber}
+            fromLine={fromLineNumber}
+            destinations={comments.destinations}
+            preferredDestination={comments.preferredDestination}
+            onSubmit={(comment) => commentActions.add(file, comment)}
+            onClose={onClose}
+          />
+        )}
+        renderExtendLine={({ data: onLine }) => (
           <div className="flex flex-col gap-2 border-y border-border bg-surface-1 p-3">
-            {comments.map((comment) => (
+            {onLine.map((comment) => (
               <ReviewCommentCard
                 key={comment.id}
                 comment={comment}
-                selected={selectedCommentIds.has(comment.id)}
-                onSelectedChange={(selected) => onToggleComment(comment.id, selected)}
+                selected={comments.selectedIds.has(comment.id)}
+                onSelectedChange={(selected) => commentActions.toggle(comment.id, selected)}
+                onPublish={() => commentActions.publish(comment.id)}
+                publishing={comments.publishingId === comment.id}
               />
             ))}
           </div>

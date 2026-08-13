@@ -4,6 +4,7 @@ import type {
   CompeteGroupState,
   IssueState,
   PullRequestState,
+  ReviewCommentPublicationState,
   ReviewCommentState,
   ReviewState,
   RunContributionState,
@@ -23,6 +24,7 @@ export type StatusKind =
   | "compete"
   | "review"
   | "reviewComment"
+  | "reviewCommentPublication"
   | "pr"
   | "diffFile";
 
@@ -45,6 +47,7 @@ export interface KindStatusMap {
   compete: CompeteGroupState;
   review: ReviewState;
   reviewComment: ReviewCommentState;
+  reviewCommentPublication: ReviewCommentPublicationState;
   pr: PullRequestState;
   diffFile: ChangeStatus;
 }

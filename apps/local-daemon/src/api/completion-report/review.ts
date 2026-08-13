@@ -88,8 +88,11 @@ function projectReview({
       open_comments: open.map((comment) => ({
         id: comment.id,
         file_path: comment.file_path,
+        side: comment.side,
+        start_line: comment.start_line,
         line: comment.line,
         body: comment.body,
+        destination: comment.destination,
         evidence: [{ source: "review", comment_id: comment.id }],
       })),
       evidence: [{ source: "review", comment_id: null }],

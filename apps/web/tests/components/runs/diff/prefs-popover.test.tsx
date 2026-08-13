@@ -50,4 +50,16 @@ describe("reviewer preferences popover", () => {
     expect(findButton("Unified")).toBeDefined();
     await cleanup();
   });
+
+  it("reports the default comment destination so a new comment starts there", async () => {
+    const patches: Partial<DiffPrefs>[] = [];
+    const { cleanup } = await openPopover(true, patches);
+
+    await act(async () => {
+      findButton("PR review")?.click();
+    });
+
+    expect(patches).toEqual([{ commentDestination: "pr_review" }]);
+    await cleanup();
+  });
 });

@@ -1,39 +1,72 @@
 import { DaemonRequestError } from "@otomat/client";
 import {
   agentProfileErrorSchema,
+  reviewCommentErrorSchema,
   runStepAppendErrorSchema,
   type CreateReviewCommentRequest,
   type RequestFixRequest,
+  type ReviewCommentContract,
+  type ReviewDetail,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
+function reviewRefusal(error: unknown): string | null {
+  if (!(error instanceof DaemonRequestError)) return null;
+  const refusal = reviewCommentErrorSchema.safeParse(error.body);
+  return refusal.success ? refusal.data.message : null;
+}
+
+/** Writes the daemon's own answer into the review cache before the refetch confirms it. */
+function seedComment(client: QueryClient, runId: string, comment: ReviewCommentContract): void {
+  client.setQueryData(queryKeys.runReview(runId), (current: ReviewDetail | undefined) => {
+    if (current === undefined) return current;
+    const known = current.comments.some((row) => row.id === comment.id);
+    return {
+      ...current,
+      comments: known
+        ? current.comments.map((row) => (row.id === comment.id ? comment : row))
+        : [...current.comments, comment],
+    };
+  });
+  client.invalidateQueries({ queryKey: queryKeys.runReview(runId) });
+}
+
 function commentErrorMessage(error: unknown): string {
+  const refusal = reviewRefusal(error);
+  if (refusal !== null) return refusal;
   if (error instanceof DaemonRequestError && error.status === 409) {
     return "The diff changed under this comment — it was refreshed, please re-anchor.";
   }
   return "Could not add the comment — is the daemon running?";
 }
 
-/**
- * Adds a review comment. On success invalidates the run's review cache. A 409
- * means the diff moved under the anchor: it refreshes the diff cache and toasts
- * asking the user to re-anchor.
- */
 export function useAddReviewComment(runId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: CreateReviewCommentRequest) => daemon.addReviewComment(runId, request),
-    onSuccess: () => {
-      client.invalidateQueries({ queryKey: queryKeys.runReview(runId) });
-    },
+    onSuccess: (comment) => seedComment(client, runId, comment),
     onError: (error) => {
       if (error instanceof DaemonRequestError && error.status === 409) {
         client.invalidateQueries({ queryKey: queryKeys.runDiff(runId) });
       }
       toast.error(commentErrorMessage(error));
+    },
+  });
+}
+
+/** The daemon persists the outcome either way, so even a failure refreshes: the comment shows `failed`, never vanishes. */
+export function usePublishReviewComment(runId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) => daemon.publishReviewComment(runId, commentId),
+    onSuccess: (comment) => seedComment(client, runId, comment),
+    onError: (error) => {
+      client.invalidateQueries({ queryKey: queryKeys.runReview(runId) });
+      toast.error(reviewRefusal(error) ?? "Could not publish the comment — is the daemon running?");
     },
   });
 }

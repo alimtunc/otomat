@@ -35,6 +35,7 @@ export const EVENT_TYPES = [
   "git.diff_updated",
   "review.comment_created",
   "review.comment_resolved",
+  "review.comment_published",
   "pr.created",
   "pr.updated",
   "linear.lifecycle_synced",

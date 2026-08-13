@@ -1,3 +1,4 @@
+import { isReviewCommentDestination } from "@otomat/domain";
 import {
   Button,
   Icon,
@@ -101,6 +102,23 @@ export function DiffPrefsPopover({ prefs, onChange, browsable }: DiffPrefsPopove
             onCheckedChange={(stats) => onChange({ stats })}
             aria-label="Show statistics"
           />
+        </PrefRow>
+        <PrefRow label="Comment goes to">
+          <SegmentedControl
+            type="single"
+            value={prefs.commentDestination}
+            onValueChange={(value) => {
+              if (isReviewCommentDestination(value)) onChange({ commentDestination: value });
+            }}
+            aria-label="Default comment destination"
+          >
+            <SegmentedItem value="agent" icon={<Icon name="bot" />}>
+              Agent
+            </SegmentedItem>
+            <SegmentedItem value="pr_review" icon={<Icon name="git-pull-request" />}>
+              PR review
+            </SegmentedItem>
+          </SegmentedControl>
         </PrefRow>
         <PrefRow label="Hide reviewed">
           <Switch

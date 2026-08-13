@@ -13,6 +13,7 @@ import {
   type PullRequestModeInput,
   type PullRequestSelector,
   type PullRequestUpdateInput,
+  type ReviewCommentCreateInput,
 } from "#github";
 
 export const CONNECTED_GITHUB: GitHubConnectionContract = {
@@ -73,6 +74,9 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
     },
     draftPullRequest: async () => {
       throw new Error("draft stub not configured");
+    },
+    publishReviewComment: async () => {
+      throw new Error("publishReviewComment stub not configured");
     },
     ...overrides,
   };
@@ -187,5 +191,14 @@ export class FakeGitHubCli implements GitHubCli {
     this.modeInputs.push(input);
     if (this.modeError) throw this.modeError;
     this.provider = { ...this.provider, lifecycle: input.draft ? "draft" : "open" };
+  }
+
+  reviewComments: ReviewCommentCreateInput[] = [];
+  reviewCommentError: Error | null = null;
+
+  async createReviewComment(input: ReviewCommentCreateInput): Promise<{ url: string }> {
+    this.reviewComments.push(input);
+    if (this.reviewCommentError) throw this.reviewCommentError;
+    return { url: `https://github.com/acme/app/pull/${input.number}#discussion_r1` };
   }
 }

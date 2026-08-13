@@ -1,14 +1,22 @@
 import type { ReviewCommentContract } from "@otomat/domain";
 import { commentFallbackReason } from "@web/components/runs/review/comment/anchor";
 import { ReviewCommentCard } from "@web/components/runs/review/comment/card";
-import type { ReviewSelection } from "@web/components/runs/review/use-selection";
 
 export interface DetachedCommentsProps {
   comments: ReviewCommentContract[];
-  selection: ReviewSelection;
+  selectedIds: ReadonlySet<string>;
+  onToggle: (commentId: string, selected: boolean) => void;
+  onPublish: (commentId: string) => void;
+  publishingId: string | null;
 }
 
-export function DetachedComments({ comments, selection }: DetachedCommentsProps) {
+export function DetachedComments({
+  comments,
+  selectedIds,
+  onToggle,
+  onPublish,
+  publishingId,
+}: DetachedCommentsProps) {
   if (comments.length === 0) return null;
   return (
     <section className="flex flex-col gap-2">
@@ -20,8 +28,10 @@ export function DetachedComments({ comments, selection }: DetachedCommentsProps)
           key={comment.id}
           comment={comment}
           fallbackReason={commentFallbackReason(comment)}
-          selected={selection.selectedIds.has(comment.id)}
-          onSelectedChange={(selected) => selection.toggle(comment.id, selected)}
+          selected={selectedIds.has(comment.id)}
+          onSelectedChange={(selected) => onToggle(comment.id, selected)}
+          onPublish={() => onPublish(comment.id)}
+          publishing={publishingId === comment.id}
         />
       ))}
     </section>

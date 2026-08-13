@@ -1,7 +1,9 @@
 import type { ReviewCommentContract } from "@otomat/domain";
 import { Checkbox, Chip, ReviewCommentStatusChip } from "@otomat/ui";
 import { commentAnchorLabel, reviewCommentDomId } from "@web/components/runs/review/comment/anchor";
+import { CommentPublication } from "@web/components/runs/review/comment/publication";
 import { CommentSnapshot } from "@web/components/runs/review/comment/snapshot";
+import { CommentSuggestion } from "@web/components/runs/review/comment/suggestion";
 
 export interface ReviewCommentCardProps {
   comment: ReviewCommentContract;
@@ -9,6 +11,8 @@ export interface ReviewCommentCardProps {
   fallbackReason?: string;
   selected?: boolean;
   onSelectedChange?: (selected: boolean) => void;
+  onPublish?: () => void;
+  publishing?: boolean;
 }
 
 export function ReviewCommentCard({
@@ -16,8 +20,12 @@ export function ReviewCommentCard({
   fallbackReason,
   selected = false,
   onSelectedChange,
+  onPublish,
+  publishing = false,
 }: ReviewCommentCardProps) {
-  const selectable = comment.status === "open" && onSelectedChange !== undefined;
+  // Only an agent comment is an instruction the AI fix can consume; a PR-review one is feedback on GitHub.
+  const selectable =
+    comment.status === "open" && comment.destination === "agent" && onSelectedChange !== undefined;
   const fixPending = comment.status === "open" && comment.fix_requested_at !== null;
 
   return (
@@ -38,10 +46,24 @@ export function ReviewCommentCard({
         </span>
         <span className="ml-auto flex items-center gap-1.5">
           {fixPending ? <Chip tone="iris">Fix requested</Chip> : null}
+          <Chip tone={comment.destination === "agent" ? "neutral" : "review"}>
+            {comment.destination === "agent" ? "Agent" : "PR review"}
+          </Chip>
           <ReviewCommentStatusChip status={comment.status} />
         </span>
       </div>
-      <p className="whitespace-pre-wrap text-sm">{comment.body}</p>
+      {comment.body.trim() === "" ? null : (
+        <p className="whitespace-pre-wrap text-sm">{comment.body}</p>
+      )}
+      {comment.suggestion === null ? null : (
+        <CommentSuggestion
+          original={comment.suggestion_original}
+          replacement={comment.suggestion}
+        />
+      )}
+      {comment.destination === "agent" ? null : (
+        <CommentPublication comment={comment} onPublish={onPublish} publishing={publishing} />
+      )}
       {fallbackReason === undefined ? null : (
         <>
           <p className="text-xs text-text-tertiary">{fallbackReason}</p>

@@ -92,6 +92,54 @@ describe("GitHubService", () => {
     });
   }
 
+  it("anchors a published review comment on the pull request's published head", async () => {
+    insertPullRequest(fix.db, {
+      id: "pr-comment",
+      run_id: RUN_ID,
+      number: 7,
+      url: "https://github.com/acme/app/pull/7",
+      status: "open",
+      publication_status: "created",
+      title: "Ship it",
+      head_ref: BRANCH,
+      published_head_sha: "a".repeat(40),
+    });
+
+    await expect(
+      service().publishReviewComment(RUN_ID, {
+        filePath: "change.txt",
+        side: "new",
+        startLine: 1,
+        line: 2,
+        body: "rename these",
+        suggestion: "second",
+      }),
+    ).resolves.toEqual({ url: "https://github.com/acme/app/pull/7#discussion_r1" });
+
+    expect(cli.reviewComments[0]).toMatchObject({
+      commitSha: "a".repeat(40),
+      path: "change.txt",
+      side: "RIGHT",
+      line: 2,
+      startLine: 1,
+      startSide: "RIGHT",
+      body: "rename these\n\n```suggestion\nsecond\n```",
+    });
+  });
+
+  it("refuses to publish a review comment with no pull request to anchor it on", async () => {
+    await expect(
+      service().publishReviewComment(RUN_ID, {
+        filePath: "change.txt",
+        side: "new",
+        startLine: null,
+        line: 2,
+        body: "nowhere to go",
+        suggestion: null,
+      }),
+    ).rejects.toThrow(/no pull request/);
+  });
+
   it("returns a safe failed connection state when GitHub auth metadata is invalid", async () => {
     cli.connectionError = new GitHubCliError(
       "github_auth_response_invalid",

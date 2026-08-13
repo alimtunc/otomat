@@ -58,6 +58,11 @@ function prepareFix(ctx: ReviewContext, run: RunRow, commentIds: string[]): FixP
     if (comment.status !== "open") {
       throw new CommentsNotFixableError(`comment ${commentId} is ${comment.status}, not open`);
     }
+    if (comment.destination !== "agent") {
+      throw new CommentsNotFixableError(
+        `comment ${commentId} is addressed to the pull request review, not to the agent`,
+      );
+    }
     comments.push(
       reviewCommentContext(
         comment,

@@ -1,4 +1,4 @@
-import type { ReviewCommentState } from "@otomat/domain";
+import type { ReviewCommentPublicationState, ReviewCommentState } from "@otomat/domain";
 import { eq, getTableColumns } from "drizzle-orm";
 
 import type { Db } from "../client.js";
@@ -40,4 +40,18 @@ export function updateReviewCommentStatus(db: Db, id: string, status: ReviewComm
 
 export function setReviewCommentFixRequested(db: Db, id: string, at: string | null): void {
   patchReviewComment(db, id, { fix_requested_at: at });
+}
+
+export interface ReviewCommentPublicationPatch {
+  publication_status: ReviewCommentPublicationState;
+  publication_error?: string | null;
+  external_url?: string | null;
+}
+
+export function setReviewCommentPublication(
+  db: Db,
+  id: string,
+  patch: ReviewCommentPublicationPatch,
+): void {
+  patchReviewComment(db, id, patch);
 }

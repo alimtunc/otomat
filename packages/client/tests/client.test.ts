@@ -299,10 +299,18 @@ const COMMENT = {
   id: "c1",
   review_id: "rv1",
   file_path: "src/thing.ts",
+  side: "new",
+  start_line: null,
   line: 12,
   diff_sha: "sha-1",
   body: "Rename this.",
   status: "open",
+  destination: "agent",
+  publication_status: "local",
+  publication_error: null,
+  external_url: null,
+  suggestion: null,
+  suggestion_original: null,
   hunk_snapshot: "@@ -1 +1 @@",
   fix_requested_at: null,
 };
@@ -389,6 +397,7 @@ it("fetches the review surface and posts a pinned comment", async () => {
       review: { id: "rv1", run_id: "run-1", status: "in_review" },
       comments: [COMMENT],
       fix_authority: { kind: "otomat", reason: "Otomat owns this branch." },
+      destinations: { pr_review: false, reason: "This run has no pull request yet." },
     });
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
@@ -399,8 +408,10 @@ it("fetches the review surface and posts a pinned comment", async () => {
 
   const created = await client.addReviewComment("run-1", {
     file_path: "src/thing.ts",
+    side: "new",
     line: 12,
     diff_sha: "sha-1",
+    destination: "agent",
     body: "Rename this.",
   });
   expect(created.id).toBe("c1");
@@ -410,6 +421,8 @@ it("fetches the review surface and posts a pinned comment", async () => {
   ]);
   expect(body).toEqual({
     file_path: "src/thing.ts",
+    side: "new",
+    destination: "agent",
     line: 12,
     diff_sha: "sha-1",
     body: "Rename this.",

@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+/** Which file a line belongs to: `old` is the diff's base side, `new` its head side. */
+export const DIFF_SIDES = ["old", "new"] as const;
+export const diffSideSchema = z.enum(DIFF_SIDES);
+export type DiffSide = z.infer<typeof diffSideSchema>;
+
 /** How a file changed relative to the diff base, mirroring `git diff --name-status`. */
 export const CHANGE_STATUSES = [
   "added",
