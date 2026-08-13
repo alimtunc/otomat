@@ -42,24 +42,16 @@ jobs:
           node scripts/baseline-anti-ratchet.mjs origin/main
 
   # The exact self-contained deploy the remote execution host runs
-  # (docs/ai/remote-execution-host.md), published as a plain artifact so updating a host — or
-  # provisioning a test instance — is a download instead of a build on the host. An artifact is
-  # only a file: nothing anywhere starts a daemon from it. Pushes to main build it too, so the
-  # merged commit's bundle exists when a host needs updating.
+  # (docs/ai/remote-execution-host.md), published as a plain artifact so updating a host is a
+  # download instead of a build on the host. An artifact is only a file: nothing anywhere starts a
+  # daemon from it.
   daemon-bundle:
     needs: check
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    outputs:
-      artifact-name: ${{ steps.bundle.outputs.name }}
-      artifact-url: ${{ steps.upload.outputs.artifact-url }}
     steps:
       - uses: actions/checkout@v7
-        with:
-          # Same head-SHA checkout as package-macos: the dist bakes its commit at build time and
-          # the desktop treats a daemon whose build differs from its own as stale — a merge-commit
-          # SHA would trip that comparison on every connect.
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -82,7 +74,7 @@ jobs:
       # must resolve inside the deployed tree, and its /api/health build must name this commit.
       - name: Smoke the deployed daemon
         env:
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           data="$RUNNER_TEMP/daemon-smoke"
@@ -107,14 +99,13 @@ jobs:
       - name: Name and pack the bundle
         id: bundle
         env:
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
           name="otomat-daemon-${HEAD_SHA:0:7}-linux-x64"
           echo "name=${name}" >> "$GITHUB_OUTPUT"
           tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/${name}.tar.gz" daemon
 
       - name: Upload the bundle
-        id: upload
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bundle.outputs.name }}
@@ -126,23 +117,14 @@ jobs:
           retention-days: 7
 
   # The unsigned artifact is the substrate the signed release is built from, and only a macOS host
-  # can produce it. Pushes to main keep it as a packaging-regression gate; pull requests also upload
-  # the DMG as an internal preview — ad-hoc signed, never notarized, never a release
-  # (docs/release/macos-alpha.md). The job reads no secret, so a fork PR builds safely with the
-  # read-only token the pull_request event already grants.
+  # can produce it; on main it is the packaging-regression gate (docs/release/macos-alpha.md).
   package-macos:
     needs: check
+    if: github.event_name == 'push'
     runs-on: macos-15
     timeout-minutes: 60
-    outputs:
-      artifact-name: ${{ steps.preview.outputs.name }}
-      artifact-url: ${{ steps.upload.outputs.artifact-url }}
     steps:
       - uses: actions/checkout@v7
-        with:
-          # On a pull request the default checkout is the synthetic merge commit; build the PR head
-          # instead so the embedded build-info.json names the exact commit the preview came from.
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -156,109 +138,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # A pull request packages the `preview` channel, named after its PR; a push to main packages
-      # the `local` channel, whose data roots are the same across commits. Neither can produce
-      # `stable` — only `pnpm desktop:release` passes that channel.
+      # The `local` channel's data roots are the same across commits; `stable` is unreachable here —
+      # only `pnpm desktop:release` passes that channel.
       - name: Package the unsigned desktop artifact
         env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          OTOMAT_CHANNEL: ${{ github.event_name == 'pull_request' && 'preview' || 'local' }}
+          OTOMAT_CHANNEL: local
         run: pnpm desktop:package
 
       - name: Smoke the packaged artifact
         env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          OTOMAT_CHANNEL: ${{ github.event_name == 'pull_request' && 'preview' || 'local' }}
+          OTOMAT_CHANNEL: local
         run: pnpm desktop:smoke
 
       # Packages the merge commit a second time and launches both builds: the promise that a local
       # package keeps its profile across commits is only worth what an actual second build shows.
       - name: Smoke the local channel across two commits
-        if: github.event_name == 'push'
         run: pnpm desktop:smoke:local
-
-      - name: Name the preview artifact
-        id: preview
-        if: github.event_name == 'pull_request'
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: echo "name=otomat-pr-${PR_NUMBER}-macos-arm64-${HEAD_SHA:0:7}" >> "$GITHUB_OUTPUT"
-
-      # Short retention: previews exist to test a PR, not to archive builds.
-      - name: Upload the preview DMG
-        id: upload
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ steps.preview.outputs.name }}
-          path: apps/desktop/release/*.dmg
-          if-no-files-found: error
-          # Same 409-on-re-run hazard as the daemon bundle: the name repeats across attempts.
-          overwrite: true
-          retention-days: 7
-
-      - name: Describe the preview in the run summary
-        if: github.event_name == 'pull_request'
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          ARTIFACT_NAME: ${{ steps.preview.outputs.name }}
-          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
-          DOC_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}/docs/release/macos-alpha.md#pr-preview-builds
-        run: |
-          {
-            echo "## macOS preview — PR #${PR_NUMBER}"
-            echo ""
-            echo "- Commit: \`${HEAD_SHA}\`"
-            echo "- Download: [${ARTIFACT_NAME}](${ARTIFACT_URL}) — kept 7 days"
-            echo ""
-            echo "> **Internal preview.** Ad-hoc signed — neither Developer ID signed nor notarized —"
-            echo "> and not distributable. Install steps for a test Mac: [PR preview builds](${DOC_URL})."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  # Puts the download links where a reviewer looks first. This is the workflow's only
-  # write-capable token, and the job runs no checked-out code — one bare gh api call. A fork or
-  # dependabot PR is skipped: their tokens stay read-only whatever permissions are requested.
-  preview-comment:
-    needs: [daemon-bundle, package-macos]
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor != 'dependabot[bot]'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      pull-requests: write
-    steps:
-      - name: Upsert the preview comment
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          DMG_NAME: ${{ needs.package-macos.outputs.artifact-name }}
-          DMG_URL: ${{ needs.package-macos.outputs.artifact-url }}
-          BUNDLE_NAME: ${{ needs.daemon-bundle.outputs.artifact-name }}
-          BUNDLE_URL: ${{ needs.daemon-bundle.outputs.artifact-url }}
-          DOC_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}/docs/release/macos-alpha.md#pr-preview-builds
-        run: |
-          set -euo pipefail
-          {
-            echo "<!-- otomat-preview-artifacts -->"
-            echo "### Preview builds — \`${HEAD_SHA:0:7}\`"
-            echo ""
-            echo "| Artifact | Download |"
-            echo "| --- | --- |"
-            echo "| macOS app (arm64 DMG) | [\`${DMG_NAME}\`](${DMG_URL}) |"
-            echo "| Daemon bundle (linux-x64) | [\`${BUNDLE_NAME}\`](${BUNDLE_URL}) |"
-            echo ""
-            echo "Kept 7 days. Ad-hoc signed, never notarized — install steps: [PR preview builds](${DOC_URL})."
-          } > body.md
-          existing=$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate \
-            --jq '[.[] | select(.body | startswith("<!-- otomat-preview-artifacts -->")) | .id][0] // empty')
-          if [ -n "$existing" ]; then
-            gh api -X PATCH "repos/${REPO}/issues/comments/${existing}" -F body=@body.md > /dev/null
-          else
-            gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" -F body=@body.md > /dev/null
-          fi

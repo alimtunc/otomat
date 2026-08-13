@@ -750,3 +750,21 @@ it("streams persisted events over SSE and ends on a terminal run", async () => {
   expect(text).toContain('"seq":0');
   expect(text).toContain("event: end");
 });
+
+it("opens a stream on the caller's anchor, and reconnects past what it delivered", async () => {
+  const runId = "run-sse-anchor";
+  seedTerminalRun(t.db, runId);
+  const app = makeApiApp(t);
+
+  const anchored = await (await request(app, `/api/runs/${runId}/events?afterSeq=1`)).text();
+  expect(anchored).not.toContain('"seq":0');
+  expect(anchored).toContain('"seq":2');
+
+  const resumed = await (
+    await request(app, `/api/runs/${runId}/events?afterSeq=0`, {
+      headers: { "Last-Event-ID": "1" },
+    })
+  ).text();
+  expect(resumed).not.toContain('"seq":1');
+  expect(resumed).toContain('"seq":2');
+});

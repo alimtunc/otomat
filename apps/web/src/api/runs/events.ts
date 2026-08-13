@@ -13,3 +13,13 @@ export function mergeEvent(current: EventEnvelope[], event: EventEnvelope): Even
   next.sort((a, b) => a.seq - b.seq);
   return next;
 }
+
+/** A live event at or below the newest loaded `seq` is a replay of a page the reader already has; drop it. */
+export function mergeEventWindow(
+  history: readonly EventEnvelope[],
+  live: readonly EventEnvelope[],
+): EventEnvelope[] {
+  const tailSeq = history.at(-1)?.seq;
+  if (tailSeq === undefined) return [...live];
+  return [...history, ...live.filter((event) => event.seq > tailSeq)];
+}

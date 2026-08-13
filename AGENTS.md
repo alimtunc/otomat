@@ -206,7 +206,8 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
   its own N-API prebuilds, so `pnpm rebuild better-sqlite3` restores a missing
   binary. CI is authoritative.
 - The pre-push hook typechecks against `packages/domain/dist`, not src — run
-  `pnpm build` before pushing a contract change.
+  `pnpm build` before pushing a contract change. It does not run the tests; CI
+  does, so run `pnpm check` yourself before calling a change done.
 - Parallel `pnpm install` across worktrees can race (ENOTEMPTY); retry serially.
 
 ## Conventions

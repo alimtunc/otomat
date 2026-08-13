@@ -21,5 +21,3 @@ pre-push:
       run: pnpm format:check
     guardrails:
       run: pnpm guardrails
-    test:
-      run: pnpm test

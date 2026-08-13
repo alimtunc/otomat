@@ -59,12 +59,7 @@ export function RunConversationView() {
                 {stream.state === "open" ? "ordered by seq · live" : "ordered by seq"}
               </span>
             </PaneHeader>
-            <ConversationThread
-              detail={data}
-              events={stream.events}
-              state={stream.state}
-              degraded={stream.degraded}
-            />
+            <ConversationThread detail={data} stream={stream} />
           </>
         );
 

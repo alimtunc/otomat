@@ -110,8 +110,8 @@ at import time. Breaking the links gives the deploy its own inodes.
 If the deploy machine's architecture differs from the host's, run the deploy on
 the host itself (`better-sqlite3` is a native module).
 
-CI publishes this exact deploy for linux-x64 on every pull request and push to
-`main` (the `daemon-bundle` job): an artifact named
+CI publishes this exact deploy for linux-x64 on every push to `main` (the
+`daemon-bundle` job): an artifact named
 `otomat-daemon-<short-sha>-linux-x64`, kept 7 days, boot-smoked to `/api/health`
 before upload. On a host with `gh` authenticated, updating is a download instead
 of a build:

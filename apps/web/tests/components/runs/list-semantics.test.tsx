@@ -5,6 +5,7 @@ import type { ConversationItem } from "@web/lib/conversation";
 import { describe, expect, it } from "vitest";
 
 import { envelope } from "#support/envelope";
+import { eventHistory } from "#support/event-stream";
 import { mount } from "#support/mount";
 
 const QUERY_FREE_ITEMS: ConversationItem[] = [
@@ -27,6 +28,7 @@ describe("run event list semantics", () => {
         filter="all"
         state="open"
         degraded={false}
+        history={eventHistory()}
       />,
     );
 

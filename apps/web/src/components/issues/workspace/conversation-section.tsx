@@ -29,12 +29,7 @@ export function ConversationSection({ runId }: { runId: string }) {
 
   return (
     <div className="flex max-h-150 flex-col">
-      <ConversationThread
-        detail={detail.data}
-        events={stream.events}
-        state={stream.state}
-        degraded={stream.degraded}
-      />
+      <ConversationThread detail={detail.data} stream={stream} />
     </div>
   );
 }

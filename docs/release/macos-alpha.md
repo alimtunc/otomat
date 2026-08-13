@@ -57,29 +57,26 @@ target. Adding Intel or a universal binary means adding a runner of that archite
 
 ## PR preview builds
 
-Every pull request to `main` packages this same unsigned artifact once its `pnpm check` gate is
-green: CI runs `pnpm desktop:package` on an Apple Silicon runner with `PR_NUMBER` and
-`OTOMAT_CHANNEL=preview` set, exercises the result with `pnpm desktop:smoke`, and only then uploads
-the DMG as a workflow artifact named `otomat-pr-<number>-macos-arm64-<short-sha>`, kept for 7 days.
-The embedded `build-info.json` names the PR's head commit, not the merge commit CI tests
-elsewhere. `PR_NUMBER` also names the
+CI does not build previews: a pull request runs `pnpm check` and nothing else, and packaging runs
+only on a push to `main`. A preview is produced on demand, on an Apple Silicon Mac, by
+`PR_NUMBER=<number> OTOMAT_CHANNEL=preview pnpm desktop:package` — the same command CI used to run —
+and exercised with the same environment through `pnpm desktop:smoke`. A preview instance on a remote
+execution host consequently has no CI bundle to deploy for its own commit; deploy from a checkout of
+that commit instead.
+
+`PR_NUMBER` names the
 build after its pull request — **Otomat PR 77.app**, bundle id `com.otomat.desktop.pr77`, data in
 `Otomat Preview PR 77` — so two previews under test and the stable install coexist on one Mac
 sharing no app, no single-instance lock and no data. A malformed `PR_NUMBER` fails the build
 rather than quietly packaging the stable identity, and `pnpm desktop:release` passes the stable
 identity explicitly, so no environment variable can rename a signed build. No Apple secret is read
 or required: the preview is ad-hoc signed and not notarized, and the signed workflow in
-`.github/workflows/release-macos.yml` remains the only distribution path. A companion
-`daemon-bundle` job publishes the same commit's linux-x64 daemon deploy for the
-[remote execution host](../ai/remote-execution-host.md), and a sticky PR comment links both
-downloads (downloading an artifact requires being signed in to GitHub).
+`.github/workflows/release-macos.yml` remains the only distribution path.
 
-To test a preview on an Apple Silicon Mac — no checkout, Node or pnpm required:
+To test a preview on an Apple Silicon Mac:
 
-1. Download the `otomat-pr-…` artifact from the link in the PR's preview comment, or from the CI
-   run's *Summary*.
-2. Unzip the download, open the DMG inside, and drag **Otomat PR &lt;number&gt;** into
-   **Applications**.
+1. Take the DMG the packaging run left in `apps/desktop/release`.
+2. Open it and drag **Otomat PR &lt;number&gt;** into **Applications**.
 3. A plain launch is refused — macOS reports the app as damaged or unverifiable, because the
    preview is neither Developer ID signed nor notarized. That refusal is Gatekeeper working as
    intended; the explicit opt-in for an internal build is stripping its quarantine flag:
@@ -89,8 +86,8 @@ To test a preview on an Apple Silicon Mac — no checkout, Node or pnpm required
    ```
 
 4. Launch it from Finder. To confirm which build is running, export a support bundle
-   (*Data Safety → Export Support Bundle…*): `versions.commit` must start with the short SHA in
-   the artifact name, and `versions.channel` must read `preview` — each bundle names its own
+   (*Data Safety → Export Support Bundle…*): `versions.commit` must start with the packaged
+   commit's short SHA, and `versions.channel` must read `preview` — each bundle names its own
    commit and the channel whose data it opened.
 
 A preview keeps its data in `~/Library/Application Support/Otomat Preview PR <number>`, beside —
@@ -103,7 +100,7 @@ ready-made issues, so there is something to launch runs against immediately. *Se
 Reset test data* wipes the database, runs, worktrees and the fixture repository, then reseeds —
 every test session can start from the same known state. Pointed at a remote execution host, a
 preview targets its own isolated daemon under `~/.otomat/instances/<short-sha>` there —
-provisioned on demand from the PR's daemon-bundle artifact, given the same fixture repository and
+provisioned on demand from a deploy of that commit, given the same fixture repository and
 issues inside that directory on connect, and controlled (stop, delete, deploy) from *Settings →
 Execution hosts*, where **Delete** removes daemon, data, worktrees and fixture in one action — so
 testing an artifact never disturbs the stable daemon
@@ -173,8 +170,7 @@ commit, a version, an architecture, an Electron version and a sha256.
 Running the workflow manually (*Run workflow*) does everything **except** publishing, which is how
 you exercise the pipeline without creating a release. `ci.yml` also packages and smokes the
 *unsigned* artifact on every push to `main`, so a packaging regression surfaces before a release
-needs it, and on every pull request, where the DMG is uploaded as a
-[PR preview build](#pr-preview-builds).
+needs it.
 
 ## Verifying on a clean Mac
 

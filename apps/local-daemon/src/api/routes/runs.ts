@@ -4,10 +4,12 @@ import {
   IllegalTransitionError,
   selectCompeteWinnerRequestSchema,
   startRunRequestSchema,
+  type RunEventWindow,
   type RunLaunchError,
 } from "@otomat/domain";
 import { Hono, type Context, type Env } from "hono";
 
+import { readRunEventWindow } from "#events";
 import { RuntimeUnavailableError } from "#runtime";
 import {
   LaunchRefusedError,
@@ -19,6 +21,7 @@ import { agentConfigErrorResponse, refusalJson } from "../agent-config-refusal.j
 import { projectRunCompletionReport } from "../completion-report.js";
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
+import { nonNegativeInt } from "../query-params.js";
 import { readCompeteCandidate, readRunDetail, readRuns } from "../reads.js";
 import { toRunDiffResponse } from "../serialize-run-diff.js";
 import { toPullRequest, toRun } from "../serialize.js";
@@ -215,6 +218,19 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
   });
 
   routes.get("/:id/events", runGuard(deps.db), (c) => streamRunEvents(c, deps.db, c.get("run").id));
+
+  routes.get("/:id/events/window", runGuard(deps.db), (c) => {
+    const run = c.get("run");
+    const page = readRunEventWindow(deps.db, run.id, {
+      before: nonNegativeInt(c.req.query("before")),
+      limit: nonNegativeInt(c.req.query("limit")),
+    });
+    return c.json({
+      run_id: run.id,
+      events: page.events,
+      older_cursor: page.olderCursor,
+    } satisfies RunEventWindow);
+  });
 
   return routes;
 }

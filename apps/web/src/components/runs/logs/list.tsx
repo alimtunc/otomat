@@ -1,9 +1,11 @@
 import type { EventEnvelope } from "@otomat/domain";
 import { EmptyState } from "@otomat/ui";
 import type { RunStreamState } from "@web/api/runs/run-event-stream";
+import type { RunEventHistory } from "@web/api/runs/use-event-history";
 import { matchesLogFilter, type LogFilter } from "@web/components/runs/logs/log-filters";
 import { LogRow } from "@web/components/runs/logs/log-row";
 import { emptyTimelineContent } from "@web/components/runs/timeline/copy";
+import { EarlierActivity } from "@web/components/runs/timeline/earlier-activity";
 import { CenteredState } from "@web/components/shell/centered-state";
 
 export interface LogListProps {
@@ -11,9 +13,10 @@ export interface LogListProps {
   filter: LogFilter;
   state: RunStreamState;
   degraded: boolean;
+  history: RunEventHistory;
 }
 
-function LogBody({ events, filter, state, degraded }: LogListProps) {
+function LogBody({ events, filter, state, degraded, history }: LogListProps) {
   if (events.length === 0) {
     const empty = emptyTimelineContent(state === "error", degraded);
     return (
@@ -29,23 +32,22 @@ function LogBody({ events, filter, state, degraded }: LogListProps) {
   }
 
   const filtered = events.filter((event) => matchesLogFilter(event, filter));
-  if (filtered.length === 0) {
-    return (
-      <CenteredState fill="flex">
-        <EmptyState
-          icon="terminal"
-          title="No matching events"
-          description="No persisted event matches this filter for the run so far."
-        />
-      </CenteredState>
-    );
-  }
 
   return (
     <div role="list" aria-label="Run logs" className="min-h-0 flex-1 overflow-auto py-2">
-      {filtered.map((event) => (
-        <LogRow key={event.seq} event={event} />
-      ))}
+      <EarlierActivity history={history} />
+      {filtered.length === 0 ? (
+        <div role="listitem" className="px-6 py-8">
+          <EmptyState
+            icon="terminal"
+            variant="inline"
+            title="No matching events"
+            description="No loaded event matches this filter."
+          />
+        </div>
+      ) : (
+        filtered.map((event) => <LogRow key={event.seq} event={event} />)
+      )}
     </div>
   );
 }

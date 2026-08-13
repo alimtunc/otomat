@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import type {
   CreateRunContributionRequest,
+  EventEnvelope,
   RunContributionContract,
   RunDetail,
   RunState,
@@ -13,6 +14,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contribution } from "#support/contribution";
 import { setTextareaValue } from "#support/dom-events";
+import { envelope } from "#support/envelope";
+import { eventStream } from "#support/event-stream";
 import { stubResizeObserver, type ResizeObserverStub } from "#support/resize-observer";
 import { controlScroll, type ScrollControl } from "#support/scroll-control";
 
@@ -139,13 +142,13 @@ afterEach(async () => {
   mutateAsync.mockClear();
 });
 
-function thread(detail: RunDetail) {
-  return <ConversationThread detail={detail} events={[]} state="open" degraded={false} />;
+function thread(detail: RunDetail, events: EventEnvelope[] = []) {
+  return <ConversationThread detail={detail} stream={eventStream({ events })} />;
 }
 
-async function renderThread(detail: RunDetail) {
+async function renderThread(detail: RunDetail, events: EventEnvelope[] = []) {
   await act(async () => {
-    root.render(thread(detail));
+    root.render(thread(detail, events));
   });
 }
 
@@ -163,8 +166,8 @@ async function attachScroll(): Promise<ScrollControl> {
   return scroll;
 }
 
-async function openThread(detail: RunDetail): Promise<ScrollControl> {
-  await renderThread(detail);
+async function openThread(detail: RunDetail, events: EventEnvelope[] = []): Promise<ScrollControl> {
+  await renderThread(detail, events);
   return attachScroll();
 }
 
@@ -173,6 +176,18 @@ async function grow(scroll: ScrollControl, height: number) {
     scroll.setContentHeight(height);
     observers.resize();
   });
+}
+
+async function prepend(scroll: ScrollControl, detail: RunDetail) {
+  await act(async () => {
+    scroll.setContentHeight(3200);
+    root.render(thread(detail, [3, 4, 5, 6].map(logEvent)));
+  });
+  await act(async () => observers.resize());
+}
+
+function logEvent(seq: number): EventEnvelope {
+  return envelope({ id: `e${seq}`, seq });
 }
 
 function jumpButton(): HTMLButtonElement | null {
@@ -344,6 +359,43 @@ describe("run conversation autoscroll", () => {
     expect(mutateAsync).toHaveBeenCalledWith({ step_run_id: "s1", body: "please rebase" });
     expect(scroll.top()).toBe(scroll.maxTop());
     expect(viewportElement().contains(promptTextarea())).toBe(false);
+  });
+
+  it("holds the reader on the same rows when older activity is prepended", async () => {
+    contributions = messages(12);
+    const detail = runDetail("run-1", "awaiting_human");
+    const scroll = await openThread(detail, [logEvent(5), logEvent(6)]);
+    await act(async () => scroll.dragTo(600));
+    const distance = scroll.maxTop() - scroll.top();
+
+    await prepend(scroll, detail);
+
+    expect(scroll.maxTop() - scroll.top()).toBe(distance);
+    expect(scroll.top()).not.toBe(scroll.maxTop());
+    expect(jumpButton()).not.toBeNull();
+  });
+
+  it("holds the reader on the same rows when the thread also grew below them", async () => {
+    contributions = messages(12);
+    const detail = runDetail("run-1", "awaiting_human");
+    const scroll = await openThread(detail, [logEvent(5), logEvent(6)]);
+    await act(async () => scroll.dragTo(600));
+    await grow(scroll, 2600);
+    const distance = scroll.maxTop() - scroll.top();
+
+    await prepend(scroll, detail);
+
+    expect(scroll.maxTop() - scroll.top()).toBe(distance);
+  });
+
+  it("stays on the newest item when older activity is prepended from the bottom", async () => {
+    contributions = messages(12);
+    const detail = runDetail("run-1", "awaiting_human");
+    const scroll = await openThread(detail, [logEvent(5), logEvent(6)]);
+
+    await prepend(scroll, detail);
+
+    expect(scroll.top()).toBe(scroll.maxTop());
   });
 
   it("re-pins and reopens at the bottom when another run is shown", async () => {

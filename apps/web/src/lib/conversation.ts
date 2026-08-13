@@ -73,6 +73,7 @@ export function buildConversation(
   events: readonly EventEnvelope[],
   contributions: readonly RunContributionContract[],
   steps: readonly ConversationStep[] = [],
+  hasOlder = false,
 ): ConversationItem[] {
   const byId = new Map(contributions.map((contribution) => [contribution.id, contribution]));
   const stepNames = steps.length > 1 ? new Map(steps.map((step) => [step.id, step.name])) : null;
@@ -80,6 +81,7 @@ export function buildConversation(
   const items: ConversationItem[] = [];
   let pending: EventEnvelope[] = [];
   let currentStepId: string | null = null;
+  let lastAnchoredSeq: number | null = null;
 
   function flush(): void {
     if (pending.length === 0) return;
@@ -114,6 +116,7 @@ export function buildConversation(
       if (id === null || anchored.has(id) || contribution === undefined) continue;
       flush();
       anchored.add(id);
+      lastAnchoredSeq = contribution.seq;
       items.push({ kind: "message", key: `message-${id}`, contribution });
       continue;
     }
@@ -132,8 +135,11 @@ export function buildConversation(
   }
   flush();
 
+  // With older pages unloaded, a message no longer queued for a turn is history above the window, not tail.
+  const floor = hasOlder ? (lastAnchoredSeq ?? Infinity) : -Infinity;
   for (const contribution of contributions) {
     if (anchored.has(contribution.id)) continue;
+    if (contribution.status !== "queued" && contribution.seq <= floor) continue;
     items.push({ kind: "message", key: `message-${contribution.id}`, contribution });
   }
   return items;

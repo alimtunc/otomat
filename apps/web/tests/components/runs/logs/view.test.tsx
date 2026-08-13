@@ -5,6 +5,7 @@ import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { envelope } from "#support/envelope";
+import { eventStream } from "#support/event-stream";
 import { mount } from "#support/mount";
 
 let streamEvents: EventEnvelope[] = [];
@@ -55,7 +56,7 @@ vi.mock("@web/api/runs/queries", () => ({
 }));
 
 vi.mock("@web/api/runs/run-event-stream", () => ({
-  useRunEventStream: () => ({ events: streamEvents, state: "open", degraded: false }),
+  useRunEventStream: () => eventStream({ events: streamEvents }),
 }));
 
 const renderView = () => mount(<RunLogsView />);
