@@ -99,7 +99,7 @@ it("rejects an option the installed runtime does not announce, saying why", () =
   );
 });
 
-it("resolves a profile that overrides nothing without probing the runtime at all", () => {
+it("resolves a profile that overrides nothing without inventing an option", () => {
   insertAgentProfile(t.db, {
     id: "pr-defaults",
     name: "P",
@@ -164,7 +164,7 @@ it("takes the host defaults only for the runtime they name", () => {
   });
 });
 
-it("drops a host default the chosen model does not publish instead of refusing the launch", () => {
+it("drops a host default the chosen model does not publish, leaving the runtime's own", () => {
   writeExecutionDefaults(t.db, {
     runtime: "fake",
     model: null,
@@ -176,7 +176,19 @@ it("drops a host default the chosen model does not publish instead of refusing t
     { kind: "runtime", runtimeId: "fake" },
     { levels: [overrideLevel("launch", { model: { kind: "model", id: "fake-fast" } })] },
   );
-  expect(config.options).toEqual({});
+  expect(config.options).toEqual({ effort: "low" });
+  expect(config.sources?.options).toEqual({ effort: "provider" });
+});
+
+it("freezes the runtime's announced default when no level selects one", () => {
+  const config = resolveAgentConfig(
+    t.db,
+    { kind: "runtime", runtimeId: "fake" },
+    { levels: [overrideLevel("launch", { model: { kind: "model", id: "fake-thorough" } })] },
+  );
+
+  expect(config.options).toEqual({ effort: "low" });
+  expect(config.sources?.options).toEqual({ effort: "provider" });
 });
 
 it("validates a profile's model against the runtime before it is persisted", () => {

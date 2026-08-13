@@ -49,6 +49,45 @@ async function launch(request: StartRunRequest) {
   return { supervisor, spawn, run };
 }
 
+it("freezes the runtime's own default and sends it, when nothing selects one", async () => {
+  const { spawn, run } = await launch({
+    prompt: "do it",
+    runtime: "fake",
+    model: { kind: "model", id: "fake-thorough" },
+  });
+
+  expect(frozenSteps(run.id)[0]?.config?.options).toEqual({ effort: "low" });
+  expect(frozenSteps(run.id)[0]?.config?.sources?.options).toEqual({ effort: "provider" });
+  expect(spawn.jobs[0]?.config?.options).toEqual({ effort: "low" });
+});
+
+it("gives an appended step the same frozen default as the launch", async () => {
+  const { supervisor, spawn, run } = await launch({
+    prompt: "do it",
+    runtime: "fake",
+    model: { kind: "model", id: "fake-thorough" },
+  });
+
+  await supervisor.appendStep(run.id, {
+    name: "Follow up",
+    prompt: "keep going",
+    selector: { kind: "runtime", runtimeId: "fake" },
+    overrides: { model: { kind: "model", id: "fake-thorough" } },
+    dependsOn: [],
+    origin: "user",
+  });
+  await supervisor.settle();
+
+  expect(frozenSteps(run.id).map((step) => step.config?.options)).toEqual([
+    { effort: "low" },
+    { effort: "low" },
+  ]);
+  expect(spawn.jobs.map((job) => job.config?.options)).toEqual([
+    { effort: "low" },
+    { effort: "low" },
+  ]);
+});
+
 it("freezes the launch option into every inheriting step and sends it on the initial turn", async () => {
   seedProfile(undefined);
 
@@ -102,7 +141,9 @@ it("ignores host defaults belonging to another runtime rather than carrying thei
 
   const { run } = await launch({ prompt: "do it", profile_id: "prof" });
 
-  expect(frozenSteps(run.id)[0]?.config?.options).toEqual({});
+  const config = frozenSteps(run.id)[0]?.config;
+  expect(config?.options).toEqual({ effort: "low" });
+  expect(config?.sources?.options).toEqual({ effort: "provider" });
 });
 
 it("gives each step its own value, its agent's, or the run's, as the plan asks", async () => {

@@ -1,5 +1,9 @@
 // @vitest-environment happy-dom
-import type { ProviderOptionSet, RuntimeDescriptor } from "@otomat/domain";
+import {
+  providerOptionDescriptor,
+  type ProviderOptionSet,
+  type RuntimeDescriptor,
+} from "@otomat/domain";
 import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
 import { encodeRuntimeChoice } from "@web/lib/agent-choice";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
@@ -80,8 +84,8 @@ it("summarises runtime, model and every announced option on the one visible cont
   const label = triggerLabel();
   expect(label).toContain("claude");
   expect(label).toContain("opus");
-  // Nothing selects the permission mode, so the CLI's own default is what the summary names.
-  expect(label).toContain("Accept edits");
+  // Nothing selects the permission mode, so the autonomous default Otomat sends is what the summary names.
+  expect(label).toContain("Auto");
   expect(label).toContain("High");
 });
 
@@ -92,8 +96,21 @@ it("summarises the Codex keys for a Codex agent, and no Claude one", async () =>
   const label = triggerLabel();
   expect(label).toContain("codex");
   expect(label).toContain("Workspace write");
-  expect(label).toContain("Medium");
-  expect(label).not.toContain("Accept edits");
+  // Otomat sends no reasoning effort of its own, so the summary names none.
+  expect(label).not.toContain("Medium");
+  expect(label).not.toContain("Auto");
+});
+
+it("never presents a boundary-removing value as the effective default", async () => {
+  const permission = providerOptionDescriptor(CLAUDE_ANNOUNCED.options, "permission_mode");
+  if (permission === null) throw new Error("the Claude fixture must announce a permission mode");
+  announced = providerOptionSet({
+    options: [{ ...permission, default_value: "bypassPermissions" }],
+  });
+
+  await render({ agent: encodeRuntimeChoice("claude"), options: {} });
+
+  expect(triggerLabel()).not.toContain("Bypass permissions");
 });
 
 it("marks a selected value the current runtime and model no longer announce", async () => {

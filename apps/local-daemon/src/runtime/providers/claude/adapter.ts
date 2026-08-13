@@ -1,11 +1,6 @@
 import type { RuntimeCapabilities } from "@otomat/domain";
 
-import {
-  requireProviderSession,
-  runCliTurn,
-  type CliTurnInput,
-  type CliTurnSpec,
-} from "#runtime/cli/turn";
+import { requireProviderSession, runCliTurn, type CliTurnSpec } from "#runtime/cli/turn";
 import type { TurnRef } from "#runtime/cli/turn-emitter";
 import type {
   RuntimeAdapter,
@@ -19,7 +14,7 @@ import type { RuntimeSink } from "#runtime/sinks";
 
 import { ClaudeFrameMapper } from "./frames.js";
 import { CLAUDE_MODEL_SUPPORT } from "./models.js";
-import { claudeOptionSupport } from "./options.js";
+import { claudeOptionSupport, claudePermissionModeStatus } from "./options.js";
 
 export const CLAUDE_ADAPTER_ID = "claude";
 
@@ -28,16 +23,17 @@ export const CLAUDE_BINARY = "claude";
 const CLAUDE_PERMISSION_MODE_ENV = "OTOMAT_CLAUDE_PERMISSION_MODE";
 const ENV_CLAUDE_PERMISSION_MODES = ["acceptEdits", "bypassPermissions"] as const;
 
-/** `acceptEdits` auto-approves worktree edits while headless mode auto-denies gated tools; `bypassPermissions` is an explicit per-daemon env opt-in, never the silent default. */
+/** What a plan frozen before Otomat froze the mode ran under; `bypassPermissions` is an explicit per-daemon env opt-in, never the silent default. */
 const DEFAULT_CLAUDE_PERMISSION_MODE = "acceptEdits";
 
-/** The daemon-wide fallback permission mode, used when a run's frozen config selects none. */
+/** Only a config frozen without a mode reaches this: a current launch resolves the announced default and freezes it. */
 export function claudePermissionMode(env: NodeJS.ProcessEnv = process.env): string {
   const raw = env[CLAUDE_PERMISSION_MODE_ENV];
   const known = ENV_CLAUDE_PERMISSION_MODES.find((mode) => mode === raw);
   return known ?? DEFAULT_CLAUDE_PERMISSION_MODE;
 }
 
+/** `permissions` stays false: `claude -p` reports the calls it refused but exposes no channel to answer one. */
 const CLAUDE_CAPABILITIES: RuntimeCapabilities = {
   stream: true,
   steering: "turn_boundary",
@@ -46,6 +42,8 @@ const CLAUDE_CAPABILITIES: RuntimeCapabilities = {
   permissions: false,
   diff_hints: false,
 };
+
+type TurnInput = RuntimeRunInput | RuntimeResumeInput;
 
 /** The prompt is piped over stdin so size and quoting never leak into argv. */
 export class ClaudeRuntimeAdapter implements RuntimeAdapter {
@@ -59,7 +57,7 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
 
   /** Claude Code's options do not vary by model, so the selection is not consulted. */
   describeOptions(_model: string | null): RuntimeOptionSupport {
-    return claudeOptionSupport(this.binary, claudePermissionMode());
+    return claudeOptionSupport(this.binary);
   }
 
   async run(
@@ -67,7 +65,7 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
-    return runCliTurn(this.spec(this.turnArgs(input), input, input), sink, signal);
+    return runCliTurn(this.spec(input, input, []), sink, signal);
   }
 
   async resume(
@@ -76,41 +74,39 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
-    const args = [...this.turnArgs(input), "--resume", requireProviderSession(session)];
-    return runCliTurn(this.spec(args, input, session), sink, signal);
+    const sessionArgs = ["--resume", requireProviderSession(session)];
+    return runCliTurn(this.spec(input, session, sessionArgs), sink, signal);
   }
 
   /**
-   * Session flags come last so `--resume <id>` closes the argv on a resume, the
-   * order Claude Code expects. The permission mode is always sent: a CLI that
-   * stopped accepting the daemon fallback must fail loudly rather than have
-   * Otomat quietly hand the turn a different permission boundary.
+   * The permission mode is always sent: a CLI that stopped accepting the daemon
+   * fallback must fail loudly rather than have Otomat quietly hand the turn a
+   * different permission boundary.
    */
-  private turnArgs(input: RuntimeRunInput | RuntimeResumeInput): string[] {
+  private turnArgs(input: TurnInput, mode: string): string[] {
     const options = input.options ?? {};
-    const args = [
-      "-p",
-      "--output-format",
-      "stream-json",
-      "--verbose",
-      "--permission-mode",
-      options.permission_mode ?? claudePermissionMode(),
-    ];
+    const args = ["-p", "--output-format", "stream-json", "--verbose", "--permission-mode", mode];
     if (options.effort !== undefined) args.push("--effort", options.effort);
     if (input.model != null) args.push("--model", input.model);
     return args;
   }
 
-  private spec(args: string[], input: CliTurnInput, ref: TurnRef): CliTurnSpec {
+  /** Session flags come last so `--resume <id>` closes the argv, the order Claude Code expects. */
+  private spec(input: TurnInput, ref: TurnRef, sessionArgs: string[]): CliTurnSpec {
+    const frozen = input.options?.permission_mode;
+    const permission = {
+      mode: frozen ?? claudePermissionMode(),
+      status: claudePermissionModeStatus(this.binary, frozen),
+    };
     return {
       adapter: this.id,
       source: "claude",
       command: this.binary,
-      args,
+      args: [...this.turnArgs(input, permission.mode), ...sessionArgs],
       prompt: input.prompt,
       cwd: input.cwd,
       ref,
-      createMapper: (emitter) => new ClaudeFrameMapper(emitter),
+      createMapper: (emitter) => new ClaudeFrameMapper(emitter, permission),
     };
   }
 }

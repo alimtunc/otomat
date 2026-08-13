@@ -124,7 +124,7 @@ it("keeps the runtime's own default when no level selects a value", async () => 
   });
 
   expect(mounted.read("values")).toBe(
-    "permission_mode=Runtime default — Accept edits | effort=Runtime default",
+    "permission_mode=Runtime default — Auto | effort=Runtime default",
   );
   await mounted.cleanup();
 });
@@ -141,7 +141,7 @@ it("ignores host defaults that name another runtime rather than carrying their o
 
   expect(mounted.read("model")).toBe("Provider's own default — Otomat sends no model");
   expect(mounted.read("values")).toBe(
-    "sandbox=Runtime default — Workspace write | reasoning_effort=Runtime default — Medium",
+    "sandbox=Runtime default — Workspace write | reasoning_effort=Runtime default",
   );
   await mounted.cleanup();
 

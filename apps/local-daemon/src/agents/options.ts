@@ -1,5 +1,6 @@
 import {
   PROVIDER_OPTION_KEYS,
+  providerOptionDefault,
   providerOptionDescriptor,
   resolveExecutionOption,
   selectedOptionKeys,
@@ -66,13 +67,16 @@ export function resolveOptions(
   model: ResolvedModel | null,
   levels: readonly ExecutionLevel[],
 ): ResolvedProviderOptions {
-  const keys = selectedOptionKeys(levels);
-  if (keys.length === 0) return { options: {}, sources: {} };
-
   const support = describeProviderOptions(runtime, model?.id ?? null);
   const options: ProviderOptions = {};
   const sources: ResolvedExecutionSources["options"] = {};
-  for (const key of keys) {
+  for (const descriptor of support.options) {
+    const fallback = providerOptionDefault(descriptor);
+    if (fallback === null) continue;
+    options[descriptor.key] = fallback;
+    sources[descriptor.key] = "provider";
+  }
+  for (const key of selectedOptionKeys(levels)) {
     const resolved = resolveExecutionOption(levels, key);
     if (resolved.value === null) continue;
     if (!announced(support, key, resolved.value)) {

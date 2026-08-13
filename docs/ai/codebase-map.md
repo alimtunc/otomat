@@ -121,6 +121,45 @@ and every surface renders from them without any per-provider branch. The
 effective options are frozen into the run plan at launch and replayed verbatim on
 resume and follow-up.
 
+A descriptor's `default_value` is what Otomat itself puts on the command line
+when no level selected a value, which is why the resolution freezes it into the
+step alongside the picked values: the plan then records the argv the CLI really
+received, not only the part a human chose. An option Otomat sends no argument for
+announces no default, however well the provider documents its own — Codex's
+reasoning level is the runtime's business, and claiming it as Otomat's would make
+the frozen plan lie. `providerOptionDefault` is the one place a default is read,
+because a value the CLI marks dangerous must be reachable only by choosing it.
+
+## Autonomy Is The Default, Approvals Are Not
+
+Otomat drives every provider headless, so a mode that stops to ask a human is a
+mode that fails. Each adapter therefore defaults to **the most autonomous policy
+its installed binary announces and Otomat did not have to weaken**: Claude Code's
+`auto`, where the provider's own classifier decides each call, and Codex's
+`workspace-write` sandbox. `bypassPermissions` and `danger-full-access` are never
+reached this way. Where the autonomous mode is unavailable the descriptor's own
+description says which run it degrades and what to do about it, so the fallback
+is never silent.
+
+Interactive approvals are a separate question with a separate answer, and both
+adapters answer `permissions: false` today. `claude -p` reports the calls its
+permission system refused — the result frame carries a structured
+`permission_denials` — but exposes no channel to answer one, so the adapter
+records each refusal as a `runtime.permission_request` plus the provider's own
+`runtime.permission_response`, and never claims Otomat could have approved it.
+`codex exec` does not surface an escalation in a machine-readable form at all.
+Nothing here is scraped from a terminal: a request/response contract is worth
+extending only for an interaction a provider actually exposes.
+
+Because both stay false, a permission mode and an approval channel must be named
+separately everywhere — `Permission mode: Auto` alongside
+`Interactive approvals: unavailable` is not a contradiction, and the label
+`Permissions — unavailable` (which reads as a blanket refusal) is wrong. A
+refusal that happens anyway carries `permission_mode_status`, resolved against
+the binary on the host that ran the turn, so the cockpit can separate a plan
+frozen before the policy, a mode that host never announced, the classifier's own
+verdict under the autonomous mode, and a request nothing could answer.
+
 ## One Execution Configuration
 
 Runtime, model and every option a CLI announces are one configuration, resolved

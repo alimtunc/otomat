@@ -1,3 +1,4 @@
+import { providerOptionDefault } from "@otomat/domain";
 import type {
   ExecutionSource,
   ModelSelection,
@@ -22,15 +23,15 @@ export function executionSourceLabel(source: ExecutionSource, profileName: strin
   }
 }
 
-export function runtimeDefaultOptionLabel(descriptor: ProviderOptionDescriptor | null): string {
-  const named = descriptor?.default_value ?? null;
+export function runtimeDefaultOptionLabel(descriptor: ProviderOptionDescriptor): string {
+  const named = providerOptionDefault(descriptor);
   if (named === null) return "Runtime default";
   return `Runtime default — ${providerOptionValueLabel(named)}`;
 }
 
 export function resolvedOptionLabel(
   resolved: ResolvedExecutionValue<string>,
-  descriptor: ProviderOptionDescriptor | null,
+  descriptor: ProviderOptionDescriptor,
   profileName: string | null,
 ): string {
   if (resolved.value === null) return runtimeDefaultOptionLabel(descriptor);

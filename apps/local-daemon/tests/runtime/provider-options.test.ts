@@ -6,6 +6,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ClaudeRuntimeAdapter } from "#runtime/providers/claude/adapter";
+import { claudePermissionModeStatus } from "#runtime/providers/claude/options";
 import { CodexRuntimeAdapter } from "#runtime/providers/codex/adapter";
 
 import {
@@ -66,14 +67,29 @@ describe("claude provider options", () => {
     ]);
   });
 
-  it("names the fallback Otomat sends itself as the permission mode's runtime default", () => {
+  it("defaults to the autonomous mode a current CLI announces, and says why", () => {
     process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
 
     const support = new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null);
+    const permission = descriptor(support.options, "permission_mode");
 
-    expect(descriptor(support.options, "permission_mode")?.default_value).toBe("acceptEdits");
+    expect(permission?.default_value).toBe("auto");
+    expect(permission?.description).toContain("`auto`");
     // Otomat sends no `--effort` unless one is chosen, so the CLI's own default stands.
     expect(descriptor(support.options, "effort")?.default_value).toBeNull();
+  });
+
+  it("falls back to acceptEdits on a CLI without `auto`, spelling out what that costs", () => {
+    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-legacy.txt");
+
+    const permission = descriptor(
+      new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null).options,
+      "permission_mode",
+    );
+
+    expect(permission?.default_value).toBe("acceptEdits");
+    expect(permission?.description).toContain("git push");
+    expect(permission?.description).toContain("Update Claude Code");
   });
 
   it("marks only bypassPermissions dangerous, and never preselects it", () => {
@@ -128,6 +144,25 @@ describe("claude provider options", () => {
     expect(support.detection.status).toBe("failed");
     expect(support.detection.detail).toBe("error: could not start claude");
     expect(support.options).toEqual([]);
+  });
+});
+
+describe("claudePermissionModeStatus", () => {
+  it("separates the four ways a mode can stand on the host that runs the turn", () => {
+    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
+
+    expect(claudePermissionModeStatus(STUB_BIN, undefined)).toBe("unfrozen");
+    expect(claudePermissionModeStatus(STUB_BIN, "auto")).toBe("autonomous");
+    expect(claudePermissionModeStatus(STUB_BIN, "acceptEdits")).toBe("supervised");
+    expect(claudePermissionModeStatus(STUB_BIN, "telepathy")).toBe("unannounced");
+  });
+
+  it("calls the same mode supervised on a host whose CLI has no autonomous one", () => {
+    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-legacy.txt");
+
+    // `acceptEdits` is this host's default, so it is the autonomous one available here.
+    expect(claudePermissionModeStatus(STUB_BIN, "acceptEdits")).toBe("autonomous");
+    expect(claudePermissionModeStatus(STUB_BIN, "auto")).toBe("unannounced");
   });
 });
 
@@ -201,7 +236,9 @@ describe("codex provider options", () => {
     );
 
     expect(values(reasoning)).toEqual(["low", "medium", "high", "xhigh", "max", "ultra"]);
-    expect(reasoning?.default_value).toBe("medium");
+    // Otomat sends no `-c model_reasoning_effort` of its own, so nothing is frozen for it.
+    expect(reasoning?.default_value).toBeNull();
+    expect(reasoning?.description).toContain('Codex applies "medium" itself');
   });
 
   it("sends an effort as `model_reasoning_effort`, including `ultra` when the model announces it", () => {

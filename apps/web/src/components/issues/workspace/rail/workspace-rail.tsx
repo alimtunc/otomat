@@ -5,6 +5,7 @@ import { LinearRailSection } from "@web/components/issues/workspace/linear/rail-
 import { ExecutionSection } from "@web/components/issues/workspace/rail/execution-section";
 import { FollowedRunSection } from "@web/components/issues/workspace/rail/followed-run-section";
 import { Mono } from "@web/components/issues/workspace/rail/mono";
+import { PermissionSection } from "@web/components/issues/workspace/rail/permission-section";
 import { PullRequestSection } from "@web/components/issues/workspace/rail/pull-request-section";
 import {
   RailMeta,
@@ -83,6 +84,7 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
           <PullRequestSection run={run} />
           <FollowedRunSection run={run} />
           <ExecutionSection run={run} />
+          <PermissionSection />
           <UsageSection />
         </>
       ) : null}

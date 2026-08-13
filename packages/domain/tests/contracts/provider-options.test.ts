@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  providerOptionDefault,
   providerOptionDescriptor,
   providerOptionSetSchema,
   providerOptionsSchema,
@@ -95,5 +96,30 @@ describe("providerOptionDescriptor", () => {
     const announced = [descriptor("sandbox"), descriptor("reasoning_effort")];
     expect(providerOptionDescriptor(announced, "reasoning_effort")?.key).toBe("reasoning_effort");
     expect(providerOptionDescriptor(announced, "effort")).toBeNull();
+  });
+});
+
+describe("providerOptionDefault", () => {
+  const permissionMode = (defaultValue: string | null): ProviderOptionDescriptor => ({
+    key: "permission_mode",
+    description: "d",
+    choices: [
+      { value: "auto", description: null, dangerous: false },
+      { value: "bypassPermissions", description: null, dangerous: true },
+    ],
+    default_value: defaultValue,
+  });
+
+  it("takes the announced default, and nothing at all when none is announced", () => {
+    expect(providerOptionDefault(permissionMode("auto"))).toBe("auto");
+    expect(providerOptionDefault(permissionMode(null))).toBeNull();
+  });
+
+  it("never hands back a value the CLI marks dangerous, even named as the default", () => {
+    expect(providerOptionDefault(permissionMode("bypassPermissions"))).toBeNull();
+  });
+
+  it("ignores a default the descriptor does not offer as a choice", () => {
+    expect(providerOptionDefault(permissionMode("plan"))).toBeNull();
   });
 });
