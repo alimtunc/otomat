@@ -1,13 +1,7 @@
-import {
-  AGENT_DEFAULT_EFFORT,
-  runPlanInputSchema,
-  type EffortSelection,
-  type ModelSelection,
-  type RunContract,
-} from "@otomat/domain";
+import { runPlanInputSchema, type RunContract } from "@otomat/domain";
 import { useForm } from "@tanstack/react-form";
 import { useLaunchRun } from "@web/api/runs/use-launch-run";
-import { agentChoiceToRequest } from "@web/lib/agent-choice";
+import type { ExecutionRequestFields } from "@web/lib/execution/request";
 import {
   newWorkflowCompeteGroup,
   newWorkflowStep,
@@ -20,8 +14,8 @@ import { targetRequest, type WorkflowLaunchTarget } from "./launch-target";
 
 export interface UseWorkflowFormOptions {
   target: WorkflowLaunchTarget;
-  /** The resolved run-level agent choice (profile or ad-hoc runtime), or null when none is launchable. */
-  agentChoice: string | null;
+  execution: ExecutionRequestFields;
+  canLaunch: boolean;
   /** Branch the run's worktree forks from, resolved by the launch gate. */
   baseBranch: string;
   onLaunched: (run: RunContract) => void;
@@ -29,24 +23,16 @@ export interface UseWorkflowFormOptions {
 
 interface WorkflowFormValues {
   goal: string;
-  /** Run-level model override; undefined keeps the agent's own model. Steps without their own model inherit it. */
-  model: ModelSelection | undefined;
-  /** Run-level effort; `agent_default` keeps whatever each resolved agent carries. Steps inherit it unless they say otherwise. */
-  effort: EffortSelection;
   steps: WorkflowNodeDraft[];
 }
 
-const WORKFLOW_DEFAULT_VALUES: WorkflowFormValues = {
-  goal: "",
-  model: undefined,
-  effort: AGENT_DEFAULT_EFFORT,
-  steps: [newWorkflowStep(1)],
-};
+const WORKFLOW_DEFAULT_VALUES: WorkflowFormValues = { goal: "", steps: [newWorkflowStep(1)] };
 
 /** Owns workflow values, submit-time plan validation, and step-list mutations. */
 export function useWorkflowForm({
   target,
-  agentChoice,
+  execution,
+  canLaunch,
   baseBranch,
   onLaunched,
 }: UseWorkflowFormOptions) {
@@ -57,7 +43,7 @@ export function useWorkflowForm({
   const form = useForm({
     defaultValues: WORKFLOW_DEFAULT_VALUES,
     onSubmit: async ({ value }) => {
-      if (agentChoice === null) return;
+      if (!canLaunch) return;
       const parsed = runPlanInputSchema.safeParse(buildRunPlanInput(value.steps));
       if (!parsed.success) {
         setPlanError(parsed.error.issues[0]?.message ?? "The workflow plan is invalid.");
@@ -68,9 +54,7 @@ export function useWorkflowForm({
         ...targetRequest(target, value.goal),
         base_branch: baseBranch,
         plan: parsed.data,
-        ...agentChoiceToRequest(agentChoice),
-        model: value.model,
-        effort: value.effort.kind === "level" ? value.effort.value : undefined,
+        ...execution,
       });
       if (!run) return;
       form.reset();

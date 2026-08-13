@@ -50,22 +50,31 @@ describe("runPlanInputSchema", () => {
     expect(parsed.steps.map((planStep) => planStep.id)).toEqual(["plan", "implement", "verify"]);
   });
 
-  it("carries a per-node effort and refuses one that could be read as another CLI argument", () => {
+  it("carries per-node options and refuses a value that could be read as another CLI argument", () => {
     const parsed = runPlanInputSchema.parse({
       version: 1,
       steps: [
-        { ...step("plan"), effort: { kind: "agent_default" } },
-        { ...step("implement", ["plan"]), effort: { kind: "level", value: "ultra" } },
+        { ...step("plan"), options: { effort: { kind: "agent_default" } } },
+        {
+          ...step("implement", ["plan"]),
+          options: { reasoning_effort: { kind: "value", value: "ultra" } },
+        },
         step("verify", ["implement"]),
       ],
     });
-    // A step that names no effort keeps no key at all, so inheriting reads as absent.
-    const efforts = parsed.steps.map((planStep) => ("effort" in planStep ? planStep.effort : null));
-    expect(efforts).toEqual([{ kind: "agent_default" }, { kind: "level", value: "ultra" }, null]);
+    // A step that names no option keeps no key at all, so inheriting reads as absent.
+    const options = parsed.steps.map((planStep) =>
+      "options" in planStep ? planStep.options : null,
+    );
+    expect(options).toEqual([
+      { effort: { kind: "agent_default" } },
+      { reasoning_effort: { kind: "value", value: "ultra" } },
+      null,
+    ]);
     expect(
       runPlanInputSchema.safeParse({
         version: 1,
-        steps: [{ ...step("plan"), effort: { kind: "level", value: "--effort" } }],
+        steps: [{ ...step("plan"), options: { effort: { kind: "value", value: "--effort" } } }],
       }).success,
     ).toBe(false);
   });

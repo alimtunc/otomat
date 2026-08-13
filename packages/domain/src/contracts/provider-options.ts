@@ -55,12 +55,6 @@ export const PROVIDER_OPTION_KEYS = [...CLAUDE_OPTION_KEYS, ...CODEX_OPTION_KEYS
 export const providerOptionKeySchema = z.enum(PROVIDER_OPTION_KEYS);
 export type ProviderOptionKey = (typeof PROVIDER_OPTION_KEYS)[number];
 
-/** Reasoning effort under the key each provider's CLI names it by; a runtime announces at most one. */
-export const EFFORT_OPTION_KEYS = [
-  "effort",
-  "reasoning_effort",
-] as const satisfies ProviderOptionKeyGroup;
-
 /** One value the installed binary announced, with what Otomat can honestly say about it. */
 export const providerOptionChoiceSchema = z.object({
   value: providerOptionValueSchema,
@@ -95,31 +89,9 @@ export const providerOptionSetSchema = z.object({
 });
 export type ProviderOptionSet = z.infer<typeof providerOptionSetSchema>;
 
-/**
- * A node's effort. Absence of the whole field means "inherit": from the run for
- * a plan node, from the agent for a launch. `agent_default` ignores the run
- * override and keeps whatever the resolved agent already carries.
- */
-export const effortSelectionSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("agent_default") }).strict(),
-  z.object({ kind: z.literal("level"), value: providerOptionValueSchema }).strict(),
-]);
-export type EffortSelection = z.infer<typeof effortSelectionSchema>;
-
-export const AGENT_DEFAULT_EFFORT: EffortSelection = { kind: "agent_default" };
-
-/** The effort descriptor among the ones a runtime and model announced, or null when this pair offers none. */
-export function effortOptionDescriptor(
+export function providerOptionDescriptor(
   options: readonly ProviderOptionDescriptor[],
+  key: ProviderOptionKey,
 ): ProviderOptionDescriptor | null {
-  return options.find((option) => EFFORT_OPTION_KEYS.some((key) => key === option.key)) ?? null;
-}
-
-/** The effort level a stored option set carries, whichever provider wrote it; null when it selects none. */
-export function storedEffortLevel(options: ProviderOptions): string | null {
-  for (const key of EFFORT_OPTION_KEYS) {
-    const value = options[key];
-    if (value !== undefined) return value;
-  }
-  return null;
+  return options.find((option) => option.key === key) ?? null;
 }

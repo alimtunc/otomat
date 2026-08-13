@@ -149,7 +149,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
           name: request.name,
           prompt: request.prompt,
           selector: appendStepSelector(request),
-          ...(request.model ? { model: request.model } : {}),
+          overrides: { model: request.model, options: request.options },
           dependsOn: request.depends_on,
           origin: "user",
         });

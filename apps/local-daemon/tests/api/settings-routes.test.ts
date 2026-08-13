@@ -1,4 +1,4 @@
-import type { AgentCapacity } from "@otomat/domain";
+import type { AgentCapacity, ExecutionDefaults } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { json, makeApiApp, request, stubSupervisor } from "../support/api.js";
@@ -67,5 +67,51 @@ it("rejects a cap that is not a positive integer before the daemon applies anyth
 
 it("rejects an unknown settings key rather than silently ignoring it", async () => {
   const res = await put("/api/settings/capacity", { max_concurrent_sessions: 2, extra: true });
+  expect(res.status).toBe(400);
+});
+
+it("answers with nothing selected until execution defaults are configured", async () => {
+  const app = makeApiApp(t);
+
+  const defaults = await json<ExecutionDefaults>(
+    await request(app, "/api/settings/execution-defaults"),
+  );
+
+  expect(defaults).toEqual({ runtime: null, model: null, options: {} });
+});
+
+it("stores execution defaults and serves them back for every later launch", async () => {
+  const saved = await put("/api/settings/execution-defaults", {
+    runtime: "fake",
+    model: "fake-thorough",
+    options: { effort: "low" },
+  });
+
+  expect(saved.status).toBe(200);
+  expect(await json<ExecutionDefaults>(saved)).toEqual({
+    runtime: "fake",
+    model: "fake-thorough",
+    options: { effort: "low" },
+  });
+});
+
+it("refuses a default the chosen runtime and model do not announce", async () => {
+  const res = await put("/api/settings/execution-defaults", {
+    runtime: "fake",
+    model: "fake-fast",
+    options: { effort: "high" },
+  });
+
+  expect(res.status).toBe(400);
+  expect(await json<{ error: string }>(res)).toMatchObject({ error: "option_unsupported" });
+});
+
+it("refuses a model and options with no runtime to belong to", async () => {
+  const res = await put("/api/settings/execution-defaults", {
+    runtime: null,
+    model: "fake-thorough",
+    options: {},
+  });
+
   expect(res.status).toBe(400);
 });

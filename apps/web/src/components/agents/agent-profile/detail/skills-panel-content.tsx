@@ -1,9 +1,10 @@
 import type { AgentProfileContract, SkillContract } from "@otomat/domain";
 import { Chip, EmptyState, toast } from "@otomat/ui";
-import { agentProfileErrorMessage, useUpdateAgentProfile } from "@web/api/agent-profiles/mutations";
+import { useUpdateAgentProfile } from "@web/api/agent-profiles/mutations";
 import { ActivatedSkillCard } from "@web/components/agents/agent-profile/detail/activated-skill-card";
 import { SkillMultiSelect } from "@web/components/agents/agent-profile/shared/skill-multi-select";
 import { requestForProfile } from "@web/lib/agent-choice";
+import { agentConfigRefusalMessage } from "@web/lib/agent-config-error";
 import { useState } from "react";
 
 export function SkillsPanelContent({
@@ -30,7 +31,7 @@ export function SkillsPanelContent({
       });
       toast.success(selected ? "Skill removed" : "Skill added");
     } catch (error) {
-      setSaveError(agentProfileErrorMessage(error));
+      setSaveError(agentConfigRefusalMessage(error, "the profile"));
     }
   }
 

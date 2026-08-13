@@ -1,16 +1,11 @@
-import type { EffortSelection, ModelSelection } from "@otomat/domain";
+import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
 import { isCompleteModelSelection } from "@web/lib/model-choice";
 
 export interface WorkflowCompetitorDraft {
   key: string;
   name: string;
   prompt: string;
-  /** Encoded agent choice (profile or ad-hoc runtime); null inherits the run default. */
-  agent: string | null;
-  /** Model for this candidate alone; undefined inherits the model of whatever agent it resolves to. */
-  model?: ModelSelection;
-  /** Effort for this candidate alone; undefined inherits the run's, `agent_default` keeps its agent's own. */
-  effort?: EffortSelection;
+  execution: ExecutionSelection;
 }
 
 export interface WorkflowStepDraft {
@@ -18,12 +13,7 @@ export interface WorkflowStepDraft {
   key: string;
   name: string;
   prompt: string;
-  /** Encoded agent choice (profile or ad-hoc runtime); null inherits the run default. */
-  agent: string | null;
-  /** Model for this step alone; undefined inherits the model of whatever agent it resolves to. */
-  model?: ModelSelection;
-  /** Effort for this step alone; undefined inherits the run's, `agent_default` keeps its agent's own. */
-  effort?: EffortSelection;
+  execution: ExecutionSelection;
   /** Keys of top-level nodes this one waits for; competitors are never valid dependency targets. */
   dependsOn: string[];
 }
@@ -46,7 +36,7 @@ export function newWorkflowStep(counter: number): WorkflowStepDraft {
     key: `step-${counter}`,
     name: "",
     prompt: "",
-    agent: null,
+    execution: EMPTY_EXECUTION_SELECTION,
     dependsOn: [],
   };
 }
@@ -56,7 +46,7 @@ export function newCompetitor(groupKey: string, counter: number): WorkflowCompet
     key: `${groupKey}-candidate-${counter}`,
     name: "",
     prompt: "",
-    agent: null,
+    execution: EMPTY_EXECUTION_SELECTION,
   };
 }
 
@@ -86,7 +76,7 @@ export function workflowExecutableCount(steps: readonly WorkflowNodeDraft[]): nu
 export function isWorkflowNodeComplete(step: WorkflowNodeDraft): boolean {
   if (!step.name.trim()) return false;
   if (step.kind === "step") {
-    return Boolean(step.prompt.trim()) && isCompleteModelSelection(step.model);
+    return Boolean(step.prompt.trim()) && isCompleteModelSelection(step.execution.model);
   }
   return (
     step.competitors.length >= 2 &&
@@ -94,7 +84,7 @@ export function isWorkflowNodeComplete(step: WorkflowNodeDraft): boolean {
       (competitor) =>
         competitor.name.trim() &&
         competitor.prompt.trim() &&
-        isCompleteModelSelection(competitor.model),
+        isCompleteModelSelection(competitor.execution.model),
     )
   );
 }

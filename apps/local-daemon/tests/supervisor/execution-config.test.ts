@@ -1,4 +1,10 @@
-import { getRun, insertAgentProfile, listRuns, updateAgentProfile } from "@otomat/db";
+import {
+  getRun,
+  insertAgentProfile,
+  listRuns,
+  updateAgentProfile,
+  writeExecutionDefaults,
+} from "@otomat/db";
 import { isRunPlanCompeteGroup, type RunPlanStep, type StartRunRequest } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -19,10 +25,10 @@ afterEach(() => {
 });
 
 /** The simulated runtime publishes levels per model, exactly as Codex does, so a model is always chosen here. */
-function seedProfile(effort: string | undefined, model = "fake-thorough"): void {
+function seedProfile(effort: string | undefined, model = "fake-thorough", id = "prof"): void {
   insertAgentProfile(fix.db, {
-    id: "prof",
-    name: "Careful",
+    id,
+    name: id === "prof" ? "Careful" : "Quick",
     runtime: "fake",
     options_json: effort === undefined ? {} : { effort },
     model,
@@ -31,7 +37,6 @@ function seedProfile(effort: string | undefined, model = "fake-thorough"): void 
   });
 }
 
-/** The frozen executable steps of a run, in plan order. */
 function frozenSteps(runId: string): RunPlanStep[] {
   const plan = getRun(fix.db, runId)?.plan_json;
   return (plan?.steps ?? []).flatMap((node) => (isRunPlanCompeteGroup(node) ? [] : [node]));
@@ -44,30 +49,69 @@ async function launch(request: StartRunRequest) {
   return { supervisor, spawn, run };
 }
 
-it("freezes the launch effort into every inheriting step and sends it on the initial turn", async () => {
+it("freezes the launch option into every inheriting step and sends it on the initial turn", async () => {
   seedProfile(undefined);
 
-  const { spawn, run } = await launch({ prompt: "do it", profile_id: "prof", effort: "high" });
+  const { spawn, run } = await launch({
+    prompt: "do it",
+    profile_id: "prof",
+    options: { effort: { kind: "value", value: "high" } },
+  });
 
   expect(frozenSteps(run.id)[0]?.config?.options).toEqual({ effort: "high" });
+  expect(frozenSteps(run.id)[0]?.config?.sources?.options).toEqual({ effort: "launch" });
   expect(spawn.jobs[0]?.config?.options).toEqual({ effort: "high" });
 });
 
-it("keeps the profile's own effort when the launch names none", async () => {
+it("keeps the profile's own option when the launch names none", async () => {
   seedProfile("medium");
 
   const { run } = await launch({ prompt: "do it", profile_id: "prof" });
 
   expect(frozenSteps(run.id)[0]?.config?.options).toEqual({ effort: "medium" });
+  expect(frozenSteps(run.id)[0]?.config?.sources?.options).toEqual({ effort: "profile" });
 });
 
-it("gives each step its own level, its agent's, or the run's, as the plan asks", async () => {
+it("falls back to the host defaults, and says so, when neither the launch nor the profile chooses", async () => {
+  writeExecutionDefaults(fix.db, {
+    runtime: "fake",
+    model: "fake-thorough",
+    options: { effort: "low" },
+  });
+
+  const { run } = await launch({ prompt: "do it" });
+
+  const config = frozenSteps(run.id)[0]?.config;
+  expect(config?.runtime).toBe("fake");
+  expect(config?.model?.id).toBe("fake-thorough");
+  expect(config?.options).toEqual({ effort: "low" });
+  expect(config?.sources).toEqual({
+    runtime: "global",
+    model: "global",
+    options: { effort: "global" },
+  });
+});
+
+it("ignores host defaults belonging to another runtime rather than carrying their options across", async () => {
+  writeExecutionDefaults(fix.db, {
+    runtime: "claude",
+    model: null,
+    options: { permission_mode: "plan" },
+  });
+  seedProfile(undefined, "fake-fast");
+
+  const { run } = await launch({ prompt: "do it", profile_id: "prof" });
+
+  expect(frozenSteps(run.id)[0]?.config?.options).toEqual({});
+});
+
+it("gives each step its own value, its agent's, or the run's, as the plan asks", async () => {
   seedProfile("low");
 
   const { run } = await launch({
     prompt: "goal",
     profile_id: "prof",
-    effort: "high",
+    options: { effort: { kind: "value", value: "high" } },
     plan: {
       version: 1,
       steps: [
@@ -76,7 +120,7 @@ it("gives each step its own level, its agent's, or the run's, as the plan asks",
           id: "b",
           name: "Keeps the agent's",
           agent: null,
-          effort: { kind: "agent_default" },
+          options: { effort: { kind: "agent_default" } },
           prompt: "second",
           depends_on: ["a"],
         },
@@ -84,7 +128,7 @@ it("gives each step its own level, its agent's, or the run's, as the plan asks",
           id: "c",
           name: "Overrides",
           agent: null,
-          effort: { kind: "level", value: "medium" },
+          options: { effort: { kind: "value", value: "medium" } },
           prompt: "third",
           depends_on: ["b"],
         },
@@ -97,30 +141,27 @@ it("gives each step its own level, its agent's, or the run's, as the plan asks",
     { effort: "low" },
     { effort: "medium" },
   ]);
+  expect(frozenSteps(run.id).map((step) => step.config?.sources?.options.effort)).toEqual([
+    "launch",
+    "profile",
+    "step",
+  ]);
 });
 
-it("applies the launch level to an inheriting step even when that step brings its own agent", async () => {
+it("does not carry the launch's options onto a step that brings its own agent", async () => {
   seedProfile("low");
-  insertAgentProfile(fix.db, {
-    id: "other",
-    name: "Quick",
-    runtime: "fake",
-    options_json: { effort: "medium" },
-    model: "fake-thorough",
-    guidance: null,
-    skill_ids_json: [],
-  });
+  seedProfile("medium", "fake-thorough", "other");
 
   const { run } = await launch({
     prompt: "goal",
     profile_id: "prof",
-    effort: "high",
+    options: { effort: { kind: "value", value: "high" } },
     plan: {
       version: 1,
       steps: [
         {
           id: "a",
-          name: "Own agent, same as run",
+          name: "Own agent",
           agent: null,
           profile_id: "other",
           prompt: "go",
@@ -128,10 +169,10 @@ it("applies the launch level to an inheriting step even when that step brings it
         },
         {
           id: "b",
-          name: "Own agent, own level",
+          name: "Own agent, own value",
           agent: null,
           profile_id: "other",
-          effort: { kind: "agent_default" },
+          options: { effort: { kind: "value", value: "low" } },
           prompt: "go",
           depends_on: ["a"],
         },
@@ -140,12 +181,12 @@ it("applies the launch level to an inheriting step even when that step brings it
   });
 
   expect(frozenSteps(run.id).map((step) => step.config?.options)).toEqual([
-    { effort: "high" },
     { effort: "medium" },
+    { effort: "low" },
   ]);
 });
 
-it("freezes a distinct level per competitor of a compete group", async () => {
+it("freezes a distinct value per competitor of a compete group", async () => {
   const { run } = await launch({
     prompt: "goal",
     runtime: "fake",
@@ -162,14 +203,14 @@ it("freezes a distinct level per competitor of a compete group", async () => {
               id: "a",
               name: "Candidate A",
               agent: null,
-              effort: { kind: "level", value: "low" },
+              options: { effort: { kind: "value", value: "low" } },
               prompt: "first",
             },
             {
               id: "b",
               name: "Candidate B",
               agent: null,
-              effort: { kind: "level", value: "high" },
+              options: { effort: { kind: "value", value: "high" } },
               prompt: "second",
             },
           ],
@@ -186,26 +227,34 @@ it("freezes a distinct level per competitor of a compete group", async () => {
   ]);
 });
 
-it("refuses a level the chosen model does not publish and launches nothing", async () => {
+it("refuses a value the chosen model does not publish and launches nothing", async () => {
   seedProfile(undefined, "fake-fast");
   const { supervisor } = makeSupervisor(fix, "complete");
 
   await expect(
-    supervisor.start({ prompt: "do it", profile_id: "prof", effort: "high" }),
+    supervisor.start({
+      prompt: "do it",
+      profile_id: "prof",
+      options: { effort: { kind: "value", value: "high" } },
+    }),
   ).rejects.toBeInstanceOf(ProfileOptionUnsupportedError);
   expect(listRuns(fix.db)).toHaveLength(0);
 });
 
-it("refuses an effort the runtime announces no option for at all", async () => {
+it("refuses an option the runtime announces no field for at all", async () => {
   const { supervisor } = makeSupervisor(fix, "complete");
 
   await expect(
-    supervisor.start({ prompt: "do it", runtime: "fake", effort: "high" }),
+    supervisor.start({
+      prompt: "do it",
+      runtime: "fake",
+      options: { effort: { kind: "value", value: "high" } },
+    }),
   ).rejects.toBeInstanceOf(ProfileOptionUnsupportedError);
   expect(listRuns(fix.db)).toHaveLength(0);
 });
 
-it("resumes with the effort frozen at launch, not the one the profile carries now", async () => {
+it("resumes with the config frozen at launch, not the one the profile carries now", async () => {
   seedProfile("low");
   const { supervisor, spawn } = makeSupervisor(fix, ["complete", "complete"]);
   const run = await supervisor.start({ prompt: "do it", profile_id: "prof" });
@@ -218,6 +267,11 @@ it("resumes with the effort frozen at launch, not the one the profile carries no
     model: "fake-thorough",
     guidance: null,
     skill_ids_json: [],
+  });
+  writeExecutionDefaults(fix.db, {
+    runtime: "fake",
+    model: "fake-fast",
+    options: { effort: "medium" },
   });
 
   await supervisor.contribute(run.id, firstStepOf(fix.db, run.id), "keep going");

@@ -1,28 +1,23 @@
 import { Field, FieldControl, Icon, IconButton, Input, Textarea } from "@otomat/ui";
-import type { LaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
-import type { ResolvedEffort } from "@web/lib/effort-choice";
+import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
+import type { LaunchExecution } from "@web/components/execution/use-launch-execution";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { type WorkflowNodeDraft } from "@web/lib/workflow-draft";
 import {
   moveWorkflowStep,
   removeWorkflowStep,
-  setWorkflowStepAgent,
-  setWorkflowStepEffort,
-  setWorkflowStepModel,
+  setWorkflowStepExecution,
   toggleWorkflowDependency,
 } from "@web/lib/workflow/steps";
 
 import { DependencyToggles } from "./dependency-toggles";
-import { NodeAgentFields } from "./node-agent-fields";
 import type { WorkflowForm } from "./use-form";
 
 export interface WorkflowStepCardProps {
   form: WorkflowForm;
   steps: WorkflowNodeDraft[];
   index: number;
-  agents: LaunchAgentChoice;
-  runEffort: ResolvedEffort;
-  runModelId: string | null;
+  execution: LaunchExecution;
   onUpdateSteps: (update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) => void;
 }
 
@@ -30,9 +25,7 @@ export function WorkflowStepCard({
   form,
   steps,
   index,
-  agents,
-  runEffort,
-  runModelId,
+  execution,
   onUpdateSteps,
 }: WorkflowStepCardProps) {
   const step = steps[index];
@@ -110,23 +103,17 @@ export function WorkflowStepCard({
           dependsOn={step.dependsOn}
           onToggle={(key) => onUpdateSteps((value) => toggleWorkflowDependency(value, index, key))}
         />
-        <NodeAgentFields
-          agents={agents}
+        <ExecutionConfigPicker
+          compact
+          level="step"
+          value={step.execution}
+          onChange={(next) =>
+            onUpdateSteps((value) => setWorkflowStepExecution(value, index, next))
+          }
+          inherited={execution.selection}
+          profiles={execution.agents.profiles}
+          descriptors={execution.agents.descriptors}
           label={`Step ${index + 1}`}
-          agent={step.agent}
-          model={step.model}
-          effort={step.effort}
-          runEffort={runEffort}
-          runModelId={runModelId}
-          onAgentChange={(next) =>
-            onUpdateSteps((value) => setWorkflowStepAgent(value, index, next))
-          }
-          onModelChange={(next) =>
-            onUpdateSteps((value) => setWorkflowStepModel(value, index, next))
-          }
-          onEffortChange={(next) =>
-            onUpdateSteps((value) => setWorkflowStepEffort(value, index, next))
-          }
         />
       </div>
     </div>

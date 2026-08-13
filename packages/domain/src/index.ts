@@ -12,6 +12,7 @@ export * from "./redaction/index.js";
 export * from "./state-machines/index.js";
 export * from "./events/index.js";
 export * from "./contracts/index.js";
+export * from "./execution/index.js";
 export * from "./plan/index.js";
 export * from "./projections/index.js";
 export * from "./report/index.js";

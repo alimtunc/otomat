@@ -25,6 +25,7 @@ export const queryKeys = {
   runtimeModels: (runtimeId: string | null) => ["runtimes", runtimeId, "models"] as const,
   runtimeOptions: (runtimeId: string | null, model: string | null) =>
     ["runtimes", runtimeId, "options", model] as const,
+  executionDefaults: ["settings", "execution-defaults"] as const,
   agentProfiles: ["agent-profiles"] as const,
   skills: ["skills"] as const,
   issues: ["issues"] as const,

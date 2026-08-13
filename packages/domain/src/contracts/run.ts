@@ -9,7 +9,7 @@ import {
   runContributionContractSchema,
   stepRunContractSchema,
 } from "./entities/runs.js";
-import { providerOptionValueSchema } from "./provider-options.js";
+import { executionOptionSelectionsSchema } from "./execution-config.js";
 import { modelSelectionSchema } from "./runtime-model.js";
 
 /** Place in the daemon's FIFO wait line for a session slot, observed at one instant. */
@@ -105,8 +105,8 @@ export const startRunRequestSchema = z
     profile_id: z.string().min(1).optional(),
     /** Per-launch model override for the run default config; absent inherits the profile's model. */
     model: modelSelectionSchema.optional(),
-    /** Per-launch effort level applied to every node that inherits it; absent keeps the effort each resolved agent carries. */
-    effort: providerOptionValueSchema.optional(),
+    /** Per-launch provider options applied to every node that inherits this agent; an absent key keeps what the resolved agent carries. */
+    options: executionOptionSelectionsSchema.optional(),
     plan: runPlanInputSchema.optional(),
   })
   .refine((value) => Boolean(value.issue_id) || Boolean(value.prompt), {
@@ -125,6 +125,8 @@ export const appendRunStepRequestSchema = z
     runtime: z.string().min(1).optional(),
     /** Model override for this step alone; absent inherits the model of the config it resolves to. */
     model: modelSelectionSchema.optional(),
+    /** Provider options for this step alone; an absent key keeps what the config it resolves to carries. */
+    options: executionOptionSelectionsSchema.optional(),
     /** Existing plan node ids this step waits on; an empty list runs it as soon as the workspace is free. */
     depends_on: z.array(z.string().min(1)).default([]),
   })

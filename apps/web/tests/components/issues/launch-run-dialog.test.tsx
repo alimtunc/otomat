@@ -3,7 +3,6 @@ import {
   CLOSED_ISSUE_WORKSPACE,
   type AppendRunStepRequest,
   type IssueContract,
-  type ModelSelection,
   type RunContract,
   type RuntimeDescriptor,
 } from "@otomat/domain";
@@ -13,6 +12,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { setInputValue, setTextareaValue } from "#support/dom-events";
 import { findButton } from "#support/dom-queries";
+import { executionDefaultsQueryResult } from "#support/execution-defaults";
 import { repositoriesQueryResult, repositoryBranchesQueryResult } from "#support/launch-target";
 import { mount } from "#support/mount";
 import { modelCatalogQueryResult } from "#support/runtime-models";
@@ -21,11 +21,12 @@ import { providerOptionSetQueryResult } from "#support/runtime-options";
 const launch = vi.fn(async () => ({ id: "run-1" }) as RunContract);
 const navigate = vi.fn();
 const onLaunched = vi.fn();
-const modelSelectProps = vi.fn();
+const pickerProps = vi.fn();
 
-interface ModelSelectProbeProps {
-  runtimeId: string | null;
-  onValueChange: (value: ModelSelection | undefined) => void;
+interface ExecutionPickerProbeProps {
+  level: string;
+  value: { agent: string | null; options: Record<string, unknown> };
+  onChange: (value: unknown) => void;
 }
 
 const appendStep = vi.fn(
@@ -73,6 +74,7 @@ vi.mock("@web/api/daemon/queries", () => ({
   }),
   useRuntimeModels: () => modelCatalogQueryResult(),
   useRuntimeProviderOptions: () => providerOptionSetQueryResult(),
+  useExecutionDefaults: () => executionDefaultsQueryResult(),
   useRepositories: () => repositoriesQueryResult(),
   useRepositoryBranches: () => repositoryBranchesQueryResult(),
 }));
@@ -81,16 +83,15 @@ vi.mock("@web/api/agent-profiles/queries", () => ({
   useAgentProfiles: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
 }));
 
-vi.mock("@web/components/runs/launch/launch-agent-select", () => ({
-  LaunchAgentSelect: () => <div data-testid="agent-select" />,
-}));
-
-vi.mock("@web/components/runs/launch/model-select", () => ({
-  ModelSelect: (props: ModelSelectProbeProps) => {
-    modelSelectProps(props);
+vi.mock("@web/components/execution/execution-config-picker", () => ({
+  ExecutionConfigPicker: (props: ExecutionPickerProbeProps) => {
+    pickerProps(props);
     return (
-      <button type="button" onClick={() => props.onValueChange({ kind: "model", id: "opus" })}>
-        pick opus
+      <button
+        type="button"
+        onClick={() => props.onChange({ ...props.value, model: { kind: "model", id: "opus" } })}
+      >
+        {`pick opus for ${props.level}`}
       </button>
     );
   },
@@ -124,7 +125,7 @@ afterEach(async () => {
   launch.mockClear();
   navigate.mockClear();
   onLaunched.mockClear();
-  modelSelectProps.mockClear();
+  pickerProps.mockClear();
   appendStep.mockClear();
   appendTarget.mockClear();
 });
@@ -188,14 +189,14 @@ it("sends the prompt on screen, edits included, and follows the run in place", a
   expect(navigate).not.toHaveBeenCalled();
 });
 
-it("sends the per-launch model override, listed against the agent's own runtime", async () => {
+it("sends the per-launch model override, on the same control every surface uses", async () => {
   await openDialog();
 
-  expect(modelSelectProps).toHaveBeenCalledWith(
-    expect.objectContaining({ runtimeId: "claude", value: undefined }),
+  expect(pickerProps).toHaveBeenCalledWith(
+    expect.objectContaining({ level: "launch", value: { agent: "runtime:claude", options: {} } }),
   );
 
-  await click("pick opus");
+  await click("pick opus for launch");
   await click("Launch run⌘↵");
 
   expect(launch).toHaveBeenCalledWith({
@@ -297,7 +298,7 @@ it("appends the step on the agent the user picked and follows the run it joined"
     setInputValue(input("Step name"), "  Address the failing test  ");
     setTextareaValue(textarea("Step prompt"), "  fix the parser  ");
   });
-  await click("pick opus");
+  await click("pick opus for launch");
   await click("Add step⌘↵");
 
   expect(appendStep).toHaveBeenCalledWith(

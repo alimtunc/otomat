@@ -1,56 +1,21 @@
-import type { EffortSelection, ModelSelection } from "@otomat/domain";
-import {
-  newCompetitor,
-  type WorkflowCompetitorDraft,
-  type WorkflowNodeDraft,
-} from "@web/lib/workflow-draft";
+import type { ExecutionSelection } from "@web/lib/execution/selection";
+import { newCompetitor, type WorkflowNodeDraft } from "@web/lib/workflow-draft";
 
-function patchCompetitor(
+export function setWorkflowCompetitorExecution(
   steps: readonly WorkflowNodeDraft[],
   stepIndex: number,
   competitorIndex: number,
-  update: Partial<Omit<WorkflowCompetitorDraft, "key">>,
+  execution: ExecutionSelection,
 ): WorkflowNodeDraft[] {
   return steps.map((step, index) => {
     if (index !== stepIndex || step.kind !== "compete") return step;
     return {
       ...step,
       competitors: step.competitors.map((competitor, candidateIndex) =>
-        candidateIndex === competitorIndex ? { ...competitor, ...update } : competitor,
+        candidateIndex === competitorIndex ? { ...competitor, execution } : competitor,
       ),
     };
   });
-}
-
-export function setWorkflowCompetitorAgent(
-  steps: readonly WorkflowNodeDraft[],
-  stepIndex: number,
-  competitorIndex: number,
-  agent: string | null,
-): WorkflowNodeDraft[] {
-  return patchCompetitor(steps, stepIndex, competitorIndex, {
-    agent,
-    model: undefined,
-    effort: undefined,
-  });
-}
-
-export function setWorkflowCompetitorModel(
-  steps: readonly WorkflowNodeDraft[],
-  stepIndex: number,
-  competitorIndex: number,
-  model: ModelSelection | undefined,
-): WorkflowNodeDraft[] {
-  return patchCompetitor(steps, stepIndex, competitorIndex, { model, effort: undefined });
-}
-
-export function setWorkflowCompetitorEffort(
-  steps: readonly WorkflowNodeDraft[],
-  stepIndex: number,
-  competitorIndex: number,
-  effort: EffortSelection | undefined,
-): WorkflowNodeDraft[] {
-  return patchCompetitor(steps, stepIndex, competitorIndex, { effort });
 }
 
 export function addWorkflowCompetitor(

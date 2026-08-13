@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { RUN_PLAN_STEP_NAME_MAX_LENGTH } from "../plan/limits.js";
 import { reviewCommentContractSchema, reviewContractSchema } from "./entities/reviews.js";
+import { executionOptionSelectionsSchema } from "./execution-config.js";
 import { modelSelectionSchema } from "./runtime-model.js";
 
 /** `reason` is user-facing: review-only is always explained, never a silently disabled button. */
@@ -36,6 +37,8 @@ export const requestFixRequestSchema = z
     profile_id: z.string().min(1).optional(),
     runtime: z.string().min(1).optional(),
     model: modelSelectionSchema.optional(),
+    /** Provider options for the fix step alone; an absent key keeps what the chosen agent carries. */
+    options: executionOptionSelectionsSchema.optional(),
     /** Overrides the default `Fix review comments` step name. */
     name: z.string().trim().min(1).max(RUN_PLAN_STEP_NAME_MAX_LENGTH).optional(),
   })

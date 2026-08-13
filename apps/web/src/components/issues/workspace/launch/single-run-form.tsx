@@ -1,22 +1,21 @@
-import type { IssueContract, ModelSelection, RunContract } from "@otomat/domain";
+import type { IssueContract, RunContract } from "@otomat/domain";
 import { Button, DialogBody, Field, FieldControl, FieldLabel, Kbd, Textarea } from "@otomat/ui";
 import { useLaunchRun } from "@web/api/runs/use-launch-run";
+import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
+import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
-import { LaunchAgentModelFields } from "@web/components/runs/launch/launch-agent-model-fields";
 import { LaunchTargetFields } from "@web/components/runs/launch/launch-target-fields";
-import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
 import type { LaunchTargetState } from "@web/components/runs/launch/use-launch-target";
-import { agentChoiceToRequest } from "@web/lib/agent-choice";
+import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { hasText, submitOnCmdEnter } from "@web/lib/form";
 import { issueLaunchPrompt } from "@web/lib/issue-prompt";
-import { isCompleteModelSelection } from "@web/lib/model-choice";
 import { useState } from "react";
 
 export interface SingleRunLaunchFormProps {
   issue: IssueContract;
   target: Extract<LaunchTargetState, { status: "ready" }>;
-  agentChoice: string | null;
-  onAgentChoice: (choice: string | null) => void;
+  execution: ExecutionSelection;
+  onExecutionChange: (execution: ExecutionSelection) => void;
   onLaunched: (run: RunContract) => void;
   onCancel: () => void;
 }
@@ -25,26 +24,23 @@ export interface SingleRunLaunchFormProps {
 export function SingleRunLaunchForm({
   issue,
   target,
-  agentChoice,
-  onAgentChoice,
+  execution,
+  onExecutionChange,
   onLaunched,
   onCancel,
 }: SingleRunLaunchFormProps) {
   const [prompt, setPrompt] = useState(() => issueLaunchPrompt(issue));
-  const [model, setModel] = useState<ModelSelection | undefined>(undefined);
-  const agents = useLaunchAgentChoice(agentChoice);
+  const launchExecution = useLaunchExecution(execution);
   const { launch, isPending } = useLaunchRun();
-  const canSubmit =
-    hasText(prompt) && agents.choice !== null && isCompleteModelSelection(model) && !isPending;
+  const canSubmit = hasText(prompt) && launchExecution.canLaunch && !isPending;
 
   async function submit() {
-    if (!canSubmit || agents.choice === null) return;
+    if (!canSubmit) return;
     const run = await launch({
       issue_id: issue.id,
       prompt: prompt.trim(),
       base_branch: target.baseBranch,
-      ...agentChoiceToRequest(agents.choice),
-      model,
+      ...launchExecution.request,
     });
     if (run) onLaunched(run);
   }
@@ -69,11 +65,10 @@ export function SingleRunLaunchForm({
         <p className="text-xs text-text-tertiary">
           Prefilled from this issue and sent as-is — the agent receives exactly this text.
         </p>
-        <LaunchAgentModelFields
-          agents={agents}
-          model={model}
-          onAgentChoice={onAgentChoice}
-          onModelChange={setModel}
+        <LaunchExecutionPicker
+          execution={launchExecution}
+          onChange={onExecutionChange}
+          label="Single run"
         />
         <LaunchTargetFields target={target} disabled={isPending} />
       </DialogBody>

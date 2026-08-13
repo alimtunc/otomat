@@ -9,6 +9,7 @@ import {
 } from "@otomat/ui";
 import { useIssue } from "@web/api/issues/queries";
 import { AppendStepForm } from "@web/components/runs/steps/append-step-form";
+import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
 import { useState } from "react";
 
 export interface AddStepDialogProps {
@@ -22,7 +23,7 @@ const CLOSED_NOTE = "This issue's workspace is closed — launch a new cycle fro
 /** The cockpit's own way into the open cycle: one step, appended to the run that already holds the workspace. */
 export function AddStepDialog({ issueId, stretch = false }: AddStepDialogProps) {
   const [open, setOpen] = useState(false);
-  const [agentChoice, setAgentChoice] = useState<string | null>(null);
+  const [execution, setExecution] = useState<ExecutionSelection>(EMPTY_EXECUTION_SELECTION);
   const issue = useIssue(issueId);
   const workspace = issue.data?.workspace;
 
@@ -49,8 +50,8 @@ export function AddStepDialog({ issueId, stretch = false }: AddStepDialogProps) 
         {workspace?.state === "open" ? (
           <AppendStepForm
             workspace={workspace}
-            agentChoice={agentChoice}
-            onAgentChoice={setAgentChoice}
+            execution={execution}
+            onExecutionChange={setExecution}
             onAppended={() => setOpen(false)}
             onCancel={() => setOpen(false)}
           />

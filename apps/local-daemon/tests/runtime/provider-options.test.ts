@@ -1,5 +1,5 @@
 import {
-  effortOptionDescriptor,
+  providerOptionDescriptor,
   type ProviderOptionDescriptor,
   type ProviderOptionKey,
 } from "@otomat/domain";
@@ -100,8 +100,9 @@ describe("claude provider options", () => {
   it("sends an effort as `--effort`, and never invents a level the help page omits", () => {
     process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
 
-    const effort = effortOptionDescriptor(
+    const effort = providerOptionDescriptor(
       new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null).options,
+      "effort",
     );
 
     expect(effort?.key).toBe("effort");
@@ -206,8 +207,9 @@ describe("codex provider options", () => {
   it("sends an effort as `model_reasoning_effort`, including `ultra` when the model announces it", () => {
     codexFixtures();
 
-    const effort = effortOptionDescriptor(
+    const effort = providerOptionDescriptor(
       new CodexRuntimeAdapter(STUB_BIN).describeOptions("gpt-5.6-sol").options,
+      "reasoning_effort",
     );
 
     expect(effort?.key).toBe("reasoning_effort");

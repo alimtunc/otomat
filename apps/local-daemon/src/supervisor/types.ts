@@ -1,8 +1,8 @@
 import type { Db, RunContributionRow, RunRow } from "@otomat/db";
 import type {
   AgentCapacity,
+  ExecutionOverrides,
   LinearLifecycleSync,
-  ModelSelection,
   ResolvedAgentConfig,
   RunResumePlan,
   RunWait,
@@ -23,7 +23,7 @@ export interface AppendStepInput {
   prompt: string;
   /** The agent the user picked for this step; never inherited from the last session. */
   selector: AgentConfigSelector;
-  model?: ModelSelection;
+  overrides: ExecutionOverrides;
   dependsOn: readonly string[];
   origin: PlanRevisionOrigin;
 }

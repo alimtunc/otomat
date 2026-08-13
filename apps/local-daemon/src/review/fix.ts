@@ -109,7 +109,7 @@ export async function requestFix(
     name: request.name ?? FIX_REVIEW_COMMENTS_STEP_NAME,
     prompt: preparation.prompt,
     selector: request.selector,
-    ...(request.model ? { model: request.model } : {}),
+    overrides: request.overrides,
     dependsOn: preparation.dependsOn,
     origin: "review_fix",
   });

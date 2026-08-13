@@ -1,7 +1,6 @@
 import { RUN_PLAN_MAX_STEPS } from "@otomat/domain";
 import { Button, Field, FieldControl, Icon, IconButton, Input } from "@otomat/ui";
-import type { LaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
-import type { ResolvedEffort } from "@web/lib/effort-choice";
+import type { LaunchExecution } from "@web/components/execution/use-launch-execution";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { workflowExecutableCount, type WorkflowNodeDraft } from "@web/lib/workflow-draft";
 import { addWorkflowCompetitor } from "@web/lib/workflow/competitors";
@@ -19,9 +18,7 @@ export interface WorkflowCompeteCardProps {
   form: WorkflowForm;
   steps: WorkflowNodeDraft[];
   index: number;
-  agents: LaunchAgentChoice;
-  runEffort: ResolvedEffort;
-  runModelId: string | null;
+  execution: LaunchExecution;
   onUpdateSteps: (update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) => void;
 }
 
@@ -29,9 +26,7 @@ export function WorkflowCompeteCard({
   form,
   steps,
   index,
-  agents,
-  runEffort,
-  runModelId,
+  execution,
   onUpdateSteps,
 }: WorkflowCompeteCardProps) {
   const group = steps[index];
@@ -99,9 +94,7 @@ export function WorkflowCompeteCard({
             steps={steps}
             groupIndex={index}
             competitorIndex={competitorIndex}
-            agents={agents}
-            runEffort={runEffort}
-            runModelId={runModelId}
+            execution={execution}
             onUpdateSteps={onUpdateSteps}
           />
         ))}

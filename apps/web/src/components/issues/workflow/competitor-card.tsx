@@ -1,16 +1,13 @@
 import { Field, FieldControl, Icon, IconButton, Input, Textarea } from "@otomat/ui";
-import type { LaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
-import type { ResolvedEffort } from "@web/lib/effort-choice";
+import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
+import type { LaunchExecution } from "@web/components/execution/use-launch-execution";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { competitorLabel, type WorkflowNodeDraft } from "@web/lib/workflow-draft";
 import {
   removeWorkflowCompetitor,
-  setWorkflowCompetitorAgent,
-  setWorkflowCompetitorEffort,
-  setWorkflowCompetitorModel,
+  setWorkflowCompetitorExecution,
 } from "@web/lib/workflow/competitors";
 
-import { NodeAgentFields } from "./node-agent-fields";
 import type { WorkflowForm } from "./use-form";
 
 export function WorkflowCompetitorCard({
@@ -18,18 +15,14 @@ export function WorkflowCompetitorCard({
   steps,
   groupIndex,
   competitorIndex,
-  agents,
-  runEffort,
-  runModelId,
+  execution,
   onUpdateSteps,
 }: {
   form: WorkflowForm;
   steps: WorkflowNodeDraft[];
   groupIndex: number;
   competitorIndex: number;
-  agents: LaunchAgentChoice;
-  runEffort: ResolvedEffort;
-  runModelId: string | null;
+  execution: LaunchExecution;
   onUpdateSteps: (update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) => void;
 }) {
   const group = steps[groupIndex];
@@ -63,29 +56,19 @@ export function WorkflowCompetitorCard({
             </Field>
           )}
         </form.Field>
-        <NodeAgentFields
-          agents={agents}
+        <ExecutionConfigPicker
+          compact
+          level="step"
+          value={competitor.execution}
+          onChange={(next) =>
+            onUpdateSteps((value) =>
+              setWorkflowCompetitorExecution(value, groupIndex, competitorIndex, next),
+            )
+          }
+          inherited={execution.selection}
+          profiles={execution.agents.profiles}
+          descriptors={execution.agents.descriptors}
           label={label}
-          agent={competitor.agent}
-          model={competitor.model}
-          effort={competitor.effort}
-          runEffort={runEffort}
-          runModelId={runModelId}
-          onAgentChange={(agent) =>
-            onUpdateSteps((value) =>
-              setWorkflowCompetitorAgent(value, groupIndex, competitorIndex, agent),
-            )
-          }
-          onModelChange={(model) =>
-            onUpdateSteps((value) =>
-              setWorkflowCompetitorModel(value, groupIndex, competitorIndex, model),
-            )
-          }
-          onEffortChange={(effort) =>
-            onUpdateSteps((value) =>
-              setWorkflowCompetitorEffort(value, groupIndex, competitorIndex, effort),
-            )
-          }
         />
         <IconButton
           type="button"

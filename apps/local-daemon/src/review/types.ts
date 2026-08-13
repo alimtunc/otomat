@@ -1,7 +1,7 @@
 import type { Db, ReviewCommentRow, ReviewRow, RunRow } from "@otomat/db";
 import type {
   CreateReviewCommentRequest,
-  ModelSelection,
+  ExecutionOverrides,
   ReviewFixAuthority,
 } from "@otomat/domain";
 
@@ -56,7 +56,7 @@ export interface FixPreparation {
 export interface FixRequest {
   commentIds: string[];
   selector: AgentConfigSelector;
-  model?: ModelSelection;
+  overrides: ExecutionOverrides;
   name?: string;
 }
 

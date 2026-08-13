@@ -1,8 +1,4 @@
-import {
-  FIX_REVIEW_COMMENTS_STEP_NAME,
-  type ModelSelection,
-  type RequestFixRequest,
-} from "@otomat/domain";
+import { FIX_REVIEW_COMMENTS_STEP_NAME, type RequestFixRequest } from "@otomat/domain";
 import {
   Button,
   Dialog,
@@ -16,13 +12,12 @@ import {
   Icon,
   Input,
 } from "@otomat/ui";
+import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
+import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
-import { LaunchAgentModelFields } from "@web/components/runs/launch/launch-agent-model-fields";
-import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
 import type { ReviewSelection } from "@web/components/runs/review/use-selection";
-import { agentChoiceToRequest } from "@web/lib/agent-choice";
+import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
 import { hasText } from "@web/lib/form";
-import { isCompleteModelSelection } from "@web/lib/model-choice";
 import { useState } from "react";
 
 export interface ReviewFixStepDialogProps {
@@ -35,22 +30,16 @@ export interface ReviewFixStepDialogProps {
 export function ReviewFixStepDialog({ selection, disabled }: ReviewFixStepDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(FIX_REVIEW_COMMENTS_STEP_NAME);
-  const [agentChoice, setAgentChoice] = useState<string | null>(null);
-  const [model, setModel] = useState<ModelSelection | undefined>(undefined);
-  const agents = useLaunchAgentChoice(agentChoice);
-  const canSubmit =
-    hasText(name) &&
-    agents.choice !== null &&
-    isCompleteModelSelection(model) &&
-    !selection.isFixPending;
+  const [execution, setExecution] = useState<ExecutionSelection>(EMPTY_EXECUTION_SELECTION);
+  const launchExecution = useLaunchExecution(execution);
+  const canSubmit = hasText(name) && launchExecution.canLaunch && !selection.isFixPending;
 
   function submit(): void {
-    if (!canSubmit || agents.choice === null) return;
+    if (!canSubmit) return;
     const request: RequestFixRequest = {
       comment_ids: [...selection.selectedIds],
       name: name.trim(),
-      ...agentChoiceToRequest(agents.choice),
-      model,
+      ...launchExecution.request,
     };
     selection.requestFix(request, () => setOpen(false));
   }
@@ -90,12 +79,10 @@ export function ReviewFixStepDialog({ selection, disabled }: ReviewFixStepDialog
               />
             </FieldControl>
           </Field>
-          <LaunchAgentModelFields
-            agents={agents}
-            model={model}
-            onAgentChoice={setAgentChoice}
-            onModelChange={setModel}
-            modelAriaLabel="Fix step model"
+          <LaunchExecutionPicker
+            execution={launchExecution}
+            onChange={setExecution}
+            label="Fix step"
           />
         </DialogBody>
         <IssueFormFooter

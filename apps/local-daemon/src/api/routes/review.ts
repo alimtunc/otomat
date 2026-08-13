@@ -80,7 +80,7 @@ export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
         const updated = await deps.review.requestFix(run, {
           commentIds: request.comment_ids,
           selector: appendStepSelector(request),
-          ...(request.model ? { model: request.model } : {}),
+          overrides: { model: request.model, options: request.options },
           ...(request.name ? { name: request.name } : {}),
         });
         return c.json(toRun(updated), 201);
