@@ -4,6 +4,7 @@ import type {
   CompeteGroupState,
   IssueState,
   PullRequestState,
+  ReviewCommentPublicationState,
   ReviewCommentState,
   ReviewState,
   RunContributionState,
@@ -121,6 +122,13 @@ const REVIEW_COMMENT_STATUS: StatusMap<ReviewCommentState> = {
   outdated: { tone: "stale", icon: AlertTriangle, label: "Outdated" },
 };
 
+const REVIEW_COMMENT_PUBLICATION_STATUS: StatusMap<ReviewCommentPublicationState> = {
+  local: { tone: "neutral", icon: MessageSquare, label: "Local" },
+  pending: { tone: "iris", icon: Send, label: "Publishing", live: true },
+  published: { tone: "success", icon: GitPullRequest, label: "Published" },
+  failed: { tone: "danger", icon: TriangleAlert, label: "Publish failed" },
+};
+
 const PR_STATUS: StatusMap<PullRequestState> = {
   draft: { tone: "neutral", icon: GitPullRequestDraft, label: "Draft" },
   open: { tone: "success", icon: GitPullRequest, label: "Open" },
@@ -146,6 +154,7 @@ export const STATUS_REGISTRY: { [K in StatusKind]: StatusMap<KindStatusMap[K]> }
   compete: COMPETE_STATUS,
   review: REVIEW_STATUS,
   reviewComment: REVIEW_COMMENT_STATUS,
+  reviewCommentPublication: REVIEW_COMMENT_PUBLICATION_STATUS,
   pr: PR_STATUS,
   diffFile: DIFF_FILE_STATUS,
 };

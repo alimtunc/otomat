@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { diffSideSchema } from "../diff.js";
+import { reviewCommentDestinationSchema } from "../entities/reviews.js";
 import {
   LINEAR_WRITE_STATES,
   PULL_REQUEST_PUBLICATION_STATES,
@@ -12,8 +14,11 @@ const reportOpenCommentSchema = z
   .object({
     id: z.string(),
     file_path: z.string(),
+    side: diffSideSchema,
+    start_line: z.number().int().positive().nullable(),
     line: z.number().int().nonnegative().nullable(),
     body: z.string(),
+    destination: reviewCommentDestinationSchema,
     evidence: reportEvidenceSchema,
   })
   .strict();

@@ -18,10 +18,18 @@ export function commentRow(overrides: Partial<ReviewCommentRow> = {}): ReviewCom
     id: "c1",
     review_id: "rv1",
     file_path: "src/thing.ts",
+    side: "new",
+    start_line: null,
     line: 12,
     diff_sha: "sha-1",
     body: "Rename this.",
     status: "open",
+    destination: "agent",
+    publication_status: "local",
+    publication_error: null,
+    external_url: null,
+    suggestion: null,
+    suggestion_original: null,
     hunk_snapshot: "@@ -1 +1 @@",
     fix_requested_at: null,
     created_at: "2026-07-05T00:00:00.000Z",
@@ -38,9 +46,13 @@ export function stubReviewService(overrides: Partial<ReviewService> = {}): Revie
       review: null,
       comments: [],
       fixAuthority: { kind: "otomat", reason: "Otomat owns this branch." },
+      destinations: { pr_review: false, reason: "This run has no pull request yet." },
     }),
-    addComment: () => {
+    addComment: async () => {
       throw new Error("addComment stub not configured");
+    },
+    publishComment: async () => {
+      throw new Error("publishComment stub not configured");
     },
     getFileBlobs: () => {
       throw new Error("getFileBlobs stub not configured");

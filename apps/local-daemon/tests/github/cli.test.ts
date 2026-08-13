@@ -491,3 +491,65 @@ describe("GitHub CLI adapter", () => {
     });
   });
 });
+
+describe("createReviewComment", () => {
+  const INPUT = {
+    cwd: "/tmp/wt",
+    repository: "acme/otomat",
+    number: 7,
+    commitSha: "f".repeat(40),
+    path: "notes.md",
+    body: "rename these",
+    side: "RIGHT",
+    line: 4,
+  } as const;
+
+  it("posts the anchor GitHub expects and returns the created comment's url", async () => {
+    const runner = fakeRunner([ok(JSON.stringify({ html_url: "https://gh/pr/7#r1" }))]);
+
+    await expect(
+      createGitHubCli(runner.run).createReviewComment({
+        ...INPUT,
+        startLine: 2,
+        startSide: "RIGHT",
+      }),
+    ).resolves.toEqual({ url: "https://gh/pr/7#r1" });
+
+    const request = runner.requests[0];
+    expect(request?.args).toEqual([
+      "api",
+      "--method",
+      "POST",
+      "repos/acme/otomat/pulls/7/comments",
+      "--input",
+      "-",
+    ]);
+    expect(JSON.parse(request?.stdin ?? "{}")).toEqual({
+      body: "rename these",
+      commit_id: "f".repeat(40),
+      path: "notes.md",
+      side: "RIGHT",
+      line: 4,
+      start_line: 2,
+      start_side: "RIGHT",
+    });
+  });
+
+  it("omits the start fields on a single-line anchor", async () => {
+    const runner = fakeRunner([ok(JSON.stringify({ html_url: "https://gh/pr/7#r1" }))]);
+
+    await createGitHubCli(runner.run).createReviewComment(INPUT);
+
+    expect(JSON.parse(runner.requests[0]?.stdin ?? "{}")).not.toHaveProperty("start_line");
+  });
+
+  it("carries GitHub's own refusal so the reviewer can act on it", async () => {
+    const runner = fakeRunner([
+      { stdout: "", stderr: "gh: HTTP 422 line must be part of the diff", exitCode: 1 },
+    ]);
+
+    await expect(createGitHubCli(runner.run).createReviewComment(INPUT)).rejects.toThrow(
+      /line must be part of the diff/,
+    );
+  });
+});

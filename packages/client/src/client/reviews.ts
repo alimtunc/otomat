@@ -28,6 +28,13 @@ export function createReviewsClient(config: DaemonClientConfig) {
         await postJson(config, `/api/runs/${encodeURIComponent(id)}/review/comments`, request),
       );
     },
+    async publishReviewComment(id: string, commentId: string) {
+      const run = encodeURIComponent(id);
+      const comment = encodeURIComponent(commentId);
+      return reviewCommentContractSchema.parse(
+        await postJson(config, `/api/runs/${run}/review/comments/${comment}/publish`, {}),
+      );
+    },
     async requestFix(id: string, request: RequestFixRequest) {
       return runContractSchema.parse(
         await postJson(config, `/api/runs/${encodeURIComponent(id)}/review/fix`, request),

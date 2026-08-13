@@ -13,11 +13,13 @@ import {
   authStatusFailed,
   parseAuthStatus,
   parsePullRequestJson,
+  parseReviewCommentUrl,
   PR_JSON_FIELDS,
   providerPullRequestSchema,
   toPullRequest,
 } from "./parse.js";
 import { fetchBranch, forcePushWithLease, push, remoteHead, resolveRemote } from "./remote.js";
+import { reviewCommentPayload } from "./review-comment-payload.js";
 import type {
   CommandRunner,
   ForcePushWithLeaseInput,
@@ -28,6 +30,7 @@ import type {
   PullRequestModeInput,
   PullRequestSelector,
   PullRequestUpdateInput,
+  ReviewCommentCreateInput,
 } from "./types.js";
 
 class CommandGitHubCli implements GitHubCli {
@@ -214,6 +217,28 @@ class CommandGitHubCli implements GitHubCli {
       "github_pr_update_failed",
       "GitHub could not update the pull request.",
     );
+  }
+
+  async createReviewComment(input: ReviewCommentCreateInput): Promise<{ url: string }> {
+    const commentResult = await this.run({
+      command: "gh",
+      args: [
+        "api",
+        "--method",
+        "POST",
+        `repos/${input.repository}/pulls/${input.number}/comments`,
+        "--input",
+        "-",
+      ],
+      cwd: input.cwd,
+      stdin: JSON.stringify(reviewCommentPayload(input)),
+    });
+    assertPublicationSucceeded(
+      commentResult,
+      "github_review_comment_failed",
+      "GitHub refused the review comment.",
+    );
+    return { url: parseReviewCommentUrl(commentResult.stdout) };
   }
 }
 

@@ -3,7 +3,12 @@ import { z } from "zod";
 import { CONTEXT_MAX_REVIEW_COMMENTS, CONTEXT_NOTE_MAX_LENGTH } from "../context/limits.js";
 import { contextReferencesSchema } from "../context/reference.js";
 import { RUN_PLAN_STEP_NAME_MAX_LENGTH } from "../plan/limits.js";
-import { reviewCommentContractSchema, reviewContractSchema } from "./entities/reviews.js";
+import { diffSideSchema } from "./diff.js";
+import {
+  reviewCommentContractSchema,
+  reviewCommentDestinationSchema,
+  reviewContractSchema,
+} from "./entities/reviews.js";
 import { executionOptionSelectionsSchema } from "./execution-config.js";
 import { modelSelectionSchema } from "./runtime-model.js";
 
@@ -14,22 +19,62 @@ export const reviewFixAuthoritySchema = z.object({
 });
 export type ReviewFixAuthority = z.infer<typeof reviewFixAuthoritySchema>;
 
+/** `reason` is populated either way: the choice is always explained, never silently disabled. */
+export const reviewDestinationAvailabilitySchema = z.object({
+  pr_review: z.boolean(),
+  reason: z.string(),
+});
+export type ReviewDestinationAvailability = z.infer<typeof reviewDestinationAvailabilitySchema>;
+
 /** A run's review surface: the review row (null before the first comment) plus every comment, newest last. */
 export const reviewDetailSchema = z.object({
   review: reviewContractSchema.nullable(),
   comments: z.array(reviewCommentContractSchema),
   fix_authority: reviewFixAuthoritySchema,
+  destinations: reviewDestinationAvailabilitySchema,
 });
 export type ReviewDetail = z.infer<typeof reviewDetailSchema>;
 
 /** Create a comment pinned to the diff the reviewer is looking at; the daemon verifies the anchor. */
-export const createReviewCommentRequestSchema = z.object({
-  file_path: z.string().min(1),
-  line: z.number().int().nonnegative().nullable(),
-  diff_sha: z.string().min(1),
-  body: z.string().min(1),
-});
+export const createReviewCommentRequestSchema = z
+  .object({
+    file_path: z.string().min(1),
+    side: diffSideSchema.default("new"),
+    /** First line of a multi-line anchor; absent comments on `line` alone. */
+    start_line: z.number().int().positive().nullish(),
+    line: z.number().int().nonnegative().nullable(),
+    diff_sha: z.string().min(1),
+    body: z.string(),
+    destination: reviewCommentDestinationSchema.default("agent"),
+    /** Replacement text for the anchored range, verbatim and unindented by the composer. */
+    suggestion: z.string().nullish(),
+  })
+  .strict()
+  .refine((value) => value.body.trim().length > 0 || typeof value.suggestion === "string", {
+    message: "Write a comment or propose a suggestion",
+  })
+  .refine(
+    (value) => value.start_line == null || (value.line !== null && value.start_line <= value.line),
+    {
+      message: "A range starts at or before the line it ends on",
+    },
+  )
+  .refine((value) => typeof value.suggestion !== "string" || value.line !== null, {
+    message: "A suggestion needs a line range, not a whole-file anchor",
+  });
 export type CreateReviewCommentRequest = z.infer<typeof createReviewCommentRequestSchema>;
+
+/** Refusals whose message the reviewer must read verbatim to act on them. */
+export const REVIEW_COMMENT_ERRORS = [
+  "comment_range_invalid",
+  "comment_destination_unavailable",
+  "comment_publication_failed",
+] as const;
+export const reviewCommentErrorSchema = z.object({
+  error: z.enum(REVIEW_COMMENT_ERRORS),
+  message: z.string(),
+});
+export type ReviewCommentError = z.infer<typeof reviewCommentErrorSchema>;
 
 /** Ask an agent to fix the selected open comments as a step appended to the run's plan; the agent is chosen explicitly, never inherited. */
 export const requestFixRequestSchema = z

@@ -26,6 +26,7 @@ const REVIEW: ReviewDetail = {
   review: null,
   comments: [],
   fix_authority: { kind: "otomat", reason: "Otomat owns this branch." },
+  destinations: { pr_review: false, reason: "This run has no pull request yet." },
 };
 
 const fresh = (data: unknown) => ({
@@ -51,6 +52,7 @@ vi.mock("@web/api/reviews/queries", () => ({
 
 vi.mock("@web/api/reviews/mutations", () => ({
   useAddReviewComment: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  usePublishReviewComment: () => ({ mutate: vi.fn(), isPending: false, variables: undefined }),
   useRequestFix: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 

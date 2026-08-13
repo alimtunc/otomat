@@ -35,10 +35,34 @@ export class FileTooLargeError extends Error {
   }
 }
 
-/** The fix selection contains unknown or non-open comments. */
+/** The fix selection contains unknown, non-open or non-agent comments. */
 export class CommentsNotFixableError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "CommentsNotFixableError";
+  }
+}
+
+/** The selected lines cannot carry this comment; the message is the reviewer-facing reason. */
+export class CommentRangeInvalidError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CommentRangeInvalidError";
+  }
+}
+
+/** The comment asks for a destination this run cannot serve, such as a PR review with no pull request. */
+export class CommentDestinationUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CommentDestinationUnavailableError";
+  }
+}
+
+/** GitHub refused the comment; the attempt is recorded as `failed` and stays retryable. */
+export class CommentPublicationFailedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CommentPublicationFailedError";
   }
 }

@@ -3,13 +3,25 @@ import type {
   ContextReference,
   ContextReviewComment,
   CreateReviewCommentRequest,
+  DiffSide,
   ExecutionOverrides,
+  ReviewDestinationAvailability,
   ReviewFixAuthority,
 } from "@otomat/domain";
 
 import type { AgentConfigSelector } from "#agents";
 import type { CanonicalDiff, RepositoryResolver } from "#git";
 import type { AppendStepInput, ReconcileClassification } from "#supervisor";
+
+/** One comment as the provider needs it; `suggestion` is serialized by the provider, not by review. */
+export interface PullRequestCommentInput {
+  filePath: string;
+  side: DiffSide;
+  startLine: number | null;
+  line: number | null;
+  body: string;
+  suggestion: string | null;
+}
 
 export interface ReviewServiceConfig {
   db: Db;
@@ -19,6 +31,8 @@ export interface ReviewServiceConfig {
   repositories: RepositoryResolver;
   /** The supervisor's append capability; late-bound in the composition root because each side needs the other. */
   appendRunStep(runId: string, input: AppendStepInput): Promise<RunRow>;
+  /** Rejects with the reason review stores on the comment and shows. */
+  publishReviewComment(runId: string, input: PullRequestCommentInput): Promise<{ url: string }>;
 }
 
 /** Shared handles every review operation threads through — the module's equivalent of SupervisorState. */
@@ -34,6 +48,7 @@ export interface ReviewDetailResult {
   review: ReviewRow | null;
   comments: ReviewCommentRow[];
   fixAuthority: ReviewFixAuthority;
+  destinations: ReviewDestinationAvailability;
 }
 
 export interface FileBlobsRequest {
@@ -73,8 +88,13 @@ export interface ReviewService {
   /** Defaults to the run's own worktree; a compete candidate names its step id as owner. */
   getWorktreeDiff(run: Pick<RunRow, "id">, owner?: string): RunDiffResult;
   getReviewDetail(runId: string): ReviewDetailResult;
-  /** Verifies the anchor against the live diff and captures the hunk snapshot before persisting. */
-  addComment(run: Pick<RunRow, "id">, request: CreateReviewCommentRequest): ReviewCommentRow;
+  /** A `pr_review` comment is published on create; a GitHub refusal comes back on it, never as a failed create. */
+  addComment(
+    run: Pick<RunRow, "id">,
+    request: CreateReviewCommentRequest,
+  ): Promise<ReviewCommentRow>;
+  /** The same call retries a failed publication. */
+  publishComment(run: Pick<RunRow, "id">, commentId: string): Promise<ReviewCommentRow>;
   getFileBlobs(run: Pick<RunRow, "id">, request: FileBlobsRequest): FileBlobsResult;
   /** The selected open comments become one appended fix step; refused while a turn is in flight. */
   requestFix(run: RunRow, request: FixRequest): Promise<RunRow>;

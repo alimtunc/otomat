@@ -1,10 +1,16 @@
-import type { ReviewCommentContract } from "@otomat/domain";
+import type { DiffSide, ReviewCommentContract } from "@otomat/domain";
 
-type Anchor = Pick<ReviewCommentContract, "file_path" | "line">;
+type Anchor = Pick<ReviewCommentContract, "file_path" | "side" | "start_line" | "line">;
+
+export function sideLabel(side: DiffSide): string {
+  return side === "old" ? "base" : "head";
+}
 
 export function commentAnchorLabel(comment: Anchor): string {
   if (comment.line === null) return `${comment.file_path} · whole file`;
-  return `${comment.file_path}:${comment.line}`;
+  const lines =
+    comment.start_line === null ? comment.line : `${comment.start_line}-${comment.line}`;
+  return `${comment.file_path}:${lines} · ${sideLabel(comment.side)}`;
 }
 
 export function reviewCommentDomId(commentId: string): string {

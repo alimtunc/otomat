@@ -57,8 +57,11 @@ const REPORT = {
       {
         id: "comment-1",
         file_path: "src/report.ts",
+        side: "new",
+        start_line: 6,
         line: 8,
         body: "Clarify the name.",
+        destination: "agent",
         evidence: [{ source: "review", comment_id: "comment-1" }],
       },
     ],

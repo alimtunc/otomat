@@ -1,17 +1,29 @@
 import { appendFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { getReviewComment, getReviewForRun, getRun } from "@otomat/db";
+import {
+  getPullRequestForRun,
+  getReviewComment,
+  getReviewForRun,
+  getRun,
+  insertPullRequest,
+  type ReviewCommentRow,
+  type RunRow,
+} from "@otomat/db";
+import type { CreateReviewCommentRequest } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
 import { createRepositoryResolver, type GitWorktreeService } from "#git";
 import {
+  CommentDestinationUnavailableError,
+  CommentRangeInvalidError,
   createReviewService,
   DiffUnavailableError,
   FileNotInDiffError,
   ReviewAnchorStaleError,
   CommentsNotFixableError,
+  type PullRequestCommentInput,
   type ReviewService,
   type ReviewServiceConfig,
 } from "#review";
@@ -29,6 +41,8 @@ let worktrees: GitWorktreeService;
 let review: ReviewService;
 let reviewConfig: ReviewServiceConfig;
 let appended: AppendStepInput[] = [];
+let published: PullRequestCommentInput[] = [];
+let publishFailure: Error | null = null;
 let worktreePath = "";
 
 beforeEach(() => {
@@ -41,6 +55,8 @@ beforeEach(() => {
   if (!binding) throw new Error("repo-1 binding missing");
   worktrees = binding.service;
   appended = [];
+  published = [];
+  publishFailure = null;
   reviewConfig = {
     db: fix.db,
     dataDir: fix.dataDir,
@@ -50,6 +66,11 @@ beforeEach(() => {
       const row = getRun(fix.db, runId);
       if (!row) throw new Error(`run ${runId} missing`);
       return row;
+    },
+    publishReviewComment: async (_runId, input) => {
+      published.push(input);
+      if (publishFailure !== null) throw publishFailure;
+      return { url: "https://github.com/acme/app/pull/7#discussion_r1" };
     },
   };
   review = createReviewService(reviewConfig);
@@ -78,6 +99,15 @@ function run() {
   return row;
 }
 
+/** Every field the daemon needs; a test names only the anchor it is about. */
+function addComment(
+  target: RunRow,
+  input: Omit<CreateReviewCommentRequest, "side" | "destination"> &
+    Partial<Pick<CreateReviewCommentRequest, "side" | "destination">>,
+): Promise<ReviewCommentRow> {
+  return review.addComment(target, { side: "new", destination: "agent", ...input });
+}
+
 function currentAnchor() {
   const diff = review.getWorktreeDiff(run()).diff;
   const file = diff?.files.find((f) => f.path === "notes.md");
@@ -101,9 +131,9 @@ it("computes the real git diff for the run's worktree and null without one", () 
   expect(bare && review.getWorktreeDiff(bare).diff).toBeNull();
 });
 
-it("pins a comment to the live diff, snapshots its hunk, and opens the review", () => {
+it("pins a comment to the live diff, snapshots its hunk, and opens the review", async () => {
   const anchor = currentAnchor();
-  const comment = review.addComment(run(), {
+  const comment = await addComment(run(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: anchor.sha,
@@ -121,15 +151,15 @@ it("pins a comment to the live diff, snapshots its hunk, and opens the review", 
   expect(created?.payload["comment_id"]).toBe(comment.id);
 });
 
-it("rejects a stale anchor and a run without a diff — no silent re-anchoring", () => {
-  expect(() =>
-    review.addComment(run(), {
+it("rejects a stale anchor and a run without a diff — no silent re-anchoring", async () => {
+  await expect(
+    addComment(run(), {
       file_path: "notes.md",
       line: 1,
       diff_sha: "not-the-current-sha",
       body: "stale",
     }),
-  ).toThrow(ReviewAnchorStaleError);
+  ).rejects.toThrow(ReviewAnchorStaleError);
 
   seedRun(fix.db, {
     runId: "r-bare2",
@@ -139,14 +169,15 @@ it("rejects a stale anchor and a run without a diff — no silent re-anchoring",
     sessionStatus: "terminated",
   });
   const bare = getRun(fix.db, "r-bare2");
-  expect(
-    () => bare && review.addComment(bare, { file_path: "x", line: 0, diff_sha: "s", body: "b" }),
-  ).toThrow(DiffUnavailableError);
+  if (!bare) throw new Error("seeded bare run missing");
+  await expect(
+    addComment(bare, { file_path: "x", line: 0, diff_sha: "s", body: "b" }),
+  ).rejects.toThrow(DiffUnavailableError);
 });
 
-it("pins a whole-file comment without capturing a hunk snapshot", () => {
+it("pins a whole-file comment without capturing a hunk snapshot", async () => {
   const anchor = currentAnchor();
-  const comment = review.addComment(run(), {
+  const comment = await addComment(run(), {
     file_path: "notes.md",
     line: null,
     diff_sha: anchor.sha,
@@ -200,7 +231,7 @@ it("grants fix authority only while Otomat still holds the run's worktree", () =
 
 it("appends one fix step carrying comment + original hunk + current file", async () => {
   const anchor = currentAnchor();
-  const comment = review.addComment(run(), {
+  const comment = await addComment(run(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: anchor.sha,
@@ -227,7 +258,11 @@ it("appends one fix step carrying comment + original hunk + current file", async
       id: comment.id,
       file_path: "notes.md",
       line: 2,
+      start_line: null,
+      side: "new",
       body: "beta should be delta",
+      suggestion: null,
+      suggestion_original: null,
       // The diff the comment was made against is frozen with it, named by its sha.
       diff_sha: anchor.sha,
       hunk: expect.stringContaining("+beta"),
@@ -255,7 +290,7 @@ it("keeps a symlinked path's fix context to the link target text, never the host
 
   const anchor = review.getWorktreeDiff(run()).diff?.files.find((f) => f.path === "leak");
   if (!anchor) throw new Error("expected leak in the diff");
-  const comment = review.addComment(run(), {
+  const comment = await addComment(run(), {
     file_path: "leak",
     line: null,
     diff_sha: anchor.sha,
@@ -276,7 +311,7 @@ it("keeps a symlinked path's fix context to the link target text, never the host
 
 it("stamps fix-requested comments and drives the review to changes_requested", async () => {
   const anchor = currentAnchor();
-  const comment = review.addComment(run(), {
+  const comment = await addComment(run(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: anchor.sha,
@@ -296,7 +331,7 @@ it("stamps fix-requested comments and drives the review to changes_requested", a
 
 it("stamps nothing when the step append fails, so the request can be retried", async () => {
   const anchor = currentAnchor();
-  const comment = review.addComment(run(), {
+  const comment = await addComment(run(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: anchor.sha,
@@ -325,13 +360,13 @@ it("stamps nothing when the step append fails, so the request can be retried", a
 
 it("on a completed settle: emits git.diff_updated, marks fixed comments addressed and moved anchors outdated", async () => {
   const anchor = currentAnchor();
-  const requested = review.addComment(run(), {
+  const requested = await addComment(run(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: anchor.sha,
     body: "fix me",
   });
-  const bystander = review.addComment(run(), {
+  const bystander = await addComment(run(), {
     file_path: "notes.md",
     line: 3,
     diff_sha: anchor.sha,
@@ -365,9 +400,9 @@ it("on a completed settle: emits git.diff_updated, marks fixed comments addresse
   expect(getReviewComment(fix.db, requested.id)?.hunk_snapshot).toContain("+beta");
 });
 
-it("keeps untouched anchors open across a completed settle", () => {
+it("keeps untouched anchors open across a completed settle", async () => {
   const anchor = currentAnchor();
-  const comment = review.addComment(run(), {
+  const comment = await addComment(run(), {
     file_path: "notes.md",
     line: 1,
     diff_sha: anchor.sha,
@@ -381,7 +416,7 @@ it("keeps untouched anchors open across a completed settle", () => {
 
 it("releases pending fix requests when the turn does not complete", async () => {
   const anchor = currentAnchor();
-  const comment = review.addComment(run(), {
+  const comment = await addComment(run(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: anchor.sha,
@@ -400,4 +435,246 @@ it("releases pending fix requests when the turn does not complete", async () => 
   const row = getReviewComment(fix.db, comment.id);
   expect(row?.status).toBe("open");
   expect(row?.fix_requested_at).toBeNull();
+});
+
+function openPullRequest(): void {
+  insertPullRequest(fix.db, {
+    id: "pr-review",
+    run_id: RUN_ID,
+    number: 7,
+    url: "https://github.com/acme/app/pull/7",
+    status: "open",
+    publication_status: "created",
+    title: "Notes",
+    head_ref: BRANCH,
+    published_head_sha: "f".repeat(40),
+  });
+}
+
+it("anchors a multi-line range and snapshots the hunk it spans", async () => {
+  const anchor = currentAnchor();
+  const ranged = await addComment(run(), {
+    file_path: "notes.md",
+    start_line: 1,
+    line: 3,
+    diff_sha: anchor.sha,
+    body: "these three lines",
+  });
+
+  expect(ranged.start_line).toBe(1);
+  expect(ranged.line).toBe(3);
+  expect(ranged.hunk_snapshot).toContain("+gamma");
+});
+
+it("captures a suggestion with the exact lines it replaces", async () => {
+  const anchor = currentAnchor();
+  const suggested = await addComment(run(), {
+    file_path: "notes.md",
+    start_line: 2,
+    line: 3,
+    diff_sha: anchor.sha,
+    body: "",
+    suggestion: "delta\nepsilon",
+  });
+
+  expect(suggested.suggestion).toBe("delta\nepsilon");
+  expect(suggested.suggestion_original).toBe("beta\ngamma");
+});
+
+it("refuses a suggestion the patch cannot back, and says why", async () => {
+  const anchor = currentAnchor();
+  await expect(
+    addComment(run(), {
+      file_path: "notes.md",
+      side: "old",
+      line: 1,
+      diff_sha: anchor.sha,
+      body: "",
+      suggestion: "delta",
+    }),
+  ).rejects.toThrow(CommentRangeInvalidError);
+
+  await expect(
+    addComment(run(), {
+      file_path: "notes.md",
+      start_line: 3,
+      line: 40,
+      diff_sha: anchor.sha,
+      body: "",
+      suggestion: "delta",
+    }),
+  ).rejects.toThrow(/not all inside one hunk/);
+});
+
+it("offers the PR destination only once a pull request carries a published head", async () => {
+  expect(review.getReviewDetail(RUN_ID).destinations.pr_review).toBe(false);
+  await expect(
+    addComment(run(), {
+      file_path: "notes.md",
+      line: 2,
+      diff_sha: currentAnchor().sha,
+      destination: "pr_review",
+      body: "on the PR",
+    }),
+  ).rejects.toThrow(CommentDestinationUnavailableError);
+
+  openPullRequest();
+  const destinations = review.getReviewDetail(RUN_ID).destinations;
+  expect(destinations.pr_review).toBe(true);
+  expect(destinations.reason).toContain("#7");
+});
+
+it("refuses a whole-file anchor for the pull-request destination", async () => {
+  openPullRequest();
+  await expect(
+    addComment(run(), {
+      file_path: "notes.md",
+      line: null,
+      diff_sha: currentAnchor().sha,
+      destination: "pr_review",
+      body: "whole file",
+    }),
+  ).rejects.toThrow(CommentRangeInvalidError);
+});
+
+it("publishes a chosen PR-review comment on creation and refuses to publish it twice", async () => {
+  openPullRequest();
+  const created = await addComment(run(), {
+    file_path: "notes.md",
+    start_line: 1,
+    line: 2,
+    diff_sha: currentAnchor().sha,
+    destination: "pr_review",
+    body: "rename these",
+    suggestion: "delta\nepsilon",
+  });
+
+  expect(created.publication_status).toBe("published");
+  expect(created.external_url).toContain("discussion_r1");
+  expect(published[0]).toEqual({
+    filePath: "notes.md",
+    side: "new",
+    startLine: 1,
+    line: 2,
+    body: "rename these",
+    suggestion: "delta\nepsilon",
+  });
+  expect(readRunEvents(fix.db, RUN_ID).some((e) => e.type === "review.comment_published")).toBe(
+    true,
+  );
+
+  await expect(review.publishComment(run(), created.id)).rejects.toThrow(
+    CommentDestinationUnavailableError,
+  );
+});
+
+it("keeps a comment GitHub refused, with its reason, and publishes it on retry", async () => {
+  openPullRequest();
+  publishFailure = new Error("GitHub refused the review comment. (HTTP 422)");
+
+  const created = await addComment(run(), {
+    file_path: "notes.md",
+    line: 2,
+    diff_sha: currentAnchor().sha,
+    destination: "pr_review",
+    body: "on the PR",
+  });
+
+  // The comment is written either way: a refused publication is never a failed create.
+  expect(created.publication_status).toBe("failed");
+  expect(created.publication_error).toContain("HTTP 422");
+  expect(getReviewComment(fix.db, created.id)?.body).toBe("on the PR");
+
+  publishFailure = null;
+  const retried = await review.publishComment(run(), created.id);
+  expect(retried.publication_status).toBe("published");
+  expect(retried.publication_error).toBeNull();
+});
+
+it("refuses to retry a publication whose diff moved under it", async () => {
+  openPullRequest();
+  publishFailure = new Error("GitHub was unreachable.");
+  const created = await addComment(run(), {
+    file_path: "notes.md",
+    line: 2,
+    diff_sha: currentAnchor().sha,
+    destination: "pr_review",
+    body: "on the PR",
+  });
+  published.length = 0;
+  publishFailure = null;
+  appendFileSync(join(worktreePath, "notes.md"), "delta\n");
+
+  await expect(review.publishComment(run(), created.id)).rejects.toThrow(ReviewAnchorStaleError);
+  expect(published).toEqual([]);
+});
+
+it("never turns a PR-review comment into an agent instruction", async () => {
+  openPullRequest();
+  const created = await addComment(run(), {
+    file_path: "notes.md",
+    line: 2,
+    diff_sha: currentAnchor().sha,
+    destination: "pr_review",
+    body: "on the PR",
+  });
+
+  await expect(
+    review.requestFix(run(), {
+      commentIds: [created.id],
+      selector: FIX_AGENT,
+      overrides: {},
+      note: null,
+      references: [],
+    }),
+  ).rejects.toThrow(CommentsNotFixableError);
+  expect(appended).toEqual([]);
+});
+
+it("freezes the global instruction beside the range and suggestion it constrains", async () => {
+  const anchor = currentAnchor();
+  const created = await addComment(run(), {
+    file_path: "notes.md",
+    start_line: 2,
+    line: 3,
+    diff_sha: anchor.sha,
+    body: "rename these",
+    suggestion: "delta\nepsilon",
+  });
+
+  await review.requestFix(run(), {
+    commentIds: [created.id],
+    selector: FIX_AGENT,
+    overrides: {},
+    note: "Keep the file ASCII-only.",
+    references: [],
+  });
+
+  const step = appended[0];
+  // The instruction is the step's own note, never merged into a comment body.
+  expect(step?.note).toBe("Keep the file ASCII-only.");
+  expect(step?.reviewComments?.[0]).toMatchObject({
+    body: "rename these",
+    start_line: 2,
+    line: 3,
+    side: "new",
+    suggestion: "delta\nepsilon",
+    suggestion_original: "beta\ngamma",
+  });
+});
+
+it("keeps a published comment's destination and state through the review detail read", async () => {
+  openPullRequest();
+  const created = await addComment(run(), {
+    file_path: "notes.md",
+    line: 2,
+    diff_sha: currentAnchor().sha,
+    destination: "pr_review",
+    body: "on the PR",
+  });
+
+  const stored = review.getReviewDetail(RUN_ID).comments.find((row) => row.id === created.id);
+  expect(stored?.destination).toBe("pr_review");
+  expect(stored?.publication_status).toBe("published");
+  expect(getPullRequestForRun(fix.db, RUN_ID)?.number).toBe(7);
 });

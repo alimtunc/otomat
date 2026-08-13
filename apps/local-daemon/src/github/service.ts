@@ -5,6 +5,7 @@ import { createDeviceAuthorization } from "./device-flow.js";
 import { buildPullRequestDraftInput } from "./draft.js";
 import { GitHubPublicationError } from "./errors.js";
 import { createPullRequestPublisher } from "./publication/index.js";
+import { publishReviewComment } from "./review-comment.js";
 import type { GitHubService, GitHubServiceConfig } from "./types.js";
 
 export { GitHubPublicationError } from "./errors.js";
@@ -18,6 +19,7 @@ export function createGitHubService(config: GitHubServiceConfig): GitHubService 
     getPullRequest: (runId) => publisher.get(runId),
     publish: (run, request) => publisher.publish(run, request),
     pushCommits: (runId, request) => publisher.pushCommits(runId, request),
+    publishReviewComment: (runId, input) => publishReviewComment(config, runId, input),
     draftPullRequest: (run) => {
       const drafter = config.drafter;
       if (drafter === undefined) {

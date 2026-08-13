@@ -70,7 +70,8 @@ it("gives an appended step the same frozen default as the launch", async () => {
 
   await supervisor.appendStep(run.id, {
     name: "Follow up",
-    prompt: "keep going",
+    note: "keep going",
+    references: [],
     selector: { kind: "runtime", runtimeId: "fake" },
     overrides: { model: { kind: "model", id: "fake-thorough" } },
     dependsOn: [],

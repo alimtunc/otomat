@@ -176,3 +176,16 @@ export function selectRemote(candidates: GitHubRemote[]): GitHubRemote {
     "More than one GitHub remote is available; configure origin explicitly.",
   );
 }
+
+const createdCommentSchema = z.object({ html_url: z.string() });
+
+export function parseReviewCommentUrl(stdout: string): string {
+  try {
+    return createdCommentSchema.parse(JSON.parse(stdout)).html_url;
+  } catch (error) {
+    throw new GitHubCliError(
+      "github_review_comment_unreadable",
+      `GitHub accepted the review comment but its answer could not be read: ${String(error)}`,
+    );
+  }
+}

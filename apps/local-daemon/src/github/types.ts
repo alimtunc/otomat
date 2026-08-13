@@ -10,6 +10,7 @@ import type {
 } from "@otomat/domain";
 
 import type { RepositoryResolver } from "#git";
+import type { PullRequestCommentInput } from "#review";
 
 export interface PullRequestDraftInput {
   /** Runtime id of the run's own agent; only CLIs with a non-interactive print mode can draft. */
@@ -73,6 +74,7 @@ export interface GitHubService {
   /** Never commits: only commits the workspace already holds are published. */
   pushCommits(runId: string, request: PushPullRequestRequest): Promise<PullRequestView>;
   draftPullRequest(run: RunRow): Promise<PullRequestDraft>;
+  publishReviewComment(runId: string, input: PullRequestCommentInput): Promise<{ url: string }>;
 }
 
 export interface GitHubRemote {
@@ -123,6 +125,24 @@ export interface PullRequestModeInput {
   draft: boolean;
 }
 
+/** GitHub's own naming for the two sides of a pull-request diff. */
+export type ReviewCommentSide = "LEFT" | "RIGHT";
+
+export interface ReviewCommentCreateInput {
+  cwd: string;
+  repository: string;
+  number: number;
+  /** The commit the comment anchors to; GitHub rejects a sha its diff does not carry. */
+  commitSha: string;
+  path: string;
+  body: string;
+  side: ReviewCommentSide;
+  line: number;
+  /** First line of a multi-line anchor; absent comments on `line` alone. */
+  startLine?: number;
+  startSide?: ReviewCommentSide;
+}
+
 export interface ForcePushWithLeaseInput {
   cwd: string;
   remote: string;
@@ -151,4 +171,6 @@ export interface GitHubCli {
   updatePullRequest(input: PullRequestUpdateInput): Promise<void>;
   /** Flips the draft flag of an existing pull request. Never merges and never touches branch protections. */
   setPullRequestMode(input: PullRequestModeInput): Promise<void>;
+  /** GitHub's refusal reaches the reviewer verbatim. */
+  createReviewComment(input: ReviewCommentCreateInput): Promise<{ url: string }>;
 }

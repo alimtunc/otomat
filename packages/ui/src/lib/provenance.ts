@@ -61,6 +61,7 @@ export const EVENT_GLYPH: Record<EventType, EventGlyphDescriptor> = {
   "git.diff_updated": { icon: FileDiff, tone: "stale" },
   "review.comment_created": { icon: MessageSquare, tone: "review" },
   "review.comment_resolved": { icon: CheckCircle2, tone: "success" },
+  "review.comment_published": { icon: GitPullRequest, tone: "review" },
   "pr.created": { icon: GitPullRequest, tone: "success" },
   "pr.updated": { icon: GitPullRequest, tone: "neutral" },
   "linear.lifecycle_synced": { icon: Flag, tone: "success" },

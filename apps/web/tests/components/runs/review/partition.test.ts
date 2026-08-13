@@ -1,21 +1,8 @@
-import type { ReviewCommentContract, RunDiffContract } from "@otomat/domain";
+import type { RunDiffContract } from "@otomat/domain";
 import { partitionComments } from "@web/components/runs/review/partition";
 import { expect, it } from "vitest";
 
-function comment(overrides: Partial<ReviewCommentContract>): ReviewCommentContract {
-  return {
-    id: "c1",
-    review_id: "rv1",
-    file_path: "src/a.ts",
-    line: 3,
-    diff_sha: "sha-a",
-    body: "Fix this.",
-    status: "open",
-    hunk_snapshot: "@@ -1 +1 @@",
-    fix_requested_at: null,
-    ...overrides,
-  };
-}
+import { reviewComment } from "#support/review-comment";
 
 const DIFF: RunDiffContract = {
   base: "base-sha",
@@ -37,7 +24,7 @@ const DIFF: RunDiffContract = {
 };
 
 it("anchors an open comment whose (file, diff_sha) matches the live diff", () => {
-  const { byLine, detached, anchoredIds } = partitionComments(DIFF, [comment({ id: "c1" })]);
+  const { byLine, detached, anchoredIds } = partitionComments(DIFF, [reviewComment({ id: "c1" })]);
   expect(
     byLine
       .get("src/a.ts")
@@ -49,7 +36,10 @@ it("anchors an open comment whose (file, diff_sha) matches the live diff", () =>
 });
 
 it("groups multiple comments on the same line in creation order", () => {
-  const { byLine } = partitionComments(DIFF, [comment({ id: "c1" }), comment({ id: "c2" })]);
+  const { byLine } = partitionComments(DIFF, [
+    reviewComment({ id: "c1" }),
+    reviewComment({ id: "c2" }),
+  ]);
   expect(
     byLine
       .get("src/a.ts")
@@ -59,14 +49,14 @@ it("groups multiple comments on the same line in creation order", () => {
 });
 
 it("keeps a whole-file comment out of the line map and against its file", () => {
-  const { byFile, byLine } = partitionComments(DIFF, [comment({ id: "whole", line: null })]);
+  const { byFile, byLine } = partitionComments(DIFF, [reviewComment({ id: "whole", line: null })]);
   expect(byFile.get("src/a.ts")?.map((c) => c.id)).toEqual(["whole"]);
   expect(byLine.size).toBe(0);
 });
 
 it("detaches comments whose anchor left the diff — never migrates them", () => {
-  const stale = comment({ id: "stale", diff_sha: "sha-old" });
-  const otherFile = comment({ id: "other", file_path: "src/gone.ts" });
+  const stale = reviewComment({ id: "stale", diff_sha: "sha-old" });
+  const otherFile = reviewComment({ id: "other", file_path: "src/gone.ts" });
   const { byLine, detached, anchoredIds } = partitionComments(DIFF, [stale, otherFile]);
   expect(byLine.size).toBe(0);
   expect(detached.map((c) => c.id)).toEqual(["stale", "other"]);
@@ -74,8 +64,8 @@ it("detaches comments whose anchor left the diff — never migrates them", () =>
 });
 
 it("detaches addressed and outdated comments even when their sha still matches", () => {
-  const addressed = comment({ id: "done", status: "addressed" });
-  const outdated = comment({ id: "old", status: "outdated" });
+  const addressed = reviewComment({ id: "done", status: "addressed" });
+  const outdated = reviewComment({ id: "old", status: "outdated" });
   const { byLine, detached } = partitionComments(DIFF, [addressed, outdated]);
   expect(byLine.size).toBe(0);
   expect(detached.map((c) => c.id)).toEqual(["done", "old"]);
@@ -83,15 +73,34 @@ it("detaches addressed and outdated comments even when their sha still matches",
 
 it("names the files an unresolved comment protects from Hide reviewed", () => {
   const { commentedPaths } = partitionComments(DIFF, [
-    comment({ id: "line" }),
-    comment({ id: "whole", line: null }),
-    comment({ id: "stale", file_path: "src/gone.ts" }),
+    reviewComment({ id: "line" }),
+    reviewComment({ id: "whole", line: null }),
+    reviewComment({ id: "stale", file_path: "src/gone.ts" }),
   ]);
   expect([...commentedPaths]).toEqual(["src/a.ts"]);
 });
 
 it("detaches everything when the run has no diff", () => {
-  const { byLine, detached } = partitionComments(null, [comment({})]);
+  const { byLine, detached } = partitionComments(null, [reviewComment({})]);
   expect(byLine.size).toBe(0);
   expect(detached).toHaveLength(1);
+});
+
+it("counts every comment of a file still in the diff, stale ones included", () => {
+  const { countsByPath } = partitionComments(DIFF, [
+    reviewComment({ id: "open" }),
+    reviewComment({ id: "stale", diff_sha: "sha-old" }),
+    reviewComment({ id: "done", status: "addressed" }),
+    reviewComment({ id: "on-pr", destination: "pr_review" }),
+    reviewComment({ id: "elsewhere", file_path: "src/gone.ts" }),
+  ]);
+
+  expect(countsByPath.get("src/a.ts")).toEqual({
+    open: 3,
+    addressed: 1,
+    agent: 3,
+    prReview: 1,
+    stale: 1,
+  });
+  expect(countsByPath.has("src/gone.ts")).toBe(false);
 });

@@ -1,4 +1,3 @@
-import type { ReviewCommentContract } from "@otomat/domain";
 import {
   commentAnchorLabel,
   commentFallbackReason,
@@ -6,25 +5,12 @@ import {
 import { filterReviewComments } from "@web/components/runs/review/comment/filter";
 import { describe, expect, it } from "vitest";
 
-function comment(overrides: Partial<ReviewCommentContract>): ReviewCommentContract {
-  return {
-    id: "c1",
-    review_id: "rv1",
-    file_path: "src/a.ts",
-    line: 3,
-    diff_sha: "sha-a",
-    body: "Fix this.",
-    status: "open",
-    hunk_snapshot: "",
-    fix_requested_at: null,
-    ...overrides,
-  };
-}
+import { reviewComment } from "#support/review-comment";
 
 const COMMENTS = [
-  comment({ id: "open" }),
-  comment({ id: "done", status: "addressed" }),
-  comment({ id: "moved", status: "outdated" }),
+  reviewComment({ id: "open" }),
+  reviewComment({ id: "done", status: "addressed" }),
+  reviewComment({ id: "moved", status: "outdated" }),
 ];
 
 describe("comment state filter", () => {
@@ -45,13 +31,17 @@ describe("comment state filter", () => {
 
 describe("comment anchors", () => {
   it("names a line anchor and a whole-file anchor differently", () => {
-    expect(commentAnchorLabel(comment({ line: 12 }))).toBe("src/a.ts:12");
-    expect(commentAnchorLabel(comment({ line: null }))).toBe("src/a.ts · whole file");
+    expect(commentAnchorLabel(reviewComment({ line: 12 }))).toBe("src/a.ts:12 · head");
+    expect(commentAnchorLabel(reviewComment({ start_line: 9, line: 12 }))).toBe(
+      "src/a.ts:9-12 · head",
+    );
+    expect(commentAnchorLabel(reviewComment({ side: "old", line: 12 }))).toBe("src/a.ts:12 · base");
+    expect(commentAnchorLabel(reviewComment({ line: null }))).toBe("src/a.ts · whole file");
   });
 
   it("states why a comment is shown away from its anchor", () => {
-    expect(commentFallbackReason(comment({ status: "addressed" }))).toContain("Addressed");
-    expect(commentFallbackReason(comment({ status: "outdated" }))).toContain("diff moved");
-    expect(commentFallbackReason(comment({ status: "open" }))).toContain("earlier version");
+    expect(commentFallbackReason(reviewComment({ status: "addressed" }))).toContain("Addressed");
+    expect(commentFallbackReason(reviewComment({ status: "outdated" }))).toContain("diff moved");
+    expect(commentFallbackReason(reviewComment({ status: "open" }))).toContain("earlier version");
   });
 });

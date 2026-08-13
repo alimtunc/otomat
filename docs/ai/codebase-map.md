@@ -20,7 +20,7 @@ apps/
       git/             # worktree/branch lifecycle + diff      (OTO-8)
       data-safety/     # startup diagnostics + restore maintenance mode (OTO-29)
       diagnostics/     # correlation-id request log + bounded redacted excerpt   (OTO-52)
-      review/          # review slice: diff snapshot + comment anchoring (OTO-11)
+      review/          # review slice: diff snapshot, comment anchoring, PR-comment publication (OTO-11)
       runtime/         # adapter contract, provider adapters, model + option feature detection (OTO-6)
         probe/         # bounded, credential-free reads of an installed provider binary
         providers/     # one folder per runtime: adapter, frames, models, options
@@ -95,7 +95,8 @@ are internal daemon modules, consumed through
 | `apps/desktop/src/main/data-safety` | OTO-29                 | Versioned data layout, redacted rotating logs, support bundle export. |
 | `apps/desktop/scripts`            | OTO-21, OTO-30           | macOS packaging: ad-hoc local build, signed/notarized release, packaged smoke. |
 | `apps/local-daemon/src/supervisor`| OTO-10                   | Process supervision, pid reconciliation (lands as a daemon module).   |
-| `apps/local-daemon/src/review`    | OTO-11                   | Review slice: server-side diff snapshot, comment anchoring, fix-step context.|
+| `apps/local-daemon/src/review`    | OTO-11                   | Review slice: server-side diff snapshot, comment anchoring, destinations, fix-step context.|
+| `packages/domain/src/patch`       | OTO-11                   | The one unified-diff reader: hunks, range coverage, GitHub anchor refusals. |
 | `packages/domain`                 | OTO-5                    | Pure TS. Canonical types, state machines, event envelope, contracts.  |
 | `packages/db`                     | OTO-5                    | SQLite driver isolation, Drizzle schema, migrations, repositories.    |
 | `packages/ui`                     | OTO-9                    | UI primitives/design system (Base UI/Tailwind/lucide).                |
@@ -379,12 +380,42 @@ card only hands those blobs to `@git-diff-view` while they belong to the sha it
 is rendering — the query key carries it — because content paired with a stale or
 empty patch is what turns a real diff into a neutral, unchanged-looking file.
 
-A comment pins to `(file_path, line, diff_sha)` where `line` is null for a
-whole-file comment. Line comments capture their covering hunk; a whole-file
-comment captures none, so a stale anchor falls back to a short, named excerpt
-rather than the entire patch. `runs/review/partition.ts` splits comments into the ones
-the live diff can place exactly and the ones that can only be shown at a
-fallback, and the Comments rail states which is which before the reader clicks.
+A comment pins to `(file_path, side, start_line, line, diff_sha)`, where `line`
+is null for a whole-file comment and `start_line` is null for a single line.
+Anchored comments capture their covering hunk; a whole-file comment captures
+none, so a stale anchor falls back to a short, named excerpt rather than the
+entire patch. `runs/review/partition.ts` splits comments into the ones the live
+diff can place exactly and the ones that can only be shown at a fallback, and
+the Comments rail states which is which before the reader clicks. A file's
+sticky header carries the same facts as a count and a named popover, so a
+collapsed, unloaded or reviewed file never reads as free of feedback.
+
+Ranges are read through one unified-diff parser, `packages/domain/src/patch`,
+because the cockpit has to explain a refusal before it is sent and the daemon
+has to enforce it. `reviewRangeRefusal` encodes GitHub's real constraint — a
+comment anchors only to lines its diff shows, start and end inside one hunk —
+and `suggestionRefusal` adds that a replacement is applied to head lines. A
+refused range is explained, never shortened or re-anchored. An agent comment
+carries no such constraint beyond a well-formed span, because expanded context
+puts unchanged lines on screen and they are legitimate to comment on.
+
+A comment's destination is chosen, never inferred. `agent` stays in Otomat and
+is the only thing `Fix selected comments with AI` will consume; `pr_review` is
+published to the pull request by an explicit second command
+(`review/publication.ts`) and is refused for the AI fix, so neither destination
+is ever a side effect of the other. Publication walks
+`local → pending → published | failed`, persisting GitHub's own refusal on the
+comment so a failure shows as `failed` with its reason and stays retryable
+rather than vanishing. The daemon publishes against the pull request's
+`published_head_sha`, never a local head GitHub has not seen, and refuses a
+comment whose file moved under it since it was written.
+
+The AI fix opens no prompt channel of its own: it appends an ordinary step, so
+the operator's global instruction is that step's note and the selected comments
+are its frozen context, anchors and structured suggestions included. Each
+provenance stays distinct — the note constrains the fix, edits no comment and is
+never published to GitHub — and both survive in `runs.plan_json`, readable per
+session in the frozen context the step was given.
 
 `review/authority.ts` answers, explicitly, whether Otomat may point an agent at
 the branch under review: it must still hold a live worktree for the run, and a

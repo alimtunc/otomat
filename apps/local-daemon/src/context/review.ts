@@ -10,7 +10,11 @@ export function reviewCommentContext(
     id: comment.id,
     file_path: comment.file_path,
     line: comment.line,
+    start_line: comment.start_line,
+    side: comment.side,
     body: comment.body,
+    suggestion: comment.suggestion,
+    suggestion_original: comment.suggestion_original,
     diff_sha: comment.diff_sha,
     hunk: comment.hunk_snapshot,
     current_file:

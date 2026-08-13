@@ -45,10 +45,31 @@ function fileBlock(file: ContextFile): string[] {
   ];
 }
 
+function anchorLabel(comment: ContextReviewComment): string {
+  if (comment.line === null) return " (whole file)";
+  const lines =
+    comment.start_line === null ? `${comment.line}` : `${comment.start_line}-${comment.line}`;
+  return `:${lines} (${comment.side === "old" ? "base" : "head"} side)`;
+}
+
+/** The replacement stays a labelled block: the agent applies it, it never has to infer one from prose. */
+function suggestionBlock(comment: ContextReviewComment): string[] {
+  if (comment.suggestion === null) return [];
+  return [
+    "",
+    "Suggested replacement for exactly the anchored lines.",
+    "Original lines:",
+    comment.suggestion_original ?? "",
+    "Replace them with:",
+    comment.suggestion,
+  ];
+}
+
 function commentBlock(comment: ContextReviewComment, index: number): string[] {
   return [
-    `### Comment ${index + 1} — ${comment.file_path}${comment.line === null ? " (whole file)" : `:${comment.line}`}`,
+    `### Comment ${index + 1} — ${comment.file_path}${anchorLabel(comment)}`,
     comment.body,
+    ...suggestionBlock(comment),
     ...(comment.hunk === "" ? [] : ["", `Pinned hunk (diff ${comment.diff_sha}):`, comment.hunk]),
     ...(comment.current_file === null
       ? ["", "The file no longer exists in the worktree."]

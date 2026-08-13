@@ -19,6 +19,7 @@ import {
   createGitHubService,
   createPullRequestDrafter,
   runCommand,
+  type GitHubService,
 } from "#github";
 import {
   createLinearApiClient,
@@ -89,6 +90,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     // Review needs the supervisor's append capability while the supervisor needs review's
     // settle hook; the same late binding `state.advance` uses inside the supervisor.
     let appendStepTarget: Supervisor | null = null;
+    let publishCommentTarget: GitHubService | null = null;
     const review = createReviewService({
       db,
       dataDir,
@@ -98,6 +100,12 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
           return Promise.reject(new Error("review fix requested before the supervisor started"));
         }
         return appendStepTarget.appendStep(runId, input);
+      },
+      publishReviewComment: (runId, input) => {
+        if (publishCommentTarget === null) {
+          return Promise.reject(new Error("comment publication requested before GitHub started"));
+        }
+        return publishCommentTarget.publishReviewComment(runId, input);
       },
     });
     const linear = createLinearService({
@@ -123,6 +131,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       drafter: createPullRequestDrafter(runCommand),
       syncIssueLifecycle,
     });
+    publishCommentTarget = github;
 
     const mainScript = process.argv[1];
     if (!mainScript) throw new Error("cannot determine daemon entrypoint for worker re-exec");

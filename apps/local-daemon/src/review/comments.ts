@@ -11,17 +11,24 @@ import {
 } from "@otomat/db";
 import {
   reviewCommentMachine,
+  reviewCommentPublicationMachine,
   reviewMachine,
   type CreateReviewCommentRequest,
 } from "@otomat/domain";
 
 import { emitLedgerEvent } from "#events";
 
+import { captureAnchor } from "./anchor.js";
 import { getFixAuthority } from "./authority.js";
+import { getDestinationAvailability } from "./destinations.js";
 import { computeDiff } from "./diff.js";
-import { DiffUnavailableError, ReviewAnchorStaleError } from "./errors.js";
+import {
+  CommentDestinationUnavailableError,
+  DiffUnavailableError,
+  ReviewAnchorStaleError,
+} from "./errors.js";
 import { buildCommentCreatedEvent } from "./events.js";
-import { extractHunkForLine } from "./hunks.js";
+import { deliverComment } from "./publication.js";
 import { reloadOrThrow } from "./reload.js";
 import { driveReviewTo } from "./transitions.js";
 import type { ReviewContext, ReviewDetailResult } from "./types.js";
@@ -43,14 +50,15 @@ export function getReviewDetail(ctx: ReviewContext, runId: string): ReviewDetail
     review: getReviewForRun(ctx.db, runId) ?? null,
     comments: listReviewCommentsForRun(ctx.db, runId),
     fixAuthority: getFixAuthority(ctx, runId),
+    destinations: getDestinationAvailability(ctx, runId),
   };
 }
 
-export function addComment(
+export async function addComment(
   ctx: ReviewContext,
   runId: string,
   request: CreateReviewCommentRequest,
-): ReviewCommentRow {
+): Promise<ReviewCommentRow> {
   const diff = computeDiff(ctx, runId);
   if (diff === null) throw new DiffUnavailableError(runId);
   const file = diff.files.find(
@@ -58,21 +66,30 @@ export function addComment(
   );
   if (!file) throw new ReviewAnchorStaleError(request.file_path);
 
+  const destinations = getDestinationAvailability(ctx, runId);
+  if (request.destination === "pr_review" && !destinations.pr_review) {
+    throw new CommentDestinationUnavailableError(destinations.reason);
+  }
+  const anchor = captureAnchor(file.patch, request);
+
   const now = new Date().toISOString();
   const review = ensureReview(ctx, runId);
   const id = randomUUID();
-  // A whole-file comment captures no snapshot: a stale anchor must not fall back to the whole patch.
-  const hunkSnapshot =
-    request.line === null ? "" : (extractHunkForLine(file.patch, request.line) ?? "");
   insertReviewComment(ctx.db, {
     id,
     review_id: review.id,
     file_path: request.file_path,
-    line: request.line,
+    side: request.side,
+    start_line: anchor.startLine,
+    line: anchor.line,
     diff_sha: request.diff_sha,
     body: request.body,
     status: reviewCommentMachine.initial,
-    hunk_snapshot: hunkSnapshot,
+    destination: request.destination,
+    publication_status: reviewCommentPublicationMachine.initial,
+    suggestion: anchor.suggestion,
+    suggestion_original: anchor.suggestionOriginal,
+    hunk_snapshot: anchor.hunkSnapshot,
   });
   if (review.status !== "in_review") driveReviewTo(ctx, review, "in_review");
 
@@ -81,5 +98,6 @@ export function addComment(
     `review comment ${id} vanished immediately after insert`,
   );
   emitLedgerEvent(ctx.db, ctx.dataDir, runId, buildCommentCreatedEvent(runId, created, now));
-  return created;
+  if (created.destination !== "pr_review") return created;
+  return deliverComment(ctx, runId, created);
 }

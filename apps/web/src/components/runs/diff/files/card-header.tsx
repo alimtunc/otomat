@@ -2,10 +2,12 @@ import type { DiffFileContract } from "@otomat/domain";
 import { Checkbox, DiffFileStatusChip, Icon, IconButton } from "@otomat/ui";
 import { diffFileLabels } from "@web/components/runs/diff/files/path";
 import { DiffStat } from "@web/components/runs/diff/stat";
+import type { ReactNode } from "react";
 
 export interface DiffFileCardHeaderProps {
   file: DiffFileContract;
   stats: boolean;
+  indicator: ReactNode;
   reviewed: boolean;
   onReviewedChange: (reviewed: boolean) => void;
   collapsed: boolean;
@@ -19,6 +21,7 @@ export interface DiffFileCardHeaderProps {
 export function DiffFileCardHeader({
   file,
   stats,
+  indicator,
   reviewed,
   onReviewedChange,
   collapsed,
@@ -41,6 +44,7 @@ export function DiffFileCardHeader({
         {labels.full}
       </span>
       <span className="ml-auto flex items-center gap-1.5">
+        {indicator}
         {stats ? (
           <span className="flex items-center gap-1.5 pr-1">
             <DiffStat additions={file.additions} deletions={file.deletions} />

@@ -1,13 +1,18 @@
-import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
+import type { DiffFileContract } from "@otomat/domain";
 import { cn, FOCUS_RING } from "@otomat/ui";
 import { DiffFileCardBody } from "@web/components/runs/diff/files/card-body";
 import { DiffFileCardHeader } from "@web/components/runs/diff/files/card-header";
 import { diffFileDomId, unrenderableNote } from "@web/components/runs/diff/files/card.utils";
+import { DiffFileCommentIndicator } from "@web/components/runs/diff/files/comment-indicator";
 import { useFileBlobs } from "@web/components/runs/diff/files/use-file-blobs";
 import type { DiffPrefs } from "@web/components/runs/diff/prefs/prefs";
 import { useNearViewport } from "@web/components/runs/diff/use-near-viewport";
 import { ReviewCommentCard } from "@web/components/runs/review/comment/card";
-import { ReviewCommentForm } from "@web/components/runs/review/comment/form";
+import { ReviewCommentComposer } from "@web/components/runs/review/comment/composer";
+import type {
+  DiffFileCommentActions,
+  DiffFileComments,
+} from "@web/components/runs/review/file-comments";
 import { useState } from "react";
 
 export interface DiffFileCardProps {
@@ -21,11 +26,8 @@ export interface DiffFileCardProps {
   active: boolean;
   /** Reading inside the panel selects the file; observed, never intercepted. */
   onActivate: () => void;
-  commentsByLine: Map<number, ReviewCommentContract[]>;
-  fileComments: ReviewCommentContract[];
-  onAddComment: (line: number | null, body: string) => Promise<void>;
-  selectedCommentIds: ReadonlySet<string>;
-  onToggleComment: (commentId: string, selected: boolean) => void;
+  comments: DiffFileComments;
+  commentActions: DiffFileCommentActions;
 }
 
 export function DiffFileCard({
@@ -38,11 +40,8 @@ export function DiffFileCard({
   onCollapsedChange,
   active,
   onActivate,
-  commentsByLine,
-  fileComments,
-  onAddComment,
-  selectedCommentIds,
-  onToggleComment,
+  comments,
+  commentActions,
 }: DiffFileCardProps) {
   const viewport = useNearViewport();
   const blobs = useFileBlobs(runId, file);
@@ -77,6 +76,15 @@ export function DiffFileCard({
       <DiffFileCardHeader
         file={file}
         stats={prefs.stats}
+        indicator={
+          <DiffFileCommentIndicator
+            filePath={file.path}
+            counts={comments.counts}
+            comments={comments.all}
+            anchoredIds={comments.anchoredIds}
+            onSelect={commentActions.reveal}
+          />
+        }
         reviewed={reviewed}
         onReviewedChange={onReviewedChange}
         collapsed={collapsed}
@@ -93,23 +101,29 @@ export function DiffFileCard({
           Loading the file around this patch…
         </p>
       ) : null}
-      {fileComments.length === 0 ? null : (
+      {comments.whole.length === 0 ? null : (
         <div className="flex flex-col gap-2 border-b border-border bg-surface-1 p-3">
-          {fileComments.map((comment) => (
+          {comments.whole.map((comment) => (
             <ReviewCommentCard
               key={comment.id}
               comment={comment}
-              selected={selectedCommentIds.has(comment.id)}
-              onSelectedChange={(selected) => onToggleComment(comment.id, selected)}
+              selected={comments.selectedIds.has(comment.id)}
+              onSelectedChange={(selected) => commentActions.toggle(comment.id, selected)}
+              onPublish={() => commentActions.publish(comment.id)}
+              publishing={comments.publishingId === comment.id}
             />
           ))}
         </div>
       )}
       {composing ? (
-        <ReviewCommentForm
-          filePath={file.path}
+        <ReviewCommentComposer
+          file={file}
+          side="new"
           line={null}
-          onSubmit={(body) => onAddComment(null, body)}
+          fromLine={null}
+          destinations={comments.destinations}
+          preferredDestination={comments.preferredDestination}
+          onSubmit={(comment) => commentActions.add(file, comment)}
           onClose={() => setComposing(false)}
         />
       ) : null}
@@ -121,10 +135,8 @@ export function DiffFileCard({
           highlight={viewport.near}
           context={blobs.context}
           expandAll={expandAll}
-          commentsByLine={commentsByLine}
-          onAddComment={onAddComment}
-          selectedCommentIds={selectedCommentIds}
-          onToggleComment={onToggleComment}
+          comments={comments}
+          commentActions={commentActions}
         />
       )}
     </section>

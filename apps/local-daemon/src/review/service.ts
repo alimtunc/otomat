@@ -2,6 +2,7 @@ import { getFileBlobs } from "./blobs.js";
 import { addComment, getReviewDetail } from "./comments.js";
 import { getWorktreeDiff } from "./diff.js";
 import { requestFix } from "./fix.js";
+import { publishComment } from "./publication.js";
 import { onRunSettled } from "./settle.js";
 import type { ReviewContext, ReviewService, ReviewServiceConfig } from "./types.js";
 
@@ -12,6 +13,7 @@ export function createReviewService(config: ReviewServiceConfig): ReviewService 
     getWorktreeDiff: (run, owner) => getWorktreeDiff(ctx, run.id, owner),
     getReviewDetail: (runId) => getReviewDetail(ctx, runId),
     addComment: (run, request) => addComment(ctx, run.id, request),
+    publishComment: (run, commentId) => publishComment(ctx, run.id, commentId),
     getFileBlobs: (run, request) => getFileBlobs(ctx, run.id, request),
     requestFix: (run, request) => requestFix(ctx, run, request),
     onRunSettled: (outcome) => onRunSettled(ctx, outcome),

@@ -51,8 +51,24 @@ export function buildCommentCreatedEvent(
     comment_id: comment.id,
     review_id: comment.review_id,
     file_path: comment.file_path,
+    side: comment.side,
+    start_line: comment.start_line,
     line: comment.line,
     diff_sha: comment.diff_sha,
+    destination: comment.destination,
+    suggested: comment.suggestion !== null,
+  });
+}
+
+export function buildCommentPublishedEvent(
+  runId: string,
+  comment: ReviewCommentRow,
+  occurredAt: string,
+): RuntimeEvent {
+  return buildEvent(runId, "review.comment_published", "github", occurredAt, {
+    comment_id: comment.id,
+    file_path: comment.file_path,
+    url: comment.external_url,
   });
 }
 
