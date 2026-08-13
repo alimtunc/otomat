@@ -1,52 +1,55 @@
-import { isRunWorking, type EventEnvelope, type RunDetail } from "@otomat/domain";
+import { isRunWorking, type RunDetail } from "@otomat/domain";
 import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
 import { useRunContributions } from "@web/api/runs/queries";
-import type { RunStreamState } from "@web/api/runs/run-event-stream";
+import type { RunEventStream } from "@web/api/runs/run-event-stream";
 import { ConversationComposer } from "@web/components/runs/conversation/composer";
 import { JumpToLatest } from "@web/components/runs/conversation/jump-to-latest";
 import { QueuedBanner } from "@web/components/runs/conversation/queued-banner";
 import { ThreadItem } from "@web/components/runs/conversation/thread-item";
+import { useLoadOlder } from "@web/components/runs/conversation/use-load-older";
 import { useThreadAutoscroll } from "@web/components/runs/conversation/use-thread-autoscroll";
 import { WorkingRow } from "@web/components/runs/conversation/working-row";
+import { EarlierActivity } from "@web/components/runs/timeline/earlier-activity";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { buildConversation } from "@web/lib/conversation";
 
-/** Ordering comes from the ledger, delivery state from the contributions read model. */
+const LOADING = (
+  <div className="flex flex-col gap-2 p-6">
+    <Skeleton height={14} width="55%" />
+    <Skeleton height={14} width="35%" />
+  </div>
+);
+
+function loadErrorState(onRetry: () => void) {
+  return <ErrorState variant="inline" title="Couldn’t load this conversation" onRetry={onRetry} />;
+}
+
+/** Ordering comes from the ledger window, delivery state from the contributions read model. */
 export function ConversationThread({
   detail,
-  events,
-  state,
-  degraded,
+  stream,
 }: {
   detail: RunDetail;
-  events: EventEnvelope[];
-  state: RunStreamState;
-  degraded: boolean;
+  stream: RunEventStream;
 }) {
+  const { events, state, degraded, history } = stream;
   const contributions = useRunContributions(detail.run.id);
-  const autoscroll = useThreadAutoscroll(detail.run.id);
+  const autoscroll = useThreadAutoscroll(detail.run.id, events[0]?.seq ?? null);
+  const loadOlderRef = useLoadOlder(history);
   const working = isRunWorking(detail.run.status);
+
+  if (history.status === "error") return loadErrorState(history.retry);
+  if (history.status === "pending") return LOADING;
 
   return (
     <QueryBoundary
       query={contributions}
-      pending={
-        <div className="flex flex-col gap-2 p-6">
-          <Skeleton height={14} width="55%" />
-          <Skeleton height={14} width="35%" />
-        </div>
-      }
-      error={
-        <ErrorState
-          variant="inline"
-          title="Couldn’t load this conversation"
-          onRetry={() => void contributions.refetch()}
-        />
-      }
+      pending={LOADING}
+      error={loadErrorState(() => void contributions.refetch())}
     >
       {(data) => {
         const messages = data.contributions;
-        const items = buildConversation(events, messages, detail.steps);
+        const items = buildConversation(events, messages, detail.steps, history.hasOlder);
 
         return (
           <div className="flex min-h-0 flex-1 flex-col">
@@ -59,7 +62,7 @@ export function ConversationThread({
                 Some events could not be decoded — this thread may be incomplete.
               </div>
             ) : null}
-            {items.length === 0 && !working ? (
+            {items.length === 0 && !working && !history.hasOlder ? (
               <div className="px-6 py-8">
                 <EmptyState
                   icon="loader"
@@ -82,6 +85,7 @@ export function ConversationThread({
                     aria-label="Run conversation"
                     className="py-1"
                   >
+                    <EarlierActivity history={history} ref={loadOlderRef} />
                     {items.map((item) => (
                       <ThreadItem key={item.key} item={item} runId={detail.run.id} />
                     ))}

@@ -1,8 +1,11 @@
 import { schema, type Db } from "@otomat/db";
 import { eventEnvelopeSchema, type EventEnvelope } from "@otomat/domain";
-import { and, asc, eq, gt } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lt } from "drizzle-orm";
 
 const { runtimeEvents } = schema;
+
+const WINDOW_DEFAULT_LIMIT = 200;
+const WINDOW_MAX_LIMIT = 500;
 
 export interface ReadRunEventsOptions {
   /** Only events whose `seq` is strictly greater than this (SSE catch-up cursor). */
@@ -13,6 +16,17 @@ export interface ReadRunEventsOptions {
 export interface RunEventProjection {
   events: EventEnvelope[];
   corruptEventCount: number;
+}
+
+export interface ReadRunEventWindowOptions {
+  /** Only events whose `seq` is strictly below this (the window's backwards cursor). */
+  before?: number;
+  limit?: number;
+}
+
+export interface RunEventWindowProjection {
+  events: EventEnvelope[];
+  olderCursor: number | null;
 }
 
 /**
@@ -45,6 +59,34 @@ export function readRunEventProjection(
   return {
     events: events.filter((event): event is EventEnvelope => event !== null),
     corruptEventCount: events.filter((event) => event === null).length,
+  };
+}
+
+/** The cursor comes from the rows read, not the surviving envelopes, so a corrupt edge row cannot strand the walk. */
+export function readRunEventWindow(
+  db: Db,
+  runId: string,
+  options: ReadRunEventWindowOptions = {},
+): RunEventWindowProjection {
+  const limit = Math.min(Math.max(options.limit ?? WINDOW_DEFAULT_LIMIT, 1), WINDOW_MAX_LIMIT);
+  const where =
+    options.before === undefined
+      ? eq(runtimeEvents.run_id, runId)
+      : and(eq(runtimeEvents.run_id, runId), lt(runtimeEvents.seq, options.before));
+
+  const rows = db
+    .select()
+    .from(runtimeEvents)
+    .where(where)
+    .orderBy(desc(runtimeEvents.seq))
+    .limit(limit + 1)
+    .all();
+  const hasOlder = rows.length > limit;
+  const page = rows.slice(0, limit).toReversed();
+
+  return {
+    events: page.map(toEnvelope).filter((event): event is EventEnvelope => event !== null),
+    olderCursor: hasOlder ? page[0].seq : null,
   };
 }
 

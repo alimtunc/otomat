@@ -129,6 +129,45 @@ it("keeps a message the stream has not carried yet, in send order at the end", (
   expect(items.map((item) => item.key)).toEqual(["message-c2", "message-c3"]);
 });
 
+it("leaves messages closed above the loaded window out of the thread's tail", () => {
+  const items = buildConversation(
+    [anchor(10, "c3")],
+    [
+      contribution({ id: "c1", seq: 0, status: "acknowledged" }),
+      contribution({ id: "c2", seq: 1, status: "canceled" }),
+      contribution({ id: "c3", seq: 2, status: "acknowledged" }),
+    ],
+    [],
+    true,
+  );
+  expect(items.map((item) => item.key)).toEqual(["message-c3"]);
+});
+
+it("still closes the thread with a message sent after the loaded window", () => {
+  const items = buildConversation(
+    [anchor(10, "c2")],
+    [contribution({ id: "c2", seq: 1 }), contribution({ id: "c3", seq: 2, body: "just sent" })],
+    [],
+    true,
+  );
+  expect(items.map((item) => item.key)).toEqual(["message-c2", "message-c3"]);
+});
+
+it("holds a message a turn already took back while the window anchors none of them", () => {
+  const items = buildConversation(
+    [],
+    [contribution({ id: "c1", seq: 0, status: "acknowledged" })],
+    [],
+    true,
+  );
+  expect(items).toEqual([]);
+});
+
+it("still closes the thread with a message no turn has taken yet", () => {
+  const items = buildConversation([], [contribution({ id: "c1", seq: 0 })], [], true);
+  expect(items.map((item) => item.key)).toEqual(["message-c1"]);
+});
+
 it("drops an anchor whose contribution the read model does not know", () => {
   expect(buildConversation([anchor(0, "gone")], [])).toEqual([]);
 });

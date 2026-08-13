@@ -5,19 +5,21 @@ import { streamSSE } from "hono/streaming";
 
 import { readRunEvents } from "#events";
 
+import { nonNegativeInt } from "./query-params.js";
+
 const POLL_INTERVAL_MS = 500;
 /** ~10s of silence between heartbeats keeps proxies and EventSource alive without spamming. */
 const HEARTBEAT_EVERY_TICKS = 20;
 
-/** SSE resume cursor: explicit `?afterSeq` wins, else the `Last-Event-ID` from a reconnecting EventSource. */
+/** The `?afterSeq` anchor stays in the URL across reconnects, so the larger of it and `Last-Event-ID` wins. */
 function parseCursor(
   query: string | undefined,
   lastEventId: string | undefined,
 ): number | undefined {
-  const raw = query ?? lastEventId;
-  if (raw === undefined) return undefined;
-  const value = Number(raw);
-  return Number.isInteger(value) && value >= 0 ? value : undefined;
+  const anchor = nonNegativeInt(query);
+  const delivered = nonNegativeInt(lastEventId);
+  if (anchor === undefined) return delivered;
+  return delivered === undefined ? anchor : Math.max(anchor, delivered);
 }
 
 /** Each event carries its `seq` as the SSE id so an EventSource reconnect resumes via `Last-Event-ID`. */

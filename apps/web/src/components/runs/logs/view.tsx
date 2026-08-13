@@ -1,4 +1,4 @@
-import { Pill, PillTabs, Skeleton } from "@otomat/ui";
+import { ErrorState, Pill, PillTabs, Skeleton } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useRunDetail } from "@web/api/runs/queries";
 import { useRunEventStream } from "@web/api/runs/run-event-stream";
@@ -16,7 +16,7 @@ export function RunLogsView() {
   const stream = useRunEventStream();
   const [filter, setFilter] = useState<LogFilter>("all");
 
-  if (detail.isPending) {
+  if (detail.isPending || stream.history.status === "pending") {
     return (
       <div className="flex flex-col gap-2 p-6">
         <Skeleton height={20} width="40%" />
@@ -31,6 +31,16 @@ export function RunLogsView() {
         error={detail.error}
         context="Couldn’t load this run"
         onRetry={() => void detail.refetch()}
+      />
+    );
+  }
+
+  if (stream.history.status === "error") {
+    return (
+      <ErrorState
+        variant="inline"
+        title="Couldn’t load this run’s events"
+        onRetry={stream.history.retry}
       />
     );
   }
@@ -69,6 +79,7 @@ export function RunLogsView() {
         filter={filter}
         state={stream.state}
         degraded={stream.degraded}
+        history={stream.history}
       />
     </div>
   );

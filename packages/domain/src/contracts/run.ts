@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { eventEnvelopeSchema } from "../events/envelope.js";
 import { RUN_PLAN_STEP_NAME_MAX_LENGTH, RUN_PLAN_STEP_PROMPT_MAX_LENGTH } from "../plan/limits.js";
 import { runPlanInputSchema } from "../plan/validate.js";
 import {
@@ -168,6 +169,15 @@ export const runContributionsResponseSchema = z.object({
   contributions: z.array(runContributionContractSchema),
 });
 export type RunContributionsResponse = z.infer<typeof runContributionsResponseSchema>;
+
+/** One bounded page of a run's ledger, ascending by `seq`; without a cursor it is the newest page. */
+export const runEventWindowSchema = z.object({
+  run_id: z.string(),
+  events: z.array(eventEnvelopeSchema),
+  /** Pass as `before` to read the page just above this one; null once the ledger's start is loaded. */
+  older_cursor: z.number().int().nonnegative().nullable(),
+});
+export type RunEventWindow = z.infer<typeof runEventWindowSchema>;
 
 /** Select one succeeded competitor explicitly; the daemon rejects premature or conflicting choices. */
 export const selectCompeteWinnerRequestSchema = z

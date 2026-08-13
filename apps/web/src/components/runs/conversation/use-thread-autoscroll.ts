@@ -17,8 +17,9 @@ export interface ThreadAutoscroll {
  * Keeps a run's conversation on its newest item while the reader sits at the bottom.
  * Growth follows only while pinned, so nothing ever pulls back a reader who scrolled
  * up: only their own scroll, an explicit jump, or opening another run re-pins.
+ * A `topSeq` change marks a prepend of older pages.
  */
-export function useThreadAutoscroll(runId: string): ThreadAutoscroll {
+export function useThreadAutoscroll(runId: string, topSeq: number | null): ThreadAutoscroll {
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
   const [content, setContent] = useState<HTMLDivElement | null>(null);
   const [pinned, setPinned] = useState(true);
@@ -36,11 +37,15 @@ export function useThreadAutoscroll(runId: string): ThreadAutoscroll {
   useLayoutEffect(() => {
     if (viewport === null || content === null) return;
 
+    const distanceToBottom = () =>
+      viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop;
+
     const stick = () => {
       if (pinnedRef.current) viewport.scrollTop = viewport.scrollHeight;
+      else lastDistanceRef.current = distanceToBottom();
     };
     const onScroll = () => {
-      const distance = viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop;
+      const distance = distanceToBottom();
       const atBottom = distance <= PIN_THRESHOLD_PX;
       const receding = distance > lastDistanceRef.current;
       lastDistanceRef.current = distance;
@@ -61,6 +66,12 @@ export function useThreadAutoscroll(runId: string): ThreadAutoscroll {
       viewport.removeEventListener("scroll", onScroll);
     };
   }, [viewport, content, runId, pin]);
+
+  // otomat-allow-effect: the anchor is the scroll offset itself, which only exists in the DOM.
+  useLayoutEffect(() => {
+    if (viewport === null) return;
+    viewport.scrollTop = viewport.scrollHeight - viewport.clientHeight - lastDistanceRef.current;
+  }, [viewport, topSeq]);
 
   const jumpToLatest = useCallback(() => {
     if (viewport === null) return;

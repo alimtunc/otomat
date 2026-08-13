@@ -5,6 +5,7 @@ import {
   runContributionsResponseSchema,
   runDetailSchema,
   runDiffResponseSchema,
+  runEventWindowSchema,
   runLaunchResponseSchema,
   workspaceClosureSummarySchema,
   type AppendRunStepRequest,
@@ -107,6 +108,15 @@ export function createRunsClient(config: DaemonClientConfig) {
           `/api/runs/${encodeURIComponent(id)}/compete-groups/${encodeURIComponent(groupId)}/winner`,
           request,
         ),
+      );
+    },
+    async getRunEventWindow(id: string, params: { before?: number; limit?: number } = {}) {
+      const query = queryString({
+        before: params.before?.toString(),
+        limit: params.limit?.toString(),
+      });
+      return runEventWindowSchema.parse(
+        await getJson(config, `/api/runs/${encodeURIComponent(id)}/events/window${query}`),
       );
     },
     async getRunDiff(id: string) {

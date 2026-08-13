@@ -323,6 +323,23 @@ it("fetches and parses the run diff (null diff allowed, never fabricated)", asyn
   expect(result.diff).toBeNull();
 });
 
+it("reads the newest ledger page, then the one above it by cursor", async () => {
+  const urls: string[] = [];
+  const fetchMock: typeof fetch = async (input) => {
+    urls.push(String(input));
+    return jsonResponse({ run_id: "run-1", events: [], older_cursor: 40 });
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+
+  const newest = await client.getRunEventWindow("run-1");
+  await client.getRunEventWindow("run-1", { before: newest.older_cursor ?? 0, limit: 20 });
+
+  expect(urls).toEqual([
+    "http://localhost:4319/api/runs/run-1/events/window",
+    "http://localhost:4319/api/runs/run-1/events/window?before=40&limit=20",
+  ]);
+});
+
 it("fetches candidate evidence and posts an explicit compete winner", async () => {
   const calls: Array<{ url: string; body?: unknown }> = [];
   const detail = {

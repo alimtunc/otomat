@@ -405,6 +405,29 @@ keeps its tab and the reviewer keeps its file anchor. Every such write replaces
 the current entry (`runs/diff/use-active-file.ts` states it for the anchor), so
 refining a screen never buries the screen it was reached from.
 
+## Reading a Run's Ledger
+
+The ledger is append-only and can be enormous, so a cockpit reads it as a window,
+never whole: `GET /api/runs/:id/events/window` serves one page and the cursor to
+the page above it. `seq` is allocated at persistence time and never rewritten,
+which is what makes that cursor stable — a page already read cannot gain, lose or
+reorder a row while the run keeps emitting.
+
+The cockpit composes that page with the live stream instead of choosing between
+them. `use-event-history.ts` pages backwards through the window endpoint, and
+`RunEventsProvider` opens the SSE stream at the newest loaded `seq`, so the stream
+carries only what happened after the first page — a long run is usable without
+replaying its history. Pages are keyed outside the `run` query root and never
+invalidated, because an immutable page refetched on a run-level event would slide
+its own boundary and open a gap between it and the page below.
+
+The conversation reads the same window: `buildConversation` is told whether older
+pages exist, since a message a turn already carried is history once its anchor
+scrolls above the loaded events, and must not be replayed at the end of the
+thread. A message still waiting for a turn stays at the tail either way — that is
+where the reader just sent it. The thread holds its distance to the bottom across
+a prepend (`use-thread-autoscroll.ts`), so loading history never moves the reader.
+
 ## Frontend Stack Direction
 
 React, Vite, TanStack Router/Query/Form, Tailwind, Base UI (shadcn-style
