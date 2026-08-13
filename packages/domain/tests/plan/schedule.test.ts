@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { RunPlan } from "#domain/contracts/entities/runs";
+import type { RunPlan } from "#domain/contracts/run-plan";
 import { InvalidRunPlanError, planExecutionOrder } from "#domain/plan/execution-order";
 import {
   allStepsSucceeded,

@@ -8,7 +8,7 @@ function step(id: string, dependsOn: string[] = []) {
     id,
     name: `Step ${id}`,
     agent: null,
-    prompt: `Do ${id}`,
+    note: `Do ${id}`,
     depends_on: dependsOn,
   };
 }
@@ -23,13 +23,13 @@ function compete(id: string, dependsOn: string[] = []) {
         id: `${id}-claude`,
         name: "Claude",
         agent: "claude",
-        prompt: `Solve ${id} with Claude`,
+        note: `Solve ${id} with Claude`,
       },
       {
         id: `${id}-codex`,
         name: "Codex",
         agent: "codex",
-        prompt: `Solve ${id} with Codex`,
+        note: `Solve ${id} with Codex`,
       },
     ],
   };
@@ -157,7 +157,7 @@ describe("runPlanInputSchema", () => {
         id: `candidate-${index}`,
         name: `Candidate ${index}`,
         agent: null,
-        prompt: `Solve with candidate ${index}`,
+        note: `Solve with candidate ${index}`,
       })),
     };
 
@@ -238,11 +238,11 @@ describe("runPlanInputSchema", () => {
     );
   });
 
-  it("rejects blank prompts and names", () => {
+  it("rejects a blank note and a blank name", () => {
     expect(
       runPlanInputSchema.safeParse({
         version: 1,
-        steps: [{ ...step("blank"), prompt: "   " }],
+        steps: [{ ...step("blank"), note: "   " }],
       }).success,
     ).toBe(false);
     expect(

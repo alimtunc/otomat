@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import type { RunPlan, RunPlanStep } from "#domain/contracts/entities/runs";
+import type { RunPlan, RunPlanStep } from "#domain/contracts/run-plan";
 import { appendPlanStep } from "#domain/plan/append";
 import { RUN_PLAN_MAX_STEPS } from "#domain/plan/limits";
 

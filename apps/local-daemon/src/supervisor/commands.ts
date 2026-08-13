@@ -18,6 +18,7 @@ import { prepareRun } from "./prepare.js";
 import { resolveResumeAction } from "./resume-plan.js";
 import { spawnReopenTurn } from "./resume-turn.js";
 import {
+  NATIVE_CONTINUATION,
   reopenIssue,
   reopenSettledRun,
   requireResumableRuntime,
@@ -110,7 +111,7 @@ async function resumeCompeteGroup(
         (entry) => entry.step_run_id === candidate.id && entry.provider_session_id !== null,
       );
       const planStep = planSteps.find((entry) => entry.id === candidate.id);
-      if (!session || session.provider_session_id === null || !planStep?.prompt) {
+      if (!session || session.provider_session_id === null || !planStep) {
         throw new RunNotResumableError(`competitor ${candidate.id} has no resumable session`);
       }
       const knownRuntime = requireResumableRuntime(state.db, run, session);
@@ -123,7 +124,8 @@ async function resumeCompeteGroup(
           runId: run.id,
           stepRunId: candidate.id,
           agentSessionId: session.id,
-          prompt: planStep.prompt,
+          prompt: planStep.prompt ?? NATIVE_CONTINUATION,
+          contextSelection: planStep.context ?? null,
           agentSessionDir: sessionDir(state.dataDir, run.id, session.id),
           worktreePath,
           runtime: knownRuntime,

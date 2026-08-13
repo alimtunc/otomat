@@ -1,10 +1,24 @@
 import { randomUUID } from "node:crypto";
 
-import { insertStepRun, listStepRunsForRun, updateRunPlan, type RunRow } from "@otomat/db";
-import { appendPlanStep, overrideLevel, stepRunMachine, type RunPlanStep } from "@otomat/domain";
+import {
+  getIssue,
+  insertStepRun,
+  listStepRunsForRun,
+  updateRunPlan,
+  type RunRow,
+} from "@otomat/db";
+import {
+  appendPlanStep,
+  overrideLevel,
+  stepRunMachine,
+  type ContextSelection,
+  type RunPlanStep,
+} from "@otomat/domain";
 
 import { resolveAgentConfig } from "#agents";
+import { createContextFreezer } from "#context";
 import { emitLedgerEvent } from "#events";
+import { diffSnapshotOrNull } from "#git";
 
 import { scheduleNextStep } from "./advance.js";
 import { signalIssueLifecycle } from "./issue-lifecycle.js";
@@ -18,6 +32,21 @@ import { requireOpenWorkspace } from "./workspace.js";
 function nextStepIndex(state: SupervisorState, runId: string): number {
   const indexes = listStepRunsForRun(state.db, runId).map((step) => step.idx);
   return indexes.length === 0 ? 0 : Math.max(...indexes) + 1;
+}
+
+/** An appended step attaches its files from the run's own worktree: that is the tree its work will start from. */
+function freezeAppendedContext(
+  state: SupervisorState,
+  run: RunRow,
+  input: AppendStepInput,
+): ContextSelection {
+  const binding = state.repositories.forRepository(run.repository_id);
+  return createContextFreezer({
+    db: state.db,
+    issue: getIssue(state.db, run.issue_id) ?? null,
+    snapshot: binding === null ? null : diffSnapshotOrNull(binding.service, run.id),
+    capturedAt: new Date().toISOString(),
+  })(input.references, input.note, input.reviewComments);
 }
 
 /** Settle credits any completed turn with the stamped comments, so the fix must be the next settlement. */
@@ -62,7 +91,8 @@ export async function appendRunStep(
     id: randomUUID(),
     name: input.name,
     agent: config.runtime,
-    prompt: input.prompt,
+    prompt: null,
+    context: freezeAppendedContext(state, run, input),
     depends_on: [...input.dependsOn],
     config,
   };

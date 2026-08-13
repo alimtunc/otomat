@@ -12,6 +12,7 @@ import {
 
 import { WorkflowCompetitorCard } from "./competitor-card";
 import { DependencyToggles } from "./dependency-toggles";
+import type { WorkflowLaunchTarget } from "./launch-target";
 import type { WorkflowForm } from "./use-form";
 
 export interface WorkflowCompeteCardProps {
@@ -19,6 +20,7 @@ export interface WorkflowCompeteCardProps {
   steps: WorkflowNodeDraft[];
   index: number;
   execution: LaunchExecution;
+  target: WorkflowLaunchTarget;
   onUpdateSteps: (update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) => void;
 }
 
@@ -27,6 +29,7 @@ export function WorkflowCompeteCard({
   steps,
   index,
   execution,
+  target,
   onUpdateSteps,
 }: WorkflowCompeteCardProps) {
   const group = steps[index];
@@ -95,6 +98,7 @@ export function WorkflowCompeteCard({
             groupIndex={index}
             competitorIndex={competitorIndex}
             execution={execution}
+            target={target}
             onUpdateSteps={onUpdateSteps}
           />
         ))}

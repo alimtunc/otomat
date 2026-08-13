@@ -19,9 +19,12 @@ export {
   headSha,
   isRepositoryRoot,
   listBranches,
+  searchTrackedFiles,
   uncommittedPaths,
   type CommitSummary,
+  type TrackedFileMatches,
 } from "./repo.js";
+export * from "./tree-file.js";
 export * from "./probe.js";
 export * from "./resolver.js";
 export * from "./service-contract.js";

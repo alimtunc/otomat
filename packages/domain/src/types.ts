@@ -33,11 +33,6 @@ export type {
   ResolvedSkill,
   RunContract,
   RunContributionContract,
-  RunPlan,
-  RunPlanCompeteGroup,
-  RunPlanCompetitor,
-  RunPlanNode,
-  RunPlanStep,
   SkillContract,
   SkillSource,
   SkillStatus,
@@ -49,6 +44,14 @@ export type {
   ReviewCommentContract,
   PullRequestContract,
 } from "./contracts/entities/index.js";
+
+export type {
+  RunPlan,
+  RunPlanCompeteGroup,
+  RunPlanCompetitor,
+  RunPlanNode,
+  RunPlanStep,
+} from "./contracts/run-plan.js";
 
 export type {
   ChangeStatus,

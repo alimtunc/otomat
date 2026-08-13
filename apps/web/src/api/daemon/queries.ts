@@ -57,6 +57,16 @@ export function useRepositoryBranches(repositoryId: string | null) {
   });
 }
 
+/** Tracked paths matching a search, for attaching repository files as context; the daemon reads git, so this is never cached long. */
+export function useRepositoryFiles(repositoryId: string | null, query: string) {
+  return useQuery({
+    queryKey: queryKeys.repositoryFiles(repositoryId, query),
+    queryFn:
+      repositoryId === null ? skipToken : () => daemon.searchRepositoryFiles(repositoryId, query),
+    staleTime: 15_000,
+  });
+}
+
 /** The daemon's runtime catalog with probed availability; short staleTime so installing a CLI shows up without a daemon restart. */
 export function useRuntimes() {
   return useQuery({

@@ -21,6 +21,8 @@ export const queryKeys = {
   repositoriesFor: (projectId?: string) => ["repositories", "project", projectId ?? null] as const,
   repositoryBranches: (repositoryId: string | null) =>
     ["repositories", repositoryId, "branches"] as const,
+  repositoryFiles: (repositoryId: string | null, query: string) =>
+    ["repositories", repositoryId, "files", query] as const,
   runtimes: ["runtimes"] as const,
   runtimeModels: (runtimeId: string | null) => ["runtimes", runtimeId, "models"] as const,
   runtimeOptions: (runtimeId: string | null, model: string | null) =>
@@ -41,6 +43,8 @@ export const queryKeys = {
   runEventWindow: (id: string) => ["run-events", id] as const,
   runCompletionReport: (id: string) => ["run", id, "report"] as const,
   runContributions: (id: string) => ["run", id, "contributions"] as const,
+  sessionContext: (runId: string, agentSessionId: string) =>
+    ["run", runId, "session", agentSessionId, "context"] as const,
   runDiff: (id: string) => ["run", id, "diff"] as const,
   runDiffFileBlobs: (id: string, path: string, sha: string) =>
     ["run", id, "diff", "file", path, sha] as const,

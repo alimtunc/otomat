@@ -40,15 +40,15 @@ const COMPETE_PLAN = {
       name: "Choose an approach",
       depends_on: [],
       compete: [
-        { id: "direct", name: "Direct", agent: "fake", prompt: "direct" },
-        { id: "layered", name: "Layered", agent: "fake", prompt: "layered" },
+        { id: "direct", name: "Direct", agent: "fake", note: "direct" },
+        { id: "layered", name: "Layered", agent: "fake", note: "layered" },
       ],
     },
     {
       id: "verify",
       name: "Verify",
       agent: "fake",
-      prompt: "verify",
+      note: "verify",
       depends_on: ["approach"],
     },
   ],
@@ -70,8 +70,8 @@ function makeCompeteSupervisor(
   const worker = workerSpawn(behavior);
   const spawn = (job: Parameters<typeof worker>[0]) => {
     onJob?.(job);
-    if (job.prompt !== "verify" && job.worktreePath) {
-      const choice = job.prompt.includes("Candidate instructions:\nlayered") ? "layered" : "direct";
+    if (!job.prompt.endsWith("verify") && job.worktreePath) {
+      const choice = job.prompt.endsWith("layered") ? "layered" : "direct";
       writeFileSync(join(job.worktreePath, "choice.txt"), `${choice}\n`);
     }
     return worker(job);
@@ -101,10 +101,12 @@ it("runs competitors in isolated worktrees, waits for a winner, then continues o
   expect(getRun(fix.db, run.id)?.status).toBe("awaiting_selection");
   expect(spawn.calls).toBe(2);
   expect(new Set(spawn.jobs.map((job) => job.worktreePath)).size).toBe(2);
-  expect(spawn.jobs.map((job) => job.prompt)).toEqual([
-    "Shared objective:\nChoose an approach\n\nCandidate instructions:\ndirect",
-    "Shared objective:\nChoose an approach\n\nCandidate instructions:\nlayered",
+  // A group's name is a label, never an instruction: each candidate gets only its own note.
+  expect(spawn.jobs.map((job) => job.prompt.split("# Step instructions\n")[1])).toEqual([
+    "direct",
+    "layered",
   ]);
+  expect(spawn.jobs.every((job) => !job.prompt.includes("Choose an approach\n\n"))).toBe(true);
 
   const [group] = listCompeteGroupsForRun(fix.db, run.id);
   expect(group?.status).toBe("awaiting_selection");
@@ -127,7 +129,7 @@ it("runs competitors in isolated worktrees, waits for a winner, then continues o
     winner_step_run_id: winner.id,
   });
   expect(spawn.calls).toBe(3);
-  expect(spawn.jobs[2]?.prompt).toBe("verify");
+  expect(spawn.jobs[2]?.prompt.endsWith("verify")).toBe(true);
   expect(spawn.jobs[2]?.worktreePath).not.toBe(spawn.jobs[0]?.worktreePath);
   expect(spawn.jobs[2]?.worktreePath).not.toBe(spawn.jobs[1]?.worktreePath);
   expect(readFileSync(join(spawn.jobs[2]?.worktreePath ?? "", "choice.txt"), "utf8")).toBe(

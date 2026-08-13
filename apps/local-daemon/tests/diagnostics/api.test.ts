@@ -18,7 +18,7 @@ const VALID_PLAN = {
   prompt: "goal",
   plan: {
     version: 1,
-    steps: [{ id: "a", name: "A", agent: null, prompt: "pa", depends_on: [] }],
+    steps: [{ id: "a", name: "A", agent: null, note: "pa", depends_on: [] }],
   },
 };
 

@@ -38,9 +38,9 @@ afterEach(() => {
 const THREE_STEPS = {
   version: 1 as const,
   steps: [
-    { id: "plan", name: "Plan", agent: null, prompt: "plan it", depends_on: [] },
-    { id: "implement", name: "Implement", agent: null, prompt: "build it", depends_on: ["plan"] },
-    { id: "verify", name: "Verify", agent: null, prompt: "check it", depends_on: ["implement"] },
+    { id: "plan", name: "Plan", agent: null, note: "plan it", depends_on: [] },
+    { id: "implement", name: "Implement", agent: null, note: "build it", depends_on: ["plan"] },
+    { id: "verify", name: "Verify", agent: null, note: "check it", depends_on: ["implement"] },
   ],
 };
 
@@ -71,7 +71,12 @@ it("runs a three-step plan in order: three step_runs, three sessions, events per
 
   expect(spawn.calls).toBe(3);
   expect(spawn.jobs.map((job) => job.stepRunId)).toEqual(steps.map((step) => step.id));
-  expect(spawn.jobs.map((job) => job.prompt)).toEqual(["plan it", "build it", "check it"]);
+  // Each step's note rides on its own dossier; no step is handed another's instruction.
+  expect(spawn.jobs.map((job) => job.prompt.split("# Step instructions\n")[1])).toEqual([
+    "plan it",
+    "build it",
+    "check it",
+  ]);
   expect(spawn.jobs.map((job) => job.agentSessionDir)).toEqual(
     sessions.map((session) => sessionDir(fix.dataDir, run.id, session.id)),
   );
@@ -170,8 +175,8 @@ it("rejects a plan step runtime that is unavailable before writing anything", as
       plan: {
         version: 1,
         steps: [
-          { id: "a", name: "A", agent: null, prompt: "pa", depends_on: [] },
-          { id: "b", name: "B", agent: "claude", prompt: "pb", depends_on: ["a"] },
+          { id: "a", name: "A", agent: null, note: "pa", depends_on: [] },
+          { id: "b", name: "B", agent: "claude", note: "pb", depends_on: ["a"] },
         ],
       },
     }),
@@ -307,6 +312,11 @@ it("launches a workflow on an existing issue: one issue, its plan frozen as give
   const planSteps = getRun(fix.db, run.id)?.plan_json.steps ?? [];
   expect(planSteps.map((step) => step.id)).toEqual(steps.map((step) => step.id));
   expect(planSteps[2]?.depends_on).toEqual([planSteps[1]?.id]);
-  // The issue title never overwrites a step prompt: the frozen plan is what the composer sent.
-  expect(spawn.jobs.map((job) => job.prompt)).toEqual(["plan it", "build it", "check it"]);
+  // The issue is attached as context, and each step still carries only its own note.
+  expect(spawn.jobs.every((job) => job.prompt.includes("## Issue: I"))).toBe(true);
+  expect(spawn.jobs.map((job) => job.prompt.split("# Step instructions\n")[1])).toEqual([
+    "plan it",
+    "build it",
+    "check it",
+  ]);
 });

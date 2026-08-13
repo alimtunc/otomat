@@ -41,7 +41,7 @@ let diffQuery: Record<string, unknown> = {};
 let reviewQuery: Record<string, unknown> = {};
 
 vi.mock("@web/api/runs/queries", () => ({
-  useRunDetail: () => fresh({ holds_workspace: false }),
+  useRunDetail: () => fresh({ holds_workspace: false, run: { issue_id: "issue-1" } }),
   useRunDiff: () => diffQuery,
 }));
 

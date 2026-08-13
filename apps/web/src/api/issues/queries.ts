@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
@@ -11,6 +11,9 @@ export function useProjectIssues(projectId: string | undefined) {
   });
 }
 
-export function useIssue(issueId: string) {
-  return useQuery({ queryKey: queryKeys.issue(issueId), queryFn: () => daemon.getIssue(issueId) });
+export function useIssue(issueId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.issue(issueId ?? ""),
+    queryFn: issueId === null ? skipToken : () => daemon.getIssue(issueId),
+  });
 }

@@ -1,4 +1,4 @@
-import type { RunPlan, RunPlanStep } from "../contracts/entities/runs.js";
+import type { RunPlan, RunPlanStep } from "../contracts/run-plan.js";
 import { InvalidRunPlanError } from "./execution-order.js";
 import { RUN_PLAN_MAX_STEPS } from "./limits.js";
 import { executableSteps } from "./schedule.js";

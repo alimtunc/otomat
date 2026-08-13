@@ -1,7 +1,9 @@
 import { z } from "zod";
 
+import { CONTEXT_NOTE_MAX_LENGTH } from "../context/limits.js";
+import { contextReferencesSchema } from "../context/reference.js";
 import { eventEnvelopeSchema } from "../events/envelope.js";
-import { RUN_PLAN_STEP_NAME_MAX_LENGTH, RUN_PLAN_STEP_PROMPT_MAX_LENGTH } from "../plan/limits.js";
+import { RUN_PLAN_STEP_NAME_MAX_LENGTH } from "../plan/limits.js";
 import { runPlanInputSchema } from "../plan/validate.js";
 import {
   agentSessionContractSchema,
@@ -95,7 +97,12 @@ export const runLaunchErrorSchema = z.object({
 export const startRunRequestSchema = z
   .object({
     issue_id: z.string().min(1).optional(),
+    /** Ad-hoc launch text; it becomes the local issue this run works on, never a step instruction of its own. */
     prompt: z.string().min(1).optional(),
+    /** The one instruction the implicit single step adds to its attached context; ignored when `plan` is given. */
+    note: z.string().trim().min(1).max(CONTEXT_NOTE_MAX_LENGTH).optional(),
+    /** Extra issues and repository files the implicit single step attaches; ignored when `plan` is given. */
+    context: contextReferencesSchema.optional(),
     /** Project the run executes in; an ad-hoc run without one uses the daemon's boot project. With `issue_id` it must match the issue's project. */
     project_id: z.string().min(1).optional(),
     /** Branch the run's dedicated worktree forks from; absent uses the repository's default branch. */
@@ -119,7 +126,10 @@ export type StartRunRequest = z.infer<typeof startRunRequestSchema>;
 export const appendRunStepRequestSchema = z
   .object({
     name: z.string().trim().min(1).max(RUN_PLAN_STEP_NAME_MAX_LENGTH),
-    prompt: z.string().trim().min(1).max(RUN_PLAN_STEP_PROMPT_MAX_LENGTH),
+    /** The one instruction this step adds; absent sends the attached context and the profile's guidance alone. */
+    note: z.string().trim().min(1).max(CONTEXT_NOTE_MAX_LENGTH).optional(),
+    /** Extra issues and repository files to attach; the run's own issue is always attached. */
+    context: contextReferencesSchema.optional(),
     /** Agent profile to resolve and freeze for this step; takes precedence over `runtime`. */
     profile_id: z.string().min(1).optional(),
     /** Ad-hoc runtime adapter id, used when no profile is selected. */

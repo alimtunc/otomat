@@ -1,6 +1,9 @@
 import type { Db, RunContributionRow, RunRow } from "@otomat/db";
 import type {
   AgentCapacity,
+  ContextReference,
+  ContextReviewComment,
+  ContextSelection,
   ExecutionOverrides,
   LinearLifecycleSync,
   ResolvedAgentConfig,
@@ -17,10 +20,13 @@ import type { KnownRuntimeId } from "#runtime";
 /** What asked for a plan revision; kept on the journaled event so the history reads honestly. */
 export type PlanRevisionOrigin = "user" | "review_fix";
 
-/** One append-only plan revision: a named step, an explicitly chosen agent, and what it waits on. */
+/** One append-only plan revision: a named step, an explicitly chosen agent, its declared context, and what it waits on. */
 export interface AppendStepInput {
   name: string;
-  prompt: string;
+  note: string | null;
+  references: readonly ContextReference[];
+  /** Review comments this step was asked to address, already frozen with their anchors. */
+  reviewComments?: readonly ContextReviewComment[];
   /** The agent the user picked for this step; never inherited from the last session. */
   selector: AgentConfigSelector;
   overrides: ExecutionOverrides;
@@ -38,8 +44,10 @@ export interface TurnContext {
   runId: string;
   stepRunId: string;
   agentSessionId: string;
-  /** `null` when the turn has no prompt of its own and runs on the batch it carries. */
+  /** The instruction this turn adds to its dossier: a recovery brief, a native continuation, or a legacy run's frozen prompt. `null` when the dossier and the carried batch are the whole turn. */
   prompt: string | null;
+  /** What the plan froze for this step; a fresh session materializes its dossier from it. */
+  contextSelection: ContextSelection | null;
   /** Evidence dir of the agent session, reused by every turn of that session. */
   agentSessionDir: string;
   /** Isolated working dir the turn mutates. Always present: a run that cannot own one is refused at launch. */
@@ -51,8 +59,8 @@ export interface TurnContext {
   config: ResolvedAgentConfig | null;
 }
 
-/** A job is a turn whose prompt is already composed, so the worker never has to ask what to run. */
-export interface SupervisedJob extends Omit<TurnContext, "prompt"> {
+/** A job is a turn whose prompt is already composed — context included — so the worker never has to ask what to run. */
+export interface SupervisedJob extends Omit<TurnContext, "prompt" | "contextSelection"> {
   prompt: string;
   mode: "run" | "resume";
   providerSessionId: string | null;

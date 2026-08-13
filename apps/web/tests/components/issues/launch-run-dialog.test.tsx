@@ -77,10 +77,24 @@ vi.mock("@web/api/daemon/queries", () => ({
   useExecutionDefaults: () => executionDefaultsQueryResult(),
   useRepositories: () => repositoriesQueryResult(),
   useRepositoryBranches: () => repositoryBranchesQueryResult(),
+  useRepositoryFiles: () => ({
+    data: { paths: ["src/parser.ts"], omitted: 3 },
+    isPending: false,
+    isError: false,
+  }),
 }));
 
 vi.mock("@web/api/agent-profiles/queries", () => ({
   useAgentProfiles: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
+}));
+
+vi.mock("@web/api/skills/queries", () => ({
+  useSkills: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
+}));
+
+vi.mock("@web/api/issues/queries", () => ({
+  useProjectIssues: () => ({ data: [ISSUE, OTHER_ISSUE], isPending: false, isError: false }),
+  useIssue: () => ({ data: ISSUE, isPending: false, isError: false }),
 }));
 
 vi.mock("@web/components/execution/execution-config-picker", () => ({
@@ -116,6 +130,8 @@ const ISSUE: IssueContract = {
   source_state_name: null,
   source_state_color: null,
 };
+
+const OTHER_ISSUE: IssueContract = { ...ISSUE, id: "issue-2", title: "Backfill the fixtures" };
 
 const cleanups: Array<() => Promise<void>> = [];
 
@@ -161,32 +177,62 @@ it("offers a single run and a workflow on the one launch surface", async () => {
   expect(labels).toContain("Workflow");
 });
 
-it("shows the prompt a single run starts from, description included", async () => {
+it("attaches the issue as context instead of copying it into an editable prompt", async () => {
   await openDialog();
-  expect(textarea("Single run prompt").value).toBe(
-    "Ship the CSV parser\n\nQuoting breaks on nested commas.",
-  );
+  expect(textarea("Single run instructions").value).toBe("");
+  expect(document.body.textContent).not.toContain("Quoting breaks on nested commas.");
+  const chips = document.querySelector("[role='list'][aria-label='Single run context']");
+  expect(chips?.textContent).toContain("issue-1");
 });
 
-it("falls back to the title alone when the issue has no description", async () => {
-  await openDialog({ ...ISSUE, body: null });
-  expect(textarea("Single run prompt").value).toBe("Ship the CSV parser");
-});
-
-it("sends the prompt on screen, edits included, and follows the run in place", async () => {
+it("launches with no user instruction at all when the note is left empty", async () => {
   await openDialog();
-  await act(async () => setTextareaValue(textarea("Single run prompt"), "Only fix the quoting"));
   await click("Launch run⌘↵");
 
   expect(launch).toHaveBeenCalledWith({
     issue_id: "issue-1",
-    prompt: "Only fix the quoting",
     base_branch: "main",
     runtime: "claude",
   });
   expect(onLaunched).toHaveBeenCalledWith({ id: "run-1" });
   // The run belongs to the issue already on screen; navigating away would lose the workspace.
   expect(navigate).not.toHaveBeenCalled();
+});
+
+it("sends the optional note and the attached file as structured context", async () => {
+  await openDialog();
+  await act(async () =>
+    setTextareaValue(textarea("Single run instructions"), "  Only fix the quoting  "),
+  );
+  await click("Add context");
+  await click("src/parser.ts");
+  await click("Launch run⌘↵");
+
+  expect(launch).toHaveBeenCalledWith({
+    issue_id: "issue-1",
+    base_branch: "main",
+    note: "Only fix the quoting",
+    context: [{ kind: "file", path: "src/parser.ts" }],
+    runtime: "claude",
+  });
+});
+
+it("removes an attached reference before the launch", async () => {
+  await openDialog();
+  await click("Add context");
+  await click("src/parser.ts");
+  const remove = document.querySelector<HTMLButtonElement>(
+    "button[aria-label='Remove src/parser.ts']",
+  );
+  if (!remove) throw new Error("remove control not found");
+  await act(async () => remove.click());
+  await click("Launch run⌘↵");
+
+  expect(launch).toHaveBeenCalledWith({
+    issue_id: "issue-1",
+    base_branch: "main",
+    runtime: "claude",
+  });
 });
 
 it("sends the per-launch model override, on the same control every surface uses", async () => {
@@ -201,7 +247,6 @@ it("sends the per-launch model override, on the same control every surface uses"
 
   expect(launch).toHaveBeenCalledWith({
     issue_id: "issue-1",
-    prompt: "Ship the CSV parser\n\nQuoting breaks on nested commas.",
     base_branch: "main",
     runtime: "claude",
     model: { kind: "model", id: "opus" },
@@ -214,9 +259,7 @@ it("reopens on the single run, since closing discarded whatever was composed", a
   await click("Cancel");
   await click("Launch run");
 
-  expect(textarea("Single run prompt").value).toBe(
-    "Ship the CSV parser\n\nQuoting breaks on nested commas.",
-  );
+  expect(textarea("Single run instructions").value).toBe("");
 });
 
 it("launches a multi-step workflow on the existing issue without inventing a second one", async () => {
@@ -228,8 +271,8 @@ it("launches a multi-step workflow on the existing issue without inventing a sec
   await act(async () => {
     setInputValue(names[0]!, "Plan");
     setInputValue(names[1]!, "Build");
-    setTextareaValue(textarea("Step 1 prompt"), "plan it");
-    setTextareaValue(textarea("Step 2 prompt"), "build it");
+    setTextareaValue(textarea("Step 1 instructions"), "plan it");
+    setTextareaValue(textarea("Step 2 instructions"), "build it");
   });
   await click("Plan");
   await click("Launch workflow⌘↵");
@@ -241,8 +284,8 @@ it("launches a multi-step workflow on the existing issue without inventing a sec
     plan: {
       version: 1,
       steps: [
-        { id: "step-1", name: "Plan", agent: null, prompt: "plan it", depends_on: [] },
-        { id: "step-2", name: "Build", agent: null, prompt: "build it", depends_on: ["step-1"] },
+        { id: "step-1", name: "Plan", agent: null, note: "plan it", depends_on: [] },
+        { id: "step-2", name: "Build", agent: null, note: "build it", depends_on: ["step-1"] },
       ],
     },
   });
@@ -280,15 +323,11 @@ it("grows the open workspace instead of offering a second launch", async () => {
   expect(appendTarget).toHaveBeenCalledWith("run-7");
 });
 
-it("refuses to append until the step has both a name and a prompt", async () => {
+it("refuses to append until the step is named, and never for a missing instruction", async () => {
   await openDialog(CONTINUING);
-  const submit = findButton("Add step⌘↵");
-  expect(submit?.disabled).toBe(true);
-
-  await act(async () => setInputValue(input("Step name"), "Address the failing test"));
   expect(findButton("Add step⌘↵")?.disabled).toBe(true);
 
-  await act(async () => setTextareaValue(textarea("Step prompt"), "fix the parser"));
+  await act(async () => setInputValue(input("Step name"), "Address the failing test"));
   expect(findButton("Add step⌘↵")?.disabled).toBe(false);
 });
 
@@ -296,7 +335,7 @@ it("appends the step on the agent the user picked and follows the run it joined"
   await openDialog(CONTINUING);
   await act(async () => {
     setInputValue(input("Step name"), "  Address the failing test  ");
-    setTextareaValue(textarea("Step prompt"), "  fix the parser  ");
+    setTextareaValue(textarea("Appended step instructions"), "  fix the parser  ");
   });
   await click("pick opus for launch");
   await click("Add step⌘↵");
@@ -304,7 +343,7 @@ it("appends the step on the agent the user picked and follows the run it joined"
   expect(appendStep).toHaveBeenCalledWith(
     {
       name: "Address the failing test",
-      prompt: "fix the parser",
+      note: "fix the parser",
       runtime: "claude",
       model: { kind: "model", id: "opus" },
       depends_on: [],

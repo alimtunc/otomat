@@ -8,10 +8,11 @@ import {
   insertStepRun,
   readExecutionDefaults,
   type Db,
+  type IssueRow,
+  type LocalIssue,
 } from "@otomat/db";
 import {
   competeGroupMachine,
-  executableSteps,
   isRunPlanCompeteGroup,
   issueMachine,
   runMachine,
@@ -21,6 +22,7 @@ import {
 } from "@otomat/domain";
 
 import { resolveAgentConfig } from "#agents";
+import { createContextFreezer, type ContextIssueRow } from "#context";
 import {
   GitCommandError,
   WorktreeConflictError,
@@ -29,7 +31,12 @@ import {
   type WorktreeRecord,
 } from "#git";
 
-import { freezePlan, runDefaultConfig, runDefaultOverrides } from "./freeze-plan.js";
+import {
+  freezePlan,
+  resolvePlanConfigs,
+  runDefaultConfig,
+  runDefaultOverrides,
+} from "./freeze-plan.js";
 import { LaunchRefusedError, resolveLaunchTarget } from "./launch-target.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
@@ -46,19 +53,34 @@ function firstLine(text: string): string {
   return first.trim().slice(0, 120);
 }
 
-/** Creates the issue that anchors a prompt-only launch and returns its id. */
-function insertAdHocIssue(db: Db, projectId: string, request: StartRunRequest): string {
-  const issueId = randomUUID();
+interface LaunchIssue {
+  row: ContextIssueRow;
+  /** Set only when the launch owns the issue: a prompt-only run creates the one it works on. */
+  create: LocalIssue | null;
+}
+
+/** The issue a run works on, resolved before the transaction so the plan can freeze it as its context. */
+function launchIssue(
+  projectId: string,
+  request: StartRunRequest,
+  existing: IssueRow | undefined,
+): LaunchIssue {
+  if (existing) return { row: existing, create: null };
   const prompt = request.prompt ?? "";
-  insertIssue(db, {
-    id: issueId,
+  const created = {
+    id: randomUUID(),
     project_id: projectId,
     title: firstLine(prompt) || "Local run",
     body: prompt,
     status: issueMachine.transition(issueMachine.initial, "ready"),
     source: "local",
-  });
-  return issueId;
+    source_identifier: null,
+    source_state_name: null,
+    source_labels: null,
+    source_assignee_name: null,
+    source_priority: null,
+  } as const satisfies LocalIssue & ContextIssueRow;
+  return { row: created, create: created };
 }
 
 function insertPlanRows(db: Db, runId: string, plan: RunPlan): void {
@@ -107,24 +129,38 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
 
   const existingIssue = request.issue_id ? getIssue(db, request.issue_id) : undefined;
   if (request.issue_id && !existingIssue) throw new Error(`issue ${request.issue_id} not found`);
-  const prompt = request.prompt ?? existingIssue?.title ?? "";
+
+  // Agents are resolved and refused before the repository is touched: an unavailable runtime is the caller's to fix, whatever the worktree says.
+  const { configFor, runtimes } = resolvePlanConfigs(db, request, runDefault, defaultConfig);
+  for (const runtime of runtimes) ensureRuntimeAgent(db, runtime);
 
   const runId = randomUUID();
   const branch = runBranchName(runId);
-  const plan = freezePlan(db, request, runDefault, defaultConfig, prompt);
-  for (const step of executableSteps(plan)) ensureRuntimeAgent(db, step.agent ?? defaultRuntime);
-  ensureRuntimeAgent(db, defaultRuntime);
   const { projectId, binding, baseRef } = resolveLaunchTarget(state, request, existingIssue);
+  const issue = launchIssue(projectId, request, existingIssue);
+
+  // The plan freezes attached files from the base tree: the run's own worktree does not exist yet.
+  const plan = freezePlan(
+    request,
+    defaultConfig,
+    configFor,
+    createContextFreezer({
+      db,
+      issue: issue.row,
+      snapshot: binding.service.treeSnapshot(baseRef),
+      capturedAt: new Date().toISOString(),
+    }),
+  );
 
   const worktree = acquireRunWorktree(binding.service, { owner: runId, branch, baseRef });
 
   try {
     db.transaction(
       () => {
-        const issueId = existingIssue?.id ?? insertAdHocIssue(db, projectId, request);
+        if (issue.create) insertIssue(db, issue.create);
         insertRun(db, {
           id: runId,
-          issue_id: issueId,
+          issue_id: issue.row.id,
           agent_id: defaultRuntime,
           status: runMachine.initial,
           branch,

@@ -12,25 +12,32 @@ import {
   Icon,
   Input,
 } from "@otomat/ui";
+import { useIssue } from "@web/api/issues/queries";
+import { ContextComposer } from "@web/components/context/context-composer";
 import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import type { ReviewSelection } from "@web/components/runs/review/use-selection";
+import { contextRequestFields, EMPTY_CONTEXT_DRAFT } from "@web/lib/context/draft";
 import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
 import { hasText } from "@web/lib/form";
 import { useState } from "react";
 
 export interface ReviewFixStepDialogProps {
   selection: ReviewSelection;
+  /** Issue the fix step attaches, like every other step of the cycle; null while the run is unknown. */
+  issueId: string | null;
   /** True while the run cannot take a step; the trigger stays visible and explains itself. */
   disabled: boolean;
 }
 
 /** Turns the selected comments into an appended step, on an agent the user picks here rather than inherits. */
-export function ReviewFixStepDialog({ selection, disabled }: ReviewFixStepDialogProps) {
+export function ReviewFixStepDialog({ selection, issueId, disabled }: ReviewFixStepDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(FIX_REVIEW_COMMENTS_STEP_NAME);
+  const [context, setContext] = useState(EMPTY_CONTEXT_DRAFT);
   const [execution, setExecution] = useState<ExecutionSelection>(EMPTY_EXECUTION_SELECTION);
+  const issue = useIssue(issueId);
   const launchExecution = useLaunchExecution(execution);
   const canSubmit = hasText(name) && launchExecution.canLaunch && !selection.isFixPending;
 
@@ -39,6 +46,7 @@ export function ReviewFixStepDialog({ selection, disabled }: ReviewFixStepDialog
     const request: RequestFixRequest = {
       comment_ids: [...selection.selectedIds],
       name: name.trim(),
+      ...contextRequestFields(context),
       ...launchExecution.request,
     };
     selection.requestFix(request, () => setOpen(false));
@@ -79,6 +87,14 @@ export function ReviewFixStepDialog({ selection, disabled }: ReviewFixStepDialog
               />
             </FieldControl>
           </Field>
+          <ContextComposer
+            issue={issue.data ?? null}
+            projectId={issue.data?.project_id}
+            value={context}
+            onChange={setContext}
+            label="Fix step"
+            noteRows={2}
+          />
           <LaunchExecutionPicker
             execution={launchExecution}
             onChange={setExecution}

@@ -203,8 +203,8 @@ it("delegates the fix request with the parsed selection and returns the updated 
   let received: { runId: string; request: FixRequest } | null = null;
   const app = makeApiApp(t, {
     review: stubReviewService({
-      requestFix: async (run, request) => {
-        received = { runId: run.id, request };
+      requestFix: async (run, fix) => {
+        received = { runId: run.id, request: fix };
         return runRow(RUN_ID);
       },
     }),
@@ -213,12 +213,16 @@ it("delegates the fix request with the parsed selection and returns the updated 
   const res = await post(app, `/api/runs/${RUN_ID}/review/fix`, {
     comment_ids: ["c1", "c2"],
     profile_id: "p-reviewer",
+    note: "keep the public API stable",
+    context: [{ kind: "file", path: "src/api.ts" }],
   });
   expect(res.status).toBe(201);
   expect(received).toEqual({
     runId: RUN_ID,
     request: {
       commentIds: ["c1", "c2"],
+      note: "keep the public API stable",
+      references: [{ kind: "file", path: "src/api.ts" }],
       selector: { kind: "profile", profileId: "p-reviewer" },
       overrides: {},
     },

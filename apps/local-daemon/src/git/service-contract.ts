@@ -1,6 +1,7 @@
 import type { Db } from "@otomat/db";
 
 import { WorktreeNotFoundError } from "./errors.js";
+import type { TreeFileLimits, TreeFileRead } from "./tree-file.js";
 import type {
   CanonicalDiff,
   ChangedFile,
@@ -47,7 +48,12 @@ export interface WorktreePromotion {
   canonical: WorktreeRecord;
 }
 
-export interface DiffSnapshot {
+/** One captured tree, so every path a response quotes comes from the same instant of the repository. */
+export interface TreeSnapshot {
+  readFile(path: string, limits: TreeFileLimits): TreeFileRead;
+}
+
+export interface DiffSnapshot extends TreeSnapshot {
   diff: CanonicalDiff;
   /** Whole-file text on both sides of `diff`, read from the captured base and tree. */
   fileBlobs(paths: DiffFilePaths): DiffFileBlobs;
@@ -84,6 +90,8 @@ export interface GitWorktreeService {
    * worktree keeps changing. Resolves like `diff`.
    */
   diffSnapshot(owner: string): DiffSnapshot;
+  /** A tree captured from a ref rather than from a worktree: what a launch reads before its worktree exists. */
+  treeSnapshot(baseRef: string): TreeSnapshot;
   /** Canonical diff of `commit` against the owner's fork point: only a commit can stand for what a push published. */
   commitDiff(owner: string, commit: string): CanonicalDiff;
   /** Commits outstanding changes and records the new branch tip without removing the active worktree. */

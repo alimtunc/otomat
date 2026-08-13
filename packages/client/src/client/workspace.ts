@@ -3,6 +3,7 @@ import {
   registerRepositoryResponseSchema,
   repositoryBranchesResponseSchema,
   repositoryContractSchema,
+  repositoryFilesResponseSchema,
   type RegisterRepositoryRequest,
   type UpdateRepositoryRequest,
 } from "@otomat/domain";
@@ -23,6 +24,14 @@ export function createWorkspaceClient(config: DaemonClientConfig) {
     async listRepositoryBranches(repositoryId: string) {
       return repositoryBranchesResponseSchema.parse(
         await getJson(config, `/api/repositories/${encodeURIComponent(repositoryId)}/branches`),
+      );
+    },
+    async searchRepositoryFiles(repositoryId: string, query: string) {
+      return repositoryFilesResponseSchema.parse(
+        await getJson(
+          config,
+          `/api/repositories/${encodeURIComponent(repositoryId)}/files${queryString({ q: query })}`,
+        ),
       );
     },
     async registerRepository(request: RegisterRepositoryRequest) {

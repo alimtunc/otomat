@@ -6,11 +6,12 @@ import type { ReviewSelection } from "@web/components/runs/review/use-selection"
 export interface DiffFixBarProps {
   /** Whether this run still owns its issue's workspace; a fix is one more step in that same cycle. */
   workspaceOpen: boolean;
+  issueId: string | null;
   authority: ReviewFixAuthority;
   selection: ReviewSelection;
 }
 
-export function DiffFixBar({ workspaceOpen, authority, selection }: DiffFixBarProps) {
+export function DiffFixBar({ workspaceOpen, issueId, authority, selection }: DiffFixBarProps) {
   const count = selection.selectedIds.size;
   const owned = authority.kind === "otomat";
   const ownedHint = workspaceOpen
@@ -32,7 +33,11 @@ export function DiffFixBar({ workspaceOpen, authority, selection }: DiffFixBarPr
           Clear
         </Button>
         {owned ? (
-          <ReviewFixStepDialog selection={selection} disabled={!workspaceOpen || count === 0} />
+          <ReviewFixStepDialog
+            selection={selection}
+            issueId={issueId}
+            disabled={!workspaceOpen || count === 0}
+          />
         ) : null}
       </span>
     </footer>

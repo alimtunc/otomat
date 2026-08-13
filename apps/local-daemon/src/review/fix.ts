@@ -1,5 +1,4 @@
 import {
-  getIssue,
   getReviewForRun,
   listCompeteGroupsForRun,
   listReviewCommentsForRun,
@@ -11,14 +10,15 @@ import {
   FIX_REVIEW_COMMENTS_STEP_NAME,
   isRunPlanCompeteGroup,
   type CompeteGroupState,
+  type ContextReviewComment,
   type RunPlanNode,
   type StepRunState,
 } from "@otomat/domain";
 
+import { reviewCommentContext } from "#context";
 import { diffSnapshotOrNull } from "#git";
 
 import { CommentsNotFixableError } from "./errors.js";
-import { buildFixPrompt, type FixCommentContext } from "./fix-context.js";
 import { driveReviewTo } from "./transitions.js";
 import type { FixPreparation, FixRequest, ReviewContext } from "./types.js";
 
@@ -44,40 +44,30 @@ function diffProducingNodes(ctx: ReviewContext, run: RunRow): string[] {
 
 /** Freezes the fix context of the selected open comments; mutates nothing. */
 function prepareFix(ctx: ReviewContext, run: RunRow, commentIds: string[]): FixPreparation {
-  const comments = listReviewCommentsForRun(ctx.db, run.id);
-  const byId = new Map(comments.map((comment) => [comment.id, comment]));
-  // One captured snapshot: the prompt's diff and every "current file" come from the same tree,
-  // and a commented path that is a symlink stays the symlink's target text, never a host file.
+  const byId = new Map(
+    listReviewCommentsForRun(ctx.db, run.id).map((comment) => [comment.id, comment]),
+  );
+  // One captured snapshot: every "current file" comes from the same tree, and a commented path
+  // that is a symlink stays the symlink's target text, never a host file.
   const binding = ctx.repositories.forRun(run.id);
   const snapshot = binding === null ? null : diffSnapshotOrNull(binding.service, run.id);
-  const selected: FixCommentContext[] = [];
+  const comments: ContextReviewComment[] = [];
   for (const commentId of commentIds) {
     const comment = byId.get(commentId);
     if (!comment) throw new CommentsNotFixableError(`comment ${commentId} not found on run`);
     if (comment.status !== "open") {
       throw new CommentsNotFixableError(`comment ${commentId} is ${comment.status}, not open`);
     }
-    selected.push({
-      comment,
-      currentFile:
+    comments.push(
+      reviewCommentContext(
+        comment,
         snapshot === null
           ? null
           : snapshot.fileBlobs({ path: comment.file_path, oldPath: null }).head,
-    });
+      ),
+    );
   }
-
-  const issue = getIssue(ctx.db, run.issue_id);
-  return {
-    prompt: buildFixPrompt({
-      issueTitle: issue?.title ?? "Local run",
-      issueBody: issue?.body ?? null,
-      branch: run.branch,
-      diff: snapshot?.diff ?? null,
-      comments: selected,
-    }),
-    commentIds,
-    dependsOn: diffProducingNodes(ctx, run),
-  };
+  return { comments, commentIds, dependsOn: diffProducingNodes(ctx, run) };
 }
 
 /**
@@ -107,7 +97,9 @@ export async function requestFix(
   const preparation = prepareFix(ctx, run, request.commentIds);
   const updated = await ctx.appendRunStep(run.id, {
     name: request.name ?? FIX_REVIEW_COMMENTS_STEP_NAME,
-    prompt: preparation.prompt,
+    note: request.note,
+    references: request.references,
+    reviewComments: preparation.comments,
     selector: request.selector,
     overrides: request.overrides,
     dependsOn: preparation.dependsOn,

@@ -21,6 +21,7 @@ import {
   issueContractSchema,
   projectContractSchema,
   pullRequestContractSchema,
+  isRunPlanCompeteGroup,
   repositoryContractSchema,
   reviewCommentContractSchema,
   reviewContractSchema,
@@ -41,6 +42,7 @@ import {
   type ReviewContract,
   type RunContract,
   type RunContributionContract,
+  type RunPlan,
   type SkillContract,
   type StepRunContract,
   type WorktreeStatus,
@@ -87,8 +89,26 @@ function toIsoInstant(value: string | null): string | null {
   return value === null ? null : sqliteToIso(value);
 }
 
+const withoutContext = <T extends { context?: unknown }>({ context: _frozen, ...node }: T) => node;
+
+/** A node's frozen context can be whole repository files, and a run row is re-read on every ledger event; the dossier endpoint serves it per session instead. */
+function toPlanShape(plan: RunPlan): RunPlan {
+  return {
+    ...plan,
+    steps: plan.steps.map((node) =>
+      isRunPlanCompeteGroup(node)
+        ? { ...node, compete: node.compete.map(withoutContext) }
+        : withoutContext(node),
+    ),
+  };
+}
+
 export function toRun(row: RunRow): RunContract {
-  return runContractSchema.parse({ ...row, updated_at: sqliteToIso(row.updated_at) });
+  return runContractSchema.parse({
+    ...row,
+    plan_json: toPlanShape(row.plan_json),
+    updated_at: sqliteToIso(row.updated_at),
+  });
 }
 
 export function toRunContribution(row: RunContributionRow): RunContributionContract {

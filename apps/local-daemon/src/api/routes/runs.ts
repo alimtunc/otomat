@@ -1,13 +1,13 @@
-import { CompeteWinnerConflictError, getPullRequestForRun, getRun } from "@otomat/db";
+import { getPullRequestForRun, getRun, listAgentSessionsForRun } from "@otomat/db";
 import {
   appendRunStepRequestSchema,
   IllegalTransitionError,
-  selectCompeteWinnerRequestSchema,
   startRunRequestSchema,
   type RunEventWindow,
   type RunLaunchError,
+  type SessionContextResponse,
 } from "@otomat/domain";
-import { Hono, type Context, type Env } from "hono";
+import { Hono } from "hono";
 
 import { readRunEventWindow } from "#events";
 import { RuntimeUnavailableError } from "#runtime";
@@ -22,8 +22,8 @@ import { projectRunCompletionReport } from "../completion-report.js";
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { nonNegativeInt } from "../query-params.js";
-import { readCompeteCandidate, readRunDetail, readRuns } from "../reads.js";
-import { toRunDiffResponse } from "../serialize-run-diff.js";
+import { readRuns } from "../reads.js";
+import { runDetailJson } from "../run-detail.js";
 import { toPullRequest, toRun } from "../serialize.js";
 import { streamRunEvents } from "../sse.js";
 import { appendStepSelector, stepAppendErrorResponse } from "../step-append.js";
@@ -41,14 +41,6 @@ const LAUNCH_REFUSAL_STATUS: Record<RunLaunchError, 400 | 409> = {
 /** Mounted at `/api/runs`. Holds the run reads, the run commands (start/resume/abort), and the SSE stream. */
 export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
-
-  const runDetailJson = <E extends Env>(c: Context<E>, runId: string) => {
-    const detail = readRunDetail(deps.db, runId, {
-      wait: deps.supervisor.waitFor(runId),
-      resume: deps.supervisor.resumePlan(runId),
-    });
-    return detail ? c.json(detail) : c.json({ error: "run_not_found" }, 404);
-  };
 
   routes.get("/", (c) =>
     c.json(
@@ -88,7 +80,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
     }
   });
 
-  routes.get("/:id", (c) => runDetailJson(c, c.req.param("id")));
+  routes.get("/:id", (c) => runDetailJson(deps, c, c.req.param("id")));
 
   routes.get("/:id/report", (c) => {
     const report = projectRunCompletionReport(deps.db, c.req.param("id"), deps.review);
@@ -150,7 +142,8 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       try {
         const updated = await deps.supervisor.appendStep(run.id, {
           name: request.name,
-          prompt: request.prompt,
+          note: request.note ?? null,
+          references: request.context ?? [],
           selector: appendStepSelector(request),
           overrides: { model: request.model, options: request.options },
           dependsOn: request.depends_on,
@@ -166,45 +159,18 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
     },
   );
 
-  routes.get("/:id/compete-groups/:groupId/candidates/:stepId/diff", runGuard(deps.db), (c) => {
+  /** The dossier one session was given, so what an agent received stays readable after the turn. */
+  routes.get("/:id/sessions/:sessionId/context", runGuard(deps.db), (c) => {
     const run = c.get("run");
-    const step = readCompeteCandidate(
-      deps.db,
-      run.id,
-      c.req.param("groupId"),
-      c.req.param("stepId"),
-    );
-    if (!step) return c.json({ error: "compete_candidate_not_found" }, 404);
-    try {
-      return c.json(toRunDiffResponse(run.id, deps.review.getWorktreeDiff(run, step.id)));
-    } catch (error) {
-      console.error(`[otomat] compete candidate diff ${step.id} failed`, error);
-      return c.json({ error: "compete_diff_failed" }, 500);
-    }
+    const sessionId = c.req.param("sessionId");
+    const session = listAgentSessionsForRun(deps.db, run.id).find((row) => row.id === sessionId);
+    if (!session) return c.json({ error: "agent_session_not_found" }, 404);
+    return c.json({
+      run_id: run.id,
+      agent_session_id: sessionId,
+      context: session.context_json ?? null,
+    } satisfies SessionContextResponse);
   });
-
-  routes.post(
-    "/:id/compete-groups/:groupId/winner",
-    validateJson(selectCompeteWinnerRequestSchema),
-    runGuard(deps.db),
-    async (c) => {
-      const run = c.get("run");
-      try {
-        await deps.supervisor.selectWinner(
-          run.id,
-          c.req.param("groupId"),
-          c.req.valid("json").step_run_id,
-        );
-        return runDetailJson(c, run.id);
-      } catch (error) {
-        if (error instanceof CompeteWinnerConflictError) {
-          return c.json({ error: "compete_winner_conflict", message: error.message }, 409);
-        }
-        console.error(`[otomat] compete winner selection on run ${run.id} failed`, error);
-        return c.json({ error: "compete_winner_selection_failed" }, 500);
-      }
-    },
-  );
 
   routes.post("/:id/abort", runGuard(deps.db), async (c) => {
     const run = c.get("run");
@@ -214,7 +180,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       console.error(`[otomat] abort run ${run.id} failed`, error);
       return c.json({ error: "run_abort_failed" }, 500);
     }
-    return runDetailJson(c, run.id);
+    return runDetailJson(deps, c, run.id);
   });
 
   routes.get("/:id/events", runGuard(deps.db), (c) => streamRunEvents(c, deps.db, c.get("run").id));

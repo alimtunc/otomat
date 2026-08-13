@@ -1,4 +1,5 @@
 import type { RunPlanInput, RunPlanNodeInput } from "@otomat/domain";
+import { contextRequestFields } from "@web/lib/context/draft";
 import { executionRequestFields } from "@web/lib/execution/request";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import type { WorkflowNodeDraft } from "@web/lib/workflow-draft";
@@ -26,7 +27,7 @@ export function buildRunPlanInput(steps: readonly WorkflowNodeDraft[]): RunPlanI
           id: competitor.key,
           name: competitor.name.trim(),
           ...nodeExecution(competitor.execution),
-          prompt: competitor.prompt.trim(),
+          ...contextRequestFields(competitor.context),
         })),
       };
     }
@@ -34,7 +35,7 @@ export function buildRunPlanInput(steps: readonly WorkflowNodeDraft[]): RunPlanI
       id: step.key,
       name: step.name.trim(),
       ...nodeExecution(step.execution),
-      prompt: step.prompt.trim(),
+      ...contextRequestFields(step.context),
       depends_on: step.dependsOn,
     };
   });

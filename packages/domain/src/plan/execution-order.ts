@@ -1,13 +1,21 @@
-import type { RunPlan, RunPlanNode } from "../contracts/entities/runs.js";
+import type { RunPlan, RunPlanNode } from "../contracts/run-plan.js";
 
-export interface TopologicalStepOrder {
-  /** Steps in deterministic execution order: dependencies first, ties broken by plan position. */
-  readonly order: readonly RunPlanNode[];
-  /** Steps that could not be ordered — non-empty exactly when the plan has a dependency cycle. */
-  readonly remaining: readonly RunPlanNode[];
+/** Ordering reads ids and edges only, so a launch input orders exactly like a frozen plan. */
+interface PlanDependencyNode {
+  readonly id: string;
+  readonly depends_on: readonly string[];
 }
 
-export function topologicalStepOrder(steps: readonly RunPlanNode[]): TopologicalStepOrder {
+export interface TopologicalStepOrder<T extends PlanDependencyNode> {
+  /** Steps in deterministic execution order: dependencies first, ties broken by plan position. */
+  readonly order: readonly T[];
+  /** Steps that could not be ordered — non-empty exactly when the plan has a dependency cycle. */
+  readonly remaining: readonly T[];
+}
+
+export function topologicalStepOrder<T extends PlanDependencyNode>(
+  steps: readonly T[],
+): TopologicalStepOrder<T> {
   const indexById = new Map(steps.map((step, index) => [step.id, index]));
   const indegree = steps.map((step) => step.depends_on.filter((dep) => indexById.has(dep)).length);
   const dependents = new Map<string, number[]>();
@@ -20,7 +28,7 @@ export function topologicalStepOrder(steps: readonly RunPlanNode[]): Topological
     }
   });
 
-  const order: RunPlanNode[] = [];
+  const order: T[] = [];
   const placed = new Set<number>();
   while (order.length < steps.length) {
     const readyIndex = steps.findIndex((_, index) => !placed.has(index) && indegree[index] === 0);

@@ -20,6 +20,13 @@ import type { SupervisorState } from "./state.js";
 import { driveIssueTo, driveRunTo } from "./transitions.js";
 import type { TurnContext } from "./types.js";
 
+/** A reattached session still holds its own conversation and dossier, so it is told to continue rather than handed the context again. */
+export const NATIVE_CONTINUATION = [
+  "Your previous turn stopped before finishing. You still have this session's",
+  "context and the same worktree. Check what you had already changed, then continue",
+  "from where you stopped.",
+].join("\n");
+
 /** A resume the caller got wrong (bad state, concurrent turn, no session) — a conflict, not a daemon fault. */
 export class RunNotResumableError extends Error {
   constructor(message: string) {
@@ -97,8 +104,7 @@ export function resolveSessionResumeTurn(
   const runId = run.id;
   const runtime = requireResumableRuntime(db, run, session);
   const worktreePath = requireWorktreePath(state, run);
-  const config =
-    executableSteps(run.plan_json).find((step) => step.id === session.step_run_id)?.config ?? null;
+  const step = executableSteps(run.plan_json).find((entry) => entry.id === session.step_run_id);
 
   return {
     context: {
@@ -106,10 +112,11 @@ export function resolveSessionResumeTurn(
       stepRunId: session.step_run_id,
       agentSessionId: session.id,
       prompt,
+      contextSelection: step?.context ?? null,
       agentSessionDir: sessionDir(state.dataDir, runId, session.id),
       worktreePath,
       runtime,
-      config,
+      config: step?.config ?? null,
     },
     providerSessionId: session.provider_session_id,
   };

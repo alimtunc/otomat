@@ -94,6 +94,7 @@ export function WorkflowLaunchForm({
           execution={launchExecution}
           onExecutionChange={onExecutionChange}
           workflow={workflow}
+          target={target}
         />
         <LaunchTargetFields target={worktreeTarget} disabled={isPending} />
       </DialogBody>

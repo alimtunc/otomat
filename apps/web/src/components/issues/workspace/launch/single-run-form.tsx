@@ -1,14 +1,17 @@
 import type { IssueContract, RunContract } from "@otomat/domain";
-import { Button, DialogBody, Field, FieldControl, FieldLabel, Kbd, Textarea } from "@otomat/ui";
+import { Button, DialogBody, Kbd } from "@otomat/ui";
 import { useLaunchRun } from "@web/api/runs/use-launch-run";
+import { ContextComposer } from "@web/components/context/context-composer";
+import { ContextSourcesPanel } from "@web/components/context/context-sources-panel";
+import { useContextSources } from "@web/components/context/use-context-sources";
 import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { LaunchTargetFields } from "@web/components/runs/launch/launch-target-fields";
 import type { LaunchTargetState } from "@web/components/runs/launch/use-launch-target";
+import { contextRequestFields, EMPTY_CONTEXT_DRAFT } from "@web/lib/context/draft";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
-import { hasText, submitOnCmdEnter } from "@web/lib/form";
-import { issueLaunchPrompt } from "@web/lib/issue/prompt";
+import { submitOnCmdEnter } from "@web/lib/form";
 import { useState } from "react";
 
 export interface SingleRunLaunchFormProps {
@@ -20,7 +23,7 @@ export interface SingleRunLaunchFormProps {
   onCancel: () => void;
 }
 
-/** One agent turn on this issue, with the prompt it starts from on screen and editable. */
+/** One agent turn on this issue: the issue is attached, and the only text is the instruction the user chooses to add. */
 export function SingleRunLaunchForm({
   issue,
   target,
@@ -29,17 +32,23 @@ export function SingleRunLaunchForm({
   onLaunched,
   onCancel,
 }: SingleRunLaunchFormProps) {
-  const [prompt, setPrompt] = useState(() => issueLaunchPrompt(issue));
+  const [context, setContext] = useState(EMPTY_CONTEXT_DRAFT);
   const launchExecution = useLaunchExecution(execution);
   const { launch, isPending } = useLaunchRun();
-  const canSubmit = hasText(prompt) && launchExecution.canLaunch && !isPending;
+  const sources = useContextSources({
+    draft: context,
+    issue,
+    agentChoice: launchExecution.selection.agent,
+    profiles: launchExecution.agents.profiles,
+  });
+  const canSubmit = launchExecution.canLaunch && !isPending;
 
   async function submit() {
     if (!canSubmit) return;
     const run = await launch({
       issue_id: issue.id,
-      prompt: prompt.trim(),
       base_branch: target.baseBranch,
+      ...contextRequestFields(context),
       ...launchExecution.request,
     });
     if (run) onLaunched(run);
@@ -47,30 +56,25 @@ export function SingleRunLaunchForm({
 
   return (
     <>
-      <DialogBody className="flex flex-col gap-3">
-        <Field>
-          <FieldLabel>Prompt</FieldLabel>
-          <FieldControl>
-            <Textarea
-              autoFocus
-              rows={5}
-              value={prompt}
-              onChange={(event) => setPrompt(event.target.value)}
-              onKeyDown={submitOnCmdEnter(() => void submit())}
-              placeholder="What should the agent do on this issue?"
-              aria-label="Single run prompt"
-            />
-          </FieldControl>
-        </Field>
-        <p className="text-xs text-text-tertiary">
-          Prefilled from this issue and sent as-is — the agent receives exactly this text.
-        </p>
-        <LaunchExecutionPicker
-          execution={launchExecution}
-          onChange={onExecutionChange}
-          label="Single run"
-        />
-        <LaunchTargetFields target={target} disabled={isPending} />
+      <DialogBody>
+        <div className="flex flex-col gap-3" onKeyDown={submitOnCmdEnter(() => void submit())}>
+          <ContextComposer
+            autoFocus
+            issue={issue}
+            projectId={issue.project_id}
+            value={context}
+            onChange={setContext}
+            label="Single run"
+            noteRows={4}
+          />
+          <ContextSourcesPanel sources={sources} />
+          <LaunchExecutionPicker
+            execution={launchExecution}
+            onChange={onExecutionChange}
+            label="Single run"
+          />
+          <LaunchTargetFields target={target} disabled={isPending} />
+        </div>
       </DialogBody>
       <IssueFormFooter
         onCancel={onCancel}

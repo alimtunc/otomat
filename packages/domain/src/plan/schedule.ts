@@ -5,7 +5,7 @@ import {
   type RunPlanCompetitor,
   type RunPlanNode,
   type RunPlanStep,
-} from "../contracts/entities/runs.js";
+} from "../contracts/run-plan.js";
 import type { CompeteGroupState } from "../state-machines/compete-group.js";
 import type { StepRunState } from "../state-machines/step-run.js";
 import { planExecutionOrder } from "./execution-order.js";
