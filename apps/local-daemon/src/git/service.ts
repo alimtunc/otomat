@@ -2,23 +2,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-import {
-  collectChangedFiles,
-  computeCanonicalDiff,
-  readFileBlobs,
-  worktreeStateTree,
-} from "./diff.js";
+import { diffBase, diffInputs } from "./diff-inputs.js";
+import { collectChangedFiles, computeCanonicalDiff, readFileBlobs } from "./diff.js";
 import { WorktreeConflictError, WorktreeNotFoundError } from "./errors.js";
 import { toRecord } from "./record.js";
-import {
-  branchExists,
-  deleteBranch,
-  fastForward,
-  headSha,
-  isAncestor,
-  mergeBase,
-  revParse,
-} from "./repo.js";
+import { branchExists, deleteBranch, fastForward, headSha, isAncestor, revParse } from "./repo.js";
 import type { GitWorktreeService, GitWorktreeServiceConfig } from "./service-contract.js";
 import { addWorktree, pruneWorktrees, removeWorktree } from "./worktree-cli.js";
 import { isDirty, snapshotWorktree } from "./worktree-snapshot.js";
@@ -60,20 +48,7 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
     throw new WorktreeNotFoundError(owner);
   }
 
-  function diffInputs(row: WorktreeRow): { gitCwd: string; base: string; tree: string } {
-    if (row.status === "active") {
-      const base =
-        row.base_sha === ""
-          ? (mergeBase(row.path, "HEAD", defaultBranch) ?? revParse(row.path, defaultBranch))
-          : row.base_sha;
-      return { gitCwd: row.path, base, tree: worktreeStateTree(row.path, base) };
-    }
-    const base =
-      row.base_sha === ""
-        ? (mergeBase(repoRoot, row.branch, defaultBranch) ?? revParse(repoRoot, defaultBranch))
-        : row.base_sha;
-    return { gitCwd: repoRoot, base, tree: revParse(repoRoot, `${row.branch}^{tree}`) };
-  }
+  const scope = { repoRoot, defaultBranch };
 
   return {
     acquire(input) {
@@ -158,21 +133,26 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
     },
 
     changedFiles(owner) {
-      const { gitCwd, base, tree } = diffInputs(resolve(owner));
+      const { gitCwd, base, tree } = diffInputs(scope, resolve(owner));
       return collectChangedFiles(gitCwd, base, tree);
     },
 
     diff(owner) {
-      const { gitCwd, base, tree } = diffInputs(resolve(owner));
+      const { gitCwd, base, tree } = diffInputs(scope, resolve(owner));
       return computeCanonicalDiff(gitCwd, base, tree);
     },
 
     diffSnapshot(owner) {
-      const { gitCwd, base, tree } = diffInputs(resolve(owner));
+      const { gitCwd, base, tree } = diffInputs(scope, resolve(owner));
       return {
         diff: computeCanonicalDiff(gitCwd, base, tree),
         fileBlobs: (paths) => readFileBlobs(gitCwd, base, tree, paths),
       };
+    },
+
+    commitDiff(owner, commit) {
+      const { gitCwd, base } = diffBase(scope, resolve(owner));
+      return computeCanonicalDiff(gitCwd, base, revParse(gitCwd, `${commit}^{tree}`));
     },
 
     snapshot(owner) {

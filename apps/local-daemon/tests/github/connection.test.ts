@@ -28,6 +28,7 @@ function fakeCli(): GitHubCli & { tokens: string[] } {
     connection: async () => current,
     availability: async () => null,
     remoteBranchExists: async () => true,
+    remoteBranchProtected: async () => true,
     loginWithToken: async (token: string) => {
       tokens.push(token);
       current = CONNECTED;
@@ -35,6 +36,9 @@ function fakeCli(): GitHubCli & { tokens: string[] } {
     },
     resolveRemote: () => Promise.reject(new Error("not used")),
     push: () => Promise.reject(new Error("not used")),
+    forcePushWithLease: () => Promise.reject(new Error("not used")),
+    remoteHead: () => Promise.reject(new Error("not used")),
+    fetchBranch: () => Promise.reject(new Error("not used")),
     findPullRequest: () => Promise.reject(new Error("not used")),
     viewPullRequest: () => Promise.reject(new Error("not used")),
     createPullRequest: () => Promise.reject(new Error("not used")),

@@ -15,6 +15,8 @@ export {
   branchExists,
   commitsSince,
   detectDefaultBranch,
+  hasCommit,
+  headSha,
   isRepositoryRoot,
   listBranches,
   uncommittedPaths,

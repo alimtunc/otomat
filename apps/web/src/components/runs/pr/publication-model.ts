@@ -7,6 +7,8 @@ export interface PublicationModel {
   stateLabel: string;
 }
 
+const UPDATE_LABEL = "Update PR details";
+
 const PENDING_PUBLICATION_MODELS = {
   pushing: {
     actionLabel: "Pushing branch…",
@@ -22,31 +24,13 @@ const PENDING_PUBLICATION_MODELS = {
   },
 } as const satisfies Record<"pushing" | "creating", PublicationModel>;
 
-function createdModel(
-  pullRequest: PullRequestContract,
-  hasDraftChanges: boolean,
-): PublicationModel {
-  if (hasDraftChanges || pullRequest.has_unpublished_changes === true) {
-    return {
-      actionLabel: "Update PR",
-      actionDisabled: false,
-      actionPending: false,
-      stateLabel: "Unpublished changes",
-    };
-  }
-  if (pullRequest.has_unpublished_changes === null) {
-    return {
-      actionLabel: "Retry comparison",
-      actionDisabled: false,
-      actionPending: false,
-      stateLabel: "Changes unavailable",
-    };
-  }
+/** Details only: this action edits title, description and Draft/Ready, and never moves a commit. */
+function createdModel(hasDraftChanges: boolean): PublicationModel {
   return {
-    actionLabel: "Pull request up to date",
-    actionDisabled: true,
+    actionLabel: UPDATE_LABEL,
+    actionDisabled: !hasDraftChanges,
     actionPending: false,
-    stateLabel: "Up to date",
+    stateLabel: hasDraftChanges ? "Unsaved details" : "Details published",
   };
 }
 
@@ -78,13 +62,21 @@ function terminalModel(status: "merged" | "closed"): PublicationModel {
   };
 }
 
+/** A pull request that exists stays editable whatever its run went on to do; only creation waits on the run. */
 function failedModel(pullRequest: PullRequestContract, canPublish: boolean): PublicationModel {
-  const isCreation = pullRequest.number === null;
+  if (pullRequest.number !== null) {
+    return {
+      actionLabel: UPDATE_LABEL,
+      actionDisabled: false,
+      actionPending: false,
+      stateLabel: "Update failed",
+    };
+  }
   return {
-    actionLabel: isCreation ? "Retry PR" : "Update PR",
+    actionLabel: "Retry PR",
     actionDisabled: !canPublish,
     actionPending: false,
-    stateLabel: pullRequest.number === null ? "Creation failed" : "Update failed",
+    stateLabel: "Creation failed",
   };
 }
 
@@ -101,9 +93,7 @@ export function publicationModel(
   }
   if (pullRequest.publication_status === "pushing") return PENDING_PUBLICATION_MODELS.pushing;
   if (pullRequest.publication_status === "creating") return PENDING_PUBLICATION_MODELS.creating;
-  if (pullRequest.publication_status === "created") {
-    return createdModel(pullRequest, hasDraftChanges);
-  }
+  if (pullRequest.publication_status === "created") return createdModel(hasDraftChanges);
   if (pullRequest.publication_status === "failed") return failedModel(pullRequest, canPublish);
   return {
     actionLabel: createLabel(mode),

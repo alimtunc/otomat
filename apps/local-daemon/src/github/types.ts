@@ -5,6 +5,8 @@ import type {
   PreparePullRequestRequest,
   PullRequestDraft,
   PullRequestState,
+  PullRequestSync,
+  PushPullRequestRequest,
 } from "@otomat/domain";
 
 import type { RepositoryResolver } from "#git";
@@ -45,7 +47,7 @@ export type CommandRunner = (request: CommandRequest) => Promise<CommandResult>;
 
 export interface PullRequestView {
   row: PullRequestRow;
-  hasUnpublishedChanges: boolean | null;
+  sync: PullRequestSync | null;
 }
 
 export interface GitHubServiceConfig {
@@ -66,7 +68,10 @@ export interface GitHubService {
   connect(): GitHubConnectionContract;
   /** Re-reads a live pull request from the provider, settling the run when it turns out merged. */
   getPullRequest(runId: string): Promise<PullRequestView | null>;
+  /** Never pushes to a pull request that already exists. */
   publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView>;
+  /** Never commits: only commits the workspace already holds are published. */
+  pushCommits(runId: string, request: PushPullRequestRequest): Promise<PullRequestView>;
   draftPullRequest(run: RunRow): Promise<PullRequestDraft>;
 }
 
@@ -85,9 +90,12 @@ export interface GitHubPullRequest {
   lifecycle: PullRequestState;
 }
 
-export interface PullRequestSelector {
+export interface GitHubRepositoryTarget {
   cwd: string;
   repository: string;
+}
+
+export interface PullRequestSelector extends GitHubRepositoryTarget {
   head: string;
   base: string;
 }
@@ -115,15 +123,28 @@ export interface PullRequestModeInput {
   draft: boolean;
 }
 
+export interface ForcePushWithLeaseInput {
+  cwd: string;
+  remote: string;
+  branch: string;
+  expectedRemoteSha: string;
+}
+
 export interface GitHubCli {
   connection(): Promise<GitHubConnectionContract>;
   /** Null when gh can run; otherwise the not_installed/cli_outdated/failed contract. */
   availability(): Promise<GitHubConnectionContract | null>;
   /** False only on a definite GitHub 404 — a failed create then reads as "base branch missing", never on a transport blip. */
   remoteBranchExists(cwd: string, repository: string, branch: string): Promise<boolean>;
+  /** True whenever GitHub does not plainly answer "unprotected": a rewrite may not proceed on a maybe. */
+  remoteBranchProtected(cwd: string, repository: string, branch: string): Promise<boolean>;
   loginWithToken(token: string): Promise<GitHubConnectionContract>;
   resolveRemote(cwd: string): Promise<GitHubRemote>;
+  /** Fast-forward push; a rejected non-fast-forward throws `github_push_rejected` rather than forcing. */
   push(cwd: string, remote: string, branch: string): Promise<void>;
+  forcePushWithLease(input: ForcePushWithLeaseInput): Promise<void>;
+  remoteHead(cwd: string, remote: string, branch: string): Promise<string | null>;
+  fetchBranch(cwd: string, remote: string, branch: string): Promise<void>;
   findPullRequest(input: PullRequestSelector): Promise<GitHubPullRequest | null>;
   viewPullRequest(cwd: string, repository: string, number: number): Promise<GitHubPullRequest>;
   createPullRequest(input: PullRequestCreateInput): Promise<void>;

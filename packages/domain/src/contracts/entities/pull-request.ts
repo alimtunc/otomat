@@ -16,11 +16,11 @@ export const pullRequestContractSchema = z
     body: z.string().nullable(),
     head_ref: z.string().nullable(),
     base_ref: z.string().nullable(),
+    /** The commit Otomat last pushed, and the canonical diff it carried; null until one lands. */
     published_head_sha: z.string().nullable(),
     published_diff_sha: z.string().nullable(),
     error_code: z.string().nullable(),
     error_message: z.string().nullable(),
-    has_unpublished_changes: z.boolean().nullable(),
   })
   .superRefine((pullRequest, context) => {
     if (pullRequest.publication_status !== "created") return;
@@ -29,8 +29,6 @@ export const pullRequestContractSchema = z
       pullRequest.url,
       pullRequest.head_ref,
       pullRequest.base_ref,
-      pullRequest.published_head_sha,
-      pullRequest.published_diff_sha,
     ];
     if (confirmedMetadata.some((value) => value === null)) {
       context.addIssue({

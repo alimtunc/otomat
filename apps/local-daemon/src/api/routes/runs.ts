@@ -116,7 +116,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       const pullRequest = getPullRequestForRun(deps.db, run.id);
       return c.json({
         ...facts,
-        pull_request: pullRequest ? toPullRequest(pullRequest, null) : null,
+        pull_request: pullRequest ? toPullRequest(pullRequest) : null,
       });
     } catch (error) {
       console.error(`[otomat] reading the workspace of run ${run.id} failed`, error);

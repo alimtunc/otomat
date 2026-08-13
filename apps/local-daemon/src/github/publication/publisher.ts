@@ -1,30 +1,28 @@
-import { getPullRequestForRun, getRepository, type PullRequestRow, type RunRow } from "@otomat/db";
-import type { GitHubConnectionContract, PreparePullRequestRequest } from "@otomat/domain";
-
-import type { GitWorktreeService, WorktreeRecord } from "#git";
+import { getPullRequestForRun, type PullRequestRow, type RunRow } from "@otomat/db";
+import type {
+  GitHubConnectionContract,
+  PreparePullRequestRequest,
+  PullRequestSync,
+  PushPullRequestRequest,
+} from "@otomat/domain";
 
 import { normalizePullRequestBody } from "../body.js";
 import { GitHubPublicationError } from "../errors.js";
-import type { PullRequestSelector, PullRequestView } from "../types.js";
-import { ensureProvider, providerPatch, refreshExistingPullRequest } from "./provider.js";
+import type { PullRequestView } from "../types.js";
+import { createPublication } from "./create.js";
+import { providerPatch, refreshExistingPullRequest, updateDetails } from "./provider.js";
+import { pushCommits } from "./push.js";
 import { PublicationStore } from "./store.js";
+import { computeSync, UNAVAILABLE_SYNC } from "./sync.js";
 import type {
-  ProviderResult,
   PublicationConfig,
-  PublicationContext,
   PublicationRequest,
   PullRequestPublicationService,
 } from "./types.js";
-
-interface PushedSnapshot {
-  row: PullRequestRow;
-  headSha: string;
-  diffSha: string;
-  selector: PullRequestSelector;
-}
+import { resolveWorkspace } from "./workspace.js";
 
 class PullRequestPublisher implements PullRequestPublicationService {
-  private readonly publications = new Map<string, Promise<PullRequestView>>();
+  private readonly operations = new Map<string, Promise<PullRequestView>>();
   private readonly store: PublicationStore;
 
   constructor(private readonly config: PublicationConfig) {
@@ -35,8 +33,34 @@ class PullRequestPublisher implements PullRequestPublicationService {
   async get(runId: string): Promise<PullRequestView | null> {
     const stored = getPullRequestForRun(this.config.db, runId);
     if (!stored) return null;
-    if (this.publications.has(runId)) return this.store.view(stored);
-    return this.store.view(await this.refreshLifecycle(this.store.recoverInterrupted(stored)));
+    if (this.operations.has(runId)) return this.view(stored);
+    return this.view(await this.refreshLifecycle(this.store.recoverInterrupted(stored)));
+  }
+
+  publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView> {
+    return this.serialize(run.id, () => this.publishOnce(run, request));
+  }
+
+  pushCommits(runId: string, request: PushPullRequestRequest): Promise<PullRequestView> {
+    return this.serialize(runId, async () => {
+      const stored = getPullRequestForRun(this.config.db, runId);
+      return this.view(await pushCommits(this.config, this.store, stored, request));
+    });
+  }
+
+  /** Queued, never dropped: two writers on one branch is how a lease turns into a lost commit. */
+  private serialize(
+    runId: string,
+    operation: () => Promise<PullRequestView>,
+  ): Promise<PullRequestView> {
+    const active = this.operations.get(runId);
+    const started: Promise<PullRequestView> = (
+      active ? active.then(operation, operation) : operation()
+    ).finally(() => {
+      if (this.operations.get(runId) === started) this.operations.delete(runId);
+    });
+    this.operations.set(runId, started);
+    return started;
   }
 
   /** The repository root is the cwd, not the worktree: a merge is exactly what takes that away. */
@@ -54,79 +78,27 @@ class PullRequestPublisher implements PullRequestPublicationService {
     }
   }
 
-  publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView> {
-    const active = this.publications.get(run.id);
-    if (active) return active;
-    const operation = this.publishOnce(run, request).finally(() =>
-      this.publications.delete(run.id),
-    );
-    this.publications.set(run.id, operation);
-    return operation;
+  private async view(row: PullRequestRow): Promise<PullRequestView> {
+    return { row, sync: await this.sync(row) };
   }
 
-  private requireWorktree(runId: string): {
-    worktrees: GitWorktreeService;
-    worktree: WorktreeRecord;
-  } {
-    const worktrees = this.config.repositories.forRun(runId)?.service;
-    const worktree = worktrees?.get(runId);
-    if (!worktrees || !worktree) {
-      throw new GitHubPublicationError("worktree_missing", "The run has no active worktree.");
+  /** A comparison that could not be made is still a comparison: only an absent branch answers null. */
+  private async sync(row: PullRequestRow): Promise<PullRequestSync | null> {
+    if (row.number === null || row.head_ref === null) return null;
+    if (row.status === "merged" || row.status === "closed") return null;
+    try {
+      const workspace = await resolveWorkspace(this.config, row.run_id);
+      return await computeSync({
+        cli: this.config.cli,
+        worktreePath: workspace.worktree.path,
+        remote: workspace.remote.name,
+        headRef: row.head_ref,
+        baseRef: workspace.baseRef,
+      });
+    } catch (error) {
+      console.error(`[otomat] workspace for run ${row.run_id} could not be compared`, error);
+      return UNAVAILABLE_SYNC;
     }
-    const diff = worktrees.diff(runId);
-    if (diff.files.length === 0) {
-      throw new GitHubPublicationError("diff_empty", "The run has no changes to publish.");
-    }
-    return { worktrees, worktree };
-  }
-
-  private async pushSnapshot(
-    row: PullRequestRow,
-    context: PublicationContext,
-  ): Promise<PushedSnapshot> {
-    const head =
-      row.number !== null
-        ? (row.head_ref ?? context.worktree.branch)
-        : (context.request.head_ref ?? row.head_ref ?? context.worktree.branch);
-    row = this.store.transition(
-      row,
-      "pushing",
-      {
-        title: context.request.title,
-        body: context.request.normalizedBody,
-        head_ref: head,
-        error_code: null,
-        error_message: null,
-      },
-      "git",
-    );
-    const snapshot = context.worktrees.snapshot(context.run.id);
-    const diff = context.worktrees.diff(context.run.id);
-    await this.config.cli.push(context.worktree.path, context.remote.name, head);
-    return {
-      row,
-      headSha: snapshot.headSha,
-      diffSha: diff.sha,
-      selector: {
-        cwd: context.worktree.path,
-        repository: context.remote.repository,
-        head,
-        base: this.requireBaseBranch(context.worktree),
-      },
-    };
-  }
-
-  /** The branch the run forked from is the only base its reviewed diff matches. */
-  private requireBaseBranch(worktree: WorktreeRecord): string {
-    if (worktree.baseRef) return worktree.baseRef;
-    const repository = getRepository(this.config.db, worktree.repositoryId);
-    if (!repository) {
-      throw new GitHubPublicationError(
-        "repository_missing",
-        "The run's worktree points at a repository that no longer exists.",
-      );
-    }
-    return repository.default_branch;
   }
 
   private persistConnectionState(
@@ -134,45 +106,24 @@ class PullRequestPublisher implements PullRequestPublicationService {
     request: PublicationRequest,
     connection: GitHubConnectionContract,
     status: "not_configured" | "failed",
-  ): PullRequestView {
-    return this.store.view(
-      this.store.transition(
-        row,
-        status,
-        {
-          error_code: connection.error_code,
-          error_message: connection.error_message,
-          title: request.title,
-          body: request.normalizedBody,
-        },
-        "github",
-      ),
-    );
-  }
-
-  private finalized(pushed: PushedSnapshot, published: ProviderResult): PullRequestView {
-    let row = this.store.reconcileLifecycle(published.row, published.provider.lifecycle);
-    const eventType = row.number === null ? "pr.created" : "pr.updated";
-    row = this.store.transition(
+  ): PullRequestRow {
+    return this.store.transition(
       row,
-      "created",
-      providerPatch(published.provider, pushed),
+      status,
+      {
+        error_code: connection.error_code,
+        error_message: connection.error_message,
+        title: request.title,
+        body: request.normalizedBody,
+      },
       "github",
-      eventType,
     );
-    return this.store.view(row);
   }
 
   private async publishOnce(
     run: RunRow,
     request: PreparePullRequestRequest,
   ): Promise<PullRequestView> {
-    if (run.status !== "review_ready") {
-      throw new GitHubPublicationError(
-        "run_not_review_ready",
-        "Only a review-ready run can publish a pull request.",
-      );
-    }
     const publicationRequest = {
       ...request,
       normalizedBody: normalizePullRequestBody(request.body),
@@ -180,34 +131,38 @@ class PullRequestPublisher implements PullRequestPublicationService {
     let row = this.store.recoverInterrupted(
       this.store.ensureRow(run.id, publicationRequest.title, publicationRequest.normalizedBody),
     );
-    if (row.status === "merged" || row.status === "closed") return this.store.view(row);
+    if (row.status === "merged" || row.status === "closed") return this.view(row);
+    // Only opening a pull request waits on the run: an existing one outlives the launch state that made it.
+    if (row.number === null && run.status !== "review_ready") {
+      throw new GitHubPublicationError(
+        "run_not_review_ready",
+        "Only a review-ready run can open a pull request.",
+      );
+    }
     try {
-      const { worktrees, worktree } = this.requireWorktree(run.id);
+      const workspace = await resolveWorkspace(this.config, run.id);
       const connection = await this.config.cli.connection();
-      if (connection.status === "failed") {
-        return this.persistConnectionState(row, publicationRequest, connection, "failed");
-      }
       if (connection.status !== "connected") {
-        return this.persistConnectionState(row, publicationRequest, connection, "not_configured");
+        const status = connection.status === "failed" ? "failed" : "not_configured";
+        return this.view(this.persistConnectionState(row, publicationRequest, connection, status));
       }
-      const remote = await this.config.cli.resolveRemote(worktree.path);
-      const context = { run, worktrees, worktree, remote, request: publicationRequest };
+      const context = { run, workspace, request: publicationRequest };
       const existing = await refreshExistingPullRequest(this.store, this.config.cli, row, context);
       row = existing.row;
-      if (existing.completedView) return existing.completedView;
-      const pushed = await this.pushSnapshot(row, context);
-      row = pushed.row;
-      const published = await ensureProvider(
-        this.store,
+      if (existing.done) return this.view(row);
+      if (existing.provider === null) {
+        return this.view(await createPublication(this.config, this.store, row, context));
+      }
+      const provider = await updateDetails(
         this.config.cli,
-        row,
-        pushed.selector,
-        publicationRequest,
         existing.provider,
+        { cwd: workspace.worktree.path, repository: workspace.remote.repository },
+        publicationRequest,
       );
-      return this.finalized(pushed, published);
+      const reconciled = this.store.reconcileLifecycle(row, provider.lifecycle);
+      return this.view(this.store.patch(reconciled, providerPatch(provider), "github"));
     } catch (error) {
-      return this.store.view(this.store.failure(this.store.reload(run.id), error));
+      return this.view(this.store.failure(this.store.reload(run.id), error));
     }
   }
 }

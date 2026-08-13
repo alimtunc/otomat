@@ -27,7 +27,6 @@ function pullRequest(overrides: Partial<PullRequestContract> = {}): PullRequestC
     published_diff_sha: null,
     error_code: null,
     error_message: null,
-    has_unpublished_changes: false,
     ...overrides,
   };
 }
@@ -110,29 +109,25 @@ describe("pullRequestViewModel", () => {
     ).toMatchObject({ actionLabel, actionPending: true });
   });
 
-  it("offers the real link and Update PR only for unpublished changes", () => {
+  it("offers the real link, and Update PR details only for edited details", () => {
     const row = pullRequest({
       number: 42,
       url: "https://github.com/acme/otomat/pull/42",
       status: "open",
       publication_status: "created",
-      has_unpublished_changes: true,
     });
 
     expect(pullRequestViewModel(connected, row)).toMatchObject({
-      actionLabel: "Update PR",
-      stateLabel: "Unpublished changes",
+      actionLabel: "Update PR details",
+      actionDisabled: true,
+      stateLabel: "Details published",
       linkLabel: "Open PR #42",
       linkUrl: row.url,
     });
-    expect(
-      pullRequestViewModel(connected, { ...row, has_unpublished_changes: false }),
-    ).toMatchObject({ stateLabel: "Up to date" });
-    expect(
-      pullRequestViewModel(connected, { ...row, has_unpublished_changes: false }, true, true),
-    ).toMatchObject({
-      actionLabel: "Update PR",
-      stateLabel: "Unpublished changes",
+    expect(pullRequestViewModel(connected, row, true, true)).toMatchObject({
+      actionLabel: "Update PR details",
+      actionDisabled: false,
+      stateLabel: "Unsaved details",
     });
   });
 
@@ -156,7 +151,7 @@ describe("pullRequestViewModel", () => {
     });
   });
 
-  it("disables an existing pull request when the run is not review-ready", () => {
+  it("keeps an existing pull request editable once its run is no longer review-ready", () => {
     expect(
       pullRequestViewModel(
         connected,
@@ -165,29 +160,11 @@ describe("pullRequestViewModel", () => {
           url: "https://github.com/acme/otomat/pull/42",
           status: "open",
           publication_status: "created",
-          has_unpublished_changes: true,
         }),
         false,
+        true,
       ),
-    ).toMatchObject({ actionLabel: "Update PR", actionDisabled: true });
-  });
-
-  it("does not claim the PR is up to date when git comparison is unavailable", () => {
-    expect(
-      pullRequestViewModel(
-        connected,
-        pullRequest({
-          number: 42,
-          url: "https://github.com/acme/otomat/pull/42",
-          status: "open",
-          publication_status: "created",
-          has_unpublished_changes: null,
-        }),
-      ),
-    ).toMatchObject({
-      actionLabel: "Retry comparison",
-      stateLabel: "Changes unavailable",
-    });
+    ).toMatchObject({ actionLabel: "Update PR details", actionDisabled: false });
   });
 
   it.each(["merged", "closed"] as const)("makes a %s PR terminal", (status) => {

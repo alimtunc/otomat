@@ -1,11 +1,12 @@
 import { DaemonRequestError } from "@otomat/client";
-import type { PreparePullRequestRequest } from "@otomat/domain";
+import type { PreparePullRequestRequest, PushPullRequestRequest } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
-function draftErrorMessage(error: unknown): string {
+/** The daemon's own reason when it sent one; a refused push is only actionable if its message survives. */
+function daemonErrorMessage(error: unknown, fallback: string): string {
   if (
     error instanceof DaemonRequestError &&
     typeof error.body === "object" &&
@@ -14,7 +15,7 @@ function draftErrorMessage(error: unknown): string {
     const message = (error.body as { message?: unknown }).message;
     if (typeof message === "string" && message !== "") return message;
   }
-  return "Could not draft the pull request — is the daemon running?";
+  return fallback;
 }
 
 export function useConnectGitHub() {
@@ -33,7 +34,31 @@ export function useConnectGitHub() {
 export function useDraftPullRequest(runId: string) {
   return useMutation({
     mutationFn: () => daemon.draftPullRequest(runId),
-    onError: (error) => toast.error(draftErrorMessage(error)),
+    onError: (error) =>
+      toast.error(
+        daemonErrorMessage(error, "Could not draft the pull request — is the daemon running?"),
+      ),
+  });
+}
+
+/** A refused push refetches: the lease on offer must stand on a remote head read after the refusal, never before it. */
+export function usePushPullRequestCommits(runId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: PushPullRequestRequest) => daemon.pushPullRequestCommits(runId, request),
+    onSuccess: (detail) => {
+      client.setQueryData(queryKeys.runPullRequest(runId), detail);
+      client.invalidateQueries({ queryKey: queryKeys.runPullRequest(runId) });
+      toast.success(
+        detail.sync?.dirty === true
+          ? "Commits pushed — uncommitted changes stay local"
+          : "Commits pushed to the pull request",
+      );
+    },
+    onError: (error) => {
+      client.invalidateQueries({ queryKey: queryKeys.runPullRequest(runId) });
+      toast.error(daemonErrorMessage(error, "Could not push — is the daemon running?"));
+    },
   });
 }
 
@@ -42,6 +67,7 @@ export function usePreparePullRequest(runId: string) {
   return useMutation({
     mutationFn: (request: PreparePullRequestRequest) => daemon.preparePullRequest(runId, request),
     onSuccess: (detail) => {
+      client.setQueryData(queryKeys.runPullRequest(runId), detail);
       client.invalidateQueries({ queryKey: queryKeys.runPullRequest(runId) });
       const pullRequest = detail.pull_request;
       if (pullRequest?.status === "merged" || pullRequest?.status === "closed") {
@@ -56,6 +82,9 @@ export function usePreparePullRequest(runId: string) {
         toast.error(pullRequest.error_message);
       }
     },
-    onError: () => toast.error("Could not publish the pull request — is the daemon running?"),
+    onError: (error) =>
+      toast.error(
+        daemonErrorMessage(error, "Could not publish the pull request — is the daemon running?"),
+      ),
   });
 }
