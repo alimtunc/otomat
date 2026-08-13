@@ -6,6 +6,7 @@ import {
   ConnectionStatusIndicator,
   FOCUS_RING,
   Icon,
+  IconButton,
   type IconName,
   Topbar,
   useCommandPalette,
@@ -17,6 +18,7 @@ import type { ShellSection } from "@web/components/shell/nav-items";
 import { NewIssueContext } from "@web/components/shell/new-issue-context";
 import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
 import { Sidebar } from "@web/components/shell/sidebar";
+import type { BackNavigation } from "@web/components/shell/use-back-navigation";
 import { useNewIssueShortcut } from "@web/components/shell/use-new-issue-shortcut";
 import { usePaletteGroups } from "@web/components/shell/use-palette-groups";
 import { useShellData } from "@web/components/shell/use-shell-data";
@@ -27,6 +29,7 @@ export interface RouteShellProps {
   active: ShellSection;
   titleIcon?: IconName;
   titleNote?: string;
+  back?: BackNavigation | null;
   breadcrumbExtra?: ReactNode;
   actions?: ReactNode;
   rightPanel?: ReactNode;
@@ -38,6 +41,7 @@ export function RouteShell({
   active,
   titleIcon,
   titleNote,
+  back,
   breadcrumbExtra,
   actions,
   rightPanel,
@@ -96,6 +100,13 @@ export function RouteShell({
       <NewIssueContext.Provider value={openNewIssue}>
         <div className="flex h-full min-h-0 flex-col">
           <div className="flex h-12 flex-none items-center gap-2.5 border-b border-border-subtle bg-background px-4.5">
+            {back ? (
+              <IconButton
+                label={back.label}
+                icon={<Icon name="arrow-left" aria-hidden />}
+                onClick={back.goBack}
+              />
+            ) : null}
             {isTitle ? (
               <>
                 <h1 className="flex items-center gap-2.25 text-md font-semibold text-foreground">

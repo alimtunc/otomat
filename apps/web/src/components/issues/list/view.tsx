@@ -1,9 +1,16 @@
 import { Icon, Pill, PillTabs, SegmentedControl, SegmentedItem } from "@otomat/ui";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useProjectIssues } from "@web/api/issues/queries";
 import { useProjectLinearSync } from "@web/api/linear/use-project-sync";
 import { IssuesFilterPopover } from "@web/components/issues/issues-filter-popover";
 import { LinearSyncControl } from "@web/components/issues/linear-sync/control";
 import { IssuesContent } from "@web/components/issues/list/content";
+import {
+  fromAdvancedFilters,
+  isIssuesLayout,
+  toAdvancedFilters,
+  type IssuesListSearch,
+} from "@web/components/issues/list/search";
 import { NewIssueButton } from "@web/components/issues/new-issue-button";
 import { ProjectQueryBoundary } from "@web/components/shell/project-selection/query-boundary";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
@@ -13,22 +20,23 @@ import {
   applyIssuesFilter,
   assigneeOptions,
   isIssuesFilter,
-  NO_ADVANCED_FILTERS,
   stateOptions,
-  type AdvancedIssueFilters,
-  type IssuesFilter,
 } from "@web/lib/issue-filters";
-import { useEffect, useState } from "react";
-
-type IssuesLayout = "board" | "list";
+import { useEffect } from "react";
 
 export function IssuesView() {
   const selectedProject = useSelectedProject();
   const issues = useProjectIssues(selectedProject.projectId);
   const sync = useProjectLinearSync(selectedProject.projectId);
-  const [layout, setLayout] = useState<IssuesLayout>("board");
-  const [filter, setFilter] = useState<IssuesFilter>("all");
-  const [advanced, setAdvanced] = useState<AdvancedIssueFilters>(NO_ADVANCED_FILTERS);
+  const search = useSearch({ from: "/issues/" });
+  const navigate = useNavigate({ from: "/issues/" });
+  const layout = search.layout ?? "board";
+  const filter = search.filter ?? "all";
+  const advanced = toAdvancedFilters(search);
+
+  const refine = (next: IssuesListSearch): void => {
+    void navigate({ to: "/issues", search: (prev) => ({ ...prev, ...next }), replace: true });
+  };
 
   const { refreshIfStale } = sync;
   // otomat-allow-effect: fires on entry and each sync-status change; the staleness guard bounds it.
@@ -46,7 +54,7 @@ export function IssuesView() {
           type="single"
           value={layout}
           onValueChange={(value) => {
-            if (value === "board" || value === "list") setLayout(value);
+            if (isIssuesLayout(value)) refine({ layout: value });
           }}
           aria-label="Issues layout"
         >
@@ -65,7 +73,7 @@ export function IssuesView() {
             type="single"
             value={filter}
             onValueChange={(value) => {
-              if (isIssuesFilter(value)) setFilter(value);
+              if (isIssuesFilter(value)) refine({ filter: value });
             }}
             aria-label="Issue filter"
           >
@@ -79,7 +87,7 @@ export function IssuesView() {
             filters={advanced}
             assignees={assigneeOptions(issues.data ?? [])}
             states={stateOptions(issues.data ?? [])}
-            onChange={setAdvanced}
+            onChange={(next) => refine(fromAdvancedFilters(next))}
           />
           <NewIssueButton />
         </div>

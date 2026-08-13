@@ -9,7 +9,7 @@ import {
   usePanelGroupLayout,
   WIDE_VIEWPORT_MEDIA_QUERY,
 } from "@otomat/ui";
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
 import { useAddReviewComment } from "@web/api/reviews/mutations";
 import { useRunReview } from "@web/api/reviews/queries";
@@ -34,13 +34,14 @@ import { useReviewSelection } from "@web/components/runs/review/use-selection";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
 import { StaleNotice } from "@web/components/shell/stale-notice";
+import { useBackNavigation } from "@web/components/shell/use-back-navigation";
 
 const NO_FILES: DiffFileContract[] = [];
 const NO_COMMENTS: ReviewCommentContract[] = [];
 
 export function RunDiffView() {
   const { runId } = useParams({ from: "/runs/$runId/diff" });
-  const navigate = useNavigate();
+  const back = useBackNavigation(null);
   const runQuery = useRunDetail(runId);
   const diffQuery = useRunDiff(runId);
   const reviewQuery = useRunReview(runId);
@@ -80,7 +81,7 @@ export function RunDiffView() {
     activePath: active.path,
     onJumpToFile: (file) => revealFile(file.path),
     onToggleReviewed: (path) => toggleReviewed(path, !reviewed.paths.has(path)),
-    onExit: () => void navigate({ to: "/runs/$runId", params: { runId } }),
+    onExit: () => back?.goBack(),
   });
 
   const retryBoth = (): void => {

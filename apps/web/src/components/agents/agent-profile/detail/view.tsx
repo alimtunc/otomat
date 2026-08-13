@@ -10,16 +10,19 @@ import { CenteredState } from "@web/components/shell/centered-state";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
+import { useBackNavigation } from "@web/components/shell/use-back-navigation";
 
 export function AgentProfileDetailView() {
   const { profileId } = useParams({ from: "/agents/$profileId" });
   const profiles = useAgentProfiles();
   const runtimes = useRuntimes();
+  const back = useBackNavigation(null);
   const profile = profiles.data?.find((candidate) => candidate.id === profileId);
 
   return (
     <RouteShell
       active="agents"
+      back={back}
       breadcrumbs={[
         { label: "Agents", href: "/agents" },
         { label: profile?.name ?? "Profile", current: true },

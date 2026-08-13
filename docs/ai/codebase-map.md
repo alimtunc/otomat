@@ -318,6 +318,30 @@ desktop shell, `remote/host/capacity.ts` relays the read and the write to the ho
 the operator is configuring; an unreachable host or a refused write comes back as
 a message, never as a value shown as applied.
 
+## Back Navigation
+
+Every detail view carries one Back control, rendered by `RouteShell` from the
+`useBackNavigation` result the view hands it. There is no navigation stack of our
+own: when the router already holds an in-app entry the control is the browser's
+own `history.back()`, so the reviewer lands on the screen they actually came from
+with its URL — and therefore its filters, its selection and its tab — intact.
+
+A view opened cold has no such entry, so it falls back to the hierarchical parent
+`lib/back-target.ts` names: a run tab to its run, a run to the issue it works on
+(the runs list while that issue is unknown), and every entity to its list. That
+navigation *replaces* the deep-linked entry rather than pushing over it, for two
+reasons: a pushed parent would make the next Back return to the view just left,
+and once the hierarchy runs out there would be nothing behind the list but
+whatever preceded Otomat. The diff reviewer's `esc` is the same control, so
+leaving a review by keyboard and by button agree.
+
+The corollary is that view state a reviewer would resent losing lives in the URL,
+not in component state: the issues list keeps its layout, pills and popover
+filters there, the issue workspace keeps the conversation it follows, the cockpit
+keeps its tab and the reviewer keeps its file anchor. Every such write replaces
+the current entry (`runs/diff/use-active-file.ts` states it for the anchor), so
+refining a screen never buries the screen it was reached from.
+
 ## Frontend Stack Direction
 
 React, Vite, TanStack Router/Query/Form, Tailwind, Base UI (shadcn-style

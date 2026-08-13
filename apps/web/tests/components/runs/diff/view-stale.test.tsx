@@ -12,6 +12,10 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children?: unknown }) => <a>{children as never}</a>,
 }));
 
+vi.mock("@web/components/shell/use-back-navigation", () => ({
+  useBackNavigation: () => null,
+}));
+
 const DIFF: RunDiffResponse = {
   run_id: "run-1",
   computed_at: "2026-08-12T00:00:00.000Z",

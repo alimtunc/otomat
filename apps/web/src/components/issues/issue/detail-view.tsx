@@ -11,7 +11,7 @@ import {
   usePanelGroupLayout,
   WIDE_VIEWPORT_MEDIA_QUERY,
 } from "@otomat/ui";
-import { useParams } from "@tanstack/react-router";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
 import { useRunsForIssue } from "@web/api/runs/queries";
 import { RunEventsProvider } from "@web/api/runs/run-events-provider";
@@ -23,9 +23,10 @@ import { RunConversations } from "@web/components/issues/workspace/run-conversat
 import { RunActionsMenu } from "@web/components/runs/actions/run-actions-menu";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
+import { useBackNavigation } from "@web/components/shell/use-back-navigation";
 import { issueShortId, shortId } from "@web/lib/ids";
 import { resolveFollowedRun } from "@web/lib/run/activity";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 function NoRunsEmptyState({ launchAction }: { launchAction: ReactNode }) {
   return (
@@ -85,17 +86,26 @@ function RunsArea({
 /** A single SSE stream, opened for the followed run, feeds both its thread and the rail. */
 export function IssueDetailView() {
   const { issueId } = useParams({ from: "/issues/$issueId" });
+  const { run: selectedRunId } = useSearch({ from: "/issues/$issueId" });
+  const navigate = useNavigate();
   const issue = useIssue(issueId);
   const runs = useRunsForIssue(issueId);
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const followedRun = resolveFollowedRun(runs.data ?? [], selectedRunId);
+  const back = useBackNavigation(null);
+  const followedRun = resolveFollowedRun(runs.data ?? [], selectedRunId ?? null);
   const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
   const railLayout = usePanelGroupLayout("otomat.issue-detail");
 
+  const follow = (runId: string): void => {
+    void navigate({
+      to: "/issues/$issueId",
+      params: { issueId },
+      search: { run: runId },
+      replace: true,
+    });
+  };
+
   const idLabel = issue.data ? issueShortId(issue.data) : shortId(issueId);
-  const launchAction = (
-    <LaunchRunDialog issue={issue.data} onLaunched={(run) => setSelectedRunId(run.id)} />
-  );
+  const launchAction = <LaunchRunDialog issue={issue.data} onLaunched={(run) => follow(run.id)} />;
   // The header acts on the issue's canonical cycle, not on whichever old run is being read.
   const cycleRunId = issue.data?.workspace.run_id ?? followedRun?.id ?? null;
 
@@ -110,7 +120,7 @@ export function IssueDetailView() {
           query={runs}
           launchAction={launchAction}
           followedRun={followedRun}
-          onFollow={setSelectedRunId}
+          onFollow={follow}
         />
       </div>
     </div>
@@ -143,6 +153,7 @@ export function IssueDetailView() {
   return (
     <RouteShell
       active="issues"
+      back={back}
       breadcrumbs={[
         { label: "Issues", href: "/issues" },
         { label: idLabel, current: true },
