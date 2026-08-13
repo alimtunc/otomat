@@ -30,6 +30,12 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
 
   state.aborting.add(runId);
   try {
+    // Interrupt running init commands and unqueue slot waiters first: both resolve through
+    // `spawnTurn`'s abandon path, so only live workers need signaling below.
+    for (const controller of state.initInterrupts.get(runId) ?? []) controller.abort();
+    for (const [sessionId, claimedRunId] of state.claiming) {
+      if (claimedRunId === runId) state.slots.cancel(sessionId);
+    }
     const handles = processesForRun(state, runId);
     await Promise.all(handles.map((handle) => terminateGracefully(handle.proc, ABORT_GRACE_MS)));
 

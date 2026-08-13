@@ -8,7 +8,9 @@ import {
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { readRunEvents, sessionDir } from "#events";
+import { createRepositoryResolver } from "#git";
 import { RuntimeUnavailableError } from "#runtime";
+import { createSupervisor, type SpawnSession, type Supervisor } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { waitFor } from "../support/poll.js";
@@ -19,7 +21,7 @@ import {
   writeRunEvents,
 } from "../support/run-event-fixtures.js";
 import { seedWorkflowRun } from "../support/seed.js";
-import { deadPid } from "../support/spawn.js";
+import { deadPid, workerSpawn } from "../support/spawn.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
@@ -79,6 +81,42 @@ it("runs a three-step plan in order: three step_runs, three sessions, events per
   for (const step of steps) {
     expect(events.some((e) => e.step_run_id === step.id)).toBe(true);
   }
+});
+
+it("settle called between steps still waits for the advance the finished step triggered", async () => {
+  const worker = workerSpawn("complete");
+  let supervisor: Supervisor;
+  let probe: Promise<void> | null = null;
+  let statusAtProbe: string | undefined;
+  let spawned = 0;
+  // A settle started while the next step is mid-spawn — exactly the window between a turn
+  // leaving `inflight` and its advance finishing — must still observe the whole plan.
+  const spawn: SpawnSession = (job) => {
+    spawned += 1;
+    if (spawned === 2 && probe === null) {
+      probe = supervisor.settle().then(() => {
+        statusAtProbe = getRun(fix.db, job.runId)?.status;
+      });
+    }
+    return worker(job);
+  };
+  supervisor = createSupervisor({
+    db: fix.db,
+    dataDir: fix.dataDir,
+    defaultProjectId: "p1",
+    spawn,
+    repositories: createRepositoryResolver({
+      db: fix.db,
+      worktreesRoot: `${fix.dataDir}/worktrees`,
+    }),
+  });
+
+  await supervisor.start({ prompt: "the goal", plan: THREE_STEPS });
+  await supervisor.settle();
+
+  if (!probe) throw new Error("the second step never spawned");
+  await probe;
+  expect(statusAtProbe).toBe("review_ready");
 });
 
 it("fail-fast: a failed step fails the run and cancels every step behind it", async () => {

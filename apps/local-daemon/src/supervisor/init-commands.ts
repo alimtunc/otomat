@@ -37,23 +37,34 @@ export async function runInitCommandBatch(
   batch: InitCommandBatch,
 ): Promise<boolean> {
   const prefix = batch.label === null ? "worktree init" : `worktree init [${batch.label}]`;
-  for (const command of batch.commands) {
-    if (!batch.shouldContinue()) return false;
-    emitSupervisorLog(state, runId, "stderr", `[otomat] ${prefix}: $ ${command}`);
-    const exit = await runCliProcess({
-      command: "bash",
-      args: ["-lc", command],
-      cwd: batch.worktreePath,
-      stdin: "",
-      signal: new AbortController().signal,
-      onStdoutLine: (line) => emitSupervisorLog(state, runId, "stdout", line),
-      onStderrLine: (line) => emitSupervisorLog(state, runId, "stderr", line),
-    });
-    if (exit.code !== 0) {
-      const outcome =
-        exit.code === null ? `signal ${exit.signal ?? "unknown"}` : `exit ${exit.code}`;
-      throw new Error(`worktree init command \`${command}\` failed (${outcome})`);
+  const interrupt = new AbortController();
+  const interrupts = state.initInterrupts.get(runId) ?? new Set();
+  interrupts.add(interrupt);
+  state.initInterrupts.set(runId, interrupts);
+  try {
+    for (const command of batch.commands) {
+      if (!batch.shouldContinue()) return false;
+      emitSupervisorLog(state, runId, "stderr", `[otomat] ${prefix}: $ ${command}`);
+      const exit = await runCliProcess({
+        command: "bash",
+        args: ["-lc", command],
+        cwd: batch.worktreePath,
+        stdin: "",
+        signal: interrupt.signal,
+        onStdoutLine: (line) => emitSupervisorLog(state, runId, "stdout", line),
+        onStderrLine: (line) => emitSupervisorLog(state, runId, "stderr", line),
+      });
+      if (exit.code !== 0) {
+        // A command the abort killed is not the batch's own failure; the settling state owns the outcome.
+        if (exit.aborted) return false;
+        const outcome =
+          exit.code === null ? `signal ${exit.signal ?? "unknown"}` : `exit ${exit.code}`;
+        throw new Error(`worktree init command \`${command}\` failed (${outcome})`);
+      }
     }
+    return batch.shouldContinue();
+  } finally {
+    interrupts.delete(interrupt);
+    if (interrupts.size === 0) state.initInterrupts.delete(runId);
   }
-  return batch.shouldContinue();
 }

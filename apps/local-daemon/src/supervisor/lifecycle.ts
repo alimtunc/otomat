@@ -18,9 +18,10 @@ import { withCarriedContributions } from "./contribution/prompt.js";
 import { failureReason } from "./fail-run.js";
 import { waitForWorkerIdentity } from "./identity.js";
 import { runInitCommandBatch, runStillLive } from "./init-commands.js";
+import type { SlotGrant } from "./semaphore.js";
 import { settleRun } from "./settle/index.js";
 import { clearWorkerStartEvidence } from "./start-gate.js";
-import { notifyAfterSettle, type SupervisorState } from "./state.js";
+import { notifyAfterSettle, trackPending, type SupervisorState } from "./state.js";
 import { driveRunTo, driveSessionTo, driveStepTo } from "./transitions.js";
 import type { ProcessExit, SessionProcess, TurnContext } from "./types.js";
 
@@ -59,28 +60,30 @@ function settleLive(state: SupervisorState, ctx: TurnContext, exit?: ProcessExit
   }
 }
 
+/** The whole chain — settle, cleanup, and the advance that may start the next step — lives in `state.pending`, so `settle` and `shutdown` never observe a window where the turn is gone from `inflight` but its advance is still running. */
 function trackTurn(
   state: SupervisorState,
   ctx: TurnContext,
   proc: SessionProcess,
-  release: () => void,
   tail: ReturnType<typeof startSessionTail>,
 ): void {
-  const monitor = proc.exited
-    .then((exit) => {
-      if (!state.aborting.has(ctx.runId)) settleLive(state, ctx, exit);
-    })
-    .catch((error) => console.error(`[otomat] run ${ctx.runId} monitor failed`, error))
-    .finally(() => {
-      tail.stop();
-      state.inflight.delete(ctx.agentSessionId);
-      release();
-    })
-    .then(() => {
+  const monitor = trackPending(
+    state,
+    (async () => {
+      const exit = await proc.exited;
+      try {
+        if (!state.aborting.has(ctx.runId)) settleLive(state, ctx, exit);
+      } finally {
+        tail.stop();
+        state.inflight.delete(ctx.agentSessionId);
+        state.slots.release();
+      }
       if (state.aborting.has(ctx.runId)) return;
-      return state.advance?.(ctx.runId);
-    })
-    .catch((error) => console.error(`[otomat] run ${ctx.runId} step chain failed`, error));
+      await state.advance?.(ctx.runId);
+    })().catch((error: unknown) =>
+      console.error(`[otomat] run ${ctx.runId} turn monitor failed`, error),
+    ),
+  );
   state.inflight.set(ctx.agentSessionId, {
     runId: ctx.runId,
     proc,
@@ -94,9 +97,10 @@ function trackTurn(
  * Advances a prepared run to `running`, spawns its worker, and tracks it to exit.
  * Awaits a concurrency slot first, then re-checks the run wasn't aborted or made
  * terminal while waiting — if it was, releases the slot and returns without spawning.
- * Throws when the run is already claiming or in-flight. A spawn failure kills any child
- * and settles the run before rethrowing. The run/step/session rows must already exist
- * (via `prepareRun`).
+ * A slot wait canceled by abort or shutdown returns the carried batch to its queue
+ * without ever holding a slot. Throws when the run is already claiming or in-flight.
+ * A spawn failure kills any child and settles the run before rethrowing. The
+ * run/step/session rows must already exist (via `prepareRun`).
  */
 export async function spawnTurn(
   state: SupervisorState,
@@ -104,29 +108,26 @@ export async function spawnTurn(
   mode: "run" | "resume",
   providerSessionId: string | null,
 ): Promise<void> {
-  const { db, slots, inflight, claiming, waiting, aborting } = state;
+  const { db, slots, inflight, claiming, aborting } = state;
   if (claiming.has(ctx.agentSessionId) || inflight.has(ctx.agentSessionId)) {
     throw new Error(`session ${ctx.agentSessionId} is already starting`);
   }
   claiming.set(ctx.agentSessionId, ctx.runId);
-  // Recorded before the await so the queue a caller reports is the queue that drains.
-  if (!slots.free) waiting.set(ctx.agentSessionId, ctx.runId);
-  await slots.acquire();
-  waiting.delete(ctx.agentSessionId);
-  let released = false;
-  const release = (): void => {
-    if (released) return;
-    released = true;
-    slots.release();
-  };
+  // Resolves before releasing, so a contribution failure here is settled by the catch's single release.
   const abandon = (): void => {
     resolveCarriedContributions(state, ctx.agentSessionId, { kind: "released" });
-    release();
+    slots.release();
   };
 
+  let grant: SlotGrant | null = null;
   let proc: SessionProcess | undefined;
   let tail: ReturnType<typeof startSessionTail> | undefined;
   try {
+    grant = await slots.acquire(ctx.agentSessionId);
+    if (grant === "canceled") {
+      resolveCarriedContributions(state, ctx.agentSessionId, { kind: "released" });
+      return;
+    }
     if (!runStillLive(state, ctx.runId)) return abandon();
 
     advanceToRunning(state, ctx);
@@ -175,14 +176,14 @@ export async function spawnTurn(
     // The released worker is the evidence, and it must land before the exit monitor can settle the batch.
     resolveCarriedContributions(state, ctx.agentSessionId, { kind: "delivered" });
     state.starting.delete(ctx.agentSessionId);
-    trackTurn(state, ctx, proc, release, tail);
+    trackTurn(state, ctx, proc, tail);
   } catch (error) {
-    release();
     tail?.stop();
     if (proc) {
       proc.kill("SIGKILL");
       await proc.exited;
     }
+    if (grant === "acquired") slots.release();
     resolveCarriedContributions(state, ctx.agentSessionId, {
       kind: "failed",
       reason: failureReason(error),

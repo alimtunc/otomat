@@ -36,8 +36,8 @@ export interface SupervisorState {
   aborting: Set<string>;
   /** Session ids reserved between the spawn guard and `inflight.set`. */
   claiming: Map<string, string>;
-  /** Sessions queued for a slot, keyed by session id in FIFO order — the same order the semaphore hands slots out in. */
-  waiting: Map<string, string>;
+  /** Live init-command controllers per run, so abort and shutdown can interrupt a command already running. */
+  initInterrupts: Map<string, Set<AbortController>>;
   /** Launches waiting for a global concurrency slot or completing their spawn bookkeeping. */
   pending: Set<Promise<void>>;
   /** Run-level scheduler guard; sessions within one compete group remain independently claimable. */
@@ -64,7 +64,7 @@ export function createState(config: SupervisorConfig): SupervisorState {
     starting: new Map(),
     aborting: new Set(),
     claiming: new Map(),
-    waiting: new Map(),
+    initInterrupts: new Map(),
     pending: new Set(),
     advancing: new Set(),
     delivering: new Set(),

@@ -30,9 +30,11 @@ export function setAgentCapacity(state: SupervisorState, limit: number): AgentCa
   return agentCapacity(state);
 }
 
-/** 1-based place of a run's oldest waiting turn, or null when none of its turns is queued for a slot. */
+/** 1-based place of a run's oldest waiting turn, or null when none of its turns is queued for a slot. Every queued session is in `claiming` (set before the slot wait, cleared after the spawn), so the semaphore's own order is the only queue. */
 export function runQueuePosition(state: SupervisorState, runId: string): RunQueuePosition | null {
-  const position = [...state.waiting.values()].indexOf(runId);
+  const position = state.slots
+    .queued()
+    .findIndex((sessionId) => state.claiming.get(sessionId) === runId);
   if (position === -1) return null;
   return {
     position: position + 1,
