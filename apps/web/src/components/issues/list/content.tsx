@@ -2,45 +2,31 @@ import type { IssueContract } from "@otomat/domain";
 import { EmptyState } from "@otomat/ui";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
-import { IssueRow } from "@web/components/issues/issue/row";
 import { IssuesBoard } from "@web/components/issues/list/board";
+import { IssuesTable } from "@web/components/issues/list/table";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { QueryList } from "@web/components/shell/query-list";
-import { HEAD_CELL, TABLE } from "@web/lib/table";
+import type { IssueGroup } from "@web/lib/issue/grouping";
+import type { IssuesLayout } from "@web/lib/issue/view-config";
 
-function IssuesTable({ issues }: { issues: IssueContract[] }) {
-  return (
-    <table className={TABLE}>
-      <thead>
-        <tr>
-          <th className={`${HEAD_CELL} w-22.5`}>ID</th>
-          <th className={HEAD_CELL}>Title</th>
-          <th className={`${HEAD_CELL} w-27.5`}>Status</th>
-          <th className={`${HEAD_CELL} w-27.5`}>Execution</th>
-          <th className={`${HEAD_CELL} w-22.5`}>Source</th>
-          <th className={`${HEAD_CELL} w-35`}>Assignee</th>
-          <th className={`${HEAD_CELL} w-27.5`}>Updated</th>
-        </tr>
-      </thead>
-      <tbody>
-        {issues.map((issue) => (
-          <IssueRow key={issue.id} issue={issue} />
-        ))}
-      </tbody>
-    </table>
-  );
+export interface IssuesContentProps {
+  query: UseQueryResult<IssueContract[]>;
+  groups: (issues: IssueContract[]) => IssueGroup[];
+  layout: IssuesLayout;
+  showGroupHeadings: boolean;
+  collapsed: string[];
+  onToggleGroup: (key: string) => void;
 }
 
 export function IssuesContent({
   query,
-  filter,
-  board = false,
-}: {
-  query: UseQueryResult<IssueContract[]>;
-  filter?: (issues: IssueContract[]) => IssueContract[];
-  board?: boolean;
-}) {
+  groups,
+  layout,
+  showGroupHeadings,
+  collapsed,
+  onToggleGroup,
+}: IssuesContentProps) {
   return (
     <QueryList
       query={query}
@@ -63,13 +49,23 @@ export function IssuesContent({
       }
     >
       {(issues) => {
-        const visible = filter ? filter(issues) : issues;
+        const visible = groups(issues);
         if (visible.length === 0) {
           return (
             <p className="px-4.5 py-6 text-sm text-text-tertiary">No issues match this filter.</p>
           );
         }
-        return board ? <IssuesBoard issues={visible} /> : <IssuesTable issues={visible} />;
+        const layoutProps = {
+          groups: visible,
+          showGroupHeadings,
+          collapsed,
+          onToggleGroup,
+        };
+        return layout === "board" ? (
+          <IssuesBoard {...layoutProps} />
+        ) : (
+          <IssuesTable {...layoutProps} />
+        );
       }}
     </QueryList>
   );

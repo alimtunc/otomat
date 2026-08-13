@@ -1,6 +1,17 @@
 import type { IssueContract } from "@otomat/domain";
 import { CLOSED_ISSUE_WORKSPACE } from "@otomat/domain";
 
+/** A mirrored issue: the source fields the grouping, filtering and sorting axes read live here. */
+export function linearIssueContract(overrides: Partial<IssueContract> = {}): IssueContract {
+  return issueContract({
+    source: "linear",
+    source_external_id: "ext-1",
+    source_identifier: "OTO-1",
+    synced_at: "2026-07-21T10:00:00.000Z",
+    ...overrides,
+  });
+}
+
 export function issueContract(overrides: Partial<IssueContract> = {}): IssueContract {
   return {
     id: "issue-1",

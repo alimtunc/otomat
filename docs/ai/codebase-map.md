@@ -477,6 +477,49 @@ keeps its tab and the reviewer keeps its file anchor. Every such write replaces
 the current entry (`runs/diff/use-active-file.ts` states it for the anchor), so
 refining a screen never buries the screen it was reached from.
 
+## Saved Issue Views
+
+An operator's issue views are named configurations — layout, grouping, sort,
+filters, folded groups — kept per project on the machine that made them
+(`lib/issue/saved-view.ts` for the model, `lib/issue/view-storage.ts` over the
+per-project buckets of `lib/storage.ts`, which the runs list uses for its own
+filters). Nothing is synced to a tracker.
+
+Two rules keep the tabs honest. `All issues` is held apart from the saved list
+(`ViewSet.system`), so it can be neither renamed, reordered, deleted nor
+overwritten: whatever a saved view filters away, one tab still shows everything.
+And the URL carries the *divergence* from the active view, never the whole
+configuration — a clean tab stays on `/issues?view=…`, and any field present is
+one the operator changed since. That is what makes "unsaved changes" observable
+(`hasOverrides`), Reset a navigation rather than a mutation, and a shared link
+reproducible: an emptied axis travels as `[]` or `all`, which is why absence can
+mean "as the view saved it" without hiding a cleared filter.
+
+A view id the reader does not have resolves to `All issues` with the overrides
+still applied, and a filter value the project no longer carries is named in the
+toolbar (`lib/issue/invalid-filters.ts`) rather than silently emptying the list.
+
+The runs list has no named views: `lib/run/grouping.ts` gathers each issue's runs
+under one header, and its two filters persist per project under
+`otomat.runs-view`. A done issue's group is hidden on arrival — a failed run is
+not, since the cycle stays resumable. Both filters only hide rows, never touch a
+run, and each reports its own casualties (`visibleRunGroups`): a group emptied by
+the failed filter counts as the runs it lost, not as an issue hidden.
+
+Grouping by status is the board's own column rule (`lib/issue/board-column.ts`),
+so every state gets a group — including `blocked` and `canceled`, which earlier
+board columns dropped, leaving those issues on no board at all.
+
+Both list tables are TanStack Table instances over one shared feature registry
+(`lib/table.ts`), whose `columnMeta` carries the head and cell classes: a column
+owns its width and its rendering in one definition, `components/table/` renders
+any of them, and each column list stays pure data (`list/columns.ts`) against one
+component per cell under `list/cells/`. Grouping stays the domain's job rather
+than the table's: an issue with several labels belongs to several groups at once,
+which a row model keyed on one grouping value cannot express. So each table feeds
+the flat concatenation of its groups as `data`, and `rowSlices` hands every group
+section the rows its own group contributed.
+
 ## Reading a Run's Ledger
 
 The ledger is append-only and can be enormous, so a cockpit reads it as a window,

@@ -1,3 +1,5 @@
+import { asRecord } from "@web/lib/coerce";
+
 function browserStorage(): Storage | null {
   if (typeof window === "undefined") return null;
   try {
@@ -30,4 +32,37 @@ export function writeStored(
   } catch {
     /* storage unavailable; the in-memory value still applies */
   }
+}
+
+export type ScopedStorage = Pick<Storage, "getItem" | "setItem">;
+
+/** One key per concern, one bucket per project inside it, so a project's entries never leak into another's. */
+function readBuckets(key: string, storage?: ScopedStorage | null): Record<string, unknown> {
+  const raw = readStored(key, storage);
+  if (raw === null) return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return {};
+  }
+  return asRecord(parsed) ?? {};
+}
+
+export function readScoped<T>(
+  key: string,
+  scope: string,
+  parse: (raw: unknown) => T,
+  storage?: ScopedStorage | null,
+): T {
+  return parse(readBuckets(key, storage)[scope]);
+}
+
+export function writeScoped<T>(
+  key: string,
+  scope: string,
+  value: T,
+  storage?: ScopedStorage | null,
+): void {
+  writeStored(key, JSON.stringify({ ...readBuckets(key, storage), [scope]: value }), storage);
 }

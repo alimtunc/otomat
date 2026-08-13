@@ -1,3 +1,4 @@
+import { asBoolean, asMember, asRecord } from "@web/lib/coerce";
 import { readStored, writeStored } from "@web/lib/storage";
 
 export type DiffViewMode = "unified" | "split";
@@ -24,14 +25,6 @@ export const DEFAULT_DIFF_PREFS: DiffPrefs = {
 
 const PREFS_KEY = "otomat.diff-prefs";
 
-function pick<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
-  return allowed.find((option) => option === value) ?? fallback;
-}
-
-function flag(value: unknown, fallback: boolean): boolean {
-  return typeof value === "boolean" ? value : fallback;
-}
-
 export function readDiffPrefs(storage?: Pick<Storage, "getItem"> | null): DiffPrefs {
   const raw = readStored(PREFS_KEY, storage);
   if (raw === null) return DEFAULT_DIFF_PREFS;
@@ -41,15 +34,15 @@ export function readDiffPrefs(storage?: Pick<Storage, "getItem"> | null): DiffPr
   } catch {
     return DEFAULT_DIFF_PREFS;
   }
-  if (typeof parsed !== "object" || parsed === null) return DEFAULT_DIFF_PREFS;
-  const stored: Record<string, unknown> = { ...parsed };
+  const stored = asRecord(parsed);
+  if (stored === null) return DEFAULT_DIFF_PREFS;
   return {
-    mode: pick(stored.mode, ["unified", "split"], DEFAULT_DIFF_PREFS.mode),
-    browser: pick(stored.browser, ["files", "tree"], DEFAULT_DIFF_PREFS.browser),
-    sort: pick(stored.sort, ["path", "changes"], DEFAULT_DIFF_PREFS.sort),
-    wrap: flag(stored.wrap, DEFAULT_DIFF_PREFS.wrap),
-    stats: flag(stored.stats, DEFAULT_DIFF_PREFS.stats),
-    hideReviewed: flag(stored.hideReviewed, DEFAULT_DIFF_PREFS.hideReviewed),
+    mode: asMember(stored.mode, ["unified", "split"] as const) ?? DEFAULT_DIFF_PREFS.mode,
+    browser: asMember(stored.browser, ["files", "tree"] as const) ?? DEFAULT_DIFF_PREFS.browser,
+    sort: asMember(stored.sort, ["path", "changes"] as const) ?? DEFAULT_DIFF_PREFS.sort,
+    wrap: asBoolean(stored.wrap) ?? DEFAULT_DIFF_PREFS.wrap,
+    stats: asBoolean(stored.stats) ?? DEFAULT_DIFF_PREFS.stats,
+    hideReviewed: asBoolean(stored.hideReviewed) ?? DEFAULT_DIFF_PREFS.hideReviewed,
   };
 }
 
