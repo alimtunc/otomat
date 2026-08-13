@@ -29,7 +29,6 @@ export const queryKeys = {
   agentProfiles: ["agent-profiles"] as const,
   skills: ["skills"] as const,
   issues: ["issues"] as const,
-  allIssues: ["issues", "all"] as const,
   issuesList: (projectId?: string) => ["issues", "project", projectId ?? null] as const,
   issue: (id: string) => ["issues", id] as const,
   linearWriteback: (issueId: string) => ["linear", "writeback", issueId] as const,

@@ -8,10 +8,13 @@ export type UseCommandPaletteReturn = {
   open: boolean;
   setOpen: (open: boolean) => void;
   toggle: () => void;
+  search: string;
+  setSearch: (search: string) => void;
 };
 
 export function useCommandPalette(options: UseCommandPaletteOptions = {}): UseCommandPaletteReturn {
   const [open, setOpen] = useState(options.defaultOpen ?? false);
+  const [search, setSearch] = useState("");
 
   const toggle = useCallback(() => setOpen((value) => !value), []);
 
@@ -27,5 +30,5 @@ export function useCommandPalette(options: UseCommandPaletteOptions = {}): UseCo
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [toggle]);
 
-  return { open, setOpen, toggle };
+  return { open, setOpen, toggle, search, setSearch };
 }

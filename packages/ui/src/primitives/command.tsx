@@ -49,18 +49,6 @@ export function CommandList({ className, ref, ...props }: CommandListProps) {
   );
 }
 
-export type CommandEmptyProps = ComponentPropsWithRef<typeof CommandPrimitive.Empty>;
-
-export function CommandEmpty({ className, ref, ...props }: CommandEmptyProps) {
-  return (
-    <CommandPrimitive.Empty
-      ref={ref}
-      className={cn("py-6 text-center text-sm text-text-tertiary", className)}
-      {...props}
-    />
-  );
-}
-
 const commandGroupHeadingClass =
   "[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-micro [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:tracking-[0.03em] [&_[cmdk-group-heading]]:text-text-tertiary";
 

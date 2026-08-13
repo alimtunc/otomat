@@ -8,7 +8,7 @@ import { LaunchTargetFields } from "@web/components/runs/launch/launch-target-fi
 import type { LaunchTargetState } from "@web/components/runs/launch/use-launch-target";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { hasText, submitOnCmdEnter } from "@web/lib/form";
-import { issueLaunchPrompt } from "@web/lib/issue-prompt";
+import { issueLaunchPrompt } from "@web/lib/issue/prompt";
 import { useState } from "react";
 
 export interface SingleRunLaunchFormProps {

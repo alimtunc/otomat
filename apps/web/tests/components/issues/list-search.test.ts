@@ -3,7 +3,7 @@ import {
   parseIssuesListSearch,
   toAdvancedFilters,
 } from "@web/components/issues/list/search";
-import { NO_ADVANCED_FILTERS, type AdvancedIssueFilters } from "@web/lib/issue-filters";
+import { NO_ADVANCED_FILTERS, type AdvancedIssueFilters } from "@web/lib/issue/filters";
 import { describe, expect, it } from "vitest";
 
 describe("parseIssuesListSearch", () => {

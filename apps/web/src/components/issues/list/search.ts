@@ -4,7 +4,7 @@ import {
   isIssuesFilter,
   type AdvancedIssueFilters,
   type IssuesFilter,
-} from "@web/lib/issue-filters";
+} from "@web/lib/issue/filters";
 
 type IssuesLayout = "board" | "list";
 

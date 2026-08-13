@@ -53,6 +53,8 @@ describe("shared UI boundaries", () => {
       <CommandPalette
         open
         onOpenChange={() => undefined}
+        search=""
+        onSearchChange={() => undefined}
         groups={[
           {
             id: "commands",
