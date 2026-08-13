@@ -1,5 +1,5 @@
 import type { IssueContract, IssueExecution, IssueState } from "@otomat/domain";
-import { boardColumnFor, divergentSourceStatus, visibleBoardColumns } from "@web/lib/board-columns";
+import { boardColumnFor, divergentSourceStatus } from "@web/lib/issue/board-column";
 import { describe, expect, it } from "vitest";
 
 const NO_EXECUTION: IssueExecution = { state: "none", run_id: null };
@@ -69,22 +69,5 @@ describe("divergentSourceStatus", () => {
         issue({ status: "running", execution: { state: "running", run_id: "r1" } }),
       ),
     ).toBeNull();
-  });
-});
-
-describe("visibleBoardColumns", () => {
-  it("keeps only the columns that hold cards and places a running issue by execution", () => {
-    const running = issue({ status: "backlog", execution: { state: "running", run_id: "r1" } });
-    const idle = issue({ status: "backlog" });
-    const columns = visibleBoardColumns([running, idle]);
-    expect(columns.map((c) => c.status)).toEqual(["backlog", "running"]);
-    expect(columns.find((c) => c.status === "running")?.issues).toEqual([running]);
-    expect(columns.find((c) => c.status === "backlog")?.issues).toEqual([idle]);
-  });
-
-  it("returns no columns when every issue maps to a hidden column (blocked/canceled)", () => {
-    expect(
-      visibleBoardColumns([issue({ status: "blocked" }), issue({ status: "canceled" })]),
-    ).toEqual([]);
   });
 });

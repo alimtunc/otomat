@@ -1,11 +1,15 @@
-import type { IssueContract, IssueSource, IssueState } from "@otomat/domain";
+import {
+  ISSUE_STATES,
+  type IssueContract,
+  type IssueSource,
+  type IssueState,
+} from "@otomat/domain";
+import { asRecord, asString, normalizedMembers, normalizedSelection } from "@web/lib/coerce";
+import { boardColumnFor } from "@web/lib/issue/board-column";
+import { ISSUE_SOURCES, knownPriority } from "@web/lib/issue/filter-options";
 
-const ISSUES_FILTERS = ["all", "active", "backlog"] as const;
+export const ISSUES_FILTERS = ["all", "active", "backlog"] as const;
 export type IssuesFilter = (typeof ISSUES_FILTERS)[number];
-
-export function isIssuesFilter(value: string): value is IssuesFilter {
-  return (ISSUES_FILTERS as readonly string[]).includes(value);
-}
 
 const ACTIVE_STATES = new Set<IssueState>(["ready", "running", "reviewing", "pr_open"]);
 
@@ -25,22 +29,34 @@ export function applyIssuesFilter(issues: IssueContract[], filter: IssuesFilter)
 /** Popover filters composing with the status pills; empty lists and "all" mean the axis is off. */
 export interface AdvancedIssueFilters {
   sources: IssueSource[];
-  states: string[];
+  statuses: IssueState[];
+  linearStates: string[];
+  labels: string[];
+  projects: string[];
   assignee: "all" | "unassigned" | (string & {});
   priority: "all" | number;
 }
 
 export const NO_ADVANCED_FILTERS: AdvancedIssueFilters = {
   sources: [],
-  states: [],
+  statuses: [],
+  linearStates: [],
+  labels: [],
+  projects: [],
   assignee: "all",
   priority: "all",
 };
 
 export function activeAdvancedFilterCount(filters: AdvancedIssueFilters): number {
+  const lists = [
+    filters.sources,
+    filters.statuses,
+    filters.linearStates,
+    filters.labels,
+    filters.projects,
+  ];
   return (
-    (filters.sources.length > 0 ? 1 : 0) +
-    (filters.states.length > 0 ? 1 : 0) +
+    lists.filter((list) => list.length > 0).length +
     [filters.assignee, filters.priority].filter((axis) => axis !== "all").length
   );
 }
@@ -54,40 +70,44 @@ function matchesAssignee(
   return issue.source_assignee_name === assignee;
 }
 
+function matchesLabels(issue: IssueContract, labels: ReadonlySet<string>): boolean {
+  if (labels.size === 0) return true;
+  return (issue.source_labels ?? []).some((label) => labels.has(label.name));
+}
+
 export function applyAdvancedFilters(
   issues: IssueContract[],
   filters: AdvancedIssueFilters,
 ): IssueContract[] {
   const sources = new Set(filters.sources);
-  const states = new Set(filters.states);
+  const statuses = new Set(filters.statuses);
+  const linearStates = new Set(filters.linearStates);
+  const labels = new Set(filters.labels);
+  const projects = new Set(filters.projects);
   return issues.filter(
     (issue) =>
       (sources.size === 0 || sources.has(issue.source)) &&
-      (states.size === 0 ||
-        (issue.source_state_name !== null && states.has(issue.source_state_name))) &&
+      (statuses.size === 0 || statuses.has(boardColumnFor(issue))) &&
+      (linearStates.size === 0 ||
+        (issue.source_state_name !== null && linearStates.has(issue.source_state_name))) &&
+      (projects.size === 0 || projects.has(issue.project_id)) &&
+      matchesLabels(issue, labels) &&
       matchesAssignee(issue, filters.assignee) &&
       (filters.priority === "all" || issue.source_priority === filters.priority),
   );
 }
 
-/** Distinct assignee names across the loaded issues, sorted for stable options. */
-export function assigneeOptions(issues: IssueContract[]): string[] {
-  const names = new Set<string>();
-  for (const issue of issues) {
-    if (issue.source_assignee_name !== null) names.add(issue.source_assignee_name);
-  }
-  return [...names].toSorted((a, b) => a.localeCompare(b));
-}
-
-/** Distinct Linear states across the loaded issues, with the first color seen per name. */
-export function stateOptions(issues: IssueContract[]): { name: string; color: string }[] {
-  const colors = new Map<string, string>();
-  for (const issue of issues) {
-    if (issue.source_state_name !== null && !colors.has(issue.source_state_name)) {
-      colors.set(issue.source_state_name, issue.source_state_color ?? "var(--text-tertiary)");
-    }
-  }
-  return [...colors.entries()]
-    .map(([name, color]) => ({ name, color }))
-    .toSorted((a, b) => a.name.localeCompare(b.name));
+export function parseAdvancedFilters(value: unknown): AdvancedIssueFilters {
+  const entry = asRecord(value);
+  if (entry === null) return NO_ADVANCED_FILTERS;
+  const assignee = asString(entry.assignee);
+  return {
+    sources: normalizedMembers(entry.sources, ISSUE_SOURCES),
+    statuses: normalizedMembers(entry.statuses, ISSUE_STATES),
+    linearStates: normalizedSelection(entry.linearStates),
+    labels: normalizedSelection(entry.labels),
+    projects: normalizedSelection(entry.projects),
+    assignee: assignee === null || assignee === "all" ? "all" : assignee,
+    priority: knownPriority(entry.priority) ?? "all",
+  };
 }
