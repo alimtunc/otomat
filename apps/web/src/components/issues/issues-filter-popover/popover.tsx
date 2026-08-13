@@ -12,7 +12,7 @@ import {
   activeAdvancedFilterCount,
   NO_ADVANCED_FILTERS,
   type AdvancedIssueFilters,
-} from "@web/lib/issue-filters";
+} from "@web/lib/issue/filters";
 
 import { MultiSelect } from "./multi-select";
 import { PRIORITY_ITEMS, SOURCE_OPTIONS } from "./options";

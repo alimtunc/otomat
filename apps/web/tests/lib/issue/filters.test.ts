@@ -6,51 +6,31 @@ import {
   applyIssuesFilter,
   assigneeOptions,
   NO_ADVANCED_FILTERS,
-} from "@web/lib/issue-filters";
+} from "@web/lib/issue/filters";
 import { describe, expect, it } from "vitest";
+
+import { issueContract } from "#support/issue";
 
 const NO_EXECUTION: IssueExecution = { state: "none", run_id: null };
 
 function issue(status: IssueState, execution: IssueExecution = NO_EXECUTION): IssueContract {
-  return {
-    id: `issue-${status}`,
-    project_id: "project-1",
-    title: status,
-    body: null,
-    status,
-    execution,
-    source: "local",
-    source_external_id: null,
-    source_identifier: null,
-    source_url: null,
-    synced_at: null,
-    source_assignee_name: null,
-    source_priority: null,
-    source_labels: null,
-    source_state_name: null,
-    source_state_color: null,
-  };
+  return issueContract({ id: `issue-${status}`, title: status, status, execution });
 }
 
 function linearIssue(id: string, assignee: string | null, priority: number): IssueContract {
-  return {
+  return issueContract({
     id,
-    project_id: "project-1",
     title: id,
-    body: null,
     status: "ready",
-    execution: NO_EXECUTION,
     source: "linear",
     source_external_id: `ext-${id}`,
     source_identifier: `OTO-${id}`,
-    source_url: null,
     synced_at: "2026-07-21T10:00:00.000Z",
     source_assignee_name: assignee,
     source_priority: priority,
-    source_labels: null,
     source_state_name: priority === 1 ? "Urgent lane" : "In Progress",
     source_state_color: "#facc15",
-  };
+  });
 }
 
 const ALL = ISSUE_STATES.map((status) => issue(status));

@@ -1,6 +1,6 @@
 import type { IssueContract } from "@otomat/domain";
 import { EmptyState } from "@otomat/ui";
-import type { useIssues } from "@web/api/issues/queries";
+import type { UseQueryResult } from "@tanstack/react-query";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
 import { IssueRow } from "@web/components/issues/issue/row";
 import { IssuesBoard } from "@web/components/issues/list/board";
@@ -37,7 +37,7 @@ export function IssuesContent({
   filter,
   board = false,
 }: {
-  query: ReturnType<typeof useIssues>;
+  query: UseQueryResult<IssueContract[]>;
   filter?: (issues: IssueContract[]) => IssueContract[];
   board?: boolean;
 }) {

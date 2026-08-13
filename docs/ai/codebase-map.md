@@ -424,6 +424,24 @@ credentials the cockpit does not send. `lib/markdown/open-fence.ts` is the one
 thing a compiler cannot tell us — it sees a finished document — so an unclosed
 fence can be labelled as still arriving.
 
+## Command Palette Search
+
+The palette searches one scope: the issues TanStack Query already holds for the
+selected project, the same cache the Issues view renders. `lib/issue/search.ts`
+matches an identifier, a title and a body case-insensitively, in that order, so
+an issue visible in the list is reachable by what the list shows. Cross-project
+listing is gone; the heading names the project (and the SSH alias on a remote
+host) so a scope is never implied.
+
+`CommandPalette` therefore runs with cmdk's `shouldFilter` off and a controlled
+search value: cmdk's fuzzy score cannot see a body, and force-mounting
+externally-filtered items would leave them out of its `filtered.count` and
+contradict the group's own empty state. One filter owns matching, so the palette
+renders exactly what it is given and each group carries its own `notice` —
+loading, stale-with-Retry, "no loaded issue matches", or a capped-result count.
+Results survive a failed refresh because the notice, not the result list, tells
+the truth about freshness.
+
 ## Offline-First Direction
 
 For V1, the local daemon is the offline cache: it mirrors external state into

@@ -6,7 +6,6 @@ import { useCallback, useState } from "react";
 import { cn } from "../lib/utils";
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -30,15 +29,17 @@ export type CommandPaletteCommand = {
 export type CommandPaletteGroup = {
   id: string;
   heading: string;
+  notice?: ReactNode;
   commands: CommandPaletteCommand[];
 };
 
 export type CommandPaletteProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  search: string;
+  onSearchChange: (search: string) => void;
   groups: CommandPaletteGroup[];
   placeholder?: string;
-  emptyMessage?: string;
   className?: string;
 };
 
@@ -55,9 +56,10 @@ const contentClass =
 export function CommandPalette({
   open,
   onOpenChange,
+  search,
+  onSearchChange,
   groups,
   placeholder = "Type a command or search…",
-  emptyMessage = "No results.",
   className,
 }: CommandPaletteProps) {
   const [pending, setPending] = useState<string | null>(null);
@@ -68,6 +70,14 @@ export function CommandPalette({
       onOpenChange(next);
     },
     [onOpenChange],
+  );
+
+  // Reset after the exit transition: clearing at close-start repaints the unfiltered list mid-fade.
+  const handleOpenChangeComplete = useCallback(
+    (next: boolean) => {
+      if (!next) onSearchChange("");
+    },
+    [onSearchChange],
   );
 
   const run = useCallback(
@@ -86,7 +96,12 @@ export function CommandPalette({
   );
 
   return (
-    <Dialog.Root open={open} onOpenChange={handleOpenChange} modal>
+    <Dialog.Root
+      open={open}
+      onOpenChange={handleOpenChange}
+      onOpenChangeComplete={handleOpenChangeComplete}
+      modal
+    >
       <Dialog.Portal>
         <Dialog.Backdrop className={overlayClass} style={{ zIndex: "var(--z-command)" }} />
         <Dialog.Popup
@@ -96,12 +111,14 @@ export function CommandPalette({
         >
           <Dialog.Title className="sr-only">Command palette</Dialog.Title>
           <Dialog.Description className="sr-only">Search and run commands</Dialog.Description>
-          <Command loop>
-            <CommandInput placeholder={placeholder} />
+          <Command loop shouldFilter={false}>
+            <CommandInput placeholder={placeholder} value={search} onValueChange={onSearchChange} />
             <CommandList>
-              <CommandEmpty>{emptyMessage}</CommandEmpty>
               {groups.map((group) => (
                 <CommandGroup key={group.id} heading={group.heading}>
+                  {group.notice === undefined ? null : (
+                    <div role="presentation">{group.notice}</div>
+                  )}
                   {group.commands.map((command) => {
                     const isPending = pending === command.id;
                     let leading: ReactNode = null;
@@ -113,7 +130,7 @@ export function CommandPalette({
                     return (
                       <CommandItem
                         key={command.id}
-                        value={`${command.label} ${command.keywords ?? ""}`}
+                        value={command.id}
                         disabled={command.disabled || pending !== null}
                         onSelect={() => run(command)}
                       >

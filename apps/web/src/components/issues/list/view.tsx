@@ -21,7 +21,7 @@ import {
   assigneeOptions,
   isIssuesFilter,
   stateOptions,
-} from "@web/lib/issue-filters";
+} from "@web/lib/issue/filters";
 import { useEffect } from "react";
 
 export function IssuesView() {

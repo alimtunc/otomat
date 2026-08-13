@@ -16,11 +16,11 @@ import { Link } from "@tanstack/react-router";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
 import type { ShellSection } from "@web/components/shell/nav-items";
 import { NewIssueContext } from "@web/components/shell/new-issue-context";
+import { usePaletteGroups } from "@web/components/shell/palette/use-groups";
 import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
 import { Sidebar } from "@web/components/shell/sidebar";
 import type { BackNavigation } from "@web/components/shell/use-back-navigation";
 import { useNewIssueShortcut } from "@web/components/shell/use-new-issue-shortcut";
-import { usePaletteGroups } from "@web/components/shell/use-palette-groups";
 import { useShellData } from "@web/components/shell/use-shell-data";
 import { useCallback, useState, type ReactNode } from "react";
 
@@ -53,7 +53,7 @@ export function RouteShell({
   const [newIssueOpen, setNewIssueOpen] = useState(false);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
   const openNewIssue = useCallback(() => setNewIssueOpen(true), []);
-  const paletteGroups = usePaletteGroups({ onNewIssue: openNewIssue });
+  const paletteGroups = usePaletteGroups({ search: palette.search, onNewIssue: openNewIssue });
   useNewIssueShortcut(openNewIssue);
 
   const topbar = (
@@ -141,7 +141,13 @@ export function RouteShell({
           <div className="min-h-0 flex-1 overflow-auto">{children}</div>
         </div>
       </NewIssueContext.Provider>
-      <CommandPalette open={palette.open} onOpenChange={palette.setOpen} groups={paletteGroups} />
+      <CommandPalette
+        open={palette.open}
+        onOpenChange={palette.setOpen}
+        search={palette.search}
+        onSearchChange={palette.setSearch}
+        groups={paletteGroups}
+      />
       <NewIssueDialog
         open={newIssueOpen}
         onOpenChange={setNewIssueOpen}
