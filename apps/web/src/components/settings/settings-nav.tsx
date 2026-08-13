@@ -25,6 +25,7 @@ const GROUPS: SettingsGroup[] = [
       { to: "/settings/host", label: "Execution hosts", icon: "monitor" },
       { to: "/settings/integrations", label: "Integrations", icon: "plug" },
       { to: "/settings/runtimes", label: "Runtimes", icon: "cpu" },
+      { to: "/settings/execution", label: "Execution defaults", icon: "sliders-horizontal" },
       { to: "/settings/agents", label: "Agents", icon: "bot" },
       { to: "/settings/appearance", label: "Appearance", icon: "palette" },
       { to: "/settings/about", label: "About · Daemon", icon: "activity" },

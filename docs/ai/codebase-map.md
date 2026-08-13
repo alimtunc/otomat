@@ -114,19 +114,44 @@ for the runtime and, where the provider scopes them that way, the selected model
 (Codex publishes reasoning levels per model). A non-`ok` detection carries no
 options and the runtime still launches on its provider defaults.
 
-Those descriptors are the single source for three gates: the daemon refuses a
-profile option the installed binary does not announce (`option_unsupported`, in
-`agents/resolve.ts`), `GET /api/runtimes/:id/options` serves them to the cockpit,
-and the profile and launch surfaces render fields from them without any
-per-provider branch. The effective options are frozen into the run plan at launch
-and replayed verbatim on resume and follow-up.
+Those descriptors are the single source for three gates: the daemon refuses an
+option the installed binary does not announce (`option_unsupported`, in
+`agents/options.ts`), `GET /api/runtimes/:id/options` serves them to the cockpit,
+and every surface renders from them without any per-provider branch. The
+effective options are frozen into the run plan at launch and replayed verbatim on
+resume and follow-up.
 
-Effort is the one option a launch also sets per run and per plan node, under
-whichever key the runtime announces it by (`effortOptionDescriptor`). A node
-names its own level, inherits the run's, or keeps the level of the agent it
-resolves to; `supervisor/freeze-plan.ts` collapses those three into the one level
-frozen into the node's config, and the workflow launcher shows the resolved level
-with its provenance beside every step.
+## One Execution Configuration
+
+Runtime, model and every option a CLI announces are one configuration, resolved
+by one hierarchy wherever Otomat creates or resumes a session: **step > launch >
+profile > global**, with `provider` as the honest fifth answer when no level
+selected anything and Otomat sends no argument at all. `packages/domain/src/execution`
+owns that walk, so the launcher's preview and the daemon's freeze cannot drift;
+`ResolvedAgentConfig.sources` records which level answered for each value, and
+the cockpit reads it back rather than re-deriving it.
+
+Inheritance is scoped to one runtime, because an option key names a flag of the
+CLI that announced it — a permission mode is not a sandbox. A plan node that
+names its own agent therefore starts from that agent rather than the run's model
+and options, and `daemon_settings`' execution defaults apply their model and
+options only to the runtime they name. A step may also decline the run's choice
+by name (`agent_default`) and take the agent's own instead.
+
+The two ends of the hierarchy are deliberately asymmetric about refusal. A step,
+a launch or a profile naming a value the installed binary does not announce is
+refused before argv; a host default that does not apply here is dropped, because
+it is a preference for every execution rather than a claim about this one. What a
+runtime or model that is *absent on this host* gets is a refusal either way —
+never a substitution.
+
+`apps/web/src/components/execution` is the single control: one trigger
+summarising the whole configuration over `DropdownMenu` submenus that list only
+detected values, reused by Settings, agent profiles, Single run, Workflow (run
+default and per step), appended steps and the review fix. A launched run is
+immutable by construction — its frozen config is what resume and follow-up
+replay — so the cockpit shows it read-only with that sentence attached instead of
+offering a picker that could not be honoured.
 
 ## Run Steering and Deferred Messages
 

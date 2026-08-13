@@ -75,6 +75,15 @@ export function useRuntimeModels(runtimeId: string | null) {
   });
 }
 
+/** The host's fallback runtime, model and options; every launcher resolves through it, so it is read once and shared. */
+export function useExecutionDefaults() {
+  return useQuery({
+    queryKey: queryKeys.executionDefaults,
+    queryFn: () => daemon.executionDefaults(),
+    staleTime: 30_000,
+  });
+}
+
 /** What the installed CLI announces for this runtime and model. Model-scoped because Codex publishes its reasoning levels per model. */
 export function useRuntimeProviderOptions(runtimeId: string | null, model: string | null) {
   return useQuery({

@@ -1,50 +1,42 @@
-import type { ModelSelection, RunContract } from "@otomat/domain";
+import type { RunContract } from "@otomat/domain";
 import { Button, DialogBody, Kbd, Textarea } from "@otomat/ui";
 import { useLaunchRun } from "@web/api/runs/use-launch-run";
+import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
+import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
-import { LaunchAgentModelFields } from "@web/components/runs/launch/launch-agent-model-fields";
 import { LaunchTargetFields } from "@web/components/runs/launch/launch-target-fields";
-import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
 import type { LaunchTargetState } from "@web/components/runs/launch/use-launch-target";
-import { agentChoiceToRequest } from "@web/lib/agent-choice";
-import { isCompleteModelSelection } from "@web/lib/model-choice";
+import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { useState, type KeyboardEvent } from "react";
 
 export interface AgentIssueFormProps {
   target: Extract<LaunchTargetState, { status: "ready" }>;
-  agentChoice: string | null;
-  onAgentChoice: (choice: string | null) => void;
+  execution: ExecutionSelection;
+  onExecutionChange: (execution: ExecutionSelection) => void;
   onLaunched: (run: RunContract) => void;
   onCancel: () => void;
 }
 
 export function AgentIssueForm({
   target,
-  agentChoice,
-  onAgentChoice,
+  execution,
+  onExecutionChange,
   onLaunched,
   onCancel,
 }: AgentIssueFormProps) {
   const [promptText, setPromptText] = useState("");
-  const [model, setModel] = useState<ModelSelection | undefined>(undefined);
   const { launch, isPending } = useLaunchRun();
-  const agents = useLaunchAgentChoice(agentChoice);
-  const choice = agents.choice;
+  const launchExecution = useLaunchExecution(execution);
 
-  const canSubmit =
-    promptText.trim().length > 0 &&
-    choice !== null &&
-    isCompleteModelSelection(model) &&
-    !isPending;
+  const canSubmit = promptText.trim().length > 0 && launchExecution.canLaunch && !isPending;
 
   async function submit() {
-    if (!canSubmit || choice === null) return;
+    if (!canSubmit) return;
     const run = await launch({
       prompt: promptText.trim(),
       project_id: target.repository.project_id,
       base_branch: target.baseBranch,
-      ...agentChoiceToRequest(choice),
-      model,
+      ...launchExecution.request,
     });
     if (run) {
       setPromptText("");
@@ -70,11 +62,10 @@ export function AgentIssueForm({
           rows={4}
           aria-label="Issue prompt"
         />
-        <LaunchAgentModelFields
-          agents={agents}
-          model={model}
-          onAgentChoice={onAgentChoice}
-          onModelChange={setModel}
+        <LaunchExecutionPicker
+          execution={launchExecution}
+          onChange={onExecutionChange}
+          label="Ad-hoc run"
         />
         <LaunchTargetFields target={target} disabled={isPending} />
       </DialogBody>

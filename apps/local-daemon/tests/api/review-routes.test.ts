@@ -220,6 +220,7 @@ it("delegates the fix request with the parsed selection and returns the updated 
     request: {
       commentIds: ["c1", "c2"],
       selector: { kind: "profile", profileId: "p-reviewer" },
+      overrides: {},
     },
   });
   expect(((await res.json()) as RunContract).status).toBe("running");

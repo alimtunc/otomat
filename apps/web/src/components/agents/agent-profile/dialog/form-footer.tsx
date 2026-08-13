@@ -19,10 +19,8 @@ export function AgentProfileFormFooter({
       <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
         Cancel
       </Button>
-      <form.Subscribe
-        selector={(state) => [state.values.name, state.values.runtime, state.values.model] as const}
-      >
-        {([name, runtime, model]) => (
+      <form.Subscribe selector={(state) => [state.values.name, state.values.execution] as const}>
+        {([name, execution]) => (
           <Button
             type="submit"
             variant="primary"
@@ -30,8 +28,8 @@ export function AgentProfileFormFooter({
             loading={isPending}
             disabled={
               name.trim().length === 0 ||
-              runtime.length === 0 ||
-              !isCompleteModelSelection(model) ||
+              execution.agent === null ||
+              !isCompleteModelSelection(execution.model) ||
               isPending
             }
           >

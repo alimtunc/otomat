@@ -1,4 +1,9 @@
-import { DEFAULT_MAX_CONCURRENT_SESSIONS } from "@otomat/domain";
+import {
+  DEFAULT_MAX_CONCURRENT_SESSIONS,
+  EMPTY_EXECUTION_DEFAULTS,
+  providerOptionsSchema,
+  type ExecutionDefaults,
+} from "@otomat/domain";
 import { eq } from "drizzle-orm";
 
 import type { Db } from "../client.js";
@@ -8,14 +13,15 @@ import { touch } from "./touch.js";
 /** A daemon holds exactly one settings row; the id is fixed so the upsert has a stable target. */
 const DAEMON_SETTINGS_ID = "daemon";
 
+type SettingsRow = typeof daemonSettings.$inferSelect;
+
+function readRow(db: Db): SettingsRow | undefined {
+  return db.select().from(daemonSettings).where(eq(daemonSettings.id, DAEMON_SETTINGS_ID)).get();
+}
+
 /** The host's session cap. A daemon that was never configured answers the shipped default. */
 export function readMaxConcurrentSessions(db: Db): number {
-  const row = db
-    .select()
-    .from(daemonSettings)
-    .where(eq(daemonSettings.id, DAEMON_SETTINGS_ID))
-    .get();
-  return row?.max_concurrent_sessions ?? DEFAULT_MAX_CONCURRENT_SESSIONS;
+  return readRow(db)?.max_concurrent_sessions ?? DEFAULT_MAX_CONCURRENT_SESSIONS;
 }
 
 export function writeMaxConcurrentSessions(db: Db, maxConcurrentSessions: number): void {
@@ -30,5 +36,32 @@ export function writeMaxConcurrentSessions(db: Db, maxConcurrentSessions: number
       target: daemonSettings.id,
       set: touch({ max_concurrent_sessions: maxConcurrentSessions }),
     })
+    .run();
+}
+
+/** An unconfigured daemon selects nothing rather than guessing a runtime. */
+export function readExecutionDefaults(db: Db): ExecutionDefaults {
+  const row = readRow(db);
+  if (!row) return EMPTY_EXECUTION_DEFAULTS;
+  return {
+    runtime: row.execution_runtime,
+    model: row.execution_model,
+    options: providerOptionsSchema.parse(row.execution_options_json ?? {}),
+  };
+}
+
+export function writeExecutionDefaults(db: Db, defaults: ExecutionDefaults): void {
+  const columns = {
+    execution_runtime: defaults.runtime,
+    execution_model: defaults.model,
+    execution_options_json: defaults.options,
+  };
+  db.insert(daemonSettings)
+    .values({
+      id: DAEMON_SETTINGS_ID,
+      max_concurrent_sessions: DEFAULT_MAX_CONCURRENT_SESSIONS,
+      ...columns,
+    })
+    .onConflictDoUpdate({ target: daemonSettings.id, set: touch(columns) })
     .run();
 }

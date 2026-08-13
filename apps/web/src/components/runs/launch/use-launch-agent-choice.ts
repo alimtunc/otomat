@@ -14,7 +14,6 @@ export interface LaunchAgentChoice {
   onRetry: () => void;
 }
 
-/** Owns the runtimes + profiles queries every launch surface needs and merges their states for LaunchAgentPicker. */
 export function useLaunchAgentChoice(preferred: string | null): LaunchAgentChoice {
   const runtimes = useRuntimes();
   const profilesQuery = useAgentProfiles();

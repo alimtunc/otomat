@@ -12,6 +12,7 @@ import { AgentIssueForm } from "@web/components/issues/agent-issue-form";
 import { ManualIssueForm } from "@web/components/issues/manual-issue-form";
 import { WorkflowLaunchForm } from "@web/components/issues/workflow/form";
 import { LaunchTargetGate } from "@web/components/runs/launch/launch-target-gate";
+import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
 import { useState } from "react";
 
 const NEW_ISSUE_MODES = ["agent", "workflow", "manual"] as const;
@@ -35,7 +36,7 @@ export function NewIssueDialog({
   projectName,
 }: NewIssueDialogProps) {
   const [mode, setMode] = useState<NewIssueMode>("agent");
-  const [agentChoice, setAgentChoice] = useState<string | null>(null);
+  const [execution, setExecution] = useState<ExecutionSelection>(EMPTY_EXECUTION_SELECTION);
   const navigate = useNavigate();
   const close = () => onOpenChange(false);
 
@@ -83,8 +84,8 @@ export function NewIssueDialog({
               mode === "agent" ? (
                 <AgentIssueForm
                   target={target}
-                  agentChoice={agentChoice}
-                  onAgentChoice={setAgentChoice}
+                  execution={execution}
+                  onExecutionChange={setExecution}
                   onLaunched={launched}
                   onCancel={close}
                 />
@@ -92,8 +93,8 @@ export function NewIssueDialog({
                 <WorkflowLaunchForm
                   target={{ kind: "project", projectId: target.repository.project_id }}
                   worktreeTarget={target}
-                  agentChoice={agentChoice}
-                  onAgentChoice={setAgentChoice}
+                  execution={execution}
+                  onExecutionChange={setExecution}
                   onLaunched={launched}
                   onCancel={close}
                 />

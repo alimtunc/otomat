@@ -1,15 +1,18 @@
 import type { RunPlanInput, RunPlanNodeInput } from "@otomat/domain";
-import { agentChoiceToRequest } from "@web/lib/agent-choice";
+import { executionRequestFields } from "@web/lib/execution/request";
+import type { ExecutionSelection } from "@web/lib/execution/selection";
 import type { WorkflowNodeDraft } from "@web/lib/workflow-draft";
 
 import { sanitizeWorkflowSteps } from "./steps";
 
-/** Decodes an agent choice into a plan node's `agent` (runtime id) and optional `profile_id`. */
-function nodeAgentFields(choice: string | null): { agent: string | null; profile_id?: string } {
-  const request = agentChoiceToRequest(choice);
-  if (request.profile_id) return { agent: null, profile_id: request.profile_id };
-  if (request.runtime) return { agent: request.runtime };
-  return { agent: null };
+function nodeExecution(execution: ExecutionSelection) {
+  const { profile_id, runtime, model, options } = executionRequestFields(execution);
+  return {
+    agent: runtime ?? null,
+    ...(profile_id === undefined ? {} : { profile_id }),
+    ...(model === undefined ? {} : { model }),
+    ...(options === undefined ? {} : { options }),
+  };
 }
 
 export function buildRunPlanInput(steps: readonly WorkflowNodeDraft[]): RunPlanInput {
@@ -22,9 +25,7 @@ export function buildRunPlanInput(steps: readonly WorkflowNodeDraft[]): RunPlanI
         compete: step.competitors.map((competitor) => ({
           id: competitor.key,
           name: competitor.name.trim(),
-          ...nodeAgentFields(competitor.agent),
-          model: competitor.model,
-          effort: competitor.effort,
+          ...nodeExecution(competitor.execution),
           prompt: competitor.prompt.trim(),
         })),
       };
@@ -32,9 +33,7 @@ export function buildRunPlanInput(steps: readonly WorkflowNodeDraft[]): RunPlanI
     return {
       id: step.key,
       name: step.name.trim(),
-      ...nodeAgentFields(step.agent),
-      model: step.model,
-      effort: step.effort,
+      ...nodeExecution(step.execution),
       prompt: step.prompt.trim(),
       depends_on: step.dependsOn,
     };

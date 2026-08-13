@@ -1,18 +1,14 @@
-import {
-  modelSelectionFromId,
-  type AgentProfileContract,
-  type ProviderOptions,
-  type RuntimeDescriptor,
-  type SaveAgentProfileRequest,
+import type {
+  AgentProfileContract,
+  RuntimeDescriptor,
+  SaveAgentProfileRequest,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
-import {
-  agentProfileErrorMessage,
-  useCreateAgentProfile,
-  useUpdateAgentProfile,
-} from "@web/api/agent-profiles/mutations";
-import { profileModelFromSelection } from "@web/lib/model-choice";
+import { useCreateAgentProfile, useUpdateAgentProfile } from "@web/api/agent-profiles/mutations";
+import { agentChoiceRuntimeId } from "@web/lib/agent-choice";
+import { agentConfigRefusalMessage } from "@web/lib/agent-config-error";
+import { selectionFromStored, storedFromSelection } from "@web/lib/execution/stored";
 import { resolveRuntimeChoice } from "@web/lib/runtimes";
 import { useState } from "react";
 
@@ -28,25 +24,31 @@ export function useAgentProfileForm({
   const create = useCreateAgentProfile();
   const update = useUpdateAgentProfile();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const defaultRuntime = profile?.runtime ?? resolveRuntimeChoice(descriptors, null) ?? "";
-  const defaultOptions: ProviderOptions = profile?.options ?? {};
 
   const form = useForm({
     defaultValues: {
       name: profile?.name ?? "",
-      runtime: defaultRuntime,
-      options: defaultOptions,
-      model: modelSelectionFromId(profile?.model ?? null),
+      execution: selectionFromStored({
+        runtime: profile?.runtime ?? resolveRuntimeChoice(descriptors, null),
+        model: profile?.model ?? null,
+        options: profile?.options ?? {},
+      }),
       guidance: profile?.guidance ?? "",
       skillIds: profile?.skill_ids ?? [],
     },
     onSubmit: async ({ value }) => {
       setSubmitError(null);
+      const runtime = agentChoiceRuntimeId(value.execution.agent, []);
+      if (runtime === null) {
+        setSubmitError("Pick the runtime this profile launches on.");
+        return;
+      }
+      const stored = storedFromSelection(value.execution, runtime);
       const request: SaveAgentProfileRequest = {
         name: value.name.trim(),
-        runtime: value.runtime,
-        options: value.options,
-        model: profileModelFromSelection(value.model),
+        runtime,
+        options: stored.options,
+        model: stored.model,
         guidance: value.guidance.trim() ? value.guidance.trim() : null,
         skill_ids: value.skillIds,
       };
@@ -57,7 +59,7 @@ export function useAgentProfileForm({
         form.reset();
         onSaved();
       } catch (error) {
-        setSubmitError(agentProfileErrorMessage(error));
+        setSubmitError(agentConfigRefusalMessage(error, "the profile"));
       }
     },
   });

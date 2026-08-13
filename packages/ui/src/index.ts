@@ -68,6 +68,8 @@ export {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
   type DropdownMenuCheckboxItemProps,
   type DropdownMenuContentProps,
@@ -76,6 +78,7 @@ export {
   type DropdownMenuRadioItemProps,
   type DropdownMenuSeparatorProps,
   type DropdownMenuShortcutProps,
+  type DropdownMenuSubTriggerProps,
 } from "./primitives/dropdown-menu";
 
 export { Input, type InputProps } from "./primitives/input";

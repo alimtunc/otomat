@@ -6,6 +6,7 @@ import {
   insertIssue,
   insertRun,
   insertStepRun,
+  readExecutionDefaults,
   type Db,
 } from "@otomat/db";
 import {
@@ -28,7 +29,7 @@ import {
   type WorktreeRecord,
 } from "#git";
 
-import { defaultConfigSelector, freezePlan } from "./freeze-plan.js";
+import { freezePlan, runDefaultConfig, runDefaultOverrides } from "./freeze-plan.js";
 import { LaunchRefusedError, resolveLaunchTarget } from "./launch-target.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
@@ -96,10 +97,12 @@ function insertPlanRows(db: Db, runId: string, plan: RunPlan): void {
 /** A launched run always owns a worktree: every precondition refuses before any row is written. */
 export function prepareRun(state: SupervisorState, request: StartRunRequest): string {
   const { db } = state;
-  const defaultConfig = resolveAgentConfig(db, defaultConfigSelector(request), {
-    model: request.model,
-    effort: request.effort,
-  });
+  const runDefault = runDefaultConfig(request, readExecutionDefaults(db).runtime);
+  const defaultConfig = resolveAgentConfig(
+    db,
+    runDefault.selector,
+    runDefaultOverrides(runDefault),
+  );
   const defaultRuntime = defaultConfig.runtime;
 
   const existingIssue = request.issue_id ? getIssue(db, request.issue_id) : undefined;
@@ -108,7 +111,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
 
   const runId = randomUUID();
   const branch = runBranchName(runId);
-  const plan = freezePlan(db, request, defaultConfig, prompt);
+  const plan = freezePlan(db, request, runDefault, defaultConfig, prompt);
   for (const step of executableSteps(plan)) ensureRuntimeAgent(db, step.agent ?? defaultRuntime);
   ensureRuntimeAgent(db, defaultRuntime);
   const { projectId, binding, baseRef } = resolveLaunchTarget(state, request, existingIssue);

@@ -11,6 +11,7 @@ const base: ResolvedAgentConfig = {
   model: null,
   guidance: null,
   skills: [],
+  sources: null,
   config_hash: "h",
 };
 

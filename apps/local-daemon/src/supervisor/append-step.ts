@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { insertStepRun, listStepRunsForRun, updateRunPlan, type RunRow } from "@otomat/db";
-import { appendPlanStep, stepRunMachine, type RunPlanStep } from "@otomat/domain";
+import { appendPlanStep, overrideLevel, stepRunMachine, type RunPlanStep } from "@otomat/domain";
 
 import { resolveAgentConfig } from "#agents";
 import { emitLedgerEvent } from "#events";
@@ -52,7 +52,10 @@ export async function appendRunStep(
     throw new ReviewFixBusyError(runId);
   }
 
-  const config = resolveAgentConfig(db, input.selector, { model: input.model });
+  const config = resolveAgentConfig(db, input.selector, {
+    levels: [overrideLevel("step", input.overrides)],
+    runtimeSource: "step",
+  });
   ensureRuntimeAgent(db, config.runtime);
 
   const step: RunPlanStep = {

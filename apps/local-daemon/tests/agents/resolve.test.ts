@@ -1,7 +1,13 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { insertAgentProfile, setSkillEnabled, upsertSkillByPath } from "@otomat/db";
+import {
+  insertAgentProfile,
+  setSkillEnabled,
+  upsertSkillByPath,
+  writeExecutionDefaults,
+} from "@otomat/db";
+import { overrideLevel } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import {
@@ -125,11 +131,52 @@ it("layers a launch override on top of the profile's own model", () => {
   const overridden = resolveAgentConfig(
     t.db,
     { kind: "profile", profileId: "pr-model" },
-    { model: { kind: "provider_default" } },
+    { levels: [overrideLevel("launch", { model: { kind: "provider_default" } })] },
   );
   expect(overridden.model).toBeNull();
+  expect(overridden.sources?.model).toBe("launch");
   // The model is part of the frozen identity, so the same profile under two models never shares a hash.
   expect(overridden.config_hash).not.toBe(fromProfile.config_hash);
+});
+
+it("takes the host defaults only for the runtime they name", () => {
+  writeExecutionDefaults(t.db, {
+    runtime: "fake",
+    model: "fake-fast",
+    options: { effort: "low" },
+  });
+  insertAgentProfile(t.db, {
+    id: "pr-empty",
+    name: "P",
+    runtime: "fake",
+    options_json: {},
+    guidance: null,
+    skill_ids_json: [],
+  });
+
+  const config = resolveAgentConfig(t.db, { kind: "profile", profileId: "pr-empty" });
+  expect(config.model).toEqual({ id: "fake-fast", source: "static" });
+  expect(config.options).toEqual({ effort: "low" });
+  expect(config.sources).toEqual({
+    runtime: "launch",
+    model: "global",
+    options: { effort: "global" },
+  });
+});
+
+it("drops a host default the chosen model does not publish instead of refusing the launch", () => {
+  writeExecutionDefaults(t.db, {
+    runtime: "fake",
+    model: null,
+    options: { effort: "high" },
+  });
+
+  const config = resolveAgentConfig(
+    t.db,
+    { kind: "runtime", runtimeId: "fake" },
+    { levels: [overrideLevel("launch", { model: { kind: "model", id: "fake-fast" } })] },
+  );
+  expect(config.options).toEqual({});
 });
 
 it("validates a profile's model against the runtime before it is persisted", () => {

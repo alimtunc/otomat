@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { resolvedExecutionSourcesSchema } from "../execution-config.js";
 import { providerOptionsSchema } from "../provider-options.js";
 import { modelIdSchema, resolvedModelSchema } from "../runtime-model.js";
 
@@ -62,6 +63,8 @@ export const resolvedAgentConfigSchema = z.object({
   model: resolvedModelSchema.nullable().default(null),
   guidance: z.string().nullable(),
   skills: z.array(resolvedSkillSchema),
+  /** Which level chose each value. Null on plans frozen before provenance was recorded: unknown, rather than a level invented for them. */
+  sources: resolvedExecutionSourcesSchema.nullable().default(null),
   /** Integrity fingerprint computed at freeze and stable across resume. */
   config_hash: z.string(),
 });

@@ -13,6 +13,7 @@ import { WorkflowLaunchForm } from "@web/components/issues/workflow/form";
 import { SingleRunLaunchForm } from "@web/components/issues/workspace/launch/single-run-form";
 import { LaunchTargetGate } from "@web/components/runs/launch/launch-target-gate";
 import { AppendStepForm } from "@web/components/runs/steps/append-step-form";
+import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
 import { issueShortId } from "@web/lib/ids";
 import { useState, type ComponentPropsWithoutRef } from "react";
 
@@ -50,7 +51,7 @@ function LaunchTrigger({ continuing = false, ...props }: LaunchTriggerProps) {
 export function LaunchRunDialog({ issue, onLaunched }: LaunchRunDialogProps) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<LaunchMode>("single");
-  const [agentChoice, setAgentChoice] = useState<string | null>(null);
+  const [execution, setExecution] = useState<ExecutionSelection>(EMPTY_EXECUTION_SELECTION);
 
   /** Closing discards the composed draft with the forms, so the mode it was composed in goes with it. */
   function openChange(next: boolean) {
@@ -102,8 +103,8 @@ export function LaunchRunDialog({ issue, onLaunched }: LaunchRunDialogProps) {
         {workspace.state === "open" ? (
           <AppendStepForm
             workspace={workspace}
-            agentChoice={agentChoice}
-            onAgentChoice={setAgentChoice}
+            execution={execution}
+            onExecutionChange={setExecution}
             onAppended={launched}
             onCancel={() => openChange(false)}
           />
@@ -114,8 +115,8 @@ export function LaunchRunDialog({ issue, onLaunched }: LaunchRunDialogProps) {
                 <SingleRunLaunchForm
                   issue={issue}
                   target={target}
-                  agentChoice={agentChoice}
-                  onAgentChoice={setAgentChoice}
+                  execution={execution}
+                  onExecutionChange={setExecution}
                   onLaunched={launched}
                   onCancel={() => openChange(false)}
                 />
@@ -123,8 +124,8 @@ export function LaunchRunDialog({ issue, onLaunched }: LaunchRunDialogProps) {
                 <WorkflowLaunchForm
                   target={{ kind: "issue", issueId: issue.id }}
                   worktreeTarget={target}
-                  agentChoice={agentChoice}
-                  onAgentChoice={setAgentChoice}
+                  execution={execution}
+                  onExecutionChange={setExecution}
                   onLaunched={launched}
                   onCancel={() => openChange(false)}
                 />

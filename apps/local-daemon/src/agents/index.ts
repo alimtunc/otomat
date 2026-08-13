@@ -10,6 +10,7 @@
  */
 export * from "./errors.js";
 export * from "./resolve.js";
+export { validateExecutionDefaults } from "./execution-defaults.js";
 export { composeTurnPrompt } from "./prompt.js";
 export { rescanSkills } from "./skills/catalog.js";
 export type { SkillRootsOptions } from "./skills/roots.js";

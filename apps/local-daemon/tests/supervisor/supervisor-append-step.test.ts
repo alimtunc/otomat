@@ -32,6 +32,7 @@ const FIX_STEP: AppendStepInput = {
   name: "Fix review comments",
   prompt: "address the review",
   selector: { kind: "runtime", runtimeId: "fake" },
+  overrides: {},
   dependsOn: [],
   origin: "review_fix",
 };

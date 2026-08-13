@@ -6,5 +6,8 @@ import { timestamps } from "./shared.js";
 export const daemonSettings = sqliteTable("daemon_settings", {
   id: text("id").primaryKey(),
   max_concurrent_sessions: integer("max_concurrent_sessions").notNull(),
+  execution_runtime: text("execution_runtime"),
+  execution_model: text("execution_model"),
+  execution_options_json: text("execution_options_json", { mode: "json" }),
   ...timestamps,
 });

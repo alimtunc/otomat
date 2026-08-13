@@ -1,11 +1,11 @@
 import type { RunContract } from "@otomat/domain";
 import { Button, DialogBody, Field, FieldControl, FieldLabel, Kbd, Textarea } from "@otomat/ui";
+import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { LaunchTargetFields } from "@web/components/runs/launch/launch-target-fields";
-import { useLaunchAgentChoice } from "@web/components/runs/launch/use-launch-agent-choice";
 import type { LaunchTargetState } from "@web/components/runs/launch/use-launch-target";
+import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@web/lib/form";
-import { isCompleteModelSelection } from "@web/lib/model-choice";
 import { isWorkflowNodeComplete } from "@web/lib/workflow-draft";
 
 import { WorkflowPlanBuilder } from "./builder";
@@ -15,8 +15,8 @@ import { useWorkflowForm, type WorkflowForm } from "./use-form";
 export interface WorkflowLaunchFormProps {
   target: WorkflowLaunchTarget;
   worktreeTarget: Extract<LaunchTargetState, { status: "ready" }>;
-  agentChoice: string | null;
-  onAgentChoice: (choice: string | null) => void;
+  execution: ExecutionSelection;
+  onExecutionChange: (execution: ExecutionSelection) => void;
   onLaunched: (run: RunContract) => void;
   onCancel: () => void;
 }
@@ -65,15 +65,16 @@ function WorkflowTargetIntro({
 export function WorkflowLaunchForm({
   target,
   worktreeTarget,
-  agentChoice,
-  onAgentChoice,
+  execution,
+  onExecutionChange,
   onLaunched,
   onCancel,
 }: WorkflowLaunchFormProps) {
-  const agents = useLaunchAgentChoice(agentChoice);
+  const launchExecution = useLaunchExecution(execution);
   const workflow = useWorkflowForm({
     target,
-    agentChoice: agents.choice,
+    execution: launchExecution.request,
+    canLaunch: launchExecution.canLaunch,
     baseBranch: worktreeTarget.baseBranch,
     onLaunched,
   });
@@ -89,7 +90,11 @@ export function WorkflowLaunchForm({
     >
       <DialogBody className="flex max-h-[62vh] flex-col gap-3 overflow-y-auto">
         <WorkflowTargetIntro target={target} form={form} />
-        <WorkflowPlanBuilder agents={agents} onAgentChoice={onAgentChoice} workflow={workflow} />
+        <WorkflowPlanBuilder
+          execution={launchExecution}
+          onExecutionChange={onExecutionChange}
+          workflow={workflow}
+        />
         <LaunchTargetFields target={worktreeTarget} disabled={isPending} />
       </DialogBody>
       <IssueFormFooter
@@ -98,7 +103,6 @@ export function WorkflowLaunchForm({
           <form.Subscribe
             selector={(state) =>
               (target.kind === "issue" || hasText(state.values.goal)) &&
-              isCompleteModelSelection(state.values.model) &&
               state.values.steps.length > 0 &&
               state.values.steps.every(isWorkflowNodeComplete)
             }
@@ -109,7 +113,7 @@ export function WorkflowLaunchForm({
                 variant="primary"
                 size="sm"
                 loading={isPending}
-                disabled={!(filled && agents.choice !== null && !isPending)}
+                disabled={!(filled && launchExecution.canLaunch && !isPending)}
               >
                 Launch workflow
                 <Kbd tone="on-accent">⌘↵</Kbd>

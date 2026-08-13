@@ -1,5 +1,6 @@
 import { runPlanInputSchema } from "@otomat/domain";
 import { encodeProfileChoice, encodeRuntimeChoice } from "@web/lib/agent-choice";
+import type { ExecutionSelection } from "@web/lib/execution/selection";
 import {
   newWorkflowCompeteGroup,
   newWorkflowStep,
@@ -10,14 +11,13 @@ import {
 import {
   addWorkflowCompetitor,
   removeWorkflowCompetitor,
-  setWorkflowCompetitorAgent,
+  setWorkflowCompetitorExecution,
 } from "@web/lib/workflow/competitors";
 import { buildRunPlanInput } from "@web/lib/workflow/plan-input";
 import {
   clearInheritedNodeOverrides,
   moveWorkflowStep,
-  setWorkflowStepEffort,
-  setWorkflowStepModel,
+  setWorkflowStepExecution,
   toggleWorkflowDependency,
 } from "@web/lib/workflow/steps";
 import { expect, it } from "vitest";
@@ -28,21 +28,33 @@ function competeGroupAt(steps: readonly WorkflowNodeDraft[], index: number): Wor
   return node;
 }
 
+const pinned: ExecutionSelection = {
+  agent: encodeRuntimeChoice("codex"),
+  model: { kind: "model", id: "gpt-5.6-sol" },
+  options: { reasoning_effort: { kind: "value", value: "ultra" } },
+};
+
+const inherits: ExecutionSelection = {
+  agent: null,
+  model: { kind: "model", id: "opus" },
+  options: { effort: { kind: "value", value: "high" } },
+};
+
 it("builds a strict compete node with per-candidate ad-hoc runtimes and a profile", () => {
   const group = newWorkflowCompeteGroup(1);
-  group.name = "Choose implementation";
   group.competitors[0] = {
     ...group.competitors[0]!,
     name: "Direct",
     prompt: "Implement directly",
-    agent: encodeRuntimeChoice("codex"),
+    execution: { agent: encodeRuntimeChoice("codex"), options: {} },
   };
   group.competitors[1] = {
     ...group.competitors[1]!,
     name: "Layered",
     prompt: "Implement with a boundary",
-    agent: encodeProfileChoice("profile-abc"),
+    execution: { agent: encodeProfileChoice("profile-abc"), options: {} },
   };
+  group.name = "Choose implementation";
   const dependent = { ...newWorkflowStep(2), name: "Verify", prompt: "Run checks" };
   const steps = toggleWorkflowDependency([group, dependent], 1, group.key);
 
@@ -64,89 +76,58 @@ it("builds a strict compete node with per-candidate ad-hoc runtimes and a profil
   expect(plan.steps[1]?.depends_on).toEqual([group.key]);
 });
 
-it("drops the model and effort of every node that inherits the run agent when that agent changes", () => {
-  const step = {
-    ...newWorkflowStep(1),
-    model: { kind: "model", id: "opus" } as const,
-    effort: { kind: "level", value: "high" } as const,
-  };
-  const pinned = {
-    ...newWorkflowStep(2),
-    agent: encodeRuntimeChoice("codex"),
-    model: { kind: "model", id: "gpt-5.6-sol" } as const,
-    effort: { kind: "level", value: "ultra" } as const,
-  };
+it("drops what every inheriting node kept when the run's own configuration changes", () => {
+  const step = { ...newWorkflowStep(1), execution: inherits };
+  const own = { ...newWorkflowStep(2), execution: pinned };
   const group = newWorkflowCompeteGroup(3);
-  group.competitors[0] = {
-    ...group.competitors[0]!,
-    model: { kind: "model", id: "opus" } as const,
-    effort: { kind: "level", value: "max" } as const,
-  };
+  group.competitors[0] = { ...group.competitors[0]!, execution: inherits };
 
-  const cleared = clearInheritedNodeOverrides([step, pinned, group], "agent");
+  const cleared = clearInheritedNodeOverrides([step, own, group]);
 
-  expect(cleared[0]).toMatchObject({ model: undefined, effort: undefined });
-  expect(cleared[1]).toMatchObject({ model: { id: "gpt-5.6-sol" }, effort: { value: "ultra" } });
-  expect(competeGroupAt(cleared, 2).competitors[0]?.effort).toBeUndefined();
-});
-
-it("drops only the effort of nodes that follow the run model when that model changes", () => {
-  const inheriting = { ...newWorkflowStep(1), effort: { kind: "level", value: "high" } as const };
-  const ownModel = {
-    ...newWorkflowStep(2),
-    model: { kind: "model", id: "opus" } as const,
-    effort: { kind: "level", value: "max" } as const,
-  };
-
-  const cleared = clearInheritedNodeOverrides([inheriting, ownModel], "model");
-
-  expect(cleared[0]).toMatchObject({ effort: undefined });
-  expect(cleared[1]).toMatchObject({ model: { id: "opus" }, effort: { value: "max" } });
-});
-
-it("clears a competitor's model and effort whenever its agent changes", () => {
-  const group = newWorkflowCompeteGroup(1);
-  group.competitors[0] = {
-    ...group.competitors[0]!,
-    model: { kind: "model", id: "opus" } as const,
-    effort: { kind: "level", value: "high" } as const,
-  };
-
-  const changed = setWorkflowCompetitorAgent([group], 0, 0, encodeRuntimeChoice("codex"));
-
-  expect(competeGroupAt(changed, 0).competitors[0]).toMatchObject({
-    agent: encodeRuntimeChoice("codex"),
-    model: undefined,
-    effort: undefined,
+  expect(cleared[0]?.kind === "step" && cleared[0].execution).toEqual({ agent: null, options: {} });
+  expect(cleared[1]?.kind === "step" && cleared[1].execution).toEqual(pinned);
+  expect(competeGroupAt(cleared, 2).competitors[0]?.execution).toEqual({
+    agent: null,
+    options: {},
   });
 });
 
-it("drops a step's level when its own model changes, because levels are published per model", () => {
-  const step = { ...newWorkflowStep(1), effort: { kind: "level", value: "ultra" } as const };
+it("starts a candidate's model and options over when its agent changes, because another CLI announces other keys", () => {
+  const group = newWorkflowCompeteGroup(1);
+  group.competitors[0] = { ...group.competitors[0]!, execution: inherits };
 
-  const changed = setWorkflowStepModel([step], 0, { kind: "model", id: "gpt-5.6-sol" });
+  const changed = setWorkflowCompetitorExecution([group], 0, 0, {
+    agent: encodeRuntimeChoice("codex"),
+    options: {},
+  });
 
-  expect(changed[0]).toMatchObject({ model: { id: "gpt-5.6-sol" }, effort: undefined });
+  expect(competeGroupAt(changed, 0).competitors[0]?.execution).toEqual({
+    agent: encodeRuntimeChoice("codex"),
+    options: {},
+  });
 });
 
-it("carries each node's effort selection into the plan the daemon validates", () => {
+it("carries each node's option selections into the plan the daemon validates", () => {
   const inheriting = { ...newWorkflowStep(1), name: "First", prompt: "go" };
-  const pinned = {
+  const named = {
     ...newWorkflowStep(2),
     name: "Second",
     prompt: "go",
-    effort: { kind: "level", value: "high" } as const,
+    execution: { agent: null, options: { effort: { kind: "value" as const, value: "high" } } },
   };
-  const own = { ...newWorkflowStep(3), name: "Third", prompt: "go" };
-  const steps = setWorkflowStepEffort([inheriting, pinned, own], 2, { kind: "agent_default" });
+  const declined = { ...newWorkflowStep(3), name: "Third", prompt: "go" };
+  const steps = setWorkflowStepExecution([inheriting, named, declined], 2, {
+    agent: null,
+    options: { effort: { kind: "agent_default" } },
+  });
 
   const plan = buildRunPlanInput(steps);
 
   expect(runPlanInputSchema.parse(plan)).toEqual(plan);
-  expect(plan.steps.map((step) => ("effort" in step ? step.effort : null))).toEqual([
-    undefined,
-    { kind: "level", value: "high" },
-    { kind: "agent_default" },
+  expect(plan.steps.map((step) => ("options" in step ? step.options : null))).toEqual([
+    null,
+    { effort: { kind: "value", value: "high" } },
+    { effort: { kind: "agent_default" } },
   ]);
 });
 

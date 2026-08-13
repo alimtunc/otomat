@@ -17,7 +17,7 @@ export interface ChoiceItem {
 export function buildItems(
   profiles: AgentProfileContract[],
   descriptors: RuntimeDescriptor[],
-  includeDefault: boolean,
+  inheritLabel?: string,
 ): { defaultItem: ChoiceItem | null; profileItems: ChoiceItem[]; runtimeItems: ChoiceItem[] } {
   const profileItems = profiles.map((profile) => {
     const runtime = runtimeById(descriptors, profile.runtime);
@@ -36,10 +36,19 @@ export function buildItems(
     mark: runtimeMark(descriptor.id),
   }));
   return {
-    defaultItem: includeDefault
-      ? { value: AGENT_CHOICE_DEFAULT, label: "Run default", disabled: false, mark: null }
+    defaultItem: inheritLabel
+      ? { value: AGENT_CHOICE_DEFAULT, label: inheritLabel, disabled: false, mark: null }
       : null,
     profileItems,
     runtimeItems,
   };
+}
+
+export function agentChoiceItem(
+  choice: string | null,
+  profiles: AgentProfileContract[],
+  descriptors: RuntimeDescriptor[],
+): ChoiceItem | null {
+  const { profileItems, runtimeItems } = buildItems(profiles, descriptors);
+  return [...profileItems, ...runtimeItems].find((item) => item.value === choice) ?? null;
 }

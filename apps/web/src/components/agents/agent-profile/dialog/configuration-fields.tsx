@@ -1,10 +1,8 @@
-import { PROVIDER_DEFAULT_MODEL, type RuntimeDescriptor, type SkillContract } from "@otomat/domain";
+import type { RuntimeDescriptor, SkillContract } from "@otomat/domain";
 import { Field, FieldControl, FieldLabel } from "@otomat/ui";
-import { ProviderOptionsFields } from "@web/components/agents/agent-profile/dialog/provider-options-fields";
-import { RuntimeFields } from "@web/components/agents/agent-profile/dialog/runtime-fields";
 import { SkillsField } from "@web/components/agents/agent-profile/dialog/skills-field";
 import type { AgentProfileFormApi } from "@web/components/agents/agent-profile/dialog/use-form";
-import { ModelSelect } from "@web/components/runs/launch/model-select";
+import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
 
 export function AgentProfileConfigurationFields({
   form,
@@ -19,33 +17,20 @@ export function AgentProfileConfigurationFields({
     <form.Subscribe selector={(state) => state.values}>
       {(values) => (
         <>
-          <RuntimeFields
-            descriptors={descriptors}
-            runtime={values.runtime}
-            onRuntimeChange={(runtime) => {
-              form.setFieldValue("runtime", runtime);
-              form.setFieldValue("model", PROVIDER_DEFAULT_MODEL);
-              form.setFieldValue("options", {});
-            }}
-          />
           <Field>
-            <FieldLabel>Model</FieldLabel>
+            <FieldLabel>Execution</FieldLabel>
             <FieldControl>
-              <ModelSelect
-                runtimeId={values.runtime || null}
-                value={values.model}
-                onValueChange={(model) =>
-                  form.setFieldValue("model", model ?? PROVIDER_DEFAULT_MODEL)
-                }
+              <ExecutionConfigPicker
+                runtimesOnly
+                level="profile"
+                value={values.execution}
+                onChange={(execution) => form.setFieldValue("execution", execution)}
+                profiles={[]}
+                descriptors={descriptors}
+                label="Profile"
               />
             </FieldControl>
           </Field>
-          <ProviderOptionsFields
-            runtime={values.runtime || null}
-            model={values.model.kind === "model" ? values.model.id : null}
-            options={values.options}
-            onOptionsChange={(options) => form.setFieldValue("options", options)}
-          />
           <SkillsField
             skills={skills}
             selectedIds={values.skillIds}

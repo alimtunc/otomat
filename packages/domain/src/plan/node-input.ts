@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { effortSelectionSchema } from "../contracts/provider-options.js";
+import { executionOptionSelectionsSchema } from "../contracts/execution-config.js";
 import { modelSelectionSchema } from "../contracts/runtime-model.js";
 import {
   RUN_PLAN_MAX_STEPS,
@@ -26,8 +26,8 @@ export const runPlanStepInputSchema = z
     profile_id: z.string().min(1).nullish(),
     /** Model override for this step alone; absent inherits the model of whatever config this step resolves to. */
     model: modelSelectionSchema.optional(),
-    /** Effort for this step alone; absent inherits the launch's, `agent_default` keeps the resolved agent's own. */
-    effort: effortSelectionSchema.optional(),
+    /** Provider options for this step alone; an absent key inherits the launch's, `agent_default` keeps the resolved agent's own. */
+    options: executionOptionSelectionsSchema.optional(),
     prompt: planNodePromptSchema,
     depends_on: planDependenciesSchema,
   })
@@ -43,8 +43,8 @@ const runPlanCompetitorInputSchema = z
     profile_id: z.string().min(1).nullish(),
     /** Model override for this candidate alone; absent inherits the model of whatever config it resolves to. */
     model: modelSelectionSchema.optional(),
-    /** Effort for this candidate alone; absent inherits the launch's, `agent_default` keeps the resolved agent's own. */
-    effort: effortSelectionSchema.optional(),
+    /** Provider options for this candidate alone; an absent key inherits the launch's, `agent_default` keeps the resolved agent's own. */
+    options: executionOptionSelectionsSchema.optional(),
     prompt: planNodePromptSchema,
   })
   .strict();

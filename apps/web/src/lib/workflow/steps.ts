@@ -1,5 +1,5 @@
-import type { EffortSelection, ModelSelection } from "@otomat/domain";
-import type { WorkflowNodeDraft, WorkflowStepDraft } from "@web/lib/workflow-draft";
+import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
+import type { WorkflowNodeDraft } from "@web/lib/workflow-draft";
 
 /** Keeps every dependency pointing at an earlier, still-existing top-level node. */
 export function sanitizeWorkflowSteps(steps: readonly WorkflowNodeDraft[]): WorkflowNodeDraft[] {
@@ -33,63 +33,34 @@ export function removeWorkflowStep(
   return sanitizeWorkflowSteps(steps.filter((_, stepIndex) => stepIndex !== index));
 }
 
-export function setWorkflowStepAgent(
+export function setWorkflowStepExecution(
   steps: readonly WorkflowNodeDraft[],
   index: number,
-  agent: string | null,
+  execution: ExecutionSelection,
 ): WorkflowNodeDraft[] {
   return steps.map((step, stepIndex) =>
-    stepIndex === index && step.kind === "step"
-      ? { ...step, agent, model: undefined, effort: undefined }
-      : step,
+    stepIndex === index && step.kind === "step" ? { ...step, execution } : step,
   );
 }
 
-/** A selection is reset when what scopes it changes: the model follows the agent, the effort level follows both. */
-function inheritedOverrides(
-  node: Pick<WorkflowStepDraft, "agent" | "model" | "effort">,
-  changed: "agent" | "model",
-): Pick<WorkflowStepDraft, "model" | "effort"> {
-  if (node.agent !== null) return { model: node.model, effort: node.effort };
-  if (changed === "agent") return { model: undefined, effort: undefined };
-  return { model: node.model, effort: node.model === undefined ? undefined : node.effort };
+function rescopeExecution(execution: ExecutionSelection): ExecutionSelection {
+  return execution.agent === null ? EMPTY_EXECUTION_SELECTION : execution;
 }
 
-/** Nodes without their own agent follow the run default, so a run-level change orphans what they kept under it. */
+/** A node inheriting the run's agent resolves against the run's model and options, so a run-level agent change orphans what it kept under the old scope. */
 export function clearInheritedNodeOverrides(
   steps: readonly WorkflowNodeDraft[],
-  changed: "agent" | "model",
 ): WorkflowNodeDraft[] {
   return steps.map((step) => {
-    if (step.kind === "step") return { ...step, ...inheritedOverrides(step, changed) };
+    if (step.kind === "step") return { ...step, execution: rescopeExecution(step.execution) };
     return {
       ...step,
       competitors: step.competitors.map((competitor) => ({
         ...competitor,
-        ...inheritedOverrides(competitor, changed),
+        execution: rescopeExecution(competitor.execution),
       })),
     };
   });
-}
-
-export function setWorkflowStepModel(
-  steps: readonly WorkflowNodeDraft[],
-  index: number,
-  model: ModelSelection | undefined,
-): WorkflowNodeDraft[] {
-  return steps.map((step, stepIndex) =>
-    stepIndex === index && step.kind === "step" ? { ...step, model, effort: undefined } : step,
-  );
-}
-
-export function setWorkflowStepEffort(
-  steps: readonly WorkflowNodeDraft[],
-  index: number,
-  effort: EffortSelection | undefined,
-): WorkflowNodeDraft[] {
-  return steps.map((step, stepIndex) =>
-    stepIndex === index && step.kind === "step" ? { ...step, effort } : step,
-  );
 }
 
 export function toggleWorkflowDependency(

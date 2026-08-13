@@ -6,6 +6,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { setInputValue } from "#support/dom-events";
+import { executionDefaultsQueryResult } from "#support/execution-defaults";
 import { repositoriesQueryResult, repositoryBranchesQueryResult } from "#support/launch-target";
 import { modelCatalogQueryResult } from "#support/runtime-models";
 import { providerOptionSetQueryResult } from "#support/runtime-options";
@@ -14,11 +15,12 @@ const launch = vi.fn(async () => ({ id: "run-1" }) as RunContract);
 const navigate = vi.fn();
 const create = vi.fn(async (_request: CreateIssueRequest) => true);
 let runtimesData: RuntimeDescriptor[] = [];
-const agentSelectProps = vi.fn();
+const pickerProps = vi.fn();
 
-interface AgentSelectProbeProps {
-  value: string | null;
-  ariaLabel?: string;
+interface ExecutionPickerProbeProps {
+  level: string;
+  value: { agent: string | null };
+  label: string;
   compact?: boolean;
 }
 
@@ -42,6 +44,7 @@ vi.mock("@web/api/daemon/queries", () => ({
   }),
   useRuntimeModels: () => modelCatalogQueryResult(),
   useRuntimeProviderOptions: () => providerOptionSetQueryResult(),
+  useExecutionDefaults: () => executionDefaultsQueryResult(),
   useRepositories: () => repositoriesQueryResult(),
   useRepositoryBranches: () => repositoryBranchesQueryResult(),
 }));
@@ -50,16 +53,10 @@ vi.mock("@web/api/agent-profiles/queries", () => ({
   useAgentProfiles: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
 }));
 
-vi.mock("@web/components/runs/launch/launch-agent-select", () => ({
-  LaunchAgentSelect: (props: AgentSelectProbeProps) => {
-    agentSelectProps(props);
-    return (
-      <div
-        data-testid="agent-select"
-        data-aria-label={props.ariaLabel ?? "Agent"}
-        data-compact={props.compact || undefined}
-      />
-    );
+vi.mock("@web/components/execution/execution-config-picker", () => ({
+  ExecutionConfigPicker: (props: ExecutionPickerProbeProps) => {
+    pickerProps(props);
+    return <div data-testid="execution-picker" data-level={props.level} data-label={props.label} />;
   },
 }));
 
@@ -96,7 +93,7 @@ afterEach(async () => {
   launch.mockClear();
   navigate.mockClear();
   create.mockClear();
-  agentSelectProps.mockClear();
+  pickerProps.mockClear();
   runtimesData = [];
 });
 
@@ -156,8 +153,8 @@ describe("NewIssueDialog", () => {
       runtimeDescriptor("fake", "simulated", true),
     ];
     await renderDialog();
-    expect(agentSelectProps).toHaveBeenCalledWith(
-      expect.objectContaining({ value: "runtime:codex" }),
+    expect(pickerProps).toHaveBeenCalledWith(
+      expect.objectContaining({ value: expect.objectContaining({ agent: "runtime:codex" }) }),
     );
   });
 
@@ -169,7 +166,7 @@ describe("NewIssueDialog", () => {
     await renderDialog();
     expect(document.body.textContent).toContain("No agent runtime available");
     expect(buttonByText("Create & launch⌘↵").disabled).toBe(true);
-    expect(document.querySelector("[data-testid='agent-select']")).toBeNull();
+    expect(document.querySelector("[data-testid='execution-picker']")).toBeNull();
   });
 
   it("creates a manual issue for the current project and closes", async () => {
@@ -251,8 +248,12 @@ describe("NewIssueDialog", () => {
     ];
     expect(candidateNames).toHaveLength(2);
     expect(candidatePrompts).toHaveLength(2);
-    expect(document.querySelector("[data-aria-label='Candidate A agent']")).not.toBeNull();
-    expect(document.querySelector("[data-aria-label='Candidate B agent']")).not.toBeNull();
+    expect(
+      document.querySelector("[data-testid='execution-picker'][data-label='Candidate A']"),
+    ).not.toBeNull();
+    expect(
+      document.querySelector("[data-testid='execution-picker'][data-label='Candidate B']"),
+    ).not.toBeNull();
     expect(document.body.textContent).toContain(
       "Steps that depend on this group stay queued until you compare the results and select a winner.",
     );
@@ -301,18 +302,14 @@ describe("NewIssueDialog", () => {
     expect(navigate).toHaveBeenCalledWith({ to: "/runs/$runId", params: { runId: "run-1" } });
   });
 
-  it("gives workflow agent selectors the standard control size", async () => {
+  it("compacts the per-step execution control and leaves the run-level one full size", async () => {
     runtimesData = [runtimeDescriptor("claude", "real", true)];
     await renderDialog();
     await act(async () => buttonByText("Workflow").click());
 
-    const stepAgent = document.querySelector<HTMLElement>("[data-aria-label='Step 1 agent']");
-    const stepCall = agentSelectProps.mock.calls.find(
-      ([props]: [AgentSelectProbeProps]) => props.ariaLabel === "Step 1 agent",
-    );
-
-    expect(stepCall?.[0].compact).not.toBe(true);
-    expect(stepAgent?.parentElement?.classList.contains("w-52")).toBe(true);
+    const calls = pickerProps.mock.calls.map(([props]: [ExecutionPickerProbeProps]) => props);
+    expect(calls.find((props) => props.label === "Workflow")?.compact).not.toBe(true);
+    expect(calls.find((props) => props.label === "Step 1")?.compact).toBe(true);
   });
 
   it("uses the iris interaction color for selected workflow dependencies", async () => {

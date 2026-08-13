@@ -473,6 +473,7 @@ it("appends a step with the agent the caller chose, never an inherited one", asy
     name: "Address review",
     prompt: "rename beta",
     selector: { kind: "profile", profileId: "p-reviewer" },
+    overrides: {},
     dependsOn: [],
     origin: "user",
   });

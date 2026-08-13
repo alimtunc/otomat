@@ -26,6 +26,7 @@ import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as SettingsAboutRouteImport } from './routes/settings/about'
 import { Route as SettingsAgentsRouteImport } from './routes/settings/agents'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
+import { Route as SettingsExecutionRouteImport } from './routes/settings/execution'
 import { Route as SettingsHostRouteImport } from './routes/settings/host'
 import { Route as SettingsIntegrationsRouteImport } from './routes/settings/integrations'
 import { Route as SettingsProjectRouteImport } from './routes/settings/project'
@@ -123,6 +124,11 @@ const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
   path: '/appearance',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const SettingsExecutionRoute = SettingsExecutionRouteImport.update({
+  id: '/execution',
+  path: '/execution',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 const SettingsHostRoute = SettingsHostRouteImport.update({
   id: '/host',
   path: '/host',
@@ -193,6 +199,7 @@ export interface FileRoutesByFullPath {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/agents': typeof SettingsAgentsRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/execution': typeof SettingsExecutionRoute
   '/settings/host': typeof SettingsHostRoute
   '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/project': typeof SettingsProjectRoute
@@ -220,6 +227,7 @@ export interface FileRoutesByTo {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/agents': typeof SettingsAgentsRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/execution': typeof SettingsExecutionRoute
   '/settings/host': typeof SettingsHostRoute
   '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/project': typeof SettingsProjectRoute
@@ -251,6 +259,7 @@ export interface FileRoutesById {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/agents': typeof SettingsAgentsRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/execution': typeof SettingsExecutionRoute
   '/settings/host': typeof SettingsHostRoute
   '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/project': typeof SettingsProjectRoute
@@ -283,6 +292,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/agents'
     | '/settings/appearance'
+    | '/settings/execution'
     | '/settings/host'
     | '/settings/integrations'
     | '/settings/project'
@@ -310,6 +320,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/agents'
     | '/settings/appearance'
+    | '/settings/execution'
     | '/settings/host'
     | '/settings/integrations'
     | '/settings/project'
@@ -340,6 +351,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/agents'
     | '/settings/appearance'
+    | '/settings/execution'
     | '/settings/host'
     | '/settings/integrations'
     | '/settings/project'
@@ -492,6 +504,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAppearanceRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/settings/execution': {
+      id: '/settings/execution'
+      path: '/execution'
+      fullPath: '/settings/execution'
+      preLoaderRoute: typeof SettingsExecutionRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/settings/host': {
       id: '/settings/host'
       path: '/host'
@@ -576,6 +595,7 @@ interface SettingsRouteRouteChildren {
   SettingsAboutRoute: typeof SettingsAboutRoute
   SettingsAgentsRoute: typeof SettingsAgentsRoute
   SettingsAppearanceRoute: typeof SettingsAppearanceRoute
+  SettingsExecutionRoute: typeof SettingsExecutionRoute
   SettingsHostRoute: typeof SettingsHostRoute
   SettingsIntegrationsRoute: typeof SettingsIntegrationsRoute
   SettingsProjectRoute: typeof SettingsProjectRoute
@@ -589,6 +609,7 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsAgentsRoute: SettingsAgentsRoute,
   SettingsAppearanceRoute: SettingsAppearanceRoute,
+  SettingsExecutionRoute: SettingsExecutionRoute,
   SettingsHostRoute: SettingsHostRoute,
   SettingsIntegrationsRoute: SettingsIntegrationsRoute,
   SettingsProjectRoute: SettingsProjectRoute,

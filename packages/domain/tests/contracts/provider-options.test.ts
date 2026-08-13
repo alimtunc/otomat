@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  effortOptionDescriptor,
-  effortSelectionSchema,
+  providerOptionDescriptor,
   providerOptionSetSchema,
   providerOptionsSchema,
   providerOptionValueSchema,
-  storedEffortLevel,
   type ProviderOptionDescriptor,
   type ProviderOptionKey,
 } from "#domain/contracts/provider-options";
@@ -92,32 +90,10 @@ const descriptor = (key: ProviderOptionKey): ProviderOptionDescriptor => ({
   default_value: null,
 });
 
-describe("effort selection", () => {
-  it("distinguishes keeping the agent's own level from naming one", () => {
-    expect(effortSelectionSchema.parse({ kind: "agent_default" })).toEqual({
-      kind: "agent_default",
-    });
-    expect(effortSelectionSchema.parse({ kind: "level", value: "ultra" })).toEqual({
-      kind: "level",
-      value: "ultra",
-    });
-    expect(effortSelectionSchema.safeParse({ kind: "level", value: "--effort" }).success).toBe(
-      false,
-    );
-    expect(effortSelectionSchema.safeParse({ kind: "runtime_default" }).success).toBe(false);
-  });
-
-  it("finds the effort option under whichever key the provider names it by", () => {
-    expect(effortOptionDescriptor([descriptor("sandbox"), descriptor("effort")])?.key).toBe(
-      "effort",
-    );
-    expect(effortOptionDescriptor([descriptor("reasoning_effort")])?.key).toBe("reasoning_effort");
-    expect(effortOptionDescriptor([descriptor("permission_mode")])).toBeNull();
-  });
-
-  it("reads a stored level whichever provider wrote it", () => {
-    expect(storedEffortLevel({ effort: "max" })).toBe("max");
-    expect(storedEffortLevel({ reasoning_effort: "ultra" })).toBe("ultra");
-    expect(storedEffortLevel({ permission_mode: "plan" })).toBeNull();
+describe("providerOptionDescriptor", () => {
+  it("finds an announced option by its key, and answers null for one this pair offers none for", () => {
+    const announced = [descriptor("sandbox"), descriptor("reasoning_effort")];
+    expect(providerOptionDescriptor(announced, "reasoning_effort")?.key).toBe("reasoning_effort");
+    expect(providerOptionDescriptor(announced, "effort")).toBeNull();
   });
 });

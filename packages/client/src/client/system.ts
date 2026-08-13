@@ -1,10 +1,12 @@
 import {
   agentCapacitySchema,
   daemonLogExcerptSchema,
+  executionDefaultsSchema,
   healthResponseSchema,
   providerOptionSetSchema,
   runtimeDescriptorSchema,
   runtimeModelCatalogSchema,
+  type ExecutionDefaults,
   type UpdateAgentCapacityRequest,
 } from "@otomat/domain";
 
@@ -26,6 +28,16 @@ export function createSystemClient(config: DaemonClientConfig) {
     },
     async setAgentCapacity(request: UpdateAgentCapacityRequest) {
       return agentCapacitySchema.parse(await putJson(config, "/api/settings/capacity", request));
+    },
+    async executionDefaults() {
+      return executionDefaultsSchema.parse(
+        await getJson(config, "/api/settings/execution-defaults"),
+      );
+    },
+    async setExecutionDefaults(defaults: ExecutionDefaults) {
+      return executionDefaultsSchema.parse(
+        await putJson(config, "/api/settings/execution-defaults", defaults),
+      );
     },
     async listRuntimes() {
       return runtimeDescriptorSchema.array().parse(await getJson(config, "/api/runtimes"));

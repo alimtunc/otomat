@@ -2,8 +2,8 @@ import type { IssueContract, RunContract } from "@otomat/domain";
 import { cn, IssueStatusChip, SidePanelToggle, useSidePanel } from "@otomat/ui";
 import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { LinearRailSection } from "@web/components/issues/workspace/linear/rail-section";
+import { ExecutionSection } from "@web/components/issues/workspace/rail/execution-section";
 import { FollowedRunSection } from "@web/components/issues/workspace/rail/followed-run-section";
-import { ModelSection } from "@web/components/issues/workspace/rail/model-section";
 import { Mono } from "@web/components/issues/workspace/rail/mono";
 import { PullRequestSection } from "@web/components/issues/workspace/rail/pull-request-section";
 import {
@@ -82,7 +82,7 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
         <>
           <PullRequestSection run={run} />
           <FollowedRunSection run={run} />
-          <ModelSection run={run} />
+          <ExecutionSection run={run} />
           <UsageSection />
         </>
       ) : null}

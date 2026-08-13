@@ -1,7 +1,8 @@
 import { AGENT_PROFILE_GUIDANCE_MAX_LENGTH, type AgentProfileContract } from "@otomat/domain";
 import { Button, Field, FieldControl, FieldLabel, Textarea, toast } from "@otomat/ui";
-import { agentProfileErrorMessage, useUpdateAgentProfile } from "@web/api/agent-profiles/mutations";
+import { useUpdateAgentProfile } from "@web/api/agent-profiles/mutations";
 import { requestForProfile } from "@web/lib/agent-choice";
+import { agentConfigRefusalMessage } from "@web/lib/agent-config-error";
 import { useState } from "react";
 
 export function InstructionsPanel({ profile }: { profile: AgentProfileContract }) {
@@ -22,7 +23,7 @@ export function InstructionsPanel({ profile }: { profile: AgentProfileContract }
       setGuidance(updated.guidance ?? "");
       toast.success("Instructions saved");
     } catch (error) {
-      setSaveError(agentProfileErrorMessage(error));
+      setSaveError(agentConfigRefusalMessage(error, "the profile"));
     }
   }
 

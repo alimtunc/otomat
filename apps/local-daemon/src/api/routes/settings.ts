@@ -1,6 +1,10 @@
-import { updateAgentCapacityRequestSchema } from "@otomat/domain";
+import { readExecutionDefaults, writeExecutionDefaults } from "@otomat/db";
+import { executionDefaultsSchema, updateAgentCapacityRequestSchema } from "@otomat/domain";
 import { Hono } from "hono";
 
+import { validateExecutionDefaults } from "#agents";
+
+import { agentConfigErrorResponse, refusalJson } from "../agent-config-refusal.js";
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";
 
@@ -13,6 +17,21 @@ export function createSettingsRoutes(deps: ApiDeps): Hono {
   routes.put("/capacity", validateJson(updateAgentCapacityRequestSchema), (c) => {
     const { max_concurrent_sessions } = c.req.valid("json");
     return c.json(deps.supervisor.setCapacity(max_concurrent_sessions));
+  });
+
+  routes.get("/execution-defaults", (c) => c.json(readExecutionDefaults(deps.db)));
+
+  routes.put("/execution-defaults", validateJson(executionDefaultsSchema), (c) => {
+    const defaults = c.req.valid("json");
+    try {
+      validateExecutionDefaults(defaults);
+    } catch (error) {
+      const refusal = agentConfigErrorResponse(error);
+      if (!refusal) throw error;
+      return refusalJson(c, refusal);
+    }
+    writeExecutionDefaults(deps.db, defaults);
+    return c.json(readExecutionDefaults(deps.db));
   });
 
   return routes;

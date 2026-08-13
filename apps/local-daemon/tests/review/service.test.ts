@@ -207,7 +207,7 @@ it("appends one fix step carrying comment + original hunk + current file", async
     body: "beta should be delta",
   });
 
-  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT });
+  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT, overrides: {} });
 
   const step = appended[0];
   if (!step) throw new Error("expected an appended fix step");
@@ -224,7 +224,7 @@ it("appends one fix step carrying comment + original hunk + current file", async
   expect(step.dependsOn).toEqual([`${RUN_ID}-step`]);
 
   await expect(
-    review.requestFix(run(), { commentIds: ["nope"], selector: FIX_AGENT }),
+    review.requestFix(run(), { commentIds: ["nope"], selector: FIX_AGENT, overrides: {} }),
   ).rejects.toThrow(CommentsNotFixableError);
 });
 
@@ -242,7 +242,7 @@ it("keeps a symlinked path's fix context to the link target text, never the host
     body: "What does this point at?",
   });
 
-  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT });
+  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT, overrides: {} });
   const step = appended[0];
   expect(step?.prompt).not.toContain("TOP-SECRET");
   expect(step?.prompt).toContain(secretPath);
@@ -257,7 +257,7 @@ it("stamps fix-requested comments and drives the review to changes_requested", a
     body: "fix me",
   });
 
-  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT });
+  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT, overrides: {} });
   expect(getReviewComment(fix.db, comment.id)?.fix_requested_at).not.toBeNull();
   expect(getReviewForRun(fix.db, RUN_ID)?.status).toBe("changes_requested");
 });
@@ -278,7 +278,7 @@ it("stamps nothing when the step append fails, so the request can be retried", a
   });
 
   await expect(
-    failing.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT }),
+    failing.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT, overrides: {} }),
   ).rejects.toThrow("append exploded");
 
   expect(getReviewComment(fix.db, comment.id)?.fix_requested_at).toBeNull();
@@ -299,7 +299,11 @@ it("on a completed settle: emits git.diff_updated, marks fixed comments addresse
     diff_sha: anchor.sha,
     body: "just a note",
   });
-  await review.requestFix(run(), { commentIds: [requested.id], selector: FIX_AGENT });
+  await review.requestFix(run(), {
+    commentIds: [requested.id],
+    selector: FIX_AGENT,
+    overrides: {},
+  });
 
   // The "fix turn" really edits the worktree, so both anchors leave the live diff.
   appendFileSync(join(worktreePath, "notes.md"), "delta\n");
@@ -343,7 +347,7 @@ it("releases pending fix requests when the turn does not complete", async () => 
     diff_sha: anchor.sha,
     body: "fix me",
   });
-  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT });
+  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT, overrides: {} });
 
   review.onRunSettled({ runId: RUN_ID, classification: "interrupted" });
 

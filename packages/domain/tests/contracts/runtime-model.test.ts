@@ -54,8 +54,23 @@ describe("frozen agent config", () => {
     config_hash: "h",
   };
 
-  it("reads a plan frozen before model selection existed as the provider default", () => {
-    expect(resolvedAgentConfigSchema.parse(base).model).toBeNull();
+  it("reads a plan frozen before model selection or provenance existed as unknown", () => {
+    const parsed = resolvedAgentConfigSchema.parse(base);
+    expect(parsed.model).toBeNull();
+    expect(parsed.sources).toBeNull();
+  });
+
+  it("keeps the level each frozen value came from", () => {
+    const parsed = resolvedAgentConfigSchema.parse({
+      ...base,
+      options: { effort: "high" },
+      sources: { runtime: "launch", model: "global", options: { effort: "step" } },
+    });
+    expect(parsed.sources).toEqual({
+      runtime: "launch",
+      model: "global",
+      options: { effort: "step" },
+    });
   });
 
   it("keeps the resolved model with the provenance it froze under", () => {

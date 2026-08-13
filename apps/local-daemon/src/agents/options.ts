@@ -1,8 +1,13 @@
 import {
-  effortOptionDescriptor,
+  PROVIDER_OPTION_KEYS,
+  providerOptionDescriptor,
+  resolveExecutionOption,
+  selectedOptionKeys,
+  type ExecutionLevel,
   type ProviderOptionKey,
   type ProviderOptions,
   type ProviderOptionSet,
+  type ResolvedExecutionSources,
   type ResolvedModel,
 } from "@otomat/domain";
 
@@ -10,66 +15,72 @@ import { describeProviderOptions, type KnownRuntimeId } from "#runtime";
 
 import { ProfileOptionUnsupportedError } from "./errors.js";
 
-/**
- * Every selected option is checked against what the installed binary announced
- * for this runtime and model, so a key or value it does not offer — including a
- * mode retired by a CLI upgrade — is refused before it can reach argv. Only what
- * the probe actually answers is enforced: `ok` and `unsupported` are answers, a
- * `failed` probe is ignorance and must not turn a working profile into a refused
- * one.
- */
-function validateOptions(
+export interface ResolvedProviderOptions {
+  options: ProviderOptions;
+  sources: ResolvedExecutionSources["options"];
+}
+
+/** A `failed` probe is ignorance, not an answer, and must not turn a working profile into a refused one. */
+function announced(support: ProviderOptionSet, key: ProviderOptionKey, value: string): boolean {
+  if (support.detection.status === "failed") return true;
+  const descriptor = providerOptionDescriptor(support.options, key);
+  return descriptor !== null && descriptor.choices.some((choice) => choice.value === value);
+}
+
+function refusal(
   runtime: KnownRuntimeId,
   support: ProviderOptionSet,
-  options: ProviderOptions,
-): void {
-  if (support.detection.status === "failed") return;
-  for (const [key, value] of Object.entries(options)) {
-    if (value === undefined) continue;
-    const descriptor = support.options.find((candidate) => candidate.key === key);
-    if (!descriptor) {
-      throw new ProfileOptionUnsupportedError(
-        `runtime "${runtime}" does not offer the "${key}" option here: ${support.detection.detail}`,
-      );
-    }
-    if (!descriptor.choices.some((choice) => choice.value === value)) {
-      throw new ProfileOptionUnsupportedError(
-        `runtime "${runtime}" does not accept "${key}" value "${value}"; pick one of ${descriptor.choices.map((choice) => choice.value).join(", ")}`,
-      );
-    }
-  }
-}
-
-/**
- * The key this runtime and model announce an effort under — `--effort` for one
- * provider, `model_reasoning_effort` for another. A pair that announces no effort
- * at all (an older Claude Code, a Codex model the catalog publishes no levels
- * for, an unreadable CLI) cannot honor the request, so it is refused rather than
- * dropped behind the caller's back.
- */
-function effortOptionKey(runtime: KnownRuntimeId, support: ProviderOptionSet): ProviderOptionKey {
-  const descriptor = effortOptionDescriptor(support.options);
-  if (!descriptor) {
-    throw new ProfileOptionUnsupportedError(
-      `runtime "${runtime}" announces no effort level here: ${support.detection.detail}`,
+  key: ProviderOptionKey,
+  value: string,
+): ProfileOptionUnsupportedError {
+  const descriptor = providerOptionDescriptor(support.options, key);
+  if (descriptor === null) {
+    return new ProfileOptionUnsupportedError(
+      `runtime "${runtime}" does not offer the "${key}" option here: ${support.detection.detail}`,
     );
   }
-  return descriptor.key;
+  return new ProfileOptionUnsupportedError(
+    `runtime "${runtime}" does not accept "${key}" value "${value}"; pick one of ${descriptor.choices.map((choice) => choice.value).join(", ")}`,
+  );
 }
 
-/** The options a config really sends: its own, plus the requested effort, each checked against the installed binary. Selecting nothing skips the probe entirely. */
-export function resolveOptions(
+export function assertOptionsAnnounced(
   runtime: KnownRuntimeId,
   model: ResolvedModel | null,
   options: ProviderOptions,
-  effort: string | undefined,
-): ProviderOptions {
-  const selected = Object.values(options).some((value) => value !== undefined);
-  if (!selected && effort === undefined) return options;
+): void {
+  const keys = PROVIDER_OPTION_KEYS.filter((key) => options[key] !== undefined);
+  if (keys.length === 0) return;
+  const support = describeProviderOptions(runtime, model?.id ?? null);
+  for (const key of keys) {
+    const value = options[key];
+    if (value !== undefined && !announced(support, key, value)) {
+      throw refusal(runtime, support, key, value);
+    }
+  }
+}
+
+/** An unannounced value is refused, except from the host defaults: those are a preference for every execution rather than a claim about this one, so they are dropped instead. */
+export function resolveOptions(
+  runtime: KnownRuntimeId,
+  model: ResolvedModel | null,
+  levels: readonly ExecutionLevel[],
+): ResolvedProviderOptions {
+  const keys = selectedOptionKeys(levels);
+  if (keys.length === 0) return { options: {}, sources: {} };
 
   const support = describeProviderOptions(runtime, model?.id ?? null);
-  const merged: ProviderOptions = { ...options };
-  if (effort !== undefined) merged[effortOptionKey(runtime, support)] = effort;
-  validateOptions(runtime, support, merged);
-  return merged;
+  const options: ProviderOptions = {};
+  const sources: ResolvedExecutionSources["options"] = {};
+  for (const key of keys) {
+    const resolved = resolveExecutionOption(levels, key);
+    if (resolved.value === null) continue;
+    if (!announced(support, key, resolved.value)) {
+      if (resolved.source === "global") continue;
+      throw refusal(runtime, support, key, resolved.value);
+    }
+    options[key] = resolved.value;
+    sources[key] = resolved.source;
+  }
+  return { options, sources };
 }

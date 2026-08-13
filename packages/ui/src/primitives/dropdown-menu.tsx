@@ -1,5 +1,5 @@
 import { Menu } from "@base-ui/react/menu";
-import { Check, Circle } from "lucide-react";
+import { Check, ChevronRight, Circle } from "lucide-react";
 import type { ComponentPropsWithRef, ReactNode } from "react";
 
 import { cn } from "../lib/utils";
@@ -14,6 +14,23 @@ import {
 export const DropdownMenu = Menu.Root;
 export const DropdownMenuTrigger = Menu.Trigger;
 export const DropdownMenuRadioGroup = Menu.RadioGroup;
+export const DropdownMenuSub = Menu.SubmenuRoot;
+
+export type DropdownMenuSubTriggerProps = ComponentPropsWithRef<typeof Menu.SubmenuTrigger>;
+
+export function DropdownMenuSubTrigger({
+  className,
+  children,
+  ref,
+  ...props
+}: DropdownMenuSubTriggerProps) {
+  return (
+    <Menu.SubmenuTrigger ref={ref} className={cn(itemClass, className)} {...props}>
+      {children}
+      <ChevronRight className="ml-auto h-3.5! w-3.5! text-text-tertiary" />
+    </Menu.SubmenuTrigger>
+  );
+}
 
 export type DropdownMenuContentProps = ComponentPropsWithRef<typeof Menu.Popup> & {
   side?: ComponentPropsWithRef<typeof Menu.Positioner>["side"];
