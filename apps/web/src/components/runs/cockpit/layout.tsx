@@ -4,15 +4,18 @@ import { useRunDetail } from "@web/api/runs/queries";
 import { RunEventsProvider } from "@web/api/runs/run-events-provider";
 import { CockpitTabs } from "@web/components/runs/cockpit/tabs";
 import { RouteShell } from "@web/components/shell/route-shell";
+import { useBackNavigation } from "@web/components/shell/use-back-navigation";
 import { shortId } from "@web/lib/ids";
 
 export function RunCockpitLayout() {
   const { runId } = useParams({ from: "/runs/$runId" });
   const detail = useRunDetail(runId);
+  const back = useBackNavigation(detail.data?.run.issue_id ?? null);
   return (
     <RunEventsProvider runId={runId}>
       <RouteShell
         active="runs"
+        back={back}
         breadcrumbs={[
           { label: "Runs", href: "/runs" },
           { label: `Run ${shortId(runId)}`, current: true },

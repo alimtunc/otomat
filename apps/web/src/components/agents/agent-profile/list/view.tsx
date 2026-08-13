@@ -1,18 +1,20 @@
 import type { AgentProfileContract } from "@otomat/domain";
 import { Button, Icon } from "@otomat/ui";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAgentProfiles } from "@web/api/agent-profiles/queries";
 import { useRuntimes } from "@web/api/daemon/queries";
 import { AgentProfileDialog } from "@web/components/agents/agent-profile/dialog/agent-profile-dialog";
 import { AgentProfileListContent } from "@web/components/agents/agent-profile/list/content";
 import { AgentProfileFilters } from "@web/components/agents/agent-profile/list/filters";
-import { type ProfileFilter } from "@web/components/agents/agent-profile/list/profile-filter";
+import type { ProfileFilter } from "@web/components/agents/agent-profile/list/profile-filter";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { useState } from "react";
 
 export function AgentsView() {
   const profiles = useAgentProfiles();
   const runtimes = useRuntimes();
-  const [filter, setFilter] = useState<ProfileFilter>("all");
+  const { filter = "all" } = useSearch({ from: "/agents/" });
+  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<AgentProfileContract | null>(null);
 
@@ -25,6 +27,10 @@ export function AgentsView() {
     setEditing(profile);
     setDialogOpen(true);
   }
+
+  const selectFilter = (next: ProfileFilter): void => {
+    void navigate({ to: "/agents", search: { filter: next }, replace: true });
+  };
 
   return (
     <RouteShell
@@ -43,7 +49,7 @@ export function AgentsView() {
         <AgentProfileFilters
           profiles={profiles.data ?? []}
           value={filter}
-          onValueChange={setFilter}
+          onValueChange={selectFilter}
         />
         <AgentProfileListContent
           profiles={profiles}

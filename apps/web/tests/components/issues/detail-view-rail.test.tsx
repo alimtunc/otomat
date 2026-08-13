@@ -70,7 +70,13 @@ vi.mock("@otomat/ui", async (importOriginal) => ({
 
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ issueId: "issue-1" }),
+  useSearch: () => ({ run: undefined }),
+  useNavigate: () => vi.fn(),
   Link: ({ children }: { children?: unknown }) => <a>{children as never}</a>,
+}));
+
+vi.mock("@web/components/shell/use-back-navigation", () => ({
+  useBackNavigation: () => null,
 }));
 
 vi.mock("@web/api/issues/queries", () => ({

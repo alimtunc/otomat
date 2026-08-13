@@ -21,6 +21,10 @@ vi.mock("@web/components/runs/cockpit/tabs", () => ({
   CockpitTabs: () => <div>tabs</div>,
 }));
 
+vi.mock("@web/components/shell/use-back-navigation", () => ({
+  useBackNavigation: () => null,
+}));
+
 vi.mock("@web/components/shell/route-shell", () => ({
   RouteShell: ({ active, children }: { active: string; children: ReactNode }) => (
     <div data-active-section={active}>{children}</div>
