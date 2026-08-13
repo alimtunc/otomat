@@ -70,10 +70,16 @@ export const providerOptionDescriptorSchema = z.object({
   key: providerOptionKeySchema,
   description: z.string().min(1),
   choices: z.array(providerOptionChoiceSchema).min(1),
-  /** What applies when nothing is selected: the value Otomat sends itself, or null when it sends no argument at all. */
+  /** The value Otomat freezes and sends when no level selects one, or null when it sends no argument at all. */
   default_value: providerOptionValueSchema.nullable(),
 });
 export type ProviderOptionDescriptor = z.infer<typeof providerOptionDescriptorSchema>;
+
+/** Dropped once here rather than guarded at every surface: a value that removes a boundary is only ever reached by choosing it. */
+export function providerOptionDefault(descriptor: ProviderOptionDescriptor): string | null {
+  const choice = descriptor.choices.find((entry) => entry.value === descriptor.default_value);
+  return choice === undefined || choice.dangerous ? null : choice.value;
+}
 
 /**
  * What one runtime accepts for one model, feature-detected from the installed

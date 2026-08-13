@@ -1,4 +1,4 @@
-import type { ProviderOptionSelection } from "@otomat/domain";
+import { providerOptionDefault, type ProviderOptionSelection } from "@otomat/domain";
 import {
   DropdownMenuContent,
   DropdownMenuRadioGroup,
@@ -40,6 +40,7 @@ export function ExecutionOptionSubmenu({
 }: ExecutionOptionSubmenuProps) {
   const label = providerOptionKeyLabel(option.key);
   const effective = resolvedOptionLabel(option.resolved, option.descriptor, profileName);
+  const recommended = providerOptionDefault(option.descriptor);
 
   return (
     <DropdownMenuSub>
@@ -70,6 +71,7 @@ export function ExecutionOptionSubmenu({
                 <span>
                   {providerOptionValueLabel(choice.value)}
                   {choice.dangerous ? " — removes a safety boundary" : ""}
+                  {choice.value === recommended ? " — recommended" : ""}
                 </span>
                 {choice.description === null ? null : (
                   <span className="text-xs whitespace-normal text-text-tertiary">

@@ -8,6 +8,15 @@ export const RUNTIME_STEERING_MODES = ["turn_boundary", "unsupported"] as const;
 export const runtimeSteeringModeSchema = z.enum(RUNTIME_STEERING_MODES);
 export type RuntimeSteeringMode = z.infer<typeof runtimeSteeringModeSchema>;
 
+/** How the permission mode a turn ran under stood on the host that ran it, so a refusal is never read as "autonomy was off". */
+export const PERMISSION_MODE_STATUSES = [
+  "unfrozen",
+  "unannounced",
+  "autonomous",
+  "supervised",
+] as const;
+export type PermissionModeStatus = (typeof PERMISSION_MODE_STATUSES)[number];
+
 /** Optional behaviors a runtime may advertise; absent ones degrade silently in the UI. Single source for the daemon registry and the wire contract. */
 export const runtimeCapabilitiesSchema = z.object({
   stream: z.boolean(),

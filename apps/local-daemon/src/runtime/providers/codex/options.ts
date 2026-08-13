@@ -11,7 +11,7 @@ const CODEX_EXEC_HELP_ARGS = ["exec", "--help"] as const;
 const CODEX_SANDBOX_FLAG = "--sandbox";
 const CODEX_APPROVAL_FLAG = "--ask-for-approval";
 
-/** Codex's own default sandbox for an Otomat turn: writes confined to the worktree. */
+/** The widest sandbox Otomat picks by itself: writes confined to the worktree, never the unconfined one. */
 export const CODEX_DEFAULT_SANDBOX = "workspace-write";
 
 const HELP_DETAIL = "Announced by `codex exec --help` from the installed binary";
@@ -91,13 +91,14 @@ function reasoningEffortDescriptor(
       note: `The bundled catalog publishes no reasoning levels for "${model}", so only the runtime default is offered.`,
     };
   }
-  const fallback = entry?.default_reasoning_level ?? null;
+  const declared = entry?.default_reasoning_level ?? null;
+  const fallback = declared !== null && supported.includes(declared) ? declared : null;
   return {
     descriptor: {
       key: "reasoning_effort",
-      description: `How much reasoning effort ${model} spends, sent as \`-c model_reasoning_effort\`.`,
+      description: `How much reasoning effort ${model} spends, sent as \`-c model_reasoning_effort\`.${fallback === null ? "" : ` Selecting nothing sends no override, and Codex applies "${fallback}" itself.`}`,
       choices: supported.map((value) => ({ value, description: null, dangerous: false })),
-      default_value: fallback !== null && supported.includes(fallback) ? fallback : null,
+      default_value: null,
     },
     note: null,
   };

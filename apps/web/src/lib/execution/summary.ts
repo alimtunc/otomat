@@ -1,3 +1,4 @@
+import { providerOptionDefault } from "@otomat/domain";
 import type {
   ModelSelection,
   ProviderOptionDescriptor,
@@ -28,7 +29,7 @@ export function executionSummarySegments(
   options: readonly ResolvedExecutionOption[],
 ): string[] {
   const optionSegments = options.flatMap((option) => {
-    const value = option.resolved.value ?? option.descriptor.default_value;
+    const value = option.resolved.value ?? providerOptionDefault(option.descriptor);
     return value === null ? [] : [providerOptionValueLabel(value)];
   });
   return [agentLabel, modelSegment(model), ...optionSegments];

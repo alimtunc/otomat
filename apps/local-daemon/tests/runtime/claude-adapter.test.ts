@@ -210,6 +210,24 @@ describe("ClaudeRuntimeAdapter", () => {
     expect(resumeArgv.at(-2)).toBe("--resume");
   });
 
+  it("runs a config frozen without a mode under the legacy fallback, and says so", async () => {
+    const argsFile = join(worktree, "stub-args.json");
+    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-permission-denied.jsonl");
+    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    const sink = new MemorySink();
+
+    await new ClaudeRuntimeAdapter(STUB_BIN).run(
+      input(worktree),
+      sink,
+      new AbortController().signal,
+    );
+
+    const argv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    expect(argv[argv.indexOf("--permission-mode") + 1]).toBe("acceptEdits");
+    const request = sink.events.find((e) => e.type === "runtime.permission_request");
+    expect(request?.payload["permission_mode_status"]).toBe("unfrozen");
+  });
+
   it("passes the frozen effort before the session flags, and none by default", async () => {
     const argsFile = join(worktree, "stub-args.json");
     process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
@@ -261,6 +279,73 @@ describe("ClaudeRuntimeAdapter", () => {
 
     await adapter.run(input(worktree), new MemorySink(), new AbortController().signal);
     expect(JSON.parse(readFileSync(argsFile, "utf8"))).not.toContain("--model");
+  });
+
+  it("records every call the provider refused, with the mode it refused under", async () => {
+    process.env["OTOMAT_STUB_FIXTURES"] = JSON.stringify({
+      "--help": join(STUB_FIXTURES, "claude-help-current.txt"),
+    });
+    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-permission-denied.jsonl");
+    const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
+    const sink = new MemorySink();
+
+    const final = await adapter.run(
+      { ...input(worktree), options: { permission_mode: "acceptEdits" } },
+      sink,
+      new AbortController().signal,
+    );
+
+    // The CLI calls the turn a success, so the refusal only survives as its own evidence.
+    expect(final.status).toBe("completed");
+    const request = sink.events.find((e) => e.type === "runtime.permission_request");
+    expect(request?.payload).toMatchObject({
+      tool: "Bash",
+      tool_use_id: "tu-denied",
+      input: { command: "git push" },
+      permission_mode: "acceptEdits",
+      permission_mode_status: "supervised",
+    });
+    const response = sink.events.find((e) => e.type === "runtime.permission_response");
+    expect(response?.payload).toMatchObject({
+      tool_use_id: "tu-denied",
+      decision: "denied",
+      decided_by: "provider",
+    });
+    // The provider's own words stay on the tool result the refusal joins by id.
+    const result = sink.events.find(
+      (e) => e.type === "runtime.tool_call" && e.payload["phase"] === "result",
+    );
+    expect(result?.payload["result"]).toMatch(/requested permissions to use Bash/);
+  });
+
+  it("marks a refusal under the autonomous mode as the provider's own verdict", async () => {
+    process.env["OTOMAT_STUB_FIXTURES"] = JSON.stringify({
+      "--help": join(STUB_FIXTURES, "claude-help-current.txt"),
+    });
+    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-permission-denied.jsonl");
+    const sink = new MemorySink();
+
+    await new ClaudeRuntimeAdapter(STUB_BIN).run(
+      { ...input(worktree), options: { permission_mode: "auto" } },
+      sink,
+      new AbortController().signal,
+    );
+
+    const request = sink.events.find((e) => e.type === "runtime.permission_request");
+    expect(request?.payload["permission_mode_status"]).toBe("autonomous");
+  });
+
+  it("emits nothing about permissions when the provider refused nothing", async () => {
+    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
+    const sink = new MemorySink();
+
+    await new ClaudeRuntimeAdapter(STUB_BIN).run(
+      input(worktree),
+      sink,
+      new AbortController().signal,
+    );
+
+    expect(sink.events.some((e) => e.type.startsWith("runtime.permission"))).toBe(false);
   });
 
   it("resumes with the provider session id and refuses to resume without one", async () => {

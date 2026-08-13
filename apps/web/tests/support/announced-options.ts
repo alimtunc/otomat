@@ -1,6 +1,6 @@
 import { providerOptionSet } from "#support/runtime-options";
 
-/** What a current Claude Code announces, under Claude's own keys: the four `--permission-mode` values — it names no `auto`, `acceptEdits` is the auto-accept-edits one — and an effort. */
+/** What a current Claude Code announces, under Claude's own keys: the `--permission-mode` values, `auto` being the autonomous one Otomat sends by default, and an effort. */
 export const CLAUDE_ANNOUNCED = providerOptionSet({
   detection: { status: "ok", detail: "Announced by `claude --help`." },
   options: [
@@ -8,12 +8,12 @@ export const CLAUDE_ANNOUNCED = providerOptionSet({
       key: "permission_mode",
       description: "How Claude Code decides whether a tool call may proceed.",
       choices: [
-        { value: "default", description: null, dangerous: false },
+        { value: "auto", description: "The provider decides for itself.", dangerous: false },
         { value: "acceptEdits", description: "Auto-approves edits.", dangerous: false },
         { value: "plan", description: "Plans the work without applying it.", dangerous: false },
         { value: "bypassPermissions", description: "Skips every check.", dangerous: true },
       ],
-      default_value: "acceptEdits",
+      default_value: "auto",
     },
     {
       key: "effort",
@@ -44,12 +44,12 @@ export const CODEX_ANNOUNCED = providerOptionSet({
     },
     {
       key: "reasoning_effort",
-      description: "How much reasoning effort this model spends.",
+      description: "How much reasoning effort this model spends. Codex applies its own by default.",
       choices: [
         { value: "medium", description: null, dangerous: false },
         { value: "xhigh", description: null, dangerous: false },
       ],
-      default_value: "medium",
+      default_value: null,
     },
   ],
 });

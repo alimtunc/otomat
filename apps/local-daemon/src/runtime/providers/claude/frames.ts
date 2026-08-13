@@ -1,6 +1,14 @@
+import type { PermissionModeStatus } from "@otomat/domain";
+
 import { asArray, asNumber, asRecord, asString } from "#runtime/cli/frame-guards";
 import type { ProviderFrameMapper, ProviderTurnOutcome } from "#runtime/cli/turn";
 import type { TurnEmitter } from "#runtime/cli/turn-emitter";
+
+/** What the turn was launched under, resolved against the installed binary before the first frame arrives. */
+interface ClaudeTurnPermission {
+  mode: string;
+  status: PermissionModeStatus;
+}
 
 export class ClaudeFrameMapper implements ProviderFrameMapper {
   readonly outcome: ProviderTurnOutcome = {
@@ -11,7 +19,10 @@ export class ClaudeFrameMapper implements ProviderFrameMapper {
 
   private model: string | null = null;
 
-  constructor(private readonly emitter: TurnEmitter) {}
+  constructor(
+    private readonly emitter: TurnEmitter,
+    private readonly permission: ClaudeTurnPermission,
+  ) {}
 
   onFrame(frame: Record<string, unknown>): void {
     const type = asString(frame["type"]);
@@ -96,7 +107,28 @@ export class ClaudeFrameMapper implements ProviderFrameMapper {
     if (!emitted) this.emitter.emit("runtime.log", "native", { frame });
   }
 
+  /** A refused call leaves the turn reported as a success, so without this the run would look fully autonomous. */
+  private onPermissionDenials(frame: Record<string, unknown>): void {
+    for (const denial of asArray(frame["permission_denials"]).map(asRecord)) {
+      if (denial === null) continue;
+      const toolUseId = asString(denial["tool_use_id"]);
+      this.emitter.emit("runtime.permission_request", "parsed", {
+        tool: asString(denial["tool_name"]),
+        tool_use_id: toolUseId,
+        input: denial["tool_input"] ?? null,
+        permission_mode: this.permission.mode,
+        permission_mode_status: this.permission.status,
+      });
+      this.emitter.emit("runtime.permission_response", "parsed", {
+        tool_use_id: toolUseId,
+        decision: "denied",
+        decided_by: "provider",
+      });
+    }
+  }
+
   private onResultFrame(frame: Record<string, unknown>): void {
+    this.onPermissionDenials(frame);
     this.outcome.providerSessionId =
       asString(frame["session_id"]) ?? this.outcome.providerSessionId;
     const usage = asRecord(frame["usage"]);
