@@ -3,6 +3,7 @@ import type {
   CompeteGroupState,
   RunContributionState,
   RunState,
+  SessionContext,
   StepRunState,
 } from "@otomat/domain";
 import { sql } from "drizzle-orm";
@@ -84,6 +85,8 @@ export const agentSessions = sqliteTable("agent_sessions", {
   agent_id: text("agent_id").references(() => agents.id),
   status: text("status").$type<AgentSessionState>().notNull().default("created"),
   provider_session_id: text("provider_session_id"),
+  // The dated dossier this session was given; null on sessions that ran before contexts were captured.
+  context_json: text("context_json", { mode: "json" }).$type<SessionContext>(),
   pid: integer("pid"),
   pgid: integer("pgid"),
   exit_code: integer("exit_code"),

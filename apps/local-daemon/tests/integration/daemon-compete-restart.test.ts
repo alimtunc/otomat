@@ -31,8 +31,8 @@ const COMPETE_PLAN = {
       name: "Choose an approach",
       depends_on: [],
       compete: [
-        { id: "direct", name: "Direct", agent: "fake", prompt: "direct" },
-        { id: "layered", name: "Layered", agent: "fake", prompt: "layered" },
+        { id: "direct", name: "Direct", agent: "fake", note: "direct" },
+        { id: "layered", name: "Layered", agent: "fake", note: "layered" },
       ],
     },
   ],

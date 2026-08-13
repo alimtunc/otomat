@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { isRunPlanCompeteGroup } from "../contracts/entities/runs.js";
+import { isRunPlanCompeteGroup } from "../contracts/run-plan.js";
 import { topologicalStepOrder } from "./execution-order.js";
 import { RUN_PLAN_MAX_STEPS } from "./limits.js";
 import { runPlanNodeInputSchema, type RunPlanNodeInput } from "./node-input.js";

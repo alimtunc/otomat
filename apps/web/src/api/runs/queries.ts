@@ -67,6 +67,16 @@ export function useRunContributions(runId: string) {
   });
 }
 
+/** The dossier one session was given. Frozen when that session started, so it never refetches. */
+export function useSessionContext(runId: string, agentSessionId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.sessionContext(runId, agentSessionId),
+    queryFn: () => daemon.getSessionContext(runId, agentSessionId),
+    enabled,
+    staleTime: Infinity,
+  });
+}
+
 export function useRunCompletionReport(runId: string) {
   return useQuery({
     queryKey: queryKeys.runCompletionReport(runId),

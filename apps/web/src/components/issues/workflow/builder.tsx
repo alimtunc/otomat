@@ -7,6 +7,7 @@ import { workflowExecutableCount } from "@web/lib/workflow-draft";
 import { clearInheritedNodeOverrides } from "@web/lib/workflow/steps";
 
 import { WorkflowCompeteCard } from "./compete-card";
+import type { WorkflowLaunchTarget } from "./launch-target";
 import { WorkflowStepCard } from "./step-card";
 import type { UseWorkflowFormResult } from "./use-form";
 
@@ -14,12 +15,14 @@ export interface WorkflowPlanBuilderProps {
   execution: LaunchExecution;
   onExecutionChange: (execution: ExecutionSelection) => void;
   workflow: UseWorkflowFormResult;
+  target: WorkflowLaunchTarget;
 }
 
 export function WorkflowPlanBuilder({
   execution,
   onExecutionChange,
   workflow,
+  target,
 }: WorkflowPlanBuilderProps) {
   const { form, planError, updateSteps, addStep, addCompeteGroup } = workflow;
 
@@ -44,6 +47,7 @@ export function WorkflowPlanBuilder({
                   steps={stepsField.state.value}
                   index={index}
                   execution={execution}
+                  target={target}
                   onUpdateSteps={updateSteps}
                 />
               ) : (
@@ -53,6 +57,7 @@ export function WorkflowPlanBuilder({
                   steps={stepsField.state.value}
                   index={index}
                   execution={execution}
+                  target={target}
                   onUpdateSteps={updateSteps}
                 />
               ),

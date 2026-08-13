@@ -1,5 +1,7 @@
 import type { Db, ReviewCommentRow, ReviewRow, RunRow } from "@otomat/db";
 import type {
+  ContextReference,
+  ContextReviewComment,
   CreateReviewCommentRequest,
   ExecutionOverrides,
   ReviewFixAuthority,
@@ -46,8 +48,8 @@ export interface FileBlobsResult {
 }
 
 export interface FixPreparation {
-  /** The frozen fix context: the selected comments, their pinned hunks, the current files and diff. */
-  prompt: string;
+  /** The selected comments frozen with their pinned hunks and the file each stood against. */
+  comments: ContextReviewComment[];
   commentIds: string[];
   /** Plan node ids that produced the reviewed diff; the appended fix step depends on them. */
   dependsOn: string[];
@@ -58,6 +60,8 @@ export interface FixRequest {
   selector: AgentConfigSelector;
   overrides: ExecutionOverrides;
   name?: string;
+  note: string | null;
+  references: readonly ContextReference[];
 }
 
 export interface RunSettledOutcome {

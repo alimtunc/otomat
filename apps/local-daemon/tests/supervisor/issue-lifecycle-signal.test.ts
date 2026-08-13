@@ -12,7 +12,8 @@ import { makeSupervisor } from "../support/supervisor.js";
 
 const FIX_STEP: AppendStepInput = {
   name: "Fix review comments",
-  prompt: "address the review",
+  note: "address the review",
+  references: [],
   selector: { kind: "runtime", runtimeId: "fake" },
   overrides: {},
   dependsOn: [],

@@ -102,6 +102,7 @@ export function LaunchRunDialog({ issue, onLaunched }: LaunchRunDialogProps) {
         </DialogHeader>
         {workspace.state === "open" ? (
           <AppendStepForm
+            issue={issue}
             workspace={workspace}
             execution={execution}
             onExecutionChange={setExecution}
@@ -122,7 +123,7 @@ export function LaunchRunDialog({ issue, onLaunched }: LaunchRunDialogProps) {
                 />
               ) : (
                 <WorkflowLaunchForm
-                  target={{ kind: "issue", issueId: issue.id }}
+                  target={{ kind: "issue", issue }}
                   worktreeTarget={target}
                   execution={execution}
                   onExecutionChange={setExecution}

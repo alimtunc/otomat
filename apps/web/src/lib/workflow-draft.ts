@@ -1,10 +1,11 @@
+import { EMPTY_CONTEXT_DRAFT, type ContextDraft } from "@web/lib/context/draft";
 import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
 import { isCompleteModelSelection } from "@web/lib/model-choice";
 
 export interface WorkflowCompetitorDraft {
   key: string;
   name: string;
-  prompt: string;
+  context: ContextDraft;
   execution: ExecutionSelection;
 }
 
@@ -12,7 +13,7 @@ export interface WorkflowStepDraft {
   kind: "step";
   key: string;
   name: string;
-  prompt: string;
+  context: ContextDraft;
   execution: ExecutionSelection;
   /** Keys of top-level nodes this one waits for; competitors are never valid dependency targets. */
   dependsOn: string[];
@@ -35,7 +36,7 @@ export function newWorkflowStep(counter: number): WorkflowStepDraft {
     kind: "step",
     key: `step-${counter}`,
     name: "",
-    prompt: "",
+    context: EMPTY_CONTEXT_DRAFT,
     execution: EMPTY_EXECUTION_SELECTION,
     dependsOn: [],
   };
@@ -45,7 +46,7 @@ export function newCompetitor(groupKey: string, counter: number): WorkflowCompet
   return {
     key: `${groupKey}-candidate-${counter}`,
     name: "",
-    prompt: "",
+    context: EMPTY_CONTEXT_DRAFT,
     execution: EMPTY_EXECUTION_SELECTION,
   };
 }
@@ -73,18 +74,15 @@ export function workflowExecutableCount(steps: readonly WorkflowNodeDraft[]): nu
   );
 }
 
+/** A node needs a label and a launchable configuration; its instructions are optional, because the attached context and the profile already carry the work. */
 export function isWorkflowNodeComplete(step: WorkflowNodeDraft): boolean {
   if (!step.name.trim()) return false;
-  if (step.kind === "step") {
-    return Boolean(step.prompt.trim()) && isCompleteModelSelection(step.execution.model);
-  }
+  if (step.kind === "step") return isCompleteModelSelection(step.execution.model);
   return (
     step.competitors.length >= 2 &&
     step.competitors.every(
       (competitor) =>
-        competitor.name.trim() &&
-        competitor.prompt.trim() &&
-        isCompleteModelSelection(competitor.execution.model),
+        competitor.name.trim() && isCompleteModelSelection(competitor.execution.model),
     )
   );
 }

@@ -79,6 +79,8 @@ export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
       try {
         const updated = await deps.review.requestFix(run, {
           commentIds: request.comment_ids,
+          note: request.note ?? null,
+          references: request.context ?? [],
           selector: appendStepSelector(request),
           overrides: { model: request.model, options: request.options },
           ...(request.name ? { name: request.name } : {}),

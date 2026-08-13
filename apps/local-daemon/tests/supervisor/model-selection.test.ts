@@ -65,7 +65,7 @@ it("lets a launch override replace the profile's model for the run", async () =>
   seedProfile("fake-fast");
 
   const { run } = await launch({
-    prompt: "do it",
+    note: "do it",
     profile_id: "prof",
     model: { kind: "model", id: "fake-thorough" },
   });
@@ -77,19 +77,19 @@ it("gives each plan step its own model while an untouched step inherits the laun
   seedProfile("fake-fast");
 
   const { run } = await launch({
-    prompt: "goal",
+    note: "goal",
     profile_id: "prof",
     model: { kind: "model", id: "fake-thorough" },
     plan: {
       version: 1,
       steps: [
-        { id: "a", name: "Inherits", agent: null, prompt: "first", depends_on: [] },
+        { id: "a", name: "Inherits", agent: null, note: "first", depends_on: [] },
         {
           id: "b",
           name: "Overrides",
           agent: null,
           model: { kind: "provider_default" },
-          prompt: "second",
+          note: "second",
           depends_on: ["a"],
         },
       ],
@@ -103,7 +103,7 @@ it("gives each plan step its own model while an untouched step inherits the laun
 
 it("freezes a distinct model per competitor of a compete group", async () => {
   const { run } = await launch({
-    prompt: "goal",
+    note: "goal",
     runtime: "fake",
     plan: {
       version: 1,
@@ -118,14 +118,14 @@ it("freezes a distinct model per competitor of a compete group", async () => {
               name: "Candidate A",
               agent: null,
               model: { kind: "model", id: "fake-fast" },
-              prompt: "first",
+              note: "first",
             },
             {
               id: "b",
               name: "Candidate B",
               agent: null,
               model: { kind: "model", id: "fake-thorough" },
-              prompt: "second",
+              note: "second",
             },
           ],
         },

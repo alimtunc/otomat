@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { CONTEXT_MAX_REVIEW_COMMENTS, CONTEXT_NOTE_MAX_LENGTH } from "../context/limits.js";
+import { contextReferencesSchema } from "../context/reference.js";
 import { RUN_PLAN_STEP_NAME_MAX_LENGTH } from "../plan/limits.js";
 import { reviewCommentContractSchema, reviewContractSchema } from "./entities/reviews.js";
 import { executionOptionSelectionsSchema } from "./execution-config.js";
@@ -32,7 +34,7 @@ export type CreateReviewCommentRequest = z.infer<typeof createReviewCommentReque
 /** Ask an agent to fix the selected open comments as a step appended to the run's plan; the agent is chosen explicitly, never inherited. */
 export const requestFixRequestSchema = z
   .object({
-    comment_ids: z.array(z.string().min(1)).min(1),
+    comment_ids: z.array(z.string().min(1)).min(1).max(CONTEXT_MAX_REVIEW_COMMENTS),
     /** Agent profile frozen for the fix step; takes precedence over `runtime`. */
     profile_id: z.string().min(1).optional(),
     runtime: z.string().min(1).optional(),
@@ -41,6 +43,10 @@ export const requestFixRequestSchema = z
     options: executionOptionSelectionsSchema.optional(),
     /** Overrides the default `Fix review comments` step name. */
     name: z.string().trim().min(1).max(RUN_PLAN_STEP_NAME_MAX_LENGTH).optional(),
+    /** The one instruction the fix step adds to the frozen comments. */
+    note: z.string().trim().min(1).max(CONTEXT_NOTE_MAX_LENGTH).optional(),
+    /** Extra issues and repository files to attach alongside the comments. */
+    context: contextReferencesSchema.optional(),
   })
   .strict()
   .refine((value) => Boolean(value.profile_id) || Boolean(value.runtime), {

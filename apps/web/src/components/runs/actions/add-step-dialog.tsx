@@ -47,8 +47,9 @@ export function AddStepDialog({ issueId, stretch = false }: AddStepDialogProps) 
         <DialogHeader>
           <DialogTitle>Add step</DialogTitle>
         </DialogHeader>
-        {workspace?.state === "open" ? (
+        {issue.data && workspace?.state === "open" ? (
           <AppendStepForm
+            issue={issue.data}
             workspace={workspace}
             execution={execution}
             onExecutionChange={setExecution}

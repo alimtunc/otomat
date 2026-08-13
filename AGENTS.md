@@ -18,7 +18,7 @@ modules of `apps/local-daemon`, not workspace packages.
 apps/
   web/                  React + Vite cockpit
   local-daemon/         Node backend process
-    src/{agents,api,data-safety,diagnostics,events,git,review,runtime,supervisor}/
+    src/{agents,api,context,data-safety,diagnostics,events,git,review,runtime,supervisor}/
   desktop/              Electron shell: manages the daemon lifecycle, serves the web build
     src/{main,preload,shared}/
 packages/
@@ -35,9 +35,9 @@ Create a package only for an existing cross-app consumer, an important boundary,
 a dangerous dependency that must be isolated, or a stable interface between two
 current systems. Reuse that is merely planned is not sufficient.
 
-`agents`, `api`, `data-safety`, `diagnostics`, `events`, `git`, `review`, `runtime`, and
-`supervisor` stay internal to `apps/local-daemon` while they have no cross-app
-consumer. Promoting one requires an explicit current justification.
+`agents`, `api`, `context`, `data-safety`, `diagnostics`, `events`, `git`, `review`,
+`runtime`, and `supervisor` stay internal to `apps/local-daemon` while they have
+no cross-app consumer. Promoting one requires an explicit current justification.
 
 ## Import boundaries
 
@@ -234,6 +234,12 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
   and resumable; only a confirmed merge or an explicit abandon closes it, and the
   next launch then starts a fresh cycle. Abandoning stamps the run and stops the
   plan — it never deletes a branch, a worktree or a commit.
+- A prompt is declarative, never copied text. A step names what it works from —
+  its issue, further issues, repository files — and adds at most one optional
+  note; Otomat resolves those references itself and never invents an
+  instruction, a profile, a role or a built-in agent. A node's name is a label
+  the daemon must not turn into a directive, and no surface may put an agent's
+  guidance or an issue's body into an editable field.
 - Queries answer, commands mutate: a read operation (list/get/status) never
   triggers lifecycle side effects. Deliberately unawaited work is dispatched
   from a state transition or an explicit command, and concurrent writes to one
@@ -256,7 +262,7 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
 - Runtime code lives in `<module>/src`; tests mirror it in
   `<module>/tests/<domain>`, with shared test support in `<module>/tests/support`.
 - Tests and daemon modules use public Node subpath imports, never deep relative
-  imports. Daemon modules expose `#agents`, `#api`, `#data-safety`,
+  imports. Daemon modules expose `#agents`, `#api`, `#context`, `#data-safety`,
   `#diagnostics`, `#events`, `#git`, `#github`, `#linear`, `#review`,
   `#runtime`, and `#supervisor`; other packages expose private `#<package>/<path>`
   test maps.

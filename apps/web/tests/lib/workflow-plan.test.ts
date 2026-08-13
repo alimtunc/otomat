@@ -45,17 +45,21 @@ it("builds a strict compete node with per-candidate ad-hoc runtimes and a profil
   group.competitors[0] = {
     ...group.competitors[0]!,
     name: "Direct",
-    prompt: "Implement directly",
+    context: { references: [{ kind: "file", path: "src/direct.ts" }], note: "Implement directly" },
     execution: { agent: encodeRuntimeChoice("codex"), options: {} },
   };
   group.competitors[1] = {
     ...group.competitors[1]!,
     name: "Layered",
-    prompt: "Implement with a boundary",
+    context: { references: [], note: "Implement with a boundary" },
     execution: { agent: encodeProfileChoice("profile-abc"), options: {} },
   };
   group.name = "Choose implementation";
-  const dependent = { ...newWorkflowStep(2), name: "Verify", prompt: "Run checks" };
+  const dependent = {
+    ...newWorkflowStep(2),
+    name: "Verify",
+    context: { references: [], note: "Run checks" },
+  };
   const steps = toggleWorkflowDependency([group, dependent], 1, group.key);
 
   const plan = buildRunPlanInput(steps);
@@ -64,12 +68,17 @@ it("builds a strict compete node with per-candidate ad-hoc runtimes and a profil
   expect(plan.steps[0]).toMatchObject({
     id: group.key,
     compete: [
-      { name: "Direct", agent: "codex", prompt: "Implement directly" },
+      {
+        name: "Direct",
+        agent: "codex",
+        note: "Implement directly",
+        context: [{ kind: "file", path: "src/direct.ts" }],
+      },
       {
         name: "Layered",
         agent: null,
         profile_id: "profile-abc",
-        prompt: "Implement with a boundary",
+        note: "Implement with a boundary",
       },
     ],
   });
@@ -108,14 +117,13 @@ it("starts a candidate's model and options over when its agent changes, because 
 });
 
 it("carries each node's option selections into the plan the daemon validates", () => {
-  const inheriting = { ...newWorkflowStep(1), name: "First", prompt: "go" };
+  const inheriting = { ...newWorkflowStep(1), name: "First" };
   const named = {
     ...newWorkflowStep(2),
     name: "Second",
-    prompt: "go",
     execution: { agent: null, options: { effort: { kind: "value" as const, value: "high" } } },
   };
-  const declined = { ...newWorkflowStep(3), name: "Third", prompt: "go" };
+  const declined = { ...newWorkflowStep(3), name: "Third" };
   const steps = setWorkflowStepExecution([inheriting, named, declined], 2, {
     agent: null,
     options: { effort: { kind: "agent_default" } },

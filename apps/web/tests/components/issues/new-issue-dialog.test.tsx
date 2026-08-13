@@ -47,10 +47,19 @@ vi.mock("@web/api/daemon/queries", () => ({
   useExecutionDefaults: () => executionDefaultsQueryResult(),
   useRepositories: () => repositoriesQueryResult(),
   useRepositoryBranches: () => repositoryBranchesQueryResult(),
+  useRepositoryFiles: () => ({ data: { paths: [], omitted: 0 }, isPending: false, isError: false }),
 }));
 
 vi.mock("@web/api/agent-profiles/queries", () => ({
   useAgentProfiles: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
+}));
+
+vi.mock("@web/api/skills/queries", () => ({
+  useSkills: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
+}));
+
+vi.mock("@web/api/issues/queries", () => ({
+  useProjectIssues: () => ({ data: [], isPending: false, isError: false }),
 }));
 
 vi.mock("@web/components/execution/execution-config-picker", () => ({
@@ -241,13 +250,13 @@ describe("NewIssueDialog", () => {
         "input[aria-label^='Candidate '][aria-label$=' name']",
       ),
     ];
-    const candidatePrompts = [
+    const candidateNotes = [
       ...document.querySelectorAll<HTMLTextAreaElement>(
-        "textarea[aria-label^='Candidate '][aria-label$=' prompt']",
+        "textarea[aria-label^='Candidate '][aria-label$=' instructions']",
       ),
     ];
     expect(candidateNames).toHaveLength(2);
-    expect(candidatePrompts).toHaveLength(2);
+    expect(candidateNotes).toHaveLength(2);
     expect(
       document.querySelector("[data-testid='execution-picker'][data-label='Candidate A']"),
     ).not.toBeNull();
@@ -263,8 +272,8 @@ describe("NewIssueDialog", () => {
       setInputValue(objective!, "Implement the feature");
       setInputValue(candidateNames[0]!, "Direct");
       setInputValue(candidateNames[1]!, "Layered");
-      setTextareaValue(candidatePrompts[0]!, "Implement directly");
-      setTextareaValue(candidatePrompts[1]!, "Implement behind a boundary");
+      setTextareaValue(candidateNotes[0]!, "Implement directly");
+      setTextareaValue(candidateNotes[1]!, "Implement behind a boundary");
     });
     await act(async () => buttonByText("Launch workflow⌘↵").click());
 
@@ -285,13 +294,13 @@ describe("NewIssueDialog", () => {
                 id: "compete-2-candidate-1",
                 name: "Direct",
                 agent: null,
-                prompt: "Implement directly",
+                note: "Implement directly",
               },
               {
                 id: "compete-2-candidate-2",
                 name: "Layered",
                 agent: null,
-                prompt: "Implement behind a boundary",
+                note: "Implement behind a boundary",
               },
             ],
           },

@@ -1,5 +1,27 @@
+import type { ContextDraft } from "@web/lib/context/draft";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
-import { newCompetitor, type WorkflowNodeDraft } from "@web/lib/workflow-draft";
+import {
+  newCompetitor,
+  type WorkflowCompetitorDraft,
+  type WorkflowNodeDraft,
+} from "@web/lib/workflow-draft";
+
+function patchCompetitor(
+  steps: readonly WorkflowNodeDraft[],
+  stepIndex: number,
+  competitorIndex: number,
+  patch: Partial<WorkflowCompetitorDraft>,
+): WorkflowNodeDraft[] {
+  return steps.map((step, index) => {
+    if (index !== stepIndex || step.kind !== "compete") return step;
+    return {
+      ...step,
+      competitors: step.competitors.map((competitor, candidateIndex) =>
+        candidateIndex === competitorIndex ? { ...competitor, ...patch } : competitor,
+      ),
+    };
+  });
+}
 
 export function setWorkflowCompetitorExecution(
   steps: readonly WorkflowNodeDraft[],
@@ -7,15 +29,16 @@ export function setWorkflowCompetitorExecution(
   competitorIndex: number,
   execution: ExecutionSelection,
 ): WorkflowNodeDraft[] {
-  return steps.map((step, index) => {
-    if (index !== stepIndex || step.kind !== "compete") return step;
-    return {
-      ...step,
-      competitors: step.competitors.map((competitor, candidateIndex) =>
-        candidateIndex === competitorIndex ? { ...competitor, execution } : competitor,
-      ),
-    };
-  });
+  return patchCompetitor(steps, stepIndex, competitorIndex, { execution });
+}
+
+export function setWorkflowCompetitorContext(
+  steps: readonly WorkflowNodeDraft[],
+  stepIndex: number,
+  competitorIndex: number,
+  context: ContextDraft,
+): WorkflowNodeDraft[] {
+  return patchCompetitor(steps, stepIndex, competitorIndex, { context });
 }
 
 export function addWorkflowCompetitor(

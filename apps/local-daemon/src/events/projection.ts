@@ -90,6 +90,30 @@ export function readRunEventWindow(
   };
 }
 
+/** The newest messages one step emitted, newest first. Bounded at the query: a caller after a step's last words must never read the run's whole ledger. */
+export function readStepMessages(
+  db: Db,
+  runId: string,
+  stepRunId: string,
+  limit: number,
+): EventEnvelope[] {
+  return db
+    .select()
+    .from(runtimeEvents)
+    .where(
+      and(
+        eq(runtimeEvents.run_id, runId),
+        eq(runtimeEvents.step_run_id, stepRunId),
+        eq(runtimeEvents.type, "runtime.message"),
+      ),
+    )
+    .orderBy(desc(runtimeEvents.seq))
+    .limit(limit)
+    .all()
+    .map(toEnvelope)
+    .filter((event): event is EventEnvelope => event !== null);
+}
+
 function toEnvelope(row: typeof runtimeEvents.$inferSelect): EventEnvelope | null {
   const parsed = eventEnvelopeSchema.safeParse({
     id: row.id,

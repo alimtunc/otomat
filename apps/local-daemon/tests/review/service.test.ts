@@ -207,24 +207,44 @@ it("appends one fix step carrying comment + original hunk + current file", async
     body: "beta should be delta",
   });
 
-  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT, overrides: {} });
+  await review.requestFix(run(), {
+    commentIds: [comment.id],
+    selector: FIX_AGENT,
+    overrides: {},
+    note: null,
+    references: [],
+  });
 
   const step = appended[0];
   if (!step) throw new Error("expected an appended fix step");
   expect(step.name).toBe("Fix review comments");
   expect(step.origin).toBe("review_fix");
   expect(step.selector).toEqual(FIX_AGENT);
-  expect(step.prompt).toContain("beta should be delta");
-  expect(step.prompt).toContain("+beta");
-  expect(step.prompt).toContain("alpha\nbeta\ngamma");
-  expect(step.prompt).toContain(BRANCH);
-  // The diff the comment was made against is frozen with it, named by its sha.
-  expect(step.prompt).toContain(anchor.sha);
+  // A fix step adds no invented instruction: the frozen comments are its context.
+  expect(step.note).toBeNull();
+  expect(step.reviewComments).toEqual([
+    {
+      id: comment.id,
+      file_path: "notes.md",
+      line: 2,
+      body: "beta should be delta",
+      // The diff the comment was made against is frozen with it, named by its sha.
+      diff_sha: anchor.sha,
+      hunk: expect.stringContaining("+beta"),
+      current_file: "alpha\nbeta\ngamma\n",
+    },
+  ]);
   // The fix waits on the succeeded step that produced that diff.
   expect(step.dependsOn).toEqual([`${RUN_ID}-step`]);
 
   await expect(
-    review.requestFix(run(), { commentIds: ["nope"], selector: FIX_AGENT, overrides: {} }),
+    review.requestFix(run(), {
+      commentIds: ["nope"],
+      selector: FIX_AGENT,
+      overrides: {},
+      note: null,
+      references: [],
+    }),
   ).rejects.toThrow(CommentsNotFixableError);
 });
 
@@ -242,10 +262,16 @@ it("keeps a symlinked path's fix context to the link target text, never the host
     body: "What does this point at?",
   });
 
-  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT, overrides: {} });
-  const step = appended[0];
-  expect(step?.prompt).not.toContain("TOP-SECRET");
-  expect(step?.prompt).toContain(secretPath);
+  await review.requestFix(run(), {
+    commentIds: [comment.id],
+    selector: FIX_AGENT,
+    overrides: {},
+    note: null,
+    references: [],
+  });
+  const frozen = appended[0]?.reviewComments?.[0];
+  expect(frozen?.current_file).not.toContain("TOP-SECRET");
+  expect(frozen?.current_file).toContain(secretPath);
 });
 
 it("stamps fix-requested comments and drives the review to changes_requested", async () => {
@@ -257,7 +283,13 @@ it("stamps fix-requested comments and drives the review to changes_requested", a
     body: "fix me",
   });
 
-  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT, overrides: {} });
+  await review.requestFix(run(), {
+    commentIds: [comment.id],
+    selector: FIX_AGENT,
+    overrides: {},
+    note: null,
+    references: [],
+  });
   expect(getReviewComment(fix.db, comment.id)?.fix_requested_at).not.toBeNull();
   expect(getReviewForRun(fix.db, RUN_ID)?.status).toBe("changes_requested");
 });
@@ -278,7 +310,13 @@ it("stamps nothing when the step append fails, so the request can be retried", a
   });
 
   await expect(
-    failing.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT, overrides: {} }),
+    failing.requestFix(run(), {
+      commentIds: [comment.id],
+      selector: FIX_AGENT,
+      overrides: {},
+      note: null,
+      references: [],
+    }),
   ).rejects.toThrow("append exploded");
 
   expect(getReviewComment(fix.db, comment.id)?.fix_requested_at).toBeNull();
@@ -303,6 +341,8 @@ it("on a completed settle: emits git.diff_updated, marks fixed comments addresse
     commentIds: [requested.id],
     selector: FIX_AGENT,
     overrides: {},
+    note: null,
+    references: [],
   });
 
   // The "fix turn" really edits the worktree, so both anchors leave the live diff.
@@ -347,7 +387,13 @@ it("releases pending fix requests when the turn does not complete", async () => 
     diff_sha: anchor.sha,
     body: "fix me",
   });
-  await review.requestFix(run(), { commentIds: [comment.id], selector: FIX_AGENT, overrides: {} });
+  await review.requestFix(run(), {
+    commentIds: [comment.id],
+    selector: FIX_AGENT,
+    overrides: {},
+    note: null,
+    references: [],
+  });
 
   review.onRunSettled({ runId: RUN_ID, classification: "interrupted" });
 

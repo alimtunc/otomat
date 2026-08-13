@@ -30,7 +30,8 @@ afterEach(() => {
 
 const FIX_STEP: AppendStepInput = {
   name: "Fix review comments",
-  prompt: "address the review",
+  note: "address the review",
+  references: [],
   selector: { kind: "runtime", runtimeId: "fake" },
   overrides: {},
   dependsOn: [],
@@ -50,7 +51,7 @@ it("runs an appended step in the run's own worktree, with no second worktree", a
   expect(appended.branch).toBe(run.branch);
   expect(spawn.jobs).toHaveLength(2);
   expect(spawn.jobs[1]?.worktreePath).toBe(first?.worktreePath);
-  expect(spawn.jobs[1]?.prompt).toBe("address the review");
+  expect(spawn.jobs[1]?.prompt).toContain("address the review");
   expect(spawn.jobs[1]?.mode).toBe("run");
   expect(getRun(fix.db, run.id)?.status).toBe("review_ready");
 });

@@ -15,6 +15,7 @@ import {
 } from "@otomat/domain";
 
 import { resolveAgentConfig, type AgentConfigOverrides, type AgentConfigSelector } from "#agents";
+import type { ContextFreezer } from "#context";
 
 const STEP_NAME = "Agent turn";
 
@@ -127,14 +128,40 @@ function makeConfigResolver(
   };
 }
 
+export interface PlanConfigs {
+  configFor: ConfigResolver;
+  /** Every runtime the launch will need, so an unavailable one is refused before the repository is touched. */
+  runtimes: string[];
+}
+
+/** Resolves each node's agent config once. Nothing here reads the repository, so a launch still refuses on its agents first. */
+export function resolvePlanConfigs(
+  db: Db,
+  request: StartRunRequest,
+  runDefault: RunDefaultConfig,
+  defaultConfig: ResolvedAgentConfig,
+): PlanConfigs {
+  const configFor = makeConfigResolver(db, runDefault, defaultConfig);
+  const executable = (request.plan?.steps ?? []).flatMap((node) =>
+    isRunPlanCompeteGroup(node) ? node.compete : [node],
+  );
+  return {
+    configFor,
+    runtimes: [
+      defaultConfig.runtime,
+      ...executable.map((node) => configFor(nodeSelector(node), node).runtime),
+    ],
+  };
+}
+
 function freezeNode(
   node: RunPlanNodeInput,
   idByRequestId: ReadonlyMap<string, string>,
   configFor: ConfigResolver,
+  freezeContext: ContextFreezer,
 ) {
   const dependencies = node.depends_on.map((dependency) => mappedStepId(idByRequestId, dependency));
-  // `in` narrowing, not isRunPlanCompeteGroup: the guard cannot exclude the compete *input* member on the else branch.
-  if ("compete" in node) {
+  if (isRunPlanCompeteGroup(node)) {
     return {
       id: mappedStepId(idByRequestId, node.id),
       name: node.name,
@@ -145,7 +172,8 @@ function freezeNode(
           id: mappedStepId(idByRequestId, competitor.id),
           name: competitor.name,
           agent: config.runtime,
-          prompt: `Shared objective:\n${node.name}\n\nCandidate instructions:\n${competitor.prompt}`,
+          prompt: null,
+          context: freezeContext(competitor.context ?? [], competitor.note ?? null),
           config,
         };
       }),
@@ -156,7 +184,8 @@ function freezeNode(
     id: mappedStepId(idByRequestId, node.id),
     name: node.name,
     agent: config.runtime,
-    prompt: node.prompt,
+    prompt: null,
+    context: freezeContext(node.context ?? [], node.note ?? null),
     depends_on: dependencies,
     config,
   };
@@ -164,15 +193,15 @@ function freezeNode(
 
 /**
  * Freezes the launch plan: request-local ids become the generated `step_runs` ids (plan step id ==
- * step_run id), and each node's resolved agent config is embedded so resume/follow-up/fix read the
- * frozen snapshot, never the live profile or the host defaults as they stand later.
+ * step_run id), and each node's resolved agent config and declared context are embedded so
+ * resume/follow-up/fix read the frozen snapshot, never the live profile, the host defaults or the
+ * tracker as they stand later. A node's name stays a label: nothing composes it into an instruction.
  */
 export function freezePlan(
-  db: Db,
   request: StartRunRequest,
-  runDefault: RunDefaultConfig,
   defaultConfig: ResolvedAgentConfig,
-  fallbackPrompt: string,
+  configFor: ConfigResolver,
+  freezeContext: ContextFreezer,
 ): RunPlan {
   if (!request.plan) {
     return {
@@ -182,7 +211,8 @@ export function freezePlan(
           id: randomUUID(),
           name: STEP_NAME,
           agent: defaultConfig.runtime,
-          prompt: fallbackPrompt,
+          prompt: null,
+          context: freezeContext(request.context ?? [], request.note ?? null),
           depends_on: [],
           config: defaultConfig,
         },
@@ -197,9 +227,10 @@ export function freezePlan(
       for (const competitor of node.compete) idByRequestId.set(competitor.id, randomUUID());
     }
   }
-  const configFor = makeConfigResolver(db, runDefault, defaultConfig);
   return {
     version: 1,
-    steps: request.plan.steps.map((node) => freezeNode(node, idByRequestId, configFor)),
+    steps: request.plan.steps.map((node) =>
+      freezeNode(node, idByRequestId, configFor, freezeContext),
+    ),
   };
 }

@@ -1,5 +1,6 @@
 import type { RunDetail, StepRunContract } from "@otomat/domain";
 import { AgentAvatar, Badge, cn, Icon, LiveDot, resolveStatus, TONE_TEXT } from "@otomat/ui";
+import { SessionContextDialog } from "@web/components/runs/session/context-dialog";
 
 function SessionRows({ detail, step }: { detail: RunDetail; step: StepRunContract }) {
   const sessions = detail.sessions.filter((session) => session.step_run_id === step.id);
@@ -19,6 +20,7 @@ function SessionRows({ detail, step }: { detail: RunDetail; step: StepRunContrac
             <span className="ml-auto text-[10px] lowercase text-text-tertiary">
               {sessionMeta.label}
             </span>
+            <SessionContextDialog runId={detail.run.id} agentSessionId={session.id} />
           </div>
         );
       })}

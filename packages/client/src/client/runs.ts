@@ -7,6 +7,7 @@ import {
   runDiffResponseSchema,
   runEventWindowSchema,
   runLaunchResponseSchema,
+  sessionContextResponseSchema,
   workspaceClosureSummarySchema,
   type AppendRunStepRequest,
   type CreateRunContributionRequest,
@@ -38,6 +39,14 @@ export function createRunsClient(config: DaemonClientConfig) {
     async resumeRun(id: string) {
       return runContractSchema.parse(
         await postJson(config, `/api/runs/${encodeURIComponent(id)}/resume`, {}),
+      );
+    },
+    async getSessionContext(id: string, agentSessionId: string) {
+      return sessionContextResponseSchema.parse(
+        await getJson(
+          config,
+          `/api/runs/${encodeURIComponent(id)}/sessions/${encodeURIComponent(agentSessionId)}/context`,
+        ),
       );
     },
     async getRunWorkspace(id: string) {

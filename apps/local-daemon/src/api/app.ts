@@ -9,6 +9,7 @@ import { correlatedRequestLog, DiagnosticLogRing, recordThrownFailure } from "#d
 import type { ApiDeps } from "./deps.js";
 import { createAgentProfileRoutes } from "./routes/agent-profiles.js";
 import { createCatalogRoutes } from "./routes/catalog.js";
+import { createCompeteRoutes } from "./routes/compete.js";
 import { createDiagnosticsRoutes } from "./routes/diagnostics.js";
 import { createGitHubRoutes } from "./routes/github.js";
 import { createHealthRoutes } from "./routes/health.js";
@@ -49,6 +50,7 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.route("/api/issues", createIssueRoutes(deps));
   app.route("/api/runs", createRunContributionRoutes(deps));
   app.route("/api/runs", createRunRoutes(deps));
+  app.route("/api/runs", createCompeteRoutes(deps));
   app.route("/api/runs", createReviewRoutes(deps));
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));

@@ -104,7 +104,7 @@ describe("launch requests", () => {
       id: "a",
       name: "Step",
       agent: null,
-      prompt: "go",
+      note: "go",
       depends_on: [],
     };
     const plan = runPlanInputSchema.parse({

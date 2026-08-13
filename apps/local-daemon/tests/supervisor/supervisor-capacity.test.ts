@@ -18,9 +18,9 @@ afterEach(() => {
 const THREE_STEPS = {
   version: 1 as const,
   steps: [
-    { id: "plan", name: "Plan", agent: null, prompt: "plan it", depends_on: [] },
-    { id: "implement", name: "Implement", agent: null, prompt: "build it", depends_on: ["plan"] },
-    { id: "verify", name: "Verify", agent: null, prompt: "check it", depends_on: ["implement"] },
+    { id: "plan", name: "Plan", agent: null, note: "plan it", depends_on: [] },
+    { id: "implement", name: "Implement", agent: null, note: "build it", depends_on: ["plan"] },
+    { id: "verify", name: "Verify", agent: null, note: "check it", depends_on: ["implement"] },
   ],
 };
 
@@ -94,12 +94,12 @@ it("drains the queue in launch order as slots free up", async () => {
 
   await supervisor.abort(first.id);
   expect(await waitFor(() => spawn.calls === 2)).toBe(true);
-  expect(spawn.jobs[1]?.prompt).toBe("b");
+  expect(spawn.jobs[1]?.prompt).toContain("## Issue: b");
   expect(supervisor.waitFor(third.id)).toMatchObject({ position: 1 });
 
   await supervisor.abort(second.id);
   expect(await waitFor(() => spawn.calls === 3)).toBe(true);
-  expect(spawn.jobs[2]?.prompt).toBe("c");
+  expect(spawn.jobs[2]?.prompt).toContain("## Issue: c");
 
   await supervisor.abort(third.id);
   await supervisor.settle();

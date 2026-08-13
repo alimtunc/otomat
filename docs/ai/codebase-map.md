@@ -15,6 +15,7 @@ apps/
   local-daemon/        # Node local process — hosts the backend as internal modules
     src/
       api/             # HTTP routes + SSE handlers          (OTO-9)
+      context/         # declarative agent context: freeze a selection, build a session dossier, render it
       events/          # event ledger + stream-to-file tailer (OTO-7)
       git/             # worktree/branch lifecycle + diff      (OTO-8)
       data-safety/     # startup diagnostics + restore maintenance mode (OTO-29)
@@ -68,7 +69,7 @@ Why each current package qualifies:
 | `client`          | Typed daemon API/SSE client reused by `web` and future frontend apps.             |
 | `tooling`         | Shared build/lint/test/boundary config.                                           |
 
-Why `api`, `data-safety`, `diagnostics`, `events`, `git`, `runtime` are **not** packages: each was
+Why `api`, `context`, `data-safety`, `diagnostics`, `events`, `git`, `runtime` are **not** packages: each was
 consumed only by the local daemon (and each other) — no frontend or cross-app consumer — so they
 are internal daemon modules, consumed through
 `#api`/`#data-safety`/`#diagnostics`/`#events`/`#git`/`#runtime` subpath imports.
@@ -89,6 +90,8 @@ are internal daemon modules, consumed through
 | `apps/web/src/components/diagnostics` | OTO-52               | Classified error report: details, host log excerpt, copy/export/report. |
 | `packages/domain/src/redaction`   | OTO-29, OTO-52           | The one log redactor; shared by the shell, the daemon and the cockpit. |
 | `apps/local-daemon/src/api`       | OTO-9                    | Local daemon routes and SSE surface.                                  |
+| `apps/local-daemon/src/context`   | OTO-107                  | Frozen context selection, per-session dossier, and its rendering.     |
+| `apps/web/src/components/context` | OTO-107                  | The one prompt composer: attached-context chips plus an optional note.|
 | `apps/desktop/src/main/data-safety` | OTO-29                 | Versioned data layout, redacted rotating logs, support bundle export. |
 | `apps/desktop/scripts`            | OTO-21, OTO-30           | macOS packaging: ad-hoc local build, signed/notarized release, packaged smoke. |
 | `apps/local-daemon/src/supervisor`| OTO-10                   | Process supervision, pid reconciliation (lands as a daemon module).   |
@@ -159,6 +162,36 @@ refusal that happens anyway carries `permission_mode_status`, resolved against
 the binary on the host that ran the turn, so the cockpit can separate a plan
 frozen before the policy, a mode that host never announced, the classifier's own
 verdict under the autonomous mode, and a request nothing could answer.
+
+## Declarative Agent Context
+
+A prompt surface composes references, not text. The issue a run works on is
+attached by Otomat, further issues and repository files are attached by identity,
+and the only thing a user types is one optional note — so the issue's own body is
+never copied into an editable field and a user profile stays the single source of
+an agent's permanent instructions. Otomat adds no built-in profile, role or
+template, and a node's name stays a label: nothing composes it into a directive.
+
+The selection is resolved once and frozen in the plan (`context/freeze.ts`):
+attached issues come from the daemon's own mirror and attached files from one
+captured tree, so a launch cannot mix two instants of the repository. A file is
+read whole or refused by name — a symlink is refused rather than followed off the
+worktree, and a binary, an oversized blob or a path that is not
+repository-relative is reported instead of approximated.
+
+What the plan cannot freeze is the cycle's own state, because a step may start
+hours later. `context/dossier.ts` therefore captures a dated envelope per
+*session* — the frozen selection plus workspace/git, the canonical pull request
+and plan progress with each dependency's last report — and `spawnTurn` records it
+on `agent_sessions.context_json` before the provider starts, so what an agent
+received stays auditable and `GET /api/runs/:id/sessions/:id/context` can show it.
+A native resume passes through untouched: the provider still holds the
+conversation its own dossier was given. A new step, an appended step and a
+recovery session each capture a new one.
+
+Every field is read locally. No external id, tracker URL or credential rides
+along, and the rendered context says so — an imported Linear issue reaches a
+session exactly like a local one, on a laptop or on a VPS daemon.
 
 ## One Execution Configuration
 

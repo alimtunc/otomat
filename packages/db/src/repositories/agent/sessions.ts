@@ -1,4 +1,4 @@
-import type { AgentSessionState } from "@otomat/domain";
+import type { AgentSessionState, SessionContext } from "@otomat/domain";
 import { eq, getTableColumns } from "drizzle-orm";
 
 import type { Db } from "#db/client";
@@ -38,6 +38,11 @@ export function updateAgentSessionStatus(db: Db, id: string, status: AgentSessio
 /** Persist the provider session id (the resume key) once the runtime reports it. */
 export function updateAgentSessionProvider(db: Db, id: string, providerSessionId: string): void {
   patchAgentSession(db, id, { provider_session_id: providerSessionId });
+}
+
+/** Recorded before the provider is spawned, so what the agent received stays auditable whatever the turn then does. */
+export function recordAgentSessionContext(db: Db, id: string, context: SessionContext): void {
+  patchAgentSession(db, id, { context_json: context });
 }
 
 /** The child process ids recorded when the supervisor spawns a session, so reconciliation can probe them. */

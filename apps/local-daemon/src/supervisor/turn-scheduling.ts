@@ -16,8 +16,8 @@ export function insertTurn(
   step: RunPlanCompetitor,
   worktreePath: string,
 ): TurnContext {
-  if (step.agent === null || step.prompt === null) {
-    throw new Error(`run ${run.id} frozen plan step ${step.id} is missing its agent or prompt`);
+  if (step.agent === null) {
+    throw new Error(`run ${run.id} frozen plan step ${step.id} is missing its agent`);
   }
   const runtime = ensureRuntimeAgent(state.db, step.agent);
   const agentSessionId = randomUUID();
@@ -32,6 +32,7 @@ export function insertTurn(
     stepRunId: step.id,
     agentSessionId,
     prompt: step.prompt,
+    contextSelection: step.context ?? null,
     agentSessionDir: sessionDir(state.dataDir, run.id, agentSessionId),
     worktreePath,
     runtime,

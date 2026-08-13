@@ -1,9 +1,11 @@
-import { schema, type Db } from "@otomat/db";
+import { recordAgentSessionContext, schema, type Db } from "@otomat/db";
+import { sessionContextResponseSchema } from "@otomat/domain";
 import type {
   HealthResponse,
   RunContributionContract,
   RunDetail,
   RunLaunchResponse,
+  SessionContext,
   StartRunRequest,
   WorkspaceClosureSummary,
 } from "@otomat/domain";
@@ -179,8 +181,8 @@ it("rejects a cyclic run plan with 400 before the launch dep ever runs", async (
     plan: {
       version: 1,
       steps: [
-        { id: "a", name: "A", agent: null, prompt: "pa", depends_on: ["b"] },
-        { id: "b", name: "B", agent: null, prompt: "pb", depends_on: ["a"] },
+        { id: "a", name: "A", agent: null, note: "pa", depends_on: ["b"] },
+        { id: "b", name: "B", agent: null, note: "pb", depends_on: ["a"] },
       ],
     },
   });
@@ -195,8 +197,8 @@ it("rejects duplicate step ids and unknown dependencies with 400", async () => {
     plan: {
       version: 1,
       steps: [
-        { id: "a", name: "A", agent: null, prompt: "pa", depends_on: [] },
-        { id: "a", name: "A2", agent: null, prompt: "pa2", depends_on: [] },
+        { id: "a", name: "A", agent: null, note: "pa", depends_on: [] },
+        { id: "a", name: "A2", agent: null, note: "pa2", depends_on: [] },
       ],
     },
   });
@@ -206,7 +208,7 @@ it("rejects duplicate step ids and unknown dependencies with 400", async () => {
     prompt: "goal",
     plan: {
       version: 1,
-      steps: [{ id: "a", name: "A", agent: null, prompt: "pa", depends_on: ["ghost"] }],
+      steps: [{ id: "a", name: "A", agent: null, note: "pa", depends_on: ["ghost"] }],
     },
   });
   expect(unknownDep.status).toBe(400);
@@ -225,8 +227,8 @@ it("delegates a valid multi-step plan to launchRun untouched", async () => {
   const plan = {
     version: 1,
     steps: [
-      { id: "plan", name: "Plan", agent: null, prompt: "plan it", depends_on: [] },
-      { id: "build", name: "Build", agent: "fake", prompt: "build it", depends_on: ["plan"] },
+      { id: "plan", name: "Plan", agent: null, note: "plan it", depends_on: [] },
+      { id: "build", name: "Build", agent: "fake", note: "build it", depends_on: ["plan"] },
     ],
   };
   const res = await post(app, "/api/runs", { prompt: "goal", plan });
@@ -463,7 +465,8 @@ it("appends a step with the agent the caller chose, never an inherited one", asy
 
   const res = await post(app, `/api/runs/${runId}/steps`, {
     name: "Address review",
-    prompt: "rename beta",
+    note: "rename beta",
+    context: [{ kind: "file", path: "src/beta.ts" }],
     profile_id: "p-reviewer",
     depends_on: [],
   });
@@ -471,7 +474,8 @@ it("appends a step with the agent the caller chose, never an inherited one", asy
   expect(res.status).toBe(201);
   expect(received).toEqual({
     name: "Address review",
-    prompt: "rename beta",
+    note: "rename beta",
+    references: [{ kind: "file", path: "src/beta.ts" }],
     selector: { kind: "profile", profileId: "p-reviewer" },
     overrides: {},
     dependsOn: [],
@@ -485,7 +489,7 @@ it("rejects an appended step with no agent, and maps a closed workspace to 409",
 
   const noAgent = await post(makeApiApp(t), `/api/runs/${runId}/steps`, {
     name: "Address review",
-    prompt: "rename beta",
+    note: "rename beta",
   });
   expect(noAgent.status).toBe(400);
 
@@ -498,17 +502,54 @@ it("rejects an appended step with no agent, and maps a closed workspace to 409",
   });
   const res = await post(closed, `/api/runs/${runId}/steps`, {
     name: "Address review",
-    prompt: "rename beta",
+    note: "rename beta",
     runtime: "fake",
   });
   expect(res.status).toBe(409);
   expect(((await res.json()) as { error: string }).error).toBe("workspace_closed");
 });
 
+it("serves the dossier one session was given, and says so when it predates them", async () => {
+  const runId = "run-context";
+  seedTerminalRun(t.db, runId);
+  const app = makeApiApp(t);
+
+  const missing = await request(app, `/api/runs/${runId}/sessions/ghost/context`);
+  expect(missing.status).toBe(404);
+
+  const legacy = await request(app, `/api/runs/${runId}/sessions/${runId}-session/context`);
+  expect(legacy.status).toBe(200);
+  expect(sessionContextResponseSchema.parse(await legacy.json())).toEqual({
+    run_id: runId,
+    agent_session_id: `${runId}-session`,
+    context: null,
+  });
+
+  const captured: SessionContext = {
+    version: 1,
+    captured_at: "2026-08-13T00:00:00.000Z",
+    selection: {
+      captured_at: "2026-08-13T00:00:00.000Z",
+      issue: null,
+      issues: [],
+      files: [],
+      review_comments: [],
+      note: "rename beta",
+    },
+    workspace: null,
+    pull_request: null,
+    progress: null,
+  };
+  recordAgentSessionContext(t.db, `${runId}-session`, captured);
+
+  const served = await request(app, `/api/runs/${runId}/sessions/${runId}-session/context`);
+  expect(sessionContextResponseSchema.parse(await served.json()).context).toEqual(captured);
+});
+
 it("returns 404 appending a step to an unknown run", async () => {
   const res = await post(makeApiApp(t), "/api/runs/nope/steps", {
     name: "Address review",
-    prompt: "rename beta",
+    note: "rename beta",
     runtime: "fake",
   });
   expect(res.status).toBe(404);

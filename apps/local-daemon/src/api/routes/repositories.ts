@@ -8,11 +8,12 @@ import {
 import {
   registerRepositoryRequestSchema,
   updateRepositoryRequestSchema,
+  type RepositoryFilesResponse,
   type RepositoryRegistrationError,
 } from "@otomat/domain";
 import { Hono } from "hono";
 
-import { isRepositoryRoot, listBranches } from "#git";
+import { isRepositoryRoot, listBranches, searchTrackedFiles } from "#git";
 
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";
@@ -33,6 +34,9 @@ const REGISTRATION_MESSAGES: Record<RepositoryRegistrationError, string> = {
   project_not_found: "This project no longer exists.",
   project_already_has_repository: "This project already has a repository.",
 };
+
+/** Enough for a picker to work against; a repository with more paths narrows by typing. */
+const FILE_SEARCH_LIMIT = 50;
 
 const CONFLICT_ERRORS: ReadonlySet<RepositoryRegistrationError> = new Set([
   "repository_already_registered",
@@ -110,6 +114,27 @@ export function createRepositoryRoutes(deps: ApiDeps): Hono {
       default_branch: repository.default_branch,
       branches: listBranches(project.root_path),
     });
+  });
+
+  routes.get("/:id/files", (c) => {
+    const repository = getRepository(deps.db, c.req.param("id"));
+    if (!repository) return c.json({ error: "repository_not_found" }, 404);
+    const project = getProject(deps.db, repository.project_id);
+    if (!project || !isRepositoryRoot(project.root_path)) {
+      return c.json(
+        {
+          error: "repository_unavailable",
+          message: "This repository's path is gone or is no longer a git repository.",
+        },
+        409,
+      );
+    }
+    const matches = searchTrackedFiles(
+      project.root_path,
+      c.req.query("q") ?? "",
+      FILE_SEARCH_LIMIT,
+    );
+    return c.json(matches satisfies RepositoryFilesResponse);
   });
 
   return routes;

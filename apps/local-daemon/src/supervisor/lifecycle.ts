@@ -23,6 +23,7 @@ import { settleRun } from "./settle/index.js";
 import { clearWorkerStartEvidence } from "./start-gate.js";
 import { notifyAfterSettle, trackPending, type SupervisorState } from "./state.js";
 import { driveRunTo, driveSessionTo, driveStepTo } from "./transitions.js";
+import { captureTurnContext } from "./turn-context.js";
 import type { ProcessExit, SessionProcess, TurnContext } from "./types.js";
 
 /** Advances only the turn's own step/session — siblings keep their state. The step machine decides what may reopen: a stopped step goes back to work, a succeeded one is left as delivered. */
@@ -144,10 +145,12 @@ export async function spawnTurn(
     claimStepContributions(state, ctx.stepRunId, ctx.agentSessionId);
     const carried = carriedContributions(state, ctx.agentSessionId);
     const prompt = withCarriedContributions(
-      ctx.prompt,
+      captureTurnContext(state, ctx, mode),
       carried.map((row) => row.body),
     );
-    proc = state.spawn({ ...ctx, prompt, mode, providerSessionId });
+    // The selection is already rendered into `prompt`; a job is serialized into the worker's env, so it must not carry it twice.
+    const { contextSelection: _frozen, ...turn } = ctx;
+    proc = state.spawn({ ...turn, prompt, mode, providerSessionId });
     state.starting.set(ctx.agentSessionId, {
       runId: ctx.runId,
       proc,

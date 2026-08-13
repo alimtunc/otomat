@@ -137,3 +137,23 @@ export function uncommittedPaths(repoPath: string): string[] {
     .filter((line) => line.trim() !== "")
     .map((line) => line.slice(3));
 }
+
+export interface TrackedFileMatches {
+  paths: string[];
+  omitted: number;
+}
+
+/** Tracked paths containing `query` (case-insensitive), capped at `limit` with the overflow counted rather than hidden. */
+export function searchTrackedFiles(
+  repoPath: string,
+  query: string,
+  limit: number,
+): TrackedFileMatches {
+  const needle = query.trim().toLowerCase();
+  const tracked = runGit(["-c", "core.quotepath=false", "ls-files", "-z"], { cwd: repoPath })
+    .stdout.split("\0")
+    .filter((path) => path !== "");
+  const matched =
+    needle === "" ? tracked : tracked.filter((path) => path.toLowerCase().includes(needle));
+  return { paths: matched.slice(0, limit), omitted: Math.max(0, matched.length - limit) };
+}

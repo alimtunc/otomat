@@ -92,7 +92,7 @@ it("freezes the launch option into every inheriting step and sends it on the ini
   seedProfile(undefined);
 
   const { spawn, run } = await launch({
-    prompt: "do it",
+    note: "do it",
     profile_id: "prof",
     options: { effort: { kind: "value", value: "high" } },
   });
@@ -150,19 +150,19 @@ it("gives each step its own value, its agent's, or the run's, as the plan asks",
   seedProfile("low");
 
   const { run } = await launch({
-    prompt: "goal",
+    note: "goal",
     profile_id: "prof",
     options: { effort: { kind: "value", value: "high" } },
     plan: {
       version: 1,
       steps: [
-        { id: "a", name: "Inherits", agent: null, prompt: "first", depends_on: [] },
+        { id: "a", name: "Inherits", agent: null, note: "first", depends_on: [] },
         {
           id: "b",
           name: "Keeps the agent's",
           agent: null,
           options: { effort: { kind: "agent_default" } },
-          prompt: "second",
+          note: "second",
           depends_on: ["a"],
         },
         {
@@ -170,7 +170,7 @@ it("gives each step its own value, its agent's, or the run's, as the plan asks",
           name: "Overrides",
           agent: null,
           options: { effort: { kind: "value", value: "medium" } },
-          prompt: "third",
+          note: "third",
           depends_on: ["b"],
         },
       ],
@@ -194,7 +194,7 @@ it("does not carry the launch's options onto a step that brings its own agent", 
   seedProfile("medium", "fake-thorough", "other");
 
   const { run } = await launch({
-    prompt: "goal",
+    note: "goal",
     profile_id: "prof",
     options: { effort: { kind: "value", value: "high" } },
     plan: {
@@ -205,7 +205,7 @@ it("does not carry the launch's options onto a step that brings its own agent", 
           name: "Own agent",
           agent: null,
           profile_id: "other",
-          prompt: "go",
+          note: "go",
           depends_on: [],
         },
         {
@@ -214,7 +214,7 @@ it("does not carry the launch's options onto a step that brings its own agent", 
           agent: null,
           profile_id: "other",
           options: { effort: { kind: "value", value: "low" } },
-          prompt: "go",
+          note: "go",
           depends_on: ["a"],
         },
       ],
@@ -229,7 +229,7 @@ it("does not carry the launch's options onto a step that brings its own agent", 
 
 it("freezes a distinct value per competitor of a compete group", async () => {
   const { run } = await launch({
-    prompt: "goal",
+    note: "goal",
     runtime: "fake",
     model: { kind: "model", id: "fake-thorough" },
     plan: {
@@ -245,14 +245,14 @@ it("freezes a distinct value per competitor of a compete group", async () => {
               name: "Candidate A",
               agent: null,
               options: { effort: { kind: "value", value: "low" } },
-              prompt: "first",
+              note: "first",
             },
             {
               id: "b",
               name: "Candidate B",
               agent: null,
               options: { effort: { kind: "value", value: "high" } },
-              prompt: "second",
+              note: "second",
             },
           ],
         },
@@ -274,7 +274,7 @@ it("refuses a value the chosen model does not publish and launches nothing", asy
 
   await expect(
     supervisor.start({
-      prompt: "do it",
+      note: "do it",
       profile_id: "prof",
       options: { effort: { kind: "value", value: "high" } },
     }),
@@ -287,7 +287,7 @@ it("refuses an option the runtime announces no field for at all", async () => {
 
   await expect(
     supervisor.start({
-      prompt: "do it",
+      note: "do it",
       runtime: "fake",
       options: { effort: { kind: "value", value: "high" } },
     }),

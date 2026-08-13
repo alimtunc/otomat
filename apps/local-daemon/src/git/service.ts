@@ -8,6 +8,7 @@ import { WorktreeConflictError, WorktreeNotFoundError } from "./errors.js";
 import { toRecord } from "./record.js";
 import { branchExists, deleteBranch, fastForward, headSha, isAncestor, revParse } from "./repo.js";
 import type { GitWorktreeService, GitWorktreeServiceConfig } from "./service-contract.js";
+import { readTreeFile } from "./tree-file.js";
 import { addWorktree, pruneWorktrees, removeWorktree } from "./worktree-cli.js";
 import { isDirty, snapshotWorktree } from "./worktree-snapshot.js";
 import {
@@ -147,7 +148,13 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       return {
         diff: computeCanonicalDiff(gitCwd, base, tree),
         fileBlobs: (paths) => readFileBlobs(gitCwd, base, tree, paths),
+        readFile: (path, limits) => readTreeFile(gitCwd, tree, path, limits),
       };
+    },
+
+    treeSnapshot(baseRef) {
+      const tree = revParse(repoRoot, `${baseRef}^{tree}`);
+      return { readFile: (path, limits) => readTreeFile(repoRoot, tree, path, limits) };
     },
 
     commitDiff(owner, commit) {

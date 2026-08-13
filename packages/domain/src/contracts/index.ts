@@ -16,6 +16,7 @@ export * from "./desktop.js";
 export * from "./diagnostics.js";
 export * from "./diff.js";
 export * from "./execution-host.js";
+export * from "./run-plan.js";
 export {
   agentProfileContractSchema,
   agentSessionContractSchema,
@@ -25,7 +26,6 @@ export {
   issueExecutionSchema,
   issueSourceContractSchema,
   issueWorkspaceSchema,
-  isRunPlanCompeteGroup,
   projectContractSchema,
   pullRequestContractSchema,
   repositoryContractSchema,
@@ -35,11 +35,6 @@ export {
   reviewContractSchema,
   runContractSchema,
   runContributionContractSchema,
-  runPlanSchema,
-  runPlanCompeteGroupSchema,
-  runPlanCompetitorSchema,
-  runPlanNodeSchema,
-  runPlanStepSchema,
   skillContractSchema,
   skillInvalidReasonSchema,
   skillSourceSchema,
@@ -66,11 +61,6 @@ export {
   type ReviewContract,
   type RunContract,
   type RunContributionContract,
-  type RunPlan,
-  type RunPlanCompeteGroup,
-  type RunPlanCompetitor,
-  type RunPlanNode,
-  type RunPlanStep,
   type SkillContract,
   type SkillInvalidReason,
   type SkillSource,

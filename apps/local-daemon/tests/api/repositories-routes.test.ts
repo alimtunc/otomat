@@ -8,6 +8,7 @@ import {
   registerRepositoryResponseSchema,
   repositoryBranchesResponseSchema,
   repositoryContractSchema,
+  repositoryFilesResponseSchema,
   repositoryRegistrationErrorSchema,
 } from "@otomat/domain";
 import type { Hono } from "hono";
@@ -203,6 +204,31 @@ it("lists the repository's branches most-recently-committed first, and refuses w
   expect((await gone.json()) as { error: string }).toMatchObject({
     error: "repository_unavailable",
   });
+});
+
+it("searches tracked files for the context picker, capping and counting what it holds back", async () => {
+  const app = makeApiApp(t);
+  repo.write("src/parser.ts", "x\n");
+  repo.write("src/writer.ts", "y\n");
+  repo.write("docs/guide.md", "z\n");
+  repo.commitAll("fixtures");
+  const created = await registerRepo(app, repo.root);
+
+  const matched = await request(app, `/api/repositories/${created.repository.id}/files?q=SRC/`);
+  expect(matched.status).toBe(200);
+  expect(repositoryFilesResponseSchema.parse(await matched.json())).toEqual({
+    paths: ["src/parser.ts", "src/writer.ts"],
+    omitted: 0,
+  });
+
+  const none = await request(app, `/api/repositories/${created.repository.id}/files?q=ghost`);
+  expect(repositoryFilesResponseSchema.parse(await none.json()).paths).toEqual([]);
+
+  expect((await request(app, "/api/repositories/nope/files")).status).toBe(404);
+
+  rmSync(repo.root, { recursive: true, force: true });
+  const gone = await request(app, `/api/repositories/${created.repository.id}/files`);
+  expect(gone.status).toBe(409);
 });
 
 it("repairs a project whose registered repository moved, instead of refusing the only offered fix", async () => {

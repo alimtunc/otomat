@@ -37,6 +37,13 @@ export const repositoryBranchesResponseSchema = z.object({
 });
 export type RepositoryBranchesResponse = z.infer<typeof repositoryBranchesResponseSchema>;
 
+export const repositoryFilesResponseSchema = z.object({
+  paths: z.array(z.string()),
+  /** Matches beyond `paths`, so the picker says a search is narrowed rather than complete. */
+  omitted: z.number().int().nonnegative(),
+});
+export type RepositoryFilesResponse = z.infer<typeof repositoryFilesResponseSchema>;
+
 /** Successful registration materializes both the project and its repository. */
 export const registerRepositoryResponseSchema = z.object({
   project: projectContractSchema,
