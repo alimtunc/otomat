@@ -1,5 +1,8 @@
 /* Unlayered on purpose: these must out-cascade @git-diff-view's unlayered `.invisible` rule. */
 .otomat-review-diff .diff-tailwindcss-wrapper {
+  --diff-multi-select-bg: var(--iris-solid);
+  --diff-multi-select-border: var(--iris-ring);
+
   .diff-add-widget-wrapper {
     visibility: visible;
   }

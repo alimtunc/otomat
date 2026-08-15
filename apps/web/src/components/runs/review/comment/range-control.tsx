@@ -11,8 +11,8 @@ export interface CommentRangeControlProps {
   filePath: string;
   side: DiffSide;
   range: { start: number; end: number } | null;
-  /** Keyboard-reachable equivalent of dragging the gutter. */
-  onMoveEdge: (edge: "start" | "end", by: 1 | -1) => void;
+  /** Keyboard-reachable equivalent of dragging the gutter; absent for a whole-file anchor. */
+  onMoveEdge?: (edge: "start" | "end", by: 1 | -1) => void;
 }
 
 function describeRange(range: CommentRangeControlProps["range"]): string {
@@ -33,7 +33,7 @@ export function CommentRangeControl({
       <span>
         {filePath} · {anchor} · {sideLabel(side)} side
       </span>
-      {range === null
+      {range === null || onMoveEdge === undefined
         ? null
         : EDGES.map(({ edge, label }) => (
             <span key={edge} className="flex items-center">

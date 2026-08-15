@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import type { DiffFileContract, ReviewCommentDestination } from "@otomat/domain";
 import { ReviewCommentComposer } from "@web/components/runs/review/comment/composer";
-import { act } from "react";
+import { act, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { findButton, findLabelled } from "#support/dom-queries";
@@ -27,21 +27,39 @@ interface ComposerOptions {
   destinations?: { pr_review: boolean; reason: string };
   preferredDestination?: ReviewCommentDestination;
   onSubmit?: (comment: unknown) => Promise<void>;
+  onMoveEdge?: (edge: "start" | "end", by: 1 | -1) => void;
 }
 
-function renderComposer(options: ComposerOptions = {}) {
-  return mount(
+/** Stands in for the gutter, which owns the range an open composer is anchored on. */
+function RangeOwner(options: ComposerOptions) {
+  const [range, setRange] = useState({
+    fromLine: options.fromLine ?? null,
+    line: options.line === undefined ? 4 : options.line,
+  });
+  return (
     <ReviewCommentComposer
       file={FILE}
       side="new"
-      line={options.line === undefined ? 4 : options.line}
-      fromLine={options.fromLine ?? null}
+      line={range.line}
+      fromLine={range.fromLine}
       destinations={options.destinations ?? WITHOUT_PR}
       preferredDestination={options.preferredDestination ?? "agent"}
+      onMoveEdge={(edge, by) => {
+        options.onMoveEdge?.(edge, by);
+        setRange((current) => {
+          const start = (current.fromLine ?? current.line ?? 0) + (edge === "start" ? by : 0);
+          const end = (current.line ?? 0) + (edge === "end" ? by : 0);
+          return { fromLine: start, line: end };
+        });
+      }}
       onSubmit={options.onSubmit ?? (async () => {})}
       onClose={() => {}}
-    />,
+    />
   );
+}
+
+function renderComposer(options: ComposerOptions = {}) {
+  return mount(<RangeOwner {...options} />);
 }
 
 function textarea(container: HTMLElement, label: string): HTMLTextAreaElement {
@@ -66,19 +84,29 @@ describe("review comment composer", () => {
     await cleanup();
   });
 
-  it("extends and reduces the range from the keyboard without re-anchoring", async () => {
-    const { container, cleanup } = await renderComposer({ line: 4, fromLine: 4 });
+  it("asks the range's owner to move an edge, and shows the range it gets back", async () => {
+    const onMoveEdge = vi.fn();
+    const { container, cleanup } = await renderComposer({ line: 4, fromLine: 4, onMoveEdge });
     expect(container.textContent).toContain("line 4");
 
     await act(async () => {
       findLabelled("Move the range start up one line")?.click();
     });
+    expect(onMoveEdge).toHaveBeenCalledWith("start", -1);
     expect(container.textContent).toContain("lines 3–4");
 
     await act(async () => {
       findLabelled("Move the range start down one line")?.click();
     });
     expect(container.textContent).toContain("line 4");
+    await cleanup();
+  });
+
+  it("offers no edge to move when the anchor is the whole file", async () => {
+    const { cleanup } = await renderComposer({ line: null });
+
+    expect(findLabelled("Move the range start up one line")).toBeUndefined();
+    expect(findLabelled("Move the range end down one line")).toBeUndefined();
     await cleanup();
   });
 

@@ -464,6 +464,11 @@ it("anchors a multi-line range and snapshots the hunk it spans", async () => {
   expect(ranged.start_line).toBe(1);
   expect(ranged.line).toBe(3);
   expect(ranged.hunk_snapshot).toContain("+gamma");
+
+  const reread = createReviewService(reviewConfig)
+    .getReviewDetail(RUN_ID)
+    .comments.find((row) => row.id === ranged.id);
+  expect(reread).toMatchObject({ side: "new", start_line: 1, line: 3 });
 });
 
 it("captures a suggestion with the exact lines it replaces", async () => {

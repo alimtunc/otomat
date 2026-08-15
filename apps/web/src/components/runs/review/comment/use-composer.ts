@@ -17,11 +17,11 @@ interface CommentRange {
 }
 
 interface CommentComposerValues {
-  range: CommentRange | null;
   mode: CommentComposerMode;
   destination: ReviewCommentDestination;
   body: string;
-  suggestion: string;
+  /** null tracks the range's head lines; a string is the reviewer's own replacement. */
+  suggestion: string | null;
 }
 
 /** What the composer hands back: a comment request minus the anchor its file already fixes. */
@@ -40,9 +40,11 @@ export interface CommentComposerOptions {
 
 const WHOLE_FILE_REFUSAL = "A suggestion replaces lines, so a whole-file note cannot carry one.";
 
-/** Owns what the reviewer is composing; the anchor it was opened on seeds it and never fights it afterwards. */
+/** Owns what the reviewer is composing; the range stays the gutter's, so both always read the same lines. */
 export function useCommentComposer(options: CommentComposerOptions) {
   const { patch, side, prReview, preferredDestination } = options;
+  const range: CommentRange | null =
+    options.line === null ? null : { start: options.fromLine ?? options.line, end: options.line };
 
   const patchRange = (range: CommentRange): PatchRange => ({
     side,
@@ -56,30 +58,27 @@ export function useCommentComposer(options: CommentComposerOptions) {
   const reachable = (destination: ReviewCommentDestination): ReviewCommentDestination =>
     destination === "pr_review" && !prReview.available ? "agent" : destination;
 
+  const prefill = headLines(range);
+
   const compose = (values: CommentComposerValues): ComposedComment => {
+    const replacement = values.suggestion ?? prefill;
     const suggesting =
-      values.mode === "suggest" &&
-      refusal(values.range) === null &&
-      values.suggestion !== headLines(values.range);
-    const range = values.range;
+      values.mode === "suggest" && refusal(range) === null && replacement !== prefill;
     return {
       side,
       start_line: range === null || range.start === range.end ? null : range.start,
       line: range?.end ?? null,
       body: values.body,
       destination: reachable(values.destination),
-      suggestion: suggesting ? values.suggestion : null,
+      suggestion: suggesting ? replacement : null,
     };
   };
 
-  const anchor =
-    options.line === null ? null : { start: options.fromLine ?? options.line, end: options.line };
   const defaultValues: CommentComposerValues = {
-    range: anchor,
     mode: "comment",
     destination: reachable(preferredDestination),
     body: "",
-    suggestion: headLines(anchor),
+    suggestion: null,
   };
 
   const form = useForm({
@@ -100,18 +99,10 @@ export function useCommentComposer(options: CommentComposerOptions) {
 
   return {
     form,
-    range: values.range,
+    range,
     mode: values.mode,
-    moveEdge: (edge: "start" | "end", by: 1 | -1): void => {
-      const current = form.getFieldValue("range");
-      if (current === null) return;
-      const next = { ...current, [edge]: current[edge] + by };
-      if (next.start < 1 || next.start > next.end) return;
-      const prefilled = form.getFieldValue("suggestion") === headLines(current);
-      form.setFieldValue("range", next);
-      if (prefilled) form.setFieldValue("suggestion", headLines(next));
-    },
-    suggestionBlocked: refusal(values.range),
+    suggestionPrefill: prefill,
+    suggestionBlocked: refusal(range),
     destination: request.destination,
     /** True when the preferred destination is unavailable and Agent stands in for it. */
     destinationFellBack: reachable(preferredDestination) !== preferredDestination,
