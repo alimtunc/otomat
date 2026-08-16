@@ -13,6 +13,7 @@ import type { ExecutionHostSync } from "#shared/execution-host-sync";
 
 import type { HostCapacityActions } from "./host/capacity.js";
 import { listRemoteRepositories } from "./host/repos.js";
+import { executionHostSnapshot } from "./host/snapshot.js";
 import type { RemoteInstanceActions } from "./instances/actions.js";
 import type { ExecutionHostManager } from "./manager.js";
 
@@ -53,20 +54,16 @@ export function buildExecutionHostActions(
       if (hosts === null) return { id: "local", ssh_alias: null };
       return { id: hosts.activeHostId, ssh_alias: hosts.remoteSshAlias };
     },
-    snapshot: () => {
-      const hosts = manager();
-      if (hosts === null) {
-        return {
-          hosts: [{ id: "local", label: "Local", kind: "local" }],
-          active_id: "local",
-          remote_ssh_alias: null,
-          remote_status: null,
-          remote_build: null,
-          expected_build: null,
-        };
-      }
-      return hosts.snapshot();
-    },
+    snapshot: () =>
+      manager()?.snapshot() ??
+      executionHostSnapshot({
+        activeId: "local",
+        alias: null,
+        status: null,
+        remoteBuild: null,
+        expectedBuild: null,
+        updateError: null,
+      }),
     select: async (id: unknown) => {
       const hosts = manager();
       if (hosts === null) return NOT_READY;
@@ -88,7 +85,7 @@ export function buildExecutionHostActions(
       if (hosts === null) return { ok: false, message: NOT_READY_MESSAGE };
       if (!isExecutionHostId(hostId)) return { ok: false, message: "Unknown execution host." };
       if (typeof path !== "string") return { ok: false, message: "Enter a repository path." };
-      return hosts.registerProject(hostId, path);
+      return hosts.catalog.registerProject(hostId, path);
     },
     readCapacity: async (hostId: unknown) => {
       const actions = capacity();
@@ -115,10 +112,10 @@ export function buildExecutionHostActions(
       if (hosts === null) return { ok: false, message: NOT_READY_MESSAGE };
       return listRemoteRepositories(hosts.remoteSshAlias);
     },
-    listProjects: async () => manager()?.listProjects() ?? [],
+    listProjects: async () => manager()?.catalog.listProjects() ?? [],
     listInstances: async () => instances()?.list() ?? { ok: false, message: NOT_READY_MESSAGE },
     stopInstance: async (build: unknown) => instances()?.stop(build) ?? NOT_READY,
     deleteInstance: async (build: unknown) => instances()?.remove(build) ?? NOT_READY,
-    updateRemoteDaemon: async () => instances()?.updateDaemon() ?? NOT_READY,
+    updateRemoteDaemon: async () => manager()?.updateDaemon() ?? NOT_READY,
   };
 }

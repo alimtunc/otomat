@@ -90,6 +90,7 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     applyRendererUrl: options.applyRendererUrl,
     expectedBuild: options.expectedBuild,
     deployment,
+    repo: OTOMAT_GITHUB_REPO,
   });
   const linear = new LinearCoordinator({
     vault: createMainLinearVault(dataDirectory.root),
@@ -99,13 +100,10 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
   const instances = new RemoteInstanceActions({
     alias: () => hosts.remoteSshAlias,
     deployment,
-    expectedBuild: options.expectedBuild,
-    repo: OTOMAT_GITHUB_REPO,
-    session: () => hosts.remoteSession,
     log: (message) => desktopLog.write(message),
   });
   const capacity = new HostCapacityActions({
-    daemonUrl: (hostId) => hosts.daemonUrl(hostId),
+    daemonUrl: (hostId) => hosts.catalog.resolveBaseUrl(hostId),
     log: (message) => desktopLog.write(message),
   });
   return {

@@ -1,8 +1,7 @@
 import type { ExecutionHostDescriptor, RemoteHostStatus } from "@otomat/domain";
 import { Badge, Icon } from "@otomat/ui";
+import { describeRemoteStatus } from "@web/components/shell/remote-session/status-labels";
 import type { ReactNode } from "react";
-
-import { describeRemoteStatus } from "./status-labels";
 
 const STATUS_TONES: Partial<Record<RemoteHostStatus["phase"], string>> = {
   connected: "text-text-secondary",

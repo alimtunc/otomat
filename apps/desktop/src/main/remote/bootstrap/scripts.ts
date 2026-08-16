@@ -14,6 +14,9 @@ export const STABLE_DEPLOYMENT: RemoteDeployment = { homeSuffix: ".otomat", port
 /** The local channel's own daemon: one deployment for every ad-hoc package, never the stable one. */
 export const LOCAL_DEPLOYMENT: RemoteDeployment = { homeSuffix: ".otomat/local", port: 4320 };
 
+/** What may name a build in host-side paths and scripts: exactly the CI's 7-hex short sha. */
+export const BUILD_SHA = /^[0-9a-f]{7}$/;
+
 const INSTANCE_PORT_BASE = 43100;
 const INSTANCE_PORT_SPAN = 900;
 
@@ -24,7 +27,7 @@ const INSTANCE_PORT_SPAN = 900;
  * rather than ever falling back to the stable deployment.
  */
 export function instanceDeployment(build: string | null): RemoteDeployment {
-  const key = build !== null && /^[0-9a-f]{7}$/.test(build) ? build : "unknown";
+  const key = build !== null && BUILD_SHA.test(build) ? build : "unknown";
   let hash = 0;
   for (const char of key) hash = (hash * 31 + (char.codePointAt(0) ?? 0)) % INSTANCE_PORT_SPAN;
   return { homeSuffix: `.otomat/instances/${key}`, port: INSTANCE_PORT_BASE + hash };

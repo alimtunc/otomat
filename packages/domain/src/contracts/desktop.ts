@@ -135,7 +135,7 @@ export interface OtomatDesktopBridge {
     listInstances(): Promise<RemoteInstanceListResult>;
     stopInstance(build: string): Promise<ExecutionHostOperationResult>;
     deleteInstance(build: string): Promise<ExecutionHostOperationResult>;
-    /** Deploys the CI bundle for this app's expected build to its own remote target; nothing starts automatically. */
+    /** Retries the automatic daemon update now: the same install the host runs by itself, minus its one-attempt memory. */
     updateRemoteDaemon(): Promise<ExecutionHostOperationResult>;
   };
   linear: {

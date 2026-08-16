@@ -1,4 +1,23 @@
-import type { OtomatDesktopBridge } from "@otomat/domain";
+import type { ExecutionHostSnapshot, OtomatDesktopBridge } from "@otomat/domain";
+
+/** Snapshot with the remote host `otomat-vps` configured; override only what the test exercises. */
+export function twoHostSnapshot(
+  overrides: Partial<ExecutionHostSnapshot> = {},
+): ExecutionHostSnapshot {
+  return {
+    hosts: [
+      { id: "local", label: "Local", kind: "local" },
+      { id: "remote", label: "otomat-vps", kind: "ssh" },
+    ],
+    active_id: "local",
+    remote_ssh_alias: "otomat-vps",
+    remote_status: null,
+    remote_build: null,
+    expected_build: null,
+    remote_update_error: null,
+    ...overrides,
+  };
+}
 
 /** Complete desktop bridge double; override only what the test exercises. */
 export function fakeDesktopBridge(
@@ -19,6 +38,7 @@ export function fakeDesktopBridge(
           remote_status: null,
           remote_build: null,
           expected_build: null,
+          remote_update_error: null,
         }),
       select: () => Promise.resolve({ ok: true as const }),
       configureRemote: () => Promise.resolve({ ok: true as const }),

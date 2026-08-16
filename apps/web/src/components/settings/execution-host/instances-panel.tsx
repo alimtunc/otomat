@@ -1,4 +1,3 @@
-import { Button } from "@otomat/ui";
 import type { ReactNode } from "react";
 
 import { InstanceRow } from "./instance-row";
@@ -6,14 +5,11 @@ import { useRemoteInstances } from "./use-remote-instances";
 
 export interface InstancesPanelProps {
   sshAlias: string | null;
-  expectedBuild: string | null;
-  remoteBuild: string | null;
 }
 
-export function InstancesPanel({ sshAlias, expectedBuild, remoteBuild }: InstancesPanelProps) {
+export function InstancesPanel({ sshAlias }: InstancesPanelProps) {
   const state = useRemoteInstances(sshAlias);
   if (!state.available) return null;
-  const stale = expectedBuild !== null && remoteBuild !== null && expectedBuild !== remoteBuild;
 
   let list: ReactNode;
   if (state.listError !== null) {
@@ -42,13 +38,6 @@ export function InstancesPanel({ sshAlias, expectedBuild, remoteBuild }: Instanc
     );
   }
 
-  let deployHint = "Downloads the CI bundle on the host; nothing starts automatically.";
-  if (expectedBuild === null) {
-    deployHint = "This build cannot name its own commit.";
-  } else if (stale) {
-    deployHint = `The host runs ${remoteBuild ?? "an unknown build"}; after the deploy it restarts by itself once idle.`;
-  }
-
   return (
     <div className="flex flex-col gap-3">
       <div>
@@ -60,18 +49,6 @@ export function InstancesPanel({ sshAlias, expectedBuild, remoteBuild }: Instanc
         </p>
       </div>
       {list}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="outline"
-          onClick={state.updateDaemon}
-          disabled={state.pending !== null || expectedBuild === null}
-        >
-          {state.pending === "update"
-            ? "Deploying…"
-            : `Deploy ${expectedBuild ?? "this build"} to this host`}
-        </Button>
-        <span className="text-xs text-text-tertiary">{deployHint}</span>
-      </div>
       {state.actionError !== null ? (
         <p role="alert" className="text-xs text-danger">
           {state.actionError}

@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import type { UseQueryResult } from "@tanstack/react-query";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
+import { LOCAL_SESSION, RemoteSessionContext } from "@web/components/shell/remote-session/context";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
@@ -77,6 +78,24 @@ it("blocks retained data with the error slot when stale data is opted out", asyn
   const container = await render(fakeQuery({ data: "issue-42", isError: true }), "block");
   expect(container.textContent).toContain("error-slot");
   expect(container.textContent).not.toContain("issue-42");
+});
+
+it("stays pending while the execution host is still settling", async () => {
+  const mounted = await mount(
+    <RemoteSessionContext.Provider value={{ ...LOCAL_SESSION, settling: true }}>
+      <QueryBoundary
+        query={fakeQuery({ isError: true })}
+        pending={<p>pending-slot</p>}
+        error={<p>error-slot</p>}
+      >
+        {(data) => <p>{data}</p>}
+      </QueryBoundary>
+    </RemoteSessionContext.Provider>,
+  );
+  cleanups.push(mounted.cleanup);
+
+  expect(mounted.container.textContent).toContain("pending-slot");
+  expect(mounted.container.textContent).not.toContain("error-slot");
 });
 
 it("renders data with no notice while the query is healthy", async () => {

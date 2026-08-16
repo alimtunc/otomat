@@ -1,5 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
 import { RefreshCw } from "lucide-react";
+import type { ReactNode } from "react";
 
 import type { ConnectionState } from "../lib/connection-state";
 import { cn } from "../lib/utils";
@@ -12,6 +13,8 @@ export interface ConnectionStatusIndicatorProps {
   state: ConnectionState;
   lastSyncAt?: Date | number | null;
   onRetry?: () => void;
+  /** What this connection means for work already running; shown in the popover, never as a dialog. */
+  note?: ReactNode;
   variant?: "dot" | "dot+label";
   className?: string;
 }
@@ -25,6 +28,7 @@ export function ConnectionStatusIndicator({
   state,
   lastSyncAt,
   onRetry,
+  note,
   variant = "dot+label",
   className,
 }: ConnectionStatusIndicatorProps) {
@@ -63,6 +67,7 @@ export function ConnectionStatusIndicator({
           <dt>Last sync</dt>
           <dd className="text-foreground">{formatLastSync(lastSyncAt)}</dd>
         </dl>
+        {note === undefined ? null : <p className="mt-2 text-xs text-text-secondary">{note}</p>}
         {onRetry ? (
           <Button
             type="button"

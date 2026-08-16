@@ -9,9 +9,11 @@ function hosts(
 ): LinearHostSource {
   return {
     remoteSshAlias,
-    daemonUrl: (hostId) => {
-      const url = urls[hostId];
-      return url === undefined ? { message: `${hostId} is not connected yet.` } : { url };
+    catalog: {
+      resolveBaseUrl: (hostId) => {
+        const url = urls[hostId];
+        return url === undefined ? { message: `${hostId} is not connected yet.` } : { url };
+      },
     },
   };
 }

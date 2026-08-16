@@ -1,6 +1,8 @@
 import { useDaemonStatus, useHealth } from "@web/api/daemon/queries";
 import { useProjectRuns } from "@web/api/runs/queries";
 import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
+import { useRemoteSession } from "@web/components/shell/remote-session/context";
+import { remoteStatusHeadline } from "@web/components/shell/remote-session/status-labels";
 import { isReviewable, isRunning } from "@web/lib/run/filters";
 
 export function useShellData() {
@@ -8,9 +10,16 @@ export function useShellData() {
   const health = useHealth();
   const switcher = useProjectSwitcher();
   const runs = useProjectRuns(switcher.currentProjectId);
+  const remote = useRemoteSession();
 
   return {
-    connectionState,
+    // A host still working its journey through is progress, not a dead daemon: the poll fails
+    // throughout a 20–30s bootstrap and an update restarts the daemon on purpose.
+    connectionState: remote.settling ? ("reconnecting" as const) : connectionState,
+    connectionLabel:
+      remote.settling && remote.status !== null
+        ? remoteStatusHeadline(remote.status, remote.alias)
+        : undefined,
     lastSyncAt,
     retry,
     daemonVersion: health.data?.version,

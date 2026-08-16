@@ -1,7 +1,9 @@
 import { Button, EmptyState, Field, FieldControl, FieldLabel, Input, Skeleton } from "@otomat/ui";
 import { SectionHeading } from "@web/components/settings/section-heading";
+import { useRemoteSession } from "@web/components/shell/remote-session/context";
 import { useState, type ReactNode } from "react";
 
+import { DaemonUpdatePanel } from "./daemon-update-panel";
 import { HostCapacityField } from "./host-capacity-field";
 import { HostRow } from "./host-row";
 import { InstancesPanel } from "./instances-panel";
@@ -11,6 +13,7 @@ const ALIAS_DATALIST_ID = "execution-host-ssh-aliases";
 
 export function ExecutionHostSection() {
   const host = useExecutionHost();
+  const remote = useRemoteSession();
   const [aliasDraft, setAliasDraft] = useState<string | null>(null);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
 
@@ -103,7 +106,7 @@ export function ExecutionHostSection() {
                   <HostRow
                     host={entry}
                     active={snapshot.active_id === entry.id}
-                    status={host.remoteStatus}
+                    status={remote.status}
                     action={action}
                   />
                   <div className="pr-4 pb-4 pl-11">
@@ -120,16 +123,7 @@ export function ExecutionHostSection() {
               under ~/.otomat there, and adding the alias again brings them back.
             </p>
           ) : null}
-          {snapshot.remote_build !== null &&
-          snapshot.expected_build !== null &&
-          snapshot.remote_build !== snapshot.expected_build ? (
-            <p role="alert" className="text-xs text-warning">
-              The remote daemon runs build {snapshot.remote_build} but this app expects{" "}
-              {snapshot.expected_build}. Otomat restarts it automatically once it has no active
-              runs; if this warning persists, the deployed files are still the old build — use the
-              deploy button below, or redeploy on the host from a checkout.
-            </p>
-          ) : null}
+          <DaemonUpdatePanel />
           <form
             className="flex flex-col gap-2 rounded-lg border border-border-subtle bg-card p-4"
             onSubmit={(event) => {
@@ -181,11 +175,7 @@ export function ExecutionHostSection() {
               {host.actionError}
             </p>
           )}
-          <InstancesPanel
-            sshAlias={snapshot.remote_ssh_alias}
-            expectedBuild={snapshot.expected_build}
-            remoteBuild={snapshot.remote_build}
-          />
+          <InstancesPanel sshAlias={snapshot.remote_ssh_alias} />
         </div>
       )}
     </div>

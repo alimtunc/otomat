@@ -4,7 +4,7 @@ import { LaunchTargetGate } from "@web/components/runs/launch/launch-target-gate
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { fakeDesktopBridge } from "#support/desktop-bridge";
+import { fakeDesktopBridge, twoHostSnapshot } from "#support/desktop-bridge";
 import {
   repositoriesQueryResult,
   repository,
@@ -156,19 +156,19 @@ it("surfaces a retryable error instead of silently allowing a launch", async () 
 });
 
 it("pauses new launches while the active daemon waits for its update", async () => {
-  const bridge = fakeDesktopBridge({ executionHostId: "remote", executionHostSshAlias: "vps" });
+  const bridge = fakeDesktopBridge({
+    executionHostId: "remote",
+    executionHostSshAlias: "otomat-vps",
+  });
   bridge.executionHost.snapshot = () =>
-    Promise.resolve({
-      hosts: [
-        { id: "local" as const, label: "Local", kind: "local" as const },
-        { id: "remote" as const, label: "vps", kind: "ssh" as const },
-      ],
-      active_id: "remote" as const,
-      remote_ssh_alias: "vps",
-      remote_status: { phase: "connected" as const, detail: null },
-      remote_build: "old0000",
-      expected_build: "new1111",
-    });
+    Promise.resolve(
+      twoHostSnapshot({
+        active_id: "remote",
+        remote_status: { phase: "connected", detail: null },
+        remote_build: "old0000",
+        expected_build: "new1111",
+      }),
+    );
   window.otomat = bridge;
   try {
     await renderGate("p1", ISSUE);

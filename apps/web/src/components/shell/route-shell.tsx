@@ -18,6 +18,7 @@ import type { ShellSection } from "@web/components/shell/nav-items";
 import { NewIssueContext } from "@web/components/shell/new-issue-context";
 import { usePaletteGroups } from "@web/components/shell/palette/use-groups";
 import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
+import { useRemoteSession } from "@web/components/shell/remote-session/context";
 import { Sidebar } from "@web/components/shell/sidebar";
 import type { BackNavigation } from "@web/components/shell/use-back-navigation";
 import { useNewIssueShortcut } from "@web/components/shell/use-new-issue-shortcut";
@@ -49,6 +50,7 @@ export function RouteShell({
 }: RouteShellProps) {
   const { density } = useTheme();
   const shell = useShellData();
+  const remote = useRemoteSession();
   const palette = useCommandPalette();
   const [newIssueOpen, setNewIssueOpen] = useState(false);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
@@ -67,6 +69,11 @@ export function RouteShell({
           state={shell.connectionState}
           lastSyncAt={shell.lastSyncAt}
           onRetry={shell.retry}
+          note={
+            remote.active && remote.alias !== null
+              ? `Runs execute on ${remote.alias}. Closing Otomat leaves them running there, and a daemon update waits for them to finish.`
+              : undefined
+          }
         />
       }
     />
@@ -78,6 +85,7 @@ export function RouteShell({
     <AppShell
       density={density}
       connectionState={shell.connectionState}
+      {...(shell.connectionLabel === undefined ? {} : { connectionLabel: shell.connectionLabel })}
       sidebar={
         <Sidebar
           active={active}

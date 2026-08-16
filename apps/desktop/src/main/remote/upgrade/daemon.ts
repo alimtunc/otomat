@@ -1,9 +1,10 @@
-import type { ExecutionHostOperationResult } from "@otomat/domain";
-
-import { stopDaemonScript, type RemoteDeployment } from "../bootstrap/scripts.js";
+import {
+  keepsDataAcrossBuilds,
+  stopDaemonScript,
+  type RemoteDeployment,
+} from "../bootstrap/scripts.js";
 import { scriptFailure, trimDetail } from "../bootstrap/status.js";
 import { deployBundle } from "../deploy.js";
-import { remoteIsIdle } from "../idle.js";
 import type { RemoteSessionHandle } from "../session.js";
 import type { runSshScript } from "../ssh/script.js";
 import {
@@ -17,6 +18,9 @@ import {
 
 const SCRIPT_TIMEOUT_MS = 60_000;
 
+/** An update either happened or explains itself in a sentence; a connection status never answers here. */
+export type RemoteUpdateResult = { ok: true } | { ok: false; message: string };
+
 export interface RemoteDaemonUpgradeOptions {
   alias: string;
   /** The deployment this app targets; its data root is kept, only the daemon bundle changes. */
@@ -27,34 +31,27 @@ export interface RemoteDaemonUpgradeOptions {
   repo: string;
   session: RemoteSessionHandle;
   runScript: typeof runSshScript;
-  fetchImpl: typeof fetch;
+  /** Announced once the bundle is in place and the daemon is being restarted onto it. */
+  onVerifying(): void;
   log(message: string): void;
 }
 
 /**
- * Upgrades the daemon of a deployment whose database has to survive the upgrade — the ones
- * `keepsDataAcrossBuilds` names: idle check, stop, durable database backup, atomic bundle swap,
- * restart, and a health response that names the expected build before it counts as done. The new
- * daemon migrates the database it finds at boot under the usual data-safety policy (pre-migration
- * backup, refusal rather than a partial schema), so a migration that fails shows up here as a
- * daemon that never answers — and takes the same rollback as any other failure to boot.
+ * Installs one CI build into the deployment this app targets: stop, database backup where the data
+ * outlives the bundle, atomic swap, restart, and a health response that names the expected build
+ * before it counts as done. The new daemon migrates the database it finds at boot under the usual
+ * data-safety policy (pre-migration backup, refusal rather than a partial schema), so a migration
+ * that fails shows up here as a daemon that never answers — and takes the same rollback as any
+ * other failure to boot.
  *
- * Every failure leaves a running daemon and names the backup: the previous bundle goes back and the
- * session reconnects to it.
+ * The caller owns the idle gate: this stops whatever is running, so it must already know no run is
+ * in flight. Every failure leaves a running daemon and names the backup it took.
  */
 export async function upgradeRemoteDaemon(
   options: RemoteDaemonUpgradeOptions,
-): Promise<ExecutionHostOperationResult> {
-  const url = options.session.url;
-  if (options.session.status.phase !== "connected" || url === null) {
+): Promise<RemoteUpdateResult> {
+  if (options.session.status.phase !== "connected" || options.session.url === null) {
     return firstInstall(options);
-  }
-  if (!(await remoteIsIdle({ baseUrl: url, fetchImpl: options.fetchImpl, log: options.log }))) {
-    return {
-      ok: false,
-      message:
-        "The remote daemon is busy or did not answer. Wait for its runs to settle, then update again.",
-    };
   }
   try {
     return await swapBundle(options);
@@ -72,9 +69,7 @@ export async function upgradeRemoteDaemon(
  * mid-write: its first install is the same plain deploy a preview instance gets. Anything else —
  * including a host that cannot say — needs a live daemon before it may be touched.
  */
-async function firstInstall(
-  options: RemoteDaemonUpgradeOptions,
-): Promise<ExecutionHostOperationResult> {
+async function firstInstall(options: RemoteDaemonUpgradeOptions): Promise<RemoteUpdateResult> {
   try {
     const probe = await options.runScript({
       alias: options.alias,
@@ -99,27 +94,29 @@ async function firstInstall(
 }
 
 /** Runs from a stopped daemon onwards; every exit path restarts one. */
-async function swapBundle(
-  options: RemoteDaemonUpgradeOptions,
-): Promise<ExecutionHostOperationResult> {
+async function swapBundle(options: RemoteDaemonUpgradeOptions): Promise<RemoteUpdateResult> {
+  const keepsData = keepsDataAcrossBuilds(options.deployment);
+  const stop = stopDaemonScript(options.deployment);
   const stopped = await options.runScript({
     alias: options.alias,
-    script: `${stopDaemonScript(options.deployment)}${backupDatabaseScript(options.deployment)}`,
+    script: keepsData ? `${stop}${backupDatabaseScript(options.deployment)}` : stop,
     timeoutMs: SCRIPT_TIMEOUT_MS,
   });
   if (stopped.code !== 0) return restart(options, scriptFailure(stopped));
-  const backup = parseBackupOutput(stopped.stdout);
-  if (backup === null) {
-    return restart(options, "the backup step reported nothing");
+  let backupPath: string | null = null;
+  if (keepsData) {
+    const backup = parseBackupOutput(stopped.stdout);
+    if (backup === null) return restart(options, "the backup step reported nothing");
+    if (backup.kind === "failed") {
+      return restart(options, `the database could not be backed up: ${backup.detail}`);
+    }
+    backupPath = backup.kind === "backed_up" ? backup.path : null;
   }
-  if (backup.kind === "failed") {
-    return restart(options, `the database could not be backed up: ${backup.detail}`);
-  }
-  const backupPath = backup.kind === "backed_up" ? backup.path : null;
 
   const deployed = await deployBundle(options);
   if (!deployed.ok) return restart(options, deployed.reason);
 
+  options.onVerifying();
   const status = await options.session.refreshDaemon();
   if (status.phase !== "connected") {
     return rollBack(options, "the upgraded daemon did not come back up", backupPath);
@@ -140,7 +137,7 @@ async function swapBundle(
 async function restart(
   options: RemoteDaemonUpgradeOptions,
   reason: string,
-): Promise<ExecutionHostOperationResult> {
+): Promise<RemoteUpdateResult> {
   const phase = await reconnect(options);
   return {
     ok: false,
@@ -153,7 +150,7 @@ async function rollBack(
   options: RemoteDaemonUpgradeOptions,
   reason: string,
   backupPath: string | null,
-): Promise<ExecutionHostOperationResult> {
+): Promise<RemoteUpdateResult> {
   options.log(`Rolling the remote daemon back: ${reason}.`);
   const result = await options.runScript({
     alias: options.alias,

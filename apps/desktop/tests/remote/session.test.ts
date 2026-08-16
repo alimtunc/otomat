@@ -139,6 +139,26 @@ it("keeps cycling through reconnecting on background failures until the host rec
   expect(phases(statuses)).toContain("reconnecting");
 });
 
+it("names the failure once its retry schedule runs out, and keeps trying behind it", async () => {
+  const { session, statuses, retries } = harness({
+    runScript: () => Promise.resolve({ code: 255, stdout: "", stderr: "no route to host" }),
+  });
+
+  await session.connect(true);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    expect(session.status.phase).toBe(attempt < 4 ? "reconnecting" : "error");
+    retries[attempt]?.();
+    await vi.waitFor(() => expect(retries).toHaveLength(attempt + 2));
+  }
+
+  expect(session.status).toMatchObject({ phase: "error", code: "ssh_unreachable" });
+  // Progress goes quiet once the cause is named, so the reader is not flickered back to "checking".
+  expect(phases(statuses).lastIndexOf("checking_host")).toBeLessThan(
+    phases(statuses).lastIndexOf("error"),
+  );
+  expect(retries.length).toBeGreaterThan(5);
+});
+
 it("re-enters the reconnect loop on an unexpected tunnel drop, keeping the same local port", async () => {
   const { session, tunnels, retries } = harness();
   await session.connect(false);
