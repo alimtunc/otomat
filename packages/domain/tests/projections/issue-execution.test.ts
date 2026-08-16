@@ -93,16 +93,43 @@ it("keeps a newer active run ahead of an older failure", () => {
   ).toEqual({ state: "running", run_id: "new" });
 });
 
-it("keeps the more specific review and PR states ahead of a failure", () => {
+it("keeps the more specific review and PR states ahead of a failure of the same instant", () => {
   for (const winner of [
-    ev({ run_id: "review", run_status: "review_ready", run_created_at: AT("1") }),
-    ev({ run_id: "pr", run_status: "completed", ...OPEN_PR, run_created_at: AT("1") }),
+    ev({ run_id: "review", run_status: "review_ready" }),
+    ev({ run_id: "pr", run_status: "completed", ...OPEN_PR }),
   ]) {
     const projected = projectIssueExecution([
       winner,
-      ev({ run_id: "stopped", run_status: "failed", run_created_at: AT("3") }),
+      ev({ run_id: "stopped", run_status: "failed" }),
     ]);
     expect(projected.state).not.toBe("failed");
+  }
+});
+
+it("lets a completed last run neutralize the failure its cycle replaced", () => {
+  expect(
+    projectIssueExecution([
+      ev({ run_id: "stopped", run_status: "failed", run_created_at: AT("1") }),
+      ev({ run_id: "merged", run_status: "completed", run_created_at: AT("2") }),
+    ]),
+  ).toEqual({ state: "none", run_id: null });
+});
+
+it("projects the failure of the last run over an older review or PR", () => {
+  for (const older of [
+    ev({ run_id: "review", run_status: "review_ready", run_created_at: AT("1") }),
+    ev({ run_id: "pr", run_status: "completed", ...OPEN_PR, run_created_at: AT("1") }),
+  ]) {
+    expect(
+      projectIssueExecution([
+        older,
+        ev({ run_id: "stopped", run_status: "canceled", run_created_at: AT("2") }),
+      ]),
+    ).toEqual({
+      state: "failed",
+      run_id: "stopped",
+      failure: { reason: "canceled", step: null },
+    });
   }
 });
 
@@ -189,6 +216,34 @@ it("breaks a same-timestamp tie deterministically by run id", () => {
       ev({ run_id: "r-b", run_status: "running", run_created_at: AT("1") }),
     ]),
   ).toEqual({ state: "running", run_id: "r-b" });
+});
+
+it("reads a run with no recorded timestamp as the oldest one", () => {
+  const undated = ev({ run_id: "undated", run_status: "failed", run_created_at: "" });
+  expect(
+    projectIssueExecution([undated, ev({ run_id: "dated", run_status: "completed" })]),
+  ).toEqual({ state: "none", run_id: null });
+  expect(projectIssueExecution([undated])).toEqual({
+    state: "failed",
+    run_id: "undated",
+    failure: { reason: "failed", step: null },
+  });
+});
+
+it("follows a cycle of ordered runs to its last one", () => {
+  const evidence = [
+    ev({ run_id: "first", run_status: "failed", run_created_at: AT("1") }),
+    ev({ run_id: "second", run_status: "completed", run_created_at: AT("2") }),
+    ev({ run_id: "third", run_status: "canceled", run_created_at: AT("3") }),
+    ev({ run_id: "fourth", run_status: "review_ready", run_created_at: AT("4") }),
+  ];
+  expect(projectIssueExecution(evidence)).toEqual({ state: "reviewing", run_id: "fourth" });
+  expect(projectIssueExecution(evidence.slice(0, 3))).toEqual({
+    state: "failed",
+    run_id: "third",
+    failure: { reason: "canceled", step: null },
+  });
+  expect(projectIssueExecution(evidence.slice(0, 2))).toEqual({ state: "none", run_id: null });
 });
 
 it("is order-independent for the same evidence", () => {

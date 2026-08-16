@@ -1,5 +1,4 @@
-import { ISSUE_BOARD_COLUMNS, type IssueContract } from "@otomat/domain";
-import { boardColumnFor } from "@web/lib/issue/board-column";
+import { ISSUE_BOARD_COLUMNS, projectIssueBoardColumn, type IssueContract } from "@otomat/domain";
 
 export const ISSUE_SORT_OPTIONS = [
   { value: "synced", label: "Last synced" },
@@ -23,8 +22,8 @@ function compare(a: IssueContract, b: IssueContract, sort: IssueSort): number {
   if (sort === "priority") return priorityRank(a) - priorityRank(b);
   if (sort === "status") {
     return (
-      ISSUE_BOARD_COLUMNS.indexOf(boardColumnFor(a)) -
-      ISSUE_BOARD_COLUMNS.indexOf(boardColumnFor(b))
+      ISSUE_BOARD_COLUMNS.indexOf(projectIssueBoardColumn(a)) -
+      ISSUE_BOARD_COLUMNS.indexOf(projectIssueBoardColumn(b))
     );
   }
   return a.title.localeCompare(b.title);

@@ -1,7 +1,11 @@
-import { ISSUE_BOARD_COLUMNS, type IssueBoardColumn, type IssueContract } from "@otomat/domain";
+import {
+  ISSUE_BOARD_COLUMNS,
+  projectIssueBoardColumn,
+  type IssueBoardColumn,
+  type IssueContract,
+} from "@otomat/domain";
 import { resolveStatus } from "@otomat/ui";
 import { shortId } from "@web/lib/ids";
-import { boardColumnFor } from "@web/lib/issue/board-column";
 
 export const ISSUE_GROUPING_OPTIONS = [
   { value: "status", label: "Status" },
@@ -35,7 +39,7 @@ interface GroupSeed {
 function statusGroups(issues: IssueContract[]): IssueGroup[] {
   const byStatus = new Map<IssueBoardColumn, IssueContract[]>();
   for (const issue of issues) {
-    const status = boardColumnFor(issue);
+    const status = projectIssueBoardColumn(issue);
     const grouped = byStatus.get(status);
     if (grouped === undefined) byStatus.set(status, [issue]);
     else grouped.push(issue);

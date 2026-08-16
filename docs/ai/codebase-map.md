@@ -431,12 +431,27 @@ its plan left failed.
 `Failed` is then a projected execution state, never a stored issue status:
 `projectIssueExecution` reports it while a run that stopped (`failed`, `canceled`
 or the `awaiting_human` an interruption leaves) still holds the issue's
-workspace, with the reason and the last step that failed or went stale. Active
-work, an open pull request and a run awaiting review all outrank it, so a newer
-run never hides behind an older failure. `ISSUE_BOARD_COLUMNS` is that projection
-plus the source statuses, in board order — `ready` is only ever an issue with no
-open cycle to resume, and the source status keeps being shown next to the column
-it diverges from.
+workspace, with the reason and the last step that failed or went stale.
+
+The projection answers for the issue's **last** run, not for the most specific
+thing any run ever did: rows are elected on `run_created_at`, then on how much
+their state has to say (active work, then an open PR, then a run awaiting review,
+then a stopped cycle), then on `run_id`. A row that classifies to nothing still
+competes, which is what lets a `completed` run neutralize the failures of the
+cycle it replaced; the rank only separates the rows of one run and genuine
+timestamp ties, and the id keeps equal or missing timestamps deterministic.
+Nothing is stored, so a refresh or a daemon restart reclassifies every issue.
+
+`ISSUE_BOARD_COLUMNS` is that projection plus the source statuses, in board
+order, and `projectIssueBoardColumn` is the one place that arbitrates between
+them: a terminal source status (`ISSUE_TERMINAL_STATES` — the issue machine's
+`done` and `canceled`) always keeps its own column, and otherwise execution wins
+it, because `ready` would hide a cycle there is still work to do on. A closed
+issue whose workspace stopped therefore stays in Done while its execution keeps
+saying `failed` on the issue itself. No view recomposes that rule: the boards,
+the lists, the saved views, the issue pills and the runs list all read the domain
+projection, and only the source status a column hides is a display concern
+(`lib/issue/divergent-status.ts`).
 
 ## Reviewing a Diff
 
@@ -616,9 +631,9 @@ not, since the cycle stays resumable. Both filters only hide rows, never touch a
 run, and each reports its own casualties (`visibleRunGroups`): a group emptied by
 the failed filter counts as the runs it lost, not as an issue hidden.
 
-Grouping by status is the board's own column rule (`lib/issue/board-column.ts`),
-so every state gets a group — including `blocked` and `canceled`, which earlier
-board columns dropped, leaving those issues on no board at all.
+Grouping by status is the board's own column rule (`projectIssueBoardColumn`), so
+every state gets a group — including `blocked` and `canceled`, which earlier board
+columns dropped, leaving those issues on no board at all.
 
 Both list tables are TanStack Table instances over one shared feature registry
 (`lib/table.ts`), whose `columnMeta` carries the head and cell classes: a column

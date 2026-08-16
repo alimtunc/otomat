@@ -1,4 +1,4 @@
-import type { IssueContract } from "@otomat/domain";
+import { projectIssueBoardColumn, type IssueContract } from "@otomat/domain";
 import {
   Avatar,
   FOCUS_RING,
@@ -11,14 +11,16 @@ import { Link } from "@tanstack/react-router";
 import { ColorDot } from "@web/components/issues/color-dot";
 import { CardChips } from "@web/components/issues/list/card-chips";
 import { issueShortId } from "@web/lib/ids";
-import { boardColumnFor, divergentSourceStatus } from "@web/lib/issue/board-column";
+import { divergentSourceStatus } from "@web/lib/issue/divergent-status";
 import { failureSummary } from "@web/lib/issue/execution-failure";
 
 export function BoardCard({ issue }: { issue: IssueContract }) {
-  const meta = resolveStatus("issue", boardColumnFor(issue));
+  const column = projectIssueBoardColumn(issue);
+  const meta = resolveStatus("issue", column);
   const StatusIcon = meta.icon;
   const sourceStatus = divergentSourceStatus(issue);
-  const failure = issue.execution.state === "failed" ? issue.execution.failure : null;
+  const failure =
+    column === "failed" && issue.execution.state === "failed" ? issue.execution.failure : null;
   return (
     <li>
       <Link

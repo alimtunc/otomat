@@ -60,6 +60,22 @@ describe("groupIssues", () => {
     expect(groups[1].label).toBe("Failed");
   });
 
+  it("keeps a closed issue in its own group instead of the stopped column", () => {
+    const done = issueContract({
+      id: "d",
+      title: "Shipped",
+      status: "done",
+      execution: {
+        state: "failed",
+        run_id: "r1",
+        failure: { reason: "failed", step: { id: "s1", name: "Reviewer" } },
+      },
+    });
+    expect(groupIssues([done], "status", PROJECT_NAMES).map((group) => group.key)).toEqual([
+      "status:done",
+    ]);
+  });
+
   it("gives blocked and canceled issues a group instead of dropping them off the board", () => {
     const blocked = issueContract({ id: "d", status: "blocked" });
     const canceled = issueContract({ id: "e", status: "canceled" });

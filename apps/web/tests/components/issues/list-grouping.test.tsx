@@ -91,6 +91,35 @@ it("gives the board one column per group and hides a folded column's cards only"
   expect(document.getElementById("board-group-status:backlog")?.children).toHaveLength(1);
 });
 
+it("names the stopped cycle only on the card whose column reports it", async () => {
+  const stopped = {
+    state: "failed",
+    run_id: "r1",
+    failure: { reason: "failed", step: { id: "s1", name: "Reviewer" } },
+  } as const;
+  await render(
+    <IssuesBoard
+      groups={groupIssues(
+        [
+          issueContract({ id: "c", title: "Shipped", status: "done", execution: stopped }),
+          issueContract({ id: "d", title: "Stopped", status: "ready", execution: stopped }),
+        ],
+        "status",
+        new Map(),
+      )}
+      showGroupHeadings
+      collapsed={[]}
+      onToggleGroup={vi.fn()}
+    />,
+  );
+  expect(document.getElementById("board-group-status:failed")?.textContent).toContain(
+    "Failed at Reviewer",
+  );
+  expect(document.getElementById("board-group-status:done")?.textContent).not.toContain(
+    "Failed at Reviewer",
+  );
+});
+
 it("drops the board's headers too when the view groups by nothing", async () => {
   const container = await render(
     <IssuesBoard

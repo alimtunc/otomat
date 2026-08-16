@@ -27,3 +27,13 @@ export const issueMachine = defineMachine<IssueState>({
     canceled: [],
   },
 });
+
+/** The two ends of the machine: the tracker has closed the issue, so no local run speaks for it any more. */
+export const ISSUE_TERMINAL_STATES = ["done", "canceled"] as const satisfies readonly IssueState[];
+export type IssueTerminalState = (typeof ISSUE_TERMINAL_STATES)[number];
+
+const issueTerminalSet: ReadonlySet<string> = new Set(ISSUE_TERMINAL_STATES);
+
+export function isIssueTerminal(status: string): status is IssueTerminalState {
+  return issueTerminalSet.has(status);
+}
