@@ -127,9 +127,9 @@ idle restart above applies unchanged.
 A host reaches `connected` and its build is checked in the same state machine, because installing a
 daemon stops and restarts the tunnel: split in two, a normal upgrade would read as a lost host.
 `RemoteHostStatus` is that machine — `checking_host → starting_daemon → opening_tunnel`, then
-`checking_version → waiting_for_runs → installing_update → verifying_update`, then `connected` —
-and `ExecutionHostManager.remoteStatus` composes it from one place: the update owns the status while
-it runs, the session speaks for itself otherwise.
+`checking_version → waiting_for_runs → waiting_for_artifact → installing_update → verifying_update`,
+then `connected` — and `ExecutionHostManager.remoteStatus` composes it from one place: the update
+owns the status while it runs, the session speaks for itself otherwise.
 
 `upgrade/coordinator.ts` drives the daemon half from **every** `connected` transition, so a client
 closed mid-wait picks the journey back up on its next launch, and nothing has to be scheduled:
@@ -140,12 +140,27 @@ closed mid-wait picks the journey back up on its next launch, and nothing has to
    re-checking every 15s. Busy, refusing, unreadable and unreachable all count as "not idle" — an
    absent answer is never taken for an empty one. Meanwhile the cockpit refuses new launches, so the
    queue drains instead of postponing the update forever. No run is ever interrupted.
-3. **Install** through `upgrade/daemon.ts` (below), which is also what the manual command runs.
-4. **Fail once, loudly.** A failed install keeps its exact reason against the build that stayed
-   running, and is never retried automatically for that build: retrying a missing artifact on a
-   timer would only hide it. The reason rides on the host snapshot as `remote_update_error`, and
-   *Settings → Execution hosts* shows it with an **Install &lt;build&gt; now** button — the retry for
-   a cause the user has fixed (a re-run CI job, an authenticated `gh`), not the nominal path.
+3. **Wait for the bundle** through `upgrade/artifact.ts`, a read-only `gh` round trip made *before*
+   anything is stopped: the artifact by name — skipping the expired entries the listing keeps
+   returning after their content is gone — and when it is not there yet, the run of the workflow
+   that publishes it (`ci.yml`, `event=push`; a tag release or a PR run must never answer for a
+   bundle they do not build) whose `head_sha` starts with that sha7, since the API's own filter
+   needs the full sha this app cannot name. A run queued, in flight, or green but still uploading is
+   `waiting_for_artifact` — progress, not a failure — re-checked on `artifact-wait.ts`'s bounded
+   backoff (10s→90s, ~2 min for a run that never appears or a bundle that never lands, ~17 min for
+   CI itself, and 24 checks — ~32 min — per build, so no sequence of reasons can wait on forever). A
+   probe the host could not answer at all is held the same way for three checks: one ssh or `gh`
+   blip must not cost the no-click install. Each re-check re-drives the whole journey, so a run
+   started meanwhile blocks the install again. Merging and opening the client before CI ends is the
+   nominal path, and it installs itself with no click.
+4. **Install** through `upgrade/daemon.ts` (below), which is also what the manual command runs.
+5. **Fail once, loudly.** A workflow that failed or was cancelled, a run that never appeared, a
+   green run that published no bundle, a host that stayed unable to ask, an unusable `gh` — each
+   ends the journey with its own sentence against the build that stayed running, and is never
+   retried automatically for that build. The reason rides on the host snapshot as
+   `remote_update_error`, and *Settings → Execution hosts* shows it with an **Install
+   &lt;build&gt; now** button — the retry for a cause the user has fixed (a re-run CI job, an
+   authenticated `gh`), not the nominal path.
 
 `remote/upgrade/daemon.ts` is the one install protocol, for every deployment, and refuses the moment
 a step is not certain. Its caller owns the idle gate: it stops whatever is running.
@@ -179,11 +194,11 @@ the phases) is the single predicate: while it holds, the cockpit keeps the cache
 shell shows a compact progress line — *Connecting to otomat-vps…*, *Checking the daemon version…*,
 *Installing the daemon update…*, *Restarting and verifying the daemon…* — instead of `Offline`.
 
-`waiting_for_runs` is the one journey phase the predicate leaves out, because it is the one where
-nothing is coming up: the tunnel serves the cockpit throughout it, and it lasts as long as the runs
-do. Holding every query on its pending slot for that long would hide real failures, so the wait is
-reported where it is actionable instead — *Update waiting on 2 runs…* in the update panel, and the
-paused-launch panel.
+The two waits are the journey phases the predicate leaves out, because they are the ones where
+nothing is coming up: the tunnel serves the cockpit throughout them, and they last as long as the
+runs — or CI — do. Holding every query on its pending slot for that long would hide real failures,
+so a wait is reported where it is actionable instead — *Update waiting on 2 runs…* and *Waiting for
+the CI artifact… — its CI run is still running* in the update panel, plus the paused-launch panel.
 
 A real offline state is only reached after a terminal failure. The session's reconnect loop keeps
 running past its schedule, but once the schedule is exhausted (1s→15s, five attempts) it reports the
@@ -267,29 +282,31 @@ copied or merged, and a run always executes on the host owning its project.
 
 Everything lives in `apps/desktop/src/main/remote/`:
 
-| Module                   | Owns                                                                |
-| ------------------------ | ------------------------------------------------------------------- |
-| `host/config.ts`         | `execution-hosts.json` (alias + active selection), atomic writes     |
-| `ssh/config-aliases.ts`  | concrete `Host` alias suggestions from `~/.ssh/config`               |
-| `ssh/script.ts`          | one-shot remote scripts over `ssh <alias> bash -ls` (script on stdin)|
-| `bootstrap/scripts.ts`   | the start-or-verify and stop scripts, `deploymentForChannel` (which home + port a channel drives) and `keepsDataAcrossBuilds` (which of them an update must protect) |
-| `idle.ts`                | the one read of the runs in flight every stop goes through; an unreadable answer is never zero |
-| `deploy.ts`              | the one CI-bundle install both the preview deploy and the in-place upgrade run; starts nothing |
-| `bootstrap/status.ts`    | resolving one start-or-verify round trip into a typed failure or the running-daemon detail |
-| `ssh/tunnel.ts`          | the `ssh -N -L` child (loopback→loopback, `ExitOnForwardFailure`)    |
-| `session.ts`             | the transport half of the phase machine: checking_host → starting_daemon → opening_tunnel → connected |
-| `reconnect.ts`           | the capped backoff, and the attempt at which a retrying session names its failure instead |
-| `host/projects.ts`       | `HostCatalog`: aggregated per-host catalog listing + project registration over the host daemon's HTTP API; an unreachable host yields null, logged |
-| `host/alias.ts`          | ssh alias validation (one concrete word, never a leading `-`) and the alias listing that degrades to empty when `~/.ssh/config` cannot be read |
-| `host/repos.ts`          | the bounded `$HOME` git-repository walk behind the remote picker; a listing counts only with its END token |
-| `manager.ts`             | persisted selection, project-driven switching, boot re-activation, host configure/remove, and the one composition of session + update into the host's status |
-| `host/snapshot.ts`       | the host list and remote standing every surface reads, including the not-ready shell's |
-| `upgrade/coordinator.ts` | the update half of the journey: version check, idle wait with its run count, install, one automatic attempt per stale build |
-| `instances/scripts.ts`   | deploy/list/delete scripts for `~/.otomat/instances`; a listing counts only with its END token |
-| `instances/actions.ts`   | one-shot list/stop/delete actions; keys regex-validated before any interpolation, never on a timer |
-| `upgrade/scripts.ts`     | the pre-upgrade database backup and the bundle rollback, with their parsers |
-| `upgrade/daemon.ts`      | the one install protocol — stop, backup where the data outlives the bundle, swap, restart, verify, roll back |
-| `ipc-actions.ts`         | renderer-facing IPC actions with honest not-ready fallbacks          |
+| Module                     | Owns                                                                |
+| -------------------------- | ------------------------------------------------------------------- |
+| `host/config.ts`           | `execution-hosts.json` (alias + active selection), atomic writes     |
+| `ssh/config-aliases.ts`    | concrete `Host` alias suggestions from `~/.ssh/config`               |
+| `ssh/script.ts`            | one-shot remote scripts over `ssh <alias> bash -ls` (script on stdin)|
+| `bootstrap/scripts.ts`     | the start-or-verify and stop scripts, `deploymentForChannel` (which home + port a channel drives) and `keepsDataAcrossBuilds` (which of them an update must protect) |
+| `idle.ts`                  | the one read of the runs in flight every stop goes through; an unreadable answer is never zero |
+| `deploy.ts`                | the one CI-bundle install both the preview deploy and the in-place upgrade run; starts nothing |
+| `bootstrap/status.ts`      | resolving one start-or-verify round trip into a typed failure or the running-daemon detail |
+| `ssh/tunnel.ts`            | the `ssh -N -L` child (loopback→loopback, `ExitOnForwardFailure`)    |
+| `session.ts`               | the transport half of the phase machine: checking_host → starting_daemon → opening_tunnel → connected |
+| `reconnect.ts`             | the capped backoff, and the attempt at which a retrying session names its failure instead |
+| `host/projects.ts`         | `HostCatalog`: aggregated per-host catalog listing + project registration over the host daemon's HTTP API; an unreachable host yields null, logged |
+| `host/alias.ts`            | ssh alias validation (one concrete word, never a leading `-`) and the alias listing that degrades to empty when `~/.ssh/config` cannot be read |
+| `host/repos.ts`            | the bounded `$HOME` git-repository walk behind the remote picker; a listing counts only with its END token |
+| `manager.ts`               | persisted selection, project-driven switching, boot re-activation, host configure/remove, and the one composition of session + update into the host's status |
+| `host/snapshot.ts`         | the host list and remote standing every surface reads, including the not-ready shell's |
+| `upgrade/coordinator.ts`   | the update half of the journey: version check, idle wait with its run count, artifact wait, install, one automatic attempt per stale build once something has gone wrong |
+| `upgrade/artifact.ts`      | the read-only probe that tells a bundle CI has not published *yet* from one that will never come, and the wording of both |
+| `upgrade/artifact-wait.ts` | the bounded backoff behind that wait: a window per reason, a ceiling per build, then a terminal answer |
+| `instances/scripts.ts`     | deploy/list/delete scripts for `~/.otomat/instances`; a listing counts only with its END token |
+| `instances/actions.ts`     | one-shot list/stop/delete actions; keys regex-validated before any interpolation, never on a timer |
+| `upgrade/scripts.ts`       | the pre-upgrade database backup and the bundle rollback, with their parsers |
+| `upgrade/daemon.ts`        | the one install protocol — stop, backup where the data outlives the bundle, swap, restart, verify, roll back |
+| `ipc-actions.ts`           | renderer-facing IPC actions with honest not-ready fallbacks          |
 
 `connected` is declared only after a schema-valid `/api/health` response came
 back **through the tunnel**. The tunnel's local port is reserved once per

@@ -21,12 +21,23 @@ const DEPLOYED: SshScriptResult = {
 };
 const INSTALL_REPLIES = [STOPPED_AND_BACKED_UP, DEPLOYED];
 
+function probed(token: string): SshScriptResult {
+  return { code: 0, stdout: `OTOMAT_ARTIFACT:${token}\n`, stderr: "" };
+}
+
+const ARTIFACT_READY = probed(`READY:otomat-daemon-${EXPECTED}-linux-x64`);
+
+function isProbe(script: string): boolean {
+  return script.includes("OTOMAT_ARTIFACT:");
+}
+
 interface Harness {
   coordinator: RemoteUpgradeCoordinator;
   session: FakeRemoteSession;
   phases: RemoteHostPhase[];
   scripts: string[];
-  /** Fires the pending idle re-check, or throws when the journey never armed one. */
+  delays: number[];
+  /** Fires the pending re-check, or throws when the journey never armed one. */
   recheck(): Promise<void>;
 }
 
@@ -46,11 +57,14 @@ function harness(
     expectedBuild?: string | null;
     fetchImpl?: typeof fetch;
     replies?: SshScriptResult[];
+    artifact?: SshScriptResult[];
   } = {},
 ): Harness {
   const phases: RemoteHostPhase[] = [];
   const scripts: string[] = [];
+  const delays: number[] = [];
   const replies = overrides.replies ?? INSTALL_REPLIES;
+  const artifact = overrides.artifact ?? [ARTIFACT_READY];
   let pending: (() => void) | null = null;
   // What the host would boot next: only a deploy that reported DEPLOYED changes it.
   let installed = STALE;
@@ -74,7 +88,12 @@ function harness(
     fetchImpl: overrides.fetchImpl ?? runsEndpoint([[]]),
     runScript: (options: RunSshScriptOptions): Promise<SshScriptResult> => {
       scripts.push(options.script);
-      const reply = replies[scripts.length - 1] ?? {
+      // Every script a test did not plan for answers as a failure, so over-probing cannot pass.
+      if (isProbe(options.script)) {
+        const probe = artifact[scripts.filter(isProbe).length - 1];
+        return Promise.resolve(probe ?? { code: 1, stdout: "", stderr: "unexpected probe" });
+      }
+      const reply = replies[scripts.filter((script) => !isProbe(script)).length - 1] ?? {
         code: 1,
         stdout: "",
         stderr: "unexpected script",
@@ -82,8 +101,9 @@ function harness(
       if (reply.stdout.includes("OTOMAT_DEPLOY:DEPLOYED:")) installed = EXPECTED;
       return Promise.resolve(reply);
     },
-    scheduleRecheck: (callback) => {
+    scheduleRecheck: (callback, delayMs) => {
       pending = callback;
+      delays.push(delayMs);
       return 0 as unknown as NodeJS.Timeout;
     },
   });
@@ -92,12 +112,14 @@ function harness(
     session,
     phases,
     scripts,
+    delays,
     recheck: async () => {
       const callback = pending;
-      if (callback === null) throw new Error("No idle re-check was armed.");
+      if (callback === null) throw new Error("No re-check was armed.");
       pending = null;
       callback();
-      await vi.waitFor(() => expect(coordinator.status).toBeNull());
+      // The journey either ended or armed the next wait; both settle the re-check.
+      await vi.waitFor(() => expect(coordinator.status === null || pending !== null).toBe(true));
     },
   };
 }
@@ -171,7 +193,158 @@ describe("RemoteUpgradeCoordinator", () => {
     expect(test.scripts).toEqual([]);
   });
 
-  it("keeps the working daemon and the exact cause when the artifact is missing", async () => {
+  it("waits out a run that is not there yet, then running, then uploading, and installs it", async () => {
+    const test = harness({
+      artifact: [
+        probed("WORKFLOW:none"),
+        probed("WORKFLOW:in_progress:none"),
+        probed("WORKFLOW:completed:success"),
+        ARTIFACT_READY,
+      ],
+    });
+
+    test.coordinator.observe();
+    await vi.waitFor(() =>
+      expect(test.coordinator.status).toEqual({
+        phase: "waiting_for_artifact",
+        detail: "no CI run has appeared for this build yet",
+      }),
+    );
+    // Nothing is stopped for a bundle CI still owes: the daemon in place keeps serving.
+    expect(test.scripts.every(isProbe)).toBe(true);
+    expect(test.coordinator.error).toBeNull();
+
+    await test.recheck();
+    expect(test.coordinator.status?.detail).toBe("its CI run is still running");
+
+    await test.recheck();
+    expect(test.coordinator.status?.detail).toContain("still being uploaded");
+
+    await test.recheck();
+
+    expect(test.session.remoteBuild).toBe(EXPECTED);
+    expect(test.phases.at(0)).toBe("checking_version");
+    expect(test.phases.slice(-2)).toEqual(["installing_update", "verifying_update"]);
+  });
+
+  it("backs off between checks instead of polling GitHub at one rate", async () => {
+    const running = probed("WORKFLOW:in_progress:none");
+    const test = harness({ artifact: [running, running, running] });
+
+    test.coordinator.observe();
+    await vi.waitFor(() => expect(test.coordinator.status?.phase).toBe("waiting_for_artifact"));
+    await test.recheck();
+    await test.recheck();
+
+    expect(test.delays).toEqual([10_000, 20_000, 30_000]);
+  });
+
+  it("restarts the schedule when CI's answer changes, so each state gets its own window", async () => {
+    const test = harness({
+      artifact: [probed("WORKFLOW:queued:none"), probed("WORKFLOW:in_progress:none")],
+    });
+
+    test.coordinator.observe();
+    await vi.waitFor(() => expect(test.coordinator.status?.detail).toBe("its CI run is queued"));
+    await test.recheck();
+
+    expect(test.delays).toEqual([10_000, 10_000]);
+    expect(test.coordinator.status?.detail).toBe("its CI run is still running");
+  });
+
+  it("resumes the wait a reconnect finds, rather than restarting or doubling it", async () => {
+    const test = harness({ artifact: [probed("WORKFLOW:in_progress:none"), ARTIFACT_READY] });
+
+    test.coordinator.observe();
+    await vi.waitFor(() => expect(test.coordinator.status?.phase).toBe("waiting_for_artifact"));
+    test.coordinator.observe();
+    test.coordinator.observe();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(test.scripts).toHaveLength(1);
+    expect(test.delays).toEqual([10_000]);
+
+    await test.recheck();
+
+    expect(test.session.remoteBuild).toBe(EXPECTED);
+    expect(test.scripts.filter((script) => script.includes("OTOMAT_DEPLOY:DEPLOYED"))).toHaveLength(
+      1,
+    );
+  });
+
+  it("rides out a probe that could not answer, rather than spending the automatic attempt", async () => {
+    const test = harness({
+      artifact: [
+        { code: 255, stdout: "", stderr: "ssh: connect to host otomat-vps: broken pipe" },
+        { code: 0, stdout: "Welcome to Ubuntu 24.04 LTS\n", stderr: "" },
+        ARTIFACT_READY,
+      ],
+    });
+
+    test.coordinator.observe();
+    await vi.waitFor(() =>
+      expect(test.coordinator.status).toEqual({
+        phase: "waiting_for_artifact",
+        detail: "the host could not reach GitHub Actions",
+      }),
+    );
+    expect(test.coordinator.error).toBeNull();
+
+    await test.recheck();
+    expect(test.coordinator.error).toBeNull();
+
+    await test.recheck();
+
+    expect(test.session.remoteBuild).toBe(EXPECTED);
+  });
+
+  it("stops on a probe that never answers, naming what the host said, daemon untouched", async () => {
+    const unreachable: SshScriptResult = { code: 255, stdout: "", stderr: "ssh: no route to host" };
+    const test = harness({ artifact: [unreachable, unreachable, unreachable, unreachable] });
+
+    test.coordinator.observe();
+    await vi.waitFor(() => expect(test.coordinator.status?.phase).toBe("waiting_for_artifact"));
+    while (test.coordinator.error === null) await test.recheck();
+
+    expect(test.coordinator.error).toMatch(/could not ask GitHub Actions about build 92584b0/);
+    expect(test.coordinator.error).toMatch(/no route to host/);
+    expect(test.session.remoteBuild).toBe(STALE);
+    expect(test.scripts.every(isProbe)).toBe(true);
+  });
+
+  it("stops on a CI run that failed, with the daemon that works still running", async () => {
+    const test = harness({ artifact: [probed("WORKFLOW:completed:failure")] });
+
+    test.coordinator.observe();
+    await vi.waitFor(() => expect(test.coordinator.error).not.toBeNull());
+
+    expect(test.coordinator.error).toMatch(/ended as failure/);
+    expect(test.coordinator.error).toMatch(/Re-run it on GitHub/);
+    expect(test.session.remoteBuild).toBe(STALE);
+    expect(test.scripts.every(isProbe)).toBe(true);
+    expect(test.delays).toEqual([]);
+  });
+
+  it("gives up on a run that never appears, then installs when asked again", async () => {
+    const missing = probed("WORKFLOW:none");
+    const test = harness({
+      artifact: [missing, missing, missing, missing, missing, ARTIFACT_READY],
+    });
+
+    test.coordinator.observe();
+    await vi.waitFor(() => expect(test.coordinator.status?.phase).toBe("waiting_for_artifact"));
+    while (test.coordinator.error === null) await test.recheck();
+
+    expect(test.delays).toHaveLength(4);
+    expect(test.coordinator.error).toMatch(/no CI run for build 92584b0/);
+    expect(test.session.remoteBuild).toBe(STALE);
+
+    expect((await test.coordinator.update()).ok).toBe(true);
+    expect(test.session.remoteBuild).toBe(EXPECTED);
+    expect(test.coordinator.error).toBeNull();
+  });
+
+  it("keeps the working daemon and the exact cause when the bundle is gone by install time", async () => {
     const test = harness({
       replies: [
         STOPPED_AND_BACKED_UP,
@@ -195,6 +368,7 @@ describe("RemoteUpgradeCoordinator", () => {
 
   it("never retries a failed install by itself, and installs again when asked to", async () => {
     const test = harness({
+      artifact: [ARTIFACT_READY, ARTIFACT_READY],
       replies: [
         STOPPED_AND_BACKED_UP,
         { code: 0, stdout: "OTOMAT_DEPLOY:NO_GH:-\n", stderr: "" },
