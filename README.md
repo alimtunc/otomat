@@ -1,13 +1,46 @@
 # Otomat
 
-Otomat is a **local-first, issue-first agent cockpit**. From an issue, you launch
-coding agents on isolated git worktrees, watch them run live, review the real git
-diff, have an agent address your review comments, and open a pull request — all
-locally, in a single pane.
+**Turn issues into reviewed pull requests from one agent cockpit.**
 
-It is a TypeScript monorepo managed with pnpm. The product is built ticket by
-ticket; packages appear when their owning ticket has real code to put in them, not
-as empty placeholders.
+Otomat is a local-first desktop app for running coding agents against real issues.
+Connect a project, choose an issue, and let Claude Code or Codex work in an isolated
+git worktree. Follow the run live, steer the agent when needed, review the actual
+diff, ask the agent to address your comments, and publish the result as a pull
+request without stitching the workflow together across terminals and browser tabs.
+
+## From issue to pull request
+
+1. **Start from the work** — use a Linear issue or a local Otomat issue as the
+   durable context for the task.
+2. **Run the right agent** — choose the provider, model, permission mode and effort,
+   or launch a reusable multi-step workflow.
+3. **Keep every run isolated** — Otomat creates and tracks the branch and worktree;
+   your own checkout stays untouched.
+4. **Review the real change** — inspect the canonical git diff, mark files reviewed,
+   leave line-level comments and send selected feedback back to an agent.
+5. **Ship deliberately** — generate a conventional commit and pull request, then
+   keep the issue, run, workspace and GitHub state linked throughout the lifecycle.
+
+Runs can execute on the local machine or on a remote host while the desktop app
+remains the control plane. Project data, run history and review state stay under
+the user's control; Otomat coordinates the tools and subscriptions already
+configured on each execution host.
+
+## Why Otomat
+
+- **Issue-first:** the issue remains the source of context across runs and agents.
+- **Local-first:** the daemon, SQLite database, repositories and credentials stay
+  on infrastructure the user controls.
+- **Provider-agnostic:** agent profiles and workflows can use the supported local
+  Claude Code and Codex runtimes without inventing a built-in agent.
+- **Reviewable:** every result ends in a normal git diff and pull request rather
+  than an opaque agent artifact.
+- **Resumable:** conversations, queued instructions and lifecycle evidence survive
+  navigation and daemon restarts.
+
+Otomat is currently an alpha. The repository is a TypeScript monorepo managed with
+pnpm; the sections below cover its architecture, local development and quality
+gates.
 
 ## Monorepo layout
 
