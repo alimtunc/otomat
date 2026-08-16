@@ -34,6 +34,8 @@ export function ConfigMenuContent({ className, ...props }: ConfigMenuContentProp
 export interface ConfigMenuTriggerProps {
   label: string;
   summary: string;
+  /** The accessible name's value when the summary leaves something to the leading art. */
+  announce?: string;
   /** Everything the one-line summary had to drop, so it never has to carry it. */
   detail?: ReactNode;
   leading?: ReactNode;
@@ -46,6 +48,7 @@ export interface ConfigMenuTriggerProps {
 export function ConfigMenuTrigger({
   label,
   summary,
+  announce,
   detail,
   leading,
   size = "sm",
@@ -61,7 +64,7 @@ export function ConfigMenuTrigger({
           variant="outline"
           size={size}
           disabled={disabled}
-          aria-label={`${label}: ${summary}`}
+          aria-label={`${label}: ${announce ?? summary}`}
           className={cn("min-w-0 max-w-full justify-start gap-1.5", className)}
         >
           {leading}

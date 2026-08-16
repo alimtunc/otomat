@@ -1,4 +1,9 @@
-import { providerOptionDefault, type ProviderOptionSelection } from "@otomat/domain";
+import {
+  providerOptionDefault,
+  type ProviderOptionChoice,
+  type ProviderOptionKey,
+  type ProviderOptionSelection,
+} from "@otomat/domain";
 import {
   ConfigMenuChoice,
   ConfigMenuNote,
@@ -17,11 +22,7 @@ import {
   type ExecutionPickerLevel,
 } from "@web/lib/execution/selection";
 import type { ResolvedExecutionOption } from "@web/lib/execution/summary";
-import {
-  providerOptionKeyLabel,
-  providerOptionValueHint,
-  providerOptionValueLabel,
-} from "@web/lib/provider-option-labels";
+import { providerOptionKeyLabel, providerOptionValueLabel } from "@web/lib/provider-option-labels";
 
 export interface ExecutionOptionSubmenuProps {
   level: ExecutionPickerLevel;
@@ -32,11 +33,18 @@ export interface ExecutionOptionSubmenuProps {
   profileName: string | null;
 }
 
-function choiceLabel(value: string, dangerous: boolean, recommended: boolean): string {
-  const marks = [dangerous ? "removes a safety boundary" : null, recommended ? "recommended" : null]
+function choiceLabel(
+  key: ProviderOptionKey,
+  choice: ProviderOptionChoice,
+  recommended: boolean,
+): string {
+  const marks = [
+    choice.dangerous ? "removes a safety boundary" : null,
+    recommended ? "recommended" : null,
+  ]
     .filter((mark) => mark !== null)
     .join(", ");
-  const label = providerOptionValueLabel(value);
+  const label = providerOptionValueLabel(key, choice.value);
   return marks === "" ? label : `${label} — ${marks}`;
 }
 
@@ -70,9 +78,8 @@ export function ExecutionOptionSubmenu({
           <ConfigMenuChoice
             key={choice.value}
             value={choice.value}
-            label={choiceLabel(choice.value, choice.dangerous, choice.value === recommended)}
+            label={choiceLabel(option.key, choice, choice.value === recommended)}
             description={choice.description}
-            hint={providerOptionValueHint(choice.value)}
           />
         ))}
       </DropdownMenuRadioGroup>

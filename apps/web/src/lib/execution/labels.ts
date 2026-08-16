@@ -25,7 +25,7 @@ export function executionSourceLabel(source: ExecutionSource, profileName: strin
 export function runtimeDefaultOptionLabel(descriptor: ProviderOptionDescriptor): string {
   const named = providerOptionDefault(descriptor);
   if (named === null) return "Runtime default";
-  return `Runtime default — ${providerOptionValueLabel(named)}`;
+  return `Runtime default — ${providerOptionValueLabel(descriptor.key, named)}`;
 }
 
 export function resolvedOptionLabel(
@@ -34,7 +34,7 @@ export function resolvedOptionLabel(
   profileName: string | null,
 ): string {
   if (resolved.value === null) return runtimeDefaultOptionLabel(descriptor);
-  const value = providerOptionValueLabel(resolved.value);
+  const value = providerOptionValueLabel(descriptor.key, resolved.value);
   return `${value} — ${executionSourceLabel(resolved.source, profileName)}`;
 }
 

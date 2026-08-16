@@ -25,15 +25,14 @@ function modelSegment(model: ResolvedExecutionValue<ModelSelection>): string {
 
 /** An option nothing selects falls back to the value the CLI names, and is omitted when it names none rather than inventing one. */
 export function executionSummarySegments(
-  agentLabel: string,
   model: ResolvedExecutionValue<ModelSelection>,
   options: readonly ResolvedExecutionOption[],
 ): string[] {
   const optionSegments = options.flatMap((option) => {
     const value = option.resolved.value ?? providerOptionDefault(option.descriptor);
-    return value === null ? [] : [providerOptionValueLabel(value)];
+    return value === null ? [] : [providerOptionValueLabel(option.key, value)];
   });
-  return [agentLabel, modelSegment(model), ...optionSegments];
+  return [modelSegment(model), ...optionSegments];
 }
 
 export interface ExecutionSummaryEntry {

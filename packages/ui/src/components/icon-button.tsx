@@ -8,10 +8,7 @@ const SIZE_CLASS = {
   sm: "size-6 [&>svg]:size-3.5",
 } as const;
 
-export interface IconButtonProps extends Omit<
-  ButtonProps,
-  "size" | "variant" | "children" | "aria-label"
-> {
+export interface IconButtonProps extends Omit<ButtonProps, "size" | "children" | "aria-label"> {
   label: string;
   icon: ReactNode;
   size?: keyof typeof SIZE_CLASS;
@@ -20,13 +17,14 @@ export interface IconButtonProps extends Omit<
 export function IconButton({
   className,
   size = "default",
+  variant = "ghost",
   label,
   icon,
   ...props
 }: IconButtonProps) {
   return (
     <Button
-      variant="ghost"
+      variant={variant}
       data-slot="icon-button"
       aria-label={label}
       title={label}

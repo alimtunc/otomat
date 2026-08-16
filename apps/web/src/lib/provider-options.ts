@@ -19,7 +19,9 @@ export function effectiveProviderOptionLabel(
   descriptor: ProviderOptionDescriptor,
   value: string | null,
 ): string {
-  return value === null ? runtimeDefaultOptionLabel(descriptor) : providerOptionValueLabel(value);
+  return value === null
+    ? runtimeDefaultOptionLabel(descriptor)
+    : providerOptionValueLabel(descriptor.key, value);
 }
 
 /** What a profile stores, in the fixed key order, so every surface lists the same options the same way. */

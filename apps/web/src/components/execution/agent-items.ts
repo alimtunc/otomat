@@ -12,6 +12,7 @@ export interface ChoiceItem {
   label: string;
   disabled: boolean;
   mark: ProviderMarkName | null;
+  kind: "default" | "profile" | "runtime";
 }
 
 export function buildItems(
@@ -19,7 +20,7 @@ export function buildItems(
   descriptors: RuntimeDescriptor[],
   inheritLabel?: string,
 ): { defaultItem: ChoiceItem | null; profileItems: ChoiceItem[]; runtimeItems: ChoiceItem[] } {
-  const profileItems = profiles.map((profile) => {
+  const profileItems: ChoiceItem[] = profiles.map((profile) => {
     const runtime = runtimeById(descriptors, profile.runtime);
     const available = runtime ? isAvailableRuntime(runtime) : false;
     return {
@@ -27,17 +28,25 @@ export function buildItems(
       label: available ? profile.name : `${profile.name} — runtime unavailable`,
       disabled: !available,
       mark: runtimeMark(profile.runtime),
+      kind: "profile",
     };
   });
-  const runtimeItems = descriptors.map((descriptor) => ({
+  const runtimeItems: ChoiceItem[] = descriptors.map((descriptor) => ({
     value: encodeRuntimeChoice(descriptor.id),
     label: descriptor.display_name,
     disabled: !isAvailableRuntime(descriptor),
     mark: runtimeMark(descriptor.id),
+    kind: "runtime",
   }));
   return {
     defaultItem: inheritLabel
-      ? { value: AGENT_CHOICE_DEFAULT, label: inheritLabel, disabled: false, mark: null }
+      ? {
+          value: AGENT_CHOICE_DEFAULT,
+          label: inheritLabel,
+          disabled: false,
+          mark: null,
+          kind: "default",
+        }
       : null,
     profileItems,
     runtimeItems,

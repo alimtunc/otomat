@@ -10,7 +10,7 @@ export interface DangerConfirmProps {
 }
 
 export function DangerConfirm({ pending, onConfirm, onCancel }: DangerConfirmProps) {
-  const head = `${providerOptionValueLabel(pending.choice.value)} removes a safety boundary.`;
+  const head = `${providerOptionValueLabel(pending.key, pending.choice.value)} removes a safety boundary.`;
   return (
     <div className="flex flex-col gap-1.5 rounded-md bg-danger-bg p-2">
       <p role="alert" className="text-xs text-danger">

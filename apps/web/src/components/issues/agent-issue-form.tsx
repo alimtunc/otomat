@@ -1,5 +1,5 @@
 import { contextReferenceKey, type RunContract } from "@otomat/domain";
-import { AutoTextarea, Button, DialogBody, Kbd } from "@otomat/ui";
+import { AutoTextarea, DialogBody, Icon, IconButton } from "@otomat/ui";
 import { useLaunchRun } from "@web/api/runs/use-launch-run";
 import { AddContextPopover } from "@web/components/context/add-context-popover";
 import { AttachedContextRow } from "@web/components/context/attached-context-row";
@@ -19,6 +19,15 @@ import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { useState, type KeyboardEvent } from "react";
 
 const COMPOSER_LABEL = "Ad-hoc run";
+const LAUNCH_ACTION = "Create & launch";
+
+/** Icon-only: the accessible name is the only thing left to say why the action is unavailable. */
+function launchLabel(pending: boolean, hasPrompt: boolean, canLaunch: boolean): string {
+  if (pending) return `${LAUNCH_ACTION} — creating the issue and launching the run`;
+  if (!hasPrompt) return `${LAUNCH_ACTION} — write a prompt first`;
+  if (!canLaunch) return `${LAUNCH_ACTION} — choose an available agent and model`;
+  return LAUNCH_ACTION;
+}
 
 export interface AgentIssueFormProps {
   target: Extract<LaunchTargetState, { status: "ready" }>;
@@ -40,7 +49,9 @@ export function AgentIssueForm({
   const { launch, isPending } = useLaunchRun();
   const launchExecution = useLaunchExecution(execution);
 
-  const canSubmit = promptText.trim().length > 0 && launchExecution.canLaunch && !isPending;
+  const hasPrompt = promptText.trim().length > 0;
+  const canSubmit = hasPrompt && launchExecution.canLaunch && !isPending;
+  const launchName = launchLabel(isPending, hasPrompt, launchExecution.canLaunch);
 
   async function submit() {
     if (!canSubmit) return;
@@ -95,16 +106,15 @@ export function AgentIssueForm({
             </>
           }
           submit={
-            <Button
+            <IconButton
               variant="primary"
-              size="sm"
+              label={launchName}
+              title={`${launchName} · ⌘↵`}
+              icon={<Icon name="play" aria-hidden />}
               loading={isPending}
               disabled={!canSubmit}
               onClick={() => void submit()}
-            >
-              Create &amp; launch
-              <Kbd tone="on-accent">⌘↵</Kbd>
-            </Button>
+            />
           }
         >
           <AutoTextarea

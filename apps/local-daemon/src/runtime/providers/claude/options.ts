@@ -17,18 +17,23 @@ const CLAUDE_EFFORT_FLAG = "--effort";
 
 const DETECTION_DETAIL = "Announced by `claude --help` from the installed binary.";
 
+/** `default` is what an older CLI calls the mode the current one announces as `manual`. */
+const ASKS_FIRST = "Claude asks before making edits.";
+
 /**
- * Only what the CLI itself documents, plus what Otomat can state about running
- * the mode headless. Claude Code's help page names the modes but describes
- * none of them, so a mode neither source can describe carries no description
- * rather than an invented one.
+ * One line each, in Claude's own wording, plus what only Otomat can state about
+ * running the mode headless. Claude Code's help page names the modes but
+ * describes none of them, so a mode neither source can describe carries no
+ * description rather than an invented one.
  */
 const PERMISSION_MODE_DESCRIPTIONS: Record<string, string> = {
-  auto: "Claude Code's own classifier decides each tool call, so a headless run can edit, test, commit, rebase and push on its own branch. It is not a blanket approval: the classifier still refuses what it considers unsafe.",
+  manual: ASKS_FIRST,
+  default: ASKS_FIRST,
+  auto: "Claude approves safe actions and pauses for risky ones.",
   acceptEdits:
-    "Auto-approves edits in the worktree; other gated tools still need permission, and nothing can grant it in a headless run.",
-  plan: "Plans the work without applying it.",
-  bypassPermissions: "Skips every permission check, exactly like `--dangerously-skip-permissions`.",
+    "Claude edits the selected code or file. Another gated tool still waits for an approval a headless run cannot give.",
+  plan: "Claude explores and presents a plan before editing.",
+  bypassPermissions: "Claude skips every permission check, like `--dangerously-skip-permissions`.",
 };
 
 /** The one mode Claude Code itself labels dangerous: its `--dangerously-skip-permissions` twin. */

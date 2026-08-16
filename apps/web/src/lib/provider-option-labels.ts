@@ -13,9 +13,20 @@ export function providerOptionKeyLabel(key: ProviderOptionKey): string {
   return KEY_LABELS[key];
 }
 
-/** Values whose plain humanization would misread. Presentation only: it never adds, hides or reinterprets a value the CLI announced. */
-const VALUE_LABELS: Record<string, string> = {
+/** What Claude Code calls each mode in its own interface; `default` is the older spelling of `manual`. */
+const PERMISSION_MODE_LABELS: Record<string, string> = {
+  default: "Manual",
+  acceptEdits: "Edit automatically",
   dontAsk: "Don't ask",
+};
+
+/** One option's vocabulary, which another option announcing the same value does not share. */
+const KEY_VALUE_LABELS: Partial<Record<ProviderOptionKey, Record<string, string>>> = {
+  permission_mode: PERMISSION_MODE_LABELS,
+};
+
+/** Values whose plain humanization would misread, whichever option announced them. */
+const VALUE_LABELS: Record<string, string> = {
   xhigh: "Extra high",
 };
 
@@ -32,12 +43,7 @@ function sentenceCase(value: string): string {
   return sentence === "" ? value : sentence;
 }
 
-/** `acceptEdits` and `workspace-write` both become sentence case; the identifier itself is never rewritten. */
-export function providerOptionValueLabel(value: string): string {
-  return VALUE_LABELS[value] ?? sentenceCase(value);
-}
-
-/** The identifier a humanized label hides, so the value the CLI receives stays readable; nothing when the label already spells it. */
-export function providerOptionValueHint(value: string): string | undefined {
-  return providerOptionValueLabel(value).toLowerCase() === value.toLowerCase() ? undefined : value;
+/** `acceptEdits` and `workspace-write` both become a readable name; the identifier itself is never rewritten. */
+export function providerOptionValueLabel(key: ProviderOptionKey, value: string): string {
+  return KEY_VALUE_LABELS[key]?.[value] ?? VALUE_LABELS[value] ?? sentenceCase(value);
 }

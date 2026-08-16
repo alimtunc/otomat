@@ -95,7 +95,7 @@ it("resolves each value down step > launch > profile > global, naming the level 
   });
 
   expect(step.read("values")).toBe(
-    "permission_mode=Accept edits — set on this step | effort=Low — from the global defaults",
+    "permission_mode=Edit automatically — set on this step | effort=Low — from the global defaults",
   );
   expect(step.read("model")).toBe("haiku — from the run");
   await step.cleanup();

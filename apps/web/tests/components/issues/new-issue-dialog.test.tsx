@@ -147,6 +147,13 @@ function buttonByText(text: string): HTMLButtonElement {
   return button;
 }
 
+/** The composer's actions are icon-only, so their name is only in `aria-label`. */
+function buttonByLabel(prefix: string): HTMLButtonElement {
+  const button = document.querySelector<HTMLButtonElement>(`button[aria-label^='${prefix}']`);
+  if (!button) throw new Error(`button labelled "${prefix}" not found`);
+  return button;
+}
+
 function setTextareaValue(input: HTMLTextAreaElement, value: string): void {
   const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
   setter?.call(input, value);
@@ -162,7 +169,7 @@ describe("NewIssueDialog", () => {
     );
     expect(labels).toContain("Manual");
     expect(labels).toContain("With agent");
-    expect(document.body.textContent).toContain("Create & launch");
+    expect(buttonByLabel("Create & launch")).not.toBeNull();
   });
 
   it("auto-selects the first available real runtime in agent mode", async () => {
@@ -184,7 +191,7 @@ describe("NewIssueDialog", () => {
     ];
     await renderDialog();
     expect(document.body.textContent).toContain("No agent runtime available");
-    expect(buttonByText("Create & launch⌘↵").disabled).toBe(true);
+    expect(buttonByLabel("Create & launch").disabled).toBe(true);
     expect(document.querySelector("[data-testid='execution-picker']")).toBeNull();
   });
 
@@ -225,7 +232,7 @@ describe("NewIssueDialog", () => {
       prompt.dispatchEvent(new Event("input", { bubbles: true }));
     });
     await act(async () => {
-      buttonByText("Create & launch⌘↵").click();
+      buttonByLabel("Create & launch").click();
     });
 
     expect(launch).toHaveBeenCalledWith({
@@ -393,9 +400,24 @@ describe("NewIssueDialog", () => {
     await renderDialog();
 
     expect(document.querySelector("[data-testid='execution-picker']")).not.toBeNull();
-    expect(buttonByText("Add context")).toBeDefined();
+    expect(buttonByLabel("Add context")).not.toBeNull();
     expect(document.querySelector("button[aria-label^='Base branch']")).not.toBeNull();
     expect(document.querySelector("textarea[aria-label='Issue prompt']")).not.toBeNull();
+  });
+
+  it("spends the row on icons, keeping each action named and its shortcut on the tooltip", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+
+    const add = buttonByLabel("Add context");
+    const action = buttonByLabel("Create & launch");
+
+    expect(add.textContent).toBe("");
+    expect(add.getAttribute("title")).toBe("Add context");
+    expect(action.textContent).toBe("");
+    expect(action.getAttribute("aria-label")).toBe("Create & launch — write a prompt first");
+    expect(action.getAttribute("title")).toContain("⌘↵");
+    expect(action.disabled).toBe(true);
   });
 
   it("sends on ⌘↵ like a composer, not only from the button", async () => {
