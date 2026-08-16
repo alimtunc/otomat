@@ -5,21 +5,24 @@ import { InvalidRunPlanError, planExecutionOrder } from "#domain/plan/execution-
 import {
   allStepsSucceeded,
   blockingPlanDependencies,
+  effectiveStepStatuses,
+  haltedPlanOutcome,
   hasActiveStep,
   planOutcome,
   readyPlanWork,
 } from "#domain/plan/schedule";
 import type { StepRunState } from "#domain/state-machines/step-run";
 
-function plan(steps: Array<{ id: string; depends_on?: string[] }>): RunPlan {
+function plan(steps: Array<{ id: string; depends_on?: string[]; replaces?: string }>): RunPlan {
   return {
     version: 1,
-    steps: steps.map(({ id, depends_on = [] }) => ({
+    steps: steps.map(({ id, depends_on = [], replaces }) => ({
       id,
       name: `Step ${id}`,
       agent: null,
       prompt: `Do ${id}`,
       depends_on,
+      replaces: replaces ?? null,
     })),
   };
 }
@@ -227,6 +230,52 @@ describe("planOutcome", () => {
 
   it("reports canceled when steps were only canceled", () => {
     expect(planOutcome(diamond, statuses({ root: "canceled" }))).toBe("canceled");
+  });
+
+  it("stops standing on a failure a linked recovery step already answered", () => {
+    const recovered = plan([{ id: "implement" }, { id: "retry", replaces: "implement" }]);
+    const halted = statuses({ implement: "stale", retry: "succeeded" });
+
+    expect(effectiveStepStatuses(recovered, halted).get("implement")).toBe("succeeded");
+    expect(haltedPlanOutcome(recovered, halted)).toBeNull();
+    expect(allStepsSucceeded(recovered, halted)).toBe(true);
+    expect(planOutcome(recovered, halted)).toBe("succeeded");
+  });
+
+  it("keeps standing on a failure an unlinked step merely succeeded next to", () => {
+    const unlinked = plan([{ id: "implement" }, { id: "review" }]);
+    const halted = statuses({ implement: "stale", review: "succeeded" });
+
+    expect(haltedPlanOutcome(unlinked, halted)).toBe("failed");
+    expect(planOutcome(unlinked, halted)).toBe("failed");
+  });
+
+  it("keeps standing on a failure whose recovery has not succeeded yet", () => {
+    const recovered = plan([{ id: "implement" }, { id: "retry", replaces: "implement" }]);
+
+    expect(planOutcome(recovered, statuses({ implement: "stale", retry: "failed" }))).toBe(
+      "failed",
+    );
+    expect(planOutcome(recovered, statuses({ implement: "stale", retry: "running" }))).toBe(
+      "running",
+    );
+  });
+
+  it("unblocks the steps that waited on a recovered failure", () => {
+    const recovered = plan([
+      { id: "implement" },
+      { id: "verify", depends_on: ["implement"] },
+      { id: "retry", replaces: "implement" },
+    ]);
+    const halted = statuses({ implement: "stale", verify: "queued", retry: "succeeded" });
+
+    expect(readyStep(recovered, Object.fromEntries(halted))?.id).toBe("verify");
+    expect(blockingPlanDependencies(recovered, halted, new Map())).toEqual([]);
+  });
+
+  it("reports canceled when the plan only ever cancelled work", () => {
+    expect(haltedPlanOutcome(diamond, statuses({ root: "canceled" }))).toBe("canceled");
+    expect(haltedPlanOutcome(diamond, statuses({ root: "succeeded" }))).toBeNull();
   });
 
   it("keeps a compete plan running until a winner is selected", () => {

@@ -6,21 +6,23 @@ import {
   type RunRow,
   type StepRunRow,
 } from "@otomat/db";
-import { executableSteps, type StartRunRequest } from "@otomat/domain";
+import { executableSteps, isRunSettled, type StartRunRequest } from "@otomat/domain";
 
-import { sessionDir } from "#events";
+import { emitLedgerEvent, sessionDir } from "#events";
 
 import { scheduleNextStep, startNextReadyStep } from "./advance.js";
 import { failIdleRun, failureReason } from "./fail-run.js";
 import { repositoryInitCommands } from "./init-commands.js";
 import { signalIssueLifecycle } from "./issue-lifecycle.js";
+import { buildRunReopenedEvent } from "./markers.js";
 import { prepareRun } from "./prepare.js";
-import { resolveResumeAction } from "./resume-plan.js";
+import { resolveResumeAction, type ResumeAction } from "./resume-plan.js";
 import { spawnReopenTurn } from "./resume-turn.js";
 import {
   NATIVE_CONTINUATION,
   reopenIssue,
   reopenSettledRun,
+  requeueCanceledSteps,
   requireResumableRuntime,
   requireRunRow,
   RunNotResumableError,
@@ -61,6 +63,27 @@ async function startNextPlanNode(state: SupervisorState, run: RunRow): Promise<R
   return requireRunRow(state.db, run.id, "resume");
 }
 
+/** Only a settled run is recovering from something; a resting one is merely continuing. */
+function recoverStoppedRun(
+  state: SupervisorState,
+  stopped: RunRow,
+  action: Extract<ResumeAction, { kind: "native" | "recovery" }>,
+): void {
+  if (!isRunSettled(stopped.status)) return;
+  requeueCanceledSteps(state.db, stopped.id, action.step.id);
+  emitLedgerEvent(
+    state.db,
+    state.dataDir,
+    stopped.id,
+    buildRunReopenedEvent(
+      { runId: stopped.id, stepRunId: action.step.id, agentSessionId: null },
+      stopped.status,
+      action.step.name,
+      new Date().toISOString(),
+    ),
+  );
+}
+
 /** Resumes a run on an explicit user action, never on its own; `resolveResumeAction` is the single decision, so what the cockpit announced is what runs. */
 export async function resumeRun(state: SupervisorState, runId: string): Promise<RunRow> {
   const stopped = getRun(state.db, runId);
@@ -71,6 +94,9 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
   }
 
   reopenIssue(state.db, stopped);
+  if (action.kind === "native" || action.kind === "recovery") {
+    recoverStoppedRun(state, stopped, action);
+  }
   const run = reopenSettledRun(state, stopped);
   signalIssueLifecycle(state.syncIssueLifecycle, run.issue_id, "in_progress", runId);
 

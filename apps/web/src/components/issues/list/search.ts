@@ -1,4 +1,4 @@
-import { ISSUE_STATES, type IssueSource, type IssueState } from "@otomat/domain";
+import { ISSUE_BOARD_COLUMNS, type IssueBoardColumn, type IssueSource } from "@otomat/domain";
 import { asMember, asString, normalizedMembers, normalizedSelection } from "@web/lib/coerce";
 import { ISSUE_SOURCES, knownPriority } from "@web/lib/issue/filter-options";
 import { ISSUES_FILTERS, type IssuesFilter } from "@web/lib/issue/filters";
@@ -18,7 +18,7 @@ export interface IssuesListSearch {
   group?: IssueGrouping;
   sort?: IssueSort;
   sources?: IssueSource[];
-  statuses?: IssueState[];
+  statuses?: IssueBoardColumn[];
   linearStates?: string[];
   labels?: string[];
   projects?: string[];
@@ -48,7 +48,7 @@ export function parseIssuesListSearch(search: Record<string, unknown>): IssuesLi
     group: asMember(search.group, ISSUE_GROUPINGS) ?? undefined,
     sort: asMember(search.sort, ISSUE_SORTS) ?? undefined,
     sources: members(search.sources, ISSUE_SOURCES),
-    statuses: members(search.statuses, ISSUE_STATES),
+    statuses: members(search.statuses, ISSUE_BOARD_COLUMNS),
     linearStates: selection(search.linearStates),
     labels: selection(search.labels),
     projects: selection(search.projects),

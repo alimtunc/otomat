@@ -1,8 +1,13 @@
 import type { EventEnvelope } from "@otomat/domain";
 
+/** A terminal marker speaks for one turn; only the supervisor's own landing speaks for the run. */
 function lifecycleSummary(event: EventEnvelope): string | null {
+  const runStatus = event.payload["run_status"];
+  if (typeof runStatus === "string") return `run ${runStatus}`;
+  const reopened = event.payload["step_name"];
+  if (typeof reopened === "string") return `run reopened at ${reopened}`;
   const finalStatus = event.payload["final_status"];
-  return typeof finalStatus === "string" ? `run ${finalStatus}` : null;
+  return typeof finalStatus === "string" ? `turn ${finalStatus}` : null;
 }
 
 function contributionSummary(event: EventEnvelope): string | null {

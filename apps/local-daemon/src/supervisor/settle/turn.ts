@@ -1,6 +1,7 @@
 import type { AgentSessionRow, StepRunRow } from "@otomat/db";
 import {
   allStepsSucceeded,
+  haltedPlanOutcome,
   isStepSettled,
   readyPlanWork,
   type RunPlan,
@@ -23,7 +24,7 @@ import {
   type SettleEvidence,
   type SettleOptions,
 } from "./context.js";
-import { recordReconciled } from "./ledger.js";
+import { recordReconciled, recordRunLanding } from "./ledger.js";
 
 interface RunResolution {
   run: RunState;
@@ -35,9 +36,12 @@ function recordTurnOutcome(
   session: AgentSessionRow,
   stepRunId: string | null,
   evidence: SettleEvidence,
+  runStatus: RunState,
 ): ReconcileOutcome {
+  const ref = { runId: ctx.run.id, stepRunId, agentSessionId: session.id };
+  recordRunLanding(ctx, ref, runStatus);
   return recordReconciled(ctx, {
-    ref: { runId: ctx.run.id, stepRunId, agentSessionId: session.id },
+    ref,
     classification: evidence.classification,
     reason: evidence.reason,
     providerSessionId: evidence.providerSessionId,
@@ -79,7 +83,8 @@ function resolveRunTarget(
     if (readyPlanWork(plan, projected, competeGroupStatuses(ctx.groups)) !== null) {
       return { run: mode === "live" ? "running" : "awaiting_human", cancelRemaining: false };
     }
-    return { run: "failed", cancelRemaining: true };
+    // The turn itself succeeded, so the run rests on what the plan's other steps still owe it — the same reading `settleIdleRun` makes on boot.
+    return { run: haltedPlanOutcome(plan, projected) ?? "failed", cancelRemaining: true };
   }
   if (classification === "interrupted") return { run: "awaiting_human", cancelRemaining: false };
   if (classification === "canceled") return { run: "canceled", cancelRemaining: true };
@@ -104,7 +109,7 @@ function settleCompeteTurn(
       [],
       ctx.options.now,
     );
-    return recordTurnOutcome(ctx, turnSession, turnStep.id, evidence);
+    return recordTurnOutcome(ctx, turnSession, turnStep.id, evidence, evidence.targets.run);
   }
 
   const projected = stepStatuses(ctx.steps);
@@ -138,7 +143,7 @@ function settleCompeteTurn(
     { behavior: "immediate" },
   );
 
-  return recordTurnOutcome(ctx, turnSession, turnStep.id, evidence);
+  return recordTurnOutcome(ctx, turnSession, turnStep.id, evidence, runTarget);
 }
 
 /** Converges one live-tracked (or still-open) turn without changing a compete sibling. */
@@ -173,5 +178,5 @@ export function settleTurn(
     ctx.options.now,
   );
 
-  return recordTurnOutcome(ctx, turnSession, turnStep?.id ?? null, evidence);
+  return recordTurnOutcome(ctx, turnSession, turnStep?.id ?? null, evidence, resolution.run);
 }

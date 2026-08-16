@@ -17,7 +17,7 @@ import { createRuntimeAdapter, isKnownRuntimeId, type KnownRuntimeId } from "#ru
 import { spawnTurn } from "./lifecycle.js";
 import { runtimeForRun } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
-import { driveIssueTo, driveRunTo } from "./transitions.js";
+import { driveIssueTo, driveRunTo, driveStepTo } from "./transitions.js";
 import type { TurnContext } from "./types.js";
 
 /** A reattached session still holds its own conversation and dossier, so it is told to continue rather than handed the context again. */
@@ -91,6 +91,24 @@ export function reopenSettledRun(state: SupervisorState, run: RunRow): RunRow {
   if (!isRunSettled(run.status)) return run;
   driveRunTo(state.db, run.id, run.status, "preparing", new Date().toISOString());
   return requireRunRow(state.db, run.id, "resume");
+}
+
+/**
+ * Stopping a run cancels every step it had not finished, so the reopened step
+ * would be the last one the plan could ever run. An explicit resume owes those
+ * steps back to the plan: they queue again and the run chains through them once
+ * the recovered step succeeds.
+ */
+export function requeueCanceledSteps(db: Db, runId: string, reopenedStepId: string): void {
+  db.transaction(
+    () => {
+      for (const step of listStepRunsForRun(db, runId)) {
+        if (step.id === reopenedStepId || step.compete_group_id !== null) continue;
+        if (step.status === "canceled") driveStepTo(db, step.id, step.status, "queued");
+      }
+    },
+    { behavior: "immediate" },
+  );
 }
 
 /** Resolves one explicit session into a spawnable turn without touching any row. */

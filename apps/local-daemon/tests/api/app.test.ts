@@ -479,6 +479,7 @@ it("appends a step with the agent the caller chose, never an inherited one", asy
     selector: { kind: "profile", profileId: "p-reviewer" },
     overrides: {},
     dependsOn: [],
+    replaces: null,
     origin: "user",
   });
 });

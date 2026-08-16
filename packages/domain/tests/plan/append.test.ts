@@ -28,6 +28,18 @@ it("refuses a dependency the plan does not already hold", () => {
   expect(() => appendPlanStep(LAUNCHED, step("c", ["ghost"]))).toThrow(/Unknown dependency/);
 });
 
+it("carries the recovery link to the step it replaces", () => {
+  const recovery = { ...step("c"), replaces: "a" };
+
+  expect(appendPlanStep(LAUNCHED, recovery).steps[2]).toEqual(recovery);
+});
+
+it("refuses a replaced step the plan does not already hold", () => {
+  expect(() => appendPlanStep(LAUNCHED, { ...step("c"), replaces: "ghost" })).toThrow(
+    /Unknown replaced step/,
+  );
+});
+
 it("refuses a node id that would shadow a launched one", () => {
   expect(() => appendPlanStep(LAUNCHED, step("b"))).toThrow(/already holds a node/);
 });

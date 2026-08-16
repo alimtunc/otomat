@@ -37,6 +37,29 @@ describe("groupIssues", () => {
     expect(groups[0].label).toBe("Backlog");
   });
 
+  it("gives a stopped cycle its own column, between Running and Reviewing", () => {
+    const stopped = issueContract({
+      id: "d",
+      title: "Stopped",
+      status: "ready",
+      execution: {
+        state: "failed",
+        run_id: "r1",
+        failure: { reason: "failed", step: { id: "s1", name: "Reviewer" } },
+      },
+    });
+    const running = issueContract({
+      id: "e",
+      title: "Working",
+      status: "ready",
+      execution: { state: "running", run_id: "r2" },
+    });
+
+    const groups = groupIssues([stopped, running], "status", PROJECT_NAMES);
+    expect(groups.map((group) => group.key)).toEqual(["status:running", "status:failed"]);
+    expect(groups[1].label).toBe("Failed");
+  });
+
   it("gives blocked and canceled issues a group instead of dropping them off the board", () => {
     const blocked = issueContract({ id: "d", status: "blocked" });
     const canceled = issueContract({ id: "e", status: "canceled" });

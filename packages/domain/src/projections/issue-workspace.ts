@@ -3,10 +3,10 @@ import {
   type IssueWorkspace,
 } from "../contracts/entities/issue-workspace.js";
 import { isRunBusy } from "../state-machines/run.js";
-import type { IssueExecutionEvidence } from "./issue-execution.js";
+import type { IssueExecutionEvidence } from "./evidence.js";
 
 /** Only the two explicit closures end a cycle — a confirmed merge (`completed`) or an abandon stamp — and a workspace must never point at a worktree that is gone. */
-function holdsWorkspace(row: IssueExecutionEvidence): boolean {
+export function holdsWorkspace(row: IssueExecutionEvidence): boolean {
   if (row.worktree_status !== "active") return false;
   return row.run_abandoned_at === null && row.run_status !== "completed";
 }

@@ -8,6 +8,7 @@ import { useContextSources } from "@web/components/context/use-context-sources";
 import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
+import { RecoveryLinkField } from "@web/components/runs/steps/recovery-link-field";
 import { WorkspaceReuseNote } from "@web/components/runs/steps/workspace-reuse-note";
 import { contextRequestFields, EMPTY_CONTEXT_DRAFT } from "@web/lib/context/draft";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
@@ -33,8 +34,10 @@ export function AppendStepForm({
   onCancel,
 }: AppendStepFormProps) {
   const [context, setContext] = useState(EMPTY_CONTEXT_DRAFT);
+  const [recovers, setRecovers] = useState(true);
   const launchExecution = useLaunchExecution(execution);
   const append = useAppendRunStep(workspace.run_id);
+  const recovered = issue.execution.state === "failed" ? issue.execution.failure.step : null;
   const sources = useContextSources({
     draft: context,
     issue,
@@ -51,6 +54,7 @@ export function AppendStepForm({
           ...contextRequestFields(context),
           ...launchExecution.request,
           depends_on: [],
+          ...(recovered !== null && recovers ? { replaces: recovered.id } : {}),
         },
         {
           onSuccess: (run) => {
@@ -73,6 +77,9 @@ export function AppendStepForm({
     >
       <DialogBody className="flex flex-col gap-3">
         <WorkspaceReuseNote workspace={workspace} />
+        {recovered === null ? null : (
+          <RecoveryLinkField step={recovered} checked={recovers} onCheckedChange={setRecovers} />
+        )}
         <form.Field name="name" validators={{ onChange: requiredTrimmed("Name the step.") }}>
           {(field) => (
             <Field {...fieldErrorProps(field.state.meta)}>

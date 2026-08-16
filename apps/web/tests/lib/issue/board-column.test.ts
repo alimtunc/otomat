@@ -39,6 +39,21 @@ describe("boardColumnFor", () => {
       boardColumnFor(issue({ status: "backlog", execution: { state: "running", run_id: "r1" } })),
     ).toBe("running");
   });
+
+  it("keeps a stopped cycle in Failed instead of falling back to a Ready source status", () => {
+    expect(
+      boardColumnFor(
+        issue({
+          status: "ready",
+          execution: {
+            state: "failed",
+            run_id: "r1",
+            failure: { reason: "failed", step: { id: "s1", name: "Reviewer" } },
+          },
+        }),
+      ),
+    ).toBe("failed");
+  });
 });
 
 describe("divergentSourceStatus", () => {

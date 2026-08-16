@@ -22,7 +22,7 @@ const ACTIVE_STEP_STATES: ReadonlySet<StepRunState> = new Set([
   "awaiting_human",
 ]);
 
-export function isStepHalted(status: StepRunState): boolean {
+function isStepHalted(status: StepRunState): boolean {
   return HALTED_STEP_STATES.has(status);
 }
 
@@ -50,17 +50,39 @@ export function executableSteps(plan: RunPlan): Array<RunPlanStep | RunPlanCompe
   return plan.steps.flatMap((node) => (isRunPlanCompeteGroup(node) ? node.compete : [node]));
 }
 
+/** Step appended to recover another, keyed by the step it replaces; append-only ordering puts a recovery after its target. */
+function replacementIds(plan: RunPlan): Map<string, string> {
+  const byReplaced = new Map<string, string>();
+  for (const node of plan.steps) {
+    if (!isRunPlanCompeteGroup(node) && node.replaces) byReplaced.set(node.replaces, node.id);
+  }
+  return byReplaced;
+}
+
+/** Statuses once recoveries are resolved: a replaced step reads the outcome of the step that replaced it, so an addressed failure stops standing. */
+export function effectiveStepStatuses(plan: RunPlan, statuses: PlanStepStatuses): PlanStepStatuses {
+  const byReplaced = replacementIds(plan);
+  if (byReplaced.size === 0) return statuses;
+  const effective = new Map<string, StepRunState>();
+  for (const step of executableSteps(plan).toReversed()) {
+    const replacement = byReplaced.get(step.id);
+    const recovered = replacement === undefined ? undefined : effective.get(replacement);
+    effective.set(step.id, recovered ?? statusOf(statuses, step.id));
+  }
+  return effective;
+}
+
 function dependencySucceeded(
   plan: RunPlan,
   dependencyId: string,
-  statuses: PlanStepStatuses,
+  effective: PlanStepStatuses,
   groupStatuses: PlanCompeteGroupStatuses,
 ): boolean {
   const dependency = plan.steps.find((node) => node.id === dependencyId);
   if (!dependency) return false;
   return isRunPlanCompeteGroup(dependency)
     ? groupStatuses.get(dependency.id) === "selected"
-    : statusOf(statuses, dependency.id) === "succeeded";
+    : statusOf(effective, dependency.id) === "succeeded";
 }
 
 export type ReadyPlanWork =
@@ -77,9 +99,10 @@ export function readyPlanWork(
   statuses: PlanStepStatuses,
   groupStatuses: PlanCompeteGroupStatuses,
 ): ReadyPlanWork | null {
+  const effective = effectiveStepStatuses(plan, statuses);
   for (const node of planExecutionOrder(plan)) {
     const depsSucceeded = node.depends_on.every((dependency) =>
-      dependencySucceeded(plan, dependency, statuses, groupStatuses),
+      dependencySucceeded(plan, dependency, effective, groupStatuses),
     );
     if (!depsSucceeded) continue;
 
@@ -104,6 +127,7 @@ export function blockingPlanDependencies(
   statuses: PlanStepStatuses,
   groupStatuses: PlanCompeteGroupStatuses,
 ): RunPlanNode[] {
+  const effective = effectiveStepStatuses(plan, statuses);
   const blocking = new Set<string>();
   for (const node of plan.steps) {
     const pending = isRunPlanCompeteGroup(node)
@@ -111,7 +135,8 @@ export function blockingPlanDependencies(
       : statusOf(statuses, node.id) === "queued";
     if (!pending) continue;
     for (const dependency of node.depends_on) {
-      if (!dependencySucceeded(plan, dependency, statuses, groupStatuses)) blocking.add(dependency);
+      if (!dependencySucceeded(plan, dependency, effective, groupStatuses))
+        blocking.add(dependency);
     }
   }
   return plan.steps.filter((node) => blocking.has(node.id));
@@ -122,11 +147,26 @@ export function allStepsSucceeded(
   statuses: PlanStepStatuses,
   groupStatuses: PlanCompeteGroupStatuses = new Map(),
 ): boolean {
+  const effective = effectiveStepStatuses(plan, statuses);
   return plan.steps.every((node) =>
     isRunPlanCompeteGroup(node)
       ? groupStatuses.get(node.id) === "selected"
-      : statusOf(statuses, node.id) === "succeeded",
+      : statusOf(effective, node.id) === "succeeded",
   );
+}
+
+/** How the plan's own steps stand once recoveries are resolved: `failed` outranks `canceled`, `null` means nothing is halted. Compete candidates answer through their group instead. */
+export function haltedPlanOutcome(
+  plan: RunPlan,
+  statuses: PlanStepStatuses,
+): "failed" | "canceled" | null {
+  const effective = effectiveStepStatuses(plan, statuses);
+  const halted = plan.steps
+    .filter((node) => !isRunPlanCompeteGroup(node))
+    .map((node) => statusOf(effective, node.id))
+    .filter(isStepHalted);
+  if (halted.length === 0) return null;
+  return halted.every((status) => status === "canceled") ? "canceled" : "failed";
 }
 
 export type PlanOutcome = "running" | "succeeded" | "failed" | "canceled";
@@ -142,8 +182,6 @@ export function planOutcome(
   if (readyPlanWork(plan, statuses, groupStatuses) !== null) return "running";
   const competitionStates = [...groupStatuses.values()];
   if (competitionStates.some((state) => ACTIVE_COMPETE_GROUP_STATES.has(state))) return "running";
-  const states = executableSteps(plan).map((step) => statusOf(statuses, step.id));
   if (competitionStates.includes("failed")) return "failed";
-  if (states.some((state) => state === "failed" || state === "stale")) return "failed";
-  return "canceled";
+  return haltedPlanOutcome(plan, statuses) ?? "canceled";
 }

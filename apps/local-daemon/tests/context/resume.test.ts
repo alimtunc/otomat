@@ -28,6 +28,7 @@ const APPENDED: AppendStepInput = {
   selector: { kind: "runtime", runtimeId: "fake" },
   overrides: {},
   dependsOn: [],
+  replaces: null,
   origin: "user",
 };
 

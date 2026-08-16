@@ -31,6 +31,7 @@ export interface AppendStepInput {
   selector: AgentConfigSelector;
   overrides: ExecutionOverrides;
   dependsOn: readonly string[];
+  replaces: string | null;
   origin: PlanRevisionOrigin;
 }
 

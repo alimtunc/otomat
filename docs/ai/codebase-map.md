@@ -94,7 +94,7 @@ are internal daemon modules, consumed through
 | `apps/web/src/components/context` | OTO-107                  | The one prompt composer: attached-context chips plus an optional note.|
 | `apps/desktop/src/main/data-safety` | OTO-29                 | Versioned data layout, redacted rotating logs, support bundle export. |
 | `apps/desktop/scripts`            | OTO-21, OTO-30           | macOS packaging: ad-hoc local build, signed/notarized release, packaged smoke. |
-| `apps/local-daemon/src/supervisor`| OTO-10                   | Process supervision, pid reconciliation (lands as a daemon module).   |
+| `apps/local-daemon/src/supervisor`| OTO-10, OTO-87           | Process supervision, pid reconciliation, and the recovery of a stopped plan. |
 | `apps/local-daemon/src/review`    | OTO-11                   | Review slice: server-side diff snapshot, comment anchoring, destinations, fix-step context.|
 | `packages/domain/src/patch`       | OTO-11                   | The one unified-diff reader: hunks, range coverage, GitHub anchor refusals. |
 | `packages/domain`                 | OTO-5                    | Pure TS. Canonical types, state machines, event envelope, contracts.  |
@@ -358,6 +358,39 @@ step's prompt, and the step waits on the nodes that produced that diff. It is
 refused (`workspace_busy`) while a turn is in flight, so the fix step is always
 the workspace's next settlement and settle can credit it with the stamped
 comments.
+
+## Recovering a Failed Run
+
+A failure is a fact of the history, not a verdict on the plan. A run's canonical
+outcome is therefore read from its **effective** steps: `effectiveStepStatuses`
+resolves the append-only `replaces` link so a halted step takes the outcome of
+the step appended to recover it, and `allStepsSucceeded`/`haltedPlanOutcome` read
+through it. Retrying the same step needs no link at all — the step machine walks
+it back to `running` and its own row converges — so `replaces` exists only for
+the case where the recovery is a new node. An unlinked step that merely succeeds
+next to a failure recovers nothing, which is what keeps a required failure from
+being masked by unrelated work. `settleTurn` and `settleIdleRun` ask the same two
+questions in the same order, so a hot settle and a boot reconciliation land the
+run on the same status. Because a stop cancels every unfinished step, an explicit
+resume requeues them (`requeueCanceledSteps`) and reopens the *earliest* stopped
+step: without that, the reopened step would be the last one the plan could run.
+
+The ledger says the same thing the rows do. A worker's terminal marker only ever
+spoke for one turn, so every settle that leaves a run resting appends a
+`run.lifecycle` `settled` event carrying the run's canonical status, and a resume
+of a settled run appends a `reopened` event naming the step and the state it
+recovers from. A `completed` turn can no longer read as the last word on a run
+its plan left failed.
+
+`Failed` is then a projected execution state, never a stored issue status:
+`projectIssueExecution` reports it while a run that stopped (`failed`, `canceled`
+or the `awaiting_human` an interruption leaves) still holds the issue's
+workspace, with the reason and the last step that failed or went stale. Active
+work, an open pull request and a run awaiting review all outrank it, so a newer
+run never hides behind an older failure. `ISSUE_BOARD_COLUMNS` is that projection
+plus the source statuses, in board order — `ready` is only ever an issue with no
+open cycle to resume, and the source status keeps being shown next to the column
+it diverges from.
 
 ## Reviewing a Diff
 

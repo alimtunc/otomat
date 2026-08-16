@@ -75,6 +75,7 @@ it("gives an appended step the same frozen default as the launch", async () => {
     selector: { kind: "runtime", runtimeId: "fake" },
     overrides: { model: { kind: "model", id: "fake-thorough" } },
     dependsOn: [],
+    replaces: null,
     origin: "user",
   });
   await supervisor.settle();

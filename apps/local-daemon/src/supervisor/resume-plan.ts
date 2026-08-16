@@ -68,9 +68,9 @@ function reopen(
   return { kind: "native", session, step };
 }
 
-/** The furthest step that stopped without succeeding; compete candidates reopen as a group or not at all. */
+/** The earliest step that stopped without succeeding: a fail-fast cascade cancels everything after the real failure, and recovery starts at the failure. Compete candidates reopen as a group or not at all. */
 function stoppedStep(steps: readonly StepRunRow[]): StepRunRow | undefined {
-  return steps.findLast(
+  return steps.find(
     (step) =>
       step.compete_group_id === null && isStepSettled(step.status) && step.status !== "succeeded",
   );

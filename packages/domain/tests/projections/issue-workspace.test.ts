@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import type { IssueExecutionEvidence } from "#domain/projections/issue-execution";
+import type { IssueExecutionEvidence } from "#domain/projections/evidence";
 import { projectIssueWorkspace } from "#domain/projections/issue-workspace";
 
 // Runs are inserted without an explicit timestamp, so the stored shape is SQLite's CURRENT_TIMESTAMP, not ISO-8601.
@@ -15,6 +15,7 @@ function ev(over: Partial<IssueExecutionEvidence> & { run_id: string }): IssueEx
     run_branch: `otomat/run/${over.run_id}`,
     run_abandoned_at: null,
     worktree_status: "active",
+    halted_step: null,
     pr_status: null,
     pr_publication: null,
     ...over,

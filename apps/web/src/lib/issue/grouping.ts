@@ -1,4 +1,4 @@
-import { ISSUE_STATES, type IssueContract, type IssueState } from "@otomat/domain";
+import { ISSUE_BOARD_COLUMNS, type IssueBoardColumn, type IssueContract } from "@otomat/domain";
 import { resolveStatus } from "@otomat/ui";
 import { shortId } from "@web/lib/ids";
 import { boardColumnFor } from "@web/lib/issue/board-column";
@@ -20,8 +20,8 @@ export const ISSUE_GROUPINGS: IssueGrouping[] = ISSUE_GROUPING_OPTIONS.map(
 export interface IssueGroup {
   key: string;
   label: string;
-  /** Status groups keep their state so a header can show the chip the board has always shown. */
-  status: IssueState | null;
+  /** Status groups keep their column so a header can show the chip the board has always shown. */
+  status: IssueBoardColumn | null;
   color: string | null;
   issues: IssueContract[];
 }
@@ -33,14 +33,14 @@ interface GroupSeed {
 }
 
 function statusGroups(issues: IssueContract[]): IssueGroup[] {
-  const byStatus = new Map<IssueState, IssueContract[]>();
+  const byStatus = new Map<IssueBoardColumn, IssueContract[]>();
   for (const issue of issues) {
     const status = boardColumnFor(issue);
     const grouped = byStatus.get(status);
     if (grouped === undefined) byStatus.set(status, [issue]);
     else grouped.push(issue);
   }
-  return ISSUE_STATES.flatMap((status) => {
+  return ISSUE_BOARD_COLUMNS.flatMap((status) => {
     const grouped = byStatus.get(status);
     if (grouped === undefined) return [];
     return {

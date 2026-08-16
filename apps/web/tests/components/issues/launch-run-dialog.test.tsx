@@ -353,3 +353,39 @@ it("appends the step on the agent the user picked and follows the run it joined"
   expect(onLaunched).toHaveBeenCalledWith({ id: "run-7" });
   expect(launch).not.toHaveBeenCalled();
 });
+
+const STOPPED: IssueContract = {
+  ...CONTINUING,
+  execution: {
+    state: "failed",
+    run_id: "run-7",
+    failure: { reason: "failed", step: { id: "step-2", name: "Reviewer" } },
+  },
+};
+
+it("links the appended step to the failure it recovers", async () => {
+  await openDialog(STOPPED);
+  await act(async () => setInputValue(input("Step name"), "Review again"));
+
+  expect(document.body.textContent).toContain("This step recovers");
+  await click("Add step⌘↵");
+
+  expect(appendStep).toHaveBeenCalledWith(
+    expect.objectContaining({ replaces: "step-2" }),
+    expect.anything(),
+  );
+});
+
+it("leaves the failure standing when the step is not declared a recovery", async () => {
+  await openDialog(STOPPED);
+  await act(async () => setInputValue(input("Step name"), "Unrelated work"));
+  const optOut = document.querySelector<HTMLElement>("[role='checkbox']");
+  if (!optOut) throw new Error("recovery checkbox not found");
+  await act(async () => optOut.click());
+  await click("Add step⌘↵");
+
+  expect(appendStep).toHaveBeenCalledWith(
+    expect.not.objectContaining({ replaces: expect.anything() }),
+    expect.anything(),
+  );
+});

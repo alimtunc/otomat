@@ -108,6 +108,7 @@ export async function requestFix(
     selector: request.selector,
     overrides: request.overrides,
     dependsOn: preparation.dependsOn,
+    replaces: null,
     origin: "review_fix",
   });
   markFixRequested(ctx, run.id, preparation.commentIds);

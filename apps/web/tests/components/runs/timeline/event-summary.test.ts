@@ -18,11 +18,18 @@ it("summarizes an event by the most specific payload field", () => {
 });
 
 it("summarizes control-plane events by type", () => {
-  expect(typed("run.lifecycle", { final_status: "completed" })).toBe("run completed");
+  expect(typed("run.lifecycle", { final_status: "completed" })).toBe("turn completed");
   expect(typed("run.lifecycle")).toBe("run.lifecycle");
   expect(typed("git.diff_updated", { additions: 1 })).toBe("canonical git diff updated");
   expect(typed("runtime.usage", { usage: {} })).toBe("usage reported by the runtime");
   expect(typed("review.comment_created", { file_path: "a.ts", line: 3 })).toBe("comment · a.ts:3");
   expect(typed("pr.created", { url: "u" })).toBe("pull request created");
   expect(typed("pr.updated")).toBe("pull request updated");
+});
+
+it("separates the run's own landing from the turn that led to it", () => {
+  expect(typed("run.lifecycle", { phase: "settled", run_status: "failed" })).toBe("run failed");
+  expect(typed("run.lifecycle", { phase: "reopened", step_name: "Reviewer" })).toBe(
+    "run reopened at Reviewer",
+  );
 });

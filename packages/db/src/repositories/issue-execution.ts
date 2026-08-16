@@ -1,25 +1,45 @@
-import type { IssueExecutionEvidence } from "@otomat/domain";
-import { and, eq, type SQL } from "drizzle-orm";
+import type { HaltedStepEvidence, IssueExecutionEvidence } from "@otomat/domain";
+import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 
 import type { Db } from "../client.js";
-import { issues, pullRequests, runs, worktrees } from "../schema/index.js";
+import { issues, pullRequests, runs, stepRuns, worktrees } from "../schema/index.js";
 
 /** Evidence for the per-issue execution projection; `issue_id` groups the rows the domain reducer consumes. */
 export type IssueExecutionEvidenceRow = IssueExecutionEvidence & { issue_id: string };
 
+function scopeFilters(options: { projectId?: string; issueId?: string }): SQL[] {
+  const filters: SQL[] = [];
+  if (options.issueId) filters.push(eq(runs.issue_id, options.issueId));
+  if (options.projectId) filters.push(eq(issues.project_id, options.projectId));
+  return filters;
+}
+
+/** The last step of each run that failed or went stale — the step a reader is sent to, not the ones a fail-fast cascade canceled. */
+function lastHaltedSteps(db: Db, filters: SQL[]): Map<string, HaltedStepEvidence> {
+  const rows = db
+    .select({ run_id: stepRuns.run_id, id: stepRuns.id, name: stepRuns.name })
+    .from(stepRuns)
+    .innerJoin(runs, eq(stepRuns.run_id, runs.id))
+    .innerJoin(issues, eq(runs.issue_id, issues.id))
+    .where(and(inArray(stepRuns.status, ["failed", "stale"]), ...filters))
+    .orderBy(asc(stepRuns.idx))
+    .all();
+  return new Map(rows.map((row) => [row.run_id, { id: row.id, name: row.name }]));
+}
+
 /**
- * One query returning every run with its worktree and optional pull request for
- * the selected issues, so the daemon projects each issue's execution and
- * workspace state without an N+1. Rows are raw persisted facts;
- * `projectIssueExecution` and `projectIssueWorkspace` own the interpretation.
+ * One query per fact returning every run with its worktree, optional pull
+ * request and last halted step for the selected issues, so the daemon projects
+ * each issue's execution and workspace state without an N+1. Rows are raw
+ * persisted facts; `projectIssueExecution` and `projectIssueWorkspace` own the
+ * interpretation.
  */
 export function listIssueExecutionEvidence(
   db: Db,
   options: { projectId?: string; issueId?: string } = {},
 ): IssueExecutionEvidenceRow[] {
-  const filters: SQL[] = [];
-  if (options.issueId) filters.push(eq(runs.issue_id, options.issueId));
-  if (options.projectId) filters.push(eq(issues.project_id, options.projectId));
+  const filters = scopeFilters(options);
+  const halted = lastHaltedSteps(db, filters);
   return db
     .select({
       issue_id: runs.issue_id,
@@ -37,5 +57,6 @@ export function listIssueExecutionEvidence(
     .leftJoin(worktrees, eq(runs.worktree_id, worktrees.id))
     .leftJoin(pullRequests, eq(pullRequests.run_id, runs.id))
     .where(filters.length > 0 ? and(...filters) : undefined)
-    .all();
+    .all()
+    .map((row) => ({ ...row, halted_step: halted.get(row.run_id) ?? null }));
 }

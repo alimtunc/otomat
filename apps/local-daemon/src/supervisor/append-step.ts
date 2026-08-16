@@ -94,6 +94,7 @@ export async function appendRunStep(
     prompt: null,
     context: freezeAppendedContext(state, run, input),
     depends_on: [...input.dependsOn],
+    replaces: input.replaces,
     config,
   };
   const plan = appendPlanStep(run.plan_json, step);
