@@ -30,13 +30,15 @@ export function useConnectGitHub() {
   });
 }
 
-/** No cache to refresh: the drafted metadata lands in the form, which stays editable. */
-export function useDraftPullRequest(runId: string) {
+/** The proposal is persisted daemon-side, so the publication draft it becomes is refetched, never mirrored here. */
+export function useGeneratePullRequestMetadata(runId: string) {
+  const client = useQueryClient();
   return useMutation({
-    mutationFn: () => daemon.draftPullRequest(runId),
+    mutationFn: () => daemon.generatePullRequestMetadata(runId),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.runPullRequest(runId) }),
     onError: (error) =>
       toast.error(
-        daemonErrorMessage(error, "Could not draft the pull request — is the daemon running?"),
+        daemonErrorMessage(error, "Could not write the pull request — is the daemon running?"),
       ),
   });
 }

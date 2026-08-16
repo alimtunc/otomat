@@ -281,6 +281,21 @@ describe("ClaudeRuntimeAdapter", () => {
     expect(JSON.parse(readFileSync(argsFile, "utf8"))).not.toContain("--model");
   });
 
+  it("asks a one-shot question as text, sending the selection but no permission mode", () => {
+    const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
+
+    expect(adapter.describeOneShot("opus", { effort: "high" })).toEqual({
+      command: STUB_BIN,
+      args: ["-p", "--output-format", "text", "--effort", "high", "--model", "opus"],
+      effort: "high",
+    });
+    expect(adapter.describeOneShot(null, {})).toEqual({
+      command: STUB_BIN,
+      args: ["-p", "--output-format", "text"],
+      effort: null,
+    });
+  });
+
   it("records every call the provider refused, with the mode it refused under", async () => {
     process.env["OTOMAT_STUB_FIXTURES"] = JSON.stringify({
       "--help": join(STUB_FIXTURES, "claude-help-current.txt"),

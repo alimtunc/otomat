@@ -1,4 +1,4 @@
-import type { RuntimeCapabilities } from "@otomat/domain";
+import type { ProviderOptions, RuntimeCapabilities } from "@otomat/domain";
 
 import {
   requireProviderSession,
@@ -10,6 +10,7 @@ import type { TurnRef } from "#runtime/cli/turn-emitter";
 import type {
   RuntimeAdapter,
   RuntimeFinalState,
+  RuntimeOneShot,
   RuntimeOptionSupport,
   RuntimeResumeInput,
   RuntimeRunInput,
@@ -58,6 +59,14 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
     return codexOptionSupport(this.binary, model);
   }
 
+  describeOneShot(model: string | null, options: ProviderOptions): RuntimeOneShot {
+    return {
+      command: this.binary,
+      args: ["exec", "--sandbox", "read-only", ...this.tuningArgs(model, options), "-"],
+      effort: options.reasoning_effort ?? null,
+    };
+  }
+
   async run(
     input: RuntimeRunInput,
     sink: RuntimeSink,
@@ -85,10 +94,15 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
     if (options.approval_policy !== undefined) {
       args.push("--ask-for-approval", options.approval_policy);
     }
+    return [...args, ...this.tuningArgs(input.model ?? null, options)];
+  }
+
+  private tuningArgs(model: string | null, options: ProviderOptions): string[] {
+    const args: string[] = [];
     if (options.reasoning_effort !== undefined) {
       args.push(...reasoningEffortOverride(options.reasoning_effort));
     }
-    if (input.model != null) args.push("--model", input.model);
+    if (model !== null) args.push("--model", model);
     return args;
   }
 

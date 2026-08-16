@@ -165,6 +165,16 @@ export function toPullRequest(row: PullRequestRow): PullRequestContract {
     body: row.body,
     head_ref: row.head_ref,
     base_ref: row.base_ref,
+    commit_subject: row.commit_subject,
+    commit_body: row.commit_body,
+    generator:
+      row.generator_runtime === null
+        ? null
+        : {
+            runtime: row.generator_runtime,
+            model: row.generator_model,
+            effort: row.generator_effort,
+          },
     published_head_sha: row.published_head_sha,
     published_diff_sha: row.published_diff_sha,
     error_code: row.error_code,

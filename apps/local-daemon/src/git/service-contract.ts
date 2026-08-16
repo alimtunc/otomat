@@ -94,8 +94,8 @@ export interface GitWorktreeService {
   treeSnapshot(baseRef: string): TreeSnapshot;
   /** Canonical diff of `commit` against the owner's fork point: only a commit can stand for what a push published. */
   commitDiff(owner: string, commit: string): CanonicalDiff;
-  /** Commits outstanding changes and records the new branch tip without removing the active worktree. */
-  snapshot(owner: string): WorktreeRecord;
+  /** Commits outstanding changes and records the new branch tip without removing the active worktree. `message` names a commit a reader will see; the default is the internal snapshot. */
+  snapshot(owner: string, message?: string): WorktreeRecord;
   /** Fast-forwards the clean canonical owner from one candidate forked at `expectedBaseSha`. */
   promote(sourceOwner: string, canonicalOwner: string, expectedBaseSha: string): WorktreePromotion;
   /**

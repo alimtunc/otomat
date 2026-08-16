@@ -140,9 +140,7 @@ describe("pull request pushes", () => {
 
     expect(pushed.sync).toMatchObject({ state: "in_sync", dirty: true, ahead: [] });
     expect(pushed.row.published_head_sha).toBe(published);
-    expect(repo.git("-C", worktreePath, "log", "--format=%s", "-1").trim()).toBe(
-      "otomat: snapshot for r-push",
-    );
+    expect(repo.git("-C", worktreePath, "log", "--format=%s", "-1").trim()).toBe("Ship it");
   });
 
   it("pushes an open pull request whose run is no longer review ready", async () => {

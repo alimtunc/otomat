@@ -1,4 +1,9 @@
-import { readExecutionDefaults, writeExecutionDefaults } from "@otomat/db";
+import {
+  readExecutionDefaults,
+  readPullRequestGenerator,
+  writeExecutionDefaults,
+  writePullRequestGenerator,
+} from "@otomat/db";
 import { executionDefaultsSchema, updateAgentCapacityRequestSchema } from "@otomat/domain";
 import { Hono } from "hono";
 
@@ -33,6 +38,21 @@ export function createSettingsRoutes(deps: ApiDeps): Hono {
     }
     writeExecutionDefaults(deps.db, defaults);
     return c.json(readExecutionDefaults(deps.db));
+  });
+
+  routes.get("/pr-generator", (c) => c.json(readPullRequestGenerator(deps.db)));
+
+  routes.put("/pr-generator", validateJson(executionDefaultsSchema), (c) => {
+    const generator = c.req.valid("json");
+    try {
+      validateExecutionDefaults(generator);
+    } catch (error) {
+      const refusal = agentConfigErrorResponse(error);
+      if (!refusal) throw error;
+      return refusalJson(c, refusal);
+    }
+    writePullRequestGenerator(deps.db, generator);
+    return c.json(readPullRequestGenerator(deps.db));
   });
 
   return routes;

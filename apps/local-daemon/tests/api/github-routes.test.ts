@@ -102,6 +102,7 @@ it("serves and publishes the durable PR through the GitHub module", async () => 
   const published = await post(app, `/api/runs/${RUN_ID}/pr`, {
     title: "Ship it",
     body: "Details",
+    mode: "ready",
   });
   expect(published.status).toBe(200);
   expect(((await published.json()) as PullRequestDetail).pull_request?.url).toBe(row.url);
@@ -166,53 +167,73 @@ it("maps a refused push to an actionable conflict", async () => {
   });
 });
 
-it("maps an invalid run state to a conflict", async () => {
+it("maps a workspace that cannot publish to a conflict carrying its technical reason", async () => {
   const app = makeApiApp(t, {
     github: stubGitHubService({
       publish: async () => {
-        throw new GitHubPublicationError("run_not_review_ready", "Not ready.");
+        throw new GitHubPublicationError("diff_empty", "The run has no changes to publish.");
       },
     }),
   });
 
-  const response = await post(app, `/api/runs/${RUN_ID}/pr`, { title: "Ship", body: "" });
+  const response = await post(app, `/api/runs/${RUN_ID}/pr`, {
+    title: "Ship",
+    body: "",
+    mode: "ready",
+  });
   expect(response.status).toBe(409);
   expect(await response.json()).toEqual({
-    error: "run_not_review_ready",
-    message: "Not ready.",
+    error: "diff_empty",
+    message: "The run has no changes to publish.",
   });
 });
 
-it("drafts PR metadata with the run's agent and surfaces drafting refusals", async () => {
+it("refuses a publication that names no mode rather than defaulting it to draft", async () => {
+  const app = makeApiApp(t, { github: stubGitHubService() });
+
+  const response = await post(app, `/api/runs/${RUN_ID}/pr`, { title: "Ship", body: "" });
+
+  expect(response.status).toBe(400);
+});
+
+it("generates PR metadata without publishing, and surfaces generation refusals", async () => {
+  const proposal = {
+    title: "feat(pr): add note.md (OTO-81)",
+    body: "Adds the note.\n\nFixes OTO-81",
+    branch: "feat/add-note",
+    commit: { subject: "feat(pr): add note.md", body: null },
+    generator: { runtime: "claude", model: "claude-opus-5", effort: "high" },
+  };
+  let published = 0;
   const app = makeApiApp(t, {
     github: stubGitHubService({
-      draftPullRequest: async () => ({
-        title: "Add note.md",
-        body: "Adds the note.",
-        branch: "feat/add-note",
-      }),
-    }),
-  });
-
-  const res = await post(app, `/api/runs/${RUN_ID}/pr/draft`, {});
-  expect(res.status).toBe(200);
-  expect(await res.json()).toEqual({
-    title: "Add note.md",
-    body: "Adds the note.",
-    branch: "feat/add-note",
-  });
-
-  const refusing = makeApiApp(t, {
-    github: stubGitHubService({
-      draftPullRequest: async () => {
-        throw new GitHubPublicationError("pr_draft_failed", "The run has no changes to describe.");
+      generatePullRequestMetadata: async () => proposal,
+      publish: async () => {
+        published += 1;
+        throw new Error("generation must not publish");
       },
     }),
   });
-  const refused = await post(refusing, `/api/runs/${RUN_ID}/pr/draft`, {});
+
+  const res = await post(app, `/api/runs/${RUN_ID}/pr/generate`, {});
+  expect(res.status).toBe(200);
+  expect(await res.json()).toEqual(proposal);
+  expect(published).toBe(0);
+
+  const refusing = makeApiApp(t, {
+    github: stubGitHubService({
+      generatePullRequestMetadata: async () => {
+        throw new GitHubPublicationError(
+          "pr_generator_model_unavailable",
+          'The claude CLI on this host does not offer model "ghost".',
+        );
+      },
+    }),
+  });
+  const refused = await post(refusing, `/api/runs/${RUN_ID}/pr/generate`, {});
   expect(refused.status).toBe(409);
   expect(await refused.json()).toEqual({
-    error: "pr_draft_failed",
-    message: "The run has no changes to describe.",
+    error: "pr_generator_model_unavailable",
+    message: 'The claude CLI on this host does not offer model "ghost".',
   });
 });

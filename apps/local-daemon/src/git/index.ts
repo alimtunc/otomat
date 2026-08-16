@@ -19,6 +19,7 @@ export {
   headSha,
   isRepositoryRoot,
   listBranches,
+  recentSubjects,
   searchTrackedFiles,
   uncommittedPaths,
   type CommitSummary,

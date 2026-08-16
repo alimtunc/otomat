@@ -1,8 +1,14 @@
 import type { PullRequestRow, RunRow } from "@otomat/db";
-import type { PreparePullRequestRequest, PushPullRequestRequest } from "@otomat/domain";
+import type {
+  PreparePullRequestRequest,
+  PullRequestProposal,
+  PullRequestPublishability,
+  PushPullRequestRequest,
+} from "@otomat/domain";
 
 import type { GitWorktreeService, WorktreeRecord } from "#git";
 
+import type { GenerationAgent } from "../generation/agent.js";
 import type {
   GitHubPullRequest,
   GitHubRemote,
@@ -26,8 +32,10 @@ export interface PublicationWorkspace {
 export interface PullRequestPublicationService {
   /** Refreshes a live pull request from the provider before answering; see `PullRequestPublisher.get`. */
   get(runId: string): Promise<PullRequestView | null>;
+  publishability(runId: string): Promise<PullRequestPublishability>;
   publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView>;
   pushCommits(runId: string, request: PushPullRequestRequest): Promise<PullRequestView>;
+  generate(run: RunRow, agent: GenerationAgent): Promise<PullRequestProposal>;
 }
 
 export interface ExistingPullRequestResult {

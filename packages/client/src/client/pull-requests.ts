@@ -1,6 +1,6 @@
 import {
   pullRequestDetailSchema,
-  pullRequestDraftSchema,
+  pullRequestProposalSchema,
   type PreparePullRequestRequest,
   type PushPullRequestRequest,
 } from "@otomat/domain";
@@ -25,9 +25,9 @@ export function createPullRequestsClient(config: DaemonClientConfig) {
         await postJson(config, `/api/runs/${encodeURIComponent(id)}/pr/push`, request),
       );
     },
-    async draftPullRequest(id: string) {
-      return pullRequestDraftSchema.parse(
-        await postJson(config, `/api/runs/${encodeURIComponent(id)}/pr/draft`, {}),
+    async generatePullRequestMetadata(id: string) {
+      return pullRequestProposalSchema.parse(
+        await postJson(config, `/api/runs/${encodeURIComponent(id)}/pr/generate`, {}),
       );
     },
   };

@@ -115,3 +115,42 @@ it("refuses a model and options with no runtime to belong to", async () => {
 
   expect(res.status).toBe(400);
 });
+
+it("selects no PR metadata generator until one is chosen, so generation follows the run", async () => {
+  const app = makeApiApp(t, {});
+
+  const generator = await json<ExecutionDefaults>(await request(app, "/api/settings/pr-generator"));
+
+  expect(generator).toEqual({ runtime: null, model: null, options: {} });
+});
+
+it("stores the PR metadata generator apart from the execution defaults", async () => {
+  const saved = await put("/api/settings/pr-generator", {
+    runtime: "fake",
+    model: "fake-thorough",
+    options: { effort: "low" },
+  });
+
+  expect(saved.status).toBe(200);
+  expect(await json<ExecutionDefaults>(saved)).toEqual({
+    runtime: "fake",
+    model: "fake-thorough",
+    options: { effort: "low" },
+  });
+
+  const app = makeApiApp(t, {});
+  expect(
+    await json<ExecutionDefaults>(await request(app, "/api/settings/execution-defaults")),
+  ).toEqual({ runtime: null, model: null, options: {} });
+});
+
+it("refuses a generator the chosen runtime and model do not announce", async () => {
+  const res = await put("/api/settings/pr-generator", {
+    runtime: "fake",
+    model: "fake-fast",
+    options: { effort: "high" },
+  });
+
+  expect(res.status).toBe(400);
+  expect(await json<{ error: string }>(res)).toMatchObject({ error: "option_unsupported" });
+});

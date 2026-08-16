@@ -1,15 +1,18 @@
 import {
   getPullRequestForRun,
   insertPullRequest,
+  listStepRunsForRun,
   updatePullRequest,
   type PullRequestPatch,
   type PullRequestRow,
+  type RunRow,
 } from "@otomat/db";
 import {
   drivePath,
   pullRequestMachine,
   pullRequestPublicationMachine,
   type EventSource,
+  type PullRequestProposal,
   type PullRequestPublicationState,
   type PullRequestState,
 } from "@otomat/domain";
@@ -18,7 +21,11 @@ import { emitLedgerEvent } from "#events";
 import { closeMergedRun } from "#supervisor";
 
 import { GitHubPublicationError, safeGitHubFailure } from "../errors.js";
-import { buildPullRequestEvent, type PullRequestEventType } from "../events.js";
+import {
+  buildPublicationOverrideEvent,
+  buildPullRequestEvent,
+  type PullRequestEventType,
+} from "../events.js";
 import type { PublicationConfig } from "./types.js";
 
 /** Row persistence, ledger emission, and state-machine reconciliation for one publication. */
@@ -113,6 +120,35 @@ export class PublicationStore {
       );
     });
     return current;
+  }
+
+  /** The proposal is the durable publication draft: it survives a reload of the cockpit. */
+  recordProposal(runId: string, proposal: PullRequestProposal): PullRequestRow {
+    const row = this.ensureRow(runId, proposal.title, proposal.body);
+    return this.patch(
+      row,
+      {
+        title: proposal.title,
+        body: proposal.body,
+        ...(row.number === null ? { head_ref: proposal.branch } : {}),
+        commit_subject: proposal.commit.subject,
+        commit_body: proposal.commit.body,
+        generator_runtime: proposal.generator.runtime,
+        generator_model: proposal.generator.model,
+        generator_effort: proposal.generator.effort,
+      },
+      "otomat",
+    );
+  }
+
+  /** Nothing is rewritten: the run keeps its status and every step keeps its own. */
+  recordExecutionOverride(row: PullRequestRow, run: RunRow): void {
+    emitLedgerEvent(
+      this.config.db,
+      this.config.dataDir,
+      run.id,
+      buildPublicationOverrideEvent(row, run, listStepRunsForRun(this.config.db, run.id)),
+    );
   }
 
   failure(row: PullRequestRow, error: unknown): PullRequestRow {

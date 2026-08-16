@@ -2,15 +2,20 @@ import { getPullRequestForRun, type PullRequestRow, type RunRow } from "@otomat/
 import type {
   GitHubConnectionContract,
   PreparePullRequestRequest,
+  PullRequestProposal,
+  PullRequestPublishability,
   PullRequestSync,
   PushPullRequestRequest,
 } from "@otomat/domain";
 
 import { normalizePullRequestBody } from "../body.js";
 import { GitHubPublicationError } from "../errors.js";
-import type { PullRequestView } from "../types.js";
+import type { GenerationAgent } from "../generation/agent.js";
+import { buildGenerationInput } from "../generation/input.js";
+import type { PullRequestGenerator, PullRequestView } from "../types.js";
 import { createPublication } from "./create.js";
 import { providerPatch, refreshExistingPullRequest, updateDetails } from "./provider.js";
+import { computePublishability } from "./publishability.js";
 import { pushCommits } from "./push.js";
 import { PublicationStore } from "./store.js";
 import { computeSync, UNAVAILABLE_SYNC } from "./sync.js";
@@ -22,10 +27,13 @@ import type {
 import { resolveWorkspace } from "./workspace.js";
 
 class PullRequestPublisher implements PullRequestPublicationService {
-  private readonly operations = new Map<string, Promise<PullRequestView>>();
+  private readonly operations = new Map<string, Promise<unknown>>();
   private readonly store: PublicationStore;
 
-  constructor(private readonly config: PublicationConfig) {
+  constructor(
+    private readonly config: PublicationConfig,
+    private readonly generator: PullRequestGenerator | undefined,
+  ) {
     this.store = new PublicationStore(config);
   }
 
@@ -37,8 +45,28 @@ class PullRequestPublisher implements PullRequestPublicationService {
     return this.view(await this.refreshLifecycle(this.store.recoverInterrupted(stored)));
   }
 
+  publishability(runId: string): Promise<PullRequestPublishability> {
+    return computePublishability(this.config, runId);
+  }
+
   publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView> {
     return this.serialize(run.id, () => this.publishOnce(run, request));
+  }
+
+  /** Serialized with the publications: a proposal written between a push and its create would describe another tree. */
+  generate(run: RunRow, agent: GenerationAgent): Promise<PullRequestProposal> {
+    const generator = this.generator;
+    if (generator === undefined) {
+      throw new GitHubPublicationError(
+        "pr_generation_unavailable",
+        "This daemon runs no metadata generator; write the title and description by hand.",
+      );
+    }
+    return this.serialize(run.id, async () => {
+      const proposal = await generator.generate(agent, buildGenerationInput(this.config, run));
+      this.store.recordProposal(run.id, proposal);
+      return proposal;
+    });
   }
 
   pushCommits(runId: string, request: PushPullRequestRequest): Promise<PullRequestView> {
@@ -49,16 +77,13 @@ class PullRequestPublisher implements PullRequestPublicationService {
   }
 
   /** Queued, never dropped: two writers on one branch is how a lease turns into a lost commit. */
-  private serialize(
-    runId: string,
-    operation: () => Promise<PullRequestView>,
-  ): Promise<PullRequestView> {
+  private serialize<T>(runId: string, operation: () => Promise<T>): Promise<T> {
     const active = this.operations.get(runId);
-    const started: Promise<PullRequestView> = (
-      active ? active.then(operation, operation) : operation()
-    ).finally(() => {
-      if (this.operations.get(runId) === started) this.operations.delete(runId);
-    });
+    const started: Promise<T> = (active ? active.then(operation, operation) : operation()).finally(
+      () => {
+        if (this.operations.get(runId) === started) this.operations.delete(runId);
+      },
+    );
     this.operations.set(runId, started);
     return started;
   }
@@ -132,12 +157,9 @@ class PullRequestPublisher implements PullRequestPublicationService {
       this.store.ensureRow(run.id, publicationRequest.title, publicationRequest.normalizedBody),
     );
     if (row.status === "merged" || row.status === "closed") return this.view(row);
-    // Only opening a pull request waits on the run: an existing one outlives the launch state that made it.
+    // Publishability is a property of the workspace, so how the run ended is recorded, never enforced.
     if (row.number === null && run.status !== "review_ready") {
-      throw new GitHubPublicationError(
-        "run_not_review_ready",
-        "Only a review-ready run can open a pull request.",
-      );
+      this.store.recordExecutionOverride(row, run);
     }
     try {
       const workspace = await resolveWorkspace(this.config, run.id);
@@ -169,6 +191,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
 
 export function createPullRequestPublisher(
   config: PublicationConfig,
+  generator: PullRequestGenerator | undefined,
 ): PullRequestPublicationService {
-  return new PullRequestPublisher(config);
+  return new PullRequestPublisher(config, generator);
 }

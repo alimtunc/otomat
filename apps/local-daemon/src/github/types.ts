@@ -3,7 +3,8 @@ import type {
   GitHubConnectionContract,
   LinearLifecycleSync,
   PreparePullRequestRequest,
-  PullRequestDraft,
+  PullRequestProposal,
+  PullRequestPublishability,
   PullRequestState,
   PullRequestSync,
   PushPullRequestRequest,
@@ -12,20 +13,11 @@ import type {
 import type { RepositoryResolver } from "#git";
 import type { PullRequestCommentInput } from "#review";
 
-export interface PullRequestDraftInput {
-  /** Runtime id of the run's own agent; only CLIs with a non-interactive print mode can draft. */
-  runtime: string;
-  cwd: string;
-  /** What the run set out to do — issue title and/or the launch prompt. */
-  objective: string;
-  /** One line per changed file, `path +a -d`. */
-  diffStat: string[];
-  /** Concatenated per-file patches; truncated to a fixed budget by the drafter. */
-  patch: string;
-}
+import type { GenerationAgent } from "./generation/agent.js";
+import type { GenerationInput } from "./generation/input.js";
 
-export interface PullRequestDrafter {
-  draft(input: PullRequestDraftInput): Promise<PullRequestDraft>;
+export interface PullRequestGenerator {
+  generate(agent: GenerationAgent, input: GenerationInput): Promise<PullRequestProposal>;
 }
 
 export interface CommandRequest {
@@ -57,8 +49,8 @@ export interface GitHubServiceConfig {
   /** Per-run resolution ensures publication pushes from the run's own repository. */
   repositories: RepositoryResolver;
   cli: GitHubCli;
-  /** Drafts PR metadata with the run's own agent CLI; absent disables the draft endpoint honestly. */
-  drafter?: PullRequestDrafter;
+  /** Writes PR metadata with a provider CLI; absent disables the generation endpoint honestly. */
+  generator?: PullRequestGenerator;
   /** Carried to merge closure; the GitHub service itself never calls it. */
   syncIssueLifecycle?: LinearLifecycleSync;
   idFactory?: () => string;
@@ -69,11 +61,13 @@ export interface GitHubService {
   connect(): GitHubConnectionContract;
   /** Re-reads a live pull request from the provider, settling the run when it turns out merged. */
   getPullRequest(runId: string): Promise<PullRequestView | null>;
+  publishability(runId: string): Promise<PullRequestPublishability>;
   /** Never pushes to a pull request that already exists. */
   publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView>;
   /** Never commits: only commits the workspace already holds are published. */
   pushCommits(runId: string, request: PushPullRequestRequest): Promise<PullRequestView>;
-  draftPullRequest(run: RunRow): Promise<PullRequestDraft>;
+  /** Writes and persists a proposal; it pushes nothing, creates no branch and opens no pull request. */
+  generatePullRequestMetadata(run: RunRow): Promise<PullRequestProposal>;
   publishReviewComment(runId: string, input: PullRequestCommentInput): Promise<{ url: string }>;
 }
 
