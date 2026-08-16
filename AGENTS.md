@@ -218,6 +218,15 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
 
 ## Conventions
 
+- Commit and pull-request titles follow Conventional Commits:
+  `<type>(<scope>): <imperative summary>`. Use `feat`, `fix`, `refactor`,
+  `perf`, `test`, `docs`, `build`, `ci`, `chore` or `revert`; give the scope a
+  current domain meaning, or omit it rather than writing empty parentheses.
+  Issue-bound commits end with a `Refs OTO-123` footer. The PR title also names
+  `(OTO-123)`, and a PR that fully delivers the issue uses `Fixes OTO-123` in
+  its description (`Refs` for partial work). Derive the identifier from the
+  attached issue; never invent one. These references are the durable link used
+  by Linear and Otomat.
 - TypeScript only, using idiomatic async/await and try/catch. Do not introduce
   Effect; the project has one async/error model to keep control flow legible.
 - A callable declared inside a function body is an arrow function bound to a
