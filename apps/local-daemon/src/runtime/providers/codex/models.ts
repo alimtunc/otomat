@@ -1,4 +1,9 @@
-import { modelIdSchema, type BinaryProbe, type RuntimeModel } from "@otomat/domain";
+import {
+  modelIdSchema,
+  providerOptionValueSchema,
+  type BinaryProbe,
+  type RuntimeModel,
+} from "@otomat/domain";
 import { z } from "zod";
 
 import type { ModelDiscoveryResult, RuntimeModelSupport } from "#runtime/models/support";
@@ -13,6 +18,17 @@ const CODEX_DISCOVERY_DETAIL = `Listed by \`codex ${CODEX_MODEL_LIST_ARGS.join("
 /** Only the entries the CLI itself lists; `hide` marks internal or retired slugs. */
 const LISTED_VISIBILITY = "list";
 
+/** Codex 0.147 publishes a level as `{ effort, description }`; earlier releases published the bare identifier. */
+const codexReasoningLevelSchema = z.union([
+  providerOptionValueSchema.transform((effort) => ({ effort, description: null })),
+  z
+    .object({
+      effort: providerOptionValueSchema,
+      description: z.string().nullish(),
+    })
+    .transform(({ effort, description }) => ({ effort, description: description ?? null })),
+]);
+
 const codexCatalogSchema = z.object({
   models: z.array(
     z.object({
@@ -23,8 +39,8 @@ const codexCatalogSchema = z.object({
       priority: z.number().nullish(),
       /** The reasoning level this model runs at when no override is sent. */
       default_reasoning_level: z.string().nullish(),
-      /** Every reasoning level this model accepts; absent on a catalog that does not publish them. */
-      supported_reasoning_levels: z.array(z.string()).nullish(),
+      /** Every reasoning level this model accepts, in the order the CLI listed them; absent on a catalog that does not publish them. */
+      supported_reasoning_levels: z.array(codexReasoningLevelSchema).nullish(),
     }),
   ),
 });

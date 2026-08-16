@@ -36,3 +36,8 @@ function sentenceCase(value: string): string {
 export function providerOptionValueLabel(value: string): string {
   return VALUE_LABELS[value] ?? sentenceCase(value);
 }
+
+/** The identifier a humanized label hides, so the value the CLI receives stays readable; nothing when the label already spells it. */
+export function providerOptionValueHint(value: string): string | undefined {
+  return providerOptionValueLabel(value).toLowerCase() === value.toLowerCase() ? undefined : value;
+}

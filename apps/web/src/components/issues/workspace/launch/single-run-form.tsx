@@ -7,7 +7,7 @@ import { useContextSources } from "@web/components/context/use-context-sources";
 import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
-import { LaunchTargetFields } from "@web/components/runs/launch/launch-target-fields";
+import { BaseBranchControl } from "@web/components/runs/launch/base-branch-control";
 import type { LaunchTargetState } from "@web/components/runs/launch/use-launch-target";
 import { contextRequestFields, EMPTY_CONTEXT_DRAFT } from "@web/lib/context/draft";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
@@ -68,12 +68,14 @@ export function SingleRunLaunchForm({
             noteRows={4}
           />
           <ContextSourcesPanel sources={sources} />
-          <LaunchExecutionPicker
-            execution={launchExecution}
-            onChange={onExecutionChange}
-            label="Single run"
-          />
-          <LaunchTargetFields target={target} disabled={isPending} />
+          <div className="flex flex-wrap items-center gap-1.5">
+            <LaunchExecutionPicker
+              execution={launchExecution}
+              onChange={onExecutionChange}
+              label="Single run"
+            />
+            <BaseBranchControl target={target} disabled={isPending} />
+          </div>
         </div>
       </DialogBody>
       <IssueFormFooter

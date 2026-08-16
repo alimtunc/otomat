@@ -2,6 +2,7 @@ import type { IssueContract } from "@otomat/domain";
 import { DialogBody, Skeleton } from "@otomat/ui";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
 import { LaunchBlockedPanel } from "@web/components/runs/launch/launch-blocked-panel";
+import { RepositoryChoice } from "@web/components/runs/launch/repository-choice";
 import {
   useLaunchTarget,
   type LaunchTargetState,
@@ -78,6 +79,13 @@ function ResolvedLaunchTargetGate({
     return (
       <DialogBody>
         <LaunchBlockedPanel projectId={projectId} blocker={target.blocker} issue={issue} />
+      </DialogBody>
+    );
+  }
+  if (target.status === "ambiguous") {
+    return (
+      <DialogBody>
+        <RepositoryChoice target={target} />
       </DialogBody>
     );
   }

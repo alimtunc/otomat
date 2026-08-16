@@ -1,13 +1,24 @@
-import type { RunContract } from "@otomat/domain";
-import { Button, DialogBody, Kbd, Textarea } from "@otomat/ui";
+import { contextReferenceKey, type RunContract } from "@otomat/domain";
+import { AutoTextarea, Button, DialogBody, Kbd } from "@otomat/ui";
 import { useLaunchRun } from "@web/api/runs/use-launch-run";
+import { AddContextPopover } from "@web/components/context/add-context-popover";
+import { AttachedContextRow } from "@web/components/context/attached-context-row";
 import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
+import { ComposerShell } from "@web/components/issues/composer-shell";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
-import { LaunchTargetFields } from "@web/components/runs/launch/launch-target-fields";
+import { BaseBranchControl } from "@web/components/runs/launch/base-branch-control";
 import type { LaunchTargetState } from "@web/components/runs/launch/use-launch-target";
+import {
+  addContextReference,
+  contextRequestFields,
+  EMPTY_CONTEXT_DRAFT,
+  removeContextReference,
+} from "@web/lib/context/draft";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { useState, type KeyboardEvent } from "react";
+
+const COMPOSER_LABEL = "Ad-hoc run";
 
 export interface AgentIssueFormProps {
   target: Extract<LaunchTargetState, { status: "ready" }>;
@@ -25,6 +36,7 @@ export function AgentIssueForm({
   onCancel,
 }: AgentIssueFormProps) {
   const [promptText, setPromptText] = useState("");
+  const [context, setContext] = useState(EMPTY_CONTEXT_DRAFT);
   const { launch, isPending } = useLaunchRun();
   const launchExecution = useLaunchExecution(execution);
 
@@ -36,10 +48,12 @@ export function AgentIssueForm({
       prompt: promptText.trim(),
       project_id: target.repository.project_id,
       base_branch: target.baseBranch,
+      ...contextRequestFields(context),
       ...launchExecution.request,
     });
     if (run) {
       setPromptText("");
+      setContext(EMPTY_CONTEXT_DRAFT);
       onLaunched(run);
     }
   }
@@ -53,37 +67,57 @@ export function AgentIssueForm({
 
   return (
     <>
-      <DialogBody className="flex flex-col gap-3">
-        <Textarea
-          value={promptText}
-          onChange={(event) => setPromptText(event.target.value)}
-          onKeyDown={onPromptKeyDown}
-          placeholder='Tell the agent what to do, e.g. "implement nested CSV quoting in the parser and open a PR"'
-          rows={4}
-          aria-label="Issue prompt"
-        />
-        <LaunchExecutionPicker
-          execution={launchExecution}
-          onChange={onExecutionChange}
-          label="Ad-hoc run"
-        />
-        <LaunchTargetFields target={target} disabled={isPending} />
+      <DialogBody>
+        <ComposerShell
+          controls={
+            <>
+              <LaunchExecutionPicker
+                execution={launchExecution}
+                onChange={onExecutionChange}
+                label={COMPOSER_LABEL}
+              />
+              <AttachedContextRow
+                issue={null}
+                references={context.references}
+                onRemove={(key) => setContext(removeContextReference(context, key))}
+                label={COMPOSER_LABEL}
+                addControl={
+                  <AddContextPopover
+                    projectId={target.repository.project_id}
+                    repositoryId={target.repository.id}
+                    attachedKeys={new Set(context.references.map(contextReferenceKey))}
+                    onAdd={(reference) => setContext(addContextReference(context, reference))}
+                    label={COMPOSER_LABEL}
+                  />
+                }
+              />
+              <BaseBranchControl target={target} disabled={isPending} />
+            </>
+          }
+          submit={
+            <Button
+              variant="primary"
+              size="sm"
+              loading={isPending}
+              disabled={!canSubmit}
+              onClick={() => void submit()}
+            >
+              Create &amp; launch
+              <Kbd tone="on-accent">⌘↵</Kbd>
+            </Button>
+          }
+        >
+          <AutoTextarea
+            autoFocus
+            value={promptText}
+            onChange={(event) => setPromptText(event.target.value)}
+            onKeyDown={onPromptKeyDown}
+            placeholder='Tell the agent what to do, e.g. "implement nested CSV quoting in the parser and open a PR"'
+            aria-label="Issue prompt"
+          />
+        </ComposerShell>
       </DialogBody>
-      <IssueFormFooter
-        onCancel={onCancel}
-        submit={
-          <Button
-            variant="primary"
-            size="sm"
-            loading={isPending}
-            disabled={!canSubmit}
-            onClick={() => void submit()}
-          >
-            Create & launch
-            <Kbd tone="on-accent">⌘↵</Kbd>
-          </Button>
-        }
-      />
+      <IssueFormFooter onCancel={onCancel} />
     </>
   );
 }

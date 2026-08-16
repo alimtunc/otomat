@@ -1,3 +1,6 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
 import {
   providerOptionDescriptor,
   type ProviderOptionDescriptor,
@@ -26,11 +29,24 @@ afterEach(() => {
   teardownStubHarness(worktree);
 });
 
-function codexFixtures(catalog = "codex-models.json"): void {
+function codexFixtures(catalog = stubFixture("codex-models.json")): void {
   process.env["OTOMAT_STUB_FIXTURES"] = JSON.stringify({
     "exec --help": stubFixture("codex-exec-help.txt"),
-    "debug models --bundled": stubFixture(catalog),
+    "debug models --bundled": catalog,
   });
+}
+
+/** The current contract with one level entry Codex could never emit, so the refusal is tested against the shape in use. */
+function malformedCatalog(directory: string): string {
+  const catalog = JSON.parse(readFileSync(stubFixture("codex-models.json"), "utf8")) as {
+    models: { supported_reasoning_levels?: unknown[] }[];
+  };
+  const [first] = catalog.models;
+  if (first === undefined) throw new Error("the codex catalog fixture must list a model");
+  first.supported_reasoning_levels = [{ description: "no effort at all" }];
+  const path = join(directory, "codex-models-malformed.json");
+  writeFileSync(path, JSON.stringify(catalog));
+  return path;
 }
 
 function descriptor(
@@ -238,7 +254,20 @@ describe("codex provider options", () => {
     expect(values(reasoning)).toEqual(["low", "medium", "high", "xhigh", "max", "ultra"]);
     // Otomat sends no `-c model_reasoning_effort` of its own, so nothing is frozen for it.
     expect(reasoning?.default_value).toBeNull();
-    expect(reasoning?.description).toContain('Codex applies "medium" itself');
+    expect(reasoning?.description).toContain('Codex applies "low" itself');
+  });
+
+  it("carries each level's own description through to the picker", () => {
+    codexFixtures();
+
+    const reasoning = descriptor(
+      new CodexRuntimeAdapter(STUB_BIN).describeOptions("gpt-5.6-sol").options,
+      "reasoning_effort",
+    );
+
+    expect(reasoning?.choices.find((choice) => choice.value === "ultra")?.description).toBe(
+      "Maximum reasoning with automatic task delegation",
+    );
   });
 
   it("sends an effort as `model_reasoning_effort`, including `ultra` when the model announces it", () => {
@@ -251,6 +280,39 @@ describe("codex provider options", () => {
 
     expect(effort?.key).toBe("reasoning_effort");
     expect(values(effort ?? undefined)).toContain("ultra");
+  });
+
+  it("withholds `ultra` from a model whose entry does not announce it", () => {
+    codexFixtures();
+
+    const reasoning = descriptor(
+      new CodexRuntimeAdapter(STUB_BIN).describeOptions("gpt-5.2").options,
+      "reasoning_effort",
+    );
+
+    expect(values(reasoning)).toEqual(["low", "medium", "high", "xhigh"]);
+  });
+
+  it("reads the same levels from a catalog that still publishes bare identifiers", () => {
+    codexFixtures(stubFixture("codex-models-legacy.json"));
+
+    const reasoning = descriptor(
+      new CodexRuntimeAdapter(STUB_BIN).describeOptions("gpt-5.6-sol").options,
+      "reasoning_effort",
+    );
+
+    expect(values(reasoning)).toEqual(["low", "medium", "high", "xhigh", "max", "ultra"]);
+    expect(reasoning?.choices.every((choice) => choice.description === null)).toBe(true);
+  });
+
+  it("invents no level from a catalog entry it cannot read, and says so", () => {
+    codexFixtures(malformedCatalog(worktree));
+
+    const support = new CodexRuntimeAdapter(STUB_BIN).describeOptions("gpt-5.6-sol");
+
+    expect(descriptor(support.options, "reasoning_effort")).toBeUndefined();
+    expect(support.detection.detail).toContain("cannot read");
+    expect(descriptor(support.options, "sandbox")).toBeDefined();
   });
 
   it("offers no reasoning field for a model the catalog does not describe", () => {

@@ -8,6 +8,11 @@ export function stepDependencyNames(plan: RunPlan, stepId: string): string[] {
   return step.depends_on.map((dependency) => nameById.get(dependency) ?? dependency);
 }
 
+/** The step the ledger last carried an event for: the one the cockpit is following. */
+export function activeStepRunId(events: readonly EventEnvelope[]): string | null {
+  return events.findLast((event) => event.step_run_id !== null)?.step_run_id ?? null;
+}
+
 /** Every event attributed to one step, directly or through a session that step owns. */
 export function eventsForStep(
   detail: RunDetail,

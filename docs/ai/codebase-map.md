@@ -118,6 +118,13 @@ for the runtime and, where the provider scopes them that way, the selected model
 (Codex publishes reasoning levels per model). A non-`ok` detection carries no
 options and the runtime still launches on its provider defaults.
 
+A published catalog is a contract that moves: Codex 0.147 lists a reasoning level
+as `{ effort, description }` where earlier releases listed the bare identifier.
+Both shapes parse, into the same normalised level, because either can come from a
+CLI a user has installed. What does not degrade is validation — an entry neither
+shape explains fails the whole catalog with the parser's own message, since a
+skipped entry would silently shorten the list of what a model accepts.
+
 Those descriptors are the single source for three gates: the daemon refuses an
 option the installed binary does not announce (`option_unsupported`, in
 `agents/options.ts`), `GET /api/runtimes/:id/options` serves them to the cockpit,
@@ -219,12 +226,25 @@ runtime or model that is *absent on this host* gets is a refusal either way —
 never a substitution.
 
 `apps/web/src/components/execution` is the single control: one trigger
-summarising the whole configuration over `DropdownMenu` submenus that list only
-detected values, reused by Settings, agent profiles, Single run, Workflow (run
-default and per step), appended steps and the review fix. A launched run is
-immutable by construction — its frozen config is what resume and follow-up
-replay — so the cockpit shows it read-only with that sentence attached instead of
-offering a picker that could not be honoured.
+summarising the whole configuration over submenus that list only detected values,
+reused by Settings, agent profiles, Single run, Workflow (run default and per
+step), appended steps and the review fix. A launched run is immutable by
+construction — its frozen config is what resume and follow-up replay — so the
+cockpit shows it read-only with that sentence attached instead of offering a
+picker that could not be honoured.
+
+The compact surface itself is not Execution's: `packages/ui`'s `ConfigMenu`
+family owns the trigger, the label/value rows, the submenus and the bounded,
+scrolling popups, and the Issues filters compose the same shell with their own
+multi-selection state. The split follows what varies — a width or scroll
+constraint is one fact in the design system, while resolving a runtime and
+confirming a dangerous value stays with Execution. It also decides what the
+compact form may drop rather than truncate: the effective value is what the row
+shows, and its provenance, the full text, and how the installed binary was read
+reach the user through the accessible name and the trigger's tooltip. The
+cockpit's Execution card answers the same way — the selected step's effective
+configuration first, every step and what the runtime reported behind a
+disclosure.
 
 ## Run Steering and Deferred Messages
 
@@ -580,6 +600,12 @@ React, Vite, TanStack Router/Query/Form, Tailwind, Base UI (shadcn-style
 primitives), lucide-react, sonner, zod, `@git-diff-view/react` for diffs, xterm for
 terminal/session surfaces, and zustand only when a local UI store is actually
 needed.
+
+Every `@otomat/*` import in `apps/web` resolves to the package's `dist`, so a
+suite run against a stale build tests a surface that no longer exists — and says
+so as `undefined is not a function` at the call site, far from its cause. The web
+suite's global setup therefore compares each consumed package's source barrel
+with its emitted one first and names the missing symbols.
 
 Markdown from Linear and from agents renders through `packages/ui`'s `Markdown`
 component, which compiles `markdown-to-jsx` into React elements — never

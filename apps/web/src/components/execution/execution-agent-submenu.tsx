@@ -1,12 +1,10 @@
 import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
 import {
-  DropdownMenuContent,
+  ConfigMenuChoice,
+  ConfigMenuSubmenu,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
   ProviderMark,
 } from "@otomat/ui";
 import { buildItems, type ChoiceItem } from "@web/components/execution/agent-items";
@@ -25,14 +23,15 @@ export interface ExecutionAgentSubmenuProps {
   effectiveLabel: string;
 }
 
-function AgentItem({ item }: { item: ChoiceItem }) {
+function agentChoice(item: ChoiceItem) {
   return (
-    <DropdownMenuRadioItem value={item.value} disabled={item.disabled}>
-      <span className="flex min-w-0 items-center gap-2">
-        {item.mark ? <ProviderMark name={item.mark} /> : null}
-        <span className="truncate">{item.label}</span>
-      </span>
-    </DropdownMenuRadioItem>
+    <ConfigMenuChoice
+      key={item.value}
+      value={item.value}
+      label={item.label}
+      disabled={item.disabled}
+      leading={item.mark ? <ProviderMark name={item.mark} /> : null}
+    />
   );
 }
 
@@ -52,38 +51,26 @@ export function ExecutionAgentSubmenu({
   );
 
   return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
-          <span>Agent</span>
-          <span className="truncate text-xs text-text-tertiary">{effectiveLabel}</span>
-        </span>
-      </DropdownMenuSubTrigger>
-      <DropdownMenuContent aria-label="Agent" className="max-w-80">
-        <DropdownMenuRadioGroup
-          value={value ?? AGENT_CHOICE_DEFAULT}
-          onValueChange={(next) => {
-            const chosen = String(next);
-            onValueChange(chosen === AGENT_CHOICE_DEFAULT ? null : chosen);
-          }}
-        >
-          {defaultItem ? <AgentItem item={defaultItem} /> : null}
-          {profileItems.length > 0 ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>Profiles</DropdownMenuLabel>
-              {profileItems.map((item) => (
-                <AgentItem key={item.value} item={item} />
-              ))}
-            </>
-          ) : null}
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel>Runtimes</DropdownMenuLabel>
-          {runtimeItems.map((item) => (
-            <AgentItem key={item.value} item={item} />
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenuSub>
+    <ConfigMenuSubmenu label="Agent" value={effectiveLabel}>
+      <DropdownMenuRadioGroup
+        value={value ?? AGENT_CHOICE_DEFAULT}
+        onValueChange={(next) => {
+          const chosen = String(next);
+          onValueChange(chosen === AGENT_CHOICE_DEFAULT ? null : chosen);
+        }}
+      >
+        {defaultItem ? agentChoice(defaultItem) : null}
+        {profileItems.length > 0 ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Profiles</DropdownMenuLabel>
+            {profileItems.map(agentChoice)}
+          </>
+        ) : null}
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Runtimes</DropdownMenuLabel>
+        {runtimeItems.map(agentChoice)}
+      </DropdownMenuRadioGroup>
+    </ConfigMenuSubmenu>
   );
 }

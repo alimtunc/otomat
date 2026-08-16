@@ -7,7 +7,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { setInputValue } from "#support/dom-events";
 import { executionDefaultsQueryResult } from "#support/execution-defaults";
-import { repositoriesQueryResult, repositoryBranchesQueryResult } from "#support/launch-target";
+import {
+  repositoriesQueryResult,
+  repository,
+  repositoryBranchesErrorResult,
+  repositoryBranchesQueryResult,
+} from "#support/launch-target";
 import { modelCatalogQueryResult } from "#support/runtime-models";
 import { providerOptionSetQueryResult } from "#support/runtime-options";
 
@@ -15,6 +20,8 @@ const launch = vi.fn(async () => ({ id: "run-1" }) as RunContract);
 const navigate = vi.fn();
 const create = vi.fn(async (_request: CreateIssueRequest) => true);
 let runtimesData: RuntimeDescriptor[] = [];
+let repositories = [repository()];
+let branchesFailed = false;
 const pickerProps = vi.fn();
 
 interface ExecutionPickerProbeProps {
@@ -45,8 +52,9 @@ vi.mock("@web/api/daemon/queries", () => ({
   useRuntimeModels: () => modelCatalogQueryResult(),
   useRuntimeProviderOptions: () => providerOptionSetQueryResult(),
   useExecutionDefaults: () => executionDefaultsQueryResult(),
-  useRepositories: () => repositoriesQueryResult(),
-  useRepositoryBranches: () => repositoryBranchesQueryResult(),
+  useRepositories: () => repositoriesQueryResult(repositories),
+  useRepositoryBranches: () =>
+    branchesFailed ? repositoryBranchesErrorResult() : repositoryBranchesQueryResult(),
   useRepositoryFiles: () => ({ data: { paths: [], omitted: 0 }, isPending: false, isError: false }),
 }));
 
@@ -104,6 +112,8 @@ afterEach(async () => {
   create.mockClear();
   pickerProps.mockClear();
   runtimesData = [];
+  repositories = [repository()];
+  branchesFailed = false;
 });
 
 async function renderDialog(
@@ -367,6 +377,98 @@ describe("NewIssueDialog", () => {
 
     expect(notice?.classList.contains("bg-iris-subtle")).toBe(true);
     expect(notice?.classList.contains("text-text-secondary")).toBe(true);
+  });
+
+  it("gives the composer the dialog, with no static Repository section to occupy it", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+
+    // The project header already names the repository; a resolved single one is not a decision.
+    expect(document.body.textContent).not.toContain("Repository");
+    expect(document.querySelector("textarea[aria-label='Issue prompt']")).not.toBeNull();
+  });
+
+  it("reaches execution, context and the base branch from the toolbar without covering the prompt", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+
+    expect(document.querySelector("[data-testid='execution-picker']")).not.toBeNull();
+    expect(buttonByText("Add context")).toBeDefined();
+    expect(document.querySelector("button[aria-label^='Base branch']")).not.toBeNull();
+    expect(document.querySelector("textarea[aria-label='Issue prompt']")).not.toBeNull();
+  });
+
+  it("sends on ⌘↵ like a composer, not only from the button", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+
+    const prompt = document.querySelector<HTMLTextAreaElement>(
+      "textarea[aria-label='Issue prompt']",
+    );
+    if (!prompt) throw new Error("issue prompt not found");
+    await act(async () => setTextareaValue(prompt, "implement the thing"));
+    await act(async () => {
+      prompt.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", metaKey: true, bubbles: true }),
+      );
+    });
+
+    expect(launch).toHaveBeenCalledWith(expect.objectContaining({ prompt: "implement the thing" }));
+  });
+
+  it("keeps a long prompt inside a bounded composer instead of growing the dialog", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+
+    const prompt = document.querySelector<HTMLTextAreaElement>(
+      "textarea[aria-label='Issue prompt']",
+    );
+    if (!prompt) throw new Error("issue prompt not found");
+    await act(async () => setTextareaValue(prompt, "context line\n".repeat(80)));
+
+    const bounded = prompt.closest(".overflow-y-auto");
+    expect(bounded?.className).toContain("max-h-64");
+    // The textarea itself never scrolls; the composer that holds it does.
+    expect(prompt.className).toContain("overflow-hidden");
+  });
+
+  it("says the branches could not be read, where a disabled control's tooltip never would", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    branchesFailed = true;
+    await renderDialog();
+
+    const alert = document.querySelector("[role='alert']");
+    expect(alert?.textContent).toContain("Could not read this repository's branches");
+    expect(document.querySelector("button[aria-label^='Base branch']")).not.toBeNull();
+  });
+
+  it("refuses to pick a repository when the project resolves several", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    repositories = [
+      repository(),
+      repository({ id: "repo-2", name: "otomat-docs", default_branch: "trunk" }),
+    ];
+    await renderDialog();
+
+    expect(document.body.textContent).toContain("Which repository should this run work in?");
+    expect(document.querySelector("textarea[aria-label='Issue prompt']")).toBeNull();
+
+    await act(async () => buttonByText("otomat-docs").click());
+
+    expect(document.querySelector("textarea[aria-label='Issue prompt']")).not.toBeNull();
+  });
+
+  it("closes on Escape without creating anything", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    const onOpenChange = vi.fn();
+    await renderDialog(onOpenChange);
+
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+
+    expect(onOpenChange.mock.calls.at(0)?.at(0)).toBe(false);
+    expect(launch).not.toHaveBeenCalled();
   });
 
   it("blocks an agent launch before the form exists when no project is selected", async () => {

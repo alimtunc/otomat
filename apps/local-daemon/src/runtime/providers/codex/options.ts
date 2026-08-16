@@ -92,12 +92,17 @@ function reasoningEffortDescriptor(
     };
   }
   const declared = entry?.default_reasoning_level ?? null;
-  const fallback = declared !== null && supported.includes(declared) ? declared : null;
+  const fallback =
+    declared !== null && supported.some((level) => level.effort === declared) ? declared : null;
   return {
     descriptor: {
       key: "reasoning_effort",
       description: `How much reasoning effort ${model} spends, sent as \`-c model_reasoning_effort\`.${fallback === null ? "" : ` Selecting nothing sends no override, and Codex applies "${fallback}" itself.`}`,
-      choices: supported.map((value) => ({ value, description: null, dangerous: false })),
+      choices: supported.map((level) => ({
+        value: level.effort,
+        description: level.description,
+        dangerous: false,
+      })),
       default_value: null,
     },
     note: null,
