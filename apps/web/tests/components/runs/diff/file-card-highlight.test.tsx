@@ -7,26 +7,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { diffFileCardProps } from "#support/diff-card";
 import { stubDiffCanvas } from "#support/diff-dom";
-import { diffFile } from "#support/diff-file";
+import { diffFile, diffPatch } from "#support/diff-file";
 import { stubIntersectionObserver, type IntersectionStub } from "#support/intersection";
 import { mountWithQuery } from "#support/mount";
 
 stubDiffCanvas();
 
-function patch(path: string): string {
-  return `diff --git a/${path} b/${path}
-index 0000001..0000002 100644
---- a/${path}
-+++ b/${path}
-@@ -1,2 +1,2 @@
- first line
--second line
-+const answer = 42;
-`;
-}
-
 function file(overrides: Partial<DiffFileContract> & { path: string }): DiffFileContract {
-  return diffFile({ patch: patch(overrides.path), ...overrides });
+  return diffFile({ patch: diffPatch(overrides.path), ...overrides });
 }
 
 function Card({ entry }: { entry: DiffFileContract }) {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 /** One screen of slack, so a card is coloured just before the reader scrolls onto it. */
 const ROOT_MARGIN = "100% 0px";
@@ -24,6 +24,19 @@ export interface NearViewport {
 export function useNearViewport(): NearViewport {
   const [node, setNode] = useState<HTMLElement | null>(null);
   const [near, setNear] = useState(() => typeof IntersectionObserver === "undefined");
+  const [root, setRoot] = useState<HTMLElement | null>(null);
+
+  const attach = useCallback((next: HTMLElement | null) => {
+    setNode(next);
+    setRoot(next === null ? null : scrollParent(next));
+  }, []);
+
+  // Resolving `null` again schedules no render, so the retry has to ride every later one.
+  // otomat-allow-effect: a card can attach before the panel scrolling it has been laid out.
+  useEffect(() => {
+    if (near || node === null || root !== null) return;
+    setRoot(scrollParent(node));
+  });
 
   // otomat-allow-effect: an IntersectionObserver subscription has no declarative equivalent.
   useEffect(() => {
@@ -32,11 +45,11 @@ export function useNearViewport(): NearViewport {
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) setNear(true);
       },
-      { root: scrollParent(node), rootMargin: ROOT_MARGIN },
+      { root, rootMargin: ROOT_MARGIN },
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [near, node]);
+  }, [near, node, root]);
 
-  return { ref: setNode, near };
+  return { ref: attach, near };
 }
