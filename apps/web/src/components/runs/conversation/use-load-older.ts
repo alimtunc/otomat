@@ -1,11 +1,17 @@
 import type { RunEventHistory } from "@web/api/runs/use-event-history";
 import { useEffect, useState, type RefCallback } from "react";
 
-/** A failed page disarms the scroll trigger, so a broken read is retried explicitly, not on every scroll frame. */
-export function useLoadOlder(history: RunEventHistory): RefCallback<HTMLDivElement> {
+/**
+ * A failed page disarms the scroll trigger, so a broken read is retried explicitly, not on every scroll frame.
+ * Only a reader who scrolled up arms it: a viewport taller than the loaded window keeps the trigger in view.
+ */
+export function useLoadOlder(
+  history: RunEventHistory,
+  readerScrolledUp: boolean,
+): RefCallback<HTMLDivElement> {
   const [head, setHead] = useState<HTMLDivElement | null>(null);
   const { hasOlder, loadingOlder, olderFailed, loadOlder } = history;
-  const armed = hasOlder && !loadingOlder && !olderFailed;
+  const armed = readerScrolledUp && hasOlder && !loadingOlder && !olderFailed;
 
   // otomat-allow-effect: an IntersectionObserver subscription has no declarative equivalent.
   useEffect(() => {

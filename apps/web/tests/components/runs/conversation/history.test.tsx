@@ -2,13 +2,17 @@
 import type { RunContributionContract, RunDetail, RuntimeDescriptor } from "@otomat/domain";
 import type { RunEventHistory } from "@web/api/runs/use-event-history";
 import { ConversationThread } from "@web/components/runs/conversation/thread";
-import { describe, expect, it, vi } from "vitest";
+import { act } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contribution } from "#support/contribution";
 import { findButton } from "#support/dom-queries";
 import { envelope } from "#support/envelope";
 import { eventHistory, eventStream } from "#support/event-stream";
+import { stubIntersectionObserver, type IntersectionStub } from "#support/intersection";
 import { mount } from "#support/mount";
+import { stubResizeObserver, type ResizeObserverStub } from "#support/resize-observer";
+import { controlScroll, type ScrollControl } from "#support/scroll-control";
 
 const contributions: RunContributionContract[] = [
   contribution({ id: "c1", seq: 8, status: "acknowledged", body: "rebase please" }),
@@ -63,6 +67,30 @@ const detail: RunDetail = {
   compete_groups: [],
   worktree_path: null,
 };
+
+/** Taller than the window a first read loads, so the trigger stays on screen. */
+const TALL_VIEWPORT = 900;
+
+let intersections: IntersectionStub;
+let resizes: ResizeObserverStub;
+
+beforeEach(() => {
+  intersections = stubIntersectionObserver();
+  resizes = stubResizeObserver();
+});
+
+afterEach(() => {
+  intersections.restore();
+  resizes.restore();
+});
+
+async function attachScroll(container: HTMLElement, contentHeight: number): Promise<ScrollControl> {
+  const content = container.querySelector<HTMLElement>('[aria-label="Run conversation"]');
+  if (!content?.parentElement) throw new Error("conversation viewport not rendered");
+  const scroll = controlScroll(content.parentElement, TALL_VIEWPORT, contentHeight);
+  await act(async () => resizes.resize());
+  return scroll;
+}
 
 function render(history: Partial<RunEventHistory>) {
   const events = [
@@ -132,6 +160,50 @@ describe("conversation history window", () => {
     findButton("Retry")?.click();
 
     expect(retry).toHaveBeenCalledOnce();
+    await cleanup();
+  });
+});
+
+describe("conversation older-page trigger", () => {
+  it("reads one window when a tall viewport keeps the trigger in view", async () => {
+    const loadOlder = vi.fn();
+    const { container, cleanup } = await render({ hasOlder: true, loadOlder });
+    const scroll = await attachScroll(container, 320);
+    expect(scroll.maxTop()).toBe(0);
+
+    await act(async () => intersections.reveal());
+
+    expect(loadOlder).not.toHaveBeenCalled();
+    expect(findButton("Load earlier activity")).toBeDefined();
+    await cleanup();
+  });
+
+  it("keeps following new activity at the bottom without paging", async () => {
+    const loadOlder = vi.fn();
+    const { container, cleanup } = await render({ hasOlder: true, loadOlder });
+    const scroll = await attachScroll(container, 320);
+
+    await act(async () => {
+      scroll.setContentHeight(1400);
+      resizes.resize();
+    });
+    await act(async () => intersections.reveal());
+
+    expect(scroll.top()).toBe(scroll.maxTop());
+    expect(loadOlder).not.toHaveBeenCalled();
+    await cleanup();
+  });
+
+  it("loads the page above once the reader scrolls up to it", async () => {
+    const loadOlder = vi.fn();
+    const { container, cleanup } = await render({ hasOlder: true, loadOlder });
+    const scroll = await attachScroll(container, 3000);
+    expect(scroll.top()).toBe(scroll.maxTop());
+
+    await act(async () => scroll.dragTo(0));
+    await act(async () => intersections.reveal());
+
+    expect(loadOlder).toHaveBeenCalledOnce();
     await cleanup();
   });
 });

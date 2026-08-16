@@ -653,6 +653,13 @@ thread. A message still waiting for a turn stays at the tail either way — that
 where the reader just sent it. The thread holds its distance to the bottom across
 a prepend (`use-thread-autoscroll.ts`), so loading history never moves the reader.
 
+How much a thread reads must not depend on how tall its surface is, so the
+older-page trigger follows the reader rather than its own visibility:
+`use-load-older.ts` arms it only once the reader scrolled away from the newest
+item, and the explicit control carries a reader whose window never overflows the
+viewport. The cockpit and the conversation embedded in an issue therefore open on
+the same single window, however much room each of them has.
+
 ## Frontend Stack Direction
 
 React, Vite, TanStack Router/Query/Form, Tailwind, Base UI (shadcn-style

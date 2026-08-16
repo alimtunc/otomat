@@ -35,7 +35,7 @@ export function ConversationThread({
   const { events, state, degraded, history } = stream;
   const contributions = useRunContributions(detail.run.id);
   const autoscroll = useThreadAutoscroll(detail.run.id, events[0]?.seq ?? null);
-  const loadOlderRef = useLoadOlder(history);
+  const loadOlderRef = useLoadOlder(history, !autoscroll.pinned);
   const working = isRunWorking(detail.run.status);
 
   if (history.status === "error") return loadErrorState(history.retry);
