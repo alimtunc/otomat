@@ -11,8 +11,8 @@
   --card-foreground: #e7e9ee;
   --popover: #16181d;
   --popover-foreground: #e7e9ee;
-  --primary: #5b7cfa;
-  --primary-foreground: #ffffff;
+  --primary: #f0645a;
+  --primary-foreground: #16181d;
   --secondary: #16181d;
   --secondary-foreground: #e7e9ee;
   --muted: #16181d;
@@ -23,7 +23,7 @@
   --destructive-foreground: #ffffff;
   --border: #23262d;
   --input: #23262d;
-  --ring: #5b7cfa;
+  --ring: #f0645a;
 
   /* Otomat surfaces (layered near-black) */
   --sidebar: #0c0d10;
@@ -31,7 +31,7 @@
   --surface-2: #16181d; /* row hover / raised */
   --surface-3: #1b1e25; /* popovers / menus */
   --hover: #15171c; /* generic hover wash */
-  --selected: rgba(91, 124, 250, 0.12);
+  --selected: rgba(240, 100, 90, 0.12);
   --border-subtle: #1b1e24;
   --border-strong: #30343d;
   --text-secondary: #9197a3;
@@ -39,18 +39,18 @@
   --text-disabled: #454b55;
 
   /* Iris (single interactive hue) */
-  --iris-solid: #5b7cfa;
-  --iris-hover: #6e8bfb;
-  --iris-active: #4a6bf0;
-  --iris-subtle-bg: rgba(91, 124, 250, 0.12);
-  --iris-ring: #5b7cfa;
-  --iris-text: #9db2ff;
+  --iris-solid: #f0645a;
+  --iris-hover: #f7776e;
+  --iris-active: #d94f46;
+  --iris-subtle-bg: rgba(240, 100, 90, 0.12);
+  --iris-ring: #f0645a;
+  --iris-text: #ff9b93;
 
   /* status */
   --success: #3fb950;
   --warning: #d8a12b;
   --danger: #f2545b;
-  --info: #5b7cfa;
+  --info: #f0645a;
   --review: #a371f7;
   --stale: #e0833b;
   --neutral: #646a76;
@@ -63,11 +63,11 @@
   --danger-bg: rgba(242, 84, 91, 0.13);
   --review-bg: rgba(163, 113, 247, 0.13);
   --stale-bg: rgba(224, 131, 59, 0.13);
-  --iris-bg: rgba(91, 124, 250, 0.13);
+  --iris-bg: rgba(240, 100, 90, 0.13);
   --neutral-bg: rgba(145, 151, 163, 0.12);
 
   /* provenance (event source) */
-  --prov-otomat: #5b7cfa;
+  --prov-otomat: #f0645a;
   --prov-claude: #c96442;
   --prov-codex: #10a37f;
   --prov-git: #e0833b;
@@ -146,7 +146,7 @@
   --card-foreground: #16181d;
   --popover: #ffffff;
   --popover-foreground: #16181d;
-  --primary: #4f6af0;
+  --primary: #d2473e;
   --primary-foreground: #ffffff;
   --secondary: #f3f4f6;
   --secondary-foreground: #16181d;
@@ -158,32 +158,32 @@
   --destructive-foreground: #ffffff;
   --border: #e4e6ea;
   --input: #e4e6ea;
-  --ring: #4f6af0;
+  --ring: #d2473e;
 
   --sidebar: #f7f8f9;
   --surface-1: #ffffff;
   --surface-2: #f3f4f6;
   --surface-3: #ffffff;
   --hover: #f3f4f6;
-  --selected: rgba(79, 106, 240, 0.1);
+  --selected: rgba(210, 71, 62, 0.1);
   --border-subtle: #eceef1;
   --border-strong: #d2d6dc;
   --text-secondary: #5a616b;
   --text-tertiary: #878e99;
   --text-disabled: #b7bcc4;
 
-  --iris-solid: #4f6af0;
-  --iris-hover: #5e78f4;
-  --iris-active: #3e59e0;
-  --iris-subtle-bg: rgba(79, 106, 240, 0.09);
-  --iris-ring: #4f6af0;
-  --iris-text: #3e59e0;
+  --iris-solid: #d2473e;
+  --iris-hover: #df554b;
+  --iris-active: #bf392f;
+  --iris-subtle-bg: rgba(210, 71, 62, 0.09);
+  --iris-ring: #d2473e;
+  --iris-text: #bf392f;
   --success-bg: rgba(45, 164, 78, 0.12);
   --warning-bg: rgba(176, 124, 10, 0.14);
   --danger-bg: rgba(224, 59, 67, 0.1);
   --review-bg: rgba(140, 86, 232, 0.12);
   --stale-bg: rgba(193, 108, 40, 0.12);
-  --iris-bg: rgba(79, 106, 240, 0.1);
+  --iris-bg: rgba(210, 71, 62, 0.1);
   --neutral-bg: rgba(90, 97, 107, 0.1);
   --shadow-overlay: 0 10px 30px rgba(20, 22, 28, 0.12), 0 0 0 1px var(--border);
   --shadow-modal: 0 24px 60px rgba(20, 22, 28, 0.18), 0 0 0 1px var(--border);
