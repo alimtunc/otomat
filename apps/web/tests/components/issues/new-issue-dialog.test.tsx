@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { setInputValue } from "#support/dom-events";
 import { executionDefaultsQueryResult } from "#support/execution-defaults";
+import { referencedIssue } from "#support/issue";
 import {
   repositoriesQueryResult,
   repository,
@@ -71,7 +72,7 @@ vi.mock("@web/api/skills/queries", () => ({
 }));
 
 vi.mock("@web/api/issues/queries", () => ({
-  useProjectIssues: () => ({ data: [], isPending: false, isError: false }),
+  useProjectIssues: () => ({ data: [REFERENCED], isPending: false, isError: false }),
 }));
 
 vi.mock("@web/components/execution/execution-config-picker", () => ({
@@ -82,6 +83,8 @@ vi.mock("@web/components/execution/execution-config-picker", () => ({
 }));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+
+const REFERENCED = referencedIssue();
 
 function runtimeDescriptor(
   id: string,
@@ -155,6 +158,15 @@ function buttonByText(text: string): HTMLButtonElement {
 function buttonByLabel(prefix: string): HTMLButtonElement {
   const button = document.querySelector<HTMLButtonElement>(`button[aria-label^='${prefix}']`);
   if (!button) throw new Error(`button labelled "${prefix}" not found`);
+  return button;
+}
+
+/** Result rows compose an identifier and a title, so they are matched on a fragment. */
+function buttonContaining(text: string): HTMLButtonElement {
+  const button = [...document.querySelectorAll("button")].find((candidate) =>
+    candidate.textContent?.includes(text),
+  );
+  if (!button) throw new Error(`button containing "${text}" not found`);
   return button;
 }
 
@@ -407,6 +419,18 @@ describe("NewIssueDialog", () => {
     expect(buttonByLabel("Add context")).not.toBeNull();
     expect(document.querySelector("button[aria-label^='Base branch']")).not.toBeNull();
     expect(document.querySelector("textarea[aria-label='Issue prompt']")).not.toBeNull();
+  });
+
+  it("names an issue attached here by its public identifier, never by its internal id", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+
+    await act(async () => buttonByLabel("Add context").click());
+    await act(async () => buttonContaining("Ship the CSV parser").click());
+
+    const chips = document.querySelector("[role='list'][aria-label='Ad-hoc run context']");
+    expect(chips?.textContent).toContain("OTO-42");
+    expect(document.body.textContent).not.toContain(REFERENCED.id.slice(0, 8));
   });
 
   it("spends the row on icons, keeping each action named and its shortcut on the tooltip", async () => {

@@ -39,15 +39,20 @@ export function ContextComposer({
     <div className="flex flex-col gap-2">
       <AttachedContextRow
         issue={issue}
+        projectId={projectId}
         references={value.references}
-        onRemove={(key) => onChange(removeContextReference(value, key))}
+        onRemove={(key) =>
+          onChange({ ...value, references: removeContextReference(value.references, key) })
+        }
         label={label}
         addControl={
           <AddContextPopover
             projectId={projectId}
             repositoryId={repository?.id ?? null}
             attachedKeys={attachedKeys}
-            onAdd={(reference) => onChange(addContextReference(value, reference))}
+            onAdd={(reference) =>
+              onChange({ ...value, references: addContextReference(value.references, reference) })
+            }
             label={label}
           />
         }

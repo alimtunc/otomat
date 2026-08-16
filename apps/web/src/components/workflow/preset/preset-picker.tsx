@@ -69,7 +69,7 @@ export function WorkflowPresetPicker({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" variant="outline" size="sm" className="self-start">
+          <Button type="button" variant="outline" size="sm">
             <Icon name="workflow" aria-hidden />
             Presets
           </Button>

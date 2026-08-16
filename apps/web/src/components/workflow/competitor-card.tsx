@@ -11,14 +11,13 @@ import {
   setWorkflowCompetitorContext,
   setWorkflowCompetitorExecution,
 } from "@web/lib/workflow/competitors";
-import type { WorkflowContextScope } from "@web/lib/workflow/context-scope";
 
 export interface WorkflowCompetitorCardProps {
   plan: PlanDraft;
   groupIndex: number;
   competitorIndex: number;
   execution: WorkflowPlanExecution;
-  contextScope: WorkflowContextScope | null;
+  projectId: string | null;
 }
 
 export function WorkflowCompetitorCard({
@@ -26,7 +25,7 @@ export function WorkflowCompetitorCard({
   groupIndex,
   competitorIndex,
   execution,
-  contextScope,
+  projectId,
 }: WorkflowCompetitorCardProps) {
   const { form, steps, setSteps } = plan;
   const group = steps[groupIndex];
@@ -75,7 +74,7 @@ export function WorkflowCompetitorCard({
         />
       </div>
       <WorkflowNodeContext
-        scope={contextScope}
+        projectId={projectId}
         value={competitor.context}
         onChange={(next) =>
           setSteps((value) =>

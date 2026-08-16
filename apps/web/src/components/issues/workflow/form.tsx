@@ -2,8 +2,7 @@ import type { RunContract } from "@otomat/domain";
 import { Button, DialogBody, Field, FieldControl, FieldLabel, Kbd, Textarea } from "@otomat/ui";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
-import { BaseBranchControl } from "@web/components/runs/launch/base-branch-control";
-import type { LaunchTargetState } from "@web/components/runs/launch/use-launch-target";
+import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@web/lib/form";
 import { isWorkflowNodeComplete } from "@web/lib/workflow-draft";
@@ -14,7 +13,7 @@ import { useWorkflowForm, type WorkflowForm } from "./use-form";
 
 export interface WorkflowLaunchFormProps {
   target: WorkflowLaunchTarget;
-  worktreeTarget: Extract<LaunchTargetState, { status: "ready" }>;
+  worktreeTarget: ReadyLaunchTarget;
   execution: ExecutionSelection;
   onExecutionChange: (execution: ExecutionSelection) => void;
   onLaunched: (run: RunContract) => void;
@@ -97,8 +96,8 @@ export function WorkflowLaunchForm({
           onExecutionChange={onExecutionChange}
           workflow={workflow}
           target={target}
+          worktreeTarget={worktreeTarget}
         />
-        <BaseBranchControl target={worktreeTarget} disabled={isPending} />
       </DialogBody>
       <IssueFormFooter
         onCancel={onCancel}

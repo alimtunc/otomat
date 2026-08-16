@@ -34,7 +34,14 @@ export function AddContextPopover({
   return (
     <Popover>
       <PopoverTrigger
-        render={<IconButton label="Add context" icon={<Icon name="plus" aria-hidden />} />}
+        render={
+          <IconButton
+            type="button"
+            variant="outline"
+            label="Add context"
+            icon={<Icon name="plus" aria-hidden />}
+          />
+        }
       />
       <PopoverContent align="start" className="flex w-80 flex-col gap-2 p-2">
         <Input

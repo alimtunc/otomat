@@ -63,7 +63,7 @@ export function WorkflowPresetDialog({
           <WorkflowPlanEditor
             plan={presetForm.plan}
             execution={{ agents, inherited: EMPTY_EXECUTION_SELECTION }}
-            contextScope={null}
+            projectId={null}
             error={null}
           />
           {presetForm.refusal === null ? null : (

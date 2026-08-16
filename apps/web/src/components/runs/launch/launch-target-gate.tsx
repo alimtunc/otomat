@@ -5,7 +5,7 @@ import { LaunchBlockedPanel } from "@web/components/runs/launch/launch-blocked-p
 import { RepositoryChoice } from "@web/components/runs/launch/repository-choice";
 import {
   useLaunchTarget,
-  type LaunchTargetState,
+  type ReadyLaunchTarget,
 } from "@web/components/runs/launch/use-launch-target";
 import { useRemoteSession } from "@web/components/shell/remote-session/context";
 import type { ReactNode } from "react";
@@ -15,7 +15,7 @@ export interface LaunchTargetGateProps {
   projectId: string | undefined;
   /** Present when launching on an existing issue, which unlocks moving it to another project. */
   issue?: IssueContract;
-  children: (target: Extract<LaunchTargetState, { status: "ready" }>) => ReactNode;
+  children: (target: ReadyLaunchTarget) => ReactNode;
 }
 
 /**

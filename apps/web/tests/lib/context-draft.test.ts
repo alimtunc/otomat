@@ -8,18 +8,16 @@ import { contextSources } from "@web/lib/context/sources";
 import { expect, it } from "vitest";
 
 it("keeps attached references unique and ordered, and removes one by key", () => {
-  const withFile = addContextReference(EMPTY_CONTEXT_DRAFT, {
-    kind: "file",
-    path: "src/parser.ts",
-  });
+  const withFile = addContextReference([], { kind: "file", path: "src/parser.ts" });
   const withIssue = addContextReference(withFile, { kind: "issue", issue_id: "i-2" });
   const twice = addContextReference(withIssue, { kind: "file", path: "src/parser.ts" });
 
-  expect(twice.references).toEqual([
+  expect(twice).toEqual([
     { kind: "file", path: "src/parser.ts" },
     { kind: "issue", issue_id: "i-2" },
   ]);
-  expect(removeContextReference(twice, "file:src/parser.ts").references).toEqual([
+  expect(twice).toBe(withIssue);
+  expect(removeContextReference(twice, "file:src/parser.ts")).toEqual([
     { kind: "issue", issue_id: "i-2" },
   ]);
 });

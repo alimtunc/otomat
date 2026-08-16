@@ -29,6 +29,8 @@ export type LaunchTargetState =
       branchesFailed: boolean;
     };
 
+export type ReadyLaunchTarget = Extract<LaunchTargetState, { status: "ready" }>;
+
 /**
  * Resolves the repository a launch would run in, so the dialog can refuse
  * before creating a run instead of letting the daemon — or worse, the provider
