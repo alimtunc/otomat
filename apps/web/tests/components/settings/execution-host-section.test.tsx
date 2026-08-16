@@ -264,6 +264,26 @@ it("refuses a cap that is not a positive whole number before asking the host", a
   expect(writeCapacity).not.toHaveBeenCalled();
 });
 
+it("shows the cap the host confirmed, not the one that was typed", async () => {
+  const bridge = fakeDesktopBridge();
+  bridge.executionHost.writeCapacity = () =>
+    Promise.resolve({
+      ok: true as const,
+      capacity: { max_concurrent_sessions: 12, active_sessions: 0, waiting_sessions: 0 },
+    });
+  window.otomat = bridge;
+  await renderSection();
+
+  await act(async () => {
+    setInputValue(capacityForm("Local").input, "99");
+  });
+  await act(async () => {
+    capacityForm("Local").apply.click();
+  });
+
+  expect(capacityForm("Local").input.value).toBe("12");
+});
+
 it("says a remote save was refused instead of showing the value as applied", async () => {
   const bridge = fakeDesktopBridge();
   bridge.executionHost.snapshot = () => Promise.resolve(twoHostSnapshot());
