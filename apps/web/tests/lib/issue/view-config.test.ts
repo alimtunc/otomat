@@ -15,21 +15,26 @@ describe("parseIssuesViewConfig", () => {
   it("keeps known values and drops the rest", () => {
     expect(
       parseIssuesViewConfig({
-        layout: "list",
-        filter: "active",
         grouping: "assignee",
         sort: "wildcard",
         advanced: { labels: ["bug"] },
         collapsedGroups: ["assignee:Ada", "assignee:Ada", 7],
       }),
     ).toEqual({
-      layout: "list",
-      filter: "active",
       grouping: "assignee",
       sort: DEFAULT_ISSUES_VIEW_CONFIG.sort,
       advanced: { ...NO_ADVANCED_FILTERS, labels: ["bug"] },
       collapsedGroups: ["assignee:Ada"],
     });
+  });
+
+  it("leaves the display layout to the project, so a stored one cannot take a tab back", () => {
+    expect(parseIssuesViewConfig({ layout: "list" })).toEqual(DEFAULT_ISSUES_VIEW_CONFIG);
+  });
+
+  it("widens the dropped All/Active/Backlog scope instead of hiding issues behind it", () => {
+    expect(parseIssuesViewConfig({ filter: "active" })).toEqual(DEFAULT_ISSUES_VIEW_CONFIG);
+    expect(parseIssuesViewConfig({ filter: "backlog" })).toEqual(DEFAULT_ISSUES_VIEW_CONFIG);
   });
 });
 

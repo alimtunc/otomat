@@ -17,9 +17,17 @@ export interface IssueViewBarProps {
   config: IssuesViewConfig;
   dirty: boolean;
   onOpenView: (viewId: string) => void;
+  onReset: () => void;
 }
 
-export function IssueViewBar({ views, active, config, dirty, onOpenView }: IssueViewBarProps) {
+export function IssueViewBar({
+  views,
+  active,
+  config,
+  dirty,
+  onOpenView,
+  onReset,
+}: IssueViewBarProps) {
   const [promptKind, setPromptKind] = useState<NamePromptKind | null>(null);
   const [deleting, setDeleting] = useState(false);
   const editable = active.id !== views.set.system.id;
@@ -52,7 +60,7 @@ export function IssueViewBar({ views, active, config, dirty, onOpenView }: Issue
             onOpenView(active.id);
           }}
           onSaveAs={() => setPromptKind("saveAs")}
-          onReset={() => onOpenView(active.id)}
+          onReset={onReset}
         />
       ) : null}
       <IssueViewMenu

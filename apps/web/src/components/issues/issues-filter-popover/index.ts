@@ -1,1 +1,0 @@
-export { IssuesFilterPopover } from "./popover";

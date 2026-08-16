@@ -15,6 +15,8 @@ export interface IssuesViewResult {
   config: IssuesViewConfig;
   dirty: boolean;
   openView: (viewId: string) => void;
+  /** Drops every override the URL carries, leaving exactly what the active view saved. */
+  reset: () => void;
   refine: (patch: Partial<IssuesViewConfig>) => void;
   toggleGroup: (key: string) => void;
 }
@@ -25,6 +27,10 @@ export function useIssuesView(projectId: string | undefined): IssuesViewResult {
   const views = useIssueViews(projectId);
   const active = findView(views.set, search.view ?? views.set.activeId);
   const config = issuesConfigFromSearch(active.config, search);
+
+  const openView = (viewId: string): void => {
+    void navigate({ to: "/issues", search: { view: viewId }, replace: true });
+  };
 
   const refine = (patch: Partial<IssuesViewConfig>): void => {
     const next = { ...config, ...patch };
@@ -44,9 +50,8 @@ export function useIssuesView(projectId: string | undefined): IssuesViewResult {
     active,
     config,
     dirty: hasOverrides(issuesSearchFromConfig(active.config, config)),
-    openView: (viewId) => {
-      void navigate({ to: "/issues", search: { view: viewId }, replace: true });
-    },
+    openView,
+    reset: () => openView(active.id),
     refine,
     toggleGroup: (key) =>
       refine({

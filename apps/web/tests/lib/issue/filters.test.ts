@@ -1,9 +1,7 @@
 import type { IssueContract, IssueExecution, IssueState } from "@otomat/domain";
-import { ISSUE_STATES } from "@otomat/domain";
 import {
   activeAdvancedFilterCount,
   applyAdvancedFilters,
-  applyIssuesFilter,
   NO_ADVANCED_FILTERS,
   parseAdvancedFilters,
 } from "@web/lib/issue/filters";
@@ -31,39 +29,6 @@ function linearIssue(id: string, assignee: string | null, priority: number): Iss
     source_state_color: "#facc15",
   });
 }
-
-const ALL = ISSUE_STATES.map((status) => issue(status));
-
-describe("applyIssuesFilter", () => {
-  it("returns everything for 'all'", () => {
-    expect(applyIssuesFilter(ALL, "all")).toEqual(ALL);
-  });
-
-  it("keeps the working states for 'active'", () => {
-    const statuses = applyIssuesFilter(ALL, "active").map((i) => i.status);
-    expect(statuses).toEqual(["ready", "running", "reviewing", "pr_open"]);
-  });
-
-  it("keeps only idle backlog issues for 'backlog'", () => {
-    const statuses = applyIssuesFilter(ALL, "backlog").map((i) => i.status);
-    expect(statuses).toEqual(["backlog"]);
-  });
-
-  it("treats a live execution as active whatever the source status says", () => {
-    const running = issue("backlog", { state: "running", run_id: "run-1" });
-    expect(applyIssuesFilter([running], "active")).toEqual([running]);
-    expect(applyIssuesFilter([running], "backlog")).toEqual([]);
-  });
-
-  it("leaves a closed issue out of 'active' even when an old run stopped on it", () => {
-    const done = issue("done", {
-      state: "failed",
-      run_id: "run-1",
-      failure: { reason: "failed", step: null },
-    });
-    expect(applyIssuesFilter([done], "active")).toEqual([]);
-  });
-});
 
 describe("applyAdvancedFilters", () => {
   const mixed = [

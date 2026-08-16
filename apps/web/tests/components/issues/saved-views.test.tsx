@@ -10,13 +10,10 @@ import { setInputValue } from "#support/dom-events";
 import { findButton } from "#support/dom-queries";
 import { mount, type Mounted } from "#support/mount";
 
-const LIST_VIEW: IssuesViewConfig = {
-  ...DEFAULT_ISSUES_VIEW_CONFIG,
-  layout: "list",
-  grouping: "assignee",
-};
+const MINE: IssuesViewConfig = { ...DEFAULT_ISSUES_VIEW_CONFIG, grouping: "assignee" };
 
 const opened = vi.fn();
+const reset = vi.fn();
 const mounted: Mounted[] = [];
 
 function ViewsHarness({ config, dirty }: { config: IssuesViewConfig; dirty: boolean }) {
@@ -28,11 +25,12 @@ function ViewsHarness({ config, dirty }: { config: IssuesViewConfig; dirty: bool
       config={config}
       dirty={dirty}
       onOpenView={opened}
+      onReset={reset}
     />
   );
 }
 
-async function renderBar(config: IssuesViewConfig = LIST_VIEW, dirty = true): Promise<void> {
+async function renderBar(config: IssuesViewConfig = MINE, dirty = true): Promise<void> {
   mounted.push(await mount(<ViewsHarness config={config} dirty={dirty} />));
 }
 
@@ -80,6 +78,7 @@ async function saveAs(name: string): Promise<void> {
 beforeEach(() => {
   window.localStorage.clear();
   opened.mockClear();
+  reset.mockClear();
 });
 
 afterEach(async () => {
@@ -95,7 +94,7 @@ it("starts on the system view, whose configuration can only become a new view", 
 
   const [entry] = mounted.splice(0, 1);
   await entry.cleanup();
-  await renderBar(LIST_VIEW, true);
+  await renderBar(MINE, true);
   expect(findButton("Save changes")).toBeUndefined();
   expect(findButton("Save as view")).toBeDefined();
   expect(findButton("Reset")).toBeDefined();
@@ -112,7 +111,7 @@ it("saves the current configuration as a named tab and opens it", async () => {
 });
 
 it("keeps each tab's own configuration and restores them after a remount", async () => {
-  await renderBar(LIST_VIEW);
+  await renderBar(MINE);
   await saveAs("Mine");
   const [first] = mounted.splice(0, 1);
   await first.cleanup();
@@ -130,9 +129,9 @@ it("keeps each tab's own configuration and restores them after a remount", async
   } = JSON.parse(window.localStorage.getItem("otomat.issue-views") ?? "{}");
   const saved = stored["project-1"].saved;
   expect(saved.map((view) => view.name)).toEqual(["Mine", "Theirs"]);
-  expect(saved[0].config.layout).toBe("list");
   expect(saved[0].config.grouping).toBe("assignee");
   expect(saved[1].config.sort).toBe("title");
+  expect(Object.keys(saved[0].config)).not.toContain("layout");
 });
 
 it("renames, duplicates and reorders saved views", async () => {

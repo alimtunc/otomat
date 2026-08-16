@@ -1,20 +1,13 @@
 import { ISSUE_BOARD_COLUMNS, type IssueBoardColumn, type IssueSource } from "@otomat/domain";
 import { asMember, asString, normalizedMembers, normalizedSelection } from "@web/lib/coerce";
 import { ISSUE_SOURCES, knownPriority } from "@web/lib/issue/filter-options";
-import { ISSUES_FILTERS, type IssuesFilter } from "@web/lib/issue/filters";
 import { ISSUE_GROUPINGS, type IssueGrouping } from "@web/lib/issue/grouping";
 import { ISSUE_SORTS, type IssueSort } from "@web/lib/issue/sort";
-import {
-  ISSUES_LAYOUTS,
-  type IssuesLayout,
-  type IssuesViewConfig,
-} from "@web/lib/issue/view-config";
+import type { IssuesViewConfig } from "@web/lib/issue/view-config";
 
 /** `[]` and `all` are values, not absence: an emptied axis still travels. */
 export interface IssuesListSearch {
   view?: string;
-  layout?: IssuesLayout;
-  filter?: IssuesFilter;
   group?: IssueGrouping;
   sort?: IssueSort;
   sources?: IssueSource[];
@@ -43,8 +36,6 @@ function parsePriority(value: unknown): number | "all" | undefined {
 export function parseIssuesListSearch(search: Record<string, unknown>): IssuesListSearch {
   return {
     view: asString(search.view) ?? undefined,
-    layout: asMember(search.layout, ISSUES_LAYOUTS) ?? undefined,
-    filter: asMember(search.filter, ISSUES_FILTERS) ?? undefined,
     group: asMember(search.group, ISSUE_GROUPINGS) ?? undefined,
     sort: asMember(search.sort, ISSUE_SORTS) ?? undefined,
     sources: members(search.sources, ISSUE_SOURCES),
@@ -63,8 +54,6 @@ export function issuesConfigFromSearch(
   search: IssuesListSearch,
 ): IssuesViewConfig {
   return {
-    layout: search.layout ?? view.layout,
-    filter: search.filter ?? view.filter,
     grouping: search.group ?? view.grouping,
     sort: search.sort ?? view.sort,
     advanced: {
@@ -91,8 +80,6 @@ export function issuesSearchFromConfig(
   const next = config.advanced;
   const base = view.advanced;
   return {
-    layout: config.layout === view.layout ? undefined : config.layout,
-    filter: config.filter === view.filter ? undefined : config.filter,
     group: config.grouping === view.grouping ? undefined : config.grouping,
     sort: config.sort === view.sort ? undefined : config.sort,
     sources: sameSelection(next.sources, base.sources) ? undefined : next.sources,

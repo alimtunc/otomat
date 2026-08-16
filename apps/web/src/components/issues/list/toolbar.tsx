@@ -1,11 +1,9 @@
 import type { IssueContract } from "@otomat/domain";
-import { Chip, Pill, PillTabs } from "@otomat/ui";
+import { Chip } from "@otomat/ui";
 import type { ProjectLinearSync } from "@web/api/linear/use-project-sync";
-import { IssuesFilterPopover } from "@web/components/issues/issues-filter-popover";
 import { LinearSyncControl } from "@web/components/issues/linear-sync/control";
-import { DisplaySelect } from "@web/components/issues/list/display-select";
 import { NewIssueButton } from "@web/components/issues/new-issue-button";
-import { asMember } from "@web/lib/coerce";
+import { IssueViewOptionsMenu } from "@web/components/issues/view-options/menu";
 import {
   assigneeOptions,
   labelOptions,
@@ -13,10 +11,7 @@ import {
   projectOptions,
   type IssueFilterOptions,
 } from "@web/lib/issue/filter-options";
-import { ISSUES_FILTERS } from "@web/lib/issue/filters";
-import { ISSUE_GROUPING_OPTIONS } from "@web/lib/issue/grouping";
 import { unmatchedFilterValues } from "@web/lib/issue/invalid-filters";
-import { ISSUE_SORT_OPTIONS } from "@web/lib/issue/sort";
 import type { IssuesViewConfig } from "@web/lib/issue/view-config";
 import { TOOLBAR_STRIP } from "@web/lib/toolbar";
 
@@ -26,7 +21,9 @@ export interface IssuesToolbarProps {
   issues: IssueContract[];
   projectNames: ReadonlyMap<string, string>;
   sync: ProjectLinearSync;
+  dirty: boolean;
   onChange: (patch: Partial<IssuesViewConfig>) => void;
+  onReset: () => void;
 }
 
 export function IssuesToolbar({
@@ -34,7 +31,9 @@ export function IssuesToolbar({
   issues,
   projectNames,
   sync,
+  dirty,
   onChange,
+  onReset,
 }: IssuesToolbarProps) {
   const options: IssueFilterOptions = {
     assignees: assigneeOptions(issues),
@@ -44,36 +43,13 @@ export function IssuesToolbar({
   };
   const unmatched = unmatchedFilterValues(config.advanced, options);
   return (
-    <div className={`${TOOLBAR_STRIP} overflow-x-auto`}>
-      <PillTabs
-        type="single"
-        value={config.filter}
-        onValueChange={(value) => {
-          const filter = asMember(value, ISSUES_FILTERS);
-          if (filter !== null) onChange({ filter });
-        }}
-        aria-label="Issue filter"
-      >
-        <Pill value="all">All</Pill>
-        <Pill value="active">Active</Pill>
-        <Pill value="backlog">Backlog</Pill>
-      </PillTabs>
-      <DisplaySelect
-        label="Group"
-        options={ISSUE_GROUPING_OPTIONS}
-        value={config.grouping}
-        onChange={(grouping) => onChange({ grouping })}
-      />
-      <DisplaySelect
-        label="Sort"
-        options={ISSUE_SORT_OPTIONS}
-        value={config.sort}
-        onChange={(sort) => onChange({ sort })}
-      />
-      <IssuesFilterPopover
-        filters={config.advanced}
+    <div className={TOOLBAR_STRIP}>
+      <IssueViewOptionsMenu
+        config={config}
         options={options}
-        onChange={(advanced) => onChange({ advanced })}
+        dirty={dirty}
+        onChange={onChange}
+        onReset={onReset}
       />
       {unmatched.length === 0 ? null : (
         <Chip tone="warning" title={unmatched.join(", ")}>

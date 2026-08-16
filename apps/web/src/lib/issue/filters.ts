@@ -8,29 +8,7 @@ import {
 import { asRecord, asString, normalizedMembers, normalizedSelection } from "@web/lib/coerce";
 import { ISSUE_SOURCES, knownPriority } from "@web/lib/issue/filter-options";
 
-export const ISSUES_FILTERS = ["all", "active", "backlog"] as const;
-export type IssuesFilter = (typeof ISSUES_FILTERS)[number];
-
-/** The columns holding work someone can pick up; the pills read the board's own column so they never disagree with it. */
-const ACTIVE_COLUMNS = new Set<IssueBoardColumn>([
-  "ready",
-  "running",
-  "failed",
-  "reviewing",
-  "pr_open",
-]);
-
-export function applyIssuesFilter(issues: IssueContract[], filter: IssuesFilter): IssueContract[] {
-  if (filter === "active") {
-    return issues.filter((issue) => ACTIVE_COLUMNS.has(projectIssueBoardColumn(issue)));
-  }
-  if (filter === "backlog") {
-    return issues.filter((issue) => projectIssueBoardColumn(issue) === "backlog");
-  }
-  return issues;
-}
-
-/** Popover filters composing with the status pills; empty lists and "all" mean the axis is off. */
+/** Every axis of the active view; empty lists and "all" mean the axis is off. */
 export interface AdvancedIssueFilters {
   sources: IssueSource[];
   statuses: IssueBoardColumn[];
