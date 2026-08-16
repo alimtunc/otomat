@@ -8,7 +8,7 @@ import { CenteredState } from "@web/components/shell/centered-state";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { QueryList } from "@web/components/shell/query-list";
 import type { IssueGroup } from "@web/lib/issue/grouping";
-import type { IssuesLayout } from "@web/lib/issue/view-config";
+import type { IssuesLayout } from "@web/lib/issue/layout";
 
 export interface IssuesContentProps {
   query: UseQueryResult<IssueContract[]>;

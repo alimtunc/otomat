@@ -1,7 +1,7 @@
 import { ConfigMenuCheck, ConfigMenuSubmenu } from "@otomat/ui";
 import type { ReactNode } from "react";
 
-export interface MultiSelectItem<T extends string> {
+interface MultiSelectItem<T extends string> {
   value: T;
   label: string;
 }

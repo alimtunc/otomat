@@ -9,8 +9,6 @@ import { DEFAULT_ISSUES_VIEW_CONFIG, type IssuesViewConfig } from "@web/lib/issu
 import { describe, expect, it } from "vitest";
 
 const SAVED: IssuesViewConfig = {
-  layout: "list",
-  filter: "active",
   grouping: "assignee",
   sort: "title",
   advanced: { ...NO_ADVANCED_FILTERS, labels: ["bug"], assignee: "Ada" },
@@ -26,8 +24,6 @@ describe("parseIssuesListSearch", () => {
     expect(
       parseIssuesListSearch({
         view: "view-1",
-        layout: "list",
-        filter: "active",
         group: "label",
         sort: "priority",
         sources: ["linear", "local"],
@@ -38,8 +34,6 @@ describe("parseIssuesListSearch", () => {
       }),
     ).toEqual({
       view: "view-1",
-      layout: "list",
-      filter: "active",
       group: "label",
       sort: "priority",
       sources: ["linear", "local"],
@@ -53,14 +47,20 @@ describe("parseIssuesListSearch", () => {
   it("drops values no control could have produced", () => {
     expect(
       parseIssuesListSearch({
-        layout: "grid",
-        filter: "archived",
         group: "milestone",
         sources: ["jira", 7],
         linearStates: "In Progress",
         priority: 9,
       }),
     ).toEqual({ sources: [] });
+  });
+
+  it("carries no display layout, so a link never repaints the reader's board as a list", () => {
+    expect(parseIssuesListSearch({ layout: "list" })).toEqual({});
+  });
+
+  it("shows everything for the dropped scope rather than filtering it in silently", () => {
+    expect(parseIssuesListSearch({ filter: "active" })).toEqual({});
   });
 
   it("tells an emptied axis apart from an untouched one", () => {
@@ -75,8 +75,6 @@ describe("a view and its overrides", () => {
   it("reads a bare URL as exactly what the active view saved", () => {
     expect(issuesConfigFromSearch(SAVED, {})).toEqual(SAVED);
     expect(issuesSearchFromConfig(SAVED, SAVED)).toEqual({
-      layout: undefined,
-      filter: undefined,
       group: undefined,
       sort: undefined,
       sources: undefined,
@@ -92,8 +90,8 @@ describe("a view and its overrides", () => {
   });
 
   it("carries only what diverges from the view", () => {
-    const search = issuesSearchFromConfig(SAVED, { ...SAVED, layout: "board" });
-    expect(search.layout).toBe("board");
+    const search = issuesSearchFromConfig(SAVED, { ...SAVED, grouping: "label" });
+    expect(search.group).toBe("label");
     expect(search.sort).toBeUndefined();
     expect(hasOverrides(search)).toBe(true);
   });
@@ -113,8 +111,6 @@ describe("a view and its overrides", () => {
 
   it("survives a round trip for every axis", () => {
     const config: IssuesViewConfig = {
-      layout: "board",
-      filter: "backlog",
       grouping: "label",
       sort: "priority",
       advanced: {
