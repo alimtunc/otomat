@@ -140,6 +140,8 @@ export const appendRunStepRequestSchema = z
     options: executionOptionSelectionsSchema.optional(),
     /** Existing plan node ids this step waits on; an empty list runs it as soon as the workspace is free. */
     depends_on: z.array(z.string().min(1)).default([]),
+    /** Halted step this one recovers; once it succeeds, that failure stops holding the run in `failed`. */
+    replaces: z.string().min(1).optional(),
   })
   .strict()
   .refine((value) => Boolean(value.profile_id) || Boolean(value.runtime), {

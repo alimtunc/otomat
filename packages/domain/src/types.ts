@@ -25,6 +25,7 @@ export type { EventType, EventSource, EventEnvelope } from "./events/envelope.js
 
 export type {
   IssueSource,
+  IssueBoardColumn,
   IssueContract,
   AgentProfileContract,
   CompeteGroupContract,

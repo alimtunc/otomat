@@ -29,6 +29,7 @@ export function buildPlanRevisedEvent(
       origin,
       step_name: step.name,
       depends_on: step.depends_on,
+      replaces: step.replaces ?? null,
       runtime: config.runtime,
       profile_id: config.profile_id,
       model_id: config.model?.id ?? null,

@@ -35,6 +35,7 @@ const FIX_STEP: AppendStepInput = {
   selector: { kind: "runtime", runtimeId: "fake" },
   overrides: {},
   dependsOn: [],
+  replaces: null,
   origin: "review_fix",
 };
 

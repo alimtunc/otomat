@@ -2,7 +2,7 @@ import type {
   AgentSessionState,
   ChangeStatus,
   CompeteGroupState,
-  IssueState,
+  IssueBoardColumn,
   PullRequestState,
   ReviewCommentPublicationState,
   ReviewCommentState,
@@ -45,10 +45,11 @@ import {
 
 import type { KindStatusMap, StatusKind, StatusMap } from "./types";
 
-const ISSUE_STATUS: StatusMap<IssueState> = {
+const ISSUE_STATUS: StatusMap<IssueBoardColumn> = {
   backlog: { tone: "neutral", icon: Circle, label: "Backlog" },
   ready: { tone: "iris", icon: CircleDot, label: "Ready" },
   running: { tone: "iris", icon: Loader, label: "Running", live: true },
+  failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
   reviewing: { tone: "review", icon: MessageSquare, label: "Reviewing" },
   pr_open: { tone: "success", icon: GitPullRequest, label: "PR open" },
   blocked: { tone: "warning", icon: CircleSlash, label: "Blocked" },

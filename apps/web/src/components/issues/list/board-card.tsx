@@ -12,11 +12,13 @@ import { ColorDot } from "@web/components/issues/color-dot";
 import { CardChips } from "@web/components/issues/list/card-chips";
 import { issueShortId } from "@web/lib/ids";
 import { boardColumnFor, divergentSourceStatus } from "@web/lib/issue/board-column";
+import { failureSummary } from "@web/lib/issue/execution-failure";
 
 export function BoardCard({ issue }: { issue: IssueContract }) {
   const meta = resolveStatus("issue", boardColumnFor(issue));
   const StatusIcon = meta.icon;
   const sourceStatus = divergentSourceStatus(issue);
+  const failure = issue.execution.state === "failed" ? issue.execution.failure : null;
   return (
     <li>
       <Link
@@ -49,6 +51,9 @@ export function BoardCard({ issue }: { issue: IssueContract }) {
           />
           <span className="text-sm font-medium leading-[1.35] text-foreground">{issue.title}</span>
         </span>
+        {failure === null ? null : (
+          <span className="truncate text-micro text-danger">{failureSummary(failure)}</span>
+        )}
         <span className="flex flex-wrap items-center gap-1">
           {sourceStatus !== null ? <IssueStatusChip status={sourceStatus} /> : null}
           <CardChips issue={issue} />

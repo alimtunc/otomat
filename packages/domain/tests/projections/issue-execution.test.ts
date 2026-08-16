@@ -1,9 +1,7 @@
 import { expect, it } from "vitest";
 
-import {
-  projectIssueExecution,
-  type IssueExecutionEvidence,
-} from "#domain/projections/issue-execution";
+import type { IssueExecutionEvidence } from "#domain/projections/evidence";
+import { projectIssueExecution } from "#domain/projections/issue-execution";
 
 // Runs are inserted without an explicit timestamp, so the stored shape is SQLite's CURRENT_TIMESTAMP, not ISO-8601.
 const AT = (day: string) => `2026-01-0${day} 00:00:00`;
@@ -17,6 +15,7 @@ function ev(over: Partial<IssueExecutionEvidence> & { run_id: string }): IssueEx
     run_branch: `otomat/run/${over.run_id}`,
     run_abandoned_at: null,
     worktree_status: "active",
+    halted_step: null,
     pr_status: null,
     pr_publication: null,
     ...over,
@@ -27,29 +26,83 @@ it("projects none when there is no evidence", () => {
   expect(projectIssueExecution([])).toEqual({ state: "none", run_id: null });
 });
 
-it("projects none when every run is terminal without a PR", () => {
+it("projects none when every run is terminal and holds no workspace", () => {
   expect(
     projectIssueExecution([
       ev({ run_id: "r1", run_status: "completed" }),
-      ev({ run_id: "r2", run_status: "failed" }),
-      ev({ run_id: "r3", run_status: "canceled" }),
+      ev({ run_id: "r2", run_status: "failed", worktree_status: "removed" }),
+      ev({ run_id: "r3", run_status: "canceled", run_abandoned_at: AT("2") }),
     ]),
   ).toEqual({ state: "none", run_id: null });
 });
 
-it("treats every non-terminal, pre-review state as active work", () => {
+it("treats every busy state as active work", () => {
   for (const run_status of [
     "queued",
     "preparing",
     "running",
     "awaiting_permission",
-    "awaiting_human",
     "awaiting_selection",
   ] as const) {
     expect(projectIssueExecution([ev({ run_id: "r1", run_status })])).toEqual({
       state: "running",
       run_id: "r1",
     });
+  }
+});
+
+it("projects a stopped run holding its workspace as failed, never back to its source status", () => {
+  const halted_step = { id: "step-2", name: "Reviewer" };
+  const reasons = {
+    failed: "failed",
+    canceled: "canceled",
+    awaiting_human: "interrupted",
+  } as const;
+  for (const [run_status, reason] of Object.entries(reasons)) {
+    expect(
+      projectIssueExecution([
+        ev({ run_id: "r1", run_status: run_status as keyof typeof reasons, halted_step }),
+      ]),
+    ).toEqual({ state: "failed", run_id: "r1", failure: { reason, step: halted_step } });
+  }
+});
+
+it("names no step when a run stopped before any step failed", () => {
+  expect(projectIssueExecution([ev({ run_id: "r1", run_status: "canceled" })])).toEqual({
+    state: "failed",
+    run_id: "r1",
+    failure: { reason: "canceled", step: null },
+  });
+});
+
+it("stops projecting failed once the workspace is closed", () => {
+  for (const over of [{ worktree_status: null }, { run_abandoned_at: AT("2") }] as const) {
+    expect(projectIssueExecution([ev({ run_id: "r1", run_status: "failed", ...over })])).toEqual({
+      state: "none",
+      run_id: null,
+    });
+  }
+});
+
+it("keeps a newer active run ahead of an older failure", () => {
+  expect(
+    projectIssueExecution([
+      ev({ run_id: "old", run_status: "failed", run_created_at: AT("1") }),
+      ev({ run_id: "new", run_status: "running", run_created_at: AT("2") }),
+    ]),
+  ).toEqual({ state: "running", run_id: "new" });
+});
+
+it("keeps the more specific review and PR states ahead of a failure", () => {
+  for (const winner of [
+    ev({ run_id: "review", run_status: "review_ready", run_created_at: AT("1") }),
+    ev({ run_id: "pr", run_status: "completed", ...OPEN_PR, run_created_at: AT("1") }),
+  ]) {
+    const projected = projectIssueExecution([
+      winner,
+      ev({ run_id: "stopped", run_status: "failed", run_created_at: AT("3") }),
+    ]);
+    expect(projected.state).not.toBe("failed");
   }
 });
 

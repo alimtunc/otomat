@@ -36,10 +36,10 @@ export function logCategory(event: EventEnvelope): LogCategory {
   return CATEGORY_BY_TYPE[event.type];
 }
 
-/** Errors cut across categories: failed tool calls and lifecycle events that settle on `failed`. */
+/** Errors cut across categories: failed tool calls, and the turns and runs that settle on `failed`. */
 export function isErrorLogEvent(event: EventEnvelope): boolean {
   if (event.payload["is_error"] === true) return true;
-  return event.payload["final_status"] === "failed";
+  return event.payload["final_status"] === "failed" || event.payload["run_status"] === "failed";
 }
 
 export function matchesLogFilter(event: EventEnvelope, filter: LogFilter): boolean {

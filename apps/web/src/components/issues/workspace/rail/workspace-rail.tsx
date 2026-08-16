@@ -12,6 +12,7 @@ import {
   RailRow,
   RailSection,
 } from "@web/components/issues/workspace/rail/rail-primitives";
+import { StoppedSection } from "@web/components/issues/workspace/rail/stopped-section";
 import { Unknown } from "@web/components/issues/workspace/rail/unknown";
 import { UsageSection } from "@web/components/issues/workspace/rail/usage-section";
 
@@ -78,6 +79,7 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
           )}
         </RailMeta>
       </RailSection>
+      <StoppedSection execution={issue.execution} />
       {issue.source === "linear" ? <LinearRailSection issue={issue} run={run} /> : null}
       {run !== null ? (
         <>

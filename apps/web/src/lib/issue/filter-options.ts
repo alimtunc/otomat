@@ -1,5 +1,5 @@
 import {
-  ISSUE_STATES,
+  ISSUE_BOARD_COLUMNS,
   LINEAR_PRIORITIES,
   type IssueContract,
   type IssueSource,
@@ -30,7 +30,7 @@ export const ISSUE_SOURCE_OPTIONS: { value: IssueSource; label: string }[] = [
 
 export const ISSUE_SOURCES: IssueSource[] = ISSUE_SOURCE_OPTIONS.map((option) => option.value);
 
-export const ISSUE_STATUS_OPTIONS = ISSUE_STATES.map((status) => ({
+export const ISSUE_STATUS_OPTIONS = ISSUE_BOARD_COLUMNS.map((status) => ({
   value: status,
   label: resolveStatus("issue", status).label,
 }));

@@ -1,7 +1,7 @@
-import type { IssueContract, IssueState } from "@otomat/domain";
+import type { IssueBoardColumn, IssueContract, IssueState } from "@otomat/domain";
 
-/** Live execution wins the card's column (Running/Reviewing/PR open); otherwise it falls back to the source status. */
-export function boardColumnFor(issue: IssueContract): IssueState {
+/** Local execution wins the card's column (Running/Failed/Reviewing/PR open); otherwise it falls back to the source status. */
+export function boardColumnFor(issue: IssueContract): IssueBoardColumn {
   return issue.execution.state === "none" ? issue.status : issue.execution.state;
 }
 

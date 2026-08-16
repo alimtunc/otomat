@@ -5,9 +5,10 @@ import { executableSteps } from "./schedule.js";
 
 /**
  * The one legal revision of a launched plan: append a frozen step. Existing
- * nodes are carried over untouched, and the new node may depend only on nodes
- * that already exist — so the graph stays acyclic by construction and every
- * scheduling and recovery invariant keeps reading the same plan shape.
+ * nodes are carried over untouched, and the new node may depend only on — or
+ * declare that it recovers — nodes that already exist, so the graph stays
+ * acyclic by construction and every scheduling and recovery invariant keeps
+ * reading the same plan shape.
  */
 export function appendPlanStep(plan: RunPlan, step: RunPlanStep): RunPlan {
   const nodeIds = new Set(plan.steps.map((node) => node.id));
@@ -19,7 +20,11 @@ export function appendPlanStep(plan: RunPlan, step: RunPlanStep): RunPlan {
       throw new InvalidRunPlanError(`Unknown dependency "${dependency}"`);
     }
   }
-  if (executableSteps(plan).length >= RUN_PLAN_MAX_STEPS) {
+  const steps = executableSteps(plan);
+  if (step.replaces != null && !steps.some((node) => node.id === step.replaces)) {
+    throw new InvalidRunPlanError(`Unknown replaced step "${step.replaces}"`);
+  }
+  if (steps.length >= RUN_PLAN_MAX_STEPS) {
     throw new InvalidRunPlanError(`Run plans support at most ${RUN_PLAN_MAX_STEPS} steps`);
   }
   return { version: 1, steps: [...plan.steps, step] };

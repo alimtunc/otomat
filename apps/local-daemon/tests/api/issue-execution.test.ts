@@ -1,10 +1,16 @@
 import { createClient, schema, type Db } from "@otomat/db";
-import type { PullRequestPublicationState, PullRequestState, RunState } from "@otomat/domain";
+import type {
+  PullRequestPublicationState,
+  PullRequestState,
+  RunState,
+  StepRunState,
+} from "@otomat/domain";
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readIssue, readIssues } from "#api/reads";
 
-import { setupTestDb, type TestDb } from "../support/db.js";
+import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
 
 let t: TestDb;
 
@@ -52,6 +58,42 @@ function addPullRequest(
     .run();
 }
 
+/** The worktree a stopped run still owns; without one there is nothing to recover, and the projection says so. */
+function addWorktree(db: Db, runId: string): void {
+  db.insert(schema.worktrees)
+    .values({
+      id: `${runId}-worktree`,
+      repository_id: seedRepository(db),
+      path: `/tmp/${runId}`,
+      branch: `otomat/${runId}`,
+      head_sha: "",
+      base_sha: "",
+      base_ref: "main",
+      owner_token: runId,
+      status: "active",
+    })
+    .run();
+  db.update(schema.runs)
+    .set({ worktree_id: `${runId}-worktree` })
+    .where(eq(schema.runs.id, runId))
+    .run();
+}
+
+function addStep(
+  db: Db,
+  step: { runId: string; id: string; idx: number; status: StepRunState; name: string },
+): void {
+  db.insert(schema.stepRuns)
+    .values({
+      id: step.id,
+      run_id: step.runId,
+      idx: step.idx,
+      name: step.name,
+      status: step.status,
+    })
+    .run();
+}
+
 function readI1(db: Db) {
   const issue = readIssue(db, "i1");
   if (!issue) throw new Error("i1 missing");
@@ -91,6 +133,40 @@ it("keeps live work ahead of an older terminal run with an open PR", () => {
   addPullRequest(t.db, { id: "pr1", runId: "old", status: "open", publication: "created" });
   addRun(t.db, { id: "new", status: "running", createdAt: "2026-01-02 00:00:00" });
   expect(readI1(t.db).execution).toEqual({ state: "running", run_id: "new" });
+});
+
+it("projects a failed run that still holds its workspace as failed, never back to the source status", () => {
+  addRun(t.db, { id: "r1", status: "failed" });
+  addWorktree(t.db, "r1");
+  addStep(t.db, { runId: "r1", id: "s1", idx: 0, status: "succeeded", name: "Implement" });
+  addStep(t.db, { runId: "r1", id: "s2", idx: 1, status: "stale", name: "Reviewer" });
+  addStep(t.db, { runId: "r1", id: "s3", idx: 2, status: "canceled", name: "Verify" });
+
+  const issue = readI1(t.db);
+  expect(issue.execution).toEqual({
+    state: "failed",
+    run_id: "r1",
+    failure: { reason: "failed", step: { id: "s2", name: "Reviewer" } },
+  });
+  expect(issue.status).toBe("backlog");
+  expect(issue.workspace).toMatchObject({ state: "open", run_id: "r1" });
+});
+
+it("keeps the failure and its step after a restart, from persisted rows alone", () => {
+  addRun(t.db, { id: "r1", status: "failed" });
+  addWorktree(t.db, "r1");
+  addStep(t.db, { runId: "r1", id: "s1", idx: 0, status: "stale", name: "Implement" });
+
+  const reopened = createClient(t.dbPath);
+  try {
+    expect(readIssue(reopened.db, "i1")?.execution).toEqual({
+      state: "failed",
+      run_id: "r1",
+      failure: { reason: "failed", step: { id: "s1", name: "Implement" } },
+    });
+  } finally {
+    reopened.sqlite.close();
+  }
 });
 
 it("projects none for an issue with no runs", () => {

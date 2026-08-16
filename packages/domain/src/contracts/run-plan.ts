@@ -18,6 +18,8 @@ const runPlanExecutableShape = {
 export const runPlanStepSchema = z.object({
   ...runPlanExecutableShape,
   depends_on: z.array(z.string()),
+  /** Halted step this one was appended to recover; its outcome then reads through to this step. Null on every node frozen at launch. */
+  replaces: z.string().nullish(),
 });
 export type RunPlanStep = z.infer<typeof runPlanStepSchema>;
 

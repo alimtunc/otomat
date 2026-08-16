@@ -1,5 +1,6 @@
 import {
-  ISSUE_STATES,
+  ISSUE_BOARD_COLUMNS,
+  type IssueBoardColumn,
   type IssueContract,
   type IssueSource,
   type IssueState,
@@ -29,7 +30,7 @@ export function applyIssuesFilter(issues: IssueContract[], filter: IssuesFilter)
 /** Popover filters composing with the status pills; empty lists and "all" mean the axis is off. */
 export interface AdvancedIssueFilters {
   sources: IssueSource[];
-  statuses: IssueState[];
+  statuses: IssueBoardColumn[];
   linearStates: string[];
   labels: string[];
   projects: string[];
@@ -103,7 +104,7 @@ export function parseAdvancedFilters(value: unknown): AdvancedIssueFilters {
   const assignee = asString(entry.assignee);
   return {
     sources: normalizedMembers(entry.sources, ISSUE_SOURCES),
-    statuses: normalizedMembers(entry.statuses, ISSUE_STATES),
+    statuses: normalizedMembers(entry.statuses, ISSUE_BOARD_COLUMNS),
     linearStates: normalizedSelection(entry.linearStates),
     labels: normalizedSelection(entry.labels),
     projects: normalizedSelection(entry.projects),

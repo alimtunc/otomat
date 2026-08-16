@@ -28,6 +28,8 @@ export interface SeedWorkflowStep {
   id: string;
   status: StepRunState;
   dependsOn?: string[];
+  /** Halted step this one was appended to recover. */
+  replaces?: string;
   name?: string;
   prompt?: string;
   sessionId?: string;
@@ -105,6 +107,7 @@ export function seedWorkflowRun(
           agent: "fake",
           prompt: step.prompt ?? `p-${step.id}`,
           depends_on: step.dependsOn ?? [],
+          replaces: step.replaces ?? null,
         })),
       },
     })
