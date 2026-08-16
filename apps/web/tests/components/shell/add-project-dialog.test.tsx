@@ -108,6 +108,31 @@ it("surfaces a folder-picker failure instead of rejecting silently", async () =>
   expect(document.body.textContent).toContain("Could not open the folder picker.");
 });
 
+it("stays quiet until the path is used, then asks again once it is cleared", async () => {
+  const registerProject = vi.fn();
+  const bridge = fakeDesktopBridge();
+  bridge.executionHost.registerProject = registerProject;
+  window.otomat = bridge;
+  await renderDialog(vi.fn());
+
+  expect(document.body.textContent).not.toContain("Enter the repository's absolute path");
+
+  await act(async () => {
+    setInputValue(pathInput(), "/srv/app");
+  });
+  expect(document.body.textContent).not.toContain("Enter the repository's absolute path");
+
+  await act(async () => {
+    setInputValue(pathInput(), "");
+  });
+
+  expect(document.body.textContent).toContain("Enter the repository's absolute path");
+  await act(async () => {
+    submitButton().click();
+  });
+  expect(registerProject).not.toHaveBeenCalled();
+});
+
 it("refuses an empty path before calling any host", async () => {
   const registerProject = vi.fn();
   const bridge = fakeDesktopBridge();

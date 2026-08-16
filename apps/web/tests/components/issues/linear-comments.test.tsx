@@ -36,6 +36,12 @@ const REPLY = {
 
 let rendered: Mounted | null = null;
 
+function commentBox(): HTMLTextAreaElement | null {
+  return document.body.querySelector<HTMLTextAreaElement>(
+    'textarea[aria-label="Comment on the Linear issue…"]',
+  );
+}
+
 afterEach(async () => {
   await rendered?.cleanup();
   rendered = null;
@@ -79,6 +85,33 @@ it("renders threads and posts a reply carrying its parent id", async () => {
   });
 });
 
+it("offers the submit only for a body with text, and empties the box once posted", async () => {
+  getLinearComments.mockResolvedValue([]);
+  publishLinearComment.mockResolvedValue({ draft: null, writes: [], lifecycle: null });
+
+  rendered = await mount(withClient(<LinearCommentsSection issueId="li" runId={null} />));
+
+  await vi.waitFor(() => {
+    expect(commentBox()).not.toBeNull();
+  });
+  const box = commentBox();
+  if (box === null) return;
+
+  expect(findButton("Comment")).toBeUndefined();
+  await act(async () => setTextareaValue(box, "   "));
+  expect(findButton("Comment")).toBeUndefined();
+
+  await act(async () => setTextareaValue(box, "Un avis"));
+  expect(findButton("Comment")).toBeDefined();
+
+  await act(async () => findButton("Comment")?.click());
+
+  await vi.waitFor(() => {
+    expect(commentBox()?.value).toBe("");
+    expect(findButton("Comment")).toBeUndefined();
+  });
+});
+
 it("posts a top-level comment without a parent", async () => {
   getLinearComments.mockResolvedValue([]);
   publishLinearComment.mockResolvedValue({ draft: null, writes: [], lifecycle: null });
@@ -86,14 +119,10 @@ it("posts a top-level comment without a parent", async () => {
   rendered = await mount(withClient(<LinearCommentsSection issueId="li" runId={null} />));
 
   await vi.waitFor(() => {
-    expect(
-      document.body.querySelector('textarea[aria-label="Comment on the Linear issue…"]'),
-    ).not.toBeNull();
+    expect(commentBox()).not.toBeNull();
   });
 
-  const box = document.body.querySelector<HTMLTextAreaElement>(
-    'textarea[aria-label="Comment on the Linear issue…"]',
-  );
+  const box = commentBox();
   if (box === null) return;
   await act(async () => setTextareaValue(box, "Premier commentaire"));
   await act(async () => findButton("Comment")?.click());

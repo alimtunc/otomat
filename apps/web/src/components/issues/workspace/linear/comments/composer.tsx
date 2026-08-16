@@ -1,6 +1,8 @@
 import { Button, Textarea } from "@otomat/ui";
+import { useForm } from "@tanstack/react-form";
 import { usePublishLinearComment } from "@web/api/linear/writeback";
-import { useRef, useState } from "react";
+import { hasText } from "@web/lib/form";
+import { useRef } from "react";
 
 export function Composer({
   issueId,
@@ -16,49 +18,68 @@ export function Composer({
   onPosted?: () => void;
 }) {
   const publish = usePublishLinearComment(issueId);
-  const [body, setBody] = useState("");
   const clientId = useRef<string | null>(null);
   if (clientId.current === null) clientId.current = crypto.randomUUID();
   const currentClientId = clientId.current;
 
+  const form = useForm({
+    defaultValues: { body: "" },
+    onSubmit: ({ value }) => {
+      publish.mutate(
+        {
+          client_id: currentClientId,
+          body: value.body.trim(),
+          run_id: runId,
+          parent_id: parentId,
+        },
+        {
+          onSuccess: () => {
+            form.reset();
+            clientId.current = crypto.randomUUID();
+            onPosted?.();
+          },
+        },
+      );
+    },
+  });
+
   return (
-    <div className="flex flex-col gap-1.5">
-      <Textarea
-        rows={2}
-        value={body}
-        onChange={(event) => setBody(event.target.value)}
-        placeholder={placeholder}
-        aria-label={placeholder}
-        className="text-sm"
-      />
-      {body.trim().length > 0 ? (
-        <Button
-          size="xs"
-          variant="primary"
-          className="self-end"
-          loading={publish.isPending}
-          disabled={publish.isPending}
-          onClick={() =>
-            publish.mutate(
-              {
-                client_id: currentClientId,
-                body: body.trim(),
-                run_id: runId,
-                parent_id: parentId,
-              },
-              {
-                onSuccess: () => {
-                  setBody("");
-                  clientId.current = crypto.randomUUID();
-                  onPosted?.();
-                },
-              },
-            )
-          }
-        >
-          {parentId === null ? "Comment" : "Post reply"}
-        </Button>
-      ) : null}
-    </div>
+    <form
+      className="flex flex-col gap-1.5"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void form.handleSubmit();
+      }}
+    >
+      <form.Field name="body">
+        {(field) => (
+          <Textarea
+            rows={2}
+            value={field.state.value}
+            onBlur={field.handleBlur}
+            onChange={(event) => field.handleChange(event.target.value)}
+            placeholder={placeholder}
+            aria-label={placeholder}
+            className="text-sm"
+          />
+        )}
+      </form.Field>
+      <form.Subscribe selector={(state) => hasText(state.values.body)}>
+        {(filled) =>
+          filled ? (
+            <Button
+              type="submit"
+              size="xs"
+              variant="primary"
+              className="self-end"
+              loading={publish.isPending}
+              disabled={publish.isPending}
+            >
+              {parentId === null ? "Comment" : "Post reply"}
+            </Button>
+          ) : null
+        }
+      </form.Subscribe>
+    </form>
   );
 }

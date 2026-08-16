@@ -1,7 +1,7 @@
 import type { RepositoryContract } from "@otomat/domain";
 import { Button, Field, FieldControl, FieldLabel, Textarea, toast } from "@otomat/ui";
+import { useForm } from "@tanstack/react-form";
 import { useUpdateRepository } from "@web/api/repositories/mutations";
-import { useState } from "react";
 
 function parseCommands(value: string): string[] {
   return value
@@ -12,44 +12,62 @@ function parseCommands(value: string): string[] {
 
 export function InitCommandsForm({ repository }: { repository: RepositoryContract }) {
   const update = useUpdateRepository();
-  const [value, setValue] = useState(() => repository.init_commands.join("\n"));
-  const dirty = parseCommands(value).join("\n") !== repository.init_commands.join("\n");
+  const saved = repository.init_commands.join("\n");
+
+  const form = useForm({
+    defaultValues: { commands: saved },
+    onSubmit: ({ value }) => {
+      update.mutate(
+        {
+          repositoryId: repository.id,
+          request: { init_commands: parseCommands(value.commands) },
+        },
+        {
+          onSuccess: () => toast.success("Worktree init commands saved"),
+          onError: () => toast.error("Could not save the init commands."),
+        },
+      );
+    },
+  });
 
   return (
     <form
       className="flex flex-col gap-2"
       onSubmit={(event) => {
         event.preventDefault();
-        update.mutate(
-          { repositoryId: repository.id, request: { init_commands: parseCommands(value) } },
-          {
-            onSuccess: () => toast.success("Worktree init commands saved"),
-            onError: () => toast.error("Could not save the init commands."),
-          },
-        );
+        void form.handleSubmit();
       }}
     >
-      <Field hint="One shell command per line, run in every fresh worktree — the run's and each compete candidate's — before the agent starts. A failing command fails the run, or just that candidate.">
-        <FieldLabel>Worktree init commands</FieldLabel>
-        <FieldControl>
-          <Textarea
-            rows={4}
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            placeholder={"pnpm install\npnpm build"}
-          />
-        </FieldControl>
-      </Field>
+      <form.Field name="commands">
+        {(field) => (
+          <Field hint="One shell command per line, run in every fresh worktree — the run's and each compete candidate's — before the agent starts. A failing command fails the run, or just that candidate.">
+            <FieldLabel>Worktree init commands</FieldLabel>
+            <FieldControl>
+              <Textarea
+                rows={4}
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.value)}
+                placeholder={"pnpm install\npnpm build"}
+              />
+            </FieldControl>
+          </Field>
+        )}
+      </form.Field>
       <div className="flex justify-end">
-        <Button
-          type="submit"
-          variant="primary"
-          size="sm"
-          disabled={!dirty}
-          loading={update.isPending}
-        >
-          Save init commands
-        </Button>
+        <form.Subscribe selector={(state) => parseCommands(state.values.commands).join("\n")}>
+          {(edited) => (
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={edited === saved}
+              loading={update.isPending}
+            >
+              Save init commands
+            </Button>
+          )}
+        </form.Subscribe>
       </div>
     </form>
   );
