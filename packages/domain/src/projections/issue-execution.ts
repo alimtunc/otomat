@@ -15,7 +15,9 @@ type Classification =
 
 type Winner = Classification & { evidence: IssueExecutionEvidence };
 
-/** Active work outranks a delivered PR, which outranks a run awaiting review, which outranks a stopped cycle; ties break to the most recent run. */
+type Candidate = { classified: Classification | null; evidence: IssueExecutionEvidence };
+
+/** Active work outranks a delivered PR, which outranks a run awaiting review, which outranks a stopped cycle. */
 const KIND_RANK: Record<ExecutionKind, number> = {
   running: 4,
   pr_open: 3,
@@ -49,12 +51,18 @@ function classifyEvidence(evidence: IssueExecutionEvidence): Classification | nu
   return null;
 }
 
-function outranks(candidate: Winner, best: Winner): boolean {
-  if (KIND_RANK[candidate.kind] !== KIND_RANK[best.kind]) {
-    return KIND_RANK[candidate.kind] > KIND_RANK[best.kind];
-  }
+/** Rank 0 is a run with nothing left to say; it still competes, so a completed run neutralizes the failures its cycle replaced. */
+function rank(classified: Classification | null): number {
+  return classified === null ? 0 : KIND_RANK[classified.kind];
+}
+
+/** The last run answers for the issue; rank only separates rows of one run and genuine ties, and the id keeps equal or missing timestamps deterministic. */
+function outranks(candidate: Candidate, best: Candidate): boolean {
   if (candidate.evidence.run_created_at !== best.evidence.run_created_at) {
     return candidate.evidence.run_created_at > best.evidence.run_created_at;
+  }
+  if (rank(candidate.classified) !== rank(best.classified)) {
+    return rank(candidate.classified) > rank(best.classified);
   }
   return candidate.evidence.run_id > best.evidence.run_id;
 }
@@ -68,14 +76,13 @@ function toExecution(winner: Winner): IssueExecution {
   };
 }
 
-/** Reduce an issue's run/PR evidence to one deterministic execution state; no evidence projects to `none`. */
+/** Reduce an issue's run/PR evidence to the deterministic execution state of its last run; no evidence, or a last run at rest, projects to `none`. */
 export function projectIssueExecution(evidence: readonly IssueExecutionEvidence[]): IssueExecution {
-  let best: Winner | null = null;
+  let best: Candidate | null = null;
   for (const item of evidence) {
-    const classified = classifyEvidence(item);
-    if (classified === null) continue;
-    const candidate: Winner = { ...classified, evidence: item };
+    const candidate: Candidate = { classified: classifyEvidence(item), evidence: item };
     if (best === null || outranks(candidate, best)) best = candidate;
   }
-  return best === null ? { state: "none", run_id: null } : toExecution(best);
+  if (best === null || best.classified === null) return { state: "none", run_id: null };
+  return toExecution({ ...best.classified, evidence: best.evidence });
 }

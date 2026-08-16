@@ -54,6 +54,15 @@ describe("applyIssuesFilter", () => {
     expect(applyIssuesFilter([running], "active")).toEqual([running]);
     expect(applyIssuesFilter([running], "backlog")).toEqual([]);
   });
+
+  it("leaves a closed issue out of 'active' even when an old run stopped on it", () => {
+    const done = issue("done", {
+      state: "failed",
+      run_id: "run-1",
+      failure: { reason: "failed", step: null },
+    });
+    expect(applyIssuesFilter([done], "active")).toEqual([]);
+  });
 });
 
 describe("applyAdvancedFilters", () => {

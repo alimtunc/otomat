@@ -8,7 +8,7 @@ import type {
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { readIssue, readIssues } from "#api/reads";
+import { readIssue, readIssues, readRuns } from "#api/reads";
 
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
 
@@ -167,6 +167,38 @@ it("keeps the failure and its step after a restart, from persisted rows alone", 
   } finally {
     reopened.sqlite.close();
   }
+});
+
+it("lets a completed run neutralize the failure of the cycle it replaced, restart included", () => {
+  addRun(t.db, { id: "old", status: "failed", createdAt: "2026-01-01 00:00:00" });
+  addWorktree(t.db, "old");
+  addStep(t.db, { runId: "old", id: "s1", idx: 0, status: "failed", name: "Implement" });
+  addRun(t.db, { id: "new", status: "completed", createdAt: "2026-01-02 00:00:00" });
+
+  expect(readI1(t.db).execution).toEqual({ state: "none", run_id: null });
+  expect(readRuns(t.db, { issueId: "i1" }).map((run) => [run.id, run.status])).toEqual(
+    expect.arrayContaining([["old", "failed"]]),
+  );
+
+  const reopened = createClient(t.dbPath);
+  try {
+    expect(readIssue(reopened.db, "i1")?.execution).toEqual({ state: "none", run_id: null });
+  } finally {
+    reopened.sqlite.close();
+  }
+});
+
+it("projects the failure of the last run, not the outcome of the run before it", () => {
+  addRun(t.db, { id: "old", status: "completed", createdAt: "2026-01-01 00:00:00" });
+  addRun(t.db, { id: "new", status: "failed", createdAt: "2026-01-02 00:00:00" });
+  addWorktree(t.db, "new");
+  addStep(t.db, { runId: "new", id: "s1", idx: 0, status: "failed", name: "Implement" });
+
+  expect(readI1(t.db).execution).toEqual({
+    state: "failed",
+    run_id: "new",
+    failure: { reason: "failed", step: { id: "s1", name: "Implement" } },
+  });
 });
 
 it("projects none for an issue with no runs", () => {

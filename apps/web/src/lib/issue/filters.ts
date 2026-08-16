@@ -1,28 +1,31 @@
 import {
   ISSUE_BOARD_COLUMNS,
+  projectIssueBoardColumn,
   type IssueBoardColumn,
   type IssueContract,
   type IssueSource,
-  type IssueState,
 } from "@otomat/domain";
 import { asRecord, asString, normalizedMembers, normalizedSelection } from "@web/lib/coerce";
-import { boardColumnFor } from "@web/lib/issue/board-column";
 import { ISSUE_SOURCES, knownPriority } from "@web/lib/issue/filter-options";
 
 export const ISSUES_FILTERS = ["all", "active", "backlog"] as const;
 export type IssuesFilter = (typeof ISSUES_FILTERS)[number];
 
-const ACTIVE_STATES = new Set<IssueState>(["ready", "running", "reviewing", "pr_open"]);
-
-/** A local run makes an issue active whatever the source says, so the pills agree with the board's execution columns. */
-function isActive(issue: IssueContract): boolean {
-  return issue.execution.state !== "none" || ACTIVE_STATES.has(issue.status);
-}
+/** The columns holding work someone can pick up; the pills read the board's own column so they never disagree with it. */
+const ACTIVE_COLUMNS = new Set<IssueBoardColumn>([
+  "ready",
+  "running",
+  "failed",
+  "reviewing",
+  "pr_open",
+]);
 
 export function applyIssuesFilter(issues: IssueContract[], filter: IssuesFilter): IssueContract[] {
-  if (filter === "active") return issues.filter(isActive);
+  if (filter === "active") {
+    return issues.filter((issue) => ACTIVE_COLUMNS.has(projectIssueBoardColumn(issue)));
+  }
   if (filter === "backlog") {
-    return issues.filter((issue) => issue.status === "backlog" && !isActive(issue));
+    return issues.filter((issue) => projectIssueBoardColumn(issue) === "backlog");
   }
   return issues;
 }
@@ -88,7 +91,7 @@ export function applyAdvancedFilters(
   return issues.filter(
     (issue) =>
       (sources.size === 0 || sources.has(issue.source)) &&
-      (statuses.size === 0 || statuses.has(boardColumnFor(issue))) &&
+      (statuses.size === 0 || statuses.has(projectIssueBoardColumn(issue))) &&
       (linearStates.size === 0 ||
         (issue.source_state_name !== null && linearStates.has(issue.source_state_name))) &&
       (projects.size === 0 || projects.has(issue.project_id)) &&
