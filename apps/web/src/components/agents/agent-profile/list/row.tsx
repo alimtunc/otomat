@@ -51,7 +51,8 @@ export function AgentProfileRow({
           <span className="flex flex-wrap gap-1">
             {options.map((option) => (
               <Chip key={option.key} tone="ghost">
-                {providerOptionKeyLabel(option.key)}: {providerOptionValueLabel(option.value)}
+                {providerOptionKeyLabel(option.key)}:{" "}
+                {providerOptionValueLabel(option.key, option.value)}
               </Chip>
             ))}
           </span>

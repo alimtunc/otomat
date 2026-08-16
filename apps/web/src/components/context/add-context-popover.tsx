@@ -1,5 +1,5 @@
 import { contextReferenceKey, type ContextReference } from "@otomat/domain";
-import { Button, Icon, Input, Popover, PopoverContent, PopoverTrigger } from "@otomat/ui";
+import { Icon, IconButton, Input, Popover, PopoverContent, PopoverTrigger } from "@otomat/ui";
 import { useRepositoryFiles } from "@web/api/daemon/queries";
 import { useProjectIssues } from "@web/api/issues/queries";
 import { ContextSearchResults } from "@web/components/context/context-search-results";
@@ -34,12 +34,7 @@ export function AddContextPopover({
   return (
     <Popover>
       <PopoverTrigger
-        render={
-          <Button type="button" variant="ghost" size="sm">
-            <Icon name="plus" aria-hidden />
-            Add context
-          </Button>
-        }
+        render={<IconButton label="Add context" icon={<Icon name="plus" aria-hidden />} />}
       />
       <PopoverContent align="start" className="flex w-80 flex-col gap-2 p-2">
         <Input

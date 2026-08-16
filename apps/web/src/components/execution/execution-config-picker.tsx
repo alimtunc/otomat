@@ -99,6 +99,10 @@ export function ExecutionConfigPicker({
   };
 
   const agentLabel = chosen?.label ?? "No agent";
+  const segments = executionSummarySegments(config.model, config.options);
+  const announced = [agentLabel, ...segments];
+  /** A runtime's mark stands in for its name; a profile's names the provider behind it, not the profile. */
+  const summary = chosen?.kind === "runtime" && chosen.mark ? segments : announced;
   const profileName = config.profile?.name ?? null;
   const modelValue = modelSelectValue(value.model, config.catalog);
   const menuLabel = `${label} execution configuration`;
@@ -114,7 +118,8 @@ export function ExecutionConfigPicker({
       <ConfigMenu>
         <ConfigMenuTrigger
           label={menuLabel}
-          summary={executionSummarySegments(agentLabel, config.model, config.options).join(" · ")}
+          summary={summary.join(" · ")}
+          announce={announced.join(" · ")}
           detail={
             <ExecutionSummaryDetail
               entries={executionSummaryDetails(

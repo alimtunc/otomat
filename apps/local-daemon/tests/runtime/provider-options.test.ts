@@ -121,6 +121,25 @@ describe("claude provider options", () => {
     expect(permission?.default_value).not.toBe("bypassPermissions");
   });
 
+  it("describes each mode in one line, and describes none it cannot", () => {
+    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
+
+    const permission = descriptor(
+      new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null).options,
+      "permission_mode",
+    );
+    const described = new Map(
+      (permission?.choices ?? []).map((choice) => [choice.value, choice.description]),
+    );
+
+    expect(described.get("manual")).toBe("Claude asks before making edits.");
+    expect(described.get("auto")).toBe("Claude approves safe actions and pauses for risky ones.");
+    expect(described.get("plan")).toBe("Claude explores and presents a plan before editing.");
+    expect(described.get("acceptEdits")).toContain("Claude edits the selected code or file.");
+    expect(described.get("acceptEdits")).toContain("headless run cannot give");
+    expect(described.get("dontAsk")).toBeNull();
+  });
+
   it("drops the retired `default` mode a current CLI no longer announces", () => {
     process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
 

@@ -1,12 +1,14 @@
 // @vitest-environment happy-dom
 import {
   providerOptionDescriptor,
+  type AgentProfileContract,
   type ProviderOptionSet,
   type RuntimeDescriptor,
 } from "@otomat/domain";
 import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
-import { encodeRuntimeChoice } from "@web/lib/agent-choice";
+import { encodeProfileChoice, encodeRuntimeChoice } from "@web/lib/agent-choice";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
+import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { CLAUDE_ANNOUNCED, CODEX_ANNOUNCED } from "#support/announced-options";
@@ -40,7 +42,17 @@ function descriptor(id: string): RuntimeDescriptor {
   };
 }
 
-const DESCRIPTORS = [descriptor("claude"), descriptor("codex")];
+const DESCRIPTORS = [descriptor("claude"), descriptor("codex"), descriptor("fake")];
+
+const PROFILE: AgentProfileContract = {
+  id: "p1",
+  name: "Careful reviewer",
+  runtime: "claude",
+  options: {},
+  model: null,
+  guidance: null,
+  skill_ids: [],
+};
 
 const cleanups: Array<() => Promise<void>> = [];
 
@@ -50,13 +62,13 @@ afterEach(async () => {
   announced = providerOptionSet();
 });
 
-async function render(value: ExecutionSelection) {
+async function render(value: ExecutionSelection, profiles: AgentProfileContract[] = []) {
   const mounted = await mount(
     <ExecutionConfigPicker
       level="launch"
       value={value}
       onChange={vi.fn()}
-      profiles={[]}
+      profiles={profiles}
       descriptors={DESCRIPTORS}
       label="Single run"
     />,
@@ -65,12 +77,27 @@ async function render(value: ExecutionSelection) {
   return mounted;
 }
 
-function triggerLabel(): string {
+function trigger(): HTMLButtonElement {
   const found = document.querySelector<HTMLButtonElement>(
     "button[aria-label^='Single run execution configuration']",
   );
   if (!found) throw new Error("execution trigger not found");
-  return found.getAttribute("aria-label") ?? "";
+  return found;
+}
+
+function triggerLabel(): string {
+  return trigger().getAttribute("aria-label") ?? "";
+}
+
+function triggerSummary(): string {
+  return trigger().querySelector(".truncate")?.textContent ?? "";
+}
+
+async function openSubmenu(label: string): Promise<void> {
+  await act(async () => trigger().click());
+  const submenu = document.querySelector<HTMLElement>(`[aria-label^='${label}:']`);
+  if (!submenu) throw new Error(`${label} submenu not found`);
+  await act(async () => submenu.click());
 }
 
 it("summarises runtime, model and every announced option on the one visible control", async () => {
@@ -89,6 +116,33 @@ it("summarises runtime, model and every announced option on the one visible cont
   expect(label).toContain("High");
 });
 
+it("shows only the choices, leaving the provider to its mark, and still announces it", async () => {
+  announced = CLAUDE_ANNOUNCED;
+  const mounted = await render({
+    agent: encodeRuntimeChoice("claude"),
+    model: { kind: "model", id: "opus" },
+    options: { effort: { kind: "value", value: "high" } },
+  });
+
+  expect(triggerSummary()).toBe("opus · Auto · High");
+  expect(triggerLabel()).toBe("Single run execution configuration: claude · opus · Auto · High");
+  expect(mounted.container.querySelector("svg[viewBox='0 0 16 16']")).not.toBeNull();
+});
+
+it("keeps a profile's own name on the trigger, which its provider mark cannot give", async () => {
+  announced = CLAUDE_ANNOUNCED;
+  await render({ agent: encodeProfileChoice(PROFILE.id), options: {} }, [PROFILE]);
+
+  expect(triggerSummary()).toContain("Careful reviewer");
+});
+
+it("keeps the agent visible for a runtime that has no mark to name it", async () => {
+  announced = providerOptionSet({ runtime: "fake", options: [] });
+  await render({ agent: encodeRuntimeChoice("fake"), options: {} });
+
+  expect(triggerSummary()).toBe("fake · Provider default");
+});
+
 it("summarises the Codex keys for a Codex agent, and no Claude one", async () => {
   announced = CODEX_ANNOUNCED;
   await render({ agent: encodeRuntimeChoice("codex"), options: {} });
@@ -99,6 +153,22 @@ it("summarises the Codex keys for a Codex agent, and no Claude one", async () =>
   // Otomat sends no reasoning effort of its own, so the summary names none.
   expect(label).not.toContain("Medium");
   expect(label).not.toContain("Auto");
+});
+
+it("names each Claude permission mode as Claude does, without echoing the flag value", async () => {
+  announced = CLAUDE_ANNOUNCED;
+  await render({ agent: encodeRuntimeChoice("claude"), options: {} });
+
+  await openSubmenu("Permission mode");
+  const modes = [...document.querySelectorAll("[role='menuitemradio']")].map(
+    (choice) => choice.querySelector(".truncate")?.textContent ?? "",
+  );
+
+  expect(modes).toContain("Edit automatically");
+  expect(modes).toContain("Auto — recommended");
+  expect(modes).toContain("Plan");
+  expect(modes).toContain("Bypass permissions — removes a safety boundary");
+  expect(document.querySelector("[role='menuitemradio'] code")).toBeNull();
 });
 
 it("never presents a boundary-removing value as the effective default", async () => {

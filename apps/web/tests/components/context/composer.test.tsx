@@ -111,7 +111,7 @@ it("shows the issue as an undetachable chip and previews what it will freeze", a
 it("searches issues and files, and attaches one by identity", async () => {
   const onChange = await mountComposer();
 
-  await click("Add context");
+  await act(async () => byLabel("Add context").click());
   await act(async () =>
     setInputValue(byLabel("Step 1 context search") as HTMLInputElement, "back"),
   );
@@ -126,7 +126,7 @@ it("searches issues and files, and attaches one by identity", async () => {
 
 it("says how many matches a narrowed file search is holding back", async () => {
   await mountComposer();
-  await click("Add context");
+  await act(async () => byLabel("Add context").click());
   expect(document.body.textContent).toContain("2 further match(es)");
 });
 
@@ -145,7 +145,7 @@ it("removes an attached reference from the keyboard", async () => {
 it("says a project with no repository cannot attach files, rather than showing none", async () => {
   filesQuery = { data: { paths: [], omitted: 0 }, isPending: false, isError: true };
   await mountComposer();
-  await click("Add context");
+  await act(async () => byLabel("Add context").click());
   expect(document.body.textContent).toContain("Couldn’t read this repository’s files.");
 });
 

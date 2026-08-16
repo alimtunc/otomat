@@ -11,7 +11,7 @@ import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { setInputValue, setTextareaValue } from "#support/dom-events";
-import { findButton } from "#support/dom-queries";
+import { findButton, findLabelled } from "#support/dom-queries";
 import { executionDefaultsQueryResult } from "#support/execution-defaults";
 import { repositoriesQueryResult, repositoryBranchesQueryResult } from "#support/launch-target";
 import { mount } from "#support/mount";
@@ -152,6 +152,12 @@ function click(text: string) {
   return act(async () => button.click());
 }
 
+function clickLabelled(label: string) {
+  const control = findLabelled(label);
+  if (!control) throw new Error(`control "${label}" not found`);
+  return act(async () => control.click());
+}
+
 async function openDialog(issue: IssueContract = ISSUE) {
   const mounted = await mount(<LaunchRunDialog issue={issue} onLaunched={onLaunched} />);
   cleanups.push(mounted.cleanup);
@@ -204,7 +210,7 @@ it("sends the optional note and the attached file as structured context", async 
   await act(async () =>
     setTextareaValue(textarea("Single run instructions"), "  Only fix the quoting  "),
   );
-  await click("Add context");
+  await clickLabelled("Add context");
   await click("src/parser.ts");
   await click("Launch run⌘↵");
 
@@ -219,7 +225,7 @@ it("sends the optional note and the attached file as structured context", async 
 
 it("removes an attached reference before the launch", async () => {
   await openDialog();
-  await click("Add context");
+  await clickLabelled("Add context");
   await click("src/parser.ts");
   const remove = document.querySelector<HTMLButtonElement>(
     "button[aria-label='Remove src/parser.ts']",

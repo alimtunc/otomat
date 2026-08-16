@@ -51,7 +51,11 @@ export function RuntimeProperties({
     items.push({
       key: stored.key,
       label: providerOptionKeyLabel(stored.key),
-      value: <Chip tone="warning">{providerOptionValueLabel(stored.value)} — not offered</Chip>,
+      value: (
+        <Chip tone="warning">
+          {providerOptionValueLabel(stored.key, stored.value)} — not offered
+        </Chip>
+      ),
     });
   }
 
