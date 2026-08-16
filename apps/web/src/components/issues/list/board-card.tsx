@@ -1,12 +1,5 @@
 import { projectIssuePrimaryState, type IssueContract } from "@otomat/domain";
-import {
-  Avatar,
-  FOCUS_RING,
-  IssueSourceGlyph,
-  IssueStatusChip,
-  resolveStatus,
-  TONE_TEXT,
-} from "@otomat/ui";
+import { Avatar, FOCUS_RING, IssueSourceGlyph, IssueStatusChip, StatusGlyph } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { ColorDot } from "@web/components/issues/color-dot";
 import { CardChips } from "@web/components/issues/list/card-chips";
@@ -16,8 +9,6 @@ import { failureSummary } from "@web/lib/issue/execution-failure";
 
 export function BoardCard({ issue }: { issue: IssueContract }) {
   const primary = projectIssuePrimaryState(issue);
-  const meta = resolveStatus("issue", primary.state);
-  const StatusIcon = meta.icon;
   const sourceStatus = divergentSourceStatus(issue);
   const failure =
     primary.state === "failed" && issue.execution.state === "failed"
@@ -49,10 +40,7 @@ export function BoardCard({ issue }: { issue: IssueContract }) {
           ) : null}
         </span>
         <span className="flex items-start gap-1.75">
-          <StatusIcon
-            aria-hidden
-            className={`mt-0.75 h-3.25 w-3.25 shrink-0 ${TONE_TEXT[meta.tone]}`}
-          />
+          <StatusGlyph kind="issue" status={primary.state} className="mt-0.75 size-3.25" />
           <span className="text-sm font-medium leading-[1.35] text-foreground">{issue.title}</span>
         </span>
         {failure === null ? null : (

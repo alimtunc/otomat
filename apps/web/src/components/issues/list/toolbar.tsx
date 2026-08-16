@@ -2,6 +2,7 @@ import type { IssueContract } from "@otomat/domain";
 import { Chip } from "@otomat/ui";
 import type { ProjectLinearSync } from "@web/api/linear/use-project-sync";
 import { LinearSyncControl } from "@web/components/issues/linear-sync/control";
+import { linearSourcesMapped } from "@web/components/issues/linear-sync/describe";
 import { NewIssueButton } from "@web/components/issues/new-issue-button";
 import { IssueViewOptionsMenu } from "@web/components/issues/view-options/menu";
 import {
@@ -47,6 +48,7 @@ export function IssuesToolbar({
       <IssueViewOptionsMenu
         config={config}
         options={options}
+        linearMapped={linearSourcesMapped(sync.status)}
         dirty={dirty}
         onChange={onChange}
         onReset={onReset}

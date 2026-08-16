@@ -17,3 +17,15 @@ export function findMenuItem(text: string): HTMLElement | undefined {
     (item) => item.textContent?.trim() === text,
   );
 }
+
+export function menuSectionLabels(): HTMLElement[] {
+  return [...document.body.querySelectorAll<HTMLElement>("[role='group']")].flatMap((group) => {
+    const id = group.getAttribute("aria-labelledby");
+    const label = id === null ? null : document.getElementById(id);
+    return label === null ? [] : [label];
+  });
+}
+
+export function findRefreshButton(container: ParentNode): HTMLButtonElement | null {
+  return container.querySelector<HTMLButtonElement>("button[aria-label^='Refresh issues']");
+}

@@ -1,4 +1,4 @@
-import { IssueSourceGlyph } from "@otomat/ui";
+import { IssueSourceGlyph, StatusGlyph } from "@otomat/ui";
 import { ColorDot } from "@web/components/issues/color-dot";
 import { MultiSelect } from "@web/components/issues/view-options/multi-select";
 import { Select } from "@web/components/issues/view-options/select";
@@ -6,14 +6,9 @@ import {
   ISSUE_SOURCE_OPTIONS,
   ISSUE_STATUS_OPTIONS,
   PRIORITY_OPTIONS,
-  type IssueFilterOption,
   type IssueFilterOptions,
 } from "@web/lib/issue/filter-options";
 import type { AdvancedIssueFilters } from "@web/lib/issue/filters";
-
-function colorDot(item: IssueFilterOption) {
-  return <ColorDot color={item.color ?? null} />;
-}
 
 export interface IssueFilterSubmenusProps {
   filters: AdvancedIssueFilters;
@@ -35,6 +30,7 @@ export function IssueFilterSubmenus({ filters, options, onChange }: IssueFilterS
         emptyLabel="Any status"
         items={ISSUE_STATUS_OPTIONS}
         selected={filters.statuses}
+        renderLeading={(item) => <StatusGlyph kind="issue" status={item.value} />}
         onChange={(statuses) => onChange({ ...filters, statuses })}
       />
       <MultiSelect
@@ -51,7 +47,7 @@ export function IssueFilterSubmenus({ filters, options, onChange }: IssueFilterS
           emptyLabel="Any label"
           items={options.labels}
           selected={filters.labels}
-          renderLeading={colorDot}
+          renderLeading={(item) => <ColorDot color={item.color ?? null} />}
           onChange={(labels) => onChange({ ...filters, labels })}
         />
       ) : null}
@@ -62,16 +58,6 @@ export function IssueFilterSubmenus({ filters, options, onChange }: IssueFilterS
         selected={filters.projects}
         onChange={(projects) => onChange({ ...filters, projects })}
       />
-      {options.linearStates.length > 0 ? (
-        <MultiSelect
-          label="Linear state"
-          emptyLabel="Any state"
-          items={options.linearStates}
-          selected={filters.linearStates}
-          renderLeading={colorDot}
-          onChange={(linearStates) => onChange({ ...filters, linearStates })}
-        />
-      ) : null}
       <Select
         label="Assignee"
         items={assigneeItems}

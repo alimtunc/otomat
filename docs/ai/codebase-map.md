@@ -679,6 +679,25 @@ A view id the reader does not have resolves to `All issues` with the overrides
 still applied, and a filter value the project no longer carries is named in the
 toolbar (`lib/issue/invalid-filters.ts`) rather than silently emptying the list.
 
+The view options menu is split along provenance: the generic axes first, then a
+Linear section (`view-options/linear-filters.tsx`) — the only source Otomat
+imports issues from today, so a second section waits for a second importer rather
+than for a registry with one entry. It appears only when the project has Linear
+mapped, the `Sources` axis leaves it in play, and it owns an option of its own, so
+the menu never offers a filter that can match nothing. The Status axis takes its
+icon and colour from `resolveStatus` like every board column, card and badge, and
+a wide selection is recapped as two labels and a count with the whole of it on the
+row's accessible name: the row states the effective value, never every value.
+Nothing sorts on the sync watermark — it describes the mirror, not the work — and
+a view stored on it opens on the default sort through the same unknown-member
+fallback that guards every other axis.
+
+The Linear refresh is a secondary action and reads as one: an icon button and its
+chevron, with the last pass on the button's accessible name and its date added in
+the tooltip, instead of a line whose text would move the whole strip. A failure
+also lands in an `sr-only` live region, because the automatic pass that finds it
+raises no toast.
+
 The runs list has no named views: `lib/run/grouping.ts` gathers each issue's runs
 under one header, and its two filters persist per project under
 `otomat.runs-view`. A done issue's group is hidden on arrival — a failed run is

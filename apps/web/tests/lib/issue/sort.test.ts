@@ -8,30 +8,18 @@ const urgent = linearIssueContract({
   title: "Bravo",
   status: "ready",
   source_priority: 1,
-  synced_at: "2026-07-22T10:00:00.000Z",
 });
-const low = linearIssueContract({
-  id: "a",
-  title: "Alpha",
-  status: "running",
-  source_priority: 4,
-  synced_at: "2026-07-20T10:00:00.000Z",
-});
+const low = linearIssueContract({ id: "a", title: "Alpha", status: "running", source_priority: 4 });
 const none = linearIssueContract({
   id: "c",
   title: "Charlie",
   status: "backlog",
   source_priority: 0,
-  synced_at: null,
 });
 
 const ALL = [none, urgent, low];
 
 describe("sortIssues", () => {
-  it("puts the freshest sync first and issues never synced last", () => {
-    expect(sortIssues(ALL, "synced").map((issue) => issue.id)).toEqual(["b", "a", "c"]);
-  });
-
   it("ranks 'no priority' after Low rather than before Urgent", () => {
     expect(sortIssues(ALL, "priority").map((issue) => issue.id)).toEqual(["b", "a", "c"]);
   });

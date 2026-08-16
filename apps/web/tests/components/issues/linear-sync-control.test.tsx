@@ -3,8 +3,10 @@ import type { LinearSyncStatusContract } from "@otomat/domain";
 import type { ProjectLinearSync } from "@web/api/linear/use-project-sync";
 import { LinearSyncControl } from "@web/components/issues/linear-sync/control";
 import { describeLinearSync } from "@web/components/issues/linear-sync/describe";
+import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { findMenuItem, findRefreshButton } from "#support/dom-queries";
 import { mount, type Mounted } from "#support/mount";
 
 function status(overrides: Partial<LinearSyncStatusContract> = {}): LinearSyncStatusContract {
@@ -38,10 +40,10 @@ async function renderControl(value: ProjectLinearSync): Promise<HTMLElement> {
   return rendered.container;
 }
 
-function refreshButton(container: HTMLElement): HTMLButtonElement | undefined {
-  return [...container.querySelectorAll("button")].find((candidate) =>
-    candidate.textContent?.includes("Refresh issues"),
-  );
+function refreshButton(container: HTMLElement): HTMLButtonElement {
+  const button = findRefreshButton(container);
+  if (button === null) throw new Error("the refresh button is missing");
+  return button;
 }
 
 afterEach(async () => {
@@ -55,29 +57,52 @@ it("offers a keyboard-reachable refresh that scopes to the active project", asyn
   const container = await renderControl(sync());
   const button = refreshButton(container);
 
-  expect(button).toBeDefined();
-  expect(button?.tagName).toBe("BUTTON");
-  expect(button?.disabled).toBe(false);
-  button?.click();
+  expect(button.tagName).toBe("BUTTON");
+  expect(button.disabled).toBe(false);
+  button.click();
 
   expect(refresh).toHaveBeenCalledWith({ announce: true });
 });
 
+it("spends no toolbar width on the report, carrying it on the button instead", async () => {
+  const container = await renderControl(
+    sync({ status: status({ last_result: { imported: 2, updated: 1 } }) }),
+  );
+
+  expect(container.textContent).toBe("");
+  expect(refreshButton(container).getAttribute("aria-label")).toBe(
+    "Refresh issues — 2 imported, 1 updated",
+  );
+  expect(container.firstElementChild?.className).not.toMatch(/\bw-|\bmin-w-/);
+});
+
+it("restores the last report and its date in the tooltip, on focus as on hover", async () => {
+  const container = await renderControl(
+    sync({ status: status({ last_result: { imported: 2, updated: 1 } }) }),
+  );
+  await act(async () => refreshButton(container).focus());
+
+  expect(document.body.textContent).toContain("2 imported, 1 updated");
+  expect(document.body.querySelector("time")).not.toBeNull();
+});
+
 it("refuses a second launch while a pass is running", async () => {
   const container = await renderControl(sync({ running: true }));
+  const button = refreshButton(container);
 
-  expect(refreshButton(container)?.disabled).toBe(true);
-  expect(container.textContent).toContain("Syncing…");
+  expect(button.disabled).toBe(true);
+  expect(button.getAttribute("aria-label")).toContain("Syncing…");
 });
 
 it("disables the control when nothing is mapped and says so", async () => {
   const container = await renderControl(sync({ status: status({ sources: 0 }) }));
+  const button = refreshButton(container);
 
-  expect(refreshButton(container)?.disabled).toBe(true);
-  expect(container.textContent).toContain("No Linear team mapped");
+  expect(button.disabled).toBe(true);
+  expect(button.getAttribute("aria-label")).toContain("No Linear team mapped");
 });
 
-it("shows an actionable failure instead of a last-sync time", async () => {
+it("shows an actionable failure on the button rather than a line the toolbar has to fit", async () => {
   const container = await renderControl(
     sync({
       status: status({
@@ -85,10 +110,36 @@ it("shows an actionable failure instead of a last-sync time", async () => {
       }),
     }),
   );
+  const button = refreshButton(container);
 
-  expect(container.querySelector("[role='alert']")?.textContent).toContain(
-    "Linear rejected the API key.",
+  expect(button.getAttribute("aria-label")).toContain("Linear rejected the API key.");
+  expect(button.querySelector("svg")?.getAttribute("class")).toContain("text-danger");
+});
+
+it("announces a failure an automatic pass raised no toast for, without taking width", async () => {
+  const container = await renderControl(
+    sync({
+      status: status({ last_error: { code: "auth", message: "Linear rejected the API key." } }),
+    }),
   );
+  const alert = container.querySelector("[role='alert']");
+
+  expect(alert?.textContent).toBe("Linear rejected the API key.");
+  expect(alert?.className).toContain("sr-only");
+});
+
+it("keeps a full resync one chevron away", async () => {
+  const container = await renderControl(sync());
+  const chevron = container.querySelector<HTMLButtonElement>(
+    "button[aria-label='Linear sync options']",
+  );
+  await act(async () => chevron?.click());
+
+  const full = findMenuItem("Full resync");
+  if (full === undefined) throw new Error("Full resync is missing");
+  await act(async () => full.click());
+
+  expect(refresh).toHaveBeenCalledWith({ full: true, announce: true });
 });
 
 const LABELS: [LinearSyncStatusContract, string][] = [

@@ -28,6 +28,13 @@ describe("parseIssuesViewConfig", () => {
     });
   });
 
+  it("opens a view saved on the dropped Last synced sort with the default one", () => {
+    expect(parseIssuesViewConfig({ grouping: "assignee", sort: "synced" })).toEqual({
+      ...DEFAULT_ISSUES_VIEW_CONFIG,
+      grouping: "assignee",
+    });
+  });
+
   it("leaves the display layout to the project, so a stored one cannot take a tab back", () => {
     expect(parseIssuesViewConfig({ layout: "list" })).toEqual(DEFAULT_ISSUES_VIEW_CONFIG);
   });

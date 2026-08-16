@@ -3,6 +3,7 @@ import type { ProjectContract } from "@otomat/domain";
 import { ProjectSourcesPanel } from "@web/components/settings/project/sources-panel";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { findRefreshButton } from "#support/dom-queries";
 import { mount, type Mounted } from "#support/mount";
 
 let connectionState: Record<string, unknown>;
@@ -165,10 +166,7 @@ it("says so instead of guessing when the team's statuses are unavailable", async
 
 it("syncs only this project's sources", async () => {
   const container = await renderPanel();
-  const button = [...container.querySelectorAll("button")].find((candidate) =>
-    candidate.textContent?.includes("Refresh issues"),
-  );
-  button?.click();
+  findRefreshButton(container)?.click();
 
   expect(syncRefresh).toHaveBeenCalledWith({ announce: true });
 });
@@ -178,11 +176,8 @@ it("disables sync when the project has no mapped sources", async () => {
   syncSources = 0;
 
   const container = await renderPanel();
-  const button = [...container.querySelectorAll("button")].find((candidate) =>
-    candidate.textContent?.includes("Refresh issues"),
-  );
 
-  expect(button?.disabled).toBe(true);
+  expect(findRefreshButton(container)?.disabled).toBe(true);
 });
 
 it("starts the first import as soon as a mapping is saved", async () => {

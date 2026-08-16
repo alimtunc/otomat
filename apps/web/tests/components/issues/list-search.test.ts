@@ -55,6 +55,12 @@ describe("parseIssuesListSearch", () => {
     ).toEqual({ sources: [] });
   });
 
+  it("opens a link written on the dropped Last synced sort as the view has it", () => {
+    const search = parseIssuesListSearch({ sort: "synced" });
+    expect(search.sort).toBeUndefined();
+    expect(issuesConfigFromSearch(SAVED, search).sort).toBe(SAVED.sort);
+  });
+
   it("carries no display layout, so a link never repaints the reader's board as a list", () => {
     expect(parseIssuesListSearch({ layout: "list" })).toEqual({});
   });

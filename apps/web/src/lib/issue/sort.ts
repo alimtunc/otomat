@@ -1,7 +1,6 @@
 import { ISSUE_BOARD_COLUMNS, projectIssuePrimaryState, type IssueContract } from "@otomat/domain";
 
 export const ISSUE_SORT_OPTIONS = [
-  { value: "synced", label: "Last synced" },
   { value: "priority", label: "Priority" },
   { value: "status", label: "Status" },
   { value: "title", label: "Title" },
@@ -18,7 +17,6 @@ function priorityRank(issue: IssueContract): number {
 }
 
 function compare(a: IssueContract, b: IssueContract, sort: IssueSort): number {
-  if (sort === "synced") return (b.synced_at ?? "").localeCompare(a.synced_at ?? "");
   if (sort === "priority") return priorityRank(a) - priorityRank(b);
   if (sort === "status") {
     return (
