@@ -1,28 +1,36 @@
 import { z } from "zod";
 
-import { pullRequestContractSchema } from "./entities/pull-request.js";
+import {
+  PULL_REQUEST_PUBLICATION_MODES,
+  pullRequestContractSchema,
+  pullRequestGeneratorAuditSchema,
+} from "./entities/pull-request.js";
 
-/** How a publication leaves the pull request on GitHub. Explicit at every publish: Otomat never guesses, and never merges. */
-export const PULL_REQUEST_PUBLICATION_MODES = ["draft", "ready"] as const;
-export type PullRequestPublicationMode = (typeof PULL_REQUEST_PUBLICATION_MODES)[number];
-
+/** Undefaulted: a caller that names no mode is refused, so an absent value never becomes a silent Draft. */
 export const preparePullRequestRequestSchema = z.object({
   title: z.string().min(1),
   body: z.string(),
   /** Remote branch the PR ships as; omitted keeps the run branch. Ignored once the PR exists — its head is its identity. */
   head_ref: z.string().trim().min(1).max(120).optional(),
-  /** Defaulted so a pre-field cockpit keeps publishing drafts instead of silently opening PRs for review. */
-  mode: z.enum(PULL_REQUEST_PUBLICATION_MODES).default("draft"),
+  mode: z.enum(PULL_REQUEST_PUBLICATION_MODES),
 });
 export type PreparePullRequestRequest = z.infer<typeof preparePullRequestRequestSchema>;
 
-/** AI-drafted metadata for the run's pull request; every field stays editable before publishing. */
-export const pullRequestDraftSchema = z.object({
+/** Which commit-subject shape the repository's own history shows; `free_form` imposes none. */
+export const COMMIT_CONVENTIONS = ["conventional", "free_form"] as const;
+export const commitConventionSchema = z.enum(COMMIT_CONVENTIONS);
+export type CommitConvention = z.infer<typeof commitConventionSchema>;
+
+/** AI-generated metadata for the run's pull request; every field stays editable, and generating publishes nothing. */
+export const pullRequestProposalSchema = z.object({
   title: z.string().min(1),
   body: z.string(),
   branch: z.string().min(1),
+  /** Message of the commit Otomat creates when the workspace still holds uncommitted work. */
+  commit: z.object({ subject: z.string().min(1), body: z.string().nullable() }),
+  generator: pullRequestGeneratorAuditSchema,
 });
-export type PullRequestDraft = z.infer<typeof pullRequestDraftSchema>;
+export type PullRequestProposal = z.infer<typeof pullRequestProposalSchema>;
 
 export const pullRequestCommitSchema = z.object({
   sha: z.string(),
@@ -44,10 +52,42 @@ export const pullRequestSyncSchema = z.object({
 });
 export type PullRequestSync = z.infer<typeof pullRequestSyncSchema>;
 
+/** Every code names an actionable Git or GitHub impossibility; how the run's execution ended is not one. */
+export const PUBLICATION_BLOCKERS = [
+  "worktree_missing",
+  "remote_missing",
+  "diff_empty",
+  "pr_terminal",
+] as const;
+export const publicationBlockerSchema = z.object({
+  code: z.enum(PUBLICATION_BLOCKERS),
+  message: z.string().min(1),
+});
+export type PublicationBlocker = z.infer<typeof publicationBlockerSchema>;
+
+/** What the run's workspace can publish right now, read from git and the stored publication alone. */
+export const pullRequestPublishabilitySchema = z.object({
+  /** Null when the workspace can open or update a pull request. */
+  blocker: publicationBlockerSchema.nullable(),
+  /** Null when the workspace or its GitHub remote could not be resolved. */
+  repository: z.string().nullable(),
+  base_ref: z.string().nullable(),
+  /** Branch the next publication would ship, already resolved from the proposal or the workspace. */
+  head_ref: z.string().nullable(),
+  changed_files: z.number().int().nonnegative(),
+  additions: z.number().int().nonnegative(),
+  deletions: z.number().int().nonnegative(),
+  /** Uncommitted work Otomat would commit itself before pushing. */
+  dirty: z.boolean(),
+  convention: commitConventionSchema,
+});
+export type PullRequestPublishability = z.infer<typeof pullRequestPublishabilitySchema>;
+
 /** `pull_request` is null while no PR has been prepared; `sync` is null while none is published to compare against. */
 export const pullRequestDetailSchema = z.object({
   pull_request: pullRequestContractSchema.nullable(),
   sync: pullRequestSyncSchema.nullable(),
+  publishability: pullRequestPublishabilitySchema,
 });
 export type PullRequestDetail = z.infer<typeof pullRequestDetailSchema>;
 

@@ -3,6 +3,7 @@ import {
   preparePullRequestRequestSchema,
   pushPullRequestRequestSchema,
   type PullRequestDetail,
+  type PullRequestPublishability,
 } from "@otomat/domain";
 import { Hono } from "hono";
 
@@ -12,26 +13,36 @@ import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { toPullRequest } from "../serialize.js";
 
-function detail(view: PullRequestView | null): PullRequestDetail {
+function detail(
+  view: PullRequestView | null,
+  publishability: PullRequestPublishability,
+): PullRequestDetail {
   return {
     pull_request: view ? toPullRequest(view.row) : null,
     sync: view?.sync ?? null,
+    publishability,
   };
 }
 
 export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
 
+  const publicationDetail = async (
+    runId: string,
+    view: PullRequestView | null,
+  ): Promise<PullRequestDetail> => detail(view, await deps.github.publishability(runId));
+
   routes.get("/github/connection", async (c) => c.json(await deps.github.connection()));
   routes.post("/github/connect", (c) => c.json(deps.github.connect(), 202));
 
-  routes.get("/runs/:id/pr", runGuard(deps.db), async (c) =>
-    c.json(detail(await deps.github.getPullRequest(c.get("run").id))),
-  );
+  routes.get("/runs/:id/pr", runGuard(deps.db), async (c) => {
+    const runId = c.get("run").id;
+    return c.json(await publicationDetail(runId, await deps.github.getPullRequest(runId)));
+  });
 
-  routes.post("/runs/:id/pr/draft", runGuard(deps.db), async (c) => {
+  routes.post("/runs/:id/pr/generate", runGuard(deps.db), async (c) => {
     try {
-      return c.json(await deps.github.draftPullRequest(c.get("run")));
+      return c.json(await deps.github.generatePullRequestMetadata(c.get("run")));
     } catch (error) {
       if (error instanceof GitHubPublicationError) {
         return c.json({ error: error.code, message: error.message }, 409);
@@ -49,7 +60,7 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
       const existed = getPullRequestForRun(deps.db, run.id) !== undefined;
       try {
         const view = await deps.github.publish(run, c.req.valid("json"));
-        return c.json(detail(view), existed ? 200 : 201);
+        return c.json(await publicationDetail(run.id, view), existed ? 200 : 201);
       } catch (error) {
         if (error instanceof GitHubPublicationError) {
           return c.json({ error: error.code, message: error.message }, 409);
@@ -67,7 +78,8 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
     async (c) => {
       const run = c.get("run");
       try {
-        return c.json(detail(await deps.github.pushCommits(run.id, c.req.valid("json"))));
+        const view = await deps.github.pushCommits(run.id, c.req.valid("json"));
+        return c.json(await publicationDetail(run.id, view));
       } catch (error) {
         if (error instanceof GitHubPublicationError) {
           return c.json({ error: error.code, message: error.message }, 409);

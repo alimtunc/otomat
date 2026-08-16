@@ -4,6 +4,7 @@ import {
   RUN_SETTLED_STATES,
   type BinaryProbe,
   type ProviderOptionDescriptor,
+  type ProviderOptions,
   type RuntimeCapabilities,
 } from "@otomat/domain";
 import { z } from "zod";
@@ -70,6 +71,13 @@ export interface RuntimeOptionSupport {
   options: ProviderOptionDescriptor[];
 }
 
+/** Argv for one non-interactive turn, plus the reasoning level it actually sends, kept for the audit. */
+export interface RuntimeOneShot {
+  command: string;
+  args: string[];
+  effort: string | null;
+}
+
 /** Handle to a started session, used by out-of-band `abort`/`resume`. */
 const runtimeSessionRefSchema = z.object({
   run_id: z.string(),
@@ -93,6 +101,8 @@ export interface RuntimeAdapter {
   describeOptions(model: string | null): RuntimeOptionSupport;
   /** How this adapter handles model selection: whether it passes a model flag, and where its catalog comes from. */
   readonly models: RuntimeModelSupport;
+  /** How to ask this runtime one question that answers on stdout and writes nothing; absent when it has no such mode. */
+  describeOneShot?(model: string | null, options: ProviderOptions): RuntimeOneShot;
   run(input: RuntimeRunInput, sink: RuntimeSink, signal: AbortSignal): Promise<RuntimeFinalState>;
   resume?(
     session: RuntimeSessionRef,

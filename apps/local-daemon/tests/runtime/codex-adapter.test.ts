@@ -259,6 +259,30 @@ describe("CodexRuntimeAdapter", () => {
     expect(argv).toEqual(["exec", "--json", "--sandbox", "workspace-write", "-"]);
   });
 
+  it("asks a one-shot question in a read-only sandbox, sending the selection", () => {
+    const adapter = new CodexRuntimeAdapter(STUB_BIN);
+
+    expect(adapter.describeOneShot("gpt-5.6-sol", { reasoning_effort: "xhigh" })).toEqual({
+      command: STUB_BIN,
+      args: [
+        "exec",
+        "--sandbox",
+        "read-only",
+        "-c",
+        'model_reasoning_effort="xhigh"',
+        "--model",
+        "gpt-5.6-sol",
+        "-",
+      ],
+      effort: "xhigh",
+    });
+    expect(adapter.describeOneShot(null, {})).toEqual({
+      command: STUB_BIN,
+      args: ["exec", "--sandbox", "read-only", "-"],
+      effort: null,
+    });
+  });
+
   it("streams stderr lines as raw_log evidence", async () => {
     process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
     process.env["OTOMAT_STUB_STDERR"] = "WARN model config fallback";

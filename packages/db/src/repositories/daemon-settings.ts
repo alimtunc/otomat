@@ -19,6 +19,17 @@ function readRow(db: Db): SettingsRow | undefined {
   return db.select().from(daemonSettings).where(eq(daemonSettings.id, DAEMON_SETTINGS_ID)).get();
 }
 
+function upsert(db: Db, columns: Partial<SettingsRow>): void {
+  db.insert(daemonSettings)
+    .values({
+      id: DAEMON_SETTINGS_ID,
+      max_concurrent_sessions: DEFAULT_MAX_CONCURRENT_SESSIONS,
+      ...columns,
+    })
+    .onConflictDoUpdate({ target: daemonSettings.id, set: touch(columns) })
+    .run();
+}
+
 /** The host's session cap. A daemon that was never configured answers the shipped default. */
 export function readMaxConcurrentSessions(db: Db): number {
   return readRow(db)?.max_concurrent_sessions ?? DEFAULT_MAX_CONCURRENT_SESSIONS;
@@ -51,17 +62,27 @@ export function readExecutionDefaults(db: Db): ExecutionDefaults {
 }
 
 export function writeExecutionDefaults(db: Db, defaults: ExecutionDefaults): void {
-  const columns = {
+  upsert(db, {
     execution_runtime: defaults.runtime,
     execution_model: defaults.model,
     execution_options_json: defaults.options,
+  });
+}
+
+export function readPullRequestGenerator(db: Db): ExecutionDefaults {
+  const row = readRow(db);
+  if (!row) return EMPTY_EXECUTION_DEFAULTS;
+  return {
+    runtime: row.pr_generator_runtime,
+    model: row.pr_generator_model,
+    options: providerOptionsSchema.parse(row.pr_generator_options_json ?? {}),
   };
-  db.insert(daemonSettings)
-    .values({
-      id: DAEMON_SETTINGS_ID,
-      max_concurrent_sessions: DEFAULT_MAX_CONCURRENT_SESSIONS,
-      ...columns,
-    })
-    .onConflictDoUpdate({ target: daemonSettings.id, set: touch(columns) })
-    .run();
+}
+
+export function writePullRequestGenerator(db: Db, generator: ExecutionDefaults): void {
+  upsert(db, {
+    pr_generator_runtime: generator.runtime,
+    pr_generator_model: generator.model,
+    pr_generator_options_json: generator.options,
+  });
 }

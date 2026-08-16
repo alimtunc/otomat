@@ -10,3 +10,11 @@ export function useSaveExecutionDefaults() {
     onSuccess: (saved) => client.setQueryData(queryKeys.executionDefaults, saved),
   });
 }
+
+export function useSavePullRequestGenerator() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (generator: ExecutionDefaults) => daemon.setPullRequestGenerator(generator),
+    onSuccess: (saved) => client.setQueryData(queryKeys.pullRequestGenerator, saved),
+  });
+}

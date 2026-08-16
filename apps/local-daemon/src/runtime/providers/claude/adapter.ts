@@ -1,10 +1,11 @@
-import type { RuntimeCapabilities } from "@otomat/domain";
+import type { ProviderOptions, RuntimeCapabilities } from "@otomat/domain";
 
 import { requireProviderSession, runCliTurn, type CliTurnSpec } from "#runtime/cli/turn";
 import type { TurnRef } from "#runtime/cli/turn-emitter";
 import type {
   RuntimeAdapter,
   RuntimeFinalState,
+  RuntimeOneShot,
   RuntimeOptionSupport,
   RuntimeResumeInput,
   RuntimeRunInput,
@@ -60,6 +61,15 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
     return claudeOptionSupport(this.binary);
   }
 
+  /** No permission mode is sent: `-p` then refuses every write the model attempts, which is what a read-only question wants. */
+  describeOneShot(model: string | null, options: ProviderOptions): RuntimeOneShot {
+    return {
+      command: this.binary,
+      args: ["-p", "--output-format", "text", ...this.tuningArgs(model, options)],
+      effort: options.effort ?? null,
+    };
+  }
+
   async run(
     input: RuntimeRunInput,
     sink: RuntimeSink,
@@ -84,10 +94,21 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
    * different permission boundary.
    */
   private turnArgs(input: TurnInput, mode: string): string[] {
-    const options = input.options ?? {};
-    const args = ["-p", "--output-format", "stream-json", "--verbose", "--permission-mode", mode];
+    return [
+      "-p",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--permission-mode",
+      mode,
+      ...this.tuningArgs(input.model ?? null, input.options ?? {}),
+    ];
+  }
+
+  private tuningArgs(model: string | null, options: ProviderOptions): string[] {
+    const args: string[] = [];
     if (options.effort !== undefined) args.push("--effort", options.effort);
-    if (input.model != null) args.push("--model", input.model);
+    if (model !== null) args.push("--model", model);
     return args;
   }
 

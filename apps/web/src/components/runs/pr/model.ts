@@ -5,11 +5,10 @@ import {
   type PullRequestPublicationMode,
 } from "@otomat/domain";
 
-import { publicationModel, type PublicationModel } from "./publication-model";
-
-export interface PullRequestViewModel extends PublicationModel {
+export interface PullRequestConnectionModel {
   connectionLabel: string;
   showConnect: boolean;
+  connected: boolean;
   deviceAuthorization: { code: string; url: string } | null;
   errorMessage: string | null;
   linkLabel: string | null;
@@ -27,12 +26,14 @@ function publishedMode(pullRequest: PullRequestContract): PullRequestPublication
   return null;
 }
 
-/** What the form starts on: the mode GitHub already holds, else a draft. */
+/** Draft is reached only through the explicit choice the route carries; a published pull request answers for itself. */
 export function initialPublicationMode(
   pullRequest: PullRequestContract | null,
+  chosen: PullRequestPublicationMode | undefined,
 ): PullRequestPublicationMode {
-  if (pullRequest === null) return "draft";
-  return publishedMode(pullRequest) ?? "draft";
+  if (chosen !== undefined) return chosen;
+  if (pullRequest === null) return "ready";
+  return publishedMode(pullRequest) ?? "ready";
 }
 
 /** Accepted only when GitHub reports back exactly what was submitted, mode included. */
@@ -70,23 +71,17 @@ function link(pullRequest: PullRequestContract | null): {
   return { label: `Open PR #${pullRequest.number}`, url: pullRequest.url };
 }
 
-export function pullRequestViewModel(
+export function pullRequestConnectionModel(
   connection: GitHubConnectionContract,
   pullRequest: PullRequestContract | null,
-  canPublish = true,
-  hasDraftChanges = false,
-  mode: PullRequestPublicationMode = "draft",
-): PullRequestViewModel {
-  const connected = connection.status === "connected";
+): PullRequestConnectionModel {
   const providerLink = link(pullRequest);
-  const publication = publicationModel(pullRequest, canPublish, connected, hasDraftChanges, mode);
   const device = connection.device_authorization;
   return {
     connectionLabel: connectionLabel(connection),
     showConnect: connection.status === "disconnected" || connection.status === "failed",
+    connected: connection.status === "connected",
     deviceAuthorization: device ? { code: device.user_code, url: device.verification_url } : null,
-    ...publication,
-    actionDisabled: !connected || publication.actionDisabled,
     errorMessage: pullRequest?.error_message ?? connection.error_message,
     linkLabel: providerLink.label,
     linkUrl: providerLink.url,

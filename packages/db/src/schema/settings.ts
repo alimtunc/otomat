@@ -9,5 +9,9 @@ export const daemonSettings = sqliteTable("daemon_settings", {
   execution_runtime: text("execution_runtime"),
   execution_model: text("execution_model"),
   execution_options_json: text("execution_options_json", { mode: "json" }),
+  // Null runtime is "same as run": the generation borrows the run's own agent instead of overriding it.
+  pr_generator_runtime: text("pr_generator_runtime"),
+  pr_generator_model: text("pr_generator_model"),
+  pr_generator_options_json: text("pr_generator_options_json", { mode: "json" }),
   ...timestamps,
 });

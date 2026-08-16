@@ -39,6 +39,14 @@ export function createSystemClient(config: DaemonClientConfig) {
         await putJson(config, "/api/settings/execution-defaults", defaults),
       );
     },
+    async pullRequestGenerator() {
+      return executionDefaultsSchema.parse(await getJson(config, "/api/settings/pr-generator"));
+    },
+    async setPullRequestGenerator(generator: ExecutionDefaults) {
+      return executionDefaultsSchema.parse(
+        await putJson(config, "/api/settings/pr-generator", generator),
+      );
+    },
     async listRuntimes() {
       return runtimeDescriptorSchema.array().parse(await getJson(config, "/api/runtimes"));
     },

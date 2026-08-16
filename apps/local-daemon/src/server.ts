@@ -17,7 +17,7 @@ import { createRepositoryResolver } from "#git";
 import {
   createGitHubCli,
   createGitHubService,
-  createPullRequestDrafter,
+  createPullRequestGenerator,
   runCommand,
   type GitHubService,
 } from "#github";
@@ -128,7 +128,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       dataDir,
       repositories,
       cli: createGitHubCli(runCommand),
-      drafter: createPullRequestDrafter(runCommand),
+      generator: createPullRequestGenerator(runCommand),
       syncIssueLifecycle,
     });
     publishCommentTarget = github;

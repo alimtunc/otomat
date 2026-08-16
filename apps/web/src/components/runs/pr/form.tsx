@@ -1,58 +1,70 @@
 import type {
-  GitHubConnectionContract,
   PreparePullRequestRequest,
   PullRequestContract,
-  PullRequestDraft,
+  PullRequestProposal,
+  PullRequestPublicationMode,
+  PullRequestPublishability,
 } from "@otomat/domain";
 import {
   Button,
   Chip,
+  Collapsible,
+  CollapsiblePanel,
+  CollapsibleTrigger,
   Field,
   FieldControl,
   FieldLabel,
   Input,
-  PRStatusBadge,
   Textarea,
 } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
-import { PullRequestConnectionPanel } from "@web/components/runs/pr/connection-panel";
+import { PullRequestActions } from "@web/components/runs/pr/actions";
 import { PullRequestModeField } from "@web/components/runs/pr/mode-field";
 import { fieldErrorProps } from "@web/lib/form";
 
-import { initialPublicationMode, pullRequestViewModel } from "./model";
+import { initialPublicationMode } from "./model";
+import { publicationModel } from "./publication-model";
 
-interface PullRequestFormProps {
+export interface PullRequestFormProps {
   pullRequest: PullRequestContract | null;
-  branch: string | null;
-  connection: GitHubConnectionContract;
+  publishability: PullRequestPublishability;
+  connected: boolean;
+  /** Advanced fields revealed; owned by the route so it survives a reload. */
+  customize: boolean;
+  onCustomizeChange: (customize: boolean) => void;
+  /** The explicit Draft/Ready choice the route already carries, or undefined for a new publication. */
+  chosenMode: PullRequestPublicationMode | undefined;
+  onModeChange: (mode: PullRequestPublicationMode) => void;
   onSubmit: (value: PreparePullRequestRequest) => Promise<boolean>;
-  /** Asks the run's agent for a draft; null when it failed (the mutation owns the toast). */
-  onDraft: () => Promise<PullRequestDraft | null>;
-  onConnect: () => void;
+  /** Writes the metadata with the configured agent; null when it failed (the mutation owns the toast). */
+  onGenerate: () => Promise<PullRequestProposal | null>;
   isPending: boolean;
-  isDrafting: boolean;
-  isConnecting: boolean;
-  canPublish: boolean;
+  isGenerating: boolean;
+}
+
+function aiActionLabel(mode: PullRequestPublicationMode): string {
+  return mode === "draft" ? "Create draft PR with AI" : "Create PR with AI";
 }
 
 export function PullRequestForm({
   pullRequest,
-  branch,
-  connection,
+  publishability,
+  connected,
+  customize,
+  onCustomizeChange,
+  chosenMode,
+  onModeChange,
   onSubmit,
-  onDraft,
-  onConnect,
+  onGenerate,
   isPending,
-  isDrafting,
-  isConnecting,
-  canPublish,
+  isGenerating,
 }: PullRequestFormProps) {
   const form = useForm({
     defaultValues: {
       title: pullRequest?.title ?? "",
       body: pullRequest?.body ?? "",
       branch: pullRequest?.head_ref ?? "",
-      mode: initialPublicationMode(pullRequest),
+      mode: initialPublicationMode(pullRequest, chosenMode),
     },
     onSubmit: async ({ value, formApi }) => {
       const headRef = value.branch.trim();
@@ -69,13 +81,32 @@ export function PullRequestForm({
   const terminal = pullRequest?.status === "merged" || pullRequest?.status === "closed";
   const branchLocked = pullRequest?.number !== null && pullRequest?.number !== undefined;
 
-  async function fillFromDraft(): Promise<void> {
-    const draft = await onDraft();
-    if (draft === null) return;
-    form.setFieldValue("title", draft.title);
-    form.setFieldValue("body", draft.body);
-    if (!branchLocked) form.setFieldValue("branch", draft.branch);
-  }
+  const fillFrom = (proposal: PullRequestProposal): void => {
+    form.setFieldValue("title", proposal.title);
+    form.setFieldValue("body", proposal.body);
+    if (!branchLocked) form.setFieldValue("branch", proposal.branch);
+  };
+
+  const generateOnly = async (): Promise<void> => {
+    const proposal = await onGenerate();
+    if (proposal !== null) fillFrom(proposal);
+  };
+
+  /** One operation, and a generation that failed publishes nothing while every field stays editable. */
+  const createWithAi = async (mode: PullRequestPublicationMode): Promise<void> => {
+    const proposal = await onGenerate();
+    if (proposal === null) return;
+    fillFrom(proposal);
+    const accepted = await onSubmit({
+      title: proposal.title,
+      body: proposal.body,
+      head_ref: proposal.branch,
+      mode,
+    });
+    if (accepted) {
+      form.reset({ title: proposal.title, body: proposal.body, branch: proposal.branch, mode });
+    }
+  };
 
   return (
     <form
@@ -89,114 +120,109 @@ export function PullRequestForm({
         selector={(state) => [state.canSubmit, state.isDirty, state.values.mode] as const}
       >
         {([canSubmit, isDirty, mode]) => {
-          const model = pullRequestViewModel(connection, pullRequest, canPublish, isDirty, mode);
-          const fieldsDisabled = terminal || model.actionPending || isPending;
+          const model = publicationModel(pullRequest, publishability, connected, isDirty, mode);
+          const busy = model.actionPending || isPending || isGenerating;
+          const fieldsDisabled = terminal || busy;
+          const composeWithAi = !branchLocked && !customize;
           return (
             <>
-              <div className="flex items-center gap-2">
-                {pullRequest ? <PRStatusBadge status={pullRequest.status} /> : null}
-                <Chip>{model.stateLabel}</Chip>
-                {branch ? <Chip tone="ghost">{branch}</Chip> : null}
-              </div>
-              <PullRequestConnectionPanel
-                model={model}
-                onConnect={onConnect}
-                isConnecting={isConnecting}
-              />
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void fillFromDraft()}
-                  loading={isDrafting}
-                  disabled={fieldsDisabled || isDrafting}
-                >
-                  Draft with AI
-                </Button>
-              </div>
-              <form.Field
-                name="title"
-                validators={{
-                  onChange: ({ value }) =>
-                    value.trim().length === 0 ? "A title is required." : undefined,
-                }}
-              >
-                {(field) => (
-                  <Field {...fieldErrorProps(field.state.meta)}>
-                    <FieldLabel>Title</FieldLabel>
-                    <FieldControl>
-                      <Input
-                        value={field.state.value}
-                        disabled={fieldsDisabled}
-                        onBlur={field.handleBlur}
-                        onChange={(event) => field.handleChange(event.target.value)}
-                        placeholder="Summarize the change…"
-                      />
-                    </FieldControl>
-                  </Field>
-                )}
-              </form.Field>
-              <form.Field name="body">
-                {(field) => (
-                  <Field hint="Optional description shown on GitHub.">
-                    <FieldLabel>Description</FieldLabel>
-                    <FieldControl>
-                      <Textarea
-                        rows={8}
-                        value={field.state.value}
-                        disabled={fieldsDisabled}
-                        onBlur={field.handleBlur}
-                        onChange={(event) => field.handleChange(event.target.value)}
-                        placeholder="What changed and why…"
-                      />
-                    </FieldControl>
-                  </Field>
-                )}
-              </form.Field>
-              <form.Field name="branch">
-                {(field) => (
-                  <Field
-                    hint={
-                      branchLocked
-                        ? "The published PR keeps its branch."
-                        : "Remote branch the PR ships as; empty keeps the run branch."
-                    }
+              <Chip>{model.stateLabel}</Chip>
+              <Collapsible open={customize} onOpenChange={onCustomizeChange}>
+                <CollapsibleTrigger
+                  render={
+                    <Button type="button" variant="ghost" size="sm">
+                      {customize ? "Hide PR details" : "Customize PR"}
+                    </Button>
+                  }
+                />
+                <CollapsiblePanel className="flex flex-col gap-4 pt-4">
+                  <form.Field
+                    name="title"
+                    validators={{
+                      onChange: ({ value }) =>
+                        value.trim().length === 0 ? "A title is required." : undefined,
+                    }}
                   >
-                    <FieldLabel>Branch</FieldLabel>
-                    <FieldControl>
-                      <Input
+                    {(field) => (
+                      <Field {...fieldErrorProps(field.state.meta)}>
+                        <FieldLabel>Title</FieldLabel>
+                        <FieldControl>
+                          <Input
+                            value={field.state.value}
+                            disabled={fieldsDisabled}
+                            onBlur={field.handleBlur}
+                            onChange={(event) => field.handleChange(event.target.value)}
+                            placeholder="Summarize the change…"
+                          />
+                        </FieldControl>
+                      </Field>
+                    )}
+                  </form.Field>
+                  <form.Field name="body">
+                    {(field) => (
+                      <Field hint="Optional description shown on GitHub.">
+                        <FieldLabel>Description</FieldLabel>
+                        <FieldControl>
+                          <Textarea
+                            rows={8}
+                            value={field.state.value}
+                            disabled={fieldsDisabled}
+                            onBlur={field.handleBlur}
+                            onChange={(event) => field.handleChange(event.target.value)}
+                            placeholder="What changed and why…"
+                          />
+                        </FieldControl>
+                      </Field>
+                    )}
+                  </form.Field>
+                  <form.Field name="branch">
+                    {(field) => (
+                      <Field
+                        hint={
+                          branchLocked
+                            ? "The published PR keeps its branch."
+                            : "Remote branch the PR ships as; empty keeps the run branch."
+                        }
+                      >
+                        <FieldLabel>Branch</FieldLabel>
+                        <FieldControl>
+                          <Input
+                            value={field.state.value}
+                            disabled={fieldsDisabled || branchLocked}
+                            onBlur={field.handleBlur}
+                            onChange={(event) => field.handleChange(event.target.value)}
+                            placeholder={publishability.head_ref ?? "feat/short-name"}
+                            spellCheck={false}
+                          />
+                        </FieldControl>
+                      </Field>
+                    )}
+                  </form.Field>
+                  <form.Field name="mode">
+                    {(field) => (
+                      <PullRequestModeField
                         value={field.state.value}
-                        disabled={fieldsDisabled || branchLocked}
-                        onBlur={field.handleBlur}
-                        onChange={(event) => field.handleChange(event.target.value)}
-                        placeholder={branch ?? "feat/short-name"}
-                        spellCheck={false}
+                        disabled={fieldsDisabled}
+                        onChange={(next) => {
+                          field.handleChange(next);
+                          onModeChange(next);
+                        }}
                       />
-                    </FieldControl>
-                  </Field>
-                )}
-              </form.Field>
-              <form.Field name="mode">
-                {(field) => (
-                  <PullRequestModeField
-                    value={field.state.value}
-                    disabled={fieldsDisabled}
-                    onChange={field.handleChange}
-                  />
-                )}
-              </form.Field>
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="sm"
-                  disabled={!canSubmit || model.actionDisabled || terminal}
-                  loading={isPending || model.actionPending}
-                >
-                  {model.actionLabel}
-                </Button>
-              </div>
+                    )}
+                  </form.Field>
+                </CollapsiblePanel>
+              </Collapsible>
+              <PullRequestActions
+                primaryLabel={composeWithAi ? aiActionLabel(mode) : model.actionLabel}
+                primaryDisabled={
+                  (!composeWithAi && !canSubmit) || model.actionDisabled || terminal || isGenerating
+                }
+                primaryLoading={composeWithAi ? busy : isPending || model.actionPending}
+                onCompose={composeWithAi ? () => void createWithAi(mode) : null}
+                onGenerate={() => void generateOnly()}
+                generateDisabled={fieldsDisabled}
+                isGenerating={isGenerating}
+              />
             </>
           );
         }}

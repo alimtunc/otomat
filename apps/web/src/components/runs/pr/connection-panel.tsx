@@ -1,8 +1,8 @@
 import { Button } from "@otomat/ui";
-import type { PullRequestViewModel } from "@web/components/runs/pr/model";
+import type { PullRequestConnectionModel } from "@web/components/runs/pr/model";
 
 export interface PullRequestConnectionPanelProps {
-  model: PullRequestViewModel;
+  model: PullRequestConnectionModel;
   onConnect: () => void;
   isConnecting: boolean;
 }

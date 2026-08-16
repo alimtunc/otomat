@@ -94,6 +94,14 @@ export function useExecutionDefaults() {
   });
 }
 
+export function usePullRequestGenerator() {
+  return useQuery({
+    queryKey: queryKeys.pullRequestGenerator,
+    queryFn: () => daemon.pullRequestGenerator(),
+    staleTime: 30_000,
+  });
+}
+
 /** What the installed CLI announces for this runtime and model. Model-scoped because Codex publishes its reasoning levels per model. */
 export function useRuntimeProviderOptions(runtimeId: string | null, model: string | null) {
   return useQuery({

@@ -469,6 +469,18 @@ it("reads connection state and starts delegated GitHub login", async () => {
   ]);
 });
 
+const PUBLISHABILITY = {
+  blocker: null,
+  repository: "acme/otomat",
+  base_ref: "main",
+  head_ref: "otomat/run/run-1",
+  changed_files: 1,
+  additions: 2,
+  deletions: 0,
+  dirty: false,
+  convention: "free_form",
+};
+
 it("reads and publishes the run pull request", async () => {
   const PR = {
     id: "pr1",
@@ -482,6 +494,9 @@ it("reads and publishes the run pull request", async () => {
     body: null,
     head_ref: null,
     base_ref: null,
+    commit_subject: null,
+    commit_body: null,
+    generator: null,
     published_head_sha: null,
     published_diff_sha: null,
     error_code: null,
@@ -491,9 +506,9 @@ it("reads and publishes the run pull request", async () => {
   const fetchMock: typeof fetch = async (_input, init) => {
     if (init?.method === "POST") {
       lastBody = JSON.parse(String(init.body));
-      return jsonResponse({ pull_request: PR, sync: null }, 201);
+      return jsonResponse({ pull_request: PR, sync: null, publishability: PUBLISHABILITY }, 201);
     }
-    return jsonResponse({ pull_request: null, sync: null });
+    return jsonResponse({ pull_request: null, sync: null, publishability: PUBLISHABILITY });
   };
   const client = createDaemonClient({ fetch: fetchMock });
 
@@ -505,7 +520,27 @@ it("reads and publishes the run pull request", async () => {
     mode: "draft",
   });
   expect(prepared.pull_request?.publication_status).toBe("not_configured");
+  expect(prepared.publishability.blocker).toBeNull();
   expect(lastBody).toEqual({ title: "First slice", body: "", mode: "draft" });
+});
+
+it("generates the pull request metadata without publishing anything", async () => {
+  const PROPOSAL = {
+    title: "feat(pr): publish in one action (OTO-81)",
+    body: "Details\n\nFixes OTO-81",
+    branch: "feat/compact-pr",
+    commit: { subject: "feat(pr): publish in one action", body: null },
+    generator: { runtime: "claude", model: "claude-opus-5", effort: "high" },
+  };
+  const urls: string[] = [];
+  const fetchMock: typeof fetch = async (input, init) => {
+    urls.push(`${init?.method ?? "GET"} ${String(input)}`);
+    return jsonResponse(PROPOSAL);
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+
+  expect(await client.generatePullRequestMetadata("run-1")).toEqual(PROPOSAL);
+  expect(urls).toEqual(["POST http://localhost:4319/api/runs/run-1/pr/generate"]);
 });
 
 it("pushes the run's commits and parses the published comparison", async () => {
@@ -520,7 +555,7 @@ it("pushes the run's commits and parses the published comparison", async () => {
   let lastBody: unknown;
   const fetchMock: typeof fetch = async (_input, init) => {
     lastBody = JSON.parse(String(init?.body));
-    return jsonResponse({ pull_request: null, sync: SYNC });
+    return jsonResponse({ pull_request: null, sync: SYNC, publishability: PUBLISHABILITY });
   };
   const client = createDaemonClient({ fetch: fetchMock });
 

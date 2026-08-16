@@ -1,5 +1,5 @@
 import type { PullRequestRow } from "@otomat/db";
-import type { GitHubConnectionContract } from "@otomat/domain";
+import type { GitHubConnectionContract, PullRequestPublishability } from "@otomat/domain";
 
 import { headSha } from "#git";
 import {
@@ -32,6 +32,18 @@ export const DISCONNECTED_GITHUB: GitHubConnectionContract = {
   error_message: "Sign in to GitHub to continue.",
 };
 
+export const PUBLISHABLE_WORKSPACE: PullRequestPublishability = {
+  blocker: null,
+  repository: "acme/otomat",
+  base_ref: "main",
+  head_ref: "otomat/run/run-detail",
+  changed_files: 1,
+  additions: 1,
+  deletions: 0,
+  dirty: false,
+  convention: "free_form",
+};
+
 export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullRequestRow {
   return {
     id: "pr1",
@@ -45,6 +57,11 @@ export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullReq
     body: null,
     head_ref: null,
     base_ref: null,
+    commit_subject: null,
+    commit_body: null,
+    generator_runtime: null,
+    generator_model: null,
+    generator_effort: null,
     published_head_sha: null,
     published_diff_sha: null,
     error_code: null,
@@ -66,14 +83,15 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
       error_message: null,
     }),
     getPullRequest: async () => null,
+    publishability: async () => PUBLISHABLE_WORKSPACE,
     publish: async () => {
       throw new Error("publish stub not configured");
     },
     pushCommits: async () => {
       throw new Error("pushCommits stub not configured");
     },
-    draftPullRequest: async () => {
-      throw new Error("draft stub not configured");
+    generatePullRequestMetadata: async () => {
+      throw new Error("generation stub not configured");
     },
     publishReviewComment: async () => {
       throw new Error("publishReviewComment stub not configured");

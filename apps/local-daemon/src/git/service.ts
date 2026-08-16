@@ -162,10 +162,10 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       return computeCanonicalDiff(gitCwd, base, revParse(gitCwd, `${commit}^{tree}`));
     },
 
-    snapshot(owner) {
+    snapshot(owner, message = `otomat: snapshot for ${owner}`) {
       const row = findActiveByOwner(db, owner);
       if (!row) throw new WorktreeNotFoundError(owner);
-      snapshotWorktree(row.path, `otomat: snapshot for ${owner}`);
+      snapshotWorktree(row.path, message);
       const head = headSha(row.path);
       updateWorktreeStatus(db, row.id, { status: "active", head_sha: head });
       return toRecord({ ...row, head_sha: head });
