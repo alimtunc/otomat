@@ -7,12 +7,14 @@ import {
 } from "@web/lib/issue/filters";
 import { describe, expect, it } from "vitest";
 
-import { issueContract, linearIssueContract } from "#support/issue";
+import { issueContract, linearIssueContract, openWorkspace } from "#support/issue";
 
 const NO_EXECUTION: IssueExecution = { state: "none", run_id: null };
 
 function issue(status: IssueState, execution: IssueExecution = NO_EXECUTION): IssueContract {
-  return issueContract({ id: `issue-${status}`, title: status, status, execution });
+  const base = { id: `issue-${status}`, title: status, status, execution };
+  if (execution.run_id === null) return issueContract(base);
+  return issueContract({ ...base, workspace: openWorkspace(execution.run_id, "running") });
 }
 
 function linearIssue(id: string, assignee: string | null, priority: number): IssueContract {
@@ -78,6 +80,15 @@ describe("applyAdvancedFilters", () => {
     const running = issue("backlog", { state: "running", run_id: "run-1" });
     const filters = { ...NO_ADVANCED_FILTERS, statuses: ["running" as const] };
     expect(applyAdvancedFilters([running], filters)).toEqual([running]);
+  });
+
+  it("files a done issue under Done, not under the column its last run stopped in", () => {
+    const done = issue("done", { state: "reviewing", run_id: "run-1" });
+    const asReviewing = { ...NO_ADVANCED_FILTERS, statuses: ["reviewing" as const] };
+    expect(applyAdvancedFilters([done], asReviewing)).toEqual([]);
+    expect(
+      applyAdvancedFilters([done], { ...NO_ADVANCED_FILTERS, statuses: ["done" as const] }),
+    ).toEqual([done]);
   });
 
   it("combines axes as an intersection", () => {

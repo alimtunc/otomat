@@ -1,4 +1,4 @@
-import type { IssueContract } from "@otomat/domain";
+import { projectOpenCycleExecution, type IssueContract } from "@otomat/domain";
 import { createColumnHelper } from "@tanstack/react-table";
 import { IssueAssigneeCell } from "@web/components/issues/list/cells/assignee";
 import { IssueExecutionCell } from "@web/components/issues/list/cells/execution";
@@ -27,7 +27,8 @@ export const ISSUE_COLUMNS = helper.columns([
     meta: { headClassName: "w-27.5" },
     cell: IssueStatusCell,
   }),
-  helper.accessor("execution", {
+  helper.accessor(projectOpenCycleExecution, {
+    id: "execution",
     header: "Execution",
     meta: { headClassName: "w-27.5" },
     cell: IssueExecutionCell,

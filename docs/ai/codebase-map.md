@@ -443,15 +443,27 @@ timestamp ties, and the id keeps equal or missing timestamps deterministic.
 Nothing is stored, so a refresh or a daemon restart reclassifies every issue.
 
 `ISSUE_BOARD_COLUMNS` is that projection plus the source statuses, in board
-order, and `projectIssueBoardColumn` is the one place that arbitrates between
-them: a terminal source status (`ISSUE_TERMINAL_STATES` — the issue machine's
-`done` and `canceled`) always keeps its own column, and otherwise execution wins
-it, because `ready` would hide a cycle there is still work to do on. A closed
-issue whose workspace stopped therefore stays in Done while its execution keeps
-saying `failed` on the issue itself. No view recomposes that rule: the boards,
-the lists, the saved views, the issue pills and the runs list all read the domain
-projection, and only the source status a column hides is a display concern
-(`lib/issue/divergent-status.ts`).
+order, and the two axes never merge: `projectIssuePrimaryState` is the one place
+that arbitrates between them, naming the winning axis and, on the execution one,
+the run to open. A terminal source status (`ISSUE_TERMINAL_STATES` — the issue
+machine's `done` and `canceled`) wins outright, so a `done` issue reads Done on
+its page, the board, the lists and the saved views even while a stopped run still
+holds its workspace, because closing that workspace is a separate lifecycle
+decision. Below it the open cycle wins, since `ready` would hide a cycle there is
+still work to do on, and a closed cycle hands the state back, so an old failure
+or review never reads as current. That cycle is the one `projectIssueWorkspace`
+computes, never a live process or the last message: worktree cleanup only ever
+runs at closure, so the two cannot disagree.
+
+No view recomposes those rules. The boards, the lists, the saved views and the
+runs list read the primary state; every surface that names the execution axis on
+its own — the rail's `Workspace execution` row, the list's `Execution` column —
+reads `projectOpenCycleExecution` rather than the raw contract field, so a closed
+cycle stops advertising the run it stopped on. Only the source status a column
+hides is a display concern (`lib/issue/divergent-status.ts`). The issue page
+keeps both axes legible in its rail (`Issue status`, `Workspace execution`), and
+the run history stays readable there and in the conversations without
+contaminating the principal state.
 
 ## Reviewing a Diff
 
@@ -631,9 +643,9 @@ not, since the cycle stays resumable. Both filters only hide rows, never touch a
 run, and each reports its own casualties (`visibleRunGroups`): a group emptied by
 the failed filter counts as the runs it lost, not as an issue hidden.
 
-Grouping by status is the board's own column rule (`projectIssueBoardColumn`), so
-every state gets a group — including `blocked` and `canceled`, which earlier board
-columns dropped, leaving those issues on no board at all.
+Grouping by status is the primary-state rule (`projectIssuePrimaryState`), so
+every state gets a group — including `blocked` and `canceled`, which earlier
+board columns dropped, leaving those issues on no board at all.
 
 Both list tables are TanStack Table instances over one shared feature registry
 (`lib/table.ts`), whose `columnMeta` carries the head and cell classes: a column

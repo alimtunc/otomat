@@ -1,7 +1,7 @@
 import { groupIssues } from "@web/lib/issue/grouping";
 import { describe, expect, it } from "vitest";
 
-import { issueContract, linearIssueContract } from "#support/issue";
+import { issueContract, linearIssueContract, openWorkspace } from "#support/issue";
 
 const PROJECT_NAMES = new Map([["project-1", "Otomat"]]);
 
@@ -47,12 +47,14 @@ describe("groupIssues", () => {
         run_id: "r1",
         failure: { reason: "failed", step: { id: "s1", name: "Reviewer" } },
       },
+      workspace: openWorkspace("r1", "failed"),
     });
     const running = issueContract({
       id: "e",
       title: "Working",
       status: "ready",
       execution: { state: "running", run_id: "r2" },
+      workspace: openWorkspace("r2", "running"),
     });
 
     const groups = groupIssues([stopped, running], "status", PROJECT_NAMES);
@@ -60,16 +62,17 @@ describe("groupIssues", () => {
     expect(groups[1].label).toBe("Failed");
   });
 
-  it("keeps a closed issue in its own group instead of the stopped column", () => {
+  it("keeps a done issue in Done, whatever the run still holding its workspace did", () => {
     const done = issueContract({
       id: "d",
-      title: "Shipped",
+      title: "Merged",
       status: "done",
       execution: {
         state: "failed",
         run_id: "r1",
-        failure: { reason: "failed", step: { id: "s1", name: "Reviewer" } },
+        failure: { reason: "canceled", step: null },
       },
+      workspace: openWorkspace("r1", "canceled"),
     });
     expect(groupIssues([done], "status", PROJECT_NAMES).map((group) => group.key)).toEqual([
       "status:done",
@@ -90,6 +93,7 @@ describe("groupIssues", () => {
       id: "d",
       status: "backlog",
       execution: { state: "running", run_id: "run-1" },
+      workspace: openWorkspace("run-1", "running"),
     });
     expect(groupIssues([running], "status", PROJECT_NAMES).map((group) => group.key)).toEqual([
       "status:running",

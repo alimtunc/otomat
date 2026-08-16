@@ -5,7 +5,7 @@ import { groupIssues } from "@web/lib/issue/grouping";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { issueContract, linearIssueContract } from "#support/issue";
+import { issueContract, linearIssueContract, openWorkspace } from "#support/issue";
 import { type Mounted } from "#support/mount";
 import { mountRouted } from "#support/router";
 
@@ -97,12 +97,25 @@ it("names the stopped cycle only on the card whose column reports it", async () 
     run_id: "r1",
     failure: { reason: "failed", step: { id: "s1", name: "Reviewer" } },
   } as const;
+  const workspace = openWorkspace("r1", "failed");
   await render(
     <IssuesBoard
       groups={groupIssues(
         [
-          issueContract({ id: "c", title: "Shipped", status: "done", execution: stopped }),
-          issueContract({ id: "d", title: "Stopped", status: "ready", execution: stopped }),
+          issueContract({
+            id: "c",
+            title: "Shipped",
+            status: "done",
+            execution: stopped,
+            workspace,
+          }),
+          issueContract({
+            id: "d",
+            title: "Stopped",
+            status: "ready",
+            execution: stopped,
+            workspace,
+          }),
         ],
         "status",
         new Map(),

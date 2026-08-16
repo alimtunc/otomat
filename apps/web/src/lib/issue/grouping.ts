@@ -1,6 +1,6 @@
 import {
   ISSUE_BOARD_COLUMNS,
-  projectIssueBoardColumn,
+  projectIssuePrimaryState,
   type IssueBoardColumn,
   type IssueContract,
 } from "@otomat/domain";
@@ -39,7 +39,7 @@ interface GroupSeed {
 function statusGroups(issues: IssueContract[]): IssueGroup[] {
   const byStatus = new Map<IssueBoardColumn, IssueContract[]>();
   for (const issue of issues) {
-    const status = projectIssueBoardColumn(issue);
+    const status = projectIssuePrimaryState(issue).state;
     const grouped = byStatus.get(status);
     if (grouped === undefined) byStatus.set(status, [issue]);
     else grouped.push(issue);

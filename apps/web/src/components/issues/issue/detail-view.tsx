@@ -2,7 +2,6 @@ import type { RunContract } from "@otomat/domain";
 import {
   EmptyState,
   ErrorState,
-  IssueStatusChip,
   ResizablePanel,
   ResizablePanelGroup,
   SidePanel,
@@ -16,6 +15,7 @@ import { useIssue } from "@web/api/issues/queries";
 import { useRunsForIssue } from "@web/api/runs/queries";
 import { RunEventsProvider } from "@web/api/runs/run-events-provider";
 import { IssueHeader } from "@web/components/issues/issue/header";
+import { IssuePrimaryStateBadge } from "@web/components/issues/issue/primary-state-badge";
 import { LaunchRunDialog } from "@web/components/issues/workspace/launch/dialog";
 import { LinearCommentsSection } from "@web/components/issues/workspace/linear/comments";
 import { WorkspaceRail } from "@web/components/issues/workspace/rail/workspace-rail";
@@ -158,7 +158,7 @@ export function IssueDetailView() {
         { label: "Issues", href: "/issues" },
         { label: idLabel, current: true },
       ]}
-      breadcrumbExtra={issue.data ? <IssueStatusChip status={issue.data.status} /> : null}
+      breadcrumbExtra={issue.data ? <IssuePrimaryStateBadge issue={issue.data} /> : null}
       actions={
         <>
           {launchAction}
