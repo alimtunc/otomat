@@ -20,6 +20,8 @@ export interface ReviewCommentComposerProps {
   fromLine: number | null;
   destinations: ReviewDestinationAvailability;
   preferredDestination: ReviewCommentDestination;
+  /** Absent when the anchor is the whole file, which has no edge to move. */
+  onMoveEdge?: (edge: "start" | "end", by: 1 | -1) => void;
   onSubmit: (comment: ComposedComment) => Promise<void>;
   onClose: () => void;
 }
@@ -31,6 +33,7 @@ export function ReviewCommentComposer({
   fromLine,
   destinations,
   preferredDestination,
+  onMoveEdge,
   onSubmit,
   onClose,
 }: ReviewCommentComposerProps) {
@@ -55,12 +58,7 @@ export function ReviewCommentComposer({
         void form.handleSubmit();
       }}
     >
-      <CommentRangeControl
-        filePath={file.path}
-        side={side}
-        range={range}
-        onMoveEdge={composer.moveEdge}
-      />
+      <CommentRangeControl filePath={file.path} side={side} range={range} onMoveEdge={onMoveEdge} />
       <SegmentedControl
         type="single"
         value={mode}
@@ -85,16 +83,19 @@ export function ReviewCommentComposer({
       ) : null}
       {mode === "suggest" && suggestionBlocked === null ? (
         <form.Field name="suggestion">
-          {(field) => (
-            <Textarea
-              rows={Math.min(12, field.state.value.split("\n").length + 1)}
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(event) => field.handleChange(event.target.value)}
-              aria-label="Suggested replacement"
-              className="font-mono"
-            />
-          )}
+          {(field) => {
+            const replacement = field.state.value ?? composer.suggestionPrefill;
+            return (
+              <Textarea
+                rows={Math.min(12, replacement.split("\n").length + 1)}
+                value={replacement}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.value)}
+                aria-label="Suggested replacement"
+                className="font-mono"
+              />
+            );
+          }}
         </form.Field>
       ) : null}
       <form.Field name="body">

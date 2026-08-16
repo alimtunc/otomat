@@ -2,13 +2,14 @@ import {
   DiffModeEnum,
   DiffViewWithMultiSelect,
   SplitSide,
-  type DiffFile,
+  type DiffViewWithMultiSelectRef,
 } from "@git-diff-view/react";
-import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
+import type { DiffFileContract, DiffSide, ReviewCommentContract } from "@otomat/domain";
 import { useTheme } from "@otomat/ui";
 import { extendDataFor, unrenderableNote } from "@web/components/runs/diff/files/card.utils";
 import { diffLanguage } from "@web/components/runs/diff/files/language";
 import type { FileBlobsContext } from "@web/components/runs/diff/files/use-file-blobs";
+import { useGutterRange } from "@web/components/runs/diff/files/use-gutter-range";
 import type { DiffViewMode } from "@web/components/runs/diff/prefs/prefs";
 import { ReviewCommentCard } from "@web/components/runs/review/comment/card";
 import { ReviewCommentComposer } from "@web/components/runs/review/comment/composer";
@@ -16,10 +17,10 @@ import type {
   DiffFileCommentActions,
   DiffFileComments,
 } from "@web/components/runs/review/file-comments";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
-interface DiffViewHandle {
-  getDiffFileInstance: () => DiffFile | null;
+function diffSide(side: SplitSide): DiffSide {
+  return side === SplitSide.old ? "old" : "new";
 }
 
 export interface DiffFileCardBodyProps {
@@ -44,10 +45,8 @@ export function DiffFileCardBody({
   commentActions,
 }: DiffFileCardBodyProps) {
   const { theme } = useTheme();
-  const handle = useRef<DiffViewHandle | null>(null);
-  const attach = useCallback((instance: DiffViewHandle | null) => {
-    handle.current = instance;
-  }, []);
+  const view = useRef<DiffViewWithMultiSelectRef | null>(null);
+  const gutter = useGutterRange(view, mode, wrap);
 
   const data = useMemo(() => {
     const oldPath = file.old_path ?? file.path;
@@ -70,16 +69,19 @@ export function DiffFileCardBody({
   // otomat-allow-effect: expansion lives only on @git-diff-view's imperative instance.
   useEffect(() => {
     if (!expandAll || context === null) return;
-    handle.current?.getDiffFileInstance()?.onAllExpand(mode);
+    view.current?.getDiffFileInstance()?.onAllExpand(mode);
   }, [expandAll, context, mode]);
 
   const note = unrenderableNote(file);
   if (note !== null) return <p className="px-3 py-4 text-sm text-text-tertiary">{note}</p>;
 
   return (
-    <div className="otomat-review-diff overflow-hidden rounded-b-md">
+    <div
+      className="otomat-review-diff overflow-hidden rounded-b-md"
+      onMouseDownCapture={gutter.press}
+    >
       <DiffViewWithMultiSelect<ReviewCommentContract[]>
-        ref={attach}
+        ref={view}
         data={data}
         extendData={extendData}
         diffViewMode={mode === "split" ? DiffModeEnum.Split : DiffModeEnum.Unified}
@@ -88,18 +90,40 @@ export function DiffFileCardBody({
         diffViewWrap={wrap}
         diffViewFontSize={12}
         diffViewAddWidget
-        renderWidgetLine={({ side, lineNumber, fromLineNumber, onClose }) => (
-          <ReviewCommentComposer
-            file={file}
-            side={side === SplitSide.old ? "old" : "new"}
-            line={lineNumber}
-            fromLine={fromLineNumber}
-            destinations={comments.destinations}
-            preferredDestination={comments.preferredDestination}
-            onSubmit={(comment) => commentActions.add(file, comment)}
-            onClose={onClose}
-          />
-        )}
+        onCreateUseWidgetHook={gutter.attachWidget}
+        onMultiSelectComplete={({ range }) =>
+          gutter.select({
+            side: range.side,
+            start: range.startLineNumber,
+            end: range.endLineNumber,
+          })
+        }
+        onAddWidgetClick={({ lineNumber, fromLineNumber, side }) =>
+          gutter.select({
+            side: diffSide(side),
+            start: fromLineNumber ?? lineNumber,
+            end: lineNumber,
+          })
+        }
+        renderWidgetLine={({ side, lineNumber, onClose }) => {
+          const anchor = gutter.rangeAt(diffSide(side), lineNumber);
+          return (
+            <ReviewCommentComposer
+              file={file}
+              side={diffSide(side)}
+              line={anchor.end}
+              fromLine={anchor.start}
+              destinations={comments.destinations}
+              preferredDestination={comments.preferredDestination}
+              onMoveEdge={gutter.moveEdge}
+              onSubmit={(comment) => commentActions.add(file, comment)}
+              onClose={() => {
+                gutter.close();
+                onClose();
+              }}
+            />
+          );
+        }}
         renderExtendLine={({ data: onLine }) => (
           <div className="flex flex-col gap-2 border-y border-border bg-surface-1 p-3">
             {onLine.map((comment) => (
