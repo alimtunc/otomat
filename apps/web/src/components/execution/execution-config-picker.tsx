@@ -4,14 +4,14 @@ import type {
   RuntimeDescriptor,
 } from "@otomat/domain";
 import {
-  Button,
   cn,
-  DropdownMenu,
-  DropdownMenuContent,
+  ConfigMenu,
+  ConfigMenuContent,
+  ConfigMenuNote,
+  ConfigMenuProblem,
+  ConfigMenuTrigger,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Icon,
   Input,
   ProviderMark,
 } from "@otomat/ui";
@@ -20,9 +20,9 @@ import { DangerConfirm, type DangerConfirmProps } from "@web/components/executio
 import { ExecutionAgentSubmenu } from "@web/components/execution/execution-agent-submenu";
 import { ExecutionModelSubmenu } from "@web/components/execution/execution-model-submenu";
 import { ExecutionOptionSubmenu } from "@web/components/execution/execution-option-submenu";
-import { MenuNote } from "@web/components/execution/menu-note";
+import { ExecutionSummaryDetail } from "@web/components/execution/execution-summary-detail";
 import { useExecutionConfig } from "@web/components/execution/use-execution-config";
-import { announcedOptionsNote } from "@web/lib/execution/labels";
+import { executionDetectionProblem, noAnnouncedOptionsNote } from "@web/lib/execution/detection";
 import {
   EMPTY_EXECUTION_SELECTION,
   inheritLabel,
@@ -32,9 +32,12 @@ import {
   type ExecutionPickerLevel,
   type ExecutionSelection,
 } from "@web/lib/execution/selection";
-import { executionSummarySegments, type ResolvedExecutionOption } from "@web/lib/execution/summary";
 import {
-  catalogNote,
+  executionSummaryDetails,
+  executionSummarySegments,
+  type ResolvedExecutionOption,
+} from "@web/lib/execution/summary";
+import {
   isCompleteModelSelection,
   MODEL_CUSTOM_VALUE,
   modelSelectionFromValue,
@@ -98,34 +101,37 @@ export function ExecutionConfigPicker({
   const agentLabel = chosen?.label ?? "No agent";
   const profileName = config.profile?.name ?? null;
   const modelValue = modelSelectValue(value.model, config.catalog);
-  const isCustomModel = modelValue === MODEL_CUSTOM_VALUE;
-  const segments = executionSummarySegments(agentLabel, config.model, config.options);
-  const note = announcedOptionsNote(
-    config.announced,
-    config.announcedPending,
-    config.announcedError,
-  );
+  const menuLabel = `${label} execution configuration`;
+  const emptyNote = noAnnouncedOptionsNote(config.announced);
+  const problem = executionDetectionProblem({
+    announced: config.announcedError,
+    catalog: config.catalogError,
+    defaults: config.defaultsError,
+  });
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              type="button"
-              variant="outline"
-              size={compact ? "xs" : "sm"}
-              disabled={disabled}
-              aria-label={`${label} execution configuration: ${segments.join(", ")}`}
-              className="min-w-0 max-w-full justify-start gap-1.5"
-            >
-              {chosen?.mark ? <ProviderMark name={chosen.mark} /> : null}
-              <span className={cn("truncate", compact && "text-xs")}>{segments.join(" · ")}</span>
-              <Icon name="chevron-down" aria-hidden className="shrink-0 text-text-tertiary" />
-            </Button>
+      <ConfigMenu>
+        <ConfigMenuTrigger
+          label={menuLabel}
+          summary={executionSummarySegments(agentLabel, config.model, config.options).join(" · ")}
+          detail={
+            <ExecutionSummaryDetail
+              entries={executionSummaryDetails(
+                agentLabel,
+                config.model,
+                config.options,
+                profileName,
+              )}
+              detection={config.announced?.detection.detail ?? null}
+            />
           }
+          leading={chosen?.mark ? <ProviderMark name={chosen.mark} /> : null}
+          size={compact ? "xs" : "sm"}
+          disabled={disabled}
+          pending={config.announcedPending || config.catalogPending}
         />
-        <DropdownMenuContent aria-label={`${label} execution configuration`} className="min-w-72">
+        <ConfigMenuContent aria-label={menuLabel}>
           <ExecutionAgentSubmenu
             profiles={profiles}
             descriptors={descriptors}
@@ -138,7 +144,8 @@ export function ExecutionConfigPicker({
           <ExecutionModelSubmenu
             level={level}
             catalog={config.catalog}
-            note={catalogNote(config.catalog, config.catalogPending, config.catalogError)}
+            catalogPending={config.catalogPending}
+            catalogError={config.catalogError}
             selected={modelValue}
             model={config.model}
             onSelect={(next) =>
@@ -156,28 +163,20 @@ export function ExecutionConfigPicker({
               profileName={profileName}
             />
           ))}
-          {config.defaultsError ? (
+          {emptyNote === null ? null : <ConfigMenuNote>{emptyNote}</ConfigMenuNote>}
+          {problem === null ? null : (
             <>
               <DropdownMenuSeparator />
-              <MenuNote>
-                The daemon could not report the global defaults, so they are left out of what this
-                shows.
-              </MenuNote>
-            </>
-          ) : null}
-          {note === null ? null : (
-            <>
-              <DropdownMenuSeparator />
-              <MenuNote>{note}</MenuNote>
+              <ConfigMenuProblem message={problem} onRetry={config.retry} />
             </>
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => apply(EMPTY_EXECUTION_SELECTION)}>
             Reset to defaults
           </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      {isCustomModel ? (
+        </ConfigMenuContent>
+      </ConfigMenu>
+      {modelValue === MODEL_CUSTOM_VALUE ? (
         <Input
           value={value.model?.kind === "model" ? value.model.id : ""}
           aria-label={`${label} custom model identifier`}
@@ -208,11 +207,6 @@ export function ExecutionConfigPicker({
           {`This runtime and model no longer announce the selected ${providerOptionKeyLabel(key)}. Pick another value — a launch with it is refused.`}
         </p>
       ))}
-      {config.announcedError || config.catalogError || config.defaultsError ? (
-        <Button type="button" variant="ghost" size="xs" onClick={config.retry}>
-          Retry
-        </Button>
-      ) : null}
     </div>
   );
 }

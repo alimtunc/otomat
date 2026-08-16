@@ -1,10 +1,12 @@
 import {
   Button,
+  ConfigMenu,
+  ConfigMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Icon,
   IssueSourceGlyph,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
 } from "@otomat/ui";
 import { ColorDot } from "@web/components/issues/color-dot";
 import { CountBadge } from "@web/components/issues/count-badge";
@@ -43,8 +45,8 @@ export function IssuesFilterPopover({ filters, options, onChange }: IssuesFilter
   ];
 
   return (
-    <Popover>
-      <PopoverTrigger
+    <ConfigMenu>
+      <DropdownMenuTrigger
         render={
           <Button variant="ghost" size="sm">
             <Icon name="wand-2" aria-hidden />
@@ -53,10 +55,7 @@ export function IssuesFilterPopover({ filters, options, onChange }: IssuesFilter
           </Button>
         }
       />
-      <PopoverContent
-        align="end"
-        className="flex max-h-[70vh] w-64 flex-col gap-3 overflow-y-auto p-3"
-      >
+      <ConfigMenuContent align="end" aria-label="Issue filters">
         <MultiSelect
           label="Status"
           emptyLabel="Any status"
@@ -117,16 +116,14 @@ export function IssuesFilterPopover({ filters, options, onChange }: IssuesFilter
           }
         />
         {activeCount > 0 ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="self-start"
-            onClick={() => onChange(NO_ADVANCED_FILTERS)}
-          >
-            Clear filters
-          </Button>
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onChange(NO_ADVANCED_FILTERS)}>
+              Clear filters
+            </DropdownMenuItem>
+          </>
         ) : null}
-      </PopoverContent>
-    </Popover>
+      </ConfigMenuContent>
+    </ConfigMenu>
   );
 }

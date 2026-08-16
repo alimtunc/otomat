@@ -3,6 +3,7 @@ import { Icon, Toaster } from "@otomat/ui";
 import { AvatarsSection } from "./sections/avatars";
 import { ButtonsSection } from "./sections/buttons";
 import { CardsSection } from "./sections/cards";
+import { ConfigMenusSection } from "./sections/config-menus";
 import { DropdownsSection } from "./sections/dropdowns";
 import { InputsSection } from "./sections/inputs";
 import { MarkdownSection } from "./sections/markdown";
@@ -28,6 +29,7 @@ export function GalleryApp() {
         <SurfacesSection />
         <ButtonsSection />
         <DropdownsSection />
+        <ConfigMenusSection />
         <StatusChipsSection />
         <ProvenanceSection />
         <InputsSection />

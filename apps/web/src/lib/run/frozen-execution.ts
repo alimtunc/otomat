@@ -14,7 +14,12 @@ export interface FrozenExecutionValue {
 }
 
 export interface FrozenExecution {
-  key: string;
+  /** The plan node this was frozen for; a step run carries the same id. */
+  id: string;
+  /** How the step reads in the plan; a competitor is named under its group. */
+  name: string;
+  /** Identical configurations share it, so "several configurations" counts intent, not nodes. */
+  configHash: string;
   runtime: FrozenExecutionValue;
   model: FrozenExecutionValue;
   options: (FrozenExecutionValue & { key: ProviderOptionKey })[];
@@ -32,10 +37,12 @@ function value(label: string, source: ExecutionSource | undefined): FrozenExecut
   return { label, source: source === undefined ? null : SOURCE_LABELS[source] };
 }
 
-function describe(config: ResolvedAgentConfig): FrozenExecution {
+function describe(id: string, name: string, config: ResolvedAgentConfig): FrozenExecution {
   const sources = config.sources;
   return {
-    key: config.config_hash,
+    id,
+    name,
+    configHash: config.config_hash,
     runtime: value(config.profile_name ?? config.runtime, sources?.runtime),
     model: value(frozenModelLabel(config.model ?? null), sources?.model),
     options: PROVIDER_OPTION_KEYS.flatMap((key) => {
@@ -45,17 +52,16 @@ function describe(config: ResolvedAgentConfig): FrozenExecution {
   };
 }
 
+/** One entry per plan node that froze a configuration, in plan order; a node without one is left out rather than guessed. */
 export function frozenRunExecutions(plan: RunPlan): FrozenExecution[] {
-  const configs = plan.steps.flatMap((node) =>
-    isRunPlanCompeteGroup(node)
-      ? node.compete.map((competitor) => competitor.config)
-      : [node.config],
-  );
-  const byHash = new Map<string, FrozenExecution>();
-  for (const config of configs) {
-    if (config && !byHash.has(config.config_hash)) {
-      byHash.set(config.config_hash, describe(config));
+  return plan.steps.flatMap((node) => {
+    if (!isRunPlanCompeteGroup(node)) {
+      return node.config ? [describe(node.id, node.name, node.config)] : [];
     }
-  }
-  return [...byHash.values()];
+    return node.compete.flatMap((competitor) =>
+      competitor.config
+        ? [describe(competitor.id, `${node.name} · ${competitor.name}`, competitor.config)]
+        : [],
+    );
+  });
 }

@@ -79,7 +79,7 @@ export function modelChoiceItems(
   return items;
 }
 
-/** One honest sentence about where these entries come from, or why there are none. */
+/** Only what the list cannot say for itself: that it is still loading, unreadable, or not offered at all. */
 export function catalogNote(
   catalog: RuntimeModelCatalog | undefined,
   isPending: boolean,
@@ -88,8 +88,7 @@ export function catalogNote(
   if (isPending) return "Checking the installed runtime…";
   if (isError) return "The model catalog could not be read, so only Default is offered.";
   if (!catalog) return null;
-  if (!acceptsModelSelection(catalog)) return "This runtime takes no model selection.";
-  return catalog.discovery.detail;
+  return acceptsModelSelection(catalog) ? null : "This runtime takes no model selection.";
 }
 
 /** The selection a picked select value stands for; picking Custom keeps whatever identifier was already typed. */

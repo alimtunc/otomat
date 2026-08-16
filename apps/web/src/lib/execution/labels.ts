@@ -3,7 +3,6 @@ import type {
   ExecutionSource,
   ModelSelection,
   ProviderOptionDescriptor,
-  ProviderOptionSet,
   ResolvedExecutionValue,
 } from "@otomat/domain";
 import { providerOptionValueLabel } from "@web/lib/provider-option-labels";
@@ -52,18 +51,4 @@ export function resolvedModelLabel(
     return `Provider's own default — ${source}`;
   }
   return `${resolved.value.id} — ${source}`;
-}
-
-export function announcedOptionsNote(
-  set: ProviderOptionSet | undefined,
-  isPending: boolean,
-  isError: boolean,
-): string | null {
-  if (isPending) return "Checking what the installed CLI accepts…";
-  if (isError) return "The daemon could not report what this runtime accepts.";
-  if (set === undefined) return null;
-  if (set.options.length === 0) {
-    return `${set.detection.detail} No option is offered for this runtime and model.`;
-  }
-  return set.detection.detail;
 }

@@ -81,7 +81,7 @@ it("omits the provider default where the selection is stored rather than overrid
   ]);
 });
 
-it("explains the catalog's provenance, or why nothing is listed", () => {
+it("notes only what the list cannot say for itself", () => {
   expect(catalogNote(undefined, true, false)).toBe("Checking the installed runtime…");
   expect(catalogNote(undefined, false, true)).toBe(
     "The model catalog could not be read, so only Default is offered.",
@@ -90,7 +90,8 @@ it("explains the catalog's provenance, or why nothing is listed", () => {
   expect(catalogNote(modelCatalog({ models: [], allows_custom: false }), false, false)).toBe(
     "This runtime takes no model selection.",
   );
-  expect(catalogNote(catalog, false, false)).toBe(catalog.discovery.detail);
+  // A readable catalog explains itself through its entries; its provenance is secondary help.
+  expect(catalogNote(catalog, false, false)).toBeNull();
 });
 
 it("labels a frozen model by its identifier alone, and the provider default as Default", () => {

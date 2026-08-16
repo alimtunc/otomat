@@ -119,6 +119,7 @@ export {
   type TabsTriggerProps,
 } from "./primitives/tabs";
 
+export { AutoTextarea, type AutoTextareaProps } from "./primitives/auto-textarea";
 export { Textarea, type TextareaProps } from "./primitives/textarea";
 
 export {
@@ -150,6 +151,23 @@ export { IssueSourceGlyph, type IssueSourceGlyphProps } from "./components/issue
 export { Breadcrumbs, type BreadcrumbItem, type BreadcrumbsProps } from "./components/breadcrumbs";
 
 export { Chip, type ChipProps, type ChipSize } from "./components/chip";
+
+export {
+  ConfigMenu,
+  ConfigMenuCheck,
+  ConfigMenuChoice,
+  ConfigMenuContent,
+  ConfigMenuNote,
+  ConfigMenuProblem,
+  ConfigMenuSubmenu,
+  ConfigMenuTrigger,
+  type ConfigMenuCheckProps,
+  type ConfigMenuChoiceProps,
+  type ConfigMenuContentProps,
+  type ConfigMenuProblemProps,
+  type ConfigMenuSubmenuProps,
+  type ConfigMenuTriggerProps,
+} from "./components/config-menu";
 
 export {
   CommandPalette,

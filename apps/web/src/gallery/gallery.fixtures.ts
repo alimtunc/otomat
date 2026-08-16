@@ -90,3 +90,11 @@ export const MARKDOWN_STREAMING_SAMPLE = [
   "```sh",
   "pnpm --filter @otomat/ui test",
 ].join("\n");
+
+export const CONFIG_MENU_LONG_VALUE =
+  "gpt-5.6-sol-preview-2026-08-01-extended-reasoning — from “Careful reviewer, escalating”";
+
+export const CONFIG_MENU_SCROLLED_CHOICES = Array.from(
+  { length: 42 },
+  (_, index) => `release/2026-08-${String(index + 1).padStart(2, "0")}`,
+);

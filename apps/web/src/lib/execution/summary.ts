@@ -5,7 +5,8 @@ import type {
   ProviderOptionKey,
   ResolvedExecutionValue,
 } from "@otomat/domain";
-import { providerOptionValueLabel } from "@web/lib/provider-option-labels";
+import { resolvedModelLabel, resolvedOptionLabel } from "@web/lib/execution/labels";
+import { providerOptionKeyLabel, providerOptionValueLabel } from "@web/lib/provider-option-labels";
 
 export interface ResolvedExecutionOption {
   key: ProviderOptionKey;
@@ -33,4 +34,26 @@ export function executionSummarySegments(
     return value === null ? [] : [providerOptionValueLabel(value)];
   });
   return [agentLabel, modelSegment(model), ...optionSegments];
+}
+
+export interface ExecutionSummaryEntry {
+  label: string;
+  /** The effective value with where it came from, which the compact summary has no room for. */
+  value: string;
+}
+
+export function executionSummaryDetails(
+  agentLabel: string,
+  model: ResolvedExecutionValue<ModelSelection>,
+  options: readonly ResolvedExecutionOption[],
+  profileName: string | null,
+): ExecutionSummaryEntry[] {
+  return [
+    { label: "Agent", value: agentLabel },
+    { label: "Model", value: resolvedModelLabel(model, profileName) },
+    ...options.map((option) => ({
+      label: providerOptionKeyLabel(option.key),
+      value: resolvedOptionLabel(option.resolved, option.descriptor, profileName),
+    })),
+  ];
 }

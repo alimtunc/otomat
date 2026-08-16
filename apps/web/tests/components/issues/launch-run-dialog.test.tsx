@@ -294,10 +294,10 @@ it("launches a multi-step workflow on the existing issue without inventing a sec
 
 it("sends the base branch the user picked instead of the repository default", async () => {
   await openDialog();
-  const trigger = document.querySelector<HTMLElement>("button[aria-label='Base branch']");
-  if (!trigger) throw new Error("base branch select not found");
+  const trigger = document.querySelector<HTMLElement>("button[aria-label^='Base branch']");
+  if (!trigger) throw new Error("base branch control not found");
   await act(async () => trigger.click());
-  const option = [...document.querySelectorAll<HTMLElement>("[role='option']")].find(
+  const option = [...document.querySelectorAll<HTMLElement>("[role='menuitemradio']")].find(
     (item) => item.textContent?.trim() === "develop",
   );
   if (!option) throw new Error("develop option not found");

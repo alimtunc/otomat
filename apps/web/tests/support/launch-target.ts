@@ -26,3 +26,14 @@ export function repositoryBranchesQueryResult(
 ) {
   return { data: branches, isPending: false, isError: false, isSuccess: true, refetch: vi.fn() };
 }
+
+/** A repository whose branches the daemon could not list; the launch still has the repository's own default. */
+export function repositoryBranchesErrorResult() {
+  return {
+    data: undefined,
+    isPending: false,
+    isError: true,
+    isSuccess: false,
+    refetch: vi.fn(),
+  };
+}

@@ -11,6 +11,7 @@ export default mergeConfig(
     },
     test: {
       include: ["tests/**/*.test.{ts,tsx}"],
+      globalSetup: [resolve(import.meta.dirname, "tests/support/package-surface.ts")],
     },
   }),
 );
