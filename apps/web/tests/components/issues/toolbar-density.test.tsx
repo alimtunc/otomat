@@ -6,7 +6,7 @@ import { NO_ADVANCED_FILTERS } from "@web/lib/issue/filters";
 import { DEFAULT_ISSUES_VIEW_CONFIG, type IssuesViewConfig } from "@web/lib/issue/view-config";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { findButton } from "#support/dom-queries";
+import { findButton, findRefreshButton } from "#support/dom-queries";
 import { linearIssueContract } from "#support/issue";
 import { mount, type Mounted } from "#support/mount";
 
@@ -43,14 +43,17 @@ const CROWDED: IssuesViewConfig = {
 
 const mounted: Mounted[] = [];
 
-async function render(config: IssuesViewConfig): Promise<HTMLElement> {
+async function render(
+  config: IssuesViewConfig,
+  sync: ProjectLinearSync = SYNC,
+): Promise<HTMLElement> {
   const entry = await mount(
     <NewIssueContext.Provider value={() => {}}>
       <IssuesToolbar
         config={config}
         issues={ISSUES}
         projectNames={new Map([["project-1", "otomat"]])}
-        sync={SYNC}
+        sync={sync}
         dirty={false}
         onChange={vi.fn()}
         onReset={vi.fn()}
@@ -88,4 +91,21 @@ it("keeps the strip on one line by ellipsising the summary, never the actions be
   expect(container.firstElementChild?.className).not.toContain("flex-wrap");
   expect(trigger?.querySelector(".truncate")).not.toBeNull();
   expect(findButton("New issue")).toBeDefined();
+});
+
+it("leaves the sync report to the refresh button, so the strip never widens with it", async () => {
+  const container = await render(CROWDED, {
+    ...SYNC,
+    status: {
+      project_id: "project-1",
+      sources: 1,
+      running: false,
+      last_synced_at: "2026-07-20T12:00:00.000Z",
+      last_result: { imported: 12, updated: 3 },
+      last_error: null,
+    },
+  });
+
+  expect(container.textContent).not.toContain("imported");
+  expect(findRefreshButton(container)).not.toBeNull();
 });

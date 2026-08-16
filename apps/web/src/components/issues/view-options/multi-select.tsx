@@ -1,6 +1,8 @@
 import { ConfigMenuCheck, ConfigMenuSubmenu } from "@otomat/ui";
 import type { ReactNode } from "react";
 
+const SHOWN = 2;
+
 interface MultiSelectItem<T extends string> {
   value: T;
   label: string;
@@ -32,11 +34,17 @@ export function MultiSelect<T extends string, TItem extends MultiSelectItem<T>>(
   for (const item of items) {
     if (selectedSet.has(item.value)) selectedLabels.push(item.label);
   }
+  const hidden = selectedLabels.length - SHOWN;
+  const summary =
+    hidden > 0
+      ? `${selectedLabels.slice(0, SHOWN).join(", ")} +${hidden}`
+      : selectedLabels.join(", ");
 
   return (
     <ConfigMenuSubmenu
       label={label}
-      value={selected.length === 0 ? emptyLabel : selectedLabels.join(", ")}
+      value={selected.length === 0 ? emptyLabel : summary}
+      hint={hidden > 0 ? selectedLabels.join(", ") : undefined}
     >
       {items.map((item) => (
         <ConfigMenuCheck

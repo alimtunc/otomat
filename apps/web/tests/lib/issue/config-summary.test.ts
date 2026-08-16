@@ -20,14 +20,14 @@ function config(advanced: Partial<AdvancedIssueFilters> = {}): IssuesViewConfig 
 
 describe("issuesConfigSegments", () => {
   it("names the display axes and counts the filters behind them", () => {
-    expect(issuesConfigSegments(config())).toEqual(["Status", "Last synced"]);
+    expect(issuesConfigSegments(config())).toEqual(["Status", "Priority"]);
     expect(issuesConfigSegments(config({ labels: ["bug"] }))).toEqual([
       "Status",
-      "Last synced",
+      "Priority",
       "1 filter",
     ]);
     expect(issuesConfigSegments(config({ labels: ["bug"], assignee: "Ada", priority: 1 }))).toEqual(
-      ["Status", "Last synced", "3 filters"],
+      ["Status", "Priority", "3 filters"],
     );
   });
 });
@@ -67,7 +67,7 @@ describe("issuesConfigDetails", () => {
   it("lists the display axes alone when nothing is filtered", () => {
     expect(issuesConfigDetails(config(), OPTIONS)).toEqual([
       { label: "Group", value: "Status" },
-      { label: "Sort", value: "Last synced" },
+      { label: "Sort", value: "Priority" },
     ]);
   });
 

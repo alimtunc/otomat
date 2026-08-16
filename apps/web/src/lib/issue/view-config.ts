@@ -16,7 +16,7 @@ export interface IssuesViewConfig {
 
 export const DEFAULT_ISSUES_VIEW_CONFIG: IssuesViewConfig = {
   grouping: "status",
-  sort: "synced",
+  sort: "priority",
   advanced: NO_ADVANCED_FILTERS,
   collapsedGroups: [],
 };

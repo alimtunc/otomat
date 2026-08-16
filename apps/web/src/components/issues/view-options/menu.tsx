@@ -7,6 +7,7 @@ import {
   Icon,
 } from "@otomat/ui";
 import { IssueFilterSubmenus } from "@web/components/issues/view-options/filter-submenus";
+import { IssueLinearFilters } from "@web/components/issues/view-options/linear-filters";
 import { Select } from "@web/components/issues/view-options/select";
 import { issuesConfigDetails, issuesConfigSegments } from "@web/lib/issue/config-summary";
 import type { IssueFilterOptions } from "@web/lib/issue/filter-options";
@@ -20,6 +21,7 @@ const MENU_LABEL = "View options";
 export interface IssueViewOptionsMenuProps {
   config: IssuesViewConfig;
   options: IssueFilterOptions;
+  linearMapped: boolean;
   dirty: boolean;
   onChange: (patch: Partial<IssuesViewConfig>) => void;
   onReset: () => void;
@@ -28,6 +30,7 @@ export interface IssueViewOptionsMenuProps {
 export function IssueViewOptionsMenu({
   config,
   options,
+  linearMapped,
   dirty,
   onChange,
   onReset,
@@ -65,6 +68,12 @@ export function IssueViewOptionsMenu({
         />
         <DropdownMenuSeparator />
         <IssueFilterSubmenus
+          filters={config.advanced}
+          options={options}
+          onChange={(advanced) => onChange({ advanced })}
+        />
+        <IssueLinearFilters
+          mapped={linearMapped}
           filters={config.advanced}
           options={options}
           onChange={(advanced) => onChange({ advanced })}

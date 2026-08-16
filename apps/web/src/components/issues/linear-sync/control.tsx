@@ -7,42 +7,66 @@ import {
   Icon,
   IconButton,
   RelativeTime,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from "@otomat/ui";
 import type { ProjectLinearSync } from "@web/api/linear/use-project-sync";
-import { describeLinearSync } from "@web/components/issues/linear-sync/describe";
+import {
+  describeLinearSync,
+  linearSourcesMapped,
+} from "@web/components/issues/linear-sync/describe";
+
+const REFRESH = "Refresh issues";
 
 /** Reports the pass wherever it was started, so a second click cannot launch a second import. */
 export function LinearSyncControl({ sync }: { sync: ProjectLinearSync }) {
   const label = describeLinearSync(sync.status, sync.running);
-  const mapped = (sync.status?.sources ?? 0) > 0;
-  const tone = label.tone === "danger" ? "text-danger" : "text-text-tertiary";
+  const mapped = linearSourcesMapped(sync.status);
+  const report =
+    label.text === "" ? null : (
+      <>
+        {label.text}
+        {label.syncedAt === null ? null : (
+          <>
+            {" · "}
+            <RelativeTime date={label.syncedAt} className="inline" />
+          </>
+        )}
+      </>
+    );
 
   return (
-    <div className="flex min-w-0 items-center gap-1.5">
-      {label.text === "" ? null : (
-        <span
-          role={label.tone === "danger" ? "alert" : undefined}
-          className={`truncate text-xs ${tone}`}
-        >
+    <div className="flex items-center gap-1">
+      {label.tone === "danger" ? (
+        <span role="alert" className="sr-only">
           {label.text}
-          {label.syncedAt === null ? null : (
-            <>
-              {" · "}
-              <RelativeTime date={label.syncedAt} className="inline" />
-            </>
-          )}
         </span>
-      )}
-      <Button
-        variant="outline"
-        size="xs"
-        loading={sync.running}
-        disabled={!mapped}
-        onClick={() => sync.refresh({ announce: true })}
-      >
-        <Icon name="refresh-cw" aria-hidden />
-        Refresh issues
-      </Button>
+      ) : null}
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            // A tooltip names nothing, so the report is repeated on the accessible name.
+            <Button
+              variant="outline"
+              size="xs"
+              loading={sync.running}
+              disabled={!mapped}
+              aria-label={label.text === "" ? REFRESH : `${REFRESH} — ${label.text}`}
+              onClick={() => sync.refresh({ announce: true })}
+            >
+              <Icon
+                name="refresh-cw"
+                aria-hidden
+                className={label.tone === "danger" ? "text-danger" : undefined}
+              />
+            </Button>
+          }
+        />
+        <TooltipContent className="max-w-64 whitespace-normal">
+          {report === null ? REFRESH : report}
+        </TooltipContent>
+      </Tooltip>
       <DropdownMenu>
         <DropdownMenuTrigger
           render={

@@ -8,6 +8,10 @@ export interface LinearSyncLabel {
   syncedAt: string | null;
 }
 
+export function linearSourcesMapped(status: LinearSyncStatusContract | null): boolean {
+  return (status?.sources ?? 0) > 0;
+}
+
 const muted = (text: string, syncedAt: string | null = null): LinearSyncLabel => ({
   text,
   tone: "muted",

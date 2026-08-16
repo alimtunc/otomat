@@ -251,6 +251,8 @@ export { Spinner, type SpinnerProps } from "./components/spinner";
 
 export { StatusChip, type StatusChipProps } from "./components/status-chip";
 
+export { StatusGlyph, type StatusGlyphProps } from "./components/status-glyph";
+
 export {
   DiffFileStatusChip,
   IssueStatusChip,
