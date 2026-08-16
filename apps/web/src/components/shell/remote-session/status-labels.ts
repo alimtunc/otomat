@@ -12,6 +12,7 @@ const REMOTE_PHASE_LABELS: Record<RemoteHostPhase, string> = {
   opening_tunnel: "Opening the SSH tunnel…",
   checking_version: "Checking the daemon version…",
   waiting_for_runs: "Update waiting for the host to go idle…",
+  waiting_for_artifact: "Waiting for the CI artifact…",
   installing_update: "Installing the daemon update…",
   verifying_update: "Restarting and verifying the daemon…",
   connected: "Connected",

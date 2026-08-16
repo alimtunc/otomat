@@ -1,6 +1,21 @@
 import { expect, it } from "vitest";
 
-import { sameRemoteHostStatus } from "#domain/contracts/execution-host";
+import { isRemoteHostSettling, sameRemoteHostStatus } from "#domain/contracts/execution-host";
+
+it("counts the phases where the data path is still coming up as settling", () => {
+  for (const phase of ["checking_host", "opening_tunnel", "installing_update"] as const) {
+    expect(isRemoteHostSettling({ phase, detail: null })).toBe(true);
+  }
+});
+
+it("leaves both waits out: the tunnel serves the cockpit while they last", () => {
+  expect(isRemoteHostSettling({ phase: "waiting_for_artifact", detail: "queued" })).toBe(false);
+  expect(isRemoteHostSettling({ phase: "waiting_for_runs", active_runs: 2, detail: null })).toBe(
+    false,
+  );
+  expect(isRemoteHostSettling({ phase: "error", code: "tunnel_failed", detail: null })).toBe(false);
+  expect(isRemoteHostSettling(null)).toBe(false);
+});
 
 it("matches statuses field by field, per phase variant", () => {
   expect(

@@ -64,6 +64,21 @@ it("says a host that could not list its runs did not answer, rather than implyin
   expect(document.body.textContent).toContain("the daemon did not answer");
 });
 
+it("renders a bundle CI has not published yet as progress, never as a failed update", async () => {
+  await renderPanel({
+    remote_status: { phase: "waiting_for_artifact", detail: "its CI run is still running" },
+    remote_update_error: "the CI run for build bbb2222 ended as failure",
+  });
+
+  const waiting = [...document.querySelectorAll('[role="status"]')].at(-1);
+  expect(waiting?.textContent).toContain("Waiting for the CI artifact…");
+  expect(waiting?.textContent).toContain("its CI run is still running");
+  // The wait and the last failure are separate lines: neither may borrow the other's wording.
+  const alert = document.querySelector('[role="alert"]');
+  expect(alert?.textContent).toContain("ended as failure");
+  expect(alert?.textContent).not.toContain("Waiting for the CI artifact");
+});
+
 it("keeps naming the step through the restart, the longest one an update takes", async () => {
   await renderPanel({ remote_status: { phase: "verifying_update", detail: "bbb2222" } });
 

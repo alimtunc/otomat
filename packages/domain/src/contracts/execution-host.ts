@@ -33,6 +33,7 @@ export type RemoteHostPhase =
   | "opening_tunnel"
   | "checking_version"
   | "waiting_for_runs"
+  | "waiting_for_artifact"
   | "installing_update"
   | "verifying_update"
   | "connected"
@@ -59,8 +60,9 @@ const SETTLING_PHASES: RemoteHostPhase[] = [
  * otherwise report a dead daemon — the offline banner, a query boundary with no data yet — reads
  * this, so a bootstrap that takes half a minute never renders as a terminal state.
  *
- * Every phase listed above is bounded by a timeout or a retry schedule; `waiting_for_runs` lasts as
- * long as the runs do, so it is reported where it is actionable instead of masking query failures.
+ * Every phase listed above is bounded by a timeout or a retry schedule. The two waits are left out:
+ * the tunnel serves the cockpit throughout them, so holding every query on its pending slot for
+ * minutes would hide real failures — they are reported where they are actionable instead.
  */
 export function isRemoteHostSettling(status: RemoteHostStatus | null): boolean {
   return status !== null && SETTLING_PHASES.includes(status.phase);

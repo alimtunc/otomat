@@ -20,7 +20,7 @@ const TITLES: Record<LaunchTargetBlocker, string> = {
 
 const DESCRIPTIONS: Record<LaunchTargetBlocker, string> = {
   daemon_update_pending:
-    "This host’s daemon runs an older build than the app. New runs are paused so the runs in flight can finish and Otomat can install the matching build — it does that by itself once the host is idle. Runs already started keep going, and closing Otomat does not stop them.",
+    "This host’s daemon runs an older build than the app. New runs are paused so the runs in flight can finish and Otomat can install the matching build — it does that by itself once the host is idle and CI has published that build’s bundle. Runs already started keep going, and closing Otomat does not stop them.",
   no_project: "Pick a project in the sidebar: a run always works in one project’s repository.",
   no_repository:
     "A run works in a dedicated git worktree, so this needs a repository before it can start.",

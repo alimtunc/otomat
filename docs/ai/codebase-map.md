@@ -359,25 +359,29 @@ navigation.
 Connecting to a remote host and putting the expected daemon on it are one state machine, not two:
 installing a build stops and restarts the tunnel, so a second machine would render a normal upgrade
 as a lost host. `RemoteHostStatus` carries both halves — the ssh/tunnel phases and
-`checking_version → waiting_for_runs → installing_update → verifying_update` — and
-`ExecutionHostManager.remoteStatus` composes them in one place, the update speaking for the host
-while it runs. `upgrade/coordinator.ts` drives it from every `connected` transition, so a client
-closed mid-wait resumes on its next launch and nothing is scheduled or persisted.
+`checking_version → waiting_for_runs → waiting_for_artifact → installing_update → verifying_update`
+— and `ExecutionHostManager.remoteStatus` composes them in one place, the update speaking for the
+host while it runs. `upgrade/coordinator.ts` drives it from every `connected` transition, so a
+client closed mid-wait resumes on its next launch and nothing is scheduled or persisted.
 
-Two rules keep it honest. A run in flight is never interrupted: the coordinator waits, says how many
-runs it is holding for, and the cockpit refuses new launches so the queue drains instead of deferring
-the update forever. And a failed install is recorded against the build it left running rather than
-retried on a timer — the old daemon and its database are intact, the exact cause rides on the
-snapshot, and the Settings button is the retry for a cause the operator has fixed.
+Three rules keep it honest. A run in flight is never interrupted: the coordinator waits, says how
+many runs it is holding for, and the cockpit refuses new launches so the queue drains instead of
+deferring the update forever. A bundle CI has not published yet is a wait, not a failure: the
+availability probe runs before anything is stopped, and a queued or running workflow — or a probe
+the host could not answer at all — is re-checked on a bounded backoff until the exact artifact
+lands. And a failure — a workflow that failed, a bundle that never came, an install that stopped —
+is recorded against the build it left running rather than retried on a timer: the old daemon and its
+database are intact, the exact cause rides on the snapshot, and the Settings button is the retry for
+a cause the operator has fixed.
 
-The corollary is on the renderer: a 20–30 second bootstrap is progress, so nothing may render it as a
-failure. `isRemoteHostSettling` is the one predicate — the shell shows a compact progress line
+The corollary is on the renderer: a 20–30 second bootstrap is progress, so nothing may render it as
+a failure. `isRemoteHostSettling` is the one predicate — the shell shows a compact progress line
 instead of `Offline`, `QueryBoundary`/`QueryList` hold their pending slot instead of mounting a
 generic error, and cached data stays on screen. It covers the phases where the data path is coming
-up, never `waiting_for_runs`: that wait serves the cockpit and lasts as long as the runs, so masking
-query failures through it would hide them for hours. Only a terminal failure reaches offline: the session's
-reconnect loop keeps trying past its schedule but stops calling the failure a hiccup once it is
-exhausted, so a host that will never come up says why. Full contract in
+up, never the two waits: they serve the cockpit and last as long as the runs — or CI — do, so
+masking query failures through them would hide them for hours. Only a terminal failure reaches
+offline: the session's reconnect loop keeps trying past its schedule but stops calling the failure a
+hiccup once it is exhausted, so a host that will never come up says why. Full contract in
 [`docs/ai/remote-execution-host.md`](remote-execution-host.md).
 
 ## Error Diagnostics

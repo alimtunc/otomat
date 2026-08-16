@@ -11,6 +11,7 @@ const RUNS_KEEP_GOING =
 const UPDATE_PHASES: RemoteHostPhase[] = [
   "checking_version",
   "waiting_for_runs",
+  "waiting_for_artifact",
   "installing_update",
   "verifying_update",
 ];
@@ -34,7 +35,8 @@ export function DaemonUpdatePanel() {
       {remote.stale ? (
         <p role="status" className="text-xs text-warning">
           The host runs build {remote.build}, this app expects {remote.expectedBuild}. Otomat
-          downloads and installs that exact build by itself, once the host has no run in flight.
+          downloads and installs that exact build by itself, once the host has no run in flight and
+          CI has published the bundle.
         </p>
       ) : (
         <p className="text-xs text-text-secondary">
@@ -67,7 +69,7 @@ export function DaemonUpdatePanel() {
         <span className="text-xs text-text-tertiary">
           {remote.expectedBuild === null
             ? "This build cannot name its own commit, so nothing is installed automatically."
-            : "Runs the same install the host performs by itself; it still waits for the runs in flight."}
+            : "Runs the same install the host performs by itself; it still waits for the runs in flight and for CI."}
         </span>
       </div>
     </div>

@@ -5,6 +5,13 @@ const DEPLOY_PREFIX = "OTOMAT_DEPLOY:";
 const INSTANCE_PREFIX = "OTOMAT_INSTANCE:";
 const INSTANCES_END = "OTOMAT_INSTANCES_END:-";
 
+export const GH_MISSING =
+  "the host has no `gh` CLI; install and authenticate it to deploy from CI artifacts";
+
+export function artifactName(build: string): string {
+  return `otomat-daemon-${build}-linux-x64`;
+}
+
 export interface DeployDaemonScriptOptions {
   deployment: RemoteDeployment;
   /** sha7 the artifact is named after; the caller has validated it. */
@@ -19,7 +26,7 @@ export interface DeployDaemonScriptOptions {
  * instance's next start-or-verify — boots whatever this leaves behind.
  */
 export function deployDaemonScript(options: DeployDaemonScriptOptions): string {
-  const name = `otomat-daemon-${options.build}-linux-x64`;
+  const name = artifactName(options.build);
   return [
     "set -u",
     `OTOMAT_HOME="$HOME/${options.deployment.homeSuffix}"`,
@@ -81,7 +88,7 @@ export function describeDeployFailure(
 ): string {
   switch (outcome.kind) {
     case "gh_missing":
-      return "the host has no `gh` CLI; install and authenticate it to deploy from CI artifacts";
+      return GH_MISSING;
     case "artifact_not_found":
       return `no CI artifact is named ${outcome.name} (artifacts expire after 7 days; re-run the workflow to rebuild it)`;
     case "download_failed":
