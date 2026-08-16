@@ -13,10 +13,12 @@ export interface LinearDaemonTarget {
 /** The slice of the execution-host manager the Linear fan-out reads. */
 export interface LinearHostSource {
   readonly remoteSshAlias: string | null;
-  daemonUrl(hostId: ExecutionHostId): { url: string } | { message: string };
+  readonly catalog: {
+    resolveBaseUrl(hostId: ExecutionHostId): { url: string } | { message: string };
+  };
 }
 
-type ResolvedDaemonUrl = ReturnType<LinearHostSource["daemonUrl"]>;
+type ResolvedDaemonUrl = ReturnType<LinearHostSource["catalog"]["resolveBaseUrl"]>;
 
 function target(
   id: ExecutionHostId,
@@ -33,8 +35,8 @@ function target(
  * host, so a reconnect that is already possible starts here.
  */
 export function linearTargets(hosts: LinearHostSource): LinearDaemonTarget[] {
-  const targets = [target("local", "Local", hosts.daemonUrl("local"))];
+  const targets = [target("local", "Local", hosts.catalog.resolveBaseUrl("local"))];
   const alias = hosts.remoteSshAlias;
-  if (alias !== null) targets.push(target("remote", alias, hosts.daemonUrl("remote")));
+  if (alias !== null) targets.push(target("remote", alias, hosts.catalog.resolveBaseUrl("remote")));
   return targets;
 }

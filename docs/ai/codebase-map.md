@@ -30,7 +30,7 @@ apps/
   desktop/             # Electron alpha shell: manages the local-daemon lifecycle, serves the web build
     src/
       main/            # app lifecycle, daemon spawn, data layout/recovery, logs, support export
-        remote/        # remote execution host: ssh tunnel, remote daemon start-or-verify, host selection
+        remote/        # remote execution host: ssh tunnel, daemon start-or-verify, host selection, daemon update journey
       preload/         # contextBridge preloads (cockpit + splash)
       shared/          # pure lifecycle logic (free port, PATH resolve, health poll, env, terminate)
 
@@ -310,6 +310,32 @@ against the live remote state, so a matching issue costs no mutation — which i
 what gives the cockpit a last sync state, a target state name, an actionable error
 and a Retry, and what makes `linear.lifecycle_synced` refresh the rail without a
 navigation.
+
+## One Remote Host Journey
+
+Connecting to a remote host and putting the expected daemon on it are one state machine, not two:
+installing a build stops and restarts the tunnel, so a second machine would render a normal upgrade
+as a lost host. `RemoteHostStatus` carries both halves — the ssh/tunnel phases and
+`checking_version → waiting_for_runs → installing_update → verifying_update` — and
+`ExecutionHostManager.remoteStatus` composes them in one place, the update speaking for the host
+while it runs. `upgrade/coordinator.ts` drives it from every `connected` transition, so a client
+closed mid-wait resumes on its next launch and nothing is scheduled or persisted.
+
+Two rules keep it honest. A run in flight is never interrupted: the coordinator waits, says how many
+runs it is holding for, and the cockpit refuses new launches so the queue drains instead of deferring
+the update forever. And a failed install is recorded against the build it left running rather than
+retried on a timer — the old daemon and its database are intact, the exact cause rides on the
+snapshot, and the Settings button is the retry for a cause the operator has fixed.
+
+The corollary is on the renderer: a 20–30 second bootstrap is progress, so nothing may render it as a
+failure. `isRemoteHostSettling` is the one predicate — the shell shows a compact progress line
+instead of `Offline`, `QueryBoundary`/`QueryList` hold their pending slot instead of mounting a
+generic error, and cached data stays on screen. It covers the phases where the data path is coming
+up, never `waiting_for_runs`: that wait serves the cockpit and lasts as long as the runs, so masking
+query failures through it would hide them for hours. Only a terminal failure reaches offline: the session's
+reconnect loop keeps trying past its schedule but stops calling the failure a hiccup once it is
+exhausted, so a host that will never come up says why. Full contract in
+[`docs/ai/remote-execution-host.md`](remote-execution-host.md).
 
 ## Error Diagnostics
 

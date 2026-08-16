@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { ProjectQueryBoundary } from "@web/components/shell/project-selection/query-boundary";
+import { LOCAL_SESSION, RemoteSessionContext } from "@web/components/shell/remote-session/context";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { mountWithQuery } from "#support/mount";
@@ -51,6 +52,19 @@ it("blocks with the error report when projects never loaded", async () => {
   const container = await render(projectsQuery({ isError: true }));
   expect(container.textContent).toContain("Couldn’t load projects");
   expect(container.textContent).not.toContain("projects-content");
+});
+
+it("keeps the children's loading state while the execution host is still settling", async () => {
+  const mounted = await mountWithQuery(
+    <RemoteSessionContext.Provider value={{ ...LOCAL_SESSION, settling: true }}>
+      <ProjectQueryBoundary query={projectsQuery({ isError: true })}>
+        <p>projects-content</p>
+      </ProjectQueryBoundary>
+    </RemoteSessionContext.Provider>,
+  );
+  cleanups.push(mounted.cleanup);
+  expect(mounted.container.textContent).toContain("projects-content");
+  expect(mounted.container.textContent).not.toContain("Couldn’t load projects");
 });
 
 it("keeps loaded projects under a stale notice when a refresh fails", async () => {

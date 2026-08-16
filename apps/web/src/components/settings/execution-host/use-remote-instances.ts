@@ -1,9 +1,8 @@
 import type { ExecutionHostOperationResult, RemoteInstanceEntry } from "@otomat/domain";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { describeOperationFailure } from "@web/components/shell/remote-session/status-labels";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 import { useState } from "react";
-
-import { describeRemoteStatus } from "./status-labels";
 
 export interface UseRemoteInstancesResult {
   available: boolean;
@@ -13,11 +12,6 @@ export interface UseRemoteInstancesResult {
   actionError: string | null;
   stop(build: string): void;
   remove(build: string): void;
-  updateDaemon(): void;
-}
-
-function failureMessage(result: ExecutionHostOperationResult & { ok: false }): string {
-  return "status" in result ? describeRemoteStatus(result.status) : result.message;
 }
 
 export function useRemoteInstances(sshAlias: string | null): UseRemoteInstancesResult {
@@ -45,7 +39,7 @@ export function useRemoteInstances(sshAlias: string | null): UseRemoteInstancesR
       (result) => {
         setPending(null);
         if (!result.ok) {
-          setActionError(failureMessage(result));
+          setActionError(describeOperationFailure(result));
           return;
         }
         void client.invalidateQueries({ queryKey: ["remote-instances", sshAlias] });
@@ -65,7 +59,6 @@ export function useRemoteInstances(sshAlias: string | null): UseRemoteInstancesR
     actionError,
     stop: (build) => runAction(`stop:${build}`, () => requireBridge().stopInstance(build)),
     remove: (build) => runAction(`delete:${build}`, () => requireBridge().deleteInstance(build)),
-    updateDaemon: () => runAction("update", () => requireBridge().updateRemoteDaemon()),
   };
 
   function requireBridge(): NonNullable<typeof bridge>["executionHost"] {

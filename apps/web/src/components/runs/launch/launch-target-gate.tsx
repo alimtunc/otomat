@@ -7,7 +7,7 @@ import {
   useLaunchTarget,
   type LaunchTargetState,
 } from "@web/components/runs/launch/use-launch-target";
-import { useDaemonUpdatePending } from "@web/components/shell/use-daemon-update-pending";
+import { useRemoteSession } from "@web/components/shell/remote-session/context";
 import type { ReactNode } from "react";
 
 export interface LaunchTargetGateProps {
@@ -24,7 +24,7 @@ export interface LaunchTargetGateProps {
  * never started without the worktree it is supposed to work in.
  */
 export function LaunchTargetGate({ projectId, issue, children }: LaunchTargetGateProps) {
-  const updatePending = useDaemonUpdatePending();
+  const { updatePending } = useRemoteSession();
   if (updatePending) {
     return (
       <DialogBody>

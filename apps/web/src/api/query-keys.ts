@@ -28,6 +28,9 @@ export const queryKeys = {
   runtimeOptions: (runtimeId: string | null, model: string | null) =>
     ["runtimes", runtimeId, "options", model] as const,
   executionDefaults: ["settings", "execution-defaults"] as const,
+  executionHost: ["execution-host"] as const,
+  // A separate root on purpose: a host status push invalidates the snapshot, never the ssh config read.
+  executionHostAliases: ["execution-host-aliases"] as const,
   agentProfiles: ["agent-profiles"] as const,
   skills: ["skills"] as const,
   issues: ["issues"] as const,

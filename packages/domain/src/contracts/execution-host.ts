@@ -21,18 +21,60 @@ export type RemoteHostErrorCode =
   | "switch_in_progress"
   | "local_daemon_unavailable";
 
+/**
+ * One remote host journey, from the first ssh round trip to a daemon running the build this app
+ * expects. The update phases belong to the same machine as the connection ones because installing a
+ * daemon stops and restarts the tunnel: split in two, a normal upgrade would read as a lost host.
+ */
 export type RemoteHostPhase =
   | "disconnected"
   | "checking_host"
   | "starting_daemon"
   | "opening_tunnel"
+  | "checking_version"
+  | "waiting_for_runs"
+  | "installing_update"
+  | "verifying_update"
   | "connected"
   | "reconnecting"
   | "error";
 
 export type RemoteHostStatus =
-  | { phase: Exclude<RemoteHostPhase, "error">; detail: string | null }
+  | { phase: Exclude<RemoteHostPhase, "error" | "waiting_for_runs">; detail: string | null }
+  | { phase: "waiting_for_runs"; active_runs: number; detail: string | null }
   | { phase: "error"; code: RemoteHostErrorCode; detail: string | null };
+
+const SETTLING_PHASES: RemoteHostPhase[] = [
+  "checking_host",
+  "starting_daemon",
+  "opening_tunnel",
+  "checking_version",
+  "installing_update",
+  "verifying_update",
+  "reconnecting",
+];
+
+/**
+ * Whether the host is mid-journey: expected progress, never a failure. Every surface that would
+ * otherwise report a dead daemon — the offline banner, a query boundary with no data yet — reads
+ * this, so a bootstrap that takes half a minute never renders as a terminal state.
+ *
+ * Every phase listed above is bounded by a timeout or a retry schedule; `waiting_for_runs` lasts as
+ * long as the runs do, so it is reported where it is actionable instead of masking query failures.
+ */
+export function isRemoteHostSettling(status: RemoteHostStatus | null): boolean {
+  return status !== null && SETTLING_PHASES.includes(status.phase);
+}
+
+/** Structural equality over the status union; a null `b` — nothing seen yet — never matches. */
+export function sameRemoteHostStatus(a: RemoteHostStatus, b: RemoteHostStatus | null): boolean {
+  if (b === null || a.phase !== b.phase || a.detail !== b.detail) return false;
+  if (a.phase === "waiting_for_runs" && b.phase === "waiting_for_runs") {
+    return a.active_runs === b.active_runs;
+  }
+  if (a.phase === "error" && b.phase === "error") return a.code === b.code;
+  return true;
+}
 
 export interface ExecutionHostDescriptor {
   id: ExecutionHostId;
@@ -49,6 +91,8 @@ export interface ExecutionHostSnapshot {
   remote_build: string | null;
   /** Build this app expects on every host (packaged commit or dev checkout HEAD); null when unidentifiable. */
   expected_build: string | null;
+  /** Why the last automatic daemon update stopped, when one did; the old daemon kept running. */
+  remote_update_error: string | null;
 }
 
 export type ExecutionHostOperationResult =

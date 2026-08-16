@@ -1,25 +1,25 @@
-import type {
-  ExecutionHostDescriptor,
-  ExecutionHostId,
-  ExecutionHostOperationResult,
-  ExecutionHostProjectsEntry,
-  ExecutionHostRegisterProjectResult,
-  ExecutionHostSnapshot,
-  RemoteHostStatus,
+import {
+  sameRemoteHostStatus,
+  type ExecutionHostId,
+  type ExecutionHostOperationResult,
+  type ExecutionHostSnapshot,
+  type RemoteHostStatus,
 } from "@otomat/domain";
 
 import { STABLE_DEPLOYMENT, type RemoteDeployment } from "./bootstrap/scripts.js";
 import { errorResult } from "./bootstrap/status.js";
 import { safeSshAliases, validateSshAlias } from "./host/alias.js";
-import { HostCatalog, type ResolvedDaemonUrl } from "./host/projects.js";
+import { HostCatalog } from "./host/projects.js";
 import { HostSelection } from "./host/selection.js";
+import { executionHostSnapshot } from "./host/snapshot.js";
 import {
   RemoteHostSession,
   type RemoteSessionHandle,
   type RemoteSessionOptions,
 } from "./session.js";
 import { listSshConfigAliases } from "./ssh/config-aliases.js";
-import { StaleDaemonRefresher } from "./stale-daemon.js";
+import { RemoteUpgradeCoordinator } from "./upgrade/coordinator.js";
+import type { RemoteUpdateResult } from "./upgrade/daemon.js";
 
 const SWITCH_IN_PROGRESS = "A host switch is in progress. Try again in a moment.";
 
@@ -34,6 +34,8 @@ export interface ExecutionHostManagerOptions {
   expectedBuild?: string | null;
   /** Daemon location and port this app targets on the host; the stable deployment when omitted. */
   deployment?: RemoteDeployment;
+  /** GitHub `owner/repo` whose CI publishes the daemon bundles an update installs. */
+  repo: string;
   createSession?: (options: RemoteSessionOptions) => RemoteSessionHandle;
   listAliases?: typeof listSshConfigAliases;
   fetchImpl?: typeof fetch;
@@ -41,11 +43,13 @@ export interface ExecutionHostManagerOptions {
 
 // Switching is always explicit: a failed remote connection never falls back to the local daemon — the selection stays untouched and the failure is returned verbatim.
 export class ExecutionHostManager {
+  /** The per-host project catalog; callers read it directly rather than through forwarders. */
+  readonly catalog: HostCatalog;
   private readonly selection: HostSelection;
   private session: RemoteSessionHandle | null = null;
   private switching = false;
-  private readonly catalog: HostCatalog;
-  private readonly staleRefresher: StaleDaemonRefresher;
+  private lastPublished: RemoteHostStatus | null = null;
+  private readonly upgrade: RemoteUpgradeCoordinator;
 
   constructor(private readonly options: ExecutionHostManagerOptions) {
     this.selection = new HostSelection(options.dataDir, options.log);
@@ -58,10 +62,15 @@ export class ExecutionHostManager {
       fetchImpl: options.fetchImpl ?? fetch,
       log: options.log,
     });
-    this.staleRefresher = new StaleDaemonRefresher({
+    this.upgrade = new RemoteUpgradeCoordinator({
       expectedBuild: options.expectedBuild ?? null,
-      fetchImpl: options.fetchImpl ?? fetch,
+      deployment: options.deployment ?? STABLE_DEPLOYMENT,
+      repo: options.repo,
+      alias: () => this.remoteSshAlias,
+      session: () => this.session,
+      onStatus: () => this.publishStatus(),
       log: options.log,
+      fetchImpl: options.fetchImpl ?? fetch,
     });
   }
 
@@ -78,18 +87,25 @@ export class ExecutionHostManager {
     return this.session;
   }
 
+  /** One journey: the update owns the status while it runs, since its own restart drops the tunnel. */
+  get remoteStatus(): RemoteHostStatus | null {
+    return this.upgrade.status ?? this.session?.status ?? null;
+  }
+
   snapshot(): ExecutionHostSnapshot {
-    const alias = this.remoteSshAlias;
-    const hosts: ExecutionHostDescriptor[] = [{ id: "local", label: "Local", kind: "local" }];
-    if (alias !== null) hosts.push({ id: "remote", label: alias, kind: "ssh" });
-    return {
-      hosts,
-      active_id: this.activeHostId,
-      remote_ssh_alias: alias,
-      remote_status: this.session?.status ?? null,
-      remote_build: this.session?.remoteBuild ?? null,
-      expected_build: this.options.expectedBuild ?? null,
-    };
+    return executionHostSnapshot({
+      activeId: this.activeHostId,
+      alias: this.remoteSshAlias,
+      status: this.remoteStatus,
+      remoteBuild: this.session?.remoteBuild ?? null,
+      expectedBuild: this.options.expectedBuild ?? null,
+      updateError: this.upgrade.error,
+    });
+  }
+
+  /** Retries the daemon update the host runs by itself; the same install, without its retry memory. */
+  updateDaemon(): Promise<RemoteUpdateResult> {
+    return this.upgrade.update();
   }
 
   listAliases(): string[] {
@@ -105,13 +121,7 @@ export class ExecutionHostManager {
       if (this.activeHostId === "remote") {
         return { ok: false, message: "Switch to a local project before changing the alias." };
       }
-      const stale = this.session;
-      this.session = null;
-      stale
-        .dispose()
-        .catch((error: unknown) =>
-          this.options.log(`Stale remote session dispose failed: ${String(error)}`),
-        );
+      this.detachSession("Stale remote session dispose failed");
     }
     const committed = this.selection.commit({ remote: { ssh_alias: alias } });
     if (!committed.ok) return committed;
@@ -143,21 +153,6 @@ export class ExecutionHostManager {
     return this.session.url;
   }
 
-  listProjects(): Promise<ExecutionHostProjectsEntry[]> {
-    return this.catalog.listProjects();
-  }
-
-  daemonUrl(hostId: ExecutionHostId): ResolvedDaemonUrl {
-    return this.catalog.resolveBaseUrl(hostId);
-  }
-
-  registerProject(
-    hostId: ExecutionHostId,
-    path: string,
-  ): Promise<ExecutionHostRegisterProjectResult> {
-    return this.catalog.registerProject(hostId, path);
-  }
-
   removeRemote(): ExecutionHostOperationResult {
     if (this.switching) return { ok: false, message: SWITCH_IN_PROGRESS };
     if (this.activeHostId === "remote") {
@@ -165,19 +160,19 @@ export class ExecutionHostManager {
     }
     const committed = this.selection.commit({ remote: null, active: "local" });
     if (!committed.ok) return committed;
-    const session = this.session;
-    this.session = null;
-    if (session !== null) {
-      session
-        .dispose()
-        .catch((error: unknown) =>
-          this.options.log(`Removed host session dispose failed: ${String(error)}`),
-        );
-    }
+    this.detachSession("Removed host session dispose failed");
     return committed;
   }
 
+  /** Drops the live session and disposes it behind the answer; a superseded handle never speaks again. */
+  private detachSession(reason: string): void {
+    const session = this.session;
+    this.session = null;
+    session?.dispose().catch((error: unknown) => this.options.log(`${reason}: ${String(error)}`));
+  }
+
   async shutdown(): Promise<void> {
+    this.upgrade.stop();
     const session = this.session;
     this.session = null;
     if (session !== null) await session.dispose();
@@ -237,13 +232,19 @@ export class ExecutionHostManager {
 
   /** Callers store the handle before connecting; a superseded session never speaks for the host. */
   private announce(alias: string, status: RemoteHostStatus): void {
-    this.options.onRemoteStatus(status);
-    const session = this.session;
-    const current = session !== null && session.alias === alias ? session : null;
-    if (status.phase !== "connected") return;
-    if (current?.url != null) this.options.onRemoteConnected?.(alias, current.url);
+    this.publishStatus();
+    const current = this.session !== null && this.session.alias === alias ? this.session : null;
+    if (status.phase !== "connected" || current === null) return;
+    if (current.url !== null) this.options.onRemoteConnected?.(alias, current.url);
     // Build verification is host lifecycle — it may restart the daemon and reconnect the
     // tunnel — so it hangs off the connected transition, never off a catalog read.
-    void this.staleRefresher.maybeRefresh(current);
+    this.upgrade.observe();
+  }
+
+  private publishStatus(): void {
+    const status = this.remoteStatus;
+    if (status === null || sameRemoteHostStatus(status, this.lastPublished)) return;
+    this.lastPublished = status;
+    this.options.onRemoteStatus(status);
   }
 }

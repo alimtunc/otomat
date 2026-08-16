@@ -14,12 +14,12 @@ import {
   type BootstrapResolution,
   type RemoteErrorStatus,
 } from "./bootstrap/status.js";
+import { ReconnectLoop } from "./reconnect.js";
 import { runSshScript } from "./ssh/script.js";
 import { SshTunnel, type SshTunnelOptions, type TunnelHandle } from "./ssh/tunnel.js";
 
 const BOOTSTRAP_TIMEOUT_MS = 30_000;
 const TUNNEL_HEALTH_TIMEOUT_MS = 15_000;
-const RECONNECT_DELAYS_MS = [1_000, 2_000, 5_000, 10_000, 15_000];
 
 export interface RemoteSessionOptions {
   alias: string;
@@ -52,11 +52,15 @@ export class RemoteHostSession implements RemoteSessionHandle {
   private tunnel: TunnelHandle | null = null;
   private disposed = false;
   private inFlight: Promise<RemoteHostStatus> | null = null;
-  private retryTimer: NodeJS.Timeout | null = null;
-  private retryAttempt = 0;
   private lastRemoteBuild: string | null = null;
+  private readonly retry: ReconnectLoop;
 
-  constructor(private readonly options: RemoteSessionOptions) {}
+  constructor(private readonly options: RemoteSessionOptions) {
+    this.retry = new ReconnectLoop({
+      attempt: () => void this.connect(true),
+      schedule: options.scheduleRetry,
+    });
+  }
 
   get alias(): string {
     return this.options.alias;
@@ -84,14 +88,14 @@ export class RemoteHostSession implements RemoteSessionHandle {
     if (this.disposed) return this.currentStatus;
     if (this.currentStatus.phase === "connected") return this.currentStatus;
     if (this.inFlight !== null) return this.inFlight;
-    this.cancelRetry();
+    this.retry.cancel();
     this.inFlight = this.attempt(retryOnFailure).finally(() => (this.inFlight = null));
     return this.inFlight;
   }
 
   async refreshDaemon(): Promise<RemoteHostStatus> {
     if (this.disposed || this.inFlight !== null) return this.currentStatus;
-    this.cancelRetry();
+    this.retry.cancel();
     const run = this.options.runScript ?? runSshScript;
     const stop = await run({
       alias: this.options.alias,
@@ -108,7 +112,7 @@ export class RemoteHostSession implements RemoteSessionHandle {
 
   async dispose(): Promise<void> {
     this.disposed = true;
-    this.cancelRetry();
+    this.retry.cancel();
     await this.stopTunnel();
     this.setStatus({ phase: "disconnected", detail: null });
   }
@@ -131,7 +135,7 @@ export class RemoteHostSession implements RemoteSessionHandle {
         await this.stopTunnel();
         return this.settleDisposed();
       }
-      this.retryAttempt = 0;
+      this.retry.reset();
       this.setStatus({ phase: "connected", detail: bootstrap.detail });
       return this.currentStatus;
     } catch (error) {
@@ -143,7 +147,7 @@ export class RemoteHostSession implements RemoteSessionHandle {
   }
 
   private async bootstrapDaemon(): Promise<BootstrapResolution> {
-    this.setStatus({ phase: "checking_host", detail: `ssh ${this.options.alias}` });
+    this.setProgress({ phase: "checking_host", detail: `ssh ${this.options.alias}` });
     const run = this.options.runScript ?? runSshScript;
     const result = await run({
       alias: this.options.alias,
@@ -152,12 +156,12 @@ export class RemoteHostSession implements RemoteSessionHandle {
     });
     const resolution = resolveBootstrapResult(result);
     if ("failure" in resolution) return resolution;
-    this.setStatus({ phase: "starting_daemon", detail: resolution.detail });
+    this.setProgress({ phase: "starting_daemon", detail: resolution.detail });
     return resolution;
   }
 
   private async openTunnel(localPort: number): Promise<RemoteErrorStatus | null> {
-    this.setStatus({ phase: "opening_tunnel", detail: `127.0.0.1:${localPort}` });
+    this.setProgress({ phase: "opening_tunnel", detail: `127.0.0.1:${localPort}` });
     const abort = new AbortController();
     let exitDetail: string | null = null;
     const createTunnel =
@@ -203,41 +207,31 @@ export class RemoteHostSession implements RemoteSessionHandle {
     if (this.currentStatus.phase !== "connected") return;
     this.options.log(`Remote tunnel dropped: ${detail}`);
     this.setStatus({ phase: "reconnecting", detail: trimDetail(detail) });
-    this.scheduleRetry();
+    this.retry.arm();
   }
 
   private settleFailure(status: RemoteErrorStatus, retryOnFailure: boolean): RemoteHostStatus {
     if (this.disposed) return this.currentStatus;
-    if (retryOnFailure) {
-      this.setStatus({
-        phase: "reconnecting",
-        detail: `${status.code}${status.detail === null ? "" : `: ${status.detail}`}`,
-      });
-      this.scheduleRetry();
+    if (!retryOnFailure) {
+      this.setStatus(status);
       return this.currentStatus;
     }
-    this.setStatus(status);
+    this.retry.arm();
+    this.setStatus(
+      this.retry.exhausted
+        ? status
+        : {
+            phase: "reconnecting",
+            detail: `${status.code}${status.detail === null ? "" : `: ${status.detail}`}`,
+          },
+    );
     return this.currentStatus;
   }
 
-  private scheduleRetry(): void {
-    if (this.disposed || this.retryTimer !== null) return;
-    const delay =
-      RECONNECT_DELAYS_MS[Math.min(this.retryAttempt, RECONNECT_DELAYS_MS.length - 1)] ??
-      RECONNECT_DELAYS_MS[0] ??
-      1_000;
-    this.retryAttempt += 1;
-    const schedule = this.options.scheduleRetry ?? ((callback, ms) => setTimeout(callback, ms));
-    this.retryTimer = schedule(() => {
-      this.retryTimer = null;
-      void this.connect(true);
-    }, delay);
-  }
-
-  private cancelRetry(): void {
-    if (this.retryTimer === null) return;
-    clearTimeout(this.retryTimer);
-    this.retryTimer = null;
+  /** Progress goes quiet once the failure has been named: flickering back through it would bury the cause. */
+  private setProgress(status: RemoteHostStatus): void {
+    if (this.retry.exhausted) return;
+    this.setStatus(status);
   }
 
   private setStatus(status: RemoteHostStatus): void {

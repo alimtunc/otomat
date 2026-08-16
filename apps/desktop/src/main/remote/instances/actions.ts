@@ -6,15 +6,11 @@ import type {
 
 import {
   instanceDeployment,
-  keepsDataAcrossBuilds,
   stopDaemonScript,
   type RemoteDeployment,
 } from "../bootstrap/scripts.js";
 import { scriptFailure, trimDetail } from "../bootstrap/status.js";
-import { deployBundle } from "../deploy.js";
-import type { RemoteSessionHandle } from "../session.js";
 import { runSshScript, type SshScriptResult } from "../ssh/script.js";
-import { upgradeRemoteDaemon } from "../upgrade/daemon.js";
 import { deleteInstanceScript, listInstancesScript, parseInstanceList } from "./scripts.js";
 
 const SCRIPT_TIMEOUT_MS = 30_000;
@@ -32,26 +28,16 @@ const OWN_INSTANCE: ExecutionHostOperationResult = {
 
 export interface RemoteInstanceActionsOptions {
   alias(): string | null;
-  /**
-   * The deployment this app itself targets; `updateDaemon` installs here, and whether that
-   * deployment keeps its data decides between an upgrade and a plain replacement.
-   */
+  /** The deployment this app itself targets, and therefore the one instance it must not touch. */
   deployment: RemoteDeployment;
-  expectedBuild: string | null;
-  /** GitHub `owner/repo` whose CI publishes the daemon bundles. */
-  repo: string;
-  /** The live remote session, when there is one; an upgrade needs it to check idleness and health. */
-  session(): RemoteSessionHandle | null;
   log(message: string): void;
   runScript?: typeof runSshScript;
-  fetchImpl?: typeof fetch;
 }
 
 /**
- * Instance housekeeping over one-shot SSH scripts: list, stop and delete the preview daemons
- * under `~/.otomat/instances`, and install the CI bundle for this app's own build. Every entry is
- * explicit — nothing here runs on a timer, and only the in-place upgrade of a deployment that keeps
- * its data ever restarts a daemon.
+ * Instance housekeeping over one-shot SSH scripts: list, stop and delete the preview daemons under
+ * `~/.otomat/instances`. Every entry is explicit and nothing here runs on a timer; installing a
+ * build is the upgrade coordinator's job, on whichever deployment this app drives.
  */
 export class RemoteInstanceActions {
   constructor(private readonly options: RemoteInstanceActionsOptions) {}
@@ -99,56 +85,6 @@ export class RemoteInstanceActions {
     return this.operate(deleteInstanceScript(build), SCRIPT_TIMEOUT_MS);
   }
 
-  /**
-   * Installs the CI bundle for the build this app expects into its own target. A deployment whose
-   * data outlives its build upgrades in place — idle check, backup, swap, restart, health — while a
-   * preview instance is only provisioned: nothing is started, and its next connect boots whatever
-   * this left behind.
-   */
-  async updateDaemon(): Promise<ExecutionHostOperationResult> {
-    const build = this.options.expectedBuild;
-    if (build === null || !/^[0-9a-f]{7}$/.test(build)) {
-      return { ok: false, message: "This build cannot name its own commit; deploy manually." };
-    }
-    const alias = this.options.alias();
-    if (alias === null) return { ok: false, message: "No remote host is configured." };
-    if (keepsDataAcrossBuilds(this.options.deployment)) return this.upgrade(alias, build);
-    try {
-      const deployed = await deployBundle({
-        alias,
-        deployment: this.options.deployment,
-        build,
-        repo: this.options.repo,
-        runScript: this.runScript,
-      });
-      if (!deployed.ok) return { ok: false, message: `The deploy failed: ${deployed.reason}.` };
-      this.options.log(`Deployed daemon build ${build} to ${this.options.deployment.homeSuffix}.`);
-      return { ok: true };
-    } catch (error) {
-      return { ok: false, message: trimDetail(String(error)) };
-    }
-  }
-
-  private async upgrade(alias: string, build: string): Promise<ExecutionHostOperationResult> {
-    const session = this.options.session();
-    if (session === null) {
-      return {
-        ok: false,
-        message: "The remote host is not connected yet. Try again once its tunnel is up.",
-      };
-    }
-    return upgradeRemoteDaemon({
-      alias,
-      deployment: this.options.deployment,
-      build,
-      repo: this.options.repo,
-      session,
-      runScript: this.runScript,
-      fetchImpl: this.options.fetchImpl ?? fetch,
-      log: this.options.log,
-    });
-  }
-
   private async operate(script: string, timeoutMs: number): Promise<ExecutionHostOperationResult> {
     const alias = this.options.alias();
     if (alias === null) return { ok: false, message: "No remote host is configured." };
@@ -161,11 +97,7 @@ export class RemoteInstanceActions {
     }
   }
 
-  private get runScript(): typeof runSshScript {
-    return this.options.runScript ?? runSshScript;
-  }
-
   private run(alias: string, script: string, timeoutMs: number): Promise<SshScriptResult> {
-    return this.runScript({ alias, script, timeoutMs });
+    return (this.options.runScript ?? runSshScript)({ alias, script, timeoutMs });
   }
 }

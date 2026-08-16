@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
-import type { ExecutionHostSnapshot, RemoteHostStatus } from "@otomat/domain";
+import type { RemoteHostStatus } from "@otomat/domain";
 import { ExecutionHostSection } from "@web/components/settings/execution-host/section";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { fakeDesktopBridge } from "#support/desktop-bridge";
+import { fakeDesktopBridge, twoHostSnapshot } from "#support/desktop-bridge";
 import { setInputValue } from "#support/dom-events";
 import { findButton } from "#support/dom-queries";
 import { mountWithQuery } from "#support/mount";
@@ -38,21 +38,6 @@ async function renderSection() {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
   return mounted;
-}
-
-function twoHostSnapshot(overrides: Partial<ExecutionHostSnapshot> = {}): ExecutionHostSnapshot {
-  return {
-    hosts: [
-      { id: "local", label: "Local", kind: "local" },
-      { id: "remote", label: "otomat-vps", kind: "ssh" },
-    ],
-    active_id: "local",
-    remote_ssh_alias: "otomat-vps",
-    remote_status: null,
-    remote_build: null,
-    expected_build: null,
-    ...overrides,
-  };
 }
 
 it("explains that hosts are desktop-managed when no bridge is present", async () => {

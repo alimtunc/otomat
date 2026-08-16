@@ -74,6 +74,7 @@ function makeManager(options?: {
     onRemoteConnected: (alias, url) => connected.push({ alias, url }),
     applyRendererUrl: (url) => applied.push(url),
     expectedBuild: options?.expectedBuild ?? null,
+    repo: "alimtunc/otomat",
     createSession: (sessionOptions) => {
       const session = new FakeSession(
         sessionOptions.alias,
@@ -117,6 +118,7 @@ it("refuses an alias change while a host switch is in flight", async () => {
     onRemoteStatus: () => {},
     applyRendererUrl: () => {},
     expectedBuild: null,
+    repo: "alimtunc/otomat",
     createSession: (sessionOptions) => {
       const session = new FakeSession(sessionOptions.alias, CONNECTED);
       session.connect = () =>
@@ -157,7 +159,7 @@ it("removes the remote host: session disposed, alias cleared, server untouched",
     remote: null,
     active: "local",
   });
-  expect(await manager.listProjects()).toHaveLength(1);
+  expect(await manager.catalog.listProjects()).toHaveLength(1);
 });
 
 it("keeps the previous selection in force when the config cannot be persisted", async () => {
@@ -226,7 +228,7 @@ it("registers a project on the local daemon and returns the created project", as
   );
   const { manager } = makeManager({ fetchImpl });
 
-  const result = await manager.registerProject("local", "/repos/app");
+  const result = await manager.catalog.registerProject("local", "/repos/app");
 
   expect(result).toEqual({ ok: true, project });
   expect(fetchImpl).toHaveBeenCalledWith(
@@ -257,7 +259,7 @@ it("registers on the remote daemon through the tunnel once connected, and refuse
   );
   const { manager, sessions } = makeManager({ fetchImpl });
 
-  const unconfigured = await manager.registerProject("remote", "/srv/app");
+  const unconfigured = await manager.catalog.registerProject("remote", "/srv/app");
   expect(unconfigured).toMatchObject({ ok: false });
 
   manager.configureRemote("otomat-vps");
@@ -265,7 +267,7 @@ it("registers on the remote daemon through the tunnel once connected, and refuse
   await manager.select("local");
   expect(sessions[0]?.status.phase).toBe("connected");
 
-  const result = await manager.registerProject("remote", "/srv/app");
+  const result = await manager.catalog.registerProject("remote", "/srv/app");
   expect(result).toMatchObject({ ok: true, project: { id: "p-vps" } });
   expect(fetchImpl).toHaveBeenCalledWith(
     "http://127.0.0.1:45010/api/repositories",
@@ -284,7 +286,7 @@ it("names an unreadable 201 body instead of blaming connectivity", async () => {
   );
   const { manager } = makeManager({ fetchImpl });
 
-  const result = await manager.registerProject("local", "/repos/app");
+  const result = await manager.catalog.registerProject("local", "/repos/app");
 
   expect(result).toMatchObject({
     ok: false,
@@ -304,7 +306,7 @@ it("re-arms a session settled on error at the next background warm-up", async ()
   expect(failed).toMatchObject({ ok: false });
   expect(session?.lastRetryFlag).toBe(false);
 
-  await manager.listProjects();
+  await manager.catalog.listProjects();
 
   expect(session?.lastRetryFlag).toBe(true);
   expect(sessions).toHaveLength(1);
@@ -322,7 +324,7 @@ it("surfaces the daemon's registration refusal verbatim", async () => {
   );
   const { manager } = makeManager({ fetchImpl });
 
-  const result = await manager.registerProject("local", "/tmp/not-a-repo");
+  const result = await manager.catalog.registerProject("local", "/tmp/not-a-repo");
 
   expect(result).toEqual({ ok: false, message: "Not a git repository." });
 });
@@ -465,7 +467,7 @@ it("aggregates both hosts' project catalogs for the switcher", async () => {
   });
   manager.configureRemote("otomat-vps");
 
-  const entries = await manager.listProjects();
+  const entries = await manager.catalog.listProjects();
 
   expect(entries).toHaveLength(2);
   expect(entries[0]).toMatchObject({
@@ -489,7 +491,7 @@ it("reports an unreachable remote host as projects: null, never an error", async
   });
   manager.configureRemote("otomat-vps");
 
-  const entries = await manager.listProjects();
+  const entries = await manager.catalog.listProjects();
 
   expect(entries[1]).toMatchObject({
     host: { id: "remote" },
@@ -498,23 +500,31 @@ it("reports an unreachable remote host as projects: null, never an error", async
   });
 });
 
-it("restarts a stale idle remote daemon when its session connects, once per build", async () => {
+it("speaks for the host with the update journey, holding it until the runs in flight finish", async () => {
   const { manager, sessions } = makeManager({
     expectedBuild: "abc1234",
     fetchImpl: async (input) =>
       projectsResponse(
         String(input).endsWith("/api/runs")
-          ? [{ status: "review_ready" }]
+          ? [{ status: "running" }]
           : [{ id: "p", name: "P", root_path: "/tmp/p" }],
       ),
   });
   manager.configureRemote("otomat-vps");
-  await new Promise((resolve) => setTimeout(resolve, 0));
 
-  expect(sessions[0]?.refreshCount).toBe(1);
+  await vi.waitFor(() =>
+    expect(manager.snapshot().remote_status).toEqual({
+      phase: "waiting_for_runs",
+      active_runs: 1,
+      detail: null,
+    }),
+  );
+  // The session is connected underneath: nothing was stopped, and the tunnel still serves the cockpit.
+  expect(sessions[0]?.status.phase).toBe("connected");
+  expect(sessions[0]?.refreshCount).toBe(0);
 
-  // A catalog read is pure: it warms the healthy session but never restarts the daemon again.
-  await manager.listProjects();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(sessions[0]?.refreshCount).toBe(1);
+  // A catalog read is pure: it warms the healthy session but never drives the update.
+  await manager.catalog.listProjects();
+  expect(sessions[0]?.refreshCount).toBe(0);
+  await manager.shutdown();
 });

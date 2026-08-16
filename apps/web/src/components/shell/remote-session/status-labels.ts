@@ -1,10 +1,19 @@
-import type { RemoteHostErrorCode, RemoteHostPhase, RemoteHostStatus } from "@otomat/domain";
+import type {
+  ExecutionHostOperationResult,
+  RemoteHostErrorCode,
+  RemoteHostPhase,
+  RemoteHostStatus,
+} from "@otomat/domain";
 
 const REMOTE_PHASE_LABELS: Record<RemoteHostPhase, string> = {
   disconnected: "Disconnected",
-  checking_host: "Checking host over SSH…",
+  checking_host: "Connecting over SSH…",
   starting_daemon: "Starting the remote daemon…",
   opening_tunnel: "Opening the SSH tunnel…",
+  checking_version: "Checking the daemon version…",
+  waiting_for_runs: "Update waiting for the host to go idle…",
+  installing_update: "Installing the daemon update…",
+  verifying_update: "Restarting and verifying the daemon…",
   connected: "Connected",
   reconnecting: "Reconnecting…",
   error: "Connection failed",
@@ -25,10 +34,28 @@ const REMOTE_ERROR_MESSAGES: Record<RemoteHostErrorCode, string> = {
   local_daemon_unavailable: "The local daemon is not running.",
 };
 
+/** The compact progress line a shell shows while the host settles; the alias names where it is going. */
+export function remoteStatusHeadline(status: RemoteHostStatus, alias: string | null): string {
+  if (status.phase === "checking_host" && alias !== null) return `Connecting to ${alias}…`;
+  if (status.phase === "waiting_for_runs" && status.active_runs > 0) {
+    const runs = status.active_runs === 1 ? "1 run" : `${status.active_runs} runs`;
+    return `Update waiting on ${runs}…`;
+  }
+  return REMOTE_PHASE_LABELS[status.phase];
+}
+
+/** The same status at full length: what failed, and whatever the host said about it. */
 export function describeRemoteStatus(status: RemoteHostStatus): string {
   const base =
     status.phase === "error"
       ? REMOTE_ERROR_MESSAGES[status.code]
-      : REMOTE_PHASE_LABELS[status.phase];
+      : remoteStatusHeadline(status, null);
   return status.detail === null ? base : `${base} — ${status.detail}`;
+}
+
+/** A refused host operation as one sentence, whether it answered with a coded status or its own prose. */
+export function describeOperationFailure(
+  result: Extract<ExecutionHostOperationResult, { ok: false }>,
+): string {
+  return "status" in result ? describeRemoteStatus(result.status) : result.message;
 }

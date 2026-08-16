@@ -1,18 +1,23 @@
-import type { ExecutionHostOperationResult } from "@otomat/domain";
 import { describe, expect, it } from "vitest";
 
-import { LOCAL_DEPLOYMENT } from "#main/remote/bootstrap/scripts";
+import {
+  deploymentForChannel,
+  instanceDeployment,
+  LOCAL_DEPLOYMENT,
+  type RemoteDeployment,
+} from "#main/remote/bootstrap/scripts";
 import type { RunSshScriptOptions, SshScriptResult } from "#main/remote/ssh/script";
-import { upgradeRemoteDaemon } from "#main/remote/upgrade/daemon";
+import { upgradeRemoteDaemon, type RemoteUpdateResult } from "#main/remote/upgrade/daemon";
 import { FakeRemoteSession, type FakeRemoteSessionOptions } from "#support/remote-session";
 
 const BUILD = "92584b0";
 const BACKUP_PATH = "/home/u/.otomat/local/backups/upgrade-20260806T090000Z";
 
-type Step = "probe" | "backup" | "deploy" | "rollback";
+type Step = "probe" | "stop" | "backup" | "deploy" | "rollback";
 
 const DEFAULT_REPLIES: Record<Step, SshScriptResult> = {
   probe: { code: 0, stdout: "OTOMAT_PRESENCE:PRESENT:-\n", stderr: "" },
+  stop: { code: 0, stdout: "OTOMAT_REMOTE:STOPPED:-\n", stderr: "" },
   backup: {
     code: 0,
     stdout: `OTOMAT_REMOTE:STOPPED:-\nOTOMAT_BACKUP:BACKED_UP:${BACKUP_PATH}\n`,
@@ -30,17 +35,13 @@ function classify(script: string): Step {
   if (script.includes("OTOMAT_PRESENCE:")) return "probe";
   if (script.includes("OTOMAT_BACKUP:")) return "backup";
   if (script.includes("OTOMAT_ROLLBACK:")) return "rollback";
-  return "deploy";
-}
-
-/** `/api/runs` as the remote daemon answers it through the tunnel. */
-function runsEndpoint(runs: { status: string }[]): typeof fetch {
-  return () => Promise.resolve(new Response(JSON.stringify(runs)));
+  return script.includes("OTOMAT_REMOTE:STOPPED") ? "stop" : "deploy";
 }
 
 interface UpgradeRun {
-  result: Promise<ExecutionHostOperationResult>;
+  result: Promise<RemoteUpdateResult>;
   steps: Step[];
+  phases: string[];
   session: FakeRemoteSession;
 }
 
@@ -49,11 +50,11 @@ function upgrade(
   overrides: {
     replies?: Partial<Record<Step, SshScriptResult>>;
     session?: FakeRemoteSessionOptions;
-    runs?: { status: string }[];
-    fetchImpl?: typeof fetch;
+    deployment?: RemoteDeployment;
   } = {},
 ): UpgradeRun {
   const steps: Step[] = [];
+  const phases: string[] = [];
   const session = new FakeRemoteSession(overrides.session ?? UPGRADED);
   const runScript = (options: RunSshScriptOptions): Promise<SshScriptResult> => {
     const step = classify(options.script);
@@ -62,20 +63,20 @@ function upgrade(
   };
   const result = upgradeRemoteDaemon({
     alias: "otomat-vps",
-    deployment: LOCAL_DEPLOYMENT,
+    deployment: overrides.deployment ?? LOCAL_DEPLOYMENT,
     build: BUILD,
     repo: "alimtunc/otomat",
     session,
     runScript,
-    fetchImpl: overrides.fetchImpl ?? runsEndpoint(overrides.runs ?? []),
+    onVerifying: () => phases.push("verifying"),
     log: () => {},
   });
-  return { result, steps, session };
+  return { result, steps, phases, session };
 }
 
 /** The prose a failure carries; the tests read it because it is what the user acts on. */
-function messageOf(result: ExecutionHostOperationResult): string {
-  if (!("message" in result)) throw new Error("The result carries no message.");
+function messageOf(result: RemoteUpdateResult): string {
+  if (result.ok) throw new Error("The result carries no message.");
   return result.message;
 }
 
@@ -86,21 +87,24 @@ describe("upgradeRemoteDaemon", () => {
     expect(await run.result).toEqual({ ok: true });
     expect(run.steps).toEqual(["backup", "deploy"]);
     expect(run.session.refreshes).toBe(1);
+    expect(run.phases).toEqual(["verifying"]);
   });
 
-  it("never touches a daemon with a run in flight", async () => {
-    const run = upgrade({ runs: [{ status: "awaiting_permission" }] });
+  it("skips the database backup on a deployment whose data does not outlive its build", async () => {
+    const run = upgrade({ deployment: instanceDeployment(BUILD) });
 
-    expect((await run.result).ok).toBe(false);
-    expect(run.steps).toEqual([]);
+    expect(await run.result).toEqual({ ok: true });
+    expect(run.steps).toEqual(["stop", "deploy"]);
+    expect(run.session.refreshes).toBe(1);
   });
 
-  it("treats a daemon that does not answer as busy, never as idle", async () => {
-    const unreachable: typeof fetch = () => Promise.reject(new Error("ECONNREFUSED"));
-    const run = upgrade({ fetchImpl: unreachable });
+  // A checkout drives the same `~/.otomat` as the stable app, so it takes the same protected path:
+  // the deployment decides, never the channel that picked it.
+  it("backs up rather than bare-deploys when a dev checkout targets the stable deployment", async () => {
+    const run = upgrade({ deployment: deploymentForChannel("dev", null) });
 
-    expect((await run.result).ok).toBe(false);
-    expect(run.steps).toEqual([]);
+    expect(await run.result).toEqual({ ok: true });
+    expect(run.steps).toEqual(["backup", "deploy"]);
   });
 
   it("refuses to touch a deployed daemon it cannot reach", async () => {

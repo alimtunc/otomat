@@ -1,4 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { useRemoteSession } from "@web/components/shell/remote-session/context";
 import type { ReactNode } from "react";
 
 import { StaleNotice } from "./stale-notice";
@@ -15,7 +16,8 @@ interface QueryBoundaryProps<T> {
 /**
  * The pending → error → data ladder every single-value query boundary shares; `QueryList` is the
  * list-shaped sibling. Data retained from a previous fetch outlives a failed refresh: it renders
- * under a stale notice with Retry instead of the blocking error slot.
+ * under a stale notice with Retry instead of the blocking error slot. A query that failed only
+ * because its host is still settling stays pending: the shell already says what it is waiting for.
  */
 export function QueryBoundary<T>({
   query,
@@ -24,7 +26,8 @@ export function QueryBoundary<T>({
   staleData = "keep",
   children,
 }: QueryBoundaryProps<T>) {
-  if (query.data === undefined) return query.isError ? error : pending;
+  const { settling } = useRemoteSession();
+  if (query.data === undefined) return query.isError && !settling ? error : pending;
   if (query.isError && staleData === "block") return error;
   return (
     <>

@@ -1,7 +1,6 @@
 import { toast, type ProjectSummary } from "@otomat/ui";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useProjects } from "@web/api/daemon/queries";
-import { describeRemoteStatus } from "@web/components/settings/execution-host/status-labels";
 import {
   parseProjectSwitcherKey,
   projectSwitcherKey,
@@ -11,6 +10,7 @@ import {
   writeSelectedProjectId,
 } from "@web/components/shell/project-selection/selection";
 import { useProjectSelection } from "@web/components/shell/project-selection/use-selection";
+import { describeOperationFailure } from "@web/components/shell/remote-session/status-labels";
 import { useHostProjects } from "@web/components/shell/use-host-projects";
 import { desktopBridge, remoteHostAlias } from "@web/lib/desktop-bridge";
 import { isProjectScopedDetail } from "@web/lib/project-navigation";
@@ -88,7 +88,7 @@ export function useProjectSwitcher() {
           result.status.phase === "error" &&
           result.status.code === "switch_in_progress";
         if (!concurrent && previous !== undefined) writeSelectedProjectId(previous);
-        toast.error("message" in result ? result.message : describeRemoteStatus(result.status));
+        toast.error(describeOperationFailure(result));
       })
       .catch((error: unknown) => {
         if (previous !== undefined) writeSelectedProjectId(previous);

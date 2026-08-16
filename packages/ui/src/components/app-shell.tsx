@@ -25,6 +25,8 @@ export interface AppShellProps {
   children: ReactNode;
   rightPanel?: ReactNode;
   connectionState?: ConnectionState;
+  /** What the shell is waiting for while reconnecting, when it knows; the generic label otherwise. */
+  connectionLabel?: string;
   density?: Density;
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
@@ -40,6 +42,7 @@ export function AppShell({
   children,
   rightPanel,
   connectionState = "online",
+  connectionLabel,
   density = "compact",
   collapsed: collapsedProp,
   onCollapsedChange,
@@ -84,7 +87,9 @@ export function AppShell({
   const content = (
     <main className="flex h-full min-h-0 min-w-0 flex-col bg-background">
       {topbar}
-      {connectionState === "reconnecting" ? <ReconnectingBar /> : null}
+      {connectionState === "reconnecting" ? (
+        <ReconnectingBar {...(connectionLabel === undefined ? {} : { label: connectionLabel })} />
+      ) : null}
       {connectionState === "offline" ? <OfflineBanner /> : null}
       <div className="min-h-0 flex-1 overflow-hidden">
         {rightPanel ? (

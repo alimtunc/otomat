@@ -80,15 +80,11 @@ checkout drives `~/.otomat` on purpose: exercising the real deployment is what a
 and it takes the same protected upgrade path the stable app does on that deployment.
 
 Updates: the daemon dist bakes its git commit in at build time and reports it
-from `/api/health`; the desktop compares it to the build it expects and warns in
-Settings on a mismatch. After the files are redeployed, the desktop restarts the
-stale daemon **automatically once it has no active runs** — never with work in
-flight — so the only manual step is the redeploy itself. (The idle check runs
-just before the stop; a resume racing it inside that window can still be cut
-and is settled honestly at the daemon's next boot.) While the active host's
-daemon is stale, the cockpit **pauses new run launches** (existing runs keep
-working and stay resumable): launching would starve the idle restart and speak a
-newer API than the old daemon knows.
+from `/api/health`; the desktop compares it to the build it expects and, on a
+mismatch, **installs that exact build itself** — no Settings visit, no manual
+deploy. While the active host's daemon is stale, the cockpit **pauses new run
+launches** (existing runs keep working and stay resumable): launching would
+delay the update indefinitely and speak a newer API than the old daemon knows.
 
 Deploying the daemon onto the host (from a checkout, on the host or any
 same-arch Linux):
@@ -126,45 +122,88 @@ The tarball's files own their inodes, so the hardlink `find` pass above does not
 apply. The artifact is only a file — nothing starts a daemon from it, and the
 idle restart above applies unchanged.
 
-## Upgrading a deployment that keeps its data
+## One journey: connect, check the build, install it
 
-On `~/.otomat` and `~/.otomat/local` — the deployments `stable`, `dev` and `local` drive — the
-deploy button in *Settings → Execution hosts* upgrades the deployment the app is attached to
-instead of replacing it: the database in it has to survive. The deployment decides, not the
-channel that picked it (`keepsDataAcrossBuilds` in `bootstrap/scripts.ts`), so a checkout cannot
-swap a bundle under the daemon real work runs on just by being a checkout.
-`remote/upgrade/daemon.ts` runs the whole sequence and refuses the moment a step is not certain:
+A host reaches `connected` and its build is checked in the same state machine, because installing a
+daemon stops and restarts the tunnel: split in two, a normal upgrade would read as a lost host.
+`RemoteHostStatus` is that machine — `checking_host → starting_daemon → opening_tunnel`, then
+`checking_version → waiting_for_runs → installing_update → verifying_update`, then `connected` —
+and `ExecutionHostManager.remoteStatus` composes it from one place: the update owns the status while
+it runs, the session speaks for itself otherwise.
+
+`upgrade/coordinator.ts` drives the daemon half from **every** `connected` transition, so a client
+closed mid-wait picks the journey back up on its next launch, and nothing has to be scheduled:
+
+1. **Compare** the build `/api/health` reported against the one this app expects. Equal, unstamped,
+   or already attempted and failed: nothing happens.
+2. **Wait** while `/api/runs` reports work in flight, saying how many runs it is holding for and
+   re-checking every 15s. Busy, refusing, unreadable and unreachable all count as "not idle" — an
+   absent answer is never taken for an empty one. Meanwhile the cockpit refuses new launches, so the
+   queue drains instead of postponing the update forever. No run is ever interrupted.
+3. **Install** through `upgrade/daemon.ts` (below), which is also what the manual command runs.
+4. **Fail once, loudly.** A failed install keeps its exact reason against the build that stayed
+   running, and is never retried automatically for that build: retrying a missing artifact on a
+   timer would only hide it. The reason rides on the host snapshot as `remote_update_error`, and
+   *Settings → Execution hosts* shows it with an **Install &lt;build&gt; now** button — the retry for
+   a cause the user has fixed (a re-run CI job, an authenticated `gh`), not the nominal path.
+
+`remote/upgrade/daemon.ts` is the one install protocol, for every deployment, and refuses the moment
+a step is not certain. Its caller owns the idle gate: it stops whatever is running.
 
 0. **Is there a daemon at all?** When the session is not connected, one script looks for the
    deployment's entry file — it starts, stops and reads nothing else. Only an answer that says
    *absent* licenses a plain first install (nothing to stop, no database of ours to protect, the
    same provisioning a preview instance gets). *Present*, or a host that cannot say, is refused.
-1. **No run in flight.** `/api/runs` is read through the tunnel. Busy, refusing, unreadable and
-   unreachable all count as "not idle" — an absent answer is never taken for an empty one.
-2. **Stop**, by pidfile pid whose `cmdline` still proves it is that daemon.
-3. **Back up**, in the same round trip so the copy is taken from a stopped database:
+1. **Stop**, by pidfile pid whose `cmdline` still proves it is that daemon.
+2. **Back up** where the data outlives the bundle (`keepsDataAcrossBuilds`: `~/.otomat` and
+   `~/.otomat/local`), in the same round trip so the copy is taken from a stopped database:
    `otomat.db` plus any `-wal`/`-shm` into `<deployment>/backups/upgrade-<timestamp>/`, flushed with
-   `sync`. Nothing prunes it. A backup that fails ends the upgrade with the old daemon restarted.
-4. **Swap** the CI bundle in atomically, keeping the bundle it displaced as `daemon.prev`.
-5. **Migrate**, by restarting: the new daemon runs the same data-safety policy as the local one —
+   `sync`. Nothing prunes it. A backup that fails ends the upgrade with the old daemon restarted. A
+   preview instance skips this step: its data is a test bed. The deployment decides, not the channel
+   that picked it, so a checkout cannot swap a bundle under the daemon real work runs on unprotected.
+3. **Swap** the CI bundle — `otomat-daemon-<build>-linux-x64`, found by name through the host's own
+   authenticated `gh` — in atomically, keeping the bundle it displaced as `daemon.prev`.
+4. **Migrate**, by restarting: the new daemon runs the same data-safety policy as the local one —
    pre-migration backup, then a refusal rather than a partial schema.
-6. **Verify**: `connected` again, and `/api/health` naming the build that was just installed.
-7. **Roll back** otherwise: `daemon.prev` goes back (the bundle that failed is kept as
+5. **Verify**: `connected` again, and `/api/health` naming the build that was just installed.
+6. **Roll back** otherwise: `daemon.prev` goes back (the bundle that failed is kept as
    `daemon.failed` for a support bundle), the session reconnects to it, and the failure names the
-   backup path. Every failure after step 2 leaves a running daemon.
+   backup path. Every failure after step 1 leaves a running daemon.
 
-A preview instance is provisioned rather than upgraded: its data is a test bed, so the deploy only
-installs the bundle and the instance's next connect boots it.
+## A startup that stays quiet
+
+Establishing a remote session takes 20–30 seconds, and an update adds a restart to it. Nothing in
+that window is a failure, so nothing renders as one. `isRemoteHostSettling` (in the domain, beside
+the phases) is the single predicate: while it holds, the cockpit keeps the cache it already has,
+`QueryBoundary`/`QueryList` stay on their pending slot instead of mounting a generic error, and the
+shell shows a compact progress line — *Connecting to otomat-vps…*, *Checking the daemon version…*,
+*Installing the daemon update…*, *Restarting and verifying the daemon…* — instead of `Offline`.
+
+`waiting_for_runs` is the one journey phase the predicate leaves out, because it is the one where
+nothing is coming up: the tunnel serves the cockpit throughout it, and it lasts as long as the runs
+do. Holding every query on its pending slot for that long would hide real failures, so the wait is
+reported where it is actionable instead — *Update waiting on 2 runs…* in the update panel, and the
+paused-launch panel.
+
+A real offline state is only reached after a terminal failure. The session's reconnect loop keeps
+running past its schedule, but once the schedule is exhausted (1s→15s, five attempts) it reports the
+coded error instead of another "reconnecting", and stops flickering progress over it: a host that
+will never come up says why, with its diagnostics and a Retry, rather than spinning forever.
+
+Runs are never the price of any of this. A remote run does not depend on the client once started, so
+closing the app leaves it running, an update waits for it, and reopening finds it again. That is
+said where it is relevant — the connection popover, the update panel, the paused-launch panel — and
+never as a quit confirmation, because closing the app destroys nothing.
 
 ## Test instances
 
 A packaged preview build never touches `~/.otomat` or `~/.otomat/local`: it targets its own
 deployment under `~/.otomat/instances/<sha7>/` — keyed by the build it expects,
 `unknown` for an unidentifiable one — with a port derived from the same key
-(`instanceDeployment` in `bootstrap/scripts.ts`). The entire connect machinery
-(start-or-verify, tunnel, stale refresh) applies unchanged to that deployment,
-so testing an artifact runs beside the daemon real work runs on, never inside
-it.
+(`instanceDeployment` in `bootstrap/scripts.ts`). The entire journey above
+(start-or-verify, tunnel, version check, install) applies unchanged to that
+deployment, so testing an artifact runs beside the daemon real work runs on,
+never inside it.
 
 An instance also gets the preview's sandbox: on the first connect, the desktop
 creates the same fixture repository as the local sandbox **inside the instance
@@ -179,12 +218,10 @@ removes every trace of that build from the host in one action.
 
 *Settings → Execution hosts → Deployments on this host* lists the instances
 (build, running state, port, size) with explicit **Stop** and **Delete**
-actions, and a deploy button that installs the CI bundle for the app's own
-build onto its own target: in a preview it provisions or refreshes the
-instance and nothing is started, on a deployment that keeps its data it runs
-the in-place upgrade above. The deploy runs `gh` on the host — already
-authenticated there — so no artifact ever transits the desktop, and nothing on
-this panel runs on a timer.
+actions. Installing a build is not one of them: that is the *Daemon build*
+panel above, on whichever deployment this app drives. The install runs `gh` on
+the host — already authenticated there — so no artifact ever transits the
+desktop.
 
 ## Linear across hosts
 
@@ -236,20 +273,22 @@ Everything lives in `apps/desktop/src/main/remote/`:
 | `ssh/config-aliases.ts`  | concrete `Host` alias suggestions from `~/.ssh/config`               |
 | `ssh/script.ts`          | one-shot remote scripts over `ssh <alias> bash -ls` (script on stdin)|
 | `bootstrap/scripts.ts`   | the start-or-verify and stop scripts, `deploymentForChannel` (which home + port a channel drives) and `keepsDataAcrossBuilds` (which of them an update must protect) |
-| `idle.ts`                | the one idle predicate every stop goes through; unreachable is never idle |
+| `idle.ts`                | the one read of the runs in flight every stop goes through; an unreadable answer is never zero |
 | `deploy.ts`              | the one CI-bundle install both the preview deploy and the in-place upgrade run; starts nothing |
 | `bootstrap/status.ts`    | resolving one start-or-verify round trip into a typed failure or the running-daemon detail |
 | `ssh/tunnel.ts`          | the `ssh -N -L` child (loopback→loopback, `ExitOnForwardFailure`)    |
-| `session.ts`             | phase machine: checking_host → starting_daemon → opening_tunnel → connected, reconnect loop with capped backoff |
+| `session.ts`             | the transport half of the phase machine: checking_host → starting_daemon → opening_tunnel → connected |
+| `reconnect.ts`           | the capped backoff, and the attempt at which a retrying session names its failure instead |
 | `host/projects.ts`       | `HostCatalog`: aggregated per-host catalog listing + project registration over the host daemon's HTTP API; an unreachable host yields null, logged |
 | `host/alias.ts`          | ssh alias validation (one concrete word, never a leading `-`) and the alias listing that degrades to empty when `~/.ssh/config` cannot be read |
 | `host/repos.ts`          | the bounded `$HOME` git-repository walk behind the remote picker; a listing counts only with its END token |
-| `manager.ts`             | persisted selection, project-driven switching, boot re-activation, host configure/remove |
-| `stale-daemon.ts`        | restarts a redeployed-but-stale remote daemon once it is idle (never with a run in flight; one attempt per observed build) |
+| `manager.ts`             | persisted selection, project-driven switching, boot re-activation, host configure/remove, and the one composition of session + update into the host's status |
+| `host/snapshot.ts`       | the host list and remote standing every surface reads, including the not-ready shell's |
+| `upgrade/coordinator.ts` | the update half of the journey: version check, idle wait with its run count, install, one automatic attempt per stale build |
 | `instances/scripts.ts`   | deploy/list/delete scripts for `~/.otomat/instances`; a listing counts only with its END token |
-| `instances/actions.ts`   | one-shot list/stop/delete/deploy actions; keys regex-validated before any interpolation, never on a timer |
+| `instances/actions.ts`   | one-shot list/stop/delete actions; keys regex-validated before any interpolation, never on a timer |
 | `upgrade/scripts.ts`     | the pre-upgrade database backup and the bundle rollback, with their parsers |
-| `upgrade/daemon.ts`      | the in-place upgrade of a `local` or `stable` deployment, end to end |
+| `upgrade/daemon.ts`      | the one install protocol — stop, backup where the data outlives the bundle, swap, restart, verify, roll back |
 | `ipc-actions.ts`         | renderer-facing IPC actions with honest not-ready fallbacks          |
 
 `connected` is declared only after a schema-valid `/api/health` response came
@@ -260,12 +299,15 @@ that keeps trying until the user acts or the app quits.
 
 The renderer learns the active host synchronously at preload
 (`window.otomat.executionHostId` / `executionHostSshAlias`) and the daemon URL
-is simply the tunnel's local origin, so the web app's existing health polling,
-offline banner, and SSE resume behave identically for both hosts. Hosts are
-managed in Settings → Execution hosts (alias only — the active host follows the
-project picked in the switcher); the repository form lists the host's own
-repositories and keeps a path field (the native folder picker is local-only and
-hidden).
+is simply the tunnel's local origin, so the web app's health polling and SSE
+resume behave identically for both hosts. What the host status adds is
+knowing when a failed poll is only a bootstrap: `RemoteSessionProvider`
+(`apps/web/src/components/shell/remote-session/`) holds the single subscription
+to it, and every surface reads that one state — the shell's connection line, the
+query boundaries, the launch gate, Settings. Hosts are managed in Settings →
+Execution hosts (alias only — the active host follows the project picked in the
+switcher); the repository form lists the host's own repositories and keeps a
+path field (the native folder picker is local-only and hidden).
 
 ## Known V1 limits
 

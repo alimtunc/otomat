@@ -15,10 +15,8 @@ afterEach(async () => {
   delete window.otomat;
 });
 
-async function renderPanel(expectedBuild: string | null = "92584b0") {
-  const mounted = await mountWithQuery(
-    <InstancesPanel sshAlias="otomat-vps" expectedBuild={expectedBuild} remoteBuild={null} />,
-  );
+async function renderPanel() {
+  const mounted = await mountWithQuery(<InstancesPanel sshAlias="otomat-vps" />);
   cleanups.push(mounted.cleanup);
 }
 
@@ -48,26 +46,12 @@ it("lists instances with stop and delete controls", async () => {
   expect(deleteInstance).toHaveBeenCalledWith("92584b0");
 });
 
-it("deploys this app's build through the bridge", async () => {
-  const updateRemoteDaemon = vi.fn(() => Promise.resolve({ ok: true as const }));
-  window.otomat = fakeDesktopBridge();
-  window.otomat.executionHost.updateRemoteDaemon = updateRemoteDaemon;
-
-  await renderPanel();
-  await act(async () => {
-    findButton("Deploy 92584b0 to this host")?.click();
-  });
-
-  expect(updateRemoteDaemon).toHaveBeenCalledOnce();
-});
-
-it("disables the deploy when the build is unidentifiable and surfaces list failures", async () => {
+it("surfaces a listing failure instead of an empty host", async () => {
   window.otomat = fakeDesktopBridge();
   window.otomat.executionHost.listInstances = () =>
     Promise.resolve({ ok: false as const, message: "ssh unreachable" });
 
-  await renderPanel(null);
+  await renderPanel();
 
-  expect(findButton("Deploy this build to this host")?.disabled).toBe(true);
   expect(document.body.textContent).toContain("ssh unreachable");
 });
