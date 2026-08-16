@@ -1,5 +1,4 @@
-import { projectIssuePrimaryState } from "@otomat/domain";
-import { FOCUS_RING, IssueStatusChip } from "@otomat/ui";
+import { FOCUS_RING } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { CountBadge } from "@web/components/issues/count-badge";
 import { issueShortId, shortId } from "@web/lib/ids";
@@ -33,9 +32,6 @@ export function RunIssueGroupSection({ group, columnCount, children }: RunIssueG
                   {issue === null ? "Issue not loaded" : issue.title}
                 </span>
               </Link>
-              {issue === null ? null : (
-                <IssueStatusChip status={projectIssuePrimaryState(issue).state} />
-              )}
               <CountBadge count={group.runs.length} tone="neutral" />
             </div>
           </th>
