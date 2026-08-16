@@ -14,7 +14,12 @@ import {
   type StartRunRequest,
 } from "@otomat/domain";
 
-import { resolveAgentConfig, type AgentConfigOverrides, type AgentConfigSelector } from "#agents";
+import {
+  nodeAgentSelector,
+  resolveAgentConfig,
+  type AgentConfigOverrides,
+  type AgentConfigSelector,
+} from "#agents";
 import type { ContextFreezer } from "#context";
 
 const STEP_NAME = "Agent turn";
@@ -62,16 +67,6 @@ function launchLevels(runDefault: RunDefaultConfig): ExecutionLevel[] {
 /** One launch level, so the run default and a node read the same hierarchy. */
 export function runDefaultOverrides(runDefault: RunDefaultConfig): AgentConfigOverrides {
   return { levels: launchLevels(runDefault), runtimeSource: runDefault.runtimeSource };
-}
-
-/** A per-node selector: its own profile, its own ad-hoc runtime, or `null` to inherit the run default. */
-function nodeSelector(node: {
-  agent: string | null;
-  profile_id?: string | null;
-}): AgentConfigSelector | null {
-  if (node.profile_id) return { kind: "profile", profileId: node.profile_id };
-  if (node.agent) return { kind: "runtime", runtimeId: node.agent };
-  return null;
 }
 
 function modelKey(level: ExecutionLevel): string {
@@ -149,7 +144,7 @@ export function resolvePlanConfigs(
     configFor,
     runtimes: [
       defaultConfig.runtime,
-      ...executable.map((node) => configFor(nodeSelector(node), node).runtime),
+      ...executable.map((node) => configFor(nodeAgentSelector(node), node).runtime),
     ],
   };
 }
@@ -167,7 +162,7 @@ function freezeNode(
       name: node.name,
       depends_on: dependencies,
       compete: node.compete.map((competitor) => {
-        const config = configFor(nodeSelector(competitor), competitor);
+        const config = configFor(nodeAgentSelector(competitor), competitor);
         return {
           id: mappedStepId(idByRequestId, competitor.id),
           name: competitor.name,
@@ -179,7 +174,7 @@ function freezeNode(
       }),
     };
   }
-  const config = configFor(nodeSelector(node), node);
+  const config = configFor(nodeAgentSelector(node), node);
   return {
     id: mappedStepId(idByRequestId, node.id),
     name: node.name,

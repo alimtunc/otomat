@@ -1,5 +1,11 @@
 import { zValidator } from "@hono/zod-validator";
-import { getRun, type Db, type RunRow } from "@otomat/db";
+import {
+  getRun,
+  getWorkflowPreset,
+  type Db,
+  type RunRow,
+  type WorkflowPresetRow,
+} from "@otomat/db";
 import { createMiddleware } from "hono/factory";
 import type { ZodType } from "zod";
 
@@ -12,6 +18,22 @@ export function runGuard(db: Db) {
     const run = getRun(db, c.req.param("id") ?? "");
     if (!run) return c.json({ error: "run_not_found" }, 404);
     c.set("run", run);
+    await next();
+  });
+}
+
+/** Hono env for the `/:id` preset routes: {@link workflowPresetGuard} resolves `c.var.preset`. */
+export type WorkflowPresetEnv = { Variables: { preset: WorkflowPresetRow } };
+
+/** Resolves the `/:id` param to its preset row, or short-circuits with a 404 `preset_not_found`. */
+export function workflowPresetGuard(db: Db) {
+  return createMiddleware<WorkflowPresetEnv>(async (c, next) => {
+    const id = c.req.param("id") ?? "";
+    const preset = getWorkflowPreset(db, id);
+    if (!preset) {
+      return c.json({ error: "preset_not_found", message: `workflow preset ${id} not found` }, 404);
+    }
+    c.set("preset", preset);
     await next();
   });
 }

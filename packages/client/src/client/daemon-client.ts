@@ -12,6 +12,7 @@ import { createPullRequestsClient } from "./pull-requests.js";
 import { createReviewsClient } from "./reviews.js";
 import { createRunsClient } from "./runs.js";
 import { createSystemClient } from "./system.js";
+import { createWorkflowPresetsClient } from "./workflow-presets.js";
 import { createWorkspaceClient } from "./workspace.js";
 
 export function createDaemonClient(config: DaemonClientConfig = {}) {
@@ -25,6 +26,7 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
     ...createRunsClient(config),
     ...createReviewsClient(config),
     ...createPullRequestsClient(config),
+    ...createWorkflowPresetsClient(config),
     subscribeRunEvents(runId: string, handlers: RunEventsHandlers): RunEventsSubscription {
       return subscribeRunEvents(config, runId, handlers);
     },

@@ -78,7 +78,9 @@ export function WorkflowLaunchForm({
     baseBranch: worktreeTarget.baseBranch,
     onLaunched,
   });
-  const { form, isPending } = workflow;
+  const { form, plan, isPending } = workflow;
+  const composed =
+    launchExecution.canLaunch && plan.steps.length > 0 && plan.steps.every(isWorkflowNodeComplete);
 
   return (
     <form
@@ -101,20 +103,14 @@ export function WorkflowLaunchForm({
       <IssueFormFooter
         onCancel={onCancel}
         submit={
-          <form.Subscribe
-            selector={(state) =>
-              (target.kind === "issue" || hasText(state.values.goal)) &&
-              state.values.steps.length > 0 &&
-              state.values.steps.every(isWorkflowNodeComplete)
-            }
-          >
-            {(filled) => (
+          <form.Subscribe selector={(state) => state.values.goal}>
+            {(goal) => (
               <Button
                 type="submit"
                 variant="primary"
                 size="sm"
                 loading={isPending}
-                disabled={!(filled && launchExecution.canLaunch && !isPending)}
+                disabled={!(composed && (target.kind === "issue" || hasText(goal)) && !isPending)}
               >
                 Launch workflow
                 <Kbd tone="on-accent">⌘↵</Kbd>

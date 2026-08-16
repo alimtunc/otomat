@@ -26,4 +26,5 @@ export * from "./runs.js";
 export * from "./skills.js";
 export * from "./step-runs.js";
 export * from "./sync-state.js";
+export * from "./workflow-presets.js";
 export * from "./workspace-removal.js";

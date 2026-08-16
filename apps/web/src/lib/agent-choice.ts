@@ -43,6 +43,15 @@ export function agentChoiceToRequest(choice: string | null): AgentRequestFields 
   return decoded.kind === "profile" ? { profile_id: decoded.id } : { runtime: decoded.id };
 }
 
+/** The inverse of {@link agentChoiceToRequest}: the choice a saved plan or preset node encodes. */
+export function nodeAgentChoice(node: {
+  agent: string | null;
+  profile_id?: string | null;
+}): string | null {
+  if (node.profile_id) return encodeProfileChoice(node.profile_id);
+  return node.agent === null ? null : encodeRuntimeChoice(node.agent);
+}
+
 /** The saved profile a choice resolves to; null for an ad-hoc runtime, an inherit choice, or a profile that no longer exists. */
 export function agentChoiceProfile(
   choice: string | null,

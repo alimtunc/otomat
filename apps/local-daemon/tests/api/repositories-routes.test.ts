@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { getIssue, getRun, listProjects, listRepositories } from "@otomat/db";
+import { getIssue, getRun, getWorkflowPreset, listProjects, listRepositories } from "@otomat/db";
 import {
   projectContractSchema,
   registerRepositoryResponseSchema,
@@ -279,6 +279,30 @@ it("deletes an idle repository with its runs and owning project", async () => {
   expect(registeredProjects()).toHaveLength(0);
   expect(getRun(t.db, "r-del")).toBeUndefined();
   expect(getIssue(t.db, "i1")).toBeDefined();
+});
+
+it("removes the project's workflow presets with its last repository", async () => {
+  const app = makeApiApp(t);
+  const created = await registerRepo(app, repo.root);
+  const scoped = await json<{ id: string }>(
+    await post(app, "/api/workflow-presets", {
+      scope: "project",
+      project_id: created.project.id,
+      name: "Ship it",
+      plan: { version: 1, steps: [] },
+    }),
+  );
+  const global = await json<{ id: string }>(
+    await post(app, "/api/workflow-presets", {
+      scope: "global",
+      name: "Everywhere",
+      plan: { version: 1, steps: [] },
+    }),
+  );
+
+  expect((await del(app, `/api/repositories/${created.repository.id}`)).status).toBe(204);
+  expect(getWorkflowPreset(t.db, scoped.id)).toBeUndefined();
+  expect(getWorkflowPreset(t.db, global.id)).toBeDefined();
 });
 
 it("refuses to delete a repository while one of its runs is active", async () => {

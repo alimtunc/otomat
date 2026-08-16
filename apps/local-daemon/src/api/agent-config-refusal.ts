@@ -1,8 +1,6 @@
 import type { AgentProfileError } from "@otomat/domain";
-import type { Context, Env } from "hono";
 
-import { ProfileNotFoundError, ProfileOptionUnsupportedError, SkillResolutionError } from "#agents";
-import { ModelSelectionRefusedError, UnknownRuntimeError } from "#runtime";
+import { agentConfigRefusal } from "#agents";
 
 export interface AgentConfigErrorResponse {
   status: 400 | 404 | 409;
@@ -10,30 +8,19 @@ export interface AgentConfigErrorResponse {
   message: string;
 }
 
-export function refusalJson<E extends Env>(c: Context<E>, refusal: AgentConfigErrorResponse) {
-  return c.json({ error: refusal.error, message: refusal.message }, refusal.status);
-}
+/** Exhaustive by type: a new refusal code cannot ship without an HTTP answer. */
+const REFUSAL_STATUS: Record<AgentProfileError, AgentConfigErrorResponse["status"]> = {
+  profile_not_found: 404,
+  runtime_unknown: 400,
+  runtime_unavailable: 409,
+  option_unsupported: 400,
+  model_unknown: 400,
+  skill_unknown: 400,
+  skill_unavailable: 409,
+};
 
 /** Maps a profile/skill/runtime resolution error to an honest HTTP refusal, or null when it is not one of ours. */
 export function agentConfigErrorResponse(error: unknown): AgentConfigErrorResponse | null {
-  if (error instanceof ProfileNotFoundError) {
-    return { status: 404, error: "profile_not_found", message: error.message };
-  }
-  if (error instanceof UnknownRuntimeError) {
-    return { status: 400, error: "runtime_unknown", message: error.message };
-  }
-  if (error instanceof ProfileOptionUnsupportedError) {
-    return { status: 400, error: "option_unsupported", message: error.message };
-  }
-  if (error instanceof ModelSelectionRefusedError) {
-    return { status: 400, error: error.code, message: error.message };
-  }
-  if (error instanceof SkillResolutionError) {
-    return {
-      status: error.code === "skill_unknown" ? 400 : 409,
-      error: error.code,
-      message: error.message,
-    };
-  }
-  return null;
+  const refusal = agentConfigRefusal(error);
+  return refusal === null ? null : { status: REFUSAL_STATUS[refusal.error], ...refusal };
 }

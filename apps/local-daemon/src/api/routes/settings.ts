@@ -4,9 +4,10 @@ import { Hono } from "hono";
 
 import { validateExecutionDefaults } from "#agents";
 
-import { agentConfigErrorResponse, refusalJson } from "../agent-config-refusal.js";
+import { agentConfigErrorResponse } from "../agent-config-refusal.js";
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";
+import { refusalJson } from "../refusal.js";
 
 /** Mounted at `/api/settings`. Every execution host owns and answers for its own settings. */
 export function createSettingsRoutes(deps: ApiDeps): Hono {

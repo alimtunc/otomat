@@ -62,6 +62,10 @@ vi.mock("@web/api/agent-profiles/queries", () => ({
   useAgentProfiles: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
 }));
 
+vi.mock("@web/api/workflow-presets/queries", () => ({
+  useWorkflowPresets: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
+}));
+
 vi.mock("@web/api/skills/queries", () => ({
   useSkills: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
 }));

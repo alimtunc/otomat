@@ -16,10 +16,11 @@ import { Hono, type Context } from "hono";
 
 import { ProfileNotFoundError, validateProfileInput } from "#agents";
 
-import { agentConfigErrorResponse, refusalJson } from "../agent-config-refusal.js";
+import { agentConfigErrorResponse } from "../agent-config-refusal.js";
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";
 import { readAgentProfile, readAgentProfiles } from "../reads.js";
+import { refusalJson } from "../refusal.js";
 
 const COPY_SUFFIX = " (copy)";
 

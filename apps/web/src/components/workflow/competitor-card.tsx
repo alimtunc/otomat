@@ -1,43 +1,39 @@
-import { Field, FieldControl, Icon, IconButton, Input } from "@otomat/ui";
-import { ContextComposer } from "@web/components/context/context-composer";
+import { Icon, IconButton } from "@otomat/ui";
 import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
-import type { LaunchExecution } from "@web/components/execution/use-launch-execution";
-import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
-import { competitorLabel, type WorkflowNodeDraft } from "@web/lib/workflow-draft";
+import { WorkflowNameField } from "@web/components/workflow/name-field";
+import { WorkflowNodeContext } from "@web/components/workflow/node-context";
+import type { WorkflowPlanExecution } from "@web/components/workflow/plan-execution";
+import type { PlanDraft } from "@web/components/workflow/use-plan-draft";
+import { requiredTrimmed } from "@web/lib/form";
+import { competitorLabel } from "@web/lib/workflow-draft";
 import {
   removeWorkflowCompetitor,
   setWorkflowCompetitorContext,
   setWorkflowCompetitorExecution,
 } from "@web/lib/workflow/competitors";
-
-import { targetContextScope, type WorkflowLaunchTarget } from "./launch-target";
-import type { WorkflowForm } from "./use-form";
+import type { WorkflowContextScope } from "@web/lib/workflow/context-scope";
 
 export interface WorkflowCompetitorCardProps {
-  form: WorkflowForm;
-  steps: WorkflowNodeDraft[];
+  plan: PlanDraft;
   groupIndex: number;
   competitorIndex: number;
-  execution: LaunchExecution;
-  target: WorkflowLaunchTarget;
-  onUpdateSteps: (update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) => void;
+  execution: WorkflowPlanExecution;
+  contextScope: WorkflowContextScope | null;
 }
 
 export function WorkflowCompetitorCard({
-  form,
-  steps,
+  plan,
   groupIndex,
   competitorIndex,
   execution,
-  target,
-  onUpdateSteps,
+  contextScope,
 }: WorkflowCompetitorCardProps) {
+  const { form, steps, setSteps } = plan;
   const group = steps[groupIndex];
   if (!group || group.kind !== "compete") return null;
   const competitor = group.competitors[competitorIndex];
   if (!competitor) return null;
   const label = competitorLabel(competitorIndex);
-  const scope = targetContextScope(target);
 
   return (
     <div className="relative flex flex-col gap-2 rounded-md border border-border-subtle bg-surface-1 p-2.5 before:absolute before:-left-3 before:top-4 before:h-px before:w-3 before:bg-iris/50">
@@ -50,18 +46,7 @@ export function WorkflowCompetitorCard({
           validators={{ onChange: requiredTrimmed("Name this candidate.") }}
         >
           {(field) => (
-            <Field {...fieldErrorProps(field.state.meta)} className="flex-1">
-              <FieldControl>
-                <Input
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  placeholder="Approach name"
-                  aria-label={`${label} name`}
-                  className="h-7 text-sm"
-                />
-              </FieldControl>
-            </Field>
+            <WorkflowNameField field={field} label={`${label} name`} placeholder="Approach name" />
           )}
         </form.Field>
         <ExecutionConfigPicker
@@ -69,11 +54,11 @@ export function WorkflowCompetitorCard({
           level="step"
           value={competitor.execution}
           onChange={(next) =>
-            onUpdateSteps((value) =>
+            setSteps((value) =>
               setWorkflowCompetitorExecution(value, groupIndex, competitorIndex, next),
             )
           }
-          inherited={execution.selection}
+          inherited={execution.inherited}
           profiles={execution.agents.profiles}
           descriptors={execution.agents.descriptors}
           label={label}
@@ -85,21 +70,19 @@ export function WorkflowCompetitorCard({
           icon={<Icon name="x" aria-hidden />}
           disabled={group.competitors.length <= 2}
           onClick={() =>
-            onUpdateSteps((value) => removeWorkflowCompetitor(value, groupIndex, competitorIndex))
+            setSteps((value) => removeWorkflowCompetitor(value, groupIndex, competitorIndex))
           }
         />
       </div>
-      <ContextComposer
-        issue={scope.issue}
-        projectId={scope.projectId}
+      <WorkflowNodeContext
+        scope={contextScope}
         value={competitor.context}
         onChange={(next) =>
-          onUpdateSteps((value) =>
+          setSteps((value) =>
             setWorkflowCompetitorContext(value, groupIndex, competitorIndex, next),
           )
         }
         label={label}
-        noteRows={2}
       />
     </div>
   );

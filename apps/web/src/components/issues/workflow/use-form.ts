@@ -1,14 +1,11 @@
 import { runPlanInputSchema, type RunContract } from "@otomat/domain";
 import { useForm } from "@tanstack/react-form";
 import { useLaunchRun } from "@web/api/runs/use-launch-run";
+import { usePlanDraft } from "@web/components/workflow/use-plan-draft";
 import type { ExecutionRequestFields } from "@web/lib/execution/request";
-import {
-  newWorkflowCompeteGroup,
-  newWorkflowStep,
-  type WorkflowNodeDraft,
-} from "@web/lib/workflow-draft";
+import { newWorkflowStep, type WorkflowNodeDraft } from "@web/lib/workflow-draft";
 import { buildRunPlanInput } from "@web/lib/workflow/plan-input";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import { targetRequest, type WorkflowLaunchTarget } from "./launch-target";
 
@@ -21,14 +18,13 @@ export interface UseWorkflowFormOptions {
   onLaunched: (run: RunContract) => void;
 }
 
-interface WorkflowFormValues {
-  goal: string;
+interface RejectedPlan {
+  /** The exact composition that failed, so any later edit clears the message by identity. */
   steps: WorkflowNodeDraft[];
+  message: string;
 }
 
-const WORKFLOW_DEFAULT_VALUES: WorkflowFormValues = { goal: "", steps: [newWorkflowStep(1)] };
-
-/** Owns workflow values, submit-time plan validation, and step-list mutations. */
+/** Owns the goal field, the composed plan and submit-time plan validation. */
 export function useWorkflowForm({
   target,
   execution,
@@ -37,19 +33,19 @@ export function useWorkflowForm({
   onLaunched,
 }: UseWorkflowFormOptions) {
   const { launch, isPending } = useLaunchRun();
-  const stepCounter = useRef(1);
-  const [planError, setPlanError] = useState<string | null>(null);
+  const plan = usePlanDraft(() => [newWorkflowStep(1)]);
+  const [rejected, setRejected] = useState<RejectedPlan | null>(null);
 
   const form = useForm({
-    defaultValues: WORKFLOW_DEFAULT_VALUES,
+    defaultValues: { goal: "" },
     onSubmit: async ({ value }) => {
       if (!canLaunch) return;
-      const parsed = runPlanInputSchema.safeParse(buildRunPlanInput(value.steps));
+      const parsed = runPlanInputSchema.safeParse(buildRunPlanInput(plan.steps));
       if (!parsed.success) {
-        setPlanError(parsed.error.issues[0]?.message ?? "The workflow plan is invalid.");
+        const message = parsed.error.issues[0]?.message ?? "The workflow plan is invalid.";
+        setRejected({ steps: plan.steps, message });
         return;
       }
-      setPlanError(null);
       const run = await launch({
         ...targetRequest(target, value.goal),
         base_branch: baseBranch,
@@ -58,26 +54,17 @@ export function useWorkflowForm({
       });
       if (!run) return;
       form.reset();
+      plan.setSteps([newWorkflowStep(1)]);
       onLaunched(run);
     },
   });
 
-  function updateSteps(update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) {
-    form.setFieldValue("steps", update(form.getFieldValue("steps")));
-    setPlanError(null);
-  }
-
-  function addStep() {
-    stepCounter.current += 1;
-    updateSteps((steps) => [...steps, newWorkflowStep(stepCounter.current)]);
-  }
-
-  function addCompeteGroup() {
-    stepCounter.current += 1;
-    updateSteps((steps) => [...steps, newWorkflowCompeteGroup(stepCounter.current)]);
-  }
-
-  return { form, planError, isPending, updateSteps, addStep, addCompeteGroup };
+  return {
+    form,
+    plan,
+    planError: rejected?.steps === plan.steps ? rejected.message : null,
+    isPending,
+  };
 }
 
 export type WorkflowForm = ReturnType<typeof useWorkflowForm>["form"];

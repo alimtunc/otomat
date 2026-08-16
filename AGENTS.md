@@ -92,6 +92,12 @@ on first attempts, added steps, and follow-ups alike.
   boundary (`QueryBoundary`/`QueryList`); a blocking error state is only for a
   query with no data. A mutation that returns the created entity seeds the
   caches it invalidates with that entity before invalidating them.
+- Every field a user edits belongs to a TanStack Form: `useForm` owns its value,
+  `form.Field` its validation and its touched state, `form.Subscribe` what a
+  submit control reads. `useState` holds what is not a field — a disclosure, a
+  selection, the refusal sentence a mutation came back with. Re-implementing a
+  field's value, its required message or its visited flag by hand is a defect
+  even when it renders correctly.
 - Never swallow errors. Avoid `catch {}`, `.catch(() => {})`, and optional
   chaining that hides error-created absence. Logging is not handling: an
   operation that catches a failure and still acknowledges success has swallowed

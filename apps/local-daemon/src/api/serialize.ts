@@ -12,6 +12,7 @@ import type {
   RunRow,
   SkillRow,
   StepRunRow,
+  WorkflowPresetRow,
 } from "@otomat/db";
 import { sqliteToIso } from "@otomat/db";
 import {
@@ -29,6 +30,7 @@ import {
   runContributionContractSchema,
   skillContractSchema,
   stepRunContractSchema,
+  workflowPresetContractSchema,
   type AgentProfileContract,
   type AgentSessionContract,
   type CompeteGroupContract,
@@ -45,6 +47,8 @@ import {
   type RunPlan,
   type SkillContract,
   type StepRunContract,
+  type WorkflowPresetCompatibility,
+  type WorkflowPresetContract,
   type WorktreeStatus,
 } from "@otomat/domain";
 
@@ -165,5 +169,20 @@ export function toPullRequest(row: PullRequestRow): PullRequestContract {
     published_diff_sha: row.published_diff_sha,
     error_code: row.error_code,
     error_message: row.error_message,
+  });
+}
+
+/** Compatibility is resolved against this host, so it is passed in rather than read from the row. */
+export function toWorkflowPreset(
+  row: WorkflowPresetRow,
+  compatibility: WorkflowPresetCompatibility,
+): WorkflowPresetContract {
+  return workflowPresetContractSchema.parse({
+    id: row.id,
+    name: row.name,
+    scope: row.scope,
+    project_id: row.project_id,
+    plan: row.plan_json,
+    compatibility,
   });
 }

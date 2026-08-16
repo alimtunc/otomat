@@ -28,6 +28,16 @@ export type AgentConfigSelector =
   | { kind: "profile"; profileId: string }
   | { kind: "runtime"; runtimeId: string };
 
+/** How a plan or preset node names its own agent; null inherits whatever the launch resolved. */
+export function nodeAgentSelector(node: {
+  agent: string | null;
+  profile_id?: string | null;
+}): AgentConfigSelector | null {
+  if (node.profile_id) return { kind: "profile", profileId: node.profile_id };
+  if (node.agent) return { kind: "runtime", runtimeId: node.agent };
+  return null;
+}
+
 export interface ProfileInput {
   runtime: string;
   options: ProviderOptions;
