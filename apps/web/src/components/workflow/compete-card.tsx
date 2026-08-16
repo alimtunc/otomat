@@ -1,37 +1,34 @@
 import { RUN_PLAN_MAX_STEPS } from "@otomat/domain";
-import { Button, Field, FieldControl, Icon, IconButton, Input } from "@otomat/ui";
-import type { LaunchExecution } from "@web/components/execution/use-launch-execution";
-import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
-import { workflowExecutableCount, type WorkflowNodeDraft } from "@web/lib/workflow-draft";
+import { Button, Icon, IconButton } from "@otomat/ui";
+import { WorkflowCompetitorCard } from "@web/components/workflow/competitor-card";
+import { DependencyToggles } from "@web/components/workflow/dependency-toggles";
+import { WorkflowNameField } from "@web/components/workflow/name-field";
+import type { WorkflowPlanExecution } from "@web/components/workflow/plan-execution";
+import type { PlanDraft } from "@web/components/workflow/use-plan-draft";
+import { requiredTrimmed } from "@web/lib/form";
+import { workflowExecutableCount } from "@web/lib/workflow-draft";
 import { addWorkflowCompetitor } from "@web/lib/workflow/competitors";
+import type { WorkflowContextScope } from "@web/lib/workflow/context-scope";
 import {
   moveWorkflowStep,
   removeWorkflowStep,
   toggleWorkflowDependency,
 } from "@web/lib/workflow/steps";
 
-import { WorkflowCompetitorCard } from "./competitor-card";
-import { DependencyToggles } from "./dependency-toggles";
-import type { WorkflowLaunchTarget } from "./launch-target";
-import type { WorkflowForm } from "./use-form";
-
 export interface WorkflowCompeteCardProps {
-  form: WorkflowForm;
-  steps: WorkflowNodeDraft[];
+  plan: PlanDraft;
   index: number;
-  execution: LaunchExecution;
-  target: WorkflowLaunchTarget;
-  onUpdateSteps: (update: (steps: WorkflowNodeDraft[]) => WorkflowNodeDraft[]) => void;
+  execution: WorkflowPlanExecution;
+  contextScope: WorkflowContextScope | null;
 }
 
 export function WorkflowCompeteCard({
-  form,
-  steps,
+  plan,
   index,
   execution,
-  target,
-  onUpdateSteps,
+  contextScope,
 }: WorkflowCompeteCardProps) {
+  const { form, steps, setSteps } = plan;
   const group = steps[index];
   if (!group || group.kind !== "compete") return null;
   const canAddCompetitor = workflowExecutableCount(steps) < RUN_PLAN_MAX_STEPS;
@@ -49,18 +46,11 @@ export function WorkflowCompeteCard({
           validators={{ onChange: requiredTrimmed("Name the shared objective.") }}
         >
           {(field) => (
-            <Field {...fieldErrorProps(field.state.meta)} className="flex-1">
-              <FieldControl>
-                <Input
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  placeholder="Shared objective"
-                  aria-label={`Compete group ${index + 1} objective`}
-                  className="h-7 text-sm"
-                />
-              </FieldControl>
-            </Field>
+            <WorkflowNameField
+              field={field}
+              label={`Compete group ${index + 1} objective`}
+              placeholder="Shared objective"
+            />
           )}
         </form.Field>
         <IconButton
@@ -69,7 +59,7 @@ export function WorkflowCompeteCard({
           label={`Move compete group ${index + 1} up`}
           icon={<Icon name="arrow-up" aria-hidden />}
           disabled={index === 0}
-          onClick={() => onUpdateSteps((value) => moveWorkflowStep(value, index, -1))}
+          onClick={() => setSteps((value) => moveWorkflowStep(value, index, -1))}
         />
         <IconButton
           type="button"
@@ -77,7 +67,7 @@ export function WorkflowCompeteCard({
           label={`Move compete group ${index + 1} down`}
           icon={<Icon name="arrow-down" aria-hidden />}
           disabled={index === steps.length - 1}
-          onClick={() => onUpdateSteps((value) => moveWorkflowStep(value, index, 1))}
+          onClick={() => setSteps((value) => moveWorkflowStep(value, index, 1))}
         />
         <IconButton
           type="button"
@@ -85,7 +75,7 @@ export function WorkflowCompeteCard({
           label={`Remove compete group ${index + 1}`}
           icon={<Icon name="x" aria-hidden />}
           disabled={steps.length === 1}
-          onClick={() => onUpdateSteps((value) => removeWorkflowStep(value, index))}
+          onClick={() => setSteps((value) => removeWorkflowStep(value, index))}
         />
       </div>
 
@@ -93,13 +83,11 @@ export function WorkflowCompeteCard({
         {group.competitors.map((competitor, competitorIndex) => (
           <WorkflowCompetitorCard
             key={competitor.key}
-            form={form}
-            steps={steps}
+            plan={plan}
             groupIndex={index}
             competitorIndex={competitorIndex}
             execution={execution}
-            target={target}
-            onUpdateSteps={onUpdateSteps}
+            contextScope={contextScope}
           />
         ))}
       </div>
@@ -108,14 +96,14 @@ export function WorkflowCompeteCard({
         <DependencyToggles
           earlier={steps.slice(0, index)}
           dependsOn={group.dependsOn}
-          onToggle={(key) => onUpdateSteps((value) => toggleWorkflowDependency(value, index, key))}
+          onToggle={(key) => setSteps((value) => toggleWorkflowDependency(value, index, key))}
         />
         <Button
           type="button"
           variant="outline"
           size="xs"
           disabled={!canAddCompetitor}
-          onClick={() => onUpdateSteps((value) => addWorkflowCompetitor(value, index))}
+          onClick={() => setSteps((value) => addWorkflowCompetitor(value, index))}
         >
           <Icon name="plus" aria-hidden />
           Add candidate

@@ -1,8 +1,8 @@
 import { contextReferenceKey, type IssueContract } from "@otomat/domain";
-import { Field, FieldControl, FieldLabel, Textarea } from "@otomat/ui";
 import { useRepositories } from "@web/api/daemon/queries";
 import { AddContextPopover } from "@web/components/context/add-context-popover";
 import { AttachedContextRow } from "@web/components/context/attached-context-row";
+import { ContextNoteField } from "@web/components/context/note-field";
 import {
   addContextReference,
   removeContextReference,
@@ -52,19 +52,13 @@ export function ContextComposer({
           />
         }
       />
-      <Field>
-        <FieldLabel>Additional step instructions (optional)</FieldLabel>
-        <FieldControl>
-          <Textarea
-            autoFocus={autoFocus}
-            rows={noteRows}
-            value={value.note}
-            onChange={(event) => onChange({ ...value, note: event.target.value })}
-            placeholder="Anything the attached context and the agent’s own guidance do not already say"
-            aria-label={`${label} instructions`}
-          />
-        </FieldControl>
-      </Field>
+      <ContextNoteField
+        value={value.note}
+        onChange={(note) => onChange({ ...value, note })}
+        label={label}
+        rows={noteRows}
+        autoFocus={autoFocus}
+      />
     </div>
   );
 }

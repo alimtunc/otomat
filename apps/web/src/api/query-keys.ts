@@ -33,6 +33,9 @@ export const queryKeys = {
   executionHostAliases: ["execution-host-aliases"] as const,
   agentProfiles: ["agent-profiles"] as const,
   skills: ["skills"] as const,
+  workflowPresets: ["workflow-presets"] as const,
+  workflowPresetsFor: (projectId?: string) =>
+    ["workflow-presets", "project", projectId ?? null] as const,
   issues: ["issues"] as const,
   issuesList: (projectId?: string) => ["issues", "project", projectId ?? null] as const,
   issue: (id: string) => ["issues", id] as const,

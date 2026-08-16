@@ -33,6 +33,7 @@ import { Route as SettingsProjectRouteImport } from './routes/settings/project'
 import { Route as SettingsRepositoriesRouteImport } from './routes/settings/repositories'
 import { Route as SettingsRuntimesRouteImport } from './routes/settings/runtimes'
 import { Route as SettingsSandboxRouteImport } from './routes/settings/sandbox'
+import { Route as SettingsWorkflowPresetsRouteImport } from './routes/settings/workflow-presets'
 import { Route as RunsRunIdIndexRouteImport } from './routes/runs/$runId/index'
 import { Route as RunsRunIdDiffRouteImport } from './routes/runs/$runId/diff'
 import { Route as RunsRunIdLogsRouteImport } from './routes/runs/$runId/logs'
@@ -159,6 +160,11 @@ const SettingsSandboxRoute = SettingsSandboxRouteImport.update({
   path: '/sandbox',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const SettingsWorkflowPresetsRoute = SettingsWorkflowPresetsRouteImport.update({
+  id: '/workflow-presets',
+  path: '/workflow-presets',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 const RunsRunIdIndexRoute = RunsRunIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/settings/sandbox': typeof SettingsSandboxRoute
+  '/settings/workflow-presets': typeof SettingsWorkflowPresetsRoute
   '/agents/': typeof AgentsIndexRoute
   '/issues/': typeof IssuesIndexRoute
   '/runs/': typeof RunsIndexRoute
@@ -234,6 +241,7 @@ export interface FileRoutesByTo {
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/settings/sandbox': typeof SettingsSandboxRoute
+  '/settings/workflow-presets': typeof SettingsWorkflowPresetsRoute
   '/agents': typeof AgentsIndexRoute
   '/issues': typeof IssuesIndexRoute
   '/runs': typeof RunsIndexRoute
@@ -266,6 +274,7 @@ export interface FileRoutesById {
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/settings/sandbox': typeof SettingsSandboxRoute
+  '/settings/workflow-presets': typeof SettingsWorkflowPresetsRoute
   '/agents/': typeof AgentsIndexRoute
   '/issues/': typeof IssuesIndexRoute
   '/runs/': typeof RunsIndexRoute
@@ -299,6 +308,7 @@ export interface FileRouteTypes {
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/settings/sandbox'
+    | '/settings/workflow-presets'
     | '/agents/'
     | '/issues/'
     | '/runs/'
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/settings/sandbox'
+    | '/settings/workflow-presets'
     | '/agents'
     | '/issues'
     | '/runs'
@@ -358,6 +369,7 @@ export interface FileRouteTypes {
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/settings/sandbox'
+    | '/settings/workflow-presets'
     | '/agents/'
     | '/issues/'
     | '/runs/'
@@ -553,6 +565,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsSandboxRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/settings/workflow-presets': {
+      id: '/settings/workflow-presets'
+      path: '/workflow-presets'
+      fullPath: '/settings/workflow-presets'
+      preLoaderRoute: typeof SettingsWorkflowPresetsRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/runs/$runId/': {
       id: '/runs/$runId/'
       path: '/'
@@ -602,6 +621,7 @@ interface SettingsRouteRouteChildren {
   SettingsRepositoriesRoute: typeof SettingsRepositoriesRoute
   SettingsRuntimesRoute: typeof SettingsRuntimesRoute
   SettingsSandboxRoute: typeof SettingsSandboxRoute
+  SettingsWorkflowPresetsRoute: typeof SettingsWorkflowPresetsRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
@@ -616,6 +636,7 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsRepositoriesRoute: SettingsRepositoriesRoute,
   SettingsRuntimesRoute: SettingsRuntimesRoute,
   SettingsSandboxRoute: SettingsSandboxRoute,
+  SettingsWorkflowPresetsRoute: SettingsWorkflowPresetsRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 

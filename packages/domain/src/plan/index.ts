@@ -7,6 +7,7 @@
  */
 export * from "./append.js";
 export * from "./execution-order.js";
+export * from "./graph.js";
 export * from "./limits.js";
 export * from "./node-input.js";
 export * from "./resume.js";

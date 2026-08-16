@@ -5,7 +5,8 @@ import type { AgentConfigSelector } from "#agents";
 import { RuntimeUnavailableError } from "#runtime";
 import { RunWorkspaceClosedError } from "#supervisor";
 
-import { agentConfigErrorResponse, refusalJson } from "./agent-config-refusal.js";
+import { agentConfigErrorResponse } from "./agent-config-refusal.js";
+import { refusalJson } from "./refusal.js";
 
 /** The explicit agent choice every append-a-step request carries. */
 interface AgentChoiceRequest {

@@ -20,6 +20,7 @@ import {
   runtimeEvents,
   stepRuns,
   syncState,
+  workflowPresets,
   worktrees,
 } from "../schema/index.js";
 
@@ -56,8 +57,9 @@ export function repositoryHasActiveRuns(db: Db, repositoryId: string): boolean {
 /**
  * Removes a registered repository and every row that depends on it — its runs
  * (with their steps, sessions, events, reviews, pull requests, and Linear
- * writes), its worktree rows, and the owning project with its issues and issue
- * sources when this was the project's only repository. Callers gate on
+ * writes), its worktree rows, and the owning project with its issues, issue
+ * sources and workflow presets when this was the project's only repository.
+ * Callers gate on
  * `repositoryHasActiveRuns`; the cascade assumes the repository is idle.
  * Disk artifacts (run event files, git worktree registrations) are not touched.
  */
@@ -143,7 +145,10 @@ export function deleteRepositoryCascade(db: Db, repositoryId: string): boolean {
         .where(eq(repositories.project_id, projectId))
         .limit(1)
         .get();
-      if (!remaining) tx.delete(projects).where(eq(projects.id, projectId)).run();
+      if (!remaining) {
+        tx.delete(workflowPresets).where(eq(workflowPresets.project_id, projectId)).run();
+        tx.delete(projects).where(eq(projects.id, projectId)).run();
+      }
       return true;
     },
     { behavior: "immediate" },

@@ -10,16 +10,16 @@ import {
   RUN_PLAN_STEP_NAME_MAX_LENGTH,
 } from "./limits.js";
 
-const planNodeIdSchema = z
+export const planNodeIdSchema = z
   .string()
   .regex(RUN_PLAN_STEP_ID_PATTERN, "Step ids are lowercase alphanumerics and dashes, 64 chars max");
 /** A label for the reader; the daemon never turns it into an instruction. */
-const planNodeNameSchema = z.string().trim().min(1).max(RUN_PLAN_STEP_NAME_MAX_LENGTH);
+export const planNodeNameSchema = z.string().trim().min(1).max(RUN_PLAN_STEP_NAME_MAX_LENGTH);
 const planNodeNoteSchema = z.string().trim().min(1).max(CONTEXT_NOTE_MAX_LENGTH);
-const planDependenciesSchema = z.array(z.string()).max(RUN_PLAN_MAX_STEPS - 1);
+export const planDependenciesSchema = z.array(z.string()).max(RUN_PLAN_MAX_STEPS - 1);
 
-/** The execution choices every executable node accepts; a node that names none inherits the launch's. */
-const planNodeExecutionShape = {
+/** What an executable node carries on its own, before a launch attaches context to it. */
+export const planNodeTemplateShape = {
   /** Runtime adapter id for this node; null inherits the run's default runtime. */
   agent: z.string().min(1).nullable(),
   /** Agent profile to resolve and freeze for this node; takes precedence over `agent`. Null/absent keeps the ad-hoc runtime path. */
@@ -28,10 +28,15 @@ const planNodeExecutionShape = {
   model: modelSelectionSchema.optional(),
   /** Provider options for this node alone; an absent key inherits the launch's, `agent_default` keeps the resolved agent's own. */
   options: executionOptionSelectionsSchema.optional(),
-  /** Extra issues and repository files to attach; the run's own issue is always attached. */
-  context: contextReferencesSchema.optional(),
   /** The one instruction this node adds; absent sends the attached context and the profile's guidance alone. */
   note: planNodeNoteSchema.optional(),
+};
+
+/** The execution choices every executable node accepts; a node that names none inherits the launch's. */
+const planNodeExecutionShape = {
+  ...planNodeTemplateShape,
+  /** Extra issues and repository files to attach; the run's own issue is always attached. */
+  context: contextReferencesSchema.optional(),
 };
 
 export const runPlanStepInputSchema = z

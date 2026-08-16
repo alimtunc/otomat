@@ -4,6 +4,7 @@ import {
   getIssue,
   getRun,
   getStepRun,
+  getWorkflowPreset,
   listAgentProfiles,
   listAgentSessionsForRun,
   listCompeteGroupsForRun,
@@ -15,6 +16,7 @@ import {
   listRuns,
   listSkills,
   listStepRunsForRun,
+  listWorkflowPresets,
   getProject,
   type Db,
   type IssueExecutionEvidenceRow,
@@ -34,8 +36,10 @@ import {
   type RunResumePlan,
   type RunWait,
   type SkillContract,
+  type WorkflowPresetContract,
 } from "@otomat/domain";
 
+import { workflowPresetCompatibility } from "#agents";
 import { isRepositoryRoot } from "#git";
 import { findWorktreeById } from "#git/worktrees-store";
 
@@ -50,6 +54,7 @@ import {
   toRunContribution,
   toSkill,
   toStepRun,
+  toWorkflowPreset,
 } from "./serialize.js";
 
 export function readProjects(db: Db): ProjectContract[] {
@@ -68,6 +73,18 @@ export function readAgentProfile(db: Db, id: string): AgentProfileContract | nul
 
 export function readSkills(db: Db): SkillContract[] {
   return listSkills(db).map(toSkill);
+}
+
+/** Compatibility is re-resolved on every read: a profile, skill or runtime can leave this host at any time. */
+export function readWorkflowPresets(db: Db, projectId?: string): WorkflowPresetContract[] {
+  return listWorkflowPresets(db, { projectId }).map((row) =>
+    toWorkflowPreset(row, workflowPresetCompatibility(db, row.plan_json)),
+  );
+}
+
+export function readWorkflowPreset(db: Db, id: string): WorkflowPresetContract | null {
+  const row = getWorkflowPreset(db, id);
+  return row ? toWorkflowPreset(row, workflowPresetCompatibility(db, row.plan_json)) : null;
 }
 
 /** Probed per read so a root that moved or stopped being a git repository is never offered as a launch target. */

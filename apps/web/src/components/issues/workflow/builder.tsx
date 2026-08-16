@@ -1,14 +1,14 @@
-import { RUN_PLAN_MAX_STEPS } from "@otomat/domain";
-import { Button, Icon } from "@otomat/ui";
 import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
 import type { LaunchExecution } from "@web/components/execution/use-launch-execution";
+import { WorkflowPlanEditor } from "@web/components/workflow/plan-editor";
+import { WorkflowPresetPicker } from "@web/components/workflow/preset/preset-picker";
+import { SavePresetDialog } from "@web/components/workflow/preset/save-preset-dialog";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
-import { workflowExecutableCount } from "@web/lib/workflow-draft";
+import { draftsFromPresetPlan } from "@web/lib/workflow/preset";
 import { clearInheritedNodeOverrides } from "@web/lib/workflow/steps";
+import { useState } from "react";
 
-import { WorkflowCompeteCard } from "./compete-card";
-import type { WorkflowLaunchTarget } from "./launch-target";
-import { WorkflowStepCard } from "./step-card";
+import { targetContextScope, type WorkflowLaunchTarget } from "./launch-target";
 import type { UseWorkflowFormResult } from "./use-form";
 
 export interface WorkflowPlanBuilderProps {
@@ -18,80 +18,48 @@ export interface WorkflowPlanBuilderProps {
   target: WorkflowLaunchTarget;
 }
 
+/** The launcher's composition surface: the run default, the preset library, and the node graph. */
 export function WorkflowPlanBuilder({
   execution,
   onExecutionChange,
   workflow,
   target,
 }: WorkflowPlanBuilderProps) {
-  const { form, planError, updateSteps, addStep, addCompeteGroup } = workflow;
+  const { plan, planError } = workflow;
+  const scope = targetContextScope(target);
+  const [saving, setSaving] = useState(false);
 
   return (
     <>
+      <WorkflowPresetPicker
+        projectId={scope.projectId}
+        onApply={(preset) => plan.setSteps(draftsFromPresetPlan(preset.plan))}
+        onSaveCurrent={() => setSaving(true)}
+      />
       <LaunchExecutionPicker
         execution={execution}
         onChange={(next) => {
-          if (next.agent !== execution.selection.agent) updateSteps(clearInheritedNodeOverrides);
+          if (next.agent !== execution.selection.agent) {
+            plan.setSteps(clearInheritedNodeOverrides);
+          }
           onExecutionChange(next);
         }}
         label="Workflow"
       />
-      <form.Field name="steps">
-        {(stepsField) => (
-          <div className="flex flex-col gap-2">
-            {stepsField.state.value.map((step, index) =>
-              step.kind === "compete" ? (
-                <WorkflowCompeteCard
-                  key={step.key}
-                  form={form}
-                  steps={stepsField.state.value}
-                  index={index}
-                  execution={execution}
-                  target={target}
-                  onUpdateSteps={updateSteps}
-                />
-              ) : (
-                <WorkflowStepCard
-                  key={step.key}
-                  form={form}
-                  steps={stepsField.state.value}
-                  index={index}
-                  execution={execution}
-                  target={target}
-                  onUpdateSteps={updateSteps}
-                />
-              ),
-            )}
-            <div className="flex items-center gap-2 self-start">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={workflowExecutableCount(stepsField.state.value) >= RUN_PLAN_MAX_STEPS}
-                onClick={addStep}
-              >
-                <Icon name="plus" aria-hidden />
-                Add step
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={workflowExecutableCount(stepsField.state.value) > RUN_PLAN_MAX_STEPS - 2}
-                onClick={addCompeteGroup}
-              >
-                <Icon name="workflow" aria-hidden />
-                Add compete group
-              </Button>
-            </div>
-          </div>
-        )}
-      </form.Field>
-      {planError === null ? null : (
-        <p role="alert" className="text-xs text-danger">
-          {planError}
-        </p>
-      )}
+      <WorkflowPlanEditor
+        plan={plan}
+        execution={{ agents: execution.agents, inherited: execution.selection }}
+        contextScope={scope}
+        error={planError}
+      />
+      {saving ? (
+        <SavePresetDialog
+          open
+          onOpenChange={setSaving}
+          steps={plan.steps}
+          projectId={scope.projectId}
+        />
+      ) : null}
     </>
   );
 }

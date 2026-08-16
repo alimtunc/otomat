@@ -92,6 +92,7 @@ are internal daemon modules, consumed through
 | `apps/local-daemon/src/api`       | OTO-9                    | Local daemon routes and SSE surface.                                  |
 | `apps/local-daemon/src/context`   | OTO-107                  | Frozen context selection, per-session dossier, and its rendering.     |
 | `apps/web/src/components/context` | OTO-107                  | The one prompt composer: attached-context chips plus an optional note.|
+| `apps/web/src/components/workflow` | OTO-64                  | The shared node-graph editor, plus the preset library it fills from. |
 | `apps/desktop/src/main/data-safety` | OTO-29                 | Versioned data layout, redacted rotating logs, support bundle export. |
 | `apps/desktop/scripts`            | OTO-21, OTO-30           | macOS packaging: ad-hoc local build, signed/notarized release, packaged smoke. |
 | `apps/local-daemon/src/supervisor`| OTO-10, OTO-87           | Process supervision, pid reconciliation, and the recovery of a stopped plan. |
@@ -245,6 +246,48 @@ reach the user through the accessible name and the trigger's tooltip. The
 cockpit's Execution card answers the same way — the selected step's effective
 configuration first, every step and what the runtime reported behind a
 disclosure.
+
+## Saved Workflow Presets
+
+A preset is a **structure**, not a launch: the steps, their dependencies and
+compete groups, the agent each node names, and its one static instruction. It
+holds no issue, no repository file, no run data and no secret, so
+`workflowPresetPlanSchema` is the launch plan's own graph minus the context a
+launch attaches — validated by the same `refinePlanGraph` walk, and savable while
+empty because a preset is composed over time and refused at launch instead.
+`presetPlanFromDrafts` builds it by dropping `context` from what the launcher
+would send, which is what keeps a preset structurally unable to carry a field the
+plan does not have.
+
+Presets are daemon rows (`workflow_presets`), not browser state, because they
+name profiles and runtimes that belong to the host: a preset composed against a
+VPS daemon's profiles is meaningless in another machine's local storage. Scope is
+one column plus its owner — `global` with no project, `project` with the project
+it belongs to — so `listWorkflowPresets` answers "what is reusable here" as every
+global preset plus this project's own, and a name identifies a preset inside its
+own scope (a collision is refused, `preset_name_taken`, rather than shadowed).
+Duplicating is how a global preset gets adapted locally; the copy is numbered
+until the target scope has room for it and the source is never touched. Those
+rules live in `api/workflow-preset-writes.ts` and answer with a typed refusal, so
+the route only resolves the row and maps a refusal to its status.
+
+Compatibility is resolved per read, never stored: `workflowPresetCompatibility`
+runs each node through `resolveAgentConfig` — the same resolution a launch
+performs — and reports the refusal it would have raised, so a profile, skill or
+runtime that left the host is visible before launch and the preset is not offered.
+A node that names no agent is silent there rather than assumed sound: what it
+inherits is the launch's own configuration, which only the launch gate can
+resolve.
+
+Nothing reads a preset after a launch. Applying one fills the launcher's draft
+and stops; `runs.plan_json` is frozen from that draft with the issue attached, so
+editing or deleting a preset cannot reach a past or active run. The composition
+surface is therefore shared rather than duplicated:
+`apps/web/src/components/workflow` owns the node graph editor, parameterised on
+what a node may attach — a launch passes its issue and project, a preset passes
+`null` and composes its static note alone. The editor carries the graph in its
+own `usePlanDraft` form, so each node name is a real field wherever it is
+composed, and the surface around it keeps its own form for its own fields.
 
 ## Run Steering and Deferred Messages
 

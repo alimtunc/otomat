@@ -13,6 +13,7 @@ import {
 
 export const DropdownMenu = Menu.Root;
 export const DropdownMenuTrigger = Menu.Trigger;
+export const DropdownMenuGroup = Menu.Group;
 export const DropdownMenuRadioGroup = Menu.RadioGroup;
 export const DropdownMenuSub = Menu.SubmenuRoot;
 

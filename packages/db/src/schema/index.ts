@@ -5,4 +5,5 @@ export * from "./pull-requests.js";
 export * from "./reviews.js";
 export * from "./runs.js";
 export * from "./settings.js";
+export * from "./workflow-presets.js";
 export * from "./workspace.js";

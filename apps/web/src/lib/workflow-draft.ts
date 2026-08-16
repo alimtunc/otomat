@@ -42,6 +42,14 @@ export function newWorkflowStep(counter: number): WorkflowStepDraft {
   };
 }
 
+/** The smallest counter no node key uses, so applying a saved plan cannot collide with a later add. */
+export function freeNodeCounter(steps: readonly WorkflowNodeDraft[]): number {
+  const used = new Set(steps.map((step) => step.key));
+  let counter = 1;
+  while (used.has(`step-${counter}`) || used.has(`compete-${counter}`)) counter += 1;
+  return counter;
+}
+
 export function newCompetitor(groupKey: string, counter: number): WorkflowCompetitorDraft {
   return {
     key: `${groupKey}-candidate-${counter}`,

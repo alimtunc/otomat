@@ -17,12 +17,13 @@ import {
   WorkspaceAbandonRefusedError,
 } from "#supervisor";
 
-import { agentConfigErrorResponse, refusalJson } from "../agent-config-refusal.js";
+import { agentConfigErrorResponse } from "../agent-config-refusal.js";
 import { projectRunCompletionReport } from "../completion-report.js";
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { nonNegativeInt } from "../query-params.js";
 import { readRuns } from "../reads.js";
+import { refusalJson } from "../refusal.js";
 import { runDetailJson } from "../run-detail.js";
 import { toPullRequest, toRun } from "../serialize.js";
 import { streamRunEvents } from "../sse.js";
