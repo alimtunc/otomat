@@ -5,22 +5,16 @@ import type { WorkflowPlanExecution } from "@web/components/workflow/plan-execut
 import { WorkflowStepCard } from "@web/components/workflow/step-card";
 import type { PlanDraft } from "@web/components/workflow/use-plan-draft";
 import { workflowExecutableCount } from "@web/lib/workflow-draft";
-import type { WorkflowContextScope } from "@web/lib/workflow/context-scope";
 
 export interface WorkflowPlanEditorProps {
   plan: PlanDraft;
   execution: WorkflowPlanExecution;
-  contextScope: WorkflowContextScope | null;
+  projectId: string | null;
   error: string | null;
 }
 
 /** Composes the node graph itself; whatever level sits above it owns its own execution picker. */
-export function WorkflowPlanEditor({
-  plan,
-  execution,
-  contextScope,
-  error,
-}: WorkflowPlanEditorProps) {
+export function WorkflowPlanEditor({ plan, execution, projectId, error }: WorkflowPlanEditorProps) {
   const executables = workflowExecutableCount(plan.steps);
 
   return (
@@ -32,7 +26,7 @@ export function WorkflowPlanEditor({
             plan={plan}
             index={index}
             execution={execution}
-            contextScope={contextScope}
+            projectId={projectId}
           />
         ) : (
           <WorkflowStepCard
@@ -40,7 +34,7 @@ export function WorkflowPlanEditor({
             plan={plan}
             index={index}
             execution={execution}
-            contextScope={contextScope}
+            projectId={projectId}
           />
         ),
       )}

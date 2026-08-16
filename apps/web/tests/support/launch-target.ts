@@ -1,4 +1,5 @@
 import type { RepositoryBranchesResponse, RepositoryContract } from "@otomat/domain";
+import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 import { vi } from "vitest";
 
 /** A usable repository row, the shape `GET /api/repositories` returns. */
@@ -12,6 +13,19 @@ export function repository(overrides: Partial<RepositoryContract> = {}): Reposit
     init_commands: [],
     available: true,
     ...overrides,
+  };
+}
+
+/** The resolved gate every launch surface renders its controls from. */
+export function readyLaunchTarget(): ReadyLaunchTarget {
+  return {
+    status: "ready",
+    repository: repository(),
+    baseBranch: "main",
+    setBaseBranch: vi.fn(),
+    branches: ["main", "develop"],
+    branchesPending: false,
+    branchesFailed: false,
   };
 }
 

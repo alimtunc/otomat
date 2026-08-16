@@ -6,10 +6,10 @@ import {
   DropdownMenuRadioGroup,
   Skeleton,
 } from "@otomat/ui";
-import type { LaunchTargetState } from "@web/components/runs/launch/use-launch-target";
+import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 
 export interface BaseBranchControlProps {
-  target: Extract<LaunchTargetState, { status: "ready" }>;
+  target: ReadyLaunchTarget;
   disabled?: boolean;
 }
 

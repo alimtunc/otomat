@@ -1,26 +1,33 @@
-import type { IssueContract, RunContract } from "@otomat/domain";
-import { Button, DialogBody, Kbd } from "@otomat/ui";
+import type { ContextReference, IssueContract, RunContract } from "@otomat/domain";
+import { AutoTextarea, DialogBody } from "@otomat/ui";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useLaunchRun } from "@web/api/runs/use-launch-run";
-import { ContextComposer } from "@web/components/context/context-composer";
 import { ContextSourcesPanel } from "@web/components/context/context-sources-panel";
 import { useContextSources } from "@web/components/context/use-context-sources";
-import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
-import { BaseBranchControl } from "@web/components/runs/launch/base-branch-control";
-import type { LaunchTargetState } from "@web/components/runs/launch/use-launch-target";
-import { contextRequestFields, EMPTY_CONTEXT_DRAFT } from "@web/lib/context/draft";
+import { LaunchComposer } from "@web/components/runs/launch/launch-composer";
+import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
+import { contextRequestFields } from "@web/lib/context/draft";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
-import { submitOnCmdEnter } from "@web/lib/form";
 import { useState } from "react";
+
+const COMPOSER_LABEL = "Single run";
+const LAUNCH_ACTION = "Launch run";
 
 export interface SingleRunLaunchFormProps {
   issue: IssueContract;
-  target: Extract<LaunchTargetState, { status: "ready" }>;
+  target: ReadyLaunchTarget;
   execution: ExecutionSelection;
   onExecutionChange: (execution: ExecutionSelection) => void;
   onLaunched: (run: RunContract) => void;
   onCancel: () => void;
+}
+
+function unavailableReason(pending: boolean, canLaunch: boolean): string | null {
+  if (pending) return "launching the run";
+  if (!canLaunch) return "choose an available agent and model";
+  return null;
 }
 
 /** One agent turn on this issue: the issue is attached, and the only text is the instruction the user chooses to add. */
@@ -32,68 +39,62 @@ export function SingleRunLaunchForm({
   onLaunched,
   onCancel,
 }: SingleRunLaunchFormProps) {
-  const [context, setContext] = useState(EMPTY_CONTEXT_DRAFT);
+  const [references, setReferences] = useState<readonly ContextReference[]>([]);
   const launchExecution = useLaunchExecution(execution);
   const { launch, isPending } = useLaunchRun();
+
+  const form = useForm({
+    defaultValues: { note: "" },
+    onSubmit: async ({ value }) => {
+      const run = await launch({
+        issue_id: issue.id,
+        base_branch: target.baseBranch,
+        ...contextRequestFields({ references, note: value.note }),
+        ...launchExecution.request,
+      });
+      if (run) onLaunched(run);
+    },
+  });
+  const note = useStore(form.store, (state) => state.values.note);
   const sources = useContextSources({
-    draft: context,
+    draft: { references, note },
     issue,
     agentChoice: launchExecution.selection.agent,
     profiles: launchExecution.agents.profiles,
   });
-  const canSubmit = launchExecution.canLaunch && !isPending;
-
-  async function submit() {
-    if (!canSubmit) return;
-    const run = await launch({
-      issue_id: issue.id,
-      base_branch: target.baseBranch,
-      ...contextRequestFields(context),
-      ...launchExecution.request,
-    });
-    if (run) onLaunched(run);
-  }
 
   return (
     <>
-      <DialogBody>
-        <div className="flex flex-col gap-3" onKeyDown={submitOnCmdEnter(() => void submit())}>
-          <ContextComposer
-            autoFocus
-            issue={issue}
-            projectId={issue.project_id}
-            value={context}
-            onChange={setContext}
-            label="Single run"
-            noteRows={4}
-          />
-          <ContextSourcesPanel sources={sources} />
-          <div className="flex flex-wrap items-center gap-1.5">
-            <LaunchExecutionPicker
-              execution={launchExecution}
-              onChange={onExecutionChange}
-              label="Single run"
-            />
-            <BaseBranchControl target={target} disabled={isPending} />
-          </div>
-        </div>
+      <DialogBody className="flex flex-col gap-3">
+        <LaunchComposer
+          issue={issue}
+          target={target}
+          references={references}
+          onReferencesChange={setReferences}
+          execution={launchExecution}
+          onExecutionChange={onExecutionChange}
+          label={COMPOSER_LABEL}
+          action={LAUNCH_ACTION}
+          unavailableReason={unavailableReason(isPending, launchExecution.canLaunch)}
+          pending={isPending}
+          onSubmit={() => void form.handleSubmit()}
+        >
+          <form.Field name="note">
+            {(field) => (
+              <AutoTextarea
+                autoFocus
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.value)}
+                placeholder="Anything the attached context and the agent’s own guidance do not already say"
+                aria-label={`${COMPOSER_LABEL} instructions`}
+              />
+            )}
+          </form.Field>
+        </LaunchComposer>
+        <ContextSourcesPanel sources={sources} />
       </DialogBody>
-      <IssueFormFooter
-        onCancel={onCancel}
-        submit={
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            loading={isPending}
-            disabled={!canSubmit}
-            onClick={() => void submit()}
-          >
-            Launch run
-            <Kbd tone="on-accent">⌘↵</Kbd>
-          </Button>
-        }
-      />
+      <IssueFormFooter onCancel={onCancel} />
     </>
   );
 }

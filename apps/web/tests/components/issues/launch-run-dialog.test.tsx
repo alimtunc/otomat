@@ -195,9 +195,17 @@ it("attaches the issue as context instead of copying it into an editable prompt"
   expect(chips?.textContent).toContain("issue-1");
 });
 
+it("composes the single run on the shared launch bar, and stops repeating its action in the footer", async () => {
+  await openDialog();
+
+  expect(findLabelled("Add context")).not.toBeUndefined();
+  expect(findLabelled("Launch run")).not.toBeUndefined();
+  expect(findButton("Launch run⌘↵")).toBeUndefined();
+});
+
 it("launches with no user instruction at all when the note is left empty", async () => {
   await openDialog();
-  await click("Launch run⌘↵");
+  await clickLabelled("Launch run");
 
   expect(launch).toHaveBeenCalledWith({
     issue_id: "issue-1",
@@ -216,7 +224,7 @@ it("sends the optional note and the attached file as structured context", async 
   );
   await clickLabelled("Add context");
   await click("src/parser.ts");
-  await click("Launch run⌘↵");
+  await clickLabelled("Launch run");
 
   expect(launch).toHaveBeenCalledWith({
     issue_id: "issue-1",
@@ -236,7 +244,7 @@ it("removes an attached reference before the launch", async () => {
   );
   if (!remove) throw new Error("remove control not found");
   await act(async () => remove.click());
-  await click("Launch run⌘↵");
+  await clickLabelled("Launch run");
 
   expect(launch).toHaveBeenCalledWith({
     issue_id: "issue-1",
@@ -253,7 +261,7 @@ it("sends the per-launch model override, on the same control every surface uses"
   );
 
   await click("pick opus for launch");
-  await click("Launch run⌘↵");
+  await clickLabelled("Launch run");
 
   expect(launch).toHaveBeenCalledWith({
     issue_id: "issue-1",
@@ -313,7 +321,7 @@ it("sends the base branch the user picked instead of the repository default", as
   if (!option) throw new Error("develop option not found");
   await act(async () => option.click());
 
-  await click("Launch run⌘↵");
+  await clickLabelled("Launch run");
 
   expect(launch).toHaveBeenCalledWith(expect.objectContaining({ base_branch: "develop" }));
 });

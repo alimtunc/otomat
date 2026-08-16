@@ -8,7 +8,6 @@ import type { PlanDraft } from "@web/components/workflow/use-plan-draft";
 import { requiredTrimmed } from "@web/lib/form";
 import { workflowExecutableCount } from "@web/lib/workflow-draft";
 import { addWorkflowCompetitor } from "@web/lib/workflow/competitors";
-import type { WorkflowContextScope } from "@web/lib/workflow/context-scope";
 import {
   moveWorkflowStep,
   removeWorkflowStep,
@@ -19,14 +18,14 @@ export interface WorkflowCompeteCardProps {
   plan: PlanDraft;
   index: number;
   execution: WorkflowPlanExecution;
-  contextScope: WorkflowContextScope | null;
+  projectId: string | null;
 }
 
 export function WorkflowCompeteCard({
   plan,
   index,
   execution,
-  contextScope,
+  projectId,
 }: WorkflowCompeteCardProps) {
   const { form, steps, setSteps } = plan;
   const group = steps[index];
@@ -87,7 +86,7 @@ export function WorkflowCompeteCard({
             groupIndex={index}
             competitorIndex={competitorIndex}
             execution={execution}
-            contextScope={contextScope}
+            projectId={projectId}
           />
         ))}
       </div>

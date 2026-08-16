@@ -8,28 +8,40 @@ import type { ReactNode } from "react";
 const FILE_PREVIEW =
   "Attached by path. Its content is read from the repository snapshot at launch, so a file that moved, is binary or is past the size limit is reported rather than guessed.";
 
+/** The internal id is never a label, so an unresolved reference stays neutral rather than leaking it. */
+const UNRESOLVED_ISSUE = "Issue";
+
+function unresolvedPreview(loading: boolean, failed: boolean): string {
+  if (loading) return "Resolving this issue’s identifier from the project.";
+  if (failed) return "This project’s issues could not be loaded.";
+  return "This issue is not loaded in this project.";
+}
+
 export interface AttachedContextRowProps {
   /** The issue Otomat attaches on its own; null for a run that has none. */
   issue: IssueContract | null;
+  projectId: string | undefined;
   references: readonly ContextReference[];
-  onRemove: (key: string) => void;
+  onRemove?: (key: string) => void;
   label: string;
-  addControl: ReactNode;
+  addControl?: ReactNode;
 }
 
 /** The attached context, shown as chips above the instruction, in the order it was attached. */
 export function AttachedContextRow({
   issue,
+  projectId,
   references,
   onRemove,
   label,
   addControl,
 }: AttachedContextRowProps) {
-  const issues = useProjectIssues(issue?.project_id);
+  const issues = useProjectIssues(projectId);
   const byId = new Map((issues.data ?? []).map((entry) => [entry.id, entry]));
 
   const referenceChip = (reference: ContextReference): ReactNode => {
     const key = contextReferenceKey(reference);
+    const remove = onRemove === undefined ? undefined : () => onRemove(key);
     if (reference.kind === "file") {
       return (
         <ContextChip
@@ -37,7 +49,7 @@ export function AttachedContextRow({
           icon="file-text"
           label={reference.path}
           preview={<p>{FILE_PREVIEW}</p>}
-          onRemove={() => onRemove(key)}
+          onRemove={remove}
         />
       );
     }
@@ -46,15 +58,15 @@ export function AttachedContextRow({
       <ContextChip
         key={key}
         icon="list-todo"
-        label={referenced ? issueShortId(referenced) : reference.issue_id}
+        label={referenced ? issueShortId(referenced) : UNRESOLVED_ISSUE}
         preview={
           referenced ? (
             <ContextIssuePreview issue={referenced} />
           ) : (
-            <p>This issue is not loaded in this project.</p>
+            <p>{unresolvedPreview(issues.isLoading, issues.isError)}</p>
           )
         }
-        onRemove={() => onRemove(key)}
+        onRemove={remove}
       />
     );
   };

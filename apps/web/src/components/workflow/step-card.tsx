@@ -6,7 +6,6 @@ import { WorkflowNodeContext } from "@web/components/workflow/node-context";
 import type { WorkflowPlanExecution } from "@web/components/workflow/plan-execution";
 import type { PlanDraft } from "@web/components/workflow/use-plan-draft";
 import { requiredTrimmed } from "@web/lib/form";
-import type { WorkflowContextScope } from "@web/lib/workflow/context-scope";
 import {
   moveWorkflowStep,
   removeWorkflowStep,
@@ -19,10 +18,10 @@ export interface WorkflowStepCardProps {
   plan: PlanDraft;
   index: number;
   execution: WorkflowPlanExecution;
-  contextScope: WorkflowContextScope | null;
+  projectId: string | null;
 }
 
-export function WorkflowStepCard({ plan, index, execution, contextScope }: WorkflowStepCardProps) {
+export function WorkflowStepCard({ plan, index, execution, projectId }: WorkflowStepCardProps) {
   const { form, steps, setSteps } = plan;
   const step = steps[index];
   if (!step || step.kind !== "step") return null;
@@ -70,7 +69,7 @@ export function WorkflowStepCard({ plan, index, execution, contextScope }: Workf
         />
       </div>
       <WorkflowNodeContext
-        scope={contextScope}
+        projectId={projectId}
         value={step.context}
         onChange={(next) => setSteps((value) => setWorkflowStepContext(value, index, next))}
         label={label}

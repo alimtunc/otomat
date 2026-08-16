@@ -1,5 +1,4 @@
 import type { IssueContract, StartRunRequest } from "@otomat/domain";
-import type { WorkflowContextScope } from "@web/lib/workflow/context-scope";
 
 /** What the workflow runs on: an existing issue, or a new issue created from the goal. */
 export type WorkflowLaunchTarget =
@@ -14,10 +13,7 @@ export function targetRequest(
   return { prompt: goal.trim(), project_id: target.projectId };
 }
 
-/** The issue every step attaches, and the project its context picker searches; a goal has neither until the run creates one. */
-export function targetContextScope(target: WorkflowLaunchTarget): WorkflowContextScope {
-  if (target.kind === "issue") {
-    return { issue: target.issue, projectId: target.issue.project_id };
-  }
-  return { issue: null, projectId: target.projectId };
+/** The project a workflow composes in: its presets, and what every node's context picker searches. */
+export function targetProjectId(target: WorkflowLaunchTarget): string {
+  return target.kind === "issue" ? target.issue.project_id : target.projectId;
 }
