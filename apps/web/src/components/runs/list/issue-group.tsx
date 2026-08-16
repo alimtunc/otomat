@@ -1,4 +1,4 @@
-import { projectIssueBoardColumn } from "@otomat/domain";
+import { projectIssuePrimaryState } from "@otomat/domain";
 import { FOCUS_RING, IssueStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { CountBadge } from "@web/components/issues/count-badge";
@@ -33,7 +33,9 @@ export function RunIssueGroupSection({ group, columnCount, children }: RunIssueG
                   {issue === null ? "Issue not loaded" : issue.title}
                 </span>
               </Link>
-              {issue === null ? null : <IssueStatusChip status={projectIssueBoardColumn(issue)} />}
+              {issue === null ? null : (
+                <IssueStatusChip status={projectIssuePrimaryState(issue).state} />
+              )}
               <CountBadge count={group.runs.length} tone="neutral" />
             </div>
           </th>

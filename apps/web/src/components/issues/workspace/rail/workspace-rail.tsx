@@ -1,4 +1,4 @@
-import type { IssueContract, RunContract } from "@otomat/domain";
+import { projectOpenCycleExecution, type IssueContract, type RunContract } from "@otomat/domain";
 import { cn, IssueStatusChip, SidePanelToggle, useSidePanel } from "@otomat/ui";
 import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { LinearRailSection } from "@web/components/issues/workspace/linear/rail-section";
@@ -39,6 +39,7 @@ function ExternalIdentifier({ identifier, url }: { identifier: string; url: stri
  */
 export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunContract | null }) {
   const panel = useSidePanel();
+  const cycleExecution = projectOpenCycleExecution(issue);
   return (
     <aside
       className={cn(
@@ -55,14 +56,14 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
         }
       >
         <RailMeta>
-          <RailRow label="Status">
+          <RailRow label="Issue status">
             <IssueStatusChip status={issue.status} />
           </RailRow>
-          <RailRow label="Execution">
-            {issue.execution.state === "none" ? (
-              <span className="text-xs text-text-tertiary">No active run</span>
+          <RailRow label="Workspace execution">
+            {cycleExecution === null ? (
+              <span className="text-xs text-text-tertiary">No open workspace</span>
             ) : (
-              <IssueExecutionChip execution={issue.execution} />
+              <IssueExecutionChip execution={cycleExecution} />
             )}
           </RailRow>
           <RailRow label="Source">

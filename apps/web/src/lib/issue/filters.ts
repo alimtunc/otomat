@@ -1,6 +1,6 @@
 import {
   ISSUE_BOARD_COLUMNS,
-  projectIssueBoardColumn,
+  projectIssuePrimaryState,
   type IssueBoardColumn,
   type IssueContract,
   type IssueSource,
@@ -69,7 +69,7 @@ export function applyAdvancedFilters(
   return issues.filter(
     (issue) =>
       (sources.size === 0 || sources.has(issue.source)) &&
-      (statuses.size === 0 || statuses.has(projectIssueBoardColumn(issue))) &&
+      (statuses.size === 0 || statuses.has(projectIssuePrimaryState(issue).state)) &&
       (linearStates.size === 0 ||
         (issue.source_state_name !== null && linearStates.has(issue.source_state_name))) &&
       (projects.size === 0 || projects.has(issue.project_id)) &&

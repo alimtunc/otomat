@@ -1,4 +1,4 @@
-import { projectIssueBoardColumn, type IssueContract } from "@otomat/domain";
+import { projectIssuePrimaryState, type IssueContract } from "@otomat/domain";
 import {
   Avatar,
   FOCUS_RING,
@@ -15,12 +15,14 @@ import { divergentSourceStatus } from "@web/lib/issue/divergent-status";
 import { failureSummary } from "@web/lib/issue/execution-failure";
 
 export function BoardCard({ issue }: { issue: IssueContract }) {
-  const column = projectIssueBoardColumn(issue);
-  const meta = resolveStatus("issue", column);
+  const primary = projectIssuePrimaryState(issue);
+  const meta = resolveStatus("issue", primary.state);
   const StatusIcon = meta.icon;
   const sourceStatus = divergentSourceStatus(issue);
   const failure =
-    column === "failed" && issue.execution.state === "failed" ? issue.execution.failure : null;
+    primary.state === "failed" && issue.execution.state === "failed"
+      ? issue.execution.failure
+      : null;
   return (
     <li>
       <Link
