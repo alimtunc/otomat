@@ -498,10 +498,10 @@ or review never reads as current. That cycle is the one `projectIssueWorkspace`
 computes, never a live process or the last message: worktree cleanup only ever
 runs at closure, so the two cannot disagree.
 
-No view recomposes those rules. The boards, the lists, the saved views and the
-runs list read the primary state; every surface that names the execution axis on
-its own — the rail's `Workspace execution` row, the list's `Execution` column —
-reads `projectOpenCycleExecution` rather than the raw contract field, so a closed
+No view recomposes those rules. The boards, the lists and the saved views read
+the primary state; every surface that names the execution axis on its own — the
+rail's `Workspace execution` row, the list's `Execution` column — reads
+`projectOpenCycleExecution` rather than the raw contract field, so a closed
 cycle stops advertising the run it stopped on. Only the source status a column
 hides is a display concern (`lib/issue/divergent-status.ts`). The issue page
 keeps both axes legible in its rail (`Issue status`, `Workspace execution`), and
@@ -684,7 +684,10 @@ under one header, and its two filters persist per project under
 `otomat.runs-view`. A done issue's group is hidden on arrival — a failed run is
 not, since the cycle stays resumable. Both filters only hide rows, never touch a
 run, and each reports its own casualties (`visibleRunGroups`): a group emptied by
-the failed filter counts as the runs it lost, not as an issue hidden.
+the failed filter counts as the runs it lost, not as an issue hidden. That header
+carries identity only — key, title, link, run count. A status there is wrong
+either way: the issue's source status contradicts a live run, and its execution
+projection only repeats what the run row beneath it already states.
 
 Grouping by status is the primary-state rule (`projectIssuePrimaryState`), so
 every state gets a group — including `blocked` and `canceled`, which earlier
