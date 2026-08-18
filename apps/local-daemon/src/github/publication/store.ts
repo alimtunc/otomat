@@ -26,7 +26,7 @@ import {
   buildPullRequestEvent,
   type PullRequestEventType,
 } from "../events.js";
-import type { PublicationConfig } from "./types.js";
+import type { ComposedSubject, PublicationConfig } from "./types.js";
 
 /** Row persistence, ledger emission, and state-machine reconciliation for one publication. */
 export class PublicationStore {
@@ -123,16 +123,20 @@ export class PublicationStore {
   }
 
   /** The proposal is the durable publication draft: it survives a reload of the cockpit. */
-  recordProposal(runId: string, proposal: PullRequestProposal): PullRequestRow {
-    const row = this.ensureRow(runId, proposal.title, proposal.body);
+  recordProposal(
+    runId: string,
+    proposal: PullRequestProposal,
+    subject: ComposedSubject,
+  ): PullRequestRow {
+    const row = this.ensureRow(runId, subject.title, proposal.body);
     return this.patch(
       row,
       {
-        title: proposal.title,
+        title: subject.title,
         body: proposal.body,
         ...(row.number === null ? { head_ref: proposal.branch } : {}),
-        commit_subject: proposal.commit.subject,
-        commit_body: proposal.commit.body,
+        commit_subject: subject.subjectLine,
+        commit_body: proposal.commit_body,
         generator_runtime: proposal.generator.runtime,
         generator_model: proposal.generator.model,
         generator_effort: proposal.generator.effort,

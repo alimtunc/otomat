@@ -14,6 +14,11 @@ import { setupTestDb, type TestDb } from "../support/db.js";
 import { CONNECTED_GITHUB, pullRequestRow, stubGitHubService } from "../support/github.js";
 
 const RUN_ID = "run-github-api";
+const PUBLISH_BODY = {
+  subject: { type: "feat", scope: "pr", summary: "ship it" },
+  body: "Details",
+  mode: "ready",
+};
 let t: TestDb;
 
 beforeEach(() => {
@@ -99,11 +104,7 @@ it("serves and publishes the durable PR through the GitHub module", async () => 
   expect(detail.pull_request).toMatchObject({ number: 42 });
   expect(detail.sync).toEqual(sync);
 
-  const published = await post(app, `/api/runs/${RUN_ID}/pr`, {
-    title: "Ship it",
-    body: "Details",
-    mode: "ready",
-  });
+  const published = await post(app, `/api/runs/${RUN_ID}/pr`, PUBLISH_BODY);
   expect(published.status).toBe(200);
   expect(((await published.json()) as PullRequestDetail).pull_request?.url).toBe(row.url);
 });
@@ -176,11 +177,7 @@ it("maps a workspace that cannot publish to a conflict carrying its technical re
     }),
   });
 
-  const response = await post(app, `/api/runs/${RUN_ID}/pr`, {
-    title: "Ship",
-    body: "",
-    mode: "ready",
-  });
+  const response = await post(app, `/api/runs/${RUN_ID}/pr`, PUBLISH_BODY);
   expect(response.status).toBe(409);
   expect(await response.json()).toEqual({
     error: "diff_empty",
@@ -191,17 +188,50 @@ it("maps a workspace that cannot publish to a conflict carrying its technical re
 it("refuses a publication that names no mode rather than defaulting it to draft", async () => {
   const app = makeApiApp(t, { github: stubGitHubService() });
 
-  const response = await post(app, `/api/runs/${RUN_ID}/pr`, { title: "Ship", body: "" });
+  const { mode: _mode, ...modeless } = PUBLISH_BODY;
+  const response = await post(app, `/api/runs/${RUN_ID}/pr`, modeless);
+
+  expect(response.status).toBe(400);
+});
+
+it("refuses a free-form title before the publisher is reached", async () => {
+  let published = 0;
+  const app = makeApiApp(t, {
+    github: stubGitHubService({
+      publish: async () => {
+        published += 1;
+        throw new Error("an unvalidated subject must never be published");
+      },
+    }),
+  });
+
+  const response = await post(app, `/api/runs/${RUN_ID}/pr`, {
+    title: "Share one launch composer and give the workflow one global row",
+    body: "Details",
+    mode: "ready",
+  });
+
+  expect(response.status).toBe(400);
+  expect(published).toBe(0);
+});
+
+it("refuses a type the repository does not publish", async () => {
+  const app = makeApiApp(t, { github: stubGitHubService() });
+
+  const response = await post(app, `/api/runs/${RUN_ID}/pr`, {
+    ...PUBLISH_BODY,
+    subject: { type: "wip", scope: null, summary: "keep going" },
+  });
 
   expect(response.status).toBe(400);
 });
 
 it("generates PR metadata without publishing, and surfaces generation refusals", async () => {
   const proposal = {
-    title: "feat(pr): add note.md (OTO-81)",
+    subject: { type: "feat" as const, scope: "pr", summary: "add note.md" },
     body: "Adds the note.\n\nFixes OTO-81",
     branch: "feat/add-note",
-    commit: { subject: "feat(pr): add note.md", body: null },
+    commit_body: null,
     generator: { runtime: "claude", model: "claude-opus-5", effort: "high" },
   };
   let published = 0;

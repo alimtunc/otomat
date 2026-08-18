@@ -10,6 +10,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { setInputValue } from "#support/dom-events";
+
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 const PUBLISHABLE: PullRequestPublishability = {
@@ -21,14 +23,13 @@ const PUBLISHABLE: PullRequestPublishability = {
   additions: 12,
   deletions: 3,
   dirty: true,
-  convention: "conventional",
 };
 
 const PROPOSAL: PullRequestProposal = {
-  title: "feat(pr): publish in one action (OTO-81)",
+  subject: { type: "feat", scope: "pr", summary: "publish in one action" },
   body: "Publishes the run in one click.\n\nFixes OTO-81",
   branch: "feat/compact-pr",
-  commit: { subject: "feat(pr): publish in one action", body: null },
+  commit_body: null,
   generator: { runtime: "claude", model: "claude-opus-5", effort: "high" },
 };
 
@@ -90,11 +91,11 @@ function pullRequest(overrides: Partial<PullRequestContract> = {}): PullRequestC
     url: null,
     status: "draft",
     publication_status: "not_configured",
-    title: "Ship it",
+    title: "feat(pr): ship it",
     body: "Details",
     head_ref: "feat/compact-pr",
     base_ref: null,
-    commit_subject: null,
+    commit_subject: "feat(pr): ship it",
     commit_body: null,
     generator: null,
     published_head_sha: null,
@@ -115,11 +116,12 @@ describe("PullRequestForm", () => {
     expect(view.textContent).toContain("Create PR with AI");
   });
 
-  it("reveals the advanced inputs without losing the current proposal", () => {
+  it("reveals the advanced inputs with the stored subject read back into its fields", () => {
     const { view } = render({ customize: true, pullRequest: pullRequest() });
 
     const inputs = [...view.querySelectorAll("input")].map((input) => input.value);
-    expect(inputs).toContain("Ship it");
+    expect(inputs).toContain("pr");
+    expect(inputs).toContain("ship it");
     expect(inputs).toContain("feat/compact-pr");
     expect(view.querySelector("textarea")?.value).toBe("Details");
   });
@@ -132,7 +134,7 @@ describe("PullRequestForm", () => {
 
     expect(onGenerate).toHaveBeenCalledTimes(1);
     expect(onSubmit).toHaveBeenCalledWith({
-      title: PROPOSAL.title,
+      subject: PROPOSAL.subject,
       body: PROPOSAL.body,
       head_ref: PROPOSAL.branch,
       mode: "ready",
@@ -150,15 +152,58 @@ describe("PullRequestForm", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("fills the fields from a generation that publishes nothing", async () => {
+  it("fills the subject fields from a generation that publishes nothing", async () => {
     const { view, onSubmit } = render({ customize: true });
 
     click(view, "Generate title & description with AI");
     await act(async () => {});
 
     expect(onSubmit).not.toHaveBeenCalled();
-    expect([...view.querySelectorAll("input")].map((input) => input.value)).toContain(
-      PROPOSAL.title,
+    const inputs = [...view.querySelectorAll("input")].map((input) => input.value);
+    expect(inputs).toContain(PROPOSAL.subject.scope);
+    expect(inputs).toContain(PROPOSAL.subject.summary);
+  });
+
+  it("refuses to publish a subject nobody filled in", async () => {
+    const { view, onSubmit } = render({ customize: true });
+
+    click(view, "Create PR ready for review");
+    await act(async () => {});
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(view.textContent).toContain("A summary is required.");
+  });
+
+  it("refuses to publish a summary the composed subject cannot hold", async () => {
+    const { view, onSubmit } = render({ customize: true, pullRequest: pullRequest() });
+
+    const summary = [...view.querySelectorAll("input")].find((input) => input.value === "ship it");
+    if (!summary) throw new Error("no summary input");
+    act(() => {
+      setInputValue(summary, "x".repeat(80));
+    });
+    click(view, "Create draft PR");
+    await act(async () => {});
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(view.textContent).toContain("72");
+  });
+
+  it("publishes the edited subject as one structured object", async () => {
+    const { view, onSubmit } = render({ customize: true, pullRequest: pullRequest() });
+
+    const summary = [...view.querySelectorAll("input")].find((input) => input.value === "ship it");
+    if (!summary) throw new Error("no summary input");
+    act(() => {
+      setInputValue(summary, "validate the publication subject");
+    });
+    click(view, "Create draft PR");
+    await act(async () => {});
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: { type: "feat", scope: "pr", summary: "validate the publication subject" },
+      }) as PreparePullRequestRequest,
     );
   });
 

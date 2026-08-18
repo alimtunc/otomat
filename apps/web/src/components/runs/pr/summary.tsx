@@ -13,11 +13,10 @@ function diffLabel(publishability: PullRequestPublishability): string {
   return `${files} · +${String(additions)} −${String(deletions)}`;
 }
 
-/** Read from the repository's own history, and shown because it is what the generated title must satisfy. */
 function commitLabel(publishability: PullRequestPublishability): string {
-  const convention =
-    publishability.convention === "conventional" ? "Conventional Commits" : "no set convention";
-  return publishability.dirty ? `${convention} · commits uncommitted work` : convention;
+  return publishability.dirty
+    ? "Otomat commits the uncommitted work"
+    : "The workspace commits ship as they are";
 }
 
 export function PullRequestSummary({ publishability, mode, issueTitle }: PullRequestSummaryProps) {
@@ -40,7 +39,7 @@ export function PullRequestSummary({ publishability, mode, issueTitle }: PullReq
     },
     { key: "diff", label: "Changes", value: <span>{diffLabel(publishability)}</span> },
     {
-      key: "convention",
+      key: "commit",
       label: "Commit",
       value: <span className="text-text-secondary">{commitLabel(publishability)}</span>,
     },

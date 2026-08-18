@@ -2,22 +2,11 @@
 export const ISSUE_DELIVERIES = ["complete", "partial"] as const;
 export type IssueDelivery = (typeof ISSUE_DELIVERIES)[number];
 
-function identifierSuffix(identifier: string): string {
-  return `(${identifier})`;
-}
-
 /** Composed, never asked of the generator: the identifier is a fact Otomat holds. */
 export function pullRequestTitle(subject: string, identifier: string | null): string {
-  const trimmed = subject.trim();
-  if (identifier === null || trimmed.endsWith(identifierSuffix(identifier))) return trimmed;
-  return `${trimmed} ${identifierSuffix(identifier)}`;
-}
-
-export function subjectFromTitle(title: string, identifier: string | null): string {
-  const trimmed = title.trim();
-  if (identifier === null) return trimmed;
-  const suffix = identifierSuffix(identifier);
-  return trimmed.endsWith(suffix) ? trimmed.slice(0, -suffix.length).trim() : trimmed;
+  if (identifier === null) return subject;
+  const suffix = `(${identifier})`;
+  return subject.endsWith(suffix) ? subject : `${subject} ${suffix}`;
 }
 
 export function pullRequestBody(

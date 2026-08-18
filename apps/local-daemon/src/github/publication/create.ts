@@ -2,6 +2,7 @@ import type { PullRequestRow } from "@otomat/db";
 
 import { GitHubPublicationError } from "../errors.js";
 import { publicationCommitMessage } from "./commit.js";
+import { requestedDetails } from "./details.js";
 import { ensureProvider, providerPatch } from "./provider.js";
 import type { PublicationStore } from "./store.js";
 import type { PublicationConfig, PublicationContext } from "./types.js";
@@ -17,19 +18,12 @@ export async function createPublication(
   if (workspace.worktrees.diff(context.run.id).files.length === 0) {
     throw new GitHubPublicationError("diff_empty", "The run has no changes to publish.");
   }
-  // Composed before the row moves: a subject the repository would refuse must stop the publication, not interrupt it.
-  const message = publicationCommitMessage(config, row, context);
+  const message = publicationCommitMessage(row, context);
   const head = request.head_ref ?? row.head_ref ?? workspace.worktree.branch;
   row = store.transition(
     row,
     "pushing",
-    {
-      title: request.title,
-      body: request.normalizedBody,
-      head_ref: head,
-      error_code: null,
-      error_message: null,
-    },
+    { ...requestedDetails(request), head_ref: head, error_code: null, error_message: null },
     "git",
   );
 

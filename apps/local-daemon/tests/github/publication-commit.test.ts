@@ -2,7 +2,6 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { getRun, schema } from "@otomat/db";
-import type { PreparePullRequestRequest } from "@otomat/domain";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -11,16 +10,14 @@ import { createGitHubService, type GitHubService } from "#github";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { stubRepositoryResolver, type TestRepo } from "../support/git.js";
-import { FakeGitHubCli } from "../support/github.js";
+import { FakeGitHubCli, publishRequest } from "../support/github.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-commit";
 const BRANCH = `otomat/run/${RUN_ID}`;
-const REQUEST: PreparePullRequestRequest = {
-  title: "feat(pr): publish in one action (OTO-81)",
-  body: "Details",
-  mode: "ready",
-};
+const REQUEST = publishRequest("publish in one action", {
+  subject: { type: "feat", scope: "pr", summary: "publish in one action" },
+});
 
 describe("the publication commit", () => {
   let fix: DaemonTestDb;
@@ -81,22 +78,48 @@ describe("the publication commit", () => {
   it("never publishes the internal snapshot subject", async () => {
     await github.publish(currentRun(), REQUEST);
 
-    expect(lastMessage()).not.toContain("otomat: snapshot");
+    expect(lastMessage()).not.toContain("chore(worktree): snapshot");
   });
 
-  it("derives the subject from the title and links the issue in a footer", async () => {
-    await github.publish(currentRun(), REQUEST);
+  it("composes the subject and the title from one object, and links the issue in a footer", async () => {
+    const view = await github.publish(currentRun(), REQUEST);
 
     expect(lastMessage()).toBe("feat(pr): publish in one action\n\nRefs OTO-81");
+    expect(cli.createInput?.title).toBe("feat(pr): publish in one action (OTO-81)");
+    expect(view.row.commit_subject).toBe("feat(pr): publish in one action");
   });
 
-  it("commits the proposal's own subject and body when one was generated", async () => {
+  it("commits a scopeless subject as the operator wrote it", async () => {
+    await github.publish(
+      currentRun(),
+      publishRequest("publish in one action", {
+        subject: { type: "chore", scope: null, summary: "publish in one action" },
+      }),
+    );
+
+    expect(lastMessage()).toBe("chore: publish in one action\n\nRefs OTO-81");
+  });
+
+  it("commits without a footer when the issue carries no identifier", async () => {
+    fix.db
+      .update(schema.issues)
+      .set({ source_identifier: null })
+      .where(eq(schema.issues.id, "i1"))
+      .run();
+
+    await github.publish(currentRun(), REQUEST);
+
+    expect(lastMessage()).toBe("feat(pr): publish in one action");
+    expect(cli.createInput?.title).toBe("feat(pr): publish in one action");
+  });
+
+  it("commits the edited subject rather than the one a generation had proposed", async () => {
     fix.db
       .insert(schema.pullRequests)
       .values({
         id: "pr-local-1",
         run_id: RUN_ID,
-        title: REQUEST.title,
+        title: "feat(publication): compose the commit (OTO-81)",
         commit_subject: "feat(publication): compose the commit",
         commit_body: "The generator wrote this paragraph.",
       })
@@ -105,7 +128,7 @@ describe("the publication commit", () => {
     await github.publish(currentRun(), REQUEST);
 
     expect(lastMessage()).toBe(
-      "feat(publication): compose the commit\n\nThe generator wrote this paragraph.\n\nRefs OTO-81",
+      "feat(pr): publish in one action\n\nThe generator wrote this paragraph.\n\nRefs OTO-81",
     );
   });
 
@@ -125,23 +148,10 @@ describe("the publication commit", () => {
     expect(lastMessage()).toBe("feat(app): the agent's own commit");
   });
 
-  it("refuses a subject the repository's convention would reject, before any push", async () => {
-    for (const subject of [
-      "feat(a): one",
-      "fix(b): two",
-      "chore(c): three",
-      "docs(d): four",
-      "refactor(e): five",
-    ]) {
-      repo.write(`${subject.slice(0, 5)}.txt`, subject);
-      repo.commitAll(subject);
-    }
-    repo.git("-C", worktreePath, "merge", "--ff-only", repo.defaultBranch);
+  it("keeps the published commit and the pull request title in step", async () => {
+    await github.publish(currentRun(), REQUEST);
 
-    const view = await github.publish(currentRun(), { ...REQUEST, title: "Publish in one action" });
-
-    expect(view.row.publication_status).toBe("failed");
-    expect(view.row.error_code).toBe("commit_convention_violation");
-    expect(cli.pushedBranches).toEqual([]);
+    expect(cli.createInput?.title).toBe(`${lastMessage().split("\n")[0] ?? ""} (OTO-81)`);
+    expect(cli.pushedBranches).toEqual([BRANCH]);
   });
 });

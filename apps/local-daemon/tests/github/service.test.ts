@@ -9,7 +9,6 @@ import {
   schema,
   updatePullRequest,
 } from "@otomat/db";
-import type { PreparePullRequestRequest } from "@otomat/domain";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -23,6 +22,7 @@ import {
   CONNECTED_GITHUB as connected,
   DISCONNECTED_GITHUB,
   FakeGitHubCli,
+  publishRequest,
 } from "../support/github.js";
 import { seedRun } from "../support/seed.js";
 
@@ -30,16 +30,8 @@ const RUN_ID = "r-github";
 const BRANCH = `otomat/run/${RUN_ID}`;
 
 /** The fake provider reports an open PR, so `ready` is the mode that leaves it untouched. */
-const READY_REQUEST: PreparePullRequestRequest = {
-  title: "Ship it",
-  body: "Details",
-  mode: "ready",
-};
-const DRAFT_REQUEST: PreparePullRequestRequest = {
-  title: "Ship it",
-  body: "Details",
-  mode: "draft",
-};
+const READY_REQUEST = publishRequest("ship it");
+const DRAFT_REQUEST = publishRequest("ship it", { mode: "draft" });
 
 describe("GitHubService", () => {
   let fix: DaemonTestDb;
@@ -437,7 +429,7 @@ describe("GitHubService", () => {
       url: "https://github.com/acme/otomat/pull/42",
       status: "open",
       publication_status: "created",
-      title: "Ship it",
+      title: "feat: ship it",
       body: "Details",
       head_ref: BRANCH,
       base_ref: "main",
@@ -529,25 +521,17 @@ describe("GitHubService", () => {
 
   it("adopts an existing provider PR and never creates a duplicate", async () => {
     cli.providerExists = true;
-    cli.provider = {
-      ...cli.provider,
-      title: "Existing provider title",
-      body: "Existing provider body",
-    };
+    cli.provider = { ...cli.provider, title: "feat: ship it", body: "Existing provider body" };
     const github = service();
 
     const first = await github.publish(run(), READY_REQUEST);
     const second = await github.publish(run(), {
-      title: "Existing provider title",
+      ...READY_REQUEST,
       body: "Existing provider body",
-      mode: "ready",
     });
 
     expect(first.row.id).toBe(second.row.id);
-    expect(first.row).toMatchObject({
-      title: "Existing provider title",
-      body: "Existing provider body",
-    });
+    expect(first.row).toMatchObject({ title: "feat: ship it", body: "Existing provider body" });
     expect(cli.createCalls).toBe(0);
     expect(cli.pushCalls).toBe(1);
     expect(getPullRequestForRun(fix.db, RUN_ID)?.number).toBe(42);
@@ -557,8 +541,8 @@ describe("GitHubService", () => {
     cli.provider = { ...cli.provider, body: "" };
     const github = service();
 
-    const first = await github.publish(run(), { title: "Ship it", body: "", mode: "ready" });
-    const second = await github.publish(run(), { title: "Ship it", body: "", mode: "ready" });
+    const first = await github.publish(run(), publishRequest("ship it", { body: "" }));
+    const second = await github.publish(run(), publishRequest("ship it", { body: "" }));
 
     expect(first.row.body).toBeNull();
     expect(second.row.body).toBeNull();
@@ -571,7 +555,7 @@ describe("GitHubService", () => {
 
     const [first, second] = await Promise.all([
       github.publish(run(), READY_REQUEST),
-      github.publish(run(), { title: "Ignored", body: "Ignored", mode: "ready" }),
+      github.publish(run(), publishRequest("ignore this one", { body: "Ignored" })),
     ]);
 
     expect(first.row.id).toBe(second.row.id);
@@ -616,17 +600,16 @@ describe("GitHubService", () => {
       state: "in_sync",
       dirty: true,
     });
-    const updated = await github.publish(run(), {
-      title: "Ship it better",
-      body: "New body",
-      mode: "ready",
-    });
+    const updated = await github.publish(
+      run(),
+      publishRequest("ship it better", { body: "New body" }),
+    );
 
     expect(updated.row).toMatchObject({
       id: "pr-local-1",
       number: 42,
       publication_status: "created",
-      title: "Ship it better",
+      title: "feat: ship it better",
       body: "New body",
     });
     expect(updated.sync).toMatchObject({ dirty: true });
@@ -641,17 +624,16 @@ describe("GitHubService", () => {
     cli.provider = { ...cli.provider, baseRef: "release" };
     writeFileSync(join(worktreePath, "change.txt"), "first\nsecond\n");
 
-    const updated = await github.publish(run(), {
-      title: "Ship it better",
-      body: "New body",
-      mode: "ready",
-    });
+    const updated = await github.publish(
+      run(),
+      publishRequest("ship it better", { body: "New body" }),
+    );
 
     expect(updated.row).toMatchObject({
       publication_status: "created",
       number: 42,
       base_ref: "release",
-      title: "Ship it better",
+      title: "feat: ship it better",
     });
     expect(cli.createCalls).toBe(1);
     expect(cli.updateCalls).toBe(1);
@@ -676,7 +658,7 @@ describe("GitHubService", () => {
     cli.provider = { ...cli.provider, lifecycle: "merged" };
     writeFileSync(join(worktreePath, "after-merge.txt"), "follow up\n");
 
-    const result = await github.publish(run(), { title: "Another PR", body: "No", mode: "ready" });
+    const result = await github.publish(run(), publishRequest("open another one", { body: "No" }));
 
     expect(result.row).toMatchObject({ status: "merged", number: 42 });
     expect(cli.pushCalls).toBe(1);
@@ -714,11 +696,11 @@ describe("GitHubService", () => {
     await github.publish(run(), READY_REQUEST);
     cli.provider = { ...cli.provider, lifecycle: "closed" };
     writeFileSync(join(worktreePath, "after-close.txt"), "follow up\n");
-    const closed = await github.publish(run(), { title: "Another PR", body: "No", mode: "ready" });
+    const closed = await github.publish(run(), publishRequest("open another one", { body: "No" }));
     expect(closed.row.status).toBe("closed");
 
     cli.provider = { ...cli.provider, lifecycle: "open" };
-    const reopened = await github.publish(run(), { title: "Reopen", body: "No", mode: "ready" });
+    const reopened = await github.publish(run(), publishRequest("reopen it", { body: "No" }));
 
     expect(reopened.row).toMatchObject({ status: "closed", number: 42 });
     expect(cli.pushCalls).toBe(1);

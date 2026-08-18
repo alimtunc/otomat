@@ -105,19 +105,6 @@ export function listBranches(repoPath: string): string[] {
     .filter((line) => line !== "");
 }
 
-/** Subjects of the commits reachable from `ref`, newest first; an unreadable history is no evidence rather than an error. */
-export function recentSubjects(repoPath: string, ref: string, limit: number): string[] {
-  const res = runGit(["log", `--max-count=${String(limit)}`, "--format=%s", ref], {
-    cwd: repoPath,
-    allowFailure: true,
-  });
-  if (res.exitCode !== 0) return [];
-  return res.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line !== "");
-}
-
 /** Deletes a local branch (`-D`, force). No-op tolerant when the branch is gone. */
 export function deleteBranch(repoPath: string, branch: string): void {
   runGit(["branch", "-D", branch], { cwd: repoPath, allowFailure: true });

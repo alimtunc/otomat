@@ -1,9 +1,7 @@
 import { getIssue, type Db, type RunRow } from "@otomat/db";
-import type { CommitConvention } from "@otomat/domain";
 
 import type { RepositoryResolver } from "#git";
 
-import { detectCommitConvention } from "../conventions/detect.js";
 import { GitHubPublicationError } from "../errors.js";
 
 export interface GenerationIssue {
@@ -16,9 +14,6 @@ export interface GenerationIssue {
 export interface GenerationInput {
   cwd: string;
   issue: GenerationIssue;
-  convention: CommitConvention;
-  /** Recent subjects of the repository, so the convention is shown rather than described. */
-  conventionEvidence: string[];
   diffStat: string[];
   patch: string;
 }
@@ -40,7 +35,6 @@ export function buildGenerationInput(
     throw new GitHubPublicationError("diff_empty", "The run has no changes to describe.");
   }
   const issue = getIssue(config.db, run.issue_id);
-  const evidence = detectCommitConvention(worktree.path, worktree.baseRef || binding.defaultBranch);
   return {
     cwd: worktree.path,
     issue: {
@@ -48,8 +42,6 @@ export function buildGenerationInput(
       title: issue?.title ?? "Untitled issue",
       body: issue?.body ?? null,
     },
-    convention: evidence.convention,
-    conventionEvidence: evidence.subjects,
     diffStat: diff.files.map((file) => `${file.path} +${file.additions} -${file.deletions}`),
     patch: diff.files.map((file) => file.patch).join("\n"),
   };

@@ -8,7 +8,6 @@ import {
   updateRunStatus,
   type PullRequestRow,
 } from "@otomat/db";
-import type { PreparePullRequestRequest } from "@otomat/domain";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createGitWorktreeService, headSha, type GitWorktreeService } from "#git";
@@ -16,16 +15,12 @@ import { createGitHubService, GitHubCliError, type GitHubService } from "#github
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { stubRepositoryResolver, type TestRepo } from "../support/git.js";
-import { FakeGitHubCli } from "../support/github.js";
+import { FakeGitHubCli, publishRequest } from "../support/github.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-push";
 const BRANCH = `otomat/run/${RUN_ID}`;
-const READY_REQUEST: PreparePullRequestRequest = {
-  title: "Ship it",
-  body: "Details",
-  mode: "ready",
-};
+const READY_REQUEST = publishRequest("ship it");
 
 describe("pull request pushes", () => {
   let fix: DaemonTestDb;
@@ -140,7 +135,7 @@ describe("pull request pushes", () => {
 
     expect(pushed.sync).toMatchObject({ state: "in_sync", dirty: true, ahead: [] });
     expect(pushed.row.published_head_sha).toBe(published);
-    expect(repo.git("-C", worktreePath, "log", "--format=%s", "-1").trim()).toBe("Ship it");
+    expect(repo.git("-C", worktreePath, "log", "--format=%s", "-1").trim()).toBe("feat: ship it");
   });
 
   it("pushes an open pull request whose run is no longer review ready", async () => {

@@ -10,7 +10,7 @@ import { branchExists, deleteBranch, fastForward, headSha, isAncestor, revParse 
 import type { GitWorktreeService, GitWorktreeServiceConfig } from "./service-contract.js";
 import { readTreeFile } from "./tree-file.js";
 import { addWorktree, pruneWorktrees, removeWorktree } from "./worktree-cli.js";
-import { isDirty, snapshotWorktree } from "./worktree-snapshot.js";
+import { isDirty, snapshotSubject, snapshotWorktree } from "./worktree-snapshot.js";
 import {
   findActiveByBranch,
   findActiveByOwner,
@@ -162,7 +162,7 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       return computeCanonicalDiff(gitCwd, base, revParse(gitCwd, `${commit}^{tree}`));
     },
 
-    snapshot(owner, message = `otomat: snapshot for ${owner}`) {
+    snapshot(owner, message = snapshotSubject("snapshot", owner)) {
       const row = findActiveByOwner(db, owner);
       if (!row) throw new WorktreeNotFoundError(owner);
       snapshotWorktree(row.path, message);
@@ -177,7 +177,7 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       if (!source) throw new WorktreeNotFoundError(sourceOwner);
       if (!canonical) throw new WorktreeNotFoundError(canonicalOwner);
 
-      snapshotWorktree(source.path, `otomat: promote snapshot for ${sourceOwner}`);
+      snapshotWorktree(source.path, snapshotSubject("promote", sourceOwner));
       const sourceHead = headSha(source.path);
       updateWorktreeStatus(db, source.id, { status: "active", head_sha: sourceHead });
 
@@ -214,7 +214,7 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
 
       let head: string;
       if (existsSync(row.path)) {
-        snapshotWorktree(row.path, `otomat: archive snapshot for ${owner}`);
+        snapshotWorktree(row.path, snapshotSubject("archive", owner));
         head = headSha(row.path);
       } else {
         head = revParse(repoRoot, row.branch);

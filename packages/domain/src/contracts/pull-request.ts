@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { commitSubjectSchema } from "./commit-subject.js";
 import {
   PULL_REQUEST_PUBLICATION_MODES,
   pullRequestContractSchema,
@@ -8,7 +9,7 @@ import {
 
 /** Undefaulted: a caller that names no mode is refused, so an absent value never becomes a silent Draft. */
 export const preparePullRequestRequestSchema = z.object({
-  title: z.string().min(1),
+  subject: commitSubjectSchema,
   body: z.string(),
   /** Remote branch the PR ships as; omitted keeps the run branch. Ignored once the PR exists — its head is its identity. */
   head_ref: z.string().trim().min(1).max(120).optional(),
@@ -16,18 +17,13 @@ export const preparePullRequestRequestSchema = z.object({
 });
 export type PreparePullRequestRequest = z.infer<typeof preparePullRequestRequestSchema>;
 
-/** Which commit-subject shape the repository's own history shows; `free_form` imposes none. */
-export const COMMIT_CONVENTIONS = ["conventional", "free_form"] as const;
-export const commitConventionSchema = z.enum(COMMIT_CONVENTIONS);
-export type CommitConvention = z.infer<typeof commitConventionSchema>;
-
 /** AI-generated metadata for the run's pull request; every field stays editable, and generating publishes nothing. */
 export const pullRequestProposalSchema = z.object({
-  title: z.string().min(1),
+  subject: commitSubjectSchema,
   body: z.string(),
   branch: z.string().min(1),
-  /** Message of the commit Otomat creates when the workspace still holds uncommitted work. */
-  commit: z.object({ subject: z.string().min(1), body: z.string().nullable() }),
+  /** Extra paragraph for the commit Otomat creates when the workspace still holds uncommitted work. */
+  commit_body: z.string().nullable(),
   generator: pullRequestGeneratorAuditSchema,
 });
 export type PullRequestProposal = z.infer<typeof pullRequestProposalSchema>;
@@ -79,7 +75,6 @@ export const pullRequestPublishabilitySchema = z.object({
   deletions: z.number().int().nonnegative(),
   /** Uncommitted work Otomat would commit itself before pushing. */
   dirty: z.boolean(),
-  convention: commitConventionSchema,
 });
 export type PullRequestPublishability = z.infer<typeof pullRequestPublishabilitySchema>;
 
