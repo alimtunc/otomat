@@ -83,5 +83,6 @@ export function pullRequestContext(row: PullRequestRow): ContextPullRequest | nu
     state: row.status,
     head_branch: row.head_ref,
     base_branch: row.base_ref,
+    published_head_sha: row.published_head_sha,
   };
 }

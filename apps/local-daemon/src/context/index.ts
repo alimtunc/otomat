@@ -11,5 +11,6 @@ export { buildSessionContext } from "./dossier.js";
 export { readContextFile } from "./files.js";
 export { createContextFreezer, type ContextFreezer } from "./freeze.js";
 export type { ContextIssueRow } from "./issues.js";
-export { renderSessionContext } from "./render.js";
+export { publicationDelta } from "./publication.js";
+export { renderPublicationDelta, renderSessionContext } from "./render.js";
 export { reviewCommentContext } from "./review.js";

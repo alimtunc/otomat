@@ -44,5 +44,7 @@ export const contextPullRequestSchema = z.object({
   state: z.enum(PULL_REQUEST_STATES),
   head_branch: z.string(),
   base_branch: z.string(),
+  /** The commit pushed to `head_branch`, never the workspace head; null until something is published. */
+  published_head_sha: z.string().nullable(),
 });
 export type ContextPullRequest = z.infer<typeof contextPullRequestSchema>;
