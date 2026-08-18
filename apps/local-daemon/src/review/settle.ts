@@ -1,7 +1,7 @@
 import {
-  getReviewForRun,
+  getReviewForSubject,
   getRun,
-  listReviewCommentsForRun,
+  listReviewCommentsForSubject,
   setReviewCommentFixRequested,
   updateReviewCommentStatus,
   type ReviewCommentRow,
@@ -17,6 +17,7 @@ import {
   buildDiffUpdatedEvent,
   type CommentResolution,
 } from "./events.js";
+import { resolveReviewSubject } from "./subject.js";
 import { driveReviewTo } from "./transitions.js";
 import type { ReviewContext, RunSettledOutcome } from "./types.js";
 
@@ -65,9 +66,9 @@ function resolveSettledComments(
 }
 
 function deriveReviewStatus(ctx: ReviewContext, runId: string): void {
-  const review = getReviewForRun(ctx.db, runId);
+  const review = getReviewForSubject(ctx.db, runId);
   if (!review || review.status === "open") return;
-  const stillOpen = listReviewCommentsForRun(ctx.db, runId).some(
+  const stillOpen = listReviewCommentsForSubject(ctx.db, runId).some(
     (comment) => comment.status === "open",
   );
   if (!stillOpen) {
@@ -82,7 +83,7 @@ export function onRunSettled(ctx: ReviewContext, outcome: RunSettledOutcome): vo
   const run = getRun(ctx.db, outcome.runId);
   if (!run) return;
   const now = new Date().toISOString();
-  const open = listReviewCommentsForRun(ctx.db, run.id).filter(
+  const open = listReviewCommentsForSubject(ctx.db, run.id).filter(
     (comment) => comment.status === "open",
   );
 
@@ -91,7 +92,7 @@ export function onRunSettled(ctx: ReviewContext, outcome: RunSettledOutcome): vo
     return;
   }
 
-  const diff = computeDiff(ctx, run.id);
+  const diff = computeDiff(resolveReviewSubject(ctx, { kind: "run", id: run.id }));
   if (diff !== null) {
     emitLedgerEvent(ctx.db, ctx.dataDir, run.id, buildDiffUpdatedEvent(run.id, diff, now));
   }

@@ -1,10 +1,10 @@
-import type { DiffFileContract, RunDiffContract } from "@otomat/domain";
+import type { DiffFileContract, ReviewDiffContract } from "@otomat/domain";
 import { DiffFileList } from "@web/components/runs/diff/files/list";
 import { DiffFileTree } from "@web/components/runs/diff/files/tree";
 import type { DiffBrowserMode } from "@web/components/runs/diff/prefs/prefs";
 
 export interface DiffFileBrowserProps {
-  diff: RunDiffContract;
+  diff: ReviewDiffContract;
   mode: DiffBrowserMode;
   activePath: string | null;
   reviewedPaths: ReadonlySet<string>;

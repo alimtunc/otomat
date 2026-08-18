@@ -1,20 +1,27 @@
 import { getFileBlobs } from "./blobs.js";
 import { addComment, getReviewDetail } from "./comments.js";
-import { getWorktreeDiff } from "./diff.js";
+import { getSubjectDiff } from "./diff.js";
 import { requestFix } from "./fix.js";
 import { publishComment } from "./publication.js";
 import { onRunSettled } from "./settle.js";
-import type { ReviewContext, ReviewService, ReviewServiceConfig } from "./types.js";
+import { resolveReviewSubject } from "./subject.js";
+import type {
+  ReviewContext,
+  ReviewService,
+  ReviewServiceConfig,
+  ReviewSubjectRef,
+} from "./types.js";
 
 /** Wires the shared {@link ReviewContext} and delegates each operation to its concern module. */
 export function createReviewService(config: ReviewServiceConfig): ReviewService {
   const ctx: ReviewContext = config;
+  const subject = (ref: ReviewSubjectRef) => resolveReviewSubject(ctx, ref);
   return {
-    getWorktreeDiff: (run, owner) => getWorktreeDiff(ctx, run.id, owner),
-    getReviewDetail: (runId) => getReviewDetail(ctx, runId),
-    addComment: (run, request) => addComment(ctx, run.id, request),
-    publishComment: (run, commentId) => publishComment(ctx, run.id, commentId),
-    getFileBlobs: (run, request) => getFileBlobs(ctx, run.id, request),
+    getDiff: (ref) => getSubjectDiff(subject(ref)),
+    getReviewDetail: (ref) => getReviewDetail(ctx, subject(ref)),
+    addComment: (ref, request) => addComment(ctx, subject(ref), request),
+    publishComment: (ref, commentId) => publishComment(ctx, subject(ref), commentId),
+    getFileBlobs: (ref, request) => getFileBlobs(subject(ref), request),
     requestFix: (run, request) => requestFix(ctx, run, request),
     onRunSettled: (outcome) => onRunSettled(ctx, outcome),
   };

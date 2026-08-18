@@ -1,8 +1,11 @@
+import type { ReviewTarget } from "@otomat/domain";
+
 /**
  * Query-key factory. Keys nest so a parent invalidation cascades to children
  * (TanStack matches by prefix): invalidating `run(id)` also clears that run's
- * `runDiff`/`runReview`/`runPullRequest`, and invalidating `runs` also clears
- * every `runsForIssue`. Note `run` (single) and `runs` (list) are distinct roots.
+ * `runPullRequest`, and invalidating `runs` also clears every `runsForIssue`.
+ * A review surface roots at `review` because a run and an adopted pull request
+ * both own one. Note `run` (single) and `runs` (list) are distinct roots.
  */
 export const queryKeys = {
   health: ["health"] as const,
@@ -52,12 +55,16 @@ export const queryKeys = {
   runContributions: (id: string) => ["run", id, "contributions"] as const,
   sessionContext: (runId: string, agentSessionId: string) =>
     ["run", runId, "session", agentSessionId, "context"] as const,
-  runDiff: (id: string) => ["run", id, "diff"] as const,
-  runDiffFileBlobs: (id: string, path: string, sha: string) =>
-    ["run", id, "diff", "file", path, sha] as const,
+  reviewDiff: (target: ReviewTarget) => ["review", target.kind, target.id, "diff"] as const,
+  reviewDiffFileBlobs: (target: ReviewTarget, path: string, sha: string) =>
+    ["review", target.kind, target.id, "diff", "file", path, sha] as const,
   runWorkspace: (id: string) => ["run", id, "workspace"] as const,
   competeCandidateDiff: (runId: string, groupId: string, stepId: string) =>
     ["run", runId, "compete", groupId, stepId, "diff"] as const,
-  runReview: (id: string) => ["run", id, "review"] as const,
+  reviewDetail: (target: ReviewTarget) => ["review", target.kind, target.id, "detail"] as const,
   runPullRequest: (id: string) => ["run", id, "pr"] as const,
+  issuePullRequests: (issueId: string) => ["issues", issueId, "pull-requests"] as const,
+  pullRequest: (id: string) => ["pull-request", id] as const,
+  reviews: ["reviews"] as const,
+  reviewQueue: (projectId?: string) => ["reviews", "project", projectId ?? null] as const,
 };

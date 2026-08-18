@@ -43,7 +43,7 @@ function Reviewer() {
       </button>
       <ThemeProvider>
         <DiffFileCards
-          runId="run-1"
+          target={{ kind: "run", id: "run-1" }}
           files={PATHS.map((path) => diffFile({ path, patch: diffPatch(path) }))}
           hiddenCount={0}
           onShowHidden={() => {}}

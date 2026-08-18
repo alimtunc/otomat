@@ -16,12 +16,12 @@ export function getReviewComment(db: Db, id: string): ReviewCommentRow | undefin
   return db.select().from(reviewComments).where(eq(reviewComments.id, id)).get();
 }
 
-export function listReviewCommentsForRun(db: Db, runId: string): ReviewCommentRow[] {
+export function listReviewCommentsForSubject(db: Db, subjectId: string): ReviewCommentRow[] {
   return db
     .select(getTableColumns(reviewComments))
     .from(reviewComments)
     .innerJoin(reviews, eq(reviewComments.review_id, reviews.id))
-    .where(eq(reviews.run_id, runId))
+    .where(eq(reviews.subject_id, subjectId))
     .orderBy(reviewComments.created_at)
     .all();
 }

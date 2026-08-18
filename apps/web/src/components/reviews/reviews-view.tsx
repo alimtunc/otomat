@@ -1,81 +1,56 @@
-import { EmptyState, FOCUS_RING, Icon, RunStatusChip } from "@otomat/ui";
-import { Link } from "@tanstack/react-router";
-import { useProjectRuns } from "@web/api/runs/queries";
+import { EmptyState } from "@otomat/ui";
+import { useReviewQueue } from "@web/api/reviews/queries";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
+import { ReviewQueueRow } from "@web/components/reviews/entry-row";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { ProjectQueryBoundary } from "@web/components/shell/project-selection/query-boundary";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
-import { shortId } from "@web/lib/ids";
-import { isReviewable } from "@web/lib/run/filters";
 
 const EMPTY = (
   <CenteredState>
     <EmptyState
       icon="git-pull-request"
       title="Nothing waiting for review"
-      description="Runs land here when their diff is ready for a line-by-line review."
+      description="Runs land here when their diff is ready, and so do the pull requests attached to an issue."
     />
   </CenteredState>
 );
 
 export function ReviewsView() {
   const selectedProject = useSelectedProject();
-  const runs = useProjectRuns(selectedProject.projectId);
+  const reviews = useReviewQueue(selectedProject.projectId);
   return (
     <RouteShell
       active="reviews"
       titleIcon="git-pull-request"
-      titleNote="Review run diffs line-by-line before opening a pull request."
+      titleNote="Review a run's diff or an attached pull request, line by line."
       breadcrumbs={[{ label: "Reviews", current: true }]}
     >
       <ProjectQueryBoundary query={selectedProject.projects}>
         <QueryList
-          query={runs}
+          query={reviews}
           pending={<ListSkeleton rows={2} height={48} />}
           error={
             <ErrorReport
-              error={runs.error}
+              error={reviews.error}
               context="Couldn’t load reviews"
-              onRetry={() => void runs.refetch()}
+              onRetry={() => void reviews.refetch()}
             />
           }
           empty={EMPTY}
         >
-          {(items) => {
-            const reviewable = items.filter(isReviewable);
-            if (reviewable.length === 0) return EMPTY;
-            return (
-              <ul className="flex flex-col gap-0.5 px-2 py-2">
-                {reviewable.map((run) => (
-                  <li key={run.id}>
-                    <Link
-                      to="/runs/$runId/diff"
-                      params={{ runId: run.id }}
-                      className={`flex items-start gap-2.25 rounded-md px-2.5 py-2.25 hover:bg-hover ${FOCUS_RING} focus-visible:outline-offset-[-2px]`}
-                    >
-                      <Icon
-                        name="git-compare"
-                        aria-hidden
-                        className="mt-0.5 h-3.5 w-3.5 text-review"
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-foreground">
-                          Run {shortId(run.id)}
-                        </span>
-                        <span className="mt-0.5 block truncate font-mono text-xs text-text-tertiary">
-                          {run.branch}
-                        </span>
-                      </span>
-                      <RunStatusChip status={run.status} />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            );
-          }}
+          {(items) => (
+            <ul className="flex flex-col gap-0.5 px-2 py-2">
+              {items.map((entry) => (
+                <li key={`${entry.kind}:${entry.id}`}>
+                  <ReviewQueueRow entry={entry} />
+                </li>
+              ))}
+            </ul>
+          )}
         </QueryList>
       </ProjectQueryBoundary>
     </RouteShell>

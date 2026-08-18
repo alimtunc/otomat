@@ -4,11 +4,10 @@ import { join } from "node:path";
 import {
   getPullRequestForRun,
   getReviewComment,
-  getReviewForRun,
+  getReviewForSubject,
   getRun,
   insertPullRequest,
   type ReviewCommentRow,
-  type RunRow,
 } from "@otomat/db";
 import type { CreateReviewCommentRequest } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -26,6 +25,7 @@ import {
   type PullRequestCommentInput,
   type ReviewService,
   type ReviewServiceConfig,
+  type ReviewSubjectRef,
 } from "#review";
 import type { AppendStepInput } from "#supervisor";
 
@@ -99,9 +99,11 @@ function run() {
   return row;
 }
 
+const runTarget = (id: string = RUN_ID): ReviewSubjectRef => ({ kind: "run", id });
+
 /** Every field the daemon needs; a test names only the anchor it is about. */
 function addComment(
-  target: RunRow,
+  target: ReviewSubjectRef,
   input: Omit<CreateReviewCommentRequest, "side" | "destination"> &
     Partial<Pick<CreateReviewCommentRequest, "side" | "destination">>,
 ): Promise<ReviewCommentRow> {
@@ -109,14 +111,14 @@ function addComment(
 }
 
 function currentAnchor() {
-  const diff = review.getWorktreeDiff(run()).diff;
+  const diff = review.getDiff(runTarget()).diff;
   const file = diff?.files.find((f) => f.path === "notes.md");
   if (!file) throw new Error("expected notes.md in the diff");
   return file;
 }
 
 it("computes the real git diff for the run's worktree and null without one", () => {
-  const withWorktree = review.getWorktreeDiff(run());
+  const withWorktree = review.getDiff(runTarget());
   expect(withWorktree.diff?.files.map((f) => f.path)).toEqual(["notes.md"]);
   expect(withWorktree.diff?.additions).toBe(3);
 
@@ -128,12 +130,12 @@ it("computes the real git diff for the run's worktree and null without one", () 
     sessionStatus: "terminated",
   });
   const bare = getRun(fix.db, "r-bare");
-  expect(bare && review.getWorktreeDiff(bare).diff).toBeNull();
+  expect(bare && review.getDiff(runTarget("r-bare")).diff).toBeNull();
 });
 
 it("pins a comment to the live diff, snapshots its hunk, and opens the review", async () => {
   const anchor = currentAnchor();
-  const comment = await addComment(run(), {
+  const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: anchor.sha,
@@ -144,7 +146,7 @@ it("pins a comment to the live diff, snapshots its hunk, and opens the review", 
   expect(comment.diff_sha).toBe(anchor.sha);
   expect(comment.hunk_snapshot).toContain("+beta");
 
-  expect(getReviewForRun(fix.db, RUN_ID)?.status).toBe("in_review");
+  expect(getReviewForSubject(fix.db, RUN_ID)?.status).toBe("in_review");
 
   const events = readRunEvents(fix.db, RUN_ID);
   const created = events.find((e) => e.type === "review.comment_created");
@@ -153,7 +155,7 @@ it("pins a comment to the live diff, snapshots its hunk, and opens the review", 
 
 it("rejects a stale anchor and a run without a diff — no silent re-anchoring", async () => {
   await expect(
-    addComment(run(), {
+    addComment(runTarget(), {
       file_path: "notes.md",
       line: 1,
       diff_sha: "not-the-current-sha",
@@ -171,13 +173,13 @@ it("rejects a stale anchor and a run without a diff — no silent re-anchoring",
   const bare = getRun(fix.db, "r-bare2");
   if (!bare) throw new Error("seeded bare run missing");
   await expect(
-    addComment(bare, { file_path: "x", line: 0, diff_sha: "s", body: "b" }),
+    addComment(runTarget("r-bare2"), { file_path: "x", line: 0, diff_sha: "s", body: "b" }),
   ).rejects.toThrow(DiffUnavailableError);
 });
 
 it("pins a whole-file comment without capturing a hunk snapshot", async () => {
   const anchor = currentAnchor();
-  const comment = await addComment(run(), {
+  const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: null,
     diff_sha: anchor.sha,
@@ -186,52 +188,52 @@ it("pins a whole-file comment without capturing a hunk snapshot", async () => {
 
   expect(comment.line).toBeNull();
   expect(comment.hunk_snapshot).toBe("");
-  expect(review.getReviewDetail(RUN_ID).comments.map((c) => c.id)).toEqual([comment.id]);
+  expect(review.getReviewDetail(runTarget()).comments.map((c) => c.id)).toEqual([comment.id]);
 });
 
 it("serves the exact base and head blobs of a live diff file", () => {
-  const blobs = review.getFileBlobs(run(), { path: "notes.md", sha: currentAnchor().sha });
+  const blobs = review.getFileBlobs(runTarget(), { path: "notes.md", sha: currentAnchor().sha });
 
   expect(blobs.base).toBeNull();
   expect(blobs.head).toBe("alpha\nbeta\ngamma\n");
 });
 
 it("refuses blobs read against a moved anchor", () => {
-  expect(() => review.getFileBlobs(run(), { path: "notes.md", sha: "moved" })).toThrow(
+  expect(() => review.getFileBlobs(runTarget(), { path: "notes.md", sha: "moved" })).toThrow(
     ReviewAnchorStaleError,
   );
 });
 
 it("refuses a path that is not part of the current diff", () => {
-  expect(() => review.getFileBlobs(run(), { path: "absent.md", sha: currentAnchor().sha })).toThrow(
-    FileNotInDiffError,
-  );
+  expect(() =>
+    review.getFileBlobs(runTarget(), { path: "absent.md", sha: currentAnchor().sha }),
+  ).toThrow(FileNotInDiffError);
 });
 
 it("reads a modified file's base side from the fork point, not from the worktree", () => {
   writeFileSync(join(worktreePath, "README.md"), "# base\nplus a line\n");
-  const file = review.getWorktreeDiff(run()).diff?.files.find((f) => f.path === "README.md");
+  const file = review.getDiff(runTarget()).diff?.files.find((f) => f.path === "README.md");
   if (!file) throw new Error("expected README.md in the diff");
 
-  const blobs = review.getFileBlobs(run(), { path: "README.md", sha: file.sha });
+  const blobs = review.getFileBlobs(runTarget(), { path: "README.md", sha: file.sha });
 
   expect(blobs.base).toBe("# base\n");
   expect(blobs.head).toBe("# base\nplus a line\n");
 });
 
 it("grants fix authority only while Otomat still holds the run's worktree", () => {
-  expect(review.getReviewDetail(RUN_ID).fixAuthority.kind).toBe("otomat");
+  expect(review.getReviewDetail(runTarget()).fixAuthority.kind).toBe("otomat");
 
   worktrees.cleanup(RUN_ID);
 
-  const authority = review.getReviewDetail(RUN_ID).fixAuthority;
+  const authority = review.getReviewDetail(runTarget()).fixAuthority;
   expect(authority.kind).toBe("external");
   expect(authority.reason).toContain(BRANCH);
 });
 
 it("appends one fix step carrying comment + original hunk + current file", async () => {
   const anchor = currentAnchor();
-  const comment = await addComment(run(), {
+  const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: anchor.sha,
@@ -288,9 +290,9 @@ it("keeps a symlinked path's fix context to the link target text, never the host
   writeFileSync(secretPath, "TOP-SECRET\n");
   symlinkSync(secretPath, join(worktreePath, "leak"));
 
-  const anchor = review.getWorktreeDiff(run()).diff?.files.find((f) => f.path === "leak");
+  const anchor = review.getDiff(runTarget()).diff?.files.find((f) => f.path === "leak");
   if (!anchor) throw new Error("expected leak in the diff");
-  const comment = await addComment(run(), {
+  const comment = await addComment(runTarget(), {
     file_path: "leak",
     line: null,
     diff_sha: anchor.sha,
@@ -311,7 +313,7 @@ it("keeps a symlinked path's fix context to the link target text, never the host
 
 it("stamps fix-requested comments and drives the review to changes_requested", async () => {
   const anchor = currentAnchor();
-  const comment = await addComment(run(), {
+  const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: anchor.sha,
@@ -326,12 +328,12 @@ it("stamps fix-requested comments and drives the review to changes_requested", a
     references: [],
   });
   expect(getReviewComment(fix.db, comment.id)?.fix_requested_at).not.toBeNull();
-  expect(getReviewForRun(fix.db, RUN_ID)?.status).toBe("changes_requested");
+  expect(getReviewForSubject(fix.db, RUN_ID)?.status).toBe("changes_requested");
 });
 
 it("stamps nothing when the step append fails, so the request can be retried", async () => {
   const anchor = currentAnchor();
-  const comment = await addComment(run(), {
+  const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: anchor.sha,
@@ -355,18 +357,18 @@ it("stamps nothing when the step append fails, so the request can be retried", a
   ).rejects.toThrow("append exploded");
 
   expect(getReviewComment(fix.db, comment.id)?.fix_requested_at).toBeNull();
-  expect(getReviewForRun(fix.db, RUN_ID)?.status).toBe("in_review");
+  expect(getReviewForSubject(fix.db, RUN_ID)?.status).toBe("in_review");
 });
 
 it("on a completed settle: emits git.diff_updated, marks fixed comments addressed and moved anchors outdated", async () => {
   const anchor = currentAnchor();
-  const requested = await addComment(run(), {
+  const requested = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: anchor.sha,
     body: "fix me",
   });
-  const bystander = await addComment(run(), {
+  const bystander = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 3,
     diff_sha: anchor.sha,
@@ -387,7 +389,7 @@ it("on a completed settle: emits git.diff_updated, marks fixed comments addresse
 
   expect(getReviewComment(fix.db, requested.id)?.status).toBe("addressed");
   expect(getReviewComment(fix.db, bystander.id)?.status).toBe("outdated");
-  expect(getReviewForRun(fix.db, RUN_ID)?.status).toBe("resolved");
+  expect(getReviewForSubject(fix.db, RUN_ID)?.status).toBe("resolved");
 
   const events = readRunEvents(fix.db, RUN_ID);
   expect(events.some((e) => e.type === "git.diff_updated")).toBe(true);
@@ -402,7 +404,7 @@ it("on a completed settle: emits git.diff_updated, marks fixed comments addresse
 
 it("keeps untouched anchors open across a completed settle", async () => {
   const anchor = currentAnchor();
-  const comment = await addComment(run(), {
+  const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 1,
     diff_sha: anchor.sha,
@@ -411,12 +413,12 @@ it("keeps untouched anchors open across a completed settle", async () => {
 
   review.onRunSettled({ runId: RUN_ID, classification: "completed" });
   expect(getReviewComment(fix.db, comment.id)?.status).toBe("open");
-  expect(getReviewForRun(fix.db, RUN_ID)?.status).toBe("in_review");
+  expect(getReviewForSubject(fix.db, RUN_ID)?.status).toBe("in_review");
 });
 
 it("releases pending fix requests when the turn does not complete", async () => {
   const anchor = currentAnchor();
-  const comment = await addComment(run(), {
+  const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: anchor.sha,
@@ -440,6 +442,7 @@ it("releases pending fix requests when the turn does not complete", async () => 
 function openPullRequest(): void {
   insertPullRequest(fix.db, {
     id: "pr-review",
+    issue_id: "i1",
     run_id: RUN_ID,
     number: 7,
     url: "https://github.com/acme/app/pull/7",
@@ -453,7 +456,7 @@ function openPullRequest(): void {
 
 it("anchors a multi-line range and snapshots the hunk it spans", async () => {
   const anchor = currentAnchor();
-  const ranged = await addComment(run(), {
+  const ranged = await addComment(runTarget(), {
     file_path: "notes.md",
     start_line: 1,
     line: 3,
@@ -466,14 +469,14 @@ it("anchors a multi-line range and snapshots the hunk it spans", async () => {
   expect(ranged.hunk_snapshot).toContain("+gamma");
 
   const reread = createReviewService(reviewConfig)
-    .getReviewDetail(RUN_ID)
+    .getReviewDetail(runTarget())
     .comments.find((row) => row.id === ranged.id);
   expect(reread).toMatchObject({ side: "new", start_line: 1, line: 3 });
 });
 
 it("captures a suggestion with the exact lines it replaces", async () => {
   const anchor = currentAnchor();
-  const suggested = await addComment(run(), {
+  const suggested = await addComment(runTarget(), {
     file_path: "notes.md",
     start_line: 2,
     line: 3,
@@ -489,7 +492,7 @@ it("captures a suggestion with the exact lines it replaces", async () => {
 it("refuses a suggestion the patch cannot back, and says why", async () => {
   const anchor = currentAnchor();
   await expect(
-    addComment(run(), {
+    addComment(runTarget(), {
       file_path: "notes.md",
       side: "old",
       line: 1,
@@ -500,7 +503,7 @@ it("refuses a suggestion the patch cannot back, and says why", async () => {
   ).rejects.toThrow(CommentRangeInvalidError);
 
   await expect(
-    addComment(run(), {
+    addComment(runTarget(), {
       file_path: "notes.md",
       start_line: 3,
       line: 40,
@@ -512,9 +515,9 @@ it("refuses a suggestion the patch cannot back, and says why", async () => {
 });
 
 it("offers the PR destination only once a pull request carries a published head", async () => {
-  expect(review.getReviewDetail(RUN_ID).destinations.pr_review).toBe(false);
+  expect(review.getReviewDetail(runTarget()).destinations.pr_review).toBe(false);
   await expect(
-    addComment(run(), {
+    addComment(runTarget(), {
       file_path: "notes.md",
       line: 2,
       diff_sha: currentAnchor().sha,
@@ -524,7 +527,7 @@ it("offers the PR destination only once a pull request carries a published head"
   ).rejects.toThrow(CommentDestinationUnavailableError);
 
   openPullRequest();
-  const destinations = review.getReviewDetail(RUN_ID).destinations;
+  const destinations = review.getReviewDetail(runTarget()).destinations;
   expect(destinations.pr_review).toBe(true);
   expect(destinations.reason).toContain("#7");
 });
@@ -532,7 +535,7 @@ it("offers the PR destination only once a pull request carries a published head"
 it("refuses a whole-file anchor for the pull-request destination", async () => {
   openPullRequest();
   await expect(
-    addComment(run(), {
+    addComment(runTarget(), {
       file_path: "notes.md",
       line: null,
       diff_sha: currentAnchor().sha,
@@ -544,7 +547,7 @@ it("refuses a whole-file anchor for the pull-request destination", async () => {
 
 it("publishes a chosen PR-review comment on creation and refuses to publish it twice", async () => {
   openPullRequest();
-  const created = await addComment(run(), {
+  const created = await addComment(runTarget(), {
     file_path: "notes.md",
     start_line: 1,
     line: 2,
@@ -557,6 +560,7 @@ it("publishes a chosen PR-review comment on creation and refuses to publish it t
   expect(created.publication_status).toBe("published");
   expect(created.external_url).toContain("discussion_r1");
   expect(published[0]).toEqual({
+    commitSha: "f".repeat(40),
     filePath: "notes.md",
     side: "new",
     startLine: 1,
@@ -568,7 +572,7 @@ it("publishes a chosen PR-review comment on creation and refuses to publish it t
     true,
   );
 
-  await expect(review.publishComment(run(), created.id)).rejects.toThrow(
+  await expect(review.publishComment(runTarget(), created.id)).rejects.toThrow(
     CommentDestinationUnavailableError,
   );
 });
@@ -577,7 +581,7 @@ it("keeps a comment GitHub refused, with its reason, and publishes it on retry",
   openPullRequest();
   publishFailure = new Error("GitHub refused the review comment. (HTTP 422)");
 
-  const created = await addComment(run(), {
+  const created = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: currentAnchor().sha,
@@ -591,7 +595,7 @@ it("keeps a comment GitHub refused, with its reason, and publishes it on retry",
   expect(getReviewComment(fix.db, created.id)?.body).toBe("on the PR");
 
   publishFailure = null;
-  const retried = await review.publishComment(run(), created.id);
+  const retried = await review.publishComment(runTarget(), created.id);
   expect(retried.publication_status).toBe("published");
   expect(retried.publication_error).toBeNull();
 });
@@ -599,7 +603,7 @@ it("keeps a comment GitHub refused, with its reason, and publishes it on retry",
 it("refuses to retry a publication whose diff moved under it", async () => {
   openPullRequest();
   publishFailure = new Error("GitHub was unreachable.");
-  const created = await addComment(run(), {
+  const created = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: currentAnchor().sha,
@@ -610,13 +614,15 @@ it("refuses to retry a publication whose diff moved under it", async () => {
   publishFailure = null;
   appendFileSync(join(worktreePath, "notes.md"), "delta\n");
 
-  await expect(review.publishComment(run(), created.id)).rejects.toThrow(ReviewAnchorStaleError);
+  await expect(review.publishComment(runTarget(), created.id)).rejects.toThrow(
+    ReviewAnchorStaleError,
+  );
   expect(published).toEqual([]);
 });
 
 it("never turns a PR-review comment into an agent instruction", async () => {
   openPullRequest();
-  const created = await addComment(run(), {
+  const created = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: currentAnchor().sha,
@@ -638,7 +644,7 @@ it("never turns a PR-review comment into an agent instruction", async () => {
 
 it("freezes the global instruction beside the range and suggestion it constrains", async () => {
   const anchor = currentAnchor();
-  const created = await addComment(run(), {
+  const created = await addComment(runTarget(), {
     file_path: "notes.md",
     start_line: 2,
     line: 3,
@@ -670,7 +676,7 @@ it("freezes the global instruction beside the range and suggestion it constrains
 
 it("keeps a published comment's destination and state through the review detail read", async () => {
   openPullRequest();
-  const created = await addComment(run(), {
+  const created = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: currentAnchor().sha,
@@ -678,7 +684,7 @@ it("keeps a published comment's destination and state through the review detail 
     body: "on the PR",
   });
 
-  const stored = review.getReviewDetail(RUN_ID).comments.find((row) => row.id === created.id);
+  const stored = review.getReviewDetail(runTarget()).comments.find((row) => row.id === created.id);
   expect(stored?.destination).toBe("pr_review");
   expect(stored?.publication_status).toBe("published");
   expect(getPullRequestForRun(fix.db, RUN_ID)?.number).toBe(7);

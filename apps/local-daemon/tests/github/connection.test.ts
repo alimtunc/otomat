@@ -29,6 +29,7 @@ function fakeCli(): GitHubCli & { tokens: string[] } {
     availability: async () => null,
     remoteBranchExists: async () => true,
     remoteBranchProtected: async () => true,
+    searchPullRequests: async () => [],
     loginWithToken: async (token: string) => {
       tokens.push(token);
       current = CONNECTED;

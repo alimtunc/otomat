@@ -1,12 +1,15 @@
 import {
+  issuePullRequestsSchema,
+  pullRequestContractSchema,
   pullRequestDetailSchema,
   pullRequestProposalSchema,
+  type AttachPullRequestRequest,
   type PreparePullRequestRequest,
   type PushPullRequestRequest,
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { getJson, postJson } from "./http.js";
+import { deleteJson, getJson, postJson } from "./http.js";
 
 export function createPullRequestsClient(config: DaemonClientConfig) {
   return {
@@ -29,6 +32,31 @@ export function createPullRequestsClient(config: DaemonClientConfig) {
       return pullRequestProposalSchema.parse(
         await postJson(config, `/api/runs/${encodeURIComponent(id)}/pr/generate`, {}),
       );
+    },
+    async listIssuePullRequests(issueId: string) {
+      const issue = encodeURIComponent(issueId);
+      return issuePullRequestsSchema.parse(
+        await getJson(config, `/api/issues/${issue}/pull-requests`),
+      );
+    },
+    async attachPullRequest(issueId: string, request: AttachPullRequestRequest) {
+      const issue = encodeURIComponent(issueId);
+      return pullRequestContractSchema.parse(
+        await postJson(config, `/api/issues/${issue}/pull-requests`, request),
+      );
+    },
+    async getAttachedPullRequest(pullRequestId: string) {
+      const id = encodeURIComponent(pullRequestId);
+      return pullRequestContractSchema.parse(await getJson(config, `/api/pull-requests/${id}`));
+    },
+    async refreshPullRequest(pullRequestId: string) {
+      const id = encodeURIComponent(pullRequestId);
+      return pullRequestContractSchema.parse(
+        await postJson(config, `/api/pull-requests/${id}/refresh`, {}),
+      );
+    },
+    async detachPullRequest(pullRequestId: string) {
+      await deleteJson(config, `/api/pull-requests/${encodeURIComponent(pullRequestId)}`);
     },
   };
 }

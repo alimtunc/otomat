@@ -1,15 +1,17 @@
 import { useDaemonStatus, useHealth } from "@web/api/daemon/queries";
+import { useReviewQueue } from "@web/api/reviews/queries";
 import { useProjectRuns } from "@web/api/runs/queries";
 import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
 import { useRemoteSession } from "@web/components/shell/remote-session/context";
 import { remoteStatusHeadline } from "@web/components/shell/remote-session/status-labels";
-import { isReviewable, isRunning } from "@web/lib/run/filters";
+import { isRunning } from "@web/lib/run/filters";
 
 export function useShellData() {
   const { connectionState, lastSyncAt, retry } = useDaemonStatus();
   const health = useHealth();
   const switcher = useProjectSwitcher();
   const runs = useProjectRuns(switcher.currentProjectId);
+  const reviews = useReviewQueue(switcher.currentProjectId);
   const remote = useRemoteSession();
 
   return {
@@ -25,6 +27,6 @@ export function useShellData() {
     daemonVersion: health.data?.version,
     ...switcher,
     hasLiveRun: (runs.data ?? []).some(isRunning),
-    reviewCount: (runs.data ?? []).filter(isReviewable).length,
+    reviewCount: (reviews.data ?? []).length,
   };
 }

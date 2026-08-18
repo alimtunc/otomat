@@ -18,3 +18,18 @@ export function useRunPullRequest(runId: string) {
     queryFn: () => daemon.getPullRequest(runId),
   });
 }
+
+/** Read on demand: detection asks GitHub, so it runs when the issue is open rather than on a timer. */
+export function useIssuePullRequests(issueId: string) {
+  return useQuery({
+    queryKey: queryKeys.issuePullRequests(issueId),
+    queryFn: () => daemon.listIssuePullRequests(issueId),
+  });
+}
+
+export function useAttachedPullRequest(pullRequestId: string) {
+  return useQuery({
+    queryKey: queryKeys.pullRequest(pullRequestId),
+    queryFn: () => daemon.getAttachedPullRequest(pullRequestId),
+  });
+}

@@ -23,6 +23,7 @@ it("stores publication metadata and updates one row in place", () => {
   const { db } = t.client;
   insertPullRequest(db, {
     id: "pr1",
+    issue_id: "i1",
     run_id: "r1",
     provider: "github",
     status: "draft",
@@ -78,7 +79,9 @@ it("stores publication metadata and updates one row in place", () => {
 
 it("enforces one pull request row per run", () => {
   const { db } = t.client;
-  insertPullRequest(db, { id: "pr1", run_id: "r1", title: "First" });
+  insertPullRequest(db, { id: "pr1", issue_id: "i1", run_id: "r1", title: "First" });
 
-  expect(() => insertPullRequest(db, { id: "pr2", run_id: "r1", title: "Duplicate" })).toThrow();
+  expect(() =>
+    insertPullRequest(db, { id: "pr2", issue_id: "i1", run_id: "r1", title: "Duplicate" }),
+  ).toThrow();
 });

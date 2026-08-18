@@ -2,10 +2,10 @@ import { randomUUID } from "node:crypto";
 
 import {
   getReviewComment,
-  getReviewForRun,
+  getReviewForSubject,
   insertReview,
   insertReviewComment,
-  listReviewCommentsForRun,
+  listReviewCommentsForSubject,
   type ReviewCommentRow,
   type ReviewRow,
 } from "@otomat/db";
@@ -19,8 +19,6 @@ import {
 import { emitLedgerEvent } from "#events";
 
 import { captureAnchor } from "./anchor.js";
-import { getFixAuthority } from "./authority.js";
-import { getDestinationAvailability } from "./destinations.js";
 import { computeDiff } from "./diff.js";
 import {
   CommentDestinationUnavailableError,
@@ -31,49 +29,49 @@ import { buildCommentCreatedEvent } from "./events.js";
 import { deliverComment } from "./publication.js";
 import { reloadOrThrow } from "./reload.js";
 import { driveReviewTo } from "./transitions.js";
-import type { ReviewContext, ReviewDetailResult } from "./types.js";
+import type { ReviewContext, ReviewDetailResult, ReviewSubject } from "./types.js";
 
-/** Returns the run's review row, creating it (status `open`) on the first comment. */
-function ensureReview(ctx: ReviewContext, runId: string): ReviewRow {
-  const existing = getReviewForRun(ctx.db, runId);
+/** Returns the subject's review row, creating it (status `open`) on the first comment. */
+function ensureReview(ctx: ReviewContext, subjectId: string): ReviewRow {
+  const existing = getReviewForSubject(ctx.db, subjectId);
   if (existing) return existing;
   const id = randomUUID();
-  insertReview(ctx.db, { id, run_id: runId, status: reviewMachine.initial });
+  insertReview(ctx.db, { id, subject_id: subjectId, status: reviewMachine.initial });
   return reloadOrThrow(
-    () => getReviewForRun(ctx.db, runId),
+    () => getReviewForSubject(ctx.db, subjectId),
     `review ${id} vanished immediately after insert`,
   );
 }
 
-export function getReviewDetail(ctx: ReviewContext, runId: string): ReviewDetailResult {
+export function getReviewDetail(ctx: ReviewContext, subject: ReviewSubject): ReviewDetailResult {
   return {
-    review: getReviewForRun(ctx.db, runId) ?? null,
-    comments: listReviewCommentsForRun(ctx.db, runId),
-    fixAuthority: getFixAuthority(ctx, runId),
-    destinations: getDestinationAvailability(ctx, runId),
+    review: getReviewForSubject(ctx.db, subject.id) ?? null,
+    comments: listReviewCommentsForSubject(ctx.db, subject.id),
+    fixAuthority: subject.fixAuthority(),
+    destinations: subject.destinations(),
   };
 }
 
 export async function addComment(
   ctx: ReviewContext,
-  runId: string,
+  subject: ReviewSubject,
   request: CreateReviewCommentRequest,
 ): Promise<ReviewCommentRow> {
-  const diff = computeDiff(ctx, runId);
-  if (diff === null) throw new DiffUnavailableError(runId);
+  const diff = computeDiff(subject);
+  if (diff === null) throw new DiffUnavailableError(subject.id);
   const file = diff.files.find(
     (candidate) => candidate.path === request.file_path && candidate.sha === request.diff_sha,
   );
   if (!file) throw new ReviewAnchorStaleError(request.file_path);
 
-  const destinations = getDestinationAvailability(ctx, runId);
+  const destinations = subject.destinations();
   if (request.destination === "pr_review" && !destinations.pr_review) {
     throw new CommentDestinationUnavailableError(destinations.reason);
   }
   const anchor = captureAnchor(file.patch, request);
 
   const now = new Date().toISOString();
-  const review = ensureReview(ctx, runId);
+  const review = ensureReview(ctx, subject.id);
   const id = randomUUID();
   insertReviewComment(ctx.db, {
     id,
@@ -97,7 +95,15 @@ export async function addComment(
     () => getReviewComment(ctx.db, id),
     `review comment ${id} vanished immediately after insert`,
   );
-  emitLedgerEvent(ctx.db, ctx.dataDir, runId, buildCommentCreatedEvent(runId, created, now));
+  const ledgerRunId = subject.ledgerRunId;
+  if (ledgerRunId !== null) {
+    emitLedgerEvent(
+      ctx.db,
+      ctx.dataDir,
+      ledgerRunId,
+      buildCommentCreatedEvent(ledgerRunId, created, now),
+    );
+  }
   if (created.destination !== "pr_review") return created;
-  return deliverComment(ctx, runId, created);
+  return deliverComment(ctx, subject, created);
 }

@@ -89,18 +89,32 @@ export function deleteRepositoryCascade(db: Db, repositoryId: string): boolean {
         .all()
         .map((row) => row.id);
 
-      if (runIds.length > 0) {
+      // A pull request Otomat adopted has no run, so the repository is what ties it to this cascade.
+      const pullRequestIds = tx
+        .select({ id: pullRequests.id })
+        .from(pullRequests)
+        .where(
+          or(eq(pullRequests.repository_id, repositoryId), inArray(pullRequests.run_id, runIds)),
+        )
+        .all()
+        .map((row) => row.id);
+      const subjectIds = [...runIds, ...pullRequestIds];
+      if (subjectIds.length > 0) {
         const reviewIds = tx
           .select({ id: reviews.id })
           .from(reviews)
-          .where(inArray(reviews.run_id, runIds))
+          .where(inArray(reviews.subject_id, subjectIds))
           .all()
           .map((row) => row.id);
         if (reviewIds.length > 0) {
           tx.delete(reviewComments).where(inArray(reviewComments.review_id, reviewIds)).run();
         }
-        tx.delete(reviews).where(inArray(reviews.run_id, runIds)).run();
-        tx.delete(pullRequests).where(inArray(pullRequests.run_id, runIds)).run();
+        tx.delete(reviews).where(inArray(reviews.subject_id, subjectIds)).run();
+      }
+      if (pullRequestIds.length > 0) {
+        tx.delete(pullRequests).where(inArray(pullRequests.id, pullRequestIds)).run();
+      }
+      if (runIds.length > 0) {
         tx.delete(linearWrites).where(inArray(linearWrites.run_id, runIds)).run();
         tx.delete(runContributions).where(inArray(runContributions.run_id, runIds)).run();
         const stepRunIds = tx

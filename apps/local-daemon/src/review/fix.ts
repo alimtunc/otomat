@@ -1,7 +1,7 @@
 import {
-  getReviewForRun,
+  getReviewForSubject,
   listCompeteGroupsForRun,
-  listReviewCommentsForRun,
+  listReviewCommentsForSubject,
   listStepRunsForRun,
   setReviewCommentFixRequested,
   type RunRow,
@@ -45,7 +45,7 @@ function diffProducingNodes(ctx: ReviewContext, run: RunRow): string[] {
 /** Freezes the fix context of the selected open comments; mutates nothing. */
 function prepareFix(ctx: ReviewContext, run: RunRow, commentIds: string[]): FixPreparation {
   const byId = new Map(
-    listReviewCommentsForRun(ctx.db, run.id).map((comment) => [comment.id, comment]),
+    listReviewCommentsForSubject(ctx.db, run.id).map((comment) => [comment.id, comment]),
   );
   // One captured snapshot: every "current file" comes from the same tree, and a commented path
   // that is a symlink stays the symlink's target text, never a host file.
@@ -83,7 +83,7 @@ function prepareFix(ctx: ReviewContext, run: RunRow, commentIds: string[]): FixP
 function markFixRequested(ctx: ReviewContext, runId: string, commentIds: string[]): void {
   const now = new Date().toISOString();
   for (const commentId of commentIds) setReviewCommentFixRequested(ctx.db, commentId, now);
-  const review = getReviewForRun(ctx.db, runId);
+  const review = getReviewForSubject(ctx.db, runId);
   if (review && review.status !== "changes_requested") {
     driveReviewTo(ctx, review, "changes_requested");
   }

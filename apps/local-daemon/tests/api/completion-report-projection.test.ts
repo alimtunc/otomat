@@ -167,6 +167,7 @@ describe("run completion report projection", () => {
       .insert(schema.pullRequests)
       .values({
         id: "pr-1",
+        issue_id: "i1",
         run_id: "run-report",
         number: 42,
         url: "https://github.com/acme/repo/pull/42",
@@ -194,9 +195,9 @@ describe("run completion report projection", () => {
       .run();
 
     const review = stubReviewService({
-      getWorktreeDiff: () => ({ computedAt: OCCURRED_AT, diff: DIFF }),
+      getDiff: () => ({ computedAt: OCCURRED_AT, diff: DIFF }),
       getReviewDetail: () => ({
-        review: reviewRow({ id: "review-1", run_id: "run-report" }),
+        review: reviewRow({ id: "review-1", subject_id: "run-report" }),
         comments: [
           commentRow({ id: "z-comment", review_id: "review-1", status: "open" }),
           commentRow({ id: "a-comment", review_id: "review-1", status: "open" }),
@@ -374,7 +375,7 @@ describe("run completion report projection", () => {
       t.db,
       "run-report",
       stubReviewService({
-        getWorktreeDiff: () => {
+        getDiff: () => {
           throw new Error("worktree missing");
         },
       }),
@@ -457,6 +458,7 @@ describe("run completion report projection", () => {
       .insert(schema.pullRequests)
       .values({
         id: "pr-corrupt",
+        issue_id: "i1",
         run_id: "run-report",
         number: 42,
         url: "https://github.com/acme/repo/pull/42",

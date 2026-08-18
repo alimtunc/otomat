@@ -7,9 +7,9 @@ export { sanitizeBranchName } from "./generation/parse.js";
 export { createDeviceAuthorization } from "./device-flow.js";
 export type { DeviceAuthorization, DeviceAuthorizationStart } from "./device-flow.js";
 export { parseGitHubRemoteUrl } from "./parse.js";
-export { GitHubCliError } from "./errors.js";
+export { GitHubCliError, GitHubPublicationError, PullRequestImportRefusal } from "./errors.js";
 export { runCommand } from "./process.js";
-export { createGitHubService, GitHubPublicationError } from "./service.js";
+export { createGitHubService } from "./service.js";
 export type {
   CommandRequest,
   CommandResult,
@@ -20,6 +20,7 @@ export type {
   GitHubRemote,
   GitHubService,
   GitHubServiceConfig,
+  IssuePullRequestsResult,
   PullRequestView,
   PullRequestCreateInput,
   PullRequestModeInput,

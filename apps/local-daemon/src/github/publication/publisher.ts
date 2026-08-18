@@ -22,7 +22,7 @@ import {
 import { providerPatch, refreshExistingPullRequest, updateDetails } from "./provider.js";
 import { computePublishability } from "./publishability.js";
 import { pushCommits } from "./push.js";
-import { PublicationStore } from "./store.js";
+import { publicationRunId, PublicationStore } from "./store.js";
 import { computeSync, UNAVAILABLE_SYNC } from "./sync.js";
 import type {
   PublicationConfig,
@@ -70,7 +70,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
     return this.serialize(run.id, async () => {
       const proposal = await generator.generate(agent, buildGenerationInput(this.config, run));
       const identifier = issueIdentifier(this.config.db, run.issue_id);
-      this.store.recordProposal(run.id, proposal, composeSubject(proposal.subject, identifier));
+      this.store.recordProposal(run, proposal, composeSubject(proposal.subject, identifier));
       return proposal;
     });
   }
@@ -97,7 +97,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
   /** The repository root is the cwd, not the worktree: a merge is exactly what takes that away. */
   private async refreshLifecycle(row: PullRequestRow): Promise<PullRequestRow> {
     if (row.number === null || (row.status !== "open" && row.status !== "draft")) return row;
-    const rootPath = this.config.repositories.forRun(row.run_id)?.rootPath;
+    const rootPath = this.config.repositories.forRun(publicationRunId(row))?.rootPath;
     if (rootPath === undefined) return row;
     try {
       const { repository } = await this.config.cli.resolveRemote(rootPath);
@@ -118,7 +118,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
     if (row.number === null || row.head_ref === null) return null;
     if (row.status === "merged" || row.status === "closed") return null;
     try {
-      const workspace = await resolveWorkspace(this.config, row.run_id);
+      const workspace = await resolveWorkspace(this.config, publicationRunId(row));
       return await computeSync({
         cli: this.config.cli,
         worktreePath: workspace.worktree.path,
@@ -156,7 +156,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
   ): Promise<PullRequestView> {
     const publicationRequest = resolvePublicationRequest(this.config.db, run, request);
     let row = this.store.recoverInterrupted(
-      this.store.ensureRow(run.id, publicationRequest.title, publicationRequest.normalizedBody),
+      this.store.ensureRow(run, publicationRequest.title, publicationRequest.normalizedBody),
     );
     if (row.status === "merged" || row.status === "closed") return this.view(row);
     // Publishability is a property of the workspace, so how the run ended is recorded, never enforced.

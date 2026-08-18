@@ -724,8 +724,8 @@ it("serves isolated candidate diff evidence and delegates explicit winner select
   const app = makeApiApp(t, {
     review: {
       ...stubReviewService(),
-      getWorktreeDiff: (_run, owner) => {
-        diffOwner = owner;
+      getDiff: (ref) => {
+        diffOwner = ref.kind === "run" ? ref.owner : undefined;
         return { computedAt: "2026-07-05T00:00:00.000Z", diff: null };
       },
     },

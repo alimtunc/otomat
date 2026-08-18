@@ -19,7 +19,10 @@ function fakeClient() {
 it("invalidates the diff cache and completion report on git.diff_updated", () => {
   const { client, keys } = fakeClient();
   invalidateForEvent(client, "run-1", event("git.diff_updated"));
-  expect(keys).toEqual([queryKeys.runCompletionReport("run-1"), queryKeys.runDiff("run-1")]);
+  expect(keys).toEqual([
+    queryKeys.runCompletionReport("run-1"),
+    queryKeys.reviewDiff({ kind: "run", id: "run-1" }),
+  ]);
 });
 
 it("invalidates the review cache on any review.* event", () => {
@@ -28,9 +31,9 @@ it("invalidates the review cache on any review.* event", () => {
   invalidateForEvent(client, "run-1", event("review.comment_resolved"));
   expect(keys).toEqual([
     queryKeys.runCompletionReport("run-1"),
-    queryKeys.runReview("run-1"),
+    queryKeys.reviewDetail({ kind: "run", id: "run-1" }),
     queryKeys.runCompletionReport("run-1"),
-    queryKeys.runReview("run-1"),
+    queryKeys.reviewDetail({ kind: "run", id: "run-1" }),
   ]);
 });
 
@@ -42,9 +45,11 @@ it("invalidates the PR and issue caches on any pr.* event", () => {
     queryKeys.runCompletionReport("run-1"),
     queryKeys.runPullRequest("run-1"),
     queryKeys.issues,
+    queryKeys.reviews,
     queryKeys.runCompletionReport("run-1"),
     queryKeys.runPullRequest("run-1"),
     queryKeys.issues,
+    queryKeys.reviews,
   ]);
 });
 
@@ -71,7 +76,7 @@ it("drops no cache for a Linear event that names no issue", () => {
   expect(keys).toEqual([queryKeys.runCompletionReport("run-1")]);
 });
 
-it("invalidates the run, run list, conversation, and issue execution caches on a lifecycle or reconcile event", () => {
+it("invalidates the run, run list, conversation, issue execution and review queue caches on a lifecycle or reconcile event", () => {
   const { client, keys } = fakeClient();
   invalidateForEvent(client, "run-1", event("run.lifecycle"));
   expect(keys).toEqual([
@@ -79,6 +84,7 @@ it("invalidates the run, run list, conversation, and issue execution caches on a
     queryKeys.runs,
     queryKeys.runContributions("run-1"),
     queryKeys.issues,
+    queryKeys.reviews,
   ]);
 });
 

@@ -58,8 +58,8 @@ export type {
 export type {
   ChangeStatus,
   DiffFileContract,
-  RunDiffContract,
-  RunDiffResponse,
+  ReviewDiffContract,
+  ReviewDiffResponse,
 } from "./contracts/diff.js";
 
 export type {

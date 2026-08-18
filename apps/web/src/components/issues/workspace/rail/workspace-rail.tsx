@@ -4,6 +4,7 @@ import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { LinearRailSection } from "@web/components/issues/workspace/linear/rail-section";
 import { ExecutionSection } from "@web/components/issues/workspace/rail/execution-section";
 import { FollowedRunSection } from "@web/components/issues/workspace/rail/followed-run-section";
+import { IssuePullRequestsSection } from "@web/components/issues/workspace/rail/issue-pull-requests-section";
 import { Mono } from "@web/components/issues/workspace/rail/mono";
 import { PermissionSection } from "@web/components/issues/workspace/rail/permission-section";
 import { PullRequestSection } from "@web/components/issues/workspace/rail/pull-request-section";
@@ -81,6 +82,7 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
         </RailMeta>
       </RailSection>
       <StoppedSection execution={issue.execution} />
+      <IssuePullRequestsSection issueId={issue.id} />
       {issue.source === "linear" ? <LinearRailSection issue={issue} run={run} /> : null}
       {run !== null ? (
         <>

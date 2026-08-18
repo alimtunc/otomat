@@ -1,5 +1,10 @@
-import { getIssue, getRun, type Db } from "@otomat/db";
-import { isRunSettled, issueMachine, type LinearLifecycleSync } from "@otomat/domain";
+import { getIssue, getRun, listIssueExecutionEvidence, type Db } from "@otomat/db";
+import {
+  isRunSettled,
+  issueMachine,
+  projectIssueWorkspace,
+  type LinearLifecycleSync,
+} from "@otomat/domain";
 
 import { WorktreeNotFoundError, type RepositoryResolver } from "#git";
 
@@ -21,11 +26,24 @@ export function closeMergedRun(config: MergeClosureConfig, runId: string): void 
   if (!isRunSettled(run.status)) {
     driveRunTo(config.db, runId, run.status, "completed", new Date().toISOString());
   }
-  const issue = getIssue(config.db, run.issue_id);
-  if (issue && !issueMachine.isTerminal(issue.status)) {
-    driveIssueTo(config.db, issue.id, issue.status, "done");
-    signalIssueLifecycle(config.syncIssueLifecycle, issue.id, "done", runId);
+  markIssueDone(config, run.issue_id, runId);
+}
+
+/** A merge Otomat only witnessed closes the cycle like one it made: through the canonical run, or on the issue when none ran here. */
+export function closeMergedIssue(config: MergeClosureConfig, issueId: string): void {
+  const workspace = projectIssueWorkspace(listIssueExecutionEvidence(config.db, { issueId }));
+  if (workspace.state === "open") {
+    closeMergedRun(config, workspace.run_id);
+    return;
   }
+  markIssueDone(config, issueId, null);
+}
+
+function markIssueDone(config: MergeClosureConfig, issueId: string, runId: string | null): void {
+  const issue = getIssue(config.db, issueId);
+  if (!issue || issueMachine.isTerminal(issue.status)) return;
+  driveIssueTo(config.db, issue.id, issue.status, "done");
+  signalIssueLifecycle(config.syncIssueLifecycle, issue.id, "done", runId);
 }
 
 /** A failed cleanup must not fail the read that observed the merge; it stays visible in the log. */

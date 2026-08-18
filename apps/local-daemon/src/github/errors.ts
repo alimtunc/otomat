@@ -1,3 +1,5 @@
+import type { PullRequestImportErrorCode } from "@otomat/domain";
+
 export class GitHubCliError extends Error {
   constructor(
     readonly code: string,
@@ -16,6 +18,21 @@ export class GitHubPublicationError extends Error {
     super(message);
     this.name = "GitHubPublicationError";
   }
+}
+
+/** An adoption refused because a verification failed; the code names which one, so no ambiguous match is ever applied silently. */
+export class PullRequestImportRefusal extends Error {
+  constructor(
+    readonly code: PullRequestImportErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "PullRequestImportRefusal";
+  }
+}
+
+export function failureMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 export function safeGitHubFailure(

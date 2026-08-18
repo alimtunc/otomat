@@ -18,6 +18,7 @@ function ev(over: Partial<IssueExecutionEvidence> & { run_id: string }): IssueEx
     halted_step: null,
     pr_status: null,
     pr_publication: null,
+    adopted_pr_status: null,
     ...over,
   };
 }
@@ -169,6 +170,24 @@ it("stops counting a merged or closed pull request", () => {
     expect(
       projectIssueExecution([
         ev({ run_id: "r1", run_status: "completed", pr_status, pr_publication: "created" }),
+      ]),
+    ).toEqual({ state: "none", run_id: null });
+  }
+});
+
+it("counts a pull request the issue adopted as its open one", () => {
+  expect(
+    projectIssueExecution([
+      ev({ run_id: "r1", run_status: "completed", adopted_pr_status: "open" }),
+    ]),
+  ).toEqual({ state: "pr_open", run_id: "r1" });
+});
+
+it("stops reading as reviewing once the adopted pull request is merged or closed", () => {
+  for (const adopted_pr_status of ["merged", "closed"] as const) {
+    expect(
+      projectIssueExecution([
+        ev({ run_id: "r1", run_status: "review_ready", worktree_status: null, adopted_pr_status }),
       ]),
     ).toEqual({ state: "none", run_id: null });
   }

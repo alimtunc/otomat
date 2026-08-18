@@ -1,4 +1,4 @@
-import type { DiffFileContract } from "@otomat/domain";
+import type { DiffFileContract, ReviewTarget } from "@otomat/domain";
 import { cn, FOCUS_RING } from "@otomat/ui";
 import { DiffFileCardBody } from "@web/components/runs/diff/files/card-body";
 import { DiffFileCardHeader } from "@web/components/runs/diff/files/card-header";
@@ -16,7 +16,7 @@ import type {
 import { useState } from "react";
 
 export interface DiffFileCardProps {
-  runId: string;
+  target: ReviewTarget;
   file: DiffFileContract;
   prefs: DiffPrefs;
   reviewed: boolean;
@@ -31,7 +31,7 @@ export interface DiffFileCardProps {
 }
 
 export function DiffFileCard({
-  runId,
+  target,
   file,
   prefs,
   reviewed,
@@ -44,7 +44,7 @@ export function DiffFileCard({
   commentActions,
 }: DiffFileCardProps) {
   const viewport = useNearViewport();
-  const blobs = useFileBlobs(runId, file);
+  const blobs = useFileBlobs(target, file);
   const [expandAll, setExpandAll] = useState(false);
   const [composing, setComposing] = useState(false);
   const expandable = unrenderableNote(file) === null;

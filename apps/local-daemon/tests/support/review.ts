@@ -5,7 +5,7 @@ import type { ReviewService } from "#review";
 export function reviewRow(overrides: Partial<ReviewRow> = {}): ReviewRow {
   return {
     id: "rv1",
-    run_id: "run-detail",
+    subject_id: "run-detail",
     status: "in_review",
     created_at: "2026-07-05T00:00:00.000Z",
     updated_at: "2026-07-05T00:00:00.000Z",
@@ -41,7 +41,7 @@ export function commentRow(overrides: Partial<ReviewCommentRow> = {}): ReviewCom
 /** Every method throws or returns empty unless a test overrides it — no accidental fake success. */
 export function stubReviewService(overrides: Partial<ReviewService> = {}): ReviewService {
   return {
-    getWorktreeDiff: () => ({ computedAt: "2026-07-05T00:00:00.000Z", diff: null }),
+    getDiff: () => ({ computedAt: "2026-07-05T00:00:00.000Z", diff: null }),
     getReviewDetail: () => ({
       review: null,
       comments: [],

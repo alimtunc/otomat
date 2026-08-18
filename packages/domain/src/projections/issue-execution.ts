@@ -3,6 +3,7 @@ import type {
   IssueExecutionFailureReason,
   IssueExecutionState,
 } from "../contracts/entities/issue-execution.js";
+import { isPullRequestLive } from "../state-machines/pull-request.js";
 import { isRunSettled } from "../state-machines/run.js";
 import type { IssueExecutionEvidence } from "./evidence.js";
 import { holdsWorkspace } from "./issue-workspace.js";
@@ -25,10 +26,25 @@ const KIND_RANK: Record<ExecutionKind, number> = {
   failed: 1,
 };
 
+function isLive(status: IssueExecutionEvidence["pr_status"]): boolean {
+  return status !== null && isPullRequestLive(status);
+}
+
 /** A pull request counts only once really created on the provider and not yet merged or closed. */
 function hasOpenPullRequest(evidence: IssueExecutionEvidence): boolean {
-  if (evidence.pr_publication !== "created") return false;
-  return evidence.pr_status === "open" || evidence.pr_status === "draft";
+  if (isLive(evidence.adopted_pr_status)) return true;
+  return evidence.pr_publication === "created" && isLive(evidence.pr_status);
+}
+
+/**
+ * GitHub's own verdict closes the local review, whoever opened the pull request:
+ * a merged or closed one leaves nothing to review, so the run stops reading as
+ * `reviewing` without any state of its own being rewritten.
+ */
+export function isReviewOpen(evidence: IssueExecutionEvidence): boolean {
+  return [evidence.pr_status, evidence.adopted_pr_status].every(
+    (status) => status === null || isPullRequestLive(status),
+  );
 }
 
 /** A stop that still holds the issue's workspace: the work owns a branch, a history and often changes, so it is recoverable work rather than work never started. */
@@ -47,7 +63,8 @@ function classifyEvidence(evidence: IssueExecutionEvidence): Classification | nu
     return { kind: "running" };
   }
   if (hasOpenPullRequest(evidence)) return { kind: "pr_open" };
-  if (evidence.run_status === "review_ready") return { kind: "reviewing" };
+  if (evidence.run_status === "review_ready" && isReviewOpen(evidence))
+    return { kind: "reviewing" };
   return null;
 }
 

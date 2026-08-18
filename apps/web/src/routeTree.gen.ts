@@ -34,6 +34,7 @@ import { Route as SettingsRepositoriesRouteImport } from './routes/settings/repo
 import { Route as SettingsRuntimesRouteImport } from './routes/settings/runtimes'
 import { Route as SettingsSandboxRouteImport } from './routes/settings/sandbox'
 import { Route as SettingsWorkflowPresetsRouteImport } from './routes/settings/workflow-presets'
+import { Route as PullRequestsPullRequestIdDiffRouteImport } from './routes/pull-requests/$pullRequestId/diff'
 import { Route as RunsRunIdIndexRouteImport } from './routes/runs/$runId/index'
 import { Route as RunsRunIdDiffRouteImport } from './routes/runs/$runId/diff'
 import { Route as RunsRunIdLogsRouteImport } from './routes/runs/$runId/logs'
@@ -165,6 +166,12 @@ const SettingsWorkflowPresetsRoute = SettingsWorkflowPresetsRouteImport.update({
   path: '/workflow-presets',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const PullRequestsPullRequestIdDiffRoute =
+  PullRequestsPullRequestIdDiffRouteImport.update({
+    id: '/pull-requests/$pullRequestId/diff',
+    path: '/pull-requests/$pullRequestId/diff',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const RunsRunIdIndexRoute = RunsRunIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -217,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/issues/': typeof IssuesIndexRoute
   '/runs/': typeof RunsIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/pull-requests/$pullRequestId/diff': typeof PullRequestsPullRequestIdDiffRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
@@ -246,6 +254,7 @@ export interface FileRoutesByTo {
   '/issues': typeof IssuesIndexRoute
   '/runs': typeof RunsIndexRoute
   '/settings': typeof SettingsIndexRoute
+  '/pull-requests/$pullRequestId/diff': typeof PullRequestsPullRequestIdDiffRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
@@ -279,6 +288,7 @@ export interface FileRoutesById {
   '/issues/': typeof IssuesIndexRoute
   '/runs/': typeof RunsIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/pull-requests/$pullRequestId/diff': typeof PullRequestsPullRequestIdDiffRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
@@ -313,6 +323,7 @@ export interface FileRouteTypes {
     | '/issues/'
     | '/runs/'
     | '/settings/'
+    | '/pull-requests/$pullRequestId/diff'
     | '/runs/$runId/diff'
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
@@ -342,6 +353,7 @@ export interface FileRouteTypes {
     | '/issues'
     | '/runs'
     | '/settings'
+    | '/pull-requests/$pullRequestId/diff'
     | '/runs/$runId/diff'
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
@@ -374,6 +386,7 @@ export interface FileRouteTypes {
     | '/issues/'
     | '/runs/'
     | '/settings/'
+    | '/pull-requests/$pullRequestId/diff'
     | '/runs/$runId/diff'
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
@@ -393,6 +406,7 @@ export interface RootRouteChildren {
   IssuesIssueIdRoute: typeof IssuesIssueIdRoute
   IssuesIndexRoute: typeof IssuesIndexRoute
   RunsIndexRoute: typeof RunsIndexRoute
+  PullRequestsPullRequestIdDiffRoute: typeof PullRequestsPullRequestIdDiffRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -572,6 +586,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsWorkflowPresetsRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/pull-requests/$pullRequestId/diff': {
+      id: '/pull-requests/$pullRequestId/diff'
+      path: '/pull-requests/$pullRequestId/diff'
+      fullPath: '/pull-requests/$pullRequestId/diff'
+      preLoaderRoute: typeof PullRequestsPullRequestIdDiffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/runs/$runId/': {
       id: '/runs/$runId/'
       path: '/'
@@ -689,6 +710,7 @@ const rootRouteChildren: RootRouteChildren = {
   IssuesIssueIdRoute: IssuesIssueIdRoute,
   IssuesIndexRoute: IssuesIndexRoute,
   RunsIndexRoute: RunsIndexRoute,
+  PullRequestsPullRequestIdDiffRoute: PullRequestsPullRequestIdDiffRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

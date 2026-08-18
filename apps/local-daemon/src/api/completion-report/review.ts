@@ -16,7 +16,7 @@ function projectDiff({
   runId,
 }: ReviewProjectionInput): RunCompletionReport["diff"] {
   try {
-    const diff = review.getWorktreeDiff({ id: runId }).diff;
+    const diff = review.getDiff({ kind: "run", id: runId }).diff;
     if (diff === null) {
       return {
         state: "not_reported",
@@ -76,7 +76,7 @@ function projectReview({
   runId,
 }: ReviewProjectionInput): RunCompletionReport["review"] {
   try {
-    const detail = review.getReviewDetail(runId);
+    const detail = review.getReviewDetail({ kind: "run", id: runId });
     const comments = detail.comments.toSorted(comparePersistedRows);
     const open = comments.filter((comment) => comment.status === "open");
     let state: RunCompletionReport["review"]["state"] = "resolved";

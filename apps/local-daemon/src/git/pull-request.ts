@@ -1,0 +1,50 @@
+import { computeCanonicalDiff, readFileBlobs } from "./diff.js";
+import { runGit } from "./git-cli.js";
+import { mergeBase, revParse } from "./repo.js";
+import type { DiffSnapshot } from "./service-contract.js";
+import { readTreeFile } from "./tree-file.js";
+
+export interface PullRequestFetchInput {
+  repoRoot: string;
+  remote: string;
+  number: number;
+  baseRef: string;
+}
+
+/** The two ends of an imported pull request's canonical diff, as this repository now holds them. */
+export interface PullRequestTrees {
+  base: string;
+  head: string;
+}
+
+/** Re-fetching is how a moved head is picked up, so the head ref is forced. */
+export function fetchPullRequestTrees(input: PullRequestFetchInput): PullRequestTrees {
+  // refs/otomat/* is a read-only namespace: never a branch, so no Otomat operation holds a ref it could move.
+  const headRef = `refs/otomat/pull/${input.number}/head`;
+  const basePin = `refs/otomat/pull/${input.number}/base`;
+  runGit(
+    [
+      "fetch",
+      "--force",
+      input.remote,
+      `refs/pull/${input.number}/head:${headRef}`,
+      `refs/heads/${input.baseRef}:${basePin}`,
+    ],
+    { cwd: input.repoRoot },
+  );
+  const head = revParse(input.repoRoot, headRef);
+  const base = mergeBase(input.repoRoot, basePin, head);
+  if (base === null) {
+    throw new Error(`pull request #${input.number} shares no history with ${input.baseRef}`);
+  }
+  return { base, head };
+}
+
+/** The imported diff plus whole-file reads, captured from the one `{base, head}` pair the review is pinned to. */
+export function pullRequestDiffSnapshot(repoRoot: string, trees: PullRequestTrees): DiffSnapshot {
+  return {
+    diff: computeCanonicalDiff(repoRoot, trees.base, trees.head),
+    fileBlobs: (paths) => readFileBlobs(repoRoot, trees.base, trees.head, paths),
+    readFile: (path, limits) => readTreeFile(repoRoot, trees.head, path, limits),
+  };
+}

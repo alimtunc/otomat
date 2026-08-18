@@ -1,4 +1,4 @@
-import type { DiffFileContract } from "@otomat/domain";
+import type { DiffFileContract, ReviewTarget } from "@otomat/domain";
 import { DiffFileCard } from "@web/components/runs/diff/files/card";
 import { HiddenReviewedNotice } from "@web/components/runs/diff/hidden-notice";
 import type { DiffPrefs } from "@web/components/runs/diff/prefs/prefs";
@@ -11,7 +11,7 @@ import {
 } from "@web/components/runs/review/file-comments";
 
 export interface DiffFileCardsProps {
-  runId: string;
+  target: ReviewTarget;
   files: readonly DiffFileContract[];
   hiddenCount: number;
   onShowHidden: () => void;
@@ -26,7 +26,7 @@ export interface DiffFileCardsProps {
 }
 
 export function DiffFileCards({
-  runId,
+  target,
   files,
   hiddenCount,
   onShowHidden,
@@ -45,7 +45,7 @@ export function DiffFileCards({
         {files.map((file) => (
           <DiffFileCard
             key={file.path}
-            runId={runId}
+            target={target}
             file={file}
             prefs={prefs}
             reviewed={reviewedPaths.has(file.path)}

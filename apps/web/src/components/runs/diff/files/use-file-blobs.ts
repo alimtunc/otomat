@@ -1,5 +1,5 @@
 import { DaemonRequestError } from "@otomat/client";
-import type { DiffFileContract } from "@otomat/domain";
+import type { DiffFileContract, ReviewTarget } from "@otomat/domain";
 import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
@@ -19,11 +19,11 @@ export interface UseFileBlobsResult {
   request: () => void;
 }
 
-export function useFileBlobs(runId: string, file: DiffFileContract): UseFileBlobsResult {
+export function useFileBlobs(target: ReviewTarget, file: DiffFileContract): UseFileBlobsResult {
   const [requested, setRequested] = useState(false);
   const query = useQuery({
-    queryKey: queryKeys.runDiffFileBlobs(runId, file.path, file.sha),
-    queryFn: () => daemon.getDiffFileBlobs(runId, file.path, file.sha),
+    queryKey: queryKeys.reviewDiffFileBlobs(target, file.path, file.sha),
+    queryFn: () => daemon.getDiffFileBlobs(target, file.path, file.sha),
     enabled: requested && !file.binary,
     retry: (count, error) => !(error instanceof DaemonRequestError) && count < 2,
   });

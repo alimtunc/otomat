@@ -1,4 +1,4 @@
-import type { ReviewCommentContract, RunDiffContract } from "@otomat/domain";
+import type { ReviewCommentContract, ReviewDiffContract } from "@otomat/domain";
 
 import { countFileComments, type FileCommentCounts } from "./file-comment-counts";
 
@@ -15,7 +15,7 @@ export interface PartitionedComments {
   anchoredIds: ReadonlySet<string>;
 }
 
-function isAnchored(diff: RunDiffContract | null, comment: ReviewCommentContract): boolean {
+function isAnchored(diff: ReviewDiffContract | null, comment: ReviewCommentContract): boolean {
   if (comment.status !== "open" || diff === null) return false;
   return diff.files.some(
     (file) => file.path === comment.file_path && file.sha === comment.diff_sha,
@@ -24,7 +24,7 @@ function isAnchored(diff: RunDiffContract | null, comment: ReviewCommentContract
 
 /** Anchors are immutable: a comment either matches the live diff exactly or falls back to its pin. */
 export function partitionComments(
-  diff: RunDiffContract | null,
+  diff: ReviewDiffContract | null,
   comments: ReviewCommentContract[],
 ): PartitionedComments {
   const byLine = new Map<string, Map<number, ReviewCommentContract[]>>();

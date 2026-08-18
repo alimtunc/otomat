@@ -1,4 +1,4 @@
-import type { DiffFileContract, ReviewCommentContract, RunDiffContract } from "@otomat/domain";
+import type { DiffFileContract, ReviewCommentContract, ReviewDiffContract } from "@otomat/domain";
 import { Icon, Pill, PillTabs, SidePanelToggle } from "@otomat/ui";
 import { DiffFileBrowser } from "@web/components/runs/diff/files/browser";
 import type { DiffBrowserMode } from "@web/components/runs/diff/prefs/prefs";
@@ -8,7 +8,7 @@ import { ReviewCommentsPanel } from "@web/components/runs/review/comments-panel"
 import { useState } from "react";
 
 export interface DiffSidebarProps {
-  diff: RunDiffContract;
+  diff: ReviewDiffContract;
   browserMode: DiffBrowserMode;
   stats: boolean;
   activePath: string | null;

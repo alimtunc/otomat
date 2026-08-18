@@ -25,8 +25,9 @@ export type {
   FixRequest,
   PullRequestCommentInput,
   ReviewDetailResult,
+  ReviewDiffResult,
   ReviewService,
   ReviewServiceConfig,
-  RunDiffResult,
+  ReviewSubjectRef,
   RunSettledOutcome,
 } from "./types.js";

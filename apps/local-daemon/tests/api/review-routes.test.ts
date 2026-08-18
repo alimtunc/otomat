@@ -2,7 +2,7 @@ import type {
   ReviewCommentContract,
   ReviewDetail,
   RunContract,
-  RunDiffResponse,
+  ReviewDiffResponse,
 } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -71,13 +71,13 @@ it("returns 404 on every review surface for an unknown run", async () => {
 it("serves the canonical diff mapped to the wire contract", async () => {
   const app = makeApiApp(t, {
     review: stubReviewService({
-      getWorktreeDiff: () => ({ computedAt: "2026-07-05T00:00:00.000Z", diff: DIFF }),
+      getDiff: () => ({ computedAt: "2026-07-05T00:00:00.000Z", diff: DIFF }),
     }),
   });
   const res = await request(app, `/api/runs/${RUN_ID}/diff`);
   expect(res.status).toBe(200);
-  const body = (await res.json()) as RunDiffResponse;
-  expect(body.run_id).toBe(RUN_ID);
+  const body = (await res.json()) as ReviewDiffResponse;
+  expect(body.subject_id).toBe(RUN_ID);
   expect(body.diff?.sha).toBe("diff-sha");
   expect(body.diff?.files[0]).toMatchObject({ path: "notes.md", old_path: null, sha: "file-sha" });
 });
@@ -85,7 +85,7 @@ it("serves the canonical diff mapped to the wire contract", async () => {
 it("serves an honest null diff when the run has no worktree", async () => {
   const res = await request(makeApiApp(t), `/api/runs/${RUN_ID}/diff`);
   expect(res.status).toBe(200);
-  expect(((await res.json()) as RunDiffResponse).diff).toBeNull();
+  expect(((await res.json()) as ReviewDiffResponse).diff).toBeNull();
 });
 
 it("serves the review surface with serialized comments and the fix authority", async () => {

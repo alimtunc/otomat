@@ -48,7 +48,7 @@ export interface PendingSpec {
 export interface PublishLifecycleRequest {
   phase: LinearLifecyclePhase;
   target: TrackerStateRef;
-  run_id: string;
+  run_id: string | null;
   /** Set only by a retry, so the failed attempt is re-armed instead of a second one being recorded. */
   key?: string;
 }

@@ -7,6 +7,7 @@ import {
   type RequestFixRequest,
   type ReviewCommentContract,
   type ReviewDetail,
+  type ReviewTarget,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,8 +22,12 @@ function reviewRefusal(error: unknown): string | null {
 }
 
 /** Writes the daemon's own answer into the review cache before the refetch confirms it. */
-function seedComment(client: QueryClient, runId: string, comment: ReviewCommentContract): void {
-  client.setQueryData(queryKeys.runReview(runId), (current: ReviewDetail | undefined) => {
+function seedComment(
+  client: QueryClient,
+  target: ReviewTarget,
+  comment: ReviewCommentContract,
+): void {
+  client.setQueryData(queryKeys.reviewDetail(target), (current: ReviewDetail | undefined) => {
     if (current === undefined) return current;
     const known = current.comments.some((row) => row.id === comment.id);
     return {
@@ -32,7 +37,7 @@ function seedComment(client: QueryClient, runId: string, comment: ReviewCommentC
         : [...current.comments, comment],
     };
   });
-  client.invalidateQueries({ queryKey: queryKeys.runReview(runId) });
+  client.invalidateQueries({ queryKey: queryKeys.reviewDetail(target) });
 }
 
 function commentErrorMessage(error: unknown): string {
@@ -44,14 +49,14 @@ function commentErrorMessage(error: unknown): string {
   return "Could not add the comment — is the daemon running?";
 }
 
-export function useAddReviewComment(runId: string) {
+export function useAddReviewComment(target: ReviewTarget) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (request: CreateReviewCommentRequest) => daemon.addReviewComment(runId, request),
-    onSuccess: (comment) => seedComment(client, runId, comment),
+    mutationFn: (request: CreateReviewCommentRequest) => daemon.addReviewComment(target, request),
+    onSuccess: (comment) => seedComment(client, target, comment),
     onError: (error) => {
       if (error instanceof DaemonRequestError && error.status === 409) {
-        client.invalidateQueries({ queryKey: queryKeys.runDiff(runId) });
+        client.invalidateQueries({ queryKey: queryKeys.reviewDiff(target) });
       }
       toast.error(commentErrorMessage(error));
     },
@@ -59,13 +64,13 @@ export function useAddReviewComment(runId: string) {
 }
 
 /** The daemon persists the outcome either way, so even a failure refreshes: the comment shows `failed`, never vanishes. */
-export function usePublishReviewComment(runId: string) {
+export function usePublishReviewComment(target: ReviewTarget) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (commentId: string) => daemon.publishReviewComment(runId, commentId),
-    onSuccess: (comment) => seedComment(client, runId, comment),
+    mutationFn: (commentId: string) => daemon.publishReviewComment(target, commentId),
+    onSuccess: (comment) => seedComment(client, target, comment),
     onError: (error) => {
-      client.invalidateQueries({ queryKey: queryKeys.runReview(runId) });
+      client.invalidateQueries({ queryKey: queryKeys.reviewDetail(target) });
       toast.error(reviewRefusal(error) ?? "Could not publish the comment — is the daemon running?");
     },
   });
@@ -95,7 +100,7 @@ export function useRequestFix(runId: string) {
     mutationFn: (request: RequestFixRequest) => daemon.requestFix(runId, request),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: queryKeys.run(runId) });
-      client.invalidateQueries({ queryKey: queryKeys.runReview(runId) });
+      client.invalidateQueries({ queryKey: queryKeys.reviewDetail({ kind: "run", id: runId }) });
       client.invalidateQueries({ queryKey: queryKeys.issues });
       toast.success("Fix step added to this issue's workspace");
     },

@@ -1,5 +1,4 @@
 import type { GitHubConnectionContract } from "@otomat/domain";
-import { z } from "zod";
 
 import { cliAvailability } from "./availability.js";
 import {
@@ -9,15 +8,8 @@ import {
   createPullRequestWithRetry,
   defaultSleep,
 } from "./cli-commands.js";
-import {
-  authStatusFailed,
-  parseAuthStatus,
-  parsePullRequestJson,
-  parseReviewCommentUrl,
-  PR_JSON_FIELDS,
-  providerPullRequestSchema,
-  toPullRequest,
-} from "./parse.js";
+import { findPullRequest, searchPullRequests, viewPullRequest } from "./cli-lookup.js";
+import { authStatusFailed, parseAuthStatus, parseReviewCommentUrl } from "./parse.js";
 import { fetchBranch, forcePushWithLease, push, remoteHead, resolveRemote } from "./remote.js";
 import { reviewCommentPayload } from "./review-comment-payload.js";
 import type {
@@ -28,6 +20,7 @@ import type {
   GitHubRemote,
   PullRequestCreateInput,
   PullRequestModeInput,
+  PullRequestSearchInput,
   PullRequestSelector,
   PullRequestUpdateInput,
   ReviewCommentCreateInput,
@@ -122,54 +115,16 @@ class CommandGitHubCli implements GitHubCli {
     return fetchBranch(this.run, cwd, remote, branch);
   }
 
-  async findPullRequest(input: PullRequestSelector): Promise<GitHubPullRequest | null> {
-    const pullRequestResult = await this.run({
-      command: "gh",
-      args: [
-        "pr",
-        "list",
-        "--repo",
-        input.repository,
-        "--head",
-        input.head,
-        "--base",
-        input.base,
-        "--state",
-        "all",
-        "--limit",
-        "1",
-        "--json",
-        PR_JSON_FIELDS,
-      ],
-      cwd: input.cwd,
-    });
-    assertPublicationSucceeded(
-      pullRequestResult,
-      "github_pr_lookup_failed",
-      "GitHub pull requests could not be queried.",
-    );
-    const rows = parsePullRequestJson(pullRequestResult.stdout, (payload) =>
-      z.array(providerPullRequestSchema).parse(payload),
-    );
-    return rows[0] ? toPullRequest(rows[0]) : null;
+  findPullRequest(input: PullRequestSelector): Promise<GitHubPullRequest | null> {
+    return findPullRequest(this.run, input);
   }
 
-  async viewPullRequest(
-    cwd: string,
-    repository: string,
-    number: number,
-  ): Promise<GitHubPullRequest> {
-    const pullRequestResult = await this.run({
-      command: "gh",
-      args: ["pr", "view", String(number), "--repo", repository, "--json", PR_JSON_FIELDS],
-      cwd,
-    });
-    assertPublicationSucceeded(
-      pullRequestResult,
-      "github_pr_lookup_failed",
-      "The GitHub pull request could not be read.",
-    );
-    return parsePullRequestJson(pullRequestResult.stdout, toPullRequest);
+  searchPullRequests(input: PullRequestSearchInput): Promise<GitHubPullRequest[]> {
+    return searchPullRequests(this.run, input);
+  }
+
+  viewPullRequest(cwd: string, repository: string, number: number): Promise<GitHubPullRequest> {
+    return viewPullRequest(this.run, cwd, repository, number);
   }
 
   createPullRequest(input: PullRequestCreateInput): Promise<void> {

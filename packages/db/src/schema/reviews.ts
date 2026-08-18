@@ -7,14 +7,12 @@ import type {
 } from "@otomat/domain";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { runs } from "./runs.js";
 import { timestamps } from "./shared.js";
 
 export const reviews = sqliteTable("reviews", {
   id: text("id").primaryKey(),
-  run_id: text("run_id")
-    .notNull()
-    .references(() => runs.id),
+  /** A run id or a pull request id: the two things that own a diff. Polymorphic, so no foreign key. */
+  subject_id: text("subject_id").notNull(),
   status: text("status").$type<ReviewState>().notNull().default("open"),
   ...timestamps,
 });

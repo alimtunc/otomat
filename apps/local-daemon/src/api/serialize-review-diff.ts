@@ -1,12 +1,15 @@
-import { runDiffResponseSchema, type RunDiffResponse } from "@otomat/domain";
+import { reviewDiffResponseSchema, type ReviewDiffResponse } from "@otomat/domain";
 
-import type { RunDiffResult } from "#review";
+import type { ReviewDiffResult } from "#review";
 
-/** Maps a `RunDiffResult` to its wire contract, remapping camelCase fields to snake_case; `diff` is null when the result carries no computed diff. */
-export function toRunDiffResponse(runId: string, result: RunDiffResult): RunDiffResponse {
+/** Maps a `ReviewDiffResult` to its wire contract, remapping camelCase fields to snake_case; `diff` is null when the result carries no computed diff. */
+export function toReviewDiffResponse(
+  subjectId: string,
+  result: ReviewDiffResult,
+): ReviewDiffResponse {
   const diff = result.diff;
-  return runDiffResponseSchema.parse({
-    run_id: runId,
+  return reviewDiffResponseSchema.parse({
+    subject_id: subjectId,
     computed_at: result.computedAt,
     diff: diff
       ? {

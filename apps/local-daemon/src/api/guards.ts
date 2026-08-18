@@ -1,13 +1,17 @@
 import { zValidator } from "@hono/zod-validator";
 import {
+  getAttachedPullRequest,
   getRun,
   getWorkflowPreset,
   type Db,
   type RunRow,
   type WorkflowPresetRow,
 } from "@otomat/db";
+import type { MiddlewareHandler } from "hono";
 import { createMiddleware } from "hono/factory";
 import type { ZodType } from "zod";
+
+import type { ReviewSubjectRef } from "#review";
 
 /** Hono env for the `/:id` run routes: {@link runGuard} resolves the row into `c.var.run`. */
 export type RunEnv = { Variables: { run: RunRow } };
@@ -18,6 +22,31 @@ export function runGuard(db: Db) {
     const run = getRun(db, c.req.param("id") ?? "");
     if (!run) return c.json({ error: "run_not_found" }, 404);
     c.set("run", run);
+    await next();
+  });
+}
+
+/** Hono env of the review surface: a guard resolves `/:id` into the subject its routes read. */
+export type ReviewSubjectEnv = { Variables: { subject: ReviewSubjectRef } };
+
+/** Resolves the `/:id` param to the run review subject, or short-circuits with a 404 `run_not_found`. */
+export function runSubjectGuard(db: Db): MiddlewareHandler<ReviewSubjectEnv> {
+  return createMiddleware<ReviewSubjectEnv>(async (c, next) => {
+    const id = c.req.param("id") ?? "";
+    if (!getRun(db, id)) return c.json({ error: "run_not_found" }, 404);
+    c.set("subject", { kind: "run", id });
+    await next();
+  });
+}
+
+/** Resolves the `/:id` param to an attached pull request, or short-circuits with a 404 `pull_request_not_found`. */
+export function pullRequestSubjectGuard(db: Db): MiddlewareHandler<ReviewSubjectEnv> {
+  return createMiddleware<ReviewSubjectEnv>(async (c, next) => {
+    const id = c.req.param("id") ?? "";
+    if (!getAttachedPullRequest(db, id)) {
+      return c.json({ error: "pull_request_not_found" }, 404);
+    }
+    c.set("subject", { kind: "pull_request", id });
     await next();
   });
 }

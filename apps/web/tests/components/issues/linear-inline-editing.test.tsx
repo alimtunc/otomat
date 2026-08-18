@@ -1,14 +1,14 @@
 // @vitest-environment happy-dom
 import { DaemonRequestError } from "@otomat/client";
 import type { IssueContract, LinearIssueSnapshot } from "@otomat/domain";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LinearIssueHeader } from "@web/components/issues/workspace/linear/header";
-import { act, type ReactNode } from "react";
+import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { setInputValue } from "#support/dom-events";
 import { findButton } from "#support/dom-queries";
 import { mount, type Mounted } from "#support/mount";
+import { withQueryClient } from "#support/query";
 
 const getLinearEditor = vi.fn();
 const getLinearWriteback = vi.fn();
@@ -81,13 +81,6 @@ const DRAFT = {
   updated_at: "2026-07-21T12:00:00.000Z",
 };
 
-function withClient(node: ReactNode): ReactNode {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return <QueryClientProvider client={client}>{node}</QueryClientProvider>;
-}
-
 let rendered: Mounted | null = null;
 
 afterEach(async () => {
@@ -102,7 +95,7 @@ it("commits an inline title edit to the local draft", async () => {
   getLinearWriteback.mockResolvedValue({ draft: null, writes: [], lifecycle: null });
   saveLinearDraft.mockResolvedValue(DRAFT);
 
-  rendered = await mount(withClient(<LinearIssueHeader issue={ISSUE} />));
+  rendered = await mount(withQueryClient(<LinearIssueHeader issue={ISSUE} />));
 
   await vi.waitFor(() => {
     expect(findButton("Mirror")).toBeDefined();
@@ -144,7 +137,7 @@ it("publishes the draft from the bar and overwrites only after an explicit confl
     )
     .mockResolvedValueOnce({ draft: null, writes: [], lifecycle: null });
 
-  rendered = await mount(withClient(<LinearIssueHeader issue={ISSUE} />));
+  rendered = await mount(withQueryClient(<LinearIssueHeader issue={ISSUE} />));
 
   await vi.waitFor(() => {
     expect(document.body.textContent).toContain("Unpublished draft");

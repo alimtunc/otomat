@@ -19,14 +19,6 @@ export function useRunsForIssue(issueId: string) {
   });
 }
 
-/** Event-driven: invalidated by the run's ledger stream (see RunEventsProvider), never polled. */
-export function useRunDiff(runId: string) {
-  return useQuery({
-    queryKey: queryKeys.runDiff(runId),
-    queryFn: () => daemon.getRunDiff(runId),
-  });
-}
-
 export function useCompeteCandidateDiff(runId: string, groupId: string, stepId: string) {
   return useQuery({
     queryKey: queryKeys.competeCandidateDiff(runId, groupId, stepId),
