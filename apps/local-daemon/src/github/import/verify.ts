@@ -1,4 +1,4 @@
-import { findPullRequestByNumber, listRuns, type Db } from "@otomat/db";
+import { findPullRequestByNumber, getRepository, listRuns, type Db } from "@otomat/db";
 import type { PullRequestDiscovery, PullRequestEvidence } from "@otomat/domain";
 
 import type { GitHubPullRequest } from "../types.js";
@@ -23,7 +23,6 @@ export function buildEvidence(
 }
 
 export interface ClassificationInput {
-  issueId: string;
   repositoryId: string;
   provider: GitHubPullRequest;
   connectedLogin: string | null;
@@ -32,9 +31,11 @@ export interface ClassificationInput {
 /** Reads the local facts a provenance may rest on — Otomat's own publication, and the branches its runs own — before judging. */
 export function classifyPullRequest(db: Db, input: ClassificationInput): ProvenanceVerdict {
   const stored = findPullRequestByNumber(db, input.repositoryId, input.provider.number);
+  const repository = getRepository(db, input.repositoryId);
+  if (!repository) throw new Error(`repository ${input.repositoryId} vanished while classifying`);
   return classifyProvenance({
     provider: input.provider,
-    otomatBranches: listRuns(db, { issueId: input.issueId }).map((run) => run.branch),
+    otomatBranches: listRuns(db, { projectId: repository.project_id }).map((run) => run.branch),
     otomatPublication: stored?.origin === "otomat",
     connectedLogin: input.connectedLogin,
   });

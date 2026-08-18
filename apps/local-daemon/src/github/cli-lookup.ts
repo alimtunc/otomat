@@ -10,14 +10,15 @@ import {
 import type {
   CommandRunner,
   GitHubPullRequest,
+  PullRequestListInput,
   PullRequestSearchInput,
   PullRequestSelector,
 } from "./types.js";
 
-function parsePullRequestList(stdout: string): GitHubPullRequest[] {
+function parsePullRequestList(stdout: string, repository: string): GitHubPullRequest[] {
   return parsePullRequestJson(stdout, (payload) =>
     z.array(providerPullRequestSchema).parse(payload),
-  ).map(toPullRequest);
+  ).map((entry) => toPullRequest(entry, repository));
 }
 
 export async function findPullRequest(
@@ -49,7 +50,7 @@ export async function findPullRequest(
     "github_pr_lookup_failed",
     "GitHub pull requests could not be queried.",
   );
-  return parsePullRequestList(result.stdout)[0] ?? null;
+  return parsePullRequestList(result.stdout, input.repository)[0] ?? null;
 }
 
 export async function searchPullRequests(
@@ -79,7 +80,35 @@ export async function searchPullRequests(
     "github_pr_lookup_failed",
     "GitHub pull requests could not be searched.",
   );
-  return parsePullRequestList(result.stdout);
+  return parsePullRequestList(result.stdout, input.repository);
+}
+
+export async function listOpenPullRequests(
+  run: CommandRunner,
+  input: PullRequestListInput,
+): Promise<GitHubPullRequest[]> {
+  const result = await run({
+    command: "gh",
+    args: [
+      "pr",
+      "list",
+      "--repo",
+      input.repository,
+      "--state",
+      "open",
+      "--limit",
+      String(input.limit),
+      "--json",
+      PR_JSON_FIELDS,
+    ],
+    cwd: input.cwd,
+  });
+  assertPublicationSucceeded(
+    result,
+    "github_pr_lookup_failed",
+    "GitHub pull requests could not be listed.",
+  );
+  return parsePullRequestList(result.stdout, input.repository);
 }
 
 export async function viewPullRequest(
@@ -98,5 +127,5 @@ export async function viewPullRequest(
     "github_pr_lookup_failed",
     "The GitHub pull request could not be read.",
   );
-  return parsePullRequestJson(result.stdout, toPullRequest);
+  return parsePullRequestJson(result.stdout, (payload) => toPullRequest(payload, repository));
 }

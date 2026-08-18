@@ -95,3 +95,19 @@ export function writePullRequestGenerator(db: Db, generator: ExecutionDefaults):
     pr_generator_options_json: generator.options,
   });
 }
+
+export interface GitHubViewerRecord {
+  login: string | null;
+  /** Null when GitHub would not answer which teams the account belongs to; empty is an answered "none". */
+  teams: string[] | null;
+}
+
+/** The account the last pull-request sync ran as, so the inbox classifies without asking GitHub again. */
+export function readGitHubViewer(db: Db): GitHubViewerRecord {
+  const row = readRow(db);
+  return { login: row?.github_viewer_login ?? null, teams: row?.github_viewer_teams_json ?? null };
+}
+
+export function writeGitHubViewer(db: Db, viewer: GitHubViewerRecord): void {
+  upsert(db, { github_viewer_login: viewer.login, github_viewer_teams_json: viewer.teams });
+}

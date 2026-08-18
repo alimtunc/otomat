@@ -12,8 +12,12 @@ import { failureMessage, PullRequestImportRefusal } from "../errors.js";
 import type { GitHubCli, GitHubPullRequest, IssuePullRequestsResult } from "../types.js";
 import { detectIssuePullRequests } from "./detect.js";
 import { parsePullRequestReference } from "./reference.js";
-import { resolveIssueRepository, type IssueRepository } from "./repository.js";
-import { applyProviderState, insertAttachedPullRequest, markPullRequestDetached } from "./store.js";
+import {
+  resolveIssueRepository,
+  resolvePullRequestRepository,
+  type IssueRepository,
+} from "./repository.js";
+import { applyProviderState, insertMirroredPullRequest, markPullRequestDetached } from "./store.js";
 import type { ImportStoreConfig } from "./store.js";
 import { buildEvidence, classifyPullRequest } from "./verify.js";
 
@@ -90,12 +94,11 @@ class DefaultPullRequestImportService implements PullRequestImportService {
     const provider = await this.view(repository, reference.number);
     const connectedLogin = await this.connectedLogin();
     const verdict = classifyPullRequest(this.config.db, {
-      issueId,
       repositoryId: repository.binding.repositoryId,
       provider,
       connectedLogin,
     });
-    return insertAttachedPullRequest(this.config, {
+    return insertMirroredPullRequest(this.config, {
       issueId,
       repositoryId: repository.binding.repositoryId,
       provider,
@@ -103,6 +106,7 @@ class DefaultPullRequestImportService implements PullRequestImportService {
       evidence: buildEvidence(repository.remote.repository, provider, "manual"),
       attachedBy: connectedLogin,
       trees: this.fetchTrees(repository, provider),
+      syncedAt: null,
     });
   }
 
@@ -125,21 +129,19 @@ class DefaultPullRequestImportService implements PullRequestImportService {
         "This pull request has no number on GitHub yet, so there is nothing to refresh.",
       );
     }
-    const repository = await this.repositoryFor(row.issue_id);
+    const repository = await resolvePullRequestRepository(this.config, row);
     const provider = await this.view(repository, row.number);
     const verdict = classifyPullRequest(this.config.db, {
-      issueId: row.issue_id,
       repositoryId: repository.binding.repositoryId,
       provider,
       connectedLogin: await this.connectedLogin(),
     });
-    return applyProviderState(
-      this.config,
-      row,
+    return applyProviderState(this.config, row, {
       provider,
-      verdict.provenance,
-      this.fetchTrees(repository, provider),
-    );
+      provenance: verdict.provenance,
+      trees: this.fetchTrees(repository, provider),
+      syncedAt: null,
+    });
   }
 
   private require(pullRequestId: string): PullRequestRow {

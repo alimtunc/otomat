@@ -58,7 +58,6 @@ export async function detectIssuePullRequests(
   const candidates = found.map((provider) => ({
     evidence: buildEvidence(repository.remote.repository, provider, "issue_reference"),
     ...classifyPullRequest(config.db, {
-      issueId,
       repositoryId: repository.binding.repositoryId,
       provider,
       connectedLogin,

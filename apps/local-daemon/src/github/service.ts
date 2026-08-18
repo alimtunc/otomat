@@ -4,6 +4,7 @@ import { createGitHubConnectionService } from "./connection.js";
 import { createDeviceAuthorization } from "./device-flow.js";
 import { resolveGenerationAgent } from "./generation/agent.js";
 import { createPullRequestImportService } from "./import/service.js";
+import { createPullRequestInboxService } from "./inbox/index.js";
 import { createPullRequestPublisher } from "./publication/index.js";
 import { refreshTrackedPullRequests } from "./refresh.js";
 import { publishReviewComment } from "./review-comment.js";
@@ -14,8 +15,11 @@ export function createGitHubService(config: GitHubServiceConfig): GitHubService 
   const connection = createGitHubConnectionService(config.cli, createDeviceAuthorization());
   const publisher = createPullRequestPublisher(normalizedConfig, config.generator);
   const imports = createPullRequestImportService(normalizedConfig);
+  const inbox = createPullRequestInboxService(normalizedConfig);
   return {
     ...connection,
+    pullRequestInbox: (projectId) => inbox.read(projectId),
+    syncPullRequestInbox: (projectId) => inbox.sync(projectId),
     listIssuePullRequests: (issueId) => imports.list(issueId),
     attachPullRequest: (issueId, request) => imports.attach(issueId, request),
     detachPullRequest: (pullRequestId) => imports.detach(pullRequestId),

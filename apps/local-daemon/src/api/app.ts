@@ -18,7 +18,7 @@ import { createLinearRoutes } from "./routes/linear.js";
 import { createPullRequestRoutes } from "./routes/pull-requests.js";
 import { createRepositoryRoutes } from "./routes/repositories.js";
 import { createReviewRoutes } from "./routes/review.js";
-import { createReviewQueueRoutes } from "./routes/reviews.js";
+import { createReviewInboxRoutes } from "./routes/reviews.js";
 import { createRunContributionRoutes } from "./routes/run-contributions.js";
 import { createRunRoutes } from "./routes/runs.js";
 import { createSettingsRoutes } from "./routes/settings.js";
@@ -55,7 +55,7 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.route("/api/workspaces", createWorkspaceRoutes(deps));
   app.route("/api/issues", createIssueRoutes(deps));
   app.route("/api/pull-requests", createPullRequestRoutes(deps));
-  app.route("/api/reviews", createReviewQueueRoutes(deps));
+  app.route("/api/reviews", createReviewInboxRoutes(deps));
   app.route("/api/runs", createRunContributionRoutes(deps));
   app.route("/api/runs", createRunRoutes(deps));
   app.route("/api/runs", createCompeteRoutes(deps));

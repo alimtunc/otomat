@@ -6,6 +6,7 @@ import type {
   PreparePullRequestRequest,
   PullRequestCandidate,
   PullRequestDetection,
+  PullRequestInbox,
   PullRequestProposal,
   PullRequestPublishability,
   PullRequestState,
@@ -18,6 +19,7 @@ import type { PullRequestCommentInput } from "#review";
 
 import type { GenerationAgent } from "./generation/agent.js";
 import type { GenerationInput } from "./generation/input.js";
+import type { PullRequestReviewFacts } from "./pull-request-facts.js";
 
 export interface PullRequestGenerator {
   generate(agent: GenerationAgent, input: GenerationInput): Promise<PullRequestProposal>;
@@ -69,6 +71,8 @@ export interface GitHubServiceConfig {
 export interface GitHubService {
   connection(): Promise<GitHubConnectionContract>;
   connect(): GitHubConnectionContract;
+  pullRequestInbox(projectId: string): PullRequestInbox;
+  syncPullRequestInbox(projectId: string): Promise<PullRequestInbox>;
   listIssuePullRequests(issueId: string): Promise<IssuePullRequestsResult>;
   attachPullRequest(issueId: string, request: AttachPullRequestRequest): Promise<PullRequestRow>;
   detachPullRequest(pullRequestId: string): PullRequestRow;
@@ -95,7 +99,7 @@ export interface GitHubRemote {
   repository: string;
 }
 
-export interface GitHubPullRequest {
+export interface GitHubPullRequest extends PullRequestReviewFacts {
   number: number;
   url: string;
   title: string;
@@ -116,6 +120,10 @@ export interface GitHubRepositoryTarget {
 export interface PullRequestSelector extends GitHubRepositoryTarget {
   head: string;
   base: string;
+}
+
+export interface PullRequestListInput extends GitHubRepositoryTarget {
+  limit: number;
 }
 
 export interface PullRequestSearchInput extends GitHubRepositoryTarget {
@@ -190,6 +198,8 @@ export interface GitHubCli {
   findPullRequest(input: PullRequestSelector): Promise<GitHubPullRequest | null>;
   /** Pull requests GitHub itself links to a query, newest first; the caller decides what the match proves. */
   searchPullRequests(input: PullRequestSearchInput): Promise<GitHubPullRequest[]>;
+  listOpenPullRequests(input: PullRequestListInput): Promise<GitHubPullRequest[]>;
+  viewerTeams(cwd: string): Promise<string[] | null>;
   viewPullRequest(cwd: string, repository: string, number: number): Promise<GitHubPullRequest>;
   createPullRequest(input: PullRequestCreateInput): Promise<void>;
   updatePullRequest(input: PullRequestUpdateInput): Promise<void>;

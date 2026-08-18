@@ -1,8 +1,10 @@
-import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 
 import type { Db } from "../client.js";
-import { issues, pullRequests } from "../schema/index.js";
+import { issues, pullRequests, repositories } from "../schema/index.js";
 import { touch } from "./touch.js";
+
+const LIVE_STATES = ["draft", "open"] as const;
 
 export type NewPullRequest = typeof pullRequests.$inferInsert;
 export type PullRequestRow = typeof pullRequests.$inferSelect;
@@ -13,6 +15,12 @@ export type PullRequestPatch = Partial<
     | "origin"
     | "provenance"
     | "author_login"
+    | "review_decision"
+    | "checks_state"
+    | "mergeable"
+    | "requested_reviewers"
+    | "provider_updated_at"
+    | "synced_at"
     | "repository_id"
     | "number"
     | "url"
@@ -80,22 +88,44 @@ export function listLivePullRequests(db: Db): PullRequestRow[] {
       and(
         isNull(pullRequests.detached_at),
         isNotNull(pullRequests.number),
-        inArray(pullRequests.status, ["draft", "open"]),
+        inArray(pullRequests.status, LIVE_STATES),
       ),
     )
     .orderBy(asc(pullRequests.created_at))
     .all();
 }
 
+/** Both anchors count: a synced pull request carries no issue, and an early publication carries no repository. */
 export function listPullRequestsForProject(db: Db, projectId: string): PullRequestRow[] {
   return db
     .select({ pullRequest: pullRequests })
     .from(pullRequests)
-    .innerJoin(issues, eq(pullRequests.issue_id, issues.id))
-    .where(and(eq(issues.project_id, projectId), isNull(pullRequests.detached_at)))
+    .leftJoin(issues, eq(pullRequests.issue_id, issues.id))
+    .leftJoin(repositories, eq(pullRequests.repository_id, repositories.id))
+    .where(
+      and(
+        or(eq(issues.project_id, projectId), eq(repositories.project_id, projectId)),
+        isNull(pullRequests.detached_at),
+      ),
+    )
     .orderBy(asc(pullRequests.created_at))
     .all()
     .map((row) => row.pullRequest);
+}
+
+export function listLivePullRequestsForRepository(db: Db, repositoryId: string): PullRequestRow[] {
+  return db
+    .select()
+    .from(pullRequests)
+    .where(
+      and(
+        eq(pullRequests.repository_id, repositoryId),
+        isNull(pullRequests.detached_at),
+        inArray(pullRequests.status, LIVE_STATES),
+      ),
+    )
+    .orderBy(asc(pullRequests.created_at))
+    .all();
 }
 
 /** The live row mirroring one GitHub pull request, so a second attachment of the same number is refused rather than duplicated. */

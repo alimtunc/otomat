@@ -17,5 +17,10 @@ export const daemonSettings = sqliteTable("daemon_settings", {
   auto_delete_workspaces: integer("auto_delete_workspaces", { mode: "boolean" })
     .notNull()
     .default(sql`1`),
+  // Resolved by the last pull-request sync: the account the review inbox is classified for.
+  github_viewer_login: text("github_viewer_login"),
+  github_viewer_teams_json: text("github_viewer_teams_json", { mode: "json" }).$type<
+    string[] | null
+  >(),
   ...timestamps,
 });

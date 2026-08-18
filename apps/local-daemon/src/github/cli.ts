@@ -8,7 +8,12 @@ import {
   createPullRequestWithRetry,
   defaultSleep,
 } from "./cli-commands.js";
-import { findPullRequest, searchPullRequests, viewPullRequest } from "./cli-lookup.js";
+import {
+  findPullRequest,
+  listOpenPullRequests,
+  searchPullRequests,
+  viewPullRequest,
+} from "./cli-lookup.js";
 import { authStatusFailed, parseAuthStatus, parseReviewCommentUrl } from "./parse.js";
 import { fetchBranch, forcePushWithLease, push, remoteHead, resolveRemote } from "./remote.js";
 import { reviewCommentPayload } from "./review-comment-payload.js";
@@ -19,12 +24,14 @@ import type {
   GitHubPullRequest,
   GitHubRemote,
   PullRequestCreateInput,
+  PullRequestListInput,
   PullRequestModeInput,
   PullRequestSearchInput,
   PullRequestSelector,
   PullRequestUpdateInput,
   ReviewCommentCreateInput,
 } from "./types.js";
+import { viewerTeams } from "./viewer.js";
 
 class CommandGitHubCli implements GitHubCli {
   constructor(
@@ -121,6 +128,14 @@ class CommandGitHubCli implements GitHubCli {
 
   searchPullRequests(input: PullRequestSearchInput): Promise<GitHubPullRequest[]> {
     return searchPullRequests(this.run, input);
+  }
+
+  listOpenPullRequests(input: PullRequestListInput): Promise<GitHubPullRequest[]> {
+    return listOpenPullRequests(this.run, input);
+  }
+
+  viewerTeams(cwd: string): Promise<string[] | null> {
+    return viewerTeams(this.run, cwd);
   }
 
   viewPullRequest(cwd: string, repository: string, number: number): Promise<GitHubPullRequest> {

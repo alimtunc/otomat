@@ -4,8 +4,8 @@ import {
   DropdownMenuSeparator,
   IssueSourceGlyph,
 } from "@otomat/ui";
+import { MultiSelect } from "@web/components/config-menu/multi-select";
 import { ColorDot } from "@web/components/issues/color-dot";
-import { MultiSelect } from "@web/components/issues/view-options/multi-select";
 import type { IssueFilterOptions } from "@web/lib/issue/filter-options";
 import type { AdvancedIssueFilters } from "@web/lib/issue/filters";
 
