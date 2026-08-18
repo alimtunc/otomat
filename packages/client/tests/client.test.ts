@@ -320,13 +320,13 @@ it("fetches and parses the run diff (null diff allowed, never fabricated)", asyn
   const fetchMock: typeof fetch = async (input) => {
     calledUrl = String(input);
     return jsonResponse({
-      run_id: "run-1",
+      subject_id: "run-1",
       computed_at: "2026-07-05T00:00:00.000Z",
       diff: null,
     });
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
-  const result = await client.getRunDiff("run-1");
+  const result = await client.getReviewDiff({ kind: "run", id: "run-1" });
   expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/diff");
   expect(result.diff).toBeNull();
 });
@@ -362,7 +362,7 @@ it("fetches candidate evidence and posts an explicit compete winner", async () =
     calls.push({ url: String(input), body: init?.body });
     if (init?.method === "POST") return jsonResponse(detail);
     return jsonResponse({
-      run_id: "run-1",
+      subject_id: "run-1",
       computed_at: "2026-07-05T00:00:00.000Z",
       diff: null,
     });
@@ -394,7 +394,7 @@ it("fetches the review surface and posts a pinned comment", async () => {
       return jsonResponse(COMMENT, 201);
     }
     return jsonResponse({
-      review: { id: "rv1", run_id: "run-1", status: "in_review" },
+      review: { id: "rv1", subject_id: "run-1", status: "in_review" },
       comments: [COMMENT],
       fix_authority: { kind: "otomat", reason: "Otomat owns this branch." },
       destinations: { pr_review: false, reason: "This run has no pull request yet." },
@@ -402,18 +402,21 @@ it("fetches the review surface and posts a pinned comment", async () => {
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
 
-  const review = await client.getRunReview("run-1");
+  const review = await client.getReviewDetail({ kind: "run", id: "run-1" });
   expect(review.review?.status).toBe("in_review");
   expect(review.comments[0].diff_sha).toBe("sha-1");
 
-  const created = await client.addReviewComment("run-1", {
-    file_path: "src/thing.ts",
-    side: "new",
-    line: 12,
-    diff_sha: "sha-1",
-    destination: "agent",
-    body: "Rename this.",
-  });
+  const created = await client.addReviewComment(
+    { kind: "run", id: "run-1" },
+    {
+      file_path: "src/thing.ts",
+      side: "new",
+      line: 12,
+      diff_sha: "sha-1",
+      destination: "agent",
+      body: "Rename this.",
+    },
+  );
   expect(created.id).toBe("c1");
   expect(urls).toEqual([
     "http://localhost:4319/api/runs/run-1/review",
@@ -483,8 +486,14 @@ const PUBLISHABILITY = {
 it("reads and publishes the run pull request", async () => {
   const PR = {
     id: "pr1",
+    issue_id: "issue-1",
     run_id: "run-1",
     provider: "github",
+    origin: "otomat",
+    provenance: "otomat",
+    author_login: null,
+    head_sha: null,
+    attachment: null,
     number: null,
     url: null,
     status: "draft",

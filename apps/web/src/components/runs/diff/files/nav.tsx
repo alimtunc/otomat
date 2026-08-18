@@ -1,4 +1,4 @@
-import type { DiffFileContract, RunDiffContract } from "@otomat/domain";
+import type { DiffFileContract, ReviewDiffContract } from "@otomat/domain";
 import {
   Icon,
   IconButton,
@@ -17,7 +17,7 @@ export function DiffFileNav({
   reviewedPaths,
   onSelect,
 }: {
-  diff: RunDiffContract;
+  diff: ReviewDiffContract;
   activePath: string | null;
   reviewedPaths: ReadonlySet<string>;
   onSelect: (file: DiffFileContract) => void;

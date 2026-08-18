@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { getIssue, getProject, insertIssue, updateIssueProject } from "@otomat/db";
 import {
+  attachPullRequestRequestSchema,
   createIssueRequestSchema,
   issueMachine,
   moveIssueProjectRequestSchema,
@@ -10,7 +11,9 @@ import { Hono } from "hono";
 
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";
+import { pullRequestImportRefusal } from "../pull-request-refusal.js";
 import { readIssue, readIssues } from "../reads.js";
+import { toPullRequest } from "../serialize.js";
 
 /** Mounted at `/api/issues`. */
 export function createIssueRoutes(deps: ApiDeps): Hono {
@@ -65,6 +68,31 @@ export function createIssueRoutes(deps: ApiDeps): Hono {
     if (!moved)
       return c.json({ error: "issue_not_found", message: "This issue no longer exists." }, 404);
     return c.json(moved);
+  });
+
+  routes.get("/:id/pull-requests", async (c) => {
+    const id = c.req.param("id");
+    if (!getIssue(deps.db, id)) return c.json({ error: "issue_not_found" }, 404);
+    const result = await deps.github.listIssuePullRequests(id);
+    return c.json({
+      attached: result.attached.map(toPullRequest),
+      candidates: result.candidates,
+      detection: result.detection,
+    });
+  });
+
+  routes.post("/:id/pull-requests", validateJson(attachPullRequestRequestSchema), async (c) => {
+    const id = c.req.param("id");
+    if (!getIssue(deps.db, id)) return c.json({ error: "issue_not_found" }, 404);
+    try {
+      const attached = await deps.github.attachPullRequest(id, c.req.valid("json"));
+      return c.json(toPullRequest(attached), 201);
+    } catch (error) {
+      const refusal = pullRequestImportRefusal(c, error);
+      if (refusal) return refusal;
+      console.error(`[otomat] attaching a pull request to issue ${id} failed`, error);
+      return c.json({ error: "pr_attach_failed" }, 500);
+    }
   });
 
   return routes;

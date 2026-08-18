@@ -62,8 +62,13 @@ export function publishRequest(
 export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullRequestRow {
   return {
     id: "pr1",
+    issue_id: "issue-detail",
     run_id: "run-detail",
+    repository_id: null,
     provider: "github",
+    origin: "otomat",
+    provenance: "otomat",
+    author_login: null,
     number: null,
     url: null,
     status: "draft",
@@ -72,6 +77,8 @@ export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullReq
     body: null,
     head_ref: null,
     base_ref: null,
+    head_sha: null,
+    base_sha: null,
     commit_subject: null,
     commit_body: null,
     generator_runtime: null,
@@ -79,6 +86,10 @@ export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullReq
     generator_effort: null,
     published_head_sha: null,
     published_diff_sha: null,
+    attached_at: null,
+    attached_by: null,
+    attachment_evidence: null,
+    detached_at: null,
     error_code: null,
     error_message: null,
     created_at: "2026-07-05T00:00:00.000Z",
@@ -97,6 +108,20 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
       error_code: null,
       error_message: null,
     }),
+    listIssuePullRequests: async () => ({
+      attached: [],
+      candidates: [],
+      detection: { status: "unavailable", message: "GitHub is not configured in this test." },
+    }),
+    attachPullRequest: async () => {
+      throw new Error("attachPullRequest stub not configured");
+    },
+    detachPullRequest: () => {
+      throw new Error("detachPullRequest stub not configured");
+    },
+    refreshPullRequest: async () => {
+      throw new Error("refreshPullRequest stub not configured");
+    },
     getPullRequest: async () => null,
     publishability: async () => PUBLISHABLE_WORKSPACE,
     publish: async () => {
@@ -125,8 +150,10 @@ export class FakeGitHubCli implements GitHubCli {
     title: "feat: ship it",
     body: "Details",
     headRef: "",
+    headSha: "0".repeat(40),
     baseRef: "main",
     lifecycle: "open",
+    authorLogin: "octocat",
   };
   createInput: PullRequestCreateInput | null = null;
   resolveError: GitHubCliError | null = null;
@@ -195,6 +222,12 @@ export class FakeGitHubCli implements GitHubCli {
     const matchesSelector =
       this.provider.headRef === input.head && this.provider.baseRef === input.base;
     return this.providerExists && matchesSelector ? this.provider : null;
+  }
+
+  searchResults: GitHubPullRequest[] = [];
+
+  async searchPullRequests(): Promise<GitHubPullRequest[]> {
+    return this.searchResults;
   }
 
   async viewPullRequest(): Promise<GitHubPullRequest> {

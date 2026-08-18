@@ -17,6 +17,8 @@ export * from "./desktop.js";
 export * from "./diagnostics.js";
 export * from "./diff.js";
 export * from "./execution-host.js";
+export * from "./pull-request-import.js";
+export * from "./review-queue.js";
 export * from "./run-plan.js";
 export {
   agentProfileContractSchema,
@@ -31,8 +33,13 @@ export {
   isReviewCommentDestination,
   projectContractSchema,
   PULL_REQUEST_PUBLICATION_MODES,
+  pullRequestAttachmentSchema,
   pullRequestContractSchema,
+  pullRequestDiscoverySchema,
+  pullRequestEvidenceSchema,
   pullRequestGeneratorAuditSchema,
+  pullRequestOriginSchema,
+  pullRequestProvenanceSchema,
   repositoryContractSchema,
   resolvedAgentConfigSchema,
   resolvedSkillSchema,
@@ -63,8 +70,13 @@ export {
   type IssueSourceContract,
   type IssueWorkspace,
   type ProjectContract,
+  type PullRequestAttachment,
   type PullRequestContract,
+  type PullRequestDiscovery,
+  type PullRequestEvidence,
   type PullRequestGeneratorAudit,
+  type PullRequestOrigin,
+  type PullRequestProvenance,
   type PullRequestPublicationMode,
   type RepositoryContract,
   type ResolvedAgentConfig,

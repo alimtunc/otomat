@@ -21,8 +21,9 @@ import {
   competeGroupContractSchema,
   issueContractSchema,
   projectContractSchema,
-  pullRequestContractSchema,
   isRunPlanCompeteGroup,
+  pullRequestContractSchema,
+  pullRequestEvidenceSchema,
   repositoryContractSchema,
   reviewCommentContractSchema,
   reviewContractSchema,
@@ -38,6 +39,7 @@ import {
   type IssueExecution,
   type IssueWorkspace,
   type ProjectContract,
+  type PullRequestAttachment,
   type PullRequestContract,
   type RepositoryContract,
   type ReviewCommentContract,
@@ -152,11 +154,27 @@ export function toReviewComment(row: ReviewCommentRow): ReviewCommentContract {
   return reviewCommentContractSchema.parse(row);
 }
 
+/** A row carries its evidence as stored JSON; parsing it strictly means a corrupt audit is reported, never shown as "no evidence". */
+function toAttachment(row: PullRequestRow): PullRequestAttachment | null {
+  if (row.attached_at === null || row.attachment_evidence === null) return null;
+  return {
+    attached_at: row.attached_at,
+    attached_by: row.attached_by,
+    evidence: pullRequestEvidenceSchema.parse(JSON.parse(row.attachment_evidence)),
+  };
+}
+
 export function toPullRequest(row: PullRequestRow): PullRequestContract {
   return pullRequestContractSchema.parse({
     id: row.id,
+    issue_id: row.issue_id,
     run_id: row.run_id,
     provider: row.provider,
+    origin: row.origin,
+    provenance: row.provenance,
+    author_login: row.author_login,
+    head_sha: row.head_sha,
+    attachment: toAttachment(row),
     number: row.number,
     url: row.url,
     status: row.status,

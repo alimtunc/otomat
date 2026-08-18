@@ -25,7 +25,8 @@ let fix: DaemonTestDb;
 let signals: (LinearLifecycleSignal & { run_status: string | undefined })[];
 
 function syncIssueLifecycle(signal: LinearLifecycleSignal): void {
-  signals.push({ ...signal, run_status: getRun(fix.db, signal.run_id)?.status });
+  const run = signal.run_id === null ? undefined : getRun(fix.db, signal.run_id);
+  signals.push({ ...signal, run_status: run?.status });
 }
 
 beforeEach(() => {

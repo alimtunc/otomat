@@ -1,19 +1,12 @@
-import { diffOrNull, type CanonicalDiff } from "#git";
+import type { CanonicalDiff } from "#git";
 
-import type { ReviewContext, RunDiffResult } from "./types.js";
+import type { ReviewSubject, ReviewDiffResult } from "./types.js";
 
-/** The live canonical diff of one worktree owner in the run's repository — the run itself unless a candidate owner is named. Null when that owner has no worktree; never a fabricated diff. */
-export function computeDiff(
-  ctx: ReviewContext,
-  runId: string,
-  owner: string = runId,
-): CanonicalDiff | null {
-  const binding = ctx.repositories.forRun(runId);
-  if (binding === null) return null;
-  return diffOrNull(binding.service, owner);
+/** The live canonical diff of one review subject. Null when it genuinely has none; never a fabricated diff. */
+export function computeDiff(subject: ReviewSubject): CanonicalDiff | null {
+  return subject.snapshot()?.diff ?? null;
 }
 
-/** A worktree's canonical diff plus its compute timestamp; `diff` is null when the owner has no worktree. */
-export function getWorktreeDiff(ctx: ReviewContext, runId: string, owner?: string): RunDiffResult {
-  return { computedAt: new Date().toISOString(), diff: computeDiff(ctx, runId, owner) };
+export function getSubjectDiff(subject: ReviewSubject): ReviewDiffResult {
+  return { computedAt: new Date().toISOString(), diff: computeDiff(subject) };
 }

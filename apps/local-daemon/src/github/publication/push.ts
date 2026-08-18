@@ -5,7 +5,7 @@ import { headSha } from "#git";
 
 import { GitHubPublicationError } from "../errors.js";
 import { providerPatch } from "./provider.js";
-import type { PublicationStore } from "./store.js";
+import { publicationRunId, type PublicationStore } from "./store.js";
 import type { PublicationConfig, PublicationWorkspace } from "./types.js";
 import { resolveWorkspace } from "./workspace.js";
 
@@ -90,7 +90,8 @@ export async function pushCommits(
   request: PushPullRequestRequest,
 ): Promise<PullRequestRow> {
   const { row, headRef, number } = requireOpenPullRequest(stored);
-  const workspace = await resolveWorkspace(config, row.run_id);
+  const runId = publicationRunId(row);
+  const workspace = await resolveWorkspace(config, runId);
   const provider = await config.cli.viewPullRequest(
     workspace.worktree.path,
     workspace.remote.repository,
@@ -116,7 +117,7 @@ export async function pushCommits(
     {
       ...providerPatch(provider),
       published_head_sha: pushed,
-      published_diff_sha: workspace.worktrees.commitDiff(row.run_id, pushed).sha,
+      published_diff_sha: workspace.worktrees.commitDiff(runId, pushed).sha,
     },
     "github",
   );

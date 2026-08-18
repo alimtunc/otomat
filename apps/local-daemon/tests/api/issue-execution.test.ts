@@ -43,6 +43,7 @@ function addPullRequest(
   db: Db,
   pr: {
     id: string;
+    issueId: string;
     runId: string;
     status: PullRequestState;
     publication: PullRequestPublicationState;
@@ -51,6 +52,7 @@ function addPullRequest(
   db.insert(schema.pullRequests)
     .values({
       id: pr.id,
+      issue_id: pr.issueId,
       run_id: pr.runId,
       status: pr.status,
       publication_status: pr.publication,
@@ -116,21 +118,45 @@ it("surfaces a review_ready run as reviewing", () => {
 
 it("surfaces a really-created, open pull request as pr_open", () => {
   addRun(t.db, { id: "r1", status: "completed" });
-  addPullRequest(t.db, { id: "pr1", runId: "r1", status: "open", publication: "created" });
+  addPullRequest(t.db, {
+    id: "pr1",
+    issueId: "i1",
+    runId: "r1",
+    status: "open",
+    publication: "created",
+  });
   expect(readI1(t.db).execution).toEqual({ state: "pr_open", run_id: "r1" });
 });
 
 it("does not treat a merged or not-yet-created PR as open", () => {
   addRun(t.db, { id: "r1", status: "completed" });
-  addPullRequest(t.db, { id: "pr1", runId: "r1", status: "merged", publication: "created" });
+  addPullRequest(t.db, {
+    id: "pr1",
+    issueId: "i1",
+    runId: "r1",
+    status: "merged",
+    publication: "created",
+  });
   addRun(t.db, { id: "r2", status: "completed" });
-  addPullRequest(t.db, { id: "pr2", runId: "r2", status: "open", publication: "creating" });
+  addPullRequest(t.db, {
+    id: "pr2",
+    issueId: "i1",
+    runId: "r2",
+    status: "open",
+    publication: "creating",
+  });
   expect(readI1(t.db).execution).toEqual({ state: "none", run_id: null });
 });
 
 it("keeps live work ahead of an older terminal run with an open PR", () => {
   addRun(t.db, { id: "old", status: "completed", createdAt: "2026-01-01 00:00:00" });
-  addPullRequest(t.db, { id: "pr1", runId: "old", status: "open", publication: "created" });
+  addPullRequest(t.db, {
+    id: "pr1",
+    issueId: "i1",
+    runId: "old",
+    status: "open",
+    publication: "created",
+  });
   addRun(t.db, { id: "new", status: "running", createdAt: "2026-01-02 00:00:00" });
   expect(readI1(t.db).execution).toEqual({ state: "running", run_id: "new" });
 });

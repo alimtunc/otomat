@@ -17,6 +17,7 @@ function ev(over: Partial<IssueExecutionEvidence> & { run_id: string }): IssueEx
     worktree_status: "active",
     halted_step: null,
     pr_status: null,
+    adopted_pr_status: null,
     pr_publication: null,
     ...over,
   };

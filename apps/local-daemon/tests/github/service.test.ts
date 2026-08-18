@@ -84,9 +84,10 @@ describe("GitHubService", () => {
     });
   }
 
-  it("anchors a published review comment on the pull request's published head", async () => {
+  it("publishes a review comment on the anchor sha review supplies", async () => {
     insertPullRequest(fix.db, {
       id: "pr-comment",
+      issue_id: "i1",
       run_id: RUN_ID,
       number: 7,
       url: "https://github.com/acme/app/pull/7",
@@ -98,7 +99,8 @@ describe("GitHubService", () => {
     });
 
     await expect(
-      service().publishReviewComment(RUN_ID, {
+      service().publishReviewComment("pr-comment", {
+        commitSha: "a".repeat(40),
         filePath: "change.txt",
         side: "new",
         startLine: 1,
@@ -121,7 +123,8 @@ describe("GitHubService", () => {
 
   it("refuses to publish a review comment with no pull request to anchor it on", async () => {
     await expect(
-      service().publishReviewComment(RUN_ID, {
+      service().publishReviewComment("pr-comment", {
+        commitSha: "a".repeat(40),
         filePath: "change.txt",
         side: "new",
         startLine: null,
@@ -216,6 +219,7 @@ describe("GitHubService", () => {
   it("adopts a migrated provider row as created without pushing anything", async () => {
     insertPullRequest(fix.db, {
       id: "pr-legacy",
+      issue_id: "i1",
       run_id: RUN_ID,
       provider: "github",
       number: 42,

@@ -36,7 +36,7 @@ export function fileCommentActions(
 
 export function diffFileCardProps(overrides: Partial<DiffFileCardProps> = {}): DiffFileCardProps {
   return {
-    runId: "run-1",
+    target: { kind: "run", id: "run-1" },
     file: diffFile({ path: "src/index.ts" }),
     prefs: DEFAULT_DIFF_PREFS,
     reviewed: false,

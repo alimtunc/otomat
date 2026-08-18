@@ -1,107 +1,18 @@
-import { createReviewCommentRequestSchema, requestFixRequestSchema } from "@otomat/domain";
+import { requestFixRequestSchema } from "@otomat/domain";
 import { Hono } from "hono";
 
-import {
-  CommentDestinationUnavailableError,
-  CommentPublicationFailedError,
-  CommentRangeInvalidError,
-  CommentsNotFixableError,
-  DiffUnavailableError,
-  ReviewAnchorStaleError,
-} from "#review";
+import { CommentsNotFixableError } from "#review";
 import { ReviewFixBusyError } from "#supervisor";
 
 import type { ApiDeps } from "../deps.js";
-import { diffFileBlobsErrorResponse, toDiffFileBlobsResponse } from "../diff-file-blobs.js";
-import { runGuard, validateJson, type RunEnv } from "../guards.js";
-import { toRunDiffResponse } from "../serialize-run-diff.js";
-import { toReview, toReviewComment, toRun } from "../serialize.js";
+import { runGuard, runSubjectGuard, validateJson, type RunEnv } from "../guards.js";
+import { toRun } from "../serialize.js";
 import { appendStepSelector, stepAppendErrorResponse } from "../step-append.js";
+import { createReviewSurfaceRoutes } from "./review-surface.js";
 
+/** Mounted at `/api/runs`: the shared review surface, plus the AI fix only a run can carry. */
 export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
-
-  routes.get("/:id/diff", runGuard(deps.db), (c) => {
-    const run = c.get("run");
-    try {
-      return c.json(toRunDiffResponse(run.id, deps.review.getWorktreeDiff(run)));
-    } catch (error) {
-      console.error(`[otomat] diff for run ${run.id} failed`, error);
-      return c.json({ error: "diff_failed" }, 500);
-    }
-  });
-
-  routes.get("/:id/diff/file", runGuard(deps.db), (c) => {
-    const run = c.get("run");
-    const path = c.req.query("path") ?? "";
-    const sha = c.req.query("sha") ?? "";
-    try {
-      return c.json(toDiffFileBlobsResponse(deps.review.getFileBlobs(run, { path, sha })));
-    } catch (error) {
-      const refusal = diffFileBlobsErrorResponse(c, error);
-      if (refusal) return refusal;
-      console.error(`[otomat] blobs for ${path} on run ${run.id} failed`, error);
-      return c.json({ error: "diff_failed" }, 500);
-    }
-  });
-
-  routes.get("/:id/review", runGuard(deps.db), (c) => {
-    const run = c.get("run");
-    const detail = deps.review.getReviewDetail(run.id);
-    return c.json({
-      review: detail.review ? toReview(detail.review) : null,
-      comments: detail.comments.map(toReviewComment),
-      fix_authority: detail.fixAuthority,
-      destinations: detail.destinations,
-    });
-  });
-
-  routes.post(
-    "/:id/review/comments",
-    validateJson(createReviewCommentRequestSchema),
-    runGuard(deps.db),
-    async (c) => {
-      const run = c.get("run");
-      try {
-        return c.json(toReviewComment(await deps.review.addComment(run, c.req.valid("json"))), 201);
-      } catch (error) {
-        if (error instanceof DiffUnavailableError) {
-          return c.json({ error: "diff_unavailable" }, 409);
-        }
-        if (error instanceof ReviewAnchorStaleError) {
-          return c.json({ error: "comment_anchor_stale" }, 409);
-        }
-        if (error instanceof CommentRangeInvalidError) {
-          return c.json({ error: "comment_range_invalid", message: error.message }, 422);
-        }
-        if (error instanceof CommentDestinationUnavailableError) {
-          return c.json({ error: "comment_destination_unavailable", message: error.message }, 409);
-        }
-        console.error(`[otomat] comment on run ${run.id} failed`, error);
-        return c.json({ error: "comment_create_failed" }, 500);
-      }
-    },
-  );
-
-  routes.post("/:id/review/comments/:commentId/publish", runGuard(deps.db), async (c) => {
-    const run = c.get("run");
-    const commentId = c.req.param("commentId");
-    try {
-      return c.json(toReviewComment(await deps.review.publishComment(run, commentId)));
-    } catch (error) {
-      if (error instanceof CommentDestinationUnavailableError) {
-        return c.json({ error: "comment_destination_unavailable", message: error.message }, 409);
-      }
-      if (error instanceof ReviewAnchorStaleError) {
-        return c.json({ error: "comment_anchor_stale" }, 409);
-      }
-      if (error instanceof CommentPublicationFailedError) {
-        return c.json({ error: "comment_publication_failed", message: error.message }, 502);
-      }
-      console.error(`[otomat] publishing comment ${commentId} on run ${run.id} failed`, error);
-      return c.json({ error: "comment_publish_failed" }, 500);
-    }
-  });
 
   routes.post(
     "/:id/review/fix",
@@ -134,6 +45,8 @@ export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
       }
     },
   );
+
+  routes.route("/", createReviewSurfaceRoutes(deps, runSubjectGuard(deps.db)));
 
   return routes;
 }

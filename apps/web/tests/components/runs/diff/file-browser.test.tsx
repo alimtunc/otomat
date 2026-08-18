@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { RunDiffContract } from "@otomat/domain";
+import type { ReviewDiffContract } from "@otomat/domain";
 import { DiffFileBrowser } from "@web/components/runs/diff/files/browser";
 import type { DiffBrowserMode } from "@web/components/runs/diff/prefs/prefs";
 import { useDiffKeyboardNav } from "@web/components/runs/diff/use-diff-keyboard-nav";
@@ -19,7 +19,7 @@ const FILES = [
   diffFile({ path: "docs/ai/codebase-map.md" }),
 ];
 
-const diff: RunDiffContract = {
+const diff: ReviewDiffContract = {
   base: "base-sha",
   files: FILES,
   additions: 3,

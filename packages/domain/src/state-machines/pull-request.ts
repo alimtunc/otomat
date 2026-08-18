@@ -4,6 +4,11 @@ export const PULL_REQUEST_STATES = ["draft", "open", "merged", "closed"] as cons
 
 export type PullRequestState = (typeof PULL_REQUEST_STATES)[number];
 
+/** Still reviewable on GitHub; `merged` and `closed` are settled verdicts. */
+export function isPullRequestLive(status: PullRequestState): boolean {
+  return status === "draft" || status === "open";
+}
+
 export const pullRequestMachine = defineMachine<PullRequestState>({
   name: "pull_request",
   initial: "draft",

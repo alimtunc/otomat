@@ -169,6 +169,13 @@
       "when": 1787225008785,
       "tag": "0023_pull_request_proposal",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1787311408785,
+      "tag": "0024_adopted_pull_requests",
+      "breakpoints": true
     }
   ]
 }

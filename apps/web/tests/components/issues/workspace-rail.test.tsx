@@ -5,6 +5,7 @@ import { afterEach, expect, it } from "vitest";
 
 import { issueContract, openWorkspace } from "#support/issue";
 import { type Mounted } from "#support/mount";
+import { withQueryClient } from "#support/query";
 import { mountRouted } from "#support/router";
 
 const mounted: Mounted[] = [];
@@ -17,7 +18,7 @@ afterEach(async () => {
 });
 
 async function render(issue: IssueContract): Promise<HTMLElement> {
-  const rendered = await mountRouted(<WorkspaceRail issue={issue} run={null} />);
+  const rendered = await mountRouted(withQueryClient(<WorkspaceRail issue={issue} run={null} />));
   mounted.push(rendered);
   return rendered.container;
 }

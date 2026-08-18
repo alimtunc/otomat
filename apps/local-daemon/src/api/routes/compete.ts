@@ -6,7 +6,7 @@ import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { readCompeteCandidate } from "../reads.js";
 import { runDetailJson } from "../run-detail.js";
-import { toRunDiffResponse } from "../serialize-run-diff.js";
+import { toReviewDiffResponse } from "../serialize-review-diff.js";
 
 /** Mounted at `/api/runs`. Holds what a compete group owns: each candidate's isolated diff, and the explicit winner selection. */
 export function createCompeteRoutes(deps: ApiDeps): Hono<RunEnv> {
@@ -22,7 +22,8 @@ export function createCompeteRoutes(deps: ApiDeps): Hono<RunEnv> {
     );
     if (!step) return c.json({ error: "compete_candidate_not_found" }, 404);
     try {
-      return c.json(toRunDiffResponse(run.id, deps.review.getWorktreeDiff(run, step.id)));
+      const diff = deps.review.getDiff({ kind: "run", id: run.id, owner: step.id });
+      return c.json(toReviewDiffResponse(run.id, diff));
     } catch (error) {
       console.error(`[otomat] compete candidate diff ${step.id} failed`, error);
       return c.json({ error: "compete_diff_failed" }, 500);

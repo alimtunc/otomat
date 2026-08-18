@@ -18,6 +18,7 @@ apps/
       context/         # declarative agent context: freeze a selection, build a session dossier, render it
       events/          # event ledger + stream-to-file tailer (OTO-7)
       git/             # worktree/branch lifecycle + diff      (OTO-8)
+      github/          # gh CLI, PR publication, and adoption of a pull request Otomat did not open (OTO-26)
       data-safety/     # startup diagnostics + restore maintenance mode (OTO-29)
       diagnostics/     # correlation-id request log + bounded redacted excerpt   (OTO-52)
       review/          # review slice: diff snapshot, comment anchoring, PR-comment publication (OTO-11)
@@ -73,8 +74,9 @@ Why `api`, `context`, `data-safety`, `diagnostics`, `events`, `git`, `runtime` a
 consumed only by the local daemon (and each other) — no frontend or cross-app consumer — so they
 are internal daemon modules, consumed through
 `#api`/`#data-safety`/`#diagnostics`/`#events`/`#git`/`#runtime` subpath imports.
-`supervisor` (OTO-10) and `review` (OTO-11) live the same way under
-`apps/local-daemon/src/<module>`, consumed through `#supervisor`/`#review`.
+`supervisor` (OTO-10), `review` (OTO-11) and `github` (OTO-26) live the same way
+under `apps/local-daemon/src/<module>`, consumed through
+`#supervisor`/`#review`/`#github`.
 
 ## Ticket Ownership
 
@@ -96,7 +98,9 @@ are internal daemon modules, consumed through
 | `apps/desktop/src/main/data-safety` | OTO-29                 | Versioned data layout, redacted rotating logs, support bundle export. |
 | `apps/desktop/scripts`            | OTO-21, OTO-30           | macOS packaging: ad-hoc local build, signed/notarized release, packaged smoke. |
 | `apps/local-daemon/src/supervisor`| OTO-10, OTO-87           | Process supervision, pid reconciliation, and the recovery of a stopped plan. |
-| `apps/local-daemon/src/review`    | OTO-11                   | Review slice: server-side diff snapshot, comment anchoring, destinations, fix-step context.|
+| `apps/local-daemon/src/review`    | OTO-11, OTO-26           | Review slice: server-side diff snapshot, comment anchoring, destinations, fix-step context; one surface for a run and an adopted pull request.|
+| `apps/local-daemon/src/github/import` | OTO-26               | Adoption of an existing pull request: reference, verification, provenance, detection, audit. |
+| `apps/web/src/components/pull-requests` | OTO-26             | The issue's pull requests: attached cards, detected candidates, manual import, detach. |
 | `packages/domain/src/patch`       | OTO-11                   | The one unified-diff reader: hunks, range coverage, GitHub anchor refusals. |
 | `packages/domain`                 | OTO-5                    | Pure TS. Canonical types, state machines, event envelope, contracts.  |
 | `packages/db`                     | OTO-5                    | SQLite driver isolation, Drizzle schema, migrations, repositories.    |
@@ -576,6 +580,52 @@ pull request tracking someone else's head ref is read-only however healthy the
 local repository looks. The verdict rides on the review detail with the sentence
 the cockpit shows, so review-only is explained rather than being a silently
 missing button.
+
+## Adopting a Pull Request Otomat Did Not Open
+
+`pull_requests` stays the single mirror of a GitHub pull request; `origin`
+separates the ones Otomat opened from the ones it adopted. An adopted row has no
+`run_id` — nothing here produced it — and hangs off `issue_id` instead, so a
+second table would only have duplicated lifecycle, publication and closure.
+
+Nothing is adopted on a resemblance. `github/import/` parses the operator's
+reference, refuses a repository that is not this issue's, reads the pull request
+with `gh`, and stores what GitHub answered as `attachment_evidence` next to who
+attached it and when; detaching stamps `detached_at` and keeps the row, because
+the audit has to answer what was attached and on what. Detection is the same
+verification applied to what `gh pr list --search <identifier>` links to the
+issue: candidates are offered, never adopted, and an issue with no tracker
+identifier says so rather than showing an empty list that reads as "there is
+none".
+
+`provenance` is decided from evidence alone (`import/provenance.ts`): ownership
+needs a local fact — a publication Otomat made, or a head ref one of the issue's
+runs owns. A readable author that is not Otomat's login is `external`; anything
+else, including Otomat's own login on a branch no run owns, stays `unknown`.
+External and unknown are review-only, and `review/pull-request.ts` phrases the
+refusal from that provenance.
+
+Isolation is the fetch, not a checkout: `git/pull-request.ts` fetches the head
+and its base into `refs/otomat/pull/<n>/{head,base}` and pins `{base_sha,
+head_sha}` on the row. Otomat therefore holds no branch and no worktree it could
+push, and the diff, the anchors and the expanded blobs all come from that one
+pinned pair. A refresh re-fetches, which is how a moved head re-pins the review.
+
+The review surface itself is shared. `reviews.subject_id` is a run id or a pull
+request id, and `review/subject.ts` is the single place the two differ: where the
+diff comes from, whether a fix is authorised, which pull request a `pr_review`
+comment publishes to, and which run ledger records the review (none, for an
+adopted pull request). Comments, anchoring and publication are untouched, and
+the API mounts one `review-surface.ts` under both `/api/runs` and
+`/api/pull-requests`.
+
+Closure is a projection, never a rewritten state. `isReviewOpen` drops a run from
+`reviewing` and from `GET /api/reviews` as soon as the pull request standing
+against it — its own or the one its issue adopted — is merged or closed, so the
+run keeps its status and its history either way. Only a *merged* pull request
+also drives `closeMergedIssue`: through the issue's canonical run when it still
+holds one, and on the issue itself when the work never ran here, which is what
+lets OTO-67's Linear write-back apply to a merge Otomat only witnessed.
 
 ## Publishing to a Pull Request
 

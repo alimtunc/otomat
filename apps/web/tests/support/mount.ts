@@ -1,7 +1,8 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RemoteSessionProvider } from "@web/components/shell/remote-session/provider";
 import { act, createElement, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
+
+import { testQueryClient, withQueryClient } from "#support/query";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -36,13 +37,9 @@ export async function mount(node: ReactNode): Promise<Mounted> {
 
 /** Mirrors the app root: the query client, then the host session every surface reads from. */
 export async function mountWithQuery(node: ReactNode): Promise<Mounted> {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = testQueryClient();
   const wrap = (child: ReactNode) =>
-    createElement(
-      QueryClientProvider,
-      { client },
-      createElement(RemoteSessionProvider, null, child),
-    );
+    withQueryClient(createElement(RemoteSessionProvider, null, child), client);
   const mounted = await mount(wrap(node));
   // React Query dispatches fetch results on a macrotask; flush two timer ticks before asserting.
   await act(async () => {

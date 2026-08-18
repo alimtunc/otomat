@@ -1,5 +1,10 @@
-import type { HaltedStepEvidence, IssueExecutionEvidence } from "@otomat/domain";
-import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
+import {
+  isPullRequestLive,
+  type HaltedStepEvidence,
+  type IssueExecutionEvidence,
+  type PullRequestState,
+} from "@otomat/domain";
+import { and, asc, eq, inArray, isNull, type SQL } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { issues, pullRequests, runs, stepRuns, worktrees } from "../schema/index.js";
@@ -27,6 +32,26 @@ function lastHaltedSteps(db: Db, filters: SQL[]): Map<string, HaltedStepEvidence
   return new Map(rows.map((row) => [row.run_id, { id: row.id, name: row.name }]));
 }
 
+/** The adopted pull request that still stands for each issue: any live one outranks every settled one. */
+function adoptedPullRequests(db: Db, filters: SQL[]): Map<string, PullRequestState> {
+  const rows = db
+    .select({ issue_id: pullRequests.issue_id, status: pullRequests.status })
+    .from(pullRequests)
+    .innerJoin(runs, eq(runs.issue_id, pullRequests.issue_id))
+    .innerJoin(issues, eq(pullRequests.issue_id, issues.id))
+    .where(and(isNull(pullRequests.run_id), isNull(pullRequests.detached_at), ...filters))
+    .orderBy(asc(pullRequests.created_at))
+    .all();
+  const standing = new Map<string, PullRequestState>();
+  for (const row of rows) {
+    const held = standing.get(row.issue_id);
+    if (held === undefined || !isPullRequestLive(held)) {
+      standing.set(row.issue_id, row.status);
+    }
+  }
+  return standing;
+}
+
 /**
  * One query per fact returning every run with its worktree, optional pull
  * request and last halted step for the selected issues, so the daemon projects
@@ -40,6 +65,7 @@ export function listIssueExecutionEvidence(
 ): IssueExecutionEvidenceRow[] {
   const filters = scopeFilters(options);
   const halted = lastHaltedSteps(db, filters);
+  const adopted = adoptedPullRequests(db, filters);
   return db
     .select({
       issue_id: runs.issue_id,
@@ -58,5 +84,9 @@ export function listIssueExecutionEvidence(
     .leftJoin(pullRequests, eq(pullRequests.run_id, runs.id))
     .where(filters.length > 0 ? and(...filters) : undefined)
     .all()
-    .map((row) => ({ ...row, halted_step: halted.get(row.run_id) ?? null }));
+    .map((row) => ({
+      ...row,
+      halted_step: halted.get(row.run_id) ?? null,
+      adopted_pr_status: adopted.get(row.issue_id) ?? null,
+    }));
 }

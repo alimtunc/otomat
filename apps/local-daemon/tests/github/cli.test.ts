@@ -389,9 +389,11 @@ describe("GitHub CLI adapter", () => {
       title: "Ship it",
       body: "Details",
       headRefName: "otomat/run/r1",
+      headRefOid: "a".repeat(40),
       baseRefName: "main",
       state: "OPEN",
       isDraft: false,
+      author: { login: "octocat" },
     };
     const runner = fakeRunner([ok("printed-url-is-ignored\n"), ok(JSON.stringify([provider]))]);
     const cli = createGitHubCli(runner.run);

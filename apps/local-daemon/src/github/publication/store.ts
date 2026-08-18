@@ -28,6 +28,12 @@ import {
 } from "../events.js";
 import type { ComposedSubject, PublicationConfig } from "./types.js";
 
+/** Publication only ever acts on a pull request Otomat opened for a run; a row without one never reaches these paths. */
+export function publicationRunId(row: PullRequestRow): string {
+  if (row.run_id === null) throw new Error(`pull request ${row.id} was adopted, not published`);
+  return row.run_id;
+}
+
 /** Row persistence, ledger emission, and state-machine reconciliation for one publication. */
 export class PublicationStore {
   constructor(private readonly config: PublicationConfig) {}
@@ -38,25 +44,29 @@ export class PublicationStore {
     return row;
   }
 
-  ensureRow(runId: string, title: string, body: string | null): PullRequestRow {
-    const existing = getPullRequestForRun(this.config.db, runId);
+  ensureRow(run: RunRow, title: string, body: string | null): PullRequestRow {
+    const existing = getPullRequestForRun(this.config.db, run.id);
     if (existing) return existing;
     try {
       insertPullRequest(this.config.db, {
         id: this.config.idFactory(),
-        run_id: runId,
+        issue_id: run.issue_id,
+        run_id: run.id,
+        repository_id: run.repository_id,
         provider: "github",
+        origin: "otomat",
+        provenance: "otomat",
         status: "draft",
         publication_status: "not_configured",
         title,
         body,
       });
     } catch (error) {
-      const raced = getPullRequestForRun(this.config.db, runId);
+      const raced = getPullRequestForRun(this.config.db, run.id);
       if (!raced) throw error;
       return raced;
     }
-    return this.reload(runId);
+    return this.reload(run.id);
   }
 
   patch(
@@ -65,13 +75,14 @@ export class PublicationStore {
     source: EventSource,
     type: PullRequestEventType = "pr.updated",
   ): PullRequestRow {
+    const runId = publicationRunId(row);
     updatePullRequest(this.config.db, row.id, values);
-    const updated = this.reload(row.run_id);
+    const updated = this.reload(runId);
     emitLedgerEvent(
       this.config.db,
       this.config.dataDir,
-      row.run_id,
-      buildPullRequestEvent(row.run_id, type, source, updated, new Date().toISOString()),
+      runId,
+      buildPullRequestEvent(runId, type, source, updated, new Date().toISOString()),
     );
     return updated;
   }
@@ -104,7 +115,7 @@ export class PublicationStore {
           repositories: this.config.repositories,
           syncIssueLifecycle: this.config.syncIssueLifecycle,
         },
-        row.run_id,
+        publicationRunId(row),
       );
     }
     return current;
@@ -124,11 +135,11 @@ export class PublicationStore {
 
   /** The proposal is the durable publication draft: it survives a reload of the cockpit. */
   recordProposal(
-    runId: string,
+    run: RunRow,
     proposal: PullRequestProposal,
     subject: ComposedSubject,
   ): PullRequestRow {
-    const row = this.ensureRow(runId, subject.title, proposal.body);
+    const row = this.ensureRow(run, subject.title, proposal.body);
     return this.patch(
       row,
       {

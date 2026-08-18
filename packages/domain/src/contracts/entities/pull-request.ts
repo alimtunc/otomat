@@ -14,12 +14,57 @@ export const pullRequestGeneratorAuditSchema = z.object({
 });
 export type PullRequestGeneratorAudit = z.infer<typeof pullRequestGeneratorAuditSchema>;
 
-/** Durable mirror of one run's GitHub pull request and its local publication progress. */
+/** Whether Otomat opened the pull request itself or adopted one that already existed on GitHub. */
+const PULL_REQUEST_ORIGINS = ["otomat", "imported"] as const;
+export const pullRequestOriginSchema = z.enum(PULL_REQUEST_ORIGINS);
+export type PullRequestOrigin = z.infer<typeof pullRequestOriginSchema>;
+
+/** Whose branch the pull request ships, decided from evidence alone; an identity that cannot be verified stays `unknown`. */
+const PULL_REQUEST_PROVENANCES = ["otomat", "external", "unknown"] as const;
+export const pullRequestProvenanceSchema = z.enum(PULL_REQUEST_PROVENANCES);
+export type PullRequestProvenance = z.infer<typeof pullRequestProvenanceSchema>;
+
+/** How a pull request reached Otomat: typed by the operator, or found from the issue's own identifier. */
+const PULL_REQUEST_DISCOVERIES = ["manual", "issue_reference"] as const;
+export const pullRequestDiscoverySchema = z.enum(PULL_REQUEST_DISCOVERIES);
+export type PullRequestDiscovery = z.infer<typeof pullRequestDiscoverySchema>;
+
+/** What GitHub actually answered when the pull request was verified; every attachment and refresh is justified by one of these. */
+export const pullRequestEvidenceSchema = z.object({
+  repository: z.string().min(1),
+  number: z.number().int().positive(),
+  base_ref: z.string().min(1),
+  head_ref: z.string().min(1),
+  head_sha: z.string().min(1),
+  author_login: z.string().nullable(),
+  status: z.enum(PULL_REQUEST_STATES),
+  discovery: pullRequestDiscoverySchema,
+  verified_at: z.iso.datetime(),
+});
+export type PullRequestEvidence = z.infer<typeof pullRequestEvidenceSchema>;
+
+/** The audit of an adoption: who attached it, when, and on which verified evidence. A detached row never reaches the wire. */
+export const pullRequestAttachmentSchema = z.object({
+  attached_at: z.iso.datetime(),
+  /** GitHub login Otomat was acting as; null when the connection could not name one. */
+  attached_by: z.string().nullable(),
+  evidence: pullRequestEvidenceSchema,
+});
+export type PullRequestAttachment = z.infer<typeof pullRequestAttachmentSchema>;
+
+/** Durable mirror of one GitHub pull request and its local publication progress; `run_id` is null for one Otomat adopted rather than opened. */
 export const pullRequestContractSchema = z
   .object({
     id: z.string(),
-    run_id: z.string(),
+    issue_id: z.string(),
+    run_id: z.string().nullable(),
     provider: z.literal("github"),
+    origin: pullRequestOriginSchema,
+    provenance: pullRequestProvenanceSchema,
+    author_login: z.string().nullable(),
+    /** Head commit GitHub reports; what an imported review is pinned to, unlike `published_head_sha`. */
+    head_sha: z.string().nullable(),
+    attachment: pullRequestAttachmentSchema.nullable(),
     number: z.number().int().positive().nullable(),
     url: z.url().nullable(),
     status: z.enum(PULL_REQUEST_STATES),

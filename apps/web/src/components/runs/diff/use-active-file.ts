@@ -5,10 +5,14 @@ export interface ActiveDiffFile {
   select: (path: string) => void;
 }
 
-/** Selection replaces the history entry: reading a diff must not bury the page the reviewer came from. */
-export function useActiveDiffFile(runId: string): ActiveDiffFile {
+/**
+ * Route-agnostic: both diff routes (`/runs/$runId/diff`, `/pull-requests/$pullRequestId/diff`)
+ * declare the `file` search param. Selection replaces the history entry: reading a diff must
+ * not bury the page the reviewer came from.
+ */
+export function useActiveDiffFile(): ActiveDiffFile {
   const navigate = useNavigate();
-  const { file } = useSearch({ from: "/runs/$runId/diff" });
+  const { file } = useSearch({ strict: false });
   const path = file ?? null;
 
   return {
@@ -16,9 +20,8 @@ export function useActiveDiffFile(runId: string): ActiveDiffFile {
     select: (next: string) => {
       if (next === path) return;
       void navigate({
-        to: "/runs/$runId/diff",
-        params: { runId },
-        search: { file: next },
+        to: ".",
+        search: (previous) => ({ ...previous, file: next }),
         replace: true,
       });
     },

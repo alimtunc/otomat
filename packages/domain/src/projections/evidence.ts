@@ -23,4 +23,6 @@ export interface IssueExecutionEvidence {
   halted_step: HaltedStepEvidence | null;
   pr_status: PullRequestState | null;
   pr_publication: PullRequestPublicationState | null;
+  /** State of the pull request the issue adopted without a run of its own; it stands against every run of that issue. */
+  adopted_pr_status: PullRequestState | null;
 }

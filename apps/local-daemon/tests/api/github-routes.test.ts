@@ -72,6 +72,7 @@ it("serves GitHub connection state and starts the delegated login", async () => 
 it("serves and publishes the durable PR through the GitHub module", async () => {
   const row = pullRequestRow({
     id: "pr1",
+    issue_id: "i1",
     run_id: RUN_ID,
     number: 42,
     url: "https://github.com/acme/otomat/pull/42",
@@ -112,6 +113,7 @@ it("serves and publishes the durable PR through the GitHub module", async () => 
 it("pushes commits through the GitHub module and answers with the published comparison", async () => {
   const row = pullRequestRow({
     id: "pr1",
+    issue_id: "i1",
     run_id: RUN_ID,
     number: 42,
     url: "https://github.com/acme/otomat/pull/42",

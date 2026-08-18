@@ -24,6 +24,7 @@ export {
   type CommitSummary,
   type TrackedFileMatches,
 } from "./repo.js";
+export * from "./pull-request.js";
 export * from "./tree-file.js";
 export * from "./probe.js";
 export * from "./resolver.js";

@@ -15,7 +15,8 @@ export const LIFECYCLE_PHASE_STATE_TYPE: Record<LinearLifecyclePhase, string> = 
 export interface LinearLifecycleSignal {
   issue_id: string;
   phase: LinearLifecyclePhase;
-  run_id: string;
+  /** Null when a merge Otomat only witnessed closed the issue: an adopted pull request has no run of its own. */
+  run_id: string | null;
 }
 
 /** Fire-and-forget: a tracker write must never block or fail the daemon transition that caused it. */

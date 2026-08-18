@@ -11,9 +11,12 @@ export const providerPullRequestSchema = z.object({
   title: z.string(),
   body: z.string().nullable(),
   headRefName: z.string().min(1),
+  headRefOid: z.string().min(1),
   baseRefName: z.string().min(1),
   state: z.enum(["OPEN", "CLOSED", "MERGED"]),
   isDraft: z.boolean(),
+  /** GitHub omits the object for a deleted account, which is exactly the unverifiable identity. */
+  author: z.object({ login: z.string().min(1) }).nullish(),
 });
 
 const authStatusSchema = z.object({
@@ -30,7 +33,8 @@ const authStatusSchema = z.object({
   ),
 });
 
-export const PR_JSON_FIELDS = "number,url,title,body,headRefName,baseRefName,state,isDraft";
+export const PR_JSON_FIELDS =
+  "number,url,title,body,headRefName,headRefOid,baseRefName,state,isDraft,author";
 
 /** `gh auth status --json hosts` appeared in 2.63.0; older gh exits 1 on it. */
 export const MINIMUM_GH_VERSION = "2.63.0";
@@ -64,8 +68,10 @@ export function toPullRequest(value: unknown): GitHubPullRequest {
     title: parsed.title,
     body: normalizePullRequestBody(parsed.body),
     headRef: parsed.headRefName,
+    headSha: parsed.headRefOid,
     baseRef: parsed.baseRefName,
     lifecycle: lifecycle(parsed.state, parsed.isDraft),
+    authorLogin: parsed.author?.login ?? null,
   };
 }
 

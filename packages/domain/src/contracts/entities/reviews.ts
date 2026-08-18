@@ -9,7 +9,8 @@ import {
 
 export const reviewContractSchema = z.object({
   id: z.string(),
-  run_id: z.string(),
+  /** The run or the pull request this review surface belongs to. */
+  subject_id: z.string(),
   status: z.enum(REVIEW_STATES),
 });
 export type ReviewContract = z.infer<typeof reviewContractSchema>;

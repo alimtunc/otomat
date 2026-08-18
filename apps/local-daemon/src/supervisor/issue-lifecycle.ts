@@ -5,7 +5,7 @@ export function signalIssueLifecycle(
   sync: LinearLifecycleSync | null | undefined,
   issueId: string,
   phase: LinearLifecyclePhase,
-  runId: string,
+  runId: string | null,
 ): void {
   if (!sync) return;
   try {

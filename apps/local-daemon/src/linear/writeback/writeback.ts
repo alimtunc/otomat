@@ -84,7 +84,6 @@ class DefaultLinearWriteback implements LinearWriteback {
     switch (write.kind) {
       case "lifecycle": {
         const payload = parseLifecyclePayload(write.payload_json);
-        if (runId === null) throw new Error(`linear lifecycle write ${writeId} lost its run`);
         return this.publishLifecycle(write.issue_id, {
           phase: payload.phase,
           target: { id: payload.state_id, name: payload.state_name },

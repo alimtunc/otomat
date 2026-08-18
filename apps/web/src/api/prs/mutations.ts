@@ -1,9 +1,14 @@
 import { DaemonRequestError } from "@otomat/client";
-import type { PreparePullRequestRequest, PushPullRequestRequest } from "@otomat/domain";
+import type {
+  AttachPullRequestRequest,
+  PreparePullRequestRequest,
+  PushPullRequestRequest,
+} from "@otomat/domain";
 import { toast } from "@otomat/ui";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
+import { pullRequestImportRefusal } from "@web/lib/pull-request/import-error";
 
 /** The daemon's own reason when it sent one; a refused push is only actionable if its message survives. */
 function daemonErrorMessage(error: unknown, fallback: string): string {
@@ -16,6 +21,12 @@ function daemonErrorMessage(error: unknown, fallback: string): string {
     if (typeof message === "string" && message !== "") return message;
   }
   return fallback;
+}
+
+function invalidateIssuePullRequests(client: QueryClient, issueId: string): void {
+  client.invalidateQueries({ queryKey: queryKeys.issuePullRequests(issueId) });
+  client.invalidateQueries({ queryKey: queryKeys.issues });
+  client.invalidateQueries({ queryKey: queryKeys.reviews });
 }
 
 export function useConnectGitHub() {
@@ -88,5 +99,50 @@ export function usePreparePullRequest(runId: string) {
       toast.error(
         daemonErrorMessage(error, "Could not publish the pull request — is the daemon running?"),
       ),
+  });
+}
+
+/** The refusal is returned rather than only toasted: the attach form shows it next to the field it refuses. */
+export function useAttachPullRequest(issueId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: AttachPullRequestRequest) => daemon.attachPullRequest(issueId, request),
+    onSuccess: (pullRequest) => {
+      client.setQueryData(queryKeys.pullRequest(pullRequest.id), pullRequest);
+      invalidateIssuePullRequests(client, issueId);
+      toast.success(`Pull request #${pullRequest.number ?? ""} attached`);
+    },
+  });
+}
+
+export function useRefreshPullRequest(issueId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (pullRequestId: string) => daemon.refreshPullRequest(pullRequestId),
+    onSuccess: (pullRequest) => {
+      client.setQueryData(queryKeys.pullRequest(pullRequest.id), pullRequest);
+      invalidateIssuePullRequests(client, issueId);
+      client.invalidateQueries({
+        queryKey: queryKeys.reviewDiff({ kind: "pull_request", id: pullRequest.id }),
+      });
+    },
+    onError: (error) =>
+      toast.error(
+        pullRequestImportRefusal(error) ?? "Could not refresh the pull request from GitHub.",
+      ),
+  });
+}
+
+export function useDetachPullRequest(issueId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (pullRequestId: string) => daemon.detachPullRequest(pullRequestId),
+    onSuccess: (_, pullRequestId) => {
+      client.removeQueries({ queryKey: queryKeys.pullRequest(pullRequestId) });
+      invalidateIssuePullRequests(client, issueId);
+      toast.success("Attachment removed — the pull request itself is untouched");
+    },
+    onError: (error) =>
+      toast.error(pullRequestImportRefusal(error) ?? "Could not remove the attachment."),
   });
 }

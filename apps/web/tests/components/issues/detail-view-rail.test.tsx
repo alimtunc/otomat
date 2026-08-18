@@ -5,6 +5,7 @@ import { act, useSyncExternalStore } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mount } from "#support/mount";
+import { withQueryClient } from "#support/query";
 
 const GROUP_STORAGE_KEY = "react-resizable-panels:otomat.issue-detail";
 const RAIL_COLLAPSED_KEY = "otomat.panel.issue-rail.collapsed";
@@ -109,7 +110,7 @@ vi.mock("@web/components/issues/workspace/run-conversations", () => ({
 const mounted: Array<() => Promise<void>> = [];
 
 async function renderView() {
-  const { container, cleanup } = await mount(<IssueDetailView />);
+  const { container, cleanup } = await mount(withQueryClient(<IssueDetailView />));
   mounted.push(cleanup);
   return container;
 }

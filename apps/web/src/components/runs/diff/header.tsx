@@ -1,4 +1,4 @@
-import type { ReviewState, RunDiffContract } from "@otomat/domain";
+import type { ReviewState, ReviewDiffContract } from "@otomat/domain";
 import { Kbd, ReviewStatusChip } from "@otomat/ui";
 import { DiffPrefsPopover } from "@web/components/runs/diff/prefs/popover";
 import type { DiffPrefs } from "@web/components/runs/diff/prefs/prefs";
@@ -7,7 +7,7 @@ import { DiffSummary } from "@web/components/runs/diff/summary";
 const ACTIVE_PATH_CLASS = "min-w-0 truncate font-mono text-xs text-text-secondary";
 
 export interface RunDiffHeaderProps {
-  diff: RunDiffContract;
+  diff: ReviewDiffContract;
   reviewStatus: ReviewState | null;
   prefs: DiffPrefs;
   onPrefsChange: (patch: Partial<DiffPrefs>) => void;

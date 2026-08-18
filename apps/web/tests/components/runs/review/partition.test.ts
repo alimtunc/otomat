@@ -1,10 +1,10 @@
-import type { RunDiffContract } from "@otomat/domain";
+import type { ReviewDiffContract } from "@otomat/domain";
 import { partitionComments } from "@web/components/runs/review/partition";
 import { expect, it } from "vitest";
 
 import { reviewComment } from "#support/review-comment";
 
-const DIFF: RunDiffContract = {
+const DIFF: ReviewDiffContract = {
   base: "base-sha",
   additions: 2,
   deletions: 0,

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { ReviewDetail, RunDiffResponse } from "@otomat/domain";
+import type { ReviewDetail, ReviewDiffResponse } from "@otomat/domain";
 import { RunDiffView } from "@web/components/runs/diff/view";
 import { expect, it, vi } from "vitest";
 
@@ -16,8 +16,8 @@ vi.mock("@web/components/shell/use-back-navigation", () => ({
   useBackNavigation: () => null,
 }));
 
-const DIFF: RunDiffResponse = {
-  run_id: "run-1",
+const DIFF: ReviewDiffResponse = {
+  subject_id: "run-1",
   computed_at: "2026-08-12T00:00:00.000Z",
   diff: { base: "base-sha", files: [], additions: 0, deletions: 0, sha: "diff-sha" },
 };
@@ -43,11 +43,11 @@ let reviewQuery: Record<string, unknown> = {};
 
 vi.mock("@web/api/runs/queries", () => ({
   useRunDetail: () => fresh({ holds_workspace: false, run: { issue_id: "issue-1" } }),
-  useRunDiff: () => diffQuery,
 }));
 
 vi.mock("@web/api/reviews/queries", () => ({
-  useRunReview: () => reviewQuery,
+  useReviewDiff: () => diffQuery,
+  useReviewDetail: () => reviewQuery,
 }));
 
 vi.mock("@web/api/reviews/mutations", () => ({

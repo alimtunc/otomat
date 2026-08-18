@@ -32,9 +32,9 @@ export const diffFileContractSchema = z.object({
 });
 export type DiffFileContract = z.infer<typeof diffFileContractSchema>;
 
-/** The canonical git diff of a run's worktree against its fork point. Never fabricated. */
-export const runDiffContractSchema = z.object({
-  /** Commit sha the diff is computed against (the worktree's fork point). */
+/** The canonical git diff of a review subject: a run's worktree, or an imported pull request's pinned trees. Never fabricated. */
+export const reviewDiffContractSchema = z.object({
+  /** Commit sha the diff is computed against (the fork point, or the imported base). */
   base: z.string(),
   files: z.array(diffFileContractSchema),
   additions: z.number().int().nonnegative(),
@@ -42,15 +42,16 @@ export const runDiffContractSchema = z.object({
   /** sha256 of the full canonical patch — the whole-diff identity. */
   sha: z.string(),
 });
-export type RunDiffContract = z.infer<typeof runDiffContractSchema>;
+export type ReviewDiffContract = z.infer<typeof reviewDiffContractSchema>;
 
-/** `diff` is null when the run has no worktree to diff — the UI must say so, not fake one. */
-export const runDiffResponseSchema = z.object({
-  run_id: z.string(),
+/** `diff` is null when the subject has nothing to diff from — the UI must say so, not fake one. */
+export const reviewDiffResponseSchema = z.object({
+  /** The run or the pull request the diff was read from. */
+  subject_id: z.string(),
   computed_at: z.iso.datetime(),
-  diff: runDiffContractSchema.nullable(),
+  diff: reviewDiffContractSchema.nullable(),
 });
-export type RunDiffResponse = z.infer<typeof runDiffResponseSchema>;
+export type ReviewDiffResponse = z.infer<typeof reviewDiffResponseSchema>;
 
 /** The exact base and head blobs behind one diff file, so context can be expanded without guessing. */
 export const diffFileBlobsResponseSchema = z.object({

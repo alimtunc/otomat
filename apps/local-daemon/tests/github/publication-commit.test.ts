@@ -118,6 +118,7 @@ describe("the publication commit", () => {
       .insert(schema.pullRequests)
       .values({
         id: "pr-local-1",
+        issue_id: "i1",
         run_id: RUN_ID,
         title: "feat(publication): compose the commit (OTO-81)",
         commit_subject: "feat(publication): compose the commit",

@@ -1,8 +1,8 @@
 import type { RunContract } from "@otomat/domain";
 import { Button, CopyButton, Icon, RunStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-import { useRunReview } from "@web/api/reviews/queries";
-import { useRunDetail, useRunDiff } from "@web/api/runs/queries";
+import { useReviewDetail, useReviewDiff } from "@web/api/reviews/queries";
+import { useRunDetail } from "@web/api/runs/queries";
 import { Mono } from "@web/components/issues/workspace/rail/mono";
 import {
   RailMeta,
@@ -14,8 +14,9 @@ import { shortId } from "@web/lib/ids";
 
 export function FollowedRunSection({ run }: { run: RunContract }) {
   const detail = useRunDetail(run.id);
-  const diff = useRunDiff(run.id);
-  const review = useRunReview(run.id);
+  const target = { kind: "run", id: run.id } as const;
+  const diff = useReviewDiff(target);
+  const review = useReviewDetail(target);
   const diffSummary = diff.data?.diff ?? null;
   const worktreePath = detail.data?.worktree_path ?? null;
   const sessionCount = detail.data ? detail.data.sessions.length : null;

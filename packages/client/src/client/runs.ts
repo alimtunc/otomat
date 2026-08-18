@@ -4,7 +4,7 @@ import {
   runContributionContractSchema,
   runContributionsResponseSchema,
   runDetailSchema,
-  runDiffResponseSchema,
+  reviewDiffResponseSchema,
   runEventWindowSchema,
   runLaunchResponseSchema,
   sessionContextResponseSchema,
@@ -103,7 +103,7 @@ export function createRunsClient(config: DaemonClientConfig) {
       );
     },
     async getCompeteCandidateDiff(id: string, groupId: string, stepId: string) {
-      return runDiffResponseSchema.parse(
+      return reviewDiffResponseSchema.parse(
         await getJson(
           config,
           `/api/runs/${encodeURIComponent(id)}/compete-groups/${encodeURIComponent(groupId)}/candidates/${encodeURIComponent(stepId)}/diff`,
@@ -126,11 +126,6 @@ export function createRunsClient(config: DaemonClientConfig) {
       });
       return runEventWindowSchema.parse(
         await getJson(config, `/api/runs/${encodeURIComponent(id)}/events/window${query}`),
-      );
-    },
-    async getRunDiff(id: string) {
-      return runDiffResponseSchema.parse(
-        await getJson(config, `/api/runs/${encodeURIComponent(id)}/diff`),
       );
     },
   };

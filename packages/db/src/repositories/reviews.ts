@@ -12,12 +12,12 @@ export function insertReview(db: Db, value: NewReview): void {
   db.insert(reviews).values(value).run();
 }
 
-/** A run has at most one review surface; the latest row wins if legacy data ever holds more. */
-export function getReviewForRun(db: Db, runId: string): ReviewRow | undefined {
+/** A subject has at most one review surface; the latest row wins if data ever holds more. */
+export function getReviewForSubject(db: Db, subjectId: string): ReviewRow | undefined {
   return db
     .select()
     .from(reviews)
-    .where(eq(reviews.run_id, runId))
+    .where(eq(reviews.subject_id, subjectId))
     .orderBy(desc(reviews.created_at))
     .get();
 }

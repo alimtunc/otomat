@@ -1,8 +1,11 @@
 import type { Db, PullRequestRow, RunRow } from "@otomat/db";
 import type {
+  AttachPullRequestRequest,
   GitHubConnectionContract,
   LinearLifecycleSync,
   PreparePullRequestRequest,
+  PullRequestCandidate,
+  PullRequestDetection,
   PullRequestProposal,
   PullRequestPublishability,
   PullRequestState,
@@ -43,6 +46,13 @@ export interface PullRequestView {
   sync: PullRequestSync | null;
 }
 
+/** What an issue can say about its pull requests: the adopted rows, what GitHub links to it, and whether that search ran. */
+export interface IssuePullRequestsResult {
+  attached: PullRequestRow[];
+  candidates: PullRequestCandidate[];
+  detection: PullRequestDetection;
+}
+
 export interface GitHubServiceConfig {
   db: Db;
   dataDir: string;
@@ -59,6 +69,10 @@ export interface GitHubServiceConfig {
 export interface GitHubService {
   connection(): Promise<GitHubConnectionContract>;
   connect(): GitHubConnectionContract;
+  listIssuePullRequests(issueId: string): Promise<IssuePullRequestsResult>;
+  attachPullRequest(issueId: string, request: AttachPullRequestRequest): Promise<PullRequestRow>;
+  detachPullRequest(pullRequestId: string): PullRequestRow;
+  refreshPullRequest(pullRequestId: string): Promise<PullRequestRow>;
   /** Re-reads a live pull request from the provider, settling the run when it turns out merged. */
   getPullRequest(runId: string): Promise<PullRequestView | null>;
   publishability(runId: string): Promise<PullRequestPublishability>;
@@ -68,7 +82,10 @@ export interface GitHubService {
   pushCommits(runId: string, request: PushPullRequestRequest): Promise<PullRequestView>;
   /** Writes and persists a proposal; it pushes nothing, creates no branch and opens no pull request. */
   generatePullRequestMetadata(run: RunRow): Promise<PullRequestProposal>;
-  publishReviewComment(runId: string, input: PullRequestCommentInput): Promise<{ url: string }>;
+  publishReviewComment(
+    pullRequestId: string,
+    input: PullRequestCommentInput,
+  ): Promise<{ url: string }>;
 }
 
 export interface GitHubRemote {
@@ -82,8 +99,11 @@ export interface GitHubPullRequest {
   title: string;
   body: string | null;
   headRef: string;
+  headSha: string;
   baseRef: string;
   lifecycle: PullRequestState;
+  /** Null when GitHub no longer names an author, which is what keeps a provenance honestly `unknown`. */
+  authorLogin: string | null;
 }
 
 export interface GitHubRepositoryTarget {
@@ -94,6 +114,12 @@ export interface GitHubRepositoryTarget {
 export interface PullRequestSelector extends GitHubRepositoryTarget {
   head: string;
   base: string;
+}
+
+export interface PullRequestSearchInput extends GitHubRepositoryTarget {
+  /** GitHub's own pull-request search syntax; Otomat passes the issue identifier, never a guess at the branch. */
+  query: string;
+  limit: number;
 }
 
 export interface PullRequestCreateInput extends PullRequestSelector {
@@ -160,6 +186,8 @@ export interface GitHubCli {
   remoteHead(cwd: string, remote: string, branch: string): Promise<string | null>;
   fetchBranch(cwd: string, remote: string, branch: string): Promise<void>;
   findPullRequest(input: PullRequestSelector): Promise<GitHubPullRequest | null>;
+  /** Pull requests GitHub itself links to a query, newest first; the caller decides what the match proves. */
+  searchPullRequests(input: PullRequestSearchInput): Promise<GitHubPullRequest[]>;
   viewPullRequest(cwd: string, repository: string, number: number): Promise<GitHubPullRequest>;
   createPullRequest(input: PullRequestCreateInput): Promise<void>;
   updatePullRequest(input: PullRequestUpdateInput): Promise<void>;

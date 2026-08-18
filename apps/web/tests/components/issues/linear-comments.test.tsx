@@ -1,12 +1,12 @@
 // @vitest-environment happy-dom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LinearCommentsSection } from "@web/components/issues/workspace/linear/comments";
-import { act, type ReactNode } from "react";
+import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { setTextareaValue } from "#support/dom-events";
 import { findButton } from "#support/dom-queries";
 import { mount, type Mounted } from "#support/mount";
+import { withQueryClient } from "#support/query";
 
 const getLinearComments = vi.fn();
 const publishLinearComment = vi.fn();
@@ -49,18 +49,11 @@ afterEach(async () => {
   document.body.replaceChildren();
 });
 
-function withClient(node: ReactNode): ReactNode {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return <QueryClientProvider client={client}>{node}</QueryClientProvider>;
-}
-
 it("renders threads and posts a reply carrying its parent id", async () => {
   getLinearComments.mockResolvedValue([ROOT, REPLY]);
   publishLinearComment.mockResolvedValue({ draft: null, writes: [], lifecycle: null });
 
-  rendered = await mount(withClient(<LinearCommentsSection issueId="li" runId="r1" />));
+  rendered = await mount(withQueryClient(<LinearCommentsSection issueId="li" runId="r1" />));
 
   await vi.waitFor(() => {
     expect(document.body.textContent).toContain("Structure is ready on webflow");
@@ -89,7 +82,7 @@ it("offers the submit only for a body with text, and empties the box once posted
   getLinearComments.mockResolvedValue([]);
   publishLinearComment.mockResolvedValue({ draft: null, writes: [], lifecycle: null });
 
-  rendered = await mount(withClient(<LinearCommentsSection issueId="li" runId={null} />));
+  rendered = await mount(withQueryClient(<LinearCommentsSection issueId="li" runId={null} />));
 
   await vi.waitFor(() => {
     expect(commentBox()).not.toBeNull();
@@ -116,7 +109,7 @@ it("posts a top-level comment without a parent", async () => {
   getLinearComments.mockResolvedValue([]);
   publishLinearComment.mockResolvedValue({ draft: null, writes: [], lifecycle: null });
 
-  rendered = await mount(withClient(<LinearCommentsSection issueId="li" runId={null} />));
+  rendered = await mount(withQueryClient(<LinearCommentsSection issueId="li" runId={null} />));
 
   await vi.waitFor(() => {
     expect(commentBox()).not.toBeNull();

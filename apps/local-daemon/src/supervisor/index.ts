@@ -22,7 +22,7 @@ export {
   RunContributionStepClosedError,
 } from "./contribution/index.js";
 export { LaunchRefusedError } from "./launch-target.js";
-export { closeMergedRun, type MergeClosureConfig } from "./merge-closure.js";
+export { closeMergedIssue, closeMergedRun, type MergeClosureConfig } from "./merge-closure.js";
 export { buildTerminalMarker } from "./markers.js";
 export { createReexecSpawn, isProcessAlive, killProcessGroup } from "./process.js";
 export { WORKER_START_TOKEN_ENV } from "./start-gate.js";
