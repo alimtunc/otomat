@@ -17,6 +17,10 @@ vi.mock("@web/api/runs/mutations", () => ({
   useAbandonWorkspace: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
+vi.mock("@web/api/workspaces/queries", () => ({
+  useWorkspacesForRun: () => ({ data: undefined }),
+}));
+
 vi.mock("@web/api/runs/queries", () => ({
   useRunDetail: () => ({ data: detail }),
   useRunWorkspace: () => ({ data: undefined, isPending: true, isError: false, refetch: vi.fn() }),

@@ -26,6 +26,7 @@ apps/
         probe/         # bounded, credential-free reads of an installed provider binary
         providers/     # one folder per runtime: adapter, frames, models, options
       supervisor/      # process supervisor + pid reconciliation (OTO-10)
+        workspaces/    # worktree inventory, attachment, safe cleanup and reconciliation (OTO-88)
       index.ts server.ts bootstrap.ts   # composition root / entrypoint
     tests/             # agents/ api/ data-safety/ events/ git/ runtime/ supervisor/ + support/
   desktop/             # Electron alpha shell: manages the local-daemon lifecycle, serves the web build
@@ -437,7 +438,8 @@ start the plan's next node (`next_step`). A recovery session is a new
 and the honest signal that the provider conversation restarted.
 
 Two things close the cycle. A confirmed merge drives the run to `completed` and
-releases the worktree (`merge-closure.ts`). An abandon stamps `runs.abandoned_at`
+hands the worktree it leaves behind to the guarded cleanup below
+(`merge-closure.ts`). An abandon stamps `runs.abandoned_at`
 and stops the plan (`supervisor/abandon.ts`) — it deletes no branch, no worktree
 and no commit, which is why `GET /api/runs/:id/workspace` serves the branch,
 commits, uncommitted files, diff and pull request as an inventory of what stays
@@ -455,6 +457,53 @@ step's prompt, and the step waits on the nodes that produced that diff. It is
 refused (`workspace_busy`) while a turn is in flight, so the fix step is always
 the workspace's next settlement and settle can credit it with the stamped
 comments.
+
+## Reconciling and Cleaning Workspaces
+
+A worktree outlives its run, a restart and a merge, so the daemon reads the real
+git state rather than trusting its rows. `supervisor/workspaces/` inventories
+each repository from `git worktree list --porcelain`, attaches every entry to a
+record, and classifies it — and none of that is stored: the state is derived on
+every read, which is exactly why a cleanup that failed is still
+`cleanup_required` after a daemon restart, with no extra column to keep honest.
+
+Attachment is deliberately narrow. The persisted `worktrees.path` is the primary
+evidence. The Otomat layout is accepted only as validated secondary evidence,
+when the worktree sits under this host's worktrees root **and** exactly one
+unclaimed record carries its branch; a partial or contested match stays
+`ambiguous` and anything outside the layout stays `none`. Neither is ever linked
+or deleted, which is what keeps a worktree a user created out of the daemon's
+reach.
+
+`projectWorkspaceState` is the one interpretation of the observed facts:
+`active` while the issue's cycle still holds it, `cleanup_required` once the
+cycle closed with the directory still on disk, `stale` for a registration whose
+directory is gone, `missing` for a record git no longer registers, `unmanaged`
+for anything unattached, and `removed` once nothing is left. A deletion is
+offered only when the cycle is closed, no writer is alive, a merged pull request
+names that branch and the tree is clean; otherwise the verdict names the blocker,
+and every surface shows that same sentence. The merged pull request may be the
+run's own or an adopted one whose head is that branch — an outside merge closes a
+cycle exactly like one Otomat made.
+
+`reconcileWorkspaces` is the whole sequence and the only one: re-read the pull
+requests still open on GitHub (injected as `refreshPullRequests`, so `#supervisor`
+never imports `#github`), `git worktree prune`, converge the records that leaves
+behind, then delete what every precondition already cleared. Startup, the bounded
+background pass (`schedule.ts`, one unref'd interval, never two passes at once)
+and `POST /api/workspaces/reconcile` all run it, so a merge made outside Otomat is
+noticed without opening a panel and a failed pass is simply retried by the next
+one. Removal is `git worktree remove` without `--force`: git's refusal is
+reported and the record is left untouched, so nothing uncommitted is ever
+discarded. `--force` stays where it belongs — the acquire rollback and the
+archive, which own work they just wrote themselves.
+
+`GET /api/workspaces` is a read that prunes and deletes nothing; the two commands
+are the reconciliation and one targeted `POST /api/workspaces/:worktreeId/cleanup`
+that the settings table, the issue rail and the run cockpit all go through, so a
+destructive action has one confirmation and one code path. The host-wide
+`auto_delete_workspaces` setting gates the automatic pass alone: turned off, a
+merge still closes the issue and the workspace waits in `cleanup_required`.
 
 ## Recovering a Failed Run
 

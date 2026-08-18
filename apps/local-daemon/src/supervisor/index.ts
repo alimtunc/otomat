@@ -27,5 +27,9 @@ export { buildTerminalMarker } from "./markers.js";
 export { createReexecSpawn, isProcessAlive, killProcessGroup } from "./process.js";
 export { WORKER_START_TOKEN_ENV } from "./start-gate.js";
 export { reconcileRuns } from "./reconcile.js";
+export {
+  startWorkspaceReconciliation,
+  type WorkspaceReconciliationLoop,
+} from "./workspaces/index.js";
 export { createSupervisor } from "./supervisor.js";
 export { parseJob, runWorkerJob, runWorkerMain, writeTerminalMarker } from "./worker.js";

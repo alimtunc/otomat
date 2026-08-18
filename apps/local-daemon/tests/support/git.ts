@@ -94,18 +94,26 @@ export function branches(repo: TestRepo): string[] {
     .filter(Boolean);
 }
 
+export interface StubResolverOptions {
+  repositoryId?: string;
+  /** The real repository root when the test reaches git through the resolver. */
+  rootPath?: string;
+  worktreesRoot?: string;
+}
+
 /** Binds every lookup to one service when a test targets git behavior rather than resolution. */
 export function stubRepositoryResolver(
   service: GitWorktreeService,
-  repositoryId = "repo-1",
+  options: StubResolverOptions = {},
 ): RepositoryResolver {
   const binding = {
-    repositoryId,
+    repositoryId: options.repositoryId ?? "repo-1",
     service,
-    rootPath: "/tmp/otomat-stub-repo",
+    rootPath: options.rootPath ?? "/tmp/otomat-stub-repo",
     defaultBranch: "main",
   };
   return {
+    worktreesRoot: options.worktreesRoot ?? "/tmp/otomat-stub-worktrees",
     forRepository: () => binding,
     forProject: () => binding,
     forRun: () => binding,

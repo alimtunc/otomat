@@ -27,6 +27,7 @@ export interface RepositoryResolverConfig {
  * go on forking from the old one.
  */
 export interface RepositoryResolver {
+  worktreesRoot: string;
   /** Returns null for null ids and for unknown repository rows. */
   forRepository(repositoryId: string | null): RepositoryBinding | null;
   /** Resolves the project's main repository, or null when it has none. */
@@ -61,6 +62,7 @@ export function createRepositoryResolver(config: RepositoryResolverConfig): Repo
   }
 
   return {
+    worktreesRoot,
     forRepository,
     forProject(projectId) {
       const [main] = listRepositories(db, { projectId });

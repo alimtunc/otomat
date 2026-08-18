@@ -73,6 +73,8 @@ export interface GitHubService {
   attachPullRequest(issueId: string, request: AttachPullRequestRequest): Promise<PullRequestRow>;
   detachPullRequest(pullRequestId: string): PullRequestRow;
   refreshPullRequest(pullRequestId: string): Promise<PullRequestRow>;
+  /** Noticing a merge must not depend on a pull request panel being open. */
+  refreshTrackedPullRequests(): Promise<number>;
   /** Re-reads a live pull request from the provider, settling the run when it turns out merged. */
   getPullRequest(runId: string): Promise<PullRequestView | null>;
   publishability(runId: string): Promise<PullRequestPublishability>;

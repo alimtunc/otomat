@@ -108,6 +108,7 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
       error_code: null,
       error_message: null,
     }),
+    refreshTrackedPullRequests: async () => 0,
     listIssuePullRequests: async () => ({
       attached: [],
       candidates: [],

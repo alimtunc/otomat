@@ -107,6 +107,14 @@ export function stubSupervisor(overrides: Partial<Supervisor> = {}): Supervisor 
       throw new Error("abandon stub not configured");
     },
     workspaceClosure: () => null,
+    workspaces: () => ({
+      entries: [],
+      counts: { active: 0, cleanup_required: 0, stale: 0, missing: 0, unmanaged: 0 },
+    }),
+    reconcileWorkspaces: async () => {
+      throw new Error("reconcileWorkspaces stub not configured");
+    },
+    cleanupWorkspace: () => null,
     appendStep: async () => {
       throw new Error("appendStep stub not configured");
     },

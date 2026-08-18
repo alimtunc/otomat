@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { issues, pullRequests } from "../schema/index.js";
@@ -67,6 +67,22 @@ export function listPullRequestsForIssue(db: Db, issueId: string): PullRequestRo
     .select()
     .from(pullRequests)
     .where(and(eq(pullRequests.issue_id, issueId), isNull(pullRequests.detached_at)))
+    .orderBy(asc(pullRequests.created_at))
+    .all();
+}
+
+/** The rows a background pass re-reads, so a merge is noticed without opening a pull request panel. */
+export function listLivePullRequests(db: Db): PullRequestRow[] {
+  return db
+    .select()
+    .from(pullRequests)
+    .where(
+      and(
+        isNull(pullRequests.detached_at),
+        isNotNull(pullRequests.number),
+        inArray(pullRequests.status, ["draft", "open"]),
+      ),
+    )
     .orderBy(asc(pullRequests.created_at))
     .all();
 }

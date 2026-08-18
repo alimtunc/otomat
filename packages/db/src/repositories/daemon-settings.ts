@@ -50,6 +50,15 @@ export function writeMaxConcurrentSessions(db: Db, maxConcurrentSessions: number
     .run();
 }
 
+/** A daemon that was never configured deletes a merged workspace by itself. */
+export function readAutoDeleteWorkspaces(db: Db): boolean {
+  return readRow(db)?.auto_delete_workspaces ?? true;
+}
+
+export function writeAutoDeleteWorkspaces(db: Db, autoDelete: boolean): void {
+  upsert(db, { auto_delete_workspaces: autoDelete });
+}
+
 /** An unconfigured daemon selects nothing rather than guessing a runtime. */
 export function readExecutionDefaults(db: Db): ExecutionDefaults {
   const row = readRow(db);

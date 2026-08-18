@@ -8,10 +8,9 @@ import {
 } from "@tanstack/react-router";
 import { act, createElement, type ReactNode } from "react";
 
-import { mount, type Mounted } from "#support/mount";
+import { mount, mountWithQuery, type Mounted } from "#support/mount";
 
-/** Mounts a fragment under the app's real detail paths so its <Link> targets resolve. */
-export async function mountRouted(node: ReactNode): Promise<Mounted> {
+function routedElement(node: ReactNode): ReactNode {
   const rootRoute = createRootRoute({ component: Outlet });
   const routeTree = rootRoute.addChildren([
     createRoute({ getParentRoute: () => rootRoute, path: "/", component: () => node }),
@@ -26,10 +25,25 @@ export async function mountRouted(node: ReactNode): Promise<Mounted> {
     routeTree,
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
-  const mounted = await mount(createElement(RouterProvider, { router }));
-  // The router resolves its first match asynchronously; flush before asserting on the DOM.
+  return createElement(RouterProvider, { router });
+}
+
+/** The router resolves its first match asynchronously; flush before asserting on the DOM. */
+async function flushRouter(): Promise<void> {
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
+}
+
+/** Mounts a fragment under the app's real detail paths so its <Link> targets resolve. */
+export async function mountRouted(node: ReactNode): Promise<Mounted> {
+  const mounted = await mount(routedElement(node));
+  await flushRouter();
+  return mounted;
+}
+
+export async function mountRoutedWithQuery(node: ReactNode): Promise<Mounted> {
+  const mounted = await mountWithQuery(routedElement(node));
+  await flushRouter();
   return mounted;
 }

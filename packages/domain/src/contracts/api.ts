@@ -26,3 +26,4 @@ export * from "./runtime-model.js";
 export * from "./usage.js";
 export * from "./workflow-preset.js";
 export * from "./workspace-closure.js";
+export * from "./workspace-inventory.js";

@@ -19,7 +19,8 @@ type RunLifecyclePayload =
     }
   | { phase: "settled"; run_status: RunState }
   | { phase: "reopened"; from_status: RunSettledState; step_name: string }
-  | { phase: "abandoned"; branch: string };
+  | { phase: "abandoned"; branch: string }
+  | { phase: "workspace_cleaned"; branch: string; worktree_path: string };
 
 function lifecycleEvent(
   ref: SessionRef,
@@ -92,6 +93,19 @@ export function buildAbandonedEvent(
   return lifecycleEvent(
     { runId, stepRunId: null, agentSessionId: null },
     { phase: "abandoned", branch },
+    occurredAt,
+  );
+}
+
+export function buildWorkspaceCleanedEvent(
+  runId: string,
+  branch: string,
+  worktreePath: string,
+  occurredAt: string,
+): RuntimeEvent {
+  return lifecycleEvent(
+    { runId, stepRunId: null, agentSessionId: null },
+    { phase: "workspace_cleaned", branch, worktree_path: worktreePath },
     occurredAt,
   );
 }

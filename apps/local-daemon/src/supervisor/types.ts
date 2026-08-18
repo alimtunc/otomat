@@ -10,7 +10,10 @@ import type {
   RunResumePlan,
   RunWait,
   StartRunRequest,
+  WorkspaceCleanupResult,
   WorkspaceClosureFacts,
+  WorkspaceInventory,
+  WorkspaceReconcileReport,
 } from "@otomat/domain";
 
 import type { AgentConfigSelector } from "#agents";
@@ -97,6 +100,12 @@ export interface SupervisorConfig {
   afterSettle?: (outcome: ReconcileOutcome) => void;
   /** Mirrors a durably created run onto the linked tracker issue; omitted leaves the daemon tracker-silent. */
   syncIssueLifecycle?: LinearLifecycleSync;
+  /** Injected so `#supervisor` never imports `#github`; answers how many rows were refreshed. */
+  refreshPullRequests?: () => Promise<number>;
+}
+
+export interface WorkspaceScope {
+  runId?: string;
 }
 
 export interface Supervisor {
@@ -132,6 +141,12 @@ export interface Supervisor {
   abort(runId: string): Promise<void>;
   /** Boot-time pass: classify every non-terminal in-flight run from durable evidence and settle it. */
   reconcile(): ReconcileReport;
+  /** A read: it prunes and deletes nothing. */
+  workspaces(scope?: WorkspaceScope): WorkspaceInventory;
+  /** Concurrent callers share the one running pass. */
+  reconcileWorkspaces(): Promise<WorkspaceReconcileReport>;
+  /** `null` for a worktree no record holds. */
+  cleanupWorkspace(worktreeId: string): WorkspaceCleanupResult | null;
   /** Resolve once every in-flight session process has exited (shutdown/test aid). */
   settle(): Promise<void>;
   /** Stop every in-flight worker group (SIGTERM, then SIGKILL after `graceMs`); resolves once all have exited. */
