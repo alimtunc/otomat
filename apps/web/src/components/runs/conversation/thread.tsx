@@ -78,7 +78,8 @@ export function ConversationThread({
               </div>
             ) : (
               <div className="relative flex min-h-0 flex-1 flex-col">
-                <div ref={autoscroll.viewportRef} className="min-h-0 flex-1 overflow-auto">
+                {/* Containing block: an sr-only span otherwise inflates ancestor scroll height. */}
+                <div ref={autoscroll.viewportRef} className="relative min-h-0 flex-1 overflow-auto">
                   <div
                     ref={autoscroll.contentRef}
                     role="list"
