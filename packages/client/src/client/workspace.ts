@@ -4,12 +4,17 @@ import {
   repositoryBranchesResponseSchema,
   repositoryContractSchema,
   repositoryFilesResponseSchema,
+  workspaceCleanupResultSchema,
+  workspaceInventorySchema,
+  workspaceReconcileReportSchema,
+  workspaceSettingsSchema,
   type RegisterRepositoryRequest,
   type UpdateRepositoryRequest,
+  type WorkspaceSettings,
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { deleteJson, getJson, patchJson, postJson, queryString } from "./http.js";
+import { deleteJson, getJson, patchJson, postJson, putJson, queryString } from "./http.js";
 
 export function createWorkspaceClient(config: DaemonClientConfig) {
   return {
@@ -46,6 +51,29 @@ export function createWorkspaceClient(config: DaemonClientConfig) {
     },
     async deleteRepository(repositoryId: string) {
       await deleteJson(config, `/api/repositories/${encodeURIComponent(repositoryId)}`);
+    },
+    /** Reads the worktrees this host holds; narrowing to a run answers for that run's cycle alone. */
+    async listWorkspaces(params: { runId?: string } = {}) {
+      const query = queryString(params.runId === undefined ? {} : { run_id: params.runId });
+      return workspaceInventorySchema.parse(await getJson(config, `/api/workspaces${query}`));
+    },
+    async reconcileWorkspaces() {
+      return workspaceReconcileReportSchema.parse(
+        await postJson(config, "/api/workspaces/reconcile", {}),
+      );
+    },
+    async cleanupWorkspace(worktreeId: string) {
+      return workspaceCleanupResultSchema.parse(
+        await postJson(config, `/api/workspaces/${encodeURIComponent(worktreeId)}/cleanup`, {}),
+      );
+    },
+    async workspaceSettings() {
+      return workspaceSettingsSchema.parse(await getJson(config, "/api/settings/workspaces"));
+    },
+    async setWorkspaceSettings(settings: WorkspaceSettings) {
+      return workspaceSettingsSchema.parse(
+        await putJson(config, "/api/settings/workspaces", settings),
+      );
     },
   };
 }

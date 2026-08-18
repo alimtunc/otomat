@@ -1,4 +1,5 @@
 import { isRunResumable, isRunSettled } from "@otomat/domain";
+import { isWorkspaceCleanable } from "@otomat/domain";
 import {
   Button,
   DropdownMenu,
@@ -10,7 +11,9 @@ import {
 } from "@otomat/ui";
 import { useAbortRun, useResumeRun } from "@web/api/runs/mutations";
 import { useRunDetail } from "@web/api/runs/queries";
+import { useWorkspacesForRun } from "@web/api/workspaces/queries";
 import { AbandonWorkspaceDialog } from "@web/components/runs/actions/abandon-workspace-dialog";
+import { CleanWorkspaceDialog } from "@web/components/runs/actions/clean-workspace-dialog";
 import { canAbortRun } from "@web/lib/run/actions";
 import { resumeModeNote } from "@web/lib/run/resume-mode";
 import { useState } from "react";
@@ -23,11 +26,14 @@ export interface RunActionsMenuProps {
 /** The daemon's own view of the run decides what is offered, so the cockpit never shows an action it would refuse. */
 export function RunActionsMenu({ runId, stretch = false }: RunActionsMenuProps) {
   const [abandoning, setAbandoning] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const detail = useRunDetail(runId).data;
+  const workspace = useWorkspacesForRun(runId).data?.entries[0] ?? null;
   const abort = useAbortRun(runId);
   const resume = useResumeRun(runId);
 
   const cancelable = detail !== undefined && canAbortRun(detail.run.status);
+  const cleanable = workspace !== null && isWorkspaceCleanable(workspace) ? workspace : null;
 
   return (
     <>
@@ -64,9 +70,20 @@ export function RunActionsMenu({ runId, stretch = false }: RunActionsMenuProps) 
             <Icon name="x" aria-hidden />
             Abandon workspace…
           </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={cleanable === null}
+            title={workspace?.reason}
+            onClick={() => setCleaning(true)}
+          >
+            <Icon name="layers" aria-hidden />
+            Clean workspace…
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <AbandonWorkspaceDialog runId={runId} open={abandoning} onOpenChange={setAbandoning} />
+      {cleanable === null ? null : (
+        <CleanWorkspaceDialog entry={cleanable} open={cleaning} onOpenChange={setCleaning} />
+      )}
     </>
   );
 }

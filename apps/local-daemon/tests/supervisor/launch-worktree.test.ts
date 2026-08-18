@@ -276,6 +276,7 @@ function resolverAcquiring(
   const binding = resolver.forRepository(fix.repositoryId);
   if (!binding) throw new Error("expected a repository binding");
   const wrapped: RepositoryResolver = {
+    worktreesRoot: resolver.worktreesRoot,
     forRepository: () => ({
       ...binding,
       service: { ...binding.service, acquire: decorate(binding.service.acquire) },

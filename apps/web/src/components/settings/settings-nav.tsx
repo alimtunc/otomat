@@ -22,6 +22,7 @@ const GROUPS: SettingsGroup[] = [
     label: "Global",
     sections: [
       { to: "/settings/repositories", label: "Repositories", icon: "folder" },
+      { to: "/settings/workspaces", label: "Workspaces", icon: "layers" },
       { to: "/settings/host", label: "Execution hosts", icon: "monitor" },
       { to: "/settings/integrations", label: "Integrations", icon: "plug" },
       { to: "/settings/runtimes", label: "Runtimes", icon: "cpu" },

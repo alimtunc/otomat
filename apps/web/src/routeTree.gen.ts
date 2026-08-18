@@ -34,6 +34,7 @@ import { Route as SettingsRepositoriesRouteImport } from './routes/settings/repo
 import { Route as SettingsRuntimesRouteImport } from './routes/settings/runtimes'
 import { Route as SettingsSandboxRouteImport } from './routes/settings/sandbox'
 import { Route as SettingsWorkflowPresetsRouteImport } from './routes/settings/workflow-presets'
+import { Route as SettingsWorkspacesRouteImport } from './routes/settings/workspaces'
 import { Route as PullRequestsPullRequestIdDiffRouteImport } from './routes/pull-requests/$pullRequestId/diff'
 import { Route as RunsRunIdIndexRouteImport } from './routes/runs/$runId/index'
 import { Route as RunsRunIdDiffRouteImport } from './routes/runs/$runId/diff'
@@ -166,6 +167,11 @@ const SettingsWorkflowPresetsRoute = SettingsWorkflowPresetsRouteImport.update({
   path: '/workflow-presets',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const SettingsWorkspacesRoute = SettingsWorkspacesRouteImport.update({
+  id: '/workspaces',
+  path: '/workspaces',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 const PullRequestsPullRequestIdDiffRoute =
   PullRequestsPullRequestIdDiffRouteImport.update({
     id: '/pull-requests/$pullRequestId/diff',
@@ -220,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/settings/sandbox': typeof SettingsSandboxRoute
   '/settings/workflow-presets': typeof SettingsWorkflowPresetsRoute
+  '/settings/workspaces': typeof SettingsWorkspacesRoute
   '/agents/': typeof AgentsIndexRoute
   '/issues/': typeof IssuesIndexRoute
   '/runs/': typeof RunsIndexRoute
@@ -250,6 +257,7 @@ export interface FileRoutesByTo {
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/settings/sandbox': typeof SettingsSandboxRoute
   '/settings/workflow-presets': typeof SettingsWorkflowPresetsRoute
+  '/settings/workspaces': typeof SettingsWorkspacesRoute
   '/agents': typeof AgentsIndexRoute
   '/issues': typeof IssuesIndexRoute
   '/runs': typeof RunsIndexRoute
@@ -284,6 +292,7 @@ export interface FileRoutesById {
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/settings/sandbox': typeof SettingsSandboxRoute
   '/settings/workflow-presets': typeof SettingsWorkflowPresetsRoute
+  '/settings/workspaces': typeof SettingsWorkspacesRoute
   '/agents/': typeof AgentsIndexRoute
   '/issues/': typeof IssuesIndexRoute
   '/runs/': typeof RunsIndexRoute
@@ -319,6 +328,7 @@ export interface FileRouteTypes {
     | '/settings/runtimes'
     | '/settings/sandbox'
     | '/settings/workflow-presets'
+    | '/settings/workspaces'
     | '/agents/'
     | '/issues/'
     | '/runs/'
@@ -349,6 +359,7 @@ export interface FileRouteTypes {
     | '/settings/runtimes'
     | '/settings/sandbox'
     | '/settings/workflow-presets'
+    | '/settings/workspaces'
     | '/agents'
     | '/issues'
     | '/runs'
@@ -382,6 +393,7 @@ export interface FileRouteTypes {
     | '/settings/runtimes'
     | '/settings/sandbox'
     | '/settings/workflow-presets'
+    | '/settings/workspaces'
     | '/agents/'
     | '/issues/'
     | '/runs/'
@@ -586,6 +598,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsWorkflowPresetsRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/settings/workspaces': {
+      id: '/settings/workspaces'
+      path: '/workspaces'
+      fullPath: '/settings/workspaces'
+      preLoaderRoute: typeof SettingsWorkspacesRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/pull-requests/$pullRequestId/diff': {
       id: '/pull-requests/$pullRequestId/diff'
       path: '/pull-requests/$pullRequestId/diff'
@@ -643,6 +662,7 @@ interface SettingsRouteRouteChildren {
   SettingsRuntimesRoute: typeof SettingsRuntimesRoute
   SettingsSandboxRoute: typeof SettingsSandboxRoute
   SettingsWorkflowPresetsRoute: typeof SettingsWorkflowPresetsRoute
+  SettingsWorkspacesRoute: typeof SettingsWorkspacesRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
@@ -658,6 +678,7 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsRuntimesRoute: SettingsRuntimesRoute,
   SettingsSandboxRoute: SettingsSandboxRoute,
   SettingsWorkflowPresetsRoute: SettingsWorkflowPresetsRoute,
+  SettingsWorkspacesRoute: SettingsWorkspacesRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 

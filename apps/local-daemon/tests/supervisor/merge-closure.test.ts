@@ -1,7 +1,13 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { getIssue, getRun, updateIssueStatus } from "@otomat/db";
+import {
+  getIssue,
+  getRun,
+  insertPullRequest,
+  updateIssueStatus,
+  writeAutoDeleteWorkspaces,
+} from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createGitWorktreeService, type GitWorktreeService } from "#git";
@@ -38,15 +44,40 @@ beforeEach(() => {
   });
 });
 
+function seedMergedPullRequest(): void {
+  insertPullRequest(fix.db, {
+    id: "pr-merged",
+    issue_id: "i1",
+    run_id: RUN_ID,
+    repository_id: fix.repositoryId,
+    number: 12,
+    url: "https://github.com/acme/app/pull/12",
+    status: "merged",
+    publication_status: "created",
+    title: "feat: ship it",
+    head_ref: BRANCH,
+  });
+}
+
 afterEach(() => {
   fix.cleanup();
 });
 
 function config() {
-  return { db: fix.db, repositories: stubRepositoryResolver(worktrees, fix.repositoryId) };
+  return {
+    db: fix.db,
+    dataDir: fix.dataDir,
+    repositories: stubRepositoryResolver(worktrees, {
+      repositoryId: fix.repositoryId,
+      rootPath: fix.repo.root,
+      worktreesRoot: join(fix.dataDir, "worktrees"),
+    }),
+  };
 }
 
 it("releases the worktree and its branch, and closes the run and its issue", () => {
+  seedMergedPullRequest();
+
   closeMergedRun(config(), RUN_ID);
 
   expect(existsSync(worktreePath)).toBe(false);
@@ -57,6 +88,7 @@ it("releases the worktree and its branch, and closes the run and its issue", () 
 });
 
 it("settles again without complaining once there is nothing left to release", () => {
+  seedMergedPullRequest();
   closeMergedRun(config(), RUN_ID);
 
   expect(() => closeMergedRun(config(), RUN_ID)).not.toThrow();
@@ -64,12 +96,31 @@ it("settles again without complaining once there is nothing left to release", ()
 });
 
 it("leaves a canceled issue in the state its user chose", () => {
+  seedMergedPullRequest();
   updateIssueStatus(fix.db, "i1", "canceled");
 
   closeMergedRun(config(), RUN_ID);
 
   expect(getIssue(fix.db, "i1")?.status).toBe("canceled");
   expect(existsSync(worktreePath)).toBe(false);
+});
+
+it("closes the cycle but keeps the worktree while no merged pull request stands for it", () => {
+  closeMergedRun(config(), RUN_ID);
+
+  expect(getRun(fix.db, RUN_ID)?.status).toBe("completed");
+  expect(existsSync(worktreePath)).toBe(true);
+  expect(branches(fix.repo)).toContain(BRANCH);
+});
+
+it("keeps the worktree when the host turned automatic deletion off", () => {
+  seedMergedPullRequest();
+  writeAutoDeleteWorkspaces(fix.db, false);
+
+  closeMergedRun(config(), RUN_ID);
+
+  expect(getIssue(fix.db, "i1")?.status).toBe("done");
+  expect(existsSync(worktreePath)).toBe(true);
 });
 
 it("does nothing for a run that no longer exists", () => {

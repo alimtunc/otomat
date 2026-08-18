@@ -93,7 +93,7 @@ it("closes the issue only once the pull request is confirmed merged", async () =
     db: fix.db,
     worktreesRoot: join(fix.dataDir, "worktrees"),
   });
-  closeMergedRun({ db: fix.db, repositories, syncIssueLifecycle }, run.id);
+  closeMergedRun({ db: fix.db, dataDir: fix.dataDir, repositories, syncIssueLifecycle }, run.id);
 
   expect(getIssue(fix.db, "i-work")?.status).toBe("done");
   expect(signals).toEqual([

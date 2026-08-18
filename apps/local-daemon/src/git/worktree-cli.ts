@@ -21,9 +21,21 @@ export function removeWorktree(repoPath: string, worktreePath: string): void {
   runGit(["worktree", "remove", "--force", worktreePath], { cwd: repoPath, allowFailure: true });
 }
 
-/** Prunes stale `.git/worktrees/<name>` admin entries with no working directory. */
-export function pruneWorktrees(repoPath: string): void {
-  runGit(["worktree", "prune"], { cwd: repoPath });
+/** No `--force`: uncommitted work refuses removal instead of being discarded. Returns git's refusal. */
+export function removeWorktreeSafely(repoPath: string, worktreePath: string): string | null {
+  const result = runGit(["worktree", "remove", worktreePath], {
+    cwd: repoPath,
+    allowFailure: true,
+  });
+  return result.exitCode === 0 ? null : result.stderr.trim();
+}
+
+/** `--verbose` announces each removal on either stream, so the count is read from both. */
+export function pruneWorktrees(repoPath: string): number {
+  const result = runGit(["worktree", "prune", "--verbose"], { cwd: repoPath });
+  return `${result.stdout}\n${result.stderr}`
+    .split("\n")
+    .filter((line) => line.startsWith("Removing ")).length;
 }
 
 export interface GitWorktreeEntry {

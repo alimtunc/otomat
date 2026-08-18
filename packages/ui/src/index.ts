@@ -208,6 +208,8 @@ export {
   type FieldProps,
 } from "./components/field";
 
+export { HostTag } from "./components/host-tag";
+
 export { Icon, type IconName, type IconProps, type IconSize } from "./components/icon";
 
 export { IconButton, type IconButtonProps } from "./components/icon-button";

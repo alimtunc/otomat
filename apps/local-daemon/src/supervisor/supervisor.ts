@@ -1,3 +1,5 @@
+import type { WorkspaceReconcileReport } from "@otomat/domain";
+
 import { abandonWorkspace } from "./abandon.js";
 import { abortRun } from "./abort.js";
 import { advanceRun } from "./advance.js";
@@ -17,12 +19,23 @@ import { terminateGracefully } from "./process.js";
 import { recoverCompeteSelections, selectCompeteWinner } from "./promotion.js";
 import { reconcileRuns } from "./reconcile.js";
 import { runResumePlan } from "./resume-plan.js";
-import { createState } from "./state.js";
+import { createState, trackPending } from "./state.js";
 import type { Supervisor, SupervisorConfig } from "./types.js";
 import { workspaceClosureFacts } from "./workspace-summary.js";
+import {
+  cleanupWorkspace,
+  cycleHolders,
+  findWorkspaceEntry,
+  listWorkspaces,
+  reconcileWorkspaces,
+  supervisorWorkspaces,
+} from "./workspaces/index.js";
 
 export function createSupervisor(config: SupervisorConfig): Supervisor {
   const state = createState(config);
+  // The background loop and a manual reconcile share one pass rather than deleting over each other.
+  let workspacePass: Promise<WorkspaceReconcileReport> | null = null;
+  const workspaces = supervisorWorkspaces(state);
   state.advance = async (runId) => {
     await advanceRun(state, runId);
     await deliverQueuedContributions(state, runId);
@@ -55,6 +68,28 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
       const reconciled = [...recovered, ...report.reconciled];
       for (const outcome of reconciled) finishSettle(state, outcome);
       return { reconciled };
+    },
+    workspaces: (scope) => listWorkspaces(workspaces, scope),
+    reconcileWorkspaces: () => {
+      if (workspacePass === null) {
+        const pass = reconcileWorkspaces(workspaces).finally(() => {
+          workspacePass = null;
+        });
+        workspacePass = pass;
+        // A pass writes rows, so shutdown has to wait for it rather than close the handle underneath.
+        trackPending(
+          state,
+          pass.then(
+            () => {},
+            () => {},
+          ),
+        );
+      }
+      return workspacePass;
+    },
+    cleanupWorkspace: (worktreeId) => {
+      const entry = findWorkspaceEntry(workspaces, worktreeId, cycleHolders(state.db));
+      return entry === null ? null : cleanupWorkspace(workspaces, entry);
     },
     settle: async () => {
       while (state.inflight.size > 0 || state.pending.size > 0) {

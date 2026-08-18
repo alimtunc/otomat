@@ -5,6 +5,7 @@ import { createDeviceAuthorization } from "./device-flow.js";
 import { resolveGenerationAgent } from "./generation/agent.js";
 import { createPullRequestImportService } from "./import/service.js";
 import { createPullRequestPublisher } from "./publication/index.js";
+import { refreshTrackedPullRequests } from "./refresh.js";
 import { publishReviewComment } from "./review-comment.js";
 import type { GitHubService, GitHubServiceConfig } from "./types.js";
 
@@ -19,6 +20,8 @@ export function createGitHubService(config: GitHubServiceConfig): GitHubService 
     attachPullRequest: (issueId, request) => imports.attach(issueId, request),
     detachPullRequest: (pullRequestId) => imports.detach(pullRequestId),
     refreshPullRequest: (pullRequestId) => imports.refresh(pullRequestId),
+    refreshTrackedPullRequests: () =>
+      refreshTrackedPullRequests({ db: config.db, publisher, imports }),
     getPullRequest: (runId) => publisher.get(runId),
     publishability: (runId) => publisher.publishability(runId),
     publish: (run, request) => publisher.publish(run, request),

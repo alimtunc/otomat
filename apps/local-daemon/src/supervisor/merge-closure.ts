@@ -1,4 +1,10 @@
-import { getIssue, getRun, listIssueExecutionEvidence, type Db } from "@otomat/db";
+import {
+  getIssue,
+  getRun,
+  listIssueExecutionEvidence,
+  readAutoDeleteWorkspaces,
+  type Db,
+} from "@otomat/db";
 import {
   isRunSettled,
   issueMachine,
@@ -6,27 +12,29 @@ import {
   type LinearLifecycleSync,
 } from "@otomat/domain";
 
-import { WorktreeNotFoundError, type RepositoryResolver } from "#git";
+import type { RepositoryResolver } from "#git";
 
 import { signalIssueLifecycle } from "./issue-lifecycle.js";
 import { driveIssueTo, driveRunTo } from "./transitions.js";
+import { cleanupWorkspace, cycleHolders, findWorkspaceEntry } from "./workspaces/index.js";
 
 export interface MergeClosureConfig {
   db: Db;
+  dataDir: string;
   repositories: RepositoryResolver;
   /** A confirmed merge is the only thing that closes the tracker issue; every other outcome leaves it open. */
   syncIssueLifecycle?: LinearLifecycleSync;
 }
 
-/** Discarding the worktree and its local branch is safe because the merge is upstream already. */
+/** The cycle closes first, so the workspace it leaves behind is already read as closed. */
 export function closeMergedRun(config: MergeClosureConfig, runId: string): void {
   const run = getRun(config.db, runId);
   if (!run) return;
-  releaseWorktree(config, runId);
   if (!isRunSettled(run.status)) {
     driveRunTo(config.db, runId, run.status, "completed", new Date().toISOString());
   }
   markIssueDone(config, run.issue_id, runId);
+  releaseWorkspace(config, run.worktree_id);
 }
 
 /** A merge Otomat only witnessed closes the cycle like one it made: through the canonical run, or on the issue when none ran here. */
@@ -46,14 +54,22 @@ function markIssueDone(config: MergeClosureConfig, issueId: string, runId: strin
   signalIssueLifecycle(config.syncIssueLifecycle, issue.id, "done", runId);
 }
 
-/** A failed cleanup must not fail the read that observed the merge; it stays visible in the log. */
-function releaseWorktree(config: MergeClosureConfig, runId: string): void {
-  const service = config.repositories.forRun(runId)?.service;
-  if (!service) return;
-  try {
-    service.cleanup(runId);
-  } catch (error) {
-    if (error instanceof WorktreeNotFoundError) return;
-    console.error(`[otomat] worktree cleanup for merged run ${runId} failed`, error);
+/** Anything refused here leaves the workspace for the next reconciliation or a manual action. */
+function releaseWorkspace(config: MergeClosureConfig, worktreeId: string | null): void {
+  if (worktreeId === null || !readAutoDeleteWorkspaces(config.db)) return;
+  const context = {
+    db: config.db,
+    dataDir: config.dataDir,
+    repositories: config.repositories,
+    busyRuns: () => false,
+    refreshPullRequests: null,
+  };
+  const entry = findWorkspaceEntry(context, worktreeId, cycleHolders(config.db));
+  if (entry === null) return;
+  const result = cleanupWorkspace(context, entry);
+  if (result.outcome !== "cleaned") {
+    console.error(
+      `[otomat] workspace ${worktreeId} kept after merge (${result.outcome}): ${result.message}`,
+    );
   }
 }

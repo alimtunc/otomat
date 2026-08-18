@@ -55,6 +55,7 @@ const COMPETE_PLAN = {
 };
 
 const UNAVAILABLE_REPOSITORIES: RepositoryResolver = {
+  worktreesRoot: "/tmp/otomat-unavailable-worktrees",
   forProject: () => null,
   forRepository: () => null,
   forRun: () => null,

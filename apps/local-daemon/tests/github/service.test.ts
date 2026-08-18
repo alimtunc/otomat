@@ -78,7 +78,11 @@ describe("GitHubService", () => {
     return createGitHubService({
       db: fix.db,
       dataDir: fix.dataDir,
-      repositories: stubRepositoryResolver(worktreeService),
+      repositories: stubRepositoryResolver(worktreeService, {
+        repositoryId: fix.repositoryId,
+        rootPath: fix.repo.root,
+        worktreesRoot: join(fix.dataDir, "worktrees"),
+      }),
       cli,
       idFactory: () => "pr-local-1",
     });

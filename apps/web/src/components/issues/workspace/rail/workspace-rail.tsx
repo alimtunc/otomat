@@ -16,6 +16,7 @@ import {
 import { StoppedSection } from "@web/components/issues/workspace/rail/stopped-section";
 import { Unknown } from "@web/components/issues/workspace/rail/unknown";
 import { UsageSection } from "@web/components/issues/workspace/rail/usage-section";
+import { WorkspaceSection } from "@web/components/issues/workspace/rail/workspace/section";
 
 function ExternalIdentifier({ identifier, url }: { identifier: string; url: string | null }) {
   const label = <Mono>{identifier}</Mono>;
@@ -41,6 +42,8 @@ function ExternalIdentifier({ identifier, url }: { identifier: string; url: stri
 export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunContract | null }) {
   const panel = useSidePanel();
   const cycleExecution = projectOpenCycleExecution(issue);
+  // The workspace belongs to the issue's canonical cycle, not to whichever old run is being read.
+  const cycleRunId = issue.workspace.run_id ?? run?.id ?? null;
   return (
     <aside
       className={cn(
@@ -82,6 +85,7 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
         </RailMeta>
       </RailSection>
       <StoppedSection execution={issue.execution} />
+      {cycleRunId === null ? null : <WorkspaceSection runId={cycleRunId} />}
       <IssuePullRequestsSection issueId={issue.id} />
       {issue.source === "linear" ? <LinearRailSection issue={issue} run={run} /> : null}
       {run !== null ? (

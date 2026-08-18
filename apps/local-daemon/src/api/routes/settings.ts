@@ -1,10 +1,16 @@
 import {
+  readAutoDeleteWorkspaces,
   readExecutionDefaults,
   readPullRequestGenerator,
+  writeAutoDeleteWorkspaces,
   writeExecutionDefaults,
   writePullRequestGenerator,
 } from "@otomat/db";
-import { executionDefaultsSchema, updateAgentCapacityRequestSchema } from "@otomat/domain";
+import {
+  executionDefaultsSchema,
+  updateAgentCapacityRequestSchema,
+  workspaceSettingsSchema,
+} from "@otomat/domain";
 import { Hono } from "hono";
 
 import { validateExecutionDefaults } from "#agents";
@@ -23,6 +29,15 @@ export function createSettingsRoutes(deps: ApiDeps): Hono {
   routes.put("/capacity", validateJson(updateAgentCapacityRequestSchema), (c) => {
     const { max_concurrent_sessions } = c.req.valid("json");
     return c.json(deps.supervisor.setCapacity(max_concurrent_sessions));
+  });
+
+  routes.get("/workspaces", (c) =>
+    c.json({ auto_delete_after_merge: readAutoDeleteWorkspaces(deps.db) }),
+  );
+
+  routes.put("/workspaces", validateJson(workspaceSettingsSchema), (c) => {
+    writeAutoDeleteWorkspaces(deps.db, c.req.valid("json").auto_delete_after_merge);
+    return c.json({ auto_delete_after_merge: readAutoDeleteWorkspaces(deps.db) });
   });
 
   routes.get("/execution-defaults", (c) => c.json(readExecutionDefaults(deps.db)));

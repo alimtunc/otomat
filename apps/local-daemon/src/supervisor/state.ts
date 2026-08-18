@@ -28,6 +28,7 @@ export interface SupervisorState {
   repositories: RepositoryResolver;
   afterSettle: ((outcome: ReconcileOutcome) => void) | null;
   syncIssueLifecycle: LinearLifecycleSync | null;
+  refreshPullRequests: (() => Promise<number>) | null;
   slots: Semaphore;
   inflight: Map<string, InflightProcess>;
   /** Spawned but gated workers whose durable identity is still being recorded. */
@@ -59,6 +60,7 @@ export function createState(config: SupervisorConfig): SupervisorState {
     repositories: config.repositories,
     afterSettle: config.afterSettle ?? null,
     syncIssueLifecycle: config.syncIssueLifecycle ?? null,
+    refreshPullRequests: config.refreshPullRequests ?? null,
     slots: new Semaphore(readMaxConcurrentSessions(config.db)),
     inflight: new Map(),
     starting: new Map(),

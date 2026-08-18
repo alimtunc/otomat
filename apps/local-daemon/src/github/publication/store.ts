@@ -112,6 +112,7 @@ export class PublicationStore {
       closeMergedRun(
         {
           db: this.config.db,
+          dataDir: this.config.dataDir,
           repositories: this.config.repositories,
           syncIssueLifecycle: this.config.syncIssueLifecycle,
         },
