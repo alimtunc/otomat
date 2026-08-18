@@ -1,4 +1,3 @@
-PRAGMA foreign_keys=OFF;--> statement-breakpoint
 CREATE TABLE `__new_pull_requests` (
 	`id` text PRIMARY KEY NOT NULL,
 	`issue_id` text NOT NULL,
@@ -105,6 +104,73 @@ CREATE TABLE `__new_reviews` (
 --> statement-breakpoint
 INSERT INTO `__new_reviews` (`id`, `subject_id`, `status`, `created_at`, `updated_at`)
 SELECT `id`, `run_id`, `status`, `created_at`, `updated_at` FROM `reviews`;--> statement-breakpoint
+CREATE TABLE `__new_review_comments` (
+	`id` text PRIMARY KEY NOT NULL,
+	`review_id` text NOT NULL,
+	`file_path` text NOT NULL,
+	`side` text DEFAULT 'new' NOT NULL,
+	`start_line` integer,
+	`line` integer,
+	`diff_sha` text NOT NULL,
+	`body` text NOT NULL,
+	`status` text DEFAULT 'open' NOT NULL,
+	`destination` text DEFAULT 'agent' NOT NULL,
+	`publication_status` text DEFAULT 'local' NOT NULL,
+	`publication_error` text,
+	`external_url` text,
+	`suggestion` text,
+	`suggestion_original` text,
+	`hunk_snapshot` text DEFAULT '' NOT NULL,
+	`fix_requested_at` text,
+	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	FOREIGN KEY (`review_id`) REFERENCES `__new_reviews`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+INSERT INTO `__new_review_comments` (
+	`id`,
+	`review_id`,
+	`file_path`,
+	`side`,
+	`start_line`,
+	`line`,
+	`diff_sha`,
+	`body`,
+	`status`,
+	`destination`,
+	`publication_status`,
+	`publication_error`,
+	`external_url`,
+	`suggestion`,
+	`suggestion_original`,
+	`hunk_snapshot`,
+	`fix_requested_at`,
+	`created_at`,
+	`updated_at`
+)
+SELECT
+	`id`,
+	`review_id`,
+	`file_path`,
+	`side`,
+	`start_line`,
+	`line`,
+	`diff_sha`,
+	`body`,
+	`status`,
+	`destination`,
+	`publication_status`,
+	`publication_error`,
+	`external_url`,
+	`suggestion`,
+	`suggestion_original`,
+	`hunk_snapshot`,
+	`fix_requested_at`,
+	`created_at`,
+	`updated_at`
+FROM `review_comments`;--> statement-breakpoint
+DROP TABLE `review_comments`;--> statement-breakpoint
 DROP TABLE `reviews`;--> statement-breakpoint
+-- Renaming the parent rewrites the child's REFERENCES clause, so `review_comments` follows it.
 ALTER TABLE `__new_reviews` RENAME TO `reviews`;--> statement-breakpoint
-PRAGMA foreign_keys=ON;
+ALTER TABLE `__new_review_comments` RENAME TO `review_comments`;
