@@ -4,6 +4,7 @@ import type {
   IssueSourceContract,
   IssueSourceSyncResult,
   LinearConnectionContract,
+  LinearLifecycleReconcileResult,
   LinearLifecycleSignal,
   LinearSyncStatusContract,
   LinearWorkspaceContract,
@@ -32,6 +33,8 @@ export interface LinearService {
   /** Rewrites one source's lifecycle mapping against its own team's live workflow states. */
   updateSource(sourceId: string, request: UpdateIssueSourceRequest): Promise<IssueSourceContract>;
   deleteSource(sourceId: string): void;
+  /** Applies the confirmed mapping to this source's issues that still hold an open workspace. */
+  reconcileSource(sourceId: string): Promise<LinearLifecycleReconcileResult>;
   sync(request?: SyncLinearRequest): Promise<IssueSourceSyncResult[]>;
   syncStatus(projectId: string): LinearSyncStatusContract;
   /** Mirrors one canonical run-lifecycle change onto the linked issue; a no-op without write right or mapping. */

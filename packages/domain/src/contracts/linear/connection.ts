@@ -59,6 +59,7 @@ export const linearErrorSchema = z.object({
 export const linearWorkflowStateSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
+  type: z.string().min(1),
 });
 export type LinearWorkflowState = z.infer<typeof linearWorkflowStateSchema>;
 

@@ -1,8 +1,10 @@
 import type { IssueContract, RunContract } from "@otomat/domain";
 import { Button, Skeleton } from "@otomat/ui";
 import { RailMeta, RailSection } from "@web/components/issues/workspace/rail/rail-primitives";
+import type { ReactNode } from "react";
 
 import { LabelsEditor } from "../labels-editor";
+import { LifecycleMapping } from "../lifecycle-mapping";
 import { LifecycleSync } from "../lifecycle-sync";
 import { LinearPropertyRows } from "../property-rows";
 import { useLinearIssueEditing } from "../use-issue-editing";
@@ -19,6 +21,14 @@ export function LinearRailSection({
 }) {
   const editing = useLinearIssueEditing(issue.id);
   const pinnedWriteId = editing.lifecycle?.write_id ?? null;
+
+  const statusSync = (): ReactNode => {
+    if (editing.lifecycle !== null) {
+      return <LifecycleSync issueId={issue.id} lifecycle={editing.lifecycle} />;
+    }
+    if (editing.lifecycleMapping === null) return null;
+    return <LifecycleMapping mapping={editing.lifecycleMapping} />;
+  };
 
   function body() {
     if (editing.editorOffline) {
@@ -66,9 +76,7 @@ export function LinearRailSection({
           </div>
         ) : (
           <>
-            {editing.lifecycle === null ? null : (
-              <LifecycleSync issueId={issue.id} lifecycle={editing.lifecycle} />
-            )}
+            {statusSync()}
             <WriteHistory
               issueId={issue.id}
               writes={editing.writes.filter((write) => write.id !== pinnedWriteId)}

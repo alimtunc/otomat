@@ -5,6 +5,7 @@ import {
   type IssueSourceContract,
   type IssueSourceSyncResult,
   type LinearConnectionContract,
+  type LinearLifecycleReconcileResult,
   type LinearLifecycleSignal,
   type LinearSyncStatusContract,
   type LinearWorkspaceContract,
@@ -15,12 +16,14 @@ import {
 import { connected, DISCONNECTED, failed } from "./connection-state.js";
 import { LinearError, linearError } from "./errors.js";
 import { resolveLifecycleTarget } from "./lifecycle.js";
+import { reconcileSourceLifecycle } from "./reconcile.js";
 import type { LinearService, LinearServiceConfig } from "./service-contract.js";
 import {
   createSourceMapping,
   deleteSourceMapping,
   listSourceContracts,
   projectSyncStatus,
+  requireSourceRow,
   resolveSyncSources,
   updateSourceLifecycle,
 } from "./sources.js";
@@ -113,6 +116,14 @@ class DefaultLinearService implements LinearService {
       this.config.client.workspace(apiKey, signal),
     );
     return updateSourceLifecycle(this.config.db, workspace, sourceId, request);
+  }
+
+  async reconcileSource(sourceId: string): Promise<LinearLifecycleReconcileResult> {
+    this.requireAuthorization();
+    const source = requireSourceRow(this.config.db, sourceId);
+    return reconcileSourceLifecycle(this.config.db, source, (signal) =>
+      this.syncIssueLifecycle(signal),
+    );
   }
 
   /** Skipping leaves no trace: a recorded failure would claim a write Otomat never could attempt. */

@@ -34,8 +34,8 @@ const WORKSPACE = {
       key: "OTO",
       name: "Otomat",
       states: [
-        { id: "s-doing", name: "Doing" },
-        { id: "s-shipped", name: "Shipped" },
+        { id: "s-doing", name: "Doing", type: "started" },
+        { id: "s-shipped", name: "Shipped", type: "completed" },
       ],
     },
     { id: "team-2", key: "ENG", name: "Engineering", states: [] },
@@ -292,6 +292,20 @@ it("stores a lifecycle mapping picked from the source's own team workflow", asyn
     done_state_id: null,
   });
   expect(cleared.lifecycle.done).toBeNull();
+});
+
+it("refuses a state whose Linear type does not carry the phase", async () => {
+  const linear = service();
+  await linear.connect("lin_api_secret");
+  const created = await linear.createSource({ project_id: "p1", ...TEAM });
+
+  await expect(
+    linear.updateSource(created.id, {
+      in_progress_state_id: "s-shipped",
+      done_state_id: "s-doing",
+    }),
+  ).rejects.toMatchObject({ code: "linear_source_state_invalid" });
+  expect(linear.sources()[0]?.lifecycle).toEqual({ in_progress: null, done: null });
 });
 
 it("refuses a lifecycle state that belongs to another team, and an unknown source", async () => {

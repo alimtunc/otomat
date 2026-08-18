@@ -98,6 +98,28 @@ export function useUpdateIssueSource() {
   });
 }
 
+export function useReconcileIssueSource() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (sourceId: string) => daemon.reconcileIssueSource(sourceId),
+    onSuccess: (result) => {
+      if (result.reconciled === 0 && result.failed === 0) {
+        toast.info("No linked issue has an open workspace to reconcile.");
+        return;
+      }
+      if (result.failed > 0) {
+        toast.error(
+          `Reconciled ${result.reconciled} issue(s); ${result.failed} failed — retry from the issue.`,
+        );
+        return;
+      }
+      toast.success(`Reconciled ${result.reconciled} issue(s) with an open workspace.`);
+    },
+    onError: (error) => toast.error(linearErrorMessage(error)),
+    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
+  });
+}
+
 export function useDeleteIssueSource() {
   const client = useQueryClient();
   return useMutation({

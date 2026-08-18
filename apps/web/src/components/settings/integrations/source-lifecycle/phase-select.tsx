@@ -1,4 +1,4 @@
-import type { LinearWorkflowState } from "@otomat/domain";
+import type { TrackerStateRef } from "@otomat/domain";
 import {
   Field,
   FieldControl,
@@ -16,19 +16,24 @@ const UNMAPPED = "__unmapped__";
 export interface LifecyclePhaseSelectProps {
   label: string;
   /** Null while the phase is unmapped: Otomat then writes nothing for it. */
-  value: string | null;
-  states: readonly LinearWorkflowState[];
+  mapped: TrackerStateRef | null;
+  candidates: readonly TrackerStateRef[];
   disabled: boolean;
   onValueChange(stateId: string | null): void;
 }
 
 export function LifecyclePhaseSelect({
   label,
-  value,
-  states,
+  mapped,
+  candidates,
   disabled,
   onValueChange,
 }: LifecyclePhaseSelectProps) {
+  // A state Linear no longer reports for this phase stays listed, so the mapping in force is never rendered blank.
+  const states =
+    mapped !== null && !candidates.some((candidate) => candidate.id === mapped.id)
+      ? [...candidates, mapped]
+      : candidates;
   const items = [
     { value: UNMAPPED, label: "Not mapped" },
     ...states.map((state) => ({ value: state.id, label: state.name })),
@@ -38,7 +43,7 @@ export function LifecyclePhaseSelect({
       <FieldLabel>{label}</FieldLabel>
       <Select
         items={items}
-        value={value ?? UNMAPPED}
+        value={mapped?.id ?? UNMAPPED}
         disabled={disabled}
         onValueChange={(next) => {
           if (next !== null) onValueChange(next === UNMAPPED ? null : next);

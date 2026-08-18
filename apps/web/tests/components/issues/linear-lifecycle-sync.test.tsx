@@ -1,7 +1,12 @@
 // @vitest-environment happy-dom
-import type { IssueContract, LinearLifecycleSyncState, LinearWritebackState } from "@otomat/domain";
+import type {
+  IssueContract,
+  IssueSourceLifecycle,
+  LinearLifecycleSyncState,
+  LinearWritebackState,
+} from "@otomat/domain";
 import { LinearRailSection } from "@web/components/issues/workspace/linear/rail-section";
-import { act } from "react";
+import { act, type ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { findButton } from "#support/dom-queries";
@@ -10,6 +15,10 @@ import { mountWithQuery, type Mounted } from "#support/mount";
 const getLinearEditor = vi.fn();
 const getLinearWriteback = vi.fn();
 const retryLinearWrite = vi.fn();
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children }: { children?: ReactNode }) => <a href="#settings">{children}</a>,
+}));
 
 vi.mock("@web/api/client", () => ({
   daemon: {
@@ -71,9 +80,15 @@ function lifecycle(overrides: Partial<LinearLifecycleSyncState> = {}): LinearLif
   };
 }
 
+const MAPPED: IssueSourceLifecycle = {
+  in_progress: { id: "s-doing", name: "Doing" },
+  done: { id: "s-shipped", name: "Shipped" },
+};
+
 /** The ledger row the pinned sync points at: the rail must render it once, not once per surface. */
 function writeback(sync: LinearLifecycleSyncState): LinearWritebackState {
   return {
+    lifecycle_mapping: MAPPED,
     draft: null,
     writes: [
       {
@@ -108,6 +123,57 @@ afterEach(async () => {
   rendered = null;
   vi.clearAllMocks();
   document.body.replaceChildren();
+});
+
+it("says an unmapped source syncs nothing instead of staying silent", async () => {
+  getLinearEditor.mockResolvedValue(EDITOR);
+  getLinearWriteback.mockResolvedValue({
+    draft: null,
+    writes: [],
+    lifecycle: null,
+    lifecycle_mapping: { in_progress: null, done: null },
+  });
+
+  rendered = await mountWithQuery(<LinearRailSection issue={ISSUE} run={null} />);
+
+  await vi.waitFor(() => {
+    expect(rendered?.container.textContent).toContain("Status sync is not configured");
+  });
+  expect(rendered?.container.textContent).toContain("Map its Linear statuses");
+});
+
+it("reports the mapping in force while no phase has been asserted yet", async () => {
+  getLinearEditor.mockResolvedValue(EDITOR);
+  getLinearWriteback.mockResolvedValue({
+    draft: null,
+    writes: [],
+    lifecycle: null,
+    lifecycle_mapping: MAPPED,
+  });
+
+  rendered = await mountWithQuery(<LinearRailSection issue={ISSUE} run={null} />);
+
+  await vi.waitFor(() => {
+    expect(rendered?.container.textContent).toContain("Run started → Doing");
+  });
+  expect(rendered?.container.textContent).toContain("Pull request merged → Shipped");
+});
+
+it("refuses to call a half-mapped source configured", async () => {
+  getLinearEditor.mockResolvedValue(EDITOR);
+  getLinearWriteback.mockResolvedValue({
+    draft: null,
+    writes: [],
+    lifecycle: null,
+    lifecycle_mapping: { in_progress: MAPPED.in_progress, done: null },
+  });
+
+  rendered = await mountWithQuery(<LinearRailSection issue={ISSUE} run={null} />);
+
+  await vi.waitFor(() => {
+    expect(rendered?.container.textContent).toContain("has no state for pull request merged");
+  });
+  expect(rendered?.container.textContent).not.toContain("is configured");
 });
 
 it("names the Linear status the daemon last mirrored, and what it was for", async () => {

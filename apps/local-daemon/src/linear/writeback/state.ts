@@ -6,6 +6,7 @@ import {
 } from "@otomat/db";
 import type { LinearLifecycleSyncState, LinearWritebackState } from "@otomat/domain";
 
+import { resolveIssueLifecycle } from "../lifecycle.js";
 import { draftToContract, writeToContract } from "./contracts.js";
 import type { LinearWriteLedger } from "./ledger.js";
 import { parseLifecyclePayload } from "./payloads.js";
@@ -40,5 +41,6 @@ export function writebackState(
     draft: draft ? draftToContract(draft) : null,
     writes: rows.map(writeToContract),
     lifecycle: latestLifecycle(rows),
+    lifecycle_mapping: resolveIssueLifecycle(config.db, issueId),
   };
 }

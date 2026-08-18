@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 import { ISSUE_STATES } from "../entity-states.js";
-import { issueSourceLifecycleSchema } from "../linear/lifecycle.js";
+import {
+  issueSourceLifecycleSchema,
+  linearLifecycleWriteErrorSchema,
+  UNMAPPED_ISSUE_SOURCE_LIFECYCLE,
+} from "../linear/lifecycle.js";
 import { issueExecutionSchema } from "./issue-execution.js";
 import { CLOSED_ISSUE_WORKSPACE, issueWorkspaceSchema } from "./issue-workspace.js";
 
@@ -60,7 +64,8 @@ const issueSourceContractBaseSchema = z.object({
   external_team_name: z.string(),
   last_synced_at: z.iso.datetime().nullable(),
   /** Defaulted so a daemon without the field still parses as "nothing mapped". */
-  lifecycle: issueSourceLifecycleSchema.default({ in_progress: null, done: null }),
+  lifecycle: issueSourceLifecycleSchema.default(UNMAPPED_ISSUE_SOURCE_LIFECYCLE),
+  lifecycle_error: linearLifecycleWriteErrorSchema.nullable().default(null),
 });
 
 export const issueSourceContractSchema = z.union([

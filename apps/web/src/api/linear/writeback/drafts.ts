@@ -9,10 +9,9 @@ export function useSaveLinearDraft(issueId: string) {
   const optimistic = useOptimisticWriteback(
     issueId,
     (current, request: SaveLinearDraftRequest) => ({
-      writes: current?.writes ?? [],
-      lifecycle: current?.lifecycle ?? null,
+      ...current,
       draft: {
-        id: current?.draft?.id ?? "optimistic",
+        id: current.draft?.id ?? "optimistic",
         issue_id: issueId,
         base_updated_at: request.base_updated_at,
         title: request.title,
@@ -20,7 +19,7 @@ export function useSaveLinearDraft(issueId: string) {
         priority: request.priority,
         assignee_id: request.assignee_id,
         label_ids: request.label_ids,
-        updated_at: current?.draft?.updated_at ?? new Date().toISOString(),
+        updated_at: current.draft?.updated_at ?? new Date().toISOString(),
       },
     }),
   );
@@ -34,8 +33,7 @@ export function useSaveLinearDraft(issueId: string) {
 
 export function useDiscardLinearDraft(issueId: string) {
   const optimistic = useOptimisticWriteback<void>(issueId, (current) => ({
-    writes: current?.writes ?? [],
-    lifecycle: current?.lifecycle ?? null,
+    ...current,
     draft: null,
   }));
   return useMutation({
