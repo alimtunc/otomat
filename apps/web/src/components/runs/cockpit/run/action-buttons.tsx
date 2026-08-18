@@ -9,7 +9,6 @@ export interface RunActionButtonsProps {
   stretch?: boolean;
 }
 
-/** The cockpit's action row: read the diff, extend the open cycle, or act on the run itself. */
 export function RunActionButtons({ runId, issueId, stretch = false }: RunActionButtonsProps) {
   const className = stretch ? "flex-1" : undefined;
 

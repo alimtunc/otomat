@@ -12,6 +12,7 @@ export {
   CommentPublicationFailedError,
   CommentRangeInvalidError,
   CommentsNotFixableError,
+  DiffScopeNotFoundError,
   DiffUnavailableError,
   FileNotExpandableError,
   FileNotInDiffError,

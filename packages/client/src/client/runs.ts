@@ -1,5 +1,6 @@
 import {
   runContractSchema,
+  runCommitsResponseSchema,
   runCompletionReportResponseSchema,
   runContributionContractSchema,
   runContributionsResponseSchema,
@@ -7,6 +8,7 @@ import {
   reviewDiffResponseSchema,
   runEventWindowSchema,
   runLaunchResponseSchema,
+  runUsageResponseSchema,
   sessionContextResponseSchema,
   workspaceClosureSummarySchema,
   type AppendRunStepRequest,
@@ -126,6 +128,16 @@ export function createRunsClient(config: DaemonClientConfig) {
       });
       return runEventWindowSchema.parse(
         await getJson(config, `/api/runs/${encodeURIComponent(id)}/events/window${query}`),
+      );
+    },
+    async getRunUsage(id: string) {
+      return runUsageResponseSchema.parse(
+        await getJson(config, `/api/runs/${encodeURIComponent(id)}/usage`),
+      );
+    },
+    async getRunCommits(id: string) {
+      return runCommitsResponseSchema.parse(
+        await getJson(config, `/api/runs/${encodeURIComponent(id)}/commits`),
       );
     },
   };

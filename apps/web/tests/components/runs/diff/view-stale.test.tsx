@@ -20,6 +20,8 @@ const DIFF: ReviewDiffResponse = {
   subject_id: "run-1",
   computed_at: "2026-08-12T00:00:00.000Z",
   diff: { base: "base-sha", files: [], additions: 0, deletions: 0, sha: "diff-sha" },
+  scope: { kind: "workspace" },
+  unavailable: null,
 };
 
 const REVIEW: ReviewDetail = {
@@ -42,7 +44,9 @@ let diffQuery: Record<string, unknown> = {};
 let reviewQuery: Record<string, unknown> = {};
 
 vi.mock("@web/api/runs/queries", () => ({
-  useRunDetail: () => fresh({ holds_workspace: false, run: { issue_id: "issue-1" } }),
+  useRunDetail: () =>
+    fresh({ holds_workspace: false, run: { issue_id: "issue-1" }, steps: [], sessions: [] }),
+  useRunCommits: () => ({ data: undefined, isError: false, refetch: vi.fn() }),
 }));
 
 vi.mock("@web/api/reviews/queries", () => ({

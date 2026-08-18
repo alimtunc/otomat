@@ -21,7 +21,7 @@ apps/
       github/          # gh CLI, PR publication, and adoption of a pull request Otomat did not open (OTO-26)
       data-safety/     # startup diagnostics + restore maintenance mode (OTO-29)
       diagnostics/     # correlation-id request log + bounded redacted excerpt   (OTO-52)
-      review/          # review slice: diff snapshot, comment anchoring, PR-comment publication (OTO-11)
+      review/          # review slice: scoped diff snapshots, comment anchoring, fix proof, PR-comment publication (OTO-11, OTO-57)
       runtime/         # adapter contract, provider adapters, model + option feature detection (OTO-6)
         probe/         # bounded, credential-free reads of an installed provider binary
         providers/     # one folder per runtime: adapter, frames, models, options
@@ -98,7 +98,7 @@ under `apps/local-daemon/src/<module>`, consumed through
 | `apps/desktop/src/main/data-safety` | OTO-29                 | Versioned data layout, redacted rotating logs, support bundle export. |
 | `apps/desktop/scripts`            | OTO-21, OTO-30           | macOS packaging: ad-hoc local build, signed/notarized release, packaged smoke. |
 | `apps/local-daemon/src/supervisor`| OTO-10, OTO-87           | Process supervision, pid reconciliation, and the recovery of a stopped plan. |
-| `apps/local-daemon/src/review`    | OTO-11, OTO-26           | Review slice: server-side diff snapshot, comment anchoring, destinations, fix-step context; one surface for a run and an adopted pull request.|
+| `apps/local-daemon/src/review`    | OTO-11, OTO-26, OTO-57   | Review slice: scoped diff snapshots, comment anchoring, destinations, fix-step context, fix proof; one surface for a run and an adopted pull request.|
 | `apps/local-daemon/src/github/import` | OTO-26               | Adoption of an existing pull request: reference, verification, provenance, detection, audit. |
 | `apps/web/src/components/pull-requests` | OTO-26             | The issue's pull requests: attached cards, detected candidates, manual import, detach. |
 | `packages/domain/src/patch`       | OTO-11                   | The one unified-diff reader: hunks, range coverage, GitHub anchor refusals. |
@@ -515,6 +515,59 @@ hides is a display concern (`lib/issue/divergent-status.ts`). The issue page
 keeps both axes legible in its rail (`Issue status`, `Workspace execution`), and
 the run history stays readable there and in the conversations without
 contaminating the principal state.
+
+## A Pass and Its Git Boundary
+
+A **pass** is one `agent_sessions` row — `insertTurn` writes exactly one per
+turn, including every resume — and each pass records two git tree objects on that
+row: `start_tree_sha`, captured after worktree init and before the provider is
+spawned, and `end_tree_sha`, captured when the turn settles. `git diff` between
+them is exactly what that pass did, commits and uncommitted work alike, and it
+stays true afterwards because a tree object never moves. `finishSettle`
+(`supervisor/pass-boundary.ts`) closes the boundary before anything observes the
+settle, so review's `addressed` stamp always has a boundary to read; a capture
+that fails stores its reason in `boundary_error` rather than throwing at the
+turn, because a boundary is evidence, not a precondition.
+
+Persisting the tree shas was chosen over persisting the patch: the trees also
+back context expansion, and they cost two object writes instead of a diff in
+SQLite. The trade is that git may eventually prune an unreachable tree — so
+every surface treats a missing boundary as a named absence, never as an empty
+delta.
+
+That boundary is what makes the cockpit's three diff scopes possible.
+`review/scope.ts` is the single place a scope becomes a snapshot — `workspace`
+(fork point → current state), `commit` (`commit^` → `commit`, or the empty tree
+for a root commit), `session` (a pass's two trees) — so no surface can pair one
+scope's descriptor with another's content. Every diff read carries the scope
+that answered plus an `unavailable` sentence when none could; the reviewer keeps
+the scope control on screen in that state rather than falling back to the
+workspace diff. Blob reads take the same scope, so expanded context always comes
+from the trees its patch was taken between.
+
+The same boundary is the proof behind an addressed comment. Settle stamps
+`review_comments.fixed_by_session_id` with the pass that addressed it, and
+`review/fix-proof.ts` narrows that pass's delta to the hunks touching the
+comment's anchored lines. The mapping is exact rather than heuristic: a comment's
+head-side lines are the *old* side of its fix delta. A pass that changed the file
+but not those lines, or did not touch the file at all, is reported as
+`no_change`; a lost boundary as `unavailable`. The card keeps the original
+comment and anchor above the proof — evidence of a fix does not replace the
+context that asked for it.
+
+## Reporting Token Usage
+
+Each `runtime.usage` event is one turn's own totals, emitted on the provider's
+result frame, so summing them across a scope is a fact rather than an estimate
+(`domain/projections/usage.ts`). `GET /api/runs/:id/usage` reads the **whole**
+ledger: the cockpit pages its event window, so summing what the client happens to
+have loaded would silently understate a long run. A `runtime.usage` frame
+invalidates that read, which is how the total moves while a run works.
+
+Availability is carried, not inferred: `live` for a scope that may still report,
+`final` once it has settled with figures, `unavailable` when it settled having
+reported none. A field no turn reported stays null and is left out of the line —
+never rendered as a zero, which would read as a measured value.
 
 ## Reviewing a Diff
 

@@ -6,13 +6,17 @@ import {
 } from "@otomat/db";
 import {
   isRunSettled,
+  isStepSettled,
   reportStepSchema,
+  scopeUsage,
+  stepUsage,
   type CompletionEvidence,
   type EventEnvelope,
   type RunCompletionReport,
   type RunState,
 } from "@otomat/domain";
 
+import { toReportedUsage } from "../serialize-usage.js";
 import { comparePersistedRows } from "./persisted-order.js";
 
 interface ExecutionProjectionInput {
@@ -56,6 +60,7 @@ function projectRun(
     status: run.status,
     outcome,
     terminal: isRunSettled(run.status),
+    usage: toReportedUsage(scopeUsage(events, isRunSettled(run.status))),
     evidence: timeline(lifecycle?.seq ?? null),
   };
 }
@@ -83,6 +88,7 @@ function projectSteps({
       provider_sessions: stepSessions.flatMap((session) =>
         session.provider_session_id ? [session.provider_session_id] : [],
       ),
+      usage: toReportedUsage(stepUsage(events, step.id, isStepSettled(step.status))),
       evidence: timeline(stepEvent?.seq ?? null),
     });
     if (parsed.success) return [parsed.data];

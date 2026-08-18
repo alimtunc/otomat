@@ -2,6 +2,7 @@ import {
   getReviewForSubject,
   getRun,
   listReviewCommentsForSubject,
+  setReviewCommentFixedBy,
   setReviewCommentFixRequested,
   updateReviewCommentStatus,
   type ReviewCommentRow,
@@ -50,7 +51,7 @@ function releasePendingFixes(ctx: ReviewContext, open: ReviewCommentRow[]): void
 
 function resolveSettledComments(
   ctx: ReviewContext,
-  runId: string,
+  outcome: RunSettledOutcome,
   open: ReviewCommentRow[],
   diff: CanonicalDiff | null,
   now: string,
@@ -58,9 +59,14 @@ function resolveSettledComments(
   const fileShas = new Map(diff?.files.map((file) => [file.path, file.sha]) ?? []);
   for (const comment of open) {
     if (comment.fix_requested_at !== null) {
-      resolveComment(ctx, runId, comment, "addressed", now);
+      // Stamped before the transition: an addressed comment must never exist without
+      // the pass that addressed it, or its proof would have to guess one.
+      if (outcome.agentSessionId !== null) {
+        setReviewCommentFixedBy(ctx.db, comment.id, outcome.agentSessionId);
+      }
+      resolveComment(ctx, outcome.runId, comment, "addressed", now);
     } else if (diff !== null && fileShas.get(comment.file_path) !== comment.diff_sha) {
-      resolveComment(ctx, runId, comment, "outdated", now);
+      resolveComment(ctx, outcome.runId, comment, "outdated", now);
     }
   }
 }
@@ -96,6 +102,6 @@ export function onRunSettled(ctx: ReviewContext, outcome: RunSettledOutcome): vo
   if (diff !== null) {
     emitLedgerEvent(ctx.db, ctx.dataDir, run.id, buildDiffUpdatedEvent(run.id, diff, now));
   }
-  resolveSettledComments(ctx, run.id, open, diff, now);
+  resolveSettledComments(ctx, outcome, open, diff, now);
   deriveReviewStatus(ctx, run.id);
 }

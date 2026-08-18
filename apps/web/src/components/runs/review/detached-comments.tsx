@@ -1,8 +1,9 @@
-import type { ReviewCommentContract } from "@otomat/domain";
+import type { ReviewCommentContract, ReviewTarget } from "@otomat/domain";
 import { commentFallbackReason } from "@web/components/runs/review/comment/anchor";
 import { ReviewCommentCard } from "@web/components/runs/review/comment/card";
 
 export interface DetachedCommentsProps {
+  target: ReviewTarget;
   comments: ReviewCommentContract[];
   selectedIds: ReadonlySet<string>;
   onToggle: (commentId: string, selected: boolean) => void;
@@ -11,6 +12,7 @@ export interface DetachedCommentsProps {
 }
 
 export function DetachedComments({
+  target,
   comments,
   selectedIds,
   onToggle,
@@ -26,6 +28,7 @@ export function DetachedComments({
       {comments.map((comment) => (
         <ReviewCommentCard
           key={comment.id}
+          target={target}
           comment={comment}
           fallbackReason={commentFallbackReason(comment)}
           selected={selectedIds.has(comment.id)}

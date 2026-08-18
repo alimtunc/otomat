@@ -1,5 +1,26 @@
 import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
 
+import { diffLanguage } from "./language";
+import type { FileBlobsContext } from "./use-file-blobs";
+
+/** @git-diff-view's `data` contract for one file; `patch` is the hunk text to render, whole or narrowed. */
+export function diffViewData(
+  file: DiffFileContract,
+  patch: string,
+  context: FileBlobsContext | null,
+) {
+  const oldPath = file.old_path ?? file.path;
+  return {
+    oldFile: { fileName: oldPath, fileLang: diffLanguage(oldPath), content: context?.base ?? null },
+    newFile: {
+      fileName: file.path,
+      fileLang: diffLanguage(file.path),
+      content: context?.head ?? null,
+    },
+    hunks: [patch],
+  };
+}
+
 // The id derives from path, not sha: sha is sha256(patch) and collides for hunk-less files.
 export function diffFileDomId(file: Pick<DiffFileContract, "path">): string {
   return `diff-file-${encodeURIComponent(file.path)}`;

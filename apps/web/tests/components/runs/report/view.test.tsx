@@ -5,6 +5,7 @@ import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { mount } from "#support/mount";
+import { reportedUsage } from "#support/usage";
 
 const RESPONSE: RunCompletionReportResponse = {
   report: {
@@ -16,6 +17,7 @@ const RESPONSE: RunCompletionReportResponse = {
       status: "awaiting_human",
       outcome: "interrupted",
       terminal: false,
+      usage: reportedUsage(),
       evidence: [{ source: "timeline", seq: 8 }],
     },
     plan: { state: "reported", step_count: 1 },
@@ -26,6 +28,7 @@ const RESPONSE: RunCompletionReportResponse = {
         status: "awaiting_human",
         runtime: "codex",
         provider_sessions: ["provider-1"],
+        usage: reportedUsage({ availability: "live", cost_usd: null }),
         evidence: [{ source: "timeline", seq: 7 }],
       },
     ],

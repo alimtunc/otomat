@@ -23,8 +23,13 @@ import {
   type StepRunRow,
 } from "@otomat/db";
 import {
+  isRunSettled,
+  isStepSettled,
   projectIssueExecution,
   projectIssueWorkspace,
+  runUsageResponseSchema,
+  scopeUsage,
+  stepUsage,
   type AgentProfileContract,
   type IssueContract,
   type IssueExecutionEvidence,
@@ -34,15 +39,19 @@ import {
   type RunContributionsResponse,
   type RunDetail,
   type RunResumePlan,
+  type RunState,
+  type RunUsageResponse,
   type RunWait,
   type SkillContract,
   type WorkflowPresetContract,
 } from "@otomat/domain";
 
 import { workflowPresetCompatibility } from "#agents";
+import { readRunEvents } from "#events";
 import { isRepositoryRoot } from "#git";
 import { findWorktreeById } from "#git/worktrees-store";
 
+import { toReportedUsage } from "./serialize-usage.js";
 import {
   toAgentProfile,
   toAgentSession,
@@ -159,6 +168,21 @@ export function readRunDetail(
 
 export function readRunContributions(db: Db, runId: string): RunContributionsResponse {
   return { run_id: runId, contributions: listRunContributions(db, runId).map(toRunContribution) };
+}
+
+/** Read from the whole ledger, so a cockpit that has paged only the newest events still sees a true total. */
+export function readRunUsage(db: Db, run: { id: string; status: RunState }): RunUsageResponse {
+  const events = readRunEvents(db, run.id);
+  return runUsageResponseSchema.parse({
+    run_id: run.id,
+    total: toReportedUsage(scopeUsage(events, isRunSettled(run.status))),
+    steps: listStepRunsForRun(db, run.id).map((step) => ({
+      step_run_id: step.id,
+      name: step.name,
+      status: step.status,
+      usage: toReportedUsage(stepUsage(events, step.id, isStepSettled(step.status))),
+    })),
+  });
 }
 
 /** The candidate step of one compete group, or null when either id does not belong to the run. */

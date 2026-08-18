@@ -40,5 +40,7 @@ export const reviewComments = sqliteTable("review_comments", {
   suggestion_original: text("suggestion_original"),
   hunk_snapshot: text("hunk_snapshot").notNull().default(""),
   fix_requested_at: text("fix_requested_at"),
+  // Deliberately not a foreign key: this evidence outlives whatever happens to the session row.
+  fixed_by_session_id: text("fixed_by_session_id"),
   ...timestamps,
 });

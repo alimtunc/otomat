@@ -32,6 +32,7 @@ export function commentRow(overrides: Partial<ReviewCommentRow> = {}): ReviewCom
     suggestion_original: null,
     hunk_snapshot: "@@ -1 +1 @@",
     fix_requested_at: null,
+    fixed_by_session_id: null,
     created_at: "2026-07-05T00:00:00.000Z",
     updated_at: "2026-07-05T00:00:00.000Z",
     ...overrides,
@@ -41,7 +42,16 @@ export function commentRow(overrides: Partial<ReviewCommentRow> = {}): ReviewCom
 /** Every method throws or returns empty unless a test overrides it — no accidental fake success. */
 export function stubReviewService(overrides: Partial<ReviewService> = {}): ReviewService {
   return {
-    getDiff: () => ({ computedAt: "2026-07-05T00:00:00.000Z", diff: null }),
+    getDiff: () => ({
+      computedAt: "2026-07-05T00:00:00.000Z",
+      diff: null,
+      scope: { kind: "workspace" },
+      unavailable: "This run has no worktree, so there is no current diff to show.",
+    }),
+    getBranchCommits: () => ({ commits: [], unavailable: null }),
+    getCommentFixProof: () => {
+      throw new Error("getCommentFixProof stub not configured");
+    },
     getReviewDetail: () => ({
       review: null,
       comments: [],

@@ -113,21 +113,57 @@ export function deleteBranch(repoPath: string, branch: string): void {
 export interface CommitSummary {
   sha: string;
   subject: string;
+  authorName: string;
+  /** Author date in ISO-8601, as git itself formats it. */
+  authoredAt: string;
 }
 
 // The unit separator: a commit subject can hold anything a tab or a pipe could.
 const FIELD_SEPARATOR = "\x1f";
+const COMMIT_FORMAT = "--format=%H%x1f%s%x1f%an%x1f%aI";
 
-/** Commits reachable from `ref` but not from `base`, newest first. An unreadable range throws rather than reporting an empty branch. */
-export function commitsSince(repoPath: string, base: string, ref: string): CommitSummary[] {
-  const res = runGit(["log", "--format=%H%x1f%s", `${base}..${ref}`], { cwd: repoPath });
-  return res.stdout
+function parseCommitLines(stdout: string): CommitSummary[] {
+  return stdout
     .split("\n")
     .filter((line) => line.trim() !== "")
     .map((line) => {
-      const [sha = "", subject = ""] = line.split(FIELD_SEPARATOR);
-      return { sha, subject };
+      const [sha = "", subject = "", authorName = "", authoredAt = ""] =
+        line.split(FIELD_SEPARATOR);
+      return { sha, subject, authorName, authoredAt };
     });
+}
+
+/** Newest first. An unreadable range throws rather than reporting an empty branch. */
+export function commitsSince(repoPath: string, base: string, ref: string): CommitSummary[] {
+  return parseCommitLines(
+    runGit(["log", COMMIT_FORMAT, `${base}..${ref}`], { cwd: repoPath }).stdout,
+  );
+}
+
+export function commitSummary(repoPath: string, ref: string): CommitSummary | null {
+  const res = runGit(["log", "-1", COMMIT_FORMAT, `${ref}^{commit}`], {
+    cwd: repoPath,
+    allowFailure: true,
+  });
+  if (res.exitCode !== 0) return null;
+  return parseCommitLines(res.stdout)[0] ?? null;
+}
+
+export function commitParent(repoPath: string, commit: string): string | null {
+  const res = runGit(["rev-parse", "--verify", "--quiet", `${commit}^`], {
+    cwd: repoPath,
+    allowFailure: true,
+  });
+  const sha = res.stdout.trim();
+  return res.exitCode === 0 && sha !== "" ? sha : null;
+}
+
+/** A boundary tree is a loose object git may prune, so a pass's delta must check before diffing. */
+export function hasTree(repoPath: string, sha: string): boolean {
+  return (
+    runGit(["cat-file", "-e", `${sha}^{tree}`], { cwd: repoPath, allowFailure: true }).exitCode ===
+    0
+  );
 }
 
 /** Paths carrying uncommitted work — staged, unstaged or untracked — in the worktree at `repoPath`. */

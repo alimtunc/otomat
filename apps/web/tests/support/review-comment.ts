@@ -21,6 +21,7 @@ export function reviewComment(
     suggestion_original: null,
     hunk_snapshot: "@@ -1 +1 @@",
     fix_requested_at: null,
+    fixed_by_session_id: null,
     ...overrides,
   };
 }

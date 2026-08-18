@@ -1,5 +1,6 @@
 import type { RunCompletionReport } from "@otomat/domain";
 import { RunStatusChip } from "@otomat/ui";
+import { UsageTokens } from "@web/components/runs/usage/tokens";
 
 import { FactEvidence } from "./fact-evidence";
 import { sentence } from "./sentence";
@@ -26,6 +27,10 @@ export function ReportSummary({ report }: { report: RunCompletionReport }) {
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs sm:min-w-64">
         <dt className="text-text-tertiary">branch</dt>
         <dd className="min-w-0 truncate text-right font-mono">{report.run.branch}</dd>
+        <dt className="text-text-tertiary">tokens</dt>
+        <dd className="flex justify-end">
+          <UsageTokens usage={report.run.usage} />
+        </dd>
         <dt className="text-text-tertiary">report</dt>
         <dd className="text-right font-mono">v{report.version} · deterministic</dd>
       </dl>

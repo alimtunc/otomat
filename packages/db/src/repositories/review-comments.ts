@@ -42,6 +42,10 @@ export function setReviewCommentFixRequested(db: Db, id: string, at: string | nu
   patchReviewComment(db, id, { fix_requested_at: at });
 }
 
+export function setReviewCommentFixedBy(db: Db, id: string, agentSessionId: string): void {
+  patchReviewComment(db, id, { fixed_by_session_id: agentSessionId });
+}
+
 export interface ReviewCommentPublicationPatch {
   publication_status: ReviewCommentPublicationState;
   publication_error?: string | null;

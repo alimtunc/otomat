@@ -1,4 +1,10 @@
-import type { ReviewDetail, ReviewDiffContract, ReviewTarget } from "@otomat/domain";
+import {
+  WORKSPACE_DIFF_SCOPE,
+  type ReviewDetail,
+  type ReviewDiffContract,
+  type ReviewTarget,
+  type RunDiffScopeSelector,
+} from "@otomat/domain";
 import {
   ResizablePanel,
   ResizablePanelGroup,
@@ -25,6 +31,10 @@ export interface ReviewWorkbenchProps {
   target: ReviewTarget;
   /** What the AI-fix bar reads; an adopted pull request holds no workspace to fix in. */
   workspace: { open: boolean; issueId: string | null };
+  /** The scope the diff was read from; expanded blobs must come from the same one. */
+  scope?: RunDiffScopeSelector;
+  /** The cockpit's scope selector; absent on a pull request, which has only its pinned head. */
+  scopeControl?: ReactNode;
   diff: ReviewDiffContract;
   review: ReviewDetail;
   /** The stale notice when a refresh failed; the query ladder above owns that judgment. */
@@ -32,7 +42,15 @@ export interface ReviewWorkbenchProps {
 }
 
 /** The loaded reviewer: header, file cards, comments and the fix bar around one diff. */
-export function ReviewWorkbench({ target, workspace, diff, review, notice }: ReviewWorkbenchProps) {
+export function ReviewWorkbench({
+  target,
+  workspace,
+  scope = WORKSPACE_DIFF_SCOPE,
+  scopeControl,
+  diff,
+  review,
+  notice,
+}: ReviewWorkbenchProps) {
   const addComment = useAddReviewComment(target);
   const publishComment = usePublishReviewComment(target);
   const selection = useReviewSelection(target.id);
@@ -67,6 +85,7 @@ export function ReviewWorkbench({ target, workspace, diff, review, notice }: Rev
   const cards = (
     <DiffFileCards
       target={target}
+      scope={scope}
       files={visible.files}
       hiddenCount={visible.hiddenCount}
       onShowHidden={() => diffPrefsStore.actions.set({ hideReviewed: false })}
@@ -83,6 +102,7 @@ export function ReviewWorkbench({ target, workspace, diff, review, notice }: Rev
 
   const emptyRegion = (
     <DiffEmptyRegion
+      target={target}
       detached={partition.detached}
       selection={selection}
       onPublish={commentActions.publish}
@@ -133,6 +153,7 @@ export function ReviewWorkbench({ target, workspace, diff, review, notice }: Rev
       {notice}
       <RunDiffHeader
         diff={diff}
+        scopeControl={scopeControl}
         reviewStatus={review.review?.status ?? null}
         prefs={prefs}
         onPrefsChange={diffPrefsStore.actions.set}

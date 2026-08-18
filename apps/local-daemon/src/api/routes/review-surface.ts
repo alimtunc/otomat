@@ -11,6 +11,7 @@ import {
 
 import type { ApiDeps } from "../deps.js";
 import { diffFileBlobsErrorResponse, toDiffFileBlobsResponse } from "../diff-file-blobs.js";
+import { diffScopeErrorResponse, readDiffScope } from "../diff-scope.js";
 import { validateJson, type ReviewSubjectEnv } from "../guards.js";
 import { toReviewDiffResponse } from "../serialize-review-diff.js";
 import { toReview, toReviewComment } from "../serialize.js";
@@ -25,8 +26,11 @@ export function createReviewSurfaceRoutes(
   routes.get("/:id/diff", guard, (c) => {
     const subject = c.get("subject");
     try {
-      return c.json(toReviewDiffResponse(subject.id, deps.review.getDiff(subject)));
+      const scope = readDiffScope(c);
+      return c.json(toReviewDiffResponse(subject.id, deps.review.getDiff(subject, scope)));
     } catch (error) {
+      const refusal = diffScopeErrorResponse(c, error);
+      if (refusal) return refusal;
       console.error(`[otomat] diff for ${subject.kind} ${subject.id} failed`, error);
       return c.json({ error: "diff_failed" }, 500);
     }
@@ -37,9 +41,12 @@ export function createReviewSurfaceRoutes(
     const path = c.req.query("path") ?? "";
     const sha = c.req.query("sha") ?? "";
     try {
-      return c.json(toDiffFileBlobsResponse(deps.review.getFileBlobs(subject, { path, sha })));
+      const scope = readDiffScope(c);
+      return c.json(
+        toDiffFileBlobsResponse(deps.review.getFileBlobs(subject, { path, sha, scope })),
+      );
     } catch (error) {
-      const refusal = diffFileBlobsErrorResponse(c, error);
+      const refusal = diffScopeErrorResponse(c, error) ?? diffFileBlobsErrorResponse(c, error);
       if (refusal) return refusal;
       console.error(`[otomat] blobs for ${path} on ${subject.kind} ${subject.id} failed`, error);
       return c.json({ error: "diff_failed" }, 500);

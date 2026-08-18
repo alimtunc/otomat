@@ -1,23 +1,36 @@
+import type { RunDiffScope, RunDiffScopeSelector } from "@otomat/domain";
 import { EmptyState, ErrorState } from "@otomat/ui";
 import { useReviewDetail, useReviewDiff } from "@web/api/reviews/queries";
 import {
   ReviewWorkbench,
   type ReviewWorkbenchProps,
 } from "@web/components/runs/diff/review-workbench";
+import { DiffScopeUnavailable } from "@web/components/runs/diff/scope/unavailable";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
 import { StaleNotice } from "@web/components/shell/stale-notice";
+import type { ReactNode } from "react";
 
 export interface ReviewDiffViewProps {
   target: ReviewWorkbenchProps["target"];
   workspace: ReviewWorkbenchProps["workspace"];
   /** Shown when the subject genuinely has no diff to read. */
   emptyDescription: string;
+  /** The slice the run cockpit asks for; a pull request has only its pinned head. */
+  scope?: RunDiffScopeSelector;
+  /** Renders the cockpit's scope selector from the scope the daemon answered with. */
+  scopeControl?: (scope: RunDiffScope) => ReactNode;
 }
 
 /** The query ladder around the reviewer: skeleton, blocking error, empty diff, or a stale-noticed workbench. */
-export function ReviewDiffView({ target, workspace, emptyDescription }: ReviewDiffViewProps) {
-  const diffQuery = useReviewDiff(target);
+export function ReviewDiffView({
+  target,
+  workspace,
+  emptyDescription,
+  scope,
+  scopeControl,
+}: ReviewDiffViewProps) {
+  const diffQuery = useReviewDiff(target, scope);
   const reviewQuery = useReviewDetail(target);
 
   const retryBoth = (): void => {
@@ -41,12 +54,15 @@ export function ReviewDiffView({ target, workspace, emptyDescription }: ReviewDi
     );
   }
 
+  const control = scopeControl?.(diffQuery.data.scope);
   const diff = diffQuery.data.diff;
   if (diff === null) {
-    return (
+    return control === undefined ? (
       <CenteredState>
         <EmptyState icon="git-compare" title="No diff to review" description={emptyDescription} />
       </CenteredState>
+    ) : (
+      <DiffScopeUnavailable scopeControl={control} reason={diffQuery.data.unavailable} />
     );
   }
 
@@ -55,6 +71,8 @@ export function ReviewDiffView({ target, workspace, emptyDescription }: ReviewDi
     <ReviewWorkbench
       target={target}
       workspace={workspace}
+      scope={scope}
+      scopeControl={control}
       diff={diff}
       review={review}
       notice={

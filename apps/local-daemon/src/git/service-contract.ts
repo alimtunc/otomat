@@ -1,6 +1,7 @@
 import type { Db } from "@otomat/db";
 
 import { WorktreeNotFoundError } from "./errors.js";
+import type { CommitSummary } from "./repo.js";
 import type { TreeFileLimits, TreeFileRead } from "./tree-file.js";
 import type {
   CanonicalDiff,
@@ -8,6 +9,7 @@ import type {
   DiffFileBlobs,
   DiffFilePaths,
   WorktreeRecord,
+  WorktreeStateCapture,
   WorktreeStatus,
 } from "./types.js";
 
@@ -59,6 +61,13 @@ export interface DiffSnapshot extends TreeSnapshot {
   fileBlobs(paths: DiffFilePaths): DiffFileBlobs;
 }
 
+/** One commit resolved into what it actually changed; `parent` is null on a root commit, diffed against the empty tree. */
+export interface CommitScope {
+  commit: CommitSummary;
+  parent: string | null;
+  snapshot: DiffSnapshot;
+}
+
 export interface GitWorktreeService {
   /**
    * Forks a new worktree on a dedicated `branch` for `owner`. Idempotent when
@@ -92,6 +101,13 @@ export interface GitWorktreeService {
   diffSnapshot(owner: string): DiffSnapshot;
   /** A tree captured from a ref rather than from a worktree: what a launch reads before its worktree exists. */
   treeSnapshot(baseRef: string): TreeSnapshot;
+  /** Requires an active worktree; the tree it writes covers staged, unstaged and untracked work alike. */
+  captureState(owner: string): WorktreeStateCapture;
+  /** Read from the repository, so a removed worktree does not lose the delta. */
+  boundaryDiff(startTree: string, endTree: string): DiffSnapshot | null;
+  commitScope(commit: string): CommitScope | null;
+  /** Commits the owner's branch carries above its fork point, newest first. */
+  branchCommits(owner: string): CommitSummary[];
   /** Canonical diff of `commit` against the owner's fork point: only a commit can stand for what a push published. */
   commitDiff(owner: string, commit: string): CanonicalDiff;
   /** Commits outstanding changes and records the new branch tip without removing the active worktree. `message` names a commit a reader will see; the default is the internal snapshot. */

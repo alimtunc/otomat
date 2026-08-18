@@ -1,5 +1,5 @@
 import { DaemonRequestError } from "@otomat/client";
-import type { DiffFileContract, ReviewTarget } from "@otomat/domain";
+import type { DiffFileContract, ReviewTarget, RunDiffScopeSelector } from "@otomat/domain";
 import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
@@ -19,11 +19,16 @@ export interface UseFileBlobsResult {
   request: () => void;
 }
 
-export function useFileBlobs(target: ReviewTarget, file: DiffFileContract): UseFileBlobsResult {
+/** `scope` must be the scope the patch came from: expanded context read from another pair of trees would not be this file. */
+export function useFileBlobs(
+  target: ReviewTarget,
+  file: DiffFileContract,
+  scope: RunDiffScopeSelector,
+): UseFileBlobsResult {
   const [requested, setRequested] = useState(false);
   const query = useQuery({
-    queryKey: queryKeys.reviewDiffFileBlobs(target, file.path, file.sha),
-    queryFn: () => daemon.getDiffFileBlobs(target, file.path, file.sha),
+    queryKey: queryKeys.reviewDiffFileBlobs(target, file.path, file.sha, scope),
+    queryFn: () => daemon.getDiffFileBlobs(target, file.path, file.sha, scope),
     enabled: requested && !file.binary,
     retry: (count, error) => !(error instanceof DaemonRequestError) && count < 2,
   });

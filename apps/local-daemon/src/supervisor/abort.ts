@@ -7,10 +7,11 @@ import { TARGETS } from "./classify.js";
 import { cancelUndeliverableContributions } from "./contribution/deliver.js";
 import { eventsForSession, findFinalStatus } from "./evidence.js";
 import { buildTerminalMarker } from "./markers.js";
+import { finishSettle } from "./pass-boundary.js";
 import { terminateGracefully } from "./process.js";
 import { resolveSessionContributions } from "./settle/contributions.js";
 import { resolveTurnSession, settleRun } from "./settle/index.js";
-import { notifyAfterSettle, processesForRun, type SupervisorState } from "./state.js";
+import { processesForRun, type SupervisorState } from "./state.js";
 import { driveIdleRunTo, driveRunConvergence } from "./transitions.js";
 
 /** Grace between a graceful `SIGTERM` and a forced `SIGKILL` during abort. */
@@ -53,7 +54,7 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
     const scoped = active === null ? events : eventsForSession(events, active.id);
 
     if (handles.length <= 1 && findFinalStatus(scoped) !== null) {
-      notifyAfterSettle(
+      finishSettle(
         state,
         settleRun(db, dataDir, current, { mode: "live", ...(turn ? { turn } : {}), now }),
       );
@@ -83,8 +84,10 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
       null;
     const marker = buildTerminalMarker(ref, "canceled", providerSessionId, 0, now);
     emitLedgerEvent(db, dataDir, runId, marker);
-    notifyAfterSettle(state, {
+    finishSettle(state, {
       runId,
+      stepRunId: ref.stepRunId,
+      agentSessionId: ref.agentSessionId,
       classification: "canceled",
       reason: "aborted by user",
       orphanTerminated: false,

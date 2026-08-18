@@ -50,6 +50,7 @@ let detailQuery: Record<string, unknown> = {};
 vi.mock("@web/api/runs/queries", () => ({
   useRunDetail: () => detailQuery,
   useRunWorkspace: () => ({ data: undefined, isPending: true, isError: false, refetch: vi.fn() }),
+  useRunUsage: () => ({ data: undefined }),
 }));
 
 vi.mock("@web/api/issues/queries", () => ({

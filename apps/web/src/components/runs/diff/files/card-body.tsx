@@ -4,10 +4,18 @@ import {
   SplitSide,
   type DiffViewWithMultiSelectRef,
 } from "@git-diff-view/react";
-import type { DiffFileContract, DiffSide, ReviewCommentContract } from "@otomat/domain";
+import type {
+  DiffFileContract,
+  DiffSide,
+  ReviewCommentContract,
+  ReviewTarget,
+} from "@otomat/domain";
 import { useTheme } from "@otomat/ui";
-import { extendDataFor, unrenderableNote } from "@web/components/runs/diff/files/card.utils";
-import { diffLanguage } from "@web/components/runs/diff/files/language";
+import {
+  diffViewData,
+  extendDataFor,
+  unrenderableNote,
+} from "@web/components/runs/diff/files/card.utils";
 import type { FileBlobsContext } from "@web/components/runs/diff/files/use-file-blobs";
 import { useGutterRange } from "@web/components/runs/diff/files/use-gutter-range";
 import type { DiffViewMode } from "@web/components/runs/diff/prefs/prefs";
@@ -24,6 +32,7 @@ function diffSide(side: SplitSide): DiffSide {
 }
 
 export interface DiffFileCardBodyProps {
+  target: ReviewTarget;
   file: DiffFileContract;
   mode: DiffViewMode;
   wrap: boolean;
@@ -35,6 +44,7 @@ export interface DiffFileCardBodyProps {
 }
 
 export function DiffFileCardBody({
+  target,
   file,
   mode,
   wrap,
@@ -48,22 +58,10 @@ export function DiffFileCardBody({
   const view = useRef<DiffViewWithMultiSelectRef | null>(null);
   const gutter = useGutterRange(view, mode, wrap);
 
-  const data = useMemo(() => {
-    const oldPath = file.old_path ?? file.path;
-    return {
-      oldFile: {
-        fileName: oldPath,
-        fileLang: diffLanguage(oldPath),
-        content: context?.base ?? null,
-      },
-      newFile: {
-        fileName: file.path,
-        fileLang: diffLanguage(file.path),
-        content: context?.head ?? null,
-      },
-      hunks: [file.patch],
-    };
-  }, [file.path, file.old_path, file.patch, context]);
+  const data = useMemo(
+    () => diffViewData(file, file.patch, context),
+    [file.path, file.old_path, file.patch, context],
+  );
   const extendData = useMemo(() => extendDataFor(comments.byLine), [comments.byLine]);
 
   // otomat-allow-effect: expansion lives only on @git-diff-view's imperative instance.
@@ -129,6 +127,7 @@ export function DiffFileCardBody({
             {onLine.map((comment) => (
               <ReviewCommentCard
                 key={comment.id}
+                target={target}
                 comment={comment}
                 selected={comments.selectedIds.has(comment.id)}
                 onSelectedChange={(selected) => commentActions.toggle(comment.id, selected)}

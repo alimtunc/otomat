@@ -51,6 +51,7 @@ const detail: RunDetail = {
 vi.mock("@web/api/runs/queries", () => ({
   useRunDetail: () => ({ isPending: false, isError: false, data: detail }),
   useRunWorkspace: () => ({ data: undefined, isPending: true, isError: false, refetch: vi.fn() }),
+  useRunUsage: () => ({ data: undefined }),
 }));
 
 vi.mock("@web/api/issues/queries", () => ({

@@ -1,4 +1,8 @@
-import { requestFixRequestSchema } from "@otomat/domain";
+import {
+  commentFixProofSchema,
+  requestFixRequestSchema,
+  runCommitsResponseSchema,
+} from "@otomat/domain";
 import { Hono } from "hono";
 
 import { CommentsNotFixableError } from "#review";
@@ -10,9 +14,32 @@ import { toRun } from "../serialize.js";
 import { appendStepSelector, stepAppendErrorResponse } from "../step-append.js";
 import { createReviewSurfaceRoutes } from "./review-surface.js";
 
-/** Mounted at `/api/runs`: the shared review surface, plus the AI fix only a run can carry. */
+/** Mounted at `/api/runs`: the shared review surface, plus the reads and the AI fix only a run can carry. */
 export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
+
+  routes.get("/:id/commits", runGuard(deps.db), (c) => {
+    const run = c.get("run");
+    try {
+      return c.json(
+        runCommitsResponseSchema.parse({ run_id: run.id, ...deps.review.getBranchCommits(run.id) }),
+      );
+    } catch (error) {
+      console.error(`[otomat] commits for run ${run.id} failed`, error);
+      return c.json({ error: "commits_failed" }, 500);
+    }
+  });
+
+  routes.get("/:id/review/comments/:commentId/fix-proof", runGuard(deps.db), (c) => {
+    const run = c.get("run");
+    const commentId = c.req.param("commentId");
+    try {
+      return c.json(commentFixProofSchema.parse(deps.review.getCommentFixProof(run.id, commentId)));
+    } catch (error) {
+      console.error(`[otomat] fix proof for comment ${commentId} on run ${run.id} failed`, error);
+      return c.json({ error: "fix_proof_failed" }, 500);
+    }
+  });
 
   routes.post(
     "/:id/review/fix",

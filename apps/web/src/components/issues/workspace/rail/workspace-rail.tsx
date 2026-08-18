@@ -90,7 +90,7 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
           <FollowedRunSection run={run} />
           <ExecutionSection run={run} />
           <PermissionSection />
-          <UsageSection />
+          <UsageSection runId={run.id} />
         </>
       ) : null}
     </aside>

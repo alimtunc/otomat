@@ -71,7 +71,12 @@ it("returns 404 on every review surface for an unknown run", async () => {
 it("serves the canonical diff mapped to the wire contract", async () => {
   const app = makeApiApp(t, {
     review: stubReviewService({
-      getDiff: () => ({ computedAt: "2026-07-05T00:00:00.000Z", diff: DIFF }),
+      getDiff: () => ({
+        computedAt: "2026-07-05T00:00:00.000Z",
+        diff: DIFF,
+        scope: { kind: "workspace" },
+        unavailable: null,
+      }),
     }),
   });
   const res = await request(app, `/api/runs/${RUN_ID}/diff`);

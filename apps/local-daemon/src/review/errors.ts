@@ -35,6 +35,17 @@ export class FileTooLargeError extends Error {
   }
 }
 
+/** The requested diff scope names something this run does not have; the caller picks another. */
+export class DiffScopeNotFoundError extends Error {
+  constructor(
+    readonly code: "commit_not_found" | "session_not_found",
+    message: string,
+  ) {
+    super(message);
+    this.name = "DiffScopeNotFoundError";
+  }
+}
+
 /** The fix selection contains unknown, non-open or non-agent comments. */
 export class CommentsNotFixableError extends Error {
   constructor(message: string) {

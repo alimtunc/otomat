@@ -4,8 +4,9 @@ import { isRunSettled } from "@otomat/domain";
 import { emitLedgerEvent } from "#events";
 
 import { buildTerminalMarker } from "./markers.js";
+import { finishSettle } from "./pass-boundary.js";
 import { emitSupervisorLog } from "./run-log.js";
-import { hasRunActivity, notifyAfterSettle, type SupervisorState } from "./state.js";
+import { hasRunActivity, type SupervisorState } from "./state.js";
 import { driveIdleRunTo } from "./transitions.js";
 
 export function failureReason(error: unknown): string {
@@ -25,8 +26,10 @@ export function failIdleRun(state: SupervisorState, runId: string, reason: strin
   driveIdleRunTo(state.db, current, "failed", listStepRunsForRun(state.db, runId), now);
   const ref = { runId, stepRunId: null, agentSessionId: null };
   emitLedgerEvent(state.db, state.dataDir, runId, buildTerminalMarker(ref, "failed", null, 0, now));
-  notifyAfterSettle(state, {
+  finishSettle(state, {
     runId,
+    stepRunId: null,
+    agentSessionId: null,
     classification: "failed",
     reason,
     orphanTerminated: false,

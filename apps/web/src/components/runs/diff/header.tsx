@@ -3,11 +3,14 @@ import { Kbd, ReviewStatusChip } from "@otomat/ui";
 import { DiffPrefsPopover } from "@web/components/runs/diff/prefs/popover";
 import type { DiffPrefs } from "@web/components/runs/diff/prefs/prefs";
 import { DiffSummary } from "@web/components/runs/diff/summary";
+import type { ReactNode } from "react";
 
 const ACTIVE_PATH_CLASS = "min-w-0 truncate font-mono text-xs text-text-secondary";
 
 export interface RunDiffHeaderProps {
-  diff: ReviewDiffContract;
+  /** Null when the chosen scope has no diff; the header still states which scope that was. */
+  diff: ReviewDiffContract | null;
+  scopeControl?: ReactNode;
   reviewStatus: ReviewState | null;
   prefs: DiffPrefs;
   onPrefsChange: (patch: Partial<DiffPrefs>) => void;
@@ -18,6 +21,7 @@ export interface RunDiffHeaderProps {
 
 export function RunDiffHeader({
   diff,
+  scopeControl,
   reviewStatus,
   prefs,
   onPrefsChange,
@@ -25,12 +29,14 @@ export function RunDiffHeader({
   reviewedCount,
   activePath,
 }: RunDiffHeaderProps) {
+  const fileCount = diff?.files.length ?? 0;
   return (
     <header className="flex h-10.5 flex-none items-center gap-2.5 border-b border-border-subtle px-4.5">
+      {scopeControl}
       {reviewStatus ? <ReviewStatusChip status={reviewStatus} /> : null}
-      {diff.files.length > 0 ? (
+      {fileCount > 0 ? (
         <span className="text-xs text-text-tertiary">
-          {reviewedCount}/{diff.files.length} reviewed
+          {reviewedCount}/{fileCount} reviewed
         </span>
       ) : null}
       {activePath === null ? null : (
@@ -38,7 +44,7 @@ export function RunDiffHeader({
           {activePath}
         </span>
       )}
-      {diff.files.length > 0 ? (
+      {fileCount > 0 ? (
         <span className="hidden items-center gap-1.5 text-[10px] text-text-tertiary xl:flex">
           <Kbd>j</Kbd>
           <Kbd>k</Kbd> files
@@ -50,7 +56,7 @@ export function RunDiffHeader({
       ) : null}
       <span className="ml-auto flex items-center gap-2.5">
         <DiffPrefsPopover prefs={prefs} onChange={onPrefsChange} browsable={browsable} />
-        {prefs.stats ? <DiffSummary diff={diff} /> : null}
+        {prefs.stats && diff !== null ? <DiffSummary diff={diff} /> : null}
       </span>
     </header>
   );

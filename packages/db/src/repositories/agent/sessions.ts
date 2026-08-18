@@ -1,5 +1,5 @@
 import type { AgentSessionState, SessionContext } from "@otomat/domain";
-import { eq, getTableColumns } from "drizzle-orm";
+import { and, eq, getTableColumns, isNull } from "drizzle-orm";
 
 import type { Db } from "#db/client";
 
@@ -63,4 +63,32 @@ export interface AgentSessionExit {
 
 export function recordAgentSessionExit(db: Db, id: string, exit: AgentSessionExit): void {
   patchAgentSession(db, id, exit);
+}
+
+/** One end of a pass's git boundary: the tree the worktree stood at, and the commit it was on. */
+export interface SessionBoundaryCapture {
+  treeSha: string;
+  headSha: string;
+}
+
+/** Written once per row: a resume reuses its session, and the pass's delta must still start where its first turn did. */
+export function recordSessionPassStart(db: Db, id: string, capture: SessionBoundaryCapture): void {
+  db.update(agentSessions)
+    .set(
+      touch({
+        start_tree_sha: capture.treeSha,
+        start_head_sha: capture.headSha,
+        boundary_error: null,
+      }),
+    )
+    .where(and(eq(agentSessions.id, id), isNull(agentSessions.start_tree_sha)))
+    .run();
+}
+
+export function recordSessionPassEnd(db: Db, id: string, capture: SessionBoundaryCapture): void {
+  patchAgentSession(db, id, { end_tree_sha: capture.treeSha, end_head_sha: capture.headSha });
+}
+
+export function recordSessionBoundaryError(db: Db, id: string, reason: string): void {
+  patchAgentSession(db, id, { boundary_error: reason });
 }
