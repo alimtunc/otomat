@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { changeStatusSchema } from "../diff.js";
 import { RUN_STATES, STEP_RUN_STATES } from "../entity-states.js";
+import { reportedUsageSchema } from "../usage.js";
 import { reportEvidenceSchema } from "./evidence.js";
 
 export const reportRunSchema = z
@@ -12,6 +13,7 @@ export const reportRunSchema = z
     status: z.enum(RUN_STATES),
     outcome: z.enum(["succeeded", "failed", "canceled", "interrupted", "in_progress"]),
     terminal: z.boolean(),
+    usage: reportedUsageSchema,
     evidence: reportEvidenceSchema,
   })
   .strict();
@@ -38,6 +40,7 @@ export const reportStepSchema = z
     status: z.enum(STEP_RUN_STATES),
     runtime: z.string().nullable(),
     provider_sessions: z.array(z.string()),
+    usage: reportedUsageSchema,
     evidence: reportEvidenceSchema,
   })
   .strict();

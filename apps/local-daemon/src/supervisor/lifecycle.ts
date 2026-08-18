@@ -18,10 +18,11 @@ import { withCarriedContributions } from "./contribution/prompt.js";
 import { failureReason } from "./fail-run.js";
 import { waitForWorkerIdentity } from "./identity.js";
 import { runInitCommandBatch, runStillLive } from "./init-commands.js";
+import { capturePassStart, finishSettle } from "./pass-boundary.js";
 import type { SlotGrant } from "./semaphore.js";
 import { settleRun } from "./settle/index.js";
 import { clearWorkerStartEvidence } from "./start-gate.js";
-import { notifyAfterSettle, trackPending, type SupervisorState } from "./state.js";
+import { trackPending, type SupervisorState } from "./state.js";
 import { driveRunTo, driveSessionTo, driveStepTo } from "./transitions.js";
 import { captureTurnContext } from "./turn-context.js";
 import type { ProcessExit, SessionProcess, TurnContext } from "./types.js";
@@ -55,7 +56,7 @@ function settleLive(state: SupervisorState, ctx: TurnContext, exit?: ProcessExit
       turn: { agentSessionId: ctx.agentSessionId },
       now: new Date().toISOString(),
     });
-    notifyAfterSettle(state, outcome);
+    finishSettle(state, outcome);
   } catch (error) {
     console.error(`[otomat] run ${ctx.runId} settle failed`, error);
   }
@@ -141,6 +142,7 @@ export async function spawnTurn(
       });
       if (!initialized) return abandon();
     }
+    capturePassStart(state, ctx);
     clearWorkerStartEvidence(ctx.agentSessionDir);
     claimStepContributions(state, ctx.stepRunId, ctx.agentSessionId);
     const carried = carriedContributions(state, ctx.agentSessionId);

@@ -1,4 +1,15 @@
-import type { ReviewTarget } from "@otomat/domain";
+import {
+  runDiffScopeParams,
+  WORKSPACE_DIFF_SCOPE,
+  type ReviewTarget,
+  type RunDiffScopeSelector,
+} from "@otomat/domain";
+
+/** One stable key segment per scope, so switching scope refetches instead of reading a neighbour's cache. */
+function runDiffScopeKey(scope: RunDiffScopeSelector): string {
+  const params = runDiffScopeParams(scope);
+  return `${params["scope"] ?? "workspace"}:${params["commit"] ?? params["session"] ?? ""}`;
+}
 
 /**
  * Query-key factory. Keys nest so a parent invalidation cascades to children
@@ -52,12 +63,21 @@ export const queryKeys = {
   run: (id: string) => ["run", id] as const,
   runEventWindow: (id: string) => ["run-events", id] as const,
   runCompletionReport: (id: string) => ["run", id, "report"] as const,
+  runUsage: (id: string) => ["run", id, "usage"] as const,
+  runCommits: (id: string) => ["run", id, "commits"] as const,
   runContributions: (id: string) => ["run", id, "contributions"] as const,
   sessionContext: (runId: string, agentSessionId: string) =>
     ["run", runId, "session", agentSessionId, "context"] as const,
-  reviewDiff: (target: ReviewTarget) => ["review", target.kind, target.id, "diff"] as const,
-  reviewDiffFileBlobs: (target: ReviewTarget, path: string, sha: string) =>
-    ["review", target.kind, target.id, "diff", "file", path, sha] as const,
+  reviewDiff: (target: ReviewTarget, scope: RunDiffScopeSelector = WORKSPACE_DIFF_SCOPE) =>
+    ["review", target.kind, target.id, "diff", runDiffScopeKey(scope)] as const,
+  reviewDiffFileBlobs: (
+    target: ReviewTarget,
+    path: string,
+    sha: string,
+    scope: RunDiffScopeSelector = WORKSPACE_DIFF_SCOPE,
+  ) =>
+    ["review", target.kind, target.id, "diff", runDiffScopeKey(scope), "file", path, sha] as const,
+  commentFixProof: (id: string, commentId: string) => ["run", id, "fix-proof", commentId] as const,
   runWorkspace: (id: string) => ["run", id, "workspace"] as const,
   competeCandidateDiff: (runId: string, groupId: string, stepId: string) =>
     ["run", runId, "compete", groupId, stepId, "diff"] as const,

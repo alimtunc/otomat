@@ -1,5 +1,6 @@
 import type { Db, PullRequestRow, ReviewCommentRow, ReviewRow, RunRow } from "@otomat/db";
 import type {
+  CommentFixProof,
   ContextReference,
   ContextReviewComment,
   CreateReviewCommentRequest,
@@ -7,6 +8,9 @@ import type {
   ExecutionOverrides,
   ReviewDestinationAvailability,
   ReviewFixAuthority,
+  RunCommit,
+  RunDiffScope,
+  RunDiffScopeSelector,
 } from "@otomat/domain";
 
 import type { AgentConfigSelector } from "#agents";
@@ -65,10 +69,19 @@ export interface ReviewServiceConfig {
 /** Shared handles every review operation threads through — the module's equivalent of SupervisorState. */
 export type ReviewContext = ReviewServiceConfig;
 
+/** `snapshot` and `unavailable` are exclusive. */
+export interface ScopedDiff {
+  scope: RunDiffScope;
+  snapshot: DiffSnapshot | null;
+  unavailable: string | null;
+}
+
 export interface ReviewDiffResult {
   computedAt: string;
-  /** Null when the subject has nothing to diff from — never a fabricated diff. */
+  /** Null when the scope could not be reconstructed — never a fabricated diff. */
   diff: CanonicalDiff | null;
+  scope: RunDiffScope;
+  unavailable: string | null;
 }
 
 export interface ReviewDetailResult {
@@ -82,6 +95,7 @@ export interface FileBlobsRequest {
   path: string;
   /** The `DiffFile.sha` the reviewer is looking at; a mismatch is refused, never reconciled. */
   sha: string;
+  scope: RunDiffScopeSelector;
 }
 
 export interface FileBlobsResult {
@@ -108,12 +122,16 @@ export interface FixRequest {
 
 export interface RunSettledOutcome {
   runId: string;
+  /** The pass that just settled; comments it addressed are stamped with it so their fix proof has a boundary to read. */
+  agentSessionId: string | null;
   classification: ReconcileClassification;
 }
 
 export interface ReviewService {
   /** A run reviews its worktree (a compete candidate names its step id as owner); a pull request reviews its imported head. */
-  getDiff(ref: ReviewSubjectRef): ReviewDiffResult;
+  getDiff(ref: ReviewSubjectRef, scope?: RunDiffScopeSelector): ReviewDiffResult;
+  getBranchCommits(runId: string): { commits: RunCommit[]; unavailable: string | null };
+  getCommentFixProof(runId: string, commentId: string): CommentFixProof;
   getReviewDetail(ref: ReviewSubjectRef): ReviewDetailResult;
   /** A `pr_review` comment is published on create; a GitHub refusal comes back on it, never as a failed create. */
   addComment(ref: ReviewSubjectRef, request: CreateReviewCommentRequest): Promise<ReviewCommentRow>;

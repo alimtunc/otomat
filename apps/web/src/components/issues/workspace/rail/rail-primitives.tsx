@@ -23,7 +23,8 @@ export function RailRow({ label, children }: { label: string; children: ReactNod
   return (
     <>
       <dt className="text-xs text-text-tertiary">{label}</dt>
-      <dd className="m-0 flex min-w-0 items-center justify-end gap-1.5 justify-self-end text-foreground">
+      {/* `w-full` bounds the value to its grid column: shrink-to-fit would let a long path run past the panel. */}
+      <dd className="m-0 flex w-full min-w-0 items-center justify-end gap-1.5 text-foreground">
         {children}
       </dd>
     </>

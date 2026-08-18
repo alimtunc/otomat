@@ -726,7 +726,12 @@ it("serves isolated candidate diff evidence and delegates explicit winner select
       ...stubReviewService(),
       getDiff: (ref) => {
         diffOwner = ref.kind === "run" ? ref.owner : undefined;
-        return { computedAt: "2026-07-05T00:00:00.000Z", diff: null };
+        return {
+          computedAt: "2026-07-05T00:00:00.000Z",
+          diff: null,
+          scope: { kind: "workspace" },
+          unavailable: "No worktree.",
+        };
       },
     },
     supervisor: stubSupervisor({

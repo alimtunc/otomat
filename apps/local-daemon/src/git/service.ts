@@ -1,34 +1,24 @@
-import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 
+import { acquireWorktree } from "./acquire.js";
 import { diffBase, diffInputs } from "./diff-inputs.js";
 import { collectChangedFiles, computeCanonicalDiff, readFileBlobs } from "./diff.js";
 import { WorktreeConflictError, WorktreeNotFoundError } from "./errors.js";
 import { toRecord } from "./record.js";
-import { branchExists, deleteBranch, fastForward, headSha, isAncestor, revParse } from "./repo.js";
+import { commitsSince, deleteBranch, fastForward, headSha, isAncestor, revParse } from "./repo.js";
+import { boundarySnapshot, captureWorktreeState, commitScope } from "./scopes.js";
 import type { GitWorktreeService, GitWorktreeServiceConfig } from "./service-contract.js";
 import { readTreeFile } from "./tree-file.js";
-import { addWorktree, pruneWorktrees, removeWorktree } from "./worktree-cli.js";
+import { pruneWorktrees, removeWorktree } from "./worktree-cli.js";
 import { isDirty, snapshotSubject, snapshotWorktree } from "./worktree-snapshot.js";
 import {
-  findActiveByBranch,
   findActiveByOwner,
-  findActiveByPath,
   findLatestByOwner,
-  insertWorktree,
   listWorktreeRows,
   updateWorktreeStatus,
   type WorktreeRow,
 } from "./worktrees-store.js";
-
-// A readable yet collision-free directory name: distinct owner tokens that
-// sanitize to the same segment stay distinct via the raw-owner hash suffix.
-function worktreeDirName(owner: string): string {
-  const safe = owner.replace(/[^a-zA-Z0-9._-]/g, "-").slice(0, 64);
-  const hash = createHash("sha256").update(owner).digest("hex").slice(0, 8);
-  return `${safe}-${hash}`;
-}
 
 /**
  * Builds the worktree/branch lifecycle service over `config.db` and the repo at
@@ -50,78 +40,11 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
   }
 
   const scope = { repoRoot, defaultBranch };
+  const acquireCtx = { db, repositoryId, repoRoot, defaultBranch, worktreesRoot, idFactory };
 
   return {
     acquire(input) {
-      const existing = findActiveByOwner(db, input.owner);
-      if (existing) {
-        if (existing.branch !== input.branch) {
-          throw new WorktreeConflictError(
-            `owner ${input.owner} already holds an active worktree on branch ${existing.branch}`,
-          );
-        }
-        return toRecord(existing);
-      }
-
-      const branchHolder = findActiveByBranch(db, input.branch);
-      if (branchHolder) {
-        throw new WorktreeConflictError(
-          `branch ${input.branch} is already held by worktree ${branchHolder.id}`,
-        );
-      }
-      if (branchExists(repoRoot, input.branch)) {
-        throw new WorktreeConflictError(`branch ${input.branch} already exists in the repository`);
-      }
-
-      const path = join(worktreesRoot, worktreeDirName(input.owner));
-      if (findActiveByPath(db, path)) {
-        throw new WorktreeConflictError(`worktree path ${path} is already in use`);
-      }
-
-      const baseRef = input.baseRef ?? defaultBranch;
-      const baseSha = revParse(repoRoot, baseRef);
-      mkdirSync(worktreesRoot, { recursive: true });
-      try {
-        addWorktree(repoRoot, { worktreePath: path, branch: input.branch, baseRef: baseSha });
-      } catch (error) {
-        // `git worktree add -b` creates the branch before the checkout, and a registered
-        // worktree makes `git branch -D` refuse. Path-scoped: a repo-wide prune would
-        // unregister a sound worktree whose directory is merely unreachable.
-        removeWorktree(repoRoot, path);
-        deleteBranch(repoRoot, input.branch);
-        throw error;
-      }
-
-      const id = idFactory();
-      try {
-        insertWorktree(db, {
-          id,
-          repository_id: repositoryId,
-          path,
-          branch: input.branch,
-          head_sha: baseSha,
-          base_sha: baseSha,
-          base_ref: baseRef,
-          owner_token: input.owner,
-          status: "active",
-        });
-      } catch (error) {
-        removeWorktree(repoRoot, path);
-        deleteBranch(repoRoot, input.branch);
-        pruneWorktrees(repoRoot);
-        throw error;
-      }
-
-      return {
-        id,
-        owner: input.owner,
-        repositoryId,
-        path,
-        branch: input.branch,
-        headSha: baseSha,
-        baseRef,
-        status: "active",
-      };
+      return acquireWorktree(acquireCtx, input);
     },
 
     get(owner) {
@@ -155,6 +78,26 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
     treeSnapshot(baseRef) {
       const tree = revParse(repoRoot, `${baseRef}^{tree}`);
       return { readFile: (path, limits) => readTreeFile(repoRoot, tree, path, limits) };
+    },
+
+    captureState(owner) {
+      const row = findActiveByOwner(db, owner);
+      if (!row) throw new WorktreeNotFoundError(owner);
+      return captureWorktreeState(row.path);
+    },
+
+    boundaryDiff(startTree, endTree) {
+      return boundarySnapshot(repoRoot, startTree, endTree);
+    },
+
+    commitScope(commit) {
+      return commitScope(repoRoot, commit);
+    },
+
+    branchCommits(owner) {
+      const row = resolve(owner);
+      const { gitCwd, base } = diffBase(scope, row);
+      return commitsSince(gitCwd, base, row.status === "active" ? "HEAD" : row.branch);
     },
 
     commitDiff(owner, commit) {

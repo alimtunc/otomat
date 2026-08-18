@@ -1,4 +1,4 @@
-import type { DiffFileContract, ReviewTarget } from "@otomat/domain";
+import type { DiffFileContract, ReviewTarget, RunDiffScopeSelector } from "@otomat/domain";
 import { DiffFileCard } from "@web/components/runs/diff/files/card";
 import { HiddenReviewedNotice } from "@web/components/runs/diff/hidden-notice";
 import type { DiffPrefs } from "@web/components/runs/diff/prefs/prefs";
@@ -12,6 +12,7 @@ import {
 
 export interface DiffFileCardsProps {
   target: ReviewTarget;
+  scope: RunDiffScopeSelector;
   files: readonly DiffFileContract[];
   hiddenCount: number;
   onShowHidden: () => void;
@@ -27,6 +28,7 @@ export interface DiffFileCardsProps {
 
 export function DiffFileCards({
   target,
+  scope,
   files,
   hiddenCount,
   onShowHidden,
@@ -46,6 +48,7 @@ export function DiffFileCards({
           <DiffFileCard
             key={file.path}
             target={target}
+            scope={scope}
             file={file}
             prefs={prefs}
             reviewed={reviewedPaths.has(file.path)}
@@ -60,6 +63,7 @@ export function DiffFileCards({
         ))}
         <HiddenReviewedNotice count={hiddenCount} onShow={onShowHidden} />
         <DetachedComments
+          target={target}
           comments={comments.partition.detached}
           selectedIds={comments.selectedIds}
           onToggle={commentActions.toggle}

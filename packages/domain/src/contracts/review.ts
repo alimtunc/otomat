@@ -3,7 +3,7 @@ import { z } from "zod";
 import { CONTEXT_MAX_REVIEW_COMMENTS, CONTEXT_NOTE_MAX_LENGTH } from "../context/limits.js";
 import { contextReferencesSchema } from "../context/reference.js";
 import { RUN_PLAN_STEP_NAME_MAX_LENGTH } from "../plan/limits.js";
-import { diffSideSchema } from "./diff.js";
+import { diffFileContractSchema, diffSideSchema } from "./diff.js";
 import {
   reviewCommentContractSchema,
   reviewCommentDestinationSchema,
@@ -101,3 +101,29 @@ export type RequestFixRequest = z.infer<typeof requestFixRequestSchema>;
 
 /** Default name of the step a review fix appends. */
 export const FIX_REVIEW_COMMENTS_STEP_NAME = "Fix review comments";
+
+export const fixProofPassSchema = z.object({
+  agent_session_id: z.string(),
+  step_name: z.string(),
+});
+export type FixProofPass = z.infer<typeof fixProofPassSchema>;
+
+/** The global workspace diff is never offered in place of a proof one of these states cannot give. */
+export const commentFixProofSchema = z.discriminatedUnion("state", [
+  z.object({
+    state: z.literal("reported"),
+    pass: fixProofPassSchema,
+    /** Its `sha` is what expanding context anchors against. */
+    file: diffFileContractSchema,
+    excerpt: z.string(),
+    /** True when the anchor carried no line range to narrow to, so the excerpt is the whole delta. */
+    whole_file: z.boolean(),
+  }),
+  z.object({
+    state: z.literal("no_change"),
+    pass: fixProofPassSchema,
+    reason: z.string(),
+  }),
+  z.object({ state: z.literal("unavailable"), reason: z.string() }),
+]);
+export type CommentFixProof = z.infer<typeof commentFixProofSchema>;

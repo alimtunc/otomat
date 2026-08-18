@@ -2,6 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { runCompletionReportResponseSchema } from "#domain/contracts/completion-report";
 
+const USAGE = {
+  availability: "final",
+  input_tokens: 4200,
+  output_tokens: 610,
+  cost_usd: 0.08,
+  turns: 2,
+} as const;
+
 const REPORT = {
   version: 1,
   run: {
@@ -11,6 +19,7 @@ const REPORT = {
     status: "completed",
     outcome: "succeeded",
     terminal: true,
+    usage: USAGE,
     evidence: [{ source: "timeline", seq: 18 }],
   },
   plan: { state: "reported", step_count: 1 },
@@ -21,6 +30,7 @@ const REPORT = {
       status: "succeeded",
       runtime: "codex",
       provider_sessions: ["provider-1"],
+      usage: USAGE,
       evidence: [{ source: "timeline", seq: 17 }],
     },
   ],

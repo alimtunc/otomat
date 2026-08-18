@@ -41,6 +41,11 @@ export interface CanonicalDiff {
   sha: string;
 }
 
+export interface WorktreeStateCapture {
+  treeSha: string;
+  headSha: string;
+}
+
 /** A worktree as tracked by the service (mirrors a `worktrees` row). */
 export interface WorktreeRecord {
   id: string;

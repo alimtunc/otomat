@@ -313,6 +313,7 @@ const COMMENT = {
   suggestion_original: null,
   hunk_snapshot: "@@ -1 +1 @@",
   fix_requested_at: null,
+  fixed_by_session_id: null,
 };
 
 it("fetches and parses the run diff (null diff allowed, never fabricated)", async () => {
@@ -323,10 +324,12 @@ it("fetches and parses the run diff (null diff allowed, never fabricated)", asyn
       subject_id: "run-1",
       computed_at: "2026-07-05T00:00:00.000Z",
       diff: null,
+      scope: { kind: "workspace" },
+      unavailable: "This run has no worktree, so there is no current diff to show.",
     });
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
-  const result = await client.getReviewDiff({ kind: "run", id: "run-1" });
+  const result = await client.getReviewDiff({ kind: "run", id: "run-1" }, { kind: "workspace" });
   expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/diff");
   expect(result.diff).toBeNull();
 });
@@ -365,6 +368,8 @@ it("fetches candidate evidence and posts an explicit compete winner", async () =
       subject_id: "run-1",
       computed_at: "2026-07-05T00:00:00.000Z",
       diff: null,
+      scope: { kind: "workspace" },
+      unavailable: "This run has no worktree, so there is no current diff to show.",
     });
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });

@@ -1,12 +1,14 @@
-import type { ReviewCommentContract } from "@otomat/domain";
+import type { ReviewCommentContract, ReviewTarget } from "@otomat/domain";
 import { Checkbox, Chip, ReviewCommentStatusChip } from "@otomat/ui";
 import { commentAnchorLabel, reviewCommentDomId } from "@web/components/runs/review/comment/anchor";
+import { CommentFixProof } from "@web/components/runs/review/comment/fix-proof";
 import { CommentPublication } from "@web/components/runs/review/comment/publication";
 import { CommentSnapshot } from "@web/components/runs/review/comment/snapshot";
 import { CommentSuggestion } from "@web/components/runs/review/comment/suggestion";
 
 export interface ReviewCommentCardProps {
   comment: ReviewCommentContract;
+  target: ReviewTarget;
   /** Set when the comment is shown away from its anchor; states why and shows its pinned excerpt. */
   fallbackReason?: string;
   selected?: boolean;
@@ -17,6 +19,7 @@ export interface ReviewCommentCardProps {
 
 export function ReviewCommentCard({
   comment,
+  target,
   fallbackReason,
   selected = false,
   onSelectedChange,
@@ -70,6 +73,9 @@ export function ReviewCommentCard({
           <CommentSnapshot snapshot={comment.hunk_snapshot} />
         </>
       )}
+      {comment.status === "addressed" && target.kind === "run" ? (
+        <CommentFixProof runId={target.id} commentId={comment.id} />
+      ) : null}
     </div>
   );
 }

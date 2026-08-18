@@ -2,6 +2,14 @@ import { expect, it } from "vitest";
 
 import { createDaemonClient } from "#client/client/index";
 
+const USAGE = {
+  availability: "final",
+  input_tokens: 4200,
+  output_tokens: 610,
+  cost_usd: 0.08,
+  turns: 2,
+} as const;
+
 const EMPTY_REPORT = {
   version: 1,
   run: {
@@ -11,6 +19,7 @@ const EMPTY_REPORT = {
     status: "awaiting_human",
     outcome: "interrupted",
     terminal: false,
+    usage: USAGE,
     evidence: [{ source: "timeline", seq: 8 }],
   },
   plan: { state: "reported", step_count: 1 },

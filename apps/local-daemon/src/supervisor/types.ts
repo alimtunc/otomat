@@ -142,6 +142,9 @@ export type ReconcileClassification = "completed" | "interrupted" | "failed" | "
 
 export interface ReconcileOutcome {
   runId: string;
+  /** The turn this settle converged; null when the settle read the whole ledger instead of one turn. */
+  stepRunId: string | null;
+  agentSessionId: string | null;
   classification: ReconcileClassification;
   reason: string;
   /** A still-running orphan process was found and its group was terminated. */

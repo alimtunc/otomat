@@ -66,6 +66,16 @@ export const competeGroupContractSchema = z.object({
 });
 export type CompeteGroupContract = z.infer<typeof competeGroupContractSchema>;
 
+/** Diffing the two trees reconstructs what the pass did, and stays true after later passes because a tree object never moves. */
+export const sessionPassBoundarySchema = z.object({
+  start_tree_sha: z.string().nullable(),
+  start_head_sha: z.string().nullable(),
+  end_tree_sha: z.string().nullable(),
+  end_head_sha: z.string().nullable(),
+  error: z.string().nullable(),
+});
+export type SessionPassBoundary = z.infer<typeof sessionPassBoundarySchema>;
+
 export const agentSessionContractSchema = z.object({
   id: z.string(),
   step_run_id: z.string(),
@@ -73,5 +83,11 @@ export const agentSessionContractSchema = z.object({
   status: z.enum(AGENT_SESSION_STATES),
   /** Provider session id, reused when resuming after the runtime assigns it. */
   provider_session_id: z.string().nullable(),
+  boundary: sessionPassBoundarySchema,
 });
 export type AgentSessionContract = z.infer<typeof agentSessionContractSchema>;
+
+/** Whether a pass's delta can be reconstructed at all from its captured boundary. */
+export function isPassReconstructable(boundary: SessionPassBoundary): boolean {
+  return boundary.start_tree_sha !== null && boundary.end_tree_sha !== null;
+}

@@ -1,55 +1,61 @@
-import { useRunEventStream } from "@web/api/runs/run-event-stream";
+import { useRunUsage } from "@web/api/runs/queries";
 import {
   RailMeta,
   RailRow,
   RailSection,
 } from "@web/components/issues/workspace/rail/rail-primitives";
 import { Unknown } from "@web/components/issues/workspace/rail/unknown";
-import { formatCostUsd, formatTokenCount, latestReportedUsage } from "@web/lib/run/usage";
+import { UsageTokens } from "@web/components/runs/usage/tokens";
+import { USAGE_PROVENANCE } from "@web/lib/run/usage-provenance";
 
-export function UsageSection() {
-  const stream = useRunEventStream();
-  const usage = latestReportedUsage(stream.events);
+function UsageTotal({ usage }: { usage: ReturnType<typeof useRunUsage> }) {
+  if (usage.data !== undefined) {
+    return <UsageTokens usage={usage.data.total} showProvenance={false} />;
+  }
+  if (!usage.isError) return <Unknown />;
+  return (
+    <button
+      type="button"
+      className="text-xs text-text-tertiary underline"
+      onClick={() => void usage.refetch()}
+    >
+      Usage could not be read — retry
+    </button>
+  );
+}
+
+export function UsageSection({ runId }: { runId: string }) {
+  const usage = useRunUsage(runId);
+  const total = usage.data?.total;
+  const provenance = (): string => {
+    if (total !== undefined) return USAGE_PROVENANCE[total.availability];
+    return usage.isError ? "unreadable" : "loading";
+  };
   return (
     <RailSection
       title={
         <>
           Usage
-          <span className="font-normal normal-case text-text-tertiary">· last reported</span>
+          <span className="font-normal normal-case text-text-tertiary">· {provenance()}</span>
         </>
       }
     >
       <RailMeta>
-        <RailRow label="Input">
-          {usage?.inputTokens != null ? (
-            <span className="font-mono text-xs tabular-nums text-text-secondary">
-              {formatTokenCount(usage.inputTokens)}
-            </span>
-          ) : (
-            <Unknown />
-          )}
+        <RailRow label="Run total">
+          <UsageTotal usage={usage} />
         </RailRow>
-        <RailRow label="Output">
-          {usage?.outputTokens != null ? (
-            <span className="font-mono text-xs tabular-nums text-text-secondary">
-              {formatTokenCount(usage.outputTokens)}
-            </span>
-          ) : (
+        <RailRow label="Turns reported">
+          {total === undefined ? (
             <Unknown />
-          )}
-        </RailRow>
-        <RailRow label="Cost">
-          {usage?.costUsd != null ? (
-            <span className="font-mono text-xs tabular-nums text-text-secondary">
-              {formatCostUsd(usage.costUsd)}
-            </span>
           ) : (
-            <Unknown />
+            <span className="font-mono text-xs tabular-nums text-text-secondary">
+              {total.turns}
+            </span>
           )}
         </RailRow>
       </RailMeta>
       <p className="mt-2 text-xs leading-relaxed text-text-tertiary">
-        Only what the runtime actually reported — nothing is estimated.
+        Summed over the turns the runtime reported — nothing is estimated.
       </p>
     </RailSection>
   );

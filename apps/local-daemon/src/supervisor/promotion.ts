@@ -138,6 +138,10 @@ export function recoverCompeteSelections(state: SupervisorState): ReconcileOutco
         restRecoveredRun(state, run.id);
         outcomes.push({
           runId: run.id,
+          stepRunId: winnerId,
+          // The winner's own passes already closed their boundaries; this recovery
+          // promotes what they produced, it is not a pass of its own.
+          agentSessionId: null,
           classification: "completed",
           reason: "recovered reserved compete winner; dependent work awaits explicit resume",
           orphanTerminated: false,

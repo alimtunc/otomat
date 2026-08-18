@@ -1,4 +1,4 @@
-import type { DiffFileContract, ReviewTarget } from "@otomat/domain";
+import type { DiffFileContract, ReviewTarget, RunDiffScopeSelector } from "@otomat/domain";
 import { cn, FOCUS_RING } from "@otomat/ui";
 import { DiffFileCardBody } from "@web/components/runs/diff/files/card-body";
 import { DiffFileCardHeader } from "@web/components/runs/diff/files/card-header";
@@ -17,6 +17,7 @@ import { useState } from "react";
 
 export interface DiffFileCardProps {
   target: ReviewTarget;
+  scope: RunDiffScopeSelector;
   file: DiffFileContract;
   prefs: DiffPrefs;
   reviewed: boolean;
@@ -32,6 +33,7 @@ export interface DiffFileCardProps {
 
 export function DiffFileCard({
   target,
+  scope,
   file,
   prefs,
   reviewed,
@@ -44,7 +46,7 @@ export function DiffFileCard({
   commentActions,
 }: DiffFileCardProps) {
   const viewport = useNearViewport();
-  const blobs = useFileBlobs(target, file);
+  const blobs = useFileBlobs(target, file, scope);
   const [expandAll, setExpandAll] = useState(false);
   const [composing, setComposing] = useState(false);
   const expandable = unrenderableNote(file) === null;
@@ -106,6 +108,7 @@ export function DiffFileCard({
           {comments.whole.map((comment) => (
             <ReviewCommentCard
               key={comment.id}
+              target={target}
               comment={comment}
               selected={comments.selectedIds.has(comment.id)}
               onSelectedChange={(selected) => commentActions.toggle(comment.id, selected)}
@@ -129,6 +132,7 @@ export function DiffFileCard({
       ) : null}
       {collapsed ? null : (
         <DiffFileCardBody
+          target={target}
           file={file}
           mode={prefs.mode}
           wrap={prefs.wrap}

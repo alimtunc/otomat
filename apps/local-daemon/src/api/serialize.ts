@@ -143,7 +143,16 @@ export function toCompeteGroup(row: CompeteGroupRow): CompeteGroupContract {
 }
 
 export function toAgentSession(row: AgentSessionRow): AgentSessionContract {
-  return agentSessionContractSchema.parse(row);
+  return agentSessionContractSchema.parse({
+    ...row,
+    boundary: {
+      start_tree_sha: row.start_tree_sha,
+      start_head_sha: row.start_head_sha,
+      end_tree_sha: row.end_tree_sha,
+      end_head_sha: row.end_head_sha,
+      error: row.boundary_error,
+    },
+  });
 }
 
 export function toReview(row: ReviewRow): ReviewContract {

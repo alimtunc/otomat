@@ -19,6 +19,23 @@ export function useRunsForIssue(issueId: string) {
   });
 }
 
+/** Read on demand: a commit list only grows on a settle. */
+export function useRunCommits(runId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.runCommits(runId),
+    queryFn: () => daemon.getRunCommits(runId),
+    enabled,
+  });
+}
+
+/** Read from the daemon, never summed from the event page the cockpit happens to have loaded. */
+export function useRunUsage(runId: string) {
+  return useQuery({
+    queryKey: queryKeys.runUsage(runId),
+    queryFn: () => daemon.getRunUsage(runId),
+  });
+}
+
 export function useCompeteCandidateDiff(runId: string, groupId: string, stepId: string) {
   return useQuery({
     queryKey: queryKeys.competeCandidateDiff(runId, groupId, stepId),

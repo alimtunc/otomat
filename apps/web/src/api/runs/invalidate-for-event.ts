@@ -28,6 +28,10 @@ export function invalidateForEvent(client: QueryClient, runId: string, event: Ev
     return;
   }
   client.invalidateQueries({ queryKey: queryKeys.runCompletionReport(runId) });
+  if (event.type === "runtime.usage") {
+    client.invalidateQueries({ queryKey: queryKeys.runUsage(runId) });
+    return;
+  }
   if (event.type === "git.diff_updated") {
     client.invalidateQueries({ queryKey: queryKeys.reviewDiff({ kind: "run", id: runId }) });
     return;

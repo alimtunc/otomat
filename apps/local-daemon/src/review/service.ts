@@ -1,6 +1,8 @@
 import { getFileBlobs } from "./blobs.js";
 import { addComment, getReviewDetail } from "./comments.js";
-import { getSubjectDiff } from "./diff.js";
+import { getBranchCommits } from "./commits.js";
+import { getDiff } from "./diff.js";
+import { getCommentFixProof } from "./fix-proof.js";
 import { requestFix } from "./fix.js";
 import { publishComment } from "./publication.js";
 import { onRunSettled } from "./settle.js";
@@ -17,11 +19,13 @@ export function createReviewService(config: ReviewServiceConfig): ReviewService 
   const ctx: ReviewContext = config;
   const subject = (ref: ReviewSubjectRef) => resolveReviewSubject(ctx, ref);
   return {
-    getDiff: (ref) => getSubjectDiff(subject(ref)),
+    getDiff: (ref, scope) => getDiff(ctx, ref, scope),
+    getBranchCommits: (runId) => getBranchCommits(ctx, runId),
+    getCommentFixProof: (runId, commentId) => getCommentFixProof(ctx, runId, commentId),
     getReviewDetail: (ref) => getReviewDetail(ctx, subject(ref)),
     addComment: (ref, request) => addComment(ctx, subject(ref), request),
     publishComment: (ref, commentId) => publishComment(ctx, subject(ref), commentId),
-    getFileBlobs: (ref, request) => getFileBlobs(subject(ref), request),
+    getFileBlobs: (ref, request) => getFileBlobs(ctx, ref, request),
     requestFix: (run, request) => requestFix(ctx, run, request),
     onRunSettled: (outcome) => onRunSettled(ctx, outcome),
   };

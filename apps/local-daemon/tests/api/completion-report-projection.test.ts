@@ -195,7 +195,12 @@ describe("run completion report projection", () => {
       .run();
 
     const review = stubReviewService({
-      getDiff: () => ({ computedAt: OCCURRED_AT, diff: DIFF }),
+      getDiff: () => ({
+        computedAt: OCCURRED_AT,
+        diff: DIFF,
+        scope: { kind: "workspace" },
+        unavailable: null,
+      }),
       getReviewDetail: () => ({
         review: reviewRow({ id: "review-1", subject_id: "run-report" }),
         comments: [

@@ -48,5 +48,6 @@ export const reviewCommentContractSchema = z.object({
   /** Hunk captured at comment time and shown when the anchor becomes stale. */
   hunk_snapshot: z.string(),
   fix_requested_at: z.iso.datetime().nullable(),
+  fixed_by_session_id: z.string().nullable(),
 });
 export type ReviewCommentContract = z.infer<typeof reviewCommentContractSchema>;

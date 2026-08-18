@@ -12,11 +12,12 @@ import {
   reconcileContributionClaims,
   retryRunContribution,
 } from "./contribution/index.js";
+import { finishSettle } from "./pass-boundary.js";
 import { terminateGracefully } from "./process.js";
 import { recoverCompeteSelections, selectCompeteWinner } from "./promotion.js";
 import { reconcileRuns } from "./reconcile.js";
 import { runResumePlan } from "./resume-plan.js";
-import { createState, notifyAfterSettle } from "./state.js";
+import { createState } from "./state.js";
 import type { Supervisor, SupervisorConfig } from "./types.js";
 import { workspaceClosureFacts } from "./workspace-summary.js";
 
@@ -52,7 +53,7 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
       const recovered = recoverCompeteSelections(state);
       const report = reconcileRuns(state.db, state.dataDir, now);
       const reconciled = [...recovered, ...report.reconciled];
-      for (const outcome of reconciled) notifyAfterSettle(state, outcome);
+      for (const outcome of reconciled) finishSettle(state, outcome);
       return { reconciled };
     },
     settle: async () => {

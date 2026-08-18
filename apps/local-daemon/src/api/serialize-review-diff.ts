@@ -29,5 +29,7 @@ export function toReviewDiffResponse(
           })),
         }
       : null,
+    scope: result.scope,
+    unavailable: result.unavailable,
   });
 }

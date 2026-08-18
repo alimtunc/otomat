@@ -91,6 +91,11 @@ export const agentSessions = sqliteTable("agent_sessions", {
   pgid: integer("pgid"),
   exit_code: integer("exit_code"),
   exit_signal: text("exit_signal"),
+  start_tree_sha: text("start_tree_sha"),
+  start_head_sha: text("start_head_sha"),
+  end_tree_sha: text("end_tree_sha"),
+  end_head_sha: text("end_head_sha"),
+  boundary_error: text("boundary_error"),
   ...timestamps,
 });
 

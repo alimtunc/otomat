@@ -44,12 +44,55 @@ export const reviewDiffContractSchema = z.object({
 });
 export type ReviewDiffContract = z.infer<typeof reviewDiffContractSchema>;
 
-/** `diff` is null when the subject has nothing to diff from — the UI must say so, not fake one. */
+/** What a caller asks a diff read for; the response echoes back the scope that answered. */
+const runDiffScopeSelectorSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("workspace") }),
+  z.object({ kind: z.literal("commit"), commit: z.string().min(1) }),
+  z.object({ kind: z.literal("session"), session: z.string().min(1) }),
+]);
+export type RunDiffScopeSelector = z.infer<typeof runDiffScopeSelectorSchema>;
+
+export const WORKSPACE_DIFF_SCOPE: RunDiffScopeSelector = { kind: "workspace" };
+
+/** The selector as query parameters — one spelling shared by the client, the cockpit's URL and its query keys. */
+export function runDiffScopeParams(
+  selector: RunDiffScopeSelector,
+): Record<string, string | undefined> {
+  if (selector.kind === "commit") return { scope: "commit", commit: selector.commit };
+  if (selector.kind === "session") return { scope: "session", session: selector.session };
+  return { scope: undefined, commit: undefined, session: undefined };
+}
+
+/** What a diff response was actually computed from, so a reader never has to infer which scope answered. */
+export const runDiffScopeSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("workspace") }),
+  z.object({
+    kind: z.literal("commit"),
+    commit: z.string(),
+    short_sha: z.string(),
+    subject: z.string(),
+    /** Parent this commit is diffed against; null on a root commit, which is diffed against the empty tree. */
+    parent: z.string().nullable(),
+  }),
+  z.object({
+    kind: z.literal("session"),
+    agent_session_id: z.string(),
+    step_name: z.string(),
+    /** The bounds the pass's delta was taken between. */
+    start_tree_sha: z.string(),
+    end_tree_sha: z.string(),
+  }),
+]);
+export type RunDiffScope = z.infer<typeof runDiffScopeSchema>;
+
+/** `diff` is null when the scope could not be reconstructed — `unavailable` then says why, and the UI states it instead of falling back. */
 export const reviewDiffResponseSchema = z.object({
   /** The run or the pull request the diff was read from. */
   subject_id: z.string(),
   computed_at: z.iso.datetime(),
   diff: reviewDiffContractSchema.nullable(),
+  scope: runDiffScopeSchema,
+  unavailable: z.string().nullable(),
 });
 export type ReviewDiffResponse = z.infer<typeof reviewDiffResponseSchema>;
 

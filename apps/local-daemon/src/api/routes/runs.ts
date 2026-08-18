@@ -22,7 +22,7 @@ import { projectRunCompletionReport } from "../completion-report.js";
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { nonNegativeInt } from "../query-params.js";
-import { readRuns } from "../reads.js";
+import { readRunUsage, readRuns } from "../reads.js";
 import { refusalJson } from "../refusal.js";
 import { runDetailJson } from "../run-detail.js";
 import { toPullRequest, toRun } from "../serialize.js";
@@ -82,6 +82,8 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
   });
 
   routes.get("/:id", (c) => runDetailJson(deps, c, c.req.param("id")));
+
+  routes.get("/:id/usage", runGuard(deps.db), (c) => c.json(readRunUsage(deps.db, c.get("run"))));
 
   routes.get("/:id/report", (c) => {
     const report = projectRunCompletionReport(deps.db, c.req.param("id"), deps.review);

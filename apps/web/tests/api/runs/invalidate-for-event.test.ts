@@ -94,6 +94,12 @@ it("invalidates the completion report for runtime evidence", () => {
   expect(keys).toEqual([queryKeys.runCompletionReport("run-1")]);
 });
 
+it("refreshes the usage read on every reported turn, so a live total moves with the run", () => {
+  const { client, keys } = fakeClient();
+  invalidateForEvent(client, "run-1", event("runtime.usage"));
+  expect(keys).toEqual([queryKeys.runCompletionReport("run-1"), queryKeys.runUsage("run-1")]);
+});
+
 it("invalidates only the run's conversation on a contribution event", () => {
   const { client, keys } = fakeClient();
   invalidateForEvent(client, "run-1", event("run.contribution"));

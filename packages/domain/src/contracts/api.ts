@@ -7,6 +7,7 @@
  */
 export * from "./agent-profile.js";
 export * from "./capacity.js";
+export * from "./commits.js";
 export * from "./completion-report.js";
 export * from "./execution-config.js";
 export * from "./github.js";
@@ -22,5 +23,6 @@ export * from "./review.js";
 export * from "./run.js";
 export * from "./runtime.js";
 export * from "./runtime-model.js";
+export * from "./usage.js";
 export * from "./workflow-preset.js";
 export * from "./workspace-closure.js";

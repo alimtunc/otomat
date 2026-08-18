@@ -41,6 +41,8 @@ export function recordReconciled(ctx: SettleContext, audit: ReconciledAudit): Re
   }
   return {
     runId: ctx.run.id,
+    stepRunId: audit.ref.stepRunId,
+    agentSessionId: audit.ref.agentSessionId,
     classification: audit.classification,
     reason: audit.reason,
     orphanTerminated: audit.orphanTerminated,

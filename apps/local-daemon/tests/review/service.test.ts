@@ -32,7 +32,10 @@ import type { AppendStepInput } from "#supervisor";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { seedRun } from "../support/seed.js";
 
+const WORKSPACE = { kind: "workspace" } as const;
+
 const RUN_ID = "r-review";
+const SESSION_ID = `${RUN_ID}-session`;
 const BRANCH = "otomat/run/r-review";
 const FIX_AGENT = { kind: "runtime", runtimeId: "fake" } as const;
 
@@ -192,21 +195,29 @@ it("pins a whole-file comment without capturing a hunk snapshot", async () => {
 });
 
 it("serves the exact base and head blobs of a live diff file", () => {
-  const blobs = review.getFileBlobs(runTarget(), { path: "notes.md", sha: currentAnchor().sha });
+  const blobs = review.getFileBlobs(runTarget(), {
+    path: "notes.md",
+    sha: currentAnchor().sha,
+    scope: WORKSPACE,
+  });
 
   expect(blobs.base).toBeNull();
   expect(blobs.head).toBe("alpha\nbeta\ngamma\n");
 });
 
 it("refuses blobs read against a moved anchor", () => {
-  expect(() => review.getFileBlobs(runTarget(), { path: "notes.md", sha: "moved" })).toThrow(
-    ReviewAnchorStaleError,
-  );
+  expect(() =>
+    review.getFileBlobs(runTarget(), { path: "notes.md", sha: "moved", scope: WORKSPACE }),
+  ).toThrow(ReviewAnchorStaleError);
 });
 
 it("refuses a path that is not part of the current diff", () => {
   expect(() =>
-    review.getFileBlobs(runTarget(), { path: "absent.md", sha: currentAnchor().sha }),
+    review.getFileBlobs(runTarget(), {
+      path: "absent.md",
+      sha: currentAnchor().sha,
+      scope: WORKSPACE,
+    }),
   ).toThrow(FileNotInDiffError);
 });
 
@@ -215,7 +226,11 @@ it("reads a modified file's base side from the fork point, not from the worktree
   const file = review.getDiff(runTarget()).diff?.files.find((f) => f.path === "README.md");
   if (!file) throw new Error("expected README.md in the diff");
 
-  const blobs = review.getFileBlobs(runTarget(), { path: "README.md", sha: file.sha });
+  const blobs = review.getFileBlobs(runTarget(), {
+    path: "README.md",
+    sha: file.sha,
+    scope: WORKSPACE,
+  });
 
   expect(blobs.base).toBe("# base\n");
   expect(blobs.head).toBe("# base\nplus a line\n");
@@ -385,7 +400,7 @@ it("on a completed settle: emits git.diff_updated, marks fixed comments addresse
   // The "fix turn" really edits the worktree, so both anchors leave the live diff.
   appendFileSync(join(worktreePath, "notes.md"), "delta\n");
 
-  review.onRunSettled({ runId: RUN_ID, classification: "completed" });
+  review.onRunSettled({ runId: RUN_ID, agentSessionId: SESSION_ID, classification: "completed" });
 
   expect(getReviewComment(fix.db, requested.id)?.status).toBe("addressed");
   expect(getReviewComment(fix.db, bystander.id)?.status).toBe("outdated");
@@ -411,7 +426,7 @@ it("keeps untouched anchors open across a completed settle", async () => {
     body: "still valid",
   });
 
-  review.onRunSettled({ runId: RUN_ID, classification: "completed" });
+  review.onRunSettled({ runId: RUN_ID, agentSessionId: SESSION_ID, classification: "completed" });
   expect(getReviewComment(fix.db, comment.id)?.status).toBe("open");
   expect(getReviewForSubject(fix.db, RUN_ID)?.status).toBe("in_review");
 });
@@ -432,7 +447,7 @@ it("releases pending fix requests when the turn does not complete", async () => 
     references: [],
   });
 
-  review.onRunSettled({ runId: RUN_ID, classification: "interrupted" });
+  review.onRunSettled({ runId: RUN_ID, agentSessionId: SESSION_ID, classification: "interrupted" });
 
   const row = getReviewComment(fix.db, comment.id);
   expect(row?.status).toBe("open");

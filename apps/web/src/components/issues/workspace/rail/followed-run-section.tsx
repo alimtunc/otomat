@@ -1,15 +1,15 @@
 import type { RunContract } from "@otomat/domain";
-import { Button, CopyButton, Icon, RunStatusChip } from "@otomat/ui";
+import { Button, Icon, RunStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useReviewDetail, useReviewDiff } from "@web/api/reviews/queries";
 import { useRunDetail } from "@web/api/runs/queries";
-import { Mono } from "@web/components/issues/workspace/rail/mono";
 import {
   RailMeta,
   RailRow,
   RailSection,
 } from "@web/components/issues/workspace/rail/rail-primitives";
 import { Unknown } from "@web/components/issues/workspace/rail/unknown";
+import { CopyablePath } from "@web/components/runs/copyable-path";
 import { shortId } from "@web/lib/ids";
 
 export function FollowedRunSection({ run }: { run: RunContract }) {
@@ -35,12 +35,11 @@ export function FollowedRunSection({ run }: { run: RunContract }) {
           <RunStatusChip status={run.status} />
         </RailRow>
         <RailRow label="Branch">
-          <Mono title={run.branch}>{run.branch}</Mono>
-          <CopyButton value={run.branch} />
+          <CopyablePath value={run.branch} label="branch" />
         </RailRow>
         <RailRow label="Worktree">
           {worktreePath !== null ? (
-            <Mono title={worktreePath}>…/{worktreePath.split("/").at(-1)}</Mono>
+            <CopyablePath value={worktreePath} label="worktree path" />
           ) : (
             <Unknown />
           )}

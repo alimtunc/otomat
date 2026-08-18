@@ -1,4 +1,5 @@
 import type { RunCompletionReport } from "@otomat/domain";
+import { UsageTokens } from "@web/components/runs/usage/tokens";
 
 import { FactEvidence } from "./fact-evidence";
 import { ReportSection } from "./section";
@@ -24,6 +25,7 @@ function Steps({ report }: { report: RunCompletionReport }) {
               {sentence(step.status)} · runtime {step.runtime ?? "not reported"} · session{" "}
               {step.provider_sessions.join(", ") || "not reported"}
             </p>
+            <UsageTokens usage={step.usage} className="mt-0.5" />
           </div>
           <FactEvidence report={report} evidence={step.evidence[0]} />
         </li>
