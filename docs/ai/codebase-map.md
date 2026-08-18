@@ -586,6 +586,16 @@ the launch state that produced it, so a finished, failed or cancelled run may
 still push to its own open pull request as long as the workspace and branch are
 real (`publication/workspace.ts` resolves exactly that, and nothing else).
 
+A publication names a `CommitSubject` — type, optional scope, imperative summary
+— rather than a free title, and the domain schema refuses anything outside the
+Conventional Commits vocabulary at the daemon boundary, so no free-form subject
+reaches git or GitHub. `publication/details.ts` composes that one object into
+both the commit subject and the pull request title, which is why they cannot
+drift apart; the issue identifier is appended by Otomat, never asked of the
+generator. Otomat reads no convention from the repository's history: inferring
+one from squash-merge titles is how a compliant repository ended up publishing
+free-form subjects.
+
 Only a commit can be pushed, so only a commit can stand as evidence of what was
 published: `published_head_sha` is the commit Otomat pushed and
 `published_diff_sha` is `commitDiff` of that commit against the run's fork

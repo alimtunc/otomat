@@ -1,5 +1,9 @@
 import type { PullRequestRow } from "@otomat/db";
-import type { GitHubConnectionContract, PullRequestPublishability } from "@otomat/domain";
+import type {
+  GitHubConnectionContract,
+  PreparePullRequestRequest,
+  PullRequestPublishability,
+} from "@otomat/domain";
 
 import { headSha } from "#git";
 import {
@@ -41,8 +45,19 @@ export const PUBLISHABLE_WORKSPACE: PullRequestPublishability = {
   additions: 1,
   deletions: 0,
   dirty: false,
-  convention: "free_form",
 };
+
+export function publishRequest(
+  summary: string,
+  overrides: Partial<PreparePullRequestRequest> = {},
+): PreparePullRequestRequest {
+  return {
+    subject: { type: "feat", scope: null, summary },
+    body: "Details",
+    mode: "ready",
+    ...overrides,
+  };
+}
 
 export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullRequestRow {
   return {
@@ -107,7 +122,7 @@ export class FakeGitHubCli implements GitHubCli {
   provider: GitHubPullRequest = {
     number: 42,
     url: "https://github.com/acme/otomat/pull/42",
-    title: "Ship it",
+    title: "feat: ship it",
     body: "Details",
     headRef: "",
     baseRef: "main",

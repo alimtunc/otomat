@@ -3,7 +3,6 @@ import type { PublicationBlocker, PullRequestPublishability } from "@otomat/doma
 
 import { uncommittedPaths } from "#git";
 
-import { detectCommitConvention } from "../conventions/detect.js";
 import { GitHubCliError, GitHubPublicationError } from "../errors.js";
 import type { PublicationConfig, PublicationWorkspace } from "./types.js";
 import { resolveWorkspace } from "./workspace.js";
@@ -16,7 +15,6 @@ const UNRESOLVED_WORKSPACE: Omit<PullRequestPublishability, "blocker"> = {
   additions: 0,
   deletions: 0,
   dirty: false,
-  convention: "free_form",
 };
 
 function blocked(blocker: PublicationBlocker): PullRequestPublishability {
@@ -69,7 +67,6 @@ export async function computePublishability(
     additions: diff.files.reduce((total, file) => total + file.additions, 0),
     deletions: diff.files.reduce((total, file) => total + file.deletions, 0),
     dirty: uncommittedPaths(workspace.worktree.path).length > 0,
-    convention: detectCommitConvention(workspace.worktree.path, workspace.baseRef).convention,
   };
   // An existing pull request takes updates whatever the diff now shows; only a creation needs one.
   if (row?.number !== null && row?.number !== undefined) return { ...resolved, blocker: null };

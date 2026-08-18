@@ -6,8 +6,6 @@ import type { CommandRequest, CommandResult } from "#github";
 const INPUT: GenerationInput = {
   cwd: "/worktree",
   issue: { identifier: "OTO-81", title: "Simplify PR creation", body: "Make it one action." },
-  convention: "conventional",
-  conventionEvidence: ["feat(pr): compact publication", "fix(board): prioritize completed issues"],
   diffStat: ["note.md +1 -0"],
   patch: "diff --git a/note.md b/note.md\n+je teste le vps\n",
 };
@@ -24,7 +22,9 @@ function answer(payload: Record<string, unknown>): string {
 }
 
 const PROPOSAL = {
-  subject: "feat(pr): create the pull request in one action",
+  type: "feat",
+  scope: "pr",
+  summary: "create the pull request in one action",
   body: "Publishes the run in one click.",
   commit_body: "The compact form composes generation and publication.",
   branch: "Feat/Compact PR",
@@ -60,19 +60,16 @@ describe("sanitizeBranchName", () => {
 });
 
 describe("pull request generator", () => {
-  it("sends the configured model and effort, and composes the identifier into title, body and commit", async () => {
+  it("sends the configured model and effort, and answers one structured subject", async () => {
     const fake = runner([{ stdout: answer(PROPOSAL), stderr: "", exitCode: 0 }]);
 
     const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, INPUT);
 
     expect(proposal).toEqual({
-      title: "feat(pr): create the pull request in one action (OTO-81)",
+      subject: { type: "feat", scope: "pr", summary: "create the pull request in one action" },
       body: "Publishes the run in one click.\n\nFixes OTO-81",
       branch: "feat/compact-pr",
-      commit: {
-        subject: "feat(pr): create the pull request in one action",
-        body: "The compact form composes generation and publication.",
-      },
+      commit_body: "The compact form composes generation and publication.",
       generator: { runtime: "claude", model: "claude-opus-5", effort: "high" },
     });
     expect(fake.requests[0]).toMatchObject({
@@ -82,7 +79,7 @@ describe("pull request generator", () => {
     });
   });
 
-  it("gives the generator the issue and the repository's own subjects rather than the patch alone", async () => {
+  it("gives the generator the issue and the allowed types rather than the patch alone", async () => {
     const fake = runner([{ stdout: answer(PROPOSAL), stderr: "", exitCode: 0 }]);
 
     await createPullRequestGenerator(fake.run).generate(AGENT, INPUT);
@@ -90,8 +87,7 @@ describe("pull request generator", () => {
     const prompt = fake.requests[0]?.stdin ?? "";
     expect(prompt).toContain("Issue OTO-81: Simplify PR creation");
     expect(prompt).toContain("Make it one action.");
-    expect(prompt).toContain("Conventional Commits");
-    expect(prompt).toContain("fix(board): prioritize completed issues");
+    expect(prompt).toContain("feat, fix, refactor, perf, test, docs, build, ci, chore, revert");
   });
 
   it("closes a partial delivery with Refs rather than Fixes", async () => {
@@ -105,13 +101,9 @@ describe("pull request generator", () => {
     expect(proposal.body).not.toContain("Fixes OTO-81");
   });
 
-  it("refuses a subject the repository's convention would not accept", async () => {
+  it("refuses a type the repository does not publish", async () => {
     const fake = runner([
-      {
-        stdout: answer({ ...PROPOSAL, subject: "Create the pull request in one action" }),
-        stderr: "",
-        exitCode: 0,
-      },
+      { stdout: answer({ ...PROPOSAL, type: "wip" }), stderr: "", exitCode: 0 },
     ]);
 
     await expect(createPullRequestGenerator(fake.run).generate(AGENT, INPUT)).rejects.toMatchObject(
@@ -119,24 +111,31 @@ describe("pull request generator", () => {
     );
   });
 
-  it("imposes no shape on a repository whose history shows none", async () => {
+  it("refuses a summary the composed subject cannot hold", async () => {
     const fake = runner([
-      {
-        stdout: answer({ ...PROPOSAL, subject: "Create the pull request in one action" }),
-        stderr: "",
-        exitCode: 0,
-      },
+      { stdout: answer({ ...PROPOSAL, summary: "x".repeat(80) }), stderr: "", exitCode: 0 },
     ]);
 
-    const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, {
-      ...INPUT,
-      convention: "free_form",
-    });
-
-    expect(proposal.commit.subject).toBe("Create the pull request in one action");
+    await expect(createPullRequestGenerator(fake.run).generate(AGENT, INPUT)).rejects.toMatchObject(
+      { code: "pr_generation_invalid", message: expect.stringContaining("72") as string },
+    );
   });
 
-  it("leaves an unidentified issue without a suffix or a footer", async () => {
+  it("answers a scopeless subject when the change touches no single area", async () => {
+    const fake = runner([
+      { stdout: answer({ ...PROPOSAL, scope: null }), stderr: "", exitCode: 0 },
+    ]);
+
+    const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, INPUT);
+
+    expect(proposal.subject).toEqual({
+      type: "feat",
+      scope: null,
+      summary: "create the pull request in one action",
+    });
+  });
+
+  it("leaves an unidentified issue without a footer", async () => {
     const fake = runner([{ stdout: answer(PROPOSAL), stderr: "", exitCode: 0 }]);
 
     const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, {
@@ -144,7 +143,6 @@ describe("pull request generator", () => {
       issue: { identifier: null, title: "Local task", body: null },
     });
 
-    expect(proposal.title).toBe("feat(pr): create the pull request in one action");
     expect(proposal.body).toBe("Publishes the run in one click.");
   });
 

@@ -1,3 +1,5 @@
+import { formatCommitSubject } from "@otomat/domain";
+
 import { runGit } from "./git-cli.js";
 
 const OTOMAT_IDENTITY = {
@@ -6,6 +8,11 @@ const OTOMAT_IDENTITY = {
   GIT_COMMITTER_NAME: "Otomat",
   GIT_COMMITTER_EMAIL: "otomat@local",
 } as const;
+
+/** Otomat's internal commits carry the same subject contract as the ones it publishes. */
+export function snapshotSubject(action: string, owner: string): string {
+  return formatCommitSubject({ type: "chore", scope: "worktree", summary: `${action} ${owner}` });
+}
 
 export function isDirty(cwd: string): boolean {
   return runGit(["status", "--porcelain"], { cwd }).stdout.trim() !== "";

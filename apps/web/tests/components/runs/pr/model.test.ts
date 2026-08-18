@@ -1,4 +1,5 @@
 import type {
+  CommitSubject,
   GitHubConnectionContract,
   PullRequestContract,
   PullRequestPublishability,
@@ -28,8 +29,9 @@ const PUBLISHABLE: PullRequestPublishability = {
   additions: 12,
   deletions: 3,
   dirty: true,
-  convention: "conventional",
 };
+
+const SUBJECT: CommitSubject = { type: "feat", scope: null, summary: "ship it" };
 
 function pullRequest(overrides: Partial<PullRequestContract> = {}): PullRequestContract {
   return {
@@ -274,18 +276,18 @@ describe("pullRequestAcceptedSubmission", () => {
       pullRequestAcceptedSubmission(
         pullRequest({
           publication_status: "failed",
-          title: "Old title",
+          commit_subject: "feat: ship the old one",
           body: "Old body",
         }),
-        { title: "New title", body: "New body", mode: "draft" },
+        { subject: SUBJECT, body: "New body", mode: "draft" },
       ),
     ).toBe(false);
   });
 
   it("accepts normalized empty body metadata", () => {
     expect(
-      pullRequestAcceptedSubmission(pullRequest({ title: "Ship it", body: null }), {
-        title: "Ship it",
+      pullRequestAcceptedSubmission(pullRequest({ commit_subject: "feat: ship it", body: null }), {
+        subject: SUBJECT,
         body: "",
         mode: "draft",
       }),
@@ -295,12 +297,8 @@ describe("pullRequestAcceptedSubmission", () => {
   it("rejects a PR GitHub still holds as a draft after a ready submission", () => {
     expect(
       pullRequestAcceptedSubmission(
-        pullRequest({ title: "Ship it", body: null, status: "draft" }),
-        {
-          title: "Ship it",
-          body: "",
-          mode: "ready",
-        },
+        pullRequest({ commit_subject: "feat: ship it", body: null, status: "draft" }),
+        { subject: SUBJECT, body: "", mode: "ready" },
       ),
     ).toBe(false);
   });
@@ -308,9 +306,19 @@ describe("pullRequestAcceptedSubmission", () => {
   it("accepts a merged PR, which is past the draft/ready question", () => {
     expect(
       pullRequestAcceptedSubmission(
-        pullRequest({ title: "Ship it", body: null, status: "merged" }),
-        { title: "Ship it", body: "", mode: "ready" },
+        pullRequest({ commit_subject: "feat: ship it", body: null, status: "merged" }),
+        { subject: SUBJECT, body: "", mode: "ready" },
       ),
     ).toBe(true);
+  });
+
+  it("rejects a scope the daemon did not store, however close the title looks", () => {
+    expect(
+      pullRequestAcceptedSubmission(pullRequest({ commit_subject: "feat(pr): ship it" }), {
+        subject: SUBJECT,
+        body: "",
+        mode: "draft",
+      }),
+    ).toBe(false);
   });
 });

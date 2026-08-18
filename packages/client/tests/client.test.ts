@@ -478,7 +478,6 @@ const PUBLISHABILITY = {
   additions: 2,
   deletions: 0,
   dirty: false,
-  convention: "free_form",
 };
 
 it("reads and publishes the run pull request", async () => {
@@ -514,22 +513,19 @@ it("reads and publishes the run pull request", async () => {
 
   expect((await client.getPullRequest("run-1")).pull_request).toBeNull();
 
-  const prepared = await client.preparePullRequest("run-1", {
-    title: "First slice",
-    body: "",
-    mode: "draft",
-  });
+  const subject = { type: "feat" as const, scope: null, summary: "add the first slice" };
+  const prepared = await client.preparePullRequest("run-1", { subject, body: "", mode: "draft" });
   expect(prepared.pull_request?.publication_status).toBe("not_configured");
   expect(prepared.publishability.blocker).toBeNull();
-  expect(lastBody).toEqual({ title: "First slice", body: "", mode: "draft" });
+  expect(lastBody).toEqual({ subject, body: "", mode: "draft" });
 });
 
 it("generates the pull request metadata without publishing anything", async () => {
   const PROPOSAL = {
-    title: "feat(pr): publish in one action (OTO-81)",
+    subject: { type: "feat", scope: "pr", summary: "publish in one action" },
     body: "Details\n\nFixes OTO-81",
     branch: "feat/compact-pr",
-    commit: { subject: "feat(pr): publish in one action", body: null },
+    commit_body: null,
     generator: { runtime: "claude", model: "claude-opus-5", effort: "high" },
   };
   const urls: string[] = [];

@@ -1,7 +1,6 @@
 export { createGitHubCli } from "./cli.js";
 export { createGitHubConnectionService } from "./connection.js";
-export { detectCommitConvention } from "./conventions/detect.js";
-export { subjectViolation } from "./conventions/conventional-commit.js";
+export { commitMessage, pullRequestBody, pullRequestTitle } from "./conventions/compose.js";
 export { createPullRequestGenerator } from "./generation/generator.js";
 export type { GenerationInput } from "./generation/input.js";
 export { sanitizeBranchName } from "./generation/parse.js";

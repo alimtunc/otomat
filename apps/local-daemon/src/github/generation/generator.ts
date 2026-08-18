@@ -1,8 +1,11 @@
-import type { PullRequestProposal } from "@otomat/domain";
+import {
+  commitSubjectViolation,
+  type CommitSubject,
+  type PullRequestProposal,
+} from "@otomat/domain";
 
 import { commandSucceeded } from "../cli-commands.js";
-import { pullRequestBody, pullRequestTitle } from "../conventions/compose.js";
-import { subjectViolation } from "../conventions/conventional-commit.js";
+import { pullRequestBody } from "../conventions/compose.js";
 import { GitHubPublicationError } from "../errors.js";
 import type { CommandRunner, PullRequestGenerator } from "../types.js";
 import type { GenerationAgent } from "./agent.js";
@@ -18,7 +21,12 @@ function compose(
   input: GenerationInput,
   agent: GenerationAgent,
 ): PullRequestProposal {
-  const violation = subjectViolation(input.convention, output.subject);
+  const subject: CommitSubject = {
+    type: output.type,
+    scope: output.scope ?? null,
+    summary: output.summary,
+  };
+  const violation = commitSubjectViolation(subject);
   if (violation !== null) throw new GitHubPublicationError("pr_generation_invalid", violation);
   const branch = sanitizeBranchName(output.branch);
   if (branch === null) {
@@ -28,10 +36,10 @@ function compose(
     );
   }
   return {
-    title: pullRequestTitle(output.subject, input.issue.identifier),
+    subject,
     body: pullRequestBody(output.body, input.issue.identifier, output.delivery),
     branch,
-    commit: { subject: output.subject, body: output.commit_body ?? null },
+    commit_body: output.commit_body ?? null,
     generator: agent.audit,
   };
 }

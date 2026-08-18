@@ -8,12 +8,17 @@ import type {
   PushPullRequestRequest,
 } from "@otomat/domain";
 
-import { normalizePullRequestBody } from "../body.js";
 import { GitHubPublicationError } from "../errors.js";
 import type { GenerationAgent } from "../generation/agent.js";
 import { buildGenerationInput } from "../generation/input.js";
 import type { PullRequestGenerator, PullRequestView } from "../types.js";
 import { createPublication } from "./create.js";
+import {
+  composeSubject,
+  issueIdentifier,
+  requestedDetails,
+  resolvePublicationRequest,
+} from "./details.js";
 import { providerPatch, refreshExistingPullRequest, updateDetails } from "./provider.js";
 import { computePublishability } from "./publishability.js";
 import { pushCommits } from "./push.js";
@@ -64,7 +69,8 @@ class PullRequestPublisher implements PullRequestPublicationService {
     }
     return this.serialize(run.id, async () => {
       const proposal = await generator.generate(agent, buildGenerationInput(this.config, run));
-      this.store.recordProposal(run.id, proposal);
+      const identifier = issueIdentifier(this.config.db, run.issue_id);
+      this.store.recordProposal(run.id, proposal, composeSubject(proposal.subject, identifier));
       return proposal;
     });
   }
@@ -136,10 +142,9 @@ class PullRequestPublisher implements PullRequestPublicationService {
       row,
       status,
       {
+        ...requestedDetails(request),
         error_code: connection.error_code,
         error_message: connection.error_message,
-        title: request.title,
-        body: request.normalizedBody,
       },
       "github",
     );
@@ -149,10 +154,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
     run: RunRow,
     request: PreparePullRequestRequest,
   ): Promise<PullRequestView> {
-    const publicationRequest = {
-      ...request,
-      normalizedBody: normalizePullRequestBody(request.body),
-    };
+    const publicationRequest = resolvePublicationRequest(this.config.db, run, request);
     let row = this.store.recoverInterrupted(
       this.store.ensureRow(run.id, publicationRequest.title, publicationRequest.normalizedBody),
     );
@@ -182,7 +184,13 @@ class PullRequestPublisher implements PullRequestPublicationService {
         publicationRequest,
       );
       const reconciled = this.store.reconcileLifecycle(row, provider.lifecycle);
-      return this.view(this.store.patch(reconciled, providerPatch(provider), "github"));
+      return this.view(
+        this.store.patch(
+          reconciled,
+          { ...requestedDetails(publicationRequest), ...providerPatch(provider) },
+          "github",
+        ),
+      );
     } catch (error) {
       return this.view(this.store.failure(this.store.reload(run.id), error));
     }

@@ -50,7 +50,13 @@ export interface ProviderResult {
   provider: GitHubPullRequest;
 }
 
-export interface PublicationRequest extends PreparePullRequestRequest {
+export interface ComposedSubject {
+  subjectLine: string;
+  title: string;
+}
+
+export interface PublicationRequest extends PreparePullRequestRequest, ComposedSubject {
+  identifier: string | null;
   normalizedBody: string | null;
 }
 

@@ -1,6 +1,8 @@
 import {
+  formatCommitSubject,
   PULL_REQUEST_PUBLICATION_MODES,
   type GitHubConnectionContract,
+  type PreparePullRequestRequest,
   type PullRequestContract,
   type PullRequestPublicationMode,
 } from "@otomat/domain";
@@ -36,13 +38,13 @@ export function initialPublicationMode(
   return publishedMode(pullRequest) ?? "ready";
 }
 
-/** Accepted only when GitHub reports back exactly what was submitted, mode included. */
+/** Accepted only when the daemon stored exactly the subject that was submitted, mode included. */
 export function pullRequestAcceptedSubmission(
   pullRequest: PullRequestContract | null,
-  submission: { title: string; body: string; mode: PullRequestPublicationMode },
+  submission: PreparePullRequestRequest,
 ): boolean {
   if (pullRequest === null) return false;
-  if (pullRequest.title !== submission.title) return false;
+  if (pullRequest.commit_subject !== formatCommitSubject(submission.subject)) return false;
   if ((pullRequest.body ?? "") !== submission.body) return false;
   const mode = publishedMode(pullRequest);
   return mode === null || mode === submission.mode;

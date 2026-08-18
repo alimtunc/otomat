@@ -17,12 +17,11 @@ import {
   Input,
   Textarea,
 } from "@otomat/ui";
-import { useForm } from "@tanstack/react-form";
 import { PullRequestActions } from "@web/components/runs/pr/actions";
 import { PullRequestModeField } from "@web/components/runs/pr/mode-field";
-import { fieldErrorProps } from "@web/lib/form";
+import { PullRequestSubjectFields } from "@web/components/runs/pr/subject-fields";
+import { usePullRequestForm } from "@web/components/runs/pr/use-form";
 
-import { initialPublicationMode } from "./model";
 import { publicationModel } from "./publication-model";
 
 export interface PullRequestFormProps {
@@ -59,30 +58,15 @@ export function PullRequestForm({
   isPending,
   isGenerating,
 }: PullRequestFormProps) {
-  const form = useForm({
-    defaultValues: {
-      title: pullRequest?.title ?? "",
-      body: pullRequest?.body ?? "",
-      branch: pullRequest?.head_ref ?? "",
-      mode: initialPublicationMode(pullRequest, chosenMode),
-    },
-    onSubmit: async ({ value, formApi }) => {
-      const headRef = value.branch.trim();
-      const submitted = {
-        title: value.title.trim(),
-        body: value.body,
-        mode: value.mode,
-        ...(headRef === "" ? {} : { head_ref: headRef }),
-      };
-      if (await onSubmit(submitted)) formApi.reset({ ...value, title: submitted.title });
-    },
-  });
+  const form = usePullRequestForm({ pullRequest, chosenMode, onSubmit });
 
   const terminal = pullRequest?.status === "merged" || pullRequest?.status === "closed";
   const branchLocked = pullRequest?.number !== null && pullRequest?.number !== undefined;
 
   const fillFrom = (proposal: PullRequestProposal): void => {
-    form.setFieldValue("title", proposal.title);
+    form.setFieldValue("type", proposal.subject.type);
+    form.setFieldValue("scope", proposal.subject.scope ?? "");
+    form.setFieldValue("summary", proposal.subject.summary);
     form.setFieldValue("body", proposal.body);
     if (!branchLocked) form.setFieldValue("branch", proposal.branch);
   };
@@ -98,13 +82,20 @@ export function PullRequestForm({
     if (proposal === null) return;
     fillFrom(proposal);
     const accepted = await onSubmit({
-      title: proposal.title,
+      subject: proposal.subject,
       body: proposal.body,
       head_ref: proposal.branch,
       mode,
     });
     if (accepted) {
-      form.reset({ title: proposal.title, body: proposal.body, branch: proposal.branch, mode });
+      form.reset({
+        type: proposal.subject.type,
+        scope: proposal.subject.scope ?? "",
+        summary: proposal.subject.summary,
+        body: proposal.body,
+        branch: proposal.branch,
+        mode,
+      });
     }
   };
 
@@ -136,28 +127,7 @@ export function PullRequestForm({
                   }
                 />
                 <CollapsiblePanel className="flex flex-col gap-4 pt-4">
-                  <form.Field
-                    name="title"
-                    validators={{
-                      onChange: ({ value }) =>
-                        value.trim().length === 0 ? "A title is required." : undefined,
-                    }}
-                  >
-                    {(field) => (
-                      <Field {...fieldErrorProps(field.state.meta)}>
-                        <FieldLabel>Title</FieldLabel>
-                        <FieldControl>
-                          <Input
-                            value={field.state.value}
-                            disabled={fieldsDisabled}
-                            onBlur={field.handleBlur}
-                            onChange={(event) => field.handleChange(event.target.value)}
-                            placeholder="Summarize the change…"
-                          />
-                        </FieldControl>
-                      </Field>
-                    )}
-                  </form.Field>
+                  <PullRequestSubjectFields form={form} disabled={fieldsDisabled} />
                   <form.Field name="body">
                     {(field) => (
                       <Field hint="Optional description shown on GitHub.">

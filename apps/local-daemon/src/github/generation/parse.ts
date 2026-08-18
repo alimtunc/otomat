@@ -1,12 +1,14 @@
+import { COMMIT_TYPES } from "@otomat/domain";
 import { z } from "zod";
 
 import { ISSUE_DELIVERIES } from "../conventions/compose.js";
-import { COMMIT_SUBJECT_MAX_LENGTH } from "../conventions/conventional-commit.js";
 import { GitHubPublicationError } from "../errors.js";
 import { JSON_CLOSE_MARKER, JSON_OPEN_MARKER } from "./prompt.js";
 
 export const generationOutputSchema = z.object({
-  subject: z.string().trim().min(1).max(COMMIT_SUBJECT_MAX_LENGTH),
+  type: z.enum(COMMIT_TYPES),
+  scope: z.string().trim().min(1).nullish(),
+  summary: z.string().trim().min(1),
   body: z.string().trim().min(1).max(10_000),
   commit_body: z.string().trim().max(4_000).nullish(),
   branch: z.string().trim().min(1).max(80),
@@ -58,7 +60,7 @@ export function parseGenerationOutput(stdout: string): GenerationOutput {
   if (!result.success) {
     throw new GitHubPublicationError(
       "pr_generation_invalid",
-      "The agent's answer was missing a subject, description, branch, or delivery.",
+      `The agent's answer must name a type among ${COMMIT_TYPES.join(", ")}, with a summary, description, branch and delivery.`,
     );
   }
   return result.data;
