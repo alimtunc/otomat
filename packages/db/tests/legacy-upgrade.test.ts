@@ -187,7 +187,7 @@ interface JournalEntry {
 const STEERING_MIGRATION = "0018_run_contribution_steering";
 
 /** Stages the schema as it stood the migration before `tag`, so a data migration can be exercised on real prior rows. */
-function migrateUpToExcluding(dir: string, dbPath: string, tag: string): void {
+function migrateUpToExcluding(dir: string, dbPath: string, tag: string, seed: string): void {
   const journal = JSON.parse(
     readFileSync(new URL("../drizzle/meta/_journal.json", import.meta.url), "utf8"),
   ) as { entries: JournalEntry[] };
@@ -211,26 +211,28 @@ function migrateUpToExcluding(dir: string, dbPath: string, tag: string): void {
 
   const prior = createClient(dbPath);
   migrate(prior.db, { migrationsFolder: folder });
-  prior.sqlite.exec(`
-    INSERT INTO projects (id, name, root_path) VALUES ('p1', 'P', '/tmp/p');
-    INSERT INTO issues (id, project_id, title, status) VALUES ('i1', 'p1', 'Issue', 'ready');
-    INSERT INTO runs (id, issue_id, status, branch, plan_json)
-    VALUES ('r1', 'i1', 'review_ready', 'otomat/run/r1', '{"version":1,"steps":[]}');
-    INSERT INTO step_runs (id, run_id, idx, name, status)
-    VALUES ('s1', 'r1', 0, 'First', 'succeeded'), ('s2', 'r1', 1, 'Second', 'succeeded');
-    INSERT INTO agent_sessions (id, step_run_id, status) VALUES ('as1', 's1', 'terminated');
-    INSERT INTO run_contributions (id, run_id, seq, body, status, agent_session_id, delivered_at)
-    VALUES
-      ('c-session', 'r1', 0, 'carried by a turn', 'sent', 'as1', '2026-07-01T00:00:00.000Z'),
-      ('c-orphan', 'r1', 1, 'never claimed', 'completed', NULL, NULL);
-  `);
+  prior.sqlite.exec(seed);
   prior.sqlite.close();
 }
+
+const STEERING_SEED = `
+  INSERT INTO projects (id, name, root_path) VALUES ('p1', 'P', '/tmp/p');
+  INSERT INTO issues (id, project_id, title, status) VALUES ('i1', 'p1', 'Issue', 'ready');
+  INSERT INTO runs (id, issue_id, status, branch, plan_json)
+  VALUES ('r1', 'i1', 'review_ready', 'otomat/run/r1', '{"version":1,"steps":[]}');
+  INSERT INTO step_runs (id, run_id, idx, name, status)
+  VALUES ('s1', 'r1', 0, 'First', 'succeeded'), ('s2', 'r1', 1, 'Second', 'succeeded');
+  INSERT INTO agent_sessions (id, step_run_id, status) VALUES ('as1', 's1', 'terminated');
+  INSERT INTO run_contributions (id, run_id, seq, body, status, agent_session_id, delivered_at)
+  VALUES
+    ('c-session', 'r1', 0, 'carried by a turn', 'sent', 'as1', '2026-07-01T00:00:00.000Z'),
+    ('c-orphan', 'r1', 1, 'never claimed', 'completed', NULL, NULL);
+`;
 
 it("gives every pre-steering message a step and renames its delivery status", () => {
   const dir = mkdtempSync(join(tmpdir(), "otomat-steering-upgrade-"));
   const dbPath = join(dir, "otomat.db");
-  migrateUpToExcluding(dir, dbPath, STEERING_MIGRATION);
+  migrateUpToExcluding(dir, dbPath, STEERING_MIGRATION, STEERING_SEED);
 
   runMigrations(dbPath);
   const migrated = createClient(dbPath);
@@ -249,4 +251,96 @@ it("gives every pre-steering message a step and renames its delivery status", ()
     // No session to name one, so it falls back to the run's furthest step; `completed` became `acknowledged`.
     { id: "c-orphan", step_run_id: "s2", status: "acknowledged" },
   ]);
+});
+
+const ADOPTION_MIGRATION = "0024_adopted_pull_requests";
+
+const ADOPTION_SEED = `
+  INSERT INTO projects (id, name, root_path) VALUES ('p1', 'P', '/tmp/p');
+  INSERT INTO repositories (id, project_id, name) VALUES ('repo1', 'p1', 'R');
+  INSERT INTO issues (id, project_id, title, status) VALUES ('i1', 'p1', 'Issue', 'ready');
+  INSERT INTO runs (id, issue_id, repository_id, status, branch, plan_json)
+  VALUES ('r1', 'i1', 'repo1', 'review_ready', 'otomat/run/r1', '{"version":1,"steps":[]}');
+  INSERT INTO pull_requests (id, run_id, title) VALUES ('pr1', 'r1', 'feat(review): adopt');
+  INSERT INTO reviews (id, run_id, status)
+  VALUES ('rev-open', 'r1', 'open'), ('rev-resolved', 'r1', 'resolved');
+  INSERT INTO review_comments (
+    id, review_id, file_path, side, start_line, line, diff_sha, body, status,
+    destination, publication_status, publication_error, external_url,
+    suggestion, suggestion_original, hunk_snapshot, fix_requested_at
+  )
+  VALUES
+    (
+      'rc-agent', 'rev-open', 'src/a.ts', 'new', 10, 12, 'sha-a', 'Rename this', 'open',
+      'agent', 'local', NULL, NULL, 'const a = 1;', 'const b = 1;', '@@ -1,2 +1,2 @@',
+      '2026-08-01T00:00:00.000Z'
+    ),
+    (
+      'rc-published', 'rev-open', 'src/b.ts', 'old', NULL, 3, 'sha-b', 'Published upstream',
+      'addressed', 'pr_review', 'published', NULL, 'https://example.test/pr/1#c1', NULL, NULL,
+      '', NULL
+    ),
+    (
+      'rc-failed', 'rev-resolved', 'src/c.ts', 'new', NULL, NULL, 'sha-c', 'Never left', 'outdated',
+      'pr_review', 'failed', 'upstream rejected the anchor', NULL, NULL, NULL, '', NULL
+    );
+`;
+
+it("keeps every review and comment when the adoption rebuild replaces both tables", () => {
+  const dir = mkdtempSync(join(tmpdir(), "otomat-adoption-upgrade-"));
+  const dbPath = join(dir, "otomat.db");
+  migrateUpToExcluding(dir, dbPath, ADOPTION_MIGRATION, ADOPTION_SEED);
+  const staged = createClient(dbPath);
+  const stagedComments = staged.sqlite
+    .prepare("SELECT * FROM review_comments ORDER BY id")
+    .all() as Record<string, unknown>[];
+  staged.sqlite.close();
+
+  runMigrations(dbPath);
+  const migrated = createClient(dbPath);
+  cleanup = () => {
+    migrated.sqlite.close();
+    rmSync(dir, { recursive: true, force: true });
+  };
+
+  expect(
+    migrated.sqlite.prepare("SELECT id, subject_id, status FROM reviews ORDER BY id").all(),
+  ).toEqual([
+    { id: "rev-open", subject_id: "r1", status: "open" },
+    { id: "rev-resolved", subject_id: "r1", status: "resolved" },
+  ]);
+  // 0025 appends `fixed_by_session_id`; every other value must survive the rebuild untouched.
+  expect(migrated.sqlite.prepare("SELECT * FROM review_comments ORDER BY id").all()).toEqual(
+    stagedComments.map((comment) => ({ ...comment, fixed_by_session_id: null })),
+  );
+  expect(migrated.sqlite.pragma("foreign_key_list(review_comments)")).toEqual([
+    expect.objectContaining({ table: "reviews", from: "review_id", to: "id" }),
+  ]);
+  expect(migrated.sqlite.pragma("foreign_key_check")).toEqual([]);
+});
+
+it("migrates a fresh database to a review that binds a comment to any diff subject", () => {
+  const dir = mkdtempSync(join(tmpdir(), "otomat-fresh-upgrade-"));
+  const dbPath = join(dir, "otomat.db");
+  runMigrations(dbPath);
+  const fresh = createClient(dbPath);
+  cleanup = () => {
+    fresh.sqlite.close();
+    rmSync(dir, { recursive: true, force: true });
+  };
+
+  // `subject_id` names a pull request no `runs` row could satisfy: 0024 dropped that key.
+  fresh.sqlite.exec(`
+    INSERT INTO reviews (id, subject_id, status) VALUES ('rev-1', 'pr-1', 'open');
+    INSERT INTO review_comments (id, review_id, file_path, diff_sha, body)
+    VALUES ('rc-1', 'rev-1', 'src/a.ts', 'sha-a', 'Body');
+  `);
+  expect(fresh.sqlite.pragma("foreign_key_check")).toEqual([]);
+  expect(() =>
+    fresh.sqlite
+      .prepare(
+        "INSERT INTO review_comments (id, review_id, file_path, diff_sha, body) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run("rc-2", "rev-missing", "src/b.ts", "sha-b", "Body"),
+  ).toThrow();
 });
