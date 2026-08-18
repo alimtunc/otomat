@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { contribution } from "#support/contribution";
 import { findLabelled } from "#support/dom-queries";
 import { eventStream } from "#support/event-stream";
-import { mount, type Mounted } from "#support/mount";
+import { mountWithQuery, type Mounted } from "#support/mount";
 import { stubResizeObserver, type ResizeObserverStub } from "#support/resize-observer";
 import { controlScroll, type ScrollControl } from "#support/scroll-control";
 
@@ -166,8 +166,8 @@ function expectsSoleScroller(): HTMLElement {
 }
 
 describe.each([
-  ["run cockpit", () => mount(<RunConversationView />)],
-  ["issue conversation embed", () => mount(<ConversationSection runId="run-1" />)],
+  ["run cockpit", () => mountWithQuery(<RunConversationView />)],
+  ["issue conversation embed", () => mountWithQuery(<ConversationSection runId="run-1" />)],
 ])("%s conversation scroll ownership", (_surface, render) => {
   let mounted: Mounted;
 
