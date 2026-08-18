@@ -1,13 +1,17 @@
 import {
+  getIssueSource,
   insertIssue,
   insertIssueSource,
+  insertLinearWrite,
   upsertMirroredIssue,
   type Db,
   type IssueSourceLifecyclePatch,
+  type IssueSourceRow,
 } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { resolveLifecycleTarget } from "#linear/lifecycle";
+import { sourceLifecycleError } from "#linear/writeback/lifecycle-error";
 
 import { setupTestDb, type TestDb } from "../support/db.js";
 
@@ -52,6 +56,34 @@ function mapTeam(db: Db, id: string, key: string, states: IssueSourceLifecyclePa
   });
 }
 
+function failLifecycleWrite(
+  db: Db,
+  id: string,
+  issueId: string,
+  message: string,
+  updatedAt: string,
+): void {
+  insertLinearWrite(db, {
+    id,
+    issue_id: issueId,
+    run_id: null,
+    kind: "lifecycle",
+    status: "failed",
+    idempotency_key: id,
+    payload_json: { phase: "in_progress", state_id: "s-doing", state_name: "Doing" },
+    detail: "Run started → Doing",
+    error_code: "linear_unauthorized",
+    error_message: message,
+    updated_at: updatedAt,
+  });
+}
+
+function sourceRow(db: Db, id: string): IssueSourceRow {
+  const row = getIssueSource(db, id);
+  if (row === undefined) throw new Error(`source ${id} was not seeded`);
+  return row;
+}
+
 it("gives each mapped team of one project its own workflow states", () => {
   mirrorIssue(t.db, "oto", "OTO-12");
   mirrorIssue(t.db, "eng", "ENG-4");
@@ -90,4 +122,27 @@ it("resolves nothing for an unmapped phase, an unmapped team or a local issue", 
   expect(resolveLifecycleTarget(t.db, "eng", "in_progress")).toBeNull();
   expect(resolveLifecycleTarget(t.db, "local", "in_progress")).toBeNull();
   expect(resolveLifecycleTarget(t.db, "missing", "in_progress")).toBeNull();
+});
+
+it("reports each source's own newest failed status write, and nothing when it has none", () => {
+  mirrorIssue(t.db, "oto", "OTO-12");
+  mirrorIssue(t.db, "eng", "ENG-4");
+  const mapping = {
+    in_progress_state_id: "s-doing",
+    in_progress_state_name: "Doing",
+    done_state_id: null,
+    done_state_name: null,
+  };
+  mapTeam(t.db, "src-oto", "OTO", mapping);
+  mapTeam(t.db, "src-eng", "ENG", mapping);
+  failLifecycleWrite(t.db, "w-old", "oto", "Linear was unavailable.", "2026-08-16 09:00:00");
+  failLifecycleWrite(t.db, "w-new", "oto", "Linear rejected the API key.", "2026-08-16 10:00:00");
+
+  expect(sourceLifecycleError(t.db, sourceRow(t.db, "src-oto"))).toEqual({
+    issue_id: "oto",
+    write_id: "w-new",
+    phase: "in_progress",
+    message: "Linear rejected the API key.",
+  });
+  expect(sourceLifecycleError(t.db, sourceRow(t.db, "src-eng"))).toBeNull();
 });

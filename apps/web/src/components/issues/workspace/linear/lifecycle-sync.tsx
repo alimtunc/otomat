@@ -5,14 +5,14 @@ import { LIFECYCLE_PHASE_LABEL } from "@web/lib/linear-lifecycle";
 
 import { WRITE_STATUS_TEXT } from "./write-status-text";
 
-export function LifecycleSync({
-  issueId,
-  lifecycle,
-}: {
+export interface LifecycleSyncProps {
   issueId: string;
   lifecycle: LinearLifecycleSyncState;
-}) {
+}
+
+export function LifecycleSync({ issueId, lifecycle }: LifecycleSyncProps) {
   const retry = useRetryLinearWrite(issueId);
+
   return (
     <div
       id={`linear-write-${lifecycle.write_id}`}

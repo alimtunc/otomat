@@ -6,6 +6,12 @@ export const LINEAR_LIFECYCLE_PHASES = ["in_progress", "done"] as const;
 export const linearLifecyclePhaseSchema = z.enum(LINEAR_LIFECYCLE_PHASES);
 export type LinearLifecyclePhase = z.infer<typeof linearLifecyclePhaseSchema>;
 
+/** Linear's own workflow-state type, so a phase proposes real candidates without ever naming a state. */
+export const LIFECYCLE_PHASE_STATE_TYPE: Record<LinearLifecyclePhase, string> = {
+  in_progress: "started",
+  done: "completed",
+};
+
 export interface LinearLifecycleSignal {
   issue_id: string;
   phase: LinearLifecyclePhase;
@@ -27,6 +33,25 @@ export const issueSourceLifecycleSchema = z.object({
   done: trackerStateRefSchema.nullable(),
 });
 export type IssueSourceLifecycle = z.infer<typeof issueSourceLifecycleSchema>;
+
+export const UNMAPPED_ISSUE_SOURCE_LIFECYCLE: IssueSourceLifecycle = {
+  in_progress: null,
+  done: null,
+};
+
+export const linearLifecycleReconcileResultSchema = z.object({
+  reconciled: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+});
+export type LinearLifecycleReconcileResult = z.infer<typeof linearLifecycleReconcileResultSchema>;
+
+export const linearLifecycleWriteErrorSchema = z.object({
+  issue_id: z.string().min(1),
+  write_id: z.string().min(1),
+  phase: linearLifecyclePhaseSchema,
+  message: z.string().min(1),
+});
+export type LinearLifecycleWriteError = z.infer<typeof linearLifecycleWriteErrorSchema>;
 
 export const linearLifecycleSyncStateSchema = z.object({
   write_id: z.string().min(1),

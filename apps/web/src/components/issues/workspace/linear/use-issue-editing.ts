@@ -1,4 +1,5 @@
 import type {
+  IssueSourceLifecycle,
   LinearIssueDraft,
   LinearIssueSnapshot,
   LinearLifecycleSyncState,
@@ -26,6 +27,7 @@ export interface LinearIssueEditing {
   writes: LinearWriteContract[];
   /** Latest run-lifecycle mirror, or null while the daemon has never synced this issue. */
   lifecycle: LinearLifecycleSyncState | null;
+  lifecycleMapping: IssueSourceLifecycle | null;
   editorOffline: boolean;
   writebackOffline: boolean;
   canEdit: boolean;
@@ -83,6 +85,7 @@ export function useLinearIssueEditing(issueId: string): LinearIssueEditing {
     draft,
     writes: writeback.data?.writes ?? [],
     lifecycle: writeback.data?.lifecycle ?? null,
+    lifecycleMapping: writeback.data?.lifecycle_mapping ?? null,
     editorOffline: editor.isError,
     writebackOffline: writeback.isError && writeback.data === undefined,
     canEdit: values !== null && base !== null,

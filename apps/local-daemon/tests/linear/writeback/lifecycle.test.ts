@@ -1,7 +1,9 @@
 import { getIssue, listLinearWritesForIssue } from "@otomat/db";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { seedRepository } from "#test-support/db";
 import { linearDetail, setupLinearWritebackTest } from "#test-support/linear-writeback";
+import { seedRun } from "#test-support/seed";
 
 let test: ReturnType<typeof setupLinearWritebackTest>;
 
@@ -178,6 +180,36 @@ it("keeps asserting after an earlier failed assertion for the same issue", async
   await service.syncIssueLifecycle({ issue_id: "li", phase: "done", run_id: "r1" });
 
   expect(getIssue(test.db, "li")?.status).toBe("done");
+});
+
+it("catches a confirmed mapping up with the issues still holding a workspace", async () => {
+  seedRepository(test.db);
+  seedRun(test.db, {
+    runId: "r2",
+    issueId: "li",
+    runStatus: "running",
+    stepStatus: "running",
+    sessionStatus: "active",
+  });
+  test.seedSource(DOING);
+  const updateIssue = vi.fn(async () => linearDetail({ state: STARTED }));
+  const service = await test.connectedService({
+    issueSnapshot: async () => linearDetail(),
+    updateIssue,
+  });
+
+  expect(await service.reconcileSource("src-1")).toEqual({ reconciled: 1, failed: 0 });
+  expect(updateIssue).toHaveBeenCalledWith(
+    expect.any(String),
+    "L-1",
+    { stateId: "s-doing" },
+    expect.anything(),
+  );
+  expect(service.writeback.writebackState("li").lifecycle).toMatchObject({
+    phase: "in_progress",
+    target_state_name: "Doing",
+    status: "sent",
+  });
 });
 
 it("keeps a refused write visible and retryable without claiming success", async () => {

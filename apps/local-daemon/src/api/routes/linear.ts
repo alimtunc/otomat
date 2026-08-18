@@ -67,6 +67,10 @@ export function createLinearRoutes(deps: ApiDeps): Hono {
     c.json(await deps.linear.updateSource(c.req.param("id"), c.req.valid("json"))),
   );
 
+  routes.post("/sources/:id/reconcile", async (c) =>
+    c.json(await deps.linear.reconcileSource(c.req.param("id"))),
+  );
+
   routes.delete("/sources/:id", (c) => {
     deps.linear.deleteSource(c.req.param("id"));
     return c.body(null, 204);

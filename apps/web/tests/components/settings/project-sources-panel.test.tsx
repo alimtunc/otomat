@@ -29,6 +29,7 @@ const updateSource = vi.fn();
 
 vi.mock("@web/api/linear/mutations", () => ({
   useDeleteIssueSource: () => ({ isPending: false, mutate: vi.fn(), variables: undefined }),
+  useReconcileIssueSource: () => ({ isPending: false, mutate: vi.fn(), variables: undefined }),
   useUpdateIssueSource: () => ({ isPending: false, mutate: updateSource, variables: undefined }),
 }));
 
@@ -88,6 +89,7 @@ beforeEach(() => {
         external_project_name: "",
         last_synced_at: null,
         lifecycle: { in_progress: null, done: null },
+        lifecycle_error: null,
       },
       {
         id: "source-2",
@@ -100,6 +102,7 @@ beforeEach(() => {
         external_project_name: "",
         last_synced_at: null,
         lifecycle: { in_progress: null, done: null },
+        lifecycle_error: null,
       },
     ],
     isPending: false,
@@ -113,7 +116,7 @@ beforeEach(() => {
           id: "team-1",
           key: "OTO",
           name: "Otomat",
-          states: [{ id: "s-doing", name: "Doing" }],
+          states: [{ id: "s-doing", name: "Doing", type: "started" }],
         },
       ],
       projects: [],

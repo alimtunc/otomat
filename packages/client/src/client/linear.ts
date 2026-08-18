@@ -4,6 +4,7 @@ import {
   linearConnectionContractSchema,
   linearEditorStateSchema,
   linearIssueDraftSchema,
+  linearLifecycleReconcileResultSchema,
   linearSyncStatusSchema,
   linearWorkspaceContractSchema,
   linearWritebackStateSchema,
@@ -53,6 +54,11 @@ export function createLinearClient(config: DaemonClientConfig) {
     async updateIssueSource(sourceId: string, request: UpdateIssueSourceRequest) {
       return issueSourceContractSchema.parse(
         await patchJson(config, `/api/linear/sources/${encodeURIComponent(sourceId)}`, request),
+      );
+    },
+    async reconcileIssueSource(sourceId: string) {
+      return linearLifecycleReconcileResultSchema.parse(
+        await postJson(config, `/api/linear/sources/${encodeURIComponent(sourceId)}/reconcile`, {}),
       );
     },
     async deleteIssueSource(sourceId: string) {

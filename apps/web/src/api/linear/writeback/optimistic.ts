@@ -6,7 +6,7 @@ import { reportUnlessHandled } from "./errors";
 
 export function useOptimisticWriteback<TRequest>(
   issueId: string,
-  apply: (current: LinearWritebackState | undefined, request: TRequest) => LinearWritebackState,
+  apply: (current: LinearWritebackState, request: TRequest) => LinearWritebackState,
 ) {
   const client = useQueryClient();
   const key = queryKeys.linearWriteback(issueId);
@@ -15,7 +15,8 @@ export function useOptimisticWriteback<TRequest>(
     onMutate: async (request: TRequest) => {
       await client.cancelQueries({ queryKey: key });
       const previous = client.getQueryData<LinearWritebackState>(key);
-      client.setQueryData<LinearWritebackState>(key, (current) => apply(current, request));
+      // Patching an unloaded cache would invent a writeback state the daemon never sent.
+      if (previous !== undefined) client.setQueryData(key, apply(previous, request));
       return { previous };
     },
     onError: (

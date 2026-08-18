@@ -26,7 +26,12 @@ export function connectedLinear(): ConnectedLinear {
 
 function stubLinearWriteback(overrides: Partial<LinearWriteback> = {}): LinearWriteback {
   return {
-    writebackState: () => ({ draft: null, writes: [], lifecycle: null }),
+    writebackState: () => ({
+      draft: null,
+      writes: [],
+      lifecycle: null,
+      lifecycle_mapping: { in_progress: null, done: null },
+    }),
     editorState: async () => {
       throw new Error("editorState stub not configured");
     },
@@ -83,6 +88,9 @@ export function stubLinearService(
     },
     deleteSource: () => {
       throw new Error("deleteSource stub not configured");
+    },
+    reconcileSource: async () => {
+      throw new Error("reconcileSource stub not configured");
     },
     sync: async () => {
       throw new Error("sync stub not configured");

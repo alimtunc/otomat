@@ -134,7 +134,7 @@ it("follows nested team workflow-state pages so no mappable status is hidden", a
       teams: {
         nodes: [
           teamNode("team-1", "ONE", "One", {
-            nodes: [{ id: "state-1", name: "Todo" }],
+            nodes: [{ id: "state-1", name: "Todo", type: "unstarted" }],
             pageInfo: { hasNextPage: true, endCursor: "state-page-1" },
           }),
         ],
@@ -144,7 +144,7 @@ it("follows nested team workflow-state pages so no mappable status is hidden", a
     ok({
       team: {
         states: {
-          nodes: [{ id: "state-2", name: "Shipped" }],
+          nodes: [{ id: "state-2", name: "Shipped", type: "completed" }],
           pageInfo: LAST_PAGE,
         },
       },

@@ -13,7 +13,7 @@ export const TEAMS_QUERY = `query OtomatTeams($after: String, $first: Int!, $sta
       id
       key
       name
-      states(first: $stateFirst) { nodes { id name } pageInfo { hasNextPage endCursor } }
+      states(first: $stateFirst) { nodes { id name type } pageInfo { hasNextPage endCursor } }
     }
     pageInfo { hasNextPage endCursor }
   }
@@ -22,7 +22,7 @@ export const TEAMS_QUERY = `query OtomatTeams($after: String, $first: Int!, $sta
 export const TEAM_STATES_QUERY = `query OtomatTeamStates($teamId: String!, $after: String, $first: Int!) {
   team(id: $teamId) {
     states(first: $first, after: $after) {
-      nodes { id name }
+      nodes { id name type }
       pageInfo { hasNextPage endCursor }
     }
   }
@@ -52,6 +52,7 @@ export const viewerResponseSchema = z.object({
 const workflowStateNodeSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
+  type: z.string().min(1),
 });
 
 export const teamsResponseSchema = z.object({

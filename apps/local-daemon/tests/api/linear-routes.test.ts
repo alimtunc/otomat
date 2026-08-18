@@ -2,6 +2,7 @@ import {
   issueSourceContractSchema,
   linearConnectionContractSchema,
   linearIssueDraftSchema,
+  linearLifecycleReconcileResultSchema,
   linearSyncStatusSchema,
   type LinearIssueSnapshot,
   syncLinearResponseSchema,
@@ -165,6 +166,7 @@ it("serves mapped sources and sync results through their contracts", async () =>
     external_project_name: "",
     last_synced_at: null,
     lifecycle: { in_progress: null, done: null },
+    lifecycle_error: null,
   };
   const app = makeApiApp(t, {
     linear: stubLinearService({
@@ -208,6 +210,7 @@ it("rewrites a source status mapping and refuses a state from another team", asy
             in_progress: { id: "s-doing", name: "Doing" },
             done: { id: "s-shipped", name: "Shipped" },
           },
+          lifecycle_error: null,
         };
       },
     }),
@@ -233,6 +236,30 @@ it("rewrites a source status mapping and refuses a state from another team", asy
   const malformed = await patch(app, "/api/linear/sources/src-1", { done_state_id: "s-shipped" });
   expect(malformed.status).toBe(400);
   expect(updates).toHaveLength(2);
+});
+
+it("reconciles one named source and refuses one it does not know", async () => {
+  const reconciled: string[] = [];
+  const app = makeApiApp(t, {
+    linear: stubLinearService({
+      reconcileSource: async (sourceId) => {
+        reconciled.push(sourceId);
+        if (sourceId !== "src-1") throw linearError("linear_source_not_found");
+        return { reconciled: 2, failed: 1 };
+      },
+    }),
+  });
+
+  const applied = await post(app, "/api/linear/sources/src-1/reconcile", {});
+  expect(applied.status).toBe(200);
+  expect(linearLifecycleReconcileResultSchema.parse(await applied.json())).toEqual({
+    reconciled: 2,
+    failed: 1,
+  });
+
+  const refused = await post(app, "/api/linear/sources/src-nope/reconcile", {});
+  expect(refused.status).toBe(404);
+  expect(reconciled).toEqual(["src-1", "src-nope"]);
 });
 
 it("serves one project's sync status and refuses a project it does not own", async () => {

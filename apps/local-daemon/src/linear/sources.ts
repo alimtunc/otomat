@@ -14,9 +14,11 @@ import {
 } from "@otomat/db";
 import {
   issueSourceContractSchema,
+  LIFECYCLE_PHASE_STATE_TYPE,
   linearSyncStatusSchema,
   type CreateIssueSourceRequest,
   type IssueSourceContract,
+  type LinearLifecyclePhase,
   type LinearSyncStatusContract,
   type LinearWorkflowState,
   type LinearWorkspaceContract,
@@ -28,6 +30,7 @@ import { linearError } from "./errors.js";
 import { sourceLifecycle } from "./lifecycle.js";
 import type { LinearSyncRuns } from "./sync-runs.js";
 import { SYNC_RESOURCE, SYNC_SOURCE } from "./sync.js";
+import { sourceLifecycleError } from "./writeback/lifecycle-error.js";
 
 export function sourceContract(db: Db, row: IssueSourceRow): IssueSourceContract {
   const cursor = getSyncState(db, SYNC_SOURCE, SYNC_RESOURCE, row.id);
@@ -42,6 +45,7 @@ export function sourceContract(db: Db, row: IssueSourceRow): IssueSourceContract
     external_project_name: row.external_project_name,
     last_synced_at: cursor?.last_synced_at ?? null,
     lifecycle: sourceLifecycle(row),
+    lifecycle_error: sourceLifecycleError(db, row),
   });
 }
 
@@ -105,11 +109,14 @@ export function createSourceMapping(
 
 function requireTeamState(
   states: readonly LinearWorkflowState[],
+  phase: LinearLifecyclePhase,
   stateId: string | null,
 ): LinearWorkflowState | null {
   if (stateId === null) return null;
   const state = states.find((candidate) => candidate.id === stateId);
-  if (state === undefined) throw linearError("linear_source_state_invalid");
+  if (state === undefined || state.type !== LIFECYCLE_PHASE_STATE_TYPE[phase]) {
+    throw linearError("linear_source_state_invalid");
+  }
   return state;
 }
 
@@ -122,8 +129,8 @@ export function updateSourceLifecycle(
   const row = requireSourceRow(db, sourceId);
   const team = workspace.teams.find((candidate) => candidate.id === row.external_team_id);
   if (team === undefined) throw linearError("linear_source_invalid_selection");
-  const inProgress = requireTeamState(team.states, request.in_progress_state_id);
-  const done = requireTeamState(team.states, request.done_state_id);
+  const inProgress = requireTeamState(team.states, "in_progress", request.in_progress_state_id);
+  const done = requireTeamState(team.states, "done", request.done_state_id);
   updateIssueSourceLifecycle(db, sourceId, {
     in_progress_state_id: inProgress?.id ?? null,
     in_progress_state_name: inProgress?.name ?? null,

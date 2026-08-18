@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 
 import type { Db } from "#db/client";
 
@@ -48,6 +48,25 @@ export function listLinearWritesForIssue(db: Db, issueId: string): LinearWriteRo
     .where(eq(linearWrites.issue_id, issueId))
     .orderBy(linearWrites.created_at, linearWrites.id)
     .all();
+}
+
+export function findLatestFailedLifecycleWrite(
+  db: Db,
+  issueIds: readonly string[],
+): LinearWriteRow | undefined {
+  if (issueIds.length === 0) return undefined;
+  return db
+    .select()
+    .from(linearWrites)
+    .where(
+      and(
+        inArray(linearWrites.issue_id, [...issueIds]),
+        eq(linearWrites.kind, "lifecycle"),
+        eq(linearWrites.status, "failed"),
+      ),
+    )
+    .orderBy(desc(linearWrites.updated_at), desc(linearWrites.id))
+    .get();
 }
 
 export function updateLinearWrite(db: Db, id: string, patch: LinearWritePatch): void {
