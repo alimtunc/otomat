@@ -1,19 +1,34 @@
 import { getRun, recordAgentSessionContext } from "@otomat/db";
 
-import { buildSessionContext, renderSessionContext } from "#context";
+import {
+  buildSessionContext,
+  publicationDelta,
+  renderPublicationDelta,
+  renderSessionContext,
+} from "#context";
 
 import type { SupervisorState } from "./state.js";
 import type { TurnContext } from "./types.js";
 
-/** A native resume passes through untouched: the provider still holds the conversation, so a fresh context would contradict what that session already knows. */
+function compose(context: string | null, prompt: string | null): string | null {
+  if (context === null) return prompt;
+  if (prompt === null) return context;
+  return `${context}\n\n---\n\n${prompt}`;
+}
+
+/** A native resume keeps the conversation the provider already holds, so it is handed no fresh dossier — only what Otomat durably recorded since, which that conversation would otherwise contradict. */
 export function captureTurnContext(
   state: SupervisorState,
   ctx: TurnContext,
   mode: "run" | "resume",
 ): string | null {
-  if (mode === "resume") return ctx.prompt;
   const run = getRun(state.db, ctx.runId);
   if (!run) return ctx.prompt;
+  if (mode === "resume") {
+    const published = publicationDelta(state.db, run.id, ctx.agentSessionId);
+    const delta = published === null ? null : renderPublicationDelta(published, run.branch);
+    return compose(delta, ctx.prompt);
+  }
   const context = buildSessionContext({
     db: state.db,
     repositories: state.repositories,
@@ -23,6 +38,5 @@ export function captureTurnContext(
     capturedAt: new Date().toISOString(),
   });
   recordAgentSessionContext(state.db, ctx.agentSessionId, context);
-  const rendered = renderSessionContext(context);
-  return ctx.prompt === null ? rendered : `${rendered}\n\n---\n\n${ctx.prompt}`;
+  return compose(renderSessionContext(context), ctx.prompt);
 }

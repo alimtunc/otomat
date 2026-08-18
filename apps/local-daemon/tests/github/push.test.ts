@@ -116,6 +116,23 @@ describe("pull request pushes", () => {
     expect(cli.forcePushes).toEqual([]);
   });
 
+  it("pushes the branch the pull request ships, leaving the workspace on its own", async () => {
+    const shipped = "feat/adopt-external-pull-requests";
+    const published = publishedHead();
+    updatePullRequest(fix.db, row().id, { head_ref: shipped });
+    cli.provider = { ...cli.provider, headRef: shipped };
+    cli.remoteHeads.set(shipped, published);
+    const local = commitInWorkspace("first\nsecond\n", "follow up");
+
+    const pushed = await github.pushCommits(RUN_ID, {});
+
+    expect(cli.remoteHeads.get(shipped)).toBe(local);
+    expect(cli.remoteHeads.get(BRANCH)).toBe(published);
+    expect(pushed.row.head_ref).toBe(shipped);
+    expect(cli.forcePushes).toEqual([]);
+    expect(repo.git("-C", worktreePath, "rev-parse", "--abbrev-ref", "HEAD").trim()).toBe(BRANCH);
+  });
+
   it("leaves uncommitted work unpublished and says so after a push", async () => {
     const local = commitInWorkspace("first\nsecond\n", "follow up");
     writeFileSync(join(worktreePath, "change.txt"), "first\nsecond\nuncommitted\n");

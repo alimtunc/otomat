@@ -1,4 +1,9 @@
-import type { ContextProgress, ContextWorkspace, SessionContext } from "@otomat/domain";
+import type {
+  ContextProgress,
+  ContextPullRequest,
+  ContextWorkspace,
+  SessionContext,
+} from "@otomat/domain";
 
 import { renderSelection } from "./render-selection.js";
 
@@ -33,6 +38,16 @@ function workspaceBlock(workspace: ContextWorkspace): string[] {
   ];
 }
 
+function pullRequestBlock(pullRequest: ContextPullRequest): string[] {
+  return [
+    "## Pull request",
+    `#${pullRequest.number} ${pullRequest.title} (${pullRequest.state})`,
+    `head branch: ${pullRequest.head_branch} → base branch: ${pullRequest.base_branch}`,
+    `published head: ${pullRequest.published_head_sha ?? "nothing published yet"}`,
+    pullRequest.url,
+  ];
+}
+
 function stepMarker(step: ContextProgress["steps"][number]): string {
   if (step.current) return " ← this session's step";
   return step.dependency ? " ← this step depends on it" : "";
@@ -57,18 +72,27 @@ export function renderSessionContext(context: SessionContext): string {
     "re-read the worktree before changing anything, and do not call an issue tracker.",
     ...renderSelection(context.selection),
     ...(context.workspace === null ? [] : ["", ...workspaceBlock(context.workspace)]),
-    ...(context.pull_request === null
-      ? []
-      : [
-          "",
-          "## Pull request",
-          `#${context.pull_request.number} ${context.pull_request.title} (${context.pull_request.state})`,
-          `${context.pull_request.head_branch} → ${context.pull_request.base_branch}`,
-          context.pull_request.url,
-        ]),
+    ...(context.pull_request === null ? [] : ["", ...pullRequestBlock(context.pull_request)]),
     ...(context.progress === null ? [] : ["", ...progressBlock(context.progress)]),
   ];
   const note = context.selection.note;
   if (note === null || note.trim() === "") return lines.join("\n");
   return [...lines, "", "# Step instructions", note].join("\n");
+}
+
+export function renderPublicationDelta(
+  pullRequest: ContextPullRequest,
+  workspaceBranch: string,
+): string {
+  return [
+    "# Publication update",
+    "This cycle's pull request moved after your session's context was captured. It is read",
+    "from Otomat's own records, so nothing here needs a GitHub lookup.",
+    "",
+    ...pullRequestBlock(pullRequest),
+    "",
+    `The workspace keeps its own branch ${workspaceBranch}; ${pullRequest.head_branch} is what this`,
+    "pull request ships. Work through this pull request only: never open a second one,",
+    "and never push another remote branch.",
+  ].join("\n");
 }
