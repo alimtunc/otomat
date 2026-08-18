@@ -1,7 +1,7 @@
 import { IssueSourceGlyph, StatusGlyph } from "@otomat/ui";
+import { MultiSelect } from "@web/components/config-menu/multi-select";
+import { Select } from "@web/components/config-menu/select";
 import { ColorDot } from "@web/components/issues/color-dot";
-import { MultiSelect } from "@web/components/issues/view-options/multi-select";
-import { Select } from "@web/components/issues/view-options/select";
 import {
   ISSUE_SOURCE_OPTIONS,
   ISSUE_STATUS_OPTIONS,

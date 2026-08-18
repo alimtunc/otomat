@@ -24,6 +24,27 @@ const PULL_REQUEST_PROVENANCES = ["otomat", "external", "unknown"] as const;
 export const pullRequestProvenanceSchema = z.enum(PULL_REQUEST_PROVENANCES);
 export type PullRequestProvenance = z.infer<typeof pullRequestProvenanceSchema>;
 
+const PULL_REQUEST_CHECKS_STATES = ["passing", "failing", "pending", "none"] as const;
+export const pullRequestChecksStateSchema = z.enum(PULL_REQUEST_CHECKS_STATES);
+export type PullRequestChecksState = z.infer<typeof pullRequestChecksStateSchema>;
+
+/** GitHub's own review verdict; null when the pull request requires no review at all. */
+const PULL_REQUEST_REVIEW_DECISIONS = ["approved", "changes_requested", "review_required"] as const;
+export const pullRequestReviewDecisionSchema = z.enum(PULL_REQUEST_REVIEW_DECISIONS);
+export type PullRequestReviewDecision = z.infer<typeof pullRequestReviewDecisionSchema>;
+
+/** Whether the head still merges cleanly; `unknown` is GitHub still computing it, never a guess. */
+const PULL_REQUEST_MERGEABILITIES = ["mergeable", "conflicting", "unknown"] as const;
+export const pullRequestMergeabilitySchema = z.enum(PULL_REQUEST_MERGEABILITIES);
+export type PullRequestMergeability = z.infer<typeof pullRequestMergeabilitySchema>;
+
+export const pullRequestReviewerSchema = z.object({
+  kind: z.enum(["user", "team"]),
+  /** Login for a user, slug for a team — what the viewer is compared against. */
+  handle: z.string().min(1),
+});
+export type PullRequestReviewer = z.infer<typeof pullRequestReviewerSchema>;
+
 /** How a pull request reached Otomat: typed by the operator, or found from the issue's own identifier. */
 const PULL_REQUEST_DISCOVERIES = ["manual", "issue_reference"] as const;
 export const pullRequestDiscoverySchema = z.enum(PULL_REQUEST_DISCOVERIES);
@@ -56,12 +77,19 @@ export type PullRequestAttachment = z.infer<typeof pullRequestAttachmentSchema>;
 export const pullRequestContractSchema = z
   .object({
     id: z.string(),
-    issue_id: z.string(),
+    /** Null for a pull request the inbox synced from GitHub without any issue linking it here. */
+    issue_id: z.string().nullable(),
     run_id: z.string().nullable(),
     provider: z.literal("github"),
     origin: pullRequestOriginSchema,
     provenance: pullRequestProvenanceSchema,
     author_login: z.string().nullable(),
+    review_decision: pullRequestReviewDecisionSchema.nullable(),
+    checks_state: pullRequestChecksStateSchema,
+    mergeable: pullRequestMergeabilitySchema,
+    requested_reviewers: z.array(pullRequestReviewerSchema),
+    /** When GitHub last touched the pull request; null until a sync or a refresh has read one. */
+    provider_updated_at: z.iso.datetime().nullable(),
     /** Head commit GitHub reports; what an imported review is pinned to, unlike `published_head_sha`. */
     head_sha: z.string().nullable(),
     attachment: pullRequestAttachmentSchema.nullable(),

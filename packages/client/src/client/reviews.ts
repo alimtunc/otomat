@@ -1,16 +1,17 @@
 import {
   commentFixProofSchema,
   diffFileBlobsResponseSchema,
+  pullRequestInboxSchema,
   reviewCommentContractSchema,
   reviewDetailSchema,
   reviewDiffResponseSchema,
-  reviewQueueEntrySchema,
   runContractSchema,
   runDiffScopeParams,
   type CreateReviewCommentRequest,
   type RequestFixRequest,
   type ReviewTarget,
   type RunDiffScopeSelector,
+  type SyncPullRequestInboxRequest,
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
@@ -24,10 +25,14 @@ function reviewPath(target: ReviewTarget): string {
 
 export function createReviewsClient(config: DaemonClientConfig) {
   return {
-    async listReviewQueue(projectId: string) {
-      return reviewQueueEntrySchema
-        .array()
-        .parse(await getJson(config, `/api/reviews${queryString({ projectId })}`));
+    async getPullRequestInbox(projectId: string) {
+      return pullRequestInboxSchema.parse(
+        await getJson(config, `/api/reviews${queryString({ projectId })}`),
+      );
+    },
+    async syncPullRequestInbox(projectId: string) {
+      const request: SyncPullRequestInboxRequest = { project_id: projectId };
+      return pullRequestInboxSchema.parse(await postJson(config, "/api/reviews/sync", request));
     },
     async getReviewDiff(target: ReviewTarget, scope: RunDiffScopeSelector) {
       const query = queryString(runDiffScopeParams(scope));

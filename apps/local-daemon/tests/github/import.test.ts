@@ -17,7 +17,7 @@ import { createGitHubService, PullRequestImportRefusal, type GitHubService } fro
 import { createReviewService, type ReviewService } from "#review";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
-import { FakeGitHubCli } from "../support/github.js";
+import { FakeGitHubCli, providerPullRequest } from "../support/github.js";
 import { seedRun } from "../support/seed.js";
 
 const ISSUE_ID = "i1";
@@ -61,17 +61,15 @@ beforeEach(() => {
     sessionStatus: "terminated",
   });
   cli = new FakeGitHubCli();
-  cli.provider = {
+  cli.provider = providerPullRequest({
     number: 7,
     url: "https://github.com/acme/otomat/pull/7",
     title: "Contributor fix",
     body: "Please review",
     headRef: "contrib/fix",
     headSha,
-    baseRef: "main",
-    lifecycle: "open",
     authorLogin: "contrib",
-  };
+  });
   const repositories = createRepositoryResolver({
     db: fix.db,
     worktreesRoot: join(fix.dataDir, "worktrees"),
@@ -158,6 +156,23 @@ it("reviews the imported head and refuses to rewrite the contributor's branch", 
   });
   expect(comment.diff_sha).toBe(file.sha);
   expect(review.getReviewDetail(target).comments.map((row) => row.id)).toEqual([comment.id]);
+});
+
+it("fetches and reviews a mirrored pull request that no issue and no run own", async () => {
+  cli.openPullRequests = [
+    { ...cli.provider, requestedReviewers: [{ kind: "user", handle: "octocat" }] },
+  ];
+  const inbox = await github.syncPullRequestInbox("p1");
+  const entry = inbox.entries[0];
+  if (!entry) throw new Error("expected the mirrored pull request in the inbox");
+  expect(entry).toMatchObject({ run_id: null, issue: null, head_fetched: false });
+
+  const fetched = await github.refreshPullRequest(entry.id);
+  expect(fetched).toMatchObject({ issue_id: null, head_sha: headSha });
+
+  const target = { kind: "pull_request", id: entry.id } as const;
+  expect(review.getDiff(target).diff?.files.map((file) => file.path)).toEqual(["contributed.txt"]);
+  expect(review.getReviewDetail(target).fixAuthority.kind).toBe("external");
 });
 
 it("closes the local review and execution projection once GitHub confirms the merge", async () => {

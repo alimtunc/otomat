@@ -3,6 +3,7 @@ import type { PullRequestPublicationMode } from "@otomat/domain";
 
 import { normalizePullRequestBody } from "../body.js";
 import { GitHubCliError, GitHubPublicationError } from "../errors.js";
+import { mirroredColumns } from "../mirror.js";
 import type {
   GitHubCli,
   GitHubPullRequest,
@@ -87,11 +88,7 @@ export function providerPatch(provider: GitHubPullRequest): PullRequestPatch {
   return {
     provider: "github",
     number: provider.number,
-    url: provider.url,
-    title: provider.title,
-    body: normalizePullRequestBody(provider.body),
-    head_ref: provider.headRef,
-    base_ref: provider.baseRef,
+    ...mirroredColumns(provider),
     error_code: null,
     error_message: null,
   };

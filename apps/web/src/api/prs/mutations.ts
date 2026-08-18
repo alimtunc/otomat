@@ -23,9 +23,11 @@ function daemonErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-function invalidateIssuePullRequests(client: QueryClient, issueId: string): void {
-  client.invalidateQueries({ queryKey: queryKeys.issuePullRequests(issueId) });
-  client.invalidateQueries({ queryKey: queryKeys.issues });
+function invalidateIssuePullRequests(client: QueryClient, issueId: string | null): void {
+  if (issueId !== null) {
+    client.invalidateQueries({ queryKey: queryKeys.issuePullRequests(issueId) });
+    client.invalidateQueries({ queryKey: queryKeys.issues });
+  }
   client.invalidateQueries({ queryKey: queryKeys.reviews });
 }
 
@@ -115,7 +117,8 @@ export function useAttachPullRequest(issueId: string) {
   });
 }
 
-export function useRefreshPullRequest(issueId: string) {
+/** A pull request the inbox synced has no issue to invalidate around, so the id is optional. */
+export function useRefreshPullRequest(issueId: string | null) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (pullRequestId: string) => daemon.refreshPullRequest(pullRequestId),

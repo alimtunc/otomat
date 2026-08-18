@@ -17,6 +17,6 @@ CONTEXT.md
 .claude/plans/
 docs/**
 !docs/ai/
-!docs/ai/otomat-visual-map.html
+!docs/ai/**
 !docs/release/
 !docs/release/**

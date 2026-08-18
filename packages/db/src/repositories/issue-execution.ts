@@ -35,7 +35,7 @@ function lastHaltedSteps(db: Db, filters: SQL[]): Map<string, HaltedStepEvidence
 /** The adopted pull request that still stands for each issue: any live one outranks every settled one. */
 function adoptedPullRequests(db: Db, filters: SQL[]): Map<string, PullRequestState> {
   const rows = db
-    .select({ issue_id: pullRequests.issue_id, status: pullRequests.status })
+    .select({ issue_id: issues.id, status: pullRequests.status })
     .from(pullRequests)
     .innerJoin(runs, eq(runs.issue_id, pullRequests.issue_id))
     .innerJoin(issues, eq(pullRequests.issue_id, issues.id))

@@ -127,3 +127,9 @@ export const commentFixProofSchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("unavailable"), reason: z.string() }),
 ]);
 export type CommentFixProof = z.infer<typeof commentFixProofSchema>;
+
+/** Which review surface a call addresses; the daemon mounts one identical surface under each. */
+export interface ReviewTarget {
+  kind: "run" | "pull_request";
+  id: string;
+}

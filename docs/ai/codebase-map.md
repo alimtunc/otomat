@@ -721,13 +721,52 @@ adopted pull request). Comments, anchoring and publication are untouched, and
 the API mounts one `review-surface.ts` under both `/api/runs` and
 `/api/pull-requests`.
 
-Closure is a projection, never a rewritten state. `isReviewOpen` drops a run from
-`reviewing` and from `GET /api/reviews` as soon as the pull request standing
-against it — its own or the one its issue adopted — is merged or closed, so the
-run keeps its status and its history either way. Only a *merged* pull request
+Closure is a projection, never a rewritten state. `isReviewOpen` drops a run
+from `reviewing` as soon as the pull request standing against it — its own or the
+one its issue adopted — is merged or closed, so the run keeps its status and its
+history either way. Only a *merged* pull request
 also drives `closeMergedIssue`: through the issue's canonical run when it still
 holds one, and on the issue itself when the work never ran here, which is what
 lets OTO-67's Linear write-back apply to a merge Otomat only witnessed.
+
+## The Reviews Inbox
+
+Reviews is PR-first: the synced GitHub pull request is the entry, and a run is at
+most context on it. Runs resting on a diff are reached from Runs and from their
+issue, which is why `GET /api/reviews` answers a pull-request inbox and the
+sidebar badge counts pull requests alone.
+
+The mirror carries the inbox. A pass writes the same `pull_requests` row an
+adoption would, minus the adoption: `issue_id` is nullable, `attached_at` and
+`attachment_evidence` stay null, and `origin` stays `imported`. Mirroring is not
+adopting, so nothing a pass writes can read as an operator's decision. The row
+gained the facts GitHub answers about a head — `review_decision`, `checks_state`,
+`mergeable`, `requested_reviewers`, `provider_updated_at` — and `toPullRequest`
+now always asks `gh` for them, so one provider shape feeds detection, refresh and
+sync alike.
+
+Which group an entry belongs to is one pure rule
+(`projections/review-inbox.ts`) over those stored facts plus the viewer.
+The cascade order *is* the priority, so an entry can never appear twice; the
+contract's group list is the display order, a separate concern. `null` is a pull
+request the viewer has no stake in and the inbox does not show at all — which is
+also what takes a merged or closed one out of the groups and out of the badge,
+without touching its row. The badge counts the groups the projection marks
+actionable, and an entry holds one group, so it counts once.
+
+The viewer is a host fact, not a request-time lookup. A pass resolves the
+connected login and the account's team handles once and stores them on
+`daemon_settings`, so reading the inbox is a query — no `gh` process, no network
+— and a GitHub outage still answers with what the last pass proved. Team handles
+are qualified by organization on both sides (`pull-request-facts.ts`), so a slug is
+never matched across organizations, and teams GitHub declined to name stay
+`teams_known: false` rather than reading as "belongs to no team".
+
+An issue appears under an entry only on durable evidence: the link the row
+already carries, or exactly one tracker identifier in the title or body naming a
+mirrored issue. Two matching issues are ambiguous and link neither — an ambiguous
+match is never written to the row, so the inbox can suggest nothing it cannot
+prove.
 
 ## Publishing to a Pull Request
 

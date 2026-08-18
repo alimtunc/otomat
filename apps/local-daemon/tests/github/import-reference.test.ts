@@ -1,20 +1,19 @@
 import { expect, it } from "vitest";
 
-import type { GitHubPullRequest } from "#github";
 import { classifyProvenance } from "#github/import/provenance";
 import { parsePullRequestReference } from "#github/import/reference";
 
-const PROVIDER: GitHubPullRequest = {
+import { providerPullRequest } from "../support/github.js";
+
+const PROVIDER = providerPullRequest({
   number: 12,
   url: "https://github.com/acme/otomat/pull/12",
   title: "Fix it",
   body: null,
   headRef: "contrib/fix",
   headSha: "a".repeat(40),
-  baseRef: "main",
-  lifecycle: "open",
   authorLogin: "contrib",
-};
+});
 
 const BASE = { otomatBranches: [], otomatPublication: false, connectedLogin: "operator" } as const;
 

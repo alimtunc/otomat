@@ -146,7 +146,9 @@ export function RouteShell({
             <div className="flex-1" />
             {actions}
           </div>
-          <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+          <div data-scroll-restoration-id="route-content" className="min-h-0 flex-1 overflow-auto">
+            {children}
+          </div>
         </div>
       </NewIssueContext.Provider>
       <CommandPalette

@@ -6,9 +6,9 @@ import {
   DropdownMenuSeparator,
   Icon,
 } from "@otomat/ui";
+import { Select } from "@web/components/config-menu/select";
 import { IssueFilterSubmenus } from "@web/components/issues/view-options/filter-submenus";
 import { IssueLinearFilters } from "@web/components/issues/view-options/linear-filters";
-import { Select } from "@web/components/issues/view-options/select";
 import { issuesConfigDetails, issuesConfigSegments } from "@web/lib/issue/config-summary";
 import type { IssueFilterOptions } from "@web/lib/issue/filter-options";
 import { activeAdvancedFilterCount, NO_ADVANCED_FILTERS } from "@web/lib/issue/filters";

@@ -1,7 +1,11 @@
 import type {
+  PullRequestChecksState,
+  PullRequestMergeability,
   PullRequestOrigin,
   PullRequestProvenance,
   PullRequestPublicationState,
+  PullRequestReviewDecision,
+  PullRequestReviewer,
   PullRequestState,
 } from "@otomat/domain";
 import { sql } from "drizzle-orm";
@@ -16,9 +20,7 @@ export const pullRequests = sqliteTable(
   "pull_requests",
   {
     id: text("id").primaryKey(),
-    issue_id: text("issue_id")
-      .notNull()
-      .references(() => issues.id),
+    issue_id: text("issue_id").references(() => issues.id),
     /** Null for a pull request Otomat adopted rather than opened: no run of its own ever produced it. */
     run_id: text("run_id").references(() => runs.id),
     repository_id: text("repository_id").references(() => repositories.id),
@@ -26,6 +28,15 @@ export const pullRequests = sqliteTable(
     origin: text("origin").$type<PullRequestOrigin>().notNull().default("otomat"),
     provenance: text("provenance").$type<PullRequestProvenance>().notNull().default("otomat"),
     author_login: text("author_login"),
+    review_decision: text("review_decision").$type<PullRequestReviewDecision>(),
+    checks_state: text("checks_state").$type<PullRequestChecksState>().notNull().default("none"),
+    mergeable: text("mergeable").$type<PullRequestMergeability>().notNull().default("unknown"),
+    requested_reviewers: text("requested_reviewers", { mode: "json" })
+      .$type<PullRequestReviewer[]>()
+      .notNull()
+      .default(sql`'[]'`),
+    provider_updated_at: text("provider_updated_at"),
+    synced_at: text("synced_at"),
     number: integer("number"),
     url: text("url"),
     status: text("status").$type<PullRequestState>().notNull().default("draft"),

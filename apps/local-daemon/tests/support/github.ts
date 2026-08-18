@@ -2,6 +2,7 @@ import type { PullRequestRow } from "@otomat/db";
 import type {
   GitHubConnectionContract,
   PreparePullRequestRequest,
+  PullRequestInbox,
   PullRequestPublishability,
 } from "@otomat/domain";
 
@@ -59,6 +60,27 @@ export function publishRequest(
   };
 }
 
+/** What GitHub answers about a pull request, review facts included, so every fake speaks one shape. */
+export function providerPullRequest(overrides: Partial<GitHubPullRequest> = {}): GitHubPullRequest {
+  return {
+    number: 42,
+    url: "https://github.com/acme/otomat/pull/42",
+    title: "feat: ship it",
+    body: "Details",
+    headRef: "",
+    headSha: "0".repeat(40),
+    baseRef: "main",
+    lifecycle: "open",
+    authorLogin: "octocat",
+    reviewDecision: null,
+    checksState: "none",
+    mergeable: "unknown",
+    requestedReviewers: [],
+    updatedAt: "2026-07-05T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
 export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullRequestRow {
   return {
     id: "pr1",
@@ -69,6 +91,12 @@ export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullReq
     origin: "otomat",
     provenance: "otomat",
     author_login: null,
+    review_decision: null,
+    checks_state: "none",
+    mergeable: "unknown",
+    requested_reviewers: [],
+    provider_updated_at: null,
+    synced_at: null,
     number: null,
     url: null,
     status: "draft",
@@ -98,9 +126,18 @@ export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullReq
   };
 }
 
+export const EMPTY_PULL_REQUEST_INBOX: PullRequestInbox = {
+  project_id: "p1",
+  viewer: { login: null, teams_known: false },
+  sync: { running: false, repositories: 0, last_synced_at: null, last_error: null },
+  entries: [],
+};
+
 export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHubService {
   return {
     connection: async () => DISCONNECTED_GITHUB,
+    pullRequestInbox: () => EMPTY_PULL_REQUEST_INBOX,
+    syncPullRequestInbox: async () => EMPTY_PULL_REQUEST_INBOX,
     connect: () => ({
       status: "connecting",
       login: null,
@@ -145,17 +182,7 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
 export class FakeGitHubCli implements GitHubCli {
   connectionValue: GitHubConnectionContract = CONNECTED_GITHUB;
   remote: GitHubRemote = { name: "origin", repository: "acme/otomat" };
-  provider: GitHubPullRequest = {
-    number: 42,
-    url: "https://github.com/acme/otomat/pull/42",
-    title: "feat: ship it",
-    body: "Details",
-    headRef: "",
-    headSha: "0".repeat(40),
-    baseRef: "main",
-    lifecycle: "open",
-    authorLogin: "octocat",
-  };
+  provider: GitHubPullRequest = providerPullRequest();
   createInput: PullRequestCreateInput | null = null;
   resolveError: GitHubCliError | null = null;
   pushError: GitHubCliError | null = null;
@@ -229,6 +256,19 @@ export class FakeGitHubCli implements GitHubCli {
 
   async searchPullRequests(): Promise<GitHubPullRequest[]> {
     return this.searchResults;
+  }
+
+  openPullRequests: GitHubPullRequest[] = [];
+  listError: Error | null = null;
+  teams: string[] | null = [];
+
+  async listOpenPullRequests(): Promise<GitHubPullRequest[]> {
+    if (this.listError) throw this.listError;
+    return this.openPullRequests;
+  }
+
+  async viewerTeams(): Promise<string[] | null> {
+    return this.teams;
   }
 
   async viewPullRequest(): Promise<GitHubPullRequest> {

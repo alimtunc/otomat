@@ -6,6 +6,7 @@ import { routeTree } from "./routeTree.gen";
 
 export const router = createRouter({
   routeTree,
+  scrollRestoration: true,
   defaultErrorComponent: RouteErrorReport,
   defaultOnCatch: (error, info) => recordComponentStack(error, info.componentStack ?? null),
 });

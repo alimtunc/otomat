@@ -394,6 +394,14 @@ describe("GitHub CLI adapter", () => {
       state: "OPEN",
       isDraft: false,
       author: { login: "octocat" },
+      updatedAt: "2026-08-18T10:00:00.000Z",
+      reviewDecision: "CHANGES_REQUESTED",
+      reviewRequests: [{ login: "reviewer" }, { __typename: "Team", slug: "core" }],
+      statusCheckRollup: [
+        { status: "COMPLETED", conclusion: "SUCCESS" },
+        { status: "IN_PROGRESS", conclusion: null },
+      ],
+      mergeable: "CONFLICTING",
     };
     const runner = fakeRunner([ok("printed-url-is-ignored\n"), ok(JSON.stringify([provider]))]);
     const cli = createGitHubCli(runner.run);
@@ -414,7 +422,17 @@ describe("GitHub CLI adapter", () => {
         head: "otomat/run/r1",
         base: "main",
       }),
-    ).resolves.toMatchObject({ number: 42, lifecycle: "open" });
+    ).resolves.toMatchObject({
+      number: 42,
+      lifecycle: "open",
+      reviewDecision: "changes_requested",
+      checksState: "pending",
+      mergeable: "conflicting",
+      requestedReviewers: [
+        { kind: "user", handle: "reviewer" },
+        { kind: "team", handle: "acme/core" },
+      ],
+    });
 
     expect(runner.requests[0]).toMatchObject({
       command: "gh",

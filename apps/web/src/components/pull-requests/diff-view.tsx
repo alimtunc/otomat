@@ -1,5 +1,6 @@
-import { EmptyState, ErrorState } from "@otomat/ui";
+import { Button, EmptyState, ErrorState } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
+import { useRefreshPullRequest } from "@web/api/prs/mutations";
 import { useAttachedPullRequest } from "@web/api/prs/queries";
 import { ReviewDiffView } from "@web/components/runs/diff/review-view";
 import { CenteredState } from "@web/components/shell/centered-state";
@@ -7,12 +8,13 @@ import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 
 const HEAD_UNREACHABLE =
-  "Otomat holds no fetched head for this pull request. Refresh it from the issue to fetch it again.";
+  "Otomat holds no fetched head for this pull request. Fetch it to read its diff here.";
 
-/** An adopted pull request is reviewed through the same surface as a run — read-only, pinned to its imported head. */
+/** A mirrored pull request is reviewed through the same surface as a run — read-only, pinned to its imported head. */
 export function PullRequestDiffView() {
   const { pullRequestId } = useParams({ from: "/pull-requests/$pullRequestId/diff" });
   const query = useAttachedPullRequest(pullRequestId);
+  const refresh = useRefreshPullRequest(query.data?.issue_id ?? null);
 
   return (
     <QueryBoundary
@@ -33,8 +35,17 @@ export function PullRequestDiffView() {
           <CenteredState>
             <EmptyState
               icon="git-compare"
-              title="No imported head"
+              title="No fetched head"
               description={HEAD_UNREACHABLE}
+              action={
+                <Button
+                  size="sm"
+                  loading={refresh.isPending}
+                  onClick={() => refresh.mutate(pullRequest.id)}
+                >
+                  Fetch from GitHub
+                </Button>
+              }
             />
           </CenteredState>
         ) : (

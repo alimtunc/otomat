@@ -24,11 +24,11 @@ export function useReviewDetail(target: ReviewTarget) {
   });
 }
 
-/** The one list the Reviews view and the sidebar count read: runs resting on a diff, plus adopted pull requests. */
-export function useReviewQueue(projectId: string | undefined) {
+/** Never polled: it mirrors the last reconciliation pass, and the view is what asks for a fresh one. */
+export function usePullRequestInbox(projectId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.reviewQueue(projectId),
-    queryFn: () => daemon.listReviewQueue(projectId ?? ""),
+    queryKey: queryKeys.pullRequestInbox(projectId),
+    queryFn: () => daemon.getPullRequestInbox(projectId ?? ""),
     enabled: projectId !== undefined,
   });
 }

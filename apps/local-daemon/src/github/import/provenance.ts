@@ -4,7 +4,7 @@ import type { GitHubPullRequest } from "../types.js";
 
 export interface ProvenanceInput {
   provider: GitHubPullRequest;
-  /** Branches runs of this issue own here; a head on one of them is Otomat's own work. */
+  /** Branches runs of this project own here; a head on one of them is Otomat's own work. */
   otomatBranches: readonly string[];
   /** True when a stored row already mirrors this pull request as a publication Otomat made. */
   otomatPublication: boolean;
@@ -27,7 +27,7 @@ export function classifyProvenance(input: ProvenanceInput): ProvenanceVerdict {
   if (input.otomatBranches.includes(provider.headRef)) {
     return {
       provenance: "otomat",
-      reason: `Its head ${provider.headRef} is a branch a run of this issue owns.`,
+      reason: `Its head ${provider.headRef} is a branch a run here owns.`,
     };
   }
   if (provider.authorLogin === null) {
