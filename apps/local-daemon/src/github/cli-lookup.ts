@@ -65,7 +65,8 @@ export async function searchPullRequests(
       "--repo",
       input.repository,
       "--search",
-      input.query,
+      // Unquoted, GitHub splits `OTO-119` into `OTO` and `119` and answers with pull requests that carry neither as a value.
+      `"${input.identifier}" in:title,body`,
       "--state",
       "all",
       "--limit",

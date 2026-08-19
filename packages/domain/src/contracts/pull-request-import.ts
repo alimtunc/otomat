@@ -12,11 +12,26 @@ export const attachPullRequestRequestSchema = z
   .strict();
 export type AttachPullRequestRequest = z.infer<typeof attachPullRequestRequestSchema>;
 
-/** A pull request GitHub links to the issue, verified but not adopted; `reason` is the sentence that explains its provenance. */
+/** The surfaces a mirrored row and a provider payload both carry; a commit message is on neither. */
+const ISSUE_REFERENCE_SURFACES = ["title", "body", "branch"] as const;
+export const issueReferenceSurfaceSchema = z.enum(ISSUE_REFERENCE_SURFACES);
+export type IssueReferenceSurface = z.infer<typeof issueReferenceSurfaceSchema>;
+
+export const issueReferenceSchema = z.object({
+  identifier: z.string().min(1),
+  surface: issueReferenceSurfaceSchema,
+  excerpt: z.string().min(1),
+});
+export type IssueReference = z.infer<typeof issueReferenceSchema>;
+
+/** A pull request found by an exact reference to the issue, verified but not adopted; `reason` is the sentence that explains its provenance. */
 export const pullRequestCandidateSchema = z.object({
   evidence: pullRequestEvidenceSchema,
+  reference: issueReferenceSchema,
   provenance: pullRequestProvenanceSchema,
   reason: z.string().min(1),
+  /** Local proof this issue's own workspace published it — the only ground for attaching without a confirmation. */
+  workspace_owned: z.boolean(),
   /** Set when this candidate is already attached, so a surface never offers to adopt it twice. */
   attached_pull_request_id: z.string().nullable(),
 });

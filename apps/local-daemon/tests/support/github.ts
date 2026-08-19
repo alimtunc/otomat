@@ -16,6 +16,7 @@ import {
   type GitHubService,
   type PullRequestCreateInput,
   type PullRequestModeInput,
+  type PullRequestSearchInput,
   type PullRequestSelector,
   type PullRequestUpdateInput,
   type ReviewCommentCreateInput,
@@ -255,8 +256,10 @@ export class FakeGitHubCli implements GitHubCli {
   }
 
   searchResults: GitHubPullRequest[] = [];
+  searchInputs: PullRequestSearchInput[] = [];
 
-  async searchPullRequests(): Promise<GitHubPullRequest[]> {
+  async searchPullRequests(input: PullRequestSearchInput): Promise<GitHubPullRequest[]> {
+    this.searchInputs.push(input);
     return this.searchResults;
   }
 

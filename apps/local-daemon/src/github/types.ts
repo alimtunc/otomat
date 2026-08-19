@@ -48,7 +48,7 @@ export interface PullRequestView {
   sync: PullRequestSync | null;
 }
 
-/** What an issue can say about its pull requests: the adopted rows, what GitHub links to it, and whether that search ran. */
+/** What an issue can say about its pull requests: the adopted rows, what names it, and whether that search ran. */
 export interface IssuePullRequestsResult {
   attached: PullRequestRow[];
   candidates: PullRequestCandidate[];
@@ -127,8 +127,8 @@ export interface PullRequestListInput extends GitHubRepositoryTarget {
 }
 
 export interface PullRequestSearchInput extends GitHubRepositoryTarget {
-  /** GitHub's own pull-request search syntax; Otomat passes the issue identifier, never a guess at the branch. */
-  query: string;
+  /** The issue identifier alone; the lookup writes the search syntax, never a guess at the branch. */
+  identifier: string;
   limit: number;
 }
 

@@ -591,6 +591,20 @@ describe("GitHub CLI adapter", () => {
       message: expect.stringContaining("merge queue"),
     });
   });
+
+  it("searches the identifier as a quoted phrase scoped to title and body", async () => {
+    const runner = fakeRunner([ok("[]")]);
+
+    await createGitHubCli(runner.run).searchPullRequests({
+      cwd: "/repo",
+      repository: "acme/otomat",
+      identifier: "OTO-119",
+      limit: 10,
+    });
+
+    const args = runner.requests[0]?.args ?? [];
+    expect(args[args.indexOf("--search") + 1]).toBe('"OTO-119" in:title,body');
+  });
 });
 
 describe("createReviewComment", () => {

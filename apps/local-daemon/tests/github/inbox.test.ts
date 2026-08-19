@@ -153,6 +153,59 @@ it("links an issue a single reference names, and refuses an ambiguous one", asyn
   expect(ambiguous?.issue).toBeNull();
 });
 
+it("weighs the branch too, and refuses the tokens a search would have split", async () => {
+  seedIssue("i-ten", "OTO-10", "Supervisor reconciliation");
+  seedIssue("i-anti-slop", "OTO-119", "Vendor anti-slop");
+  cli.openPullRequests = [
+    contributorPullRequest({ title: "chore: sweep", headRef: "feat/oto-119-lint" }),
+    contributorPullRequest({
+      number: 8,
+      url: "https://github.com/acme/otomat/pull/8",
+      title: "feat(supervisor): reconcile pids",
+      body: "Refs OTO-10\n\nThe daemon 119 tests still pass.",
+      headRef: "oto-10-supervisor-pid-reconciliation",
+    }),
+  ];
+
+  const inbox = await github.syncPullRequestInbox("p1");
+
+  const [byBranch, tokenized] = inbox.entries;
+  expect(byBranch?.issue).toMatchObject({ id: "i-anti-slop", evidence: "reference" });
+  expect(tokenized?.issue).toMatchObject({ id: "i-ten", evidence: "reference" });
+});
+
+it("lets the title and the body decide, so a stale branch name cannot unlink a named issue", async () => {
+  seedIssue("i-ten", "OTO-10", "Supervisor reconciliation");
+  seedIssue("i-anti-slop", "OTO-119", "Vendor anti-slop");
+  cli.openPullRequests = [
+    contributorPullRequest({
+      title: "chore: sweep",
+      body: "Refs OTO-119",
+      headRef: "oto-10-leftover-branch",
+    }),
+  ];
+
+  const inbox = await github.syncPullRequestInbox("p1");
+
+  expect(inbox.entries[0]?.issue).toMatchObject({ id: "i-anti-slop", evidence: "reference" });
+});
+
+it("reads a lowercase mention in prose as prose, so it cannot make one named issue read as two", async () => {
+  seedIssue("i-ten", "OTO-118", "Supervisor reconciliation");
+  seedIssue("i-anti-slop", "OTO-119", "Vendor anti-slop");
+  cli.openPullRequests = [
+    contributorPullRequest({
+      title: "OTO-119: split the detector",
+      body: "Supersedes oto-118; that branch is stale.",
+      headRef: "feat/detector",
+    }),
+  ];
+
+  const inbox = await github.syncPullRequestInbox("p1");
+
+  expect(inbox.entries[0]?.issue).toMatchObject({ id: "i-anti-slop", evidence: "reference" });
+});
+
 it("reads an Otomat-owned branch as its own work without inventing a publication", async () => {
   seedRun(fix.db, {
     runId: "r1",

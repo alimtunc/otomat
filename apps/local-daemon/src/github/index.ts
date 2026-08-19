@@ -24,6 +24,7 @@ export type {
   PullRequestView,
   PullRequestCreateInput,
   PullRequestModeInput,
+  PullRequestSearchInput,
   PullRequestSelector,
   PullRequestUpdateInput,
   ReviewCommentCreateInput,
