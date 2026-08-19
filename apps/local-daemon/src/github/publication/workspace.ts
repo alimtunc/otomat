@@ -11,12 +11,18 @@ export async function resolveWorkspace(
   if (!binding || !worktree) {
     throw new GitHubPublicationError("worktree_missing", "The run has no active worktree.");
   }
-  return {
-    worktrees: binding.service,
-    worktree,
-    remote: await config.cli.resolveRemote(worktree.path),
-    /** A worktree recorded before fork refs carries an empty base, never a missing one. */
-    baseRef: worktree.baseRef || binding.defaultBranch,
-    defaultBranch: binding.defaultBranch,
-  };
+  try {
+    return {
+      worktrees: binding.service,
+      worktree,
+      remote: await config.cli.resolveRemote(worktree.path),
+      /** A worktree recorded before fork refs carries an empty base, never a missing one. */
+      baseRef: worktree.baseRef || binding.defaultBranch,
+      defaultBranch: binding.defaultBranch,
+    };
+  } catch (error) {
+    // Journaled where the run and its canonical path are known; the refusal itself carries only what git answered.
+    console.error(`[otomat] remote resolution for run ${runId} in ${worktree.path} failed`, error);
+    throw error;
+  }
 }

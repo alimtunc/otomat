@@ -196,6 +196,7 @@ export class FakeGitHubCli implements GitHubCli {
   createCalls = 0;
   updateCalls = 0;
   pushedBranches: string[] = [];
+  resolveRemoteCwds: string[] = [];
   forcePushes: ForcePushWithLeaseInput[] = [];
   modeInputs: PullRequestModeInput[] = [];
   remoteHeads = new Map<string, string>();
@@ -223,7 +224,8 @@ export class FakeGitHubCli implements GitHubCli {
     return this.connectionValue;
   }
 
-  async resolveRemote(): Promise<GitHubRemote> {
+  async resolveRemote(cwd: string): Promise<GitHubRemote> {
+    this.resolveRemoteCwds.push(cwd);
     if (this.resolveError) throw this.resolveError;
     return this.remote;
   }

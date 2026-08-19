@@ -70,6 +70,8 @@ export function runCommand(request: CommandRequest): Promise<CommandResult> {
       finish(exitCode, stdinErrorCode);
     });
 
-    child.stdin.end(request.stdin ?? "");
+    // An empty payload is closed, never written: a zero-length write races a fast child into a spurious EPIPE.
+    if (request.stdin) child.stdin.end(request.stdin);
+    else child.stdin.end();
   });
 }

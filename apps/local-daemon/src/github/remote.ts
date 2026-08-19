@@ -1,15 +1,59 @@
-import { assertPublicationSucceeded, commandSucceeded } from "./cli-commands.js";
+import {
+  assertPublicationSucceeded,
+  commandFailureDetail,
+  commandSucceeded,
+} from "./cli-commands.js";
 import { GitHubCliError } from "./errors.js";
-import { parseGitHubRemoteUrl, selectRemote } from "./parse.js";
+import { maskRemoteUrl, parseGitHubRemoteUrl } from "./parse.js";
 import type { CommandRunner, ForcePushWithLeaseInput, GitHubRemote } from "./types.js";
 
 const NON_FAST_FORWARD = /non-fast-forward|fetch first|Updates were rejected/i;
 const STALE_LEASE = /stale info/i;
 
+interface RemoteRefusal {
+  name: string;
+  reason: string;
+}
+
+function noUsableRemote(cwd: string, refused: RemoteRefusal[]): GitHubCliError {
+  if (refused.length === 0) {
+    return new GitHubCliError(
+      "github_remote_missing",
+      `No git remote is configured in ${cwd}; add a GitHub remote named origin, then retry.`,
+    );
+  }
+  const listed = refused.map((refusal) => `${refusal.name} (${refusal.reason})`).join(", ");
+  return new GitHubCliError(
+    "github_remote_missing",
+    `No usable GitHub remote was found for this run in ${cwd}: ${listed}. Point origin at a GitHub repository, then retry.`,
+  );
+}
+
+function selectRemote(
+  cwd: string,
+  candidates: GitHubRemote[],
+  refused: RemoteRefusal[],
+): GitHubRemote {
+  const origin = candidates.find((candidate) => candidate.name === "origin");
+  if (origin) return origin;
+  const [onlyCandidate] = candidates;
+  if (onlyCandidate && candidates.length === 1) return onlyCandidate;
+  if (!onlyCandidate) throw noUsableRemote(cwd, refused);
+  throw new GitHubCliError(
+    "github_remote_ambiguous",
+    `More than one GitHub remote is available (${candidates.map((candidate) => candidate.name).join(", ")}); configure origin explicitly.`,
+  );
+}
+
 export async function resolveRemote(run: CommandRunner, cwd: string): Promise<GitHubRemote> {
   const names = await run({ command: "git", args: ["remote"], cwd });
-  assertPublicationSucceeded(names, "git_remote_list_failed", "Git remotes could not be read.");
+  assertPublicationSucceeded(
+    names,
+    "git_remote_list_failed",
+    `Git remotes could not be read in ${cwd}.`,
+  );
   const candidates: GitHubRemote[] = [];
+  const refused: RemoteRefusal[] = [];
   for (const line of names.stdout.split("\n")) {
     const name = line.trim();
     if (name === "") continue;
@@ -18,11 +62,20 @@ export async function resolveRemote(run: CommandRunner, cwd: string): Promise<Gi
       args: ["remote", "get-url", "--push", name],
       cwd,
     });
-    if (!commandSucceeded(remoteResult)) continue;
-    const parsed = parseGitHubRemoteUrl(remoteResult.stdout.trim());
+    // Nothing is written to this command's stdin, so its exit code alone judges the URL it printed.
+    if (remoteResult.exitCode !== 0) {
+      refused.push({
+        name,
+        reason: `push URL unreadable: ${commandFailureDetail(remoteResult) ?? "no output"}`,
+      });
+      continue;
+    }
+    const url = remoteResult.stdout.trim();
+    const parsed = parseGitHubRemoteUrl(url);
     if (parsed) candidates.push({ name, repository: parsed.repository });
+    else refused.push({ name, reason: `${maskRemoteUrl(url)} is not a GitHub repository URL` });
   }
-  return selectRemote(candidates);
+  return selectRemote(cwd, candidates, refused);
 }
 
 /** A rejected fast-forward gets its own code: it is the one push failure the cockpit can offer a lease for. */

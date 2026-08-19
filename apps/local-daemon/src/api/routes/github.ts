@@ -7,7 +7,7 @@ import {
 } from "@otomat/domain";
 import { Hono } from "hono";
 
-import { GitHubPublicationError, type PullRequestView } from "#github";
+import { GitHubCliError, GitHubPublicationError, type PullRequestView } from "#github";
 
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
@@ -22,6 +22,13 @@ function detail(
     sync: view?.sync ?? null,
     publishability,
   };
+}
+
+function refusal(error: unknown): { error: string; message: string } | null {
+  if (error instanceof GitHubPublicationError || error instanceof GitHubCliError) {
+    return { error: error.code, message: error.message };
+  }
+  return null;
 }
 
 export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
@@ -44,9 +51,8 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
     try {
       return c.json(await deps.github.generatePullRequestMetadata(c.get("run")));
     } catch (error) {
-      if (error instanceof GitHubPublicationError) {
-        return c.json({ error: error.code, message: error.message }, 409);
-      }
+      const refused = refusal(error);
+      if (refused) return c.json(refused, 409);
       throw error;
     }
   });
@@ -62,9 +68,8 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
         const view = await deps.github.publish(run, c.req.valid("json"));
         return c.json(await publicationDetail(run.id, view), existed ? 200 : 201);
       } catch (error) {
-        if (error instanceof GitHubPublicationError) {
-          return c.json({ error: error.code, message: error.message }, 409);
-        }
+        const refused = refusal(error);
+        if (refused) return c.json(refused, 409);
         console.error(`[otomat] GitHub publication for run ${run.id} failed`, error);
         return c.json({ error: "pr_prepare_failed" }, 500);
       }
@@ -81,9 +86,8 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
         const view = await deps.github.pushCommits(run.id, c.req.valid("json"));
         return c.json(await publicationDetail(run.id, view));
       } catch (error) {
-        if (error instanceof GitHubPublicationError) {
-          return c.json({ error: error.code, message: error.message }, 409);
-        }
+        const refused = refusal(error);
+        if (refused) return c.json(refused, 409);
         console.error(`[otomat] GitHub push for run ${run.id} failed`, error);
         return c.json({ error: "pr_push_failed" }, 500);
       }
