@@ -7,7 +7,7 @@ import type {
   StepRunState,
 } from "@otomat/domain";
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { agents } from "./agents.js";
 import { issues } from "./issues.js";
@@ -142,5 +142,9 @@ export const runtimeEvents = sqliteTable(
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
-  (table) => [uniqueIndex("runtime_events_run_seq_unique").on(table.run_id, table.seq)],
+  (table) => [
+    uniqueIndex("runtime_events_run_seq_unique").on(table.run_id, table.seq),
+    // Not partial on `runtime.usage`: SQLite cannot prove a partial predicate from a bound parameter.
+    index("runtime_events_type_occurred_idx").on(table.type, table.occurred_at),
+  ],
 );

@@ -23,6 +23,7 @@ import { createRunContributionRoutes } from "./routes/run-contributions.js";
 import { createRunRoutes } from "./routes/runs.js";
 import { createSettingsRoutes } from "./routes/settings.js";
 import { createSkillRoutes } from "./routes/skills.js";
+import { createUsageRoutes } from "./routes/usage.js";
 import { createWorkflowPresetRoutes } from "./routes/workflow-presets.js";
 import { createWorkspaceRoutes } from "./routes/workspaces.js";
 import { allowedOrigin, hostGuard } from "./security.js";
@@ -54,6 +55,7 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.route("/api/workflow-presets", createWorkflowPresetRoutes(deps));
   app.route("/api/workspaces", createWorkspaceRoutes(deps));
   app.route("/api/issues", createIssueRoutes(deps));
+  app.route("/api/usage", createUsageRoutes(deps));
   app.route("/api/pull-requests", createPullRequestRoutes(deps));
   app.route("/api/reviews", createReviewInboxRoutes(deps));
   app.route("/api/runs", createRunContributionRoutes(deps));

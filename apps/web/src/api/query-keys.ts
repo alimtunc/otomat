@@ -3,6 +3,7 @@ import {
   WORKSPACE_DIFF_SCOPE,
   type ReviewTarget,
   type RunDiffScopeSelector,
+  type UsageFilters,
 } from "@otomat/domain";
 
 /** One stable key segment per scope, so switching scope refetches instead of reading a neighbour's cache. */
@@ -57,6 +58,8 @@ export const queryKeys = {
   linearWriteback: (issueId: string) => ["linear", "writeback", issueId] as const,
   linearEditor: (issueId: string) => ["linear", "editor", issueId] as const,
   linearComments: (issueId: string) => ["linear", "comments", issueId] as const,
+  usage: ["usage"] as const,
+  usageDashboard: (filters: UsageFilters) => ["usage", filters] as const,
   runs: ["runs"] as const,
   runsList: (projectId?: string) => ["runs", "project", projectId ?? null] as const,
   runsForIssue: (issueId: string) => ["runs", { issueId }] as const,

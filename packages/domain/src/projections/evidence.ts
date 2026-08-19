@@ -26,3 +26,33 @@ export interface IssueExecutionEvidence {
   /** State of the pull request the issue adopted without a run of its own; it stands against every run of that issue. */
   adopted_pr_status: PullRequestState | null;
 }
+
+/** One group of `runtime.usage` turns as SQLite folded them, keyed by run, step, UTC day and emitter. */
+export interface UsageTurnEvidence {
+  run_id: string;
+  step_run_id: string | null;
+  day: string;
+  last_occurred_at: string;
+  runtime: string | null;
+  model: string | null;
+  turns: number;
+  unreadable_turns: number;
+  input_tokens: number | null;
+  input_turns: number;
+  output_tokens: number | null;
+  output_turns: number;
+  cost_usd: number | null;
+  cost_turns: number;
+}
+
+export interface UsageRunEvidence {
+  run_id: string;
+  status: RunState;
+  started_at: string | null;
+  completed_at: string | null;
+  project_id: string;
+  project_name: string;
+  issue_id: string;
+  issue_identifier: string | null;
+  issue_title: string;
+}

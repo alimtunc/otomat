@@ -61,12 +61,18 @@ export function resolveUrl(config: DaemonClientConfig, path: string): string {
   return `${config.baseUrl ?? ""}${path}`;
 }
 
-export function queryString(params: Record<string, string | undefined>): string {
-  const entries = Object.entries(params).filter(
-    (entry): entry is [string, string] => entry[1] !== undefined,
-  );
-  if (entries.length === 0) return "";
-  return `?${new URLSearchParams(entries).toString()}`;
+/** A list value repeats its key, so a selection carrying an empty string stays distinguishable from an absent one. */
+export function queryString(
+  params: Record<string, string | readonly string[] | undefined>,
+): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined) continue;
+    if (typeof value === "string") search.append(key, value);
+    else for (const entry of value) search.append(key, entry);
+  }
+  const query = search.toString();
+  return query === "" ? "" : `?${query}`;
 }
 
 async function daemonFetch(
