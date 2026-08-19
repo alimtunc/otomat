@@ -43,7 +43,9 @@ const REGISTRY = {
 
 export type KnownRuntimeId = keyof typeof REGISTRY;
 
-export const RUNTIME_IDS = Object.keys(REGISTRY) as KnownRuntimeId[];
+export const RUNTIME_IDS =
+  // SAFETY: Object.keys widens to string; REGISTRY's keys are exactly the known runtime ids.
+  Object.keys(REGISTRY) as KnownRuntimeId[];
 
 export function isKnownRuntimeId(value: string): value is KnownRuntimeId {
   return value in REGISTRY;

@@ -12,13 +12,14 @@ interface FakeQueryState {
 }
 
 function fakeQuery(state: FakeQueryState): UseQueryResult<string[]> {
+  // SAFETY: QueryList reads only these five fields, not the full query-state union.
   return {
     data: state.data,
     isError: state.isError ?? false,
     isFetching: false,
     dataUpdatedAt: Date.now(),
     refetch: () => Promise.resolve(),
-  } as unknown as UseQueryResult<string[]>;
+  } as UseQueryResult<string[]>;
 }
 
 const cleanups: Array<() => Promise<void>> = [];

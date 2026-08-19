@@ -1,3 +1,4 @@
+import type { CreateIssueRequest } from "@otomat/domain";
 import { Button, DialogBody, Field, FieldControl, FieldLabel, Input, Textarea } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import { useCreateIssueAndNavigate } from "@web/api/issues/mutations";
@@ -17,11 +18,9 @@ export function ManualIssueForm({ projectId, onCreated, onCancel }: ManualIssueF
     onSubmit: async ({ value }) => {
       if (!projectId) return;
       const body = value.body.trim();
-      const created = await create({
-        project_id: projectId,
-        title: value.title.trim(),
-        ...(body.length > 0 ? { body } : {}),
-      });
+      const request: CreateIssueRequest = { project_id: projectId, title: value.title.trim() };
+      if (body.length > 0) request.body = body;
+      const created = await create(request);
       if (created) {
         form.reset();
         onCreated();

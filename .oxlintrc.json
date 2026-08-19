@@ -1,5 +1,6 @@
 {
   "extends": ["./packages/tooling/oxlintrc.base.json"],
+  "ignorePatterns": ["**/oxlint/anti-slop/**"],
   "overrides": [
     {
       "files": ["**/*.mjs", "**/*.cjs"],

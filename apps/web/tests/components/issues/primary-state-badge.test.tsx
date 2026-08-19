@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { IssueExecution, IssueState } from "@otomat/domain";
+import type { IssueContract, IssueExecution, IssueState } from "@otomat/domain";
 import { IssuePrimaryStateBadge } from "@web/components/issues/issue/primary-state-badge";
 import { afterEach, expect, it } from "vitest";
 
@@ -27,12 +27,9 @@ async function render(
   execution: IssueExecution,
   cycle: "open" | "closed",
 ): Promise<HTMLElement> {
-  const issue = issueContract({
-    id: "issue-1",
-    status,
-    execution,
-    ...(cycle === "open" ? { workspace: openWorkspace("run-1", "review_ready") } : {}),
-  });
+  const overrides: Partial<IssueContract> = { id: "issue-1", status, execution };
+  if (cycle === "open") overrides.workspace = openWorkspace("run-1", "review_ready");
+  const issue = issueContract(overrides);
   const rendered = await mountRouted(<IssuePrimaryStateBadge issue={issue} />);
   mounted.push(rendered);
   return rendered.container;

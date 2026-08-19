@@ -13,7 +13,7 @@ export interface StateMeta {
   live: boolean;
 }
 
-export const STATE_META: Record<ConnectionState, StateMeta> = {
+export const STATE_META = {
   online: {
     label: "Online",
     icon: Wifi,
@@ -38,4 +38,4 @@ export const STATE_META: Record<ConnectionState, StateMeta> = {
     triggerTextClass: "text-text-tertiary",
     live: false,
   },
-};
+} satisfies Record<ConnectionState, StateMeta>;

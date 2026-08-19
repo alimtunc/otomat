@@ -24,7 +24,7 @@ export function readStored(): ThemeState {
     if (!raw) {
       return DEFAULTS;
     }
-    const parsed = JSON.parse(raw) as StoredThemeState;
+    const parsed: StoredThemeState = JSON.parse(raw);
     return {
       theme: parsed.theme === "light" ? "light" : "dark",
       density: parsed.density === "comfortable" ? "comfortable" : "compact",

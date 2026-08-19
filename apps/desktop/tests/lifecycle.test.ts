@@ -145,6 +145,7 @@ it.skipIf(!existsSync(DAEMON_ENTRY))(
 
     await controller.restoreBackup(backupPath);
     const restoredUrl = await controller.start();
+    // SAFETY: the daemon answers the issues route with an array of issue contracts.
     const issues = (await (await fetch(`${restoredUrl}/api/issues`)).json()) as {
       title: string;
     }[];

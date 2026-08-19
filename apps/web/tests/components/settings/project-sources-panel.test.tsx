@@ -1,14 +1,16 @@
 // @vitest-environment happy-dom
 import type { ProjectContract } from "@otomat/domain";
 import { ProjectSourcesPanel } from "@web/components/settings/project/sources-panel";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { findRefreshButton } from "#support/dom-queries";
+import type { FakeQueryState } from "#support/fake-query";
 import { mount, type Mounted } from "#support/mount";
 
-let connectionState: Record<string, unknown>;
-let sourcesState: Record<string, unknown>;
-let workspaceState: Record<string, unknown>;
+let connectionState: FakeQueryState;
+let sourcesState: FakeQueryState;
+let workspaceState: FakeQueryState;
 let syncSources: number;
 const syncRefresh = vi.fn();
 const createdCallbacks: (() => void)[] = [];
@@ -16,7 +18,7 @@ const createdCallbacks: (() => void)[] = [];
 const PROJECT: ProjectContract = { id: "p1", name: "Otomat", root_path: "/tmp/otomat" };
 
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children }: { children?: unknown }) => <a href="#link">{children as never}</a>,
+  Link: ({ children }: { children?: ReactNode }) => <a href="#link">{children}</a>,
 }));
 
 vi.mock("@web/api/linear/queries", () => ({

@@ -29,7 +29,7 @@ import { toPullRequest, toRun } from "../serialize.js";
 import { streamRunEvents } from "../sse.js";
 import { appendStepSelector, stepAppendErrorResponse } from "../step-append.js";
 
-const LAUNCH_REFUSAL_STATUS: Record<RunLaunchError, 400 | 409> = {
+const LAUNCH_REFUSAL_STATUS = {
   project_not_found: 400,
   project_mismatch: 400,
   base_branch_not_found: 400,
@@ -37,7 +37,7 @@ const LAUNCH_REFUSAL_STATUS: Record<RunLaunchError, 400 | 409> = {
   repository_unavailable: 409,
   worktree_unavailable: 409,
   issue_workspace_open: 409,
-};
+} satisfies Record<RunLaunchError, 400 | 409>;
 
 /** Mounted at `/api/runs`. Holds the run reads, the run commands (start/resume/abort), and the SSE stream. */
 export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {

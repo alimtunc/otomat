@@ -81,11 +81,13 @@ export class CodexFrameMapper implements ProviderFrameMapper {
       if (frameType !== "item.completed") return;
       const text = asString(item["text"]);
       if (text !== null) {
-        this.emitter.emit("runtime.message", "parsed", {
-          role: "assistant",
-          text,
-          ...(itemType === "reasoning" ? { thinking: true } : {}),
-        });
+        this.emitter.emit(
+          "runtime.message",
+          "parsed",
+          itemType === "reasoning"
+            ? { role: "assistant", text, thinking: true }
+            : { role: "assistant", text },
+        );
       }
       return;
     }

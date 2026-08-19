@@ -8,12 +8,14 @@ const COMMAND_TOOLS = new Set(["bash", "command_execution"]);
 
 function stringProperty(value: unknown, property: string): string | null {
   if (typeof value !== "object" || value === null || !(property in value)) return null;
+  // SAFETY: a non-null object with the property present indexes as a record of unknowns.
   const candidate = (value as Record<string, unknown>)[property];
   return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
 }
 
 function numberProperty(value: unknown, property: string): number | null {
   if (typeof value !== "object" || value === null || !(property in value)) return null;
+  // SAFETY: a non-null object with the property present indexes as a record of unknowns.
   const candidate = (value as Record<string, unknown>)[property];
   return typeof candidate === "number" && Number.isInteger(candidate) ? candidate : null;
 }

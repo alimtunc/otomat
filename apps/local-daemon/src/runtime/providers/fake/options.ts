@@ -1,17 +1,17 @@
 import type { RuntimeOptionSupport } from "#runtime/contract";
 
 /** Simulated levels, published per model exactly as the real providers publish theirs. No provider is contacted. */
-const FAKE_EFFORT_LEVELS: Record<string, readonly string[]> = {
-  "fake-fast": ["low", "medium"],
-  "fake-thorough": ["low", "medium", "high"],
-};
+const FAKE_EFFORT_LEVELS = new Map<string, readonly string[]>([
+  ["fake-fast", ["low", "medium"]],
+  ["fake-thorough", ["low", "medium", "high"]],
+]);
 
 const NO_MODEL_DETAIL =
   "The simulated runtime publishes effort levels per model, so pick one first.";
 
 /** The levels the test adapter attributes to this exact model; a model it does not describe gets no field rather than another model's levels. */
 export function fakeOptionSupport(model: string | null): RuntimeOptionSupport {
-  const levels = model === null ? undefined : FAKE_EFFORT_LEVELS[model];
+  const levels = model === null ? undefined : FAKE_EFFORT_LEVELS.get(model);
   if (levels === undefined) {
     return { detection: { status: "unsupported", detail: NO_MODEL_DETAIL }, options: [] };
   }

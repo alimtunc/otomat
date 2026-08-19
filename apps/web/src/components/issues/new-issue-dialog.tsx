@@ -19,7 +19,7 @@ const NEW_ISSUE_MODES = ["agent", "workflow", "manual"] as const;
 type NewIssueMode = (typeof NEW_ISSUE_MODES)[number];
 
 function isNewIssueMode(value: string): value is NewIssueMode {
-  return (NEW_ISSUE_MODES as readonly string[]).includes(value);
+  return NEW_ISSUE_MODES.some((mode) => mode === value);
 }
 
 export interface NewIssueDialogProps {

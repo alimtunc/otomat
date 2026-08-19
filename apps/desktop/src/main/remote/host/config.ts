@@ -22,13 +22,15 @@ export const DEFAULT_EXECUTION_HOSTS_CONFIG: ExecutionHostsConfig = {
 
 function isExecutionHostsConfig(value: unknown): value is ExecutionHostsConfig {
   if (typeof value !== "object" || value === null) return false;
-  const config = value as Record<string, unknown>;
-  if (config.version !== 1) return false;
-  if (!isExecutionHostId(config.active)) return false;
-  if (config.remote === null) return config.active === "local";
-  if (typeof config.remote !== "object") return false;
-  const remote = config.remote as Record<string, unknown>;
-  return typeof remote.ssh_alias === "string" && remote.ssh_alias.length > 0;
+  if (!("version" in value) || value.version !== 1) return false;
+  if (!("active" in value) || !isExecutionHostId(value.active)) return false;
+  if (!("remote" in value)) return false;
+  const remote = value.remote;
+  if (remote === null) return value.active === "local";
+  if (typeof remote !== "object") return false;
+  return (
+    "ssh_alias" in remote && typeof remote.ssh_alias === "string" && remote.ssh_alias.length > 0
+  );
 }
 
 export function executionHostsConfigPath(dataDir: string): string {

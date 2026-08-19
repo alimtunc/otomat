@@ -112,9 +112,9 @@ it("searches issues and files, and attaches one by identity", async () => {
   const onChange = await mountComposer();
 
   await act(async () => byLabel("Add context").click());
-  await act(async () =>
-    setInputValue(byLabel("Step 1 context search") as HTMLInputElement, "back"),
-  );
+  const search = byLabel("Step 1 context search");
+  if (!(search instanceof HTMLInputElement)) throw new Error("context search input not found");
+  await act(async () => setInputValue(search, "back"));
   expect(fileSearches).toHaveBeenLastCalledWith("repo-1", "back");
   await clickContaining("Backfill the fixtures");
 

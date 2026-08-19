@@ -2,6 +2,7 @@
 import { CLOSED_ISSUE_WORKSPACE, type IssueContract } from "@otomat/domain";
 import { IssueDetailView } from "@web/components/issues/issue/detail-view";
 import { act, useSyncExternalStore } from "react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mount } from "#support/mount";
@@ -73,7 +74,7 @@ vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ issueId: "issue-1" }),
   useSearch: () => ({ run: undefined }),
   useNavigate: () => vi.fn(),
-  Link: ({ children }: { children?: unknown }) => <a>{children as never}</a>,
+  Link: ({ children }: { children?: ReactNode }) => <a>{children}</a>,
 }));
 
 vi.mock("@web/components/shell/use-back-navigation", () => ({
@@ -92,7 +93,7 @@ vi.mock("@web/api/runs/queries", () => ({
 }));
 
 vi.mock("@web/components/shell/route-shell", () => ({
-  RouteShell: ({ children }: { children?: unknown }) => <div>{children as never}</div>,
+  RouteShell: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock("@web/components/issues/issue/header", () => ({
@@ -199,7 +200,7 @@ describe("IssueDetailView rail panel", () => {
 
     const raw = window.localStorage.getItem(GROUP_STORAGE_KEY);
     if (raw === null) throw new Error("no persisted layout");
-    const stored = JSON.parse(raw) as Record<string, number | undefined>;
+    const stored: Record<string, number | undefined> = JSON.parse(raw);
     expect(stored["issue-rail"]).toBeGreaterThan(0);
   });
 

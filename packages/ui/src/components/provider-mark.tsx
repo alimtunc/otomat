@@ -1,6 +1,10 @@
 import type { SVGProps } from "react";
 
-import { PROVIDER_MARK_ART, type ProviderMarkName } from "../lib/provider-mark-art";
+import {
+  PROVIDER_MARK_ART,
+  type ProviderMarkArt,
+  type ProviderMarkName,
+} from "../lib/provider-mark-art";
 import { cn } from "../lib/utils";
 
 export interface ProviderMarkProps extends Omit<SVGProps<SVGSVGElement>, "children" | "viewBox"> {
@@ -9,7 +13,7 @@ export interface ProviderMarkProps extends Omit<SVGProps<SVGSVGElement>, "childr
 
 /** The marks are solid artwork, so `fill-current stroke-none` opts them out of the global `svg` rule that would paint a stroke around every filled ray. */
 export function ProviderMark({ name, className, style, ...props }: ProviderMarkProps) {
-  const art = PROVIDER_MARK_ART[name];
+  const art: ProviderMarkArt = PROVIDER_MARK_ART[name];
   return (
     <svg
       aria-hidden

@@ -18,6 +18,7 @@ import { mount } from "#support/mount";
 import { modelCatalogQueryResult } from "#support/runtime-models";
 import { providerOptionSetQueryResult } from "#support/runtime-options";
 
+// SAFETY: the dialogs read only the launched run's id.
 const launch = vi.fn(async () => ({ id: "run-1" }) as RunContract);
 const navigate = vi.fn();
 const onLaunched = vi.fn();
@@ -31,6 +32,7 @@ interface ExecutionPickerProbeProps {
 
 const appendStep = vi.fn(
   (_request: AppendRunStepRequest, options?: { onSuccess?: (run: RunContract) => void }) => {
+    // SAFETY: the success handler reads only the launched run's id.
     options?.onSuccess?.({ id: "run-7" } as RunContract);
   },
 );

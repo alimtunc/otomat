@@ -17,7 +17,7 @@ export interface ToneFacets {
   subtleBgVar?: string;
 }
 
-export const TONE_FACETS: Record<StatusTone, ToneFacets> = {
+export const TONE_FACETS = {
   neutral: {
     text: "text-text-tertiary",
     textOnSubtle: "text-text-secondary",
@@ -76,11 +76,13 @@ export const TONE_FACETS: Record<StatusTone, ToneFacets> = {
     solid: "bg-text-tertiary",
     cssVar: "var(--text-tertiary)",
   },
-};
+} satisfies Record<StatusTone, ToneFacets>;
 
+// SAFETY: Object.entries widens the keys; TONE_FACETS is keyed by exactly the StatusTone union.
 const TONE_ENTRIES = Object.entries(TONE_FACETS) as [StatusTone, ToneFacets][];
 
 export function toneClassMap(pick: (facets: ToneFacets) => string): Record<StatusTone, string> {
+  // SAFETY: fromEntries widens the keys; the entries cover every StatusTone exactly once.
   return Object.fromEntries(TONE_ENTRIES.map(([tone, facets]) => [tone, pick(facets)])) as Record<
     StatusTone,
     string

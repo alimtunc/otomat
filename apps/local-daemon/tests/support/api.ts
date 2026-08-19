@@ -40,6 +40,7 @@ export function del(app: Hono, path: string): Promise<Response> {
 }
 
 export async function json<T>(res: Response): Promise<T> {
+  // SAFETY: routes answer their declared contract; each test's expectations check the fields it uses.
   return (await res.json()) as T;
 }
 

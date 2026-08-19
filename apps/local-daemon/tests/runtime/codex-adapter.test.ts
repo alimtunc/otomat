@@ -146,7 +146,7 @@ describe("CodexRuntimeAdapter", () => {
     );
     expect(final.status).toBe("completed");
 
-    const argv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    const argv: string[] = JSON.parse(readFileSync(argsFile, "utf8"));
     // Exec-level flags must precede the resume subcommand; the real CLI rejects them after it.
     expect(argv).toEqual([
       "exec",
@@ -255,7 +255,7 @@ describe("CodexRuntimeAdapter", () => {
       new AbortController().signal,
     );
 
-    const argv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    const argv: string[] = JSON.parse(readFileSync(argsFile, "utf8"));
     expect(argv).toEqual(["exec", "--json", "--sandbox", "workspace-write", "-"]);
   });
 

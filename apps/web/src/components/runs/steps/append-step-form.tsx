@@ -1,4 +1,9 @@
-import type { IssueContract, IssueWorkspace, RunContract } from "@otomat/domain";
+import type {
+  AppendRunStepRequest,
+  IssueContract,
+  IssueWorkspace,
+  RunContract,
+} from "@otomat/domain";
 import { Button, DialogBody, Field, FieldControl, FieldLabel, Input, Kbd } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import { useAppendRunStep } from "@web/api/runs/mutations";
@@ -48,22 +53,20 @@ export function AppendStepForm({
     defaultValues: { name: "" },
     onSubmit: ({ value }) => {
       if (!launchExecution.canLaunch) return;
-      append.mutate(
-        {
-          name: value.name.trim(),
-          ...contextRequestFields(context),
-          ...launchExecution.request,
-          depends_on: [],
-          ...(recovered !== null && recovers ? { replaces: recovered.id } : {}),
+      const request: AppendRunStepRequest = {
+        name: value.name.trim(),
+        ...contextRequestFields(context),
+        ...launchExecution.request,
+        depends_on: [],
+      };
+      if (recovered !== null && recovers) request.replaces = recovered.id;
+      append.mutate(request, {
+        onSuccess: (run) => {
+          form.reset();
+          setContext(EMPTY_CONTEXT_DRAFT);
+          onAppended(run);
         },
-        {
-          onSuccess: (run) => {
-            form.reset();
-            setContext(EMPTY_CONTEXT_DRAFT);
-            onAppended(run);
-          },
-        },
-      );
+      });
     },
   });
 

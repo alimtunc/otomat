@@ -7,12 +7,12 @@ export type { IconName } from "../lib/icon-registry";
 
 export type IconSize = "xs" | "sm" | "md" | "lg";
 
-const SIZE_CLASS: Record<IconSize, string> = {
+const SIZE_CLASS = {
   xs: "size-3",
   sm: "size-4",
   md: "size-5",
   lg: "size-6",
-};
+} satisfies Record<IconSize, string>;
 
 export interface IconProps extends Omit<LucideProps, "size"> {
   name: IconName;

@@ -1,6 +1,6 @@
 import type { RunPlanInput, RunPlanNodeInput } from "@otomat/domain";
 import { contextRequestFields } from "@web/lib/context/draft";
-import { executionRequestFields } from "@web/lib/execution/request";
+import { executionRequestFields, type ExecutionRequestFields } from "@web/lib/execution/request";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import type { WorkflowNodeDraft } from "@web/lib/workflow-draft";
 
@@ -8,12 +8,13 @@ import { sanitizeWorkflowSteps } from "./steps";
 
 function nodeExecution(execution: ExecutionSelection) {
   const { profile_id, runtime, model, options } = executionRequestFields(execution);
-  return {
+  const node: { agent: string | null } & Omit<ExecutionRequestFields, "runtime"> = {
     agent: runtime ?? null,
-    ...(profile_id === undefined ? {} : { profile_id }),
-    ...(model === undefined ? {} : { model }),
-    ...(options === undefined ? {} : { options }),
   };
+  if (profile_id !== undefined) node.profile_id = profile_id;
+  if (model !== undefined) node.model = model;
+  if (options !== undefined) node.options = options;
+  return node;
 }
 
 export function buildRunPlanInput(steps: readonly WorkflowNodeDraft[]): RunPlanInput {

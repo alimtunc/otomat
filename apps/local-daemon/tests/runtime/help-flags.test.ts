@@ -58,9 +58,9 @@ describe("helpFlagValues", () => {
 
   it("lets an explicit list win over a bare enumeration earlier in the entry", () => {
     // Synthetic: no shipped CLI mixes the two shapes, but word order must not decide which wins.
-    const help = "Options:\n      --mode <m>  one of (fast, slow) [possible values: a, b]";
+    const entry = "Options:\n      --mode <m>  one of (fast, slow) [possible values: a, b]";
 
-    expect(helpFlagValues(help, "--mode")).toEqual(["a", "b"]);
+    expect(helpFlagValues(entry, "--mode")).toEqual(["a", "b"]);
   });
 
   it("separates a documented flag with no enumeration from an absent one", () => {

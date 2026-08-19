@@ -34,7 +34,10 @@ describe("defineMachine", () => {
       expect.unreachable("transition should have thrown");
     } catch (error) {
       expect(error).toBeInstanceOf(IllegalTransitionError);
-      const illegal = error as IllegalTransitionError;
+      if (!(error instanceof IllegalTransitionError)) {
+        throw new Error("expected an illegal transition", { cause: error });
+      }
+      const illegal = error;
       expect(illegal.machine).toBe("toy");
       expect(illegal.from).toBe("a");
       expect(illegal.to).toBe("c");

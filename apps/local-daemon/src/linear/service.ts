@@ -36,6 +36,11 @@ function supersededRequest(): LinearError {
   return linearError("linear_request_superseded");
 }
 
+interface LinearAuthorization {
+  apiKey: string;
+  signal: AbortSignal;
+}
+
 class DefaultLinearService implements LinearService {
   private apiKey: string | null = null;
   private readonly idFactory: () => string;
@@ -187,10 +192,7 @@ class DefaultLinearService implements LinearService {
     return projectSyncStatus(this.config.db, this.runs, projectId);
   }
 
-  private requireAuthorization(): {
-    apiKey: string;
-    signal: AbortSignal;
-  } {
+  private requireAuthorization(): LinearAuthorization {
     const apiKey = this.apiKey;
     if (apiKey === null) throw linearError("linear_not_connected");
     return {

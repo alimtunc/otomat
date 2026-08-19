@@ -20,7 +20,7 @@ import { waitForWorkerIdentity } from "./identity.js";
 import { runInitCommandBatch, runStillLive } from "./init-commands.js";
 import { capturePassStart, finishSettle } from "./pass-boundary.js";
 import type { SlotGrant } from "./semaphore.js";
-import { settleRun } from "./settle/index.js";
+import { settleRun, type SettleOptions } from "./settle/index.js";
 import { clearWorkerStartEvidence } from "./start-gate.js";
 import { trackPending, type SupervisorState } from "./state.js";
 import { driveRunTo, driveSessionTo, driveStepTo } from "./transitions.js";
@@ -50,12 +50,13 @@ function settleLive(state: SupervisorState, ctx: TurnContext, exit?: ProcessExit
   const run = getRun(state.db, ctx.runId);
   if (!run) return;
   try {
-    const outcome = settleRun(state.db, state.dataDir, run, {
+    const settle: SettleOptions = {
       mode: "live",
-      ...(exit ? { observedExit: exit } : {}),
       turn: { agentSessionId: ctx.agentSessionId },
       now: new Date().toISOString(),
-    });
+    };
+    if (exit) settle.observedExit = exit;
+    const outcome = settleRun(state.db, state.dataDir, run, settle);
     finishSettle(state, outcome);
   } catch (error) {
     console.error(`[otomat] run ${ctx.runId} settle failed`, error);

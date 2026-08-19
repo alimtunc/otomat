@@ -10,14 +10,14 @@ export function reviewAnchorSha(row: PullRequestRow): string | null {
   return row.origin === "imported" ? row.head_sha : row.published_head_sha;
 }
 
-const OWNERSHIP_REASON: Record<PullRequestRow["provenance"], (row: PullRequestRow) => string> = {
+const OWNERSHIP_REASON = {
   otomat: (row) =>
     `Otomat owns ${row.head_ref ?? "this branch"}, but an AI fix runs on its own run, not on this imported view.`,
   external: (row) =>
     `${row.author_login === null ? "Someone else" : `@${row.author_login}`} owns ${row.head_ref ?? "this branch"}. Otomat reviews it here; it never rewrites it.`,
   unknown: (row) =>
     `Otomat cannot verify who owns ${row.head_ref ?? "this branch"}, so this pull request stays review-only.`,
-};
+} satisfies Record<PullRequestRow["provenance"], (row: PullRequestRow) => string>;
 
 /** An adopted pull request is always review-only: Otomat holds no worktree for it and must never move a branch it did not create. */
 export function importedFixAuthority(row: PullRequestRow): ReviewFixAuthority {

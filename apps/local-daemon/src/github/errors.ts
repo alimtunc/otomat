@@ -35,13 +35,18 @@ export function failureMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+interface PublicationFailure {
+  code: string;
+  message: string;
+}
+
 export function safeGitHubFailure(
   error: unknown,
   fallback = {
     code: "github_publication_failed",
     message: "GitHub publication failed unexpectedly.",
   },
-): { code: string; message: string } {
+): PublicationFailure {
   if (error instanceof GitHubCliError || error instanceof GitHubPublicationError) {
     return { code: error.code, message: error.message };
   }

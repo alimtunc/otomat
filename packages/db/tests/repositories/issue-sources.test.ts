@@ -45,12 +45,11 @@ it("defaults a whole-team mapping to empty external project columns", () => {
 it.each([{ external_project_id: "project-1" }, { external_project_name: "Project one" }])(
   "rejects an incomplete project scope",
   (incompleteScope) => {
-    expect(() =>
-      insertIssueSource(t.client.db, {
-        ...source(),
-        ...incompleteScope,
-      } as unknown as NewIssueSource),
-    ).toThrow("issue source project id and name must either both be set or both be empty");
+    // SAFETY: deliberately violates the both-or-neither project scope to prove the insert throws.
+    const incomplete = { ...source(), ...incompleteScope } as NewIssueSource;
+    expect(() => insertIssueSource(t.client.db, incomplete)).toThrow(
+      "issue source project id and name must either both be set or both be empty",
+    );
   },
 );
 

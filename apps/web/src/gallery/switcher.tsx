@@ -30,6 +30,7 @@ export function Switcher() {
       <SegmentedControl
         type="single"
         value={accent}
+        // SAFETY: the toggle group renders only values of this union.
         onValueChange={(value) => value && setAccent(value as Accent)}
         aria-label="Accent direction"
       >
@@ -43,6 +44,7 @@ export function Switcher() {
       <SegmentedControl
         type="single"
         value={density}
+        // SAFETY: the toggle group renders only values of this union.
         onValueChange={(value) => value && setDensity(value as "compact" | "comfortable")}
         aria-label="Density"
       >

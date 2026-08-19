@@ -3,6 +3,7 @@ import { expect, it, vi } from "vitest";
 import { remoteBusyRuns } from "#main/remote/idle";
 
 function runsResponse(payload: unknown): Response {
+  // SAFETY: the idle probe reads only ok and json from a response.
   return { ok: true, json: async () => payload } as Response;
 }
 
@@ -30,7 +31,9 @@ it("ignores rows without a readable status", async () => {
 });
 
 it("answers null — never zero — on a refusal, an unexpected body, or an unreachable host", async () => {
-  expect(await remoteBusyRuns(options(vi.fn(async () => ({ ok: false }) as Response)))).toBeNull();
+  // SAFETY: a refusal is answered from ok alone.
+  const refusal = vi.fn(async () => ({ ok: false }) as Response);
+  expect(await remoteBusyRuns(options(refusal))).toBeNull();
   expect(await remoteBusyRuns(options(vi.fn(async () => runsResponse({}))))).toBeNull();
 
   const log = vi.fn();

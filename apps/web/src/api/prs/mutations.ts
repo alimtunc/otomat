@@ -15,9 +15,10 @@ function daemonErrorMessage(error: unknown, fallback: string): string {
   if (
     error instanceof DaemonRequestError &&
     typeof error.body === "object" &&
-    error.body !== null
+    error.body !== null &&
+    "message" in error.body
   ) {
-    const message = (error.body as { message?: unknown }).message;
+    const message = error.body.message;
     if (typeof message === "string" && message !== "") return message;
   }
   return fallback;

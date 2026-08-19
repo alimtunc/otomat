@@ -23,11 +23,11 @@ function readAllReviewedFiles(storage?: Pick<Storage, "getItem"> | null): Review
     return {};
   }
   if (typeof parsed !== "object" || parsed === null) return {};
-  const byRun: ReviewedFilesByRun = {};
-  for (const [runId, entry] of Object.entries(parsed)) {
-    if (isFingerprints(entry)) byRun[runId] = entry;
-  }
-  return byRun;
+  return Object.fromEntries(
+    Object.entries(parsed).filter((pair): pair is [string, ReviewedFingerprints] =>
+      isFingerprints(pair[1]),
+    ),
+  );
 }
 
 export function readReviewedFingerprints(
@@ -69,9 +69,5 @@ export function pruneFingerprints(
   files: readonly { path: string }[],
 ): ReviewedFingerprints {
   const live = new Set(files.map((file) => file.path));
-  const kept: ReviewedFingerprints = {};
-  for (const [path, sha] of Object.entries(fingerprints)) {
-    if (live.has(path)) kept[path] = sha;
-  }
-  return kept;
+  return Object.fromEntries(Object.entries(fingerprints).filter(([path]) => live.has(path)));
 }

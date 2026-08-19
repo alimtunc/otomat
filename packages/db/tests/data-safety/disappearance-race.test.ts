@@ -20,12 +20,14 @@ vi.mock("node:fs", async (importOriginal) => {
       if (path === disappearance.beforeInspectionPath && options === undefined) {
         disappearance.beforeInspectionPath = "";
         original.rmSync(path);
+        // SAFETY: an ErrnoException is an Error carrying the code attached on the next line.
         const error = new Error(
           "injected disappearance before inspection",
         ) as NodeJS.ErrnoException;
         error.code = "ENOENT";
         throw error;
       }
+      // SAFETY: forwards the caller's own options; the lstatSync overloads cannot express passthrough.
       return original.lstatSync(path, options as never);
     },
   };

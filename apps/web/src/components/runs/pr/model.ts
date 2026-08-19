@@ -7,6 +7,12 @@ import {
   type PullRequestPublicationMode,
 } from "@otomat/domain";
 
+/** `customize` reveals the advanced fields; `mode` carries the operator's explicit Draft/Ready choice, so both survive a reload. */
+export interface PrSearch {
+  customize?: true;
+  mode?: PullRequestPublicationMode;
+}
+
 export interface PullRequestConnectionModel {
   connectionLabel: string;
   showConnect: boolean;
@@ -18,7 +24,7 @@ export interface PullRequestConnectionModel {
 }
 
 export function isPullRequestPublicationMode(value: string): value is PullRequestPublicationMode {
-  return (PULL_REQUEST_PUBLICATION_MODES as readonly string[]).includes(value);
+  return PULL_REQUEST_PUBLICATION_MODES.some((mode) => mode === value);
 }
 
 /** How GitHub currently holds the pull request; a merged or closed one is past the draft/ready question. */
@@ -63,10 +69,12 @@ function connectionLabel(connection: GitHubConnectionContract): string {
   return "GitHub not connected";
 }
 
-function link(pullRequest: PullRequestContract | null): {
+interface PullRequestLink {
   label: string | null;
   url: string | null;
-} {
+}
+
+function link(pullRequest: PullRequestContract | null): PullRequestLink {
   if (pullRequest?.number === null || pullRequest?.number === undefined || !pullRequest.url) {
     return { label: null, url: null };
   }

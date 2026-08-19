@@ -19,7 +19,7 @@ import {
 
 import type { StatusTone } from "./tone";
 
-export const PROVENANCE_VAR: Record<EventSource, string> = {
+export const PROVENANCE_VAR = {
   otomat: "var(--prov-otomat)",
   claude: "var(--prov-claude)",
   codex: "var(--prov-codex)",
@@ -27,9 +27,9 @@ export const PROVENANCE_VAR: Record<EventSource, string> = {
   github: "var(--prov-github)",
   linear: "var(--prov-linear)",
   system: "var(--prov-system)",
-};
+} satisfies Record<EventSource, string>;
 
-export const PROVENANCE_LABEL: Record<EventSource, string> = {
+export const PROVENANCE_LABEL = {
   otomat: "Otomat",
   claude: "Claude",
   codex: "Codex",
@@ -37,14 +37,14 @@ export const PROVENANCE_LABEL: Record<EventSource, string> = {
   github: "GitHub",
   linear: "Linear",
   system: "System",
-};
+} satisfies Record<EventSource, string>;
 
 export interface EventGlyphDescriptor {
   icon: LucideIcon;
   tone: StatusTone;
 }
 
-export const EVENT_GLYPH: Record<EventType, EventGlyphDescriptor> = {
+export const EVENT_GLYPH = {
   "run.lifecycle": { icon: Flag, tone: "neutral" },
   "run.contribution": { icon: MessageSquare, tone: "iris" },
   "run.plan_revised": { icon: ListPlus, tone: "iris" },
@@ -69,4 +69,4 @@ export const EVENT_GLYPH: Record<EventType, EventGlyphDescriptor> = {
   "linear.comment_published": { icon: MessageSquare, tone: "neutral" },
   "linear.pr_link_published": { icon: GitPullRequest, tone: "success" },
   "system.reconciled": { icon: AlertTriangle, tone: "stale" },
-};
+} satisfies Record<EventType, EventGlyphDescriptor>;

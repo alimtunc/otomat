@@ -9,7 +9,7 @@ export interface AgentConfigErrorResponse {
 }
 
 /** Exhaustive by type: a new refusal code cannot ship without an HTTP answer. */
-const REFUSAL_STATUS: Record<AgentProfileError, AgentConfigErrorResponse["status"]> = {
+const REFUSAL_STATUS = {
   profile_not_found: 404,
   runtime_unknown: 400,
   runtime_unavailable: 409,
@@ -17,7 +17,7 @@ const REFUSAL_STATUS: Record<AgentProfileError, AgentConfigErrorResponse["status
   model_unknown: 400,
   skill_unknown: 400,
   skill_unavailable: 409,
-};
+} satisfies Record<AgentProfileError, AgentConfigErrorResponse["status"]>;
 
 /** Maps a profile/skill/runtime resolution error to an honest HTTP refusal, or null when it is not one of ours. */
 export function agentConfigErrorResponse(error: unknown): AgentConfigErrorResponse | null {

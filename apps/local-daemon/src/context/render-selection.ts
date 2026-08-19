@@ -5,17 +5,14 @@ import type {
   ContextSelection,
 } from "@otomat/domain";
 
-const FILE_REFUSAL_SENTENCE: Record<
-  Extract<ContextFile, { state: "unavailable" }>["reason"],
-  string
-> = {
+const FILE_REFUSAL_SENTENCE = {
   missing: "not present in this snapshot of the repository",
   binary: "binary, so it was not read",
   too_large: "past the size Otomat attaches, so it was not read",
   outside_repository: "not a repository-relative path, so it was refused",
   symlink: "a symlink, so it was refused rather than followed off the repository",
   unreadable: "unreadable in this snapshot",
-};
+} satisfies Record<Extract<ContextFile, { state: "unavailable" }>["reason"], string>;
 
 function issueBlock(issue: ContextIssue, heading: string): string[] {
   const name = issue.identifier === null ? issue.title : `${issue.identifier} — ${issue.title}`;

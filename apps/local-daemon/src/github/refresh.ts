@@ -10,8 +10,12 @@ export interface PullRequestRefreshConfig {
 }
 
 /** An adopted pull request has no run of its own, so the import service is what re-reads it. */
-function refreshOne(config: PullRequestRefreshConfig, row: PullRequestRow): Promise<unknown> {
-  return row.run_id === null ? config.imports.refresh(row.id) : config.publisher.get(row.run_id);
+async function refreshOne(config: PullRequestRefreshConfig, row: PullRequestRow): Promise<void> {
+  if (row.run_id === null) {
+    await config.imports.refresh(row.id);
+  } else {
+    await config.publisher.get(row.run_id);
+  }
 }
 
 /** A row that cannot be read stays open, so the next pass tries it again instead of losing the merge. */

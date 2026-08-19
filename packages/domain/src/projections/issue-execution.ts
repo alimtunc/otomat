@@ -19,12 +19,12 @@ type Winner = Classification & { evidence: IssueExecutionEvidence };
 type Candidate = { classified: Classification | null; evidence: IssueExecutionEvidence };
 
 /** Active work outranks a delivered PR, which outranks a run awaiting review, which outranks a stopped cycle. */
-const KIND_RANK: Record<ExecutionKind, number> = {
+const KIND_RANK = {
   running: 4,
   pr_open: 3,
   reviewing: 2,
   failed: 1,
-};
+} satisfies Record<ExecutionKind, number>;
 
 function isLive(status: IssueExecutionEvidence["pr_status"]): boolean {
   return status !== null && isPullRequestLive(status);

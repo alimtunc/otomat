@@ -13,6 +13,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { mount } from "#support/mount";
 
+interface IssuesProbeSearch {
+  filter?: string;
+}
+
 let linkedIssueId: string | null = null;
 
 function BackProbe() {
@@ -27,7 +31,7 @@ function testRouter(entry: string) {
   const issuesRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/issues",
-    validateSearch: (search: Record<string, unknown>): { filter?: string } => ({
+    validateSearch: (search: Record<string, unknown>): IssuesProbeSearch => ({
       filter: typeof search.filter === "string" ? search.filter : undefined,
     }),
     component: BackProbe,

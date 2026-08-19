@@ -35,6 +35,7 @@ function sumReportedUsage(events: readonly EventEnvelope[]): ReportedTokens {
     if (event.type !== "runtime.usage") continue;
     const usage = event.payload["usage"];
     if (typeof usage !== "object" || usage === null) continue;
+    // SAFETY: a non-null object indexes as a record; every read is number-checked after.
     const record = usage as Record<string, unknown>;
     total = {
       input: add(total.input, readNumber(record, "input_tokens")),

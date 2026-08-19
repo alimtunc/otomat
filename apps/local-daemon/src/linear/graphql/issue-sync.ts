@@ -50,9 +50,8 @@ export function buildIssueFilter(
   projectId: string,
   updatedSince: string | null,
 ): LinearIssueFilter {
-  return {
-    team: { id: { eq: teamId } },
-    ...(projectId === "" ? {} : { project: { id: { eq: projectId } } }),
-    ...(updatedSince === null ? {} : { updatedAt: { gte: updatedSince } }),
-  };
+  const filter: LinearIssueFilter = { team: { id: { eq: teamId } } };
+  if (projectId !== "") filter.project = { id: { eq: projectId } };
+  if (updatedSince !== null) filter.updatedAt = { gte: updatedSince };
+  return filter;
 }

@@ -13,6 +13,7 @@ export interface ReportedUsage {
 export function parseReportedUsage(payload: EventEnvelope["payload"]): ReportedUsage | null {
   const usage = payload["usage"];
   if (typeof usage !== "object" || usage === null) return null;
+  // SAFETY: a non-null object indexes as a record; every read is type-checked after.
   const record = usage as Record<string, unknown>;
   return {
     model: asString(record["model"]),

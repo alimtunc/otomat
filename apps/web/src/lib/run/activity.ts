@@ -5,7 +5,7 @@ export function isActiveRun(run: RunContract): boolean {
 }
 
 export function isRunState(value: unknown): value is RunState {
-  return typeof value === "string" && (RUN_STATES as readonly string[]).includes(value);
+  return RUN_STATES.some((state) => state === value);
 }
 
 /**

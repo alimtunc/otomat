@@ -37,7 +37,7 @@ export function scrubGitEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.Proces
 
 /** Runs `git` with array args (no shell), capturing stdout/stderr as UTF-8. */
 export function runGit(args: readonly string[], options: RunGitOptions): GitResult {
-  const result = spawnSync("git", args as string[], {
+  const result = spawnSync("git", args, {
     cwd: options.cwd,
     encoding: "utf8",
     env: { ...scrubGitEnv(process.env), ...options.env },

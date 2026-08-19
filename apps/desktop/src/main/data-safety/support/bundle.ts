@@ -65,7 +65,7 @@ export function buildSupportBundle(input: SupportBundleInput): string {
       versions: input.versions,
       health,
       schema: input.schema,
-      ...(incident === null ? {} : { incident: redactedIncident(incident) }),
+      incident: incident === null ? undefined : redactedIncident(incident),
       logs: {
         desktop: redactLogText(input.logs.desktop),
         daemon: redactLogText(input.logs.daemon),

@@ -5,11 +5,11 @@ export interface DiagnosticSummaryRow {
   value: string;
 }
 
-const CATEGORY_LABELS: Record<ErrorDiagnosticCategory, string> = {
+const CATEGORY_LABELS = {
   renderer: "Renderer — this app, not the daemon",
   daemon: "Daemon — the active execution host",
   transport: "Transport — the host was never reached",
-};
+} satisfies Record<ErrorDiagnosticCategory, string>;
 
 /** The metadata that makes a report actionable, in the order an operator reads it. */
 export function diagnosticSummaryRows(diagnostic: ErrorDiagnostic): DiagnosticSummaryRow[] {

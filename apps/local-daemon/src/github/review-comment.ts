@@ -56,9 +56,10 @@ export async function publishReviewComment(
     body: reviewCommentBody(input.body, input.suggestion),
     side: side(input.side),
     line: input.line,
-    ...(input.startLine === null
-      ? {}
-      : { startLine: input.startLine, startSide: side(input.side) }),
   };
+  if (input.startLine !== null) {
+    request.startLine = input.startLine;
+    request.startSide = side(input.side);
+  }
   return config.cli.createReviewComment(request);
 }

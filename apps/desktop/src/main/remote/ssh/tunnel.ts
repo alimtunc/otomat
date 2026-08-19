@@ -1,8 +1,15 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, type SpawnOptions } from "node:child_process";
 
-import { terminateChild } from "#shared/terminate";
+import { terminateChild, type TerminatableChild } from "#shared/terminate";
 
 import { SSH_BATCH_ARGS } from "./script.js";
+
+/** What the tunnel drives on a spawned ssh child: termination plus stderr and lifecycle events. */
+export interface TunnelChild extends TerminatableChild {
+  readonly stderr: { on(event: "data", listener: (chunk: Buffer) => void): void } | null;
+  on(event: "error", listener: (error: Error) => void): void;
+  on(event: "close", listener: (code: number | null) => void): void;
+}
 
 const STDERR_TAIL_LIMIT = 600;
 const STOP_GRACE_MS = 2_000;
@@ -19,7 +26,7 @@ export interface SshTunnelOptions {
   localPort: number;
   remotePort: number;
   onExit(info: TunnelExitInfo): void;
-  spawnImpl?: typeof spawn;
+  spawnImpl?: (command: string, args: readonly string[], options: SpawnOptions) => TunnelChild;
 }
 
 export function tunnelArgs(alias: string, localPort: number, remotePort: number): string[] {
@@ -47,7 +54,7 @@ export interface TunnelHandle {
 
 /** One `ssh -N -L` child forwarding a local loopback port to the remote daemon's loopback port. */
 export class SshTunnel implements TunnelHandle {
-  private child: ChildProcess | null = null;
+  private child: TunnelChild | null = null;
   private stderrTail = "";
   private stopping = false;
 
@@ -59,7 +66,7 @@ export class SshTunnel implements TunnelHandle {
 
   start(): void {
     if (this.child !== null) throw new Error("Tunnel already started");
-    const doSpawn = this.options.spawnImpl ?? spawn;
+    const doSpawn: NonNullable<SshTunnelOptions["spawnImpl"]> = this.options.spawnImpl ?? spawn;
     const child = doSpawn(
       "ssh",
       tunnelArgs(this.options.alias, this.options.localPort, this.options.remotePort),

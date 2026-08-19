@@ -24,12 +24,13 @@ export interface ExecutionLevelsInput {
 }
 
 function ownLevel(level: ExecutionPickerLevel, own: ExecutionSelection): ExecutionLevel {
-  return {
+  const result: ExecutionLevel = {
     source: level,
     agent: level === "profile" || level === "global",
-    ...(own.model === undefined ? {} : { model: own.model }),
     options: own.options,
   };
+  if (own.model !== undefined) result.model = own.model;
+  return result;
 }
 
 /** A surface never sits under itself: editing a profile puts the host defaults directly beneath it, and editing the host defaults leaves nothing beneath at all. */

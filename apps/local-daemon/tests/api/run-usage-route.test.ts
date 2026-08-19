@@ -2,7 +2,7 @@ import { schema } from "@otomat/db";
 import type { RunUsageResponse } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { makeApiApp, request } from "../support/api.js";
+import { json, makeApiApp, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 import { seedRun } from "../support/seed.js";
 
@@ -33,7 +33,7 @@ function reportUsage(seq: number, usage: Record<string, unknown>): void {
 async function readUsage(): Promise<RunUsageResponse> {
   const res = await request(makeApiApp(t), `/api/runs/${RUN_ID}/usage`);
   expect(res.status).toBe(200);
-  return (await res.json()) as RunUsageResponse;
+  return await json<RunUsageResponse>(res);
 }
 
 function seed(live: boolean): void {

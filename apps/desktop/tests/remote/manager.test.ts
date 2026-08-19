@@ -85,12 +85,13 @@ function makeManager(options?: {
       return session;
     },
     listAliases: () => ["otomat-vps"],
-    ...(options?.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+    fetchImpl: options?.fetchImpl,
   });
   return { manager, applied, sessions, connected, dataDir };
 }
 
 function projectsResponse(projects: unknown): Response {
+  // SAFETY: the manager reads only ok and json from a catalog response.
   return { ok: true, json: async () => projects } as Response;
 }
 
@@ -110,7 +111,7 @@ it.each(["", "  ", "two words", "-oProxyCommand=evil"])("rejects the alias %j", 
 });
 
 it("refuses an alias change while a host switch is in flight", async () => {
-  let release: (status: RemoteHostStatus) => void = () => {};
+  let release!: (status: RemoteHostStatus) => void;
   const manager = new ExecutionHostManager({
     dataDir: scratch(),
     log: () => {},
@@ -207,6 +208,7 @@ it("refuses to remove the host while a remote project is active", async () => {
 
 it("registers a project on the local daemon and returns the created project", async () => {
   const project = { id: "p-new", name: "app", root_path: "/repos/app", has_repository: true };
+  // SAFETY: the manager reads only status, ok and json from a registration response.
   const fetchImpl = vi.fn(
     async () =>
       ({
@@ -238,6 +240,7 @@ it("registers a project on the local daemon and returns the created project", as
 });
 
 it("registers on the remote daemon through the tunnel once connected, and refuses before", async () => {
+  // SAFETY: the manager reads only status, ok and json from a registration response.
   const fetchImpl = vi.fn(
     async () =>
       ({
@@ -276,6 +279,7 @@ it("registers on the remote daemon through the tunnel once connected, and refuse
 });
 
 it("names an unreadable 201 body instead of blaming connectivity", async () => {
+  // SAFETY: the manager reads only status, ok and json from a registration response.
   const fetchImpl = vi.fn(
     async () =>
       ({
@@ -290,7 +294,7 @@ it("names an unreadable 201 body instead of blaming connectivity", async () => {
 
   expect(result).toMatchObject({
     ok: false,
-    message: expect.stringContaining("unknown format") as string,
+    message: expect.stringContaining("unknown format"),
   });
 });
 
@@ -313,6 +317,7 @@ it("re-arms a session settled on error at the next background warm-up", async ()
 });
 
 it("surfaces the daemon's registration refusal verbatim", async () => {
+  // SAFETY: the manager reads only status, ok and json from a registration response.
   const fetchImpl = vi.fn(
     async () =>
       ({

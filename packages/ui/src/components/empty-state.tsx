@@ -16,11 +16,11 @@ export interface EmptyStateProps {
   className?: string;
 }
 
-const PADDING: Record<EmptyStateVariant, string> = {
+const PADDING = {
   full: "48px 24px",
   inline: "28px 20px",
   compact: "16px 14px",
-};
+} satisfies Record<EmptyStateVariant, string>;
 
 export function EmptyState({
   icon,

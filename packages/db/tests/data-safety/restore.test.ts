@@ -14,7 +14,11 @@ import { basename, join } from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-const diskSpace = vi.hoisted(() => ({ availableBytes: null as number | null }));
+interface FakeDiskSpace {
+  availableBytes: number | null;
+}
+
+const diskSpace = vi.hoisted((): FakeDiskSpace => ({ availableBytes: null }));
 
 vi.mock("#db/data-safety/capacity", async (importOriginal) => {
   const original = await importOriginal<typeof import("#db/data-safety/capacity")>();

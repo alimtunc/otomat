@@ -9,12 +9,12 @@ export interface Targets {
 }
 
 /** Each classification's canonical resting/terminal states across the three machines. */
-export const TARGETS: Record<ReconcileClassification, Targets> = {
+export const TARGETS = {
   completed: { run: "review_ready", step: "succeeded", session: "terminated" },
   canceled: { run: "canceled", step: "canceled", session: "terminated" },
   interrupted: { run: "awaiting_human", step: "awaiting_human", session: "awaiting_input" },
   failed: { run: "failed", step: "stale", session: "failed" },
-};
+} satisfies Record<ReconcileClassification, Targets>;
 
 /** Classifies a torn run from durable evidence: an explicit terminal marker wins; absent that, a known provider session means `interrupted` (resumable); otherwise `failed`. */
 export function classify(

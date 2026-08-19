@@ -11,11 +11,9 @@ interface RecordedCall {
   body: unknown;
 }
 
-function fakeFetch(respond: (url: string, body: unknown) => Response): {
-  calls: RecordedCall[];
-  fetchImpl: typeof fetch;
-} {
+function fakeFetch(respond: (url: string, body: unknown) => Response) {
   const calls: RecordedCall[] = [];
+  // SAFETY: the seed calls fetch only with a URL and an optional JSON init.
   const fetchImpl = ((input: unknown, init?: RequestInit) => {
     const url = String(input);
     const body = typeof init?.body === "string" ? JSON.parse(init.body) : null;

@@ -37,11 +37,7 @@ const AMBIENT_WORKTREES_ROOT = "/shared/ambient/worktrees";
  * and under it runs + worktrees. Only valid while the env carries no `OTOMAT_WORKTREES_ROOT`, which
  * every caller asserts first.
  */
-function daemonStorage(env: NodeJS.ProcessEnv): {
-  dataDir: string;
-  runs: string;
-  worktrees: string;
-} {
+function daemonStorage(env: NodeJS.ProcessEnv) {
   const dbPath = env.OTOMAT_DB_PATH;
   if (dbPath === undefined) throw new Error("The daemon environment carries no database path.");
   expect(env.OTOMAT_WORKTREES_ROOT).toBeUndefined();
@@ -49,7 +45,7 @@ function daemonStorage(env: NodeJS.ProcessEnv): {
   return { dataDir, runs: join(dataDir, "runs"), worktrees: join(dataDir, "worktrees") };
 }
 
-function sessionFor(worktree: string, appData: string): { root: string; env: NodeJS.ProcessEnv } {
+function sessionFor(worktree: string, appData: string) {
   const root = resolveDevDataRoot({ repoRoot: worktree, appData, env: {} });
   const runtime = createDesktopRuntime({
     paths: devPaths(root),

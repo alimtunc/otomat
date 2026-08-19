@@ -57,11 +57,16 @@ const UNSETTLED_CANDIDATE_STATES: ReadonlySet<StepRunState> = new Set([
   "awaiting_permission",
 ]);
 
+interface CompeteTargets {
+  group: "running" | "awaiting_selection" | "awaiting_human" | "failed";
+  run: RunState;
+}
+
 function competeTargets(
   hasActive: boolean,
   hasSucceeded: boolean,
   hasResumable: boolean,
-): { group: "running" | "awaiting_selection" | "awaiting_human" | "failed"; run: RunState } {
+): CompeteTargets {
   if (hasActive) return { group: "running", run: "running" };
   if (hasSucceeded) return { group: "awaiting_selection", run: "awaiting_selection" };
   if (hasResumable) return { group: "awaiting_human", run: "awaiting_human" };

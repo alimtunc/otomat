@@ -24,6 +24,7 @@ export function useEventHistory(runId: string): RunEventHistory {
     queryKey: queryKeys.runEventWindow(runId),
     queryFn: ({ pageParam }) =>
       daemon.getRunEventWindow(runId, pageParam === null ? {} : { before: pageParam }),
+    // SAFETY: seeds TanStack's page-param type; the daemon pages by the seq cursor.
     initialPageParam: null as number | null,
     getPreviousPageParam: (firstPage) => firstPage.older_cursor,
     getNextPageParam: () => null,

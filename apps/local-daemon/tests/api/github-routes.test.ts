@@ -9,7 +9,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { GitHubPublicationError } from "#github";
 
-import { makeApiApp, post, request } from "../support/api.js";
+import { json, makeApiApp, post, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 import { CONNECTED_GITHUB, pullRequestRow, stubGitHubService } from "../support/github.js";
 
@@ -56,14 +56,14 @@ it("serves GitHub connection state and starts the delegated login", async () => 
   });
 
   const status = await request(app, "/api/github/connection");
-  expect((await status.json()) as GitHubConnectionContract).toMatchObject({
+  expect(await json<GitHubConnectionContract>(status)).toMatchObject({
     status: "connected",
     login: "octocat",
   });
 
   const connect = await post(app, "/api/github/connect", {});
   expect(connect.status).toBe(202);
-  expect((await connect.json()) as GitHubConnectionContract).toMatchObject({
+  expect(await json<GitHubConnectionContract>(connect)).toMatchObject({
     status: "connecting",
   });
   expect(connects).toBe(1);
@@ -101,13 +101,13 @@ it("serves and publishes the durable PR through the GitHub module", async () => 
   });
 
   const fetched = await request(app, `/api/runs/${RUN_ID}/pr`);
-  const detail = (await fetched.json()) as PullRequestDetail;
+  const detail = await json<PullRequestDetail>(fetched);
   expect(detail.pull_request).toMatchObject({ number: 42 });
   expect(detail.sync).toEqual(sync);
 
   const published = await post(app, `/api/runs/${RUN_ID}/pr`, PUBLISH_BODY);
   expect(published.status).toBe(200);
-  expect(((await published.json()) as PullRequestDetail).pull_request?.url).toBe(row.url);
+  expect((await json<PullRequestDetail>(published)).pull_request?.url).toBe(row.url);
 });
 
 it("pushes commits through the GitHub module and answers with the published comparison", async () => {
@@ -149,7 +149,7 @@ it("pushes commits through the GitHub module and answers with the published comp
   });
 
   expect(response.status).toBe(200);
-  expect(((await response.json()) as PullRequestDetail).sync?.state).toBe("in_sync");
+  expect((await json<PullRequestDetail>(response)).sync?.state).toBe("in_sync");
   expect(requests).toEqual([{ expected_remote_sha: "a".repeat(40) }]);
 });
 

@@ -46,15 +46,15 @@ export function useCommentComposer(options: CommentComposerOptions) {
   const range: CommentRange | null =
     options.line === null ? null : { start: options.fromLine ?? options.line, end: options.line };
 
-  const patchRange = (range: CommentRange): PatchRange => ({
+  const patchRange = (lines: CommentRange): PatchRange => ({
     side,
-    startLine: range.start,
-    endLine: range.end,
+    startLine: lines.start,
+    endLine: lines.end,
   });
-  const refusal = (range: CommentRange | null): string | null =>
-    range === null ? WHOLE_FILE_REFUSAL : suggestionRefusal(patch, patchRange(range));
-  const headLines = (range: CommentRange | null): string =>
-    range === null ? "" : (readRangeLines(patch, patchRange(range)) ?? []).join("\n");
+  const refusal = (lines: CommentRange | null): string | null =>
+    lines === null ? WHOLE_FILE_REFUSAL : suggestionRefusal(patch, patchRange(lines));
+  const headLines = (lines: CommentRange | null): string =>
+    lines === null ? "" : (readRangeLines(patch, patchRange(lines)) ?? []).join("\n");
   const reachable = (destination: ReviewCommentDestination): ReviewCommentDestination =>
     destination === "pr_review" && !prReview.available ? "agent" : destination;
 

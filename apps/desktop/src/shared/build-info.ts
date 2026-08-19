@@ -32,7 +32,8 @@ export function parseBuildInfo(contents: string): BuildInfo {
   if (typeof parsed !== "object" || parsed === null) {
     throw new Error("The build metadata is not an object.");
   }
-  const record: Record<string, unknown> = { ...parsed };
+  // SAFETY: checked above to be a non-null object; every field read is validated after.
+  const record = parsed as Record<string, unknown>;
   const info = {
     version: readString(record, "version"),
     commit: readString(record, "commit"),

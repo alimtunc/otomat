@@ -21,7 +21,7 @@ import { readRepositories } from "../reads.js";
 import { registerLocalRepository } from "../repository-registration.js";
 import { toProject, toRepository } from "../serialize.js";
 
-const REGISTRATION_MESSAGES: Record<RepositoryRegistrationError, string> = {
+const REGISTRATION_MESSAGES = {
   path_not_absolute: "Provide an absolute path to the repository.",
   path_not_found: "This path does not exist on this machine.",
   path_not_directory: "This path is not a directory.",
@@ -33,7 +33,7 @@ const REGISTRATION_MESSAGES: Record<RepositoryRegistrationError, string> = {
   repository_already_registered: "This repository is already registered.",
   project_not_found: "This project no longer exists.",
   project_already_has_repository: "This project already has a repository.",
-};
+} satisfies Record<RepositoryRegistrationError, string>;
 
 /** Enough for a picker to work against; a repository with more paths narrows by typing. */
 const FILE_SEARCH_LIMIT = 50;

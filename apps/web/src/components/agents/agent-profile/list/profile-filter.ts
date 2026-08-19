@@ -14,3 +14,8 @@ export function matchesProfileFilter(
   if (filter === "instructions") return Boolean(profile.guidance?.trim());
   return true;
 }
+
+/** The agents route's search: `all` stays out of the URL as the default view. */
+export interface AgentsSearch {
+  filter?: ProfileFilter;
+}

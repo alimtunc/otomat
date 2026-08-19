@@ -36,7 +36,7 @@ vi.mock("@web/api/runs/mutations", () => ({
 
 vi.mock("@web/api/daemon/queries", () => ({
   useDaemonStatus: () => ({ connectionState: "online" }),
-  useRuntimes: () => ({ data: [] as RuntimeDescriptor[] }),
+  useRuntimes: () => ({ data: new Array<RuntimeDescriptor>() }),
 }));
 
 const detail: RunDetail = {

@@ -2,7 +2,6 @@ import {
   workflowPresetPlanSchema,
   type SaveWorkflowPresetRequest,
   type WorkflowPresetContract,
-  type WorkflowPresetScope,
 } from "@otomat/domain";
 import { useForm, useStore } from "@tanstack/react-form";
 import {
@@ -35,7 +34,7 @@ export function usePresetForm({ preset, initialSteps, projectId, onSaved }: UseP
   );
   const [refusal, setRefusal] = useState<string | null>(null);
 
-  const defaultValues: { name: string; scope: WorkflowPresetScope } = {
+  const defaultValues = {
     name: preset?.name ?? "",
     scope: preset?.scope ?? "global",
   };

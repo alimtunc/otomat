@@ -4,11 +4,11 @@ import { AboutRow } from "@web/components/settings/about-row";
 import { SectionHeading } from "@web/components/settings/section-heading";
 import { remoteHostAlias } from "@web/lib/desktop-bridge";
 
-const DAEMON_STATUS_LABELS: Record<ConnectionState, string> = {
+const DAEMON_STATUS_LABELS = {
   online: "Connected",
   offline: "Not connected",
   reconnecting: "Connecting…",
-};
+} satisfies Record<ConnectionState, string>;
 
 export function AboutSection() {
   const health = useHealth();

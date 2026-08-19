@@ -1,5 +1,5 @@
 import { schema, type Db } from "@otomat/db";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql, type SQL } from "drizzle-orm";
 
 import type { WorktreeStatus } from "./types.js";
 
@@ -72,12 +72,10 @@ export interface WorktreeStatusPatch {
 }
 
 export function updateWorktreeStatus(db: Db, id: string, patch: WorktreeStatusPatch): void {
-  db.update(worktrees)
-    .set({
-      status: patch.status,
-      ...(patch.head_sha !== undefined ? { head_sha: patch.head_sha } : {}),
-      updated_at: sql`(CURRENT_TIMESTAMP)`,
-    })
-    .where(eq(worktrees.id, id))
-    .run();
+  const changes: WorktreeStatusPatch & { updated_at: SQL } = {
+    status: patch.status,
+    updated_at: sql`(CURRENT_TIMESTAMP)`,
+  };
+  if (patch.head_sha !== undefined) changes.head_sha = patch.head_sha;
+  db.update(worktrees).set(changes).where(eq(worktrees.id, id)).run();
 }

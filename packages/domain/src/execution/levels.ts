@@ -37,12 +37,9 @@ export function overrideLevel(
   source: Extract<ExecutionSource, "step" | "launch">,
   overrides: ExecutionOverrides,
 ): ExecutionLevel {
-  return {
-    source,
-    agent: false,
-    ...(overrides.model === undefined ? {} : { model: overrides.model }),
-    options: overrides.options ?? {},
-  };
+  const level: ExecutionLevel = { source, agent: false, options: overrides.options ?? {} };
+  if (overrides.model !== undefined) level.model = overrides.model;
+  return level;
 }
 
 /** A stored model of `null` selects nothing rather than the provider default: only an override can ask for "send no model". */
@@ -50,12 +47,13 @@ export function storedLevel(
   source: Extract<ExecutionSource, "profile" | "global">,
   stored: StoredExecutionConfig,
 ): ExecutionLevel {
-  return {
+  const level: ExecutionLevel = {
     source,
     agent: true,
-    ...(stored.model === null ? {} : { model: { kind: "model" as const, id: stored.model } }),
     options: optionSelectionsFromValues(stored.options),
   };
+  if (stored.model !== null) level.model = { kind: "model", id: stored.model };
+  return level;
 }
 
 /** Null when the defaults name another runtime: their model and option keys belong to the CLI that announced them. */

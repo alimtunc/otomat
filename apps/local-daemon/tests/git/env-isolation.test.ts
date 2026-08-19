@@ -61,13 +61,13 @@ function makeRepo(prefix: string, seedFile: string): string {
 
 function activateHookEnv(repoRoot: string): () => void {
   const previous = new Map<string, string | undefined>();
-  const values: Record<(typeof GIT_ISOLATION_ENV_VARS)[number], string> = {
+  const values = {
     GIT_DIR: join(repoRoot, ".git"),
     GIT_WORK_TREE: repoRoot,
     GIT_INDEX_FILE: join(repoRoot, ".git", "index"),
     GIT_COMMON_DIR: join(repoRoot, ".git"),
     GIT_OBJECT_DIRECTORY: join(repoRoot, ".git", "objects"),
-  };
+  } satisfies Record<(typeof GIT_ISOLATION_ENV_VARS)[number], string>;
   for (const key of GIT_ISOLATION_ENV_VARS) {
     previous.set(key, process.env[key]);
     process.env[key] = values[key];

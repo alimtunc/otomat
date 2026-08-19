@@ -41,22 +41,19 @@ function appendStateMessages(
 }
 
 function appendNextActions(report: RunCompletionReport): void {
-  const runActions: Partial<Record<RunState, { code: string; message: string }>> = {
-    awaiting_human: { code: "resume_run", message: "Resume the interrupted run when ready." },
-    awaiting_permission: {
-      code: "answer_permission",
-      message: "Answer the pending permission request.",
-    },
-    awaiting_selection: {
-      code: "select_candidate",
-      message: "Select a competing candidate.",
-    },
-    review_ready: {
-      code: "review_run",
-      message: "Review the run and publish a pull request when ready.",
-    },
-  };
-  const runAction = runActions[report.run.status];
+  const runActions = new Map<RunState, { code: string; message: string }>([
+    ["awaiting_human", { code: "resume_run", message: "Resume the interrupted run when ready." }],
+    [
+      "awaiting_permission",
+      { code: "answer_permission", message: "Answer the pending permission request." },
+    ],
+    ["awaiting_selection", { code: "select_candidate", message: "Select a competing candidate." }],
+    [
+      "review_ready",
+      { code: "review_run", message: "Review the run and publish a pull request when ready." },
+    ],
+  ]);
+  const runAction = runActions.get(report.run.status);
   if (runAction) report.next_actions.push({ ...runAction, evidence: report.run.evidence });
   if (report.review.open_comments.length > 0) {
     report.next_actions.push({

@@ -10,7 +10,7 @@ import { buildTerminalMarker } from "./markers.js";
 import { finishSettle } from "./pass-boundary.js";
 import { terminateGracefully } from "./process.js";
 import { resolveSessionContributions } from "./settle/contributions.js";
-import { resolveTurnSession, settleRun } from "./settle/index.js";
+import { resolveTurnSession, settleRun, type SettleOptions } from "./settle/index.js";
 import { processesForRun, type SupervisorState } from "./state.js";
 import { driveIdleRunTo, driveRunConvergence } from "./transitions.js";
 
@@ -54,10 +54,9 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
     const scoped = active === null ? events : eventsForSession(events, active.id);
 
     if (handles.length <= 1 && findFinalStatus(scoped) !== null) {
-      finishSettle(
-        state,
-        settleRun(db, dataDir, current, { mode: "live", ...(turn ? { turn } : {}), now }),
-      );
+      const settle: SettleOptions = { mode: "live", now };
+      if (turn) settle.turn = turn;
+      finishSettle(state, settleRun(db, dataDir, current, settle));
       const settled = getRun(db, runId);
       if (settled) cancelRemainder(state, settled, now);
       return;

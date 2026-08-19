@@ -49,23 +49,23 @@ export function isWorkspaceCleanable(verdict: WorkspaceVerdict): boolean {
   return verdict.state === "cleanup_required" && verdict.blocker === null;
 }
 
-const BLOCKER_REASONS: Record<WorkspaceCleanupBlocker, string> = {
+const BLOCKER_REASONS = {
   cycle_open: "The issue is still working here — merge or abandon its cycle first.",
   pull_request_not_merged: "No merged canonical pull request stands for this branch yet.",
   worktree_dirty: "Uncommitted changes are still in this worktree.",
   writer_alive: "A session is still running here — cancel the run first.",
   worktree_unreadable: "This worktree could not be read from disk.",
   unmanaged_worktree: "Otomat did not create this worktree, so it manages nothing here.",
-};
+} satisfies Record<WorkspaceCleanupBlocker, string>;
 
-const STATE_REASONS: Record<WorkspaceState, string> = {
+const STATE_REASONS = {
   active: BLOCKER_REASONS.cycle_open,
   cleanup_required: "Ready to delete: the cycle is closed and the worktree is clean.",
   stale: "The directory is gone; the git registration is pruned on the next reconcile.",
   missing: "Otomat records this worktree but git has no registration and the directory is gone.",
   unmanaged: BLOCKER_REASONS.unmanaged_worktree,
   removed: "Already cleaned up — nothing is left on disk.",
-};
+} satisfies Record<WorkspaceState, string>;
 
 export function describeWorkspace(
   verdict: WorkspaceVerdict,

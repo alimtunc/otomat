@@ -2,6 +2,7 @@
 
 export function asRecord(value: unknown): Record<string, unknown> | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  // SAFETY: a non-null, non-array object indexes as a record; every read stays unknown-typed.
   return value as Record<string, unknown>;
 }
 

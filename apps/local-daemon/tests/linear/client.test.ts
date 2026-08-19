@@ -14,21 +14,16 @@ function ok(data: unknown): LinearTransportResponse {
   return { status: 200, body: { data } };
 }
 
-function fakeTransport(responses: LinearTransportResponse[]): {
-  requests: LinearTransportRequest[];
-  transport: LinearTransport;
-} {
+function fakeTransport(responses: LinearTransportResponse[]) {
   const requests: LinearTransportRequest[] = [];
   const queue = [...responses];
-  return {
-    requests,
-    transport: async (request) => {
-      requests.push(request);
-      const next = queue.shift();
-      if (next === undefined) throw new Error("unexpected Linear request");
-      return next;
-    },
+  const transport: LinearTransport = async (request) => {
+    requests.push(request);
+    const next = queue.shift();
+    if (next === undefined) throw new Error("unexpected Linear request");
+    return next;
   };
+  return { requests, transport };
 }
 
 const LAST_PAGE = { hasNextPage: false, endCursor: null };

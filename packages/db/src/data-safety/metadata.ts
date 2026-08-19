@@ -81,10 +81,12 @@ function parseAppliedMigration(row: unknown): AppliedMigration | null {
   return { hash: row.hash, createdAt: row.created_at };
 }
 
-function readAppliedMigrations(sqlite: Database.Database): {
+interface AppliedMigrationHistory {
   present: boolean;
   migrations: AppliedMigration[];
-} {
+}
+
+function readAppliedMigrations(sqlite: Database.Database): AppliedMigrationHistory {
   let rows: unknown;
   try {
     if (!migrationTablePresent(sqlite)) return { present: false, migrations: [] };
@@ -134,11 +136,13 @@ export function readSchemaMetadata(sqlite: Database.Database): SchemaMetadataCon
   });
 }
 
-export function inspectMigrationHistory(sqlite: Database.Database): {
+export interface MigrationHistory {
   appliedCount: number;
   present: boolean;
   pending: boolean;
-} {
+}
+
+export function inspectMigrationHistory(sqlite: Database.Database): MigrationHistory {
   const { present, migrations: applied } = readAppliedMigrations(sqlite);
   let available: ReturnType<typeof readMigrationFiles>;
   try {

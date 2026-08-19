@@ -8,7 +8,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { DiffScopeNotFoundError } from "#review";
 
-import { makeApiApp, request } from "../support/api.js";
+import { json, makeApiApp, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 import { stubReviewService } from "../support/review.js";
 import { seedRun } from "../support/seed.js";
@@ -78,7 +78,7 @@ it("refuses a scope naming nothing rather than answering with the workspace", as
 
 it("hands back the daemon's own unavailable sentence with a null diff", async () => {
   const res = await request(appEchoingScope(), `/api/runs/${RUN_ID}/diff?scope=session&session=s1`);
-  const body = (await res.json()) as ReviewDiffResponse;
+  const body = await json<ReviewDiffResponse>(res);
 
   expect(body.diff).toBeNull();
   expect(body.unavailable).toBe("nothing here");
@@ -119,7 +119,7 @@ it("serves the branch commits a picker reads", async () => {
   });
 
   const res = await request(app, `/api/runs/${RUN_ID}/commits`);
-  const body = (await res.json()) as RunCommitsResponse;
+  const body = await json<RunCommitsResponse>(res);
 
   expect(res.status).toBe(200);
   expect(body.commits[0]).toMatchObject({

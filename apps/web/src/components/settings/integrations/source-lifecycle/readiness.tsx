@@ -3,13 +3,13 @@ import { TONE_TEXT, type StatusTone } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { lifecycleReadinessSentence } from "@web/lib/linear-lifecycle";
 
-const TONE: Record<LinearLifecycleReadiness["status"], StatusTone> = {
+const TONE = {
   unavailable: "stale",
   unmapped: "warning",
   incomplete: "warning",
   failing: "danger",
   ready: "success",
-};
+} satisfies Record<LinearLifecycleReadiness["status"], StatusTone>;
 
 export interface LifecycleReadinessProps {
   readiness: LinearLifecycleReadiness;

@@ -10,6 +10,14 @@ import { createClient } from "#db/client";
 import { runMigrations } from "#db/migrate";
 import { listIssues } from "#db/repositories/issues";
 
+function columnName(column: unknown): string {
+  if (typeof column === "object" && column !== null && "name" in column) {
+    const { name } = column;
+    if (typeof name === "string") return name;
+  }
+  throw new Error("PRAGMA table_info returned no column name");
+}
+
 const LEGACY_MIGRATIONS = [
   "0000_sticky_hellfire_club",
   "0001_famous_eternals",
@@ -102,11 +110,11 @@ it("upgrades a legacy database through the current migrations", () => {
   const issueColumns = migrated.sqlite
     .prepare("PRAGMA table_info(issues)")
     .all()
-    .map((column) => (column as { name: string }).name);
+    .map((column) => columnName(column));
   const issueSourceColumns = migrated.sqlite
     .prepare("PRAGMA table_info(issue_sources)")
     .all()
-    .map((column) => (column as { name: string }).name);
+    .map((column) => columnName(column));
   expect(issueColumns).toContain("source_identifier");
   expect(issueSourceColumns).toContain("source");
   const migratedIssues = migrated.sqlite
@@ -188,9 +196,9 @@ const STEERING_MIGRATION = "0018_run_contribution_steering";
 
 /** Stages the schema as it stood the migration before `tag`, so a data migration can be exercised on real prior rows. */
 function migrateUpToExcluding(dir: string, dbPath: string, tag: string, seed: string): void {
-  const journal = JSON.parse(
+  const journal: { entries: JournalEntry[] } = JSON.parse(
     readFileSync(new URL("../drizzle/meta/_journal.json", import.meta.url), "utf8"),
-  ) as { entries: JournalEntry[] };
+  );
   const target = journal.entries.find((entry) => entry.tag === tag);
   if (!target) throw new Error(`migration ${tag} is not in the journal`);
   const entries = journal.entries.filter((entry) => entry.idx < target.idx);
@@ -291,6 +299,7 @@ it("keeps every review and comment when the adoption rebuild replaces both table
   const dbPath = join(dir, "otomat.db");
   migrateUpToExcluding(dir, dbPath, ADOPTION_MIGRATION, ADOPTION_SEED);
   const staged = createClient(dbPath);
+  // SAFETY: sqlite answers each row as a column-keyed record.
   const stagedComments = staged.sqlite
     .prepare("SELECT * FROM review_comments ORDER BY id")
     .all() as Record<string, unknown>[];

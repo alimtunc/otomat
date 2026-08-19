@@ -3,13 +3,13 @@ import type { ArtifactWaitReason } from "./artifact.js";
 const DELAYS_MS = [10_000, 20_000, 30_000, 60_000, 90_000];
 
 /** How many checks each reason is worth: minutes for a bundle to appear, a CI run's length for CI. */
-const ATTEMPTS: Record<ArtifactWaitReason, number> = {
+const ATTEMPTS = {
   no_run: 4,
   queued: 14,
   in_progress: 14,
   not_published: 4,
   unreadable: 3,
-};
+} satisfies Record<ArtifactWaitReason, number>;
 
 /** The ceiling no sequence of reasons may pass, so a flapping workflow cannot wait forever. */
 const TOTAL_ATTEMPTS = 24;

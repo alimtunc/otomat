@@ -3,6 +3,8 @@ import { EventEmitter } from "node:events";
 
 import { describe, expect, it, vi } from "vitest";
 
+import type { TerminatableChild } from "#shared/terminate";
+
 function spawnSleeper(ignoreSigterm: boolean): ChildProcess {
   const guard = ignoreSigterm ? "process.on('SIGTERM', () => {});" : "";
   // Announce readiness once the handler is registered, so the test never signals mid-boot.
@@ -18,13 +20,13 @@ async function importTerminate() {
   return (await import("#shared/terminate")).terminateChild;
 }
 
-function fakeChild(kill: (signal?: NodeJS.Signals | number) => boolean): ChildProcess {
+function fakeChild(kill: (signal?: NodeJS.Signals | number) => boolean): TerminatableChild {
   return Object.assign(new EventEmitter(), {
     exitCode: null,
     signalCode: null,
     pid: 42,
     kill,
-  }) as unknown as ChildProcess;
+  });
 }
 
 describe("terminateChild", () => {

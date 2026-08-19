@@ -31,7 +31,7 @@ export interface RemoteSessionOptions {
   createTunnel?: (options: SshTunnelOptions) => TunnelHandle;
   health?: typeof waitForHealth;
   reservePort?: typeof findFreeLoopbackPort;
-  scheduleRetry?: (callback: () => void, delayMs: number) => NodeJS.Timeout;
+  scheduleRetry?: (callback: () => void, delayMs: number) => NodeJS.Timeout | number;
 }
 
 export interface RemoteSessionHandle {

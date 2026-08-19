@@ -12,11 +12,11 @@ export interface AgentAvatarProps extends HTMLAttributes<HTMLSpanElement> {
   runtimeTint?: string;
 }
 
-const SIZE_CLASS: Record<AvatarSize, string> = {
+const SIZE_CLASS = {
   sm: "size-4 [&_svg]:size-2.5",
   default: "size-5 [&_svg]:size-3",
   lg: "size-10 [&_svg]:size-5",
-};
+} satisfies Record<AvatarSize, string>;
 
 export function AgentAvatar({
   name,

@@ -59,7 +59,10 @@ export function RunLogsView() {
           type="single"
           value={filter}
           onValueChange={(value) => {
-            if (value !== "") setFilter(value as LogFilter);
+            if (value !== "") {
+              // SAFETY: the filter toggle renders only LogFilter values.
+              setFilter(value as LogFilter);
+            }
           }}
           aria-label="Filter log events"
           className="flex-wrap"

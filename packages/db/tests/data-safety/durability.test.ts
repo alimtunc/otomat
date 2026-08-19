@@ -4,12 +4,20 @@ import { join } from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-const injectedFailure = vi.hoisted(() => ({
+interface InjectedFailure {
+  directory: string;
+  descriptor: number | null;
+  failEveryDirectorySync: boolean;
+  failRestoreCopy: boolean;
+  restoreCopyDescriptor: number | null;
+}
+
+const injectedFailure = vi.hoisted((): InjectedFailure => ({
   directory: "",
-  descriptor: null as number | null,
+  descriptor: null,
   failEveryDirectorySync: false,
   failRestoreCopy: false,
-  restoreCopyDescriptor: null as number | null,
+  restoreCopyDescriptor: null,
 }));
 
 vi.mock("node:fs", async (importOriginal) => {

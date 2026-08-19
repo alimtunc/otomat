@@ -14,11 +14,13 @@ export function toRunCommit(commit: CommitSummary): RunCommit {
   };
 }
 
+interface BranchCommits {
+  commits: RunCommit[];
+  unavailable: string | null;
+}
+
 /** An unreadable history is reported, never rendered as a branch with no commits. */
-export function getBranchCommits(
-  ctx: ReviewContext,
-  runId: string,
-): { commits: RunCommit[]; unavailable: string | null } {
+export function getBranchCommits(ctx: ReviewContext, runId: string): BranchCommits {
   const service = ctx.repositories.forRun(runId)?.service ?? null;
   if (service === null) {
     return { commits: [], unavailable: "This run has no git repository to read commits from." };

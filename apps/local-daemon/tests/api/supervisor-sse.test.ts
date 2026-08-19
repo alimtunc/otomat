@@ -1,7 +1,7 @@
 import { eventEnvelopeSchema, runEndPayloadSchema, type EventEnvelope } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { makeApiApp } from "../support/api.js";
+import { json, makeApiApp } from "../support/api.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
@@ -20,7 +20,7 @@ interface SseFrame {
   data: string;
 }
 
-function parseFrames(buffer: string): { frames: SseFrame[]; rest: string } {
+function parseFrames(buffer: string) {
   const frames: SseFrame[] = [];
   const parts = buffer.split("\n\n");
   const rest = parts.pop() ?? "";
@@ -49,7 +49,7 @@ it(
       body: JSON.stringify({ prompt: "integration turn" }),
     });
     expect(started.status).toBe(201);
-    const { run } = (await started.json()) as { run: { id: string } };
+    const { run } = await json<{ run: { id: string } }>(started);
 
     const sse = await app.request(`/api/runs/${run.id}/events`, {
       headers: { Host: "127.0.0.1" },

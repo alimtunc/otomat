@@ -37,7 +37,9 @@ export interface RemoteUpgradeCoordinatorOptions {
   log(message: string): void;
   runScript?: typeof runSshScript | undefined;
   fetchImpl?: typeof fetch | undefined;
-  scheduleRecheck?: ((callback: () => void, delayMs: number) => NodeJS.Timeout) | undefined;
+  scheduleRecheck?:
+    | ((callback: () => void, delayMs: number) => NodeJS.Timeout | number)
+    | undefined;
 }
 
 /**
@@ -55,7 +57,7 @@ export class RemoteUpgradeCoordinator {
   private journey: RemoteHostStatus | null = null;
   /** The last attempt that stopped, against the build it left running: that pair is the retry memory. */
   private failure: { build: string | null; message: string } | null = null;
-  private timer: NodeJS.Timeout | null = null;
+  private timer: NodeJS.Timeout | number | null = null;
   private running = false;
   private readonly artifact = new ArtifactWait();
 

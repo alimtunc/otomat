@@ -43,6 +43,7 @@ export function subscribeRunEvents(
   runId: string,
   handlers: RunEventsHandlers,
 ): RunEventsSubscription {
+  // SAFETY: probes the ambient global, which platforms without SSE leave undefined.
   const Source =
     config.EventSource ?? (globalThis as { EventSource?: typeof EventSource }).EventSource;
   if (!Source) {
@@ -60,6 +61,7 @@ export function subscribeRunEvents(
     handle: (value: T) => void,
   ): void => {
     try {
+      // SAFETY: named SSE events arrive as MessageEvents carrying the frame payload in data.
       handle(schema.parse(JSON.parse((event as MessageEvent).data)));
     } catch (error) {
       if (handlers.onParseError) handlers.onParseError(error);

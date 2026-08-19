@@ -14,7 +14,7 @@ export class StartupLogSink {
   private buffered = "";
   private reportedFailure = false;
 
-  constructor(private readonly target: () => RotatingLog | null) {}
+  constructor(private readonly target: () => Pick<RotatingLog, "write"> | null) {}
 
   write(message: string): void {
     const log = this.target();

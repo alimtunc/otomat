@@ -199,7 +199,7 @@ it("saves the configured alias", async () => {
   expect(configureRemote).toHaveBeenCalledWith("otomat-vps");
 });
 
-function capacityForm(hostLabel: string): { input: HTMLInputElement; apply: HTMLButtonElement } {
+function capacityForm(hostLabel: string) {
   const input = document.querySelector<HTMLInputElement>(
     `input[aria-label='Maximum concurrent agent sessions on ${hostLabel}']`,
   );

@@ -3,14 +3,14 @@ import { Badge, Icon } from "@otomat/ui";
 import { describeRemoteStatus } from "@web/components/shell/remote-session/status-labels";
 import type { ReactNode } from "react";
 
-const STATUS_TONES: Partial<Record<RemoteHostStatus["phase"], string>> = {
-  connected: "text-text-secondary",
-  error: "text-danger",
-};
+const STATUS_TONES = new Map<RemoteHostStatus["phase"], string>([
+  ["connected", "text-text-secondary"],
+  ["error", "text-danger"],
+]);
 
 function RemoteStatusLine({ status }: { status: RemoteHostStatus | null }) {
   if (status === null) return null;
-  const tone = STATUS_TONES[status.phase] ?? "text-text-tertiary";
+  const tone = STATUS_TONES.get(status.phase) ?? "text-text-tertiary";
   return (
     <p role="status" className={`text-xs ${tone}`}>
       {describeRemoteStatus(status)}

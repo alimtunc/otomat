@@ -64,10 +64,7 @@ const UNAVAILABLE_REPOSITORIES: RepositoryResolver = {
 function makeCompeteSupervisor(
   behavior: Parameters<typeof workerSpawn>[0] = "complete",
   onJob?: (job: Parameters<ReturnType<typeof workerSpawn>>[0]) => void,
-): {
-  supervisor: ReturnType<typeof createSupervisor>;
-  spawn: ReturnType<typeof workerSpawn>;
-} {
+) {
   const worker = workerSpawn(behavior);
   const spawn = (job: Parameters<typeof worker>[0]) => {
     onJob?.(job);
@@ -169,7 +166,10 @@ it("initializes every candidate worktree before its agent starts", async () => {
 
   const texts = readRunEvents(fix.db, run.id)
     .filter((event) => event.type === "runtime.log")
-    .map((event) => (event.payload as { text?: string }).text ?? "");
+    .map((event) => {
+      const text = event.payload["text"];
+      return typeof text === "string" ? text : "";
+    });
   expect(texts).toContain("[otomat] worktree init: $ touch init-marker");
   expect(texts).toContain("[otomat] worktree init [Direct]: $ touch init-marker");
   expect(texts).toContain("[otomat] worktree init [Layered]: $ touch init-marker");

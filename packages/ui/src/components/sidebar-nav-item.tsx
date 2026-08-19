@@ -126,7 +126,10 @@ export function SidebarNavItem({
   if (collapsed) {
     return (
       <Tooltip>
-        <TooltipTrigger render={node as ReactElement} />
+        <TooltipTrigger
+          // SAFETY: node is the anchor/button element built above, never a fragment or text.
+          render={node as ReactElement}
+        />
         <TooltipContent side="right">
           {label}
           {badgeCount != null ? ` · ${badgeCount}` : ""}

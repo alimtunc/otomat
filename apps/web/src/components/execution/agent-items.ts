@@ -15,11 +15,17 @@ export interface ChoiceItem {
   kind: "default" | "profile" | "runtime";
 }
 
+interface AgentChoiceItems {
+  defaultItem: ChoiceItem | null;
+  profileItems: ChoiceItem[];
+  runtimeItems: ChoiceItem[];
+}
+
 export function buildItems(
   profiles: AgentProfileContract[],
   descriptors: RuntimeDescriptor[],
   inheritLabel?: string,
-): { defaultItem: ChoiceItem | null; profileItems: ChoiceItem[]; runtimeItems: ChoiceItem[] } {
+): AgentChoiceItems {
   const profileItems: ChoiceItem[] = profiles.map((profile) => {
     const runtime = runtimeById(descriptors, profile.runtime);
     const available = runtime ? isAvailableRuntime(runtime) : false;

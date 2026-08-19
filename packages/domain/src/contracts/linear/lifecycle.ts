@@ -7,10 +7,10 @@ export const linearLifecyclePhaseSchema = z.enum(LINEAR_LIFECYCLE_PHASES);
 export type LinearLifecyclePhase = z.infer<typeof linearLifecyclePhaseSchema>;
 
 /** Linear's own workflow-state type, so a phase proposes real candidates without ever naming a state. */
-export const LIFECYCLE_PHASE_STATE_TYPE: Record<LinearLifecyclePhase, string> = {
+export const LIFECYCLE_PHASE_STATE_TYPE = {
   in_progress: "started",
   done: "completed",
-};
+} satisfies Record<LinearLifecyclePhase, string>;
 
 export interface LinearLifecycleSignal {
   issue_id: string;

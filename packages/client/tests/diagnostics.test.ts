@@ -4,18 +4,11 @@ import { expect, it } from "vitest";
 import { DaemonRequestError, DaemonTransportError } from "#client/client/http";
 import { createDaemonClient } from "#client/client/index";
 
+import { jsonResponse } from "./support/response.js";
+
 const unreachableHost: typeof fetch = async () => {
   throw new TypeError("fetch failed");
 };
-
-function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    headers: new Headers(headers),
-    json: async () => body,
-  } as unknown as Response;
-}
 
 it("carries the method, path and the daemon's correlation id on a failed request", async () => {
   const fetchMock: typeof fetch = async () =>
@@ -24,8 +17,8 @@ it("carries the method, path and the daemon's correlation id on a failed request
 
   const error = await client.startRun({ prompt: "go" }).catch((thrown: unknown) => thrown);
 
-  expect(error).toBeInstanceOf(DaemonRequestError);
-  const failure = error as DaemonRequestError;
+  if (!(error instanceof DaemonRequestError)) throw new Error("expected a DaemonRequestError");
+  const failure = error;
   expect(failure.status).toBe(500);
   expect(failure.method).toBe("POST");
   expect(failure.path).toBe("/api/runs");
@@ -38,7 +31,8 @@ it("reports a null correlation id rather than inventing one", async () => {
 
   const error = await client.getRun("missing").catch((thrown: unknown) => thrown);
 
-  expect((error as DaemonRequestError).correlationId).toBeNull();
+  if (!(error instanceof DaemonRequestError)) throw new Error("expected a DaemonRequestError");
+  expect(error.correlationId).toBeNull();
 });
 
 it("separates a request that never reached a host from one the daemon answered", async () => {
@@ -46,9 +40,9 @@ it("separates a request that never reached a host from one the daemon answered",
 
   const error = await client.health().catch((thrown: unknown) => thrown);
 
-  expect(error).toBeInstanceOf(DaemonTransportError);
   expect(error).not.toBeInstanceOf(DaemonRequestError);
-  const failure = error as DaemonTransportError;
+  if (!(error instanceof DaemonTransportError)) throw new Error("expected a DaemonTransportError");
+  const failure = error;
   expect(failure.method).toBe("GET");
   expect(failure.path).toBe("/api/health");
   expect(failure.cause).toBeInstanceOf(TypeError);

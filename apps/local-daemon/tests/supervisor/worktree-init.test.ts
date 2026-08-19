@@ -20,7 +20,10 @@ afterEach(() => {
 function logTexts(runId: string): string[] {
   return readRunEvents(fix.db, runId)
     .filter((event) => event.type === "runtime.log")
-    .map((event) => (event.payload as { text?: string }).text ?? "");
+    .map((event) => {
+      const text = event.payload["text"];
+      return typeof text === "string" ? text : "";
+    });
 }
 
 it("runs init commands in the worktree, streams their output, then starts the first step", async () => {

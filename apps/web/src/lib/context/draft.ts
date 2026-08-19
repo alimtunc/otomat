@@ -24,14 +24,16 @@ export function removeContextReference(
   return references.filter((entry) => contextReferenceKey(entry) !== key);
 }
 
-/** The request fields a draft contributes; an empty note adds no instruction rather than an empty one. */
-export function contextRequestFields(draft: ContextDraft): {
+interface ContextRequestFields {
   note?: string;
   context?: ContextReference[];
-} {
+}
+
+/** The request fields a draft contributes; an empty note adds no instruction rather than an empty one. */
+export function contextRequestFields(draft: ContextDraft): ContextRequestFields {
   const note = draft.note.trim();
-  return {
-    ...(note === "" ? {} : { note }),
-    ...(draft.references.length === 0 ? {} : { context: [...draft.references] }),
-  };
+  const fields: ContextRequestFields = {};
+  if (note !== "") fields.note = note;
+  if (draft.references.length > 0) fields.context = [...draft.references];
+  return fields;
 }

@@ -14,7 +14,7 @@ afterEach(() => {
   vi.resetModules();
 });
 
-function mockElectron(sendSync: (channel: string) => unknown): { exposeInMainWorld: unknown } {
+function mockElectron(sendSync: (typeof import("electron"))["ipcRenderer"]["sendSync"]) {
   const exposeInMainWorld = vi.fn();
   vi.doMock("electron", () => ({
     contextBridge: { exposeInMainWorld },

@@ -32,7 +32,7 @@ export function RunEventsProvider({ runId, children }: RunEventsProviderProps) {
     setDegraded(false);
     if (!anchored) return;
     const subscription = daemon.subscribeRunEvents(runId, {
-      ...(tailSeq === null ? {} : { afterSeq: tailSeq }),
+      afterSeq: tailSeq ?? undefined,
       onOpen: () => setState("open"),
       onEvent: (event) => {
         setLive((current) => mergeEvent(current, event));

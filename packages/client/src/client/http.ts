@@ -2,6 +2,8 @@ import { CORRELATION_ID_HEADER } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
 
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
 /**
  * Thrown by HTTP helpers on a non-2xx response; `body` carries the daemon's JSON
  * error payload when one was provided, and `correlationId` the id that daemon stamped
@@ -47,7 +49,7 @@ export class DaemonTransportError extends Error {
   }
 }
 
-async function readErrorBody(res: Response): Promise<unknown> {
+async function readErrorBody(res: Response): Promise<JsonValue> {
   try {
     return await res.json();
   } catch {
@@ -92,7 +94,7 @@ async function daemonFetch(
   return res;
 }
 
-export async function getJson(config: DaemonClientConfig, path: string): Promise<unknown> {
+export async function getJson(config: DaemonClientConfig, path: string): Promise<JsonValue> {
   return (await daemonFetch(config, path)).json();
 }
 
@@ -100,7 +102,7 @@ export async function postJson(
   config: DaemonClientConfig,
   path: string,
   body: unknown,
-): Promise<unknown> {
+): Promise<JsonValue> {
   return sendJson(config, "POST", path, body);
 }
 
@@ -108,7 +110,7 @@ export async function patchJson(
   config: DaemonClientConfig,
   path: string,
   body: unknown,
-): Promise<unknown> {
+): Promise<JsonValue> {
   return sendJson(config, "PATCH", path, body);
 }
 
@@ -116,7 +118,7 @@ export async function putJson(
   config: DaemonClientConfig,
   path: string,
   body: unknown,
-): Promise<unknown> {
+): Promise<JsonValue> {
   return sendJson(config, "PUT", path, body);
 }
 
@@ -125,7 +127,7 @@ async function sendJson(
   method: "POST" | "PATCH" | "PUT",
   path: string,
   body: unknown,
-): Promise<unknown> {
+): Promise<JsonValue> {
   const res = await daemonFetch(config, path, {
     method,
     headers: { "content-type": "application/json" },

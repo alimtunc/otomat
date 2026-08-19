@@ -11,17 +11,18 @@ import { mount } from "#support/mount";
 interface FakeQueryState {
   data?: string;
   isError?: boolean;
-  refetch?: () => Promise<unknown>;
+  refetch?: () => void;
 }
 
 function fakeQuery(state: FakeQueryState): UseQueryResult<string> {
+  // SAFETY: QueryBoundary reads only these five fields, not the full query-state union.
   return {
     data: state.data,
     isError: state.isError ?? false,
     isFetching: false,
     dataUpdatedAt: Date.now(),
     refetch: state.refetch ?? (() => Promise.resolve()),
-  } as unknown as UseQueryResult<string>;
+  } as UseQueryResult<string>;
 }
 
 const cleanups: Array<() => Promise<void>> = [];

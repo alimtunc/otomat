@@ -22,17 +22,15 @@ afterEach(() => {
 const PLAN_STEP = { id: "s1", name: "Agent turn", agent: "claude", prompt: "p", depends_on: [] };
 
 function insertRun(id: string, values: { agentId?: string; steps?: (typeof PLAN_STEP)[] }): void {
-  harness.db
-    .insert(schema.runs)
-    .values({
-      id,
-      issue_id: "i1",
-      status: "queued",
-      branch: `otomat/run/${id}`,
-      ...(values.agentId === undefined ? {} : { agent_id: values.agentId }),
-      plan_json: { version: 1, steps: values.steps ?? [PLAN_STEP] },
-    })
-    .run();
+  const row: typeof schema.runs.$inferInsert = {
+    id,
+    issue_id: "i1",
+    status: "queued",
+    branch: `otomat/run/${id}`,
+    plan_json: { version: 1, steps: values.steps ?? [PLAN_STEP] },
+  };
+  if (values.agentId !== undefined) row.agent_id = values.agentId;
+  harness.db.insert(schema.runs).values(row).run();
 }
 
 describe("ensureRuntimeAgent", () => {

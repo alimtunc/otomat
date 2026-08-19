@@ -13,7 +13,12 @@ import { LinearError } from "../errors.js";
 import { buildLinearWriteEvent, linearWriteEventType } from "../events.js";
 import type { LinearWritebackConfig, PendingSpec, WriteOutcome } from "./types.js";
 
-function safeLinearFailure(error: unknown): { code: string; message: string } {
+interface SafeLinearFailure {
+  code: string;
+  message: string;
+}
+
+function safeLinearFailure(error: unknown): SafeLinearFailure {
   if (error instanceof LinearError) return { code: error.code, message: error.message };
   return { code: "linear_request_failed", message: "Linear returned an unexpected response." };
 }

@@ -15,7 +15,7 @@ import {
   useRuntimeProviderOptions,
 } from "@web/api/daemon/queries";
 import { agentChoiceProfile, agentChoiceRuntimeId } from "@web/lib/agent-choice";
-import { pickerLevels } from "@web/lib/execution/levels";
+import { pickerLevels, type ExecutionLevelsInput } from "@web/lib/execution/levels";
 import {
   scopedModelId,
   type ExecutionPickerLevel,
@@ -61,15 +61,16 @@ export function useExecutionConfig({
   const agentChoice = value.agent ?? inherited?.agent ?? null;
   const runtimeId = agentChoiceRuntimeId(agentChoice, profiles);
   const profile = agentChoiceProfile(agentChoice, profiles);
-  const levels = pickerLevels({
+  const levelsInput: ExecutionLevelsInput = {
     level,
     own: value,
-    ...(inherited ? { inherited: { model: inherited.model, options: inherited.options } } : {}),
     inheritsAgent,
     profile,
     defaults: defaults.data,
     runtimeId,
-  });
+  };
+  if (inherited) levelsInput.inherited = { model: inherited.model, options: inherited.options };
+  const levels = pickerLevels(levelsInput);
   const model = resolveExecutionModel(levels);
   const modelId = scopedModelId(model.value);
   const catalog = useRuntimeModels(runtimeId);

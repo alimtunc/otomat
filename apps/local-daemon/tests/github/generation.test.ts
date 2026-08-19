@@ -117,7 +117,7 @@ describe("pull request generator", () => {
     ]);
 
     await expect(createPullRequestGenerator(fake.run).generate(AGENT, INPUT)).rejects.toMatchObject(
-      { code: "pr_generation_invalid", message: expect.stringContaining("72") as string },
+      { code: "pr_generation_invalid", message: expect.stringContaining("72") },
     );
   });
 
@@ -152,7 +152,7 @@ describe("pull request generator", () => {
     await expect(createPullRequestGenerator(fake.run).generate(AGENT, INPUT)).rejects.toMatchObject(
       {
         code: "pr_generation_failed",
-        message: expect.stringContaining("not logged in") as string,
+        message: expect.stringContaining("not logged in"),
       },
     );
   });
@@ -163,7 +163,7 @@ describe("pull request generator", () => {
     await expect(createPullRequestGenerator(fake.run).generate(AGENT, INPUT)).rejects.toMatchObject(
       {
         code: "pr_generation_failed",
-        message: expect.stringContaining("did not answer within") as string,
+        message: expect.stringContaining("did not answer within"),
       },
     );
     expect(fake.requests[0]?.timeoutMs).toBeGreaterThan(0);

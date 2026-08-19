@@ -1006,3 +1006,49 @@ For V1, the local daemon is the offline cache: it mirrors external state into
 SQLite, serves last-known state without network, and streams local updates to the
 web app over SSE. The frontend uses TanStack Query + SSE. There is no IndexedDB
 replica and no `frontend/store` package.
+
+## Anti-Slop Lint Rules (OTO-119)
+
+The [anti-slop](https://github.com/dmmulroy/anti-slop) Oxlint plugin is vendored
+at `packages/tooling/oxlint/anti-slop/` (its files are repo-owned and formatted
+with oxfmt), registered through `jsPlugins` in `packages/tooling/oxlintrc.base.json`,
+and pinned to matching `oxlint`/`@oxlint/plugins` versions. The vendored
+directory is lint-ignored from the root `.oxlintrc.json` — a root-level
+`ignorePatterns` entry, because oxlint does not honour patterns added in an
+extended config for jsPlugin-loaded sources. The upstream Effect rule group was
+deleted from the vendored copy: Otomat forbids Effect, so the group could never
+gain a consumer.
+
+Adopted at `error`, with zero violations in owned code:
+`no-chained-type-assertions`, `no-conditional-empty-object-spread`,
+`no-known-value-widening`, `no-object-parameters`, `no-reflect-apply`,
+`no-reflect-get`, `no-unknown-returns`, `no-unknown-type-aliases`,
+`no-widen-then-assert`, `require-safety-comment-for-type-assertion`.
+The migration's idioms: `satisfies` for exhaustive lookup tables, `Map` for
+open-keyed or partial lookups, named interfaces over anonymous object types,
+`in`/`typeof`/`instanceof` narrowing over casts, and a one-line
+`// SAFETY:` invariant on each assertion that must remain.
+
+Discarded, each against a demonstrated repo need — never weakened, baselined or
+scoped down instead:
+
+- `no-module-mocking` — the web, desktop and db test suites isolate the typed
+  client boundary and Electron's native modules with `vi.mock` by design;
+  replacing ~77 test files with injected seams is a test-architecture project
+  of its own, not a lint migration.
+- `no-runtime-typeof` — plain-`.mjs` operational scripts must validate external
+  input with `typeof` (no type system exists there), zod-free zones parse
+  boundaries with `typeof`-based guards and coercers, and error introspection
+  on unknown catch values has no other spelling. The `allowInTypeGuards`
+  option covers none of these.
+- `no-unknown-parameters` — `(error: unknown)` rejection handlers state the
+  platform contract, the desktop main deliberately types renderer IPC input
+  `unknown` because the renderer is untrusted, and schema-free guard/coerce
+  parsers take `unknown` by definition.
+- `no-unsafe-dictionary-type` — `Record<string, unknown>` is the honest
+  contract for raw JSON ingress/egress in zod-free zones, GraphQL variable
+  dictionaries, and journal payloads.
+- `no-shape-in-symbol-names` — every hit is zod's own vocabulary (raw shape
+  objects fed to `z.object`, `.shape` reads) or the literally geometric
+  `AvatarShape`; the lazy structural naming the rule targets does not exist
+  in this repo.

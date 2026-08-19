@@ -3,9 +3,10 @@ import { IntegrationsSection } from "@web/components/settings/integrations/secti
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { fakeDesktopBridge } from "#support/desktop-bridge";
+import type { FakeQueryState } from "#support/fake-query";
 import { mountWithQuery, type Mounted } from "#support/mount";
 
-let connectionState: Record<string, unknown>;
+let connectionState: FakeQueryState;
 
 vi.mock("@web/api/linear/queries", () => ({
   useLinearConnection: () => connectionState,

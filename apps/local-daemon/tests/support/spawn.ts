@@ -62,12 +62,12 @@ export function workerSpawn(
     });
   };
   spawnFn.calls = 0;
-  spawnFn.jobs = [] as SupervisedJob[];
+  spawnFn.jobs = new Array<SupervisedJob>();
   return spawnFn;
 }
 
 /** Spawns a detached, long-lived process and returns its pid/pgid — an "orphan" for reconciliation. */
-export function spawnOrphan(): { pid: number; pgid: number; stop(): void } {
+export function spawnOrphan() {
   const child = spawn(process.execPath, ["-e", "setInterval(()=>{}, 1000)"], {
     detached: true,
     stdio: "ignore",

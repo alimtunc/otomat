@@ -34,14 +34,13 @@ function checkExecutableCount(steps: readonly PlanGraphNode[], ctx: z.Refinement
   }
 }
 
-function checkPlanIds(
-  steps: readonly PlanGraphNode[],
-  ctx: z.RefinementCtx,
-): {
+interface PlanIdIndex {
   nodeIds: Set<string>;
   competitorGroups: Map<string, string>;
   sound: boolean;
-} {
+}
+
+function checkPlanIds(steps: readonly PlanGraphNode[], ctx: z.RefinementCtx): PlanIdIndex {
   const nodeIds = new Set<string>();
   const allIds = new Set<string>();
   const competitorGroups = new Map<string, string>();

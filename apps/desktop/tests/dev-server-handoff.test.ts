@@ -6,10 +6,16 @@ import { devBuildInfo } from "#shared/build-info";
 import { DEV_SERVER_ENV } from "#shared/constants";
 import { scratchDir } from "#support/scratch-dir";
 
-const harness = vi.hoisted(() => ({
-  cockpitUrls: [] as (string | null)[],
-  hardenedOrigins: [] as string[][],
-  appListeners: new Map<string, (...args: unknown[]) => void>(),
+interface Harness {
+  cockpitUrls: (string | null)[];
+  hardenedOrigins: string[][];
+  appListeners: Map<string, (...args: unknown[]) => void>;
+}
+
+const harness = vi.hoisted((): Harness => ({
+  cockpitUrls: [],
+  hardenedOrigins: [],
+  appListeners: new Map(),
 }));
 
 vi.mock("electron", () => ({

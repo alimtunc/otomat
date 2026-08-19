@@ -14,11 +14,12 @@ export interface StoredExecution {
 }
 
 export function selectionFromStored(stored: StoredExecution): ExecutionSelection {
-  return {
+  const selection: ExecutionSelection = {
     agent: stored.runtime === null ? null : encodeRuntimeChoice(stored.runtime),
-    ...(stored.model === null ? {} : { model: { kind: "model" as const, id: stored.model } }),
     options: optionSelectionsFromValues(stored.options),
   };
+  if (stored.model !== null) selection.model = { kind: "model", id: stored.model };
+  return selection;
 }
 
 /** A saved configuration holds values only, so an `agent_default` selection is dropped. */

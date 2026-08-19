@@ -17,11 +17,11 @@ export const CODEX_DEFAULT_SANDBOX = "workspace-write";
 const HELP_DETAIL = "Announced by `codex exec --help` from the installed binary";
 const CATALOG_DETAIL = "reasoning levels from its bundled model catalog";
 
-const SANDBOX_DESCRIPTIONS: Record<string, string> = {
-  "read-only": "Codex may read the worktree but not write to it.",
-  "workspace-write": "Codex may write inside the working directory.",
-  "danger-full-access": "Codex may read and write anywhere the daemon can, with no sandbox.",
-};
+const SANDBOX_DESCRIPTIONS = new Map<string, string>([
+  ["read-only", "Codex may read the worktree but not write to it."],
+  ["workspace-write", "Codex may write inside the working directory."],
+  ["danger-full-access", "Codex may read and write anywhere the daemon can, with no sandbox."],
+]);
 
 /**
  * Otomat drives `codex exec` with no terminal attached, so an escalation it
@@ -31,12 +31,15 @@ const SANDBOX_DESCRIPTIONS: Record<string, string> = {
 const NON_INTERACTIVE_NOTE =
   "Codex escalates to a human for approval, and Otomat runs it non-interactively, so nothing it escalates gets approved.";
 
-const APPROVAL_DESCRIPTIONS: Record<string, string> = {
-  never: "Codex never asks; it stays inside the sandbox or fails the command.",
-  untrusted: `Codex asks before anything it does not consider trusted. ${NON_INTERACTIVE_NOTE}`,
-  "on-request": `Codex asks when it wants to step outside the sandbox — the escalation half of Codex's own Auto preset (\`${CODEX_DEFAULT_SANDBOX}\` + \`on-request\`). ${NON_INTERACTIVE_NOTE}`,
-  "on-failure": `Codex asks after a sandboxed command fails. ${NON_INTERACTIVE_NOTE}`,
-};
+const APPROVAL_DESCRIPTIONS = new Map<string, string>([
+  ["never", "Codex never asks; it stays inside the sandbox or fails the command."],
+  ["untrusted", `Codex asks before anything it does not consider trusted. ${NON_INTERACTIVE_NOTE}`],
+  [
+    "on-request",
+    `Codex asks when it wants to step outside the sandbox — the escalation half of Codex's own Auto preset (\`${CODEX_DEFAULT_SANDBOX}\` + \`on-request\`). ${NON_INTERACTIVE_NOTE}`,
+  ],
+  ["on-failure", `Codex asks after a sandboxed command fails. ${NON_INTERACTIVE_NOTE}`],
+]);
 
 /** The sandbox value Codex itself names for its danger: it removes the OS-level confinement entirely. */
 const DANGEROUS_SANDBOXES = new Set(["danger-full-access"]);
@@ -49,7 +52,7 @@ function sandboxDescriptor(help: string): ProviderOptionDescriptor | null {
     description: "What the OS-level sandbox lets Codex write while it runs.",
     choices: values.map((value) => ({
       value,
-      description: SANDBOX_DESCRIPTIONS[value] ?? null,
+      description: SANDBOX_DESCRIPTIONS.get(value) ?? null,
       dangerous: DANGEROUS_SANDBOXES.has(value),
     })),
     default_value: values.includes(CODEX_DEFAULT_SANDBOX) ? CODEX_DEFAULT_SANDBOX : null,
@@ -64,7 +67,7 @@ function approvalDescriptor(help: string): ProviderOptionDescriptor | null {
     description: "When Codex asks a human before acting. Otomat cannot answer such a request yet.",
     choices: values.map((value) => ({
       value,
-      description: APPROVAL_DESCRIPTIONS[value] ?? null,
+      description: APPROVAL_DESCRIPTIONS.get(value) ?? null,
       dangerous: false,
     })),
     default_value: null,
@@ -72,10 +75,12 @@ function approvalDescriptor(help: string): ProviderOptionDescriptor | null {
 }
 
 /** Only the levels the bundled catalog attributes to this exact model; a model it does not describe gets no field rather than another model's levels. */
-function reasoningEffortDescriptor(
-  binary: string,
-  model: string | null,
-): { descriptor: ProviderOptionDescriptor | null; note: string | null } {
+interface ReasoningEffortField {
+  descriptor: ProviderOptionDescriptor | null;
+  note: string | null;
+}
+
+function reasoningEffortDescriptor(binary: string, model: string | null): ReasoningEffortField {
   if (model === null) {
     return { descriptor: null, note: "Reasoning levels follow the model, so pick one first." };
   }

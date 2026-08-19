@@ -26,7 +26,7 @@ export async function waitForHealth(options: WaitForHealthOptions): Promise<Heal
   const sleep = options.sleep ?? defaultSleep;
   const deadline = now() + timeoutMs;
 
-  let lastError: unknown = new Error("health never answered");
+  let lastFailure: unknown;
   while (now() < deadline) {
     if (options.signal?.aborted) throw new Error("daemon exited before it became healthy");
     try {
@@ -37,14 +37,18 @@ export async function waitForHealth(options: WaitForHealthOptions): Promise<Heal
         return healthResponseSchema.parse(await response.json());
       });
       if (typeof outcome !== "number") return outcome;
-      lastError = new Error(`health responded ${outcome}`);
+      lastFailure = outcome;
     } catch (error) {
       if (options.signal?.aborted === true) {
         throw new Error("daemon exited before it became healthy", { cause: error });
       }
-      lastError = error;
+      lastFailure = error;
     }
     await sleep(intervalMs);
   }
-  throw new Error(`daemon health check timed out after ${timeoutMs}ms`, { cause: lastError });
+  const cause =
+    typeof lastFailure === "number"
+      ? new Error(`health responded ${lastFailure}`)
+      : (lastFailure ?? new Error("health never answered"));
+  throw new Error(`daemon health check timed out after ${timeoutMs}ms`, { cause });
 }

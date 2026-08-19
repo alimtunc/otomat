@@ -4,10 +4,12 @@ import { join } from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-const injectedFailure = vi.hoisted(() => ({
-  descriptor: null as number | null,
-  manifestPath: "",
-}));
+interface InjectedFailure {
+  descriptor: number | null;
+  manifestPath: string;
+}
+
+const injectedFailure = vi.hoisted((): InjectedFailure => ({ descriptor: null, manifestPath: "" }));
 
 vi.mock("node:fs", async (importOriginal) => {
   const original = await importOriginal<typeof import("node:fs")>();

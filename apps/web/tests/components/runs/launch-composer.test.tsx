@@ -13,7 +13,13 @@ import { mount } from "#support/mount";
 
 const REFERENCED = referencedIssue();
 
-let issuesQuery: { data: IssueContract[] | undefined; isLoading: boolean; isError: boolean } = {
+interface FakeIssuesQuery {
+  data: IssueContract[] | undefined;
+  isLoading: boolean;
+  isError: boolean;
+}
+
+let issuesQuery: FakeIssuesQuery = {
   data: [REFERENCED],
   isLoading: false,
   isError: false,

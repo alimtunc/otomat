@@ -102,7 +102,7 @@ function serviceWithTransport(transport: LinearTransport): LinearService {
   });
 }
 
-function persistSource(source: "linear" | "github" = "linear"): { id: string } {
+function persistSource(source: "linear" | "github" = "linear") {
   const id = `src-${(ids += 1)}`;
   insertIssueSource(t.db, {
     id,

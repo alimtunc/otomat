@@ -7,8 +7,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { linearIssueContract } from "#support/issue";
 
-let detail: { data: unknown };
-let issue: { isPending: boolean; data: unknown };
+interface FakeDetailQuery {
+  data: unknown;
+}
+
+interface FakeIssueQuery {
+  isPending: boolean;
+  isError?: boolean;
+  data: unknown;
+}
+
+let detail: FakeDetailQuery;
+let issue: FakeIssueQuery;
 
 vi.mock("@tanstack/react-router", () => ({
   Outlet: () => <div>outlet</div>,
