@@ -1,0 +1,1 @@
+CREATE INDEX `runtime_events_type_occurred_idx` ON `runtime_events` (`type`,`occurred_at`);

@@ -618,6 +618,31 @@ Availability is carried, not inferred: `live` for a scope that may still report,
 reported none. A field no turn reported stays null and is left out of the line —
 never rendered as a zero, which would read as a measured value.
 
+## The Usage Dashboard
+
+`GET /api/usage` answers the whole host's consumption over a rolling window, and
+it aggregates where the data is: SQLite groups the window's `runtime.usage` rows
+by run, step, UTC day and emitter (`db/repositories/usage.ts`), so the client
+receives roll-ups and never a ledger. `SUM` skips the turns that reported nothing
+— a metric no turn carried comes back null, not zero — and the matching `COUNT`
+is what separates a complete total from a partial one. `json_type` guards every
+read, so a text value at a number's path is refused rather than coerced, and a
+payload with no readable `usage` object is counted as unreadable instead of being
+dropped. The new `runtime_events (type, occurred_at)` index keeps that read off a
+full scan; it is deliberately not partial, because SQLite cannot prove a partial
+index's predicate from a bound parameter.
+
+Only the period is pushed into SQL. The facets — project, runtime, model, issue,
+day — are applied by `usageDashboard()` in the domain, over the period's evidence,
+which is what lets the facet options stay read from the whole period: a narrowed
+axis is still re-openable. The window itself is resolved from the daemon's clock
+and echoed on the response, because a client that computed its own bounds could
+not say which instant the totals cover. The run table is a page, and it states
+what it left out against the window's own run count.
+
+Host is not a dimension: a daemon answers for its own machine, so the page tags
+the host it read rather than offering a filter over one constant value.
+
 ## Reviewing a Diff
 
 The reviewer never reconciles a moved anchor, so every surface it builds is
