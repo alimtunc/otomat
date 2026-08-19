@@ -63,7 +63,7 @@ function harness(overrides?: {
     reservePort: () => Promise.resolve(45_000),
     scheduleRetry: (callback) => {
       retries.push(callback);
-      return 0 as unknown as NodeJS.Timeout;
+      return 0;
     },
   });
   return { session, statuses, tunnels, retries, runScript, health };
@@ -215,7 +215,7 @@ it("refreshDaemon keeps the session serving when the stop script fails", async (
 });
 
 it("never leaves a tunnel behind when disposed mid-connect", async () => {
-  let releaseBootstrap: (result: SshScriptResult) => void = () => {};
+  let releaseBootstrap!: (result: SshScriptResult) => void;
   const runScript = vi.fn(
     () =>
       new Promise<SshScriptResult>((resolve) => {

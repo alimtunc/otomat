@@ -2,13 +2,13 @@ import type { LinearHostDeliveryState } from "@otomat/domain";
 
 import { useLinearDelivery } from "./use-linear-delivery";
 
-const STATES: Record<LinearHostDeliveryState, { label: string; tone: string }> = {
+const STATES = {
   delivered: { label: "Connected", tone: "text-text-secondary" },
   cleared: { label: "No key", tone: "text-text-tertiary" },
   pending_restore: { label: "Waiting to receive the key", tone: "text-text-tertiary" },
   pending_revocation: { label: "Waiting to revoke the key", tone: "text-warning" },
   unavailable: { label: "Unavailable", tone: "text-text-tertiary" },
-};
+} satisfies Record<LinearHostDeliveryState, { label: string; tone: string }>;
 
 /** A host that is down says what it is still owed, instead of claiming a connection. */
 export function HostDeliveryPanel() {

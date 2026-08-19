@@ -27,11 +27,11 @@ function nameColor(name: string): string {
   return `hsl(${Math.abs(hash) % 360} 48% 46%)`;
 }
 
-const SIZE_CLASS: Record<AvatarSize, string> = {
+const SIZE_CLASS = {
   sm: "size-4 text-[9px]",
   default: "size-5 text-[10px]",
   lg: "size-10 text-[15px]",
-};
+} satisfies Record<AvatarSize, string>;
 
 function shapeClassFor(shape: AvatarShape, size: AvatarSize): string {
   if (shape === "square") return "rounded-sm";

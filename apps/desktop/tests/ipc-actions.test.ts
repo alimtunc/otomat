@@ -9,13 +9,15 @@ function makeContext(options: {
   reset: () => Promise<{ ok: true; message: null }>;
 }) {
   const reloadCockpit = vi.fn();
+  // SAFETY: the reset action only reads the active host id and calls sandbox.reset.
   const runtime = {
     hosts: { activeHostId: options.activeHostId },
     sandbox: { reset: options.reset },
-  } as unknown as DesktopRuntime;
+  } as DesktopRuntime;
   const context: IpcActionContext = {
     runtime: () => runtime,
-    support: {} as unknown as DesktopSupport,
+    // SAFETY: the actions under test never touch the support surface.
+    support: {} as DesktopSupport,
     restoreBackup: async () => {},
     reloadCockpit,
   };

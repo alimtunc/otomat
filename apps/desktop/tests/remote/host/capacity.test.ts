@@ -6,19 +6,17 @@ const CAPACITY = { max_concurrent_sessions: 6, active_sessions: 2, waiting_sessi
 
 const CONNECTED = { url: "http://127.0.0.1:4319" };
 
-const OFFLINE = (): { message: string } => ({ message: "The remote host is not connected yet." });
+const OFFLINE = () => ({ message: "The remote host is not connected yet." });
 
 type DaemonUrl = () => { url: string } | { message: string };
 
 /** `fetchImpl` arrives as the raw vitest mock so the tests can assert on it; only the seam is cast. */
-function actions(
-  fetchImpl: unknown,
-  daemonUrl: DaemonUrl = () => CONNECTED,
-): { capacity: HostCapacityActions; logs: string[] } {
+function actions(fetchImpl: unknown, daemonUrl: DaemonUrl = () => CONNECTED) {
   const logs: string[] = [];
   const log = (message: string): void => {
     logs.push(message);
   };
+  // SAFETY: the raw vitest mock stands in for fetch so the tests can assert on it.
   return {
     capacity: new HostCapacityActions({ daemonUrl, fetchImpl: fetchImpl as typeof fetch, log }),
     logs,

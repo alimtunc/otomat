@@ -12,6 +12,7 @@ import { mount } from "#support/mount";
 
 const ISSUE = referencedIssue();
 
+// SAFETY: the dialogs read only the launched run's id.
 const launch = vi.fn(async () => ({ id: "run-1" }) as RunContract);
 const pickerProps = vi.fn();
 
@@ -133,8 +134,8 @@ function globalRow(): HTMLElement {
 
 function stepCard(): HTMLElement {
   const card = document.querySelector("input[aria-label='Step 1 name']")?.closest("div.rounded-lg");
-  if (!card) throw new Error("step 1 card not found");
-  return card as HTMLElement;
+  if (!(card instanceof HTMLElement)) throw new Error("step 1 card not found");
+  return card;
 }
 
 /** The last props the probe saw for a node, which is what that node currently reads. */

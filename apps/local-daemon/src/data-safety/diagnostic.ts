@@ -7,7 +7,7 @@ import {
   type DesktopStartupDiagnostic,
 } from "@otomat/domain";
 
-const SAFE_MESSAGES: Record<DataSafetyErrorCode, string> = {
+const SAFE_MESSAGES = {
   backup_failed: "Otomat could not create a safe database backup.",
   database_corrupt:
     "The SQLite database failed its integrity check. Otomat did not modify or recreate it.",
@@ -18,7 +18,7 @@ const SAFE_MESSAGES: Record<DataSafetyErrorCode, string> = {
     "Database migration failed. Recovery is available from the pre-migration backup.",
   restore_failed: "Database restoration failed. Otomat preserved the original database state.",
   schema_incompatible: "The SQLite schema is newer than or incompatible with this Otomat build.",
-};
+} satisfies Record<DataSafetyErrorCode, string>;
 
 export function serializeStartupDiagnostic(error: unknown): DesktopStartupDiagnostic {
   if (error instanceof DataSafetyError) {

@@ -14,11 +14,13 @@ interface PushTarget {
   headRef: string;
 }
 
-function requireOpenPullRequest(row: PullRequestRow | undefined): {
+interface OpenPullRequest {
   row: PullRequestRow;
   headRef: string;
   number: number;
-} {
+}
+
+function requireOpenPullRequest(row: PullRequestRow | undefined): OpenPullRequest {
   if (row === undefined || row.number === null || row.head_ref === null) {
     throw new GitHubPublicationError(
       "pr_not_published",

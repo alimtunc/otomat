@@ -21,7 +21,7 @@ const LAUNCH_MODES = ["single", "workflow"] as const;
 type LaunchMode = (typeof LAUNCH_MODES)[number];
 
 function isLaunchMode(value: string): value is LaunchMode {
-  return (LAUNCH_MODES as readonly string[]).includes(value);
+  return LAUNCH_MODES.some((mode) => mode === value);
 }
 
 export interface LaunchRunDialogProps {

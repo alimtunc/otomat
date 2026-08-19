@@ -141,20 +141,17 @@ export class PublicationStore {
     subject: ComposedSubject,
   ): PullRequestRow {
     const row = this.ensureRow(run, subject.title, proposal.body);
-    return this.patch(
-      row,
-      {
-        title: subject.title,
-        body: proposal.body,
-        ...(row.number === null ? { head_ref: proposal.branch } : {}),
-        commit_subject: subject.subjectLine,
-        commit_body: proposal.commit_body,
-        generator_runtime: proposal.generator.runtime,
-        generator_model: proposal.generator.model,
-        generator_effort: proposal.generator.effort,
-      },
-      "otomat",
-    );
+    const values: PullRequestPatch = {
+      title: subject.title,
+      body: proposal.body,
+      commit_subject: subject.subjectLine,
+      commit_body: proposal.commit_body,
+      generator_runtime: proposal.generator.runtime,
+      generator_model: proposal.generator.model,
+      generator_effort: proposal.generator.effort,
+    };
+    if (row.number === null) values.head_ref = proposal.branch;
+    return this.patch(row, values, "otomat");
   }
 
   /** Nothing is rewritten: the run keeps its status and every step keeps its own. */

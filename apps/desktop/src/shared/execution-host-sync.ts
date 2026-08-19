@@ -8,8 +8,10 @@ export interface ExecutionHostSync {
 
 export function isExecutionHostSync(value: unknown): value is ExecutionHostSync {
   if (typeof value !== "object" || value === null) return false;
-  const sync = value as Record<string, unknown>;
   return (
-    isExecutionHostId(sync.id) && (typeof sync.ssh_alias === "string" || sync.ssh_alias === null)
+    "id" in value &&
+    isExecutionHostId(value.id) &&
+    "ssh_alias" in value &&
+    (typeof value.ssh_alias === "string" || value.ssh_alias === null)
   );
 }

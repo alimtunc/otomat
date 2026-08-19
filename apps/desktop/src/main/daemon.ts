@@ -75,7 +75,7 @@ export class DaemonController {
       allowedOrigin: this.options.packaged ? APP_ORIGIN : undefined,
       baseEnv: this.options.baseEnv ?? process.env,
       runAsNode: this.options.packaged,
-      ...(this.options.buildSha === undefined ? {} : { buildSha: this.options.buildSha }),
+      buildSha: this.options.buildSha,
     });
     const command = this.options.packaged ? this.options.electronBinary : "node";
     const child = spawn(command, [this.options.daemonEntry], {
@@ -101,7 +101,7 @@ export class DaemonController {
     } catch (error) {
       child.off("exit", onEarlyExit);
       child.off("error", onSpawnError);
-      let cleanupFailure: unknown = null;
+      let cleanupFailure: unknown;
       try {
         await this.stopActive(active);
       } catch (stopError) {
@@ -109,7 +109,7 @@ export class DaemonController {
       }
       const startupFailure = spawnError ?? error;
       const cause = combineFailures(
-        cleanupFailure === null ? [startupFailure] : [startupFailure, cleanupFailure],
+        cleanupFailure === undefined ? [startupFailure] : [startupFailure, cleanupFailure],
         "Daemon startup and process cleanup both failed.",
       );
       if (active.output.diagnostic !== null) {
@@ -141,7 +141,7 @@ export class DaemonController {
       allowedOrigin: this.options.packaged ? APP_ORIGIN : undefined,
       baseEnv: this.options.baseEnv ?? process.env,
       runAsNode: this.options.packaged,
-      ...(this.options.buildSha === undefined ? {} : { buildSha: this.options.buildSha }),
+      buildSha: this.options.buildSha,
     });
     env[MAINTENANCE_ACTION_ENV] = MAINTENANCE_RESTORE_ACTION;
     env[RESTORE_BACKUP_ENV] = backupPath;
@@ -185,7 +185,7 @@ export class DaemonController {
   }
 
   private async stopActive(active: ActiveChild): Promise<void> {
-    let terminationFailure: unknown = null;
+    let terminationFailure: unknown;
     try {
       await terminateChild(active.child, DAEMON_TERMINATE_GRACE_MS);
     } catch (error) {
@@ -199,7 +199,7 @@ export class DaemonController {
       }),
     ]);
     if (drainTimer !== null) clearTimeout(drainTimer);
-    if (terminationFailure !== null) {
+    if (terminationFailure !== undefined) {
       if (drained && this.active === active) this.active = null;
       throw terminationFailure;
     }

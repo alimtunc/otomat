@@ -112,9 +112,9 @@ export function useSelectCompeteWinner(runId: string, groupId: string) {
   });
 }
 
-function useContributionMutation<TVariables>(
+function useContributionMutation<TVariables, TResult>(
   runId: string,
-  mutationFn: (variables: TVariables) => Promise<unknown>,
+  mutationFn: (variables: TVariables) => Promise<TResult>,
 ) {
   const client = useQueryClient();
   return useMutation({
@@ -150,7 +150,7 @@ export function useCancelRunContribution(runId: string) {
 
 /** Explicit "deliver now" for messages a daemon restart left queued; the daemon never resumes a run on its own at boot. */
 export function useDeliverRunContributions(runId: string) {
-  return useContributionMutation<void>(runId, () => daemon.deliverRunContributions(runId));
+  return useContributionMutation(runId, (_: void) => daemon.deliverRunContributions(runId));
 }
 
 function contributionErrorMessage(error: unknown): string {

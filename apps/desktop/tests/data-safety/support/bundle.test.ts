@@ -30,7 +30,7 @@ it("contains only versions, health, schema metadata and already-redacted logs", 
         '{"authorization":"Bearer opaque-secret","user_prompt":[\n"third private instruction"\n]}',
     },
   });
-  const bundle = JSON.parse(serialized) as Record<string, unknown>;
+  const bundle: Record<string, unknown> = JSON.parse(serialized);
 
   expect(Object.keys(bundle).toSorted()).toEqual(["health", "logs", "schema", "versions"]);
   expect(serialized).not.toContain("private instructions");

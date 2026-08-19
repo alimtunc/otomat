@@ -203,7 +203,7 @@ describe("PullRequestForm", () => {
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         subject: { type: "feat", scope: "pr", summary: "validate the publication subject" },
-      }) as PreparePullRequestRequest,
+      }),
     );
   });
 
@@ -217,9 +217,7 @@ describe("PullRequestForm", () => {
     click(view, "Create draft PR");
     await act(async () => {});
 
-    expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ mode: "draft" }) as PreparePullRequestRequest,
-    );
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ mode: "draft" }));
   });
 
   it("names the blocked publication and offers no creation", () => {

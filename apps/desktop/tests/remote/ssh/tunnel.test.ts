@@ -19,17 +19,14 @@ class FakeSshChild extends EventEmitter {
   });
 }
 
-function makeTunnel(onExit: (info: TunnelExitInfo) => void): {
-  tunnel: SshTunnel;
-  child: FakeSshChild;
-} {
+function makeTunnel(onExit: (info: TunnelExitInfo) => void) {
   const child = new FakeSshChild();
   const tunnel = new SshTunnel({
     alias: "otomat-vps",
     localPort: 45123,
     remotePort: 4319,
     onExit,
-    spawnImpl: (() => child) as unknown as typeof import("node:child_process").spawn,
+    spawnImpl: () => child,
   });
   return { tunnel, child };
 }

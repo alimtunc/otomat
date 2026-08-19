@@ -5,9 +5,9 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { scratchDir } from "#support/scratch-dir";
 
-const harness = vi.hoisted(() => ({
-  actions: null as { restoreBackup(): Promise<void> } | null,
-  runtime: null as {
+interface RecoveryHarness {
+  actions: { restoreBackup(): Promise<void> } | null;
+  runtime: {
     dataDirectory: { root: string; dbPath: string; backupsDir: string };
     desktopLog: { write(message: string): void };
     daemonLog: { write(message: string): void };
@@ -23,9 +23,11 @@ const harness = vi.hoisted(() => ({
       shutdown(): Promise<void>;
       remoteSession: null;
     };
-  } | null,
-  userData: "",
-}));
+  } | null;
+  userData: string;
+}
+
+const harness = vi.hoisted((): RecoveryHarness => ({ actions: null, runtime: null, userData: "" }));
 
 vi.mock("electron", () => ({
   app: { getPath: () => harness.userData, on: vi.fn() },

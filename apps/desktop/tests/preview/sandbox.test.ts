@@ -26,6 +26,7 @@ function layout(): ManagedDataDirectory {
 }
 
 function okFetch(recordRegistration?: (body: string) => void): typeof fetch {
+  // SAFETY: the sandbox seed calls fetch only with a URL and an optional JSON init.
   return ((input: unknown, init?: RequestInit) => {
     if (String(input).endsWith("/api/repositories")) {
       recordRegistration?.(String(init?.body));
@@ -61,9 +62,9 @@ describe("PreviewSandbox", () => {
       daemon,
       onDaemonStarted: vi.fn(),
       log: () => {},
-      fetchImpl: (() => {
+      fetchImpl: () => {
         throw new Error("fetch must not run outside previews");
-      }) as unknown as typeof fetch,
+      },
     });
 
     await sandbox.ensure("http://127.0.0.1:4319");
@@ -84,8 +85,7 @@ describe("PreviewSandbox", () => {
       daemon: fakeDaemon(),
       onDaemonStarted: vi.fn(),
       log,
-      fetchImpl: (() =>
-        Promise.resolve(new Response("boom", { status: 500 }))) as unknown as typeof fetch,
+      fetchImpl: () => Promise.resolve(new Response("boom", { status: 500 })),
     });
 
     await expect(sandbox.ensure("http://127.0.0.1:4319")).resolves.toBeUndefined();
@@ -132,8 +132,7 @@ describe("PreviewSandbox", () => {
       daemon: fakeDaemon(),
       onDaemonStarted,
       log: () => {},
-      fetchImpl: (() =>
-        Promise.resolve(new Response("boom", { status: 500 }))) as unknown as typeof fetch,
+      fetchImpl: () => Promise.resolve(new Response("boom", { status: 500 })),
     });
 
     const result = await sandbox.reset();

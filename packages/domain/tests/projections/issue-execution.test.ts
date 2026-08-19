@@ -59,12 +59,14 @@ it("projects a stopped run holding its workspace as failed, never back to its so
     canceled: "canceled",
     awaiting_human: "interrupted",
   } as const;
-  for (const [run_status, reason] of Object.entries(reasons)) {
-    expect(
-      projectIssueExecution([
-        ev({ run_id: "r1", run_status: run_status as keyof typeof reasons, halted_step }),
-      ]),
-    ).toEqual({ state: "failed", run_id: "r1", failure: { reason, step: halted_step } });
+  // SAFETY: Object.entries widens the keys; reasons is keyed by the three stopped statuses.
+  const cases = Object.entries(reasons) as [keyof typeof reasons, string][];
+  for (const [run_status, reason] of cases) {
+    expect(projectIssueExecution([ev({ run_id: "r1", run_status, halted_step })])).toEqual({
+      state: "failed",
+      run_id: "r1",
+      failure: { reason, step: halted_step },
+    });
   }
 });
 

@@ -21,7 +21,7 @@ export function assertManagedBackup(dbPath: string, backupPath: string): void {
   const managedDirectory = resolve(dirname(dbPath), MANAGED_BACKUPS_DIRECTORY_NAME);
   const backupName = basename(backupPath);
   let validFile = false;
-  let inspectionFailure: unknown = null;
+  let inspectionFailure: unknown;
   try {
     assertManagedBackupsDirectory(managedDirectory);
     const stats = lstatSync(backupPath);
@@ -41,7 +41,7 @@ export function assertManagedBackup(dbPath: string, backupPath: string): void {
     throw new DataSafetyError(
       "invalid_backup",
       "Only an existing backup from the managed backups directory can be restored.",
-      inspectionFailure === null ? undefined : { cause: inspectionFailure },
+      inspectionFailure === undefined ? undefined : { cause: inspectionFailure },
     );
   }
 }

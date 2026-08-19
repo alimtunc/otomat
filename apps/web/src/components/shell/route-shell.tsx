@@ -133,6 +133,7 @@ export function RouteShell({
               <Breadcrumbs
                 items={breadcrumbs}
                 renderLink={(item, label) => (
+                  // SAFETY: Breadcrumbs calls renderLink only for items carrying an href.
                   <Link
                     to={item.href as string}
                     className={`truncate hover:text-foreground ${FOCUS_RING} focus-visible:rounded-sm`}

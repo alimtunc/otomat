@@ -110,7 +110,11 @@ async function shiftClick(cell: Element): Promise<void> {
 
 function composers(container: HTMLElement): HTMLElement[] {
   return [...container.querySelectorAll<HTMLElement>('textarea[aria-label="Review comment"]')].map(
-    (field) => field.closest("form") as HTMLElement,
+    (field) => {
+      const form = field.closest("form");
+      if (!form) throw new Error("comment composer form not found");
+      return form;
+    },
   );
 }
 

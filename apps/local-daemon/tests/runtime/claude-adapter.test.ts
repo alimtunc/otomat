@@ -152,7 +152,7 @@ describe("ClaudeRuntimeAdapter", () => {
       const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
       await adapter.run(input(worktree), new MemorySink(), new AbortController().signal);
 
-      const childEnv = JSON.parse(readFileSync(envFile, "utf8")) as Record<string, string>;
+      const childEnv: Record<string, string> = JSON.parse(readFileSync(envFile, "utf8"));
       expect(childEnv["CLAUDECODE"]).toBeUndefined();
       expect(childEnv["CLAUDE_CODE_ENTRYPOINT"]).toBeUndefined();
       expect(childEnv["OTOMAT_STUB_FIXTURE"]).toBeDefined();
@@ -191,7 +191,7 @@ describe("ClaudeRuntimeAdapter", () => {
       new MemorySink(),
       new AbortController().signal,
     );
-    const runArgv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    const runArgv: string[] = JSON.parse(readFileSync(argsFile, "utf8"));
     expect(runArgv[runArgv.indexOf("--permission-mode") + 1]).toBe("plan");
 
     await adapter.resume(
@@ -205,7 +205,7 @@ describe("ClaudeRuntimeAdapter", () => {
       new MemorySink(),
       new AbortController().signal,
     );
-    const resumeArgv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    const resumeArgv: string[] = JSON.parse(readFileSync(argsFile, "utf8"));
     expect(resumeArgv[resumeArgv.indexOf("--permission-mode") + 1]).toBe("plan");
     expect(resumeArgv.at(-2)).toBe("--resume");
   });
@@ -222,7 +222,7 @@ describe("ClaudeRuntimeAdapter", () => {
       new AbortController().signal,
     );
 
-    const argv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    const argv: string[] = JSON.parse(readFileSync(argsFile, "utf8"));
     expect(argv[argv.indexOf("--permission-mode") + 1]).toBe("acceptEdits");
     const request = sink.events.find((e) => e.type === "runtime.permission_request");
     expect(request?.payload["permission_mode_status"]).toBe("unfrozen");
@@ -242,7 +242,7 @@ describe("ClaudeRuntimeAdapter", () => {
       new AbortController().signal,
     );
 
-    const argv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    const argv: string[] = JSON.parse(readFileSync(argsFile, "utf8"));
     expect(argv[argv.indexOf("--permission-mode") + 1]).toBe("auto");
     expect(argv[argv.indexOf("--effort") + 1]).toBe("xhigh");
     // Configuration precedes the session flags; the CLI reads `--resume <id>` as the tail.
@@ -264,7 +264,7 @@ describe("ClaudeRuntimeAdapter", () => {
       new MemorySink(),
       new AbortController().signal,
     );
-    const runArgv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    const runArgv: string[] = JSON.parse(readFileSync(argsFile, "utf8"));
     expect(runArgv[runArgv.indexOf("--model") + 1]).toBe("opus");
 
     await adapter.resume(
@@ -273,7 +273,7 @@ describe("ClaudeRuntimeAdapter", () => {
       new MemorySink(),
       new AbortController().signal,
     );
-    const resumeArgv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    const resumeArgv: string[] = JSON.parse(readFileSync(argsFile, "utf8"));
     expect(resumeArgv[resumeArgv.indexOf("--model") + 1]).toBe("opus");
     expect(resumeArgv.at(-2)).toBe("--resume");
 
@@ -379,7 +379,7 @@ describe("ClaudeRuntimeAdapter", () => {
     );
     expect(final.status).toBe("completed");
 
-    const argv = JSON.parse(readFileSync(argsFile, "utf8")) as string[];
+    const argv: string[] = JSON.parse(readFileSync(argsFile, "utf8"));
     expect(argv.at(-2)).toBe("--resume");
     expect(argv.at(-1)).toBe("sess-claude-1");
 

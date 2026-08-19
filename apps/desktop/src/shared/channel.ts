@@ -14,5 +14,5 @@ export type DesktopChannel = PackagedChannel | "dev" | "unknown";
 export const PACKAGED_CHANNELS: readonly PackagedChannel[] = ["preview", "local", "stable"];
 
 export function isPackagedChannel(value: unknown): value is PackagedChannel {
-  return typeof value === "string" && (PACKAGED_CHANNELS as readonly string[]).includes(value);
+  return PACKAGED_CHANNELS.some((channel) => channel === value);
 }

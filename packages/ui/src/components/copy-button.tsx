@@ -7,17 +7,17 @@ import { Button } from "../primitives/button";
 
 type CopyStatus = "idle" | "copied" | "error";
 
-const ICON_BY_STATUS: Record<CopyStatus, LucideIcon> = {
+const ICON_BY_STATUS = {
   idle: Copy,
   copied: Check,
   error: X,
-};
+} satisfies Record<CopyStatus, LucideIcon>;
 
-const COLOR_BY_STATUS: Record<CopyStatus, string> = {
+const COLOR_BY_STATUS = {
   idle: TONE_FACETS.ghost.cssVar,
   copied: TONE_FACETS.success.cssVar,
   error: TONE_FACETS.danger.cssVar,
-};
+} satisfies Record<CopyStatus, string>;
 
 export interface CopyButtonProps {
   value: string;
@@ -74,11 +74,11 @@ export function CopyButton({
   }, [value, schedule, onCopy, onError]);
 
   const Icon = ICON_BY_STATUS[status];
-  const textByStatus: Record<CopyStatus, string> = {
+  const textByStatus = {
     idle: label,
     copied: copiedLabel,
     error: "Copy failed",
-  };
+  } satisfies Record<CopyStatus, string>;
   const text = textByStatus[status];
 
   return (

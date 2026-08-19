@@ -2,12 +2,12 @@ import { expect, it } from "vitest";
 
 import { createDaemonClient } from "#client/client/index";
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body,
-  } as unknown as Response;
+import { jsonResponse } from "./support/response.js";
+
+interface CapturedRequest {
+  url?: string;
+  method?: string;
+  body?: unknown;
 }
 
 const PROFILE = {
@@ -32,7 +32,7 @@ const SKILL = {
 };
 
 it("creates a profile via POST and parses the response", async () => {
-  let captured: { url?: string; method?: string; body?: unknown } = {};
+  let captured: CapturedRequest = {};
   const fetchMock: typeof fetch = async (input, init) => {
     captured = { url: String(input), method: init?.method, body: init?.body };
     return jsonResponse(PROFILE, 201);

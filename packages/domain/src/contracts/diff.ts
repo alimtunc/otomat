@@ -55,9 +55,7 @@ export type RunDiffScopeSelector = z.infer<typeof runDiffScopeSelectorSchema>;
 export const WORKSPACE_DIFF_SCOPE: RunDiffScopeSelector = { kind: "workspace" };
 
 /** The selector as query parameters — one spelling shared by the client, the cockpit's URL and its query keys. */
-export function runDiffScopeParams(
-  selector: RunDiffScopeSelector,
-): Record<string, string | undefined> {
+export function runDiffScopeParams(selector: RunDiffScopeSelector) {
   if (selector.kind === "commit") return { scope: "commit", commit: selector.commit };
   if (selector.kind === "session") return { scope: "session", session: selector.session };
   return { scope: undefined, commit: undefined, session: undefined };

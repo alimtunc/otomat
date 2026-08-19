@@ -15,7 +15,7 @@ const BACKUP_PATH = "/home/u/.otomat/local/backups/upgrade-20260806T090000Z";
 
 type Step = "probe" | "stop" | "backup" | "deploy" | "rollback";
 
-const DEFAULT_REPLIES: Record<Step, SshScriptResult> = {
+const DEFAULT_REPLIES = {
   probe: { code: 0, stdout: "OTOMAT_PRESENCE:PRESENT:-\n", stderr: "" },
   stop: { code: 0, stdout: "OTOMAT_REMOTE:STOPPED:-\n", stderr: "" },
   backup: {
@@ -25,7 +25,7 @@ const DEFAULT_REPLIES: Record<Step, SshScriptResult> = {
   },
   deploy: { code: 0, stdout: `OTOMAT_DEPLOY:DEPLOYED:${BUILD}\n`, stderr: "" },
   rollback: { code: 0, stdout: "OTOMAT_ROLLBACK:RESTORED:-\n", stderr: "" },
-};
+} satisfies Record<Step, SshScriptResult>;
 
 const UPGRADED: FakeRemoteSessionOptions = {
   onRefresh: () => ({ status: { phase: "connected", detail: null }, build: BUILD }),

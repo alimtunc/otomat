@@ -4,7 +4,7 @@ export interface WorkspaceReconciliationLoop {
 
 /** One pass at startup then one per interval, never two at once, on a timer that does not hold the process open. */
 export function startWorkspaceReconciliation(
-  reconcile: () => Promise<unknown>,
+  reconcile: () => Promise<void>,
   intervalMs: number,
 ): WorkspaceReconciliationLoop {
   let running = false;

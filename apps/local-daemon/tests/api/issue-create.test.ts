@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { RuntimeUnavailableError } from "#runtime";
 
-import { makeApiApp, patch, post, request, stubSupervisor } from "../support/api.js";
+import { json, makeApiApp, patch, post, request, stubSupervisor } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 
 let t: TestDb;
@@ -26,7 +26,7 @@ it("creates a local backlog issue without launching a run", async () => {
     body: "Nested quoting support",
   });
   expect(res.status).toBe(201);
-  const issue = (await res.json()) as IssueContract;
+  const issue = await json<IssueContract>(res);
   expect(issue).toMatchObject({
     project_id: "p1",
     title: "Wire the CSV parser",
@@ -39,23 +39,23 @@ it("creates a local backlog issue without launching a run", async () => {
     synced_at: null,
   });
 
-  const listed = (await (await request(app, "/api/issues")).json()) as IssueContract[];
+  const listed = await json<IssueContract[]>(await request(app, "/api/issues"));
   expect(listed.map((entry) => entry.id)).toContain(issue.id);
-  const runs = (await (await request(app, `/api/runs?issueId=${issue.id}`)).json()) as unknown[];
+  const runs = await json<unknown[]>(await request(app, `/api/runs?issueId=${issue.id}`));
   expect(runs).toEqual([]);
 });
 
 it("creates an issue without a body as null", async () => {
   const res = await post(makeApiApp(t), "/api/issues", { project_id: "p1", title: "No body" });
   expect(res.status).toBe(201);
-  expect(((await res.json()) as IssueContract).body).toBeNull();
+  expect((await json<IssueContract>(res)).body).toBeNull();
 });
 
 it("rejects an issue with a blank title or missing project", async () => {
   const app = makeApiApp(t);
   const blank = await post(app, "/api/issues", { project_id: "p1", title: "   " });
   expect(blank.status).toBe(400);
-  expect(((await blank.json()) as { error: string }).error).toBe("invalid_request");
+  expect((await json<{ error: string }>(blank)).error).toBe("invalid_request");
 
   const missing = await post(app, "/api/issues", { title: "No project" });
   expect(missing.status).toBe(400);
@@ -64,7 +64,7 @@ it("rejects an issue with a blank title or missing project", async () => {
 it("rejects an issue for an unknown project", async () => {
   const res = await post(makeApiApp(t), "/api/issues", { project_id: "ghost", title: "Nope" });
   expect(res.status).toBe(400);
-  expect((await res.json()) as { error: string }).toEqual({ error: "project_not_found" });
+  expect(await json<{ error: string }>(res)).toEqual({ error: "project_not_found" });
 });
 
 it("maps RuntimeUnavailableError from launch to a 409 with the reason", async () => {
@@ -77,7 +77,7 @@ it("maps RuntimeUnavailableError from launch to a 409 with the reason", async ()
   });
   const res = await post(app, "/api/runs", { prompt: "do it", runtime: "claude" });
   expect(res.status).toBe(409);
-  expect((await res.json()) as unknown).toEqual({
+  expect(await json<unknown>(res)).toEqual({
     error: "runtime_unavailable",
     runtime: "claude",
     reason: "binary_not_found",
@@ -87,7 +87,7 @@ it("maps RuntimeUnavailableError from launch to a 409 with the reason", async ()
 
 it("serves the runtime catalog with probed availability and hides fake in production", async () => {
   const app = makeApiApp(t);
-  const listed = (await (await request(app, "/api/runtimes")).json()) as RuntimeDescriptor[];
+  const listed = await json<RuntimeDescriptor[]>(await request(app, "/api/runtimes"));
   // Vitest counts as a test env, so the fake is listed here.
   expect(listed.map((d) => d.id)).toEqual(["claude", "codex", "fake"]);
   for (const descriptor of listed) {
@@ -97,32 +97,32 @@ it("serves the runtime catalog with probed availability and hides fake in produc
   vi.stubEnv("VITEST", "");
   vi.stubEnv("NODE_ENV", "production");
   vi.stubEnv("OTOMAT_ENABLE_FAKE_RUNTIME", "");
-  const prod = (await (await request(app, "/api/runtimes")).json()) as RuntimeDescriptor[];
+  const prod = await json<RuntimeDescriptor[]>(await request(app, "/api/runtimes"));
   expect(prod.map((d) => d.id)).toEqual(["claude", "codex"]);
 });
 
 it("re-points a local issue at another project so its runs fork from that repository", async () => {
   const app = makeApiApp(t);
   t.db.insert(schema.projects).values({ id: "p2", name: "Second", root_path: "/tmp/p2" }).run();
-  const created = (await (
-    await post(app, "/api/issues", { project_id: "p1", title: "Moves" })
-  ).json()) as IssueContract;
+  const created = await json<IssueContract>(
+    await post(app, "/api/issues", { project_id: "p1", title: "Moves" }),
+  );
 
   const res = await patch(app, `/api/issues/${created.id}/project`, { project_id: "p2" });
   expect(res.status).toBe(200);
-  expect((await res.json()) as IssueContract).toMatchObject({ id: created.id, project_id: "p2" });
+  expect(await json<IssueContract>(res)).toMatchObject({ id: created.id, project_id: "p2" });
   expect(getIssue(t.db, created.id)?.project_id).toBe("p2");
 });
 
 it("refuses to move an issue to an unknown project, or a mirrored issue at all", async () => {
   const app = makeApiApp(t);
-  const created = (await (
-    await post(app, "/api/issues", { project_id: "p1", title: "Stays" })
-  ).json()) as IssueContract;
+  const created = await json<IssueContract>(
+    await post(app, "/api/issues", { project_id: "p1", title: "Stays" }),
+  );
 
   const ghost = await patch(app, `/api/issues/${created.id}/project`, { project_id: "nope" });
   expect(ghost.status).toBe(400);
-  expect((await ghost.json()) as { error: string }).toMatchObject({ error: "project_not_found" });
+  expect(await json<{ error: string }>(ghost)).toMatchObject({ error: "project_not_found" });
 
   t.db.insert(schema.projects).values({ id: "p2", name: "Second", root_path: "/tmp/p2" }).run();
   t.db
@@ -140,7 +140,7 @@ it("refuses to move an issue to an unknown project, or a mirrored issue at all",
     .run();
   const mirrored = await patch(app, "/api/issues/i-mirrored/project", { project_id: "p2" });
   expect(mirrored.status).toBe(409);
-  expect((await mirrored.json()) as { error: string }).toMatchObject({ error: "issue_not_local" });
+  expect(await json<{ error: string }>(mirrored)).toMatchObject({ error: "issue_not_local" });
   expect(getIssue(t.db, "i-mirrored")?.project_id).toBe("p1");
 
   const missing = await patch(app, "/api/issues/ghost/project", { project_id: "p2" });

@@ -2,8 +2,12 @@ import { expect, it } from "vitest";
 
 import { Semaphore, type SlotGrant } from "#supervisor/semaphore";
 
-function track(promise: Promise<SlotGrant>): { grant: SlotGrant | null } {
-  const state: { grant: SlotGrant | null } = { grant: null };
+interface SlotHolder {
+  grant: SlotGrant | null;
+}
+
+function track(promise: Promise<SlotGrant>): SlotHolder {
+  const state: SlotHolder = { grant: null };
   void promise.then((grant) => {
     state.grant = grant;
   });

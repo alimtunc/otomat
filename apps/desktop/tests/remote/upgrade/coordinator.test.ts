@@ -104,7 +104,7 @@ function harness(
     scheduleRecheck: (callback, delayMs) => {
       pending = callback;
       delays.push(delayMs);
-      return 0 as unknown as NodeJS.Timeout;
+      return 0;
     },
   });
   return {

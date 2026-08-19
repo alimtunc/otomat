@@ -1,4 +1,4 @@
-export function combineFailures(failures: readonly unknown[], message: string): unknown {
+export function combineFailures<T>(failures: readonly T[], message: string): T | AggregateError {
   if (failures.length === 0) {
     throw new TypeError("At least one failure is required.");
   }

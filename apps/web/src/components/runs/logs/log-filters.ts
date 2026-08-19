@@ -5,7 +5,7 @@ export type LogCategory = "provider" | "tool" | "permission" | "usage" | "contro
 
 export type LogFilter = "all" | LogCategory | "error";
 
-const CATEGORY_BY_TYPE: Record<EventType, LogCategory> = {
+const CATEGORY_BY_TYPE = {
   "run.lifecycle": "control",
   "run.contribution": "control",
   "run.plan_revised": "control",
@@ -30,7 +30,7 @@ const CATEGORY_BY_TYPE: Record<EventType, LogCategory> = {
   "linear.comment_published": "control",
   "linear.pr_link_published": "control",
   "system.reconciled": "control",
-};
+} satisfies Record<EventType, LogCategory>;
 
 export function logCategory(event: EventEnvelope): LogCategory {
   return CATEGORY_BY_TYPE[event.type];

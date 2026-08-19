@@ -18,7 +18,7 @@ import {
 } from "#review";
 import { ReviewFixBusyError, RunWorkspaceClosedError } from "#supervisor";
 
-import { makeApiApp, post, request, runRow } from "../support/api.js";
+import { json, makeApiApp, post, request, runRow } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 import { commentRow, reviewRow, stubReviewService } from "../support/review.js";
 import { seedRun } from "../support/seed.js";
@@ -81,7 +81,7 @@ it("serves the canonical diff mapped to the wire contract", async () => {
   });
   const res = await request(app, `/api/runs/${RUN_ID}/diff`);
   expect(res.status).toBe(200);
-  const body = (await res.json()) as ReviewDiffResponse;
+  const body = await json<ReviewDiffResponse>(res);
   expect(body.subject_id).toBe(RUN_ID);
   expect(body.diff?.sha).toBe("diff-sha");
   expect(body.diff?.files[0]).toMatchObject({ path: "notes.md", old_path: null, sha: "file-sha" });
@@ -90,7 +90,7 @@ it("serves the canonical diff mapped to the wire contract", async () => {
 it("serves an honest null diff when the run has no worktree", async () => {
   const res = await request(makeApiApp(t), `/api/runs/${RUN_ID}/diff`);
   expect(res.status).toBe(200);
-  expect(((await res.json()) as ReviewDiffResponse).diff).toBeNull();
+  expect((await json<ReviewDiffResponse>(res)).diff).toBeNull();
 });
 
 it("serves the review surface with serialized comments and the fix authority", async () => {
@@ -105,7 +105,7 @@ it("serves the review surface with serialized comments and the fix authority", a
     }),
   });
   const res = await request(app, `/api/runs/${RUN_ID}/review`);
-  const body = (await res.json()) as ReviewDetail;
+  const body = await json<ReviewDetail>(res);
   expect(body.review?.status).toBe("in_review");
   expect(body.comments[0]).toMatchObject({ id: "c1", diff_sha: "sha-1", status: "open" });
   expect(body.comments[0]).not.toHaveProperty("created_at");
@@ -139,7 +139,7 @@ it("refuses blobs read against a moved anchor instead of expanding the wrong con
   });
   const res = await request(app, `/api/runs/${RUN_ID}/diff/file?path=src/thing.ts&sha=old`);
   expect(res.status).toBe(409);
-  expect(((await res.json()) as { error: string }).error).toBe("blobs_anchor_stale");
+  expect((await json<{ error: string }>(res)).error).toBe("blobs_anchor_stale");
 });
 
 it("creates a pinned comment and returns 201", async () => {
@@ -159,7 +159,7 @@ it("creates a pinned comment and returns 201", async () => {
     body: "Rename this.",
   });
   expect(res.status).toBe(201);
-  expect(((await res.json()) as ReviewCommentContract).id).toBe("c1");
+  expect((await json<ReviewCommentContract>(res)).id).toBe("c1");
   // Absent side and destination are defaulted by the contract, never left undefined.
   expect(received).toEqual({
     file_path: "src/thing.ts",
@@ -174,7 +174,7 @@ it("creates a pinned comment and returns 201", async () => {
 it("rejects an invalid comment body with 400", async () => {
   const res = await post(makeApiApp(t), `/api/runs/${RUN_ID}/review/comments`, { body: "" });
   expect(res.status).toBe(400);
-  expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
+  expect((await json<{ error: string }>(res)).error).toBe("invalid_request");
 });
 
 it("explains a refused range and an unreachable destination instead of failing blankly", async () => {
@@ -236,7 +236,7 @@ it("publishes one PR-review comment and reports a GitHub refusal as a bad gatewa
   const res = await post(app, `/api/runs/${RUN_ID}/review/comments/c1/publish`, {});
   expect(res.status).toBe(200);
   expect(publishedId).toBe("c1");
-  expect((await res.json()) as ReviewCommentContract).toMatchObject({
+  expect(await json<ReviewCommentContract>(res)).toMatchObject({
     publication_status: "published",
     external_url: "https://gh/pr/7#r1",
   });
@@ -271,7 +271,7 @@ it("maps stale anchors and missing diffs to 409 conflicts", async () => {
     body: "x",
   });
   expect(staleRes.status).toBe(409);
-  expect(((await staleRes.json()) as { error: string }).error).toBe("comment_anchor_stale");
+  expect((await json<{ error: string }>(staleRes)).error).toBe("comment_anchor_stale");
 
   const bare = makeApiApp(t, {
     review: stubReviewService({
@@ -287,7 +287,7 @@ it("maps stale anchors and missing diffs to 409 conflicts", async () => {
     body: "x",
   });
   expect(bareRes.status).toBe(409);
-  expect(((await bareRes.json()) as { error: string }).error).toBe("diff_unavailable");
+  expect((await json<{ error: string }>(bareRes)).error).toBe("diff_unavailable");
 });
 
 it("delegates the fix request with the parsed selection and returns the updated run", async () => {
@@ -318,7 +318,7 @@ it("delegates the fix request with the parsed selection and returns the updated 
       overrides: {},
     },
   });
-  expect(((await res.json()) as RunContract).status).toBe("running");
+  expect((await json<RunContract>(res)).status).toBe("running");
 });
 
 it("refuses a fix with no explicit agent, and maps conflicts to 409", async () => {
@@ -354,6 +354,6 @@ it("refuses a fix with no explicit agent, and maps conflicts to 409", async () =
       runtime: "fake",
     });
     expect(res.status).toBe(409);
-    expect(((await res.json()) as { error: string }).error).toBe(conflict.code);
+    expect((await json<{ error: string }>(res)).error).toBe(conflict.code);
   }
 });

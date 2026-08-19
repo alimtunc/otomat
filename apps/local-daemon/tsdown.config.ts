@@ -25,7 +25,7 @@ export default defineConfig({
   format: "esm",
   platform: "node",
   dts: false,
-  ...(sha === null ? {} : { define: { "process.env.OTOMAT_BUILD_SHA": JSON.stringify(sha) } }),
+  define: sha === null ? {} : { "process.env.OTOMAT_BUILD_SHA": JSON.stringify(sha) },
   // tsdown >=0.16 defaults platform:node ESM output to .mjs; pin .js so the
   // `start:dist` script and scripts/smoke-dist.mjs keep resolving dist/index.js.
   outExtensions: () => ({ js: ".js" }),

@@ -4,6 +4,7 @@ import {
   applyAdvancedFilters,
   NO_ADVANCED_FILTERS,
   parseAdvancedFilters,
+  type AdvancedIssueFilters,
 } from "@web/lib/issue/filters";
 import { describe, expect, it } from "vitest";
 
@@ -46,11 +47,11 @@ describe("applyAdvancedFilters", () => {
   });
 
   it("filters by sources, assignee, and priority together", () => {
-    const filters = {
+    const filters: AdvancedIssueFilters = {
       ...NO_ADVANCED_FILTERS,
-      sources: ["linear", "github"] as ("linear" | "github")[],
-      assignee: "Alim" as const,
-      priority: 2 as const,
+      sources: ["linear", "github"],
+      assignee: "Alim",
+      priority: 2,
     };
     expect(applyAdvancedFilters(mixed, filters).map((i) => i.id)).toEqual(["a"]);
     expect(activeAdvancedFilterCount(filters)).toBe(3);

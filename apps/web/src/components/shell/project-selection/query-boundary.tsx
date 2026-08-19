@@ -10,7 +10,7 @@ interface ProjectQueryBoundaryProps {
     error: unknown;
     isError: boolean;
     isFetching: boolean;
-    refetch: () => Promise<unknown>;
+    refetch: () => void;
   };
   children: ReactNode;
 }

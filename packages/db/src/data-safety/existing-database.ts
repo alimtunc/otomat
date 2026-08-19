@@ -13,7 +13,11 @@ import { assertDatabaseIntegrity } from "./integrity.js";
 import { inspectMigrationHistory } from "./metadata.js";
 import { throwIfMigrationRuntimeFailure } from "./migration-runtime-error.js";
 
-export function inspectExistingDatabase(dbPath: string): { pending: boolean } {
+export interface ExistingDatabaseReport {
+  pending: boolean;
+}
+
+export function inspectExistingDatabase(dbPath: string): ExistingDatabaseReport {
   let stats;
   try {
     stats = lstatSync(dbPath);

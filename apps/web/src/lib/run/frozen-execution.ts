@@ -25,13 +25,13 @@ export interface FrozenExecution {
   options: (FrozenExecutionValue & { key: ProviderOptionKey })[];
 }
 
-const SOURCE_LABELS: Record<ExecutionSource, string> = {
+const SOURCE_LABELS = {
   step: "set on this step",
   launch: "chosen at launch",
   profile: "from the agent profile",
   global: "from the global defaults",
   provider: "runtime default",
-};
+} satisfies Record<ExecutionSource, string>;
 
 function value(label: string, source: ExecutionSource | undefined): FrozenExecutionValue {
   return { label, source: source === undefined ? null : SOURCE_LABELS[source] };

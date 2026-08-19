@@ -11,13 +11,14 @@ const START_PAYLOAD = {
 };
 
 function jsonResponse(payload: unknown, ok = true): Response {
+  // SAFETY: the device flow reads only ok and json from a response.
   return {
     ok,
     json: async () => payload,
   } as Response;
 }
 
-function harness(responses: unknown[]) {
+function harness(responses: (Response | Error)[]) {
   const delays: number[] = [];
   let clock = 0;
   const device = createDeviceAuthorization({
@@ -25,7 +26,7 @@ function harness(responses: unknown[]) {
       const next = responses.shift();
       if (next === undefined) throw new Error("unexpected fetch");
       if (next instanceof Error) throw next;
-      return next as Response;
+      return next;
     },
     delay: async (ms) => {
       delays.push(ms);

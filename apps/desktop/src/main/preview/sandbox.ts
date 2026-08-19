@@ -98,7 +98,7 @@ export class PreviewSandbox {
       daemonUrl,
       repoPath: outcome.path,
       realpath: (path) => path,
-      ...(this.deps.fetchImpl === undefined ? {} : { fetchImpl: this.deps.fetchImpl }),
+      fetchImpl: this.deps.fetchImpl,
     });
     this.deps.log(
       seeded.seeded
@@ -141,7 +141,7 @@ export class PreviewSandbox {
     const result = await seedSandbox({
       daemonUrl,
       repoPath: repoDir,
-      ...(this.deps.fetchImpl === undefined ? {} : { fetchImpl: this.deps.fetchImpl }),
+      fetchImpl: this.deps.fetchImpl,
     });
     if (result.seeded) this.deps.log(`Sandbox fixtures seeded: ${result.issues} issues.`);
   }

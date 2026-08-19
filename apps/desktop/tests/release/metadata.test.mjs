@@ -89,7 +89,7 @@ it("writes metadata the app's own parser accepts, on every channel", () => {
   for (const info of written) {
     expect(parseBuildInfo(JSON.stringify(info))).toEqual(info);
   }
-  expect(written.map((info) => info.channel).sort()).toEqual([...PACKAGED_CHANNELS].sort());
+  expect(written.map((info) => info.channel).toSorted()).toEqual(PACKAGED_CHANNELS.toSorted());
 });
 
 it("packages a preview only for a pull request, and everything else as local", () => {

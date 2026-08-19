@@ -1,6 +1,6 @@
 import { getProject, getRepository, getRun, listRepositories, type Db } from "@otomat/db";
 
-import type { GitWorktreeService } from "./service-contract.js";
+import type { GitWorktreeService, GitWorktreeServiceConfig } from "./service-contract.js";
 import { createGitWorktreeService } from "./service.js";
 
 /** Ties a persisted repository id to the worktree service operating on its root. */
@@ -46,18 +46,19 @@ export function createRepositoryResolver(config: RepositoryResolverConfig): Repo
     const project = getProject(db, repository.project_id);
     if (!project) return null;
 
+    const serviceConfig: GitWorktreeServiceConfig = {
+      db,
+      repositoryId,
+      repoRoot: project.root_path,
+      defaultBranch: repository.default_branch,
+      worktreesRoot,
+    };
+    if (config.idFactory) serviceConfig.idFactory = config.idFactory;
     return {
       repositoryId,
       rootPath: project.root_path,
       defaultBranch: repository.default_branch,
-      service: createGitWorktreeService({
-        db,
-        repositoryId,
-        repoRoot: project.root_path,
-        defaultBranch: repository.default_branch,
-        worktreesRoot,
-        ...(config.idFactory ? { idFactory: config.idFactory } : {}),
-      }),
+      service: createGitWorktreeService(serviceConfig),
     };
   }
 

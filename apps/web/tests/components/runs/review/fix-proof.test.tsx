@@ -2,17 +2,24 @@
 import type { CommentFixProof } from "@otomat/domain";
 import { ReviewCommentCard } from "@web/components/runs/review/comment/card";
 import { CommentFixProof as CommentFixProofCard } from "@web/components/runs/review/comment/fix-proof";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { mount, type Mounted } from "#support/mount";
 import { reviewComment } from "#support/review-comment";
 
-let proofQuery: { isPending: boolean; data: CommentFixProof | undefined; refetch: () => void };
+interface FakeProofQuery {
+  isPending: boolean;
+  data: CommentFixProof | undefined;
+  refetch: () => void;
+}
+
+let proofQuery: FakeProofQuery;
 let requestedBlobs = false;
 
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children, search }: { children?: unknown; search?: Record<string, unknown> }) => (
-    <a data-search={JSON.stringify(search)}>{children as never}</a>
+  Link: ({ children, search }: { children?: ReactNode; search?: Record<string, unknown> }) => (
+    <a data-search={JSON.stringify(search)}>{children}</a>
   ),
 }));
 

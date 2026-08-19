@@ -28,7 +28,7 @@ it("keeps the message and reports a failing log only once", () => {
     write: () => {
       throw new Error("injected log write failure");
     },
-  } as unknown as RotatingLog;
+  };
   const reported = vi.spyOn(console, "error").mockImplementation(() => undefined);
   const sink = new StartupLogSink(() => failing);
 

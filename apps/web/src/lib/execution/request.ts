@@ -9,9 +9,8 @@ export interface ExecutionRequestFields extends AgentRequestFields {
 }
 
 export function executionRequestFields(selection: ExecutionSelection): ExecutionRequestFields {
-  return {
-    ...agentChoiceToRequest(selection.agent),
-    ...(selection.model === undefined ? {} : { model: selection.model }),
-    ...(Object.keys(selection.options).length === 0 ? {} : { options: selection.options }),
-  };
+  const fields: ExecutionRequestFields = { ...agentChoiceToRequest(selection.agent) };
+  if (selection.model !== undefined) fields.model = selection.model;
+  if (Object.keys(selection.options).length > 0) fields.options = selection.options;
+  return fields;
 }

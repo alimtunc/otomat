@@ -5,7 +5,7 @@ import type {
   RemoteHostStatus,
 } from "@otomat/domain";
 
-const REMOTE_PHASE_LABELS: Record<RemoteHostPhase, string> = {
+const REMOTE_PHASE_LABELS = {
   disconnected: "Disconnected",
   checking_host: "Connecting over SSH…",
   starting_daemon: "Starting the remote daemon…",
@@ -18,9 +18,9 @@ const REMOTE_PHASE_LABELS: Record<RemoteHostPhase, string> = {
   connected: "Connected",
   reconnecting: "Reconnecting…",
   error: "Connection failed",
-};
+} satisfies Record<RemoteHostPhase, string>;
 
-const REMOTE_ERROR_MESSAGES: Record<RemoteHostErrorCode, string> = {
+const REMOTE_ERROR_MESSAGES = {
   not_configured: "Configure the SSH alias first.",
   ssh_unreachable:
     "The host could not be reached over SSH. Check that connecting with `ssh` works from a terminal (keys, agent, host key already accepted).",
@@ -33,7 +33,7 @@ const REMOTE_ERROR_MESSAGES: Record<RemoteHostErrorCode, string> = {
   health_failed: "The remote daemon never answered its health check through the tunnel.",
   switch_in_progress: "A host switch is already in progress.",
   local_daemon_unavailable: "The local daemon is not running.",
-};
+} satisfies Record<RemoteHostErrorCode, string>;
 
 /** The compact progress line a shell shows while the host settles; the alias names where it is going. */
 export function remoteStatusHeadline(status: RemoteHostStatus, alias: string | null): string {

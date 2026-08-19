@@ -18,11 +18,13 @@ export interface PullRequestFormOptions {
 
 const [DEFAULT_TYPE] = COMMIT_TYPES;
 
-function subjectDefaults(pullRequest: PullRequestContract | null): {
+interface SubjectDefaults {
   type: CommitType;
   scope: string;
   summary: string;
-} {
+}
+
+function subjectDefaults(pullRequest: PullRequestContract | null): SubjectDefaults {
   const stored = parseCommitSubject(pullRequest?.commit_subject ?? "");
   if (stored === null) return { type: DEFAULT_TYPE, scope: "", summary: "" };
   return { type: stored.type, scope: stored.scope ?? "", summary: stored.summary };
@@ -47,8 +49,8 @@ export function usePullRequestForm({ pullRequest, chosenMode, onSubmit }: PullRe
         },
         body: value.body,
         mode: value.mode,
-        ...(headRef === "" ? {} : { head_ref: headRef }),
       };
+      if (headRef !== "") submitted.head_ref = headRef;
       if (await onSubmit(submitted)) {
         formApi.reset({
           ...value,

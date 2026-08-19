@@ -64,6 +64,11 @@ async function startNextPlanNode(state: SupervisorState, run: RunRow): Promise<R
 }
 
 /** Only a settled run is recovering from something; a resting one is merely continuing. */
+interface ResumableCandidate {
+  context: TurnContext;
+  providerSessionId: string;
+}
+
 function recoverStoppedRun(
   state: SupervisorState,
   stopped: RunRow,
@@ -131,36 +136,34 @@ async function resumeCompeteGroup(
   if (!service) {
     throw new RunNotResumableError(`compete group ${group.id} repository is unavailable`);
   }
-  const contexts = candidates.map(
-    (candidate): { context: TurnContext; providerSessionId: string } => {
-      const session = sessions.find(
-        (entry) => entry.step_run_id === candidate.id && entry.provider_session_id !== null,
-      );
-      const planStep = planSteps.find((entry) => entry.id === candidate.id);
-      if (!session || session.provider_session_id === null || !planStep) {
-        throw new RunNotResumableError(`competitor ${candidate.id} has no resumable session`);
-      }
-      const knownRuntime = requireResumableRuntime(state.db, run, session);
-      const worktreePath = service.get(candidate.id)?.path;
-      if (!worktreePath) {
-        throw new RunNotResumableError(`competitor ${candidate.id} worktree is unavailable`);
-      }
-      return {
-        context: {
-          runId: run.id,
-          stepRunId: candidate.id,
-          agentSessionId: session.id,
-          prompt: planStep.prompt ?? NATIVE_CONTINUATION,
-          contextSelection: planStep.context ?? null,
-          agentSessionDir: sessionDir(state.dataDir, run.id, session.id),
-          worktreePath,
-          runtime: knownRuntime,
-          config: planStep.config ?? null,
-        },
-        providerSessionId: session.provider_session_id,
-      };
-    },
-  );
+  const contexts = candidates.map((candidate): ResumableCandidate => {
+    const session = sessions.find(
+      (entry) => entry.step_run_id === candidate.id && entry.provider_session_id !== null,
+    );
+    const planStep = planSteps.find((entry) => entry.id === candidate.id);
+    if (!session || session.provider_session_id === null || !planStep) {
+      throw new RunNotResumableError(`competitor ${candidate.id} has no resumable session`);
+    }
+    const knownRuntime = requireResumableRuntime(state.db, run, session);
+    const worktreePath = service.get(candidate.id)?.path;
+    if (!worktreePath) {
+      throw new RunNotResumableError(`competitor ${candidate.id} worktree is unavailable`);
+    }
+    return {
+      context: {
+        runId: run.id,
+        stepRunId: candidate.id,
+        agentSessionId: session.id,
+        prompt: planStep.prompt ?? NATIVE_CONTINUATION,
+        contextSelection: planStep.context ?? null,
+        agentSessionDir: sessionDir(state.dataDir, run.id, session.id),
+        worktreePath,
+        runtime: knownRuntime,
+        config: planStep.config ?? null,
+      },
+      providerSessionId: session.provider_session_id,
+    };
+  });
   if (contexts.length === 0) {
     throw new RunNotResumableError(`compete group ${group.id} has no interrupted competitor`);
   }

@@ -37,6 +37,7 @@ afterEach(() => {
 
 it("migrate creates exactly the expected canonical tables", () => {
   t = createTempDb("otomat-schema-");
+  // SAFETY: sqlite_master rows carry the selected name column.
   const rows = t.client.sqlite
     .prepare(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__drizzle%'",

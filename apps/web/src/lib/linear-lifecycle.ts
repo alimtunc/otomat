@@ -1,9 +1,9 @@
 import type { LinearLifecyclePhase, LinearLifecycleReadiness } from "@otomat/domain";
 
-export const LIFECYCLE_PHASE_LABEL: Record<LinearLifecyclePhase, string> = {
+export const LIFECYCLE_PHASE_LABEL = {
   in_progress: "Run started",
   done: "Pull request merged",
-};
+} satisfies Record<LinearLifecyclePhase, string>;
 
 export function lifecycleReadinessSentence(readiness: LinearLifecycleReadiness): string {
   switch (readiness.status) {

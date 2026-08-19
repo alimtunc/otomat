@@ -26,6 +26,7 @@ import {
 
 import {
   contributionRow,
+  json,
   makeApiApp,
   post,
   request,
@@ -68,7 +69,7 @@ function seedTerminalRun(database: Db, runId: string): void {
 it("serves daemon health", async () => {
   const res = await request(makeApiApp(t), "/api/health");
   expect(res.status).toBe(200);
-  const body = (await res.json()) as HealthResponse;
+  const body = await json<HealthResponse>(res);
   expect(body).toMatchObject({
     status: "ok",
     name: "test-daemon",
@@ -92,19 +93,15 @@ it("reads current schema metadata for every health response", async () => {
     }),
   });
 
-  expect(
-    ((await (await request(app, "/api/health")).json()) as HealthResponse).schema.page_count,
-  ).toBe(1);
+  expect((await json<HealthResponse>(await request(app, "/api/health"))).schema.page_count).toBe(1);
   pageCount = 2;
-  expect(
-    ((await (await request(app, "/api/health")).json()) as HealthResponse).schema.page_count,
-  ).toBe(2);
+  expect((await json<HealthResponse>(await request(app, "/api/health"))).schema.page_count).toBe(2);
 });
 
 it("lists projects and issues from SQLite", async () => {
   const app = makeApiApp(t);
-  expect((await (await request(app, "/api/projects")).json()) as unknown).toHaveLength(1);
-  const issues = (await (await request(app, "/api/issues")).json()) as { id: string }[];
+  expect(await json<unknown>(await request(app, "/api/projects"))).toHaveLength(1);
+  const issues = await json<{ id: string }[]>(await request(app, "/api/issues"));
   expect(issues.map((i) => i.id)).toEqual(["i1"]);
 });
 
@@ -118,7 +115,7 @@ it("composes run detail with steps and sessions (events come over SSE, not detai
   seedTerminalRun(t.db, runId);
   const res = await request(makeApiApp(t), `/api/runs/${runId}`);
   expect(res.status).toBe(200);
-  const detail = (await res.json()) as RunDetail;
+  const detail = await json<RunDetail>(res);
   expect(detail.run.id).toBe(runId);
   expect(detail.steps).toHaveLength(1);
   expect(detail.sessions).toHaveLength(1);
@@ -136,7 +133,7 @@ it("tells the cockpit why a queued run is not moving", async () => {
     }),
   });
 
-  const detail = (await (await request(app, `/api/runs/${runId}`)).json()) as RunDetail;
+  const detail = await json<RunDetail>(await request(app, `/api/runs/${runId}`));
 
   expect(detail.wait).toEqual({ kind: "workflow_dependency", blocked_by: ["Implement"] });
 });
@@ -157,7 +154,7 @@ it("exposes the run's worktree path on its detail", async () => {
     .run();
   t.db.update(schema.runs).set({ worktree_id: "wt1" }).where(eq(schema.runs.id, runId)).run();
   const res = await request(makeApiApp(t), `/api/runs/${runId}`);
-  const detail = (await res.json()) as RunDetail;
+  const detail = await json<RunDetail>(res);
   expect(detail.worktree_path).toBe("/tmp/otomat/wt1");
 });
 
@@ -187,7 +184,7 @@ it("rejects a cyclic run plan with 400 before the launch dep ever runs", async (
     },
   });
   expect(res.status).toBe(400);
-  expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
+  expect((await json<{ error: string }>(res)).error).toBe("invalid_request");
   expect(launched).toBe(0);
 });
 
@@ -249,7 +246,7 @@ it("delegates start-run to the injected launchRun dep", async () => {
   const res = await post(app, "/api/runs", { prompt: "do it" });
   expect(res.status).toBe(201);
   expect(received).toEqual({ prompt: "do it" });
-  expect((await res.json()) as RunLaunchResponse).toMatchObject({
+  expect(await json<RunLaunchResponse>(res)).toMatchObject({
     run: { id: "run-x" },
     wait: null,
   });
@@ -270,7 +267,7 @@ it("answers a saturated launch with the run and the place it is queued at", asyn
   const res = await post(app, "/api/runs", { prompt: "the fifth one" });
 
   expect(res.status).toBe(201);
-  expect((await res.json()) as RunLaunchResponse).toMatchObject({
+  expect(await json<RunLaunchResponse>(res)).toMatchObject({
     run: { id: "run-queued", status: "queued" },
     wait: { kind: "concurrency_limit", position: 2, max_concurrent_sessions: 4 },
   });
@@ -331,7 +328,7 @@ it("returns a bad request when the requested base branch does not exist", async 
   const res = await post(app, "/api/runs", { prompt: "goal", base_branch: "ghost" });
 
   expect(res.status).toBe(400);
-  expect((await res.json()) as { error: string }).toMatchObject({ error: "base_branch_not_found" });
+  expect(await json<{ error: string }>(res)).toMatchObject({ error: "base_branch_not_found" });
 });
 
 it("delegates resume to the supervisor for a known run", async () => {
@@ -370,7 +367,7 @@ it("carries the daemon's own reason when a resume is refused", async () => {
   const res = await request(app, `/api/runs/${runId}/resume`, { method: "POST" });
 
   expect(res.status).toBe(409);
-  expect((await res.json()) as { error: string; message: string }).toMatchObject({
+  expect(await json<{ error: string; message: string }>(res)).toMatchObject({
     error: "run_not_resumable",
     message: expect.stringContaining("already running"),
   });
@@ -385,7 +382,7 @@ it("tells the cockpit what a resume would do before it runs", async () => {
     }),
   });
 
-  const detail = (await (await request(app, `/api/runs/${runId}`)).json()) as RunDetail;
+  const detail = await json<RunDetail>(await request(app, `/api/runs/${runId}`));
 
   expect(detail.resume).toEqual({
     mode: "recovery",
@@ -420,15 +417,15 @@ it("serves what abandoning would leave behind, and refuses while the run is acti
     }),
   });
 
-  const summary = (await (
-    await request(app, `/api/runs/${runId}/workspace`)
-  ).json()) as WorkspaceClosureSummary;
+  const summary = await json<WorkspaceClosureSummary>(
+    await request(app, `/api/runs/${runId}/workspace`),
+  );
   expect(summary).toMatchObject({ commit_count: 1, uncommitted_files: 2, blocker: "run_active" });
   expect(summary.pull_request).toBeNull();
 
   const refused = await request(app, `/api/runs/${runId}/abandon`, { method: "POST" });
   expect(refused.status).toBe(409);
-  expect((await refused.json()) as { error: string }).toMatchObject({ error: "run_active" });
+  expect(await json<{ error: string }>(refused)).toMatchObject({ error: "run_active" });
 });
 
 it("abandons the workspace on an explicit confirmation", async () => {
@@ -507,7 +504,7 @@ it("rejects an appended step with no agent, and maps a closed workspace to 409",
     runtime: "fake",
   });
   expect(res.status).toBe(409);
-  expect(((await res.json()) as { error: string }).error).toBe("workspace_closed");
+  expect((await json<{ error: string }>(res)).error).toBe("workspace_closed");
 });
 
 it("serves the dossier one session was given, and says so when it predates them", async () => {
@@ -574,7 +571,7 @@ it("delegates a contribution to the supervisor with its step and the trimmed bod
   });
   expect(res.status).toBe(201);
   expect(received).toEqual({ id: runId, stepRunId: "step-1", body: "keep going" });
-  const contribution = (await res.json()) as RunContributionContract;
+  const contribution = await json<RunContributionContract>(res);
   expect(contribution.status).toBe("queued");
   expect(contribution.step_run_id).toBe("step-1");
   expect(contribution.delivered_at).toBeNull();
@@ -588,7 +585,7 @@ it("rejects a contribution with a blank body or no step", async () => {
     body: "   ",
   });
   expect(blank.status).toBe(400);
-  expect(((await blank.json()) as { error: string }).error).toBe("invalid_request");
+  expect((await json<{ error: string }>(blank)).error).toBe("invalid_request");
 
   const unrouted = await post(makeApiApp(t), `/api/runs/${runId}/contributions`, { body: "hi" });
   expect(unrouted.status).toBe(400);
@@ -617,7 +614,7 @@ it("maps a step that will not run again to 409 rather than accepting a message f
     body: "keep going",
   });
   expect(res.status).toBe(409);
-  expect(((await res.json()) as { error: string }).error).toBe("run_contribution_step_closed");
+  expect((await json<{ error: string }>(res)).error).toBe("run_contribution_step_closed");
 });
 
 it("maps a non-cancelable contribution to 409 rather than pretending it was withdrawn", async () => {
@@ -632,7 +629,7 @@ it("maps a non-cancelable contribution to 409 rather than pretending it was with
   });
   const res = await post(app, `/api/runs/${runId}/contributions/c1/cancel`, {});
   expect(res.status).toBe(409);
-  expect(((await res.json()) as { error: string }).error).toBe("run_contribution_not_cancelable");
+  expect((await json<{ error: string }>(res)).error).toBe("run_contribution_not_cancelable");
 });
 
 it("maps a non-retriable contribution to 409 rather than replaying a delivered message", async () => {
@@ -647,7 +644,7 @@ it("maps a non-retriable contribution to 409 rather than replaying a delivered m
   });
   const res = await post(app, `/api/runs/${runId}/contributions/c1/retry`, {});
   expect(res.status).toBe(409);
-  expect(((await res.json()) as { error: string }).error).toBe("run_contribution_not_retriable");
+  expect((await json<{ error: string }>(res)).error).toBe("run_contribution_not_retriable");
 });
 
 it("delegates abort to the supervisor and returns the run detail", async () => {
@@ -660,7 +657,7 @@ it("delegates abort to the supervisor and returns the run detail", async () => {
   const res = await request(app, `/api/runs/${runId}/abort`, { method: "POST" });
   expect(res.status).toBe(200);
   expect(aborted).toBe(runId);
-  expect(((await res.json()) as RunDetail).run.id).toBe(runId);
+  expect((await json<RunDetail>(res)).run.id).toBe(runId);
 });
 
 it("serves isolated candidate diff evidence and delegates explicit winner selection", async () => {
@@ -765,7 +762,7 @@ it("rejects a request whose Host header is not a loopback host", async () => {
     headers: { Host: "evil.example.com" },
   });
   expect(res.status).toBe(403);
-  expect((await res.json()) as { error: string }).toEqual({ error: "forbidden_host" });
+  expect(await json<{ error: string }>(res)).toEqual({ error: "forbidden_host" });
 });
 
 it("accepts a loopback Host with a port", async () => {

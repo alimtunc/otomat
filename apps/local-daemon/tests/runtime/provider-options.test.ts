@@ -38,9 +38,9 @@ function codexFixtures(catalog = stubFixture("codex-models.json")): void {
 
 /** The current contract with one level entry Codex could never emit, so the refusal is tested against the shape in use. */
 function malformedCatalog(directory: string): string {
-  const catalog = JSON.parse(readFileSync(stubFixture("codex-models.json"), "utf8")) as {
-    models: { supported_reasoning_levels?: unknown[] }[];
-  };
+  const catalog: { models: { supported_reasoning_levels?: unknown[] }[] } = JSON.parse(
+    readFileSync(stubFixture("codex-models.json"), "utf8"),
+  );
   const [first] = catalog.models;
   if (first === undefined) throw new Error("the codex catalog fixture must list a model");
   first.supported_reasoning_levels = [{ description: "no effort at all" }];

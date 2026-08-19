@@ -3,11 +3,11 @@ import type { ErrorDiagnostic, ErrorDiagnosticCategory, ProblemReportDraft } fro
 const MAX_TITLE_CHARACTERS = 120;
 const MAX_BODY_CHARACTERS = 6_000;
 
-const CATEGORY_TITLES: Record<ErrorDiagnosticCategory, string> = {
+const CATEGORY_TITLES = {
   renderer: "Renderer error",
   daemon: "Daemon error",
   transport: "Execution host unreachable",
-};
+} satisfies Record<ErrorDiagnosticCategory, string>;
 
 const TRACES_OMITTED_NOTE =
   "Stacks and the host log excerpt were left out to keep this draft short. They are in the " +

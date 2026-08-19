@@ -37,14 +37,16 @@ Object.defineProperty(Element.prototype, "ariaDisabled", {
 Element.prototype.getAnimations = () => [];
 
 // A wide viewport with a fine pointer, so the shell starts with its sidebar open.
-window.matchMedia = ((query: string) => ({
+window.matchMedia = (query: string) => ({
   matches: query.includes("min-width"),
   media: query,
   onchange: null,
   addEventListener: () => {},
   removeEventListener: () => {},
+  addListener: () => {},
+  removeListener: () => {},
   dispatchEvent: () => false,
-})) as unknown as typeof window.matchMedia;
+});
 
 const FILES_GROUP = "test.files";
 const FILES_DEFAULT_WIDTH = 264;
@@ -55,7 +57,8 @@ const asPercent = (px: number) => (px / GROUP_SIZE) * 100;
 function storedSize(groupId: string, panelId: string): number {
   const raw = window.localStorage.getItem(`react-resizable-panels:${groupId}`);
   if (raw === null) throw new Error(`no stored layout for ${groupId}`);
-  const size = (JSON.parse(raw) as Record<string, number | undefined>)[panelId];
+  const stored: Record<string, number | undefined> = JSON.parse(raw);
+  const size = stored[panelId];
   if (size === undefined) throw new Error(`${groupId} stored no size for ${panelId}`);
   return size;
 }

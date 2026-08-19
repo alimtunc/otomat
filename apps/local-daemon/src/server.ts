@@ -159,10 +159,9 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     if (report.reconciled.length > 0) {
       console.log(`[otomat] reconciled ${report.reconciled.length} run(s) left in flight at boot`);
     }
-    const workspacePasses = startWorkspaceReconciliation(
-      () => supervisor.reconcileWorkspaces(),
-      WORKSPACE_RECONCILE_INTERVAL_MS,
-    );
+    const workspacePasses = startWorkspaceReconciliation(async () => {
+      await supervisor.reconcileWorkspaces();
+    }, WORKSPACE_RECONCILE_INTERVAL_MS);
 
     const app = createApiApp({
       db,

@@ -6,10 +6,14 @@ import {
   type LinearVaultIo,
 } from "#shared/linear-vault";
 
+interface StoredKeyHolder {
+  stored: Buffer | null;
+}
+
 const KEY = "lin_api_secret";
 
 function fakeIo(overrides: Partial<LinearVaultIo> = {}): LinearVaultIo & { stored: Buffer | null } {
-  const state: { stored: Buffer | null } = { stored: null };
+  const state: StoredKeyHolder = { stored: null };
   return {
     get stored() {
       return state.stored;

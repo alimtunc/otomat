@@ -38,6 +38,7 @@ export function Toaster({
       position={position}
       closeButton={closeButton}
       duration={duration}
+      // SAFETY: CSSProperties types zIndex numerically, but the design token is a var reference.
       style={{ zIndex: "var(--z-toast)" } as CSSProperties}
       icons={{
         success: <CheckCircle2 className="h-4 w-4 text-success" />,

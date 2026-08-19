@@ -68,7 +68,7 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     userPath: options.userPath,
     packaged: options.paths.packaged,
     electronBinary: process.execPath,
-    ...(options.expectedBuild === null ? {} : { buildSha: options.expectedBuild }),
+    buildSha: options.expectedBuild ?? undefined,
     writeLog: (stream, text) => daemonLog.write(`[${stream}] ${text}`),
   });
   const deployment = deploymentForChannel(options.channel, options.expectedBuild);

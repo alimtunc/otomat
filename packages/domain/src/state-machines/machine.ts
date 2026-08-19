@@ -43,6 +43,7 @@ export interface StateMachine<S extends string> {
  * IllegalTransitionError otherwise.
  */
 export function defineMachine<S extends string>(definition: MachineDefinition<S>): StateMachine<S> {
+  // SAFETY: Object.keys widens to string; the transition table is keyed by every state of S.
   const states = Object.keys(definition.transitions) as S[];
   const next = (from: S): readonly S[] => definition.transitions[from] ?? [];
   const canTransition = (from: S, to: S): boolean => next(from).includes(to);

@@ -19,7 +19,7 @@ export class LinearWriteConflictError extends LinearError {
   }
 }
 
-const LINEAR_ERROR_MESSAGES: Record<LinearErrorCode, string> = {
+const LINEAR_ERROR_MESSAGES = {
   linear_not_connected: "Connect a Linear workspace first.",
   linear_unauthorized: "Linear rejected the API key. Create a new key and connect again.",
   linear_rate_limited: "Linear is rate limiting this workspace. Try again later.",
@@ -36,7 +36,7 @@ const LINEAR_ERROR_MESSAGES: Record<LinearErrorCode, string> = {
   linear_issue_not_writable: "Only a Linear-sourced issue can be edited or published.",
   linear_write_conflict: "The Linear issue changed since you started editing.",
   linear_write_not_found: "That Linear write attempt no longer exists.",
-};
+} satisfies Record<LinearErrorCode, string>;
 
 export function linearError(code: LinearErrorCode, cause?: unknown): LinearError {
   return new LinearError(

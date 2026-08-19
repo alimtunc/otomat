@@ -58,7 +58,7 @@ it("separates safe health from schema metadata and omits the database path", asy
     path: "/tmp/support.json",
   });
   const serialized = String(write.mock.calls[0]?.[1]);
-  const bundle = JSON.parse(serialized) as Record<string, unknown>;
+  const bundle: Record<string, unknown> = JSON.parse(serialized);
   expect(Object.keys(bundle).toSorted()).toEqual(["health", "logs", "schema", "versions"]);
   expect(serialized).not.toContain("/Users/private");
   expect(bundle.schema).toEqual(HEALTH.schema);
@@ -79,10 +79,8 @@ it("writes available logs with unavailable health when the daemon health request
     status: "written",
     path: "/tmp/support.json",
   });
-  const bundle = JSON.parse(String(write.mock.calls[0]?.[1])) as {
-    health: SupportBundleHealth;
-    logs: { desktop: string; daemon: string };
-  };
+  const bundle: { health: SupportBundleHealth; logs: { desktop: string; daemon: string } } =
+    JSON.parse(String(write.mock.calls[0]?.[1]));
   expect(bundle.health).toEqual({
     status: "unavailable",
     detail: "The daemon health response was unavailable or invalid.",

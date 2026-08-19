@@ -40,7 +40,7 @@ const REFUSED = {
   error_message: "Linear rejected the API key.",
 } as const;
 
-const LABELS: Record<ExecutionHostId, string> = { local: "Local", remote: "otomat-vps" };
+const LABELS = { local: "Local", remote: "otomat-vps" } satisfies Record<ExecutionHostId, string>;
 
 export function reachable(id: ExecutionHostId, url: string): LinearDaemonTarget {
   return { id, label: LABELS[id], url, unavailable: null };

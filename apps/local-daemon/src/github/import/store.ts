@@ -2,6 +2,8 @@ import {
   getPullRequest,
   insertPullRequest,
   updatePullRequest,
+  type NewPullRequest,
+  type PullRequestPatch,
   type PullRequestRow,
 } from "@otomat/db";
 import {
@@ -54,7 +56,7 @@ export function insertMirroredPullRequest(
           attached_by: input.attachedBy,
           attachment_evidence: JSON.stringify(input.evidence),
         };
-  insertPullRequest(config.db, {
+  const value: NewPullRequest = {
     id,
     issue_id: input.issueId,
     repository_id: input.repositoryId,
@@ -65,10 +67,14 @@ export function insertMirroredPullRequest(
     number: input.provider.number,
     status: input.provider.lifecycle,
     publication_status: "created",
-    ...(input.trees === null ? {} : { head_sha: input.trees.head, base_sha: input.trees.base }),
     synced_at: input.syncedAt,
     ...adoption,
-  });
+  };
+  if (input.trees !== null) {
+    value.head_sha = input.trees.head;
+    value.base_sha = input.trees.base;
+  }
+  insertPullRequest(config.db, value);
   return settleLifecycle(config, reload(config, id));
 }
 
@@ -87,14 +93,18 @@ export function applyProviderState(
   row: PullRequestRow,
   input: ProviderStateInput,
 ): PullRequestRow {
-  updatePullRequest(config.db, row.id, {
+  const patch: PullRequestPatch = {
     provenance: input.provenance,
     ...mirroredColumns(input.provider),
-    ...(input.trees === null ? {} : { head_sha: input.trees.head, base_sha: input.trees.base }),
     ...(input.syncedAt === null
       ? { error_code: null, error_message: null }
       : { synced_at: input.syncedAt }),
-  });
+  };
+  if (input.trees !== null) {
+    patch.head_sha = input.trees.head;
+    patch.base_sha = input.trees.base;
+  }
+  updatePullRequest(config.db, row.id, patch);
   let current = reload(config, row.id);
   drivePath(pullRequestMachine, current.status, input.provider.lifecycle, (next) => {
     updatePullRequest(config.db, current.id, { status: next });

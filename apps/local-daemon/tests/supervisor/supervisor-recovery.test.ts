@@ -38,10 +38,11 @@ function stepStatus(runId: string, stepId: string): string | undefined {
 }
 
 /** The run's own canonical status as the ledger tells it, which a turn's terminal marker never speaks for. */
-function landedStatus(runId: string): unknown {
-  return readRunEvents(fix.db, runId)
+function landedStatus(runId: string): string | undefined {
+  const status = readRunEvents(fix.db, runId)
     .filter((event) => event.payload["phase"] === "settled")
     .at(-1)?.payload["run_status"];
+  return typeof status === "string" ? status : undefined;
 }
 
 it("leaves failed when the stale step itself is retried and succeeds", async () => {

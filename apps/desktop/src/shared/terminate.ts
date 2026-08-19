@@ -1,11 +1,19 @@
-import type { ChildProcess } from "node:child_process";
+/** The slice of a child process the bounded termination sequence drives. */
+export interface TerminatableChild {
+  readonly exitCode: number | null;
+  readonly signalCode: NodeJS.Signals | null;
+  readonly pid?: number | undefined;
+  kill(signal: NodeJS.Signals): boolean;
+  once(event: "exit", listener: () => void): void;
+  off(event: "exit", listener: () => void): void;
+}
 
 /**
  * Stops a child with a bounded escalation: SIGTERM (letting the daemon's own handler settle
  * runs and reap its workers), then SIGKILL after `graceMs` if it has not exited. Resolves once
  * the child is gone. Rejects when signal delivery fails or the process cannot be observed exiting.
  */
-export function terminateChild(child: ChildProcess, graceMs: number): Promise<void> {
+export function terminateChild(child: TerminatableChild, graceMs: number): Promise<void> {
   return new Promise((resolve, reject) => {
     if (child.exitCode !== null || child.signalCode !== null || child.pid === undefined) {
       resolve();
@@ -50,7 +58,7 @@ export function terminateChild(child: ChildProcess, graceMs: number): Promise<vo
   });
 }
 
-function trySignal(child: ChildProcess, signal: NodeJS.Signals): "sent" | "gone" | Error {
+function trySignal(child: TerminatableChild, signal: NodeJS.Signals): "sent" | "gone" | Error {
   try {
     return child.kill(signal)
       ? "sent"

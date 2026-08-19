@@ -47,11 +47,12 @@ function flowError(message: string): GitHubCliError {
   return new GitHubCliError("github_device_flow_failed", message);
 }
 
-async function postForm(
+async function postForm<T>(
   fetchImpl: typeof fetch,
   url: string,
   form: Record<string, string>,
-): Promise<unknown> {
+  schema: z.ZodType<T>,
+): Promise<T> {
   let response: Response;
   try {
     response = await fetchImpl(url, {
@@ -63,11 +64,15 @@ async function postForm(
     throw flowError("GitHub could not be reached to sign in.");
   }
   if (!response.ok) throw flowError("GitHub rejected the sign-in request.");
+  let payload: unknown;
   try {
-    return await response.json();
+    payload = await response.json();
   } catch {
     throw flowError("GitHub returned an invalid sign-in response.");
   }
+  const parsed = schema.safeParse(payload);
+  if (!parsed.success) throw flowError("GitHub returned an invalid sign-in response.");
+  return parsed.data;
 }
 
 export function createDeviceAuthorization(
@@ -79,18 +84,18 @@ export function createDeviceAuthorization(
 
   return {
     async start() {
-      const payload = await postForm(fetchImpl, DEVICE_CODE_URL, {
-        client_id: GITHUB_CLI_CLIENT_ID,
-        scope: TOKEN_SCOPES,
-      });
-      const parsed = startResponseSchema.safeParse(payload);
-      if (!parsed.success) throw flowError("GitHub returned an invalid sign-in response.");
+      const parsed = await postForm(
+        fetchImpl,
+        DEVICE_CODE_URL,
+        { client_id: GITHUB_CLI_CLIENT_ID, scope: TOKEN_SCOPES },
+        startResponseSchema,
+      );
       return {
-        deviceCode: parsed.data.device_code,
-        userCode: parsed.data.user_code,
-        verificationUrl: parsed.data.verification_uri,
-        intervalMs: parsed.data.interval * 1_000,
-        expiresAt: now() + parsed.data.expires_in * 1_000,
+        deviceCode: parsed.device_code,
+        userCode: parsed.user_code,
+        verificationUrl: parsed.verification_uri,
+        intervalMs: parsed.interval * 1_000,
+        expiresAt: now() + parsed.expires_in * 1_000,
       };
     },
 
@@ -98,15 +103,18 @@ export function createDeviceAuthorization(
       let intervalMs = start.intervalMs;
       while (now() < start.expiresAt) {
         await delay(intervalMs);
-        const payload = await postForm(fetchImpl, ACCESS_TOKEN_URL, {
-          client_id: GITHUB_CLI_CLIENT_ID,
-          device_code: start.deviceCode,
-          grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-        });
-        const parsed = tokenResponseSchema.safeParse(payload);
-        if (!parsed.success) throw flowError("GitHub returned an invalid sign-in response.");
-        if ("access_token" in parsed.data) return parsed.data.access_token;
-        switch (parsed.data.error) {
+        const parsed = await postForm(
+          fetchImpl,
+          ACCESS_TOKEN_URL,
+          {
+            client_id: GITHUB_CLI_CLIENT_ID,
+            device_code: start.deviceCode,
+            grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+          },
+          tokenResponseSchema,
+        );
+        if ("access_token" in parsed) return parsed.access_token;
+        switch (parsed.error) {
           case "authorization_pending":
             break;
           case "slow_down":

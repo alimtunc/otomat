@@ -15,7 +15,7 @@ export function diffLineRow(operator: string, id: string): string {
 
 /** happy-dom lays nothing out; @git-diff-view hides a comment widget whose wrapper measures zero. */
 export function stubDiffLayout(): void {
-  Element.prototype.getBoundingClientRect = (() => ({
+  Element.prototype.getBoundingClientRect = () => ({
     x: 0,
     y: 0,
     width: 800,
@@ -25,13 +25,14 @@ export function stubDiffLayout(): void {
     right: 800,
     bottom: 20,
     toJSON: () => ({}),
-  })) as unknown as typeof Element.prototype.getBoundingClientRect;
+  });
 }
 
 /** happy-dom has no canvas 2d context; @git-diff-view measures line-number width with it. */
 export function stubDiffCanvas(): void {
-  HTMLCanvasElement.prototype.getContext = (() => ({
+  // SAFETY: @git-diff-view only reads font and measureText from the 2d context.
+  (HTMLCanvasElement.prototype as { getContext: unknown }).getContext = () => ({
     font: "",
     measureText: (text: string) => ({ width: text.length * 7 }),
-  })) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+  });
 }

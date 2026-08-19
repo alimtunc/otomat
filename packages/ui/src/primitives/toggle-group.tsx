@@ -27,6 +27,7 @@ function toArrayValue(
   multiple: boolean,
 ): string[] | undefined {
   if (value === undefined) return undefined;
+  // SAFETY: the ToggleGroup contract pairs multiple with string[] values and single with string.
   return multiple ? (value as string[]) : [value as string];
 }
 
@@ -37,6 +38,7 @@ export function ToggleGroupRoot({ className, children, ...props }: ToggleGroupRo
   const groupValue = toArrayValue(value, multiple);
   const groupDefaultValue = toArrayValue(defaultValue, multiple);
 
+  // SAFETY: the ToggleGroup contract pairs multiple with a string[] handler and single with string.
   const handleValueChange = onValueChange
     ? (next: string[]) =>
         multiple

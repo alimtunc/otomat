@@ -22,12 +22,12 @@ it("exposes bounded recovery actions over named IPC channels", async () => {
   }));
 
   await import("#preload/splash");
-  const bridge = exposeInMainWorld.mock.calls[0]?.[1] as {
+  const bridge: {
     retry(): void;
     restore(): Promise<void>;
     exportSupportBundle(): Promise<void>;
     showDataPolicy(): Promise<void>;
-  };
+  } = exposeInMainWorld.mock.calls[0]?.[1];
   bridge.retry();
   await bridge.restore();
   await bridge.exportSupportBundle();

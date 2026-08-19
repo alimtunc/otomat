@@ -27,16 +27,18 @@ function addRun(
   db: Db,
   run: { id: string; status: RunState; issueId?: string; createdAt?: string },
 ): void {
-  db.insert(schema.runs)
-    .values({
-      id: run.id,
-      issue_id: run.issueId ?? "i1",
-      status: run.status,
-      branch: `otomat/${run.id}`,
-      plan_json: { version: 1, steps: [] },
-      ...(run.createdAt ? { created_at: run.createdAt, updated_at: run.createdAt } : {}),
-    })
-    .run();
+  const row: typeof schema.runs.$inferInsert = {
+    id: run.id,
+    issue_id: run.issueId ?? "i1",
+    status: run.status,
+    branch: `otomat/${run.id}`,
+    plan_json: { version: 1, steps: [] },
+  };
+  if (run.createdAt) {
+    row.created_at = run.createdAt;
+    row.updated_at = run.createdAt;
+  }
+  db.insert(schema.runs).values(row).run();
 }
 
 function addPullRequest(

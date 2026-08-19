@@ -6,14 +6,14 @@ export interface WorkspaceStateDescriptor {
   tone: StatusTone;
 }
 
-export const WORKSPACE_STATE: Record<WorkspaceState, WorkspaceStateDescriptor> = {
+export const WORKSPACE_STATE = {
   active: { label: "Active", tone: "iris" },
   cleanup_required: { label: "Cleanup required", tone: "warning" },
   stale: { label: "Stale", tone: "stale" },
   missing: { label: "Missing", tone: "stale" },
   unmanaged: { label: "Unmanaged", tone: "ghost" },
   removed: { label: "Cleaned", tone: "neutral" },
-};
+} satisfies Record<WorkspaceState, WorkspaceStateDescriptor>;
 
 /** `removed` is history, not work, so it is neither counted nor offered as a filter. */
 export const WORKSPACE_COUNTED_STATES = [

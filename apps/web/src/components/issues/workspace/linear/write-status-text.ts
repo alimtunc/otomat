@@ -1,8 +1,8 @@
 import type { LinearWriteState } from "@otomat/domain";
 
-export const WRITE_STATUS_TEXT: Record<LinearWriteState, string> = {
+export const WRITE_STATUS_TEXT = {
   pending: "text-text-tertiary",
   sending: "text-iris-text",
   sent: "text-success",
   failed: "text-danger",
-};
+} satisfies Record<LinearWriteState, string>;

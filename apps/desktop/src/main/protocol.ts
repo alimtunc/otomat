@@ -6,25 +6,25 @@ import { protocol } from "electron";
 
 import { APP_SCHEME } from "#shared/constants";
 
-const MIME_BY_EXT: Record<string, string> = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".mjs": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-  ".ico": "image/x-icon",
-  ".woff": "font/woff",
-  ".woff2": "font/woff2",
-  ".ttf": "font/ttf",
-  ".wasm": "application/wasm",
-  ".map": "application/json",
-};
+const MIME_BY_EXT = new Map<string, string>([
+  [".html", "text/html; charset=utf-8"],
+  [".js", "text/javascript; charset=utf-8"],
+  [".mjs", "text/javascript; charset=utf-8"],
+  [".css", "text/css; charset=utf-8"],
+  [".json", "application/json; charset=utf-8"],
+  [".svg", "image/svg+xml"],
+  [".png", "image/png"],
+  [".jpg", "image/jpeg"],
+  [".jpeg", "image/jpeg"],
+  [".gif", "image/gif"],
+  [".webp", "image/webp"],
+  [".ico", "image/x-icon"],
+  [".woff", "font/woff"],
+  [".woff2", "font/woff2"],
+  [".ttf", "font/ttf"],
+  [".wasm", "application/wasm"],
+  [".map", "application/json"],
+]);
 
 /** Must run before `app.whenReady()`: marks the scheme secure + CORS-enabled so the renderer behaves like a normal https origin. */
 export function registerAppSchemePrivileged(): void {
@@ -43,7 +43,7 @@ export function registerAppSchemePrivileged(): void {
 }
 
 function contentType(file: string): string {
-  return MIME_BY_EXT[extname(file).toLowerCase()] ?? "application/octet-stream";
+  return MIME_BY_EXT.get(extname(file).toLowerCase()) ?? "application/octet-stream";
 }
 
 function isFile(candidate: string): boolean {

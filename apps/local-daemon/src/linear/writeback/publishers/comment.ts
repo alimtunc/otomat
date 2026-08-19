@@ -1,5 +1,7 @@
 import type { PublishCommentRequest } from "@otomat/domain";
 
+import type { LinearCommentInput } from "#linear/client/types";
+
 import { requireWritableIssue } from "../issue.js";
 import type { LinearWriteLedger } from "../ledger.js";
 import type { LinearWritebackConfig } from "../types.js";
@@ -28,20 +30,13 @@ export async function publishComment(
     payload: { body: request.body, parent_id: parentId },
     detail: commentDetail(request.body),
   });
+  const input: LinearCommentInput = { id: key, issueId: linearId, body: request.body };
+  if (parentId !== null) input.parentId = parentId;
   await ledger.run(write, async (apiKey, signal) => {
     const remoteComments = await config.client.listComments(apiKey, linearId, signal);
     const remoteId = remoteComments.some((comment) => comment.id === key)
       ? key
-      : await config.client.createComment(
-          apiKey,
-          {
-            id: key,
-            issueId: linearId,
-            body: request.body,
-            ...(parentId === null ? {} : { parentId }),
-          },
-          signal,
-        );
+      : await config.client.createComment(apiKey, input, signal);
     return { remote_id: remoteId, detail: commentDetail(request.body) };
   });
 }

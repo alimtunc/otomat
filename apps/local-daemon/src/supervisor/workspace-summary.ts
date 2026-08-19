@@ -13,10 +13,13 @@ import type { SupervisorState } from "./state.js";
 const MAX_LISTED_COMMITS = 20;
 
 /** Mirrors the diff resolution: a live worktree answers from its own HEAD, an archived one from the branch in the main repository. */
-function commitRange(
-  row: WorktreeRow,
-  binding: RepositoryBinding,
-): { gitCwd: string; base: string; ref: string } {
+interface WorktreeGitView {
+  gitCwd: string;
+  base: string;
+  ref: string;
+}
+
+function commitRange(row: WorktreeRow, binding: RepositoryBinding): WorktreeGitView {
   const live = row.status === "active" && existsSync(row.path);
   return {
     gitCwd: live ? row.path : binding.rootPath,

@@ -66,17 +66,15 @@ async function reconcile(
   fetchImpl: typeof fetch,
 ): Promise<SeedSandboxResult> {
   const rootPath = (options.realpath ?? realpathSync)(options.repoPath);
-  const projects = recordsOf(await getJson(fetchImpl, `${options.daemonUrl}/api/projects`));
+  const projects = await getRecords(fetchImpl, `${options.daemonUrl}/api/projects`);
   const project = projects.find((entry) => entry.root_path === rootPath);
   if (project === undefined || typeof project.id !== "string" || project.id === "") {
     throw new Error(`The sandbox repository is registered but no project owns ${rootPath}.`);
   }
   const projectId = project.id;
-  const issues = recordsOf(
-    await getJson(
-      fetchImpl,
-      `${options.daemonUrl}/api/issues?projectId=${encodeURIComponent(projectId)}`,
-    ),
+  const issues = await getRecords(
+    fetchImpl,
+    `${options.daemonUrl}/api/issues?projectId=${encodeURIComponent(projectId)}`,
   );
   if (issues.length > 0) return { seeded: false, issues: 0 };
   await fileFixtureIssues(options.daemonUrl, projectId, fetchImpl);
@@ -102,12 +100,15 @@ async function fileFixtureIssues(
   }
 }
 
-async function getJson(fetchImpl: typeof fetch, url: string): Promise<unknown> {
+async function getRecords(
+  fetchImpl: typeof fetch,
+  url: string,
+): Promise<Record<string, unknown>[]> {
   const response = await fetchImpl(url);
   if (!response.ok) {
     throw new Error(`Sandbox lookup ${url} failed (${response.status}): ${await response.text()}`);
   }
-  return response.json();
+  return recordsOf(await response.json());
 }
 
 function recordsOf(payload: unknown): Record<string, unknown>[] {
@@ -118,10 +119,10 @@ function recordsOf(payload: unknown): Record<string, unknown>[] {
 }
 
 function projectIdOf(payload: unknown): string {
-  if (typeof payload === "object" && payload !== null) {
-    const project = (payload as Record<string, unknown>).project;
-    if (typeof project === "object" && project !== null) {
-      const id = (project as Record<string, unknown>).id;
+  if (typeof payload === "object" && payload !== null && "project" in payload) {
+    const project = payload.project;
+    if (typeof project === "object" && project !== null && "id" in project) {
+      const id = project.id;
       if (typeof id === "string" && id !== "") return id;
     }
   }

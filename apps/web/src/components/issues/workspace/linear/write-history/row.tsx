@@ -4,13 +4,13 @@ import { linearWriteConflict, useRetryLinearWrite } from "@web/api/linear/writeb
 
 import { WRITE_STATUS_TEXT } from "../write-status-text";
 
-const KIND_LABEL: Record<LinearWriteKind, string> = {
+const KIND_LABEL = {
   fields: "Fields",
   status: "Status",
   comment: "Comment",
   pr_link: "PR link",
   lifecycle: "Status sync",
-};
+} satisfies Record<LinearWriteKind, string>;
 
 export function WriteRow({ issueId, write }: { issueId: string; write: LinearWriteContract }) {
   const retry = useRetryLinearWrite(issueId);

@@ -1,5 +1,10 @@
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 
+interface TailRead {
+  lines: string[];
+  consumedBytes: number;
+}
+
 const NEWLINE = 0x0a;
 
 /**
@@ -8,10 +13,7 @@ const NEWLINE = 0x0a;
  * stays aligned with `byteOffsetForLine`). A torn final line (a partial write
  * with no newline yet) is left unread until it is completed.
  */
-export function readCompleteLinesFrom(
-  path: string,
-  offset: number,
-): { lines: string[]; consumedBytes: number } {
+export function readCompleteLinesFrom(path: string, offset: number): TailRead {
   const fd = openSync(path, "r");
   try {
     const size = fstatSync(fd).size;

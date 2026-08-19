@@ -1,3 +1,4 @@
+import type { RegisterRepositoryRequest } from "@otomat/domain";
 import { Button, Field, FieldControl, FieldLabel, Input, toast } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import {
@@ -24,10 +25,9 @@ export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProp
     onSubmit: async ({ value }) => {
       setSubmitError(null);
       try {
-        const registered = await register.mutateAsync({
-          path: value.path.trim(),
-          ...(projectId === undefined ? {} : { project_id: projectId }),
-        });
+        const request: RegisterRepositoryRequest = { path: value.path.trim() };
+        if (projectId !== undefined) request.project_id = projectId;
+        const registered = await register.mutateAsync(request);
         toast.success(`Registered ${registered.project.name}`);
         form.reset();
       } catch (error) {

@@ -56,9 +56,9 @@ describe("model selection", () => {
       resolveModelSelection("fake", { kind: "model", id: "fake-imaginary" });
       expect.unreachable("an unlisted model must be refused");
     } catch (error) {
-      expect(error).toBeInstanceOf(ModelSelectionRefusedError);
-      expect((error as ModelSelectionRefusedError).code).toBe("model_unknown");
-      expect((error as Error).message).toMatch(/fake-imaginary/);
+      if (!(error instanceof ModelSelectionRefusedError)) throw error;
+      expect(error.code).toBe("model_unknown");
+      expect(error.message).toMatch(/fake-imaginary/);
     }
   });
 });

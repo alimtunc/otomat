@@ -36,7 +36,7 @@ export const ACCENT_VARS = [
 export type AccentVar = (typeof ACCENT_VARS)[number];
 
 /** Derives the full accent CSS-variable set from a single `#rrggbb` hex (hover/active/text are lightened/darkened tints). */
-export function accentVars(hex: string): Record<AccentVar, string> {
+export function accentVars(hex: string) {
   const channels = toRgb(hex).join(",");
   return {
     "--iris-solid": hex,
@@ -50,5 +50,5 @@ export function accentVars(hex: string): Record<AccentVar, string> {
     "--info": hex,
     "--primary": hex,
     "--ring": hex,
-  };
+  } satisfies Record<AccentVar, string>;
 }

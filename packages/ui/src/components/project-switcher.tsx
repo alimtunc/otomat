@@ -19,11 +19,11 @@ import {
 import { HostTag } from "./host-tag";
 import { ProjectGlyph } from "./project-glyph";
 
-const HEALTH_COLOR: Record<NonNullable<ProjectSummary["health"]>, string> = {
+const HEALTH_COLOR = {
   healthy: TONE_FACETS.success.cssVar,
   degraded: TONE_FACETS.warning.cssVar,
   unknown: TONE_FACETS.neutral.cssVar,
-};
+} satisfies Record<NonNullable<ProjectSummary["health"]>, string>;
 
 export interface ProjectSwitcherProps {
   projects: ProjectSummary[];

@@ -1,7 +1,7 @@
 import { getRun, listActiveRuns, listAgentSessionsForRun, type Db } from "@otomat/db";
 import { agentSessionMachine, type RunState } from "@otomat/domain";
 
-import { settleRun } from "./settle/index.js";
+import { settleRun, type SettleOptions } from "./settle/index.js";
 import type { ReconcileOutcome, ReconcileReport } from "./types.js";
 
 /** Non-terminal states a crash must not disturb: they await an explicit human action, not a process. */
@@ -30,11 +30,9 @@ export function reconcileRuns(db: Db, dataDir: string, now: string): ReconcileRe
     for (const session of turns) {
       const current = getRun(db, run.id);
       if (!current || RESTING_RUN_STATES.has(current.status)) break;
-      const outcome = settleRun(db, dataDir, current, {
-        mode: "boot",
-        ...(session ? { turn: { agentSessionId: session.id } } : {}),
-        now,
-      });
+      const settle: SettleOptions = { mode: "boot", now };
+      if (session) settle.turn = { agentSessionId: session.id };
+      const outcome = settleRun(db, dataDir, current, settle);
       if (outcome !== null) reconciled.push(outcome);
     }
   }

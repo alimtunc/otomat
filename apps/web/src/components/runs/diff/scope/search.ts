@@ -10,11 +10,11 @@ export function readDiffScopeSearch(search: Record<string, unknown>): DiffScopeS
   const scope = search["scope"];
   const commit = search["commit"];
   const session = search["session"];
-  return {
-    ...(scope === "commit" || scope === "session" ? { scope } : {}),
-    ...(typeof commit === "string" ? { commit } : {}),
-    ...(typeof session === "string" ? { session } : {}),
-  };
+  const parsed: DiffScopeSearch = {};
+  if (scope === "commit" || scope === "session") parsed.scope = scope;
+  if (typeof commit === "string") parsed.commit = commit;
+  if (typeof session === "string") parsed.session = session;
+  return parsed;
 }
 
 /** A scope naming nothing usable falls back to the workspace instead of asking the daemon a question it cannot answer. */

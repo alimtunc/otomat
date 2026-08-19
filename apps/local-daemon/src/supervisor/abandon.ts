@@ -9,10 +9,10 @@ import { hasRunActivity, type SupervisorState } from "./state.js";
 import { driveIdleRunTo } from "./transitions.js";
 import { holdsOpenWorkspace, issueWorkspace } from "./workspace.js";
 
-const BLOCKER_MESSAGES: Record<WorkspaceAbandonBlocker, string> = {
+const BLOCKER_MESSAGES = {
   workspace_closed: "this run no longer holds its issue's workspace",
   run_active: "cancel the run before abandoning its workspace",
-};
+} satisfies Record<WorkspaceAbandonBlocker, string>;
 
 /** Abandon refused, carrying the wire code the API returns verbatim. */
 export class WorkspaceAbandonRefusedError extends Error {

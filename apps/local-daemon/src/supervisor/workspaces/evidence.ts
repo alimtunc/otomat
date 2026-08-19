@@ -19,6 +19,11 @@ export interface WorkspaceRecord {
 }
 
 /** A worktree is held either by a step or by the run itself, so both kinds resolve to one run. */
+interface PullRequestEvidenceIndex {
+  byRun: Map<string, WorkspacePullRequest>;
+  byBranch: Map<string, WorkspacePullRequest>;
+}
+
 function owningRuns(db: Db, worktreeIds: string[]): Map<string, string> {
   const owners = new Map<string, string>();
   const candidates = db
@@ -74,10 +79,7 @@ function runContexts(db: Db, runIds: string[]): Map<string, RunContext> {
 type WorkspacePullRequest = NonNullable<WorkspaceRecord["pull_request"]>;
 
 /** A merge is only ever read from a row naming this workspace, never from the issue at large. */
-function pullRequestsByBranch(
-  db: Db,
-  runIds: string[],
-): { byRun: Map<string, WorkspacePullRequest>; byBranch: Map<string, WorkspacePullRequest> } {
+function pullRequestsByBranch(db: Db, runIds: string[]): PullRequestEvidenceIndex {
   const byRun = new Map<string, WorkspacePullRequest>();
   const byBranch = new Map<string, WorkspacePullRequest>();
   if (runIds.length === 0) return { byRun, byBranch };

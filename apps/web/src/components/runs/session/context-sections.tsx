@@ -2,14 +2,14 @@ import type { ContextFileRefusal, SessionContext } from "@otomat/domain";
 import { Markdown } from "@otomat/ui";
 import type { ReactNode } from "react";
 
-const FILE_REFUSAL_LABEL: Record<ContextFileRefusal, string> = {
+const FILE_REFUSAL_LABEL = {
   missing: "not in this snapshot",
   binary: "binary",
   too_large: "past the size limit",
   outside_repository: "not repository-relative",
   symlink: "a symlink, refused",
   unreadable: "unreadable",
-};
+} satisfies Record<ContextFileRefusal, string>;
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (

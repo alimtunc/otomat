@@ -18,7 +18,7 @@ import { LinearError, LinearWriteConflictError } from "#linear";
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";
 
-const LINEAR_ERROR_STATUS: Record<LinearErrorCode, ContentfulStatusCode> = {
+const LINEAR_ERROR_STATUS = {
   linear_not_connected: 409,
   linear_unauthorized: 409,
   linear_rate_limited: 409,
@@ -35,7 +35,7 @@ const LINEAR_ERROR_STATUS: Record<LinearErrorCode, ContentfulStatusCode> = {
   linear_issue_not_writable: 400,
   linear_write_conflict: 409,
   linear_write_not_found: 404,
-};
+} satisfies Record<LinearErrorCode, ContentfulStatusCode>;
 
 export function createLinearRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();

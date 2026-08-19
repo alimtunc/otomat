@@ -38,7 +38,7 @@ export class HostCapacityActions {
     if ("message" in target) return { ok: false, message: target.message };
     const client = createDaemonClient({
       baseUrl: target.url,
-      ...(this.options.fetchImpl === undefined ? {} : { fetch: this.options.fetchImpl }),
+      fetch: this.options.fetchImpl,
     });
     try {
       return { ok: true, capacity: await call(client) };

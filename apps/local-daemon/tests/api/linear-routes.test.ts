@@ -11,7 +11,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { linearError, LinearWriteConflictError } from "#linear";
 
-import { makeApiApp, patch, post, request } from "../support/api.js";
+import { json, makeApiApp, patch, post, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 import { connectedLinear, stubLinearService } from "../support/linear.js";
 
@@ -339,7 +339,7 @@ it("returns the remote snapshot when a fields publish conflicts", async () => {
   const res = await post(app, "/api/linear/issues/li/publish-fields", { overwrite: false });
 
   expect(res.status).toBe(409);
-  const body = (await res.json()) as { error: string; remote: LinearIssueSnapshot };
+  const body = await json<{ error: string; remote: LinearIssueSnapshot }>(res);
   expect(body.error).toBe("linear_write_conflict");
   expect(body.remote.title).toBe("Changed remotely");
 });

@@ -2,7 +2,6 @@ import { readPullRequestGenerator, type Db, type RunRow } from "@otomat/db";
 import {
   isRunPlanCompeteGroup,
   modelSelectionFromId,
-  type ProviderOptions,
   type PullRequestGeneratorAudit,
 } from "@otomat/domain";
 
@@ -22,8 +21,13 @@ export interface GenerationAgent extends RuntimeOneShot {
   audit: PullRequestGeneratorAudit;
 }
 
+interface RunExecutionSummary {
+  runtime: string | null;
+  model: string | null;
+}
+
 /** The execution the launch froze — what "Same as run" means when no generator is configured. */
-function runExecution(run: RunRow): { runtime: string | null; model: string | null } {
+function runExecution(run: RunRow): RunExecutionSummary {
   for (const node of run.plan_json.steps) {
     const config = isRunPlanCompeteGroup(node) ? node.compete[0]?.config : node.config;
     if (config) return { runtime: config.runtime, model: config.model?.id ?? null };
@@ -68,7 +72,7 @@ export function resolveGenerationAgent(db: Db, run: RunRow): GenerationAgent {
   const inherited = runExecution(run);
   const requested =
     preference.runtime === null
-      ? { runtime: inherited.runtime, model: inherited.model, options: {} as ProviderOptions }
+      ? { runtime: inherited.runtime, model: inherited.model, options: {} }
       : { runtime: preference.runtime, model: preference.model, options: preference.options };
   if (requested.runtime === null) {
     throw new GitHubPublicationError(

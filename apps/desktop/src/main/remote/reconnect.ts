@@ -2,7 +2,7 @@ const RECONNECT_DELAYS_MS = [1_000, 2_000, 5_000, 10_000, 15_000];
 
 export interface ReconnectLoopOptions {
   attempt(): void;
-  schedule?: ((callback: () => void, delayMs: number) => NodeJS.Timeout) | undefined;
+  schedule?: ((callback: () => void, delayMs: number) => NodeJS.Timeout | number) | undefined;
 }
 
 /**
@@ -12,7 +12,7 @@ export interface ReconnectLoopOptions {
  * says why rather than spinning forever.
  */
 export class ReconnectLoop {
-  private timer: NodeJS.Timeout | null = null;
+  private timer: NodeJS.Timeout | number | null = null;
   private attempts = 0;
   private ranOut = false;
 

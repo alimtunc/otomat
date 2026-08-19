@@ -24,7 +24,9 @@ it("throws IllegalTransitionError without applying when the target is unreachabl
     caught = error;
   }
   expect(caught).toBeInstanceOf(IllegalTransitionError);
-  const error = caught as IllegalTransitionError;
+  if (!(caught instanceof IllegalTransitionError))
+    throw new Error("expected an illegal transition");
+  const error = caught;
   expect(error.machine).toBe(runMachine.name);
   expect(error.from).toBe("completed");
   expect(error.to).toBe("running");

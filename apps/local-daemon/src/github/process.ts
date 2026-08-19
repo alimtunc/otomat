@@ -43,12 +43,13 @@ export function runCommand(request: CommandRequest): Promise<CommandResult> {
       if (settled) return;
       settled = true;
       if (timer !== null) clearTimeout(timer);
-      resolve({
+      const result: CommandResult = {
         stdout: stdout.finish(),
         stderr: stderr.finish(),
         exitCode,
-        ...(errorCode ? { errorCode } : {}),
-      });
+      };
+      if (errorCode) result.errorCode = errorCode;
+      resolve(result);
     };
     if (request.timeoutMs !== undefined) {
       timer = setTimeout(() => {

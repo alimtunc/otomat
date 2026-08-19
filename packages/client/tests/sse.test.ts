@@ -24,6 +24,7 @@ class FakeEventSource {
 
   emit(type: string, data: string): void {
     for (const listener of this.listeners.get(type) ?? []) {
+      // SAFETY: the subscription reads only data from a delivered SSE event.
       listener({ data } as MessageEvent);
     }
   }
@@ -42,10 +43,7 @@ const ENVELOPE: EventEnvelope = {
   raw_ref: null,
 };
 
-function captureEventSource(): {
-  sources: FakeEventSource[];
-  client: ReturnType<typeof createDaemonClient>;
-} {
+function captureEventSource() {
   const sources: FakeEventSource[] = [];
   const factory = class extends FakeEventSource {
     constructor(url: string) {
@@ -55,7 +53,7 @@ function captureEventSource(): {
   };
   const client = createDaemonClient({
     baseUrl: "",
-    EventSource: factory as unknown as typeof EventSource,
+    EventSource: factory,
   });
   return { sources, client };
 }

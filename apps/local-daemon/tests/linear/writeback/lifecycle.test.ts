@@ -135,7 +135,7 @@ it("lands overlapping assertions for one issue in signal order, so done stays fi
   test.seedSource({ ...DOING, ...SHIPPED });
   let remote = linearDetail();
   const stateUpdates: string[] = [];
-  let releaseFirst: () => void = () => {};
+  let releaseFirst!: () => void;
   const firstGate = new Promise<void>((resolve) => {
     releaseFirst = resolve;
   });

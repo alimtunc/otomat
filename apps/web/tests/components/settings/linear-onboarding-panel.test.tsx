@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import type { IssueSourceContract, ProjectContract } from "@otomat/domain";
 import { LinearOnboardingPanel } from "@web/components/settings/integrations/onboarding-panel";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { mount, type Mounted } from "#support/mount";
@@ -10,9 +11,7 @@ let sources: IssueSourceContract[];
 const selectProject = vi.fn();
 
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children, to }: { children?: unknown; to?: string }) => (
-    <a href={to}>{children as never}</a>
-  ),
+  Link: ({ children, to }: { children?: ReactNode; to?: string }) => <a href={to}>{children}</a>,
 }));
 
 vi.mock("@web/api/daemon/queries", () => ({

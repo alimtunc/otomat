@@ -7,15 +7,15 @@ interface InboxSignal {
 }
 
 /** What GitHub answered about the head's checks; `none` is "no check ran", never "they passed". */
-export const CHECKS_SIGNAL: Record<PullRequestChecksState, InboxSignal> = {
+export const CHECKS_SIGNAL = {
   passing: { label: "Checks passing", tone: "success" },
   failing: { label: "Checks failing", tone: "danger" },
   pending: { label: "Checks running", tone: "warning" },
   none: { label: "No checks", tone: "neutral" },
-};
+} satisfies Record<PullRequestChecksState, InboxSignal>;
 
-export const REVIEW_DECISION_SIGNAL: Record<PullRequestReviewDecision, InboxSignal> = {
+export const REVIEW_DECISION_SIGNAL = {
   approved: { label: "Approved", tone: "success" },
   changes_requested: { label: "Changes requested", tone: "warning" },
   review_required: { label: "Review required", tone: "review" },
-};
+} satisfies Record<PullRequestReviewDecision, InboxSignal>;

@@ -35,7 +35,8 @@ it("blocks a fields publish when the remote issue changed, without writing", asy
     .publishFields("li", { overwrite: false })
     .catch((caught) => caught);
   expect(error).toBeInstanceOf(LinearWriteConflictError);
-  expect((error as LinearWriteConflictError).remote.title).toBe("Changed remotely");
+  if (!(error instanceof LinearWriteConflictError)) throw new Error("expected a write conflict");
+  expect(error.remote.title).toBe("Changed remotely");
   expect(updateIssue).not.toHaveBeenCalled();
   expect(service.writeback.writebackState("li")).toMatchObject({
     draft: { title: "My local edit" },

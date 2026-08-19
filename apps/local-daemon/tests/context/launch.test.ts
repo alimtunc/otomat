@@ -1,5 +1,5 @@
 import { getRun, listAgentSessionsForRun, schema } from "@otomat/db";
-import { executableSteps, sessionContextSchema, type RunPlanStep } from "@otomat/domain";
+import { executableSteps, sessionContextSchema } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { toRun } from "#api/serialize";
@@ -36,12 +36,12 @@ afterEach(() => {
   fix.cleanup();
 });
 
-function planStep(runId: string, index = 0): RunPlanStep {
+function planStep(runId: string, index = 0) {
   const step = executableSteps(getRun(fix.db, runId)?.plan_json ?? { version: 1, steps: [] })[
     index
   ];
   if (!step) throw new Error(`no plan step at ${index}`);
-  return step as RunPlanStep;
+  return step;
 }
 
 it("attaches the issue snapshot to a single run without any editable prompt", async () => {

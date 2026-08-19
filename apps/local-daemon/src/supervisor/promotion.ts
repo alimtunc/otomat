@@ -16,11 +16,16 @@ import { hasRunActivity, type SupervisorState } from "./state.js";
 import { driveCompeteGroupTo, driveRunTo } from "./transitions.js";
 import type { ReconcileOutcome } from "./types.js";
 
+interface PromotionTarget {
+  run: RunRow;
+  group: CompeteGroupRow;
+}
+
 function requireSelectionScope(
   state: SupervisorState,
   runId: string,
   groupId: string,
-): { run: RunRow; group: CompeteGroupRow } {
+): PromotionTarget {
   const run = getRun(state.db, runId);
   if (!run) throw new CompeteWinnerConflictError(groupId, `run ${runId} not found`);
   const group = getCompeteGroup(state.db, groupId);

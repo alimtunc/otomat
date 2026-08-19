@@ -10,6 +10,7 @@ import {
   repositoryContractSchema,
   repositoryFilesResponseSchema,
   repositoryRegistrationErrorSchema,
+  type RegisterRepositoryRequest,
 } from "@otomat/domain";
 import type { Hono } from "hono";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -40,10 +41,9 @@ function registeredProjects() {
 }
 
 async function registerRepo(app: Hono, path: string, projectId?: string) {
-  const res = await post(app, "/api/repositories", {
-    path,
-    ...(projectId === undefined ? {} : { project_id: projectId }),
-  });
+  const body: RegisterRepositoryRequest = { path };
+  if (projectId !== undefined) body.project_id = projectId;
+  const res = await post(app, "/api/repositories", body);
   expect(res.status).toBe(201);
   return registerRepositoryResponseSchema.parse(await res.json());
 }
@@ -201,7 +201,7 @@ it("lists the repository's branches most-recently-committed first, and refuses w
   rmSync(repo.root, { recursive: true, force: true });
   const gone = await request(app, `/api/repositories/${created.repository.id}/branches`);
   expect(gone.status).toBe(409);
-  expect((await gone.json()) as { error: string }).toMatchObject({
+  expect(await json<{ error: string }>(gone)).toMatchObject({
     error: "repository_unavailable",
   });
 });

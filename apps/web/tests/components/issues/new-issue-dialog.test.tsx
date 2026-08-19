@@ -17,6 +17,7 @@ import {
 import { modelCatalogQueryResult } from "#support/runtime-models";
 import { providerOptionSetQueryResult } from "#support/runtime-options";
 
+// SAFETY: the dialogs read only the launched run's id.
 const launch = vi.fn(async () => ({ id: "run-1" }) as RunContract);
 const navigate = vi.fn();
 const create = vi.fn(async (_request: CreateIssueRequest) => true);

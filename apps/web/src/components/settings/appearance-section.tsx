@@ -25,6 +25,7 @@ export function AppearanceSection() {
             <SegmentedControl
               type="single"
               value={theme}
+              // SAFETY: the toggle group renders only values of this union.
               onValueChange={(v) => v && setTheme(v as Theme)}
               aria-label="Theme"
             >
@@ -45,6 +46,7 @@ export function AppearanceSection() {
             <SegmentedControl
               type="single"
               value={density}
+              // SAFETY: the toggle group renders only values of this union.
               onValueChange={(v) => v && setDensity(v as Density)}
               aria-label="Density"
             >
@@ -65,6 +67,7 @@ export function AppearanceSection() {
             <SegmentedControl
               type="single"
               value={accent}
+              // SAFETY: the toggle group renders only values of this union.
               onValueChange={(v) => v && setAccent(v as Accent)}
               aria-label="Accent direction"
             >

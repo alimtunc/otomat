@@ -3,6 +3,7 @@ import type { RunContributionContract, RunDetail } from "@otomat/domain";
 import { ConversationSection } from "@web/components/issues/workspace/conversation-section";
 import { RunConversationView } from "@web/components/runs/conversation/view";
 import { act } from "react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contribution } from "#support/contribution";
@@ -64,7 +65,7 @@ vi.mock("@otomat/ui", async (importOriginal) => ({
 
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ runId: "run-1" }),
-  Link: ({ children }: { children?: unknown }) => <a>{children as never}</a>,
+  Link: ({ children }: { children?: ReactNode }) => <a>{children}</a>,
 }));
 
 vi.mock("@web/api/runs/queries", () => ({

@@ -43,14 +43,14 @@ function incident(overrides: Partial<ErrorDiagnostic> = {}): ErrorDiagnostic {
 }
 
 it("omits the incident key entirely when the export came from the menu", () => {
-  const bundle = JSON.parse(buildSupportBundle(BASE)) as Record<string, unknown>;
+  const bundle: Record<string, unknown> = JSON.parse(buildSupportBundle(BASE));
 
   expect(Object.keys(bundle).toSorted()).toEqual(["health", "logs", "schema", "versions"]);
 });
 
 it("attaches the incident the user exported for, with its correlation id", () => {
   const serialized = buildSupportBundle({ ...BASE, incident: incident() });
-  const bundle = JSON.parse(serialized) as { incident: ErrorDiagnostic };
+  const bundle: { incident: ErrorDiagnostic } = JSON.parse(serialized);
 
   expect(bundle.incident.id).toBe("err_abc");
   expect(bundle.incident.request?.correlation_id).toBe("req_abc123");

@@ -146,7 +146,7 @@ const DIFF_FILE_STATUS: StatusMap<ChangeStatus> = {
   type_changed: { tone: "neutral", icon: FileType, label: "Type changed" },
 };
 
-export const STATUS_REGISTRY: { [K in StatusKind]: StatusMap<KindStatusMap[K]> } = {
+export const STATUS_REGISTRY = {
   issue: ISSUE_STATUS,
   run: RUN_STATUS,
   runContribution: RUN_CONTRIBUTION_STATUS,
@@ -158,4 +158,4 @@ export const STATUS_REGISTRY: { [K in StatusKind]: StatusMap<KindStatusMap[K]> }
   reviewCommentPublication: REVIEW_COMMENT_PUBLICATION_STATUS,
   pr: PR_STATUS,
   diffFile: DIFF_FILE_STATUS,
-};
+} satisfies { [K in StatusKind]: StatusMap<KindStatusMap[K]> };

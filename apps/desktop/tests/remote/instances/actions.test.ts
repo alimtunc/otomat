@@ -11,7 +11,7 @@ import type { RunSshScriptOptions, SshScriptResult } from "#main/remote/ssh/scri
 function actionsWith(
   respond: (options: RunSshScriptOptions) => SshScriptResult,
   overrides: { alias?: string | null; deployment?: RemoteDeployment } = {},
-): { actions: RemoteInstanceActions; scripts: string[] } {
+) {
   const scripts: string[] = [];
   const actions = new RemoteInstanceActions({
     alias: () => (overrides.alias === undefined ? "otomat-vps" : overrides.alias),

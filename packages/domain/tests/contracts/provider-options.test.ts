@@ -99,17 +99,17 @@ describe("providerOptionDescriptor", () => {
   });
 });
 
-describe("providerOptionDefault", () => {
-  const permissionMode = (defaultValue: string | null): ProviderOptionDescriptor => ({
-    key: "permission_mode",
-    description: "d",
-    choices: [
-      { value: "auto", description: null, dangerous: false },
-      { value: "bypassPermissions", description: null, dangerous: true },
-    ],
-    default_value: defaultValue,
-  });
+const permissionMode = (defaultValue: string | null): ProviderOptionDescriptor => ({
+  key: "permission_mode",
+  description: "d",
+  choices: [
+    { value: "auto", description: null, dangerous: false },
+    { value: "bypassPermissions", description: null, dangerous: true },
+  ],
+  default_value: defaultValue,
+});
 
+describe("providerOptionDefault", () => {
   it("takes the announced default, and nothing at all when none is announced", () => {
     expect(providerOptionDefault(permissionMode("auto"))).toBe("auto");
     expect(providerOptionDefault(permissionMode(null))).toBeNull();

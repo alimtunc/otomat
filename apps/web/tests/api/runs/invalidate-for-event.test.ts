@@ -10,9 +10,12 @@ const event = (type: EventEnvelope["type"]): EventEnvelope => envelope({ type })
 
 function fakeClient() {
   const keys: unknown[] = [];
+  // SAFETY: invalidateForEvent only calls invalidateQueries with a query-key filter.
   const client = {
-    invalidateQueries: vi.fn(({ queryKey }: { queryKey: unknown }) => keys.push(queryKey)),
-  } as unknown as QueryClient;
+    invalidateQueries: vi.fn(async ({ queryKey }: { queryKey: unknown }) => {
+      keys.push(queryKey);
+    }),
+  } as QueryClient;
   return { client, keys };
 }
 

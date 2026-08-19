@@ -1,15 +1,17 @@
 // @vitest-environment happy-dom
 import type { ReviewDetail, ReviewDiffResponse } from "@otomat/domain";
 import { RunDiffView } from "@web/components/runs/diff/view";
+import type { ReactNode } from "react";
 import { expect, it, vi } from "vitest";
 
+import type { FakeQueryState } from "#support/fake-query";
 import { mount } from "#support/mount";
 
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ runId: "run-1" }),
   useSearch: () => ({ file: undefined }),
   useNavigate: () => vi.fn(),
-  Link: ({ children }: { children?: unknown }) => <a>{children as never}</a>,
+  Link: ({ children }: { children?: ReactNode }) => <a>{children}</a>,
 }));
 
 vi.mock("@web/components/shell/use-back-navigation", () => ({
@@ -40,8 +42,8 @@ const fresh = (data: unknown) => ({
   refetch: vi.fn(),
 });
 
-let diffQuery: Record<string, unknown> = {};
-let reviewQuery: Record<string, unknown> = {};
+let diffQuery: FakeQueryState = {};
+let reviewQuery: FakeQueryState = {};
 
 vi.mock("@web/api/runs/queries", () => ({
   useRunDetail: () =>

@@ -21,11 +21,9 @@ function log(text: string, stream: "stdout" | "stderr" = "stdout"): EventSpec {
 
 /** The assistant text a conversation surface shows on its own; `thinking` is reasoning, not the answer. */
 function message(text: string, thinking = false): EventSpec {
-  return {
-    type: "runtime.message",
-    fidelity: "parsed",
-    data: { role: "assistant", text, ...(thinking ? { thinking: true } : {}) },
-  };
+  const data: EventSpec["data"] = { role: "assistant", text };
+  if (thinking) data["thinking"] = true;
+  return { type: "runtime.message", fidelity: "parsed", data };
 }
 
 function toolCall(

@@ -26,15 +26,20 @@ const ASKS_FIRST = "Claude asks before making edits.";
  * describes none of them, so a mode neither source can describe carries no
  * description rather than an invented one.
  */
-const PERMISSION_MODE_DESCRIPTIONS: Record<string, string> = {
-  manual: ASKS_FIRST,
-  default: ASKS_FIRST,
-  auto: "Claude approves safe actions and pauses for risky ones.",
-  acceptEdits:
+const PERMISSION_MODE_DESCRIPTIONS = new Map<string, string>([
+  ["manual", ASKS_FIRST],
+  ["default", ASKS_FIRST],
+  ["auto", "Claude approves safe actions and pauses for risky ones."],
+  [
+    "acceptEdits",
     "Claude edits the selected code or file. Another gated tool still waits for an approval a headless run cannot give.",
-  plan: "Claude explores and presents a plan before editing.",
-  bypassPermissions: "Claude skips every permission check, like `--dangerously-skip-permissions`.",
-};
+  ],
+  ["plan", "Claude explores and presents a plan before editing."],
+  [
+    "bypassPermissions",
+    "Claude skips every permission check, like `--dangerously-skip-permissions`.",
+  ],
+]);
 
 /** The one mode Claude Code itself labels dangerous: its `--dangerously-skip-permissions` twin. */
 const DANGEROUS_PERMISSION_MODES = new Set(["bypassPermissions"]);
@@ -51,7 +56,7 @@ const DEGRADED_DEFAULT_NOTE =
 function permissionModeChoice(value: string): ProviderOptionChoice {
   return {
     value,
-    description: PERMISSION_MODE_DESCRIPTIONS[value] ?? null,
+    description: PERMISSION_MODE_DESCRIPTIONS.get(value) ?? null,
     dangerous: DANGEROUS_PERMISSION_MODES.has(value),
   };
 }

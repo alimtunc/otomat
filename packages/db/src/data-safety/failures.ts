@@ -8,7 +8,12 @@ import {
 
 import { DataSafetyError, type RecoverableDataSafetyErrorOptions } from "./errors.js";
 
-function aggregateCause(failures: unknown[]): unknown {
+interface OperationFailureEvidence {
+  cause: unknown;
+  missing: boolean;
+}
+
+function aggregateCause<T>(failures: T[]): T | AggregateError {
   return failures.length === 1
     ? failures[0]
     : new AggregateError(failures, "The data-safety operation and its cleanup both failed.");
@@ -99,7 +104,7 @@ export function isSqliteContentError(error: unknown): boolean {
 export function inspectPathAfterFailure(
   path: string,
   operationFailure: unknown,
-): { cause: unknown; missing: boolean } {
+): OperationFailureEvidence {
   try {
     return {
       cause: operationFailure,

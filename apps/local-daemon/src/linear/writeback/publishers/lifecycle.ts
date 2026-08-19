@@ -4,10 +4,10 @@ import { refreshMirror, requireWritableIssue } from "../issue.js";
 import type { LinearWriteLedger } from "../ledger.js";
 import type { LinearWritebackConfig, PublishLifecycleRequest } from "../types.js";
 
-const PHASE_LABEL: Record<LinearLifecyclePhase, string> = {
+const PHASE_LABEL = {
   in_progress: "In Progress",
   done: "Done",
-};
+} satisfies Record<LinearLifecyclePhase, string>;
 
 export async function publishLifecycle(
   config: LinearWritebackConfig,

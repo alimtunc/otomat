@@ -18,6 +18,7 @@ export function ProjectSourcesPanel({ project }: { project: ProjectContract }) {
   const sources = useIssueSources(workspaceId);
   const workspace = useLinearWorkspace(workspaceId);
   const sync = useProjectLinearSync(project.id);
+  // SAFETY: only data is narrowed to this project; the query surface is forwarded unchanged.
   const projectSources = {
     ...sources,
     data: sources.data?.filter((source) => source.project_id === project.id),

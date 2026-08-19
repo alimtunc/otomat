@@ -5,7 +5,7 @@ import {
 } from "@otomat/domain";
 import { Hono } from "hono";
 
-import { CommentsNotFixableError } from "#review";
+import { CommentsNotFixableError, type FixRequest } from "#review";
 import { ReviewFixBusyError } from "#supervisor";
 
 import type { ApiDeps } from "../deps.js";
@@ -49,14 +49,15 @@ export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
       const run = c.get("run");
       const request = c.req.valid("json");
       try {
-        const updated = await deps.review.requestFix(run, {
+        const fix: FixRequest = {
           commentIds: request.comment_ids,
           note: request.note ?? null,
           references: request.context ?? [],
           selector: appendStepSelector(request),
           overrides: { model: request.model, options: request.options },
-          ...(request.name ? { name: request.name } : {}),
-        });
+        };
+        if (request.name) fix.name = request.name;
+        const updated = await deps.review.requestFix(run, fix);
         return c.json(toRun(updated), 201);
       } catch (error) {
         if (error instanceof CommentsNotFixableError) {

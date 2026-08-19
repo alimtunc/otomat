@@ -45,9 +45,9 @@ function selectedTab(): string | undefined {
 }
 
 async function click(element: Element | null | undefined): Promise<void> {
-  if (element === null || element === undefined) throw new Error("target not found");
+  if (!(element instanceof HTMLElement)) throw new Error("target not found");
   await act(async () => {
-    (element as HTMLElement).click();
+    element.click();
   });
 }
 

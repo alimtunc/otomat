@@ -6,6 +6,7 @@ import {
   type WorkflowPresetScope,
 } from "@otomat/domain";
 import { nodeAgentChoice } from "@web/lib/agent-choice";
+import type { ExecutionSelection } from "@web/lib/execution/selection";
 import type {
   WorkflowCompetitorDraft,
   WorkflowNodeDraft,
@@ -15,10 +16,10 @@ import type {
 import { buildRunPlanInput } from "./plan-input";
 
 /** A scoped list only ever carries this project's presets, so `project` needs no project name. */
-export const PRESET_SCOPE_LABEL: Record<WorkflowPresetScope, string> = {
+export const PRESET_SCOPE_LABEL = {
   global: "Global",
   project: "This project",
-};
+} satisfies Record<WorkflowPresetScope, string>;
 
 /** A preset is a launch plan without what a launch attaches to it: no issue, no repository file. */
 function withoutContext<T extends { context?: unknown }>(node: T): Omit<T, "context"> {
@@ -38,15 +39,16 @@ export function presetPlanFromDrafts(steps: readonly WorkflowNodeDraft[]): Workf
 }
 
 function executableDraft(node: WorkflowPresetExecutable): WorkflowCompetitorDraft {
+  const execution: ExecutionSelection = {
+    agent: nodeAgentChoice(node),
+    options: node.options ?? {},
+  };
+  if (node.model !== undefined) execution.model = node.model;
   return {
     key: node.id,
     name: node.name,
     context: { references: [], note: node.note ?? "" },
-    execution: {
-      agent: nodeAgentChoice(node),
-      ...(node.model === undefined ? {} : { model: node.model }),
-      options: node.options ?? {},
-    },
+    execution,
   };
 }
 

@@ -3,13 +3,12 @@ import { expect, it, vi } from "vitest";
 import { DaemonRequestError } from "#client/client/http";
 import { createDaemonClient } from "#client/client/index";
 
-function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    headers: new Headers(headers),
-    json: async () => body,
-  } as unknown as Response;
+import { jsonResponse } from "./support/response.js";
+
+interface CapturedRequest {
+  url?: string;
+  method?: string;
+  body?: unknown;
 }
 
 const ISSUE = {
@@ -76,7 +75,7 @@ it("appends defined query params only", async () => {
 
 it("posts a create-issue request and parses the created issue", async () => {
   let calledUrl = "";
-  let captured: { method?: string; body?: unknown } = {};
+  let captured: CapturedRequest = {};
   const fetchMock: typeof fetch = async (input, init) => {
     calledUrl = String(input);
     captured = { method: init?.method, body: init?.body };
@@ -118,7 +117,7 @@ it("throws DaemonRequestError on a non-2xx response", async () => {
 });
 
 it("posts a start-run request body and reads back the run with its wait, if any", async () => {
-  let captured: { method?: string; body?: unknown } = {};
+  let captured: CapturedRequest = {};
   const wait = {
     kind: "concurrency_limit",
     position: 1,
@@ -139,7 +138,7 @@ it("posts a start-run request body and reads back the run with its wait, if any"
 
 it("reads and writes this host's agent-session capacity", async () => {
   const capacity = { max_concurrent_sessions: 6, active_sessions: 1, waiting_sessions: 0 };
-  let captured: { url?: string; method?: string; body?: unknown } = {};
+  let captured: CapturedRequest = {};
   const fetchMock: typeof fetch = async (input, init) => {
     captured = { url: String(input), method: init?.method, body: init?.body };
     return jsonResponse(capacity);
@@ -171,7 +170,7 @@ it("posts resume to the run's resume endpoint", async () => {
 
 it("posts a message to the run's contributions endpoint and parses its queued state", async () => {
   let calledUrl = "";
-  let captured: { method?: string; body?: unknown } = {};
+  let captured: CapturedRequest = {};
   const fetchMock: typeof fetch = async (input, init) => {
     calledUrl = String(input);
     captured = { method: init?.method, body: init?.body };
@@ -257,7 +256,9 @@ it("reads what abandoning a workspace would leave behind, then confirms it", asy
     blocker: null,
   };
   const fetchMock: typeof fetch = async (input, init) => {
-    calls.push({ url: String(input), ...(init?.method ? { method: init.method } : {}) });
+    const call: CapturedRequest = { url: String(input) };
+    if (init?.method) call.method = init.method;
+    calls.push(call);
     return jsonResponse(init?.method === "POST" ? { ...RUN, status: "canceled" } : summary);
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });

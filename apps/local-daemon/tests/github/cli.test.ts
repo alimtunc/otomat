@@ -360,7 +360,7 @@ describe("GitHub CLI adapter", () => {
       }),
     ).rejects.toMatchObject({
       code: "github_pr_create_failed",
-      message: expect.stringContaining("No commits between main and otomat/run/r1") as string,
+      message: expect.stringContaining("No commits between main and otomat/run/r1"),
     });
     expect(runner.requests).toHaveLength(3);
   });
@@ -507,7 +507,7 @@ describe("GitHub CLI adapter", () => {
       }),
     ).rejects.toMatchObject({
       code: "github_pr_mode_failed",
-      message: expect.stringContaining("merge queue") as string,
+      message: expect.stringContaining("merge queue"),
     });
   });
 });

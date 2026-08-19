@@ -16,5 +16,8 @@
   "scripts": {
     "build": "true",
     "typecheck": "true"
+  },
+  "devDependencies": {
+    "@oxlint/plugins": "1.79.0"
   }
 }

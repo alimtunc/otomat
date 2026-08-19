@@ -49,6 +49,7 @@ function issue(identifier: string, title: string, body: string | null): IssueCon
 }
 
 function issuesQuery(state: Partial<IssuesQuery>): IssuesQuery {
+  // SAFETY: the palette reads only these five fields, not the full query-state union.
   return {
     data: undefined,
     isError: false,
@@ -56,7 +57,7 @@ function issuesQuery(state: Partial<IssuesQuery>): IssuesQuery {
     dataUpdatedAt: Date.now(),
     refetch: () => Promise.resolve(),
     ...state,
-  } as unknown as IssuesQuery;
+  } as IssuesQuery;
 }
 
 const RETRY = issue("OTO-42", "Retry queue drain", "The webhook receiver drops retries.");

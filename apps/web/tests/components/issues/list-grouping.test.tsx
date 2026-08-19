@@ -69,8 +69,9 @@ it("folds a collapsed group away without dropping its header or its count", asyn
   expect(document.getElementById("issue-group-status:backlog")?.children).toHaveLength(0);
   expect(document.getElementById("issue-group-status:ready")?.children).toHaveLength(1);
 
+  if (!(backlog instanceof HTMLElement)) throw new Error("backlog header is not an element");
   await act(async () => {
-    (backlog as HTMLElement).click();
+    backlog.click();
   });
   expect(onToggleGroup).toHaveBeenCalledWith("status:backlog");
 });

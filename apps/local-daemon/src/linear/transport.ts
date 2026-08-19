@@ -45,13 +45,11 @@ export function createLinearTransport(): LinearTransport {
         error,
       );
     }
-    let body: unknown = null;
-    if (text !== "") {
-      try {
-        body = JSON.parse(text);
-      } catch (error) {
-        throw linearError("linear_request_failed", error);
-      }
+    let body: unknown;
+    try {
+      body = text === "" ? null : JSON.parse(text);
+    } catch (error) {
+      throw linearError("linear_request_failed", error);
     }
 
     return { status: response.status, body };
