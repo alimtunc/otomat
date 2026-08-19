@@ -2,11 +2,10 @@ import {
   getRun,
   listAgentSessionsForRun,
   listStepRunsForRun,
-  type CompeteGroupRow,
   type RunRow,
   type StepRunRow,
 } from "@otomat/db";
-import { executableSteps, isRunSettled, type StartRunRequest } from "@otomat/domain";
+import { isRunSettled, type StartRunRequest } from "@otomat/domain";
 
 import { emitLedgerEvent, sessionDir } from "#events";
 
@@ -27,6 +26,7 @@ import {
   requireRunRow,
   RunNotResumableError,
 } from "./resume.js";
+import { preflightResumeAction } from "./runtime-preflight.js";
 import type { SupervisorState } from "./state.js";
 import { driveCompeteGroupTo } from "./transitions.js";
 import { scheduleTurn } from "./turn-scheduling.js";
@@ -98,6 +98,8 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
     throw new RunNotResumableError(`run ${runId} cannot be resumed: ${action.reason}`);
   }
 
+  preflightResumeAction(state, stopped, action);
+
   reopenIssue(state.db, stopped);
   if (action.kind === "native" || action.kind === "recovery") {
     recoverStoppedRun(state, stopped, action);
@@ -108,7 +110,7 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
   try {
     if (action.kind === "compete_group") {
       const steps = listStepRunsForRun(state.db, runId);
-      return await resumeCompeteGroup(state, run, action.group, steps);
+      return await resumeCompeteGroup(state, run, action, steps);
     }
     if (action.kind === "next_step") return await startNextPlanNode(state, run);
     return await spawnReopenTurn(state, run, action);
@@ -124,16 +126,16 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
 async function resumeCompeteGroup(
   state: SupervisorState,
   run: RunRow,
-  group: CompeteGroupRow,
+  action: Extract<ResumeAction, { kind: "compete_group" }>,
   steps: readonly StepRunRow[],
 ): Promise<RunRow> {
+  const { group } = action;
   const candidates = steps.filter(
     (step) =>
       step.compete_group_id === group.id &&
       (step.status === "awaiting_human" || step.status === "waiting_for_provider"),
   );
   const sessions = listAgentSessionsForRun(state.db, run.id);
-  const planSteps = executableSteps(run.plan_json);
   const service = state.repositories.forRepository(run.repository_id)?.service;
   if (!service) {
     throw new RunNotResumableError(`compete group ${group.id} repository is unavailable`);
@@ -142,7 +144,7 @@ async function resumeCompeteGroup(
     const session = sessions.find(
       (entry) => entry.step_run_id === candidate.id && entry.provider_session_id !== null,
     );
-    const planStep = planSteps.find((entry) => entry.id === candidate.id);
+    const planStep = action.competitors.find((entry) => entry.id === candidate.id);
     if (!session || session.provider_session_id === null || !planStep) {
       throw new RunNotResumableError(`competitor ${candidate.id} has no resumable session`);
     }

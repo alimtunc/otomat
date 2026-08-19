@@ -11,7 +11,6 @@ import {
 import { Hono } from "hono";
 
 import { readRunEventWindow } from "#events";
-import { RuntimeUnavailableError } from "#runtime";
 import {
   LaunchRefusedError,
   ProviderResumeRefusedError,
@@ -27,6 +26,7 @@ import { nonNegativeInt } from "../query-params.js";
 import { readRunUsage, readRuns } from "../reads.js";
 import { refusalJson } from "../refusal.js";
 import { runDetailJson } from "../run-detail.js";
+import { runtimeUnavailableResponse } from "../runtime-unavailable.js";
 import { toPullRequest, toRun } from "../serialize.js";
 import { streamRunEvents } from "../sse.js";
 import { appendStepSelector, stepAppendErrorResponse } from "../step-append.js";
@@ -65,17 +65,8 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
         const status = LAUNCH_REFUSAL_STATUS[error.code];
         return c.json({ error: error.code, message: error.message, run_id: error.runId }, status);
       }
-      if (error instanceof RuntimeUnavailableError) {
-        return c.json(
-          {
-            error: "runtime_unavailable",
-            runtime: error.runtime,
-            reason: error.reason,
-            message: error.message,
-          },
-          409,
-        );
-      }
+      const runtimeRefusal = runtimeUnavailableResponse(c, error);
+      if (runtimeRefusal) return runtimeRefusal;
       const refusal = agentConfigErrorResponse(error);
       if (refusal) return refusalJson(c, refusal);
       console.error("[otomat] launch run failed", error);
@@ -100,6 +91,8 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       if (error instanceof RunNotResumableError) {
         return c.json({ error: "run_not_resumable", message: error.message }, 409);
       }
+      const runtimeRefusal = runtimeUnavailableResponse(c, error);
+      if (runtimeRefusal) return runtimeRefusal;
       if (error instanceof IllegalTransitionError && error.machine === "issue") {
         return c.json({ error: "issue_closed", message: error.message }, 409);
       }

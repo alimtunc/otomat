@@ -29,6 +29,7 @@ export interface SeededRun {
 export interface SeedWorkflowStep {
   id: string;
   status: StepRunState;
+  agent?: string;
   dependsOn?: string[];
   /** Halted step this one was appended to recover. */
   replaces?: string;
@@ -107,7 +108,7 @@ export function seedWorkflowRun(
         steps: options.steps.map((step) => ({
           id: step.id,
           name: step.name ?? `Step ${step.id}`,
-          agent: "fake",
+          agent: step.agent ?? "fake",
           prompt: step.prompt ?? `p-${step.id}`,
           depends_on: step.dependsOn ?? [],
           replaces: step.replaces ?? null,

@@ -64,6 +64,12 @@ const runtimeResumeInputSchema = z.object({
 });
 export type RuntimeResumeInput = z.infer<typeof runtimeResumeInputSchema>;
 
+export interface RuntimePreflightInput {
+  cwd: string;
+  options: ProviderOptions;
+  model: string | null;
+}
+
 /**
  * What an adapter feature-detected from the installed binary for one model: the
  * probe's verdict and the options it may honestly offer. A non-`ok` detection
@@ -79,6 +85,7 @@ export interface RuntimeOneShot {
   command: string;
   args: string[];
   effort: string | null;
+  preflight?(cwd: string): void;
 }
 
 /** Handle to a started session, used by out-of-band `abort`/`resume`. */
@@ -106,6 +113,7 @@ export interface RuntimeAdapter {
   readonly models: RuntimeModelSupport;
   /** How to ask this runtime one question that answers on stdout and writes nothing; absent when it has no such mode. */
   describeOneShot?(model: string | null, options: ProviderOptions): RuntimeOneShot;
+  preflight?(input: RuntimePreflightInput): void;
   run(input: RuntimeRunInput, sink: RuntimeSink, signal: AbortSignal): Promise<RuntimeFinalState>;
   resume?(
     session: RuntimeSessionRef,

@@ -6,12 +6,13 @@ import {
   type ProviderOptionDescriptor,
   type ProviderOptionKey,
 } from "@otomat/domain";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ClaudeRuntimeAdapter } from "#runtime/providers/claude/adapter";
 import { claudePermissionModeStatus } from "#runtime/providers/claude/options";
 import { CodexRuntimeAdapter } from "#runtime/providers/codex/adapter";
 
+import { stubLinuxPlatform } from "../support/platform.js";
 import {
   setupStubHarness,
   STUB_BIN,
@@ -26,6 +27,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   teardownStubHarness(worktree);
 });
 
@@ -230,6 +232,23 @@ describe("codex provider options", () => {
     expect(sandbox?.default_value).toBe("workspace-write");
     const dangerous = sandbox?.choices.filter((choice) => choice.dangerous) ?? [];
     expect(dangerous.map((choice) => choice.value)).toEqual(["danger-full-access"]);
+  });
+
+  it("withholds confined sandboxes when the host capability probe is denied", () => {
+    stubLinuxPlatform();
+    codexFixtures();
+    process.env["OTOMAT_STUB_EXITS"] = JSON.stringify({ "sandbox true": 1 });
+    process.env["OTOMAT_STUB_STDERRS"] = JSON.stringify({
+      "sandbox true": "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
+    });
+
+    const support = new CodexRuntimeAdapter(STUB_BIN).describeOptions("gpt-5.6-sol");
+    const sandbox = descriptor(support.options, "sandbox");
+
+    expect(values(sandbox)).toEqual(["danger-full-access"]);
+    expect(sandbox?.default_value).toBeNull();
+    expect(support.detection.detail).toMatch(/Confined sandboxes are unavailable/);
+    expect(support.detection.detail).toMatch(/did not fall back to danger-full-access/);
   });
 
   it("describes Codex's Auto preset as workspace-write plus on-request", () => {

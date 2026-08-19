@@ -2,11 +2,11 @@ import { IllegalTransitionError, InvalidRunPlanError } from "@otomat/domain";
 import type { Context, Env } from "hono";
 
 import type { AgentConfigSelector } from "#agents";
-import { RuntimeUnavailableError } from "#runtime";
 import { RunWorkspaceClosedError } from "#supervisor";
 
 import { agentConfigErrorResponse } from "./agent-config-refusal.js";
 import { refusalJson } from "./refusal.js";
+import { runtimeUnavailableResponse } from "./runtime-unavailable.js";
 
 /** The explicit agent choice every append-a-step request carries. */
 interface AgentChoiceRequest {
@@ -46,17 +46,8 @@ export function stepAppendErrorResponse<E extends Env>(
   if (error instanceof InvalidRunPlanError) {
     return c.json({ error: "invalid_revision", message: error.message }, 409);
   }
-  if (error instanceof RuntimeUnavailableError) {
-    return c.json(
-      {
-        error: "runtime_unavailable",
-        runtime: error.runtime,
-        reason: error.reason,
-        message: error.message,
-      },
-      409,
-    );
-  }
+  const runtimeRefusal = runtimeUnavailableResponse(c, error);
+  if (runtimeRefusal) return runtimeRefusal;
   const refusal = agentConfigErrorResponse(error);
   return refusal ? refusalJson(c, refusal) : null;
 }

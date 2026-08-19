@@ -38,6 +38,7 @@ import {
   runDefaultOverrides,
 } from "./freeze-plan.js";
 import { LaunchRefusedError, resolveLaunchTarget } from "./launch-target.js";
+import { preflightRunPlan } from "./runtime-preflight.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
 
@@ -155,6 +156,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
   const worktree = acquireRunWorktree(binding.service, { owner: runId, branch, baseRef });
 
   try {
+    preflightRunPlan(plan, worktree.path);
     db.transaction(
       () => {
         if (issue.create) insertIssue(db, issue.create);

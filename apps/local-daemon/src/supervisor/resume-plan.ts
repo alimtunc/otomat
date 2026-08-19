@@ -11,6 +11,7 @@ import {
 } from "@otomat/db";
 import {
   executableSteps,
+  isRunPlanCompeteGroup,
   isRunResumable,
   isRunSettled,
   isStepSettled,
@@ -18,6 +19,7 @@ import {
   selectLatestResumableSession,
   type RunPlanCompetitor,
   type RunPlanStep,
+  type ReadyPlanWork,
   type RunResumePlan,
 } from "@otomat/domain";
 
@@ -30,10 +32,14 @@ type ResumableStep = RunPlanStep | RunPlanCompetitor;
 
 /** What **Resume run** will do, decided once — the route serves it and the command executes it, so the cockpit never announces a mode the daemon then declines. */
 export type ResumeAction =
-  | { kind: "compete_group"; group: CompeteGroupRow }
+  | {
+      kind: "compete_group";
+      group: CompeteGroupRow;
+      competitors: readonly RunPlanCompetitor[];
+    }
   | { kind: "native"; session: AgentSessionRow; step: ResumableStep }
   | { kind: "recovery"; step: ResumableStep; reason: string }
-  | { kind: "next_step"; name: string }
+  | { kind: "next_step"; work: ReadyPlanWork }
   | { kind: "unavailable"; reason: string };
 
 function stepOf(run: RunRow, stepRunId: string): ResumableStep | undefined {
@@ -89,6 +95,24 @@ function unavailableFor(state: SupervisorState, run: RunRow): ResumeAction | nul
   return null;
 }
 
+function interruptedCompeteAction(
+  run: RunRow,
+  steps: readonly StepRunRow[],
+  group: CompeteGroupRow,
+): Extract<ResumeAction, { kind: "compete_group" }> {
+  const candidateIds = new Set(
+    steps
+      .filter((step) => step.compete_group_id === group.id && step.status === "awaiting_human")
+      .map((step) => step.id),
+  );
+  const plannedGroup = run.plan_json.steps.find((node) => node.id === group.id);
+  const competitors =
+    plannedGroup && isRunPlanCompeteGroup(plannedGroup)
+      ? plannedGroup.compete.filter((candidate) => candidateIds.has(candidate.id))
+      : [];
+  return { kind: "compete_group", group, competitors };
+}
+
 /** Reads rows only; nothing here writes, so the same call answers the cockpit and drives the command. */
 export function resolveResumeAction(state: SupervisorState, run: RunRow): ResumeAction {
   const refusal = unavailableFor(state, run);
@@ -98,7 +122,7 @@ export function resolveResumeAction(state: SupervisorState, run: RunRow): Resume
   const steps = listStepRunsForRun(db, run.id);
   const groups = listCompeteGroupsForRun(db, run.id);
   const interruptedGroup = groups.find((group) => group.status === "awaiting_human");
-  if (interruptedGroup) return { kind: "compete_group", group: interruptedGroup };
+  if (interruptedGroup) return interruptedCompeteAction(run, steps, interruptedGroup);
 
   const sessions = listAgentSessionsForRun(db, run.id);
   const session = selectLatestResumableSession(sessions, steps, groups);
@@ -118,9 +142,7 @@ export function resolveResumeAction(state: SupervisorState, run: RunRow): Resume
     return reopen(db, run, node, lastSessionOf(sessions, stopped.id));
   }
   const ready = readyPlanWork(run.plan_json, stepStatuses(steps), competeGroupStatuses(groups));
-  if (ready) {
-    return { kind: "next_step", name: ready.kind === "step" ? ready.step.name : ready.group.name };
-  }
+  if (ready) return { kind: "next_step", work: ready };
   const last = executableSteps(run.plan_json).at(-1);
   if (!last) return { kind: "unavailable", reason: "This run's plan has no step to resume" };
   return reopen(db, run, last, session);
@@ -129,7 +151,10 @@ export function resolveResumeAction(state: SupervisorState, run: RunRow): Resume
 function toResumePlan(action: ResumeAction): RunResumePlan {
   if (action.kind === "unavailable") return { mode: "unavailable", reason: action.reason };
   if (action.kind === "recovery") return { mode: "recovery", reason: action.reason };
-  if (action.kind === "next_step") return { mode: "next_step", step_name: action.name };
+  if (action.kind === "next_step") {
+    const name = action.work.kind === "step" ? action.work.step.name : action.work.group.name;
+    return { mode: "next_step", step_name: name };
+  }
   return { mode: "native" };
 }
 

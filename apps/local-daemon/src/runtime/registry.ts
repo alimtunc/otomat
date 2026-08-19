@@ -1,12 +1,8 @@
-import {
-  type RuntimeAvailability,
-  type RuntimeDescriptor,
-  type RuntimeKind,
-  type RuntimeUnavailableReason,
-} from "@otomat/domain";
+import { type RuntimeAvailability, type RuntimeDescriptor, type RuntimeKind } from "@otomat/domain";
 
 import { isFakeRuntimeEnabled, resolveBinaryPath } from "./availability.js";
 import type { RuntimeAdapter } from "./contract.js";
+import { RuntimeUnavailableError } from "./errors.js";
 import {
   CLAUDE_ADAPTER_ID,
   CLAUDE_BINARY,
@@ -47,10 +43,6 @@ export const RUNTIME_IDS =
   // SAFETY: Object.keys widens to string; REGISTRY's keys are exactly the known runtime ids.
   Object.keys(REGISTRY) as KnownRuntimeId[];
 
-export function isKnownRuntimeId(value: string): value is KnownRuntimeId {
-  return value in REGISTRY;
-}
-
 export class UnknownRuntimeError extends Error {
   constructor(id: string) {
     super(`unknown runtime "${id}" (known: ${RUNTIME_IDS.join(", ")})`);
@@ -58,14 +50,8 @@ export class UnknownRuntimeError extends Error {
   }
 }
 
-export class RuntimeUnavailableError extends Error {
-  constructor(
-    readonly runtime: string,
-    readonly reason: RuntimeUnavailableReason,
-  ) {
-    super(`runtime "${runtime}" is unavailable (${reason})`);
-    this.name = "RuntimeUnavailableError";
-  }
+export function isKnownRuntimeId(value: string): value is KnownRuntimeId {
+  return value in REGISTRY;
 }
 
 export function createRuntimeAdapter(id: string): RuntimeAdapter {

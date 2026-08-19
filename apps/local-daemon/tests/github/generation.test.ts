@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createPullRequestGenerator, sanitizeBranchName, type GenerationInput } from "#github";
 import type { CommandRequest, CommandResult } from "#github";
+import { RuntimeUnavailableError } from "#runtime";
 
 const INPUT: GenerationInput = {
   cwd: "/worktree",
@@ -60,6 +61,28 @@ describe("sanitizeBranchName", () => {
 });
 
 describe("pull request generator", () => {
+  it("maps a sandbox preflight refusal before invoking the generator command", async () => {
+    const fake = runner([]);
+    const agent = {
+      ...AGENT,
+      preflight: () => {
+        throw new RuntimeUnavailableError(
+          "codex",
+          "sandbox_unavailable",
+          "Codex sandbox unavailable on this host",
+        );
+      },
+    };
+
+    await expect(createPullRequestGenerator(fake.run).generate(agent, INPUT)).rejects.toMatchObject(
+      {
+        code: "pr_generator_unavailable",
+        message: "Codex sandbox unavailable on this host",
+      },
+    );
+    expect(fake.requests).toEqual([]);
+  });
+
   it("sends the configured model and effort, and answers one structured subject", async () => {
     const fake = runner([{ stdout: answer(PROPOSAL), stderr: "", exitCode: 0 }]);
 

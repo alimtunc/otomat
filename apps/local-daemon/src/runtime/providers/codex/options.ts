@@ -5,6 +5,7 @@ import { cachedProviderProbe } from "#runtime/probe/cache";
 import { helpFlagValues } from "#runtime/probe/help-flags";
 
 import { codexBundledCatalog } from "./models.js";
+import { probeCodexSandbox, type CodexSandboxProbeResult } from "./sandbox.js";
 
 const CODEX_EXEC_HELP_ARGS = ["exec", "--help"] as const;
 
@@ -44,18 +45,26 @@ const APPROVAL_DESCRIPTIONS = new Map<string, string>([
 /** The sandbox value Codex itself names for its danger: it removes the OS-level confinement entirely. */
 const DANGEROUS_SANDBOXES = new Set(["danger-full-access"]);
 
-function sandboxDescriptor(help: string): ProviderOptionDescriptor | null {
+function sandboxDescriptor(
+  help: string,
+  capability: CodexSandboxProbeResult | null,
+): ProviderOptionDescriptor | null {
   const values = helpFlagValues(help, CODEX_SANDBOX_FLAG);
   if (values === null || values.length === 0) return null;
+  const supported =
+    capability?.status === "unavailable"
+      ? values.filter((value) => value === "danger-full-access")
+      : values;
+  if (supported.length === 0) return null;
   return {
     key: "sandbox",
     description: "What the OS-level sandbox lets Codex write while it runs.",
-    choices: values.map((value) => ({
+    choices: supported.map((value) => ({
       value,
       description: SANDBOX_DESCRIPTIONS.get(value) ?? null,
       dangerous: DANGEROUS_SANDBOXES.has(value),
     })),
-    default_value: values.includes(CODEX_DEFAULT_SANDBOX) ? CODEX_DEFAULT_SANDBOX : null,
+    default_value: supported.includes(CODEX_DEFAULT_SANDBOX) ? CODEX_DEFAULT_SANDBOX : null,
   };
 }
 
@@ -114,8 +123,11 @@ function reasoningEffortDescriptor(binary: string, model: string | null): Reason
   };
 }
 
-function detectionDetail(note: string | null): string {
-  return note === null ? `${HELP_DETAIL}, ${CATALOG_DETAIL}.` : `${HELP_DETAIL}. ${note}`;
+function detectionDetail(note: string | null, capability: CodexSandboxProbeResult | null): string {
+  const catalog = note === null ? `${HELP_DETAIL}, ${CATALOG_DETAIL}.` : `${HELP_DETAIL}. ${note}`;
+  if (capability?.status !== "unavailable") return catalog;
+  const { diagnostics } = capability;
+  return `${catalog} Confined sandboxes are unavailable on host "${diagnostics.host}": ${diagnostics.stderr || capability.cause}. ${capability.remediation}`;
 }
 
 /**
@@ -128,11 +140,15 @@ export function codexOptionSupport(binary: string, model: string | null): Runtim
   if (probe.status !== "ok") {
     return { detection: { status: probe.status, detail: probe.detail }, options: [] };
   }
+  const capability = process.platform === "linux" ? probeCodexSandbox(binary, process.cwd()) : null;
   const reasoning = reasoningEffortDescriptor(binary, model);
   const options = [
-    sandboxDescriptor(probe.stdout),
+    sandboxDescriptor(probe.stdout, capability),
     approvalDescriptor(probe.stdout),
     reasoning.descriptor,
   ].filter((option): option is ProviderOptionDescriptor => option !== null);
-  return { detection: { status: "ok", detail: detectionDetail(reasoning.note) }, options };
+  return {
+    detection: { status: "ok", detail: detectionDetail(reasoning.note, capability) },
+    options,
+  };
 }

@@ -319,6 +319,9 @@ describe("runtime availability contract", () => {
     expect(
       runtimeAvailabilitySchema.parse({ status: "unavailable", reason: "binary_not_found" }),
     ).toEqual({ status: "unavailable", reason: "binary_not_found" });
+    expect(
+      runtimeAvailabilitySchema.parse({ status: "unavailable", reason: "sandbox_unavailable" }),
+    ).toEqual({ status: "unavailable", reason: "sandbox_unavailable" });
   });
 
   it("rejects an unavailable state with an unknown reason", () => {

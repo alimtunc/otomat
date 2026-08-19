@@ -124,6 +124,20 @@ for the runtime and, where the provider scopes them that way, the selected model
 (Codex publishes reasoning levels per model). A non-`ok` detection carries no
 options and the runtime still launches on its provider defaults.
 
+Codex's confined Linux choices have a second, credential-free host gate:
+`codex sandbox true` must start the installed CLI's real namespace sandbox in
+the target cwd. A successful answer is cached by binary identity and cwd; a
+failure is not cached, so correcting the host makes the next launch immediately
+retryable. A failed probe removes `read-only` and `workspace-write` from the
+announced choices while leaving `danger-full-access` reachable only through its
+existing explicit dangerous-value confirmation. Launch, append and resume
+preflight the frozen config before creating a provider session, PR metadata
+generation preflights its read-only invocation, and the adapter repeats the
+guard before spawn. Refusals report the redacted effective argv, cwd,
+host/environment, CLI version, requested and resolved sandbox, exit/stderr and
+the relevant user/network-namespace settings; they never substitute an
+unconfined mode.
+
 A published catalog is a contract that moves: Codex 0.147 lists a reasoning level
 as `{ effort, description }` where earlier releases listed the bare identifier.
 Both shapes parse, into the same normalised level, because either can come from a

@@ -4,6 +4,8 @@ import {
   type PullRequestProposal,
 } from "@otomat/domain";
 
+import { RuntimeUnavailableError } from "#runtime";
+
 import { commandSucceeded } from "../cli-commands.js";
 import { pullRequestBody } from "../conventions/compose.js";
 import { GitHubPublicationError } from "../errors.js";
@@ -47,6 +49,14 @@ function compose(
 export function createPullRequestGenerator(run: CommandRunner): PullRequestGenerator {
   return {
     async generate(agent: GenerationAgent, input: GenerationInput): Promise<PullRequestProposal> {
+      try {
+        agent.preflight?.(input.cwd);
+      } catch (error) {
+        if (error instanceof RuntimeUnavailableError) {
+          throw new GitHubPublicationError("pr_generator_unavailable", error.message);
+        }
+        throw error;
+      }
       const result = await run({
         command: agent.command,
         args: agent.args,

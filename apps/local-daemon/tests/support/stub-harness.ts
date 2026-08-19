@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { clearProviderProbeCache } from "#runtime";
+import { clearCodexSandboxProbeCache } from "#runtime/providers/codex/sandbox";
 
 /** The provider-CLI stand-in binary, injected via the adapters' binary constructor parameter. */
 export const STUB_BIN = fileURLToPath(new URL("./stub-provider.mjs", import.meta.url));
@@ -16,6 +17,7 @@ export function stubFixture(name: string): string {
 
 export function setupStubHarness(prefix: string): string {
   clearProviderProbeCache();
+  clearCodexSandboxProbeCache();
   return mkdtempSync(join(tmpdir(), prefix));
 }
 
@@ -30,4 +32,5 @@ export function teardownStubHarness(worktree: string): void {
     if (key.startsWith("OTOMAT_STUB_")) delete process.env[key];
   }
   clearProviderProbeCache();
+  clearCodexSandboxProbeCache();
 }

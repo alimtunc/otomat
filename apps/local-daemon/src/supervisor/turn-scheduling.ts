@@ -6,6 +6,7 @@ import { agentSessionMachine, type RunPlanCompetitor } from "@otomat/domain";
 import { sessionDir } from "#events";
 
 import { spawnTurn } from "./lifecycle.js";
+import { preflightRuntimeConfig } from "./runtime-preflight.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
 import { trackPending, type SupervisorState } from "./state.js";
 import type { TurnContext } from "./types.js";
@@ -20,6 +21,7 @@ export function insertTurn(
     throw new Error(`run ${run.id} frozen plan step ${step.id} is missing its agent`);
   }
   const runtime = ensureRuntimeAgent(state.db, step.agent);
+  preflightRuntimeConfig(runtime, step.config ?? null, worktreePath);
   const agentSessionId = randomUUID();
   insertAgentSession(state.db, {
     id: agentSessionId,
