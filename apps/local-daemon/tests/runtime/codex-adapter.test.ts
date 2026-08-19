@@ -91,6 +91,7 @@ describe("CodexRuntimeAdapter", () => {
 
   it("surfaces an [otomat] diagnostic when the provider exits without reporting a result", async () => {
     process.env["OTOMAT_STUB_EXIT"] = "3";
+    process.env["OTOMAT_STUB_EXITS"] = JSON.stringify({ "sandbox true": 0 });
     const adapter = new CodexRuntimeAdapter(STUB_BIN);
     const sink = new MemorySink();
 
@@ -117,17 +118,14 @@ describe("CodexRuntimeAdapter", () => {
     expect(final.error?.message).toMatch(/worktree .* does not exist/);
   });
 
-  it("fails with an [otomat] diagnostic when the binary cannot be spawned", async () => {
+  it("refuses before spawn when the binary cannot run the sandbox probe", async () => {
     const adapter = new CodexRuntimeAdapter("/nonexistent/codex-binary");
     const sink = new MemorySink();
 
-    const final = await adapter.run(input(worktree), sink, new AbortController().signal);
-
-    expect(final.status).toBe("failed");
-    expect(final.error?.message).toMatch(/failed to run codex: spawn .*ENOENT/);
-
-    const diagnostic = sink.events.find((e) => e.source === "otomat");
-    expect(diagnostic?.payload["text"]).toMatch(/^\[otomat\] failed to run codex: spawn .*ENOENT/);
+    await expect(adapter.run(input(worktree), sink, new AbortController().signal)).rejects.toThrow(
+      /Codex sandbox unavailable/,
+    );
+    expect(sink.events).toEqual([]);
   });
 
   it("resumes via exec resume with the thread id and refuses to resume without one", async () => {
@@ -294,5 +292,44 @@ describe("CodexRuntimeAdapter", () => {
     const stderrEvent = sink.events.find((e) => e.payload["stream"] === "stderr");
     expect(stderrEvent?.type).toBe("runtime.log");
     expect(stderrEvent?.payload["text"]).toBe("WARN model config fallback");
+  });
+
+  it("scrubs inherited Codex session markers without dropping Codex home", async () => {
+    const envFile = join(worktree, "stub-env.json");
+    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
+    process.env["OTOMAT_STUB_ENV_FILE"] = envFile;
+    const prior = {
+      thread: process.env["CODEX_THREAD_ID"],
+      payload: process.env["CODEX_REMOTE_PAYLOAD"],
+      network: process.env["CODEX_SANDBOX_NETWORK_DISABLED"],
+      home: process.env["CODEX_HOME"],
+    };
+    try {
+      process.env["CODEX_THREAD_ID"] = "outer-thread";
+      process.env["CODEX_REMOTE_PAYLOAD"] = "outer-payload";
+      process.env["CODEX_SANDBOX_NETWORK_DISABLED"] = "1";
+      process.env["CODEX_HOME"] = worktree;
+
+      await new CodexRuntimeAdapter(STUB_BIN).run(
+        input(worktree),
+        new MemorySink(),
+        new AbortController().signal,
+      );
+
+      const childEnv: NodeJS.ProcessEnv = JSON.parse(readFileSync(envFile, "utf8"));
+      expect(childEnv["CODEX_THREAD_ID"]).toBeUndefined();
+      expect(childEnv["CODEX_REMOTE_PAYLOAD"]).toBeUndefined();
+      expect(childEnv["CODEX_SANDBOX_NETWORK_DISABLED"]).toBeUndefined();
+      expect(childEnv["CODEX_HOME"]).toBe(worktree);
+    } finally {
+      if (prior.thread === undefined) delete process.env["CODEX_THREAD_ID"];
+      else process.env["CODEX_THREAD_ID"] = prior.thread;
+      if (prior.payload === undefined) delete process.env["CODEX_REMOTE_PAYLOAD"];
+      else process.env["CODEX_REMOTE_PAYLOAD"] = prior.payload;
+      if (prior.network === undefined) delete process.env["CODEX_SANDBOX_NETWORK_DISABLED"];
+      else process.env["CODEX_SANDBOX_NETWORK_DISABLED"] = prior.network;
+      if (prior.home === undefined) delete process.env["CODEX_HOME"];
+      else process.env["CODEX_HOME"] = prior.home;
+    }
   });
 });

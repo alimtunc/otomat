@@ -98,6 +98,17 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       if (error instanceof RunNotResumableError) {
         return c.json({ error: "run_not_resumable", message: error.message }, 409);
       }
+      if (error instanceof RuntimeUnavailableError) {
+        return c.json(
+          {
+            error: "runtime_unavailable",
+            runtime: error.runtime,
+            reason: error.reason,
+            message: error.message,
+          },
+          409,
+        );
+      }
       if (error instanceof IllegalTransitionError && error.machine === "issue") {
         return c.json({ error: "issue_closed", message: error.message }, 409);
       }

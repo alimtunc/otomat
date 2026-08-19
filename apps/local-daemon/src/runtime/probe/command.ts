@@ -2,6 +2,8 @@ import { spawnSync } from "node:child_process";
 
 import type { ProbeStatus } from "@otomat/domain";
 
+import { providerProcessEnv } from "#runtime/cli/environment";
+
 const PROBE_TIMEOUT_MS = 10_000;
 const PROBE_MAX_BUFFER = 16 * 1024 * 1024;
 const DETAIL_MAX_LENGTH = 200;
@@ -37,6 +39,7 @@ function classifyFailure(stderr: string, exitCode: number | null): ProbeResult {
 export function probeProviderCommand(binary: string, args: readonly string[]): ProbeResult {
   const result = spawnSync(binary, args, {
     encoding: "utf8",
+    env: providerProcessEnv(),
     timeout: PROBE_TIMEOUT_MS,
     maxBuffer: PROBE_MAX_BUFFER,
   });

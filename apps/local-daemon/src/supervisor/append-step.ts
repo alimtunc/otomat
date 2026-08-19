@@ -24,6 +24,8 @@ import { scheduleNextStep } from "./advance.js";
 import { signalIssueLifecycle } from "./issue-lifecycle.js";
 import { buildPlanRevisedEvent } from "./plan-revision.js";
 import { reopenIssue, reopenSettledRun, requireRunRow } from "./resume.js";
+import { requireWorktreePath } from "./resume.js";
+import { preflightRuntimeConfig } from "./runtime-preflight.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
 import { hasRunActivity, type SupervisorState } from "./state.js";
 import type { AppendStepInput } from "./types.js";
@@ -85,7 +87,8 @@ export async function appendRunStep(
     levels: [overrideLevel("step", input.overrides)],
     runtimeSource: "step",
   });
-  ensureRuntimeAgent(db, config.runtime);
+  const runtime = ensureRuntimeAgent(db, config.runtime);
+  preflightRuntimeConfig(runtime, config, requireWorktreePath(state, run));
 
   const step: RunPlanStep = {
     id: randomUUID(),

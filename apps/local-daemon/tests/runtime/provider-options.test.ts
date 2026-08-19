@@ -232,6 +232,22 @@ describe("codex provider options", () => {
     expect(dangerous.map((choice) => choice.value)).toEqual(["danger-full-access"]);
   });
 
+  it("withholds confined sandboxes when the host capability probe is denied", () => {
+    codexFixtures();
+    process.env["OTOMAT_STUB_EXITS"] = JSON.stringify({ "sandbox true": 1 });
+    process.env["OTOMAT_STUB_STDERRS"] = JSON.stringify({
+      "sandbox true": "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
+    });
+
+    const support = new CodexRuntimeAdapter(STUB_BIN).describeOptions("gpt-5.6-sol");
+    const sandbox = descriptor(support.options, "sandbox");
+
+    expect(values(sandbox)).toEqual(["danger-full-access"]);
+    expect(sandbox?.default_value).toBeNull();
+    expect(support.detection.detail).toMatch(/Confined sandboxes are unavailable/);
+    expect(support.detection.detail).toMatch(/did not fall back to danger-full-access/);
+  });
+
   it("describes Codex's Auto preset as workspace-write plus on-request", () => {
     codexFixtures();
 

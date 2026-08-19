@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+
 import type { ProviderOptions, RuntimeCapabilities } from "@otomat/domain";
 
 import {
@@ -12,6 +14,7 @@ import type {
   RuntimeFinalState,
   RuntimeOneShot,
   RuntimeOptionSupport,
+  RuntimePreflightInput,
   RuntimeResumeInput,
   RuntimeRunInput,
   RuntimeSessionRef,
@@ -22,6 +25,7 @@ import type { RuntimeSink } from "#runtime/sinks";
 import { CodexFrameMapper } from "./frames.js";
 import { codexModelSupport } from "./models.js";
 import { CODEX_DEFAULT_SANDBOX, codexOptionSupport } from "./options.js";
+import { CodexSandboxUnavailableError, probeCodexSandbox } from "./sandbox.js";
 
 export const CODEX_ADAPTER_ID = "codex";
 
@@ -67,11 +71,33 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
     };
   }
 
+  preflight(input: RuntimePreflightInput): void {
+    const requested = input.options.sandbox ?? "provider-default";
+    const resolved = input.options.sandbox ?? CODEX_DEFAULT_SANDBOX;
+    if (resolved === "danger-full-access" || process.platform !== "linux") return;
+    const probe = probeCodexSandbox(this.binary, input.cwd);
+    if (probe.status === "unavailable") {
+      throw new CodexSandboxUnavailableError(
+        requested,
+        resolved,
+        ["exec", ...this.execArgs(input), "-"],
+        probe,
+      );
+    }
+  }
+
   async run(
     input: RuntimeRunInput,
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
+    if (existsSync(input.cwd)) {
+      this.preflight({
+        cwd: input.cwd,
+        options: input.options ?? {},
+        model: input.model ?? null,
+      });
+    }
     const args = ["exec", ...this.execArgs(input), "-"];
     return runCliTurn(this.spec(args, input, input), sink, signal);
   }
@@ -82,13 +108,20 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
+    if (existsSync(input.cwd)) {
+      this.preflight({
+        cwd: input.cwd,
+        options: input.options ?? {},
+        model: input.model ?? null,
+      });
+    }
     // Every configured flag is `exec`-level; the real CLI rejects them after the `resume` subcommand.
     const args = ["exec", ...this.execArgs(input), "resume", requireProviderSession(session), "-"];
     return runCliTurn(this.spec(args, input, session), sink, signal);
   }
 
   /** JSONL output plus the frozen sandbox, approval policy, reasoning level and model, in that order. */
-  private execArgs(input: RuntimeRunInput | RuntimeResumeInput): string[] {
+  private execArgs(input: { options?: ProviderOptions; model?: string | null }): string[] {
     const options = input.options ?? {};
     const args = ["--json", "--sandbox", options.sandbox ?? CODEX_DEFAULT_SANDBOX];
     if (options.approval_policy !== undefined) {

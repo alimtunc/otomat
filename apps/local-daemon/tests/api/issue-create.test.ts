@@ -85,6 +85,27 @@ it("maps RuntimeUnavailableError from launch to a 409 with the reason", async ()
   });
 });
 
+it("returns the actionable sandbox refusal from launch", async () => {
+  const message =
+    "Codex sandbox unavailable on host vps: requested=provider-default; resolved=workspace-write";
+  const app = makeApiApp(t, {
+    supervisor: stubSupervisor({
+      start: async () => {
+        throw new RuntimeUnavailableError("codex", "sandbox_unavailable", message);
+      },
+    }),
+  });
+  const res = await post(app, "/api/runs", { prompt: "do it", runtime: "codex" });
+
+  expect(res.status).toBe(409);
+  expect(await json<unknown>(res)).toEqual({
+    error: "runtime_unavailable",
+    runtime: "codex",
+    reason: "sandbox_unavailable",
+    message,
+  });
+});
+
 it("serves the runtime catalog with probed availability and hides fake in production", async () => {
   const app = makeApiApp(t);
   const listed = await json<RuntimeDescriptor[]>(await request(app, "/api/runtimes"));

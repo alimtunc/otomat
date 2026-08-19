@@ -15,6 +15,7 @@ export { isFakeRuntimeEnabled, resolveBinaryPath } from "./availability.js";
 export { asString } from "./cli/frame-guards.js";
 export * from "./contract.js";
 export * from "./events.js";
+export * from "./errors.js";
 export { describeRuntimeModelCatalog } from "./models/catalog.js";
 export { ModelSelectionRefusedError, resolveModelSelection } from "./models/resolve.js";
 export { clearProviderProbeCache } from "./probe/cache.js";

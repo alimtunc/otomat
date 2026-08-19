@@ -29,7 +29,11 @@ export const runtimeCapabilitiesSchema = z.object({
 export type RuntimeCapabilities = z.infer<typeof runtimeCapabilitiesSchema>;
 
 /** Why a runtime cannot be used right now; safe to show verbatim in the UI. */
-export const RUNTIME_UNAVAILABLE_REASONS = ["binary_not_found", "not_enabled"] as const;
+export const RUNTIME_UNAVAILABLE_REASONS = [
+  "binary_not_found",
+  "not_enabled",
+  "sandbox_unavailable",
+] as const;
 export type RuntimeUnavailableReason = (typeof RUNTIME_UNAVAILABLE_REASONS)[number];
 
 /** Probed without launching the provider: `version` is null when no safe probe reports one. */

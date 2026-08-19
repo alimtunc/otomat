@@ -24,10 +24,6 @@ if (stdinFile) {
   process.stdin.resume();
 }
 
-if (process.env.OTOMAT_STUB_STDERR) {
-  process.stderr.write(`${process.env.OTOMAT_STUB_STDERR}\n`);
-}
-
 // OTOMAT_STUB_FIXTURES maps a joined argv ("exec --help") to its own fixture, so one stub can answer several probes in a single test.
 function fixtureForArgv() {
   const byArgv = process.env.OTOMAT_STUB_FIXTURES;
@@ -35,6 +31,16 @@ function fixtureForArgv() {
   const map = JSON.parse(byArgv);
   return map[process.argv.slice(2).join(" ")] ?? process.env.OTOMAT_STUB_FIXTURE;
 }
+
+function mappedValue(name, fallback) {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const map = JSON.parse(raw);
+  return map[process.argv.slice(2).join(" ")] ?? fallback;
+}
+
+const stderr = mappedValue("OTOMAT_STUB_STDERRS", process.env.OTOMAT_STUB_STDERR);
+if (stderr) process.stderr.write(`${stderr}\n`);
 
 const fixture = fixtureForArgv();
 if (fixture) {
@@ -47,5 +53,5 @@ if (fixture) {
 if (process.env.OTOMAT_STUB_HANG === "1") {
   setInterval(() => {}, 60_000);
 } else {
-  process.exit(Number(process.env.OTOMAT_STUB_EXIT ?? 0));
+  process.exit(Number(mappedValue("OTOMAT_STUB_EXITS", process.env.OTOMAT_STUB_EXIT ?? 0)));
 }

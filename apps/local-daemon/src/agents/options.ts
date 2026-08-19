@@ -41,7 +41,7 @@ function refusal(
     );
   }
   return new ProfileOptionUnsupportedError(
-    `runtime "${runtime}" does not accept "${key}" value "${value}"; pick one of ${descriptor.choices.map((choice) => choice.value).join(", ")}`,
+    `runtime "${runtime}" does not accept requested "${key}" value "${value}"; pick one of ${descriptor.choices.map((choice) => choice.value).join(", ")}. ${support.detection.detail}`,
   );
 }
 

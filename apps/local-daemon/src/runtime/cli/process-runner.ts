@@ -1,6 +1,8 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 
+import { providerProcessEnv } from "./environment.js";
+
 /** Grace between the abort SIGTERM and the forced SIGKILL on the provider child. */
 const KILL_GRACE_MS = 5000;
 
@@ -22,23 +24,13 @@ export interface CliProcessExit {
   aborted: boolean;
 }
 
-/** Ambient nested-session markers scrubbed so a provider spawned by the daemon never believes it runs inside another agent session (same isolation stance as the daemon git wrapper). */
-function scrubbedEnv(): NodeJS.ProcessEnv {
-  const clean: NodeJS.ProcessEnv = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    if (key === "CLAUDECODE" || key.startsWith("CLAUDE_CODE_")) continue;
-    clean[key] = value;
-  }
-  return clean;
-}
-
 /** Streams the child's stdout/stderr line-by-line and resolves only once the process is gone and both pipes are drained; on abort, SIGTERM escalates to SIGKILL on the child's whole process group — no orphaned grandchildren. Rejects only on spawn failure. */
 export function runCliProcess(options: CliProcessOptions): Promise<CliProcessExit> {
   return new Promise((resolve, reject) => {
     // detached makes the child a process-group leader, so kill signals reach grandchildren a provider CLI spawns.
     const child = spawn(options.command, options.args, {
       cwd: options.cwd,
-      env: scrubbedEnv(),
+      env: providerProcessEnv(),
       stdio: ["pipe", "pipe", "pipe"],
       detached: true,
     });

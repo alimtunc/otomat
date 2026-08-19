@@ -27,6 +27,7 @@ import {
   requireRunRow,
   RunNotResumableError,
 } from "./resume.js";
+import { preflightRunPlan } from "./runtime-preflight.js";
 import type { SupervisorState } from "./state.js";
 import { driveCompeteGroupTo } from "./transitions.js";
 import { scheduleTurn } from "./turn-scheduling.js";
@@ -97,6 +98,11 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
   if (action.kind === "unavailable") {
     throw new RunNotResumableError(`run ${runId} cannot be resumed: ${action.reason}`);
   }
+
+  const worktreePath = state.repositories
+    .forRepository(stopped.repository_id)
+    ?.service.get(stopped.id)?.path;
+  if (worktreePath !== undefined) preflightRunPlan(stopped.plan_json, worktreePath);
 
   reopenIssue(state.db, stopped);
   if (action.kind === "native" || action.kind === "recovery") {
