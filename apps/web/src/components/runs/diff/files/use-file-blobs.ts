@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 import { blobsErrorMessage } from "@web/components/runs/diff/files/blobs-error";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export interface FileBlobsContext {
   base: string | null;
@@ -16,7 +16,9 @@ export interface UseFileBlobsResult {
   isPending: boolean;
   error: string | null;
   requested: boolean;
+  /** Latched, so folding the file back and expanding it again never issues a second request. */
   request: () => void;
+  retry: () => void;
 }
 
 /** `scope` must be the scope the patch came from: expanded context read from another pair of trees would not be this file. */
@@ -34,11 +36,18 @@ export function useFileBlobs(
   });
 
   const blobs = query.data ?? null;
+  // A fresh object rebuilds @git-diff-view's file — and drops its expansion — on every render.
+  const context = useMemo(
+    () => (blobs === null ? null : { base: blobs.base_content, head: blobs.head_content }),
+    [blobs],
+  );
+
   return {
-    context: blobs === null ? null : { base: blobs.base_content, head: blobs.head_content },
+    context,
     isPending: query.isLoading,
     error: query.error === null ? null : blobsErrorMessage(query.error),
     requested,
     request: () => setRequested(true),
+    retry: () => void query.refetch(),
   };
 }

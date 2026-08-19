@@ -21,6 +21,17 @@
     opacity: 1;
   }
 
+  /* @git-diff-view ships its own 16px glyphs; these mirror IconButton `sm` — a compact
+     0.875rem mark on a 1.5rem target — since the design system cannot reach inside it. */
+  .diff-line-hunk-action button {
+    min-height: 1.5rem;
+  }
+
+  .diff-line-hunk-action svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
   .diff-line:focus-visible {
     outline: 2px solid var(--iris-ring);
     outline-offset: -2px;

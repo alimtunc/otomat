@@ -1,5 +1,5 @@
 import type { ReviewCommentContract, ReviewDiffContract } from "@otomat/domain";
-import { revealAndFocus } from "@web/components/runs/diff/diff-nav";
+import { nextUnreviewedFile, revealAndFocus } from "@web/components/runs/diff/diff-nav";
 import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
 import type { DiffSortMode } from "@web/components/runs/diff/prefs/prefs";
 import { useActiveDiffFile, type ActiveDiffFile } from "@web/components/runs/diff/use-active-file";
@@ -42,8 +42,8 @@ export interface DiffInteractions {
 export function useDiffInteractions(input: DiffInteractionsInput): DiffInteractions {
   const back = useBackNavigation(null);
   const active = useActiveDiffFile();
-  const collapsed = useCollapsedFiles();
   const reviewed = useReviewedFiles(input.subjectId, input.diff.files);
+  const collapsed = useCollapsedFiles(input.diff.files, reviewed.paths);
   const ordered = sortDiffFiles(input.diff.files, input.sort);
   const partition = partitionComments(input.diff, input.comments);
   const visible = hideReviewedFiles(ordered, {
@@ -55,13 +55,19 @@ export function useDiffInteractions(input: DiffInteractionsInput): DiffInteracti
   const revealFile = (path: string): void => {
     active.select(path);
     collapsed.set(path, false);
-    const card = document.getElementById(diffFileDomId({ path }));
-    if (card !== null) revealAndFocus(card, "start");
+    // The card only has its final height once the expand — and any file the mark hid — has painted.
+    requestAnimationFrame(() => {
+      const card = document.getElementById(diffFileDomId({ path }));
+      if (card !== null) revealAndFocus(card, "start");
+    });
   };
 
   const toggleReviewed = (path: string, next: boolean): void => {
     reviewed.setReviewed(path, next);
     collapsed.set(path, next);
+    if (!next) return;
+    const following = nextUnreviewedFile(visible.files, path, reviewed.paths);
+    if (following !== null) revealFile(following.path);
   };
 
   const selectComment = (comment: ReviewCommentContract): void => {

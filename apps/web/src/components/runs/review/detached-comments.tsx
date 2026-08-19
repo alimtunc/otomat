@@ -21,7 +21,7 @@ export function DetachedComments({
 }: DetachedCommentsProps) {
   if (comments.length === 0) return null;
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-2 p-4">
       <h2 className="text-xs font-medium uppercase tracking-wide text-text-tertiary">
         Comments off the current diff
       </h2>
