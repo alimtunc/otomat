@@ -1,6 +1,6 @@
-import type { RemoteHostStatus } from "@otomat/domain";
+import { PREVIEW_BUILD_SHA, type RemoteHostStatus } from "@otomat/domain";
 
-import { BUILD_SHA, type RemoteDeployment } from "../bootstrap/scripts.js";
+import type { RemoteDeployment } from "../bootstrap/scripts.js";
 import { trimDetail } from "../bootstrap/status.js";
 import { remoteBusyRuns } from "../idle.js";
 import type { RemoteSessionHandle } from "../session.js";
@@ -96,7 +96,7 @@ export class RemoteUpgradeCoordinator {
     this.cancelRecheck();
     // A journey that cannot go on stops speaking for the host, which its own status then describes.
     const expected = this.options.expectedBuild;
-    if (expected === null || !BUILD_SHA.test(expected)) {
+    if (expected === null || !PREVIEW_BUILD_SHA.test(expected)) {
       return this.rest({ ok: false, message: NO_BUILD });
     }
     const alias = this.options.alias();

@@ -403,6 +403,43 @@ offline: the session's reconnect loop keeps trying past its schedule but stops c
 hiccup once it is exhausted, so a host that will never come up says why. Full contract in
 [`docs/ai/remote-execution-host.md`](remote-execution-host.md).
 
+## Web Previews Per Pull Request
+
+A pull request is testable at a URL, without a DMG. Cloudflare Pages serves that commit's cockpit
+build behind Access; the deployment carries one runtime fact beside its assets — `preview.json`,
+naming its pull request and its commit — and everything else is derived from it. `apps/web/src/preview`
+resolves the session before the app graph is imported, because `api/client` reads its transport when
+its own module is evaluated: no daemon routed yet or none answering yet is the **sandbox**, the same
+commit answering is **live**, and any other commit is **blocked**. A build mismatch is refused rather
+than degraded — the API the cockpit would call is not the one this bundle was compiled against — and
+a starting instance is progress, never a failure screen.
+
+The sandbox is not a second client. It is a `fetch` and an `EventSource` handed to the typed client
+through `DaemonClientConfig`, so every fixture is validated by the daemon's own zod contracts and an
+SSE replay drives the real conversation and timeline. It is dynamically imported, so no desktop
+bundle carries it, it answers reads only, and a read it has no fixture for says
+`sandbox_unsupported` instead of impersonating a daemon 404.
+
+**Same-origin façade, not a cross-origin daemon endpoint.** Both were considered. A cross-origin
+daemon hostname needs four coordinated relaxations for one feature — `credentials: "include"` in the
+typed client, `Access-Control-Allow-Credentials` on the daemon, `withCredentials` on `EventSource`,
+and a cross-site `CF_Authorization` cookie — and turns an Access refusal into an opaque redirect. The
+Pages Function at `apps/web/functions/api/[[path]].ts` proxies `/api/*` to the pull request's tunnel
+instead: the browser sees one Access-protected origin, the upstream `Response` is returned as-is so
+SSE streams, and the daemon's loopback protections are **untouched**. Nothing of the browser's
+identity crosses over — no `Origin`, no `Cookie`, no `Host` — the machine hop carries an Access
+service token, and cloudflared rewrites `Host` to loopback, so `hostGuard` and `allowedOrigin` keep
+refusing everything else with `OTOMAT_ALLOWED_ORIGINS` unset.
+
+The instance itself is the one OTO-49 already defines, keyed by commit:
+`previewInstanceDeployment` moved into `packages/domain` so the desktop shell and CI provisioning
+cannot derive two ports for one commit. `scripts/preview/instance.mjs` provisions, lists and tears
+down over ssh; the tunnel's ingress is **re-derived** from the route descriptor each instance owns
+rather than edited in place, under a lock and below the operator's own marker, so two pull requests
+provision concurrently and a closed one takes nothing else with it. Provisioning a commit tears down
+that pull request's earlier ones, so a pushed branch never leaves a daemon per commit behind. Setup
+and secrets: [`docs/release/web-preview.md`](../release/web-preview.md).
+
 ## Error Diagnostics
 
 Otomat never shows a bare error string. Every incident is classified first —

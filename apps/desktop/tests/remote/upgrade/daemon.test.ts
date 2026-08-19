@@ -1,8 +1,8 @@
+import { previewInstanceDeployment } from "@otomat/domain";
 import { describe, expect, it } from "vitest";
 
 import {
   deploymentForChannel,
-  instanceDeployment,
   LOCAL_DEPLOYMENT,
   type RemoteDeployment,
 } from "#main/remote/bootstrap/scripts";
@@ -91,7 +91,7 @@ describe("upgradeRemoteDaemon", () => {
   });
 
   it("skips the database backup on a deployment whose data does not outlive its build", async () => {
-    const run = upgrade({ deployment: instanceDeployment(BUILD) });
+    const run = upgrade({ deployment: previewInstanceDeployment(BUILD) });
 
     expect(await run.result).toEqual({ ok: true });
     expect(run.steps).toEqual(["stop", "deploy"]);

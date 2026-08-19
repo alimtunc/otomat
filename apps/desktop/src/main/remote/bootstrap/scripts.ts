@@ -1,3 +1,5 @@
+import { previewInstanceDeployment } from "@otomat/domain";
+
 import type { DesktopChannel } from "#shared/channel";
 
 import { lastToken } from "../ssh/tokens.js";
@@ -13,25 +15,6 @@ export const STABLE_DEPLOYMENT: RemoteDeployment = { homeSuffix: ".otomat", port
 
 /** The local channel's own daemon: one deployment for every ad-hoc package, never the stable one. */
 export const LOCAL_DEPLOYMENT: RemoteDeployment = { homeSuffix: ".otomat/local", port: 4320 };
-
-/** What may name a build in host-side paths and scripts: exactly the CI's 7-hex short sha. */
-export const BUILD_SHA = /^[0-9a-f]{7}$/;
-
-const INSTANCE_PORT_BASE = 43100;
-const INSTANCE_PORT_SPAN = 900;
-
-/**
- * A preview build's own isolated daemon on the host, keyed by the build it expects: data,
- * pidfile and port all disjoint from the stable deployment, so testing an artifact never
- * touches the daemon real work runs on. An unidentifiable build shares one "unknown" slot
- * rather than ever falling back to the stable deployment.
- */
-export function instanceDeployment(build: string | null): RemoteDeployment {
-  const key = build !== null && BUILD_SHA.test(build) ? build : "unknown";
-  let hash = 0;
-  for (const char of key) hash = (hash * 31 + (char.codePointAt(0) ?? 0)) % INSTANCE_PORT_SPAN;
-  return { homeSuffix: `.otomat/instances/${key}`, port: INSTANCE_PORT_BASE + hash };
-}
 
 /**
  * The daemon this app targets on a host. `local` and `stable` keep one deployment each, so their
@@ -49,9 +32,9 @@ export function deploymentForChannel(
     case "local":
       return LOCAL_DEPLOYMENT;
     case "preview":
-      return instanceDeployment(build);
+      return previewInstanceDeployment(build);
     case "unknown":
-      return instanceDeployment(null);
+      return previewInstanceDeployment(null);
   }
 }
 

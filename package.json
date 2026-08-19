@@ -14,8 +14,9 @@
     "format:check": "oxfmt --check apps packages",
     "boundaries": "node scripts/import-boundaries.mjs",
     "guardrails": "node --test scripts/guardrails.test.mjs && node scripts/guardrails.mjs",
+    "test:scripts": "node --test scripts/preview/remote.test.mjs",
     "smoke:dist": "pnpm --filter @otomat/local-daemon smoke:dist",
-    "check": "pnpm run format:check && pnpm run lint && pnpm run guardrails && pnpm run build && pnpm run typecheck && pnpm run smoke:dist && pnpm run test",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run guardrails && pnpm run test:scripts && pnpm run build && pnpm run typecheck && pnpm run smoke:dist && pnpm run test",
     "desktop:dev": "node apps/desktop/scripts/dev.mjs",
     "desktop:package": "node apps/desktop/scripts/package-mac.mjs",
     "desktop:preflight": "node apps/desktop/scripts/release-preflight.mjs",
@@ -27,6 +28,7 @@
     "prepare": "lefthook install"
   },
   "devDependencies": {
+    "@otomat/domain": "workspace:*",
     "@otomat/tooling": "workspace:*",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "lefthook": "^2.1.10",

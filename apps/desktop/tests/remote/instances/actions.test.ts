@@ -1,10 +1,7 @@
+import { previewInstanceDeployment } from "@otomat/domain";
 import { describe, expect, it } from "vitest";
 
-import {
-  instanceDeployment,
-  STABLE_DEPLOYMENT,
-  type RemoteDeployment,
-} from "#main/remote/bootstrap/scripts";
+import { STABLE_DEPLOYMENT, type RemoteDeployment } from "#main/remote/bootstrap/scripts";
 import { RemoteInstanceActions } from "#main/remote/instances/actions";
 import type { RunSshScriptOptions, SshScriptResult } from "#main/remote/ssh/script";
 
@@ -42,7 +39,7 @@ describe("RemoteInstanceActions", () => {
           build: "92584b0",
           running: true,
           size_kb: 2048,
-          port: instanceDeployment("92584b0").port,
+          port: previewInstanceDeployment("92584b0").port,
         },
       ],
     });
@@ -72,7 +69,7 @@ describe("RemoteInstanceActions", () => {
     "refuses to %s the instance this app itself is attached to",
     async (method) => {
       const { actions, scripts } = actionsWith(() => ok(""), {
-        deployment: instanceDeployment("92584b0"),
+        deployment: previewInstanceDeployment("92584b0"),
       });
 
       const refused = await actions[method]("92584b0");

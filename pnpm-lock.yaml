@@ -11,6 +11,9 @@ importers:
 
   .:
     devDependencies:
+      '@otomat/domain':
+        specifier: workspace:*
+        version: link:packages/domain
       '@otomat/tooling':
         specifier: workspace:*
         version: link:packages/tooling

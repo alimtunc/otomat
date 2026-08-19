@@ -1,6 +1,7 @@
+import { previewInstanceDeployment } from "@otomat/domain";
 import { describe, expect, it } from "vitest";
 
-import { instanceDeployment, STABLE_DEPLOYMENT } from "#main/remote/bootstrap/scripts";
+import { STABLE_DEPLOYMENT } from "#main/remote/bootstrap/scripts";
 import {
   deleteInstanceScript,
   deployDaemonScript,
@@ -9,17 +10,17 @@ import {
   parseInstanceList,
 } from "#main/remote/instances/scripts";
 
-describe("instanceDeployment", () => {
+describe("previewInstanceDeployment", () => {
   it("keys the home and port on the build, disjoint from the stable deployment", () => {
-    const deployment = instanceDeployment("92584b0");
+    const deployment = previewInstanceDeployment("92584b0");
 
     expect(deployment.homeSuffix).toBe(".otomat/instances/92584b0");
     expect(deployment.port).not.toBe(STABLE_DEPLOYMENT.port);
-    expect(deployment).toEqual(instanceDeployment("92584b0"));
+    expect(deployment).toEqual(previewInstanceDeployment("92584b0"));
   });
 
   it("never falls back to the stable deployment for an unidentifiable build", () => {
-    const deployment = instanceDeployment(null);
+    const deployment = previewInstanceDeployment(null);
 
     expect(deployment.homeSuffix).toBe(".otomat/instances/unknown");
     expect(deployment.homeSuffix).not.toBe(STABLE_DEPLOYMENT.homeSuffix);
@@ -29,7 +30,7 @@ describe("instanceDeployment", () => {
 describe("deployDaemonScript", () => {
   it("targets the deployment home and the artifact named after the build", () => {
     const script = deployDaemonScript({
-      deployment: instanceDeployment("92584b0"),
+      deployment: previewInstanceDeployment("92584b0"),
       build: "92584b0",
       repo: "alimtunc/otomat",
     });

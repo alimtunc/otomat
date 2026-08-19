@@ -1,4 +1,5 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { PreviewStatusBar } from "@web/components/preview/status-bar";
 import { RemoteSessionProvider } from "@web/components/shell/remote-session/provider";
 import { useLinearAutoSync } from "@web/components/shell/use-linear-auto-sync";
 
@@ -8,6 +9,7 @@ function RootLayout() {
   return (
     <RemoteSessionProvider>
       <Outlet />
+      <PreviewStatusBar />
     </RemoteSessionProvider>
   );
 }

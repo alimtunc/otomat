@@ -783,6 +783,26 @@ it("echoes CORS for a loopback origin but not a foreign one", async () => {
   expect(denied.headers.get("access-control-allow-origin")).not.toBe("https://evil.example.com");
 });
 
+// The web preview's topology: cloudflared rewrites `Host` to the loopback origin and the façade
+// forwards no `Origin`, so an instance runs with no `OTOMAT_ALLOWED_ORIGINS` at all.
+it("serves a preview instance through its tunnel while refusing the preview's own public origin", async () => {
+  const app = makeApiApp(t);
+  const throughTunnel = await request(app, "/api/health", {
+    headers: { Host: "127.0.0.1:43142" },
+  });
+  expect(throughTunnel.status).toBe(200);
+
+  const publicHost = await request(app, "/api/health", {
+    headers: { Host: "otomat-pr-142.preview.example.com" },
+  });
+  expect(publicHost.status).toBe(403);
+
+  const browserOrigin = await request(app, "/api/health", {
+    headers: { Host: "127.0.0.1:43142", Origin: "https://pr-142.otomat-web.pages.dev" },
+  });
+  expect(browserOrigin.headers.get("access-control-allow-origin")).toBeNull();
+});
+
 it("streams persisted events over SSE and ends on a terminal run", async () => {
   const runId = "run-sse";
   seedTerminalRun(t.db, runId);
