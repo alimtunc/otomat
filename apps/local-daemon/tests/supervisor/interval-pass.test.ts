@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { startWorkspaceReconciliation } from "#supervisor";
+import { startIntervalPass } from "#supervisor";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -11,13 +11,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it("reconciles at startup, then once per interval, and never two passes at a time", async () => {
+it("passes at startup, then once per interval, and never two passes at a time", async () => {
   let calls = 0;
   const running: Array<() => void> = [];
-  const loop = startWorkspaceReconciliation(() => {
-    calls += 1;
-    return new Promise<void>((resolve) => running.push(resolve));
-  }, 1000);
+  const loop = startIntervalPass(
+    "workspace reconciliation",
+    () => {
+      calls += 1;
+      return new Promise<void>((resolve) => running.push(resolve));
+    },
+    1000,
+  );
 
   expect(calls).toBe(1);
 
@@ -37,10 +41,14 @@ it("reconciles at startup, then once per interval, and never two passes at a tim
 it("keeps ticking after a pass that failed, so a merge is not lost with the error", async () => {
   const logged = vi.spyOn(console, "error").mockImplementation(() => {});
   let calls = 0;
-  const loop = startWorkspaceReconciliation(() => {
-    calls += 1;
-    return Promise.reject(new Error("gh is offline"));
-  }, 1000);
+  const loop = startIntervalPass(
+    "workspace reconciliation",
+    () => {
+      calls += 1;
+      return Promise.reject(new Error("gh is offline"));
+    },
+    1000,
+  );
 
   await vi.advanceTimersByTimeAsync(1000);
   loop.stop();

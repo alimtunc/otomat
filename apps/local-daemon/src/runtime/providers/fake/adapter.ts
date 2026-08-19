@@ -66,6 +66,7 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     resume: true,
     permissions: true,
     diff_hints: false,
+    provider_limit: "unsupported",
   };
   readonly models = FAKE_MODEL_SUPPORT;
 
@@ -149,6 +150,7 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
       provider_session_id: ctx.provider_session_id,
       usage: FAKE_USAGE,
       error: null,
+      limit: null,
       event_count: emitted,
     };
   }

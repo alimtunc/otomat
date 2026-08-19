@@ -97,6 +97,7 @@ function runDetail(runId: string, status: RunState): RunDetail {
         worktree_id: null,
         branch: null,
         worktree_status: null,
+        provider_wait: null,
       },
     ],
     sessions: [

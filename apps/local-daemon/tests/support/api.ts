@@ -92,6 +92,12 @@ export function stubSupervisor(overrides: Partial<Supervisor> = {}): Supervisor 
       throw new Error("start stub not configured");
     },
     waitFor: () => null,
+    scheduleProviderResume: () => {
+      throw new Error("scheduleProviderResume stub not configured");
+    },
+    resumeDueProviderWaits: async () => {
+      throw new Error("resumeDueProviderWaits stub not configured");
+    },
     capacity: () => ({
       max_concurrent_sessions: 4,
       active_sessions: 0,

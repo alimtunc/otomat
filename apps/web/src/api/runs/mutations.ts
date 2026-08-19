@@ -1,6 +1,7 @@
 import { DaemonRequestError } from "@otomat/client";
 import {
   agentProfileErrorSchema,
+  providerResumeScheduleErrorSchema,
   runResumeErrorSchema,
   runStepAppendErrorSchema,
   workspaceAbandonErrorSchema,
@@ -44,6 +45,28 @@ function resumeErrorMessage(error: unknown): string {
   const refusal = runResumeErrorSchema.safeParse(error.body);
   if (refusal.success) return refusal.data.message;
   return "Could not resume this run — the daemon refused it.";
+}
+
+export function useScheduleProviderResume(runId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (resumeAt: string | null) =>
+      daemon.scheduleProviderResume(runId, { resume_at: resumeAt }),
+    onSuccess: (detail) => {
+      client.setQueryData(queryKeys.run(runId), detail);
+      invalidateRunCycleCaches(client, runId);
+    },
+    onError: (error) => toast.error(scheduleErrorMessage(error)),
+  });
+}
+
+function scheduleErrorMessage(error: unknown): string {
+  if (!(error instanceof DaemonRequestError)) {
+    return "Could not change this schedule — is the daemon running?";
+  }
+  const refusal = providerResumeScheduleErrorSchema.safeParse(error.body);
+  if (refusal.success) return refusal.data.message;
+  return "Could not change this schedule — the daemon refused it.";
 }
 
 export function useAbandonWorkspace(runId: string) {

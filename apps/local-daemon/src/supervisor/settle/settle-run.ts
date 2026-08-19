@@ -10,7 +10,13 @@ import { isRunSettled } from "@otomat/domain";
 import { drainRunEvents, drainSessionEvents, readRunEvents } from "#events";
 
 import { classify, describe, TARGETS } from "../classify.js";
-import { eventsForSession, findFinalStatus, findProviderSessionId } from "../evidence.js";
+import {
+  eventsForSession,
+  findFinalStatus,
+  findProviderLimit,
+  findProviderSessionId,
+} from "../evidence.js";
+import { recordProviderWait } from "../provider-wait/record.js";
 import type { ReconcileOutcome } from "../types.js";
 import {
   resolveTurnSession,
@@ -62,7 +68,8 @@ export function settleRun(
   const scoped = turnSession === null ? events : eventsForSession(events, turnSession.id);
   const finalStatus = findFinalStatus(scoped);
   const providerSessionId = findProviderSessionId(scoped);
-  const classification = classify(finalStatus, providerSessionId);
+  const providerLimit = findProviderLimit(scoped);
+  const classification = classify(finalStatus, providerSessionId, providerLimit);
   const evidence: SettleEvidence = {
     classification,
     reason: describe(classification, providerSessionId, orphanTerminated),
@@ -79,6 +86,16 @@ export function settleRun(
   }
   if (turnSession !== null) {
     resolveSessionContributions(db, turnSession.id, classification, options.now);
+    // Persisted before the step reaches `waiting_for_provider`, so the state and the schedule it stands for land together.
+    if (classification === "provider_limited" && providerLimit !== null) {
+      recordProviderWait(
+        db,
+        dataDir,
+        { runId: run.id, stepRunId: turnSession.step_run_id, agentSessionId: turnSession.id },
+        providerLimit,
+        options.now,
+      );
+    }
   }
 
   if (plan === null || turnSession === null) return settleFromWholeLedger(ctx, evidence);

@@ -31,7 +31,14 @@ function toHandle(child: ReturnType<typeof spawn>, start: SessionProcess["start"
   };
 }
 
-export type WorkerBehavior = "complete" | "slow" | "fail" | "crash" | "linger";
+export type WorkerBehavior =
+  | "complete"
+  | "slow"
+  | "fail"
+  | "crash"
+  | "linger"
+  | "quota"
+  | "quota-undated";
 
 /** Launches the real fake-worker per job and records spawned jobs; a behavior array maps one entry per call, last entry repeats. */
 export function workerSpawn(

@@ -28,6 +28,7 @@ function detail(status: RunState, providerSessionId: string | null = "ps-1"): Ru
         worktree_id: null,
         branch: null,
         worktree_status: null,
+        provider_wait: null,
       },
     ],
     sessions: [
@@ -189,6 +190,7 @@ it("refuses a run whose every step is a losing compete candidate", () => {
       worktree_id: null,
       branch: null,
       worktree_status: null,
+      provider_wait: null,
     },
   ];
   runDetail.sessions = [

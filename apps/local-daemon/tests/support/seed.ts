@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
 import { getRepository, listStepRunsForRun, schema, type Db } from "@otomat/db";
-import type { AgentSessionState, RunState, StepRunState } from "@otomat/domain";
+import type { AgentSessionState, RunState, StepProviderWait, StepRunState } from "@otomat/domain";
 
 export interface SeedRunOptions {
   runId: string;
@@ -16,6 +16,8 @@ export interface SeedRunOptions {
   pid?: number | null;
   pgid?: number | null;
   providerSessionId?: string | null;
+  /** The quota wait a `waiting_for_provider` step carries, schedule included. */
+  providerWait?: StepProviderWait;
 }
 
 export interface SeededRun {
@@ -32,6 +34,7 @@ export interface SeedWorkflowStep {
   replaces?: string;
   name?: string;
   prompt?: string;
+  providerWait?: StepProviderWait | null;
   sessionId?: string;
   session?: {
     status: AgentSessionState;
@@ -120,6 +123,7 @@ export function seedWorkflowRun(
         idx: index,
         name: step.name ?? `Step ${step.id}`,
         status: step.status,
+        provider_wait_json: step.providerWait ?? null,
       })
       .run();
     const sessionId = step.sessionId ?? `${step.id}-session`;
@@ -164,6 +168,7 @@ export function seedRun(db: Db, options: SeedRunOptions): SeededRun {
         name: "Agent turn",
         prompt: "p",
         status: options.stepStatus,
+        providerWait: options.providerWait ?? null,
         sessionId: `${options.runId}-session`,
         session: {
           status: options.sessionStatus,

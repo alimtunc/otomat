@@ -28,14 +28,10 @@ import {
   takeLinearKeyFromEnv,
 } from "#linear";
 import { createReviewService } from "#review";
-import {
-  createReexecSpawn,
-  createSupervisor,
-  startWorkspaceReconciliation,
-  type Supervisor,
-} from "#supervisor";
+import { createReexecSpawn, createSupervisor, type Supervisor } from "#supervisor";
 
 import { ensureDefaultProject, ensureDefaultRepository } from "./bootstrap.js";
+import { startMaintenancePasses } from "./maintenance.js";
 import {
   DAEMON_NAME,
   DAEMON_VERSION,
@@ -47,9 +43,6 @@ import {
 
 export { DAEMON_NAME, DAEMON_VERSION } from "./server-contract.js";
 export type { CloseOptions, DaemonHandle, StartDaemonOptions } from "./server-contract.js";
-
-/** Slow enough to stay a maintenance pass rather than a poller, short enough that a merge is noticed within a work break. */
-const WORKSPACE_RECONCILE_INTERVAL_MS = 5 * 60 * 1000;
 
 function daemonStartupCleanupFailure(operation: unknown, cleanup: unknown): Error {
   return new Error("Daemon startup failed and its SQLite handle could not be closed.", {
@@ -159,9 +152,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     if (report.reconciled.length > 0) {
       console.log(`[otomat] reconciled ${report.reconciled.length} run(s) left in flight at boot`);
     }
-    const workspacePasses = startWorkspaceReconciliation(async () => {
-      await supervisor.reconcileWorkspaces();
-    }, WORKSPACE_RECONCILE_INTERVAL_MS);
+    const maintenance = startMaintenancePasses(supervisor);
 
     const app = createApiApp({
       db,
@@ -199,7 +190,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
 
     async function close(closeOptions: CloseOptions = {}): Promise<void> {
       const failures: unknown[] = [];
-      workspacePasses.stop();
+      maintenance.stop();
       if (closeOptions.terminateInFlightMs !== undefined) {
         try {
           await supervisor.shutdown(closeOptions.terminateInFlightMs);

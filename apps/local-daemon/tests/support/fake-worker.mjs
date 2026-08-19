@@ -37,13 +37,14 @@ function emit(type, source, payload) {
   appendFileSync(file, `${JSON.stringify(event)}\n`);
 }
 
-function marker(status) {
+function marker(status, providerLimit = null) {
   emit("run.lifecycle", "otomat", {
     fidelity: "parsed",
     adapter: "otomat-supervisor",
     phase: "final",
     final_status: status,
     provider_session_id: provider,
+    provider_limit: providerLimit,
     event_count: n,
   });
 }
@@ -71,6 +72,21 @@ if (behavior === "complete") {
   process.exit(0);
 } else if (behavior === "fail") {
   marker("failed");
+  process.exit(1);
+} else if (behavior === "quota" || behavior === "quota-undated") {
+  // A dated reset is one hour out, so the wait it schedules is genuinely in the future.
+  const limit = {
+    provider: "fake",
+    reason: "fake usage limit reached",
+    resume_at: behavior === "quota" ? new Date(Date.now() + 3_600_000).toISOString() : null,
+  };
+  emit("runtime.provider_limit", "otomat", {
+    fidelity: "native",
+    adapter: "fake",
+    test_adapter: true,
+    ...limit,
+  });
+  marker("failed", limit);
   process.exit(1);
 } else if (behavior === "crash") {
   process.exit(1);

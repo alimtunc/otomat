@@ -41,6 +41,27 @@ export const runContributionContractSchema = z.object({
 });
 export type RunContributionContract = z.infer<typeof runContributionContractSchema>;
 
+/**
+ * A step suspended on a provider quota: the limit as the provider reported it, plus
+ * the resume it is scheduled for. `resume_at` null is an actionable wait, not a lost
+ * one — the provider proved no deadline, or the operator cancelled the schedule.
+ */
+export const stepProviderWaitSchema = z.object({
+  provider: z.string().min(1),
+  reason: z.string().min(1),
+  detected_at: z.iso.datetime(),
+  /** The reset the provider proved, kept through every reschedule: it is evidence, not a setting. */
+  provider_resume_at: z.iso.datetime().nullable(),
+  /** When the daemon will resume the step; null while nothing is scheduled. */
+  resume_at: z.iso.datetime().nullable(),
+});
+export type StepProviderWait = z.infer<typeof stepProviderWaitSchema>;
+
+/** Whether the scheduled instant is the provider's own reset rather than a time the operator picked. */
+export function isProviderProvedResume(wait: StepProviderWait): boolean {
+  return wait.resume_at !== null && wait.resume_at === wait.provider_resume_at;
+}
+
 export const stepRunContractSchema = z.object({
   id: z.string(),
   run_id: z.string(),
@@ -52,6 +73,8 @@ export const stepRunContractSchema = z.object({
   worktree_id: z.string().nullable(),
   branch: z.string().nullable(),
   worktree_status: worktreeStatusSchema.nullable(),
+  /** Set only while the step is `waiting_for_provider`. */
+  provider_wait: stepProviderWaitSchema.nullable(),
 });
 export type StepRunContract = z.infer<typeof stepRunContractSchema>;
 

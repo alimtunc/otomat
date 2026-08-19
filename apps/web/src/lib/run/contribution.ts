@@ -30,6 +30,8 @@ const STEERING_NOTE = "The agent is working — this message is delivered at its
 const FIRST_TURN_NOTE = "This step has not started — this message is delivered in its first turn.";
 const CAPACITY_NOTE =
   "This run is waiting for capacity — this message is delivered in its next turn.";
+const PROVIDER_WAIT_NOTE =
+  "This run is waiting on its provider quota — this message is delivered when it resumes.";
 
 /** No turn is live yet while the run waits on the semaphore, so the composer must not claim the agent is working. */
 function isWaitingForCapacity(status: RunDetail["run"]["status"]): boolean {
@@ -125,6 +127,9 @@ export function resolveContributionGate(
   }
   if (isWaitingForCapacity(detail.run.status)) {
     return { ...routed, note: CAPACITY_NOTE, queues: true };
+  }
+  if (detail.run.status === "waiting_for_provider") {
+    return { ...routed, note: PROVIDER_WAIT_NOTE, queues: true };
   }
   if (!canFollowUpRun(detail.run.status)) {
     return { ...routed, note: STEERING_NOTE, queues: true };

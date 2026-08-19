@@ -94,6 +94,18 @@ arrière et laissant publish/fix ouverts), puis l'issue rejoint `done` par
 Tant que la PR reste ouverte, rien n'est nettoyé : le worktree survit et
 `pr_open → reviewing → running` reste le chemin d'une reprise sur commentaires.
 
+## Quota provider — `waiting_for_provider`, puis reprise planifiée
+
+Un quota épuisé n'est pas un échec fonctionnel : l'adapter le reconnaît dans la
+sortie de son propre CLI, le worker le tamponne sur son terminal marker, et le
+settle classe le tour `provider_limited` — la run se repose sur
+`waiting_for_provider` et l'étape garde son `provider_wait_json` (provider,
+motif verbatim, reset prouvé, échéance planifiée). `resumeDueProviderWaits`, une
+passe du daemon de l'host d'exécution, reprend à l'échéance par
+`resolveResumeAction` : même run, même step, même worktree, même session
+provider. Rationale complet dans
+[`codebase-map.md`](codebase-map.md) → *Suspending on a Provider Quota*.
+
 ## Reprises & abort — greffent sur la même `spawnTurn`
 
 ```mermaid
@@ -129,11 +141,13 @@ stateDiagram-v2
     running --> awaiting_permission
     running --> awaiting_human
     running --> awaiting_selection
+    running --> waiting_for_provider
     running --> review_ready
     awaiting_permission --> running
     awaiting_human --> running
     awaiting_human --> preparing
     awaiting_selection --> running
+    waiting_for_provider --> running
     review_ready --> running
     review_ready --> completed
     completed --> [*]
@@ -153,6 +167,7 @@ stateDiagram-v2
 | Surface HTTP (start · resume · abort · fix · contributions · SSE) | [`api/routes/runs.ts`](../../apps/local-daemon/src/api/routes/runs.ts) · [`review.ts`](../../apps/local-daemon/src/api/routes/review.ts) · [`run-contributions.ts`](../../apps/local-daemon/src/api/routes/run-contributions.ts) |
 | Livraison des contributions | [`supervisor/contribution/deliver.ts`](../../apps/local-daemon/src/supervisor/contribution/deliver.ts) |
 | Commandes du supervisor | [`supervisor/commands.ts`](../../apps/local-daemon/src/supervisor/commands.ts) |
+| Attente et reprise sur quota | [`supervisor/provider-wait/`](../../apps/local-daemon/src/supervisor/provider-wait) · [`runtime/providers/claude/limits.ts`](../../apps/local-daemon/src/runtime/providers/claude/limits.ts) |
 | Matérialisation (rows · plan · worktree) | [`supervisor/prepare.ts`](../../apps/local-daemon/src/supervisor/prepare.ts) |
 | Init du worktree (commandes du repository) | [`supervisor/worktree-init.ts`](../../apps/local-daemon/src/supervisor/worktree-init.ts) · [`supervisor/init-commands.ts`](../../apps/local-daemon/src/supervisor/init-commands.ts) |
 | Draft & publication de la PR | [`github/draft.ts`](../../apps/local-daemon/src/github/draft.ts) · [`github/publication/publisher.ts`](../../apps/local-daemon/src/github/publication/publisher.ts) |

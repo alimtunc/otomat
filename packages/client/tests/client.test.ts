@@ -101,6 +101,7 @@ it("parses the runtime catalog with kind and availability", async () => {
       resume: true,
       permissions: false,
       diff_hints: false,
+      provider_limit: "deadline",
     },
     availability: { status: "unavailable", reason: "binary_not_found" },
   };

@@ -4,6 +4,7 @@ import type {
   RunContributionState,
   RunState,
   SessionContext,
+  StepProviderWait,
   StepRunState,
 } from "@otomat/domain";
 import { sql } from "drizzle-orm";
@@ -62,6 +63,8 @@ export const stepRuns = sqliteTable(
     status: text("status").$type<StepRunState>().notNull().default("queued"),
     compete_group_id: text("compete_group_id").references(() => competeGroups.id),
     worktree_id: text("worktree_id").references(() => worktrees.id),
+    // Never cleared: it is stale evidence the moment the step leaves `waiting_for_provider`.
+    provider_wait_json: text("provider_wait_json", { mode: "json" }).$type<StepProviderWait>(),
     ...timestamps,
   },
   (table) => [uniqueIndex("step_runs_run_idx_unique").on(table.run_id, table.idx)],

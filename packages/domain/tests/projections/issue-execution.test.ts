@@ -52,6 +52,22 @@ it("treats every busy state as active work", () => {
   }
 });
 
+it("projects a quota wait as its own state, neither live work nor a failure", () => {
+  expect(projectIssueExecution([ev({ run_id: "r1", run_status: "waiting_for_provider" })])).toEqual(
+    { state: "waiting_for_provider", run_id: "r1" },
+  );
+});
+
+// The wait is where the work currently is; an already delivered PR of the same instant does not speak for the issue instead.
+it("keeps a quota wait ahead of a review or a PR of the same instant", () => {
+  expect(
+    projectIssueExecution([
+      ev({ run_id: "r1", run_status: "waiting_for_provider" }),
+      ev({ run_id: "r2", run_status: "review_ready", ...OPEN_PR }),
+    ]),
+  ).toEqual({ state: "waiting_for_provider", run_id: "r1" });
+});
+
 it("projects a stopped run holding its workspace as failed, never back to its source status", () => {
   const halted_step = { id: "step-2", name: "Reviewer" };
   const reasons = {

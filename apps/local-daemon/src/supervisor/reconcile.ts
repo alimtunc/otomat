@@ -4,11 +4,12 @@ import { agentSessionMachine, type RunState } from "@otomat/domain";
 import { settleRun, type SettleOptions } from "./settle/index.js";
 import type { ReconcileOutcome, ReconcileReport } from "./types.js";
 
-/** Non-terminal states a crash must not disturb: they await an explicit human action, not a process. */
+/** Non-terminal states a crash must not disturb: they await an explicit human action or a scheduled resume, not a process. */
 const RESTING_RUN_STATES: ReadonlySet<RunState> = new Set([
   "review_ready",
   "awaiting_human",
   "awaiting_selection",
+  "waiting_for_provider",
 ]);
 
 /** Boot pass: settle every in-flight run left non-terminal by a crash or kill. */

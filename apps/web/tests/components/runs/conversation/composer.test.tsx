@@ -51,6 +51,7 @@ function runDetail(status: RunState, providerSessionId: string | null = "ps-1"):
         worktree_id: null,
         branch: null,
         worktree_status: null,
+        provider_wait: null,
       },
     ],
     sessions: [

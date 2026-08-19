@@ -50,6 +50,7 @@ describe("CodexRuntimeAdapter", () => {
         cost_usd: null,
       },
       error: null,
+      limit: null,
       event_count: sink.events.length,
     });
 

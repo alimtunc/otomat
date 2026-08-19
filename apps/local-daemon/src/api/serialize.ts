@@ -135,6 +135,7 @@ export function toStepRun(
     ...row,
     branch: worktree?.branch ?? null,
     worktree_status: worktree?.status ?? null,
+    provider_wait: row.status === "waiting_for_provider" ? row.provider_wait_json : null,
   });
 }
 

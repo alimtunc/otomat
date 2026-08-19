@@ -1,19 +1,20 @@
-export interface WorkspaceReconciliationLoop {
+export interface IntervalPass {
   stop(): void;
 }
 
 /** One pass at startup then one per interval, never two at once, on a timer that does not hold the process open. */
-export function startWorkspaceReconciliation(
-  reconcile: () => Promise<void>,
+export function startIntervalPass(
+  label: string,
+  pass: () => Promise<void>,
   intervalMs: number,
-): WorkspaceReconciliationLoop {
+): IntervalPass {
   let running = false;
   const tick = (): void => {
     if (running) return;
     running = true;
-    void reconcile()
+    void pass()
       .catch((error: unknown) => {
-        console.error("[otomat] background workspace reconciliation failed", error);
+        console.error(`[otomat] background ${label} failed`, error);
       })
       .finally(() => {
         running = false;

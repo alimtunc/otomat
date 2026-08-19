@@ -61,6 +61,7 @@ export async function runWorkerJob(
           provider_session_id: job.providerSessionId,
           usage: null,
           error: { message: `runtime ${job.runtime} does not support resume` },
+          limit: null,
           event_count: 0,
         };
       }
@@ -95,7 +96,7 @@ export async function runWorkerJob(
   }
 }
 
-/** Appends the run's terminal-marker line (final status, provider session, event count) to its `events.jsonl` — the durable sentinel reconciliation reads to tell a finished run from a torn one. */
+/** Appends the run's terminal-marker line (final status, provider session, reported quota, event count) to its `events.jsonl` — the durable sentinel reconciliation reads to tell a finished run from a torn one. */
 export function writeTerminalMarker(
   job: SupervisedJob,
   final: RuntimeFinalState,
@@ -105,6 +106,7 @@ export function writeTerminalMarker(
     { runId: job.runId, stepRunId: job.stepRunId, agentSessionId: job.agentSessionId },
     final.status,
     final.provider_session_id,
+    final.limit,
     final.event_count,
     occurredAt,
   );

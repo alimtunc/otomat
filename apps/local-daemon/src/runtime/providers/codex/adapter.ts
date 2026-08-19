@@ -27,6 +27,7 @@ export const CODEX_ADAPTER_ID = "codex";
 
 export const CODEX_BINARY = "codex";
 
+/** `provider_limit` stops at `detects`: Codex reports an exhausted quota as a turn error and never says when it reopens. */
 const CODEX_CAPABILITIES: RuntimeCapabilities = {
   stream: true,
   steering: "turn_boundary",
@@ -34,6 +35,7 @@ const CODEX_CAPABILITIES: RuntimeCapabilities = {
   resume: true,
   permissions: false,
   diff_hints: false,
+  provider_limit: "detects",
 };
 
 /** The official config override for the reasoning level; the TOML string keeps the value a value, never a flag. */

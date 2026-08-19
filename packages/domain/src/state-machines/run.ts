@@ -7,6 +7,7 @@ export const RUN_STATES = [
   "awaiting_permission",
   "awaiting_human",
   "awaiting_selection",
+  "waiting_for_provider",
   "review_ready",
   "completed",
   "failed",
@@ -26,6 +27,7 @@ export const runMachine = defineMachine<RunState>({
       "awaiting_permission",
       "awaiting_human",
       "awaiting_selection",
+      "waiting_for_provider",
       "review_ready",
       "failed",
       "canceled",
@@ -33,6 +35,7 @@ export const runMachine = defineMachine<RunState>({
     awaiting_permission: ["running", "failed", "canceled"],
     awaiting_human: ["running", "preparing", "failed", "canceled"],
     awaiting_selection: ["running", "failed", "canceled"],
+    waiting_for_provider: ["running", "failed", "canceled"],
     review_ready: ["completed", "running", "failed", "canceled"],
     completed: [],
     failed: ["preparing"],
@@ -70,6 +73,7 @@ export function canFollowUpRun(status: string): status is RunFollowUpState {
 /** States an explicit **Resume run** reopens; `completed` is the merged end of the cycle and stays closed. */
 export const RUN_RESUMABLE_STATES = [
   "awaiting_human",
+  "waiting_for_provider",
   "failed",
   "canceled",
 ] as const satisfies readonly RunState[];
@@ -81,7 +85,7 @@ export function isRunResumable(status: string): status is RunResumableState {
   return runResumableSet.has(status);
 }
 
-/** States with a provider turn genuinely in flight. `awaiting_permission` and `awaiting_selection` are in neither this set nor the resting one: the turn is blocked on an answer. */
+/** States with a provider turn genuinely in flight. `awaiting_permission`, `awaiting_selection` and `waiting_for_provider` are in neither this set nor the resting one: the turn is blocked on an answer or on a quota reset. */
 export const RUN_WORKING_STATES = [
   "queued",
   "preparing",

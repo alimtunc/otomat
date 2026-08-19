@@ -22,14 +22,12 @@ export {
   RunContributionStepClosedError,
 } from "./contribution/index.js";
 export { LaunchRefusedError } from "./launch-target.js";
+export { ProviderResumeRefusedError } from "./provider-wait/schedule.js";
 export { closeMergedIssue, closeMergedRun, type MergeClosureConfig } from "./merge-closure.js";
 export { buildTerminalMarker } from "./markers.js";
 export { createReexecSpawn, isProcessAlive, killProcessGroup } from "./process.js";
 export { WORKER_START_TOKEN_ENV } from "./start-gate.js";
 export { reconcileRuns } from "./reconcile.js";
-export {
-  startWorkspaceReconciliation,
-  type WorkspaceReconciliationLoop,
-} from "./workspaces/index.js";
+export { startIntervalPass, type IntervalPass } from "./interval-pass.js";
 export { createSupervisor } from "./supervisor.js";
 export { parseJob, runWorkerJob, runWorkerMain, writeTerminalMarker } from "./worker.js";

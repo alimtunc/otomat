@@ -32,6 +32,7 @@ export const EVENT_TYPES = [
   "runtime.permission_response",
   "runtime.usage",
   "runtime.provider_session",
+  "runtime.provider_limit",
   "git.diff_updated",
   "review.comment_created",
   "review.comment_resolved",

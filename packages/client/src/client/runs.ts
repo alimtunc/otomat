@@ -13,6 +13,7 @@ import {
   workspaceClosureSummarySchema,
   type AppendRunStepRequest,
   type CreateRunContributionRequest,
+  type ScheduleProviderResumeRequest,
   type SelectCompeteWinnerRequest,
   type StartRunRequest,
 } from "@otomat/domain";
@@ -41,6 +42,11 @@ export function createRunsClient(config: DaemonClientConfig) {
     async resumeRun(id: string) {
       return runContractSchema.parse(
         await postJson(config, `/api/runs/${encodeURIComponent(id)}/resume`, {}),
+      );
+    },
+    async scheduleProviderResume(id: string, request: ScheduleProviderResumeRequest) {
+      return runDetailSchema.parse(
+        await postJson(config, `/api/runs/${encodeURIComponent(id)}/provider-wait`, request),
       );
     },
     async getSessionContext(id: string, agentSessionId: string) {

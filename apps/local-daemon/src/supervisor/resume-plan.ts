@@ -102,7 +102,9 @@ export function resolveResumeAction(state: SupervisorState, run: RunRow): Resume
 
   const sessions = listAgentSessionsForRun(db, run.id);
   const session = selectLatestResumableSession(sessions, steps, groups);
-  const interrupted = steps.find((step) => step.status === "awaiting_human");
+  const interrupted = steps.find(
+    (step) => step.status === "awaiting_human" || step.status === "waiting_for_provider",
+  );
   const target = interrupted ? stepOf(run, interrupted.id) : undefined;
   if (target) return reopen(db, run, target, session);
 

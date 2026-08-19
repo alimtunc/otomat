@@ -1,5 +1,6 @@
 import {
   modelIdSchema,
+  providerLimitSchema,
   providerOptionsSchema,
   RUN_SETTLED_STATES,
   type BinaryProbe,
@@ -32,6 +33,8 @@ export const runtimeFinalStateSchema = z.object({
   provider_session_id: z.string().nullable(),
   usage: runtimeUsageSchema.nullable(),
   error: z.object({ message: z.string() }).nullable(),
+  /** The quota the provider reported instead of doing the work; the turn still ends `failed`, and this is what makes the failure recoverable. */
+  limit: providerLimitSchema.nullable(),
   event_count: z.number().int().nonnegative(),
 });
 export type RuntimeFinalState = z.infer<typeof runtimeFinalStateSchema>;

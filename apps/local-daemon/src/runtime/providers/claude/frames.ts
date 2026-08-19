@@ -4,6 +4,8 @@ import { asArray, asNumber, asRecord, asString } from "#runtime/cli/frame-guards
 import type { ProviderFrameMapper, ProviderTurnOutcome } from "#runtime/cli/turn";
 import type { TurnEmitter } from "#runtime/cli/turn-emitter";
 
+import { claudeProviderLimit } from "./limits.js";
+
 /** What the turn was launched under, resolved against the installed binary before the first frame arrives. */
 interface ClaudeTurnPermission {
   mode: string;
@@ -15,6 +17,7 @@ export class ClaudeFrameMapper implements ProviderFrameMapper {
     providerSessionId: null,
     usage: null,
     result: null,
+    limit: null,
   };
 
   private model: string | null = null;
@@ -154,6 +157,14 @@ export class ClaudeFrameMapper implements ProviderFrameMapper {
         ? (asString(frame["result"]) ?? asString(frame["subtype"]) ?? "provider reported an error")
         : null,
     };
+    if (isError) this.onProviderLimit(frame);
+  }
+
+  private onProviderLimit(frame: Record<string, unknown>): void {
+    const limit = claudeProviderLimit(frame);
+    if (limit === null) return;
+    this.outcome.limit = limit;
+    this.emitter.emit("runtime.provider_limit", "native", { ...limit, frame });
   }
 }
 

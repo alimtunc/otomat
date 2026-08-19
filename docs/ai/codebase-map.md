@@ -565,6 +565,52 @@ keeps both axes legible in its rail (`Issue status`, `Workspace execution`), and
 the run history stays readable there and in the conversations without
 contaminating the principal state.
 
+## Suspending on a Provider Quota
+
+A quota is not a verdict either. When a provider refuses the work because its
+window is exhausted, the turn's own outcome is still `failed` — that is what the
+CLI reported — but the run rests on `waiting_for_provider` instead, and the step
+it stopped keeps a `provider_wait_json` naming the provider, its verbatim reason,
+the reset it proved and the instant a resume is scheduled for.
+
+The evidence path is deliberately narrow. Each adapter recognises its own CLI's
+quota shape (`providers/<id>/limits.ts`) and declares what it can really do
+through `capabilities.provider_limit`: Claude Code reaches `deadline`, because it
+prints the unix second its window reopens next to the limit; Codex stops at
+`detects`, because it reports the quota as a turn error and never says when it
+reopens. A mapper that recognises one emits a `runtime.provider_limit` event
+keeping the raw frame, and reports it on the turn's `RuntimeFinalState`, from
+where the worker stamps it onto its terminal marker. Settle reads the **last**
+marker (`findProviderLimit`), which is what keeps one agent session's several
+turns apart: a limit scanned for as a loose event would let turn 1's quota
+explain turn 2's genuine failure. A torn ledger with no marker stays
+`interrupted`, since a killed worker cannot vouch for its own ending, and a reset
+that has already passed is not proof — the wait then stays actionable rather than
+retrying at once. Nothing is ever inferred: an unrecognised failure is a failure.
+
+The schedule is a property of the step that owns it, not a queue: the durable rows
+*are* the work list, and driving `waiting_for_provider → running` is the claim
+that makes a resume happen exactly once. `resumeDueProviderWaits` is one pass over
+the steps whose run is waiting too — a resume takes the workspace, and only a run
+at rest has it free — and it resumes through `resolveResumeAction` like any other
+resume, so the same run, step, worktree and provider session come back, with the
+recovery session as the same fallback. `startMaintenancePasses` drives it on the
+daemon that owns the execution host, so a reset that falls while the desktop is
+closed is honoured, and one that falls while the daemon is down is honoured when
+it boots — late, never lost and never twice. A workspace that closed under a due
+wait is refused and journaled (`provider_resume`, `outcome: refused`) and drops
+its schedule rather than looping; a live writer simply leaves it for the next pass.
+
+Because `waiting_for_provider` is not a settled step state, a cancel and an
+abandon still close it — which is what makes criterion "merge, abandon or cancel
+prevents an invalid resume" hold without a second guard. It is in
+`RUN_RESUMABLE_STATES` (so **Resume now** works) and out of
+`RUN_FOLLOW_UP_STATES`, so a message posted before the deadline is queued and
+carried by the resuming turn instead of starting a turn that would hit the same
+wall. `projectIssueExecution` gives it its own state and its own board column,
+ranked just under live work: a suspended cycle must read as neither Ready nor
+Failed.
+
 ## A Pass and Its Git Boundary
 
 A **pass** is one `agent_sessions` row — `insertTurn` writes exactly one per
