@@ -8,7 +8,7 @@ import {
   providerReviewFactsSchema,
   toReviewFacts,
 } from "./pull-request-facts.js";
-import type { GitHubPullRequest, GitHubRemote } from "./types.js";
+import type { GitHubPullRequest } from "./types.js";
 
 export const providerPullRequestSchema = providerReviewFactsSchema.extend({
   number: z.number().int().positive(),
@@ -121,6 +121,19 @@ export function parseGitHubRemoteUrl(url: string): { repository: string } | null
   }
 }
 
+/** Keeps a refused remote quotable: everything the operator needs to recognise it, none of its credentials. */
+export function maskRemoteUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.username === "" && parsed.password === "") return url;
+    parsed.username = "***";
+    parsed.password = "";
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 export function connectionProblem(
   status: GitHubConnectionContract["status"],
   code: string,
@@ -169,23 +182,6 @@ export function parseAuthStatus(stdout: string): GitHubConnectionContract {
   } catch {
     throw new GitHubCliError("github_auth_response_invalid", "GitHub auth response was invalid.");
   }
-}
-
-export function selectRemote(candidates: GitHubRemote[]): GitHubRemote {
-  const origin = candidates.find((candidate) => candidate.name === "origin");
-  if (origin) return origin;
-  const [onlyCandidate] = candidates;
-  if (onlyCandidate && candidates.length === 1) return onlyCandidate;
-  if (!onlyCandidate) {
-    throw new GitHubCliError(
-      "github_remote_missing",
-      "No usable GitHub remote was found for this run.",
-    );
-  }
-  throw new GitHubCliError(
-    "github_remote_ambiguous",
-    "More than one GitHub remote is available; configure origin explicitly.",
-  );
 }
 
 const createdCommentSchema = z.object({ html_url: z.string() });

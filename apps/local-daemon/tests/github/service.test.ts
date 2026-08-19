@@ -1,5 +1,5 @@
-import { existsSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { delimiter, join } from "node:path";
 
 import {
   getIssue,
@@ -8,13 +8,14 @@ import {
   insertPullRequest,
   schema,
   updatePullRequest,
+  writePullRequestGenerator,
 } from "@otomat/db";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
 import { createGitWorktreeService, type GitWorktreeService } from "#git";
-import { createGitHubService, GitHubCliError } from "#github";
+import { createGitHubService, GitHubCliError, type GitHubServiceConfig } from "#github";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { stubRepositoryResolver, type TestRepo } from "../support/git.js";
@@ -74,8 +75,11 @@ describe("GitHubService", () => {
     return row;
   }
 
-  function service(worktreeService: GitWorktreeService = worktrees) {
-    return createGitHubService({
+  function service(
+    worktreeService: GitWorktreeService = worktrees,
+    generator?: GitHubServiceConfig["generator"],
+  ) {
+    const config: GitHubServiceConfig = {
       db: fix.db,
       dataDir: fix.dataDir,
       repositories: stubRepositoryResolver(worktreeService, {
@@ -85,6 +89,21 @@ describe("GitHubService", () => {
       }),
       cli,
       idFactory: () => "pr-local-1",
+    };
+    if (generator) config.generator = generator;
+    return createGitHubService(config);
+  }
+
+  /** Puts a runtime on PATH so agent resolution stops gating what this suite is really asserting. */
+  function withStubbedClaude(assertion: () => Promise<void>): Promise<void> {
+    const binDir = join(fix.dataDir, "runtime-bin");
+    mkdirSync(binDir, { recursive: true });
+    writeFileSync(join(binDir, "claude"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    writePullRequestGenerator(fix.db, { runtime: "claude", model: null, options: {} });
+    const restore = process.env.PATH;
+    process.env.PATH = `${binDir}${delimiter}${restore ?? ""}`;
+    return assertion().finally(() => {
+      process.env.PATH = restore;
     });
   }
 
@@ -312,6 +331,52 @@ describe("GitHubService", () => {
       url: null,
     });
     expect(cli.pushCalls).toBe(0);
+  });
+
+  it("refuses a generation before paying for it when the remote cannot be resolved", async () => {
+    cli.resolveError = new GitHubCliError(
+      "github_remote_missing",
+      "No usable GitHub remote was found for this run in /w: origin (https://***@gitlab.com/acme/otomat.git is not a GitHub repository URL).",
+    );
+    let generated = 0;
+
+    await withStubbedClaude(async () => {
+      const generating = service(worktrees, {
+        generate: async () => {
+          generated += 1;
+          throw new Error("the generator must not run behind an unresolvable remote");
+        },
+      });
+
+      await expect(generating.generatePullRequestMetadata(run())).rejects.toMatchObject({
+        code: "github_remote_missing",
+      });
+    });
+
+    expect(generated).toBe(0);
+    expect(getPullRequestForRun(fix.db, RUN_ID)).toBeUndefined();
+  });
+
+  it("publishes on retry once the remote is fixed, on the same run", async () => {
+    cli.resolveError = new GitHubCliError(
+      "github_remote_missing",
+      "No usable GitHub remote was found for this run.",
+    );
+    const failed = await service().publish(run(), READY_REQUEST);
+    expect(failed.row).toMatchObject({ publication_status: "failed", number: null });
+
+    cli.resolveError = null;
+    const retried = await service().publish(run(), READY_REQUEST);
+
+    expect(retried.row).toMatchObject({
+      id: failed.row.id,
+      run_id: RUN_ID,
+      publication_status: "created",
+      number: 42,
+      error_code: null,
+      error_message: null,
+    });
+    expect(cli.pushCalls).toBe(1);
   });
 
   it("keeps confirmed metadata null when push fails", async () => {
@@ -672,6 +737,16 @@ describe("GitHubService", () => {
     expect(cli.pushCalls).toBe(1);
     expect(cli.createCalls).toBe(1);
     expect(cli.updateCalls).toBe(0);
+  });
+
+  it("resolves the remote from the run's own worktree, never an implicit local checkout", async () => {
+    const github = service();
+    await github.publish(run(), READY_REQUEST);
+
+    await github.getPullRequest(RUN_ID);
+
+    expect(cli.resolveRemoteCwds).toContain(worktreePath);
+    expect(cli.resolveRemoteCwds).not.toContain(repo.root);
   });
 
   it("notices a merge when the PR panel is read, and settles the run there", async () => {

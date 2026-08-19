@@ -92,6 +92,87 @@ describe("GitHub CLI adapter", () => {
     });
   });
 
+  /** OTO-120: a zero-length stdin write races a fast child into EPIPE, so a remote that resolved read as absent. */
+  it("keeps a remote whose push URL exited zero under a stdin pipe error", async () => {
+    const runner = fakeRunner([
+      ok("origin\n"),
+      { stdout: "git@github.com:acme/otomat.git\n", stderr: "", exitCode: 0, errorCode: "EPIPE" },
+    ]);
+    const cli = createGitHubCli(runner.run);
+
+    await expect(cli.resolveRemote("/repo")).resolves.toEqual({
+      name: "origin",
+      repository: "acme/otomat",
+    });
+  });
+
+  it("reads the push URL of every remote it inspects", async () => {
+    const runner = fakeRunner([ok("origin\n"), ok("ssh://git@github.com/acme/otomat.git\n")]);
+    const cli = createGitHubCli(runner.run);
+
+    await expect(cli.resolveRemote("/repo")).resolves.toEqual({
+      name: "origin",
+      repository: "acme/otomat",
+    });
+    expect(runner.requests[1]).toMatchObject({
+      args: ["remote", "get-url", "--push", "origin"],
+      cwd: "/repo",
+    });
+  });
+
+  it("refuses a remote whose push URL could not be read, naming the failure", async () => {
+    const runner = fakeRunner([
+      ok("origin\n"),
+      { stdout: "", stderr: "fatal: No such remote 'origin'\n", exitCode: 128 },
+    ]);
+    const cli = createGitHubCli(runner.run);
+
+    await expect(cli.resolveRemote("/repo")).rejects.toMatchObject({
+      code: "github_remote_missing",
+      message: expect.stringContaining("origin (push URL unreadable: fatal: No such remote"),
+    });
+  });
+
+  it("names a refused remote without disclosing the credentials in its URL", async () => {
+    const runner = fakeRunner([
+      ok("origin\n"),
+      ok("https://octocat:ghp_supersecrettoken@gitlab.com/acme/otomat.git\n"),
+    ]);
+    const cli = createGitHubCli(runner.run);
+
+    const refusal = await cli.resolveRemote("/repo").catch((error: Error) => error.message);
+
+    expect(refusal).toContain("origin");
+    expect(refusal).toContain("is not a GitHub repository URL");
+    expect(refusal).not.toContain("ghp_supersecrettoken");
+    expect(refusal).toContain("***");
+  });
+
+  it("distinguishes a workspace that has no remote at all", async () => {
+    const runner = fakeRunner([ok("")]);
+    const cli = createGitHubCli(runner.run);
+
+    await expect(cli.resolveRemote("/repo")).rejects.toMatchObject({
+      code: "github_remote_missing",
+      message:
+        "No git remote is configured in /repo; add a GitHub remote named origin, then retry.",
+    });
+  });
+
+  it("refuses ambiguity rather than picking a GitHub remote for the operator", async () => {
+    const runner = fakeRunner([
+      ok("fork\nupstream\n"),
+      ok("git@github.com:someone/fork.git\n"),
+      ok("git@github.com:acme/otomat.git\n"),
+    ]);
+    const cli = createGitHubCli(runner.run);
+
+    await expect(cli.resolveRemote("/repo")).rejects.toMatchObject({
+      code: "github_remote_ambiguous",
+      message: expect.stringContaining("fork, upstream"),
+    });
+  });
+
   it("reports connected identity without requesting a token", async () => {
     const runner = fakeRunner([
       ok("gh version 2.96.0\n"),

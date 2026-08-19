@@ -68,6 +68,8 @@ class PullRequestPublisher implements PullRequestPublicationService {
       );
     }
     return this.serialize(run.id, async () => {
+      // Preflighted here: a workspace that cannot publish must refuse before the generator is paid for.
+      await resolveWorkspace(this.config, run.id);
       const proposal = await generator.generate(agent, buildGenerationInput(this.config, run));
       const identifier = issueIdentifier(this.config.db, run.issue_id);
       this.store.recordProposal(run, proposal, composeSubject(proposal.subject, identifier));
@@ -94,14 +96,16 @@ class PullRequestPublisher implements PullRequestPublicationService {
     return started;
   }
 
-  /** The repository root is the cwd, not the worktree: a merge is exactly what takes that away. */
+  /** The run's own worktree, falling back to the repository root: a merge is exactly what takes the worktree away. */
   private async refreshLifecycle(row: PullRequestRow): Promise<PullRequestRow> {
     if (row.number === null || (row.status !== "open" && row.status !== "draft")) return row;
-    const rootPath = this.config.repositories.forRun(publicationRunId(row))?.rootPath;
-    if (rootPath === undefined) return row;
+    const runId = publicationRunId(row);
+    const binding = this.config.repositories.forRun(runId);
+    if (binding === null) return row;
+    const cwd = binding.service.get(runId)?.path ?? binding.rootPath;
     try {
-      const { repository } = await this.config.cli.resolveRemote(rootPath);
-      const provider = await this.config.cli.viewPullRequest(rootPath, repository, row.number);
+      const { repository } = await this.config.cli.resolveRemote(cwd);
+      const provider = await this.config.cli.viewPullRequest(cwd, repository, row.number);
       return this.store.reconcileLifecycle(row, provider.lifecycle);
     } catch (error) {
       console.error(`[otomat] pull request refresh for run ${row.run_id} failed`, error);

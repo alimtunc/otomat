@@ -7,13 +7,17 @@ import type {
 } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { GitHubPublicationError } from "#github";
+import { GitHubCliError, GitHubPublicationError } from "#github";
 
 import { json, makeApiApp, post, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 import { CONNECTED_GITHUB, pullRequestRow, stubGitHubService } from "../support/github.js";
 
 const RUN_ID = "run-github-api";
+const REFUSED_REMOTE = new GitHubCliError(
+  "github_remote_missing",
+  "No usable GitHub remote was found for this run in /w: origin (https://***@gitlab.com/acme/otomat.git is not a GitHub repository URL). Point origin at a GitHub repository, then retry.",
+);
 const PUBLISH_BODY = {
   subject: { type: "feat", scope: "pr", summary: "ship it" },
   body: "Details",
@@ -267,5 +271,41 @@ it("generates PR metadata without publishing, and surfaces generation refusals",
   expect(await refused.json()).toEqual({
     error: "pr_generator_model_unavailable",
     message: 'The claude CLI on this host does not offer model "ghost".',
+  });
+});
+
+it("answers a generation refused by the run's remote with the actionable reason", async () => {
+  const app = makeApiApp(t, {
+    github: stubGitHubService({
+      generatePullRequestMetadata: async () => {
+        throw REFUSED_REMOTE;
+      },
+    }),
+  });
+
+  const res = await post(app, `/api/runs/${RUN_ID}/pr/generate`, {});
+
+  expect(res.status).toBe(409);
+  expect(await res.json()).toEqual({
+    error: REFUSED_REMOTE.code,
+    message: REFUSED_REMOTE.message,
+  });
+});
+
+it("answers a push refused by the run's remote with the same actionable reason", async () => {
+  const app = makeApiApp(t, {
+    github: stubGitHubService({
+      pushCommits: async () => {
+        throw REFUSED_REMOTE;
+      },
+    }),
+  });
+
+  const res = await post(app, `/api/runs/${RUN_ID}/pr/push`, {});
+
+  expect(res.status).toBe(409);
+  expect(await res.json()).toEqual({
+    error: REFUSED_REMOTE.code,
+    message: REFUSED_REMOTE.message,
   });
 });
