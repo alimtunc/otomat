@@ -56,9 +56,27 @@ function testRouter(entry: string) {
     path: "/runs/$runId/diff",
     component: BackProbe,
   });
+  const reviewsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/reviews",
+    component: BackProbe,
+  });
+  const pullRequestDiffRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/pull-requests/$pullRequestId/diff",
+    component: BackProbe,
+  });
 
   return createRouter({
-    routeTree: rootRoute.addChildren([issuesRoute, issueRoute, runsRoute, runRoute, runDiffRoute]),
+    routeTree: rootRoute.addChildren([
+      issuesRoute,
+      issueRoute,
+      runsRoute,
+      runRoute,
+      runDiffRoute,
+      reviewsRoute,
+      pullRequestDiffRoute,
+    ]),
     history: createMemoryHistory({ initialEntries: [entry] }),
   });
 }
@@ -166,6 +184,29 @@ describe("back navigation", () => {
     await clickBack(container);
 
     expect(router.state.location.pathname).toBe("/runs");
+  });
+
+  it("returns a pull-request reviewer to whichever surface opened it", async () => {
+    for (const origin of ["/reviews", "/issues/issue-1", "/runs/run-1"]) {
+      const { router, container } = await openAt(origin);
+
+      await goTo(router, "/pull-requests/pr-1/diff");
+      await clickBack(container);
+
+      expect(router.state.location.pathname).toBe(origin);
+    }
+  });
+
+  it("falls back to Reviews from a deep-linked pull request, issue or not", async () => {
+    for (const issueId of [null, "issue-1"]) {
+      linkedIssueId = issueId;
+      const { router, container } = await openAt("/pull-requests/pr-1/diff");
+      expect(backButtonOf(container)?.getAttribute("aria-label")).toBe("Back to Reviews");
+
+      await clickBack(container);
+
+      expect(router.state.location.pathname).toBe("/reviews");
+    }
   });
 
   it("names the fallback destination, and stays generic once history exists", async () => {
