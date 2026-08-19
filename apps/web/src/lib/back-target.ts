@@ -9,6 +9,7 @@ const RUN_TAB_ROUTE = /^\/runs\/([^/]+)\/[^/]+$/;
 const RUN_ROUTE = /^\/runs\/[^/]+$/;
 const ISSUE_ROUTE = /^\/issues\/[^/]+$/;
 const AGENT_ROUTE = /^\/agents\/[^/]+$/;
+const PULL_REQUEST_ROUTE = /^\/pull-requests\/[^/]+\/[^/]+$/;
 
 /** `null` means `pathname` is not a detail view, so it owns no Back control. */
 export function backTarget(pathname: string, linkedIssueId: string | null): BackTarget | null {
@@ -23,5 +24,6 @@ export function backTarget(pathname: string, linkedIssueId: string | null): Back
   }
   if (ISSUE_ROUTE.test(pathname)) return { href: "/issues", label: "Issues" };
   if (AGENT_ROUTE.test(pathname)) return { href: "/agents", label: "Agents" };
+  if (PULL_REQUEST_ROUTE.test(pathname)) return { href: "/reviews", label: "Reviews" };
   return null;
 }

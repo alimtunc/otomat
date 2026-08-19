@@ -30,6 +30,15 @@ describe("backTarget", () => {
     }
   });
 
+  it("sends a pull-request reviewer to the reviews inbox, linked issue or not", () => {
+    for (const linkedIssueId of [null, "issue-42"]) {
+      expect(backTarget("/pull-requests/pr-1/diff", linkedIssueId)).toEqual({
+        href: "/reviews",
+        label: "Reviews",
+      });
+    }
+  });
+
   it("gives list routes no back target", () => {
     for (const pathname of ["/issues", "/runs", "/agents", "/reviews", "/settings/project", "/"]) {
       expect(backTarget(pathname, "issue-42")).toBeNull();
