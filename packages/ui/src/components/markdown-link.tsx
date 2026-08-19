@@ -2,8 +2,9 @@ import type { ReactNode } from "react";
 
 import { isExternalHref, safeHref } from "../lib/markdown";
 
+// Containing block: the sr-only label otherwise inflates ancestor scroll height.
 const LINK =
-  "text-iris-text underline decoration-iris-text/40 underline-offset-2 hover:decoration-iris-text [overflow-wrap:anywhere]";
+  "relative text-iris-text underline decoration-iris-text/40 underline-offset-2 hover:decoration-iris-text [overflow-wrap:anywhere]";
 
 export interface MarkdownLinkProps {
   href?: string | null;

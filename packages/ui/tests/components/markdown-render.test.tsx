@@ -77,6 +77,13 @@ it("opens an external link safely and names its destination", async () => {
   expect(link?.querySelector(".sr-only")?.textContent).toContain("opens https://otomat.dev/docs");
 });
 
+it("anchors the off-screen destination label to its own link", async () => {
+  const container = await render(<Markdown value="[docs](https://otomat.dev/docs)" />);
+  const offscreen = container.querySelector(".sr-only");
+
+  expect(offscreen?.closest(".relative")).toBe(container.querySelector("a"));
+});
+
 it("resolves a reference link and leaves its definition out of the prose", async () => {
   const container = await render(
     <Markdown value={"See [the doc][ref].\n\n[ref]: https://otomat.dev/doc"} />,
