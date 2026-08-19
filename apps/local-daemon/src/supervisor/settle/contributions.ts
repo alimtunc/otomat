@@ -3,14 +3,14 @@ import { listRunContributionsForSession, markRunContributionsSettled, type Db } 
 import { assertContributionTransitions } from "../transitions.js";
 import type { ReconcileClassification } from "../types.js";
 
-/** An interrupted turn keeps its messages `delivered`: the agent did receive them and the turn can still be resumed. */
+/** An interrupted turn — or one a provider quota stopped — keeps its messages `delivered`: they were handed over, and that same turn runs again. */
 export function resolveSessionContributions(
   db: Db,
   agentSessionId: string,
   classification: ReconcileClassification,
   now: string,
 ): void {
-  if (classification === "interrupted") return;
+  if (classification === "interrupted" || classification === "provider_limited") return;
   const delivered = listRunContributionsForSession(db, agentSessionId).filter(
     (row) => row.status === "delivered",
   );

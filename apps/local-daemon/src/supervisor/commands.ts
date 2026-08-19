@@ -128,7 +128,9 @@ async function resumeCompeteGroup(
   steps: readonly StepRunRow[],
 ): Promise<RunRow> {
   const candidates = steps.filter(
-    (step) => step.compete_group_id === group.id && step.status === "awaiting_human",
+    (step) =>
+      step.compete_group_id === group.id &&
+      (step.status === "awaiting_human" || step.status === "waiting_for_provider"),
   );
   const sessions = listAgentSessionsForRun(state.db, run.id);
   const planSteps = executableSteps(run.plan_json);

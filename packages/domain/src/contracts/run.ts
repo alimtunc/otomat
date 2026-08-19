@@ -169,6 +169,21 @@ export const runStepAppendErrorSchema = z.object({
   message: z.string(),
 });
 
+/** Set or clear when a step waiting on a provider quota resumes; `null` cancels the schedule and leaves the step waiting and actionable. */
+export const scheduleProviderResumeRequestSchema = z
+  .object({ resume_at: z.iso.datetime().nullable() })
+  .strict();
+export type ScheduleProviderResumeRequest = z.infer<typeof scheduleProviderResumeRequestSchema>;
+
+/** Why a resume schedule was refused. Both are caller-fixable: the run is not waiting, or the instant has already passed. */
+export const PROVIDER_RESUME_SCHEDULE_ERRORS = ["run_not_waiting", "resume_at_passed"] as const;
+export type ProviderResumeScheduleError = (typeof PROVIDER_RESUME_SCHEDULE_ERRORS)[number];
+
+export const providerResumeScheduleErrorSchema = z.object({
+  error: z.enum(PROVIDER_RESUME_SCHEDULE_ERRORS),
+  message: z.string(),
+});
+
 /** Post one user message to a step's conversation; it is persisted as `queued` whatever the run is doing. */
 export const createRunContributionRequestSchema = z
   .object({ step_run_id: z.string().min(1), body: z.string().trim().min(1) })

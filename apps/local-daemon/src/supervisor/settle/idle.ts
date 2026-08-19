@@ -40,6 +40,10 @@ export function settleIdleRun(ctx: SettleContext, plan: RunPlan): ReconcileOutco
     target = classification;
     cancelRemaining = true;
     reason = "a plan step already halted; blocked steps canceled";
+  } else if ([...statuses.values()].includes("waiting_for_provider")) {
+    classification = "provider_limited";
+    target = "waiting_for_provider";
+    reason = "a step is waiting for its provider quota to reopen";
   } else if (readyPlanWork(plan, statuses, groups) !== null) {
     classification = "interrupted";
     target = "awaiting_human";

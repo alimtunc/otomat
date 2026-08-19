@@ -50,6 +50,7 @@ export function canceledState(providerSession: string, emitted: number): Runtime
     provider_session_id: providerSession,
     usage: null,
     error: null,
+    limit: null,
     event_count: emitted,
   };
 }

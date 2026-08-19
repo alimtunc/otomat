@@ -1,4 +1,4 @@
-import type { RunSettledState, RunState } from "@otomat/domain";
+import type { ProviderLimit, RunSettledState, RunState, StepProviderWait } from "@otomat/domain";
 
 import { buildRuntimeEvent, type RuntimeEvent } from "#runtime";
 
@@ -10,14 +10,20 @@ export interface SessionRef {
   agentSessionId: string | null;
 }
 
+/** What one scheduled resume attempt did; the sweep and the journal agree on this single set. */
+export type ProviderResumeOutcome = "resumed" | "refused";
+
 type RunLifecyclePayload =
   | {
       phase: "final";
       final_status: RunSettledState;
       provider_session_id: string | null;
+      provider_limit: ProviderLimit | null;
       event_count: number;
     }
   | { phase: "settled"; run_status: RunState }
+  | ({ phase: "provider_wait" } & StepProviderWait)
+  | { phase: "provider_resume"; resume_at: string; outcome: ProviderResumeOutcome; detail: string }
   | { phase: "reopened"; from_status: RunSettledState; step_name: string }
   | { phase: "abandoned"; branch: string }
   | { phase: "workspace_cleaned"; branch: string; worktree_path: string };
@@ -43,6 +49,7 @@ export function buildTerminalMarker(
   ref: SessionRef,
   finalStatus: RunSettledState,
   providerSessionId: string | null,
+  providerLimit: ProviderLimit | null,
   eventCount: number,
   occurredAt: string,
 ): RuntimeEvent {
@@ -52,8 +59,32 @@ export function buildTerminalMarker(
       phase: "final",
       final_status: finalStatus,
       provider_session_id: providerSessionId,
+      provider_limit: providerLimit,
       event_count: eventCount,
     },
+    occurredAt,
+  );
+}
+
+/** Where the step's quota wait stands now: journaled on detection and on every schedule change, so a cancelled schedule reads as `resume_at: null`. */
+export function buildProviderWaitEvent(
+  ref: SessionRef,
+  wait: StepProviderWait,
+  occurredAt: string,
+): RuntimeEvent {
+  return lifecycleEvent(ref, { phase: "provider_wait", ...wait }, occurredAt);
+}
+
+export function buildProviderResumeEvent(
+  ref: SessionRef,
+  resumeAt: string,
+  outcome: ProviderResumeOutcome,
+  detail: string,
+  occurredAt: string,
+): RuntimeEvent {
+  return lifecycleEvent(
+    ref,
+    { phase: "provider_resume", resume_at: resumeAt, outcome, detail },
     occurredAt,
   );
 }

@@ -31,6 +31,7 @@ export {
   issueSourceContractSchema,
   issueWorkspaceSchema,
   isPassReconstructable,
+  isProviderProvedResume,
   isReviewCommentDestination,
   projectContractSchema,
   PULL_REQUEST_PUBLICATION_MODES,
@@ -102,6 +103,7 @@ export {
   type SkillSource,
   type SkillStatus,
   type SourceLabel,
+  type StepProviderWait,
   type StepRunContract,
   type WorktreeStatus,
 } from "./entities/index.js";

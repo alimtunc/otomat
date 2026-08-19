@@ -25,7 +25,12 @@ export function failIdleRun(state: SupervisorState, runId: string, reason: strin
   emitSupervisorLog(state, runId, "stderr", `[otomat] ${reason}`);
   driveIdleRunTo(state.db, current, "failed", listStepRunsForRun(state.db, runId), now);
   const ref = { runId, stepRunId: null, agentSessionId: null };
-  emitLedgerEvent(state.db, state.dataDir, runId, buildTerminalMarker(ref, "failed", null, 0, now));
+  emitLedgerEvent(
+    state.db,
+    state.dataDir,
+    runId,
+    buildTerminalMarker(ref, "failed", null, null, 0, now),
+  );
   finishSettle(state, {
     runId,
     stepRunId: null,

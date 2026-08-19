@@ -51,6 +51,7 @@ describe("ClaudeRuntimeAdapter", () => {
         cost_usd: 0.0123,
       },
       error: null,
+      limit: null,
       event_count: sink.events.length,
     });
 

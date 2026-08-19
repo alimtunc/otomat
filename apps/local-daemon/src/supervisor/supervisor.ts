@@ -17,6 +17,8 @@ import {
 import { finishSettle } from "./pass-boundary.js";
 import { terminateGracefully } from "./process.js";
 import { recoverCompeteSelections, selectCompeteWinner } from "./promotion.js";
+import { scheduleProviderResume } from "./provider-wait/schedule.js";
+import { resumeDueProviderWaits } from "./provider-wait/sweep.js";
 import { reconcileRuns } from "./reconcile.js";
 import { runResumePlan } from "./resume-plan.js";
 import { createState, trackPending } from "./state.js";
@@ -48,6 +50,8 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     setCapacity: (maxConcurrentSessions) => setAgentCapacity(state, maxConcurrentSessions),
     resume: (runId) => resumeRun(state, runId),
     resumePlan: (runId) => runResumePlan(state, runId),
+    scheduleProviderResume: (runId, resumeAt) => scheduleProviderResume(state, runId, resumeAt),
+    resumeDueProviderWaits: () => resumeDueProviderWaits(state),
     abandon: (runId) => abandonWorkspace(state, runId),
     workspaceClosure: (runId) => workspaceClosureFacts(state, runId),
     appendStep: (runId, input) => appendRunStep(state, runId, input),

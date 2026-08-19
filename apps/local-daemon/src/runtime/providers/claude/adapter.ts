@@ -34,7 +34,11 @@ export function claudePermissionMode(env: NodeJS.ProcessEnv = process.env): stri
   return known ?? DEFAULT_CLAUDE_PERMISSION_MODE;
 }
 
-/** `permissions` stays false: `claude -p` reports the calls it refused but exposes no channel to answer one. */
+/**
+ * `permissions` stays false: `claude -p` reports the calls it refused but exposes
+ * no channel to answer one. `provider_limit` is `deadline` because the CLI prints
+ * the unix second its plan window reopens next to the limit it reports.
+ */
 const CLAUDE_CAPABILITIES: RuntimeCapabilities = {
   stream: true,
   steering: "turn_boundary",
@@ -42,6 +46,7 @@ const CLAUDE_CAPABILITIES: RuntimeCapabilities = {
   resume: true,
   permissions: false,
   diff_hints: false,
+  provider_limit: "deadline",
 };
 
 type TurnInput = RuntimeRunInput | RuntimeResumeInput;

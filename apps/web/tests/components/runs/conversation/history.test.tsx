@@ -61,6 +61,7 @@ const detail: RunDetail = {
       worktree_id: null,
       branch: null,
       worktree_status: null,
+      provider_wait: null,
     },
   ],
   sessions: [],

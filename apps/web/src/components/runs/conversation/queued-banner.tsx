@@ -18,6 +18,9 @@ function queuedNote(status: RunContract["status"], label: string): string {
   if (status === "queued" || status === "preparing") {
     return `${label} waiting for capacity and will be delivered in this run's first turn.`;
   }
+  if (status === "waiting_for_provider") {
+    return `${label} waiting — this run resumes when its provider quota reopens, and carries them then.`;
+  }
   if (canFollowUpRun(status)) {
     return `${label} waiting — this run is paused, so delivery needs an explicit resume.`;
   }

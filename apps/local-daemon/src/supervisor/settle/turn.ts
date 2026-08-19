@@ -62,13 +62,16 @@ interface CompeteTargets {
   run: RunState;
 }
 
+/** The group machine has no quota state of its own, so a competition resting only on quota waits rests at `awaiting_human` while the run says why. */
 function competeTargets(
   hasActive: boolean,
   hasSucceeded: boolean,
   hasResumable: boolean,
+  hasWaiting: boolean,
 ): CompeteTargets {
   if (hasActive) return { group: "running", run: "running" };
   if (hasSucceeded) return { group: "awaiting_selection", run: "awaiting_selection" };
+  if (hasWaiting) return { group: "awaiting_human", run: "waiting_for_provider" };
   if (hasResumable) return { group: "awaiting_human", run: "awaiting_human" };
   return { group: "failed", run: "failed" };
 }
@@ -92,6 +95,10 @@ function resolveRunTarget(
     return { run: haltedPlanOutcome(plan, projected) ?? "failed", cancelRemaining: true };
   }
   if (classification === "interrupted") return { run: "awaiting_human", cancelRemaining: false };
+  // The plan is not halted: the step still owes its work, and the scheduler owns when it starts again.
+  if (classification === "provider_limited") {
+    return { run: "waiting_for_provider", cancelRemaining: false };
+  }
   if (classification === "canceled") return { run: "canceled", cancelRemaining: true };
   return { run: "failed", cancelRemaining: true };
 }
@@ -125,7 +132,8 @@ function settleCompeteTurn(
   const hasActive = candidateStates.some((status) => UNSETTLED_CANDIDATE_STATES.has(status));
   const hasSucceeded = candidateStates.includes("succeeded");
   const hasResumable = candidateStates.includes("awaiting_human");
-  const targets = competeTargets(hasActive, hasSucceeded, hasResumable);
+  const hasWaiting = candidateStates.includes("waiting_for_provider");
+  const targets = competeTargets(hasActive, hasSucceeded, hasResumable, hasWaiting);
   const groupTarget = targets.group;
   const runTarget = targets.run;
 

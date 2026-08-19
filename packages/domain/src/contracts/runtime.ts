@@ -17,6 +17,11 @@ export const PERMISSION_MODE_STATUSES = [
 ] as const;
 export type PermissionModeStatus = (typeof PERMISSION_MODE_STATUSES)[number];
 
+/** How far a runtime can go in telling a quota/rate limit from a functional failure: not at all, from its own error report, or with a reset time it proves. */
+export const RUNTIME_PROVIDER_LIMIT_MODES = ["unsupported", "detects", "deadline"] as const;
+export const runtimeProviderLimitModeSchema = z.enum(RUNTIME_PROVIDER_LIMIT_MODES);
+export type RuntimeProviderLimitMode = z.infer<typeof runtimeProviderLimitModeSchema>;
+
 /** Optional behaviors a runtime may advertise; absent ones degrade silently in the UI. Single source for the daemon registry and the wire contract. */
 export const runtimeCapabilitiesSchema = z.object({
   stream: z.boolean(),
@@ -25,6 +30,7 @@ export const runtimeCapabilitiesSchema = z.object({
   resume: z.boolean(),
   permissions: z.boolean(),
   diff_hints: z.boolean(),
+  provider_limit: runtimeProviderLimitModeSchema,
 });
 export type RuntimeCapabilities = z.infer<typeof runtimeCapabilitiesSchema>;
 
@@ -58,3 +64,16 @@ export const runtimeDescriptorSchema = z.object({
   availability: runtimeAvailabilitySchema,
 });
 export type RuntimeDescriptor = z.infer<typeof runtimeDescriptorSchema>;
+
+/**
+ * A quota or rate limit the provider itself reported, as the adapter read it —
+ * evidence, not a decision. `resume_at` is the reset the provider printed, if any;
+ * whether that reset can still be scheduled against is the daemon's call.
+ */
+export const providerLimitSchema = z.object({
+  provider: z.string().min(1),
+  /** The provider's own sentence, shown verbatim. */
+  reason: z.string().min(1),
+  resume_at: z.iso.datetime().nullable(),
+});
+export type ProviderLimit = z.infer<typeof providerLimitSchema>;

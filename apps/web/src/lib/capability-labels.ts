@@ -1,4 +1,8 @@
-import type { RuntimeCapabilities, RuntimeSteeringMode } from "@otomat/domain";
+import type {
+  RuntimeCapabilities,
+  RuntimeProviderLimitMode,
+  RuntimeSteeringMode,
+} from "@otomat/domain";
 
 export interface CapabilityEntry {
   key: keyof RuntimeCapabilities;
@@ -12,6 +16,13 @@ const STEERING_LABELS = {
   turn_boundary: "Steering at next turn",
   unsupported: "Steering",
 } satisfies Record<RuntimeSteeringMode, string>;
+
+/** A quota is only useful to schedule around when the CLI also says when it reopens, so the label names which of the two the runtime offers. */
+const PROVIDER_LIMIT_LABELS = {
+  unsupported: "Quota detection",
+  detects: "Quota detection",
+  deadline: "Quota detection with reset time",
+} satisfies Record<RuntimeProviderLimitMode, string>;
 
 const APPROVALS_HINT =
   "Whether Otomat can answer a permission question mid-run. It is not the run's permission mode, which the provider still applies on its own.";
@@ -38,6 +49,12 @@ export function capabilityEntries(capabilities: RuntimeCapabilities): Capability
       key: "diff_hints",
       label: "Diff hints",
       supported: capabilities.diff_hints,
+      hint: null,
+    },
+    provider_limit: {
+      key: "provider_limit",
+      label: PROVIDER_LIMIT_LABELS[capabilities.provider_limit],
+      supported: capabilities.provider_limit !== "unsupported",
       hint: null,
     },
   } satisfies Record<keyof RuntimeCapabilities, CapabilityEntry>);

@@ -7,6 +7,7 @@ import { FollowedRunSection } from "@web/components/issues/workspace/rail/follow
 import { IssuePullRequestsSection } from "@web/components/issues/workspace/rail/issue-pull-requests-section";
 import { Mono } from "@web/components/issues/workspace/rail/mono";
 import { PermissionSection } from "@web/components/issues/workspace/rail/permission-section";
+import { ProviderWaitSection } from "@web/components/issues/workspace/rail/provider-wait-section";
 import { PullRequestSection } from "@web/components/issues/workspace/rail/pull-request-section";
 import {
   RailMeta,
@@ -84,6 +85,7 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
           )}
         </RailMeta>
       </RailSection>
+      {cycleRunId === null ? null : <ProviderWaitSection runId={cycleRunId} />}
       <StoppedSection execution={issue.execution} />
       {cycleRunId === null ? null : <WorkspaceSection runId={cycleRunId} />}
       <IssuePullRequestsSection issueId={issue.id} />

@@ -2,6 +2,7 @@ import { getPullRequestForRun, getRun, listAgentSessionsForRun } from "@otomat/d
 import {
   appendRunStepRequestSchema,
   IllegalTransitionError,
+  scheduleProviderResumeRequestSchema,
   startRunRequestSchema,
   type RunEventWindow,
   type RunLaunchError,
@@ -13,6 +14,7 @@ import { readRunEventWindow } from "#events";
 import { RuntimeUnavailableError } from "#runtime";
 import {
   LaunchRefusedError,
+  ProviderResumeRefusedError,
   RunNotResumableError,
   WorkspaceAbandonRefusedError,
 } from "#supervisor";
@@ -105,6 +107,25 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       return c.json({ error: "run_resume_failed" }, 500);
     }
   });
+
+  routes.post(
+    "/:id/provider-wait",
+    validateJson(scheduleProviderResumeRequestSchema),
+    runGuard(deps.db),
+    (c) => {
+      const run = c.get("run");
+      try {
+        deps.supervisor.scheduleProviderResume(run.id, c.req.valid("json").resume_at);
+      } catch (error) {
+        if (error instanceof ProviderResumeRefusedError) {
+          return c.json({ error: error.code, message: error.message }, 409);
+        }
+        console.error(`[otomat] scheduling the provider resume of run ${run.id} failed`, error);
+        return c.json({ error: "provider_resume_schedule_failed" }, 500);
+      }
+      return runDetailJson(deps, c, run.id);
+    },
+  );
 
   routes.get("/:id/workspace", runGuard(deps.db), (c) => {
     const run = c.get("run");

@@ -20,6 +20,7 @@ const ACTIVE_STEP_STATES: ReadonlySet<StepRunState> = new Set([
   "running",
   "awaiting_permission",
   "awaiting_human",
+  "waiting_for_provider",
 ]);
 
 function isStepHalted(status: StepRunState): boolean {

@@ -1,5 +1,7 @@
 import { existsSync } from "node:fs";
 
+import type { ProviderLimit } from "@otomat/domain";
+
 import type { RuntimeFinalState, RuntimeRunInput, RuntimeUsage } from "#runtime/contract";
 import type { RuntimeEvent } from "#runtime/events";
 import type { RuntimeSink } from "#runtime/sinks";
@@ -8,11 +10,20 @@ import { parseJsonRecord } from "./frame-guards.js";
 import { runCliProcess, type CliProcessExit } from "./process-runner.js";
 import { TurnEmitter, type TurnRef } from "./turn-emitter.js";
 
+/**
+ * A quota a frame mapper recognised in its provider's own output; `runCliTurn`
+ * stamps which provider said it. A mapper that reports one also emits a
+ * `runtime.provider_limit` event carrying the raw frame, so the wait it ends up
+ * scheduling stays auditable against what the CLI actually said.
+ */
+export type ProviderLimitReport = Omit<ProviderLimit, "provider">;
+
 /** Provider evidence a frame mapper accumulates over one turn; null fields mean the provider never reported them. */
 export interface ProviderTurnOutcome {
   providerSessionId: string | null;
   usage: RuntimeUsage | null;
   result: { isError: boolean; message: string | null } | null;
+  limit: ProviderLimitReport | null;
 }
 
 /** Maps one provider-native stdout frame onto runtime events while accumulating the turn outcome. */
@@ -59,7 +70,7 @@ export async function runCliTurn(
   if (!existsSync(spec.cwd)) {
     const message = `worktree ${spec.cwd} does not exist`;
     emitter.daemonLog(message);
-    return failedState(message, mapper.outcome, emitter.emitted);
+    return failedState(spec.adapter, message, mapper.outcome, emitter.emitted);
   }
   const workDir = spec.cwd;
 
@@ -87,6 +98,7 @@ export async function runCliTurn(
     });
     if (dispatchError !== null) {
       return failedState(
+        spec.adapter,
         `event dispatch failed: ${dispatchError}`,
         mapper.outcome,
         emitter.emitted,
@@ -97,6 +109,7 @@ export async function runCliTurn(
     const message = error instanceof Error ? error.message : String(error);
     emitter.daemonLog(`failed to run ${spec.adapter}: ${message}`);
     return failedState(
+      spec.adapter,
       `failed to run ${spec.adapter}: ${message}`,
       mapper.outcome,
       emitter.emitted,
@@ -118,6 +131,7 @@ function finalStateFromExit(
       error: outcome.result.isError
         ? { message: outcome.result.message ?? "provider reported an error" }
         : null,
+      limit: outcome.result.isError ? providerLimit(adapter, outcome) : null,
       event_count: emitter.emitted,
     };
   }
@@ -127,12 +141,17 @@ function finalStateFromExit(
       provider_session_id: outcome.providerSessionId,
       usage: outcome.usage,
       error: null,
+      limit: null,
       event_count: emitter.emitted,
     };
   }
   const message = `${adapter} exited (${exit.signal ?? exit.code ?? "unknown"}) without reporting a result`;
   emitter.daemonLog(message);
-  return failedState(message, outcome, emitter.emitted);
+  return failedState(adapter, message, outcome, emitter.emitted);
+}
+
+function providerLimit(adapter: string, outcome: ProviderTurnOutcome): ProviderLimit | null {
+  return outcome.limit === null ? null : { provider: adapter, ...outcome.limit };
 }
 
 function dispatchStdoutLine(line: string, emitter: TurnEmitter, mapper: ProviderFrameMapper): void {
@@ -146,6 +165,7 @@ function dispatchStdoutLine(line: string, emitter: TurnEmitter, mapper: Provider
 }
 
 function failedState(
+  adapter: string,
   message: string,
   outcome: ProviderTurnOutcome,
   eventCount: number,
@@ -155,6 +175,7 @@ function failedState(
     provider_session_id: outcome.providerSessionId,
     usage: outcome.usage,
     error: { message },
+    limit: providerLimit(adapter, outcome),
     event_count: eventCount,
   };
 }

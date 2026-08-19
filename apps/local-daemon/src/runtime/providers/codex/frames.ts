@@ -2,6 +2,8 @@ import { asNumber, asRecord, asString } from "#runtime/cli/frame-guards";
 import type { ProviderFrameMapper, ProviderTurnOutcome } from "#runtime/cli/turn";
 import type { TurnEmitter } from "#runtime/cli/turn-emitter";
 
+import { codexProviderLimit } from "./limits.js";
+
 type ItemFrameType = "item.started" | "item.completed" | "item.updated";
 
 export class CodexFrameMapper implements ProviderFrameMapper {
@@ -9,6 +11,7 @@ export class CodexFrameMapper implements ProviderFrameMapper {
     providerSessionId: null,
     usage: null,
     result: null,
+    limit: null,
   };
 
   constructor(private readonly emitter: TurnEmitter) {}
@@ -60,11 +63,14 @@ export class CodexFrameMapper implements ProviderFrameMapper {
 
   private onTurnFailed(frame: Record<string, unknown>): void {
     const error = asRecord(frame["error"]);
-    this.outcome.result = {
-      isError: true,
-      message: asString(error?.["message"]) ?? asString(frame["message"]) ?? "codex turn failed",
-    };
+    const message =
+      asString(error?.["message"]) ?? asString(frame["message"]) ?? "codex turn failed";
+    this.outcome.result = { isError: true, message };
     this.emitter.emit("runtime.log", "native", { frame });
+    const limit = codexProviderLimit(message);
+    if (limit === null) return;
+    this.outcome.limit = limit;
+    this.emitter.emit("runtime.provider_limit", "native", { ...limit, frame });
   }
 
   private onItemFrame(frameType: ItemFrameType, frame: Record<string, unknown>): void {

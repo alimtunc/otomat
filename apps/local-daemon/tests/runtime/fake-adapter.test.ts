@@ -36,13 +36,14 @@ const sessionRef = () => runtimeSessionRef("fake-session-sess-1");
 const liveSignal = (): AbortSignal => new AbortController().signal;
 
 describe("FakeRuntimeAdapter contract", () => {
-  it("exposes a lean 6-flag capability model and a test-adapter identity", () => {
+  it("exposes a lean 7-flag capability model and a test-adapter identity", () => {
     expect(adapter.id).toBe(FAKE_ADAPTER_ID);
     expect(adapter.displayName).toMatch(/test adapter/i);
     expect(Object.keys(adapter.capabilities).toSorted()).toEqual([
       "abort",
       "diff_hints",
       "permissions",
+      "provider_limit",
       "resume",
       "steering",
       "stream",

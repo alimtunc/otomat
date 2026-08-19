@@ -1,0 +1,1 @@
+ALTER TABLE `step_runs` ADD `provider_wait_json` text;

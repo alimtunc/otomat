@@ -8,6 +8,7 @@ import {
   effectiveStepStatuses,
   haltedPlanOutcome,
   hasActiveStep,
+  isStepActive,
   planOutcome,
   readyPlanWork,
 } from "#domain/plan/schedule";
@@ -194,6 +195,21 @@ describe("readyPlanWork", () => {
       kind: "compete",
       competitors: [{ id: "candidate-b" }],
     });
+  });
+});
+
+describe("a step waiting on a provider quota", () => {
+  it("is active work the plan still owes, never a halted one", () => {
+    const waiting = statuses({ root: "waiting_for_provider" });
+    expect(isStepActive("waiting_for_provider")).toBe(true);
+    expect(hasActiveStep(diamond, waiting)).toBe(true);
+    expect(planOutcome(diamond, waiting)).toBe("running");
+  });
+
+  it("is not startable work, so nothing restarts it behind the scheduler", () => {
+    expect(
+      readyPlanWork(diamond, statuses({ root: "waiting_for_provider" }), new Map()),
+    ).toBeNull();
   });
 });
 

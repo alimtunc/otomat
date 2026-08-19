@@ -4,7 +4,11 @@ import { agentSessionMachine } from "#domain/state-machines/agent-session";
 import { competeGroupMachine } from "#domain/state-machines/compete-group";
 import { issueMachine } from "#domain/state-machines/issue";
 import { linearWriteMachine } from "#domain/state-machines/linear-write";
-import { IllegalTransitionError, type StateMachine } from "#domain/state-machines/machine";
+import {
+  IllegalTransitionError,
+  shortestPath,
+  type StateMachine,
+} from "#domain/state-machines/machine";
 import { pullRequestMachine } from "#domain/state-machines/pull-request";
 import { pullRequestPublicationMachine } from "#domain/state-machines/pull-request-publication";
 import { reviewMachine } from "#domain/state-machines/review";
@@ -208,9 +212,17 @@ describe("RUN_SETTLED_STATES", () => {
 });
 
 describe("RUN_RESUMABLE_STATES", () => {
-  it.each(RUN_RESUMABLE_STATES)("%s can be reopened through preparing", (status) => {
+  it.each(RUN_RESUMABLE_STATES)("%s can be reopened into a working run", (status) => {
     expect(isRunResumable(status)).toBe(true);
-    expect(() => runMachine.transition(status, "preparing")).not.toThrow();
+    expect(shortestPath(runMachine, status, "running")).not.toBeNull();
+  });
+
+  // Only a stopped run needs `preparing`: it may have to replay its worktree init, while a run merely waiting never left it.
+  it("reopens a stopped run through preparing", () => {
+    for (const status of RUN_SETTLED_STATES.filter((state) => isRunResumable(state))) {
+      expect(() => runMachine.transition(status, "preparing")).not.toThrow();
+    }
+    expect(() => runMachine.transition("waiting_for_provider", "running")).not.toThrow();
   });
 
   it("never reopens a merged run", () => {

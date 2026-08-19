@@ -17,9 +17,14 @@ import { driveIdleRunTo, driveRunConvergence } from "./transitions.js";
 /** Grace between a graceful `SIGTERM` and a forced `SIGKILL` during abort. */
 const ABORT_GRACE_MS = 2000;
 
-/** The user asked to stop: whatever the settled turn produced, nothing further starts. */
+/**
+ * The user asked to stop: whatever the settled turn produced, nothing further
+ * starts. Only a run that reached review has delivered its work; every other
+ * landing — including a step left waiting on a provider quota — is cancelled,
+ * or the cancel would leave a resume still scheduled.
+ */
 function cancelRemainder(state: SupervisorState, run: RunRow, now: string): void {
-  if (run.status !== "running") return;
+  if (isRunSettled(run.status) || run.status === "review_ready") return;
   driveIdleRunTo(state.db, run, "canceled", listStepRunsForRun(state.db, run.id), now);
 }
 
@@ -81,7 +86,7 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
       active?.provider_session_id ??
       sessions.find((s) => s.provider_session_id !== null)?.provider_session_id ??
       null;
-    const marker = buildTerminalMarker(ref, "canceled", providerSessionId, 0, now);
+    const marker = buildTerminalMarker(ref, "canceled", providerSessionId, null, 0, now);
     emitLedgerEvent(db, dataDir, runId, marker);
     finishSettle(state, {
       runId,

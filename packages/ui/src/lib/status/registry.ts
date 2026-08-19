@@ -40,6 +40,7 @@ import {
   Send,
   ShieldQuestion,
   Square,
+  Timer,
   TriangleAlert,
 } from "lucide-react";
 
@@ -49,6 +50,7 @@ const ISSUE_STATUS: StatusMap<IssueBoardColumn> = {
   backlog: { tone: "neutral", icon: Circle, label: "Backlog" },
   ready: { tone: "iris", icon: CircleDot, label: "Ready" },
   running: { tone: "iris", icon: Loader, label: "Running", live: true },
+  waiting_for_provider: { tone: "warning", icon: Timer, label: "Waiting on provider" },
   failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
   reviewing: { tone: "review", icon: MessageSquare, label: "Reviewing" },
   pr_open: { tone: "success", icon: GitPullRequest, label: "PR open" },
@@ -64,6 +66,7 @@ const RUN_STATUS: StatusMap<RunState> = {
   awaiting_permission: { tone: "warning", icon: ShieldQuestion, label: "Awaiting permission" },
   awaiting_human: { tone: "warning", icon: Hand, label: "Awaiting human" },
   awaiting_selection: { tone: "warning", icon: GitCompare, label: "Awaiting winner" },
+  waiting_for_provider: { tone: "warning", icon: Timer, label: "Waiting on provider" },
   review_ready: { tone: "review", icon: GitCompare, label: "Review ready" },
   completed: { tone: "success", icon: CheckCircle2, label: "Completed" },
   failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
@@ -84,6 +87,7 @@ const STEP_STATUS: StatusMap<StepRunState> = {
   running: { tone: "iris", icon: Loader, label: "Running", live: true },
   awaiting_permission: { tone: "warning", icon: ShieldQuestion, label: "Awaiting permission" },
   awaiting_human: { tone: "warning", icon: Hand, label: "Awaiting human" },
+  waiting_for_provider: { tone: "warning", icon: Timer, label: "Waiting on provider" },
   succeeded: { tone: "success", icon: CheckCircle2, label: "Succeeded" },
   failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
   canceled: { tone: "neutral", icon: Ban, label: "Canceled" },

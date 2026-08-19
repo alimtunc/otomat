@@ -19,6 +19,7 @@ const CATEGORY_BY_TYPE = {
   "runtime.permission_response": "permission",
   "runtime.usage": "usage",
   "runtime.provider_session": "provider",
+  "runtime.provider_limit": "provider",
   "git.diff_updated": "control",
   "review.comment_created": "control",
   "review.comment_resolved": "control",

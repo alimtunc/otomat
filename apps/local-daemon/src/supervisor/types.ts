@@ -121,6 +121,9 @@ export interface Supervisor {
   resume(runId: string): Promise<RunRow>;
   /** What that resume would do, so the cockpit shows native reattachment or a recovery session before it runs. */
   resumePlan(runId: string): RunResumePlan;
+  scheduleProviderResume(runId: string, resumeAt: string | null): void;
+  /** Scheduler pass: resume every suspended step whose deadline has come. Answers how many runs it resumed. */
+  resumeDueProviderWaits(): Promise<number>;
   /** Close the issue's work cycle by hand; refused while a turn is live, and it deletes nothing in git. */
   abandon(runId: string): RunRow;
   /** The branch, commits, uncommitted work and diff an abandon would leave behind; null for an unknown run. */
@@ -153,7 +156,12 @@ export interface Supervisor {
   shutdown(graceMs: number): Promise<void>;
 }
 
-export type ReconcileClassification = "completed" | "interrupted" | "failed" | "canceled";
+export type ReconcileClassification =
+  | "completed"
+  | "interrupted"
+  | "provider_limited"
+  | "failed"
+  | "canceled";
 
 export interface ReconcileOutcome {
   runId: string;

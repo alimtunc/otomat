@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { pullRequestContractSchema } from "#domain/contracts/entities/pull-request";
+import { isProviderProvedResume, stepProviderWaitSchema } from "#domain/contracts/entities/runs";
 import { repositoryContractSchema } from "#domain/contracts/entities/workspace";
 
 describe("repository contract", () => {
@@ -136,5 +137,32 @@ describe("pull request contract", () => {
         error_message: null,
       }),
     ).toThrow();
+  });
+});
+
+describe("stepProviderWaitSchema", () => {
+  const WAIT = {
+    provider: "claude",
+    reason: "Claude AI usage limit reached|4102444800",
+    detected_at: "2026-08-19T12:00:00.000Z",
+    provider_resume_at: "2100-01-01T00:00:00.000Z",
+    resume_at: "2100-01-01T00:00:00.000Z",
+  };
+
+  it("keeps the provider's proved reset apart from the instant a resume is scheduled for", () => {
+    expect(stepProviderWaitSchema.parse(WAIT)).toEqual(WAIT);
+    expect(isProviderProvedResume(stepProviderWaitSchema.parse(WAIT))).toBe(true);
+  });
+
+  it("reads a rescheduled or cancelled wait as the operator's own, never the provider's", () => {
+    const moved = { ...WAIT, resume_at: "2099-01-01T00:00:00.000Z" };
+    expect(isProviderProvedResume(stepProviderWaitSchema.parse(moved))).toBe(false);
+    const cancelled = { ...WAIT, resume_at: null };
+    expect(isProviderProvedResume(stepProviderWaitSchema.parse(cancelled))).toBe(false);
+  });
+
+  it("refuses a wait that names no provider or no reason, so the UI never shows an empty cause", () => {
+    expect(stepProviderWaitSchema.safeParse({ ...WAIT, provider: "" }).success).toBe(false);
+    expect(stepProviderWaitSchema.safeParse({ ...WAIT, reason: "" }).success).toBe(false);
   });
 });

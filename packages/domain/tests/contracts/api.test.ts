@@ -225,6 +225,7 @@ describe("runDetailSchema", () => {
           worktree_id: "wt-a",
           branch: "otomat/run/run-1/compete/candidate-a",
           worktree_status: "archived",
+          provider_wait: null,
         },
       ],
       sessions: [],
@@ -339,6 +340,7 @@ describe("runtime availability contract", () => {
         resume: true,
         permissions: false,
         diff_hints: false,
+        provider_limit: "deadline",
       },
       availability: { status: "unavailable", reason: "binary_not_found" },
     };

@@ -6,6 +6,7 @@ export const STEP_RUN_STATES = [
   "running",
   "awaiting_permission",
   "awaiting_human",
+  "waiting_for_provider",
   "succeeded",
   "failed",
   "canceled",
@@ -21,9 +22,18 @@ export const stepRunMachine = defineMachine<StepRunState>({
   transitions: {
     queued: ["starting", "canceled"],
     starting: ["running", "failed", "canceled", "stale"],
-    running: ["awaiting_permission", "awaiting_human", "succeeded", "failed", "canceled", "stale"],
+    running: [
+      "awaiting_permission",
+      "awaiting_human",
+      "waiting_for_provider",
+      "succeeded",
+      "failed",
+      "canceled",
+      "stale",
+    ],
     awaiting_permission: ["running", "failed", "canceled", "stale"],
     awaiting_human: ["running", "failed", "canceled", "stale"],
+    waiting_for_provider: ["running", "failed", "canceled", "stale"],
     succeeded: [],
     failed: ["queued"],
     canceled: ["queued"],
@@ -31,7 +41,7 @@ export const stepRunMachine = defineMachine<StepRunState>({
   },
 });
 
-/** Step states with no work in flight; a settle leaves them alone, and only an explicit resume requeues one. */
+/** Step states with no work in flight; a settle leaves them alone, and only an explicit resume requeues one. `waiting_for_provider` is deliberately out: a cancel or an abandon still has to be able to close a step waiting on a quota reset. */
 export const STEP_RUN_SETTLED_STATES = [
   "succeeded",
   "failed",

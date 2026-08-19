@@ -5,6 +5,7 @@ import type { IssueState } from "../entity-states.js";
 /** What Otomat is locally doing for an issue — never the issue's business/source `status`, which a run, review, or PR must not mutate. */
 export const ISSUE_EXECUTION_STATES = [
   "running",
+  "waiting_for_provider",
   "reviewing",
   "pr_open",
   "failed",
@@ -14,20 +15,21 @@ export type IssueExecutionState = (typeof ISSUE_EXECUTION_STATES)[number];
 
 /**
  * Where an issue is shown once its local execution is taken into account: its
- * source status, plus the `failed` execution that must never fold back into
- * `ready`. Ordered as the board reads, left to right.
+ * source status, plus the `failed` and `waiting_for_provider` executions that
+ * must never fold back into `ready`. Ordered as the board reads, left to right.
  */
 export const ISSUE_BOARD_COLUMNS = [
   "backlog",
   "ready",
   "running",
+  "waiting_for_provider",
   "failed",
   "reviewing",
   "pr_open",
   "blocked",
   "done",
   "canceled",
-] as const satisfies readonly (IssueState | "failed")[];
+] as const satisfies readonly (IssueState | Exclude<IssueExecutionState, "none">)[];
 export type IssueBoardColumn = (typeof ISSUE_BOARD_COLUMNS)[number];
 
 /** Why the issue's open workspace stopped; every one of them is resumable, so none closes the cycle. */
@@ -42,7 +44,7 @@ const issueExecutionFailureSchema = z.object({
 export type IssueExecutionFailure = z.infer<typeof issueExecutionFailureSchema>;
 
 const activeExecutionSchema = z.object({
-  state: z.enum(["running", "reviewing", "pr_open"]),
+  state: z.enum(["running", "waiting_for_provider", "reviewing", "pr_open"]),
   run_id: z.string().min(1),
 });
 const failedExecutionSchema = z.object({

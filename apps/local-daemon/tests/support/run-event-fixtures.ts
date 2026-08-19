@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 
+import type { ProviderLimit } from "@otomat/domain";
 import { expect } from "vitest";
 
 import { runDir, runEventsPath } from "#events";
@@ -61,7 +62,30 @@ export function logEvent(seed: SeededRun, text: string): RuntimeEvent {
 }
 
 export function completedMarker(seed: SeededRun, providerSessionId: string): RuntimeEvent {
-  return buildTerminalMarker(seed, "completed", providerSessionId, 3, "2026-01-01T00:00:01.000Z");
+  return buildTerminalMarker(
+    seed,
+    "completed",
+    providerSessionId,
+    null,
+    3,
+    "2026-01-01T00:00:01.000Z",
+  );
+}
+
+/** A turn the provider refused for quota: `failed` on the wire, with the limit that makes it recoverable. */
+export function providerLimitMarker(
+  seed: SeededRun,
+  providerSessionId: string,
+  limit: ProviderLimit,
+): RuntimeEvent {
+  return buildTerminalMarker(
+    seed,
+    "failed",
+    providerSessionId,
+    limit,
+    3,
+    "2026-01-01T00:00:01.000Z",
+  );
 }
 
 /** Writes the run's durable `events.jsonl`. */

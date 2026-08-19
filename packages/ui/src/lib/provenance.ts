@@ -15,6 +15,7 @@ import {
   Play,
   ShieldQuestion,
   Terminal,
+  Timer,
 } from "lucide-react";
 
 import type { StatusTone } from "./tone";
@@ -58,6 +59,7 @@ export const EVENT_GLYPH = {
   "runtime.permission_response": { icon: ShieldQuestion, tone: "neutral" },
   "runtime.usage": { icon: Activity, tone: "neutral" },
   "runtime.provider_session": { icon: CircleDotDashed, tone: "neutral" },
+  "runtime.provider_limit": { icon: Timer, tone: "warning" },
   "git.diff_updated": { icon: FileDiff, tone: "stale" },
   "review.comment_created": { icon: MessageSquare, tone: "review" },
   "review.comment_resolved": { icon: CheckCircle2, tone: "success" },
