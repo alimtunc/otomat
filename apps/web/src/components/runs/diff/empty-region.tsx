@@ -29,18 +29,14 @@ export function DiffEmptyRegion({
           description="The canonical git diff appears once a run produces changes. Diffs are never fabricated."
         />
       </CenteredState>
-      {detached.length === 0 ? null : (
-        <div className="p-4">
-          <DetachedComments
-            target={target}
-            comments={detached}
-            selectedIds={selection.selectedIds}
-            onToggle={selection.toggle}
-            onPublish={onPublish}
-            publishingId={publishingId}
-          />
-        </div>
-      )}
+      <DetachedComments
+        target={target}
+        comments={detached}
+        selectedIds={selection.selectedIds}
+        onToggle={selection.toggle}
+        onPublish={onPublish}
+        publishingId={publishingId}
+      />
     </div>
   );
 }

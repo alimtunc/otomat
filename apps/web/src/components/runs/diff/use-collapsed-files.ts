@@ -1,3 +1,4 @@
+import type { DiffFileContract } from "@otomat/domain";
 import { useState } from "react";
 
 export interface CollapsedFiles {
@@ -5,19 +6,31 @@ export interface CollapsedFiles {
   set: (path: string, collapsed: boolean) => void;
 }
 
-/** Collapse is per file and purely a reading state: it never touches Reviewed or a comment. */
-export function useCollapsedFiles(): CollapsedFiles {
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set<string>());
+/** Keyed by sha so an override dies with the patch it was made against. */
+interface CollapseOverride {
+  sha: string;
+  collapsed: boolean;
+}
+
+export function useCollapsedFiles(
+  files: readonly DiffFileContract[],
+  reviewedPaths: ReadonlySet<string>,
+): CollapsedFiles {
+  const [overrides, setOverrides] = useState<ReadonlyMap<string, CollapseOverride>>(
+    () => new Map(),
+  );
+  const shas = new Map(files.map((file) => [file.path, file.sha]));
 
   return {
-    has: (path) => collapsed.has(path),
-    set: (path, next) => {
-      setCollapsed((current) => {
-        const updated = new Set(current);
-        if (next) updated.add(path);
-        else updated.delete(path);
-        return updated;
-      });
+    has: (path) => {
+      const override = overrides.get(path);
+      if (override !== undefined && override.sha === shas.get(path)) return override.collapsed;
+      return reviewedPaths.has(path);
+    },
+    set: (path, collapsed) => {
+      const sha = shas.get(path);
+      if (sha === undefined) return;
+      setOverrides((current) => new Map(current).set(path, { sha, collapsed }));
     },
   };
 }

@@ -653,6 +653,13 @@ is byte-identical and only the files a new head really touched come back unread.
 unresolved comment, and always says how many it is holding back — a reviewer who
 cannot see a file must at least know it exists.
 
+Folding follows from that mark rather than living beside it: a reviewed file
+opens collapsed, marking one folds it and moves the reader to the next unread
+file at its start, and the last mark ends on a stated final state instead of an
+arbitrary jump. A manual fold or unfold overrides the derived state only for the
+sha it was made against, so the patch change that drops a Reviewed mark also
+reopens the file — one fact, `DiffFile.sha`, drives both.
+
 Context expansion reads the real thing rather than guessing around the patch:
 `GET /api/runs/:id/diff/file` verifies the caller's sha against the live diff and
 answers with the exact base and head blobs, refusing a moved anchor, a binary
@@ -663,6 +670,10 @@ with even while the agent keeps writing. The web
 card only hands those blobs to `@git-diff-view` while they belong to the sha it
 is rendering — the query key carries it — because content paired with a stale or
 empty patch is what turns a real diff into a neutral, unchanged-looking file.
+The card offers that as one header action rather than a load-then-expand pair,
+and the request is latched: folding back to the changes keeps the loaded blobs,
+so re-expanding costs nothing and a large file is still only ever read on
+demand.
 
 A comment pins to `(file_path, side, start_line, line, diff_sha)`, where `line`
 is null for a whole-file comment and `start_line` is null for a single line.

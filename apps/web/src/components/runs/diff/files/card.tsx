@@ -1,5 +1,5 @@
 import type { DiffFileContract, ReviewTarget, RunDiffScopeSelector } from "@otomat/domain";
-import { cn, FOCUS_RING } from "@otomat/ui";
+import { Button, cn, FOCUS_RING } from "@otomat/ui";
 import { DiffFileCardBody } from "@web/components/runs/diff/files/card-body";
 import { DiffFileCardHeader } from "@web/components/runs/diff/files/card-header";
 import { diffFileDomId, unrenderableNote } from "@web/components/runs/diff/files/card.utils";
@@ -14,6 +14,8 @@ import type {
   DiffFileComments,
 } from "@web/components/runs/review/file-comments";
 import { useState } from "react";
+
+const NOTICE_CLASS = "flex items-center gap-2 border-b border-border px-3 py-2 text-xs";
 
 export interface DiffFileCardProps {
   target: ReviewTarget;
@@ -47,13 +49,13 @@ export function DiffFileCard({
 }: DiffFileCardProps) {
   const viewport = useNearViewport();
   const blobs = useFileBlobs(target, file, scope);
-  const [expandAll, setExpandAll] = useState(false);
+  const [fullFile, setFullFile] = useState(false);
   const [composing, setComposing] = useState(false);
   const expandable = unrenderableNote(file) === null;
 
-  const showFullFile = (): void => {
-    blobs.request();
-    setExpandAll(true);
+  const changeFullFile = (next: boolean): void => {
+    if (next) blobs.request();
+    setFullFile(next);
   };
   const commentOnFile = (): void => {
     onCollapsedChange(false);
@@ -69,11 +71,7 @@ export function DiffFileCard({
       aria-current={active ? "true" : undefined}
       onPointerDownCapture={onActivate}
       onFocusCapture={onActivate}
-      className={cn(
-        "rounded-md border bg-surface-2",
-        FOCUS_RING,
-        active ? "border-border-strong" : "border-border",
-      )}
+      className={cn("border-b border-border bg-surface-2", FOCUS_RING)}
     >
       <DiffFileCardHeader
         file={file}
@@ -87,21 +85,25 @@ export function DiffFileCard({
             onSelect={commentActions.reveal}
           />
         }
+        active={active}
         reviewed={reviewed}
         onReviewedChange={onReviewedChange}
         collapsed={collapsed}
         onCollapsedChange={onCollapsedChange}
-        onExpandContext={expandable && !blobs.requested ? blobs.request : null}
-        onShowFullFile={expandable ? showFullFile : null}
+        fullFile={fullFile}
+        onFullFileChange={expandable ? changeFullFile : null}
         onCommentFile={commentOnFile}
       />
       {blobs.error === null ? null : (
-        <p className="border-b border-border px-3 py-2 text-xs text-danger">{blobs.error}</p>
+        <p className={cn(NOTICE_CLASS, "text-danger")}>
+          {blobs.error}
+          <Button variant="ghost" size="xs" onClick={blobs.retry}>
+            Retry
+          </Button>
+        </p>
       )}
       {blobs.isPending ? (
-        <p className="border-b border-border px-3 py-2 text-xs text-text-tertiary">
-          Loading the file around this patch…
-        </p>
+        <p className={cn(NOTICE_CLASS, "text-text-tertiary")}>Loading the full file…</p>
       ) : null}
       {comments.whole.length === 0 ? null : (
         <div className="flex flex-col gap-2 border-b border-border bg-surface-1 p-3">
@@ -138,7 +140,7 @@ export function DiffFileCard({
           wrap={prefs.wrap}
           highlight={viewport.near}
           context={blobs.context}
-          expandAll={expandAll}
+          fullFile={fullFile}
           comments={comments}
           commentActions={commentActions}
         />

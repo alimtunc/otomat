@@ -1,4 +1,5 @@
 import type { DiffFileContract, ReviewTarget, RunDiffScopeSelector } from "@otomat/domain";
+import { DiffAllReviewedNotice } from "@web/components/runs/diff/all-reviewed-notice";
 import { DiffFileCard } from "@web/components/runs/diff/files/card";
 import { HiddenReviewedNotice } from "@web/components/runs/diff/hidden-notice";
 import type { DiffPrefs } from "@web/components/runs/diff/prefs/prefs";
@@ -18,6 +19,8 @@ export interface DiffFileCardsProps {
   onShowHidden: () => void;
   prefs: DiffPrefs;
   reviewedPaths: ReadonlySet<string>;
+  /** True once every file of the diff carries a Reviewed mark, hidden ones included. */
+  allReviewed: boolean;
   onReviewedChange: (path: string, reviewed: boolean) => void;
   collapsed: CollapsedFiles;
   activePath: string | null;
@@ -34,6 +37,7 @@ export function DiffFileCards({
   onShowHidden,
   prefs,
   reviewedPaths,
+  allReviewed,
   onReviewedChange,
   collapsed,
   activePath,
@@ -42,35 +46,34 @@ export function DiffFileCards({
   commentActions,
 }: DiffFileCardsProps) {
   return (
-    <div className="min-h-0 min-w-0 flex-1 overflow-auto p-4">
-      <div className="flex flex-col gap-3">
-        {files.map((file) => (
-          <DiffFileCard
-            key={file.path}
-            target={target}
-            scope={scope}
-            file={file}
-            prefs={prefs}
-            reviewed={reviewedPaths.has(file.path)}
-            onReviewedChange={(next) => onReviewedChange(file.path, next)}
-            collapsed={collapsed.has(file.path)}
-            onCollapsedChange={(next) => collapsed.set(file.path, next)}
-            active={file.path === activePath}
-            onActivate={() => onActivate(file.path)}
-            comments={fileComments(file.path, comments)}
-            commentActions={commentActions}
-          />
-        ))}
-        <HiddenReviewedNotice count={hiddenCount} onShow={onShowHidden} />
-        <DetachedComments
+    <div className="min-h-0 min-w-0 flex-1 overflow-auto">
+      {files.map((file) => (
+        <DiffFileCard
+          key={file.path}
           target={target}
-          comments={comments.partition.detached}
-          selectedIds={comments.selectedIds}
-          onToggle={commentActions.toggle}
-          onPublish={commentActions.publish}
-          publishingId={comments.publishingId}
+          scope={scope}
+          file={file}
+          prefs={prefs}
+          reviewed={reviewedPaths.has(file.path)}
+          onReviewedChange={(next) => onReviewedChange(file.path, next)}
+          collapsed={collapsed.has(file.path)}
+          onCollapsedChange={(next) => collapsed.set(file.path, next)}
+          active={file.path === activePath}
+          onActivate={() => onActivate(file.path)}
+          comments={fileComments(file.path, comments)}
+          commentActions={commentActions}
         />
-      </div>
+      ))}
+      <HiddenReviewedNotice count={hiddenCount} onShow={onShowHidden} />
+      {allReviewed ? <DiffAllReviewedNotice count={reviewedPaths.size} /> : null}
+      <DetachedComments
+        target={target}
+        comments={comments.partition.detached}
+        selectedIds={comments.selectedIds}
+        onToggle={commentActions.toggle}
+        onPublish={commentActions.publish}
+        publishingId={comments.publishingId}
+      />
     </div>
   );
 }

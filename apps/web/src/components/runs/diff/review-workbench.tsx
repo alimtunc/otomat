@@ -91,6 +91,7 @@ export function ReviewWorkbench({
       onShowHidden={() => diffPrefsStore.actions.set({ hideReviewed: false })}
       prefs={prefs}
       reviewedPaths={reviewed.paths}
+      allReviewed={diff.files.length > 0 && reviewed.paths.size === diff.files.length}
       onReviewedChange={interactions.toggleReviewed}
       collapsed={collapsed}
       activePath={active.path}
@@ -158,7 +159,7 @@ export function ReviewWorkbench({
         prefs={prefs}
         onPrefsChange={diffPrefsStore.actions.set}
         browsable={wide && diff.files.length > 0}
-        reviewedCount={diff.files.filter((file) => reviewed.paths.has(file.path)).length}
+        reviewedCount={reviewed.paths.size}
         activePath={active.path}
       />
       {diff.files.length === 0 ? emptyRegion : browsedRegion}

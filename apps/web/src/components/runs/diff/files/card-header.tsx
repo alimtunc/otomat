@@ -1,5 +1,5 @@
 import type { DiffFileContract } from "@otomat/domain";
-import { Checkbox, DiffFileStatusChip, Icon, IconButton } from "@otomat/ui";
+import { Checkbox, cn, DiffFileStatusChip, Icon, IconButton } from "@otomat/ui";
 import { diffFileLabels } from "@web/components/runs/diff/files/path";
 import { DiffStat } from "@web/components/runs/diff/stat";
 import type { ReactNode } from "react";
@@ -8,13 +8,14 @@ export interface DiffFileCardHeaderProps {
   file: DiffFileContract;
   stats: boolean;
   indicator: ReactNode;
+  active: boolean;
   reviewed: boolean;
   onReviewedChange: (reviewed: boolean) => void;
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
-  /** Absent when the file has no text to expand, so no context action is offered. */
-  onExpandContext: (() => void) | null;
-  onShowFullFile: (() => void) | null;
+  fullFile: boolean;
+  /** Absent when the file has no text to expand, so no full-file action is offered. */
+  onFullFileChange: ((fullFile: boolean) => void) | null;
   onCommentFile: () => void;
 }
 
@@ -22,17 +23,23 @@ export function DiffFileCardHeader({
   file,
   stats,
   indicator,
+  active,
   reviewed,
   onReviewedChange,
   collapsed,
   onCollapsedChange,
-  onExpandContext,
-  onShowFullFile,
+  fullFile,
+  onFullFileChange,
   onCommentFile,
 }: DiffFileCardHeaderProps) {
   const labels = diffFileLabels(file);
   return (
-    <header className="sticky top-0 z-10 flex h-9 items-center gap-2.5 rounded-t-md border-b border-border bg-surface-1 px-2 font-mono text-xs">
+    <header
+      className={cn(
+        "sticky top-0 z-10 flex h-8.5 items-center gap-2.5 border-b border-border px-2 font-mono text-xs",
+        active ? "bg-surface-3" : "bg-surface-1",
+      )}
+    >
       <IconButton
         size="sm"
         label={collapsed ? `Expand ${file.path}` : `Collapse ${file.path}`}
@@ -56,20 +63,15 @@ export function DiffFileCardHeader({
           icon={<Icon name="message-square" />}
           onClick={onCommentFile}
         />
-        {onExpandContext === null ? null : (
+        {onFullFileChange === null ? null : (
           <IconButton
             size="sm"
-            label={`Expand context in ${file.path}`}
-            icon={<Icon name="unfold-vertical" />}
-            onClick={onExpandContext}
-          />
-        )}
-        {onShowFullFile === null ? null : (
-          <IconButton
-            size="sm"
-            label={`Show all of ${file.path}`}
-            icon={<Icon name="file-text" />}
-            onClick={onShowFullFile}
+            label={
+              fullFile ? `Show only the changes in ${file.path}` : `Expand full file ${file.path}`
+            }
+            icon={<Icon name={fullFile ? "fold-vertical" : "unfold-vertical"} />}
+            aria-pressed={fullFile}
+            onClick={() => onFullFileChange(!fullFile)}
           />
         )}
         <label className="flex cursor-pointer select-none items-center gap-1.5 pl-1.5 font-sans text-xs text-text-secondary">

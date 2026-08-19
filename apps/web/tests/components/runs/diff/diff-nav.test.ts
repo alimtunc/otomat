@@ -1,4 +1,8 @@
-import { adjacentFile, clampBlockIndex } from "@web/components/runs/diff/diff-nav";
+import {
+  adjacentFile,
+  clampBlockIndex,
+  nextUnreviewedFile,
+} from "@web/components/runs/diff/diff-nav";
 import { describe, expect, it } from "vitest";
 
 import { diffFile } from "#support/diff-file";
@@ -45,5 +49,25 @@ describe("clampBlockIndex", () => {
 
   it("returns -1 with no change blocks", () => {
     expect(clampBlockIndex(-1, 1, 0)).toBe(-1);
+  });
+});
+
+describe("nextUnreviewedFile", () => {
+  it("steps to the next file still unreviewed", () => {
+    expect(nextUnreviewedFile(files, "a.ts", new Set())?.path).toBe("b.ts");
+  });
+
+  it("skips the files already reviewed", () => {
+    expect(nextUnreviewedFile(files, "a.ts", new Set(["b.ts"]))?.path).toBe("c.ts");
+  });
+
+  it("wraps to an unreviewed file left behind", () => {
+    expect(nextUnreviewedFile(files, "c.ts", new Set(["b.ts"]))?.path).toBe("a.ts");
+  });
+
+  it("returns null when nothing but the marked file is left", () => {
+    expect(nextUnreviewedFile(files, "b.ts", new Set(["a.ts", "c.ts"]))).toBeNull();
+    expect(nextUnreviewedFile([files[0]], "a.ts", new Set())).toBeNull();
+    expect(nextUnreviewedFile([], "a.ts", new Set())).toBeNull();
   });
 });

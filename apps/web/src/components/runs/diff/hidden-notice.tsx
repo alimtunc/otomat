@@ -9,7 +9,7 @@ export function HiddenReviewedNotice({ count, onShow }: HiddenReviewedNoticeProp
   if (count === 0) return null;
   const label = count === 1 ? "1 reviewed file hidden" : `${count} reviewed files hidden`;
   return (
-    <div className="flex items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-xs text-text-tertiary">
+    <div className="flex items-center gap-2 border-b border-border px-4 py-2 text-xs text-text-tertiary">
       <Icon name="check" aria-hidden className="h-3.5 w-3.5 text-success" />
       {label}
       <Button variant="ghost" size="xs" className="ml-auto" onClick={onShow}>

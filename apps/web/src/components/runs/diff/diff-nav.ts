@@ -13,6 +13,20 @@ export function adjacentFile(
   return files[next];
 }
 
+/** The next file still unreviewed after `fromPath`, wrapping once; null when nothing is left to read. */
+export function nextUnreviewedFile(
+  files: readonly DiffFileContract[],
+  fromPath: string,
+  reviewedPaths: ReadonlySet<string>,
+): DiffFileContract | null {
+  const start = files.findIndex((file) => file.path === fromPath);
+  for (let step = 1; step <= files.length; step += 1) {
+    const candidate = files[(start + step) % files.length];
+    if (candidate.path !== fromPath && !reviewedPaths.has(candidate.path)) return candidate;
+  }
+  return null;
+}
+
 export function clampBlockIndex(current: number, direction: 1 | -1, blockCount: number): number {
   if (blockCount === 0) return -1;
   return Math.min(Math.max(current + direction, 0), blockCount - 1);

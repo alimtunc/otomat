@@ -38,7 +38,7 @@ export interface DiffFileCardBodyProps {
   wrap: boolean;
   highlight: boolean;
   context: FileBlobsContext | null;
-  expandAll: boolean;
+  fullFile: boolean;
   comments: DiffFileComments;
   commentActions: DiffFileCommentActions;
 }
@@ -50,7 +50,7 @@ export function DiffFileCardBody({
   wrap,
   highlight,
   context,
-  expandAll,
+  fullFile,
   comments,
   commentActions,
 }: DiffFileCardBodyProps) {
@@ -66,18 +66,21 @@ export function DiffFileCardBody({
 
   // otomat-allow-effect: expansion lives only on @git-diff-view's imperative instance.
   useEffect(() => {
-    if (!expandAll || context === null) return;
-    view.current?.getDiffFileInstance()?.onAllExpand(mode);
-  }, [expandAll, context, mode]);
+    if (context === null) return;
+    const instance = view.current?.getDiffFileInstance() ?? null;
+    if (instance === null) return;
+    // Reading it back keeps a hand-expanded hunk from being folded by an unrelated render.
+    const expanded = mode === "split" ? instance.hasExpandSplitAll : instance.hasExpandUnifiedAll;
+    if (expanded === fullFile) return;
+    if (fullFile) instance.onAllExpand(mode);
+    else instance.onAllCollapse(mode);
+  }, [fullFile, context, mode]);
 
   const note = unrenderableNote(file);
   if (note !== null) return <p className="px-3 py-4 text-sm text-text-tertiary">{note}</p>;
 
   return (
-    <div
-      className="otomat-review-diff overflow-hidden rounded-b-md"
-      onMouseDownCapture={gutter.press}
-    >
+    <div className="otomat-review-diff overflow-hidden" onMouseDownCapture={gutter.press}>
       <DiffViewWithMultiSelect<ReviewCommentContract[]>
         ref={view}
         data={data}
