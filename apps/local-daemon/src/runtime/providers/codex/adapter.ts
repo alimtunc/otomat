@@ -64,25 +64,31 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
   }
 
   describeOneShot(model: string | null, options: ProviderOptions): RuntimeOneShot {
+    const args = ["exec", "--sandbox", "read-only", ...this.tuningArgs(model, options), "-"];
     return {
       command: this.binary,
-      args: ["exec", "--sandbox", "read-only", ...this.tuningArgs(model, options), "-"],
+      args,
       effort: options.reasoning_effort ?? null,
+      preflight: (cwd) => this.preflightSandbox(cwd, "read-only", "read-only", args),
     };
   }
 
   preflight(input: RuntimePreflightInput): void {
     const requested = input.options.sandbox ?? "provider-default";
     const resolved = input.options.sandbox ?? CODEX_DEFAULT_SANDBOX;
+    this.preflightSandbox(input.cwd, requested, resolved, ["exec", ...this.execArgs(input), "-"]);
+  }
+
+  private preflightSandbox(
+    cwd: string,
+    requested: string,
+    resolved: string,
+    agentArgs: readonly string[],
+  ): void {
     if (resolved === "danger-full-access" || process.platform !== "linux") return;
-    const probe = probeCodexSandbox(this.binary, input.cwd);
+    const probe = probeCodexSandbox(this.binary, cwd);
     if (probe.status === "unavailable") {
-      throw new CodexSandboxUnavailableError(
-        requested,
-        resolved,
-        ["exec", ...this.execArgs(input), "-"],
-        probe,
-      );
+      throw new CodexSandboxUnavailableError(requested, resolved, agentArgs, probe);
     }
   }
 

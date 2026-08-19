@@ -6,12 +6,13 @@ import {
   type ProviderOptionDescriptor,
   type ProviderOptionKey,
 } from "@otomat/domain";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ClaudeRuntimeAdapter } from "#runtime/providers/claude/adapter";
 import { claudePermissionModeStatus } from "#runtime/providers/claude/options";
 import { CodexRuntimeAdapter } from "#runtime/providers/codex/adapter";
 
+import { stubLinuxPlatform } from "../support/platform.js";
 import {
   setupStubHarness,
   STUB_BIN,
@@ -26,6 +27,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   teardownStubHarness(worktree);
 });
 
@@ -233,6 +235,7 @@ describe("codex provider options", () => {
   });
 
   it("withholds confined sandboxes when the host capability probe is denied", () => {
+    stubLinuxPlatform();
     codexFixtures();
     process.env["OTOMAT_STUB_EXITS"] = JSON.stringify({ "sandbox true": 1 });
     process.env["OTOMAT_STUB_STDERRS"] = JSON.stringify({

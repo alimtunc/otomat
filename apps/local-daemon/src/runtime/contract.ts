@@ -82,6 +82,7 @@ export interface RuntimeOneShot {
   command: string;
   args: string[];
   effort: string | null;
+  preflight?(cwd: string): void;
 }
 
 /** Handle to a started session, used by out-of-band `abort`/`resume`. */

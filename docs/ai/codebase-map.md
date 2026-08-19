@@ -131,8 +131,9 @@ failure is not cached, so correcting the host makes the next launch immediately
 retryable. A failed probe removes `read-only` and `workspace-write` from the
 announced choices while leaving `danger-full-access` reachable only through its
 existing explicit dangerous-value confirmation. Launch, append and resume
-preflight the frozen config before creating a provider session, and the adapter
-repeats the guard before spawn. Refusals report the redacted effective argv, cwd,
+preflight the frozen config before creating a provider session, PR metadata
+generation preflights its read-only invocation, and the adapter repeats the
+guard before spawn. Refusals report the redacted effective argv, cwd,
 host/environment, CLI version, requested and resolved sandbox, exit/stderr and
 the relevant user/network-namespace settings; they never substitute an
 unconfined mode.

@@ -1,13 +1,14 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runtimeFinalStateSchema } from "#runtime/contract";
 import { runtimeEventSchema } from "#runtime/events";
 import { CodexRuntimeAdapter } from "#runtime/providers/codex/adapter";
 import { MemorySink } from "#runtime/sinks";
 
+import { stubLinuxPlatform } from "../support/platform.js";
 import { runtimeRunInput, runtimeSessionRef } from "../support/runtime.js";
 import {
   setupStubHarness,
@@ -23,6 +24,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   teardownStubHarness(worktree);
 });
 
@@ -119,6 +121,7 @@ describe("CodexRuntimeAdapter", () => {
   });
 
   it("refuses before spawn when the binary cannot run the sandbox probe", async () => {
+    stubLinuxPlatform();
     const adapter = new CodexRuntimeAdapter("/nonexistent/codex-binary");
     const sink = new MemorySink();
 
@@ -260,7 +263,7 @@ describe("CodexRuntimeAdapter", () => {
   it("asks a one-shot question in a read-only sandbox, sending the selection", () => {
     const adapter = new CodexRuntimeAdapter(STUB_BIN);
 
-    expect(adapter.describeOneShot("gpt-5.6-sol", { reasoning_effort: "xhigh" })).toEqual({
+    expect(adapter.describeOneShot("gpt-5.6-sol", { reasoning_effort: "xhigh" })).toMatchObject({
       command: STUB_BIN,
       args: [
         "exec",
@@ -273,12 +276,27 @@ describe("CodexRuntimeAdapter", () => {
         "-",
       ],
       effort: "xhigh",
+      preflight: expect.any(Function),
     });
-    expect(adapter.describeOneShot(null, {})).toEqual({
+    expect(adapter.describeOneShot(null, {})).toMatchObject({
       command: STUB_BIN,
       args: ["exec", "--sandbox", "read-only", "-"],
       effort: null,
+      preflight: expect.any(Function),
     });
+  });
+
+  it("preflights the one-shot read-only sandbox with its effective argv", () => {
+    stubLinuxPlatform();
+    process.env["OTOMAT_STUB_EXITS"] = JSON.stringify({ "sandbox true": 1 });
+    process.env["OTOMAT_STUB_STDERRS"] = JSON.stringify({
+      "sandbox true": "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
+    });
+    const oneShot = new CodexRuntimeAdapter(STUB_BIN).describeOneShot(null, {});
+
+    expect(() => oneShot.preflight?.(worktree)).toThrow(
+      /Agent argv=\["exec","--sandbox","read-only","-"\]/,
+    );
   });
 
   it("streams stderr lines as raw_log evidence", async () => {
@@ -316,11 +334,11 @@ describe("CodexRuntimeAdapter", () => {
         new AbortController().signal,
       );
 
-      const childEnv: NodeJS.ProcessEnv = JSON.parse(readFileSync(envFile, "utf8"));
-      expect(childEnv["CODEX_THREAD_ID"]).toBeUndefined();
-      expect(childEnv["CODEX_REMOTE_PAYLOAD"]).toBeUndefined();
-      expect(childEnv["CODEX_SANDBOX_NETWORK_DISABLED"]).toBeUndefined();
-      expect(childEnv["CODEX_HOME"]).toBe(worktree);
+      const childEnv: unknown = JSON.parse(readFileSync(envFile, "utf8"));
+      expect(childEnv).not.toHaveProperty("CODEX_THREAD_ID");
+      expect(childEnv).not.toHaveProperty("CODEX_REMOTE_PAYLOAD");
+      expect(childEnv).not.toHaveProperty("CODEX_SANDBOX_NETWORK_DISABLED");
+      expect(childEnv).toHaveProperty("CODEX_HOME", worktree);
     } finally {
       if (prior.thread === undefined) delete process.env["CODEX_THREAD_ID"];
       else process.env["CODEX_THREAD_ID"] = prior.thread;

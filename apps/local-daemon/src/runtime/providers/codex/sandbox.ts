@@ -25,9 +25,9 @@ export interface CodexSandboxDiagnostics {
   exitCode: number | null;
   stderr: string;
   capabilities: {
-    unprivilegedUserNamespaceClone: string | null;
-    maxUserNamespaces: string | null;
-    appArmorRestrictsUnprivilegedUserNamespaces: string | null;
+    unprivilegedUserNamespaceClone: string;
+    maxUserNamespaces: string;
+    appArmorRestrictsUnprivilegedUserNamespaces: string;
   };
 }
 
@@ -42,10 +42,10 @@ export type CodexSandboxProbeResult =
 
 export class CodexSandboxUnavailableError extends RuntimeUnavailableError {
   constructor(
-    readonly requestedSandbox: string,
-    readonly resolvedSandbox: string,
-    readonly agentArgs: readonly string[],
-    readonly probe: Extract<CodexSandboxProbeResult, { status: "unavailable" }>,
+    requestedSandbox: string,
+    resolvedSandbox: string,
+    agentArgs: readonly string[],
+    probe: Extract<CodexSandboxProbeResult, { status: "unavailable" }>,
   ) {
     super(
       "codex",
@@ -64,11 +64,12 @@ function bounded(value: string): string {
   return redactLogText(value).trim().slice(0, DIAGNOSTIC_MAX_LENGTH);
 }
 
-function kernelSetting(path: string): string | null {
+function kernelSetting(path: string): string {
   try {
-    return readFileSync(path, "utf8").trim() || null;
-  } catch {
-    return null;
+    return readFileSync(path, "utf8").trim() || "empty";
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return `unavailable: ${bounded(message)}`;
   }
 }
 
@@ -96,12 +97,10 @@ function codexVersion(binary: string, env: NodeJS.ProcessEnv): string | null {
 
 function remediation(
   cause: Extract<CodexSandboxProbeResult, { status: "unavailable" }>["cause"],
-  appArmor: string | null,
+  appArmor: string,
 ): string {
   if (cause === "loopback_namespace_denied") {
-    const gate =
-      appArmor === null ? "" : ` kernel.apparmor_restrict_unprivileged_userns=${appArmor}.`;
-    return `Allow the Codex sandbox to create user/network namespaces and configure loopback under this host's AppArmor policy.${gate} Apply a scoped host policy or an approved host-level user-namespace change, then retry. Otomat did not fall back to danger-full-access.`;
+    return `Allow the Codex sandbox to create user/network namespaces and configure loopback under this host's AppArmor policy. kernel.apparmor_restrict_unprivileged_userns=${appArmor}. Apply a scoped host policy or an approved host-level user-namespace change, then retry. Otomat did not fall back to danger-full-access.`;
   }
   return "Run the reported credential-free probe on this host, correct the Codex CLI or namespace capability it reports, then retry. Otomat did not disable the sandbox.";
 }
