@@ -1,8 +1,8 @@
-import { previewInstanceDeployment } from "@otomat/domain";
 import { expect, it } from "vitest";
 
 import {
   deploymentForChannel,
+  instanceDeployment,
   keepsDataAcrossBuilds,
   LOCAL_DEPLOYMENT,
   parseBootstrapOutput,
@@ -27,10 +27,10 @@ it("isolates a preview per build and a channel-less build from every channel wit
   const other = deploymentForChannel("preview", "2222222");
   const unknown = deploymentForChannel("unknown", "1111111");
 
-  expect(preview).toEqual(previewInstanceDeployment("1111111"));
+  expect(preview).toEqual(instanceDeployment("1111111"));
   expect(preview.homeSuffix).not.toBe(other.homeSuffix);
   // Whatever a build with unreadable metadata thinks its commit is, it stays in the shared slot.
-  expect(unknown).toEqual(previewInstanceDeployment(null));
+  expect(unknown).toEqual(instanceDeployment(null));
   expect(unknown.homeSuffix).toBe(".otomat/instances/unknown");
   for (const isolated of [preview, other, unknown]) {
     expect(isolated.homeSuffix).not.toBe(STABLE_DEPLOYMENT.homeSuffix);

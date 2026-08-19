@@ -1,18 +1,20 @@
 import { PREVIEW_MANIFEST_PATH } from "@otomat/domain";
 
+import { accessRefusal, type AccessEnv } from "../_access";
+
 /**
  * Same-origin façade for a web preview: `/api/*` is proxied to the pull request's own daemon
- * through its named Cloudflare Tunnel, so the browser only ever talks to one Access-protected
- * origin. Nothing of the browser's request identity crosses over — no `Origin`, no `Cookie`, no
- * `Host` — which is why the daemon keeps its loopback CORS and `Host` guard unchanged.
+ * worker, so the browser only ever talks to one Access-protected origin. Nothing of the
+ * browser's request identity crosses over — no `Origin`, no `Cookie`, no `Host` — which is why
+ * the daemon keeps its loopback CORS and `Host` guard unchanged.
  */
 
-interface PreviewEnv {
-  /** Tunnel hostname pattern such as `otomat-pr-{pr}.preview.example.com`, shared with the provisioning script. */
+interface PreviewEnv extends AccessEnv {
+  /** Daemon hostname pattern such as `otomat-preview-pr-{pr}.<subdomain>.workers.dev`. */
   OTOMAT_PREVIEW_DAEMON_HOSTNAME?: string;
-  /** Access service token for the machine-to-machine hop; the browser never holds it. */
-  OTOMAT_PREVIEW_ACCESS_CLIENT_ID?: string;
-  OTOMAT_PREVIEW_ACCESS_CLIENT_SECRET?: string;
+  /** Machine credential for the daemon hop; the pull request's worker verifies it, the browser never holds it. */
+  OTOMAT_PREVIEW_CLIENT_ID?: string;
+  OTOMAT_PREVIEW_CLIENT_SECRET?: string;
   ASSETS: { fetch(input: URL): Promise<Response> };
 }
 
@@ -48,6 +50,9 @@ async function daemonOrigin(context: PagesContext): Promise<string | null> {
   const manifest = await context.env.ASSETS.fetch(
     new URL(PREVIEW_MANIFEST_PATH, context.request.url),
   );
+  // Only a definitive answer is cached: a transient asset failure must not pin the isolate to
+  // "no daemon" for its whole lifetime.
+  if (!manifest.ok && manifest.status !== 404) return null;
   const pullRequest = manifest.ok ? pullRequestOf(await manifest.json()) : null;
   cachedOrigin =
     pullRequest === null ? null : `https://${template.replace("{pr}", String(pullRequest))}`;
@@ -60,9 +65,11 @@ function upstreamHeaders(context: PagesContext): Headers {
     const value = context.request.headers.get(name);
     if (value !== null) headers.set(name, value);
   }
-  const id = context.env.OTOMAT_PREVIEW_ACCESS_CLIENT_ID;
-  const secret = context.env.OTOMAT_PREVIEW_ACCESS_CLIENT_SECRET;
+  const id = context.env.OTOMAT_PREVIEW_CLIENT_ID;
+  const secret = context.env.OTOMAT_PREVIEW_CLIENT_SECRET;
   if (id !== undefined && secret !== undefined) {
+    // Access service-token header names, so fronting the worker with a real Access policy later
+    // needs no façade change.
     headers.set("CF-Access-Client-Id", id);
     headers.set("CF-Access-Client-Secret", secret);
   }
@@ -70,6 +77,8 @@ function upstreamHeaders(context: PagesContext): Headers {
 }
 
 export async function onRequest(context: PagesContext): Promise<Response> {
+  const deniedIdentity = await accessRefusal(context.request, context.env);
+  if (deniedIdentity !== null) return deniedIdentity;
   const origin = await daemonOrigin(context);
   if (origin === null) {
     return refusal(
@@ -81,12 +90,22 @@ export async function onRequest(context: PagesContext): Promise<Response> {
   const incoming = new URL(context.request.url);
   try {
     // The upstream Response is returned as-is so an SSE body keeps streaming instead of buffering.
-    return await fetch(new URL(`${incoming.pathname}${incoming.search}`, origin), {
+    const upstream = await fetch(new URL(`${incoming.pathname}${incoming.search}`, origin), {
       method: context.request.method,
       headers: upstreamHeaders(context),
       body: context.request.body,
       redirect: "manual",
     });
+    // The daemon's own 404s are JSON (`not_found`); a bare 404 is workers.dev answering for a
+    // hostname no worker is deployed at yet.
+    if (upstream.status === 404 && !(upstream.headers.get("content-type") ?? "").includes("json")) {
+      return refusal(
+        "preview_daemon_unavailable",
+        "No daemon instance is routed for this preview yet.",
+        503,
+      );
+    }
+    return upstream;
   } catch (error) {
     return refusal(
       "preview_daemon_unreachable",

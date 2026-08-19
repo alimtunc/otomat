@@ -67,14 +67,21 @@ describe("probePreviewDaemon", () => {
     });
   });
 
-  it("recognises the façade's own refusal while nothing is routed", async () => {
-    const refusal = Response.json({ error: "preview_daemon_unavailable" }, { status: 503 });
+  it.each([
+    ["preview_daemon_unavailable", 503],
+    ["preview_access_unconfigured", 403],
+    ["preview_access_denied", 403],
+    ["preview_client_unauthorized", 403],
+  ] as const)("recognises the preview plumbing's own refusal %s", async (error, status) => {
+    const refusal = Response.json({ error }, { status });
     await expect(probePreviewDaemon(answering(refusal))).resolves.toEqual({ kind: "unavailable" });
   });
 
-  it("treats an unreachable tunnel as an instance that is still starting", async () => {
+  it("treats an unreachable daemon hop as an instance that is still starting", async () => {
     const gateway = Response.json({ error: "preview_daemon_unreachable" }, { status: 502 });
     await expect(probePreviewDaemon(answering(gateway))).resolves.toEqual({ kind: "starting" });
+    const starting = Response.json({ error: "preview_daemon_starting" }, { status: 503 });
+    await expect(probePreviewDaemon(answering(starting))).resolves.toEqual({ kind: "starting" });
     await expect(probePreviewDaemon(() => Promise.reject(new Error("offline")))).resolves.toEqual({
       kind: "starting",
     });

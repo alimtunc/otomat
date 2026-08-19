@@ -14,7 +14,7 @@
     "format:check": "oxfmt --check apps packages",
     "boundaries": "node scripts/import-boundaries.mjs",
     "guardrails": "node --test scripts/guardrails.test.mjs && node scripts/guardrails.mjs",
-    "test:scripts": "node --test scripts/preview/remote.test.mjs",
+    "test:scripts": "node --test \"scripts/preview/**/*.test.mjs\"",
     "smoke:dist": "pnpm --filter @otomat/local-daemon smoke:dist",
     "check": "pnpm run format:check && pnpm run lint && pnpm run guardrails && pnpm run test:scripts && pnpm run build && pnpm run typecheck && pnpm run smoke:dist && pnpm run test",
     "desktop:dev": "node apps/desktop/scripts/dev.mjs",
@@ -28,6 +28,7 @@
     "prepare": "lefthook install"
   },
   "devDependencies": {
+    "@cloudflare/containers": "^0.3.7",
     "@otomat/domain": "workspace:*",
     "@otomat/tooling": "workspace:*",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",

@@ -424,21 +424,28 @@ bundle carries it, it answers reads only, and a read it has no fixture for says
 daemon hostname needs four coordinated relaxations for one feature — `credentials: "include"` in the
 typed client, `Access-Control-Allow-Credentials` on the daemon, `withCredentials` on `EventSource`,
 and a cross-site `CF_Authorization` cookie — and turns an Access refusal into an opaque redirect. The
-Pages Function at `apps/web/functions/api/[[path]].ts` proxies `/api/*` to the pull request's tunnel
-instead: the browser sees one Access-protected origin, the upstream `Response` is returned as-is so
-SSE streams, and the daemon's loopback protections are **untouched**. Nothing of the browser's
-identity crosses over — no `Origin`, no `Cookie`, no `Host` — the machine hop carries an Access
-service token, and cloudflared rewrites `Host` to loopback, so `hostGuard` and `allowedOrigin` keep
-refusing everything else with `OTOMAT_ALLOWED_ORIGINS` unset.
+Pages Function at `apps/web/functions/api/[[path]].ts` proxies `/api/*` to the pull request's daemon
+worker instead: the browser sees one Access-protected origin, the upstream `Response` is returned
+as-is so SSE streams, and the daemon's loopback protections are **untouched**. The façade first
+verifies the request's Access JWT at the origin (`functions/_access.ts`, fail closed while
+unconfigured), so it lends its machine credential only to an identity Access actually authenticated.
+Nothing of the browser's identity crosses over — no `Origin`, no `Cookie`, no `Host` — and the
+worker rewrites `Host` to loopback, so `hostGuard` and `allowedOrigin` keep refusing everything else
+with `OTOMAT_ALLOWED_ORIGINS` unset.
 
-The instance itself is the one OTO-49 already defines, keyed by commit:
-`previewInstanceDeployment` moved into `packages/domain` so the desktop shell and CI provisioning
-cannot derive two ports for one commit. `scripts/preview/instance.mjs` provisions, lists and tears
-down over ssh; the tunnel's ingress is **re-derived** from the route descriptor each instance owns
-rather than edited in place, under a lock and below the operator's own marker, so two pull requests
-provision concurrently and a closed one takes nothing else with it. Provisioning a commit tears down
-that pull request's earlier ones, so a pushed branch never leaves a daemon per commit behind. Setup
-and secrets: [`docs/release/web-preview.md`](../release/web-preview.md).
+**The daemon runs in a Cloudflare container, not on the operator's VPS.** Each pull request owns
+one Worker (`otomat-preview-pr-<n>`, deployed by `scripts/preview/instance.mjs` from CI) whose
+container image carries that commit's daemon dist; the running instance is **named by the build**,
+so a redeploy reaches a fresh container immediately instead of one still draining on the previous
+commit, and a mismatched daemon can only ever be refused, never answered. The Worker admits only
+the façade's client pair — checked in the worker itself, under Access service-token header names —
+and the container's ephemeral disk reseeds its fixture repository and database on every cold start.
+Teardown deletes the Worker, which takes the container, its route and its data with it; `list`
+finds orphans. The rejected alternative — per-commit instances on the operator's VPS behind a named
+tunnel — kept a personal host and an SSH private key inside CI, shared one machine between all
+previews and the stable daemon, and left processes to clean by pidfile; the VPS keeps serving the
+desktop previews (`instanceDeployment` in `apps/desktop`), which OTO-99 leaves untouched. Setup and
+secrets: [`docs/release/web-preview.md`](../release/web-preview.md).
 
 ## Error Diagnostics
 

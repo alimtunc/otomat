@@ -1,31 +1,28 @@
 #!/usr/bin/env node
 /**
- * Provisions, tears down and lists the per-pull-request daemon instances a web preview talks to.
- * Run from CI (docs/release/web-preview.md); every command is idempotent, and each one reports the
- * host's own token rather than an exit code alone.
+ * Provisions, tears down and lists the per-pull-request preview daemons on Cloudflare.
+ * Run from CI (docs/release/web-preview.md); every command is idempotent.
  *
- *   node scripts/preview/instance.mjs provision --host <ssh> --pr 142 --build 1a2b3c4 \
- *     --hostname otomat-pr-{pr}.preview.example.com --bundle /tmp/daemon.tar.gz
- *   node scripts/preview/instance.mjs teardown  --host <ssh> --pr 142
- *   node scripts/preview/instance.mjs list      --host <ssh>
+ *   CLOUDFLARE_API_TOKEN=… CLOUDFLARE_ACCOUNT_ID=… PREVIEW_CLIENT_ID=… PREVIEW_CLIENT_SECRET=… \
+ *     node scripts/preview/instance.mjs provision --pr 142 --build 1a2b3c4 --bundle /tmp/daemon.tar.gz
+ *   node scripts/preview/instance.mjs teardown --pr 142
+ *   node scripts/preview/instance.mjs list
  *
- * The instance keys on the commit, exactly as the desktop preview does, so both reach one daemon
- * per commit instead of two on different ports.
+ * A pull request owns one Worker; each provision replaces its container image with the commit's
+ * own daemon and names the running instance after the build, so a stale container is unreachable
+ * rather than answering for the wrong commit.
  */
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-import { PREVIEW_BUILD_SHA, previewInstanceDeployment } from "@otomat/domain";
+import { PREVIEW_BUILD_SHA } from "@otomat/domain";
 
-import {
-  listScript,
-  parseInstances,
-  parseOutcome,
-  provisionScript,
-  teardownScript,
-} from "./remote.mjs";
+import { previewWorkerName, previewWorkerPullRequest } from "./workers.mjs";
 
-const SSH_ARGS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10"];
+const HOST_DIR = fileURLToPath(new URL("./host/", import.meta.url));
+const WRANGLER = ["dlx", "wrangler@4"];
+const API = "https://api.cloudflare.com/client/v4";
 
 function fail(message) {
   console.error(`[preview] ${message}`);
@@ -43,101 +40,115 @@ function readFlags(argv) {
   return flags;
 }
 
-function ssh(host, script, input) {
-  const result = spawnSync("ssh", [...SSH_ARGS, host, "bash", "-ls"], {
-    input: input ?? script,
-    encoding: "utf8",
-    maxBuffer: 256 * 1024 * 1024,
-  });
-  if (result.error) fail(`ssh to ${host} failed: ${result.error.message}`);
-  if (result.status !== 0) {
-    fail(`ssh to ${host} exited ${String(result.status)}: ${result.stderr.trim()}`);
-  }
-  return result.stdout;
-}
-
-function requireBuild(flags) {
-  const build = flags.build ?? "";
-  if (!PREVIEW_BUILD_SHA.test(build)) fail(`--build must be a 7-hex short sha, got "${build}"`);
-  return build;
-}
-
-function requireHost(flags) {
-  if (!flags.host) fail("--host is required");
-  return flags.host;
+function requireEnv(name) {
+  const value = process.env[name] ?? "";
+  if (value === "") fail(`${name} is required in the environment`);
+  return value;
 }
 
 function requirePullRequest(flags) {
   const pullRequest = Number.parseInt(flags.pr ?? "", 10);
-  if (!Number.isInteger(pullRequest) || pullRequest <= 0) fail("--pr must be a pull request number");
+  if (!Number.isInteger(pullRequest) || pullRequest <= 0)
+    fail("--pr must be a pull request number");
   return pullRequest;
 }
 
-function report(stdout, expected) {
-  const outcome = parseOutcome(stdout);
-  if (outcome === null) fail(`the host reported nothing:\n${stdout}`);
-  if (outcome.kind !== expected) fail(`${outcome.kind}: ${outcome.detail}`);
-  console.log(`[preview] ${outcome.kind} ${outcome.detail}`);
+function wrangler(args, input) {
+  const result = spawnSync("pnpm", [...WRANGLER, ...args], {
+    encoding: "utf8",
+    stdio: input === undefined ? "inherit" : ["pipe", "inherit", "inherit"],
+    input,
+  });
+  if (result.error) fail(`wrangler could not run: ${result.error.message}`);
+  if (result.status !== 0) fail(`wrangler ${args[0]} exited ${String(result.status)}`);
+}
+
+async function cloudflare(method, pathname) {
+  const token = requireEnv("CLOUDFLARE_API_TOKEN");
+  const response = await fetch(`${API}${pathname}`, {
+    method,
+    headers: { authorization: `Bearer ${token}` },
+  });
+  let body = null;
+  try {
+    body = await response.json();
+  } catch {
+    // A non-JSON answer is reported through the status alone.
+  }
+  return { status: response.status, body };
+}
+
+function apiErrors(body) {
+  const errors = body !== null && typeof body === "object" ? body.errors : undefined;
+  return Array.isArray(errors) ? errors.map((error) => error.message).join("; ") : "";
 }
 
 function provision(flags) {
-  const host = requireHost(flags);
-  const build = requireBuild(flags);
   const pullRequest = requirePullRequest(flags);
-  if (!flags.hostname) fail("--hostname is required (a pattern containing {pr})");
-  if (!flags.bundle) fail("--bundle is required (the daemon deploy tarball)");
-  const deployment = previewInstanceDeployment(build);
-  const hostname = flags.hostname.replace("{pr}", String(pullRequest));
-  // Uploaded before the script runs: the provision step extracts whatever this commit put there.
-  ssh(
-    host,
-    `set -eu; mkdir -p "$HOME/${deployment.homeSuffix}"; cat > "$HOME/${deployment.homeSuffix}/daemon.tar.gz"`,
-    readFileSync(flags.bundle),
-  );
-  report(ssh(host, provisionScript({ ...deployment, hostname, pullRequest, build })), "READY");
-  // A pull request owns exactly one instance: the commit just provisioned. Its earlier heads are
-  // torn down here, so a pushed branch never leaves a daemon and a route behind per commit.
-  for (const stale of instancesOf(host, pullRequest)) {
-    if (stale.build === build) continue;
-    report(ssh(host, teardownScript(previewInstanceDeployment(stale.build))), "TORN_DOWN");
+  const build = flags.build ?? "";
+  if (!PREVIEW_BUILD_SHA.test(build)) fail(`--build must be a 7-hex short sha, got "${build}"`);
+  if (!flags.bundle || !existsSync(flags.bundle)) {
+    fail("--bundle is required (the daemon deploy tarball)");
   }
-  console.log(`[preview] https://${hostname} serves the PR #${String(pullRequest)} daemon`);
+  requireEnv("CLOUDFLARE_ACCOUNT_ID");
+  const clientId = requireEnv("PREVIEW_CLIENT_ID");
+  const clientSecret = requireEnv("PREVIEW_CLIENT_SECRET");
+
+  rmSync(`${HOST_DIR}daemon`, { recursive: true, force: true });
+  mkdirSync(`${HOST_DIR}daemon`, { recursive: true });
+  const extract = spawnSync("tar", ["-xzf", flags.bundle, "-C", HOST_DIR], { stdio: "inherit" });
+  if (extract.status !== 0) fail(`could not extract ${flags.bundle}`);
+
+  const name = previewWorkerName(pullRequest);
+  wrangler([
+    "deploy",
+    "--config",
+    `${HOST_DIR}wrangler.jsonc`,
+    "--name",
+    name,
+    "--var",
+    `PREVIEW_BUILD:${build}`,
+    "--var",
+    `PREVIEW_CLIENT_ID:${clientId}`,
+  ]);
+  wrangler(["secret", "put", "PREVIEW_CLIENT_SECRET", "--name", name], clientSecret);
+  console.log(`[preview] ${name} serves the PR #${String(pullRequest)} daemon on build ${build}`);
 }
 
-function instancesOf(host, pullRequest) {
-  const instances = parseInstances(ssh(host, listScript()));
-  if (instances === null) fail("the instance listing was truncated");
-  return pullRequest === null
-    ? instances
-    : instances.filter((instance) => instance.pullRequest === pullRequest);
-}
-
-/** `--pr` removes every instance that pull request still holds, whatever commit each was built from. */
-function teardown(flags) {
-  const host = requireHost(flags);
-  if (flags.pr === undefined) {
-    report(ssh(host, teardownScript(previewInstanceDeployment(requireBuild(flags)))), "TORN_DOWN");
+async function teardown(flags) {
+  const name = previewWorkerName(requirePullRequest(flags));
+  const account = requireEnv("CLOUDFLARE_ACCOUNT_ID");
+  const removed = await cloudflare(
+    "DELETE",
+    `/accounts/${account}/workers/scripts/${name}?force=true`,
+  );
+  if (removed.status === 404) {
+    console.log(`[preview] ${name} already holds no worker`);
     return;
   }
-  const pullRequest = requirePullRequest(flags);
-  const held = instancesOf(host, pullRequest);
-  if (held.length === 0) console.log(`[preview] PR #${String(pullRequest)} holds no instance`);
-  for (const instance of held) {
-    report(ssh(host, teardownScript(previewInstanceDeployment(instance.build))), "TORN_DOWN");
+  if (removed.status !== 200) {
+    fail(`deleting ${name} answered ${String(removed.status)}: ${apiErrors(removed.body)}`);
   }
+  console.log(`[preview] ${name} torn down`);
 }
 
-function list(flags) {
-  for (const instance of instancesOf(requireHost(flags), null)) {
-    console.log(
-      `${instance.build}\tPR #${String(instance.pullRequest)}\t${instance.hostname}\t${String(instance.port)}`,
-    );
+/** Names every preview worker still deployed, so an orphan of a closed pull request is found. */
+async function list() {
+  const account = requireEnv("CLOUDFLARE_ACCOUNT_ID");
+  const scripts = await cloudflare("GET", `/accounts/${account}/workers/scripts`);
+  if (scripts.status !== 200) {
+    fail(`listing workers answered ${String(scripts.status)}: ${apiErrors(scripts.body)}`);
+  }
+  for (const script of scripts.body.result ?? []) {
+    const pullRequest = previewWorkerPullRequest(script.id ?? "");
+    if (pullRequest === null) continue;
+    console.log(`${script.id}\tPR #${String(pullRequest)}`);
   }
 }
 
 const [command, ...rest] = process.argv.slice(2);
 const flags = readFlags(rest);
 if (command === "provision") provision(flags);
-else if (command === "teardown") teardown(flags);
-else if (command === "list") list(flags);
+else if (command === "teardown") await teardown(flags);
+else if (command === "list") await list();
 else fail(`unknown command "${command ?? ""}"; expected provision, teardown or list`);

@@ -1,11 +1,11 @@
 # Web Previews Per Pull Request
 
 A pull request gets a protected web URL that tests Otomat without installing anything: the cockpit
-opens immediately on browser fixtures, and switches to that commit's own daemon on the VPS once its
-instance is provisioned. The desktop preview contract
+opens immediately on browser fixtures, and switches to that commit's own daemon — running in a
+Cloudflare container, not on anyone's VPS — once it is provisioned. The desktop preview contract
 ([macOS alpha](macos-alpha.md)) is unchanged; this is the other half of the same test surface.
 
-The design and its rejected alternative live in
+The design and its rejected alternatives live in
 [`docs/ai/codebase-map.md`](../ai/codebase-map.md#web-previews-per-pull-request).
 
 ## What runs where
@@ -14,80 +14,90 @@ The design and its rejected alternative live in
 browser ──https──> Cloudflare Access ──> Pages deployment (apps/web build + preview.json)
                                           ├── static assets
                                           └── /api/*  → functions/api/[[path]].ts
-                                                          │ Access service token
+                                                          │ verifies the Access JWT, then adds
+                                                          │ the preview client pair
                                                           ▼
-                                              https://otomat-pr-<n>.preview.<domain>
-                                                          │ cloudflared, outbound only
+                              otomat-preview-pr-<n>.<subdomain>.workers.dev
+                                (Worker: refuses any request without the pair)
+                                                          │ Host rewritten to loopback
                                                           ▼
-                                    VPS: ~/.otomat/instances/<sha7>, daemon on 127.0.0.1:<derived>
+                              Cloudflare container: this commit's daemon dist,
+                              ephemeral SQLite + fixture repo, sleeps after 1h idle
 ```
 
-No daemon port is ever reachable from the internet: cloudflared dials out, and the only way in is
-the Access-protected hostname. The daemon runs with no `OTOMAT_ALLOWED_ORIGINS`, so its loopback
-`Host` guard and CORS behaviour are exactly what a desktop install gets.
+No daemon port exists anywhere on the internet: the container only answers its own Worker, the
+Worker only answers requests carrying the client pair, and the façade only lends that pair to a
+request whose Cloudflare Access identity it has verified at the origin. The daemon runs with no
+`OTOMAT_ALLOWED_ORIGINS`, so its loopback `Host` guard and CORS behaviour are exactly what a
+desktop install gets.
 
 ## One-time setup
 
 Everything below is done once, by an operator. `.github/workflows/web-preview.yml` skips — never
 fails — while any of it is missing, so a fork or an unconfigured checkout still builds green.
 
-1. **Cloudflare Pages project** for the cockpit build. Add an Access application covering its
-   preview deployments (`*.<project>.pages.dev`) with the policy your team should have.
-2. **Named Cloudflare Tunnel on the VPS**, run as the user that owns `~/.otomat`. Its config must
-   carry the operator's own header and then the marker the provisioner regenerates below:
+1. **Workers Paid plan** ($5/month) on the Cloudflare account: Containers require it. Container
+   time itself is billed per active second and the instances sleep when idle.
+2. **Cloudflare Pages project** for the cockpit build. Enable the built-in **Access policy** on the
+   project so `*.<project>.pages.dev` (production and previews) requires your team's login, and
+   note the Access application's **AUD tag** and your team domain
+   (`<team>.cloudflareaccess.com`).
+3. **API token** used by CI, with `Cloudflare Pages: Edit`, `Workers Scripts: Edit` and
+   `Containers: Edit` on the account.
+4. **Preview client pair** — the machine credential between the façade and the daemon workers.
+   Generate two random values, for example `openssl rand -hex 16` and `openssl rand -hex 32`.
+5. **Pages environment variables** on the project's preview environment:
 
-   ```yaml
-   tunnel: otomat-preview
-   credentials-file: /home/otomat/.cloudflared/otomat-preview.json
-   # --- otomat preview ingress (generated) ---
-   ```
+   | Variable | Value |
+   | --- | --- |
+   | `OTOMAT_PREVIEW_DAEMON_HOSTNAME` | `otomat-preview-pr-{pr}.<subdomain>.workers.dev` |
+   | `OTOMAT_PREVIEW_ACCESS_TEAM_DOMAIN` | `<team>.cloudflareaccess.com` |
+   | `OTOMAT_PREVIEW_ACCESS_AUD` | the Access application's AUD tag |
+   | `OTOMAT_PREVIEW_CLIENT_ID` | the pair's id half |
+   | `OTOMAT_PREVIEW_CLIENT_SECRET` | the pair's secret half |
 
-   Everything above the marker is yours and is preserved; everything below is re-derived from the
-   instances present on disk. A config without the marker fails the provisioning step closed rather
-   than being rewritten.
-3. **Wildcard DNS + Access** for `*.preview.<domain>` pointing at that tunnel, with a policy that
-   allows the Access **service token** the Pages Function uses. Per-pull-request DNS is then never
-   created or deleted, which is why teardown cannot leave a dangling record.
-4. **Pages environment variables** on the project's preview environment:
-   `OTOMAT_PREVIEW_DAEMON_HOSTNAME` = `otomat-pr-{pr}.preview.<domain>`,
-   `OTOMAT_PREVIEW_ACCESS_CLIENT_ID` and `OTOMAT_PREVIEW_ACCESS_CLIENT_SECRET` = the service token.
-5. **VPS requirements**: Linux with `bash`, `git`, `flock`, `tar` and Node.js >= 22 on the login
-   PATH — the same host conventions as [the remote execution host](../ai/remote-execution-host.md).
+   `<subdomain>` is the account's `workers.dev` subdomain. While the Access variables are unset the
+   façade refuses `/api/*` entirely — a preview is never public by default — and the sandbox keeps
+   working.
 
 ## Repository configuration
 
 | Kind | Name | Value |
 | --- | --- | --- |
 | Variable | `CLOUDFLARE_PAGES_PROJECT` | Pages project name |
-| Variable | `PREVIEW_VPS_HOST` | `user@host` the runner ssh's to |
-| Variable | `PREVIEW_DAEMON_HOSTNAME` | `otomat-pr-{pr}.preview.<domain>` |
-| Secret | `CLOUDFLARE_API_TOKEN` | Pages deploy token |
+| Variable | `PREVIEW_DAEMON_ENABLED` | any non-empty value turns daemon previews on |
+| Secret | `CLOUDFLARE_API_TOKEN` | the API token above |
 | Secret | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account id |
-| Secret | `PREVIEW_VPS_SSH_KEY` | private key authorized on the VPS |
-| Secret | `PREVIEW_VPS_KNOWN_HOSTS` | the VPS's `known_hosts` line |
+| Secret | `PREVIEW_CLIENT_ID` | the same pair as the Pages variables |
+| Secret | `PREVIEW_CLIENT_SECRET` | the same pair as the Pages variables |
 
-`PREVIEW_DAEMON_HOSTNAME` and the Pages `OTOMAT_PREVIEW_DAEMON_HOSTNAME` are the same pattern: the
-provisioner names the tunnel route with it, the façade resolves the same hostname from it.
+The Worker checks the pair itself, under the Access service-token header names — fronting the
+workers with a real Access policy on a custom domain later needs no code change.
 
 ## Operating it by hand
 
 ```bash
-node scripts/preview/instance.mjs list      --host user@vps
-node scripts/preview/instance.mjs teardown  --host user@vps --pr 142
-node scripts/preview/instance.mjs teardown  --host user@vps --build 1a2b3c4
+export CLOUDFLARE_API_TOKEN=… CLOUDFLARE_ACCOUNT_ID=…
+node scripts/preview/instance.mjs list
+node scripts/preview/instance.mjs teardown --pr 142
 ```
 
-`list` names every instance still on the host with the pull request it belongs to, which is how an
-orphan — a deployment whose pull request closed while the workflow was down — is found. Tearing it
-down is idempotent: the daemon is stopped by verified pid, the instance directory is removed, and
-the ingress is re-derived without it.
+`list` names every preview worker still deployed with the pull request it belongs to, which is how
+an orphan — a deployment whose pull request closed while the workflow was down — is found. Tearing
+one down deletes the worker, which takes its container, route and data with it, and is idempotent.
+Container images accumulate in the Cloudflare registry across deploys;
+`pnpm dlx wrangler@4 containers images list` / `… delete` reclaims the space now and then.
 
 ## Limits worth knowing
 
 - The **atomic deployment URL** (`<hash>.<project>.pages.dev`) works for the sandbox; the pull
-  request comment links the branch alias, which is the one the tunnel is keyed to.
-- Preview instances share the VPS with the stable daemon and the desktop previews. They are
-  disjoint by construction (directory, database, port, worktrees), but they are not free: a busy
-  repository wants the instance list checked now and then.
-- A run started in a preview keeps running on the VPS after the tab is closed, exactly as it does
-  from the desktop client.
+  request comment links the branch alias, which is the one the manifest keys the daemon worker to.
+- The container's disk is **ephemeral**: after an hour idle it sleeps, and the next request boots
+  it fresh — reseeded fixture repository, empty database, a few seconds of cold start behind the
+  "starting" status. That reset is a feature for previews and a difference from the desktop
+  preview instances on the VPS.
+- A run keeps executing while the container is awake even if the tab closes, but an idle-timeout
+  sleep ends it; previews are for exercising workflows, not for long unattended runs.
+- Agent providers are not installed in the container, so launching a real agent run fails at the
+  provider; navigation, issues, views, diff, SSE and lifecycle flows are what the full preview
+  exercises.

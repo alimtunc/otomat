@@ -1,11 +1,14 @@
-import {
-  previewInstanceDeployment,
-  type ExecutionHostOperationResult,
-  type RemoteInstanceEntry,
-  type RemoteInstanceListResult,
+import type {
+  ExecutionHostOperationResult,
+  RemoteInstanceEntry,
+  RemoteInstanceListResult,
 } from "@otomat/domain";
 
-import { stopDaemonScript, type RemoteDeployment } from "../bootstrap/scripts.js";
+import {
+  instanceDeployment,
+  stopDaemonScript,
+  type RemoteDeployment,
+} from "../bootstrap/scripts.js";
 import { scriptFailure, trimDetail } from "../bootstrap/status.js";
 import { runSshScript, type SshScriptResult } from "../ssh/script.js";
 import { deleteInstanceScript, listInstancesScript, parseInstanceList } from "./scripts.js";
@@ -57,7 +60,7 @@ export class RemoteInstanceActions {
           build: row.build,
           running: row.running,
           size_kb: row.sizeKb,
-          port: previewInstanceDeployment(row.build).port,
+          port: instanceDeployment(row.build).port,
         });
       }
       return { ok: true, instances };
@@ -68,15 +71,15 @@ export class RemoteInstanceActions {
 
   stop(build: unknown): Promise<ExecutionHostOperationResult> {
     if (typeof build !== "string" || !INSTANCE_KEY.test(build)) return Promise.resolve(INVALID_KEY);
-    if (previewInstanceDeployment(build).homeSuffix === this.options.deployment.homeSuffix) {
+    if (instanceDeployment(build).homeSuffix === this.options.deployment.homeSuffix) {
       return Promise.resolve(OWN_INSTANCE);
     }
-    return this.operate(stopDaemonScript(previewInstanceDeployment(build)), SCRIPT_TIMEOUT_MS);
+    return this.operate(stopDaemonScript(instanceDeployment(build)), SCRIPT_TIMEOUT_MS);
   }
 
   remove(build: unknown): Promise<ExecutionHostOperationResult> {
     if (typeof build !== "string" || !INSTANCE_KEY.test(build)) return Promise.resolve(INVALID_KEY);
-    if (previewInstanceDeployment(build).homeSuffix === this.options.deployment.homeSuffix) {
+    if (instanceDeployment(build).homeSuffix === this.options.deployment.homeSuffix) {
       return Promise.resolve(OWN_INSTANCE);
     }
     return this.operate(deleteInstanceScript(build), SCRIPT_TIMEOUT_MS);

@@ -9,11 +9,19 @@ export type PreviewProbe =
 /** The façade answers as soon as it knows; a longer bound would only delay the sandbox a starting instance falls back to. */
 const PROBE_TIMEOUT_MS = 2_000;
 
-/** The façade's own refusal while no instance is routed for this pull request, distinct from a daemon that is merely down. */
+/** The preview plumbing's own refusals — no usable daemon hop — distinct from a daemon that is merely down. */
+const PREVIEW_REFUSALS = new Set([
+  "preview_daemon_unavailable",
+  "preview_access_unconfigured",
+  "preview_access_denied",
+  "preview_client_unauthorized",
+]);
+
 function isUnroutedInstance(body: unknown): boolean {
   if (typeof body !== "object" || body === null) return false;
   // SAFETY: narrowed to a non-null object above; the property read is what decides the shape.
-  return (body as { error?: unknown }).error === "preview_daemon_unavailable";
+  const error = (body as { error?: unknown }).error;
+  return typeof error === "string" && PREVIEW_REFUSALS.has(error);
 }
 
 export async function probePreviewDaemon(fetchImpl: typeof fetch = fetch): Promise<PreviewProbe> {
