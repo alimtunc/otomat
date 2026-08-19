@@ -719,11 +719,29 @@ Nothing is adopted on a resemblance. `github/import/` parses the operator's
 reference, refuses a repository that is not this issue's, reads the pull request
 with `gh`, and stores what GitHub answered as `attachment_evidence` next to who
 attached it and when; detaching stamps `detached_at` and keeps the row, because
-the audit has to answer what was attached and on what. Detection is the same
-verification applied to what `gh pr list --search <identifier>` links to the
-issue: candidates are offered, never adopted, and an issue with no tracker
-identifier says so rather than showing an empty list that reads as "there is
-none".
+the audit has to answer what was attached and on what.
+
+Detection adds a second verification, because GitHub's search answers on tokens:
+unquoted, `OTO-119` splits into `OTO` and `119` and matches a pull request
+carrying neither as a value. The search is a quoted phrase scoped to title and
+body, and every result is then re-read locally by
+`projections/pull-request-reference.ts` — one bounded, case-insensitive rule over
+the title, the body and the head branch (a mirrored row may hold no head ref
+yet). That rule is the only thing the issue card and the Reviews inbox share:
+neither accepts what the other would reject on the same text, but each keeps its
+own reach and its own ambiguity policy. The issue card searches every state and
+so sees only what GitHub indexes — title and body; the inbox re-reads the open
+pull requests it already mirrors, branch included, and refuses a row naming two
+mirrored issues rather than guessing. The inbox weighs the branch only when
+title and body name none, so reading it can add a link but never remove one.
+Commit messages are not a surface: GitHub does not index them for pull-request
+search and no mirror holds them, so weighing them would cost a `gh` call per
+pull request on both paths — deferred, not impossible. A candidate names where
+it matched; candidates are offered, never adopted, and `import/detect.ts` clears
+the confirmation (`workspace_owned`) only for a pull request this issue's own
+workspace published, which the issue card is the surface that enforces. An issue
+with no tracker identifier says so rather than showing an empty list that reads
+as "there is none".
 
 `provenance` is decided from evidence alone (`import/provenance.ts`): ownership
 needs a local fact — a publication Otomat made, or a head ref one of the issue's

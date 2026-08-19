@@ -86,6 +86,24 @@ it("shows the linked issue under the title when one is proven", async () => {
   ]);
 
   expect(container.textContent).toContain("OTO-113 · Reviews inbox");
+  expect(container.textContent).toContain("(named, not attached)");
+});
+
+it("marks a named issue apart from an attached one, so a reference never reads as adopted", async () => {
+  const container = await render([
+    entry({
+      issue: {
+        id: "i1",
+        identifier: "OTO-113",
+        title: "Reviews inbox",
+        status: "ready",
+        evidence: "attachment",
+      },
+    }),
+  ]);
+
+  expect(container.textContent).toContain("OTO-113 · Reviews inbox");
+  expect(container.textContent).not.toContain("(named, not attached)");
 });
 
 it("folds the rows away without dropping the header or the count", async () => {

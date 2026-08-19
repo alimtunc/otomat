@@ -1,5 +1,9 @@
-import { getIssue, listPullRequestsForIssue, type Db } from "@otomat/db";
-import type { PullRequestCandidate, PullRequestDetection } from "@otomat/domain";
+import { getIssue, listPullRequestsForIssue, listRuns, type Db } from "@otomat/db";
+import {
+  matchIssueReference,
+  type PullRequestCandidate,
+  type PullRequestDetection,
+} from "@otomat/domain";
 
 import { failureMessage } from "../errors.js";
 import type { GitHubCli, GitHubPullRequest } from "../types.js";
@@ -16,6 +20,15 @@ export interface DetectionResult {
 
 function unavailable(message: string): DetectionResult {
   return { candidates: [], detection: { status: "unavailable", message } };
+}
+
+function searchedMessage(identifier: string, candidates: readonly PullRequestCandidate[]): string {
+  if (candidates.length === 0) {
+    return `No pull request names ${identifier} in its title or body. Attach one by number or URL if it exists.`;
+  }
+  const offered = candidates.filter((candidate) => candidate.attached_pull_request_id === null);
+  if (offered.length === 0) return `Every pull request naming ${identifier} is already attached.`;
+  return `${offered.length} pull request(s) naming ${identifier} are not attached. Confirm one to attach it.`;
 }
 
 export interface DetectionConfig {
@@ -42,37 +55,52 @@ export async function detectIssuePullRequests(
     found = await config.cli.searchPullRequests({
       cwd: repository.binding.rootPath,
       repository: repository.remote.repository,
-      query: identifier,
+      identifier,
       limit: CANDIDATE_LIMIT,
     });
   } catch (error) {
     return unavailable(`GitHub could not be searched for ${identifier}: ${failureMessage(error)}`);
   }
 
+  const repositoryId = repository.binding.repositoryId;
+  const issueRows = listPullRequestsForIssue(config.db, issueId);
   const attached = new Map(
-    listPullRequestsForIssue(config.db, issueId).flatMap((row) =>
-      row.number === null ? [] : [[row.number, row.id] as const],
+    issueRows.flatMap((row) =>
+      row.number === null || row.repository_id !== repositoryId
+        ? []
+        : [[row.number, row.id] as const],
     ),
   );
+  const workspacePublications = new Set(
+    issueRows.flatMap((row) =>
+      row.number !== null && row.origin === "otomat" && row.repository_id === repositoryId
+        ? [row.number]
+        : [],
+    ),
+  );
+  const workspaceBranches = new Set(listRuns(config.db, { issueId }).map((run) => run.branch));
   const connectedLogin = await config.connectedLogin();
-  const candidates = found.map((provider) => ({
-    evidence: buildEvidence(repository.remote.repository, provider, "issue_reference"),
-    ...classifyPullRequest(config.db, {
-      repositoryId: repository.binding.repositoryId,
-      provider,
-      connectedLogin,
-    }),
-    attached_pull_request_id: attached.get(provider.number) ?? null,
-  }));
+  const candidates = found.flatMap((provider): PullRequestCandidate[] => {
+    const reference = matchIssueReference(identifier, {
+      title: provider.title,
+      body: provider.body,
+      branch: provider.headRef,
+    });
+    if (reference === null) return [];
+    return [
+      {
+        evidence: buildEvidence(repository.remote.repository, provider, "issue_reference"),
+        reference,
+        ...classifyPullRequest(config.db, { repositoryId, provider, connectedLogin }),
+        workspace_owned:
+          workspacePublications.has(provider.number) || workspaceBranches.has(provider.headRef),
+        attached_pull_request_id: attached.get(provider.number) ?? null,
+      },
+    ];
+  });
 
   return {
     candidates,
-    detection: {
-      status: "searched",
-      message:
-        candidates.length === 0
-          ? `No GitHub pull request mentions ${identifier}. Attach one by number or URL if it exists.`
-          : `GitHub links ${candidates.length} pull request(s) to ${identifier}.`,
-    },
+    detection: { status: "searched", message: searchedMessage(identifier, candidates) },
   };
 }

@@ -42,6 +42,9 @@ export function ReviewInboxRow({ entry }: { entry: PullRequestInboxEntry }) {
               {entry.issue.identifier === null ? "" : `${entry.issue.identifier} · `}
               {entry.issue.title}
             </span>
+            {entry.issue.evidence === "reference" ? (
+              <span className="shrink-0">(named, not attached)</span>
+            ) : null}
           </span>
         )}
       </span>
