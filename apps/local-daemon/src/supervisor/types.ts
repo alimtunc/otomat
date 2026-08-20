@@ -41,9 +41,6 @@ export interface AppendStepInput {
 /** Identifies the supervisor as the event source so its markers are never shown as a provider result. */
 export const SUPERVISOR_ADAPTER = "otomat-supervisor";
 
-/** Env var carrying the serialized job to a re-exec'd worker process. */
-export const WORKER_JOB_ENV = "OTOMAT_WORKER_JOB";
-
 export interface TurnContext {
   runId: string;
   stepRunId: string;

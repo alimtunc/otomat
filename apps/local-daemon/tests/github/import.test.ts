@@ -36,7 +36,6 @@ function git(cwd: string, ...args: string[]): string {
   return execFileSync("git", args, { cwd, encoding: "utf8" }).toString();
 }
 
-/** A real bare remote carrying `refs/pull/7/head`: the fetch under test is the actual git one. */
 function publishContributorBranch(): string {
   remotePath = mkdtempSync(join(tmpdir(), "otomat-remote-"));
   git(remotePath, "init", "--bare", "-b", "main");

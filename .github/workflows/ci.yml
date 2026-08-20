@@ -17,7 +17,16 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      # React Doctor's changed scope and the baseline anti-ratchet both diff against main,
+      # which the default pull-request checkout does not fetch.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Provide the diff base
+        run: |
+          git show-ref --verify --quiet refs/heads/main ||
+            git fetch --no-tags origin +refs/heads/main:refs/heads/main
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -37,9 +46,7 @@ jobs:
 
       # Needs a base ref, so it lives in CI rather than `pnpm check`.
       - name: Baseline anti-ratchet
-        run: |
-          git fetch --no-tags --depth=1 origin main
-          node scripts/baseline-anti-ratchet.mjs origin/main
+        run: node scripts/baseline-anti-ratchet.mjs main
 
   # The exact self-contained deploy the remote execution host runs
   # (docs/ai/remote-execution-host.md), published as a plain artifact so updating a host is a

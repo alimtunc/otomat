@@ -36,7 +36,7 @@ function toIssueLink(
   };
 }
 
-/** Only a branch is read case-insensitively: prose spells an identifier as the tracker does, and reading `oto-118` in a sentence would make a row naming one issue read as naming two. */
+/** Branch matching is case-insensitive; prose preserves tracker spelling to avoid duplicate issue matches. */
 function mirroredIssue(
   reference: IssueReference,
   issuesByIdentifier: ReadonlyMap<string, IssueRow>,

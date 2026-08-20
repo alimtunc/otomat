@@ -17,10 +17,6 @@ export class MemorySink implements RuntimeSink {
   }
 }
 
-/**
- * Appends each event as one JSON line to a run-dir `events.jsonl`. This is the
- * durable, non-lossy fixture the OTO-7 ledger ingests; OTO-7 allocates `seq`.
- */
 export class JsonlEventSink implements RuntimeSink {
   private readonly fd: number;
 

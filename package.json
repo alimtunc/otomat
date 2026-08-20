@@ -10,13 +10,15 @@
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck",
     "lint": "oxlint apps packages",
+    "lint:react": "oxlint --config .oxlintrc.react.json apps/web packages/ui",
+    "guard:react": "pnpm run lint:react && react-doctor --yes --include-untracked --no-telemetry --no-supply-chain --no-dead-code",
     "format": "oxfmt apps packages",
     "format:check": "oxfmt --check apps packages",
     "boundaries": "node scripts/import-boundaries.mjs",
-    "guardrails": "node --test scripts/guardrails.test.mjs && node scripts/guardrails.mjs",
+    "guardrails": "node --test scripts/anti-slop.test.mjs scripts/guardrails.test.mjs scripts/react-doctor.test.mjs scripts/react-lint.test.mjs && node scripts/guardrails.mjs",
     "test:scripts": "node --test \"scripts/preview/**/*.test.mjs\"",
     "smoke:dist": "pnpm --filter @otomat/local-daemon smoke:dist",
-    "check": "pnpm run format:check && pnpm run lint && pnpm run guardrails && pnpm run test:scripts && pnpm run build && pnpm run typecheck && pnpm run smoke:dist && pnpm run test",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run guard:react && pnpm run guardrails && pnpm run test:scripts && pnpm run build && pnpm run typecheck && pnpm run smoke:dist && pnpm run test",
     "desktop:dev": "node apps/desktop/scripts/dev.mjs",
     "desktop:package": "node apps/desktop/scripts/package-mac.mjs",
     "desktop:preflight": "node apps/desktop/scripts/release-preflight.mjs",
@@ -34,10 +36,11 @@
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "lefthook": "^2.1.10",
     "oxfmt": "~0.63.0",
-    "oxlint": "1.79.0"
+    "oxlint": "1.79.0",
+    "react-doctor": "0.9.12"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.13.0"
   },
   "packageManager": "pnpm@11.8.0+sha512.c1f5e7c4cb241c8f174b743851d82f42b802324afc8b0f116b96adb15aa06664948dde36960a3ba1079ba5b4b29dd0140135b94b5b5f5263592249d68e555f26"
 }

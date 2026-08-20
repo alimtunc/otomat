@@ -25,11 +25,7 @@ export const runtimeEventPayloadSchema = z.looseObject({
   test_adapter: z.boolean().optional(),
 });
 
-/**
- * What a runtime pushes into the sink. It is the canonical Otomat event
- * envelope minus `seq`: the per-run sequence number is allocated downstream by
- * the OTO-7 ledger at persistence time, never by the runtime.
- */
+/** Runtime events omit `seq` because persistence owns the canonical per-run ordering. */
 export const runtimeEventSchema = eventEnvelopeSchema.omit({ seq: true }).extend({
   payload: runtimeEventPayloadSchema,
 });

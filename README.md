@@ -71,6 +71,7 @@ rationale, and “where to change what” guide.
 
 Focused references remain available in
 [`docs/ai/codebase-map.md`](docs/ai/codebase-map.md),
+[`docs/ai/first-pass-quality.md`](docs/ai/first-pass-quality.md),
 [`docs/ai/import-boundaries.md`](docs/ai/import-boundaries.md), and
 [`docs/ai/run-lifecycle.md`](docs/ai/run-lifecycle.md).
 

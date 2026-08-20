@@ -14,6 +14,11 @@ graphify-out/
 
 # Local-only docs and planning (kept on disk, never committed to the public tree)
 CONTEXT.md
+!.claude/
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/first-pass-quality
 .claude/plans/
 docs/**
 !docs/ai/

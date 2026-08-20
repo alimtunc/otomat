@@ -5,8 +5,7 @@ import type { RepositoryResolver } from "#git";
 import { GitHubPublicationError } from "../errors.js";
 
 export interface GenerationIssue {
-  /** Tracker identifier such as `OTO-81`; null on a local issue, and then no footer is composed. */
-  identifier: string | null;
+  sourceIdentifier: string | null;
   title: string;
   body: string | null;
 }
@@ -38,7 +37,7 @@ export function buildGenerationInput(
   return {
     cwd: worktree.path,
     issue: {
-      identifier: issue?.source_identifier ?? null,
+      sourceIdentifier: issue?.source_identifier ?? null,
       title: issue?.title ?? "Untitled issue",
       body: issue?.body ?? null,
     },

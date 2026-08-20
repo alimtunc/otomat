@@ -24,11 +24,6 @@ const SANDBOX_DESCRIPTIONS = new Map<string, string>([
   ["danger-full-access", "Codex may read and write anywhere the daemon can, with no sandbox."],
 ]);
 
-/**
- * Otomat drives `codex exec` with no terminal attached, so an escalation it
- * raises cannot be answered here. Saying which policies escalate is honest;
- * claiming Otomat could reply to one would not be — that is OTO-24's work.
- */
 const NON_INTERACTIVE_NOTE =
   "Codex escalates to a human for approval, and Otomat runs it non-interactively, so nothing it escalates gets approved.";
 

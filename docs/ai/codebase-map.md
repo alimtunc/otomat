@@ -221,6 +221,15 @@ Every field is read locally. No external id, tracker URL or credential rides
 along, and the rendered context says so — an imported Linear issue reaches a
 session exactly like a local one, on a laptop or on a VPS daemon.
 
+Project skills are discovered one directory deep from `.agents/skills` and
+`.claude/skills`. Discovery only makes a skill selectable: an agent profile owns
+the selected ids, resolution freezes their content hashes, and `composeTurnPrompt`
+prepends the frozen bodies before the supervisor chooses Claude or Codex. The
+repo-local `first-pass-quality` skill therefore reaches both runtimes through the
+same profile contract without becoming a daemon-built-in role. Its Claude project
+path is a symlink to the canonical `.agents` directory; realpath de-duplication
+keeps one catalog entry and one instruction body.
+
 ## One Execution Configuration
 
 Runtime, model and every option a CLI announces are one configuration, resolved
@@ -1302,6 +1311,12 @@ open-keyed or partial lookups, named interfaces over anonymous object types,
 `in`/`typeof`/`instanceof` narrowing over casts, and a one-line
 `// SAFETY:` invariant on each assertion that must remain.
 
+OTO-128 adds the repo-owned `no-ephemeral-comment-references` rule beside the
+vendored rules. It reports tracker and pull-request references inside line, block
+and JSDoc comments while leaving durable standards such as ISO-8601 alone. It is
+an error with a zero-finding baseline; `scripts/anti-slop.test.mjs` fixes the
+intended detection boundary without inventing exceptions.
+
 Discarded, each against a demonstrated repo need — never weakened, baselined or
 scoped down instead:
 
@@ -1325,3 +1340,41 @@ scoped down instead:
   objects fed to `z.object`, `.shape` reads) or the literally geometric
   `AvatarShape`; the lazy structural naming the rule targets does not exist
   in this repo.
+
+## First-Pass Quality Gates (OTO-128)
+
+The quality stack has three owners. `AGENTS.md` carries repository conventions;
+`.agents/skills/first-pass-quality/SKILL.md` carries the reusable implementation
+sequence; Oxlint and `scripts/guardrails.mjs` carry deterministic checks. This
+keeps Claude and Codex on the same repository contract without loading specialist
+review rubrics on every turn.
+
+`pnpm guard:react` composes two non-overlapping layers. `pnpm lint:react` uses
+`.oxlintrc.react.json` as a separate zero-baseline gate.
+It activates 15 rules from the React plugin already compiled into the pinned
+Oxlint binary: hook order, render purity, render-time state changes, static
+component identity, error boundaries, JSX keys/definitions/duplicate props,
+legacy mutation/DOM APIs and void-element correctness. It excludes performance
+rules, the experimental React Compiler rule, and four otherwise useful rules with
+existing violations. `.turkit.yaml → commands.react_review` lets the ticket flow
+run it early only when React files changed; the 1–2 s zero-baseline scan also stays
+in `pnpm check` so CI cannot depend on an agent having selected the right profile.
+`scripts/react-lint.test.mjs` pressure-tests the gate with a failing render-time
+state update and its event-handler counterpart.
+
+The second layer pins `react-doctor@0.9.12` and scans only Bugs and Accessibility
+diagnostics introduced against `main`, including untracked React files. The
+repository's existing `doctor.config.json` remains the owner of reviewed
+file-specific exceptions and now also disables Performance, Maintainability,
+Security, 13 rules already enforced by the native layer, dead-code analysis,
+remote scoring and
+supply-chain requests. This makes the gate blocking on every new retained warning
+without turning existing findings into a baseline or sending scan data away.
+`scripts/react-doctor.test.mjs` verifies both the exclusion contract and a unique
+render-time ref mutation diagnostic.
+
+The candidate audit, measured baselines and promotion criteria live in
+[`first-pass-quality.md`](first-pass-quality.md). Knip remains the next dead-code
+pilot; broad Vercel guidance and heavy architecture/review skills do not enter the
+default stack without the evidence recorded there. React Doctor is a pinned code
+lint only; its output is not model training or cross-harness evaluation data.

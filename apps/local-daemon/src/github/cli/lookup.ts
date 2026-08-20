@@ -65,7 +65,7 @@ export async function searchPullRequests(
       "--repo",
       input.repository,
       "--search",
-      // Unquoted, GitHub splits `OTO-119` into `OTO` and `119` and answers with pull requests that carry neither as a value.
+      // Quoting keeps a hyphenated identifier as one search term instead of two unrelated terms.
       `"${input.identifier}" in:title,body`,
       "--state",
       "all",

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": ["react"],
+  "categories": {
+    "correctness": "off",
+    "suspicious": "off"
+  },
+  "rules": {
+    "react/error-boundaries": "error",
+    "react/jsx-key": "error",
+    "react/jsx-no-duplicate-props": "error",
+    "react/jsx-no-undef": "error",
+    "react/no-danger-with-children": "error",
+    "react/no-direct-mutation-state": "error",
+    "react/no-find-dom-node": "error",
+    "react/no-render-return-value": "error",
+    "react/no-string-refs": "error",
+    "react/purity": "error",
+    "react/rules-of-hooks": "error",
+    "react/set-state-in-render": "error",
+    "react/static-components": "error",
+    "react/void-dom-elements-no-children": "error",
+    "react/void-use-memo": "error"
+  },
+  "ignorePatterns": ["**/dist/**", "**/node_modules/**", "**/*.d.ts", "**/routeTree.gen.ts"]
+}

@@ -3,6 +3,7 @@ commands:
   dev: pnpm dev
   check: pnpm check
   lint: pnpm lint
+  react_review: pnpm guard:react
   fmt: pnpm format
   test: pnpm test
   build: pnpm build

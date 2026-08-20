@@ -7,7 +7,13 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createClient, listAgentSessionsForRun, listStepRunsForRun, type Db } from "@otomat/db";
-import { runDetailSchema, runLaunchResponseSchema, type RunDetail } from "@otomat/domain";
+import {
+  runDetailSchema,
+  runLaunchResponseSchema,
+  WORKER_JOB_ENV,
+  WORKER_START_TOKEN_ENV,
+  type RunDetail,
+} from "@otomat/domain";
 import { expect, it } from "vitest";
 
 import { readRunEvents, sessionDir } from "#events";
@@ -61,6 +67,8 @@ function daemonEnv(
   delete env.VITEST;
   delete env.VITEST_WORKER_ID;
   delete env.VITEST_POOL_ID;
+  delete env[WORKER_JOB_ENV];
+  delete env[WORKER_START_TOKEN_ENV];
   return env;
 }
 

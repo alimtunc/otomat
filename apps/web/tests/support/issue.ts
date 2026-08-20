@@ -12,7 +12,6 @@ export function openWorkspace(runId: string, runStatus: RunState): IssueWorkspac
   };
 }
 
-/** The issue a launch attaches by reference: a chip may name it `OTO-42`, never the id it is looked up by. */
 export function referencedIssue(): IssueContract {
   return issueContract({
     id: "0f8a1c34-9b7e-4f6a-9d21-6c5b1d0e7a42",

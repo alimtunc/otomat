@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -33,6 +33,20 @@ it("discovers valid and invalid skills under a project root", () => {
   const invalid = skills.find((skill) => skill.canonical_path.includes("nofm"));
   expect(invalid?.status).toBe("invalid");
   expect(invalid?.invalid_reason).toBe("frontmatter_missing");
+});
+
+it("deduplicates one skill exposed through both harness roots", () => {
+  writeSkill("shared", "---\nname: Shared\ndescription: ok\n---\nBody");
+  const claudeSkills = join(t.dir, ".claude", "skills");
+  mkdirSync(claudeSkills, { recursive: true });
+  symlinkSync("../../.agents/skills/shared", join(claudeSkills, "shared"));
+
+  const skills = rescanSkills(t.db, { home: null }).filter((skill) => skill.name === "Shared");
+
+  expect(skills).toHaveLength(1);
+  expect(skills[0]?.canonical_path).toBe(
+    realpathSync(join(t.dir, ".agents", "skills", "shared", "SKILL.md")),
+  );
 });
 
 it("marks a removed skill as path_missing on the next rescan", () => {

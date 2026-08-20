@@ -5,7 +5,7 @@ import { ISSUE_STATES } from "../contracts/entity-states.js";
 /** No external id and no credential: an imported Linear issue and a local one reach the session as the same shape. */
 export const contextIssueSchema = z.object({
   id: z.string(),
-  /** `OTO-42` for a tracker issue, null for a local one. */
+  /** Tracker-facing identifier; null for a local issue. */
   identifier: z.string().nullable(),
   title: z.string(),
   body: z.string().nullable(),

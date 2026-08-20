@@ -3,6 +3,9 @@ import { z } from "zod";
 /** Wire id of the built-in deterministic fake runtime — a simulated runtime for tests and explicit development only. */
 export const FAKE_RUNTIME_ID = "fake";
 
+export const WORKER_JOB_ENV = "OTOMAT_WORKER_JOB";
+export const WORKER_START_TOKEN_ENV = "OTOMAT_WORKER_START_TOKEN";
+
 /** How far a runtime can carry a message that arrives while it works; a boundary is promised, never a read receipt. */
 export const RUNTIME_STEERING_MODES = ["turn_boundary", "unsupported"] as const;
 export const runtimeSteeringModeSchema = z.enum(RUNTIME_STEERING_MODES);

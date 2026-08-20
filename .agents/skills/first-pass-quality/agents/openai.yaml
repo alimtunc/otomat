@@ -1,0 +1,6 @@
+interface:
+  display_name: "First-pass quality"
+  short_description: "Ship a clean first implementation pass"
+  default_prompt: "Use $first-pass-quality to implement this change with the repository quality gates."
+policy:
+  allow_implicit_invocation: true

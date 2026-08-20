@@ -13,8 +13,6 @@ import { join } from "node:path";
 
 import { delay } from "./delay.js";
 
-export const WORKER_START_TOKEN_ENV = "OTOMAT_WORKER_START_TOKEN";
-
 const WORKER_START_TIMEOUT_MS = 30_000;
 const WORKER_START_POLL_MS = 10;
 const RELEASED_PREFIX = ".worker-start-";

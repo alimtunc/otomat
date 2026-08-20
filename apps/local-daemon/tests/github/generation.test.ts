@@ -6,7 +6,11 @@ import { RuntimeUnavailableError } from "#runtime";
 
 const INPUT: GenerationInput = {
   cwd: "/worktree",
-  issue: { identifier: "OTO-81", title: "Simplify PR creation", body: "Make it one action." },
+  issue: {
+    sourceIdentifier: "OTO-81",
+    title: "Simplify PR creation",
+    body: "Make it one action.",
+  },
   diffStat: ["note.md +1 -0"],
   patch: "diff --git a/note.md b/note.md\n+je teste le vps\n",
 };
@@ -163,7 +167,7 @@ describe("pull request generator", () => {
 
     const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, {
       ...INPUT,
-      issue: { identifier: null, title: "Local task", body: null },
+      issue: { sourceIdentifier: null, title: "Local task", body: null },
     });
 
     expect(proposal.body).toBe("Publishes the run in one click.");
