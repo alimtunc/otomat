@@ -32,7 +32,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on("second-instance", () => desktop?.focusPrimary());
   app.on("window-all-closed", () => app.quit());
   app.on("before-quit", (event) => {
-    if (desktop !== null && desktop.beginQuitIfNeeded(() => app.quit())) event.preventDefault();
+    if (desktop !== null && desktop.quit.begin(() => app.quit())) event.preventDefault();
   });
 
   app

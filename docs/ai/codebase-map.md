@@ -410,6 +410,29 @@ export never destroys the surrounding diagnostics. Copy, export and report are
 explicit user actions — the report previews its exact text and only opens a
 draft once confirmed. There is no telemetry and no automatic send.
 
+## Quitting the Desktop Shell (OTO-129)
+
+The shell owns the daemon it spawned, so `before-quit` cannot simply let Electron
+go: `QuitSequence` (`apps/desktop/src/main/quit.ts`) preventDefaults the quit,
+stops the remote hosts and then the local daemon, and only then re-issues it.
+
+The invariant that shape has to respect is that the only quit request an app gets
+may be a single SIGTERM — that is exactly what the packaged smokes send. So a
+shutdown that fails still releases the request instead of holding it for a retry
+that will never come, and a request already released is never blocked a second
+time; the shell that cannot stop its daemon says so in `desktop.log` and quits
+anyway, leaving the smoke's orphan check to fail loudly rather than the app
+hanging silently. Each phase is logged, so a launch that does hang names the
+stage it stopped in.
+
+The smokes hold the other half: `terminate` (`scripts/smoke/harness.mjs`) attaches
+its exit listener before signalling, refuses to read an already-dead child or an
+undelivered signal as one that ignored SIGTERM, and carries that launch's own
+output and logs on every failure — plus the parent pid and the surviving process
+tree when it really did time out. Every wait it makes is bounded and unref'd: a
+harness that lingers after the shutdown it observed, or that hangs on a child
+outliving SIGKILL, reads exactly like the defect it exists to catch.
+
 ## Issue Workspace and Plan Revisions
 
 An issue owns one canonical workspace while its work is unmerged: the run whose
