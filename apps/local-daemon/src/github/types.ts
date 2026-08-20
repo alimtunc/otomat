@@ -3,7 +3,7 @@ import type {
   AttachPullRequestRequest,
   GitHubConnectionContract,
   LinearLifecycleSync,
-  PreparePullRequestRequest,
+  PublishPullRequestRequest,
   PullRequestCandidate,
   PullRequestDetection,
   PullRequestInbox,
@@ -85,8 +85,11 @@ export interface GitHubService {
   /** Re-reads a live pull request from the provider, settling the run when it turns out merged. */
   getPullRequest(runId: string): Promise<PullRequestView | null>;
   publishability(runId: string): Promise<PullRequestPublishability>;
-  /** Never pushes to a pull request that already exists. */
-  publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView>;
+  /** Accepts the publication and answers its initial state; it never pushes to a pull request that already exists. */
+  publish(run: RunRow, request: PublishPullRequestRequest): Promise<PullRequestView>;
+  /** Stamps every publication a stopped process left mid-phase as interrupted; answers how many. */
+  reconcileInterruptedPublications(): number;
+  settlePublications(): Promise<void>;
   /** Never commits: only commits the workspace already holds are published. */
   pushCommits(runId: string, request: PushPullRequestRequest): Promise<PullRequestView>;
   /** Writes and persists a proposal; it pushes nothing, creates no branch and opens no pull request. */

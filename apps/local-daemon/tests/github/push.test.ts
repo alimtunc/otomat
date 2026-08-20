@@ -15,7 +15,7 @@ import { createGitHubService, GitHubCliError, type GitHubService } from "#github
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { stubRepositoryResolver, type TestRepo } from "../support/git.js";
-import { FakeGitHubCli, publishRequest } from "../support/github.js";
+import { FakeGitHubCli, publishAndSettle, publishRequest } from "../support/github.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-push";
@@ -61,7 +61,7 @@ describe("pull request pushes", () => {
     });
     const run = getRun(fix.db, RUN_ID);
     if (!run) throw new Error("seeded run missing");
-    await github.publish(run, READY_REQUEST);
+    await publishAndSettle(github, fix.db, run, READY_REQUEST);
   });
 
   afterEach(() => {

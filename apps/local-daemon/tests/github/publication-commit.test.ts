@@ -10,7 +10,7 @@ import { createGitHubService, type GitHubService } from "#github";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { stubRepositoryResolver, type TestRepo } from "../support/git.js";
-import { FakeGitHubCli, publishRequest } from "../support/github.js";
+import { FakeGitHubCli, publishAndSettle, publishRequest } from "../support/github.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-commit";
@@ -76,21 +76,23 @@ describe("the publication commit", () => {
   const lastMessage = (): string => repo.git("-C", worktreePath, "log", "--format=%B", "-1").trim();
 
   it("never publishes the internal snapshot subject", async () => {
-    await github.publish(currentRun(), REQUEST);
+    await publishAndSettle(github, fix.db, currentRun(), REQUEST);
 
     expect(lastMessage()).not.toContain("chore(worktree): snapshot");
   });
 
   it("composes the subject and the title from one object, and links the issue in a footer", async () => {
-    const view = await github.publish(currentRun(), REQUEST);
+    const view = await publishAndSettle(github, fix.db, currentRun(), REQUEST);
 
     expect(lastMessage()).toBe("feat(pr): publish in one action\n\nRefs OTO-81");
     expect(cli.createInput?.title).toBe("feat(pr): publish in one action (OTO-81)");
-    expect(view.row.commit_subject).toBe("feat(pr): publish in one action");
+    expect(view.commit_subject).toBe("feat(pr): publish in one action");
   });
 
   it("commits a scopeless subject as the operator wrote it", async () => {
-    await github.publish(
+    await publishAndSettle(
+      github,
+      fix.db,
       currentRun(),
       publishRequest("publish in one action", {
         subject: { type: "chore", scope: null, summary: "publish in one action" },
@@ -107,7 +109,7 @@ describe("the publication commit", () => {
       .where(eq(schema.issues.id, "i1"))
       .run();
 
-    await github.publish(currentRun(), REQUEST);
+    await publishAndSettle(github, fix.db, currentRun(), REQUEST);
 
     expect(lastMessage()).toBe("feat(pr): publish in one action");
     expect(cli.createInput?.title).toBe("feat(pr): publish in one action");
@@ -126,7 +128,7 @@ describe("the publication commit", () => {
       })
       .run();
 
-    await github.publish(currentRun(), REQUEST);
+    await publishAndSettle(github, fix.db, currentRun(), REQUEST);
 
     expect(lastMessage()).toBe(
       "feat(pr): publish in one action\n\nThe generator wrote this paragraph.\n\nRefs OTO-81",
@@ -144,13 +146,13 @@ describe("the publication commit", () => {
       "feat(app): the agent's own commit",
     );
 
-    await github.publish(currentRun(), REQUEST);
+    await publishAndSettle(github, fix.db, currentRun(), REQUEST);
 
     expect(lastMessage()).toBe("feat(app): the agent's own commit");
   });
 
   it("keeps the published commit and the pull request title in step", async () => {
-    await github.publish(currentRun(), REQUEST);
+    await publishAndSettle(github, fix.db, currentRun(), REQUEST);
 
     expect(cli.createInput?.title).toBe(`${lastMessage().split("\n")[0] ?? ""} (OTO-81)`);
     expect(cli.pushedBranches).toEqual([BRANCH]);

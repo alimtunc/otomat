@@ -36,10 +36,10 @@ import {
   DAEMON_NAME,
   DAEMON_VERSION,
   daemonBuild,
-  type CloseOptions,
   type DaemonHandle,
   type StartDaemonOptions,
 } from "./server-contract.js";
+import { createDaemonClose } from "./shutdown.js";
 
 export { DAEMON_NAME, DAEMON_VERSION } from "./server-contract.js";
 export type { CloseOptions, DaemonHandle, StartDaemonOptions } from "./server-contract.js";
@@ -152,6 +152,12 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     if (report.reconciled.length > 0) {
       console.log(`[otomat] reconciled ${report.reconciled.length} run(s) left in flight at boot`);
     }
+    const interrupted = github.reconcileInterruptedPublications();
+    if (interrupted > 0) {
+      console.log(
+        `[otomat] ${interrupted} GitHub publication(s) were interrupted; retry reconciles them`,
+      );
+    }
     const maintenance = startMaintenancePasses(supervisor);
 
     const app = createApiApp({
@@ -188,42 +194,13 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       process.exit(1);
     });
 
-    async function close(closeOptions: CloseOptions = {}): Promise<void> {
-      const failures: unknown[] = [];
-      maintenance.stop();
-      if (closeOptions.terminateInFlightMs !== undefined) {
-        try {
-          await supervisor.shutdown(closeOptions.terminateInFlightMs);
-        } catch (error) {
-          failures.push(error);
-        }
-      }
-      await new Promise<void>((resolve) => {
-        try {
-          server.close((closeError) => {
-            if (closeError) failures.push(closeError);
-            resolve();
-          });
-        } catch (error) {
-          failures.push(error);
-          resolve();
-        }
-      });
-      try {
-        await supervisor.settle();
-      } catch (error) {
-        failures.push(error);
-      }
-      try {
-        sqlite.close();
-      } catch (error) {
-        failures.push(error);
-      }
-      if (failures.length === 1) throw failures[0];
-      if (failures.length > 1) {
-        throw new AggregateError(failures, "Daemon shutdown encountered multiple failures.");
-      }
-    }
+    const close = createDaemonClose({
+      stopMaintenancePasses: () => maintenance.stop(),
+      supervisor,
+      server,
+      settlePublications: () => github.settlePublications(),
+      closeDatabase: () => sqlite.close(),
+    });
 
     return { port: listening.port, close };
   } catch (error) {

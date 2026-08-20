@@ -1,4 +1,5 @@
 import type {
+  OperationContract,
   PullRequestContract,
   PullRequestPublicationMode,
   PullRequestPublishability,
@@ -11,22 +12,17 @@ export interface PublicationModel {
   stateLabel: string;
 }
 
-const UPDATE_LABEL = "Update PR details";
+export interface PublicationModelInput {
+  pullRequest: PullRequestContract | null;
+  operation: OperationContract | null;
+  publishability: PullRequestPublishability;
+  connected: boolean;
+  hasDraftChanges: boolean;
+  mode: PullRequestPublicationMode;
+}
 
-const PENDING_PUBLICATION_MODELS = {
-  pushing: {
-    actionLabel: "Pushing branch…",
-    actionDisabled: true,
-    actionPending: true,
-    stateLabel: "Pushing",
-  },
-  creating: {
-    actionLabel: "Creating pull request…",
-    actionDisabled: true,
-    actionPending: true,
-    stateLabel: "Creating",
-  },
-} as const satisfies Record<"pushing" | "creating", PublicationModel>;
+const UPDATE_LABEL = "Update PR details";
+const RETRY_LABEL = "Retry publication";
 
 /** Details only: this action edits title, description and Draft/Ready, and never moves a commit. */
 function createdModel(hasDraftChanges: boolean, connected: boolean): PublicationModel {
@@ -44,11 +40,8 @@ function createLabel(mode: PullRequestPublicationMode): string {
 }
 
 /** A workspace that cannot publish says exactly why; how the run ended is never the answer. */
-function creationModel(
-  publishability: PullRequestPublishability,
-  connected: boolean,
-  mode: PullRequestPublicationMode,
-): PublicationModel {
+function creationModel(input: PublicationModelInput): PublicationModel {
+  const { publishability, connected, mode } = input;
   if (publishability.blocker !== null) {
     return {
       actionLabel: createLabel(mode),
@@ -74,42 +67,47 @@ function terminalModel(status: "merged" | "closed"): PublicationModel {
   };
 }
 
+/** The phase the daemon is in names the wait, so the cockpit never shows a spinner without saying what for. */
+function runningModel(operation: OperationContract): PublicationModel {
+  const label = operation.phases.find((phase) => phase.state === "active")?.label ?? "Publishing";
+  return {
+    actionLabel: `${label}…`,
+    actionDisabled: true,
+    actionPending: true,
+    stateLabel: label,
+  };
+}
+
 /** A pull request that exists stays editable whatever its run went on to do. */
-function failedModel(
+function stoppedModel(
+  input: PublicationModelInput,
   pullRequest: PullRequestContract,
-  publishability: PullRequestPublishability,
-  connected: boolean,
-  mode: PullRequestPublicationMode,
+  interrupted: boolean,
 ): PublicationModel {
   if (pullRequest.number !== null) {
     return {
-      actionLabel: UPDATE_LABEL,
-      actionDisabled: !connected,
+      actionLabel: interrupted ? RETRY_LABEL : UPDATE_LABEL,
+      actionDisabled: !input.connected,
       actionPending: false,
-      stateLabel: "Update failed",
+      stateLabel: interrupted ? "Publication interrupted" : "Update failed",
     };
   }
-  return { ...creationModel(publishability, connected, mode), stateLabel: "Creation failed" };
+  return {
+    ...creationModel(input),
+    actionLabel: interrupted ? RETRY_LABEL : createLabel(input.mode),
+    stateLabel: interrupted ? "Publication interrupted" : "Creation failed",
+  };
 }
 
-export function publicationModel(
-  pullRequest: PullRequestContract | null,
-  publishability: PullRequestPublishability,
-  connected: boolean,
-  hasDraftChanges: boolean,
-  mode: PullRequestPublicationMode,
-): PublicationModel {
-  if (pullRequest === null) return creationModel(publishability, connected, mode);
+/** The operation is the only account of the publication: reading `publication_status` beside it is how the two disagree. */
+export function publicationModel(input: PublicationModelInput): PublicationModel {
+  const { pullRequest, operation } = input;
+  if (pullRequest === null) return creationModel(input);
   if (pullRequest.status === "merged" || pullRequest.status === "closed") {
     return terminalModel(pullRequest.status);
   }
-  if (pullRequest.publication_status === "pushing") return PENDING_PUBLICATION_MODELS.pushing;
-  if (pullRequest.publication_status === "creating") return PENDING_PUBLICATION_MODELS.creating;
-  if (pullRequest.publication_status === "created") {
-    return createdModel(hasDraftChanges, connected);
-  }
-  if (pullRequest.publication_status === "failed") {
-    return failedModel(pullRequest, publishability, connected, mode);
-  }
-  return creationModel(publishability, connected, mode);
+  if (operation === null) return creationModel(input);
+  if (operation.state === "running") return runningModel(operation);
+  if (operation.state === "succeeded") return createdModel(input.hasDraftChanges, input.connected);
+  return stoppedModel(input, pullRequest, operation.state === "interrupted");
 }

@@ -1,8 +1,9 @@
-import type { PullRequestRow } from "@otomat/db";
+import { getPullRequestForRun, type Db, type PullRequestRow, type RunRow } from "@otomat/db";
 import type {
   GitHubConnectionContract,
-  PreparePullRequestRequest,
+  PublishPullRequestRequest,
   PullRequestInbox,
+  PullRequestPublicationMode,
   PullRequestPublishability,
 } from "@otomat/domain";
 
@@ -51,14 +52,27 @@ export const PUBLISHABLE_WORKSPACE: PullRequestPublishability = {
 
 export function publishRequest(
   summary: string,
-  overrides: Partial<PreparePullRequestRequest> = {},
-): PreparePullRequestRequest {
+  overrides: Partial<PublishPullRequestRequest["details"]> = {},
+  mode: PullRequestPublicationMode = "ready",
+): PublishPullRequestRequest {
   return {
-    subject: { type: "feat", scope: null, summary },
-    body: "Details",
-    mode: "ready",
-    ...overrides,
+    mode,
+    details: { subject: { type: "feat", scope: null, summary }, body: "Details", ...overrides },
   };
+}
+
+/** Publication is accepted, then worked on; a test asserting its outcome waits for the daemon to finish it. */
+export async function publishAndSettle(
+  github: GitHubService,
+  db: Db,
+  run: RunRow,
+  request: PublishPullRequestRequest,
+): Promise<PullRequestRow> {
+  await github.publish(run, request);
+  await github.settlePublications();
+  const row = getPullRequestForRun(db, run.id);
+  if (!row) throw new Error(`no pull request was recorded for run ${run.id}`);
+  return row;
 }
 
 /** What GitHub answers about a pull request, review facts included, so every fake speaks one shape. */
@@ -102,6 +116,7 @@ export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullReq
     url: null,
     status: "draft",
     publication_status: "not_configured",
+    failed_phase: null,
     title: "First slice",
     body: null,
     head_ref: null,
@@ -167,6 +182,8 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
     publish: async () => {
       throw new Error("publish stub not configured");
     },
+    reconcileInterruptedPublications: () => 0,
+    settlePublications: async () => {},
     pushCommits: async () => {
       throw new Error("pushCommits stub not configured");
     },

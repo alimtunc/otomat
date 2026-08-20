@@ -5,7 +5,7 @@ import { useIssue } from "@web/api/issues/queries";
 import {
   useConnectGitHub,
   useGeneratePullRequestMetadata,
-  usePreparePullRequest,
+  usePublishPullRequest,
 } from "@web/api/prs/mutations";
 import { useGitHubConnection, useRunPullRequest } from "@web/api/prs/queries";
 import { useRunDetail } from "@web/api/runs/queries";
@@ -14,11 +14,7 @@ import { PullRequestConnectionPanel } from "@web/components/runs/pr/connection-p
 import { PullRequestExecutionNotice } from "@web/components/runs/pr/execution-notice";
 import { PullRequestForm } from "@web/components/runs/pr/form";
 import { PullRequestGeneratorNote } from "@web/components/runs/pr/generator-note";
-import {
-  initialPublicationMode,
-  pullRequestAcceptedSubmission,
-  pullRequestConnectionModel,
-} from "@web/components/runs/pr/model";
+import { initialPublicationMode, pullRequestConnectionModel } from "@web/components/runs/pr/model";
 import { PullRequestProgress } from "@web/components/runs/pr/progress";
 import { PullRequestSummary } from "@web/components/runs/pr/summary";
 import { PullRequestSyncPanel } from "@web/components/runs/pr/sync/panel";
@@ -34,7 +30,7 @@ export function RunPrView() {
   const connectionQuery = useGitHubConnection();
   const issueQuery = useIssue(runQuery.data?.run.issue_id ?? null);
   const connect = useConnectGitHub();
-  const prepare = usePreparePullRequest(runId);
+  const publish = usePublishPullRequest(runId);
   const generate = useGeneratePullRequestMetadata(runId);
 
   if (runQuery.isPending || prQuery.isPending || connectionQuery.isPending) {
@@ -55,7 +51,7 @@ export function RunPrView() {
   }
 
   const pullRequest = prQuery.data.pull_request;
-  const { publishability, sync } = prQuery.data;
+  const { operation, publishability, sync } = prQuery.data;
   const headRef = pullRequest?.head_ref ?? null;
   const connection = pullRequestConnectionModel(connectionQuery.data, pullRequest);
 
@@ -77,16 +73,12 @@ export function RunPrView() {
         onConnect={() => connect.mutate()}
         isConnecting={connect.isPending || connectionQuery.data.status === "connecting"}
       />
-      <PullRequestProgress
-        generating={generate.isPending}
-        publishing={prepare.isPending}
-        generated={pullRequest?.commit_subject != null}
-        publicationStatus={pullRequest?.publication_status ?? null}
-      />
+      <PullRequestProgress operation={operation} />
       <PullRequestGeneratorNote generator={pullRequest?.generator ?? null} />
       <PullRequestForm
         key={`${pullRequest?.id ?? "new"}:${pullRequest?.publication_status ?? "none"}:${pullRequest?.status ?? "none"}`}
         pullRequest={pullRequest}
+        operation={operation}
         publishability={publishability}
         connected={connection.connected}
         customize={customize === true}
@@ -97,10 +89,10 @@ export function RunPrView() {
         onModeChange={(next: PullRequestPublicationMode) => {
           void navigate({ search: (previous) => ({ ...previous, mode: next }) });
         }}
-        onSubmit={async (value) => {
+        onSubmit={async (request) => {
           try {
-            const detail = await prepare.mutateAsync(value);
-            return pullRequestAcceptedSubmission(detail.pull_request, value);
+            await publish.mutateAsync(request);
+            return true;
           } catch {
             return false;
           }
@@ -112,7 +104,7 @@ export function RunPrView() {
             return null;
           }
         }}
-        isPending={prepare.isPending}
+        isPending={publish.isPending}
         isGenerating={generate.isPending}
       />
     </div>

@@ -15,6 +15,7 @@ export * from "./health.js";
 export * from "./issue.js";
 export * from "./skill.js";
 export * from "./linear.js";
+export * from "./operation.js";
 export * from "./probe.js";
 export * from "./provider-options.js";
 export * from "./pull-request.js";

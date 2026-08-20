@@ -2,7 +2,8 @@ import {
   COMMIT_TYPES,
   parseCommitSubject,
   type CommitType,
-  type PreparePullRequestRequest,
+  type PublishPullRequestRequest,
+  type PullRequestPublicationDetails,
   type PullRequestContract,
   type PullRequestPublicationMode,
 } from "@otomat/domain";
@@ -13,7 +14,7 @@ import { initialPublicationMode } from "./model";
 export interface PullRequestFormOptions {
   pullRequest: PullRequestContract | null;
   chosenMode: PullRequestPublicationMode | undefined;
-  onSubmit: (value: PreparePullRequestRequest) => Promise<boolean>;
+  onSubmit: (request: PublishPullRequestRequest) => Promise<boolean>;
 }
 
 const [DEFAULT_TYPE] = COMMIT_TYPES;
@@ -41,21 +42,20 @@ export function usePullRequestForm({ pullRequest, chosenMode, onSubmit }: PullRe
     onSubmit: async ({ value, formApi }) => {
       const headRef = value.branch.trim();
       const scope = value.scope.trim();
-      const submitted: PreparePullRequestRequest = {
+      const details: PullRequestPublicationDetails = {
         subject: {
           type: value.type,
           scope: scope === "" ? null : scope,
           summary: value.summary.trim(),
         },
         body: value.body,
-        mode: value.mode,
       };
-      if (headRef !== "") submitted.head_ref = headRef;
-      if (await onSubmit(submitted)) {
+      if (headRef !== "") details.head_ref = headRef;
+      if (await onSubmit({ mode: value.mode, details })) {
         formApi.reset({
           ...value,
-          scope: submitted.subject.scope ?? "",
-          summary: submitted.subject.summary,
+          scope: details.subject.scope ?? "",
+          summary: details.subject.summary,
         });
       }
     },

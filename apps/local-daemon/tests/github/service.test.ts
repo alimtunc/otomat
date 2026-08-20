@@ -23,6 +23,7 @@ import {
   CONNECTED_GITHUB as connected,
   DISCONNECTED_GITHUB,
   FakeGitHubCli,
+  publishAndSettle,
   publishRequest,
 } from "../support/github.js";
 import { seedRun } from "../support/seed.js";
@@ -32,7 +33,7 @@ const BRANCH = `otomat/run/${RUN_ID}`;
 
 /** The fake provider reports an open PR, so `ready` is the mode that leaves it untouched. */
 const READY_REQUEST = publishRequest("ship it");
-const DRAFT_REQUEST = publishRequest("ship it", { mode: "draft" });
+const DRAFT_REQUEST = publishRequest("ship it", {}, "draft");
 
 describe("GitHubService", () => {
   let fix: DaemonTestDb;
@@ -188,9 +189,9 @@ describe("GitHubService", () => {
   it("persists not_configured without touching git when authentication is missing", async () => {
     cli.connectionValue = DISCONNECTED_GITHUB;
 
-    const result = await service().publish(run(), READY_REQUEST);
+    const result = await publishAndSettle(service(), fix.db, run(), READY_REQUEST);
 
-    expect(result.row).toMatchObject({
+    expect(result).toMatchObject({
       publication_status: "not_configured",
       number: null,
       url: null,
@@ -209,9 +210,9 @@ describe("GitHubService", () => {
       error_message: "GitHub authentication status could not be read.",
     };
 
-    const result = await service().publish(run(), READY_REQUEST);
+    const result = await publishAndSettle(service(), fix.db, run(), READY_REQUEST);
 
-    expect(result.row).toMatchObject({
+    expect(result).toMatchObject({
       publication_status: "failed",
       error_code: "github_auth_status_failed",
       error_message: "GitHub authentication status could not be read.",
@@ -222,15 +223,15 @@ describe("GitHubService", () => {
 
   it("restores a created publication after reconnecting without new changes", async () => {
     const github = service();
-    await github.publish(run(), READY_REQUEST);
+    await publishAndSettle(github, fix.db, run(), READY_REQUEST);
     cli.connectionValue = DISCONNECTED_GITHUB;
-    const disconnected = await github.publish(run(), READY_REQUEST);
-    expect(disconnected.row.publication_status).toBe("not_configured");
+    const disconnected = await publishAndSettle(github, fix.db, run(), READY_REQUEST);
+    expect(disconnected.publication_status).toBe("not_configured");
 
     cli.connectionValue = connected;
-    const recovered = await github.publish(run(), READY_REQUEST);
+    const recovered = await publishAndSettle(github, fix.db, run(), READY_REQUEST);
 
-    expect(recovered.row).toMatchObject({
+    expect(recovered).toMatchObject({
       publication_status: "created",
       error_code: null,
       error_message: null,
@@ -256,9 +257,9 @@ describe("GitHubService", () => {
     });
     cli.providerExists = true;
 
-    const result = await service().publish(run(), READY_REQUEST);
+    const result = await publishAndSettle(service(), fix.db, run(), READY_REQUEST);
 
-    expect(result.row).toMatchObject({
+    expect(result).toMatchObject({
       id: "pr-legacy",
       publication_status: "created",
       number: 42,
@@ -273,9 +274,9 @@ describe("GitHubService", () => {
     writeFileSync(join(worktreePath, "change.txt"), "");
     repo.git("-C", worktreePath, "clean", "-fd");
 
-    const result = await service().publish(run(), READY_REQUEST);
+    const result = await publishAndSettle(service(), fix.db, run(), READY_REQUEST);
 
-    expect(result.row).toMatchObject({
+    expect(result).toMatchObject({
       publication_status: "failed",
       error_code: "diff_empty",
       number: null,
@@ -292,9 +293,9 @@ describe("GitHubService", () => {
       },
     };
 
-    const result = await service(brokenWorktrees).publish(run(), READY_REQUEST);
+    const result = await publishAndSettle(service(brokenWorktrees), fix.db, run(), READY_REQUEST);
 
-    expect(result.row).toMatchObject({
+    expect(result).toMatchObject({
       publication_status: "failed",
       error_code: "github_publication_failed",
       error_message: "GitHub publication failed unexpectedly.",
@@ -307,9 +308,9 @@ describe("GitHubService", () => {
       "GitHub auth response was invalid.",
     );
 
-    const result = await service().publish(run(), READY_REQUEST);
+    const result = await publishAndSettle(service(), fix.db, run(), READY_REQUEST);
 
-    expect(result.row).toMatchObject({
+    expect(result).toMatchObject({
       publication_status: "failed",
       error_code: "github_auth_response_invalid",
       error_message: "GitHub auth response was invalid.",
@@ -322,9 +323,9 @@ describe("GitHubService", () => {
       "No usable GitHub remote was found for this run.",
     );
 
-    const result = await service().publish(run(), READY_REQUEST);
+    const result = await publishAndSettle(service(), fix.db, run(), READY_REQUEST);
 
-    expect(result.row).toMatchObject({
+    expect(result).toMatchObject({
       publication_status: "failed",
       error_code: "github_remote_missing",
       number: null,
@@ -362,14 +363,14 @@ describe("GitHubService", () => {
       "github_remote_missing",
       "No usable GitHub remote was found for this run.",
     );
-    const failed = await service().publish(run(), READY_REQUEST);
-    expect(failed.row).toMatchObject({ publication_status: "failed", number: null });
+    const failed = await publishAndSettle(service(), fix.db, run(), READY_REQUEST);
+    expect(failed).toMatchObject({ publication_status: "failed", number: null });
 
     cli.resolveError = null;
-    const retried = await service().publish(run(), READY_REQUEST);
+    const retried = await publishAndSettle(service(), fix.db, run(), READY_REQUEST);
 
-    expect(retried.row).toMatchObject({
-      id: failed.row.id,
+    expect(retried).toMatchObject({
+      id: failed.id,
       run_id: RUN_ID,
       publication_status: "created",
       number: 42,
@@ -385,9 +386,9 @@ describe("GitHubService", () => {
       "The run branch could not be pushed to GitHub.",
     );
 
-    const result = await service().publish(run(), READY_REQUEST);
+    const result = await publishAndSettle(service(), fix.db, run(), READY_REQUEST);
 
-    expect(result.row).toMatchObject({
+    expect(result).toMatchObject({
       publication_status: "failed",
       error_code: "github_push_failed",
       number: null,
@@ -402,9 +403,9 @@ describe("GitHubService", () => {
       "GitHub could not create the pull request.",
     );
 
-    const result = await service().publish(run(), READY_REQUEST);
+    const result = await publishAndSettle(service(), fix.db, run(), READY_REQUEST);
 
-    expect(result.row).toMatchObject({
+    expect(result).toMatchObject({
       publication_status: "failed",
       error_code: "github_pr_create_failed",
       number: null,
@@ -415,15 +416,17 @@ describe("GitHubService", () => {
   it("ships a first publish under the requested head branch", async () => {
     cli.provider = { ...cli.provider, headRef: "feat/add-note" };
 
-    const result = await service().publish(run(), {
-      ...READY_REQUEST,
-      head_ref: "feat/add-note",
-    });
+    const result = await publishAndSettle(
+      service(),
+      fix.db,
+      run(),
+      publishRequest("ship it", { head_ref: "feat/add-note" }),
+    );
 
-    expect(result.row.publication_status).toBe("created");
+    expect(result.publication_status).toBe("created");
     expect(cli.pushedBranches).toEqual(["feat/add-note"]);
     expect(cli.createInput?.head).toBe("feat/add-note");
-    expect(result.row.head_ref).toBe("feat/add-note");
+    expect(result.head_ref).toBe("feat/add-note");
   });
 
   it("keeps the chosen head branch across a failed create so a retry targets it", async () => {
@@ -433,18 +436,20 @@ describe("GitHubService", () => {
     );
     const github = service();
 
-    const failed = await github.publish(run(), {
-      ...READY_REQUEST,
-      head_ref: "feat/add-note",
-    });
-    expect(failed.row.publication_status).toBe("failed");
-    expect(failed.row.head_ref).toBe("feat/add-note");
+    const failed = await publishAndSettle(
+      github,
+      fix.db,
+      run(),
+      publishRequest("ship it", { head_ref: "feat/add-note" }),
+    );
+    expect(failed.publication_status).toBe("failed");
+    expect(failed.head_ref).toBe("feat/add-note");
 
     cli.createError = null;
     cli.provider = { ...cli.provider, headRef: "feat/add-note" };
-    const retried = await github.publish(run(), READY_REQUEST);
+    const retried = await publishAndSettle(github, fix.db, run(), READY_REQUEST);
 
-    expect(retried.row.publication_status).toBe("created");
+    expect(retried.publication_status).toBe("created");
     expect(cli.pushedBranches).toEqual(["feat/add-note", "feat/add-note"]);
     expect(cli.createInput?.head).toBe("feat/add-note");
   });
@@ -468,9 +473,9 @@ describe("GitHubService", () => {
 
     const forkedRun = getRun(fix.db, "run-forked");
     if (!forkedRun) throw new Error("seeded run missing");
-    const result = await service().publish(forkedRun, READY_REQUEST);
+    const result = await publishAndSettle(service(), fix.db, forkedRun, READY_REQUEST);
 
-    expect(result.row.publication_status).toBe("created");
+    expect(result.publication_status).toBe("created");
     expect(cli.createInput?.base).toBe("feature-base");
   });
 
@@ -481,22 +486,22 @@ describe("GitHubService", () => {
     );
     cli.baseExists = false;
 
-    const result = await service().publish(run(), READY_REQUEST);
+    const result = await publishAndSettle(service(), fix.db, run(), READY_REQUEST);
 
-    expect(result.row).toMatchObject({
+    expect(result).toMatchObject({
       publication_status: "failed",
       error_code: "github_base_branch_missing",
       number: null,
       url: null,
     });
-    expect(result.row.error_message).toContain("does not exist on GitHub");
+    expect(result.error_message).toContain("does not exist on GitHub");
   });
 
   it("snapshots, pushes, creates, persists and emits only confirmed metadata", async () => {
     const github = service();
-    const result = await github.publish(run(), READY_REQUEST);
+    const result = await publishAndSettle(github, fix.db, run(), READY_REQUEST);
 
-    expect(result.row).toMatchObject({
+    expect(result).toMatchObject({
       provider: "github",
       number: 42,
       url: "https://github.com/acme/otomat/pull/42",
@@ -509,9 +514,12 @@ describe("GitHubService", () => {
       error_code: null,
       error_message: null,
     });
-    expect(result.row.published_head_sha).toBe(worktrees.get(RUN_ID)?.headSha);
-    expect(result.row.published_diff_sha).toBe(worktrees.diff(RUN_ID).sha);
-    expect(result.sync).toMatchObject({ state: "in_sync", dirty: false });
+    expect(result.published_head_sha).toBe(worktrees.get(RUN_ID)?.headSha);
+    expect(result.published_diff_sha).toBe(worktrees.diff(RUN_ID).sha);
+    expect((await service().getPullRequest(RUN_ID))?.sync).toMatchObject({
+      state: "in_sync",
+      dirty: false,
+    });
     expect(repo.git("-C", worktreePath, "status", "--porcelain").trim()).toBe("");
     expect(cli.pushCalls).toBe(1);
     expect(cli.createCalls).toBe(1);
@@ -521,9 +529,13 @@ describe("GitHubService", () => {
       "pr.updated",
       "pr.updated",
       "pr.updated",
+      "pr.updated",
+      "pr.updated",
       "pr.created",
     ]);
     expect(events.map((event) => event.payload["publication_status"])).toEqual([
+      "committing",
+      "committing",
       "pushing",
       "creating",
       "creating",
@@ -550,12 +562,12 @@ describe("GitHubService", () => {
     const released = getRun(fix.db, "r-release");
     if (!released) throw new Error("seeded release run missing");
 
-    const result = await service().publish(released, READY_REQUEST);
+    const result = await publishAndSettle(service(), fix.db, released, READY_REQUEST);
 
     // The reviewed diff is computed against `release/v1`; a PR based on `main` would
     // show every commit `release/v1` carries that the reviewer never saw.
     expect(cli.createInput?.base).toBe("release/v1");
-    expect(result.row.base_ref).toBe("release/v1");
+    expect(result.base_ref).toBe("release/v1");
   });
 
   it("falls back to the repository default for a worktree recorded before fork refs", async () => {
@@ -576,13 +588,13 @@ describe("GitHubService", () => {
     const legacy = getRun(fix.db, "r-legacy");
     if (!legacy) throw new Error("seeded legacy run missing");
 
-    await service().publish(legacy, READY_REQUEST);
+    await publishAndSettle(service(), fix.db, legacy, READY_REQUEST);
 
     expect(cli.createInput?.base).toBe(repo.defaultBranch);
   });
 
   it("reports an unavailable comparison instead of a false up-to-date state", async () => {
-    await service().publish(run(), READY_REQUEST);
+    await publishAndSettle(service(), fix.db, run(), READY_REQUEST);
     cli.remoteHead = async () => {
       throw new GitHubCliError("github_remote_head_failed", "gh is offline.");
     };
@@ -597,14 +609,16 @@ describe("GitHubService", () => {
     cli.provider = { ...cli.provider, title: "feat: ship it", body: "Existing provider body" };
     const github = service();
 
-    const first = await github.publish(run(), READY_REQUEST);
-    const second = await github.publish(run(), {
-      ...READY_REQUEST,
-      body: "Existing provider body",
-    });
+    const first = await publishAndSettle(github, fix.db, run(), READY_REQUEST);
+    const second = await publishAndSettle(
+      github,
+      fix.db,
+      run(),
+      publishRequest("ship it", { body: "Existing provider body" }),
+    );
 
-    expect(first.row.id).toBe(second.row.id);
-    expect(first.row).toMatchObject({ title: "feat: ship it", body: "Existing provider body" });
+    expect(first.id).toBe(second.id);
+    expect(first).toMatchObject({ title: "feat: ship it", body: "Existing provider body" });
     expect(cli.createCalls).toBe(0);
     expect(cli.pushCalls).toBe(1);
     expect(getPullRequestForRun(fix.db, RUN_ID)?.number).toBe(42);
@@ -614,22 +628,33 @@ describe("GitHubService", () => {
     cli.provider = { ...cli.provider, body: "" };
     const github = service();
 
-    const first = await github.publish(run(), publishRequest("ship it", { body: "" }));
-    const second = await github.publish(run(), publishRequest("ship it", { body: "" }));
+    const first = await publishAndSettle(
+      github,
+      fix.db,
+      run(),
+      publishRequest("ship it", { body: "" }),
+    );
+    const second = await publishAndSettle(
+      github,
+      fix.db,
+      run(),
+      publishRequest("ship it", { body: "" }),
+    );
 
-    expect(first.row.body).toBeNull();
-    expect(second.row.body).toBeNull();
+    expect(first.body).toBeNull();
+    expect(second.body).toBeNull();
     expect(cli.pushCalls).toBe(1);
     expect(cli.updateCalls).toBe(0);
   });
 
-  it("coalesces concurrent publication requests for one run", async () => {
+  it("serializes concurrent publication requests for one run onto one pull request", async () => {
     const github = service();
 
     const [first, second] = await Promise.all([
       github.publish(run(), READY_REQUEST),
       github.publish(run(), publishRequest("ignore this one", { body: "Ignored" })),
     ]);
+    await github.settlePublications();
 
     expect(first.row.id).toBe(second.row.id);
     expect(cli.pushCalls).toBe(1);
@@ -640,7 +665,7 @@ describe("GitHubService", () => {
     "recovers an interrupted %s publication after daemon restart",
     async (publicationStatus) => {
       cli.connectionValue = DISCONNECTED_GITHUB;
-      await service().publish(run(), READY_REQUEST);
+      await publishAndSettle(service(), fix.db, run(), READY_REQUEST);
       const row = getPullRequestForRun(fix.db, RUN_ID);
       if (!row) throw new Error("local pull request missing");
       updatePullRequest(fix.db, row.id, { publication_status: publicationStatus });
@@ -653,9 +678,9 @@ describe("GitHubService", () => {
         error_code: "github_publication_interrupted",
       });
 
-      const recovered = await restarted.publish(run(), READY_REQUEST);
+      const recovered = await publishAndSettle(restarted, fix.db, run(), READY_REQUEST);
 
-      expect(recovered.row).toMatchObject({
+      expect(recovered).toMatchObject({
         publication_status: "created",
         number: 42,
         url: "https://github.com/acme/otomat/pull/42",
@@ -666,26 +691,28 @@ describe("GitHubService", () => {
 
   it("updates the details of an open PR without publishing the workspace's later work", async () => {
     const github = service();
-    await github.publish(run(), READY_REQUEST);
+    await publishAndSettle(github, fix.db, run(), READY_REQUEST);
     writeFileSync(join(worktreePath, "change.txt"), "first\nsecond\n");
 
     expect((await github.getPullRequest(RUN_ID))?.sync).toMatchObject({
       state: "in_sync",
       dirty: true,
     });
-    const updated = await github.publish(
+    const updated = await publishAndSettle(
+      github,
+      fix.db,
       run(),
       publishRequest("ship it better", { body: "New body" }),
     );
 
-    expect(updated.row).toMatchObject({
+    expect(updated).toMatchObject({
       id: "pr-local-1",
       number: 42,
       publication_status: "created",
       title: "feat: ship it better",
       body: "New body",
     });
-    expect(updated.sync).toMatchObject({ dirty: true });
+    expect((await github.getPullRequest(RUN_ID))?.sync).toMatchObject({ dirty: true });
     expect(cli.pushCalls).toBe(1);
     expect(cli.createCalls).toBe(1);
     expect(cli.updateCalls).toBe(1);
@@ -693,16 +720,18 @@ describe("GitHubService", () => {
 
   it("updates a known pull request by number after its base branch changes", async () => {
     const github = service();
-    await github.publish(run(), READY_REQUEST);
+    await publishAndSettle(github, fix.db, run(), READY_REQUEST);
     cli.provider = { ...cli.provider, baseRef: "release" };
     writeFileSync(join(worktreePath, "change.txt"), "first\nsecond\n");
 
-    const updated = await github.publish(
+    const updated = await publishAndSettle(
+      github,
+      fix.db,
       run(),
       publishRequest("ship it better", { body: "New body" }),
     );
 
-    expect(updated.row).toMatchObject({
+    expect(updated).toMatchObject({
       publication_status: "created",
       number: 42,
       base_ref: "release",
@@ -715,25 +744,30 @@ describe("GitHubService", () => {
   it("refreshes provider lifecycle without pushing an unchanged branch", async () => {
     cli.provider = { ...cli.provider, lifecycle: "draft" };
     const github = service();
-    const created = await github.publish(run(), DRAFT_REQUEST);
-    expect(created.row.status).toBe("draft");
+    const created = await publishAndSettle(github, fix.db, run(), DRAFT_REQUEST);
+    expect(created.status).toBe("draft");
 
     cli.provider = { ...cli.provider, lifecycle: "open" };
-    const refreshed = await github.publish(run(), READY_REQUEST);
+    const refreshed = await publishAndSettle(github, fix.db, run(), READY_REQUEST);
 
-    expect(refreshed.row.status).toBe("open");
+    expect(refreshed.status).toBe("open");
     expect(cli.pushCalls).toBe(1);
   });
 
   it("refreshes merged lifecycle and refuses to publish another PR for the run", async () => {
     const github = service();
-    await github.publish(run(), READY_REQUEST);
+    await publishAndSettle(github, fix.db, run(), READY_REQUEST);
     cli.provider = { ...cli.provider, lifecycle: "merged" };
     writeFileSync(join(worktreePath, "after-merge.txt"), "follow up\n");
 
-    const result = await github.publish(run(), publishRequest("open another one", { body: "No" }));
+    const result = await publishAndSettle(
+      github,
+      fix.db,
+      run(),
+      publishRequest("open another one", { body: "No" }),
+    );
 
-    expect(result.row).toMatchObject({ status: "merged", number: 42 });
+    expect(result).toMatchObject({ status: "merged", number: 42 });
     expect(cli.pushCalls).toBe(1);
     expect(cli.createCalls).toBe(1);
     expect(cli.updateCalls).toBe(0);
@@ -741,7 +775,7 @@ describe("GitHubService", () => {
 
   it("resolves the remote from the run's own worktree, never an implicit local checkout", async () => {
     const github = service();
-    await github.publish(run(), READY_REQUEST);
+    await publishAndSettle(github, fix.db, run(), READY_REQUEST);
 
     await github.getPullRequest(RUN_ID);
 
@@ -751,7 +785,7 @@ describe("GitHubService", () => {
 
   it("notices a merge when the PR panel is read, and settles the run there", async () => {
     const github = service();
-    await github.publish(run(), READY_REQUEST);
+    await publishAndSettle(github, fix.db, run(), READY_REQUEST);
     cli.provider = { ...cli.provider, lifecycle: "merged" };
 
     const viewed = await github.getPullRequest(RUN_ID);
@@ -764,7 +798,7 @@ describe("GitHubService", () => {
 
   it("leaves the stored pull request alone when GitHub cannot be reached", async () => {
     const github = service();
-    await github.publish(run(), READY_REQUEST);
+    await publishAndSettle(github, fix.db, run(), READY_REQUEST);
     cli.viewError = new GitHubCliError("github_pr_view_failed", "gh is offline.");
 
     const viewed = await github.getPullRequest(RUN_ID);
@@ -776,71 +810,81 @@ describe("GitHubService", () => {
 
   it("keeps a closed pull request terminal when it is reopened on GitHub", async () => {
     const github = service();
-    await github.publish(run(), READY_REQUEST);
+    await publishAndSettle(github, fix.db, run(), READY_REQUEST);
     cli.provider = { ...cli.provider, lifecycle: "closed" };
     writeFileSync(join(worktreePath, "after-close.txt"), "follow up\n");
-    const closed = await github.publish(run(), publishRequest("open another one", { body: "No" }));
-    expect(closed.row.status).toBe("closed");
+    const closed = await publishAndSettle(
+      github,
+      fix.db,
+      run(),
+      publishRequest("open another one", { body: "No" }),
+    );
+    expect(closed.status).toBe("closed");
 
     cli.provider = { ...cli.provider, lifecycle: "open" };
-    const reopened = await github.publish(run(), publishRequest("reopen it", { body: "No" }));
+    const reopened = await publishAndSettle(
+      github,
+      fix.db,
+      run(),
+      publishRequest("reopen it", { body: "No" }),
+    );
 
-    expect(reopened.row).toMatchObject({ status: "closed", number: 42 });
+    expect(reopened).toMatchObject({ status: "closed", number: 42 });
     expect(cli.pushCalls).toBe(1);
     expect(cli.createCalls).toBe(1);
     expect(cli.updateCalls).toBe(0);
   });
 
   it("creates the pull request as a draft when draft is the requested mode", async () => {
-    const result = await service().publish(run(), DRAFT_REQUEST);
+    const result = await publishAndSettle(service(), fix.db, run(), DRAFT_REQUEST);
 
     expect(cli.createInput?.draft).toBe(true);
-    expect(result.row).toMatchObject({ status: "draft", publication_status: "created" });
+    expect(result).toMatchObject({ status: "draft", publication_status: "created" });
     expect(cli.modeInputs).toEqual([]);
   });
 
   it("creates the pull request ready for review when ready is the requested mode", async () => {
-    const result = await service().publish(run(), READY_REQUEST);
+    const result = await publishAndSettle(service(), fix.db, run(), READY_REQUEST);
 
     expect(cli.createInput?.draft).toBe(false);
-    expect(result.row).toMatchObject({ status: "open", publication_status: "created" });
+    expect(result).toMatchObject({ status: "open", publication_status: "created" });
     expect(cli.modeInputs).toEqual([]);
   });
 
   it("marks an existing draft ready for review, and never merges it", async () => {
     const github = service();
-    await github.publish(run(), DRAFT_REQUEST);
+    await publishAndSettle(github, fix.db, run(), DRAFT_REQUEST);
 
-    const ready = await github.publish(run(), READY_REQUEST);
+    const ready = await publishAndSettle(github, fix.db, run(), READY_REQUEST);
 
     expect(cli.modeInputs).toEqual([
       { cwd: worktreePath, repository: "acme/otomat", number: 42, draft: false },
     ]);
-    expect(ready.row).toMatchObject({ status: "open", publication_status: "created" });
+    expect(ready).toMatchObject({ status: "open", publication_status: "created" });
     expect(cli.createCalls).toBe(1);
   });
 
   it("converts a ready pull request back to a draft on an explicit draft publish", async () => {
     const github = service();
-    await github.publish(run(), READY_REQUEST);
+    await publishAndSettle(github, fix.db, run(), READY_REQUEST);
 
-    const drafted = await github.publish(run(), DRAFT_REQUEST);
+    const drafted = await publishAndSettle(github, fix.db, run(), DRAFT_REQUEST);
 
     expect(cli.modeInputs.map((input) => input.draft)).toEqual([true]);
-    expect(drafted.row.status).toBe("draft");
+    expect(drafted.status).toBe("draft");
   });
 
   it("surfaces a refused mode change as an actionable publication failure", async () => {
     const github = service();
-    await github.publish(run(), DRAFT_REQUEST);
+    await publishAndSettle(github, fix.db, run(), DRAFT_REQUEST);
     cli.modeError = new GitHubCliError(
       "github_pr_mode_failed",
       "GitHub could not mark the pull request ready for review.",
     );
 
-    const result = await github.publish(run(), READY_REQUEST);
+    const result = await publishAndSettle(github, fix.db, run(), READY_REQUEST);
 
-    expect(result.row).toMatchObject({
+    expect(result).toMatchObject({
       publication_status: "failed",
       error_code: "github_pr_mode_failed",
       status: "draft",

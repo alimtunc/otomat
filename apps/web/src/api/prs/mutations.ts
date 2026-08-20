@@ -1,7 +1,7 @@
 import { DaemonRequestError } from "@otomat/client";
 import type {
   AttachPullRequestRequest,
-  PreparePullRequestRequest,
+  PublishPullRequestRequest,
   PushPullRequestRequest,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
@@ -83,10 +83,11 @@ export function usePushPullRequestCommits(runId: string) {
   });
 }
 
-export function usePreparePullRequest(runId: string) {
+/** The daemon owns the publication once it accepts it: this mutation reports the acceptance, and the run's ledger stream reports every phase after it. */
+export function usePublishPullRequest(runId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (request: PreparePullRequestRequest) => daemon.preparePullRequest(runId, request),
+    mutationFn: (request: PublishPullRequestRequest) => daemon.publishPullRequest(runId, request),
     onSuccess: (detail) => {
       client.setQueryData(queryKeys.runPullRequest(runId), detail);
       client.invalidateQueries({ queryKey: queryKeys.runPullRequest(runId) });
@@ -95,13 +96,7 @@ export function usePreparePullRequest(runId: string) {
         toast.success(`Pull request #${pullRequest.number} is ${pullRequest.status}`);
         return;
       }
-      if (pullRequest?.publication_status === "created") {
-        toast.success(`Pull request #${pullRequest.number} is ready`);
-        return;
-      }
-      if (pullRequest?.error_message) {
-        toast.error(pullRequest.error_message);
-      }
+      toast.success("Publishing — it continues even if you leave this page");
     },
     onError: (error) =>
       toast.error(

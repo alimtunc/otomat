@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import type {
-  PreparePullRequestRequest,
+  PublishPullRequestRequest,
   PullRequestContract,
   PullRequestProposal,
   PullRequestPublishability,
@@ -37,7 +37,7 @@ let container: HTMLDivElement | null = null;
 let root: Root | null = null;
 
 function render(overrides: Partial<Parameters<typeof PullRequestForm>[0]> = {}) {
-  const onSubmit = vi.fn(async (_value: PreparePullRequestRequest) => true);
+  const onSubmit = vi.fn(async (_request: PublishPullRequestRequest) => true);
   const onGenerate = vi.fn(async (): Promise<PullRequestProposal | null> => PROPOSAL);
   const onModeChange = vi.fn();
   const onCustomizeChange = vi.fn();
@@ -48,6 +48,7 @@ function render(overrides: Partial<Parameters<typeof PullRequestForm>[0]> = {}) 
     root?.render(
       <PullRequestForm
         pullRequest={null}
+        operation={null}
         publishability={PUBLISHABLE}
         connected
         customize={false}
@@ -126,30 +127,32 @@ describe("PullRequestForm", () => {
     expect(view.querySelector("textarea")?.value).toBe("Details");
   });
 
-  it("generates and publishes ready for review in one action", async () => {
+  it("hands the whole publication to the daemon, metadata included, in one action", async () => {
     const { view, onGenerate, onSubmit } = render();
 
     click(view, "Create PR with AI");
     await act(async () => {});
 
-    expect(onGenerate).toHaveBeenCalledTimes(1);
-    expect(onSubmit).toHaveBeenCalledWith({
-      subject: PROPOSAL.subject,
-      body: PROPOSAL.body,
-      head_ref: PROPOSAL.branch,
-      mode: "ready",
-    });
+    expect(onGenerate).not.toHaveBeenCalled();
+    expect(onSubmit).toHaveBeenCalledWith({ mode: "ready" });
   });
 
-  it("publishes nothing when the generation failed, and leaves the fields editable", async () => {
-    const onGenerate = vi.fn(async (): Promise<PullRequestProposal | null> => null);
-    const { view, onSubmit } = render({ onGenerate });
+  it("republishes stored metadata rather than paying the generator twice", async () => {
+    const { view, onSubmit } = render({
+      pullRequest: pullRequest({ publication_status: "failed", error_code: "github_push_failed" }),
+    });
 
-    click(view, "Create PR with AI");
+    click(view, "Create draft PR");
     await act(async () => {});
 
-    expect(onGenerate).toHaveBeenCalledTimes(1);
-    expect(onSubmit).not.toHaveBeenCalled();
+    expect(onSubmit).toHaveBeenCalledWith({
+      mode: "draft",
+      details: {
+        subject: { type: "feat", scope: "pr", summary: "ship it" },
+        body: "Details",
+        head_ref: "feat/compact-pr",
+      },
+    });
   });
 
   it("fills the subject fields from a generation that publishes nothing", async () => {
@@ -202,7 +205,9 @@ describe("PullRequestForm", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
-        subject: { type: "feat", scope: "pr", summary: "validate the publication subject" },
+        details: expect.objectContaining({
+          subject: { type: "feat", scope: "pr", summary: "validate the publication subject" },
+        }),
       }),
     );
   });

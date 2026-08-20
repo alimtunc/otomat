@@ -1,3 +1,4 @@
+import { PULL_REQUEST_PUBLICATION_ACTIVE_STATES } from "@otomat/domain";
 import { and, asc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 
 import type { Db } from "../client.js";
@@ -26,6 +27,7 @@ export type PullRequestPatch = Partial<
     | "url"
     | "status"
     | "publication_status"
+    | "failed_phase"
     | "title"
     | "body"
     | "head_ref"
@@ -89,6 +91,22 @@ export function listLivePullRequests(db: Db): PullRequestRow[] {
         isNull(pullRequests.detached_at),
         isNotNull(pullRequests.number),
         inArray(pullRequests.status, LIVE_STATES),
+      ),
+    )
+    .orderBy(asc(pullRequests.created_at))
+    .all();
+}
+
+/** Publications a daemon was working through; after a restart every one of them is an interrupted operation. */
+export function listActivePublications(db: Db): PullRequestRow[] {
+  return db
+    .select()
+    .from(pullRequests)
+    .where(
+      and(
+        isNotNull(pullRequests.run_id),
+        isNull(pullRequests.detached_at),
+        inArray(pullRequests.publication_status, PULL_REQUEST_PUBLICATION_ACTIVE_STATES),
       ),
     )
     .orderBy(asc(pullRequests.created_at))

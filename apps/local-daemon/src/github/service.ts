@@ -31,6 +31,8 @@ export function createGitHubService(config: GitHubServiceConfig): GitHubService 
     getPullRequest: (runId) => publisher.get(runId),
     publishability: (runId) => publisher.publishability(runId),
     publish: (run, request) => publisher.publish(run, request),
+    reconcileInterruptedPublications: () => publisher.reconcileInterrupted(),
+    settlePublications: () => publisher.settle(),
     pushCommits: (runId, request) => publisher.pushCommits(runId, request),
     publishReviewComment: (pullRequestId, input) =>
       publishReviewComment(config, pullRequestId, input),
