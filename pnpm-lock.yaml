@@ -11,6 +11,12 @@ importers:
 
   .:
     devDependencies:
+      '@cloudflare/containers':
+        specifier: ^0.3.7
+        version: 0.3.7
+      '@otomat/domain':
+        specifier: workspace:*
+        version: link:packages/domain
       '@otomat/tooling':
         specifier: workspace:*
         version: link:packages/tooling
@@ -369,6 +375,9 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  '@cloudflare/containers@0.3.7':
+    resolution: {integrity: sha512-DM9dm3FnIBSyiSJ1FLavKwl/lk3oAmTaynCzZQ9pZR0ncRPquSxkxd8Nu2MFILxmDDsPkxKsSNEh9mHHMty4Fw==}
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
@@ -4220,6 +4229,8 @@ snapshots:
       use-sync-external-store: 1.6.0(react@19.2.8)
     optionalDependencies:
       '@types/react': 19.2.18
+
+  '@cloudflare/containers@0.3.7': {}
 
   '@drizzle-team/brocli@0.10.2': {}
 

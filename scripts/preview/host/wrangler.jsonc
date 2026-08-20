@@ -1,0 +1,22 @@
+// One Worker per pull request: scripts/preview/instance.mjs deploys this config with
+// --name otomat-preview-pr-<n>, so previews stay disjoint workers with disjoint containers.
+{
+  "name": "otomat-preview",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-08-01",
+  "workers_dev": true,
+  "containers": [
+    {
+      "class_name": "PreviewDaemon",
+      "image": "./Dockerfile",
+      "instance_type": "basic",
+      // Two, not one: after a push the previous commit's instance may still be draining
+      // while the new build's container starts.
+      "max_instances": 2
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "PREVIEW_DAEMON", "class_name": "PreviewDaemon" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PreviewDaemon"] }]
+}

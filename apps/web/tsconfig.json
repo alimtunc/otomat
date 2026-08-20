@@ -8,5 +8,5 @@
     "verbatimModuleSyntax": true,
     "paths": { "@web/*": ["./src/*"] }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "functions", "vite.config.ts"]
 }

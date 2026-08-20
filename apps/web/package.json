@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "imports": {
+    "#functions/*": "./functions/*.ts",
     "#support/*": "./tests/support/*.ts"
   },
   "scripts": {

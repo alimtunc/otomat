@@ -1,0 +1,187 @@
+name: Web preview
+
+# A pull request gets a protected Cloudflare URL instead of a DMG: the UI deploys immediately and
+# runs on browser fixtures, and the same URL drives this commit's own daemon in a Cloudflare
+# container once it is provisioned. Nothing runs on operator hardware. The one-time Cloudflare
+# setup lives in docs/release/web-preview.md.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: web-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      url: ${{ steps.pages.outputs.url }}
+    steps:
+      # The head commit, not the merge ref: the daemon dist stamps `git rev-parse HEAD` as its
+      # build, and the manifest names the head sha — on the merge ref they would never match.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the cockpit and the daemon this commit ships
+        run: |
+          pnpm --filter "@otomat/web..." run build
+          pnpm --filter "@otomat/local-daemon..." run build
+          pnpm --filter @otomat/local-daemon deploy --prod --legacy "$RUNNER_TEMP/daemon"
+          tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/daemon.tar.gz" daemon
+
+      # The one runtime configuration the preview needs: which pull request this deployment serves
+      # and the commit it was built from. The cockpit reads it at boot, the façade reads it to find
+      # this pull request's daemon worker, and a daemon on any other commit is refused against it.
+      - name: Stamp the deployment manifest
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          printf '{"pull_request":%s,"build":"%s"}\n' "$PR_NUMBER" "${HEAD_SHA:0:7}" \
+            > apps/web/dist/preview.json
+
+      - name: Publish the preview to Cloudflare Pages
+        id: pages
+        if: vars.CLOUDFLARE_PAGES_PROJECT != ''
+        working-directory: apps/web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+        run: |
+          set -euo pipefail
+          pnpm dlx wrangler@4 pages deploy dist \
+            --project-name "$PAGES_PROJECT" \
+            --branch "pr-$PR_NUMBER" \
+            --commit-dirty=true
+          echo "url=https://pr-$PR_NUMBER.$PAGES_PROJECT.pages.dev" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the daemon bundle for the daemon step
+        if: vars.PREVIEW_DAEMON_ENABLED != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: otomat-preview-daemon-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/daemon.tar.gz
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 1
+
+  # Isolated per pull request and per commit: its own Worker, its own container image built from
+  # this commit's daemon bundle, its own ephemeral database and fixture repository. No daemon port
+  # exists anywhere — the container only answers its Worker, and the Worker only answers the
+  # façade's client pair.
+  daemon:
+    if: github.event.action != 'closed' && vars.PREVIEW_DAEMON_ENABLED != ''
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the domain package the provisioner reads its conventions from
+        run: pnpm --filter @otomat/domain run build
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: otomat-preview-daemon-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}
+
+      - name: Deploy this commit's daemon worker
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIEW_CLIENT_ID: ${{ secrets.PREVIEW_CLIENT_ID }}
+          PREVIEW_CLIENT_SECRET: ${{ secrets.PREVIEW_CLIENT_SECRET }}
+        run: |
+          node scripts/preview/instance.mjs provision \
+            --pr "$PR_NUMBER" \
+            --build "${HEAD_SHA:0:7}" \
+            --bundle "$RUNNER_TEMP/daemon.tar.gz"
+
+  # Runs whether or not the daemon step was configured: the sandbox URL is already testable.
+  announce:
+    if: ${{ !cancelled() && github.event.action != 'closed' && needs.deploy.outputs.url != '' }}
+    needs: [deploy, daemon]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish the preview URL on the pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          URL: ${{ needs.deploy.outputs.url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          body=$(printf 'Web preview for \x60%s\x60: %s\n\nIt opens on browser fixtures straight away, and switches to this commit'"'"'s own isolated daemon once its container answers. Sign in with Cloudflare Access; no DMG needed.' "${HEAD_SHA:0:7}" "$URL")
+          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$body" --edit-last --create-if-none
+
+  # Close or merge and the pull request keeps nothing: its worker is deleted, which takes the
+  # container, its data and its workers.dev route with it, and its Pages deployments are purged.
+  # Other previews are untouched.
+  teardown:
+    if: github.event.action == 'closed' && vars.PREVIEW_DAEMON_ENABLED != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the domain package the provisioner reads its conventions from
+        run: pnpm --filter @otomat/domain run build
+
+      - name: Delete this pull request's daemon worker and Pages deployments
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+        run: |
+          node scripts/preview/instance.mjs teardown --pr "$PR_NUMBER"
