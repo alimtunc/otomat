@@ -38,10 +38,8 @@ function Harness() {
   return (
     <button
       type="button"
-      onClick={() => {
-        void launch({ prompt: "go" }).then((run) => {
-          launched = run;
-        });
+      onClick={async () => {
+        launched = await launch({ prompt: "go" });
       }}
     >
       go

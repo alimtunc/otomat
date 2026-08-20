@@ -32,26 +32,23 @@ describe("run event list semantics", () => {
       />,
     );
 
-    const list = container.querySelector('[role="list"][aria-label="Run logs"]');
-    expect(list?.tagName).toBe("DIV");
-    expect(list?.querySelector(':scope > [role="listitem"]')).not.toBeNull();
+    const list = container.querySelector('ul[aria-label="Run logs"]');
+    expect(list?.querySelector(":scope > li")).not.toBeNull();
     await cleanup();
   });
 
   it("gives every conversation item shape list-item semantics", async () => {
     const { container, cleanup } = await mount(
-      <div role="list" aria-label="Run conversation">
+      <ul aria-label="Run conversation">
         {QUERY_FREE_ITEMS.map((item) => (
           <ThreadItem key={item.key} item={item} runId="run-1" />
         ))}
-      </div>,
+      </ul>,
     );
 
-    const list = container.querySelector('[role="list"][aria-label="Run conversation"]');
-    expect(list?.querySelectorAll(':scope > [role="listitem"]')).toHaveLength(
-      QUERY_FREE_ITEMS.length,
-    );
-    expect(list?.querySelector(":scope > :not([role='listitem'])")).toBeNull();
+    const list = container.querySelector('ul[aria-label="Run conversation"]');
+    expect(list?.querySelectorAll(":scope > li")).toHaveLength(QUERY_FREE_ITEMS.length);
+    expect(list?.querySelector(":scope > :not(li)")).toBeNull();
     await cleanup();
   });
 });

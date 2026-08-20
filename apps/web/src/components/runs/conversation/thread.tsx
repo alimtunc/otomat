@@ -80,18 +80,13 @@ export function ConversationThread({
               <div className="relative flex min-h-0 flex-1 flex-col">
                 {/* Containing block: an sr-only span otherwise inflates ancestor scroll height. */}
                 <div ref={autoscroll.viewportRef} className="relative min-h-0 flex-1 overflow-auto">
-                  <div
-                    ref={autoscroll.contentRef}
-                    role="list"
-                    aria-label="Run conversation"
-                    className="py-1"
-                  >
+                  <ul ref={autoscroll.contentRef} aria-label="Run conversation" className="py-1">
                     <EarlierActivity history={history} ref={loadOlderRef} />
                     {items.map((item) => (
                       <ThreadItem key={item.key} item={item} runId={detail.run.id} />
                     ))}
                     {working ? <WorkingRow latest={events.at(-1) ?? null} /> : null}
-                  </div>
+                  </ul>
                 </div>
                 {autoscroll.pinned ? null : <JumpToLatest onClick={autoscroll.jumpToLatest} />}
               </div>

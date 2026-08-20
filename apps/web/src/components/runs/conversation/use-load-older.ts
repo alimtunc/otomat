@@ -8,8 +8,8 @@ import { useEffect, useState, type RefCallback } from "react";
 export function useLoadOlder(
   history: RunEventHistory,
   readerScrolledUp: boolean,
-): RefCallback<HTMLDivElement> {
-  const [head, setHead] = useState<HTMLDivElement | null>(null);
+): RefCallback<HTMLElement> {
+  const [head, setHead] = useState<HTMLElement | null>(null);
   const { hasOlder, loadingOlder, olderFailed, loadOlder } = history;
   const armed = readerScrolledUp && hasOlder && !loadingOlder && !olderFailed;
 

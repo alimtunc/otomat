@@ -193,7 +193,7 @@ it("attaches the issue as context instead of copying it into an editable prompt"
   await openDialog();
   expect(textarea("Single run instructions").value).toBe("");
   expect(document.body.textContent).not.toContain("Quoting breaks on nested commas.");
-  const chips = document.querySelector("[role='list'][aria-label='Single run context']");
+  const chips = document.querySelector("ul[aria-label='Single run context']");
   expect(chips?.textContent).toContain("issue-1");
 });
 

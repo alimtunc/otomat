@@ -429,7 +429,7 @@ describe("NewIssueDialog", () => {
     await act(async () => buttonByLabel("Add context").click());
     await act(async () => buttonContaining("Ship the CSV parser").click());
 
-    const chips = document.querySelector("[role='list'][aria-label='Ad-hoc run context']");
+    const chips = document.querySelector("ul[aria-label='Ad-hoc run context']");
     expect(chips?.textContent).toContain("OTO-42");
     expect(document.body.textContent).not.toContain(REFERENCED.id.slice(0, 8));
   });

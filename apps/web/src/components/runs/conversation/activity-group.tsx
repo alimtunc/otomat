@@ -20,7 +20,7 @@ export function ActivityGroup({
   counts: ActivityCounts;
 }) {
   return (
-    <Collapsible role="listitem" className="group/activity px-6 py-1.5">
+    <Collapsible render={<li />} className="group/activity px-6 py-1.5">
       <CollapsibleTrigger
         render={
           <Button
@@ -42,15 +42,16 @@ export function ActivityGroup({
         <span className="text-xs">{describeActivity(counts)}</span>
       </CollapsibleTrigger>
       <CollapsiblePanel>
-        <div
-          role="list"
+        <ul
           aria-label="Agent activity"
           className="mt-1 rounded-md border border-border-subtle py-1"
         >
           {events.map((event) => (
-            <LedgerEventRow key={event.seq} event={event} />
+            <li key={event.seq}>
+              <LedgerEventRow event={event} />
+            </li>
           ))}
-        </div>
+        </ul>
       </CollapsiblePanel>
     </Collapsible>
   );

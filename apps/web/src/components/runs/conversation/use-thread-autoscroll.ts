@@ -7,7 +7,7 @@ const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 export interface ThreadAutoscroll {
   viewportRef: RefCallback<HTMLDivElement>;
-  contentRef: RefCallback<HTMLDivElement>;
+  contentRef: RefCallback<HTMLElement>;
   /** Whether the thread follows its last item; false once the reader scrolled up to read. */
   pinned: boolean;
   jumpToLatest: () => void;
@@ -21,7 +21,7 @@ export interface ThreadAutoscroll {
  */
 export function useThreadAutoscroll(runId: string, topSeq: number | null): ThreadAutoscroll {
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
-  const [content, setContent] = useState<HTMLDivElement | null>(null);
+  const [content, setContent] = useState<HTMLElement | null>(null);
   const [pinned, setPinned] = useState(true);
   const pinnedRef = useRef(true);
   const lastDistanceRef = useRef(0);

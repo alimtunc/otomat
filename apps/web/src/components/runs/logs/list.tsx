@@ -34,21 +34,25 @@ function LogBody({ events, filter, state, degraded, history }: LogListProps) {
   const filtered = events.filter((event) => matchesLogFilter(event, filter));
 
   return (
-    <div role="list" aria-label="Run logs" className="min-h-0 flex-1 overflow-auto py-2">
+    <ul aria-label="Run logs" className="min-h-0 flex-1 overflow-auto py-2">
       <EarlierActivity history={history} />
       {filtered.length === 0 ? (
-        <div role="listitem" className="px-6 py-8">
+        <li className="px-6 py-8">
           <EmptyState
             icon="terminal"
             variant="inline"
             title="No matching events"
             description="No loaded event matches this filter."
           />
-        </div>
+        </li>
       ) : (
-        filtered.map((event) => <LogRow key={event.seq} event={event} />)
+        filtered.map((event) => (
+          <li key={event.seq}>
+            <LogRow event={event} />
+          </li>
+        ))
       )}
-    </div>
+    </ul>
   );
 }
 
