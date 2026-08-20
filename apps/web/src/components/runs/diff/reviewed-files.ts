@@ -1,73 +1,32 @@
-import { readStored, writeStored } from "@web/lib/storage";
+import type { ReviewedFileContract } from "@otomat/domain";
 
-const REVIEWED_KEY = "otomat.reviewed-files";
-const MAX_REVIEWED_RUNS = 40;
-
-/** `path -> the DiffFile.sha that was reviewed`; a file keeps its mark while its patch is unchanged. */
-export type ReviewedFingerprints = Record<string, string>;
-
-type ReviewedFilesByRun = Record<string, ReviewedFingerprints>;
-
-function isFingerprints(value: unknown): value is ReviewedFingerprints {
-  if (typeof value !== "object" || value === null) return false;
-  return Object.values(value).every((sha) => typeof sha === "string");
-}
-
-function readAllReviewedFiles(storage?: Pick<Storage, "getItem"> | null): ReviewedFilesByRun {
-  const raw = readStored(REVIEWED_KEY, storage);
-  if (raw === null) return {};
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return {};
-  }
-  if (typeof parsed !== "object" || parsed === null) return {};
-  return Object.fromEntries(
-    Object.entries(parsed).filter((pair): pair is [string, ReviewedFingerprints] =>
-      isFingerprints(pair[1]),
-    ),
-  );
-}
-
-export function readReviewedFingerprints(
-  runId: string,
-  storage?: Pick<Storage, "getItem"> | null,
-): ReviewedFingerprints {
-  return readAllReviewedFiles(storage)[runId] ?? {};
-}
-
-export function writeReviewedFingerprints(
-  runId: string,
-  fingerprints: ReviewedFingerprints,
-  storage?: (Pick<Storage, "getItem"> & Pick<Storage, "setItem">) | null,
-): void {
-  const byRun = readAllReviewedFiles(storage);
-  delete byRun[runId];
-  if (Object.keys(fingerprints).length > 0) byRun[runId] = fingerprints;
-  const runIds = Object.keys(byRun);
-  for (const staleRunId of runIds.slice(0, Math.max(0, runIds.length - MAX_REVIEWED_RUNS))) {
-    delete byRun[staleRunId];
-  }
-  writeStored(REVIEWED_KEY, JSON.stringify(byRun), storage);
-}
-
+/** An unsettled toggle outranks the last answer the daemon gave, so the control follows the click, not the round trip. */
 export function reviewedPaths(
-  fingerprints: ReviewedFingerprints,
+  marks: readonly ReviewedFileContract[],
   files: readonly { path: string; sha: string }[],
+  unsettled: ReadonlyMap<string, boolean>,
 ): ReadonlySet<string> {
+  const shaByPath = new Map(files.map((file) => [file.path, file.sha]));
   const reviewed = new Set<string>();
-  for (const file of files) {
-    if (fingerprints[file.path] === file.sha) reviewed.add(file.path);
+  for (const mark of marks) {
+    if (mark.reviewed && shaByPath.get(mark.file_path) === mark.diff_sha) {
+      reviewed.add(mark.file_path);
+    }
+  }
+  for (const [path, intent] of unsettled) {
+    if (!shaByPath.has(path)) continue;
+    if (intent) reviewed.add(path);
+    else reviewed.delete(path);
   }
   return reviewed;
 }
 
-/** Drops marks for files no longer in the diff so a long-lived run's entry stays bounded. */
-export function pruneFingerprints(
-  fingerprints: ReviewedFingerprints,
-  files: readonly { path: string }[],
-): ReviewedFingerprints {
-  const live = new Set(files.map((file) => file.path));
-  return Object.fromEntries(Object.entries(fingerprints).filter(([path]) => live.has(path)));
+export function unsyncedMarks(
+  marks: readonly ReviewedFileContract[],
+): ReadonlyMap<string, ReviewedFileContract> {
+  return new Map(
+    marks
+      .filter((mark) => mark.sync_status === "failed" || mark.sync_status === "pending")
+      .map((mark) => [mark.file_path, mark]),
+  );
 }

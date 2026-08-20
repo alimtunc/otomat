@@ -16,11 +16,12 @@ import type {
 } from "@otomat/domain";
 
 import type { RepositoryResolver } from "#git";
-import type { PullRequestCommentInput } from "#review";
+import type { PullRequestCommentInput, ViewedFilesResult, ViewedFileState } from "#review";
 
 import type { GenerationAgent } from "./generation/agent.js";
 import type { GenerationInput } from "./generation/input.js";
 import type { PullRequestReviewFacts } from "./pull-request-facts.js";
+import type { PullRequestViewedFiles } from "./viewed-state.js";
 
 export interface PullRequestGenerator {
   generate(agent: GenerationAgent, input: GenerationInput): Promise<PullRequestProposal>;
@@ -66,8 +67,12 @@ export interface GitHubServiceConfig {
   generator?: PullRequestGenerator;
   /** Carried to merge closure; the GitHub service itself never calls it. */
   syncIssueLifecycle?: LinearLifecycleSync;
+  /** Carried to review, which owns the reconciliation; the GitHub service never implements it. */
+  importViewedFiles?: PullRequestViewedImport;
   idFactory?: () => string;
 }
+
+export type PullRequestViewedImport = (pullRequestId: string) => void;
 
 export interface GitHubService {
   connection(): Promise<GitHubConnectionContract>;
@@ -98,6 +103,8 @@ export interface GitHubService {
     pullRequestId: string,
     input: PullRequestCommentInput,
   ): Promise<{ url: string }>;
+  readViewedFiles(pullRequestId: string): Promise<ViewedFilesResult>;
+  syncViewedFile(pullRequestId: string, input: ViewedFileState): Promise<string | null>;
 }
 
 export interface GitHubRemote {
@@ -106,6 +113,7 @@ export interface GitHubRemote {
 }
 
 export interface GitHubPullRequest extends PullRequestReviewFacts {
+  nodeId: string;
   number: number;
   url: string;
   title: string;
@@ -179,6 +187,17 @@ export interface ReviewCommentCreateInput {
   startSide?: ReviewCommentSide;
 }
 
+export interface ViewedFilesInput extends GitHubRepositoryTarget {
+  number: number;
+}
+
+export interface ViewedFileMutationInput {
+  cwd: string;
+  pullRequestNodeId: string;
+  path: string;
+  viewed: boolean;
+}
+
 export interface ForcePushWithLeaseInput {
   cwd: string;
   remote: string;
@@ -213,4 +232,6 @@ export interface GitHubCli {
   setPullRequestMode(input: PullRequestModeInput): Promise<void>;
   /** GitHub's refusal reaches the reviewer verbatim. */
   createReviewComment(input: ReviewCommentCreateInput): Promise<{ url: string }>;
+  listViewedFiles(input: ViewedFilesInput): Promise<PullRequestViewedFiles>;
+  setFileViewed(input: ViewedFileMutationInput): Promise<void>;
 }

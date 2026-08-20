@@ -446,6 +446,83 @@ describe("GitHub CLI adapter", () => {
     expect(runner.requests).toHaveLength(3);
   });
 
+  it("reads every page of viewed state and the node id its mutations need", async () => {
+    const page = (paths: string[], hasNextPage: boolean, endCursor: string | null) =>
+      ok(
+        JSON.stringify({
+          data: {
+            repository: {
+              pullRequest: {
+                id: "PR_node_9",
+                files: {
+                  pageInfo: { hasNextPage, endCursor },
+                  nodes: paths.map((path, index) => ({
+                    path,
+                    viewerViewedState: index === 0 ? "VIEWED" : "DISMISSED",
+                  })),
+                },
+              },
+            },
+          },
+        }),
+      );
+    const runner = fakeRunner([
+      page(["a.ts", "b.ts"], true, "cursor-1"),
+      page(["c.ts"], false, null),
+    ]);
+    const cli = createGitHubCli(runner.run);
+
+    await expect(
+      cli.listViewedFiles({ cwd: "/repo", repository: "acme/otomat", number: 9 }),
+    ).resolves.toEqual({
+      nodeId: "PR_node_9",
+      files: [
+        { path: "a.ts", state: "VIEWED" },
+        { path: "b.ts", state: "DISMISSED" },
+        { path: "c.ts", state: "VIEWED" },
+      ],
+    });
+    expect(runner.requests[0]?.args).toContain("owner=acme");
+    expect(runner.requests[0]?.args).not.toContain("after=cursor-1");
+    expect(runner.requests[1]?.args).toContain("after=cursor-1");
+  });
+
+  it("marks and unmarks a file with the mutation GitHub names for each", async () => {
+    const runner = fakeRunner([ok("{}"), ok("{}")]);
+    const cli = createGitHubCli(runner.run);
+
+    await cli.setFileViewed({
+      cwd: "/repo",
+      pullRequestNodeId: "PR_node_9",
+      path: "a.ts",
+      viewed: true,
+    });
+    await cli.setFileViewed({
+      cwd: "/repo",
+      pullRequestNodeId: "PR_node_9",
+      path: "a.ts",
+      viewed: false,
+    });
+
+    expect(runner.requests[0]?.args.join(" ")).toContain("markFileAsViewed");
+    expect(runner.requests[1]?.args.join(" ")).toContain("unmarkFileAsViewed");
+    expect(runner.requests[1]?.args).toContain("path=a.ts");
+  });
+
+  it("quotes GitHub's own refusal when a file cannot be marked viewed", async () => {
+    const runner = fakeRunner([
+      { stdout: "", stderr: "GraphQL: Could not resolve to a node (pullRequestId)", exitCode: 1 },
+    ]);
+    const cli = createGitHubCli(runner.run);
+
+    await expect(
+      cli.setFileViewed({ cwd: "/repo", pullRequestNodeId: "gone", path: "a.ts", viewed: true }),
+    ).rejects.toMatchObject({
+      code: "github_viewed_file_failed",
+      message: expect.stringContaining("Could not resolve to a node"),
+    });
+  });
+
   it("reads a branch as missing only on a definite GitHub 404", async () => {
     const runner = fakeRunner([
       ok("{}"),
@@ -465,6 +542,7 @@ describe("GitHub CLI adapter", () => {
 
   it("creates with body on stdin then reads structured provider metadata", async () => {
     const provider = {
+      id: "PR_node_42",
       number: 42,
       url: "https://github.com/acme/otomat/pull/42",
       title: "Ship it",

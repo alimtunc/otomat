@@ -5,6 +5,7 @@ import {
   REVIEW_COMMENT_PUBLICATION_STATES,
   REVIEW_COMMENT_STATES,
   REVIEW_STATES,
+  REVIEWED_FILE_SYNC_STATES,
 } from "../entity-states.js";
 
 export const reviewContractSchema = z.object({
@@ -51,3 +52,16 @@ export const reviewCommentContractSchema = z.object({
   fixed_by_session_id: z.string().nullable(),
 });
 export type ReviewCommentContract = z.infer<typeof reviewCommentContractSchema>;
+
+/** One file the operator marked, pinned to the `diff_sha` it was read at: the mark holds while that sha does. */
+export const reviewedFileContractSchema = z.object({
+  id: z.string(),
+  review_id: z.string(),
+  file_path: z.string(),
+  diff_sha: z.string(),
+  reviewed: z.boolean(),
+  sync_status: z.enum(REVIEWED_FILE_SYNC_STATES),
+  /** Verbatim reason the last synchronization failed; the reviewer retries on it. */
+  sync_error: z.string().nullable(),
+});
+export type ReviewedFileContract = z.infer<typeof reviewedFileContractSchema>;

@@ -1,36 +1,54 @@
-import type { DiffFileContract } from "@otomat/domain";
-import {
-  pruneFingerprints,
-  readReviewedFingerprints,
-  reviewedPaths,
-  writeReviewedFingerprints,
-  type ReviewedFingerprints,
-} from "@web/components/runs/diff/reviewed-files";
+import type { DiffFileContract, ReviewedFileContract, ReviewTarget } from "@otomat/domain";
+import { useSetReviewedFile } from "@web/api/reviews/mutations";
+import { reviewedPaths, unsyncedMarks } from "@web/components/runs/diff/reviewed-files";
 import { useMemo, useState } from "react";
 
 export interface ReviewedFiles {
   paths: ReadonlySet<string>;
+  unsynced: ReadonlyMap<string, ReviewedFileContract>;
   setReviewed: (path: string, reviewed: boolean) => void;
+  /** Re-sends the intent GitHub has not taken; the mark itself is already persisted. */
+  retrySync: (path: string) => void;
 }
 
-export function useReviewedFiles(runId: string, files: DiffFileContract[]): ReviewedFiles {
-  const [marks, setMarks] = useState<{ runId: string; fingerprints: ReviewedFingerprints }>(() => ({
-    runId,
-    fingerprints: readReviewedFingerprints(runId),
-  }));
+export function useReviewedFiles(
+  target: ReviewTarget,
+  marks: ReviewedFileContract[],
+  files: DiffFileContract[],
+): ReviewedFiles {
+  const setMark = useSetReviewedFile(target);
+  // Keyed by path, because the daemon answers a mark only once GitHub has taken it and the reviewer marks faster than that.
+  const [unsettled, setUnsettled] = useState<ReadonlyMap<string, boolean>>(() => new Map());
+  const paths = useMemo(() => reviewedPaths(marks, files, unsettled), [marks, files, unsettled]);
+  const unsynced = useMemo(() => unsyncedMarks(marks), [marks]);
 
-  const stored = marks.runId === runId ? marks.fingerprints : readReviewedFingerprints(runId);
-  const paths = useMemo(() => reviewedPaths(stored, files), [stored, files]);
-
-  const setReviewed = (path: string, reviewedNow: boolean): void => {
-    const file = files.find((candidate) => candidate.path === path);
-    if (file === undefined) return;
-    const next = pruneFingerprints(stored, files);
-    if (reviewedNow) next[path] = file.sha;
-    else delete next[path];
-    setMarks({ runId, fingerprints: next });
-    writeReviewedFingerprints(runId, next);
+  const send = (path: string, diffSha: string, reviewed: boolean): void => {
+    setUnsettled((current) => new Map(current).set(path, reviewed));
+    setMark.mutate(
+      { file_path: path, diff_sha: diffSha, reviewed },
+      {
+        onSettled: () =>
+          setUnsettled((current) => {
+            const next = new Map(current);
+            next.delete(path);
+            return next;
+          }),
+      },
+    );
   };
 
-  return { paths, setReviewed };
+  return {
+    paths,
+    unsynced,
+    setReviewed: (path, reviewed) => {
+      const file = files.find((candidate) => candidate.path === path);
+      if (file === undefined) return;
+      send(path, file.sha, reviewed);
+    },
+    retrySync: (path) => {
+      const mark = unsynced.get(path);
+      if (mark === undefined) return;
+      send(path, mark.diff_sha, mark.reviewed);
+    },
+  };
 }

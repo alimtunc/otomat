@@ -176,6 +176,8 @@ class PullRequestPublisher implements PullRequestPublicationService {
         run,
         resolvePublicationRequest(this.config.db, run, details, request.mode),
       );
+      // Dispatched here, not from `publish`: that returns on acceptance, before the row carries a number.
+      this.config.importViewedFiles?.(this.store.reload(run.id).id);
     } catch (error) {
       this.store.failure(this.store.reload(run.id), error);
     }

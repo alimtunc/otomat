@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
-import type { ReviewDetail, ReviewDiffContract } from "@otomat/domain";
+import type { ReviewDetail, ReviewDiffContract, ReviewedFileContract } from "@otomat/domain";
 import { ThemeProvider } from "@otomat/ui";
 import { diffPrefsStore } from "@web/components/runs/diff/prefs/store";
 import { ReviewWorkbench } from "@web/components/runs/diff/review-workbench";
-import { writeReviewedFingerprints } from "@web/components/runs/diff/reviewed-files";
 import { act, useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -31,17 +30,33 @@ const DIFF: ReviewDiffContract = {
   sha: "diff-sha",
 };
 
-const REVIEW: ReviewDetail = {
-  review: null,
-  comments: [],
-  fix_authority: { kind: "review_only", reason: "This pull request is someone else's branch." },
-  destinations: { pr_review: false, reason: "This run has no pull request yet." },
-};
+function review(reviewedFiles: ReviewedFileContract[] = []): ReviewDetail {
+  return {
+    review: null,
+    comments: [],
+    reviewed_files: reviewedFiles,
+    fix_authority: { kind: "review_only", reason: "This pull request is someone else's branch." },
+    destinations: { pr_review: false, reason: "This run has no pull request yet." },
+  };
+}
+
+function reviewedMark(path: string): ReviewedFileContract {
+  return {
+    id: `rf-${path}`,
+    review_id: "rv1",
+    file_path: path,
+    diff_sha: `sha-${path}`,
+    reviewed: true,
+    sync_status: "local",
+    sync_error: null,
+  };
+}
 
 vi.mock("@web/api/reviews/mutations", () => ({
   useAddReviewComment: () => ({ mutateAsync: vi.fn(), isPending: false }),
   usePublishReviewComment: () => ({ mutate: vi.fn(), isPending: false, variables: undefined }),
   useRequestFix: () => ({ mutate: vi.fn(), isPending: false }),
+  useSetReviewedFile: () => ({ mutate: vi.fn(), isPending: false, variables: undefined }),
 }));
 
 vi.mock("@web/components/runs/diff/fix-bar", () => ({ DiffFixBar: () => null }));
@@ -93,14 +108,14 @@ afterEach(() => {
   styles.remove();
 });
 
-async function mountReviewer(children?: ReactNode) {
+async function mountReviewer(children?: ReactNode, reviewedFiles: ReviewedFileContract[] = []) {
   const mounted = await mountWithQuery(
     <ThemeProvider>
       <ReviewWorkbench
         target={{ kind: "pull_request", id: "pr-1" }}
         workspace={{ open: false, issueId: null }}
         diff={DIFF}
-        review={REVIEW}
+        review={review(reviewedFiles)}
         notice={children ?? null}
       />
     </ThemeProvider>,
@@ -144,9 +159,8 @@ describe("revealing a file from the rail", () => {
   }
 
   it("waits for a hidden file's card to mount, then scrolls to it once", async () => {
-    writeReviewedFingerprints("pr-1", { [TARGET]: `sha-${TARGET}` });
     diffPrefsStore.actions.set({ hideReviewed: true });
-    const view = await mountReviewer();
+    const view = await mountReviewer(null, [reviewedMark(TARGET)]);
     expect(cardsOf(view.scroller).map((card) => card.getAttribute("aria-label"))).not.toContain(
       TARGET,
     );

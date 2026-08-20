@@ -39,6 +39,8 @@ export const pullRequests = sqliteTable(
     provider_updated_at: text("provider_updated_at"),
     synced_at: text("synced_at"),
     number: integer("number"),
+    /** GitHub's GraphQL node id, which the file-viewed mutations address the pull request by. */
+    node_id: text("node_id"),
     url: text("url"),
     status: text("status").$type<PullRequestState>().notNull().default("draft"),
     publication_status: text("publication_status")

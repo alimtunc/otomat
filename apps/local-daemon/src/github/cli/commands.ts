@@ -1,5 +1,5 @@
-import { GitHubCliError } from "./errors.js";
-import type { CommandResult, CommandRunner, PullRequestCreateInput } from "./types.js";
+import { GitHubCliError } from "../errors.js";
+import type { CommandResult, CommandRunner, PullRequestCreateInput } from "../types.js";
 
 export function commandSucceeded(result: CommandResult): boolean {
   return result.exitCode === 0 && !result.errorCode;

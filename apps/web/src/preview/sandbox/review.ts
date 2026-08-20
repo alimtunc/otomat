@@ -104,6 +104,17 @@ export const SANDBOX_REVIEW: ReviewDetail = {
       fixed_by_session_id: null,
     },
   ],
+  reviewed_files: [
+    {
+      id: "sandbox-reviewed-1",
+      review_id: "sandbox-review-1",
+      file_path: FILE_PATH,
+      diff_sha: DIFF_SHA,
+      reviewed: false,
+      sync_status: "local",
+      sync_error: null,
+    },
+  ],
   fix_authority: { kind: "otomat", reason: "Otomat opened this pull request." },
   destinations: { pr_review: false, reason: "The sandbox publishes nothing to GitHub." },
 };

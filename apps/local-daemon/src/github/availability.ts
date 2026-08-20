@@ -1,6 +1,6 @@
 import type { GitHubConnectionContract } from "@otomat/domain";
 
-import { commandSucceeded } from "./cli-commands.js";
+import { commandSucceeded } from "./cli/commands.js";
 import { connectionProblem, MINIMUM_GH_VERSION, outdatedGhVersion } from "./parse.js";
 import type { CommandRunner } from "./types.js";
 

@@ -1,22 +1,9 @@
 import type { GitHubConnectionContract } from "@otomat/domain";
 
-import { cliAvailability } from "./availability.js";
-import {
-  assertCommandSucceeded,
-  assertPublicationSucceeded,
-  commandSucceeded,
-  createPullRequestWithRetry,
-  defaultSleep,
-} from "./cli-commands.js";
-import {
-  findPullRequest,
-  listOpenPullRequests,
-  searchPullRequests,
-  viewPullRequest,
-} from "./cli-lookup.js";
-import { authStatusFailed, parseAuthStatus, parseReviewCommentUrl } from "./parse.js";
-import { fetchBranch, forcePushWithLease, push, remoteHead, resolveRemote } from "./remote.js";
-import { reviewCommentPayload } from "./review-comment-payload.js";
+import { cliAvailability } from "../availability.js";
+import { authStatusFailed, parseAuthStatus, parseReviewCommentUrl } from "../parse.js";
+import { fetchBranch, forcePushWithLease, push, remoteHead, resolveRemote } from "../remote.js";
+import { reviewCommentPayload } from "../review-comment-payload.js";
 import type {
   CommandRunner,
   ForcePushWithLeaseInput,
@@ -30,8 +17,25 @@ import type {
   PullRequestSelector,
   PullRequestUpdateInput,
   ReviewCommentCreateInput,
-} from "./types.js";
-import { viewerTeams } from "./viewer.js";
+  ViewedFileMutationInput,
+  ViewedFilesInput,
+} from "../types.js";
+import type { PullRequestViewedFiles } from "../viewed-state.js";
+import { viewerTeams } from "../viewer.js";
+import {
+  assertCommandSucceeded,
+  assertPublicationSucceeded,
+  commandSucceeded,
+  createPullRequestWithRetry,
+  defaultSleep,
+} from "./commands.js";
+import {
+  findPullRequest,
+  listOpenPullRequests,
+  searchPullRequests,
+  viewPullRequest,
+} from "./lookup.js";
+import { listViewedFiles, setFileViewed } from "./viewed.js";
 
 class CommandGitHubCli implements GitHubCli {
   constructor(
@@ -209,6 +213,14 @@ class CommandGitHubCli implements GitHubCli {
       "GitHub refused the review comment.",
     );
     return { url: parseReviewCommentUrl(commentResult.stdout) };
+  }
+
+  listViewedFiles(input: ViewedFilesInput): Promise<PullRequestViewedFiles> {
+    return listViewedFiles(this.run, input);
+  }
+
+  setFileViewed(input: ViewedFileMutationInput): Promise<void> {
+    return setFileViewed(this.run, input);
   }
 }
 

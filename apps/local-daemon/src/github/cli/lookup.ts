@@ -1,19 +1,19 @@
 import { z } from "zod";
 
-import { assertPublicationSucceeded } from "./cli-commands.js";
 import {
   parsePullRequestJson,
   PR_JSON_FIELDS,
   providerPullRequestSchema,
   toPullRequest,
-} from "./parse.js";
+} from "../parse.js";
 import type {
   CommandRunner,
   GitHubPullRequest,
   PullRequestListInput,
   PullRequestSearchInput,
   PullRequestSelector,
-} from "./types.js";
+} from "../types.js";
+import { assertPublicationSucceeded } from "./commands.js";
 
 function parsePullRequestList(stdout: string, repository: string): GitHubPullRequest[] {
   return parsePullRequestJson(stdout, (payload) =>

@@ -20,6 +20,7 @@ export * from "./projects.js";
 export * from "./pull-requests.js";
 export * from "./repositories.js";
 export * from "./review-comments.js";
+export * from "./reviewed-files.js";
 export * from "./reviews.js";
 export * from "./run-contributions.js";
 export * from "./runs.js";

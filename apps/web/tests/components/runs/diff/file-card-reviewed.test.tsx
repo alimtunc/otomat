@@ -84,6 +84,40 @@ describe("diff file card controls and body", () => {
     await cleanup();
   });
 
+  it("offers no synchronization control while the mark is settled", async () => {
+    const { container, cleanup } = await renderCard({ reviewed: true });
+    expect(container.querySelector('[aria-label^="Retry syncing"]')).toBeNull();
+    await cleanup();
+  });
+
+  it("carries GitHub's refusal on a retry control that re-sends the same mark", async () => {
+    const onRetrySync = vi.fn();
+    const { container, cleanup } = await renderCard({
+      reviewed: true,
+      onRetrySync,
+      unsyncedMark: {
+        id: "rf1",
+        review_id: "rv1",
+        file_path: "src/index.ts",
+        diff_sha: "file-sha",
+        reviewed: true,
+        sync_status: "failed",
+        sync_error: "GitHub is unreachable.",
+      },
+    });
+    const retry = container.querySelector<HTMLElement>('[aria-label^="Retry syncing"]');
+    if (retry === null) throw new Error("no retry control rendered");
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("GitHub is unreachable.");
+    expect(reviewedCheckbox(container).getAttribute("aria-checked")).toBe("true");
+
+    await act(async () => {
+      retry.click();
+    });
+
+    expect(onRetrySync).toHaveBeenCalled();
+    await cleanup();
+  });
+
   it("selects the file when the reader clicks inside the panel", async () => {
     const onActivate = vi.fn();
     const { container, cleanup } = await renderCard({ onActivate });

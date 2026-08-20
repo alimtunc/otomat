@@ -1,4 +1,4 @@
-import type { ReviewCommentRow, ReviewRow } from "@otomat/db";
+import type { ReviewCommentRow, ReviewedFileRow, ReviewRow } from "@otomat/db";
 
 import type { ReviewService } from "#review";
 
@@ -39,6 +39,22 @@ export function commentRow(overrides: Partial<ReviewCommentRow> = {}): ReviewCom
   };
 }
 
+export function reviewedFileRow(overrides: Partial<ReviewedFileRow> = {}): ReviewedFileRow {
+  return {
+    id: "rf1",
+    review_id: "rv1",
+    file_path: "src/thing.ts",
+    diff_sha: "sha-1",
+    reviewed: true,
+    sync_status: "local",
+    sync_error: null,
+    viewer_login: null,
+    created_at: "2026-07-05T00:00:00.000Z",
+    updated_at: "2026-07-05T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
 /** Every method throws or returns empty unless a test overrides it — no accidental fake success. */
 export function stubReviewService(overrides: Partial<ReviewService> = {}): ReviewService {
   return {
@@ -55,6 +71,7 @@ export function stubReviewService(overrides: Partial<ReviewService> = {}): Revie
     getReviewDetail: () => ({
       review: null,
       comments: [],
+      reviewedFiles: [],
       fixAuthority: { kind: "otomat", reason: "Otomat owns this branch." },
       destinations: { pr_review: false, reason: "This run has no pull request yet." },
     }),
@@ -66,6 +83,12 @@ export function stubReviewService(overrides: Partial<ReviewService> = {}): Revie
     },
     getFileBlobs: () => {
       throw new Error("getFileBlobs stub not configured");
+    },
+    setReviewedFile: async () => {
+      throw new Error("setReviewedFile stub not configured");
+    },
+    importViewedFiles: async () => {
+      throw new Error("importViewedFiles stub not configured");
     },
     requestFix: async () => {
       throw new Error("requestFix stub not configured");

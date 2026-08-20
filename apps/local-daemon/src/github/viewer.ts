@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { commandSucceeded } from "./cli-commands.js";
+import { commandSucceeded } from "./cli/commands.js";
 import { teamHandle } from "./pull-request-facts.js";
 import type { CommandRunner } from "./types.js";
 

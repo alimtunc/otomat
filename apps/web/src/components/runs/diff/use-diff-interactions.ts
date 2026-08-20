@@ -1,4 +1,9 @@
-import type { ReviewCommentContract, ReviewDiffContract } from "@otomat/domain";
+import type {
+  ReviewCommentContract,
+  ReviewDiffContract,
+  ReviewedFileContract,
+  ReviewTarget,
+} from "@otomat/domain";
 import { nextUnreviewedFile, revealAndFocus } from "@web/components/runs/diff/diff-nav";
 import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
 import type { DiffSortMode } from "@web/components/runs/diff/prefs/prefs";
@@ -26,10 +31,10 @@ interface PendingReveal {
 }
 
 export interface DiffInteractionsInput {
-  /** Keys the reviewed-file fingerprints and the active-file selection. */
-  subjectId: string;
+  target: ReviewTarget;
   diff: ReviewDiffContract;
   comments: ReviewCommentContract[];
+  reviewedFiles: ReviewedFileContract[];
   sort: DiffSortMode;
   hideReviewed: boolean;
 }
@@ -49,7 +54,7 @@ export interface DiffInteractions {
 export function useDiffInteractions(input: DiffInteractionsInput): DiffInteractions {
   const back = useBackNavigation(null);
   const active = useActiveDiffFile();
-  const reviewed = useReviewedFiles(input.subjectId, input.diff.files);
+  const reviewed = useReviewedFiles(input.target, input.reviewedFiles, input.diff.files);
   const collapsed = useCollapsedFiles(input.diff.files, reviewed.paths);
   const ordered = sortDiffFiles(input.diff.files, input.sort);
   const partition = partitionComments(input.diff, input.comments);

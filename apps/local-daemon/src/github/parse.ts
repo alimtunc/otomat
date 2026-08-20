@@ -11,6 +11,7 @@ import {
 import type { GitHubPullRequest } from "./types.js";
 
 export const providerPullRequestSchema = providerReviewFactsSchema.extend({
+  id: z.string().min(1),
   number: z.number().int().positive(),
   url: z.url(),
   title: z.string(),
@@ -38,7 +39,7 @@ const authStatusSchema = z.object({
   ),
 });
 
-export const PR_JSON_FIELDS = `number,url,title,body,headRefName,headRefOid,baseRefName,state,isDraft,author,${PR_REVIEW_FACT_FIELDS}`;
+export const PR_JSON_FIELDS = `id,number,url,title,body,headRefName,headRefOid,baseRefName,state,isDraft,author,${PR_REVIEW_FACT_FIELDS}`;
 
 /** `gh auth status --json hosts` appeared in 2.63.0; older gh exits 1 on it. */
 export const MINIMUM_GH_VERSION = "2.63.0";
@@ -68,6 +69,7 @@ export function toPullRequest(value: unknown, repository: string): GitHubPullReq
   const parsed = providerPullRequestSchema.parse(value);
   return {
     ...toReviewFacts(parsed, repository),
+    nodeId: parsed.id,
     number: parsed.number,
     url: parsed.url,
     title: parsed.title,

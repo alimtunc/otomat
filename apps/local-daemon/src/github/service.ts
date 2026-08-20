@@ -10,6 +10,7 @@ import { createPullRequestPublisher } from "./publication/index.js";
 import { refreshTrackedPullRequests } from "./refresh.js";
 import { publishReviewComment } from "./review-comment.js";
 import type { GitHubService, GitHubServiceConfig } from "./types.js";
+import { readViewedFiles, syncViewedFile } from "./viewed-files.js";
 
 export function createGitHubService(config: GitHubServiceConfig): GitHubService {
   const normalizedConfig = { ...config, idFactory: config.idFactory ?? randomUUID };
@@ -22,10 +23,18 @@ export function createGitHubService(config: GitHubServiceConfig): GitHubService 
     pullRequestInbox: (projectId) => inbox.read(projectId),
     syncPullRequestInbox: (projectId) => inbox.sync(projectId),
     listIssuePullRequests: (issueId) => imports.list(issueId),
-    attachPullRequest: (issueId, request) => imports.attach(issueId, request),
+    attachPullRequest: async (issueId, request) => {
+      const row = await imports.attach(issueId, request);
+      config.importViewedFiles?.(row.id);
+      return row;
+    },
     detachPullRequest: (pullRequestId) => imports.detach(pullRequestId),
     pullRequestIssue: (row) => pullRequestIssue(config.db, row),
-    refreshPullRequest: (pullRequestId) => imports.refresh(pullRequestId),
+    refreshPullRequest: async (pullRequestId) => {
+      const row = await imports.refresh(pullRequestId);
+      config.importViewedFiles?.(pullRequestId);
+      return row;
+    },
     refreshTrackedPullRequests: () =>
       refreshTrackedPullRequests({ db: config.db, publisher, imports }),
     getPullRequest: (runId) => publisher.get(runId),
@@ -36,6 +45,8 @@ export function createGitHubService(config: GitHubServiceConfig): GitHubService 
     pushCommits: (runId, request) => publisher.pushCommits(runId, request),
     publishReviewComment: (pullRequestId, input) =>
       publishReviewComment(config, pullRequestId, input),
+    readViewedFiles: (pullRequestId) => readViewedFiles(config, pullRequestId),
+    syncViewedFile: (pullRequestId, input) => syncViewedFile(config, pullRequestId, input),
     // Resolved before the run is reached: an unavailable runtime or model refuses here rather than in the CLI.
     generatePullRequestMetadata: (run) =>
       publisher.generate(run, resolveGenerationAgent(config.db, run)),

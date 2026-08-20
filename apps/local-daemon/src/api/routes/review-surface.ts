@@ -1,4 +1,4 @@
-import { createReviewCommentRequestSchema } from "@otomat/domain";
+import { createReviewCommentRequestSchema, setReviewedFileRequestSchema } from "@otomat/domain";
 import { Hono, type MiddlewareHandler } from "hono";
 
 import {
@@ -14,7 +14,7 @@ import { diffFileBlobsErrorResponse, toDiffFileBlobsResponse } from "../diff-fil
 import { diffScopeErrorResponse, readDiffScope } from "../diff-scope.js";
 import { validateJson, type ReviewSubjectEnv } from "../guards.js";
 import { toReviewDiffResponse } from "../serialize-review-diff.js";
-import { toReview, toReviewComment } from "../serialize.js";
+import { toReview, toReviewComment, toReviewedFile } from "../serialize.js";
 
 /** One surface for both subjects: only the guard that names the subject differs, so the two never drift apart. */
 export function createReviewSurfaceRoutes(
@@ -58,9 +58,22 @@ export function createReviewSurfaceRoutes(
     return c.json({
       review: detail.review ? toReview(detail.review) : null,
       comments: detail.comments.map(toReviewComment),
+      reviewed_files: detail.reviewedFiles.map(toReviewedFile),
       fix_authority: detail.fixAuthority,
       destinations: detail.destinations,
     });
+  });
+
+  /** No refusal branch for GitHub: an outage rides back on the mark's own sync state, which the reviewer retries. */
+  routes.post("/:id/review/files", guard, validateJson(setReviewedFileRequestSchema), async (c) => {
+    const subject = c.get("subject");
+    try {
+      const mark = await deps.review.setReviewedFile(subject, c.req.valid("json"));
+      return c.json(toReviewedFile(mark));
+    } catch (error) {
+      console.error(`[otomat] reviewed mark on ${subject.kind} ${subject.id} failed`, error);
+      return c.json({ error: "reviewed_mark_failed" }, 500);
+    }
   });
 
   routes.post(

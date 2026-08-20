@@ -1,6 +1,7 @@
 import type {
   ReviewCommentContract,
   ReviewDetail,
+  ReviewedFileContract,
   RunContract,
   ReviewDiffResponse,
 } from "@otomat/domain";
@@ -20,7 +21,7 @@ import { ReviewFixBusyError, RunWorkspaceClosedError } from "#supervisor";
 
 import { json, makeApiApp, post, request, runRow } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
-import { commentRow, reviewRow, stubReviewService } from "../support/review.js";
+import { commentRow, reviewedFileRow, reviewRow, stubReviewService } from "../support/review.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "run-review";
@@ -99,6 +100,7 @@ it("serves the review surface with serialized comments and the fix authority", a
       getReviewDetail: () => ({
         review: reviewRow(),
         comments: [commentRow()],
+        reviewedFiles: [],
         fixAuthority: { kind: "external", reason: "Otomat does not own this branch." },
         destinations: { pr_review: false, reason: "This run has no pull request yet." },
       }),
@@ -112,6 +114,59 @@ it("serves the review surface with serialized comments and the fix authority", a
   expect(body.fix_authority).toEqual({
     kind: "external",
     reason: "Otomat does not own this branch.",
+  });
+});
+
+it("serves the reviewed marks alongside the comments", async () => {
+  const app = makeApiApp(t, {
+    review: stubReviewService({
+      getReviewDetail: () => ({
+        review: reviewRow(),
+        comments: [],
+        reviewedFiles: [reviewedFileRow({ sync_status: "failed", sync_error: "GitHub said no." })],
+        fixAuthority: { kind: "otomat", reason: "Otomat owns this branch." },
+        destinations: { pr_review: false, reason: "This run has no pull request yet." },
+      }),
+    }),
+  });
+  const body = await json<ReviewDetail>(await request(app, `/api/runs/${RUN_ID}/review`));
+  expect(body.reviewed_files[0]).toMatchObject({
+    file_path: "src/thing.ts",
+    diff_sha: "sha-1",
+    reviewed: true,
+    sync_status: "failed",
+    sync_error: "GitHub said no.",
+  });
+  expect(body.reviewed_files[0]).not.toHaveProperty("viewer_login");
+});
+
+it("answers a refused synchronization with the persisted mark, not with a failure", async () => {
+  let received: unknown;
+  const app = makeApiApp(t, {
+    review: stubReviewService({
+      setReviewedFile: async (_subject, mark) => {
+        received = mark;
+        return reviewedFileRow({
+          file_path: mark.file_path,
+          diff_sha: mark.diff_sha,
+          reviewed: mark.reviewed,
+          sync_status: "failed",
+          sync_error: "GitHub is unreachable.",
+        });
+      },
+    }),
+  });
+  const res = await post(app, `/api/runs/${RUN_ID}/review/files`, {
+    file_path: "notes.md",
+    diff_sha: "file-sha",
+    reviewed: true,
+  });
+  expect(res.status).toBe(200);
+  expect(received).toEqual({ file_path: "notes.md", diff_sha: "file-sha", reviewed: true });
+  expect(await json<ReviewedFileContract>(res)).toMatchObject({
+    reviewed: true,
+    sync_status: "failed",
+    sync_error: "GitHub is unreachable.",
   });
 });
 

@@ -6,7 +6,7 @@ import {
 
 import { RuntimeUnavailableError } from "#runtime";
 
-import { commandSucceeded } from "../cli-commands.js";
+import { commandSucceeded } from "../cli/commands.js";
 import { pullRequestBody } from "../conventions/compose.js";
 import { GitHubPublicationError } from "../errors.js";
 import type { CommandRunner, PullRequestGenerator } from "../types.js";

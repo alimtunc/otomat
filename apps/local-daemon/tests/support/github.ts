@@ -20,7 +20,10 @@ import {
   type PullRequestSearchInput,
   type PullRequestSelector,
   type PullRequestUpdateInput,
+  type PullRequestViewedFile,
+  type PullRequestViewedFiles,
   type ReviewCommentCreateInput,
+  type ViewedFileMutationInput,
 } from "#github";
 
 export const CONNECTED_GITHUB: GitHubConnectionContract = {
@@ -78,6 +81,7 @@ export async function publishAndSettle(
 /** What GitHub answers about a pull request, review facts included, so every fake speaks one shape. */
 export function providerPullRequest(overrides: Partial<GitHubPullRequest> = {}): GitHubPullRequest {
   return {
+    nodeId: "PR_node_42",
     number: 42,
     url: "https://github.com/acme/otomat/pull/42",
     title: "feat: ship it",
@@ -113,6 +117,7 @@ export function pullRequestRow(overrides: Partial<PullRequestRow> = {}): PullReq
     provider_updated_at: null,
     synced_at: null,
     number: null,
+    node_id: null,
     url: null,
     status: "draft",
     publication_status: "not_configured",
@@ -192,6 +197,12 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
     },
     publishReviewComment: async () => {
       throw new Error("publishReviewComment stub not configured");
+    },
+    readViewedFiles: async () => {
+      throw new Error("readViewedFiles stub not configured");
+    },
+    syncViewedFile: async () => {
+      throw new Error("syncViewedFile stub not configured");
     },
     ...overrides,
   };
@@ -330,5 +341,24 @@ export class FakeGitHubCli implements GitHubCli {
     this.reviewComments.push(input);
     if (this.reviewCommentError) throw this.reviewCommentError;
     return { url: `https://github.com/acme/app/pull/${input.number}#discussion_r1` };
+  }
+
+  viewedFiles: PullRequestViewedFile[] = [];
+  viewedFileInputs: ViewedFileMutationInput[] = [];
+  viewedFilesError: Error | null = null;
+  setFileViewedError: Error | null = null;
+
+  async listViewedFiles(): Promise<PullRequestViewedFiles> {
+    if (this.viewedFilesError) throw this.viewedFilesError;
+    return { nodeId: this.provider.nodeId, files: this.viewedFiles };
+  }
+
+  async setFileViewed(input: ViewedFileMutationInput): Promise<void> {
+    this.viewedFileInputs.push(input);
+    if (this.setFileViewedError) throw this.setFileViewedError;
+    this.viewedFiles = [
+      ...this.viewedFiles.filter((file) => file.path !== input.path),
+      { path: input.path, state: input.viewed ? "VIEWED" : "UNVIEWED" },
+    ];
   }
 }

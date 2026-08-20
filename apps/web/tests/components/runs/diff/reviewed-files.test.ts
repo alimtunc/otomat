@@ -1,78 +1,61 @@
-import {
-  pruneFingerprints,
-  readReviewedFingerprints,
-  reviewedPaths,
-  writeReviewedFingerprints,
-} from "@web/components/runs/diff/reviewed-files";
+import type { ReviewedFileContract } from "@otomat/domain";
+import { reviewedPaths, unsyncedMarks } from "@web/components/runs/diff/reviewed-files";
 import { describe, expect, it } from "vitest";
-
-import { memoryStorage } from "#support/storage";
 
 const FILES = [
   { path: "a.ts", sha: "sha-a" },
   { path: "b.ts", sha: "sha-b" },
 ];
 
-describe("reviewed file fingerprints", () => {
-  it("round-trips the sha each file was reviewed at", () => {
-    const storage = memoryStorage();
-    writeReviewedFingerprints("run-1", { "a.ts": "sha-a" }, storage);
-    expect(readReviewedFingerprints("run-1", storage)).toEqual({ "a.ts": "sha-a" });
-  });
+function mark(overrides: Partial<ReviewedFileContract>): ReviewedFileContract {
+  return {
+    id: "rf1",
+    review_id: "rv1",
+    file_path: "a.ts",
+    diff_sha: "sha-a",
+    reviewed: true,
+    sync_status: "local",
+    sync_error: null,
+    ...overrides,
+  };
+}
 
-  it("keeps runs independent", () => {
-    const storage = memoryStorage();
-    writeReviewedFingerprints("run-1", { "a.ts": "sha-a" }, storage);
-    writeReviewedFingerprints("run-2", { "b.ts": "sha-b" }, storage);
-    expect(readReviewedFingerprints("run-1", storage)).toEqual({ "a.ts": "sha-a" });
-    expect(readReviewedFingerprints("run-2", storage)).toEqual({ "b.ts": "sha-b" });
-  });
-
-  it("clears a run's entry when no path is reviewed", () => {
-    const storage = memoryStorage();
-    writeReviewedFingerprints("run-1", { "a.ts": "sha-a" }, storage);
-    writeReviewedFingerprints("run-1", {}, storage);
-    expect(storage.getItem("otomat.reviewed-files")).toBe("{}");
-  });
-
-  it("survives corrupt stored JSON", () => {
-    const storage = memoryStorage();
-    storage.setItem("otomat.reviewed-files", "{not json");
-    expect(readReviewedFingerprints("run-1", storage)).toEqual({});
-    writeReviewedFingerprints("run-1", { "a.ts": "sha-a" }, storage);
-    expect(readReviewedFingerprints("run-1", storage)).toEqual({ "a.ts": "sha-a" });
-  });
-
-  it("prunes the oldest runs beyond the retention cap", () => {
-    const storage = memoryStorage();
-    for (let index = 0; index < 41; index += 1) {
-      writeReviewedFingerprints(`run-${index}`, { "a.ts": "sha-a" }, storage);
-    }
-    expect(readReviewedFingerprints("run-0", storage)).toEqual({});
-    expect(readReviewedFingerprints("run-40", storage)).toEqual({ "a.ts": "sha-a" });
-  });
-});
-
-describe("reviewed marks against a live diff", () => {
-  it("keeps a file reviewed while its patch is byte-identical", () => {
-    expect(reviewedPaths({ "a.ts": "sha-a", "b.ts": "sha-b" }, FILES)).toEqual(
-      new Set(["a.ts", "b.ts"]),
+describe("reviewed marks over a diff", () => {
+  it("counts a file reviewed only while it still reads at the sha it was marked against", () => {
+    const marks = [mark({}), mark({ id: "rf2", file_path: "b.ts", diff_sha: "sha-b" })];
+    expect(reviewedPaths(marks, FILES, new Map())).toEqual(new Set(["a.ts", "b.ts"]));
+    expect(reviewedPaths(marks, [{ path: "a.ts", sha: "sha-a-2" }, FILES[1]!], new Map())).toEqual(
+      new Set(["b.ts"]),
     );
   });
 
-  it("only clears the files a new head actually moved", () => {
-    const nextHead = [
-      { path: "a.ts", sha: "sha-a" },
-      { path: "b.ts", sha: "sha-b2" },
+  it("leaves an unmarked file out even when its mark is current", () => {
+    expect(reviewedPaths([mark({ reviewed: false })], FILES, new Map())).toEqual(new Set());
+  });
+
+  it("follows every unsettled toggle at once, so a second click cannot revert the first", () => {
+    expect(reviewedPaths([mark({})], FILES, new Map([["a.ts", false]]))).toEqual(new Set());
+    expect(
+      reviewedPaths(
+        [mark({})],
+        FILES,
+        new Map([
+          ["a.ts", false],
+          ["b.ts", true],
+        ]),
+      ),
+    ).toEqual(new Set(["b.ts"]));
+    expect(reviewedPaths([], FILES, new Map([["gone.ts", true]]))).toEqual(new Set());
+  });
+
+  it("offers a retry for a mark GitHub refused or has not taken, and for nothing else", () => {
+    const marks = [
+      mark({ id: "rf1", file_path: "a.ts", sync_status: "failed", sync_error: "GitHub said no." }),
+      mark({ id: "rf2", file_path: "b.ts", sync_status: "pending" }),
+      mark({ id: "rf3", file_path: "c.ts", sync_status: "synced" }),
+      mark({ id: "rf4", file_path: "d.ts", sync_status: "local" }),
     ];
-    expect(reviewedPaths({ "a.ts": "sha-a", "b.ts": "sha-b" }, nextHead)).toEqual(
-      new Set(["a.ts"]),
-    );
-  });
-
-  it("drops marks for files that left the diff", () => {
-    expect(pruneFingerprints({ "a.ts": "sha-a", "gone.ts": "sha-g" }, FILES)).toEqual({
-      "a.ts": "sha-a",
-    });
+    expect([...unsyncedMarks(marks).keys()]).toEqual(["a.ts", "b.ts"]);
+    expect(unsyncedMarks(marks).get("a.ts")?.sync_error).toBe("GitHub said no.");
   });
 });

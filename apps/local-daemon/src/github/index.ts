@@ -1,4 +1,4 @@
-export { createGitHubCli } from "./cli.js";
+export { createGitHubCli } from "./cli/index.js";
 export { createGitHubConnectionService } from "./connection.js";
 export { commitMessage, pullRequestBody, pullRequestTitle } from "./conventions/compose.js";
 export { createPullRequestGenerator } from "./generation/generator.js";
@@ -28,4 +28,6 @@ export type {
   PullRequestSelector,
   PullRequestUpdateInput,
   ReviewCommentCreateInput,
+  ViewedFileMutationInput,
 } from "./types.js";
+export type { PullRequestViewedFile, PullRequestViewedFiles } from "./viewed-state.js";

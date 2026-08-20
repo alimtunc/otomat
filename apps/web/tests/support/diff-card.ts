@@ -43,6 +43,8 @@ export function diffFileCardProps(overrides: Partial<DiffFileCardProps> = {}): D
     prefs: DEFAULT_DIFF_PREFS,
     reviewed: false,
     onReviewedChange: () => {},
+    unsyncedMark: null,
+    onRetrySync: () => {},
     collapsed: false,
     onCollapsedChange: () => {},
     active: false,

@@ -24,6 +24,7 @@ export type PullRequestPatch = Partial<
     | "synced_at"
     | "repository_id"
     | "number"
+    | "node_id"
     | "url"
     | "status"
     | "publication_status"
