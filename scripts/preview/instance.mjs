@@ -116,7 +116,8 @@ function provision(flags) {
 }
 
 async function teardown(flags) {
-  const name = previewWorkerName(requirePullRequest(flags));
+  const pullRequest = requirePullRequest(flags);
+  const name = previewWorkerName(pullRequest);
   const account = requireEnv("CLOUDFLARE_ACCOUNT_ID");
   const removed = await cloudflare(
     "DELETE",
@@ -124,12 +125,52 @@ async function teardown(flags) {
   );
   if (removed.status === 404) {
     console.log(`[preview] ${name} already holds no worker`);
+  } else if (removed.status !== 200) {
+    fail(`deleting ${name} answered ${String(removed.status)}: ${apiErrors(removed.body)}`);
+  } else {
+    console.log(`[preview] ${name} torn down`);
+  }
+  await purgePagesDeployments(account, pullRequest);
+}
+
+/** A closed pull request keeps no Pages deployments either; ids are collected before any delete so pagination never shifts under the walk. */
+async function purgePagesDeployments(account, pullRequest) {
+  const project = process.env.CLOUDFLARE_PAGES_PROJECT ?? "";
+  if (project === "") {
+    console.log("[preview] CLOUDFLARE_PAGES_PROJECT unset; Pages deployments left in place");
     return;
   }
-  if (removed.status !== 200) {
-    fail(`deleting ${name} answered ${String(removed.status)}: ${apiErrors(removed.body)}`);
+  const branch = `pr-${String(pullRequest)}`;
+  const base = `/accounts/${account}/pages/projects/${project}/deployments`;
+  const targets = [];
+  const PAGE_BOUND = 40;
+  for (let page = 1; page <= PAGE_BOUND; page += 1) {
+    const listed = await cloudflare("GET", `${base}?page=${String(page)}&per_page=25`);
+    if (listed.status !== 200) {
+      fail(
+        `listing ${project} deployments answered ${String(listed.status)}: ${apiErrors(listed.body)}`,
+      );
+    }
+    const rows = listed.body.result ?? [];
+    if (rows.length === 0) break;
+    for (const row of rows) {
+      if (row?.deployment_trigger?.metadata?.branch === branch) targets.push(row.id);
+    }
+    if (page === PAGE_BOUND) {
+      console.log(
+        `[preview] stopped listing after ${String(PAGE_BOUND)} pages; older deployments may remain`,
+      );
+    }
   }
-  console.log(`[preview] ${name} torn down`);
+  for (const id of targets) {
+    const removed = await cloudflare("DELETE", `${base}/${id}?force=true`);
+    if (removed.status !== 200 && removed.status !== 404) {
+      fail(
+        `deleting deployment ${id} answered ${String(removed.status)}: ${apiErrors(removed.body)}`,
+      );
+    }
+  }
+  console.log(`[preview] ${String(targets.length)} Pages deployment(s) of ${branch} purged`);
 }
 
 /** Names every preview worker still deployed, so an orphan of a closed pull request is found. */

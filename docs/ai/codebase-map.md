@@ -440,8 +440,8 @@ so a redeploy reaches a fresh container immediately instead of one still drainin
 commit, and a mismatched daemon can only ever be refused, never answered. The Worker admits only
 the façade's client pair — checked in the worker itself, under Access service-token header names —
 and the container's ephemeral disk reseeds its fixture repository and database on every cold start.
-Teardown deletes the Worker, which takes the container, its route and its data with it; `list`
-finds orphans. The rejected alternative — per-commit instances on the operator's VPS behind a named
+Teardown deletes the Worker — which takes the container, its route and its data with it — and
+purges the pull request's Pages deployments; `list` finds orphans. The rejected alternative — per-commit instances on the operator's VPS behind a named
 tunnel — kept a personal host and an SSH private key inside CI, shared one machine between all
 previews and the stable daemon, and left processes to clean by pidfile; the VPS keeps serving the
 desktop previews (`instanceDeployment` in `apps/desktop`), which OTO-99 leaves untouched. Setup and

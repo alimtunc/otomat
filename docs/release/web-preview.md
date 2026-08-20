@@ -84,9 +84,10 @@ node scripts/preview/instance.mjs teardown --pr 142
 
 `list` names every preview worker still deployed with the pull request it belongs to, which is how
 an orphan — a deployment whose pull request closed while the workflow was down — is found. Tearing
-one down deletes the worker, which takes its container, route and data with it, and is idempotent.
-Container images accumulate in the Cloudflare registry across deploys;
-`pnpm dlx wrangler@4 containers images list` / `… delete` reclaims the space now and then.
+one down deletes the worker — which takes its container, route and data with it — and, when
+`CLOUDFLARE_PAGES_PROJECT` is set in the environment, purges the pull request's Pages deployments
+too; both halves are idempotent. Container images accumulate in the Cloudflare registry across
+deploys; `pnpm dlx wrangler@4 containers images list` / `… delete` reclaims the space now and then.
 
 ## Limits worth knowing
 
