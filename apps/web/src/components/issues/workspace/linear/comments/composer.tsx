@@ -2,7 +2,7 @@ import { Button, Textarea } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import { usePublishLinearComment } from "@web/api/linear/writeback";
 import { hasText } from "@web/lib/form";
-import { useRef } from "react";
+import { useState } from "react";
 
 export function Composer({
   issueId,
@@ -18,16 +18,14 @@ export function Composer({
   onPosted?: () => void;
 }) {
   const publish = usePublishLinearComment(issueId);
-  const clientId = useRef<string | null>(null);
-  if (clientId.current === null) clientId.current = crypto.randomUUID();
-  const currentClientId = clientId.current;
+  const [clientId, setClientId] = useState(() => crypto.randomUUID());
 
   const form = useForm({
     defaultValues: { body: "" },
     onSubmit: ({ value }) => {
       publish.mutate(
         {
-          client_id: currentClientId,
+          client_id: clientId,
           body: value.body.trim(),
           run_id: runId,
           parent_id: parentId,
@@ -35,7 +33,7 @@ export function Composer({
         {
           onSuccess: () => {
             form.reset();
-            clientId.current = crypto.randomUUID();
+            setClientId(crypto.randomUUID());
             onPosted?.();
           },
         },
