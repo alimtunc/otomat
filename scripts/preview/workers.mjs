@@ -14,3 +14,16 @@ export function previewWorkerPullRequest(name) {
   const suffix = name.slice(PREVIEW_WORKER_PREFIX.length);
   return /^[1-9][0-9]*$/.test(suffix) ? Number.parseInt(suffix, 10) : null;
 }
+
+/**
+ * The deployed config must carry the worker's own name: `wrangler deploy --name` renames the
+ * script but the container application keeps the config's name, so every pull request would
+ * collide on one application (`otomat-preview-previewdaemon`) with the first one's DO namespace.
+ */
+export function renderWorkerConfig(template, name) {
+  const rendered = template.replace(/"name":\s*"otomat-preview"/, `"name": "${name}"`);
+  if (rendered === template) {
+    throw new Error('the wrangler config template carries no "name": "otomat-preview" to render');
+  }
+  return rendered;
+}

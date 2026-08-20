@@ -60,6 +60,11 @@ fails — while any of it is missing, so a fork or an unconfigured checkout stil
    façade refuses `/api/*` entirely — a preview is never public by default — and the sandbox keeps
    working.
 
+6. **Preview base image** — run the `Preview base image` workflow once (`workflow_dispatch`). It
+   publishes `ghcr.io/<owner>/<repo>/preview-base:node22`, the prebuilt node + git base the host
+   Dockerfile `FROM`s, so a pull-request provision never runs `apt-get`. It republishes itself
+   whenever `scripts/preview/host/base.Dockerfile` changes on `main`.
+
 ## Repository configuration
 
 | Kind | Name | Value |
@@ -80,6 +85,21 @@ workers with a real Access policy on a custom domain later needs no code change.
 export CLOUDFLARE_API_TOKEN=… CLOUDFLARE_ACCOUNT_ID=…
 node scripts/preview/instance.mjs list
 node scripts/preview/instance.mjs teardown --pr 142
+```
+
+`list`, `warm` and `teardown` run without an installed workspace — only `provision` needs
+`@otomat/domain` built. CI uses `warm` (with the client pair in the environment) to boot the
+container right after provisioning, so the first reviewer click lands on a running daemon instead
+of a cold start; the workflow step is `continue-on-error`, so a daemon that never answers shows as
+a failed step, not a red pipeline.
+
+Provisions before the per-pull-request config rendering shared one container application named
+`otomat-preview-previewdaemon`, which made any second pull request's deploy fail on its durable
+object namespace. If that stale application still exists on the account, delete it once:
+
+```bash
+pnpm dlx wrangler@4 containers list
+pnpm dlx wrangler@4 containers delete <application-id>
 ```
 
 `list` names every preview worker still deployed with the pull request it belongs to, which is how
