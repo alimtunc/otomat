@@ -5,7 +5,7 @@ import type { Ref } from "react";
 export interface EarlierActivityProps {
   history: RunEventHistory;
   /** Only a list opening at its newest end takes a scroll trigger: at the top it would page the whole ledger. */
-  ref?: Ref<HTMLDivElement>;
+  ref?: Ref<HTMLLIElement>;
 }
 
 export function EarlierActivity({ history, ref }: EarlierActivityProps) {
@@ -13,9 +13,8 @@ export function EarlierActivity({ history, ref }: EarlierActivityProps) {
   if (!hasOlder) return null;
 
   return (
-    <div
+    <li
       ref={ref}
-      role="listitem"
       aria-live="polite"
       className="flex items-center justify-center gap-2 px-6 py-2 text-xs text-text-tertiary"
     >
@@ -28,6 +27,6 @@ export function EarlierActivity({ history, ref }: EarlierActivityProps) {
           {olderFailed ? "Retry" : "Load earlier activity"}
         </Button>
       )}
-    </div>
+    </li>
   );
 }

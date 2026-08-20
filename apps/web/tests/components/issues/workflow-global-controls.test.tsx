@@ -151,9 +151,7 @@ it("carries the ticket, the preset, the base branch and the inherited execution 
   const row = globalRow();
 
   expect(row.className).toContain("flex-wrap");
-  expect(row.querySelector("[role='list'][aria-label='Workflow context']")?.textContent).toContain(
-    "OTO-42",
-  );
+  expect(row.querySelector("ul[aria-label='Workflow context']")?.textContent).toContain("OTO-42");
   expect(row.querySelector("button[aria-label^='Base branch']")).not.toBeNull();
   expect(
     row.querySelector("[data-testid='execution-picker'][data-label='Workflow']"),

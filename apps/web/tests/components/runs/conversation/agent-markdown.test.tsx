@@ -21,7 +21,7 @@ it("renders an agent reply as Markdown and keeps its raw text copyable", async (
 
   expect(container.querySelector("h2")?.textContent).toBe("Result");
   expect(container.querySelector("code")?.textContent).toBe("pnpm check");
-  expect(container.querySelectorAll("li")).toHaveLength(2);
+  expect(container.querySelectorAll("ul li")).toHaveLength(2);
   expect(container.querySelector("a")?.getAttribute("href")).toBe("https://otomat.dev/runs/1");
   expect(container.textContent).not.toContain("## Result");
   expect(

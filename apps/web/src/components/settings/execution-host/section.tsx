@@ -41,6 +41,11 @@ export function ExecutionHostSection() {
   const snapshotError = host.snapshot.error;
   const alias = aliasDraft ?? snapshot?.remote_ssh_alias ?? "";
 
+  const saveAlias = async (): Promise<void> => {
+    const saved = await host.configureRemote(alias.trim());
+    if (saved) setAliasDraft(null);
+  };
+
   if (snapshotError !== null) {
     return (
       <div>
@@ -128,9 +133,7 @@ export function ExecutionHostSection() {
             className="flex flex-col gap-2 rounded-lg border border-border-subtle bg-card p-4"
             onSubmit={(event) => {
               event.preventDefault();
-              void host.configureRemote(alias.trim()).then((saved) => {
-                if (saved) setAliasDraft(null);
-              });
+              void saveAlias();
             }}
           >
             <Field>

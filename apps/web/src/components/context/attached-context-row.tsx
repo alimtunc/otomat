@@ -44,48 +44,48 @@ export function AttachedContextRow({
     const remove = onRemove === undefined ? undefined : () => onRemove(key);
     if (reference.kind === "file") {
       return (
-        <ContextChip
-          key={key}
-          icon="file-text"
-          label={reference.path}
-          preview={<p>{FILE_PREVIEW}</p>}
-          onRemove={remove}
-        />
+        <li key={key}>
+          <ContextChip
+            icon="file-text"
+            label={reference.path}
+            preview={<p>{FILE_PREVIEW}</p>}
+            onRemove={remove}
+          />
+        </li>
       );
     }
     const referenced = byId.get(reference.issue_id);
     return (
-      <ContextChip
-        key={key}
-        icon="list-todo"
-        label={referenced ? issueShortId(referenced) : UNRESOLVED_ISSUE}
-        preview={
-          referenced ? (
-            <ContextIssuePreview issue={referenced} />
-          ) : (
-            <p>{unresolvedPreview(issues.isLoading, issues.isError)}</p>
-          )
-        }
-        onRemove={remove}
-      />
+      <li key={key}>
+        <ContextChip
+          icon="list-todo"
+          label={referenced ? issueShortId(referenced) : UNRESOLVED_ISSUE}
+          preview={
+            referenced ? (
+              <ContextIssuePreview issue={referenced} />
+            ) : (
+              <p>{unresolvedPreview(issues.isLoading, issues.isError)}</p>
+            )
+          }
+          onRemove={remove}
+        />
+      </li>
     );
   };
 
   return (
-    <div
-      className="flex flex-wrap items-center gap-1.5"
-      role="list"
-      aria-label={`${label} context`}
-    >
+    <ul className="flex flex-wrap items-center gap-1.5" aria-label={`${label} context`}>
       {issue === null ? null : (
-        <ContextChip
-          icon="list-todo"
-          label={issueShortId(issue)}
-          preview={<ContextIssuePreview issue={issue} />}
-        />
+        <li>
+          <ContextChip
+            icon="list-todo"
+            label={issueShortId(issue)}
+            preview={<ContextIssuePreview issue={issue} />}
+          />
+        </li>
       )}
       {references.map(referenceChip)}
-      {addControl}
-    </div>
+      {addControl === undefined ? null : <li>{addControl}</li>}
+    </ul>
   );
 }

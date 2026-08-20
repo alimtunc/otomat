@@ -23,7 +23,7 @@ export function ConversationMessage({
   const cancelable = isRunContributionCancelable(contribution);
 
   return (
-    <div role="listitem" className="flex flex-col gap-1.5 px-6 py-3">
+    <li className="flex flex-col gap-1.5 px-6 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-text-secondary">You</span>
         <RelativeTime date={contribution.created_at} className="text-xs" />
@@ -65,6 +65,6 @@ export function ConversationMessage({
           ) : null}
         </div>
       ) : null}
-    </div>
+    </li>
   );
 }

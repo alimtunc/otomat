@@ -44,6 +44,13 @@
         // aria-busy is the intentional, accessible choice here.
         "files": ["**/components/reconnecting-bar.tsx"],
         "rules": ["react-doctor/prefer-tag-over-role"]
+      },
+      {
+        // The log excerpt is a frozen snapshot whose rows never reorder, and identical
+        // redacted lines can repeat with the same timestamp, so the index is the only
+        // stable identity a key can use.
+        "files": ["**/components/diagnostics/daemon-log-panel.tsx"],
+        "rules": ["react-doctor/no-array-index-as-key"]
       }
     ],
     "tags": ["design", "migration-hint", "test-noise"]

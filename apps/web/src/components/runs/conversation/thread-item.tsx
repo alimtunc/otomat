@@ -7,12 +7,9 @@ import type { ConversationItem } from "@web/lib/conversation";
 export function ThreadItem({ item, runId }: { item: ConversationItem; runId: string }) {
   if (item.kind === "step") {
     return (
-      <div
-        role="listitem"
-        className="px-6 pb-1 pt-3 text-micro font-semibold uppercase tracking-wide text-text-tertiary"
-      >
+      <li className="px-6 pb-1 pt-3 text-micro font-semibold uppercase tracking-wide text-text-tertiary">
         {item.name}
-      </div>
+      </li>
     );
   }
   if (item.kind === "message") {
@@ -24,5 +21,9 @@ export function ThreadItem({ item, runId }: { item: ConversationItem; runId: str
   if (item.kind === "activity") {
     return <ActivityGroup events={item.events} counts={item.counts} />;
   }
-  return <LedgerEventRow event={item.event} />;
+  return (
+    <li>
+      <LedgerEventRow event={item.event} />
+    </li>
+  );
 }
