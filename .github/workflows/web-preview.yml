@@ -11,10 +11,14 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  packages: read
 
 concurrency:
   group: web-preview-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
+  # A superseded commit's run is safe to cancel: provision is idempotent and the manifest refuses
+  # a mismatched daemon, so the worst a mid-flight cancel leaves is a blocked screen until the
+  # next run lands.
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -42,10 +46,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # One filtered build: web and daemon share @otomat/domain and the other workspace packages,
+      # so building them in one pnpm invocation builds each shared package once.
       - name: Build the cockpit and the daemon this commit ships
         run: |
-          pnpm --filter "@otomat/web..." run build
-          pnpm --filter "@otomat/local-daemon..." run build
+          pnpm --filter "@otomat/web..." --filter "@otomat/local-daemon..." run build
           pnpm --filter @otomat/local-daemon deploy --prod --legacy "$RUNNER_TEMP/daemon"
           tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/daemon.tar.gz" daemon
 
@@ -77,51 +82,22 @@ jobs:
             --commit-dirty=true
           echo "url=https://pr-$PR_NUMBER.$PAGES_PROJECT.pages.dev" >> "$GITHUB_OUTPUT"
 
-      - name: Upload the daemon bundle for the daemon step
+      # The host Dockerfile FROMs the prebuilt ghcr base (preview-base.yml), which the wrangler
+      # build pulls with this login.
+      - name: Log in to the GitHub container registry
         if: vars.PREVIEW_DAEMON_ENABLED != ''
-        uses: actions/upload-artifact@v7
+        uses: docker/login-action@v3
         with:
-          name: otomat-preview-daemon-${{ github.event.pull_request.head.sha }}
-          path: ${{ runner.temp }}/daemon.tar.gz
-          if-no-files-found: error
-          overwrite: true
-          retention-days: 1
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-  # Isolated per pull request and per commit: its own Worker, its own container image built from
-  # this commit's daemon bundle, its own ephemeral database and fixture repository. No daemon port
-  # exists anywhere — the container only answers its Worker, and the Worker only answers the
-  # façade's client pair.
-  daemon:
-    if: github.event.action != 'closed' && vars.PREVIEW_DAEMON_ENABLED != ''
-    needs: deploy
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build the domain package the provisioner reads its conventions from
-        run: pnpm --filter @otomat/domain run build
-
-      - uses: actions/download-artifact@v7
-        with:
-          name: otomat-preview-daemon-${{ github.event.pull_request.head.sha }}
-          path: ${{ runner.temp }}
-
+      # Isolated per pull request and per commit: its own Worker, its own container image built from
+      # this commit's daemon bundle, its own ephemeral database and fixture repository. No daemon
+      # port exists anywhere — the container only answers its Worker, and the Worker only answers
+      # the façade's client pair.
       - name: Deploy this commit's daemon worker
+        if: vars.PREVIEW_DAEMON_ENABLED != ''
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -135,10 +111,23 @@ jobs:
             --build "${HEAD_SHA:0:7}" \
             --bundle "$RUNNER_TEMP/daemon.tar.gz"
 
-  # Runs whether or not the daemon step was configured: the sandbox URL is already testable.
+      # Boots the container before the first reviewer clicks. continue-on-error: a daemon that
+      # never answers marks this step failed as a visible signal, but the preview URL itself still
+      # works on fixtures, so the pipeline stays green.
+      - name: Warm this commit's daemon container
+        if: vars.PREVIEW_DAEMON_ENABLED != ''
+        continue-on-error: true
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIEW_CLIENT_ID: ${{ secrets.PREVIEW_CLIENT_ID }}
+          PREVIEW_CLIENT_SECRET: ${{ secrets.PREVIEW_CLIENT_SECRET }}
+        run: node scripts/preview/instance.mjs warm --pr "$PR_NUMBER"
+
   announce:
     if: ${{ !cancelled() && github.event.action != 'closed' && needs.deploy.outputs.url != '' }}
-    needs: [deploy, daemon]
+    needs: deploy
     runs-on: ubuntu-latest
     steps:
       - name: Publish the preview URL on the pull request
@@ -154,7 +143,8 @@ jobs:
 
   # Close or merge and the pull request keeps nothing: its worker is deleted, which takes the
   # container, its data and its workers.dev route with it, and its Pages deployments are purged.
-  # Other previews are untouched.
+  # Other previews are untouched. No pnpm install: the teardown path of instance.mjs runs without
+  # an installed workspace, and `pnpm dlx` fetches wrangler on demand.
   teardown:
     if: github.event.action == 'closed' && vars.PREVIEW_DAEMON_ENABLED != ''
     runs-on: ubuntu-latest
@@ -169,13 +159,6 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build the domain package the provisioner reads its conventions from
-        run: pnpm --filter @otomat/domain run build
 
       - name: Delete this pull request's daemon worker and Pages deployments
         env:

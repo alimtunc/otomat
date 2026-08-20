@@ -1,5 +1,7 @@
-// One Worker per pull request: scripts/preview/instance.mjs deploys this config with
-// --name otomat-preview-pr-<n>, so previews stay disjoint workers with disjoint containers.
+// One Worker per pull request: scripts/preview/instance.mjs renders this template into
+// wrangler.generated.jsonc with "name" set to otomat-preview-pr-<n> and deploys that, because
+// --name would rename the script but leave every pull request colliding on one container
+// application named after this file's "name".
 {
   "name": "otomat-preview",
   "main": "worker.mjs",

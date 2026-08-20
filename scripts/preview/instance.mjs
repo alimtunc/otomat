@@ -1,24 +1,28 @@
 #!/usr/bin/env node
 /**
- * Provisions, tears down and lists the per-pull-request preview daemons on Cloudflare.
+ * Provisions, warms, tears down and lists the per-pull-request preview daemons on Cloudflare.
  * Run from CI (docs/release/web-preview.md); every command is idempotent.
  *
  *   CLOUDFLARE_API_TOKEN=… CLOUDFLARE_ACCOUNT_ID=… PREVIEW_CLIENT_ID=… PREVIEW_CLIENT_SECRET=… \
  *     node scripts/preview/instance.mjs provision --pr 142 --build 1a2b3c4 --bundle /tmp/daemon.tar.gz
+ *   node scripts/preview/instance.mjs warm --pr 142
  *   node scripts/preview/instance.mjs teardown --pr 142
  *   node scripts/preview/instance.mjs list
  *
  * A pull request owns one Worker; each provision replaces its container image with the commit's
  * own daemon and names the running instance after the build, so a stale container is unreachable
  * rather than answering for the wrong commit.
+ *
+ * Only provision imports @otomat/domain — lazily — so warm, teardown and list run without an
+ * installed workspace; keep every static import here dependency-free.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
-import { PREVIEW_BUILD_SHA } from "@otomat/domain";
-
-import { previewWorkerName, previewWorkerPullRequest } from "./workers.mjs";
+import { CLIENT_ID_HEADER, CLIENT_SECRET_HEADER } from "./host/gate.mjs";
+import { previewWorkerName, previewWorkerPullRequest, renderWorkerConfig } from "./workers.mjs";
 
 const HOST_DIR = fileURLToPath(new URL("./host/", import.meta.url));
 const WRANGLER = ["dlx", "wrangler@4"];
@@ -83,9 +87,10 @@ function apiErrors(body) {
   return Array.isArray(errors) ? errors.map((error) => error.message).join("; ") : "";
 }
 
-function provision(flags) {
+async function provision(flags) {
   const pullRequest = requirePullRequest(flags);
   const build = flags.build ?? "";
+  const { PREVIEW_BUILD_SHA } = await import("@otomat/domain");
   if (!PREVIEW_BUILD_SHA.test(build)) fail(`--build must be a 7-hex short sha, got "${build}"`);
   if (!flags.bundle || !existsSync(flags.bundle)) {
     fail("--bundle is required (the daemon deploy tarball)");
@@ -100,12 +105,15 @@ function provision(flags) {
   if (extract.status !== 0) fail(`could not extract ${flags.bundle}`);
 
   const name = previewWorkerName(pullRequest);
+  const config = `${HOST_DIR}wrangler.generated.jsonc`;
+  writeFileSync(
+    config,
+    renderWorkerConfig(readFileSync(`${HOST_DIR}wrangler.jsonc`, "utf8"), name),
+  );
   wrangler([
     "deploy",
     "--config",
-    `${HOST_DIR}wrangler.jsonc`,
-    "--name",
-    name,
+    config,
     "--var",
     `PREVIEW_BUILD:${build}`,
     "--var",
@@ -113,6 +121,49 @@ function provision(flags) {
   ]);
   wrangler(["secret", "put", "PREVIEW_CLIENT_SECRET", "--name", name], clientSecret);
   console.log(`[preview] ${name} serves the PR #${String(pullRequest)} daemon on build ${build}`);
+}
+
+const WARM_ATTEMPTS = 18;
+const WARM_DELAY_MS = 5_000;
+
+/**
+ * Boots the pull request's container ahead of the first reviewer click. Exits non-zero when the
+ * daemon never answers; the workflow step carries continue-on-error, so that is a visible signal,
+ * not a red pipeline.
+ */
+async function warm(flags) {
+  const pullRequest = requirePullRequest(flags);
+  const account = requireEnv("CLOUDFLARE_ACCOUNT_ID");
+  const clientId = requireEnv("PREVIEW_CLIENT_ID");
+  const clientSecret = requireEnv("PREVIEW_CLIENT_SECRET");
+  const subdomain = await cloudflare("GET", `/accounts/${account}/workers/subdomain`);
+  if (subdomain.status !== 200) {
+    fail(
+      `reading the workers.dev subdomain answered ${String(subdomain.status)}: ${apiErrors(subdomain.body)}`,
+    );
+  }
+  const host = `${previewWorkerName(pullRequest)}.${subdomain.body.result.subdomain}.workers.dev`;
+  const url = `https://${host}/api/health`;
+  const probe = async () => {
+    try {
+      const response = await fetch(url, {
+        headers: { [CLIENT_ID_HEADER]: clientId, [CLIENT_SECRET_HEADER]: clientSecret },
+      });
+      return { answered: response.ok, detail: `HTTP ${String(response.status)}` };
+    } catch (error) {
+      return { answered: false, detail: error instanceof Error ? error.message : String(error) };
+    }
+  };
+  for (let attempt = 1; attempt <= WARM_ATTEMPTS; attempt += 1) {
+    const { answered, detail } = await probe();
+    if (answered) {
+      console.log(`[preview] ${host} answered on attempt ${String(attempt)}`);
+      return;
+    }
+    console.log(`[preview] attempt ${String(attempt)}/${String(WARM_ATTEMPTS)}: ${detail}`);
+    await delay(WARM_DELAY_MS);
+  }
+  fail(`${url} never answered over ${String(WARM_ATTEMPTS)} attempts`);
 }
 
 async function teardown(flags) {
@@ -205,7 +256,8 @@ async function list() {
 
 const [command, ...rest] = process.argv.slice(2);
 const flags = readFlags(rest);
-if (command === "provision") provision(flags);
+if (command === "provision") await provision(flags);
+else if (command === "warm") await warm(flags);
 else if (command === "teardown") await teardown(flags);
 else if (command === "list") await list();
-else fail(`unknown command "${command ?? ""}"; expected provision, teardown or list`);
+else fail(`unknown command "${command ?? ""}"; expected provision, warm, teardown or list`);
