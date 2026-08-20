@@ -1,0 +1,27 @@
+name: Cancel PR CI
+
+# A closed pull request's CI answer is moot, but its runs share no concurrency
+# group with the push to main, so nothing cancels them on merge.
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  actions: write
+
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel this branch's unfinished CI runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          for status in queued in_progress; do
+            gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml \
+              --branch "$HEAD_REF" --status "$status" \
+              --json databaseId --jq '.[].databaseId'
+          done | while read -r id; do
+            gh run cancel "$id" --repo "$GITHUB_REPOSITORY"
+          done
