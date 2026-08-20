@@ -1,4 +1,9 @@
-import type { DiffFileContract, ReviewTarget, RunDiffScopeSelector } from "@otomat/domain";
+import type {
+  DiffFileContract,
+  ReviewedFileContract,
+  ReviewTarget,
+  RunDiffScopeSelector,
+} from "@otomat/domain";
 import { Button, cn, FOCUS_RING } from "@otomat/ui";
 import { DiffFileCardBody } from "@web/components/runs/diff/files/card-body";
 import { DiffFileCardHeader } from "@web/components/runs/diff/files/card-header";
@@ -24,6 +29,8 @@ export interface DiffFileCardProps {
   prefs: DiffPrefs;
   reviewed: boolean;
   onReviewedChange: (reviewed: boolean) => void;
+  unsyncedMark: ReviewedFileContract | null;
+  onRetrySync: () => void;
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
   active: boolean;
@@ -40,6 +47,8 @@ export function DiffFileCard({
   prefs,
   reviewed,
   onReviewedChange,
+  unsyncedMark,
+  onRetrySync,
   collapsed,
   onCollapsedChange,
   active,
@@ -88,6 +97,8 @@ export function DiffFileCard({
         active={active}
         reviewed={reviewed}
         onReviewedChange={onReviewedChange}
+        unsyncedMark={unsyncedMark}
+        onRetrySync={onRetrySync}
         collapsed={collapsed}
         onCollapsedChange={onCollapsedChange}
         fullFile={fullFile}

@@ -1,13 +1,42 @@
 // @vitest-environment happy-dom
-import type { DiffFileContract } from "@otomat/domain";
+import type {
+  DiffFileContract,
+  ReviewedFileContract,
+  SetReviewedFileRequest,
+} from "@otomat/domain";
 import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
-import { writeReviewedFingerprints } from "@web/components/runs/diff/reviewed-files";
 import { useDiffInteractions } from "@web/components/runs/diff/use-diff-interactions";
 import { act, useState } from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { diffFile } from "#support/diff-file";
 import { mountRouted } from "#support/router";
+
+/** The daemon answers a mark before it is shown, so the probe below plays that part synchronously. */
+let answerMark: ((request: SetReviewedFileRequest) => void) | null = null;
+
+vi.mock("@web/api/reviews/mutations", () => ({
+  useSetReviewedFile: () => ({
+    isPending: false,
+    variables: undefined,
+    mutate: (request: SetReviewedFileRequest, options?: { onSettled?: () => void }) => {
+      answerMark?.(request);
+      options?.onSettled?.();
+    },
+  }),
+}));
+
+function mark(path: string, sha: string, reviewed = true): ReviewedFileContract {
+  return {
+    id: `rf-${path}`,
+    review_id: "rv1",
+    file_path: path,
+    diff_sha: sha,
+    reviewed,
+    sync_status: "local",
+    sync_error: null,
+  };
+}
 
 const PATHS = ["a.ts", "b.ts", "c.ts"];
 
@@ -16,12 +45,26 @@ function files(shas: Record<string, string> = {}): DiffFileContract[] {
 }
 
 /** Stands in for the reviewer: the same interaction hook, driven the way its controls drive it. */
-function ReviewedNavigationProbe({ initial }: { initial: DiffFileContract[] }) {
+function ReviewedNavigationProbe({
+  initial,
+  marks: seeded,
+}: {
+  initial: DiffFileContract[];
+  marks: ReviewedFileContract[];
+}) {
   const [diffFiles, setDiffFiles] = useState(initial);
+  const [marks, setMarks] = useState(seeded);
+  answerMark = (request) => {
+    setMarks((current) => [
+      ...current.filter((row) => row.file_path !== request.file_path),
+      mark(request.file_path, request.diff_sha, request.reviewed),
+    ]);
+  };
   const interactions = useDiffInteractions({
-    subjectId: "run-1",
+    target: { kind: "run", id: "run-1" },
     diff: { base: "base", files: diffFiles, additions: 0, deletions: 0, sha: "diff-sha" },
     comments: [],
+    reviewedFiles: marks,
     sort: "path",
     hideReviewed: false,
   });
@@ -62,8 +105,10 @@ function ReviewedNavigationProbe({ initial }: { initial: DiffFileContract[] }) {
 
 const cleanups: Array<() => Promise<void>> = [];
 
-async function openReviewer(initial = files()) {
-  const { container, cleanup } = await mountRouted(<ReviewedNavigationProbe initial={initial} />);
+async function openReviewer(initial = files(), marks: ReviewedFileContract[] = []) {
+  const { container, cleanup } = await mountRouted(
+    <ReviewedNavigationProbe initial={initial} marks={marks} />,
+  );
   cleanups.push(cleanup);
   return {
     click: async (testid: string) => {
@@ -87,7 +132,7 @@ async function openReviewer(initial = files()) {
 }
 
 beforeEach(() => {
-  window.localStorage.clear();
+  answerMark = null;
 });
 
 afterEach(async () => {
@@ -137,17 +182,14 @@ describe("reviewed navigation", () => {
   });
 
   it("opens with the files reviewed in an earlier visit already folded", async () => {
-    writeReviewedFingerprints("run-1", { "b.ts": "sha-b.ts" });
-
-    const reviewer = await openReviewer();
+    const reviewer = await openReviewer(files(), [mark("b.ts", "sha-b.ts")]);
 
     expect(reviewer.state("b.ts").collapsed).toBe(true);
     expect(reviewer.state("a.ts").collapsed).toBe(false);
   });
 
   it("keeps Reviewed when the reader opens a folded file by hand", async () => {
-    writeReviewedFingerprints("run-1", { "b.ts": "sha-b.ts" });
-    const reviewer = await openReviewer();
+    const reviewer = await openReviewer(files(), [mark("b.ts", "sha-b.ts")]);
 
     await reviewer.click("open:b.ts");
 

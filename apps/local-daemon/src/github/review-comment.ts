@@ -1,32 +1,15 @@
-import { getPullRequest, type PullRequestRow } from "@otomat/db";
+import { getPullRequest } from "@otomat/db";
 import type { DiffSide } from "@otomat/domain";
 
 import type { PullRequestCommentInput } from "#review";
 
 import { reviewCommentBody } from "./body.js";
 import { GitHubPublicationError } from "./errors.js";
+import { pullRequestCwd } from "./pull-request-cwd.js";
 import type { GitHubServiceConfig, ReviewCommentCreateInput, ReviewCommentSide } from "./types.js";
 
 function side(value: DiffSide): ReviewCommentSide {
   return value === "old" ? "LEFT" : "RIGHT";
-}
-
-/** The checkout a `gh` call runs from: the run's own worktree when it holds one, else the repository root. */
-function commentCwd(config: GitHubServiceConfig, pullRequest: PullRequestRow): string {
-  const binding =
-    pullRequest.run_id === null
-      ? config.repositories.forRepository(pullRequest.repository_id)
-      : config.repositories.forRun(pullRequest.run_id);
-  const worktree =
-    pullRequest.run_id === null ? undefined : binding?.service.get(pullRequest.run_id);
-  const cwd = worktree?.path ?? binding?.rootPath;
-  if (cwd === undefined) {
-    throw new GitHubPublicationError(
-      "worktree_missing",
-      "This pull request has no repository checkout to reach GitHub from.",
-    );
-  }
-  return cwd;
 }
 
 /** Anchored to the head GitHub itself carries — what Otomat pushed, or what the imported pull request reports. */
@@ -45,7 +28,7 @@ export async function publishReviewComment(
       "GitHub anchors a review comment to lines, so a whole-file note cannot be published.",
     );
   }
-  const cwd = commentCwd(config, pullRequest);
+  const cwd = pullRequestCwd(config, pullRequest);
 
   const request: ReviewCommentCreateInput = {
     cwd,

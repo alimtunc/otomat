@@ -5,11 +5,13 @@ import {
   reviewCommentContractSchema,
   reviewDetailSchema,
   reviewDiffResponseSchema,
+  reviewedFileContractSchema,
   runContractSchema,
   runDiffScopeParams,
   type CreateReviewCommentRequest,
   type RequestFixRequest,
   type ReviewTarget,
+  type SetReviewedFileRequest,
   type RunDiffScopeSelector,
   type SyncPullRequestInboxRequest,
 } from "@otomat/domain";
@@ -70,6 +72,11 @@ export function createReviewsClient(config: DaemonClientConfig) {
       const comment = encodeURIComponent(commentId);
       return reviewCommentContractSchema.parse(
         await postJson(config, `${reviewPath(target)}/review/comments/${comment}/publish`, {}),
+      );
+    },
+    async setReviewedFile(target: ReviewTarget, request: SetReviewedFileRequest) {
+      return reviewedFileContractSchema.parse(
+        await postJson(config, `${reviewPath(target)}/review/files`, request),
       );
     },
     async requestFix(runId: string, request: RequestFixRequest) {

@@ -14,6 +14,7 @@ import {
   pullRequests,
   repositories,
   reviewComments,
+  reviewedFiles,
   reviews,
   runContributions,
   runs,
@@ -107,6 +108,7 @@ export function deleteRepositoryCascade(db: Db, repositoryId: string): boolean {
           .all()
           .map((row) => row.id);
         if (reviewIds.length > 0) {
+          tx.delete(reviewedFiles).where(inArray(reviewedFiles.review_id, reviewIds)).run();
           tx.delete(reviewComments).where(inArray(reviewComments.review_id, reviewIds)).run();
         }
         tx.delete(reviews).where(inArray(reviews.subject_id, subjectIds)).run();

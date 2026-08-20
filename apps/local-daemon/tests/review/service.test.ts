@@ -75,6 +75,8 @@ beforeEach(() => {
       if (publishFailure !== null) throw publishFailure;
       return { url: "https://github.com/acme/app/pull/7#discussion_r1" };
     },
+    syncViewedFile: async () => "octocat",
+    readViewedFiles: async () => ({ viewerLogin: "octocat", files: [] }),
   };
   review = createReviewService(reviewConfig);
 

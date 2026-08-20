@@ -38,6 +38,13 @@ function pullRequestSubject(ctx: ReviewContext, row: PullRequestRow): ReviewSubj
   };
 }
 
+/** A pull request opened by a run is reviewed through that run, not as a subject of its own. */
+export function pullRequestSubjectRef(row: PullRequestRow): ReviewSubjectRef {
+  return row.run_id === null
+    ? { kind: "pull_request", id: row.id }
+    : { kind: "run", id: row.run_id };
+}
+
 export function resolveReviewSubject(ctx: ReviewContext, ref: ReviewSubjectRef): ReviewSubject {
   if (ref.kind === "run") return runSubject(ctx, ref.id, ref.owner ?? ref.id);
   const row = getAttachedPullRequest(ctx.db, ref.id);

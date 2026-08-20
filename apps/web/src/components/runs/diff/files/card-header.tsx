@@ -1,6 +1,7 @@
-import type { DiffFileContract } from "@otomat/domain";
+import type { DiffFileContract, ReviewedFileContract } from "@otomat/domain";
 import { Checkbox, cn, DiffFileStatusChip, Icon, IconButton } from "@otomat/ui";
 import { diffFileLabels } from "@web/components/runs/diff/files/path";
+import { ReviewedSyncBadge } from "@web/components/runs/diff/files/reviewed-sync";
 import { DiffStat } from "@web/components/runs/diff/stat";
 import type { ReactNode } from "react";
 
@@ -11,6 +12,8 @@ export interface DiffFileCardHeaderProps {
   active: boolean;
   reviewed: boolean;
   onReviewedChange: (reviewed: boolean) => void;
+  unsyncedMark: ReviewedFileContract | null;
+  onRetrySync: () => void;
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
   fullFile: boolean;
@@ -26,6 +29,8 @@ export function DiffFileCardHeader({
   active,
   reviewed,
   onReviewedChange,
+  unsyncedMark,
+  onRetrySync,
   collapsed,
   onCollapsedChange,
   fullFile,
@@ -73,6 +78,9 @@ export function DiffFileCardHeader({
             aria-pressed={fullFile}
             onClick={() => onFullFileChange(!fullFile)}
           />
+        )}
+        {unsyncedMark === null ? null : (
+          <ReviewedSyncBadge mark={unsyncedMark} onRetry={onRetrySync} />
         )}
         <label className="flex cursor-pointer select-none items-center gap-1.5 pl-1.5 font-sans text-xs text-text-secondary">
           <Checkbox

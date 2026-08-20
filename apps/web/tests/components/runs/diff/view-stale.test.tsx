@@ -29,6 +29,7 @@ const DIFF: ReviewDiffResponse = {
 const REVIEW: ReviewDetail = {
   review: null,
   comments: [],
+  reviewed_files: [],
   fix_authority: { kind: "otomat", reason: "Otomat owns this branch." },
   destinations: { pr_review: false, reason: "This run has no pull request yet." },
 };
@@ -60,6 +61,7 @@ vi.mock("@web/api/reviews/mutations", () => ({
   useAddReviewComment: () => ({ mutateAsync: vi.fn(), isPending: false }),
   usePublishReviewComment: () => ({ mutate: vi.fn(), isPending: false, variables: undefined }),
   useRequestFix: () => ({ mutate: vi.fn(), isPending: false }),
+  useSetReviewedFile: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@web/components/runs/diff/fix-bar", () => ({ DiffFixBar: () => null }));

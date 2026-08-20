@@ -1,18 +1,9 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  getReviewComment,
-  getReviewForSubject,
-  insertReview,
-  insertReviewComment,
-  listReviewCommentsForSubject,
-  type ReviewCommentRow,
-  type ReviewRow,
-} from "@otomat/db";
+import { getReviewComment, insertReviewComment, type ReviewCommentRow } from "@otomat/db";
 import {
   reviewCommentMachine,
   reviewCommentPublicationMachine,
-  reviewMachine,
   type CreateReviewCommentRequest,
 } from "@otomat/domain";
 
@@ -28,29 +19,9 @@ import {
 import { buildCommentCreatedEvent } from "./events.js";
 import { deliverComment } from "./publication.js";
 import { reloadOrThrow } from "./reload.js";
+import { ensureReview } from "./surface.js";
 import { driveReviewTo } from "./transitions.js";
-import type { ReviewContext, ReviewDetailResult, ReviewSubject } from "./types.js";
-
-/** Returns the subject's review row, creating it (status `open`) on the first comment. */
-function ensureReview(ctx: ReviewContext, subjectId: string): ReviewRow {
-  const existing = getReviewForSubject(ctx.db, subjectId);
-  if (existing) return existing;
-  const id = randomUUID();
-  insertReview(ctx.db, { id, subject_id: subjectId, status: reviewMachine.initial });
-  return reloadOrThrow(
-    () => getReviewForSubject(ctx.db, subjectId),
-    `review ${id} vanished immediately after insert`,
-  );
-}
-
-export function getReviewDetail(ctx: ReviewContext, subject: ReviewSubject): ReviewDetailResult {
-  return {
-    review: getReviewForSubject(ctx.db, subject.id) ?? null,
-    comments: listReviewCommentsForSubject(ctx.db, subject.id),
-    fixAuthority: subject.fixAuthority(),
-    destinations: subject.destinations(),
-  };
-}
+import type { ReviewContext, ReviewSubject } from "./types.js";
 
 export async function addComment(
   ctx: ReviewContext,

@@ -31,4 +31,6 @@ export type {
   ReviewServiceConfig,
   ReviewSubjectRef,
   RunSettledOutcome,
+  ViewedFilesResult,
+  ViewedFileState,
 } from "./types.js";

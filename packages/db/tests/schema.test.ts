@@ -19,6 +19,7 @@ const EXPECTED_TABLES = [
   "runtime_events",
   "reviews",
   "review_comments",
+  "reviewed_files",
   "pull_requests",
   "sync_state",
   "issue_sources",

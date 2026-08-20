@@ -8,6 +8,7 @@ import {
   reviewCommentContractSchema,
   reviewCommentDestinationSchema,
   reviewContractSchema,
+  reviewedFileContractSchema,
 } from "./entities/reviews.js";
 import { executionOptionSelectionsSchema } from "./execution-config.js";
 import { modelSelectionSchema } from "./runtime-model.js";
@@ -26,10 +27,12 @@ export const reviewDestinationAvailabilitySchema = z.object({
 });
 export type ReviewDestinationAvailability = z.infer<typeof reviewDestinationAvailabilitySchema>;
 
-/** A run's review surface: the review row (null before the first comment) plus every comment, newest last. */
+/** A run's review surface: the review row (null until something hangs from it), its comments newest last, and its reviewed marks. */
 export const reviewDetailSchema = z.object({
   review: reviewContractSchema.nullable(),
   comments: z.array(reviewCommentContractSchema),
+  /** Only the connected account's own marks; another account's imported Viewed state is never presented here. */
+  reviewed_files: z.array(reviewedFileContractSchema),
   fix_authority: reviewFixAuthoritySchema,
   destinations: reviewDestinationAvailabilitySchema,
 });
@@ -63,6 +66,16 @@ export const createReviewCommentRequestSchema = z
     message: "A suggestion needs a line range, not a whole-file anchor",
   });
 export type CreateReviewCommentRequest = z.infer<typeof createReviewCommentRequestSchema>;
+
+/** Mark or unmark one file of the diff the reviewer is looking at; re-sending the same request retries a failed synchronization. */
+export const setReviewedFileRequestSchema = z
+  .object({
+    file_path: z.string().min(1),
+    diff_sha: z.string().min(1),
+    reviewed: z.boolean(),
+  })
+  .strict();
+export type SetReviewedFileRequest = z.infer<typeof setReviewedFileRequestSchema>;
 
 /** Refusals whose message the reviewer must read verbatim to act on them. */
 export const REVIEW_COMMENT_ERRORS = [

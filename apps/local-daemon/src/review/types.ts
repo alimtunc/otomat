@@ -1,6 +1,14 @@
-import type { Db, PullRequestRow, ReviewCommentRow, ReviewRow, RunRow } from "@otomat/db";
+import type {
+  Db,
+  PullRequestRow,
+  ReviewCommentRow,
+  ReviewedFileRow,
+  ReviewRow,
+  RunRow,
+} from "@otomat/db";
 import type {
   CommentFixProof,
+  SetReviewedFileRequest,
   ContextReference,
   ContextReviewComment,
   CreateReviewCommentRequest,
@@ -51,6 +59,16 @@ export interface PullRequestCommentInput {
   suggestion: string | null;
 }
 
+export interface ViewedFileState {
+  path: string;
+  viewed: boolean;
+}
+
+export interface ViewedFilesResult {
+  viewerLogin: string | null;
+  files: ViewedFileState[];
+}
+
 export interface ReviewServiceConfig {
   db: Db;
   /** Root of the run artifact dirs — review events land in the same per-run ledger. */
@@ -64,6 +82,9 @@ export interface ReviewServiceConfig {
     pullRequestId: string,
     input: PullRequestCommentInput,
   ): Promise<{ url: string }>;
+  /** Rejects with the reason review stores on the mark and shows the reviewer. */
+  syncViewedFile(pullRequestId: string, input: ViewedFileState): Promise<string | null>;
+  readViewedFiles(pullRequestId: string): Promise<ViewedFilesResult>;
 }
 
 /** Shared handles every review operation threads through — the module's equivalent of SupervisorState. */
@@ -87,6 +108,7 @@ export interface ReviewDiffResult {
 export interface ReviewDetailResult {
   review: ReviewRow | null;
   comments: ReviewCommentRow[];
+  reviewedFiles: ReviewedFileRow[];
   fixAuthority: ReviewFixAuthority;
   destinations: ReviewDestinationAvailability;
 }
@@ -138,6 +160,8 @@ export interface ReviewService {
   /** The same call retries a failed publication. */
   publishComment(ref: ReviewSubjectRef, commentId: string): Promise<ReviewCommentRow>;
   getFileBlobs(ref: ReviewSubjectRef, request: FileBlobsRequest): FileBlobsResult;
+  setReviewedFile(ref: ReviewSubjectRef, request: SetReviewedFileRequest): Promise<ReviewedFileRow>;
+  importViewedFiles(pullRequestId: string): Promise<void>;
   /** The selected open comments become one appended fix step; refused while a turn is in flight. */
   requestFix(run: RunRow, request: FixRequest): Promise<RunRow>;
   /** Post-settle hook: refreshes the diff projection and resolves comment anchors. */

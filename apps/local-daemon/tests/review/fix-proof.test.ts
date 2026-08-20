@@ -79,6 +79,8 @@ beforeEach(() => {
     repositories,
     appendRunStep: async () => run(),
     publishReviewComment: async () => ({ url: "https://example.invalid/1" }),
+    syncViewedFile: async () => "octocat",
+    readViewedFiles: async () => ({ viewerLogin: "octocat", files: [] }),
   });
 
   const acquired = worktrees.acquire({ owner: RUN_ID, branch: BRANCH });

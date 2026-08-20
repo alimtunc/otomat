@@ -17,6 +17,7 @@ export * from "./compete-group.js";
 export * from "./review.js";
 export * from "./review-comment.js";
 export * from "./review-comment-publication.js";
+export * from "./reviewed-file-sync.js";
 export * from "./pull-request.js";
 export * from "./pull-request-publication.js";
 export * from "./linear-write.js";

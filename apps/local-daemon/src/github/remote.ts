@@ -2,7 +2,7 @@ import {
   assertPublicationSucceeded,
   commandFailureDetail,
   commandSucceeded,
-} from "./cli-commands.js";
+} from "./cli/commands.js";
 import { GitHubCliError } from "./errors.js";
 import { maskRemoteUrl, parseGitHubRemoteUrl } from "./parse.js";
 import type { CommandRunner, ForcePushWithLeaseInput, GitHubRemote } from "./types.js";

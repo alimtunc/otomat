@@ -3,9 +3,10 @@ import type {
   ReviewCommentDestination,
   ReviewCommentPublicationState,
   ReviewCommentState,
+  ReviewedFileSyncState,
   ReviewState,
 } from "@otomat/domain";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { timestamps } from "./shared.js";
 
@@ -44,3 +45,24 @@ export const reviewComments = sqliteTable("review_comments", {
   fixed_by_session_id: text("fixed_by_session_id"),
   ...timestamps,
 });
+
+export const reviewedFiles = sqliteTable(
+  "reviewed_files",
+  {
+    id: text("id").primaryKey(),
+    review_id: text("review_id")
+      .notNull()
+      .references(() => reviews.id),
+    file_path: text("file_path").notNull(),
+    diff_sha: text("diff_sha").notNull(),
+    reviewed: integer("reviewed", { mode: "boolean" }).notNull(),
+    sync_status: text("sync_status").$type<ReviewedFileSyncState>().notNull().default("local"),
+    sync_error: text("sync_error"),
+    /** The GitHub account this mark was imported from or synced for; null while it never left Otomat. */
+    viewer_login: text("viewer_login"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("reviewed_files_review_path_unique").on(table.review_id, table.file_path),
+  ],
+);

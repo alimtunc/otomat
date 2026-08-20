@@ -318,6 +318,16 @@ const COMMENT = {
   fixed_by_session_id: null,
 };
 
+const REVIEWED_FILE = {
+  id: "rf1",
+  review_id: "rv1",
+  file_path: "src/thing.ts",
+  diff_sha: "sha-1",
+  reviewed: true,
+  sync_status: "synced",
+  sync_error: null,
+};
+
 it("fetches and parses the run diff (null diff allowed, never fabricated)", async () => {
   let calledUrl = "";
   const fetchMock: typeof fetch = async (input) => {
@@ -403,6 +413,7 @@ it("fetches the review surface and posts a pinned comment", async () => {
     return jsonResponse({
       review: { id: "rv1", subject_id: "run-1", status: "in_review" },
       comments: [COMMENT],
+      reviewed_files: [REVIEWED_FILE],
       fix_authority: { kind: "otomat", reason: "Otomat owns this branch." },
       destinations: { pr_review: false, reason: "This run has no pull request yet." },
     });
@@ -412,6 +423,7 @@ it("fetches the review surface and posts a pinned comment", async () => {
   const review = await client.getReviewDetail({ kind: "run", id: "run-1" });
   expect(review.review?.status).toBe("in_review");
   expect(review.comments[0].diff_sha).toBe("sha-1");
+  expect(review.reviewed_files[0]).toMatchObject({ file_path: "src/thing.ts", reviewed: true });
 
   const created = await client.addReviewComment(
     { kind: "run", id: "run-1" },

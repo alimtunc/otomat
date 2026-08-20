@@ -6,6 +6,7 @@ import type { GitHubPullRequest } from "./types.js";
 /** The one column set every path mirrors, so a publication, an adoption and a pass cannot drift apart. */
 export function mirroredColumns(provider: GitHubPullRequest): PullRequestPatch {
   return {
+    node_id: provider.nodeId,
     author_login: provider.authorLogin,
     url: provider.url,
     title: provider.title,

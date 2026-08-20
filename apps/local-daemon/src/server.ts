@@ -31,6 +31,7 @@ import { createReviewService } from "#review";
 import { createReexecSpawn, createSupervisor, type Supervisor } from "#supervisor";
 
 import { ensureDefaultProject, ensureDefaultRepository } from "./bootstrap.js";
+import { lateBinding } from "./late-binding.js";
 import { startMaintenancePasses } from "./maintenance.js";
 import {
   DAEMON_NAME,
@@ -90,24 +91,19 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     });
     // Review needs the supervisor's append capability while the supervisor needs review's
     // settle hook; the same late binding `state.advance` uses inside the supervisor.
-    let appendStepTarget: Supervisor | null = null;
-    let publishCommentTarget: GitHubService | null = null;
+    const supervisorBinding = lateBinding<Supervisor>("the supervisor");
+    const gitHubBinding = lateBinding<GitHubService>("GitHub");
     const review = createReviewService({
       db,
       dataDir,
       repositories,
-      appendRunStep: (runId, input) => {
-        if (appendStepTarget === null) {
-          return Promise.reject(new Error("review fix requested before the supervisor started"));
-        }
-        return appendStepTarget.appendStep(runId, input);
-      },
-      publishReviewComment: (runId, input) => {
-        if (publishCommentTarget === null) {
-          return Promise.reject(new Error("comment publication requested before GitHub started"));
-        }
-        return publishCommentTarget.publishReviewComment(runId, input);
-      },
+      appendRunStep: (runId, input) => supervisorBinding.on((it) => it.appendStep(runId, input)),
+      publishReviewComment: (runId, input) =>
+        gitHubBinding.on((it) => it.publishReviewComment(runId, input)),
+      syncViewedFile: (pullRequestId, input) =>
+        gitHubBinding.on((it) => it.syncViewedFile(pullRequestId, input)),
+      readViewedFiles: (pullRequestId) =>
+        gitHubBinding.on((it) => it.readViewedFiles(pullRequestId)),
     });
     const linear = createLinearService({
       db,
@@ -131,8 +127,13 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       cli: createGitHubCli(runCommand),
       generator: createPullRequestGenerator(runCommand),
       syncIssueLifecycle,
+      importViewedFiles: (pullRequestId) => {
+        void review.importViewedFiles(pullRequestId).catch((error: unknown) => {
+          console.error(`[otomat] viewed state import for ${pullRequestId} failed`, error);
+        });
+      },
     });
-    publishCommentTarget = github;
+    gitHubBinding.bind(github);
 
     const mainScript = process.argv[1];
     if (!mainScript) throw new Error("cannot determine daemon entrypoint for worker re-exec");
@@ -146,7 +147,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       syncIssueLifecycle,
       refreshPullRequests: () => github.refreshTrackedPullRequests(),
     });
-    appendStepTarget = supervisor;
+    supervisorBinding.bind(supervisor);
 
     const report = supervisor.reconcile();
     if (report.reconciled.length > 0) {

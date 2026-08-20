@@ -58,9 +58,10 @@ export function ReviewWorkbench({
   const filesLayout = usePanelGroupLayout("otomat.run-diff");
   const prefs = useSelector(diffPrefsStore);
   const interactions = useDiffInteractions({
-    subjectId: target.id,
+    target,
     diff,
     comments: review.comments,
+    reviewedFiles: review.reviewed_files,
     sort: prefs.sort,
     hideReviewed: prefs.hideReviewed,
   });
@@ -92,7 +93,9 @@ export function ReviewWorkbench({
       prefs={prefs}
       reviewedPaths={reviewed.paths}
       allReviewed={diff.files.length > 0 && reviewed.paths.size === diff.files.length}
+      unsyncedMarks={reviewed.unsynced}
       onReviewedChange={interactions.toggleReviewed}
+      onRetrySync={reviewed.retrySync}
       collapsed={collapsed}
       activePath={active.path}
       onActivate={active.select}

@@ -2,7 +2,15 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { getIssue, getRun, getWorkflowPreset, listProjects, listRepositories } from "@otomat/db";
+import {
+  getIssue,
+  getRun,
+  getWorkflowPreset,
+  insertReview,
+  insertReviewedFile,
+  listProjects,
+  listRepositories,
+} from "@otomat/db";
 import {
   projectContractSchema,
   registerRepositoryResponseSchema,
@@ -261,7 +269,7 @@ it("keeps reporting a detached-HEAD repository as available, since a launch fork
   );
 });
 
-it("deletes an idle repository with its runs and owning project", async () => {
+it("deletes an idle repository with its runs, reviewed marks and owning project", async () => {
   const app = makeApiApp(t);
   const created = await registerRepo(app, repo.root);
   seedRun(t.db, {
@@ -270,6 +278,14 @@ it("deletes an idle repository with its runs and owning project", async () => {
     runStatus: "completed",
     stepStatus: "succeeded",
     sessionStatus: "terminated",
+  });
+  insertReview(t.db, { id: "rv-del", subject_id: "r-del", status: "in_review" });
+  insertReviewedFile(t.db, {
+    id: "rf-del",
+    review_id: "rv-del",
+    file_path: "src/thing.ts",
+    diff_sha: "sha-1",
+    reviewed: true,
   });
 
   const res = await del(app, `/api/repositories/${created.repository.id}`);

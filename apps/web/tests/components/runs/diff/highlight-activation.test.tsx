@@ -49,7 +49,10 @@ function Reviewer() {
           onShowHidden={() => {}}
           prefs={DEFAULT_DIFF_PREFS}
           reviewedPaths={new Set()}
+          allReviewed={false}
+          unsyncedMarks={new Map()}
           onReviewedChange={() => {}}
+          onRetrySync={() => {}}
           collapsed={{ has: (path) => collapsed.has(path), set: () => {} }}
           activePath={null}
           onActivate={() => {}}

@@ -7,7 +7,9 @@ import {
   type RequestFixRequest,
   type ReviewCommentContract,
   type ReviewDetail,
+  type ReviewedFileContract,
   type ReviewTarget,
+  type SetReviewedFileRequest,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -38,6 +40,37 @@ function seedComment(
     };
   });
   client.invalidateQueries({ queryKey: queryKeys.reviewDetail(target) });
+}
+
+/** One mark per path, so the daemon's answer replaces the file's previous one rather than stacking on it. */
+function seedReviewedFile(
+  client: QueryClient,
+  target: ReviewTarget,
+  mark: ReviewedFileContract,
+): void {
+  client.setQueryData(queryKeys.reviewDetail(target), (current: ReviewDetail | undefined) => {
+    if (current === undefined) return current;
+    const known = current.reviewed_files.some((row) => row.file_path === mark.file_path);
+    return {
+      ...current,
+      reviewed_files: known
+        ? current.reviewed_files.map((row) => (row.file_path === mark.file_path ? mark : row))
+        : [...current.reviewed_files, mark],
+    };
+  });
+  client.invalidateQueries({ queryKey: queryKeys.reviewDetail(target) });
+}
+
+export function useSetReviewedFile(target: ReviewTarget) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: SetReviewedFileRequest) => daemon.setReviewedFile(target, request),
+    onSuccess: (mark) => seedReviewedFile(client, target, mark),
+    onError: () => {
+      client.invalidateQueries({ queryKey: queryKeys.reviewDetail(target) });
+      toast.error("Could not record this file as reviewed — is the daemon running?");
+    },
+  });
 }
 
 function commentErrorMessage(error: unknown): string {

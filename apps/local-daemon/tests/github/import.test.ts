@@ -14,7 +14,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createRepositoryResolver } from "#git";
 import { createGitHubService, PullRequestImportRefusal, type GitHubService } from "#github";
-import { createReviewService, type ReviewService } from "#review";
+import { createReviewService, type ReviewService, type ViewedFilesResult } from "#review";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { FakeGitHubCli, providerPullRequest } from "../support/github.js";
@@ -29,6 +29,8 @@ let github: GitHubService;
 let review: ReviewService;
 let remotePath: string;
 let headSha: string;
+let viewedImports: string[] = [];
+let remoteViewed: ViewedFilesResult = { viewerLogin: "octocat", files: [] };
 
 function git(cwd: string, ...args: string[]): string {
   return execFileSync("git", args, { cwd, encoding: "utf8" }).toString();
@@ -74,7 +76,15 @@ beforeEach(() => {
     db: fix.db,
     worktreesRoot: join(fix.dataDir, "worktrees"),
   });
-  github = createGitHubService({ db: fix.db, dataDir: fix.dataDir, repositories, cli });
+  viewedImports = [];
+  remoteViewed = { viewerLogin: "octocat", files: [] };
+  github = createGitHubService({
+    db: fix.db,
+    dataDir: fix.dataDir,
+    repositories,
+    cli,
+    importViewedFiles: (pullRequestId) => viewedImports.push(pullRequestId),
+  });
   review = createReviewService({
     db: fix.db,
     dataDir: fix.dataDir,
@@ -83,6 +93,8 @@ beforeEach(() => {
       throw new Error("append not expected");
     },
     publishReviewComment: async () => ({ url: "https://github.com/acme/otomat/pull/7#c1" }),
+    syncViewedFile: async () => "octocat",
+    readViewedFiles: async () => remoteViewed,
   });
 });
 
@@ -93,6 +105,7 @@ afterEach(() => {
 
 it("adopts a verified pull request with its evidence and fetches its head read-only", async () => {
   const attached = await github.attachPullRequest(ISSUE_ID, { reference: "#7" });
+  expect(viewedImports).toEqual([attached.id]);
 
   expect(attached).toMatchObject({
     issue_id: ISSUE_ID,
@@ -173,6 +186,18 @@ it("fetches and reviews a mirrored pull request that no issue and no run own", a
   const target = { kind: "pull_request", id: entry.id } as const;
   expect(review.getDiff(target).diff?.files.map((file) => file.path)).toEqual(["contributed.txt"]);
   expect(review.getReviewDetail(target).fixAuthority.kind).toBe("external");
+
+  expect(viewedImports).toContain(entry.id);
+  remoteViewed = { viewerLogin: "octocat", files: [{ path: "contributed.txt", viewed: true }] };
+  await review.importViewedFiles(entry.id);
+  expect(review.getReviewDetail(target).reviewedFiles).toMatchObject([
+    {
+      file_path: "contributed.txt",
+      reviewed: true,
+      sync_status: "synced",
+      viewer_login: "octocat",
+    },
+  ]);
 });
 
 it("closes the local review and execution projection once GitHub confirms the merge", async () => {

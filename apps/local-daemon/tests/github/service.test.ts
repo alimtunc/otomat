@@ -79,6 +79,7 @@ describe("GitHubService", () => {
   function service(
     worktreeService: GitWorktreeService = worktrees,
     generator?: GitHubServiceConfig["generator"],
+    importViewedFiles?: GitHubServiceConfig["importViewedFiles"],
   ) {
     const config: GitHubServiceConfig = {
       db: fix.db,
@@ -92,6 +93,7 @@ describe("GitHubService", () => {
       idFactory: () => "pr-local-1",
     };
     if (generator) config.generator = generator;
+    if (importViewedFiles) config.importViewedFiles = importViewedFiles;
     return createGitHubService(config);
   }
 
@@ -143,6 +145,73 @@ describe("GitHubService", () => {
       startSide: "RIGHT",
       body: "rename these\n\n```suggestion\nsecond\n```",
     });
+  });
+
+  it("imports the viewed state once the publication it accepted has opened the pull request", async () => {
+    const imported: string[] = [];
+    const github = service(worktrees, undefined, (id) => imported.push(id));
+
+    const view = await github.publish(run(), READY_REQUEST);
+    expect(imported).toEqual([]);
+    await github.settlePublications();
+
+    expect(getPullRequestForRun(fix.db, RUN_ID)?.number).toBe(42);
+    expect(imported).toEqual([view.row.id]);
+  });
+
+  it("reads the account's own viewed state and records the node id its mutations need", async () => {
+    insertPullRequest(fix.db, {
+      id: "pr-viewed",
+      issue_id: "i1",
+      run_id: RUN_ID,
+      number: 7,
+      url: "https://github.com/acme/app/pull/7",
+      status: "open",
+      publication_status: "created",
+      title: "Ship it",
+      head_ref: BRANCH,
+    });
+    cli.viewedFiles = [
+      { path: "change.txt", state: "VIEWED" },
+      { path: "other.txt", state: "DISMISSED" },
+    ];
+
+    await expect(service().readViewedFiles("pr-viewed")).resolves.toEqual({
+      viewerLogin: "octocat",
+      files: [
+        { path: "change.txt", viewed: true },
+        { path: "other.txt", viewed: false },
+      ],
+    });
+    expect(getPullRequestForRun(fix.db, RUN_ID)?.node_id).toBe(cli.provider.nodeId);
+
+    await service().syncViewedFile("pr-viewed", { path: "change.txt", viewed: false });
+    expect(cli.viewedFileInputs).toEqual([
+      {
+        cwd: worktreePath,
+        pullRequestNodeId: cli.provider.nodeId,
+        path: "change.txt",
+        viewed: false,
+      },
+    ]);
+  });
+
+  it("refuses to synchronize a viewed file before the pull request has been read once", async () => {
+    insertPullRequest(fix.db, {
+      id: "pr-unread",
+      issue_id: "i1",
+      run_id: RUN_ID,
+      number: 7,
+      url: "https://github.com/acme/app/pull/7",
+      status: "open",
+      publication_status: "created",
+      title: "Ship it",
+      head_ref: BRANCH,
+    });
+
+    await expect(
+      service().syncViewedFile("pr-unread", { path: "change.txt", viewed: true }),
+    ).rejects.toMatchObject({ code: "pr_node_missing" });
   });
 
   it("refuses to publish a review comment with no pull request to anchor it on", async () => {

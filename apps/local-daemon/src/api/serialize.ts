@@ -7,6 +7,7 @@ import type {
   PullRequestRow,
   RepositoryRow,
   ReviewCommentRow,
+  ReviewedFileRow,
   ReviewRow,
   RunContributionRow,
   RunRow,
@@ -28,6 +29,7 @@ import {
   repositoryContractSchema,
   reviewCommentContractSchema,
   reviewContractSchema,
+  reviewedFileContractSchema,
   runContractSchema,
   runContributionContractSchema,
   skillContractSchema,
@@ -47,6 +49,7 @@ import {
   type RepositoryContract,
   type ReviewCommentContract,
   type ReviewContract,
+  type ReviewedFileContract,
   type RunContract,
   type RunContributionContract,
   type RunPlan,
@@ -165,6 +168,10 @@ export function toReview(row: ReviewRow): ReviewContract {
 
 export function toReviewComment(row: ReviewCommentRow): ReviewCommentContract {
   return reviewCommentContractSchema.parse(row);
+}
+
+export function toReviewedFile(row: ReviewedFileRow): ReviewedFileContract {
+  return reviewedFileContractSchema.parse(row);
 }
 
 /** A row carries its evidence as stored JSON; parsing it strictly means a corrupt audit is reported, never shown as "no evidence". */
