@@ -2,6 +2,7 @@ import type { ReviewCommentContract, ReviewDiffContract } from "@otomat/domain";
 import { nextUnreviewedFile, revealAndFocus } from "@web/components/runs/diff/diff-nav";
 import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
 import type { DiffSortMode } from "@web/components/runs/diff/prefs/prefs";
+import type { RevealBlock } from "@web/components/runs/diff/scroll";
 import { useActiveDiffFile, type ActiveDiffFile } from "@web/components/runs/diff/use-active-file";
 import {
   useCollapsedFiles,
@@ -17,6 +18,12 @@ import {
 import { reviewCommentDomId } from "@web/components/runs/review/comment/anchor";
 import { partitionComments, type PartitionedComments } from "@web/components/runs/review/partition";
 import { useBackNavigation } from "@web/components/shell/use-back-navigation";
+import { useLayoutEffect, useState } from "react";
+
+interface PendingReveal {
+  domId: string;
+  block: RevealBlock;
+}
 
 export interface DiffInteractionsInput {
   /** Keys the reviewed-file fingerprints and the active-file selection. */
@@ -50,17 +57,25 @@ export function useDiffInteractions(input: DiffInteractionsInput): DiffInteracti
     hideReviewed: input.hideReviewed,
     reviewedPaths: reviewed.paths,
     commentedPaths: partition.commentedPaths,
+    activePath: active.path,
   });
+  const [revealing, setRevealing] = useState<PendingReveal | null>(null);
 
   const revealFile = (path: string): void => {
     active.select(path);
     collapsed.set(path, false);
-    // The card only has its final height once the expand — and any file the mark hid — has painted.
-    requestAnimationFrame(() => {
-      const card = document.getElementById(diffFileDomId({ path }));
-      if (card !== null) revealAndFocus(card, "start");
-    });
+    setRevealing({ domId: diffFileDomId({ path }), block: "start" });
   };
+
+  // Resolving nothing schedules no render, so the retry has to ride every later one.
+  // otomat-allow-effect: scrolling to a card measures the DOM React has just committed.
+  useLayoutEffect(() => {
+    if (revealing === null) return;
+    const target = document.getElementById(revealing.domId);
+    if (target === null) return;
+    revealAndFocus(target, revealing.block);
+    setRevealing(null);
+  });
 
   const toggleReviewed = (path: string, next: boolean): void => {
     reviewed.setReviewed(path, next);
@@ -75,11 +90,7 @@ export function useDiffInteractions(input: DiffInteractionsInput): DiffInteracti
       active.select(comment.file_path);
       collapsed.set(comment.file_path, false);
     }
-    // The anchor only exists once the card it lives in has rendered expanded.
-    requestAnimationFrame(() => {
-      const anchor = document.getElementById(reviewCommentDomId(comment.id));
-      if (anchor !== null) revealAndFocus(anchor, "center");
-    });
+    setRevealing({ domId: reviewCommentDomId(comment.id), block: "center" });
   };
 
   useDiffKeyboardNav({

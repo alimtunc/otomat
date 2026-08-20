@@ -27,9 +27,10 @@ export function useIssuePullRequests(issueId: string) {
   });
 }
 
-export function useAttachedPullRequest(pullRequestId: string) {
+/** The reviewer's single read: the mirrored pull request and the issue resolved for it. */
+export function usePullRequestReviewContext(pullRequestId: string) {
   return useQuery({
     queryKey: queryKeys.pullRequest(pullRequestId),
-    queryFn: () => daemon.getAttachedPullRequest(pullRequestId),
+    queryFn: () => daemon.getPullRequestReviewContext(pullRequestId),
   });
 }

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { PullRequestContract } from "@otomat/domain";
+import type { PullRequestReviewContext } from "@otomat/domain";
 import type { BreadcrumbItem } from "@otomat/ui";
 import { PullRequestDiffView } from "@web/components/pull-requests/diff-view";
 import type { ReviewDiffViewProps } from "@web/components/runs/diff/review-view";
@@ -7,10 +7,12 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mount } from "#support/mount";
+import { pullRequestReviewContext } from "#support/pull-request";
 
 interface FakePullRequestQuery {
-  data: PullRequestContract | undefined;
+  data: PullRequestReviewContext | undefined;
   isError: boolean;
+  dataUpdatedAt: number;
 }
 
 type ReviewedProps = Pick<ReviewDiffViewProps, "target" | "workspace">;
@@ -18,51 +20,17 @@ type ReviewedProps = Pick<ReviewDiffViewProps, "target" | "workspace">;
 let query: FakePullRequestQuery;
 let reviewed: ReviewedProps | null = null;
 
-function pullRequest(overrides: Partial<PullRequestContract> = {}): PullRequestContract {
-  return {
-    id: "pr-1",
-    issue_id: null,
-    run_id: null,
-    provider: "github",
-    origin: "imported",
-    provenance: "external",
-    author_login: "contrib",
-    review_decision: null,
-    checks_state: "none",
-    mergeable: "mergeable",
-    requested_reviewers: [],
-    provider_updated_at: null,
-    head_sha: "a1b2c3d4",
-    attachment: null,
-    number: 142,
-    url: "https://github.com/alimtunc/otomat/pull/142",
-    status: "open",
-    publication_status: "created",
-    title: "Vendor anti-slop",
-    body: null,
-    head_ref: "contrib/fix",
-    base_ref: "main",
-    commit_subject: null,
-    commit_body: null,
-    generator: null,
-    published_head_sha: null,
-    published_diff_sha: null,
-    error_code: null,
-    error_message: null,
-    ...overrides,
-  };
-}
-
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ pullRequestId: "pr-1" }),
+  Link: ({ children }: { children?: ReactNode }) => <a>{children}</a>,
 }));
 
 vi.mock("@web/api/prs/queries", () => ({
-  useAttachedPullRequest: () => query,
+  usePullRequestReviewContext: () => query,
 }));
 
-vi.mock("@web/api/prs/mutations", () => ({
-  useRefreshPullRequest: () => ({ isPending: false, mutate: vi.fn() }),
+vi.mock("@web/api/prs/use-reconciliation", () => ({
+  usePullRequestReconciliation: () => ({ running: false, failure: null, retry: vi.fn() }),
 }));
 
 vi.mock("@web/components/runs/diff/review-view", () => ({
@@ -81,11 +49,13 @@ vi.mock("@web/components/shell/route-shell", () => ({
     active,
     back,
     breadcrumbs,
+    breadcrumbExtra,
     children,
   }: {
     active: string;
     back: { label: string } | null;
     breadcrumbs: BreadcrumbItem[];
+    breadcrumbExtra: ReactNode;
     children: ReactNode;
   }) => (
     <div data-active-section={active}>
@@ -97,6 +67,7 @@ vi.mock("@web/components/shell/route-shell", () => ({
           </li>
         ))}
       </ol>
+      <div data-context>{breadcrumbExtra}</div>
       {children}
     </div>
   ),
@@ -113,11 +84,12 @@ async function render() {
       label: li.textContent,
       href: li.getAttribute("data-href"),
     })),
+    context: container.querySelector("[data-context]")?.textContent ?? "",
   };
 }
 
 beforeEach(() => {
-  query = { data: pullRequest(), isError: false };
+  query = { data: pullRequestReviewContext(), isError: false, dataUpdatedAt: 0 };
   reviewed = null;
 });
 
@@ -147,7 +119,11 @@ describe("PullRequestDiffView", () => {
   });
 
   it("reviews the pull request it read, against a workspace it never holds", async () => {
-    query = { data: pullRequest({ issue_id: "issue-1" }), isError: false };
+    query = {
+      data: pullRequestReviewContext({ issue_id: "issue-1" }),
+      isError: false,
+      dataUpdatedAt: 0,
+    };
     await render();
 
     expect(reviewed).toEqual({
@@ -157,18 +133,72 @@ describe("PullRequestDiffView", () => {
   });
 
   it("never names a pull request it has not read", async () => {
-    query = { data: undefined, isError: false };
+    query = { data: undefined, isError: false, dataUpdatedAt: 0 };
     const loading = await render();
     expect(loading.crumbs[1]?.label).toBe("Loading pull request…");
 
-    query = { data: undefined, isError: true };
+    query = { data: undefined, isError: true, dataUpdatedAt: 0 };
     const failed = await render();
     expect(failed.crumbs[1]?.label).toBe("Pull request unavailable");
     expect(failed.container.textContent).toContain("Could not load this pull request");
   });
 
+  it("names the issue a reference resolves, without claiming Otomat owns it", async () => {
+    query = {
+      data: pullRequestReviewContext(
+        {},
+        {
+          id: "issue-1",
+          identifier: "OTO-125",
+          title: "Stabilise the reviewer",
+          status: "running",
+          evidence: "reference",
+        },
+      ),
+      isError: false,
+      dataUpdatedAt: 0,
+    };
+    const view = await render();
+
+    expect(view.context).toContain("OTO-125");
+    expect(view.context).toContain("Stabilise the reviewer");
+    expect(view.context).toContain("Referenced");
+    expect(reviewed?.workspace).toEqual({ open: false, issueId: null });
+  });
+
+  it("says an attached pull request is held by a workspace here", async () => {
+    query = {
+      data: pullRequestReviewContext(
+        { issue_id: "issue-1" },
+        {
+          id: "issue-1",
+          identifier: "OTO-125",
+          title: "Stabilise the reviewer",
+          status: "running",
+          evidence: "attachment",
+        },
+      ),
+      isError: false,
+      dataUpdatedAt: 0,
+    };
+    const view = await render();
+
+    expect(view.context).toContain("Attached");
+  });
+
+  it("stays reviewable and honest when no issue could be resolved", async () => {
+    const view = await render();
+
+    expect(view.context).toBe("No linked issue");
+    expect(view.container.querySelector('[data-testid="reviewer"]')).not.toBeNull();
+  });
+
   it("keeps the shell around a pull request whose head was never fetched", async () => {
-    query = { data: pullRequest({ head_sha: null }), isError: false };
+    query = {
+      data: pullRequestReviewContext({ head_sha: null }),
+      isError: false,
+      dataUpdatedAt: 0,
+    };
     const view = await render();
 
     expect(view.container.querySelector('[data-testid="reviewer"]')).toBeNull();

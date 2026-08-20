@@ -24,6 +24,11 @@ function daemonErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+interface RefreshPullRequestVariables {
+  /** Reports the failure as a toast; the reviewer's automatic pass stays silent and shows a notice. */
+  announce: boolean;
+}
+
 function invalidateIssuePullRequests(client: QueryClient, issueId: string | null): void {
   if (issueId !== null) {
     client.invalidateQueries({ queryKey: queryKeys.issuePullRequests(issueId) });
@@ -111,29 +116,35 @@ export function useAttachPullRequest(issueId: string) {
   return useMutation({
     mutationFn: (request: AttachPullRequestRequest) => daemon.attachPullRequest(issueId, request),
     onSuccess: (pullRequest) => {
-      client.setQueryData(queryKeys.pullRequest(pullRequest.id), pullRequest);
       invalidateIssuePullRequests(client, issueId);
       toast.success(`Pull request #${pullRequest.number ?? ""} attached`);
     },
   });
 }
 
-/** A pull request the inbox synced has no issue to invalidate around, so the id is optional. */
-export function useRefreshPullRequest(issueId: string | null) {
+/**
+ * Keyed by pull request so the reviewer's automatic pass and the operator's own Refresh are one
+ * in-flight reconciliation. A pull request the inbox synced has no issue to invalidate around.
+ */
+export function useRefreshPullRequest(pullRequestId: string, issueId: string | null) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (pullRequestId: string) => daemon.refreshPullRequest(pullRequestId),
-    onSuccess: (pullRequest) => {
-      client.setQueryData(queryKeys.pullRequest(pullRequest.id), pullRequest);
+    mutationKey: queryKeys.pullRequestRefresh(pullRequestId),
+    mutationFn: (_variables: RefreshPullRequestVariables) =>
+      daemon.refreshPullRequest(pullRequestId),
+    onSuccess: (context) => {
+      client.setQueryData(queryKeys.pullRequest(context.pull_request.id), context);
       invalidateIssuePullRequests(client, issueId);
       client.invalidateQueries({
-        queryKey: queryKeys.reviewDiff({ kind: "pull_request", id: pullRequest.id }),
+        queryKey: queryKeys.reviewDiff({ kind: "pull_request", id: context.pull_request.id }),
       });
     },
-    onError: (error) =>
-      toast.error(
-        pullRequestImportRefusal(error) ?? "Could not refresh the pull request from GitHub.",
-      ),
+    onError: (error, variables) => {
+      if (variables.announce)
+        toast.error(
+          pullRequestImportRefusal(error) ?? "Could not refresh the pull request from GitHub.",
+        );
+    },
   });
 }
 
