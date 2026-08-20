@@ -45,6 +45,38 @@
         "files": ["**/components/reconnecting-bar.tsx"],
         "rules": ["react-doctor/prefer-tag-over-role"]
       }
-    ]
+    ],
+    "tags": ["design", "migration-hint", "test-noise"]
+  },
+  "$schema": "https://react.doctor/schema/config.json",
+  "projects": ["apps/web", "packages/ui"],
+  "scope": "changed",
+  "base": "main",
+  "blocking": "warning",
+  "noScore": true,
+  "supplyChain": {
+    "enabled": false
+  },
+  "deadCode": false,
+  "adoptExistingLintConfig": false,
+  "categories": {
+    "Maintainability": "off",
+    "Performance": "off",
+    "Security": "off"
+  },
+  "rules": {
+    "react-doctor/jsx-key": "off",
+    "react-doctor/jsx-no-duplicate-props": "off",
+    "react-doctor/jsx-no-undef": "off",
+    "react-doctor/no-danger-with-children": "off",
+    "react-doctor/no-direct-mutation-state": "off",
+    "react-doctor/no-find-dom-node": "off",
+    "react-doctor/no-nested-component-definition": "off",
+    "react-doctor/no-render-return-value": "off",
+    "react-doctor/no-set-state-in-render": "off",
+    "react-doctor/no-string-refs": "off",
+    "react-doctor/no-unstable-nested-components": "off",
+    "react-doctor/rules-of-hooks": "off",
+    "react-doctor/void-dom-elements-no-children": "off"
   }
 }

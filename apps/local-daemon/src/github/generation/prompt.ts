@@ -14,9 +14,9 @@ function truncate(text: string, budget: number): string {
 
 function issueSection(input: GenerationInput): string {
   const heading =
-    input.issue.identifier === null
+    input.issue.sourceIdentifier === null
       ? `Issue: ${input.issue.title}`
-      : `Issue ${input.issue.identifier}: ${input.issue.title}`;
+      : `Issue ${input.issue.sourceIdentifier}: ${input.issue.title}`;
   const body = input.issue.body?.trim();
   return body ? `${heading}\n${truncate(body, ISSUE_BODY_BUDGET_CHARS)}` : heading;
 }

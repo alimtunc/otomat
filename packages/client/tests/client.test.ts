@@ -112,8 +112,9 @@ it("parses the runtime catalog with kind and availability", async () => {
 });
 
 it("throws DaemonRequestError on a non-2xx response", async () => {
-  const fetchMock: typeof fetch = async () => jsonResponse({ error: "run_not_found" }, 404);
-  const client = createDaemonClient({ fetch: fetchMock });
+  const client = createDaemonClient({
+    fetch: async () => jsonResponse({ error: "run_not_found" }, 404),
+  });
   await expect(client.getRun("missing")).rejects.toBeInstanceOf(DaemonRequestError);
 });
 
@@ -637,9 +638,10 @@ it("registers a repository and parses the project + repository pair", async () =
 });
 
 it("surfaces the daemon's error payload on a refused registration", async () => {
-  const fetchMock: typeof fetch = async () =>
-    jsonResponse({ error: "head_detached", message: "The repository's HEAD is detached." }, 400);
-  const client = createDaemonClient({ fetch: fetchMock });
+  const client = createDaemonClient({
+    fetch: async () =>
+      jsonResponse({ error: "head_detached", message: "The repository's HEAD is detached." }, 400),
+  });
 
   const error = await client.registerRepository({ path: "/tmp/x" }).catch((e: unknown) => e);
   expect(error).toBeInstanceOf(DaemonRequestError);

@@ -20,8 +20,8 @@ import { fieldErrorProps } from "@web/lib/form";
 export interface ProviderWaitScheduleDialogProps {
   runId: string;
   wait: StepProviderWait;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  openedAt: string;
+  onClose: () => void;
 }
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -33,29 +33,35 @@ const PRESET_HOURS = [1, 3];
 export function ProviderWaitScheduleDialog({
   runId,
   wait,
-  open,
-  onOpenChange,
+  openedAt,
+  onClose,
 }: ProviderWaitScheduleDialogProps) {
   const schedule = useScheduleProviderResume(runId);
-  const suggestion = wait.provider_resume_at ?? new Date(Date.now() + HOUR_MS).toISOString();
+  const suggestion =
+    wait.provider_resume_at ?? new Date(new Date(openedAt).getTime() + HOUR_MS).toISOString();
   const form = useForm({
     defaultValues: { at: toDateTimeLocal(new Date(suggestion)) },
     onSubmit: async ({ value }) => {
       const instant = fromDateTimeLocal(value.at);
       if (instant === null) return;
       await schedule.mutateAsync(instant);
-      onOpenChange(false);
+      onClose();
     },
   });
 
-  const pick = (hours: number): void => {
-    schedule.mutate(new Date(Date.now() + hours * HOUR_MS).toISOString(), {
-      onSuccess: () => onOpenChange(false),
+  const pick = (hours: number, now: number): void => {
+    schedule.mutate(new Date(now + hours * HOUR_MS).toISOString(), {
+      onSuccess: onClose,
     });
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
       <DialogContent aria-label="Schedule this resume">
         <DialogHeader>
           <DialogTitle>Schedule the resume</DialogTitle>
@@ -79,7 +85,7 @@ export function ProviderWaitScheduleDialog({
                   variant="outline"
                   size="sm"
                   disabled={schedule.isPending}
-                  onClick={() => pick(hours)}
+                  onClick={() => pick(hours, Date.now())}
                 >
                   In {hours} {hours === 1 ? "hour" : "hours"}
                 </Button>
@@ -114,7 +120,7 @@ export function ProviderWaitScheduleDialog({
             </form.Field>
           </DialogBody>
           <DialogFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
               Keep waiting
             </Button>
             <form.Subscribe selector={(state) => state.canSubmit}>

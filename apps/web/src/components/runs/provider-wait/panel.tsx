@@ -12,7 +12,7 @@ export interface ProviderWaitPanelProps {
 
 /** The suspended step where the operator meets it: what the provider said, when Otomat will pick the work back up, and every way to change that. */
 export function ProviderWaitPanel({ runId, target }: ProviderWaitPanelProps) {
-  const [scheduling, setScheduling] = useState(false);
+  const [scheduleOpenedAt, setScheduleOpenedAt] = useState<string | null>(null);
   const resume = useResumeRun(runId);
   const schedule = useScheduleProviderResume(runId);
   const { wait } = target;
@@ -60,7 +60,12 @@ export function ProviderWaitPanel({ runId, target }: ProviderWaitPanelProps) {
             Resume when available
           </Button>
         ) : null}
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => setScheduling(true)}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() => setScheduleOpenedAt(new Date().toISOString())}
+        >
           <Icon name="timer" aria-hidden />
           Change schedule…
         </Button>
@@ -71,12 +76,14 @@ export function ProviderWaitPanel({ runId, target }: ProviderWaitPanelProps) {
           </Button>
         )}
       </div>
-      <ProviderWaitScheduleDialog
-        runId={runId}
-        wait={wait}
-        open={scheduling}
-        onOpenChange={setScheduling}
-      />
+      {scheduleOpenedAt === null ? null : (
+        <ProviderWaitScheduleDialog
+          runId={runId}
+          wait={wait}
+          openedAt={scheduleOpenedAt}
+          onClose={() => setScheduleOpenedAt(null)}
+        />
+      )}
     </div>
   );
 }

@@ -49,7 +49,7 @@ describe("buildDaemonEnv", () => {
     expect(JSON.stringify(env)).not.toContain("lin_api");
   });
 
-  it("never inherits a restore action into a normal daemon start", () => {
+  it("never inherits a process mode into a normal daemon start", () => {
     const env = buildDaemonEnv({
       port: 1,
       dbPath: "d",
@@ -58,11 +58,15 @@ describe("buildDaemonEnv", () => {
       baseEnv: {
         OTOMAT_MAINTENANCE_ACTION: "restore",
         OTOMAT_RESTORE_BACKUP: "/untrusted/backup.sqlite",
+        OTOMAT_WORKER_JOB: "serialized-worker-job",
+        OTOMAT_WORKER_START_TOKEN: "worker-start-token",
       },
     });
 
     expect(env.OTOMAT_MAINTENANCE_ACTION).toBeUndefined();
     expect(env.OTOMAT_RESTORE_BACKUP).toBeUndefined();
+    expect(env.OTOMAT_WORKER_JOB).toBeUndefined();
+    expect(env.OTOMAT_WORKER_START_TOKEN).toBeUndefined();
   });
 
   it("never inherits a worktrees root or a CORS allowlist from the launching shell", () => {

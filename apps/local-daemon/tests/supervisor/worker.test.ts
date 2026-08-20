@@ -2,16 +2,11 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { WORKER_JOB_ENV } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readEventsJsonl } from "#runtime";
-import {
-  parseJob,
-  runWorkerJob,
-  WORKER_JOB_ENV,
-  writeTerminalMarker,
-  type SupervisedJob,
-} from "#supervisor";
+import { parseJob, runWorkerJob, writeTerminalMarker, type SupervisedJob } from "#supervisor";
 
 let dir = "";
 

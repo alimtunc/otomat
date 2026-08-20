@@ -11,6 +11,7 @@ import {
   MAINTENANCE_ACTION_ENV,
   MAINTENANCE_RESTORE_ACTION,
   RESTORE_BACKUP_ENV,
+  WORKER_JOB_ENV,
 } from "@otomat/domain";
 
 import { formatStartupDiagnostic, runRestoreMaintenance } from "#data-safety";
@@ -66,7 +67,7 @@ if (process.env[MAINTENANCE_ACTION_ENV] === MAINTENANCE_RESTORE_ACTION) {
         process.exitCode = 1;
       });
   }
-} else if (process.env.OTOMAT_WORKER_JOB) {
+} else if (process.env[WORKER_JOB_ENV]) {
   void runWorkerMain();
 } else if (!process.env.VITEST) {
   void startDaemon()

@@ -29,12 +29,6 @@ export interface RunEventWindowProjection {
   olderCursor: number | null;
 }
 
-/**
- * Reads a run's persisted events in `seq` order — the projection OTO-9 serves
- * over SSE. The persisted ledger, never the adapter's in-memory state, is the
- * source of truth for any UI/API surface. A row that fails envelope validation
- * is skipped, so one malformed row can never blank out the whole run's stream.
- */
 export function readRunEvents(
   db: Db,
   runId: string,

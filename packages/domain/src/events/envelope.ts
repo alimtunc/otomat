@@ -48,11 +48,6 @@ export const EVENT_TYPES = [
 
 export type EventType = (typeof EVENT_TYPES)[number];
 
-/**
- * Canonical Otomat event envelope. `seq` is assigned per-run by the daemon at
- * persistence time (OTO-7 owns the ledger/seq allocator); OTO-5 only fixes the
- * shape so storage and contracts agree.
- */
 export const eventEnvelopeSchema = z.object({
   id: z.string(),
   run_id: z.string(),

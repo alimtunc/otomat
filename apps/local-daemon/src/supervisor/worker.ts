@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { resolvedAgentConfigSchema } from "@otomat/domain";
+import { resolvedAgentConfigSchema, WORKER_JOB_ENV, WORKER_START_TOKEN_ENV } from "@otomat/domain";
 import { z } from "zod";
 
 import { composeTurnPrompt } from "#agents";
@@ -14,8 +14,8 @@ import {
 } from "#runtime";
 
 import { buildTerminalMarker } from "./markers.js";
-import { waitForWorkerStart, WORKER_START_TOKEN_ENV } from "./start-gate.js";
-import { WORKER_JOB_ENV, type SupervisedJob } from "./types.js";
+import { waitForWorkerStart } from "./start-gate.js";
+import { type SupervisedJob } from "./types.js";
 
 const supervisedJobSchema = z.object({
   runId: z.string(),

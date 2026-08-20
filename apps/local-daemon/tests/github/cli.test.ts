@@ -92,8 +92,7 @@ describe("GitHub CLI adapter", () => {
     });
   });
 
-  /** OTO-120: a zero-length stdin write races a fast child into EPIPE, so a remote that resolved read as absent. */
-  it("keeps a remote whose push URL exited zero under a stdin pipe error", async () => {
+  it("keeps a zero-exit remote when an empty-stdin race reports EPIPE", async () => {
     const runner = fakeRunner([
       ok("origin\n"),
       { stdout: "git@github.com:acme/otomat.git\n", stderr: "", exitCode: 0, errorCode: "EPIPE" },

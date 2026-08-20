@@ -1,6 +1,6 @@
 import type { IssueReference, IssueReferenceSurface } from "../contracts/pull-request-import.js";
 
-/** Bounded on both sides so an identifier is read as one value: `OTO-1190` yields itself, and the `119` in `daemon 119` yields nothing. */
+/** Bounded on both sides so suffix digits stay in the identifier and unrelated prose digits do not match. */
 const IDENTIFIER = /(?<![A-Za-z0-9])[A-Za-z][A-Za-z0-9]*-\d+(?![A-Za-z0-9])/g;
 
 const EXCERPT_LIMIT = 120;

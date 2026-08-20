@@ -26,7 +26,6 @@ export { ProviderResumeRefusedError } from "./provider-wait/schedule.js";
 export { closeMergedIssue, closeMergedRun, type MergeClosureConfig } from "./merge-closure.js";
 export { buildTerminalMarker } from "./markers.js";
 export { createReexecSpawn, isProcessAlive, killProcessGroup } from "./process.js";
-export { WORKER_START_TOKEN_ENV } from "./start-gate.js";
 export { reconcileRuns } from "./reconcile.js";
 export { startIntervalPass, type IntervalPass } from "./interval-pass.js";
 export { createSupervisor } from "./supervisor.js";

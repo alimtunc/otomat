@@ -1,13 +1,10 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
-import { releaseWorkerStart, WORKER_START_TOKEN_ENV } from "./start-gate.js";
-import {
-  WORKER_JOB_ENV,
-  type ProcessExit,
-  type SessionProcess,
-  type SupervisedJob,
-} from "./types.js";
+import { WORKER_JOB_ENV, WORKER_START_TOKEN_ENV } from "@otomat/domain";
+
+import { releaseWorkerStart } from "./start-gate.js";
+import { type ProcessExit, type SessionProcess, type SupervisedJob } from "./types.js";
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {

@@ -4,10 +4,10 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { WORKER_JOB_ENV, WORKER_START_TOKEN_ENV } from "@otomat/domain";
+
 import {
   killProcessGroup,
-  WORKER_JOB_ENV,
-  WORKER_START_TOKEN_ENV,
   type ProcessExit,
   type SessionProcess,
   type SpawnSession,

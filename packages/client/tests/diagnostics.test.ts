@@ -11,9 +11,12 @@ const unreachableHost: typeof fetch = async () => {
 };
 
 it("carries the method, path and the daemon's correlation id on a failed request", async () => {
-  const fetchMock: typeof fetch = async () =>
-    jsonResponse({ error: "run_launch_failed" }, 500, { [CORRELATION_ID_HEADER]: "req_abc123" });
-  const client = createDaemonClient({ fetch: fetchMock });
+  const client = createDaemonClient({
+    fetch: async () =>
+      jsonResponse({ error: "run_launch_failed" }, 500, {
+        [CORRELATION_ID_HEADER]: "req_abc123",
+      }),
+  });
 
   const error = await client.startRun({ prompt: "go" }).catch((thrown: unknown) => thrown);
 
@@ -26,8 +29,9 @@ it("carries the method, path and the daemon's correlation id on a failed request
 });
 
 it("reports a null correlation id rather than inventing one", async () => {
-  const fetchMock: typeof fetch = async () => jsonResponse({ error: "run_not_found" }, 404);
-  const client = createDaemonClient({ fetch: fetchMock });
+  const client = createDaemonClient({
+    fetch: async () => jsonResponse({ error: "run_not_found" }, 404),
+  });
 
   const error = await client.getRun("missing").catch((thrown: unknown) => thrown);
 

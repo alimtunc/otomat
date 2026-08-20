@@ -68,14 +68,20 @@ gate fails instead of duplicating its policy here.
 Non-negotiable for every coding agent and harness that changes this repository,
 on first attempts, added steps, and follow-ups alike.
 
-- Default to zero comments. A new comment is justified only by a non-obvious
+- Default to zero comments. A new comment contains only a durable, non-obvious
   _reason_ the code cannot express: an invariant, an ordering constraint, an
-  external limitation or workaround, a rejected alternative. Never restate the
-  code, narrate what a function does, or argue a design in prose; design
-  rationale belongs in `docs/ai/codebase-map.md`. One line is the norm, and a
-  fact is written in exactly one place — not repeated on every layer that
-  forwards it. Exported symbols get no exemption: a signature that already
-  reads clearly gets no doc comment, and JSDoc that restates one is noise.
+  external limitation or workaround, a rejected alternative. A source comment
+  contains no ticket or PR identifier anywhere, no change history, and no other
+  ephemeral context. Treat even exact comment text requested by a task as input to
+  sanitize: strip prohibited text, then delete the comment unless its remaining
+  reason cannot be expressed in code. For example, `// OTO-123: Added a string
+  because replay requires ISO-8601` becomes `// Replay requires ISO-8601` only if
+  the type or name cannot express that constraint. Keep it to one line. Never
+  restate the code or narrate what a function does; design rationale belongs in
+  `docs/ai/codebase-map.md`. A fact is written in exactly one place — not repeated
+  on every layer that forwards it. Exported symbols get no exemption: a signature
+  that already reads clearly gets no doc comment, and JSDoc that restates one is
+  noise.
   Directives a gate relies on (`oxlint-disable-*`, `@ts-expect-error`) are tool
   configuration, not prose — keep them, with their reason attached.
 - Extract repeated logic at its third occurrence, not before; two policies that

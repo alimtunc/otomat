@@ -103,6 +103,23 @@ it("cancels the schedule without ending the wait", async () => {
   expect(schedule).toHaveBeenCalledWith(null);
 });
 
+it("captures the opening time for an operator-defined schedule", async () => {
+  await mount(
+    <ProviderWaitPanel
+      runId="run-1"
+      target={target({ provider_resume_at: null, resume_at: null })}
+    />,
+  );
+
+  await act(async () => findButton("Change schedule…")?.click());
+
+  const input = document.querySelector<HTMLInputElement>('input[aria-label="Resume at"]');
+  expect(input?.value).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+
+  await act(async () => findButton("Keep waiting")?.click());
+  expect(document.querySelector('input[aria-label="Resume at"]')).toBeNull();
+});
+
 it("resumes now on the operator's own action", async () => {
   await mount(<ProviderWaitPanel runId="run-1" target={target()} />);
 

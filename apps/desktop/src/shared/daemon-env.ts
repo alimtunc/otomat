@@ -1,4 +1,9 @@
-import { MAINTENANCE_ACTION_ENV, RESTORE_BACKUP_ENV } from "@otomat/domain";
+import {
+  MAINTENANCE_ACTION_ENV,
+  RESTORE_BACKUP_ENV,
+  WORKER_JOB_ENV,
+  WORKER_START_TOKEN_ENV,
+} from "@otomat/domain";
 
 import { DAEMON_HOST } from "#shared/constants";
 
@@ -31,6 +36,8 @@ export function buildDaemonEnv(options: DaemonEnvOptions): NodeJS.ProcessEnv {
   delete env.OTOMAT_LINEAR_API_KEY;
   delete env[MAINTENANCE_ACTION_ENV];
   delete env[RESTORE_BACKUP_ENV];
+  delete env[WORKER_JOB_ENV];
+  delete env[WORKER_START_TOKEN_ENV];
   delete env.OTOMAT_WORKTREES_ROOT;
   delete env.OTOMAT_ALLOWED_ORIGINS;
   delete env.OTOMAT_BUILD_SHA;
