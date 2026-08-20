@@ -181,22 +181,74 @@ async function teardown(flags) {
   } else {
     console.log(`[preview] ${name} torn down`);
   }
+  await deleteContainerApplications(account, name);
   await purgePagesDeployments(account, pullRequest);
-  deleteRegistryImage(name);
+  deleteRegistryImages(name);
 }
 
-/** Best-effort: with the worker gone its image is pure storage, and wrangler's beta `containers images` command must never fail an otherwise clean teardown. */
-function deleteRegistryImage(name) {
-  const result = spawnSync("pnpm", [...WRANGLER, "containers", "images", "delete", name], {
-    stdio: ["ignore", "inherit", "inherit"],
-    timeout: 60_000,
-  });
-  if (result.status === 0) {
-    console.log(`[preview] registry image ${name} deleted`);
-  } else {
-    console.log(
-      `[preview] registry image ${name} left in place (wrangler exited ${String(result.status)}); \`wrangler containers images list\` finds leftovers`,
+/** Cloudflare names the application `<worker>-<class>` and the worker's deletion does not remove it, so a leftover would refuse the next provision of a reopened pull request. */
+async function deleteContainerApplications(account, name) {
+  const listed = await cloudflare("GET", `/accounts/${account}/containers/applications`);
+  if (listed.status !== 200) {
+    fail(
+      `listing container applications answered ${String(listed.status)}: ${apiErrors(listed.body)}`,
     );
+  }
+  const targets = (listed.body.result ?? []).filter(
+    (application) => application.name === name || application.name.startsWith(`${name}-`),
+  );
+  if (targets.length === 0) {
+    console.log(`[preview] ${name} holds no container application`);
+    return;
+  }
+  for (const application of targets) {
+    const removed = await cloudflare(
+      "DELETE",
+      `/accounts/${account}/containers/applications/${application.id}`,
+    );
+    if (removed.status !== 200 && removed.status !== 404) {
+      fail(
+        `deleting container application ${application.name} answered ${String(removed.status)}: ${apiErrors(removed.body)}`,
+      );
+    }
+    console.log(`[preview] container application ${application.name} deleted`);
+  }
+}
+
+/** Best-effort: with the worker gone its images are pure storage, and wrangler's beta `containers images` commands must never fail an otherwise clean teardown. */
+function deleteRegistryImages(name) {
+  const leftovers = (reason) => {
+    console.log(
+      `[preview] registry images of ${name} left in place (${reason}); \`wrangler containers images list\` finds leftovers`,
+    );
+  };
+  const listed = spawnSync(
+    "pnpm",
+    [...WRANGLER, "containers", "images", "list", "--filter", `^${name}(-|$)`, "--json"],
+    { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"], timeout: 60_000 },
+  );
+  if (listed.status !== 0) {
+    leftovers(`listing exited ${String(listed.status)}`);
+    return;
+  }
+  let repositories;
+  try {
+    repositories = JSON.parse(listed.stdout);
+  } catch {
+    leftovers("listing answered no JSON");
+    return;
+  }
+  for (const repository of repositories) {
+    for (const tag of repository.tags) {
+      const image = `${repository.name}:${tag}`;
+      const removed = spawnSync(
+        "pnpm",
+        [...WRANGLER, "containers", "images", "delete", image, "-y"],
+        { stdio: ["ignore", "inherit", "inherit"], timeout: 60_000 },
+      );
+      if (removed.status === 0) console.log(`[preview] registry image ${image} deleted`);
+      else leftovers(`deleting ${image} exited ${String(removed.status)}`);
+    }
   }
 }
 
