@@ -131,6 +131,22 @@ async function teardown(flags) {
     console.log(`[preview] ${name} torn down`);
   }
   await purgePagesDeployments(account, pullRequest);
+  deleteRegistryImage(name);
+}
+
+/** Best-effort: with the worker gone its image is pure storage, and wrangler's beta `containers images` command must never fail an otherwise clean teardown. */
+function deleteRegistryImage(name) {
+  const result = spawnSync("pnpm", [...WRANGLER, "containers", "images", "delete", name], {
+    stdio: ["ignore", "inherit", "inherit"],
+    timeout: 60_000,
+  });
+  if (result.status === 0) {
+    console.log(`[preview] registry image ${name} deleted`);
+  } else {
+    console.log(
+      `[preview] registry image ${name} left in place (wrangler exited ${String(result.status)}); \`wrangler containers images list\` finds leftovers`,
+    );
+  }
 }
 
 /** A closed pull request keeps no Pages deployments either; ids are collected before any delete so pagination never shifts under the walk. */
