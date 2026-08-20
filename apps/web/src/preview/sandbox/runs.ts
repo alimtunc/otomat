@@ -59,6 +59,7 @@ function steps(runId: string, second: StepRunContract["status"]): StepRunContrac
       worktree_id: "sandbox-worktree-1",
       branch: branchOf(runId),
       worktree_status: "active",
+      provider_wait: null,
     },
     {
       id: `${runId}-step-2`,
@@ -70,6 +71,7 @@ function steps(runId: string, second: StepRunContract["status"]): StepRunContrac
       worktree_id: "sandbox-worktree-1",
       branch: branchOf(runId),
       worktree_status: "active",
+      provider_wait: null,
     },
   ];
 }
