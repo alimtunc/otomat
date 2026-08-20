@@ -1,13 +1,7 @@
-import type { SkillContract, SkillInvalidReason } from "@otomat/domain";
+import type { SkillContract } from "@otomat/domain";
 import { Badge, Chip, Switch } from "@otomat/ui";
 import { useSetSkillEnabled } from "@web/api/skills/mutations";
-
-const INVALID_REASON_LABELS = {
-  frontmatter_missing: "No frontmatter",
-  name_missing: "No name in frontmatter",
-  unreadable: "File unreadable",
-  path_missing: "File no longer on disk",
-} satisfies Record<SkillInvalidReason, string>;
+import { SKILL_INVALID_REASON_LABELS } from "@web/lib/skill-availability";
 
 export function SkillRow({ skill }: { skill: SkillContract }) {
   const setEnabled = useSetSkillEnabled();
@@ -21,7 +15,7 @@ export function SkillRow({ skill }: { skill: SkillContract }) {
           <Badge variant="default">{skill.source}</Badge>
           {invalid ? (
             <Chip tone="danger">
-              {skill.invalid_reason ? INVALID_REASON_LABELS[skill.invalid_reason] : "Invalid"}
+              {skill.invalid_reason ? SKILL_INVALID_REASON_LABELS[skill.invalid_reason] : "Invalid"}
             </Chip>
           ) : (
             <Badge variant="iris">Available</Badge>

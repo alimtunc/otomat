@@ -5,14 +5,17 @@ import { ActivatedSkillCard } from "@web/components/agents/agent-profile/detail/
 import { SkillMultiSelect } from "@web/components/agents/agent-profile/shared/skill-multi-select";
 import { requestForProfile } from "@web/lib/agent-choice";
 import { agentConfigRefusalMessage } from "@web/lib/agent-config-error";
+import { skillAvailability } from "@web/lib/skill-availability";
 import { useState } from "react";
 
 export function SkillsPanelContent({
   profile,
   skills,
+  hostLabel,
 }: {
   profile: AgentProfileContract;
   skills: SkillContract[];
+  hostLabel: string;
 }) {
   const update = useUpdateAgentProfile();
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -36,7 +39,7 @@ export function SkillsPanelContent({
   }
 
   return (
-    <div className="flex max-w-180 flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <section>
         <div className="mb-2.5 flex items-center gap-2">
           <h3 className="text-sm font-semibold text-foreground">Activated skills</h3>
@@ -48,7 +51,8 @@ export function SkillsPanelContent({
               <ActivatedSkillCard
                 key={skillId}
                 skillId={skillId}
-                skill={skills.find((skill) => skill.id === skillId)}
+                availability={skillAvailability(skillId, skills)}
+                hostLabel={hostLabel}
                 disabled={update.isPending}
                 onRemove={() => void toggleSkill(skillId)}
               />
@@ -67,7 +71,8 @@ export function SkillsPanelContent({
       <section>
         <h3 className="mb-1 text-sm font-semibold text-foreground">Skill catalog</h3>
         <p className="mb-2.5 text-xs leading-relaxed text-text-tertiary">
-          Enabled local instructions this profile can activate when a run launches.
+          Enabled local instructions this profile can activate when a run launches, as discovered on{" "}
+          {hostLabel}.
         </p>
         <SkillMultiSelect
           skills={skills}

@@ -1047,6 +1047,42 @@ desktop shell, `remote/host/capacity.ts` relays the read and the write to the ho
 the operator is configuring; an unreachable host or a refused write comes back as
 a message, never as a value shown as applied.
 
+## Settings and Global Agents (OTO-61)
+
+The sidebar carries work only — Issues, Runs, Reviews, Usage, plus the Inbox and
+the two quick actions. Everything that configures Otomat or documents it is
+reached from the project switcher, which is where the operator already goes to
+change what they are working on. `nav-items.ts` therefore holds one workspace
+list and a single `SETTINGS_NAV` entry the switcher and the palette share; there
+is no second "Configure" rail to keep in sync with the settings surface itself.
+
+Settings splits three ways, and the split is a claim about ownership rather than
+a menu order. *Project* is what belongs to the selected project. *Global* is what
+the operator sets once for this machine — their agents, the skills those agents
+may activate, repositories, workspaces, hosts, integrations, execution defaults,
+presets, appearance. *Reference* is what Otomat reports rather than what the
+operator decides: the runtimes it detected, the daemon it is talking to, and the
+design system.
+
+That is what keeps the daemon's capability catalog from reading as a roster of
+agents. Global · Agents is the operator's own profiles — a profile's runtime,
+its instructions, the skills it activates — and Reference · Runtimes is the
+probe result for each installed adapter. Neither page invents the other's
+content: a profile whose runtime is missing says so and links to Runtimes
+instead of hiding, and Runtimes never lists a profile.
+
+Availability is always stated against the host currently answering
+(`executionHostLabel`), because the skills catalog and the runtime probe are
+that daemon's, not the app's. A configured skill that is gone, disabled or
+invalid is shown with that reason (`lib/skill-availability.ts`, mirroring the
+launch-time refusal in `agents/skills/resolve.ts`) rather than dropped from the
+profile — the profile still holds it, and the operator can see why a launch
+would be refused before attempting one.
+
+The routes moved with the surfaces: `/settings/agents`, `/settings/agents/<id>`
+and `/settings/skills` are canonical, and `/agents`, `/agents/<id>` and `/skills`
+redirect to them, filter and profile id included.
+
 ## Back Navigation
 
 Every detail view carries one Back control, rendered by `RouteShell` from the

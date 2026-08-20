@@ -25,7 +25,7 @@ export function AgentProfileHeaderActions({ profile }: { profile: AgentProfileCo
                 remove.mutate(profile.id, {
                   onSuccess: () => {
                     toast.success("Profile deleted");
-                    void navigate({ to: "/agents" });
+                    void navigate({ to: "/settings/agents" });
                   },
                   onError: () => toast.error("Could not delete the profile."),
                 })
@@ -51,7 +51,7 @@ export function AgentProfileHeaderActions({ profile }: { profile: AgentProfileCo
                   onSuccess: (copy) => {
                     toast.success("Profile duplicated");
                     void navigate({
-                      to: "/agents/$profileId",
+                      to: "/settings/agents/$profileId",
                       params: { profileId: copy.id },
                     });
                   },

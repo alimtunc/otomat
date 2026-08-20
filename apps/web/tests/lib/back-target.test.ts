@@ -6,8 +6,11 @@ describe("backTarget", () => {
     expect(backTarget("/issues/issue-1", null)).toEqual({ href: "/issues", label: "Issues" });
   });
 
-  it("sends an agent profile to the agents list", () => {
-    expect(backTarget("/agents/profile-1", null)).toEqual({ href: "/agents", label: "Agents" });
+  it("sends an agent profile to the agents settings list", () => {
+    expect(backTarget("/settings/agents/profile-1", null)).toEqual({
+      href: "/settings/agents",
+      label: "Agents",
+    });
   });
 
   it("sends a run to the issue it works on", () => {
@@ -40,7 +43,14 @@ describe("backTarget", () => {
   });
 
   it("gives list routes no back target", () => {
-    for (const pathname of ["/issues", "/runs", "/agents", "/reviews", "/settings/project", "/"]) {
+    for (const pathname of [
+      "/issues",
+      "/runs",
+      "/reviews",
+      "/settings/agents",
+      "/settings/project",
+      "/",
+    ]) {
       expect(backTarget(pathname, "issue-42")).toBeNull();
     }
   });

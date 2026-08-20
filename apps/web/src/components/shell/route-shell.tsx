@@ -12,9 +12,9 @@ import {
   useCommandPalette,
   useTheme,
 } from "@otomat/ui";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
-import type { ShellSection } from "@web/components/shell/nav-items";
+import { SETTINGS_NAV, type ShellSection } from "@web/components/shell/nav-items";
 import { NewIssueContext } from "@web/components/shell/new-issue-context";
 import { usePaletteGroups } from "@web/components/shell/palette/use-groups";
 import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
@@ -49,6 +49,7 @@ export function RouteShell({
   children,
 }: RouteShellProps) {
   const { density } = useTheme();
+  const navigate = useNavigate();
   const shell = useShellData();
   const remote = useRemoteSession();
   const palette = useCommandPalette();
@@ -96,6 +97,7 @@ export function RouteShell({
           currentProjectId={shell.currentSwitcherId}
           onProjectSelect={shell.selectProject}
           onAddProject={() => setAddProjectOpen(true)}
+          onOpenSettings={() => void navigate({ to: SETTINGS_NAV.to })}
           onSearch={() => palette.setOpen(true)}
           onNewIssue={openNewIssue}
           hasLiveRun={shell.hasLiveRun}

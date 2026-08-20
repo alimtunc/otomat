@@ -1,14 +1,15 @@
-import { Outlet, useMatchRoute } from "@tanstack/react-router";
+import { Outlet } from "@tanstack/react-router";
 import { SettingsNav } from "@web/components/settings/settings-nav";
 import { RouteShell } from "@web/components/shell/route-shell";
+import { useBackNavigation } from "@web/components/shell/use-back-navigation";
 
 export function SettingsLayout() {
-  const matchRoute = useMatchRoute();
-  const onRuntimes = !!matchRoute({ to: "/settings/runtimes" });
+  const back = useBackNavigation(null);
   return (
     <RouteShell
-      active={onRuntimes ? "runtimes" : "settings"}
+      active="settings"
       titleIcon="settings"
+      back={back}
       breadcrumbs={[{ label: "Settings", current: true }]}
     >
       <div className="flex h-full min-h-0">
