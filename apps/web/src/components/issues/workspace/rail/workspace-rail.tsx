@@ -1,10 +1,11 @@
 import { projectOpenCycleExecution, type IssueContract, type RunContract } from "@otomat/domain";
-import { cn, IssueStatusChip, SidePanelToggle, useSidePanel } from "@otomat/ui";
+import { cn, SidePanelToggle, useSidePanel } from "@otomat/ui";
 import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { LinearRailSection } from "@web/components/issues/workspace/linear/rail-section";
 import { ExecutionSection } from "@web/components/issues/workspace/rail/execution-section";
 import { FollowedRunSection } from "@web/components/issues/workspace/rail/followed-run-section";
 import { IssuePullRequestsSection } from "@web/components/issues/workspace/rail/issue-pull-requests-section";
+import { IssueStatusControl } from "@web/components/issues/workspace/rail/issue-status-control";
 import { Mono } from "@web/components/issues/workspace/rail/mono";
 import { PermissionSection } from "@web/components/issues/workspace/rail/permission-section";
 import { ProviderWaitSection } from "@web/components/issues/workspace/rail/provider-wait-section";
@@ -62,7 +63,7 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
       >
         <RailMeta>
           <RailRow label="Issue status">
-            <IssueStatusChip status={issue.status} />
+            <IssueStatusControl issue={issue} />
           </RailRow>
           <RailRow label="Workspace execution">
             {cycleExecution === null ? (

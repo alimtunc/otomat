@@ -82,8 +82,8 @@ describe.each(machines.map((machine) => [machine.name, machine] as const))(
 );
 
 describe("representative illegal transitions are rejected", () => {
-  it("issue cannot jump backlog -> done", () => {
-    expect(() => issueMachine.transition("backlog", "done")).toThrow(IllegalTransitionError);
+  it("issue cannot jump backlog -> running", () => {
+    expect(() => issueMachine.transition("backlog", "running")).toThrow(IllegalTransitionError);
   });
 
   it("run cannot resurrect completed -> running", () => {

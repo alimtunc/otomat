@@ -62,10 +62,7 @@ export function driveSessionTo(
   );
 }
 
-/**
- * Walks the issue to `to` and stores only where it lands; a terminal issue has no legal path out,
- * so the machine's refusal is what stops new work.
- */
+/** Walks the issue to `to` and stores only where it lands; `done` keeps an edge back to `ready`, so the machine no longer refuses a reopen and a caller that must not reopen a closed issue guards with `isIssueClosed` itself. */
 export function driveIssueTo(db: Db, issueId: string, from: IssueState, to: IssueState): void {
   let landed = from;
   drivePath(issueMachine, from, to, (state) => (landed = state));
