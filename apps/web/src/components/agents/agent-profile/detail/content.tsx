@@ -1,21 +1,17 @@
 import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
-import {
-  Chip,
-  ResizablePanel,
-  ResizablePanelGroup,
-  SidePanel,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  useMediaQuery,
-  usePanelGroupLayout,
-  WIDE_VIEWPORT_MEDIA_QUERY,
-} from "@otomat/ui";
+import { AgentAvatar, Chip } from "@otomat/ui";
+import { Link } from "@tanstack/react-router";
+import { AgentProfileHeaderActions } from "@web/components/agents/agent-profile/detail/header-actions";
 import { InstructionsPanel } from "@web/components/agents/agent-profile/detail/instructions-panel";
-import { AgentProfileRail } from "@web/components/agents/agent-profile/detail/rail";
+import { RuntimeProperties } from "@web/components/agents/agent-profile/detail/runtime-properties";
 import { SkillsPanel } from "@web/components/agents/agent-profile/detail/skills-panel";
-import { runtimeById } from "@web/lib/runtimes";
+import { useRemoteSession } from "@web/components/shell/remote-session/context";
+import { executionHostLabel } from "@web/components/shell/remote-session/status-labels";
+import { runtimeAvailabilityLabel } from "@web/lib/runtime-availability";
+import { isAvailableRuntime, runtimeById } from "@web/lib/runtimes";
+
+const PANEL = "rounded-lg border border-border-subtle bg-card px-4 py-3.5";
+const PANEL_TITLE = "mb-2.5 text-sm font-semibold text-foreground";
 
 export function AgentProfileDetail({
   profile,
@@ -24,53 +20,45 @@ export function AgentProfileDetail({
   profile: AgentProfileContract;
   descriptors: RuntimeDescriptor[];
 }) {
+  const hostLabel = executionHostLabel(useRemoteSession());
   const descriptor = runtimeById(descriptors, profile.runtime);
-  const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
-  const railLayout = usePanelGroupLayout("otomat.agent-profile");
+  const launchable = descriptor !== undefined && isAvailableRuntime(descriptor);
 
-  const rail = <AgentProfileRail profile={profile} descriptor={descriptor} />;
-  const tabs = (
-    <div className="min-h-0 min-w-0 flex-1 overflow-auto">
-      <Tabs defaultValue="instructions" className="min-h-full">
-        <TabsList className="sticky top-0 z-[3] overflow-x-auto bg-background px-4.5">
-          <TabsTrigger value="instructions">Instructions</TabsTrigger>
-          <TabsTrigger
-            value="skills"
-            badge={<Chip tone="neutral">{profile.skill_ids.length}</Chip>}
-          >
-            Skills
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="instructions" className="p-4.5">
-          <InstructionsPanel key={`${profile.id}:${profile.guidance ?? ""}`} profile={profile} />
-        </TabsContent>
-        <TabsContent value="skills" className="p-4.5">
-          <SkillsPanel profile={profile} />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-
-  return wide ? (
-    <ResizablePanelGroup {...railLayout} className="h-full min-h-0">
-      <SidePanel
-        id="agent-profile-rail"
-        label="Agent properties"
-        side="left"
-        defaultSize={280}
-        minSize={220}
-        maxSize="36%"
-      >
-        {rail}
-      </SidePanel>
-      <ResizablePanel id="agent-profile" minSize="40%">
-        {tabs}
-      </ResizablePanel>
-    </ResizablePanelGroup>
-  ) : (
-    <div className="min-h-full">
-      {rail}
-      {tabs}
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-start gap-3">
+        <AgentAvatar name={profile.name} size="lg" />
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-lg font-semibold text-foreground">{profile.name}</h1>
+          <div className="mt-1.5">
+            <Chip tone={launchable ? "success" : "warning"}>
+              {runtimeAvailabilityLabel(descriptor, hostLabel)}
+            </Chip>
+          </div>
+        </div>
+        <AgentProfileHeaderActions profile={profile} />
+      </div>
+      <section className={PANEL}>
+        <h2 className={PANEL_TITLE}>Runtime</h2>
+        <RuntimeProperties profile={profile} descriptor={descriptor} />
+        {launchable ? null : (
+          <p className="mt-2.5 text-xs leading-relaxed text-text-tertiary">
+            This profile cannot be selected on {hostLabel} until its runtime is available there.{" "}
+            <Link to="/settings/runtimes" className="underline">
+              Reference · Runtimes
+            </Link>{" "}
+            reports what this host actually detected.
+          </p>
+        )}
+      </section>
+      <section className={PANEL}>
+        <h2 className={PANEL_TITLE}>Instructions</h2>
+        <InstructionsPanel key={`${profile.id}:${profile.guidance ?? ""}`} profile={profile} />
+      </section>
+      <section className={PANEL}>
+        <h2 className={PANEL_TITLE}>Skills</h2>
+        <SkillsPanel profile={profile} hostLabel={hostLabel} />
+      </section>
     </div>
   );
 }

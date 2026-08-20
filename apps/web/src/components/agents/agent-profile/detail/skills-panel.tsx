@@ -5,7 +5,13 @@ import { SkillsPanelContent } from "@web/components/agents/agent-profile/detail/
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 
-export function SkillsPanel({ profile }: { profile: AgentProfileContract }) {
+export function SkillsPanel({
+  profile,
+  hostLabel,
+}: {
+  profile: AgentProfileContract;
+  hostLabel: string;
+}) {
   const skills = useSkills();
 
   return (
@@ -20,7 +26,7 @@ export function SkillsPanel({ profile }: { profile: AgentProfileContract }) {
         />
       }
     >
-      {(catalog) => <SkillsPanelContent profile={profile} skills={catalog} />}
+      {(catalog) => <SkillsPanelContent profile={profile} skills={catalog} hostLabel={hostLabel} />}
     </QueryBoundary>
   );
 }

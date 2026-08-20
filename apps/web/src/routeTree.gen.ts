@@ -24,7 +24,6 @@ import { Route as RunsIndexRouteImport } from './routes/runs/index'
 import { Route as RunsRunIdRouteRouteImport } from './routes/runs/$runId/route'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as SettingsAboutRouteImport } from './routes/settings/about'
-import { Route as SettingsAgentsRouteImport } from './routes/settings/agents'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 import { Route as SettingsExecutionRouteImport } from './routes/settings/execution'
 import { Route as SettingsHostRouteImport } from './routes/settings/host'
@@ -33,6 +32,7 @@ import { Route as SettingsProjectRouteImport } from './routes/settings/project'
 import { Route as SettingsRepositoriesRouteImport } from './routes/settings/repositories'
 import { Route as SettingsRuntimesRouteImport } from './routes/settings/runtimes'
 import { Route as SettingsSandboxRouteImport } from './routes/settings/sandbox'
+import { Route as SettingsSkillsRouteImport } from './routes/settings/skills'
 import { Route as SettingsWorkflowPresetsRouteImport } from './routes/settings/workflow-presets'
 import { Route as SettingsWorkspacesRouteImport } from './routes/settings/workspaces'
 import { Route as PullRequestsPullRequestIdDiffRouteImport } from './routes/pull-requests/$pullRequestId/diff'
@@ -41,6 +41,8 @@ import { Route as RunsRunIdDiffRouteImport } from './routes/runs/$runId/diff'
 import { Route as RunsRunIdLogsRouteImport } from './routes/runs/$runId/logs'
 import { Route as RunsRunIdPrRouteImport } from './routes/runs/$runId/pr'
 import { Route as RunsRunIdReportRouteImport } from './routes/runs/$runId/report'
+import { Route as SettingsAgentsIndexRouteImport } from './routes/settings/agents/index'
+import { Route as SettingsAgentsProfileIdRouteImport } from './routes/settings/agents/$profileId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -117,11 +119,6 @@ const SettingsAboutRoute = SettingsAboutRouteImport.update({
   path: '/about',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
-const SettingsAgentsRoute = SettingsAgentsRouteImport.update({
-  id: '/agents',
-  path: '/agents',
-  getParentRoute: () => SettingsRouteRoute,
-} as any)
 const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
   id: '/appearance',
   path: '/appearance',
@@ -160,6 +157,11 @@ const SettingsRuntimesRoute = SettingsRuntimesRouteImport.update({
 const SettingsSandboxRoute = SettingsSandboxRouteImport.update({
   id: '/sandbox',
   path: '/sandbox',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+const SettingsSkillsRoute = SettingsSkillsRouteImport.update({
+  id: '/skills',
+  path: '/skills',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
 const SettingsWorkflowPresetsRoute = SettingsWorkflowPresetsRouteImport.update({
@@ -203,6 +205,16 @@ const RunsRunIdReportRoute = RunsRunIdReportRouteImport.update({
   path: '/report',
   getParentRoute: () => RunsRunIdRouteRoute,
 } as any)
+const SettingsAgentsIndexRoute = SettingsAgentsIndexRouteImport.update({
+  id: '/agents/',
+  path: '/agents/',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+const SettingsAgentsProfileIdRoute = SettingsAgentsProfileIdRouteImport.update({
+  id: '/agents/$profileId',
+  path: '/agents/$profileId',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -216,7 +228,6 @@ export interface FileRoutesByFullPath {
   '/agents/$profileId': typeof AgentsProfileIdRoute
   '/issues/$issueId': typeof IssuesIssueIdRoute
   '/settings/about': typeof SettingsAboutRoute
-  '/settings/agents': typeof SettingsAgentsRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/execution': typeof SettingsExecutionRoute
   '/settings/host': typeof SettingsHostRoute
@@ -225,6 +236,7 @@ export interface FileRoutesByFullPath {
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/settings/sandbox': typeof SettingsSandboxRoute
+  '/settings/skills': typeof SettingsSkillsRoute
   '/settings/workflow-presets': typeof SettingsWorkflowPresetsRoute
   '/settings/workspaces': typeof SettingsWorkspacesRoute
   '/agents/': typeof AgentsIndexRoute
@@ -236,7 +248,9 @@ export interface FileRoutesByFullPath {
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
   '/runs/$runId/report': typeof RunsRunIdReportRoute
+  '/settings/agents/$profileId': typeof SettingsAgentsProfileIdRoute
   '/runs/$runId/': typeof RunsRunIdIndexRoute
+  '/settings/agents/': typeof SettingsAgentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -247,7 +261,6 @@ export interface FileRoutesByTo {
   '/agents/$profileId': typeof AgentsProfileIdRoute
   '/issues/$issueId': typeof IssuesIssueIdRoute
   '/settings/about': typeof SettingsAboutRoute
-  '/settings/agents': typeof SettingsAgentsRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/execution': typeof SettingsExecutionRoute
   '/settings/host': typeof SettingsHostRoute
@@ -256,6 +269,7 @@ export interface FileRoutesByTo {
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/settings/sandbox': typeof SettingsSandboxRoute
+  '/settings/skills': typeof SettingsSkillsRoute
   '/settings/workflow-presets': typeof SettingsWorkflowPresetsRoute
   '/settings/workspaces': typeof SettingsWorkspacesRoute
   '/agents': typeof AgentsIndexRoute
@@ -267,7 +281,9 @@ export interface FileRoutesByTo {
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
   '/runs/$runId/report': typeof RunsRunIdReportRoute
+  '/settings/agents/$profileId': typeof SettingsAgentsProfileIdRoute
   '/runs/$runId': typeof RunsRunIdIndexRoute
+  '/settings/agents': typeof SettingsAgentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -282,7 +298,6 @@ export interface FileRoutesById {
   '/agents/$profileId': typeof AgentsProfileIdRoute
   '/issues/$issueId': typeof IssuesIssueIdRoute
   '/settings/about': typeof SettingsAboutRoute
-  '/settings/agents': typeof SettingsAgentsRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/execution': typeof SettingsExecutionRoute
   '/settings/host': typeof SettingsHostRoute
@@ -291,6 +306,7 @@ export interface FileRoutesById {
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/settings/sandbox': typeof SettingsSandboxRoute
+  '/settings/skills': typeof SettingsSkillsRoute
   '/settings/workflow-presets': typeof SettingsWorkflowPresetsRoute
   '/settings/workspaces': typeof SettingsWorkspacesRoute
   '/agents/': typeof AgentsIndexRoute
@@ -302,7 +318,9 @@ export interface FileRoutesById {
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
   '/runs/$runId/report': typeof RunsRunIdReportRoute
+  '/settings/agents/$profileId': typeof SettingsAgentsProfileIdRoute
   '/runs/$runId/': typeof RunsRunIdIndexRoute
+  '/settings/agents/': typeof SettingsAgentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -318,7 +336,6 @@ export interface FileRouteTypes {
     | '/agents/$profileId'
     | '/issues/$issueId'
     | '/settings/about'
-    | '/settings/agents'
     | '/settings/appearance'
     | '/settings/execution'
     | '/settings/host'
@@ -327,6 +344,7 @@ export interface FileRouteTypes {
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/settings/sandbox'
+    | '/settings/skills'
     | '/settings/workflow-presets'
     | '/settings/workspaces'
     | '/agents/'
@@ -338,7 +356,9 @@ export interface FileRouteTypes {
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
     | '/runs/$runId/report'
+    | '/settings/agents/$profileId'
     | '/runs/$runId/'
+    | '/settings/agents/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -349,7 +369,6 @@ export interface FileRouteTypes {
     | '/agents/$profileId'
     | '/issues/$issueId'
     | '/settings/about'
-    | '/settings/agents'
     | '/settings/appearance'
     | '/settings/execution'
     | '/settings/host'
@@ -358,6 +377,7 @@ export interface FileRouteTypes {
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/settings/sandbox'
+    | '/settings/skills'
     | '/settings/workflow-presets'
     | '/settings/workspaces'
     | '/agents'
@@ -369,7 +389,9 @@ export interface FileRouteTypes {
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
     | '/runs/$runId/report'
+    | '/settings/agents/$profileId'
     | '/runs/$runId'
+    | '/settings/agents'
   id:
     | '__root__'
     | '/'
@@ -383,7 +405,6 @@ export interface FileRouteTypes {
     | '/agents/$profileId'
     | '/issues/$issueId'
     | '/settings/about'
-    | '/settings/agents'
     | '/settings/appearance'
     | '/settings/execution'
     | '/settings/host'
@@ -392,6 +413,7 @@ export interface FileRouteTypes {
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/settings/sandbox'
+    | '/settings/skills'
     | '/settings/workflow-presets'
     | '/settings/workspaces'
     | '/agents/'
@@ -403,7 +425,9 @@ export interface FileRouteTypes {
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
     | '/runs/$runId/report'
+    | '/settings/agents/$profileId'
     | '/runs/$runId/'
+    | '/settings/agents/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -528,13 +552,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAboutRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
-    '/settings/agents': {
-      id: '/settings/agents'
-      path: '/agents'
-      fullPath: '/settings/agents'
-      preLoaderRoute: typeof SettingsAgentsRouteImport
-      parentRoute: typeof SettingsRouteRoute
-    }
     '/settings/appearance': {
       id: '/settings/appearance'
       path: '/appearance'
@@ -589,6 +606,13 @@ declare module '@tanstack/react-router' {
       path: '/sandbox'
       fullPath: '/settings/sandbox'
       preLoaderRoute: typeof SettingsSandboxRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/skills': {
+      id: '/settings/skills'
+      path: '/skills'
+      fullPath: '/settings/skills'
+      preLoaderRoute: typeof SettingsSkillsRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
     '/settings/workflow-presets': {
@@ -647,12 +671,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsRunIdReportRouteImport
       parentRoute: typeof RunsRunIdRouteRoute
     }
+    '/settings/agents/': {
+      id: '/settings/agents/'
+      path: '/agents'
+      fullPath: '/settings/agents/'
+      preLoaderRoute: typeof SettingsAgentsIndexRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/agents/$profileId': {
+      id: '/settings/agents/$profileId'
+      path: '/agents/$profileId'
+      fullPath: '/settings/agents/$profileId'
+      preLoaderRoute: typeof SettingsAgentsProfileIdRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
   }
 }
 
 interface SettingsRouteRouteChildren {
   SettingsAboutRoute: typeof SettingsAboutRoute
-  SettingsAgentsRoute: typeof SettingsAgentsRoute
   SettingsAppearanceRoute: typeof SettingsAppearanceRoute
   SettingsExecutionRoute: typeof SettingsExecutionRoute
   SettingsHostRoute: typeof SettingsHostRoute
@@ -661,14 +698,16 @@ interface SettingsRouteRouteChildren {
   SettingsRepositoriesRoute: typeof SettingsRepositoriesRoute
   SettingsRuntimesRoute: typeof SettingsRuntimesRoute
   SettingsSandboxRoute: typeof SettingsSandboxRoute
+  SettingsSkillsRoute: typeof SettingsSkillsRoute
   SettingsWorkflowPresetsRoute: typeof SettingsWorkflowPresetsRoute
   SettingsWorkspacesRoute: typeof SettingsWorkspacesRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
+  SettingsAgentsProfileIdRoute: typeof SettingsAgentsProfileIdRoute
+  SettingsAgentsIndexRoute: typeof SettingsAgentsIndexRoute
 }
 
 const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsAboutRoute: SettingsAboutRoute,
-  SettingsAgentsRoute: SettingsAgentsRoute,
   SettingsAppearanceRoute: SettingsAppearanceRoute,
   SettingsExecutionRoute: SettingsExecutionRoute,
   SettingsHostRoute: SettingsHostRoute,
@@ -677,9 +716,12 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsRepositoriesRoute: SettingsRepositoriesRoute,
   SettingsRuntimesRoute: SettingsRuntimesRoute,
   SettingsSandboxRoute: SettingsSandboxRoute,
+  SettingsSkillsRoute: SettingsSkillsRoute,
   SettingsWorkflowPresetsRoute: SettingsWorkflowPresetsRoute,
   SettingsWorkspacesRoute: SettingsWorkspacesRoute,
   SettingsIndexRoute: SettingsIndexRoute,
+  SettingsAgentsProfileIdRoute: SettingsAgentsProfileIdRoute,
+  SettingsAgentsIndexRoute: SettingsAgentsIndexRoute,
 }
 
 const SettingsRouteRouteWithChildren = SettingsRouteRoute._addFileChildren(

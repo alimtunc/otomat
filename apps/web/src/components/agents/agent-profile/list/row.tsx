@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { AgentProfileRowActions } from "@web/components/agents/agent-profile/list/row-actions";
 import { providerOptionKeyLabel, providerOptionValueLabel } from "@web/lib/provider-option-labels";
 import { storedProviderOptions } from "@web/lib/provider-options";
-import { runtimeById, runtimeMark } from "@web/lib/runtimes";
+import { isAvailableRuntime, runtimeById, runtimeMark } from "@web/lib/runtimes";
 import { CELL } from "@web/lib/table";
 
 export function AgentProfileRow({
@@ -19,12 +19,13 @@ export function AgentProfileRow({
   const descriptor = runtimeById(descriptors, profile.runtime);
   const options = storedProviderOptions(profile.options);
   const mark = runtimeMark(profile.runtime);
+  const usable = descriptor !== undefined && isAvailableRuntime(descriptor);
 
   return (
     <tr className="relative transition-colors hover:bg-hover">
       <td className={`${CELL} min-w-64 p-0`}>
         <Link
-          to="/agents/$profileId"
+          to="/settings/agents/$profileId"
           params={{ profileId: profile.id }}
           className={`flex h-full min-w-0 items-center gap-2.5 px-3 after:absolute after:inset-0 ${FOCUS_RING} focus-visible:outline-offset-[-2px]`}
         >
@@ -38,9 +39,10 @@ export function AgentProfileRow({
         </Link>
       </td>
       <td className={CELL}>
-        <Chip tone="neutral">
+        <Chip tone={usable ? "neutral" : "warning"}>
           {mark ? <ProviderMark name={mark} /> : null}
           {descriptor?.display_name ?? profile.runtime}
+          {usable ? null : " · unavailable"}
         </Chip>
       </td>
       <td className={`${CELL} font-mono text-xs text-text-secondary tabular-nums`}>

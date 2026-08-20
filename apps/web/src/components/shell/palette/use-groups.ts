@@ -1,9 +1,9 @@
 import { useTheme, type CommandPaletteCommand, type CommandPaletteGroup } from "@otomat/ui";
 import { useNavigate } from "@tanstack/react-router";
-import { CONFIGURE_NAV, INBOX_NAV, WORKSPACE_NAV } from "@web/components/shell/nav-items";
+import { INBOX_NAV, SETTINGS_NAV, WORKSPACE_NAV } from "@web/components/shell/nav-items";
 import { usePaletteIssueGroup } from "@web/components/shell/palette/use-issue-group";
 
-const NAVIGATE = [...WORKSPACE_NAV, ...CONFIGURE_NAV, INBOX_NAV];
+const NAVIGATE = [...WORKSPACE_NAV, INBOX_NAV, SETTINGS_NAV];
 
 function matching(commands: CommandPaletteCommand[], search: string): CommandPaletteCommand[] {
   const needle = search.trim().toLowerCase();

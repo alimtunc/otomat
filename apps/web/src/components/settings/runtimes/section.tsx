@@ -3,14 +3,17 @@ import { useRuntimes } from "@web/api/daemon/queries";
 import { RuntimeRow } from "@web/components/settings/runtimes/row";
 import { SectionHeading } from "@web/components/settings/section-heading";
 import { QueryList } from "@web/components/shell/query-list";
+import { useRemoteSession } from "@web/components/shell/remote-session/context";
+import { executionHostLabel } from "@web/components/shell/remote-session/status-labels";
 
 export function RuntimesSection() {
   const runtimes = useRuntimes();
+  const hostLabel = executionHostLabel(useRemoteSession());
   return (
     <div>
       <SectionHeading
         title="Runtimes"
-        description="Adapter catalog with honest capability snapshots, as reported by the daemon."
+        description={`What ${hostLabel} reports about each installed provider adapter: its identity and the capabilities it actually offers. These are detected, not configured — your own agents live under Global · Agents.`}
       />
       <div className="rounded-lg border border-border-subtle bg-card">
         <QueryList
@@ -35,7 +38,7 @@ export function RuntimesSection() {
           {(descriptors) => (
             <div className="divide-y divide-border-subtle">
               {descriptors.map((runtime) => (
-                <RuntimeRow key={runtime.id} runtime={runtime} />
+                <RuntimeRow key={runtime.id} runtime={runtime} hostLabel={hostLabel} />
               ))}
             </div>
           )}

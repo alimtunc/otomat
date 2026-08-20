@@ -4,6 +4,7 @@ import type {
   RemoteHostPhase,
   RemoteHostStatus,
 } from "@otomat/domain";
+import type { RemoteSessionState } from "@web/components/shell/remote-session/context";
 
 const REMOTE_PHASE_LABELS = {
   disconnected: "Disconnected",
@@ -59,4 +60,9 @@ export function describeOperationFailure(
   result: Extract<ExecutionHostOperationResult, { ok: false }>,
 ): string {
   return "status" in result ? describeRemoteStatus(result.status) : result.message;
+}
+
+/** A configured alias only names the answering host while that host is the active one. */
+export function executionHostLabel(session: RemoteSessionState): string {
+  return session.active && session.alias !== null ? session.alias : "the local host";
 }

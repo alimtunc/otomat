@@ -33,6 +33,8 @@ export interface ProjectSwitcherProps {
   loading?: boolean;
   /** Renders an "Add project…" footer action; also replaces the empty-state hint when provided. */
   onAddProject?: () => void;
+  /** Opens the settings surface: the switcher is the only way in, so it is required. */
+  onOpenSettings: () => void;
 }
 
 export function ProjectSwitcher({
@@ -42,6 +44,7 @@ export function ProjectSwitcher({
   collapsed = false,
   loading = false,
   onAddProject,
+  onOpenSettings,
 }: ProjectSwitcherProps) {
   const [open, setOpen] = useState(false);
   const current = projects.find((p) => p.id === currentId);
@@ -119,7 +122,8 @@ export function ProjectSwitcher({
               variant="ghost"
               onClick={() => {
                 setOpen(false);
-                onAddProject?.();
+                if (onAddProject) onAddProject();
+                else onOpenSettings();
               }}
               className="h-auto w-full justify-start gap-2 px-2.5 py-3 text-sm"
             >
@@ -160,8 +164,8 @@ export function ProjectSwitcher({
                 </ComboboxItem>
               )}
             </ComboboxList>
-            {onAddProject ? (
-              <div className="border-t border-border-subtle p-1.5">
+            <div className="border-t border-border-subtle p-1.5">
+              {onAddProject ? (
                 <Button
                   type="button"
                   variant="ghost"
@@ -174,8 +178,20 @@ export function ProjectSwitcher({
                   <Plus className="h-4 w-4 text-text-tertiary" />
                   Add project…
                 </Button>
-              </div>
-            ) : null}
+              ) : null}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setOpen(false);
+                  onOpenSettings();
+                }}
+                className="h-auto w-full justify-start gap-2 px-2.5 py-2 text-sm"
+              >
+                <Settings className="h-4 w-4 text-text-tertiary" />
+                Settings
+              </Button>
+            </div>
           </>
         )}
       </ComboboxContent>

@@ -8,12 +8,7 @@ import {
   type ProjectSummary,
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-import {
-  CONFIGURE_NAV,
-  INBOX_NAV,
-  WORKSPACE_NAV,
-  type ShellSection,
-} from "@web/components/shell/nav-items";
+import { INBOX_NAV, WORKSPACE_NAV, type ShellSection } from "@web/components/shell/nav-items";
 import type { ReactNode } from "react";
 
 interface SidebarProps {
@@ -26,6 +21,7 @@ interface SidebarProps {
   currentProjectId?: string;
   onProjectSelect: (id: string) => void;
   onAddProject?: () => void;
+  onOpenSettings: () => void;
   onSearch: () => void;
   onNewIssue: () => void;
   hasLiveRun?: boolean;
@@ -59,6 +55,7 @@ export function Sidebar({
   currentProjectId,
   onProjectSelect,
   onAddProject,
+  onOpenSettings,
   onSearch,
   onNewIssue,
   hasLiveRun = false,
@@ -71,6 +68,7 @@ export function Sidebar({
       currentId={currentProjectId}
       onSelect={onProjectSelect}
       collapsed={collapsed}
+      onOpenSettings={onOpenSettings}
       {...(onAddProject === undefined ? {} : { onAddProject })}
     />
   );
@@ -120,26 +118,6 @@ export function Sidebar({
             collapsed={collapsed}
           />
         ))}
-      </NavSection>
-      <NavSection label="Configure" collapsed={collapsed}>
-        {CONFIGURE_NAV.map((item) => (
-          <SidebarNavItem
-            key={item.section}
-            icon={item.icon}
-            label={item.label}
-            active={active === item.section}
-            render={navRender(item.to)}
-            collapsed={collapsed}
-          />
-        ))}
-      </NavSection>
-      <NavSection label="Reference" collapsed={collapsed}>
-        <SidebarNavItem
-          icon="layers"
-          label="Design system"
-          href="/gallery.html"
-          collapsed={collapsed}
-        />
       </NavSection>
     </AppSidebar>
   );

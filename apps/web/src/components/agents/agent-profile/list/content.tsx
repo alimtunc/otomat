@@ -7,7 +7,6 @@ import {
   type ProfileFilter,
 } from "@web/components/agents/agent-profile/list/profile-filter";
 import { AgentProfileList } from "@web/components/agents/agent-profile/list/table";
-import { CenteredState } from "@web/components/shell/centered-state";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { QueryList } from "@web/components/shell/query-list";
@@ -26,32 +25,30 @@ export function AgentProfileListContent({
   onEdit: (profile: AgentProfileContract) => void;
 }) {
   return (
-    <div className="min-h-0 flex-1 overflow-auto">
+    <div className="overflow-hidden rounded-lg border border-border-subtle bg-card">
       <QueryList
         query={profiles}
         pending={<ListSkeleton rows={3} height={40} />}
         error={
-          <CenteredState>
-            <ErrorState
-              title="Couldn’t load agent profiles"
-              onRetry={() => void profiles.refetch()}
-            />
-          </CenteredState>
+          <ErrorState
+            variant="inline"
+            title="Couldn’t load agent profiles"
+            onRetry={() => void profiles.refetch()}
+          />
         }
         empty={
-          <CenteredState>
-            <EmptyState
-              icon="bot"
-              title="No agent profiles yet"
-              description="Create a reusable profile with a runtime, instructions and skills."
-              action={
-                <Button variant="primary" size="sm" onClick={onCreate}>
-                  <Icon name="plus" aria-hidden />
-                  New profile
-                </Button>
-              }
-            />
-          </CenteredState>
+          <EmptyState
+            icon="bot"
+            variant="inline"
+            title="No agent profiles yet"
+            description="Create a reusable profile with a runtime, instructions and skills."
+            action={
+              <Button variant="primary" size="sm" onClick={onCreate}>
+                <Icon name="plus" aria-hidden />
+                New profile
+              </Button>
+            }
+          />
         }
       >
         {(items) => (
@@ -59,32 +56,28 @@ export function AgentProfileListContent({
             query={runtimes}
             pending={<ListSkeleton rows={items.length} height={40} />}
             error={
-              <CenteredState>
-                <ErrorState
-                  title="Couldn’t load runtimes"
-                  onRetry={() => void runtimes.refetch()}
-                />
-              </CenteredState>
+              <ErrorState
+                variant="inline"
+                title="Couldn’t load runtimes"
+                onRetry={() => void runtimes.refetch()}
+              />
             }
           >
             {(runtimeDescriptors) => {
-              const filteredProfiles = items.filter((profile) =>
-                matchesProfileFilter(profile, filter),
-              );
-              return filteredProfiles.length > 0 ? (
+              const filtered = items.filter((profile) => matchesProfileFilter(profile, filter));
+              return filtered.length > 0 ? (
                 <AgentProfileList
-                  profiles={filteredProfiles}
+                  profiles={filtered}
                   descriptors={runtimeDescriptors}
                   onEdit={onEdit}
                 />
               ) : (
-                <CenteredState>
-                  <EmptyState
-                    icon="bot"
-                    title="No matching profiles"
-                    description="Choose another filter to see your agent profiles."
-                  />
-                </CenteredState>
+                <EmptyState
+                  icon="bot"
+                  variant="inline"
+                  title="No matching profiles"
+                  description="Choose another filter to see your agent profiles."
+                />
               );
             }}
           </QueryBoundary>

@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AgentProfileDetailView } from "@web/components/agents/agent-profile/detail/view";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/agents/$profileId")({
-  component: AgentProfileDetailView,
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: "/settings/agents/$profileId", params });
+  },
 });
