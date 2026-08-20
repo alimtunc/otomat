@@ -3,6 +3,7 @@ import type {
   PullRequestMergeability,
   PullRequestOrigin,
   PullRequestProvenance,
+  PullRequestPublicationActiveState,
   PullRequestPublicationState,
   PullRequestReviewDecision,
   PullRequestReviewer,
@@ -44,6 +45,8 @@ export const pullRequests = sqliteTable(
       .$type<PullRequestPublicationState>()
       .notNull()
       .default("not_configured"),
+    /** The phase a stopped publication was in; `publication_status` alone only says that it stopped. */
+    failed_phase: text("failed_phase").$type<PullRequestPublicationActiveState>(),
     title: text("title").notNull().default(""),
     body: text("body"),
     head_ref: text("head_ref"),

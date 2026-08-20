@@ -11,7 +11,7 @@ import { createGitHubService, type GitHubService } from "#github";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { stubRepositoryResolver, type TestRepo } from "../support/git.js";
-import { FakeGitHubCli, publishRequest } from "../support/github.js";
+import { FakeGitHubCli, publishAndSettle, publishRequest } from "../support/github.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-failed";
@@ -80,10 +80,10 @@ describe("publishing a run whose execution did not succeed", () => {
   it.each(["ready", "draft"] as const)(
     "opens a %s pull request without touching the run's status or its steps",
     async (mode) => {
-      const view = await github.publish(currentRun(), { ...READY_REQUEST, mode });
+      const view = await publishAndSettle(github, fix.db, currentRun(), { ...READY_REQUEST, mode });
 
-      expect(view.row.publication_status).toBe("created");
-      expect(view.row.number).toBe(42);
+      expect(view.publication_status).toBe("created");
+      expect(view.number).toBe(42);
       expect(currentRun().status).toBe("failed");
       expect(
         fix.db.select().from(schema.stepRuns).where(eq(schema.stepRuns.run_id, RUN_ID)).all(),
@@ -93,7 +93,7 @@ describe("publishing a run whose execution did not succeed", () => {
   );
 
   it("journals that the publication was decided despite the failure, with the steps as they stood", async () => {
-    await github.publish(currentRun(), READY_REQUEST);
+    await publishAndSettle(github, fix.db, currentRun(), READY_REQUEST);
 
     const override = readRunEvents(fix.db, RUN_ID).find(
       (event) => event.payload.published_despite_run_status !== undefined,
@@ -124,12 +124,12 @@ describe("publishing a run whose execution did not succeed", () => {
   });
 
   it("opens no second pull request when the publication is retried", async () => {
-    await github.publish(currentRun(), READY_REQUEST);
+    await publishAndSettle(github, fix.db, currentRun(), READY_REQUEST);
     updateRunStatus(fix.db, RUN_ID, { status: "preparing" });
 
-    const retried = await github.publish(currentRun(), READY_REQUEST);
+    const retried = await publishAndSettle(github, fix.db, currentRun(), READY_REQUEST);
 
-    expect(retried.row.number).toBe(42);
+    expect(retried.number).toBe(42);
     expect(cli.createCalls).toBe(1);
     expect(cli.pushedBranches).toEqual([BRANCH]);
   });

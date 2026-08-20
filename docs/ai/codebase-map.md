@@ -979,6 +979,34 @@ as the workspace the AI fix may act on.
 
 ## Publishing to a Pull Request
 
+Publishing is a **durable operation the daemon owns**, not a request the browser
+drives. `POST /api/runs/:id/pr` resolves the row, the generation agent and the
+first phase, then answers `202` with the publication's initial state; the work
+itself is queued on the run's in-memory chain and outlives the request, the route
+change and the disconnection that follow. A command whose `details` are absent
+asks the daemon to write the metadata as the operation's first phase, which is
+why **Create PR with AI** is one command rather than a generation the component
+chains into a publication — a navigation used to lose the second half of it.
+
+`publication_status` is that operation's whole record: `generating`,
+`committing`, `pushing`, `creating`, then `created`, each transition journaled as
+`pr.updated`/`pr.created`, so a client follows the phases over the run's SSE
+stream instead of polling. The stream therefore stays open for a settled run
+while a publication is still active — a pull request outlives the run that
+produced it. `projectPullRequestPublicationOperation` turns the row into the
+common `OperationContract` — phases, error, `retryable` — that other long
+operations (runs, commit pushes, Linear sync, daemon upgrade) can be projected
+into without a job table, a scheduler, a lease or a second source of truth.
+
+Nothing is auto-resumed at boot. Every publication a stopped process left on a
+phase is stamped `failed` with `github_publication_interrupted` and the phase it
+stopped in (`failed_phase`), which the projection reads as `interrupted` and
+offers as an explicit Retry. **Retry is the proven idempotent resume**: a
+re-commit of a clean worktree writes nothing, a re-push of the same commit is a
+no-op, and `ensureProvider` finds the pull request GitHub already holds instead
+of opening a second one. Resuming from a phase would have to guess what the
+stopped process had done; retrying asks GitHub.
+
 Two different things can be published to a pull request, so they are two
 commands. `publish` opens it, or edits title/body/Draft-Ready on one that
 exists; `pushCommits` moves commits onto its head branch. Opening one is the

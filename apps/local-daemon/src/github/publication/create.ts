@@ -22,12 +22,13 @@ export async function createPublication(
   const head = request.head_ref ?? row.head_ref ?? workspace.worktree.branch;
   row = store.transition(
     row,
-    "pushing",
+    "committing",
     { ...requestedDetails(request), head_ref: head, error_code: null, error_message: null },
     "git",
   );
 
   const pushed = workspace.worktrees.snapshot(context.run.id, message ?? undefined).headSha;
+  row = store.transition(row, "pushing", {}, "git");
   const selector = {
     cwd: workspace.worktree.path,
     repository: workspace.remote.repository,

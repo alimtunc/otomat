@@ -2,7 +2,8 @@ import { getIssue, type Db, type PullRequestPatch, type RunRow } from "@otomat/d
 import {
   formatCommitSubject,
   type CommitSubject,
-  type PreparePullRequestRequest,
+  type PullRequestPublicationDetails,
+  type PullRequestPublicationMode,
 } from "@otomat/domain";
 
 import { normalizePullRequestBody } from "../body.js";
@@ -21,14 +22,16 @@ export function composeSubject(subject: CommitSubject, identifier: string | null
 export function resolvePublicationRequest(
   db: Db,
   run: RunRow,
-  request: PreparePullRequestRequest,
+  details: PullRequestPublicationDetails,
+  mode: PullRequestPublicationMode,
 ): PublicationRequest {
   const identifier = issueIdentifier(db, run.issue_id);
   return {
-    ...request,
+    ...details,
+    mode,
     identifier,
-    ...composeSubject(request.subject, identifier),
-    normalizedBody: normalizePullRequestBody(request.body),
+    ...composeSubject(details.subject, identifier),
+    normalizedBody: normalizePullRequestBody(details.body),
   };
 }
 

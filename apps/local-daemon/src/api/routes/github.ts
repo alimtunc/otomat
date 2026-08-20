@@ -1,6 +1,7 @@
-import { getPullRequestForRun } from "@otomat/db";
+import { sqliteToIso } from "@otomat/db";
 import {
-  preparePullRequestRequestSchema,
+  projectPullRequestPublicationOperation,
+  publishPullRequestRequestSchema,
   pushPullRequestRequestSchema,
   type PullRequestDetail,
   type PullRequestPublishability,
@@ -17,10 +18,20 @@ function detail(
   view: PullRequestView | null,
   publishability: PullRequestPublishability,
 ): PullRequestDetail {
+  const row = view?.row ?? null;
   return {
-    pull_request: view ? toPullRequest(view.row) : null,
+    pull_request: row ? toPullRequest(row) : null,
     sync: view?.sync ?? null,
     publishability,
+    operation: row
+      ? projectPullRequestPublicationOperation(row.id, {
+          publication_status: row.publication_status,
+          failed_phase: row.failed_phase,
+          error_code: row.error_code,
+          error_message: row.error_message,
+          updated_at: sqliteToIso(row.updated_at),
+        })
+      : null,
   };
 }
 
@@ -57,21 +68,21 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
     }
   });
 
+  /** Accepted, not performed: the publication outlives this request, so the answer is its reference and initial state. */
   routes.post(
     "/runs/:id/pr",
-    validateJson(preparePullRequestRequestSchema),
+    validateJson(publishPullRequestRequestSchema),
     runGuard(deps.db),
     async (c) => {
       const run = c.get("run");
-      const existed = getPullRequestForRun(deps.db, run.id) !== undefined;
       try {
         const view = await deps.github.publish(run, c.req.valid("json"));
-        return c.json(await publicationDetail(run.id, view), existed ? 200 : 201);
+        return c.json(await publicationDetail(run.id, view), 202);
       } catch (error) {
         const refused = refusal(error);
         if (refused) return c.json(refused, 409);
         console.error(`[otomat] GitHub publication for run ${run.id} failed`, error);
-        return c.json({ error: "pr_prepare_failed" }, 500);
+        return c.json({ error: "pr_publish_failed" }, 500);
       }
     },
   );

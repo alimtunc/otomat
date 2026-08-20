@@ -526,19 +526,28 @@ it("reads and publishes the run pull request", async () => {
   const fetchMock: typeof fetch = async (_input, init) => {
     if (init?.method === "POST") {
       lastBody = JSON.parse(String(init.body));
-      return jsonResponse({ pull_request: PR, sync: null, publishability: PUBLISHABILITY }, 201);
+      return jsonResponse(
+        { pull_request: PR, sync: null, publishability: PUBLISHABILITY, operation: null },
+        202,
+      );
     }
-    return jsonResponse({ pull_request: null, sync: null, publishability: PUBLISHABILITY });
+    return jsonResponse({
+      pull_request: null,
+      sync: null,
+      publishability: PUBLISHABILITY,
+      operation: null,
+    });
   };
   const client = createDaemonClient({ fetch: fetchMock });
 
   expect((await client.getPullRequest("run-1")).pull_request).toBeNull();
 
   const subject = { type: "feat" as const, scope: null, summary: "add the first slice" };
-  const prepared = await client.preparePullRequest("run-1", { subject, body: "", mode: "draft" });
-  expect(prepared.pull_request?.publication_status).toBe("not_configured");
-  expect(prepared.publishability.blocker).toBeNull();
-  expect(lastBody).toEqual({ subject, body: "", mode: "draft" });
+  const details = { subject, body: "" };
+  const accepted = await client.publishPullRequest("run-1", { mode: "draft", details });
+  expect(accepted.pull_request?.publication_status).toBe("not_configured");
+  expect(accepted.publishability.blocker).toBeNull();
+  expect(lastBody).toEqual({ mode: "draft", details });
 });
 
 it("generates the pull request metadata without publishing anything", async () => {
@@ -572,7 +581,12 @@ it("pushes the run's commits and parses the published comparison", async () => {
   let lastBody: unknown;
   const fetchMock: typeof fetch = async (_input, init) => {
     lastBody = JSON.parse(String(init?.body));
-    return jsonResponse({ pull_request: null, sync: SYNC, publishability: PUBLISHABILITY });
+    return jsonResponse({
+      pull_request: null,
+      sync: SYNC,
+      publishability: PUBLISHABILITY,
+      operation: null,
+    });
   };
   const client = createDaemonClient({ fetch: fetchMock });
 

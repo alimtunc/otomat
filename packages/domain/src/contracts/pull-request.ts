@@ -7,16 +7,27 @@ import {
   pullRequestContractSchema,
   pullRequestGeneratorAuditSchema,
 } from "./entities/pull-request.js";
+import { operationContractSchema } from "./operation.js";
 
-/** Undefaulted: a caller that names no mode is refused, so an absent value never becomes a silent Draft. */
-export const preparePullRequestRequestSchema = z.object({
+export const pullRequestPublicationDetailsSchema = z.object({
   subject: commitSubjectSchema,
   body: z.string(),
   /** Remote branch the PR ships as; omitted keeps the run branch. Ignored once the PR exists — its head is its identity. */
   head_ref: z.string().trim().min(1).max(120).optional(),
-  mode: z.enum(PULL_REQUEST_PUBLICATION_MODES),
 });
-export type PreparePullRequestRequest = z.infer<typeof preparePullRequestRequestSchema>;
+export type PullRequestPublicationDetails = z.infer<typeof pullRequestPublicationDetailsSchema>;
+
+/**
+ * Undefaulted mode: a caller that names none is refused, so an absent value never
+ * becomes a silent Draft. Strict, because a request whose details land outside
+ * `details` would otherwise publish AI-written metadata instead of the ones sent.
+ */
+export const publishPullRequestRequestSchema = z.strictObject({
+  mode: z.enum(PULL_REQUEST_PUBLICATION_MODES),
+  /** Absent asks the configured agent to write the details as the publication's first phase. */
+  details: pullRequestPublicationDetailsSchema.optional(),
+});
+export type PublishPullRequestRequest = z.infer<typeof publishPullRequestRequestSchema>;
 
 /** AI-generated metadata for the run's pull request; every field stays editable, and generating publishes nothing. */
 export const pullRequestProposalSchema = z.object({
@@ -84,6 +95,8 @@ export const pullRequestDetailSchema = z.object({
   pull_request: pullRequestContractSchema.nullable(),
   sync: pullRequestSyncSchema.nullable(),
   publishability: pullRequestPublishabilitySchema,
+  /** The publication as a durable operation, or null while none was ever started for this run. */
+  operation: operationContractSchema.nullable(),
 });
 export type PullRequestDetail = z.infer<typeof pullRequestDetailSchema>;
 

@@ -158,10 +158,15 @@ describe("representative illegal transitions are rejected", () => {
     expect(() => pullRequestMachine.transition("merged", "open")).toThrow(IllegalTransitionError);
   });
 
-  it("pull_request_publication cannot create before pushing", () => {
-    expect(() => pullRequestPublicationMachine.transition("not_configured", "creating")).toThrow(
+  it("pull_request_publication cannot confirm a pull request straight out of a commit", () => {
+    expect(() => pullRequestPublicationMachine.transition("committing", "created")).toThrow(
       IllegalTransitionError,
     );
+  });
+
+  it("pull_request_publication walks a composed publication phase by phase", () => {
+    expect(pullRequestPublicationMachine.transition("generating", "committing")).toBe("committing");
+    expect(pullRequestPublicationMachine.transition("committing", "pushing")).toBe("pushing");
   });
 
   it("pull_request_publication can update a created PR through pushing", () => {
@@ -175,14 +180,11 @@ describe("representative illegal transitions are rejected", () => {
     },
   );
 
-  it.each(["pushing", "creating"] as const)(
-    "pull_request_publication cannot become not configured from %s",
-    (status) => {
-      expect(() => pullRequestPublicationMachine.transition(status, "not_configured")).toThrow(
-        IllegalTransitionError,
-      );
-    },
-  );
+  it("pull_request_publication cannot become not configured from a push in flight", () => {
+    expect(() => pullRequestPublicationMachine.transition("pushing", "not_configured")).toThrow(
+      IllegalTransitionError,
+    );
+  });
 
   it("linear_write reconciles an interrupted send to a retryable failure", () => {
     expect(linearWriteMachine.transition("sending", "failed")).toBe("failed");

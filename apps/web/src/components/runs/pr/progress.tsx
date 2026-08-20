@@ -1,14 +1,17 @@
+import type { OperationContract } from "@otomat/domain";
 import { Spinner } from "@otomat/ui";
-import { publicationPhases, type PublicationProgressInput } from "@web/components/runs/pr/phases";
 
-const STATE_MARKS = { pending: "○", active: null, done: "●" } as const;
+const STATE_MARKS = { pending: "○", active: null, done: "●", failed: "✕" } as const;
 
-export function PullRequestProgress(input: PublicationProgressInput) {
-  const phases = publicationPhases(input);
-  if (phases.length === 0) return null;
+export interface PullRequestProgressProps {
+  operation: OperationContract | null;
+}
+
+export function PullRequestProgress({ operation }: PullRequestProgressProps) {
+  if (operation === null) return null;
   return (
     <ol aria-label="Publication progress" className="flex flex-wrap items-center gap-3 text-xs">
-      {phases.map((phase) => (
+      {operation.phases.map((phase) => (
         <li
           key={phase.key}
           aria-current={phase.state === "active" ? "step" : undefined}

@@ -1,15 +1,16 @@
-import type {
-  CommitSubject,
-  GitHubConnectionContract,
-  PullRequestContract,
-  PullRequestPublishability,
-} from "@otomat/domain";
 import {
-  initialPublicationMode,
-  pullRequestAcceptedSubmission,
-  pullRequestConnectionModel,
-} from "@web/components/runs/pr/model";
-import { publicationModel } from "@web/components/runs/pr/publication-model";
+  projectPullRequestPublicationOperation,
+  PUBLICATION_INTERRUPTED_CODE,
+  type GitHubConnectionContract,
+  type PullRequestContract,
+  type PullRequestPublicationActiveState,
+  type PullRequestPublishability,
+} from "@otomat/domain";
+import { initialPublicationMode, pullRequestConnectionModel } from "@web/components/runs/pr/model";
+import {
+  publicationModel,
+  type PublicationModelInput,
+} from "@web/components/runs/pr/publication-model";
 import { describe, expect, it } from "vitest";
 
 const connected: GitHubConnectionContract = {
@@ -30,8 +31,6 @@ const PUBLISHABLE: PullRequestPublishability = {
   deletions: 3,
   dirty: true,
 };
-
-const SUBJECT: CommitSubject = { type: "feat", scope: null, summary: "ship it" };
 
 function pullRequest(overrides: Partial<PullRequestContract> = {}): PullRequestContract {
   return {
@@ -171,9 +170,37 @@ describe("initialPublicationMode", () => {
   });
 });
 
+/** The pairing the daemon answers with: the row and the operation projected from it. */
+function published(
+  row: PullRequestContract,
+  failedPhase: PullRequestPublicationActiveState | null = null,
+): Partial<PublicationModelInput> {
+  return {
+    pullRequest: row,
+    operation: projectPullRequestPublicationOperation(row.id, {
+      publication_status: row.publication_status,
+      failed_phase: failedPhase,
+      error_code: row.error_code,
+      error_message: row.error_message,
+      updated_at: "2026-08-20T09:00:00.000Z",
+    }),
+  };
+}
+
 describe("publicationModel", () => {
+  const model = (overrides: Partial<PublicationModelInput> = {}) =>
+    publicationModel({
+      pullRequest: null,
+      operation: null,
+      publishability: PUBLISHABLE,
+      connected: true,
+      hasDraftChanges: false,
+      mode: "ready",
+      ...overrides,
+    });
+
   it("offers creation on a workspace with a publishable diff, whatever its run did", () => {
-    expect(publicationModel(null, PUBLISHABLE, true, false, "ready")).toMatchObject({
+    expect(model()).toMatchObject({
       actionLabel: "Create PR ready for review",
       actionDisabled: false,
       stateLabel: "Ready to publish",
@@ -181,9 +208,7 @@ describe("publicationModel", () => {
   });
 
   it("names the draft publication when the operator chose it", () => {
-    expect(publicationModel(null, PUBLISHABLE, true, false, "draft")).toMatchObject({
-      actionLabel: "Create draft PR",
-    });
+    expect(model({ mode: "draft" })).toMatchObject({ actionLabel: "Create draft PR" });
   });
 
   it("blocks on the technical reason rather than on the run's state", () => {
@@ -192,32 +217,30 @@ describe("publicationModel", () => {
       blocker: { code: "diff_empty", message: "The workspace carries no change." },
     };
 
-    expect(publicationModel(null, blocked, true, false, "ready")).toMatchObject({
+    expect(model({ publishability: blocked })).toMatchObject({
       actionDisabled: true,
       stateLabel: "Cannot publish",
     });
   });
 
   it("waits for a connection before offering to publish", () => {
-    expect(publicationModel(null, PUBLISHABLE, false, false, "ready")).toMatchObject({
+    expect(model({ connected: false })).toMatchObject({
       actionDisabled: true,
       stateLabel: "Not connected",
     });
   });
 
   it.each([
-    ["pushing", "Pushing branch…"],
-    ["creating", "Creating pull request…"],
-  ] as const)("renders honest %s progress", (publicationStatus, actionLabel) => {
-    expect(
-      publicationModel(
-        pullRequest({ publication_status: publicationStatus }),
-        PUBLISHABLE,
-        true,
-        false,
-        "ready",
-      ),
-    ).toMatchObject({ actionLabel, actionPending: true });
+    ["generating", "Writing metadata"],
+    ["committing", "Committing the workspace"],
+    ["pushing", "Pushing the branch"],
+    ["creating", "Creating the pull request"],
+  ] as const)("names the phase the daemon is in for %s", (status, label) => {
+    expect(model(published(pullRequest({ publication_status: status })))).toMatchObject({
+      actionLabel: `${label}…`,
+      actionPending: true,
+      stateLabel: label,
+    });
   });
 
   it("offers Update PR details only for edited details", () => {
@@ -228,12 +251,12 @@ describe("publicationModel", () => {
       publication_status: "created",
     });
 
-    expect(publicationModel(row, PUBLISHABLE, true, false, "ready")).toMatchObject({
+    expect(model(published(row))).toMatchObject({
       actionLabel: "Update PR details",
       actionDisabled: true,
       stateLabel: "Details published",
     });
-    expect(publicationModel(row, PUBLISHABLE, true, true, "ready")).toMatchObject({
+    expect(model({ ...published(row), hasDraftChanges: true })).toMatchObject({
       actionLabel: "Update PR details",
       actionDisabled: false,
       stateLabel: "Unsaved details",
@@ -242,83 +265,43 @@ describe("publicationModel", () => {
 
   it("keeps a failed creation retryable", () => {
     expect(
-      publicationModel(
-        pullRequest({ publication_status: "failed", error_code: "github_push_failed" }),
-        PUBLISHABLE,
-        true,
-        false,
-        "ready",
+      model(
+        published(pullRequest({ publication_status: "failed", error_code: "github_push_failed" })),
       ),
     ).toMatchObject({ actionDisabled: false, stateLabel: "Creation failed" });
   });
 
+  it("offers an explicit retry for a publication a stopped daemon left behind", () => {
+    expect(
+      model(
+        published(
+          pullRequest({
+            publication_status: "failed",
+            error_code: PUBLICATION_INTERRUPTED_CODE,
+            error_message: "The GitHub publication stopped while pushing the branch.",
+          }),
+          "pushing",
+        ),
+      ),
+    ).toMatchObject({
+      actionLabel: "Retry publication",
+      actionDisabled: false,
+      stateLabel: "Publication interrupted",
+    });
+  });
+
   it.each(["merged", "closed"] as const)("makes a %s PR terminal", (status) => {
     expect(
-      publicationModel(
-        pullRequest({
-          number: 42,
-          url: "https://github.com/acme/otomat/pull/42",
-          status,
-          publication_status: "created",
-        }),
-        PUBLISHABLE,
-        true,
-        false,
-        "ready",
+      model(
+        published(
+          pullRequest({
+            number: 42,
+            url: "https://github.com/acme/otomat/pull/42",
+            status,
+            publication_status: "created",
+          }),
+        ),
       ),
     ).toMatchObject({ actionDisabled: true, stateLabel: `PR ${status}` });
-  });
-});
-
-describe("pullRequestAcceptedSubmission", () => {
-  it("rejects a failed result that retained older metadata", () => {
-    expect(
-      pullRequestAcceptedSubmission(
-        pullRequest({
-          publication_status: "failed",
-          commit_subject: "feat: ship the old one",
-          body: "Old body",
-        }),
-        { subject: SUBJECT, body: "New body", mode: "draft" },
-      ),
-    ).toBe(false);
-  });
-
-  it("accepts normalized empty body metadata", () => {
-    expect(
-      pullRequestAcceptedSubmission(pullRequest({ commit_subject: "feat: ship it", body: null }), {
-        subject: SUBJECT,
-        body: "",
-        mode: "draft",
-      }),
-    ).toBe(true);
-  });
-
-  it("rejects a PR GitHub still holds as a draft after a ready submission", () => {
-    expect(
-      pullRequestAcceptedSubmission(
-        pullRequest({ commit_subject: "feat: ship it", body: null, status: "draft" }),
-        { subject: SUBJECT, body: "", mode: "ready" },
-      ),
-    ).toBe(false);
-  });
-
-  it("accepts a merged PR, which is past the draft/ready question", () => {
-    expect(
-      pullRequestAcceptedSubmission(
-        pullRequest({ commit_subject: "feat: ship it", body: null, status: "merged" }),
-        { subject: SUBJECT, body: "", mode: "ready" },
-      ),
-    ).toBe(true);
-  });
-
-  it("rejects a scope the daemon did not store, however close the title looks", () => {
-    expect(
-      pullRequestAcceptedSubmission(pullRequest({ commit_subject: "feat(pr): ship it" }), {
-        subject: SUBJECT,
-        body: "",
-        mode: "draft",
-      }),
-    ).toBe(false);
   });
 });

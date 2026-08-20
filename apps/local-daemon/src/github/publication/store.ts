@@ -9,10 +9,13 @@ import {
 } from "@otomat/db";
 import {
   drivePath,
+  isPullRequestPublicationActive,
+  PUBLICATION_INTERRUPTED_CODE,
   pullRequestMachine,
   pullRequestPublicationMachine,
   type EventSource,
   type PullRequestProposal,
+  type PullRequestPublicationActiveState,
   type PullRequestPublicationState,
   type PullRequestState,
 } from "@otomat/domain";
@@ -27,6 +30,23 @@ import {
   type PullRequestEventType,
 } from "../events.js";
 import type { ComposedSubject, PublicationConfig } from "./types.js";
+
+const INTERRUPTED_PHASE_LABELS = {
+  generating: "writing the metadata",
+  committing: "committing the workspace",
+  pushing: "pushing the branch",
+  creating: "creating the pull request",
+} satisfies Record<PullRequestPublicationActiveState, string>;
+
+function stoppedPhase(
+  row: PullRequestRow,
+  next: PullRequestPublicationState,
+): PullRequestPublicationActiveState | null {
+  if (isPullRequestPublicationActive(next) || next === "created") return null;
+  return isPullRequestPublicationActive(row.publication_status)
+    ? row.publication_status
+    : row.failed_phase;
+}
 
 /** Publication only ever acts on a pull request Otomat opened for a run; a row without one never reaches these paths. */
 export function publicationRunId(row: PullRequestRow): string {
@@ -87,6 +107,7 @@ export class PublicationStore {
     return updated;
   }
 
+  /** The phase rides every transition: a publication that stops keeps where it stopped, one that moves on drops it. */
   transition(
     row: PullRequestRow,
     status: PullRequestPublicationState,
@@ -97,7 +118,12 @@ export class PublicationStore {
     if (row.publication_status !== status) {
       pullRequestPublicationMachine.transition(row.publication_status, status);
     }
-    return this.patch(row, { ...values, publication_status: status }, source, type);
+    return this.patch(
+      row,
+      { ...values, publication_status: status, failed_phase: stoppedPhase(row, status) },
+      source,
+      type,
+    );
   }
 
   /** Landing on `merged` settles the run in the same breath: worktree, branch and issue. */
@@ -127,7 +153,7 @@ export class PublicationStore {
     drivePath(pullRequestPublicationMachine, row.publication_status, status, (next) => {
       current = this.patch(
         current,
-        { publication_status: next, error_code: null, error_message: null },
+        { publication_status: next, failed_phase: null, error_code: null, error_message: null },
         "github",
       );
     });
@@ -185,13 +211,14 @@ export class PublicationStore {
     return new GitHubPublicationError(failure.code, failure.message);
   }
 
+  /** Classifies, never resumes: what a stopped process had done is only knowable by asking GitHub, which retry does. */
   recoverInterrupted(row: PullRequestRow): PullRequestRow {
-    if (row.publication_status !== "pushing" && row.publication_status !== "creating") return row;
+    if (!isPullRequestPublicationActive(row.publication_status)) return row;
     return this.failure(
       row,
       new GitHubPublicationError(
-        "github_publication_interrupted",
-        "The previous GitHub publication was interrupted. Retry to reconcile it safely.",
+        PUBLICATION_INTERRUPTED_CODE,
+        `The GitHub publication stopped while ${INTERRUPTED_PHASE_LABELS[row.publication_status]}. Retry to reconcile it safely.`,
       ),
     );
   }

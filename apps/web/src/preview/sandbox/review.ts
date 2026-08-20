@@ -1,10 +1,11 @@
-import type {
-  DiffFileBlobsResponse,
-  PullRequestContract,
-  PullRequestDetail,
-  PullRequestInbox,
-  ReviewDetail,
-  ReviewDiffResponse,
+import {
+  projectPullRequestPublicationOperation,
+  type DiffFileBlobsResponse,
+  type PullRequestContract,
+  type PullRequestDetail,
+  type PullRequestInbox,
+  type ReviewDetail,
+  type ReviewDiffResponse,
 } from "@otomat/domain";
 import { branchOf, SANDBOX_REVIEW_RUN_ID } from "@web/preview/sandbox/runs";
 import { SANDBOX_NOW, SANDBOX_PROJECT_ID } from "@web/preview/sandbox/workspace";
@@ -145,6 +146,13 @@ export const SANDBOX_PULL_REQUESTS: PullRequestContract[] = [PULL_REQUEST];
 
 export const SANDBOX_PULL_REQUEST_DETAIL: PullRequestDetail = {
   pull_request: PULL_REQUEST,
+  operation: projectPullRequestPublicationOperation(PULL_REQUEST.id, {
+    publication_status: PULL_REQUEST.publication_status,
+    failed_phase: null,
+    error_code: null,
+    error_message: null,
+    updated_at: SANDBOX_NOW,
+  }),
   sync: null,
   publishability: {
     blocker: null,

@@ -1,5 +1,10 @@
-import { getRun, type Db } from "@otomat/db";
-import { isRunSettled, type RunEndPayload, type RunStreamErrorPayload } from "@otomat/domain";
+import { getPullRequestForRun, getRun, type Db } from "@otomat/db";
+import {
+  isPullRequestPublicationActive,
+  isRunSettled,
+  type RunEndPayload,
+  type RunStreamErrorPayload,
+} from "@otomat/domain";
 import type { Context } from "hono";
 import { streamSSE } from "hono/streaming";
 
@@ -22,6 +27,14 @@ function parseCursor(
   return delivered === undefined ? anchor : Math.max(anchor, delivered);
 }
 
+/** A publication outlives the run that produced it, so a settled run still streams while one is in flight. */
+function isPublishing(db: Db, runId: string): boolean {
+  const pullRequest = getPullRequestForRun(db, runId);
+  return (
+    pullRequest !== undefined && isPullRequestPublicationActive(pullRequest.publication_status)
+  );
+}
+
 /** Each event carries its `seq` as the SSE id so an EventSource reconnect resumes via `Last-Event-ID`. */
 export function streamRunEvents(c: Context, db: Db, runId: string) {
   const afterSeq = parseCursor(c.req.query("afterSeq"), c.req.header("Last-Event-ID"));
@@ -42,7 +55,7 @@ export function streamRunEvents(c: Context, db: Db, runId: string) {
         }
 
         const run = getRun(db, runId);
-        if (!run || (isRunSettled(run.status) && events.length === 0)) {
+        if (!run || (isRunSettled(run.status) && events.length === 0 && !isPublishing(db, runId))) {
           const status = run?.status ?? "canceled";
           await stream.writeSSE({
             event: "end",

@@ -1,5 +1,6 @@
 import type {
-  PreparePullRequestRequest,
+  OperationContract,
+  PublishPullRequestRequest,
   PullRequestContract,
   PullRequestProposal,
   PullRequestPublicationMode,
@@ -26,6 +27,7 @@ import { publicationModel } from "./publication-model";
 
 export interface PullRequestFormProps {
   pullRequest: PullRequestContract | null;
+  operation: OperationContract | null;
   publishability: PullRequestPublishability;
   connected: boolean;
   /** Advanced fields revealed; owned by the route so it survives a reload. */
@@ -34,7 +36,8 @@ export interface PullRequestFormProps {
   /** The explicit Draft/Ready choice the route already carries, or undefined for a new publication. */
   chosenMode: PullRequestPublicationMode | undefined;
   onModeChange: (mode: PullRequestPublicationMode) => void;
-  onSubmit: (value: PreparePullRequestRequest) => Promise<boolean>;
+  /** Hands the publication to the daemon; a request without details asks it to write them first. */
+  onSubmit: (request: PublishPullRequestRequest) => Promise<boolean>;
   /** Writes the metadata with the configured agent; null when it failed (the mutation owns the toast). */
   onGenerate: () => Promise<PullRequestProposal | null>;
   isPending: boolean;
@@ -47,6 +50,7 @@ function aiActionLabel(mode: PullRequestPublicationMode): string {
 
 export function PullRequestForm({
   pullRequest,
+  operation,
   publishability,
   connected,
   customize,
@@ -76,29 +80,6 @@ export function PullRequestForm({
     if (proposal !== null) fillFrom(proposal);
   };
 
-  /** One operation, and a generation that failed publishes nothing while every field stays editable. */
-  const createWithAi = async (mode: PullRequestPublicationMode): Promise<void> => {
-    const proposal = await onGenerate();
-    if (proposal === null) return;
-    fillFrom(proposal);
-    const accepted = await onSubmit({
-      subject: proposal.subject,
-      body: proposal.body,
-      head_ref: proposal.branch,
-      mode,
-    });
-    if (accepted) {
-      form.reset({
-        type: proposal.subject.type,
-        scope: proposal.subject.scope ?? "",
-        summary: proposal.subject.summary,
-        body: proposal.body,
-        branch: proposal.branch,
-        mode,
-      });
-    }
-  };
-
   return (
     <form
       className="flex flex-col gap-4"
@@ -111,10 +92,19 @@ export function PullRequestForm({
         selector={(state) => [state.canSubmit, state.isDirty, state.values.mode] as const}
       >
         {([canSubmit, isDirty, mode]) => {
-          const model = publicationModel(pullRequest, publishability, connected, isDirty, mode);
+          const model = publicationModel({
+            pullRequest,
+            operation,
+            publishability,
+            connected,
+            hasDraftChanges: isDirty,
+            mode,
+          });
           const busy = model.actionPending || isPending || isGenerating;
           const fieldsDisabled = terminal || busy;
-          const composeWithAi = !branchLocked && !customize;
+          // Metadata already written is republished as it stands: a retry never pays the generator twice.
+          const composeWithAi =
+            !branchLocked && !customize && !isDirty && pullRequest?.commit_subject == null;
           return (
             <>
               <Chip>{model.stateLabel}</Chip>
@@ -188,7 +178,7 @@ export function PullRequestForm({
                   (!composeWithAi && !canSubmit) || model.actionDisabled || terminal || isGenerating
                 }
                 primaryLoading={composeWithAi ? busy : isPending || model.actionPending}
-                onCompose={composeWithAi ? () => void createWithAi(mode) : null}
+                onCompose={composeWithAi ? () => void onSubmit({ mode }) : null}
                 onGenerate={() => void generateOnly()}
                 generateDisabled={fieldsDisabled}
                 isGenerating={isGenerating}

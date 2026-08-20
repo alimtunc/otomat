@@ -19,9 +19,8 @@ const REFUSED_REMOTE = new GitHubCliError(
   "No usable GitHub remote was found for this run in /w: origin (https://***@gitlab.com/acme/otomat.git is not a GitHub repository URL). Point origin at a GitHub repository, then retry.",
 );
 const PUBLISH_BODY = {
-  subject: { type: "feat", scope: "pr", summary: "ship it" },
-  body: "Details",
   mode: "ready",
+  details: { subject: { type: "feat", scope: "pr", summary: "ship it" }, body: "Details" },
 };
 let t: TestDb;
 
@@ -87,7 +86,6 @@ it("serves and publishes the durable PR through the GitHub module", async () => 
     published_head_sha: "abc123",
     published_diff_sha: "diff123",
   });
-  // The route reads "created or updated" from the stored row, so the publish below answers 200.
   t.db.insert(schema.pullRequests).values(row).run();
   const sync: PullRequestSync = {
     state: "ahead",
@@ -108,9 +106,11 @@ it("serves and publishes the durable PR through the GitHub module", async () => 
   const detail = await json<PullRequestDetail>(fetched);
   expect(detail.pull_request).toMatchObject({ number: 42 });
   expect(detail.sync).toEqual(sync);
+  // A client that reconnects finds the operation on the read, not only on the answer that accepted it.
+  expect(detail.operation).toMatchObject({ id: "pr1", state: "succeeded", retryable: false });
 
   const published = await post(app, `/api/runs/${RUN_ID}/pr`, PUBLISH_BODY);
-  expect(published.status).toBe(200);
+  expect(published.status).toBe(202);
   expect((await json<PullRequestDetail>(published)).pull_request?.url).toBe(row.url);
 });
 
@@ -225,8 +225,8 @@ it("refuses a type the repository does not publish", async () => {
   const app = makeApiApp(t, { github: stubGitHubService() });
 
   const response = await post(app, `/api/runs/${RUN_ID}/pr`, {
-    ...PUBLISH_BODY,
-    subject: { type: "wip", scope: null, summary: "keep going" },
+    mode: "ready",
+    details: { subject: { type: "wip", scope: null, summary: "keep going" }, body: "Details" },
   });
 
   expect(response.status).toBe(400);

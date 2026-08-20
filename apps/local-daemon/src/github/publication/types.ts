@@ -1,7 +1,9 @@
 import type { PullRequestRow, RunRow } from "@otomat/db";
 import type {
-  PreparePullRequestRequest,
+  PublishPullRequestRequest,
   PullRequestProposal,
+  PullRequestPublicationDetails,
+  PullRequestPublicationMode,
   PullRequestPublishability,
   PushPullRequestRequest,
 } from "@otomat/domain";
@@ -33,9 +35,11 @@ export interface PullRequestPublicationService {
   /** Refreshes a live pull request from the provider before answering; see `PullRequestPublisher.get`. */
   get(runId: string): Promise<PullRequestView | null>;
   publishability(runId: string): Promise<PullRequestPublishability>;
-  publish(run: RunRow, request: PreparePullRequestRequest): Promise<PullRequestView>;
+  publish(run: RunRow, request: PublishPullRequestRequest): Promise<PullRequestView>;
   pushCommits(runId: string, request: PushPullRequestRequest): Promise<PullRequestView>;
   generate(run: RunRow, agent: GenerationAgent): Promise<PullRequestProposal>;
+  reconcileInterrupted(): number;
+  settle(): Promise<void>;
 }
 
 export interface ExistingPullRequestResult {
@@ -55,7 +59,8 @@ export interface ComposedSubject {
   title: string;
 }
 
-export interface PublicationRequest extends PreparePullRequestRequest, ComposedSubject {
+export interface PublicationRequest extends PullRequestPublicationDetails, ComposedSubject {
+  mode: PullRequestPublicationMode;
   identifier: string | null;
   normalizedBody: string | null;
 }
