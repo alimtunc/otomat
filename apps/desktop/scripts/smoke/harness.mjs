@@ -7,6 +7,7 @@ import { join } from "node:path";
 
 const SHUTDOWN_TIMEOUT_MS = 20_000;
 const ORPHAN_GRACE_MS = 3_000;
+const REAP_TIMEOUT_MS = 2_000;
 
 const temporaries = [];
 let mountPoint = null;
@@ -65,17 +66,68 @@ function alive(pid) {
   return spawnSync("kill", ["-0", pid]).status === 0;
 }
 
-export async function awaitExit(child, label) {
+export function descendantPids(pid) {
+  const found = [];
+  for (const child of childPids(pid)) found.push(child, ...descendantPids(child));
+  return found;
+}
+
+export function describeProcesses(pids) {
+  if (pids.length === 0) return "  (no process left)";
+  const listed = spawnSync("ps", ["-o", "pid,ppid,stat,etime,command", "-p", pids.join(",")], {
+    encoding: "utf8",
+  });
+  return listed.stdout.trimEnd();
+}
+
+export function tail(text, lines = 40) {
+  const kept = text.trimEnd().split("\n").slice(-lines);
+  return kept.length === 1 && kept[0] === "" ? "  (empty)" : kept.map((l) => `  ${l}`).join("\n");
+}
+
+/** Unref'd: a race this timer loses must not hold the smoke open until it fires. */
+function expiry(timeoutMs) {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(null), timeoutMs).unref();
+  });
+}
+
+/** A child already gone, or one the signal never reached, must not read as one ignoring SIGTERM. */
+export async function terminate(child, label, evidence) {
+  const evidenced = (message) => {
+    if (evidence === undefined) return message;
+    try {
+      return `${message}\n${evidence()}`;
+    } catch (error) {
+      return `${message}\n  (evidence unavailable: ${String(error)})`;
+    }
+  };
+  if (child.exitCode !== null || child.signalCode !== null) {
+    const exit = `code ${String(child.exitCode)}, signal ${String(child.signalCode)}`;
+    throw new Error(evidenced(`${label} had already exited (${exit}) before SIGTERM.`));
+  }
   const exited = new Promise((resolve) =>
     child.once("exit", (code, signal) => resolve({ code, signal })),
   );
-  const timer = new Promise((resolve) => setTimeout(() => resolve(null), SHUTDOWN_TIMEOUT_MS));
-  const outcome = await Promise.race([exited, timer]);
-  if (outcome === null) {
-    child.kill("SIGKILL");
-    throw new Error(`${label} ignored SIGTERM for ${SHUTDOWN_TIMEOUT_MS}ms.`);
+  const pid = child.pid;
+  if (!child.kill("SIGTERM")) {
+    throw new Error(evidenced(`SIGTERM could not be delivered to ${label} (pid ${String(pid)}).`));
   }
-  return outcome;
+  const outcome = await Promise.race([exited, expiry(SHUTDOWN_TIMEOUT_MS)]);
+  if (outcome !== null) return outcome;
+
+  const survivors = descendantPids(pid);
+  const report = evidenced(
+    [
+      `${label} ignored SIGTERM for ${SHUTDOWN_TIMEOUT_MS}ms.`,
+      `  pid: ${String(pid)}`,
+      `  surviving children: ${survivors.length === 0 ? "none" : survivors.join(", ")}`,
+      describeProcesses([String(pid), ...survivors]),
+    ].join("\n"),
+  );
+  child.kill("SIGKILL");
+  await Promise.race([exited, expiry(REAP_TIMEOUT_MS)]);
+  throw new Error(report);
 }
 
 /** Electron's own helpers are children too, so a survivor needs a grace period before it is one. */

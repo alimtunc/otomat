@@ -7,14 +7,15 @@ import { join } from "node:path";
 import { RELEASE_OUT } from "../mac-build.mjs";
 import { PACKAGED_CHANNELS, readPrNumber, resolveBuildIdentity } from "../release/metadata.mjs";
 import {
-  awaitExit,
   capture,
   childPids,
   cleanup,
   installFromDmg,
   isolatedEnv,
   survivingPids,
+  tail,
   temporaryDir,
+  terminate,
   until,
 } from "./harness.mjs";
 
@@ -155,14 +156,25 @@ async function smokeDaemon(appPath, expectedBuild) {
     throw new Error(`${error.message}\n${output}`, { cause: error });
   }
 
-  child.kill("SIGTERM");
-  const exit = await awaitExit(child, "the packaged daemon");
+  const exit = await terminate(child, "the packaged daemon", () => `  output:\n${tail(output)}`);
   if (exit.code !== 0 && exit.signal !== "SIGTERM") {
     throw new Error(`the packaged daemon exited with code ${String(exit.code)}:\n${output}`);
   }
   if (!existsSync(join(dataDir, "otomat.db"))) {
     throw new Error("the packaged daemon never created its database.");
   }
+}
+
+function launchEvidence(userData, output) {
+  const read = (name) => {
+    const path = join(userData, "logs", name);
+    return existsSync(path) ? readFileSync(path, "utf8") : "";
+  };
+  return [
+    `  output:\n${tail(output)}`,
+    `  desktop.log:\n${tail(read("desktop.log"))}`,
+    `  daemon.log:\n${tail(read("daemon.log"))}`,
+  ].join("\n");
 }
 
 /** The whole shell: launch the installed app, let it own its daemon, quit it, reap the child. */
@@ -188,8 +200,7 @@ async function smokeApp(appPath) {
   }
 
   const spawnedPids = childPids(child.pid);
-  child.kill("SIGTERM");
-  await awaitExit(child, "the launched app");
+  await terminate(child, "the launched app", () => launchEvidence(userData, output));
   const orphans = await survivingPids(spawnedPids);
   if (orphans.length > 0) {
     for (const pid of orphans) spawnSync("kill", ["-9", pid]);

@@ -12,13 +12,14 @@ import { join } from "node:path";
 import { DESKTOP, RELEASE_OUT, REPO } from "../mac-build.mjs";
 import { assertMacHost } from "../release/metadata.mjs";
 import {
-  awaitExit,
   childPids,
   cleanup,
   installFromDmg,
   isolatedEnv,
   survivingPids,
+  tail,
   temporaryDir,
+  terminate,
   until,
 } from "./harness.mjs";
 
@@ -60,28 +61,41 @@ function channelRoot(appData) {
   return entries.length === 0 ? null : join(appData, entries[0]);
 }
 
-function daemonLog(appData) {
+function logContents(appData, name) {
   const root = channelRoot(appData);
   if (root === null) return null;
-  const log = join(root, "logs", "daemon.log");
+  const log = join(root, "logs", name);
   return existsSync(log) ? { root, contents: readFileSync(log, "utf8") } : { root, contents: "" };
 }
 
-/** How much of the daemon log this launch inherits, so only its own boot line can satisfy it. */
-function daemonLogLength(appData) {
-  return daemonLog(appData)?.contents.length ?? 0;
+/** How much of a log this launch inherits, so only its own lines can answer for it. */
+function logLength(appData, name) {
+  return logContents(appData, name)?.contents.length ?? 0;
 }
 
 /** A boot line past `since` means this launch's own daemon is up, not the previous one's. */
 function bootedAfter(appData, since) {
-  const log = daemonLog(appData);
+  const log = logContents(appData, "daemon.log");
   if (log === null) return null;
   return log.contents.slice(since).includes(BOOT_MARKER) ? log.root : null;
 }
 
+/** What a stuck quit leaves to read, sliced to this launch: the profile is shared across builds. */
+function launchEvidence(appData, output, inherited) {
+  const since = (name) => tail(logContents(appData, name)?.contents.slice(inherited[name]) ?? "");
+  return [
+    `  output:\n${tail(output)}`,
+    `  desktop.log:\n${since("desktop.log")}`,
+    `  daemon.log:\n${since("daemon.log")}`,
+  ].join("\n");
+}
+
 /** Launches the installed app against the scratch appData, waits for its daemon, then quits it. */
 async function runOnce(appPath, appData, label) {
-  const since = daemonLogLength(appData);
+  const inherited = {
+    "daemon.log": logLength(appData, "daemon.log"),
+    "desktop.log": logLength(appData, "desktop.log"),
+  };
   const child = spawn(join(appPath, "Contents", "MacOS", PRODUCT_NAME), [], {
     env: isolatedEnv({ [APP_DATA_ENV]: appData }),
     stdio: ["ignore", "pipe", "pipe"],
@@ -94,7 +108,7 @@ async function runOnce(appPath, appData, label) {
   try {
     root = await until(`${label} reaching its daemon`, LAUNCH_TIMEOUT_MS, async () => {
       if (child.exitCode !== null) throw new Error(`${label} exited during launch.`);
-      return bootedAfter(appData, since);
+      return bootedAfter(appData, inherited["daemon.log"]);
     });
   } catch (error) {
     child.kill("SIGKILL");
@@ -102,8 +116,7 @@ async function runOnce(appPath, appData, label) {
   }
 
   const spawnedPids = childPids(child.pid);
-  child.kill("SIGTERM");
-  await awaitExit(child, label);
+  await terminate(child, label, () => launchEvidence(appData, output, inherited));
   const orphans = await survivingPids(spawnedPids);
   for (const pid of orphans) spawnSync("kill", ["-9", pid]);
   if (orphans.length > 0) {

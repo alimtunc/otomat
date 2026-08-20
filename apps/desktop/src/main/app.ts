@@ -19,6 +19,7 @@ import { registerIpc, type IpcState } from "./ipc.js";
 import { installApplicationMenu } from "./menu.js";
 import type { AppPaths } from "./paths.js";
 import { serveAppScheme } from "./protocol.js";
+import { QuitSequence } from "./quit.js";
 import { createDesktopRuntime, type DesktopRuntime } from "./runtime.js";
 import { hardenWebContents, resolveAllowedOrigins } from "./security.js";
 import {
@@ -41,10 +42,13 @@ export class DesktopApp {
   private diagnostic: DesktopStartupDiagnostic | null = null;
   private splash: BrowserWindow | null = null;
   private cockpit: BrowserWindow | null = null;
-  private isQuitting = false;
   private operation: "restoring" | "starting" | null = null;
   private readonly rejectedBackupPaths = new Set<string>();
   private readonly log = new StartupLogSink(() => this.runtime?.desktopLog ?? null);
+  readonly quit = new QuitSequence(
+    () => this.runtime,
+    (message) => this.log.write(message),
+  );
 
   constructor(
     private readonly paths: AppPaths,
@@ -101,29 +105,6 @@ export class DesktopApp {
     if (window === null) return;
     if (window.isMinimized()) window.restore();
     window.focus();
-  }
-
-  beginQuitIfNeeded(done: () => void): boolean {
-    if (this.isQuitting) return true;
-    const runtime = this.runtime;
-    if (runtime === null) return false;
-    if (runtime.daemon.running !== true && runtime.hosts.remoteSession === null) return false;
-    this.isQuitting = true;
-    runtime.hosts
-      .shutdown()
-      .catch((error: unknown) => this.log.write(`Tunnel stop failed during quit: ${String(error)}`))
-      .then(() => (runtime.daemon.running === true ? runtime.daemon.stop() : undefined))
-      .then(() => {
-        this.isQuitting = false;
-        done();
-      })
-      .catch((error: unknown) => {
-        this.isQuitting = false;
-        this.log.write(
-          `Daemon stop failed during quit: ${String(error)}; desktop shutdown remains blocked for retry.`,
-        );
-      });
-    return true;
   }
 
   private async runStartup(): Promise<void> {
