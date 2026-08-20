@@ -1,8 +1,10 @@
 import { DaemonRequestError } from "@otomat/client";
 import {
   issueProjectMoveErrorSchema,
+  issueStatusErrorSchema,
   type CreateIssueRequest,
   type MoveIssueProjectRequest,
+  type SetIssueStatusRequest,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,6 +33,27 @@ export function useMoveIssueProject(issueId: string) {
       client.invalidateQueries({ queryKey: queryKeys.repositories });
     },
   });
+}
+
+/** Sets the source status of a local issue; the daemon refuses a mirrored one. */
+export function useSetIssueStatus(issueId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: SetIssueStatusRequest) => daemon.setIssueStatus(issueId, request),
+    onSuccess: (issue) => {
+      client.setQueryData(queryKeys.issue(issue.id), issue);
+      client.invalidateQueries({ queryKey: queryKeys.issues });
+    },
+  });
+}
+
+export function issueStatusErrorMessage(error: unknown): string {
+  if (error instanceof DaemonRequestError) {
+    const refusal = issueStatusErrorSchema.safeParse(error.body);
+    if (refusal.success) return refusal.data.message;
+    return "Could not change this status — the daemon rejected the request.";
+  }
+  return "Could not change this status — is the daemon running?";
 }
 
 /** Preserves the daemon's typed refusal and falls back to a connectivity message otherwise. */

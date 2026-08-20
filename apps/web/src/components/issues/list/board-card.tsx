@@ -1,7 +1,12 @@
-import { projectIssuePrimaryState, type IssueContract } from "@otomat/domain";
+import {
+  projectIssuePrimaryState,
+  projectOpenCycleExecution,
+  type IssueContract,
+} from "@otomat/domain";
 import { Avatar, FOCUS_RING, IssueSourceGlyph, IssueStatusChip, StatusGlyph } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { ColorDot } from "@web/components/issues/color-dot";
+import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { CardChips } from "@web/components/issues/list/card-chips";
 import { issueShortId } from "@web/lib/ids";
 import { divergentSourceStatus } from "@web/lib/issue/divergent-status";
@@ -10,6 +15,8 @@ import { failureSummary } from "@web/lib/issue/execution-failure";
 export function BoardCard({ issue }: { issue: IssueContract }) {
   const primary = projectIssuePrimaryState(issue);
   const sourceStatus = divergentSourceStatus(issue);
+  // Name the cycle a closed status left open, rather than let the card read as finished work.
+  const overlay = primary.axis === "status" ? projectOpenCycleExecution(issue) : null;
   const failure =
     primary.state === "failed" && issue.execution.state === "failed"
       ? issue.execution.failure
@@ -48,6 +55,7 @@ export function BoardCard({ issue }: { issue: IssueContract }) {
         )}
         <span className="flex flex-wrap items-center gap-1">
           {sourceStatus !== null ? <IssueStatusChip status={sourceStatus} /> : null}
+          {overlay === null ? null : <IssueExecutionChip execution={overlay} />}
           <CardChips issue={issue} />
         </span>
       </Link>

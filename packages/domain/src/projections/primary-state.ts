@@ -1,6 +1,6 @@
 import type { IssueExecution, IssueExecutionState } from "../contracts/entities/issue-execution.js";
 import type { IssueWorkspace } from "../contracts/entities/issue-workspace.js";
-import { isIssueTerminal, type IssueState } from "../state-machines/issue.js";
+import { isIssueClosed, type IssueState } from "../state-machines/issue.js";
 
 /** The axis an issue's current state was read from: its business/source status, or the execution of its canonical workspace. */
 export type IssuePrimaryState =
@@ -22,9 +22,9 @@ export function projectOpenCycleExecution(
   return issue.execution;
 }
 
-/** A terminal business status outranks every run; below it an open cycle outranks the status, and a closed one hands it back, so an old failure or review never reads as current. */
+/** A closed business status outranks every run; below it an open cycle outranks the status, and a closed cycle hands it back, so an old failure or review never reads as current. */
 export function projectIssuePrimaryState(issue: IssuePrimaryStateInput): IssuePrimaryState {
-  if (isIssueTerminal(issue.status)) return { axis: "status", state: issue.status };
+  if (isIssueClosed(issue.status)) return { axis: "status", state: issue.status };
   const execution = projectOpenCycleExecution(issue);
   if (execution === null) return { axis: "status", state: issue.status };
   return { axis: "execution", state: execution.state, run_id: execution.run_id };

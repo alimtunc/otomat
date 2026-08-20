@@ -9,7 +9,13 @@ import {
   type IssueRow,
   type RunRow,
 } from "@otomat/db";
-import { executableSteps, isRunSettled, selectLatestResumableSession } from "@otomat/domain";
+import {
+  executableSteps,
+  IllegalTransitionError,
+  isIssueClosed,
+  isRunSettled,
+  selectLatestResumableSession,
+} from "@otomat/domain";
 
 import { sessionDir } from "#events";
 import { createRuntimeAdapter, isKnownRuntimeId, type KnownRuntimeId } from "#runtime";
@@ -79,10 +85,14 @@ export function requireRunRow(db: Db, runId: string, when: RunReadPoint): RunRow
   return row;
 }
 
-/** Runs before any worktree work so a closed issue refuses the resume rather than reopening. */
+/** Runs before any worktree work so a closed issue refuses the resume: only an operator reopens one. */
 export function reopenIssue(db: Db, run: RunRow): IssueRow | undefined {
   const issue = getIssue(db, run.issue_id);
-  if (issue) driveIssueTo(db, issue.id, issue.status, "running");
+  if (!issue) return undefined;
+  if (isIssueClosed(issue.status)) {
+    throw new IllegalTransitionError("issue", issue.status, "running");
+  }
+  driveIssueTo(db, issue.id, issue.status, "running");
   return issue;
 }
 

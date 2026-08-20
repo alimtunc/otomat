@@ -1,11 +1,19 @@
 import { randomUUID } from "node:crypto";
 
-import { getIssue, getProject, insertIssue, updateIssueProject } from "@otomat/db";
+import {
+  getIssue,
+  getProject,
+  insertIssue,
+  updateIssueProject,
+  updateIssueStatus,
+} from "@otomat/db";
 import {
   attachPullRequestRequestSchema,
   createIssueRequestSchema,
+  IllegalTransitionError,
   issueMachine,
   moveIssueProjectRequestSchema,
+  setIssueStatusRequestSchema,
 } from "@otomat/domain";
 import { Hono } from "hono";
 
@@ -68,6 +76,40 @@ export function createIssueRoutes(deps: ApiDeps): Hono {
     if (!moved)
       return c.json({ error: "issue_not_found", message: "This issue no longer exists." }, 404);
     return c.json(moved);
+  });
+
+  routes.patch("/:id/status", validateJson(setIssueStatusRequestSchema), (c) => {
+    const id = c.req.param("id");
+    const issue = getIssue(deps.db, id);
+    if (!issue)
+      return c.json({ error: "issue_not_found", message: "This issue no longer exists." }, 404);
+    if (issue.source !== "local") {
+      return c.json(
+        {
+          error: "issue_not_local",
+          message: `A ${issue.source} issue takes its status from its tracker; set it there instead.`,
+        },
+        409,
+      );
+    }
+    const { status } = c.req.valid("json");
+    try {
+      updateIssueStatus(deps.db, id, issueMachine.transition(issue.status, status));
+    } catch (error) {
+      if (!(error instanceof IllegalTransitionError)) throw error;
+      return c.json(
+        {
+          error: "issue_status_refused",
+          message: `An issue that is ${issue.status} cannot be marked ${status}.`,
+        },
+        409,
+      );
+    }
+    console.log(`[otomat] issue ${id} status set to ${status} by hand`);
+    const updated = readIssue(deps.db, id);
+    if (!updated)
+      return c.json({ error: "issue_not_found", message: "This issue no longer exists." }, 404);
+    return c.json(updated);
   });
 
   routes.get("/:id/pull-requests", async (c) => {

@@ -9,7 +9,7 @@ import {
   projectIssuePrimaryState,
   projectOpenCycleExecution,
 } from "#domain/projections/primary-state";
-import { ISSUE_TERMINAL_STATES, type IssueState } from "#domain/state-machines/issue";
+import { ISSUE_CLOSED_STATES, type IssueState } from "#domain/state-machines/issue";
 
 const OPEN: IssueWorkspace = {
   state: "open",
@@ -48,8 +48,8 @@ it("names the open pull request of an issue the tracker calls In Progress", () =
   });
 });
 
-it("keeps a terminal source status whatever its runs did", () => {
-  for (const status of ISSUE_TERMINAL_STATES) {
+it("keeps a closed source status whatever its runs did", () => {
+  for (const status of ISSUE_CLOSED_STATES) {
     for (const execution of [FAILED, REVIEWING, PR_OPEN]) {
       expect(projectIssuePrimaryState(issue(status, execution))).toEqual({
         axis: "status",

@@ -6,8 +6,8 @@ import {
   type Db,
 } from "@otomat/db";
 import {
+  isIssueClosed,
   isRunSettled,
-  issueMachine,
   projectIssueWorkspace,
   type LinearLifecycleSync,
 } from "@otomat/domain";
@@ -49,7 +49,7 @@ export function closeMergedIssue(config: MergeClosureConfig, issueId: string): v
 
 function markIssueDone(config: MergeClosureConfig, issueId: string, runId: string | null): void {
   const issue = getIssue(config.db, issueId);
-  if (!issue || issueMachine.isTerminal(issue.status)) return;
+  if (!issue || isIssueClosed(issue.status)) return;
   driveIssueTo(config.db, issue.id, issue.status, "done");
   signalIssueLifecycle(config.syncIssueLifecycle, issue.id, "done", runId);
 }
