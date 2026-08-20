@@ -104,11 +104,13 @@ pnpm dlx wrangler@4 containers delete <application-id>
 
 `list` names every preview worker still deployed with the pull request it belongs to, which is how
 an orphan — a deployment whose pull request closed while the workflow was down — is found. Tearing
-one down deletes the worker — which takes its container, route and data with it — and, when
-`CLOUDFLARE_PAGES_PROJECT` is set in the environment, purges the pull request's Pages deployments
-too; both halves are idempotent. It then tries to delete the worker's registry image best-effort —
-the beta `wrangler containers images` command is allowed to refuse without failing the teardown, so
-`pnpm dlx wrangler@4 containers images list` / `… delete` is still how leftovers are reclaimed.
+one down deletes the worker and its container application — deleting the worker alone leaves the
+application behind, and a leftover application refuses the next provision of a reopened pull
+request — and, when `CLOUDFLARE_PAGES_PROJECT` is set in the environment, purges the pull
+request's Pages deployments too; all of it is idempotent. It then deletes the worker's registry
+images best-effort — the beta `wrangler containers images` commands are allowed to refuse without
+failing the teardown, so `pnpm dlx wrangler@4 containers images list` / `… delete <image>:<tag>`
+is still how leftovers are reclaimed.
 
 ## Limits worth knowing
 
