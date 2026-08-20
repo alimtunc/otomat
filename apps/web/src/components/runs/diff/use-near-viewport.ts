@@ -1,19 +1,8 @@
+import { scrollParent } from "@web/components/runs/diff/scroll";
 import { useCallback, useEffect, useState } from "react";
 
 /** One screen of slack, so a card is coloured just before the reader scrolls onto it. */
 const ROOT_MARGIN = "100% 0px";
-
-/**
- * A clipping ancestor is not widened by `rootMargin`, so the slack only applies when the
- * observer's root is the element that actually scrolls the cards.
- */
-function scrollParent(node: HTMLElement): HTMLElement | null {
-  for (let parent = node.parentElement; parent !== null; parent = parent.parentElement) {
-    const overflow = getComputedStyle(parent).overflowY;
-    if (overflow === "auto" || overflow === "scroll") return parent;
-  }
-  return null;
-}
 
 export interface NearViewport {
   ref: (node: HTMLElement | null) => void;
@@ -38,6 +27,8 @@ export function useNearViewport(): NearViewport {
     setRoot(scrollParent(node));
   });
 
+  // A clipping ancestor is not widened by `rootMargin`, so the slack only applies while the root
+  // is the element that actually scrolls the cards.
   // otomat-allow-effect: an IntersectionObserver subscription has no declarative equivalent.
   useEffect(() => {
     if (near || node === null) return;

@@ -24,6 +24,7 @@ import {
   isRunPlanCompeteGroup,
   pullRequestContractSchema,
   pullRequestEvidenceSchema,
+  pullRequestReviewContextSchema,
   repositoryContractSchema,
   reviewCommentContractSchema,
   reviewContractSchema,
@@ -41,6 +42,8 @@ import {
   type ProjectContract,
   type PullRequestAttachment,
   type PullRequestContract,
+  type PullRequestIssueLink,
+  type PullRequestReviewContext,
   type RepositoryContract,
   type ReviewCommentContract,
   type ReviewContract,
@@ -213,6 +216,13 @@ export function toPullRequest(row: PullRequestRow): PullRequestContract {
     error_code: row.error_code,
     error_message: row.error_message,
   });
+}
+
+export function toPullRequestReviewContext(
+  row: PullRequestRow,
+  issue: PullRequestIssueLink | null,
+): PullRequestReviewContext {
+  return pullRequestReviewContextSchema.parse({ pull_request: toPullRequest(row), issue });
 }
 
 /** Compatibility is resolved against this host, so it is passed in rather than read from the row. */

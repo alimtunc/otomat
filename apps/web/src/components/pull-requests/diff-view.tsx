@@ -1,27 +1,32 @@
 import { Button, EmptyState, ErrorState, type BreadcrumbItem } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
-import { useRefreshPullRequest } from "@web/api/prs/mutations";
-import { useAttachedPullRequest } from "@web/api/prs/queries";
+import { usePullRequestReviewContext } from "@web/api/prs/queries";
+import { usePullRequestReconciliation } from "@web/api/prs/use-reconciliation";
+import { PullRequestIssueContext } from "@web/components/pull-requests/issue-context";
 import { ReviewDiffView } from "@web/components/runs/diff/review-view";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { RouteShell } from "@web/components/shell/route-shell";
+import { StaleNotice } from "@web/components/shell/stale-notice";
 import { useBackNavigation } from "@web/components/shell/use-back-navigation";
 import { pullRequestLabel } from "@web/lib/pull-request/label";
 
 const HEAD_UNREACHABLE =
   "Otomat holds no fetched head for this pull request. Fetch it to read its diff here.";
 
+const HEAD_FETCHING = "Otomat is reading this pull request from GitHub and fetching its head.";
+
 /** A mirrored pull request is reviewed through the same surface as a run — read-only, pinned to its imported head. */
 export function PullRequestDiffView() {
   const { pullRequestId } = useParams({ from: "/pull-requests/$pullRequestId/diff" });
-  const query = useAttachedPullRequest(pullRequestId);
-  const refresh = useRefreshPullRequest(query.data?.issue_id ?? null);
+  const query = usePullRequestReviewContext(pullRequestId);
+  const pullRequest = query.data?.pull_request;
+  const reconciliation = usePullRequestReconciliation(pullRequestId, pullRequest?.issue_id ?? null);
   const back = useBackNavigation(null);
 
   const pullRequestCrumb = (): BreadcrumbItem => {
-    if (query.data !== undefined) return { label: pullRequestLabel(query.data) };
+    if (pullRequest !== undefined) return { label: pullRequestLabel(pullRequest) };
     return { label: query.isError ? "Pull request unavailable" : "Loading pull request…" };
   };
 
@@ -34,6 +39,9 @@ export function PullRequestDiffView() {
         pullRequestCrumb(),
         { label: "Diff", current: true },
       ]}
+      breadcrumbExtra={
+        query.data === undefined ? null : <PullRequestIssueContext issue={query.data.issue} />
+      }
     >
       <QueryBoundary
         query={query}
@@ -48,32 +56,40 @@ export function PullRequestDiffView() {
           </CenteredState>
         }
       >
-        {(pullRequest) =>
-          pullRequest.head_sha === null ? (
-            <CenteredState>
-              <EmptyState
-                icon="git-compare"
-                title="No fetched head"
-                description={HEAD_UNREACHABLE}
-                action={
-                  <Button
-                    size="sm"
-                    loading={refresh.isPending}
-                    onClick={() => refresh.mutate(pullRequest.id)}
-                  >
-                    Fetch from GitHub
-                  </Button>
-                }
+        {(context) => (
+          <>
+            {reconciliation.failure === null ? null : (
+              <StaleNotice
+                dataUpdatedAt={query.dataUpdatedAt}
+                refreshing={reconciliation.running}
+                onRetry={reconciliation.retry}
+                reason={reconciliation.failure}
               />
-            </CenteredState>
-          ) : (
-            <ReviewDiffView
-              target={{ kind: "pull_request", id: pullRequestId }}
-              workspace={{ open: false, issueId: pullRequest.issue_id }}
-              emptyDescription={HEAD_UNREACHABLE}
-            />
-          )
-        }
+            )}
+            {context.pull_request.head_sha === null ? (
+              <CenteredState>
+                <EmptyState
+                  icon="git-compare"
+                  title={reconciliation.running ? "Fetching the head…" : "No fetched head"}
+                  description={reconciliation.running ? HEAD_FETCHING : HEAD_UNREACHABLE}
+                  action={
+                    reconciliation.running ? undefined : (
+                      <Button size="sm" onClick={reconciliation.retry}>
+                        Fetch from GitHub
+                      </Button>
+                    )
+                  }
+                />
+              </CenteredState>
+            ) : (
+              <ReviewDiffView
+                target={{ kind: "pull_request", id: pullRequestId }}
+                workspace={{ open: false, issueId: context.pull_request.issue_id }}
+                emptyDescription={HEAD_UNREACHABLE}
+              />
+            )}
+          </>
+        )}
       </QueryBoundary>
     </RouteShell>
   );

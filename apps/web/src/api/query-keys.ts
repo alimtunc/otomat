@@ -88,6 +88,7 @@ export const queryKeys = {
   runPullRequest: (id: string) => ["run", id, "pr"] as const,
   issuePullRequests: (issueId: string) => ["issues", issueId, "pull-requests"] as const,
   pullRequest: (id: string) => ["pull-request", id] as const,
+  pullRequestRefresh: (id: string) => ["pull-request", id, "refresh"] as const,
   workspaces: ["workspaces"] as const,
   workspacesForRun: (runId: string | null) => ["workspaces", "run", runId] as const,
   workspaceSettings: ["settings", "workspaces"] as const,

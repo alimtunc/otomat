@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ISSUE_STATES } from "../state-machines/issue.js";
 import { commitSubjectSchema } from "./commit-subject.js";
 import {
   PULL_REQUEST_PUBLICATION_MODES,
@@ -85,6 +86,23 @@ export const pullRequestDetailSchema = z.object({
   publishability: pullRequestPublishabilitySchema,
 });
 export type PullRequestDetail = z.infer<typeof pullRequestDetailSchema>;
+
+/** `attachment` is the durable link the row carries; `reference`, one exact identifier it names. */
+export const pullRequestIssueLinkSchema = z.object({
+  id: z.string(),
+  identifier: z.string().nullable(),
+  title: z.string(),
+  status: z.enum(ISSUE_STATES),
+  evidence: z.enum(["attachment", "reference"]),
+});
+export type PullRequestIssueLink = z.infer<typeof pullRequestIssueLinkSchema>;
+
+/** What the reviewer opens a pull request with: the mirror, and the issue resolved for context only. */
+export const pullRequestReviewContextSchema = z.object({
+  pull_request: pullRequestContractSchema,
+  issue: pullRequestIssueLinkSchema.nullable(),
+});
+export type PullRequestReviewContext = z.infer<typeof pullRequestReviewContextSchema>;
 
 export const pushPullRequestRequestSchema = z.object({
   /** The remote head the user was shown, replayed as a lease: absent, the push may only fast-forward. */

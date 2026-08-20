@@ -7,6 +7,7 @@ import type {
   PullRequestCandidate,
   PullRequestDetection,
   PullRequestInbox,
+  PullRequestIssueLink,
   PullRequestProposal,
   PullRequestPublishability,
   PullRequestState,
@@ -76,6 +77,8 @@ export interface GitHubService {
   listIssuePullRequests(issueId: string): Promise<IssuePullRequestsResult>;
   attachPullRequest(issueId: string, request: AttachPullRequestRequest): Promise<PullRequestRow>;
   detachPullRequest(pullRequestId: string): PullRequestRow;
+  /** Display context only: resolving an issue for a pull request attaches nothing and owns nothing. */
+  pullRequestIssue(row: PullRequestRow): PullRequestIssueLink | null;
   refreshPullRequest(pullRequestId: string): Promise<PullRequestRow>;
   /** Noticing a merge must not depend on a pull request panel being open. */
   refreshTrackedPullRequests(): Promise<number>;

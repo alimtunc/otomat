@@ -158,6 +158,7 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
     detachPullRequest: () => {
       throw new Error("detachPullRequest stub not configured");
     },
+    pullRequestIssue: () => null,
     refreshPullRequest: async () => {
       throw new Error("refreshPullRequest stub not configured");
     },

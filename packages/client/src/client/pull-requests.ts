@@ -3,6 +3,7 @@ import {
   pullRequestContractSchema,
   pullRequestDetailSchema,
   pullRequestProposalSchema,
+  pullRequestReviewContextSchema,
   type AttachPullRequestRequest,
   type PreparePullRequestRequest,
   type PushPullRequestRequest,
@@ -45,13 +46,15 @@ export function createPullRequestsClient(config: DaemonClientConfig) {
         await postJson(config, `/api/issues/${issue}/pull-requests`, request),
       );
     },
-    async getAttachedPullRequest(pullRequestId: string) {
+    async getPullRequestReviewContext(pullRequestId: string) {
       const id = encodeURIComponent(pullRequestId);
-      return pullRequestContractSchema.parse(await getJson(config, `/api/pull-requests/${id}`));
+      return pullRequestReviewContextSchema.parse(
+        await getJson(config, `/api/pull-requests/${id}`),
+      );
     },
     async refreshPullRequest(pullRequestId: string) {
       const id = encodeURIComponent(pullRequestId);
-      return pullRequestContractSchema.parse(
+      return pullRequestReviewContextSchema.parse(
         await postJson(config, `/api/pull-requests/${id}/refresh`, {}),
       );
     },

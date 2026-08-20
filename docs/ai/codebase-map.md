@@ -795,6 +795,28 @@ provenance stays distinct — the note constrains the fix, edits no comment and 
 never published to GitHub — and both survive in `runs.plan_json`, readable per
 session in the frozen context the step was given.
 
+Reading a file is one primitive. Every surface that picks a file — the rail in
+either mode, the narrow-viewport nav, `j`/`k`, the Comments panel — calls
+`revealFile`, which selects, expands, and then scrolls in a layout effect that
+rides later renders until the card exists: a collapsed, hidden or lazily mounted
+card is reached without a timeout, and `Hide reviewed` keeps the file being read
+on screen the way it already keeps a commented one. The scroll moves the cards'
+own container and nothing above it (`runs/diff/scroll.ts`), because
+`scrollIntoView` also scrolls every scrollable ancestor — the shell's content
+pane included, which is what slid the toolbar off a file's sticky header. A
+comment being typed keeps the focus; revealing is a scroll, not a takeover.
+
+Opening a mirrored pull request hydrates itself. `GET /api/pull-requests/:id`
+answers one review context — the mirror plus its resolved issue — so the header,
+the rail and the diff read a single query, and arriving fires one silent
+reconciliation against GitHub (`api/prs/use-reconciliation.ts`) instead of
+waiting for a click, head fetch included. Whatever the cache holds stays on
+screen while that pass runs; a failure becomes the discreet stale notice carrying
+the daemon's own refusal, never a blank view. The operator's Refresh shares that
+mutation key, so recovery and arrival can never reconcile twice at once, and each
+answer is keyed by the pull request the daemon named — a late one for another
+pull request lands in its own entry.
+
 `review/authority.ts` answers, explicitly, whether Otomat may point an agent at
 the branch under review: it must still hold a live worktree for the run, and a
 pull request tracking someone else's head ref is read-only however healthy the
@@ -900,10 +922,16 @@ never matched across organizations, and teams GitHub declined to name stay
 `teams_known: false` rather than reading as "belongs to no team".
 
 An issue appears under an entry only on durable evidence: the link the row
-already carries, or exactly one tracker identifier in the title or body naming a
-mirrored issue. Two matching issues are ambiguous and link neither — an ambiguous
-match is never written to the row, so the inbox can suggest nothing it cannot
-prove.
+already carries, or exactly one mirrored issue named by the same bounded rule
+detection uses (`projections/pull-request-reference.ts`), so a surface cannot
+resolve a reference detection would refuse. Two matching issues are ambiguous and
+link neither — an ambiguous match is never written to the row, so the inbox can
+suggest nothing it cannot prove.
+`github/issue-link.ts` is that rule, and the inbox and the reviewer both read it
+(`GitHubService.pullRequestIssue`), so one pull request cannot be linked in one
+surface and unlinked in the other. Resolving is display only: it writes nothing,
+and the reviewer still passes the row's own `issue_id` — the attachment alone —
+as the workspace the AI fix may act on.
 
 ## Publishing to a Pull Request
 

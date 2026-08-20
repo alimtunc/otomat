@@ -12,7 +12,7 @@ export interface AttachedPullRequestCardProps {
 }
 
 export function AttachedPullRequestCard({ issueId, pullRequest }: AttachedPullRequestCardProps) {
-  const refresh = useRefreshPullRequest(issueId);
+  const refresh = useRefreshPullRequest(pullRequest.id, issueId);
   const [detaching, setDetaching] = useState(false);
   const settled = pullRequest.status === "merged" || pullRequest.status === "closed";
 
@@ -66,7 +66,7 @@ export function AttachedPullRequestCard({ issueId, pullRequest }: AttachedPullRe
           size="xs"
           variant="ghost"
           loading={refresh.isPending}
-          onClick={() => refresh.mutate(pullRequest.id)}
+          onClick={() => refresh.mutate({ announce: true })}
         >
           Refresh
         </Button>

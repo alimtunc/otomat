@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { ISSUE_STATES } from "../state-machines/issue.js";
 import { PULL_REQUEST_STATES } from "../state-machines/pull-request.js";
 import {
   pullRequestChecksStateSchema,
@@ -8,6 +7,7 @@ import {
   pullRequestProvenanceSchema,
   pullRequestReviewDecisionSchema,
 } from "./entities/pull-request.js";
+import { pullRequestIssueLinkSchema } from "./pull-request.js";
 
 export const PULL_REQUEST_INBOX_GROUPS = [
   "needs_your_review",
@@ -19,15 +19,6 @@ export const PULL_REQUEST_INBOX_GROUPS = [
 ] as const;
 export const pullRequestInboxGroupSchema = z.enum(PULL_REQUEST_INBOX_GROUPS);
 export type PullRequestInboxGroup = z.infer<typeof pullRequestInboxGroupSchema>;
-
-export const pullRequestInboxIssueSchema = z.object({
-  id: z.string(),
-  identifier: z.string().nullable(),
-  title: z.string(),
-  status: z.enum(ISSUE_STATES),
-  evidence: z.enum(["attachment", "reference"]),
-});
-export type PullRequestInboxIssue = z.infer<typeof pullRequestInboxIssueSchema>;
 
 export const pullRequestInboxEntrySchema = z.object({
   id: z.string(),
@@ -46,7 +37,7 @@ export const pullRequestInboxEntrySchema = z.object({
   base_ref: z.string().nullable(),
   updated_at: z.iso.datetime(),
   run_id: z.string().nullable(),
-  issue: pullRequestInboxIssueSchema.nullable(),
+  issue: pullRequestIssueLinkSchema.nullable(),
   /** False while Otomat holds no fetched head, so the reviewer offers to fetch one instead of failing. */
   head_fetched: z.boolean(),
 });

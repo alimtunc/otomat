@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import type { ApiDeps } from "../deps.js";
 import { pullRequestSubjectGuard } from "../guards.js";
 import { pullRequestImportRefusal } from "../pull-request-refusal.js";
-import { toPullRequest } from "../serialize.js";
+import { toPullRequestReviewContext } from "../serialize.js";
 import { createReviewSurfaceRoutes } from "./review-surface.js";
 
 /** Mounted at `/api/pull-requests`: the review surface of an adopted pull request, plus refresh and detach. */
@@ -14,13 +14,14 @@ export function createPullRequestRoutes(deps: ApiDeps): Hono {
   routes.get("/:id", (c) => {
     const row = getAttachedPullRequest(deps.db, c.req.param("id"));
     if (!row) return c.json({ error: "pull_request_not_found" }, 404);
-    return c.json(toPullRequest(row));
+    return c.json(toPullRequestReviewContext(row, deps.github.pullRequestIssue(row)));
   });
 
   routes.post("/:id/refresh", async (c) => {
     const id = c.req.param("id");
     try {
-      return c.json(toPullRequest(await deps.github.refreshPullRequest(id)));
+      const row = await deps.github.refreshPullRequest(id);
+      return c.json(toPullRequestReviewContext(row, deps.github.pullRequestIssue(row)));
     } catch (error) {
       const refusal = pullRequestImportRefusal(c, error);
       if (refusal) return refusal;

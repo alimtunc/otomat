@@ -40,6 +40,7 @@ describe("hide reviewed", () => {
       hideReviewed: true,
       reviewedPaths: new Set(["src/a.ts", "src/z.ts"]),
       commentedPaths: NONE,
+      activePath: null,
     });
 
     expect(result.files.map((file) => file.path)).toEqual(["src/m.ts"]);
@@ -51,9 +52,22 @@ describe("hide reviewed", () => {
       hideReviewed: true,
       reviewedPaths: new Set(["src/a.ts", "src/z.ts"]),
       commentedPaths: new Set(["src/z.ts"]),
+      activePath: null,
     });
 
     expect(result.files.map((file) => file.path)).toEqual(["src/z.ts", "src/m.ts"]);
+    expect(result.hiddenCount).toBe(1);
+  });
+
+  it("keeps the file being read on screen, however reviewed it is", () => {
+    const result = hideReviewedFiles(FILES, {
+      hideReviewed: true,
+      reviewedPaths: new Set(["src/a.ts", "src/z.ts"]),
+      commentedPaths: NONE,
+      activePath: "src/a.ts",
+    });
+
+    expect(result.files.map((file) => file.path)).toEqual(["src/a.ts", "src/m.ts"]);
     expect(result.hiddenCount).toBe(1);
   });
 
@@ -62,6 +76,7 @@ describe("hide reviewed", () => {
       hideReviewed: false,
       reviewedPaths: new Set(["src/a.ts"]),
       commentedPaths: NONE,
+      activePath: null,
     });
 
     expect(result.files).toHaveLength(3);

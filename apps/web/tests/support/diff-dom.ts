@@ -13,19 +13,24 @@ export function diffLineRow(operator: string, id: string): string {
   return `<tr class="diff-line" id="${id}"><td><span class="diff-line-content-operator">${operator}</span></td></tr>`;
 }
 
-/** happy-dom lays nothing out; @git-diff-view hides a comment widget whose wrapper measures zero. */
-export function stubDiffLayout(): void {
-  Element.prototype.getBoundingClientRect = () => ({
+/** happy-dom lays nothing out, so every rect the diff surface reads is one a test hands it. */
+export function domRect(top: number, height: number): DOMRect {
+  return {
     x: 0,
-    y: 0,
+    y: top,
     width: 800,
-    height: 20,
-    top: 0,
+    height,
+    top,
     left: 0,
     right: 800,
-    bottom: 20,
+    bottom: top + height,
     toJSON: () => ({}),
-  });
+  };
+}
+
+/** @git-diff-view hides a comment widget whose wrapper measures zero. */
+export function stubDiffLayout(): void {
+  Element.prototype.getBoundingClientRect = () => domRect(0, 20);
 }
 
 /** happy-dom has no canvas 2d context; @git-diff-view measures line-number width with it. */

@@ -1,4 +1,6 @@
 import type { DiffFileContract } from "@otomat/domain";
+import { isEditableTarget } from "@otomat/ui";
+import { scrollIntoContainer, type RevealBlock } from "@web/components/runs/diff/scroll";
 
 export function adjacentFile(
   files: readonly DiffFileContract[],
@@ -63,8 +65,9 @@ export function changeBlockRows(container: ParentNode): HTMLElement[] {
   return blocks;
 }
 
-export function revealAndFocus(element: HTMLElement, block: ScrollLogicalPosition): void {
+export function revealAndFocus(element: HTMLElement, block: RevealBlock): void {
+  scrollIntoContainer(element, block);
+  if (isEditableTarget(document.activeElement)) return;
   element.tabIndex = -1;
-  element.scrollIntoView({ block });
   element.focus({ preventScroll: true });
 }

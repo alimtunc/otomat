@@ -6,6 +6,8 @@ export interface HideReviewedOptions {
   reviewedPaths: ReadonlySet<string>;
   /** Files carrying an unresolved comment stay on screen whatever `hideReviewed` says. */
   commentedPaths: ReadonlySet<string>;
+  /** So does the file being read: the rail lists every file, and selecting one must show it. */
+  activePath: string | null;
 }
 
 export interface VisibleFiles {
@@ -33,7 +35,10 @@ export function hideReviewedFiles(
 ): VisibleFiles {
   if (!options.hideReviewed) return { files: [...files], hiddenCount: 0 };
   const kept = files.filter(
-    (file) => !options.reviewedPaths.has(file.path) || options.commentedPaths.has(file.path),
+    (file) =>
+      !options.reviewedPaths.has(file.path) ||
+      options.commentedPaths.has(file.path) ||
+      file.path === options.activePath,
   );
   return { files: kept, hiddenCount: files.length - kept.length };
 }

@@ -16,7 +16,7 @@ import {
 } from "@otomat/domain";
 
 import { parsePullRequestReference } from "../import/reference.js";
-import { indexIssuesByIdentifier, resolveInboxIssue } from "./link.js";
+import { indexIssuesByIdentifier, resolvePullRequestIssue } from "../issue-link.js";
 import type { PullRequestSyncPasses } from "./passes.js";
 import { SYNC_RESOURCE, SYNC_SOURCE } from "./sync.js";
 
@@ -92,7 +92,7 @@ export function readPullRequestInbox(ctx: InboxReadContext, projectId: string): 
   const viewer = { login: stored.login, teams: stored.teams ?? [] };
   const issuesByIdentifier = indexIssuesByIdentifier(ctx.db, projectId);
   const entries = listPullRequestsForProject(ctx.db, projectId).flatMap((row) => {
-    const entry = toEntry(row, viewer, resolveInboxIssue(ctx.db, row, issuesByIdentifier));
+    const entry = toEntry(row, viewer, resolvePullRequestIssue(ctx.db, row, issuesByIdentifier));
     return entry === null ? [] : [entry];
   });
   return {
