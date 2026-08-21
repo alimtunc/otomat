@@ -29,7 +29,8 @@ export const queryKeys = {
   linearConnection: ["linear", "connection"] as const,
   issueSources: ["linear", "sources"] as const,
   linearWorkspaceFor: (workspaceId: string | null) => ["linear", "workspace", workspaceId] as const,
-  issueSourcesFor: (workspaceId: string | null) => ["linear", "sources", workspaceId] as const,
+  issueSourcesFor: (workspaceId: string | null, projectId?: string) =>
+    ["linear", "sources", workspaceId, projectId ?? null] as const,
   linearSyncStatus: (projectId: string) => ["linear", "sync-status", projectId] as const,
   linearSync: (projectId: string) => ["linear", "sync", projectId] as const,
   projects: ["projects"] as const,
@@ -46,6 +47,8 @@ export const queryKeys = {
   executionDefaults: ["settings", "execution-defaults"] as const,
   pullRequestGenerator: ["settings", "pr-generator"] as const,
   executionHost: ["execution-host"] as const,
+  hostProjects: ["execution-host", "projects"] as const,
+  hostRepositories: ["execution-host", "repositories"] as const,
   // A separate root on purpose: a host status push invalidates the snapshot, never the ssh config read.
   executionHostAliases: ["execution-host-aliases"] as const,
   agentProfiles: ["agent-profiles"] as const,

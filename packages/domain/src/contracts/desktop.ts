@@ -15,6 +15,7 @@ import type {
   ExecutionHostOperationResult,
   ExecutionHostProjectsEntry,
   ExecutionHostRegisterProjectResult,
+  ExecutionHostRepositoriesEntry,
   ExecutionHostSnapshot,
   RemoteHostStatus,
   RemoteInstanceListResult,
@@ -129,6 +130,12 @@ export interface OtomatDesktopBridge {
     listRemoteRepositories(): Promise<RemoteRepositoryListResult>;
     /** Every configured host with its project catalog, fetched by the main process so the renderer never talks to the inactive daemon directly. */
     listProjects(): Promise<ExecutionHostProjectsEntry[]>;
+    listRepositories(): Promise<ExecutionHostRepositoriesEntry[]>;
+    /** Deletes the repository with its project and its runs. */
+    deleteRepository(
+      hostId: ExecutionHostId,
+      repositoryId: string,
+    ): Promise<ExecutionHostOperationResult>;
     /** Subscribes to live remote-connection status; returns the unsubscribe function. */
     onRemoteStatus(listener: (status: RemoteHostStatus) => void): () => void;
     /** Preview daemons under `~/.otomat/instances` on the remote host. */

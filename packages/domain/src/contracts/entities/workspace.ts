@@ -17,6 +17,8 @@ export const repositoryContractSchema = z.object({
   id: z.string(),
   project_id: z.string(),
   name: z.string().min(1),
+  /** Absolute working-tree path on the host that owns it; empty when its project row is gone. */
+  root_path: z.string().default(""),
   remote_url: z.string().nullable(),
   default_branch: z.string(),
   /** Shell commands the daemon runs in every fresh run worktree before the first agent turn; defaulted so pre-field daemons' repositories still parse. */

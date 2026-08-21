@@ -5,6 +5,7 @@ import type {
   ExecutionHostOperationResult,
   ExecutionHostProjectsEntry,
   ExecutionHostRegisterProjectResult,
+  ExecutionHostRepositoriesEntry,
   ExecutionHostSnapshot,
   LinearDeliverySnapshot,
   LinearVaultOperationResult,
@@ -24,8 +25,10 @@ import {
   BUILD_SYNC_CHANNEL,
   DAEMON_URL_CHANNEL,
   EXECUTION_HOST_ALIASES_CHANNEL,
+  EXECUTION_HOST_CATALOG_REPOSITORIES_CHANNEL,
   EXECUTION_HOST_CONFIGURE_CHANNEL,
   EXECUTION_HOST_DELETE_INSTANCE_CHANNEL,
+  EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL,
   EXECUTION_HOST_INSTANCES_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_READ_CAPACITY_CHANNEL,
@@ -101,6 +104,13 @@ contextBridge.exposeInMainWorld("otomat", {
       ipcRenderer.invoke(EXECUTION_HOST_REPOSITORIES_CHANNEL),
     listProjects: (): Promise<ExecutionHostProjectsEntry[]> =>
       ipcRenderer.invoke(EXECUTION_HOST_PROJECTS_CHANNEL),
+    listRepositories: (): Promise<ExecutionHostRepositoriesEntry[]> =>
+      ipcRenderer.invoke(EXECUTION_HOST_CATALOG_REPOSITORIES_CHANNEL),
+    deleteRepository: (
+      hostId: ExecutionHostId,
+      repositoryId: string,
+    ): Promise<ExecutionHostOperationResult> =>
+      ipcRenderer.invoke(EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL, hostId, repositoryId),
     onRemoteStatus: (listener: (status: RemoteHostStatus) => void): (() => void) => {
       const wrapped = (_event: IpcRendererEvent, status: RemoteHostStatus): void =>
         listener(status);

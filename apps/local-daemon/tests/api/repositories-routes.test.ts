@@ -188,6 +188,14 @@ it("reports a repository whose root vanished as unavailable instead of hiding it
   expect((await listRepos(app, created.project.id))[0]?.available).toBe(false);
 });
 
+it("names the host path each repository lives at, from registration onwards", async () => {
+  const app = makeApiApp(t);
+  const created = await registerRepo(app, repo.root);
+
+  expect(created.repository.root_path).toBe(realpathSync(repo.root));
+  expect((await listRepos(app, created.project.id))[0]?.root_path).toBe(realpathSync(repo.root));
+});
+
 it("lists the repository's branches most-recently-committed first, and refuses when its root is gone", async () => {
   const app = makeApiApp(t);
   // `zeta` sorts after `main` alphabetically and commits later, so only a date sort yields this order.

@@ -11,8 +11,10 @@ import {
   BUILD_SYNC_CHANNEL,
   DAEMON_URL_CHANNEL,
   EXECUTION_HOST_ALIASES_CHANNEL,
+  EXECUTION_HOST_CATALOG_REPOSITORIES_CHANNEL,
   EXECUTION_HOST_CONFIGURE_CHANNEL,
   EXECUTION_HOST_DELETE_INSTANCE_CHANNEL,
+  EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL,
   EXECUTION_HOST_INSTANCES_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_READ_CAPACITY_CHANNEL,
@@ -115,6 +117,14 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
     actions.executionHost.listRemoteRepositories(),
   );
   ipcMain.handle(EXECUTION_HOST_PROJECTS_CHANNEL, () => actions.executionHost.listProjects());
+  ipcMain.handle(EXECUTION_HOST_CATALOG_REPOSITORIES_CHANNEL, () =>
+    actions.executionHost.listRepositories(),
+  );
+  ipcMain.handle(
+    EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL,
+    (_event, hostId: unknown, repositoryId: unknown) =>
+      actions.executionHost.deleteRepository(hostId, repositoryId),
+  );
   ipcMain.handle(EXECUTION_HOST_INSTANCES_CHANNEL, () => actions.executionHost.listInstances());
   ipcMain.handle(EXECUTION_HOST_STOP_INSTANCE_CHANNEL, (_event, build: unknown) =>
     actions.executionHost.stopInstance(build),

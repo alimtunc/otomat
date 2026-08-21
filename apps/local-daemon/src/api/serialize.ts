@@ -5,7 +5,6 @@ import type {
   IssueRow,
   ProjectRow,
   PullRequestRow,
-  RepositoryRow,
   ReviewCommentRow,
   ReviewedFileRow,
   ReviewRow,
@@ -26,7 +25,6 @@ import {
   pullRequestContractSchema,
   pullRequestEvidenceSchema,
   pullRequestReviewContextSchema,
-  repositoryContractSchema,
   reviewCommentContractSchema,
   reviewContractSchema,
   reviewedFileContractSchema,
@@ -46,7 +44,6 @@ import {
   type PullRequestContract,
   type PullRequestIssueLink,
   type PullRequestReviewContext,
-  type RepositoryContract,
   type ReviewCommentContract,
   type ReviewContract,
   type ReviewedFileContract,
@@ -79,14 +76,6 @@ export function toAgentProfile(row: AgentProfileRow): AgentProfileContract {
 
 export function toSkill(row: SkillRow): SkillContract {
   return skillContractSchema.parse(row);
-}
-
-export function toRepository(row: RepositoryRow, available: boolean): RepositoryContract {
-  return repositoryContractSchema.parse({
-    ...row,
-    init_commands: row.init_commands_json,
-    available,
-  });
 }
 
 export function toIssue(

@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import {
   getSyncState,
   insertIssueSource,
@@ -100,6 +103,13 @@ function serviceWithTransport(transport: LinearTransport): LinearService {
     idFactory: () => `src-${(ids += 1)}`,
     now: () => new Date("2026-07-20T12:00:00.000Z"),
   });
+}
+
+/** Every file the daemon wrote — the database and its write-ahead log alike — that carries `secret`. */
+function dataDirHolding(secret: string): string[] {
+  return readdirSync(t.dir).filter((name) =>
+    readFileSync(join(t.dir, name)).includes(Buffer.from(secret)),
+  );
 }
 
 function persistSource(source: "linear" | "github" = "linear") {
@@ -668,4 +678,66 @@ it("refuses to unmap a non-Linear source", async () => {
   expect(() => linear.deleteSource(githubSource.id)).toThrow(
     expect.objectContaining({ code: "linear_source_not_found" }),
   );
+});
+
+it("feeds two projects from one connection, each keeping its own selection", async () => {
+  insertProject(t.db, { id: "p2", name: "Back", root_path: "/tmp/otomat-p2" });
+  const linear = service({
+    issues: async (_apiKey, query) => [
+      {
+        id: `uuid-${query.project_id ?? query.team_id}`,
+        identifier: "OTO-1",
+        title: "Mirror me",
+        description: null,
+        url: "https://linear.app/otomat/issue/OTO-1",
+        updated_at: "2026-07-20T11:00:00.000Z",
+        state_type: "unstarted",
+        state_name: "Todo",
+        state_color: "#888",
+        priority: 0,
+        assignee_name: null,
+        labels: [],
+      },
+    ],
+  });
+  await linear.connect("lin_api_secret");
+  const front = await linear.createSource({
+    project_id: "p1",
+    ...TEAM,
+    external_project_id: "proj-1",
+  });
+  const back = await linear.createSource({
+    project_id: "p2",
+    ...TEAM,
+    external_project_id: "proj-2",
+  });
+
+  await linear.updateSource(front.id, { in_progress_state_id: "s-doing", done_state_id: null });
+  await linear.updateSource(back.id, { in_progress_state_id: null, done_state_id: "s-shipped" });
+
+  expect(linear.sources("p1").map((source) => source.external_project_name)).toEqual(["V1 Alpha"]);
+  expect(linear.sources("p2").map((source) => source.external_project_name)).toEqual(["V2"]);
+  expect(linear.sources("p1")[0]?.lifecycle).toEqual({
+    in_progress: { id: "s-doing", name: "Doing" },
+    done: null,
+  });
+  expect(linear.sources("p2")[0]?.lifecycle).toEqual({
+    in_progress: null,
+    done: { id: "s-shipped", name: "Shipped" },
+  });
+
+  await linear.sync({ project_id: "p1" });
+
+  expect(listIssues(t.db).map((issue) => issue.project_id)).toEqual(["p1", "p1"]);
+});
+
+it("never writes the key to the database it imports into", async () => {
+  const linear = service({ issues: async () => [] });
+  await linear.connect("lin_api_secret");
+  const source = await linear.createSource({ project_id: "p1", ...TEAM });
+  await linear.updateSource(source.id, { in_progress_state_id: "s-doing", done_state_id: null });
+  await linear.sync();
+  linear.disconnect();
+
+  expect(dataDirHolding("lin_api_secret")).toEqual([]);
 });

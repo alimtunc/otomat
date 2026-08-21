@@ -20,6 +20,7 @@ import {
   getProject,
   type Db,
   type IssueExecutionEvidenceRow,
+  type RepositoryRow,
   type StepRunRow,
 } from "@otomat/db";
 import {
@@ -27,6 +28,7 @@ import {
   isStepSettled,
   projectIssueExecution,
   projectIssueWorkspace,
+  repositoryContractSchema,
   runUsageResponseSchema,
   scopeUsage,
   stepUsage,
@@ -58,7 +60,6 @@ import {
   toCompeteGroup,
   toIssue,
   toProject,
-  toRepository,
   toRun,
   toRunContribution,
   toSkill,
@@ -97,11 +98,18 @@ export function readWorkflowPreset(db: Db, id: string): WorkflowPresetContract |
 }
 
 /** Probed per read so a root that moved or stopped being a git repository is never offered as a launch target. */
-export function readRepositories(db: Db, projectId?: string): RepositoryContract[] {
-  return listRepositories(db, { projectId }).map((row) => {
-    const project = getProject(db, row.project_id);
-    return toRepository(row, project !== undefined && isRepositoryRoot(project.root_path));
+export function repositoryContract(db: Db, row: RepositoryRow): RepositoryContract {
+  const project = getProject(db, row.project_id);
+  return repositoryContractSchema.parse({
+    ...row,
+    root_path: project?.root_path ?? "",
+    init_commands: row.init_commands_json,
+    available: project !== undefined && isRepositoryRoot(project.root_path),
   });
+}
+
+export function readRepositories(db: Db, projectId?: string): RepositoryContract[] {
+  return listRepositories(db, { projectId }).map((row) => repositoryContract(db, row));
 }
 
 /** Groups the flat evidence rows by issue so each issue gets one deterministic projection. */

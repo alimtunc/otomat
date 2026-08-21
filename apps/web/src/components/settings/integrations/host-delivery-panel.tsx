@@ -1,6 +1,5 @@
 import type { LinearHostDeliveryState } from "@otomat/domain";
-
-import { useLinearDelivery } from "./use-linear-delivery";
+import { useLinearDelivery } from "@web/api/linear/use-delivery";
 
 const STATES = {
   delivered: { label: "Connected", tone: "text-text-secondary" },

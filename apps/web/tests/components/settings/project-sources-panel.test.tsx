@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { ProjectContract } from "@otomat/domain";
+import type { LinearDeliverySnapshot, ProjectContract } from "@otomat/domain";
 import { ProjectSourcesPanel } from "@web/components/settings/project/sources-panel";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -10,7 +10,9 @@ import { mount, type Mounted } from "#support/mount";
 
 let connectionState: FakeQueryState;
 let sourcesState: FakeQueryState;
+let sourcesScope: unknown[];
 let workspaceState: FakeQueryState;
+let delivery: LinearDeliverySnapshot | null;
 let syncSources: number;
 const syncRefresh = vi.fn();
 const createdCallbacks: (() => void)[] = [];
@@ -22,10 +24,15 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 vi.mock("@web/api/linear/queries", () => ({
-  useIssueSources: () => sourcesState,
+  useIssueSources: (...args: unknown[]) => {
+    sourcesScope = args;
+    return sourcesState;
+  },
   useLinearConnection: () => connectionState,
   useLinearWorkspace: () => workspaceState,
 }));
+
+vi.mock("@web/api/linear/use-delivery", () => ({ useLinearDelivery: () => delivery }));
 
 const updateSource = vi.fn();
 
@@ -65,6 +72,8 @@ beforeEach(() => {
   updateSource.mockClear();
   createdCallbacks.length = 0;
   syncSources = 1;
+  sourcesScope = [];
+  delivery = null;
   connectionState = {
     data: {
       status: "connected",
@@ -87,19 +96,6 @@ beforeEach(() => {
         external_team_id: "team-1",
         external_team_key: "OTO",
         external_team_name: "Otomat",
-        external_project_id: "",
-        external_project_name: "",
-        last_synced_at: null,
-        lifecycle: { in_progress: null, done: null },
-        lifecycle_error: null,
-      },
-      {
-        id: "source-2",
-        project_id: "p2",
-        source: "linear",
-        external_team_id: "team-2",
-        external_team_key: "ENG",
-        external_team_name: "Engineering",
         external_project_id: "",
         external_project_name: "",
         last_synced_at: null,
@@ -139,11 +135,11 @@ async function renderPanel(): Promise<HTMLElement> {
   return rendered.container;
 }
 
-it("lists only the selected project's sources, with an unmap action", async () => {
+it("asks the daemon for this project's sources alone, with an unmap action", async () => {
   const container = await renderPanel();
 
+  expect(sourcesScope).toEqual(["workspace-1", "p1"]);
   expect(container.textContent).toContain("OTO");
-  expect(container.textContent).not.toContain("ENG");
   const unmap = [...container.querySelectorAll("button")].find(
     (candidate) => candidate.textContent?.trim() === "Unmap",
   );
@@ -228,4 +224,37 @@ it("points at global Integrations while Linear is disconnected", async () => {
 
   expect(container.textContent).toContain("Connect Linear");
   expect(container.querySelector("[data-testid='issue-source-form']")).toBeNull();
+});
+
+it("names the host still waiting for the key instead of inviting a connection that exists", async () => {
+  connectionState = {
+    data: {
+      status: "disconnected",
+      workspace_id: null,
+      workspace_name: null,
+      user_name: null,
+      error_code: null,
+      error_message: null,
+    },
+    isPending: false,
+    isError: false,
+    isSuccess: true,
+  };
+  delivery = {
+    stored: true,
+    hosts: [
+      {
+        host_id: "local",
+        label: "Local",
+        state: "pending_restore",
+        detail: "The local daemon is not running yet.",
+      },
+    ],
+  };
+
+  const container = await renderPanel();
+
+  expect(container.textContent).toContain("Local has not received the key yet");
+  expect(container.textContent).toContain("The local daemon is not running yet.");
+  expect(container.textContent).not.toContain("Connect Linear in");
 });

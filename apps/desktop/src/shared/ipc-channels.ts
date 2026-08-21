@@ -17,6 +17,9 @@ export const EXECUTION_HOST_ALIASES_CHANNEL = "otomat:execution-host-aliases";
 export const EXECUTION_HOST_REPOSITORIES_CHANNEL = "otomat:execution-host-repositories";
 export const EXECUTION_HOST_STATUS_CHANNEL = "otomat:execution-host-status";
 export const EXECUTION_HOST_PROJECTS_CHANNEL = "otomat:execution-host-projects";
+export const EXECUTION_HOST_CATALOG_REPOSITORIES_CHANNEL =
+  "otomat:execution-host-catalog-repositories";
+export const EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL = "otomat:execution-host-delete-repository";
 export const BUILD_SYNC_CHANNEL = "otomat:build-sync";
 export const SUPPORT_EXPORT_CHANNEL = "otomat:support-export";
 export const SUPPORT_REPORT_DRAFT_CHANNEL = "otomat:support-report-draft";

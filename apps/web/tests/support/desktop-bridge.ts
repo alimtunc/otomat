@@ -70,6 +70,8 @@ export function fakeDesktopBridge(
       listSshAliases: () => Promise.resolve([]),
       listRemoteRepositories: () => Promise.resolve({ ok: true as const, repositories: [] }),
       listProjects: () => Promise.resolve([]),
+      listRepositories: () => Promise.resolve([]),
+      deleteRepository: () => Promise.resolve({ ok: true as const }),
       onRemoteStatus: () => () => {},
       listInstances: () => Promise.resolve({ ok: true as const, instances: [] }),
       stopInstance: () => Promise.resolve({ ok: true as const }),

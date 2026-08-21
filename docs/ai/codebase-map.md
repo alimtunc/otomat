@@ -382,6 +382,26 @@ what gives the cockpit a last sync state, a target state name, an actionable err
 and a Retry, and what makes `linear.lifecycle_synced` refresh the rail without a
 navigation.
 
+## Repositories Belong To A Host (OTO-60)
+
+A repository is one project on exactly one execution host, and Settings says which. `HostCatalog`
+answers for every configured host in one walk — projects for the switcher, registered repositories
+for Settings — by asking each host's own daemon through `@otomat/client`. A host that cannot be
+reached reads `null`, never an empty list, so an unreachable VPS renders its ssh reason instead of
+looking like a machine with no work on it. Registration and deletion resolve the same way: they run
+against the host the operator named, and a refusal — a path that does not exist there, a tunnel that
+is down, a run still in flight — comes back as that host's own sentence. Nothing is ever retried
+against the local daemon, because a silent local fallback is how a VPS project would quietly become
+a second, competing local one. `RepositoryContract` carries `root_path` so a row is legible without
+joining the project list; `available` stays a per-read probe of that same root.
+
+The Linear side needs no per-host secret. One vaulted key is delivered to each host's daemon in
+memory (see the Linear sections above); what is per project is the mapping, and it is scoped by the
+daemon that owns the project — `GET /api/linear/sources?projectId=…` — so two projects on one
+connection keep independent team, Linear-project and lifecycle-state selections and neither reads
+the other's rows. When the vault holds a key the active host has not received yet, the project's
+Linear panel says exactly that rather than inviting a connection that already exists.
+
 ## One Remote Host Journey
 
 Connecting to a remote host and putting the expected daemon on it are one state machine, not two:
