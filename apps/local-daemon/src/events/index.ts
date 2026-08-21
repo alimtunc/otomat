@@ -11,6 +11,7 @@
  * @packageDocumentation
  */
 export { appendSeqedEvents, applyLedgerPragmas, type SeqedEvent } from "./ledger.js";
+export { readCompleteLinesFrom, type TailRead } from "./tail-source.js";
 export * from "./tailer.js";
 export * from "./projection.js";
 export * from "./run-ledger.js";

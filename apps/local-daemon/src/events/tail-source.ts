@@ -1,6 +1,6 @@
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 
-interface TailRead {
+export interface TailRead {
   lines: string[];
   consumedBytes: number;
 }

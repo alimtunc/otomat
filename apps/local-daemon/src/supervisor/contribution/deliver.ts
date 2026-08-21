@@ -21,10 +21,16 @@ import { createRuntimeAdapter, type KnownRuntimeId } from "#runtime";
 
 import { failureReason } from "../fail-run.js";
 import { spawnTurn } from "../lifecycle.js";
-import { resolveSessionResumeTurn, RunNotResumableError, type ResumeTurn } from "../resume.js";
+import {
+  resolveSessionResumeTurn,
+  resumableRuntime,
+  RunNotResumableError,
+  type ResumeTurn,
+} from "../resume.js";
 import { hasRunActivity, type SupervisorState } from "../state.js";
 import { assertContributionTransitions } from "../transitions.js";
 import { emitContributionEvent, emitContributionEvents, requireRunContribution } from "./events.js";
+import { deliverLiveContributions, inflightLiveTarget, type LiveTarget } from "./live.js";
 
 /** A runtime with no steering channel cannot take a follow-up at all; saying so beats queueing forever. */
 function requireSteerableRuntime(runtime: KnownRuntimeId, runId: string): void {
@@ -82,24 +88,48 @@ async function sendBatch(
   }
 }
 
+function liveTarget(
+  state: SupervisorState,
+  run: RunRow,
+  sessions: readonly AgentSessionRow[],
+  stepRunId: string,
+): LiveTarget | null {
+  const running = latestSessionForStep(sessions, stepRunId);
+  if (running === undefined) return null;
+  const runtime = resumableRuntime(state.db, run, running);
+  if (runtime === null || createRuntimeAdapter(runtime).capabilities.steering !== "live") {
+    return null;
+  }
+  return inflightLiveTarget(state, run.id, running);
+}
+
 /** A step that has yet to start keeps its messages for its own first turn; only one whose session can no longer be resumed fails them. */
 type DeliveryTarget =
+  | { kind: "live"; stepRunId: string; live: LiveTarget }
   | { kind: "send"; stepRunId: string; session: AgentSessionRow }
   | { kind: "unreachable"; stepRunId: string; reason: string };
 
 function nextDeliveryTarget(
-  db: SupervisorState["db"],
-  runId: string,
+  state: SupervisorState,
+  run: RunRow,
   queued: readonly RunContributionRow[],
 ): DeliveryTarget | null {
-  const steps = listStepRunsForRun(db, runId);
-  const sessions = listAgentSessionsForRun(db, runId);
-  const groups = listCompeteGroupsForRun(db, runId);
+  const { db } = state;
+  const steps = listStepRunsForRun(db, run.id);
+  const sessions = listAgentSessionsForRun(db, run.id);
+  const groups = listCompeteGroupsForRun(db, run.id);
   for (const row of queued) {
     const step = steps.find((candidate) => candidate.id === row.step_run_id);
     if (!step) continue;
     // One routing rule for accepting a message and for delivering it, so the two can never disagree.
     const route = resolveStepContributionRoute(step, sessions, groups);
+    if (route === "first_turn") continue;
+    if (route === "steering") {
+      const live = liveTarget(state, run, sessions, step.id);
+      if (live !== null) return { kind: "live", stepRunId: step.id, live };
+    }
+    // Everything below starts a turn, and the run owns a single worktree, so it waits for the live one to end.
+    if (hasRunActivity(state, run.id) || !canFollowUpRun(run.status)) return null;
     if (route === null) {
       return {
         kind: "unreachable",
@@ -107,7 +137,6 @@ function nextDeliveryTarget(
         reason: `step ${step.id} is ${step.status} and will not run another turn`,
       };
     }
-    if (route === "first_turn") continue;
     const session = steerableSessionForStep(sessions, step.id);
     if (session) return { kind: "send", stepRunId: step.id, session };
     return {
@@ -119,24 +148,27 @@ function nextDeliveryTarget(
   return null;
 }
 
-/** The single delivery mechanism; one step's batch travels per turn because the run owns a single worktree. */
+/**
+ * The single delivery mechanism. A step whose provider process is still running
+ * takes its batch live, on that same invocation; anything else travels one step's
+ * batch per resume turn, because the run owns a single worktree.
+ */
 export async function deliverQueuedContributions(
   state: SupervisorState,
   runId: string,
 ): Promise<void> {
   if (state.shuttingDown || state.aborting.has(runId) || state.delivering.has(runId)) return;
-  let queued = listClaimableRunContributions(state.db, runId);
-  if (queued.length === 0) return;
-  const run = getRun(state.db, runId);
-  if (!run || !canFollowUpRun(run.status) || hasRunActivity(state, runId)) return;
-
   // Failing an unreachable step must not strand a later step that can still be sent, so the scan resumes past it.
+  let queued = listClaimableRunContributions(state.db, runId);
   while (queued.length > 0) {
-    const target = nextDeliveryTarget(state.db, runId, queued);
+    const run = getRun(state.db, runId);
+    if (!run || state.aborting.has(runId) || state.shuttingDown) return;
+    const target = nextDeliveryTarget(state, run, queued);
     if (target === null) return;
     const batch = queued.filter((row) => row.step_run_id === target.stepRunId);
 
     if (target.kind === "send") {
+      // Only a spawn needs the run-level guard: a live batch is claimed synchronously, so a concurrent post can never pick it up.
       state.delivering.add(runId);
       try {
         await sendBatch(state, run, target.session, batch);
@@ -145,8 +177,11 @@ export async function deliverQueuedContributions(
       }
       return;
     }
-
-    failBatch(state, batch, target.reason);
+    if (target.kind === "live") {
+      if (!(await deliverLiveContributions(state, runId, target.live, batch))) return;
+    } else {
+      failBatch(state, batch, target.reason);
+    }
     queued = listClaimableRunContributions(state.db, runId);
   }
 }

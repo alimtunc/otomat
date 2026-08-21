@@ -10,9 +10,11 @@ import {
   isKnownRuntimeId,
   JsonlEventSink,
   type KnownRuntimeId,
+  type LiveInputChannel,
   type RuntimeFinalState,
 } from "#runtime";
 
+import { createLiveInputChannel } from "./live-input.js";
 import { buildTerminalMarker } from "./markers.js";
 import { waitForWorkerStart } from "./start-gate.js";
 import { type SupervisedJob } from "./types.js";
@@ -43,7 +45,9 @@ export function parseJob(env: NodeJS.ProcessEnv): SupervisedJob | null {
 /**
  * Runs one turn through the runtime adapter — or resumes the provider session when
  * `job.mode` is `resume` — streaming every event into the job's `events.jsonl` and
- * closing the sink before returning. Rejects if the turn throws.
+ * closing the sink before returning. A live-steering runtime gets the session's
+ * live-input channel: the worker, not the daemon, owns the provider's stdin.
+ * Rejects if the turn throws.
  */
 export async function runWorkerJob(
   job: SupervisedJob,
@@ -52,6 +56,10 @@ export async function runWorkerJob(
   const adapter = createRuntimeAdapter(job.runtime);
   const options = job.config?.options;
   const model = job.config?.model?.id ?? null;
+  const live: LiveInputChannel | undefined =
+    adapter.capabilities.steering === "live"
+      ? createLiveInputChannel(job.agentSessionDir)
+      : undefined;
   const sink = new JsonlEventSink(join(job.agentSessionDir, EVENTS_FILENAME));
   try {
     if (job.mode === "resume") {
@@ -75,6 +83,7 @@ export async function runWorkerJob(
         { prompt: job.prompt, run_dir: job.agentSessionDir, cwd: job.worktreePath, options, model },
         sink,
         signal,
+        live,
       );
     }
     return await adapter.run(
@@ -90,6 +99,7 @@ export async function runWorkerJob(
       },
       sink,
       signal,
+      live,
     );
   } finally {
     sink.close();

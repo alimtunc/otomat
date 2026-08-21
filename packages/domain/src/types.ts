@@ -11,7 +11,10 @@
  */
 export type { IssueState } from "./state-machines/issue.js";
 export type { RunState, RunSettledState } from "./state-machines/run.js";
-export type { RunContributionState } from "./state-machines/run-contribution.js";
+export type {
+  RunContributionDeliveryPhase,
+  RunContributionState,
+} from "./state-machines/run-contribution.js";
 export type { StepRunState } from "./state-machines/step-run.js";
 export type { AgentSessionState } from "./state-machines/agent-session.js";
 export type { CompeteGroupState } from "./state-machines/compete-group.js";

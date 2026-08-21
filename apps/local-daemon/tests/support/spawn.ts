@@ -37,6 +37,10 @@ export type WorkerBehavior =
   | "fail"
   | "crash"
   | "linger"
+  /** Lingers while answering the live-input channel, as a worker owning a steerable provider does. */
+  | "live"
+  /** Same channel, but stdin refuses every message, as a provider that closed its pipe does. */
+  | "live-refuse"
   | "quota"
   | "quota-undated";
 

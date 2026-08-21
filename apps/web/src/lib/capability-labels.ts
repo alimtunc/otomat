@@ -13,6 +13,7 @@ export interface CapabilityEntry {
 
 /** Steering is a guarantee level, not a yes/no, so the label names the level the CLI actually offers. */
 const STEERING_LABELS = {
+  live: "Steering the live session",
   turn_boundary: "Steering at next turn",
   unsupported: "Steering",
 } satisfies Record<RuntimeSteeringMode, string>;

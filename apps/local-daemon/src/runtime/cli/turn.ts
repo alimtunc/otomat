@@ -3,11 +3,12 @@ import { existsSync } from "node:fs";
 import type { ProviderLimit } from "@otomat/domain";
 
 import type { RuntimeFinalState, RuntimeRunInput, RuntimeUsage } from "#runtime/contract";
+import { errorMessage } from "#runtime/errors";
 import type { RuntimeEvent } from "#runtime/events";
 import type { RuntimeSink } from "#runtime/sinks";
 
 import { parseJsonRecord } from "./frame-guards.js";
-import { runCliProcess, type CliProcessExit } from "./process-runner.js";
+import { runCliProcess, type CliProcessExit, type CliProcessOptions } from "./process-runner.js";
 import { TurnEmitter, type TurnRef } from "./turn-emitter.js";
 
 /**
@@ -41,6 +42,7 @@ export interface CliTurnSpec {
   prompt: string;
   cwd: string;
   ref: TurnRef;
+  streamStdin?: CliProcessOptions["streamStdin"];
   createMapper(emitter: TurnEmitter): ProviderFrameMapper;
 }
 
@@ -81,10 +83,21 @@ export async function runCliTurn(
     try {
       dispatch();
     } catch (error) {
-      dispatchError ??= error instanceof Error ? error.message : String(error);
+      dispatchError ??= `event dispatch failed: ${errorMessage(error)}`;
       dispatchAbort.abort();
     }
   };
+  const pump = spec.streamStdin;
+  const guardedPump: CliProcessOptions["streamStdin"] =
+    pump &&
+    (async (write, inputSignal) => {
+      try {
+        await pump(write, inputSignal);
+      } catch (error) {
+        dispatchError ??= `live input failed: ${errorMessage(error)}`;
+        dispatchAbort.abort();
+      }
+    });
 
   try {
     const exit = await runCliProcess({
@@ -92,28 +105,19 @@ export async function runCliTurn(
       args: spec.args,
       cwd: workDir,
       stdin: spec.prompt,
+      streamStdin: guardedPump,
       signal: AbortSignal.any([signal, dispatchAbort.signal]),
       onStdoutLine: (line) => guarded(() => dispatchStdoutLine(line, emitter, mapper)),
       onStderrLine: (line) => guarded(() => emitter.log("stderr", line)),
     });
     if (dispatchError !== null) {
-      return failedState(
-        spec.adapter,
-        `event dispatch failed: ${dispatchError}`,
-        mapper.outcome,
-        emitter.emitted,
-      );
+      return failedState(spec.adapter, dispatchError, mapper.outcome, emitter.emitted);
     }
     return finalStateFromExit(spec.adapter, exit, mapper.outcome, emitter);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    emitter.daemonLog(`failed to run ${spec.adapter}: ${message}`);
-    return failedState(
-      spec.adapter,
-      `failed to run ${spec.adapter}: ${message}`,
-      mapper.outcome,
-      emitter.emitted,
-    );
+    const message = `failed to run ${spec.adapter}: ${errorMessage(error)}`;
+    emitter.daemonLog(message);
+    return failedState(spec.adapter, message, mapper.outcome, emitter.emitted);
   }
 }
 

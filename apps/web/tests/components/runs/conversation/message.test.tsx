@@ -62,6 +62,18 @@ it("offers both retry and withdrawal for a failure that never reached the agent"
   expect(buttonLabelled("Cancel message")).toBeDefined();
 });
 
+it("shows an unclaimed message as waiting for the next turn", async () => {
+  await renderMessage({ status: "queued" });
+
+  expect(document.body.textContent).toContain("Waiting for next turn");
+});
+
+it("shows a message a live turn claimed as on its way, not as still queued", async () => {
+  await renderMessage({ status: "queued", agent_session_id: "as1" });
+
+  expect(document.body.textContent).toContain("Sending");
+});
+
 it("offers neither once a turn is carrying the message", async () => {
   await renderMessage({
     status: "delivered",

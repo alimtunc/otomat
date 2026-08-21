@@ -1,6 +1,7 @@
 import {
   isRunContributionCancelable,
   isRunContributionRetriable,
+  projectRunContributionDelivery,
   type RunContributionContract,
 } from "@otomat/domain";
 import { Button, Markdown, RelativeTime, RunContributionStatusChip } from "@otomat/ui";
@@ -27,7 +28,10 @@ export function ConversationMessage({
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-text-secondary">You</span>
         <RelativeTime date={contribution.created_at} className="text-xs" />
-        <RunContributionStatusChip status={contribution.status} size="sm" />
+        <RunContributionStatusChip
+          status={projectRunContributionDelivery(contribution)}
+          size="sm"
+        />
       </div>
       <Markdown
         value={contribution.body}
