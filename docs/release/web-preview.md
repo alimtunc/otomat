@@ -31,10 +31,27 @@ request whose Cloudflare Access identity it has verified at the origin. The daem
 `OTOMAT_ALLOWED_ORIGINS`, so its loopback `Host` guard and CORS behaviour are exactly what a
 desktop install gets.
 
+## Resource ownership
+
+| Resource | Ownership and cleanup |
+| --- | --- |
+| Pages deployment on branch `pr-<n>` | dedicated; exact-branch deployments are deleted |
+| Worker `otomat-preview-pr-<n>` and its `workers.dev` route | dedicated; deleting the exact script removes both and its Worker secret |
+| Container application `otomat-preview-pr-<n>-previewdaemon` | dedicated; deleted by its exact name |
+| Container image tags | dedicated repositories derived from the exact Worker/application names; deleted on close |
+| Durable Object instance, SQLite and fixture repo | dedicated to the container application and ephemeral; removed with the application |
+| Pages project, Access policy/environment and preview client pair | shared; inventoried by configuration, never deleted |
+| `preview-base:node22` image | shared by all previews; updated in place, never handled by PR cleanup |
+| Tunnel, route outside `workers.dev`, or preview VPS daemon | not created by this architecture |
+
+The PR comment is historical review metadata rather than a provisioned runtime resource and remains
+on the closed PR.
+
 ## One-time setup
 
-Everything below is done once, by an operator. `.github/workflows/web-preview.yml` skips — never
-fails — while any of it is missing, so a fork or an unconfigured checkout still builds green.
+Everything below is done once, by an operator. Deploy surfaces stay disabled while their repository
+variable is absent. Cleanup skips an account with no Cloudflare credentials and fails visibly for
+partial credentials, so an unconfigured fork stays green without masking a broken configured repo.
 
 1. **Workers Paid plan** ($5/month) on the Cloudflare account: Containers require it. Container
    time itself is billed per active second and the instances sleep when idle.
@@ -60,10 +77,10 @@ fails — while any of it is missing, so a fork or an unconfigured checkout stil
    façade refuses `/api/*` entirely — a preview is never public by default — and the sandbox keeps
    working.
 
-6. **Preview base image** — run the `Preview base image` workflow once (`workflow_dispatch`). It
-   publishes `ghcr.io/<owner>/<repo>/preview-base:node22`, the prebuilt node + git base the host
-   Dockerfile `FROM`s, so a pull-request provision never runs `apt-get`. It republishes itself
-   whenever `scripts/preview/host/base.Dockerfile` changes on `main`.
+6. **Preview base image** — dispatch `Preview base image` once. It publishes the Linux/amd64
+   Node + git layer at `ghcr.io/<owner>/<repo>/preview-base:node22`; subsequent provisions rebuild
+   only the commit-specific daemon layers. A push to `main` republishes it when
+   `scripts/preview/host/base.Dockerfile` changes.
 
 ## Repository configuration
 
@@ -83,15 +100,26 @@ workers with a real Access policy on a custom domain later needs no code change.
 
 ```bash
 export CLOUDFLARE_API_TOKEN=… CLOUDFLARE_ACCOUNT_ID=…
-node scripts/preview/instance.mjs list
+export CLOUDFLARE_PAGES_PROJECT=…
+node scripts/preview/instance.mjs inventory
 node scripts/preview/instance.mjs teardown --pr 142
 ```
 
-`list`, `warm` and `teardown` run without an installed workspace — only `provision` needs
-`@otomat/domain` built. CI uses `warm` (with the client pair in the environment) to boot the
-container right after provisioning, so the first reviewer click lands on a running daemon instead
-of a cold start; the workflow step is `continue-on-error`, so a daemon that never answers shows as
-a failed step, not a red pipeline.
+`inventory`, `warm` and `teardown` run without an installed workspace — only `provision` needs
+`@otomat/domain` built. The workflow's `workflow_dispatch` offers the same `inventory` and
+`teardown` operations. Inventory
+groups strict preview Worker, container application, Pages deployment and registry-image names by
+pull request and labels the pull request `open`, `closed`, `merged` or `missing` — `unknown` when
+`GITHUB_REPOSITORY`/`GITHUB_TOKEN` are absent, as in the snippet above. A closed, merged or
+missing row is an orphan candidate; deletion always remains an explicit `--pr` operation.
+
+Teardown derives every target from that validated number: Worker `otomat-preview-pr-142`, container
+application `otomat-preview-pr-142-previewdaemon`, Pages branch `pr-142`, and only the matching
+image repositories. It never deletes the shared Pages project, Access application, repository
+secrets or another PR's resources. Worker/container/Pages/image cleanup attempts all resource
+classes, treats an already-absent target as success, and fails visibly when any real deletion fails.
+The closed-event workflow happens after merge eligibility is decided, so a red cleanup is visible
+without falsifying or blocking the merge; dispatch can replay it until clean.
 
 Provisions before the per-pull-request config rendering shared one container application named
 `otomat-preview-previewdaemon`, which made any second pull request's deploy fail on its durable
@@ -102,20 +130,15 @@ pnpm dlx wrangler@4 containers list
 pnpm dlx wrangler@4 containers delete <application-id>
 ```
 
-`list` names every preview worker still deployed with the pull request it belongs to, which is how
-an orphan — a deployment whose pull request closed while the workflow was down — is found. Tearing
-one down deletes the worker and its container application — deleting the worker alone leaves the
-application behind, and a leftover application refuses the next provision of a reopened pull
-request — and, when `CLOUDFLARE_PAGES_PROJECT` is set in the environment, purges the pull
-request's Pages deployments too; all of it is idempotent. It then deletes the worker's registry
-images best-effort — the beta `wrangler containers images` commands are allowed to refuse without
-failing the teardown, so `pnpm dlx wrangler@4 containers images list` / `… delete <image>:<tag>`
-is still how leftovers are reclaimed.
+Successive commits cancel their superseded deploy. A close does not cancel the deploy already in
+flight: it queues, then removes the final exact names. Reopening provisions the same names again,
+and a repeated cleanup remains safe. Preview images and Pages deployments have no retention window:
+they are deleted immediately on close.
 
 ## Limits worth knowing
 
 - The **atomic deployment URL** (`<hash>.<project>.pages.dev`) works for the sandbox; the pull
-  request comment links the branch alias, which is the one the manifest keys the daemon worker to.
+  request comment links the branch alias, and the deployment is stamped with the full PR head SHA.
 - The container's disk is **ephemeral**: after an hour idle it sleeps, and the next request boots
   it fresh — reseeded fixture repository, empty database, a few seconds of cold start behind the
   "starting" status. That reset is a feature for previews and a difference from the desktop

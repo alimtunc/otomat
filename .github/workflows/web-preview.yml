@@ -1,12 +1,23 @@
 name: Web preview
 
-# A pull request gets a protected Cloudflare URL instead of a DMG: the UI deploys immediately and
-# runs on browser fixtures, and the same URL drives this commit's own daemon in a Cloudflare
-# container once it is provisioned. Nothing runs on operator hardware. The one-time Cloudflare
-# setup lives in docs/release/web-preview.md.
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Inspect resources or tear down one pull request
+        required: true
+        type: choice
+        options: [inventory, teardown]
+      pull_request:
+        description: Pull request number required for teardown
+        required: false
+        type: string
+      pages_project:
+        description: Optional Pages project override for recovery
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -14,49 +25,41 @@ permissions:
   packages: read
 
 concurrency:
-  group: web-preview-${{ github.event.pull_request.number }}
+  group: web-preview-${{ github.event.pull_request.number || inputs.pull_request || 'inventory' }}
   # A superseded commit's run is safe to cancel: provision is idempotent and the manifest refuses
-  # a mismatched daemon, so the worst a mid-flight cancel leaves is a blocked screen until the
-  # next run lands.
-  cancel-in-progress: true
+  # a mismatched daemon. A close event and a dispatched cleanup must run to completion instead.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
 
 jobs:
   deploy:
-    if: github.event.action != 'closed'
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     outputs:
       url: ${{ steps.pages.outputs.url }}
     steps:
-      # The head commit, not the merge ref: the daemon dist stamps `git rev-parse HEAD` as its
-      # build, and the manifest names the head sha — on the merge ref they would never match.
+      # The head commit, not the merge ref: the daemon build stamp and the manifest name the
+      # head sha — on the merge ref they would never match.
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
 
       # One filtered build: web and daemon share @otomat/domain and the other workspace packages,
       # so building them in one pnpm invocation builds each shared package once.
-      - name: Build the cockpit and the daemon this commit ships
+      - name: Build this commit's preview payloads
+        env:
+          PREVIEW_DAEMON_ENABLED: ${{ vars.PREVIEW_DAEMON_ENABLED }}
         run: |
-          pnpm --filter "@otomat/web..." --filter "@otomat/local-daemon..." run build
-          pnpm --filter @otomat/local-daemon deploy --prod --legacy "$RUNNER_TEMP/daemon"
-          tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/daemon.tar.gz" daemon
+          if [ -n "$PREVIEW_DAEMON_ENABLED" ]; then
+            pnpm --filter "@otomat/web..." --filter "@otomat/local-daemon..." run build
+            pnpm --filter @otomat/local-daemon deploy --prod --legacy "$RUNNER_TEMP/daemon"
+            tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/daemon.tar.gz" daemon
+          else
+            pnpm --filter "@otomat/web..." run build
+          fi
 
-      # The one runtime configuration the preview needs: which pull request this deployment serves
-      # and the commit it was built from. The cockpit reads it at boot, the façade reads it to find
-      # this pull request's daemon worker, and a daemon on any other commit is refused against it.
       - name: Stamp the deployment manifest
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -73,12 +76,14 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
         run: |
           set -euo pipefail
           pnpm dlx wrangler@4 pages deploy dist \
             --project-name "$PAGES_PROJECT" \
             --branch "pr-$PR_NUMBER" \
+            --commit-hash "$HEAD_SHA" \
             --commit-dirty=true
           echo "url=https://pr-$PR_NUMBER.$PAGES_PROJECT.pages.dev" >> "$GITHUB_OUTPUT"
 
@@ -126,7 +131,7 @@ jobs:
         run: node scripts/preview/instance.mjs warm --pr "$PR_NUMBER"
 
   announce:
-    if: ${{ !cancelled() && github.event.action != 'closed' && needs.deploy.outputs.url != '' }}
+    if: ${{ !cancelled() && needs.deploy.outputs.url != '' }}
     needs: deploy
     runs-on: ubuntu-latest
     steps:
@@ -141,12 +146,12 @@ jobs:
           body=$(printf 'Web preview for \x60%s\x60: %s\n\nIt opens on browser fixtures straight away, and switches to this commit'"'"'s own isolated daemon once its container answers. Sign in with Cloudflare Access; no DMG needed.' "${HEAD_SHA:0:7}" "$URL")
           gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$body" --edit-last --create-if-none
 
-  # Close or merge and the pull request keeps nothing: its worker is deleted, which takes the
-  # container, its data and its workers.dev route with it, and its Pages deployments are purged.
-  # Other previews are untouched. No pnpm install: the teardown path of instance.mjs runs without
-  # an installed workspace, and `pnpm dlx` fetches wrangler on demand.
+  # Close or merge and the pull request keeps nothing: teardown deletes its exact worker,
+  # container application, Pages deployments and registry images; other previews are untouched.
+  # No pnpm install: the teardown path of instance.mjs runs without an installed workspace, and
+  # `pnpm dlx` fetches wrangler on demand.
   teardown:
-    if: github.event.action == 'closed' && vars.PREVIEW_DAEMON_ENABLED != ''
+    if: ${{ (github.event_name == 'pull_request' && github.event.action == 'closed') || (github.event_name == 'workflow_dispatch' && inputs.operation == 'teardown') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -160,11 +165,49 @@ jobs:
         with:
           node-version: 22
 
-      - name: Delete this pull request's daemon worker and Pages deployments
+      - name: Delete this pull request's dedicated resources
         env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pull_request }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ inputs.pages_project || vars.CLOUDFLARE_PAGES_PROJECT }}
         run: |
+          set -euo pipefail
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] && [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::Cloudflare preview cleanup skipped because this repository has no credentials"
+            exit 0
+          fi
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Cloudflare preview cleanup has partial credentials"
+            exit 1
+          fi
           node scripts/preview/instance.mjs teardown --pr "$PR_NUMBER"
+
+  inventory:
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'inventory'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Inventory dedicated resources and PR state
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ inputs.pages_project || vars.CLOUDFLARE_PAGES_PROJECT }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          {
+            printf '```json\n'
+            node scripts/preview/instance.mjs inventory
+            printf '```\n'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
