@@ -3,6 +3,7 @@ import {
   type LinearSyncStatusContract,
   type LinearWorkspaceContract,
 } from "@otomat/domain";
+import { SANDBOX_ACTIVITY } from "@web/preview/sandbox/activity";
 import {
   SANDBOX_GITHUB,
   SANDBOX_LINEAR,
@@ -81,6 +82,7 @@ const LINEAR_SYNC: LinearSyncStatusContract = {
 
 const ROUTES: SandboxRoute[] = [
   { pattern: /^\/api\/health$/, respond: (_m, build) => json(sandboxHealth(build)) },
+  { pattern: /^\/api\/activity$/, respond: () => json(SANDBOX_ACTIVITY) },
   { pattern: /^\/api\/projects$/, respond: () => json([SANDBOX_PROJECT]) },
   { pattern: /^\/api\/repositories$/, respond: () => json([SANDBOX_REPOSITORY]) },
   { pattern: /^\/api\/repositories\/[^/]+\/branches$/, respond: () => json(SANDBOX_BRANCHES) },

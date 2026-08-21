@@ -14,7 +14,7 @@ apps/
   web/                 # React + Vite cockpit (OTO-9, refactored in OTO-15)
   local-daemon/        # Node local process — hosts the backend as internal modules
     src/
-      api/             # HTTP routes + SSE handlers          (OTO-9)
+      api/             # HTTP routes + SSE handlers (run ledger, activity snapshot) (OTO-9)
       context/         # declarative agent context: freeze a selection, build a session dossier, render it
       events/          # event ledger + stream-to-file tailer (OTO-7)
       git/             # worktree/branch lifecycle + diff      (OTO-8)
@@ -1061,6 +1061,46 @@ protected (an unreadable answer counts as protected), a merged or closed pull
 request, and a head the pull request no longer ships. A push failure records its
 code on the row without unwinding `publication_status`: the pull request was
 created and still is.
+
+## The Activity Center
+
+The header's Activity Center is a **projection of what the daemon already owns**,
+never a store of its own. `projectActivities` folds one evidence row per run —
+the run, its current or halted step, its project and issue, and the publication
+row attached to it — into bucketed `ActivityContract`s, and the publication
+variant embeds the `OperationContract`
+`projectPullRequestPublicationOperation` already produces rather than deriving a
+second set of phases. Nothing about an activity exists that a run row, a step row
+or a pull request row does not already say, which is why the panel can never
+disagree with Runs, Reviews or the PR panel.
+
+Buckets come from the state machines, not from the component: `running` and
+`queued` split the work in flight from the work waiting on a slot or a quota,
+`attention` holds every state that is asking the operator something (an
+awaited permission, human, or winner; a review that is ready; a failed run; a
+publication that failed or was interrupted), and `recent` holds what settled.
+Only `recent` is bounded — by a time window *and* a count — because unfinished
+work is never hidden, while a header must not grow an unbounded history.
+
+`GET /api/activity` answers the whole cross-project snapshot and
+`GET /api/activity/stream` pushes it again whenever it changes. The stream
+carries **state, not a ledger**, so it has no cursor: a reconnect resumes by
+receiving the current snapshot rather than by replaying what it missed, and the
+daemon writes a frame only when the projected payload actually differs. It is
+opened once above the routes (`__root.tsx`), so navigating, switching project or
+opening a modal never interrupts it; the snapshot query it writes into is the
+same one the header reads, so a reload rebuilds the panel from the daemon and a
+host that stops answering leaves its last activities on screen behind the stale
+notice instead of erasing them.
+
+The panel offers only what the domain authorizes. A run that has not settled can
+be cancelled, because `POST /api/runs/:id/abort` is exactly that command. A
+failed publication is *not* given a generic Retry here: re-issuing it needs the
+publication request — mode, subject, body — that only the PR panel holds, so the
+activity deep-links there instead of inventing a command. For the same reason
+Linear sync and the daemon upgrade are absent: their domains report a boolean
+`running` with no durable phase, and a header that showed them would be showing
+an estimate.
 
 ## Session Capacity and the Launch Queue
 

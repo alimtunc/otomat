@@ -3,6 +3,7 @@ import type {
   ChangeStatus,
   CompeteGroupState,
   IssueBoardColumn,
+  OperationState,
   PullRequestState,
   ReviewCommentPublicationState,
   ReviewCommentState,
@@ -22,6 +23,7 @@ export type StatusKind =
   | "step"
   | "session"
   | "compete"
+  | "operation"
   | "review"
   | "reviewComment"
   | "reviewCommentPublication"
@@ -46,6 +48,8 @@ export interface KindStatusMap {
   step: StepRunState;
   session: AgentSessionState;
   compete: CompeteGroupState;
+  /** A daemon-owned background operation, whatever kind of work it runs. */
+  operation: OperationState;
   review: ReviewState;
   reviewComment: ReviewCommentState;
   reviewCommentPublication: ReviewCommentPublicationState;

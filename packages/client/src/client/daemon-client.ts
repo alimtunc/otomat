@@ -1,3 +1,4 @@
+import { createActivityClient } from "./activity.js";
 import { createAgentsClient } from "./agents.js";
 import type { DaemonClientConfig } from "./config.js";
 import {
@@ -19,6 +20,7 @@ import { createWorkspaceClient } from "./workspace.js";
 export function createDaemonClient(config: DaemonClientConfig = {}) {
   return {
     ...createSystemClient(config),
+    ...createActivityClient(config),
     ...createWorkspaceClient(config),
     ...createGitHubClient(config),
     ...createLinearClient(config),

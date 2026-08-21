@@ -11,4 +11,5 @@
 export * from "./client/index.js";
 export { DaemonRequestError, DaemonTransportError } from "./client/http.js";
 export * from "./client/config.js";
+export type { ActivityStreamHandlers, ActivityStreamSubscription } from "./client/activity.js";
 export type { RunEventsHandlers, RunEventsSubscription } from "./client/events.js";

@@ -4,6 +4,7 @@ import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { stubAnimations } from "#support/animations";
 import { findButton } from "#support/dom-queries";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -15,8 +16,7 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-// happy-dom has no Web Animations API; Base UI's ScrollArea polls it after mount.
-Object.assign(Element.prototype, { getAnimations: (): Animation[] => [] });
+stubAnimations();
 
 const cleanups: Array<() => Promise<void>> = [];
 

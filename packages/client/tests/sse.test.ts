@@ -101,3 +101,54 @@ it("routes a malformed SSE frame to onParseError instead of throwing", () => {
   expect(parseErrors).toBe(2);
   expect(received.map((e) => e.seq)).toEqual([0]);
 });
+
+const SNAPSHOT = {
+  activities: [
+    {
+      kind: "run",
+      id: "run:run-1",
+      bucket: "running",
+      status: "running",
+      project: { id: "project-1", name: "Otomat" },
+      issue: { id: "issue-1", identifier: "ABC-1", title: "Ship it" },
+      run_id: "run-1",
+      phase: "Implement",
+      updated_at: "2026-01-01T00:00:00.000Z",
+    },
+  ],
+  observed_at: "2026-01-01T00:00:00.000Z",
+};
+
+it("delivers each activity snapshot the host pushes", () => {
+  const { sources, client } = captureEventSource();
+
+  const received: string[][] = [];
+  const sub = client.subscribeActivity({
+    onSnapshot: (snapshot) => received.push(snapshot.activities.map((activity) => activity.id)),
+  });
+
+  const source = sources[0];
+  expect(source.url).toBe("/api/activity/stream");
+  source.emit("snapshot", JSON.stringify(SNAPSHOT));
+  source.emit("snapshot", JSON.stringify({ ...SNAPSHOT, activities: [] }));
+
+  expect(received).toEqual([["run:run-1"], []]);
+  sub.close();
+  expect(source.closed).toBe(true);
+});
+
+it("routes a malformed activity frame to onParseError instead of throwing", () => {
+  const { sources, client } = captureEventSource();
+
+  let parseErrors = 0;
+  client.subscribeActivity({
+    onSnapshot: () => {},
+    onParseError: () => {
+      parseErrors += 1;
+    },
+  });
+
+  expect(() => sources[0].emit("snapshot", "{not json")).not.toThrow();
+
+  expect(parseErrors).toBe(1);
+});
