@@ -36,7 +36,7 @@ async function click(): Promise<void> {
   });
 }
 
-it("carries the read file in the URL without burying the page it came from", async () => {
+it("carries the read file in the URL without burying the page it came from or restoring its scroll", async () => {
   search.mockReturnValue({ file: undefined });
   rendered = await mount(<Harness />);
 
@@ -44,7 +44,7 @@ it("carries the read file in the URL without burying the page it came from", asy
 
   expect(navigate).toHaveBeenCalledTimes(1);
   const [call] = navigate.mock.calls;
-  expect(call?.[0]).toMatchObject({ to: ".", replace: true });
+  expect(call?.[0]).toMatchObject({ to: ".", replace: true, resetScroll: false });
   expect(call?.[0].search({ scope: "workspace" })).toEqual({
     scope: "workspace",
     file: "src/b.ts",

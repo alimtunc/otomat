@@ -874,9 +874,15 @@ session in the frozen context the step was given.
 Reading a file is one primitive. Every surface that picks a file — the rail in
 either mode, the narrow-viewport nav, `j`/`k`, the Comments panel — calls
 `revealFile`, which selects, expands, and then scrolls in a layout effect that
-rides later renders until the card exists: a collapsed, hidden or lazily mounted
-card is reached without a timeout, and `Hide reviewed` keeps the file being read
-on screen the way it already keeps a commented one. The scroll moves the cards'
+rides later renders until the card exists and the selection it asked for has
+rendered: a collapsed, hidden or lazily mounted card is reached without a
+timeout, and the card is measured in the layout that selection settles — folding
+the file just marked reviewed, or dropping it under `Hide reviewed`, lifts every
+card below it. `Hide reviewed` keeps the file being read on screen the way it
+already keeps a commented one. Selection carries the file in the URL with the
+router's scroll restoration switched off (`use-active-file.ts`): it lands after
+the reveal, and re-applying the previous file's offset is what left the reader
+in the middle of the file they had just finished. The scroll moves the cards'
 own container and nothing above it (`runs/diff/scroll.ts`), because
 `scrollIntoView` also scrolls every scrollable ancestor — the shell's content
 pane included, which is what slid the toolbar off a file's sticky header. A

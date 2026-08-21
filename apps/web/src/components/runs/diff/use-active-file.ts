@@ -8,7 +8,8 @@ export interface ActiveDiffFile {
 /**
  * Route-agnostic: both diff routes (`/runs/$runId/diff`, `/pull-requests/$pullRequestId/diff`)
  * declare the `file` search param. Selection replaces the history entry: reading a diff must
- * not bury the page the reviewer came from.
+ * not bury the page the reviewer came from, and `resetScroll: false` keeps the router from
+ * re-applying the previous file's offset over the reveal that selection asked for.
  */
 export function useActiveDiffFile(): ActiveDiffFile {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ export function useActiveDiffFile(): ActiveDiffFile {
         to: ".",
         search: (previous) => ({ ...previous, file: next }),
         replace: true,
+        resetScroll: false,
       });
     },
   };
