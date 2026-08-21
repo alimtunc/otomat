@@ -1,7 +1,7 @@
 import type { ActivitySnapshot } from "@otomat/domain";
 import { EmptyState } from "@otomat/ui";
+import { ActivityCluster } from "@web/components/shell/activity/cluster";
 import { groupActivities } from "@web/components/shell/activity/groups";
-import { ActivityRow } from "@web/components/shell/activity/row";
 
 export interface ActivityPanelProps {
   snapshot: ActivitySnapshot;
@@ -28,10 +28,10 @@ export function ActivityPanel({ snapshot, hostLabel, onNavigate }: ActivityPanel
             {group.label}
           </h3>
           <ul className="flex flex-col">
-            {group.activities.map((activity) => (
-              <ActivityRow
-                key={activity.id}
-                activity={activity}
+            {group.clusters.map((cluster) => (
+              <ActivityCluster
+                key={cluster.issue.id}
+                cluster={cluster}
                 hostLabel={hostLabel}
                 onNavigate={onNavigate}
               />

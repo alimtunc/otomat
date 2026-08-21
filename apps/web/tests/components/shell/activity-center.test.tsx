@@ -5,7 +5,7 @@ import { ActivityCenter } from "@web/components/shell/activity/center";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { runActivity } from "#support/activity";
+import { publicationActivity, runActivity } from "#support/activity";
 import { stubAnimations } from "#support/animations";
 import { findLabelled } from "#support/dom-queries";
 import { testQueryClient } from "#support/query";
@@ -22,6 +22,16 @@ vi.mock("@web/api/runs/mutations", () => ({
 stubAnimations();
 
 const UPDATED_AT = "2026-08-20T10:00:00.000Z";
+
+const STOPPED_PUBLICATION = {
+  id: "pr-1",
+  kind: "pull_request_publication",
+  state: "failed",
+  phases: [{ key: "push", label: "Pushing the branch", state: "failed" }],
+  error: { code: "github_push_failed", message: "The branch was rejected." },
+  retryable: true,
+  updated_at: UPDATED_AT,
+} as const;
 
 function snapshot(activities: ActivityContract[]): ActivitySnapshot {
   return { activities, observed_at: UPDATED_AT };
@@ -123,28 +133,7 @@ describe("ActivityCenter", () => {
 
   it("links a run to its cockpit and a publication to the pull-request panel", async () => {
     listActivity.mockResolvedValue(
-      snapshot([
-        runActivity(),
-        {
-          kind: "pull_request_publication",
-          id: "publication:pr-1",
-          bucket: "running",
-          operation: {
-            id: "pr-1",
-            kind: "pull_request_publication",
-            state: "running",
-            phases: [{ key: "push", label: "Pushing the branch", state: "active" }],
-            error: null,
-            retryable: false,
-            updated_at: UPDATED_AT,
-          },
-          project: { id: "p1", name: "Otomat" },
-          issue: { id: "i1", identifier: "ABC-1", title: "Ship it" },
-          run_id: "run-9",
-          phase: "Pushing the branch",
-          updated_at: UPDATED_AT,
-        },
-      ]),
+      snapshot([runActivity(), publicationActivity({ run_id: "run-9" })]),
     );
 
     await openCenter();
@@ -154,43 +143,66 @@ describe("ActivityCenter", () => {
     expect(hrefs).toContain("/runs/run-9/pr");
   });
 
-  it("names the project and the execution host on every row", async () => {
-    listActivity.mockResolvedValue(snapshot([runActivity()]));
+  it("names the project and the execution host once per issue entry", async () => {
+    listActivity.mockResolvedValue(snapshot([runActivity(), publicationActivity()]));
 
     await openCenter();
 
-    expect(document.body.textContent).toContain("Otomat");
-    expect(document.body.textContent).toContain("otomat-vps");
+    expect(document.body.textContent?.match(/Otomat/g)).toHaveLength(1);
+    expect(document.body.textContent?.match(/otomat-vps/g)).toHaveLength(1);
   });
 
   it("shows the failure the daemon recorded on a stopped publication", async () => {
     listActivity.mockResolvedValue(
-      snapshot([
-        {
-          kind: "pull_request_publication",
-          id: "publication:pr-1",
-          bucket: "attention",
-          operation: {
-            id: "pr-1",
-            kind: "pull_request_publication",
-            state: "failed",
-            phases: [{ key: "push", label: "Pushing the branch", state: "failed" }],
-            error: { code: "github_push_failed", message: "The branch was rejected." },
-            retryable: true,
-            updated_at: UPDATED_AT,
-          },
-          project: { id: "p1", name: "Otomat" },
-          issue: { id: "i1", identifier: "ABC-1", title: "Ship it" },
-          run_id: "run-1",
-          phase: "Pushing the branch",
-          updated_at: UPDATED_AT,
-        },
-      ]),
+      snapshot([publicationActivity({ bucket: "attention", operation: STOPPED_PUBLICATION })]),
     );
 
     await openCenter();
 
     expect(document.body.textContent).toContain("The branch was rejected.");
+  });
+
+  it("gathers an issue's alerts under one entry, each action still its own row", async () => {
+    listActivity.mockResolvedValue(
+      snapshot([
+        runActivity({ bucket: "attention", status: "awaiting_human", phase: "Implement" }),
+        publicationActivity({ bucket: "attention", operation: STOPPED_PUBLICATION }),
+        runActivity({
+          bucket: "attention",
+          status: "failed",
+          run_id: "run-2",
+          id: "run:run-2",
+          issue: { id: "i2", identifier: "ABC-2", title: "Ship more" },
+        }),
+      ]),
+    );
+
+    await openCenter();
+
+    expect(
+      [...document.body.querySelectorAll("section > ul > li")].map(
+        (entry) => entry.querySelectorAll("a").length,
+      ),
+    ).toEqual([2, 1]);
+    expect(
+      [...document.body.querySelectorAll("a")].map((link) => link.getAttribute("href")),
+    ).toEqual(["/runs/run-1", "/runs/run-1/pr", "/runs/run-2"]);
+    expect(trigger().getAttribute("aria-label")).toBe("Activity — 3 in progress");
+  });
+
+  it("names its issue on every link, since the entry writes it only once", async () => {
+    listActivity.mockResolvedValue(
+      snapshot([
+        runActivity({ bucket: "attention", status: "awaiting_human", phase: "Implement" }),
+        publicationActivity({ bucket: "attention", operation: STOPPED_PUBLICATION }),
+      ]),
+    );
+
+    await openCenter();
+
+    expect(
+      [...document.body.querySelectorAll("a")].map((link) => link.textContent?.includes("ABC-1")),
+    ).toEqual([true, true]);
   });
 
   it("offers Cancel on a run still in flight and none on one that settled", async () => {

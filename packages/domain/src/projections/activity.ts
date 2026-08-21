@@ -1,6 +1,7 @@
 import type { ActivityBucket, ActivityContract } from "../contracts/activity.js";
 import type { OperationContract, OperationState } from "../contracts/operation.js";
-import type { RunState } from "../state-machines/run.js";
+import { isIssueClosed, type IssueState } from "../state-machines/issue.js";
+import { isRunSettled, type RunState } from "../state-machines/run.js";
 import {
   projectPullRequestPublicationOperation,
   type PullRequestPublicationFacts,
@@ -32,12 +33,15 @@ export interface ActivityEvidence {
   run_id: string;
   run_status: RunState;
   run_updated_at: string;
+  run_abandoned_at: string | null;
+  run_superseded: boolean;
   current_step: string | null;
   /** Name of the step that stopped the run, which outlives the turn that failed. */
   halted_step: string | null;
   issue_id: string;
   issue_identifier: string | null;
   issue_title: string;
+  issue_status: IssueState;
   project_id: string;
   project_name: string;
   publication: (PullRequestPublicationFacts & { id: string }) | null;
@@ -48,6 +52,13 @@ export interface ActivityWindow {
   /** Activities that settled before this instant are dropped. */
   since: string;
   limit: number;
+}
+
+function isActionable(row: ActivityEvidence): boolean {
+  if (!isRunSettled(row.run_status)) return true;
+  if (isIssueClosed(row.issue_status)) return false;
+  if (row.run_abandoned_at !== null) return false;
+  return !row.run_superseded;
 }
 
 function operationPhase(operation: OperationContract): string | null {
@@ -92,7 +103,7 @@ function byNewest(a: ActivityContract, b: ActivityContract): number {
   return b.updated_at.localeCompare(a.updated_at);
 }
 
-/** Newest first within each bucket; only the `recent` bucket is bounded, because unfinished work is never hidden. */
+/** Newest first within each bucket; only `recent` is bounded, and an `attention` activity the evidence no longer supports is dropped, not settled — it never completed. */
 export function projectActivities(
   rows: ActivityEvidence[],
   window: ActivityWindow,
@@ -100,8 +111,10 @@ export function projectActivities(
   const live: ActivityContract[] = [];
   const recent: ActivityContract[] = [];
   for (const row of rows) {
+    const actionable = isActionable(row);
     for (const activity of [runActivity(row), publicationActivity(row)]) {
       if (activity === null) continue;
+      if (activity.bucket === "attention" && !actionable) continue;
       if (activity.bucket !== "recent") live.push(activity);
       else if (activity.updated_at >= window.since) recent.push(activity);
     }
