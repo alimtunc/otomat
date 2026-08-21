@@ -1,13 +1,13 @@
 import { parsePatchHunks, type DiffFileContract, type PatchLine } from "@otomat/domain";
-import { occurrenceOffsets } from "@web/components/runs/diff/search/occurrences";
+
+const SPECIAL = /[.*+?^${}()|[\]\\]/g;
 
 /** Counted once per patch line whatever renders it: split mode prints a context line twice. */
 export interface DiffSearchMatch {
   path: string;
   oldLine: number | null;
   newLine: number | null;
-  /** Rank of this occurrence among the ones on its own line. */
-  occurrence: number;
+  offset: number;
 }
 
 type DiffSearchIndex = ReadonlyMap<string, PatchLine[]>;
@@ -30,12 +30,20 @@ export function findDiffMatches(
   index: DiffSearchIndex,
   query: string,
 ): DiffSearchMatch[] {
+  if (query === "") return [];
+  const pattern = new RegExp(query.replace(SPECIAL, "\\$&"), "gi");
   const matches: DiffSearchMatch[] = [];
   for (const file of order) {
     for (const line of index.get(file.path) ?? []) {
-      occurrenceOffsets(line.text, query).forEach((_, occurrence) => {
-        matches.push({ path: file.path, oldLine: line.oldLine, newLine: line.newLine, occurrence });
-      });
+      pattern.lastIndex = 0;
+      for (let found = pattern.exec(line.text); found !== null; found = pattern.exec(line.text)) {
+        matches.push({
+          path: file.path,
+          oldLine: line.oldLine,
+          newLine: line.newLine,
+          offset: found.index,
+        });
+      }
     }
   }
   return matches;

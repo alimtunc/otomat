@@ -5,7 +5,7 @@ import type { DiffSearch } from "@web/components/runs/diff/search/use-diff-searc
 import { useEffect, useLayoutEffect, useRef } from "react";
 
 function matchKey(cursor: number, match: DiffSearchMatch): string {
-  return `${cursor} ${match.path} ${match.oldLine} ${match.newLine} ${match.occurrence}`;
+  return `${cursor} ${match.path} ${match.oldLine} ${match.newLine} ${match.offset}`;
 }
 
 export function useSearchReveal(search: DiffSearch, onShowFile: (path: string) => void): void {

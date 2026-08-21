@@ -1,6 +1,6 @@
 import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
 import type { DiffSearchMatch } from "@web/components/runs/diff/search/matches";
-import { occurrenceRanges } from "@web/components/runs/diff/search/ranges";
+import { rangesAtOffsets } from "@web/components/runs/diff/search/ranges";
 import { lineTextElements } from "@web/components/runs/diff/search/rows";
 
 /** Must match the `::highlight()` rules in `review-diff.css`. */
@@ -9,7 +9,7 @@ const ACTIVE_MATCH = "otomat-diff-search-active";
 
 interface LineHit {
   position: number;
-  occurrence: number;
+  offset: number;
 }
 
 interface LineGroup {
@@ -19,20 +19,34 @@ interface LineGroup {
   hits: LineHit[];
 }
 
+const groupsByMatches = new WeakMap<readonly DiffSearchMatch[], LineGroup[]>();
+
 function groupByLine(matches: readonly DiffSearchMatch[]): LineGroup[] {
-  const groups = new Map<string, LineGroup>();
-  matches.forEach((match, position) => {
-    const key = `${match.path} ${match.oldLine} ${match.newLine}`;
-    const group = groups.get(key) ?? {
-      path: match.path,
-      oldLine: match.oldLine,
-      newLine: match.newLine,
-      hits: [],
-    };
-    group.hits.push({ position, occurrence: match.occurrence });
-    groups.set(key, group);
-  });
-  return [...groups.values()];
+  const cached = groupsByMatches.get(matches);
+  if (cached !== undefined) return cached;
+  const groups: LineGroup[] = [];
+  let position = 0;
+  for (const match of matches) {
+    const current = groups.at(-1);
+    if (
+      current !== undefined &&
+      current.path === match.path &&
+      current.oldLine === match.oldLine &&
+      current.newLine === match.newLine
+    ) {
+      current.hits.push({ position, offset: match.offset });
+    } else {
+      groups.push({
+        path: match.path,
+        oldLine: match.oldLine,
+        newLine: match.newLine,
+        hits: [{ position, offset: match.offset }],
+      });
+    }
+    position += 1;
+  }
+  groupsByMatches.set(matches, groups);
+  return groups;
 }
 
 function paint(name: string, ranges: readonly Range[]): void {
@@ -60,14 +74,22 @@ export function paintDiffSearch(
     const card = document.getElementById(diffFileDomId(group));
     if (card === null) continue;
     for (const element of lineTextElements(card, group)) {
-      const ranges = occurrenceRanges(element, query);
+      const ranges = rangesAtOffsets(
+        element,
+        group.hits.map((hit) => hit.offset),
+        query.length,
+      );
+      let index = 0;
       for (const hit of group.hits) {
-        const range = ranges[hit.occurrence];
-        if (range === undefined) continue;
-        all.push(range);
-        if (hit.position !== activeIndex) continue;
-        active.push(range);
-        activeElement ??= element;
+        const range = ranges[index];
+        if (range !== null && range !== undefined) {
+          all.push(range);
+          if (hit.position === activeIndex) {
+            active.push(range);
+            activeElement ??= element;
+          }
+        }
+        index += 1;
       }
     }
   }

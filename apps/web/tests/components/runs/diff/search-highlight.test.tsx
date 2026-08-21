@@ -32,11 +32,11 @@ index 0000001..0000002 100644
 `,
 });
 
-const ADDED: DiffSearchMatch = { path: PATH, oldLine: null, newLine: 2, occurrence: 0 };
-const REMOVED: DiffSearchMatch = { path: PATH, oldLine: 2, newLine: null, occurrence: 0 };
-const CONTEXT: DiffSearchMatch = { path: PATH, oldLine: 1, newLine: 1, occurrence: 0 };
-const FIRST: DiffSearchMatch = { path: TWICE, oldLine: null, newLine: 1, occurrence: 0 };
-const SECOND: DiffSearchMatch = { path: TWICE, oldLine: null, newLine: 1, occurrence: 1 };
+const ADDED: DiffSearchMatch = { path: PATH, oldLine: null, newLine: 2, offset: 6 };
+const REMOVED: DiffSearchMatch = { path: PATH, oldLine: 2, newLine: null, offset: 0 };
+const CONTEXT: DiffSearchMatch = { path: PATH, oldLine: 1, newLine: 1, offset: 6 };
+const FIRST: DiffSearchMatch = { path: TWICE, oldLine: null, newLine: 1, offset: 6 };
+const SECOND: DiffSearchMatch = { path: TWICE, oldLine: null, newLine: 1, offset: 15 };
 
 function renderCard(mode: "unified" | "split", wrap: boolean, collapsed = false, on = file) {
   return mountWithQuery(

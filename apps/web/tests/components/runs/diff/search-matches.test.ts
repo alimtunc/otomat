@@ -37,19 +37,19 @@ function matchesFor(query: string, order = FILES) {
 describe("finding matches in the loaded hunks", () => {
   it("finds every occurrence, case-insensitively, on both sides of a hunk", () => {
     expect(matchesFor("answer")).toEqual([
-      { path: "src/one.ts", oldLine: 2, newLine: null, occurrence: 0 },
-      { path: "src/one.ts", oldLine: null, newLine: 2, occurrence: 0 },
-      { path: "src/one.ts", oldLine: 3, newLine: 3, occurrence: 0 },
-      { path: "src/one.ts", oldLine: 3, newLine: 3, occurrence: 1 },
-      { path: "src/two.ts", oldLine: 10, newLine: null, occurrence: 0 },
+      { path: "src/one.ts", oldLine: 2, newLine: null, offset: 6 },
+      { path: "src/one.ts", oldLine: null, newLine: 2, offset: 6 },
+      { path: "src/one.ts", oldLine: 3, newLine: 3, offset: 6 },
+      { path: "src/one.ts", oldLine: 3, newLine: 3, offset: 15 },
+      { path: "src/two.ts", oldLine: 10, newLine: null, offset: 4 },
     ]);
   });
 
   it("counts the removed and the added form of one changed line separately", () => {
     expect(matchesFor("const answer")).toEqual([
-      { path: "src/one.ts", oldLine: 2, newLine: null, occurrence: 0 },
-      { path: "src/one.ts", oldLine: null, newLine: 2, occurrence: 0 },
-      { path: "src/one.ts", oldLine: 3, newLine: 3, occurrence: 0 },
+      { path: "src/one.ts", oldLine: 2, newLine: null, offset: 0 },
+      { path: "src/one.ts", oldLine: null, newLine: 2, offset: 0 },
+      { path: "src/one.ts", oldLine: 3, newLine: 3, offset: 0 },
     ]);
   });
 
@@ -85,8 +85,19 @@ describe("finding matches in the loaded hunks", () => {
     });
 
     expect(findDiffMatches([carriage], indexDiffLines([carriage]), "ab")).toEqual([
-      { path: "src/crlf.ts", oldLine: null, newLine: 1, occurrence: 0 },
-      { path: "src/crlf.ts", oldLine: null, newLine: 1, occurrence: 1 },
+      { path: "src/crlf.ts", oldLine: null, newLine: 1, offset: 0 },
+      { path: "src/crlf.ts", oldLine: null, newLine: 1, offset: 2 },
+    ]);
+  });
+
+  it("keeps offsets aligned past a character whose lowercase is longer", () => {
+    const unicode = diffFile({
+      path: "src/unicode.ts",
+      patch: `${HEADER}@@ -1 +1 @@\n-old\n+İ answer\n`,
+    });
+
+    expect(findDiffMatches([unicode], indexDiffLines([unicode]), "ANSWER")).toEqual([
+      { path: "src/unicode.ts", oldLine: null, newLine: 1, offset: 2 },
     ]);
   });
 
