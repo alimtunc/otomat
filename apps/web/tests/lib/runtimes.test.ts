@@ -18,6 +18,7 @@ function descriptor(
       resume: true,
       permissions: false,
       diff_hints: false,
+      provider_limit: "unsupported",
     },
     availability,
   };
@@ -45,13 +46,22 @@ describe("resolveRuntimeChoice", () => {
     expect(resolveRuntimeChoice(descriptors, null)).toBe("codex");
   });
 
-  it("never auto-selects a simulated runtime but keeps it when explicitly chosen", () => {
+  it("prefers an available real runtime over a listed simulated one", () => {
+    const descriptors = [
+      descriptor("codex", "real", AVAILABLE),
+      descriptor("fake", "simulated", AVAILABLE),
+    ];
+    expect(resolveRuntimeChoice(descriptors, null)).toBe("codex");
+    expect(resolveRuntimeChoice(descriptors, "fake")).toBe("fake");
+  });
+
+  it("falls back to a simulated runtime when no real one is available", () => {
     const descriptors = [
       descriptor("claude", "real", NOT_INSTALLED),
       descriptor("fake", "simulated", AVAILABLE),
     ];
-    expect(resolveRuntimeChoice(descriptors, null)).toBeNull();
-    expect(resolveRuntimeChoice(descriptors, "fake")).toBe("fake");
+    expect(resolveRuntimeChoice(descriptors, null)).toBe("fake");
+    expect(hasLaunchableRuntime(descriptors)).toBe(true);
   });
 
   it("returns null when nothing is available", () => {

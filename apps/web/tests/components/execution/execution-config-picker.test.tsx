@@ -4,10 +4,12 @@ import {
   type AgentProfileContract,
   type ProviderOptionSet,
   type RuntimeDescriptor,
+  type RuntimeKind,
 } from "@otomat/domain";
 import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
 import { encodeProfileChoice, encodeRuntimeChoice } from "@web/lib/agent-choice";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
+import { SIMULATED_RUNTIME_NOTE } from "@web/lib/runtimes";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
@@ -25,11 +27,11 @@ vi.mock("@web/api/daemon/queries", () => ({
   useExecutionDefaults: () => executionDefaultsQueryResult(),
 }));
 
-function descriptor(id: string): RuntimeDescriptor {
+function descriptor(id: string, kind: RuntimeKind = "real"): RuntimeDescriptor {
   return {
     id,
     display_name: id,
-    kind: "real",
+    kind,
     capabilities: {
       stream: true,
       steering: "turn_boundary",
@@ -42,7 +44,7 @@ function descriptor(id: string): RuntimeDescriptor {
   };
 }
 
-const DESCRIPTORS = [descriptor("claude"), descriptor("codex"), descriptor("fake")];
+const DESCRIPTORS = [descriptor("claude"), descriptor("codex"), descriptor("fake", "simulated")];
 
 const PROFILE: AgentProfileContract = {
   id: "p1",
@@ -141,6 +143,22 @@ it("keeps the agent visible for a runtime that has no mark to name it", async ()
   await render({ agent: encodeRuntimeChoice("fake"), options: {} });
 
   expect(triggerSummary()).toBe("fake · Provider default");
+});
+
+it("warns in the menu that a simulated runtime contacts no model", async () => {
+  announced = providerOptionSet({ runtime: "fake", options: [] });
+  await render({ agent: encodeRuntimeChoice("fake"), options: {} });
+  await act(async () => trigger().click());
+
+  expect(document.body.textContent).toContain(SIMULATED_RUNTIME_NOTE);
+});
+
+it("keeps that warning off a real runtime, which does contact a provider", async () => {
+  announced = CLAUDE_ANNOUNCED;
+  await render({ agent: encodeRuntimeChoice("claude"), options: {} });
+  await act(async () => trigger().click());
+
+  expect(document.body.textContent).not.toContain(SIMULATED_RUNTIME_NOTE);
 });
 
 it("summarises the Codex keys for a Codex agent, and no Claude one", async () => {

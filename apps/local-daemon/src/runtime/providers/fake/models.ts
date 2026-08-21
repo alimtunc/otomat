@@ -6,14 +6,14 @@ export const FAKE_MODEL_SUPPORT: RuntimeModelSupport = {
   staticModels: [
     {
       id: "fake-fast",
-      label: "Fake fast (simulated)",
-      description: "Catalog entry of the test adapter; no provider is contacted.",
+      label: "Simulated fast",
+      description: "Simulated catalog entry; no provider is contacted.",
       source: "static",
     },
     {
       id: "fake-thorough",
-      label: "Fake thorough (simulated)",
-      description: "Catalog entry of the test adapter; no provider is contacted.",
+      label: "Simulated thorough",
+      description: "Simulated catalog entry; no provider is contacted.",
       source: "static",
     },
   ],

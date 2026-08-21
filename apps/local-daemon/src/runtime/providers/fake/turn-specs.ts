@@ -44,8 +44,8 @@ export function runSpecs(prompt: string, providerSession: string): EventSpec[] {
         frame: { kind: "session.created", session: providerSession, model: FAKE_USAGE.model },
       },
     },
-    log("[fake] session started"),
-    log(`[fake] received prompt: ${prompt}`),
+    log("[simulation] session started"),
+    log(`[simulation] received prompt: ${prompt}`),
     message("Let me read the repository before I change anything.", true),
     toolCall("read_file", { path: "README.md" }, { ok: true, bytes: 42 }),
     {
@@ -58,25 +58,27 @@ export function runSpecs(prompt: string, providerSession: string): EventSpec[] {
       fidelity: "parsed",
       data: { request_id: "perm-1", decision: "approved", auto: true },
     },
-    log("[fake] applying changes"),
+    log("[simulation] writing the placeholder change"),
     toolCall("write_file", { path: "src/index.ts" }, { ok: true, bytes: 17 }),
     { type: "runtime.usage", fidelity: "parsed", data: { usage: FAKE_USAGE } },
-    message(`I implemented "${prompt}" in src/index.ts and left the diff for review.`),
-    log("[fake] done"),
+    message(
+      `No model was contacted, so "${prompt}" is not implemented: the diff holds a placeholder change instead.`,
+    ),
+    log("[simulation] done"),
   ];
 }
 
 export function resumeSpecs(prompt: string, providerSession: string): EventSpec[] {
   return [
-    log(`[fake] resumed session ${providerSession}`),
-    log(`[fake] follow-up: ${prompt}`),
+    log(`[simulation] resumed session ${providerSession}`),
+    log(`[simulation] follow-up: ${prompt}`),
     toolCall("edit_file", { path: "src/index.ts" }, { ok: true, bytes: 9 }),
     { type: "runtime.usage", fidelity: "parsed", data: { usage: FAKE_USAGE } },
-    message("Done — I folded your follow-up into the same branch."),
-    log("[fake] done"),
+    message("The follow-up was recorded on the same branch, again without contacting a model."),
+    log("[simulation] done"),
   ];
 }
 
 export function abortSpec(): EventSpec {
-  return log("[fake] aborted", "stderr");
+  return log("[simulation] aborted", "stderr");
 }

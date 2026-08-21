@@ -4,12 +4,15 @@
 # commit.
 FROM ghcr.io/alimtunc/otomat/preview-base:node22
 
+# No provider CLI is installed here, so the simulated runtime is the only one a preview can launch on.
 ENV OTOMAT_DAEMON_HOST=0.0.0.0 \
   OTOMAT_DAEMON_PORT=4331 \
   OTOMAT_DB_PATH=/data/otomat.db \
-  OTOMAT_PROJECT_ROOT=/data/test-repo
+  OTOMAT_PROJECT_ROOT=/data/test-repo \
+  OTOMAT_ENABLE_FAKE_RUNTIME=1
 
 COPY daemon/ /srv/daemon/
+COPY seed.mjs /srv/seed.mjs
 COPY start.sh /srv/start.sh
 RUN chmod +x /srv/start.sh
 

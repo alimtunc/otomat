@@ -85,7 +85,7 @@ under `apps/local-daemon/src/<module>`, consumed through
 | --------------------------------- | ------------------------ | --------------------------------------------------------------------- |
 | `apps/web`                        | OTO-5, OTO-9, OTO-15     | Vite/React cockpit; file-based routing + domain-split components.     |
 | `apps/local-daemon`               | OTO-5, OTO-9/10, OTO-13  | Local process host; backend modules folded in by OTO-13.              |
-| `apps/local-daemon/src/runtime`   | OTO-6                    | Push-sink adapter contract and fake adapter.                          |
+| `apps/local-daemon/src/runtime`   | OTO-6                    | Push-sink adapter contract and simulated adapter.                     |
 | `apps/local-daemon/src/events`    | OTO-7                    | Append-only event store, stream-to-file ingestion, projections.       |
 | `apps/local-daemon/src/git`       | OTO-8                    | Worktree/branch ownership, canonical diff, cleanup primitives.        |
 | `apps/local-daemon/src/data-safety` | OTO-29                 | Safe startup diagnostics and the one-shot restore maintenance mode.   |
@@ -478,6 +478,24 @@ tunnel — kept a personal host and an SSH private key inside CI, shared one mac
 previews and the stable daemon, and left processes to clean by pidfile; the VPS keeps serving the
 desktop previews (`instanceDeployment` in `apps/desktop`), which OTO-99 leaves untouched. Setup and
 secrets: [`docs/release/web-preview.md`](../release/web-preview.md).
+
+**A preview launches its runs on the simulated runtime.** No provider CLI is installed in the
+container, so the image sets `OTOMAT_ENABLE_FAKE_RUNTIME=1` and the daemon lists its built-in
+simulated adapter beside the two real ones it cannot find. That is the only opt-in: a normal
+install never sees it, and the launcher still prefers any available real runtime — it falls back
+to the simulated one only when there is none. The alternative, a second mock backend behind the
+cockpit, was rejected: the simulated adapter is a runtime like the others, so a preview run travels
+the real supervisor, ledger, SSE, conversation, usage, worktree and diff instead of a parallel
+fixture path that proves nothing. What it does not do is contact a model, and it says so in its own
+turn, in its worktree file and wherever it can be picked (`SIMULATED_RUNTIME_NOTE`).
+
+A cold container also seeds its cockpit: `scripts/preview/host/seed.mjs` polls `/api/health`, then
+drives the daemon's own HTTP API to create four issues — one ready, one done, one reviewing a
+settled simulated run, one whose run was aborted — and stops at the first sight of an existing
+issue. Seeding through the API rather than through SQL or React fixtures is the point: a preview
+shows rows the real contracts produced. The image ships `procps` nowhere, so the supervisor stamps
+a worker's identity from `/proc/<pid>/stat` and keeps `ps -o lstart` for hosts without `/proc`;
+without that, every preview run failed before its first event.
 
 ## Error Diagnostics
 

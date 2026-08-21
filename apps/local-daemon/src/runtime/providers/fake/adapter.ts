@@ -27,7 +27,7 @@ import { abortSpec, FAKE_USAGE, resumeSpecs, runSpecs, type EventSpec } from "./
 
 export { FAKE_ADAPTER_ID } from "./turn-events.js";
 
-const FAKE_WORK_FILENAME = "fake-implementation.md";
+const SIMULATED_WORK_FILENAME = "simulated-turn.md";
 
 function configuredBarrierPath(): string | null {
   return process.env.OTOMAT_FAKE_RUNTIME_BARRIER_PATH || null;
@@ -37,15 +37,18 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** The fake turn leaves real edits in its `cwd` worktree so the canonical git diff has honest content to show. */
-function writeFakeWork(cwd: string, prompt: string, followUp: boolean): void {
+/** The simulated turn leaves real edits in its `cwd` worktree so the canonical git diff has honest content to show. */
+function writeSimulatedWork(cwd: string, prompt: string, followUp: boolean): void {
   if (!existsSync(cwd)) return;
-  const file = join(cwd, FAKE_WORK_FILENAME);
+  const file = join(cwd, SIMULATED_WORK_FILENAME);
   if (followUp && existsSync(file)) {
     appendFileSync(file, `\n## Follow-up turn\n\n${prompt}\n`);
     return;
   }
-  writeFileSync(file, `# Fake implementation\n\n## Prompt\n\n${prompt}\n`);
+  writeFileSync(
+    file,
+    `# Simulated turn\n\nNo model was contacted, so this file records the prompt instead of implementing it.\n\n## Prompt\n\n${prompt}\n`,
+  );
 }
 
 /**
@@ -58,7 +61,7 @@ function writeFakeWork(cwd: string, prompt: string, followUp: boolean): void {
  */
 export class FakeRuntimeAdapter implements RuntimeAdapter {
   readonly id = FAKE_ADAPTER_ID;
-  readonly displayName = "Fake Runtime (test adapter)";
+  readonly displayName = "Simulation";
   readonly capabilities: RuntimeCapabilities = {
     stream: true,
     steering: "turn_boundary",
@@ -92,7 +95,7 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
-    writeFakeWork(input.cwd, input.prompt, false);
+    writeSimulatedWork(input.cwd, input.prompt, false);
     const providerSession = providerSessionId(input.agent_session_id);
     const ctx: TurnContext = {
       run_id: input.run_id,
@@ -109,7 +112,7 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     sink: RuntimeSink,
     signal: AbortSignal,
   ): Promise<RuntimeFinalState> {
-    writeFakeWork(input.cwd, input.prompt, true);
+    writeSimulatedWork(input.cwd, input.prompt, true);
     const providerSession =
       session.provider_session_id ?? providerSessionId(session.agent_session_id);
     const ctx: TurnContext = {

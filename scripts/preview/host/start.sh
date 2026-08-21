@@ -10,4 +10,7 @@ if [ ! -d /data/test-repo/.git ]; then
   git -C /data/test-repo -c user.name=Otomat -c user.email=preview@otomat.local \
     commit -q -m "chore: seed the preview fixture"
 fi
+# Seeds behind the daemon it needs: it polls /api/health, then leaves a filled database alone.
+node /srv/seed.mjs &
+
 exec node /srv/daemon/dist/index.js

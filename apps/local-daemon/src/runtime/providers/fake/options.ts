@@ -9,7 +9,7 @@ const FAKE_EFFORT_LEVELS = new Map<string, readonly string[]>([
 const NO_MODEL_DETAIL =
   "The simulated runtime publishes effort levels per model, so pick one first.";
 
-/** The levels the test adapter attributes to this exact model; a model it does not describe gets no field rather than another model's levels. */
+/** The levels the simulated runtime attributes to this exact model; a model it does not describe gets no field rather than another model's levels. */
 export function fakeOptionSupport(model: string | null): RuntimeOptionSupport {
   const levels = model === null ? undefined : FAKE_EFFORT_LEVELS.get(model);
   if (levels === undefined) {
@@ -18,12 +18,12 @@ export function fakeOptionSupport(model: string | null): RuntimeOptionSupport {
   return {
     detection: {
       status: "ok",
-      detail: "Simulated levels of the test adapter; no binary is probed.",
+      detail: "Simulated levels; no binary is probed and no model is contacted.",
     },
     options: [
       {
         key: "effort",
-        description: "How much simulated effort the test adapter spends.",
+        description: "How much simulated effort the turn reports spending.",
         choices: levels.map((value) => ({ value, description: null, dangerous: false })),
         default_value: "low",
       },
