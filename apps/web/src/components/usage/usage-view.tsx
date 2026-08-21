@@ -1,10 +1,11 @@
 import type { UsageFacetOptions } from "@otomat/domain";
-import { EmptyState, HostTag, Icon, IconButton } from "@otomat/ui";
+import { EmptyState, Icon, IconButton } from "@otomat/ui";
 import { useUsageDashboard } from "@web/api/usage/queries";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
+import { ActiveHostTag } from "@web/components/shell/remote-session/active-host-tag";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { UsageActiveFilters } from "@web/components/usage/active-filters";
 import { UsageBreakdown } from "@web/components/usage/breakdown";
@@ -13,7 +14,6 @@ import { UsageFiltersMenu } from "@web/components/usage/filters-menu";
 import { UsageRunsTable } from "@web/components/usage/runs-table";
 import { UsageSummary } from "@web/components/usage/summary";
 import { useUsageView } from "@web/components/usage/use-usage-view";
-import { remoteHostAlias } from "@web/lib/desktop-bridge";
 import {
   toggleUsageRow,
   usageDayRows,
@@ -45,7 +45,7 @@ export function UsageView() {
       breadcrumbs={[{ label: "Usage", current: true }]}
       actions={
         <div className="flex items-center gap-2">
-          <HostTag tag={remoteHostAlias() ?? "local"} />
+          <ActiveHostTag />
           <UsageFiltersMenu
             filters={view.filters}
             options={usage.data?.options ?? NO_OPTIONS}

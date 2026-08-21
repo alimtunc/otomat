@@ -4,6 +4,7 @@ import {
   type ExecutionHostOperationResult,
   type ExecutionHostProjectsEntry,
   type ExecutionHostRegisterProjectResult,
+  type ExecutionHostRepositoriesEntry,
   type ExecutionHostSnapshot,
   type RemoteInstanceListResult,
   type RemoteRepositoryListResult,
@@ -33,6 +34,8 @@ export interface ExecutionHostIpcActions {
   listAliases(): string[];
   listRemoteRepositories(): Promise<RemoteRepositoryListResult>;
   listProjects(): Promise<ExecutionHostProjectsEntry[]>;
+  listRepositories(): Promise<ExecutionHostRepositoriesEntry[]>;
+  deleteRepository(hostId: unknown, repositoryId: unknown): Promise<ExecutionHostOperationResult>;
   listInstances(): Promise<RemoteInstanceListResult>;
   stopInstance(build: unknown): Promise<ExecutionHostOperationResult>;
   deleteInstance(build: unknown): Promise<ExecutionHostOperationResult>;
@@ -113,6 +116,16 @@ export function buildExecutionHostActions(
       return listRemoteRepositories(hosts.remoteSshAlias);
     },
     listProjects: async () => manager()?.catalog.listProjects() ?? [],
+    listRepositories: async () => manager()?.catalog.listRepositories() ?? [],
+    deleteRepository: async (hostId: unknown, repositoryId: unknown) => {
+      const hosts = manager();
+      if (hosts === null) return NOT_READY;
+      if (!isExecutionHostId(hostId)) return { ok: false, message: "Unknown execution host." };
+      if (typeof repositoryId !== "string") {
+        return { ok: false, message: "Unknown repository." };
+      }
+      return hosts.catalog.deleteRepository(hostId, repositoryId);
+    },
     listInstances: async () => instances()?.list() ?? { ok: false, message: NOT_READY_MESSAGE },
     stopInstance: async (build: unknown) => instances()?.stop(build) ?? NOT_READY,
     deleteInstance: async (build: unknown) => instances()?.remove(build) ?? NOT_READY,

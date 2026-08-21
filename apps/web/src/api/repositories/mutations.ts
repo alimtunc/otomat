@@ -31,19 +31,6 @@ export function useUpdateRepository() {
   });
 }
 
-export function useDeleteRepository() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (repositoryId: string) => daemon.deleteRepository(repositoryId),
-    onSuccess: () => {
-      client.invalidateQueries({ queryKey: queryKeys.projects });
-      client.invalidateQueries({ queryKey: queryKeys.repositories });
-      client.invalidateQueries({ queryKey: queryKeys.issues });
-      client.invalidateQueries({ queryKey: queryKeys.runs });
-    },
-  });
-}
-
 export function deleteRepositoryErrorMessage(error: unknown): string {
   if (error instanceof DaemonRequestError) {
     const refusal = repositoryDeletionErrorSchema.safeParse(error.body);

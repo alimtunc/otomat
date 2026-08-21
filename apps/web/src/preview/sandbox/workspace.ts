@@ -25,6 +25,7 @@ export const SANDBOX_REPOSITORY: RepositoryContract = {
   id: SANDBOX_REPOSITORY_ID,
   project_id: SANDBOX_PROJECT_ID,
   name: "otomat",
+  root_path: SANDBOX_PROJECT.root_path,
   remote_url: "git@github.com:otomat/otomat.git",
   default_branch: "main",
   init_commands: [],

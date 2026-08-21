@@ -17,9 +17,9 @@ import { isRepositoryRoot, listBranches, searchTrackedFiles } from "#git";
 
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";
-import { readRepositories } from "../reads.js";
+import { readRepositories, repositoryContract } from "../reads.js";
 import { registerLocalRepository } from "../repository-registration.js";
-import { toProject, toRepository } from "../serialize.js";
+import { toProject } from "../serialize.js";
 
 const REGISTRATION_MESSAGES = {
   path_not_absolute: "Provide an absolute path to the repository.",
@@ -58,7 +58,7 @@ export function createRepositoryRoutes(deps: ApiDeps): Hono {
     return c.json(
       {
         project: toProject(result.project, true),
-        repository: toRepository(result.repository, true),
+        repository: repositoryContract(deps.db, result.repository),
       },
       201,
     );
@@ -70,8 +70,7 @@ export function createRepositoryRoutes(deps: ApiDeps): Hono {
     updateRepositoryInitCommands(deps.db, repository.id, c.req.valid("json").init_commands);
     const updated = getRepository(deps.db, repository.id);
     if (!updated) return c.json({ error: "repository_not_found" }, 404);
-    const project = getProject(deps.db, updated.project_id);
-    return c.json(toRepository(updated, project ? isRepositoryRoot(project.root_path) : false));
+    return c.json(repositoryContract(deps.db, updated));
   });
 
   /** Removes the repository, its runs, and the owning project; refused while a run is active. */

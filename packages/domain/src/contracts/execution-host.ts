@@ -1,5 +1,5 @@
 import type { AgentCapacity } from "./capacity.js";
-import type { ProjectContract } from "./entities/workspace.js";
+import type { ProjectContract, RepositoryContract } from "./entities/workspace.js";
 
 export const EXECUTION_HOST_IDS = ["local", "remote"] as const;
 
@@ -141,4 +141,12 @@ export interface ExecutionHostProjectsEntry {
   active: boolean;
   status: RemoteHostStatus | null;
   projects: ProjectContract[] | null;
+}
+
+/** One host's registered repositories; `repositories` is null while the host's daemon is unreachable, never an empty list. */
+export interface ExecutionHostRepositoriesEntry {
+  host: ExecutionHostDescriptor;
+  active: boolean;
+  status: RemoteHostStatus | null;
+  repositories: RepositoryContract[] | null;
 }

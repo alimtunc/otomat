@@ -9,7 +9,7 @@ import {
 import { STABLE_DEPLOYMENT, type RemoteDeployment } from "./bootstrap/scripts.js";
 import { errorResult } from "./bootstrap/status.js";
 import { safeSshAliases, validateSshAlias } from "./host/alias.js";
-import { HostCatalog } from "./host/projects.js";
+import { HostCatalog } from "./host/catalog.js";
 import { HostSelection } from "./host/selection.js";
 import { executionHostSnapshot } from "./host/snapshot.js";
 import {

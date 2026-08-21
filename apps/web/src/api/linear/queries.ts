@@ -26,10 +26,11 @@ export function useLinearWorkspace(workspaceId: string | null) {
   });
 }
 
-export function useIssueSources(workspaceId: string | null) {
+/** Scoped by the daemon that owns the project, so one project's mappings never carry another's rows. */
+export function useIssueSources(workspaceId: string | null, projectId?: string) {
   return useQuery({
-    queryKey: queryKeys.issueSourcesFor(workspaceId),
-    queryFn: () => daemon.listIssueSources(),
+    queryKey: queryKeys.issueSourcesFor(workspaceId, projectId),
+    queryFn: () => daemon.listIssueSources({ projectId }),
   });
 }
 

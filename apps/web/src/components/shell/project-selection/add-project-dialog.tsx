@@ -53,7 +53,7 @@ export function AddProjectDialog({ open, onOpenChange, hosts, onSelect }: AddPro
       setError(null);
       const path = value.path.trim();
       const registered = (projectId: string, name: string): void => {
-        void client.invalidateQueries({ queryKey: ["execution-host", "projects"] });
+        void client.invalidateQueries({ queryKey: queryKeys.executionHost });
         void client.invalidateQueries({ queryKey: queryKeys.projects });
         void client.invalidateQueries({ queryKey: queryKeys.repositories });
         toast.success(`${name} added on ${labelOf(value.hostId)}`);
