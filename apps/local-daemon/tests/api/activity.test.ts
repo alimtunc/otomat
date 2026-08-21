@@ -154,8 +154,17 @@ describe("GET /api/activity", () => {
     });
     t.db
       .update(schema.runs)
-      .set({ status: "completed", updated_at: "2020-01-01 00:00:00" })
+      .set({
+        status: "completed",
+        created_at: "2020-01-01 00:00:00",
+        updated_at: "2020-01-01 00:00:00",
+      })
       .where(eq(schema.runs.id, "run-old"))
+      .run();
+    t.db
+      .update(schema.runs)
+      .set({ created_at: "2020-01-02 00:00:00" })
+      .where(eq(schema.runs.id, "run-stopped"))
       .run();
 
     const snapshot = await readActivitySnapshot();
@@ -178,18 +187,94 @@ describe("GET /api/activity", () => {
     });
     t.db
       .update(schema.runs)
-      .set({ updated_at: "2020-01-01 00:00:00" })
+      .set({ created_at: "2020-01-02 00:00:00", updated_at: "2020-01-01 00:00:00" })
       .where(eq(schema.runs.id, "run-old-failed"))
       .run();
     t.db
       .update(schema.runs)
-      .set({ updated_at: "2020-01-01 00:00:00", abandoned_at: "2020-01-02 00:00:00" })
+      .set({
+        created_at: "2020-01-01 00:00:00",
+        updated_at: "2020-01-01 00:00:00",
+        abandoned_at: "2020-01-02 00:00:00",
+      })
       .where(eq(schema.runs.id, "run-old-abandoned"))
       .run();
 
     const snapshot = await readActivitySnapshot();
 
     expect(snapshot.activities.map((activity) => activity.run_id)).toEqual(["run-old-failed"]);
+  });
+
+  it("drops the failures of an issue the operator closed", async () => {
+    seedRun(t.db, {
+      runId: "run-closed",
+      runStatus: "failed",
+      stepStatus: "failed",
+      sessionStatus: "failed",
+    });
+    t.db.update(schema.issues).set({ status: "done" }).where(eq(schema.issues.id, "i1")).run();
+
+    const snapshot = await readActivitySnapshot();
+
+    expect(snapshot.activities).toEqual([]);
+  });
+
+  it("drops a failure a newer run replaced, even one that succeeded outside the window", async () => {
+    seedRun(t.db, {
+      runId: "run-older",
+      runStatus: "failed",
+      stepStatus: "failed",
+      sessionStatus: "failed",
+    });
+    seedRun(t.db, {
+      runId: "run-newer",
+      runStatus: "completed",
+      stepStatus: "succeeded",
+      sessionStatus: "terminated",
+    });
+    t.db
+      .update(schema.runs)
+      .set({ created_at: "2020-01-01 00:00:00" })
+      .where(eq(schema.runs.id, "run-older"))
+      .run();
+    t.db
+      .update(schema.runs)
+      .set({ created_at: "2020-01-02 00:00:00", updated_at: "2020-01-03 00:00:00" })
+      .where(eq(schema.runs.id, "run-newer"))
+      .run();
+
+    const snapshot = await readActivitySnapshot();
+
+    expect(snapshot.activities).toEqual([]);
+  });
+
+  it("lets the open run outrank the abandoned one it was created alongside", async () => {
+    seedRun(t.db, {
+      runId: "run-stale-abandoned",
+      runStatus: "failed",
+      stepStatus: "failed",
+      sessionStatus: "failed",
+    });
+    seedRun(t.db, {
+      runId: "run-live-retry",
+      runStatus: "failed",
+      stepStatus: "failed",
+      sessionStatus: "failed",
+    });
+    t.db
+      .update(schema.runs)
+      .set({ created_at: "2020-01-01 00:00:00", abandoned_at: "2020-01-01 00:00:01" })
+      .where(eq(schema.runs.id, "run-stale-abandoned"))
+      .run();
+    t.db
+      .update(schema.runs)
+      .set({ created_at: "2020-01-01 00:00:00" })
+      .where(eq(schema.runs.id, "run-live-retry"))
+      .run();
+
+    const snapshot = await readActivitySnapshot();
+
+    expect(snapshot.activities.map((activity) => activity.run_id)).toEqual(["run-live-retry"]);
   });
 
   it("keeps a stopped publication whose run settled long ago", async () => {

@@ -11,17 +11,29 @@ function evidence(overrides: Partial<ActivityEvidence> = {}): ActivityEvidence {
     run_id: "run-1",
     run_status: "running",
     run_updated_at: NOW,
+    run_abandoned_at: null,
+    run_superseded: false,
     current_step: "Implement",
     halted_step: null,
     issue_id: "issue-1",
     issue_identifier: "ABC-1",
     issue_title: "Ship it",
+    issue_status: "running",
     project_id: "project-1",
     project_name: "Otomat",
     publication: null,
     ...overrides,
   };
 }
+
+const STOPPED_PUBLICATION = {
+  id: "pr-1",
+  publication_status: "failed",
+  failed_phase: "pushing",
+  error_code: "github_push_failed",
+  error_message: "The branch was rejected.",
+  updated_at: NOW,
+} as const;
 
 describe("projectActivities", () => {
   it("puts a working run in `running` with the step it is on", () => {
@@ -129,6 +141,93 @@ describe("projectActivities", () => {
     ];
 
     expect(projectActivities(rows, WINDOW).every((activity) => activity.kind === "run")).toBe(true);
+  });
+
+  it.each(["done", "canceled"] as const)(
+    "keeps the failures of a %s issue out of the attention bucket",
+    (issue_status) => {
+      const rows = [
+        evidence({
+          issue_status,
+          run_status: "failed",
+          current_step: null,
+          halted_step: "Implement",
+          publication: STOPPED_PUBLICATION,
+        }),
+      ];
+
+      expect(projectActivities(rows, WINDOW)).toEqual([]);
+    },
+  );
+
+  it("still shows the work a closed issue has in flight, which the operator can still cancel", () => {
+    const rows = [evidence({ issue_status: "done", run_status: "running" })];
+
+    expect(projectActivities(rows, WINDOW)[0]).toMatchObject({ bucket: "running" });
+  });
+
+  it("keeps a live run of a closed issue that is blocked on the operator", () => {
+    const rows = [evidence({ issue_status: "done", run_status: "awaiting_permission" })];
+
+    expect(projectActivities(rows, WINDOW)[0]).toMatchObject({ bucket: "attention" });
+  });
+
+  it("stops alerting on a cycle the operator abandoned, publication included", () => {
+    const rows = [
+      evidence({
+        run_abandoned_at: "2026-08-20T09:00:00.000Z",
+        run_status: "failed",
+        current_step: null,
+        halted_step: "Implement",
+        publication: STOPPED_PUBLICATION,
+      }),
+    ];
+
+    expect(projectActivities(rows, WINDOW)).toEqual([]);
+  });
+
+  it("drops a failure a newer run of the same issue has superseded", () => {
+    const rows = [
+      evidence({
+        run_superseded: true,
+        run_status: "failed",
+        current_step: null,
+        halted_step: "Implement",
+      }),
+    ];
+
+    expect(projectActivities(rows, WINDOW)).toEqual([]);
+  });
+
+  it("keeps the current run's failure of an open issue, with what stopped it", () => {
+    const rows = [
+      evidence({
+        run_status: "failed",
+        current_step: null,
+        halted_step: "Implement",
+        publication: STOPPED_PUBLICATION,
+      }),
+    ];
+
+    expect(projectActivities(rows, WINDOW)).toMatchObject([
+      { kind: "run", bucket: "attention", phase: "Implement" },
+      {
+        kind: "pull_request_publication",
+        bucket: "attention",
+        operation: { error: { code: "github_push_failed" } },
+      },
+    ]);
+  });
+
+  it("sends a publication a later attempt carried through to `recent`, stale error and all", () => {
+    const rows = [
+      evidence({ publication: { ...STOPPED_PUBLICATION, publication_status: "created" } }),
+    ];
+
+    expect(projectActivities(rows, WINDOW)).toMatchObject([
+      { kind: "run", bucket: "running" },
+      { kind: "pull_request_publication", bucket: "recent", operation: { error: null } },
+    ]);
   });
 
   it("drops settled work older than the window but keeps unfinished work of any age", () => {

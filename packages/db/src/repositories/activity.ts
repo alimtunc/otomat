@@ -1,5 +1,10 @@
-import { RUN_SETTLED_STATES, STEP_RUN_SETTLED_STATES, type ActivityEvidence } from "@otomat/domain";
-import { and, asc, eq, gte, inArray, isNotNull, isNull, notInArray, or } from "drizzle-orm";
+import {
+  ISSUE_CLOSED_STATES,
+  RUN_SETTLED_STATES,
+  STEP_RUN_SETTLED_STATES,
+  type ActivityEvidence,
+} from "@otomat/domain";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, notInArray, or } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { issues, projects, pullRequests, runs, stepRuns } from "../schema/index.js";
@@ -37,17 +42,34 @@ function haltedSteps(db: Db, runIds: string[]): Map<string, string> {
   );
 }
 
-/** `since` bounds only settled work: an unabandoned failure — run or publication — stays fetched at any age, because `projectActivities` never windows the attention bucket. */
+/** The run that speaks for each issue now, ranked over every run rather than the fetched window; a same-second tie goes to the run still open. */
+function currentRuns(db: Db, issueIds: string[]): Set<string> {
+  const held = new Map<string, string>();
+  for (const row of db
+    .select({ issue_id: runs.issue_id, run_id: runs.id })
+    .from(runs)
+    .where(inArray(runs.issue_id, issueIds))
+    .orderBy(desc(runs.created_at), desc(isNull(runs.abandoned_at)), desc(runs.id))
+    .all()) {
+    if (!held.has(row.issue_id)) held.set(row.issue_id, row.run_id);
+  }
+  return new Set(held.values());
+}
+
+/** `since` bounds only settled work: the attention arms stay unwindowed at any age, and `open` is what keeps them off closed history. */
 export function listActivityEvidence(db: Db, since: string): ActivityEvidence[] {
   const bound = isoToSqlite(since);
+  const open = and(isNull(runs.abandoned_at), notInArray(issues.status, [...ISSUE_CLOSED_STATES]));
   const rows = db
     .select({
       run_id: runs.id,
       run_status: runs.status,
       run_updated_at: runs.updated_at,
+      run_abandoned_at: runs.abandoned_at,
       issue_id: issues.id,
       issue_identifier: issues.source_identifier,
       issue_title: issues.title,
+      issue_status: issues.status,
       project_id: projects.id,
       project_name: projects.name,
       pullRequest: pullRequests,
@@ -59,14 +81,14 @@ export function listActivityEvidence(db: Db, since: string): ActivityEvidence[] 
     .where(
       or(
         notInArray(runs.status, [...RUN_SETTLED_STATES]),
-        and(eq(runs.status, "failed"), isNull(runs.abandoned_at)),
+        and(eq(runs.status, "failed"), open),
         gte(runs.updated_at, bound),
         gte(pullRequests.updated_at, bound),
-        and(eq(pullRequests.publication_status, "failed"), isNull(runs.abandoned_at)),
+        and(eq(pullRequests.publication_status, "failed"), open),
         and(
           eq(pullRequests.publication_status, "not_configured"),
           isNotNull(pullRequests.error_code),
-          isNull(runs.abandoned_at),
+          open,
         ),
       ),
     )
@@ -75,11 +97,13 @@ export function listActivityEvidence(db: Db, since: string): ActivityEvidence[] 
   const runIds = rows.map((row) => row.run_id);
   const current = currentSteps(db, runIds);
   const halted = haltedSteps(db, runIds);
+  const currentRunIds = currentRuns(db, [...new Set(rows.map((row) => row.issue_id))]);
   return rows.map(({ pullRequest, ...row }) => ({
     ...row,
     run_updated_at: sqliteToIso(row.run_updated_at),
     current_step: current.get(row.run_id) ?? null,
     halted_step: halted.get(row.run_id) ?? null,
+    run_superseded: !currentRunIds.has(row.run_id),
     publication: toPublication(pullRequest),
   }));
 }
