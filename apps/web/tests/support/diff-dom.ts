@@ -48,3 +48,17 @@ export function stubDiffCanvas(): void {
     measureText: (text: string) => ({ width: text.length * 7 }),
   });
 }
+
+/** happy-dom ships no CSS Custom Highlight API, so a painted name is otherwise unobservable. */
+export function stubHighlightApi(): Map<string, Set<Range>> {
+  const registry = new Map<string, Set<Range>>();
+  // The bare `CSS` binding is not `globalThis.CSS`, and `Object.create` keeps happy-dom's `escape`.
+  const css: { highlights: Map<string, Set<Range>> } = Object.create(globalThis.CSS);
+  css.highlights = registry;
+  Object.assign(globalThis, { Highlight: Set, CSS: css });
+  return registry;
+}
+
+export function diffCardsOf(root: ParentNode): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>("section[aria-label]")];
+}

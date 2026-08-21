@@ -1,13 +1,14 @@
 // @vitest-environment happy-dom
-import type { ReviewDetail, ReviewDiffContract, ReviewedFileContract } from "@otomat/domain";
+import type { ReviewDiffContract, ReviewedFileContract } from "@otomat/domain";
 import { ThemeProvider } from "@otomat/ui";
 import { diffPrefsStore } from "@web/components/runs/diff/prefs/store";
 import { ReviewWorkbench } from "@web/components/runs/diff/review-workbench";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { domRect, overflowLonghandStyle, stubDiffCanvas } from "#support/diff-dom";
+import { diffCardsOf, domRect, overflowLonghandStyle, stubDiffCanvas } from "#support/diff-dom";
 import { diffFile, diffPatch } from "#support/diff-file";
+import { reviewDetail } from "#support/review-detail";
 import { reviewedFile } from "#support/reviewed-file";
 import { mountRoutedWithQuery } from "#support/router";
 import { controlScroll, type ScrollControl } from "#support/scroll-control";
@@ -31,16 +32,6 @@ const DIFF: ReviewDiffContract = {
   sha: "diff-sha",
 };
 
-function review(reviewedFiles: ReviewedFileContract[] = []): ReviewDetail {
-  return {
-    review: null,
-    comments: [],
-    reviewed_files: reviewedFiles,
-    fix_authority: { kind: "review_only", reason: "This pull request is someone else's branch." },
-    destinations: { pr_review: false, reason: "This run has no pull request yet." },
-  };
-}
-
 vi.mock("@web/api/reviews/mutations", () => ({
   useAddReviewComment: () => ({ mutateAsync: vi.fn(), isPending: false }),
   usePublishReviewComment: () => ({ mutate: vi.fn(), isPending: false, variables: undefined }),
@@ -51,10 +42,6 @@ vi.mock("@web/api/reviews/mutations", () => ({
 vi.mock("@web/components/runs/diff/fix-bar", () => ({ DiffFixBar: () => null }));
 
 vi.mock("@web/components/shell/use-back-navigation", () => ({ useBackNavigation: () => null }));
-
-function cardsOf(root: ParentNode): HTMLElement[] {
-  return [...root.querySelectorAll<HTMLElement>("section[aria-label^='src/']")];
-}
 
 function folded(card: HTMLElement): boolean {
   return card.querySelector(`[aria-label="Expand ${card.getAttribute("aria-label")}"]`) !== null;
@@ -68,7 +55,7 @@ function layoutCards(scroller: HTMLElement, scroll: ScrollControl): void {
   Element.prototype.getBoundingClientRect = function (this: Element) {
     if (this === scroller) return domRect(0, VIEWPORT);
     let top = 0;
-    for (const card of cardsOf(scroller)) {
+    for (const card of diffCardsOf(scroller)) {
       const height = folded(card) ? FOLDED : EXPANDED;
       if (card === this) return domRect(top - scroll.top(), height);
       top += height;
@@ -104,12 +91,12 @@ async function mountReviewer(reviewedFiles: ReviewedFileContract[] = []) {
         target={{ kind: "pull_request", id: "pr-1" }}
         workspace={{ open: false, issueId: null }}
         diff={DIFF}
-        review={review(reviewedFiles)}
+        review={reviewDetail(reviewedFiles)}
         notice={null}
       />
     </ThemeProvider>,
   );
-  const scroller = cardsOf(mounted.container).at(0)?.closest<HTMLElement>(".overflow-auto");
+  const scroller = diffCardsOf(mounted.container).at(0)?.closest<HTMLElement>(".overflow-auto");
   if (scroller === null || scroller === undefined) {
     throw new Error("the cards are not inside a scroll container");
   }
@@ -119,7 +106,7 @@ async function mountReviewer(reviewedFiles: ReviewedFileContract[] = []) {
 }
 
 function cardFor(scroller: HTMLElement, path: string): HTMLElement {
-  const card = cardsOf(scroller).find((entry) => entry.getAttribute("aria-label") === path);
+  const card = diffCardsOf(scroller).find((entry) => entry.getAttribute("aria-label") === path);
   if (card === undefined) throw new Error(`no card for ${path}`);
   return card;
 }
@@ -151,7 +138,7 @@ async function pressReviewedShortcut(): Promise<void> {
 }
 
 function revealed(scroller: HTMLElement) {
-  const card = cardsOf(scroller).find((entry) => entry.getAttribute("aria-current") === "true");
+  const card = diffCardsOf(scroller).find((entry) => entry.getAttribute("aria-current") === "true");
   return {
     path: card?.getAttribute("aria-label") ?? null,
     top: card?.getBoundingClientRect().top ?? null,

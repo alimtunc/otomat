@@ -1,14 +1,15 @@
 // @vitest-environment happy-dom
-import type { ReviewDetail, ReviewDiffContract, ReviewedFileContract } from "@otomat/domain";
+import type { ReviewDiffContract, ReviewedFileContract } from "@otomat/domain";
 import { ThemeProvider } from "@otomat/ui";
 import { diffPrefsStore } from "@web/components/runs/diff/prefs/store";
 import { ReviewWorkbench } from "@web/components/runs/diff/review-workbench";
 import { act, useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { domRect, overflowLonghandStyle, stubDiffCanvas } from "#support/diff-dom";
+import { diffCardsOf, domRect, overflowLonghandStyle, stubDiffCanvas } from "#support/diff-dom";
 import { diffFile, diffPatch } from "#support/diff-file";
 import { mountWithQuery } from "#support/mount";
+import { reviewDetail } from "#support/review-detail";
 import { reviewedFile } from "#support/reviewed-file";
 import { controlScroll, type ScrollControl } from "#support/scroll-control";
 
@@ -29,16 +30,6 @@ const DIFF: ReviewDiffContract = {
   sha: "diff-sha",
 };
 
-function review(reviewedFiles: ReviewedFileContract[] = []): ReviewDetail {
-  return {
-    review: null,
-    comments: [],
-    reviewed_files: reviewedFiles,
-    fix_authority: { kind: "review_only", reason: "This pull request is someone else's branch." },
-    destinations: { pr_review: false, reason: "This run has no pull request yet." },
-  };
-}
-
 vi.mock("@web/api/reviews/mutations", () => ({
   useAddReviewComment: () => ({ mutateAsync: vi.fn(), isPending: false }),
   usePublishReviewComment: () => ({ mutate: vi.fn(), isPending: false, variables: undefined }),
@@ -58,10 +49,6 @@ vi.mock("@web/components/runs/diff/use-active-file", () => ({
   },
 }));
 
-function cardsOf(root: ParentNode): HTMLElement[] {
-  return [...root.querySelectorAll<HTMLElement>("section[aria-label]")];
-}
-
 /**
  * Lays the cards out down the scroller and keeps them there: a card mounted by the very render
  * the reveal is waiting for must measure like the browser would, not like an unlaid-out node.
@@ -69,7 +56,7 @@ function cardsOf(root: ParentNode): HTMLElement[] {
 function layoutCards(scroller: HTMLElement, scroll: ScrollControl): void {
   Element.prototype.getBoundingClientRect = function (this: Element) {
     if (this === scroller) return domRect(0, VIEWPORT);
-    const index = cardsOf(scroller).findIndex((card) => card === this);
+    const index = diffCardsOf(scroller).findIndex((card) => card === this);
     return index === -1 ? domRect(0, 0) : domRect(index * CARD - scroll.top(), CARD);
   };
 }
@@ -102,7 +89,7 @@ async function mountReviewer(children?: ReactNode, reviewedFiles: ReviewedFileCo
         target={{ kind: "pull_request", id: "pr-1" }}
         workspace={{ open: false, issueId: null }}
         diff={DIFF}
-        review={review(reviewedFiles)}
+        review={reviewDetail(reviewedFiles)}
         notice={children ?? null}
       />
     </ThemeProvider>,
@@ -139,7 +126,7 @@ describe("revealing a file from the rail", () => {
         await clickFile(view.container, TARGET);
 
         expect(view.scroll.top()).toBe(2 * CARD);
-        expect(cardsOf(view.scroller)[2]?.getAttribute("aria-current")).toBe("true");
+        expect(diffCardsOf(view.scroller)[2]?.getAttribute("aria-current")).toBe("true");
         await view.cleanup();
       });
     }
@@ -148,13 +135,15 @@ describe("revealing a file from the rail", () => {
   it("waits for a hidden file's card to mount, then scrolls to it once", async () => {
     diffPrefsStore.actions.set({ hideReviewed: true });
     const view = await mountReviewer(null, [reviewedFile({ file_path: TARGET })]);
-    expect(cardsOf(view.scroller).map((card) => card.getAttribute("aria-label"))).not.toContain(
+    expect(diffCardsOf(view.scroller).map((card) => card.getAttribute("aria-label"))).not.toContain(
       TARGET,
     );
 
     await clickFile(view.container, TARGET);
 
-    expect(cardsOf(view.scroller).map((card) => card.getAttribute("aria-label"))).toContain(TARGET);
+    expect(diffCardsOf(view.scroller).map((card) => card.getAttribute("aria-label"))).toContain(
+      TARGET,
+    );
     expect(view.scroll.top()).toBe(2 * CARD);
     await view.cleanup();
   });

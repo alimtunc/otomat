@@ -1,6 +1,6 @@
 import { Input as BaseInput } from "@base-ui/react/input";
 import type { VariantProps } from "class-variance-authority";
-import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
+import type { ComponentPropsWithRef, CSSProperties, ReactNode } from "react";
 
 import { cn } from "../lib/utils";
 import { inputVariants } from "./input-variants";
@@ -8,7 +8,7 @@ import { FIELD_TRANSITION } from "./styles";
 
 export interface InputProps
   extends
-    Omit<ComponentPropsWithoutRef<typeof BaseInput>, "className" | "render" | "size" | "style">,
+    Omit<ComponentPropsWithRef<typeof BaseInput>, "className" | "render" | "size" | "style">,
     Pick<VariantProps<typeof inputVariants>, "density"> {
   className?: string;
   icon?: ReactNode;

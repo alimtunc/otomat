@@ -1,3 +1,12 @@
+::highlight(otomat-diff-search) {
+  background-color: var(--warning-bg);
+}
+
+::highlight(otomat-diff-search-active) {
+  background-color: var(--warning);
+  color: var(--button-light-fg);
+}
+
 /* Unlayered on purpose: these must out-cascade @git-diff-view's unlayered `.invisible` rule. */
 .otomat-review-diff .diff-tailwindcss-wrapper {
   --diff-multi-select-bg: var(--iris-solid);

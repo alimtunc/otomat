@@ -1,4 +1,4 @@
-export type { PatchHunk, PatchLine, PatchLineKind } from "./parse.js";
+export { parsePatchHunks, type PatchHunk, type PatchLine, type PatchLineKind } from "./parse.js";
 export { narrowPatchToRange } from "./select.js";
 export {
   hunkCoveringRange,
