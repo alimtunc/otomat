@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { z } from "zod";
 
 import { delay } from "./delay.js";
+import { errorCode } from "./start-gate.js";
 
 export const WORKER_IDENTITY_FILE = "worker.json";
 
@@ -15,13 +16,29 @@ const workerIdentitySchema = z.object({
 });
 export type WorkerIdentity = z.infer<typeof workerIdentitySchema>;
 
+/** `/proc/<pid>/stat` field 22: the process start time in ticks since boot. The comm field can hold spaces and parentheses, so the fields are counted from its closing one. */
+function procStartTime(pid: number): string | null {
+  let stat: string;
+  try {
+    stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") return null;
+    throw error;
+  }
+  const afterComm = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+  return afterComm[19] ?? null;
+}
+
 /**
- * The OS start time of `pid` (`ps -o lstart`, an absolute wall-clock stamp stable for the life of the
- * process). Paired with the pid it forms an identity the kernel does not recycle: a reused pid has a
- * different start time. Returns null when the pid is gone or `ps` yields nothing.
+ * The OS start time of `pid`, an absolute stamp stable for the life of the process. Paired with the
+ * pid it forms an identity the kernel does not recycle: a reused pid has a different start time.
+ * `/proc` answers first because a slim Linux image (the preview container) ships no `ps`; `ps -o
+ * lstart` covers the hosts without `/proc`. Returns null when the pid is gone or neither answers.
  */
 export function readProcessStartTime(pid: number): string | null {
   if (pid <= 1) return null;
+  const fromProc = procStartTime(pid);
+  if (fromProc !== null) return fromProc;
   const result = spawnSync("ps", ["-o", "lstart=", "-p", String(pid)], { encoding: "utf8" });
   if (result.status !== 0) return null;
   const value = result.stdout.trim();
