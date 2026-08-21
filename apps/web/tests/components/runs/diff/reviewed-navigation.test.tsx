@@ -10,6 +10,7 @@ import { act, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { diffFile } from "#support/diff-file";
+import { reviewedFile } from "#support/reviewed-file";
 import { mountRouted } from "#support/router";
 
 /** The daemon answers a mark before it is shown, so the probe below plays that part synchronously. */
@@ -25,18 +26,6 @@ vi.mock("@web/api/reviews/mutations", () => ({
     },
   }),
 }));
-
-function mark(path: string, sha: string, reviewed = true): ReviewedFileContract {
-  return {
-    id: `rf-${path}`,
-    review_id: "rv1",
-    file_path: path,
-    diff_sha: sha,
-    reviewed,
-    sync_status: "local",
-    sync_error: null,
-  };
-}
 
 const PATHS = ["a.ts", "b.ts", "c.ts"];
 
@@ -57,7 +46,11 @@ function ReviewedNavigationProbe({
   answerMark = (request) => {
     setMarks((current) => [
       ...current.filter((row) => row.file_path !== request.file_path),
-      mark(request.file_path, request.diff_sha, request.reviewed),
+      reviewedFile({
+        file_path: request.file_path,
+        diff_sha: request.diff_sha,
+        reviewed: request.reviewed,
+      }),
     ]);
   };
   const interactions = useDiffInteractions({
@@ -182,14 +175,14 @@ describe("reviewed navigation", () => {
   });
 
   it("opens with the files reviewed in an earlier visit already folded", async () => {
-    const reviewer = await openReviewer(files(), [mark("b.ts", "sha-b.ts")]);
+    const reviewer = await openReviewer(files(), [reviewedFile({ file_path: "b.ts" })]);
 
     expect(reviewer.state("b.ts").collapsed).toBe(true);
     expect(reviewer.state("a.ts").collapsed).toBe(false);
   });
 
   it("keeps Reviewed when the reader opens a folded file by hand", async () => {
-    const reviewer = await openReviewer(files(), [mark("b.ts", "sha-b.ts")]);
+    const reviewer = await openReviewer(files(), [reviewedFile({ file_path: "b.ts" })]);
 
     await reviewer.click("open:b.ts");
 

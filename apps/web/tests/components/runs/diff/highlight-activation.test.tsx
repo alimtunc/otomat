@@ -7,16 +7,14 @@ import { act, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { fileCommentActions } from "#support/diff-card";
-import { stubDiffCanvas } from "#support/diff-dom";
+import { overflowLonghandStyle, stubDiffCanvas } from "#support/diff-dom";
 import { diffFile, diffPatch } from "#support/diff-file";
 import { mountWithQuery } from "#support/mount";
 import { stubViewport, type ViewportStub } from "#support/viewport";
 
 stubDiffCanvas();
 
-/** Tailwind writes the `overflow` shorthand; happy-dom only resolves the longhand it is asked for. */
-const styles = document.createElement("style");
-styles.textContent = ".overflow-auto { overflow-y: auto; }";
+const styles = overflowLonghandStyle();
 
 const VIEWPORT = 400;
 const CARD = 300;

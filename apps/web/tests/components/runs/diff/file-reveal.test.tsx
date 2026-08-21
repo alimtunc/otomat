@@ -6,16 +6,15 @@ import { ReviewWorkbench } from "@web/components/runs/diff/review-workbench";
 import { act, useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { domRect, stubDiffCanvas } from "#support/diff-dom";
+import { domRect, overflowLonghandStyle, stubDiffCanvas } from "#support/diff-dom";
 import { diffFile, diffPatch } from "#support/diff-file";
 import { mountWithQuery } from "#support/mount";
+import { reviewedFile } from "#support/reviewed-file";
 import { controlScroll, type ScrollControl } from "#support/scroll-control";
 
 stubDiffCanvas();
 
-/** Tailwind writes the `overflow` shorthand; happy-dom only resolves the longhand it is asked for. */
-const styles = document.createElement("style");
-styles.textContent = ".overflow-auto { overflow-y: auto; }";
+const styles = overflowLonghandStyle();
 
 const VIEWPORT = 400;
 const CARD = 300;
@@ -37,18 +36,6 @@ function review(reviewedFiles: ReviewedFileContract[] = []): ReviewDetail {
     reviewed_files: reviewedFiles,
     fix_authority: { kind: "review_only", reason: "This pull request is someone else's branch." },
     destinations: { pr_review: false, reason: "This run has no pull request yet." },
-  };
-}
-
-function reviewedMark(path: string): ReviewedFileContract {
-  return {
-    id: `rf-${path}`,
-    review_id: "rv1",
-    file_path: path,
-    diff_sha: `sha-${path}`,
-    reviewed: true,
-    sync_status: "local",
-    sync_error: null,
   };
 }
 
@@ -160,7 +147,7 @@ describe("revealing a file from the rail", () => {
 
   it("waits for a hidden file's card to mount, then scrolls to it once", async () => {
     diffPrefsStore.actions.set({ hideReviewed: true });
-    const view = await mountReviewer(null, [reviewedMark(TARGET)]);
+    const view = await mountReviewer(null, [reviewedFile({ file_path: TARGET })]);
     expect(cardsOf(view.scroller).map((card) => card.getAttribute("aria-label"))).not.toContain(
       TARGET,
     );

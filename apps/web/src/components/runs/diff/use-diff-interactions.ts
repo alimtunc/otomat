@@ -28,6 +28,8 @@ import { useLayoutEffect, useState } from "react";
 interface PendingReveal {
   domId: string;
   block: RevealBlock;
+  /** The file the reveal selected: measuring before that selection renders reads the old layout. */
+  selecting: string | null;
 }
 
 export interface DiffInteractionsInput {
@@ -69,13 +71,14 @@ export function useDiffInteractions(input: DiffInteractionsInput): DiffInteracti
   const revealFile = (path: string): void => {
     active.select(path);
     collapsed.set(path, false);
-    setRevealing({ domId: diffFileDomId({ path }), block: "start" });
+    setRevealing({ domId: diffFileDomId({ path }), block: "start", selecting: path });
   };
 
   // Resolving nothing schedules no render, so the retry has to ride every later one.
   // otomat-allow-effect: scrolling to a card measures the DOM React has just committed.
   useLayoutEffect(() => {
     if (revealing === null) return;
+    if (revealing.selecting !== null && active.path !== revealing.selecting) return;
     const target = document.getElementById(revealing.domId);
     if (target === null) return;
     revealAndFocus(target, revealing.block);
@@ -91,11 +94,16 @@ export function useDiffInteractions(input: DiffInteractionsInput): DiffInteracti
   };
 
   const selectComment = (comment: ReviewCommentContract): void => {
-    if (partition.anchoredIds.has(comment.id)) {
+    const anchored = partition.anchoredIds.has(comment.id);
+    if (anchored) {
       active.select(comment.file_path);
       collapsed.set(comment.file_path, false);
     }
-    setRevealing({ domId: reviewCommentDomId(comment.id), block: "center" });
+    setRevealing({
+      domId: reviewCommentDomId(comment.id),
+      block: "center",
+      selecting: anchored ? comment.file_path : null,
+    });
   };
 
   useDiffKeyboardNav({

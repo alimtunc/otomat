@@ -33,6 +33,13 @@ export function stubDiffLayout(): void {
   Element.prototype.getBoundingClientRect = () => domRect(0, 20);
 }
 
+/** Tailwind writes the `overflow` shorthand; happy-dom only resolves the longhand it is asked for. */
+export function overflowLonghandStyle(): HTMLStyleElement {
+  const style = document.createElement("style");
+  style.textContent = ".overflow-auto { overflow-y: auto; }";
+  return style;
+}
+
 /** happy-dom has no canvas 2d context; @git-diff-view measures line-number width with it. */
 export function stubDiffCanvas(): void {
   // SAFETY: @git-diff-view only reads font and measureText from the 2d context.
