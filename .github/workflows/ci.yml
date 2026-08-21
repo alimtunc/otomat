@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  static:
     runs-on: ubuntu-latest
     steps:
       # React Doctor's changed scope and the baseline anti-ratchet both diff against main,
@@ -28,57 +28,95 @@ jobs:
           git show-ref --verify --quiet refs/heads/main ||
             git fetch --no-tags origin +refs/heads/main:refs/heads/main
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
+      - uses: ./.github/actions/setup-workspace
 
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
+      - name: Static gates
+        run: pnpm check:static
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # Same gate as `pnpm check` locally, kept as one step so CI can never drift from it.
-      - name: Check
-        run: pnpm check
-
-      # Needs a base ref, so it lives in CI rather than `pnpm check`.
       - name: Baseline anti-ratchet
         run: node scripts/baseline-anti-ratchet.mjs main
 
-  # The exact self-contained deploy the remote execution host runs
-  # (docs/ai/remote-execution-host.md), published as a plain artifact so updating a host is a
-  # download instead of a build on the host. An artifact is only a file: nothing anywhere starts a
-  # daemon from it.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Build, boundaries, typecheck and dist smoke
+        run: pnpm check:build
+
+  test-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Build web test dependencies
+        run: pnpm --filter "@otomat/web..." run build
+
+      - name: Test web
+        run: pnpm --filter @otomat/web test
+
+  test-daemon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Build daemon test dependencies
+        run: pnpm --filter "@otomat/local-daemon..." run build
+
+      - name: Test daemon
+        run: pnpm --filter @otomat/local-daemon test
+
+  test-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Build package test dependencies
+        run: pnpm --filter "./packages/**" --filter "@otomat/desktop..." run build
+
+      - name: Test desktop and packages
+        run: pnpm test:packages
+
+  check:
+    if: always()
+    needs: [static, build, test-web, test-daemon, test-packages]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every gate
+        env:
+          STATIC_RESULT: ${{ needs.static.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          WEB_RESULT: ${{ needs.test-web.result }}
+          DAEMON_RESULT: ${{ needs.test-daemon.result }}
+          PACKAGES_RESULT: ${{ needs.test-packages.result }}
+        run: |
+          test "$STATIC_RESULT" = success
+          test "$BUILD_RESULT" = success
+          test "$WEB_RESULT" = success
+          test "$DAEMON_RESULT" = success
+          test "$PACKAGES_RESULT" = success
+
   daemon-bundle:
-    needs: check
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      name: ${{ steps.bundle.outputs.name }}
     steps:
       - uses: actions/checkout@v7
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
 
       - name: Deploy the self-contained daemon
         run: |
           pnpm --filter "@otomat/local-daemon..." run build
           pnpm --filter @otomat/local-daemon deploy --prod --legacy "$RUNNER_TEMP/daemon"
 
-      # Boots the deploy itself (not the workspace dist smoke:dist already covers): its imports
-      # must resolve inside the deployed tree, and its /api/health build must name this commit.
+      # Not what smoke:dist covers: imports must resolve inside the deployed tree, and its
+      # /api/health build must name this commit.
       - name: Smoke the deployed daemon
         env:
           HEAD_SHA: ${{ github.sha }}
@@ -112,41 +150,54 @@ jobs:
           echo "name=${name}" >> "$GITHUB_OUTPUT"
           tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/${name}.tar.gz" daemon
 
-      - name: Upload the bundle
+      # The public artifact name makes remote hosts install immediately, so only the post-check
+      # publish job may expose it. This full-SHA candidate is an internal one-day handoff.
+      # Re-runs share the run's artifact namespace; without overwrite a rerun's upload 409s.
+      - name: Upload the bundle candidate
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.bundle.outputs.name }}
+          name: otomat-daemon-candidate-${{ github.sha }}-linux-x64
           path: ${{ runner.temp }}/otomat-daemon-*.tar.gz
           if-no-files-found: error
-          # Re-runs share the run's artifact namespace; without this a green run re-run for a flaky
-          # test fails its upload with a 409 on the identically named artifact.
+          overwrite: true
+          retention-days: 1
+
+  publish-daemon:
+    if: github.event_name == 'push'
+    needs: [check, daemon-bundle]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the checked bundle candidate
+        uses: actions/download-artifact@v7
+        with:
+          name: otomat-daemon-candidate-${{ github.sha }}-linux-x64
+          path: ${{ runner.temp }}
+
+      - name: Publish the daemon bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ needs.daemon-bundle.outputs.name }}
+          path: ${{ runner.temp }}/otomat-daemon-*.tar.gz
+          if-no-files-found: error
           overwrite: true
           retention-days: 7
 
-  # The unsigned artifact is the substrate the signed release is built from, and only a macOS host
-  # can produce it; on main it is the packaging-regression gate (docs/release/macos-alpha.md).
   package-macos:
-    needs: check
     if: github.event_name == 'push'
     runs-on: macos-15
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-workspace
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v7
+      - name: Restore Electron downloads
+        uses: actions/cache@v6
         with:
-          node-version: 22
-          cache: pnpm
+          path: |
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+          key: electron-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml', 'apps/desktop/package.json') }}
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # The `local` channel's data roots are the same across commits; `stable` is unreachable here —
-      # only `pnpm desktop:release` passes that channel.
       - name: Package the unsigned desktop artifact
         env:
           OTOMAT_CHANNEL: local
@@ -157,7 +208,5 @@ jobs:
           OTOMAT_CHANNEL: local
         run: pnpm desktop:smoke
 
-      # Packages the merge commit a second time and launches both builds: the promise that a local
-      # package keeps its profile across commits is only worth what an actual second build shows.
       - name: Smoke the local channel across two commits
         run: pnpm desktop:smoke:local

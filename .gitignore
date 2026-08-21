@@ -21,6 +21,7 @@ CONTEXT.md
 !.claude/skills/first-pass-quality
 .claude/plans/
 docs/**
+!docs/ci-performance.md
 !docs/ai/
 !docs/ai/**
 !docs/release/

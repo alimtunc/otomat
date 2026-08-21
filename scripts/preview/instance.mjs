@@ -1,37 +1,37 @@
 #!/usr/bin/env node
-/**
- * Provisions, warms, tears down and lists the per-pull-request preview daemons on Cloudflare.
- * Run from CI (docs/release/web-preview.md); every command is idempotent.
- *
- *   CLOUDFLARE_API_TOKEN=… CLOUDFLARE_ACCOUNT_ID=… PREVIEW_CLIENT_ID=… PREVIEW_CLIENT_SECRET=… \
- *     node scripts/preview/instance.mjs provision --pr 142 --build 1a2b3c4 --bundle /tmp/daemon.tar.gz
- *   node scripts/preview/instance.mjs warm --pr 142
- *   node scripts/preview/instance.mjs teardown --pr 142
- *   node scripts/preview/instance.mjs list
- *
- * A pull request owns one Worker; each provision replaces its container image with the commit's
- * own daemon and names the running instance after the build, so a stale container is unreachable
- * rather than answering for the wrong commit.
- *
- * Only provision imports @otomat/domain — lazily — so warm, teardown and list run without an
- * installed workspace; keep every static import here dependency-free.
- */
+// Only provision imports @otomat/domain — lazily — so warm, teardown and inventory run without
+// an installed workspace; keep every static import here dependency-free.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 import { CLIENT_ID_HEADER, CLIENT_SECRET_HEADER } from "./host/gate.mjs";
-import { previewWorkerName, previewWorkerPullRequest, renderWorkerConfig } from "./workers.mjs";
+import {
+  isFinalPage,
+  isIdempotentDeleteStatus,
+  ownedContainerApplications,
+  ownedPagesDeployments,
+  ownedRegistryImages,
+  previewContainerPullRequest,
+  previewPagesPullRequest,
+  previewRegistryPullRequest,
+  runCleanupTasks,
+} from "./resources.mjs";
+import {
+  PREVIEW_WORKER_PREFIX,
+  previewWorkerName,
+  previewWorkerPullRequest,
+  renderWorkerConfig,
+} from "./workers.mjs";
 
 const HOST_DIR = fileURLToPath(new URL("./host/", import.meta.url));
 const WRANGLER = ["dlx", "wrangler@4"];
 const API = "https://api.cloudflare.com/client/v4";
-
-function fail(message) {
-  console.error(`[preview] ${message}`);
-  process.exit(1);
-}
+const PAGE_SIZE = 100;
+const MAX_PAGES = 1_000;
+const WARM_ATTEMPTS = 18;
+const WARM_INTERVAL_MS = 5_000;
 
 function readFlags(argv) {
   const flags = {};
@@ -46,25 +46,46 @@ function readFlags(argv) {
 
 function requireEnv(name) {
   const value = process.env[name] ?? "";
-  if (value === "") fail(`${name} is required in the environment`);
+  if (value === "") throw new Error(`${name} is required in the environment`);
   return value;
 }
 
 function requirePullRequest(flags) {
   const pullRequest = Number.parseInt(flags.pr ?? "", 10);
-  if (!Number.isInteger(pullRequest) || pullRequest <= 0)
-    fail("--pr must be a pull request number");
+  if (!Number.isInteger(pullRequest) || pullRequest <= 0) {
+    throw new Error("--pr must be a pull request number");
+  }
   return pullRequest;
 }
 
-function wrangler(args, input) {
+function runWrangler(args, input) {
   const result = spawnSync("pnpm", [...WRANGLER, ...args], {
     encoding: "utf8",
     stdio: input === undefined ? "inherit" : ["pipe", "inherit", "inherit"],
     input,
   });
-  if (result.error) fail(`wrangler could not run: ${result.error.message}`);
-  if (result.status !== 0) fail(`wrangler ${args[0]} exited ${String(result.status)}`);
+  if (result.error) throw new Error(`wrangler could not run: ${result.error.message}`);
+  if (result.status !== 0) throw new Error(`wrangler ${args[0]} exited ${String(result.status)}`);
+}
+
+function readWranglerJson(args) {
+  const result = spawnSync("pnpm", [...WRANGLER, ...args], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "inherit"],
+    timeout: 60_000,
+  });
+  if (result.error) throw new Error(`wrangler could not run: ${result.error.message}`);
+  if (result.status !== 0) throw new Error(`wrangler ${args[0]} exited ${String(result.status)}`);
+  let parsed;
+  try {
+    parsed = JSON.parse(result.stdout);
+  } catch (error) {
+    throw new Error(
+      `wrangler ${args[0]} returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  if (!Array.isArray(parsed)) throw new Error(`wrangler ${args[0]} returned no array`);
+  return parsed;
 }
 
 async function cloudflare(method, pathname) {
@@ -73,11 +94,14 @@ async function cloudflare(method, pathname) {
     method,
     headers: { authorization: `Bearer ${token}` },
   });
+  const text = await response.text();
   let body = null;
-  try {
-    body = await response.json();
-  } catch {
-    // A non-JSON answer is reported through the status alone.
+  if (text !== "") {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = { errors: [{ message: `non-JSON answer: ${text.slice(0, 200)}` }] };
+    }
   }
   return { status: response.status, body };
 }
@@ -87,13 +111,39 @@ function apiErrors(body) {
   return Array.isArray(errors) ? errors.map((error) => error.message).join("; ") : "";
 }
 
+function apiRows(response, label) {
+  if (response.status !== 200) {
+    throw new Error(`${label} answered ${String(response.status)}: ${apiErrors(response.body)}`);
+  }
+  const rows = response.body?.result;
+  if (!Array.isArray(rows)) throw new Error(`${label} returned no result array`);
+  return rows;
+}
+
+async function listPagesDeployments(account, project) {
+  const base = `/accounts/${account}/pages/projects/${encodeURIComponent(project)}/deployments`;
+  const deployments = [];
+  for (let page = 1; page <= MAX_PAGES; page += 1) {
+    const response = await cloudflare(
+      "GET",
+      `${base}?page=${String(page)}&per_page=${String(PAGE_SIZE)}`,
+    );
+    const rows = apiRows(response, `listing ${project} deployments`);
+    deployments.push(...rows);
+    if (isFinalPage(rows, response.body?.result_info, page)) return { base, deployments };
+  }
+  throw new Error(`listing ${project} deployments exceeded ${String(MAX_PAGES)} pages`);
+}
+
 async function provision(flags) {
   const pullRequest = requirePullRequest(flags);
   const build = flags.build ?? "";
   const { PREVIEW_BUILD_SHA } = await import("@otomat/domain");
-  if (!PREVIEW_BUILD_SHA.test(build)) fail(`--build must be a 7-hex short sha, got "${build}"`);
+  if (!PREVIEW_BUILD_SHA.test(build)) {
+    throw new Error(`--build must be a 7-hex short sha, got "${build}"`);
+  }
   if (!flags.bundle || !existsSync(flags.bundle)) {
-    fail("--bundle is required (the daemon deploy tarball)");
+    throw new Error("--bundle is required (the daemon deploy tarball)");
   }
   requireEnv("CLOUDFLARE_ACCOUNT_ID");
   const clientId = requireEnv("PREVIEW_CLIENT_ID");
@@ -102,7 +152,7 @@ async function provision(flags) {
   rmSync(`${HOST_DIR}daemon`, { recursive: true, force: true });
   mkdirSync(`${HOST_DIR}daemon`, { recursive: true });
   const extract = spawnSync("tar", ["-xzf", flags.bundle, "-C", HOST_DIR], { stdio: "inherit" });
-  if (extract.status !== 0) fail(`could not extract ${flags.bundle}`);
+  if (extract.status !== 0) throw new Error(`could not extract ${flags.bundle}`);
 
   const name = previewWorkerName(pullRequest);
   const config = `${HOST_DIR}wrangler.generated.jsonc`;
@@ -110,7 +160,7 @@ async function provision(flags) {
     config,
     renderWorkerConfig(readFileSync(`${HOST_DIR}wrangler.jsonc`, "utf8"), name),
   );
-  wrangler([
+  runWrangler([
     "deploy",
     "--config",
     config,
@@ -119,197 +169,258 @@ async function provision(flags) {
     "--var",
     `PREVIEW_CLIENT_ID:${clientId}`,
   ]);
-  wrangler(["secret", "put", "PREVIEW_CLIENT_SECRET", "--name", name], clientSecret);
-  console.log(`[preview] ${name} serves the PR #${String(pullRequest)} daemon on build ${build}`);
+  runWrangler(["secret", "put", "PREVIEW_CLIENT_SECRET", "--name", name], clientSecret);
+  console.log(`[preview] ${name} serves PR #${String(pullRequest)} on build ${build}`);
 }
 
-const WARM_ATTEMPTS = 18;
-const WARM_DELAY_MS = 5_000;
-
-/**
- * Boots the pull request's container ahead of the first reviewer click. Exits non-zero when the
- * daemon never answers; the workflow step carries continue-on-error, so that is a visible signal,
- * not a red pipeline.
- */
 async function warm(flags) {
   const pullRequest = requirePullRequest(flags);
   const account = requireEnv("CLOUDFLARE_ACCOUNT_ID");
   const clientId = requireEnv("PREVIEW_CLIENT_ID");
   const clientSecret = requireEnv("PREVIEW_CLIENT_SECRET");
-  const subdomain = await cloudflare("GET", `/accounts/${account}/workers/subdomain`);
-  if (subdomain.status !== 200) {
-    fail(
-      `reading the workers.dev subdomain answered ${String(subdomain.status)}: ${apiErrors(subdomain.body)}`,
+  const response = await cloudflare("GET", `/accounts/${account}/workers/subdomain`);
+  if (response.status !== 200) {
+    throw new Error(
+      `reading workers.dev subdomain answered ${String(response.status)}: ${apiErrors(response.body)}`,
     );
   }
-  const host = `${previewWorkerName(pullRequest)}.${subdomain.body.result.subdomain}.workers.dev`;
+  const subdomain = response.body?.result?.subdomain;
+  if (typeof subdomain !== "string" || subdomain === "") {
+    throw new Error("reading workers.dev subdomain returned no subdomain");
+  }
+  const host = `${previewWorkerName(pullRequest)}.${subdomain}.workers.dev`;
   const url = `https://${host}/api/health`;
-  const probe = async () => {
+  for (let attempt = 1; attempt <= WARM_ATTEMPTS; attempt += 1) {
+    const label = `warm attempt ${String(attempt)}/${String(WARM_ATTEMPTS)}`;
     try {
-      const response = await fetch(url, {
+      const probe = await fetch(url, {
         headers: { [CLIENT_ID_HEADER]: clientId, [CLIENT_SECRET_HEADER]: clientSecret },
       });
-      return { answered: response.ok, detail: `HTTP ${String(response.status)}` };
+      if (probe.ok) {
+        console.log(`[preview] ${host} answered on attempt ${String(attempt)}`);
+        return;
+      }
+      console.log(`[preview] ${label} answered HTTP ${String(probe.status)}`);
     } catch (error) {
-      return { answered: false, detail: error instanceof Error ? error.message : String(error) };
+      console.log(
+        `[preview] ${label} failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
-  };
-  for (let attempt = 1; attempt <= WARM_ATTEMPTS; attempt += 1) {
-    const { answered, detail } = await probe();
-    if (answered) {
-      console.log(`[preview] ${host} answered on attempt ${String(attempt)}`);
-      return;
-    }
-    console.log(`[preview] attempt ${String(attempt)}/${String(WARM_ATTEMPTS)}: ${detail}`);
-    await delay(WARM_DELAY_MS);
+    await delay(WARM_INTERVAL_MS);
   }
-  fail(`${url} never answered over ${String(WARM_ATTEMPTS)} attempts`);
+  throw new Error(`${url} never answered over ${String(WARM_ATTEMPTS)} attempts`);
 }
 
-async function teardown(flags) {
-  const pullRequest = requirePullRequest(flags);
+async function deleteWorker(account, pullRequest) {
   const name = previewWorkerName(pullRequest);
-  const account = requireEnv("CLOUDFLARE_ACCOUNT_ID");
-  const removed = await cloudflare(
+  const response = await cloudflare(
     "DELETE",
     `/accounts/${account}/workers/scripts/${name}?force=true`,
   );
-  if (removed.status === 404) {
-    console.log(`[preview] ${name} already holds no worker`);
-  } else if (removed.status !== 200) {
-    fail(`deleting ${name} answered ${String(removed.status)}: ${apiErrors(removed.body)}`);
-  } else {
-    console.log(`[preview] ${name} torn down`);
-  }
-  await deleteContainerApplications(account, name);
-  await purgePagesDeployments(account, pullRequest);
-  deleteRegistryImages(name);
-}
-
-/** Cloudflare names the application `<worker>-<class>` and the worker's deletion does not remove it, so a leftover would refuse the next provision of a reopened pull request. */
-async function deleteContainerApplications(account, name) {
-  const listed = await cloudflare("GET", `/accounts/${account}/containers/applications`);
-  if (listed.status !== 200) {
-    fail(
-      `listing container applications answered ${String(listed.status)}: ${apiErrors(listed.body)}`,
+  if (!isIdempotentDeleteStatus(response.status)) {
+    throw new Error(
+      `deleting ${name} answered ${String(response.status)}: ${apiErrors(response.body)}`,
     );
   }
-  const targets = (listed.body.result ?? []).filter(
-    (application) => application.name === name || application.name.startsWith(`${name}-`),
+  console.log(`[preview] worker ${name} ${response.status === 404 ? "already absent" : "deleted"}`);
+}
+
+// The worker's deletion does not remove its container application, and a leftover application
+// refuses the next provision of a reopened pull request.
+async function deleteContainerApplications(account, pullRequest) {
+  const response = await cloudflare("GET", `/accounts/${account}/containers/applications`);
+  const targets = ownedContainerApplications(
+    apiRows(response, "listing container applications"),
+    pullRequest,
   );
-  if (targets.length === 0) {
-    console.log(`[preview] ${name} holds no container application`);
-    return;
-  }
   for (const application of targets) {
     const removed = await cloudflare(
       "DELETE",
       `/accounts/${account}/containers/applications/${application.id}`,
     );
-    if (removed.status !== 200 && removed.status !== 404) {
-      fail(
-        `deleting container application ${application.name} answered ${String(removed.status)}: ${apiErrors(removed.body)}`,
+    if (!isIdempotentDeleteStatus(removed.status)) {
+      throw new Error(
+        `deleting container ${application.name} answered ${String(removed.status)}: ${apiErrors(removed.body)}`,
       );
     }
     console.log(`[preview] container application ${application.name} deleted`);
   }
+  if (targets.length === 0) console.log("[preview] container application already absent");
 }
 
-/** Best-effort: with the worker gone its images are pure storage, and wrangler's beta `containers images` commands must never fail an otherwise clean teardown. */
-function deleteRegistryImages(name) {
-  const leftovers = (reason) => {
-    console.log(
-      `[preview] registry images of ${name} left in place (${reason}); \`wrangler containers images list\` finds leftovers`,
-    );
-  };
-  const listed = spawnSync(
-    "pnpm",
-    [...WRANGLER, "containers", "images", "list", "--filter", `^${name}(-|$)`, "--json"],
-    { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"], timeout: 60_000 },
-  );
-  if (listed.status !== 0) {
-    leftovers(`listing exited ${String(listed.status)}`);
-    return;
-  }
-  let repositories;
-  try {
-    repositories = JSON.parse(listed.stdout);
-  } catch {
-    leftovers("listing answered no JSON");
-    return;
-  }
-  for (const repository of repositories) {
-    for (const tag of repository.tags) {
-      const image = `${repository.name}:${tag}`;
-      const removed = spawnSync(
-        "pnpm",
-        [...WRANGLER, "containers", "images", "delete", image, "-y"],
-        { stdio: ["ignore", "inherit", "inherit"], timeout: 60_000 },
-      );
-      if (removed.status === 0) console.log(`[preview] registry image ${image} deleted`);
-      else leftovers(`deleting ${image} exited ${String(removed.status)}`);
-    }
-  }
-}
-
-/** A closed pull request keeps no Pages deployments either; ids are collected before any delete so pagination never shifts under the walk. */
 async function purgePagesDeployments(account, pullRequest) {
   const project = process.env.CLOUDFLARE_PAGES_PROJECT ?? "";
   if (project === "") {
-    console.log("[preview] CLOUDFLARE_PAGES_PROJECT unset; Pages deployments left in place");
+    console.log("[preview] Pages project unset; no Pages target can be proven");
     return;
   }
-  const branch = `pr-${String(pullRequest)}`;
-  const base = `/accounts/${account}/pages/projects/${project}/deployments`;
-  const targets = [];
-  const PAGE_BOUND = 40;
-  for (let page = 1; page <= PAGE_BOUND; page += 1) {
-    const listed = await cloudflare("GET", `${base}?page=${String(page)}&per_page=25`);
-    if (listed.status !== 200) {
-      fail(
-        `listing ${project} deployments answered ${String(listed.status)}: ${apiErrors(listed.body)}`,
-      );
-    }
-    const rows = listed.body.result ?? [];
-    if (rows.length === 0) break;
-    for (const row of rows) {
-      if (row?.deployment_trigger?.metadata?.branch === branch) targets.push(row.id);
-    }
-    if (page === PAGE_BOUND) {
-      console.log(
-        `[preview] stopped listing after ${String(PAGE_BOUND)} pages; older deployments may remain`,
+  const { base, deployments } = await listPagesDeployments(account, project);
+  const targets = ownedPagesDeployments(deployments, pullRequest);
+  const failures = [];
+  for (const deployment of targets) {
+    const removed = await cloudflare("DELETE", `${base}/${deployment.id}?force=true`);
+    if (!isIdempotentDeleteStatus(removed.status)) {
+      failures.push(
+        new Error(
+          `deleting Pages deployment ${deployment.id} answered ${String(removed.status)}: ${apiErrors(removed.body)}`,
+        ),
       );
     }
   }
-  for (const id of targets) {
-    const removed = await cloudflare("DELETE", `${base}/${id}?force=true`);
-    if (removed.status !== 200 && removed.status !== 404) {
-      fail(
-        `deleting deployment ${id} answered ${String(removed.status)}: ${apiErrors(removed.body)}`,
-      );
-    }
-  }
-  console.log(`[preview] ${String(targets.length)} Pages deployment(s) of ${branch} purged`);
+  console.log(`[preview] ${String(targets.length - failures.length)} Pages deployment(s) deleted`);
+  if (failures.length > 0) throw new AggregateError(failures, "Pages cleanup incomplete");
 }
 
-/** Names every preview worker still deployed, so an orphan of a closed pull request is found. */
-async function list() {
+function listPreviewRepositories() {
+  return readWranglerJson([
+    "containers",
+    "images",
+    "list",
+    "--filter",
+    `^${PREVIEW_WORKER_PREFIX}`,
+    "--json",
+  ]);
+}
+
+function deleteRegistryImages(pullRequest) {
+  const targets = ownedRegistryImages(listPreviewRepositories(), pullRequest);
+  const failures = [];
+  for (const image of targets) {
+    const removed = spawnSync(
+      "pnpm",
+      [...WRANGLER, "containers", "images", "delete", image, "-y"],
+      { stdio: "inherit", timeout: 60_000 },
+    );
+    if (removed.error || removed.status !== 0) {
+      failures.push(
+        new Error(
+          `deleting registry image ${image} failed${removed.error ? `: ${removed.error.message}` : ` with exit ${String(removed.status)}`}`,
+        ),
+      );
+    }
+  }
+  console.log(`[preview] ${String(targets.length - failures.length)} registry image(s) deleted`);
+  if (failures.length > 0) throw new AggregateError(failures, "registry cleanup incomplete");
+}
+
+async function teardown(flags) {
+  const pullRequest = requirePullRequest(flags);
   const account = requireEnv("CLOUDFLARE_ACCOUNT_ID");
-  const scripts = await cloudflare("GET", `/accounts/${account}/workers/scripts`);
-  if (scripts.status !== 200) {
-    fail(`listing workers answered ${String(scripts.status)}: ${apiErrors(scripts.body)}`);
+  await runCleanupTasks([
+    ["worker", () => deleteWorker(account, pullRequest)],
+    ["container", () => deleteContainerApplications(account, pullRequest)],
+    ["Pages", () => purgePagesDeployments(account, pullRequest)],
+    ["registry", () => deleteRegistryImages(pullRequest)],
+  ]);
+}
+
+function addInventoryResource(inventory, pullRequest, type, name) {
+  const resources = inventory.get(pullRequest) ?? [];
+  resources.push({ type, name });
+  inventory.set(pullRequest, resources);
+}
+
+async function pullRequestState(pullRequest) {
+  const repository = process.env.GITHUB_REPOSITORY ?? "";
+  const token = process.env.GITHUB_TOKEN ?? "";
+  if (repository === "" || token === "") return "unknown";
+  const response = await fetch(
+    `https://api.github.com/repos/${repository}/pulls/${String(pullRequest)}`,
+    {
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${token}`,
+        "x-github-api-version": "2022-11-28",
+      },
+    },
+  );
+  if (response.status === 404) return "missing";
+  if (!response.ok)
+    throw new Error(`reading PR #${String(pullRequest)} answered ${String(response.status)}`);
+  const body = await response.json();
+  if (typeof body.merged_at === "string") return "merged";
+  return body.state === "open" ? "open" : "closed";
+}
+
+async function inventory() {
+  const account = requireEnv("CLOUDFLARE_ACCOUNT_ID");
+  const resources = new Map();
+  const workers = apiRows(
+    await cloudflare("GET", `/accounts/${account}/workers/scripts`),
+    "listing workers",
+  );
+  for (const worker of workers) {
+    const pullRequest = previewWorkerPullRequest(worker?.id ?? "");
+    if (pullRequest !== null) addInventoryResource(resources, pullRequest, "worker", worker.id);
   }
-  for (const script of scripts.body.result ?? []) {
-    const pullRequest = previewWorkerPullRequest(script.id ?? "");
-    if (pullRequest === null) continue;
-    console.log(`${script.id}\tPR #${String(pullRequest)}`);
+
+  const applications = apiRows(
+    await cloudflare("GET", `/accounts/${account}/containers/applications`),
+    "listing container applications",
+  );
+  for (const application of applications) {
+    const pullRequest = previewContainerPullRequest(application?.name ?? "");
+    if (pullRequest !== null) {
+      addInventoryResource(resources, pullRequest, "container", application.name);
+    }
   }
+
+  const project = process.env.CLOUDFLARE_PAGES_PROJECT ?? "";
+  if (project !== "") {
+    const { deployments } = await listPagesDeployments(account, project);
+    for (const deployment of deployments) {
+      const branch = deployment?.deployment_trigger?.metadata?.branch ?? "";
+      const pullRequest = previewPagesPullRequest(branch);
+      if (pullRequest !== null)
+        addInventoryResource(resources, pullRequest, "pages", deployment.id);
+    }
+  }
+
+  for (const repository of listPreviewRepositories()) {
+    const pullRequest = previewRegistryPullRequest(repository?.name ?? "");
+    if (pullRequest === null || !Array.isArray(repository.tags)) continue;
+    for (const tag of repository.tags) {
+      if (typeof tag === "string" && tag !== "") {
+        addInventoryResource(resources, pullRequest, "image", `${repository.name}:${tag}`);
+      }
+    }
+  }
+
+  for (const [pullRequest, rows] of [...resources.entries()].sort(
+    ([left], [right]) => left - right,
+  )) {
+    console.log(
+      JSON.stringify({
+        pull_request: pullRequest,
+        state: await pullRequestState(pullRequest),
+        resources: rows,
+      }),
+    );
+  }
+  if (resources.size === 0) console.log("[preview] no dedicated preview resource found");
+}
+
+function failureMessage(error) {
+  if (error instanceof AggregateError) {
+    return [error.message, ...error.errors.map((failure) => failureMessage(failure))].join(
+      "\n  - ",
+    );
+  }
+  return error instanceof Error ? error.message : String(error);
 }
 
 const [command, ...rest] = process.argv.slice(2);
 const flags = readFlags(rest);
-if (command === "provision") await provision(flags);
-else if (command === "warm") await warm(flags);
-else if (command === "teardown") await teardown(flags);
-else if (command === "list") await list();
-else fail(`unknown command "${command ?? ""}"; expected provision, warm, teardown or list`);
+try {
+  if (command === "provision") await provision(flags);
+  else if (command === "warm") await warm(flags);
+  else if (command === "teardown") await teardown(flags);
+  else if (command === "inventory") await inventory();
+  else
+    throw new Error(
+      `unknown command "${command ?? ""}"; expected provision, warm, teardown or inventory`,
+    );
+} catch (error) {
+  console.error(`[preview] ${failureMessage(error)}`);
+  process.exitCode = 1;
+}
