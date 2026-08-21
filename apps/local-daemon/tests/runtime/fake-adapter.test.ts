@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -26,7 +26,7 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-/** Absent on purpose: these cases assert the event stream, not the worktree edits. */
+/** Absent unless a case creates it: most cases assert the event stream, not the worktree edits. */
 const cwd = () => join(dir, "worktree");
 
 const input = () => runtimeRunInput({ run_dir: dir, cwd: cwd(), prompt: "do the thing" });
@@ -36,9 +36,9 @@ const sessionRef = () => runtimeSessionRef("fake-session-sess-1");
 const liveSignal = (): AbortSignal => new AbortController().signal;
 
 describe("FakeRuntimeAdapter contract", () => {
-  it("exposes a lean 7-flag capability model and a test-adapter identity", () => {
+  it("exposes a lean 7-flag capability model and a simulation identity", () => {
     expect(adapter.id).toBe(FAKE_ADAPTER_ID);
-    expect(adapter.displayName).toMatch(/test adapter/i);
+    expect(adapter.displayName).toBe("Simulation");
     expect(Object.keys(adapter.capabilities).toSorted()).toEqual([
       "abort",
       "diff_hints",
@@ -93,6 +93,19 @@ describe("FakeRuntimeAdapter.run", () => {
     expect(messages.map((event) => event.payload.thinking)).toEqual([true, undefined]);
     expect(messages.at(-1)?.payload.text).toContain("do the thing");
     expect(messages.every((event) => event.payload.role === "assistant")).toBe(true);
+  });
+
+  it("says in the turn itself that no model answered and the prompt is not implemented", async () => {
+    mkdirSync(cwd());
+    const sink = new MemorySink();
+    await adapter.run(input(), sink, liveSignal());
+    const answer = sink.events.findLast((event) => event.type === "runtime.message");
+
+    expect(answer?.payload.text).toContain("No model was contacted");
+    expect(answer?.payload.text).toContain("not implemented");
+    expect(readFileSync(join(cwd(), "simulated-turn.md"), "utf8")).toContain(
+      "No model was contacted",
+    );
   });
 
   it("labels every event as test data and never as a real provider", async () => {

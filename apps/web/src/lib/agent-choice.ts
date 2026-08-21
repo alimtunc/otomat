@@ -93,7 +93,7 @@ export function isUsableAgentChoice(
   return runtimeAvailable(descriptors, decoded.id);
 }
 
-/** The effective run-level choice: keep the preferred one while usable, else the shared runtime fallback (never auto-select simulated), else null. */
+/** The effective run-level choice: keep the preferred one while usable, else the shared runtime fallback, else null. */
 export function resolveAgentChoice(
   preferred: string | null,
   profiles: AgentProfileContract[],

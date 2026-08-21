@@ -26,19 +26,19 @@ export function isRealRuntime(descriptor: RuntimeDescriptor): boolean {
   return descriptor.kind === "real";
 }
 
-/**
- * The runtime a launch should use: the user's choice while it is still listed
- * and available, else the first available real runtime, else null — a simulated
- * runtime is never auto-selected, only kept when explicitly chosen.
- */
+/** The runtime a launch should use: the still-available choice, else an available real runtime, else any available one — the daemon lists a simulated runtime only under an explicit opt-in. */
 export function resolveRuntimeChoice(
   descriptors: RuntimeDescriptor[],
   preferred: string | null,
 ): string | null {
   const chosen = descriptors.find((descriptor) => descriptor.id === preferred);
   if (chosen && isAvailableRuntime(chosen)) return chosen.id;
-  return descriptors.find((d) => isRealRuntime(d) && isAvailableRuntime(d))?.id ?? null;
+  const real = descriptors.find((d) => isRealRuntime(d) && isAvailableRuntime(d));
+  return (real ?? descriptors.find(isAvailableRuntime))?.id ?? null;
 }
+
+export const SIMULATED_RUNTIME_NOTE =
+  "Simulation drives the real run pipeline without contacting a model: it records the prompt instead of implementing it.";
 
 export function hasLaunchableRuntime(descriptors: RuntimeDescriptor[]): boolean {
   return descriptors.some(isAvailableRuntime);

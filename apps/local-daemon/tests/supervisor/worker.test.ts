@@ -69,7 +69,7 @@ it("writes a real file on a run turn and appends on a resume turn", async () => 
   const worktree = mkdtempSync(join(tmpdir(), "otomat-worktree-"));
   try {
     await runWorkerJob(job("run", worktree), new AbortController().signal);
-    const file = join(worktree, "fake-implementation.md");
+    const file = join(worktree, "simulated-turn.md");
     const first = readFileSync(file, "utf8");
     expect(first).toContain("do the thing");
 
@@ -84,7 +84,7 @@ it("writes a real file on a run turn and appends on a resume turn", async () => 
 
 it("leaves the filesystem untouched when the job's worktree no longer exists", async () => {
   await runWorkerJob(job("run"), new AbortController().signal);
-  expect(existsSync(join(dir, "fake-implementation.md"))).toBe(false);
+  expect(existsSync(join(dir, "simulated-turn.md"))).toBe(false);
 });
 
 it("rejects a serialized job that carries no worktree", () => {

@@ -2,7 +2,12 @@ import type { RuntimeDescriptor } from "@otomat/domain";
 import { Badge, Chip, ProviderMark } from "@otomat/ui";
 import { capabilityEntries } from "@web/lib/capability-labels";
 import { runtimeAvailabilityLabel } from "@web/lib/runtime-availability";
-import { isAvailableRuntime, runtimeMark } from "@web/lib/runtimes";
+import {
+  isAvailableRuntime,
+  isRealRuntime,
+  runtimeMark,
+  SIMULATED_RUNTIME_NOTE,
+} from "@web/lib/runtimes";
 
 export function RuntimeRow({
   runtime,
@@ -23,6 +28,9 @@ export function RuntimeRow({
           {runtimeAvailabilityLabel(runtime, hostLabel)}
         </Chip>
       </div>
+      {isRealRuntime(runtime) ? null : (
+        <p className="text-xs text-text-secondary">{SIMULATED_RUNTIME_NOTE}</p>
+      )}
       <div className="flex flex-wrap gap-1.5">
         {capabilityEntries(runtime.capabilities).map(({ key, label, supported }) => (
           <Badge key={key} variant={supported ? "iris" : "default"}>

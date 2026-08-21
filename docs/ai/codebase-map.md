@@ -85,7 +85,7 @@ under `apps/local-daemon/src/<module>`, consumed through
 | --------------------------------- | ------------------------ | --------------------------------------------------------------------- |
 | `apps/web`                        | OTO-5, OTO-9, OTO-15     | Vite/React cockpit; file-based routing + domain-split components.     |
 | `apps/local-daemon`               | OTO-5, OTO-9/10, OTO-13  | Local process host; backend modules folded in by OTO-13.              |
-| `apps/local-daemon/src/runtime`   | OTO-6                    | Push-sink adapter contract and fake adapter.                          |
+| `apps/local-daemon/src/runtime`   | OTO-6                    | Push-sink adapter contract and simulated adapter.                     |
 | `apps/local-daemon/src/events`    | OTO-7                    | Append-only event store, stream-to-file ingestion, projections.       |
 | `apps/local-daemon/src/git`       | OTO-8                    | Worktree/branch ownership, canonical diff, cleanup primitives.        |
 | `apps/local-daemon/src/data-safety` | OTO-29                 | Safe startup diagnostics and the one-shot restore maintenance mode.   |
@@ -478,6 +478,16 @@ tunnel — kept a personal host and an SSH private key inside CI, shared one mac
 previews and the stable daemon, and left processes to clean by pidfile; the VPS keeps serving the
 desktop previews (`instanceDeployment` in `apps/desktop`), which OTO-99 leaves untouched. Setup and
 secrets: [`docs/release/web-preview.md`](../release/web-preview.md).
+
+**A preview launches its runs on the simulated runtime.** No provider CLI is installed in the
+container, so the image sets `OTOMAT_ENABLE_FAKE_RUNTIME=1` and the daemon lists its built-in
+simulated adapter beside the two real ones it cannot find. That is the only opt-in: a normal
+install never sees it, and the launcher still prefers any available real runtime — it falls back
+to the simulated one only when there is none. The alternative, a second mock backend behind the
+cockpit, was rejected: the simulated adapter is a runtime like the others, so a preview run travels
+the real supervisor, ledger, SSE, conversation, usage, worktree and diff instead of a parallel
+fixture path that proves nothing. What it does not do is contact a model, and it says so in its own
+turn, in its worktree file and wherever it can be picked (`SIMULATED_RUNTIME_NOTE`).
 
 ## Error Diagnostics
 

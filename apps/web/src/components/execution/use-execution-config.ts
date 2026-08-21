@@ -33,6 +33,7 @@ export interface UseExecutionConfigOptions {
 
 export interface ExecutionConfig {
   agentChoice: string | null;
+  runtimeId: string | null;
   profile: AgentProfileContract | null;
   model: ResolvedExecutionValue<ModelSelection>;
   options: ResolvedExecutionOption[];
@@ -94,6 +95,7 @@ export function useExecutionConfig({
 
   return {
     agentChoice,
+    runtimeId,
     profile,
     model,
     options,

@@ -201,6 +201,31 @@ describe("NewIssueDialog", () => {
     );
   });
 
+  it("launches on the simulated runtime when a preview reports no real one", async () => {
+    runtimesData = [
+      runtimeDescriptor("claude", "real", false),
+      runtimeDescriptor("fake", "simulated", true),
+    ];
+    await renderDialog();
+    expect(document.body.textContent).not.toContain("No agent runtime available");
+
+    const prompt = document.querySelector<HTMLTextAreaElement>(
+      "textarea[aria-label='Issue prompt']",
+    );
+    if (!prompt) throw new Error("issue prompt not found");
+    await act(async () => setTextareaValue(prompt, "try the run cycle"));
+    await act(async () => {
+      buttonByLabel("Create & launch").click();
+    });
+
+    expect(launch).toHaveBeenCalledWith({
+      prompt: "try the run cycle",
+      project_id: "p1",
+      base_branch: "main",
+      runtime: "fake",
+    });
+  });
+
   it("blocks launch with an actionable empty state when no runtime is launchable", async () => {
     runtimesData = [
       runtimeDescriptor("claude", "real", false),

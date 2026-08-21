@@ -44,6 +44,7 @@ import {
   modelSelectValue,
 } from "@web/lib/model-choice";
 import { providerOptionKeyLabel } from "@web/lib/provider-option-labels";
+import { isRealRuntime, runtimeById, SIMULATED_RUNTIME_NOTE } from "@web/lib/runtimes";
 import { useState } from "react";
 
 export interface ExecutionConfigPickerProps {
@@ -107,6 +108,9 @@ export function ExecutionConfigPicker({
   const modelValue = modelSelectValue(value.model, config.catalog);
   const menuLabel = `${label} execution configuration`;
   const emptyNote = noAnnouncedOptionsNote(config.announced);
+  const chosenRuntime =
+    config.runtimeId === null ? undefined : runtimeById(descriptors, config.runtimeId);
+  const simulated = chosenRuntime !== undefined && !isRealRuntime(chosenRuntime);
   const problem = executionDetectionProblem({
     announced: config.announcedError,
     catalog: config.catalogError,
@@ -168,6 +172,7 @@ export function ExecutionConfigPicker({
               profileName={profileName}
             />
           ))}
+          {simulated ? <ConfigMenuNote>{SIMULATED_RUNTIME_NOTE}</ConfigMenuNote> : null}
           {emptyNote === null ? null : <ConfigMenuNote>{emptyNote}</ConfigMenuNote>}
           {problem === null ? null : (
             <>
