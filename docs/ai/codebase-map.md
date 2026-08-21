@@ -489,6 +489,14 @@ the real supervisor, ledger, SSE, conversation, usage, worktree and diff instead
 fixture path that proves nothing. What it does not do is contact a model, and it says so in its own
 turn, in its worktree file and wherever it can be picked (`SIMULATED_RUNTIME_NOTE`).
 
+A cold container also seeds its cockpit: `scripts/preview/host/seed.mjs` polls `/api/health`, then
+drives the daemon's own HTTP API to create four issues — one ready, one done, one reviewing a
+settled simulated run, one whose run was aborted — and stops at the first sight of an existing
+issue. Seeding through the API rather than through SQL or React fixtures is the point: a preview
+shows rows the real contracts produced. The image ships `procps` nowhere, so the supervisor stamps
+a worker's identity from `/proc/<pid>/stat` and keeps `ps -o lstart` for hosts without `/proc`;
+without that, every preview run failed before its first event.
+
 ## Error Diagnostics
 
 Otomat never shows a bare error string. Every incident is classified first —

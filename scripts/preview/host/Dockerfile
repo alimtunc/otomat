@@ -12,6 +12,7 @@ ENV OTOMAT_DAEMON_HOST=0.0.0.0 \
   OTOMAT_ENABLE_FAKE_RUNTIME=1
 
 COPY daemon/ /srv/daemon/
+COPY seed.mjs /srv/seed.mjs
 COPY start.sh /srv/start.sh
 RUN chmod +x /srv/start.sh
 
