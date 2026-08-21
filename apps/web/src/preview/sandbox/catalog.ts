@@ -20,7 +20,7 @@ export const SANDBOX_RUNTIMES: RuntimeDescriptor[] = [
     kind: "real",
     capabilities: {
       stream: true,
-      steering: "turn_boundary",
+      steering: "live",
       abort: true,
       resume: true,
       permissions: false,

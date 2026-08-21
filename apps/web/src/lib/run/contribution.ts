@@ -3,6 +3,7 @@ import {
   executableSteps,
   isRunResumable,
   isRunSettled,
+  projectRunContributionDelivery,
   resolveStepContributionRoute,
   type RunContributionContract,
   type RunDetail,
@@ -12,8 +13,12 @@ import {
 } from "@otomat/domain";
 import type { ConnectionState } from "@otomat/ui";
 
+/** Only what no turn has taken yet: a message already on its way to a live session is not waiting for one. */
 export function queuedCount(contributions: readonly RunContributionContract[]): number {
-  return contributions.reduce((count, item) => count + (item.status === "queued" ? 1 : 0), 0);
+  return contributions.reduce(
+    (count, item) => count + (projectRunContributionDelivery(item) === "waiting" ? 1 : 0),
+    0,
+  );
 }
 
 export interface ContributionGate {
@@ -27,6 +32,8 @@ export interface ContributionGate {
 
 const RESTING_NOTE = "Resumes this step's agent session as a new turn.";
 const STEERING_NOTE = "The agent is working — this message is delivered at its next safe turn.";
+const LIVE_NOTE =
+  "The agent is working — this message goes into its live session without waiting for the turn to end.";
 const FIRST_TURN_NOTE = "This step has not started — this message is delivered in its first turn.";
 const CAPACITY_NOTE =
   "This run is waiting for capacity — this message is delivered in its next turn.";
@@ -132,7 +139,8 @@ export function resolveContributionGate(
     return { ...routed, note: PROVIDER_WAIT_NOTE, queues: true };
   }
   if (!canFollowUpRun(detail.run.status)) {
-    return { ...routed, note: STEERING_NOTE, queues: true };
+    const live = runtime.capabilities.steering === "live";
+    return { ...routed, note: live ? LIVE_NOTE : STEERING_NOTE, queues: !live };
   }
   // A resting run starts no turn on its own, so the daemon fails a message whose step has no session left to resume.
   if (!isSteerable(detail, target.step.id)) {

@@ -3,6 +3,7 @@ import type { ProviderOptions, RuntimeCapabilities } from "@otomat/domain";
 import { requireProviderSession, runCliTurn, type CliTurnSpec } from "#runtime/cli/turn";
 import type { TurnRef } from "#runtime/cli/turn-emitter";
 import type {
+  LiveInputChannel,
   RuntimeAdapter,
   RuntimeFinalState,
   RuntimeOneShot,
@@ -14,6 +15,7 @@ import type {
 import type { RuntimeSink } from "#runtime/sinks";
 
 import { ClaudeFrameMapper } from "./frames.js";
+import { ClaudeLiveInput, claudeUserFrame } from "./live-input.js";
 import { CLAUDE_MODEL_SUPPORT } from "./models.js";
 import { claudeOptionSupport, claudePermissionModeStatus } from "./options.js";
 
@@ -35,13 +37,15 @@ export function claudePermissionMode(env: NodeJS.ProcessEnv = process.env): stri
 }
 
 /**
- * `permissions` stays false: `claude -p` reports the calls it refused but exposes
- * no channel to answer one. `provider_limit` is `deadline` because the CLI prints
- * the unix second its plan window reopens next to the limit it reports.
+ * `steering` is `live` because the CLI reads further user messages from an open
+ * stdin while it works. `permissions` stays false: `claude -p` reports the calls
+ * it refused but exposes no channel to answer one. `provider_limit` is `deadline`
+ * because the CLI prints the unix second its plan window reopens next to the
+ * limit it reports.
  */
 const CLAUDE_CAPABILITIES: RuntimeCapabilities = {
   stream: true,
-  steering: "turn_boundary",
+  steering: "live",
   abort: true,
   resume: true,
   permissions: false,
@@ -51,7 +55,7 @@ const CLAUDE_CAPABILITIES: RuntimeCapabilities = {
 
 type TurnInput = RuntimeRunInput | RuntimeResumeInput;
 
-/** The prompt is piped over stdin so size and quoting never leak into argv. */
+/** The prompt is piped over stdin as a streaming-input user frame, so size and quoting never leak into argv and a live message can follow it on the same pipe. */
 export class ClaudeRuntimeAdapter implements RuntimeAdapter {
   readonly id = CLAUDE_ADAPTER_ID;
   readonly displayName = "Claude Code";
@@ -79,8 +83,9 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
     input: RuntimeRunInput,
     sink: RuntimeSink,
     signal: AbortSignal,
+    live?: LiveInputChannel,
   ): Promise<RuntimeFinalState> {
-    return runCliTurn(this.spec(input, input, []), sink, signal);
+    return runCliTurn(this.spec(input, input, [], live), sink, signal);
   }
 
   async resume(
@@ -88,9 +93,10 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
     input: RuntimeResumeInput,
     sink: RuntimeSink,
     signal: AbortSignal,
+    live?: LiveInputChannel,
   ): Promise<RuntimeFinalState> {
     const sessionArgs = ["--resume", requireProviderSession(session)];
-    return runCliTurn(this.spec(input, session, sessionArgs), sink, signal);
+    return runCliTurn(this.spec(input, session, sessionArgs, live), sink, signal);
   }
 
   /**
@@ -101,6 +107,8 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
   private turnArgs(input: TurnInput, mode: string): string[] {
     return [
       "-p",
+      "--input-format",
+      "stream-json",
       "--output-format",
       "stream-json",
       "--verbose",
@@ -118,21 +126,28 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
   }
 
   /** Session flags come last so `--resume <id>` closes the argv, the order Claude Code expects. */
-  private spec(input: TurnInput, ref: TurnRef, sessionArgs: string[]): CliTurnSpec {
+  private spec(
+    input: TurnInput,
+    ref: TurnRef,
+    sessionArgs: string[],
+    live: LiveInputChannel | undefined,
+  ): CliTurnSpec {
     const frozen = input.options?.permission_mode;
     const permission = {
       mode: frozen ?? claudePermissionMode(),
       status: claudePermissionModeStatus(this.binary, frozen),
     };
+    const liveInput = live && new ClaudeLiveInput(live);
     return {
       adapter: this.id,
       source: "claude",
       command: this.binary,
       args: [...this.turnArgs(input, permission.mode), ...sessionArgs],
-      prompt: input.prompt,
+      prompt: claudeUserFrame(input.prompt),
       cwd: input.cwd,
       ref,
-      createMapper: (emitter) => new ClaudeFrameMapper(emitter, permission),
+      streamStdin: liveInput?.stream,
+      createMapper: (emitter) => new ClaudeFrameMapper(emitter, permission, liveInput?.onResult),
     };
   }
 }

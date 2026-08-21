@@ -10,8 +10,14 @@ export interface CliProcessOptions {
   command: string;
   args: string[];
   cwd: string;
-  /** Piped to the child's stdin, then stdin is closed. */
+  /** Piped to the child's stdin first. */
   stdin: string;
+  /**
+   * Keeps stdin open after `stdin` and writes whatever else the turn accepts;
+   * stdin closes once it resolves. `write` resolves when the chunk reached the
+   * pipe, and `signal` aborts when the child is gone. Absent closes stdin at once.
+   */
+  streamStdin?: (write: (chunk: string) => Promise<void>, signal: AbortSignal) => Promise<void>;
   signal: AbortSignal;
   onStdoutLine: (line: string) => void;
   onStderrLine: (line: string) => void;
@@ -47,10 +53,13 @@ export function runCliProcess(options: CliProcessOptions): Promise<CliProcessExi
       }
     };
 
+    // Ends the input pump on every path the child stops being writable, so a live turn never waits on a process that is gone.
+    const inputDone = new AbortController();
     let aborted = false;
     let killTimer: NodeJS.Timeout | null = null;
     const onAbort = (): void => {
       aborted = true;
+      inputDone.abort();
       signalChildGroup("SIGTERM");
       killTimer = setTimeout(() => signalChildGroup("SIGKILL"), KILL_GRACE_MS);
       killTimer.unref();
@@ -68,17 +77,43 @@ export function runCliProcess(options: CliProcessOptions): Promise<CliProcessExi
 
     child.on("error", (error) => {
       cleanup();
+      inputDone.abort();
       reject(error);
     });
     // "close" (not "exit") so both pipes are fully drained before the caller settles.
     child.on("close", (code, signal) => {
       cleanup();
+      inputDone.abort();
       resolve({ code, signal, aborted });
     });
 
     child.stdin.on("error", () => {
       // The provider may exit before reading stdin; losing the pipe is not a runner failure.
     });
-    child.stdin.end(options.stdin);
+
+    const { streamStdin } = options;
+    if (streamStdin === undefined) {
+      child.stdin.end(options.stdin);
+      return;
+    }
+    const write = (chunk: string): Promise<void> =>
+      new Promise((resolveWrite, rejectWrite) => {
+        child.stdin.write(chunk, (error) => (error ? rejectWrite(error) : resolveWrite()));
+      });
+    // The pump owns stdin until it resolves, so nothing else can close the pipe under a pending write.
+    void write(options.stdin)
+      .then(
+        () => streamStdin(write, inputDone.signal),
+        // The provider may exit before reading the prompt; like the non-streaming path, exit classification decides, not the lost pipe.
+        () => undefined,
+      )
+      .then(
+        () => child.stdin.end(),
+        // A settled exit already resolved this promise, so rejecting late is the no-op the spec makes it.
+        (error: unknown) => {
+          child.stdin.end();
+          reject(error instanceof Error ? error : new Error(String(error)));
+        },
+      );
   });
 }

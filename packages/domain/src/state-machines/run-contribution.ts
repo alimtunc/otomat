@@ -29,6 +29,19 @@ interface RunContributionDelivery {
   delivered_at: string | null;
 }
 
+/** How far one message has travelled, as a surface states it: `queued` splits on the session claim; settled states pass through. */
+export type RunContributionDeliveryPhase =
+  | "waiting"
+  | "sending"
+  | Exclude<RunContributionState, "queued">;
+
+export function projectRunContributionDelivery(
+  contribution: Pick<RunContributionDelivery, "status" | "agent_session_id">,
+): RunContributionDeliveryPhase {
+  if (contribution.status !== "queued") return contribution.status;
+  return contribution.agent_session_id === null ? "waiting" : "sending";
+}
+
 /** A failed message is retriable only while nothing was ever handed to the provider. */
 export function isRunContributionRetriable(contribution: {
   status: RunContributionState;

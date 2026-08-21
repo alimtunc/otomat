@@ -88,6 +88,22 @@ export interface RuntimeOneShot {
   preflight?(cwd: string): void;
 }
 
+/** One persisted message handed to a turn that is already running. */
+export interface LiveInputMessage {
+  id: string;
+  body: string;
+}
+
+/**
+ * The caller's side of a live steering channel. `wrote` is the only evidence the
+ * provider's stdin accepted a message, so it is reported per message, not per batch.
+ */
+export interface LiveInputChannel {
+  /** Pending messages in send order; ends when `signal` aborts, which is how a turn stops taking input. */
+  messages(signal: AbortSignal): AsyncIterable<LiveInputMessage>;
+  wrote(id: string, error: string | null): void;
+}
+
 /** Handle to a started session, used by out-of-band `abort`/`resume`. */
 const runtimeSessionRefSchema = z.object({
   run_id: z.string(),
@@ -100,8 +116,9 @@ export type RuntimeSessionRef = z.infer<typeof runtimeSessionRefSchema>;
 /**
  * Thin push-sink runtime boundary. `run` executes a turn and resolves on a
  * terminal state, pushing all evidence through `sink` as it goes. Live controls
- * are optional capabilities, not assumed; there is no mid-turn steering — a
- * follow-up message is a new turn via `resume`.
+ * are optional capabilities, not assumed: a runtime whose `steering` is `live`
+ * takes `live` messages into the invocation it is already running, and every
+ * other one carries a follow-up as a new turn via `resume`.
  */
 export interface RuntimeAdapter {
   readonly id: RuntimeId;
@@ -114,12 +131,18 @@ export interface RuntimeAdapter {
   /** How to ask this runtime one question that answers on stdout and writes nothing; absent when it has no such mode. */
   describeOneShot?(model: string | null, options: ProviderOptions): RuntimeOneShot;
   preflight?(input: RuntimePreflightInput): void;
-  run(input: RuntimeRunInput, sink: RuntimeSink, signal: AbortSignal): Promise<RuntimeFinalState>;
+  run(
+    input: RuntimeRunInput,
+    sink: RuntimeSink,
+    signal: AbortSignal,
+    live?: LiveInputChannel,
+  ): Promise<RuntimeFinalState>;
   resume?(
     session: RuntimeSessionRef,
     input: RuntimeResumeInput,
     sink: RuntimeSink,
     signal: AbortSignal,
+    live?: LiveInputChannel,
   ): Promise<RuntimeFinalState>;
   abort?(session: RuntimeSessionRef, reason: string): Promise<void>;
 }

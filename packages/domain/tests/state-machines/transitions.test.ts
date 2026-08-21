@@ -28,6 +28,7 @@ import {
 import {
   isRunContributionCancelable,
   isRunContributionRetriable,
+  projectRunContributionDelivery,
   runContributionMachine,
 } from "#domain/state-machines/run-contribution";
 import {
@@ -138,6 +139,18 @@ describe("representative illegal transitions are rejected", () => {
     expect(isRunContributionCancelable({ ...pending, agent_session_id: "s1" })).toBe(false);
     expect(isRunContributionCancelable({ ...pending, status: "failed" })).toBe(true);
     expect(isRunContributionCancelable({ ...pending, status: "delivered" })).toBe(false);
+  });
+
+  it("run_contribution splits queued into what is on its way and what is still waiting", () => {
+    const queued = { status: "queued", agent_session_id: null } as const;
+    expect(projectRunContributionDelivery(queued)).toBe("waiting");
+    expect(projectRunContributionDelivery({ ...queued, agent_session_id: "s1" })).toBe("sending");
+    expect(projectRunContributionDelivery({ status: "delivered", agent_session_id: "s1" })).toBe(
+      "delivered",
+    );
+    expect(projectRunContributionDelivery({ status: "failed", agent_session_id: null })).toBe(
+      "failed",
+    );
   });
 
   it("step_run cannot skip queued -> succeeded", () => {

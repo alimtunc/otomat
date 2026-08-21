@@ -1,5 +1,5 @@
 // Pure Node with no workspace imports so the spawned child survives independent of the test process; behavior via FAKE_WORKER_BEHAVIOR.
-import { appendFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const job = JSON.parse(process.env.OTOMAT_WORKER_JOB);
@@ -88,6 +88,34 @@ if (behavior === "complete") {
   });
   marker("failed", limit);
   process.exit(1);
+} else if (behavior === "live" || behavior === "live-refuse") {
+  // Mirrors the worker's real live-input protocol: tail the daemon's inbox, receipt each write, linger like `linger`.
+  const error = behavior === "live-refuse" ? "stdin closed" : null;
+  const inbox = join(job.agentSessionDir, "live-input.jsonl");
+  const receipts = join(job.agentSessionDir, "live-input-receipts.jsonl");
+  let taken = 0;
+  setInterval(() => {
+    if (!existsSync(inbox)) return;
+    const lines = readFileSync(inbox, "utf8").split("\n").filter(Boolean);
+    for (const line of lines.slice(taken)) {
+      const message = JSON.parse(line);
+      if (error === null) {
+        emit("runtime.message", "otomat", {
+          fidelity: "parsed",
+          adapter: "fake",
+          test_adapter: true,
+          role: "user",
+          text: message.body,
+        });
+      }
+      appendFileSync(receipts, `${JSON.stringify({ id: message.id, error })}\n`);
+    }
+    taken = lines.length;
+  }, 10);
+  process.on("SIGTERM", () => {
+    marker("canceled");
+    process.exit(0);
+  });
 } else if (behavior === "crash") {
   process.exit(1);
 } else {

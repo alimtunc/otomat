@@ -25,6 +25,8 @@ export class ClaudeFrameMapper implements ProviderFrameMapper {
   constructor(
     private readonly emitter: TurnEmitter,
     private readonly permission: ClaudeTurnPermission,
+    /** Told when the provider closed an agent loop, so a live turn knows whether it still owes an answer. */
+    private readonly onResult?: () => void,
   ) {}
 
   onFrame(frame: Record<string, unknown>): void {
@@ -130,10 +132,8 @@ export class ClaudeFrameMapper implements ProviderFrameMapper {
     }
   }
 
-  private onResultFrame(frame: Record<string, unknown>): void {
-    this.onPermissionDenials(frame);
-    this.outcome.providerSessionId =
-      asString(frame["session_id"]) ?? this.outcome.providerSessionId;
+  /** A result frame's `usage` covers only its own agent loop, so a steered turn sums them; `total_cost_usd` is already the invocation's running total, so the latest frame wins. */
+  private onResultUsage(frame: Record<string, unknown>): void {
     const usage = asRecord(frame["usage"]);
     // Cache reads/creations are real prompt-side tokens; folded in so usage never understates the turn.
     const inputTokens =
@@ -141,14 +141,23 @@ export class ClaudeFrameMapper implements ProviderFrameMapper {
       (asNumber(usage?.["cache_creation_input_tokens"]) ?? 0) +
       (asNumber(usage?.["cache_read_input_tokens"]) ?? 0);
     const outputTokens = asNumber(usage?.["output_tokens"]) ?? 0;
+    const cost = asNumber(frame["total_cost_usd"]);
+    const previous = this.outcome.usage;
     this.outcome.usage = {
       model: this.model,
-      input_tokens: inputTokens,
-      output_tokens: outputTokens,
-      total_tokens: inputTokens + outputTokens,
-      cost_usd: asNumber(frame["total_cost_usd"]),
+      input_tokens: (previous?.input_tokens ?? 0) + inputTokens,
+      output_tokens: (previous?.output_tokens ?? 0) + outputTokens,
+      total_tokens: (previous?.total_tokens ?? 0) + inputTokens + outputTokens,
+      cost_usd: cost ?? previous?.cost_usd ?? null,
     };
     this.emitter.emit("runtime.usage", "native", { usage: this.outcome.usage, frame });
+  }
+
+  private onResultFrame(frame: Record<string, unknown>): void {
+    this.onPermissionDenials(frame);
+    this.outcome.providerSessionId =
+      asString(frame["session_id"]) ?? this.outcome.providerSessionId;
+    this.onResultUsage(frame);
 
     const isError = frame["is_error"] === true || asString(frame["subtype"]) !== "success";
     this.outcome.result = {
@@ -158,6 +167,7 @@ export class ClaudeFrameMapper implements ProviderFrameMapper {
         : null,
     };
     if (isError) this.onProviderLimit(frame);
+    this.onResult?.();
   }
 
   private onProviderLimit(frame: Record<string, unknown>): void {

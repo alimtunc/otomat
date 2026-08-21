@@ -7,7 +7,7 @@ import type {
   ReviewCommentPublicationState,
   ReviewCommentState,
   ReviewState,
-  RunContributionState,
+  RunContributionDeliveryPhase,
   RunState,
   StepRunState,
 } from "@otomat/domain/types";
@@ -73,8 +73,9 @@ const RUN_STATUS: StatusMap<RunState> = {
   canceled: { tone: "neutral", icon: Ban, label: "Canceled" },
 };
 
-const RUN_CONTRIBUTION_STATUS: StatusMap<RunContributionState> = {
-  queued: { tone: "neutral", icon: Clock, label: "Queued" },
+const RUN_CONTRIBUTION_STATUS: StatusMap<RunContributionDeliveryPhase> = {
+  waiting: { tone: "neutral", icon: Clock, label: "Waiting for next turn" },
+  sending: { tone: "iris", icon: Loader, label: "Sending", live: true },
   delivered: { tone: "iris", icon: Send, label: "Delivered" },
   acknowledged: { tone: "success", icon: CheckCircle2, label: "Acknowledged" },
   failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },

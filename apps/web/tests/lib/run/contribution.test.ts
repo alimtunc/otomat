@@ -157,6 +157,15 @@ it("refuses a runtime that cannot resume or is unavailable", () => {
   );
 });
 
+it("sends into the live session, rather than queueing, when the runtime steers live", () => {
+  const live = { ...CLAUDE, capabilities: { ...CLAUDE.capabilities, steering: "live" as const } };
+  const gate = resolveContributionGate(detail("running", null), [live], "online");
+
+  expect(gate.stepRunId).toBe("s1");
+  expect(gate.queues).toBe(false);
+  expect(gate.note).toContain("live session");
+});
+
 it("says a runtime without steering cannot take a message once its session started", () => {
   const noSteering = {
     ...CLAUDE,
@@ -274,12 +283,14 @@ it("routes to the selected competitor, never to a later losing session", () => {
   expect(resolveContributionGate(runDetail, [CLAUDE], "online").stepRunId).toBe("winner");
 });
 
-it("counts only the messages still waiting", () => {
+it("counts only the messages still waiting for a turn to start", () => {
   expect(
     queuedCount([
       contribution({ id: "a", status: "queued" }),
       contribution({ id: "b", status: "delivered" }),
       contribution({ id: "c", status: "queued" }),
+      // Already claimed by the live turn: on its way, not waiting for the next one.
+      contribution({ id: "d", status: "queued", agent_session_id: "as1" }),
     ]),
   ).toBe(2);
 });

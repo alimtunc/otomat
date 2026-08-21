@@ -7,7 +7,7 @@ import type {
   ReviewCommentPublicationState,
   ReviewCommentState,
   ReviewState,
-  RunContributionState,
+  RunContributionDeliveryPhase,
   RunState,
   StepRunState,
 } from "@otomat/domain/types";
@@ -42,7 +42,7 @@ export interface KindStatusMap {
   /** An issue's source status, plus the local `failed` execution the board shows as its own column. */
   issue: IssueBoardColumn;
   run: RunState;
-  runContribution: RunContributionState;
+  runContribution: RunContributionDeliveryPhase;
   step: StepRunState;
   session: AgentSessionState;
   compete: CompeteGroupState;

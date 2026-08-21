@@ -18,6 +18,7 @@ import { withCarriedContributions } from "./contribution/prompt.js";
 import { failureReason } from "./fail-run.js";
 import { waitForWorkerIdentity } from "./identity.js";
 import { runInitCommandBatch, runStillLive } from "./init-commands.js";
+import { clearLiveInput } from "./live-input.js";
 import { capturePassStart, finishSettle } from "./pass-boundary.js";
 import type { SlotGrant } from "./semaphore.js";
 import { settleRun, type SettleOptions } from "./settle/index.js";
@@ -145,6 +146,7 @@ export async function spawnTurn(
     }
     capturePassStart(state, ctx);
     clearWorkerStartEvidence(ctx.agentSessionDir);
+    clearLiveInput(ctx.agentSessionDir);
     claimStepContributions(state, ctx.stepRunId, ctx.agentSessionId);
     const carried = carriedContributions(state, ctx.agentSessionId);
     const prompt = withCarriedContributions(
