@@ -5,6 +5,7 @@ import { act, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { stubAnimations } from "#support/animations";
 import { mount } from "#support/mount";
 import { withQueryClient } from "#support/query";
 
@@ -26,7 +27,7 @@ Object.defineProperty(Element.prototype, "ariaDisabled", {
     return this.getAttribute("aria-disabled");
   },
 });
-Element.prototype.getAnimations = () => [];
+stubAnimations();
 
 let wide = true;
 

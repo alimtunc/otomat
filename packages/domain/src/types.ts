@@ -24,6 +24,8 @@ export type { ReviewCommentPublicationState } from "./state-machines/review-comm
 export type { PullRequestState } from "./state-machines/pull-request.js";
 export type { PullRequestPublicationState } from "./state-machines/pull-request-publication.js";
 
+export type { OperationState } from "./contracts/operation.js";
+
 export type { EventType, EventSource, EventEnvelope } from "./events/envelope.js";
 
 export type {

@@ -14,6 +14,7 @@ import {
 } from "@otomat/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
+import { ActivityCenter } from "@web/components/shell/activity/center";
 import { SETTINGS_NAV, type ShellSection } from "@web/components/shell/nav-items";
 import { NewIssueContext } from "@web/components/shell/new-issue-context";
 import { usePaletteGroups } from "@web/components/shell/palette/use-groups";
@@ -65,6 +66,7 @@ export function RouteShell({
         <span className="truncate text-sm text-text-secondary">{shell.projectLabel}</span>
       }
       onSearch={() => palette.setOpen(true)}
+      actions={<ActivityCenter hostLabel={shell.activeHostLabel} />}
       connectionStatus={
         <ConnectionStatusIndicator
           state={shell.connectionState}

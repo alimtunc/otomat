@@ -731,3 +731,40 @@ it("reads mapped issue sources and triggers a sync", async () => {
     "POST http://localhost:4319/api/linear/sync",
   ]);
 });
+
+it("reads the host's activity snapshot and validates its buckets", async () => {
+  let calledUrl = "";
+  const fetchMock: typeof fetch = async (input) => {
+    calledUrl = String(input);
+    return jsonResponse({
+      activities: [
+        {
+          kind: "pull_request_publication",
+          id: "publication:pr-1",
+          bucket: "attention",
+          operation: {
+            id: "pr-1",
+            kind: "pull_request_publication",
+            state: "failed",
+            phases: [{ key: "push", label: "Pushing the branch", state: "failed" }],
+            error: { code: "github_push_failed", message: "gh refused" },
+            retryable: true,
+            updated_at: "2026-07-25T10:00:00.000Z",
+          },
+          project: { id: "project-1", name: "Otomat" },
+          issue: { id: "issue-1", identifier: "ABC-1", title: "Ship it" },
+          run_id: "run-1",
+          phase: "Pushing the branch",
+          updated_at: "2026-07-25T10:00:00.000Z",
+        },
+      ],
+      observed_at: "2026-07-25T10:00:01.000Z",
+    });
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+
+  const snapshot = await client.listActivity();
+
+  expect(calledUrl).toBe("http://localhost:4319/api/activity");
+  expect(snapshot.activities[0]).toMatchObject({ bucket: "attention", run_id: "run-1" });
+});

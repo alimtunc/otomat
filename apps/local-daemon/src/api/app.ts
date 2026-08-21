@@ -7,6 +7,7 @@ import { HTTPException } from "hono/http-exception";
 import { correlatedRequestLog, DiagnosticLogRing, recordThrownFailure } from "#diagnostics";
 
 import type { ApiDeps } from "./deps.js";
+import { createActivityRoutes } from "./routes/activity.js";
 import { createAgentProfileRoutes } from "./routes/agent-profiles.js";
 import { createCatalogRoutes } from "./routes/catalog.js";
 import { createCompeteRoutes } from "./routes/compete.js";
@@ -47,6 +48,7 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.route("/api", createDiagnosticsRoutes(diagnosticLog));
   app.route("/api", createGitHubRoutes(deps));
   app.route("/api", createCatalogRoutes(deps));
+  app.route("/api/activity", createActivityRoutes(deps));
   app.route("/api/linear", createLinearRoutes(deps));
   app.route("/api/settings", createSettingsRoutes(deps));
   app.route("/api/repositories", createRepositoryRoutes(deps));

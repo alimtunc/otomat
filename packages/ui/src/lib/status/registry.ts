@@ -3,6 +3,7 @@ import type {
   ChangeStatus,
   CompeteGroupState,
   IssueBoardColumn,
+  OperationState,
   PullRequestState,
   ReviewCommentPublicationState,
   ReviewCommentState,
@@ -115,6 +116,13 @@ const COMPETE_STATUS: StatusMap<CompeteGroupState> = {
   canceled: { tone: "neutral", icon: Ban, label: "Canceled" },
 };
 
+const OPERATION_STATUS: StatusMap<OperationState> = {
+  running: { tone: "iris", icon: Loader, label: "Running", live: true },
+  succeeded: { tone: "success", icon: CheckCircle2, label: "Done" },
+  interrupted: { tone: "stale", icon: AlertTriangle, label: "Interrupted" },
+  failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
+};
+
 const REVIEW_STATUS: StatusMap<ReviewState> = {
   open: { tone: "iris", icon: CircleDot, label: "Open" },
   in_review: { tone: "iris", icon: MessageSquare, label: "In review" },
@@ -158,6 +166,7 @@ export const STATUS_REGISTRY = {
   step: STEP_STATUS,
   session: SESSION_STATUS,
   compete: COMPETE_STATUS,
+  operation: OPERATION_STATUS,
   review: REVIEW_STATUS,
   reviewComment: REVIEW_COMMENT_STATUS,
   reviewCommentPublication: REVIEW_COMMENT_PUBLICATION_STATUS,

@@ -7,6 +7,7 @@
  * (fail-loud in `listRuns`, fail-separate in `listActiveRuns`).
  * @packageDocumentation
  */
+export * from "./activity.js";
 export * from "./agent/index.js";
 export * from "./compete-groups.js";
 export * from "./daemon-settings.js";

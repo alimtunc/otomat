@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -20,6 +21,11 @@ function routedElement(node: ReactNode): ReactNode {
       component: () => null,
     }),
     createRoute({ getParentRoute: () => rootRoute, path: "/runs/$runId", component: () => null }),
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/runs/$runId/pr",
+      component: () => null,
+    }),
   ]);
   const router = createRouter({
     routeTree,
@@ -42,8 +48,11 @@ export async function mountRouted(node: ReactNode): Promise<Mounted> {
   return mounted;
 }
 
-export async function mountRoutedWithQuery(node: ReactNode): Promise<Mounted> {
-  const mounted = await mountWithQuery(routedElement(node));
+export async function mountRoutedWithQuery(
+  node: ReactNode,
+  client?: QueryClient,
+): Promise<Mounted> {
+  const mounted = await mountWithQuery(routedElement(node), client);
   await flushRouter();
   return mounted;
 }

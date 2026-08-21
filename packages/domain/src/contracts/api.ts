@@ -5,6 +5,7 @@
  *
  * @packageDocumentation
  */
+export * from "./activity.js";
 export * from "./agent-profile.js";
 export * from "./capacity.js";
 export * from "./commits.js";
