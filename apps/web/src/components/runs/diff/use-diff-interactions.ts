@@ -8,6 +8,8 @@ import { nextUnreviewedFile, revealAndFocus } from "@web/components/runs/diff/di
 import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
 import type { DiffSortMode } from "@web/components/runs/diff/prefs/prefs";
 import type { RevealBlock } from "@web/components/runs/diff/scroll";
+import { useDiffSearch, type DiffSearch } from "@web/components/runs/diff/search/use-diff-search";
+import { useSearchReveal } from "@web/components/runs/diff/search/use-search-reveal";
 import { useActiveDiffFile, type ActiveDiffFile } from "@web/components/runs/diff/use-active-file";
 import {
   useCollapsedFiles,
@@ -23,7 +25,7 @@ import {
 import { reviewCommentDomId } from "@web/components/runs/review/comment/anchor";
 import { partitionComments, type PartitionedComments } from "@web/components/runs/review/partition";
 import { useBackNavigation } from "@web/components/shell/use-back-navigation";
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 
 interface PendingReveal {
   domId: string;
@@ -47,6 +49,7 @@ export interface DiffInteractions {
   reviewed: ReviewedFiles;
   active: ActiveDiffFile;
   collapsed: CollapsedFiles;
+  search: DiffSearch;
   revealFile: (path: string) => void;
   toggleReviewed: (path: string, next: boolean) => void;
   selectComment: (comment: ReviewCommentContract) => void;
@@ -58,7 +61,10 @@ export function useDiffInteractions(input: DiffInteractionsInput): DiffInteracti
   const active = useActiveDiffFile();
   const reviewed = useReviewedFiles(input.target, input.reviewedFiles, input.diff.files);
   const collapsed = useCollapsedFiles(input.diff.files, reviewed.paths);
-  const ordered = sortDiffFiles(input.diff.files, input.sort);
+  const ordered = useMemo(
+    () => sortDiffFiles(input.diff.files, input.sort),
+    [input.diff.files, input.sort],
+  );
   const partition = partitionComments(input.diff, input.comments);
   const visible = hideReviewedFiles(ordered, {
     hideReviewed: input.hideReviewed,
@@ -67,10 +73,15 @@ export function useDiffInteractions(input: DiffInteractionsInput): DiffInteracti
     activePath: active.path,
   });
   const [revealing, setRevealing] = useState<PendingReveal | null>(null);
+  const search = useDiffSearch(input.diff.files, ordered);
 
-  const revealFile = (path: string): void => {
+  const showFile = (path: string): void => {
     active.select(path);
     collapsed.set(path, false);
+  };
+
+  const revealFile = (path: string): void => {
+    showFile(path);
     setRevealing({ domId: diffFileDomId({ path }), block: "start", selecting: path });
   };
 
@@ -95,10 +106,7 @@ export function useDiffInteractions(input: DiffInteractionsInput): DiffInteracti
 
   const selectComment = (comment: ReviewCommentContract): void => {
     const anchored = partition.anchoredIds.has(comment.id);
-    if (anchored) {
-      active.select(comment.file_path);
-      collapsed.set(comment.file_path, false);
-    }
+    if (anchored) showFile(comment.file_path);
     setRevealing({
       domId: reviewCommentDomId(comment.id),
       block: "center",
@@ -106,13 +114,18 @@ export function useDiffInteractions(input: DiffInteractionsInput): DiffInteracti
     });
   };
 
+  useSearchReveal(search, showFile);
+
   useDiffKeyboardNav({
     enabled: ordered.length > 0,
     files: visible.files,
     activePath: active.path,
     onJumpToFile: (file) => revealFile(file.path),
     onToggleReviewed: (path) => toggleReviewed(path, !reviewed.paths.has(path)),
-    onExit: () => back?.goBack(),
+    onExit: () => {
+      if (search.query !== "") search.setQuery("");
+      else back?.goBack();
+    },
   });
 
   return {
@@ -121,6 +134,7 @@ export function useDiffInteractions(input: DiffInteractionsInput): DiffInteracti
     reviewed,
     active,
     collapsed,
+    search,
     revealFile,
     toggleReviewed,
     selectComment,

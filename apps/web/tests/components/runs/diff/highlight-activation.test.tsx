@@ -7,7 +7,7 @@ import { act, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { fileCommentActions } from "#support/diff-card";
-import { overflowLonghandStyle, stubDiffCanvas } from "#support/diff-dom";
+import { diffCardsOf, overflowLonghandStyle, stubDiffCanvas } from "#support/diff-dom";
 import { diffFile, diffPatch } from "#support/diff-file";
 import { mountWithQuery } from "#support/mount";
 import { stubViewport, type ViewportStub } from "#support/viewport";
@@ -68,13 +68,9 @@ function Reviewer() {
   );
 }
 
-function cardsOf(container: HTMLElement): HTMLElement[] {
-  return [...container.querySelectorAll<HTMLElement>("section[aria-label]")];
-}
-
 /** The paths whose body carries highlighter output rather than plain text. */
 function coloured(container: HTMLElement): string[] {
-  return cardsOf(container)
+  return diffCardsOf(container)
     .filter((card) => card.querySelector(".hljs-keyword") !== null)
     .map((card) => card.getAttribute("aria-label") ?? "");
 }
@@ -102,7 +98,7 @@ async function mountReviewer() {
   const scroller = mounted.container.querySelector<HTMLElement>(".overflow-auto");
   if (scroller === null) throw new Error("the cards are not inside a scroll container");
   await act(async () => {
-    viewport.layout(cardsOf(mounted.container), CARD);
+    viewport.layout(diffCardsOf(mounted.container), CARD);
   });
   return { ...mounted, scroller };
 }

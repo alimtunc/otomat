@@ -21,6 +21,7 @@ import { DiffFileNav } from "@web/components/runs/diff/files/nav";
 import { DiffFixBar } from "@web/components/runs/diff/fix-bar";
 import { RunDiffHeader } from "@web/components/runs/diff/header";
 import { diffPrefsStore } from "@web/components/runs/diff/prefs/store";
+import { DiffSearchField } from "@web/components/runs/diff/search/field";
 import { DiffSidebar } from "@web/components/runs/diff/sidebar";
 import { useDiffInteractions } from "@web/components/runs/diff/use-diff-interactions";
 import type { DiffFileCommentActions } from "@web/components/runs/review/file-comments";
@@ -158,6 +159,7 @@ export function ReviewWorkbench({
       <RunDiffHeader
         diff={diff}
         scopeControl={scopeControl}
+        search={<DiffSearchField search={interactions.search} />}
         reviewStatus={review.review?.status ?? null}
         prefs={prefs}
         onPrefsChange={diffPrefsStore.actions.set}

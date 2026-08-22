@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
-import type { ReviewDetail, ReviewDiffResponse } from "@otomat/domain";
+import type { ReviewDiffResponse } from "@otomat/domain";
 import { RunDiffView } from "@web/components/runs/diff/view";
 import type { ReactNode } from "react";
 import { expect, it, vi } from "vitest";
 
 import type { FakeQueryState } from "#support/fake-query";
 import { mount } from "#support/mount";
+import { reviewDetail } from "#support/review-detail";
 
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ runId: "run-1" }),
@@ -26,13 +27,9 @@ const DIFF: ReviewDiffResponse = {
   unavailable: null,
 };
 
-const REVIEW: ReviewDetail = {
-  review: null,
-  comments: [],
-  reviewed_files: [],
+const REVIEW = reviewDetail([], {
   fix_authority: { kind: "otomat", reason: "Otomat owns this branch." },
-  destinations: { pr_review: false, reason: "This run has no pull request yet." },
-};
+});
 
 const fresh = (data: unknown) => ({
   isPending: false,
