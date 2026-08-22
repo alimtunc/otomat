@@ -1,7 +1,8 @@
 import type { ReviewState, ReviewDiffContract } from "@otomat/domain";
-import { Kbd, ReviewStatusChip } from "@otomat/ui";
+import { ReviewStatusChip } from "@otomat/ui";
 import { DiffPrefsPopover } from "@web/components/runs/diff/prefs/popover";
 import type { DiffPrefs } from "@web/components/runs/diff/prefs/prefs";
+import { DiffShortcutsPopover } from "@web/components/runs/diff/shortcuts-popover";
 import { DiffSummary } from "@web/components/runs/diff/summary";
 import type { ReactNode } from "react";
 
@@ -47,19 +48,9 @@ export function RunDiffHeader({
           {activePath}
         </span>
       )}
-      {hasFiles ? (
-        <span className="hidden items-center gap-1.5 text-[10px] text-text-tertiary xl:flex">
-          <Kbd>j</Kbd>
-          <Kbd>k</Kbd> files
-          <Kbd>n</Kbd>
-          <Kbd>p</Kbd> changes
-          <Kbd>v</Kbd> reviewed
-          <Kbd>⌘F</Kbd> find
-          <Kbd>esc</Kbd> back
-        </span>
-      ) : null}
       <span className="ml-auto flex items-center gap-2.5">
         {hasFiles ? search : null}
+        {hasFiles ? <DiffShortcutsPopover /> : null}
         <DiffPrefsPopover prefs={prefs} onChange={onPrefsChange} browsable={browsable} />
         {prefs.stats && diff !== null ? <DiffSummary diff={diff} /> : null}
       </span>

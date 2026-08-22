@@ -203,6 +203,8 @@ describe("searching the loaded hunks from the reviewer toolbar", () => {
     const view = await mountReviewer();
 
     expect(view.counter()).toBe("");
+    expect(view.field.classList.contains("selection:bg-iris")).toBe(true);
+    expect(view.field.classList.contains("selection:text-on-accent")).toBe(true);
 
     await view.cleanup();
   });
