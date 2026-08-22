@@ -1,5 +1,5 @@
 import type { RunEventStream } from "@web/api/runs/run-event-stream";
-import type { RunEventHistory } from "@web/api/runs/use-event-history";
+import type { RunEventHistory } from "@web/api/runs/use-event-window-history";
 
 export function eventHistory(overrides: Partial<RunEventHistory> = {}): RunEventHistory {
   return {

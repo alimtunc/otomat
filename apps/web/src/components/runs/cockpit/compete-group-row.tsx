@@ -8,11 +8,17 @@ export function CompeteGroupRow({
   node,
   number,
   dependencies,
+  selectedStepId,
+  onSelectStep,
+  hasNewActivity,
 }: {
   detail: RunDetail;
   node: RunPlanCompeteGroup;
   number?: number;
   dependencies: string[];
+  selectedStepId: string | null;
+  onSelectStep: (stepId: string) => void;
+  hasNewActivity: (stepId: string) => boolean;
 }) {
   const group = detail.compete_groups.find((entry) => entry.id === node.id);
   if (!group) return null;
@@ -47,6 +53,9 @@ export function CompeteGroupRow({
               step={step}
               nested
               winner={group.winner_step_run_id === step.id}
+              selected={step.id === selectedStepId}
+              onSelect={() => onSelectStep(step.id)}
+              newActivity={hasNewActivity(step.id)}
             />
           ) : null;
         })}

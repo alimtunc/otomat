@@ -34,7 +34,7 @@ export function optionSelectionsFromValues(options: ProviderOptions): ExecutionO
 }
 
 export function overrideLevel(
-  source: Extract<ExecutionSource, "step" | "launch">,
+  source: Extract<ExecutionSource, "turn" | "step" | "launch">,
   overrides: ExecutionOverrides,
 ): ExecutionLevel {
   const level: ExecutionLevel = { source, agent: false, options: overrides.options ?? {} };

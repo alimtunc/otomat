@@ -10,6 +10,7 @@ import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
+import { seedIssueRun } from "@web/api/runs/seed-run";
 import { describeRunWait } from "@web/lib/run/wait-copy";
 
 /** Starts a run. On success seeds the issue's run list with the confirmed run, then invalidates. */
@@ -18,12 +19,7 @@ function useStartRun() {
   return useMutation({
     mutationFn: (request: StartRunRequest) => daemon.startRun(request),
     onSuccess: (launched) => {
-      // Seeding first keeps the new run followed while the refetch is in flight or failing;
-      // without it `resolveFollowedRun` falls back to an older run.
-      client.setQueryData<RunContract[]>(
-        queryKeys.runsForIssue(launched.run.issue_id),
-        (runs = []) => [...runs.filter((run) => run.id !== launched.run.id), launched.run],
-      );
+      seedIssueRun(client, launched.run);
       client.invalidateQueries({ queryKey: queryKeys.issues });
       client.invalidateQueries({ queryKey: queryKeys.runs });
     },

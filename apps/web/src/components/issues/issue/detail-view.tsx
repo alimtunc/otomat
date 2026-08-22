@@ -57,11 +57,15 @@ function RunsArea({
   launchAction,
   followedRun,
   onFollow,
+  selectedStepId,
+  onSelectStep,
 }: {
   query: ReturnType<typeof useRunsForIssue>;
   launchAction: ReactNode;
   followedRun: RunContract | null;
   onFollow: (runId: string) => void;
+  selectedStepId: string | null;
+  onSelectStep: (stepId: string) => void;
 }) {
   return (
     <QueryList
@@ -77,7 +81,13 @@ function RunsArea({
       empty={<NoRunsEmptyState launchAction={launchAction} />}
     >
       {(runs) => (
-        <RunConversations runs={runs} followedRunId={followedRun?.id ?? null} onFollow={onFollow} />
+        <RunConversations
+          runs={runs}
+          followedRunId={followedRun?.id ?? null}
+          selectedStepId={selectedStepId}
+          onFollow={onFollow}
+          onSelectStep={onSelectStep}
+        />
       )}
     </QueryList>
   );
@@ -86,7 +96,7 @@ function RunsArea({
 /** A single SSE stream, opened for the followed run, feeds both its thread and the rail. */
 export function IssueDetailView() {
   const { issueId } = useParams({ from: "/issues/$issueId" });
-  const { run: selectedRunId } = useSearch({ from: "/issues/$issueId" });
+  const { run: selectedRunId, step: selectedStepId } = useSearch({ from: "/issues/$issueId" });
   const navigate = useNavigate();
   const issue = useIssue(issueId);
   const runs = useRunsForIssue(issueId);
@@ -95,17 +105,29 @@ export function IssueDetailView() {
   const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
   const railLayout = usePanelGroupLayout("otomat.issue-detail");
 
-  const follow = (runId: string): void => {
+  const follow = (runId: string, stepId?: string): void => {
     void navigate({
       to: "/issues/$issueId",
       params: { issueId },
-      search: { run: runId },
+      search: { run: runId, step: stepId },
+      replace: true,
+    });
+  };
+
+  const selectStep = (stepId: string): void => {
+    if (!followedRun) return;
+    void navigate({
+      to: "/issues/$issueId",
+      params: { issueId },
+      search: { run: followedRun.id, step: stepId },
       replace: true,
     });
   };
 
   const idLabel = issue.data ? issueShortId(issue.data) : shortId(issueId);
-  const launchAction = <LaunchRunDialog issue={issue.data} onLaunched={(run) => follow(run.id)} />;
+  const launchAction = (
+    <LaunchRunDialog issue={issue.data} onLaunched={(run, stepId) => follow(run.id, stepId)} />
+  );
   // The header acts on the issue's canonical cycle, not on whichever old run is being read.
   const cycleRunId = issue.data?.workspace.run_id ?? followedRun?.id ?? null;
 
@@ -121,6 +143,8 @@ export function IssueDetailView() {
           launchAction={launchAction}
           followedRun={followedRun}
           onFollow={follow}
+          selectedStepId={selectedStepId ?? null}
+          onSelectStep={selectStep}
         />
       </div>
     </div>

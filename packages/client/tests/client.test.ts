@@ -39,6 +39,18 @@ const RUN = {
   updated_at: "2026-07-25T10:00:00.000Z",
 };
 
+const TARGET_CONFIG = {
+  runtime: "claude",
+  profile_id: "profile-1",
+  profile_name: "Implementer",
+  options: {},
+  model: null,
+  guidance: null,
+  skills: [],
+  sources: null,
+  config_hash: "config-1",
+};
+
 const CONTRIBUTION = {
   id: "contribution-1",
   run_id: "run-1",
@@ -47,6 +59,8 @@ const CONTRIBUTION = {
   body: "keep going",
   status: "queued",
   agent_session_id: null,
+  target_agent_session_id: "session-1",
+  target_config: TARGET_CONFIG,
   delivered_at: null,
   settled_at: null,
   attempts: 0,
@@ -99,6 +113,7 @@ it("parses the runtime catalog with kind and availability", async () => {
       steering: "turn_boundary",
       abort: true,
       resume: true,
+      resume_model: { status: "supported" },
       permissions: false,
       diff_hints: false,
       provider_limit: "deadline",
@@ -181,12 +196,16 @@ it("posts a message to the run's contributions endpoint and parses its queued st
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
   const result = await client.createRunContribution("run-1", {
     step_run_id: "step-1",
+    target_agent_session_id: "session-1",
+    target_config_hash: "config-1",
     body: "keep going",
   });
   expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/contributions");
   expect(captured.method).toBe("POST");
   expect(JSON.parse(String(captured.body))).toEqual({
     step_run_id: "step-1",
+    target_agent_session_id: "session-1",
+    target_config_hash: "config-1",
     body: "keep going",
   });
   expect(result.status).toBe("queued");
@@ -458,13 +477,17 @@ it("posts a fix request with the selected comment ids", async () => {
   const fetchMock: typeof fetch = async (input, init) => {
     calledUrl = String(input);
     body = JSON.parse(String(init?.body));
-    return jsonResponse({ ...RUN, status: "running" });
+    return jsonResponse({ run: { ...RUN, status: "running" }, step_run_id: "fix-step" });
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
-  const result = await client.requestFix("run-1", { comment_ids: ["c1", "c2"] });
+  const result = await client.requestFix("run-1", {
+    comment_ids: ["c1", "c2"],
+    profile_id: "profile-1",
+  });
   expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/review/fix");
-  expect(body).toEqual({ comment_ids: ["c1", "c2"] });
-  expect(result.status).toBe("running");
+  expect(body).toEqual({ comment_ids: ["c1", "c2"], profile_id: "profile-1" });
+  expect(result.run.status).toBe("running");
+  expect(result.step_run_id).toBe("fix-step");
 });
 
 it("reads connection state and starts delegated GitHub login", async () => {

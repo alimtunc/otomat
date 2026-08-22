@@ -1,4 +1,4 @@
-import type { RunEventHistory } from "@web/api/runs/use-event-history";
+import type { RunEventHistory } from "@web/api/runs/use-event-window-history";
 import { useEffect, useState, type RefCallback } from "react";
 
 /**

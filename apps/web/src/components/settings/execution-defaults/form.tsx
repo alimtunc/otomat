@@ -22,7 +22,7 @@ export function ExecutionDefaultsForm({ defaults }: { defaults: ExecutionDefault
             <FieldLabel>Default execution</FieldLabel>
             <FieldControl>
               <ExecutionConfigPicker
-                runtimesOnly
+                scope="runtimes"
                 level="global"
                 value={field.state.value}
                 onChange={field.handleChange}

@@ -1,8 +1,20 @@
-import type { RunDetail, RunState, RuntimeDescriptor } from "@otomat/domain";
+import type { ResolvedAgentConfig, RunDetail, RunState, RuntimeDescriptor } from "@otomat/domain";
 import { queuedCount, resolveContributionGate } from "@web/lib/run/contribution";
 import { expect, it } from "vitest";
 
 import { contribution } from "#support/contribution";
+
+const CONFIG: ResolvedAgentConfig = {
+  runtime: "claude",
+  profile_id: "profile-1",
+  profile_name: "Implementer",
+  options: {},
+  model: { id: "claude-opus", source: "manual" },
+  guidance: null,
+  skills: [],
+  sources: { runtime: "profile", model: "profile", options: {} },
+  config_hash: "config-1",
+};
 
 function detail(status: RunState, providerSessionId: string | null = "ps-1"): RunDetail {
   return {
@@ -13,7 +25,16 @@ function detail(status: RunState, providerSessionId: string | null = "ps-1"): Ru
       branch: "otomat/run/run-1",
       plan_json: {
         version: 1,
-        steps: [{ id: "s1", name: "Agent turn", agent: "claude", prompt: "p", depends_on: [] }],
+        steps: [
+          {
+            id: "s1",
+            name: "Agent turn",
+            agent: "claude",
+            prompt: "p",
+            depends_on: [],
+            config: CONFIG,
+          },
+        ],
       },
       updated_at: "2026-07-25T10:00:00.000Z",
     },
@@ -29,6 +50,7 @@ function detail(status: RunState, providerSessionId: string | null = "ps-1"): Ru
         branch: null,
         worktree_status: null,
         provider_wait: null,
+        next_turn_config: null,
       },
     ],
     sessions: [
@@ -38,6 +60,17 @@ function detail(status: RunState, providerSessionId: string | null = "ps-1"): Ru
         agent_id: "claude",
         status: "active",
         provider_session_id: providerSessionId,
+        resumed_from_session_id: null,
+        config: CONFIG,
+        reported_model: null,
+        started_at: "2026-07-25T10:00:00.000Z",
+        boundary: {
+          start_tree_sha: null,
+          start_head_sha: null,
+          end_tree_sha: null,
+          end_head_sha: null,
+          error: null,
+        },
       },
     ],
     compete_groups: [],
@@ -54,6 +87,7 @@ const CLAUDE: RuntimeDescriptor = {
     steering: "turn_boundary",
     abort: true,
     resume: true,
+    resume_model: { status: "supported" },
     permissions: false,
     diff_hints: false,
   },
@@ -61,7 +95,7 @@ const CLAUDE: RuntimeDescriptor = {
 };
 
 it("promises the next safe turn while the agent is working, and names the step", () => {
-  const gate = resolveContributionGate(detail("running", null), [CLAUDE], "online");
+  const gate = resolveContributionGate(detail("running", null), [CLAUDE], "online", "s1");
   expect(gate.stepRunId).toBe("s1");
   expect(gate.stepName).toBe("Agent turn");
   expect(gate.queues).toBe(true);
@@ -69,23 +103,25 @@ it("promises the next safe turn while the agent is working, and names the step",
 });
 
 it("sends straight away on a resting run with a resumable session", () => {
-  const gate = resolveContributionGate(detail("awaiting_human"), [CLAUDE], "online");
+  const gate = resolveContributionGate(detail("awaiting_human"), [CLAUDE], "online", "s1");
   expect(gate).toEqual({
     stepRunId: "s1",
     stepName: "Agent turn",
+    targetAgentSessionId: "as1",
+    targetConfig: CONFIG,
     queues: false,
     note: "Resumes this step's agent session as a new turn.",
   });
 });
 
 it("says the run is waiting for capacity rather than claiming the agent is working", () => {
-  const gate = resolveContributionGate(detail("queued", null), [CLAUDE], "online");
+  const gate = resolveContributionGate(detail("queued", null), [CLAUDE], "online", "s1");
   expect(gate.stepRunId).toBe("s1");
   expect(gate.queues).toBe(true);
   expect(gate.note).toContain("waiting for capacity");
 });
 
-it("keeps addressing the live step mid-turn, whose provider id only lands at settle", () => {
+it("addresses exactly the selected step, never a sibling with more recent activity", () => {
   const base = detail("running");
   const [firstStep] = base.steps;
   const [firstSession] = base.sessions;
@@ -101,12 +137,13 @@ it("keeps addressing the live step mid-turn, whose provider id only lands at set
     },
     [CLAUDE],
     "online",
+    "s2",
   );
   expect(gate.stepRunId).toBe("s2");
   expect(gate.stepName).toBe("Follow-up");
 });
 
-it("addresses an earlier resumable step when the furthest one has no provider session", () => {
+it("refuses the selected step on a resting run when its own session has no provider id", () => {
   const base = detail("awaiting_human");
   const [firstStep] = base.steps;
   const [firstSession] = base.sessions;
@@ -122,44 +159,45 @@ it("addresses an earlier resumable step when the furthest one has no provider se
     },
     [CLAUDE],
     "online",
+    "s2",
   );
-  expect(gate.stepRunId).toBe("s1");
-  expect(gate.stepName).toBe("Agent turn");
+  expect(gate.stepRunId).toBeNull();
+  expect(gate.note).toContain("No provider session");
 });
 
 it("refuses a resting run whose session has no provider id to resume", () => {
-  const gate = resolveContributionGate(detail("awaiting_human", null), [CLAUDE], "online");
+  const gate = resolveContributionGate(detail("awaiting_human", null), [CLAUDE], "online", "s1");
   expect(gate.stepRunId).toBeNull();
   expect(gate.note).toContain("No provider session");
 });
 
 it("refuses a terminal run", () => {
-  const gate = resolveContributionGate(detail("completed"), [CLAUDE], "online");
+  const gate = resolveContributionGate(detail("completed"), [CLAUDE], "online", "s1");
   expect(gate.stepRunId).toBeNull();
   expect(gate.note).toContain("finished");
 });
 
 it("refuses while the daemon is offline", () => {
-  const gate = resolveContributionGate(detail("running"), [CLAUDE], "offline");
+  const gate = resolveContributionGate(detail("running"), [CLAUDE], "offline", "s1");
   expect(gate.stepRunId).toBeNull();
   expect(gate.note).toContain("Daemon offline");
 });
 
 it("refuses a runtime that cannot resume or is unavailable", () => {
   const noResume = { ...CLAUDE, capabilities: { ...CLAUDE.capabilities, resume: false } };
-  expect(resolveContributionGate(detail("running"), [noResume], "online").note).toContain(
+  expect(resolveContributionGate(detail("running"), [noResume], "online", "s1").note).toContain(
     "does not support resuming",
   );
 
   const missing = { ...CLAUDE, availability: { status: "missing", version: null } as const };
-  expect(resolveContributionGate(detail("running"), [missing], "online").note).toContain(
+  expect(resolveContributionGate(detail("running"), [missing], "online", "s1").note).toContain(
     "not available on this machine",
   );
 });
 
 it("sends into the live session, rather than queueing, when the runtime steers live", () => {
   const live = { ...CLAUDE, capabilities: { ...CLAUDE.capabilities, steering: "live" as const } };
-  const gate = resolveContributionGate(detail("running", null), [live], "online");
+  const gate = resolveContributionGate(detail("running", null), [live], "online", "s1");
 
   expect(gate.stepRunId).toBe("s1");
   expect(gate.queues).toBe(false);
@@ -171,7 +209,7 @@ it("says a runtime without steering cannot take a message once its session start
     ...CLAUDE,
     capabilities: { ...CLAUDE.capabilities, steering: "unsupported" as const },
   };
-  const gate = resolveContributionGate(detail("running"), [noSteering], "online");
+  const gate = resolveContributionGate(detail("running"), [noSteering], "online", "s1");
 
   expect(gate.stepRunId).toBeNull();
   expect(gate.note).toContain("cannot take a message once a session has started");
@@ -179,7 +217,7 @@ it("says a runtime without steering cannot take a message once its session start
 
 it("accepts a message for a step that has not started, promising its first turn", () => {
   const pending: RunDetail = { ...detail("queued"), sessions: [] };
-  const gate = resolveContributionGate(pending, [CLAUDE], "online");
+  const gate = resolveContributionGate(pending, [CLAUDE], "online", "s1");
 
   expect(gate.stepRunId).toBe("s1");
   expect(gate.queues).toBe(true);
@@ -200,6 +238,7 @@ it("refuses a run whose every step is a losing compete candidate", () => {
       branch: null,
       worktree_status: null,
       provider_wait: null,
+      next_turn_config: null,
     },
   ];
   runDetail.sessions = [
@@ -209,6 +248,17 @@ it("refuses a run whose every step is a losing compete candidate", () => {
       agent_id: "claude",
       status: "terminated",
       provider_session_id: "provider-loser",
+      resumed_from_session_id: null,
+      config: CONFIG,
+      reported_model: null,
+      started_at: "2026-07-25T10:00:00.000Z",
+      boundary: {
+        start_tree_sha: null,
+        start_head_sha: null,
+        end_tree_sha: null,
+        end_head_sha: null,
+        error: null,
+      },
     },
   ];
   runDetail.compete_groups = [
@@ -223,7 +273,9 @@ it("refuses a run whose every step is a losing compete candidate", () => {
     },
   ];
 
-  expect(resolveContributionGate(runDetail, [CLAUDE], "online").stepRunId).toBeNull();
+  const gate = resolveContributionGate(runDetail, [CLAUDE], "online", "loser");
+  expect(gate.stepRunId).toBeNull();
+  expect(gate.note).toContain("competitor was not selected");
 });
 
 it("routes to the selected competitor, never to a later losing session", () => {
@@ -239,6 +291,8 @@ it("routes to the selected competitor, never to a later losing session", () => {
       worktree_id: "worktree-winner",
       branch: "candidate/winner",
       worktree_status: "archived",
+      provider_wait: null,
+      next_turn_config: null,
     },
     {
       id: "loser",
@@ -250,6 +304,8 @@ it("routes to the selected competitor, never to a later losing session", () => {
       worktree_id: "worktree-loser",
       branch: "candidate/loser",
       worktree_status: "archived",
+      provider_wait: null,
+      next_turn_config: null,
     },
   ];
   runDetail.sessions = [
@@ -259,6 +315,17 @@ it("routes to the selected competitor, never to a later losing session", () => {
       agent_id: "claude",
       status: "awaiting_input",
       provider_session_id: "provider-winner",
+      resumed_from_session_id: null,
+      config: CONFIG,
+      reported_model: null,
+      started_at: "2026-07-25T10:00:00.000Z",
+      boundary: {
+        start_tree_sha: null,
+        start_head_sha: null,
+        end_tree_sha: null,
+        end_head_sha: null,
+        error: null,
+      },
     },
     {
       id: "loser-session",
@@ -266,6 +333,17 @@ it("routes to the selected competitor, never to a later losing session", () => {
       agent_id: "unregistered-runtime",
       status: "terminated",
       provider_session_id: "provider-loser",
+      resumed_from_session_id: null,
+      config: { ...CONFIG, runtime: "unregistered-runtime" },
+      reported_model: null,
+      started_at: "2026-07-25T10:00:00.000Z",
+      boundary: {
+        start_tree_sha: null,
+        start_head_sha: null,
+        end_tree_sha: null,
+        end_head_sha: null,
+        error: null,
+      },
     },
   ];
   runDetail.compete_groups = [
@@ -280,7 +358,10 @@ it("routes to the selected competitor, never to a later losing session", () => {
     },
   ];
 
-  expect(resolveContributionGate(runDetail, [CLAUDE], "online").stepRunId).toBe("winner");
+  expect(resolveContributionGate(runDetail, [CLAUDE], "online", "winner").stepRunId).toBe("winner");
+  expect(resolveContributionGate(runDetail, [CLAUDE], "online", "loser").note).toContain(
+    "competitor was not selected",
+  );
 });
 
 it("counts only the messages still waiting for a turn to start", () => {

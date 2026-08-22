@@ -7,6 +7,7 @@ import {
   DialogTrigger,
   Icon,
 } from "@otomat/ui";
+import { useNavigate } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
 import { AppendStepForm } from "@web/components/runs/steps/append-step-form";
 import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
@@ -24,6 +25,7 @@ const CLOSED_NOTE = "This issue's workspace is closed — launch a new cycle fro
 export function AddStepDialog({ issueId, stretch = false }: AddStepDialogProps) {
   const [open, setOpen] = useState(false);
   const [execution, setExecution] = useState<ExecutionSelection>(EMPTY_EXECUTION_SELECTION);
+  const navigate = useNavigate();
   const issue = useIssue(issueId);
   const workspace = issue.data?.workspace;
 
@@ -39,13 +41,13 @@ export function AddStepDialog({ issueId, stretch = false }: AddStepDialogProps) 
             title={workspace?.state === "open" ? undefined : CLOSED_NOTE}
           >
             <Icon name="plus" aria-hidden />
-            Add step
+            Add follow-up step
           </Button>
         }
       />
       <DialogContent aria-label="Add a step to this run">
         <DialogHeader>
-          <DialogTitle>Add step</DialogTitle>
+          <DialogTitle>Add follow-up step</DialogTitle>
         </DialogHeader>
         {issue.data && workspace?.state === "open" ? (
           <AppendStepForm
@@ -53,7 +55,14 @@ export function AddStepDialog({ issueId, stretch = false }: AddStepDialogProps) 
             workspace={workspace}
             execution={execution}
             onExecutionChange={setExecution}
-            onAppended={() => setOpen(false)}
+            onAppended={(response) => {
+              setOpen(false);
+              void navigate({
+                to: "/runs/$runId",
+                params: { runId: response.run.id },
+                search: { step: response.step_run_id },
+              });
+            }}
             onCancel={() => setOpen(false)}
           />
         ) : null}

@@ -8,17 +8,8 @@ import { agentConfigErrorResponse } from "./agent-config-refusal.js";
 import { refusalJson } from "./refusal.js";
 import { runtimeUnavailableResponse } from "./runtime-unavailable.js";
 
-/** The explicit agent choice every append-a-step request carries. */
-interface AgentChoiceRequest {
-  profile_id?: string;
-  runtime?: string;
-}
-
-/** The agent the caller picked for an appended step; a profile always wins over an ad-hoc runtime. */
-export function appendStepSelector(request: AgentChoiceRequest): AgentConfigSelector {
-  if (request.profile_id) return { kind: "profile", profileId: request.profile_id };
-  if (request.runtime) return { kind: "runtime", runtimeId: request.runtime };
-  throw new Error("append step request passed validation without an agent");
+export function appendStepSelector(request: { profile_id: string }): AgentConfigSelector {
+  return { kind: "profile", profileId: request.profile_id };
 }
 
 /**

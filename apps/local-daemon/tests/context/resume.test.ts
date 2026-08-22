@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import type { AppendStepInput } from "#supervisor";
 
+import { contributeToStep } from "../support/contribution.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { firstStepOf } from "../support/seed.js";
 import { makeSupervisor } from "../support/supervisor.js";
@@ -171,7 +172,13 @@ it("carries the same pull request into a message delivered to that session", asy
   await supervisor.settle();
   insertPullRequest(fix.db, { ...LATE_PULL_REQUEST, run_id: run.id });
 
-  await supervisor.contribute(run.id, firstStepOf(fix.db, run.id), "address the review");
+  await contributeToStep(
+    fix.db,
+    supervisor,
+    run.id,
+    firstStepOf(fix.db, run.id),
+    "address the review",
+  );
   await supervisor.settle();
 
   const prompt = spawn.jobs[1]?.prompt ?? "";

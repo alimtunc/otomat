@@ -13,6 +13,8 @@ export interface AppendRunContribution {
   run_id: string;
   step_run_id: string;
   body: string;
+  target_agent_session_id: string | null;
+  target_config_json: RunContributionRow["target_config_json"];
 }
 
 /** The tail read and the insert share one immediate transaction, so concurrent posts get distinct `seq` values. */
@@ -72,6 +74,25 @@ export function listClaimableStepContributions(db: Db, stepRunId: string): RunCo
     .where(and(eq(runContributions.step_run_id, stepRunId), claimable))
     .orderBy(runContributions.seq)
     .all();
+}
+
+export function listClaimableTurnContributions(
+  db: Db,
+  stepRunId: string,
+  configHash: string,
+  targetSessionId: string,
+): RunContributionRow[] {
+  const batch: RunContributionRow[] = [];
+  for (const row of listClaimableStepContributions(db, stepRunId)) {
+    if (
+      row.target_config_json?.config_hash !== configHash ||
+      (row.target_agent_session_id !== null && row.target_agent_session_id !== targetSessionId)
+    ) {
+      break;
+    }
+    batch.push(row);
+  }
+  return batch;
 }
 
 /** Every contribution still claiming a delivery, across runs; the boot pass resolves these against session evidence. */

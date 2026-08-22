@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 
-import type { ProviderOptions, RuntimeCapabilities } from "@otomat/domain";
+import type { ProviderOptions } from "@otomat/domain";
 
 import {
   requireProviderSession,
@@ -11,6 +11,7 @@ import {
 import type { TurnRef } from "#runtime/cli/turn-emitter";
 import type {
   RuntimeAdapter,
+  RuntimeAdapterCapabilities,
   RuntimeFinalState,
   RuntimeOneShot,
   RuntimeOptionSupport,
@@ -32,7 +33,7 @@ export const CODEX_ADAPTER_ID = "codex";
 export const CODEX_BINARY = "codex";
 
 /** `provider_limit` stops at `detects`: Codex reports an exhausted quota as a turn error and never says when it reopens. */
-const CODEX_CAPABILITIES: RuntimeCapabilities = {
+const CODEX_CAPABILITIES = {
   stream: true,
   steering: "turn_boundary",
   abort: true,
@@ -40,7 +41,7 @@ const CODEX_CAPABILITIES: RuntimeCapabilities = {
   permissions: false,
   diff_hints: false,
   provider_limit: "detects",
-};
+} satisfies RuntimeAdapterCapabilities;
 
 /** The official config override for the reasoning level; the TOML string keeps the value a value, never a flag. */
 function reasoningEffortOverride(level: string): string[] {

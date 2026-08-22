@@ -1,7 +1,9 @@
 // @vitest-environment happy-dom
 import {
   CLOSED_ISSUE_WORKSPACE,
+  type AgentProfileContract,
   type AppendRunStepRequest,
+  type AppendedRunStepResponse,
   type IssueContract,
   type RunContract,
   type RuntimeDescriptor,
@@ -18,22 +20,55 @@ import { mount } from "#support/mount";
 import { modelCatalogQueryResult } from "#support/runtime-models";
 import { providerOptionSetQueryResult } from "#support/runtime-options";
 
-// SAFETY: the dialogs read only the launched run's id.
-const launch = vi.fn(async () => ({ id: "run-1" }) as RunContract);
+const LAUNCHED_RUN: RunContract = {
+  id: "run-1",
+  issue_id: "issue-1",
+  status: "running",
+  branch: "otomat/run/run-1",
+  plan_json: { version: 1, steps: [] },
+  updated_at: "2026-08-21T00:00:00.000Z",
+};
+
+const launch = vi.fn(async () => LAUNCHED_RUN);
 const navigate = vi.fn();
 const onLaunched = vi.fn();
 const pickerProps = vi.fn();
+
+const PROFILE: AgentProfileContract = {
+  id: "profile-1",
+  name: "Implementer",
+  runtime: "claude",
+  options: {},
+  model: null,
+  guidance: null,
+  skill_ids: [],
+};
 
 interface ExecutionPickerProbeProps {
   level: string;
   value: { agent: string | null; options: Record<string, unknown> };
   onChange: (value: unknown) => void;
+  scope?: "all" | "profiles" | "runtimes";
 }
 
+const APPENDED_RUN: RunContract = {
+  id: "run-7",
+  issue_id: "issue-1",
+  status: "running",
+  branch: "otomat/run/run-7",
+  plan_json: { version: 1, steps: [] },
+  updated_at: "2026-08-21T00:00:00.000Z",
+};
+
 const appendStep = vi.fn(
-  (_request: AppendRunStepRequest, options?: { onSuccess?: (run: RunContract) => void }) => {
-    // SAFETY: the success handler reads only the launched run's id.
-    options?.onSuccess?.({ id: "run-7" } as RunContract);
+  (
+    _request: AppendRunStepRequest,
+    options?: { onSuccess?: (response: AppendedRunStepResponse) => void },
+  ) => {
+    options?.onSuccess?.({
+      run: APPENDED_RUN,
+      step_run_id: "appended-step",
+    });
   },
 );
 const appendTarget = vi.fn();
@@ -63,6 +98,7 @@ vi.mock("@web/api/daemon/queries", () => ({
           steering: "turn_boundary",
           abort: true,
           resume: true,
+          resume_model: { status: "supported" },
           permissions: false,
           diff_hints: false,
         },
@@ -87,7 +123,7 @@ vi.mock("@web/api/daemon/queries", () => ({
 }));
 
 vi.mock("@web/api/agent-profiles/queries", () => ({
-  useAgentProfiles: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
+  useAgentProfiles: () => ({ data: [PROFILE], isPending: false, isError: false, isSuccess: true }),
 }));
 
 vi.mock("@web/api/workflow-presets/queries", () => ({
@@ -109,7 +145,13 @@ vi.mock("@web/components/execution/execution-config-picker", () => ({
     return (
       <button
         type="button"
-        onClick={() => props.onChange({ ...props.value, model: { kind: "model", id: "opus" } })}
+        onClick={() =>
+          props.onChange({
+            ...props.value,
+            agent: props.scope === "profiles" ? "profile:profile-1" : props.value.agent,
+            model: { kind: "model", id: "opus" },
+          })
+        }
       >
         {`pick opus for ${props.level}`}
       </button>
@@ -167,7 +209,7 @@ function clickLabelled(label: string) {
 async function openDialog(issue: IssueContract = ISSUE) {
   const mounted = await mount(<LaunchRunDialog issue={issue} onLaunched={onLaunched} />);
   cleanups.push(mounted.cleanup);
-  await click(issue.workspace.state === "open" ? "Add step" : "Launch run");
+  await click(issue.workspace.state === "open" ? "Add follow-up step" : "Launch run");
 }
 
 function textarea(label: string): HTMLTextAreaElement {
@@ -214,7 +256,7 @@ it("launches with no user instruction at all when the note is left empty", async
     base_branch: "main",
     runtime: "claude",
   });
-  expect(onLaunched).toHaveBeenCalledWith({ id: "run-1" });
+  expect(onLaunched).toHaveBeenCalledWith(LAUNCHED_RUN, undefined);
   // The run belongs to the issue already on screen; navigating away would lose the workspace.
   expect(navigate).not.toHaveBeenCalled();
 });
@@ -345,10 +387,11 @@ it("grows the open workspace instead of offering a second launch", async () => {
 
 it("refuses to append until the step is named, and never for a missing instruction", async () => {
   await openDialog(CONTINUING);
-  expect(findButton("Add step⌘↵")?.disabled).toBe(true);
+  expect(findButton("Add follow-up step⌘↵")?.disabled).toBe(true);
 
   await act(async () => setInputValue(input("Step name"), "Address the failing test"));
-  expect(findButton("Add step⌘↵")?.disabled).toBe(false);
+  await click("pick opus for launch");
+  expect(findButton("Add follow-up step⌘↵")?.disabled).toBe(false);
 });
 
 it("appends the step on the agent the user picked and follows the run it joined", async () => {
@@ -358,19 +401,19 @@ it("appends the step on the agent the user picked and follows the run it joined"
     setTextareaValue(textarea("Appended step instructions"), "  fix the parser  ");
   });
   await click("pick opus for launch");
-  await click("Add step⌘↵");
+  await click("Add follow-up step⌘↵");
 
   expect(appendStep).toHaveBeenCalledWith(
     {
       name: "Address the failing test",
       note: "fix the parser",
-      runtime: "claude",
+      profile_id: "profile-1",
       model: { kind: "model", id: "opus" },
       depends_on: [],
     },
     expect.anything(),
   );
-  expect(onLaunched).toHaveBeenCalledWith({ id: "run-7" });
+  expect(onLaunched).toHaveBeenCalledWith(APPENDED_RUN, "appended-step");
   expect(launch).not.toHaveBeenCalled();
 });
 
@@ -386,9 +429,10 @@ const STOPPED: IssueContract = {
 it("links the appended step to the failure it recovers", async () => {
   await openDialog(STOPPED);
   await act(async () => setInputValue(input("Step name"), "Review again"));
+  await click("pick opus for launch");
 
   expect(document.body.textContent).toContain("This step recovers");
-  await click("Add step⌘↵");
+  await click("Add follow-up step⌘↵");
 
   expect(appendStep).toHaveBeenCalledWith(
     expect.objectContaining({ replaces: "step-2" }),
@@ -399,10 +443,11 @@ it("links the appended step to the failure it recovers", async () => {
 it("leaves the failure standing when the step is not declared a recovery", async () => {
   await openDialog(STOPPED);
   await act(async () => setInputValue(input("Step name"), "Unrelated work"));
+  await click("pick opus for launch");
   const optOut = document.querySelector<HTMLElement>("[role='checkbox']");
   if (!optOut) throw new Error("recovery checkbox not found");
   await act(async () => optOut.click());
-  await click("Add step⌘↵");
+  await click("Add follow-up step⌘↵");
 
   expect(appendStep).toHaveBeenCalledWith(
     expect.not.objectContaining({ replaces: expect.anything() }),

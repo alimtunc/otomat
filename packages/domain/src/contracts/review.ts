@@ -2,7 +2,6 @@ import { z } from "zod";
 
 import { CONTEXT_MAX_REVIEW_COMMENTS, CONTEXT_NOTE_MAX_LENGTH } from "../context/limits.js";
 import { contextReferencesSchema } from "../context/reference.js";
-import { RUN_PLAN_STEP_NAME_MAX_LENGTH } from "../plan/limits.js";
 import { diffFileContractSchema, diffSideSchema } from "./diff.js";
 import {
   reviewCommentContractSchema,
@@ -93,26 +92,18 @@ export type ReviewCommentError = z.infer<typeof reviewCommentErrorSchema>;
 export const requestFixRequestSchema = z
   .object({
     comment_ids: z.array(z.string().min(1)).min(1).max(CONTEXT_MAX_REVIEW_COMMENTS),
-    /** Agent profile frozen for the fix step; takes precedence over `runtime`. */
-    profile_id: z.string().min(1).optional(),
-    runtime: z.string().min(1).optional(),
+    profile_id: z.string().min(1),
     model: modelSelectionSchema.optional(),
     /** Provider options for the fix step alone; an absent key keeps what the chosen agent carries. */
     options: executionOptionSelectionsSchema.optional(),
-    /** Overrides the default `Fix review comments` step name. */
-    name: z.string().trim().min(1).max(RUN_PLAN_STEP_NAME_MAX_LENGTH).optional(),
     /** The one instruction the fix step adds to the frozen comments. */
     note: z.string().trim().min(1).max(CONTEXT_NOTE_MAX_LENGTH).optional(),
     /** Extra issues and repository files to attach alongside the comments. */
     context: contextReferencesSchema.optional(),
   })
-  .strict()
-  .refine((value) => Boolean(value.profile_id) || Boolean(value.runtime), {
-    message: "Provide either profile_id or runtime",
-  });
+  .strict();
 export type RequestFixRequest = z.infer<typeof requestFixRequestSchema>;
 
-/** Default name of the step a review fix appends. */
 export const FIX_REVIEW_COMMENTS_STEP_NAME = "Fix review comments";
 
 export const fixProofPassSchema = z.object({

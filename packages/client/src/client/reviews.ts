@@ -1,4 +1,5 @@
 import {
+  appendedRunStepResponseSchema,
   commentFixProofSchema,
   diffFileBlobsResponseSchema,
   pullRequestInboxSchema,
@@ -6,7 +7,6 @@ import {
   reviewDetailSchema,
   reviewDiffResponseSchema,
   reviewedFileContractSchema,
-  runContractSchema,
   runDiffScopeParams,
   type CreateReviewCommentRequest,
   type RequestFixRequest,
@@ -80,7 +80,7 @@ export function createReviewsClient(config: DaemonClientConfig) {
       );
     },
     async requestFix(runId: string, request: RequestFixRequest) {
-      return runContractSchema.parse(
+      return appendedRunStepResponseSchema.parse(
         await postJson(config, `/api/runs/${encodeURIComponent(runId)}/review/fix`, request),
       );
     },

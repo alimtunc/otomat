@@ -1,5 +1,5 @@
 import type { EventEnvelope } from "@otomat/domain";
-import type { RunEventHistory } from "@web/api/runs/use-event-history";
+import type { RunEventHistory } from "@web/api/runs/use-event-window-history";
 import { createContext, useContext } from "react";
 
 export type RunStreamState = "connecting" | "open" | "closed" | "error";

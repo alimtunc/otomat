@@ -1,5 +1,5 @@
 import type { AgentSessionState, SessionContext } from "@otomat/domain";
-import { and, eq, getTableColumns, isNull } from "drizzle-orm";
+import { and, eq, getTableColumns, isNull, max } from "drizzle-orm";
 
 import type { Db } from "#db/client";
 
@@ -10,7 +10,14 @@ export type NewAgentSession = typeof agentSessions.$inferInsert;
 export type AgentSessionRow = typeof agentSessions.$inferSelect;
 
 export function insertAgentSession(db: Db, value: NewAgentSession): void {
-  db.insert(agentSessions).values(value).run();
+  const tail = db
+    .select({ index: max(agentSessions.turn_index) })
+    .from(agentSessions)
+    .where(eq(agentSessions.step_run_id, value.step_run_id))
+    .get();
+  db.insert(agentSessions)
+    .values({ ...value, turn_index: value.turn_index ?? (tail?.index ?? -1) + 1 })
+    .run();
 }
 
 export function listAgentSessionsForRun(db: Db, runId: string): AgentSessionRow[] {
@@ -19,7 +26,7 @@ export function listAgentSessionsForRun(db: Db, runId: string): AgentSessionRow[
     .from(agentSessions)
     .innerJoin(stepRuns, eq(agentSessions.step_run_id, stepRuns.id))
     .where(eq(stepRuns.run_id, runId))
-    .orderBy(agentSessions.created_at)
+    .orderBy(stepRuns.idx, agentSessions.turn_index)
     .all();
 }
 
@@ -32,7 +39,13 @@ function patchAgentSession(
 }
 
 export function updateAgentSessionStatus(db: Db, id: string, status: AgentSessionState): void {
-  patchAgentSession(db, id, { status });
+  const values: Partial<typeof agentSessions.$inferInsert> = { status };
+  if (status === "active") values.started_at = new Date().toISOString();
+  patchAgentSession(db, id, values);
+}
+
+export function recordAgentSessionReportedModel(db: Db, id: string, model: string): void {
+  patchAgentSession(db, id, { reported_model: model });
 }
 
 /** Persist the provider session id (the resume key) once the runtime reports it. */

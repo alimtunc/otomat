@@ -18,8 +18,10 @@ import {
   RunContributionNotCancelableError,
   RunContributionNotRetriableError,
   RunContributionStepClosedError,
+  type Supervisor,
 } from "#supervisor";
 
+import { contributeToStep } from "../support/contribution.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { firstStepOf, seedRun, seedWorkflowRun } from "../support/seed.js";
 import { makeSupervisor } from "../support/supervisor.js";
@@ -38,11 +40,28 @@ function contributions(runId: string) {
   return listRunContributions(fix.db, runId);
 }
 
+function frozenSessionConfig(runId: string, sessionId: string) {
+  const config = listAgentSessionsForRun(fix.db, runId).find(
+    (session) => session.id === sessionId,
+  )?.config_json;
+  if (!config) throw new Error(`session ${sessionId} has no frozen config`);
+  return config;
+}
+
+async function contribute(supervisor: Supervisor, runId: string, stepRunId: string, body: string) {
+  return contributeToStep(fix.db, supervisor, runId, stepRunId, body);
+}
+
 it("persists a message sent during an active turn without claiming any delivery", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "linger");
   const run = await supervisor.start({ prompt: "do the work" });
 
-  const queued = await supervisor.contribute(run.id, firstStepOf(fix.db, run.id), "also add tests");
+  const queued = await contribute(
+    supervisor,
+    run.id,
+    firstStepOf(fix.db, run.id),
+    "also add tests",
+  );
 
   expect(queued.status).toBe("queued");
   expect(queued.delivered_at).toBeNull();
@@ -60,8 +79,8 @@ it("batches the queued messages into the next turn in send order, keeping each o
   const run = await supervisor.start({ prompt: "do the work" });
   const step = firstStepOf(fix.db, run.id);
 
-  await supervisor.contribute(run.id, step, "first message");
-  await supervisor.contribute(run.id, step, "second message");
+  await contribute(supervisor, run.id, step, "first message");
+  await contribute(supervisor, run.id, step, "second message");
   expect(spawn.calls).toBe(1);
   expect(contributions(run.id).map((entry) => entry.status)).toEqual(["queued", "queued"]);
 
@@ -90,7 +109,8 @@ it("carries a message queued while the run waited for capacity into that step's 
 
   // The second run owns its rows but has not spawned: its turn is still queued on the semaphore.
   expect(spawn.calls).toBe(1);
-  const queued = await supervisor.contribute(
+  const queued = await contribute(
+    supervisor,
     waiting.id,
     firstStepOf(fix.db, waiting.id),
     "use fixtures",
@@ -111,14 +131,19 @@ it("carries a message queued while the run waited for capacity into that step's 
 it("delivers on the run's own provider session and worktree", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, ["slow", "complete"]);
   const run = await supervisor.start({ prompt: "do the work" });
-  await supervisor.contribute(run.id, firstStepOf(fix.db, run.id), "keep going");
+  await contribute(supervisor, run.id, firstStepOf(fix.db, run.id), "keep going");
   await supervisor.settle();
 
   const [first, delivery] = spawn.jobs;
-  expect(delivery?.agentSessionId).toBe(first?.agentSessionId);
+  expect(delivery?.agentSessionId).not.toBe(first?.agentSessionId);
   expect(delivery?.stepRunId).toBe(first?.stepRunId);
   expect(delivery?.worktreePath).toBe(first?.worktreePath);
   expect(delivery?.providerSessionId).toBe(`fake-session-${first?.agentSessionId}`);
+  expect(
+    listAgentSessionsForRun(fix.db, run.id).find(
+      (session) => session.id === delivery?.agentSessionId,
+    )?.resumed_from_session_id,
+  ).toBe(first?.agentSessionId);
 });
 
 it("delivers a lone message verbatim when the run is already resting", async () => {
@@ -131,7 +156,8 @@ it("delivers a lone message verbatim when the run is already resting", async () 
     providerSessionId: "ps-resting",
   });
 
-  const sent = await supervisor.contribute(
+  const sent = await contribute(
+    supervisor,
     "resting",
     seeded.stepRunId,
     "Also add tests for the parser.",
@@ -158,9 +184,9 @@ it("refuses a message addressed to a step that will not run again", async () => 
     steps: [{ id: "done-step", status: "canceled" }],
   });
 
-  await expect(supervisor.contribute("done", "done-step", "one more thing")).rejects.toBeInstanceOf(
-    RunContributionStepClosedError,
-  );
+  await expect(
+    contribute(supervisor, "done", "done-step", "one more thing"),
+  ).rejects.toBeInstanceOf(RunContributionStepClosedError);
   expect(contributions("done")).toEqual([]);
 });
 
@@ -174,7 +200,8 @@ it("still takes a follow-up for a finished step, because resuming its session is
     providerSessionId: "ps-reviewed",
   });
 
-  const sent = await supervisor.contribute(
+  const sent = await contribute(
+    supervisor,
     "reviewed",
     seeded.stepRunId,
     "address the review comments",
@@ -194,7 +221,7 @@ it("fails a message the run cannot deliver and keeps it retriable", async () => 
     providerSessionId: null,
   });
 
-  const failed = await supervisor.contribute("nosession", seeded.stepRunId, "keep going");
+  const failed = await contribute(supervisor, "nosession", seeded.stepRunId, "keep going");
   expect(failed.status).toBe("failed");
   expect(failed.delivered_at).toBeNull();
   expect(failed.error).toContain("no provider session");
@@ -204,7 +231,7 @@ it("fails a message the run cannot deliver and keeps it retriable", async () => 
 it("withdraws a message the run can no longer carry once it is aborted", async () => {
   const { supervisor } = makeSupervisor(fix, "linger");
   const run = await supervisor.start({ prompt: "do the work" });
-  const queued = await supervisor.contribute(run.id, firstStepOf(fix.db, run.id), "never mind");
+  const queued = await contribute(supervisor, run.id, firstStepOf(fix.db, run.id), "never mind");
   expect(queued.status).toBe("queued");
 
   await supervisor.abort(run.id);
@@ -217,7 +244,7 @@ it("withdraws a message the run can no longer carry once it is aborted", async (
 
 it("fails an unreachable step's batch and still delivers the step that can take one", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "complete");
-  seedWorkflowRun(fix.db, {
+  const mixed = seedWorkflowRun(fix.db, {
     runId: "mixed",
     runStatus: "awaiting_human",
     steps: [
@@ -233,17 +260,23 @@ it("fails an unreachable step's batch and still delivers the step that can take 
       },
     ],
   });
+  const stuck = mixed("mixed-stuck");
+  const live = mixed("mixed-live");
   appendRunContribution(fix.db, {
     id: "c-stuck",
     run_id: "mixed",
     step_run_id: "mixed-stuck",
     body: "for the session that never reported",
+    target_agent_session_id: stuck.agentSessionId,
+    target_config_json: frozenSessionConfig("mixed", stuck.agentSessionId),
   });
   appendRunContribution(fix.db, {
     id: "c-live",
     run_id: "mixed",
     step_run_id: "mixed-live",
     body: "for the resumable one",
+    target_agent_session_id: live.agentSessionId,
+    target_config_json: frozenSessionConfig("mixed", live.agentSessionId),
   });
 
   await supervisor.deliverContributions("mixed");
@@ -265,7 +298,7 @@ it("retries a failed message that never reached the provider", async () => {
     sessionStatus: "awaiting_input",
     providerSessionId: null,
   });
-  const failed = await supervisor.contribute("retry", seeded.stepRunId, "keep going");
+  const failed = await contribute(supervisor, "retry", seeded.stepRunId, "keep going");
   expect(failed.status).toBe("failed");
 
   updateAgentSessionProvider(fix.db, seeded.agentSessionId, "ps-retry");
@@ -282,12 +315,12 @@ it("withdraws a message no turn has claimed, and refuses once one has", async ()
   const run = await supervisor.start({ prompt: "do the work" });
   const step = firstStepOf(fix.db, run.id);
 
-  const queued = await supervisor.contribute(run.id, step, "never mind this one");
+  const queued = await contribute(supervisor, run.id, step, "never mind this one");
   const canceled = supervisor.cancelContribution(run.id, queued.id);
   expect(canceled.status).toBe("canceled");
   expect(canceled.delivered_at).toBeNull();
 
-  const claimed = await supervisor.contribute(run.id, step, "this one is on its way");
+  const claimed = await contribute(supervisor, run.id, step, "this one is on its way");
   claimRunContributions(fix.db, [claimed.id], listAgentSessionsForRun(fix.db, run.id)[0]?.id ?? "");
   expect(() => supervisor.cancelContribution(run.id, claimed.id)).toThrowError(
     RunContributionNotCancelableError,
@@ -302,8 +335,8 @@ it("never carries a canceled message into a later turn", async () => {
   const run = await supervisor.start({ prompt: "do the work" });
   const step = firstStepOf(fix.db, run.id);
 
-  const dropped = await supervisor.contribute(run.id, step, "forget this");
-  await supervisor.contribute(run.id, step, "but do this");
+  const dropped = await contribute(supervisor, run.id, step, "forget this");
+  await contribute(supervisor, run.id, step, "but do this");
   supervisor.cancelContribution(run.id, dropped.id);
 
   await supervisor.settle();
@@ -323,7 +356,7 @@ it("refuses to retry a message the agent already received", async () => {
     providerSessionId: "ps-delivered",
   });
 
-  const sent = await supervisor.contribute("delivered", seeded.stepRunId, "keep going");
+  const sent = await contribute(supervisor, "delivered", seeded.stepRunId, "keep going");
   expect(sent.status).toBe("delivered");
   await supervisor.settle();
 
@@ -338,7 +371,8 @@ it("refuses to retry a message the agent already received", async () => {
 it("keeps a message queued across a restart and never spawns for it at boot", async () => {
   const first = makeSupervisor(fix, "linger");
   const run = await first.supervisor.start({ prompt: "do the work" });
-  const queued = await first.supervisor.contribute(
+  const queued = await contribute(
+    first.supervisor,
     run.id,
     firstStepOf(fix.db, run.id),
     "queued before the crash",
@@ -369,6 +403,8 @@ it("replays a message a restart left queued exactly once", async () => {
     run_id: "reconnected",
     step_run_id: seeded.stepRunId,
     body: "survive the restart",
+    target_agent_session_id: seeded.agentSessionId,
+    target_config_json: frozenSessionConfig("reconnected", seeded.agentSessionId),
   });
 
   const rebooted = makeSupervisor(fix, "complete");
@@ -409,12 +445,14 @@ it("treats a crash-time claim as delivered only when its worker was really launc
     pgid: 5353,
   });
 
-  const claimed = await supervisor.contribute(
+  const claimed = await contribute(
+    supervisor,
     "claimed",
     launched.stepRunId,
     "carried by the lost worker",
   );
-  const dropped = await supervisor.contribute(
+  const dropped = await contribute(
+    supervisor,
     "unclaimed",
     neverLaunched.stepRunId,
     "never handed over",
@@ -451,12 +489,12 @@ it("marks delivered messages failed when the turn carrying them fails", async ()
   });
   recordAgentSessionProcess(fix.db, seeded.agentSessionId, { pid: 1, pgid: 1 });
 
-  await supervisor.contribute("turnfails", seeded.stepRunId, "keep going");
+  await contribute(supervisor, "turnfails", seeded.stepRunId, "keep going");
   await supervisor.settle();
 
   const row = contributions("turnfails")[0];
   expect(row?.status).toBe("failed");
   expect(row?.error).toContain("failed");
   expect(row?.delivered_at).not.toBeNull();
-  expect(listAgentSessionsForRun(fix.db, "turnfails")).toHaveLength(1);
+  expect(listAgentSessionsForRun(fix.db, "turnfails")).toHaveLength(2);
 });

@@ -14,6 +14,8 @@ vi.mock("@otomat/ui", async (importOriginal) => ({
 
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ runId: "run-1" }),
+  useSearch: () => ({ step: null }),
+  useNavigate: () => vi.fn(),
   Link: ({ children }: { children?: ReactNode }) => <a>{children}</a>,
 }));
 
@@ -74,8 +76,12 @@ vi.mock("@web/api/runs/mutations", () => ({
   useAbandonWorkspace: () => ({ mutate: () => {}, isPending: false }),
 }));
 
-vi.mock("@web/components/runs/conversation/thread", () => ({
-  ConversationThread: () => <div data-testid="conversation" />,
+vi.mock("@web/components/runs/conversation/step-thread", () => ({
+  StepConversationThread: () => <div data-testid="conversation" />,
+}));
+
+vi.mock("@web/components/runs/conversation/header", () => ({
+  ConversationHeader: () => null,
 }));
 
 vi.mock("@web/components/runs/compete/comparison", () => ({

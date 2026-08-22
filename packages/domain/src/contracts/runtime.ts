@@ -25,12 +25,19 @@ export const RUNTIME_PROVIDER_LIMIT_MODES = ["unsupported", "detects", "deadline
 export const runtimeProviderLimitModeSchema = z.enum(RUNTIME_PROVIDER_LIMIT_MODES);
 export type RuntimeProviderLimitMode = z.infer<typeof runtimeProviderLimitModeSchema>;
 
+export const runtimeResumeModelCapabilitySchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("supported") }),
+  z.object({ status: z.literal("unsupported"), reason: z.string().min(1) }),
+]);
+export type RuntimeResumeModelCapability = z.infer<typeof runtimeResumeModelCapabilitySchema>;
+
 /** Optional behaviors a runtime may advertise; absent ones degrade silently in the UI. Single source for the daemon registry and the wire contract. */
 export const runtimeCapabilitiesSchema = z.object({
   stream: z.boolean(),
   steering: runtimeSteeringModeSchema,
   abort: z.boolean(),
   resume: z.boolean(),
+  resume_model: runtimeResumeModelCapabilitySchema,
   permissions: z.boolean(),
   diff_hints: z.boolean(),
   provider_limit: runtimeProviderLimitModeSchema,

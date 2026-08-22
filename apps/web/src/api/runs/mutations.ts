@@ -7,11 +7,15 @@ import {
   workspaceAbandonErrorSchema,
   type AppendRunStepRequest,
   type CreateRunContributionRequest,
+  type RunContributionsResponse,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
+import { seedContribution } from "@web/api/runs/seed-contribution";
+import { seedIssueRun } from "@web/api/runs/seed-run";
+import { contributionErrorMessage } from "@web/lib/run/contribution";
 
 /** Every cycle command drops the same caches: the issue's join in, because it decides what can still be continued. */
 function invalidateRunCycleCaches(client: QueryClient, runId: string): void {
@@ -109,7 +113,10 @@ export function useAppendRunStep(runId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: AppendRunStepRequest) => daemon.appendRunStep(runId, request),
-    onSuccess: () => invalidateRunCycleCaches(client, runId),
+    onSuccess: (response) => {
+      seedIssueRun(client, response.run);
+      invalidateRunCycleCaches(client, runId);
+    },
     onError: (error) => toast.error(appendStepErrorMessage(error)),
   });
 }
@@ -139,52 +146,55 @@ export function useSelectCompeteWinner(runId: string, groupId: string) {
 function useContributionMutation<TVariables, TResult>(
   runId: string,
   mutationFn: (variables: TVariables) => Promise<TResult>,
+  seed: (client: QueryClient, result: TResult) => void,
+  onError?: (error: unknown) => void,
 ) {
   const client = useQueryClient();
   return useMutation({
     mutationFn,
-    onSuccess: () => {
+    onSuccess: (result) => {
+      seed(client, result);
       client.invalidateQueries({ queryKey: queryKeys.runContributions(runId) });
       client.invalidateQueries({ queryKey: queryKeys.run(runId) });
       client.invalidateQueries({ queryKey: queryKeys.runs });
     },
-    onError: (error) => toast.error(contributionErrorMessage(error)),
+    onError: onError ?? ((error) => toast.error(contributionErrorMessage(error))),
   });
 }
 
-/** Posts a message to the run's conversation. The daemon persists it whatever the run is doing, so success never implies delivery. */
+/** Posts a message to the run's conversation. The daemon persists it whatever the run is doing, so success never implies delivery. The composer surfaces the failure inline, so no toast doubles it. */
 export function useCreateRunContribution(runId: string) {
-  return useContributionMutation(runId, (request: CreateRunContributionRequest) =>
-    daemon.createRunContribution(runId, request),
+  return useContributionMutation(
+    runId,
+    (request: CreateRunContributionRequest) => daemon.createRunContribution(runId, request),
+    seedContribution,
+    () => {},
   );
 }
 
 /** Retries one failed message that never reached the agent. */
 export function useRetryRunContribution(runId: string) {
-  return useContributionMutation(runId, (contributionId: string) =>
-    daemon.retryRunContribution(runId, contributionId),
+  return useContributionMutation(
+    runId,
+    (contributionId: string) => daemon.retryRunContribution(runId, contributionId),
+    seedContribution,
   );
 }
 
 export function useCancelRunContribution(runId: string) {
-  return useContributionMutation(runId, (contributionId: string) =>
-    daemon.cancelRunContribution(runId, contributionId),
+  return useContributionMutation(
+    runId,
+    (contributionId: string) => daemon.cancelRunContribution(runId, contributionId),
+    seedContribution,
   );
 }
 
 /** Explicit "deliver now" for messages a daemon restart left queued; the daemon never resumes a run on its own at boot. */
 export function useDeliverRunContributions(runId: string) {
-  return useContributionMutation(runId, (_: void) => daemon.deliverRunContributions(runId));
-}
-
-function contributionErrorMessage(error: unknown): string {
-  if (error instanceof DaemonRequestError) {
-    if (error.status === 409) {
-      return "The daemon refused this — the run moved on since this view loaded.";
-    }
-    return error.status >= 500
-      ? "The daemon failed to record this message."
-      : "The daemon rejected this request.";
-  }
-  return "Could not reach the daemon — is it running?";
+  return useContributionMutation(
+    runId,
+    (_: void) => daemon.deliverRunContributions(runId),
+    (client, response) =>
+      client.setQueryData<RunContributionsResponse>(queryKeys.runContributions(runId), response),
+  );
 }

@@ -1,6 +1,10 @@
+import { randomUUID } from "node:crypto";
+
 import {
   getIssue,
   getRun,
+  getStepRun,
+  insertAgentSession,
   listAgentSessionsForRun,
   listCompeteGroupsForRun,
   listStepRunsForRun,
@@ -10,15 +14,22 @@ import {
   type RunRow,
 } from "@otomat/db";
 import {
+  agentSessionMachine,
   executableSteps,
   IllegalTransitionError,
   isIssueClosed,
   isRunSettled,
   selectLatestResumableSession,
+  type ResolvedAgentConfig,
 } from "@otomat/domain";
 
 import { sessionDir } from "#events";
-import { createRuntimeAdapter, isKnownRuntimeId, type KnownRuntimeId } from "#runtime";
+import {
+  createRuntimeAdapter,
+  describeRuntimeResumeModelCapability,
+  isKnownRuntimeId,
+  type KnownRuntimeId,
+} from "#runtime";
 
 import { spawnTurn } from "./lifecycle.js";
 import { runtimeForRun } from "./runtime-selection.js";
@@ -121,6 +132,31 @@ export function requeueCanceledSteps(db: Db, runId: string, reopenedStepId: stri
   );
 }
 
+function resumeTurnFor(
+  state: SupervisorState,
+  run: RunRow,
+  session: AgentSessionRow,
+  turn: Pick<TurnContext, "agentSessionId" | "prompt" | "config" | "carryContributionIds">,
+): ResumeTurn {
+  const runtime = requireResumableRuntime(state.db, run, session);
+  const worktreePath = requireWorktreePath(state, run);
+  const step = executableSteps(run.plan_json).find((entry) => entry.id === session.step_run_id);
+
+  return {
+    context: {
+      ...turn,
+      runId: run.id,
+      stepRunId: session.step_run_id,
+      contextSelection: step?.context ?? null,
+      agentSessionDir: sessionDir(state.dataDir, run.id, turn.agentSessionId),
+      worktreePath,
+      runtime,
+      config: turn.config ?? step?.config ?? null,
+    },
+    providerSessionId: session.provider_session_id,
+  };
+}
+
 /** Resolves one explicit session into a spawnable turn without touching any row. */
 export function resolveSessionResumeTurn(
   state: SupervisorState,
@@ -128,26 +164,53 @@ export function resolveSessionResumeTurn(
   session: AgentSessionRow,
   prompt: string | null,
 ): ResumeTurn {
-  const { db } = state;
-  const runId = run.id;
-  const runtime = requireResumableRuntime(db, run, session);
-  const worktreePath = requireWorktreePath(state, run);
-  const step = executableSteps(run.plan_json).find((entry) => entry.id === session.step_run_id);
+  return resumeTurnFor(state, run, session, {
+    agentSessionId: session.id,
+    prompt,
+    config: session.config_json,
+  });
+}
 
-  return {
-    context: {
-      runId,
-      stepRunId: session.step_run_id,
-      agentSessionId: session.id,
-      prompt,
-      contextSelection: step?.context ?? null,
-      agentSessionDir: sessionDir(state.dataDir, runId, session.id),
-      worktreePath,
-      runtime,
-      config: step?.config ?? null,
-    },
-    providerSessionId: session.provider_session_id,
-  };
+/** Opens the next turn of one participant as its own session row, so the queue it carries is auditable. The context is resolved before the row lands, so a refused resume leaves no orphan session behind. */
+export function insertSessionResumeTurn(
+  state: SupervisorState,
+  run: RunRow,
+  session: AgentSessionRow,
+  config: ResolvedAgentConfig,
+  prompt: string | null,
+  contributionIds: readonly string[],
+): ResumeTurn {
+  const agentSessionId = randomUUID();
+  const turn = resumeTurnFor(state, run, session, {
+    agentSessionId,
+    prompt,
+    config,
+    carryContributionIds: contributionIds,
+  });
+  insertAgentSession(state.db, {
+    id: agentSessionId,
+    step_run_id: session.step_run_id,
+    agent_id: session.agent_id,
+    status: agentSessionMachine.initial,
+    provider_session_id: session.provider_session_id,
+    resumed_from_session_id: session.id,
+    config_json: config,
+  });
+  return turn;
+}
+
+/** A pending model revision resumes only through a runtime that announces resume-with-model; refusing beats silently running the old model. */
+export function requireResumeConfigSupport(
+  db: Db,
+  run: RunRow,
+  session: AgentSessionRow,
+  config: ResolvedAgentConfig,
+): void {
+  if (session.config_json?.config_hash === config.config_hash) return;
+  const capability = describeRuntimeResumeModelCapability(
+    requireResumableRuntime(db, run, session),
+  );
+  if (capability.status !== "supported") throw new RunNotResumableError(capability.reason);
 }
 
 /** Spawns a resume turn on the run's latest resumable session; the run row is re-read once the worker is live. */
@@ -163,7 +226,17 @@ export async function spawnResumeTurn(
     listCompeteGroupsForRun(db, run.id),
   );
   if (!session) throw new RunNotResumableError(`run ${run.id} has no provider session to resume`);
-  const turn = resolveSessionResumeTurn(state, run, session, prompt);
+  // A revision back to the session's own configuration is nothing to consume; `spawnTurn` clears it.
+  const revised = getStepRun(db, session.step_run_id)?.next_turn_config_json ?? null;
+  const pending =
+    revised === null || revised.config_hash === session.config_json?.config_hash ? null : revised;
+  let turn: ResumeTurn;
+  if (pending === null) {
+    turn = resolveSessionResumeTurn(state, run, session, prompt);
+  } else {
+    requireResumeConfigSupport(db, run, session, pending);
+    turn = insertSessionResumeTurn(state, run, session, pending, prompt, []);
+  }
   await spawnTurn(state, turn.context, "resume", turn.providerSessionId);
   return requireRunRow(state.db, run.id, "resume");
 }

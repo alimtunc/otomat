@@ -1,7 +1,8 @@
 import {
   claimRunContributions,
   failRunContributionDelivery,
-  listClaimableStepContributions,
+  getRunContribution,
+  listClaimableTurnContributions,
   listRunContributionsForSession,
   markRunContributionsDelivered,
   releaseRunContributionClaims,
@@ -22,8 +23,19 @@ export function claimStepContributions(
   state: SupervisorState,
   stepRunId: string,
   agentSessionId: string,
+  configHash: string | null,
+  contributionIds?: readonly string[],
 ): void {
-  const queued = listClaimableStepContributions(state.db, stepRunId);
+  let queued: RunContributionRow[];
+  if (contributionIds !== undefined) {
+    queued = contributionIds
+      .map((id) => getRunContribution(state.db, id))
+      .filter((row): row is RunContributionRow => row?.status === "queued");
+  } else if (configHash === null) {
+    queued = [];
+  } else {
+    queued = listClaimableTurnContributions(state.db, stepRunId, configHash, agentSessionId);
+  }
   if (queued.length === 0) return;
   claimRunContributions(
     state.db,

@@ -101,7 +101,7 @@ export async function requestFix(
 ): Promise<RunRow> {
   const preparation = prepareFix(ctx, run, request.commentIds);
   const updated = await ctx.appendRunStep(run.id, {
-    name: request.name ?? FIX_REVIEW_COMMENTS_STEP_NAME,
+    name: FIX_REVIEW_COMMENTS_STEP_NAME,
     note: request.note,
     references: request.references,
     reviewComments: preparation.comments,

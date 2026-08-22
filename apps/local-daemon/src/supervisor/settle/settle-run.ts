@@ -2,6 +2,7 @@ import {
   listAgentSessionsForRun,
   listCompeteGroupsForRun,
   listStepRunsForRun,
+  recordAgentSessionReportedModel,
   updateAgentSessionProvider,
   type Db,
 } from "@otomat/db";
@@ -15,6 +16,7 @@ import {
   findFinalStatus,
   findProviderLimit,
   findProviderSessionId,
+  findReportedModel,
 } from "../evidence.js";
 import { recordProviderWait } from "../provider-wait/record.js";
 import type { ReconcileOutcome } from "../types.js";
@@ -69,6 +71,7 @@ export function settleRun(
   const finalStatus = findFinalStatus(scoped);
   const providerSessionId = findProviderSessionId(scoped);
   const providerLimit = findProviderLimit(scoped);
+  const reportedModel = findReportedModel(scoped);
   const classification = classify(finalStatus, providerSessionId, providerLimit);
   const evidence: SettleEvidence = {
     classification,
@@ -83,6 +86,9 @@ export function settleRun(
     turnSession.provider_session_id === null
   ) {
     updateAgentSessionProvider(db, turnSession.id, providerSessionId);
+  }
+  if (reportedModel !== null && turnSession !== null) {
+    recordAgentSessionReportedModel(db, turnSession.id, reportedModel);
   }
   if (turnSession !== null) {
     resolveSessionContributions(db, turnSession.id, classification, options.now);

@@ -35,6 +35,15 @@ function helpEntries(help: string): string[] {
   return entries;
 }
 
+function entryDeclaresFlag(entry: string, flag: string): boolean {
+  const declaresFlag = new RegExp(`(^|[\\s,])${flag}([\\s,=]|$)`);
+  return declaresFlag.test(entry);
+}
+
+export function helpDeclaresFlag(help: string, flag: string): boolean {
+  return helpEntries(help).some((entry) => entryDeclaresFlag(entry, flag));
+}
+
 /** `split` already walks the list, so trimming and dropping empties happen in that same pass. */
 function splitList(raw: string): string[] {
   const items: string[] = [];
@@ -67,8 +76,7 @@ function announcedValues(entry: string): string[] {
  * CLI argument are dropped.
  */
 export function helpFlagValues(help: string, flag: string): string[] | null {
-  const declaresFlag = new RegExp(`(^|[\\s,])${flag}([\\s,=]|$)`);
-  const entry = helpEntries(help).find((candidate) => declaresFlag.test(candidate));
+  const entry = helpEntries(help).find((candidate) => entryDeclaresFlag(candidate, flag));
   if (entry === undefined) return null;
   const values = announcedValues(entry).filter(
     (value) => providerOptionValueSchema.safeParse(value).success,

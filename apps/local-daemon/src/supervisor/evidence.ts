@@ -6,7 +6,7 @@ import {
   type RunSettledState,
 } from "@otomat/domain";
 
-import { asString } from "#runtime";
+import { asRecord, asString } from "#runtime";
 
 import { SUPERVISOR_ADAPTER } from "./types.js";
 
@@ -48,9 +48,8 @@ export function findFinalStatus(events: readonly EventEnvelope[]): RunSettledSta
 }
 
 /**
- * The quota the last turn ended on, read from that same terminal marker. Scoped
- * to the marker on purpose: one agent session spans several turns, and an earlier
- * turn's limit must never explain a later turn's failure.
+ * Scoped to the last terminal marker on purpose: one agent session spans several
+ * turns, and an earlier turn's limit must never explain a later turn's failure.
  */
 export function findProviderLimit(events: readonly EventEnvelope[]): ProviderLimit | null {
   const parsed = providerLimitSchema.safeParse(lastFinalMarker(events)?.payload["provider_limit"]);
@@ -70,6 +69,16 @@ export function findProviderSessionId(events: readonly EventEnvelope[]): string 
       const fromFrame = asString(event.payload["provider_session_id"]);
       if (fromFrame !== null) return fromFrame;
     }
+  }
+  return null;
+}
+
+export function findReportedModel(events: readonly EventEnvelope[]): string | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event?.type !== "runtime.usage") continue;
+    const model = asString(asRecord(event.payload["usage"])?.["model"]);
+    if (model !== null) return model;
   }
   return null;
 }

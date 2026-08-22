@@ -11,6 +11,7 @@ const CATEGORY_BY_TYPE = {
   "run.plan_revised": "control",
   "step.lifecycle": "control",
   "session.lifecycle": "control",
+  "session.model_override": "control",
   "compete.lifecycle": "control",
   "runtime.log": "provider",
   "runtime.message": "provider",

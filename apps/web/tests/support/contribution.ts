@@ -11,6 +11,8 @@ export function contribution(
     body: "keep going",
     status: "queued",
     agent_session_id: null,
+    target_agent_session_id: null,
+    target_config: null,
     delivered_at: null,
     settled_at: null,
     attempts: 0,

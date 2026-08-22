@@ -1,5 +1,7 @@
 import {
   commentFixProofSchema,
+  appendedRunStepResponseSchema,
+  executableSteps,
   requestFixRequestSchema,
   runCommitsResponseSchema,
 } from "@otomat/domain";
@@ -56,9 +58,13 @@ export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
           selector: appendStepSelector(request),
           overrides: { model: request.model, options: request.options },
         };
-        if (request.name) fix.name = request.name;
         const updated = await deps.review.requestFix(run, fix);
-        return c.json(toRun(updated), 201);
+        const step = executableSteps(updated.plan_json).at(-1);
+        if (!step) throw new Error(`run ${run.id} has no review-fix step`);
+        return c.json(
+          appendedRunStepResponseSchema.parse({ run: toRun(updated), step_run_id: step.id }),
+          201,
+        );
       } catch (error) {
         if (error instanceof CommentsNotFixableError) {
           return c.json({ error: "comments_not_fixable" }, 409);

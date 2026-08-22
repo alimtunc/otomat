@@ -106,6 +106,7 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
   }
   const run = reopenSettledRun(state, stopped);
   signalIssueLifecycle(state.syncIssueLifecycle, run.issue_id, "in_progress", runId);
+  for (const step of listStepRunsForRun(state.db, runId)) state.stopHeld.delete(step.id);
 
   try {
     if (action.kind === "compete_group") {

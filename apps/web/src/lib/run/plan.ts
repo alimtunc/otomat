@@ -13,6 +13,22 @@ export function activeStepRunId(events: readonly EventEnvelope[]): string | null
   return events.findLast((event) => event.step_run_id !== null)?.step_run_id ?? null;
 }
 
+/** The step a surface shows: the caller's choice when it still exists, else the live one, else the first. */
+export function selectedStepRunId(
+  detail: RunDetail,
+  events: readonly EventEnvelope[],
+  requested: string | undefined,
+): string | null {
+  if (requested !== undefined && detail.steps.some((step) => step.id === requested)) {
+    return requested;
+  }
+  return (
+    activeStepRunId(events) ??
+    detail.steps.toSorted((left, right) => left.idx - right.idx)[0]?.id ??
+    null
+  );
+}
+
 /** Every event attributed to one step, directly or through a session that step owns. */
 export function eventsForStep(
   detail: RunDetail,

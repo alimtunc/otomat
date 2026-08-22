@@ -3,49 +3,63 @@ import { Button, Field, FieldControl, Kbd, Textarea } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import { useDaemonStatus, useRuntimes } from "@web/api/daemon/queries";
 import { useCreateRunContribution } from "@web/api/runs/mutations";
+import { participantLabel } from "@web/lib/execution/labels";
 import { fieldErrorProps } from "@web/lib/form";
-import { resolveContributionGate } from "@web/lib/run/contribution";
+import { contributionErrorMessage, resolveContributionGate } from "@web/lib/run/contribution";
+import { stepParticipant } from "@web/lib/run/participant";
 import type { KeyboardEvent } from "react";
 
 /** Step-scoped composer. It stays usable while the agent works: the message is persisted and waits for that step's next turn. */
 export function ConversationComposer({
   detail,
+  stepRunId: selectedStepRunId,
   onSent,
 }: {
   detail: RunDetail;
+  stepRunId: string;
   onSent: () => void;
 }) {
   const contribute = useCreateRunContribution(detail.run.id);
   const { connectionState } = useDaemonStatus();
   const runtimes = useRuntimes();
-  const gate = resolveContributionGate(detail, runtimes.data, connectionState);
+  const gate = resolveContributionGate(detail, runtimes.data, connectionState, selectedStepRunId);
   const stepRunId = gate.stepRunId;
+  const recipientStep = detail.steps.find((step) => step.id === selectedStepRunId);
+  // The identity line outlives the gate: a refused composer still names its recipient.
+  const recipient = stepParticipant(detail, selectedStepRunId);
 
   const form = useForm({
     defaultValues: { body: "" },
-    onSubmit: async ({ value }) => {
-      if (stepRunId === null) return;
-      try {
-        await contribute.mutateAsync({ step_run_id: stepRunId, body: value.body.trim() });
-      } catch {
-        return;
-      }
-      form.reset();
-      onSent();
+    onSubmit: ({ value }) => {
+      if (stepRunId === null || gate.targetConfig === null) return;
+      contribute.mutate(
+        {
+          step_run_id: stepRunId,
+          target_agent_session_id: gate.targetAgentSessionId,
+          target_config_hash: gate.targetConfig.config_hash,
+          body: value.body.trim(),
+        },
+        {
+          onSuccess: () => {
+            form.reset();
+            onSent();
+          },
+        },
+      );
     },
   });
 
-  function submitIfPossible() {
+  const submitIfPossible = () => {
     if (stepRunId === null) return;
     void form.handleSubmit();
-  }
+  };
 
-  function onBodyKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+  const onBodyKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
       submitIfPossible();
     }
-  }
+  };
 
   return (
     <form
@@ -56,6 +70,19 @@ export function ConversationComposer({
         submitIfPossible();
       }}
     >
+      {recipientStep === undefined ? null : (
+        <p className="text-xs font-medium text-text-secondary">
+          To: {recipientStep.name}
+          {recipient.config === null
+            ? " · Participant configuration unavailable"
+            : ` · ${participantLabel(recipient.config)}`}
+          {recipient.session === null ? (
+            " · First turn"
+          ) : (
+            <span title={recipient.session.id}> · Session {recipient.session.id.slice(0, 8)}</span>
+          )}
+        </p>
+      )}
       <form.Field
         name="body"
         validators={{
@@ -70,7 +97,10 @@ export function ConversationComposer({
                 rows={2}
                 value={field.state.value}
                 onBlur={field.handleBlur}
-                onChange={(event) => field.handleChange(event.target.value)}
+                onChange={(event) => {
+                  if (contribute.isError) contribute.reset();
+                  field.handleChange(event.target.value);
+                }}
                 onKeyDown={onBodyKeyDown}
                 placeholder={
                   gate.stepName === null
@@ -84,14 +114,16 @@ export function ConversationComposer({
         )}
       </form.Field>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-text-tertiary">{gate.note}</p>
+        <p className={contribute.error ? "text-xs text-danger" : "text-xs text-text-tertiary"}>
+          {contribute.error ? contributionErrorMessage(contribute.error) : gate.note}
+        </p>
         <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting] as const}>
           {([canSubmit, isSubmitting]) => (
             <Button
               type="submit"
               variant="primary"
               size="xs"
-              disabled={stepRunId === null || !canSubmit}
+              disabled={stepRunId === null || !canSubmit || contribute.isPending}
               loading={isSubmitting || contribute.isPending}
             >
               {gate.queues ? "Queue message" : "Send message"}

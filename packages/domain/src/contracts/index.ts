@@ -19,6 +19,7 @@ export * from "./diff.js";
 export * from "./execution-host.js";
 export * from "./pull-request-import.js";
 export * from "./review-inbox.js";
+export * from "./run-events.js";
 export * from "./run-plan.js";
 export {
   agentProfileContractSchema,

@@ -8,7 +8,7 @@ import {
   ProviderMark,
 } from "@otomat/ui";
 import { buildItems, type ChoiceItem } from "@web/components/execution/agent-items";
-import { AGENT_CHOICE_DEFAULT } from "@web/lib/agent-choice";
+import { AGENT_CHOICE_DEFAULT, type AgentScope } from "@web/lib/agent-choice";
 
 export interface ExecutionAgentSubmenuProps {
   profiles: AgentProfileContract[];
@@ -18,8 +18,8 @@ export interface ExecutionAgentSubmenuProps {
   onValueChange: (value: string | null) => void;
   /** Omitted where the agent must be named, as on a run-level launcher. */
   inheritLabel?: string;
-  /** Hides the saved profiles, for a surface that configures one runtime rather than picking an agent. */
-  runtimesOnly?: boolean;
+  /** `runtimes` configures one runtime rather than picking an agent; `profiles` forces a saved profile. */
+  scope?: AgentScope;
   effectiveLabel: string;
 }
 
@@ -41,11 +41,11 @@ export function ExecutionAgentSubmenu({
   value,
   onValueChange,
   inheritLabel,
-  runtimesOnly = false,
+  scope = "all",
   effectiveLabel,
 }: ExecutionAgentSubmenuProps) {
   const { defaultItem, profileItems, runtimeItems } = buildItems(
-    runtimesOnly ? [] : profiles,
+    scope === "runtimes" ? [] : profiles,
     descriptors,
     inheritLabel,
   );
@@ -67,9 +67,13 @@ export function ExecutionAgentSubmenu({
             {profileItems.map(agentChoice)}
           </>
         ) : null}
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>Runtimes</DropdownMenuLabel>
-        {runtimeItems.map(agentChoice)}
+        {scope === "profiles" ? null : (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Runtimes</DropdownMenuLabel>
+            {runtimeItems.map(agentChoice)}
+          </>
+        )}
       </DropdownMenuRadioGroup>
     </ConfigMenuSubmenu>
   );

@@ -63,6 +63,34 @@ export function runRow(id: string, overrides: Partial<RunRow> = {}): RunRow {
   };
 }
 
+export function runRowWithStep(id: string, stepRunId: string): RunRow {
+  return runRow(id, {
+    plan_json: {
+      version: 1,
+      steps: [
+        {
+          id: stepRunId,
+          name: "Appended step",
+          agent: "fake",
+          prompt: "",
+          depends_on: [],
+          config: {
+            runtime: "fake",
+            profile_id: null,
+            profile_name: null,
+            options: {},
+            model: null,
+            guidance: null,
+            skills: [],
+            sources: null,
+            config_hash: `config-${stepRunId}`,
+          },
+        },
+      ],
+    },
+  });
+}
+
 export function contributionRow(
   runId: string,
   overrides: Partial<RunContributionRow> = {},
@@ -73,6 +101,8 @@ export function contributionRow(
     step_run_id: `${runId}-step`,
     seq: 0,
     body: "keep going",
+    target_agent_session_id: `${runId}-session`,
+    target_config_json: null,
     status: "queued",
     agent_session_id: null,
     delivered_at: null,
@@ -105,6 +135,12 @@ export function stubSupervisor(overrides: Partial<Supervisor> = {}): Supervisor 
     }),
     setCapacity: () => {
       throw new Error("setCapacity stub not configured");
+    },
+    setNextTurnModel: () => {
+      throw new Error("setNextTurnModel stub not configured");
+    },
+    stopStep: async () => {
+      throw new Error("stopStep stub not configured");
     },
     resume: async () => {
       throw new Error("resume stub not configured");

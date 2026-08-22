@@ -1,4 +1,9 @@
-import { type RuntimeAvailability, type RuntimeDescriptor, type RuntimeKind } from "@otomat/domain";
+import {
+  type RuntimeAvailability,
+  type RuntimeDescriptor,
+  type RuntimeKind,
+  type RuntimeResumeModelCapability,
+} from "@otomat/domain";
 
 import { isFakeRuntimeEnabled, resolveBinaryPath } from "./availability.js";
 import type { RuntimeAdapter } from "./contract.js";
@@ -8,7 +13,9 @@ import {
   CLAUDE_BINARY,
   ClaudeRuntimeAdapter,
 } from "./providers/claude/adapter.js";
+import { claudeResumeModelCapability } from "./providers/claude/resume-model.js";
 import { CODEX_ADAPTER_ID, CODEX_BINARY, CodexRuntimeAdapter } from "./providers/codex/adapter.js";
+import { codexResumeModelCapability } from "./providers/codex/resume-model.js";
 import { FAKE_ADAPTER_ID, FakeRuntimeAdapter } from "./providers/fake/adapter.js";
 
 interface RuntimeRegistration {
@@ -17,6 +24,7 @@ interface RuntimeRegistration {
   kind: RuntimeKind;
   /** CLI binary probed for availability; null for the built-in simulated runtime. */
   binary: string | null;
+  resumeModel(): RuntimeResumeModelCapability;
 }
 
 const REGISTRY = {
@@ -24,16 +32,19 @@ const REGISTRY = {
     create: () => new ClaudeRuntimeAdapter(),
     kind: "real",
     binary: CLAUDE_BINARY,
+    resumeModel: () => claudeResumeModelCapability(CLAUDE_BINARY),
   },
   [CODEX_ADAPTER_ID]: {
     create: () => new CodexRuntimeAdapter(),
     kind: "real",
     binary: CODEX_BINARY,
+    resumeModel: () => codexResumeModelCapability(CODEX_BINARY),
   },
   [FAKE_ADAPTER_ID]: {
     create: () => new FakeRuntimeAdapter(),
     kind: "simulated",
     binary: null,
+    resumeModel: () => ({ status: "supported" }),
   },
 } as const satisfies Record<string, RuntimeRegistration>;
 
@@ -57,6 +68,12 @@ export function isKnownRuntimeId(value: string): value is KnownRuntimeId {
 export function createRuntimeAdapter(id: string): RuntimeAdapter {
   if (!isKnownRuntimeId(id)) throw new UnknownRuntimeError(id);
   return REGISTRY[id].create();
+}
+
+export function describeRuntimeResumeModelCapability(
+  id: KnownRuntimeId,
+): RuntimeResumeModelCapability {
+  return REGISTRY[id].resumeModel();
 }
 
 /** Validates a runtime id and refuses an unavailable one (missing CLI binary, or the fake outside tests/dev) without touching state. */
@@ -97,7 +114,10 @@ export function listRuntimeDescriptors(env: NodeJS.ProcessEnv = process.env): Ru
         id: adapter.id,
         display_name: adapter.displayName,
         kind: REGISTRY[id].kind,
-        capabilities: adapter.capabilities,
+        capabilities: {
+          ...adapter.capabilities,
+          resume_model: describeRuntimeResumeModelCapability(id),
+        },
         availability: describeRuntimeAvailability(id, env),
       };
     },

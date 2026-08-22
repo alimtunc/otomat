@@ -27,8 +27,8 @@ function isLaunchMode(value: string): value is LaunchMode {
 export interface LaunchRunDialogProps {
   /** Undefined while the issue is still loading: the trigger stays on screen, disabled, instead of vanishing. */
   issue: IssueContract | undefined;
-  /** The run the surface should follow — a fresh one, or the workspace run the step joined. */
-  onLaunched: (run: RunContract) => void;
+  /** The run the surface should follow — a fresh one, or the workspace run the step joined — and, for an appended step, its own thread. */
+  onLaunched: (run: RunContract, stepRunId?: string) => void;
 }
 
 type LaunchTriggerProps = ComponentPropsWithoutRef<typeof Button> & { continuing?: boolean };
@@ -37,7 +37,7 @@ function LaunchTrigger({ continuing = false, ...props }: LaunchTriggerProps) {
   return (
     <Button variant="primary" size="sm" {...props}>
       <Icon name={continuing ? "plus" : "play"} aria-hidden />
-      {continuing ? "Add step" : "Launch run"}
+      {continuing ? "Add follow-up step" : "Launch run"}
     </Button>
   );
 }
@@ -54,15 +54,15 @@ export function LaunchRunDialog({ issue, onLaunched }: LaunchRunDialogProps) {
   const [execution, setExecution] = useState<ExecutionSelection>(EMPTY_EXECUTION_SELECTION);
 
   /** Closing discards the composed draft with the forms, so the mode it was composed in goes with it. */
-  function openChange(next: boolean) {
+  const openChange = (next: boolean) => {
     setOpen(next);
     if (!next) setMode("single");
-  }
+  };
 
-  function launched(run: RunContract) {
+  const launched = (run: RunContract, stepRunId?: string) => {
     openChange(false);
-    onLaunched(run);
-  }
+    onLaunched(run, stepRunId);
+  };
 
   if (issue === undefined)
     return <LaunchTrigger disabled title="Available once this issue has loaded" />;
@@ -83,7 +83,7 @@ export function LaunchRunDialog({ issue, onLaunched }: LaunchRunDialogProps) {
                 aria-hidden
                 className="h-3.25 w-3.25 -rotate-90 text-text-tertiary"
               />
-              <span>{continuing ? "Add step" : "Launch"}</span>
+              <span>{continuing ? "Add follow-up step" : "Launch"}</span>
             </div>
             {continuing ? null : (
               <SegmentedControl
@@ -106,7 +106,7 @@ export function LaunchRunDialog({ issue, onLaunched }: LaunchRunDialogProps) {
             workspace={workspace}
             execution={execution}
             onExecutionChange={setExecution}
-            onAppended={launched}
+            onAppended={(response) => launched(response.run, response.step_run_id)}
             onCancel={() => openChange(false)}
           />
         ) : (

@@ -320,22 +320,29 @@ composed, and the surface around it keeps its own form for its own fields.
 ## Run Steering and Deferred Messages
 
 A user message is a durable intention attached to one **step**, never to the run
-at large: steps own separate conversations, so `run_contributions.step_run_id` is
-`NOT NULL` and the composer posts an explicitly resolved step id. Its lifecycle is
-`queued → delivered → acknowledged`, with `failed` and `canceled` as the other
-landings. `delivered` requires persisted evidence that a turn carrying the message
-was launched, and `acknowledged` requires that turn to have finished — neither is
-ever reached from a UI click, so the cockpit cannot claim a message was read.
+at large. The composer posts the selected step, its current participant session
+and the hash of the resolved configuration it shows. The daemon validates all
+three together, then freezes `target_agent_session_id` and the full
+`target_config_json` on the contribution. Later activity cannot redirect it;
+`agent_session_id` separately records the turn that eventually carried it. Its
+lifecycle is `queued → delivered → acknowledged`, with `failed` and `canceled`
+as the other landings. `delivered` requires persisted evidence that a turn
+carrying the message was launched, and `acknowledged` requires that turn to have
+finished — neither is ever reached from a UI click.
 
-Delivery has one mechanism. `supervisor/lifecycle.ts` claims the target step's
-pending queue inside `spawnTurn`, after the start gate is cleared and before the
-provider is spawned, and composes the effective prompt with
-`withCarriedContributions`. Every turn therefore carries whatever was waiting for
-its step: a message sent while the run waits for capacity rides the step's *first*
-turn, and a message sent to a live session rides its next one.
-`contribution/deliver.ts` only adds the case where the queue is the entire reason
-to spawn — a resting run's follow-up — and it claims first so the same spawn path
-resolves it.
+Delivery has one mechanism. `supervisor/lifecycle.ts` claims one FIFO-homogeneous
+batch for the target step, session and configuration inside `spawnTurn`, after
+the start gate is cleared and before the provider is spawned, and composes the
+effective prompt with `withCarriedContributions`. A message sent before a step
+starts freezes a null session and rides that step's first turn. A message for an
+existing participant either reaches its live channel at the next safe boundary
+or creates a new session row linked through `resumed_from_session_id`; it is
+never handed to whichever provider session happened to become latest. A
+per-step `turn_index` gives those rows a stable order even when SQLite assigns
+several of them the same second-granularity timestamp.
+`contribution/deliver.ts` adds only the case where the queue is the entire reason
+to spawn. If the frozen participant becomes unavailable, the contribution lands
+`failed` with the exact reason and its body remains visible and retriable.
 
 Because the claim is the unit of delivery, restart recovery is a question about
 one turn: `contribution/reconcile.ts` promotes a crash-time claim to `delivered`
@@ -343,12 +350,40 @@ only when that turn's own start gate was consumed, and returns it to the queue
 otherwise. That is what makes a replay idempotent — a message is never delivered
 twice, and never buried as delivered by a worker that never ran.
 
-`RuntimeCapabilities.steering` is a guarantee level (`turn_boundary` or
-`unsupported`), not a boolean, because no supported CLI can interrupt a turn in
-flight. Claude Code and Codex both resume a recorded session with a new prompt, so
-both declare `turn_boundary` and owe the same product contract; the label names
-the level instead of a bare yes/no, and a runtime that declared `unsupported`
-would be refused at the composer instead of queueing forever.
+The run ledger remains the canonical event sequence, but conversation history is
+read through `/api/runs/:id/steps/:stepId/events/window`. The cockpit keeps the
+selected step in the route search, filters the live SSE tail to that same step,
+and renders the ordered step list as run progress rather than as one synthetic
+run-wide conversation. Refresh, deep links and the issue-embedded conversation
+therefore reopen the same participant without browser-only state.
+
+A model revision is also turn-scoped. `RuntimeCapabilities.resume_model` is a
+feature-detected answer from the installed Claude or Codex binary; an unsupported
+runtime carries its own reason and the UI offers an appended follow-up step
+instead. A supported selection clones the participant's frozen configuration,
+validates the model-scoped options, records `session.model_override`, and stores
+the result as `step_runs.next_turn_config_json`. The active session is untouched.
+The first queued contribution freezes that pending hash, and the spawned resume
+turn persists the requested configuration and any provider-reported model on its
+own session row before clearing only the pending value it consumed.
+
+`RuntimeCapabilities.steering` is a guarantee level (`live`, `turn_boundary` or
+`unsupported`), not a boolean. A model override never upgrades that guarantee:
+the active turn continues unchanged, and the pending configuration is consumed
+only by a later native resume — an explicit **Resume** applies it the same way a
+queued message does, or refuses when the runtime no longer announces
+resume-with-model. A runtime that cannot steer or resume is refused at the
+composer instead of queueing forever.
+
+**Stop step** (`supervisor/stop-step.ts`) interrupts one live turn without
+closing anything: the process group is killed with no grace on purpose, so no
+terminal marker lands and the existing settle classifies the turn `interrupted`
+— the same resumable landing a daemon crash produces, honored against a final
+marker the worker already wrote. The step's queued messages are then held
+in-memory until an explicit message, retry or resume, because an automatic
+delivery would relaunch the very turn the operator just stopped; a restart
+clears the hold but nothing auto-delivers on boot, so the queue still waits for
+an explicit action.
 
 ## Linear Issue Freshness
 

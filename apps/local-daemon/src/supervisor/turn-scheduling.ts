@@ -28,6 +28,7 @@ export function insertTurn(
     step_run_id: step.id,
     agent_id: runtime,
     status: agentSessionMachine.initial,
+    config_json: step.config ?? null,
   });
   return {
     runId: run.id,

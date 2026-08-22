@@ -2,10 +2,9 @@ import { randomUUID } from "node:crypto";
 import { appendFileSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { RuntimeCapabilities } from "@otomat/domain";
-
 import {
   type RuntimeAdapter,
+  type RuntimeAdapterCapabilities,
   type RuntimeFinalState,
   type RuntimeOptionSupport,
   type RuntimeResumeInput,
@@ -62,7 +61,7 @@ function writeSimulatedWork(cwd: string, prompt: string, followUp: boolean): voi
 export class FakeRuntimeAdapter implements RuntimeAdapter {
   readonly id = FAKE_ADAPTER_ID;
   readonly displayName = "Simulation";
-  readonly capabilities: RuntimeCapabilities = {
+  readonly capabilities: RuntimeAdapterCapabilities = {
     stream: true,
     steering: "turn_boundary",
     abort: true,

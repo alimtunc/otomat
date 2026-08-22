@@ -1,17 +1,37 @@
+import { DaemonRequestError } from "@otomat/client";
 import {
   canFollowUpRun,
-  executableSteps,
   isRunResumable,
   isRunSettled,
   projectRunContributionDelivery,
   resolveStepContributionRoute,
   type RunContributionContract,
   type RunDetail,
+  type ResolvedAgentConfig,
   type RuntimeDescriptor,
   type StepContributionRoute,
   type StepRunContract,
 } from "@otomat/domain";
 import type { ConnectionState } from "@otomat/ui";
+import { stepParticipant } from "@web/lib/run/participant";
+
+export function contributionErrorMessage(error: unknown): string {
+  if (error instanceof DaemonRequestError) {
+    const body = error.body;
+    if (
+      typeof body === "object" &&
+      body !== null &&
+      "message" in body &&
+      typeof body.message === "string"
+    ) {
+      return body.message;
+    }
+    return error.status >= 500
+      ? "The daemon failed to record this message."
+      : "The daemon rejected this request.";
+  }
+  return "Could not reach the daemon — is it running?";
+}
 
 /** Only what no turn has taken yet: a message already on its way to a live session is not waiting for one. */
 export function queuedCount(contributions: readonly RunContributionContract[]): number {
@@ -28,6 +48,8 @@ export interface ContributionGate {
   note: string;
   /** The message will be persisted and wait for a turn rather than start one now. */
   queues: boolean;
+  targetAgentSessionId: string | null;
+  targetConfig: ResolvedAgentConfig | null;
 }
 
 const RESTING_NOTE = "Resumes this step's agent session as a new turn.";
@@ -46,7 +68,14 @@ function isWaitingForCapacity(status: RunDetail["run"]["status"]): boolean {
 }
 
 function blocked(note: string): ContributionGate {
-  return { stepRunId: null, stepName: null, note, queues: false };
+  return {
+    stepRunId: null,
+    stepName: null,
+    note,
+    queues: false,
+    targetAgentSessionId: null,
+    targetConfig: null,
+  };
 }
 
 interface RoutedStep {
@@ -60,32 +89,17 @@ function isSteerable(detail: RunDetail, stepRunId: string): boolean {
   );
 }
 
-/** The furthest step whose session can still be steered, or else the earliest one that has yet to run. */
-function routeTarget(detail: RunDetail): RoutedStep | null {
-  const eligible = detail.steps
-    .toSorted((left, right) => left.idx - right.idx)
-    .flatMap((step) => {
-      const route = resolveStepContributionRoute(step, detail.sessions, detail.compete_groups);
-      return route === null ? [] : [{ step, route }];
-    });
-  const steering = eligible.filter((entry) => entry.route === "steering");
-  // Only a resting run may skip an unsteerable step: mid-turn the live session has no provider id yet, since settle writes it.
-  const resumable = canFollowUpRun(detail.run.status)
-    ? steering.findLast((entry) => isSteerable(detail, entry.step.id))
-    : undefined;
-  return resumable ?? steering.at(-1) ?? eligible.at(0) ?? null;
+function isCompeteLoser(detail: RunDetail, step: StepRunContract): boolean {
+  if (step.compete_group_id === null) return false;
+  const group = detail.compete_groups.find((candidate) => candidate.id === step.compete_group_id);
+  return group?.winner_step_run_id != null && group.winner_step_run_id !== step.id;
 }
 
-/** The runtime that would carry the message: the step's own session, or the agent its frozen plan node names. */
-function runtimeForStep(
-  detail: RunDetail,
-  stepRunId: string,
-  descriptors: RuntimeDescriptor[],
-): RuntimeDescriptor | undefined {
-  const session = detail.sessions.findLast((row) => row.step_run_id === stepRunId);
-  const planned = executableSteps(detail.run.plan_json).find((step) => step.id === stepRunId);
-  const agentId = session?.agent_id ?? planned?.agent;
-  return descriptors.find((descriptor) => descriptor.id === agentId);
+function selectedRoute(detail: RunDetail, stepRunId: string): RoutedStep | null {
+  const step = detail.steps.find((candidate) => candidate.id === stepRunId);
+  if (!step) return null;
+  const route = resolveStepContributionRoute(step, detail.sessions, detail.compete_groups);
+  return route === null ? null : { step, route };
 }
 
 /** Mirrors the daemon's own refusals, so the composer never offers an action the daemon would drop. */
@@ -93,6 +107,7 @@ export function resolveContributionGate(
   detail: RunDetail,
   descriptors: RuntimeDescriptor[] | undefined,
   connectionState: ConnectionState,
+  selectedStepRunId: string,
 ): ContributionGate {
   if (connectionState !== "online") {
     return blocked("Daemon offline — reconnect to send a message.");
@@ -107,12 +122,21 @@ export function resolveContributionGate(
   if (descriptors === undefined) {
     return blocked("Checking runtime availability…");
   }
-  const target = routeTarget(detail);
+  const target = selectedRoute(detail, selectedStepRunId);
   if (target === null) {
-    return blocked("Every step of this run is finished — none of them will run another turn.");
+    const step = detail.steps.find((candidate) => candidate.id === selectedStepRunId);
+    return blocked(
+      step && isCompeteLoser(detail, step)
+        ? "This competitor was not selected — its worktree is archived and no turn of it will run again."
+        : "This step is finished and its participant cannot receive another message. Add a follow-up step with a user profile to continue.",
+    );
   }
 
-  const runtime = runtimeForStep(detail, target.step.id, descriptors);
+  const { session, config } = stepParticipant(detail, target.step.id);
+  if (config === null) {
+    return blocked("This step has no frozen participant configuration.");
+  }
+  const runtime = descriptors.find((descriptor) => descriptor.id === config.runtime);
   if (!runtime) {
     return blocked("This step's runtime is not registered on the daemon.");
   }
@@ -128,7 +152,12 @@ export function resolveContributionGate(
     }
   }
 
-  const routed = { stepRunId: target.step.id, stepName: target.step.name };
+  const routed = {
+    stepRunId: target.step.id,
+    stepName: target.step.name,
+    targetAgentSessionId: session?.id ?? null,
+    targetConfig: config,
+  };
   if (target.route === "first_turn") {
     return { ...routed, note: FIRST_TURN_NOTE, queues: true };
   }

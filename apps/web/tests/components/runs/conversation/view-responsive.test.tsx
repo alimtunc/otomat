@@ -8,6 +8,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mount } from "#support/mount";
 
 let wide = true;
+let searchedStep: string | null = null;
+const navigate = vi.fn();
 
 vi.mock("@otomat/ui", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -16,6 +18,8 @@ vi.mock("@otomat/ui", async (importOriginal) => ({
 
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ runId: "run-1" }),
+  useSearch: () => ({ step: searchedStep }),
+  useNavigate: () => navigate,
   Link: ({ children }: { children?: ReactNode }) => <a>{children}</a>,
 }));
 
@@ -27,7 +31,10 @@ const detail: RunDetail = {
     branch: "otomat/run-1",
     plan_json: {
       version: 1,
-      steps: [{ id: "s1", name: "Implement", agent: null, prompt: null, depends_on: [] }],
+      steps: [
+        { id: "s1", name: "Implement", agent: null, prompt: null, depends_on: [] },
+        { id: "s2", name: "Review", agent: null, prompt: null, depends_on: ["s1"] },
+      ],
     },
   },
   steps: [
@@ -37,6 +44,18 @@ const detail: RunDetail = {
       idx: 0,
       name: "Implement",
       status: "running",
+      compete_group_id: null,
+      worktree_id: null,
+      branch: null,
+      worktree_status: null,
+      provider_wait: null,
+    },
+    {
+      id: "s2",
+      run_id: "run-1",
+      idx: 1,
+      name: "Review",
+      status: "queued",
       compete_group_id: null,
       worktree_id: null,
       branch: null,
@@ -74,8 +93,14 @@ vi.mock("@web/api/runs/mutations", () => ({
   useAbandonWorkspace: () => ({ mutate: () => {}, isPending: false }),
 }));
 
-vi.mock("@web/components/runs/conversation/thread", () => ({
-  ConversationThread: () => <div data-testid="conversation" />,
+vi.mock("@web/components/runs/conversation/step-thread", () => ({
+  StepConversationThread: ({ stepRunId }: { stepRunId: string }) => (
+    <div data-testid="step-thread">{stepRunId}</div>
+  ),
+}));
+
+vi.mock("@web/components/runs/conversation/header", () => ({
+  ConversationHeader: () => null,
 }));
 
 vi.mock("@web/components/runs/compete/comparison", () => ({
@@ -86,6 +111,8 @@ const renderView = () => mount(<RunConversationView />);
 
 afterEach(() => {
   wide = true;
+  searchedStep = null;
+  navigate.mockClear();
 });
 
 describe("RunConversationView responsive composition", () => {
@@ -112,7 +139,7 @@ describe("RunConversationView responsive composition", () => {
     expect(chevron?.closest('[class*="group/steps"]')).toBe(collapsible);
     expect(container.textContent).not.toContain("Run context");
     expect(container.textContent).toContain("otomat/run-1");
-    expect(container.querySelector('[data-testid="conversation"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="step-thread"]')).not.toBeNull();
 
     await act(async () => {
       disclosure.click();
@@ -120,6 +147,25 @@ describe("RunConversationView responsive composition", () => {
     expect(collapsible?.hasAttribute("data-open")).toBe(true);
     expect(disclosure.hasAttribute("data-panel-open")).toBe(true);
     expect(container.textContent).toContain("Implement");
+    await cleanup();
+  });
+
+  it("opens a deep-linked step and exposes each step as a native keyboard target", async () => {
+    searchedStep = "s2";
+    const { container, cleanup } = await renderView();
+
+    expect(container.querySelector('[data-testid="step-thread"]')?.textContent).toBe("s2");
+    const implement = [...container.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Implement"),
+    );
+    expect(implement?.tabIndex).toBe(0);
+    await act(async () => implement?.click());
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/runs/$runId",
+      params: { runId: "run-1" },
+      search: { step: "s1" },
+      replace: true,
+    });
     await cleanup();
   });
 });
