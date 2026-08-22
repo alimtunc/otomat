@@ -51,6 +51,10 @@ export function invalidateForEvent(client: QueryClient, runId: string, event: Ev
   }
   if (event.type.startsWith("pr.")) {
     client.invalidateQueries({ queryKey: queryKeys.runPullRequest(runId) });
+    // A push moves the published head, so the only scope whose diff a `pr.` event changes.
+    client.invalidateQueries({
+      queryKey: queryKeys.reviewDiff({ kind: "run", id: runId }, { kind: "pull_request" }),
+    });
     client.invalidateQueries({ queryKey: queryKeys.issues });
     client.invalidateQueries({ queryKey: queryKeys.reviews });
     client.invalidateQueries({ queryKey: queryKeys.inbox });

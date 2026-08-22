@@ -1,32 +1,14 @@
-import { existsSync } from "node:fs";
-
 import { getRun } from "@otomat/db";
 import type { WorkspaceClosureFacts } from "@otomat/domain";
 
-import { commitsSince, diffOrNull, uncommittedPaths, type RepositoryBinding } from "#git";
-import { findWorktreeById, type WorktreeRow } from "#git/worktrees-store";
+import { commitsSince, diffOrNull, uncommittedPaths, worktreeGitView } from "#git";
+import { findWorktreeById } from "#git/worktrees-store";
 
 import { abandonBlocker } from "./abandon.js";
 import type { SupervisorState } from "./state.js";
 
 /** Enough history to recognize the work without turning the confirmation into a log viewer. */
 const MAX_LISTED_COMMITS = 20;
-
-/** Mirrors the diff resolution: a live worktree answers from its own HEAD, an archived one from the branch in the main repository. */
-interface WorktreeGitView {
-  gitCwd: string;
-  base: string;
-  ref: string;
-}
-
-function commitRange(row: WorktreeRow, binding: RepositoryBinding): WorktreeGitView {
-  const live = row.status === "active" && existsSync(row.path);
-  return {
-    gitCwd: live ? row.path : binding.rootPath,
-    base: row.base_sha === "" ? binding.defaultBranch : row.base_sha,
-    ref: live ? "HEAD" : row.branch,
-  };
-}
 
 /** What abandoning would leave behind, read from git at the moment of asking so the choice is made against the real branch. */
 export function workspaceClosureFacts(
@@ -54,9 +36,11 @@ export function workspaceClosureFacts(
     };
   }
 
-  const { gitCwd, base, ref } = commitRange(row, binding);
+  const { live, gitCwd, base, ref } = worktreeGitView(
+    { repoRoot: binding.rootPath, defaultBranch: binding.defaultBranch },
+    row,
+  );
   const commits = commitsSince(gitCwd, base, ref);
-  const live = row.status === "active" && existsSync(row.path);
   const diff = diffOrNull(binding.service, runId);
   return {
     run_id: runId,

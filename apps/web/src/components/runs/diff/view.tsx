@@ -3,12 +3,12 @@ import { useRunDetail } from "@web/api/runs/queries";
 import { ReviewDiffView } from "@web/components/runs/diff/review-view";
 import { DiffScopeControl } from "@web/components/runs/diff/scope/control";
 import { useDiffScope } from "@web/components/runs/diff/scope/use-scope";
-import { runPasses, type RunPass } from "@web/lib/run/passes";
+import { runDiffSteps, type RunDiffStep } from "@web/lib/run/diff-steps";
 
 const NO_WORKTREE =
   "This run executed without a git worktree, so there is no diff to show. Diffs are never fabricated.";
 
-const NO_PASSES: RunPass[] = [];
+const NO_STEPS: RunDiffStep[] = [];
 
 export function RunDiffView() {
   const { runId } = useParams({ from: "/runs/$runId/diff" });
@@ -27,7 +27,7 @@ export function RunDiffView() {
         <DiffScopeControl
           runId={runId}
           scope={scope}
-          passes={run.data === undefined ? NO_PASSES : runPasses(run.data)}
+          steps={run.data === undefined ? NO_STEPS : runDiffSteps(run.data)}
           onSelect={diffScope.select}
         />
       )}

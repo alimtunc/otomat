@@ -1,15 +1,36 @@
-import { getStepRun, listAgentSessionsForRun, type AgentSessionRow } from "@otomat/db";
-import { shortSha, type RunDiffScope, type RunDiffScopeSelector } from "@otomat/domain";
+import {
+  getPullRequestForRun,
+  getStepRun,
+  listAgentSessionsForRun,
+  type AgentSessionRow,
+  type PullRequestRow,
+} from "@otomat/db";
+import {
+  shortSha,
+  stepPassBounds,
+  type RunDiffScope,
+  type RunDiffScopeSelector,
+} from "@otomat/domain";
 
-import { diffSnapshotOrNull, type GitWorktreeService } from "#git";
+import {
+  diffSnapshotOrNull,
+  pullRequestDiffSnapshot,
+  type GitWorktreeService,
+  type RepositoryBinding,
+} from "#git";
 
 import { DiffScopeNotFoundError } from "./errors.js";
+import { pullRequestTrees, reviewAnchorSha } from "./pull-request.js";
 import { resolveReviewSubject } from "./subject.js";
 import type { ReviewContext, ReviewSubjectRef, ScopedDiff } from "./types.js";
 
 const NO_REPOSITORY = "This run has no git repository, so no diff can be reconstructed.";
 const NO_WORKTREE = "This run has no worktree, so there is no current diff to show.";
-const NO_IMPORTED_HEAD = "The imported head of this pull request can no longer be read.";
+const NO_PULL_REQUEST = "This run has no pull request yet, so there is no published diff to show.";
+const NO_HEAD_RECORDED = "No head commit is recorded for this pull request yet, so it has no diff.";
+const NO_PUBLISHED_HEAD =
+  "This clone can no longer read the head and base this pull request spans.";
+const PRUNED_TREES = "Git no longer holds the trees this slice was captured against.";
 
 function unavailable(scope: RunDiffScope, reason: string): ScopedDiff {
   return { scope, snapshot: null, unavailable: reason };
@@ -44,12 +65,16 @@ function resolveCommit(service: GitWorktreeService, commit: string): ScopedDiff 
   };
 }
 
-function passUnavailable(session: AgentSessionRow): string {
-  if (session.boundary_error !== null) return session.boundary_error;
-  if (session.start_tree_sha === null) {
-    return "This pass started before Otomat captured a git boundary for it.";
+function boundaryUnavailable(passes: readonly AgentSessionRow[], subject: "pass" | "step"): string {
+  for (const pass of passes) {
+    if (pass.boundary_error !== null) return pass.boundary_error;
   }
-  return "This pass has not finished, so its end boundary is not captured yet.";
+  const first = passes[0];
+  if (first === undefined) return `This ${subject} has not run yet, so it captured no boundary.`;
+  if (first.start_tree_sha === null) {
+    return `This ${subject} started before Otomat captured a git boundary for it.`;
+  }
+  return `This ${subject} has not finished, so its end boundary is not captured yet.`;
 }
 
 function resolveSession(
@@ -58,37 +83,81 @@ function resolveSession(
   runId: string,
   agentSessionId: string,
 ): ScopedDiff {
-  const session = listAgentSessionsForRun(ctx.db, runId).find((row) => row.id === agentSessionId);
-  if (!session) {
+  const pass = listAgentSessionsForRun(ctx.db, runId).find((row) => row.id === agentSessionId);
+  if (!pass) {
     throw new DiffScopeNotFoundError(
       "session_not_found",
       `session ${agentSessionId} is not a pass of this run`,
     );
   }
-  const step = getStepRun(ctx.db, session.step_run_id);
+  const step = getStepRun(ctx.db, pass.step_run_id);
   const scope: RunDiffScope = {
     kind: "session",
-    agent_session_id: session.id,
+    agent_session_id: pass.id,
     step_name: step?.name ?? "Unknown step",
-    start_tree_sha: session.start_tree_sha ?? "",
-    end_tree_sha: session.end_tree_sha ?? "",
   };
-  const { start_tree_sha: start, end_tree_sha: end } = session;
-  if (start === null || end === null) return unavailable(scope, passUnavailable(session));
+  const bounds = stepPassBounds([pass]);
+  if (bounds === null) return unavailable(scope, boundaryUnavailable([pass], "pass"));
 
-  const snapshot = service.boundaryDiff(start, end);
+  const snapshot = service.boundaryDiff(bounds.start_tree_sha, bounds.end_tree_sha);
   return snapshot === null
-    ? unavailable(scope, "Git no longer holds the trees this pass was captured against.")
+    ? unavailable(scope, PRUNED_TREES)
     : { scope, snapshot, unavailable: null };
 }
 
-/** An adopted pull request has exactly one scope: its pinned imported head. */
-function resolvePinnedHead(ctx: ReviewContext, ref: ReviewSubjectRef): ScopedDiff {
-  const snapshot = resolveReviewSubject(ctx, ref).snapshot();
-  const scope: RunDiffScope = { kind: "workspace" };
+function resolveStep(
+  ctx: ReviewContext,
+  service: GitWorktreeService,
+  runId: string,
+  stepRunId: string,
+): ScopedDiff {
+  const step = getStepRun(ctx.db, stepRunId);
+  if (!step || step.run_id !== runId) {
+    throw new DiffScopeNotFoundError(
+      "step_not_found",
+      `step ${stepRunId} is not a step of this run`,
+    );
+  }
+  const scope: RunDiffScope = {
+    kind: "step",
+    step_run_id: step.id,
+    step_name: step.name,
+    step_number: step.idx + 1,
+  };
+  const passes = listAgentSessionsForRun(ctx.db, runId).filter(
+    (pass) => pass.step_run_id === stepRunId,
+  );
+  const bounds = stepPassBounds(passes);
+  if (bounds === null) return unavailable(scope, boundaryUnavailable(passes, "step"));
+
+  const snapshot = service.boundaryDiff(bounds.start_tree_sha, bounds.end_tree_sha);
   return snapshot === null
-    ? unavailable(scope, NO_IMPORTED_HEAD)
+    ? unavailable(scope, PRUNED_TREES)
     : { scope, snapshot, unavailable: null };
+}
+
+function resolvePullRequest(
+  row: PullRequestRow | null,
+  binding: RepositoryBinding | null,
+): ScopedDiff {
+  const scope: RunDiffScope = { kind: "pull_request", number: row?.number ?? null };
+  if (row === null) return unavailable(scope, NO_PULL_REQUEST);
+  if (binding === null) return unavailable(scope, NO_REPOSITORY);
+  const anchor = reviewAnchorSha(row);
+  if (anchor === null || anchor === "") return unavailable(scope, NO_HEAD_RECORDED);
+  const trees = pullRequestTrees(row, binding);
+  return trees === null
+    ? unavailable(scope, NO_PUBLISHED_HEAD)
+    : { scope, snapshot: pullRequestDiffSnapshot(binding.rootPath, trees), unavailable: null };
+}
+
+/** An adopted pull request is its own subject and has exactly one scope: the head it is pinned to. */
+function resolveAdoptedPullRequest(ctx: ReviewContext, ref: ReviewSubjectRef): ScopedDiff {
+  const row = resolveReviewSubject(ctx, ref).pullRequest();
+  return resolvePullRequest(
+    row,
+    row === null ? null : ctx.repositories.forRepository(row.repository_id),
+  );
 }
 
 /** The single place a scope becomes a snapshot, so no surface pairs one scope's descriptor with another's content. */
@@ -97,12 +166,16 @@ export function resolveScope(
   ref: ReviewSubjectRef,
   request: RunDiffScopeSelector,
 ): ScopedDiff {
-  if (ref.kind === "pull_request") return resolvePinnedHead(ctx, ref);
-  const service = ctx.repositories.forRun(ref.id)?.service ?? null;
-  if (service === null) return unavailable({ kind: "workspace" }, NO_REPOSITORY);
-  if (request.kind === "commit") return resolveCommit(service, request.commit);
+  if (ref.kind === "pull_request") return resolveAdoptedPullRequest(ctx, ref);
+  const binding = ctx.repositories.forRun(ref.id);
+  if (binding === null) return unavailable({ kind: "workspace" }, NO_REPOSITORY);
+  if (request.kind === "commit") return resolveCommit(binding.service, request.commit);
+  if (request.kind === "step") return resolveStep(ctx, binding.service, ref.id, request.step);
   if (request.kind === "session") {
-    return resolveSession(ctx, service, ref.id, request.session);
+    return resolveSession(ctx, binding.service, ref.id, request.session);
   }
-  return resolveWorkspace(service, ref.owner ?? ref.id);
+  if (request.kind === "pull_request") {
+    return resolvePullRequest(getPullRequestForRun(ctx.db, ref.id) ?? null, binding);
+  }
+  return resolveWorkspace(binding.service, ref.owner ?? ref.id);
 }

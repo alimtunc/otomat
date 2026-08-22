@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 
 import { acquireWorktree } from "./acquire.js";
-import { diffBase, diffInputs } from "./diff-inputs.js";
+import { diffInputs, worktreeGitView } from "./diff-inputs.js";
 import { collectChangedFiles, computeCanonicalDiff, readFileBlobs } from "./diff.js";
 import { WorktreeConflictError, WorktreeNotFoundError } from "./errors.js";
 import { toRecord } from "./record.js";
@@ -95,13 +95,12 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
     },
 
     branchCommits(owner) {
-      const row = resolve(owner);
-      const { gitCwd, base } = diffBase(scope, row);
-      return commitsSince(gitCwd, base, row.status === "active" ? "HEAD" : row.branch);
+      const { gitCwd, base, ref } = worktreeGitView(scope, resolve(owner));
+      return commitsSince(gitCwd, base, ref);
     },
 
     commitDiff(owner, commit) {
-      const { gitCwd, base } = diffBase(scope, resolve(owner));
+      const { gitCwd, base } = worktreeGitView(scope, resolve(owner));
       return computeCanonicalDiff(gitCwd, base, revParse(gitCwd, `${commit}^{tree}`));
     },
 

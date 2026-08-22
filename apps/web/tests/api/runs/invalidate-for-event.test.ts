@@ -40,22 +40,19 @@ it("invalidates the review cache on any review.* event", () => {
   ]);
 });
 
-it("invalidates the PR, issue and inbox caches on any pr.* event", () => {
+it("invalidates the PR, its diff, the issue and inbox caches on any pr.* event", () => {
   const { client, keys } = fakeClient();
   invalidateForEvent(client, "run-1", event("pr.created"));
   invalidateForEvent(client, "run-1", event("pr.updated"));
-  expect(keys).toEqual([
+  const perEvent = [
     queryKeys.runCompletionReport("run-1"),
     queryKeys.runPullRequest("run-1"),
+    queryKeys.reviewDiff({ kind: "run", id: "run-1" }, { kind: "pull_request" }),
     queryKeys.issues,
     queryKeys.reviews,
     queryKeys.inbox,
-    queryKeys.runCompletionReport("run-1"),
-    queryKeys.runPullRequest("run-1"),
-    queryKeys.issues,
-    queryKeys.reviews,
-    queryKeys.inbox,
-  ]);
+  ];
+  expect(keys).toEqual([...perEvent, ...perEvent]);
 });
 
 it("refreshes the synced issue's Linear caches so the cockpit needs no navigation", () => {

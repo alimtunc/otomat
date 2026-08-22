@@ -1,6 +1,6 @@
 import { computeCanonicalDiff, readFileBlobs } from "./diff.js";
 import { runGit } from "./git-cli.js";
-import { mergeBase, revParse } from "./repo.js";
+import { hasCommit, mergeBase, revParse } from "./repo.js";
 import type { DiffSnapshot } from "./service-contract.js";
 import { readTreeFile } from "./tree-file.js";
 
@@ -38,6 +38,17 @@ export function fetchPullRequestTrees(input: PullRequestFetchInput): PullRequest
     throw new Error(`pull request #${input.number} shares no history with ${input.baseRef}`);
   }
   return { base, head };
+}
+
+/** Null rather than a guessed pair: this clone may hold neither the head nor a history it shares with the base. */
+export function publishedPullRequestTrees(
+  repoRoot: string,
+  baseRef: string,
+  head: string,
+): PullRequestTrees | null {
+  if (!hasCommit(repoRoot, head)) return null;
+  const base = mergeBase(repoRoot, baseRef, head);
+  return base === null ? null : { base, head };
 }
 
 /** The imported diff plus whole-file reads, captured from the one `{base, head}` pair the review is pinned to. */

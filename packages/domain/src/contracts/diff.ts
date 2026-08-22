@@ -48,17 +48,30 @@ export type ReviewDiffContract = z.infer<typeof reviewDiffContractSchema>;
 const runDiffScopeSelectorSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("workspace") }),
   z.object({ kind: z.literal("commit"), commit: z.string().min(1) }),
+  z.object({ kind: z.literal("step"), step: z.string().min(1) }),
+  z.object({ kind: z.literal("pull_request") }),
   z.object({ kind: z.literal("session"), session: z.string().min(1) }),
 ]);
 export type RunDiffScopeSelector = z.infer<typeof runDiffScopeSelectorSchema>;
 
 export const WORKSPACE_DIFF_SCOPE: RunDiffScopeSelector = { kind: "workspace" };
 
+/** Every key the selector can occupy, so switching scope clears the one the previous scope named. */
+export type RunDiffScopeParams = {
+  scope: Exclude<RunDiffScopeSelector["kind"], "workspace"> | undefined;
+  commit: string | undefined;
+  step: string | undefined;
+  session: string | undefined;
+};
+
 /** The selector as query parameters — one spelling shared by the client, the cockpit's URL and its query keys. */
-export function runDiffScopeParams(selector: RunDiffScopeSelector) {
-  if (selector.kind === "commit") return { scope: "commit", commit: selector.commit };
-  if (selector.kind === "session") return { scope: "session", session: selector.session };
-  return { scope: undefined, commit: undefined, session: undefined };
+export function runDiffScopeParams(selector: RunDiffScopeSelector): RunDiffScopeParams {
+  return {
+    scope: selector.kind === "workspace" ? undefined : selector.kind,
+    commit: selector.kind === "commit" ? selector.commit : undefined,
+    step: selector.kind === "step" ? selector.step : undefined,
+    session: selector.kind === "session" ? selector.session : undefined,
+  };
 }
 
 /** What a diff response was actually computed from, so a reader never has to infer which scope answered. */
@@ -73,12 +86,21 @@ export const runDiffScopeSchema = z.discriminatedUnion("kind", [
     parent: z.string().nullable(),
   }),
   z.object({
+    kind: z.literal("step"),
+    step_run_id: z.string(),
+    step_name: z.string(),
+    /** 1-based position of the step in the run's plan, so a repeated name still reads apart. */
+    step_number: z.number().int().positive(),
+  }),
+  z.object({
+    kind: z.literal("pull_request"),
+    /** Null while GitHub has not numbered the pull request yet. */
+    number: z.number().int().positive().nullable(),
+  }),
+  z.object({
     kind: z.literal("session"),
     agent_session_id: z.string(),
     step_name: z.string(),
-    /** The bounds the pass's delta was taken between. */
-    start_tree_sha: z.string(),
-    end_tree_sha: z.string(),
   }),
 ]);
 export type RunDiffScope = z.infer<typeof runDiffScopeSchema>;

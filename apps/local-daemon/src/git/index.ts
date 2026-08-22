@@ -10,6 +10,7 @@
 export * from "./types.js";
 export * from "./errors.js";
 export * from "./diff.js";
+export { worktreeGitView, type WorktreeGitView } from "./diff-inputs.js";
 export { scrubGitEnv } from "./git-cli.js";
 export {
   branchExists,

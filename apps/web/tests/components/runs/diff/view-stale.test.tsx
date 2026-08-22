@@ -49,6 +49,10 @@ vi.mock("@web/api/runs/queries", () => ({
   useRunCommits: () => ({ data: undefined, isError: false, refetch: vi.fn() }),
 }));
 
+vi.mock("@web/api/prs/queries", () => ({
+  useRunPullRequest: () => ({ data: undefined, isError: false, refetch: vi.fn() }),
+}));
+
 vi.mock("@web/api/reviews/queries", () => ({
   useReviewDiff: () => diffQuery,
   useReviewDetail: () => reviewQuery,

@@ -1,10 +1,10 @@
 import { getAttachedPullRequest, getPullRequestForRun, type PullRequestRow } from "@otomat/db";
 
-import { diffSnapshotOrNull, hasCommit, pullRequestDiffSnapshot } from "#git";
+import { diffSnapshotOrNull, pullRequestDiffSnapshot } from "#git";
 
 import { getFixAuthority } from "./authority.js";
 import { getDestinationAvailability } from "./destinations.js";
-import { importedDestinations, importedFixAuthority } from "./pull-request.js";
+import { importedDestinations, importedFixAuthority, pullRequestTrees } from "./pull-request.js";
 import type { ReviewContext, ReviewSubject, ReviewSubjectRef } from "./types.js";
 
 function runSubject(ctx: ReviewContext, id: string, owner: string): ReviewSubject {
@@ -28,9 +28,9 @@ function pullRequestSubject(ctx: ReviewContext, row: PullRequestRow): ReviewSubj
     ledgerRunId: row.run_id,
     snapshot: () => {
       const binding = ctx.repositories.forRepository(row.repository_id);
-      if (binding === null || row.head_sha === null || row.base_sha === null) return null;
-      if (!hasCommit(binding.rootPath, row.head_sha)) return null;
-      return pullRequestDiffSnapshot(binding.rootPath, { base: row.base_sha, head: row.head_sha });
+      if (binding === null) return null;
+      const trees = pullRequestTrees(row, binding);
+      return trees === null ? null : pullRequestDiffSnapshot(binding.rootPath, trees);
     },
     fixAuthority: () => importedFixAuthority(row),
     destinations: () => importedDestinations(row),
