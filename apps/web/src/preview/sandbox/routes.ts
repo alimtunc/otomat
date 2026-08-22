@@ -12,14 +12,15 @@ import {
   sandboxModels,
   sandboxOptions,
 } from "@web/preview/sandbox/catalog";
+import { SANDBOX_INBOX } from "@web/preview/sandbox/inbox";
 import { SANDBOX_ISSUES, sandboxIssue } from "@web/preview/sandbox/issues";
 import {
   SANDBOX_DIFF,
   SANDBOX_DIFF_BLOBS,
-  SANDBOX_INBOX,
   SANDBOX_PULL_REQUEST_DETAIL,
   SANDBOX_PULL_REQUESTS,
   SANDBOX_REVIEW,
+  SANDBOX_REVIEW_INBOX,
 } from "@web/preview/sandbox/review";
 import {
   SANDBOX_RUNS,
@@ -83,6 +84,7 @@ const LINEAR_SYNC: LinearSyncStatusContract = {
 const ROUTES: SandboxRoute[] = [
   { pattern: /^\/api\/health$/, respond: (_m, build) => json(sandboxHealth(build)) },
   { pattern: /^\/api\/activity$/, respond: () => json(SANDBOX_ACTIVITY) },
+  { pattern: /^\/api\/inbox$/, respond: () => json(SANDBOX_INBOX) },
   { pattern: /^\/api\/projects$/, respond: () => json([SANDBOX_PROJECT]) },
   { pattern: /^\/api\/repositories$/, respond: () => json([SANDBOX_REPOSITORY]) },
   { pattern: /^\/api\/repositories\/[^/]+\/branches$/, respond: () => json(SANDBOX_BRANCHES) },
@@ -120,7 +122,7 @@ const ROUTES: SandboxRoute[] = [
     },
   },
   { pattern: /^\/api\/issues\/[^/]+\/pull-requests$/, respond: () => json(SANDBOX_PULL_REQUESTS) },
-  { pattern: /^\/api\/reviews$/, respond: () => json(SANDBOX_INBOX) },
+  { pattern: /^\/api\/reviews$/, respond: () => json(SANDBOX_REVIEW_INBOX) },
   { pattern: /^\/api\/pull-requests\/[^/]+$/, respond: () => json(SANDBOX_PULL_REQUESTS[0]) },
   { pattern: /^\/api\/runs$/, respond: () => json(SANDBOX_RUNS) },
   {

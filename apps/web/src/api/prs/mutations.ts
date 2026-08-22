@@ -35,6 +35,7 @@ function invalidateIssuePullRequests(client: QueryClient, issueId: string | null
     client.invalidateQueries({ queryKey: queryKeys.issues });
   }
   client.invalidateQueries({ queryKey: queryKeys.reviews });
+  client.invalidateQueries({ queryKey: queryKeys.inbox });
 }
 
 export function useConnectGitHub() {

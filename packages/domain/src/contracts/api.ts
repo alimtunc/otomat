@@ -13,6 +13,7 @@ export * from "./completion-report.js";
 export * from "./execution-config.js";
 export * from "./github.js";
 export * from "./health.js";
+export * from "./inbox.js";
 export * from "./issue.js";
 export * from "./skill.js";
 export * from "./linear.js";

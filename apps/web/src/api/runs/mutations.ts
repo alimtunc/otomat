@@ -18,11 +18,12 @@ import { seedIssueRun } from "@web/api/runs/seed-run";
 import { contributionErrorMessage } from "@web/lib/run/contribution";
 
 /** Every cycle command drops the same caches: the issue's join in, because it decides what can still be continued. */
-function invalidateRunCycleCaches(client: QueryClient, runId: string): void {
+export function invalidateRunCycleCaches(client: QueryClient, runId: string): void {
   client.invalidateQueries({ queryKey: queryKeys.run(runId) });
   client.invalidateQueries({ queryKey: queryKeys.runs });
   client.invalidateQueries({ queryKey: queryKeys.issues });
   client.invalidateQueries({ queryKey: queryKeys.activity });
+  client.invalidateQueries({ queryKey: queryKeys.inbox });
 }
 
 export function useAbortRun(runId: string) {

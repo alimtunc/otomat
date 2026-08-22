@@ -21,6 +21,11 @@ describe("the preview sandbox", () => {
     expect(await daemon.listRuntimes()).not.toHaveLength(0);
   });
 
+  it("serves the Inbox the navigation counts from", async () => {
+    const inbox = await daemon.listInbox();
+    expect(inbox.entries.map((entry) => entry.kind)).toEqual(["run_review_ready"]);
+  });
+
   it("serves issues across the board columns, and one issue by id", async () => {
     const issues = await daemon.listIssues();
     expect(issues.length).toBeGreaterThan(3);

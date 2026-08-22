@@ -177,7 +177,7 @@ export const SANDBOX_PULL_REQUEST_DETAIL: PullRequestDetail = {
   },
 };
 
-export const SANDBOX_INBOX: PullRequestInbox = {
+export const SANDBOX_REVIEW_INBOX: PullRequestInbox = {
   project_id: SANDBOX_PROJECT_ID,
   viewer: { login: "sandbox-operator", teams_known: true },
   sync: { running: false, repositories: 1, last_synced_at: SANDBOX_NOW, last_error: null },

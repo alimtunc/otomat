@@ -22,6 +22,7 @@ function runDiffScopeKey(scope: RunDiffScopeSelector): string {
 export const queryKeys = {
   health: ["health"] as const,
   activity: ["activity"] as const,
+  inbox: ["inbox"] as const,
   daemonLogExcerpt: (correlationId: string | null) =>
     ["diagnostics", "logs", correlationId] as const,
   githubConnection: ["github", "connection"] as const,

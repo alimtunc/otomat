@@ -9,6 +9,7 @@ import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
+import { invalidateRunCycleCaches } from "@web/api/runs/mutations";
 
 function seedStepRow(client: QueryClient, runId: string, step: StepRunContract): void {
   client.setQueryData(queryKeys.run(runId), (current: RunDetail | undefined) =>
@@ -67,10 +68,7 @@ export function useStopRunStep(runId: string) {
     mutationFn: (stepId: string) => daemon.stopRunStep(runId, stepId),
     onSuccess: (step) => {
       seedStepRow(client, runId, step);
-      client.invalidateQueries({ queryKey: queryKeys.run(runId) });
-      client.invalidateQueries({ queryKey: queryKeys.runs });
-      client.invalidateQueries({ queryKey: queryKeys.issues });
-      client.invalidateQueries({ queryKey: queryKeys.activity });
+      invalidateRunCycleCaches(client, runId);
       toast.success("Step stopped — your next message resumes the same session.");
     },
     onError: (error) => toast.error(stopStepErrorMessage(error)),

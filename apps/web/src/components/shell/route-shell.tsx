@@ -104,6 +104,7 @@ export function RouteShell({
           onNewIssue={openNewIssue}
           hasLiveRun={shell.hasLiveRun}
           reviewCount={shell.reviewCount}
+          inboxCount={shell.inboxCount}
         />
       }
       rightPanel={rightPanel}

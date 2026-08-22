@@ -7,6 +7,7 @@ import {
   type RunEventsSubscription,
 } from "./events.js";
 import { createGitHubClient } from "./github.js";
+import { createInboxClient } from "./inbox.js";
 import { createIssuesClient } from "./issues.js";
 import { createLinearClient } from "./linear.js";
 import { createPullRequestsClient } from "./pull-requests.js";
@@ -25,6 +26,7 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
     ...createGitHubClient(config),
     ...createLinearClient(config),
     ...createAgentsClient(config),
+    ...createInboxClient(config),
     ...createIssuesClient(config),
     ...createRunsClient(config),
     ...createReviewsClient(config),
