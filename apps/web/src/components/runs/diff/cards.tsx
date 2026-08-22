@@ -80,8 +80,6 @@ export function DiffFileCards({
       <DetachedComments
         target={target}
         comments={comments.partition.detached}
-        selectedIds={comments.selectedIds}
-        onToggle={commentActions.toggle}
         onPublish={commentActions.publish}
         publishingId={comments.publishingId}
       />

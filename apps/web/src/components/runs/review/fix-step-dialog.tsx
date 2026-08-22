@@ -10,49 +10,53 @@ import {
 } from "@otomat/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
+import { useRequestFix } from "@web/api/reviews/mutations";
 import { ContextComposer } from "@web/components/context/context-composer";
 import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
-import type { ReviewSelection } from "@web/components/runs/review/use-selection";
 import { contextRequestFields, EMPTY_CONTEXT_DRAFT } from "@web/lib/context/draft";
 import { profileRequestFields } from "@web/lib/execution/request";
 import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
 import { useState } from "react";
 
 export interface ReviewFixStepDialogProps {
-  selection: ReviewSelection;
+  runId: string;
   /** Issue the fix step attaches, like every other step of the cycle; null while the run is unknown. */
   issueId: string | null;
+  /** What the daemon will freeze, counted here only to name it; the request never lists comments. */
+  count: number;
   /** True while the run cannot take a step; the trigger stays visible and explains itself. */
   disabled: boolean;
 }
 
-/** Turns the selected comments into an appended step, on an agent the user picks here rather than inherits. */
-export function ReviewFixStepDialog({ selection, issueId, disabled }: ReviewFixStepDialogProps) {
+/** Turns every open agent comment into an appended step, on an agent the user picks here rather than inherits. */
+export function ReviewFixStepDialog({ runId, issueId, count, disabled }: ReviewFixStepDialogProps) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const [context, setContext] = useState(EMPTY_CONTEXT_DRAFT);
   const [execution, setExecution] = useState<ExecutionSelection>(EMPTY_EXECUTION_SELECTION);
   const issue = useIssue(issueId);
+  const fix = useRequestFix(runId);
   const launchExecution = useLaunchExecution(execution, "profiles");
   const profile = profileRequestFields(launchExecution.request);
-  const canSubmit = launchExecution.canLaunch && profile !== null && !selection.isFixPending;
+  const canSubmit = launchExecution.canLaunch && profile !== null && !fix.isPending;
 
   const submit = (): void => {
     if (!canSubmit || profile === null) return;
     const request: RequestFixRequest = {
-      comment_ids: [...selection.selectedIds],
       ...contextRequestFields(context),
       ...profile,
     };
-    selection.requestFix(request, (response) => {
-      setOpen(false);
-      void navigate({
-        to: "/runs/$runId",
-        params: { runId: selection.runId },
-        search: { step: response.step_run_id },
-      });
+    fix.mutate(request, {
+      onSuccess: (response) => {
+        setOpen(false);
+        void navigate({
+          to: "/runs/$runId",
+          params: { runId },
+          search: { step: response.step_run_id },
+        });
+      },
     });
   };
 
@@ -62,21 +66,19 @@ export function ReviewFixStepDialog({ selection, issueId, disabled }: ReviewFixS
         render={
           <Button variant="primary" size="sm" disabled={disabled}>
             <Icon name="wand-2" aria-hidden />
-            Fix selected comments with AI
+            {count === 1 ? "Fix 1 agent comment" : `Fix ${count} agent comments`}
           </Button>
         }
       />
-      <DialogContent aria-label="Fix the selected review comments">
+      <DialogContent aria-label="Fix the open agent comments">
         <DialogHeader>
           <span className="text-sm text-text-secondary">
-            {selection.selectedIds.size === 1
-              ? "1 comment becomes a new step"
-              : `${selection.selectedIds.size} comments become a new step`}
+            {count === 1 ? "1 comment becomes a new step" : `${count} comments become a new step`}
           </span>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-3">
           <p className="text-xs text-text-tertiary">
-            The step is appended to this issue’s plan and runs in its workspace. Each selected
+            The step is appended to this issue’s plan and runs in its workspace. Each open agent
             comment, its pinned hunk, the current file and the current diff sha are frozen as its
             context.
           </p>
@@ -102,7 +104,7 @@ export function ReviewFixStepDialog({ selection, issueId, disabled }: ReviewFixS
               type="button"
               variant="primary"
               size="sm"
-              loading={selection.isFixPending}
+              loading={fix.isPending}
               disabled={!canSubmit}
               onClick={submit}
             >

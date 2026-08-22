@@ -15,7 +15,6 @@ export function fileCommentsProp(overrides: Partial<DiffFileComments> = {}): Dif
     all: [],
     counts: { open: 0, addressed: 0, agent: 0, prReview: 0, stale: 0 },
     anchoredIds: new Set(),
-    selectedIds: new Set(),
     destinations: { pr_review: false, reason: "This run has no pull request yet." },
     preferredDestination: "agent",
     publishingId: null,
@@ -28,7 +27,6 @@ export function fileCommentActions(
 ): DiffFileCommentActions {
   return {
     add: async () => {},
-    toggle: () => {},
     publish: () => {},
     reveal: () => {},
     ...overrides,

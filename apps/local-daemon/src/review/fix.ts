@@ -7,7 +7,9 @@ import {
   type RunRow,
 } from "@otomat/db";
 import {
+  CONTEXT_MAX_REVIEW_COMMENTS,
   FIX_REVIEW_COMMENTS_STEP_NAME,
+  isAgentFixEligible,
   isRunPlanCompeteGroup,
   type CompeteGroupState,
   type ContextReviewComment,
@@ -42,47 +44,46 @@ function diffProducingNodes(ctx: ReviewContext, run: RunRow): string[] {
   return produced.map((node) => node.id);
 }
 
-/** Freezes the fix context of the selected open comments; mutates nothing. */
-function prepareFix(ctx: ReviewContext, run: RunRow, commentIds: string[]): FixPreparation {
-  const byId = new Map(
-    listReviewCommentsForSubject(ctx.db, run.id).map((comment) => [comment.id, comment]),
-  );
+/** Freezes the fix context of every eligible agent comment; mutates nothing. */
+function prepareFix(ctx: ReviewContext, run: RunRow): FixPreparation {
+  const eligible = listReviewCommentsForSubject(ctx.db, run.id).filter(isAgentFixEligible);
+  if (eligible.length === 0) {
+    throw new CommentsNotFixableError(
+      "No open agent comment is waiting for a fix. Address a comment to the agent first.",
+    );
+  }
+  if (eligible.length > CONTEXT_MAX_REVIEW_COMMENTS) {
+    throw new CommentsNotFixableError(
+      `${eligible.length} agent comments are open; a fix step carries at most ${CONTEXT_MAX_REVIEW_COMMENTS}. Fix or resolve some first.`,
+    );
+  }
   // One captured snapshot: every "current file" comes from the same tree, and a commented path
   // that is a symlink stays the symlink's target text, never a host file.
   const binding = ctx.repositories.forRun(run.id);
   const snapshot = binding === null ? null : diffSnapshotOrNull(binding.service, run.id);
-  const comments: ContextReviewComment[] = [];
-  for (const commentId of commentIds) {
-    const comment = byId.get(commentId);
-    if (!comment) throw new CommentsNotFixableError(`comment ${commentId} not found on run`);
-    if (comment.status !== "open") {
-      throw new CommentsNotFixableError(`comment ${commentId} is ${comment.status}, not open`);
-    }
-    if (comment.destination !== "agent") {
-      throw new CommentsNotFixableError(
-        `comment ${commentId} is addressed to the pull request review, not to the agent`,
-      );
-    }
-    comments.push(
-      reviewCommentContext(
-        comment,
-        snapshot === null
-          ? null
-          : snapshot.fileBlobs({ path: comment.file_path, oldPath: null }).head,
-      ),
-    );
-  }
-  return { comments, commentIds, dependsOn: diffProducingNodes(ctx, run) };
+  const comments: ContextReviewComment[] = eligible.map((comment) =>
+    reviewCommentContext(
+      comment,
+      snapshot === null
+        ? null
+        : snapshot.fileBlobs({ path: comment.file_path, oldPath: null }).head,
+    ),
+  );
+  return { comments, dependsOn: diffProducingNodes(ctx, run) };
 }
 
 /**
- * Stamps `fix_requested_at` on each selected comment and drives the review to
+ * Stamps `fix_requested_at` on each frozen comment and drives the review to
  * `changes_requested`. The drive is a no-op when the run has no review or it is
- * already `changes_requested`. Does not validate the comment ids — prepareFix does.
+ * already `changes_requested`.
  */
-function markFixRequested(ctx: ReviewContext, runId: string, commentIds: string[]): void {
+function markFixRequested(
+  ctx: ReviewContext,
+  runId: string,
+  comments: readonly ContextReviewComment[],
+): void {
   const now = new Date().toISOString();
-  for (const commentId of commentIds) setReviewCommentFixRequested(ctx.db, commentId, now);
+  for (const comment of comments) setReviewCommentFixRequested(ctx.db, comment.id, now);
   const review = getReviewForSubject(ctx.db, runId);
   if (review && review.status !== "changes_requested") {
     driveReviewTo(ctx, review, "changes_requested");
@@ -90,7 +91,7 @@ function markFixRequested(ctx: ReviewContext, runId: string, commentIds: string[
 }
 
 /**
- * The selected open comments become one appended fix step. Order is the
+ * Every eligible agent comment becomes one appended fix step. Order is the
  * invariant: freeze context, append the step, then stamp — a failed append
  * leaves every comment unstamped and the review untouched.
  */
@@ -99,7 +100,7 @@ export async function requestFix(
   run: RunRow,
   request: FixRequest,
 ): Promise<RunRow> {
-  const preparation = prepareFix(ctx, run, request.commentIds);
+  const preparation = prepareFix(ctx, run);
   const updated = await ctx.appendRunStep(run.id, {
     name: FIX_REVIEW_COMMENTS_STEP_NAME,
     note: request.note,
@@ -111,6 +112,6 @@ export async function requestFix(
     replaces: null,
     origin: "review_fix",
   });
-  markFixRequested(ctx, run.id, preparation.commentIds);
+  markFixRequested(ctx, run.id, preparation.comments);
   return updated;
 }

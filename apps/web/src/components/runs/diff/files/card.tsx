@@ -123,8 +123,6 @@ export function DiffFileCard({
               key={comment.id}
               target={target}
               comment={comment}
-              selected={comments.selectedIds.has(comment.id)}
-              onSelectedChange={(selected) => commentActions.toggle(comment.id, selected)}
               onPublish={() => commentActions.publish(comment.id)}
               publishing={comments.publishingId === comment.id}
             />

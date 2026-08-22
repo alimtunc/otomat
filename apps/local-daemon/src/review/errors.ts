@@ -46,7 +46,7 @@ export class DiffScopeNotFoundError extends Error {
   }
 }
 
-/** The fix selection contains unknown, non-open or non-agent comments. */
+/** No comment is eligible for a fix step, or more are open than one step may carry. */
 export class CommentsNotFixableError extends Error {
   constructor(message: string) {
     super(message);

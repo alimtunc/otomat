@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { CONTEXT_MAX_REVIEW_COMMENTS, CONTEXT_NOTE_MAX_LENGTH } from "../context/limits.js";
+import { CONTEXT_NOTE_MAX_LENGTH } from "../context/limits.js";
 import { contextReferencesSchema } from "../context/reference.js";
 import { diffFileContractSchema, diffSideSchema } from "./diff.js";
 import {
@@ -81,6 +81,7 @@ export const REVIEW_COMMENT_ERRORS = [
   "comment_range_invalid",
   "comment_destination_unavailable",
   "comment_publication_failed",
+  "comments_not_fixable",
 ] as const;
 export const reviewCommentErrorSchema = z.object({
   error: z.enum(REVIEW_COMMENT_ERRORS),
@@ -88,10 +89,9 @@ export const reviewCommentErrorSchema = z.object({
 });
 export type ReviewCommentError = z.infer<typeof reviewCommentErrorSchema>;
 
-/** Ask an agent to fix the selected open comments as a step appended to the run's plan; the agent is chosen explicitly, never inherited. */
+/** Ask an agent to fix every open Agent comment as a step appended to the run's plan; the daemon resolves which ones, and the agent is chosen explicitly. */
 export const requestFixRequestSchema = z
   .object({
-    comment_ids: z.array(z.string().min(1)).min(1).max(CONTEXT_MAX_REVIEW_COMMENTS),
     profile_id: z.string().min(1),
     model: modelSelectionSchema.optional(),
     /** Provider options for the fix step alone; an absent key keeps what the chosen agent carries. */

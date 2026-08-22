@@ -1,45 +1,53 @@
-import type { ReviewFixAuthority } from "@otomat/domain";
-import { Button, Chip } from "@otomat/ui";
+import {
+  isAgentFixEligible,
+  type ReviewCommentContract,
+  type ReviewFixAuthority,
+} from "@otomat/domain";
+import { Chip } from "@otomat/ui";
 import { ReviewFixStepDialog } from "@web/components/runs/review/fix-step-dialog";
-import type { ReviewSelection } from "@web/components/runs/review/use-selection";
 
 export interface DiffFixBarProps {
+  runId: string;
   /** Whether this run still owns its issue's workspace; a fix is one more step in that same cycle. */
   workspaceOpen: boolean;
   issueId: string | null;
   authority: ReviewFixAuthority;
-  selection: ReviewSelection;
+  comments: readonly ReviewCommentContract[];
 }
 
-export function DiffFixBar({ workspaceOpen, issueId, authority, selection }: DiffFixBarProps) {
-  const count = selection.selectedIds.size;
+function ownedHint(workspaceOpen: boolean, count: number): string {
+  if (!workspaceOpen) return "Fix is available while this issue’s workspace is still open.";
+  if (count === 0) return "Address a comment to the agent to make it part of the next fix step.";
+  return "A fix step freezes every open agent comment, its pinned hunk and the current diff as its context.";
+}
+
+export function DiffFixBar({
+  runId,
+  workspaceOpen,
+  issueId,
+  authority,
+  comments,
+}: DiffFixBarProps) {
+  const count = comments.filter(isAgentFixEligible).length;
   const owned = authority.kind === "otomat";
-  const ownedHint = workspaceOpen
-    ? "A fix step freezes the comments, their pinned hunks and the current diff as its context."
-    : "Fix is available while this issue’s workspace is still open.";
-  const hint = owned ? ownedHint : authority.reason;
+  const hint = owned ? ownedHint(workspaceOpen, count) : authority.reason;
 
   return (
     <footer className="flex h-12 flex-none items-center gap-2.5 border-t border-border-subtle bg-surface-1 px-4.5">
-      <span className="text-xs font-medium text-review">
-        {count === 1 ? "1 comment selected" : `${count} comments selected`}
-      </span>
       {owned ? null : <Chip tone="neutral">Review only</Chip>}
       <span className="min-w-0 truncate text-xs text-text-tertiary" title={hint}>
         {hint}
       </span>
-      <span className="ml-auto flex items-center gap-2">
-        <Button variant="ghost" size="sm" disabled={count === 0} onClick={selection.clear}>
-          Clear
-        </Button>
-        {owned ? (
+      {owned ? (
+        <span className="ml-auto">
           <ReviewFixStepDialog
-            selection={selection}
+            runId={runId}
             issueId={issueId}
+            count={count}
             disabled={!workspaceOpen || count === 0}
           />
-        ) : null}
-      </span>
+        </span>
+      ) : null}
     </footer>
   );
 }

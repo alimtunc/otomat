@@ -480,12 +480,9 @@ it("posts a fix request with the selected comment ids", async () => {
     return jsonResponse({ run: { ...RUN, status: "running" }, step_run_id: "fix-step" });
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
-  const result = await client.requestFix("run-1", {
-    comment_ids: ["c1", "c2"],
-    profile_id: "profile-1",
-  });
+  const result = await client.requestFix("run-1", { profile_id: "profile-1" });
   expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/review/fix");
-  expect(body).toEqual({ comment_ids: ["c1", "c2"], profile_id: "profile-1" });
+  expect(body).toEqual({ profile_id: "profile-1" });
   expect(result.run.status).toBe("running");
   expect(result.step_run_id).toBe("fix-step");
 });

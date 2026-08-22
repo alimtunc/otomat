@@ -41,7 +41,6 @@ function cardsProps(overrides: Partial<DiffFileCardsProps> = {}): DiffFileCardsP
         { base: "base", files: FILES, additions: 0, deletions: 0, sha: "diff-sha" },
         [],
       ),
-      selectedIds: new Set(),
       destinations: { pr_review: false, reason: "This run has no pull request yet." },
       preferredDestination: "agent",
       publishingId: null,

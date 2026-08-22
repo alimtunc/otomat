@@ -53,6 +53,17 @@ export const reviewCommentContractSchema = z.object({
 });
 export type ReviewCommentContract = z.infer<typeof reviewCommentContractSchema>;
 
+/** The single eligibility rule the fix step and the surfaces that count it must agree on. */
+export function isAgentFixEligible(
+  comment: Pick<ReviewCommentContract, "status" | "destination" | "fix_requested_at">,
+): boolean {
+  return (
+    comment.status === "open" &&
+    comment.destination === "agent" &&
+    comment.fix_requested_at === null
+  );
+}
+
 /** One file the operator marked, pinned to the `diff_sha` it was read at: the mark holds while that sha does. */
 export const reviewedFileContractSchema = z.object({
   id: z.string(),

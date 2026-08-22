@@ -16,7 +16,6 @@ export interface DiffFileComments {
   all: readonly ReviewCommentContract[];
   counts: FileCommentCounts;
   anchoredIds: ReadonlySet<string>;
-  selectedIds: ReadonlySet<string>;
   destinations: ReviewDestinationAvailability;
   preferredDestination: ReviewCommentDestination;
   publishingId: string | null;
@@ -24,7 +23,6 @@ export interface DiffFileComments {
 
 export interface DiffFileCommentActions {
   add: (file: DiffFileContract, comment: ComposedComment) => Promise<void>;
-  toggle: (commentId: string, selected: boolean) => void;
   publish: (commentId: string) => void;
   reveal: (comment: ReviewCommentContract) => void;
 }
@@ -34,7 +32,6 @@ const NO_COMMENTS: ReviewCommentContract[] = [];
 
 export interface FileCommentsInput {
   partition: PartitionedComments;
-  selectedIds: ReadonlySet<string>;
   destinations: ReviewDestinationAvailability;
   preferredDestination: ReviewCommentDestination;
   publishingId: string | null;
@@ -48,7 +45,6 @@ export function fileComments(path: string, input: FileCommentsInput): DiffFileCo
     all: partition.byPath.get(path) ?? NO_COMMENTS,
     counts: partition.countsByPath.get(path) ?? EMPTY_FILE_COMMENT_COUNTS,
     anchoredIds: partition.anchoredIds,
-    selectedIds: input.selectedIds,
     destinations: input.destinations,
     preferredDestination: input.preferredDestination,
     publishingId: input.publishingId,
