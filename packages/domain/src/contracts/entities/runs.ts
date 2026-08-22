@@ -118,7 +118,17 @@ export const agentSessionContractSchema = z.object({
 });
 export type AgentSessionContract = z.infer<typeof agentSessionContractSchema>;
 
-/** Whether a pass's delta can be reconstructed at all from its captured boundary. */
-export function isPassReconstructable(boundary: SessionPassBoundary): boolean {
-  return boundary.start_tree_sha !== null && boundary.end_tree_sha !== null;
+export interface StepPassBounds {
+  start_tree_sha: string;
+  end_tree_sha: string;
+}
+
+/** Read positionally, so `boundaries` must be in turn order; null rather than a narrower span, since the workspace is not a stand-in for a missing exit. */
+export function stepPassBounds(
+  boundaries: readonly Pick<SessionPassBoundary, "start_tree_sha" | "end_tree_sha">[],
+): StepPassBounds | null {
+  const start = boundaries[0]?.start_tree_sha ?? null;
+  const end = boundaries.at(-1)?.end_tree_sha ?? null;
+  if (start === null || end === null) return null;
+  return { start_tree_sha: start, end_tree_sha: end };
 }

@@ -20,11 +20,17 @@ export function readDiffScope<E extends Env>(c: Context<E>): RunDiffScopeSelecto
     if (!commit) throw new DiffScopeInvalidError("A commit scope needs a `commit` sha.");
     return { kind: "commit", commit };
   }
+  if (kind === "step") {
+    const step = query("step");
+    if (!step) throw new DiffScopeInvalidError("A step scope needs a `step` id.");
+    return { kind: "step", step };
+  }
   if (kind === "session") {
     const session = query("session");
     if (!session) throw new DiffScopeInvalidError("A session scope needs a `session` id.");
     return { kind: "session", session };
   }
+  if (kind === "pull_request") return { kind: "pull_request" };
   throw new DiffScopeInvalidError(`Unknown diff scope \`${kind}\`.`);
 }
 

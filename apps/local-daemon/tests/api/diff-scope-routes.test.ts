@@ -56,14 +56,18 @@ it("reads the workspace scope when the query names none", async () => {
   expect(asked).toEqual([{ kind: "workspace" }]);
 });
 
-it("passes a commit and a session scope through verbatim", async () => {
+it("passes every named scope through verbatim", async () => {
   const app = appEchoingScope();
   await request(app, `/api/runs/${RUN_ID}/diff?scope=commit&commit=abc123`);
+  await request(app, `/api/runs/${RUN_ID}/diff?scope=step&step=step-9`);
   await request(app, `/api/runs/${RUN_ID}/diff?scope=session&session=sess-9`);
+  await request(app, `/api/runs/${RUN_ID}/diff?scope=pull_request`);
 
   expect(asked).toEqual([
     { kind: "commit", commit: "abc123" },
+    { kind: "step", step: "step-9" },
     { kind: "session", session: "sess-9" },
+    { kind: "pull_request" },
   ]);
 });
 
@@ -71,6 +75,7 @@ it("refuses a scope naming nothing rather than answering with the workspace", as
   const app = appEchoingScope();
 
   expect((await request(app, `/api/runs/${RUN_ID}/diff?scope=commit`)).status).toBe(400);
+  expect((await request(app, `/api/runs/${RUN_ID}/diff?scope=step`)).status).toBe(400);
   expect((await request(app, `/api/runs/${RUN_ID}/diff?scope=session`)).status).toBe(400);
   expect((await request(app, `/api/runs/${RUN_ID}/diff?scope=nonsense`)).status).toBe(400);
   expect(asked).toEqual([]);

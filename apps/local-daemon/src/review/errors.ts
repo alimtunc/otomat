@@ -38,7 +38,7 @@ export class FileTooLargeError extends Error {
 /** The requested diff scope names something this run does not have; the caller picks another. */
 export class DiffScopeNotFoundError extends Error {
   constructor(
-    readonly code: "commit_not_found" | "session_not_found",
+    readonly code: "commit_not_found" | "session_not_found" | "step_not_found",
     message: string,
   ) {
     super(message);

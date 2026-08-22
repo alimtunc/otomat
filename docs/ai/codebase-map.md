@@ -796,15 +796,32 @@ SQLite. The trade is that git may eventually prune an unreachable tree — so
 every surface treats a missing boundary as a named absence, never as an empty
 delta.
 
-That boundary is what makes the cockpit's three diff scopes possible.
-`review/scope.ts` is the single place a scope becomes a snapshot — `workspace`
-(fork point → current state), `commit` (`commit^` → `commit`, or the empty tree
-for a root commit), `session` (a pass's two trees) — so no surface can pair one
-scope's descriptor with another's content. Every diff read carries the scope
-that answered plus an `unavailable` sentence when none could; the reviewer keeps
-the scope control on screen in that state rather than falling back to the
-workspace diff. Blob reads take the same scope, so expanded context always comes
-from the trees its patch was taken between.
+That boundary is what makes the cockpit's diff scopes possible. `review/scope.ts`
+is the single place a scope becomes a snapshot — `workspace` (fork point →
+current state), `commit` (`commit^` → `commit`, or the empty tree for a root
+commit), `step` (its first pass's start tree → its last pass's end tree),
+`pull_request` (the published or imported head against its base), and `session`
+(one pass's two trees) — so no surface can pair one scope's descriptor with
+another's content. Every diff read carries the scope that answered plus an
+`unavailable` sentence when none could; the reviewer keeps the scope control on
+screen in that state rather than falling back to the workspace diff. Blob reads
+take the same scope, so expanded context always comes from the trees its patch
+was taken between.
+
+The picker offers `workspace`, `step`, `commit`, and `pull_request` once the run
+has one: those are the slices a reviewer chooses between. A step that captured no
+pair of boundaries is listed unselectable rather than hidden, so an absent delta
+reads as an absence. `session` stays a scope without being offered, because a fix
+proof links to the one pass that produced it, and a step that took several turns
+has different per-file shas than any of them.
+
+The workspace fork point is recomputed (`git/diff-inputs.ts`), not read from
+`worktrees.base_sha`: rebasing a branch moves where it forks from its base ref,
+and the sha recorded at acquire would then make the diff carry everything the
+base branch gained since — the shape behind a reviewer counting 407 files against
+GitHub's 79. The recorded sha stays the fallback for a base ref git can no longer
+resolve, and one `worktreeGitView` serves the diff, the branch commits and the
+abandon confirmation so the three cannot drift.
 
 The same boundary is the proof behind an addressed comment. Settle stamps
 `review_comments.fixed_by_session_id` with the pass that addressed it, and

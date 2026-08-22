@@ -1,6 +1,13 @@
 import type { PullRequestRow } from "@otomat/db";
 import type { ReviewDestinationAvailability, ReviewFixAuthority } from "@otomat/domain";
 
+import {
+  hasCommit,
+  publishedPullRequestTrees,
+  type PullRequestTrees,
+  type RepositoryBinding,
+} from "#git";
+
 /**
  * The commit a review comment may anchor to: what Otomat pushed for a pull
  * request it opened, what GitHub reports for one it adopted. GitHub rejects a
@@ -8,6 +15,21 @@ import type { ReviewDestinationAvailability, ReviewFixAuthority } from "@otomat/
  */
 export function reviewAnchorSha(row: PullRequestRow): string | null {
   return row.origin === "imported" ? row.head_sha : row.published_head_sha;
+}
+
+/** An import is pinned to the pair it fetched; a published head is only ever as current as its fork from the base. */
+export function pullRequestTrees(
+  row: PullRequestRow,
+  binding: RepositoryBinding,
+): PullRequestTrees | null {
+  const head = reviewAnchorSha(row);
+  if (head === null || head === "") return null;
+  if (row.origin !== "imported") {
+    if (row.base_ref === null || row.base_ref === "") return null;
+    return publishedPullRequestTrees(binding.rootPath, row.base_ref, head);
+  }
+  if (row.base_sha === null || row.base_sha === "") return null;
+  return hasCommit(binding.rootPath, head) ? { base: row.base_sha, head } : null;
 }
 
 const OWNERSHIP_REASON = {

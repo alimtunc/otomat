@@ -9,7 +9,7 @@ import {
 /** One stable key segment per scope, so switching scope refetches instead of reading a neighbour's cache. */
 function runDiffScopeKey(scope: RunDiffScopeSelector): string {
   const params = runDiffScopeParams(scope);
-  return `${params["scope"] ?? "workspace"}:${params["commit"] ?? params["session"] ?? ""}`;
+  return `${params.scope ?? "workspace"}:${params.commit ?? params.step ?? params.session ?? ""}`;
 }
 
 /**
