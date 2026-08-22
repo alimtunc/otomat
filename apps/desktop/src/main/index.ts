@@ -5,6 +5,7 @@ import { readBuildInfo } from "./build-info.js";
 import { resolveChannelDataRoot } from "./channel-data-root.js";
 import { resolveAppPaths } from "./paths.js";
 import { registerAppSchemePrivileged } from "./protocol.js";
+import { registerQuitHandlers } from "./quit.js";
 import { applyUserDataRoot } from "./user-data-root.js";
 
 registerAppSchemePrivileged();
@@ -29,11 +30,9 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   let desktop: DesktopApp | null = null;
 
+  registerQuitHandlers(app, process, () => desktop?.quit ?? null);
   app.on("second-instance", () => desktop?.focusPrimary());
   app.on("window-all-closed", () => app.quit());
-  app.on("before-quit", (event) => {
-    if (desktop !== null && desktop.quit.begin(() => app.quit())) event.preventDefault();
-  });
 
   app
     .whenReady()

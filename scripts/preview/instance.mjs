@@ -13,6 +13,7 @@ import {
   ownedContainerApplications,
   ownedPagesDeployments,
   ownedRegistryImages,
+  pagesDeploymentPage,
   previewContainerPullRequest,
   previewPagesPullRequest,
   previewRegistryPullRequest,
@@ -28,7 +29,6 @@ import {
 const HOST_DIR = fileURLToPath(new URL("./host/", import.meta.url));
 const WRANGLER = ["dlx", "wrangler@4"];
 const API = "https://api.cloudflare.com/client/v4";
-const PAGE_SIZE = 100;
 const MAX_PAGES = 1_000;
 const WARM_ATTEMPTS = 18;
 const WARM_INTERVAL_MS = 5_000;
@@ -121,13 +121,10 @@ function apiRows(response, label) {
 }
 
 async function listPagesDeployments(account, project) {
-  const base = `/accounts/${account}/pages/projects/${encodeURIComponent(project)}/deployments`;
   const deployments = [];
   for (let page = 1; page <= MAX_PAGES; page += 1) {
-    const response = await cloudflare(
-      "GET",
-      `${base}?page=${String(page)}&per_page=${String(PAGE_SIZE)}`,
-    );
+    const { base, pathname } = pagesDeploymentPage(account, project, page);
+    const response = await cloudflare("GET", pathname);
     const rows = apiRows(response, `listing ${project} deployments`);
     deployments.push(...rows);
     if (isFinalPage(rows, response.body?.result_info, page)) return { base, deployments };

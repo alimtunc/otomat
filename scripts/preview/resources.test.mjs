@@ -8,6 +8,7 @@ import {
   ownedContainerApplications,
   ownedPagesDeployments,
   ownedRegistryImages,
+  pagesDeploymentPage,
   PREVIEW_CONTAINER_CLASS,
   previewContainerName,
   previewContainerPullRequest,
@@ -62,14 +63,21 @@ test("selects only resources proven to belong to one pull request", () => {
   ]);
 });
 
-test("walks every page even when the API clamps per_page below the requested size", () => {
-  const clampedPage = Array.from({ length: 25 }, (_, index) => ({ id: String(index) }));
-  assert.equal(isFinalPage(clampedPage, { total_pages: 3 }, 1), false);
-  assert.equal(isFinalPage(clampedPage, { total_pages: 3 }, 3), true);
-  assert.equal(isFinalPage(clampedPage, { total_pages: 1 }, 1), true);
+test("ends the deployment walk on total_pages, never on a short page", () => {
+  const shortPage = Array.from({ length: 25 }, (_, index) => ({ id: String(index) }));
+  assert.equal(isFinalPage(shortPage, { total_pages: 3 }, 1), false);
+  assert.equal(isFinalPage(shortPage, { total_pages: 3 }, 3), true);
+  assert.equal(isFinalPage(shortPage, { total_pages: 1 }, 1), true);
   assert.equal(isFinalPage([], { total_pages: 0 }, 1), true);
-  assert.equal(isFinalPage(clampedPage, undefined, 1), false);
+  assert.equal(isFinalPage(shortPage, undefined, 1), false);
   assert.equal(isFinalPage([], undefined, 2), true);
+});
+
+test("requests a Pages deployment page within the endpoint limit", () => {
+  assert.deepEqual(pagesDeploymentPage("account", "otomat/web", 2), {
+    base: "/accounts/account/pages/projects/otomat%2Fweb/deployments",
+    pathname: "/accounts/account/pages/projects/otomat%2Fweb/deployments?page=2&per_page=25",
+  });
 });
 
 test("treats not-found deletes as idempotent success", () => {
