@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
 
-import { QuitSequence, type QuittableRuntime } from "#main/quit";
+import { QuitSequence, registerQuitHandlers, type QuittableRuntime } from "#main/quit";
 
 function quitSequence(
   runtime: QuittableRuntime,
@@ -15,6 +15,45 @@ function runningRuntime(stop: () => Promise<void>): QuittableRuntime {
     hosts: { shutdown: async () => {}, remoteSession: null },
   };
 }
+
+it("turns SIGTERM into an Electron quit request", () => {
+  let onSigterm: (() => void) | undefined;
+  const app = {
+    on: vi.fn(),
+    quit: vi.fn(),
+  };
+  const signals = {
+    once: vi.fn((_signal: "SIGTERM", listener: () => void) => {
+      onSigterm = listener;
+    }),
+  };
+
+  registerQuitHandlers(app, signals, () => null);
+  if (onSigterm === undefined) throw new Error("SIGTERM handler was not registered");
+  onSigterm();
+
+  expect(signals.once).toHaveBeenCalledWith("SIGTERM", expect.any(Function));
+  expect(app.quit).toHaveBeenCalledOnce();
+});
+
+it("holds Electron's quit while owned processes stop", async () => {
+  let beforeQuit: ((event: { preventDefault(): void }) => void) | undefined;
+  const app = {
+    on: vi.fn((_event: "before-quit", listener: typeof beforeQuit) => {
+      beforeQuit = listener;
+    }),
+    quit: vi.fn(),
+  };
+  const quit = quitSequence(runningRuntime(() => Promise.resolve()));
+  const preventDefault = vi.fn();
+
+  registerQuitHandlers(app, { once: vi.fn() }, () => quit);
+  if (beforeQuit === undefined) throw new Error("before-quit handler was not registered");
+  beforeQuit({ preventDefault });
+
+  expect(preventDefault).toHaveBeenCalledOnce();
+  await vi.waitFor(() => expect(app.quit).toHaveBeenCalledOnce());
+});
 
 it("still releases the quit when stopping the daemon fails, and names the failed phase", async () => {
   const log = vi.fn();

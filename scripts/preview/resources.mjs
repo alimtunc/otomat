@@ -2,6 +2,8 @@ import { previewWorkerName, previewWorkerPullRequest } from "./workers.mjs";
 
 export const PREVIEW_CONTAINER_CLASS = "PreviewDaemon";
 const CONTAINER_SUFFIX = `-${PREVIEW_CONTAINER_CLASS.toLowerCase()}`;
+// Pages answers 400 "Invalid list options provided" above 25.
+const PAGES_DEPLOYMENTS_PAGE_SIZE = 25;
 
 export function previewPagesBranch(pullRequest) {
   return `pr-${String(pullRequest)}`;
@@ -10,6 +12,14 @@ export function previewPagesBranch(pullRequest) {
 export function previewPagesPullRequest(branch) {
   const match = /^pr-([1-9][0-9]*)$/.exec(branch);
   return match === null ? null : Number.parseInt(match[1], 10);
+}
+
+export function pagesDeploymentPage(account, project, page) {
+  const base = `/accounts/${account}/pages/projects/${encodeURIComponent(project)}/deployments`;
+  return {
+    base,
+    pathname: `${base}?page=${String(page)}&per_page=${String(PAGES_DEPLOYMENTS_PAGE_SIZE)}`,
+  };
 }
 
 export function previewContainerName(pullRequest) {
@@ -57,8 +67,8 @@ export function isIdempotentDeleteStatus(status) {
   return status === 200 || status === 404;
 }
 
-// The API clamps per_page (Pages caps it at 25), so a short page proves nothing; only the
-// reported total_pages — or an empty page when the API omits result_info — ends the walk.
+// A short page never proves the walk is over: only the reported total_pages — or an empty page
+// when the API omits result_info — ends it.
 export function isFinalPage(rows, resultInfo, page) {
   const totalPages = resultInfo?.total_pages;
   if (Number.isInteger(totalPages)) return page >= totalPages;

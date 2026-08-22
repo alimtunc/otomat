@@ -4,6 +4,27 @@ export interface QuittableRuntime {
   hosts: { shutdown(): Promise<void>; remoteSession: object | null };
 }
 
+interface QuitApplication {
+  on(event: "before-quit", listener: (event: { preventDefault(): void }) => void): void;
+  quit(): void;
+}
+
+interface QuitSignalSource {
+  once(event: "SIGTERM", listener: () => void): void;
+}
+
+export function registerQuitHandlers(
+  app: QuitApplication,
+  signals: QuitSignalSource,
+  sequence: () => QuitSequence | null,
+): void {
+  signals.once("SIGTERM", () => app.quit());
+  app.on("before-quit", (event) => {
+    const quit = sequence();
+    if (quit !== null && quit.begin(() => app.quit())) event.preventDefault();
+  });
+}
+
 /** The only quit request an app gets may be one SIGTERM, so a failed shutdown still releases it. */
 export class QuitSequence {
   private phase: "idle" | "stopping" | "stopped" = "idle";
