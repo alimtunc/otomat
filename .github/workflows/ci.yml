@@ -168,7 +168,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download the checked bundle candidate
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: otomat-daemon-candidate-${{ github.sha }}-linux-x64
           path: ${{ runner.temp }}

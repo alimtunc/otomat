@@ -91,7 +91,7 @@ jobs:
       # build pulls with this login.
       - name: Log in to the GitHub container registry
         if: vars.PREVIEW_DAEMON_ENABLED != ''
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
