@@ -345,7 +345,7 @@ it("maps stale anchors and missing diffs to 409 conflicts", async () => {
   expect((await json<{ error: string }>(bareRes)).error).toBe("diff_unavailable");
 });
 
-it("delegates the fix request with the parsed selection and returns the updated run", async () => {
+it("delegates the fix request with its parsed agent and returns the updated run", async () => {
   let received: { runId: string; request: FixRequest } | null = null;
   const app = makeApiApp(t, {
     review: stubReviewService({
@@ -357,7 +357,6 @@ it("delegates the fix request with the parsed selection and returns the updated 
   });
 
   const res = await post(app, `/api/runs/${RUN_ID}/review/fix`, {
-    comment_ids: ["c1", "c2"],
     profile_id: "p-reviewer",
     note: "keep the public API stable",
     context: [{ kind: "file", path: "src/api.ts" }],
@@ -366,7 +365,6 @@ it("delegates the fix request with the parsed selection and returns the updated 
   expect(received).toEqual({
     runId: RUN_ID,
     request: {
-      commentIds: ["c1", "c2"],
       note: "keep the public API stable",
       references: [{ kind: "file", path: "src/api.ts" }],
       selector: { kind: "profile", profileId: "p-reviewer" },
@@ -380,24 +378,20 @@ it("delegates the fix request with the parsed selection and returns the updated 
 });
 
 it("refuses a fix with no explicit agent, and maps conflicts to 409", async () => {
-  const noAgent = await post(makeApiApp(t), `/api/runs/${RUN_ID}/review/fix`, {
-    comment_ids: ["c1"],
-  });
+  const noAgent = await post(makeApiApp(t), `/api/runs/${RUN_ID}/review/fix`, {});
   expect(noAgent.status).toBe(400);
 
-  const emptySelection = await post(makeApiApp(t), `/api/runs/${RUN_ID}/review/fix`, {
-    comment_ids: [],
+  const chosenComments = await post(makeApiApp(t), `/api/runs/${RUN_ID}/review/fix`, {
+    comment_ids: ["c1"],
     profile_id: "p-reviewer",
   });
-  expect(emptySelection.status).toBe(400);
+  expect(chosenComments.status).toBe(400);
 
+  const notFixable = new CommentsNotFixableError("No open agent comment is waiting for a fix.");
   const conflicts = [
-    {
-      error: new CommentsNotFixableError("comment c9 not found on run"),
-      code: "comments_not_fixable",
-    },
-    { error: new RunWorkspaceClosedError("merged"), code: "workspace_closed" },
-    { error: new ReviewFixBusyError(RUN_ID), code: "workspace_busy" },
+    { error: notFixable, code: "comments_not_fixable", message: notFixable.message },
+    { error: new RunWorkspaceClosedError("merged"), code: "workspace_closed", message: null },
+    { error: new ReviewFixBusyError(RUN_ID), code: "workspace_busy", message: null },
   ];
   for (const conflict of conflicts) {
     const app = makeApiApp(t, {
@@ -408,10 +402,11 @@ it("refuses a fix with no explicit agent, and maps conflicts to 409", async () =
       }),
     });
     const res = await post(app, `/api/runs/${RUN_ID}/review/fix`, {
-      comment_ids: ["c1"],
       profile_id: "p-reviewer",
     });
     expect(res.status).toBe(409);
-    expect((await json<{ error: string }>(res)).error).toBe(conflict.code);
+    const body = await json<{ error: string; message?: string }>(res);
+    expect(body.error).toBe(conflict.code);
+    if (conflict.message !== null) expect(body.message).toBe(conflict.message);
   }
 });

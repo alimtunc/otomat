@@ -8,7 +8,7 @@ export function reviewDetail(
     review: null,
     comments: [],
     reviewed_files: reviewedFiles,
-    fix_authority: { kind: "review_only", reason: "This pull request is someone else's branch." },
+    fix_authority: { kind: "external", reason: "This pull request is someone else's branch." },
     destinations: { pr_review: false, reason: "This run has no pull request yet." },
     ...overrides,
   };

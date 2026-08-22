@@ -103,7 +103,6 @@ afterEach(() => {
 it("shows only the hunks the fix pass changed around the comment's lines", async () => {
   const target = await comment(2);
   await review.requestFix(run(), {
-    commentIds: [target.id],
     selector: { kind: "runtime", runtimeId: "fake" },
     overrides: {},
     note: null,
@@ -133,7 +132,6 @@ it("gives two comments fixed by one pass their own excerpt and the same full del
   const first = await comment(2);
   const second = await comment(10);
   await review.requestFix(run(), {
-    commentIds: [first.id, second.id],
     selector: { kind: "runtime", runtimeId: "fake" },
     overrides: {},
     note: null,
@@ -159,7 +157,6 @@ it("gives two comments fixed by one pass their own excerpt and the same full del
 it("says nothing relevant was attributed when the pass missed the anchored lines", async () => {
   const target = await comment(2);
   await review.requestFix(run(), {
-    commentIds: [target.id],
     selector: { kind: "runtime", runtimeId: "fake" },
     overrides: {},
     note: null,
@@ -179,7 +176,6 @@ it("says nothing relevant was attributed when the pass missed the anchored lines
 it("says the pass did not touch the file at all rather than showing another one", async () => {
   const target = await comment(2);
   await review.requestFix(run(), {
-    commentIds: [target.id],
     selector: { kind: "runtime", runtimeId: "fake" },
     overrides: {},
     note: null,
@@ -197,7 +193,6 @@ it("says the pass did not touch the file at all rather than showing another one"
 it("stays exact after a later pass rewrites the same lines", async () => {
   const target = await comment(2);
   await review.requestFix(run(), {
-    commentIds: [target.id],
     selector: { kind: "runtime", runtimeId: "fake" },
     overrides: {},
     note: null,
@@ -245,7 +240,6 @@ it("falls back to the file's whole delta for a whole-file anchor, and says so", 
     },
   );
   await review.requestFix(run(), {
-    commentIds: [target.id],
     selector: { kind: "runtime", runtimeId: "fake" },
     overrides: {},
     note: null,

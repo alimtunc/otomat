@@ -1,5 +1,5 @@
 import type { ReviewCommentContract, ReviewTarget } from "@otomat/domain";
-import { Checkbox, Chip, ReviewCommentStatusChip } from "@otomat/ui";
+import { Chip, ReviewCommentStatusChip } from "@otomat/ui";
 import { commentAnchorLabel, reviewCommentDomId } from "@web/components/runs/review/comment/anchor";
 import { CommentFixProof } from "@web/components/runs/review/comment/fix-proof";
 import { CommentPublication } from "@web/components/runs/review/comment/publication";
@@ -11,8 +11,6 @@ export interface ReviewCommentCardProps {
   target: ReviewTarget;
   /** Set when the comment is shown away from its anchor; states why and shows its pinned excerpt. */
   fallbackReason?: string;
-  selected?: boolean;
-  onSelectedChange?: (selected: boolean) => void;
   onPublish?: () => void;
   publishing?: boolean;
 }
@@ -21,14 +19,9 @@ export function ReviewCommentCard({
   comment,
   target,
   fallbackReason,
-  selected = false,
-  onSelectedChange,
   onPublish,
   publishing = false,
 }: ReviewCommentCardProps) {
-  // Only an agent comment is an instruction the AI fix can consume; a PR-review one is feedback on GitHub.
-  const selectable =
-    comment.status === "open" && comment.destination === "agent" && onSelectedChange !== undefined;
   const fixPending = comment.status === "open" && comment.fix_requested_at !== null;
 
   return (
@@ -37,13 +30,6 @@ export function ReviewCommentCard({
       className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3"
     >
       <div className="flex items-center gap-2">
-        {selectable ? (
-          <Checkbox
-            checked={selected}
-            onCheckedChange={(checked) => onSelectedChange(checked === true)}
-            aria-label={`Select comment on ${commentAnchorLabel(comment)} for fix`}
-          />
-        ) : null}
         <span className="min-w-0 truncate font-mono text-xs text-text-tertiary">
           {commentAnchorLabel(comment)}
         </span>

@@ -1,13 +1,14 @@
 // @vitest-environment happy-dom
 import type { RequestFixRequest } from "@otomat/domain";
 import { ReviewFixStepDialog } from "@web/components/runs/review/fix-step-dialog";
-import type { ReviewSelection } from "@web/components/runs/review/use-selection";
 import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { findButton } from "#support/dom-queries";
 import { repositoriesQueryResult } from "#support/launch-target";
 import { mount } from "#support/mount";
+
+const requests: RequestFixRequest[] = [];
 
 vi.mock("@web/api/daemon/queries", () => ({
   useRepositories: () => repositoriesQueryResult(),
@@ -19,6 +20,16 @@ vi.mock("@web/api/issues/queries", () => ({
   useProjectIssues: () => ({ data: [], isPending: false, isError: false }),
 }));
 
+vi.mock("@web/api/reviews/mutations", () => ({
+  useRequestFix: () => ({
+    isPending: false,
+    mutate: (request: RequestFixRequest, handlers: { onSuccess: (r: unknown) => void }) => {
+      requests.push(request);
+      handlers.onSuccess(APPENDED_RESPONSE);
+    },
+  }),
+}));
+
 vi.mock("@web/components/execution/use-launch-execution", () => ({
   useLaunchExecution: () => ({ canLaunch: true, request: { profile_id: "profile-fix" } }),
 }));
@@ -28,17 +39,6 @@ vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn() }));
 vi.mock("@web/components/execution/launch-execution-picker", () => ({
   LaunchExecutionPicker: () => null,
 }));
-
-function selectionStub(requestFix: ReviewSelection["requestFix"]): ReviewSelection {
-  return {
-    runId: "run-1",
-    selectedIds: new Set(["c1", "c2"]),
-    toggle: () => {},
-    clear: () => {},
-    requestFix,
-    isFixPending: false,
-  };
-}
 
 const APPENDED_RESPONSE = {
   run: {
@@ -60,12 +60,13 @@ function instructionsField(): HTMLTextAreaElement {
   return field;
 }
 
-async function openDialog(requestFix: ReviewSelection["requestFix"]) {
+async function openDialog(count: number) {
+  requests.length = 0;
   const mounted = await mount(
-    <ReviewFixStepDialog selection={selectionStub(requestFix)} issueId="i1" disabled={false} />,
+    <ReviewFixStepDialog runId="run-1" issueId="i1" count={count} disabled={false} />,
   );
   await act(async () => {
-    findButton("Fix selected comments with AI")?.click();
+    findButton(count === 1 ? "Fix 1 agent comment" : `Fix ${count} agent comments`)?.click();
   });
   return mounted;
 }
@@ -81,12 +82,8 @@ async function type(field: HTMLTextAreaElement, value: string): Promise<void> {
 }
 
 describe("AI fix confirmation", () => {
-  it("summarizes the selection and carries the global instruction with it", async () => {
-    const requests: RequestFixRequest[] = [];
-    const { cleanup } = await openDialog((request, onAppended) => {
-      requests.push(request);
-      onAppended(APPENDED_RESPONSE);
-    });
+  it("names how many comments become the step and carries the global instruction", async () => {
+    const { cleanup } = await openDialog(2);
 
     expect(document.body.textContent).toContain("2 comments become a new step");
     await type(instructionsField(), "Keep the file ASCII-only.");
@@ -94,22 +91,13 @@ describe("AI fix confirmation", () => {
       findButton("Add fix step")?.click();
     });
 
-    expect(requests).toEqual([
-      {
-        comment_ids: ["c1", "c2"],
-        note: "Keep the file ASCII-only.",
-        profile_id: "profile-fix",
-      },
-    ]);
+    // The daemon resolves which comments are eligible; the request never names them.
+    expect(requests).toEqual([{ note: "Keep the file ASCII-only.", profile_id: "profile-fix" }]);
     await cleanup();
   });
 
   it("sends no instruction when the field is left empty", async () => {
-    const requests: RequestFixRequest[] = [];
-    const { cleanup } = await openDialog((request, onAppended) => {
-      requests.push(request);
-      onAppended(APPENDED_RESPONSE);
-    });
+    const { cleanup } = await openDialog(1);
 
     await act(async () => {
       findButton("Add fix step")?.click();
@@ -120,15 +108,14 @@ describe("AI fix confirmation", () => {
   });
 
   it("creates no step when the operator cancels", async () => {
-    const requestFix = vi.fn();
-    const { cleanup } = await openDialog(requestFix);
+    const { cleanup } = await openDialog(2);
 
     await type(instructionsField(), "Never mind.");
     await act(async () => {
       findButton("Cancel")?.click();
     });
 
-    expect(requestFix).not.toHaveBeenCalled();
+    expect(requests).toEqual([]);
     expect(findButton("Add fix step")).toBeUndefined();
     await cleanup();
   });

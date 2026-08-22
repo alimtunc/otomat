@@ -31,6 +31,7 @@ export {
   issueExecutionSchema,
   issueSourceContractSchema,
   issueWorkspaceSchema,
+  isAgentFixEligible,
   isPassReconstructable,
   isProviderProvedResume,
   isReviewCommentDestination,

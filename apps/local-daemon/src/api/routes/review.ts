@@ -52,7 +52,6 @@ export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
       const request = c.req.valid("json");
       try {
         const fix: FixRequest = {
-          commentIds: request.comment_ids,
           note: request.note ?? null,
           references: request.context ?? [],
           selector: appendStepSelector(request),
@@ -67,7 +66,7 @@ export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
         );
       } catch (error) {
         if (error instanceof CommentsNotFixableError) {
-          return c.json({ error: "comments_not_fixable" }, 409);
+          return c.json({ error: "comments_not_fixable", message: error.message }, 409);
         }
         if (error instanceof ReviewFixBusyError) {
           return c.json({ error: "workspace_busy", message: error.message }, 409);

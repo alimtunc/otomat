@@ -5,8 +5,6 @@ import { ReviewCommentCard } from "@web/components/runs/review/comment/card";
 export interface DetachedCommentsProps {
   target: ReviewTarget;
   comments: ReviewCommentContract[];
-  selectedIds: ReadonlySet<string>;
-  onToggle: (commentId: string, selected: boolean) => void;
   onPublish: (commentId: string) => void;
   publishingId: string | null;
 }
@@ -14,8 +12,6 @@ export interface DetachedCommentsProps {
 export function DetachedComments({
   target,
   comments,
-  selectedIds,
-  onToggle,
   onPublish,
   publishingId,
 }: DetachedCommentsProps) {
@@ -31,8 +27,6 @@ export function DetachedComments({
           target={target}
           comment={comment}
           fallbackReason={commentFallbackReason(comment)}
-          selected={selectedIds.has(comment.id)}
-          onSelectedChange={(selected) => onToggle(comment.id, selected)}
           onPublish={() => onPublish(comment.id)}
           publishing={publishingId === comment.id}
         />

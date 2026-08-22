@@ -56,7 +56,6 @@ function Reviewer() {
           onActivate={() => {}}
           comments={{
             partition: partitionComments(null, []),
-            selectedIds: new Set(),
             destinations: { pr_review: false, reason: "This run has no pull request yet." },
             preferredDestination: "agent",
             publishingId: null,

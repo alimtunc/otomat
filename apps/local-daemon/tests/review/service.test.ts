@@ -7,6 +7,8 @@ import {
   getReviewForSubject,
   getRun,
   insertPullRequest,
+  setReviewCommentFixRequested,
+  updateReviewCommentStatus,
   type ReviewCommentRow,
 } from "@otomat/db";
 import type { CreateReviewCommentRequest } from "@otomat/domain";
@@ -258,7 +260,6 @@ it("appends one fix step carrying comment + original hunk + current file", async
   });
 
   await review.requestFix(run(), {
-    commentIds: [comment.id],
     selector: FIX_AGENT,
     overrides: {},
     note: null,
@@ -291,15 +292,59 @@ it("appends one fix step carrying comment + original hunk + current file", async
   // The fix waits on the succeeded step that produced that diff.
   expect(step.dependsOn).toEqual([`${RUN_ID}-step`]);
 
+  // Stamped by this very request, the comment is no longer eligible for a second one.
   await expect(
     review.requestFix(run(), {
-      commentIds: ["nope"],
       selector: FIX_AGENT,
       overrides: {},
       note: null,
       references: [],
     }),
   ).rejects.toThrow(CommentsNotFixableError);
+});
+
+it("freezes every open agent comment and leaves the ineligible ones alone", async () => {
+  openPullRequest();
+  const anchor = currentAnchor();
+  const body = (text: string) => ({
+    file_path: "notes.md",
+    line: 2,
+    diff_sha: anchor.sha,
+    body: text,
+  });
+
+  const first = await addComment(runTarget(), body("beta should be delta"));
+  const second = await addComment(runTarget(), body("and gamma too"));
+  const onPr = await addComment(runTarget(), {
+    ...body("on the PR"),
+    destination: "pr_review" as const,
+  });
+  const addressed = await addComment(runTarget(), body("already done"));
+  updateReviewCommentStatus(fix.db, addressed.id, "addressed");
+  const outdated = await addComment(runTarget(), body("anchor moved"));
+  updateReviewCommentStatus(fix.db, outdated.id, "outdated");
+  const requested = await addComment(runTarget(), body("a pass already has this"));
+  setReviewCommentFixRequested(fix.db, requested.id, new Date().toISOString());
+
+  await review.requestFix(run(), {
+    selector: FIX_AGENT,
+    overrides: {},
+    note: null,
+    references: [],
+  });
+
+  expect(appended[0]?.reviewComments?.map((frozen) => frozen.id)).toEqual([first.id, second.id]);
+  for (const untouched of [onPr, addressed, outdated]) {
+    expect(getReviewComment(fix.db, untouched.id)?.fix_requested_at).toBeNull();
+  }
+});
+
+it("keeps fix authority on a published branch GitHub renamed under it", () => {
+  openPullRequest("feat/diff-content-search");
+
+  const authority = review.getReviewDetail(runTarget()).fixAuthority;
+  expect(authority.kind).toBe("otomat");
+  expect(authority.reason).toContain(BRANCH);
 });
 
 it("keeps a symlinked path's fix context to the link target text, never the host file", async () => {
@@ -309,7 +354,7 @@ it("keeps a symlinked path's fix context to the link target text, never the host
 
   const anchor = review.getDiff(runTarget()).diff?.files.find((f) => f.path === "leak");
   if (!anchor) throw new Error("expected leak in the diff");
-  const comment = await addComment(runTarget(), {
+  await addComment(runTarget(), {
     file_path: "leak",
     line: null,
     diff_sha: anchor.sha,
@@ -317,7 +362,6 @@ it("keeps a symlinked path's fix context to the link target text, never the host
   });
 
   await review.requestFix(run(), {
-    commentIds: [comment.id],
     selector: FIX_AGENT,
     overrides: {},
     note: null,
@@ -338,7 +382,6 @@ it("stamps fix-requested comments and drives the review to changes_requested", a
   });
 
   await review.requestFix(run(), {
-    commentIds: [comment.id],
     selector: FIX_AGENT,
     overrides: {},
     note: null,
@@ -365,7 +408,6 @@ it("stamps nothing when the step append fails, so the request can be retried", a
 
   await expect(
     failing.requestFix(run(), {
-      commentIds: [comment.id],
       selector: FIX_AGENT,
       overrides: {},
       note: null,
@@ -385,18 +427,18 @@ it("on a completed settle: emits git.diff_updated, marks fixed comments addresse
     diff_sha: anchor.sha,
     body: "fix me",
   });
+  await review.requestFix(run(), {
+    selector: FIX_AGENT,
+    overrides: {},
+    note: null,
+    references: [],
+  });
+  // Written while the fix pass runs, so it carries no fix request of its own.
   const bystander = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 3,
     diff_sha: anchor.sha,
     body: "just a note",
-  });
-  await review.requestFix(run(), {
-    commentIds: [requested.id],
-    selector: FIX_AGENT,
-    overrides: {},
-    note: null,
-    references: [],
   });
 
   // The "fix turn" really edits the worktree, so both anchors leave the live diff.
@@ -442,7 +484,6 @@ it("releases pending fix requests when the turn does not complete", async () => 
     body: "fix me",
   });
   await review.requestFix(run(), {
-    commentIds: [comment.id],
     selector: FIX_AGENT,
     overrides: {},
     note: null,
@@ -456,7 +497,7 @@ it("releases pending fix requests when the turn does not complete", async () => 
   expect(row?.fix_requested_at).toBeNull();
 });
 
-function openPullRequest(): void {
+function openPullRequest(headRef: string = BRANCH): void {
   insertPullRequest(fix.db, {
     id: "pr-review",
     issue_id: "i1",
@@ -466,7 +507,7 @@ function openPullRequest(): void {
     status: "open",
     publication_status: "created",
     title: "Notes",
-    head_ref: BRANCH,
+    head_ref: headRef,
     published_head_sha: "f".repeat(40),
   });
 }
@@ -639,7 +680,7 @@ it("refuses to retry a publication whose diff moved under it", async () => {
 
 it("never turns a PR-review comment into an agent instruction", async () => {
   openPullRequest();
-  const created = await addComment(runTarget(), {
+  await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: currentAnchor().sha,
@@ -649,7 +690,6 @@ it("never turns a PR-review comment into an agent instruction", async () => {
 
   await expect(
     review.requestFix(run(), {
-      commentIds: [created.id],
       selector: FIX_AGENT,
       overrides: {},
       note: null,
@@ -661,7 +701,7 @@ it("never turns a PR-review comment into an agent instruction", async () => {
 
 it("freezes the global instruction beside the range and suggestion it constrains", async () => {
   const anchor = currentAnchor();
-  const created = await addComment(runTarget(), {
+  await addComment(runTarget(), {
     file_path: "notes.md",
     start_line: 2,
     line: 3,
@@ -671,7 +711,6 @@ it("freezes the global instruction beside the range and suggestion it constrains
   });
 
   await review.requestFix(run(), {
-    commentIds: [created.id],
     selector: FIX_AGENT,
     overrides: {},
     note: "Keep the file ASCII-only.",

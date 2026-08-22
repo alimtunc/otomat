@@ -7,11 +7,13 @@ import { findButton } from "#support/dom-queries";
 import { mount } from "#support/mount";
 import { reviewComment } from "#support/review-comment";
 
+const TARGET = { kind: "run", id: "run-1" } as const;
+
 describe("review comment card", () => {
   it("shows a suggestion as the exact replacement it proposes", async () => {
     const { container, cleanup } = await mount(
       <ReviewCommentCard
-        runId="run-1"
+        target={TARGET}
         comment={reviewComment({
           start_line: 2,
           line: 3,
@@ -27,23 +29,17 @@ describe("review comment card", () => {
     await cleanup();
   });
 
-  it("offers an agent comment for the AI fix and a PR-review one never", async () => {
-    const agent = await mount(
-      <ReviewCommentCard runId="run-1" comment={reviewComment()} onSelectedChange={() => {}} />,
-    );
-    expect(agent.container.querySelector('[role="checkbox"]')).not.toBeNull();
+  it("names each comment's destination and offers no selection of its own", async () => {
+    const agent = await mount(<ReviewCommentCard target={TARGET} comment={reviewComment()} />);
     expect(agent.container.textContent).toContain("Agent");
+    expect(agent.container.querySelector('[role="checkbox"]')).toBeNull();
     await agent.cleanup();
 
     const onPr = await mount(
-      <ReviewCommentCard
-        runId="run-1"
-        comment={reviewComment({ destination: "pr_review" })}
-        onSelectedChange={() => {}}
-      />,
+      <ReviewCommentCard target={TARGET} comment={reviewComment({ destination: "pr_review" })} />,
     );
-    expect(onPr.container.querySelector('[role="checkbox"]')).toBeNull();
     expect(onPr.container.textContent).toContain("PR review");
+    expect(onPr.container.querySelector('[role="checkbox"]')).toBeNull();
     await onPr.cleanup();
   });
 
@@ -51,7 +47,7 @@ describe("review comment card", () => {
     const onPublish = vi.fn();
     const { container, cleanup } = await mount(
       <ReviewCommentCard
-        runId="run-1"
+        target={TARGET}
         comment={reviewComment({
           destination: "pr_review",
           publication_status: "failed",
@@ -74,7 +70,7 @@ describe("review comment card", () => {
   it("links a published comment to GitHub and stops offering to publish it", async () => {
     const { container, cleanup } = await mount(
       <ReviewCommentCard
-        runId="run-1"
+        target={TARGET}
         comment={reviewComment({
           destination: "pr_review",
           publication_status: "published",
@@ -92,7 +88,7 @@ describe("review comment card", () => {
 
   it("shows no publication state at all on an agent comment", async () => {
     const { container, cleanup } = await mount(
-      <ReviewCommentCard runId="run-1" comment={reviewComment()} onPublish={() => {}} />,
+      <ReviewCommentCard target={TARGET} comment={reviewComment()} onPublish={() => {}} />,
     );
 
     expect(container.textContent).not.toContain("Publish to GitHub");

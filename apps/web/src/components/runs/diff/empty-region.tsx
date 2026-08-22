@@ -1,14 +1,12 @@
 import type { ReviewCommentContract, ReviewTarget } from "@otomat/domain";
 import { EmptyState } from "@otomat/ui";
 import { DetachedComments } from "@web/components/runs/review/detached-comments";
-import type { ReviewSelection } from "@web/components/runs/review/use-selection";
 import { CenteredState } from "@web/components/shell/centered-state";
 
 export interface DiffEmptyRegionProps {
   target: ReviewTarget;
   /** Comments survive an emptied diff, so they are shown here rather than lost with it. */
   detached: ReviewCommentContract[];
-  selection: ReviewSelection;
   onPublish: (commentId: string) => void;
   publishingId: string | null;
 }
@@ -16,7 +14,6 @@ export interface DiffEmptyRegionProps {
 export function DiffEmptyRegion({
   target,
   detached,
-  selection,
   onPublish,
   publishingId,
 }: DiffEmptyRegionProps) {
@@ -32,8 +29,6 @@ export function DiffEmptyRegion({
       <DetachedComments
         target={target}
         comments={detached}
-        selectedIds={selection.selectedIds}
-        onToggle={selection.toggle}
         onPublish={onPublish}
         publishingId={publishingId}
       />

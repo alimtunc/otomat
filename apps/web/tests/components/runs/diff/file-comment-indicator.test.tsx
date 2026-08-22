@@ -39,7 +39,7 @@ function renderCard(overrides: Parameters<typeof fileCommentsProp>[0] = {}, reve
             anchoredIds: new Set(["open-agent"]),
             ...overrides,
           }),
-          commentActions: { add: async () => {}, toggle: () => {}, publish: () => {}, reveal },
+          commentActions: { add: async () => {}, publish: () => {}, reveal },
         })}
       />
     </ThemeProvider>,

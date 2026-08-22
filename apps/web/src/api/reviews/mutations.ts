@@ -111,20 +111,22 @@ export function usePublishReviewComment(target: ReviewTarget) {
 }
 
 function fixErrorMessage(error: unknown): string {
+  const notFixable = reviewRefusal(error);
+  if (notFixable !== null) return notFixable;
   if (error instanceof DaemonRequestError) {
     const refusal = runStepAppendErrorSchema.safeParse(error.body);
     if (refusal.success) return refusal.data.message;
     const profile = agentProfileErrorSchema.safeParse(error.body);
     if (profile.success) return profile.data.message;
     if (error.status === 409) {
-      return "Fix not added — the run or the selected comments are not fixable right now.";
+      return "Fix not added — this run cannot take a step right now.";
     }
   }
   return "Could not request the fix — is the daemon running?";
 }
 
 /**
- * Appends a `Fix review comments` step carrying the selected comments as its
+ * Appends a `Fix review comments` step carrying every open agent comment as its
  * frozen context. On success invalidates the run's detail, its review and the
  * issues cache; a refusal is shown verbatim so the user can act on it.
  */

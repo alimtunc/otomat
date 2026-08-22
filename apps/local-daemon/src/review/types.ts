@@ -126,15 +126,13 @@ export interface FileBlobsResult {
 }
 
 export interface FixPreparation {
-  /** The selected comments frozen with their pinned hunks and the file each stood against. */
+  /** The eligible comments frozen with their pinned hunks and the file each stood against. */
   comments: ContextReviewComment[];
-  commentIds: string[];
   /** Plan node ids that produced the reviewed diff; the appended fix step depends on them. */
   dependsOn: string[];
 }
 
 export interface FixRequest {
-  commentIds: string[];
   selector: AgentConfigSelector;
   overrides: ExecutionOverrides;
   note: string | null;
@@ -161,7 +159,7 @@ export interface ReviewService {
   getFileBlobs(ref: ReviewSubjectRef, request: FileBlobsRequest): FileBlobsResult;
   setReviewedFile(ref: ReviewSubjectRef, request: SetReviewedFileRequest): Promise<ReviewedFileRow>;
   importViewedFiles(pullRequestId: string): Promise<void>;
-  /** The selected open comments become one appended fix step; refused while a turn is in flight. */
+  /** Every open agent comment awaiting a fix becomes one appended step; refused while a turn is in flight. */
   requestFix(run: RunRow, request: FixRequest): Promise<RunRow>;
   /** Post-settle hook: refreshes the diff projection and resolves comment anchors. */
   onRunSettled(outcome: RunSettledOutcome): void;

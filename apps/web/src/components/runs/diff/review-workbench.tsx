@@ -25,7 +25,6 @@ import { DiffSearchField } from "@web/components/runs/diff/search/field";
 import { DiffSidebar } from "@web/components/runs/diff/sidebar";
 import { useDiffInteractions } from "@web/components/runs/diff/use-diff-interactions";
 import type { DiffFileCommentActions } from "@web/components/runs/review/file-comments";
-import { useReviewSelection } from "@web/components/runs/review/use-selection";
 import type { ReactNode } from "react";
 
 export interface ReviewWorkbenchProps {
@@ -54,7 +53,6 @@ export function ReviewWorkbench({
 }: ReviewWorkbenchProps) {
   const addComment = useAddReviewComment(target);
   const publishComment = usePublishReviewComment(target);
-  const selection = useReviewSelection(target.id);
   const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
   const filesLayout = usePanelGroupLayout("otomat.run-diff");
   const prefs = useSelector(diffPrefsStore);
@@ -72,13 +70,11 @@ export function ReviewWorkbench({
     add: async (file, comment) => {
       await addComment.mutateAsync({ ...comment, file_path: file.path, diff_sha: file.sha });
     },
-    toggle: selection.toggle,
     publish: (commentId) => publishComment.mutate(commentId),
     reveal: interactions.selectComment,
   };
   const fileCommentsInput = {
     partition,
-    selectedIds: selection.selectedIds,
     destinations: review.destinations,
     preferredDestination: prefs.commentDestination,
     publishingId: publishComment.isPending ? publishComment.variables : null,
@@ -109,7 +105,6 @@ export function ReviewWorkbench({
     <DiffEmptyRegion
       target={target}
       detached={partition.detached}
-      selection={selection}
       onPublish={commentActions.publish}
       publishingId={fileCommentsInput.publishingId}
     />
@@ -169,10 +164,11 @@ export function ReviewWorkbench({
       />
       {diff.files.length === 0 ? emptyRegion : browsedRegion}
       <DiffFixBar
+        runId={target.id}
         workspaceOpen={workspace.open}
         issueId={workspace.issueId}
         authority={review.fix_authority}
-        selection={selection}
+        comments={review.comments}
       />
     </div>
   );
