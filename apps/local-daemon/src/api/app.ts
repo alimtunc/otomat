@@ -14,6 +14,7 @@ import { createCompeteRoutes } from "./routes/compete.js";
 import { createDiagnosticsRoutes } from "./routes/diagnostics.js";
 import { createGitHubRoutes } from "./routes/github.js";
 import { createHealthRoutes } from "./routes/health.js";
+import { createInboxRoutes } from "./routes/inbox.js";
 import { createIssueRoutes } from "./routes/issues.js";
 import { createLinearRoutes } from "./routes/linear.js";
 import { createPullRequestRoutes } from "./routes/pull-requests.js";
@@ -51,6 +52,7 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.route("/api", createGitHubRoutes(deps));
   app.route("/api", createCatalogRoutes(deps));
   app.route("/api/activity", createActivityRoutes(deps));
+  app.route("/api/inbox", createInboxRoutes(deps));
   app.route("/api/linear", createLinearRoutes(deps));
   app.route("/api/settings", createSettingsRoutes(deps));
   app.route("/api/repositories", createRepositoryRoutes(deps));

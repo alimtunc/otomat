@@ -1,5 +1,6 @@
-import { countActionablePullRequestInboxEntries } from "@otomat/domain";
+import { countActionablePullRequestInboxEntries, countOpenInboxEntries } from "@otomat/domain";
 import { useDaemonStatus, useHealth } from "@web/api/daemon/queries";
+import { useInbox } from "@web/api/inbox/queries";
 import { usePullRequestInbox } from "@web/api/reviews/queries";
 import { useProjectRuns } from "@web/api/runs/queries";
 import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
@@ -12,7 +13,8 @@ export function useShellData() {
   const health = useHealth();
   const switcher = useProjectSwitcher();
   const runs = useProjectRuns(switcher.currentProjectId);
-  const inbox = usePullRequestInbox(switcher.currentProjectId);
+  const reviewInbox = usePullRequestInbox(switcher.currentProjectId);
+  const inbox = useInbox();
   const remote = useRemoteSession();
 
   return {
@@ -28,6 +30,7 @@ export function useShellData() {
     daemonVersion: health.data?.version,
     ...switcher,
     hasLiveRun: (runs.data ?? []).some(isRunning),
-    reviewCount: countActionablePullRequestInboxEntries(inbox.data?.entries ?? []),
+    reviewCount: countActionablePullRequestInboxEntries(reviewInbox.data?.entries ?? []),
+    inboxCount: countOpenInboxEntries(inbox.data?.entries ?? []),
   };
 }

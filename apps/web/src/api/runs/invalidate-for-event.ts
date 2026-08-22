@@ -25,6 +25,7 @@ export function invalidateForEvent(client: QueryClient, runId: string, event: Ev
     client.invalidateQueries({ queryKey: queryKeys.runContributions(runId) });
     client.invalidateQueries({ queryKey: queryKeys.issues });
     client.invalidateQueries({ queryKey: queryKeys.reviews });
+    client.invalidateQueries({ queryKey: queryKeys.inbox });
     return;
   }
   client.invalidateQueries({ queryKey: queryKeys.runCompletionReport(runId) });
@@ -52,6 +53,7 @@ export function invalidateForEvent(client: QueryClient, runId: string, event: Ev
     client.invalidateQueries({ queryKey: queryKeys.runPullRequest(runId) });
     client.invalidateQueries({ queryKey: queryKeys.issues });
     client.invalidateQueries({ queryKey: queryKeys.reviews });
+    client.invalidateQueries({ queryKey: queryKeys.inbox });
     return;
   }
 }

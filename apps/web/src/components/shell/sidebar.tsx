@@ -26,6 +26,7 @@ interface SidebarProps {
   onNewIssue: () => void;
   hasLiveRun?: boolean;
   reviewCount?: number;
+  inboxCount?: number;
 }
 
 function navRender(to: string) {
@@ -60,6 +61,7 @@ export function Sidebar({
   onNewIssue,
   hasLiveRun = false,
   reviewCount = 0,
+  inboxCount = 0,
 }: SidebarProps) {
   const collapsed = useSidebarCollapsed();
   const projectSwitcher = (
@@ -101,6 +103,7 @@ export function Sidebar({
           icon={INBOX_NAV.icon}
           label={INBOX_NAV.label}
           active={active === INBOX_NAV.section}
+          badgeCount={inboxCount > 0 ? inboxCount : undefined}
           render={navRender(INBOX_NAV.to)}
           collapsed={collapsed}
         />

@@ -5,7 +5,7 @@ import type { Db } from "../client.js";
 import { issues, pullRequests, repositories } from "../schema/index.js";
 import { touch } from "./touch.js";
 
-const LIVE_STATES = ["draft", "open"] as const;
+export const LIVE_PULL_REQUEST_STATES = ["draft", "open"] as const;
 
 export type NewPullRequest = typeof pullRequests.$inferInsert;
 export type PullRequestRow = typeof pullRequests.$inferSelect;
@@ -91,7 +91,7 @@ export function listLivePullRequests(db: Db): PullRequestRow[] {
       and(
         isNull(pullRequests.detached_at),
         isNotNull(pullRequests.number),
-        inArray(pullRequests.status, LIVE_STATES),
+        inArray(pullRequests.status, LIVE_PULL_REQUEST_STATES),
       ),
     )
     .orderBy(asc(pullRequests.created_at))
@@ -140,7 +140,7 @@ export function listLivePullRequestsForRepository(db: Db, repositoryId: string):
       and(
         eq(pullRequests.repository_id, repositoryId),
         isNull(pullRequests.detached_at),
-        inArray(pullRequests.status, LIVE_STATES),
+        inArray(pullRequests.status, LIVE_PULL_REQUEST_STATES),
       ),
     )
     .orderBy(asc(pullRequests.created_at))

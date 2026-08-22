@@ -90,6 +90,24 @@ describe("Sidebar", () => {
     expect(container.textContent).not.toContain("Agents");
   });
 
+  it("carries the open inbox count without opening a single entry", async () => {
+    const container = await renderSidebar({ inboxCount: 3 });
+    const inbox = [...container.querySelectorAll("a")].find(
+      (link) => link.getAttribute("href") === "/inbox",
+    );
+
+    expect(inbox?.textContent).toContain("3");
+  });
+
+  it("shows no inbox badge when nothing needs the operator", async () => {
+    const container = await renderSidebar({ inboxCount: 0 });
+    const inbox = [...container.querySelectorAll("a")].find(
+      (link) => link.getAttribute("href") === "/inbox",
+    );
+
+    expect(inbox?.textContent).toBe("Inbox");
+  });
+
   it("opens settings from the project switcher", async () => {
     const onOpenSettings = vi.fn();
     await renderSidebar({ onOpenSettings });
