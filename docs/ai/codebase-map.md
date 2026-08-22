@@ -1164,6 +1164,15 @@ publication that failed or was interrupted), and `recent` holds what settled.
 Only `recent` is bounded — by a time window *and* a count — because unfinished
 work is never hidden, while a header must not grow an unbounded history.
 
+`attention` answers what is required *now*, so the evidence outranks the run
+status: a closed issue, an abandoned cycle or a run a newer one replaced silences
+that arm whatever its run or publication still reads as, and the activity is
+dropped rather than moved to `recent` — it never completed. Liveness earns no
+exemption, which is what keeps a `Done` issue whose run stopped at `review_ready`
+out of both the list and the badge; that issue's `running` work still shows,
+because watching it is not an alert, and the cockpit and the logs keep the
+history.
+
 `GET /api/activity` answers the whole cross-project snapshot and
 `GET /api/activity/stream` pushes it again whenever it changes. The stream
 carries **state, not a ledger**, so it has no cursor: a reconnect resumes by

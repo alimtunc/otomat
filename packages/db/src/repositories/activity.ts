@@ -56,7 +56,7 @@ function currentRuns(db: Db, issueIds: string[]): Set<string> {
   return new Set(held.values());
 }
 
-/** `since` bounds only settled work: the attention arms stay unwindowed at any age, and `open` is what keeps them off closed history. */
+/** `since` bounds only settled work, so an attention arm stays fetchable at any age; `open` only narrows the fetch — `projectActivities` is what silences a closed issue. */
 export function listActivityEvidence(db: Db, since: string): ActivityEvidence[] {
   const bound = isoToSqlite(since);
   const open = and(isNull(runs.abandoned_at), notInArray(issues.status, [...ISSUE_CLOSED_STATES]));
