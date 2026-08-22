@@ -1,7 +1,7 @@
 import type { ActivityBucket, ActivityContract } from "../contracts/activity.js";
 import type { OperationContract, OperationState } from "../contracts/operation.js";
 import { isIssueClosed, type IssueState } from "../state-machines/issue.js";
-import { isRunSettled, type RunState } from "../state-machines/run.js";
+import type { RunState } from "../state-machines/run.js";
 import {
   projectPullRequestPublicationOperation,
   type PullRequestPublicationFacts,
@@ -55,7 +55,6 @@ export interface ActivityWindow {
 }
 
 function isActionable(row: ActivityEvidence): boolean {
-  if (!isRunSettled(row.run_status)) return true;
   if (isIssueClosed(row.issue_status)) return false;
   if (row.run_abandoned_at !== null) return false;
   return !row.run_superseded;
@@ -103,7 +102,7 @@ function byNewest(a: ActivityContract, b: ActivityContract): number {
   return b.updated_at.localeCompare(a.updated_at);
 }
 
-/** Newest first within each bucket; only `recent` is bounded, and an `attention` activity the evidence no longer supports is dropped, not settled — it never completed. */
+/** Newest first within each bucket. */
 export function projectActivities(
   rows: ActivityEvidence[],
   window: ActivityWindow,

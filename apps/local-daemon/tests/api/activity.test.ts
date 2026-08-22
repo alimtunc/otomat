@@ -17,6 +17,26 @@ function seedOtherProject(db: Db): void {
     .run();
 }
 
+function patchRun(db: Db, id: string, patch: Partial<typeof schema.runs.$inferInsert>): void {
+  db.update(schema.runs).set(patch).where(eq(schema.runs.id, id)).run();
+}
+
+function seedStoppedPublication(db: Db, id: string, runId: string): void {
+  insertPullRequest(db, {
+    id,
+    issue_id: "i1",
+    run_id: runId,
+    publication_status: "pushing",
+    title: "feat: ship it",
+  });
+  updatePullRequest(db, id, {
+    publication_status: "failed",
+    failed_phase: "pushing",
+    error_code: "github_push_failed",
+    error_message: "The commits could not be pushed to GitHub.",
+  });
+}
+
 async function readActivitySnapshot(): Promise<ActivitySnapshot> {
   const response = await request(makeApiApp(t), "/api/activity");
   expect(response.status).toBe(200);
@@ -111,19 +131,7 @@ describe("GET /api/activity", () => {
       stepStatus: "succeeded",
       sessionStatus: "terminated",
     });
-    insertPullRequest(t.db, {
-      id: "pr-2",
-      issue_id: "i1",
-      run_id: "run-failed-pr",
-      publication_status: "pushing",
-      title: "feat: ship it",
-    });
-    updatePullRequest(t.db, "pr-2", {
-      publication_status: "failed",
-      failed_phase: "pushing",
-      error_code: "github_push_failed",
-      error_message: "The commits could not be pushed to GitHub.",
-    });
+    seedStoppedPublication(t.db, "pr-2", "run-failed-pr");
 
     const snapshot = await readActivitySnapshot();
     const publication = snapshot.activities.find(
@@ -152,20 +160,12 @@ describe("GET /api/activity", () => {
       stepStatus: "failed",
       sessionStatus: "failed",
     });
-    t.db
-      .update(schema.runs)
-      .set({
-        status: "completed",
-        created_at: "2020-01-01 00:00:00",
-        updated_at: "2020-01-01 00:00:00",
-      })
-      .where(eq(schema.runs.id, "run-old"))
-      .run();
-    t.db
-      .update(schema.runs)
-      .set({ created_at: "2020-01-02 00:00:00" })
-      .where(eq(schema.runs.id, "run-stopped"))
-      .run();
+    patchRun(t.db, "run-old", {
+      status: "completed",
+      created_at: "2020-01-01 00:00:00",
+      updated_at: "2020-01-01 00:00:00",
+    });
+    patchRun(t.db, "run-stopped", { created_at: "2020-01-02 00:00:00" });
 
     const snapshot = await readActivitySnapshot();
 
@@ -185,20 +185,15 @@ describe("GET /api/activity", () => {
       stepStatus: "failed",
       sessionStatus: "failed",
     });
-    t.db
-      .update(schema.runs)
-      .set({ created_at: "2020-01-02 00:00:00", updated_at: "2020-01-01 00:00:00" })
-      .where(eq(schema.runs.id, "run-old-failed"))
-      .run();
-    t.db
-      .update(schema.runs)
-      .set({
-        created_at: "2020-01-01 00:00:00",
-        updated_at: "2020-01-01 00:00:00",
-        abandoned_at: "2020-01-02 00:00:00",
-      })
-      .where(eq(schema.runs.id, "run-old-abandoned"))
-      .run();
+    patchRun(t.db, "run-old-failed", {
+      created_at: "2020-01-02 00:00:00",
+      updated_at: "2020-01-01 00:00:00",
+    });
+    patchRun(t.db, "run-old-abandoned", {
+      created_at: "2020-01-01 00:00:00",
+      updated_at: "2020-01-01 00:00:00",
+      abandoned_at: "2020-01-02 00:00:00",
+    });
 
     const snapshot = await readActivitySnapshot();
 
@@ -219,6 +214,53 @@ describe("GET /api/activity", () => {
     expect(snapshot.activities).toEqual([]);
   });
 
+  it("drops the review a closed issue never came back for", async () => {
+    seedRun(t.db, {
+      runId: "run-closed-review",
+      runStatus: "review_ready",
+      stepStatus: "succeeded",
+      sessionStatus: "terminated",
+    });
+    seedStoppedPublication(t.db, "pr-closed", "run-closed-review");
+    t.db.update(schema.issues).set({ status: "done" }).where(eq(schema.issues.id, "i1")).run();
+
+    const snapshot = await readActivitySnapshot();
+
+    expect(snapshot.activities).toEqual([]);
+  });
+
+  it("drops the publication error of an unfinished run once a newer run published", async () => {
+    seedRun(t.db, {
+      runId: "run-failed-publish",
+      runStatus: "review_ready",
+      stepStatus: "succeeded",
+      sessionStatus: "terminated",
+    });
+    seedRun(t.db, {
+      runId: "run-published-retry",
+      runStatus: "review_ready",
+      stepStatus: "succeeded",
+      sessionStatus: "terminated",
+    });
+    seedStoppedPublication(t.db, "pr-stale", "run-failed-publish");
+    insertPullRequest(t.db, {
+      id: "pr-fresh",
+      issue_id: "i1",
+      run_id: "run-published-retry",
+      publication_status: "created",
+      title: "feat: ship it",
+    });
+    patchRun(t.db, "run-failed-publish", { created_at: "2020-01-01 00:00:00" });
+    patchRun(t.db, "run-published-retry", { created_at: "2020-01-02 00:00:00" });
+
+    const snapshot = await readActivitySnapshot();
+
+    expect(snapshot.activities.map((activity) => activity.id)).toEqual([
+      "run:run-published-retry",
+      "publication:pr-fresh",
+    ]);
+  });
+
   it("drops a failure a newer run replaced, even one that succeeded outside the window", async () => {
     seedRun(t.db, {
       runId: "run-older",
@@ -232,16 +274,11 @@ describe("GET /api/activity", () => {
       stepStatus: "succeeded",
       sessionStatus: "terminated",
     });
-    t.db
-      .update(schema.runs)
-      .set({ created_at: "2020-01-01 00:00:00" })
-      .where(eq(schema.runs.id, "run-older"))
-      .run();
-    t.db
-      .update(schema.runs)
-      .set({ created_at: "2020-01-02 00:00:00", updated_at: "2020-01-03 00:00:00" })
-      .where(eq(schema.runs.id, "run-newer"))
-      .run();
+    patchRun(t.db, "run-older", { created_at: "2020-01-01 00:00:00" });
+    patchRun(t.db, "run-newer", {
+      created_at: "2020-01-02 00:00:00",
+      updated_at: "2020-01-03 00:00:00",
+    });
 
     const snapshot = await readActivitySnapshot();
 
@@ -261,16 +298,11 @@ describe("GET /api/activity", () => {
       stepStatus: "failed",
       sessionStatus: "failed",
     });
-    t.db
-      .update(schema.runs)
-      .set({ created_at: "2020-01-01 00:00:00", abandoned_at: "2020-01-01 00:00:01" })
-      .where(eq(schema.runs.id, "run-stale-abandoned"))
-      .run();
-    t.db
-      .update(schema.runs)
-      .set({ created_at: "2020-01-01 00:00:00" })
-      .where(eq(schema.runs.id, "run-live-retry"))
-      .run();
+    patchRun(t.db, "run-stale-abandoned", {
+      created_at: "2020-01-01 00:00:00",
+      abandoned_at: "2020-01-01 00:00:01",
+    });
+    patchRun(t.db, "run-live-retry", { created_at: "2020-01-01 00:00:00" });
 
     const snapshot = await readActivitySnapshot();
 
@@ -284,24 +316,8 @@ describe("GET /api/activity", () => {
       stepStatus: "succeeded",
       sessionStatus: "terminated",
     });
-    insertPullRequest(t.db, {
-      id: "pr-old",
-      issue_id: "i1",
-      run_id: "run-old-pr",
-      publication_status: "pushing",
-      title: "feat: ship it",
-    });
-    updatePullRequest(t.db, "pr-old", {
-      publication_status: "failed",
-      failed_phase: "pushing",
-      error_code: "github_push_failed",
-      error_message: "The commits could not be pushed to GitHub.",
-    });
-    t.db
-      .update(schema.runs)
-      .set({ updated_at: "2020-01-01 00:00:00" })
-      .where(eq(schema.runs.id, "run-old-pr"))
-      .run();
+    seedStoppedPublication(t.db, "pr-old", "run-old-pr");
+    patchRun(t.db, "run-old-pr", { updated_at: "2020-01-01 00:00:00" });
     t.db
       .update(schema.pullRequests)
       .set({ updated_at: "2020-01-01 00:00:00" })

@@ -166,11 +166,21 @@ describe("projectActivities", () => {
     expect(projectActivities(rows, WINDOW)[0]).toMatchObject({ bucket: "running" });
   });
 
-  it("keeps a live run of a closed issue that is blocked on the operator", () => {
-    const rows = [evidence({ issue_status: "done", run_status: "awaiting_permission" })];
+  it.each(["review_ready", "awaiting_permission", "awaiting_human", "awaiting_selection"] as const)(
+    "keeps a closed issue out of the attention bucket while its run still reads as %s",
+    (run_status) => {
+      const rows = [
+        evidence({
+          issue_status: "done",
+          run_status,
+          current_step: null,
+          publication: STOPPED_PUBLICATION,
+        }),
+      ];
 
-    expect(projectActivities(rows, WINDOW)[0]).toMatchObject({ bucket: "attention" });
-  });
+      expect(projectActivities(rows, WINDOW)).toEqual([]);
+    },
+  );
 
   it("stops alerting on a cycle the operator abandoned, publication included", () => {
     const rows = [
@@ -193,6 +203,19 @@ describe("projectActivities", () => {
         run_status: "failed",
         current_step: null,
         halted_step: "Implement",
+      }),
+    ];
+
+    expect(projectActivities(rows, WINDOW)).toEqual([]);
+  });
+
+  it("drops the publication error of an unfinished run a newer run of the same issue replaced", () => {
+    const rows = [
+      evidence({
+        run_superseded: true,
+        run_status: "review_ready",
+        current_step: null,
+        publication: STOPPED_PUBLICATION,
       }),
     ];
 
