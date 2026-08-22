@@ -1,8 +1,10 @@
 import {
   getRun,
+  getStepRun,
   listAgentSessionsForRun,
   listStepRunsForRun,
   recordAgentSessionProcess,
+  setStepNextTurnConfig,
   updateRunStatus,
 } from "@otomat/db";
 import { agentSessionMachine, isRunSettled, stepRunMachine } from "@otomat/domain";
@@ -147,14 +149,20 @@ export async function spawnTurn(
     capturePassStart(state, ctx);
     clearWorkerStartEvidence(ctx.agentSessionDir);
     clearLiveInput(ctx.agentSessionDir);
-    claimStepContributions(state, ctx.stepRunId, ctx.agentSessionId);
+    claimStepContributions(
+      state,
+      ctx.stepRunId,
+      ctx.agentSessionId,
+      ctx.config?.config_hash ?? null,
+      ctx.carryContributionIds,
+    );
     const carried = carriedContributions(state, ctx.agentSessionId);
     const prompt = withCarriedContributions(
       captureTurnContext(state, ctx, mode),
       carried.map((row) => row.body),
     );
     // The selection is already rendered into `prompt`; a job is serialized into the worker's env, so it must not carry it twice.
-    const { contextSelection: _frozen, ...turn } = ctx;
+    const { contextSelection: _frozen, carryContributionIds: _carried, ...turn } = ctx;
     proc = state.spawn({ ...turn, prompt, mode, providerSessionId });
     state.starting.set(ctx.agentSessionId, {
       runId: ctx.runId,
@@ -181,6 +189,10 @@ export async function spawnTurn(
     }
     tail = startSessionTail(state.db, state.dataDir, ctx.runId, ctx.agentSessionId);
     proc.start();
+    const pendingConfig = getStepRun(db, ctx.stepRunId)?.next_turn_config_json;
+    if (pendingConfig != null && pendingConfig.config_hash === ctx.config?.config_hash) {
+      setStepNextTurnConfig(db, ctx.stepRunId, null);
+    }
     // The released worker is the evidence, and it must land before the exit monitor can settle the batch.
     resolveCarriedContributions(state, ctx.agentSessionId, { kind: "delivered" });
     state.starting.delete(ctx.agentSessionId);

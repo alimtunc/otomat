@@ -69,6 +69,7 @@ export const queryKeys = {
   runsForIssue: (issueId: string) => ["runs", { issueId }] as const,
   run: (id: string) => ["run", id] as const,
   runEventWindow: (id: string) => ["run-events", id] as const,
+  stepEventWindow: (id: string, stepId: string) => ["run-events", id, "step", stepId] as const,
   runCompletionReport: (id: string) => ["run", id, "report"] as const,
   runUsage: (id: string) => ["run", id, "usage"] as const,
   runCommits: (id: string) => ["run", id, "commits"] as const,

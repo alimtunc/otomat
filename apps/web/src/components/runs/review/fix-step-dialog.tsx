@@ -1,4 +1,4 @@
-import { FIX_REVIEW_COMMENTS_STEP_NAME, type RequestFixRequest } from "@otomat/domain";
+import type { RequestFixRequest } from "@otomat/domain";
 import {
   Button,
   Dialog,
@@ -6,12 +6,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTrigger,
-  Field,
-  FieldControl,
-  FieldLabel,
   Icon,
-  Input,
 } from "@otomat/ui";
+import { useNavigate } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
 import { ContextComposer } from "@web/components/context/context-composer";
 import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
@@ -19,8 +16,8 @@ import { useLaunchExecution } from "@web/components/execution/use-launch-executi
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import type { ReviewSelection } from "@web/components/runs/review/use-selection";
 import { contextRequestFields, EMPTY_CONTEXT_DRAFT } from "@web/lib/context/draft";
+import { profileRequestFields } from "@web/lib/execution/request";
 import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
-import { hasText } from "@web/lib/form";
 import { useState } from "react";
 
 export interface ReviewFixStepDialogProps {
@@ -34,23 +31,30 @@ export interface ReviewFixStepDialogProps {
 /** Turns the selected comments into an appended step, on an agent the user picks here rather than inherits. */
 export function ReviewFixStepDialog({ selection, issueId, disabled }: ReviewFixStepDialogProps) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState(FIX_REVIEW_COMMENTS_STEP_NAME);
+  const navigate = useNavigate();
   const [context, setContext] = useState(EMPTY_CONTEXT_DRAFT);
   const [execution, setExecution] = useState<ExecutionSelection>(EMPTY_EXECUTION_SELECTION);
   const issue = useIssue(issueId);
-  const launchExecution = useLaunchExecution(execution);
-  const canSubmit = hasText(name) && launchExecution.canLaunch && !selection.isFixPending;
+  const launchExecution = useLaunchExecution(execution, "profiles");
+  const profile = profileRequestFields(launchExecution.request);
+  const canSubmit = launchExecution.canLaunch && profile !== null && !selection.isFixPending;
 
-  function submit(): void {
-    if (!canSubmit) return;
+  const submit = (): void => {
+    if (!canSubmit || profile === null) return;
     const request: RequestFixRequest = {
       comment_ids: [...selection.selectedIds],
-      name: name.trim(),
       ...contextRequestFields(context),
-      ...launchExecution.request,
+      ...profile,
     };
-    selection.requestFix(request, () => setOpen(false));
-  }
+    selection.requestFix(request, (response) => {
+      setOpen(false);
+      void navigate({
+        to: "/runs/$runId",
+        params: { runId: selection.runId },
+        search: { step: response.step_run_id },
+      });
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -76,17 +80,6 @@ export function ReviewFixStepDialog({ selection, issueId, disabled }: ReviewFixS
             comment, its pinned hunk, the current file and the current diff sha are frozen as its
             context.
           </p>
-          <Field>
-            <FieldLabel>Step name</FieldLabel>
-            <FieldControl>
-              <Input
-                autoFocus
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                aria-label="Fix step name"
-              />
-            </FieldControl>
-          </Field>
           <ContextComposer
             issue={issue.data ?? null}
             projectId={issue.data?.project_id}
@@ -99,6 +92,7 @@ export function ReviewFixStepDialog({ selection, issueId, disabled }: ReviewFixS
             execution={launchExecution}
             onChange={setExecution}
             label="Fix step"
+            scope="profiles"
           />
         </DialogBody>
         <IssueFormFooter

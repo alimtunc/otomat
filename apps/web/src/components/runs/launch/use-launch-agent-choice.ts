@@ -1,7 +1,7 @@
 import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
 import { useAgentProfiles } from "@web/api/agent-profiles/queries";
 import { useRuntimes } from "@web/api/daemon/queries";
-import { resolveAgentChoice } from "@web/lib/agent-choice";
+import { resolveAgentChoice, resolveProfileChoice, type AgentScope } from "@web/lib/agent-choice";
 
 export interface LaunchAgentChoice {
   descriptors: RuntimeDescriptor[];
@@ -14,7 +14,10 @@ export interface LaunchAgentChoice {
   onRetry: () => void;
 }
 
-export function useLaunchAgentChoice(preferred: string | null): LaunchAgentChoice {
+export function useLaunchAgentChoice(
+  preferred: string | null,
+  scope: AgentScope = "all",
+): LaunchAgentChoice {
   const runtimes = useRuntimes();
   const profilesQuery = useAgentProfiles();
   const descriptors = runtimes.data ?? [];
@@ -23,7 +26,10 @@ export function useLaunchAgentChoice(preferred: string | null): LaunchAgentChoic
   return {
     descriptors,
     profiles,
-    choice: resolveAgentChoice(preferred, profiles, descriptors),
+    choice:
+      scope === "profiles"
+        ? resolveProfileChoice(preferred, profiles, descriptors)
+        : resolveAgentChoice(preferred, profiles, descriptors),
     isPending: runtimes.isPending || profilesQuery.isPending,
     isError: runtimes.isError || profilesQuery.isError,
     isSuccess: runtimes.isSuccess,

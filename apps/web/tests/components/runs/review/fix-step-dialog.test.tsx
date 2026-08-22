@@ -20,8 +20,10 @@ vi.mock("@web/api/issues/queries", () => ({
 }));
 
 vi.mock("@web/components/execution/use-launch-execution", () => ({
-  useLaunchExecution: () => ({ canLaunch: true, request: { runtime: "fake" } }),
+  useLaunchExecution: () => ({ canLaunch: true, request: { profile_id: "profile-fix" } }),
 }));
+
+vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn() }));
 
 vi.mock("@web/components/execution/launch-execution-picker", () => ({
   LaunchExecutionPicker: () => null,
@@ -29,6 +31,7 @@ vi.mock("@web/components/execution/launch-execution-picker", () => ({
 
 function selectionStub(requestFix: ReviewSelection["requestFix"]): ReviewSelection {
   return {
+    runId: "run-1",
     selectedIds: new Set(["c1", "c2"]),
     toggle: () => {},
     clear: () => {},
@@ -36,6 +39,18 @@ function selectionStub(requestFix: ReviewSelection["requestFix"]): ReviewSelecti
     isFixPending: false,
   };
 }
+
+const APPENDED_RESPONSE = {
+  run: {
+    id: "run-1",
+    issue_id: "i1",
+    status: "running" as const,
+    branch: "otomat/run/run-1",
+    plan_json: { version: 1 as const, steps: [] },
+    updated_at: "2026-08-21T00:00:00.000Z",
+  },
+  step_run_id: "fix-step",
+};
 
 function instructionsField(): HTMLTextAreaElement {
   const field = document.body.querySelector<HTMLTextAreaElement>(
@@ -70,7 +85,7 @@ describe("AI fix confirmation", () => {
     const requests: RequestFixRequest[] = [];
     const { cleanup } = await openDialog((request, onAppended) => {
       requests.push(request);
-      onAppended();
+      onAppended(APPENDED_RESPONSE);
     });
 
     expect(document.body.textContent).toContain("2 comments become a new step");
@@ -82,9 +97,8 @@ describe("AI fix confirmation", () => {
     expect(requests).toEqual([
       {
         comment_ids: ["c1", "c2"],
-        name: "Fix review comments",
         note: "Keep the file ASCII-only.",
-        runtime: "fake",
+        profile_id: "profile-fix",
       },
     ]);
     await cleanup();
@@ -94,7 +108,7 @@ describe("AI fix confirmation", () => {
     const requests: RequestFixRequest[] = [];
     const { cleanup } = await openDialog((request, onAppended) => {
       requests.push(request);
-      onAppended();
+      onAppended(APPENDED_RESPONSE);
     });
 
     await act(async () => {

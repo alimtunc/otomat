@@ -1,17 +1,17 @@
 import { createRunContributionRequestSchema } from "@otomat/domain";
 import { Hono } from "hono";
 
+import type { ApiDeps } from "#api/deps";
+import { runGuard, validateJson, type RunEnv } from "#api/guards";
+import { readRunContributions } from "#api/reads";
+import { toRunContribution } from "#api/serialize";
 import {
   RunContributionNotCancelableError,
   RunContributionNotFoundError,
   RunContributionNotRetriableError,
   RunContributionStepClosedError,
+  RunContributionTargetChangedError,
 } from "#supervisor";
-
-import type { ApiDeps } from "../deps.js";
-import { runGuard, validateJson, type RunEnv } from "../guards.js";
-import { readRunContributions } from "../reads.js";
-import { toRunContribution } from "../serialize.js";
 
 /** Mounted at `/api/runs`. The step conversation surface: a post always persists the message and returns its honest delivery state. */
 export function createRunContributionRoutes(deps: ApiDeps): Hono<RunEnv> {
@@ -27,9 +27,16 @@ export function createRunContributionRoutes(deps: ApiDeps): Hono<RunEnv> {
     runGuard(deps.db),
     async (c) => {
       const run = c.get("run");
-      const { step_run_id, body } = c.req.valid("json");
+      const { step_run_id, target_agent_session_id, target_config_hash, body } =
+        c.req.valid("json");
       try {
-        const row = await deps.supervisor.contribute(run.id, step_run_id, body);
+        const row = await deps.supervisor.contribute(
+          run.id,
+          step_run_id,
+          target_agent_session_id,
+          target_config_hash,
+          body,
+        );
         return c.json(toRunContribution(row), 201);
       } catch (error) {
         if (error instanceof RunContributionNotFoundError) {
@@ -37,6 +44,9 @@ export function createRunContributionRoutes(deps: ApiDeps): Hono<RunEnv> {
         }
         if (error instanceof RunContributionStepClosedError) {
           return c.json({ error: "run_contribution_step_closed", message: error.message }, 409);
+        }
+        if (error instanceof RunContributionTargetChangedError) {
+          return c.json({ error: error.code, message: error.message }, 409);
         }
         console.error(`[otomat] contribution on run ${run.id} failed`, error);
         return c.json({ error: "run_contribution_failed" }, 500);

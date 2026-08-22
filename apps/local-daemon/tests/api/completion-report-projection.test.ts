@@ -95,6 +95,7 @@ describe("run completion report projection", () => {
         status: "terminated",
         provider_session_id: "provider-session-0",
         exit_code: 0,
+        turn_index: 1,
         created_at: OCCURRED_AT,
       })
       .run();
@@ -285,6 +286,7 @@ describe("run completion report projection", () => {
         agent_id: null,
         status: "terminated",
         provider_session_id: "provider-session-2",
+        turn_index: 1,
       })
       .run();
 

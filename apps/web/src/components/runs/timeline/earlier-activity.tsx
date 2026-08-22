@@ -1,5 +1,5 @@
 import { Button } from "@otomat/ui";
-import type { RunEventHistory } from "@web/api/runs/use-event-history";
+import type { RunEventHistory } from "@web/api/runs/use-event-window-history";
 import type { Ref } from "react";
 
 export interface EarlierActivityProps {

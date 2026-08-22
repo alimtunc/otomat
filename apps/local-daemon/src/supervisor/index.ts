@@ -20,9 +20,12 @@ export {
   RunContributionNotFoundError,
   RunContributionNotRetriableError,
   RunContributionStepClosedError,
+  RunContributionTargetChangedError,
 } from "./contribution/index.js";
 export { LaunchRefusedError } from "./launch-target.js";
 export { ProviderResumeRefusedError } from "./provider-wait/schedule.js";
+export { NextTurnModelError } from "./next-turn-model.js";
+export { StepStopRefusedError } from "./stop-step.js";
 export { closeMergedIssue, closeMergedRun, type MergeClosureConfig } from "./merge-closure.js";
 export { buildTerminalMarker } from "./markers.js";
 export { createReexecSpawn, isProcessAlive, killProcessGroup } from "./process.js";

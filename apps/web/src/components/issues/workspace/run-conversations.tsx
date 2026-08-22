@@ -52,10 +52,14 @@ export function RunConversations({
   runs,
   followedRunId,
   onFollow,
+  selectedStepId,
+  onSelectStep,
 }: {
   runs: RunContract[];
   followedRunId: string | null;
   onFollow: (runId: string) => void;
+  selectedStepId: string | null;
+  onSelectStep: (stepId: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -66,7 +70,13 @@ export function RunConversations({
           return (
             <li key={run.id} className="flex flex-col">
               <SectionHeader run={run} expanded={expanded} onSelect={() => onFollow(run.id)} />
-              {expanded ? <ConversationSection runId={run.id} /> : null}
+              {expanded ? (
+                <ConversationSection
+                  runId={run.id}
+                  selectedStepId={selectedStepId}
+                  onSelectStep={onSelectStep}
+                />
+              ) : null}
             </li>
           );
         })}

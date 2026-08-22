@@ -1,16 +1,16 @@
 import { getPullRequestForRun, getRun, listAgentSessionsForRun } from "@otomat/db";
 import {
   appendRunStepRequestSchema,
+  appendedRunStepResponseSchema,
+  executableSteps,
   IllegalTransitionError,
   scheduleProviderResumeRequestSchema,
   startRunRequestSchema,
-  type RunEventWindow,
   type RunLaunchError,
   type SessionContextResponse,
 } from "@otomat/domain";
 import { Hono } from "hono";
 
-import { readRunEventWindow } from "#events";
 import {
   LaunchRefusedError,
   ProviderResumeRefusedError,
@@ -22,13 +22,11 @@ import { agentConfigErrorResponse } from "../agent-config-refusal.js";
 import { projectRunCompletionReport } from "../completion-report.js";
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
-import { nonNegativeInt } from "../query-params.js";
 import { readRunUsage, readRuns } from "../reads.js";
 import { refusalJson } from "../refusal.js";
 import { runDetailJson } from "../run-detail.js";
 import { runtimeUnavailableResponse } from "../runtime-unavailable.js";
 import { toPullRequest, toRun } from "../serialize.js";
-import { streamRunEvents } from "../sse.js";
 import { appendStepSelector, stepAppendErrorResponse } from "../step-append.js";
 
 const LAUNCH_REFUSAL_STATUS = {
@@ -167,7 +165,12 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
           replaces: request.replaces ?? null,
           origin: "user",
         });
-        return c.json(toRun(updated), 201);
+        const step = executableSteps(updated.plan_json).at(-1);
+        if (!step) throw new Error(`run ${run.id} has no appended step`);
+        return c.json(
+          appendedRunStepResponseSchema.parse({ run: toRun(updated), step_run_id: step.id }),
+          201,
+        );
       } catch (error) {
         const refusal = stepAppendErrorResponse(c, error);
         if (refusal) return refusal;
@@ -199,21 +202,6 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       return c.json({ error: "run_abort_failed" }, 500);
     }
     return runDetailJson(deps, c, run.id);
-  });
-
-  routes.get("/:id/events", runGuard(deps.db), (c) => streamRunEvents(c, deps.db, c.get("run").id));
-
-  routes.get("/:id/events/window", runGuard(deps.db), (c) => {
-    const run = c.get("run");
-    const page = readRunEventWindow(deps.db, run.id, {
-      before: nonNegativeInt(c.req.query("before")),
-      limit: nonNegativeInt(c.req.query("limit")),
-    });
-    return c.json({
-      run_id: run.id,
-      events: page.events,
-      older_cursor: page.olderCursor,
-    } satisfies RunEventWindow);
   });
 
   return routes;

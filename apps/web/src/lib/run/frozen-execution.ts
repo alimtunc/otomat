@@ -26,6 +26,7 @@ export interface FrozenExecution {
 }
 
 const SOURCE_LABELS = {
+  turn: "chosen for this turn",
   step: "set on this step",
   launch: "chosen at launch",
   profile: "from the agent profile",

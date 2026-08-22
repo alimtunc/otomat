@@ -1,7 +1,13 @@
 import { join } from "node:path";
 
 import { getRepository, listStepRunsForRun, schema, type Db } from "@otomat/db";
-import type { AgentSessionState, RunState, StepProviderWait, StepRunState } from "@otomat/domain";
+import type {
+  AgentSessionState,
+  ResolvedAgentConfig,
+  RunState,
+  StepProviderWait,
+  StepRunState,
+} from "@otomat/domain";
 
 export interface SeedRunOptions {
   runId: string;
@@ -65,6 +71,20 @@ function resolveSeedRepository(db: Db, requested: string | null | undefined): st
   return requested;
 }
 
+function seedConfig(stepId: string, runtime: string): ResolvedAgentConfig {
+  return {
+    runtime,
+    profile_id: null,
+    profile_name: null,
+    options: {},
+    model: null,
+    guidance: null,
+    skills: [],
+    sources: null,
+    config_hash: `seed-config-${stepId}`,
+  };
+}
+
 /** Mirrors the worktree every launched run owns. The directory is never created: these fixtures reproduce crash leftovers, where the row outlives it. */
 function seedWorktree(db: Db, runId: string, repositoryId: string): string {
   const id = `${runId}-worktree`;
@@ -112,6 +132,7 @@ export function seedWorkflowRun(
           prompt: step.prompt ?? `p-${step.id}`,
           depends_on: step.dependsOn ?? [],
           replaces: step.replaces ?? null,
+          config: seedConfig(step.id, step.agent ?? "fake"),
         })),
       },
     })
@@ -138,6 +159,7 @@ export function seedWorkflowRun(
           provider_session_id: step.session.providerSessionId ?? null,
           pid: step.session.pid ?? null,
           pgid: step.session.pgid ?? null,
+          config_json: seedConfig(step.id, step.agent ?? "fake"),
         })
         .run();
     }

@@ -3,17 +3,22 @@ import { randomUUID } from "node:crypto";
 import {
   appendRunContribution,
   cancelRunContribution as writeRunContributionCanceled,
+  getRun,
   getRunContribution,
+  getStepRun,
   listAgentSessionsForRun,
   listCompeteGroupsForRun,
-  listStepRunsForRun,
   requeueRunContribution,
+  type AgentSessionRow,
   type RunContributionRow,
+  type StepRunRow,
 } from "@otomat/db";
 import {
+  executableSteps,
   isRunContributionCancelable,
   isRunContributionRetriable,
   resolveStepContributionRoute,
+  type ResolvedAgentConfig,
 } from "@otomat/domain";
 
 import type { SupervisorState } from "../state.js";
@@ -37,6 +42,16 @@ export class RunContributionStepClosedError extends Error {
   }
 }
 
+export class RunContributionTargetChangedError extends Error {
+  constructor(
+    readonly code: "session_changed" | "config_changed" | "config_unavailable",
+    message: string,
+  ) {
+    super(message);
+    this.name = "RunContributionTargetChangedError";
+  }
+}
+
 /** A retry the caller got wrong: the contribution is not failed, or it already reached the provider. */
 export class RunContributionNotRetriableError extends Error {
   constructor(message: string) {
@@ -53,18 +68,24 @@ export class RunContributionNotCancelableError extends Error {
   }
 }
 
-function assertStepAcceptsContributions(
+interface AcceptingStep {
+  step: StepRunRow;
+  sessions: AgentSessionRow[];
+}
+
+function stepAcceptingContributions(
   state: SupervisorState,
   runId: string,
   stepRunId: string,
-): void {
-  const step = listStepRunsForRun(state.db, runId).find((row) => row.id === stepRunId);
-  if (!step) {
+): AcceptingStep {
+  const step = getStepRun(state.db, stepRunId);
+  if (!step || step.run_id !== runId) {
     throw new RunContributionNotFoundError(`step ${stepRunId} is not on run ${runId}`);
   }
+  const sessions = listAgentSessionsForRun(state.db, runId);
   const route = resolveStepContributionRoute(
     step,
-    listAgentSessionsForRun(state.db, runId),
+    sessions,
     listCompeteGroupsForRun(state.db, runId),
   );
   if (route === null) {
@@ -72,22 +93,84 @@ function assertStepAcceptsContributions(
       `step ${stepRunId} is ${step.status} and will not run another turn`,
     );
   }
+  return { step, sessions: sessions.filter((session) => session.step_run_id === stepRunId) };
+}
+
+interface ContributionTarget {
+  sessionId: string | null;
+  config: ResolvedAgentConfig;
+}
+
+function contributionTarget(
+  state: SupervisorState,
+  runId: string,
+  { step, sessions }: AcceptingStep,
+  requestedSessionId: string | null,
+  requestedConfigHash: string,
+): ContributionTarget {
+  const run = getRun(state.db, runId);
+  if (!run) throw new RunContributionNotFoundError(`run ${runId} not found`);
+  const session =
+    requestedSessionId === null
+      ? null
+      : sessions.find((candidate) => candidate.id === requestedSessionId);
+  if (requestedSessionId !== null && session === undefined) {
+    throw new RunContributionTargetChangedError(
+      "session_changed",
+      "The selected participant session is no longer available. Refresh the conversation target.",
+    );
+  }
+  if (requestedSessionId === null && sessions.length > 0) {
+    throw new RunContributionTargetChangedError(
+      "session_changed",
+      "This step now has a participant session. Refresh before sending the message.",
+    );
+  }
+  const planConfig = executableSteps(run.plan_json).find(
+    (candidate) => candidate.id === step.id,
+  )?.config;
+  const config = step.next_turn_config_json ?? session?.config_json ?? planConfig ?? null;
+  if (config === null) {
+    throw new RunContributionTargetChangedError(
+      "config_unavailable",
+      "The selected participant has no frozen execution configuration.",
+    );
+  }
+  if (config.config_hash !== requestedConfigHash) {
+    throw new RunContributionTargetChangedError(
+      "config_changed",
+      "The selected participant configuration changed before this message was queued. Review it and send again.",
+    );
+  }
+  return { sessionId: requestedSessionId, config };
 }
 
 export async function contributeToRun(
   state: SupervisorState,
   runId: string,
   stepRunId: string,
+  targetAgentSessionId: string | null,
+  targetConfigHash: string,
   body: string,
 ): Promise<RunContributionRow> {
-  assertStepAcceptsContributions(state, runId, stepRunId);
+  const accepting = stepAcceptingContributions(state, runId, stepRunId);
+  const target = contributionTarget(
+    state,
+    runId,
+    accepting,
+    targetAgentSessionId,
+    targetConfigHash,
+  );
   const row = appendRunContribution(state.db, {
     id: randomUUID(),
     run_id: runId,
     step_run_id: stepRunId,
     body,
+    target_agent_session_id: target.sessionId,
+    target_config_json: target.config,
   });
   emitContributionEvent(state, row);
+  state.stopHeld.delete(stepRunId);
   await deliverQueuedContributions(state, runId);
   return requireRunContribution(state, row.id);
 }
@@ -120,6 +203,7 @@ export async function retryRunContribution(
   assertContributionTransitions([row], "queued");
   requeueRunContribution(state.db, contributionId);
   emitContributionEvent(state, requireRunContribution(state, contributionId));
+  state.stopHeld.delete(row.step_run_id);
   await deliverQueuedContributions(state, runId);
   return requireRunContribution(state, contributionId);
 }

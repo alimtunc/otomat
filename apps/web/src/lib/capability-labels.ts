@@ -30,6 +30,7 @@ const APPROVALS_HINT =
 
 /** The `satisfies` is the guarantee: a capability added to the schema fails the build here instead of vanishing from the list. */
 export function capabilityEntries(capabilities: RuntimeCapabilities): CapabilityEntry[] {
+  const resumeModel = capabilities.resume_model;
   return Object.values({
     steering: {
       key: "steering",
@@ -40,6 +41,12 @@ export function capabilityEntries(capabilities: RuntimeCapabilities): Capability
     stream: { key: "stream", label: "Stream", supported: capabilities.stream, hint: null },
     abort: { key: "abort", label: "Abort", supported: capabilities.abort, hint: null },
     resume: { key: "resume", label: "Resume", supported: capabilities.resume, hint: null },
+    resume_model: {
+      key: "resume_model",
+      label: "Model override on resume",
+      supported: resumeModel.status === "supported",
+      hint: resumeModel.status === "unsupported" ? resumeModel.reason : null,
+    },
     permissions: {
       key: "permissions",
       label: "Interactive approvals",

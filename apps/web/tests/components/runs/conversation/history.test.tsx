@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import type { RunContributionContract, RunDetail, RuntimeDescriptor } from "@otomat/domain";
-import type { RunEventHistory } from "@web/api/runs/use-event-history";
+import type { RunEventHistory } from "@web/api/runs/use-event-window-history";
 import { ConversationThread } from "@web/components/runs/conversation/thread";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -95,14 +95,20 @@ async function attachScroll(container: HTMLElement, contentHeight: number): Prom
 
 function render(history: Partial<RunEventHistory>) {
   const events = [
-    envelope({ id: "e8", seq: 8, type: "run.contribution", payload: { contribution_id: "c1" } }),
-    envelope({ id: "e9", seq: 9, payload: { text: "the newest line" } }),
+    envelope({
+      id: "e8",
+      seq: 8,
+      step_run_id: "s1",
+      type: "run.contribution",
+      payload: { contribution_id: "c1" },
+    }),
+    envelope({ id: "e9", seq: 9, step_run_id: "s1", payload: { text: "the newest line" } }),
   ];
   const stream = eventStream({
     events,
     history: eventHistory({ events, tailSeq: 9, ...history }),
   });
-  return mount(<ConversationThread detail={detail} stream={stream} />);
+  return mount(<ConversationThread detail={detail} stream={stream} stepRunId="s1" />);
 }
 
 describe("conversation history window", () => {

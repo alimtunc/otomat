@@ -1,0 +1,11 @@
+Resume a previous non-interactive session
+
+Usage: codex exec resume [OPTIONS] [SESSION_ID] [PROMPT]
+
+Arguments:
+  [SESSION_ID]
+          Session identifier to resume
+
+Options:
+  -h, --help
+          Print help

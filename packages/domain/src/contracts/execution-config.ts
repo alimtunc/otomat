@@ -8,7 +8,7 @@ import {
 import { modelIdSchema } from "./runtime-model.js";
 
 /** Ordered most specific first; `provider` means nothing selected, so Otomat sends no argument. */
-const EXECUTION_SOURCES = ["step", "launch", "profile", "global", "provider"] as const;
+const EXECUTION_SOURCES = ["turn", "step", "launch", "profile", "global", "provider"] as const;
 const executionSourceSchema = z.enum(EXECUTION_SOURCES);
 export type ExecutionSource = z.infer<typeof executionSourceSchema>;
 

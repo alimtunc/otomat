@@ -1,4 +1,4 @@
-import type { RunDetail } from "@otomat/domain";
+import type { EventEnvelope, RunDetail } from "@otomat/domain";
 import {
   Button,
   cn,
@@ -9,9 +9,21 @@ import {
   Icon,
 } from "@otomat/ui";
 import { StepsList } from "@web/components/runs/cockpit/steps/list";
+import { useStepActivity } from "@web/components/runs/cockpit/steps/use-step-activity";
 
-export function StepsDisclosure({ detail }: { detail: RunDetail }) {
+export function StepsDisclosure({
+  detail,
+  events,
+  selectedStepId,
+  onSelectStep,
+}: {
+  detail: RunDetail;
+  events: readonly EventEnvelope[];
+  selectedStepId: string | null;
+  onSelectStep: (stepId: string) => void;
+}) {
   const stepCount = detail.run.plan_json.steps.length;
+  const hasNewActivity = useStepActivity(events, selectedStepId);
   return (
     <Collapsible className="group/steps flex-none border-b border-border-subtle bg-sidebar">
       <CollapsibleTrigger
@@ -38,7 +50,12 @@ export function StepsDisclosure({ detail }: { detail: RunDetail }) {
         </span>
       </CollapsibleTrigger>
       <CollapsiblePanel className="max-h-72 overflow-auto border-t border-border-subtle">
-        <StepsList detail={detail} />
+        <StepsList
+          detail={detail}
+          selectedStepId={selectedStepId}
+          onSelectStep={onSelectStep}
+          hasNewActivity={hasNewActivity}
+        />
       </CollapsiblePanel>
     </Collapsible>
   );

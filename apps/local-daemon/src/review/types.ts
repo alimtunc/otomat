@@ -137,7 +137,6 @@ export interface FixRequest {
   commentIds: string[];
   selector: AgentConfigSelector;
   overrides: ExecutionOverrides;
-  name?: string;
   note: string | null;
   references: readonly ContextReference[];
 }

@@ -6,6 +6,7 @@ import type {
   RunDetail,
   RunState,
   RuntimeDescriptor,
+  ResolvedAgentConfig,
 } from "@otomat/domain";
 import { ConversationThread } from "@web/components/runs/conversation/thread";
 import { act } from "react";
@@ -22,10 +23,25 @@ import { controlScroll, type ScrollControl } from "#support/scroll-control";
 const VIEWPORT_HEIGHT = 400;
 const CONTENT_HEIGHT = 2000;
 
-const mutateAsync = vi.fn(async (_request: CreateRunContributionRequest) => ({}));
+const mutate = vi.fn(
+  (_request: CreateRunContributionRequest, callbacks?: { onSuccess?: () => void }) =>
+    callbacks?.onSuccess?.(),
+);
 let contributions: RunContributionContract[] = [];
 let contributionsPending = false;
 let reducedMotion = false;
+
+const CONFIG: ResolvedAgentConfig = {
+  runtime: "claude",
+  profile_id: "profile-1",
+  profile_name: "Implementer",
+  options: {},
+  model: { id: "claude-opus", source: "manual" },
+  guidance: null,
+  skills: [],
+  sources: { runtime: "profile", model: "profile", options: {} },
+  config_hash: "config-1",
+};
 
 vi.mock("@web/api/runs/queries", () => ({
   useRunContributions: () => ({
@@ -37,7 +53,7 @@ vi.mock("@web/api/runs/queries", () => ({
 }));
 
 vi.mock("@web/api/runs/mutations", () => ({
-  useCreateRunContribution: () => ({ mutateAsync, isPending: false }),
+  useCreateRunContribution: () => ({ mutate, isPending: false }),
   useRetryRunContribution: () => ({ mutate: vi.fn(), isPending: false }),
   useCancelRunContribution: () => ({ mutate: vi.fn(), isPending: false }),
   useDeliverRunContributions: () => ({ mutate: vi.fn(), isPending: false }),
@@ -65,6 +81,7 @@ function claudeDescriptor(): RuntimeDescriptor {
       steering: "turn_boundary",
       abort: true,
       resume: true,
+      resume_model: { status: "supported" },
       permissions: false,
       diff_hints: false,
     },
@@ -82,7 +99,16 @@ function runDetail(runId: string, status: RunState): RunDetail {
       branch: `otomat/run/${runId}`,
       plan_json: {
         version: 1,
-        steps: [{ id: "s1", name: "Agent turn", agent: "claude", prompt: "p", depends_on: [] }],
+        steps: [
+          {
+            id: "s1",
+            name: "Agent turn",
+            agent: "claude",
+            prompt: "p",
+            depends_on: [],
+            config: CONFIG,
+          },
+        ],
       },
       updated_at: "2026-07-25T10:00:00.000Z",
     },
@@ -92,12 +118,13 @@ function runDetail(runId: string, status: RunState): RunDetail {
         run_id: runId,
         idx: 0,
         name: "Agent turn",
-        status: "succeeded",
+        status: status === "running" ? "running" : "succeeded",
         compete_group_id: null,
         worktree_id: null,
         branch: null,
         worktree_status: null,
         provider_wait: null,
+        next_turn_config: null,
       },
     ],
     sessions: [
@@ -107,6 +134,17 @@ function runDetail(runId: string, status: RunState): RunDetail {
         agent_id: "claude",
         status: "awaiting_input",
         provider_session_id: "ps-1",
+        resumed_from_session_id: null,
+        config: CONFIG,
+        reported_model: null,
+        started_at: "2026-07-25T10:00:00.000Z",
+        boundary: {
+          start_tree_sha: null,
+          start_head_sha: null,
+          end_tree_sha: null,
+          end_head_sha: null,
+          error: null,
+        },
       },
     ],
     compete_groups: [],
@@ -140,11 +178,11 @@ afterEach(async () => {
   contributions = [];
   contributionsPending = false;
   reducedMotion = false;
-  mutateAsync.mockClear();
+  mutate.mockClear();
 });
 
 function thread(detail: RunDetail, events: EventEnvelope[] = []) {
-  return <ConversationThread detail={detail} stream={eventStream({ events })} />;
+  return <ConversationThread detail={detail} stream={eventStream({ events })} stepRunId="s1" />;
 }
 
 async function renderThread(detail: RunDetail, events: EventEnvelope[] = []) {
@@ -188,7 +226,7 @@ async function prepend(scroll: ScrollControl, detail: RunDetail) {
 }
 
 function logEvent(seq: number): EventEnvelope {
-  return envelope({ id: `e${seq}`, seq });
+  return envelope({ id: `e${seq}`, seq, step_run_id: "s1" });
 }
 
 function jumpButton(): HTMLButtonElement | null {
@@ -357,7 +395,15 @@ describe("run conversation autoscroll", () => {
       );
     });
 
-    expect(mutateAsync).toHaveBeenCalledWith({ step_run_id: "s1", body: "please rebase" });
+    expect(mutate).toHaveBeenCalledWith(
+      {
+        step_run_id: "s1",
+        target_agent_session_id: "as1",
+        target_config_hash: "config-1",
+        body: "please rebase",
+      },
+      expect.anything(),
+    );
     expect(scroll.top()).toBe(scroll.maxTop());
     expect(viewportElement().contains(promptTextarea())).toBe(false);
   });

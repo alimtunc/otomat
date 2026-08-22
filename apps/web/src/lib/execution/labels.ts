@@ -3,12 +3,15 @@ import type {
   ExecutionSource,
   ModelSelection,
   ProviderOptionDescriptor,
+  ResolvedAgentConfig,
   ResolvedExecutionValue,
 } from "@otomat/domain";
 import { providerOptionValueLabel } from "@web/lib/provider-option-labels";
 
 export function executionSourceLabel(source: ExecutionSource, profileName: string | null): string {
   switch (source) {
+    case "turn":
+      return "set for the next turn";
     case "step":
       return "set on this step";
     case "launch":
@@ -51,4 +54,16 @@ export function resolvedModelLabel(
     return `Provider's own default — ${source}`;
   }
   return `${resolved.value.id} — ${source}`;
+}
+
+export function agentLabel(config: ResolvedAgentConfig): string {
+  return config.profile_name ?? "Ad-hoc agent";
+}
+
+export function modelLabel(model: ResolvedAgentConfig["model"]): string {
+  return model?.id ?? "Provider default";
+}
+
+export function participantLabel(config: ResolvedAgentConfig): string {
+  return `${agentLabel(config)} · ${config.runtime} · ${modelLabel(config.model)}`;
 }

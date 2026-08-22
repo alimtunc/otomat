@@ -45,6 +45,8 @@ export interface SupervisorState {
   advancing: Set<string>;
   /** Run-level delivery guard so two contribution posts never batch the same queue twice. */
   delivering: Set<string>;
+  /** Steps the operator stopped mid-turn: their queued messages wait for an explicit message, retry or resume, never an automatic restart. */
+  stopHeld: Set<string>;
   /** Prevents turns queued on the semaphore from spawning while daemon shutdown drains live workers. */
   shuttingDown: boolean;
   /** Wired by `createSupervisor` to advance the plan then flush the run's queued contributions; injected to keep `lifecycle` free of a module cycle. */
@@ -70,6 +72,7 @@ export function createState(config: SupervisorConfig): SupervisorState {
     pending: new Set(),
     advancing: new Set(),
     delivering: new Set(),
+    stopHeld: new Set(),
     shuttingDown: false,
     advance: null,
   };

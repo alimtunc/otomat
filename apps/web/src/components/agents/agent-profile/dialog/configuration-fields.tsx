@@ -21,7 +21,7 @@ export function AgentProfileConfigurationFields({
             <FieldLabel>Execution</FieldLabel>
             <FieldControl>
               <ExecutionConfigPicker
-                runtimesOnly
+                scope="runtimes"
                 level="profile"
                 value={values.execution}
                 onChange={(execution) => form.setFieldValue("execution", execution)}

@@ -3,6 +3,7 @@ import type {
   CompeteGroupState,
   RunContributionState,
   RunState,
+  ResolvedAgentConfig,
   SessionContext,
   StepProviderWait,
   StepRunState,
@@ -65,6 +66,9 @@ export const stepRuns = sqliteTable(
     worktree_id: text("worktree_id").references(() => worktrees.id),
     // Never cleared: it is stale evidence the moment the step leaves `waiting_for_provider`.
     provider_wait_json: text("provider_wait_json", { mode: "json" }).$type<StepProviderWait>(),
+    next_turn_config_json: text("next_turn_config_json", {
+      mode: "json",
+    }).$type<ResolvedAgentConfig>(),
     ...timestamps,
   },
   (table) => [uniqueIndex("step_runs_run_idx_unique").on(table.run_id, table.idx)],
@@ -80,27 +84,37 @@ export const eventStreams = sqliteTable("event_streams", {
   ...timestamps,
 });
 
-export const agentSessions = sqliteTable("agent_sessions", {
-  id: text("id").primaryKey(),
-  step_run_id: text("step_run_id")
-    .notNull()
-    .references(() => stepRuns.id),
-  agent_id: text("agent_id").references(() => agents.id),
-  status: text("status").$type<AgentSessionState>().notNull().default("created"),
-  provider_session_id: text("provider_session_id"),
-  // The dated dossier this session was given; null on sessions that ran before contexts were captured.
-  context_json: text("context_json", { mode: "json" }).$type<SessionContext>(),
-  pid: integer("pid"),
-  pgid: integer("pgid"),
-  exit_code: integer("exit_code"),
-  exit_signal: text("exit_signal"),
-  start_tree_sha: text("start_tree_sha"),
-  start_head_sha: text("start_head_sha"),
-  end_tree_sha: text("end_tree_sha"),
-  end_head_sha: text("end_head_sha"),
-  boundary_error: text("boundary_error"),
-  ...timestamps,
-});
+export const agentSessions = sqliteTable(
+  "agent_sessions",
+  {
+    id: text("id").primaryKey(),
+    step_run_id: text("step_run_id")
+      .notNull()
+      .references(() => stepRuns.id),
+    turn_index: integer("turn_index").notNull().default(0),
+    agent_id: text("agent_id").references(() => agents.id),
+    status: text("status").$type<AgentSessionState>().notNull().default("created"),
+    provider_session_id: text("provider_session_id"),
+    resumed_from_session_id: text("resumed_from_session_id"),
+    config_json: text("config_json", { mode: "json" }).$type<ResolvedAgentConfig>(),
+    reported_model: text("reported_model"),
+    started_at: text("started_at"),
+    context_json: text("context_json", { mode: "json" }).$type<SessionContext>(),
+    pid: integer("pid"),
+    pgid: integer("pgid"),
+    exit_code: integer("exit_code"),
+    exit_signal: text("exit_signal"),
+    start_tree_sha: text("start_tree_sha"),
+    start_head_sha: text("start_head_sha"),
+    end_tree_sha: text("end_tree_sha"),
+    end_head_sha: text("end_head_sha"),
+    boundary_error: text("boundary_error"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("agent_sessions_step_turn_unique").on(table.step_run_id, table.turn_index),
+  ],
+);
 
 export const runContributions = sqliteTable(
   "run_contributions",
@@ -116,6 +130,8 @@ export const runContributions = sqliteTable(
     seq: integer("seq").notNull(),
     body: text("body").notNull(),
     status: text("status").$type<RunContributionState>().notNull().default("queued"),
+    target_agent_session_id: text("target_agent_session_id").references(() => agentSessions.id),
+    target_config_json: text("target_config_json", { mode: "json" }).$type<ResolvedAgentConfig>(),
     agent_session_id: text("agent_session_id").references(() => agentSessions.id),
     delivered_at: text("delivered_at"),
     settled_at: text("settled_at"),

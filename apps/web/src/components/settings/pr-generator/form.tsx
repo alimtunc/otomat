@@ -22,7 +22,7 @@ export function PullRequestGeneratorForm({ generator }: { generator: ExecutionDe
             <FieldLabel>PR metadata generator</FieldLabel>
             <FieldControl>
               <ExecutionConfigPicker
-                runtimesOnly
+                scope="runtimes"
                 level="global"
                 value={field.state.value}
                 onChange={field.handleChange}

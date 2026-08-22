@@ -2,7 +2,7 @@ import type {
   ReviewCommentContract,
   ReviewDetail,
   ReviewedFileContract,
-  RunContract,
+  AppendedRunStepResponse,
   ReviewDiffResponse,
 } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -19,7 +19,7 @@ import {
 } from "#review";
 import { ReviewFixBusyError, RunWorkspaceClosedError } from "#supervisor";
 
-import { json, makeApiApp, post, request, runRow } from "../support/api.js";
+import { json, makeApiApp, post, request, runRowWithStep } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 import { commentRow, reviewedFileRow, reviewRow, stubReviewService } from "../support/review.js";
 import { seedRun } from "../support/seed.js";
@@ -351,7 +351,7 @@ it("delegates the fix request with the parsed selection and returns the updated 
     review: stubReviewService({
       requestFix: async (run, fix) => {
         received = { runId: run.id, request: fix };
-        return runRow(RUN_ID);
+        return runRowWithStep(RUN_ID, "fix-review-comments");
       },
     }),
   });
@@ -373,7 +373,10 @@ it("delegates the fix request with the parsed selection and returns the updated 
       overrides: {},
     },
   });
-  expect((await json<RunContract>(res)).status).toBe("running");
+  expect(await json<AppendedRunStepResponse>(res)).toMatchObject({
+    run: { status: "running" },
+    step_run_id: "fix-review-comments",
+  });
 });
 
 it("refuses a fix with no explicit agent, and maps conflicts to 409", async () => {
@@ -384,7 +387,7 @@ it("refuses a fix with no explicit agent, and maps conflicts to 409", async () =
 
   const emptySelection = await post(makeApiApp(t), `/api/runs/${RUN_ID}/review/fix`, {
     comment_ids: [],
-    runtime: "fake",
+    profile_id: "p-reviewer",
   });
   expect(emptySelection.status).toBe(400);
 
@@ -406,7 +409,7 @@ it("refuses a fix with no explicit agent, and maps conflicts to 409", async () =
     });
     const res = await post(app, `/api/runs/${RUN_ID}/review/fix`, {
       comment_ids: ["c1"],
-      runtime: "fake",
+      profile_id: "p-reviewer",
     });
     expect(res.status).toBe(409);
     expect((await json<{ error: string }>(res)).error).toBe(conflict.code);

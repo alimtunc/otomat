@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { contribution } from "#support/contribution";
 import { findLabelled } from "#support/dom-queries";
 import { eventStream } from "#support/event-stream";
+import { eventHistory } from "#support/event-stream";
 import { mountWithQuery, type Mounted } from "#support/mount";
 import { stubResizeObserver, type ResizeObserverStub } from "#support/resize-observer";
 import { controlScroll, type ScrollControl } from "#support/scroll-control";
@@ -66,7 +67,13 @@ vi.mock("@otomat/ui", async (importOriginal) => ({
 
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ runId: "run-1" }),
+  useSearch: () => ({ step: null }),
+  useNavigate: () => vi.fn(),
   Link: ({ children }: { children?: ReactNode }) => <a>{children}</a>,
+}));
+
+vi.mock("@web/api/runs/use-step-event-history", () => ({
+  useStepEventHistory: () => eventHistory(),
 }));
 
 vi.mock("@web/api/runs/queries", () => ({
@@ -88,6 +95,11 @@ vi.mock("@web/api/issues/queries", () => ({
 
 vi.mock("@web/api/runs/run-event-stream", () => ({
   useRunEventStream: () => eventStream(),
+}));
+
+vi.mock("@web/api/runs/step-mutations", () => ({
+  useSetNextTurnModel: () => ({ mutate: vi.fn(), isPending: false }),
+  useStopRunStep: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@web/api/runs/mutations", () => ({
@@ -169,7 +181,13 @@ function expectsSoleScroller(): HTMLElement {
 
 describe.each([
   ["run cockpit", () => mountWithQuery(<RunConversationView />)],
-  ["issue conversation embed", () => mountWithQuery(<ConversationSection runId="run-1" />)],
+  [
+    "issue conversation embed",
+    () =>
+      mountWithQuery(
+        <ConversationSection runId="run-1" selectedStepId="s1" onSelectStep={vi.fn()} />,
+      ),
+  ],
 ])("%s conversation scroll ownership", (_surface, render) => {
   let mounted: Mounted;
 

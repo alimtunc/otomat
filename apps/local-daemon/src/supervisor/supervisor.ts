@@ -14,6 +14,7 @@ import {
   reconcileContributionClaims,
   retryRunContribution,
 } from "./contribution/index.js";
+import { setNextTurnModel } from "./next-turn-model.js";
 import { finishSettle } from "./pass-boundary.js";
 import { terminateGracefully } from "./process.js";
 import { recoverCompeteSelections, selectCompeteWinner } from "./promotion.js";
@@ -22,6 +23,7 @@ import { resumeDueProviderWaits } from "./provider-wait/sweep.js";
 import { reconcileRuns } from "./reconcile.js";
 import { runResumePlan } from "./resume-plan.js";
 import { createState, trackPending } from "./state.js";
+import { stopStepTurn } from "./stop-step.js";
 import type { Supervisor, SupervisorConfig } from "./types.js";
 import { workspaceClosureFacts } from "./workspace-summary.js";
 import {
@@ -48,6 +50,9 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     waitFor: (runId) => runWait(state, runId),
     capacity: () => agentCapacity(state),
     setCapacity: (maxConcurrentSessions) => setAgentCapacity(state, maxConcurrentSessions),
+    setNextTurnModel: (runId, stepRunId, sessionId, currentConfigHash, model, options) =>
+      setNextTurnModel(state, runId, stepRunId, sessionId, currentConfigHash, model, options),
+    stopStep: (runId, stepRunId) => stopStepTurn(state, runId, stepRunId),
     resume: (runId) => resumeRun(state, runId),
     resumePlan: (runId) => runResumePlan(state, runId),
     scheduleProviderResume: (runId, resumeAt) => scheduleProviderResume(state, runId, resumeAt),
@@ -55,7 +60,8 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     abandon: (runId) => abandonWorkspace(state, runId),
     workspaceClosure: (runId) => workspaceClosureFacts(state, runId),
     appendStep: (runId, input) => appendRunStep(state, runId, input),
-    contribute: (runId, stepRunId, body) => contributeToRun(state, runId, stepRunId, body),
+    contribute: (runId, stepRunId, targetSessionId, targetConfigHash, body) =>
+      contributeToRun(state, runId, stepRunId, targetSessionId, targetConfigHash, body),
     retryContribution: (runId, contributionId) =>
       retryRunContribution(state, runId, contributionId),
     cancelContribution: (runId, contributionId) =>

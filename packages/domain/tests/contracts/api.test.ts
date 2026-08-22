@@ -226,6 +226,7 @@ describe("runDetailSchema", () => {
           branch: "otomat/run/run-1/compete/candidate-a",
           worktree_status: "archived",
           provider_wait: null,
+          next_turn_config: null,
         },
       ],
       sessions: [],
@@ -291,9 +292,16 @@ describe("createRunContributionRequestSchema", () => {
     expect(
       createRunContributionRequestSchema.parse({
         step_run_id: "s1",
+        target_agent_session_id: "session-1",
+        target_config_hash: "config-1",
         body: "  continue with tests  ",
       }),
-    ).toEqual({ step_run_id: "s1", body: "continue with tests" });
+    ).toEqual({
+      step_run_id: "s1",
+      target_agent_session_id: "session-1",
+      target_config_hash: "config-1",
+      body: "continue with tests",
+    });
   });
 
   it("rejects a blank or missing body", () => {
@@ -341,6 +349,7 @@ describe("runtime availability contract", () => {
         steering: "turn_boundary",
         abort: true,
         resume: true,
+        resume_model: { status: "supported" },
         permissions: false,
         diff_hints: false,
         provider_limit: "deadline",

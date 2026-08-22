@@ -1,4 +1,4 @@
-import { isRunWorking, type RunDetail } from "@otomat/domain";
+import type { RunDetail } from "@otomat/domain";
 import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
 import { useRunContributions } from "@web/api/runs/queries";
 import type { RunEventStream } from "@web/api/runs/run-event-stream";
@@ -28,15 +28,21 @@ function loadErrorState(onRetry: () => void) {
 export function ConversationThread({
   detail,
   stream,
+  stepRunId,
 }: {
   detail: RunDetail;
   stream: RunEventStream;
+  stepRunId: string;
 }) {
   const { events, state, degraded, history } = stream;
   const contributions = useRunContributions(detail.run.id);
-  const autoscroll = useThreadAutoscroll(detail.run.id, events[0]?.seq ?? null);
+  const autoscroll = useThreadAutoscroll(`${detail.run.id}:${stepRunId}`, events[0]?.seq ?? null);
   const loadOlderRef = useLoadOlder(history, !autoscroll.pinned);
-  const working = isRunWorking(detail.run.status);
+  const step = detail.steps.find((candidate) => candidate.id === stepRunId);
+  const working =
+    step?.status === "starting" ||
+    step?.status === "running" ||
+    step?.status === "awaiting_permission";
 
   if (history.status === "error") return loadErrorState(history.retry);
   if (history.status === "pending") return LOADING;
@@ -48,7 +54,9 @@ export function ConversationThread({
       error={loadErrorState(() => void contributions.refetch())}
     >
       {(data) => {
-        const messages = data.contributions;
+        const messages = data.contributions.filter(
+          (contribution) => contribution.step_run_id === stepRunId,
+        );
         const items = buildConversation(events, messages, detail.steps, history.hasOlder);
 
         return (
@@ -91,7 +99,13 @@ export function ConversationThread({
                 {autoscroll.pinned ? null : <JumpToLatest onClick={autoscroll.jumpToLatest} />}
               </div>
             )}
-            <ConversationComposer detail={detail} onSent={autoscroll.jumpToLatest} />
+            {/* Keyed per step: a draft written for one recipient must never travel to another thread. */}
+            <ConversationComposer
+              key={stepRunId}
+              detail={detail}
+              stepRunId={stepRunId}
+              onSent={autoscroll.jumpToLatest}
+            />
           </div>
         );
       }}

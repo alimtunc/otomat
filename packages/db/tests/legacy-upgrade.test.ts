@@ -353,3 +353,39 @@ it("migrates a fresh database to a review that binds a comment to any diff subje
       .run("rc-2", "rev-missing", "src/b.ts", "sha-b", "Body"),
   ).toThrow();
 });
+
+const TURN_INDEX_MIGRATION = "0033_handy_ser_duncan";
+
+const TURN_INDEX_SEED = `
+  INSERT INTO projects (id, name, root_path) VALUES ('p1', 'P', '/tmp/p');
+  INSERT INTO issues (id, project_id, title, status) VALUES ('i1', 'p1', 'Issue', 'ready');
+  INSERT INTO runs (id, issue_id, status, branch, plan_json)
+  VALUES ('r1', 'i1', 'review_ready', 'otomat/run/r1', '{"version":1,"steps":[]}');
+  INSERT INTO step_runs (id, run_id, idx, name, status) VALUES ('s1', 'r1', 0, 'First', 'succeeded');
+  INSERT INTO agent_sessions (id, step_run_id, status, created_at)
+  VALUES
+    ('as-old', 's1', 'terminated', '2026-07-01 00:00:00'),
+    ('as-mid', 's1', 'terminated', '2026-07-02 00:00:00'),
+    ('as-new', 's1', 'terminated', '2026-07-02 00:00:00');
+`;
+
+it("numbers the turns a step already ran before the unique turn index lands", () => {
+  const dir = mkdtempSync(join(tmpdir(), "otomat-turn-index-upgrade-"));
+  const dbPath = join(dir, "otomat.db");
+  migrateUpToExcluding(dir, dbPath, TURN_INDEX_MIGRATION, TURN_INDEX_SEED);
+
+  runMigrations(dbPath);
+  const migrated = createClient(dbPath);
+  cleanup = () => {
+    migrated.sqlite.close();
+    rmSync(dir, { recursive: true, force: true });
+  };
+
+  expect(
+    migrated.sqlite.prepare("SELECT id, turn_index FROM agent_sessions ORDER BY turn_index").all(),
+  ).toEqual([
+    { id: "as-old", turn_index: 0 },
+    { id: "as-mid", turn_index: 1 },
+    { id: "as-new", turn_index: 2 },
+  ]);
+});

@@ -2,7 +2,6 @@ import { z } from "zod";
 
 import { CONTEXT_NOTE_MAX_LENGTH } from "../context/limits.js";
 import { contextReferencesSchema } from "../context/reference.js";
-import { eventEnvelopeSchema } from "../events/envelope.js";
 import { RUN_PLAN_STEP_NAME_MAX_LENGTH } from "../plan/limits.js";
 import { runPlanInputSchema } from "../plan/validate.js";
 import {
@@ -13,7 +12,8 @@ import {
   stepRunContractSchema,
 } from "./entities/runs.js";
 import { executionOptionSelectionsSchema } from "./execution-config.js";
-import { modelSelectionSchema } from "./runtime-model.js";
+import { providerOptionsSchema } from "./provider-options.js";
+import { modelIdSchema, modelSelectionSchema } from "./runtime-model.js";
 
 /** Place in the daemon's FIFO wait line for a session slot, observed at one instant. */
 export const runQueuePositionSchema = z.object({
@@ -74,6 +74,12 @@ export const runLaunchResponseSchema = z.object({
 });
 export type RunLaunchResponse = z.infer<typeof runLaunchResponseSchema>;
 
+export const appendedRunStepResponseSchema = z.object({
+  run: runContractSchema,
+  step_run_id: z.string().min(1),
+});
+export type AppendedRunStepResponse = z.infer<typeof appendedRunStepResponseSchema>;
+
 /** Why a launch was refused before any run row was written; every code is caller-fixable. */
 export const RUN_LAUNCH_ERRORS = [
   "project_not_found",
@@ -130,10 +136,7 @@ export const appendRunStepRequestSchema = z
     note: z.string().trim().min(1).max(CONTEXT_NOTE_MAX_LENGTH).optional(),
     /** Extra issues and repository files to attach; the run's own issue is always attached. */
     context: contextReferencesSchema.optional(),
-    /** Agent profile to resolve and freeze for this step; takes precedence over `runtime`. */
-    profile_id: z.string().min(1).optional(),
-    /** Ad-hoc runtime adapter id, used when no profile is selected. */
-    runtime: z.string().min(1).optional(),
+    profile_id: z.string().min(1),
     /** Model override for this step alone; absent inherits the model of the config it resolves to. */
     model: modelSelectionSchema.optional(),
     /** Provider options for this step alone; an absent key keeps what the config it resolves to carries. */
@@ -143,10 +146,7 @@ export const appendRunStepRequestSchema = z
     /** Halted step this one recovers; once it succeeds, that failure stops holding the run in `failed`. */
     replaces: z.string().min(1).optional(),
   })
-  .strict()
-  .refine((value) => Boolean(value.profile_id) || Boolean(value.runtime), {
-    message: "Provide either profile_id or runtime",
-  });
+  .strict();
 export type AppendRunStepRequest = z.infer<typeof appendRunStepRequestSchema>;
 
 /** Why a resume was refused. Both are caller-fixable, and the daemon's own sentence says which precondition failed. */
@@ -186,9 +186,37 @@ export const providerResumeScheduleErrorSchema = z.object({
 
 /** Post one user message to a step's conversation; it is persisted as `queued` whatever the run is doing. */
 export const createRunContributionRequestSchema = z
-  .object({ step_run_id: z.string().min(1), body: z.string().trim().min(1) })
+  .object({
+    step_run_id: z.string().min(1),
+    target_agent_session_id: z.string().min(1).nullable(),
+    target_config_hash: z.string().min(1),
+    body: z.string().trim().min(1),
+  })
   .strict();
 export type CreateRunContributionRequest = z.infer<typeof createRunContributionRequestSchema>;
+
+export const setNextTurnModelRequestSchema = z
+  .object({
+    agent_session_id: z.string().min(1),
+    current_config_hash: z.string().min(1),
+    model: modelIdSchema,
+    options: providerOptionsSchema,
+  })
+  .strict();
+export type SetNextTurnModelRequest = z.infer<typeof setNextTurnModelRequestSchema>;
+
+export const NEXT_TURN_MODEL_ERRORS = [
+  "step_not_found",
+  "session_not_found",
+  "session_changed",
+  "config_changed",
+  "config_unavailable",
+  "resume_model_unsupported",
+] as const;
+export const nextTurnModelErrorSchema = z.object({
+  error: z.enum(NEXT_TURN_MODEL_ERRORS),
+  message: z.string().min(1),
+});
 
 /** A run's conversation contributions, oldest first. */
 export const runContributionsResponseSchema = z.object({
@@ -197,25 +225,8 @@ export const runContributionsResponseSchema = z.object({
 });
 export type RunContributionsResponse = z.infer<typeof runContributionsResponseSchema>;
 
-/** One bounded page of a run's ledger, ascending by `seq`; without a cursor it is the newest page. */
-export const runEventWindowSchema = z.object({
-  run_id: z.string(),
-  events: z.array(eventEnvelopeSchema),
-  /** Pass as `before` to read the page just above this one; null once the ledger's start is loaded. */
-  older_cursor: z.number().int().nonnegative().nullable(),
-});
-export type RunEventWindow = z.infer<typeof runEventWindowSchema>;
-
 /** Select one succeeded competitor explicitly; the daemon rejects premature or conflicting choices. */
 export const selectCompeteWinnerRequestSchema = z
   .object({ step_run_id: z.string().min(1) })
   .strict();
 export type SelectCompeteWinnerRequest = z.infer<typeof selectCompeteWinnerRequestSchema>;
-
-/** Terminal payload of a run's SSE stream: the run's final status once the ledger is drained. */
-export const runEndPayloadSchema = z.object({ status: z.string() });
-export type RunEndPayload = z.infer<typeof runEndPayloadSchema>;
-
-/** Terminal payload when a run's SSE stream fails server-side before the run ends; the consumer should stop and surface it. */
-export const runStreamErrorPayloadSchema = z.object({ message: z.string() });
-export type RunStreamErrorPayload = z.infer<typeof runStreamErrorPayloadSchema>;

@@ -22,6 +22,7 @@ import { ExecutionModelSubmenu } from "@web/components/execution/execution-model
 import { ExecutionOptionSubmenu } from "@web/components/execution/execution-option-submenu";
 import { ExecutionSummaryDetail } from "@web/components/execution/execution-summary-detail";
 import { useExecutionConfig } from "@web/components/execution/use-execution-config";
+import type { AgentScope } from "@web/lib/agent-choice";
 import { executionDetectionProblem, noAnnouncedOptionsNote } from "@web/lib/execution/detection";
 import {
   EMPTY_EXECUTION_SELECTION,
@@ -54,7 +55,7 @@ export interface ExecutionConfigPickerProps {
   inherited?: ExecutionSelection;
   profiles: AgentProfileContract[];
   descriptors: RuntimeDescriptor[];
-  runtimesOnly?: boolean;
+  scope?: AgentScope;
   /** Prefixes every accessible name, so several pickers on one page stay distinguishable. */
   label: string;
   compact?: boolean;
@@ -68,7 +69,7 @@ export function ExecutionConfigPicker({
   inherited,
   profiles,
   descriptors,
-  runtimesOnly = false,
+  scope = "all",
   label,
   compact = false,
   disabled = false,
@@ -147,7 +148,7 @@ export function ExecutionConfigPicker({
             value={value.agent}
             onValueChange={(agent) => apply(withAgentSelection(agent))}
             {...(inherited ? { inheritLabel: inheritLabel(level) } : {})}
-            runtimesOnly={runtimesOnly}
+            scope={scope}
             effectiveLabel={agentLabel}
           />
           <ExecutionModelSubmenu

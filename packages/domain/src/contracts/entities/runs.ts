@@ -8,6 +8,7 @@ import {
   STEP_RUN_STATES,
 } from "../entity-states.js";
 import { runPlanSchema } from "../run-plan.js";
+import { resolvedAgentConfigSchema } from "./agents.js";
 import { worktreeStatusSchema } from "./workspace.js";
 
 export const runContractSchema = z.object({
@@ -32,6 +33,8 @@ export const runContributionContractSchema = z.object({
   status: z.enum(RUN_CONTRIBUTION_STATES),
   /** Agent session the delivering turn resumes; stamped when the delivery is claimed. */
   agent_session_id: z.string().nullable(),
+  target_agent_session_id: z.string().nullable(),
+  target_config: resolvedAgentConfigSchema.nullable(),
   delivered_at: z.iso.datetime().nullable(),
   /** When the carrying turn settled, resolving this message to `acknowledged` or `failed`. */
   settled_at: z.iso.datetime().nullable(),
@@ -75,6 +78,7 @@ export const stepRunContractSchema = z.object({
   worktree_status: worktreeStatusSchema.nullable(),
   /** Set only while the step is `waiting_for_provider`. */
   provider_wait: stepProviderWaitSchema.nullable(),
+  next_turn_config: resolvedAgentConfigSchema.nullable(),
 });
 export type StepRunContract = z.infer<typeof stepRunContractSchema>;
 
@@ -106,6 +110,10 @@ export const agentSessionContractSchema = z.object({
   status: z.enum(AGENT_SESSION_STATES),
   /** Provider session id, reused when resuming after the runtime assigns it. */
   provider_session_id: z.string().nullable(),
+  resumed_from_session_id: z.string().nullable(),
+  config: resolvedAgentConfigSchema.nullable(),
+  reported_model: z.string().nullable(),
+  started_at: z.iso.datetime().nullable(),
   boundary: sessionPassBoundarySchema,
 });
 export type AgentSessionContract = z.infer<typeof agentSessionContractSchema>;

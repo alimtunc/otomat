@@ -24,6 +24,7 @@ export const EVENT_TYPES = [
   "run.plan_revised",
   "step.lifecycle",
   "session.lifecycle",
+  "session.model_override",
   "compete.lifecycle",
   "runtime.log",
   "runtime.message",

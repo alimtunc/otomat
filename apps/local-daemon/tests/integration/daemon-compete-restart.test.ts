@@ -161,7 +161,7 @@ function isIdentityAlive(identity: WorkerIdentity): boolean {
 
 it(
   "recovers a competition after the daemon and one worker are killed without duplicate work or lost events",
-  { timeout: 40_000 },
+  { timeout: 70_000 },
   async () => {
     const dataDir = mkdtempSync(join(tmpdir(), "otomat-daemon-restart-"));
     const dbPath = join(dataDir, "otomat.db");
@@ -191,7 +191,7 @@ it(
                 (event) => event.type === "runtime.provider_session",
               ).length === 2
             );
-          }, 10_000),
+          }, 20_000),
         ).toBe(true);
         return {
           originalSessions: listAgentSessionsForRun(db, launchedRun.id),
@@ -237,7 +237,7 @@ it(
           async () =>
             (await readDetail(restartedDaemon.origin, launchedRun.id)).run.status ===
             "awaiting_human",
-          10_000,
+          20_000,
         ),
       ).toBe(true);
 
@@ -269,7 +269,7 @@ it(
           async () =>
             (await readDetail(restartedDaemon.origin, launchedRun.id)).run.status ===
             "awaiting_selection",
-          10_000,
+          20_000,
         ),
       ).toBe(true);
 

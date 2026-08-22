@@ -1,12 +1,18 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { appendRunContribution, claimRunContributions, listRunContributions } from "@otomat/db";
+import {
+  appendRunContribution,
+  claimRunContributions,
+  listAgentSessionsForRun,
+  listRunContributions,
+} from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { sessionDir } from "#events";
 import { appendLiveInput, createLiveInputChannel } from "#supervisor/live-input";
 
+import { contributeToStep } from "../support/contribution.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { seedWorkflowRun } from "../support/seed.js";
 import { makeSupervisor } from "../support/supervisor.js";
@@ -25,8 +31,8 @@ const STEP = "s-live";
 const RUN = "r-live";
 
 /** A run resting on a resumable session of `agent`: resuming it puts that runtime's turn in flight. */
-function seedSteerableRun(agent: string): { stepRunId: string; agentSessionId: string } {
-  return seedWorkflowRun(fix.db, {
+function seedSteerableRun(agent: string) {
+  const seeded = seedWorkflowRun(fix.db, {
     runId: RUN,
     runStatus: "awaiting_human",
     steps: [
@@ -38,6 +44,11 @@ function seedSteerableRun(agent: string): { stepRunId: string; agentSessionId: s
       },
     ],
   })(STEP);
+  const config = listAgentSessionsForRun(fix.db, RUN).find(
+    (session) => session.id === seeded.agentSessionId,
+  )?.config_json;
+  if (!config) throw new Error("expected the seeded session's frozen config");
+  return { ...seeded, config };
 }
 
 function contributions() {
@@ -58,14 +69,22 @@ it("reaches the running invocation without starting a second turn", async () => 
   await supervisor.resume(RUN);
   expect(spawn.calls).toBe(1);
 
-  const delivered = await supervisor.contribute(RUN, seeded.stepRunId, "also update the changelog");
+  const delivered = await contributeToStep(
+    fix.db,
+    supervisor,
+    RUN,
+    seeded.stepRunId,
+    "also update the changelog",
+  );
+  const activeSessionId = spawn.jobs[0]?.agentSessionId;
 
   expect(delivered.status).toBe("delivered");
-  expect(delivered.agent_session_id).toBe(seeded.agentSessionId);
+  expect(delivered.agent_session_id).toBe(activeSessionId);
   expect(delivered.delivered_at).not.toBeNull();
   // Same process, same session: nothing was spawned to carry the message.
   expect(spawn.calls).toBe(1);
-  expect(inboxBodies(seeded.agentSessionId)).toEqual(["also update the changelog"]);
+  if (!activeSessionId) throw new Error("expected the active session id");
+  expect(inboxBodies(activeSessionId)).toEqual(["also update the changelog"]);
 
   await supervisor.abort(RUN);
   await supervisor.settle();
@@ -76,13 +95,15 @@ it("carries two live messages exactly once, in send order", async () => {
   const seeded = seedSteerableRun("claude");
   await supervisor.resume(RUN);
 
-  await supervisor.contribute(RUN, seeded.stepRunId, "first message");
-  await supervisor.contribute(RUN, seeded.stepRunId, "second message");
+  await contributeToStep(fix.db, supervisor, RUN, seeded.stepRunId, "first message");
+  await contributeToStep(fix.db, supervisor, RUN, seeded.stepRunId, "second message");
 
   expect(contributions().map((row) => row.body)).toEqual(["first message", "second message"]);
   expect(contributions().every((row) => row.status === "delivered")).toBe(true);
   expect(contributions().every((row) => row.attempts === 1)).toBe(true);
-  expect(inboxBodies(seeded.agentSessionId)).toEqual(["first message", "second message"]);
+  const activeSessionId = listRunContributions(fix.db, RUN)[0]?.agent_session_id;
+  if (!activeSessionId) throw new Error("expected the active session id");
+  expect(inboxBodies(activeSessionId)).toEqual(["first message", "second message"]);
 
   await supervisor.abort(RUN);
   await supervisor.settle();
@@ -93,7 +114,7 @@ it("returns a message the live channel refused to the queue for the next turn", 
   const seeded = seedSteerableRun("claude");
   await supervisor.resume(RUN);
 
-  const refused = await supervisor.contribute(RUN, seeded.stepRunId, "steer me");
+  const refused = await contributeToStep(fix.db, supervisor, RUN, seeded.stepRunId, "steer me");
 
   expect(refused.status).toBe("queued");
   expect(refused.agent_session_id).toBeNull();
@@ -110,7 +131,13 @@ it("keeps a message queued for the next turn when the runtime has no live input"
   const seeded = seedSteerableRun("fake");
   await supervisor.resume(RUN);
 
-  const queued = await supervisor.contribute(RUN, seeded.stepRunId, "also update the changelog");
+  const queued = await contributeToStep(
+    fix.db,
+    supervisor,
+    RUN,
+    seeded.stepRunId,
+    "also update the changelog",
+  );
 
   expect(queued.status).toBe("queued");
   expect(queued.agent_session_id).toBeNull();
@@ -128,6 +155,8 @@ it("returns a live claim the daemon never saw receipted to the queue at boot", (
     run_id: RUN,
     step_run_id: seeded.stepRunId,
     body: "steer me",
+    target_agent_session_id: seeded.agentSessionId,
+    target_config_json: seeded.config,
   });
   const dir = sessionDir(fix.dataDir, RUN, seeded.agentSessionId);
   claimRunContributions(fix.db, [row.id], seeded.agentSessionId);
@@ -151,6 +180,8 @@ it("keeps a live claim the worker receipted delivered across a restart", () => {
     run_id: RUN,
     step_run_id: seeded.stepRunId,
     body: "steer me",
+    target_agent_session_id: seeded.agentSessionId,
+    target_config_json: seeded.config,
   });
   const dir = sessionDir(fix.dataDir, RUN, seeded.agentSessionId);
   claimRunContributions(fix.db, [row.id], seeded.agentSessionId);

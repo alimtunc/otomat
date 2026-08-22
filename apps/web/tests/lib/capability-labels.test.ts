@@ -7,8 +7,10 @@ const CLAUDE: RuntimeCapabilities = {
   steering: "turn_boundary",
   abort: true,
   resume: true,
+  resume_model: { status: "supported" },
   permissions: false,
   diff_hints: false,
+  provider_limit: "deadline",
 };
 
 function entry(capabilities: RuntimeCapabilities, key: keyof RuntimeCapabilities) {

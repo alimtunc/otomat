@@ -60,6 +60,7 @@ function steps(runId: string, second: StepRunContract["status"]): StepRunContrac
       branch: branchOf(runId),
       worktree_status: "active",
       provider_wait: null,
+      next_turn_config: null,
     },
     {
       id: `${runId}-step-2`,
@@ -72,6 +73,7 @@ function steps(runId: string, second: StepRunContract["status"]): StepRunContrac
       branch: branchOf(runId),
       worktree_status: "active",
       provider_wait: null,
+      next_turn_config: null,
     },
   ];
 }
@@ -83,6 +85,10 @@ function session(runId: string, status: AgentSessionContract["status"]): AgentSe
     agent_id: "claude",
     status,
     provider_session_id: "sandbox-provider-session",
+    resumed_from_session_id: null,
+    config: null,
+    reported_model: null,
+    started_at: SANDBOX_NOW,
     boundary: {
       start_tree_sha: "3f1a9c0d5b7e2148ac6f0937d2be5148ac6f0937",
       start_head_sha: "1c4d7e9a2b6f08351d4e7a9c2b6f08351d4e7a9c",

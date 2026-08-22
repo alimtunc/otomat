@@ -1,6 +1,6 @@
 import { schema, type Db } from "@otomat/db";
 import { eventEnvelopeSchema, type EventEnvelope } from "@otomat/domain";
-import { and, asc, desc, eq, gt, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lt, type SQL } from "drizzle-orm";
 
 const { runtimeEvents } = schema;
 
@@ -57,16 +57,14 @@ export function readRunEventProjection(
 }
 
 /** The cursor comes from the rows read, not the surviving envelopes, so a corrupt edge row cannot strand the walk. */
-export function readRunEventWindow(
+function readEventWindow(
   db: Db,
-  runId: string,
-  options: ReadRunEventWindowOptions = {},
+  scope: SQL | undefined,
+  options: ReadRunEventWindowOptions,
 ): RunEventWindowProjection {
   const limit = Math.min(Math.max(options.limit ?? WINDOW_DEFAULT_LIMIT, 1), WINDOW_MAX_LIMIT);
   const where =
-    options.before === undefined
-      ? eq(runtimeEvents.run_id, runId)
-      : and(eq(runtimeEvents.run_id, runId), lt(runtimeEvents.seq, options.before));
+    options.before === undefined ? scope : and(scope, lt(runtimeEvents.seq, options.before));
 
   const rows = db
     .select()
@@ -82,6 +80,24 @@ export function readRunEventWindow(
     events: page.map(toEnvelope).filter((event): event is EventEnvelope => event !== null),
     olderCursor: hasOlder ? page[0].seq : null,
   };
+}
+
+export function readRunEventWindow(
+  db: Db,
+  runId: string,
+  options: ReadRunEventWindowOptions = {},
+): RunEventWindowProjection {
+  return readEventWindow(db, eq(runtimeEvents.run_id, runId), options);
+}
+
+export function readStepEventWindow(
+  db: Db,
+  runId: string,
+  stepRunId: string,
+  options: ReadRunEventWindowOptions = {},
+): RunEventWindowProjection {
+  const scope = and(eq(runtimeEvents.run_id, runId), eq(runtimeEvents.step_run_id, stepRunId));
+  return readEventWindow(db, scope, options);
 }
 
 /** The newest messages one step emitted, newest first. Bounded at the query: a caller after a step's last words must never read the run's whole ledger. */

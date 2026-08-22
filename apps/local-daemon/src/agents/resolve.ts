@@ -2,6 +2,7 @@ import { getAgentProfile, getSkill, readExecutionDefaults, type Db } from "@otom
 import {
   executionLevels,
   modelSelectionFromId,
+  PROVIDER_OPTION_KEYS,
   PROVIDER_DEFAULT_MODEL,
   resolveExecutionModel,
   type ExecutionDefaults,
@@ -78,6 +79,31 @@ function configHash(config: Omit<ResolvedAgentConfig, "config_hash">): string {
 
 function finalize(config: Omit<ResolvedAgentConfig, "config_hash">): ResolvedAgentConfig {
   return { ...config, config_hash: configHash(config) };
+}
+
+export function reviseAgentConfigForTurn(
+  current: ResolvedAgentConfig,
+  modelId: string,
+  options: ProviderOptions,
+): ResolvedAgentConfig {
+  if (!isKnownRuntimeId(current.runtime)) throw new UnknownRuntimeError(current.runtime);
+  const runtime = current.runtime;
+  const model = resolveModelSelection(runtime, modelSelectionFromId(modelId));
+  assertOptionsAnnounced(runtime, model, options);
+  const optionSources: NonNullable<ResolvedAgentConfig["sources"]>["options"] = {};
+  for (const key of PROVIDER_OPTION_KEYS) {
+    if (options[key] === undefined) continue;
+    optionSources[key] = "turn";
+  }
+  return finalize({
+    ...current,
+    model,
+    options,
+    sources:
+      current.sources === null
+        ? null
+        : { runtime: current.sources.runtime, model: "turn", options: optionSources },
+  });
 }
 
 function resolveConfig(

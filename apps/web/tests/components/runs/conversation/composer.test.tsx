@@ -1,5 +1,6 @@
 import type {
   CreateRunContributionRequest,
+  ResolvedAgentConfig,
   RunDetail,
   RunState,
   RuntimeDescriptor,
@@ -11,13 +12,35 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const mutateAsync = vi.fn(async (_request: CreateRunContributionRequest) => ({}));
+let nextMutationError: Error | null = null;
+let contributionError: Error | null = null;
+const mutate = vi.fn(
+  (_request: CreateRunContributionRequest, callbacks?: { onSuccess?: () => void }) => {
+    if (nextMutationError === null) {
+      callbacks?.onSuccess?.();
+      return;
+    }
+    contributionError = nextMutationError;
+  },
+);
 const onSent = vi.fn();
 let connectionState: ConnectionState = "online";
 let runtimesData: RuntimeDescriptor[] | undefined;
 
+const CONFIG: ResolvedAgentConfig = {
+  runtime: "claude",
+  profile_id: "profile-1",
+  profile_name: "Implementer",
+  options: {},
+  model: { id: "claude-opus", source: "manual" },
+  guidance: null,
+  skills: [],
+  sources: { runtime: "profile", model: "profile", options: {} },
+  config_hash: "config-1",
+};
+
 vi.mock("@web/api/runs/mutations", () => ({
-  useCreateRunContribution: () => ({ mutateAsync, isPending: false }),
+  useCreateRunContribution: () => ({ mutate, isPending: false, error: contributionError }),
 }));
 
 vi.mock("@web/api/daemon/queries", () => ({
@@ -36,7 +59,16 @@ function runDetail(status: RunState, providerSessionId: string | null = "ps-1"):
       branch: "otomat/run/run-1",
       plan_json: {
         version: 1,
-        steps: [{ id: "s1", name: "Agent turn", agent: "claude", prompt: "p", depends_on: [] }],
+        steps: [
+          {
+            id: "s1",
+            name: "Agent turn",
+            agent: "claude",
+            prompt: "p",
+            depends_on: [],
+            config: CONFIG,
+          },
+        ],
       },
       updated_at: "2026-07-25T10:00:00.000Z",
     },
@@ -52,6 +84,7 @@ function runDetail(status: RunState, providerSessionId: string | null = "ps-1"):
         branch: null,
         worktree_status: null,
         provider_wait: null,
+        next_turn_config: null,
       },
     ],
     sessions: [
@@ -61,6 +94,17 @@ function runDetail(status: RunState, providerSessionId: string | null = "ps-1"):
         agent_id: "claude",
         status: "awaiting_input",
         provider_session_id: providerSessionId,
+        resumed_from_session_id: null,
+        config: CONFIG,
+        reported_model: null,
+        started_at: "2026-07-25T10:00:00.000Z",
+        boundary: {
+          start_tree_sha: null,
+          start_head_sha: null,
+          end_tree_sha: null,
+          end_head_sha: null,
+          error: null,
+        },
       },
     ],
     compete_groups: [],
@@ -78,6 +122,7 @@ function claudeDescriptor(): RuntimeDescriptor {
       steering: "turn_boundary",
       abort: true,
       resume: true,
+      resume_model: { status: "supported" },
       permissions: false,
       diff_hints: false,
     },
@@ -90,10 +135,12 @@ const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
   document.body.replaceChildren();
-  mutateAsync.mockClear();
+  mutate.mockClear();
   onSent.mockClear();
   connectionState = "online";
   runtimesData = undefined;
+  nextMutationError = null;
+  contributionError = null;
 });
 
 async function renderComposer(detail: RunDetail) {
@@ -101,7 +148,7 @@ async function renderComposer(detail: RunDetail) {
   document.body.append(container);
   const root: Root = createRoot(container);
   await act(async () => {
-    root.render(<ConversationComposer detail={detail} onSent={onSent} />);
+    root.render(<ConversationComposer detail={detail} stepRunId="s1" onSent={onSent} />);
   });
   cleanups.push(async () => {
     await act(async () => root.unmount());
@@ -145,14 +192,22 @@ describe("ConversationComposer", () => {
       );
     });
 
-    expect(mutateAsync).toHaveBeenCalledWith({ step_run_id: "s1", body: "add error handling" });
+    expect(mutate).toHaveBeenCalledWith(
+      {
+        step_run_id: "s1",
+        target_agent_session_id: "as1",
+        target_config_hash: "config-1",
+        body: "add error handling",
+      },
+      expect.anything(),
+    );
     expect(promptTextarea().value).toBe("");
     expect(onSent).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the draft and reports no send when the mutation fails", async () => {
     runtimesData = [claudeDescriptor()];
-    mutateAsync.mockRejectedValueOnce(new Error("daemon refused the message"));
+    nextMutationError = new Error("daemon refused the message");
     await renderComposer(runDetail("awaiting_human"));
     await typePrompt("add error handling");
 
@@ -175,7 +230,15 @@ describe("ConversationComposer", () => {
       sendButton().click();
     });
 
-    expect(mutateAsync).toHaveBeenCalledWith({ step_run_id: "s1", body: "rename the helper" });
+    expect(mutate).toHaveBeenCalledWith(
+      {
+        step_run_id: "s1",
+        target_agent_session_id: "as1",
+        target_config_hash: "config-1",
+        body: "rename the helper",
+      },
+      expect.anything(),
+    );
   });
 
   it("does not submit a blank message", async () => {
@@ -189,7 +252,7 @@ describe("ConversationComposer", () => {
       );
     });
 
-    expect(mutateAsync).not.toHaveBeenCalled();
+    expect(mutate).not.toHaveBeenCalled();
   });
 
   it("queues a message sent while the run is active instead of refusing it", async () => {
@@ -207,7 +270,15 @@ describe("ConversationComposer", () => {
       );
     });
 
-    expect(mutateAsync).toHaveBeenCalledWith({ step_run_id: "s1", body: "also add tests" });
+    expect(mutate).toHaveBeenCalledWith(
+      {
+        step_run_id: "s1",
+        target_agent_session_id: "as1",
+        target_config_hash: "config-1",
+        body: "also add tests",
+      },
+      expect.anything(),
+    );
   });
 
   it("refuses a message on a finished run", async () => {
@@ -215,6 +286,9 @@ describe("ConversationComposer", () => {
     await renderComposer(runDetail("completed"));
 
     expect(sendButton().disabled).toBe(true);
+    expect(document.body.textContent).toContain(
+      "To: Agent turn · Implementer · claude · claude-opus · Session as1",
+    );
     expect(document.body.textContent).toContain("This run is finished");
   });
 

@@ -37,17 +37,27 @@ afterEach(() => {
   t.cleanup();
 });
 
-it("keeps the first start boundary when a resumed turn captures again", () => {
+it("keeps the first start boundary when the same turn is retried", () => {
   recordSessionPassStart(t.client.db, "r1-session", { treeSha: "tree-1", headSha: "head-1" });
   recordSessionPassEnd(t.client.db, "r1-session", { treeSha: "tree-2", headSha: "head-2" });
 
   recordSessionPassStart(t.client.db, "r1-session", { treeSha: "tree-3", headSha: "head-3" });
   recordSessionPassEnd(t.client.db, "r1-session", { treeSha: "tree-4", headSha: "head-4" });
 
-  // A resume reuses its session row; moving the start would drop the first turn out of the pass delta.
   expect(session()?.start_tree_sha).toBe("tree-1");
   expect(session()?.start_head_sha).toBe("head-1");
   expect(session()?.end_tree_sha).toBe("tree-4");
+});
+
+it("assigns a durable order to each turn of one step", () => {
+  insertAgentSession(t.client.db, { id: "r1-session-2", step_run_id: "r1-step" });
+
+  expect(listAgentSessionsForRun(t.client.db, "r1").map((row) => [row.id, row.turn_index])).toEqual(
+    [
+      ["r1-session", 0],
+      ["r1-session-2", 1],
+    ],
+  );
 });
 
 it("captures a start boundary a failed first attempt never recorded", () => {

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   claimCompeteWinner,
   getRun,
+  listAgentSessionsForRun,
   listCompeteGroupsForRun,
   listRunContributions,
   listStepRunsForRun,
@@ -15,8 +16,9 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
 import { createRepositoryResolver, type RepositoryResolver } from "#git";
-import { createSupervisor, RunNotResumableError } from "#supervisor";
+import { createSupervisor, RunNotResumableError, type Supervisor } from "#supervisor";
 
+import { contributeToStep } from "../support/contribution.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { providerSessionEvent, writeRunEvents } from "../support/run-event-fixtures.js";
 import { deadPid, workerSpawn } from "../support/spawn.js";
@@ -88,6 +90,10 @@ function makeCompeteSupervisor(
     }),
     spawn: worker,
   };
+}
+
+async function contribute(supervisor: Supervisor, runId: string, stepRunId: string, body: string) {
+  return contributeToStep(fix.db, supervisor, runId, stepRunId, body);
 }
 
 it("runs competitors in isolated worktrees, waits for a winner, then continues on canonical", async () => {
@@ -450,8 +456,8 @@ it("routes messages queued during selection once the winner is chosen", async ()
   const loser = candidates.find((step) => step.name === "Layered");
   if (!group || !winner || !loser) throw new Error("expected both candidates");
 
-  const forWinner = await supervisor.contribute(run.id, winner.id, "polish the direct approach");
-  const forLoser = await supervisor.contribute(run.id, loser.id, "polish the layered approach");
+  const forWinner = await contribute(supervisor, run.id, winner.id, "polish the direct approach");
+  const forLoser = await contribute(supervisor, run.id, loser.id, "polish the layered approach");
   expect(forWinner.status).toBe("queued");
   expect(forLoser.status).toBe("queued");
 
@@ -469,7 +475,7 @@ it("routes messages queued during selection once the winner is chosen", async ()
   expect(getRun(fix.db, run.id)?.status).toBe("review_ready");
 });
 
-it("keeps delivery turns on the selected provider session and canonical worktree", async () => {
+it("keeps delivery turns linked to the selected provider session and canonical worktree", async () => {
   const { supervisor, spawn } = makeCompeteSupervisor();
   const groupOnlyPlan = { ...COMPETE_PLAN, steps: [COMPETE_PLAN.steps[0]!] };
   const run = await supervisor.start({ prompt: "the goal", plan: groupOnlyPlan });
@@ -482,15 +488,20 @@ it("keeps delivery turns on the selected provider session and canonical worktree
   expect(getRun(fix.db, run.id)?.status).toBe("review_ready");
   const winnerJob = spawn.jobs.find((job) => job.stepRunId === winner.id);
 
-  await supervisor.contribute(run.id, winner.id, "refine the winner");
+  await contribute(supervisor, run.id, winner.id, "refine the winner");
   await supervisor.settle();
 
   expect(spawn.jobs.at(-1)).toMatchObject({
     mode: "resume",
     stepRunId: winner.id,
-    agentSessionId: winnerJob?.agentSessionId,
     prompt: "refine the winner",
   });
+  expect(spawn.jobs.at(-1)?.agentSessionId).not.toBe(winnerJob?.agentSessionId);
+  expect(
+    listAgentSessionsForRun(fix.db, run.id).find(
+      (session) => session.id === spawn.jobs.at(-1)?.agentSessionId,
+    )?.resumed_from_session_id,
+  ).toBe(winnerJob?.agentSessionId);
   expect(spawn.jobs.at(-1)?.worktreePath).not.toBe(winnerJob?.worktreePath);
   expect(listCompeteGroupsForRun(fix.db, run.id)[0]?.status).toBe("selected");
   expect(getRun(fix.db, run.id)?.status).toBe("review_ready");
@@ -510,7 +521,7 @@ it("fails a message on a selected winner whose canonical worktree is unavailable
     repositories: UNAVAILABLE_REPOSITORIES,
   });
 
-  const refused = await blocked.contribute(run.id, winner.id, "continue winner");
+  const refused = await contribute(blocked, run.id, winner.id, "continue winner");
   expect(refused.status).toBe("failed");
   expect(refused.delivered_at).toBeNull();
   expect(blockedSpawn.calls).toBe(0);

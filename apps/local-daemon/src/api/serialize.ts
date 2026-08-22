@@ -115,6 +115,7 @@ export function toRun(row: RunRow): RunContract {
 export function toRunContribution(row: RunContributionRow): RunContributionContract {
   return runContributionContractSchema.parse({
     ...row,
+    target_config: row.target_config_json,
     created_at: sqliteToIso(row.created_at),
     delivered_at: toIsoInstant(row.delivered_at),
     settled_at: toIsoInstant(row.settled_at),
@@ -131,6 +132,7 @@ export function toStepRun(
     branch: worktree?.branch ?? null,
     worktree_status: worktree?.status ?? null,
     provider_wait: row.status === "waiting_for_provider" ? row.provider_wait_json : null,
+    next_turn_config: row.next_turn_config_json,
   });
 }
 
@@ -141,6 +143,7 @@ export function toCompeteGroup(row: CompeteGroupRow): CompeteGroupContract {
 export function toAgentSession(row: AgentSessionRow): AgentSessionContract {
   return agentSessionContractSchema.parse({
     ...row,
+    config: row.config_json,
     boundary: {
       start_tree_sha: row.start_tree_sha,
       start_head_sha: row.start_head_sha,

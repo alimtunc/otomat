@@ -51,6 +51,7 @@ export const EVENT_GLYPH = {
   "run.plan_revised": { icon: ListPlus, tone: "iris" },
   "step.lifecycle": { icon: GitCommitHorizontal, tone: "neutral" },
   "session.lifecycle": { icon: Play, tone: "neutral" },
+  "session.model_override": { icon: CircleDotDashed, tone: "iris" },
   "compete.lifecycle": { icon: GitCompare, tone: "warning" },
   "runtime.log": { icon: Terminal, tone: "neutral" },
   "runtime.message": { icon: MessageSquare, tone: "neutral" },

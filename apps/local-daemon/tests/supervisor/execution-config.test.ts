@@ -10,6 +10,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { ProfileOptionUnsupportedError } from "#agents";
 
+import { contributeToStep } from "../support/contribution.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { firstStepOf } from "../support/seed.js";
 import { makeSupervisor } from "../support/supervisor.js";
@@ -317,7 +318,7 @@ it("resumes with the config frozen at launch, not the one the profile carries no
     options: { effort: "medium" },
   });
 
-  await supervisor.contribute(run.id, firstStepOf(fix.db, run.id), "keep going");
+  await contributeToStep(fix.db, supervisor, run.id, firstStepOf(fix.db, run.id), "keep going");
   await supervisor.settle();
 
   const resume = spawn.jobs[1];

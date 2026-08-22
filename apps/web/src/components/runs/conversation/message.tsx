@@ -6,6 +6,7 @@ import {
 } from "@otomat/domain";
 import { Button, Markdown, RelativeTime, RunContributionStatusChip } from "@otomat/ui";
 import { useCancelRunContribution, useRetryRunContribution } from "@web/api/runs/mutations";
+import { participantLabel } from "@web/lib/execution/labels";
 
 const DELIVERED_FAILURE_HINT =
   "This message already reached the agent, so it is never sent twice — write a new one instead.";
@@ -37,6 +38,11 @@ export function ConversationMessage({
         value={contribution.body}
         className="rounded-lg border border-border-subtle bg-card px-3 py-2 text-sm"
       />
+      {contribution.target_config ? (
+        <p className="text-[10px] text-text-tertiary">
+          To {participantLabel(contribution.target_config)}
+        </p>
+      ) : null}
       {contribution.error === null ? null : (
         <p className="text-xs text-danger">{contribution.error}</p>
       )}

@@ -27,6 +27,10 @@ export function emitContributionEvent(state: SupervisorState, row: RunContributi
         status: row.status,
         body: row.body,
         error: row.error,
+        target_agent_session_id: row.target_agent_session_id,
+        target_config_hash: row.target_config_json?.config_hash ?? null,
+        target_runtime: row.target_config_json?.runtime ?? null,
+        target_model: row.target_config_json?.model?.id ?? null,
       },
     }),
   );

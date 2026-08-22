@@ -5,7 +5,17 @@ import { stepDependencyNames } from "@web/lib/run/plan";
 import { DependencyNote } from "./dependency-note";
 import { StepRow } from "./row";
 
-export function StepsList({ detail }: { detail: RunDetail }) {
+export function StepsList({
+  detail,
+  selectedStepId,
+  onSelectStep,
+  hasNewActivity,
+}: {
+  detail: RunDetail;
+  selectedStepId: string | null;
+  onSelectStep: (stepId: string) => void;
+  hasNewActivity: (stepId: string) => boolean;
+}) {
   const multiNode = detail.run.plan_json.steps.length > 1;
   return (
     <div className="py-1.5">
@@ -20,6 +30,9 @@ export function StepsList({ detail }: { detail: RunDetail }) {
               node={node}
               number={number}
               dependencies={dependencies}
+              selectedStepId={selectedStepId}
+              onSelectStep={onSelectStep}
+              hasNewActivity={hasNewActivity}
             />
           );
         }
@@ -28,7 +41,14 @@ export function StepsList({ detail }: { detail: RunDetail }) {
         if (!step) return null;
         return (
           <div key={node.id} className="border-b border-border-subtle last:border-b-0">
-            <StepRow detail={detail} step={step} number={number} />
+            <StepRow
+              detail={detail}
+              step={step}
+              number={number}
+              selected={step.id === selectedStepId}
+              onSelect={() => onSelectStep(step.id)}
+              newActivity={hasNewActivity(step.id)}
+            />
             <DependencyNote
               names={dependencies}
               className="mb-2 ml-9 truncate text-xs text-text-tertiary"

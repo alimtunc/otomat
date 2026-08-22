@@ -1,4 +1,4 @@
-import type { StepProviderWait, StepRunState } from "@otomat/domain";
+import type { ResolvedAgentConfig, StepProviderWait, StepRunState } from "@otomat/domain";
 import { and, asc, eq } from "drizzle-orm";
 
 import type { Db } from "../client.js";
@@ -36,6 +36,19 @@ export function setStepProviderWait(db: Db, id: string, wait: StepProviderWait |
     .set(touch({ provider_wait_json: wait }))
     .where(eq(stepRuns.id, id))
     .run();
+}
+
+export function setStepNextTurnConfig(
+  db: Db,
+  id: string,
+  config: ResolvedAgentConfig | null,
+): StepRunRow {
+  return db
+    .update(stepRuns)
+    .set(touch({ next_turn_config_json: config }))
+    .where(eq(stepRuns.id, id))
+    .returning()
+    .get();
 }
 
 /** One suspended step and the identity of the run holding it; the plan is deliberately not read — the resume re-reads the run itself. */

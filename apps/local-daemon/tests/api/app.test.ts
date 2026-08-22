@@ -20,6 +20,7 @@ import {
   RunContributionStepClosedError,
   RunNotResumableError,
   RunWorkspaceClosedError,
+  StepStopRefusedError,
   WorkspaceAbandonRefusedError,
   type AppendStepInput,
 } from "#supervisor";
@@ -31,6 +32,7 @@ import {
   post,
   request,
   runRow,
+  runRowWithStep,
   stubSupervisor,
 } from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
@@ -455,7 +457,7 @@ it("appends a step with the agent the caller chose, never an inherited one", asy
     supervisor: stubSupervisor({
       appendStep: async (_id, input) => {
         received = input;
-        return runRow(runId);
+        return runRowWithStep(runId, "appended-step");
       },
     }),
   });
@@ -501,7 +503,7 @@ it("rejects an appended step with no agent, and maps a closed workspace to 409",
   const res = await post(closed, `/api/runs/${runId}/steps`, {
     name: "Address review",
     note: "rename beta",
-    runtime: "fake",
+    profile_id: "p-reviewer",
   });
   expect(res.status).toBe(409);
   expect((await json<{ error: string }>(res)).error).toBe("workspace_closed");
@@ -548,29 +550,47 @@ it("returns 404 appending a step to an unknown run", async () => {
   const res = await post(makeApiApp(t), "/api/runs/nope/steps", {
     name: "Address review",
     note: "rename beta",
-    runtime: "fake",
+    profile_id: "p-reviewer",
   });
   expect(res.status).toBe(404);
 });
 
-it("delegates a contribution to the supervisor with its step and the trimmed body", async () => {
+it("delegates a contribution to its frozen step, session, and config", async () => {
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
-  let received: { id: string; stepRunId: string; body: string } | null = null;
+  let received: {
+    id: string;
+    stepRunId: string;
+    targetAgentSessionId: string | null;
+    targetConfigHash: string;
+    body: string;
+  } | null = null;
   const app = makeApiApp(t, {
     supervisor: stubSupervisor({
-      contribute: async (id, stepRunId, body) => {
-        received = { id, stepRunId, body };
-        return contributionRow(id, { step_run_id: stepRunId, body });
+      contribute: async (id, stepRunId, targetAgentSessionId, targetConfigHash, body) => {
+        received = { id, stepRunId, targetAgentSessionId, targetConfigHash, body };
+        return contributionRow(id, {
+          step_run_id: stepRunId,
+          target_agent_session_id: targetAgentSessionId,
+          body,
+        });
       },
     }),
   });
   const res = await post(app, `/api/runs/${runId}/contributions`, {
     step_run_id: "step-1",
+    target_agent_session_id: "session-1",
+    target_config_hash: "config-1",
     body: "  keep going  ",
   });
   expect(res.status).toBe(201);
-  expect(received).toEqual({ id: runId, stepRunId: "step-1", body: "keep going" });
+  expect(received).toEqual({
+    id: runId,
+    stepRunId: "step-1",
+    targetAgentSessionId: "session-1",
+    targetConfigHash: "config-1",
+    body: "keep going",
+  });
   const contribution = await json<RunContributionContract>(res);
   expect(contribution.status).toBe("queued");
   expect(contribution.step_run_id).toBe("step-1");
@@ -582,6 +602,8 @@ it("rejects a contribution with a blank body or no step", async () => {
   seedTerminalRun(t.db, runId);
   const blank = await post(makeApiApp(t), `/api/runs/${runId}/contributions`, {
     step_run_id: "step-1",
+    target_agent_session_id: "session-1",
+    target_config_hash: "config-1",
     body: "   ",
   });
   expect(blank.status).toBe(400);
@@ -594,6 +616,8 @@ it("rejects a contribution with a blank body or no step", async () => {
 it("returns 404 contributing to an unknown run", async () => {
   const res = await post(makeApiApp(t), "/api/runs/nope/contributions", {
     step_run_id: "step-1",
+    target_agent_session_id: "session-1",
+    target_config_hash: "config-1",
     body: "p",
   });
   expect(res.status).toBe(404);
@@ -611,10 +635,56 @@ it("maps a step that will not run again to 409 rather than accepting a message f
   });
   const res = await post(app, `/api/runs/${runId}/contributions`, {
     step_run_id: "step-1",
+    target_agent_session_id: "session-1",
+    target_config_hash: "config-1",
     body: "keep going",
   });
   expect(res.status).toBe(409);
   expect((await json<{ error: string }>(res)).error).toBe("run_contribution_step_closed");
+});
+
+it("stops a live step over the API and maps a stop refusal to its own status", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  let received: { id: string; stepRunId: string } | null = null;
+  const app = makeApiApp(t, {
+    supervisor: stubSupervisor({
+      stopStep: async (id, stepRunId) => {
+        received = { id, stepRunId };
+        return {
+          id: stepRunId,
+          run_id: id,
+          idx: 0,
+          name: "Implement",
+          status: "awaiting_human",
+          compete_group_id: null,
+          worktree_id: null,
+          provider_wait_json: null,
+          next_turn_config_json: null,
+          created_at: "2026-01-01T00:00:00.000Z",
+          updated_at: "2026-01-01T00:00:00.000Z",
+        };
+      },
+    }),
+  });
+  const res = await post(app, `/api/runs/${runId}/steps/step-1/stop`, {});
+  expect(res.status).toBe(200);
+  expect(received).toEqual({ id: runId, stepRunId: "step-1" });
+  expect(await json<{ status: string }>(res)).toMatchObject({
+    id: "step-1",
+    status: "awaiting_human",
+  });
+
+  const refused = makeApiApp(t, {
+    supervisor: stubSupervisor({
+      stopStep: async () => {
+        throw new StepStopRefusedError("step_not_active", "step step-1 has no live turn to stop");
+      },
+    }),
+  });
+  const conflict = await post(refused, `/api/runs/${runId}/steps/step-1/stop`, {});
+  expect(conflict.status).toBe(409);
+  expect((await json<{ error: string }>(conflict)).error).toBe("step_not_active");
 });
 
 it("maps a non-cancelable contribution to 409 rather than pretending it was withdrawn", async () => {

@@ -1,4 +1,4 @@
-import type { Db, RunContributionRow, RunRow } from "@otomat/db";
+import type { Db, RunContributionRow, RunRow, StepRunRow } from "@otomat/db";
 import type {
   AgentCapacity,
   ContextReference,
@@ -6,6 +6,7 @@ import type {
   ContextSelection,
   ExecutionOverrides,
   LinearLifecycleSync,
+  ProviderOptions,
   ResolvedAgentConfig,
   RunResumePlan,
   RunWait,
@@ -58,10 +59,14 @@ export interface TurnContext {
   worktreeInit?: { commands: string[]; label: string };
   /** Frozen for this step; null on runs launched before profiles existed. */
   config: ResolvedAgentConfig | null;
+  carryContributionIds?: readonly string[];
 }
 
 /** A job is a turn whose prompt is already composed — context included — so the worker never has to ask what to run. */
-export interface SupervisedJob extends Omit<TurnContext, "prompt" | "contextSelection"> {
+export interface SupervisedJob extends Omit<
+  TurnContext,
+  "prompt" | "contextSelection" | "carryContributionIds"
+> {
   prompt: string;
   mode: "run" | "resume";
   providerSessionId: string | null;
@@ -114,6 +119,16 @@ export interface Supervisor {
   capacity(): AgentCapacity;
   /** Persist and apply a new cap: raising it drains the queue at once, lowering it only gates the next start. */
   setCapacity(maxConcurrentSessions: number): AgentCapacity;
+  setNextTurnModel(
+    runId: string,
+    stepRunId: string,
+    sessionId: string,
+    currentConfigHash: string,
+    model: string,
+    options: ProviderOptions,
+  ): StepRunRow;
+  /** Interrupt the step's live turn without settling the run or starting dependents; the step lands `awaiting_human`, resumable on the same provider session. */
+  stopStep(runId: string, stepRunId: string): Promise<StepRunRow>;
   /** Resume a resting or stopped run on an explicit action — never auto-runs. */
   resume(runId: string): Promise<RunRow>;
   /** What that resume would do, so the cockpit shows native reattachment or a recovery session before it runs. */
@@ -128,7 +143,13 @@ export interface Supervisor {
   /** Append one step to the run's plan and start it once the workspace is free; refused once the workspace closes. */
   appendStep(runId: string, input: AppendStepInput): Promise<RunRow>;
   /** Persist one user message on an explicitly selected step as `queued`, then deliver it if that step can take it now. */
-  contribute(runId: string, stepRunId: string, body: string): Promise<RunContributionRow>;
+  contribute(
+    runId: string,
+    stepRunId: string,
+    targetAgentSessionId: string | null,
+    targetConfigHash: string,
+    body: string,
+  ): Promise<RunContributionRow>;
   /** Re-queue a failed message that never reached the provider and retry the run's queue. */
   retryContribution(runId: string, contributionId: string): Promise<RunContributionRow>;
   /** Withdraw a message no turn has claimed yet; it stays in the conversation as `canceled`. */

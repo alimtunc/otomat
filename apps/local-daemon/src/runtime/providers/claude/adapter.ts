@@ -1,10 +1,11 @@
-import type { ProviderOptions, RuntimeCapabilities } from "@otomat/domain";
+import type { ProviderOptions } from "@otomat/domain";
 
 import { requireProviderSession, runCliTurn, type CliTurnSpec } from "#runtime/cli/turn";
 import type { TurnRef } from "#runtime/cli/turn-emitter";
 import type {
   LiveInputChannel,
   RuntimeAdapter,
+  RuntimeAdapterCapabilities,
   RuntimeFinalState,
   RuntimeOneShot,
   RuntimeOptionSupport,
@@ -43,7 +44,7 @@ export function claudePermissionMode(env: NodeJS.ProcessEnv = process.env): stri
  * because the CLI prints the unix second its plan window reopens next to the
  * limit it reports.
  */
-const CLAUDE_CAPABILITIES: RuntimeCapabilities = {
+const CLAUDE_CAPABILITIES = {
   stream: true,
   steering: "live",
   abort: true,
@@ -51,7 +52,7 @@ const CLAUDE_CAPABILITIES: RuntimeCapabilities = {
   permissions: false,
   diff_hints: false,
   provider_limit: "deadline",
-};
+} satisfies RuntimeAdapterCapabilities;
 
 type TurnInput = RuntimeRunInput | RuntimeResumeInput;
 

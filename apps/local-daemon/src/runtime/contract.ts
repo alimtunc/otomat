@@ -120,10 +120,13 @@ export type RuntimeSessionRef = z.infer<typeof runtimeSessionRefSchema>;
  * takes `live` messages into the invocation it is already running, and every
  * other one carries a follow-up as a new turn via `resume`.
  */
+/** `resume_model` is absent here on purpose: it is probed from the installed CLI, so the registry states it. */
+export type RuntimeAdapterCapabilities = Omit<RuntimeCapabilities, "resume_model">;
+
 export interface RuntimeAdapter {
   readonly id: RuntimeId;
   readonly displayName: string;
-  readonly capabilities: RuntimeCapabilities;
+  readonly capabilities: RuntimeAdapterCapabilities;
   /** What the installed binary accepts for `model`, feature-detected per call. Never a union assumed valid across CLI versions. */
   describeOptions(model: string | null): RuntimeOptionSupport;
   /** How this adapter handles model selection: whether it passes a model flag, and where its catalog comes from. */

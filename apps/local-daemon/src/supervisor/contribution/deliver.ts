@@ -10,19 +10,15 @@ import {
   type RunContributionRow,
   type RunRow,
 } from "@otomat/db";
-import {
-  canFollowUpRun,
-  isRunSettled,
-  latestSessionForStep,
-  resolveStepContributionRoute,
-} from "@otomat/domain";
+import { canFollowUpRun, isRunSettled, resolveStepContributionRoute } from "@otomat/domain";
 
 import { createRuntimeAdapter, type KnownRuntimeId } from "#runtime";
 
 import { failureReason } from "../fail-run.js";
 import { spawnTurn } from "../lifecycle.js";
 import {
-  resolveSessionResumeTurn,
+  insertSessionResumeTurn,
+  requireResumeConfigSupport,
   resumableRuntime,
   RunNotResumableError,
   type ResumeTurn,
@@ -37,15 +33,6 @@ function requireSteerableRuntime(runtime: KnownRuntimeId, runId: string): void {
   if (createRuntimeAdapter(runtime).capabilities.steering === "unsupported") {
     throw new RunNotResumableError(`run ${runId} runtime "${runtime}" does not support steering`);
   }
-}
-
-/** The session a delivery would re-enter: this step's newest one the provider can still be resumed through. */
-function steerableSessionForStep(
-  sessions: readonly AgentSessionRow[],
-  stepRunId: string,
-): AgentSessionRow | undefined {
-  const resumable = sessions.filter((session) => session.provider_session_id !== null);
-  return latestSessionForStep(resumable, stepRunId);
 }
 
 function failBatch(
@@ -69,8 +56,24 @@ async function sendBatch(
 ): Promise<void> {
   let turn: ResumeTurn;
   try {
-    turn = resolveSessionResumeTurn(state, run, session, null);
-    requireSteerableRuntime(turn.context.runtime, run.id);
+    const config = batch[0]?.target_config_json;
+    if (config === null || config === undefined) {
+      throw new RunNotResumableError("the queued contribution has no frozen target configuration");
+    }
+    const runtime = resumableRuntime(state.db, run, session);
+    if (runtime === null) {
+      throw new RunNotResumableError(`session ${session.id} has no resumable runtime`);
+    }
+    requireSteerableRuntime(runtime, run.id);
+    requireResumeConfigSupport(state.db, run, session, config);
+    turn = insertSessionResumeTurn(
+      state,
+      run,
+      session,
+      config,
+      null,
+      batch.map((row) => row.id),
+    );
   } catch (error) {
     if (!(error instanceof RunNotResumableError)) throw error;
     failBatch(state, batch, failureReason(error));
@@ -91,16 +94,32 @@ async function sendBatch(
 function liveTarget(
   state: SupervisorState,
   run: RunRow,
-  sessions: readonly AgentSessionRow[],
-  stepRunId: string,
+  session: AgentSessionRow,
+  configHash: string,
 ): LiveTarget | null {
-  const running = latestSessionForStep(sessions, stepRunId);
-  if (running === undefined) return null;
-  const runtime = resumableRuntime(state.db, run, running);
+  if (session.config_json?.config_hash !== configHash) return null;
+  const runtime = resumableRuntime(state.db, run, session);
   if (runtime === null || createRuntimeAdapter(runtime).capabilities.steering !== "live") {
     return null;
   }
-  return inflightLiveTarget(state, run.id, running);
+  return inflightLiveTarget(state, run.id, session);
+}
+
+/** One turn carries one target, so the batch stops at the first message frozen against another session or configuration. */
+function headTargetBatch(stepQueue: readonly RunContributionRow[]): RunContributionRow[] {
+  const head = stepQueue[0];
+  if (head === undefined) return [];
+  const batch: RunContributionRow[] = [];
+  for (const row of stepQueue) {
+    if (
+      row.target_agent_session_id !== head.target_agent_session_id ||
+      row.target_config_json?.config_hash !== head.target_config_json?.config_hash
+    ) {
+      break;
+    }
+    batch.push(row);
+  }
+  return batch;
 }
 
 /** A step that has yet to start keeps its messages for its own first turn; only one whose session can no longer be resumed fails them. */
@@ -121,11 +140,17 @@ function nextDeliveryTarget(
   for (const row of queued) {
     const step = steps.find((candidate) => candidate.id === row.step_run_id);
     if (!step) continue;
+    // An operator-stopped step keeps its queue until an explicit message, retry or resume lifts the hold.
+    if (state.stopHeld.has(step.id)) continue;
     // One routing rule for accepting a message and for delivering it, so the two can never disagree.
     const route = resolveStepContributionRoute(step, sessions, groups);
     if (route === "first_turn") continue;
-    if (route === "steering") {
-      const live = liveTarget(state, run, sessions, step.id);
+    const targetSession = sessions.find(
+      (candidate) => candidate.id === row.target_agent_session_id,
+    );
+    const configHash = row.target_config_json?.config_hash;
+    if (route === "steering" && targetSession !== undefined && configHash !== undefined) {
+      const live = liveTarget(state, run, targetSession, configHash);
       if (live !== null) return { kind: "live", stepRunId: step.id, live };
     }
     // Everything below starts a turn, and the run owns a single worktree, so it waits for the live one to end.
@@ -137,8 +162,9 @@ function nextDeliveryTarget(
         reason: `step ${step.id} is ${step.status} and will not run another turn`,
       };
     }
-    const session = steerableSessionForStep(sessions, step.id);
-    if (session) return { kind: "send", stepRunId: step.id, session };
+    if (targetSession?.provider_session_id) {
+      return { kind: "send", stepRunId: step.id, session: targetSession };
+    }
     return {
       kind: "unreachable",
       stepRunId: step.id,
@@ -165,7 +191,7 @@ export async function deliverQueuedContributions(
     if (!run || state.aborting.has(runId) || state.shuttingDown) return;
     const target = nextDeliveryTarget(state, run, queued);
     if (target === null) return;
-    const batch = queued.filter((row) => row.step_run_id === target.stepRunId);
+    const batch = headTargetBatch(queued.filter((row) => row.step_run_id === target.stepRunId));
 
     if (target.kind === "send") {
       // Only a spawn needs the run-level guard: a live batch is claimed synchronously, so a concurrent post can never pick it up.

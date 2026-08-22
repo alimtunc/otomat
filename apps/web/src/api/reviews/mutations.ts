@@ -16,6 +16,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
+import { seedIssueRun } from "@web/api/runs/seed-run";
 
 function reviewRefusal(error: unknown): string | null {
   if (!(error instanceof DaemonRequestError)) return null;
@@ -131,7 +132,8 @@ export function useRequestFix(runId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: RequestFixRequest) => daemon.requestFix(runId, request),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      seedIssueRun(client, response.run);
       client.invalidateQueries({ queryKey: queryKeys.run(runId) });
       client.invalidateQueries({ queryKey: queryKeys.reviewDetail({ kind: "run", id: runId }) });
       client.invalidateQueries({ queryKey: queryKeys.issues });

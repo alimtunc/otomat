@@ -104,6 +104,20 @@ export function resolveAgentChoice(
   return fallback ? encodeRuntimeChoice(fallback) : null;
 }
 
+export function resolveProfileChoice(
+  preferred: string | null,
+  profiles: AgentProfileContract[],
+  descriptors: RuntimeDescriptor[],
+): string | null {
+  return agentChoiceProfile(preferred, profiles) !== null &&
+    isUsableAgentChoice(preferred, profiles, descriptors)
+    ? preferred
+    : null;
+}
+
+/** What an execution picker offers: every agent, only saved profiles, or only ad-hoc runtimes. */
+export type AgentScope = "all" | "profiles" | "runtimes";
+
 /**
  * An unrelated edit resubmits the profile exactly as stored. Its provider
  * options are the daemon's to accept or refuse against the installed CLI, never
