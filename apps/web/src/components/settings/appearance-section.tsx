@@ -3,7 +3,6 @@ import type { Accent, Density, Theme } from "@otomat/ui";
 import { AppearanceRow } from "@web/components/settings/appearance-row";
 import { SectionHeading } from "@web/components/settings/section-heading";
 
-/** Fallback base color shown in the custom-accent picker before the user sets one. */
 const DEFAULT_ACCENT = "#5B7CFA";
 
 export function AppearanceSection() {

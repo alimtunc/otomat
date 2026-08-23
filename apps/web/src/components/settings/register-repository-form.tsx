@@ -10,7 +10,6 @@ import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { useState } from "react";
 
 export interface RegisterRepositoryFormProps {
-  /** Attaches the path to an existing repository-less project instead of creating a new one. */
   projectId?: string;
 }
 

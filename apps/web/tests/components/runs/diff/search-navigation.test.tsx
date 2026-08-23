@@ -61,7 +61,6 @@ vi.mock("@web/components/shell/use-back-navigation", () => ({
   useBackNavigation: () => ({ goBack }),
 }));
 
-/** The route owns the selection; this holds it the same way, so the reveal is the code under test. */
 vi.mock("@web/components/runs/diff/use-active-file", () => ({
   useActiveDiffFile: () => {
     const [path, setPath] = useState<string | null>(null);
@@ -73,7 +72,6 @@ function diffRows(card: HTMLElement): HTMLElement[] {
   return [...card.querySelectorAll<HTMLElement>("tr.diff-line")];
 }
 
-/** Cards run down the scroller and rows run down their card, so a hit has its own offset. */
 function layout(scroller: HTMLElement, scroll: ScrollControl): void {
   Element.prototype.getBoundingClientRect = function (this: Element) {
     if (this === scroller) return domRect(0, VIEWPORT);

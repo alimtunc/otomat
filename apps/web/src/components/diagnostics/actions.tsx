@@ -15,7 +15,6 @@ function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Everything the user can do about this incident. Every one of them is an explicit, local action. */
 export function DiagnosticActions({
   diagnostic,
   retryLabel,

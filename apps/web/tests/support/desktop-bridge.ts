@@ -1,6 +1,5 @@
 import type { ExecutionHostSnapshot, OtomatDesktopBridge } from "@otomat/domain";
 
-/** Snapshot with the remote host `otomat-vps` configured; override only what the test exercises. */
 export function twoHostSnapshot(
   overrides: Partial<ExecutionHostSnapshot> = {},
 ): ExecutionHostSnapshot {
@@ -19,7 +18,6 @@ export function twoHostSnapshot(
   };
 }
 
-/** Complete desktop bridge double; override only what the test exercises. */
 export function fakeDesktopBridge(
   overrides: Partial<OtomatDesktopBridge> = {},
 ): OtomatDesktopBridge {

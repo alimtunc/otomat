@@ -24,7 +24,6 @@ function reviewRefusal(error: unknown): string | null {
   return refusal.success ? refusal.data.message : null;
 }
 
-/** Writes the daemon's own answer into the review cache before the refetch confirms it. */
 function seedComment(
   client: QueryClient,
   target: ReviewTarget,
@@ -43,7 +42,6 @@ function seedComment(
   client.invalidateQueries({ queryKey: queryKeys.reviewDetail(target) });
 }
 
-/** One mark per path, so the daemon's answer replaces the file's previous one rather than stacking on it. */
 function seedReviewedFile(
   client: QueryClient,
   target: ReviewTarget,
@@ -125,11 +123,6 @@ function fixErrorMessage(error: unknown): string {
   return "Could not request the fix — is the daemon running?";
 }
 
-/**
- * Appends a `Fix review comments` step carrying every open agent comment as its
- * frozen context. On success invalidates the run's detail, its review and the
- * issues cache; a refusal is shown verbatim so the user can act on it.
- */
 export function useRequestFix(runId: string) {
   const client = useQueryClient();
   return useMutation({

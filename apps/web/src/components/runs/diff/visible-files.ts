@@ -4,9 +4,7 @@ import type { DiffSortMode } from "@web/components/runs/diff/prefs/prefs";
 export interface HideReviewedOptions {
   hideReviewed: boolean;
   reviewedPaths: ReadonlySet<string>;
-  /** Files carrying an unresolved comment stay on screen whatever `hideReviewed` says. */
   commentedPaths: ReadonlySet<string>;
-  /** So does the file being read: the rail lists every file, and selecting one must show it. */
   activePath: string | null;
 }
 

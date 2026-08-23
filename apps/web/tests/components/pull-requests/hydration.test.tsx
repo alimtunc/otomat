@@ -48,7 +48,6 @@ async function render() {
   return rendered;
 }
 
-/** React Query dispatches on a macrotask: the read, the pass it starts and its cache write each need one. */
 async function settle(): Promise<void> {
   for (let tick = 0; tick < 3; tick += 1) {
     await act(async () => {

@@ -9,7 +9,6 @@ import type { ReactNode } from "react";
 const ACTIVE_PATH_CLASS = "min-w-0 truncate font-mono text-xs text-text-secondary";
 
 export interface RunDiffHeaderProps {
-  /** Null when the chosen scope has no diff; the header still states which scope that was. */
   diff: ReviewDiffContract | null;
   scopeControl?: ReactNode;
   search?: ReactNode;

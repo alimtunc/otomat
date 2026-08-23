@@ -15,11 +15,6 @@ export interface LaunchProjectMoveFieldProps {
   issue: IssueContract;
 }
 
-/**
- * Re-points the issue at a project that already has a usable repository. A
- * mirrored issue is not offered the move: its project comes from the tracker
- * connection and the next sync would revert it.
- */
 export function LaunchProjectMoveField({ issue }: LaunchProjectMoveFieldProps) {
   const repositories = useRepositories();
   const projects = useProjects();
@@ -30,6 +25,7 @@ export function LaunchProjectMoveField({ issue }: LaunchProjectMoveFieldProps) {
   const projectName = (projectId: string, fallback: string) =>
     projects.data?.find((project) => project.id === projectId)?.name ?? fallback;
 
+  // A mirrored issue takes its project from the tracker connection: the next sync would revert a move.
   if (issue.source !== "local") {
     return (
       <p className="text-xs text-text-tertiary">

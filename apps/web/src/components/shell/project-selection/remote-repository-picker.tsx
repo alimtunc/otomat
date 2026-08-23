@@ -9,7 +9,6 @@ export interface RemoteRepositoryPickerProps {
   enabled: boolean;
 }
 
-/** A failed listing must not block the path field: registering by hand stays possible. */
 export function RemoteRepositoryPicker({ value, onSelect, enabled }: RemoteRepositoryPickerProps) {
   const { repositories, error } = useRemoteRepositories(enabled);
 

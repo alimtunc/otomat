@@ -7,7 +7,6 @@ export interface PullRequestConnectionPanelProps {
   isConnecting: boolean;
 }
 
-/** GitHub's own answer about this run: the signed-in account, any device code, the last failure, and the PR link. */
 export function PullRequestConnectionPanel({
   model,
   onConnect,

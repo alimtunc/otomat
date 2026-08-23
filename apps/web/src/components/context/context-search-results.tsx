@@ -35,15 +35,12 @@ function Notice({ children, tone }: { children: ReactNode; tone?: "danger" }) {
 export interface ContextSearchResultsProps {
   issues: readonly IssueContract[];
   paths: readonly string[];
-  /** Matches beyond `paths`, so a narrowed search is never read as the whole repository. */
   omittedPaths: number;
-  /** Null when the project has no usable repository; file attachment then says so. */
   repositoryId: string | null;
   filesFailed: boolean;
   onAdd: (reference: ContextReference) => void;
 }
 
-/** What the picker found, split by kind, with each empty or capped case stated rather than left blank. */
 export function ContextSearchResults({
   issues,
   paths,

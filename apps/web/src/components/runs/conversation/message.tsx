@@ -11,7 +11,6 @@ import { participantLabel } from "@web/lib/execution/labels";
 const DELIVERED_FAILURE_HINT =
   "This message already reached the agent, so it is never sent twice — write a new one instead.";
 
-/** Retry appears only for a failure that never reached the provider, so nothing here can replay an instruction. */
 export function ConversationMessage({
   runId,
   contribution,

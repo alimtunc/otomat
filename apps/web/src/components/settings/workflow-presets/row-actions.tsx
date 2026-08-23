@@ -20,7 +20,6 @@ import { useState } from "react";
 
 export interface WorkflowPresetRowActionsProps {
   preset: WorkflowPresetContract;
-  /** Undefined leaves "duplicate into this project" unavailable: there is no project to copy into. */
   projectId: string | undefined;
   onEdit: (preset: WorkflowPresetContract) => void;
 }

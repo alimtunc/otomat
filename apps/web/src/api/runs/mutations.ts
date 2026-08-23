@@ -17,7 +17,6 @@ import { seedContribution } from "@web/api/runs/seed-contribution";
 import { seedIssueRun } from "@web/api/runs/seed-run";
 import { contributionErrorMessage } from "@web/lib/run/contribution";
 
-/** Every cycle command drops the same caches: the issue's join in, because it decides what can still be continued. */
 export function invalidateRunCycleCaches(client: QueryClient, runId: string): void {
   client.invalidateQueries({ queryKey: queryKeys.run(runId) });
   client.invalidateQueries({ queryKey: queryKeys.runs });
@@ -109,7 +108,6 @@ function appendStepErrorMessage(error: unknown): string {
   return "Could not add the step — is the daemon running?";
 }
 
-/** Appends a step to the issue's canonical run; the daemon runs it in that same workspace. */
 export function useAppendRunStep(runId: string) {
   const client = useQueryClient();
   return useMutation({
@@ -163,7 +161,7 @@ function useContributionMutation<TVariables, TResult>(
   });
 }
 
-/** Posts a message to the run's conversation. The daemon persists it whatever the run is doing, so success never implies delivery. The composer surfaces the failure inline, so no toast doubles it. */
+/** The composer surfaces the failure inline, so no toast doubles it. */
 export function useCreateRunContribution(runId: string) {
   return useContributionMutation(
     runId,
@@ -173,7 +171,6 @@ export function useCreateRunContribution(runId: string) {
   );
 }
 
-/** Retries one failed message that never reached the agent. */
 export function useRetryRunContribution(runId: string) {
   return useContributionMutation(
     runId,
@@ -190,7 +187,7 @@ export function useCancelRunContribution(runId: string) {
   );
 }
 
-/** Explicit "deliver now" for messages a daemon restart left queued; the daemon never resumes a run on its own at boot. */
+/** The daemon never resumes a run on its own at boot, so queued messages need this explicit delivery. */
 export function useDeliverRunContributions(runId: string) {
   return useContributionMutation(
     runId,

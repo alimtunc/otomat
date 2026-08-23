@@ -2,7 +2,6 @@ import type { RepositoryBranchesResponse, RepositoryContract } from "@otomat/dom
 import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 import { vi } from "vitest";
 
-/** A usable repository row, the shape `GET /api/repositories` returns. */
 export function repository(overrides: Partial<RepositoryContract> = {}): RepositoryContract {
   return {
     id: "repo-1",
@@ -16,7 +15,6 @@ export function repository(overrides: Partial<RepositoryContract> = {}): Reposit
   };
 }
 
-/** The resolved gate every launch surface renders its controls from. */
 export function readyLaunchTarget(): ReadyLaunchTarget {
   return {
     status: "ready",
@@ -29,19 +27,16 @@ export function readyLaunchTarget(): ReadyLaunchTarget {
   };
 }
 
-/** What `useRepositories` resolves to in a mocked `@web/api/daemon/queries`. */
 export function repositoriesQueryResult(rows: RepositoryContract[] = [repository()]) {
   return { data: rows, isPending: false, isError: false, isSuccess: true, refetch: vi.fn() };
 }
 
-/** What `useRepositoryBranches` resolves to in a mocked `@web/api/daemon/queries`. */
 export function repositoryBranchesQueryResult(
   branches: RepositoryBranchesResponse = { default_branch: "main", branches: ["main", "develop"] },
 ) {
   return { data: branches, isPending: false, isError: false, isSuccess: true, refetch: vi.fn() };
 }
 
-/** A repository whose branches the daemon could not list; the launch still has the repository's own default. */
 export function repositoryBranchesErrorResult() {
   return {
     data: undefined,

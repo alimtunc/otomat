@@ -10,7 +10,6 @@ import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 import { pullRequestImportRefusal } from "@web/lib/pull-request/import-error";
 
-/** The daemon's own reason when it sent one; a refused push is only actionable if its message survives. */
 function daemonErrorMessage(error: unknown, fallback: string): string {
   if (
     error instanceof DaemonRequestError &&
@@ -25,7 +24,6 @@ function daemonErrorMessage(error: unknown, fallback: string): string {
 }
 
 interface RefreshPullRequestVariables {
-  /** Reports the failure as a toast; the reviewer's automatic pass stays silent and shows a notice. */
   announce: boolean;
 }
 
@@ -84,7 +82,7 @@ export function usePushPullRequestCommits(runId: string) {
   });
 }
 
-/** The daemon owns the publication once it accepts it: this mutation reports the acceptance, and the run's ledger stream reports every phase after it. */
+/** The daemon owns the publication once it accepts it; the run's ledger stream reports every phase after. */
 export function usePublishPullRequest(runId: string) {
   const client = useQueryClient();
   return useMutation({
@@ -118,10 +116,7 @@ export function useAttachPullRequest(issueId: string) {
   });
 }
 
-/**
- * Keyed by pull request so the reviewer's automatic pass and the operator's own Refresh are one
- * in-flight reconciliation. A pull request the inbox synced has no issue to invalidate around.
- */
+/** Keyed by pull request so the automatic pass and the operator's own Refresh are one in-flight reconciliation. */
 export function useRefreshPullRequest(pullRequestId: string, issueId: string | null) {
   const client = useQueryClient();
   return useMutation({

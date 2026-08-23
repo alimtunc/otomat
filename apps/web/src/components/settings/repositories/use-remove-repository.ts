@@ -11,7 +11,6 @@ export interface RemoveRepositoryInput {
   repositoryId: string;
 }
 
-/** A refusal — an active run, an unreachable host — surfaces as the sentence that host itself gave. */
 export function useRemoveRepository() {
   const bridge = desktopBridge();
   const client = useQueryClient();

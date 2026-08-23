@@ -138,7 +138,6 @@ function stepCard(): HTMLElement {
   return card;
 }
 
-/** The last props the probe saw for a node, which is what that node currently reads. */
 function lastPickerValue(label: string): ExecutionSelection {
   const calls = pickerProps.mock.calls.map(([props]: [PickerProbeProps]) => props);
   const last = calls.filter((props) => props.label === label).at(-1);

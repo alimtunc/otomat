@@ -1,8 +1,6 @@
 import type { EventEnvelope } from "@otomat/domain";
 import { AgentAvatar, CopyButton, Markdown, RelativeTime } from "@otomat/ui";
 
-/** What the agent actually said, straight from a `runtime.message` the provider emitted.
-    Copy raw text stays next to it because diagnostics need the unrendered source. */
 export function AgentMessage({ event, text }: { event: EventEnvelope; text: string }) {
   return (
     <li className="flex flex-col gap-1.5 px-6 py-3">

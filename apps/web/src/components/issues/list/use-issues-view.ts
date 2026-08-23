@@ -15,7 +15,6 @@ export interface IssuesViewResult {
   config: IssuesViewConfig;
   dirty: boolean;
   openView: (viewId: string) => void;
-  /** Drops every override the URL carries, leaving exactly what the active view saved. */
   reset: () => void;
   refine: (patch: Partial<IssuesViewConfig>) => void;
   toggleGroup: (key: string) => void;

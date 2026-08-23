@@ -37,7 +37,6 @@ function Probe(): ReactNode {
 
 let rendered: Mounted | null = null;
 
-/** Each call is one snapshot the host pushed; the hook only ever sees the newest. */
 async function observe(...frames: ActivityContract[][]): Promise<void> {
   for (const [index, activities] of frames.entries()) {
     frame = activities;

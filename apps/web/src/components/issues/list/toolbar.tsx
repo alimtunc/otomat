@@ -18,7 +18,6 @@ import { TOOLBAR_STRIP } from "@web/lib/toolbar";
 
 export interface IssuesToolbarProps {
   config: IssuesViewConfig;
-  /** Every loaded issue, so the filter options and the stale-value notice describe this project. */
   issues: IssueContract[];
   projectNames: ReadonlyMap<string, string>;
   sync: ProjectLinearSync;

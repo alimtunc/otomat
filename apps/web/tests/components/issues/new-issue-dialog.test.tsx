@@ -155,14 +155,12 @@ function buttonByText(text: string): HTMLButtonElement {
   return button;
 }
 
-/** The composer's actions are icon-only, so their name is only in `aria-label`. */
 function buttonByLabel(prefix: string): HTMLButtonElement {
   const button = document.querySelector<HTMLButtonElement>(`button[aria-label^='${prefix}']`);
   if (!button) throw new Error(`button labelled "${prefix}" not found`);
   return button;
 }
 
-/** Result rows compose an identifier and a title, so they are matched on a fragment. */
 function buttonContaining(text: string): HTMLButtonElement {
   const button = [...document.querySelectorAll("button")].find((candidate) =>
     candidate.textContent?.includes(text),
@@ -432,7 +430,6 @@ describe("NewIssueDialog", () => {
     runtimesData = [runtimeDescriptor("claude", "real", true)];
     await renderDialog();
 
-    // The project header already names the repository; a resolved single one is not a decision.
     expect(document.body.textContent).not.toContain("Repository");
     expect(document.querySelector("textarea[aria-label='Issue prompt']")).not.toBeNull();
   });
@@ -504,7 +501,6 @@ describe("NewIssueDialog", () => {
 
     const bounded = prompt.closest(".overflow-y-auto");
     expect(bounded?.className).toContain("max-h-64");
-    // The textarea itself never scrolls; the composer that holds it does.
     expect(prompt.className).toContain("overflow-hidden");
   });
 

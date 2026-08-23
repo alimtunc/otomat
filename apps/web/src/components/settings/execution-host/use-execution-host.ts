@@ -7,7 +7,6 @@ import { desktopBridge, requireDesktopBridge } from "@web/lib/desktop-bridge";
 import { useState } from "react";
 
 export interface UseExecutionHostResult {
-  /** False in a plain browser, where hosts are managed by the desktop app only. */
   isDesktop: boolean;
   snapshot: UseQueryResult<ExecutionHostSnapshot>;
   aliases: string[];

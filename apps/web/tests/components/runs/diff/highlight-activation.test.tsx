@@ -24,7 +24,6 @@ const LAST = PATHS[PATHS.length - 1];
 /** Off screen, and near enough that only the slack around the scroll container reaches it. */
 const WITHIN_SLACK = PATHS[2];
 
-/** Mirrors the reviewer pane: collapsing, reopening and refetching re-render the same cards. */
 function Reviewer() {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [, setRound] = useState(0);
@@ -67,7 +66,6 @@ function Reviewer() {
   );
 }
 
-/** The paths whose body carries highlighter output rather than plain text. */
 function coloured(container: HTMLElement): string[] {
   return diffCardsOf(container)
     .filter((card) => card.querySelector(".hljs-keyword") !== null)

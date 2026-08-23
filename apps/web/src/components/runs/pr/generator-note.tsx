@@ -1,6 +1,5 @@
 import type { PullRequestGeneratorAudit } from "@otomat/domain";
 
-/** What actually wrote the text on screen; a generation that named no model says so rather than implying one. */
 export function PullRequestGeneratorNote({
   generator,
 }: {

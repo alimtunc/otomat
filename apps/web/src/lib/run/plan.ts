@@ -1,6 +1,6 @@
 import type { EventEnvelope, RunDetail, RunPlan } from "@otomat/domain";
 
-/** Display names of the plan steps a given step waits for (plan step id == step_run id). */
+/** A plan step id is also its step_run id. */
 export function stepDependencyNames(plan: RunPlan, stepId: string): string[] {
   const nameById = new Map(plan.steps.map((step) => [step.id, step.name]));
   const step = plan.steps.find((candidate) => candidate.id === stepId);

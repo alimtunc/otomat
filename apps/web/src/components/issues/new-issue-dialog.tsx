@@ -40,7 +40,6 @@ export function NewIssueDialog({
   const navigate = useNavigate();
   const close = () => onOpenChange(false);
 
-  /** This dialog creates the issue, so the new run is not on screen yet — follow it on its own route. */
   function launched(run: RunContract) {
     close();
     navigate({ to: "/runs/$runId", params: { runId: run.id } });

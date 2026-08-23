@@ -1,4 +1,3 @@
-/** The slice of a TanStack query result the mocked hooks under test actually read. */
 export interface FakeQueryState {
   data?: unknown;
   error?: unknown;

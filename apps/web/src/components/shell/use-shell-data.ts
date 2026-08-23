@@ -18,8 +18,7 @@ export function useShellData() {
   const remote = useRemoteSession();
 
   return {
-    // A host still working its journey through is progress, not a dead daemon: the poll fails
-    // throughout a 20–30s bootstrap and an update restarts the daemon on purpose.
+    // A settling host's health poll fails for a 20–30s bootstrap: progress, not a dead daemon.
     connectionState: remote.settling ? ("reconnecting" as const) : connectionState,
     connectionLabel:
       remote.settling && remote.status !== null

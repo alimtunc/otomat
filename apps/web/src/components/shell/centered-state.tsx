@@ -5,7 +5,7 @@ const FILL_CLASS = {
   flex: "grid flex-1 place-items-center p-6",
 } as const;
 
-/** Centers a full-pane Empty/Error state; `flex` fills a flex-column parent where h-full cannot stretch. */
+/** `flex` fills a flex-column parent, where `h-full` cannot stretch. */
 export function CenteredState({
   fill = "full",
   children,

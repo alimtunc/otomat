@@ -25,7 +25,6 @@ function BackProbe() {
   return <button type="button" data-testid="back" aria-label={back.label} onClick={back.goBack} />;
 }
 
-/** Mirrors the app's detail routes; the views themselves are covered by their own suites. */
 function testRouter(entry: string) {
   const rootRoute = createRootRoute({ component: Outlet });
   const issuesRoute = createRoute({

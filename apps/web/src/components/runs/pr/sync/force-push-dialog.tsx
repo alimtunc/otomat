@@ -14,7 +14,6 @@ import { PullRequestCommitList } from "@web/components/runs/pr/sync/commit-list"
 export interface ForcePushDialogProps {
   headRef: string;
   sync: PullRequestSync;
-  /** The remote head the comparison was read at; the push carries it as a lease. */
   expectedRemoteSha: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -22,7 +21,6 @@ export interface ForcePushDialogProps {
   isPending: boolean;
 }
 
-/** The only place a rewrite is confirmed; it states exactly which commits leave the branch. */
 export function ForcePushDialog({
   headRef,
   sync,

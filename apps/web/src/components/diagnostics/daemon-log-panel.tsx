@@ -10,7 +10,6 @@ const PANEL_CLASS =
   "max-h-56 overflow-auto rounded-md border border-border-subtle bg-background p-2.5 " +
   "font-mono text-[11px] leading-relaxed text-text-secondary";
 
-/** Why there is nothing to show, when there is nothing — never silence, which reads as "no error". */
 function unavailableNote({ diagnostic, pending, error }: DaemonLogPanelProps): string | null {
   if (pending) return `Asking ${diagnostic.host.label} for its log excerpt…`;
   if (error !== null) return `${diagnostic.host.label} could not be asked: ${error.message}`;
@@ -24,10 +23,6 @@ function unavailableNote({ diagnostic, pending, error }: DaemonLogPanelProps): s
   return null;
 }
 
-/**
- * The active host's own redacted excerpt for this request — never a general tail, which would read
- * as evidence it is not. Shown only for a daemon failure: no other category reached a host.
- */
 export function DaemonLogPanel(props: DaemonLogPanelProps) {
   if (props.diagnostic.category !== "daemon") return null;
   const unavailable = unavailableNote(props);

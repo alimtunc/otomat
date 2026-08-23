@@ -4,13 +4,10 @@ import type { KeyboardEvent, ReactNode } from "react";
 export interface ContextChipProps {
   icon: IconName;
   label: string;
-  /** What the chip stands for, shown before the launch so nothing is attached blind. */
   preview: ReactNode;
-  /** Absent on the issue Otomat attaches on its own, which the launch cannot detach. */
   onRemove?: () => void;
 }
 
-/** Backspace removes the chip so a reviewer can check and drop what will be sent without leaving the keyboard. */
 export function ContextChip({ icon, label, preview, onRemove }: ContextChipProps) {
   const keyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
     if (event.key !== "Backspace" && event.key !== "Delete") return;

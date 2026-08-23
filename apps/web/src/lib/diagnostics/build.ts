@@ -24,10 +24,7 @@ function sanitizeTrace(value: string | null): string | null {
     : safe;
 }
 
-/**
- * Builds the incident exactly as it will be shown, copied and exported. Redaction happens once,
- * here, so the panel on screen and the exported bundle can never disagree about what is safe.
- */
+/** Redaction happens once, here, so the panel and the exported bundle can never disagree about what is safe. */
 export function buildErrorDiagnostic(input: ErrorDiagnosticInput): ErrorDiagnostic {
   const classification = input.classification;
   const environment = diagnosticEnvironment();

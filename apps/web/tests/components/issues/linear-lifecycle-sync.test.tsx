@@ -85,7 +85,6 @@ const MAPPED: IssueSourceLifecycle = {
   done: { id: "s-shipped", name: "Shipped" },
 };
 
-/** The ledger row the pinned sync points at: the rail must render it once, not once per surface. */
 function writeback(sync: LinearLifecycleSyncState): LinearWritebackState {
   return {
     lifecycle_mapping: MAPPED,

@@ -4,7 +4,6 @@ import { RunActionButtons } from "@web/components/runs/cockpit/run/action-button
 import { RunWaitNote } from "@web/components/runs/cockpit/run/wait-note";
 import { CopyablePath } from "@web/components/runs/copyable-path";
 
-/** The narrow-viewport stand-in for the context pane: branch and worktree keep one stable line each, never sharing one. */
 export function ContextStrip({ detail }: { detail: RunDetail }) {
   return (
     <div className="flex flex-none flex-col gap-1 border-b border-border-subtle bg-surface-1 px-3.5 py-2">

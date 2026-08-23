@@ -1,6 +1,5 @@
 import { contextReferenceKey, type ContextReference } from "@otomat/domain";
 
-/** What one prompt surface composes: structured references plus the single optional instruction. */
 export interface ContextDraft {
   references: readonly ContextReference[];
   note: string;
@@ -29,7 +28,6 @@ interface ContextRequestFields {
   context?: ContextReference[];
 }
 
-/** The request fields a draft contributes; an empty note adds no instruction rather than an empty one. */
 export function contextRequestFields(draft: ContextDraft): ContextRequestFields {
   const note = draft.note.trim();
   const fields: ContextRequestFields = {};

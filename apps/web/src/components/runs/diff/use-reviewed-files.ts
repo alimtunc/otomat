@@ -7,7 +7,6 @@ export interface ReviewedFiles {
   paths: ReadonlySet<string>;
   unsynced: ReadonlyMap<string, ReviewedFileContract>;
   setReviewed: (path: string, reviewed: boolean) => void;
-  /** Re-sends the intent GitHub has not taken; the mark itself is already persisted. */
   retrySync: (path: string) => void;
 }
 

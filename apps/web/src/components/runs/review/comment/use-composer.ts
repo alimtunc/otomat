@@ -24,7 +24,6 @@ interface CommentComposerValues {
   suggestion: string | null;
 }
 
-/** What the composer hands back: a comment request minus the anchor its file already fixes. */
 export type ComposedComment = Omit<CreateReviewCommentRequest, "file_path" | "diff_sha">;
 
 export interface CommentComposerOptions {
@@ -40,7 +39,6 @@ export interface CommentComposerOptions {
 
 const WHOLE_FILE_REFUSAL = "A suggestion replaces lines, so a whole-file note cannot carry one.";
 
-/** Owns what the reviewer is composing; the range stays the gutter's, so both always read the same lines. */
 export function useCommentComposer(options: CommentComposerOptions) {
   const { patch, side, prReview, preferredDestination } = options;
   const range: CommentRange | null =
@@ -104,7 +102,6 @@ export function useCommentComposer(options: CommentComposerOptions) {
     suggestionPrefill: prefill,
     suggestionBlocked: refusal(range),
     destination: request.destination,
-    /** True when the preferred destination is unavailable and Agent stands in for it. */
     destinationFellBack: reachable(preferredDestination) !== preferredDestination,
     canSubmit: hasText(values.body) || request.suggestion !== null,
   };

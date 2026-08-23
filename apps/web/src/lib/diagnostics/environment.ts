@@ -6,7 +6,6 @@ export interface DiagnosticEnvironment {
   app: ErrorDiagnostic["app"];
 }
 
-/** Where this cockpit is running: the host a request would have gone to, and the shell build. */
 export function diagnosticEnvironment(): DiagnosticEnvironment {
   const bridge = desktopBridge();
   if (bridge === null) {

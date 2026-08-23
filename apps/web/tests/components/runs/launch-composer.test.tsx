@@ -134,7 +134,6 @@ it("puts the add control alone on the left and groups the branch with execution 
 
   const [add, group, action] = [...bar().children];
   expect(add?.getAttribute("aria-label")).toBe("Add context");
-  // Outlined, not the IconButton's borderless ghost default.
   expect(add?.className).toContain("border-border");
   expect(group?.className).toContain("ml-auto");
   expect(group?.firstElementChild?.getAttribute("aria-label")).toBe("Base branch: main");

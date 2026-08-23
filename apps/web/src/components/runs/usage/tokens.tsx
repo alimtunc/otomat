@@ -5,7 +5,6 @@ import { USAGE_PROVENANCE } from "@web/lib/run/usage-provenance";
 
 export interface UsageTokensProps {
   usage: ReportedUsageContract;
-  /** Names the total's provenance inline; off where a section header already states it. */
   showProvenance?: boolean;
   className?: string;
 }

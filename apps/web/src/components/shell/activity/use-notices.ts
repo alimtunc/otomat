@@ -5,7 +5,6 @@ import { useActivity } from "@web/api/activity/queries";
 import { activityTarget } from "@web/components/shell/activity/target";
 import { useEffect, useRef } from "react";
 
-/** Buckets worth interrupting for: work that stopped, one way or the other. */
 const ANNOUNCED: ReadonlySet<ActivityBucket> = new Set<ActivityBucket>(["attention", "recent"]);
 
 function headline(activity: ActivityContract): string {
@@ -20,7 +19,6 @@ function headline(activity: ActivityContract): string {
     : `Publication stopped — ${subject}`;
 }
 
-/** Announces work that stopped while the operator was elsewhere; the first snapshot only seeds, so opening the app never replays yesterday as news. */
 export function useActivityNotices(): void {
   const activities = useActivity().data?.activities ?? [];
   const navigate = useNavigate();

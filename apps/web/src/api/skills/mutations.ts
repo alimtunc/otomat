@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
-/** Rescans the known skill roots and refreshes the catalog. */
 export function useScanSkills() {
   const client = useQueryClient();
   return useMutation({
@@ -16,7 +15,6 @@ export function useScanSkills() {
   });
 }
 
-/** Toggles whether a discovered skill may be activated by a profile. */
 export function useSetSkillEnabled() {
   const client = useQueryClient();
   return useMutation({

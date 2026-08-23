@@ -4,11 +4,9 @@ export interface StaleNoticeProps {
   dataUpdatedAt: number;
   refreshing: boolean;
   onRetry: () => void;
-  /** The refusal the daemon sent, when one names why the refresh failed. */
   reason?: string;
 }
 
-/** Discreet banner above data whose background refresh failed: freshness plus Retry, never a blank view. */
 export function StaleNotice({ dataUpdatedAt, refreshing, onRetry, reason }: StaleNoticeProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle bg-surface-2 px-3 py-1.5">

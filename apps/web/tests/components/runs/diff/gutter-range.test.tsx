@@ -15,7 +15,6 @@ import { mount } from "#support/mount";
 stubDiffCanvas();
 stubDiffLayout();
 
-/** Head lines 2–4 are `bravo`, `charlie`, `delta`; base lines 2–3 are `beta` and `gamma`. */
 const FILE: DiffFileContract = {
   path: "notes.md",
   old_path: null,
@@ -57,7 +56,6 @@ function renderBody(mode: DiffViewMode, add = vi.fn(async () => {})) {
   );
 }
 
-/** Lets a test flip the layout the way the diff toolbar does. */
 function LayoutHarness() {
   const [mode, setMode] = useState<DiffViewMode>("unified");
   const [wrap, setWrap] = useState(false);

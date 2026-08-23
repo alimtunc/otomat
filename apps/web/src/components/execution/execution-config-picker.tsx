@@ -56,7 +56,6 @@ export interface ExecutionConfigPickerProps {
   profiles: AgentProfileContract[];
   descriptors: RuntimeDescriptor[];
   scope?: AgentScope;
-  /** Prefixes every accessible name, so several pickers on one page stay distinguishable. */
   label: string;
   compact?: boolean;
   disabled?: boolean;
@@ -78,7 +77,6 @@ export function ExecutionConfigPicker({
   const config = useExecutionConfig({ level, value, inherited, profiles });
   const chosen = agentChoiceItem(config.agentChoice, profiles, descriptors);
 
-  /** A boundary-removing value waits for its own confirmation; everything else applies at once. */
   const selectOption = (
     option: ResolvedExecutionOption,
     selection: ProviderOptionSelection | undefined,
@@ -103,7 +101,6 @@ export function ExecutionConfigPicker({
   const agentLabel = chosen?.label ?? "No agent";
   const segments = executionSummarySegments(config.model, config.options);
   const announced = [agentLabel, ...segments];
-  /** A runtime's mark stands in for its name; a profile's names the provider behind it, not the profile. */
   const summary = chosen?.kind === "runtime" && chosen.mark ? segments : announced;
   const profileName = config.profile?.name ?? null;
   const modelValue = modelSelectValue(value.model, config.catalog);

@@ -23,7 +23,6 @@ function modelSegment(model: ResolvedExecutionValue<ModelSelection>): string {
   return model.value.id;
 }
 
-/** An option nothing selects falls back to the value the CLI names, and is omitted when it names none rather than inventing one. */
 export function executionSummarySegments(
   model: ResolvedExecutionValue<ModelSelection>,
   options: readonly ResolvedExecutionOption[],
@@ -37,7 +36,6 @@ export function executionSummarySegments(
 
 export interface ExecutionSummaryEntry {
   label: string;
-  /** The effective value with where it came from, which the compact summary has no room for. */
   value: string;
 }
 

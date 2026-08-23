@@ -22,13 +22,11 @@ import { useState } from "react";
 
 export interface DiffScopeControlProps {
   runId: string;
-  /** What the daemon answered for, so the control always reflects the diff on screen. */
   scope: RunDiffScope;
   steps: readonly RunDiffStep[];
   onSelect: (selector: RunDiffScopeSelector) => void;
 }
 
-/** The reviewer's one statement of what it is showing, and the only place that changes it. */
 export function DiffScopeControl({ runId, scope, steps, onSelect }: DiffScopeControlProps) {
   const [open, setOpen] = useState(false);
   const pullRequest = useRunPullRequest(runId);

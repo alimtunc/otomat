@@ -9,9 +9,7 @@ interface Subscription {
 }
 
 export interface ViewportStub {
-  /** Lay `cards` out in DOM order down the scroll container, then deliver what changed. */
   layout: (cards: readonly Element[], cardHeight: number) => void;
-  /** Move the scrollbar the way a reader does; observers re-evaluate afterwards. */
   scrollTo: (top: number) => void;
   restore: () => void;
 }
@@ -22,12 +20,7 @@ function verticalSlack(rootMargin: string, rootHeight: number): number {
   return Number.parseFloat(vertical);
 }
 
-/**
- * happy-dom lays nothing out, so an intersection only exists if a test states it. This models
- * the three browser rules the diff cards depend on: a root that is not an ancestor of the target
- * never intersects, a target is clipped by the container that scrolls it, and `rootMargin`
- * widens the observer's own root but never that clip.
- */
+/** Models the browser rules happy-dom lacks: a root that is not an ancestor never intersects, a target is clipped by its scroller, and `rootMargin` widens the root but never that clip. */
 export function stubViewport(viewportHeight: number): ViewportStub {
   const subscriptions: Subscription[] = [];
   const boxes = new Map<Element, { top: number; height: number }>();

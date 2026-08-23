@@ -11,7 +11,6 @@ interface FieldErrorProps {
   error: string | undefined;
 }
 
-/** Maps a TanStack Form field's `meta` to the `Field` component's `invalid` / `error` props. */
 export function fieldErrorProps(meta: FieldMetaLike): FieldErrorProps {
   const [first] = meta.errors;
   return {

@@ -27,12 +27,10 @@ function newViewId(): string {
   return `view-${crypto.randomUUID()}`;
 }
 
-/** Without a project there is nothing to scope views to, so the set stays the system view alone. */
 function storedViews(projectId: string | undefined): ViewSet {
   return projectId === undefined ? emptyViewSet(ALL_ISSUES_VIEW) : readIssueViews(projectId);
 }
 
-/** The saved views of one project, restored from local storage and written back on every change. */
 export function useIssueViews(projectId: string | undefined): IssueViewsResult {
   const [state, setState] = useState(() => ({ projectId, set: storedViews(projectId) }));
   if (state.projectId !== projectId) setState({ projectId, set: storedViews(projectId) });

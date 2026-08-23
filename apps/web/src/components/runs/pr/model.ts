@@ -5,7 +5,6 @@ import {
   type PullRequestPublicationMode,
 } from "@otomat/domain";
 
-/** `customize` reveals the advanced fields; `mode` carries the operator's explicit Draft/Ready choice, so both survive a reload. */
 export interface PrSearch {
   customize?: true;
   mode?: PullRequestPublicationMode;
@@ -25,14 +24,12 @@ export function isPullRequestPublicationMode(value: string): value is PullReques
   return PULL_REQUEST_PUBLICATION_MODES.some((mode) => mode === value);
 }
 
-/** How GitHub currently holds the pull request; a merged or closed one is past the draft/ready question. */
 function publishedMode(pullRequest: PullRequestContract): PullRequestPublicationMode | null {
   if (pullRequest.status === "draft") return "draft";
   if (pullRequest.status === "open") return "ready";
   return null;
 }
 
-/** Draft is reached only through the explicit choice the route carries; a published pull request answers for itself. */
 export function initialPublicationMode(
   pullRequest: PullRequestContract | null,
   chosen: PullRequestPublicationMode | undefined,

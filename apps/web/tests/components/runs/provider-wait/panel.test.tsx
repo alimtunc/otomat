@@ -82,7 +82,6 @@ it("offers the provider's reset once a cancelled schedule left nothing planned",
   expect(schedule).toHaveBeenCalledWith(FUTURE);
 });
 
-// A reset that has come and gone is no longer something to schedule against; only "Resume now" honestly applies.
 it("never offers a reset that has already passed", async () => {
   await mount(
     <ProviderWaitPanel

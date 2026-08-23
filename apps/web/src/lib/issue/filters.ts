@@ -8,7 +8,7 @@ import {
 import { asRecord, asString, normalizedMembers, normalizedSelection } from "@web/lib/coerce";
 import { ISSUE_SOURCES, knownPriority } from "@web/lib/issue/filter-options";
 
-/** Every axis of the active view; empty lists and "all" mean the axis is off. */
+/** An empty list and `all` both mean the axis is off. */
 export interface AdvancedIssueFilters {
   sources: IssueSource[];
   statuses: IssueBoardColumn[];

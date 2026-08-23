@@ -8,7 +8,7 @@ import { isAvailableRuntime, resolveRuntimeChoice, runtimeById } from "@web/lib/
 const PROFILE_PREFIX = "profile:";
 const RUNTIME_PREFIX = "runtime:";
 
-/** Select sentinel that maps to the `null` (inherit) choice. */
+/** Select sentinel for the `null` (inherit) choice. */
 export const AGENT_CHOICE_DEFAULT = "__default";
 
 export function encodeProfileChoice(id: string): string {
@@ -31,7 +31,6 @@ function decodeAgentChoice(
   return null;
 }
 
-/** The request fields a choice contributes to a launch/plan node: a profile id, a runtime id, or neither (inherit). */
 export interface AgentRequestFields {
   profile_id?: string;
   runtime?: string;
@@ -43,7 +42,6 @@ export function agentChoiceToRequest(choice: string | null): AgentRequestFields 
   return decoded.kind === "profile" ? { profile_id: decoded.id } : { runtime: decoded.id };
 }
 
-/** The inverse of {@link agentChoiceToRequest}: the choice a saved plan or preset node encodes. */
 export function nodeAgentChoice(node: {
   agent: string | null;
   profile_id?: string | null;
@@ -52,7 +50,6 @@ export function nodeAgentChoice(node: {
   return node.agent === null ? null : encodeRuntimeChoice(node.agent);
 }
 
-/** The saved profile a choice resolves to; null for an ad-hoc runtime, an inherit choice, or a profile that no longer exists. */
 export function agentChoiceProfile(
   choice: string | null,
   profiles: AgentProfileContract[],
@@ -62,7 +59,6 @@ export function agentChoiceProfile(
   return profiles.find((profile) => profile.id === decoded.id) ?? null;
 }
 
-/** The runtime a choice will launch on — a profile's runtime or the ad-hoc runtime itself — so its model catalog can be fetched. */
 export function agentChoiceRuntimeId(
   choice: string | null,
   profiles: AgentProfileContract[],
@@ -78,7 +74,6 @@ function runtimeAvailable(descriptors: RuntimeDescriptor[], runtimeId: string): 
   return descriptor ? isAvailableRuntime(descriptor) : false;
 }
 
-/** Whether a choice still resolves to something launchable: an available runtime, or a profile whose runtime is available. */
 export function isUsableAgentChoice(
   choice: string | null,
   profiles: AgentProfileContract[],
@@ -93,7 +88,6 @@ export function isUsableAgentChoice(
   return runtimeAvailable(descriptors, decoded.id);
 }
 
-/** The effective run-level choice: keep the preferred one while usable, else the shared runtime fallback, else null. */
 export function resolveAgentChoice(
   preferred: string | null,
   profiles: AgentProfileContract[],
@@ -115,15 +109,9 @@ export function resolveProfileChoice(
     : null;
 }
 
-/** What an execution picker offers: every agent, only saved profiles, or only ad-hoc runtimes. */
 export type AgentScope = "all" | "profiles" | "runtimes";
 
-/**
- * An unrelated edit resubmits the profile exactly as stored. Its provider
- * options are the daemon's to accept or refuse against the installed CLI, never
- * this surface's to quietly rewrite; a stale one surfaces as a refusal the user
- * fixes in the profile editor.
- */
+/** Provider options are the daemon's to refuse against the installed CLI, never this surface's to quietly rewrite. */
 export function requestForProfile(
   profile: AgentProfileContract,
   changes: Partial<Pick<SaveAgentProfileRequest, "guidance" | "skill_ids">>,

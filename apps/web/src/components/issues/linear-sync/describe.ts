@@ -1,10 +1,8 @@
 import type { LinearSyncStatusContract } from "@otomat/domain";
 
 export interface LinearSyncLabel {
-  /** Empty while the owning daemon has not answered yet: silence beats a guess. */
   text: string;
   tone: "muted" | "danger";
-  /** Instant to render as a relative time after `text`, when the label carries one. */
   syncedAt: string | null;
 }
 
@@ -18,10 +16,6 @@ const muted = (text: string, syncedAt: string | null = null): LinearSyncLabel =>
   syncedAt,
 });
 
-/**
- * Every state reads differently, so a refresh that did nothing is never mistaken
- * for one that failed — or for one that worked.
- */
 export function describeLinearSync(
   status: LinearSyncStatusContract | null,
   running: boolean,

@@ -21,7 +21,6 @@ export interface ProfileRequestFields {
   options?: ExecutionOptionSelections;
 }
 
-/** The same fields for a request that only accepts a saved profile; null while the picker has not resolved one. */
 export function profileRequestFields(fields: ExecutionRequestFields): ProfileRequestFields | null {
   if (fields.profile_id === undefined) return null;
   const request: ProfileRequestFields = { profile_id: fields.profile_id };

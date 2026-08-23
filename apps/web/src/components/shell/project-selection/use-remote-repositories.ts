@@ -4,7 +4,6 @@ import { desktopBridge } from "@web/lib/desktop-bridge";
 
 export interface UseRemoteRepositoriesResult {
   repositories: RemoteRepositoryEntry[] | undefined;
-  /** Prose from the host listing; the free-text path field stays usable while it is set. */
   error: string | null;
 }
 

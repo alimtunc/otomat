@@ -30,10 +30,6 @@ function body(diagnostic: ErrorDiagnostic, note: string | null): string {
   return sections.join("\n");
 }
 
-/**
- * The exact text a report would carry, rendered so the user can read it before deciding. Nothing
- * is written or opened by building it; the draft is only ever published from an explicit confirm.
- */
 export function problemReportDraft(diagnostic: ErrorDiagnostic): ProblemReportDraft {
   const title = `${CATEGORY_TITLES[diagnostic.category]}: ${diagnostic.message}`;
   const full = body(diagnostic, null);

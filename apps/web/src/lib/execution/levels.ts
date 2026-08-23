@@ -13,13 +13,10 @@ import type { ExecutionPickerLevel, ExecutionSelection } from "./selection";
 export interface ExecutionLevelsInput {
   level: ExecutionPickerLevel;
   own: ExecutionSelection;
-  /** The run's own overrides, applied only while this surface keeps the run's agent. */
   inherited?: ExecutionOverrides;
-  /** Whether this surface still resolves through the run: false once it names its own agent. */
   inheritsAgent: boolean;
   profile: AgentProfileContract | null;
   defaults: ExecutionDefaults | undefined;
-  /** The runtime the effective agent resolves on; null while nothing is chosen. */
   runtimeId: string | null;
 }
 

@@ -2,7 +2,7 @@ import type { LinearIssueDraft, LinearIssueSnapshot } from "@otomat/domain";
 
 export const UNASSIGNED = "__unassigned__";
 
-/** The editor's form shape: description is always a string ("" for empty) so inputs stay controlled. */
+/** `description` is "" rather than null so the input stays controlled. */
 export interface EditorFormValues {
   title: string;
   description: string;

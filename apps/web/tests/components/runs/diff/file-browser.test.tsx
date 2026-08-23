@@ -27,7 +27,6 @@ const diff: ReviewDiffContract = {
   sha: "diff-sha",
 };
 
-/** Mirrors RunDiffView: the browser is presentation, the state around it is shared. */
 function Harness({ initialMode }: { initialMode: DiffBrowserMode }) {
   const [mode, setMode] = useState<DiffBrowserMode>(initialMode);
   const [activePath, setActivePath] = useState<string | null>(null);

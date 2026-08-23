@@ -13,7 +13,6 @@ import { diffFile } from "#support/diff-file";
 import { reviewedFile } from "#support/reviewed-file";
 import { mountRouted } from "#support/router";
 
-/** The daemon answers a mark before it is shown, so the probe below plays that part synchronously. */
 let answerMark: ((request: SetReviewedFileRequest) => void) | null = null;
 
 vi.mock("@web/api/reviews/mutations", () => ({
@@ -33,7 +32,6 @@ function files(shas: Record<string, string> = {}): DiffFileContract[] {
   return PATHS.map((path) => diffFile({ path, sha: shas[path] ?? `sha-${path}` }));
 }
 
-/** Stands in for the reviewer: the same interaction hook, driven the way its controls drive it. */
 function ReviewedNavigationProbe({
   initial,
   marks: seeded,

@@ -26,7 +26,6 @@ function Harness({ collapsed }: { collapsed: string | null }) {
     enabled: true,
     files,
     activePath,
-    // Mirrors RunDiffView: selecting a file reveals and focuses its card.
     onJumpToFile: (next) => {
       setActivePath(next.path);
       const card = document.getElementById(diffFileDomId(next));

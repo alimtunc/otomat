@@ -13,7 +13,6 @@ export interface RunEventsProviderProps {
   children: ReactNode;
 }
 
-/** One SSE stream per run, anchored past the newest loaded ledger page; torn down on unmount / run change. */
 export function RunEventsProvider({ runId, children }: RunEventsProviderProps) {
   const client = useQueryClient();
   const history = useEventHistory(runId);

@@ -2,17 +2,8 @@ import { PREVIEW_MANIFEST_PATH } from "@otomat/domain";
 
 import { accessRefusal, type AccessEnv } from "../_access";
 
-/**
- * Same-origin façade for a web preview: `/api/*` is proxied to the pull request's own daemon
- * worker, so the browser only ever talks to one Access-protected origin. Nothing of the
- * browser's request identity crosses over — no `Origin`, no `Cookie`, no `Host` — which is why
- * the daemon keeps its loopback CORS and `Host` guard unchanged.
- */
-
 interface PreviewEnv extends AccessEnv {
-  /** Daemon hostname pattern such as `otomat-preview-pr-{pr}.<subdomain>.workers.dev`. */
   OTOMAT_PREVIEW_DAEMON_HOSTNAME?: string;
-  /** Machine credential for the daemon hop; the pull request's worker verifies it, the browser never holds it. */
   OTOMAT_PREVIEW_CLIENT_ID?: string;
   OTOMAT_PREVIEW_CLIENT_SECRET?: string;
   ASSETS: { fetch(input: URL): Promise<Response> };
@@ -23,10 +14,10 @@ interface PagesContext {
   env: PreviewEnv;
 }
 
-/** Everything the daemon needs to answer; anything else would either leak identity or be ignored. */
+// No browser request identity crosses over — no `Origin`, `Cookie` or `Host` — so the daemon keeps its loopback CORS and `Host` guard.
 const FORWARDED_HEADERS = ["accept", "content-type", "last-event-id", "cache-control"];
 
-// A deployment's manifest never changes, so each isolate reads it once. `undefined` is "not read yet".
+// `undefined` is "not read yet"; a deployment's manifest never changes, so each isolate reads it once.
 let cachedOrigin: string | null | undefined;
 
 function refusal(error: string, message: string, status: number): Response {
@@ -50,8 +41,7 @@ async function daemonOrigin(context: PagesContext): Promise<string | null> {
   const manifest = await context.env.ASSETS.fetch(
     new URL(PREVIEW_MANIFEST_PATH, context.request.url),
   );
-  // Only a definitive answer is cached: a transient asset failure must not pin the isolate to
-  // "no daemon" for its whole lifetime.
+  // Only a definitive answer is cached: a transient asset failure must not pin the isolate to "no daemon".
   if (!manifest.ok && manifest.status !== 404) return null;
   const pullRequest = manifest.ok ? pullRequestOf(await manifest.json()) : null;
   cachedOrigin =
@@ -68,8 +58,7 @@ function upstreamHeaders(context: PagesContext): Headers {
   const id = context.env.OTOMAT_PREVIEW_CLIENT_ID;
   const secret = context.env.OTOMAT_PREVIEW_CLIENT_SECRET;
   if (id !== undefined && secret !== undefined) {
-    // Access service-token header names, so fronting the worker with a real Access policy later
-    // needs no façade change.
+    // Access service-token header names, so fronting the worker with a real Access policy needs no façade change.
     headers.set("CF-Access-Client-Id", id);
     headers.set("CF-Access-Client-Secret", secret);
   }
@@ -96,8 +85,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
       body: context.request.body,
       redirect: "manual",
     });
-    // The daemon's own 404s are JSON (`not_found`); a bare 404 is workers.dev answering for a
-    // hostname no worker is deployed at yet.
+    // A bare 404 is workers.dev answering for a hostname no worker is deployed at; the daemon's own 404s are JSON.
     if (upstream.status === 404 && !(upstream.headers.get("content-type") ?? "").includes("json")) {
       return refusal(
         "preview_daemon_unavailable",

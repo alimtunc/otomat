@@ -26,7 +26,6 @@ import type { ResolvedExecutionOption } from "@web/lib/execution/summary";
 export interface UseExecutionConfigOptions {
   level: ExecutionPickerLevel;
   value: ExecutionSelection;
-  /** What applies when this surface selects nothing; absent on a surface with no level above it. */
   inherited?: ExecutionSelection;
   profiles: AgentProfileContract[];
 }
@@ -37,7 +36,6 @@ export interface ExecutionConfig {
   profile: AgentProfileContract | null;
   model: ResolvedExecutionValue<ModelSelection>;
   options: ResolvedExecutionOption[];
-  /** Selected values the current runtime and model no longer announce; a launch carrying one is refused. */
   stale: ProviderOptionKey[];
   catalog: RuntimeModelCatalog | undefined;
   catalogPending: boolean;
@@ -45,7 +43,6 @@ export interface ExecutionConfig {
   announced: ProviderOptionSet | undefined;
   announcedPending: boolean;
   announcedError: boolean;
-  /** The global level is missing from this resolution, so the preview understates what a launch would send. */
   defaultsError: boolean;
   retry: () => void;
 }

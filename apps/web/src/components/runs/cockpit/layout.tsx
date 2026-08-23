@@ -9,7 +9,6 @@ import { RouteShell } from "@web/components/shell/route-shell";
 import { useBackNavigation } from "@web/components/shell/use-back-navigation";
 import { runIssueLabel, UNLINKED_RUN_LABEL } from "@web/lib/run/issue-label";
 
-/** The cockpit's own route level, so the issue crumb is rendered once and survives every tab change. */
 export function RunCockpitLayout() {
   const { runId } = useParams({ from: "/runs/$runId" });
   const detail = useRunDetail(runId);
@@ -17,7 +16,6 @@ export function RunCockpitLayout() {
   const issue = useIssue(issueId);
   const back = useBackNavigation(issueId);
 
-  // Only a run known to have no issue may read as unlinked — not one whose id or issue is still loading.
   const issueCrumb = (): BreadcrumbItem => {
     if (detail.data === undefined) return { label: "Loading issue…" };
     if (issueId === null) return { label: UNLINKED_RUN_LABEL };

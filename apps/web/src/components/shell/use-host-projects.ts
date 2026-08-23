@@ -3,7 +3,6 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { queryKeys } from "@web/api/query-keys";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 
-/** Disabled in the browser, where only one daemon exists. */
 export function useHostProjects(): UseQueryResult<ExecutionHostProjectsEntry[]> {
   const bridge = desktopBridge();
   return useQuery({

@@ -15,7 +15,6 @@ function storedConfig(projectId: string | undefined): RunsViewConfig {
   return projectId === undefined ? DEFAULT_RUNS_VIEW_CONFIG : readRunsViewConfig(projectId);
 }
 
-/** The runs filters of one project, restored from local storage and written back on every change. */
 export function useRunsView(projectId: string | undefined): RunsViewResult {
   const [state, setState] = useState(() => ({ projectId, config: storedConfig(projectId) }));
   if (state.projectId !== projectId) setState({ projectId, config: storedConfig(projectId) });

@@ -11,7 +11,6 @@ import { useRunCommits } from "@web/api/runs/queries";
 export interface DiffCommitSubmenuProps {
   runId: string;
   scope: RunDiffScope;
-  /** Gates the fetch on the menu being open, so a closed picker costs nothing. */
   open: boolean;
   onSelect: (selector: RunDiffScopeSelector) => void;
 }

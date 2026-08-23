@@ -36,7 +36,6 @@ export async function mount(node: ReactNode): Promise<Mounted> {
   };
 }
 
-/** Mirrors the app root: the query client, then the host session every surface reads from. Pass a client to drive its lifecycle from the test. */
 export async function mountWithQuery(
   node: ReactNode,
   client: QueryClient = testQueryClient(),

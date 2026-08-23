@@ -7,7 +7,6 @@ import { ToolCallDetail } from "@web/components/runs/timeline/event-detail/tool-
 import { UsageDetail } from "@web/components/runs/timeline/event-detail/usage-detail";
 import type { ReactNode } from "react";
 
-/** Per-type readable detail rendered under an event's summary row; null when the payload has nothing beyond the summary. */
 export function EventDetail({ event }: { event: EventEnvelope }): ReactNode {
   switch (event.type) {
     case "runtime.tool_call":

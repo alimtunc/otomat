@@ -25,9 +25,7 @@ function isLaunchMode(value: string): value is LaunchMode {
 }
 
 export interface LaunchRunDialogProps {
-  /** Undefined while the issue is still loading: the trigger stays on screen, disabled, instead of vanishing. */
   issue: IssueContract | undefined;
-  /** The run the surface should follow — a fresh one, or the workspace run the step joined — and, for an appended step, its own thread. */
   onLaunched: (run: RunContract, stepRunId?: string) => void;
 }
 
@@ -42,18 +40,11 @@ function LaunchTrigger({ continuing = false, ...props }: LaunchTriggerProps) {
   );
 }
 
-/**
- * The one surface that starts work on an issue. While the issue's workspace is
- * open it can only grow: the action appends a step to that run's plan, in its
- * branch and worktree. A closed workspace launches a fresh cycle instead — a
- * single agent turn or a workflow, both frozen into the same `plan` contract.
- */
 export function LaunchRunDialog({ issue, onLaunched }: LaunchRunDialogProps) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<LaunchMode>("single");
   const [execution, setExecution] = useState<ExecutionSelection>(EMPTY_EXECUTION_SELECTION);
 
-  /** Closing discards the composed draft with the forms, so the mode it was composed in goes with it. */
   const openChange = (next: boolean) => {
     setOpen(next);
     if (!next) setMode("single");

@@ -9,7 +9,6 @@ import type { ComposedComment } from "./comment/use-composer";
 import { EMPTY_FILE_COMMENT_COUNTS, type FileCommentCounts } from "./file-comment-counts";
 import type { PartitionedComments } from "./partition";
 
-/** Everything one file card knows about its own feedback, gathered once by the diff view. */
 export interface DiffFileComments {
   byLine: Map<number, ReviewCommentContract[]>;
   whole: ReviewCommentContract[];

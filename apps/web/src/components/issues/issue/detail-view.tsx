@@ -93,7 +93,6 @@ function RunsArea({
   );
 }
 
-/** A single SSE stream, opened for the followed run, feeds both its thread and the rail. */
 export function IssueDetailView() {
   const { issueId } = useParams({ from: "/issues/$issueId" });
   const { run: selectedRunId, step: selectedStepId } = useSearch({ from: "/issues/$issueId" });
@@ -128,7 +127,6 @@ export function IssueDetailView() {
   const launchAction = (
     <LaunchRunDialog issue={issue.data} onLaunched={(run, stepId) => follow(run.id, stepId)} />
   );
-  // The header acts on the issue's canonical cycle, not on whichever old run is being read.
   const cycleRunId = issue.data?.workspace.run_id ?? followedRun?.id ?? null;
 
   const main = (

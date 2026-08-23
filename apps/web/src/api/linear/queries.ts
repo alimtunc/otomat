@@ -34,7 +34,7 @@ export function useIssueSources(workspaceId: string | null, projectId?: string) 
   });
 }
 
-/** Polls only while a pass is in flight, so a pass started elsewhere still shows up. */
+/** Polled while a pass is in flight so a pass started elsewhere still shows up. */
 export function useLinearSyncStatus(projectId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.linearSyncStatus(projectId ?? ""),

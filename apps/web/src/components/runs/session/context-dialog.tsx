@@ -19,7 +19,6 @@ export interface SessionContextDialogProps {
   agentSessionId: string;
 }
 
-/** The working dossier this session received, so what an agent was given stays readable after the turn. */
 export function SessionContextDialog({ runId, agentSessionId }: SessionContextDialogProps) {
   const [open, setOpen] = useState(false);
   const query = useSessionContext(runId, agentSessionId, open);

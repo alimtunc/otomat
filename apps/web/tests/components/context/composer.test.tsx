@@ -73,7 +73,6 @@ function byLabel(label: string): HTMLElement {
   return found;
 }
 
-/** Result rows compose an identifier and a title, so they are matched on a fragment. */
 function clickContaining(text: string) {
   const button = [...document.body.querySelectorAll("button")].find((candidate) =>
     candidate.textContent?.includes(text),

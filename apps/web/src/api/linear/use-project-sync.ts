@@ -7,13 +7,11 @@ import { useLinearConnection, useLinearSyncStatus } from "@web/api/linear/querie
 import { queryKeys } from "@web/api/query-keys";
 import { useCallback } from "react";
 
-/** A success this recent is reused instead of asking Linear again. */
 const FRESH_FOR_MS = 60_000;
 
 export interface ProjectLinearSyncOptions {
   /** Ignores the stored watermark and re-reads every issue; repairs a drifted cursor. */
   full?: boolean;
-  /** Reports the outcome as a toast. Automatic passes stay silent and speak through the status. */
   announce?: boolean;
 }
 
@@ -22,20 +20,14 @@ interface RefreshVariables extends ProjectLinearSyncOptions {
 }
 
 export interface ProjectLinearSync {
-  /** Null until the owning daemon has answered; never assume freshness from it. */
   status: LinearSyncStatusContract | null;
-  /** True while this project has a pass in flight, wherever it was started. */
+  /** True for a pass in flight anywhere, not only one this hook started. */
   running: boolean;
   refresh: (options?: ProjectLinearSyncOptions) => void;
-  /** The automatic path: runs only when the last success is unknown or over a minute old. */
   refreshIfStale: () => void;
 }
 
-/**
- * Every Linear refresh for the active project goes through this hook, so only the
- * daemon owning that project is asked and concurrent triggers collapse into one
- * request instead of racing each other.
- */
+/** Every Linear refresh for the active project funnels here, so concurrent triggers collapse into one request. */
 export function useProjectLinearSync(projectId: string | undefined): ProjectLinearSync {
   const client = useQueryClient();
   const status = useLinearSyncStatus(projectId).data ?? null;

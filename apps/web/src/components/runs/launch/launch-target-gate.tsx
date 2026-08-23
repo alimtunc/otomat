@@ -11,18 +11,11 @@ import { useRemoteSession } from "@web/components/shell/remote-session/context";
 import type { ReactNode } from "react";
 
 export interface LaunchTargetGateProps {
-  /** Project the run would execute in; `undefined` means none is selected yet. */
   projectId: string | undefined;
-  /** Present when launching on an existing issue, which unlocks moving it to another project. */
   issue?: IssueContract;
   children: (target: ReadyLaunchTarget) => ReactNode;
 }
 
-/**
- * The one gate every launch surface passes through. Nothing that can create a
- * run renders until a real repository and base branch are resolved, so a run is
- * never started without the worktree it is supposed to work in.
- */
 export function LaunchTargetGate({ projectId, issue, children }: LaunchTargetGateProps) {
   const { updatePending } = useRemoteSession();
   if (updatePending) {

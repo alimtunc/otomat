@@ -19,7 +19,6 @@ export interface AttachCandidateDialogProps {
   pending: boolean;
 }
 
-/** Adopting a pull request no run here owns is never silent; nothing but this confirmation stands between a candidate and an attachment. */
 export function AttachCandidateDialog({
   candidate,
   open,

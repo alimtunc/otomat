@@ -7,10 +7,6 @@ import { selectableProjects } from "@web/components/shell/project-selection/sele
 import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
 import { useState } from "react";
 
-/**
- * A key alone imports nothing, and ownership stays with the active host:
- * connecting one never creates or feeds a project in another daemon's database.
- */
 export function LinearOnboardingPanel({ workspaceId }: { workspaceId: string }) {
   const projects = useProjects();
   const sources = useIssueSources(workspaceId);

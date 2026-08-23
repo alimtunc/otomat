@@ -6,7 +6,6 @@ export interface PullRequestSyncModel {
   tone: StatusTone;
   description: string;
   pushDisabled: boolean;
-  /** The remote head a rewrite may be leased against; null wherever no rewrite is on offer. */
   forceExpectedSha: string | null;
 }
 

@@ -17,7 +17,6 @@ const HEAD_UNREACHABLE =
 
 const HEAD_FETCHING = "Otomat is reading this pull request from GitHub and fetching its head.";
 
-/** A mirrored pull request is reviewed through the same surface as a run — read-only, pinned to its imported head. */
 export function PullRequestDiffView() {
   const { pullRequestId } = useParams({ from: "/pull-requests/$pullRequestId/diff" });
   const query = usePullRequestReviewContext(pullRequestId);

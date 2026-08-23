@@ -15,7 +15,6 @@ export function adjacentFile(
   return files[next];
 }
 
-/** The next file still unreviewed after `fromPath`, wrapping once; null when nothing is left to read. */
 export function nextUnreviewedFile(
   files: readonly DiffFileContract[],
   fromPath: string,
@@ -46,10 +45,7 @@ function panes(container: ParentNode): HTMLElement[][] {
   return tables.map((table) => [...table.querySelectorAll<HTMLElement>("tr.diff-line")]);
 }
 
-/**
- * First row of each contiguous changed block, in reading order. Rows are walked by
- * position across panes so a split-mode change anchors once, not once per side.
- */
+/** Rows are walked by position across panes so a split-mode change anchors once, not once per side. */
 export function changeBlockRows(container: ParentNode): HTMLElement[] {
   const sides = panes(container);
   const height = Math.max(0, ...sides.map((rows) => rows.length));

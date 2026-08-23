@@ -3,10 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
-/**
- * Never polled. A run's surface is event-driven (invalidated by its ledger stream, see
- * RunEventsProvider); a pull request's refreshes only through the explicit Refresh mutation.
- */
 export function useReviewDiff(
   target: ReviewTarget,
   scope: RunDiffScopeSelector = WORKSPACE_DIFF_SCOPE,
@@ -24,7 +20,6 @@ export function useReviewDetail(target: ReviewTarget) {
   });
 }
 
-/** Never polled: it mirrors the last reconciliation pass, and the view is what asks for a fresh one. */
 export function usePullRequestInbox(projectId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.pullRequestInbox(projectId),

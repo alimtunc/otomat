@@ -3,7 +3,6 @@ import { desktopBridge } from "@web/lib/desktop-bridge";
 
 const REVOKE_DELAY_MS = 1_000;
 
-/** No shell to assemble a bundle: the browser still gets the incident itself, as a plain download. */
 function downloadDiagnostic(diagnostic: ErrorDiagnostic): SupportBundleExportResult {
   const filename = `otomat-diagnostic-${diagnostic.id}.json`;
   const url = URL.createObjectURL(
@@ -17,10 +16,7 @@ function downloadDiagnostic(diagnostic: ErrorDiagnostic): SupportBundleExportRes
   return { status: "written", path: filename };
 }
 
-/**
- * Writes the incident where the user asked for it: into the shell's support bundle when a shell is
- * there, and a download otherwise. Both are explicit, local writes — nothing leaves the machine.
- */
+/** Both paths are explicit, local writes — nothing leaves the machine. */
 export async function exportDiagnostic(
   diagnostic: ErrorDiagnostic,
 ): Promise<SupportBundleExportResult> {

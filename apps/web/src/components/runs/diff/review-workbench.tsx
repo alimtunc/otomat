@@ -29,19 +29,14 @@ import type { ReactNode } from "react";
 
 export interface ReviewWorkbenchProps {
   target: ReviewTarget;
-  /** What the AI-fix bar reads; an adopted pull request holds no workspace to fix in. */
   workspace: { open: boolean; issueId: string | null };
-  /** The scope the diff was read from; expanded blobs must come from the same one. */
   scope?: RunDiffScopeSelector;
-  /** The cockpit's scope selector; absent on a pull request, which has only its pinned head. */
   scopeControl?: ReactNode;
   diff: ReviewDiffContract;
   review: ReviewDetail;
-  /** The stale notice when a refresh failed; the query ladder above owns that judgment. */
   notice: ReactNode;
 }
 
-/** The loaded reviewer: header, file cards, comments and the fix bar around one diff. */
 export function ReviewWorkbench({
   target,
   workspace,

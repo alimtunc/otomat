@@ -16,10 +16,6 @@ const UPDATE_PHASES: RemoteHostPhase[] = [
   "verifying_update",
 ];
 
-/**
- * Where the host's daemon build stands and what Otomat is doing about it. The install runs by
- * itself from every connection; the button here is the retry for a failure the user has fixed.
- */
 export function DaemonUpdatePanel() {
   const remote = useRemoteSession();
   const update = useDaemonUpdate();

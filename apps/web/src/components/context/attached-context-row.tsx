@@ -8,7 +8,6 @@ import type { ReactNode } from "react";
 const FILE_PREVIEW =
   "Attached by path. Its content is read from the repository snapshot at launch, so a file that moved, is binary or is past the size limit is reported rather than guessed.";
 
-/** The internal id is never a label, so an unresolved reference stays neutral rather than leaking it. */
 const UNRESOLVED_ISSUE = "Issue";
 
 function unresolvedPreview(loading: boolean, failed: boolean): string {
@@ -18,7 +17,6 @@ function unresolvedPreview(loading: boolean, failed: boolean): string {
 }
 
 export interface AttachedContextRowProps {
-  /** The issue Otomat attaches on its own; null for a run that has none. */
   issue: IssueContract | null;
   projectId: string | undefined;
   references: readonly ContextReference[];
@@ -27,7 +25,6 @@ export interface AttachedContextRowProps {
   addControl?: ReactNode;
 }
 
-/** The attached context, shown as chips above the instruction, in the order it was attached. */
 export function AttachedContextRow({
   issue,
   projectId,

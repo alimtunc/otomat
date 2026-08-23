@@ -11,14 +11,12 @@ export interface CapabilityEntry {
   hint: string | null;
 }
 
-/** Steering is a guarantee level, not a yes/no, so the label names the level the CLI actually offers. */
 const STEERING_LABELS = {
   live: "Steering the live session",
   turn_boundary: "Steering at next turn",
   unsupported: "Steering",
 } satisfies Record<RuntimeSteeringMode, string>;
 
-/** A quota is only useful to schedule around when the CLI also says when it reopens, so the label names which of the two the runtime offers. */
 const PROVIDER_LIMIT_LABELS = {
   unsupported: "Quota detection",
   detects: "Quota detection",
@@ -28,7 +26,7 @@ const PROVIDER_LIMIT_LABELS = {
 const APPROVALS_HINT =
   "Whether Otomat can answer a permission question mid-run. It is not the run's permission mode, which the provider still applies on its own.";
 
-/** The `satisfies` is the guarantee: a capability added to the schema fails the build here instead of vanishing from the list. */
+/** The `satisfies` makes a capability added to the schema fail the build here instead of vanishing from the list. */
 export function capabilityEntries(capabilities: RuntimeCapabilities): CapabilityEntry[] {
   const resumeModel = capabilities.resume_model;
   return Object.values({

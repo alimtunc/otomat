@@ -2,7 +2,6 @@ import { skipToken, useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
-/** The daemon reads real git for this, so it is never cached long. */
 export function useWorkspaces() {
   return useQuery({
     queryKey: queryKeys.workspaces,

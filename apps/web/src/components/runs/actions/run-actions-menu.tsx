@@ -23,7 +23,6 @@ export interface RunActionsMenuProps {
   stretch?: boolean;
 }
 
-/** The daemon's own view of the run decides what is offered, so the cockpit never shows an action it would refuse. */
 export function RunActionsMenu({ runId, stretch = false }: RunActionsMenuProps) {
   const [abandoning, setAbandoning] = useState(false);
   const [cleaning, setCleaning] = useState(false);

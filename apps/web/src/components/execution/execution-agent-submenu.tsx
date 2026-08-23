@@ -13,12 +13,9 @@ import { AGENT_CHOICE_DEFAULT, type AgentScope } from "@web/lib/agent-choice";
 export interface ExecutionAgentSubmenuProps {
   profiles: AgentProfileContract[];
   descriptors: RuntimeDescriptor[];
-  /** Null inherits the level above; the entry only exists when `inheritLabel` is given. */
   value: string | null;
   onValueChange: (value: string | null) => void;
-  /** Omitted where the agent must be named, as on a run-level launcher. */
   inheritLabel?: string;
-  /** `runtimes` configures one runtime rather than picking an agent; `profiles` forces a saved profile. */
   scope?: AgentScope;
   effectiveLabel: string;
 }

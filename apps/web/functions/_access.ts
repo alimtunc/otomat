@@ -1,15 +1,7 @@
-/**
- * Origin-side verification of the Cloudflare Access identity in front of a preview: the façade
- * lends its machine credential only to a request Access has actually authenticated, so a Pages
- * deployment whose Access application was never set up refuses the daemon hop instead of
- * exposing it. Verification follows
- * https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/validating-json/.
- */
+// Follows https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/validating-json/.
 
 export interface AccessEnv {
-  /** Access team domain such as `example.cloudflareaccess.com`. */
   OTOMAT_PREVIEW_ACCESS_TEAM_DOMAIN?: string;
-  /** AUD tag of the Access application covering the Pages project. */
   OTOMAT_PREVIEW_ACCESS_AUD?: string;
 }
 

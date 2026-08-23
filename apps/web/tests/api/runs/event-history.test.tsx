@@ -79,7 +79,6 @@ let view: Mounted;
 const text = (testId: string) =>
   view.container.querySelector(`[data-testid="${testId}"]`)?.textContent;
 
-/** React Query dispatches fetch results on a macrotask; two ticks settle a page. */
 const flush = async () => {
   for (let tick = 0; tick < 2; tick += 1) {
     await act(async () => {

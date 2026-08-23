@@ -65,7 +65,6 @@ function parseSavedView(value: unknown): SavedView | null {
   return { id, name, config: parseIssuesViewConfig(entry.config) };
 }
 
-/** Unknown ids, dropped views and corrupt entries all resolve to the system view rather than an empty screen. */
 export function parseViewSet(value: unknown, system: SavedView): ViewSet {
   const entry = asRecord(value);
   if (entry === null) return emptyViewSet(system);

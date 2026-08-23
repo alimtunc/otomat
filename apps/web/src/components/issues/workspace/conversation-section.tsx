@@ -5,7 +5,6 @@ import { ConversationHeader } from "@web/components/runs/conversation/header";
 import { StepConversationThread } from "@web/components/runs/conversation/step-thread";
 import { selectedStepRunId } from "@web/lib/run/plan";
 
-/** Reads the enclosing run event stream, so it only ever renders for the followed run. */
 export function ConversationSection({
   runId,
   selectedStepId,

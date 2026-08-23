@@ -8,12 +8,10 @@ const UNREACHABLE = "GitHub could not be read for this pull request.";
 
 export interface PullRequestReconciliation {
   running: boolean;
-  /** The daemon's own refusal when the pass failed; the reviewer shows it beside Retry. */
   failure: string | null;
   retry: () => void;
 }
 
-/** Arriving reconciles the pull request, so the first usable state never waits on a click. */
 export function usePullRequestReconciliation(
   pullRequestId: string,
   issueId: string | null,
@@ -23,8 +21,7 @@ export function usePullRequestReconciliation(
   const running = useIsMutating({ mutationKey: queryKeys.pullRequestRefresh(pullRequestId) }) > 0;
   const { mutate } = refresh;
 
-  // Reading the pass imperatively keeps `start` stable: a `running` dependency would re-arm the
-  // arrival effect the moment the pass it started settles.
+  // A `running` dependency would re-arm the arrival effect the moment the pass it started settles.
   const start = useCallback(
     (announce: boolean) => {
       if (client.isMutating({ mutationKey: queryKeys.pullRequestRefresh(pullRequestId) }) > 0)

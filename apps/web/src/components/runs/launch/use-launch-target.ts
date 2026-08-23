@@ -2,7 +2,6 @@ import type { RepositoryContract } from "@otomat/domain";
 import { useRepositories, useRepositoryBranches } from "@web/api/daemon/queries";
 import { useState } from "react";
 
-/** Why a project cannot be launched on, in the order the UI must resolve it. */
 export type LaunchTargetBlocker =
   | "no_project"
   | "no_repository"
@@ -21,7 +20,6 @@ export type LaunchTargetState =
   | {
       status: "ready";
       repository: RepositoryContract;
-      /** Fork point sent as `base_branch`; defaults to the repository's own default branch. */
       baseBranch: string;
       setBaseBranch: (branch: string) => void;
       branches: string[];
@@ -31,13 +29,6 @@ export type LaunchTargetState =
 
 export type ReadyLaunchTarget = Extract<LaunchTargetState, { status: "ready" }>;
 
-/**
- * Resolves the repository a launch would run in, so the dialog can refuse
- * before creating a run instead of letting the daemon — or worse, the provider
- * — discover the project has nowhere to work. Several usable repositories are
- * `ambiguous` rather than silently the first one: which worktree the agent gets
- * is not a detail Otomat may pick.
- */
 export function useLaunchTarget(projectId: string): LaunchTargetState {
   const repositories = useRepositories(projectId);
   const [chosenId, setChosenId] = useState<string | null>(null);

@@ -15,7 +15,6 @@ interface SidebarProps {
   active: ShellSection;
   online: boolean;
   daemonVersion?: string;
-  /** SSH alias of the active remote execution host; absent when running against the local daemon. */
   hostAlias?: string;
   projects: ProjectSummary[];
   currentProjectId?: string;

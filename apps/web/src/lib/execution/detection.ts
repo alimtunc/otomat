@@ -14,7 +14,6 @@ export function executionDetectionProblem(errors: ExecutionDetectionErrors): str
   return null;
 }
 
-/** An empty menu cannot explain itself; a menu with entries needs no sentence about them. */
 export function noAnnouncedOptionsNote(set: ProviderOptionSet | undefined): string | null {
   if (set === undefined || set.options.length > 0) return null;
   return "This runtime and model announce no option Otomat can send.";

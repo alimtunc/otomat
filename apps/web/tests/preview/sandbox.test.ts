@@ -6,7 +6,6 @@ import { describe, expect, it } from "vitest";
 const BUILD = "1a2b3c4";
 const RUN_ID = "sandbox-run-2";
 
-/** Every read goes through the real typed client, so each fixture is validated by the daemon's own contracts. */
 const daemon = createDaemonClient(sandboxTransport(BUILD));
 
 describe("the preview sandbox", () => {

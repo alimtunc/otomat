@@ -26,7 +26,6 @@ export interface LaunchComposerProps {
   children: ReactNode;
 }
 
-/** The one launch surface New issue and Single run share: same controls, same order, same gate. */
 export function LaunchComposer({
   issue,
   target,
@@ -42,9 +41,7 @@ export function LaunchComposer({
   children,
 }: LaunchComposerProps) {
   const projectId = target.repository.project_id;
-  /** Icon-only: the accessible name is the only thing left to say why the action is unavailable. */
   const name = unavailableReason === null ? action : `${action} — ${unavailableReason}`;
-  /** The shortcut obeys the gate the disabled action states, so neither path can launch twice or empty. */
   const submit = (): void => {
     if (unavailableReason !== null) return;
     onSubmit();

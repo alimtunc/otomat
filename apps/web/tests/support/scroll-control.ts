@@ -1,21 +1,13 @@
 export interface ScrollControl {
-  /** Grow or shrink the scrolled content, as a new message or a taller row would. */
   setContentHeight: (height: number) => void;
-  /** Grow or shrink the visible box, as the queued banner or a taller composer would. */
   setViewportHeight: (height: number) => void;
-  /** Move the scrollbar the way a reader does: the browser notifies listeners afterwards. */
   dragTo: (top: number) => void;
   top: () => number;
   maxTop: () => number;
-  /** Behaviour of the last `scrollTo` the component asked for; undefined until it asks. */
   lastBehavior: () => ScrollBehavior | undefined;
 }
 
-/**
- * happy-dom has no layout, so a scroll container only has the geometry a test gives it.
- * Every move — the component's own `scrollTop` write included — notifies scroll listeners,
- * as a browser does.
- */
+/** happy-dom has no layout, so every move — the component's own `scrollTop` write included — notifies scroll listeners as a browser does. */
 export function controlScroll(
   element: HTMLElement,
   viewportHeight: number,

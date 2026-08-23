@@ -12,7 +12,6 @@ export interface PullRequestCandidateRowProps {
   candidate: PullRequestCandidate;
 }
 
-/** A pull request found by an exact reference to this issue: it shows where, by whom and on whose branch, and adopts nothing on its own. */
 export function PullRequestCandidateRow({ issueId, candidate }: PullRequestCandidateRowProps) {
   const attach = useAttachPullRequest(issueId);
   const [confirming, setConfirming] = useState(false);

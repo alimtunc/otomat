@@ -3,7 +3,6 @@ import { cn } from "@otomat/ui";
 
 export interface UsageMetricValueProps {
   metric: UsageMetric;
-  /** The turns the metric was summed against; what makes a total partial rather than complete. */
   turns: number;
   format: (value: number) => string;
   className?: string;

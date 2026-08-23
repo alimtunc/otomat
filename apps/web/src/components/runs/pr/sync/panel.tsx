@@ -13,7 +13,6 @@ export interface PullRequestSyncPanelProps {
   sync: PullRequestSync;
 }
 
-/** Publishing commits, kept apart from editing details: this panel only ever moves commits. */
 export function PullRequestSyncPanel({ runId, headRef, sync }: PullRequestSyncPanelProps) {
   const [confirmingForce, setConfirmingForce] = useState(false);
   const push = usePushPullRequestCommits(runId);

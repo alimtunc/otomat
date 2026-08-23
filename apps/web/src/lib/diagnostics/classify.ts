@@ -17,11 +17,7 @@ function stackOf(error: unknown): string | null {
   return error instanceof Error ? (error.stack ?? null) : null;
 }
 
-/**
- * Names where an incident came from before anything is shown. The distinction is the whole point:
- * a renderer exception appears in no daemon log, and a transport failure never reached a host at
- * all, so asking the operator for daemon logs would send them after evidence that cannot exist.
- */
+/** The category decides what evidence exists: a renderer exception reaches no daemon log, a transport failure no host. */
 export function classifyError(error: unknown): ErrorClassification {
   if (error instanceof DaemonRequestError) {
     return {

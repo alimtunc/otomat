@@ -47,7 +47,6 @@ function SectionHeader({
   );
 }
 
-/** Only the followed run holds an SSE connection, so the others stay collapsed on their last known status. */
 export function RunConversations({
   runs,
   followedRunId,

@@ -1,6 +1,5 @@
 import { createContext, useContext } from "react";
 
-/** Opens the shell-owned New issue dialog; provided by RouteShell. */
 export const NewIssueContext = createContext<(() => void) | null>(null);
 
 export function useNewIssue(): () => void {

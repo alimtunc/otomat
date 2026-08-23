@@ -5,7 +5,6 @@ export interface WorkspaceReuseNoteProps {
   workspace: Extract<IssueWorkspace, { state: "open" }>;
 }
 
-/** Says plainly which branch the new work lands on, and that a live turn is not raced. */
 export function WorkspaceReuseNote({ workspace }: WorkspaceReuseNoteProps) {
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface-2 p-3">

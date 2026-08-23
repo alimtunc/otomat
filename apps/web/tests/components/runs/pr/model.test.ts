@@ -170,7 +170,6 @@ describe("initialPublicationMode", () => {
   });
 });
 
-/** The pairing the daemon answers with: the row and the operation projected from it. */
 function published(
   row: PullRequestContract,
   failedPhase: PullRequestPublicationActiveState | null = null,

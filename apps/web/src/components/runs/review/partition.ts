@@ -5,12 +5,9 @@ import { countFileComments, type FileCommentCounts } from "./file-comment-counts
 export interface PartitionedComments {
   byLine: Map<string, Map<number, ReviewCommentContract[]>>;
   byFile: Map<string, ReviewCommentContract[]>;
-  /** Comments no longer pinned to the live diff; they render outside any file card, at their excerpt. */
   detached: ReviewCommentContract[];
-  /** Every comment of a file still in the diff, anchored or not — what its header states. */
   byPath: Map<string, ReviewCommentContract[]>;
   countsByPath: Map<string, FileCommentCounts>;
-  /** Files carrying at least one open comment; Hide reviewed must not swallow them. */
   commentedPaths: ReadonlySet<string>;
   anchoredIds: ReadonlySet<string>;
 }

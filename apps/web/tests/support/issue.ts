@@ -1,7 +1,6 @@
 import type { IssueContract, IssueWorkspace, RunState } from "@otomat/domain";
 import { CLOSED_ISSUE_WORKSPACE } from "@otomat/domain";
 
-/** The canonical cycle behind a live execution; contracts are built closed, which reads as "no workspace to reuse". */
 export function openWorkspace(runId: string, runStatus: RunState): IssueWorkspace {
   return {
     state: "open",
@@ -22,7 +21,6 @@ export function referencedIssue(): IssueContract {
   });
 }
 
-/** A mirrored issue: the source fields the grouping, filtering and sorting axes read live here. */
 export function linearIssueContract(overrides: Partial<IssueContract> = {}): IssueContract {
   return issueContract({
     source: "linear",

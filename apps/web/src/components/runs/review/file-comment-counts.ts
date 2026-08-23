@@ -1,12 +1,10 @@
 import type { ReviewCommentContract } from "@otomat/domain";
 
-/** What a file's header has to state without opening anything: how much feedback it carries and in what shape. */
 export interface FileCommentCounts {
   open: number;
   addressed: number;
   agent: number;
   prReview: number;
-  /** Open comments whose anchor no longer matches the live diff. */
   stale: number;
 }
 
@@ -33,7 +31,6 @@ export function countFileComments(
   return counts;
 }
 
-/** Screen-reader wording for the header indicator: a number and a state, never an unnamed icon. */
 export function describeFileComments(path: string, counts: FileCommentCounts): string {
   const total = counts.open + counts.addressed;
   const parts = [`${total} comment${total === 1 ? "" : "s"} on ${path}`];

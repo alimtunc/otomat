@@ -1,6 +1,5 @@
 import type { ReviewedFileContract } from "@otomat/domain";
 
-/** An unsettled toggle outranks the last answer the daemon gave, so the control follows the click, not the round trip. */
 export function reviewedPaths(
   marks: readonly ReviewedFileContract[],
   files: readonly { path: string; sha: string }[],

@@ -30,15 +30,11 @@ export interface PullRequestFormProps {
   operation: OperationContract | null;
   publishability: PullRequestPublishability;
   connected: boolean;
-  /** Advanced fields revealed; owned by the route so it survives a reload. */
   customize: boolean;
   onCustomizeChange: (customize: boolean) => void;
-  /** The explicit Draft/Ready choice the route already carries, or undefined for a new publication. */
   chosenMode: PullRequestPublicationMode | undefined;
   onModeChange: (mode: PullRequestPublicationMode) => void;
-  /** Hands the publication to the daemon; a request without details asks it to write them first. */
   onSubmit: (request: PublishPullRequestRequest) => Promise<boolean>;
-  /** Writes the metadata with the configured agent; null when it failed (the mutation owns the toast). */
   onGenerate: () => Promise<PullRequestProposal | null>;
   isPending: boolean;
   isGenerating: boolean;

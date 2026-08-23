@@ -13,7 +13,6 @@ import { mountWithQuery } from "#support/mount";
 
 stubDiffCanvas();
 
-/** One modification (old line 2) and one pure deletion (old line 7): two logical changes. */
 const TWO_CHANGE_PATCH = `diff --git a/src/index.ts b/src/index.ts
 index 0000001..0000002 100644
 --- a/src/index.ts

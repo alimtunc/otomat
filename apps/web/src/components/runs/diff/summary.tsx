@@ -2,7 +2,6 @@ import type { ReviewDiffContract } from "@otomat/domain";
 import { CopyButton } from "@otomat/ui";
 import { DiffStat } from "@web/components/runs/diff/stat";
 
-/** The diff header's summary line: file count, aggregate +/- counts, and the short, copyable diff sha. */
 export function DiffSummary({ diff }: { diff: ReviewDiffContract }) {
   const fileCount = diff.files.length;
   const filesLabel = fileCount === 1 ? "1 file" : `${fileCount} files`;

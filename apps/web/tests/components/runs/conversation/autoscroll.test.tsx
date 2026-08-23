@@ -198,7 +198,6 @@ function viewportElement(): HTMLElement {
   return viewport;
 }
 
-/** Gives the mounted viewport its geometry, then reports it as a first layout would. */
 async function attachScroll(): Promise<ScrollControl> {
   const scroll = controlScroll(viewportElement(), VIEWPORT_HEIGHT, CONTENT_HEIGHT);
   await act(async () => observers.resize());

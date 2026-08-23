@@ -12,7 +12,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
-/** Creates a local issue without launching a run. On success invalidates the issues cache. */
 export function useCreateIssue() {
   const client = useQueryClient();
   return useMutation({
@@ -23,7 +22,6 @@ export function useCreateIssue() {
   });
 }
 
-/** Re-points an issue at another project, refreshing the issue and every project-scoped list. */
 export function useMoveIssueProject(issueId: string) {
   const client = useQueryClient();
   return useMutation({
@@ -35,7 +33,7 @@ export function useMoveIssueProject(issueId: string) {
   });
 }
 
-/** Sets the source status of a local issue; the daemon refuses a mirrored one. */
+/** The daemon refuses this for a mirrored issue. */
 export function useSetIssueStatus(issueId: string) {
   const client = useQueryClient();
   return useMutation({
@@ -56,7 +54,6 @@ export function issueStatusErrorMessage(error: unknown): string {
   return "Could not change this status — is the daemon running?";
 }
 
-/** Preserves the daemon's typed refusal and falls back to a connectivity message otherwise. */
 export function moveIssueProjectErrorMessage(error: unknown): string {
   if (error instanceof DaemonRequestError) {
     const refusal = issueProjectMoveErrorSchema.safeParse(error.body);
@@ -76,12 +73,11 @@ function createIssueErrorMessage(error: unknown): string {
 }
 
 export interface CreateIssueAndNavigate {
-  /** Resolves true when the issue was created and navigation fired; false when it failed (an error toast was shown). */
+  /** False when the create failed; an error toast was already shown. */
   create: (request: CreateIssueRequest) => Promise<boolean>;
   isPending: boolean;
 }
 
-/** Creates the issue and, on success, toasts and opens its workspace; on failure shows an error toast. */
 export function useCreateIssueAndNavigate(): CreateIssueAndNavigate {
   const createIssue = useCreateIssue();
   const navigate = useNavigate();

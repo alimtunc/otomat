@@ -30,7 +30,6 @@ it("maps every selection to the entry that represents it", () => {
     MODEL_PROVIDER_DEFAULT_VALUE,
   );
   expect(modelSelectValue({ kind: "model", id: "opus" }, catalog)).toBe("opus");
-  // An id the catalog does not list is a custom identifier, never silently shown as a listed one.
   expect(modelSelectValue({ kind: "model", id: "claude-fable-5" }, catalog)).toBe(
     MODEL_CUSTOM_VALUE,
   );
@@ -61,7 +60,6 @@ it("assembles the picker entries in display order, custom staying reachable when
       }),
     ),
   ).toEqual([EXECUTION_INHERIT_VALUE, MODEL_PROVIDER_DEFAULT_VALUE, "opus"]);
-  // A stored custom identifier still owns the trigger even when the catalog stopped allowing custom entries.
   expect(
     values(
       modelChoiceItems(closed, {
@@ -90,7 +88,6 @@ it("notes only what the list cannot say for itself", () => {
   expect(catalogNote(modelCatalog({ models: [], allows_custom: false }), false, false)).toBe(
     "This runtime takes no model selection.",
   );
-  // A readable catalog explains itself through its entries; its provenance is secondary help.
   expect(catalogNote(catalog, false, false)).toBeNull();
 });
 

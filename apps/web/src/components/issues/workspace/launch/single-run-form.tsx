@@ -30,7 +30,6 @@ function unavailableReason(pending: boolean, canLaunch: boolean): string | null 
   return null;
 }
 
-/** One agent turn on this issue: the issue is attached, and the only text is the instruction the user chooses to add. */
 export function SingleRunLaunchForm({
   issue,
   target,
