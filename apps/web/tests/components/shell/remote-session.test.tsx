@@ -9,7 +9,6 @@ import { fakeDesktopBridge, twoHostSnapshot } from "#support/desktop-bridge";
 import { mountWithQuery } from "#support/mount";
 
 vi.mock("@web/api/daemon/queries", () => ({
-  // The tunnel is not up yet, so the health poll fails throughout the bootstrap.
   useDaemonStatus: () => ({ connectionState: "offline", lastSyncAt: null, retry: () => {} }),
   useHealth: () => ({ data: undefined }),
 }));
@@ -102,7 +101,6 @@ it("serves the cockpit normally while an update waits for the runs in flight", a
 
   await probe.push({ phase: "waiting_for_runs", active_runs: 2, detail: null });
 
-  // That wait lasts as long as the runs do, and the tunnel serves the cockpit throughout it.
   expect(probe.read("settling")).toBe("false");
   expect(probe.read("connection")).toBe("offline");
 });

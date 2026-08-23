@@ -29,7 +29,6 @@ function ConnectedSummary({ connection }: { connection: ConnectedLinear }) {
   );
 }
 
-/** Renders the connection card: the connected workspace with a disconnect control, or the connect form carrying any failure. */
 export function LinearConnectionPanel({
   query,
 }: {

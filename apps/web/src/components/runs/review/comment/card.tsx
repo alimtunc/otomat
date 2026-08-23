@@ -9,7 +9,6 @@ import { CommentSuggestion } from "@web/components/runs/review/comment/suggestio
 export interface ReviewCommentCardProps {
   comment: ReviewCommentContract;
   target: ReviewTarget;
-  /** Set when the comment is shown away from its anchor; states why and shows its pinned excerpt. */
   fallbackReason?: string;
   onPublish?: () => void;
   publishing?: boolean;

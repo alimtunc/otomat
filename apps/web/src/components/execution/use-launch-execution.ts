@@ -9,10 +9,8 @@ import { isCompleteModelSelection } from "@web/lib/model-choice";
 
 export interface LaunchExecution {
   agents: LaunchAgentChoice;
-  /** The selection with its agent resolved to something launchable. */
   selection: ExecutionSelection;
   request: ExecutionRequestFields;
-  /** False while no runtime is launchable or a typed model identifier is not one the daemon would accept. */
   canLaunch: boolean;
 }
 

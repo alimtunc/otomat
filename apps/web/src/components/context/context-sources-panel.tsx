@@ -5,7 +5,6 @@ export interface ContextSourcesPanelProps {
   sources: readonly ContextSource[];
 }
 
-/** A disclosure of provenance, not a prompt to edit: the daemon composes the text from its own records. */
 export function ContextSourcesPanel({ sources }: ContextSourcesPanelProps) {
   return (
     <Collapsible>

@@ -6,7 +6,6 @@ import { resolveAgentChoice, resolveProfileChoice, type AgentScope } from "@web/
 export interface LaunchAgentChoice {
   descriptors: RuntimeDescriptor[];
   profiles: AgentProfileContract[];
-  /** The effective choice: the preferred one while usable, else the shared runtime fallback, else null. */
   choice: string | null;
   isPending: boolean;
   isError: boolean;

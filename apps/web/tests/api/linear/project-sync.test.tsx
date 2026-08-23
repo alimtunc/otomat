@@ -92,7 +92,6 @@ async function flush(): Promise<void> {
 let rendered: Mounted | null = null;
 let client: QueryClient;
 
-/** Mounts and waits for the owning daemon's answer: before it lands nothing may be assumed stale. */
 async function renderProbe(): Promise<HTMLElement> {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

@@ -14,16 +14,10 @@ export function useHealth() {
 
 export interface DaemonStatus {
   connectionState: ConnectionState;
-  /** Timestamp of the last successful health response, or null if never reached. */
   lastSyncAt: number | null;
   retry: () => void;
 }
 
-/**
- * Coarse daemon connection state derived from the health poll: `online` on a
- * successful response, `offline` on error while not mid-request, else
- * `reconnecting`. `lastSyncAt` is the last successful health timestamp, or null.
- */
 export function useDaemonStatus(): DaemonStatus {
   const health = useHealth();
   let connectionState: ConnectionState = "reconnecting";
@@ -48,7 +42,6 @@ export function useRepositories(projectId?: string) {
   });
 }
 
-/** Base-branch candidates for one repository; the daemon reads them from the real repo, so this is never cached long. */
 export function useRepositoryBranches(repositoryId: string | null) {
   return useQuery({
     queryKey: queryKeys.repositoryBranches(repositoryId),
@@ -57,7 +50,6 @@ export function useRepositoryBranches(repositoryId: string | null) {
   });
 }
 
-/** Tracked paths matching a search, for attaching repository files as context; the daemon reads git, so this is never cached long. */
 export function useRepositoryFiles(repositoryId: string | null, query: string) {
   return useQuery({
     queryKey: queryKeys.repositoryFiles(repositoryId, query),
@@ -67,7 +59,7 @@ export function useRepositoryFiles(repositoryId: string | null, query: string) {
   });
 }
 
-/** The daemon's runtime catalog with probed availability; short staleTime so installing a CLI shows up without a daemon restart. */
+/** Short staleTime so installing a CLI shows up without a daemon restart. */
 export function useRuntimes() {
   return useQuery({
     queryKey: queryKeys.runtimes,
@@ -76,7 +68,6 @@ export function useRuntimes() {
   });
 }
 
-/** One runtime's model catalog; fetched only once a runtime is chosen, because the daemon probes the installed binary to build it. */
 export function useRuntimeModels(runtimeId: string | null) {
   return useQuery({
     queryKey: queryKeys.runtimeModels(runtimeId),
@@ -85,7 +76,6 @@ export function useRuntimeModels(runtimeId: string | null) {
   });
 }
 
-/** The host's fallback runtime, model and options; every launcher resolves through it, so it is read once and shared. */
 export function useExecutionDefaults() {
   return useQuery({
     queryKey: queryKeys.executionDefaults,
@@ -102,7 +92,7 @@ export function usePullRequestGenerator() {
   });
 }
 
-/** What the installed CLI announces for this runtime and model. Model-scoped because Codex publishes its reasoning levels per model. */
+/** Model-scoped because Codex publishes its reasoning levels per model. */
 export function useRuntimeProviderOptions(runtimeId: string | null, model: string | null) {
   return useQuery({
     queryKey: queryKeys.runtimeOptions(runtimeId, model),

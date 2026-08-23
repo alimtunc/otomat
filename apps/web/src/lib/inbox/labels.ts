@@ -8,7 +8,6 @@ import type { StatusTone } from "@otomat/ui";
 
 export interface InboxKindCopy {
   label: string;
-  /** What the operator is expected to do, in the imperative the row's link leads to. */
   action: string;
 }
 
@@ -35,7 +34,6 @@ const SEVERITY_TONE = {
   attention: "warning",
 } satisfies Record<InboxSeverity, StatusTone>;
 
-/** A resolved entry keeps its cause's label but drops its urgency: it is history, not a demand. */
 export function inboxEntryTone(entry: InboxEntry): StatusTone {
   return entry.state === "resolved" ? "ghost" : SEVERITY_TONE[INBOX_SEVERITY[entry.kind]];
 }

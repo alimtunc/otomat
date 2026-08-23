@@ -8,7 +8,6 @@ export function toDateTimeLocal(instant: Date): string {
   return `${date}T${pad(instant.getHours())}:${pad(instant.getMinutes())}`;
 }
 
-/** The instant a `datetime-local` value names in this browser's own zone, or null when it names none. */
 export function fromDateTimeLocal(value: string): string | null {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();

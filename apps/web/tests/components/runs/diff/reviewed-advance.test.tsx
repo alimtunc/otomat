@@ -47,10 +47,7 @@ function folded(card: HTMLElement): boolean {
   return card.querySelector(`[aria-label="Expand ${card.getAttribute("aria-label")}"]`) !== null;
 }
 
-/**
- * Stacks the cards down the scroller and keeps them stacked: folding the file being reviewed
- * lifts every card under it, and a reveal that measures before that has the reader mid-file.
- */
+/** Folding the file being reviewed lifts every card under it, so a reveal that measures before that leaves the reader mid-file. */
 function layoutCards(scroller: HTMLElement, scroll: ScrollControl): void {
   Element.prototype.getBoundingClientRect = function (this: Element) {
     if (this === scroller) return domRect(0, VIEWPORT);
@@ -111,7 +108,6 @@ function cardFor(scroller: HTMLElement, path: string): HTMLElement {
   return card;
 }
 
-/** The reviewer reads a file by pointing at it, which is what selects it. */
 async function readMidwayThrough(scroller: HTMLElement, scroll: ScrollControl, path: string) {
   const card = cardFor(scroller, path);
   scroll.dragTo(scroll.top() + card.getBoundingClientRect().top + EXPANDED / 2);
@@ -146,7 +142,6 @@ function revealed(scroller: HTMLElement) {
 }
 
 describe("advancing to the next file to review", () => {
-  // Hiding reviewed files drops the folded card on the selection that follows it, one render later.
   for (const hideReviewed of [false, true]) {
     it(`starts the next file at its header when the mouse marks one (hidden: ${hideReviewed})`, async () => {
       diffPrefsStore.actions.set({ hideReviewed });

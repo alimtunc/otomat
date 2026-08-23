@@ -31,7 +31,6 @@ function SessionRow({
   );
 }
 
-/** The run's agent sessions as persisted by the daemon; never inferred from the stream. */
 export function SessionsPanel({ detail }: { detail: RunDetail }) {
   return (
     <section className="flex-none border-b border-border-subtle">

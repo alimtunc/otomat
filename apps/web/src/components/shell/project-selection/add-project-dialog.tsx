@@ -32,7 +32,6 @@ export interface AddProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   hosts: Array<{ id: ExecutionHostId; label: string; active: boolean }>;
-  /** Receives the new project's switcher key; the caller owns selection (and the cross-host switch). */
   onSelect: (switcherId: string) => void;
 }
 

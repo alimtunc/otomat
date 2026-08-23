@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
-/** Runs for the selected project; disabled while no project is selected. */
 export function useProjectRuns(projectId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.runsList(projectId),
@@ -19,7 +18,6 @@ export function useRunsForIssue(issueId: string) {
   });
 }
 
-/** Read on demand: a commit list only grows on a settle. */
 export function useRunCommits(runId: string, enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.runCommits(runId),
@@ -43,10 +41,6 @@ export function useCompeteCandidateDiff(runId: string, groupId: string, stepId: 
   });
 }
 
-/**
- * Fetches one run's detail and polls it every 1.5s until the run settles, then
- * stops refetching; resuming a settled run invalidates the query and restarts it.
- */
 export function useRunDetail(runId: string) {
   return useQuery({
     queryKey: queryKeys.run(runId),
@@ -58,7 +52,7 @@ export function useRunDetail(runId: string) {
   });
 }
 
-/** What abandoning this run's workspace would leave behind. Read on demand — the confirmation must show the branch as it is now, not as it was cached. */
+/** Never cached: the confirmation must show the branch as it is now, not as it was cached. */
 export function useRunWorkspace(runId: string, enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.runWorkspace(runId),
@@ -68,7 +62,6 @@ export function useRunWorkspace(runId: string, enabled: boolean) {
   });
 }
 
-/** A run's conversation. Event-driven: the run's ledger stream invalidates it on every contribution change. */
 export function useRunContributions(runId: string) {
   return useQuery({
     queryKey: queryKeys.runContributions(runId),
@@ -76,7 +69,7 @@ export function useRunContributions(runId: string) {
   });
 }
 
-/** The dossier one session was given. Frozen when that session started, so it never refetches. */
+/** The dossier is frozen when the session starts, so it never refetches. */
 export function useSessionContext(runId: string, agentSessionId: string, enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.sessionContext(runId, agentSessionId),

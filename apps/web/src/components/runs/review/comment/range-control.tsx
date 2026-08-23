@@ -11,7 +11,6 @@ export interface CommentRangeControlProps {
   filePath: string;
   side: DiffSide;
   range: { start: number; end: number } | null;
-  /** Keyboard-reachable equivalent of dragging the gutter; absent for a whole-file anchor. */
   onMoveEdge?: (edge: "start" | "end", by: 1 | -1) => void;
 }
 

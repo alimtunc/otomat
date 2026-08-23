@@ -8,7 +8,6 @@ import { ReviewFixStepDialog } from "@web/components/runs/review/fix-step-dialog
 
 export interface DiffFixBarProps {
   runId: string;
-  /** Whether this run still owns its issue's workspace; a fix is one more step in that same cycle. */
   workspaceOpen: boolean;
   issueId: string | null;
   authority: ReviewFixAuthority;

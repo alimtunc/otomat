@@ -1,11 +1,6 @@
 import type { EventEnvelope } from "@otomat/domain";
 import { useRef } from "react";
 
-/**
- * Which steps produced ledger events the operator has not looked at. Session-local
- * on purpose: the first render baselines every step so history never reads as
- * news, and the selected thread is always considered read.
- */
 export function useStepActivity(
   events: readonly EventEnvelope[],
   selectedStepId: string | null,

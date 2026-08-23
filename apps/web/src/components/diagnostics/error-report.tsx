@@ -19,7 +19,6 @@ import { useErrorDiagnostic } from "./use-error-diagnostic";
 
 export interface ErrorReportProps {
   error: unknown;
-  /** What the caller was doing, when it knows it — shown above the classified title. */
   context?: string;
   componentStack?: string | null;
   occurredAt?: Date;
@@ -33,10 +32,6 @@ const CARD_CLASS =
 const TRIGGER_CLASS =
   "h-8 w-full justify-start gap-1.5 rounded-md px-2 text-xs font-medium text-text-secondary";
 
-/**
- * The one error surface: it classifies the incident, names the layer it came from, offers the
- * copy, export and report actions, and always leaves a way back into the app.
- */
 export function ErrorReport({
   error,
   context,

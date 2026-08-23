@@ -55,7 +55,6 @@ export interface DiffInteractions {
   selectComment: (comment: ReviewCommentContract) => void;
 }
 
-/** Everything a reviewer does to move through a loaded diff: select, reveal, collapse, mark, keyboard. */
 export function useDiffInteractions(input: DiffInteractionsInput): DiffInteractions {
   const back = useBackNavigation(null);
   const active = useActiveDiffFile();

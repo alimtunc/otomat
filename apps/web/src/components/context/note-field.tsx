@@ -3,13 +3,11 @@ import { Field, FieldControl, FieldLabel, Textarea } from "@otomat/ui";
 export interface ContextNoteFieldProps {
   value: string;
   onChange: (note: string) => void;
-  /** Names this field for assistive tech: "Single run", "Step 2", … */
   label: string;
   rows?: number;
   autoFocus?: boolean;
 }
 
-/** The one instruction a prompt surface lets a user type, next to the references it composes. */
 export function ContextNoteField({
   value,
   onChange,

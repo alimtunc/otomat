@@ -6,7 +6,7 @@ const REASON_LABEL = {
   starting: "its instance is starting",
 } as const;
 
-/** Fixed rather than in the flow: the shell owns the viewport height, and a preview must not change the layout it is there to test. */
+/** Fixed, never in the flow: a preview must not change the layout it is there to test. */
 export function PreviewStatusBar() {
   const session = previewSession();
   if (session === null || session.state === "blocked") return null;

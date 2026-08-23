@@ -8,7 +8,6 @@ import {
   RailSection,
 } from "@web/components/issues/workspace/rail/rail-primitives";
 
-/** Only the run's not-yet-opened draft; once a number exists the issue's Pull requests section owns the row. */
 export function PullRequestSection({ run }: { run: RunContract }) {
   const pr = useRunPullRequest(run.id);
   const pullRequest = pr.data?.pull_request ?? null;

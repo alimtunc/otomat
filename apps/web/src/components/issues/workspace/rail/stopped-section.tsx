@@ -8,11 +8,6 @@ import {
 } from "@web/components/issues/workspace/rail/rail-primitives";
 import { failureSummary } from "@web/lib/issue/execution-failure";
 
-/**
- * The stopped cycle, named where the issue is read: what stopped it, which step
- * it stopped on, and the logs that say why. Resuming or extending it happens
- * through the run that still holds the workspace, never through a second one.
- */
 export function StoppedSection({ execution }: { execution: IssueExecution }) {
   if (execution.state !== "failed") return null;
   const { failure, run_id: runId } = execution;

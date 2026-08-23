@@ -15,7 +15,6 @@ import { failureSummary } from "@web/lib/issue/execution-failure";
 export function BoardCard({ issue }: { issue: IssueContract }) {
   const primary = projectIssuePrimaryState(issue);
   const sourceStatus = divergentSourceStatus(issue);
-  // Name the cycle a closed status left open, rather than let the card read as finished work.
   const overlay = primary.axis === "status" ? projectOpenCycleExecution(issue) : null;
   const failure =
     primary.state === "failed" && issue.execution.state === "failed"

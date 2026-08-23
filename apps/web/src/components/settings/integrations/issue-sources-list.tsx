@@ -9,7 +9,6 @@ interface IssueSourcesListProps {
   query: UseQueryResult<IssueSourceContract[]>;
   projects: ProjectContract[];
   teams: LinearTeamContract[];
-  /** Shows an Unmap action per row; issues already imported stay, they just stop syncing. */
   removable?: boolean;
 }
 

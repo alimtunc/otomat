@@ -22,7 +22,6 @@ import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@we
 import { useState } from "react";
 
 export interface AppendStepFormProps {
-  /** The issue whose workspace the step joins; it is attached to the step's context. */
   issue: IssueContract;
   workspace: Extract<IssueWorkspace, { state: "open" }>;
   execution: ExecutionSelection;

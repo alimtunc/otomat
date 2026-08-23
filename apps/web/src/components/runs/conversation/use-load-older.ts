@@ -1,10 +1,7 @@
 import type { RunEventHistory } from "@web/api/runs/use-event-window-history";
 import { useEffect, useState, type RefCallback } from "react";
 
-/**
- * A failed page disarms the scroll trigger, so a broken read is retried explicitly, not on every scroll frame.
- * Only a reader who scrolled up arms it: a viewport taller than the loaded window keeps the trigger in view.
- */
+/** Only a reader who scrolled up arms the trigger (a tall viewport keeps it in view), and a failed page disarms it. */
 export function useLoadOlder(
   history: RunEventHistory,
   readerScrolledUp: boolean,

@@ -11,10 +11,6 @@ interface BoundaryState {
   componentStack: string | null;
 }
 
-/**
- * The last boundary before a blank window: it catches what escapes the router, so a renderer
- * exception always ends on a classified report with a way back instead of an empty page.
- */
 export class AppErrorBoundary extends Component<AppErrorBoundaryProps, BoundaryState> {
   constructor(props: AppErrorBoundaryProps) {
     super(props);

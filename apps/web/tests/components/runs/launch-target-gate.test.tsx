@@ -16,7 +16,6 @@ let repositories: RepositoryContract[] = [repository()];
 let repositoriesFailed = false;
 const moveIssue = vi.fn();
 
-// Mirrors the daemon: `projectId` scopes the list, no argument returns every repository.
 vi.mock("@web/api/daemon/queries", () => ({
   useRepositories: (projectId?: string) =>
     repositoriesFailed

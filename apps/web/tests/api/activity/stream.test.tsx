@@ -32,7 +32,6 @@ function snapshot(runIds: string[], observedAt: string): ActivitySnapshot {
   };
 }
 
-/** React Query notifies observers on a macrotask; a pushed snapshot is only on screen after one tick. */
 async function push(pushed: ActivitySnapshot): Promise<void> {
   await act(async () => {
     handlers?.onSnapshot(pushed);

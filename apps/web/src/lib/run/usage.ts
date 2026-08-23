@@ -9,7 +9,6 @@ export interface ReportedUsage {
   costUsd: number | null;
 }
 
-/** Parse a `runtime.usage` payload into ReportedUsage; null when its `usage` object is absent or malformed. */
 export function parseReportedUsage(payload: EventEnvelope["payload"]): ReportedUsage | null {
   const usage = payload["usage"];
   if (typeof usage !== "object" || usage === null) return null;
@@ -27,10 +26,7 @@ export function latestUsageEvent(events: readonly EventEnvelope[]): EventEnvelop
   return events.filter((event) => event.type === "runtime.usage").at(-1);
 }
 
-/**
- * The last `runtime.usage` event's payload, field by field — never summed or
- * estimated across turns. Null when the run's ledger carries no usage event.
- */
+/** Never summed or estimated across turns: the last `runtime.usage` payload field by field, null when the ledger carries none. */
 export function latestReportedUsage(events: EventEnvelope[]): ReportedUsage | null {
   const payload = latestUsageEvent(events)?.payload;
   return payload ? parseReportedUsage(payload) : null;

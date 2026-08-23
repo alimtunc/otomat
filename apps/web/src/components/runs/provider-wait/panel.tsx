@@ -10,7 +10,6 @@ export interface ProviderWaitPanelProps {
   target: ProviderWaitTarget;
 }
 
-/** The suspended step where the operator meets it: what the provider said, when Otomat will pick the work back up, and every way to change that. */
 export function ProviderWaitPanel({ runId, target }: ProviderWaitPanelProps) {
   const [scheduleOpenedAt, setScheduleOpenedAt] = useState<string | null>(null);
   const resume = useResumeRun(runId);

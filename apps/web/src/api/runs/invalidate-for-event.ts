@@ -3,13 +3,11 @@ import type { QueryClient } from "@tanstack/react-query";
 import { invalidateWriteback } from "@web/api/linear/writeback";
 import { queryKeys } from "@web/api/query-keys";
 
-/** Linear writes carry the issue they landed on, so only that issue's caches are dropped. */
 function issueIdOf(event: EventEnvelope): string | null {
   const issueId = event.payload["issue_id"];
   return typeof issueId === "string" && issueId !== "" ? issueId : null;
 }
 
-/** The event-driven sync policy: maps a run ledger event to the REST caches it invalidates. */
 export function invalidateForEvent(client: QueryClient, runId: string, event: EventEnvelope): void {
   if (event.type === "run.contribution") {
     client.invalidateQueries({ queryKey: queryKeys.runContributions(runId) });

@@ -24,7 +24,6 @@ export interface WorkflowPlanBuilderProps {
   worktreeTarget: ReadyLaunchTarget;
 }
 
-/** The launcher's composition surface: what every node inherits, then the node graph. */
 export function WorkflowPlanBuilder({
   execution,
   onExecutionChange,

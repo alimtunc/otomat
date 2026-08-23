@@ -22,15 +22,11 @@ import { useState } from "react";
 
 export interface ReviewFixStepDialogProps {
   runId: string;
-  /** Issue the fix step attaches, like every other step of the cycle; null while the run is unknown. */
   issueId: string | null;
-  /** What the daemon will freeze, counted here only to name it; the request never lists comments. */
   count: number;
-  /** True while the run cannot take a step; the trigger stays visible and explains itself. */
   disabled: boolean;
 }
 
-/** Turns every open agent comment into an appended step, on an agent the user picks here rather than inherits. */
 export function ReviewFixStepDialog({ runId, issueId, count, disabled }: ReviewFixStepDialogProps) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();

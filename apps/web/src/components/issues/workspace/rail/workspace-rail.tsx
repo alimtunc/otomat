@@ -36,15 +36,10 @@ function ExternalIdentifier({ identifier, url }: { identifier: string; url: stri
   );
 }
 
-/**
- * Right rail of the issue workspace. The run-scoped sections read the followed
- * run and must render inside its RunEventsProvider; with no run the rail shows
- * only the issue's properties.
- */
+/** The run-scoped sections read the run event stream, so this must render inside its RunEventsProvider. */
 export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunContract | null }) {
   const panel = useSidePanel();
   const cycleExecution = projectOpenCycleExecution(issue);
-  // The workspace belongs to the issue's canonical cycle, not to whichever old run is being read.
   const cycleRunId = issue.workspace.run_id ?? run?.id ?? null;
   return (
     <aside

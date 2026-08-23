@@ -5,7 +5,6 @@ import { CenteredState } from "@web/components/shell/centered-state";
 
 export interface DiffEmptyRegionProps {
   target: ReviewTarget;
-  /** Comments survive an emptied diff, so they are shown here rather than lost with it. */
   detached: ReviewCommentContract[];
   onPublish: (commentId: string) => void;
   publishingId: string | null;

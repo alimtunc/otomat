@@ -26,10 +26,8 @@ export interface ProviderWaitScheduleDialogProps {
 
 const HOUR_MS = 60 * 60 * 1000;
 
-/** Relative resumes offered when the provider proved no reset time of its own. */
 const PRESET_HOURS = [1, 3];
 
-/** Otomat never guesses a reset time: when the provider proved none, this is where the operator names one. */
 export function ProviderWaitScheduleDialog({
   runId,
   wait,

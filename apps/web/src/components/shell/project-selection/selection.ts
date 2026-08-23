@@ -4,7 +4,6 @@ import { readStored, writeStored } from "@web/lib/storage";
 
 const PROJECT_SELECTION_KEY = "otomat.selected-project-id";
 
-/** Only repository-backed projects are selectable; the bootstrap ghost must never anchor a scoped view. */
 export function selectableProjects(projects: ProjectContract[]): ProjectContract[] {
   return projects.filter((project) => project.has_repository);
 }

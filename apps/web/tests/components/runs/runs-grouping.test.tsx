@@ -25,7 +25,6 @@ const ISSUE = linearIssueContract({
   source_identifier: "OTO-42",
 });
 
-/** The trigger carries its active-filter count, so it is found by prefix rather than exact text. */
 function filterTrigger(): HTMLButtonElement | undefined {
   return [...document.body.querySelectorAll("button")].find((button) =>
     button.textContent?.startsWith("Filter"),

@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
-/** The workspace packages apps/web reaches only through their built entry point. */
 const CONSUMED = ["domain", "ui", "client"];
 
 const PACKAGES = resolve(import.meta.dirname, "../../../../packages");
@@ -66,11 +65,7 @@ function missingFromBuild(name: string): string[] {
   );
 }
 
-/**
- * apps/web resolves every `@otomat/*` import to the package's `dist`, so a
- * suite run against a stale build tests a surface that no longer exists — the
- * symbol is simply `undefined` at the call site, far from its cause.
- */
+/** apps/web resolves every `@otomat/*` import to the package's `dist`, so a stale build makes a missing symbol read as `undefined` far from its cause. */
 export default function verifyPackageSurface(): void {
   const stale = CONSUMED.map((name) => ({ name, missing: missingFromBuild(name) })).filter(
     (entry) => entry.missing.length > 0,

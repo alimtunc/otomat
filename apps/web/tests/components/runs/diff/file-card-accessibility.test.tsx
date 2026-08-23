@@ -54,8 +54,7 @@ describe("diff comment trigger accessibility (patched @git-diff-view/react)", ()
       newSideButton.click();
     });
 
-    // happy-dom reports zero layout width, which gates the widget's inner content;
-    // the widget row itself proves the click reached the lib's open-widget state.
+    // happy-dom reports zero layout width, which gates the widget's inner content, so only the row itself proves the click landed.
     expect(container.querySelector('tr[data-state="widget"]')).not.toBeNull();
 
     await cleanup();

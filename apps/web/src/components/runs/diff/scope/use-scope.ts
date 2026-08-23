@@ -7,7 +7,6 @@ export interface DiffScopeState {
   select: (next: RunDiffScopeSelector) => void;
 }
 
-/** The scope lives in the URL, so a shared link opens on the same slice and Back returns to the previous one. */
 export function useDiffScope(): DiffScopeState {
   const search = useSearch({ from: "/runs/$runId/diff" });
   const navigate = useNavigate({ from: "/runs/$runId/diff" });

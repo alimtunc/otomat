@@ -14,7 +14,6 @@ function Trace({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Everything the copied and exported diagnostic contains, shown verbatim so the two never differ. */
 export function DiagnosticDetails({ diagnostic }: { diagnostic: ErrorDiagnostic }) {
   return (
     <div className="flex flex-col gap-3.5">

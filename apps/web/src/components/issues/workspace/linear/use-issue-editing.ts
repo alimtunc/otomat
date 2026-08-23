@@ -25,7 +25,6 @@ export interface LinearIssueEditing {
   metadata: LinearTeamMetadata | null;
   draft: LinearIssueDraft | null;
   writes: LinearWriteContract[];
-  /** Latest run-lifecycle mirror, or null while the daemon has never synced this issue. */
   lifecycle: LinearLifecycleSyncState | null;
   lifecycleMapping: IssueSourceLifecycle | null;
   editorOffline: boolean;

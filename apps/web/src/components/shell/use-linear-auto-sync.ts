@@ -4,11 +4,6 @@ import { useProjectLinearSync } from "@web/api/linear/use-project-sync";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
 import { useEffect } from "react";
 
-/**
- * Mounted once above the routes, so navigating between pages is not itself a
- * trigger. Every pass goes through the staleness guard, so returning to a project
- * that synced seconds ago costs no request.
- */
 export function useLinearAutoSync(): void {
   const { projectId } = useSelectedProject();
   const connection = useLinearConnection();

@@ -53,10 +53,7 @@ function ScopeGroup({
   );
 }
 
-/**
- * Fills the composition from a saved preset. The preset is read, never written: whatever the
- * launcher does to the applied steps afterwards stays in the draft.
- */
+/** The preset is read, never written: whatever the launcher does to the applied steps afterwards stays in the draft. */
 export function WorkflowPresetPicker({
   projectId,
   onApply,

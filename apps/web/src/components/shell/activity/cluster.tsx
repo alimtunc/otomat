@@ -3,7 +3,6 @@ import { ActivityRow } from "@web/components/shell/activity/row";
 
 export interface ActivityClusterProps {
   cluster: ActivityIssueCluster;
-  /** Every issue names it: a project alone does not say where it runs. */
   hostLabel: string;
   onNavigate: () => void;
 }

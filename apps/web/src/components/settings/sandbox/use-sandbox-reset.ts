@@ -2,7 +2,6 @@ import { desktopBridge } from "@web/lib/desktop-bridge";
 import { useState } from "react";
 
 export interface UseSandboxResetResult {
-  /** True when the bridge exists and this build is a packaged preview. */
   available: boolean;
   pending: boolean;
   error: string | null;

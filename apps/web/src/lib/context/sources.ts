@@ -1,6 +1,5 @@
 import type { ContextDraft } from "./draft";
 
-/** One line of the launch preview: where a piece of the agent's context comes from. */
 export interface ContextSource {
   id: string;
   label: string;
@@ -9,16 +8,12 @@ export interface ContextSource {
 
 export interface ContextSourceInput {
   draft: ContextDraft;
-  /** Identifier of the issue Otomat attaches on its own; null for a run that has none. */
   issueLabel: string | null;
-  /** Name of the resolved agent profile, or null when the launch names a runtime directly. */
   profileName: string | null;
   skillNames: readonly string[];
-  /** Names of the plan nodes this one waits on; their evidence rides along. */
   dependencyNames: readonly string[];
 }
 
-/** Provenance stated before the launch, not a prompt to edit: the daemon composes the text from these itself. */
 export function contextSources(input: ContextSourceInput): ContextSource[] {
   const issues = input.draft.references.filter((reference) => reference.kind === "issue");
   const files = input.draft.references.filter((reference) => reference.kind === "file");

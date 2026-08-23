@@ -3,7 +3,6 @@ import type { PreviewBlockedCause } from "@web/preview/state";
 
 export interface PreviewBlockedProps {
   cause: PreviewBlockedCause;
-  /** Commit this bundle was built from; null when the manifest naming it is what failed. */
   expected: string | null;
 }
 
@@ -21,7 +20,6 @@ function description(cause: PreviewBlockedCause, expected: string | null): strin
   return `This page was built from ${built}, and the pull request's instance is serving ${serving}. Re-run the preview workflow so both sides carry the same commit.`;
 }
 
-/** A build mismatch is refused rather than degraded: the API the cockpit would call is not the one this bundle was compiled against. */
 export function PreviewBlocked({ cause, expected }: PreviewBlockedProps) {
   return (
     <div className="grid h-dvh place-items-center bg-background p-6">

@@ -14,15 +14,11 @@ import type { ReactNode } from "react";
 export interface ReviewDiffViewProps {
   target: ReviewWorkbenchProps["target"];
   workspace: ReviewWorkbenchProps["workspace"];
-  /** Shown when the subject genuinely has no diff to read. */
   emptyDescription: string;
-  /** The slice the run cockpit asks for; a pull request has only its pinned head. */
   scope?: RunDiffScopeSelector;
-  /** Renders the cockpit's scope selector from the scope the daemon answered with. */
   scopeControl?: (scope: RunDiffScope) => ReactNode;
 }
 
-/** The query ladder around the reviewer: skeleton, blocking error, empty diff, or a stale-noticed workbench. */
 export function ReviewDiffView({
   target,
   workspace,
@@ -40,8 +36,7 @@ export function ReviewDiffView({
 
   if (diffQuery.isPending || reviewQuery.isPending) return <DetailSkeleton blocks={2} />;
   const review = reviewQuery.data;
-  // Two queries share this view, so QueryBoundary's ladder is applied by hand:
-  // block only when a failing query has nothing retained to show.
+  // Two queries share this view, so QueryBoundary's ladder is applied by hand: block only when a failing query has nothing retained.
   if (diffQuery.data === undefined || review === undefined) {
     return (
       <CenteredState>

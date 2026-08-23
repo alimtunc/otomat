@@ -11,11 +11,9 @@ const OUTCOME_LABELS = {
 const UNREADABLE_OUTCOME =
   "The run's execution outcome could not be read, so this page cannot vouch for it. Publishing stays available.";
 
-/** Non-blocking: publishing is a property of the workspace, so the execution is reported as it stands. */
 export function PullRequestExecutionNotice({ runId }: { runId: string }) {
   const report = useRunCompletionReport(runId);
   const failure = report.data ? executionFailure(report.data.report) : null;
-  // A refresh that failed over retained data still knows the outcome; only an unanswered read does not.
   const unreadable = report.isError && report.data === undefined;
   if (failure === null && !unreadable) return null;
   const details =

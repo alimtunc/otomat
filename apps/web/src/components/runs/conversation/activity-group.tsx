@@ -11,7 +11,6 @@ import {
 import { LedgerEventRow } from "@web/components/runs/conversation/ledger-event-row";
 import { describeActivity, type ActivityCounts } from "@web/lib/conversation";
 
-/** Collapsed by default and never dropped: the summary states exactly how much work is folded away. */
 export function ActivityGroup({
   events,
   counts,

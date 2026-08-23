@@ -8,7 +8,6 @@ export interface PullRequestModeFieldProps {
   onChange: (mode: PullRequestPublicationMode) => void;
 }
 
-/** The explicit Draft / Ready choice made at every publish; Otomat never guesses it, and never merges. */
 export function PullRequestModeField({ value, disabled, onChange }: PullRequestModeFieldProps) {
   return (
     <Field hint="Ready opens the pull request for review. Otomat never merges it, and the repository's branch protections still apply.">

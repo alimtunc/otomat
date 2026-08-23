@@ -24,7 +24,6 @@ export interface PublicationModelInput {
 const UPDATE_LABEL = "Update PR details";
 const RETRY_LABEL = "Retry publication";
 
-/** Details only: this action edits title, description and Draft/Ready, and never moves a commit. */
 function createdModel(hasDraftChanges: boolean, connected: boolean): PublicationModel {
   return {
     actionLabel: UPDATE_LABEL,
@@ -34,12 +33,10 @@ function createdModel(hasDraftChanges: boolean, connected: boolean): Publication
   };
 }
 
-/** The action says which of the two publications it will perform, so the choice is never implicit. */
 function createLabel(mode: PullRequestPublicationMode): string {
   return mode === "draft" ? "Create draft PR" : "Create PR ready for review";
 }
 
-/** A workspace that cannot publish says exactly why; how the run ended is never the answer. */
 function creationModel(input: PublicationModelInput): PublicationModel {
   const { publishability, connected, mode } = input;
   if (publishability.blocker !== null) {
@@ -67,7 +64,6 @@ function terminalModel(status: "merged" | "closed"): PublicationModel {
   };
 }
 
-/** The phase the daemon is in names the wait, so the cockpit never shows a spinner without saying what for. */
 function runningModel(operation: OperationContract): PublicationModel {
   const label = operation.phases.find((phase) => phase.state === "active")?.label ?? "Publishing";
   return {
@@ -78,7 +74,6 @@ function runningModel(operation: OperationContract): PublicationModel {
   };
 }
 
-/** A pull request that exists stays editable whatever its run went on to do. */
 function stoppedModel(
   input: PublicationModelInput,
   pullRequest: PullRequestContract,

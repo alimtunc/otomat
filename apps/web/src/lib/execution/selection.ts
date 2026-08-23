@@ -9,7 +9,7 @@ import {
 
 export type ExecutionPickerLevel = Exclude<ExecutionSource, "provider">;
 
-/** Radio sentinels: a selection is either one of these two intents or a value the runtime announced. */
+/** Radio sentinels: a selection is one of these two intents or a value the runtime announced. */
 export const EXECUTION_INHERIT_VALUE = "__inherit";
 export const EXECUTION_AGENT_DEFAULT_VALUE = "__agent_default";
 
@@ -33,7 +33,6 @@ export function optionSelectionFromRadio(value: string): ProviderOptionSelection
 }
 
 export interface ExecutionSelection {
-  /** Encoded agent choice (profile or ad-hoc runtime); null inherits the level above. */
   agent: string | null;
   model?: ModelSelection;
   options: ExecutionOptionSelections;
@@ -41,7 +40,6 @@ export interface ExecutionSelection {
 
 export const EMPTY_EXECUTION_SELECTION: ExecutionSelection = { agent: null, options: {} };
 
-/** Null asks for the provider default's option set. */
 export function scopedModelId(model: ModelSelection | null): string | null {
   return model !== null && model.kind === "model" ? model.id : null;
 }

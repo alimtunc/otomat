@@ -10,7 +10,6 @@ import {
 } from "@otomat/ui";
 import { issueStatusErrorMessage, useSetIssueStatus } from "@web/api/issues/mutations";
 
-/** Falls back to a plain chip whenever nothing is offerable: a mirrored issue, or one the machine has no manual edge out of. */
 export function IssueStatusControl({ issue }: { issue: IssueContract }) {
   const setStatus = useSetIssueStatus(issue.id);
   const targets = issue.source === "local" ? manualIssueTargets(issue.status) : [];

@@ -5,7 +5,6 @@ import { ActivityPanel } from "@web/components/shell/activity/panel";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { useState } from "react";
 
-/** A count past this reads as "a lot"; the exact number belongs in the panel, not on a 16px badge. */
 const BADGE_CAP = 9;
 
 export interface ActivityCenterProps {

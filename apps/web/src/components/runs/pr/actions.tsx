@@ -4,7 +4,6 @@ export interface PullRequestActionsProps {
   primaryLabel: string;
   primaryDisabled: boolean;
   primaryLoading: boolean;
-  /** Composes generation and publication in one action; null submits the fields as they stand. */
   onCompose: (() => void) | null;
   onGenerate: () => void;
   generateDisabled: boolean;

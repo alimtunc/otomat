@@ -14,7 +14,6 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** Everything abandoning leaves reachable: nothing here is deleted, so it reads as an inventory, not a warning list. */
 export function WorkspaceClosureEvidence({ summary }: WorkspaceClosureEvidenceProps) {
   const { pull_request: pullRequest } = summary;
   return (

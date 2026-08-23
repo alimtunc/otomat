@@ -6,19 +6,12 @@ import {
   type UsageFilters,
 } from "@otomat/domain";
 
-/** One stable key segment per scope, so switching scope refetches instead of reading a neighbour's cache. */
 function runDiffScopeKey(scope: RunDiffScopeSelector): string {
   const params = runDiffScopeParams(scope);
   return `${params.scope ?? "workspace"}:${params.commit ?? params.step ?? params.session ?? ""}`;
 }
 
-/**
- * Query-key factory. Keys nest so a parent invalidation cascades to children
- * (TanStack matches by prefix): invalidating `run(id)` also clears that run's
- * `runPullRequest`, and invalidating `runs` also clears every `runsForIssue`.
- * A review surface roots at `review` because a run and an adopted pull request
- * both own one. Note `run` (single) and `runs` (list) are distinct roots.
- */
+/** Keys nest so a parent invalidation cascades by prefix; `run` (single) and `runs` (list) are distinct roots. */
 export const queryKeys = {
   health: ["health"] as const,
   activity: ["activity"] as const,

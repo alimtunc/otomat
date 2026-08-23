@@ -30,7 +30,6 @@ interface ComposerOptions {
   onMoveEdge?: (edge: "start" | "end", by: 1 | -1) => void;
 }
 
-/** Stands in for the gutter, which owns the range an open composer is anchored on. */
 function RangeOwner(options: ComposerOptions) {
   const [range, setRange] = useState({
     fromLine: options.fromLine ?? null,

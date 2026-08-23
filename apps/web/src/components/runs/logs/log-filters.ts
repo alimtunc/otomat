@@ -1,6 +1,5 @@
 import type { EventEnvelope, EventType } from "@otomat/domain";
 
-/** Log buckets: runtime families map onto themselves; everything else is control-plane. */
 export type LogCategory = "provider" | "tool" | "permission" | "usage" | "control";
 
 export type LogFilter = "all" | LogCategory | "error";
@@ -38,7 +37,6 @@ export function logCategory(event: EventEnvelope): LogCategory {
   return CATEGORY_BY_TYPE[event.type];
 }
 
-/** Errors cut across categories: failed tool calls, and the turns and runs that settle on `failed`. */
 export function isErrorLogEvent(event: EventEnvelope): boolean {
   if (event.payload["is_error"] === true) return true;
   return event.payload["final_status"] === "failed" || event.payload["run_status"] === "failed";

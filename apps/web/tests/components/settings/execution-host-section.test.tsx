@@ -72,7 +72,6 @@ it("lists both hosts and marks the active one, without a manual switch", async (
 
   expect(document.body.textContent).toContain("otomat-vps");
   expect(document.body.textContent).toContain("Active");
-  // The host follows the selected project; Settings only manages the host list.
   const switchButtons = [...document.querySelectorAll("button")].filter(
     (candidate) => candidate.textContent?.trim() === "Use this host",
   );
@@ -303,7 +302,6 @@ it("says a remote save was refused instead of showing the value as applied", asy
   });
 
   expect(document.body.textContent).toContain("The remote host is not connected yet.");
-  // The draft stays on screen: nothing was applied, so nothing snaps back to a saved value.
   expect(capacityForm("otomat-vps").input.value).toBe("9");
 });
 

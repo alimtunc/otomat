@@ -19,7 +19,6 @@ import {
 
 const REFRESH = "Refresh issues";
 
-/** Reports the pass wherever it was started, so a second click cannot launch a second import. */
 export function LinearSyncControl({ sync }: { sync: ProjectLinearSync }) {
   const label = describeLinearSync(sync.status, sync.running);
   const mapped = linearSourcesMapped(sync.status);

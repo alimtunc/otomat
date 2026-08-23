@@ -27,7 +27,6 @@ export interface InboxEntryFilterOptions {
   projects: FilterOption<string>[];
 }
 
-/** `open` is the default view rather than an applied filter, so it never reads as one. */
 export function activeInboxEntryFilterCount(filters: InboxEntryFilters): number {
   return (
     [filters.kinds, filters.projects].filter((list) => list.length > 0).length +
@@ -49,7 +48,6 @@ export function applyInboxEntryFilters(
   );
 }
 
-/** Kinds keep their declared order; projects come from the entries, so an idle project offers no option. */
 export function inboxEntryFilterOptions(entries: readonly InboxEntry[]): InboxEntryFilterOptions {
   const present = new Set(entries.map((entry) => entry.kind));
   const projects = new Map<string, FilterOption<string>>();

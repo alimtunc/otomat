@@ -113,7 +113,6 @@ it("summarises runtime, model and every announced option on the one visible cont
   const label = triggerLabel();
   expect(label).toContain("claude");
   expect(label).toContain("opus");
-  // Nothing selects the permission mode, so the autonomous default Otomat sends is what the summary names.
   expect(label).toContain("Auto");
   expect(label).toContain("High");
 });
@@ -168,7 +167,6 @@ it("summarises the Codex keys for a Codex agent, and no Claude one", async () =>
   const label = triggerLabel();
   expect(label).toContain("codex");
   expect(label).toContain("Workspace write");
-  // Otomat sends no reasoning effort of its own, so the summary names none.
   expect(label).not.toContain("Medium");
   expect(label).not.toContain("Auto");
 });

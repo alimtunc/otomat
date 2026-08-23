@@ -61,7 +61,6 @@ function stopStepErrorMessage(error: unknown): string {
   return "Could not stop this step — is the daemon running?";
 }
 
-/** Interrupts the step's live turn; the conversation and its provider session stay resumable. */
 export function useStopRunStep(runId: string) {
   const client = useQueryClient();
   return useMutation({

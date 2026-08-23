@@ -5,7 +5,6 @@ export interface RepositoryChoiceProps {
   target: Extract<LaunchTargetState, { status: "ambiguous" }>;
 }
 
-/** Blocking on purpose: which repository the agent gets a worktree in is the user's call, never a default. */
 export function RepositoryChoice({ target }: RepositoryChoiceProps) {
   return (
     <EmptyState

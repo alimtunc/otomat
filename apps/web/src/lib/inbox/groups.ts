@@ -18,7 +18,6 @@ function sectionOf(entry: InboxEntry): InboxSectionKey {
   return entry.state === "resolved" ? "resolved" : INBOX_SEVERITY[entry.kind];
 }
 
-/** Sections in reading order, empty ones dropped so no heading stands over nothing; entries keep the daemon's order. */
 export function groupInboxEntries(entries: readonly InboxEntry[]): InboxSection[] {
   return SECTIONS.map((section) => ({
     key: section.key,

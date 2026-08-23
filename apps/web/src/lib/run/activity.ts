@@ -8,10 +8,7 @@ export function isRunState(value: unknown): value is RunState {
   return RUN_STATES.some((state) => state === value);
 }
 
-/**
- * The run whose activity the workspace shows: the user's pick while it is still
- * listed, else the oldest still-active run, else the most recent run, else null.
- */
+/** `runs` is oldest-first: the first still-active run is the oldest, and the last entry the most recent. */
 export function resolveFollowedRun(
   runs: RunContract[],
   selectedId: string | null,

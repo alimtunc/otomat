@@ -1,6 +1,5 @@
 import { providerOptionSet } from "#support/runtime-options";
 
-/** What a current Claude Code announces, under Claude's own keys: the `--permission-mode` values, `auto` being the autonomous one Otomat sends by default, and an effort. */
 export const CLAUDE_ANNOUNCED = providerOptionSet({
   detection: { status: "ok", detail: "Announced by `claude --help`." },
   options: [
@@ -27,7 +26,6 @@ export const CLAUDE_ANNOUNCED = providerOptionSet({
   ],
 });
 
-/** What a current Codex announces: a sandbox and a per-model reasoning effort, under Codex's own keys. */
 export const CODEX_ANNOUNCED = providerOptionSet({
   runtime: "codex",
   model: "gpt-5.6-sol",

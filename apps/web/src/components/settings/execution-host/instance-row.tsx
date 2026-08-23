@@ -3,7 +3,6 @@ import { Button } from "@otomat/ui";
 
 export interface InstanceRowProps {
   instance: RemoteInstanceEntry;
-  /** Label of the in-flight action, or null; every button disables while one is pending. */
   pending: string | null;
   onStop(build: string): void;
   onRemove(build: string): void;

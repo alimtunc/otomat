@@ -54,7 +54,6 @@ function planWithModel(model: ResolvedModel | null) {
   return planWith({ ...CONFIG, model });
 }
 
-/** Every runtime event the daemon writes names the step run it came from; usage is no exception. */
 function usage(model: string | null, stepRunId = "s1"): EventEnvelope {
   return envelope({
     type: "runtime.usage",

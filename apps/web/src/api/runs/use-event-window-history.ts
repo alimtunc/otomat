@@ -3,15 +3,12 @@ import { useInfiniteQuery, type QueryKey } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 
 export interface RunEventHistory {
-  /** The loaded pages in `seq` order; the live tail is not part of them. */
   events: EventEnvelope[];
-  /** `pending` until the newest page lands; `error` only when no page ever did. */
+  /** `error` only when no page ever landed; a failed older page is `olderFailed`. */
   status: "pending" | "ready" | "error";
-  /** `seq` the live stream resumes from, null while no page carries an event. */
   tailSeq: number | null;
   hasOlder: boolean;
   loadingOlder: boolean;
-  /** The last older-page read failed; the loaded pages are intact and `loadOlder` retries it. */
   olderFailed: boolean;
   loadOlder: () => void;
   retry: () => void;

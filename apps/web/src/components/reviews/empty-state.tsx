@@ -3,7 +3,6 @@ import { EmptyState } from "@otomat/ui";
 
 export interface ReviewInboxEmptyProps {
   inbox: PullRequestInbox;
-  /** True when entries exist but the active filters hide all of them. */
   filtered: boolean;
 }
 

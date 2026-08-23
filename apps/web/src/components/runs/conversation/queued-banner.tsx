@@ -27,7 +27,6 @@ function queuedNote(status: RunContract["status"], label: string): string {
   return `${label} queued and will be delivered at the next safe turn.`;
 }
 
-/** A resting run with a queue is the post-restart case: the daemon never resumes a run on its own at boot. */
 export function QueuedBanner({
   run,
   contributions,

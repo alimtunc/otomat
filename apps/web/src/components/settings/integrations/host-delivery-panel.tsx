@@ -9,7 +9,6 @@ const STATES = {
   unavailable: { label: "Unavailable", tone: "text-text-tertiary" },
 } satisfies Record<LinearHostDeliveryState, { label: string; tone: string }>;
 
-/** A host that is down says what it is still owed, instead of claiming a connection. */
 export function HostDeliveryPanel() {
   const delivery = useLinearDelivery();
   if (delivery === null) return null;

@@ -41,7 +41,6 @@ export function resolvedOptionLabel(
   return `${value} — ${executionSourceLabel(resolved.source, profileName)}`;
 }
 
-/** Spelled out on the entry itself: "default" alone reads as "some default", not "Otomat stays out of it". */
 export const PROVIDER_DEFAULT_MODEL_LABEL = "Provider's own default — Otomat sends no model";
 
 export function resolvedModelLabel(

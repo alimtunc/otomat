@@ -13,7 +13,6 @@ export function diffLineRow(operator: string, id: string): string {
   return `<tr class="diff-line" id="${id}"><td><span class="diff-line-content-operator">${operator}</span></td></tr>`;
 }
 
-/** happy-dom lays nothing out, so every rect the diff surface reads is one a test hands it. */
 export function domRect(top: number, height: number): DOMRect {
   return {
     x: 0,

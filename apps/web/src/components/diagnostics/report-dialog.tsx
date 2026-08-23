@@ -24,10 +24,6 @@ const PREVIEW_CLASS =
   "max-h-72 overflow-auto whitespace-pre-wrap rounded-md border border-border-subtle " +
   "bg-background p-2.5 font-mono text-[11px] leading-relaxed text-text-secondary";
 
-/**
- * The confirmation step: it shows the exact text a report would carry and does nothing until the
- * user chooses. There is no telemetry and no background send — confirming opens an editable draft.
- */
 export function ReportProblemDialog({ diagnostic, open, onOpenChange }: ReportProblemDialogProps) {
   const draft = problemReportDraft(diagnostic);
   const preview = `${draft.title}\n\n${draft.body}`;

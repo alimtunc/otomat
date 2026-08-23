@@ -10,18 +10,15 @@ import {
 } from "@web/lib/context/draft";
 
 export interface ContextComposerProps {
-  /** The issue Otomat attaches on its own; it is shown, previewable, and not detachable. */
   issue: IssueContract | null;
   projectId: string | undefined;
   value: ContextDraft;
   onChange: (draft: ContextDraft) => void;
-  /** Names this composer's controls for assistive tech: "Single run", "Step 2", … */
   label: string;
   noteRows?: number;
   autoFocus?: boolean;
 }
 
-/** References are objects the daemon resolves at launch, never text copied into the note. */
 export function ContextComposer({
   issue,
   projectId,

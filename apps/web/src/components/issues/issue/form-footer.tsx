@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 
 export interface IssueFormFooterProps {
   onCancel: () => void;
-  /** The primary submit control — differs per form, and is absent where the composer owns its own send action. */
   submit?: ReactNode;
 }
 

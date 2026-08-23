@@ -3,7 +3,6 @@ import { Button } from "@otomat/ui";
 import { providerOptionValueLabel } from "@web/lib/provider-option-labels";
 
 export interface DangerConfirmProps {
-  /** A picked value that removes a boundary, held aside until it is confirmed. */
   pending: { key: ProviderOptionKey; choice: ProviderOptionChoice };
   onConfirm: () => void;
   onCancel: () => void;

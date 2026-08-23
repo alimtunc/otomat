@@ -1,7 +1,6 @@
 import type { IconName } from "@otomat/ui";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 
-/** A settings destination: an in-app route, or a document served outside the router. */
 export type SettingsNavEntry = { label: string; icon: IconName } & (
   | { to: string }
   | { href: string }
@@ -44,7 +43,6 @@ const REFERENCE: SettingsNavGroup = {
   ],
 };
 
-/** The sandbox entry exists only in packaged preview builds; everyone else keeps the static nav. */
 export function settingsNavGroups(): SettingsNavGroup[] {
   const global =
     desktopBridge()?.preview === true ? [...GLOBAL_ENTRIES, SANDBOX_ENTRY] : GLOBAL_ENTRIES;

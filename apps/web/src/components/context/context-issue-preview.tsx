@@ -6,7 +6,6 @@ export interface ContextIssuePreviewProps {
   issue: IssueContract;
 }
 
-/** What an attached issue will be frozen as, shown before the launch rather than after it. */
 export function ContextIssuePreview({ issue }: ContextIssuePreviewProps) {
   return (
     <>

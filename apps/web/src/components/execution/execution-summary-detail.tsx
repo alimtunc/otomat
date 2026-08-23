@@ -2,7 +2,6 @@ import type { ExecutionSummaryEntry } from "@web/lib/execution/summary";
 
 export interface ExecutionSummaryDetailProps {
   entries: ExecutionSummaryEntry[];
-  /** How the installed CLI was read; the only place this technical line appears. */
   detection: string | null;
 }
 

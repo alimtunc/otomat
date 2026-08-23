@@ -9,7 +9,6 @@ index 0000001..0000002 100644
 +++ b/src/one.ts
 `;
 
-/** Old line 2 is removed, new line 2 added; both carry the needle, and line 3 carries it twice. */
 const PATCH = `${HEADER}@@ -1,3 +1,3 @@
  const total = 1;
 -const Answer = 2;

@@ -17,7 +17,6 @@ export interface DetachPullRequestDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/** The only place an attachment is removed; it says what stays, because detaching touches nothing on GitHub. */
 export function DetachPullRequestDialog({
   issueId,
   pullRequest,

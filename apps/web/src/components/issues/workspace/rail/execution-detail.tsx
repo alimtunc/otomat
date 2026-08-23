@@ -12,7 +12,6 @@ export interface ExecutionDetailProps {
 }
 
 export function ExecutionDetail({ executions, reported }: ExecutionDetailProps) {
-  /** Identical configurations need no breakdown: the card above already shows the one they share. */
   const perStep = new Set(executions.map((execution) => execution.configHash)).size > 1;
 
   return (

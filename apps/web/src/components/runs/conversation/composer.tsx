@@ -9,7 +9,6 @@ import { contributionErrorMessage, resolveContributionGate } from "@web/lib/run/
 import { stepParticipant } from "@web/lib/run/participant";
 import type { KeyboardEvent } from "react";
 
-/** Step-scoped composer. It stays usable while the agent works: the message is persisted and waits for that step's next turn. */
 export function ConversationComposer({
   detail,
   stepRunId: selectedStepRunId,

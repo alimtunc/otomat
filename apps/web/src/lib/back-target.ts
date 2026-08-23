@@ -11,7 +11,6 @@ const ISSUE_ROUTE = /^\/issues\/[^/]+$/;
 const AGENT_PROFILE_ROUTE = /^\/settings\/agents\/[^/]+$/;
 const PULL_REQUEST_ROUTE = /^\/pull-requests\/[^/]+\/[^/]+$/;
 
-/** `null` means `pathname` is not a detail view, so it owns no Back control. */
 export function backTarget(pathname: string, linkedIssueId: string | null): BackTarget | null {
   const tab = RUN_TAB_ROUTE.exec(pathname);
   if (tab !== null) {

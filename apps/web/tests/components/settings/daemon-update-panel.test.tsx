@@ -73,7 +73,6 @@ it("renders a bundle CI has not published yet as progress, never as a failed upd
   const waiting = [...document.querySelectorAll('[role="status"]')].at(-1);
   expect(waiting?.textContent).toContain("Waiting for the CI artifact…");
   expect(waiting?.textContent).toContain("its CI run is still running");
-  // The wait and the last failure are separate lines: neither may borrow the other's wording.
   const alert = document.querySelector('[role="alert"]');
   expect(alert?.textContent).toContain("ended as failure");
   expect(alert?.textContent).not.toContain("Waiting for the CI artifact");

@@ -60,7 +60,6 @@ function WorkflowTargetIntro({
   );
 }
 
-/** Composes a multi-step workflow, on an issue that already exists or on a goal that creates one. */
 export function WorkflowLaunchForm({
   target,
   worktreeTarget,

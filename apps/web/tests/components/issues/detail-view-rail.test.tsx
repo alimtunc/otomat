@@ -12,8 +12,7 @@ import { withQueryClient } from "#support/query";
 const GROUP_STORAGE_KEY = "react-resizable-panels:otomat.issue-detail";
 const RAIL_COLLAPSED_KEY = "otomat.panel.issue-rail.collapsed";
 
-// The library measures a group as the sum of its panels' offsets, and happy-dom runs no
-// layout engine, so give every element a share of a two-panel group.
+// The library measures a group as the sum of its panels' offsets, and happy-dom runs no layout engine.
 const GROUP_SIZE = 1000;
 for (const property of ["offsetWidth", "offsetHeight"]) {
   Object.defineProperty(HTMLElement.prototype, property, {
@@ -31,8 +30,7 @@ stubAnimations();
 
 let wide = true;
 
-// The rail crash only reproduces when the issue resolves into an already-mounted group, so
-// the query mock is a store the test can flip mid-mount.
+// The rail crash only reproduces when the issue resolves into an already-mounted group.
 let issueLoaded = false;
 const issueListeners = new Set<() => void>();
 const subscribeIssue = (listener: () => void) => {

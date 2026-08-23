@@ -8,17 +8,10 @@ interface QueryBoundaryProps<T> {
   query: UseQueryResult<T>;
   pending: ReactNode;
   error: ReactNode;
-  /** "block" prefers the error slot over retained data, for controls that must not act on stale state. */
   staleData?: "keep" | "block";
   children: (data: T) => ReactNode;
 }
 
-/**
- * The pending → error → data ladder every single-value query boundary shares; `QueryList` is the
- * list-shaped sibling. Data retained from a previous fetch outlives a failed refresh: it renders
- * under a stale notice with Retry instead of the blocking error slot. A query that failed only
- * because its host is still settling stays pending: the shell already says what it is waiting for.
- */
 export function QueryBoundary<T>({
   query,
   pending,

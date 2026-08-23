@@ -13,7 +13,6 @@ import { queryKeys } from "@web/api/query-keys";
 import { seedIssueRun } from "@web/api/runs/seed-run";
 import { describeRunWait } from "@web/lib/run/wait-copy";
 
-/** Starts a run. On success seeds the issue's run list with the confirmed run, then invalidates. */
 function useStartRun() {
   const client = useQueryClient();
   return useMutation({
@@ -48,12 +47,11 @@ function toastLaunched(launched: RunLaunchResponse): void {
 }
 
 export interface LaunchRun {
-  /** Resolves the launched run, or null when the daemon refused it (an error toast was shown). */
+  /** Null when the daemon refused the launch; an error toast was already shown. */
   launch: (request: StartRunRequest) => Promise<RunContract | null>;
   isPending: boolean;
 }
 
-/** Toasts the outcome and hands the run back; where the user goes next belongs to the surface that launched it. */
 export function useLaunchRun(): LaunchRun {
   const startRun = useStartRun();
 

@@ -5,11 +5,6 @@ export interface ErrorCategoryCopy {
   description: string;
 }
 
-/**
- * What the operator is told before any detail. A renderer exception says so in as many words: a
- * fault like `Panel constraints not found for Panel issue-rail` appears in no daemon log, and
- * sending someone to look for it there costs more than saying nothing.
- */
 export function describeErrorCategory(diagnostic: ErrorDiagnostic): ErrorCategoryCopy {
   if (diagnostic.category === "renderer") {
     return {

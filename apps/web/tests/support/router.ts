@@ -41,7 +41,6 @@ async function flushRouter(): Promise<void> {
   });
 }
 
-/** Mounts a fragment under the app's real detail paths so its <Link> targets resolve. */
 export async function mountRouted(node: ReactNode): Promise<Mounted> {
   const mounted = await mount(routedElement(node));
   await flushRouter();

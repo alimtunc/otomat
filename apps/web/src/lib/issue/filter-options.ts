@@ -14,7 +14,6 @@ export interface IssueFilterOption {
   color?: string;
 }
 
-/** The tracker-owned axes: unlike source, status and priority, their values come from the loaded issues. */
 export interface IssueFilterOptions {
   assignees: IssueFilterOption[];
   linearStates: IssueFilterOption[];
@@ -61,7 +60,6 @@ export function assigneeOptions(issues: IssueContract[]): IssueFilterOption[] {
   return sortedOptions(names);
 }
 
-/** Distinct Linear states across the loaded issues, with the first color seen per name. */
 export function linearStateOptions(issues: IssueContract[]): IssueFilterOption[] {
   const states = new Map<string, IssueFilterOption>();
   for (const issue of issues) {

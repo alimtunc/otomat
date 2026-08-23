@@ -1,6 +1,5 @@
 import type { EventEnvelope, RunContributionContract } from "@otomat/domain";
 
-/** Ledger families a reader follows on their own; everything else folds into a collapsed group. */
 const MILESTONE_TYPES: ReadonlySet<EventEnvelope["type"]> = new Set([
   "run.lifecycle",
   "git.diff_updated",
@@ -28,7 +27,7 @@ export interface ConversationStep {
   name: string;
 }
 
-/** The assistant's own words. Reasoning is not the answer the user is waiting for, so it stays grouped. */
+/** Reasoning is not the answer the user is waiting for, so it stays grouped. */
 function agentText(event: EventEnvelope): string | null {
   if (event.type !== "runtime.message" || event.payload["thinking"] === true) return null;
   const text = event.payload["text"];
@@ -94,7 +93,7 @@ export function buildConversation(
     pending = [];
   }
 
-  /** Run-level events (no step) stay under the section already open, as the flat timeline did. */
+  /** Run-level events (no step) stay under the section already open. */
   function openStepSection(event: EventEnvelope): void {
     if (stepNames === null) return;
     const stepId = event.step_run_id;

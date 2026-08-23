@@ -10,7 +10,6 @@ export interface ParsedProjectSwitcherKey {
   projectId: string;
 }
 
-/** Splits on the first colon; a bare or unknown-host key resolves to the fallback host. */
 export function parseProjectSwitcherKey(
   key: string,
   fallbackHost: ExecutionHostId,

@@ -20,7 +20,6 @@ export interface ReviewCommentComposerProps {
   fromLine: number | null;
   destinations: ReviewDestinationAvailability;
   preferredDestination: ReviewCommentDestination;
-  /** Absent when the anchor is the whole file, which has no edge to move. */
   onMoveEdge?: (edge: "start" | "end", by: 1 | -1) => void;
   onSubmit: (comment: ComposedComment) => Promise<void>;
   onClose: () => void;

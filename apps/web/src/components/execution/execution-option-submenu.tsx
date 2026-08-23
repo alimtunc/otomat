@@ -29,7 +29,6 @@ export interface ExecutionOptionSubmenuProps {
   option: ResolvedExecutionOption;
   selection: ProviderOptionSelection | undefined;
   onSelectionChange: (selection: ProviderOptionSelection | undefined) => void;
-  /** Named on the profile entry so "from the agent" is never anonymous. */
   profileName: string | null;
 }
 
@@ -48,7 +47,6 @@ function choiceLabel(
   return marks === "" ? label : `${label} — ${marks}`;
 }
 
-/** Nothing outside `option.descriptor.choices` is listed: a value the CLI does not announce cannot be picked here at all. */
 export function ExecutionOptionSubmenu({
   level,
   option,

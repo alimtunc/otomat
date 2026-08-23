@@ -5,7 +5,6 @@ import type { LaunchTargetBlocker } from "@web/components/runs/launch/use-launch
 import { RegisterRepositoryForm } from "@web/components/settings/register-repository-form";
 
 export interface LaunchBlockedPanelProps {
-  /** Null when no project is selected, which is the one blocker registration cannot fix. */
   projectId: string | null;
   blocker: LaunchTargetBlocker;
   issue?: IssueContract;
@@ -28,7 +27,6 @@ const DESCRIPTIONS = {
     "The registered path is gone or is no longer a git repository, so no worktree can be created from it.",
 } satisfies Record<LaunchTargetBlocker, string>;
 
-/** Replaces the launch form with what unblocks it: move the issue, or register a repository. */
 export function LaunchBlockedPanel({ projectId, blocker, issue }: LaunchBlockedPanelProps) {
   return (
     <div className="flex flex-col gap-4">

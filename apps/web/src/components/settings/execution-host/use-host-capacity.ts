@@ -4,7 +4,6 @@ import { daemon } from "@web/api/client";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 import { useState } from "react";
 
-/** In the browser the only reachable host is the daemon this cockpit was started against. */
 function readCapacity(
   bridge: OtomatDesktopBridge | null,
   hostId: ExecutionHostId,
@@ -31,12 +30,10 @@ function writeCapacity(
 }
 
 export interface UseHostCapacityResult {
-  /** What that host's daemon reports it is applying; undefined while the first read is in flight. */
   capacity: AgentCapacity | undefined;
   loadError: string | null;
   saving: boolean;
   saveError: string | null;
-  /** Resolves true only when the host confirmed the new cap; a refusal leaves `saveError` set. */
   save(maxConcurrentSessions: number): Promise<boolean>;
 }
 

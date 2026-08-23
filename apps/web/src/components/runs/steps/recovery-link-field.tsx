@@ -7,7 +7,6 @@ export interface RecoveryLinkFieldProps {
   onCheckedChange: (checked: boolean) => void;
 }
 
-/** Links the appended step to the failure it answers for; without the link an unrelated success would be read as a recovery. */
 export function RecoveryLinkField({ step, checked, onCheckedChange }: RecoveryLinkFieldProps) {
   return (
     <div className="flex items-start gap-2.5 rounded-md border border-border bg-surface-2 p-3">

@@ -6,7 +6,6 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { mount } from "#support/mount";
 
-/** Stands in for the Reviews view: the same hook, mounted and unmounted as the route is. */
 function InboxViewProbe() {
   const view = useInboxView("project-1");
   return (

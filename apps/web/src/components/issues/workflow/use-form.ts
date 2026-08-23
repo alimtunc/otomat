@@ -13,18 +13,16 @@ export interface UseWorkflowFormOptions {
   target: WorkflowLaunchTarget;
   execution: ExecutionRequestFields;
   canLaunch: boolean;
-  /** Branch the run's worktree forks from, resolved by the launch gate. */
   baseBranch: string;
   onLaunched: (run: RunContract) => void;
 }
 
 interface RejectedPlan {
-  /** The exact composition that failed, so any later edit clears the message by identity. */
+  /** Compared by reference: any later edit yields a new array, which clears the message. */
   steps: WorkflowNodeDraft[];
   message: string;
 }
 
-/** Owns the goal field, the composed plan and submit-time plan validation. */
 export function useWorkflowForm({
   target,
   execution,

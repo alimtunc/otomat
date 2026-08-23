@@ -5,10 +5,7 @@ import {
 } from "@web/lib/diagnostics/component-stacks";
 import { useSyncExternalStore } from "react";
 
-/**
- * The component stack for this error, once React has reported it. It arrives one commit after the
- * error surface first renders, so this subscribes rather than reading once and settling for null.
- */
+/** React reports the stack one commit after this first renders, so it is subscribed to, not read once. */
 export function useComponentStack(error: unknown): string | null {
   useSyncExternalStore(subscribeComponentStacks, componentStacksVersion, componentStacksVersion);
   return componentStackFor(error);

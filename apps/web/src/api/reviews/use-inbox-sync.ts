@@ -6,19 +6,16 @@ import { queryKeys } from "@web/api/query-keys";
 import { usePullRequestInbox } from "@web/api/reviews/queries";
 import { useCallback, useEffect } from "react";
 
-/** A success this recent is reused instead of asking GitHub again. */
 const FRESH_FOR_MS = 60_000;
 
 const REFRESH_INTERVAL_MS = 120_000;
 
 interface RefreshVariables {
   project_id: string;
-  /** Reports the outcome as a toast. Automatic passes stay silent and speak through `last_error`. */
   announce: boolean;
 }
 
 export interface PullRequestInboxSyncState extends Omit<PullRequestInboxSync, "repositories"> {
-  /** Null until the inbox has answered, so the control states nothing it cannot know yet. */
   repositories: number | null;
   refresh: () => void;
 }

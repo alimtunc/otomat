@@ -13,7 +13,6 @@ import { useState } from "react";
 export interface IssueViewBarProps {
   views: IssueViewsResult;
   active: SavedView;
-  /** What the screen shows right now, saved as-is by "Save changes" and by a new view. */
   config: IssuesViewConfig;
   dirty: boolean;
   onOpenView: (viewId: string) => void;

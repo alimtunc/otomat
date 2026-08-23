@@ -24,7 +24,6 @@ export interface SessionContextSectionsProps {
   context: SessionContext;
 }
 
-/** The dossier a session was given, shown as it was frozen: nothing here is re-read live. */
 export function SessionContextSections({ context }: SessionContextSectionsProps) {
   const { selection, workspace, pull_request: pullRequest, progress } = context;
   return (

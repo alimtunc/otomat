@@ -15,7 +15,6 @@ export interface RunEventStream {
 
 export const RunEventsContext = createContext<RunEventStream | null>(null);
 
-/** Reads the enclosing RunEventsProvider's stream. Throws when used outside a provider. */
 export function useRunEventStream(): RunEventStream {
   const stream = useContext(RunEventsContext);
   if (stream === null) throw new Error("useRunEventStream must be used within a RunEventsProvider");

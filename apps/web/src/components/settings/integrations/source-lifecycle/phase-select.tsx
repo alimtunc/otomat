@@ -15,7 +15,6 @@ const UNMAPPED = "__unmapped__";
 
 export interface LifecyclePhaseSelectProps {
   label: string;
-  /** Null while the phase is unmapped: Otomat then writes nothing for it. */
   mapped: TrackerStateRef | null;
   candidates: readonly TrackerStateRef[];
   disabled: boolean;

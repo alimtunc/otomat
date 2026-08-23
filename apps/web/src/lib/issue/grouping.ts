@@ -24,7 +24,7 @@ export const ISSUE_GROUPINGS: IssueGrouping[] = ISSUE_GROUPING_OPTIONS.map(
 export interface IssueGroup {
   key: string;
   label: string;
-  /** Status groups keep their column so a header can show the chip the board has always shown. */
+  /** Status groups keep their column so a header can show the board's chip. */
   status: IssueBoardColumn | null;
   color: string | null;
   issues: IssueContract[];
@@ -57,7 +57,7 @@ function statusGroups(issues: IssueContract[]): IssueGroup[] {
   });
 }
 
-/** An issue with several labels belongs to each of their groups; one with none falls into `fallback`, which an axis that always seeds every issue does not need. */
+/** An issue with several labels joins each of their groups; `fallback` is for axes that do not seed every issue. */
 function collect(
   issues: IssueContract[],
   seedsFor: (issue: IssueContract) => GroupSeed[],

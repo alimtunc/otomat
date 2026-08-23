@@ -1,7 +1,6 @@
 type ResizeCallback = (entries: ResizeObserverEntry[]) => void;
 
 export interface ResizeObserverStub {
-  /** Fire every live observer, as a browser does after a layout change. */
   resize: () => void;
   restore: () => void;
 }
@@ -30,7 +29,7 @@ export function stubResizeObserver(): ResizeObserverStub {
 
   return {
     resize() {
-      /** Snapshot: a callback may observe or disconnect while this loop runs. */
+      // A callback may observe or disconnect while this loop runs.
       const live = [...callbacks];
       for (const callback of live) callback([]);
     },

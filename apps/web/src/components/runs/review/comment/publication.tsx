@@ -3,7 +3,6 @@ import { Button, StatusChip } from "@otomat/ui";
 
 export interface CommentPublicationProps {
   comment: ReviewCommentContract;
-  /** Absent where a retry has nowhere to report; the state is still stated. */
   onPublish?: () => void;
   publishing: boolean;
 }

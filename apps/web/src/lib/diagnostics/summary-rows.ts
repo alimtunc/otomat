@@ -11,7 +11,6 @@ const CATEGORY_LABELS = {
   transport: "Transport — the host was never reached",
 } satisfies Record<ErrorDiagnosticCategory, string>;
 
-/** The metadata that makes a report actionable, in the order an operator reads it. */
 export function diagnosticSummaryRows(diagnostic: ErrorDiagnostic): DiagnosticSummaryRow[] {
   const rows: DiagnosticSummaryRow[] = [
     { label: "Error id", value: diagnostic.id },

@@ -16,7 +16,6 @@ export interface BaseBranchControlProps {
 const WORKTREE_HELP =
   "The daemon creates a dedicated worktree and branch from here; your own checkout is never touched.";
 
-/** Compact by default: forking from the repository's own default branch is not a decision, so it does not read like one. */
 export function BaseBranchControl({ target, disabled = false }: BaseBranchControlProps) {
   if (target.branchesPending) return <Skeleton className="h-6.5 w-28" />;
 

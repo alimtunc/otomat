@@ -41,7 +41,6 @@ vi.mock("@web/components/runs/diff/fix-bar", () => ({ DiffFixBar: () => null }))
 
 vi.mock("@web/components/shell/use-back-navigation", () => ({ useBackNavigation: () => null }));
 
-/** The route owns the selection; this holds it the same way, so the reveal is the code under test. */
 vi.mock("@web/components/runs/diff/use-active-file", () => ({
   useActiveDiffFile: () => {
     const [path, setPath] = useState<string | null>(null);
@@ -49,10 +48,7 @@ vi.mock("@web/components/runs/diff/use-active-file", () => ({
   },
 }));
 
-/**
- * Lays the cards out down the scroller and keeps them there: a card mounted by the very render
- * the reveal is waiting for must measure like the browser would, not like an unlaid-out node.
- */
+/** A card mounted by the very render the reveal waits for must measure like the browser would, not like an unlaid-out node. */
 function layoutCards(scroller: HTMLElement, scroll: ScrollControl): void {
   Element.prototype.getBoundingClientRect = function (this: Element) {
     if (this === scroller) return domRect(0, VIEWPORT);
@@ -65,7 +61,6 @@ const original = Element.prototype.getBoundingClientRect;
 
 const wideViewport = window.matchMedia.bind(window);
 
-/** Below the reviewer's wide breakpoint the rail gives way to the file nav. */
 function narrowViewport(): void {
   window.matchMedia = () => wideViewport("(min-width: 99999px)");
 }

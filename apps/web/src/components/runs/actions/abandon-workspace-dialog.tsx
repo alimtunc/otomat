@@ -24,7 +24,6 @@ const BLOCKER_NOTE = {
   workspace_closed: "This run no longer holds its issue's workspace, so there is nothing to close.",
 } as const;
 
-/** The only place abandoning is confirmed; it lists what stays reachable because abandoning deletes none of it. */
 export function AbandonWorkspaceDialog({ runId, open, onOpenChange }: AbandonWorkspaceDialogProps) {
   const summary = useRunWorkspace(runId, open);
   const abandon = useAbandonWorkspace(runId);

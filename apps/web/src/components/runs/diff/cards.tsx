@@ -24,7 +24,6 @@ export interface DiffFileCardsProps {
   onShowHidden: () => void;
   prefs: DiffPrefs;
   reviewedPaths: ReadonlySet<string>;
-  /** True once every file of the diff carries a Reviewed mark, hidden ones included. */
   allReviewed: boolean;
   unsyncedMarks: ReadonlyMap<string, ReviewedFileContract>;
   onReviewedChange: (path: string, reviewed: boolean) => void;

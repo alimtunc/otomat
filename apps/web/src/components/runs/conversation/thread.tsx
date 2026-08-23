@@ -24,7 +24,6 @@ function loadErrorState(onRetry: () => void) {
   return <ErrorState variant="inline" title="Couldn’t load this conversation" onRetry={onRetry} />;
 }
 
-/** Ordering comes from the ledger window, delivery state from the contributions read model. */
 export function ConversationThread({
   detail,
   stream,

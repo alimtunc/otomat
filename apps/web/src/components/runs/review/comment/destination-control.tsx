@@ -4,7 +4,6 @@ import { Icon, SegmentedControl, SegmentedItem } from "@otomat/ui";
 export interface CommentDestinationControlProps {
   destination: ReviewCommentDestination;
   onChange: (destination: ReviewCommentDestination) => void;
-  /** Why PR review is out of reach; the choice stays visible and explained instead of hidden. */
   unavailableReason: string | null;
   fellBack: boolean;
 }

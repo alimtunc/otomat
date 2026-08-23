@@ -15,13 +15,11 @@ import { useState } from "react";
 
 export interface AddStepDialogProps {
   issueId: string;
-  /** Fills the width of a narrow side pane instead of hugging its label. */
   stretch?: boolean;
 }
 
 const CLOSED_NOTE = "This issue's workspace is closed — launch a new cycle from the issue.";
 
-/** The cockpit's own way into the open cycle: one step, appended to the run that already holds the workspace. */
 export function AddStepDialog({ issueId, stretch = false }: AddStepDialogProps) {
   const [open, setOpen] = useState(false);
   const [execution, setExecution] = useState<ExecutionSelection>(EMPTY_EXECUTION_SELECTION);

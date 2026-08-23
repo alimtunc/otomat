@@ -10,7 +10,6 @@ import {
 
 export interface ViewDeleteDialogProps {
   name: string;
-  /** True when the screen also carries changes this view never saved, which the delete drops too. */
   dirty: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;

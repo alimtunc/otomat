@@ -33,7 +33,6 @@ function clusterByIssue(activities: ActivityContract[]): ActivityIssueCluster[] 
   return [...clusters.values()];
 }
 
-/** Buckets in panel order, empty ones dropped so no heading stands over nothing. */
 export function groupActivities(activities: ActivityContract[]): ActivityGroup[] {
   return ACTIVITY_BUCKETS.map((bucket) => ({
     bucket,
@@ -42,7 +41,6 @@ export function groupActivities(activities: ActivityContract[]): ActivityGroup[]
   })).filter((group) => group.clusters.length > 0);
 }
 
-/** What the badge counts: every action still in flight, waiting, or asking for the operator. */
 export function countPendingActivities(activities: ActivityContract[]): number {
   return activities.filter((activity) => activity.bucket !== "recent").length;
 }

@@ -1,6 +1,5 @@
 import type { EventEnvelope } from "@otomat/domain";
 
-/** A terminal marker speaks for one turn; only the supervisor's own landing speaks for the run. */
 function lifecycleSummary(event: EventEnvelope): string | null {
   const runStatus = event.payload["run_status"];
   if (typeof runStatus === "string") return `run ${runStatus}`;
@@ -24,7 +23,6 @@ function commentSummary(event: EventEnvelope): string | null {
   return typeof line === "number" ? `comment · ${filePath}:${line}` : `comment · ${filePath}`;
 }
 
-/** Type-specific one-liner for control-plane events whose payloads carry no `text`/`tool` field. */
 function typedSummary(event: EventEnvelope): string | null {
   switch (event.type) {
     case "run.lifecycle":
@@ -48,7 +46,6 @@ function typedSummary(event: EventEnvelope): string | null {
   }
 }
 
-/** One-line human summary: the first present payload field by priority (text, tool, action, decision, provider session id), else the raw event type. */
 export function eventSummary(event: EventEnvelope): string {
   const typed = typedSummary(event);
   if (typed !== null) return typed;

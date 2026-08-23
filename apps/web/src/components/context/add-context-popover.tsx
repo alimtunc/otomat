@@ -6,20 +6,16 @@ import { ContextSearchResults } from "@web/components/context/context-search-res
 import { searchIssues } from "@web/lib/issue/search";
 import { useState } from "react";
 
-/** Enough to choose from without turning the popover into a list view. */
 const MAX_ISSUE_RESULTS = 8;
 
 export interface AddContextPopoverProps {
   projectId: string | undefined;
-  /** Null when the project has no usable repository; file attachment then says so. */
   repositoryId: string | null;
-  /** Reference keys already attached, so the picker never offers the same thing twice. */
   attachedKeys: ReadonlySet<string>;
   onAdd: (reference: ContextReference) => void;
   label: string;
 }
 
-/** Searches what the project already knows — cached issues and tracked paths — and attaches one by identity. */
 export function AddContextPopover({
   projectId,
   repositoryId,

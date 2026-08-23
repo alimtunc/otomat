@@ -8,11 +8,6 @@ export interface RouteErrorReportProps {
   reset: () => void;
 }
 
-/**
- * The router's error component. It catches route render and loader failures, which is where a
- * renderer exception like a panel-layout fault actually lands, and keeps the shell navigable:
- * `reset` clears the boundary, so retrying re-renders the route instead of reloading the app.
- */
 export function RouteErrorReport({ error, reset }: RouteErrorReportProps) {
   const router = useRouter();
   const componentStack = useComponentStack(error);

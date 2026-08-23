@@ -13,7 +13,6 @@ export interface UsageDailyChartProps {
   onSelect: (row: UsageBreakdownRow) => void;
 }
 
-/** A day that reported turns but no figure still gets a mark: absent is not the same as none. */
 const UNREPORTED_HEIGHT = "3px";
 
 function barClass(magnitude: number | null, selected: boolean): string {

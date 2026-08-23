@@ -1,24 +1,17 @@
 import { useMediaQuery } from "@otomat/ui";
 import { useCallback, useLayoutEffect, useRef, useState, type RefCallback } from "react";
 
-/** Slack under the last item: a reader this close to the bottom is still reading the newest message. */
 const PIN_THRESHOLD_PX = 64;
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 export interface ThreadAutoscroll {
   viewportRef: RefCallback<HTMLDivElement>;
   contentRef: RefCallback<HTMLElement>;
-  /** Whether the thread follows its last item; false once the reader scrolled up to read. */
   pinned: boolean;
   jumpToLatest: () => void;
 }
 
-/**
- * Keeps a run's conversation on its newest item while the reader sits at the bottom.
- * Growth follows only while pinned, so nothing ever pulls back a reader who scrolled
- * up: only their own scroll, an explicit jump, or opening another run re-pins.
- * A `topSeq` change marks a prepend of older pages.
- */
+/** A `topSeq` change marks a prepend of older pages. */
 export function useThreadAutoscroll(runId: string, topSeq: number | null): ThreadAutoscroll {
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
   const [content, setContent] = useState<HTMLElement | null>(null);
