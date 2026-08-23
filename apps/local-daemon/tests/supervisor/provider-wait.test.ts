@@ -217,6 +217,28 @@ it("refuses a due resume whose workspace closed, and drops the schedule rather t
   expect(refused[0]?.payload["outcome"]).toBe("refused");
 });
 
+it("keeps a due schedule while launches are held, instead of dropping it as a refusal", async () => {
+  const { supervisor, spawn } = makeSupervisor(fix, "complete");
+  const seeded = seedRun(fix.db, {
+    runId: "rheld",
+    runStatus: "waiting_for_provider",
+    stepStatus: "waiting_for_provider",
+    sessionStatus: "idle",
+    providerSessionId: "ps-held",
+    providerWait: wait(),
+  });
+  supervisor.setLaunchHold(true);
+
+  expect(await supervisor.resumeDueProviderWaits()).toBe(0);
+  expect(spawn.calls).toBe(0);
+  expect(getStepRun(fix.db, seeded.stepRunId)?.provider_wait_json?.resume_at).toBe(PAST);
+
+  supervisor.setLaunchHold(false);
+  expect(await supervisor.resumeDueProviderWaits()).toBe(1);
+  await supervisor.settle();
+  expect(getRun(fix.db, "rheld")?.status).toBe("review_ready");
+});
+
 it("cancelling the run cancels the wait, so nothing resumes behind the operator's back", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "complete");
   const seeded = seedRun(fix.db, {

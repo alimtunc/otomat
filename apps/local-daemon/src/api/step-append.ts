@@ -2,7 +2,7 @@ import { IllegalTransitionError, InvalidRunPlanError } from "@otomat/domain";
 import type { Context, Env } from "hono";
 
 import type { AgentConfigSelector } from "#agents";
-import { RunWorkspaceClosedError } from "#supervisor";
+import { LaunchRefusedError, RunWorkspaceClosedError } from "#supervisor";
 
 import { agentConfigErrorResponse } from "./agent-config-refusal.js";
 import { refusalJson } from "./refusal.js";
@@ -30,6 +30,9 @@ export function stepAppendErrorResponse<E extends Env>(
       },
       409,
     );
+  }
+  if (error instanceof LaunchRefusedError) {
+    return c.json({ error: error.code, message: error.message }, 409);
   }
   if (error instanceof IllegalTransitionError && error.machine === "issue") {
     return c.json({ error: "issue_closed", message: error.message }, 409);

@@ -5,6 +5,7 @@ import type {
   ContextReviewComment,
   ContextSelection,
   ExecutionOverrides,
+  LaunchHold,
   LinearLifecycleSync,
   ProviderOptions,
   ResolvedAgentConfig,
@@ -119,6 +120,7 @@ export interface Supervisor {
   capacity(): AgentCapacity;
   /** Persist and apply a new cap: raising it drains the queue at once, lowering it only gates the next start. */
   setCapacity(maxConcurrentSessions: number): AgentCapacity;
+  setLaunchHold(held: boolean): LaunchHold;
   setNextTurnModel(
     runId: string,
     stepRunId: string,

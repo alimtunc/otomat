@@ -3,11 +3,13 @@ import {
   daemonLogExcerptSchema,
   executionDefaultsSchema,
   healthResponseSchema,
+  launchHoldSchema,
   providerOptionSetSchema,
   runtimeDescriptorSchema,
   runtimeModelCatalogSchema,
   type ExecutionDefaults,
   type UpdateAgentCapacityRequest,
+  type UpdateLaunchHoldRequest,
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
@@ -28,6 +30,9 @@ export function createSystemClient(config: DaemonClientConfig) {
     },
     async setAgentCapacity(request: UpdateAgentCapacityRequest) {
       return agentCapacitySchema.parse(await putJson(config, "/api/settings/capacity", request));
+    },
+    async setLaunchHold(request: UpdateLaunchHoldRequest) {
+      return launchHoldSchema.parse(await putJson(config, "/api/settings/launch-hold", request));
     },
     async executionDefaults() {
       return executionDefaultsSchema.parse(

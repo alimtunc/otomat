@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 import { RELEASE_OUT } from "../mac-build.mjs";
 import { PACKAGED_CHANNELS, readPrNumber, resolveBuildIdentity } from "../release/metadata.mjs";
+import { UPDATE_FEED_FILE } from "../release/update-feed.mjs";
 import {
   capture,
   childPids,
@@ -60,6 +61,27 @@ function assertBuildMetadata() {
     throw new Error(`the artifact does not name its commit: ${String(info.commit_short)}.`);
   }
   return info;
+}
+
+/**
+ * Who this artifact may replace. Only the signed stable build ships `app-update.yml`, so a preview
+ * or ad-hoc package cannot follow the stable feed even if its updater were asked to.
+ */
+function assertUpdateWiring(appPath, buildInfo) {
+  const inApp = join(appPath, "Contents", "Resources", "app-update.yml");
+  const signed = buildInfo.channel === "stable";
+  if (existsSync(inApp) !== signed) {
+    throw new Error(
+      signed
+        ? `the signed build ships no app-update.yml at ${inApp}; it could never update itself.`
+        : `a ${String(buildInfo.channel)} build must not ship app-update.yml, yet ${inApp} exists.`,
+    );
+  }
+  const feed = join(RELEASE_OUT, UPDATE_FEED_FILE);
+  if (signed && !existsSync(feed)) {
+    throw new Error(`the signed build published no ${UPDATE_FEED_FILE} beside its artifacts.`);
+  }
+  return signed ? "follows the stable feed" : "offers a manual download only";
 }
 
 function locateDmg() {
@@ -216,6 +238,7 @@ try {
   console.log(`Installing ${dmgPath}…`);
   const appPath = installFromDmg(dmgPath, PRODUCT_NAME);
   console.log(`  ok — installed ${PRODUCT_NAME}.app version ${assertBundleLayout(appPath)}`);
+  console.log(`  ok — ${assertUpdateWiring(appPath, buildInfo)}`);
   await smokeDaemon(appPath, buildInfo.commit_short);
   console.log("  ok — the installed daemon boots, serves /api/health and stops on SIGTERM");
   await smokeApp(appPath);

@@ -21,6 +21,7 @@ const harness = vi.hoisted((): Harness => ({
 vi.mock("electron", () => ({
   app: {
     getPath: () => "/unused",
+    getAppPath: () => "/unused/Otomat.app/Contents/Resources/app.asar",
     on: (event: string, listener: (...args: unknown[]) => void) =>
       harness.appListeners.set(event, listener),
   },
@@ -28,6 +29,15 @@ vi.mock("electron", () => ({
   dialog: { showMessageBox: vi.fn() },
   ipcMain: { handle: vi.fn(), on: vi.fn() },
 }));
+vi.mock("#main/update/electron-updater", () => ({
+  createElectronUpdaterPort: () => ({
+    check: async () => null,
+    download: async () => {},
+    quitAndInstall: vi.fn(),
+    onProgress: vi.fn(),
+  }),
+}));
+
 vi.mock("#main/runtime", () => ({
   createDesktopRuntime: () => ({
     dataDirectory: { root: "/unused", dbPath: "/unused/otomat.db", backupsDir: "/unused/backups" },
@@ -37,6 +47,7 @@ vi.mock("#main/runtime", () => ({
     linear: { reconcile: async () => {} },
     hosts: { bootActivate: async () => null, shutdown: async () => {}, remoteSession: null },
     sandbox: { ensure: async () => {} },
+    updater: { start: vi.fn() },
   }),
 }));
 vi.mock("#main/support", () => ({

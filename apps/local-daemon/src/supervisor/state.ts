@@ -49,6 +49,8 @@ export interface SupervisorState {
   stopHeld: Set<string>;
   /** Prevents turns queued on the semaphore from spawning while daemon shutdown drains live workers. */
   shuttingDown: boolean;
+  /** Epoch ms until which this host refuses new agent work, so an update can quiesce it; 0 when it accepts work. */
+  launchHoldUntil: number;
   /** Wired by `createSupervisor` to advance the plan then flush the run's queued contributions; injected to keep `lifecycle` free of a module cycle. */
   advance: ((runId: string) => Promise<void>) | null;
 }
@@ -74,6 +76,7 @@ export function createState(config: SupervisorConfig): SupervisorState {
     delivering: new Set(),
     stopHeld: new Set(),
     shuttingDown: false,
+    launchHoldUntil: 0,
     advance: null,
   };
 }

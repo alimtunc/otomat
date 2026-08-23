@@ -13,6 +13,7 @@ import { scheduleNextStep, startNextReadyStep } from "./advance.js";
 import { failIdleRun, failureReason } from "./fail-run.js";
 import { repositoryInitCommands } from "./init-commands.js";
 import { signalIssueLifecycle } from "./issue-lifecycle.js";
+import { requireLaunchable } from "./launch-hold.js";
 import { buildRunReopenedEvent } from "./markers.js";
 import { prepareRun } from "./prepare.js";
 import { resolveResumeAction, type ResumeAction } from "./resume-plan.js";
@@ -39,6 +40,7 @@ import { scheduleWorktreeInit } from "./worktree-init.js";
  * the launch answers and worktree init and the first step continue in the background.
  */
 export async function startRun(state: SupervisorState, request: StartRunRequest): Promise<RunRow> {
+  requireLaunchable(state);
   const runId = prepareRun(state, request);
   const run = requireRunRow(state.db, runId, "spawn");
   signalIssueLifecycle(state.syncIssueLifecycle, run.issue_id, "in_progress", runId);
@@ -91,6 +93,7 @@ function recoverStoppedRun(
 
 /** Resumes a run on an explicit user action, never on its own; `resolveResumeAction` is the single decision, so what the cockpit announced is what runs. */
 export async function resumeRun(state: SupervisorState, runId: string): Promise<RunRow> {
+  requireLaunchable(state);
   const stopped = getRun(state.db, runId);
   if (!stopped) throw new RunNotResumableError(`run ${runId} not found`);
   const action = resolveResumeAction(state, stopped);

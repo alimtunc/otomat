@@ -14,6 +14,7 @@ import {
   reconcileContributionClaims,
   retryRunContribution,
 } from "./contribution/index.js";
+import { setLaunchHold } from "./launch-hold.js";
 import { setNextTurnModel } from "./next-turn-model.js";
 import { finishSettle } from "./pass-boundary.js";
 import { terminateGracefully } from "./process.js";
@@ -50,6 +51,7 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     waitFor: (runId) => runWait(state, runId),
     capacity: () => agentCapacity(state),
     setCapacity: (maxConcurrentSessions) => setAgentCapacity(state, maxConcurrentSessions),
+    setLaunchHold: (held) => setLaunchHold(state, held),
     setNextTurnModel: (runId, stepRunId, sessionId, currentConfigHash, model, options) =>
       setNextTurnModel(state, runId, stepRunId, sessionId, currentConfigHash, model, options),
     stopStep: (runId, stepRunId) => stopStepTurn(state, runId, stepRunId),

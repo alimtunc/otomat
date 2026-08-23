@@ -19,7 +19,7 @@ export type ResolvedDaemonUrl = { url: string } | { message: string };
 type DaemonClient = ReturnType<typeof createDaemonClient>;
 
 /** One configured host with the URL its own daemon answers on, or null while it cannot be reached. */
-interface HostTarget {
+export interface HostTarget {
   host: ExecutionHostDescriptor;
   active: boolean;
   status: RemoteHostStatus | null;
@@ -41,7 +41,7 @@ export class HostCatalog {
 
   async listProjects(): Promise<ExecutionHostProjectsEntry[]> {
     return Promise.all(
-      this.hostTargets().map(async ({ url, ...entry }) => ({
+      this.targets().map(async ({ url, ...entry }) => ({
         ...entry,
         projects: url === null ? null : await this.read(url, "projects", (c) => c.listProjects()),
       })),
@@ -50,7 +50,7 @@ export class HostCatalog {
 
   async listRepositories(): Promise<ExecutionHostRepositoriesEntry[]> {
     return Promise.all(
-      this.hostTargets().map(async ({ url, ...entry }) => ({
+      this.targets().map(async ({ url, ...entry }) => ({
         ...entry,
         repositories:
           url === null ? null : await this.read(url, "repositories", (c) => c.listRepositories()),
@@ -142,7 +142,8 @@ export class HostCatalog {
     return { url: session.url };
   }
 
-  private hostTargets(): HostTarget[] {
+  /** Every configured host, warmed: asking is what brings an idle remote tunnel back up. */
+  targets(): HostTarget[] {
     const localUrl = this.options.localDaemonUrl();
     const targets: HostTarget[] = [
       {

@@ -1,5 +1,6 @@
 import type {
   DesktopBuildSummary,
+  DesktopUpdateSnapshot,
   LinearDeliverySnapshot,
   LinearVaultOperationResult,
   PreviewSandboxResetResult,
@@ -35,6 +36,9 @@ import {
   PREVIEW_SYNC_CHANNEL,
   SUPPORT_EXPORT_CHANNEL,
   SUPPORT_REPORT_DRAFT_CHANNEL,
+  UPDATE_CHECK_CHANNEL,
+  UPDATE_INSTALL_CHANNEL,
+  UPDATE_SNAPSHOT_CHANNEL,
 } from "#shared/ipc-channels";
 import {
   SPLASH_EXPORT_SUPPORT_CHANNEL,
@@ -63,6 +67,11 @@ export interface IpcActions {
   openReportDraft(draft: unknown): Promise<void>;
   showDataPolicy(): Promise<void>;
   resetSandbox(): Promise<PreviewSandboxResetResult>;
+  update: {
+    snapshot(): DesktopUpdateSnapshot | null;
+    check(): Promise<void>;
+    install(): Promise<void>;
+  };
   executionHost: ExecutionHostIpcActions;
 }
 
@@ -91,6 +100,10 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
   });
 
   ipcMain.handle(PREVIEW_SANDBOX_RESET_CHANNEL, () => actions.resetSandbox());
+
+  ipcMain.handle(UPDATE_SNAPSHOT_CHANNEL, () => actions.update.snapshot());
+  ipcMain.handle(UPDATE_CHECK_CHANNEL, () => actions.update.check());
+  ipcMain.handle(UPDATE_INSTALL_CHANNEL, () => actions.update.install());
 
   ipcMain.handle(EXECUTION_HOST_SNAPSHOT_CHANNEL, () => actions.executionHost.snapshot());
   ipcMain.handle(EXECUTION_HOST_SELECT_CHANNEL, (_event, id: unknown) =>

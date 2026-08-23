@@ -13,6 +13,7 @@
 export * from "./api.js";
 export * from "./commit-subject.js";
 export * from "./data-safety.js";
+export * from "./desktop-update.js";
 export * from "./desktop.js";
 export * from "./diagnostics.js";
 export * from "./diff.js";

@@ -8,6 +8,7 @@ import { DEV_SERVER_ENV } from "#shared/constants";
 import {
   EXECUTION_HOST_STATUS_CHANNEL,
   LINEAR_DELIVERY_STATUS_CHANNEL,
+  UPDATE_STATUS_CHANNEL,
 } from "#shared/ipc-channels";
 import { SPLASH_RETRY_CHANNEL, SPLASH_STATUS_CHANNEL, type StartupStatus } from "#shared/startup";
 import { resolveUserPath } from "#shared/user-path";
@@ -29,6 +30,9 @@ import {
 } from "./startup-failure.js";
 import { StartupLogSink } from "./startup-log-sink.js";
 import { DesktopSupport } from "./support.js";
+import { createElectronUpdaterPort } from "./update/electron-updater.js";
+import { feedOf } from "./update/feed.js";
+import { describeInstallability } from "./update/installability.js";
 import { createCockpitWindow, createSplashWindow } from "./windows.js";
 
 export class DesktopApp {
@@ -118,6 +122,16 @@ export class DesktopApp {
         userPath: this.userPath,
         expectedBuild: resolveExpectedBuild(this.buildInfo, (message) => this.log.write(message)),
         channel: this.buildInfo.channel,
+        version: this.buildInfo.version,
+        installability: describeInstallability({
+          build: this.buildInfo,
+          platform: process.platform,
+          packaged: this.paths.packaged,
+          appPath: app.getAppPath(),
+        }),
+        updaterPort: createElectronUpdaterPort(feedOf(this.buildInfo.version), (message) =>
+          this.log.write(message),
+        ),
         localDaemonUrl: () => this.localDaemonUrl,
         onRemoteStatus: (status) => {
           this.sendToCockpit(EXECUTION_HOST_STATUS_CHANNEL, status);
@@ -125,6 +139,7 @@ export class DesktopApp {
         },
         onLinearDelivery: (delivery) =>
           this.sendToCockpit(LINEAR_DELIVERY_STATUS_CHANNEL, delivery),
+        onUpdate: (snapshot) => this.sendToCockpit(UPDATE_STATUS_CHANNEL, snapshot),
         applyRendererUrl: (url) => this.applyRendererUrl(url),
         onSandboxDaemonStarted: (url) => {
           this.localDaemonUrl = url;
@@ -143,6 +158,7 @@ export class DesktopApp {
       this.openCockpit();
       this.splash?.close();
       this.splash = null;
+      this.runtime.updater.start();
     } catch (error) {
       this.ipcState.daemonUrl = "";
       this.localDaemonUrl = "";

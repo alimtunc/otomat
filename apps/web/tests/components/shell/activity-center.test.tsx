@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { ActivityContract, ActivitySnapshot } from "@otomat/domain";
+import type { ActivityContract, ActivitySnapshot, DesktopUpdateSnapshot } from "@otomat/domain";
 import { queryKeys } from "@web/api/query-keys";
 import { ActivityCenter } from "@web/components/shell/activity/center";
 import { act } from "react";
@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { publicationActivity, runActivity } from "#support/activity";
 import { stubAnimations } from "#support/animations";
+import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { findLabelled } from "#support/dom-queries";
 import { testQueryClient } from "#support/query";
 import { mountRoutedWithQuery } from "#support/router";
@@ -64,7 +65,30 @@ beforeEach(() => {
 afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
   document.body.replaceChildren();
+  delete window.otomat;
 });
+
+function withDesktopUpdate(update: Partial<DesktopUpdateSnapshot>): void {
+  window.otomat = fakeDesktopBridge({
+    update: {
+      snapshot: () =>
+        Promise.resolve({
+          state: "downloading",
+          current_version: "0.1.0-alpha.1",
+          feed: "prerelease",
+          release: { version: "0.1.0-alpha.2", notes: "", released_at: null },
+          progress: 40,
+          checked_at: "2026-08-20T09:00:00.000Z",
+          detail: null,
+          manual_url: null,
+          ...update,
+        }),
+      check: () => Promise.resolve(),
+      install: () => Promise.resolve(),
+      onChange: () => () => {},
+    },
+  });
+}
 
 describe("ActivityCenter", () => {
   it("badges the work still in flight and names it on the trigger", async () => {
@@ -275,6 +299,36 @@ describe("ActivityCenter", () => {
     });
 
     expect(trigger().getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("shows the app's own update beside the host's work, and counts it on the badge", async () => {
+    listActivity.mockResolvedValue(snapshot([runActivity()]));
+    withDesktopUpdate({});
+
+    await openCenter();
+
+    expect(document.body.textContent).toContain("Downloading Otomat 0.1.0-alpha.2 — 40%");
+    expect(trigger().getAttribute("aria-label")).toBe("Activity — 2 in progress");
+  });
+
+  it("keeps the update readable when the host's own activity cannot be read", async () => {
+    listActivity.mockRejectedValue(new Error("host unreachable"));
+    withDesktopUpdate({ state: "waiting_for_runs", detail: "Local still has 1 run in flight." });
+
+    await openCenter();
+
+    expect(document.body.textContent).toContain("Local still has 1 run in flight.");
+    expect(document.body.textContent).toContain("Could not read this host’s activity.");
+  });
+
+  it("leaves the panel alone while the app has nothing to update", async () => {
+    listActivity.mockResolvedValue(snapshot([runActivity()]));
+    withDesktopUpdate({ state: "up_to_date", release: null, progress: null });
+
+    await openCenter();
+
+    expect(trigger().getAttribute("aria-label")).toBe("Activity — 1 in progress");
+    expect(document.body.textContent).not.toContain("up to date");
   });
 
   it("keeps the activities it knows when the host stops answering", async () => {

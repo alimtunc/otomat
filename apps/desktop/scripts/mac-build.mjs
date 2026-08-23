@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { assertMacHost, createBuildInfo, readProductVersion } from "./release/metadata.mjs";
+import { githubPublishConfig } from "./release/update-feed.mjs";
 
 const require = createRequire(import.meta.url);
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -84,6 +85,8 @@ function assembleStage(buildInfo, identity) {
 }
 
 function builderConfig({ buildInfo, signing, identity }) {
+  // Only a signed build gets a publish provider, and with it the update metadata: an ad-hoc or
+  // preview artifact must not ship an `app-update.yml` pointing at the stable release feed.
   const mac =
     signing === null
       ? { identity: null, hardenedRuntime: false }
@@ -102,7 +105,7 @@ function builderConfig({ buildInfo, signing, identity }) {
     electronVersion: buildInfo.electron,
     npmRebuild: false,
     asar: true,
-    publish: null,
+    publish: signing === null ? null : githubPublishConfig(),
     artifactName: "${productName}-${version}-${arch}.${ext}",
     afterPack: "build/afterpack.cjs",
     directories: { output: RELEASE_OUT, buildResources: "build" },
@@ -113,6 +116,8 @@ function builderConfig({ buildInfo, signing, identity }) {
       target: [
         { target: "dir", arch: [buildInfo.arch] },
         { target: "dmg", arch: [buildInfo.arch] },
+        // Squirrel.Mac installs from the archive, never from the DMG; `latest-mac.yml` names it.
+        ...(signing === null ? [] : [{ target: "zip", arch: [buildInfo.arch] }]),
       ],
       category: "public.app-category.developer-tools",
       icon: "build/icon.png",

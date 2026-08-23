@@ -98,6 +98,7 @@ under `apps/local-daemon/src/<module>`, consumed through
 | `apps/web/src/components/workflow` | OTO-64                  | The shared node-graph editor, plus the preset library it fills from. |
 | `apps/desktop/src/main/data-safety` | OTO-29                 | Versioned data layout, redacted rotating logs, support bundle export. |
 | `apps/desktop/scripts`            | OTO-21, OTO-30           | macOS packaging: ad-hoc local build, signed/notarized release, packaged smoke. |
+| `apps/desktop/src/main/update`    | OTO-33                   | Self-update of the signed app: feed, installability, safety gate, state machine. |
 | `apps/local-daemon/src/supervisor`| OTO-10, OTO-87           | Process supervision, pid reconciliation, and the recovery of a stopped plan. |
 | `apps/local-daemon/src/review`    | OTO-11, OTO-26, OTO-57   | Review slice: scoped diff snapshots, comment anchoring, destinations, fix-step context, fix proof; one surface for a run and an adopted pull request.|
 | `apps/local-daemon/src/github/import` | OTO-26               | Adoption of an existing pull request: reference, verification, provenance, detection, audit. |
@@ -575,6 +576,43 @@ output and logs on every failure — plus the parent pid and the surviving proce
 tree when it really did time out. Every wait it makes is bounded and unref'd: a
 harness that lingers after the shutdown it observed, or that hangs on a child
 outliving SIGKILL, reads exactly like the defect it exists to catch.
+
+## Replacing the Desktop App (OTO-33)
+
+The shell updates itself through `electron-updater` against GitHub Releases, but every decision
+around it is the repository's own, in `apps/desktop/src/main/update`:
+
+- **who may.** `installability.ts` allows the packaged, signed, `stable` build running from
+  `/Applications` and nothing else. A preview keeps its own bundle id precisely so it never stands
+  in for the stable install, and an ad-hoc build has no signature Squirrel could match; both get
+  the releases page instead. `packaged.mjs` asserts the same split on the artifact: only a signed
+  build ships `app-update.yml`.
+- **which release.** `feed.ts` puts a prerelease version on the prerelease feed and a plain one on
+  stable, and only moves forward inside one feed. A release on the other feed is named in the
+  snapshot rather than hidden behind "up to date". `release-macos.yml` marks a prerelease version's
+  GitHub release prerelease, which is the flag the provider reads.
+- **when.** `controller.ts` checks at startup behind a persisted cooldown (`cooldown.ts`),
+  downloads by itself once it finds a release, and stops. Replacing the app is always an explicit
+  click.
+- **whether it is safe.** `gate.ts` walks every configured host — local first — through
+  `HostCatalog.targets()`. `observe` reads; an unreadable answer is busy, never idle. The click
+  then calls `arm`, which puts each host on `PUT /api/settings/launch-hold` and judges the run
+  count that same call answers with: holding and re-reading in one daemon tick is what closes the
+  race with a launch started while the operator was reading the notes. Any verdict but `clear`
+  releases every hold and keeps the running app.
+
+Daemon-side, the hold is `SupervisorState.launchHoldUntil` — in memory, expiring by itself, so the
+client that armed it may be replaced by the very update it armed it for without stranding a remote
+daemon. `requireLaunchable` refuses at the three commands that create new agent work (start, resume,
+append step) with the `launches_held` launch code, rather than at the spawn choke point, where a
+refusal would read as an accepted launch that then died. The provider-quota sweep skips its whole
+pass while the hold is up: being refused there would drop the run's schedule instead of retrying
+it on the next pass.
+
+The renderer never owns any of it: `useDesktopUpdate` seeds from one read and then follows the main
+process's pushes, so a download survives every navigation. It surfaces twice — the Updates card on
+the About settings page, and a row in the existing Activity Center, counted on its badge and
+rendered outside the activity query's boundary so a host that stops answering cannot hide it.
 
 ## Issue Workspace and Plan Revisions
 

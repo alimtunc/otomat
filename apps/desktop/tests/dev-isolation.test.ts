@@ -53,9 +53,18 @@ function sessionFor(worktree: string, appData: string) {
     userPath: "/usr/bin",
     expectedBuild: null,
     channel: "dev",
+    version: "0.0.0",
+    installability: { installable: false, reason: "a checkout" },
+    updaterPort: {
+      check: async () => null,
+      download: async () => {},
+      quitAndInstall: () => {},
+      onProgress: () => {},
+    },
     localDaemonUrl: () => "",
     onRemoteStatus: () => {},
     onLinearDelivery: () => {},
+    onUpdate: () => {},
     applyRendererUrl: () => {},
     onSandboxDaemonStarted: () => {},
   });

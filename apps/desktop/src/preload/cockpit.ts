@@ -1,4 +1,5 @@
 import type {
+  DesktopUpdateSnapshot,
   ErrorDiagnostic,
   ExecutionHostCapacityResult,
   ExecutionHostId,
@@ -51,6 +52,10 @@ import {
   PREVIEW_SYNC_CHANNEL,
   SUPPORT_EXPORT_CHANNEL,
   SUPPORT_REPORT_DRAFT_CHANNEL,
+  UPDATE_CHECK_CHANNEL,
+  UPDATE_INSTALL_CHANNEL,
+  UPDATE_SNAPSHOT_CHANNEL,
+  UPDATE_STATUS_CHANNEL,
 } from "#shared/ipc-channels";
 
 // Resolved synchronously so `window.otomat.daemonUrl` exists before the client module reads it.
@@ -144,6 +149,18 @@ contextBridge.exposeInMainWorld("otomat", {
       ipcRenderer.invoke(SUPPORT_EXPORT_CHANNEL, diagnostic),
     openReportDraft: (draft: ProblemReportDraft): Promise<void> =>
       ipcRenderer.invoke(SUPPORT_REPORT_DRAFT_CHANNEL, draft),
+  },
+  update: {
+    snapshot: (): Promise<DesktopUpdateSnapshot | null> =>
+      ipcRenderer.invoke(UPDATE_SNAPSHOT_CHANNEL),
+    check: (): Promise<void> => ipcRenderer.invoke(UPDATE_CHECK_CHANNEL),
+    install: (): Promise<void> => ipcRenderer.invoke(UPDATE_INSTALL_CHANNEL),
+    onChange: (listener: (snapshot: DesktopUpdateSnapshot) => void): (() => void) => {
+      const wrapped = (_event: IpcRendererEvent, snapshot: DesktopUpdateSnapshot): void =>
+        listener(snapshot);
+      ipcRenderer.on(UPDATE_STATUS_CHANNEL, wrapped);
+      return () => ipcRenderer.off(UPDATE_STATUS_CHANNEL, wrapped);
+    },
   },
   preview,
   sandbox: {

@@ -29,3 +29,7 @@ export const EXECUTION_HOST_INSTANCES_CHANNEL = "otomat:execution-host-instances
 export const EXECUTION_HOST_STOP_INSTANCE_CHANNEL = "otomat:execution-host-stop-instance";
 export const EXECUTION_HOST_DELETE_INSTANCE_CHANNEL = "otomat:execution-host-delete-instance";
 export const EXECUTION_HOST_UPDATE_DAEMON_CHANNEL = "otomat:execution-host-update-daemon";
+export const UPDATE_SNAPSHOT_CHANNEL = "otomat:update-snapshot";
+export const UPDATE_CHECK_CHANNEL = "otomat:update-check";
+export const UPDATE_INSTALL_CHANNEL = "otomat:update-install";
+export const UPDATE_STATUS_CHANNEL = "otomat:update-status";

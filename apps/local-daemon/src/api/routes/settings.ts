@@ -9,6 +9,7 @@ import {
 import {
   executionDefaultsSchema,
   updateAgentCapacityRequestSchema,
+  updateLaunchHoldRequestSchema,
   workspaceSettingsSchema,
 } from "@otomat/domain";
 import { Hono } from "hono";
@@ -30,6 +31,10 @@ export function createSettingsRoutes(deps: ApiDeps): Hono {
     const { max_concurrent_sessions } = c.req.valid("json");
     return c.json(deps.supervisor.setCapacity(max_concurrent_sessions));
   });
+
+  routes.put("/launch-hold", validateJson(updateLaunchHoldRequestSchema), (c) =>
+    c.json(deps.supervisor.setLaunchHold(c.req.valid("json").held)),
+  );
 
   routes.get("/workspaces", (c) =>
     c.json({ auto_delete_after_merge: readAutoDeleteWorkspaces(deps.db) }),
