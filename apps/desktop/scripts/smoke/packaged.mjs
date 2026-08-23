@@ -63,10 +63,7 @@ function assertBuildMetadata() {
   return info;
 }
 
-/**
- * Who this artifact may replace. Only the signed stable build ships `app-update.yml`, so a preview
- * or ad-hoc package cannot follow the stable feed even if its updater were asked to.
- */
+/** Only the signed stable build ships `app-update.yml`, so nothing else can follow the stable feed. */
 function assertUpdateWiring(appPath, buildInfo) {
   const inApp = join(appPath, "Contents", "Resources", "app-update.yml");
   const signed = buildInfo.channel === "stable";

@@ -4,13 +4,11 @@ import type { LaunchHold } from "@otomat/domain";
 import type { HostTarget } from "../remote/host/catalog.js";
 import { remoteBusyRuns } from "../remote/idle.js";
 
-/** Why the app may not be replaced right now, or nothing left in its way. */
 export type GateVerdict = { clear: true } | { clear: false; reason: string };
 
 const CLEAR: GateVerdict = { clear: true };
 
 export interface UpdateGateOptions {
-  /** Every configured execution host, local first; asking warms an idle remote tunnel. */
   hosts(): HostTarget[];
   fetchImpl?: typeof fetch;
   log(message: string): void;
@@ -28,7 +26,7 @@ function busy(label: string, runs: number): GateVerdict {
 export class UpdateGate {
   constructor(private readonly options: UpdateGateOptions) {}
 
-  /** What the operator is shown before deciding; nothing is held. */
+  /** Nothing is held: this is the read the operator decides on. */
   async observe(): Promise<GateVerdict> {
     for (const target of this.options.hosts()) {
       if (target.url === null) return unreachable(target.host.label);
@@ -44,7 +42,7 @@ export class UpdateGate {
     return CLEAR;
   }
 
-  /** Holds every host and reports the first one that is not idle; the caller releases on any verdict but `clear`. */
+  /** The caller releases on any verdict but `clear`. */
   async arm(): Promise<GateVerdict> {
     for (const target of this.options.hosts()) {
       if (target.url === null) return unreachable(target.host.label);
@@ -58,7 +56,7 @@ export class UpdateGate {
     return CLEAR;
   }
 
-  /** Best effort on every host: a hold left behind expires by itself, but a live one must not. */
+  /** Best effort: a hold left behind expires by itself, but a live one must not. */
   async release(): Promise<void> {
     for (const target of this.options.hosts()) {
       if (target.url === null) continue;
@@ -68,7 +66,6 @@ export class UpdateGate {
     }
   }
 
-  /** Null for a host that refused, could not be reached, or answered something else entirely. */
   private async hold(baseUrl: string, held: boolean): Promise<LaunchHold | null> {
     const client: DaemonClient = createDaemonClient({
       baseUrl,

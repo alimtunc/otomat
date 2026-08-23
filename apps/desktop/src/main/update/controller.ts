@@ -10,13 +10,11 @@ import { feedOf, replaces } from "./feed.js";
 import type { UpdateGate } from "./gate.js";
 import { RELEASES_URL, type Installability } from "./installability.js";
 
-/** The updater mechanism, injected so the state machine is testable without Electron or a network. */
 export interface UpdaterPort {
-  /** The release this build would move to, or null when the feed offers none. */
   check(): Promise<DesktopUpdateRelease | null>;
-  /** Resolves once the artifact is downloaded and verified against the published metadata. */
+  /** Resolves only once the artifact is verified against the published metadata. */
   download(): Promise<void>;
-  /** Replaces the installed app with the downloaded one and relaunches; it does not return. */
+  /** Does not return: the app is replaced and relaunched. */
   quitAndInstall(): void;
   onProgress(listener: (percent: number) => void): void;
 }
@@ -25,7 +23,6 @@ export interface DesktopUpdaterOptions {
   currentVersion: string;
   installability: Installability;
   dataDir: string;
-  /** Only the three questions the updater asks; a stub answering them is a legitimate gate. */
   gate: Pick<UpdateGate, "arm" | "observe" | "release">;
   port: UpdaterPort;
   onChange(snapshot: DesktopUpdateSnapshot): void;
@@ -71,7 +68,7 @@ export class DesktopUpdater {
     void this.check();
   }
 
-  /** The manual check: the operator asked now, so the cooldown does not apply. */
+  /** The operator asked now, so the cooldown does not apply. */
   async check(): Promise<void> {
     if (!this.options.installability.installable || this.working) return;
     this.working = true;
@@ -114,7 +111,6 @@ export class DesktopUpdater {
     }
   }
 
-  /** A release this build may not move to is named rather than hidden behind "up to date". */
   private otherFeed(found: DesktopUpdateRelease | null): string | null {
     const feed = feedOf(this.options.currentVersion);
     if (found === null || feedOf(found.version) === feed) return null;
@@ -129,7 +125,6 @@ export class DesktopUpdater {
     await this.settleReady();
   }
 
-  /** A downloaded release still names what is in its way, so the operator sees it before clicking. */
   private async settleReady(): Promise<void> {
     const verdict = await this.options.gate.observe();
     if (verdict.clear) this.publish("ready", null);
@@ -149,7 +144,6 @@ export class DesktopUpdater {
     writeLastCheck(this.options.dataDir, this.checkedAt, this.options.log);
   }
 
-  /** Nothing was replaced: the running app and its data are exactly as they were. */
   private fail(error: unknown): void {
     const message = reason(error);
     this.options.log(`Desktop update stopped: ${message}`);

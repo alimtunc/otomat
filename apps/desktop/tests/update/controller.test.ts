@@ -31,7 +31,6 @@ function harness(options: {
   observe?: GateVerdict;
   arm?: GateVerdict;
   installability?: Installability;
-  /** Percentages the download reports while it runs. */
   downloadProgress?: number[];
 }): Harness {
   const states: DesktopUpdateSnapshot[] = [];

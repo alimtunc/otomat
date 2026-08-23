@@ -3,7 +3,6 @@ import { sep } from "node:path";
 import type { BuildInfo } from "#shared/build-info";
 import { OTOMAT_GITHUB_REPO } from "#shared/constants";
 
-/** Where a build that cannot replace itself sends the user instead. */
 export const RELEASES_URL = `https://github.com/${OTOMAT_GITHUB_REPO}/releases/latest`;
 
 /** macOS installs applications here; Squirrel replaces the bundle in place and needs to own it. */
@@ -13,11 +12,9 @@ export interface InstallabilityInput {
   build: BuildInfo;
   platform: NodeJS.Platform;
   packaged: boolean;
-  /** Absolute path of the running `.app` bundle. */
   appPath: string;
 }
 
-/** Whether this build may replace itself, and the sentence explaining a refusal. */
 export type Installability = { installable: true } | { installable: false; reason: string };
 
 export function describeInstallability(input: InstallabilityInput): Installability {

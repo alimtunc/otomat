@@ -17,7 +17,7 @@ function activeRuns(state: SupervisorState): number {
   return listRuns(state.db).filter((run) => isRunBusy(run.status)).length;
 }
 
-/** Arms or lifts the hold and answers with the runs still in flight, so one call closes the race. */
+/** One call, so arming and the count it is judged on cannot disagree. */
 export function setLaunchHold(state: SupervisorState, hold: boolean): LaunchHold {
   state.launchHoldUntil = hold ? Date.now() + HOLD_WINDOW_MS : 0;
   return { held: launchesHeld(state), active_runs: activeRuns(state) };

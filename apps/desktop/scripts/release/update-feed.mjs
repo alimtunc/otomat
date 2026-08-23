@@ -19,14 +19,12 @@ export function githubPublishConfig() {
 const URL_LINE = /^\s*(?:-\s*)?url:\s*(\S+)\s*$/gm;
 const VERSION_LINE = /^version:\s*(\S+)\s*$/m;
 
-/** Every artifact `latest-mac.yml` points an installed app at, in the order it lists them. */
 function referencedArtifacts(feedText) {
   return [...new Set([...feedText.matchAll(URL_LINE)].map((match) => match[1]))];
 }
 
 /**
- * A feed that names a version, an artifact or a digest this build did not produce would send every
- * installed app at a download that does not exist. Throws rather than publishing one.
+ * Throws rather than publishing a feed that would send installed apps at a download that is absent.
  *
  * @param {{ feedText: string, version: string, present: Set<string>,
  *   digestOf: (name: string) => string }} input

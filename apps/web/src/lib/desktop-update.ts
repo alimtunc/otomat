@@ -1,6 +1,5 @@
 import type { DesktopUpdateSnapshot, DesktopUpdateState } from "@otomat/domain";
 
-/** States the operator has something to do about, or that are working right now. */
 const ACTIVE: ReadonlySet<DesktopUpdateState> = new Set<DesktopUpdateState>([
   "available",
   "downloading",

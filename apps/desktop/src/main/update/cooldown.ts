@@ -12,7 +12,6 @@ function path(dataDir: string): string {
   return join(dataDir, FILENAME);
 }
 
-/** When this install last completed a release check, or null when it never has or the record is unusable. */
 export function readLastCheck(dataDir: string, log: (message: string) => void): string | null {
   let text: string;
   try {
@@ -34,7 +33,7 @@ export function readLastCheck(dataDir: string, log: (message: string) => void): 
   }
 }
 
-/** A record that cannot be written costs a cooldown, never a check: the caller is told and goes on. */
+/** A record that cannot be written costs a cooldown, never a check. */
 export function writeLastCheck(
   dataDir: string,
   checkedAt: string,

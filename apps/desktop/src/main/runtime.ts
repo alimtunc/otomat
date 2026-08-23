@@ -53,9 +53,7 @@ interface DesktopRuntimeOptions {
   /** Distribution channel: it picks the daemon deployment on a host, and whether a sandbox exists. */
   channel: DesktopChannel;
   version: string;
-  /** Whether this artifact may replace itself with a release, and why not when it may not. */
   installability: Installability;
-  /** The update mechanism, built by the caller: it is the one binding to Electron's own updater. */
   updaterPort: UpdaterPort;
   localDaemonUrl(): string;
   onRemoteStatus(status: RemoteHostStatus): void;

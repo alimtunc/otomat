@@ -142,7 +142,7 @@ export class HostCatalog {
     return { url: session.url };
   }
 
-  /** Every configured host, warmed: asking is what brings an idle remote tunnel back up. */
+  /** Asking is what brings an idle remote tunnel back up. */
   targets(): HostTarget[] {
     const localUrl = this.options.localDaemonUrl();
     const targets: HostTarget[] = [

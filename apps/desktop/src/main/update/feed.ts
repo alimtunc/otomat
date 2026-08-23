@@ -1,11 +1,9 @@
 import type { DesktopUpdateFeed } from "@otomat/domain";
 
-/** `1.2.3`, then an optional prerelease tag; anything else is not a version this app can compare. */
 const SEMVER = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/;
 
 interface Version {
   numbers: [number, number, number];
-  /** Dot-separated prerelease identifiers, empty on a stable version. */
   tags: string[];
 }
 
@@ -52,7 +50,6 @@ export function feedOf(version: string): DesktopUpdateFeed {
   return parsed !== null && parsed.tags.length > 0 ? "prerelease" : "stable";
 }
 
-/** True when `candidate` is a strictly newer version on the same feed as `current`. */
 export function replaces(current: string, candidate: string): boolean {
   if (feedOf(current) !== feedOf(candidate)) return false;
   const [from, to] = [parse(current), parse(candidate)];
