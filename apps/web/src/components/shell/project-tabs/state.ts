@@ -52,8 +52,9 @@ export function withProjectTabRoute(
   key: string,
   route: string,
 ): StoredProjectTab[] {
-  if (tabs.some((tab) => tab.key === key && tab.route === route)) return tabs;
-  return withProjectTab(tabs, key).map((tab) => (tab.key === key ? { ...tab, route } : tab));
+  const current = tabs.find((tab) => tab.key === key);
+  if (current === undefined || current.route === route) return tabs;
+  return tabs.map((tab) => (tab.key === key ? { ...tab, route } : tab));
 }
 
 export function projectTabDestination(
@@ -64,10 +65,4 @@ export function projectTabDestination(
   const stored = tabs.find((tab) => tab.key === key)?.route ?? null;
   if (stored !== null) return stored;
   return isProjectScopedDetail(pathname) ? "/issues" : null;
-}
-
-export function adjacentProjectTab(keys: string[], key: string): string | undefined {
-  const index = keys.indexOf(key);
-  if (index === -1) return undefined;
-  return keys[index - 1] ?? keys[index + 1];
 }

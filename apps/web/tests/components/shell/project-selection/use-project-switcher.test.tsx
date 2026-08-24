@@ -53,15 +53,14 @@ async function renderSwitcher(): Promise<void> {
   mounted.push(await mount(<Probe />));
 }
 
-it("opens one tab for a project, however often it is picked", async () => {
+it("opens no tab of its own: picking a project only switches to it", async () => {
   await renderSwitcher();
 
   await act(async () => {
     select("local:p2");
-    select("local:p2");
   });
 
-  expect(projectTabsStore.state.map((tab) => tab.key)).toEqual(["local:p2"]);
+  expect(projectTabsStore.state).toEqual([]);
 });
 
 it("restores the view the picked project was left on", async () => {

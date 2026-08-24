@@ -55,15 +55,13 @@ export function ProjectTabsBar() {
               <TooltipTrigger render={trigger} />
               <TooltipContent side="bottom">{tab.name}</TooltipContent>
             </Tooltip>
-            {tabs.length > 1 ? (
-              <IconButton
-                size="sm"
-                label={`Close ${tab.name}`}
-                icon={<Icon name="x" aria-hidden />}
-                onClick={() => close(tab.id)}
-                className="opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
-              />
-            ) : null}
+            <IconButton
+              size="sm"
+              label={`Close ${tab.name}`}
+              icon={<Icon name="x" aria-hidden />}
+              onClick={() => close(tab.id)}
+              className="opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
+            />
           </div>
         );
       })}

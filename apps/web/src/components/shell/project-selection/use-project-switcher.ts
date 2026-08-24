@@ -73,7 +73,6 @@ export function useProjectSwitcher() {
   function selectProject(switcherId: string): void {
     const target = parseProjectSwitcherKey(switcherId, activeHostId);
     const destination = projectTabDestination(projectTabsStore.state, switcherId, pathname);
-    projectTabsStore.actions.open(switcherId);
     if (target.hostId === activeHostId || bridge === null) {
       select(target.projectId);
       if (destination !== null) void navigate({ href: destination });

@@ -1338,13 +1338,15 @@ strip renders the same in the browser, in the packaged app and in a preview.
 
 A tab is identified by the switcher key the project already had — `host:project`
 (`project-selection/host-key.ts`) — so two daemons that both name a project
-`local-default` cannot share a tab, a route or a badge. Activating one is not a
-second code path: `useProjectSwitcher.selectProject` opens or reactivates the tab
-and then navigates, which is why picking a project from the switcher, from a tab
-or from a keyboard shortcut lands identically. The active project is not
-persisted twice either — the selected project *is* the active tab, and a project
-that is selected without a stored tab is rendered one
-(`project-tabs/visible-tabs.ts`), so uniqueness holds without reconciliation.
+`local-default` cannot share a tab, a route or a badge. Tabs are opt-in and
+independent of the selection: only the switcher's per-project pin action opens
+one, and merely picking a project never does, so the bar shows the projects the
+operator chose to keep at hand — not every project ever visited — and a
+single-project cockpit simply never renders it. Activation stays one code path:
+`useProjectSwitcher.selectProject` restores the target's remembered view whether
+it was reached from the switcher, a tab or a keyboard shortcut, and the store
+deduplicates on open (`project-tabs/state.ts`), so uniqueness holds without
+reconciliation.
 
 What a tab restores is the last **project-scoped** location it was on, stored as
 the router's `href` so the filters, the selection and the panel state that live in
@@ -1361,8 +1363,8 @@ projection refuses to count (a withdrawn demand, a completed run) can never
 inflate it.
 
 Closing a tab is a view operation and nothing else: it drops the tab and its
-remembered route, hands the selection to the neighbour when it was the active
-one, and touches no run, branch or worktree.
+remembered route while the selection stays where it is — the project outlives
+its tab — and touches no run, branch or worktree.
 
 ## Saved Issue Views
 

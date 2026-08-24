@@ -1,5 +1,4 @@
 import {
-  adjacentProjectTab,
   projectTabDestination,
   readStoredProjectTabs,
   withoutProjectTab,
@@ -22,12 +21,23 @@ describe("stored project tabs", () => {
   });
 
   it("tells the same host's project from another host's", () => {
-    const tabs = withProjectTabRoute(withProjectTab([], LOCAL), REMOTE, "/runs");
+    const tabs = withProjectTabRoute(
+      withProjectTab(withProjectTab([], LOCAL), REMOTE),
+      REMOTE,
+      "/runs",
+    );
 
     expect(tabs).toEqual([
       { key: LOCAL, route: null },
       { key: REMOTE, route: "/runs" },
     ]);
+  });
+
+  it("records a route only for a tab the operator opened", () => {
+    const tabs = withProjectTab([], REMOTE);
+
+    expect(withProjectTabRoute(tabs, LOCAL, "/runs")).toBe(tabs);
+    expect(withProjectTabRoute([], LOCAL, "/runs")).toEqual([]);
   });
 
   it("restores the order, the tabs and each last route after a restart", () => {
@@ -72,7 +82,11 @@ describe("stored project tabs", () => {
   });
 
   it("forgets the route of a closed tab, and leaves the other tabs alone", () => {
-    const tabs = withProjectTabRoute(withProjectTab([], REMOTE), LOCAL, "/issues/issue-7");
+    const tabs = withProjectTabRoute(
+      withProjectTab(withProjectTab([], REMOTE), LOCAL),
+      LOCAL,
+      "/issues/issue-7",
+    );
 
     expect(withoutProjectTab(tabs, LOCAL)).toEqual([{ key: REMOTE, route: null }]);
     expect(withProjectTab(withoutProjectTab(tabs, LOCAL), LOCAL).at(-1)).toEqual({
@@ -82,7 +96,7 @@ describe("stored project tabs", () => {
   });
 
   it("returns the same list when nothing changed", () => {
-    const tabs = withProjectTabRoute([], LOCAL, "/issues");
+    const tabs = withProjectTabRoute(withProjectTab([], LOCAL), LOCAL, "/issues");
 
     expect(withProjectTab(tabs, LOCAL)).toBe(tabs);
     expect(withProjectTabRoute(tabs, LOCAL, "/issues")).toBe(tabs);
@@ -92,7 +106,7 @@ describe("stored project tabs", () => {
 
 describe("project tab destination", () => {
   it("restores the view the project was left on", () => {
-    const tabs = withProjectTabRoute([], LOCAL, "/runs/run-3/diff");
+    const tabs = withProjectTabRoute(withProjectTab([], LOCAL), LOCAL, "/runs/run-3/diff");
 
     expect(projectTabDestination(tabs, LOCAL, "/issues/issue-7")).toBe("/runs/run-3/diff");
   });
@@ -106,16 +120,5 @@ describe("project tab destination", () => {
   it("stays on a list view when the activated tab has no route yet", () => {
     expect(projectTabDestination([], LOCAL, "/issues")).toBeNull();
     expect(projectTabDestination([], LOCAL, "/settings/project")).toBeNull();
-  });
-});
-
-describe("adjacent project tab", () => {
-  it("takes the tab on the left, and the one on the right for the first", () => {
-    const keys = [LOCAL, "local:project-2", REMOTE];
-
-    expect(adjacentProjectTab(keys, "local:project-2")).toBe(LOCAL);
-    expect(adjacentProjectTab(keys, LOCAL)).toBe("local:project-2");
-    expect(adjacentProjectTab([LOCAL], LOCAL)).toBeUndefined();
-    expect(adjacentProjectTab(keys, "local:absent")).toBeUndefined();
   });
 });

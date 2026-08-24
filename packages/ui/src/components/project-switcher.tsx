@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown, FolderGit2, Plus, Settings } from "lucide-react";
+import { Check, ChevronsUpDown, FolderGit2, Pin, Plus, Settings } from "lucide-react";
 import { useState } from "react";
 
 import { FOCUS_RING } from "../lib/focus";
@@ -17,6 +17,7 @@ import {
   ComboboxTrigger,
 } from "../primitives/combobox";
 import { HostTag } from "./host-tag";
+import { IconButton } from "./icon-button";
 import { ProjectGlyph } from "./project-glyph";
 
 const HEALTH_COLOR = {
@@ -33,6 +34,8 @@ export interface ProjectSwitcherProps {
   loading?: boolean;
   /** Renders an "Add project…" footer action; also replaces the empty-state hint when provided. */
   onAddProject?: () => void;
+  /** Renders a per-project "open in a tab" action; selection alone never creates a tab. */
+  onOpenTab?: (id: string) => void;
   /** Opens the settings surface: the switcher is the only way in, so it is required. */
   onOpenSettings: () => void;
 }
@@ -44,6 +47,7 @@ export function ProjectSwitcher({
   collapsed = false,
   loading = false,
   onAddProject,
+  onOpenTab,
   onOpenSettings,
 }: ProjectSwitcherProps) {
   const [open, setOpen] = useState(false);
@@ -156,6 +160,18 @@ export function ProjectSwitcher({
                       aria-hidden
                       className="inline-block h-1.75 w-1.75 flex-none rounded-full"
                       style={{ background: HEALTH_COLOR[project.health] }}
+                    />
+                  ) : null}
+                  {onOpenTab ? (
+                    <IconButton
+                      size="sm"
+                      label={`Open ${project.name} in a tab`}
+                      icon={<Pin aria-hidden />}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setOpen(false);
+                        onOpenTab(project.id);
+                      }}
                     />
                   ) : null}
                   <ComboboxItemIndicator>

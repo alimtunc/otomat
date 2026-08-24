@@ -4,7 +4,6 @@ import { useSelector } from "@tanstack/react-store";
 import { useInbox } from "@web/api/inbox/queries";
 import { projectSwitcherKey } from "@web/components/shell/project-selection/host-key";
 import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
-import { adjacentProjectTab } from "@web/components/shell/project-tabs/state";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
 import {
   visibleProjectTabs,
@@ -36,12 +35,7 @@ export function useProjectTabs(): ProjectTabsView {
       count,
     ]),
   );
-  const tabs = visibleProjectTabs({
-    stored,
-    projects: switcher.projects,
-    activeKey,
-    attention,
-  });
+  const tabs = visibleProjectTabs({ stored, projects: switcher.projects, attention });
 
   // otomat-allow-effect: the committed location is the router's state, not a result of this render.
   useEffect(() => {
@@ -53,13 +47,6 @@ export function useProjectTabs(): ProjectTabsView {
     tabs,
     activeKey,
     select: switcher.selectProject,
-    close: (key: string): void => {
-      const next = adjacentProjectTab(
-        tabs.map((tab) => tab.id),
-        key,
-      );
-      if (key === activeKey && next !== undefined) switcher.selectProject(next);
-      projectTabsStore.actions.close(key);
-    },
+    close: projectTabsStore.actions.close,
   };
 }

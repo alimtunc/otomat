@@ -168,33 +168,36 @@ it("leaves the tabs alone on a route that answers for every project", async () =
   expect(projectTabsStore.state.map((tab) => tab.route)).toEqual([null, null]);
 });
 
-it("hands the selection to the neighbouring tab when the active one is closed", async () => {
+it("closes a tab without touching the selection or the other tabs", async () => {
   await renderBar();
 
   await act(async () => {
     findLabelled("Close Otomat")?.click();
   });
 
-  expect(selectProject).toHaveBeenCalledWith("local:p2");
-  expect(projectTabsStore.state).toEqual([{ key: "local:p2", route: null }]);
-});
-
-it("keeps the selection when an inactive tab is closed", async () => {
-  await renderBar();
-
-  await act(async () => {
-    findLabelled("Close Cockpit")?.click();
-  });
-
   expect(selectProject).not.toHaveBeenCalled();
-  expect(projectTabsStore.state.map((tab) => tab.key)).toEqual(["local:p1"]);
+  expect(projectTabsStore.state.map((tab) => tab.key)).toEqual(["local:p2"]);
 });
 
-it("offers no close control while a single project is open", async () => {
+it("disappears entirely when the last tab is closed", async () => {
   projects = [{ id: "local:p1", name: "Otomat" }];
   projectTabsStore.setState(() => [{ key: "local:p1", route: null }]);
 
   await renderBar();
 
-  expect(findLabelled("Close Otomat")).toBeUndefined();
+  await act(async () => {
+    findLabelled("Close Otomat")?.click();
+  });
+
+  expect(projectTabsStore.state).toEqual([]);
+  expect(document.body.querySelector("nav")).toBeNull();
+});
+
+it("leaves an unopened project out of the bar, active or not", async () => {
+  projectTabsStore.setState(() => [{ key: "local:p2", route: null }]);
+
+  await renderBar();
+
+  expect(tabLabels()).toEqual(["Cockpit"]);
+  expect(projectTabsStore.state).toEqual([{ key: "local:p2", route: null }]);
 });

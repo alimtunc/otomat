@@ -12,22 +12,17 @@ export interface ProjectTab {
 export interface VisibleProjectTabsInput {
   stored: StoredProjectTab[];
   projects: ProjectSummary[];
-  activeKey: string | undefined;
   attention: Map<string, number>;
 }
 
 export function visibleProjectTabs(input: VisibleProjectTabsInput): ProjectTab[] {
   const known = new Map(input.projects.map((project) => [project.id, project]));
-  const keys = new Set([
-    ...input.stored.map((tab) => tab.key),
-    ...(input.activeKey === undefined ? [] : [input.activeKey]),
-  ]);
-  return [...keys].flatMap((key) => {
-    const project = known.get(key);
+  return input.stored.flatMap((storedTab) => {
+    const project = known.get(storedTab.key);
     if (project === undefined) return [];
-    const tab: ProjectTab = { id: key, name: project.name };
+    const tab: ProjectTab = { id: storedTab.key, name: project.name };
     if (project.tag !== undefined) tab.tag = project.tag;
-    const attention = input.attention.get(key);
+    const attention = input.attention.get(storedTab.key);
     if (attention !== undefined) tab.attention = attention;
     return [tab];
   });
