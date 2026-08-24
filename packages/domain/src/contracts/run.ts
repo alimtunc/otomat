@@ -89,6 +89,7 @@ export const RUN_LAUNCH_ERRORS = [
   "base_branch_not_found",
   "worktree_unavailable",
   "issue_workspace_open",
+  "launches_held",
 ] as const;
 export type RunLaunchError = (typeof RUN_LAUNCH_ERRORS)[number];
 

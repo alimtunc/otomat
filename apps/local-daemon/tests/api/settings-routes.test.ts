@@ -1,4 +1,4 @@
-import type { AgentCapacity, ExecutionDefaults } from "@otomat/domain";
+import type { AgentCapacity, ExecutionDefaults, LaunchHold } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { json, makeApiApp, request, stubSupervisor } from "../support/api.js";
@@ -55,6 +55,33 @@ it("applies a new cap and answers with what the daemon now enforces", async () =
 
   expect(res.status).toBe(200);
   expect(await json<AgentCapacity>(res)).toMatchObject({ max_concurrent_sessions: 6 });
+});
+
+it("arms the launch hold and answers with the runs still in flight", async () => {
+  const app = makeApiApp(t, {
+    supervisor: stubSupervisor({ setLaunchHold: (held) => ({ held, active_runs: 2 }) }),
+  });
+
+  const res = await request(app, "/api/settings/launch-hold", {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ held: true }),
+  });
+
+  expect(res.status).toBe(200);
+  expect(await json<LaunchHold>(res)).toEqual({ held: true, active_runs: 2 });
+});
+
+it("rejects a launch-hold request that does not say which way", async () => {
+  const app = makeApiApp(t, { supervisor: stubSupervisor() });
+
+  const res = await request(app, "/api/settings/launch-hold", {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ hold: true }),
+  });
+
+  expect(res.status).toBe(400);
 });
 
 it("rejects a cap that is not a positive integer before the daemon applies anything", async () => {

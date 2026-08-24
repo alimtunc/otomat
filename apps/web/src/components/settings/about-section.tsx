@@ -2,6 +2,7 @@ import { type ConnectionState } from "@otomat/ui";
 import { useDaemonStatus, useHealth } from "@web/api/daemon/queries";
 import { AboutRow } from "@web/components/settings/about-row";
 import { SectionHeading } from "@web/components/settings/section-heading";
+import { UpdateSection } from "@web/components/settings/update-section";
 import { remoteHostAlias } from "@web/lib/desktop-bridge";
 
 const DAEMON_STATUS_LABELS = {
@@ -16,7 +17,7 @@ export function AboutSection() {
   const remoteAlias = remoteHostAlias();
   const hostLabel = remoteAlias === null ? "Local" : `Remote · ${remoteAlias}`;
   return (
-    <div>
+    <div className="flex flex-col gap-6">
       <SectionHeading title="About" description="Version, daemon status and diagnostics." />
       <dl className="flex flex-col gap-3 rounded-lg border border-border-subtle bg-card p-4 text-sm">
         <AboutRow
@@ -36,6 +37,7 @@ export function AboutSection() {
           />
         ) : null}
       </dl>
+      <UpdateSection />
     </div>
   );
 }

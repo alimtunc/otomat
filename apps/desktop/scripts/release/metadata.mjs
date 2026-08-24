@@ -146,6 +146,11 @@ export function sha256OfFile(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+/** electron-updater records base64 sha512 in `latest-mac.yml`; the check must speak the same digest. */
+export function sha512OfFile(path) {
+  return createHash("sha512").update(readFileSync(path)).digest("base64");
+}
+
 export function describeArtifact(path) {
   return { name: basename(path), bytes: statSync(path).size, sha256: sha256OfFile(path) };
 }

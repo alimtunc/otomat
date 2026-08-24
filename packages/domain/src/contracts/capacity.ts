@@ -16,3 +16,12 @@ export const updateAgentCapacityRequestSchema = z
   .object({ max_concurrent_sessions: z.number().int().positive() })
   .strict();
 export type UpdateAgentCapacityRequest = z.infer<typeof updateAgentCapacityRequestSchema>;
+
+export const launchHoldSchema = z.object({
+  held: z.boolean(),
+  active_runs: z.number().int().nonnegative(),
+});
+export type LaunchHold = z.infer<typeof launchHoldSchema>;
+
+export const updateLaunchHoldRequestSchema = z.object({ held: z.boolean() }).strict();
+export type UpdateLaunchHoldRequest = z.infer<typeof updateLaunchHoldRequestSchema>;

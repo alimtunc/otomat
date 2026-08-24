@@ -22,6 +22,7 @@ import { diffSnapshotOrNull } from "#git";
 
 import { scheduleNextStep } from "./advance.js";
 import { signalIssueLifecycle } from "./issue-lifecycle.js";
+import { requireLaunchable } from "./launch-hold.js";
 import { buildPlanRevisedEvent } from "./plan-revision.js";
 import { reopenIssue, reopenSettledRun, requireRunRow, requireWorktreePath } from "./resume.js";
 import { preflightRuntimeConfig } from "./runtime-preflight.js";
@@ -75,6 +76,7 @@ export async function appendRunStep(
   runId: string,
   input: AppendStepInput,
 ): Promise<RunRow> {
+  requireLaunchable(state);
   const { db } = state;
   const run = requireRunRow(db, runId, "append");
   requireOpenWorkspace(db, run);

@@ -23,6 +23,7 @@ interface RecoveryHarness {
       shutdown(): Promise<void>;
       remoteSession: null;
     };
+    updater: { start(): void };
   } | null;
   userData: string;
 }
@@ -30,10 +31,22 @@ interface RecoveryHarness {
 const harness = vi.hoisted((): RecoveryHarness => ({ actions: null, runtime: null, userData: "" }));
 
 vi.mock("electron", () => ({
-  app: { getPath: () => harness.userData, on: vi.fn() },
+  app: {
+    getPath: () => harness.userData,
+    getAppPath: () => "/unused/Otomat.app/Contents/Resources/app.asar",
+    on: vi.fn(),
+  },
   BrowserWindow: vi.fn(),
   dialog: { showMessageBox: async () => ({ response: 1 }) },
   ipcMain: { handle: vi.fn(), on: vi.fn() },
+}));
+vi.mock("#main/update/electron-updater", () => ({
+  createElectronUpdaterPort: () => ({
+    check: async () => null,
+    download: async () => {},
+    quitAndInstall: vi.fn(),
+    onProgress: vi.fn(),
+  }),
 }));
 vi.mock("#main/runtime", () => ({
   createDesktopRuntime: () => harness.runtime,
@@ -167,6 +180,7 @@ it("offers the next managed backup after the daemon rejects the newest candidate
     },
     linear: { reconcile: async () => {} },
     hosts: { bootActivate: async () => null, shutdown: async () => {}, remoteSession: null },
+    updater: { start: vi.fn() },
   };
 
   const desktop = new DesktopApp(DEV_PATHS, devBuildInfo("0.0.0", "43.2.0"));

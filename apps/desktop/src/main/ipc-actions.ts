@@ -66,6 +66,11 @@ export function buildIpcActions(context: IpcActionContext): IpcActions {
       if (result.ok) context.reloadCockpit();
       return result;
     },
+    update: {
+      snapshot: () => context.runtime()?.updater.snapshot() ?? null,
+      check: () => context.runtime()?.updater.check() ?? Promise.resolve(),
+      install: () => context.runtime()?.updater.install() ?? Promise.resolve(),
+    },
     executionHost: buildExecutionHostActions(
       () => context.runtime()?.hosts ?? null,
       () => context.runtime()?.instances ?? null,

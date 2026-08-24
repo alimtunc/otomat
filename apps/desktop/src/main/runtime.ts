@@ -1,6 +1,10 @@
 import { join } from "node:path";
 
-import type { LinearDeliverySnapshot, RemoteHostStatus } from "@otomat/domain";
+import type {
+  DesktopUpdateSnapshot,
+  LinearDeliverySnapshot,
+  RemoteHostStatus,
+} from "@otomat/domain";
 
 import type { DesktopChannel } from "#shared/channel";
 import { OTOMAT_GITHUB_REPO } from "#shared/constants";
@@ -20,6 +24,9 @@ import { deploymentForChannel } from "./remote/bootstrap/scripts.js";
 import { HostCapacityActions } from "./remote/host/capacity.js";
 import { RemoteInstanceActions } from "./remote/instances/actions.js";
 import { ExecutionHostManager } from "./remote/manager.js";
+import { DesktopUpdater, type UpdaterPort } from "./update/controller.js";
+import { UpdateGate } from "./update/gate.js";
+import type { Installability } from "./update/installability.js";
 
 const LOG_MAX_BYTES = 1024 * 1024;
 const LOG_ARCHIVES = 3;
@@ -34,6 +41,7 @@ export interface DesktopRuntime {
   sandbox: PreviewSandbox;
   instances: RemoteInstanceActions;
   capacity: HostCapacityActions;
+  updater: DesktopUpdater;
 }
 
 interface DesktopRuntimeOptions {
@@ -44,9 +52,13 @@ interface DesktopRuntimeOptions {
   expectedBuild: string | null;
   /** Distribution channel: it picks the daemon deployment on a host, and whether a sandbox exists. */
   channel: DesktopChannel;
+  version: string;
+  installability: Installability;
+  updaterPort: UpdaterPort;
   localDaemonUrl(): string;
   onRemoteStatus(status: RemoteHostStatus): void;
   onLinearDelivery(snapshot: LinearDeliverySnapshot): void;
+  onUpdate(snapshot: DesktopUpdateSnapshot): void;
   applyRendererUrl(url: string): void;
   onSandboxDaemonStarted(url: string): void;
 }
@@ -106,6 +118,18 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     daemonUrl: (hostId) => hosts.catalog.resolveBaseUrl(hostId),
     log: (message) => desktopLog.write(message),
   });
+  const updater = new DesktopUpdater({
+    currentVersion: options.version,
+    installability: options.installability,
+    dataDir: dataDirectory.root,
+    gate: new UpdateGate({
+      hosts: () => hosts.catalog.targets(),
+      log: (message) => desktopLog.write(message),
+    }),
+    port: options.updaterPort,
+    onChange: options.onUpdate,
+    log: (message) => desktopLog.write(message),
+  });
   return {
     dataDirectory,
     desktopLog,
@@ -116,5 +140,6 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     sandbox,
     instances,
     capacity,
+    updater,
   };
 }

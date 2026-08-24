@@ -41,6 +41,7 @@ export const queryKeys = {
   executionDefaults: ["settings", "execution-defaults"] as const,
   pullRequestGenerator: ["settings", "pr-generator"] as const,
   executionHost: ["execution-host"] as const,
+  desktopUpdate: ["desktop-update"] as const,
   hostProjects: ["execution-host", "projects"] as const,
   hostRepositories: ["execution-host", "repositories"] as const,
   // A separate root on purpose: a host status push invalidates the snapshot, never the ssh config read.

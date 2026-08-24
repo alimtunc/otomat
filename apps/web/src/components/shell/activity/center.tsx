@@ -2,7 +2,10 @@ import { FOCUS_RING, Icon, Popover, PopoverContent, PopoverTrigger, cn } from "@
 import { useActivity } from "@web/api/activity/queries";
 import { countPendingActivities } from "@web/components/shell/activity/groups";
 import { ActivityPanel } from "@web/components/shell/activity/panel";
+import { ActivityUpdateRow } from "@web/components/shell/activity/update-row";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
+import { useDesktopUpdate } from "@web/components/shell/use-desktop-update";
+import { isDesktopUpdateActive } from "@web/lib/desktop-update";
 import { useState } from "react";
 
 const BADGE_CAP = 9;
@@ -14,7 +17,14 @@ export interface ActivityCenterProps {
 export function ActivityCenter({ hostLabel }: ActivityCenterProps) {
   const [open, setOpen] = useState(false);
   const activity = useActivity();
-  const pending = countPendingActivities(activity.data?.activities ?? []);
+  const update = useDesktopUpdate();
+  // Outside the activity query's boundary: a host that stops answering must not hide the update.
+  const updating =
+    update.snapshot !== null && isDesktopUpdateActive(update.snapshot.state)
+      ? update.snapshot
+      : null;
+  const pending =
+    countPendingActivities(activity.data?.activities ?? []) + (updating === null ? 0 : 1);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -34,6 +44,15 @@ export function ActivityCenter({ hostLabel }: ActivityCenterProps) {
         )}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-90 p-0">
+        {updating === null ? null : (
+          <ul className="flex flex-col border-b border-border-subtle py-1">
+            <ActivityUpdateRow
+              snapshot={updating}
+              installing={update.installing}
+              onInstall={update.install}
+            />
+          </ul>
+        )}
         <QueryBoundary
           query={activity}
           pending={<p className="px-3 py-4 text-xs text-text-tertiary">Loading activity…</p>}

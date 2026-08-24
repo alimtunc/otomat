@@ -136,6 +136,9 @@ export function stubSupervisor(overrides: Partial<Supervisor> = {}): Supervisor 
     setCapacity: () => {
       throw new Error("setCapacity stub not configured");
     },
+    setLaunchHold: () => {
+      throw new Error("setLaunchHold stub not configured");
+    },
     setNextTurnModel: () => {
       throw new Error("setNextTurnModel stub not configured");
     },

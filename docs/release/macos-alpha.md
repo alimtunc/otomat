@@ -47,6 +47,38 @@ package in `apps/desktop/release`, packages the next commit, launches that one a
 scratch `appData`, and fails unless both opened the same root and the same database file. CI runs it
 on every push to `main`.
 
+## Updating an installed app
+
+The signed `stable` build replaces itself; nothing else does. `pnpm desktop:release` configures a
+GitHub publish provider, which is what makes electron-builder emit the two pieces of metadata the
+mechanism needs: `app-update.yml` inside the app, and `latest-mac.yml` plus the macOS `.zip` beside
+the DMG. Squirrel.Mac installs from that archive, never from the DMG, so the release publishes both.
+The release refuses to continue when `latest-mac.yml` is missing, announces another version, points
+at an artifact this build did not produce, or carries a digest that is not that artifact's — a feed
+that lies is worse than no feed.
+
+`local` and `preview` builds ship no `app-update.yml` at all (`pnpm desktop:smoke` asserts both
+directions), so they can only ever offer a manual download from the releases page. A build running
+from outside `/Applications` does the same: Squirrel replaces the bundle in place and has to own it.
+
+Stable and prerelease stay separate in both directions. A prerelease version follows GitHub's
+prereleases and a plain one follows the stable releases; the workflow marks the release from the
+packaged version, and the app refuses a candidate from the other feed rather than downgrading or
+jumping channels. It says so instead of reporting "up to date".
+
+In the app, *Settings → About · Daemon → Updates* shows the channel, the current and available
+versions, the release notes and the download progress; the Activity Center carries the same state
+while you work elsewhere. Otomat checks at startup behind a four-hour cooldown and downloads in the
+background, but **never installs on its own**: **Install and restart** is the only path, and it is
+refused — naming the host and the count — while any configured execution host still has a run in
+flight or cannot be reached. Clicking it stops every host accepting new work, re-reads their runs
+in that same request, and only then quits and swaps the app; a run that started meanwhile keeps the
+version you are on and lifts the hold again.
+
+The data directory is untouched by the swap: `~/Library/Application Support/Otomat` and its SQLite
+database survive, which `pnpm desktop:smoke:local` proves end to end (build N, build N+1, same root,
+same database file, same layout manifest).
+
 ## Architecture policy
 
 The alpha ships **Apple Silicon (`arm64`) only**, one artifact per architecture, each built on a

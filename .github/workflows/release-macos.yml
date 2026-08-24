@@ -97,24 +97,31 @@ jobs:
           name: otomat-macos-${{ github.sha }}
           path: |
             apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/latest-mac.yml
             apps/desktop/release/manifest.json
             apps/desktop/release/release-notes.md
           if-no-files-found: error
 
       # Only a tag push publishes; a manual dispatch exercises the pipeline without creating one,
       # even when it is dispatched against a tag ref.
-      - name: Publish the prerelease
+      # A prerelease version publishes a GitHub prerelease, which is the flag electron-updater reads
+      # to keep the stable and prerelease feeds apart.
+      - name: Publish the release
         if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release create "$GITHUB_REF_NAME" \
-            --verify-tag \
-            --prerelease \
+          version="$(node -p "require('./apps/desktop/package.json').version")"
+          flags="--verify-tag"
+          case "$version" in *-*) flags="$flags --prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" $flags \
             --title "Otomat $GITHUB_REF_NAME — macOS alpha" \
             --notes-file apps/desktop/release/release-notes.md \
             apps/desktop/release/*.dmg \
+            apps/desktop/release/*.zip \
+            apps/desktop/release/latest-mac.yml \
             apps/desktop/release/manifest.json
 
       - name: Shred the App Store Connect key

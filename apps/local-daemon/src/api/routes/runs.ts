@@ -37,6 +37,7 @@ const LAUNCH_REFUSAL_STATUS = {
   repository_unavailable: 409,
   worktree_unavailable: 409,
   issue_workspace_open: 409,
+  launches_held: 409,
 } satisfies Record<RunLaunchError, 400 | 409>;
 
 /** Mounted at `/api/runs`. Holds the run reads, the run commands (start/resume/abort), and the SSE stream. */
@@ -86,6 +87,9 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
     try {
       return c.json(toRun(await deps.supervisor.resume(run.id)));
     } catch (error) {
+      if (error instanceof LaunchRefusedError) {
+        return c.json({ error: error.code, message: error.message }, 409);
+      }
       if (error instanceof RunNotResumableError) {
         return c.json({ error: "run_not_resumable", message: error.message }, 409);
       }

@@ -9,6 +9,7 @@ import { emitLedgerEvent } from "#events";
 
 import { resumeRun } from "../commands.js";
 import { failureReason } from "../fail-run.js";
+import { launchesHeld } from "../launch-hold.js";
 import {
   buildProviderResumeEvent,
   type ProviderResumeOutcome,
@@ -59,6 +60,8 @@ function refuse(
  * Answers how many runs it resumed.
  */
 export async function resumeDueProviderWaits(state: SupervisorState): Promise<number> {
+  // Letting the resume be refused would drop the schedule; the hold expires, so the next pass runs it.
+  if (launchesHeld(state)) return 0;
   const now = new Date().toISOString();
   let resumed = 0;
   for (const waiting of listStepsWaitingForProvider(state.db)) {

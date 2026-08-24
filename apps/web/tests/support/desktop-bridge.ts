@@ -86,6 +86,12 @@ export function fakeDesktopBridge(
       exportBundle: () => Promise.resolve({ status: "written" as const, path: "/tmp/bundle.json" }),
       openReportDraft: () => Promise.resolve(),
     },
+    update: {
+      snapshot: () => Promise.resolve(null),
+      check: () => Promise.resolve(),
+      install: () => Promise.resolve(),
+      onChange: () => () => {},
+    },
     preview: false,
     sandbox: {
       reset: () => Promise.resolve({ ok: true as const, message: null }),

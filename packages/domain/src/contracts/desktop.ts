@@ -4,6 +4,7 @@ import {
   PLAIN_DATA_SAFETY_ERROR_CODES,
   RECOVERABLE_DATA_SAFETY_ERROR_CODES,
 } from "./data-safety.js";
+import type { DesktopUpdateSnapshot } from "./desktop-update.js";
 import type {
   ErrorDiagnostic,
   ProblemReportDraft,
@@ -160,6 +161,16 @@ export interface OtomatDesktopBridge {
     exportBundle(diagnostic: ErrorDiagnostic): Promise<SupportBundleExportResult>;
     /** Opens the prepared draft in the user's browser. Nothing is sent; the user posts it or not. */
     openReportDraft(draft: ProblemReportDraft): Promise<void>;
+  };
+  update: {
+    /** Where the shell's own update stands right now; null before the shell's runtime is up. */
+    snapshot(): Promise<DesktopUpdateSnapshot | null>;
+    /** Looks for a release now, ignoring the startup cooldown. */
+    check(): Promise<void>;
+    /** Replaces the app and relaunches it — refused, with a reason, while any host is working. */
+    install(): Promise<void>;
+    /** Subscribes to update state pushed by the main process; returns the unsubscribe function. */
+    onChange(listener: (snapshot: DesktopUpdateSnapshot) => void): () => void;
   };
   /** True for a packaged preview (unsigned build); the sandbox surface is only shown — and its reset only honored — when true. */
   readonly preview: boolean;

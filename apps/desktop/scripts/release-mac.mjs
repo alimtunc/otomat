@@ -1,7 +1,7 @@
 // Distributable macOS artifact: Developer ID signed, notarized, stapled, then verified. Fails closed
 // on a missing credential; it never falls back to the unsigned build.
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { buildMacApp, resolveBuildInfo, REPO } from "./mac-build.mjs";
@@ -10,9 +10,11 @@ import {
   createArtifactManifest,
   describeArtifact,
   resolveBuildIdentity,
+  sha512OfFile,
 } from "./release/metadata.mjs";
 import { renderReleaseNotes } from "./release/notes.mjs";
 import { preflight } from "./release/preflight.mjs";
+import { assertUpdateFeed, UPDATE_FEED_FILE } from "./release/update-feed.mjs";
 
 /** Streams progress. Never reports argv or a spawn error: they carry the App Store Connect ids. */
 function runStreamed(command, args) {
@@ -86,10 +88,30 @@ for (const check of verifySignedRelease({
   console.log(`  ok — ${check}`);
 }
 
+console.log("\nChecking the update feed an installed app will follow…");
+const feedPath = join(built.releaseDir, UPDATE_FEED_FILE);
+if (!existsSync(feedPath)) {
+  throw new Error(
+    `${UPDATE_FEED_FILE} is missing from ${built.releaseDir}. electron-builder emits it from the ` +
+      "publish provider in `builderConfig`; a release without it can never update anyone.",
+  );
+}
+const updateArtifacts = assertUpdateFeed({
+  feedText: readFileSync(feedPath, "utf8"),
+  version: buildInfo.version,
+  present: new Set(readdirSync(built.releaseDir)),
+  digestOf: (name) => sha512OfFile(join(built.releaseDir, name)),
+});
+for (const name of updateArtifacts) console.log(`  ok — ${name}`);
+
 const manifest = createArtifactManifest({
   buildInfo,
   notarized: true,
-  artifacts: [describeArtifact(built.dmgPath)],
+  artifacts: [
+    built.dmgPath,
+    feedPath,
+    ...updateArtifacts.map((n) => join(built.releaseDir, n)),
+  ].map(describeArtifact),
 });
 const manifestPath = join(built.releaseDir, "manifest.json");
 const notesPath = join(built.releaseDir, "release-notes.md");
@@ -98,5 +120,6 @@ writeFileSync(notesPath, renderReleaseNotes({ manifest, changes: changesSincePre
 
 console.log(`\nRelease artifacts in ${built.releaseDir}`);
 console.log(`  dmg:      ${built.dmgPath}`);
+console.log(`  feed:     ${feedPath}`);
 console.log(`  manifest: ${manifestPath}`);
 console.log(`  notes:    ${notesPath}`);
