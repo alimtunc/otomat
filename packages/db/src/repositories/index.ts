@@ -25,6 +25,7 @@ export * from "./review-comments.js";
 export * from "./reviewed-files.js";
 export * from "./reviews.js";
 export * from "./run-contributions.js";
+export * from "./run-interactions.js";
 export * from "./runs.js";
 export * from "./skills.js";
 export * from "./step-runs.js";

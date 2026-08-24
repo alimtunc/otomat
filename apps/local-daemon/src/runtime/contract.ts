@@ -7,6 +7,7 @@ import {
   type ProviderOptionDescriptor,
   type ProviderOptions,
   type RuntimeCapabilities,
+  type RuntimeInteractionAnswer,
 } from "@otomat/domain";
 import { z } from "zod";
 
@@ -88,19 +89,27 @@ export interface RuntimeOneShot {
   preflight?(cwd: string): void;
 }
 
-/** One persisted message handed to a turn that is already running. */
-export interface LiveInputMessage {
-  id: string;
-  body: string;
-}
+/**
+ * One persisted item handed to a turn that is already running: a user message, or
+ * the operator's answer to a question that turn is blocked on. Both travel the one
+ * channel because both are the daemon writing into a running provider's stdin.
+ */
+export type LiveInputItem =
+  | { kind: "message"; id: string; body: string }
+  | {
+      kind: "interaction_answer";
+      id: string;
+      request_id: string;
+      answer: RuntimeInteractionAnswer;
+    };
 
 /**
  * The caller's side of a live steering channel. `wrote` is the only evidence the
- * provider's stdin accepted a message, so it is reported per message, not per batch.
+ * provider's stdin accepted an item, so it is reported per item, not per batch.
  */
 export interface LiveInputChannel {
-  /** Pending messages in send order; ends when `signal` aborts, which is how a turn stops taking input. */
-  messages(signal: AbortSignal): AsyncIterable<LiveInputMessage>;
+  /** Pending items in send order; ends when `signal` aborts, which is how a turn stops taking input. */
+  items(signal: AbortSignal): AsyncIterable<LiveInputItem>;
   wrote(id: string, error: string | null): void;
 }
 

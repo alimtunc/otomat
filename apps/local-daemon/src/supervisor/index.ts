@@ -22,6 +22,7 @@ export {
   RunContributionStepClosedError,
   RunContributionTargetChangedError,
 } from "./contribution/index.js";
+export { RunInteractionRefusedError } from "./interaction/index.js";
 export { LaunchRefusedError } from "./launch-target.js";
 export { ProviderResumeRefusedError } from "./provider-wait/schedule.js";
 export { NextTurnModelError } from "./next-turn-model.js";

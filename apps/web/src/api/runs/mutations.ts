@@ -13,8 +13,8 @@ import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
-import { seedContribution } from "@web/api/runs/seed-contribution";
-import { seedIssueRun } from "@web/api/runs/seed-run";
+import { seedContribution } from "@web/api/runs/seed/contribution";
+import { seedIssueRun } from "@web/api/runs/seed/run";
 import { contributionErrorMessage } from "@web/lib/run/contribution";
 
 export function invalidateRunCycleCaches(client: QueryClient, runId: string): void {

@@ -350,7 +350,7 @@ describe("runtime availability contract", () => {
         abort: true,
         resume: true,
         resume_model: { status: "supported" },
-        permissions: false,
+        interactions: { status: "supported", kinds: ["permission"] },
         diff_hints: false,
         provider_limit: "deadline",
       },

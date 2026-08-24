@@ -3,6 +3,7 @@ import { expect, it } from "vitest";
 
 import { contribution } from "#support/contribution";
 import { envelope } from "#support/envelope";
+import { interaction } from "#support/interaction";
 
 function anchor(seq: number, contributionId: string) {
   return envelope({ seq, type: "run.contribution", payload: { contribution_id: contributionId } });
@@ -21,6 +22,33 @@ it("places each message where the ledger anchored it, around the agent's replies
   );
 
   expect(items.map((item) => item.key)).toEqual(["message-c1", "agent-1", "message-c2", "agent-3"]);
+});
+
+it("places a question where the ledger recorded the turn asking it", () => {
+  const asked = envelope({
+    id: "e-ask",
+    seq: 1,
+    type: "runtime.interaction_requested",
+    payload: { request_id: "req-1", kind: "permission" },
+  });
+  const items = buildConversation(
+    [agentSaid(0, "let me write that"), asked, agentSaid(2, "done")],
+    [],
+    [],
+    false,
+    [interaction()],
+  );
+
+  expect(items.map((item) => item.key)).toEqual(["agent-0", "interaction-e-ask", "agent-2"]);
+});
+
+it("keeps a question with no row yet as collapsed activity rather than dropping it", () => {
+  const items = buildConversation(
+    [envelope({ id: "e-unknown", seq: 0, type: "runtime.interaction_requested", payload: {} })],
+    [],
+  );
+
+  expect(items.map((item) => item.kind)).toEqual(["activity"]);
 });
 
 it("folds tools, logs and permission round-trips into one collapsed group per run of them", () => {

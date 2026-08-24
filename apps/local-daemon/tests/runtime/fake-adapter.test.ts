@@ -42,7 +42,7 @@ describe("FakeRuntimeAdapter contract", () => {
     expect(Object.keys(adapter.capabilities).toSorted()).toEqual([
       "abort",
       "diff_hints",
-      "permissions",
+      "interactions",
       "provider_limit",
       "resume",
       "steering",

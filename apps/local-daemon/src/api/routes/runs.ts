@@ -22,11 +22,12 @@ import { agentConfigErrorResponse } from "../agent-config-refusal.js";
 import { projectRunCompletionReport } from "../completion-report.js";
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
+import { toPullRequest } from "../pull-request-serialize.js";
 import { readRunUsage, readRuns } from "../reads.js";
 import { refusalJson } from "../refusal.js";
 import { runDetailJson } from "../run-detail.js";
 import { runtimeUnavailableResponse } from "../runtime-unavailable.js";
-import { toPullRequest, toRun } from "../serialize.js";
+import { toRun } from "../serialize.js";
 import { appendStepSelector, stepAppendErrorResponse } from "../step-append.js";
 
 const LAUNCH_REFUSAL_STATUS = {

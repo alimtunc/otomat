@@ -4,10 +4,13 @@ import {
   AGENT_SESSION_STATES,
   COMPETE_GROUP_STATES,
   RUN_CONTRIBUTION_STATES,
+  RUN_INTERACTION_KINDS,
+  RUN_INTERACTION_STATES,
   RUN_STATES,
   STEP_RUN_STATES,
 } from "../entity-states.js";
 import { runPlanSchema } from "../run-plan.js";
+import { runtimeInteractionAnswerSchema, runtimeInteractionOptionSchema } from "../runtime.js";
 import { resolvedAgentConfigSchema } from "./agents.js";
 import { worktreeStatusSchema } from "./workspace.js";
 
@@ -43,6 +46,27 @@ export const runContributionContractSchema = z.object({
   created_at: z.iso.datetime(),
 });
 export type RunContributionContract = z.infer<typeof runContributionContractSchema>;
+
+/** One question a runtime blocked its turn on, and what the operator answered. */
+export const runInteractionContractSchema = z.object({
+  /** The id of the `runtime.interaction_requested` event that asked it, so a surface can place the request where it was asked. */
+  id: z.string(),
+  run_id: z.string(),
+  step_run_id: z.string(),
+  agent_session_id: z.string(),
+  provider_request_id: z.string(),
+  kind: z.enum(RUN_INTERACTION_KINDS),
+  state: z.enum(RUN_INTERACTION_STATES),
+  prompt: z.string().min(1),
+  tool: z.string().nullable(),
+  options: z.array(runtimeInteractionOptionSchema),
+  answer: runtimeInteractionAnswerSchema.nullable(),
+  /** Why the request can no longer be answered; set only on `canceled`. */
+  canceled_reason: z.string().nullable(),
+  requested_at: z.iso.datetime(),
+  settled_at: z.iso.datetime().nullable(),
+});
+export type RunInteractionContract = z.infer<typeof runInteractionContractSchema>;
 
 /**
  * A step suspended on a provider quota: the limit as the provider reported it, plus

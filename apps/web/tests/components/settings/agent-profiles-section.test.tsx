@@ -43,7 +43,7 @@ function claude(overrides: Partial<RuntimeDescriptor> = {}): RuntimeDescriptor {
       steering: "turn_boundary",
       abort: true,
       resume: true,
-      permissions: true,
+      interactions: { status: "supported", kinds: ["permission"] },
       diff_hints: true,
     },
     availability: { status: "available", version: "1.0.0" },

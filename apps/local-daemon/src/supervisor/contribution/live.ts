@@ -8,8 +8,7 @@ import {
 
 import { sessionDir } from "#events";
 
-import { delay } from "../delay.js";
-import { appendLiveInput, liveInputIds, liveInputReceipts } from "../live-input.js";
+import { awaitLiveInputReceipts, appendLiveInput, liveInputIds } from "../live-input.js";
 import type { SupervisorState } from "../state.js";
 import { assertContributionTransitions } from "../transitions.js";
 import { emitContributionEvents } from "./events.js";
@@ -21,11 +20,6 @@ export interface LiveTarget {
   exited: Promise<unknown>;
 }
 
-const RECEIPT_POLL_MS = 25;
-
-/** Long enough for a worker between two inbox polls, short enough that a wedged one still frees the message for the next turn. */
-const RECEIPT_TIMEOUT_MS = 10_000;
-
 export function inflightLiveTarget(
   state: SupervisorState,
   runId: string,
@@ -34,25 +28,6 @@ export function inflightLiveTarget(
   const handle = state.inflight.get(session.id);
   if (handle === undefined || handle.runId !== runId) return null;
   return { session, exited: handle.proc.exited };
-}
-
-async function awaitReceipts(
-  dir: string,
-  ids: readonly string[],
-  exited: Promise<unknown>,
-): Promise<Map<string, string | null>> {
-  const deadline = Date.now() + RECEIPT_TIMEOUT_MS;
-  let workerGone = false;
-  void exited.then(() => {
-    workerGone = true;
-  });
-  for (;;) {
-    const receipts = liveInputReceipts(dir);
-    if (ids.every((id) => receipts.has(id))) return receipts;
-    // One last read after the exit: the worker may have written a receipt on its way out.
-    if (workerGone || Date.now() >= deadline) return liveInputReceipts(dir);
-    await delay(RECEIPT_POLL_MS);
-  }
 }
 
 /**
@@ -74,11 +49,11 @@ export async function deliverLiveContributions(
   const inboxed = liveInputIds(dir);
   // The channel is written before the ledger is told about it: a failed event must not cost the worker its message.
   for (const row of batch) {
-    if (!inboxed.has(row.id)) appendLiveInput(dir, { id: row.id, body: row.body });
+    if (!inboxed.has(row.id)) appendLiveInput(dir, { kind: "message", id: row.id, body: row.body });
   }
   emitContributionEvents(state, ids);
 
-  const receipts = await awaitReceipts(dir, ids, target.exited);
+  const { receipts } = await awaitLiveInputReceipts(dir, ids, target.exited);
   const accepted = batch.filter((row) => receipts.get(row.id) === null);
   const refused = batch.filter((row) => receipts.get(row.id) !== null);
 

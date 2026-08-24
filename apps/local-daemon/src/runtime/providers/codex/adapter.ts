@@ -38,7 +38,11 @@ const CODEX_CAPABILITIES = {
   steering: "turn_boundary",
   abort: true,
   resume: true,
-  permissions: false,
+  interactions: {
+    status: "unsupported",
+    reason:
+      "`codex exec` reads stdin as the prompt, so it has no channel to carry an approval back; the interactive app-server protocol is a different transport.",
+  },
   diff_hints: false,
   provider_limit: "detects",
 } satisfies RuntimeAdapterCapabilities;

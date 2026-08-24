@@ -14,6 +14,7 @@ import {
   reconcileContributionClaims,
   retryRunContribution,
 } from "./contribution/index.js";
+import { answerRunInteraction } from "./interaction/index.js";
 import { setLaunchHold } from "./launch-hold.js";
 import { setNextTurnModel } from "./next-turn-model.js";
 import { finishSettle } from "./pass-boundary.js";
@@ -69,6 +70,8 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     cancelContribution: (runId, contributionId) =>
       cancelRunContribution(state, runId, contributionId),
     deliverContributions: (runId) => deliverQueuedContributions(state, runId),
+    answerInteraction: (runId, interactionId, answer) =>
+      answerRunInteraction(state, runId, interactionId, answer),
     selectWinner: (runId, groupId, stepRunId) =>
       selectCompeteWinner(state, runId, groupId, stepRunId),
     abort: (runId) => abortRun(state, runId),

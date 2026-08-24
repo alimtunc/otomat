@@ -6,6 +6,7 @@ import { drainRunEvents, drainSessionEvents, emitLedgerEvent, readRunEvents } fr
 import { TARGETS } from "./classify.js";
 import { cancelUndeliverableContributions } from "./contribution/deliver.js";
 import { eventsForSession, findFinalStatus } from "./evidence.js";
+import { cancelSessionInteractions, ingestRunInteractions } from "./interaction/index.js";
 import { buildTerminalMarker } from "./markers.js";
 import { finishSettle } from "./pass-boundary.js";
 import { terminateGracefully } from "./process.js";
@@ -76,6 +77,17 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
       now,
     );
     for (const session of sessions) resolveSessionContributions(db, session.id, "canceled", now);
+    // Promote-then-cancel, as settle does: an unpromoted ask or pending question left behind would resurrect on the next turn and park it.
+    ingestRunInteractions(db, runId);
+    for (const session of sessions) {
+      cancelSessionInteractions(
+        db,
+        dataDir,
+        session.id,
+        "the run was aborted before this question was answered",
+        now,
+      );
+    }
 
     const ref = {
       runId,

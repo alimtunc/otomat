@@ -20,8 +20,8 @@ import { Hono } from "hono";
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";
 import { pullRequestImportRefusal } from "../pull-request-refusal.js";
+import { toPullRequest } from "../pull-request-serialize.js";
 import { readIssue, readIssues } from "../reads.js";
-import { toPullRequest } from "../serialize.js";
 
 /** Mounted at `/api/issues`. */
 export function createIssueRoutes(deps: ApiDeps): Hono {

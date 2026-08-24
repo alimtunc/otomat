@@ -4,11 +4,11 @@ import type {
   CompeteGroupRow,
   IssueRow,
   ProjectRow,
-  PullRequestRow,
   ReviewCommentRow,
   ReviewedFileRow,
   ReviewRow,
   RunContributionRow,
+  RunInteractionRow,
   RunRow,
   SkillRow,
   StepRunRow,
@@ -22,14 +22,12 @@ import {
   issueContractSchema,
   projectContractSchema,
   isRunPlanCompeteGroup,
-  pullRequestContractSchema,
-  pullRequestEvidenceSchema,
-  pullRequestReviewContextSchema,
   reviewCommentContractSchema,
   reviewContractSchema,
   reviewedFileContractSchema,
   runContractSchema,
   runContributionContractSchema,
+  runInteractionContractSchema,
   skillContractSchema,
   stepRunContractSchema,
   workflowPresetContractSchema,
@@ -40,15 +38,12 @@ import {
   type IssueExecution,
   type IssueWorkspace,
   type ProjectContract,
-  type PullRequestAttachment,
-  type PullRequestContract,
-  type PullRequestIssueLink,
-  type PullRequestReviewContext,
   type ReviewCommentContract,
   type ReviewContract,
   type ReviewedFileContract,
   type RunContract,
   type RunContributionContract,
+  type RunInteractionContract,
   type RunPlan,
   type SkillContract,
   type StepRunContract,
@@ -122,6 +117,16 @@ export function toRunContribution(row: RunContributionRow): RunContributionContr
   });
 }
 
+export function toRunInteraction(row: RunInteractionRow): RunInteractionContract {
+  return runInteractionContractSchema.parse({
+    ...row,
+    options: row.options_json,
+    answer: row.answer_json,
+    requested_at: sqliteToIso(row.requested_at),
+    settled_at: toIsoInstant(row.settled_at),
+  });
+}
+
 /** A compete candidate carries the branch and status of its own isolated worktree; a plain step has none. */
 export function toStepRun(
   row: StepRunRow,
@@ -164,64 +169,6 @@ export function toReviewComment(row: ReviewCommentRow): ReviewCommentContract {
 
 export function toReviewedFile(row: ReviewedFileRow): ReviewedFileContract {
   return reviewedFileContractSchema.parse(row);
-}
-
-/** A row carries its evidence as stored JSON; parsing it strictly means a corrupt audit is reported, never shown as "no evidence". */
-function toAttachment(row: PullRequestRow): PullRequestAttachment | null {
-  if (row.attached_at === null || row.attachment_evidence === null) return null;
-  return {
-    attached_at: row.attached_at,
-    attached_by: row.attached_by,
-    evidence: pullRequestEvidenceSchema.parse(JSON.parse(row.attachment_evidence)),
-  };
-}
-
-export function toPullRequest(row: PullRequestRow): PullRequestContract {
-  return pullRequestContractSchema.parse({
-    id: row.id,
-    issue_id: row.issue_id,
-    run_id: row.run_id,
-    provider: row.provider,
-    origin: row.origin,
-    provenance: row.provenance,
-    author_login: row.author_login,
-    review_decision: row.review_decision,
-    checks_state: row.checks_state,
-    mergeable: row.mergeable,
-    requested_reviewers: row.requested_reviewers,
-    provider_updated_at: row.provider_updated_at,
-    head_sha: row.head_sha,
-    attachment: toAttachment(row),
-    number: row.number,
-    url: row.url,
-    status: row.status,
-    publication_status: row.publication_status,
-    title: row.title,
-    body: row.body,
-    head_ref: row.head_ref,
-    base_ref: row.base_ref,
-    commit_subject: row.commit_subject,
-    commit_body: row.commit_body,
-    generator:
-      row.generator_runtime === null
-        ? null
-        : {
-            runtime: row.generator_runtime,
-            model: row.generator_model,
-            effort: row.generator_effort,
-          },
-    published_head_sha: row.published_head_sha,
-    published_diff_sha: row.published_diff_sha,
-    error_code: row.error_code,
-    error_message: row.error_message,
-  });
-}
-
-export function toPullRequestReviewContext(
-  row: PullRequestRow,
-  issue: PullRequestIssueLink | null,
-): PullRequestReviewContext {
-  return pullRequestReviewContextSchema.parse({ pull_request: toPullRequest(row), issue });
 }
 
 /** Compatibility is resolved against this host, so it is passed in rather than read from the row. */

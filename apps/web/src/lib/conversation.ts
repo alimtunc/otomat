@@ -1,4 +1,8 @@
-import type { EventEnvelope, RunContributionContract } from "@otomat/domain";
+import type {
+  EventEnvelope,
+  RunContributionContract,
+  RunInteractionContract,
+} from "@otomat/domain";
 
 const MILESTONE_TYPES: ReadonlySet<EventEnvelope["type"]> = new Set([
   "run.lifecycle",
@@ -18,6 +22,7 @@ export interface ActivityCounts {
 export type ConversationItem =
   | { kind: "step"; key: string; name: string }
   | { kind: "message"; key: string; contribution: RunContributionContract }
+  | { kind: "interaction"; key: string; interaction: RunInteractionContract }
   | { kind: "agent"; key: string; event: EventEnvelope; text: string }
   | { kind: "milestone"; key: string; event: EventEnvelope }
   | { kind: "activity"; key: string; events: EventEnvelope[]; counts: ActivityCounts };
@@ -43,8 +48,12 @@ function countActivity(events: readonly EventEnvelope[]): ActivityCounts {
   const counts: ActivityCounts = { tools: 0, permissions: 0, thinking: 0, logs: 0, other: 0 };
   for (const event of events) {
     if (event.type === "runtime.tool_call") counts.tools += 1;
-    else if (event.type.startsWith("runtime.permission")) counts.permissions += 1;
-    else if (event.type === "runtime.message") counts.thinking += 1;
+    else if (
+      event.type.startsWith("runtime.permission") ||
+      event.type.startsWith("runtime.interaction")
+    ) {
+      counts.permissions += 1;
+    } else if (event.type === "runtime.message") counts.thinking += 1;
     else if (event.type === "runtime.log") counts.logs += 1;
     else counts.other += 1;
   }
@@ -67,14 +76,16 @@ export function describeActivity(counts: ActivityCounts): string {
   return `${plural(total, "step")}${detail}`;
 }
 
-/** Ordering comes from the ledger via each message's `run.contribution` anchor; a message the stream has not carried yet closes the thread. */
+/** Ordering comes from the ledger via each message's `run.contribution` anchor and each question's own request event; a message the stream has not carried yet closes the thread. */
 export function buildConversation(
   events: readonly EventEnvelope[],
   contributions: readonly RunContributionContract[],
   steps: readonly ConversationStep[] = [],
   hasOlder = false,
+  interactions: readonly RunInteractionContract[] = [],
 ): ConversationItem[] {
   const byId = new Map(contributions.map((contribution) => [contribution.id, contribution]));
+  const byRequestEvent = new Map(interactions.map((entry) => [entry.id, entry]));
   const stepNames = steps.length > 1 ? new Map(steps.map((step) => [step.id, step.name])) : null;
   const anchored = new Set<string>();
   const items: ConversationItem[] = [];
@@ -117,6 +128,14 @@ export function buildConversation(
       anchored.add(id);
       lastAnchoredSeq = contribution.seq;
       items.push({ kind: "message", key: `message-${id}`, contribution });
+      continue;
+    }
+    // An unmatched request event stays collapsed activity rather than vanishing from the thread.
+    const interaction =
+      event.type === "runtime.interaction_requested" ? byRequestEvent.get(event.id) : undefined;
+    if (interaction !== undefined) {
+      flush();
+      items.push({ kind: "interaction", key: `interaction-${interaction.id}`, interaction });
       continue;
     }
     const text = agentText(event);

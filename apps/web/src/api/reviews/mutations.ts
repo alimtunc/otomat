@@ -16,7 +16,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
-import { seedIssueRun } from "@web/api/runs/seed-run";
+import { seedIssueRun } from "@web/api/runs/seed/run";
 
 function reviewRefusal(error: unknown): string | null {
   if (!(error instanceof DaemonRequestError)) return null;

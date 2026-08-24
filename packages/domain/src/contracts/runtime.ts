@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { RUN_INTERACTION_KINDS } from "./entity-states.js";
+
 /** Wire id of the built-in deterministic fake runtime — a simulated runtime for tests and explicit development only. */
 export const FAKE_RUNTIME_ID = "fake";
 
@@ -31,6 +33,60 @@ export const runtimeResumeModelCapabilitySchema = z.discriminatedUnion("status",
 ]);
 export type RuntimeResumeModelCapability = z.infer<typeof runtimeResumeModelCapabilitySchema>;
 
+/** Which question kinds a runtime can genuinely round-trip; `unsupported` states why rather than leaving the operator to guess. */
+export const runtimeInteractionCapabilitySchema = z.discriminatedUnion("status", [
+  z.object({
+    status: z.literal("supported"),
+    kinds: z.array(z.enum(RUN_INTERACTION_KINDS)).min(1),
+  }),
+  z.object({ status: z.literal("unsupported"), reason: z.string().min(1) }),
+]);
+export type RuntimeInteractionCapability = z.infer<typeof runtimeInteractionCapabilitySchema>;
+
+export const runtimeInteractionOptionSchema = z.object({
+  value: z.string().min(1),
+  label: z.string().min(1),
+});
+export type RuntimeInteractionOption = z.infer<typeof runtimeInteractionOptionSchema>;
+
+/**
+ * One question as its adapter translated it — never inferred from prose.
+ * `request_id` is the runtime's own correlation id, which the answer travels
+ * back under; `options` is empty unless the kind is `choice`.
+ */
+export const runtimeInteractionRequestSchema = z.object({
+  request_id: z.string().min(1),
+  kind: z.enum(RUN_INTERACTION_KINDS),
+  prompt: z.string().min(1),
+  /** The tool the question gates, when it gates one. */
+  tool: z.string().min(1).nullable(),
+  options: z.array(runtimeInteractionOptionSchema),
+});
+export type RuntimeInteractionRequest = z.infer<typeof runtimeInteractionRequestSchema>;
+
+/** The operator's answer, in the runtime-agnostic shape every adapter translates back into its own protocol. */
+export const runtimeInteractionAnswerSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("permission"), decision: z.enum(["allow", "deny"]) }),
+  z.object({ kind: z.literal("choice"), values: z.array(z.string().min(1)).min(1) }),
+  z.object({ kind: z.literal("text"), text: z.string().trim().min(1) }),
+]);
+export type RuntimeInteractionAnswer = z.infer<typeof runtimeInteractionAnswerSchema>;
+
+/** How a request stopped being open: the operator answered it, or it can no longer be answered and why. */
+export const runtimeInteractionOutcomeSchema = z.discriminatedUnion("outcome", [
+  z.object({
+    outcome: z.literal("answered"),
+    request_id: z.string().min(1),
+    answer: runtimeInteractionAnswerSchema,
+  }),
+  z.object({
+    outcome: z.literal("canceled"),
+    request_id: z.string().min(1),
+    reason: z.string().min(1),
+  }),
+]);
+export type RuntimeInteractionOutcome = z.infer<typeof runtimeInteractionOutcomeSchema>;
+
 /** Optional behaviors a runtime may advertise; absent ones degrade silently in the UI. Single source for the daemon registry and the wire contract. */
 export const runtimeCapabilitiesSchema = z.object({
   stream: z.boolean(),
@@ -38,7 +94,7 @@ export const runtimeCapabilitiesSchema = z.object({
   abort: z.boolean(),
   resume: z.boolean(),
   resume_model: runtimeResumeModelCapabilitySchema,
-  permissions: z.boolean(),
+  interactions: runtimeInteractionCapabilitySchema,
   diff_hints: z.boolean(),
   provider_limit: runtimeProviderLimitModeSchema,
 });

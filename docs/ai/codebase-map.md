@@ -386,6 +386,49 @@ delivery would relaunch the very turn the operator just stopped; a restart
 clears the hold but nothing auto-delivers on boot, so the queue still waits for
 an explicit action.
 
+## Runtime Interactions
+
+An agent that blocks mid-turn on a permission, a choice or a written question is
+answered through one provider-agnostic contract. `supervisor/interaction/` owns
+that lifecycle end to end; the conversation, the Activity Center and the project
+badge only consume it.
+
+The request travels on evidence the turn already writes. An adapter translates
+its native protocol into a `runtime.interaction_requested` event, the session
+tailer ingests it, and a pass paired with that tailer promotes it into a
+`run_interactions` row keyed by `(agent_session_id, provider_request_id)`. The
+ledger is therefore the request's proof: a pass that runs twice, or after a
+restart, reaches the same row instead of a second one. A pending row rests the
+run and its step on the already-reachable `awaiting_permission` state, which is
+what makes the Activity Center entry, the Inbox kind and the shell badge appear
+without a projection of their own.
+
+The answer travels back on the channel that already writes into a running turn's
+stdin: `live-input.jsonl` carries a steering message and an interaction answer as
+two kinds of the same item, with the same per-item receipts and the same
+per-turn reset. The worker's single stdin pump writes a user frame for one and a
+provider control frame for the other, and takes the first answer per request id,
+so a retried command can never reach the provider twice. The row is marked
+answered only behind that write, and the write is scoped to a still-pending row,
+so two racing commands settle it once.
+
+A request outlives nothing that cannot receive it. `settleRun` cancels a settled
+session's open questions next to the contributions it resolves, so the live exit,
+an abort and boot reconciliation all close them; an answer aimed at a session
+that is no longer in flight cancels the request and is refused with the reason,
+never accepted into the void.
+
+Claude Code reaches this contract through `--permission-prompt-tool stdio`, which
+routes an ask the frozen permission mode did not settle to the client as a
+`can_use_tool` control request on the stream-json channel Otomat already owns —
+no MCP server and no second process. The CLI's `permission_suggestions` are
+dropped on purpose: one approval must never widen the mode the run was launched
+under, and a refusal the operator gave is reported once rather than again as the
+provider-decided denial the result frame echoes. Codex declares the capability
+unsupported with its reason: `codex exec` reads stdin as the prompt and has no
+approval channel, and the interactive app-server protocol is a different
+transport.
+
 ## Linear Issue Freshness
 
 The mirror is refreshed by app-driven incremental reads, not webhooks; missed

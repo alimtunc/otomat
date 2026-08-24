@@ -44,6 +44,7 @@ const CONFIG: ResolvedAgentConfig = {
 };
 
 vi.mock("@web/api/runs/queries", () => ({
+  useRunInteractions: () => ({ data: { interactions: [] } }),
   useRunContributions: () => ({
     isPending: contributionsPending,
     isError: false,

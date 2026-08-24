@@ -6,6 +6,8 @@ import {
   runContributionContractSchema,
   runContributionsResponseSchema,
   runDetailSchema,
+  runInteractionContractSchema,
+  runInteractionsResponseSchema,
   reviewDiffResponseSchema,
   runEventWindowSchema,
   runLaunchResponseSchema,
@@ -15,6 +17,7 @@ import {
   stepRunContractSchema,
   workspaceClosureSummarySchema,
   type AppendRunStepRequest,
+  type AnswerRunInteractionRequest,
   type CreateRunContributionRequest,
   type ScheduleProviderResumeRequest,
   type SetNextTurnModelRequest,
@@ -106,6 +109,24 @@ export function createRunsClient(config: DaemonClientConfig) {
           config,
           `/api/runs/${encodeURIComponent(id)}/contributions/${encodeURIComponent(contributionId)}/cancel`,
           {},
+        ),
+      );
+    },
+    async listRunInteractions(id: string) {
+      return runInteractionsResponseSchema.parse(
+        await getJson(config, `/api/runs/${encodeURIComponent(id)}/interactions`),
+      );
+    },
+    async answerRunInteraction(
+      id: string,
+      interactionId: string,
+      request: AnswerRunInteractionRequest,
+    ) {
+      return runInteractionContractSchema.parse(
+        await postJson(
+          config,
+          `/api/runs/${encodeURIComponent(id)}/interactions/${encodeURIComponent(interactionId)}/answer`,
+          request,
         ),
       );
     },

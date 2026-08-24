@@ -1,6 +1,6 @@
 import type { RunDetail } from "@otomat/domain";
 import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
-import { useRunContributions } from "@web/api/runs/queries";
+import { useRunContributions, useRunInteractions } from "@web/api/runs/queries";
 import type { RunEventStream } from "@web/api/runs/run-event-stream";
 import { ConversationComposer } from "@web/components/runs/conversation/composer";
 import { JumpToLatest } from "@web/components/runs/conversation/jump-to-latest";
@@ -35,13 +35,12 @@ export function ConversationThread({
 }) {
   const { events, state, degraded, history } = stream;
   const contributions = useRunContributions(detail.run.id);
+  const interactions = useRunInteractions(detail.run.id);
   const autoscroll = useThreadAutoscroll(`${detail.run.id}:${stepRunId}`, events[0]?.seq ?? null);
   const loadOlderRef = useLoadOlder(history, !autoscroll.pinned);
   const step = detail.steps.find((candidate) => candidate.id === stepRunId);
-  const working =
-    step?.status === "starting" ||
-    step?.status === "running" ||
-    step?.status === "awaiting_permission";
+  // `awaiting_permission` is out: the turn is live, but it is waiting on the operator, and its card already says so.
+  const working = step?.status === "starting" || step?.status === "running";
 
   if (history.status === "error") return loadErrorState(history.retry);
   if (history.status === "pending") return LOADING;
@@ -52,62 +51,83 @@ export function ConversationThread({
       pending={LOADING}
       error={loadErrorState(() => void contributions.refetch())}
     >
-      {(data) => {
-        const messages = data.contributions.filter(
-          (contribution) => contribution.step_run_id === stepRunId,
-        );
-        const items = buildConversation(events, messages, detail.steps, history.hasOlder);
+      {(data) => (
+        <QueryBoundary
+          query={interactions}
+          pending={LOADING}
+          error={loadErrorState(() => void interactions.refetch())}
+        >
+          {(asked) => {
+            const messages = data.contributions.filter(
+              (contribution) => contribution.step_run_id === stepRunId,
+            );
+            const items = buildConversation(
+              events,
+              messages,
+              detail.steps,
+              history.hasOlder,
+              asked.interactions,
+            );
 
-        return (
-          <div className="flex min-h-0 flex-1 flex-col">
-            <QueuedBanner run={detail.run} contributions={messages} />
-            {degraded ? (
-              <div
-                aria-live="polite"
-                className="border-b border-border-subtle px-6 py-2 text-xs text-danger"
-              >
-                Some events could not be decoded — this thread may be incomplete.
-              </div>
-            ) : null}
-            {items.length === 0 && !working && !history.hasOlder ? (
-              <div className="px-6 py-8">
-                <EmptyState
-                  icon="loader"
-                  variant="inline"
-                  tone={state === "error" ? "error" : "neutral"}
-                  title={state === "error" ? "This run's stream failed" : "Nothing here yet"}
-                  description={
-                    state === "error"
-                      ? "Reconnect to see this run's activity."
-                      : "Agent activity and your messages appear here as they happen."
-                  }
+            return (
+              <div className="flex min-h-0 flex-1 flex-col">
+                <QueuedBanner run={detail.run} contributions={messages} />
+                {degraded ? (
+                  <div
+                    aria-live="polite"
+                    className="border-b border-border-subtle px-6 py-2 text-xs text-danger"
+                  >
+                    Some events could not be decoded — this thread may be incomplete.
+                  </div>
+                ) : null}
+                {items.length === 0 && !working && !history.hasOlder ? (
+                  <div className="px-6 py-8">
+                    <EmptyState
+                      icon="loader"
+                      variant="inline"
+                      tone={state === "error" ? "error" : "neutral"}
+                      title={state === "error" ? "This run's stream failed" : "Nothing here yet"}
+                      description={
+                        state === "error"
+                          ? "Reconnect to see this run's activity."
+                          : "Agent activity and your messages appear here as they happen."
+                      }
+                    />
+                  </div>
+                ) : (
+                  <div className="relative flex min-h-0 flex-1 flex-col">
+                    {/* Containing block: an sr-only span otherwise inflates ancestor scroll height. */}
+                    <div
+                      ref={autoscroll.viewportRef}
+                      className="relative min-h-0 flex-1 overflow-auto"
+                    >
+                      <ul
+                        ref={autoscroll.contentRef}
+                        aria-label="Run conversation"
+                        className="py-1"
+                      >
+                        <EarlierActivity history={history} ref={loadOlderRef} />
+                        {items.map((item) => (
+                          <ThreadItem key={item.key} item={item} runId={detail.run.id} />
+                        ))}
+                        {working ? <WorkingRow latest={events.at(-1) ?? null} /> : null}
+                      </ul>
+                    </div>
+                    {autoscroll.pinned ? null : <JumpToLatest onClick={autoscroll.jumpToLatest} />}
+                  </div>
+                )}
+                {/* Keyed per step: a draft written for one recipient must never travel to another thread. */}
+                <ConversationComposer
+                  key={stepRunId}
+                  detail={detail}
+                  stepRunId={stepRunId}
+                  onSent={autoscroll.jumpToLatest}
                 />
               </div>
-            ) : (
-              <div className="relative flex min-h-0 flex-1 flex-col">
-                {/* Containing block: an sr-only span otherwise inflates ancestor scroll height. */}
-                <div ref={autoscroll.viewportRef} className="relative min-h-0 flex-1 overflow-auto">
-                  <ul ref={autoscroll.contentRef} aria-label="Run conversation" className="py-1">
-                    <EarlierActivity history={history} ref={loadOlderRef} />
-                    {items.map((item) => (
-                      <ThreadItem key={item.key} item={item} runId={detail.run.id} />
-                    ))}
-                    {working ? <WorkingRow latest={events.at(-1) ?? null} /> : null}
-                  </ul>
-                </div>
-                {autoscroll.pinned ? null : <JumpToLatest onClick={autoscroll.jumpToLatest} />}
-              </div>
-            )}
-            {/* Keyed per step: a draft written for one recipient must never travel to another thread. */}
-            <ConversationComposer
-              key={stepRunId}
-              detail={detail}
-              stepRunId={stepRunId}
-              onSent={autoscroll.jumpToLatest}
-            />
-          </div>
-        );
-      }}
+            );
+          }}
+        </QueryBoundary>
+      )}
     </QueryBoundary>
   );
 }

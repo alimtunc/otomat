@@ -13,6 +13,7 @@ import {
   listProjects,
   listRepositories,
   listRunContributions,
+  listRunInteractions,
   listRuns,
   listSkills,
   listStepRunsForRun,
@@ -40,6 +41,7 @@ import {
   type RunContract,
   type RunContributionsResponse,
   type RunDetail,
+  type RunInteractionsResponse,
   type RunResumePlan,
   type RunState,
   type RunUsageResponse,
@@ -62,6 +64,7 @@ import {
   toProject,
   toRun,
   toRunContribution,
+  toRunInteraction,
   toSkill,
   toStepRun,
   toWorkflowPreset,
@@ -176,6 +179,10 @@ export function readRunDetail(
 
 export function readRunContributions(db: Db, runId: string): RunContributionsResponse {
   return { run_id: runId, contributions: listRunContributions(db, runId).map(toRunContribution) };
+}
+
+export function readRunInteractions(db: Db, runId: string): RunInteractionsResponse {
+  return { run_id: runId, interactions: listRunInteractions(db, runId).map(toRunInteraction) };
 }
 
 /** Read from the whole ledger, so a cockpit that has paged only the newest events still sees a true total. */

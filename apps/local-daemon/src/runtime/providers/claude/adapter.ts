@@ -37,19 +37,22 @@ export function claudePermissionMode(env: NodeJS.ProcessEnv = process.env): stri
   return known ?? DEFAULT_CLAUDE_PERMISSION_MODE;
 }
 
+/** Routes unsettled asks to Otomat over the stream-json control channel; a CLI that stopped accepting the flag must fail loudly rather than silently auto-deny. */
+const CLAUDE_PERMISSION_PROMPT_TOOL = ["--permission-prompt-tool", "stdio"];
+
 /**
  * `steering` is `live` because the CLI reads further user messages from an open
- * stdin while it works. `permissions` stays false: `claude -p` reports the calls
- * it refused but exposes no channel to answer one. `provider_limit` is `deadline`
- * because the CLI prints the unix second its plan window reopens next to the
- * limit it reports.
+ * stdin while it works, and `interactions` rides that same open stdin: the CLI
+ * asks with a `can_use_tool` control request and takes the control response back.
+ * `provider_limit` is `deadline` because the CLI prints the unix second its plan
+ * window reopens next to the limit it reports.
  */
 const CLAUDE_CAPABILITIES = {
   stream: true,
   steering: "live",
   abort: true,
   resume: true,
-  permissions: false,
+  interactions: { status: "supported", kinds: ["permission"] },
   diff_hints: false,
   provider_limit: "deadline",
 } satisfies RuntimeAdapterCapabilities;
@@ -115,6 +118,7 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
       "--verbose",
       "--permission-mode",
       mode,
+      ...CLAUDE_PERMISSION_PROMPT_TOOL,
       ...this.tuningArgs(input.model ?? null, input.options ?? {}),
     ];
   }
@@ -148,7 +152,8 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
       cwd: input.cwd,
       ref,
       streamStdin: liveInput?.stream,
-      createMapper: (emitter) => new ClaudeFrameMapper(emitter, permission, liveInput?.onResult),
+      createMapper: (emitter) =>
+        new ClaudeFrameMapper(emitter, permission, liveInput?.onResult, liveInput?.onRequest),
     };
   }
 }

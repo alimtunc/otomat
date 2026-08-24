@@ -20,6 +20,8 @@ import { withCarriedContributions } from "./contribution/prompt.js";
 import { failureReason } from "./fail-run.js";
 import { waitForWorkerIdentity } from "./identity.js";
 import { runInitCommandBatch, runStillLive } from "./init-commands.js";
+import { ingestRunInteractions } from "./interaction/index.js";
+import { startIntervalPass } from "./interval-pass.js";
 import { clearLiveInput } from "./live-input.js";
 import { capturePassStart, finishSettle } from "./pass-boundary.js";
 import type { SlotGrant } from "./semaphore.js";
@@ -29,6 +31,9 @@ import { trackPending, type SupervisorState } from "./state.js";
 import { driveRunTo, driveSessionTo, driveStepTo } from "./transitions.js";
 import { captureTurnContext } from "./turn-context.js";
 import type { ProcessExit, SessionProcess, TurnContext } from "./types.js";
+
+/** Just behind the session tail's own interval, so a question reaches the operator within one poll of being written. */
+const INTERACTION_INGEST_INTERVAL_MS = 250;
 
 /** Advances only the turn's own step/session — siblings keep their state. The step machine decides what may reopen: a stopped step goes back to work, a succeeded one is left as delivered. */
 function advanceToRunning(state: SupervisorState, ctx: TurnContext): void {
@@ -73,10 +78,18 @@ function trackTurn(
   proc: SessionProcess,
   tail: ReturnType<typeof startSessionTail>,
 ): void {
+  // Paired with the tail because it reads what the tail just ingested: a question the turn asked is only answerable once it is a row.
+  const interactions = startIntervalPass(
+    `run ${ctx.runId} interactions`,
+    async () => ingestRunInteractions(state.db, ctx.runId),
+    INTERACTION_INGEST_INTERVAL_MS,
+  );
   const monitor = trackPending(
     state,
     (async () => {
       const exit = await proc.exited;
+      // Stopped before settling: settle owns the interaction lifecycle from here, and a pass firing mid-settle would race its state walk.
+      interactions.stop();
       try {
         if (!state.aborting.has(ctx.runId)) settleLive(state, ctx, exit);
       } finally {
