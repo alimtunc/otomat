@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { ActivityEvidence } from "#domain/projections/activity";
 import {
   countOpenInboxEntries,
+  countOpenInboxEntriesByProject,
   projectInbox,
   type InboxEvidence,
   type InboxPullRequestEvidence,
@@ -284,5 +285,35 @@ describe("projectInbox resolution", () => {
     });
 
     expect(countOpenInboxEntries(entries)).toBe(1);
+  });
+
+  it("counts what is still open for each project on its own", () => {
+    const entries = inbox({
+      runs: [
+        run({ run_id: "run-broken" }),
+        run({ run_id: "run-waiting", run_status: "awaiting_human" }),
+        run({
+          run_id: "run-other",
+          project_id: "project-2",
+          project_name: "Cockpit",
+          issue_id: "issue-2",
+        }),
+        run({ run_id: "run-done", run_status: "completed", issue_status: "done" }),
+      ],
+    });
+
+    expect(countOpenInboxEntriesByProject(entries)).toEqual(
+      new Map([
+        ["project-1", 2],
+        ["project-2", 1],
+      ]),
+    );
+  });
+
+  it("leaves a project whose only entry resolved out of the counts", () => {
+    const entries = inbox({ runs: [run({ run_id: "run-done", run_status: "completed" })] });
+
+    expect(entries.map((entry) => entry.state)).toEqual(["resolved"]);
+    expect(countOpenInboxEntriesByProject(entries)).toEqual(new Map());
   });
 });

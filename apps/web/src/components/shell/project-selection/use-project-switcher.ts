@@ -10,10 +10,11 @@ import {
   writeSelectedProjectId,
 } from "@web/components/shell/project-selection/selection";
 import { useProjectSelection } from "@web/components/shell/project-selection/use-selection";
+import { projectTabDestination } from "@web/components/shell/project-tabs/state";
+import { projectTabsStore } from "@web/components/shell/project-tabs/store";
 import { describeOperationFailure } from "@web/components/shell/remote-session/status-labels";
 import { useHostProjects } from "@web/components/shell/use-host-projects";
-import { desktopBridge, remoteHostAlias } from "@web/lib/desktop-bridge";
-import { isProjectScopedDetail } from "@web/lib/project-navigation";
+import { activeExecutionHostId, desktopBridge, remoteHostAlias } from "@web/lib/desktop-bridge";
 
 function lastPathSegment(rootPath: string): string | undefined {
   return rootPath.split("/").filter(Boolean).at(-1);
@@ -21,7 +22,7 @@ function lastPathSegment(rootPath: string): string | undefined {
 
 export function useProjectSwitcher() {
   const bridge = desktopBridge();
-  const activeHostId = bridge?.executionHostId ?? "local";
+  const activeHostId = activeExecutionHostId();
   const hostAlias = remoteHostAlias();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -71,13 +72,15 @@ export function useProjectSwitcher() {
 
   function selectProject(switcherId: string): void {
     const target = parseProjectSwitcherKey(switcherId, activeHostId);
+    const destination = projectTabDestination(projectTabsStore.state, switcherId, pathname);
+    projectTabsStore.actions.open(switcherId);
     if (target.hostId === activeHostId || bridge === null) {
       select(target.projectId);
-      if (isProjectScopedDetail(pathname)) navigate({ to: "/issues" });
+      if (destination !== null) void navigate({ href: destination });
       return;
     }
     const previous = currentProjectId;
-    if (isProjectScopedDetail(pathname)) void navigate({ to: "/issues" });
+    if (destination !== null) void navigate({ href: destination });
     writeSelectedProjectId(target.projectId);
     void bridge.executionHost
       .select(target.hostId)

@@ -172,3 +172,14 @@ export function projectInbox(evidence: InboxEvidence, window: ActivityWindow): I
 export function countOpenInboxEntries(entries: readonly InboxEntry[]): number {
   return entries.filter((entry) => entry.state === "open").length;
 }
+
+export function countOpenInboxEntriesByProject(
+  entries: readonly InboxEntry[],
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const entry of entries) {
+    if (entry.state !== "open") continue;
+    counts.set(entry.project.id, (counts.get(entry.project.id) ?? 0) + 1);
+  }
+  return counts;
+}

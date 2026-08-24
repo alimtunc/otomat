@@ -8,7 +8,7 @@ import { LinearSyncControl } from "@web/components/issues/linear-sync/control";
 import { IssueSourceForm } from "@web/components/settings/integrations/issue-source-form";
 import { IssueSourcesList } from "@web/components/settings/integrations/issue-sources-list";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
-import { desktopBridge } from "@web/lib/desktop-bridge";
+import { activeExecutionHostId } from "@web/lib/desktop-bridge";
 
 export function ProjectSourcesPanel({ project }: { project: ProjectContract }) {
   const connection = useLinearConnection();
@@ -20,7 +20,7 @@ export function ProjectSourcesPanel({ project }: { project: ProjectContract }) {
   const workspace = useLinearWorkspace(workspaceId);
   const sync = useProjectLinearSync(project.id);
   const delivery = useLinearDelivery();
-  const activeHostId = desktopBridge()?.executionHostId ?? "local";
+  const activeHostId = activeExecutionHostId();
   const owedHost =
     delivery?.stored === true
       ? (delivery.hosts.find(
