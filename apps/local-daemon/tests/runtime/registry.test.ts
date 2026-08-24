@@ -121,9 +121,13 @@ describe("runtime registry", () => {
     });
     expect(codex).toMatchObject({ kind: "real", availability: { status: "available" } });
     expect(fake).toMatchObject({ kind: "simulated", availability: { status: "available" } });
-    // Real adapters never claim the interactive permission round-trip they do not have.
-    expect(claude?.capabilities.permissions).toBe(false);
-    expect(codex?.capabilities.permissions).toBe(false);
+    // Each adapter states the round-trip it genuinely has, and the reason when it has none.
+    expect(claude?.capabilities.interactions).toEqual({
+      status: "supported",
+      kinds: ["permission"],
+    });
+    expect(codex?.capabilities.interactions).toMatchObject({ status: "unsupported" });
+    expect(fake?.capabilities.interactions).toMatchObject({ status: "unsupported" });
     expect(claude?.capabilities.resume).toBe(true);
     expect(codex?.capabilities.resume).toBe(true);
   });

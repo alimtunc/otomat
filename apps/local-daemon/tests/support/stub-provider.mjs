@@ -32,6 +32,47 @@ function replay(fixture) {
 
 const stdinFile = process.env.OTOMAT_STUB_STDIN_FILE;
 
+// Permission stand-in: replay the prelude, ask once over the control channel, and report the decision the client sent back.
+if (process.env.OTOMAT_STUB_PERMISSION === "1") {
+  replay(process.env.OTOMAT_STUB_FIXTURE);
+  process.stdout.write(
+    `${JSON.stringify({
+      type: "control_request",
+      request_id: "req-perm-1",
+      request: {
+        subtype: "can_use_tool",
+        tool_name: "Write",
+        display_name: "Write",
+        description: "notes.md",
+        input: { file_path: "notes.md", content: "ok" },
+        tool_use_id: "tu-perm-1",
+      },
+    })}\n`,
+  );
+  for await (const line of createInterface({ input: process.stdin })) {
+    if (stdinFile) appendFileSync(stdinFile, `${line}\n`);
+    const frame = JSON.parse(line);
+    if (frame.type !== "control_response") continue;
+    process.stdout.write(
+      `${JSON.stringify({
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        result: frame.response.response.behavior,
+        session_id: "sess-claude-1",
+        total_cost_usd: 0.001,
+        usage: { input_tokens: 10, output_tokens: 1 },
+        permission_denials:
+          frame.response.response.behavior === "deny"
+            ? [{ tool_name: "Write", tool_use_id: "tu-perm-1", tool_input: {} }]
+            : [],
+      })}\n`,
+    );
+    process.exit(0);
+  }
+  process.exit(0);
+}
+
 // Streaming-input stand-in: replay the prelude, then answer one result frame per user message and exit at EOF.
 if (process.env.OTOMAT_STUB_STREAM_INPUT === "1") {
   replay(valueForArgv("OTOMAT_STUB_FIXTURES", process.env.OTOMAT_STUB_FIXTURE));

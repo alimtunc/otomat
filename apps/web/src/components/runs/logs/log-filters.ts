@@ -17,6 +17,8 @@ const CATEGORY_BY_TYPE = {
   "runtime.tool_call": "tool",
   "runtime.permission_request": "permission",
   "runtime.permission_response": "permission",
+  "runtime.interaction_requested": "permission",
+  "runtime.interaction_answered": "permission",
   "runtime.usage": "usage",
   "runtime.provider_session": "provider",
   "runtime.provider_limit": "provider",

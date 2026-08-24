@@ -66,7 +66,10 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     steering: "turn_boundary",
     abort: true,
     resume: true,
-    permissions: true,
+    interactions: {
+      status: "unsupported",
+      reason: "The simulated runtime decides its own turn; it never asks the operator anything.",
+    },
     diff_hints: false,
     provider_limit: "unsupported",
   };

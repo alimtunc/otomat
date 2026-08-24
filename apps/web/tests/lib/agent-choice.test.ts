@@ -23,7 +23,7 @@ function runtime(
       steering: "turn_boundary",
       abort: true,
       resume: true,
-      permissions: false,
+      interactions: { status: "unsupported", reason: "no channel" },
       diff_hints: false,
     },
     availability: available

@@ -69,6 +69,13 @@ export function useRunContributions(runId: string) {
   });
 }
 
+export function useRunInteractions(runId: string) {
+  return useQuery({
+    queryKey: queryKeys.runInteractions(runId),
+    queryFn: () => daemon.listRunInteractions(runId),
+  });
+}
+
 /** The dossier is frozen when the session starts, so it never refetches. */
 export function useSessionContext(runId: string, agentSessionId: string, enabled: boolean) {
   return useQuery({

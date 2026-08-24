@@ -12,7 +12,7 @@ import { GitHubCliError, GitHubPublicationError, type PullRequestView } from "#g
 
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
-import { toPullRequest } from "../serialize.js";
+import { toPullRequest } from "../pull-request-serialize.js";
 
 function detail(
   view: PullRequestView | null,

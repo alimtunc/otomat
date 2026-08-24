@@ -13,6 +13,13 @@ export function invalidateForEvent(client: QueryClient, runId: string, event: Ev
     client.invalidateQueries({ queryKey: queryKeys.runContributions(runId) });
     return;
   }
+  if (event.type.startsWith("runtime.interaction_")) {
+    client.invalidateQueries({ queryKey: queryKeys.runInteractions(runId) });
+    client.invalidateQueries({ queryKey: queryKeys.run(runId) });
+    client.invalidateQueries({ queryKey: queryKeys.activity });
+    client.invalidateQueries({ queryKey: queryKeys.inbox });
+    return;
+  }
   if (
     event.type === "run.lifecycle" ||
     event.type === "run.plan_revised" ||

@@ -160,7 +160,7 @@ it("returns a live claim the daemon never saw receipted to the queue at boot", (
   });
   const dir = sessionDir(fix.dataDir, RUN, seeded.agentSessionId);
   claimRunContributions(fix.db, [row.id], seeded.agentSessionId);
-  appendLiveInput(dir, { id: row.id, body: row.body });
+  appendLiveInput(dir, { kind: "message", id: row.id, body: row.body });
 
   supervisor.reconcile();
 
@@ -185,7 +185,7 @@ it("keeps a live claim the worker receipted delivered across a restart", () => {
   });
   const dir = sessionDir(fix.dataDir, RUN, seeded.agentSessionId);
   claimRunContributions(fix.db, [row.id], seeded.agentSessionId);
-  appendLiveInput(dir, { id: row.id, body: row.body });
+  appendLiveInput(dir, { kind: "message", id: row.id, body: row.body });
   createLiveInputChannel(dir).wrote(row.id, null);
 
   supervisor.reconcile();

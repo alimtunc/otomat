@@ -10,7 +10,7 @@ import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
-import { seedIssueRun } from "@web/api/runs/seed-run";
+import { seedIssueRun } from "@web/api/runs/seed/run";
 import { describeRunWait } from "@web/lib/run/wait-copy";
 
 function useStartRun() {

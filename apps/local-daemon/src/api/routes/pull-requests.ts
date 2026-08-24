@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import type { ApiDeps } from "../deps.js";
 import { pullRequestSubjectGuard } from "../guards.js";
 import { pullRequestImportRefusal } from "../pull-request-refusal.js";
-import { toPullRequestReviewContext } from "../serialize.js";
+import { toPullRequestReviewContext } from "../pull-request-serialize.js";
 import { createReviewSurfaceRoutes } from "./review-surface.js";
 
 /** Mounted at `/api/pull-requests`: the review surface of an adopted pull request, plus refresh and detach. */

@@ -1,4 +1,4 @@
-import type { RunContributionRow, RunRow } from "@otomat/db";
+import type { RunContributionRow, RunInteractionRow, RunRow } from "@otomat/db";
 import type { Hono } from "hono";
 
 import { createApiApp } from "#api/app";
@@ -115,6 +115,31 @@ export function contributionRow(
   };
 }
 
+export function interactionRow(
+  runId: string,
+  overrides: Partial<RunInteractionRow> = {},
+): RunInteractionRow {
+  return {
+    id: "interaction-1",
+    run_id: runId,
+    step_run_id: `${runId}-step`,
+    agent_session_id: `${runId}-session`,
+    provider_request_id: "req-1",
+    kind: "permission",
+    state: "pending",
+    prompt: "Run Write: notes.md",
+    tool: "Write",
+    options_json: [],
+    answer_json: null,
+    canceled_reason: null,
+    requested_at: "2026-01-01T00:00:00.000Z",
+    settled_at: null,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
 /** Un-overridden commands throw, never fake-succeed. */
 export function stubSupervisor(overrides: Partial<Supervisor> = {}): Supervisor {
   return {
@@ -175,6 +200,9 @@ export function stubSupervisor(overrides: Partial<Supervisor> = {}): Supervisor 
     },
     deliverContributions: async () => {
       throw new Error("deliverContributions stub not configured");
+    },
+    answerInteraction: async () => {
+      throw new Error("answerInteraction stub not configured");
     },
     selectWinner: async () => {
       throw new Error("selectWinner stub not configured");

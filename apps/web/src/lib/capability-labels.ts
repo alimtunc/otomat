@@ -1,5 +1,7 @@
 import type {
+  RunInteractionKind,
   RuntimeCapabilities,
+  RuntimeInteractionCapability,
   RuntimeProviderLimitMode,
   RuntimeSteeringMode,
 } from "@otomat/domain";
@@ -23,12 +25,24 @@ const PROVIDER_LIMIT_LABELS = {
   deadline: "Quota detection with reset time",
 } satisfies Record<RuntimeProviderLimitMode, string>;
 
-const APPROVALS_HINT =
-  "Whether Otomat can answer a permission question mid-run. It is not the run's permission mode, which the provider still applies on its own.";
+const INTERACTIONS_HINT =
+  "Whether Otomat can answer a question the agent blocks on mid-run. It is not the run's permission mode, which the provider still applies on its own.";
+
+const INTERACTION_KIND_LABELS = {
+  permission: "approvals",
+  choice: "choices",
+  text: "written answers",
+} satisfies Record<RunInteractionKind, string>;
+
+function interactionLabel(capability: RuntimeInteractionCapability): string {
+  if (capability.status === "unsupported") return "Interactive answers";
+  return `Interactive ${capability.kinds.map((kind) => INTERACTION_KIND_LABELS[kind]).join(" · ")}`;
+}
 
 /** The `satisfies` makes a capability added to the schema fail the build here instead of vanishing from the list. */
 export function capabilityEntries(capabilities: RuntimeCapabilities): CapabilityEntry[] {
   const resumeModel = capabilities.resume_model;
+  const interactions = capabilities.interactions;
   return Object.values({
     steering: {
       key: "steering",
@@ -45,11 +59,11 @@ export function capabilityEntries(capabilities: RuntimeCapabilities): Capability
       supported: resumeModel.status === "supported",
       hint: resumeModel.status === "unsupported" ? resumeModel.reason : null,
     },
-    permissions: {
-      key: "permissions",
-      label: "Interactive approvals",
-      supported: capabilities.permissions,
-      hint: APPROVALS_HINT,
+    interactions: {
+      key: "interactions",
+      label: interactionLabel(interactions),
+      supported: interactions.status === "supported",
+      hint: interactions.status === "unsupported" ? interactions.reason : INTERACTIONS_HINT,
     },
     diff_hints: {
       key: "diff_hints",

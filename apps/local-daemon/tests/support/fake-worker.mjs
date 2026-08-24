@@ -88,9 +88,21 @@ if (behavior === "complete") {
   });
   marker("failed", limit);
   process.exit(1);
-} else if (behavior === "live" || behavior === "live-refuse") {
+} else if (behavior === "live" || behavior === "live-refuse" || behavior === "live-ask") {
   // Mirrors the worker's real live-input protocol: tail the daemon's inbox, receipt each write, linger like `linger`.
   const error = behavior === "live-refuse" ? "stdin closed" : null;
+  if (behavior === "live-ask") {
+    emit("runtime.interaction_requested", "otomat", {
+      fidelity: "parsed",
+      adapter: "fake",
+      test_adapter: true,
+      request_id: "ask-1",
+      kind: "permission",
+      prompt: "Run Write: notes.md",
+      tool: "Write",
+      options: [],
+    });
+  }
   const inbox = join(job.agentSessionDir, "live-input.jsonl");
   const receipts = join(job.agentSessionDir, "live-input-receipts.jsonl");
   let taken = 0;
@@ -99,7 +111,7 @@ if (behavior === "complete") {
     const lines = readFileSync(inbox, "utf8").split("\n").filter(Boolean);
     for (const line of lines.slice(taken)) {
       const message = JSON.parse(line);
-      if (error === null) {
+      if (error === null && message.kind !== "interaction_answer") {
         emit("runtime.message", "otomat", {
           fidelity: "parsed",
           adapter: "fake",

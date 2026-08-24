@@ -58,6 +58,8 @@ export const EVENT_GLYPH = {
   "runtime.tool_call": { icon: Terminal, tone: "iris" },
   "runtime.permission_request": { icon: ShieldQuestion, tone: "warning" },
   "runtime.permission_response": { icon: ShieldQuestion, tone: "neutral" },
+  "runtime.interaction_requested": { icon: ShieldQuestion, tone: "warning" },
+  "runtime.interaction_answered": { icon: ShieldQuestion, tone: "neutral" },
   "runtime.usage": { icon: Activity, tone: "neutral" },
   "runtime.provider_session": { icon: CircleDotDashed, tone: "neutral" },
   "runtime.provider_limit": { icon: Timer, tone: "warning" },

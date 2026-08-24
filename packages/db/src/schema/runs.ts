@@ -2,8 +2,12 @@ import type {
   AgentSessionState,
   CompeteGroupState,
   RunContributionState,
+  RunInteractionKind,
+  RunInteractionState,
   RunState,
   ResolvedAgentConfig,
+  RuntimeInteractionAnswer,
+  RuntimeInteractionOption,
   SessionContext,
   StepProviderWait,
   StepRunState,
@@ -140,6 +144,42 @@ export const runContributions = sqliteTable(
     ...timestamps,
   },
   (table) => [uniqueIndex("run_contributions_run_seq_unique").on(table.run_id, table.seq)],
+);
+
+export const runInteractions = sqliteTable(
+  "run_interactions",
+  {
+    id: text("id").primaryKey(),
+    run_id: text("run_id")
+      .notNull()
+      .references(() => runs.id),
+    step_run_id: text("step_run_id")
+      .notNull()
+      .references(() => stepRuns.id),
+    agent_session_id: text("agent_session_id")
+      .notNull()
+      .references(() => agentSessions.id),
+    provider_request_id: text("provider_request_id").notNull(),
+    kind: text("kind").$type<RunInteractionKind>().notNull(),
+    state: text("state").$type<RunInteractionState>().notNull().default("pending"),
+    prompt: text("prompt").notNull(),
+    tool: text("tool"),
+    options_json: text("options_json", { mode: "json" })
+      .$type<RuntimeInteractionOption[]>()
+      .notNull(),
+    answer_json: text("answer_json", { mode: "json" }).$type<RuntimeInteractionAnswer>(),
+    canceled_reason: text("canceled_reason"),
+    requested_at: text("requested_at").notNull(),
+    settled_at: text("settled_at"),
+    ...timestamps,
+  },
+  (table) => [
+    // The ingest replays the same request events on every pass; this is what makes re-reading them a no-op.
+    uniqueIndex("run_interactions_session_request_unique").on(
+      table.agent_session_id,
+      table.provider_request_id,
+    ),
+  ],
 );
 
 export const runtimeEvents = sqliteTable(

@@ -31,6 +31,8 @@ export const EVENT_TYPES = [
   "runtime.tool_call",
   "runtime.permission_request",
   "runtime.permission_response",
+  "runtime.interaction_requested",
+  "runtime.interaction_answered",
   "runtime.usage",
   "runtime.provider_session",
   "runtime.provider_limit",

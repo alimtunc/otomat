@@ -41,6 +41,8 @@ export type WorkerBehavior =
   | "live"
   /** Same channel, but stdin refuses every message, as a provider that closed its pipe does. */
   | "live-refuse"
+  /** Asks one permission over the ledger, then waits on the channel exactly as a blocked provider does. */
+  | "live-ask"
   | "quota"
   | "quota-undated";
 

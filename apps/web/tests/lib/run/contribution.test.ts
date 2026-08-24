@@ -88,7 +88,7 @@ const CLAUDE: RuntimeDescriptor = {
     abort: true,
     resume: true,
     resume_model: { status: "supported" },
-    permissions: false,
+    interactions: { status: "unsupported", reason: "no channel" },
     diff_hints: false,
   },
   availability: { status: "available", version: null },

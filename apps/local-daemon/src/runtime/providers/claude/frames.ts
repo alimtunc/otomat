@@ -22,11 +22,19 @@ export class ClaudeFrameMapper implements ProviderFrameMapper {
 
   private model: string | null = null;
 
+  /** Tool calls already carried to the operator as an interaction; the result frame must not report the same refusal twice. */
+  private readonly askedToolUseIds = new Set<string>();
+
+  /** Control requests surfaced as questions; a cancel for anything else must not fabricate an answer to a question never asked. */
+  private readonly askedRequestIds = new Set<string>();
+
   constructor(
     private readonly emitter: TurnEmitter,
     private readonly permission: ClaudeTurnPermission,
     /** Told when the provider closed an agent loop, so a live turn knows whether it still owes an answer. */
     private readonly onResult?: () => void,
+    /** Told what the CLI is asking about, so the answer can echo that input back to it. */
+    private readonly onRequest?: (requestId: string, toolInput: unknown) => void,
   ) {}
 
   onFrame(frame: Record<string, unknown>): void {
@@ -43,11 +51,65 @@ export class ClaudeFrameMapper implements ProviderFrameMapper {
       this.onToolResultFrame(frame);
       return;
     }
+    if (type === "control_request") {
+      this.onControlRequestFrame(frame);
+      return;
+    }
+    if (type === "control_cancel_request") {
+      this.onControlCancelFrame(frame);
+      return;
+    }
     if (type === "result") {
       this.onResultFrame(frame);
       return;
     }
     this.emitter.emit("runtime.log", "native", { frame });
+  }
+
+  /** `--permission-prompt-tool stdio` routes unsettled asks here; only `can_use_tool` becomes a question — any other subtype stays a log rather than a guess. */
+  private onControlRequestFrame(frame: Record<string, unknown>): void {
+    const request = asRecord(frame["request"]);
+    const requestId = asString(frame["request_id"]);
+    const toolName = asString(request?.["tool_name"]);
+    if (
+      request === null ||
+      requestId === null ||
+      toolName === null ||
+      asString(request["subtype"]) !== "can_use_tool"
+    ) {
+      this.emitter.emit("runtime.log", "native", { frame });
+      return;
+    }
+    const toolUseId = asString(request["tool_use_id"]);
+    if (toolUseId !== null) this.askedToolUseIds.add(toolUseId);
+    this.askedRequestIds.add(requestId);
+    this.onRequest?.(requestId, request["input"] ?? null);
+    const detail = asString(request["description"]);
+    this.emitter.emit("runtime.interaction_requested", "parsed", {
+      request_id: requestId,
+      kind: "permission",
+      prompt: detail === null ? `Run ${toolName}?` : `Run ${toolName}: ${detail}`,
+      tool: toolName,
+      options: [],
+      tool_use_id: toolUseId,
+      input: request["input"] ?? null,
+      permission_mode: this.permission.mode,
+      permission_mode_status: this.permission.status,
+    });
+  }
+
+  /** The CLI stopped needing an answer; without this the request would stay open on a turn that already moved on. */
+  private onControlCancelFrame(frame: Record<string, unknown>): void {
+    const requestId = asString(frame["request_id"]);
+    if (requestId === null || !this.askedRequestIds.has(requestId)) {
+      this.emitter.emit("runtime.log", "native", { frame });
+      return;
+    }
+    this.emitter.emit("runtime.interaction_answered", "parsed", {
+      request_id: requestId,
+      outcome: "canceled",
+      reason: "Claude Code withdrew this permission request.",
+    });
   }
 
   private onInitFrame(frame: Record<string, unknown>): void {
@@ -112,11 +174,12 @@ export class ClaudeFrameMapper implements ProviderFrameMapper {
     if (!emitted) this.emitter.emit("runtime.log", "native", { frame });
   }
 
-  /** A refused call leaves the turn reported as a success, so without this the run would look fully autonomous. */
+  /** A refused call leaves the turn reported as a success; a call the operator already answered is reported by that answer, not again here. */
   private onPermissionDenials(frame: Record<string, unknown>): void {
     for (const denial of asArray(frame["permission_denials"]).map(asRecord)) {
       if (denial === null) continue;
       const toolUseId = asString(denial["tool_use_id"]);
+      if (toolUseId !== null && this.askedToolUseIds.has(toolUseId)) continue;
       this.emitter.emit("runtime.permission_request", "parsed", {
         tool: asString(denial["tool_name"]),
         tool_use_id: toolUseId,

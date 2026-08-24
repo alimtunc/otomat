@@ -1,13 +1,26 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { clearProviderProbeCache } from "#runtime";
+import { clearProviderProbeCache, type LiveInputChannel } from "#runtime";
 import { clearCodexSandboxProbeCache } from "#runtime/providers/codex/sandbox";
 
 /** The provider-CLI stand-in binary, injected via the adapters' binary constructor parameter. */
 export const STUB_BIN = fileURLToPath(new URL("./stub-provider.mjs", import.meta.url));
+
+/** A live-input channel that keeps what `wrote` reported, so a test can assert the receipts stdin produced. */
+export interface RecordingChannel extends LiveInputChannel {
+  readonly receipts: Array<{ id: string; error: string | null }>;
+}
+
+/** The frames the stub CLI captured from its stdin, one JSON object per line. */
+export function stdinFrames(path: string): Record<string, unknown>[] {
+  return readFileSync(path, "utf8")
+    .split("\n")
+    .filter((line) => line.length > 0)
+    .map((line) => JSON.parse(line));
+}
 
 export const STUB_FIXTURES = fileURLToPath(new URL("./fixtures", import.meta.url));
 

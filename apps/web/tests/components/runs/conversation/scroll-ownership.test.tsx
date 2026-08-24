@@ -77,6 +77,7 @@ vi.mock("@web/api/runs/use-step-event-history", () => ({
 }));
 
 vi.mock("@web/api/runs/queries", () => ({
+  useRunInteractions: () => ({ data: { interactions: [] } }),
   useRunDetail: () => ({ isPending: false, isError: false, data: detail, refetch: vi.fn() }),
   useRunContributions: () => ({
     isPending: false,

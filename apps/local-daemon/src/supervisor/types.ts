@@ -1,4 +1,4 @@
-import type { Db, RunContributionRow, RunRow, StepRunRow } from "@otomat/db";
+import type { Db, RunContributionRow, RunInteractionRow, RunRow, StepRunRow } from "@otomat/db";
 import type {
   AgentCapacity,
   ContextReference,
@@ -10,6 +10,7 @@ import type {
   ProviderOptions,
   ResolvedAgentConfig,
   RunResumePlan,
+  RuntimeInteractionAnswer,
   RunWait,
   StartRunRequest,
   WorkspaceCleanupResult,
@@ -158,6 +159,12 @@ export interface Supervisor {
   cancelContribution(runId: string, contributionId: string): RunContributionRow;
   /** Explicit "deliver now" for messages left queued by a restart; a no-op while the run is busy. */
   deliverContributions(runId: string): Promise<void>;
+  /** Answer one question a live turn is blocked on; repeating the same answer settles nothing twice. */
+  answerInteraction(
+    runId: string,
+    interactionId: string,
+    answer: RuntimeInteractionAnswer,
+  ): Promise<RunInteractionRow>;
   /** Reserve, promote and archive one succeeded competitor, then unlock dependent work. */
   selectWinner(runId: string, groupId: string, stepRunId: string): Promise<void>;
   /** Kill the run's process group and write the canonical canceled state + a ledger event. No fake success. */

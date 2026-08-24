@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import type { LiveInputChannel, LiveInputMessage } from "#runtime/contract";
+import type { LiveInputItem } from "#runtime/contract";
 import { ClaudeRuntimeAdapter } from "#runtime/providers/claude/adapter";
 import { ClaudeLiveInput, claudeUserFrame } from "#runtime/providers/claude/live-input";
 import { MemorySink } from "#runtime/sinks";
@@ -12,8 +12,10 @@ import { runtimeRunInput } from "../support/runtime.js";
 import {
   setupStubHarness,
   STUB_BIN,
+  stdinFrames,
   stubFixture,
   teardownStubHarness,
+  type RecordingChannel,
 } from "../support/stub-harness.js";
 
 let worktree: string;
@@ -28,30 +30,19 @@ afterEach(() => {
   teardownStubHarness(worktree);
 });
 
-interface RecordingChannel extends LiveInputChannel {
-  readonly receipts: Array<{ id: string; error: string | null }>;
-}
-
 /** Hands the turn a fixed batch, then holds the channel open exactly as the file-backed one does until the turn stops taking input. */
-function channelOf(messages: readonly LiveInputMessage[]): RecordingChannel {
+function channelOf(batch: readonly LiveInputItem[]): RecordingChannel {
   const receipts: Array<{ id: string; error: string | null }> = [];
   return {
     receipts,
-    async *messages(signal: AbortSignal) {
-      yield* messages;
+    async *items(signal: AbortSignal) {
+      yield* batch;
       while (!signal.aborted) await new Promise((resolve) => setTimeout(resolve, 5));
     },
     wrote(id, error) {
       receipts.push({ id, error });
     },
   };
-}
-
-function stdinFrames(path: string): unknown[] {
-  return readFileSync(path, "utf8")
-    .split("\n")
-    .filter((line) => line.length > 0)
-    .map((line) => JSON.parse(line));
 }
 
 /** The frame shape the Claude CLI's streaming input reads, asserted literally so a producer regression cannot hide behind its own encoder. */
@@ -65,8 +56,8 @@ it("writes the prompt and every live message as ordered user frames on one invoc
   process.env["OTOMAT_STUB_STDIN_FILE"] = stdinFile;
   process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
   const channel = channelOf([
-    { id: "c1", body: "also update the changelog" },
-    { id: "c2", body: "and bump the version" },
+    { kind: "message", id: "c1", body: "also update the changelog" },
+    { kind: "message", id: "c2", body: "and bump the version" },
   ]);
   const sink = new MemorySink();
 
@@ -96,7 +87,7 @@ it("writes the prompt and every live message as ordered user frames on one invoc
 });
 
 it("sums each loop's usage but keeps the invocation's running cost total", async () => {
-  const channel = channelOf([{ id: "c1", body: "one more thing" }]);
+  const channel = channelOf([{ kind: "message", id: "c1", body: "one more thing" }]);
 
   const final = await new ClaudeRuntimeAdapter(STUB_BIN).run(
     runtimeRunInput({ run_dir: worktree, cwd: worktree, prompt: "do the work" }),
@@ -131,8 +122,8 @@ it("keeps a plain turn on the same streaming input, closing stdin with no channe
 
 it("receipts the refusal and stops the pump when a live write fails", async () => {
   const channel = channelOf([
-    { id: "c1", body: "steer" },
-    { id: "c2", body: "more" },
+    { kind: "message", id: "c1", body: "steer" },
+    { kind: "message", id: "c2", body: "more" },
   ]);
 
   await new ClaudeLiveInput(channel).stream(
@@ -144,7 +135,7 @@ it("receipts the refusal and stops the pump when a live write fails", async () =
 });
 
 it("keeps stdin open across a result that answers a live message, closing on the next", async () => {
-  const channel = channelOf([{ id: "c1", body: "steer" }]);
+  const channel = channelOf([{ kind: "message", id: "c1", body: "steer" }]);
   const live = new ClaudeLiveInput(channel);
   const written: string[] = [];
 

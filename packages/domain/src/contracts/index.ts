@@ -21,6 +21,7 @@ export * from "./execution-host.js";
 export * from "./pull-request-import.js";
 export * from "./review-inbox.js";
 export * from "./run-events.js";
+export * from "./interaction.js";
 export * from "./run-plan.js";
 export {
   agentProfileContractSchema,
@@ -59,6 +60,7 @@ export {
   reviewedFileContractSchema,
   runContractSchema,
   runContributionContractSchema,
+  runInteractionContractSchema,
   skillContractSchema,
   skillInvalidReasonSchema,
   skillSourceSchema,
@@ -102,6 +104,7 @@ export {
   type ReviewedFileContract,
   type RunContract,
   type RunContributionContract,
+  type RunInteractionContract,
   type SessionPassBoundary,
   type SkillContract,
   type SkillInvalidReason,

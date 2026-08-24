@@ -19,6 +19,7 @@ const contributions: RunContributionContract[] = [
 ];
 
 vi.mock("@web/api/runs/queries", () => ({
+  useRunInteractions: () => ({ data: { interactions: [] } }),
   useRunContributions: () => ({
     isPending: false,
     isError: false,

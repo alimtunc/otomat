@@ -69,6 +69,7 @@ export const queryKeys = {
   runUsage: (id: string) => ["run", id, "usage"] as const,
   runCommits: (id: string) => ["run", id, "commits"] as const,
   runContributions: (id: string) => ["run", id, "contributions"] as const,
+  runInteractions: (id: string) => ["run", id, "interactions"] as const,
   sessionContext: (runId: string, agentSessionId: string) =>
     ["run", runId, "session", agentSessionId, "context"] as const,
   reviewDiff: (target: ReviewTarget, scope: RunDiffScopeSelector = WORKSPACE_DIFF_SCOPE) =>

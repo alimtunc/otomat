@@ -1,6 +1,6 @@
 import { schema, type Db } from "@otomat/db";
 import { eventEnvelopeSchema, type EventEnvelope } from "@otomat/domain";
-import { and, asc, desc, eq, gt, lt, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, lt, type SQL } from "drizzle-orm";
 
 const { runtimeEvents } = schema;
 
@@ -119,6 +119,22 @@ export function readStepMessages(
     )
     .orderBy(desc(runtimeEvents.seq))
     .limit(limit)
+    .all()
+    .map(toEnvelope)
+    .filter((event): event is EventEnvelope => event !== null);
+}
+
+/** One run's events of the given types, in `seq` order. Bounded at the query: a caller after one family must never read the run's whole ledger. */
+export function readRunEventsOfTypes(
+  db: Db,
+  runId: string,
+  types: readonly EventEnvelope["type"][],
+): EventEnvelope[] {
+  return db
+    .select()
+    .from(runtimeEvents)
+    .where(and(eq(runtimeEvents.run_id, runId), inArray(runtimeEvents.type, [...types])))
+    .orderBy(asc(runtimeEvents.seq))
     .all()
     .map(toEnvelope)
     .filter((event): event is EventEnvelope => event !== null);

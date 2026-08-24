@@ -18,6 +18,7 @@ import {
   findProviderSessionId,
   findReportedModel,
 } from "../evidence.js";
+import { cancelSessionInteractions, ingestRunInteractions } from "../interaction/index.js";
 import { recordProviderWait } from "../provider-wait/record.js";
 import type { ReconcileOutcome } from "../types.js";
 import {
@@ -92,6 +93,15 @@ export function settleRun(
   }
   if (turnSession !== null) {
     resolveSessionContributions(db, turnSession.id, classification, options.now);
+    // Promotes any ledgered ask no pass reached into its row first: the cancel closes rows, and an unpromoted ask would otherwise resurrect as a pending question on the next turn.
+    ingestRunInteractions(db, run.id);
+    cancelSessionInteractions(
+      db,
+      dataDir,
+      turnSession.id,
+      "the turn that asked this question ended before it was answered",
+      options.now,
+    );
     // Persisted before the step reaches `waiting_for_provider`, so the state and the schedule it stands for land together.
     if (classification === "provider_limited" && providerLimit !== null) {
       recordProviderWait(
