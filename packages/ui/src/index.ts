@@ -226,6 +226,8 @@ export { NavSection, type NavSectionProps } from "./components/nav-section";
 
 export { Pill, PillTabs, type PillProps, type PillTabsProps } from "./components/pill-tabs";
 
+export { ProjectGlyph } from "./components/project-glyph";
+
 export { ProjectSwitcher, type ProjectSwitcherProps } from "./components/project-switcher";
 
 export { RelativeTime, type RelativeTimeProps } from "./components/relative-time";

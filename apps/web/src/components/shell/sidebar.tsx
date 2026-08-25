@@ -9,6 +9,7 @@ import {
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { INBOX_NAV, WORKSPACE_NAV, type ShellSection } from "@web/components/shell/nav-items";
+import { projectTabsStore } from "@web/components/shell/project-tabs/store";
 import type { ReactNode } from "react";
 
 interface SidebarProps {
@@ -70,6 +71,7 @@ export function Sidebar({
       onSelect={onProjectSelect}
       collapsed={collapsed}
       onOpenSettings={onOpenSettings}
+      onOpenTab={projectTabsStore.actions.open}
       {...(onAddProject === undefined ? {} : { onAddProject })}
     />
   );

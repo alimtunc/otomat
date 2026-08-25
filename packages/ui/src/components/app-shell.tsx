@@ -22,6 +22,7 @@ const SHELL_LAYOUT_ID = "otomat.shell";
 export interface AppShellProps {
   sidebar: ReactNode;
   topbar: ReactNode;
+  tabs?: ReactNode;
   children: ReactNode;
   rightPanel?: ReactNode;
   connectionState?: ConnectionState;
@@ -39,6 +40,7 @@ export interface AppShellProps {
 export function AppShell({
   sidebar,
   topbar,
+  tabs,
   children,
   rightPanel,
   connectionState = "online",
@@ -117,8 +119,12 @@ export function AppShell({
 
   return (
     <SidebarCollapsedContext.Provider value={collapsed}>
-      <div data-density={density} className={cn("h-screen overflow-hidden", className)}>
-        <ResizablePanelGroup {...shellLayout}>
+      <div
+        data-density={density}
+        className={cn("flex h-screen flex-col overflow-hidden", className)}
+      >
+        {tabs}
+        <ResizablePanelGroup {...shellLayout} className="h-auto flex-1">
           <SidePanel
             id={SIDEBAR_PANEL_ID}
             label="Sidebar"

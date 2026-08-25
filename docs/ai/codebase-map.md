@@ -1373,6 +1373,42 @@ keeps its tab and the reviewer keeps its file anchor. Every such write replaces
 the current entry (`runs/diff/use-active-file.ts` states it for the anchor), so
 refining a screen never buries the screen it was reached from.
 
+## Project Tabs (OTO-139)
+
+The shell carries one tab per open project above everything else, and a tab is an
+**application** tab: the desktop shell never asks macOS for native ones, so the
+strip renders the same in the browser, in the packaged app and in a preview.
+
+A tab is identified by the switcher key the project already had — `host:project`
+(`project-selection/host-key.ts`) — so two daemons that both name a project
+`local-default` cannot share a tab, a route or a badge. Tabs are opt-in and
+independent of the selection: only the switcher's per-project pin action opens
+one, and merely picking a project never does, so the bar shows the projects the
+operator chose to keep at hand — not every project ever visited — and a
+single-project cockpit simply never renders it. Activation stays one code path:
+`useProjectSwitcher.selectProject` restores the target's remembered view whether
+it was reached from the switcher, a tab or a keyboard shortcut, and the store
+deduplicates on open (`project-tabs/state.ts`), so uniqueness holds without
+reconciliation.
+
+What a tab restores is the last **project-scoped** location it was on, stored as
+the router's `href` so the filters, the selection and the panel state that live in
+the URL come back with it. `lib/project-navigation.ts` draws that line: Inbox,
+Settings and the agent surfaces answer for every project at once and therefore
+never become a project's remembered view.
+
+The attention badge is `countOpenInboxEntriesByProject` over the Inbox snapshot
+the shell already polls — not a second notification path. That has three
+consequences worth stating: an entry that resolves clears the badge with the
+invalidation the acting mutation already issues, a project the operator is not
+looking at is badged from the same background poll, and everything the Inbox
+projection refuses to count (a withdrawn demand, a completed run) can never
+inflate it.
+
+Closing a tab is a view operation and nothing else: it drops the tab and its
+remembered route while the selection stays where it is — the project outlives
+its tab — and touches no run, branch or worktree.
+
 ## Saved Issue Views
 
 An operator's issue views are named configurations — layout, grouping, sort,

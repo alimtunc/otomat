@@ -19,6 +19,7 @@ import { SETTINGS_NAV, type ShellSection } from "@web/components/shell/nav-items
 import { NewIssueContext } from "@web/components/shell/new-issue-context";
 import { usePaletteGroups } from "@web/components/shell/palette/use-groups";
 import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
+import { ProjectTabsBar } from "@web/components/shell/project-tabs/bar";
 import { useRemoteSession } from "@web/components/shell/remote-session/context";
 import { Sidebar } from "@web/components/shell/sidebar";
 import type { BackNavigation } from "@web/components/shell/use-back-navigation";
@@ -87,6 +88,7 @@ export function RouteShell({
   return (
     <AppShell
       density={density}
+      tabs={<ProjectTabsBar />}
       connectionState={shell.connectionState}
       {...(shell.connectionLabel === undefined ? {} : { connectionLabel: shell.connectionLabel })}
       sidebar={
