@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8">
+<title>Current — Runs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+html,body{margin:0;padding:0;background:#050506}
+a{color:#e7e9ee;text-decoration:none}a:hover{color:#ffffff}
+*{box-sizing:border-box}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#23262d;border-radius:5px;border:2px solid #0a0b0d}::-webkit-scrollbar-track{background:transparent}
+</style>
+</helmet>
+<div data-screen-label="Current · Runs list" style="font-family:'Inter',system-ui,sans-serif;background:#0a0b0d;color:#e7e9ee;height:100vh;min-width:1440px;display:flex;flex-direction:column;overflow:hidden;font-size:13px;-webkit-font-smoothing:antialiased">
+  <div style="height:36px;flex:none;background:#131417;border-bottom:1px solid #1f2126;display:flex;align-items:center;position:relative">
+    <div style="display:flex;gap:8px;padding-left:20px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+    <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:#b7bcc4">Otomat</span>
+  </div>
+  <div style="flex:1;min-height:0;display:flex">
+    <aside style="width:236px;flex:none;background:#0c0d10;display:flex;flex-direction:column;min-height:0">
+      <div style="display:flex;align-items:center;padding-right:6px">
+        <div style="flex:1;min-width:0;height:48px;display:flex;align-items:center;gap:9px;padding:0 12px;cursor:default">
+          <span style="width:24px;height:24px;border-radius:6px;background:#f0645a;color:#fff;font-weight:700;font-size:14px;display:grid;place-items:center;flex:none">o</span>
+          <span style="min-width:0;flex:1">
+            <span style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:600">otomat</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9197a3;background:#16181d;border:1px solid #23262d;border-radius:4px;padding:1px 5px">supervps</span></span>
+            <span style="display:block;font-size:11px;color:#646a76">otomat</span>
+          </span>
+          <i data-lucide="chevrons-up-down" style="width:14px;height:14px;color:#646a76;flex:none"></i>
+        </div>
+        <span style="width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="panel-left" style="width:15px;height:15px"></i></span>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto;padding-top:6px;padding-bottom:8px">
+        <nav style="display:flex;flex-direction:column;gap:1px;padding:4px 8px 0">
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="search" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Search</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;min-width:16px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">⌘K</kbd></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="plus" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">New issue</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;min-width:16px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">C</kbd></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="inbox" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Inbox</span></span>
+        </nav>
+        <div style="padding:14px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.03em;color:#646a76">Workspace</div>
+        <nav style="display:flex;flex-direction:column;gap:1px;padding:0 8px">
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="list-todo" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Issues</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;background:rgba(240,100,90,.12);color:#e7e9ee;font-weight:450"><i data-lucide="activity" style="width:16px;height:16px;color:#ff9b93"></i><span style="flex:1">Runs</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="git-pull-request" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Reviews</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="bar-chart-3" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Usage</span></span>
+        </nav>
+      </div>
+      <div style="border-top:1px solid #1b1e24;padding:8px">
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;font-size:12px;color:#9197a3"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950;flex:none"></span>daemon supervps · v0.1.0</div>
+      </div>
+    </aside>
+    <div style="width:1px;background:#1b1e24"></div>
+    <main style="flex:1;min-width:0;display:flex;flex-direction:column;background:#0a0b0d">
+      <header style="height:44px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 12px 0 14px">
+        <span style="font-size:13px;color:#9197a3">otomat</span>
+        <span style="flex:1"></span>
+        <span style="height:28px;width:230px;display:flex;align-items:center;gap:8px;border:1px solid #23262d;border-radius:6px;background:#0a0b0d;padding:0 9px;color:#646a76"><i data-lucide="search" style="width:14px;height:14px;flex:none"></i><span style="flex:1;text-align:left;font-size:13px;font-weight:400">Search…</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;display:inline-flex;align-items:center;padding:0 4px">⌘K</kbd></span>
+        <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="activity" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:6px;padding:0 6px;font-size:12px;color:#e7e9ee"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950"></span>Online</span>
+      </header>
+      <div style="height:48px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 18px">
+        <h1 style="margin:0;display:flex;align-items:center;gap:9px;font-size:15px;font-weight:600"><i data-lucide="activity" style="width:17px;height:17px;color:#9197a3"></i>Runs</h1>
+      </div>
+      <div style="height:42px;flex:none;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1b1e24;padding:0 18px">
+        <span style="height:26px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:0 9px;color:#9197a3;font-weight:500;font-size:13px"><i data-lucide="wand-sparkles" style="width:14px;height:14px"></i>Filter<span style="height:17px;min-width:17px;display:inline-flex;align-items:center;justify-content:center;border-radius:99px;background:#f0645a;color:#fff;font-size:11px;font-weight:500;padding:0 5px;font-variant-numeric:tabular-nums">1</span></span>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto">
+        <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:13px">
+          <thead><tr>
+            <th style="position:sticky;top:0;height:30px;width:110px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Run</th>
+            <th style="position:sticky;top:0;height:30px;width:160px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Status</th>
+            <th style="position:sticky;top:0;height:30px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Branch</th>
+            <th style="position:sticky;top:0;height:30px;width:110px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Updated</th>
+          </tr></thead>
+          <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+          <tbody>
+            <tr><th colspan="4" scope="colgroup" style="border-bottom:1px solid #1b1e24;background:#101216;padding:0;text-align:left">
+              <div style="display:flex;height:36px;align-items:center;gap:8px;padding:0 12px">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76;font-weight:400">{{ g.issue }}</span>
+                <span style="font-size:13px;font-weight:500;color:#e7e9ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.title }}</span>
+                <span style="height:17px;min-width:17px;display:inline-flex;align-items:center;justify-content:center;border-radius:99px;background:#1b1e25;color:#9197a3;font-size:11px;font-weight:500;padding:0 5px">{{ g.count }}</span>
+              </div>
+            </th></tr>
+            <sc-for list="{{ g.runs }}" as="r" hint-placeholder-count="1">
+            <tr>
+              <td style="height:40px;border-bottom:1px solid #1b1e24;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#646a76">{{ r.id }}</td>
+              <td style="height:40px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:{{ r.bg }};color:{{ r.color }};text-transform:lowercase"><i data-lucide="{{ r.icon }}" style="width:12px;height:12px"></i>{{ r.status }}</span></td>
+              <td style="height:40px;border-bottom:1px solid #1b1e24;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">{{ r.branch }}</td>
+              <td style="height:40px;border-bottom:1px solid #1b1e24;padding:0 12px;color:#646a76">{{ r.updated }}</td>
+            </tr>
+            </sc-for>
+          </tbody>
+          </sc-for>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const tick = () => { if (window.lucide) { window.lucide.createIcons(); } else { setTimeout(tick, 150); } };
+    tick();
+  }
+  renderVals() {
+    const done = { status: "completed", icon: "circle-check", bg: "rgba(63,185,80,.12)", color: "#3fb950" };
+    const canceled = { status: "canceled", icon: "ban", bg: "rgba(145,151,163,.12)", color: "#9197a3" };
+    const groups = [
+      { issue: "OTO-139", title: "Ajouter des tabs de projets avec badges d’attention", count: 1, runs: [{ ...done, id: "491f269a", branch: "otomat/run/491f269a", updated: "10 hours" }] },
+      { issue: "OTO-140", title: "Rendre les permissions et questions runtime interactives dans Otomat", count: 1, runs: [{ ...done, id: "5e3c5bed", branch: "otomat/run/5e3c5bed", updated: "2 days" }] },
+      { issue: "OTO-33", title: "Mettre à jour automatiquement l’app desktop signée sans interrompre les runs", count: 1, runs: [{ ...done, id: "a83a20df", branch: "otomat/run/a83a20df", updated: "2 days" }] },
+      { issue: "OTO-127", title: "Nettoyer les commentaires narratifs et durcir leur prévention à la première passe", count: 1, runs: [{ ...done, id: "54c63b11", branch: "otomat/run/54c63b11", updated: "2 days" }] },
+      { issue: "OTO-138", title: "Choisir le diff d’un workspace, d’une step ou d’un commit", count: 1, runs: [{ ...done, id: "4418250e", branch: "otomat/run/4418250e", updated: "3 days" }] },
+      { issue: "OTO-137", title: "Corriger les alertes terminales encore actives dans l’Activity Center", count: 1, runs: [{ ...done, id: "4d821fbe", branch: "otomat/run/4d821fbe", updated: "3 days" }] },
+      { issue: "OTO-34", title: "Construire une Inbox opérationnelle cross-project", count: 1, runs: [{ ...done, id: "95103902", branch: "otomat/run/95103902", updated: "3 days" }] },
+      { issue: "OTO-136", title: "Corriger l’autorité des PR publiées et simplifier le fix des commentaires", count: 2, runs: [{ ...done, id: "9c57a329", branch: "otomat/run/9c57a329", updated: "3 days" }, { ...canceled, id: "5c113942", branch: "otomat/run/5c113942", updated: "4 days" }] },
+      { issue: "OTO-134", title: "Corriger les échecs CI du teardown preview et du package macOS", count: 1, runs: [{ ...done, id: "80b6e55b", branch: "otomat/run/80b6e55b", updated: "4 days" }] },
+      { issue: "OTO-65", title: "Rendre les conversations de workflow multi-agent explicites et routables", count: 1, runs: [{ ...done, id: "ce35bc22", branch: "otomat/run/ce35bc22", updated: "4 days" }] },
+    ];
+    return { groups };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8">
+<title>Current — Usage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+html,body{margin:0;padding:0;background:#050506}
+a{color:#e7e9ee;text-decoration:none}a:hover{color:#fff}
+*{box-sizing:border-box}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#23262d;border-radius:5px;border:2px solid #0a0b0d}::-webkit-scrollbar-track{background:transparent}
+</style>
+</helmet>
+<div data-screen-label="Current · Usage" style="font-family:'Inter',system-ui,sans-serif;background:#0a0b0d;color:#e7e9ee;height:100vh;min-width:1440px;display:flex;flex-direction:column;overflow:hidden;font-size:13px;-webkit-font-smoothing:antialiased">
+  <div style="height:36px;flex:none;background:#131417;border-bottom:1px solid #1f2126;display:flex;align-items:center;position:relative">
+    <div style="display:flex;gap:8px;padding-left:20px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+    <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:#b7bcc4">Otomat</span>
+  </div>
+  <div style="flex:1;min-height:0;display:flex">
+    <aside style="width:236px;flex:none;background:#0c0d10;display:flex;flex-direction:column;min-height:0">
+      <div style="display:flex;align-items:center;padding-right:6px">
+        <div style="flex:1;min-width:0;height:48px;display:flex;align-items:center;gap:9px;padding:0 12px">
+          <span style="width:24px;height:24px;border-radius:6px;background:#f0645a;color:#fff;font-weight:700;font-size:14px;display:grid;place-items:center;flex:none">o</span>
+          <span style="min-width:0;flex:1">
+            <span style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:600">otomat</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9197a3;background:#16181d;border:1px solid #23262d;border-radius:4px;padding:1px 5px">supervps</span></span>
+            <span style="display:block;font-size:11px;color:#646a76">otomat</span>
+          </span>
+          <i data-lucide="chevrons-up-down" style="width:14px;height:14px;color:#646a76;flex:none"></i>
+        </div>
+        <span style="width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="panel-left" style="width:15px;height:15px"></i></span>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto;padding-top:6px;padding-bottom:8px">
+        <nav style="display:flex;flex-direction:column;gap:1px;padding:4px 8px 0">
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="search" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Search</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;min-width:16px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">⌘K</kbd></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="plus" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">New issue</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;min-width:16px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">C</kbd></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="inbox" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Inbox</span></span>
+        </nav>
+        <div style="padding:14px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.03em;color:#646a76">Workspace</div>
+        <nav style="display:flex;flex-direction:column;gap:1px;padding:0 8px">
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="list-todo" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Issues</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="activity" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Runs</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="git-pull-request" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Reviews</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;background:rgba(240,100,90,.12);color:#e7e9ee;font-weight:450"><i data-lucide="bar-chart-3" style="width:16px;height:16px;color:#ff9b93"></i><span style="flex:1">Usage</span></span>
+        </nav>
+      </div>
+      <div style="border-top:1px solid #1b1e24;padding:8px">
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;font-size:12px;color:#9197a3"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950;flex:none"></span>daemon supervps · v0.1.0</div>
+      </div>
+    </aside>
+    <div style="width:1px;background:#1b1e24"></div>
+    <main style="flex:1;min-width:0;display:flex;flex-direction:column;background:#0a0b0d">
+      <header style="height:44px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 12px 0 14px">
+        <span style="font-size:13px;color:#9197a3">otomat</span>
+        <span style="flex:1"></span>
+        <span style="height:28px;width:230px;display:flex;align-items:center;gap:8px;border:1px solid #23262d;border-radius:6px;background:#0a0b0d;padding:0 9px;color:#646a76"><i data-lucide="search" style="width:14px;height:14px;flex:none"></i><span style="flex:1;text-align:left;font-size:13px">Search…</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;display:inline-flex;align-items:center;padding:0 4px">⌘K</kbd></span>
+        <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="activity" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:6px;padding:0 6px;font-size:12px;color:#e7e9ee"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950"></span>Online</span>
+      </header>
+      <div style="height:48px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 18px">
+        <h1 style="margin:0;display:flex;align-items:center;gap:9px;font-size:15px;font-weight:600"><i data-lucide="bar-chart-3" style="width:17px;height:17px;color:#9197a3"></i>Usage</h1>
+        <span style="font-size:12px;color:#646a76">What the providers reported for this host’s runs — nothing is estimated.</span>
+        <span style="flex:1"></span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9197a3;background:#16181d;border:1px solid #23262d;border-radius:4px;padding:2px 6px">supervps</span>
+        <span style="height:28px;display:inline-flex;align-items:center;gap:7px;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 10px;font-size:13px;font-weight:500;color:#e7e9ee"><i data-lucide="sliders-horizontal" style="width:14px;height:14px;color:#9197a3"></i>Last 30 days<i data-lucide="chevron-down" style="width:13px;height:13px;color:#646a76"></i></span>
+        <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></span>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto">
+        <div style="display:flex;flex-wrap:wrap;align-items:stretch;border-bottom:1px solid #1b1e24">
+          <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="6">
+            <div style="display:flex;min-width:128px;flex-direction:column;gap:2px;padding:10px 14px;border-right:1px solid #1b1e24">
+              <span style="font-size:12px;color:#646a76">{{ t.label }}</span>
+              <span style="font-size:15px;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;color:#e7e9ee">{{ t.value }} <sc-if value="{{ t.partial }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-family:'Inter',sans-serif;font-weight:600;letter-spacing:.05em;color:#d8a12b">PARTIAL</span></sc-if></span>
+              <sc-if value="{{ t.note }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#646a76">{{ t.note }}</span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <section style="display:flex;flex-direction:column;gap:8px;border-bottom:1px solid #1b1e24;padding:12px 18px">
+          <h2 style="margin:0;font-size:12px;font-weight:500;color:#646a76">Tokens per day (UTC)</h2>
+          <div style="display:flex;height:96px;align-items:flex-end;gap:2px">
+            <sc-for list="{{ bars }}" as="b" hint-placeholder-count="18">
+              <span style="flex:1;min-width:4px;height:100%;display:flex;align-items:flex-end"><span style="width:100%;border-radius:2px;background:#3b2220;height:{{ b.h }}"></span></span>
+            </sc-for>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#646a76"><span>7 août</span><span>24 août</span></div>
+        </section>
+        <div style="display:flex;flex-wrap:wrap;border-bottom:1px solid #1b1e24">
+          <section style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;padding:12px 18px;border-right:1px solid #1b1e24">
+            <h2 style="margin:0;font-size:12px;font-weight:500;color:#646a76">By project</h2>
+            <div style="display:flex;align-items:center;gap:12px;padding:4px 6px;border-radius:4px">
+              <span style="min-width:0;flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">otomat</span>
+              <span style="height:6px;width:96px;flex:none;border-radius:99px;background:#16181d;overflow:hidden"><span style="display:block;height:100%;border-radius:99px;background:rgba(240,100,90,.25);width:100%"></span></span>
+              <span style="width:80px;flex:none;text-align:right;font-size:12px;font-family:'JetBrains Mono',monospace;color:#e7e9ee">5374028k</span>
+            </div>
+          </section>
+          <section style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;padding:12px 18px">
+            <h2 style="margin:0;font-size:12px;font-weight:500;color:#646a76">By runtime and model</h2>
+            <sc-for list="{{ emitters }}" as="e" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:12px;padding:4px 6px;border-radius:4px">
+                <span style="min-width:0;flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.label }}</span>
+                <span style="height:6px;width:96px;flex:none;border-radius:99px;background:#16181d;overflow:hidden"><span style="display:block;height:100%;border-radius:99px;background:rgba(240,100,90,.25);width:{{ e.pct }}"></span></span>
+                <span style="width:80px;flex:none;text-align:right;font-size:12px;font-family:'JetBrains Mono',monospace;color:#e7e9ee">{{ e.value }}</span>
+              </div>
+            </sc-for>
+          </section>
+        </div>
+        <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:13px">
+          <thead><tr>
+            <th style="height:30px;width:96px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Run</th>
+            <th style="height:30px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Issue</th>
+            <th style="height:30px;width:110px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Project</th>
+            <th style="height:30px;width:224px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Model</th>
+            <th style="height:30px;width:176px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Tokens</th>
+            <th style="height:30px;width:120px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Cost</th>
+            <th style="height:30px;width:96px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Duration</th>
+          </tr></thead>
+          <tbody>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+            <tr>
+              <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">{{ r.run }}</td>
+              <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">{{ r.issueId }}</span> <span style="color:#e7e9ee">{{ r.title }}</span></td>
+              <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;color:#9197a3">otomat</td>
+              <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;color:#9197a3">{{ r.model }} <sc-if value="{{ r.extra }}" hint-placeholder-val="{{ false }}"><span style="color:#646a76;font-size:12px">{{ r.extra }}</span></sc-if></td>
+              <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="display:grid;grid-template-columns:auto auto;gap:0 10px;justify-content:start;align-items:baseline"><span style="font-size:11px;color:#646a76">in</span><span style="font-size:11px;color:#646a76">out</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#e7e9ee">{{ r.tin }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#e7e9ee">{{ r.tout }}</span></span></td>
+              <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#e7e9ee">{{ r.cost }}</span> <sc-if value="{{ r.partial }}" hint-placeholder-val="{{ false }}"><span style="font-size:9px;font-weight:600;letter-spacing:.05em;color:#d8a12b">PARTIAL</span></sc-if></td>
+              <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">{{ r.dur }}</td>
+            </tr>
+          </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const tick = () => { if (window.lucide) { window.lucide.createIcons(); } else { setTimeout(tick, 150); } };
+    tick();
+  }
+  renderVals() {
+    const tiles = [
+      { label: "Input tokens", value: "5353947k" },
+      { label: "Output tokens", value: "20080k" },
+      { label: "Reported cost", value: "$6279.101", partial: true },
+      { label: "Execution time", value: "1213h 27m", note: "2 run(s) not measured" },
+      { label: "Runs", value: "89", note: "200 step(s)" },
+      { label: "Turns reported", value: "409" },
+    ];
+    const heights = [5, 14, 11, 26, 34, 21, 29, 13, 44, 100, 24, 3, 38, 64, 38, 33, 26, 9, 16];
+    const bars = heights.map((h) => ({ h: h <= 3 ? "3px" : h + "%" }));
+    const emitters = [
+      { label: "claude · claude-opus-5", value: "4443630k", pct: "100%" },
+      { label: "claude · claude-fable-5", value: "533796k", pct: "12%" },
+      { label: "codex · Model not reported", value: "228589k", pct: "5%" },
+      { label: "claude · claude-opus-5[1m]", value: "168012k", pct: "4%" },
+    ];
+    const rows = [
+      { run: "491f269a", issueId: "OTO-139", title: "Ajouter des tabs de projets avec badges d’attention", model: "claude · claude-opus-5", extra: "+1", tin: "33386k", tout: "191k", cost: "$84.438", dur: "37h 19m" },
+      { run: "5e3c5bed", issueId: "OTO-140", title: "Rendre les permissions et questions runtime interactives dans Otomat", model: "claude · claude-opus-5", extra: "+1", tin: "180586k", tout: "631k", cost: "$483.658", dur: "9h 59m" },
+      { run: "a83a20df", issueId: "OTO-33", title: "Mettre à jour automatiquement l’app desktop signée sans interrompre les runs", model: "claude · claude-opus-5", tin: "59970k", tout: "205k", cost: "$42.674", dur: "25h 37m" },
+      { run: "54c63b11", issueId: "OTO-127", title: "Nettoyer les commentaires narratifs et durcir leur prévention à la première passe", model: "claude · claude-opus-5", tin: "8139k", tout: "71.6k", cost: "$10.721", dur: "24h 56m" },
+      { run: "4418250e", issueId: "OTO-138", title: "Choisir le diff d’un workspace, d’une step ou d’un commit", model: "claude · claude-opus-5", tin: "110794k", tout: "309k", cost: "$113.807", dur: "13h 23m" },
+      { run: "95103902", issueId: "OTO-34", title: "Construire une Inbox opérationnelle cross-project", model: "claude · claude-opus-5", tin: "36926k", tout: "160k", cost: "$26.944", dur: "13h 12m" },
+      { run: "9c57a329", issueId: "OTO-136", title: "Corriger l’autorité des PR publiées et simplifier le fix des commentaires", model: "claude · claude-opus-5", tin: "23466k", tout: "87.3k", cost: "$17.353", dur: "13h 11m" },
+      { run: "4d821fbe", issueId: "OTO-137", title: "Corriger les alertes terminales encore actives dans l’Activity Center", model: "claude · claude-opus-5", tin: "7994k", tout: "55.3k", cost: "$7.490", dur: "13h 13m" },
+      { run: "ce35bc22", issueId: "OTO-65", title: "Rendre les conversations de workflow multi-agent explicites et routables", model: "claude · claude-fable-5", extra: "+2", tin: "154367k", tout: "444k", cost: "$99.080", partial: true, dur: "19h 51m" },
+      { run: "03faf0b2", issueId: "OTO-105", title: "Rechercher et naviguer dans le contenu du diff", model: "claude · claude-opus-5", extra: "+1", tin: "100709k", tout: "469k", cost: "$110.590", partial: true, dur: "19h 52m" },
+    ];
+    return { tiles, bars, emitters, rows };
+  }
+}
+</script>
+</body>
+</html>

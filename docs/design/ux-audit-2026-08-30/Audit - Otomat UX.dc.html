@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8">
+<title>Otomat — UX/UI audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#0a0b0d}
+a{color:#ff9b93;text-decoration:none}a:hover{color:#ffb3ac;text-decoration:underline;text-underline-offset:2px}
+*{box-sizing:border-box}
+code{font-family:'JetBrains Mono',monospace;font-size:.92em;background:#16181d;border:1px solid #23262d;border-radius:4px;padding:1px 5px;color:#d5d8de}
+::-webkit-scrollbar{width:10px}::-webkit-scrollbar-thumb{background:#23262d;border-radius:5px}
+</style>
+</helmet>
+<div data-screen-label="Audit document" style="font-family:'Inter',system-ui,sans-serif;background:#0a0b0d;color:#e7e9ee;min-height:100vh;-webkit-font-smoothing:antialiased">
+<div style="max-width:880px;margin:0 auto;padding:56px 32px 96px;display:flex;flex-direction:column;gap:40px">
+
+  <header style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #23262d;padding-bottom:28px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="width:26px;height:26px;border-radius:6px;background:#f0645a;color:#fff;font-weight:700;font-size:15px;display:grid;place-items:center">o</span>
+      <span style="font-size:13px;color:#9197a3">Otomat · UX/UI audit &amp; redesign plan · August 26, 2026 · read-only session — no source modified</span>
+    </div>
+    <h1 style="margin:0;font-size:30px;font-weight:600;letter-spacing:-0.015em;line-height:1.2">Quieter chrome, louder state</h1>
+    <p style="margin:0;font-size:14.5px;line-height:1.65;color:#b7bcc4;max-width:760px">Otomat’s bones are excellent: a real design-token system, a central status registry, honest event-sourced data, resizable instrument panes. The problems are almost all <em>semantic</em> — the wrong hue on live state, chrome that repeats itself, terminal states that keep dead controls on screen, and machine vocabulary leaking into reading surfaces. Every recommendation below reuses the existing token and component system.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;font-size:12.5px">
+      <a href="Redesign - Otomat.dc.html" style="display:inline-flex;align-items:center;gap:6px;height:28px;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 11px;color:#e7e9ee;font-weight:500">Redesign board → 6 screens</a>
+      <a href="Flows - Otomat.dc.html" style="display:inline-flex;align-items:center;gap:6px;height:28px;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 11px;color:#e7e9ee;font-weight:500">Flow storyboards → 3 flows</a>
+      <a href="current/Runs List.dc.html" style="display:inline-flex;align-items:center;gap:6px;height:28px;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 11px;color:#e7e9ee;font-weight:500">Current-state recreations → 6 screens</a>
+      <a href="handoff/IMPLEMENTATION-PROMPT.md" style="display:inline-flex;align-items:center;gap:6px;height:28px;border-radius:6px;background:#f0645a;padding:0 11px;color:#fff;font-weight:500">Implementation prompt → 3 batches, ready to send</a>
+    </div>
+  </header>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <h2 style="margin:0;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#646a76">Method &amp; evidence</h2>
+    <p style="margin:0;font-size:13.5px;line-height:1.65;color:#b7bcc4">26 screenshots (primary visual evidence) + full read of the relevant source: <code>packages/ui</code> (tokens, primitives, status registry), the web shell (<code>route-shell</code>, sidebar, topbar), and the priority views (runs list, run cockpit, conversation, PR, usage, issue detail, settings/workspaces, inbox, reviews). The live app was not exercised. Every finding is tagged:</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:12px">
+      <span style="display:inline-flex;align-items:center;gap:5px;height:22px;border-radius:4px;background:rgba(63,185,80,.12);color:#3fb950;padding:0 8px;font-weight:500">shot — visible in a screenshot</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;height:22px;border-radius:4px;background:rgba(77,163,255,.13);color:#4da3ff;padding:0 8px;font-weight:500">src — proven in source code</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;height:22px;border-radius:4px;background:rgba(216,161,43,.13);color:#d8a12b;padding:0 8px;font-weight:500">verify — needs a screenshot or live test</span>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <h2 style="margin:0;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#646a76">Keep — what already works</h2>
+    <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:7px;font-size:13.5px;line-height:1.6;color:#b7bcc4">
+      <li><b style="color:#e7e9ee">One status registry.</b> <code>ui/lib/status/registry.ts</code> maps every state of 12 domains to tone + icon + label. Nothing else in the codebase invents status colors. This is the lever that makes the P0 color fix a one-file change.</li>
+      <li><b style="color:#e7e9ee">Token discipline.</b> <code>tokens.css</code> covers surfaces, status, provenance, spacing, motion, density and even live theme identities (<code>brass</code>/<code>viridian</code>). Values are tunable by contract.</li>
+      <li><b style="color:#e7e9ee">State coverage.</b> Skeletons, error states with retry, empty states with actions, offline banner, reconnecting bar, stale-data notice all exist as shared components — the audit found no missing state <em>class</em>, only uneven use.</li>
+      <li><b style="color:#e7e9ee">Instrument layout.</b> Resizable, collapsible panes with persisted layout; command palette; consistent focus rings; labeled icon buttons.</li>
+      <li><b style="color:#e7e9ee">Evidence-first copy.</b> “Nothing is estimated”, deterministic reports, permission requests recorded in the ledger — the product’s honesty is a differentiator. The redesign keeps it and only changes <em>where</em> the honesty is spoken.</li>
+    </ul>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:16px">
+    <h2 style="margin:0;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#646a76">Prioritized findings</h2>
+
+    <div style="border:1px solid #23262d;border-radius:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;background:#101216;border-bottom:1px solid #1b1e24;padding:12px 16px">
+        <span style="display:inline-flex;align-items:center;height:20px;border-radius:4px;background:rgba(242,84,91,.13);color:#f2545b;padding:0 8px;font-size:11px;font-weight:600">P0</span>
+        <span style="font-size:14px;font-weight:600">1 · The live/interactive/danger hue collision</span>
+        <a href="Redesign - Otomat.dc.html#1a" style="margin-left:auto;font-size:12px">fix → 1a</a>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;font-size:13.5px;line-height:1.62;color:#b7bcc4">
+        <p style="margin:0"><b style="color:#e7e9ee">A1.</b> <code>--iris-solid #f0645a</code> is perceptually identical to <code>--danger #f2545b</code>. The design doc (§1) built the system around a <em>blue</em> iris (#5B7CFA) carrying “primary action, focus, selection <em>and the live/running state</em>”; when the brand hue moved to coral, every live/selected state started reading as failure. Symptoms across the screenshots: “Active” worktrees look alarming in Settings › Workspaces, the selected step in the cockpit sits on a red wash, the sidebar “live run” dot reads as an error, “Ready” issues look flagged. <span style="color:#3fb950;font-size:12px;font-weight:500">shot</span> <span style="color:#4da3ff;font-size:12px;font-weight:500">src: tokens.css · docs/design/otomat-v1-design-system.md</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">A2.</b> The same word gets two colors: a workspace “Active” is iris (<code>lib/workspace/state.ts</code>) while a session “Active” is success-green (<code>registry.ts</code>). <span style="color:#4da3ff;font-size:12px;font-weight:500">src</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">Fix.</b> Introduce <code>--live</code> (a blue, e.g. <code>#4da3ff</code>) + <code>--live-bg</code>; remap <em>only motion states</em> — run/step <code>running·preparing·starting</code>, contribution <code>sending</code>, compete <code>promoting</code>, workspace <code>active</code> — to the live tone. Coral stays for primary actions, selection and focus. One tone added in <code>tone.ts</code>, ~10 lines changed in <code>registry.ts</code>, zero component changes.</p>
+      </div>
+    </div>
+
+    <div style="border:1px solid #23262d;border-radius:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;background:#101216;border-bottom:1px solid #1b1e24;padding:12px 16px">
+        <span style="display:inline-flex;align-items:center;height:20px;border-radius:4px;background:rgba(242,84,91,.13);color:#f2545b;padding:0 8px;font-size:11px;font-weight:600">P0</span>
+        <span style="font-size:14px;font-weight:600">2 · Chrome repeats itself; Settings is hidden</span>
+        <a href="Redesign - Otomat.dc.html#1a" style="margin-left:auto;font-size:12px">fix → 1a</a>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;font-size:13.5px;line-height:1.62;color:#b7bcc4">
+        <p style="margin:0"><b style="color:#e7e9ee">B1.</b> Settings has no persistent navigation entry — it is reachable only through the project-switcher popover or the palette. The source states it: <code>project-switcher.tsx</code> — “the switcher is the only way in, so it is required”. For an alpha whose setup lives in Settings (hosts, repositories, integrations), that is a daily tax. <span style="color:#3fb950;font-size:12px;font-weight:500">shot 01.05.48</span> <span style="color:#4da3ff;font-size:12px;font-weight:500">src</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">B2.</b> Up to five stacked chrome rows before content, three of which repeat the project identity: the tab strip pill (“otomat supervps”), the switcher (“otomat supervps · otomat”), and the topbar label (“otomat”), then a 48px page header, then a 42px toolbar. ≈176px of chrome above the first data row on list views. <span style="color:#3fb950;font-size:12px;font-weight:500">shot 01.05.23, 01.03.21</span> <span style="color:#4da3ff;font-size:12px;font-weight:500">src: route-shell.tsx, app-shell.tsx, topbar.tsx</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">B3.</b> Two search affordances for one command: the sidebar “Search ⌘K” item and the 230px topbar search button both open the palette. <span style="color:#4da3ff;font-size:12px;font-weight:500">src: sidebar.tsx + route-shell.tsx</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">B4.</b> Cockpit tabs (Conversation·Report·Logs·Diff·PR) sit in the right-hand “actions” slot, detached from the run they describe, and collapse to unlabeled icons below <code>lg</code>. <span style="color:#4da3ff;font-size:12px;font-weight:500">src: cockpit/tabs.tsx</span> <span style="color:#d8a12b;font-size:12px;font-weight:500">verify narrow width</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">Fix.</b> One 48px <b>PageBar</b> (breadcrumb/title + status + view actions + activity + connection) replaces topbar + page header; the topbar search button is removed (sidebar item + ⌘K remain); Settings becomes a pinned sidebar footer item; cockpit tabs center in the PageBar. Keyboard behavior unchanged.</p>
+      </div>
+    </div>
+
+    <div style="border:1px solid #23262d;border-radius:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;background:#101216;border-bottom:1px solid #1b1e24;padding:12px 16px">
+        <span style="display:inline-flex;align-items:center;height:20px;border-radius:4px;background:rgba(242,84,91,.13);color:#f2545b;padding:0 8px;font-size:11px;font-weight:600">P0</span>
+        <span style="font-size:14px;font-weight:600">3 · Terminal states keep dead controls alive</span>
+        <a href="Redesign - Otomat.dc.html#1c" style="margin-left:auto;font-size:12px">fix → 1b · 1c</a>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;font-size:13.5px;line-height:1.62;color:#b7bcc4">
+        <p style="margin:0"><b style="color:#e7e9ee">C1 — the PR tab after merge</b> (your named pain point) encodes one fact four conflicting ways: a purple “merged” banner, a <em>danger-red</em> notice (“Pull request #183 is merged; it takes no further publication.”), a fully-filled progress stepper, and — below all that — a complete, editable-looking form (Type/Scope/Summary/Description/Branch/Publication) with an AI-generate button and a disabled primary. Meanwhile the summary reports “no workspace · no GitHub remote · 0 files · +0 −0” because the worktree was cleaned post-merge — data honesty reading as breakage. <span style="color:#3fb950;font-size:12px;font-weight:500">shot 01.05.23/28</span> <span style="color:#4da3ff;font-size:12px;font-weight:500">src: pr/view.tsx renders PullRequestForm unconditionally; summary.tsx</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">C2.</b> A finished run keeps a full composer — textarea plus an enabled-styled coral “Send message ⌘↵” — directly above the caption “This run is finished — its session can no longer be resumed.” <span style="color:#3fb950;font-size:12px;font-weight:500">shot 01.04.27</span> <span style="color:#4da3ff;font-size:12px;font-weight:500">src: conversation/composer.tsx (gate note vs. button state)</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">C3.</b> No surface answers “what now?”. After <code>review_ready</code> or <code>completed</code>, the next step (review diff → publish → open PR) hides in a right-rail button row; the runs list offers nothing inline for waiting runs. <span style="color:#3fb950;font-size:12px;font-weight:500">shot</span> <span style="color:#4da3ff;font-size:12px;font-weight:500">src: cockpit/run/action-buttons.tsx</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">C4.</b> The Report tab stamps EVIDENCE ten times on one screen and triple-encodes the hero (“Succeeded” + completed chip + EVIDENCE). <span style="color:#3fb950;font-size:12px;font-weight:500">shot 01.04.36</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">Fix.</b> A pure <code>resolveNextAction(detail, pr, review)</code> in <code>web/lib/run/</code> drives: a next-action strip in the cockpit, the lead card in the run-context rail, inline actions on waiting rows in the runs list, and a state-driven PR tab — terminal states render an outcome card (facts that survive cleanup + the Linear consequence + a read-only “Publication details” disclosure) and never an editable form. Merged is review-purple or success — never danger. Composer swaps for a closure bar on terminal runs.</p>
+      </div>
+    </div>
+
+    <div style="border:1px solid #23262d;border-radius:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;background:#101216;border-bottom:1px solid #1b1e24;padding:12px 16px">
+        <span style="display:inline-flex;align-items:center;height:20px;border-radius:4px;background:rgba(216,161,43,.13);color:#d8a12b;padding:0 8px;font-size:11px;font-weight:600">P1</span>
+        <span style="font-size:14px;font-weight:600">4 · Numbers speak machine, not operator</span>
+        <a href="Redesign - Otomat.dc.html#1d" style="margin-left:auto;font-size:12px">fix → 1d</a>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;font-size:13.5px;line-height:1.62;color:#b7bcc4">
+        <p style="margin:0"><b style="color:#e7e9ee">D1.</b> Token counts always render in “k”: <code>5353947k</code>, <code>33386k</code>, <code>110794k</code> — unparseable at a glance and the top complaint driver on the Usage view (your named pain point). <span style="color:#3fb950;font-size:12px;font-weight:500">shot 01.03.02</span> <span style="color:#4da3ff;font-size:12px;font-weight:500">src: web/lib/run/usage.ts formatTokenCount</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">D2.</b> Costs carry 3 decimals and no thousands separator (<code>$6279.101</code>); <code>PARTIAL</code>/<code>FINAL</code> shout in caps with no explanation anywhere. <span style="color:#3fb950;font-size:12px;font-weight:500">shot</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">D3.</b> The daily chart has no y-scale, no hover values, first/last date only; the “By project” meter is invisible at 1 project (fill = 12%-alpha coral on a dark track); the per-run Tokens cell stacks a 2×2 grid into a 44px row. <span style="color:#3fb950;font-size:12px;font-weight:500">shot</span> <span style="color:#4da3ff;font-size:12px;font-weight:500">src: daily-chart.tsx, breakdown.tsx, cells/tokens.tsx</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">Fix.</b> Tiered units (k/M/B) with the exact value on hover/copy; <code>$#,##0.00</code>; “partial” becomes an info glyph + sentence (“2 runs did not report cost”); “FINAL” disappears — final is the default, only live counting gets a marker. Chart: metric toggle (Tokens/Cost/Runs), two dashed gridlines with labels, weekly ticks, hover tooltip. Breakdowns get share-% and a solid 4px meter. One formatting module feeds usage, steps pane, run facts and runs list.</p>
+      </div>
+    </div>
+
+    <div style="border:1px solid #23262d;border-radius:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;background:#101216;border-bottom:1px solid #1b1e24;padding:12px 16px">
+        <span style="display:inline-flex;align-items:center;height:20px;border-radius:4px;background:rgba(216,161,43,.13);color:#d8a12b;padding:0 8px;font-size:11px;font-weight:600">P1</span>
+        <span style="font-size:14px;font-weight:600">5 · Repetition where a signal should be</span>
+        <a href="Redesign - Otomat.dc.html#1e" style="margin-left:auto;font-size:12px">fix → 1e · 1f</a>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;font-size:13.5px;line-height:1.62;color:#b7bcc4">
+        <p style="margin:0"><b style="color:#e7e9ee">E1 — Workspaces</b> (your named pain point): the same full state sentence repeats under every row (“The issue is still working here — merge or abandon its cycle first.” ×5, “No merged canonical pull request…” ×7 in one screenshot), doubling row height and burying the actual variance (which repo, which branch, dirty or clean). Zero-count filter chips (Stale 0, Missing 0) still render; cleanup has no bulk action although the count is right there. <span style="color:#3fb950;font-size:12px;font-weight:500">shot 01.08.32</span> <span style="color:#4da3ff;font-size:12px;font-weight:500">src: workspaces/section.tsx, cells</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">E2 — Issue detail</b> (your named pain point): the issue’s status appears four times in two vocabularies — header chip “ready”, meta “Todo”, rail Properties “ready”, rail Linear “Todo” — and the primary action (“Launch run”) sits both top-right and below the full spec, so on a long issue the empty-state launcher is one full page-scroll away. The PR-attach input renders prominently even when no PR exists. <span style="color:#3fb950;font-size:12px;font-weight:500">shot 01.04.07/16</span> <span style="color:#4da3ff;font-size:12px;font-weight:500">src: detail-view.tsx, workspace-rail.tsx</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">E3 — Steps pane:</b> three identical “claude · terminated · Context” rows per step, plus a mono usage line, push the actual step list off-balance. <span style="color:#3fb950;font-size:12px;font-weight:500">shot 01.04.27</span> <span style="color:#4da3ff;font-size:12px;font-weight:500">src: steps/row.tsx</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">Fix.</b> State sentences → tooltip on the chip (a legend row exists once, not per row); one-line 40px workspace rows with hover actions; “Clean up N” bulk strip; zero-count chips collapse behind “+N empty states”. Issue detail: one status <em>control</em> with the sync consequence written under it; a compact launcher row above the fold; the spec clamps at ~300px with “Show full spec”. Sessions collapse to “N sessions · terminated”.</p>
+      </div>
+    </div>
+    <div style="border:1px solid #23262d;border-radius:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;background:#101216;border-bottom:1px solid #1b1e24;padding:12px 16px">
+        <span style="display:inline-flex;align-items:center;height:20px;border-radius:4px;background:rgba(216,161,43,.13);color:#d8a12b;padding:0 8px;font-size:11px;font-weight:600">P1</span>
+        <span style="font-size:14px;font-weight:600">6 · Machine vocabulary on reading surfaces</span>
+        <a href="Redesign - Otomat.dc.html#1b" style="margin-left:auto;font-size:12px">fix → 1b</a>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;font-size:13.5px;line-height:1.62;color:#b7bcc4">
+        <p style="margin:0"><b style="color:#e7e9ee">F1.</b> The conversation — the main reading surface — speaks in event types: “ordered by seq”, “run review_ready”, “Otomat · run.lifecycle”, “report v1 · deterministic”; the run header packs five provenance facts into one unbroken line (“finished Reviewer · Claude Code claude-fable-5 · high Requested: fable · Reported: claude-fable-5 … fable”). <span style="color:#3fb950;font-size:12px;font-weight:500">shot 01.04.27, 01.04.36</span> <span style="color:#4da3ff;font-size:12px;font-weight:500">src: conversation/view.tsx, timeline/event-summary</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">F2.</b> Provenance dots (coral = Otomat) are color-only — the one place the design system’s own “status is never color-only” rule is broken. <span style="color:#4da3ff;font-size:12px;font-weight:500">src: design-system.md §0 vs. ledger rows</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">Fix.</b> A sentence template per event type (“Run is ready for review”, “Turn completed”) with the raw type + seq in the expanded detail and tooltips; the header becomes “Reviewer · Claude Code — fable-5 · high effort” + a mono session id; “ordered by seq · live” becomes a live pill with a tooltip. No data is removed — it moves one level down.</p>
+      </div>
+    </div>
+
+    <div style="border:1px solid #23262d;border-radius:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;background:#101216;border-bottom:1px solid #1b1e24;padding:12px 16px">
+        <span style="display:inline-flex;align-items:center;height:20px;border-radius:4px;background:rgba(216,161,43,.13);color:#d8a12b;padding:0 8px;font-size:11px;font-weight:600">P1</span>
+        <span style="font-size:14px;font-weight:600">7 · Duplication the shared layer should absorb</span>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;font-size:13.5px;line-height:1.62;color:#b7bcc4">
+        <p style="margin:0;color:#b7bcc4"><b style="color:#e7e9ee">G1.</b> <code>components/inbox/*</code> and <code>components/reviews/*</code> are parallel implementations of the same pattern — entry-row, filters-menu, empty-state, group-section — differing only in grouping and tone. <span style="color:#4da3ff;font-size:12px;font-weight:500">src: file tree</span></p>
+        <p style="margin:0;color:#b7bcc4"><b style="color:#e7e9ee">G2.</b> Shell-grade pieces live app-side and get re-invented: <code>PaneHeader</code> (runs), <code>SectionHeading</code> (settings), <code>CenteredState</code>, list skeletons. Promote to <code>packages/ui</code>.</p>
+        <p style="margin:0;color:#b7bcc4"><b style="color:#e7e9ee">G3.</b> Three menu-configuration systems coexist: <code>config-menu</code>, the execution submenus, and issues <code>view-options</code>. Converge on <code>config-menu</code>.</p>
+        <p style="margin:0;color:#b7bcc4"><b style="color:#e7e9ee">G4.</b> Settings pages surface 3–5 coral primaries at once (Save init commands, Map source, Apply, Save defaults…). Primary should be dirty-state-gated, one per card, default variant otherwise. <span style="color:#3fb950;font-size:12px;font-weight:500">shot 01.07.58, 01.08.37, 01.08.54</span></p>
+      </div>
+    </div>
+
+    <div style="border:1px solid #23262d;border-radius:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;background:#101216;border-bottom:1px solid #1b1e24;padding:12px 16px">
+        <span style="display:inline-flex;align-items:center;height:20px;border-radius:4px;background:rgba(216,161,43,.13);color:#d8a12b;padding:0 8px;font-size:11px;font-weight:600">P1</span>
+        <span style="font-size:14px;font-weight:600">8 · Readability floors</span>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;font-size:13.5px;line-height:1.62;color:#b7bcc4">
+        <p style="margin:0"><b style="color:#e7e9ee">H1.</b> 10px and 9px text carries real information: step participant lines (<code>text-[10px]</code> in <code>steps/row.tsx</code>), session status, FINAL/PARTIAL tags. Floor is 11px in the product’s own type scale. <span style="color:#4da3ff;font-size:12px;font-weight:500">src</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">H2.</b> <code>--text-tertiary #646a76</code> on <code>#0a0b0d</code> ≈ 4.0:1, used at 11–12px for timestamps, notes, axis labels — below the design system’s own “secondary ≥ 4.5:1” contract. Raise the token (≈<code>#7a8291</code>) or reserve tertiary for decorative text. <span style="color:#4da3ff;font-size:12px;font-weight:500">src: tokens.css vs design-system.md §1</span> <span style="color:#d8a12b;font-size:12px;font-weight:500">verify with axe</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">H3.</b> Lowercase status labels (“awaiting permission”) in a mixed FR/EN interface slow scanning; worth an A/B in the gallery before changing — it is an identity choice. <span style="color:#d8a12b;font-size:12px;font-weight:500">verify</span></p>
+      </div>
+    </div>
+
+    <div style="border:1px solid #23262d;border-radius:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;background:#101216;border-bottom:1px solid #1b1e24;padding:12px 16px">
+        <span style="display:inline-flex;align-items:center;height:20px;border-radius:4px;background:rgba(145,151,163,.12);color:#9197a3;padding:0 8px;font-size:11px;font-weight:600">P2</span>
+        <span style="font-size:14px;font-weight:600">9 · Motion &amp; perceived responsiveness</span>
+        <a href="Flows - Otomat.dc.html" style="margin-left:auto;font-size:12px">behavior → flows</a>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;font-size:13.5px;line-height:1.62;color:#b7bcc4">
+        <p style="margin:0"><b style="color:#e7e9ee">I1.</b> Motion tokens exist (<code>--motion-*</code>, <code>--ease</code>, reduced-motion path) but state changes are hard cuts: chips flip, ledger rows pop, counts jump. Proposed: 140ms tone/label crossfade on chips, fade+2px rise for new ledger rows (batched per frame under streaming), count-up ≤300ms on usage tiles. <span style="color:#4da3ff;font-size:12px;font-weight:500">src: tokens present, few usages</span> <span style="color:#d8a12b;font-size:12px;font-weight:500">verify live feel</span></p>
+        <p style="margin:0"><b style="color:#e7e9ee">I2.</b> Launch feels modal-bound: the dialog stays until the daemon answers. Proposed optimistic handoff — navigate to the cockpit ≤200ms with a “preparing” live chip and skeleton thread (the run row already exists in the ledger). <span style="color:#d8a12b;font-size:12px;font-weight:500">verify current latency</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <h2 style="margin:0;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#646a76">Shared tokens, primitives &amp; components to update</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;line-height:1.6">
+      <div style="border:1px solid #1b1e24;border-radius:8px;background:#101216;padding:12px 14px">
+        <div style="font-weight:600;margin-bottom:6px">Tokens — <code>packages/ui/src/styles/tokens.css</code></div>
+        <ul style="margin:0;padding-left:18px;color:#b7bcc4;display:flex;flex-direction:column;gap:4px">
+          <li>Add <code>--live #4da3ff</code> · <code>--live-bg rgba(77,163,255,.13)</code> (dark + light + brass/viridian overrides)</li>
+          <li>Raise <code>--text-tertiary</code> to ≥4.5:1 on <code>--background</code></li>
+          <li>Document: iris = interactive only; status hues never carry brand</li>
+        </ul>
+      </div>
+      <div style="border:1px solid #1b1e24;border-radius:8px;background:#101216;padding:12px 14px">
+        <div style="font-weight:600;margin-bottom:6px">Status system — <code>packages/ui/src/lib</code></div>
+        <ul style="margin:0;padding-left:18px;color:#b7bcc4;display:flex;flex-direction:column;gap:4px">
+          <li><code>tone.ts</code>: add <code>live</code> facets</li>
+          <li><code>status/registry.ts</code>: running/preparing/starting/sending/promoting → <code>live</code>; workspace <code>active</code> (web) → <code>live</code></li>
+          <li><code>StatusChip</code>: optional <code>hint</code> tooltip slot (workspace sentences)</li>
+        </ul>
+      </div>
+      <div style="border:1px solid #1b1e24;border-radius:8px;background:#101216;padding:12px 14px">
+        <div style="font-weight:600;margin-bottom:6px">New shared components</div>
+        <ul style="margin:0;padding-left:18px;color:#b7bcc4;display:flex;flex-direction:column;gap:4px">
+          <li><code>PageBar</code> — merges Topbar + page header (ui)</li>
+          <li><code>NextActionStrip</code> + <code>OutcomeCard</code> (web/runs)</li>
+          <li><code>StatTile</code>, <code>Meter</code> (usage + breakdowns)</li>
+          <li><code>FilterChip</code> row (runs/usage/workspaces toolbars)</li>
+          <li><code>ClampedMarkdown</code> (issue spec)</li>
+          <li><code>InboxRow/InboxGroup</code> shared by Inbox + Reviews</li>
+        </ul>
+      </div>
+      <div style="border:1px solid #1b1e24;border-radius:8px;background:#101216;padding:12px 14px">
+        <div style="font-weight:600;margin-bottom:6px">Logic &amp; formatting — <code>apps/web/src/lib</code></div>
+        <ul style="margin:0;padding-left:18px;color:#b7bcc4;display:flex;flex-direction:column;gap:4px">
+          <li><code>run/next-action.ts</code> — pure resolver over RunState × PR × review (unit-tested)</li>
+          <li><code>run/usage.ts</code> — tiered token units, <code>$#,##0.00</code>, partial/final semantics</li>
+          <li><code>conversation</code> — event sentence templates per type</li>
+          <li>Promote <code>PaneHeader</code>, <code>SectionHeading</code> to <code>packages/ui</code></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:14px">
+    <h2 style="margin:0;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#646a76">Implementation batches — medium (3–5 days each)</h2>
+
+    <div style="border:1px solid #23262d;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="height:22px;min-width:22px;display:inline-grid;place-items:center;border-radius:6px;background:#f0645a;color:#fff;font-size:12px;font-weight:700">1</span><span style="font-size:14.5px;font-weight:600">State colors &amp; number language</span><span style="margin-left:auto;font-size:12px;color:#646a76">foundation · lowest risk · widest spread</span></div>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#b7bcc4"><b style="color:#e7e9ee">Scope.</b> <code>--live</code> token + tone facets; registry remap (run/step/compete/contribution motion states); <code>workspace/state.ts</code> active→live; tiered <code>formatTokenCount</code> + <code>formatCostUsd</code> and their call sites (usage tiles/cells, steps pane, run facts, PR summary); PARTIAL→info-glyph component with sentence; drop FINAL; kill 9–10px text in runs components; raise <code>--text-tertiary</code>.</p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#b7bcc4"><b style="color:#e7e9ee">Acceptance.</b> No running/active/selected state renders in the <code>#f0645a</code>…<code>#f2545b</code> band; Workspaces counter “Active” is blue; every token count in the app renders ≤4 significant characters + unit with the exact value on <code>title</code>; costs show 2 decimals + separators; no informational text below 11px in <code>components/runs/**</code>; chip text contrast ≥4.5:1.</p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#b7bcc4"><b style="color:#e7e9ee">Validation.</b> Unit: registry tone snapshot + formatter table tests. Visual: gallery pages (<code>apps/web/src/gallery</code>) before/after screenshots; axe pass on gallery; <code>rg "text-\[(9|10)px\]" apps/web/src/components/runs</code> returns nothing; <code>pnpm check</code> green.</p>
+    </div>
+
+    <div style="border:1px solid #23262d;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="height:22px;min-width:22px;display:inline-grid;place-items:center;border-radius:6px;background:#f0645a;color:#fff;font-size:12px;font-weight:700">2</span><span style="font-size:14.5px;font-weight:600">Terminal states &amp; next action (run surfaces)</span><span style="margin-left:auto;font-size:12px;color:#646a76">the two named pain points on runs</span></div>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#b7bcc4"><b style="color:#e7e9ee">Scope.</b> <code>resolveNextAction</code> resolver + tests; cockpit next-action strip + rail lead card; composer→closure bar on terminal runs; PR tab state-driven layout: terminal = OutcomeCard (surviving facts + Linear consequence + read-only publication disclosure + “workspace cleaned” reframe), pre-publish keeps today’s form; Report EVIDENCE de-duplication (one explainer + subtle per-card tag); runs list inline “Answer” / “Follow live” affordances on waiting/running rows.</p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#b7bcc4"><b style="color:#e7e9ee">Acceptance.</b> For each of {completed+merged, completed+unpublished, review_ready, failed, canceled, awaiting_permission}: exactly one primary next action across cockpit + PR tab; post-merge shows zero editable fields, zero AI-generate, zero danger tone; composer textarea absent on terminal runs and replaced by the closure bar; existing publish/generate behavior unchanged pre-publish (contract tests untouched).</p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#b7bcc4"><b style="color:#e7e9ee">Validation.</b> Drive each state with the deterministic fake runtime adapter (<code>apps/local-daemon/src/runtime</code>) and snapshot the three surfaces per state; resolver unit tests cover every <code>RunState</code>; manual pass on a real merged run (this repo has OTO-139 · #183).</p>
+    </div>
+
+    <div style="border:1px solid #23262d;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="height:22px;min-width:22px;display:inline-grid;place-items:center;border-radius:6px;background:#f0645a;color:#fff;font-size:12px;font-weight:700">3</span><span style="font-size:14.5px;font-weight:600">Chrome merge &amp; list grammar</span><span style="margin-left:auto;font-size:12px;color:#646a76">shell + workspaces + inbox unification</span></div>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#b7bcc4"><b style="color:#e7e9ee">Scope.</b> PageBar merge in <code>route-shell</code> (drop topbar search field + project label; keep ⌘K, sidebar Search, palette); Settings sidebar entry; cockpit tabs centered; Workspaces one-line rows + chip tooltip + “Clean up N” bulk (loops the existing per-workspace delete; confirm dialog lists branches) + zero-count chip collapse; shared InboxRow/Group adopted by Inbox and Reviews; runs-list row upgrade (outcome summary + cost from the usage rollup — <b>needs check:</b> steps/cost per run on the list endpoint; if absent, render from the run-detail cache and add a daemon aggregate later).</p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#b7bcc4"><b style="color:#e7e9ee">Acceptance.</b> ≤2 fixed bars above content on list views (≤96px, was ≈176px); Settings reachable in one click from every view; project identity rendered once in the chrome; workspace rows are 40px single-line, sentences appear on hover, bulk delete touches only <code>cleanup_required</code>; Inbox and Reviews render through the same row/group components; no keyboard regression (<code>[</code>, <code>⌘K</code>, <code>C</code>, tab shortcuts).</p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#b7bcc4"><b style="color:#e7e9ee">Validation.</b> Keyboard smoke script; 1180px-width pass (tabs collapse gracefully, PageBar truncates breadcrumb not actions); import-boundary lint (<code>pnpm build</code>) confirms no app→app leaks from the shared rows; pixel review of gallery + the six recreated screens vs. redesign boards; <code>pnpm check</code> green.</p>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <h2 style="margin:0;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#646a76">Screenshots needed before implementation</h2>
+    <p style="margin:0;font-size:13px;color:#9197a3;line-height:1.6">Surfaces I could only read as code — capture these before Batch 2/3 detail design so states aren’t designed blind:</p>
+    <ol style="margin:0;padding-left:20px;font-size:13.5px;line-height:1.7;color:#b7bcc4;columns:2;column-gap:40px">
+      <li>Inbox with entries (multiple projects, mixed kinds)</li>
+      <li>Reviews populated (groups: needs review / changes requested)</li>
+      <li>Run in <code>awaiting_permission</code> with the interaction card visible</li>
+      <li>Compete group in <code>awaiting_selection</code> (comparison view)</li>
+      <li>Diff → Comments tab + the fix-comments bar mid-flow</li>
+      <li>PR tab pre-publish (unpublished run with a dirty workspace)</li>
+      <li>Issues List mode + saved views bar</li>
+      <li>Activity Center popover open (with notices)</li>
+      <li>Offline banner + reconnecting bar states</li>
+      <li>Fresh-install empty states (no project, no repository)</li>
+      <li>Light theme — any two dense screens</li>
+      <li>Narrow window (&lt;1180px): cockpit + issues board</li>
+      <li>Linear comments section rendered on an issue</li>
+      <li>Toasts (success + failure)</li>
+      <li>Agents list page + agent detail (not the dialog)</li>
+    </ol>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:10px;border-top:1px solid #23262d;padding-top:24px">
+    <h2 style="margin:0;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#646a76">Confidence &amp; limits</h2>
+    <p style="margin:0;font-size:13px;line-height:1.65;color:#9197a3">Findings tagged <span style="color:#3fb950">shot</span>/<span style="color:#4da3ff">src</span> are verified against the 26 screenshots and the files named inline. The right-hand columns of the Workspaces recreation (Branch·path, Git, PR) follow <code>workspaces/columns.ts</code> but their cell rendering was not screenshot-verified. Latency/motion observations are proposals pending live feel-testing. Diff review, compete, and the launch dialogs were read in source but are out of this pass’s redesign scope — they inherit Batch 1 tokens automatically.</p>
+  </section>
+</div>
+</div>
+</x-dc>
+</body>
+</html>

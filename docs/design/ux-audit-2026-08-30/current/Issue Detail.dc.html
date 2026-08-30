@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8">
+<title>Current — Issue Detail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+html,body{margin:0;padding:0;background:#050506}
+a{color:#e7e9ee;text-decoration:none}a:hover{color:#fff}
+*{box-sizing:border-box}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#23262d;border-radius:5px;border:2px solid #0a0b0d}::-webkit-scrollbar-track{background:transparent}
+code.tk{font-family:'JetBrains Mono',monospace;font-size:11.5px;background:#16181d;border:1px solid #23262d;border-radius:4px;padding:1px 5px;color:#e7e9ee}
+</style>
+</helmet>
+<div data-screen-label="Current · Issue detail" style="font-family:'Inter',system-ui,sans-serif;background:#0a0b0d;color:#e7e9ee;height:100vh;min-width:1440px;display:flex;flex-direction:column;overflow:hidden;font-size:13px;-webkit-font-smoothing:antialiased">
+  <div style="height:36px;flex:none;background:#131417;border-bottom:1px solid #1f2126;display:flex;align-items:center;position:relative">
+    <div style="display:flex;gap:8px;padding-left:20px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+    <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:#b7bcc4">Otomat</span>
+  </div>
+  <div style="flex:1;min-height:0;display:flex">
+    <aside style="width:236px;flex:none;background:#0c0d10;display:flex;flex-direction:column;min-height:0">
+      <div style="display:flex;align-items:center;padding-right:6px">
+        <div style="flex:1;min-width:0;height:48px;display:flex;align-items:center;gap:9px;padding:0 12px">
+          <span style="width:24px;height:24px;border-radius:6px;background:#f0645a;color:#fff;font-weight:700;font-size:14px;display:grid;place-items:center;flex:none">o</span>
+          <span style="min-width:0;flex:1">
+            <span style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:600">otomat</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9197a3;background:#16181d;border:1px solid #23262d;border-radius:4px;padding:1px 5px">supervps</span></span>
+            <span style="display:block;font-size:11px;color:#646a76">otomat</span>
+          </span>
+          <i data-lucide="chevrons-up-down" style="width:14px;height:14px;color:#646a76;flex:none"></i>
+        </div>
+        <span style="width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="panel-left" style="width:15px;height:15px"></i></span>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto;padding-top:6px;padding-bottom:8px">
+        <nav style="display:flex;flex-direction:column;gap:1px;padding:4px 8px 0">
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="search" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Search</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;min-width:16px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">⌘K</kbd></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="plus" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">New issue</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;min-width:16px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">C</kbd></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="inbox" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Inbox</span></span>
+        </nav>
+        <div style="padding:14px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.03em;color:#646a76">Workspace</div>
+        <nav style="display:flex;flex-direction:column;gap:1px;padding:0 8px">
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;background:rgba(240,100,90,.12);color:#e7e9ee;font-weight:450"><i data-lucide="list-todo" style="width:16px;height:16px;color:#ff9b93"></i><span style="flex:1">Issues</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="activity" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Runs</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="git-pull-request" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Reviews</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="bar-chart-3" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Usage</span></span>
+        </nav>
+      </div>
+      <div style="border-top:1px solid #1b1e24;padding:8px">
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;font-size:12px;color:#9197a3"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950;flex:none"></span>daemon supervps · v0.1.0</div>
+      </div>
+    </aside>
+    <div style="width:1px;background:#1b1e24"></div>
+    <main style="flex:1;min-width:0;display:flex;flex-direction:column;background:#0a0b0d">
+      <header style="height:44px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 12px 0 14px">
+        <span style="font-size:13px;color:#9197a3">otomat</span>
+        <span style="flex:1"></span>
+        <span style="height:28px;width:230px;display:flex;align-items:center;gap:8px;border:1px solid #23262d;border-radius:6px;background:#0a0b0d;padding:0 9px;color:#646a76"><i data-lucide="search" style="width:14px;height:14px;flex:none"></i><span style="flex:1;text-align:left;font-size:13px">Search…</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;display:inline-flex;align-items:center;padding:0 4px">⌘K</kbd></span>
+        <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="activity" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:6px;padding:0 6px;font-size:12px;color:#e7e9ee"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950"></span>Online</span>
+      </header>
+      <div style="height:48px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 18px">
+        <span style="width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:#9197a3;flex:none"><i data-lucide="arrow-left" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:8px;font-size:13px;color:#9197a3"><span>Issues</span><span style="color:#454b55">›</span><span style="color:#e7e9ee">OTO-68</span></span>
+        <span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(240,100,90,.13);color:#ff9b93;text-transform:lowercase"><i data-lucide="circle-dot" style="width:12px;height:12px"></i>ready</span>
+        <span style="flex:1"></span>
+        <span style="height:28px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;background:#f0645a;padding:0 11px;font-size:13px;font-weight:500;color:#fff;box-shadow:0 1px 0 rgba(0,0,0,.15) inset,0 1px 2px rgba(0,0,0,.25)"><i data-lucide="play" style="width:13px;height:13px"></i>Launch run</span>
+      </div>
+      <div style="flex:1;min-height:0;display:flex">
+        <div style="flex:1;min-width:0;overflow:auto;padding:26px 32px">
+          <div style="max-width:720px;display:flex;flex-direction:column;gap:24px">
+            <div>
+              <div style="display:flex;align-items:flex-start;gap:16px">
+                <h1 style="margin:0;flex:1;font-size:26px;line-height:1.3;font-weight:600;letter-spacing:-0.01em">Bloquer les steps dépendantes jusqu’à une sortie de travail vérifiable</h1>
+                <span style="width:24px;height:24px;border-radius:50%;background:#8aa353;color:#0a0b0d;font-size:10px;font-weight:700;display:grid;place-items:center;flex:none;margin-top:6px">AL</span>
+              </div>
+              <div style="margin-top:10px;display:flex;align-items:center;gap:8px;font-size:13px;color:#9197a3">
+                <span style="width:13px;height:13px;border-radius:50%;background:#8a8ff5;display:inline-block"></span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">OTO-68</span>
+                <span style="color:#454b55">·</span>
+                <span style="width:9px;height:9px;border-radius:50%;background:#9197a3;display:inline-block"></span>
+                <span>Todo</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px;font-size:13.5px;line-height:1.65;color:#d5d8de">
+              <h3 style="margin:6px 0 0;font-size:15px;font-weight:600;color:#e7e9ee">Contexte</h3>
+              <p style="margin:0">Dans une run workflow, une première step peut terminer après un simple audit ou un message demandant une approbation. Si elle est néanmoins classée <code class="tk">succeeded</code> parce que le process retourne <code class="tk">0</code>, une step dépendante comme goal-review démarre alors que le travail demandé n’a pas été implémenté.</p>
+              <p style="margin:0">Le scheduler ne doit pas deviner la réussite depuis une phrase libre ni traiter la fin d’un process comme une preuve suffisante de livraison.</p>
+              <h3 style="margin:10px 0 0;font-size:15px;font-weight:600;color:#e7e9ee">Objectif</h3>
+              <p style="margin:0">Ne lancer une step dépendante que lorsque sa dépendance est réellement terminée selon le contrat de la step, sans bloquer les tâches légitimement sans modification de code.</p>
+              <h3 style="margin:10px 0 0;font-size:15px;font-weight:600;color:#e7e9ee">Scope</h3>
+              <h4 style="margin:4px 0 0;font-size:13.5px;font-weight:600;color:#e7e9ee">Garde de dépendance et approbations</h4>
+              <ul style="margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px">
+                <li>Conserver comme invariant que seule une dépendance <code class="tk">succeeded</code> déverrouille une step suivante ; <code class="tk">awaiting_permission</code>, <code class="tk">awaiting_human</code>, <code class="tk">awaiting_selection</code>, <code class="tk">failed</code>, <code class="tk">canceled</code> ou <code class="tk">stale</code> la laissent queued.</li>
+                <li>Une requête de permission non résolue, enregistrée dans le ledger, ne peut jamais être réconciliée en succès par un code retour <code class="tk">0</code>. La step reste dans l’état bloqué approprié et sa raison est visible.</li>
+                <li>Après la réponse/approbation réellement supportée par le runtime, reprendre la même step ; les dépendances se déclenchent seulement après sa réussite ultérieure. Coordonner le contrôle de permission avec <a href="#" style="color:#ff9b93;text-decoration:underline;text-underline-offset:2px">OTO-24</a>.</li>
+              </ul>
+              <h4 style="margin:8px 0 0;font-size:13.5px;font-weight:600;color:#e7e9ee">Contrat de sortie vérifiable</h4>
+              <ul style="margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px">
+                <li>Ajouter au plan gelé une attente de livraison déclarative, choisie par l’utilisateur pour chaque step : standard, implémentation requise ou analyse/review. Ce n’est ni un agent built-in ni une heuristique fondée sur le nom de la step.</li>
+                <li>Le contrôleur de workflow, dans le daemon et non dans un agent LLM caché, constitue une snapshot de preuves canoniques : état du worktree/diff exact contre la base, commandes et codes de sortie réellement observés, permissions/choix en attente, états de review et contexte gelé de l’issue. Une déclaration de l’agent est informative mais n’est jamais à elle seule une preuve de réussite.</li>
+              </ul>
+              <h3 style="margin:10px 0 0;font-size:15px;font-weight:600;color:#e7e9ee">Hors périmètre</h3>
+              <ul style="margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px">
+                <li>Ajouter des agents, prompts ou LLM built-in.</li>
+                <li>Laisser un LLM superviseur opaque, permanent ou non borné décider seul de la livraison sans preuves canoniques ni profil utilisateur explicite.</li>
+                <li>Déclarer qu’un diff est fonctionnel sans les preuves définies par la step.</li>
+                <li>Laisser une step suivante analyser le ticket ou réparer silencieusement l’absence d’implémentation de sa dépendance.</li>
+              </ul>
+              <div><span style="font-size:13px;font-weight:500;color:#e7e9ee">Edit</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:13px;font-weight:600">Comments</span>
+              <div style="border:1px solid #23262d;border-radius:6px;min-height:64px;padding:9px 11px;font-size:13px;color:#646a76">Comment on the Linear issue…</div>
+            </div>
+            <div style="border:1px solid #1b1e24;border-radius:8px;background:#101216;padding:36px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;margin-bottom:24px">
+              <span style="width:40px;height:40px;border-radius:8px;display:grid;place-items:center;color:#9197a3"><i data-lucide="play" style="width:26px;height:26px"></i></span>
+              <span style="font-size:15px;font-weight:600">No runs yet</span>
+              <span style="font-size:13px;color:#646a76;max-width:320px">This issue has no agent activity. Launch a run to follow its live ledger here.</span>
+              <span style="margin-top:6px;height:28px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;background:#f0645a;padding:0 11px;font-size:13px;font-weight:500;color:#fff"><i data-lucide="play" style="width:13px;height:13px"></i>Launch run</span>
+            </div>
+          </div>
+        </div>
+        <div style="width:1px;background:#1b1e24"></div>
+        <aside style="width:300px;flex:none;overflow:auto;background:#0c0d10;padding:16px">
+          <div style="margin-bottom:18px">
+            <div style="display:flex;align-items:center;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#646a76;margin-bottom:10px">Properties<span style="margin-left:auto"><i data-lucide="panel-right" style="width:14px;height:14px"></i></span></div>
+            <div style="display:flex;flex-direction:column;gap:9px;font-size:13px">
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;color:#646a76;flex:1">Issue status</span><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(240,100,90,.13);color:#ff9b93;text-transform:lowercase"><i data-lucide="circle-dot" style="width:12px;height:12px"></i>ready</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;color:#646a76;flex:1">Workspace execution</span><span style="font-size:12px;color:#646a76">No open workspace</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;color:#646a76;flex:1">Source</span><span style="color:#9197a3">linear</span></div>
+            </div>
+          </div>
+          <div style="margin-bottom:18px;border-top:1px solid #1b1e24;padding-top:14px">
+            <div style="font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#646a76;margin-bottom:10px">Pull requests</div>
+            <p style="margin:0 0 10px;font-size:12.5px;line-height:1.5;color:#9197a3">No pull request names OTO-68 in its title or body. Attach one by number or URL if it exists.</p>
+            <div style="display:flex;gap:8px">
+              <span style="flex:1;height:30px;display:flex;align-items:center;border:1px solid #23262d;border-radius:6px;background:#101216;padding:0 10px;font-size:12px;color:#646a76;white-space:nowrap;overflow:hidden">#128 or a github.com pull request URL</span>
+              <span style="height:30px;display:inline-flex;align-items:center;border:1px solid #23262d;border-radius:6px;padding:0 11px;font-size:13px;font-weight:500;color:#9197a3">Attach</span>
+            </div>
+          </div>
+          <div style="border-top:1px solid #1b1e24;padding-top:14px">
+            <div style="display:flex;align-items:center;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#646a76;margin-bottom:10px">Linear<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;letter-spacing:0;text-transform:none">OTO-68</span></div>
+            <div style="display:flex;flex-direction:column;gap:9px;font-size:13px">
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;color:#646a76;flex:1">Status</span><span style="display:inline-flex;align-items:center;gap:6px;color:#e7e9ee"><span style="width:9px;height:9px;border-radius:50%;background:#9197a3"></span>Todo</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;color:#646a76;flex:1">Priority</span><span style="color:#e7e9ee">High</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;color:#646a76;flex:1">Assignee</span><span style="color:#e7e9ee;font-size:12.5px">alim.tunc@outlook.fr</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;color:#646a76;flex:1">Labels</span><span style="display:inline-flex;align-items:center;gap:4px;color:#646a76;font-size:12px"><i data-lucide="plus" style="width:12px;height:12px"></i>Add label</span></div>
+            </div>
+            <p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#646a76"><span style="color:#9197a3;font-weight:500">Status sync</span> is configured: Run started → In Progress, Pull request merged → Done</p>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const tick = () => { if (window.lucide) { window.lucide.createIcons(); } else { setTimeout(tick, 150); } };
+    tick();
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8">
+<title>Current — Run Conversation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+html,body{margin:0;padding:0;background:#050506}
+a{color:#e7e9ee;text-decoration:none}a:hover{color:#fff}
+*{box-sizing:border-box}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#23262d;border-radius:5px;border:2px solid #0a0b0d}::-webkit-scrollbar-track{background:transparent}
+</style>
+</helmet>
+<div data-screen-label="Current · Run conversation" style="font-family:'Inter',system-ui,sans-serif;background:#0a0b0d;color:#e7e9ee;height:100vh;min-width:1440px;display:flex;flex-direction:column;overflow:hidden;font-size:13px;-webkit-font-smoothing:antialiased">
+  <div style="height:36px;flex:none;background:#131417;border-bottom:1px solid #1f2126;display:flex;align-items:center;position:relative">
+    <div style="display:flex;gap:8px;padding-left:20px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+    <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:#b7bcc4">Otomat</span>
+  </div>
+  <div style="flex:1;min-height:0;display:flex">
+    <aside style="width:236px;flex:none;background:#0c0d10;display:flex;flex-direction:column;min-height:0">
+      <div style="display:flex;align-items:center;padding-right:6px">
+        <div style="flex:1;min-width:0;height:48px;display:flex;align-items:center;gap:9px;padding:0 12px">
+          <span style="width:24px;height:24px;border-radius:6px;background:#f0645a;color:#fff;font-weight:700;font-size:14px;display:grid;place-items:center;flex:none">o</span>
+          <span style="min-width:0;flex:1">
+            <span style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:600">otomat</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9197a3;background:#16181d;border:1px solid #23262d;border-radius:4px;padding:1px 5px">supervps</span></span>
+            <span style="display:block;font-size:11px;color:#646a76">otomat</span>
+          </span>
+          <i data-lucide="chevrons-up-down" style="width:14px;height:14px;color:#646a76;flex:none"></i>
+        </div>
+        <span style="width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="panel-left" style="width:15px;height:15px"></i></span>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto;padding-top:6px;padding-bottom:8px">
+        <nav style="display:flex;flex-direction:column;gap:1px;padding:4px 8px 0">
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="search" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Search</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;min-width:16px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">⌘K</kbd></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="plus" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">New issue</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;min-width:16px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">C</kbd></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="inbox" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Inbox</span></span>
+        </nav>
+        <div style="padding:14px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.03em;color:#646a76">Workspace</div>
+        <nav style="display:flex;flex-direction:column;gap:1px;padding:0 8px">
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="list-todo" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Issues</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;background:rgba(240,100,90,.12);color:#e7e9ee;font-weight:450"><i data-lucide="activity" style="width:16px;height:16px;color:#ff9b93"></i><span style="flex:1">Runs</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="git-pull-request" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Reviews</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="bar-chart-3" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Usage</span></span>
+        </nav>
+      </div>
+      <div style="border-top:1px solid #1b1e24;padding:8px">
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;font-size:12px;color:#9197a3"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950;flex:none"></span>daemon supervps · v0.1.0</div>
+      </div>
+    </aside>
+    <div style="width:1px;background:#1b1e24"></div>
+    <main style="flex:1;min-width:0;display:flex;flex-direction:column;background:#0a0b0d">
+      <header style="height:44px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 12px 0 14px">
+        <span style="font-size:13px;color:#9197a3">otomat</span>
+        <span style="flex:1"></span>
+        <span style="height:28px;width:230px;display:flex;align-items:center;gap:8px;border:1px solid #23262d;border-radius:6px;background:#0a0b0d;padding:0 9px;color:#646a76"><i data-lucide="search" style="width:14px;height:14px;flex:none"></i><span style="flex:1;text-align:left;font-size:13px">Search…</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;display:inline-flex;align-items:center;padding:0 4px">⌘K</kbd></span>
+        <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="activity" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:6px;padding:0 6px;font-size:12px;color:#e7e9ee"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950"></span>Online</span>
+      </header>
+      <div style="height:48px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 18px">
+        <span style="width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:#9197a3;flex:none"><i data-lucide="arrow-left" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;font-size:13px;color:#9197a3">
+          <span>Runs</span><span style="color:#454b55">›</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:430px">OTO-139 · Ajouter des tabs de projets avec badges d’attention</span><span style="color:#454b55">›</span>
+          <span style="color:#e7e9ee">Run</span>
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(63,185,80,.12);color:#3fb950;text-transform:lowercase"><i data-lucide="circle-check" style="width:12px;height:12px"></i>completed</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">491f269a</span>
+        <i data-lucide="copy" style="width:13px;height:13px;color:#646a76"></i>
+        <span style="flex:1"></span>
+        <span style="display:inline-flex;gap:2px;background:#16181d;border:1px solid #23262d;border-radius:6px;padding:2px">
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;background:#1b1e25;color:#e7e9ee;box-shadow:0 1px 2px rgba(0,0,0,.4)"><i data-lucide="list-tree" style="width:13px;height:13px"></i>Conversation</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="list-todo" style="width:13px;height:13px"></i>Report</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="terminal" style="width:13px;height:13px"></i>Logs</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="git-compare" style="width:13px;height:13px"></i>Diff</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="git-pull-request" style="width:13px;height:13px"></i>PR</span>
+        </span>
+      </div>
+      <div style="flex:1;min-height:0;display:flex">
+        <div style="width:226px;flex:none;background:#0c0d10;overflow:auto">
+          <div style="position:sticky;top:0;height:34px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1b1e24;background:#0c0d10;padding:0 14px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#646a76">Steps &amp; sessions<span style="margin-left:auto"><i data-lucide="panel-left" style="width:14px;height:14px"></i></span></div>
+          <sc-for list="{{ steps }}" as="s" hint-placeholder-count="2">
+            <div style="padding:7px 14px 5px">
+              <div style="display:flex;width:100%;align-items:center;gap:8px;border-radius:6px;padding:4px;background:{{ s.selBg }}">
+                <span style="width:14px;text-align:right;font-size:12px;font-weight:600;color:#646a76">{{ s.n }}</span>
+                <span style="width:7px;height:7px;border-radius:50%;background:#3fb950;flex:none"></span>
+                <span style="min-width:0;flex:1;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</span>
+                <span style="font-size:12px;text-transform:lowercase;color:#3fb950">succeeded</span>
+              </div>
+              <p style="margin:2px 0 0 22px;font-size:10px;color:#646a76;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.meta }}</p>
+              <p style="margin:4px 0 0 22px;font-size:11px;font-family:'JetBrains Mono',monospace;color:#646a76;display:flex;gap:6px;align-items:baseline">{{ s.usage }}<span style="margin-left:auto;font-size:9px;font-family:'Inter',sans-serif;font-weight:600;letter-spacing:.05em;color:#646a76">FINAL</span></p>
+              <div style="margin:6px 0 2px 22px;display:flex;flex-direction:column;gap:3px">
+                <sc-for list="{{ s.sessions }}" as="x" hint-placeholder-count="1">
+                  <div style="display:flex;height:28px;align-items:center;gap:8px;border-radius:6px;padding:0 8px">
+                    <span style="width:16px;height:16px;border-radius:5px;border:1px solid #23262d;background:#1b1e25;display:grid;place-items:center;color:#9197a3;flex:none"><i data-lucide="bot" style="width:10px;height:10px"></i></span>
+                    <span style="min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">claude</span>
+                    <span style="font-size:10px;text-transform:lowercase;color:#646a76">terminated</span>
+                    <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#9197a3"><i data-lucide="list" style="width:12px;height:12px"></i>Context</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="width:1px;background:#1b1e24"></div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div style="height:34px;flex:none;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1b1e24;padding:0 14px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#646a76">Review<span style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0">ordered by seq</span></div>
+          <div style="flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:8px;border-bottom:1px solid #1b1e24;padding:8px 24px;font-size:12px">
+            <span style="color:#e7e9ee">finished</span>
+            <span style="font-size:13px;font-weight:600">Reviewer · Claude Code</span>
+            <span style="color:#646a76">claude-fable-5 · high</span>
+            <span style="color:#ff9b93">Requested: fable · Reported: claude-fable-5</span>
+            <span style="margin-left:auto;color:#646a76">fable</span>
+          </div>
+          <div style="flex:1;min-height:0;overflow:auto">
+            <ul style="list-style:none;margin:0;padding:8px 0">
+              <li style="padding:12px 24px 4px">
+                <div style="border:1px solid #23262d;border-radius:8px;background:#101216;padding:10px 12px;font-size:13px">tu peux push</div>
+                <p style="margin:6px 0 0;font-size:11px;color:#646a76">To Reviewer · claude · fable</p>
+              </li>
+              <sc-for list="{{ thread }}" as="m" hint-placeholder-count="4">
+                <sc-if value="{{ m.group }}" hint-placeholder-val="{{ false }}">
+                  <li style="padding:6px 24px"><span style="display:inline-flex;align-items:center;gap:8px;border-radius:6px;padding:4px 8px;font-size:12px;color:#646a76"><i data-lucide="chevron-right" style="width:13px;height:13px"></i>{{ m.group }}</span></li>
+                </sc-if>
+                <sc-if value="{{ m.agent }}" hint-placeholder-val="{{ false }}">
+                  <li style="display:flex;flex-direction:column;gap:6px;padding:12px 24px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="width:16px;height:16px;border-radius:5px;border:1px solid #23262d;background:#1b1e25;display:grid;place-items:center;color:#9197a3"><i data-lucide="bot" style="width:10px;height:10px"></i></span>
+                      <span style="font-size:12px;font-weight:600;color:#9197a3">Agent</span>
+                      <span style="font-size:12px;color:#646a76">1 day ago</span>
+                      <span style="margin-left:auto;color:#646a76"><i data-lucide="copy" style="width:13px;height:13px"></i></span>
+                    </div>
+                    <div style="border:1px solid #1b1e24;border-radius:8px;background:#16181d;padding:8px 12px;font-size:13px;line-height:1.55">{{ m.agent }}</div>
+                  </li>
+                </sc-if>
+                <sc-if value="{{ m.event }}" hint-placeholder-val="{{ false }}">
+                  <li style="padding:5px 24px">
+                    <div style="display:flex;align-items:center;gap:9px">
+                      <span style="width:7px;height:7px;border-radius:50%;background:#f0645a;flex:none"></span>
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#646a76">17:57:10</span>
+                      <i data-lucide="flag" style="width:13px;height:13px;color:#9197a3"></i>
+                      <span style="font-weight:500">{{ m.event }}</span>
+                      <span style="font-size:12px;color:#646a76">Otomat · run.lifecycle</span>
+                    </div>
+                    <div style="margin:5px 0 2px 55px"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:{{ m.chipBg }};color:{{ m.chipColor }};text-transform:lowercase"><i data-lucide="{{ m.chipIcon }}" style="width:12px;height:12px"></i>{{ m.chip }}</span></div>
+                  </li>
+                </sc-if>
+              </sc-for>
+            </ul>
+          </div>
+          <form style="flex:none;display:flex;flex-direction:column;gap:8px;border-top:1px solid #1b1e24;padding:12px">
+            <p style="margin:0;font-size:12px;font-weight:500;color:#9197a3">To: Review · Reviewer · claude · fable · Session 4a4c844a</p>
+            <div style="border:1px solid #23262d;border-radius:6px;background:transparent;min-height:58px;padding:8px 10px;font-size:13px;color:#646a76">Send a message to this run’s agent…</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <p style="margin:0;font-size:12px;color:#646a76">This run is finished — its session can no longer be resumed.</p>
+              <span style="display:inline-flex;align-items:center;gap:4px;height:22px;border-radius:6px;padding:0 7px;font-size:12px;font-weight:500;background:#f0645a;color:#fff;box-shadow:0 1px 0 rgba(0,0,0,.15) inset,0 1px 2px rgba(0,0,0,.25)">Send message<kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#fff;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);border-radius:4px;height:15px;display:inline-flex;align-items:center;padding:0 3px">⌘↵</kbd></span>
+            </div>
+          </form>
+        </div>
+        <div style="width:1px;background:#1b1e24"></div>
+        <div style="width:270px;flex:none;overflow:auto">
+          <div style="position:sticky;top:0;height:34px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 14px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#646a76">Run context<span style="margin-left:auto"><i data-lucide="panel-right" style="width:14px;height:14px"></i></span></div>
+          <div style="padding:16px">
+            <dl style="margin:0;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:9px 12px;border:1px solid #1b1e24;border-radius:8px;background:#101216;padding:14px;font-size:13px">
+              <dt style="font-size:12px;color:#646a76">state</dt><dd style="margin:0;display:flex;justify-content:flex-end"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(63,185,80,.12);color:#3fb950;text-transform:lowercase"><i data-lucide="circle-check" style="width:12px;height:12px"></i>completed</span></dd>
+              <dt style="font-size:12px;color:#646a76">branch</dt><dd style="margin:0;display:flex;justify-content:flex-end;align-items:center;gap:6px;min-width:0"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#e7e9ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">otomat/run/491f269a</span><i data-lucide="copy" style="width:12px;height:12px;color:#646a76;flex:none"></i></dd>
+              <dt style="font-size:12px;color:#646a76">worktree</dt><dd style="margin:0;display:flex;justify-content:flex-end;align-items:center;gap:6px;min-width:0"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#e7e9ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">…446e2cdfd-c23686b0</span><i data-lucide="copy" style="width:12px;height:12px;color:#646a76;flex:none"></i></dd>
+              <dt style="font-size:12px;color:#646a76">sessions</dt><dd style="margin:0;display:flex;justify-content:flex-end"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">4</span></dd>
+              <dt style="font-size:12px;color:#646a76">tokens</dt><dd style="margin:0;display:flex;justify-content:flex-end;text-align:right"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9197a3;line-height:1.5">in 33386k · out<br>191k · $84.438 <span style="font-family:'Inter',sans-serif;font-size:9px;font-weight:600;letter-spacing:.05em;color:#646a76">FINAL</span></span></dd>
+            </dl>
+            <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px">
+              <span style="flex:1;height:26px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid #23262d;border-radius:6px;background:#16181d;font-size:13px;font-weight:500"><i data-lucide="git-compare" style="width:13px;height:13px"></i>Diff</span>
+              <span style="flex:1;height:26px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid #23262d;border-radius:6px;background:#16181d;font-size:13px;font-weight:500;white-space:nowrap"><i data-lucide="plus" style="width:13px;height:13px"></i>Add follow-up step</span>
+            </div>
+            <div style="margin-top:10px;color:#646a76"><i data-lucide="ellipsis" style="width:16px;height:16px"></i></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const tick = () => { if (window.lucide) { window.lucide.createIcons(); } else { setTimeout(tick, 150); } };
+    tick();
+  }
+  renderVals() {
+    const steps = [
+      { n: 1, name: "Plan + Implement", meta: "Ticket (auto) · claude · opus", usage: "in 22732k · out 87.9k · $15.865", selBg: "transparent", sessions: [1] },
+      { n: 2, name: "Review", meta: "Reviewer · claude · fable", usage: "in 10654k · out 103k · $68.573", selBg: "rgba(240,100,90,.12)", sessions: [1, 2, 3] },
+    ];
+    const thread = [
+      { group: "9 steps · 1 reasoning · 7 logs · 1 other" },
+      { agent: "Committing on the run branch and pushing to the PR’s head branch feat/project-tabs :" },
+      { group: "5 steps · 2 tools · 3 logs" },
+      { agent: "Committed as 81b31222 on top of the PR head (b962feb7, fast-forward). Pushing:" },
+      { group: "6 steps · 2 tools · 4 logs" },
+      { agent: "Pushed: feat/project-tabs moved b962feb7 → 81b31222 (pre-push hooks all green), so PR #183 now carries the opt-in tab strip. Nothing left uncommitted on the run branch." },
+      { group: "1 step · 1 other" },
+      { event: "turn completed", chip: "completed", chipIcon: "circle-check", chipBg: "rgba(63,185,80,.12)", chipColor: "#3fb950" },
+      { event: "run review_ready", chip: "review ready", chipIcon: "git-compare", chipBg: "rgba(163,113,247,.13)", chipColor: "#a371f7" },
+    ];
+    return { steps, thread };
+  }
+}
+</script>
+</body>
+</html>

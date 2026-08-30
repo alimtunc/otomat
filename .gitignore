@@ -21,6 +21,10 @@ CONTEXT.md
 !.claude/skills/first-pass-quality
 .claude/plans/
 docs/**
+!docs/design/
+docs/design/**
+!docs/design/ux-audit-2026-08-30/
+!docs/design/ux-audit-2026-08-30/**
 !docs/ci-performance.md
 !docs/ai/
 !docs/ai/**

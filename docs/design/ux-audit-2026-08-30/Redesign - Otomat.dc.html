@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8">
+<title>Otomat — Redesign direction</title>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+html,body{margin:0;padding:0;background:#101013}
+a{color:#e7e9ee;text-decoration:none}a:hover{color:#fff}
+*{box-sizing:border-box}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#23262d;border-radius:5px}
+code.tk{font-family:'JetBrains Mono',monospace;font-size:11.5px;background:#16181d;border:1px solid #23262d;border-radius:4px;padding:1px 5px;color:#e7e9ee}
+</style>
+</helmet>
+<section id="turn-2" style="font-family:'Inter',system-ui,sans-serif;color:#e7e9ee;padding:48px 48px 0;display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start;-webkit-font-smoothing:antialiased">
+  <div style="width:100%;max-width:1440px;display:flex;flex-direction:column;gap:6px">
+    <h1 style="margin:0;font-size:18px;font-weight:600;letter-spacing:-0.01em">Turn 2 — Multi-project operation</h1>
+    <p style="margin:0;font-size:13px;line-height:1.6;color:#9197a3;max-width:920px">Otomat is one cockpit over many projects on one host. Rule: <strong style="color:#e7e9ee">project identity renders once (the tab), attention travels to you (badges → Inbox), you never switch projects just to check</strong>. The tab strip is the merged OTO-139 feature, promoted to the default shell; the switcher popover remains for opening/pinning projects.</p>
+  </div>
+
+  <div id="2a" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:baseline;max-width:1440px">
+      <span style="flex:none;height:22px;min-width:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:#ffd166;color:#1a1206;font-size:12px;font-weight:700">2a</span>
+      <div>
+        <div style="font-size:15px;font-weight:600">Multi-project shell + cross-project Inbox</div>
+        <div style="font-size:12.5px;color:#9197a3;line-height:1.55;max-width:1200px"><b style="color:#ffd166">1</b> project tabs carry attention badges (amber = something waits on you, blue dot = running) — the badge count equals the project’s Inbox entries · <b style="color:#ffd166">2</b> the sidebar shows the active project once; no repeated “otomat supervps” chips · <b style="color:#ffd166">3</b> Inbox groups by project, newest wait first · <b style="color:#ffd166">4</b> every entry ends with its answer — resolve without switching · <b style="color:#ffd166">5</b> resolved entries leave instantly (badge decrements live)</div>
+      </div>
+    </div>
+    <div style="position:relative;width:1440px;height:720px;border:1px solid #2a2d34;border-radius:10px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);background:#0a0b0d;display:flex;flex-direction:column;font-size:13px">
+      <div style="height:36px;flex:none;background:#131417;border-bottom:1px solid #1f2126;display:flex;align-items:center;position:relative">
+        <div style="display:flex;gap:8px;padding-left:20px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+        <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:#b7bcc4">Otomat</span>
+      </div>
+      <div style="height:36px;flex:none;display:flex;align-items:center;gap:4px;border-bottom:1px solid #1b1e24;background:#0c0d10;padding:0 10px;position:relative">
+        <span style="display:inline-flex;align-items:center;gap:7px;height:27px;border-radius:6px;background:rgba(240,100,90,.12);padding:0 10px">
+          <span style="width:16px;height:16px;border-radius:4px;background:#f0645a;color:#fff;font-weight:700;font-size:10px;display:grid;place-items:center">o</span>
+          <span style="font-size:12.5px;font-weight:600">otomat</span>
+          <span style="width:6px;height:6px;border-radius:50%;background:{{ liveSolid }}"></span>
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:7px;height:27px;border-radius:6px;padding:0 10px;color:#9197a3">
+          <span style="width:16px;height:16px;border-radius:4px;background:#2fbf8f;color:#04110c;font-weight:700;font-size:10px;display:grid;place-items:center">g</span>
+          <span style="font-size:12.5px;font-weight:500">graphify</span>
+          <span style="height:16px;min-width:16px;display:inline-flex;align-items:center;justify-content:center;border-radius:99px;background:rgba(216,161,43,.2);color:#d8a12b;font-size:10.5px;font-weight:600;padding:0 5px">2</span>
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:7px;height:27px;border-radius:6px;padding:0 10px;color:#9197a3">
+          <span style="width:16px;height:16px;border-radius:4px;background:#8a8ff5;color:#0a0b1d;font-weight:700;font-size:10px;display:grid;place-items:center">i</span>
+          <span style="font-size:12.5px;font-weight:500">infra</span>
+        </span>
+        <span style="width:24px;height:24px;display:grid;place-items:center;border-radius:6px;color:#646a76"><i data-lucide="plus" style="width:13px;height:13px"></i></span>
+        <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76">host supervps</span>
+        <span style="position:absolute;left:290px;top:-9px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">1</span>
+      </div>
+      <div style="flex:1;min-height:0;display:flex">
+        <aside style="width:236px;flex:none;background:#0c0d10;display:flex;flex-direction:column;min-height:0">
+          <div style="display:flex;align-items:center;padding-right:6px;position:relative">
+            <div style="flex:1;min-width:0;height:44px;display:flex;align-items:center;gap:9px;padding:0 12px">
+              <span style="min-width:0;flex:1">
+                <span style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:600">otomat</span></span>
+                <span style="display:block;font-size:11px;color:#646a76">/home/ubuntu/workspace/otomat</span>
+              </span>
+              <i data-lucide="chevrons-up-down" style="width:14px;height:14px;color:#646a76;flex:none"></i>
+            </div>
+            <span style="position:absolute;right:0;top:34px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">2</span>
+          </div>
+          <div style="flex:1;min-height:0;overflow:hidden;padding-top:2px">
+            <nav style="display:flex;flex-direction:column;gap:1px;padding:4px 8px 0">
+              <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="search" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Search</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;padding:0 4px;display:inline-flex;align-items:center">⌘K</kbd></span>
+              <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="plus" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">New issue</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;padding:0 4px;display:inline-flex;align-items:center">C</kbd></span>
+              <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;background:rgba(240,100,90,.12);color:#e7e9ee;font-weight:450"><i data-lucide="inbox" style="width:16px;height:16px;color:#ff9b93"></i><span style="flex:1">Inbox</span><span style="height:17px;display:inline-flex;align-items:center;border-radius:4px;background:rgba(216,161,43,.2);color:#d8a12b;font-size:11px;font-weight:600;padding:0 6px">3</span></span>
+            </nav>
+            <div style="padding:14px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.03em;color:#646a76">Workspace</div>
+            <nav style="display:flex;flex-direction:column;gap:1px;padding:0 8px">
+              <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="list-todo" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Issues</span></span>
+              <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="activity" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Runs</span><span style="width:7px;height:7px;border-radius:50%;background:{{ liveSolid }}"></span></span>
+              <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="git-pull-request" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Reviews</span><span style="height:17px;display:inline-flex;align-items:center;border-radius:4px;background:#1b1e25;color:#9197a3;font-size:11px;font-weight:500;padding:0 6px">2</span></span>
+              <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="bar-chart-3" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Usage</span></span>
+            </nav>
+          </div>
+          <div style="border-top:1px solid #1b1e24;padding:8px">
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="settings" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Settings</span></span>
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 8px 2px;font-size:12px;color:#9197a3"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950;flex:none"></span>daemon supervps · v0.1.0</div>
+          </div>
+        </aside>
+        <div style="width:1px;background:#1b1e24"></div>
+        <main style="flex:1;min-width:0;display:flex;flex-direction:column;background:#0a0b0d">
+          <div style="height:48px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 18px">
+            <h1 style="margin:0;display:flex;align-items:center;gap:9px;font-size:15px;font-weight:600"><i data-lucide="inbox" style="width:17px;height:17px;color:#9197a3"></i>Inbox</h1>
+            <span style="font-size:12px;color:#646a76">Everything that needs you, across every project on this host.</span>
+            <span style="flex:1"></span>
+            <span style="height:26px;display:inline-flex;align-items:center;gap:6px;border:1px solid #23262d;border-radius:6px;padding:0 9px;color:#9197a3;font-weight:500;font-size:12.5px"><i data-lucide="list-filter" style="width:13px;height:13px"></i>All kinds</span>
+            <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="bell" style="width:15px;height:15px"></i></span>
+            <span style="display:flex;align-items:center;gap:6px;padding:0 6px;font-size:12px;color:#e7e9ee"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950"></span>Online</span>
+          </div>
+          <div style="flex:1;min-height:0;overflow:hidden;padding:14px 18px;position:relative">
+            <div style="display:flex;align-items:center;gap:8px;padding:0 0 8px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#646a76"><span style="width:14px;height:14px;border-radius:4px;background:#f0645a;color:#fff;font-weight:700;font-size:9px;display:grid;place-items:center;text-transform:none">o</span>otomat<span style="font-weight:400;text-transform:none;letter-spacing:0">· 3 need you</span></div>
+            <sc-for list="{{ inboxOtomat }}" as="e" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border:1px solid #1b1e24;border-bottom:none;background:#101216">
+                <span style="width:150px;flex:none"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:{{ e.bg }};color:{{ e.color }}"><i data-lucide="{{ e.icon }}" style="width:12px;height:12px"></i>{{ e.kind }}</span></span>
+                <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">{{ e.id }}</span> <span style="font-weight:500">{{ e.title }}</span> <span style="color:#646a76">— {{ e.reason }}</span></span>
+                <span style="flex:none;font-size:12px;color:#646a76">{{ e.time }}</span>
+                <span style="flex:none;height:24px;display:inline-flex;align-items:center;gap:5px;border:1px solid {{ e.abd }};border-radius:6px;padding:0 9px;font-size:12px;font-weight:500;color:{{ e.color }}">{{ e.action }}</span>
+              </div>
+            </sc-for>
+            <div style="border-top:1px solid #1b1e24;margin-bottom:16px"></div>
+            <div style="display:flex;align-items:center;gap:8px;padding:0 0 8px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#646a76"><span style="width:14px;height:14px;border-radius:4px;background:#2fbf8f;color:#04110c;font-weight:700;font-size:9px;display:grid;place-items:center;text-transform:none">g</span>graphify<span style="font-weight:400;text-transform:none;letter-spacing:0">· 2 need you</span></div>
+            <sc-for list="{{ inboxGraphify }}" as="e" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border:1px solid #1b1e24;border-bottom:none;background:#101216">
+                <span style="width:150px;flex:none"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:{{ e.bg }};color:{{ e.color }}"><i data-lucide="{{ e.icon }}" style="width:12px;height:12px"></i>{{ e.kind }}</span></span>
+                <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">{{ e.id }}</span> <span style="font-weight:500">{{ e.title }}</span> <span style="color:#646a76">— {{ e.reason }}</span></span>
+                <span style="flex:none;font-size:12px;color:#646a76">{{ e.time }}</span>
+                <span style="flex:none;height:24px;display:inline-flex;align-items:center;gap:5px;border:1px solid {{ e.abd }};border-radius:6px;padding:0 9px;font-size:12px;font-weight:500;color:{{ e.color }}">{{ e.action }}</span>
+              </div>
+            </sc-for>
+            <div style="border-top:1px solid #1b1e24"></div>
+            <p style="margin:14px 0 0;font-size:12px;color:#646a76;display:flex;align-items:center;gap:6px"><i data-lucide="check" style="width:13px;height:13px;color:#3fb950"></i>infra — nothing waits on you.</p>
+            <span style="position:absolute;left:6px;top:64px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">3</span>
+            <span style="position:absolute;right:34px;top:78px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">4</span>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <div id="2b" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:baseline;max-width:1440px">
+      <span style="flex:none;height:22px;min-width:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:#ffd166;color:#1a1206;font-size:12px;font-weight:700">2b</span>
+      <div>
+        <div style="font-size:15px;font-weight:600">Reviews — PR inbox for the active project</div>
+        <div style="font-size:12.5px;color:#9197a3;line-height:1.55;max-width:1200px">Same row grammar as Inbox (one shared component). <b style="color:#ffd166">1</b> grouped by what the PR needs from you, actionable group first · <b style="color:#ffd166">2</b> checks + review state read left-to-right as chips, not prose · <b style="color:#ffd166">3</b> each row’s single action matches its group · <b style="color:#ffd166">4</b> sync status is a quiet timestamp, sync stays manual</div>
+      </div>
+    </div>
+    <div style="position:relative;width:1440px;height:560px;border:1px solid #2a2d34;border-radius:10px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);background:#0a0b0d;display:flex;flex-direction:column;font-size:13px">
+      <div style="height:36px;flex:none;background:#131417;border-bottom:1px solid #1f2126;display:flex;align-items:center;position:relative">
+        <div style="display:flex;gap:8px;padding-left:20px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+        <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:#b7bcc4">Otomat</span>
+      </div>
+      <div style="height:48px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 18px;position:relative">
+        <h1 style="margin:0;display:flex;align-items:center;gap:9px;font-size:15px;font-weight:600"><i data-lucide="git-pull-request" style="width:17px;height:17px;color:#9197a3"></i>Reviews</h1>
+        <span style="font-size:12px;color:#646a76">Open pull requests of this project, grouped by what they need.</span>
+        <span style="flex:1"></span>
+        <span style="font-size:12px;color:#646a76">synced 4 min ago</span>
+        <span style="height:26px;display:inline-flex;align-items:center;gap:6px;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 10px;font-size:12.5px;font-weight:500"><i data-lucide="refresh-cw" style="width:12px;height:12px"></i>Sync now</span>
+        <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="bell" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:6px;padding:0 6px;font-size:12px;color:#e7e9ee"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950"></span>Online</span>
+        <span style="position:absolute;right:250px;top:39px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">4</span>
+      </div>
+      <div style="flex:1;min-height:0;overflow:hidden;padding:14px 18px;position:relative">
+        <sc-for list="{{ reviewGroups }}" as="g" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 0 8px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:{{ g.hcolor }}"><i data-lucide="{{ g.hicon }}" style="width:13px;height:13px"></i>{{ g.label }}<span style="font-weight:400;text-transform:none;letter-spacing:0;color:#646a76">{{ g.count }}</span></div>
+          <div style="margin-bottom:16px;border:1px solid #1b1e24;border-radius:8px;background:#101216;overflow:hidden">
+            <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="1">
+              <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-bottom:1px solid #1b1e24">
+                <span style="width:56px;flex:none;font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">{{ r.num }}</span>
+                <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500">{{ r.title }} <span style="font-weight:400;color:#646a76;font-family:'JetBrains Mono',monospace;font-size:11.5px">{{ r.branch }}</span></span>
+                <span style="width:92px;flex:none"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:{{ r.cbg }};color:{{ r.ccolor }}"><i data-lucide="{{ r.cicon }}" style="width:12px;height:12px"></i>{{ r.checks }}</span></span>
+                <span style="width:110px;flex:none;font-size:12px;color:#646a76">{{ r.meta }}</span>
+                <span style="flex:none;height:24px;display:inline-flex;align-items:center;gap:5px;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 9px;font-size:12px;font-weight:500">{{ r.action }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+        <span style="position:absolute;left:6px;top:8px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">1</span>
+        <span style="position:absolute;left:880px;top:44px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">2</span>
+        <span style="position:absolute;right:30px;top:44px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">3</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="turn-1" style="font-family:'Inter',system-ui,sans-serif;color:#e7e9ee;padding:48px;display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start;-webkit-font-smoothing:antialiased">
+  <div style="width:100%;max-width:1440px;display:flex;flex-direction:column;gap:6px">
+    <h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-0.01em">Otomat redesign — “Quieter chrome, louder state”</h1>
+    <p style="margin:0;font-size:13.5px;line-height:1.6;color:#9197a3;max-width:920px">One direction applied across six priority screens. Three system moves carry most of it: <strong style="color:#e7e9ee">(1)</strong> a new <code class="tk">--live</code> blue for running/active state — coral iris returns to interactive-only, ending the iris≈danger collision; <strong style="color:#e7e9ee">(2)</strong> one merged 48px PageBar replaces topbar + page header (search lives in the sidebar, Settings gets a sidebar entry); <strong style="color:#e7e9ee">(3)</strong> terminal states collapse to outcome + next action instead of leaving dead forms on screen. Amber dots ⓿ are annotations, not UI.</p>
+  </div>
+
+  <div id="1a" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:baseline;max-width:1440px">
+      <span style="flex:none;height:22px;min-width:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:#ffd166;color:#1a1206;font-size:12px;font-weight:700">1a</span>
+      <div>
+        <div style="font-size:15px;font-weight:600">Shell + Runs list</div>
+        <div style="font-size:12.5px;color:#9197a3;line-height:1.55;max-width:1200px"><b style="color:#ffd166">1</b> one PageBar (was 3 stacked bars) — search moved to sidebar, no duplicate project label · <b style="color:#ffd166">2</b> Settings pinned in sidebar (was hidden in switcher popover) · <b style="color:#ffd166">3</b> live/running is blue, not coral · <b style="color:#ffd166">4</b> rows carry outcome, steps, cost — filters are visible chips · <b style="color:#ffd166">5</b> waiting runs expose their next action inline</div>
+      </div>
+    </div>
+    <div style="position:relative;width:1440px;height:820px;border:1px solid #2a2d34;border-radius:10px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);background:#0a0b0d;display:flex;flex-direction:column;font-size:13px">
+      <div style="height:36px;flex:none;background:#131417;border-bottom:1px solid #1f2126;display:flex;align-items:center;position:relative">
+        <div style="display:flex;gap:8px;padding-left:20px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+        <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:#b7bcc4">Otomat</span>
+      </div>
+      <div style="flex:1;min-height:0;display:flex">
+        <aside style="width:236px;flex:none;background:#0c0d10;display:flex;flex-direction:column;min-height:0">
+          <div style="display:flex;align-items:center;padding-right:6px">
+            <div style="flex:1;min-width:0;height:48px;display:flex;align-items:center;gap:9px;padding:0 12px">
+              <span style="width:24px;height:24px;border-radius:6px;background:#f0645a;color:#fff;font-weight:700;font-size:14px;display:grid;place-items:center;flex:none">o</span>
+              <span style="min-width:0;flex:1">
+                <span style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:600">otomat</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9197a3;background:#16181d;border:1px solid #23262d;border-radius:4px;padding:1px 5px">supervps</span></span>
+                <span style="display:block;font-size:11px;color:#646a76">otomat</span>
+              </span>
+              <i data-lucide="chevrons-up-down" style="width:14px;height:14px;color:#646a76;flex:none"></i>
+            </div>
+            <span style="width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="panel-left" style="width:15px;height:15px"></i></span>
+          </div>
+          <div style="flex:1;min-height:0;overflow:hidden;padding-top:6px">
+            <nav style="display:flex;flex-direction:column;gap:1px;padding:4px 8px 0">
+              <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="search" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Search</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;min-width:16px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">⌘K</kbd></span>
+              <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="plus" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">New issue</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;min-width:16px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">C</kbd></span>
+              <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="inbox" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Inbox</span><span style="height:17px;display:inline-flex;align-items:center;border-radius:4px;background:rgba(240,100,90,.12);color:#ff9b93;font-size:11px;font-weight:500;padding:0 6px">3</span></span>
+            </nav>
+            <div style="padding:14px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.03em;color:#646a76">Workspace</div>
+            <nav style="display:flex;flex-direction:column;gap:1px;padding:0 8px">
+              <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="list-todo" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Issues</span></span>
+              <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;background:rgba(240,100,90,.12);color:#e7e9ee;font-weight:450"><i data-lucide="activity" style="width:16px;height:16px;color:#ff9b93"></i><span style="flex:1">Runs</span><span style="width:7px;height:7px;border-radius:50%;background:{{ liveSolid }}"></span></span>
+              <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="git-pull-request" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Reviews</span><span style="height:17px;display:inline-flex;align-items:center;border-radius:4px;background:#1b1e25;color:#9197a3;font-size:11px;font-weight:500;padding:0 6px">2</span></span>
+              <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="bar-chart-3" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Usage</span></span>
+            </nav>
+          </div>
+          <div style="border-top:1px solid #1b1e24;padding:8px;position:relative">
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="settings" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Settings</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;display:inline-flex;align-items:center;padding:0 4px">G S</kbd></span>
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 8px 2px;font-size:12px;color:#9197a3"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950;flex:none"></span>daemon supervps · v0.1.0</div>
+            <span style="position:absolute;right:-9px;top:2px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">2</span>
+          </div>
+        </aside>
+        <div style="width:1px;background:#1b1e24"></div>
+        <main style="flex:1;min-width:0;display:flex;flex-direction:column;background:#0a0b0d">
+          <div style="height:48px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 18px;position:relative">
+            <h1 style="margin:0;display:flex;align-items:center;gap:9px;font-size:15px;font-weight:600"><i data-lucide="activity" style="width:17px;height:17px;color:#9197a3"></i>Runs</h1>
+            <span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:{{ liveBg }};color:{{ liveSolid }}"><i data-lucide="loader" style="width:12px;height:12px"></i>1 running</span>
+            <span style="flex:1"></span>
+            <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="bell" style="width:15px;height:15px"></i></span>
+            <span style="width:1px;height:16px;background:#23262d"></span>
+            <span style="display:flex;align-items:center;gap:6px;padding:0 6px;font-size:12px;color:#e7e9ee"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950"></span>Online</span>
+            <span style="position:absolute;left:220px;top:-9px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">1</span>
+          </div>
+          <div style="height:42px;flex:none;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1b1e24;padding:0 18px;position:relative">
+            <span style="height:26px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:0 9px;color:#9197a3;font-weight:500;font-size:13px;border:1px solid #23262d"><i data-lucide="list-filter" style="width:14px;height:14px"></i>Filter</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:24px;border-radius:99px;border:1px solid #23262d;background:#16181d;padding:0 10px;font-size:12px;color:#9197a3">Failed hidden<i data-lucide="x" style="width:12px;height:12px;color:#646a76"></i></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:24px;border-radius:99px;border:1px solid #23262d;background:#16181d;padding:0 10px;font-size:12px;color:#9197a3">Done issues hidden<i data-lucide="x" style="width:12px;height:12px;color:#646a76"></i></span>
+            <span style="flex:1"></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#646a76">Grouped by issue<i data-lucide="chevron-down" style="width:12px;height:12px"></i></span>
+            <span style="position:absolute;left:110px;top:33px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">4</span>
+          </div>
+          <div style="flex:1;min-height:0;overflow:hidden">
+            <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:13px">
+              <thead><tr>
+                <th style="height:30px;width:150px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Status</th>
+                <th style="height:30px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Steps</th>
+                <th style="height:30px;width:210px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Branch</th>
+                <th style="height:30px;width:150px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:right;font-size:12px;font-weight:500;color:#646a76">Tokens · cost</th>
+                <th style="height:30px;width:170px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:right;font-size:12px;font-weight:500;color:#646a76"></th>
+                <th style="height:30px;width:95px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:right;font-size:12px;font-weight:500;color:#646a76">Updated</th>
+              </tr></thead>
+              <tbody>
+                <tr><th colspan="6" style="border-bottom:1px solid #1b1e24;background:#101216;padding:0;text-align:left">
+                  <div style="display:flex;height:36px;align-items:center;gap:8px;padding:0 12px"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">OTO-140</span><span style="font-size:13px;font-weight:500">Rendre les permissions et questions runtime interactives dans Otomat</span><span style="height:17px;min-width:17px;display:inline-flex;align-items:center;justify-content:center;border-radius:99px;background:#1b1e25;color:#9197a3;font-size:11px;padding:0 5px">2</span><span style="margin-left:auto;font-size:12px;color:#646a76">View issue →</span></div>
+                </th></tr>
+                <tr style="position:relative">
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:{{ liveBg }};color:{{ liveSolid }}"><i data-lucide="loader" style="width:12px;height:12px"></i>running</span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="color:#e7e9ee">Plan + Implement</span> <span style="color:#646a76">· step 1 of 2 · 34 min</span><span style="position:absolute;margin-left:8px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">3</span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">otomat/run/8b31f2c0</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">4.2M · $6.10</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right"><span style="font-size:12px;color:{{ liveSolid }}">Follow live →</span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;color:#646a76">now</td>
+                </tr>
+                <tr>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(216,161,43,.13);color:#d8a12b"><i data-lucide="shield-question" style="width:12px;height:12px"></i>awaiting permission</span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="color:#e7e9ee">Review</span> <span style="color:#646a76">· wants to run <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px">gh pr edit</span></span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">otomat/run/5e3c5bed</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">180M · $483.66</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right"><span style="height:24px;display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(216,161,43,.4);border-radius:6px;padding:0 9px;font-size:12px;font-weight:500;color:#d8a12b"><i data-lucide="shield-question" style="width:12px;height:12px"></i>Answer</span><span style="position:absolute;margin-left:8px;margin-top:3px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">5</span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;color:#646a76">2 min</td>
+                </tr>
+                <tr><th colspan="6" style="border-bottom:1px solid #1b1e24;background:#101216;padding:0;text-align:left">
+                  <div style="display:flex;height:36px;align-items:center;gap:8px;padding:0 12px"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">OTO-139</span><span style="font-size:13px;font-weight:500">Ajouter des tabs de projets avec badges d’attention</span><span style="height:17px;min-width:17px;display:inline-flex;align-items:center;justify-content:center;border-radius:99px;background:#1b1e25;color:#9197a3;font-size:11px;padding:0 5px">1</span><span style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#a371f7"><i data-lucide="git-merge" style="width:12px;height:12px"></i>PR #183 merged</span></div>
+                </th></tr>
+                <tr>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(63,185,80,.12);color:#3fb950"><i data-lucide="circle-check" style="width:12px;height:12px"></i>completed</span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="color:#e7e9ee">Plan + Implement ✓ · Review ✓</span> <span style="color:#646a76">· 2 steps</span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">otomat/run/491f269a</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">33.6M · $84.44</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;color:#646a76">10 hours</td>
+                </tr>
+                <tr><th colspan="6" style="border-bottom:1px solid #1b1e24;background:#101216;padding:0;text-align:left">
+                  <div style="display:flex;height:36px;align-items:center;gap:8px;padding:0 12px"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">OTO-33</span><span style="font-size:13px;font-weight:500">Mettre à jour automatiquement l’app desktop signée sans interrompre les runs</span><span style="height:17px;min-width:17px;display:inline-flex;align-items:center;justify-content:center;border-radius:99px;background:#1b1e25;color:#9197a3;font-size:11px;padding:0 5px">1</span><span style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#3fb950"><i data-lucide="git-pull-request" style="width:12px;height:12px"></i>PR #186 open</span></div>
+                </th></tr>
+                <tr>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(63,185,80,.12);color:#3fb950"><i data-lucide="circle-check" style="width:12px;height:12px"></i>completed</span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="color:#e7e9ee">Plan + Implement ✓</span> <span style="color:#646a76">· 1 step</span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">otomat/run/a83a20df</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">60.2M · $42.67</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;color:#646a76">2 days</td>
+                </tr>
+                <tr><th colspan="6" style="border-bottom:1px solid #1b1e24;background:#101216;padding:0;text-align:left">
+                  <div style="display:flex;height:36px;align-items:center;gap:8px;padding:0 12px"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">OTO-136</span><span style="font-size:13px;font-weight:500">Corriger l’autorité des PR publiées et simplifier le fix des commentaires</span><span style="height:17px;min-width:17px;display:inline-flex;align-items:center;justify-content:center;border-radius:99px;background:#1b1e25;color:#9197a3;font-size:11px;padding:0 5px">2</span></div>
+                </th></tr>
+                <tr>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(63,185,80,.12);color:#3fb950"><i data-lucide="circle-check" style="width:12px;height:12px"></i>completed</span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="color:#e7e9ee">Plan + Implement ✓ · Review ✓</span> <span style="color:#646a76">· 2 steps</span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">otomat/run/9c57a329</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">23.6M · $17.35</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;color:#646a76">3 days</td>
+                </tr>
+                <tr>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(145,151,163,.12);color:#9197a3"><i data-lucide="ban" style="width:12px;height:12px"></i>canceled</span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;color:#646a76">stopped during Plan + Implement</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">otomat/run/5c113942</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">1.1M · $0.84</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;color:#646a76">4 days</td>
+                </tr>
+                <tr><th colspan="6" style="border-bottom:1px solid #1b1e24;background:#101216;padding:0;text-align:left">
+                  <div style="display:flex;height:36px;align-items:center;gap:8px;padding:0 12px"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">OTO-127</span><span style="font-size:13px;font-weight:500">Nettoyer les commentaires narratifs et durcir leur prévention à la première passe</span><span style="height:17px;min-width:17px;display:inline-flex;align-items:center;justify-content:center;border-radius:99px;background:#1b1e25;color:#9197a3;font-size:11px;padding:0 5px">1</span></div>
+                </th></tr>
+                <tr>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(63,185,80,.12);color:#3fb950"><i data-lucide="circle-check" style="width:12px;height:12px"></i>completed</span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"><span style="color:#e7e9ee">Plan + Implement ✓ · Review ✓</span> <span style="color:#646a76">· 2 steps</span></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">otomat/run/54c63b11</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">8.2M · $10.72</td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px"></td>
+                  <td style="height:44px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;color:#646a76">2 days</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div id="1b" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:baseline;max-width:1440px">
+      <span style="flex:none;height:22px;min-width:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:#ffd166;color:#1a1206;font-size:12px;font-weight:700">1b</span>
+      <div>
+        <div style="font-size:15px;font-weight:600">Run cockpit — conversation</div>
+        <div style="font-size:12.5px;color:#9197a3;line-height:1.55;max-width:1200px"><b style="color:#ffd166">1</b> next-action strip resolves “what now?” per run state · <b style="color:#ffd166">2</b> ledger events read as sentences, jargon (“ordered by seq”, event types) moves to tooltips · <b style="color:#ffd166">3</b> sessions + usage collapse to one line per step · <b style="color:#ffd166">4</b> a finished run swaps the composer for a quiet closure bar · <b style="color:#ffd166">5</b> right rail leads with the next action, facts humanized</div>
+      </div>
+    </div>
+    <div style="position:relative;width:1440px;height:800px;border:1px solid #2a2d34;border-radius:10px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);background:#0a0b0d;display:flex;flex-direction:column;font-size:13px">
+      <div style="height:36px;flex:none;background:#131417;border-bottom:1px solid #1f2126;display:flex;align-items:center;position:relative">
+        <div style="display:flex;gap:8px;padding-left:20px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+        <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:#b7bcc4">Otomat</span>
+      </div>
+      <div style="height:48px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 14px">
+        <span style="width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:#9197a3;flex:none"><i data-lucide="arrow-left" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;font-size:13px;color:#9197a3"><span>Runs</span><span style="color:#454b55">›</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px">OTO-139 · Ajouter des tabs de projets…</span><span style="color:#454b55">›</span><span style="color:#e7e9ee">Run</span></span>
+        <span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(63,185,80,.12);color:#3fb950;text-transform:lowercase"><i data-lucide="circle-check" style="width:12px;height:12px"></i>completed</span>
+        <span style="flex:1"></span>
+        <span style="display:inline-flex;gap:2px;background:#16181d;border:1px solid #23262d;border-radius:6px;padding:2px">
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;background:#1b1e25;color:#e7e9ee;box-shadow:0 1px 2px rgba(0,0,0,.4)"><i data-lucide="list-tree" style="width:13px;height:13px"></i>Conversation</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="list-todo" style="width:13px;height:13px"></i>Report</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="terminal" style="width:13px;height:13px"></i>Logs</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="git-compare" style="width:13px;height:13px"></i>Diff</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="git-pull-request" style="width:13px;height:13px"></i>PR</span>
+        </span>
+        <span style="flex:1"></span>
+        <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="bell" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:6px;padding:0 6px;font-size:12px;color:#e7e9ee"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950"></span>Online</span>
+      </div>
+      <div style="height:40px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;background:#101216;padding:0 14px;position:relative">
+        <i data-lucide="circle-check" style="width:15px;height:15px;color:#3fb950"></i>
+        <span style="font-size:13px"><span style="font-weight:600">Run completed.</span> <span style="color:#9197a3">PR #183 is merged — nothing left to do here.</span></span>
+        <span style="flex:1"></span>
+        <span style="height:26px;display:inline-flex;align-items:center;gap:6px;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 10px;font-size:12.5px;font-weight:500"><i data-lucide="external-link" style="width:12px;height:12px"></i>Open PR #183</span>
+        <span style="height:26px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:0 10px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="plus" style="width:12px;height:12px"></i>Add follow-up step</span>
+        <span style="position:absolute;left:-9px;top:11px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">1</span>
+      </div>
+      <div style="flex:1;min-height:0;display:flex">
+        <div style="width:226px;flex:none;background:#0c0d10;overflow:hidden">
+          <div style="height:34px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1b1e24;padding:0 14px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#646a76">Steps<span style="margin-left:auto"><i data-lucide="panel-left" style="width:14px;height:14px"></i></span></div>
+          <div style="padding:7px 14px 5px">
+            <div style="display:flex;align-items:center;gap:8px;border-radius:6px;padding:4px">
+              <span style="width:14px;text-align:right;font-size:12px;font-weight:600;color:#646a76">1</span>
+              <span style="width:7px;height:7px;border-radius:50%;background:#3fb950;flex:none"></span>
+              <span style="min-width:0;flex:1;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Plan + Implement</span>
+              <span style="font-size:12px;text-transform:lowercase;color:#3fb950">succeeded</span>
+            </div>
+            <p style="margin:2px 0 0 22px;font-size:11px;color:#646a76">Ticket (auto) · claude · opus</p>
+            <p style="margin:3px 0 0 22px;font-size:11px;color:#646a76;display:flex;align-items:center;gap:5px"><i data-lucide="chevron-right" style="width:11px;height:11px"></i>1 session · 22.7M in · $15.87</p>
+          </div>
+          <div style="padding:7px 14px 5px;position:relative">
+            <div style="display:flex;align-items:center;gap:8px;border-radius:6px;padding:4px;background:rgba(240,100,90,.12)">
+              <span style="width:14px;text-align:right;font-size:12px;font-weight:600;color:#646a76">2</span>
+              <span style="width:7px;height:7px;border-radius:50%;background:#3fb950;flex:none"></span>
+              <span style="min-width:0;flex:1;font-weight:500">Review</span>
+              <span style="font-size:12px;text-transform:lowercase;color:#3fb950">succeeded</span>
+            </div>
+            <p style="margin:2px 0 0 22px;font-size:11px;color:#646a76">Reviewer · claude · fable</p>
+            <p style="margin:3px 0 0 22px;font-size:11px;color:#646a76;display:flex;align-items:center;gap:5px"><i data-lucide="chevron-right" style="width:11px;height:11px"></i>3 sessions · 10.7M in · $68.57</p>
+            <span style="position:absolute;left:24px;bottom:-8px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">3</span>
+          </div>
+        </div>
+        <div style="width:1px;background:#1b1e24"></div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div style="height:34px;flex:none;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1b1e24;padding:0 14px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#646a76">Review — conversation<span style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0;display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#646a76"></span>stream ended</span></div>
+          <div style="flex:none;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1b1e24;padding:8px 24px;font-size:12px">
+            <span style="width:16px;height:16px;border-radius:5px;border:1px solid #23262d;background:#1b1e25;display:grid;place-items:center;color:#9197a3"><i data-lucide="bot" style="width:10px;height:10px"></i></span>
+            <span style="font-size:13px;font-weight:600">Reviewer · Claude Code</span>
+            <span style="color:#646a76">fable-5 · high effort</span>
+            <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#646a76">session 4a4c844a</span>
+          </div>
+          <div style="flex:1;min-height:0;overflow:hidden">
+            <ul style="list-style:none;margin:0;padding:8px 0">
+              <li style="padding:12px 24px 4px">
+                <div style="border:1px solid #23262d;border-radius:8px;background:#101216;padding:10px 12px">tu peux push</div>
+                <p style="margin:6px 0 0;font-size:11px;color:#646a76">You → Reviewer</p>
+              </li>
+              <li style="padding:6px 24px"><span style="display:inline-flex;align-items:center;gap:8px;border-radius:6px;padding:4px 8px;font-size:12px;color:#646a76"><i data-lucide="chevron-right" style="width:13px;height:13px"></i>Worked for 2 min — 9 steps · 7 logs</span></li>
+              <li style="display:flex;flex-direction:column;gap:6px;padding:12px 24px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="width:16px;height:16px;border-radius:5px;border:1px solid #23262d;background:#1b1e25;display:grid;place-items:center;color:#9197a3"><i data-lucide="bot" style="width:10px;height:10px"></i></span>
+                  <span style="font-size:12px;font-weight:600;color:#9197a3">Agent</span>
+                  <span style="font-size:12px;color:#646a76">1 day ago</span>
+                  <span style="margin-left:auto;color:#646a76"><i data-lucide="copy" style="width:13px;height:13px"></i></span>
+                </div>
+                <div style="border:1px solid #1b1e24;border-radius:8px;background:#16181d;padding:8px 12px;line-height:1.55">Pushed: <code class="tk">feat/project-tabs</code> moved b962feb7 → 81b31222 (pre-push hooks all green), so PR #183 now carries the opt-in tab strip. Nothing left uncommitted on the run branch.</div>
+              </li>
+              <li style="padding:6px 24px;position:relative">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <i data-lucide="circle-check" style="width:14px;height:14px;color:#3fb950"></i>
+                  <span style="font-weight:500">Turn completed</span>
+                  <span style="font-size:12px;color:#646a76">Otomat · 17:57</span>
+                </div>
+                <span style="position:absolute;left:220px;top:2px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">2</span>
+              </li>
+              <li style="padding:6px 24px">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <i data-lucide="git-compare" style="width:14px;height:14px;color:#a371f7"></i>
+                  <span style="font-weight:500">Run is ready for review</span>
+                  <span style="font-size:12px;color:#646a76">Otomat · 17:57</span>
+                  <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#a371f7">View diff →</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div style="flex:none;display:flex;align-items:center;gap:10px;border-top:1px solid #1b1e24;padding:12px 14px;position:relative">
+            <i data-lucide="circle-check" style="width:14px;height:14px;color:#3fb950"></i>
+            <span style="font-size:12.5px;color:#9197a3">This run is finished — its sessions are closed.</span>
+            <span style="margin-left:auto;height:26px;display:inline-flex;align-items:center;gap:6px;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 10px;font-size:12.5px;font-weight:500"><i data-lucide="plus" style="width:12px;height:12px"></i>Add follow-up step</span>
+            <span style="position:absolute;left:-9px;top:14px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">4</span>
+          </div>
+        </div>
+        <div style="width:1px;background:#1b1e24"></div>
+        <div style="width:270px;flex:none;overflow:hidden">
+          <div style="height:34px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1b1e24;padding:0 14px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#646a76">Run context<span style="margin-left:auto"><i data-lucide="panel-right" style="width:14px;height:14px"></i></span></div>
+          <div style="padding:16px;position:relative">
+            <div style="border:1px solid rgba(163,113,247,.35);border-radius:8px;background:rgba(163,113,247,.07);padding:14px">
+              <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600"><i data-lucide="git-merge" style="width:15px;height:15px;color:#a371f7"></i>PR #183 merged</div>
+              <p style="margin:6px 0 10px;font-size:12px;line-height:1.5;color:#9197a3">Publication is finished. OTO-139 moved to Done.</p>
+              <span style="height:28px;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid #23262d;border-radius:6px;background:#16181d;font-size:13px;font-weight:500"><i data-lucide="external-link" style="width:13px;height:13px"></i>Open PR #183</span>
+            </div>
+            <span style="position:absolute;right:14px;top:6px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">5</span>
+            <dl style="margin:14px 0 0;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:9px 12px;border:1px solid #1b1e24;border-radius:8px;background:#101216;padding:14px;font-size:13px">
+              <dt style="font-size:12px;color:#646a76">state</dt><dd style="margin:0;display:flex;justify-content:flex-end"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(63,185,80,.12);color:#3fb950;text-transform:lowercase"><i data-lucide="circle-check" style="width:12px;height:12px"></i>completed</span></dd>
+              <dt style="font-size:12px;color:#646a76">branch</dt><dd style="margin:0;display:flex;justify-content:flex-end;align-items:center;gap:6px;min-width:0"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">otomat/run/491f269a</span><i data-lucide="copy" style="width:12px;height:12px;color:#646a76;flex:none"></i></dd>
+              <dt style="font-size:12px;color:#646a76">sessions</dt><dd style="margin:0;display:flex;justify-content:flex-end"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">4</span></dd>
+              <dt style="font-size:12px;color:#646a76">tokens</dt><dd style="margin:0;display:flex;justify-content:flex-end;text-align:right"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9197a3">33.4M in · 191k out</span></dd>
+              <dt style="font-size:12px;color:#646a76">cost</dt><dd style="margin:0;display:flex;justify-content:flex-end"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9197a3">$84.44 · final</span></dd>
+            </dl>
+            <div style="margin-top:14px;display:flex;gap:8px">
+              <span style="flex:1;height:26px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid #23262d;border-radius:6px;background:#16181d;font-size:13px;font-weight:500"><i data-lucide="git-compare" style="width:13px;height:13px"></i>Diff</span>
+              <span style="width:26px;height:26px;display:inline-grid;place-items:center;border:1px solid #23262d;border-radius:6px;background:#16181d;color:#9197a3"><i data-lucide="ellipsis" style="width:14px;height:14px"></i></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="1c" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:baseline;max-width:1440px">
+      <span style="flex:none;height:22px;min-width:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:#ffd166;color:#1a1206;font-size:12px;font-weight:700">1c</span>
+      <div>
+        <div style="font-size:15px;font-weight:600">Run · PR tab — terminal (merged) state</div>
+        <div style="font-size:12.5px;color:#9197a3;line-height:1.55;max-width:1200px">Replaces today’s four contradictory encodings (purple banner + red “takes no further publication” + filled stepper + a fully rendered, dead form). <b style="color:#ffd166">1</b> one outcome card with the facts that survive cleanup · <b style="color:#ffd166">2</b> merged reads as success/review tone, never danger · <b style="color:#ffd166">3</b> Linear consequence stated explicitly · <b style="color:#ffd166">4</b> the frozen form collapses into a read-only disclosure · <b style="color:#ffd166">5</b> “no workspace / 0 files” reframed as post-merge cleanup, not missing data</div>
+      </div>
+    </div>
+    <div style="position:relative;width:1440px;height:620px;border:1px solid #2a2d34;border-radius:10px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);background:#0a0b0d;display:flex;flex-direction:column;font-size:13px">
+      <div style="height:36px;flex:none;background:#131417;border-bottom:1px solid #1f2126;display:flex;align-items:center;position:relative">
+        <div style="display:flex;gap:8px;padding-left:20px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+        <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:#b7bcc4">Otomat</span>
+      </div>
+      <div style="height:48px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 14px">
+        <span style="width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:#9197a3;flex:none"><i data-lucide="arrow-left" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;font-size:13px;color:#9197a3"><span>Runs</span><span style="color:#454b55">›</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px">OTO-139 · Ajouter des tabs de projets…</span><span style="color:#454b55">›</span><span style="color:#e7e9ee">Run</span></span>
+        <span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(63,185,80,.12);color:#3fb950;text-transform:lowercase"><i data-lucide="circle-check" style="width:12px;height:12px"></i>completed</span>
+        <span style="flex:1"></span>
+        <span style="display:inline-flex;gap:2px;background:#16181d;border:1px solid #23262d;border-radius:6px;padding:2px">
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="list-tree" style="width:13px;height:13px"></i>Conversation</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="list-todo" style="width:13px;height:13px"></i>Report</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="terminal" style="width:13px;height:13px"></i>Logs</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="git-compare" style="width:13px;height:13px"></i>Diff</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;background:#1b1e25;color:#e7e9ee;box-shadow:0 1px 2px rgba(0,0,0,.4)"><i data-lucide="git-pull-request" style="width:13px;height:13px"></i>PR</span>
+        </span>
+        <span style="flex:1"></span>
+        <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="bell" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:6px;padding:0 6px;font-size:12px;color:#e7e9ee"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950"></span>Online</span>
+      </div>
+      <div style="flex:1;min-height:0;overflow:hidden;display:flex;justify-content:center">
+        <div style="width:680px;display:flex;flex-direction:column;gap:14px;padding:28px 0">
+          <div style="position:relative;border:1px solid #1b1e24;border-radius:10px;background:#101216;padding:20px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="width:38px;height:38px;border-radius:9px;background:rgba(163,113,247,.13);display:grid;place-items:center;color:#a371f7;flex:none"><i data-lucide="git-merge" style="width:20px;height:20px"></i></span>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px;font-weight:600">Pull request #183</span><span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(163,113,247,.13);color:#a371f7;text-transform:lowercase"><i data-lucide="git-merge" style="width:12px;height:12px"></i>merged</span></div>
+                <div style="margin-top:3px;font-size:12px;color:#9197a3"><span style="font-family:'JetBrains Mono',monospace;font-size:11.5px">feat/project-tabs → main</span> · merged 1 day ago · alimtunc</div>
+              </div>
+              <span style="height:28px;display:inline-flex;align-items:center;gap:6px;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 11px;font-size:13px;font-weight:500;flex:none"><i data-lucide="external-link" style="width:13px;height:13px"></i>Open on GitHub</span>
+              <span style="height:28px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:0 10px;font-size:13px;font-weight:500;color:#9197a3;flex:none"><i data-lucide="git-compare" style="width:13px;height:13px"></i>View diff</span>
+            </div>
+            <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;border-top:1px solid #1b1e24;padding-top:14px;font-size:13px">
+              <div style="display:flex;justify-content:space-between;gap:12px"><span style="font-size:12px;color:#646a76">Changes</span><span>21 files · <span style="color:#3fb950">+917</span> <span style="color:#f2545b">−13</span></span></div>
+              <div style="display:flex;justify-content:space-between;gap:12px"><span style="font-size:12px;color:#646a76">Steps</span><span>Plan + Implement ✓ · Review ✓</span></div>
+              <div style="display:flex;justify-content:space-between;gap:12px"><span style="font-size:12px;color:#646a76">Usage</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">33.6M tokens · $84.44</span></div>
+              <div style="display:flex;justify-content:space-between;gap:12px"><span style="font-size:12px;color:#646a76">Metadata written by</span><span style="color:#9197a3">claude · opus · xhigh</span></div>
+            </div>
+            <span style="position:absolute;left:-9px;top:18px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">1</span>
+            <span style="position:absolute;right:-9px;top:18px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">2</span>
+          </div>
+          <div style="position:relative;display:flex;align-items:center;gap:10px;border:1px solid rgba(63,185,80,.3);border-radius:8px;background:rgba(63,185,80,.07);padding:12px 14px">
+            <span style="width:13px;height:13px;border-radius:50%;background:#8a8ff5;flex:none"></span>
+            <span style="font-size:13px"><span style="font-weight:600">OTO-139 moved to Done.</span> <span style="color:#9197a3">Status sync ran on merge: Pull request merged → Done.</span></span>
+            <span style="margin-left:auto;font-size:12px;color:#9197a3">Open in Linear ↗</span>
+            <span style="position:absolute;left:-9px;top:12px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">3</span>
+          </div>
+          <div style="position:relative;border:1px solid #1b1e24;border-radius:8px;background:#101216">
+            <div style="display:flex;align-items:center;gap:9px;padding:12px 14px">
+              <i data-lucide="chevron-right" style="width:14px;height:14px;color:#646a76"></i>
+              <span style="font-size:13px;font-weight:500">Publication details</span>
+              <span style="font-size:12px;color:#646a76">frozen at publication — <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px">feat(shell): open projects in tabs with attention badges</span></span>
+            </div>
+            <span style="position:absolute;left:-9px;top:12px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">4</span>
+          </div>
+          <div style="position:relative;display:flex;align-items:center;gap:9px;padding:2px 14px;font-size:12px;color:#646a76">
+            <i data-lucide="layers" style="width:13px;height:13px"></i>Workspace cleaned after merge — the run’s worktree was removed, so there is no local diff to show.
+            <span style="position:absolute;left:-9px;top:2px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">5</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="1d" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:baseline;max-width:1440px">
+      <span style="flex:none;height:22px;min-width:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:#ffd166;color:#1a1206;font-size:12px;font-weight:700">1d</span>
+      <div>
+        <div style="font-size:15px;font-weight:600">Usage</div>
+        <div style="font-size:12.5px;color:#9197a3;line-height:1.55;max-width:1200px"><b style="color:#ffd166">1</b> human-scale numbers (“5353947k” → “5.35B”, “$6279.101” → “$6,279.10”) — raw values on hover/copy · <b style="color:#ffd166">2</b> PARTIAL becomes an explained footnote, not shouting caps · <b style="color:#ffd166">3</b> chart gains a metric toggle, y-scale, weekly ticks and hover values · <b style="color:#ffd166">4</b> breakdown meters get real weight + share % · <b style="color:#ffd166">5</b> per-run tokens on one line, costs aligned right</div>
+      </div>
+    </div>
+    <div style="position:relative;width:1440px;height:860px;border:1px solid #2a2d34;border-radius:10px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);background:#0a0b0d;display:flex;flex-direction:column;font-size:13px">
+      <div style="height:36px;flex:none;background:#131417;border-bottom:1px solid #1f2126;display:flex;align-items:center;position:relative">
+        <div style="display:flex;gap:8px;padding-left:20px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+        <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:#b7bcc4">Otomat</span>
+      </div>
+      <div style="height:48px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 18px">
+        <h1 style="margin:0;display:flex;align-items:center;gap:9px;font-size:15px;font-weight:600"><i data-lucide="bar-chart-3" style="width:17px;height:17px;color:#9197a3"></i>Usage</h1>
+        <span style="font-size:12px;color:#646a76">As reported by providers — nothing estimated.</span>
+        <span style="flex:1"></span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9197a3;background:#16181d;border:1px solid #23262d;border-radius:4px;padding:2px 6px">supervps</span>
+        <span style="height:28px;display:inline-flex;align-items:center;gap:7px;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 10px;font-size:13px;font-weight:500"><i data-lucide="calendar" style="width:13px;height:13px;color:#9197a3"></i>Last 30 days<i data-lucide="chevron-down" style="width:13px;height:13px;color:#646a76"></i></span>
+        <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></span>
+        <span style="width:1px;height:16px;background:#23262d"></span>
+        <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="bell" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:6px;padding:0 6px;font-size:12px;color:#e7e9ee"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950"></span>Online</span>
+      </div>
+      <div style="flex:1;min-height:0;overflow:hidden">
+        <div style="display:flex;flex-wrap:wrap;align-items:stretch;border-bottom:1px solid #1b1e24;position:relative">
+          <div style="display:flex;min-width:150px;flex-direction:column;gap:2px;padding:12px 16px;border-right:1px solid #1b1e24"><span style="font-size:12px;color:#646a76">Input tokens</span><span style="font-size:19px;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums">5.35B</span><span style="font-size:11px;color:#646a76">5,353,947,000</span></div>
+          <div style="display:flex;min-width:150px;flex-direction:column;gap:2px;padding:12px 16px;border-right:1px solid #1b1e24"><span style="font-size:12px;color:#646a76">Output tokens</span><span style="font-size:19px;font-family:'JetBrains Mono',monospace">20.1M</span><span style="font-size:11px;color:#646a76">3.7k per turn</span></div>
+          <div style="display:flex;min-width:170px;flex-direction:column;gap:2px;padding:12px 16px;border-right:1px solid #1b1e24"><span style="font-size:12px;color:#646a76">Reported cost</span><span style="font-size:19px;font-family:'JetBrains Mono',monospace">$6,279.10<span style="margin-left:6px;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-family:'Inter',sans-serif;color:#d8a12b;vertical-align:3px"><i data-lucide="info" style="width:11px;height:11px"></i>partial</span></span><span style="font-size:11px;color:#646a76">2 runs did not report cost</span></div>
+          <div style="display:flex;min-width:150px;flex-direction:column;gap:2px;padding:12px 16px;border-right:1px solid #1b1e24"><span style="font-size:12px;color:#646a76">Execution time</span><span style="font-size:19px;font-family:'JetBrains Mono',monospace">1,213h</span><span style="font-size:11px;color:#646a76">2 runs not measured</span></div>
+          <div style="display:flex;min-width:130px;flex-direction:column;gap:2px;padding:12px 16px;border-right:1px solid #1b1e24"><span style="font-size:12px;color:#646a76">Runs</span><span style="font-size:19px;font-family:'JetBrains Mono',monospace">89</span><span style="font-size:11px;color:#646a76">200 steps</span></div>
+          <div style="display:flex;min-width:130px;flex-direction:column;gap:2px;padding:12px 16px;border-right:1px solid #1b1e24"><span style="font-size:12px;color:#646a76">Turns reported</span><span style="font-size:19px;font-family:'JetBrains Mono',monospace">409</span></div>
+          <span style="position:absolute;left:110px;top:-9px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">1</span>
+          <span style="position:absolute;left:485px;top:-9px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">2</span>
+        </div>
+        <section style="display:flex;flex-direction:column;gap:8px;border-bottom:1px solid #1b1e24;padding:12px 18px;position:relative">
+          <div style="display:flex;align-items:center;gap:10px">
+            <h2 style="margin:0;font-size:12px;font-weight:500;color:#646a76">Per day (UTC)</h2>
+            <span style="margin-left:auto;display:inline-flex;gap:2px;background:#16181d;border:1px solid #23262d;border-radius:6px;padding:2px">
+              <span style="display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:4px;font-size:11.5px;font-weight:500;background:#1b1e25;color:#e7e9ee">Tokens</span>
+              <span style="display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:4px;font-size:11.5px;font-weight:500;color:#9197a3">Cost</span>
+              <span style="display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:4px;font-size:11.5px;font-weight:500;color:#9197a3">Runs</span>
+            </span>
+          </div>
+          <div style="position:relative;height:110px">
+            <div style="position:absolute;inset:0 0 14px 0">
+              <div style="position:absolute;left:0;right:0;top:0;border-top:1px dashed #1b1e24"></div><span style="position:absolute;right:0;top:-7px;font-size:10px;color:#454b55;background:#0a0b0d;padding-left:4px">600M</span>
+              <div style="position:absolute;left:0;right:0;top:50%;border-top:1px dashed #1b1e24"></div><span style="position:absolute;right:0;top:calc(50% - 7px);font-size:10px;color:#454b55;background:#0a0b0d;padding-left:4px">300M</span>
+              <div style="position:absolute;left:0;right:36px;bottom:0;display:flex;align-items:flex-end;gap:3px;height:100%">
+                <sc-for list="{{ bars }}" as="b" hint-placeholder-count="18">
+                  <span style="flex:1;height:100%;display:flex;align-items:flex-end;position:relative">
+                    <span style="width:100%;border-radius:2px 2px 0 0;background:{{ b.c }};height:{{ b.h }}"></span>
+                    <sc-if value="{{ b.tip }}" hint-placeholder-val="{{ false }}">
+                      <span style="position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;background:#1b1e25;border:1px solid #30343d;border-radius:6px;padding:5px 8px;font-size:11px;color:#e7e9ee;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:2">15 août · <b>412M tokens</b> · $512 · 6 runs</span>
+                    </sc-if>
+                  </span>
+                </sc-for>
+              </div>
+            </div>
+            <div style="position:absolute;left:0;right:36px;bottom:0;display:flex;justify-content:space-between;font-size:10.5px;color:#646a76"><span>7 août</span><span>11</span><span>15</span><span>19</span><span>24 août</span></div>
+            <span style="position:absolute;left:340px;top:-16px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">3</span>
+          </div>
+        </section>
+        <div style="display:flex;flex-wrap:wrap;border-bottom:1px solid #1b1e24;position:relative">
+          <section style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;padding:12px 18px;border-right:1px solid #1b1e24">
+            <h2 style="margin:0;font-size:12px;font-weight:500;color:#646a76">By project</h2>
+            <div style="display:flex;align-items:center;gap:12px;padding:4px 6px;border-radius:4px">
+              <span style="min-width:0;flex:1;font-size:13px">otomat</span>
+              <span style="height:4px;width:140px;flex:none;border-radius:99px;background:#16181d;overflow:hidden"><span style="display:block;height:100%;background:#f0645a;opacity:.75;width:100%"></span></span>
+              <span style="width:46px;text-align:right;font-size:11.5px;color:#646a76">100%</span>
+              <span style="width:64px;flex:none;text-align:right;font-size:12px;font-family:'JetBrains Mono',monospace">5.37B</span>
+            </div>
+          </section>
+          <section style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;padding:12px 18px">
+            <h2 style="margin:0;font-size:12px;font-weight:500;color:#646a76">By runtime and model</h2>
+            <sc-for list="{{ emitters }}" as="e" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:12px;padding:4px 6px;border-radius:4px">
+                <span style="min-width:0;flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ e.dim }}">{{ e.label }}</span>
+                <span style="height:4px;width:140px;flex:none;border-radius:99px;background:#16181d;overflow:hidden"><span style="display:block;height:100%;background:#f0645a;opacity:.75;width:{{ e.pct }}"></span></span>
+                <span style="width:46px;text-align:right;font-size:11.5px;color:#646a76">{{ e.share }}</span>
+                <span style="width:64px;flex:none;text-align:right;font-size:12px;font-family:'JetBrains Mono',monospace">{{ e.value }}</span>
+              </div>
+            </sc-for>
+          </section>
+          <span style="position:absolute;left:840px;top:-9px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">4</span>
+        </div>
+        <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:13px">
+          <thead><tr>
+            <th style="height:30px;width:90px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Run</th>
+            <th style="height:30px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Issue</th>
+            <th style="height:30px;width:200px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:left;font-size:12px;font-weight:500;color:#646a76">Model</th>
+            <th style="height:30px;width:170px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:right;font-size:12px;font-weight:500;color:#646a76">Tokens</th>
+            <th style="height:30px;width:100px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:right;font-size:12px;font-weight:500;color:#646a76">Cost</th>
+            <th style="height:30px;width:90px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:right;font-size:12px;font-weight:500;color:#646a76">Duration</th>
+            <th style="height:30px;width:90px;border-bottom:1px solid #1b1e24;background:#0a0b0d;padding:0 12px;text-align:right;font-size:12px;font-weight:500;color:#646a76">Last turn</th>
+          </tr></thead>
+          <tbody style="position:relative">
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+            <tr>
+              <td style="height:38px;border-bottom:1px solid #1b1e24;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">{{ r.run }}</td>
+              <td style="height:38px;border-bottom:1px solid #1b1e24;padding:0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">{{ r.issueId }}</span> <span>{{ r.title }}</span></td>
+              <td style="height:38px;border-bottom:1px solid #1b1e24;padding:0 12px;color:#9197a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.model }} <span style="color:#646a76;font-size:12px">{{ r.extra }}</span></td>
+              <td style="height:38px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">{{ r.tok }}</td>
+              <td style="height:38px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px">{{ r.cost }}<sc-if value="{{ r.partial }}" hint-placeholder-val="{{ false }}"><i data-lucide="info" style="width:11px;height:11px;color:#d8a12b;margin-left:4px;vertical-align:-1px"></i></sc-if></td>
+              <td style="height:38px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9197a3">{{ r.dur }}</td>
+              <td style="height:38px;border-bottom:1px solid #1b1e24;padding:0 12px;text-align:right;color:#646a76">{{ r.last }}</td>
+            </tr>
+          </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="1e" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:baseline;max-width:1440px">
+      <span style="flex:none;height:22px;min-width:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:#ffd166;color:#1a1206;font-size:12px;font-weight:700">1e</span>
+      <div>
+        <div style="font-size:15px;font-weight:600">Issue detail</div>
+        <div style="font-size:12.5px;color:#9197a3;line-height:1.55;max-width:1200px"><b style="color:#ffd166">1</b> the run area sits above the fold as a compact launcher row — no more scrolling a full spec to reach “Launch run” · <b style="color:#ffd166">2</b> long specs clamp with “Show full spec” · <b style="color:#ffd166">3</b> status appears once, as a control, with the Linear sync consequence written under it (today it renders 4× in 2 vocabularies) · <b style="color:#ffd166">4</b> PR attach demotes to a quiet row until a PR exists</div>
+      </div>
+    </div>
+    <div style="position:relative;width:1440px;height:780px;border:1px solid #2a2d34;border-radius:10px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);background:#0a0b0d;display:flex;flex-direction:column;font-size:13px">
+      <div style="height:36px;flex:none;background:#131417;border-bottom:1px solid #1f2126;display:flex;align-items:center;position:relative">
+        <div style="display:flex;gap:8px;padding-left:20px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+        <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:#b7bcc4">Otomat</span>
+      </div>
+      <div style="height:48px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 14px">
+        <span style="width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:#9197a3;flex:none"><i data-lucide="arrow-left" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:8px;font-size:13px;color:#9197a3"><span>Issues</span><span style="color:#454b55">›</span><span style="color:#e7e9ee">OTO-68</span></span>
+        <span style="flex:1"></span>
+        <span style="height:28px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;background:#f0645a;padding:0 11px;font-size:13px;font-weight:500;color:#fff;box-shadow:0 1px 0 rgba(0,0,0,.15) inset,0 1px 2px rgba(0,0,0,.25)"><i data-lucide="play" style="width:13px;height:13px"></i>Launch run</span>
+        <span style="width:28px;height:28px;display:grid;place-items:center;border:1px solid #23262d;border-radius:6px;background:#16181d;color:#9197a3"><i data-lucide="ellipsis" style="width:14px;height:14px"></i></span>
+        <span style="width:1px;height:16px;background:#23262d"></span>
+        <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="bell" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:6px;padding:0 6px;font-size:12px;color:#e7e9ee"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950"></span>Online</span>
+      </div>
+      <div style="flex:1;min-height:0;display:flex">
+        <div style="flex:1;min-width:0;overflow:hidden;padding:26px 32px">
+          <div style="max-width:720px;display:flex;flex-direction:column;gap:18px">
+            <div>
+              <h1 style="margin:0;font-size:24px;line-height:1.3;font-weight:600;letter-spacing:-0.01em">Bloquer les steps dépendantes jusqu’à une sortie de travail vérifiable</h1>
+              <div style="margin-top:8px;display:flex;align-items:center;gap:8px;font-size:13px;color:#9197a3">
+                <span style="width:13px;height:13px;border-radius:50%;background:#8a8ff5"></span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">OTO-68</span>
+                <span style="color:#454b55">·</span><span style="width:9px;height:9px;border-radius:50%;background:#9197a3"></span><span>Todo</span>
+                <span style="color:#454b55">·</span><i data-lucide="signal-high" style="width:13px;height:13px;color:#d8a12b"></i><span>High</span>
+                <span style="color:#454b55">·</span><span style="width:18px;height:18px;border-radius:50%;background:#8aa353;color:#0a0b0d;font-size:9px;font-weight:700;display:grid;place-items:center">AL</span>
+              </div>
+            </div>
+            <div style="position:relative;border:1px solid #1b1e24;border-radius:8px;background:#101216;padding:12px 14px;display:flex;align-items:center;gap:12px">
+              <span style="width:28px;height:28px;border-radius:7px;background:rgba(240,100,90,.12);display:grid;place-items:center;color:#ff9b93;flex:none"><i data-lucide="play" style="width:14px;height:14px"></i></span>
+              <span style="flex:1;min-width:0">
+                <span style="display:block;font-size:13px;font-weight:600">No runs yet</span>
+                <span style="display:block;font-size:12px;color:#9197a3">Launch the first run — its live ledger will land here.</span>
+              </span>
+              <span style="height:28px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;background:#f0645a;padding:0 11px;font-size:13px;font-weight:500;color:#fff"><i data-lucide="play" style="width:13px;height:13px"></i>Launch run</span>
+              <span style="height:28px;display:inline-flex;align-items:center;gap:6px;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 11px;font-size:13px;font-weight:500;color:#e7e9ee"><i data-lucide="workflow" style="width:13px;height:13px"></i>Workflow…</span>
+              <span style="position:absolute;left:-9px;top:14px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">1</span>
+            </div>
+            <div style="position:relative">
+              <div style="display:flex;flex-direction:column;gap:12px;font-size:13.5px;line-height:1.65;color:#d5d8de;max-height:300px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,#000 62%,transparent);mask-image:linear-gradient(to bottom,#000 62%,transparent)">
+                <h3 style="margin:0;font-size:15px;font-weight:600;color:#e7e9ee">Contexte</h3>
+                <p style="margin:0">Dans une run workflow, une première step peut terminer après un simple audit ou un message demandant une approbation. Si elle est néanmoins classée <code class="tk">succeeded</code> parce que le process retourne <code class="tk">0</code>, une step dépendante comme goal-review démarre alors que le travail demandé n’a pas été implémenté.</p>
+                <p style="margin:0">Le scheduler ne doit pas deviner la réussite depuis une phrase libre ni traiter la fin d’un process comme une preuve suffisante de livraison.</p>
+                <h3 style="margin:4px 0 0;font-size:15px;font-weight:600;color:#e7e9ee">Objectif</h3>
+                <p style="margin:0">Ne lancer une step dépendante que lorsque sa dépendance est réellement terminée selon le contrat de la step, sans bloquer les tâches légitimement sans modification de code.</p>
+                <h3 style="margin:4px 0 0;font-size:15px;font-weight:600;color:#e7e9ee">Scope</h3>
+                <p style="margin:0">Conserver comme invariant que seule une dépendance <code class="tk">succeeded</code> déverrouille une step suivante…</p>
+              </div>
+              <div style="display:flex;justify-content:center;margin-top:-6px"><span style="height:26px;display:inline-flex;align-items:center;gap:6px;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 10px;font-size:12.5px;font-weight:500;color:#9197a3">Show full spec<i data-lucide="chevron-down" style="width:12px;height:12px"></i></span></div>
+              <span style="position:absolute;left:-9px;bottom:8px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">2</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:13px;font-weight:600">Comments</span>
+              <div style="border:1px solid #23262d;border-radius:6px;min-height:56px;padding:9px 11px;font-size:13px;color:#646a76">Comment on the Linear issue…</div>
+            </div>
+          </div>
+        </div>
+        <div style="width:1px;background:#1b1e24"></div>
+        <aside style="width:300px;flex:none;overflow:hidden;background:#0c0d10;padding:16px">
+          <div style="margin-bottom:18px;position:relative">
+            <div style="display:flex;align-items:center;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#646a76;margin-bottom:10px">Properties<span style="margin-left:auto"><i data-lucide="panel-right" style="width:14px;height:14px"></i></span></div>
+            <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
+              <div>
+                <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;color:#646a76;flex:1">Status</span><span style="display:inline-flex;align-items:center;gap:5px;height:22px;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 8px;font-size:12px;font-weight:500;color:#ff9b93"><i data-lucide="circle-dot" style="width:12px;height:12px"></i>ready<i data-lucide="chevron-down" style="width:11px;height:11px;color:#646a76"></i></span></div>
+                <p style="margin:5px 0 0;font-size:11px;color:#646a76;text-align:right">Linear: Todo → In Progress on run start</p>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;color:#646a76;flex:1">Priority</span><span>High</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;color:#646a76;flex:1">Assignee</span><span style="font-size:12.5px">alim.tunc@outlook.fr</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;color:#646a76;flex:1">Workspace</span><span style="font-size:12px;color:#646a76">none open</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;color:#646a76;flex:1">Source</span><span style="display:inline-flex;align-items:center;gap:5px;color:#9197a3">linear<i data-lucide="external-link" style="width:11px;height:11px;color:#646a76"></i></span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;color:#646a76;flex:1">Labels</span><span style="display:inline-flex;align-items:center;gap:4px;color:#646a76;font-size:12px"><i data-lucide="plus" style="width:12px;height:12px"></i>Add</span></div>
+            </div>
+            <span style="position:absolute;right:-8px;top:26px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">3</span>
+          </div>
+          <div style="border-top:1px solid #1b1e24;padding-top:12px;position:relative">
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-size:12.5px"><i data-lucide="git-pull-request" style="width:14px;height:14px;color:#646a76"></i>Attach pull request…</span>
+            <span style="position:absolute;right:-8px;top:14px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">4</span>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <div id="1f" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:baseline;max-width:1440px">
+      <span style="flex:none;height:22px;min-width:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:#ffd166;color:#1a1206;font-size:12px;font-weight:700">1f</span>
+      <div>
+        <div style="font-size:15px;font-weight:600">Settings — Workspaces</div>
+        <div style="font-size:12.5px;color:#9197a3;line-height:1.55;max-width:1200px"><b style="color:#ffd166">1</b> the per-row state sentence (repeated 12×) becomes a hover tooltip — rows drop to one line · <b style="color:#ffd166">2</b> “Active” is live-blue, no longer reads as an alert · <b style="color:#ffd166">3</b> cleanup gets a bulk action where the count is · <b style="color:#ffd166">4</b> zero-count filters collapse · <b style="color:#ffd166">5</b> the three stacked control rows merge into one toolbar</div>
+      </div>
+    </div>
+    <div style="position:relative;width:1440px;height:760px;border:1px solid #2a2d34;border-radius:10px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);background:#0a0b0d;display:flex;flex-direction:column;font-size:13px">
+      <div style="height:36px;flex:none;background:#131417;border-bottom:1px solid #1f2126;display:flex;align-items:center;position:relative">
+        <div style="display:flex;gap:8px;padding-left:20px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+        <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:#b7bcc4">Otomat</span>
+      </div>
+      <div style="height:48px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 14px">
+        <span style="width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:#9197a3;flex:none"><i data-lucide="arrow-left" style="width:15px;height:15px"></i></span>
+        <h1 style="margin:0;display:flex;align-items:center;gap:9px;font-size:15px;font-weight:600"><i data-lucide="settings" style="width:17px;height:17px;color:#9197a3"></i>Settings</h1>
+        <span style="flex:1"></span>
+        <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="bell" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:6px;padding:0 6px;font-size:12px;color:#e7e9ee"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950"></span>Online</span>
+      </div>
+      <div style="flex:1;min-height:0;display:flex">
+        <nav style="width:208px;flex:none;overflow:hidden;border-right:1px solid #1b1e24;background:#0c0d10;padding:16px 8px">
+          <div style="padding:0 10px 4px;font-size:11px;font-weight:600;letter-spacing:.03em;color:#646a76">Project</div>
+          <div style="display:flex;flex-direction:column;gap:1px;padding-bottom:12px">
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="folder-cog" style="width:16px;height:16px;color:#646a76"></i>This project</span>
+          </div>
+          <div style="padding:0 10px 4px;font-size:11px;font-weight:600;letter-spacing:.03em;color:#646a76">Global</div>
+          <div style="display:flex;flex-direction:column;gap:1px;padding-bottom:12px">
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="bot" style="width:16px;height:16px;color:#646a76"></i>Agents</span>
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="book-open" style="width:16px;height:16px;color:#646a76"></i>Skills</span>
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="folder-git-2" style="width:16px;height:16px;color:#646a76"></i>Repositories</span>
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;background:rgba(240,100,90,.12);color:#e7e9ee;font-weight:450"><i data-lucide="layers" style="width:16px;height:16px;color:#ff9b93"></i>Workspaces</span>
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="monitor" style="width:16px;height:16px;color:#646a76"></i>Execution hosts</span>
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="unplug" style="width:16px;height:16px;color:#646a76"></i>Integrations</span>
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="sliders-horizontal" style="width:16px;height:16px;color:#646a76"></i>Execution defaults</span>
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="workflow" style="width:16px;height:16px;color:#646a76"></i>Workflow presets</span>
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="palette" style="width:16px;height:16px;color:#646a76"></i>Appearance</span>
+          </div>
+          <div style="padding:0 10px 4px;font-size:11px;font-weight:600;letter-spacing:.03em;color:#646a76">Reference</div>
+          <div style="display:flex;flex-direction:column;gap:1px">
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="cpu" style="width:16px;height:16px;color:#646a76"></i>Runtimes</span>
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="activity" style="width:16px;height:16px;color:#646a76"></i>About · Daemon</span>
+            <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="layers" style="width:16px;height:16px;color:#646a76"></i>Design system</span>
+          </div>
+        </nav>
+        <div style="flex:1;min-width:0;overflow:hidden">
+          <div style="max-width:1000px;padding:26px 32px">
+            <div style="margin-bottom:18px">
+              <h1 style="margin:0 0 4px;font-size:18px;font-weight:600">Workspaces</h1>
+              <p style="margin:0;font-size:13px;color:#646a76;max-width:640px">Every worktree this host holds, reconciled against real git state.</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div style="border:1px solid #1b1e24;border-radius:8px;background:#101216;padding:12px 16px;display:flex;align-items:center;gap:16px">
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;font-size:13px;font-weight:600">Automatically delete workspaces after merge</span>
+                  <span style="display:block;margin-top:2px;font-size:12px;color:#9197a3">A merged canonical pull request removes its clean worktree.</span>
+                </span>
+                <span style="width:36px;height:20px;flex:none;border-radius:99px;background:#f0645a;position:relative"><span style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:#fff"></span></span>
+              </div>
+              <div style="position:relative;display:flex;align-items:center;gap:10px;border:1px solid rgba(63,185,80,.3);border-radius:8px;background:rgba(63,185,80,.07);padding:10px 14px">
+                <i data-lucide="sparkles" style="width:14px;height:14px;color:#3fb950"></i>
+                <span style="font-size:13px"><span style="font-weight:600">7 worktrees</span> <span style="color:#9197a3">have merged pull requests and are safe to delete.</span></span>
+                <span style="margin-left:auto;height:26px;display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(63,185,80,.4);border-radius:6px;padding:0 10px;font-size:12.5px;font-weight:500;color:#3fb950"><i data-lucide="trash-2" style="width:12px;height:12px"></i>Clean up 7</span>
+                <span style="position:absolute;left:-9px;top:11px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">3</span>
+              </div>
+              <div style="position:relative;display:flex;align-items:center;gap:8px">
+                <span style="display:inline-flex;align-items:center;gap:6px;height:24px;border-radius:4px;padding:0 8px;font-size:12px;font-weight:500;background:{{ liveBg }};color:{{ liveSolid }};outline:1px solid #30343d">Active <span style="font-family:'JetBrains Mono',monospace">12</span></span>
+                <span style="display:inline-flex;align-items:center;gap:6px;height:24px;border-radius:4px;padding:0 8px;font-size:12px;font-weight:500;background:rgba(216,161,43,.13);color:#d8a12b;outline:1px solid #30343d">Cleanup required <span style="font-family:'JetBrains Mono',monospace">7</span></span>
+                <span style="display:inline-flex;align-items:center;gap:6px;height:24px;border-radius:4px;padding:0 8px;font-size:12px;font-weight:500;border:1px solid #23262d;color:#9197a3">Unmanaged <span style="font-family:'JetBrains Mono',monospace">3</span></span>
+                <span style="display:inline-flex;align-items:center;height:24px;border-radius:4px;padding:0 8px;font-size:12px;color:#646a76">+2 empty states</span>
+                <span style="flex:1"></span>
+                <span style="height:28px;width:240px;display:flex;align-items:center;gap:8px;border:1px solid #23262d;border-radius:6px;background:#101216;padding:0 10px;color:#646a76"><i data-lucide="search" style="width:13px;height:13px"></i><span style="font-size:12.5px">Search issue, branch, path…</span></span>
+                <span style="height:28px;display:inline-flex;align-items:center;gap:6px;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 10px;font-size:12.5px;font-weight:500"><i data-lucide="refresh-cw" style="width:12px;height:12px"></i>Reconcile</span>
+                <span style="position:absolute;left:20px;top:-11px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">2</span>
+                <span style="position:absolute;left:340px;top:-11px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">4</span>
+                <span style="position:absolute;right:300px;top:-11px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:3">5</span>
+              </div>
+              <div style="border:1px solid #1b1e24;border-radius:8px;background:#101216;overflow:visible">
+                <div style="display:flex;height:36px;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid #1b1e24;background:#16181d;border-radius:8px 8px 0 0">
+                  <span style="font-size:13px;font-weight:600">otomat</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9197a3;background:#101216;border:1px solid #23262d;border-radius:3px;padding:1px 4px">supervps</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">/home/ubuntu/workspace/otomat</span>
+                  <span style="height:17px;min-width:17px;display:inline-flex;align-items:center;justify-content:center;border-radius:99px;background:#1b1e25;color:#9197a3;font-size:11px;padding:0 5px">22</span>
+                </div>
+                <sc-for list="{{ wsRows }}" as="w" hint-placeholder-count="7">
+                  <div style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-bottom:1px solid #1b1e24;position:relative;background:{{ w.rowBg }}">
+                    <span style="width:128px;flex:none"><span style="display:inline-flex;align-items:center;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:{{ w.bg }};color:{{ w.color }}">{{ w.state }}</span></span>
+                    <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">{{ w.issue }}</span> <span>{{ w.title }}</span></span>
+                    <span style="width:230px;flex:none;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9197a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ w.branch }}</span>
+                    <span style="width:70px;flex:none;display:inline-flex;align-items:center;gap:5px;font-size:12px;color:{{ w.gitColor }}"><span style="width:6px;height:6px;border-radius:50%;background:{{ w.gitColor }}"></span>{{ w.git }}</span>
+                    <span style="width:52px;flex:none;font-size:12px;color:{{ w.prColor }}">{{ w.pr }}</span>
+                    <span style="width:60px;flex:none;text-align:right;font-size:12px;color:#646a76">{{ w.updated }}</span>
+                    <span style="width:56px;flex:none;display:inline-flex;justify-content:flex-end;gap:6px;color:{{ w.actionColor }}"><i data-lucide="external-link" style="width:13px;height:13px"></i><i data-lucide="trash-2" style="width:13px;height:13px"></i></span>
+                    <sc-if value="{{ w.tip }}" hint-placeholder-val="{{ false }}">
+                      <span style="position:absolute;left:24px;top:34px;z-index:4;white-space:nowrap;background:#1b1e25;border:1px solid #30343d;border-radius:6px;padding:6px 9px;font-size:11.5px;color:#e7e9ee;box-shadow:0 10px 30px rgba(0,0,0,.5)">No merged canonical pull request stands for this branch yet.</span>
+                      <span style="position:absolute;left:2px;top:38px;width:18px;height:18px;border-radius:50%;background:#ffd166;color:#1a1206;font-size:11px;font-weight:700;display:{{ dotDisplay }};place-items:center;z-index:5">1</span>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showAnnotations&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Presentation&quot;},&quot;liveHue&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;blue&quot;,&quot;teal&quot;,&quot;violet&quot;],&quot;default&quot;:&quot;blue&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Direction&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() {
+    const tick = () => { if (window.lucide) { window.lucide.createIcons(); } else { setTimeout(tick, 150); } };
+    tick();
+  }
+  renderVals() {
+    const dotDisplay = (this.props.showAnnotations ?? true) ? "grid" : "none";
+    const hues = {
+      blue: { s: "#4da3ff", b: "rgba(77,163,255,.13)" },
+      teal: { s: "#2fbfa8", b: "rgba(47,191,168,.13)" },
+      violet: { s: "#9d8cff", b: "rgba(157,140,255,.14)" },
+    };
+    const hue = hues[this.props.liveHue ?? "blue"] ?? hues.blue;
+    const liveSolid = hue.s, liveBg = hue.b;
+    const heights = [5, 14, 11, 26, 34, 21, 29, 13, 44, 68, 24, 3, 38, 64, 38, 33, 26, 9, 16];
+    const bars = heights.map((h, i) => ({
+      h: h <= 3 ? "3px" : h + "%",
+      c: i === 9 ? "#f0645a" : "rgba(240,100,90,.45)",
+      tip: i === 9,
+    }));
+    const emitters = [
+      { label: "claude · claude-opus-5", value: "4.44B", pct: "100%", share: "83%", dim: "#e7e9ee" },
+      { label: "claude · claude-fable-5", value: "534M", pct: "12%", share: "10%", dim: "#e7e9ee" },
+      { label: "codex · model not reported", value: "229M", pct: "5%", share: "4%", dim: "#9197a3" },
+      { label: "claude · claude-opus-5[1m]", value: "168M", pct: "4%", share: "3%", dim: "#e7e9ee" },
+    ];
+    const rows = [
+      { run: "491f269a", issueId: "OTO-139", title: "Ajouter des tabs de projets avec badges d’attention", model: "claude · opus-5", extra: "+1", tok: "33.4M in · 191k out", cost: "$84.44", dur: "37h 19m", last: "10 hours" },
+      { run: "5e3c5bed", issueId: "OTO-140", title: "Rendre les permissions et questions runtime interactives dans Otomat", model: "claude · opus-5", extra: "+1", tok: "181M in · 631k out", cost: "$483.66", dur: "9h 59m", last: "2 days" },
+      { run: "a83a20df", issueId: "OTO-33", title: "Mettre à jour automatiquement l’app desktop signée", model: "claude · opus-5", extra: "", tok: "60.0M in · 205k out", cost: "$42.67", dur: "25h 37m", last: "2 days" },
+      { run: "54c63b11", issueId: "OTO-127", title: "Nettoyer les commentaires narratifs et durcir leur prévention", model: "claude · opus-5", extra: "", tok: "8.1M in · 71.6k out", cost: "$10.72", dur: "24h 56m", last: "2 days" },
+      { run: "4418250e", issueId: "OTO-138", title: "Choisir le diff d’un workspace, d’une step ou d’un commit", model: "claude · opus-5", extra: "", tok: "111M in · 309k out", cost: "$113.81", dur: "13h 23m", last: "3 days" },
+      { run: "95103902", issueId: "OTO-34", title: "Construire une Inbox opérationnelle cross-project", model: "claude · opus-5", extra: "", tok: "36.9M in · 160k out", cost: "$26.94", dur: "13h 12m", last: "3 days" },
+      { run: "ce35bc22", issueId: "OTO-65", title: "Rendre les conversations de workflow multi-agent explicites", model: "claude · fable-5", extra: "+2", tok: "154M in · 444k out", cost: "$99.08", partial: true, dur: "19h 51m", last: "4 days" },
+      { run: "03faf0b2", issueId: "OTO-105", title: "Rechercher et naviguer dans le contenu du diff", model: "claude · opus-5", extra: "+1", tok: "101M in · 469k out", cost: "$110.59", partial: true, dur: "19h 52m", last: "5 days" },
+    ];
+    const live = { bg: liveBg, color: liveSolid, state: "Active" };
+    const cleanup = { bg: "rgba(216,161,43,.13)", color: "#d8a12b", state: "Cleanup required" };
+    const wsRows = [
+      { ...cleanup, issue: "OTO-119", title: "Intégrer anti-slop et nettoyer les violations TypeScript", branch: "otomat/run/b41c99d2 · …es/b41c99d2", git: "clean", gitColor: "#3fb950", pr: "—", prColor: "#646a76", updated: "2 days", tip: true, rowBg: "#15171c", actionColor: "#9197a3" },
+      { ...cleanup, issue: "OTO-125", title: "Stabiliser Reviews → PR → Diff : navigation, cohérence", branch: "otomat/run/77e0c8a4 · …es/77e0c8a4", git: "clean", gitColor: "#3fb950", pr: "#171", prColor: "#a371f7", updated: "3 days", rowBg: "transparent", actionColor: "transparent" },
+      { ...live, issue: "OTO-89", title: "Charger les conversations de run par fenêtre roulante", branch: "otomat/run/2d94b7e1 · …es/2d94b7e1", git: "dirty", gitColor: "#d8a12b", pr: "—", prColor: "#646a76", updated: "1 hour", rowBg: "transparent", actionColor: "transparent" },
+      { ...live, issue: "OTO-62", title: "Rendre correctement le Markdown des issues", branch: "otomat/run/c1f4a2d8 · …es/c1f4a2d8", git: "clean", gitColor: "#3fb950", pr: "—", prColor: "#646a76", updated: "4 hours", rowBg: "transparent", actionColor: "transparent" },
+      { ...cleanup, issue: "OTO-113", title: "Transformer Reviews en inbox de pull requests", branch: "otomat/run/5f21d9ce · …es/5f21d9ce", git: "clean", gitColor: "#3fb950", pr: "#166", prColor: "#a371f7", updated: "5 days", rowBg: "transparent", actionColor: "transparent" },
+      { ...live, issue: "OTO-79", title: "Unifier les options runtime sur tous les lanceurs", branch: "otomat/run/e83b1f04 · …es/e83b1f04", git: "clean", gitColor: "#3fb950", pr: "—", prColor: "#646a76", updated: "1 day", rowBg: "transparent", actionColor: "transparent" },
+      { ...cleanup, issue: "OTO-136", title: "Corriger l’autorité des PR publiées et simplifier le fix", branch: "otomat/run/9c57a329 · …es/9c57a329", git: "clean", gitColor: "#3fb950", pr: "#183", prColor: "#a371f7", updated: "3 days", rowBg: "transparent", actionColor: "transparent" },
+    ];
+    const warnE = { bg: "rgba(216,161,43,.13)", color: "#d8a12b", abd: "rgba(216,161,43,.4)" };
+    const revE = { bg: "rgba(163,113,247,.13)", color: "#a371f7", abd: "rgba(163,113,247,.4)" };
+    const dangerE = { bg: "rgba(242,84,91,.13)", color: "#f2545b", abd: "rgba(242,84,91,.4)" };
+    const inboxOtomat = [
+      { ...warnE, kind: "permission", icon: "shield-question", id: "OTO-140", title: "Rendre les permissions et questions runtime interactives", reason: "Review wants to run gh pr edit", time: "2 min", action: "Answer" },
+      { ...revE, kind: "review ready", icon: "git-compare", id: "OTO-138", title: "Choisir le diff d’un workspace, d’une step ou d’un commit", reason: "run finished, diff awaits review", time: "1 h", action: "Review diff" },
+      { ...warnE, kind: "question", icon: "message-circle-question", id: "OTO-89", title: "Charger les conversations de run par fenêtre roulante", reason: "agent asked which pagination contract to keep", time: "3 h", action: "Reply" },
+    ];
+    const inboxGraphify = [
+      { ...dangerE, kind: "failed", icon: "triangle-alert", id: "GRA-41", title: "Exporter le graphe en PNG haute résolution", reason: "step Implement failed — exit 1 on pnpm check", time: "20 min", action: "Open run" },
+      { ...revE, kind: "review ready", icon: "git-compare", id: "GRA-38", title: "Corriger le layout des nœuds imbriqués", reason: "run finished, diff awaits review", time: "5 h", action: "Review diff" },
+    ];
+    const okC = { cbg: "rgba(63,185,80,.12)", ccolor: "#3fb950", cicon: "check", checks: "checks" };
+    const runC = { cbg: liveBg, ccolor: liveSolid, cicon: "loader", checks: "running" };
+    const failC = { cbg: "rgba(242,84,91,.13)", ccolor: "#f2545b", cicon: "x", checks: "failed" };
+    const reviewGroups = [
+      { label: "Needs your review", count: "2", hicon: "eye", hcolor: "#a371f7", rows: [
+        { num: "#186", title: "Mettre à jour automatiquement l’app desktop signée", branch: "otomat/run/a83a20df", ...okC, meta: "OTO-33 · 2 days", action: "Review diff" },
+        { num: "#185", title: "Choisir le diff d’un workspace, d’une step ou d’un commit", branch: "otomat/run/4418250e", ...runC, meta: "OTO-138 · 3 days", action: "Review diff" },
+      ]},
+      { label: "Changes requested", count: "1", hicon: "message-square", hcolor: "#d8a12b", rows: [
+        { num: "#181", title: "Construire une Inbox opérationnelle cross-project", branch: "otomat/run/95103902", ...okC, meta: "OTO-34 · 4 days", action: "Fix 3 comments" },
+      ]},
+      { label: "Waiting on checks", count: "1", hicon: "clock", hcolor: "#646a76", rows: [
+        { num: "#184", title: "Corriger les échecs CI du teardown preview", branch: "otomat/run/80b6e55b", ...failC, meta: "OTO-134 · 4 days", action: "Open run" },
+      ]},
+    ];
+    return { bars, emitters, rows, wsRows, dotDisplay, liveSolid, liveBg, inboxOtomat, inboxGraphify, reviewGroups };
+  }
+}
+</script>
+</body>
+</html>

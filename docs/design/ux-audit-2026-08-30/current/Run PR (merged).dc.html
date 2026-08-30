@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8">
+<title>Current — Run PR (merged)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+html,body{margin:0;padding:0;background:#050506}
+a{color:#e7e9ee;text-decoration:none}a:hover{color:#fff}
+*{box-sizing:border-box}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#23262d;border-radius:5px;border:2px solid #0a0b0d}::-webkit-scrollbar-track{background:transparent}
+</style>
+</helmet>
+<div data-screen-label="Current · Run PR (merged)" style="font-family:'Inter',system-ui,sans-serif;background:#0a0b0d;color:#e7e9ee;height:100vh;min-width:1440px;display:flex;flex-direction:column;overflow:hidden;font-size:13px;-webkit-font-smoothing:antialiased">
+  <div style="height:36px;flex:none;background:#131417;border-bottom:1px solid #1f2126;display:flex;align-items:center;position:relative">
+    <div style="display:flex;gap:8px;padding-left:20px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+    <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:#b7bcc4">Otomat</span>
+  </div>
+  <div style="height:34px;flex:none;display:flex;align-items:center;gap:6px;background:#0a0b0d;border-bottom:1px solid #1b1e24;padding:0 10px">
+    <span style="display:inline-flex;align-items:center;gap:7px;height:26px;border-radius:6px;background:rgba(240,100,90,.12);padding:0 9px">
+      <span style="width:16px;height:16px;border-radius:4px;background:#f0645a;color:#fff;font-weight:700;font-size:10px;display:grid;place-items:center">o</span>
+      <span style="font-size:12px;font-weight:600">otomat</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9197a3;background:#16181d;border:1px solid #23262d;border-radius:3px;padding:1px 4px">supervps</span>
+    </span>
+  </div>
+  <div style="flex:1;min-height:0;display:flex">
+    <aside style="width:236px;flex:none;background:#0c0d10;display:flex;flex-direction:column;min-height:0">
+      <div style="display:flex;align-items:center;padding-right:6px">
+        <div style="flex:1;min-width:0;height:48px;display:flex;align-items:center;gap:9px;padding:0 12px">
+          <span style="width:24px;height:24px;border-radius:6px;background:#f0645a;color:#fff;font-weight:700;font-size:14px;display:grid;place-items:center;flex:none">o</span>
+          <span style="min-width:0;flex:1">
+            <span style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:600">otomat</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9197a3;background:#16181d;border:1px solid #23262d;border-radius:4px;padding:1px 5px">supervps</span></span>
+            <span style="display:block;font-size:11px;color:#646a76">otomat</span>
+          </span>
+          <i data-lucide="chevrons-up-down" style="width:14px;height:14px;color:#646a76;flex:none"></i>
+        </div>
+        <span style="width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="panel-left" style="width:15px;height:15px"></i></span>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto;padding-top:6px;padding-bottom:8px">
+        <nav style="display:flex;flex-direction:column;gap:1px;padding:4px 8px 0">
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="search" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Search</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;min-width:16px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">⌘K</kbd></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="plus" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">New issue</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;min-width:16px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">C</kbd></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="inbox" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Inbox</span></span>
+        </nav>
+        <div style="padding:14px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.03em;color:#646a76">Workspace</div>
+        <nav style="display:flex;flex-direction:column;gap:1px;padding:0 8px">
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="list-todo" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Issues</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;background:rgba(240,100,90,.12);color:#e7e9ee;font-weight:450"><i data-lucide="activity" style="width:16px;height:16px;color:#ff9b93"></i><span style="flex:1">Runs</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="git-pull-request" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Reviews</span></span>
+          <span style="height:29px;display:flex;align-items:center;gap:9px;border-radius:6px;padding:0 8px;color:#9197a3;font-weight:450"><i data-lucide="bar-chart-3" style="width:16px;height:16px;color:#646a76"></i><span style="flex:1">Usage</span></span>
+        </nav>
+      </div>
+      <div style="border-top:1px solid #1b1e24;padding:8px">
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;font-size:12px;color:#9197a3"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950;flex:none"></span>daemon supervps · v0.1.0</div>
+      </div>
+    </aside>
+    <div style="width:1px;background:#1b1e24"></div>
+    <main style="flex:1;min-width:0;display:flex;flex-direction:column;background:#0a0b0d">
+      <header style="height:44px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 12px 0 14px">
+        <span style="font-size:13px;color:#9197a3">otomat</span>
+        <span style="flex:1"></span>
+        <span style="height:28px;width:230px;display:flex;align-items:center;gap:8px;border:1px solid #23262d;border-radius:6px;background:#0a0b0d;padding:0 9px;color:#646a76"><i data-lucide="search" style="width:14px;height:14px;flex:none"></i><span style="flex:1;text-align:left;font-size:13px">Search…</span><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#646a76;background:#101216;border:1px solid #23262d;border-radius:4px;height:17px;display:inline-flex;align-items:center;padding:0 4px">⌘K</kbd></span>
+        <span style="width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#9197a3"><i data-lucide="activity" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:6px;padding:0 6px;font-size:12px;color:#e7e9ee"><span style="width:7px;height:7px;border-radius:50%;background:#3fb950"></span>Online</span>
+      </header>
+      <div style="height:48px;flex:none;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1b1e24;padding:0 18px">
+        <span style="width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:#9197a3;flex:none"><i data-lucide="arrow-left" style="width:15px;height:15px"></i></span>
+        <span style="display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;font-size:13px;color:#9197a3">
+          <span>Runs</span><span style="color:#454b55">›</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:430px">OTO-139 · Ajouter des tabs de projets avec badges d’attention</span><span style="color:#454b55">›</span>
+          <span style="color:#e7e9ee">Run</span>
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:5px;height:20px;border-radius:4px;padding:0 7px;font-size:12px;font-weight:500;background:rgba(63,185,80,.12);color:#3fb950;text-transform:lowercase"><i data-lucide="circle-check" style="width:12px;height:12px"></i>completed</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#646a76">491f269a</span>
+        <i data-lucide="copy" style="width:13px;height:13px;color:#646a76"></i>
+        <span style="flex:1"></span>
+        <span style="display:inline-flex;gap:2px;background:#16181d;border:1px solid #23262d;border-radius:6px;padding:2px">
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="list-tree" style="width:13px;height:13px"></i>Conversation</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="list-todo" style="width:13px;height:13px"></i>Report</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="terminal" style="width:13px;height:13px"></i>Logs</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3"><i data-lucide="git-compare" style="width:13px;height:13px"></i>Diff</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;background:#1b1e25;color:#e7e9ee;box-shadow:0 1px 2px rgba(0,0,0,.4)"><i data-lucide="git-pull-request" style="width:13px;height:13px"></i>PR</span>
+        </span>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto">
+        <div style="max-width:672px;display:flex;flex-direction:column;gap:16px;padding:16px">
+          <div style="display:flex;align-items:center;gap:8px;border-radius:6px;background:rgba(163,113,247,.13);padding:8px 12px;color:#a371f7;font-size:13px;font-weight:500"><i data-lucide="git-merge" style="width:14px;height:14px"></i>merged</div>
+          <dl style="margin:0;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:9px 12px;font-size:13px">
+            <dt style="font-size:12px;color:#646a76">Issue</dt><dd style="margin:0;justify-self:end;text-align:right">Ajouter des tabs de projets avec badges d’attention</dd>
+            <dt style="font-size:12px;color:#646a76">Source</dt><dd style="margin:0;justify-self:end"><span style="display:inline-flex;align-items:center;height:20px;border-radius:4px;border:1px solid #23262d;padding:0 7px;font-size:12px;font-weight:500;color:#9197a3">no workspace</span></dd>
+            <dt style="font-size:12px;color:#646a76">Destination</dt><dd style="margin:0;justify-self:end;color:#9197a3">no GitHub remote</dd>
+            <dt style="font-size:12px;color:#646a76">Changes</dt><dd style="margin:0;justify-self:end">0 files · +0 −0</dd>
+            <dt style="font-size:12px;color:#646a76">Commit</dt><dd style="margin:0;justify-self:end;color:#9197a3;text-align:right">The workspace commits ship as they are</dd>
+            <dt style="font-size:12px;color:#646a76">Publication</dt><dd style="margin:0;justify-self:end"><span style="display:inline-flex;align-items:center;height:20px;border-radius:4px;background:rgba(145,151,163,.12);padding:0 7px;font-size:12px;font-weight:500;color:#9197a3">Ready for review</span></dd>
+          </dl>
+          <div style="border:1px solid rgba(242,84,91,.5);border-radius:8px;padding:14px 16px;color:#f2545b;font-size:13px">Pull request #183 is merged; it takes no further publication.</div>
+          <div style="border:1px solid #1b1e24;border-radius:8px;background:#101216;padding:12px 16px;display:flex;align-items:center;gap:12px">
+            <span style="font-size:13px">Connected as alimtunc</span>
+            <span style="margin-left:auto;height:28px;display:inline-flex;align-items:center;border:1px solid #23262d;border-radius:6px;background:#16181d;padding:0 11px;font-size:13px;font-weight:500">Open PR #183</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:#e7e9ee">
+            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#e7e9ee"></span>Writing metadata</span>
+            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#e7e9ee"></span>Committing the workspace</span>
+            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#e7e9ee"></span>Pushing the branch</span>
+            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#e7e9ee"></span>Creating the pull request</span>
+          </div>
+          <p style="margin:0;font-size:13px;color:#9197a3;font-style:italic">Written by claude · opus · xhigh</p>
+          <div style="border-radius:6px;background:#16181d;padding:8px 12px;font-size:13px;color:#e7e9ee">PR merged</div>
+          <div><span style="height:28px;display:inline-flex;align-items:center;border-radius:6px;padding:0 4px;font-size:13px;font-weight:500;color:#9197a3">Hide PR details</span></div>
+          <div style="display:flex;gap:16px">
+            <div style="width:170px;display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:500">Type</label><span style="height:32px;display:flex;align-items:center;justify-content:space-between;border:1px solid #23262d;border-radius:6px;background:#101216;padding:0 10px;font-size:13px">feat<i data-lucide="chevron-down" style="width:13px;height:13px;color:#646a76"></i></span></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:500">Scope</label><span style="height:32px;display:flex;align-items:center;border:1px solid #23262d;border-radius:6px;background:#101216;padding:0 10px;font-size:13px">shell</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label style="font-size:13px;font-weight:500">Summary</label>
+            <span style="height:32px;display:flex;align-items:center;border:1px solid #23262d;border-radius:6px;background:#101216;padding:0 10px;font-size:13px">open projects in tabs with attention badges</span>
+            <p style="margin:0;font-size:12px;color:#646a76;font-style:italic">Otomat commits `type(scope): summary` and adds the issue reference itself.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label style="font-size:13px;font-weight:500">Description</label>
+            <div style="border:1px solid #23262d;border-radius:6px;background:#101216;padding:10px 12px;font-size:13px;line-height:1.6;color:#e7e9ee;max-height:210px;overflow:hidden">persisted locally, so a restart comes back to the same session. Every tab carries an attention badge derived from the existing Inbox projection, counted per project, so an actionable event arriving for an inactive project surfaces without navigating to it and disappears the moment it is resolved.<br><br>- Add `components/shell/project-tabs/`: the bar, a persisted `@tanstack/react-store` of open tabs, the pure state helpers (open, close, record route, destination, adjacent), the visible-tab projection and the keyboard shortcuts (`Cmd`/`Ctrl` + digit, `Ctrl+Tab`, `Ctrl+Shift+Tab`), ignored inside editable controls.<br>- Route `useProjectSwitcher.selectProject` through the tab store so the switcher, a tab click and a…</div>
+            <p style="margin:0;font-size:12px;color:#646a76;font-style:italic">Optional description shown on GitHub.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label style="font-size:13px;font-weight:500">Branch</label>
+            <span style="height:32px;display:flex;align-items:center;border:1px solid #23262d;border-radius:6px;background:#101216;padding:0 10px;font-size:13px;font-family:'JetBrains Mono',monospace;font-size:12px">feat/project-tabs</span>
+            <p style="margin:0;font-size:12px;color:#646a76;font-style:italic">The published PR keeps its branch.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label style="font-size:13px;font-weight:500">Publication</label>
+            <span style="display:inline-flex;align-self:flex-start;gap:2px;background:#101216;border:1px solid #23262d;border-radius:6px;padding:2px">
+              <span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:4px;font-size:12.5px;font-weight:500;color:#9197a3">Draft</span>
+              <span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:4px;font-size:12.5px;font-weight:500;background:#1b1e25;color:#e7e9ee">Ready for review</span>
+            </span>
+            <p style="margin:0;font-size:12px;color:#646a76;font-style:italic">Ready opens the pull request for review. Otomat never merges it, and the repository’s branch protections still apply.</p>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;padding-bottom:24px">
+            <span style="height:30px;display:inline-flex;align-items:center;border:1px solid #23262d;border-radius:6px;padding:0 11px;font-size:13px;font-weight:500;color:#e7e9ee">Generate title &amp; description with AI</span>
+            <span style="height:30px;display:inline-flex;align-items:center;border-radius:6px;background:#f0645a;padding:0 11px;font-size:13px;font-weight:500;color:#fff;opacity:.55">Pull request complete</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const tick = () => { if (window.lucide) { window.lucide.createIcons(); } else { setTimeout(tick, 150); } };
+    tick();
+  }
+}
+</script>
+</body>
+</html>

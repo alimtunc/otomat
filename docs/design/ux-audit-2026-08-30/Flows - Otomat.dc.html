@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8">
+<title>Otomat — Interaction flows</title>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#101013}
+a{color:#e7e9ee;text-decoration:none}a:hover{color:#fff}
+*{box-sizing:border-box}
+</style>
+</helmet>
+<section id="flows" style="font-family:'Inter',system-ui,sans-serif;color:#e7e9ee;padding:48px;display:flex;flex-direction:column;gap:44px;-webkit-font-smoothing:antialiased">
+  <div style="max-width:980px;display:flex;flex-direction:column;gap:6px">
+    <h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-0.01em">Otomat — proposed flows &amp; interaction behavior</h1>
+    <p style="margin:0;font-size:13.5px;line-height:1.6;color:#9197a3">Three storyboards at wireframe fidelity. Coral = interactive, blue = live, amber notes = motion/latency behavior. They preserve today’s product behavior (issue → run → review → PR); what changes is continuity: every state hands you its next action.</p>
+  </div>
+  <sc-for list="{{ flows }}" as="f" hint-placeholder-count="3">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px">
+        <span style="flex:none;height:22px;min-width:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:#ffd166;color:#1a1206;font-size:12px;font-weight:700">{{ f.id }}</span>
+        <div>
+          <div style="font-size:15px;font-weight:600">{{ f.title }}</div>
+          <div style="font-size:12.5px;color:#9197a3;max-width:1100px;line-height:1.55">{{ f.sub }}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:stretch;gap:0;flex-wrap:wrap;row-gap:28px">
+        <sc-for list="{{ f.frames }}" as="fr" hint-placeholder-count="5">
+          <div style="display:flex;align-items:center">
+            <div style="width:252px;display:flex;flex-direction:column;gap:8px">
+              <div style="height:170px;border:1px solid #2a2d34;border-radius:8px;background:#0c0d10;overflow:hidden;display:flex;flex-direction:column">
+                <div style="height:22px;flex:none;border-bottom:1px solid #1b1e24;display:flex;align-items:center;gap:6px;padding:0 8px">
+                  <span style="width:5px;height:5px;border-radius:50%;background:#2a2d34"></span><span style="width:5px;height:5px;border-radius:50%;background:#2a2d34"></span>
+                  <span style="font-size:9.5px;color:#646a76;font-family:'JetBrains Mono',monospace">{{ fr.crumb }}</span>
+                  <sc-if value="{{ fr.chip }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;display:inline-flex;align-items:center;height:13px;border-radius:3px;padding:0 4px;font-size:8.5px;font-weight:600;background:{{ fr.chipBg }};color:{{ fr.chipColor }}">{{ fr.chip }}</span></sc-if>
+                </div>
+                <div style="flex:1;padding:8px;display:flex;flex-direction:column;gap:5px">
+                  <sc-for list="{{ fr.els }}" as="el" hint-placeholder-count="4">
+                    <div style="height:{{ el.h }};border-radius:4px;background:{{ el.bg }};border:1px solid {{ el.bd }};display:flex;align-items:center;gap:5px;padding:0 7px;flex:none">
+                      <sc-if value="{{ el.dot }}" hint-placeholder-val="{{ false }}"><span style="width:6px;height:6px;border-radius:50%;background:{{ el.dot }};flex:none"></span></sc-if>
+                      <span style="font-size:9.5px;color:{{ el.fg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ el.t }}</span>
+                      <sc-if value="{{ el.btn }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;display:inline-flex;align-items:center;height:14px;border-radius:3px;padding:0 5px;font-size:8.5px;font-weight:600;background:{{ el.btnBg }};color:{{ el.btnFg }};flex:none">{{ el.btn }}</span></sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex;gap:7px;align-items:flex-start">
+                <span style="flex:none;width:16px;height:16px;border-radius:50%;background:#1b1e25;border:1px solid #30343d;color:#9197a3;font-size:9.5px;font-weight:600;display:grid;place-items:center">{{ fr.n }}</span>
+                <div style="min-width:0">
+                  <div style="font-size:12px;font-weight:600">{{ fr.cap }}</div>
+                  <div style="font-size:11px;color:#9197a3;line-height:1.5">{{ fr.note }}</div>
+                </div>
+              </div>
+            </div>
+            <sc-if value="{{ fr.arrow }}" hint-placeholder-val="{{ true }}">
+              <div style="width:34px;display:flex;align-items:center;justify-content:center;margin-top:-60px"><span style="color:#454b55;font-size:16px">→</span></div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-start;max-width:1100px;border:1px solid rgba(255,209,102,.25);background:rgba(255,209,102,.05);border-radius:8px;padding:10px 12px">
+        <span style="flex:none;font-size:11px;font-weight:700;color:#ffd166;letter-spacing:.04em;margin-top:1px">MOTION</span>
+        <span style="font-size:12px;color:#b7bcc4;line-height:1.55">{{ f.motion }}</span>
+      </div>
+    </div>
+  </sc-for>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const S1 = "#16181d", B1 = "#23262d", T2 = "#9197a3", T3 = "#646a76";
+    const iris = "#f0645a", live = "#4da3ff", ok = "#3fb950", warn = "#d8a12b", rev = "#a371f7";
+    const box = (t, extra) => ({ h: "18px", bg: S1, bd: B1, fg: T2, t, ...extra });
+    const ghost = (t, extra) => ({ h: "18px", bg: "transparent", bd: "transparent", fg: T3, t, ...extra });
+    const flows = [
+      {
+        id: "F1", title: "Issue → run → review → merged PR (happy path)",
+        sub: "The chain the product exists for. Each state ends by naming the next action — the user never hunts for the next surface.",
+        frames: [
+          { n: 1, crumb: "issues/OTO-68", chip: "ready", chipBg: "rgba(240,100,90,.13)", chipColor: "#ff9b93", arrow: true, cap: "Issue", note: "Launcher row sits above the spec fold.", els: [box("Bloquer les steps dépendantes…", { fg: "#e7e9ee" }), box("No runs yet — launch the first run", { btn: "Launch run", btnBg: iris, btnFg: "#fff" }), ghost("Spec (clamped) · Show full spec ⌄")] },
+          { n: 2, crumb: "new run", arrow: true, cap: "Launcher", note: "Mode, branch, agent config in one row; ⌘↵ launches.", els: [box("Tell the agent what to do…", { h: "34px" }), ghost("main · opus · Auto · Extra high", { btn: "Launch ⌘↵", btnBg: iris, btnFg: "#fff" })] },
+          { n: 3, crumb: "runs/8b31f2c0", chip: "running", chipBg: "rgba(77,163,255,.13)", chipColor: live, arrow: true, cap: "Cockpit — streaming", note: "Steps left, thread center, context right. Messages queue for the next turn.", els: [box("1 ● Plan + Implement — running", { dot: live }), ghost("streaming ledger…"), box("Queue message for next turn", { fg: T3 })] },
+          { n: 4, crumb: "runs/8b31f2c0", chip: "review ready", chipBg: "rgba(163,113,247,.13)", chipColor: rev, arrow: true, cap: "Ready for review", note: "Next-action strip appears: Review diff.", els: [box("Run finished its steps", { dot: rev }), box("Next: review the diff", { btn: "Review diff", btnBg: rev, btnFg: "#0a0b0d" })] },
+          { n: 5, crumb: "runs/…/diff", arrow: true, cap: "Diff review", note: "Mark files reviewed; comments batch into one fix turn.", els: [box("21 files · +917 −13 · 11/21 reviewed"), box("comment: rename helper…", { fg: T3, btn: "Fix 2 comments", btnBg: S1, btnFg: "#e7e9ee" })] },
+          { n: 6, crumb: "runs/…/pr", arrow: true, cap: "Publish", note: "Draft/Ready; metadata generated; Otomat never merges.", els: [box("feat(shell): open projects in tabs…"), ghost("Draft | Ready for review", { btn: "Publish PR", btnBg: iris, btnFg: "#fff" })] },
+          { n: 7, crumb: "runs/…/pr", chip: "merged", chipBg: "rgba(163,113,247,.13)", chipColor: rev, arrow: false, cap: "Merged — outcome", note: "Outcome card; OTO-68 → Done; worktree auto-cleaned.", els: [box("PR #183 merged into main", { dot: rev }), box("OTO-139 moved to Done", { dot: ok }), ghost("Workspace cleaned after merge")] },
+        ],
+        motion: "Launch is optimistic: the dialog hands off to the cockpit in <200ms with a “preparing” chip rather than a spinner-on-dialog. Status chips crossfade tone+label in 140ms (no layout shift); new ledger rows fade in with a 2px rise, batched per animation frame under streaming load. The next-action strip slides in once (200ms ease-out) when the state machine crosses review_ready / completed — it never pulses.",
+      },
+      {
+        id: "F2", title: "Interruption — run awaits permission",
+        sub: "Today the wait is visible only inside the run. Proposed: the waiting state carries its answer affordance everywhere the run appears.",
+        frames: [
+          { n: 1, crumb: "runs/5e3c5bed", chip: "awaiting permission", chipBg: "rgba(216,161,43,.13)", chipColor: warn, arrow: true, cap: "Run pauses", note: "Step blocks on a permission request; reason stays visible in the ledger.", els: [box("Review — wants to run gh pr edit", { dot: warn }), box("Permission request · recorded in ledger", { fg: T3 })] },
+          { n: 2, crumb: "anywhere", arrow: true, cap: "Surfaced globally", note: "Sidebar Runs dot turns amber; Inbox entry created; bell badge counts it.", els: [box("Runs ● (amber while something waits)", { dot: warn }), box("Inbox: OTO-140 needs a permission answer", { btn: "1", btnBg: "rgba(216,161,43,.2)", btnFg: warn })] },
+          { n: 3, crumb: "runs/5e3c5bed", arrow: true, cap: "Answer inline", note: "Interaction card in the conversation: Allow once / Always / Deny, with the exact command shown.", els: [box("gh pr edit — allow?", { h: "26px" }), ghost("", { btn: "Allow once", btnBg: iris, btnFg: "#fff" })] },
+          { n: 4, crumb: "runs/5e3c5bed", chip: "running", chipBg: "rgba(77,163,255,.13)", chipColor: live, arrow: false, cap: "Resumes", note: "Same step resumes; queued messages deliver on the next turn; dependent steps stay gated on real success.", els: [box("Review — running", { dot: live }), ghost("queued message delivered ✓")] },
+        ],
+        motion: "The amber wait state must interrupt gently: one 300ms ease-in of the amber dot, then static — no blinking. The inbox badge increments with a 90ms scale tick. Answering removes the card optimistically (chip flips to running-blue immediately; a failure re-opens the card with the daemon’s reason). Cross-project waits surface only in Inbox and the bell — never as toasts stealing focus.",
+      },
+      {
+        id: "F3", title: "Closure — merged PR → workspace cleanup",
+        sub: "The lifecycle after merge is currently split across the PR tab, run context and Settings › Workspaces. Proposed: one closure story with explicit receipts.",
+        frames: [
+          { n: 1, crumb: "runs/…/pr", chip: "merged", chipBg: "rgba(163,113,247,.13)", chipColor: rev, arrow: true, cap: "Merged", note: "Outcome card is the terminal surface — no editable form remains.", els: [box("PR #183 merged into main", { dot: rev }), box("OTO-139 → Done · sync receipt", { dot: ok })] },
+          { n: 2, crumb: "auto-delete ON", arrow: true, cap: "Auto-clean", note: "Merged PR removes its clean worktree; run context records it.", els: [box("Workspace cleaned after merge", { dot: ok }), ghost("worktree removed · branch kept on remote")] },
+          { n: 3, crumb: "settings/workspaces", arrow: true, cap: "Manual path (auto-delete OFF)", note: "Cleanup-required count doubles as a bulk action next to the filters.", els: [box("7 safe to delete", { dot: warn, btn: "Clean up 7", btnBg: "rgba(63,185,80,.15)", btnFg: ok }), box("Active 12 · Cleanup 7 · Unmanaged 3", { fg: T3 })] },
+          { n: 4, crumb: "settings/workspaces", arrow: false, cap: "Reconciled", note: "Confirm dialog lists exact branches; deletion never touches active or unmanaged trees; counts re-reconcile against git.", els: [box("Delete 7 worktrees? (lists branches)", { h: "26px" }), ghost("", { btn: "Delete 7", btnBg: "transparent", btnFg: "#f2545b" }), ghost("Active 12 · Cleanup 0 · Unmanaged 3")] },
+        ],
+        motion: "Bulk delete shows per-row progress (rows collapse upward, 140ms each, sequential) so the table visibly shrinks instead of jump-cutting from 22 to 15 rows. The receipt (“7 deleted · 0 failed”) lands as an inline strip, not a toast, and stays until dismissed. Reconcile spins only the icon — the table stays interactive with stale rows dimmed to 60%.",
+      },
+    ];
+    return { flows };
+  }
+}
+</script>
+</body>
+</html>
