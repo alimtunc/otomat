@@ -1,7 +1,7 @@
-import type { WorkspaceEntry } from "@otomat/domain";
 import type { TableCellProps } from "@web/lib/table";
+import type { WorkspaceRow } from "@web/lib/workspace/row";
 
-export function WorkspacePullRequestCell({ row }: TableCellProps<WorkspaceEntry, unknown>) {
+export function WorkspacePullRequestCell({ row }: TableCellProps<WorkspaceRow, unknown>) {
   const pullRequest = row.original.pull_request;
   if (pullRequest === null) return <span className="text-text-tertiary">—</span>;
   const label = `#${pullRequest.number ?? "?"}${pullRequest.merged ? " merged" : ""}`;

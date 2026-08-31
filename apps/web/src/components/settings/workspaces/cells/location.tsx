@@ -1,8 +1,8 @@
-import type { WorkspaceEntry } from "@otomat/domain";
 import { CopyablePath } from "@web/components/runs/copyable-path";
 import type { TableCellProps } from "@web/lib/table";
+import type { WorkspaceRow } from "@web/lib/workspace/row";
 
-export function WorkspaceLocationCell({ row }: TableCellProps<WorkspaceEntry, unknown>) {
+export function WorkspaceLocationCell({ row }: TableCellProps<WorkspaceRow, unknown>) {
   const { branch, path } = row.original;
   return (
     <span className="flex min-w-0 flex-col gap-0.5">

@@ -1,6 +1,8 @@
 import {
   isExecutionHostId,
+  type ExecutionHostCallResult,
   type ExecutionHostCapacityResult,
+  type ExecutionHostId,
   type ExecutionHostOperationResult,
   type ExecutionHostProjectsEntry,
   type ExecutionHostRegisterProjectResult,
@@ -8,11 +10,15 @@ import {
   type ExecutionHostSnapshot,
   type RemoteInstanceListResult,
   type RemoteRepositoryListResult,
+  type WorkspaceCleanupResult,
+  type WorkspaceInventory,
+  type WorkspaceReconcileReport,
 } from "@otomat/domain";
 
 import type { ExecutionHostSync } from "#shared/execution-host-sync";
 
 import type { HostCapacityActions } from "./host/capacity.js";
+import type { HostCatalog } from "./host/catalog.js";
 import { listRemoteRepositories } from "./host/repos.js";
 import { executionHostSnapshot } from "./host/snapshot.js";
 import type { RemoteInstanceActions } from "./instances/actions.js";
@@ -36,6 +42,12 @@ export interface ExecutionHostIpcActions {
   listProjects(): Promise<ExecutionHostProjectsEntry[]>;
   listRepositories(): Promise<ExecutionHostRepositoriesEntry[]>;
   deleteRepository(hostId: unknown, repositoryId: unknown): Promise<ExecutionHostOperationResult>;
+  readWorkspaces(hostId: unknown): Promise<ExecutionHostCallResult<WorkspaceInventory>>;
+  reconcileWorkspaces(hostId: unknown): Promise<ExecutionHostCallResult<WorkspaceReconcileReport>>;
+  cleanupWorkspace(
+    hostId: unknown,
+    worktreeId: unknown,
+  ): Promise<ExecutionHostCallResult<WorkspaceCleanupResult>>;
   listInstances(): Promise<RemoteInstanceListResult>;
   stopInstance(build: unknown): Promise<ExecutionHostOperationResult>;
   deleteInstance(build: unknown): Promise<ExecutionHostOperationResult>;
@@ -45,6 +57,16 @@ export interface ExecutionHostIpcActions {
 const NOT_READY_MESSAGE = "The desktop runtime is not ready yet.";
 
 const NOT_READY: ExecutionHostOperationResult = { ok: false, message: NOT_READY_MESSAGE };
+
+async function onOwningHost<T>(
+  hosts: ExecutionHostManager | null,
+  hostId: unknown,
+  call: (catalog: HostCatalog, id: ExecutionHostId) => Promise<ExecutionHostCallResult<T>>,
+): Promise<ExecutionHostCallResult<T>> {
+  if (hosts === null) return { ok: false, message: NOT_READY_MESSAGE };
+  if (!isExecutionHostId(hostId)) return { ok: false, message: "Unknown execution host." };
+  return call(hosts.catalog, hostId);
+}
 
 export function buildExecutionHostActions(
   manager: () => ExecutionHostManager | null,
@@ -125,6 +147,16 @@ export function buildExecutionHostActions(
         return { ok: false, message: "Unknown repository." };
       }
       return hosts.catalog.deleteRepository(hostId, repositoryId);
+    },
+    readWorkspaces: async (hostId: unknown) =>
+      onOwningHost(manager(), hostId, (catalog, id) => catalog.readWorkspaces(id)),
+    reconcileWorkspaces: async (hostId: unknown) =>
+      onOwningHost(manager(), hostId, (catalog, id) => catalog.reconcileWorkspaces(id)),
+    cleanupWorkspace: async (hostId: unknown, worktreeId: unknown) => {
+      if (typeof worktreeId !== "string") return { ok: false, message: "Unknown workspace." };
+      return onOwningHost(manager(), hostId, (catalog, id) =>
+        catalog.cleanupWorkspace(id, worktreeId),
+      );
     },
     listInstances: async () => instances()?.list() ?? { ok: false, message: NOT_READY_MESSAGE },
     stopInstance: async (build: unknown) => instances()?.stop(build) ?? NOT_READY,

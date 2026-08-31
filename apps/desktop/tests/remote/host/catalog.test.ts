@@ -1,4 +1,4 @@
-import type { RemoteHostStatus } from "@otomat/domain";
+import { countWorkspaces, type RemoteHostStatus } from "@otomat/domain";
 import { expect, it, vi } from "vitest";
 
 import { HostCatalog, type HostCatalogOptions } from "#main/remote/host/catalog";
@@ -17,6 +17,8 @@ const REPOSITORY = {
   init_commands: [],
   available: true,
 };
+
+const EMPTY_INVENTORY = { entries: [], counts: countWorkspaces([]) };
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -122,4 +124,77 @@ it("refuses a delete on a host it cannot reach rather than falling back to the l
     message: "The remote host is not connected yet. Try again once its tunnel is up.",
   });
   expect(fetchImpl).not.toHaveBeenCalled();
+});
+
+it("reads the worktrees of the host that was named, on that host alone", async () => {
+  const fetchImpl = vi.fn(() => Promise.resolve(jsonResponse(EMPTY_INVENTORY)));
+
+  const result = await catalog(fetchImpl).catalog.readWorkspaces("remote");
+
+  expect(result).toEqual({ ok: true, value: EMPTY_INVENTORY });
+  expect(fetchImpl).toHaveBeenCalledWith(`${REMOTE_URL}/api/workspaces`, undefined);
+});
+
+it("says why an unreachable host could not be read instead of answering for it", async () => {
+  const fetchImpl = vi.fn(() => Promise.resolve(jsonResponse(EMPTY_INVENTORY)));
+
+  const result = await catalog(fetchImpl, {
+    remoteSession: () => session({ phase: "disconnected", detail: null }, null),
+  }).catalog.readWorkspaces("remote");
+
+  expect(result).toEqual({
+    ok: false,
+    message: "The remote host is not connected yet. Try again once its tunnel is up.",
+  });
+  expect(fetchImpl).not.toHaveBeenCalled();
+});
+
+it("reconciles and cleans on the owning host alone", async () => {
+  const fetchImpl = vi.fn((url: string) =>
+    Promise.resolve(
+      jsonResponse(
+        url.endsWith("/reconcile")
+          ? {
+              pull_requests_refreshed: 0,
+              pruned: 0,
+              converged: 0,
+              cleaned: 1,
+              skipped: 0,
+              failed: 0,
+              inventory: EMPTY_INVENTORY,
+            }
+          : { outcome: "cleaned", blocker: null, message: "Deleted.", entry: null },
+      ),
+    ),
+  );
+  const hosts = catalog(fetchImpl).catalog;
+
+  const reconciled = await hosts.reconcileWorkspaces("remote");
+  const cleaned = await hosts.cleanupWorkspace("remote", "w-1");
+
+  expect(reconciled.ok && reconciled.value.cleaned).toBe(1);
+  expect(cleaned.ok && cleaned.value.outcome).toBe("cleaned");
+  expect(fetchImpl).toHaveBeenCalledWith(
+    `${REMOTE_URL}/api/workspaces/reconcile`,
+    expect.objectContaining({ method: "POST" }),
+  );
+  expect(fetchImpl).toHaveBeenCalledWith(
+    `${REMOTE_URL}/api/workspaces/w-1/cleanup`,
+    expect.objectContaining({ method: "POST" }),
+  );
+});
+
+it("forwards a refusal as prose rather than deleting on another host", async () => {
+  const fetchImpl = vi.fn(() =>
+    Promise.resolve(jsonResponse({ error: "workspace_not_found", message: "gone" }, 404)),
+  );
+
+  expect(await catalog(fetchImpl).catalog.cleanupWorkspace("remote", "w-1")).toEqual({
+    ok: false,
+    message: "The remote daemon refused the request (HTTP 404).",
+  });
+  expect(fetchImpl).toHaveBeenCalledWith(
+    `${REMOTE_URL}/api/workspaces/w-1/cleanup`,
+    expect.objectContaining({ method: "POST" }),
+  );
 });

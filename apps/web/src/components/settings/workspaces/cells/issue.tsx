@@ -1,10 +1,10 @@
-import type { WorkspaceEntry } from "@otomat/domain";
 import { FOCUS_RING } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { shortId } from "@web/lib/ids";
 import type { TableCellProps } from "@web/lib/table";
+import type { WorkspaceRow } from "@web/lib/workspace/row";
 
-export function WorkspaceIssueCell({ row }: TableCellProps<WorkspaceEntry, unknown>) {
+export function WorkspaceIssueCell({ row }: TableCellProps<WorkspaceRow, unknown>) {
   const { issue_id: issueId, issue_identifier: identifier, issue_title: title } = row.original;
   if (issueId === null) return <span className="text-text-tertiary">—</span>;
   return (

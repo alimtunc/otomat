@@ -14,6 +14,7 @@ import { useRunDetail } from "@web/api/runs/queries";
 import { useWorkspacesForRun } from "@web/api/workspaces/queries";
 import { AbandonWorkspaceDialog } from "@web/components/runs/actions/abandon-workspace-dialog";
 import { CleanWorkspaceDialog } from "@web/components/runs/actions/clean-workspace-dialog";
+import { activeExecutionHostId } from "@web/lib/desktop-bridge";
 import { canAbortRun } from "@web/lib/run/actions";
 import { resumeModeNote } from "@web/lib/run/resume-mode";
 import { useState } from "react";
@@ -81,7 +82,12 @@ export function RunActionsMenu({ runId, stretch = false }: RunActionsMenuProps) 
       </DropdownMenu>
       <AbandonWorkspaceDialog runId={runId} open={abandoning} onOpenChange={setAbandoning} />
       {cleanable === null ? null : (
-        <CleanWorkspaceDialog entry={cleanable} open={cleaning} onOpenChange={setCleaning} />
+        <CleanWorkspaceDialog
+          entry={cleanable}
+          hostId={activeExecutionHostId()}
+          open={cleaning}
+          onOpenChange={setCleaning}
+        />
       )}
     </>
   );

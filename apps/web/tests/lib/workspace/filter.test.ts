@@ -1,13 +1,17 @@
-import type { WorkspaceEntry } from "@otomat/domain";
 import {
   DEFAULT_WORKSPACES_FILTER,
   filterWorkspaces,
   groupWorkspacesByRepository,
 } from "@web/lib/workspace/filter";
+import type { WorkspaceRow } from "@web/lib/workspace/row";
 import { expect, it } from "vitest";
 
-function entry(over: Partial<WorkspaceEntry> & { id: string }): WorkspaceEntry {
+const LOCAL = { id: "local", label: "Local", kind: "local" } as const;
+const REMOTE = { id: "remote", label: "otomat-vps", kind: "ssh" } as const;
+
+function entry(over: Partial<WorkspaceRow> & { id: string }): WorkspaceRow {
   return {
+    host: LOCAL,
     repository_id: "repo-1",
     repository_name: "otomat",
     repository_path: "/tmp/otomat",
@@ -76,5 +80,13 @@ it("groups by repository, keeping every entry under the checkout it belongs to",
   ]);
 
   expect(groups.map((group) => group.name)).toEqual(["otomat", "other"]);
-  expect(groups[0].entries.map((row) => row.id)).toEqual(["a", "c"]);
+  expect(groups[0].rows.map((row) => row.id)).toEqual(["a", "c"]);
+});
+
+it("searches the owning host, so its label narrows to that host's rows alone", () => {
+  const rows = [entry({ id: "a" }), entry({ id: "a", host: REMOTE })];
+
+  expect(
+    filterWorkspaces(rows, { search: "otomat-vps", states: [] }).map((row) => row.host.id),
+  ).toEqual(["remote"]);
 });

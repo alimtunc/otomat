@@ -2,6 +2,7 @@ import { createDaemonClient, DaemonRequestError, DaemonTransportError } from "@o
 import {
   repositoryDeletionErrorSchema,
   repositoryRegistrationErrorSchema,
+  type ExecutionHostCallResult,
   type ExecutionHostDescriptor,
   type ExecutionHostId,
   type ExecutionHostOperationResult,
@@ -9,6 +10,9 @@ import {
   type ExecutionHostRegisterProjectResult,
   type ExecutionHostRepositoriesEntry,
   type RemoteHostStatus,
+  type WorkspaceCleanupResult,
+  type WorkspaceInventory,
+  type WorkspaceReconcileReport,
 } from "@otomat/domain";
 
 import type { RemoteSessionHandle } from "../session.js";
@@ -125,6 +129,25 @@ export class HostCatalog {
     }
   }
 
+  async readWorkspaces(
+    hostId: ExecutionHostId,
+  ): Promise<ExecutionHostCallResult<WorkspaceInventory>> {
+    return this.call(hostId, (client) => client.listWorkspaces());
+  }
+
+  async reconcileWorkspaces(
+    hostId: ExecutionHostId,
+  ): Promise<ExecutionHostCallResult<WorkspaceReconcileReport>> {
+    return this.call(hostId, (client) => client.reconcileWorkspaces());
+  }
+
+  async cleanupWorkspace(
+    hostId: ExecutionHostId,
+    worktreeId: string,
+  ): Promise<ExecutionHostCallResult<WorkspaceCleanupResult>> {
+    return this.call(hostId, (client) => client.cleanupWorkspace(worktreeId));
+  }
+
   /** Asking warms an idle remote host. */
   resolveBaseUrl(hostId: ExecutionHostId): ResolvedDaemonUrl {
     if (hostId === "local") {
@@ -168,6 +191,33 @@ export class HostCatalog {
 
   private client(baseUrl: string): DaemonClient {
     return createDaemonClient({ baseUrl, fetch: this.options.fetchImpl });
+  }
+
+  /** Runs one call on the owning host's daemon alone; an unreachable or refusing host answers with prose. */
+  private async call<T>(
+    hostId: ExecutionHostId,
+    run: (client: DaemonClient) => Promise<T>,
+  ): Promise<ExecutionHostCallResult<T>> {
+    const target = this.resolveBaseUrl(hostId);
+    if ("message" in target) return { ok: false, message: target.message };
+    try {
+      return { ok: true, value: await run(this.client(target.url)) };
+    } catch (error) {
+      if (error instanceof DaemonRequestError) {
+        return {
+          ok: false,
+          message: `The ${hostId} daemon refused the request (HTTP ${error.status}).`,
+        };
+      }
+      if (error instanceof DaemonTransportError) {
+        this.options.log(`Call on ${hostId} failed: ${String(error.cause)}`);
+        return {
+          ok: false,
+          message: `Could not reach the ${hostId} daemon: ${String(error.cause)}`,
+        };
+      }
+      return { ok: false, message: `The ${hostId} daemon answered in an unknown format.` };
+    }
   }
 
   /** Unreachable, refused or invalid reads null (never a throw), so one dead host cannot blank a listing. */

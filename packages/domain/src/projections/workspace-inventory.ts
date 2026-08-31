@@ -2,6 +2,8 @@ import type { WorktreeStatus } from "../contracts/entities/workspace.js";
 import type {
   WorkspaceAttachment,
   WorkspaceCleanupBlocker,
+  WorkspaceCounts,
+  WorkspaceEntry,
   WorkspaceState,
 } from "../contracts/workspace-inventory.js";
 
@@ -76,4 +78,18 @@ export function describeWorkspace(
   }
   if (verdict.blocker === null) return STATE_REASONS[verdict.state];
   return BLOCKER_REASONS[verdict.blocker];
+}
+
+export function countWorkspaces(entries: readonly WorkspaceEntry[]): WorkspaceCounts {
+  const counts: WorkspaceCounts = {
+    active: 0,
+    cleanup_required: 0,
+    stale: 0,
+    missing: 0,
+    unmanaged: 0,
+  };
+  for (const entry of entries) {
+    if (entry.state !== "removed") counts[entry.state] += 1;
+  }
+  return counts;
 }

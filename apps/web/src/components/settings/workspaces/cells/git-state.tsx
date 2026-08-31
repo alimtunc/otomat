@@ -1,8 +1,8 @@
-import type { WorkspaceEntry } from "@otomat/domain";
 import { RelativeTime } from "@otomat/ui";
 import type { TableCellProps } from "@web/lib/table";
+import type { WorkspaceRow } from "@web/lib/workspace/row";
 
-export function WorkspaceGitStateCell({ row }: TableCellProps<WorkspaceEntry, unknown>) {
+export function WorkspaceGitStateCell({ row }: TableCellProps<WorkspaceRow, unknown>) {
   const { present, dirty, last_activity_at: lastActivity } = row.original;
   let git = "clean";
   if (!present) git = "gone from disk";

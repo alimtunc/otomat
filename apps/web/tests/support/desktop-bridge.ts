@@ -1,4 +1,13 @@
-import type { ExecutionHostSnapshot, OtomatDesktopBridge } from "@otomat/domain";
+import {
+  countWorkspaces,
+  type ExecutionHostSnapshot,
+  type OtomatDesktopBridge,
+  type WorkspaceInventory,
+} from "@otomat/domain";
+
+function emptyInventory(): WorkspaceInventory {
+  return { entries: [], counts: countWorkspaces([]) };
+}
 
 export function twoHostSnapshot(
   overrides: Partial<ExecutionHostSnapshot> = {},
@@ -70,6 +79,25 @@ export function fakeDesktopBridge(
       listProjects: () => Promise.resolve([]),
       listRepositories: () => Promise.resolve([]),
       deleteRepository: () => Promise.resolve({ ok: true as const }),
+      readWorkspaces: () => Promise.resolve({ ok: true as const, value: emptyInventory() }),
+      reconcileWorkspaces: () =>
+        Promise.resolve({
+          ok: true as const,
+          value: {
+            pull_requests_refreshed: 0,
+            pruned: 0,
+            converged: 0,
+            cleaned: 0,
+            skipped: 0,
+            failed: 0,
+            inventory: emptyInventory(),
+          },
+        }),
+      cleanupWorkspace: () =>
+        Promise.resolve({
+          ok: true as const,
+          value: { outcome: "cleaned" as const, blocker: null, message: "Deleted.", entry: null },
+        }),
       onRemoteStatus: () => () => {},
       listInstances: () => Promise.resolve({ ok: true as const, instances: [] }),
       stopInstance: () => Promise.resolve({ ok: true as const }),
