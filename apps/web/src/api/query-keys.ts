@@ -21,11 +21,11 @@ export const queryKeys = {
     ["diagnostics", "logs", correlationId] as const,
   githubConnection: ["github", "connection"] as const,
   linear: ["linear"] as const,
-  linearConnection: ["linear", "connection"] as const,
+  linearConnections: ["linear", "connections"] as const,
   issueSources: ["linear", "sources"] as const,
-  linearWorkspaceFor: (workspaceId: string | null) => ["linear", "workspace", workspaceId] as const,
-  issueSourcesFor: (workspaceId: string | null, projectId?: string) =>
-    ["linear", "sources", workspaceId, projectId ?? null] as const,
+  linearWorkspaceFor: (connectionId: string | null) =>
+    ["linear", "workspace", connectionId] as const,
+  issueSourcesFor: (projectId?: string) => ["linear", "sources", projectId ?? null] as const,
   linearSyncStatus: (projectId: string) => ["linear", "sync-status", projectId] as const,
   linearSync: (projectId: string) => ["linear", "sync", projectId] as const,
   projects: ["projects"] as const,

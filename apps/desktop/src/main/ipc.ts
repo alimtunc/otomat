@@ -61,8 +61,8 @@ export interface IpcState {
 }
 
 export interface IpcActions {
-  saveLinearKey(apiKey: unknown): Promise<LinearVaultOperationResult>;
-  forgetLinearKey(): Promise<LinearVaultOperationResult>;
+  saveLinearKey(request: unknown): Promise<LinearVaultOperationResult>;
+  forgetLinearKey(connectionId: unknown): Promise<LinearVaultOperationResult>;
   linearDelivery(): LinearDeliverySnapshot;
   restoreBackup(): Promise<void>;
   exportSupportBundle(): Promise<void>;
@@ -175,11 +175,13 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
     return result.filePaths[0] ?? null;
   });
 
-  ipcMain.handle(LINEAR_SAVE_KEY_CHANNEL, (_event, apiKey: unknown) =>
-    actions.saveLinearKey(apiKey),
+  ipcMain.handle(LINEAR_SAVE_KEY_CHANNEL, (_event, request: unknown) =>
+    actions.saveLinearKey(request),
   );
 
-  ipcMain.handle(LINEAR_FORGET_KEY_CHANNEL, () => actions.forgetLinearKey());
+  ipcMain.handle(LINEAR_FORGET_KEY_CHANNEL, (_event, connectionId: unknown) =>
+    actions.forgetLinearKey(connectionId),
+  );
   ipcMain.handle(LINEAR_DELIVERY_CHANNEL, () => actions.linearDelivery());
   ipcMain.handle(SPLASH_RESTORE_CHANNEL, () => actions.restoreBackup());
   ipcMain.handle(SPLASH_EXPORT_SUPPORT_CHANNEL, () => actions.exportSupportBundle());

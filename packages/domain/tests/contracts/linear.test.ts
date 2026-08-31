@@ -14,15 +14,19 @@ import {
   saveLinearDraftRequestSchema,
 } from "#domain/contracts/linear";
 
+const CONNECTION = {
+  id: "c-otomat",
+  label: "Otomat",
+  workspace_id: "workspace-1",
+  workspace_name: "Otomat",
+  user_name: "Alim",
+  status: "connected",
+  error_code: null,
+  error_message: null,
+};
+
 it("carries honest connection state without credentials", () => {
-  const connection = linearConnectionContractSchema.parse({
-    status: "connected",
-    workspace_id: "workspace-1",
-    workspace_name: "Otomat",
-    user_name: "Alim",
-    error_code: null,
-    error_message: null,
-  });
+  const connection = linearConnectionContractSchema.parse(CONNECTION);
 
   expect(Object.keys(connection)).not.toContain("api_key");
   expect(JSON.stringify(connection)).not.toContain("lin_api");
@@ -30,43 +34,37 @@ it("carries honest connection state without credentials", () => {
 
 it("strips a key smuggled into the connection contract", () => {
   const connection = linearConnectionContractSchema.parse({
-    status: "connected",
-    workspace_id: "workspace-1",
-    workspace_name: "Otomat",
-    user_name: "Alim",
-    error_code: null,
-    error_message: null,
+    ...CONNECTION,
     api_key: "lin_api_secret",
   });
 
   expect(JSON.stringify(connection)).not.toContain("lin_api_secret");
 });
 
-it("accepts only the key on the connect request", () => {
-  expect(connectLinearRequestSchema.parse({ api_key: "lin_api_secret" })).toEqual({
-    api_key: "lin_api_secret",
-  });
-  expect(connectLinearRequestSchema.safeParse({ api_key: "" }).success).toBe(false);
-  expect(connectLinearRequestSchema.safeParse({ api_key: "k", persist: true }).success).toBe(false);
+it("accepts only an identified key on the connect request", () => {
+  const request = { id: "c-otomat", label: "Otomat", api_key: "lin_api_secret" };
+  expect(connectLinearRequestSchema.parse(request)).toEqual(request);
+  expect(connectLinearRequestSchema.safeParse({ ...request, api_key: "" }).success).toBe(false);
+  expect(connectLinearRequestSchema.safeParse({ ...request, label: "" }).success).toBe(false);
+  expect(connectLinearRequestSchema.safeParse({ api_key: "k" }).success).toBe(false);
+  expect(connectLinearRequestSchema.safeParse({ ...request, persist: true }).success).toBe(false);
 });
 
-it("ties connection payloads to their status", () => {
+it("keeps an identified connection legible before and after it authenticates", () => {
   expect(
     linearConnectionContractSchema.safeParse({
-      status: "connected",
-      workspace_id: null,
-      workspace_name: null,
-      user_name: null,
-      error_code: null,
-      error_message: null,
+      ...CONNECTION,
+      status: "disconnected",
+      workspace_id: "",
+      workspace_name: "",
+      user_name: "",
     }).success,
-  ).toBe(false);
+  ).toBe(true);
+  expect(linearConnectionContractSchema.safeParse({ ...CONNECTION, id: "" }).success).toBe(false);
   expect(
     linearConnectionContractSchema.safeParse({
+      ...CONNECTION,
       status: "failed",
-      workspace_id: null,
-      workspace_name: null,
-      user_name: null,
       error_code: "unknown",
       error_message: "Nope",
     }).success,
@@ -76,6 +74,7 @@ it("ties connection payloads to their status", () => {
 it("accepts only provider IDs and keeps labels server-owned", () => {
   const team = {
     project_id: "local-1",
+    connection_id: "c-otomat",
     external_team_id: "team-1",
   };
   expect(createIssueSourceRequestSchema.safeParse(team).success).toBe(true);
@@ -94,6 +93,7 @@ it("ties persisted project labels to their project ids", () => {
   const source = {
     id: "source-1",
     project_id: "local-1",
+    connection_id: "c-otomat",
     source: "linear",
     external_team_id: "team-1",
     external_team_key: "OTO",

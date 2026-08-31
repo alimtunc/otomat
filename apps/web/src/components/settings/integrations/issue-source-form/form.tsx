@@ -8,14 +8,22 @@ import { useIssueSourceForm } from "./use-form";
 
 export interface IssueSourceFormProps {
   workspace: LinearWorkspaceContract;
+  /** The connection whose workspace is shown; every source this form creates names it. */
+  connectionId: string;
   projects: ProjectContract[];
   onCreated?: () => void;
 }
 
-export function IssueSourceForm({ workspace, projects, onCreated }: IssueSourceFormProps) {
+export function IssueSourceForm({
+  workspace,
+  connectionId,
+  projects,
+  onCreated,
+}: IssueSourceFormProps) {
   const { form, pending, submitError, teamOptions, projectOptions } = useIssueSourceForm(
     workspace,
     projects,
+    connectionId,
     onCreated,
   );
 

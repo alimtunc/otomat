@@ -8,6 +8,7 @@ import type {
   ExecutionHostProjectsEntry,
   ExecutionHostRegisterProjectResult,
   ExecutionHostRepositoriesEntry,
+  ConnectLinearRequest,
   ExecutionHostSnapshot,
   LinearDeliverySnapshot,
   LinearVaultOperationResult,
@@ -152,10 +153,10 @@ contextBridge.exposeInMainWorld("otomat", {
       ipcRenderer.invoke(EXECUTION_HOST_UPDATE_DAEMON_CHANNEL),
   },
   linear: {
-    saveKey: (apiKey: string): Promise<LinearVaultOperationResult> =>
-      ipcRenderer.invoke(LINEAR_SAVE_KEY_CHANNEL, apiKey),
-    forgetKey: (): Promise<LinearVaultOperationResult> =>
-      ipcRenderer.invoke(LINEAR_FORGET_KEY_CHANNEL),
+    saveKey: (request: ConnectLinearRequest): Promise<LinearVaultOperationResult> =>
+      ipcRenderer.invoke(LINEAR_SAVE_KEY_CHANNEL, request),
+    forgetKey: (connectionId: string): Promise<LinearVaultOperationResult> =>
+      ipcRenderer.invoke(LINEAR_FORGET_KEY_CHANNEL, connectionId),
     delivery: (): Promise<LinearDeliverySnapshot> => ipcRenderer.invoke(LINEAR_DELIVERY_CHANNEL),
     onDelivery: (listener: (snapshot: LinearDeliverySnapshot) => void): (() => void) => {
       const wrapped = (_event: IpcRendererEvent, snapshot: LinearDeliverySnapshot): void =>

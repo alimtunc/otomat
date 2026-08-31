@@ -13,7 +13,7 @@ import { buildExecutionHostActions } from "./remote/ipc-actions.js";
 import type { DesktopRuntime } from "./runtime.js";
 import type { DesktopSupport } from "./support.js";
 
-const NO_DELIVERY: LinearDeliverySnapshot = { stored: false, hosts: [] };
+const NO_DELIVERY: LinearDeliverySnapshot = { connections: [] };
 
 const NOT_READY: LinearVaultOperationResult = {
   ok: false,
@@ -37,8 +37,10 @@ export interface IpcActionContext {
 /** Every renderer-facing action, bound to the runtime and degrading honestly before it exists. */
 export function buildIpcActions(context: IpcActionContext): IpcActions {
   return {
-    saveLinearKey: (apiKey) => context.runtime()?.linear.save(apiKey) ?? Promise.resolve(NOT_READY),
-    forgetLinearKey: () => context.runtime()?.linear.forget() ?? Promise.resolve(NOT_READY),
+    saveLinearKey: (request) =>
+      context.runtime()?.linear.save(request) ?? Promise.resolve(NOT_READY),
+    forgetLinearKey: (connectionId) =>
+      context.runtime()?.linear.forget(connectionId) ?? Promise.resolve(NOT_READY),
     linearDelivery: () => context.runtime()?.linear.snapshot() ?? NO_DELIVERY,
     restoreBackup: () => context.restoreBackup(),
     exportSupportBundle: () => context.support.exportBundleWithFeedback(),

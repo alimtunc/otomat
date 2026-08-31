@@ -24,6 +24,7 @@ const EXPECTED_TABLES = [
   "pull_requests",
   "sync_state",
   "issue_sources",
+  "linear_connections",
   "linear_issue_drafts",
   "linear_writes",
   "daemon_settings",

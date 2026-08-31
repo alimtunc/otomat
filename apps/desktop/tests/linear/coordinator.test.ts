@@ -3,12 +3,13 @@ import { afterEach, expect, it, vi } from "vitest";
 import { LinearCoordinator } from "#main/linear/coordinator";
 import type { LinearVault } from "#shared/linear-vault";
 import {
-  CONNECTED,
-  DISCONNECTED,
+  connected,
+  CRM,
   FakeDaemon,
   harness,
   LOCAL_URL,
   memoryVault,
+  OTOMAT,
   reachable,
   REMOTE_URL,
   routeDaemons,
@@ -47,34 +48,34 @@ it("serializes save then forget so a delayed connect cannot restore a forgotten 
   const fetch = vi
     .fn<typeof globalThis.fetch>()
     .mockImplementationOnce(() => connectResponse.promise)
-    .mockResolvedValueOnce(Response.json(DISCONNECTED));
+    .mockResolvedValueOnce(new Response(null, { status: 204 }));
   vi.stubGlobal("fetch", fetch);
   const vault = memoryVault();
   const coordinator = localOnly(vault);
 
-  const save = coordinator.save("first-key");
-  const forget = coordinator.forget();
+  const save = coordinator.save(OTOMAT);
+  const forget = coordinator.forget(OTOMAT.id);
   await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
-  connectResponse.resolve(Response.json(CONNECTED));
+  connectResponse.resolve(Response.json(connected(OTOMAT.id, OTOMAT.label)));
 
   await expect(save).resolves.toEqual({ ok: true, message: null });
   await expect(forget).resolves.toEqual({ ok: true, message: null });
   expect(fetch).toHaveBeenCalledTimes(2);
-  expect(vault.stored()).toBeNull();
+  expect(vault.stored()).toEqual({});
 });
 
 it("reports a vault deletion failure without disconnecting any daemon", async () => {
   const fetch = vi.fn();
   vi.stubGlobal("fetch", fetch);
   const vault: LinearVault = {
-    clear: () => {
+    forget: () => {
       throw new Error("keychain unavailable");
     },
-    load: () => null,
+    load: () => ({}),
     save: vi.fn(),
   };
 
-  await expect(localOnly(vault).forget()).resolves.toEqual({
+  await expect(localOnly(vault).forget(OTOMAT.id)).resolves.toEqual({
     ok: false,
     message: "keychain unavailable",
     error_code: null,
@@ -96,9 +97,9 @@ it("never persists a key when the daemon rejects its superseded connection", asy
     ),
   );
   const save = vi.fn();
-  const vault: LinearVault = { clear: vi.fn(), load: () => null, save };
+  const vault: LinearVault = { forget: vi.fn(), load: () => ({}), save };
 
-  await expect(localOnly(vault).save("first-key")).resolves.toEqual({
+  await expect(localOnly(vault).save(OTOMAT)).resolves.toEqual({
     ok: false,
     message: "A newer Linear connection state replaced this request.",
     error_code: "linear_request_superseded",
@@ -106,11 +107,11 @@ it("never persists a key when the daemon rejects its superseded connection", asy
   expect(save).not.toHaveBeenCalled();
 });
 
-it("logs the restoration cause without rejecting desktop startup", async () => {
+it("logs an unreadable vault without rejecting desktop startup", async () => {
   const decryptionError = new Error("decryption failed");
   const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
   const vault: LinearVault = {
-    clear: vi.fn(),
+    forget: vi.fn(),
     load: () => {
       throw decryptionError;
     },
@@ -119,7 +120,7 @@ it("logs the restoration cause without rejecting desktop startup", async () => {
 
   await expect(localOnly(vault).reconcile()).resolves.toBeUndefined();
   expect(log).toHaveBeenCalledWith(
-    "[otomat-desktop] restoring the Linear connection failed",
+    "[otomat-desktop] reading the Linear vault failed",
     decryptionError,
   );
 });
@@ -131,43 +132,109 @@ it("hands one saved key to every reachable host", async () => {
   const vault = memoryVault();
   const app = harness(vault, [reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
 
-  await expect(app.coordinator.save("lin_api_key")).resolves.toEqual({ ok: true, message: null });
+  await expect(app.coordinator.save(OTOMAT)).resolves.toEqual({ ok: true, message: null });
 
-  expect(local.connectCount).toBe(1);
-  expect(remote.connectCount).toBe(1);
-  expect(local.key).toBe("lin_api_key");
-  expect(remote.key).toBe("lin_api_key");
-  expect(vault.stored()).toBe("lin_api_key");
-  expect(app.state("local")).toBe("delivered");
-  expect(app.state("remote")).toBe("delivered");
+  expect(local.keys.get(OTOMAT.id)).toBe(OTOMAT.api_key);
+  expect(remote.keys.get(OTOMAT.id)).toBe(OTOMAT.api_key);
+  expect(vault.stored()).toEqual({ [OTOMAT.id]: OTOMAT.api_key });
+  expect(app.state(OTOMAT.id, "local")).toBe("delivered");
+  expect(app.state(OTOMAT.id, "remote")).toBe("delivered");
 
   // A host that stops answering can no longer be reported as delivered, only as unreachable.
   app.setTargets([reachable("local", LOCAL_URL), unreachable("remote", HOST_DOWN)]);
   await app.coordinator.reconcile();
-  expect(app.state("remote")).toBe("unavailable");
+  expect(app.state(OTOMAT.id, "remote")).toBe("unavailable");
 });
 
-it("restores the vaulted key on every host at boot", async () => {
+it("keeps two workspaces on every host without mixing their keys", async () => {
   const local = new FakeDaemon(LOCAL_URL);
   const remote = new FakeDaemon(REMOTE_URL);
   routeDaemons([local, remote]);
-  const app = harness(memoryVault("lin_api_key"), [
+  const vault = memoryVault();
+  const app = harness(vault, [reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
+
+  await app.coordinator.save(OTOMAT);
+  await app.coordinator.save(CRM);
+
+  expect(vault.stored()).toEqual({ [OTOMAT.id]: OTOMAT.api_key, [CRM.id]: CRM.api_key });
+  for (const daemon of [local, remote]) {
+    expect(daemon.keys.get(OTOMAT.id)).toBe(OTOMAT.api_key);
+    expect(daemon.keys.get(CRM.id)).toBe(CRM.api_key);
+  }
+  expect(app.state(CRM.id, "remote")).toBe("delivered");
+});
+
+it("leaves the other connection delivered when one is disconnected", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  routeDaemons([local]);
+  const vault = memoryVault();
+  const app = harness(vault, [reachable("local", LOCAL_URL)]);
+  await app.coordinator.save(OTOMAT);
+  await app.coordinator.save(CRM);
+
+  await expect(app.coordinator.forget(CRM.id)).resolves.toEqual({ ok: true, message: null });
+
+  expect(vault.stored()).toEqual({ [OTOMAT.id]: OTOMAT.api_key });
+  expect(local.holds(OTOMAT.id)).toBe(true);
+  expect(local.holds(CRM.id)).toBe(false);
+  expect(app.state(OTOMAT.id, "local")).toBe("delivered");
+});
+
+it("keeps a forgotten connection listed while a host still owes its revocation", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  routeDaemons([local]);
+  const app = harness(memoryVault(), [reachable("local", LOCAL_URL)]);
+  await app.coordinator.save(OTOMAT);
+
+  app.setTargets([unreachable("local", HOST_DOWN)]);
+  await app.coordinator.forget(OTOMAT.id);
+
+  const owed = app.deliveries.at(-1)?.connections.find((c) => c.connection_id === OTOMAT.id);
+  expect(owed).toBeDefined();
+  expect(app.state(OTOMAT.id, "local")).toBe("pending_revocation");
+});
+
+it("keeps delivering the healthy connection when another one is refused", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  routeDaemons([local]);
+  local.rejects = CRM.api_key;
+  const vault = memoryVault();
+  const app = harness(vault, [reachable("local", LOCAL_URL)]);
+  await app.coordinator.save(OTOMAT);
+
+  const refused = await app.coordinator.save(CRM);
+
+  expect(refused).toEqual({
+    ok: false,
+    message: "Linear rejected the API key.",
+    error_code: "linear_unauthorized",
+  });
+  expect(vault.stored()).toEqual({ [OTOMAT.id]: OTOMAT.api_key });
+  expect(local.holds(OTOMAT.id)).toBe(true);
+  expect(app.state(OTOMAT.id, "local")).toBe("delivered");
+});
+
+it("restores every vaulted key on every host at boot", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  routeDaemons([local, remote]);
+  const app = harness(memoryVault({ [OTOMAT.id]: OTOMAT.api_key, [CRM.id]: CRM.api_key }), [
     reachable("local", LOCAL_URL),
     reachable("remote", REMOTE_URL),
   ]);
 
   await app.coordinator.reconcile();
 
-  expect(local.connectCount).toBe(1);
-  expect(remote.connectCount).toBe(1);
-  expect(app.state("remote")).toBe("delivered");
+  expect(local.connectCount).toBe(2);
+  expect(remote.connectCount).toBe(2);
+  expect(app.state(CRM.id, "remote")).toBe("delivered");
 });
 
 it("revokes a key a daemon kept from an earlier desktop session", async () => {
   const local = new FakeDaemon(LOCAL_URL);
   const remote = new FakeDaemon(REMOTE_URL);
   // The VPS daemon outlives the app: it still holds a key this machine has forgotten.
-  remote.connected = true;
+  remote.adopt(OTOMAT.id, OTOMAT.label, OTOMAT.api_key);
   routeDaemons([local, remote]);
   const app = harness(memoryVault(), [
     reachable("local", LOCAL_URL),
@@ -177,9 +244,8 @@ it("revokes a key a daemon kept from an earlier desktop session", async () => {
   await app.coordinator.reconcile();
 
   expect(remote.disconnectCount).toBe(1);
-  expect(remote.connected).toBe(false);
+  expect(remote.holds(OTOMAT.id)).toBe(false);
   expect(local.disconnectCount).toBe(0);
-  expect(app.state("remote")).toBe("cleared");
 });
 
 it("keeps Linear working locally while the remote host is down, and delivers it on reconnect", async () => {
@@ -191,17 +257,17 @@ it("keeps Linear working locally while the remote host is down, and delivers it 
     unreachable("remote", HOST_DOWN),
   ]);
 
-  await expect(app.coordinator.save("lin_api_key")).resolves.toEqual({ ok: true, message: null });
-  expect(local.connected).toBe(true);
+  await expect(app.coordinator.save(OTOMAT)).resolves.toEqual({ ok: true, message: null });
+  expect(local.holds(OTOMAT.id)).toBe(true);
   expect(remote.connectCount).toBe(0);
-  expect(app.state("local")).toBe("delivered");
-  expect(app.state("remote")).toBe("pending_restore");
+  expect(app.state(OTOMAT.id, "local")).toBe("delivered");
+  expect(app.state(OTOMAT.id, "remote")).toBe("pending_restore");
 
   app.setTargets([reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
   await app.coordinator.reconcile();
 
   expect(remote.connectCount).toBe(1);
-  expect(app.state("remote")).toBe("delivered");
+  expect(app.state(OTOMAT.id, "remote")).toBe("delivered");
 });
 
 it("re-delivers to a remote daemon that restarted, and leaves a healthy one alone", async () => {
@@ -212,17 +278,17 @@ it("re-delivers to a remote daemon that restarted, and leaves a healthy one alon
     reachable("local", LOCAL_URL),
     reachable("remote", REMOTE_URL),
   ]);
-  await app.coordinator.save("lin_api_key");
+  await app.coordinator.save(OTOMAT);
 
   await app.coordinator.reconcile();
   expect(remote.connectCount).toBe(1);
 
   // The VPS daemon restarted: it answers again, with no credential in memory.
-  remote.connected = false;
+  remote.keys.clear();
   await app.coordinator.reconcile();
 
   expect(remote.connectCount).toBe(2);
-  expect(app.state("remote")).toBe("delivered");
+  expect(app.state(OTOMAT.id, "remote")).toBe("delivered");
 });
 
 it("replaces a key the remote host still holds after it was rotated offline", async () => {
@@ -233,19 +299,19 @@ it("replaces a key the remote host still holds after it was rotated offline", as
     reachable("local", LOCAL_URL),
     reachable("remote", REMOTE_URL),
   ]);
-  await app.coordinator.save("first-key");
+  await app.coordinator.save(OTOMAT);
 
   app.setTargets([reachable("local", LOCAL_URL), unreachable("remote", HOST_DOWN)]);
-  await app.coordinator.save("second-key");
+  await app.coordinator.save({ ...OTOMAT, api_key: "second-key" });
   expect(remote.connectCount).toBe(1);
 
   app.setTargets([reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
   await app.coordinator.reconcile();
 
-  // The daemon still reported `connected` from the first key: the rotation must overwrite it.
+  // The daemon still reported the first key as held: the rotation must overwrite it.
   expect(remote.connectCount).toBe(2);
-  expect(remote.key).toBe("second-key");
-  expect(app.state("remote")).toBe("delivered");
+  expect(remote.keys.get(OTOMAT.id)).toBe("second-key");
+  expect(app.state(OTOMAT.id, "remote")).toBe("delivered");
 });
 
 it("refuses a save no daemon could validate instead of storing an unchecked key", async () => {
@@ -256,13 +322,12 @@ it("refuses a save no daemon could validate instead of storing an unchecked key"
     unreachable("remote", HOST_DOWN),
   ]);
 
-  await expect(app.coordinator.save("lin_api_key")).resolves.toEqual({
+  await expect(app.coordinator.save(OTOMAT)).resolves.toEqual({
     ok: false,
     message: "No daemon could take the Linear key. Check that a host is reachable, then retry.",
     error_code: null,
   });
-  expect(vault.stored()).toBeNull();
-  expect(app.state("local")).toBe("unavailable");
+  expect(vault.stored()).toEqual({});
 });
 
 it("reports a partial disconnect and revokes on the host's next connection", async () => {
@@ -271,24 +336,23 @@ it("reports a partial disconnect and revokes on the host's next connection", asy
   routeDaemons([local, remote]);
   const vault = memoryVault();
   const app = harness(vault, [reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
-  await app.coordinator.save("lin_api_key");
+  await app.coordinator.save(OTOMAT);
 
   app.setTargets([reachable("local", LOCAL_URL), unreachable("remote", HOST_DOWN)]);
-  const forgotten = await app.coordinator.forget();
+  const forgotten = await app.coordinator.forget(OTOMAT.id);
 
   expect(forgotten.ok).toBe(false);
   expect(forgotten.message).toContain("otomat-vps");
-  expect(vault.stored()).toBeNull();
-  expect(local.connected).toBe(false);
-  expect(remote.connected).toBe(true);
-  expect(app.state("remote")).toBe("pending_revocation");
+  expect(vault.stored()).toEqual({});
+  expect(local.holds(OTOMAT.id)).toBe(false);
+  expect(remote.holds(OTOMAT.id)).toBe(true);
+  expect(app.state(OTOMAT.id, "remote")).toBe("pending_revocation");
 
   app.setTargets([reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
   await app.coordinator.reconcile();
 
   expect(remote.disconnectCount).toBe(1);
-  expect(remote.connected).toBe(false);
-  expect(app.state("remote")).toBe("cleared");
+  expect(remote.holds(OTOMAT.id)).toBe(false);
 });
 
 it("publishes every delivery change so the cockpit never shows a stale host", async () => {
@@ -299,13 +363,17 @@ it("publishes every delivery change so the cockpit never shows a stale host", as
     unreachable("remote", HOST_DOWN),
   ]);
 
-  await app.coordinator.save("lin_api_key");
+  await app.coordinator.save(OTOMAT);
 
   expect(app.deliveries.at(-1)).toEqual({
-    stored: true,
-    hosts: [
-      { host_id: "local", label: "Local", state: "delivered", detail: null },
-      { host_id: "remote", label: "otomat-vps", state: "pending_restore", detail: HOST_DOWN },
+    connections: [
+      {
+        connection_id: OTOMAT.id,
+        hosts: [
+          { host_id: "local", label: "Local", state: "delivered", detail: null },
+          { host_id: "remote", label: "otomat-vps", state: "pending_restore", detail: HOST_DOWN },
+        ],
+      },
     ],
   });
 });
@@ -316,23 +384,102 @@ it("puts the vaulted key back on every host when a rotation is refused", async (
   routeDaemons([local, remote]);
   const vault = memoryVault();
   const app = harness(vault, [reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
-  await app.coordinator.save("good-key");
+  await app.coordinator.save(OTOMAT);
   local.rejects = "rotated-key";
   remote.rejects = "rotated-key";
 
-  const refused = await app.coordinator.save("rotated-key");
+  const refused = await app.coordinator.save({ ...OTOMAT, api_key: "rotated-key" });
 
   expect(refused).toEqual({
     ok: false,
     message: "Linear rejected the API key.",
     error_code: "linear_unauthorized",
   });
-  expect(vault.stored()).toBe("good-key");
+  expect(vault.stored()).toEqual({ [OTOMAT.id]: OTOMAT.api_key });
   // The refused push already cleared both daemons, so the key still in the vault must go back.
-  expect(local.connected).toBe(true);
-  expect(remote.connected).toBe(true);
-  expect(app.state("local")).toBe("delivered");
-  expect(app.state("remote")).toBe("delivered");
+  expect(local.keys.get(OTOMAT.id)).toBe(OTOMAT.api_key);
+  expect(remote.keys.get(OTOMAT.id)).toBe(OTOMAT.api_key);
+  expect(app.state(OTOMAT.id, "remote")).toBe("delivered");
+});
+
+it("puts the vaulted key back when the daemons accepted a rotation the vault could not store", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  routeDaemons([local]);
+  const vault = memoryVault();
+  const app = harness(vault, [reachable("local", LOCAL_URL)]);
+  await app.coordinator.save(OTOMAT);
+  vault.save = () => {
+    throw new Error("keychain unavailable");
+  };
+
+  const rotated = await app.coordinator.save({ ...OTOMAT, api_key: "rotated-key" });
+
+  expect(rotated).toEqual({ ok: false, message: "keychain unavailable", error_code: null });
+  expect(vault.stored()).toEqual({ [OTOMAT.id]: OTOMAT.api_key });
+  expect(local.keys.get(OTOMAT.id)).toBe(OTOMAT.api_key);
+  expect(app.state(OTOMAT.id, "local")).toBe("delivered");
+});
+
+it("revokes on a daemon that restarted before its owed revocation arrived", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  routeDaemons([local, remote]);
+  const app = harness(memoryVault(), [
+    reachable("local", LOCAL_URL),
+    reachable("remote", REMOTE_URL),
+  ]);
+  await app.coordinator.save(OTOMAT);
+
+  app.setTargets([reachable("local", LOCAL_URL), unreachable("remote", HOST_DOWN)]);
+  await app.coordinator.forget(OTOMAT.id);
+  expect(app.state(OTOMAT.id, "remote")).toBe("pending_revocation");
+
+  // The VPS daemon restarted: the catalogue row survived in SQLite, the key did not.
+  remote.keys.clear();
+  app.setTargets([reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
+  await app.coordinator.reconcile();
+
+  expect(remote.disconnectCount).toBe(1);
+  expect(app.state(OTOMAT.id, "remote")).toBeUndefined();
+});
+
+it("resolves an owed revocation on a host that never received the key", async () => {
+  const local = new FakeDaemon(LOCAL_URL);
+  const remote = new FakeDaemon(REMOTE_URL);
+  routeDaemons([local, remote]);
+  const app = harness(memoryVault(), [
+    reachable("local", LOCAL_URL),
+    unreachable("remote", HOST_DOWN),
+  ]);
+  await app.coordinator.save(OTOMAT);
+  await app.coordinator.forget(OTOMAT.id);
+  expect(app.state(OTOMAT.id, "remote")).toBe("pending_revocation");
+
+  app.setTargets([reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
+  await app.coordinator.reconcile();
+
+  expect(remote.disconnectCount).toBe(0);
+  expect(app.state(OTOMAT.id, "remote")).toBeUndefined();
+});
+
+it("leaves every daemon untouched while the vault cannot be read", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const local = new FakeDaemon(LOCAL_URL);
+  local.adopt(OTOMAT.id, OTOMAT.label, OTOMAT.api_key);
+  routeDaemons([local]);
+  const vault: LinearVault = {
+    forget: vi.fn(),
+    load: () => {
+      throw new Error("decryption failed");
+    },
+    save: vi.fn(),
+  };
+  const app = harness(vault, [reachable("local", LOCAL_URL)]);
+
+  await app.coordinator.reconcile();
+
+  expect(local.disconnectCount).toBe(0);
+  expect(local.holds(OTOMAT.id)).toBe(true);
 });
 
 it("clears every daemon it just fed when the vault refuses the key", async () => {
@@ -340,15 +487,15 @@ it("clears every daemon it just fed when the vault refuses the key", async () =>
   const remote = new FakeDaemon(REMOTE_URL);
   routeDaemons([local, remote]);
   const vault: LinearVault = {
-    clear: vi.fn(),
-    load: () => null,
+    forget: vi.fn(),
+    load: () => ({}),
     save: () => {
       throw new Error("keychain unavailable");
     },
   };
   const app = harness(vault, [reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
 
-  await expect(app.coordinator.save("lin_api_key")).resolves.toEqual({
+  await expect(app.coordinator.save(OTOMAT)).resolves.toEqual({
     ok: false,
     message: "keychain unavailable",
     error_code: null,
@@ -356,19 +503,17 @@ it("clears every daemon it just fed when the vault refuses the key", async () =>
 
   expect(local.disconnectCount).toBe(1);
   expect(remote.disconnectCount).toBe(1);
-  expect(local.connected).toBe(false);
-  expect(remote.connected).toBe(false);
-  expect(app.state("remote")).toBe("cleared");
+  expect(local.holds(OTOMAT.id)).toBe(false);
+  expect(remote.holds(OTOMAT.id)).toBe(false);
 });
 
 it("reports the host whose key could not be rolled back", async () => {
-  const log = vi.spyOn(console, "error").mockImplementation(() => {});
   const local = new FakeDaemon(LOCAL_URL);
   const remote = new FakeDaemon(REMOTE_URL);
   routeDaemons([local, remote]);
   const vault: LinearVault = {
-    clear: vi.fn(),
-    load: () => null,
+    forget: vi.fn(),
+    load: () => ({}),
     save: () => {
       // The remote host drops in the same moment the vault write fails.
       routeDaemons([local]);
@@ -377,14 +522,13 @@ it("reports the host whose key could not be rolled back", async () => {
   };
   const app = harness(vault, [reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
 
-  const saved = await app.coordinator.save("lin_api_key");
+  const saved = await app.coordinator.save(OTOMAT);
 
   expect(saved.ok).toBe(false);
   expect(saved.message).toContain("could not be rolled back");
-  expect(local.connected).toBe(false);
-  expect(remote.connected).toBe(true);
-  expect(app.state("remote")).toBe("pending_revocation");
-  expect(log).toHaveBeenCalled();
+  expect(local.holds(OTOMAT.id)).toBe(false);
+  expect(remote.holds(OTOMAT.id)).toBe(true);
+  expect(app.state(OTOMAT.id, "remote")).toBe("pending_revocation");
 });
 
 it("stops reporting a host as delivered once its daemon stops answering", async () => {
@@ -395,14 +539,14 @@ it("stops reporting a host as delivered once its daemon stops answering", async 
     reachable("local", LOCAL_URL),
     reachable("remote", REMOTE_URL),
   ]);
-  await app.coordinator.save("lin_api_key");
-  expect(app.state("remote")).toBe("delivered");
+  await app.coordinator.save(OTOMAT);
+  expect(app.state(OTOMAT.id, "remote")).toBe("delivered");
 
   // The tunnel still looks up to the host manager, but the daemon behind it is gone.
   routeDaemons([local]);
   await app.coordinator.reconcile();
 
-  expect(app.state("remote")).toBe("pending_restore");
+  expect(app.state(OTOMAT.id, "remote")).toBe("pending_restore");
 });
 
 it("still owes a revocation to a host whose daemon stops answering", async () => {
@@ -413,17 +557,17 @@ it("still owes a revocation to a host whose daemon stops answering", async () =>
     reachable("local", LOCAL_URL),
     reachable("remote", REMOTE_URL),
   ]);
-  await app.coordinator.save("lin_api_key");
+  await app.coordinator.save(OTOMAT);
 
   app.setTargets([reachable("local", LOCAL_URL), unreachable("remote", HOST_DOWN)]);
-  await app.coordinator.forget();
-  expect(app.state("remote")).toBe("pending_revocation");
+  await app.coordinator.forget(OTOMAT.id);
+  expect(app.state(OTOMAT.id, "remote")).toBe("pending_revocation");
 
   // The tunnel is back, but the daemon behind it does not answer: the key may still be live there.
   app.setTargets([reachable("local", LOCAL_URL), reachable("remote", REMOTE_URL)]);
   routeDaemons([local]);
   await app.coordinator.reconcile();
 
-  expect(app.state("remote")).toBe("pending_revocation");
+  expect(app.state(OTOMAT.id, "remote")).toBe("pending_revocation");
   expect(remote.disconnectCount).toBe(0);
 });

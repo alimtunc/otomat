@@ -693,23 +693,29 @@ it("posts the Linear key to the write-only connect endpoint", async () => {
       body: init?.body === undefined ? undefined : JSON.parse(String(init.body)),
     });
     return jsonResponse({
-      status: "connected",
+      id: "c-otomat",
+      label: "Otomat",
       workspace_id: "workspace-1",
       workspace_name: "Otomat",
       user_name: "Alim",
+      status: "connected",
       error_code: null,
       error_message: null,
     });
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
 
-  const connection = await client.connectLinear({ api_key: "lin_api_secret" });
+  const connection = await client.connectLinear({
+    id: "c-otomat",
+    label: "Otomat",
+    api_key: "lin_api_secret",
+  });
 
   expect(calls).toEqual([
     {
-      url: "http://localhost:4319/api/linear/connect",
+      url: "http://localhost:4319/api/linear/connections",
       method: "POST",
-      body: { api_key: "lin_api_secret" },
+      body: { id: "c-otomat", label: "Otomat", api_key: "lin_api_secret" },
     },
   ]);
   expect(JSON.stringify(connection)).not.toContain("lin_api_secret");
@@ -726,6 +732,7 @@ it("reads mapped issue sources and triggers a sync", async () => {
         {
           id: "src-1",
           project_id: "p1",
+          connection_id: "c-otomat",
           source: "linear",
           external_team_id: "team-1",
           external_team_key: "OTO",

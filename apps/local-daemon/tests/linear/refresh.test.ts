@@ -12,7 +12,7 @@ import {
 } from "#linear";
 
 import { setupTestDb, type TestDb } from "../support/db.js";
-import { stubLinearApiClient } from "../support/linear.js";
+import { CONNECTION, connectLinear as connect, stubLinearApiClient } from "../support/linear.js";
 
 const VIEWER = { user_name: "Alim", workspace_id: "workspace-1", workspace_name: "Otomat" };
 const WORKSPACE = {
@@ -22,7 +22,7 @@ const WORKSPACE = {
   ],
   projects: [],
 };
-const TEAM = { external_team_id: "team-1" };
+const TEAM = { connection_id: CONNECTION.id, external_team_id: "team-1" };
 
 function uninitializedDeferred(): never {
   throw new Error("Deferred promise did not initialize");
@@ -85,7 +85,7 @@ afterEach(() => {
 it("imports an issue created on Linear after the first pass", async () => {
   let remote: LinearIssue[] = [];
   const linear = service({ issues: async () => remote });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   await linear.createSource({ project_id: "p1", ...TEAM });
   await linear.sync({ project_id: "p1" });
   expect(listIssues(t.db).filter((issue) => issue.source === SYNC_SOURCE)).toHaveLength(0);
@@ -105,7 +105,7 @@ it("imports an issue created on Linear after the first pass", async () => {
 it("mirrors a remote field and status change onto the same row", async () => {
   let remote = [linearIssue()];
   const linear = service({ issues: async () => remote });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   await linear.createSource({ project_id: "p1", ...TEAM });
   await linear.sync({ project_id: "p1" });
 
@@ -129,7 +129,7 @@ it("collapses concurrent refreshes of one project into a single Linear read", as
       return page.promise;
     },
   });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   await linear.createSource({ project_id: "p1", ...TEAM });
 
   const first = linear.sync({ project_id: "p1" });
@@ -154,7 +154,7 @@ it("repairs a cursor that drifted past the remote updates it should have caught"
       return since === null ? remote : remote.filter((issue) => issue.updated_at >= since);
     },
   });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   const source = await linear.createSource({ project_id: "p1", ...TEAM });
   // A skewed clock parks the watermark a month ahead of anything Linear will report.
   clock = new Date("2026-08-20T12:00:00.000Z");
@@ -184,7 +184,7 @@ it("queues a full reconciliation behind the incremental pass it repairs", async 
       return queries.length === 1 ? firstPage.promise : [linearIssue()];
     },
   });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   await linear.createSource({ project_id: "p1", ...TEAM });
 
   const incremental = linear.sync({ project_id: "p1" });
@@ -200,7 +200,7 @@ it("queues a full reconciliation behind the incremental pass it repairs", async 
 
 it("keeps every local row a full reconciliation is not allowed to touch", async () => {
   const linear = service({ issues: async () => [linearIssue()] });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   await linear.createSource({ project_id: "p1", ...TEAM });
   await linear.sync({ project_id: "p1" });
   const before = listIssues(t.db).map((issue) => issue.id);
@@ -219,7 +219,7 @@ it("reports an expired key as an error instead of a successful refresh", async (
       return remote;
     },
   });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   await linear.createSource({ project_id: "p1", ...TEAM });
   await linear.sync({ project_id: "p1" });
   const fresh = linear.syncStatus("p1").last_synced_at;
@@ -234,7 +234,7 @@ it("reports an expired key as an error instead of a successful refresh", async (
     last_synced_at: fresh,
     last_error: { code: "linear_unauthorized" },
   });
-  expect(linear.connection()).toMatchObject({ status: "failed" });
+  expect(linear.connections()[0]).toMatchObject({ status: "failed" });
 });
 
 it("clears a recorded failure once a later pass succeeds", async () => {
@@ -245,7 +245,7 @@ it("clears a recorded failure once a later pass succeeds", async () => {
       return [linearIssue()];
     },
   });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   await linear.createSource({ project_id: "p1", ...TEAM });
   await expect(linear.sync({ project_id: "p1" })).rejects.toThrow();
   expect(linear.syncStatus("p1").last_error).toMatchObject({ code: "linear_unavailable" });
@@ -262,7 +262,7 @@ it("clears a recorded failure once a later pass succeeds", async () => {
 
 it("refuses a project this daemon does not own rather than syncing nothing", async () => {
   const linear = service({ issues: async () => [] });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   await linear.createSource({ project_id: "p1", ...TEAM });
 
   await expect(linear.sync({ project_id: "vps-project" })).rejects.toMatchObject({
@@ -282,9 +282,13 @@ it("refreshes only the sources of the project it was asked about", async () => {
       return [];
     },
   });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   await linear.createSource({ project_id: "p1", ...TEAM });
-  await linear.createSource({ project_id: "p2", external_team_id: "team-2" });
+  await linear.createSource({
+    project_id: "p2",
+    connection_id: CONNECTION.id,
+    external_team_id: "team-2",
+  });
 
   await linear.sync({ project_id: "p1" });
 
@@ -294,7 +298,7 @@ it("refreshes only the sources of the project it was asked about", async () => {
 
 it("reports a project with no mapped source as unsynced rather than fresh", async () => {
   const linear = service();
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
 
   expect(linear.syncStatus("p1")).toMatchObject({
     project_id: "p1",
@@ -308,9 +312,13 @@ it("reports a project with no mapped source as unsynced rather than fresh", asyn
 
 it("stays unsynced while one of the project's sources has never landed", async () => {
   const linear = service({ issues: async () => [] });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   const first = await linear.createSource({ project_id: "p1", ...TEAM });
-  await linear.createSource({ project_id: "p1", external_team_id: "team-2" });
+  await linear.createSource({
+    project_id: "p1",
+    connection_id: CONNECTION.id,
+    external_team_id: "team-2",
+  });
 
   await linear.sync({ source_id: first.id });
 

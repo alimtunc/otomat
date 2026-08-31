@@ -22,7 +22,7 @@ import {
 } from "#linear";
 
 import { setupTestDb, type TestDb } from "../support/db.js";
-import { stubLinearApiClient } from "../support/linear.js";
+import { CONNECTION, connectLinear as connect, stubLinearApiClient } from "../support/linear.js";
 
 const VIEWER = {
   user_name: "Alim",
@@ -51,8 +51,13 @@ const WORKSPACE = {
 };
 
 const TEAM = {
+  connection_id: CONNECTION.id,
   external_team_id: "team-1",
 };
+
+function connectionOf(linear: LinearService, id = CONNECTION.id) {
+  return linear.connections().find((candidate) => candidate.id === id);
+}
 
 const VIEWER_RESPONSE: LinearTransportResponse = {
   status: 200,
@@ -117,6 +122,7 @@ function persistSource(source: "linear" | "github" = "linear") {
   insertIssueSource(t.db, {
     id,
     project_id: "p1",
+    connection_id: CONNECTION.id,
     source,
     external_team_id: "team-1",
     external_team_key: "OTO",
@@ -134,13 +140,15 @@ afterEach(() => {
   t.cleanup();
 });
 
-it("starts disconnected and reports the workspace once connected", async () => {
+it("starts with an empty catalogue and reports the workspace once connected", async () => {
   const linear = service();
 
-  expect(linear.connection().status).toBe("disconnected");
-  const connection = await linear.connect("lin_api_secret");
+  expect(linear.connections()).toEqual([]);
+  const connection = await connect(linear, "lin_api_secret");
 
   expect(connection).toEqual({
+    id: CONNECTION.id,
+    label: CONNECTION.label,
     status: "connected",
     workspace_id: "workspace-1",
     workspace_name: "Otomat",
@@ -151,17 +159,19 @@ it("starts disconnected and reports the workspace once connected", async () => {
   expect(JSON.stringify(connection)).not.toContain("lin_api_secret");
 });
 
-it("refuses a rejected key and keeps nothing", async () => {
+it("refuses a rejected key and catalogues nothing", async () => {
   const linear = service({
     viewer: async () => {
       throw linearError("linear_unauthorized");
     },
   });
 
-  const connection = await linear.connect("bad-key");
+  await expect(connect(linear, "bad-key")).rejects.toMatchObject({ code: "linear_unauthorized" });
 
-  expect(connection).toMatchObject({ status: "failed", error_code: "linear_unauthorized" });
-  await expect(linear.sync()).rejects.toMatchObject({ code: "linear_not_connected" });
+  expect(linear.connections()).toEqual([]);
+  await expect(linear.workspace(CONNECTION.id)).rejects.toMatchObject({
+    code: "linear_connection_not_found",
+  });
 });
 
 it("does not hide an unexpected connection failure", async () => {
@@ -171,8 +181,8 @@ it("does not hide an unexpected connection failure", async () => {
     },
   });
 
-  await expect(linear.connect("lin_api_secret")).rejects.toThrow("unexpected failure");
-  await expect(linear.sync()).rejects.toMatchObject({ code: "linear_not_connected" });
+  await expect(connect(linear, "lin_api_secret")).rejects.toThrow("unexpected failure");
+  expect(linear.connections()).toEqual([]);
 });
 
 it("does not keep a stale connected state after an unexpected reconnect failure", async () => {
@@ -184,20 +194,28 @@ it("does not keep a stale connected state after an unexpected reconnect failure"
       throw new Error("unexpected failure");
     },
   });
-  await linear.connect("first-key");
+  await connect(linear, "first-key");
 
-  await expect(linear.connect("second-key")).rejects.toThrow("unexpected failure");
+  await expect(connect(linear, "second-key")).rejects.toThrow("unexpected failure");
 
-  expect(linear.connection().status).toBe("disconnected");
-  await expect(linear.workspace()).rejects.toMatchObject({ code: "linear_not_connected" });
+  expect(connectionOf(linear)?.status).toBe("disconnected");
+  await expect(linear.workspace(CONNECTION.id)).rejects.toMatchObject({
+    code: "linear_not_connected",
+  });
 });
 
-it("forgets the key on disconnect", async () => {
+it("removes the connection and its mappings on disconnect", async () => {
   const linear = service();
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
+  await linear.createSource({ project_id: "p1", ...TEAM });
 
-  expect(linear.disconnect().status).toBe("disconnected");
-  await expect(linear.workspace()).rejects.toMatchObject({ code: "linear_not_connected" });
+  linear.disconnect(CONNECTION.id);
+
+  expect(linear.connections()).toEqual([]);
+  expect(linear.sources()).toEqual([]);
+  await expect(linear.workspace(CONNECTION.id)).rejects.toMatchObject({
+    code: "linear_connection_not_found",
+  });
 });
 
 it("drops a connection whose key was revoked mid-use", async () => {
@@ -206,10 +224,12 @@ it("drops a connection whose key was revoked mid-use", async () => {
       throw linearError("linear_unauthorized");
     },
   });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
 
-  await expect(linear.workspace()).rejects.toMatchObject({ code: "linear_unauthorized" });
-  expect(linear.connection()).toMatchObject({
+  await expect(linear.workspace(CONNECTION.id)).rejects.toMatchObject({
+    code: "linear_unauthorized",
+  });
+  expect(connectionOf(linear)).toMatchObject({
     status: "failed",
     error_code: "linear_unauthorized",
   });
@@ -220,15 +240,14 @@ it("does not return data from an obsolete authorized request", async () => {
   const linear = service({
     workspace: () => workspaceRequest.promise,
   });
-  await linear.connect("first-key");
-  const obsoleteRequest = linear.workspace();
+  await connect(linear, "first-key");
+  const obsoleteRequest = linear.workspace(CONNECTION.id);
 
-  linear.disconnect();
-  await linear.connect("replacement-key");
+  await connect(linear, "replacement-key");
   workspaceRequest.resolve({ teams: [], projects: [] });
 
   await expect(obsoleteRequest).rejects.toMatchObject({ code: "linear_request_superseded" });
-  expect(linear.connection()).toMatchObject({ status: "connected" });
+  expect(connectionOf(linear)).toMatchObject({ status: "connected" });
 });
 
 it("rejects an obsolete connect instead of returning the winning connection", async () => {
@@ -243,8 +262,8 @@ it("rejects an obsolete connect instead of returning the winning connection", as
     },
   });
 
-  const firstConnect = linear.connect("first-key");
-  const secondConnect = linear.connect("second-key");
+  const firstConnect = connect(linear, "first-key");
+  const secondConnect = connect(linear, "second-key");
   secondViewer.resolve({
     user_name: "Second",
     workspace_id: "workspace-2",
@@ -257,13 +276,13 @@ it("rejects an obsolete connect instead of returning the winning connection", as
   firstViewer.resolve(VIEWER);
 
   await expect(firstConnect).rejects.toMatchObject({ code: "linear_request_superseded" });
-  await linear.workspace();
+  await linear.workspace(CONNECTION.id);
   expect(workspaceKey).toBe("second-key");
 });
 
 it("maps a source onto an existing local project and refuses a duplicate", async () => {
   const linear = service();
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
 
   const source = await linear.createSource({ project_id: "p1", ...TEAM });
 
@@ -282,7 +301,7 @@ it("maps a source onto an existing local project and refuses a duplicate", async
 
 it("stores a lifecycle mapping picked from the source's own team workflow", async () => {
   const linear = service();
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   const created = await linear.createSource({ project_id: "p1", ...TEAM });
   expect(created.lifecycle).toEqual({ in_progress: null, done: null });
 
@@ -306,7 +325,7 @@ it("stores a lifecycle mapping picked from the source's own team workflow", asyn
 
 it("refuses a state whose Linear type does not carry the phase", async () => {
   const linear = service();
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   const created = await linear.createSource({ project_id: "p1", ...TEAM });
 
   await expect(
@@ -320,7 +339,7 @@ it("refuses a state whose Linear type does not carry the phase", async () => {
 
 it("refuses a lifecycle state that belongs to another team, and an unknown source", async () => {
   const linear = service();
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   const created = await linear.createSource({ project_id: "p1", ...TEAM });
 
   await expect(
@@ -337,7 +356,7 @@ it("refuses a lifecycle state that belongs to another team, and an unknown sourc
 
 it("refuses a source pointing at a project that does not exist locally", async () => {
   const linear = service();
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
 
   await expect(linear.createSource({ project_id: "missing", ...TEAM })).rejects.toMatchObject({
     code: "linear_project_not_found",
@@ -346,7 +365,7 @@ it("refuses a source pointing at a project that does not exist locally", async (
 
 it("allows non-overlapping Linear projects from the same team", async () => {
   const linear = service();
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
 
   await linear.createSource({
     project_id: "p1",
@@ -367,7 +386,7 @@ it("allows non-overlapping Linear projects from the same team", async () => {
 
 it("refuses overlapping whole-team and project mappings", async () => {
   const linear = service();
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
 
   await linear.createSource({ project_id: "p1", ...TEAM });
 
@@ -380,6 +399,7 @@ it("refuses overlapping whole-team and project mappings", async () => {
   ).rejects.toMatchObject({ code: "linear_source_already_mapped" });
 
   const otherTeam = {
+    connection_id: CONNECTION.id,
     external_team_id: "team-2",
   };
   await linear.createSource({
@@ -395,10 +415,11 @@ it("refuses overlapping whole-team and project mappings", async () => {
 
 it("derives source labels from the authenticated workspace", async () => {
   const linear = service();
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
 
   const source = await linear.createSource({
     project_id: "p1",
+    connection_id: CONNECTION.id,
     external_team_id: "team-1",
     external_project_id: "proj-1",
   });
@@ -413,14 +434,19 @@ it("derives source labels from the authenticated workspace", async () => {
 
 it("rejects a team or project outside the authenticated workspace", async () => {
   const linear = service();
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
 
   await expect(
-    linear.createSource({ project_id: "p1", external_team_id: "foreign-team" }),
+    linear.createSource({
+      project_id: "p1",
+      connection_id: CONNECTION.id,
+      external_team_id: "foreign-team",
+    }),
   ).rejects.toMatchObject({ code: "linear_source_invalid_selection" });
   await expect(
     linear.createSource({
       project_id: "p1",
+      connection_id: CONNECTION.id,
       external_team_id: "team-2",
       external_project_id: "proj-1",
     }),
@@ -431,7 +457,7 @@ it("lists and syncs only Linear mappings", async () => {
   const linearSource = persistSource();
   const githubSource = persistSource("github");
   const linear = service({ issues: async () => [] });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
 
   expect(linear.sources().map((source) => source.id)).toEqual([linearSource.id]);
   await expect(linear.sync({ source_id: githubSource.id })).rejects.toMatchObject({
@@ -442,11 +468,11 @@ it("lists and syncs only Linear mappings", async () => {
 it("does not persist a source after its workspace request is superseded", async () => {
   const workspaceRequest = deferred<typeof WORKSPACE>();
   const linear = service({ workspace: () => workspaceRequest.promise });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   const creation = linear.createSource({ project_id: "p1", ...TEAM });
 
   workspaceRequest.resolve(WORKSPACE);
-  queueMicrotask(() => linear.disconnect());
+  queueMicrotask(() => void connect(linear, "replacement-key"));
 
   await expect(creation).rejects.toMatchObject({ code: "linear_request_superseded" });
   expect(listIssueSources(t.db, "linear")).toEqual([]);
@@ -454,7 +480,7 @@ it("does not persist a source after its workspace request is superseded", async 
 
 it("refuses to sync an unknown source", async () => {
   const linear = service();
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
 
   await expect(linear.sync({ source_id: "missing" })).rejects.toMatchObject({
     code: "linear_source_not_found",
@@ -480,7 +506,7 @@ it("syncs every mapped source and reports what landed", async () => {
       },
     ],
   });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   await linear.createSource({ project_id: "p1", ...TEAM });
 
   const results = await linear.sync();
@@ -521,7 +547,7 @@ it("rejects a malformed Linear issue before writing rows or a cursor", async () 
     if (response === undefined) throw new Error("Unexpected Linear request");
     return response;
   });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   const source = persistSource();
 
   await expect(linear.sync()).rejects.toMatchObject({ code: "linear_request_failed" });
@@ -544,13 +570,12 @@ it("cancels an obsolete paginated sync before another page or any write", async 
     }
     throw new Error("Unexpected Linear request");
   });
-  await linear.connect("first-key");
+  await connect(linear, "first-key");
   const source = persistSource();
   const obsoleteSync = linear.sync();
   await vi.waitFor(() => expect(issueRequests).toBe(1));
 
-  linear.disconnect();
-  await linear.connect("replacement-key");
+  await connect(linear, "replacement-key");
   firstIssuePage.resolve({
     status: 200,
     body: {
@@ -599,12 +624,14 @@ it("cancels sibling operations when one discovers a revoked key", async () => {
     }
     throw new Error("Unexpected Linear request");
   });
-  await linear.connect("revoked-key");
+  await connect(linear, "revoked-key");
   const source = persistSource();
   const siblingSync = linear.sync();
   await vi.waitFor(() => expect(issueRequests).toBe(1));
 
-  await expect(linear.workspace()).rejects.toMatchObject({ code: "linear_unauthorized" });
+  await expect(linear.workspace(CONNECTION.id)).rejects.toMatchObject({
+    code: "linear_unauthorized",
+  });
   firstIssuePage.resolve({
     status: 200,
     body: {
@@ -628,7 +655,7 @@ it("cancels sibling operations when one discovers a revoked key", async () => {
   });
 
   await expect(siblingSync).rejects.toMatchObject({ code: "linear_request_superseded" });
-  expect(linear.connection()).toMatchObject({
+  expect(connectionOf(linear)).toMatchObject({
     status: "failed",
     error_code: "linear_unauthorized",
   });
@@ -640,9 +667,13 @@ it("cancels sibling operations when one discovers a revoked key", async () => {
 it("scopes source listing and sync to a single project when asked", async () => {
   insertProject(t.db, { id: "p2", name: "Second", root_path: "/tmp/otomat-p2" });
   const linear = service({ issues: async () => [] });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   await linear.createSource({ project_id: "p1", ...TEAM });
-  await linear.createSource({ project_id: "p2", external_team_id: "team-2" });
+  await linear.createSource({
+    project_id: "p2",
+    connection_id: CONNECTION.id,
+    external_team_id: "team-2",
+  });
 
   expect(linear.sources()).toHaveLength(2);
   expect(linear.sources("p1").map((source) => source.project_id)).toEqual(["p1"]);
@@ -653,7 +684,7 @@ it("scopes source listing and sync to a single project when asked", async () => 
 
 it("unmaps a source, drops its cursor, and frees the team for a new mapping", async () => {
   const linear = service({ issues: async () => [] });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   const source = await linear.createSource({ project_id: "p1", ...TEAM });
   await linear.sync({ source_id: source.id });
   expect(getSyncState(t.db, SYNC_SOURCE, SYNC_RESOURCE, source.id)).toBeDefined();
@@ -673,7 +704,7 @@ it("unmaps a source, drops its cursor, and frees the team for a new mapping", as
 it("refuses to unmap a non-Linear source", async () => {
   const githubSource = persistSource("github");
   const linear = service();
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
 
   expect(() => linear.deleteSource(githubSource.id)).toThrow(
     expect.objectContaining({ code: "linear_source_not_found" }),
@@ -700,7 +731,7 @@ it("feeds two projects from one connection, each keeping its own selection", asy
       },
     ],
   });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   const front = await linear.createSource({
     project_id: "p1",
     ...TEAM,
@@ -733,11 +764,87 @@ it("feeds two projects from one connection, each keeping its own selection", asy
 
 it("never writes the key to the database it imports into", async () => {
   const linear = service({ issues: async () => [] });
-  await linear.connect("lin_api_secret");
+  await connect(linear, "lin_api_secret");
   const source = await linear.createSource({ project_id: "p1", ...TEAM });
   await linear.updateSource(source.id, { in_progress_state_id: "s-doing", done_state_id: null });
   await linear.sync();
-  linear.disconnect();
+  linear.disconnect(CONNECTION.id);
 
   expect(dataDirHolding("lin_api_secret")).toEqual([]);
+});
+
+it("keeps two projects on two connections apart, and one revocation local to its own", async () => {
+  insertProject(t.db, { id: "p2", name: "CRM", root_path: "/tmp/otomat-crm" });
+  const keysUsed: string[] = [];
+  const linear = service({
+    viewer: async (apiKey) => ({ ...VIEWER, workspace_id: `workspace-${apiKey}` }),
+    workspace: async (apiKey) => {
+      if (apiKey === "crm-key") throw linearError("linear_unauthorized");
+      return WORKSPACE;
+    },
+    issues: async (apiKey, query) => {
+      keysUsed.push(apiKey);
+      return [
+        {
+          id: `uuid-${query.team_id}`,
+          identifier: "OTO-1",
+          title: "Mirror me",
+          description: null,
+          url: "https://linear.app/otomat/issue/OTO-1",
+          updated_at: "2026-07-20T11:00:00.000Z",
+          state_type: "unstarted",
+          state_name: "Todo",
+          state_color: "#888",
+          priority: 0,
+          assignee_name: null,
+          labels: [],
+        },
+      ];
+    },
+  });
+  await connect(linear, "otomat-key");
+  await connect(linear, "crm-key", "c-crm");
+  await linear.createSource({ project_id: "p1", ...TEAM });
+  insertIssueSource(t.db, {
+    id: "src-crm",
+    project_id: "p2",
+    connection_id: "c-crm",
+    source: "linear",
+    external_team_id: "team-9",
+    external_team_key: "CRM",
+    external_team_name: "Avest",
+  });
+
+  await linear.sync({ project_id: "p1" });
+  await linear.sync({ project_id: "p2" });
+
+  expect(keysUsed).toEqual(["otomat-key", "crm-key"]);
+  expect(linear.sources("p1").map((source) => source.connection_id)).toEqual([CONNECTION.id]);
+  expect(linear.sources("p2").map((source) => source.connection_id)).toEqual(["c-crm"]);
+
+  // The CRM key is revoked mid-use; the Otomat project must keep working.
+  await expect(linear.workspace("c-crm")).rejects.toMatchObject({ code: "linear_unauthorized" });
+
+  expect(connectionOf(linear, "c-crm")).toMatchObject({ status: "failed" });
+  expect(connectionOf(linear)).toMatchObject({ status: "connected" });
+  await expect(linear.sync({ project_id: "p1" })).resolves.toHaveLength(1);
+  await expect(linear.sync({ project_id: "p2" })).rejects.toMatchObject({
+    code: "linear_not_connected",
+  });
+  expect(linear.syncStatus("p2").connection).toMatchObject({ status: "failed" });
+});
+
+it("refuses a second connection's team on a project already reading another", async () => {
+  const linear = service();
+  await connect(linear, "otomat-key");
+  await connect(linear, "crm-key", "c-crm");
+  await linear.createSource({ project_id: "p1", ...TEAM });
+
+  await expect(
+    linear.createSource({
+      project_id: "p1",
+      connection_id: "c-crm",
+      external_team_id: "team-2",
+    }),
+  ).rejects.toMatchObject({ code: "linear_connection_mismatch" });
 });

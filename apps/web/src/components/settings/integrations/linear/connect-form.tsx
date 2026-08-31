@@ -1,3 +1,4 @@
+import type { LinearConnectionContract } from "@otomat/domain";
 import { Button, Field, FieldControl, FieldLabel, Input, toast } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import {
@@ -9,22 +10,30 @@ import { desktopBridge } from "@web/lib/desktop-bridge";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { useState } from "react";
 
-export function LinearConnectForm({ connectionError }: { connectionError: string | null }) {
+export interface LinearConnectFormProps {
+  /** The connection this key replaces; null adds a new one to the catalogue. */
+  connection?: LinearConnectionContract | null;
+  onConnected?: () => void;
+}
+
+export function LinearConnectForm({ connection = null, onConnected }: LinearConnectFormProps) {
   const connect = useConnectLinear();
   const persists = desktopBridge() !== null;
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [dismissedConnectionError, setDismissedConnectionError] = useState<string | null>(null);
-  const visibleError =
-    submitError ?? (connectionError === dismissedConnectionError ? null : connectionError);
 
   const form = useForm({
-    defaultValues: { apiKey: "" },
+    defaultValues: { label: connection?.label ?? "", apiKey: "" },
     onSubmit: async ({ value }) => {
       setSubmitError(null);
       try {
-        await connect.mutateAsync(value.apiKey.trim());
+        await connect.mutateAsync({
+          id: connection?.id ?? crypto.randomUUID(),
+          label: value.label.trim(),
+          api_key: value.apiKey.trim(),
+        });
         form.reset();
-        toast.success("Connected to Linear");
+        toast.success(connection === null ? "Connected to Linear" : "Reconnected to Linear");
+        onConnected?.();
       } catch (error) {
         if (isSupersededLinearError(error)) return;
         setSubmitError(linearErrorMessage(error));
@@ -40,6 +49,27 @@ export function LinearConnectForm({ connectionError }: { connectionError: string
         void form.handleSubmit();
       }}
     >
+      <form.Field name="label" validators={{ onChange: requiredTrimmed("Name this connection.") }}>
+        {(field) => (
+          <Field {...fieldErrorProps(field.state.meta)}>
+            <FieldLabel>Name</FieldLabel>
+            <FieldControl>
+              <Input
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(event) => {
+                  setSubmitError(null);
+                  field.handleChange(event.target.value);
+                }}
+                placeholder="Otomat workspace"
+                aria-label="Linear connection name"
+                autoComplete="off"
+              />
+            </FieldControl>
+          </Field>
+        )}
+      </form.Field>
+
       <form.Field
         name="apiKey"
         validators={{ onChange: requiredTrimmed("Paste a Linear Personal API key.") }}
@@ -56,7 +86,6 @@ export function LinearConnectForm({ connectionError }: { connectionError: string
                     onBlur={field.handleBlur}
                     onChange={(event) => {
                       setSubmitError(null);
-                      setDismissedConnectionError(connectionError);
                       field.handleChange(event.target.value);
                     }}
                     placeholder="lin_api_…"
@@ -66,16 +95,20 @@ export function LinearConnectForm({ connectionError }: { connectionError: string
                   />
                 </FieldControl>
               </div>
-              <form.Subscribe selector={(state) => state.values.apiKey}>
-                {(apiKey) => (
+              <form.Subscribe
+                selector={(state) => [state.values.label, state.values.apiKey] as const}
+              >
+                {([label, apiKey]) => (
                   <Button
                     type="submit"
                     variant="primary"
                     size="sm"
                     loading={connect.isPending}
-                    disabled={apiKey.trim().length === 0 || connect.isPending}
+                    disabled={
+                      label.trim().length === 0 || apiKey.trim().length === 0 || connect.isPending
+                    }
                   >
-                    Connect
+                    {connection === null ? "Connect" : "Reconnect"}
                   </Button>
                 )}
               </form.Subscribe>
@@ -83,14 +116,15 @@ export function LinearConnectForm({ connectionError }: { connectionError: string
           </Field>
         )}
       </form.Field>
+
       <p className="text-xs text-text-tertiary">
         {persists
           ? "Stored encrypted on this device and held in daemon memory. Otomat never reads it back."
           : "The browser build keeps the key in daemon memory only — it is forgotten when the daemon restarts. Use the desktop app to store it encrypted."}
       </p>
-      {visibleError === null ? null : (
+      {submitError === null ? null : (
         <p role="alert" className="text-xs text-danger">
-          {visibleError}
+          {submitError}
         </p>
       )}
     </form>

@@ -2,7 +2,13 @@ import { insertLinearWrite, schema, updateLinearWrite, listLinearWritesForIssue 
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createLinearApiClient, type LinearTransport } from "#linear";
-import { API_KEY, COMMENT_UUID, setupLinearWritebackTest } from "#test-support/linear-writeback";
+import { connectLinear } from "#test-support/linear";
+import {
+  API_KEY,
+  COMMENT_UUID,
+  CONNECTION,
+  setupLinearWritebackTest,
+} from "#test-support/linear-writeback";
 
 let test: ReturnType<typeof setupLinearWritebackTest>;
 
@@ -47,7 +53,7 @@ it("recovers a write interrupted by a crash into a retryable failure", async () 
 it("persists an offline publish attempt as a retryable failure", async () => {
   test.seedLinearIssue();
   const service = await test.connectedService();
-  service.disconnect();
+  service.disconnect(CONNECTION.id);
 
   await expect(service.writeback.publishStatus("li", { state_id: "s-done" })).rejects.toThrow();
   expect(service.writeback.writebackState("li").writes[0]).toMatchObject({
@@ -60,7 +66,7 @@ it("persists an offline publish attempt as a retryable failure", async () => {
 it("classifies a rate-limited GraphQL body even under HTTP 400 and persists it", async () => {
   test.seedLinearIssue();
   const service = test.createService(createLinearApiClient(rateLimitedTransport));
-  await service.connect(API_KEY);
+  await connectLinear(service, API_KEY);
 
   await expect(service.writeback.publishStatus("li", { state_id: "s-done" })).rejects.toThrow();
   expect(service.writeback.writebackState("li").writes[0].error_code).toBe("linear_rate_limited");

@@ -26,6 +26,9 @@ const LINEAR_ERROR_MESSAGES = {
   linear_unavailable: "Linear is unreachable. Check your connection and try again.",
   linear_request_failed: "Linear returned an unexpected response.",
   linear_request_superseded: "A newer Linear connection state replaced this request.",
+  linear_connection_not_found: "That Linear connection is not in the catalogue.",
+  linear_connection_mismatch:
+    "This project already maps another Linear connection. Unmap its sources first.",
   linear_source_not_found: "That Linear source is not mapped.",
   linear_source_already_mapped: "That Linear team or project is already mapped.",
   linear_source_invalid_selection: "That team or project is not available in this workspace.",

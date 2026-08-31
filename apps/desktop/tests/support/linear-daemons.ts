@@ -1,6 +1,7 @@
 import {
   connectLinearRequestSchema,
   type ExecutionHostId,
+  type LinearConnectionContract,
   type LinearDeliverySnapshot,
   type LinearHostDeliveryState,
 } from "@otomat/domain";
@@ -8,37 +9,26 @@ import { vi } from "vitest";
 
 import { LinearCoordinator } from "#main/linear/coordinator";
 import type { LinearDaemonTarget } from "#main/linear/targets";
-import type { LinearVault } from "#shared/linear-vault";
+import type { LinearVault, LinearVaultKeys } from "#shared/linear-vault";
 
 export const LOCAL_URL = "http://127.0.0.1:4319";
 export const REMOTE_URL = "http://127.0.0.1:45010";
 
-export const CONNECTED = {
-  status: "connected",
-  workspace_id: "workspace-1",
-  workspace_name: "Otomat",
-  user_name: "Alim",
-  error_code: null,
-  error_message: null,
-} as const;
+export const OTOMAT = { id: "otomat", label: "Otomat", api_key: "lin_api_otomat" };
+export const CRM = { id: "crm", label: "CRM", api_key: "lin_api_crm" };
 
-export const DISCONNECTED = {
-  status: "disconnected",
-  workspace_id: null,
-  workspace_name: null,
-  user_name: null,
-  error_code: null,
-  error_message: null,
-} as const;
-
-const REFUSED = {
-  status: "failed",
-  workspace_id: null,
-  workspace_name: null,
-  user_name: null,
-  error_code: "linear_unauthorized",
-  error_message: "Linear rejected the API key.",
-} as const;
+export function connected(id: string, label: string): LinearConnectionContract {
+  return {
+    id,
+    label,
+    workspace_id: `workspace-${id}`,
+    workspace_name: label,
+    user_name: "Alim",
+    status: "connected",
+    error_code: null,
+    error_message: null,
+  };
+}
 
 const LABELS = { local: "Local", remote: "otomat-vps" } satisfies Record<ExecutionHostId, string>;
 
@@ -52,35 +42,66 @@ export function unreachable(id: ExecutionHostId, reason: string): LinearDaemonTa
 
 /** One daemon double answering `/api/linear/*` the way the real service would, in memory. */
 export class FakeDaemon {
-  connected = false;
   connectCount = 0;
   disconnectCount = 0;
-  /** The key this daemon currently holds in memory; null once it holds none. */
-  key: string | null = null;
+  /** The keys this daemon currently holds in memory, by connection id. */
+  readonly keys = new Map<string, string>();
+  private readonly labels = new Map<string, string>();
   /** The one key Linear refuses; every other key is accepted. */
   rejects: string | null = null;
 
   constructor(readonly url: string) {}
 
-  handle(path: string, body: RequestInit["body"]): Response {
-    if (path === "/api/linear/connection") {
-      return Response.json(this.connected ? CONNECTED : DISCONNECTED);
+  holds(connectionId: string): boolean {
+    return this.keys.has(connectionId);
+  }
+
+  /** A key kept from an earlier desktop session: catalogued and connected without a push. */
+  adopt(id: string, label: string, apiKey: string): void {
+    this.labels.set(id, label);
+    this.keys.set(id, apiKey);
+  }
+
+  handle(path: string, method: string, body: RequestInit["body"]): Response {
+    if (path === "/api/linear/connections" && method === "GET") {
+      // A restarted daemon still catalogues its rows in SQLite; only the in-memory keys are gone.
+      return Response.json(
+        [...this.labels].map(([id, label]) => ({
+          ...connected(id, label),
+          status: this.keys.has(id) ? ("connected" as const) : ("disconnected" as const),
+        })),
+      );
     }
-    if (path === "/api/linear/connect") {
+    if (path === "/api/linear/connections" && method === "POST") {
       this.connectCount += 1;
-      const { api_key } = connectLinearRequestSchema.parse(JSON.parse(String(body)));
-      // The daemon clears its credential before validating, so a refusal leaves it holding nothing.
-      this.connected = api_key !== this.rejects;
-      this.key = this.connected ? api_key : null;
-      return Response.json(this.connected ? CONNECTED : REFUSED);
+      const request = connectLinearRequestSchema.parse(JSON.parse(String(body)));
+      // The daemon clears the credential before validating, so a refusal leaves it holding nothing.
+      this.keys.delete(request.id);
+      if (request.api_key === this.rejects) {
+        return Response.json(
+          { error: "linear_unauthorized", message: "Linear rejected the API key." },
+          { status: 409 },
+        );
+      }
+      this.labels.set(request.id, request.label);
+      this.keys.set(request.id, request.api_key);
+      return Response.json(connected(request.id, request.label));
     }
-    if (path === "/api/linear/disconnect") {
+    const removed = /^\/api\/linear\/connections\/([^/]+)$/.exec(path);
+    if (removed !== null && method === "DELETE") {
+      const id = decodeURIComponent(removed[1] ?? "");
+      if (!this.labels.has(id)) {
+        return Response.json(
+          { error: "linear_connection_not_found", message: "No Linear connection has this id." },
+          { status: 404 },
+        );
+      }
       this.disconnectCount += 1;
-      this.connected = false;
-      this.key = null;
-      return Response.json(DISCONNECTED);
+      this.labels.delete(id);
+      this.keys.delete(id);
+      return new Response(null, { status: 204 });
     }
-    throw new Error(`FakeDaemon has no route for ${path}`);
+    throw new Error(`FakeDaemon has no route for ${method} ${path}`);
   }
 }
 
@@ -94,22 +115,24 @@ export function routeDaemons(daemons: FakeDaemon[]): void {
       if (daemon === undefined) {
         return Promise.reject(new TypeError(`fetch failed: no daemon at ${url.origin}`));
       }
-      return Promise.resolve(daemon.handle(url.pathname, init?.body));
+      return Promise.resolve(daemon.handle(url.pathname, init?.method ?? "GET", init?.body));
     }),
   );
 }
 
 export interface MemoryVault extends LinearVault {
-  stored(): string | null;
+  stored(): LinearVaultKeys;
 }
 
-export function memoryVault(initial: string | null = null): MemoryVault {
-  let stored = initial;
+export function memoryVault(initial: LinearVaultKeys = {}): MemoryVault {
+  const keys: LinearVaultKeys = { ...initial };
   return {
-    clear: () => (stored = null),
-    load: () => stored,
-    save: (apiKey: string) => (stored = apiKey),
-    stored: () => stored,
+    forget: (connectionId) => delete keys[connectionId],
+    load: () => ({ ...keys }),
+    save: (connectionId, apiKey) => {
+      keys[connectionId] = apiKey;
+    },
+    stored: () => ({ ...keys }),
   };
 }
 
@@ -120,7 +143,7 @@ export interface CoordinatorHarness {
   /** Every snapshot the coordinator pushed to the renderer, in order. */
   deliveries: LinearDeliverySnapshot[];
   /** Read from the last pushed snapshot, so asserting a state also proves the cockpit was told. */
-  state(hostId: ExecutionHostId): LinearHostDeliveryState | undefined;
+  state(connectionId: string, hostId: ExecutionHostId): LinearHostDeliveryState | undefined;
 }
 
 export function harness(vault: LinearVault, targets: LinearDaemonTarget[]): CoordinatorHarness {
@@ -135,6 +158,10 @@ export function harness(vault: LinearVault, targets: LinearDaemonTarget[]): Coor
     coordinator,
     setTargets: (next) => (current = next),
     deliveries,
-    state: (hostId) => deliveries.at(-1)?.hosts.find((host) => host.host_id === hostId)?.state,
+    state: (connectionId, hostId) =>
+      deliveries
+        .at(-1)
+        ?.connections.find((connection) => connection.connection_id === connectionId)
+        ?.hosts.find((host) => host.host_id === hostId)?.state,
   };
 }

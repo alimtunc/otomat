@@ -1,5 +1,6 @@
 import type { Db } from "@otomat/db";
 import type {
+  ConnectLinearRequest,
   CreateIssueSourceRequest,
   IssueSourceContract,
   IssueSourceSyncResult,
@@ -24,10 +25,12 @@ export interface LinearServiceConfig {
 }
 
 export interface LinearService {
-  connection(): LinearConnectionContract;
-  connect(apiKey: string): Promise<LinearConnectionContract>;
-  disconnect(): LinearConnectionContract;
-  workspace(): Promise<LinearWorkspaceContract>;
+  connections(): LinearConnectionContract[];
+  /** Connects a new connection, or rotates a catalogued one's key in place. */
+  connect(request: ConnectLinearRequest): Promise<LinearConnectionContract>;
+  /** Removes the connection, its mappings and their cursors; mirrored issues stay. */
+  disconnect(connectionId: string): void;
+  workspace(connectionId: string): Promise<LinearWorkspaceContract>;
   sources(projectId?: string): IssueSourceContract[];
   createSource(request: CreateIssueSourceRequest): Promise<IssueSourceContract>;
   /** Rewrites one source's lifecycle mapping against its own team's live workflow states. */

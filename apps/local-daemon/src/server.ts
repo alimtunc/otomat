@@ -9,7 +9,7 @@ import {
   prepareDatabase,
   readSchemaMetadata,
 } from "@otomat/db";
-import type { LinearLifecycleSync } from "@otomat/domain";
+import { LINEAR_DEFAULT_CONNECTION_ID, type LinearLifecycleSync } from "@otomat/domain";
 
 import { rescanSkills } from "#agents";
 import { createApiApp, logApiRoutes } from "#api";
@@ -111,9 +111,15 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       client: createLinearApiClient(createLinearTransport()),
     });
     if (developmentLinearKey !== null) {
-      void linear.connect(developmentLinearKey).catch((error: unknown) => {
-        console.error("[otomat] Linear development connection failed", error);
-      });
+      void linear
+        .connect({
+          id: LINEAR_DEFAULT_CONNECTION_ID,
+          label: "Linear",
+          api_key: developmentLinearKey,
+        })
+        .catch((error: unknown) => {
+          console.error("[otomat] Linear development connection failed", error);
+        });
     }
     const syncIssueLifecycle: LinearLifecycleSync = (signal) => {
       void linear.syncIssueLifecycle(signal).catch((error: unknown) => {

@@ -76,11 +76,4 @@ export const SANDBOX_GITHUB: GitHubConnectionContract = {
   error_message: null,
 };
 
-export const SANDBOX_LINEAR: LinearConnectionContract = {
-  status: "disconnected",
-  workspace_id: null,
-  workspace_name: null,
-  user_name: null,
-  error_code: null,
-  error_message: null,
-};
+export const SANDBOX_LINEAR: LinearConnectionContract[] = [];

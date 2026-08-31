@@ -23,7 +23,7 @@ import type {
   RemoteInstanceListResult,
   RemoteRepositoryListResult,
 } from "./execution-host.js";
-import type { LinearErrorCode } from "./linear.js";
+import type { ConnectLinearRequest, LinearErrorCode } from "./linear.js";
 import type {
   WorkspaceCleanupResult,
   WorkspaceInventory,
@@ -82,10 +82,14 @@ export interface LinearHostDelivery {
   detail: string | null;
 }
 
-export interface LinearDeliverySnapshot {
-  /** True while this machine's vault holds a key — independent of any execution host. */
-  stored: boolean;
+/** One vaulted connection and where its key stands on each execution host. */
+export interface LinearConnectionDelivery {
+  connection_id: string;
   hosts: LinearHostDelivery[];
+}
+
+export interface LinearDeliverySnapshot {
+  connections: LinearConnectionDelivery[];
 }
 
 export type PreviewSandboxResetResult =
@@ -161,11 +165,11 @@ export interface OtomatDesktopBridge {
     updateRemoteDaemon(): Promise<ExecutionHostOperationResult>;
   };
   linear: {
-    /** Connects the workspace for the whole app: the key is vaulted here and handed to every host's daemon. */
-    saveKey(apiKey: string): Promise<LinearVaultOperationResult>;
-    /** Erases the vault and revokes the key on every reachable host; unreachable ones stay pending. */
-    forgetKey(): Promise<LinearVaultOperationResult>;
-    /** Where the vault key stands on each execution host right now. */
+    /** Connects one catalogued workspace: the key is vaulted here and handed to every host's daemon. */
+    saveKey(request: ConnectLinearRequest): Promise<LinearVaultOperationResult>;
+    /** Erases one connection from the vault and revokes it on every reachable host. */
+    forgetKey(connectionId: string): Promise<LinearVaultOperationResult>;
+    /** Where each vaulted connection stands on each execution host right now. */
     delivery(): Promise<LinearDeliverySnapshot>;
     /** Subscribes to delivery changes pushed by the main process; returns the unsubscribe function. */
     onDelivery(listener: (snapshot: LinearDeliverySnapshot) => void): () => void;

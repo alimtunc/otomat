@@ -2,7 +2,7 @@ import { getIssue, listLinearWritesForIssue } from "@otomat/db";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { seedRepository } from "#test-support/db";
-import { linearDetail, setupLinearWritebackTest } from "#test-support/linear-writeback";
+import { CONNECTION, linearDetail, setupLinearWritebackTest } from "#test-support/linear-writeback";
 import { seedRun } from "#test-support/seed";
 
 let test: ReturnType<typeof setupLinearWritebackTest>;
@@ -85,7 +85,7 @@ it("writes nothing while the integration has no write right", async () => {
   test.seedSource(DOING);
   const issueSnapshot = vi.fn(async () => linearDetail());
   const service = await test.connectedService({ issueSnapshot });
-  service.disconnect();
+  service.disconnect(CONNECTION.id);
 
   await service.syncIssueLifecycle({ issue_id: "li", phase: "in_progress", run_id: "r1" });
 

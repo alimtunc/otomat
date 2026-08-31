@@ -40,6 +40,7 @@ export const issueSources = sqliteTable(
     project_id: text("project_id")
       .notNull()
       .references(() => projects.id),
+    connection_id: text("connection_id").notNull().default(""),
     external_team_id: text("external_team_id").notNull(),
     external_team_key: text("external_team_key").notNull(),
     external_team_name: text("external_team_name").notNull(),

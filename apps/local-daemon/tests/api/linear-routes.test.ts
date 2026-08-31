@@ -32,14 +32,18 @@ it("accepts a key and answers with a connection that never contains it", async (
   const submitted: string[] = [];
   const app = makeApiApp(t, {
     linear: stubLinearService({
-      connect: async (apiKey) => {
-        submitted.push(apiKey);
-        return connectedLinear();
+      connect: async (connectRequest) => {
+        submitted.push(connectRequest.api_key);
+        return connectedLinear(connectRequest.id, connectRequest.label);
       },
     }),
   });
 
-  const res = await post(app, "/api/linear/connect", { api_key: KEY });
+  const res = await post(app, "/api/linear/connections", {
+    id: "c-otomat",
+    label: "Otomat",
+    api_key: KEY,
+  });
 
   expect(res.status).toBe(200);
   const body = await res.text();
@@ -48,18 +52,18 @@ it("accepts a key and answers with a connection that never contains it", async (
   expect(submitted).toEqual([KEY]);
 });
 
-it("never echoes a key from the connection endpoint", async () => {
+it("never echoes a key from the connections endpoint", async () => {
   const app = makeApiApp(t, {
-    linear: stubLinearService({ connection: () => connectedLinear() }),
+    linear: stubLinearService({ connections: () => [connectedLinear()] }),
   });
 
-  const res = await request(app, "/api/linear/connection");
+  const res = await request(app, "/api/linear/connections");
 
   expect(res.status).toBe(200);
   expect(await res.text()).not.toContain(KEY);
 });
 
-it("rejects a connect body that is not exactly a key", async () => {
+it("rejects a connect body that is not exactly an identified key", async () => {
   const app = makeApiApp(t, {
     linear: stubLinearService({
       connect: async () => {
@@ -68,9 +72,18 @@ it("rejects a connect body that is not exactly a key", async () => {
     }),
   });
 
-  expect((await post(app, "/api/linear/connect", {})).status).toBe(400);
-  expect((await post(app, "/api/linear/connect", { api_key: "" })).status).toBe(400);
-  const extra = await post(app, "/api/linear/connect", { api_key: KEY, persist: true });
+  expect((await post(app, "/api/linear/connections", {})).status).toBe(400);
+  expect(
+    (await post(app, "/api/linear/connections", { id: "c-otomat", label: "Otomat", api_key: "" }))
+      .status,
+  ).toBe(400);
+  expect((await post(app, "/api/linear/connections", { api_key: KEY })).status).toBe(400);
+  const extra = await post(app, "/api/linear/connections", {
+    id: "c-otomat",
+    label: "Otomat",
+    api_key: KEY,
+    persist: true,
+  });
   expect(extra.status).toBe(400);
   expect(await extra.json()).toMatchObject({ error: "invalid_request" });
 });
@@ -110,7 +123,7 @@ it("maps a rate limit to 409 and an outage to 503", async () => {
   });
 
   expect((await post(rateLimited, "/api/linear/sync", {})).status).toBe(409);
-  expect((await request(offline, "/api/linear/workspace")).status).toBe(503);
+  expect((await request(offline, "/api/linear/connections/c-otomat/workspace")).status).toBe(503);
 });
 
 it("leaves unexpected failures to the central API error handler", async () => {
@@ -123,7 +136,7 @@ it("leaves unexpected failures to the central API error handler", async () => {
     }),
   });
 
-  const response = await request(app, "/api/linear/workspace");
+  const response = await request(app, "/api/linear/connections/c-otomat/workspace");
 
   expect(response.status).toBe(500);
   expect(await response.json()).toEqual({ error: "internal_error" });
@@ -149,6 +162,7 @@ it("maps an unknown source to 404 and a duplicate mapping to 409", async () => {
   expect((await post(missing, "/api/linear/sync", { source_id: "nope" })).status).toBe(404);
   const conflict = await post(duplicate, "/api/linear/sources", {
     project_id: "p1",
+    connection_id: "c-otomat",
     external_team_id: "team-1",
   });
   expect(conflict.status).toBe(409);
@@ -158,6 +172,7 @@ it("serves mapped sources and sync results through their contracts", async () =>
   const source = {
     id: "src-1",
     project_id: "p1",
+    connection_id: "c-otomat",
     source: "linear" as const,
     external_team_id: "team-1",
     external_team_key: "OTO",
@@ -198,6 +213,7 @@ it("rewrites a source status mapping and refuses a state from another team", asy
         }
         return {
           id: sourceId,
+          connection_id: "c-otomat",
           project_id: "p1",
           source: "linear" as const,
           external_team_id: "team-1",
@@ -272,6 +288,7 @@ it("serves one project's sync status and refuses a project it does not own", asy
         return {
           project_id: "p1",
           sources: 1,
+          connection: connectedLinear(),
           running: false,
           last_synced_at: "2026-07-20T12:00:00.000Z",
           last_result: { imported: 2, updated: 1 },
@@ -422,10 +439,10 @@ it("keeps the Linear routes behind the loopback host guard", async () => {
     }),
   });
 
-  const res = await app.request("/api/linear/connect", {
+  const res = await app.request("/api/linear/connections", {
     method: "POST",
     headers: { Host: "evil.example.com", "content-type": "application/json" },
-    body: JSON.stringify({ api_key: KEY }),
+    body: JSON.stringify({ id: "c-otomat", label: "Otomat", api_key: KEY }),
   });
 
   expect(res.status).toBe(403);

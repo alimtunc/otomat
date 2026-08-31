@@ -474,12 +474,37 @@ against the local daemon, because a silent local fallback is how a VPS project w
 a second, competing local one. `RepositoryContract` carries `root_path` so a row is legible without
 joining the project list; `available` stays a per-read probe of that same root.
 
-The Linear side needs no per-host secret. One vaulted key is delivered to each host's daemon in
-memory (see the Linear sections above); what is per project is the mapping, and it is scoped by the
-daemon that owns the project — `GET /api/linear/sources?projectId=…` — so two projects on one
+The Linear side needs no per-host secret. Every catalogued key is delivered to each host's daemon in
+memory (see "Several Linear Workspaces" below); what is per project is the mapping, and it is scoped
+by the daemon that owns the project — `GET /api/linear/sources?projectId=…` — so two projects on one
 connection keep independent team, Linear-project and lifecycle-state selections and neither reads
 the other's rows. When the vault holds a key the active host has not received yet, the project's
 Linear panel says exactly that rather than inviting a connection that already exists.
+
+## Several Linear Workspaces (OTO-145)
+
+The catalogue of connections is global; the choice of one is per project. `linear_connections` holds
+what identifies a connection — a label plus the workspace and account it last authenticated as — and
+never its key: the daemon keeps keys in a `LinearConnectionRegistry` in memory, one abort controller
+each, and the desktop shell keeps them in its `safeStorage` vault as one `{ connectionId: apiKey }`
+map. Nothing else on the path may hold one, which is why a key reaches a host only as a
+`POST /api/linear/connections` body.
+
+`issue_sources.connection_id` is the single binding. A project's connection is *derived* from its
+own mappings rather than stored beside them, so there is one fact to keep true: a second mapping
+naming another connection is refused (`linear_connection_mismatch`), and every read that needs a key
+— a sync pass, a lifecycle assertion, an issue's write-back — resolves it the same way, through the
+project the issue or source belongs to. That is what keeps CRM's issues off Otomat's key when the
+operator switches project, and what lets two projects deliberately share one connection.
+
+A connection fails alone. Its own controller means a revoked key retires only its calls, marks only
+its row `failed`, and leaves every other project syncing; `GET /api/linear/sync-status` carries the
+project's connection so auto-sync fires only against a connected one, while the project surface
+reads the catalogue and the delivery snapshot to separate "no connection chosen", "the key never
+reached this host", and "Linear refused it". Disconnecting is the one destructive operation, so it is the one
+that asks: the cockpit lists the projects that lose their mapping before the daemon drops the
+connection, its sources and their cursors. Rolling back a rotation never does that — the vault still
+holds the previous key, so a failed vault write re-delivers it instead of deleting anything.
 
 ## One Remote Host Journey
 

@@ -6,11 +6,13 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { findRefreshButton } from "#support/dom-queries";
 import type { FakeQueryState } from "#support/fake-query";
+import { linearConnection as connection } from "#support/linear";
 import { mount, type Mounted } from "#support/mount";
 
-let connectionState: FakeQueryState;
+let connectionsState: FakeQueryState;
 let sourcesState: FakeQueryState;
 let sourcesScope: unknown[];
+let workspaceScope: unknown[];
 let workspaceState: FakeQueryState;
 let delivery: LinearDeliverySnapshot | null;
 let syncSources: number;
@@ -28,8 +30,11 @@ vi.mock("@web/api/linear/queries", () => ({
     sourcesScope = args;
     return sourcesState;
   },
-  useLinearConnection: () => connectionState,
-  useLinearWorkspace: () => workspaceState,
+  useLinearConnections: () => connectionsState,
+  useLinearWorkspace: (...args: unknown[]) => {
+    workspaceScope = args;
+    return workspaceState;
+  },
 }));
 
 vi.mock("@web/api/linear/use-delivery", () => ({ useLinearDelivery: () => delivery }));
@@ -47,6 +52,7 @@ vi.mock("@web/api/linear/use-project-sync", () => ({
     status: {
       project_id: projectId ?? "",
       sources: syncSources,
+      connection: null,
       running: false,
       last_synced_at: null,
       last_result: null,
@@ -59,9 +65,15 @@ vi.mock("@web/api/linear/use-project-sync", () => ({
 }));
 
 vi.mock("@web/components/settings/integrations/issue-source-form", () => ({
-  IssueSourceForm: ({ onCreated }: { onCreated?: () => void }) => {
+  IssueSourceForm: ({
+    connectionId,
+    onCreated,
+  }: {
+    connectionId: string;
+    onCreated?: () => void;
+  }) => {
     if (onCreated !== undefined) createdCallbacks.push(onCreated);
-    return <div data-testid="issue-source-form" />;
+    return <div data-testid="issue-source-form" data-connection-id={connectionId} />;
   },
 }));
 
@@ -73,16 +85,10 @@ beforeEach(() => {
   createdCallbacks.length = 0;
   syncSources = 1;
   sourcesScope = [];
+  workspaceScope = [];
   delivery = null;
-  connectionState = {
-    data: {
-      status: "connected",
-      workspace_id: "workspace-1",
-      workspace_name: "Otomat",
-      user_name: "Alim",
-      error_code: null,
-      error_message: null,
-    },
+  connectionsState = {
+    data: [connection()],
     isPending: false,
     isError: false,
     isSuccess: true,
@@ -92,6 +98,7 @@ beforeEach(() => {
       {
         id: "source-1",
         project_id: "p1",
+        connection_id: "c-otomat",
         source: "linear",
         external_team_id: "team-1",
         external_team_key: "OTO",
@@ -138,12 +145,30 @@ async function renderPanel(): Promise<HTMLElement> {
 it("asks the daemon for this project's sources alone, with an unmap action", async () => {
   const container = await renderPanel();
 
-  expect(sourcesScope).toEqual(["workspace-1", "p1"]);
+  expect(sourcesScope).toEqual(["p1"]);
   expect(container.textContent).toContain("OTO");
   const unmap = [...container.querySelectorAll("button")].find(
     (candidate) => candidate.textContent?.trim() === "Unmap",
   );
   expect(unmap).toBeDefined();
+});
+
+it("reads the workspace of the connection this project already maps", async () => {
+  connectionsState = {
+    data: [connection({ id: "c-crm", label: "CRM" }), connection()],
+    isPending: false,
+    isError: false,
+    isSuccess: true,
+  };
+
+  const container = await renderPanel();
+
+  expect(workspaceScope).toEqual(["c-otomat"]);
+  expect(
+    container
+      .querySelector("[data-testid='issue-source-form']")
+      ?.getAttribute("data-connection-id"),
+  ).toBe("c-otomat");
 });
 
 it("offers the source's own Linear statuses for the run and merge phases", async () => {
@@ -172,13 +197,13 @@ it("syncs only this project's sources", async () => {
   expect(syncRefresh).toHaveBeenCalledWith({ announce: true });
 });
 
-it("disables sync when the project has no mapped sources", async () => {
+it("offers no refresh while the project maps nothing", async () => {
   sourcesState = { data: [], isPending: false, isError: false, isSuccess: true };
   syncSources = 0;
 
   const container = await renderPanel();
 
-  expect(findRefreshButton(container)?.disabled).toBe(true);
+  expect(findRefreshButton(container)).toBeNull();
 });
 
 it("starts the first import as soon as a mapping is saved", async () => {
@@ -190,12 +215,6 @@ it("starts the first import as soon as a mapping is saved", async () => {
   expect(syncRefresh).toHaveBeenCalledWith({ announce: true });
 });
 
-it("mounts the mapping form pinned to the selected project", async () => {
-  const container = await renderPanel();
-
-  expect(container.querySelector("[data-testid='issue-source-form']")).not.toBeNull();
-});
-
 it("explains when the connected Linear workspace has no teams", async () => {
   workspaceState = { data: { teams: [], projects: [] }, isPending: false, isError: false };
 
@@ -205,56 +224,74 @@ it("explains when the connected Linear workspace has no teams", async () => {
   expect(container.querySelector("[data-testid='issue-source-form']")).toBeNull();
 });
 
-it("points at global Integrations while Linear is disconnected", async () => {
-  connectionState = {
-    data: {
-      status: "disconnected",
-      workspace_id: null,
-      workspace_name: null,
-      user_name: null,
-      error_code: null,
-      error_message: null,
-    },
-    isPending: false,
-    isError: false,
-    isSuccess: true,
-  };
+it("points at global Integrations while no connection exists", async () => {
+  connectionsState = { data: [], isPending: false, isError: false, isSuccess: true };
 
   const container = await renderPanel();
 
-  expect(container.textContent).toContain("Connect Linear");
+  expect(container.textContent).toContain("Connect a Linear workspace in");
   expect(container.querySelector("[data-testid='issue-source-form']")).toBeNull();
 });
 
 it("names the host still waiting for the key instead of inviting a connection that exists", async () => {
-  connectionState = {
-    data: {
-      status: "disconnected",
-      workspace_id: null,
-      workspace_name: null,
-      user_name: null,
-      error_code: null,
-      error_message: null,
-    },
+  connectionsState = {
+    data: [connection({ status: "disconnected" })],
     isPending: false,
     isError: false,
     isSuccess: true,
   };
   delivery = {
-    stored: true,
-    hosts: [
+    connections: [
       {
-        host_id: "local",
-        label: "Local",
-        state: "pending_restore",
-        detail: "The local daemon is not running yet.",
+        connection_id: "c-otomat",
+        hosts: [
+          {
+            host_id: "local",
+            label: "Local",
+            state: "pending_restore",
+            detail: "The local daemon is not running yet.",
+          },
+        ],
       },
     ],
   };
 
   const container = await renderPanel();
 
-  expect(container.textContent).toContain("Local has not received the key yet");
+  expect(container.textContent).toContain("Local has not received Otomat's key yet");
   expect(container.textContent).toContain("The local daemon is not running yet.");
-  expect(container.textContent).not.toContain("Connect Linear in");
+  expect(container.querySelector("[data-testid='issue-source-form']")).toBeNull();
+});
+
+it("says a revoked connection lost its access rather than blaming the host", async () => {
+  connectionsState = {
+    data: [
+      connection({
+        status: "failed",
+        error_code: "linear_unauthorized",
+        error_message: "Linear rejected the API key.",
+      }),
+    ],
+    isPending: false,
+    isError: false,
+    isSuccess: true,
+  };
+
+  const container = await renderPanel();
+
+  expect(container.textContent).toContain("lost its access");
+  expect(container.textContent).toContain("Linear rejected the API key.");
+});
+
+it("says so when this project maps a connection the host does not know", async () => {
+  connectionsState = {
+    data: [connection({ id: "c-crm", label: "CRM" })],
+    isPending: false,
+    isError: false,
+    isSuccess: true,
+  };
+
+  const container = await renderPanel();
+
+  expect(container.textContent).toContain("maps a Linear connection this host does not know");
 });

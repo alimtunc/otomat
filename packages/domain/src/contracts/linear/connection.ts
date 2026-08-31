@@ -7,6 +7,8 @@ export const LINEAR_ERROR_CODES = [
   "linear_unavailable",
   "linear_request_failed",
   "linear_request_superseded",
+  "linear_connection_not_found",
+  "linear_connection_mismatch",
   "linear_source_not_found",
   "linear_source_already_mapped",
   "linear_source_invalid_selection",
@@ -20,35 +22,33 @@ export const LINEAR_ERROR_CODES = [
 ] as const;
 export type LinearErrorCode = (typeof LINEAR_ERROR_CODES)[number];
 
-export const linearConnectionContractSchema = z.discriminatedUnion("status", [
-  z.object({
-    status: z.literal("disconnected"),
-    workspace_id: z.null(),
-    workspace_name: z.null(),
-    user_name: z.null(),
-    error_code: z.null(),
-    error_message: z.null(),
-  }),
-  z.object({
-    status: z.literal("connected"),
-    workspace_id: z.string().min(1),
-    workspace_name: z.string(),
-    user_name: z.string(),
-    error_code: z.null(),
-    error_message: z.null(),
-  }),
-  z.object({
-    status: z.literal("failed"),
-    workspace_id: z.null(),
-    workspace_name: z.null(),
-    user_name: z.null(),
-    error_code: z.enum(LINEAR_ERROR_CODES),
-    error_message: z.string(),
-  }),
-]);
+/** The one id the migration, the desktop vault and the `OTOMAT_LINEAR_API_KEY` bootstrap agree on. */
+export const LINEAR_DEFAULT_CONNECTION_ID = "linear-default";
+
+export const LINEAR_CONNECTION_STATUSES = ["connected", "disconnected", "failed"] as const;
+export type LinearConnectionStatus = (typeof LINEAR_CONNECTION_STATUSES)[number];
+
+export const linearConnectionContractSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  /** Empty until the connection has authenticated once. */
+  workspace_id: z.string(),
+  workspace_name: z.string(),
+  user_name: z.string(),
+  status: z.enum(LINEAR_CONNECTION_STATUSES),
+  error_code: z.enum(LINEAR_ERROR_CODES).nullable(),
+  error_message: z.string().nullable(),
+});
 export type LinearConnectionContract = z.infer<typeof linearConnectionContractSchema>;
 
-export const connectLinearRequestSchema = z.object({ api_key: z.string().min(1) }).strict();
+/** The caller owns the id so one key reaches every execution host as the same connection. */
+export const connectLinearRequestSchema = z
+  .object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    api_key: z.string().trim().min(1),
+  })
+  .strict();
 export type ConnectLinearRequest = z.infer<typeof connectLinearRequestSchema>;
 
 export const linearErrorSchema = z.object({
@@ -86,6 +86,7 @@ export type LinearWorkspaceContract = z.infer<typeof linearWorkspaceContractSche
 export const createIssueSourceRequestSchema = z
   .object({
     project_id: z.string().min(1),
+    connection_id: z.string().min(1),
     external_team_id: z.string().min(1),
     external_project_id: z.string().min(1).optional(),
   })
@@ -129,6 +130,8 @@ export const linearSyncStatusSchema = z.object({
   project_id: z.string().min(1),
   /** Linear sources mapped to this project; zero means there is nothing to refresh. */
   sources: z.number().int().nonnegative(),
+  /** The connection this project reads from; null while none is mapped. */
+  connection: linearConnectionContractSchema.nullable(),
   running: z.boolean(),
   /** Oldest success across the project's sources; null while any of them has never synced. */
   last_synced_at: z.iso.datetime().nullable(),

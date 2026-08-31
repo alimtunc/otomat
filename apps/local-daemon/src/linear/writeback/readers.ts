@@ -9,10 +9,8 @@ export async function editorState(
   issueId: string,
 ): Promise<LinearEditorState> {
   const { linearId } = requireWritableIssue(config.db, issueId);
-  const { apiKey, signal } = config.authorize();
-  const editor = await config.guard(signal, () =>
-    config.client.issueEditor(apiKey, linearId, signal),
-  );
+  const { apiKey, signal, run } = config.authorize(issueId);
+  const editor = await run(() => config.client.issueEditor(apiKey, linearId, signal));
   return {
     snapshot: snapshotToContract(editor.issue),
     team_metadata: {
@@ -29,9 +27,7 @@ export async function comments(
   issueId: string,
 ): Promise<LinearCommentContract[]> {
   const { linearId } = requireWritableIssue(config.db, issueId);
-  const { apiKey, signal } = config.authorize();
-  const remote = await config.guard(signal, () =>
-    config.client.listComments(apiKey, linearId, signal),
-  );
+  const { apiKey, signal, run } = config.authorize(issueId);
+  const remote = await run(() => config.client.listComments(apiKey, linearId, signal));
   return remote.toSorted((a, b) => a.created_at.localeCompare(b.created_at));
 }

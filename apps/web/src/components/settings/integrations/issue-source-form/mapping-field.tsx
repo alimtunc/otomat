@@ -10,21 +10,33 @@ import {
 } from "@otomat/ui";
 import { fieldErrorProps, type FieldMetaLike } from "@web/lib/form";
 
+const UNVALIDATED: FieldMetaLike = { isTouched: false, isValid: true, errors: [] };
+
 export interface MappingFieldProps {
   label: string;
   value: string;
   options: { value: string; label: string }[];
-  meta: FieldMetaLike;
+  /** Omitted for a plain selection, which carries no touched state of its own. */
+  meta?: FieldMetaLike;
+  disabled?: boolean;
   onValueChange(value: string): void;
 }
 
-export function MappingField({ label, value, options, meta, onValueChange }: MappingFieldProps) {
+export function MappingField({
+  label,
+  value,
+  options,
+  meta = UNVALIDATED,
+  disabled = false,
+  onValueChange,
+}: MappingFieldProps) {
   return (
     <Field {...fieldErrorProps(meta)}>
       <FieldLabel>{label}</FieldLabel>
       <Select
         items={options}
         value={value}
+        disabled={disabled}
         onValueChange={(nextValue) => {
           if (nextValue !== null) onValueChange(nextValue);
         }}

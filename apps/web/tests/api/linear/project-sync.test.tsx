@@ -2,17 +2,16 @@
 import { DaemonRequestError } from "@otomat/client";
 import type { LinearSyncStatusContract } from "@otomat/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useLinearConnection } from "@web/api/linear/queries";
 import { useProjectLinearSync } from "@web/api/linear/use-project-sync";
 import { queryKeys } from "@web/api/query-keys";
 import { act } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { linearConnection } from "#support/linear";
 import { mount, type Mounted } from "#support/mount";
 
 const syncLinear = vi.fn();
 const getLinearSyncStatus = vi.fn();
-const getLinearConnection = vi.fn();
 const { toastError, toastSuccess } = vi.hoisted(() => ({
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
@@ -22,7 +21,6 @@ vi.mock("@web/api/client", () => ({
   daemon: {
     syncLinear: (request: unknown) => syncLinear(request),
     getLinearSyncStatus: (projectId: string) => getLinearSyncStatus(projectId),
-    getLinearConnection: () => getLinearConnection(),
   },
 }));
 
@@ -30,10 +28,13 @@ vi.mock("@otomat/ui", () => ({
   toast: { error: toastError, success: toastSuccess },
 }));
 
+const CONNECTED = linearConnection();
+
 function status(overrides: Partial<LinearSyncStatusContract> = {}): LinearSyncStatusContract {
   return {
     project_id: "p1",
     sources: 1,
+    connection: CONNECTED,
     running: false,
     last_synced_at: null,
     last_result: null,
@@ -46,8 +47,7 @@ function status(overrides: Partial<LinearSyncStatusContract> = {}): LinearSyncSt
 function SyncProbe() {
   const one = useProjectLinearSync("p1");
   const two = useProjectLinearSync("p1");
-  const connection = useLinearConnection();
-  const ready = one.status !== null && connection.data !== undefined;
+  const ready = one.status !== null;
   return (
     <>
       <button type="button" onClick={() => one.refresh({ announce: true })}>
@@ -109,7 +109,6 @@ async function renderProbe(): Promise<HTMLElement> {
 beforeEach(() => {
   syncLinear.mockResolvedValue({ results: [{ imported: 1, updated: 0 }] });
   getLinearSyncStatus.mockResolvedValue(status());
-  getLinearConnection.mockResolvedValue({ status: "connected", workspace_id: "workspace-1" });
 });
 
 afterEach(async () => {
@@ -117,7 +116,6 @@ afterEach(async () => {
   rendered = null;
   syncLinear.mockReset();
   getLinearSyncStatus.mockReset();
-  getLinearConnection.mockReset();
   toastError.mockReset();
   toastSuccess.mockReset();
   document.body.replaceChildren();
@@ -186,8 +184,10 @@ it("refreshes automatically once the last success has aged out", async () => {
   await vi.waitFor(() => expect(syncLinear).toHaveBeenCalledTimes(1));
 });
 
-it("never runs an automatic pass while Linear is disconnected", async () => {
-  getLinearConnection.mockResolvedValue({ status: "disconnected" });
+it("never runs an automatic pass while the project's connection has no key here", async () => {
+  getLinearSyncStatus.mockResolvedValue(
+    status({ connection: { ...CONNECTED, status: "disconnected" } }),
+  );
   const container = await renderProbe();
 
   click(container, "Stale");
@@ -197,7 +197,7 @@ it("never runs an automatic pass while Linear is disconnected", async () => {
 });
 
 it("never asks Linear for a project with no mapped source", async () => {
-  getLinearSyncStatus.mockResolvedValue(status({ sources: 0 }));
+  getLinearSyncStatus.mockResolvedValue(status({ sources: 0, connection: null }));
   const container = await renderProbe();
 
   click(container, "Stale");
@@ -223,7 +223,7 @@ it("refreshes persisted rows and shouts when a partially applied sync rejects", 
   await vi.waitFor(() => {
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.issues });
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.issueSources });
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.linearConnection });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.linearConnections });
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: queryKeys.linearSyncStatus("p1"),
     });
@@ -245,7 +245,7 @@ it("silences a sync canceled by a newer connection state", async () => {
   click(container, "Refresh");
 
   await vi.waitFor(() => {
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.linearConnection });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.linearConnections });
   });
   expect(toastError).not.toHaveBeenCalled();
 });

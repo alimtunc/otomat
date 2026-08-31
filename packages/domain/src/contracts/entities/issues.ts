@@ -58,6 +58,7 @@ export type IssueContract = z.infer<typeof issueContractSchema>;
 const issueSourceContractBaseSchema = z.object({
   id: z.string(),
   project_id: z.string(),
+  connection_id: z.string(),
   source: z.enum(EXTERNAL_ISSUE_SOURCES),
   external_team_id: z.string(),
   external_team_key: z.string(),

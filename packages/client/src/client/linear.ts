@@ -25,21 +25,26 @@ import { deleteJson, getJson, patchJson, postJson, queryString } from "./http.js
 
 export function createLinearClient(config: DaemonClientConfig) {
   return {
-    async getLinearConnection() {
-      return linearConnectionContractSchema.parse(await getJson(config, "/api/linear/connection"));
+    async listLinearConnections() {
+      return linearConnectionContractSchema
+        .array()
+        .parse(await getJson(config, "/api/linear/connections"));
     },
     async connectLinear(request: ConnectLinearRequest) {
       return linearConnectionContractSchema.parse(
-        await postJson(config, "/api/linear/connect", request),
+        await postJson(config, "/api/linear/connections", request),
       );
     },
-    async disconnectLinear() {
-      return linearConnectionContractSchema.parse(
-        await postJson(config, "/api/linear/disconnect", {}),
-      );
+    async disconnectLinear(connectionId: string) {
+      await deleteJson(config, `/api/linear/connections/${encodeURIComponent(connectionId)}`);
     },
-    async getLinearWorkspace() {
-      return linearWorkspaceContractSchema.parse(await getJson(config, "/api/linear/workspace"));
+    async getLinearWorkspace(connectionId: string) {
+      return linearWorkspaceContractSchema.parse(
+        await getJson(
+          config,
+          `/api/linear/connections/${encodeURIComponent(connectionId)}/workspace`,
+        ),
+      );
     },
     async listIssueSources(params: { projectId?: string } = {}) {
       return issueSourceContractSchema

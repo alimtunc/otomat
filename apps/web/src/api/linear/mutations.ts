@@ -1,7 +1,9 @@
 import { DaemonRequestError } from "@otomat/client";
 import {
   linearErrorSchema,
+  type ConnectLinearRequest,
   type CreateIssueSourceRequest,
+  type LinearConnectionContract,
   type LinearErrorCode,
   type UpdateIssueSourceRequest,
 } from "@otomat/domain";
@@ -38,23 +40,28 @@ export function isSupersededLinearError(error: unknown): boolean {
   return linearRefusal(error)?.code === "linear_request_superseded";
 }
 
+/** On the desktop the vault owns the key and fans it out; the browser build talks to its own daemon. */
 export function useConnectLinear() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async (apiKey: string) => {
+    mutationFn: async (request: ConnectLinearRequest) => {
       const bridge = desktopBridge();
-      if (bridge === null) {
-        const connection = await daemon.connectLinear({ api_key: apiKey });
-        if (connection.status !== "connected") {
-          throw new LinearOperationError(
-            connection.error_message ?? "Linear rejected the API key.",
-            connection.error_code,
-          );
-        }
-        return;
-      }
-      const result = await bridge.linear.saveKey(apiKey);
+      if (bridge === null) return daemon.connectLinear(request);
+      const result = await bridge.linear.saveKey(request);
       if (!result.ok) throw new LinearOperationError(result.message, result.error_code);
+      return null;
+    },
+    onSuccess: (connection) => {
+      if (connection === null) return;
+      client.setQueryData<LinearConnectionContract[]>(
+        queryKeys.linearConnections,
+        (connections = []) =>
+          connections.some((candidate) => candidate.id === connection.id)
+            ? connections.map((candidate) =>
+                candidate.id === connection.id ? connection : candidate,
+              )
+            : [...connections, connection],
+      );
     },
     onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
   });
@@ -63,13 +70,13 @@ export function useConnectLinear() {
 export function useDisconnectLinear() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (connectionId: string) => {
       const bridge = desktopBridge();
       if (bridge === null) {
-        await daemon.disconnectLinear();
+        await daemon.disconnectLinear(connectionId);
         return;
       }
-      const result = await bridge.linear.forgetKey();
+      const result = await bridge.linear.forgetKey(connectionId);
       if (!result.ok) throw new LinearOperationError(result.message, result.error_code);
     },
     onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),

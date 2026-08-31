@@ -15,6 +15,7 @@ import { useState } from "react";
 export function useIssueSourceForm(
   workspace: LinearWorkspaceContract,
   projects: ProjectContract[],
+  connectionId: string,
   onCreated?: () => void,
 ) {
   const create = useCreateIssueSource();
@@ -27,7 +28,7 @@ export function useIssueSourceForm(
     },
     onSubmit: async ({ value }) => {
       setSubmitError(null);
-      const resolution = buildIssueSourceRequest(workspace, value);
+      const resolution = buildIssueSourceRequest(workspace, { ...value, connectionId });
       if (!resolution.ok) {
         setSubmitError(resolution.message);
         return;
