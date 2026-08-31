@@ -1,7 +1,6 @@
 import { Button, Icon, Popover, PopoverContent, PopoverTrigger, Switch } from "@otomat/ui";
 import { CountBadge } from "@web/components/issues/count-badge";
 import { DEFAULT_RUNS_VIEW_CONFIG, type RunsViewConfig } from "@web/lib/run/view-config";
-import { TOOLBAR_STRIP } from "@web/lib/toolbar";
 import type { ReactNode } from "react";
 
 export interface RunsToolbarProps {
@@ -32,7 +31,7 @@ export function RunsToolbar({ config, hidden, onChange }: RunsToolbarProps) {
     (config.showDoneIssues === DEFAULT_RUNS_VIEW_CONFIG.showDoneIssues ? 0 : 1);
   const summary = hiddenSummary(hidden);
   return (
-    <div className={TOOLBAR_STRIP}>
+    <div className="flex items-center gap-2">
       <Popover>
         <PopoverTrigger
           render={

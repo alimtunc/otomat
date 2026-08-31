@@ -224,6 +224,8 @@ export { MetaList, type MetaListItem, type MetaListProps } from "./components/me
 
 export { NavSection, type NavSectionProps } from "./components/nav-section";
 
+export { PageBar, type PageBarProps } from "./components/page-bar";
+
 export { Pill, PillTabs, type PillProps, type PillTabsProps } from "./components/pill-tabs";
 
 export { ProjectGlyph } from "./components/project-glyph";
@@ -273,5 +275,3 @@ export { TimelineEventRow, type TimelineEventRowProps } from "./components/timel
 
 export { Toaster, type ToasterProps } from "./components/toaster";
 export { toast } from "sonner";
-
-export { Topbar, type TopbarProps } from "./components/topbar";

@@ -25,13 +25,19 @@ export function RunsView() {
   );
 
   return (
-    <RouteShell active="runs" titleIcon="activity" breadcrumbs={[{ label: "Runs", current: true }]}>
-      <div className="flex h-full min-h-0 flex-col">
+    <RouteShell
+      active="runs"
+      titleIcon="activity"
+      breadcrumbs={[{ label: "Runs", current: true }]}
+      actions={
         <RunsToolbar
           config={view.config}
           hidden={{ runs: visible.hiddenRuns, groups: visible.hiddenGroups }}
           onChange={view.update}
         />
+      }
+    >
+      <div className="flex h-full min-h-0 flex-col">
         {issues.isError && issues.data !== undefined ? (
           <StaleNotice
             dataUpdatedAt={issues.dataUpdatedAt}

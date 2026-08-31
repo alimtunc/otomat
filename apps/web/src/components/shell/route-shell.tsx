@@ -8,14 +8,14 @@ import {
   Icon,
   IconButton,
   type IconName,
-  Topbar,
+  PageBar,
   useCommandPalette,
   useTheme,
 } from "@otomat/ui";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
 import { ActivityCenter } from "@web/components/shell/activity/center";
-import { SETTINGS_NAV, type ShellSection } from "@web/components/shell/nav-items";
+import type { ShellSection } from "@web/components/shell/nav-items";
 import { NewIssueContext } from "@web/components/shell/new-issue-context";
 import { usePaletteGroups } from "@web/components/shell/palette/use-groups";
 import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
@@ -34,6 +34,7 @@ export interface RouteShellProps {
   titleNote?: string;
   back?: BackNavigation | null;
   breadcrumbExtra?: ReactNode;
+  tabs?: ReactNode;
   actions?: ReactNode;
   rightPanel?: ReactNode;
   children: ReactNode;
@@ -46,12 +47,12 @@ export function RouteShell({
   titleNote,
   back,
   breadcrumbExtra,
+  tabs,
   actions,
   rightPanel,
   children,
 }: RouteShellProps) {
   const { density } = useTheme();
-  const navigate = useNavigate();
   const shell = useShellData();
   const remote = useRemoteSession();
   const palette = useCommandPalette();
@@ -61,29 +62,73 @@ export function RouteShell({
   const paletteGroups = usePaletteGroups({ search: palette.search, onNewIssue: openNewIssue });
   useNewIssueShortcut(openNewIssue);
 
-  const topbar = (
-    <Topbar
-      breadcrumbs={
-        <span className="truncate text-sm text-text-secondary">{shell.projectLabel}</span>
+  const isTitle = breadcrumbs.length === 1;
+
+  const pageBar = (
+    <PageBar
+      leading={
+        <>
+          {back ? (
+            <IconButton
+              label={back.label}
+              icon={<Icon name="arrow-left" aria-hidden />}
+              onClick={back.goBack}
+            />
+          ) : null}
+          {isTitle ? (
+            <>
+              <h1 className="flex items-center gap-2.25 text-md font-semibold text-foreground">
+                {titleIcon ? (
+                  <Icon
+                    name={titleIcon}
+                    aria-hidden
+                    className="h-4.25 w-4.25 text-text-secondary"
+                  />
+                ) : null}
+                {breadcrumbs[0]?.label}
+              </h1>
+              {titleNote ? (
+                <span className="truncate text-xs text-text-tertiary">{titleNote}</span>
+              ) : null}
+            </>
+          ) : (
+            <Breadcrumbs
+              items={breadcrumbs}
+              renderLink={(item, label) => (
+                // SAFETY: Breadcrumbs calls renderLink only for items carrying an href.
+                <Link
+                  to={item.href as string}
+                  className={`truncate hover:text-foreground ${FOCUS_RING} focus-visible:rounded-sm`}
+                >
+                  {label}
+                </Link>
+              )}
+            />
+          )}
+          {breadcrumbExtra}
+        </>
       }
-      onSearch={() => palette.setOpen(true)}
-      actions={<ActivityCenter hostLabel={shell.activeHostLabel} />}
-      connectionStatus={
-        <ConnectionStatusIndicator
-          state={shell.connectionState}
-          lastSyncAt={shell.lastSyncAt}
-          onRetry={shell.retry}
-          note={
-            remote.active && remote.alias !== null
-              ? `Runs execute on ${remote.alias}. Closing Otomat leaves them running there, and a daemon update waits for them to finish.`
-              : undefined
-          }
-        />
+      tabs={tabs}
+      trailing={
+        <>
+          {actions}
+          <ActivityCenter hostLabel={shell.activeHostLabel} />
+          <div className="flex items-center gap-1.5 px-1.5 text-xs">
+            <ConnectionStatusIndicator
+              state={shell.connectionState}
+              lastSyncAt={shell.lastSyncAt}
+              onRetry={shell.retry}
+              note={
+                remote.active && remote.alias !== null
+                  ? `Runs execute on ${remote.alias}. Closing Otomat leaves them running there, and a daemon update waits for them to finish.`
+                  : undefined
+              }
+            />
+          </div>
+        </>
       }
     />
   );
-
-  const isTitle = breadcrumbs.length === 1;
 
   return (
     <AppShell
@@ -101,7 +146,6 @@ export function RouteShell({
           currentProjectId={shell.currentSwitcherId}
           onProjectSelect={shell.selectProject}
           onAddProject={() => setAddProjectOpen(true)}
-          onOpenSettings={() => void navigate({ to: SETTINGS_NAV.to })}
           onSearch={() => palette.setOpen(true)}
           onNewIssue={openNewIssue}
           hasLiveRun={shell.hasLiveRun}
@@ -110,53 +154,11 @@ export function RouteShell({
         />
       }
       rightPanel={rightPanel}
-      topbar={topbar}
+      topbar={pageBar}
     >
       <NewIssueContext.Provider value={openNewIssue}>
-        <div className="flex h-full min-h-0 flex-col">
-          <div className="flex h-12 flex-none items-center gap-2.5 border-b border-border-subtle bg-background px-4.5">
-            {back ? (
-              <IconButton
-                label={back.label}
-                icon={<Icon name="arrow-left" aria-hidden />}
-                onClick={back.goBack}
-              />
-            ) : null}
-            {isTitle ? (
-              <>
-                <h1 className="flex items-center gap-2.25 text-md font-semibold text-foreground">
-                  {titleIcon ? (
-                    <Icon
-                      name={titleIcon}
-                      aria-hidden
-                      className="h-4.25 w-4.25 text-text-secondary"
-                    />
-                  ) : null}
-                  {breadcrumbs[0]?.label}
-                </h1>
-                {titleNote ? <span className="text-xs text-text-tertiary">{titleNote}</span> : null}
-              </>
-            ) : (
-              <Breadcrumbs
-                items={breadcrumbs}
-                renderLink={(item, label) => (
-                  // SAFETY: Breadcrumbs calls renderLink only for items carrying an href.
-                  <Link
-                    to={item.href as string}
-                    className={`truncate hover:text-foreground ${FOCUS_RING} focus-visible:rounded-sm`}
-                  >
-                    {label}
-                  </Link>
-                )}
-              />
-            )}
-            {breadcrumbExtra}
-            <div className="flex-1" />
-            {actions}
-          </div>
-          <div data-scroll-restoration-id="route-content" className="min-h-0 flex-1 overflow-auto">
-            {children}
-          </div>
+        <div data-scroll-restoration-id="route-content" className="h-full min-h-0 overflow-auto">
+          {children}
         </div>
       </NewIssueContext.Provider>
       <CommandPalette

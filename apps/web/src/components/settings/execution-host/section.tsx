@@ -161,7 +161,11 @@ export function ExecutionHostSection() {
                   variant="primary"
                   size="sm"
                   loading={host.pending === "configure"}
-                  disabled={alias.trim().length === 0 || host.pending !== null}
+                  disabled={
+                    alias.trim().length === 0 ||
+                    alias.trim() === (snapshot.remote_ssh_alias ?? "") ||
+                    host.pending !== null
+                  }
                 >
                   Save
                 </Button>

@@ -1,11 +1,12 @@
 import type { LinearConnectionContract } from "@otomat/domain";
-import { Button, Field, FieldControl, FieldLabel, Input, toast } from "@otomat/ui";
+import { Button, Field, FieldControl, FieldLabel, Input } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import {
   isSupersededLinearError,
   linearErrorMessage,
   useConnectLinear,
 } from "@web/api/linear/mutations";
+import { SavedNotice } from "@web/components/settings/saved-notice";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { useState } from "react";
@@ -32,7 +33,6 @@ export function LinearConnectForm({ connection = null, onConnected }: LinearConn
           api_key: value.apiKey.trim(),
         });
         form.reset();
-        toast.success(connection === null ? "Connected to Linear" : "Reconnected to Linear");
         onConnected?.();
       } catch (error) {
         if (isSupersededLinearError(error)) return;
@@ -122,6 +122,11 @@ export function LinearConnectForm({ connection = null, onConnected }: LinearConn
           ? "Stored encrypted on this device and held in daemon memory. Otomat never reads it back."
           : "The browser build keeps the key in daemon memory only — it is forgotten when the daemon restarts. Use the desktop app to store it encrypted."}
       </p>
+      {connect.isSuccess && submitError === null ? (
+        <SavedNotice>
+          {connection === null ? "Connected to Linear" : "Reconnected to Linear"}
+        </SavedNotice>
+      ) : null}
       {submitError === null ? null : (
         <p role="alert" className="text-xs text-danger">
           {submitError}

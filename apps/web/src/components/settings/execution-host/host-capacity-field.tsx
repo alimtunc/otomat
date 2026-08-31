@@ -71,13 +71,19 @@ export function HostCapacityField({ hostId, hostLabel }: HostCapacityFieldProps)
                     onChange={(event) => field.handleChange(event.target.value)}
                   />
                 </FieldControl>
-                <form.Subscribe selector={(state) => isSessionCount(state.values.sessions)}>
-                  {(valid) => (
+                <form.Subscribe selector={(state) => state.values.sessions.trim()}>
+                  {(sessions) => (
                     <Button
                       type="submit"
                       size="sm"
                       loading={capacity.saving}
-                      disabled={!valid || capacity.saving || loading}
+                      disabled={
+                        !isSessionCount(sessions) ||
+                        (applied !== undefined &&
+                          sessions === String(applied.max_concurrent_sessions)) ||
+                        capacity.saving ||
+                        loading
+                      }
                     >
                       Apply
                     </Button>

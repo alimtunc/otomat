@@ -35,7 +35,7 @@ export function RunCockpitLayout() {
           { label: "Run", current: true },
         ]}
         breadcrumbExtra={<RunIdentity runId={runId} status={detail.data?.run.status} />}
-        actions={<CockpitTabs runId={runId} />}
+        tabs={<CockpitTabs runId={runId} />}
       >
         <Outlet />
       </RouteShell>

@@ -18,12 +18,11 @@ export function CockpitTabs({ runId }: { runId: string }) {
         <SegmentedItem
           key={tab.value}
           value={tab.value}
-          icon={<Icon name={tab.icon} />}
+          icon={<Icon name={tab.icon} className="max-lg:hidden" />}
           nativeButton={false}
-          aria-label={tab.label}
           render={<Link to={tab.to} params={{ runId }} />}
         >
-          <span className="hidden lg:inline">{tab.label}</span>
+          {tab.label}
         </SegmentedItem>
       ))}
     </SegmentedControl>

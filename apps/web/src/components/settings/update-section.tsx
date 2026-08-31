@@ -71,6 +71,7 @@ export function UpdateSection() {
         )}
         {installable ? (
           <Button
+            variant="primary"
             size="sm"
             loading={update.installing}
             disabled={update.checking || update.installing}

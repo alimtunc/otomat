@@ -8,7 +8,12 @@ import {
   type ProjectSummary,
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-import { INBOX_NAV, WORKSPACE_NAV, type ShellSection } from "@web/components/shell/nav-items";
+import {
+  INBOX_NAV,
+  SETTINGS_NAV,
+  WORKSPACE_NAV,
+  type ShellSection,
+} from "@web/components/shell/nav-items";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
 import type { ReactNode } from "react";
 
@@ -21,7 +26,6 @@ interface SidebarProps {
   currentProjectId?: string;
   onProjectSelect: (id: string) => void;
   onAddProject?: () => void;
-  onOpenSettings: () => void;
   onSearch: () => void;
   onNewIssue: () => void;
   hasLiveRun?: boolean;
@@ -56,7 +60,6 @@ export function Sidebar({
   currentProjectId,
   onProjectSelect,
   onAddProject,
-  onOpenSettings,
   onSearch,
   onNewIssue,
   hasLiveRun = false,
@@ -70,18 +73,26 @@ export function Sidebar({
       currentId={currentProjectId}
       onSelect={onProjectSelect}
       collapsed={collapsed}
-      onOpenSettings={onOpenSettings}
       onOpenTab={projectTabsStore.actions.open}
       {...(onAddProject === undefined ? {} : { onAddProject })}
     />
   );
   const footer = (
-    <SidebarDaemonStatus
-      daemonId={hostAlias}
-      online={online}
-      version={daemonVersion && `v${daemonVersion}`}
-      collapsed={collapsed}
-    />
+    <>
+      <SidebarNavItem
+        icon={SETTINGS_NAV.icon}
+        label={SETTINGS_NAV.label}
+        active={active === SETTINGS_NAV.section}
+        render={navRender(SETTINGS_NAV.to)}
+        collapsed={collapsed}
+      />
+      <SidebarDaemonStatus
+        daemonId={hostAlias}
+        online={online}
+        version={daemonVersion && `v${daemonVersion}`}
+        collapsed={collapsed}
+      />
+    </>
   );
   return (
     <AppSidebar projectSwitcher={projectSwitcher} footer={footer} collapsed={collapsed}>
