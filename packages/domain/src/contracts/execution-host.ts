@@ -150,3 +150,5 @@ export interface ExecutionHostRepositoriesEntry {
   status: RemoteHostStatus | null;
   repositories: RepositoryContract[] | null;
 }
+
+export type ExecutionHostCallResult<T> = { ok: true; value: T } | { ok: false; message: string };

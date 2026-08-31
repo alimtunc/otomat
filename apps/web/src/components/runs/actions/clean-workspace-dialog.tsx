@@ -1,4 +1,4 @@
-import { isWorkspaceCleanable, type WorkspaceEntry } from "@otomat/domain";
+import { isWorkspaceCleanable, type ExecutionHostId, type WorkspaceEntry } from "@otomat/domain";
 import {
   Button,
   Dialog,
@@ -13,16 +13,24 @@ import {
 import { useRunWorkspace } from "@web/api/runs/queries";
 import { cleanupWorkspaceErrorMessage, useCleanupWorkspace } from "@web/api/workspaces/mutations";
 import { WorkspaceClosureEvidence } from "@web/components/runs/actions/workspace-closure-evidence";
+import { activeExecutionHostId } from "@web/lib/desktop-bridge";
 import { workspaceBlockerAction } from "@web/lib/workspace/blocker";
 
 export interface CleanWorkspaceDialogProps {
   entry: WorkspaceEntry;
+  hostId: ExecutionHostId;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function CleanWorkspaceDialog({ entry, open, onOpenChange }: CleanWorkspaceDialogProps) {
-  const summary = useRunWorkspace(entry.run_id ?? "", open && entry.run_id !== null);
+export function CleanWorkspaceDialog({
+  entry,
+  hostId,
+  open,
+  onOpenChange,
+}: CleanWorkspaceDialogProps) {
+  const owned = hostId === activeExecutionHostId();
+  const summary = useRunWorkspace(entry.run_id ?? "", open && entry.run_id !== null && owned);
   const cleanup = useCleanupWorkspace();
   const blocked = !isWorkspaceCleanable(entry);
 
@@ -37,7 +45,13 @@ export function CleanWorkspaceDialog({ entry, open, onOpenChange }: CleanWorkspa
             This deletes the worktree at <span className="font-mono">{entry.path}</span> and its
             local branch. The merged pull request and its commits stay on GitHub.
           </p>
-          {summary.isPending && entry.run_id !== null ? <Skeleton height={140} /> : null}
+          {owned ? null : (
+            <p className="m-0 text-sm text-text-tertiary">
+              This worktree lives on another host. Its commits and pull request can only be re-read
+              from the host holding it, so this dialog cannot show them here.
+            </p>
+          )}
+          {summary.isPending && entry.run_id !== null && owned ? <Skeleton height={140} /> : null}
           {summary.isError ? (
             <ErrorState
               variant="inline"
@@ -72,11 +86,14 @@ export function CleanWorkspaceDialog({ entry, open, onOpenChange }: CleanWorkspa
             loading={cleanup.isPending}
             disabled={blocked || cleanup.isPending}
             onClick={() =>
-              cleanup.mutate(entry.id, {
-                onSuccess: (result) => {
-                  if (result.outcome === "cleaned") onOpenChange(false);
+              cleanup.mutate(
+                { hostId, worktreeId: entry.id },
+                {
+                  onSuccess: (result) => {
+                    if (result.outcome === "cleaned") onOpenChange(false);
+                  },
                 },
-              })
+              )
             }
           >
             Delete workspace

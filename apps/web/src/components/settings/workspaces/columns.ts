@@ -1,4 +1,3 @@
-import type { WorkspaceEntry } from "@otomat/domain";
 import { createColumnHelper } from "@tanstack/react-table";
 import { WorkspaceActionsCell } from "@web/components/settings/workspaces/cells/actions";
 import { WorkspaceGitStateCell } from "@web/components/settings/workspaces/cells/git-state";
@@ -7,8 +6,9 @@ import { WorkspaceLocationCell } from "@web/components/settings/workspaces/cells
 import { WorkspacePullRequestCell } from "@web/components/settings/workspaces/cells/pull-request";
 import { WorkspaceStateCell } from "@web/components/settings/workspaces/cells/state";
 import { TABLE_FEATURES } from "@web/lib/table";
+import type { WorkspaceRow } from "@web/lib/workspace/row";
 
-const helper = createColumnHelper<typeof TABLE_FEATURES, WorkspaceEntry>();
+const helper = createColumnHelper<typeof TABLE_FEATURES, WorkspaceRow>();
 
 export const WORKSPACE_COLUMNS = helper.columns([
   helper.accessor("state", {

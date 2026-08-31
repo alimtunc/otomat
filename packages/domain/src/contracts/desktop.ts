@@ -11,6 +11,7 @@ import type {
   SupportBundleExportResult,
 } from "./diagnostics.js";
 import type {
+  ExecutionHostCallResult,
   ExecutionHostCapacityResult,
   ExecutionHostId,
   ExecutionHostOperationResult,
@@ -23,6 +24,11 @@ import type {
   RemoteRepositoryListResult,
 } from "./execution-host.js";
 import type { LinearErrorCode } from "./linear.js";
+import type {
+  WorkspaceCleanupResult,
+  WorkspaceInventory,
+  WorkspaceReconcileReport,
+} from "./workspace-inventory.js";
 
 const startupDiagnosticBase = z.object({
   message: z.string().min(1),
@@ -137,6 +143,14 @@ export interface OtomatDesktopBridge {
       hostId: ExecutionHostId,
       repositoryId: string,
     ): Promise<ExecutionHostOperationResult>;
+    readWorkspaces(hostId: ExecutionHostId): Promise<ExecutionHostCallResult<WorkspaceInventory>>;
+    reconcileWorkspaces(
+      hostId: ExecutionHostId,
+    ): Promise<ExecutionHostCallResult<WorkspaceReconcileReport>>;
+    cleanupWorkspace(
+      hostId: ExecutionHostId,
+      worktreeId: string,
+    ): Promise<ExecutionHostCallResult<WorkspaceCleanupResult>>;
     /** Subscribes to live remote-connection status; returns the unsubscribe function. */
     onRemoteStatus(listener: (status: RemoteHostStatus) => void): () => void;
     /** Preview daemons under `~/.otomat/instances` on the remote host. */

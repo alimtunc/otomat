@@ -13,12 +13,14 @@ import {
   DAEMON_URL_CHANNEL,
   EXECUTION_HOST_ALIASES_CHANNEL,
   EXECUTION_HOST_CATALOG_REPOSITORIES_CHANNEL,
+  EXECUTION_HOST_CLEANUP_WORKSPACE_CHANNEL,
   EXECUTION_HOST_CONFIGURE_CHANNEL,
   EXECUTION_HOST_DELETE_INSTANCE_CHANNEL,
   EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL,
   EXECUTION_HOST_INSTANCES_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_READ_CAPACITY_CHANNEL,
+  EXECUTION_HOST_RECONCILE_WORKSPACES_CHANNEL,
   EXECUTION_HOST_REGISTER_PROJECT_CHANNEL,
   EXECUTION_HOST_REMOVE_CHANNEL,
   EXECUTION_HOST_REPOSITORIES_CHANNEL,
@@ -27,6 +29,7 @@ import {
   EXECUTION_HOST_STOP_INSTANCE_CHANNEL,
   EXECUTION_HOST_SYNC_CHANNEL,
   EXECUTION_HOST_UPDATE_DAEMON_CHANNEL,
+  EXECUTION_HOST_WORKSPACES_CHANNEL,
   EXECUTION_HOST_WRITE_CAPACITY_CHANNEL,
   LINEAR_DELIVERY_CHANNEL,
   LINEAR_FORGET_KEY_CHANNEL,
@@ -137,6 +140,17 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
     EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL,
     (_event, hostId: unknown, repositoryId: unknown) =>
       actions.executionHost.deleteRepository(hostId, repositoryId),
+  );
+  ipcMain.handle(EXECUTION_HOST_WORKSPACES_CHANNEL, (_event, hostId: unknown) =>
+    actions.executionHost.readWorkspaces(hostId),
+  );
+  ipcMain.handle(EXECUTION_HOST_RECONCILE_WORKSPACES_CHANNEL, (_event, hostId: unknown) =>
+    actions.executionHost.reconcileWorkspaces(hostId),
+  );
+  ipcMain.handle(
+    EXECUTION_HOST_CLEANUP_WORKSPACE_CHANNEL,
+    (_event, hostId: unknown, worktreeId: unknown) =>
+      actions.executionHost.cleanupWorkspace(hostId, worktreeId),
   );
   ipcMain.handle(EXECUTION_HOST_INSTANCES_CHANNEL, () => actions.executionHost.listInstances());
   ipcMain.handle(EXECUTION_HOST_STOP_INSTANCE_CHANNEL, (_event, build: unknown) =>

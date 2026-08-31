@@ -1,19 +1,25 @@
-import { isWorkspaceCleanable, type WorkspaceEntry } from "@otomat/domain";
+import { isWorkspaceCleanable } from "@otomat/domain";
 import { Button } from "@otomat/ui";
 import { CleanWorkspaceDialog } from "@web/components/runs/actions/clean-workspace-dialog";
 import type { TableCellProps } from "@web/lib/table";
+import type { WorkspaceRow } from "@web/lib/workspace/row";
 import { useState } from "react";
 
-export function WorkspaceActionsCell({ row }: TableCellProps<WorkspaceEntry, unknown>) {
+export function WorkspaceActionsCell({ row }: TableCellProps<WorkspaceRow, unknown>) {
   const [cleaning, setCleaning] = useState(false);
-  const entry = row.original;
-  if (!isWorkspaceCleanable(entry)) return null;
+  const workspace = row.original;
+  if (!isWorkspaceCleanable(workspace)) return null;
   return (
     <>
       <Button variant="outline" size="sm" onClick={() => setCleaning(true)}>
         Clean…
       </Button>
-      <CleanWorkspaceDialog entry={entry} open={cleaning} onOpenChange={setCleaning} />
+      <CleanWorkspaceDialog
+        entry={workspace}
+        hostId={workspace.host.id}
+        open={cleaning}
+        onOpenChange={setCleaning}
+      />
     </>
   );
 }

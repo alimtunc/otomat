@@ -20,6 +20,10 @@ export const EXECUTION_HOST_PROJECTS_CHANNEL = "otomat:execution-host-projects";
 export const EXECUTION_HOST_CATALOG_REPOSITORIES_CHANNEL =
   "otomat:execution-host-catalog-repositories";
 export const EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL = "otomat:execution-host-delete-repository";
+export const EXECUTION_HOST_WORKSPACES_CHANNEL = "otomat:execution-host-workspaces";
+export const EXECUTION_HOST_RECONCILE_WORKSPACES_CHANNEL =
+  "otomat:execution-host-reconcile-workspaces";
+export const EXECUTION_HOST_CLEANUP_WORKSPACE_CHANNEL = "otomat:execution-host-cleanup-workspace";
 export const BUILD_SYNC_CHANNEL = "otomat:build-sync";
 export const SUPPORT_EXPORT_CHANNEL = "otomat:support-export";
 export const SUPPORT_REPORT_DRAFT_CHANNEL = "otomat:support-report-draft";

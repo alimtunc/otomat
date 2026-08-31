@@ -10,10 +10,10 @@ import {
 } from "@otomat/db";
 import {
   agentSessionMachine,
+  countWorkspaces,
   describeWorkspace,
   projectIssueWorkspace,
   projectWorkspaceState,
-  type WorkspaceCounts,
   type WorkspaceEntry,
   type WorkspaceInventory,
 } from "@otomat/domain";
@@ -123,20 +123,6 @@ export function repositoryInventory(
     { repoRoot: binding.rootPath, worktreesRoot: context.repositories.worktreesRoot },
   );
   return attached.map((entry) => toEntry(context, repository, binding, entry, holders));
-}
-
-function countWorkspaces(entries: readonly WorkspaceEntry[]): WorkspaceCounts {
-  const counts: WorkspaceCounts = {
-    active: 0,
-    cleanup_required: 0,
-    stale: 0,
-    missing: 0,
-    unmanaged: 0,
-  };
-  for (const entry of entries) {
-    if (entry.state !== "removed") counts[entry.state] += 1;
-  }
-  return counts;
 }
 
 export function listWorkspaces(

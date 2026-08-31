@@ -1,6 +1,7 @@
 import {
   runDiffScopeParams,
   WORKSPACE_DIFF_SCOPE,
+  type ExecutionHostId,
   type ReviewTarget,
   type RunDiffScopeSelector,
   type UsageFilters,
@@ -91,6 +92,7 @@ export const queryKeys = {
   pullRequest: (id: string) => ["pull-request", id] as const,
   pullRequestRefresh: (id: string) => ["pull-request", id, "refresh"] as const,
   workspaces: ["workspaces"] as const,
+  workspacesForHost: (hostId: ExecutionHostId) => ["workspaces", "host", hostId] as const,
   workspacesForRun: (runId: string | null) => ["workspaces", "run", runId] as const,
   workspaceSettings: ["settings", "workspaces"] as const,
   reviews: ["reviews"] as const,

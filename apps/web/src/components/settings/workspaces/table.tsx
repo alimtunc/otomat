@@ -10,11 +10,11 @@ export function WorkspacesTable({ groups }: { groups: WorkspaceRepositoryGroup[]
   const table = useTable({
     features: TABLE_FEATURES,
     columns: WORKSPACE_COLUMNS,
-    data: groups.flatMap((group) => group.entries),
+    data: groups.flatMap((group) => group.rows),
   });
   const sections = rowSlices(
     table.getRowModel().rows,
-    groups.map((group) => group.entries.length),
+    groups.map((group) => group.rows.length),
   );
 
   return (

@@ -2,11 +2,13 @@ import { isWorkspaceCleanable, type WorkspaceEntry } from "@otomat/domain";
 import { Button, Icon } from "@otomat/ui";
 import { useReconcileWorkspaces } from "@web/api/workspaces/mutations";
 import { CleanWorkspaceDialog } from "@web/components/runs/actions/clean-workspace-dialog";
+import { activeExecutionHostId } from "@web/lib/desktop-bridge";
 import { useState } from "react";
 
 export function WorkspaceActions({ entry }: { entry: WorkspaceEntry }) {
   const [cleaning, setCleaning] = useState(false);
   const reconcile = useReconcileWorkspaces();
+  const hostId = activeExecutionHostId();
   const cleanable = isWorkspaceCleanable(entry);
 
   return (
@@ -17,7 +19,7 @@ export function WorkspaceActions({ entry }: { entry: WorkspaceEntry }) {
         className="flex-1"
         loading={reconcile.isPending}
         disabled={reconcile.isPending}
-        onClick={() => reconcile.mutate()}
+        onClick={() => reconcile.mutate(hostId)}
       >
         <Icon name="refresh-cw" aria-hidden />
         Reconcile
@@ -32,7 +34,12 @@ export function WorkspaceActions({ entry }: { entry: WorkspaceEntry }) {
           >
             Clean workspace…
           </Button>
-          <CleanWorkspaceDialog entry={entry} open={cleaning} onOpenChange={setCleaning} />
+          <CleanWorkspaceDialog
+            entry={entry}
+            hostId={hostId}
+            open={cleaning}
+            onOpenChange={setCleaning}
+          />
         </>
       ) : null}
     </div>

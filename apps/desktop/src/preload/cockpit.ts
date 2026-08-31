@@ -1,6 +1,7 @@
 import type {
   DesktopUpdateSnapshot,
   ErrorDiagnostic,
+  ExecutionHostCallResult,
   ExecutionHostCapacityResult,
   ExecutionHostId,
   ExecutionHostOperationResult,
@@ -17,6 +18,9 @@ import type {
   RemoteInstanceListResult,
   RemoteRepositoryListResult,
   SupportBundleExportResult,
+  WorkspaceCleanupResult,
+  WorkspaceInventory,
+  WorkspaceReconcileReport,
 } from "@otomat/domain";
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
@@ -27,12 +31,14 @@ import {
   DAEMON_URL_CHANNEL,
   EXECUTION_HOST_ALIASES_CHANNEL,
   EXECUTION_HOST_CATALOG_REPOSITORIES_CHANNEL,
+  EXECUTION_HOST_CLEANUP_WORKSPACE_CHANNEL,
   EXECUTION_HOST_CONFIGURE_CHANNEL,
   EXECUTION_HOST_DELETE_INSTANCE_CHANNEL,
   EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL,
   EXECUTION_HOST_INSTANCES_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_READ_CAPACITY_CHANNEL,
+  EXECUTION_HOST_RECONCILE_WORKSPACES_CHANNEL,
   EXECUTION_HOST_REGISTER_PROJECT_CHANNEL,
   EXECUTION_HOST_REMOVE_CHANNEL,
   EXECUTION_HOST_REPOSITORIES_CHANNEL,
@@ -42,6 +48,7 @@ import {
   EXECUTION_HOST_STOP_INSTANCE_CHANNEL,
   EXECUTION_HOST_SYNC_CHANNEL,
   EXECUTION_HOST_UPDATE_DAEMON_CHANNEL,
+  EXECUTION_HOST_WORKSPACES_CHANNEL,
   EXECUTION_HOST_WRITE_CAPACITY_CHANNEL,
   LINEAR_DELIVERY_CHANNEL,
   LINEAR_DELIVERY_STATUS_CHANNEL,
@@ -116,6 +123,19 @@ contextBridge.exposeInMainWorld("otomat", {
       repositoryId: string,
     ): Promise<ExecutionHostOperationResult> =>
       ipcRenderer.invoke(EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL, hostId, repositoryId),
+    readWorkspaces: (
+      hostId: ExecutionHostId,
+    ): Promise<ExecutionHostCallResult<WorkspaceInventory>> =>
+      ipcRenderer.invoke(EXECUTION_HOST_WORKSPACES_CHANNEL, hostId),
+    reconcileWorkspaces: (
+      hostId: ExecutionHostId,
+    ): Promise<ExecutionHostCallResult<WorkspaceReconcileReport>> =>
+      ipcRenderer.invoke(EXECUTION_HOST_RECONCILE_WORKSPACES_CHANNEL, hostId),
+    cleanupWorkspace: (
+      hostId: ExecutionHostId,
+      worktreeId: string,
+    ): Promise<ExecutionHostCallResult<WorkspaceCleanupResult>> =>
+      ipcRenderer.invoke(EXECUTION_HOST_CLEANUP_WORKSPACE_CHANNEL, hostId, worktreeId),
     onRemoteStatus: (listener: (status: RemoteHostStatus) => void): (() => void) => {
       const wrapped = (_event: IpcRendererEvent, status: RemoteHostStatus): void =>
         listener(status);
