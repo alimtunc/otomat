@@ -45,9 +45,7 @@ export function Toaster({
         error: <XCircle className="h-4 w-4 text-danger" />,
         warning: <AlertTriangle className="h-4 w-4 text-warning" />,
         info: <Info className="h-4 w-4 text-neutral" />,
-        loading: (
-          <Loader2 className="h-4 w-4 animate-spin text-iris-text motion-reduce:animate-none" />
-        ),
+        loading: <Loader2 className="h-4 w-4 animate-spin text-live motion-reduce:animate-none" />,
       }}
       toastOptions={{
         style: toastStyle,

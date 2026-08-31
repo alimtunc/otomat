@@ -25,7 +25,7 @@ function DiffFacts({ report }: { report: RunCompletionReport }) {
         {report.diff.files.map((file) => (
           <li key={file.path} className="flex min-w-0 items-center gap-2 text-sm">
             <span className="min-w-0 flex-1 truncate font-mono text-xs">{file.path}</span>
-            <span className="font-mono text-[10px] text-text-tertiary">
+            <span className="font-mono text-micro text-text-tertiary">
               +{file.additions}/-{file.deletions}
             </span>
             <FactEvidence report={report} evidence={file.evidence[0]} />

@@ -35,7 +35,7 @@ export function DiffSearchField({ search }: DiffSearchFieldProps) {
         />
         <span
           aria-live="polite"
-          className="pointer-events-none absolute right-1.5 font-mono text-[10px] tabular-nums text-text-tertiary"
+          className="pointer-events-none absolute right-1.5 font-mono text-micro tabular-nums text-text-tertiary"
         >
           {search.query === "" ? "" : `${search.activeIndex + 1}/${total}`}
         </span>

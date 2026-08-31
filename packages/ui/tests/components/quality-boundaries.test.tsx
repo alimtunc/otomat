@@ -110,7 +110,7 @@ describe("shared UI boundaries", () => {
     expect(button?.hasAttribute("disabled")).toBe(false);
   });
 
-  it("uses the canonical iris loading indicator for every button variant", async () => {
+  it("uses the canonical live loading indicator for every button variant", async () => {
     await render(
       <Button variant="outline" loading>
         Sync now
@@ -121,7 +121,7 @@ describe("shared UI boundaries", () => {
       document.querySelector<HTMLStyleElement>("#otomat-btn-loading")?.textContent;
 
     expect(loadingStyles).toContain("border:2px solid var(--border-strong)");
-    expect(loadingStyles).toContain("border-top-color:var(--iris-solid)");
+    expect(loadingStyles).toContain("border-top-color:var(--live)");
     expect(loadingStyles).not.toContain("border:2px solid currentColor");
   });
 

@@ -1,7 +1,7 @@
 import { usageTokenMetric, type UsageFilters } from "@otomat/domain";
 import { cn } from "@otomat/ui";
 import { UsageMetricValue } from "@web/components/usage/metric-value";
-import { formatTokenCount } from "@web/lib/run/usage";
+import { formatExactTokenCount, formatTokenCount } from "@web/lib/run/usage";
 import {
   isUsageRowSelected,
   usageRowSummary,
@@ -63,6 +63,7 @@ export function UsageBreakdown({
                     metric={tokens}
                     turns={row.figures.turns}
                     format={formatTokenCount}
+                    exact={formatExactTokenCount}
                     className="w-20 shrink-0 justify-end text-xs"
                   />
                 </button>

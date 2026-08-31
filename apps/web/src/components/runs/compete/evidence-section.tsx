@@ -8,7 +8,7 @@ export type EvidenceSectionProps = { label: string } & (
 export function EvidenceSection({ label, empty, children }: EvidenceSectionProps) {
   return (
     <section>
-      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-tertiary">
+      <p className="mb-1.5 text-micro font-semibold uppercase tracking-wide text-text-tertiary">
         {label}
       </p>
       {empty === undefined ? children : <p className="text-xs text-text-tertiary">{empty}</p>}

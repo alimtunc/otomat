@@ -242,7 +242,7 @@ it("compares honest candidate evidence and requires an explicit confirm", async 
 
   expect(container.textContent).toContain("Otomat does not score candidates");
   expect(container.textContent).toContain("implemented direct path");
-  expect(container.textContent).toContain("in 1.2k · out 340 · $0.042 · gpt-5");
+  expect(container.textContent).toContain("in 1.2k · out 340 · $0.04 · gpt-5");
   expect(container.textContent).toContain("Test passed");
   expect(container.textContent).toContain("Test evidence · 1");
   expect(container.textContent).not.toContain("Test evidence · 2");

@@ -56,7 +56,7 @@ export function CandidateEvidence({
               </Badge>
             ) : null}
           </div>
-          <p className="mt-0.5 truncate font-mono text-[10px] text-text-tertiary">
+          <p className="mt-0.5 truncate font-mono text-micro text-text-tertiary">
             {candidate.branch ?? "No git branch"}
           </p>
         </div>

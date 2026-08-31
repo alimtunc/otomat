@@ -11,6 +11,7 @@ export function AvatarsSection() {
         <AgentAvatar name="Agent" />
         <AgentAvatar name="claude" active runtimeTint="var(--prov-claude)" />
         <AgentAvatar name="codex" runtimeTint="var(--prov-codex)" />
+        <LiveDot tone="live" live />
         <LiveDot tone="success" live />
         <Spinner />
         <Button size="sm" onClick={() => toast("Custom arguments saved")}>

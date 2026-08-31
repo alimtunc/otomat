@@ -1,9 +1,8 @@
 import type { RunContract } from "@otomat/domain";
-import { Button, Icon, LiveDot, RelativeTime, RunStatusChip, cn } from "@otomat/ui";
+import { Button, Icon, LiveDot, RelativeTime, resolveStatus, RunStatusChip, cn } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { ConversationSection } from "@web/components/issues/workspace/conversation-section";
 import { shortId } from "@web/lib/ids";
-import { isActiveRun } from "@web/lib/run/activity";
 
 function SectionHeader({
   run,
@@ -14,6 +13,7 @@ function SectionHeader({
   expanded: boolean;
   onSelect: () => void;
 }) {
+  const meta = resolveStatus("run", run.status);
   return (
     <div
       className={cn("flex items-center gap-1 pr-2", expanded ? "bg-selected" : "hover:bg-hover")}
@@ -31,7 +31,7 @@ function SectionHeader({
         <span className="min-w-0 flex-1 truncate font-mono text-xs text-text-tertiary">
           {run.branch}
         </span>
-        {isActiveRun(run) ? <LiveDot /> : null}
+        {meta.live ? <LiveDot tone={meta.tone} live /> : null}
         <RelativeTime date={run.updated_at} className="text-xs" />
       </Button>
       <Link

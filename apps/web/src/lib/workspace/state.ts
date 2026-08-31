@@ -7,7 +7,7 @@ export interface WorkspaceStateDescriptor {
 }
 
 export const WORKSPACE_STATE = {
-  active: { label: "Active", tone: "iris" },
+  active: { label: "Active", tone: "live" },
   cleanup_required: { label: "Cleanup required", tone: "warning" },
   stale: { label: "Stale", tone: "stale" },
   missing: { label: "Missing", tone: "stale" },

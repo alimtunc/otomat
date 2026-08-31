@@ -6,6 +6,7 @@ import { Button } from "../primitives/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../primitives/tooltip";
 import { Icon, type IconName } from "./icon";
 import { Kbd } from "./kbd";
+import { LiveDot } from "./live-dot";
 
 export interface SidebarNavItemRenderProps {
   className: string;
@@ -62,12 +63,7 @@ export function SidebarNavItem({
   const rightEl =
     !collapsed && (badgeCount != null || live || kbd) ? (
       <span className="ml-auto inline-flex items-center gap-1.5">
-        {live ? (
-          <span
-            className="inline-block h-1.75 w-1.75 rounded-full"
-            style={{ background: "var(--iris-solid)" }}
-          />
-        ) : null}
+        {live ? <LiveDot tone="live" /> : null}
         {badgeCount != null ? (
           <span className="inline-flex h-4.5 items-center rounded-sm bg-iris-subtle px-1.5 text-micro font-medium tabular-nums text-iris-text">
             {badgeCount}

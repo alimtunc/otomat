@@ -1,6 +1,6 @@
 import type { UsageTotals } from "@otomat/domain";
 import { UsageMetricValue } from "@web/components/usage/metric-value";
-import { formatCostUsd, formatTokenCount } from "@web/lib/run/usage";
+import { formatCostUsd, formatExactTokenCount, formatTokenCount } from "@web/lib/run/usage";
 import { formatDurationMs } from "@web/lib/usage/format";
 import type { ReactNode } from "react";
 
@@ -23,6 +23,7 @@ export function UsageSummary({ totals }: { totals: UsageTotals }) {
           metric={figures.input_tokens}
           turns={figures.turns}
           format={formatTokenCount}
+          exact={formatExactTokenCount}
         />
       </Tile>
       <Tile label="Output tokens">
@@ -30,6 +31,7 @@ export function UsageSummary({ totals }: { totals: UsageTotals }) {
           metric={figures.output_tokens}
           turns={figures.turns}
           format={formatTokenCount}
+          exact={formatExactTokenCount}
         />
       </Tile>
       <Tile label="Reported cost">

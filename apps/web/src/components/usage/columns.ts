@@ -34,18 +34,18 @@ export const USAGE_RUN_COLUMNS = helper.columns([
   helper.display({
     id: "tokens",
     header: "Tokens",
-    meta: { headClassName: "w-44" },
+    meta: { headClassName: "w-44 text-right", cellClassName: "text-right" },
     cell: UsageTokensCell,
   }),
   helper.display({
     id: "cost",
     header: "Cost",
-    meta: { headClassName: "w-24" },
+    meta: { headClassName: "w-24 text-right", cellClassName: "text-right" },
     cell: UsageCostCell,
   }),
   helper.accessor("duration_ms", {
     header: "Duration",
-    meta: { headClassName: "w-24" },
+    meta: { headClassName: "w-24 text-right", cellClassName: "text-right" },
     cell: UsageDurationCell,
   }),
   helper.accessor("last_activity_at", {

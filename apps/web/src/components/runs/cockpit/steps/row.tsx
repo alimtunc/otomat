@@ -21,7 +21,7 @@ function SessionRows({ detail, step }: { detail: RunDetail; step: StepRunContrac
           >
             <AgentAvatar size="sm" name={session.agent_id ?? "agent"} />
             <span className="truncate">{session.agent_id ?? "agent"}</span>
-            <span className="ml-auto text-[10px] lowercase text-text-tertiary">
+            <span className="ml-auto text-micro lowercase text-text-tertiary">
               {sessionMeta.label}
             </span>
             <SessionContextDialog runId={detail.run.id} agentSessionId={session.id} />
@@ -89,7 +89,7 @@ export function StepRow({
         <span className={`ml-auto text-xs lowercase ${TONE_TEXT[meta.tone]}`}>{meta.label}</span>
       </button>
       {shown === null ? null : (
-        <p className="mt-0.5 ml-5.5 truncate text-[10px] text-text-tertiary">
+        <p className="mt-0.5 ml-5.5 truncate text-micro text-text-tertiary">
           {participantLabel(shown)}
           {pending?.model ? ` · next: ${pending.model.id}` : ""}
         </p>

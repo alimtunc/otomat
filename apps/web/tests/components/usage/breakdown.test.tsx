@@ -47,7 +47,7 @@ afterEach(async () => {
 it("drills into the slice a reader picks", async () => {
   const { rows, onSelect } = await mountBreakdown(NO_USAGE_FILTERS);
 
-  findLabelled("First: 1.5k tokens, $0.021, 1 run(s)")?.click();
+  findLabelled("First: 1.54k tokens, $0.02, 1 run(s)")?.click();
 
   expect(onSelect).toHaveBeenCalledWith(rows[0]);
 });
@@ -55,7 +55,7 @@ it("drills into the slice a reader picks", async () => {
 it("marks the slice the filters already stand on", async () => {
   await mountBreakdown({ ...NO_USAGE_FILTERS, projects: ["p1"] });
 
-  expect(findLabelled("First: 1.5k tokens, $0.021, 1 run(s)")?.getAttribute("aria-pressed")).toBe(
+  expect(findLabelled("First: 1.54k tokens, $0.02, 1 run(s)")?.getAttribute("aria-pressed")).toBe(
     "true",
   );
 });
@@ -63,7 +63,7 @@ it("marks the slice the filters already stand on", async () => {
 it("says a slice reported no tokens rather than drawing it as zero", async () => {
   await mountBreakdown(NO_USAGE_FILTERS);
 
-  expect(findLabelled("Second: no tokens reported, $0.021, 2 run(s)")?.textContent).toContain(
+  expect(findLabelled("Second: no tokens reported, $0.02, 2 run(s)")?.textContent).toContain(
     "Not reported",
   );
 });

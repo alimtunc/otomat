@@ -14,7 +14,7 @@ function EventTime({ at }: { at: Date | string | number }) {
     <time
       dateTime={valid ? resolved.toISOString() : undefined}
       title={valid ? format(resolved, "PPpp") : undefined}
-      className="cursor-default pt-0.5 font-mono text-[10px] tabular-nums text-text-tertiary"
+      className="cursor-default pt-0.5 font-mono text-micro tabular-nums text-text-tertiary"
     >
       {valid ? format(resolved, "HH:mm:ss") : "—"}
     </time>

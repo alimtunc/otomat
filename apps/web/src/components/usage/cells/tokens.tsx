@@ -1,21 +1,23 @@
 import type { UsageRunRow } from "@otomat/domain";
 import { UsageMetricValue } from "@web/components/usage/metric-value";
-import { formatTokenCount } from "@web/lib/run/usage";
+import { formatExactTokenCount, formatTokenCount } from "@web/lib/run/usage";
 import type { TableCellProps } from "@web/lib/table";
 
 export function UsageTokensCell({ row }: TableCellProps<UsageRunRow>) {
   const { figures } = row.original;
   return (
-    <span className="flex items-baseline gap-2 text-xs">
+    <span className="flex items-baseline justify-end gap-2 text-xs">
       <UsageMetricValue
         metric={figures.input_tokens}
         turns={figures.turns}
-        format={(value) => `in ${formatTokenCount(value)}`}
+        format={(value) => `${formatTokenCount(value)} in`}
+        exact={formatExactTokenCount}
       />
       <UsageMetricValue
         metric={figures.output_tokens}
         turns={figures.turns}
-        format={(value) => `out ${formatTokenCount(value)}`}
+        format={(value) => `${formatTokenCount(value)} out`}
+        exact={formatExactTokenCount}
       />
     </span>
   );

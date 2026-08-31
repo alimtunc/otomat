@@ -27,16 +27,16 @@ function UsageTotal({ usage }: { usage: ReturnType<typeof useRunUsage> }) {
 export function UsageSection({ runId }: { runId: string }) {
   const usage = useRunUsage(runId);
   const total = usage.data?.total;
-  const provenance = (): string => {
-    if (total !== undefined) return USAGE_PROVENANCE[total.availability];
-    return usage.isError ? "unreadable" : "loading";
-  };
+  const pending = usage.isError ? "unreadable" : "loading";
+  const provenance = total === undefined ? pending : USAGE_PROVENANCE[total.availability];
   return (
     <RailSection
       title={
         <>
           Usage
-          <span className="font-normal normal-case text-text-tertiary">· {provenance()}</span>
+          {provenance === null ? null : (
+            <span className="font-normal normal-case text-text-tertiary">· {provenance}</span>
+          )}
         </>
       }
     >

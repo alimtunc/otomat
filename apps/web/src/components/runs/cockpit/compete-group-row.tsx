@@ -61,7 +61,7 @@ export function CompeteGroupRow({
         })}
       </div>
       {group.status === "awaiting_selection" ? (
-        <p className="mt-1.5 rounded bg-warning-bg px-2 py-1.5 text-[10px] leading-4 text-warning">
+        <p className="mt-1.5 rounded bg-warning-bg px-2 py-1.5 text-micro leading-4 text-warning">
           Dependent steps wait for the winner.
         </p>
       ) : null}

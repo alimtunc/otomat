@@ -56,7 +56,7 @@ export function DiffSidebar({
           </Pill>
         </PillTabs>
         {stats ? (
-          <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] font-normal normal-case">
+          <span className="ml-auto flex items-center gap-1.5 font-mono text-micro font-normal normal-case">
             <DiffStat additions={diff.additions} deletions={diff.deletions} />
           </span>
         ) : null}

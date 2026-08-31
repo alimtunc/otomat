@@ -1,6 +1,7 @@
 export type StatusTone =
   | "neutral"
   | "iris"
+  | "live"
   | "success"
   | "warning"
   | "danger"
@@ -31,6 +32,13 @@ export const TONE_FACETS = {
     subtleBg: "bg-iris-bg",
     solid: "bg-iris",
     cssVar: "var(--iris-solid)",
+  },
+  live: {
+    text: "text-live",
+    textOnSubtle: "text-live",
+    subtleBg: "bg-live-bg",
+    solid: "bg-live",
+    cssVar: "var(--live)",
   },
   success: {
     text: "text-success",

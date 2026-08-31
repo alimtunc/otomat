@@ -15,7 +15,7 @@ export function LogRow({ event }: { event: EventEnvelope }) {
       at={event.occurred_at}
     >
       <div className="flex flex-col">
-        <span className="font-mono text-[10px] text-text-tertiary">
+        <span className="font-mono text-micro text-text-tertiary">
           seq {event.seq}
           {isErrorLogEvent(event) ? " · error" : ""}
           {event.raw_ref !== null ? ` · raw ${event.raw_ref}` : ""}

@@ -33,16 +33,16 @@ export function CandidateTestEvidence({ tests }: { tests: readonly TestEvidence[
                 Test {test.outcome}
               </span>
               {test.exitCode !== null ? (
-                <span className="font-mono text-[10px] text-text-tertiary">
+                <span className="font-mono text-micro text-text-tertiary">
                   exit {test.exitCode}
                 </span>
               ) : null}
             </div>
-            <code className="mt-1 block break-words text-[10px] text-text-secondary">
+            <code className="mt-1 block break-words text-micro text-text-secondary">
               {test.command}
             </code>
             {test.output ? (
-              <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap font-mono text-[10px] text-text-tertiary">
+              <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap font-mono text-micro text-text-tertiary">
                 {test.output}
               </pre>
             ) : null}
