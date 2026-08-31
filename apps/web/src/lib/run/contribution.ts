@@ -67,6 +67,12 @@ function isWaitingForCapacity(status: RunDetail["run"]["status"]): boolean {
   return status === "queued" || status === "preparing";
 }
 
+export function settledRunNote(status: RunDetail["run"]["status"]): string {
+  return isRunResumable(status)
+    ? "This run has stopped — resume it to continue the conversation."
+    : "This run is finished — its session can no longer be resumed.";
+}
+
 function blocked(note: string): ContributionGate {
   return {
     stepRunId: null,
@@ -113,11 +119,7 @@ export function resolveContributionGate(
     return blocked("Daemon offline — reconnect to send a message.");
   }
   if (isRunSettled(detail.run.status)) {
-    return blocked(
-      isRunResumable(detail.run.status)
-        ? "This run has stopped — resume it to continue the conversation."
-        : "This run is finished — its session can no longer be resumed.",
-    );
+    return blocked(settledRunNote(detail.run.status));
   }
   if (descriptors === undefined) {
     return blocked("Checking runtime availability…");

@@ -1,7 +1,8 @@
-import type { RunDetail } from "@otomat/domain";
+import { isRunSettled, type RunDetail } from "@otomat/domain";
 import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
 import { useRunContributions, useRunInteractions } from "@web/api/runs/queries";
 import type { RunEventStream } from "@web/api/runs/run-event-stream";
+import { RunClosureBar } from "@web/components/runs/conversation/closure-bar";
 import { ConversationComposer } from "@web/components/runs/conversation/composer";
 import { JumpToLatest } from "@web/components/runs/conversation/jump-to-latest";
 import { QueuedBanner } from "@web/components/runs/conversation/queued-banner";
@@ -116,13 +117,17 @@ export function ConversationThread({
                     {autoscroll.pinned ? null : <JumpToLatest onClick={autoscroll.jumpToLatest} />}
                   </div>
                 )}
-                {/* Keyed per step: a draft written for one recipient must never travel to another thread. */}
-                <ConversationComposer
-                  key={stepRunId}
-                  detail={detail}
-                  stepRunId={stepRunId}
-                  onSent={autoscroll.jumpToLatest}
-                />
+                {isRunSettled(detail.run.status) ? (
+                  <RunClosureBar detail={detail} />
+                ) : (
+                  // Keyed per step: a draft written for one recipient must never travel to another thread.
+                  <ConversationComposer
+                    key={stepRunId}
+                    detail={detail}
+                    stepRunId={stepRunId}
+                    onSent={autoscroll.jumpToLatest}
+                  />
+                )}
               </div>
             );
           }}

@@ -288,19 +288,4 @@ describe("publicationModel", () => {
       stateLabel: "Publication interrupted",
     });
   });
-
-  it.each(["merged", "closed"] as const)("makes a %s PR terminal", (status) => {
-    expect(
-      model(
-        published(
-          pullRequest({
-            number: 42,
-            url: "https://github.com/acme/otomat/pull/42",
-            status,
-            publication_status: "created",
-          }),
-        ),
-      ),
-    ).toMatchObject({ actionDisabled: true, stateLabel: `PR ${status}` });
-  });
 });

@@ -10,6 +10,7 @@ import { MarkdownSection } from "./sections/markdown";
 import { OperationalRowsSection } from "./sections/operational-rows";
 import { PageBarSection } from "./sections/page-bar";
 import { ProvenanceSection } from "./sections/provenance";
+import { RunStatesSection } from "./sections/run-states";
 import { StatusChipsSection } from "./sections/status-chips";
 import { SurfacesSection } from "./sections/surfaces";
 import { TabsSection } from "./sections/tabs";
@@ -34,6 +35,7 @@ export function GalleryApp() {
         <ConfigMenusSection />
         <StatusChipsSection />
         <OperationalRowsSection />
+        <RunStatesSection />
         <ProvenanceSection />
         <InputsSection />
         <TabsSection />

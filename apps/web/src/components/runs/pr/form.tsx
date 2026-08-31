@@ -60,7 +60,6 @@ export function PullRequestForm({
 }: PullRequestFormProps) {
   const form = usePullRequestForm({ pullRequest, chosenMode, onSubmit });
 
-  const terminal = pullRequest?.status === "merged" || pullRequest?.status === "closed";
   const branchLocked = pullRequest?.number !== null && pullRequest?.number !== undefined;
 
   const fillFrom = (proposal: PullRequestProposal): void => {
@@ -97,7 +96,6 @@ export function PullRequestForm({
             mode,
           });
           const busy = model.actionPending || isPending || isGenerating;
-          const fieldsDisabled = terminal || busy;
           // Metadata already written is republished as it stands: a retry never pays the generator twice.
           const composeWithAi =
             !branchLocked && !customize && !isDirty && pullRequest?.commit_subject == null;
@@ -113,7 +111,7 @@ export function PullRequestForm({
                   }
                 />
                 <CollapsiblePanel className="flex flex-col gap-4 pt-4">
-                  <PullRequestSubjectFields form={form} disabled={fieldsDisabled} />
+                  <PullRequestSubjectFields form={form} disabled={busy} />
                   <form.Field name="body">
                     {(field) => (
                       <Field hint="Optional description shown on GitHub.">
@@ -122,7 +120,7 @@ export function PullRequestForm({
                           <Textarea
                             rows={8}
                             value={field.state.value}
-                            disabled={fieldsDisabled}
+                            disabled={busy}
                             onBlur={field.handleBlur}
                             onChange={(event) => field.handleChange(event.target.value)}
                             placeholder="What changed and why…"
@@ -144,7 +142,7 @@ export function PullRequestForm({
                         <FieldControl>
                           <Input
                             value={field.state.value}
-                            disabled={fieldsDisabled || branchLocked}
+                            disabled={busy || branchLocked}
                             onBlur={field.handleBlur}
                             onChange={(event) => field.handleChange(event.target.value)}
                             placeholder={publishability.head_ref ?? "feat/short-name"}
@@ -158,7 +156,7 @@ export function PullRequestForm({
                     {(field) => (
                       <PullRequestModeField
                         value={field.state.value}
-                        disabled={fieldsDisabled}
+                        disabled={busy}
                         onChange={(next) => {
                           field.handleChange(next);
                           onModeChange(next);
@@ -171,12 +169,12 @@ export function PullRequestForm({
               <PullRequestActions
                 primaryLabel={composeWithAi ? aiActionLabel(mode) : model.actionLabel}
                 primaryDisabled={
-                  (!composeWithAi && !canSubmit) || model.actionDisabled || terminal || isGenerating
+                  (!composeWithAi && !canSubmit) || model.actionDisabled || isGenerating
                 }
                 primaryLoading={composeWithAi ? busy : isPending || model.actionPending}
                 onCompose={composeWithAi ? () => void onSubmit({ mode }) : null}
                 onGenerate={() => void generateOnly()}
-                generateDisabled={fieldsDisabled}
+                generateDisabled={busy}
                 isGenerating={isGenerating}
               />
             </>

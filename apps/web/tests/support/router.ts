@@ -26,6 +26,11 @@ function routedElement(node: ReactNode): ReactNode {
       path: "/runs/$runId/pr",
       component: () => null,
     }),
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/runs/$runId/diff",
+      component: () => null,
+    }),
   ]);
   const router = createRouter({
     routeTree,

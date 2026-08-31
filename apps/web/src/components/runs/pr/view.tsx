@@ -1,4 +1,4 @@
-import type { PullRequestPublicationMode } from "@otomat/domain";
+import { isPullRequestLive, type PullRequestPublicationMode } from "@otomat/domain";
 import { ErrorState, PRStatusBadge } from "@otomat/ui";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
@@ -15,6 +15,7 @@ import { PullRequestExecutionNotice } from "@web/components/runs/pr/execution-no
 import { PullRequestForm } from "@web/components/runs/pr/form";
 import { PullRequestGeneratorNote } from "@web/components/runs/pr/generator-note";
 import { initialPublicationMode, pullRequestConnectionModel } from "@web/components/runs/pr/model";
+import { PullRequestOutcome } from "@web/components/runs/pr/outcome";
 import { PullRequestProgress } from "@web/components/runs/pr/progress";
 import { PullRequestSummary } from "@web/components/runs/pr/summary";
 import { PullRequestSyncPanel } from "@web/components/runs/pr/sync/panel";
@@ -52,6 +53,21 @@ export function RunPrView() {
 
   const pullRequest = prQuery.data.pull_request;
   const { operation, publishability, sync } = prQuery.data;
+  const issueTitle = issueQuery.data?.title ?? "Not loaded";
+
+  if (pullRequest !== null && !isPullRequestLive(pullRequest.status)) {
+    return (
+      <div className="flex max-w-2xl flex-col gap-4 p-4">
+        <PullRequestOutcome
+          pullRequest={pullRequest}
+          runId={runId}
+          issueTitle={issueTitle}
+          hasWorktree={runQuery.data.worktree_path !== null}
+        />
+      </div>
+    );
+  }
+
   const headRef = pullRequest?.head_ref ?? null;
   const connection = pullRequestConnectionModel(connectionQuery.data, pullRequest);
 
@@ -65,7 +81,7 @@ export function RunPrView() {
       <PullRequestSummary
         publishability={publishability}
         mode={initialPublicationMode(pullRequest, mode)}
-        issueTitle={issueQuery.data?.title ?? "Not loaded"}
+        issueTitle={issueTitle}
       />
       <PullRequestBlockerNotice blocker={publishability.blocker} />
       <PullRequestConnectionPanel

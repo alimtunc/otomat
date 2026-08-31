@@ -1,6 +1,7 @@
 import type { RunContract } from "@otomat/domain";
 import { createColumnHelper } from "@tanstack/react-table";
 import { RunIdCell } from "@web/components/runs/list/cells/id";
+import { RunNextActionCell } from "@web/components/runs/list/cells/next-action";
 import { RunStatusCell } from "@web/components/runs/list/cells/status";
 import { RunUpdatedCell } from "@web/components/runs/list/cells/updated";
 import { shortId } from "@web/lib/ids";
@@ -28,5 +29,11 @@ export const RUN_COLUMNS = helper.columns([
     header: "Updated",
     meta: { headClassName: "w-27.5", cellClassName: "text-text-tertiary" },
     cell: RunUpdatedCell,
+  }),
+  helper.display({
+    id: "next_action",
+    header: "Next",
+    meta: { headClassName: "w-40" },
+    cell: RunNextActionCell,
   }),
 ]);
