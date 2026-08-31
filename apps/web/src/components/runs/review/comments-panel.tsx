@@ -37,7 +37,7 @@ export function ReviewCommentsPanel({
           aria-label="Comment state"
         >
           {REVIEW_COMMENT_FILTERS.map((option) => (
-            <Pill key={option} value={option} className="text-[11px]">
+            <Pill key={option} value={option} className="text-micro">
               {option === "all" ? "All" : resolveStatus("reviewComment", option).label}
             </Pill>
           ))}
@@ -62,14 +62,14 @@ export function ReviewCommentsPanel({
                 )}
               >
                 <span className="flex w-full items-center gap-1.5">
-                  <span className="min-w-0 flex-1 truncate text-left font-mono text-[11px]">
+                  <span className="min-w-0 flex-1 truncate text-left font-mono text-micro">
                     {commentAnchorLabel(comment)}
                   </span>
                   <ReviewCommentStatusChip status={comment.status} />
                 </span>
                 <span className="w-full truncate text-left">{comment.body}</span>
                 {anchoredIds.has(comment.id) ? null : (
-                  <span className="text-[10px] text-text-tertiary">Shown at its fallback</span>
+                  <span className="text-micro text-text-tertiary">Shown at its fallback</span>
                 )}
               </Button>
             </li>

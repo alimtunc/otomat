@@ -38,7 +38,7 @@ export function ConversationMessage({
         className="rounded-lg border border-border-subtle bg-card px-3 py-2 text-sm"
       />
       {contribution.target_config ? (
-        <p className="text-[10px] text-text-tertiary">
+        <p className="text-micro text-text-tertiary">
           To {participantLabel(contribution.target_config)}
         </p>
       ) : null}

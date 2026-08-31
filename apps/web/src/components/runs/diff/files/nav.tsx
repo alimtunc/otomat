@@ -66,7 +66,7 @@ export function DiffFileNav({
           ))}
         </SelectContent>
       </Select>
-      <span className="font-mono text-[10px] tabular-nums text-text-tertiary">
+      <span className="font-mono text-micro tabular-nums text-text-tertiary">
         {index === -1 ? "–" : index + 1}/{files.length}
       </span>
     </div>

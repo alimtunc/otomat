@@ -18,7 +18,7 @@ function SessionRow({
       ) : null}
       <span className="ml-auto flex items-center gap-2">
         {session.provider_session_id !== null ? (
-          <span className="flex items-center gap-1 font-mono text-[10px] text-text-tertiary">
+          <span className="flex items-center gap-1 font-mono text-micro text-text-tertiary">
             <span className="max-w-40 truncate" title={session.provider_session_id}>
               {session.provider_session_id}
             </span>
@@ -36,7 +36,7 @@ export function SessionsPanel({ detail }: { detail: RunDetail }) {
     <section className="flex-none border-b border-border-subtle">
       <PaneHeader>
         Sessions
-        <span className="ml-auto font-mono text-[10px] font-normal normal-case">
+        <span className="ml-auto font-mono text-micro font-normal normal-case">
           {detail.sessions.length}
         </span>
       </PaneHeader>

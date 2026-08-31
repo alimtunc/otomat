@@ -34,7 +34,7 @@ export function CandidateRuntimeActivity({ events }: { events: readonly EventEnv
     <EvidenceSection label="Runtime evidence">
       <ul className="max-h-36 space-y-1 overflow-y-auto text-xs text-text-secondary">
         {recentActivity.map((event) => (
-          <li key={event.id} className="break-words font-mono text-[10px]">
+          <li key={event.id} className="break-words font-mono text-micro">
             {eventSummary(event)}
           </li>
         ))}

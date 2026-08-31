@@ -10,7 +10,7 @@ import { buttonVariants } from "./button-variants";
 const BTN_LOADING_STYLE_ID = "otomat-btn-loading";
 const BTN_LOADING_CSS = `
 .otomat-btn-loading{color:transparent!important}
-.otomat-btn-loading::after{content:"";position:absolute;inset:0;margin:auto;width:14px;height:14px;border-radius:50%;border:2px solid var(--border-strong);border-top-color:var(--iris-solid);animation:otomat-spin .7s linear infinite}
+.otomat-btn-loading::after{content:"";position:absolute;inset:0;margin:auto;width:14px;height:14px;border-radius:50%;border:2px solid var(--border-strong);border-top-color:var(--live);animation:otomat-spin .7s linear infinite}
 @media (prefers-reduced-motion:reduce){.otomat-btn-loading::after{animation:none}}
 `;
 

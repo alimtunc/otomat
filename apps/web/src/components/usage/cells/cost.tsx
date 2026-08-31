@@ -9,7 +9,7 @@ export function UsageCostCell({ row }: TableCellProps<UsageRunRow>) {
       metric={row.original.figures.cost_usd}
       turns={row.original.figures.turns}
       format={formatCostUsd}
-      className="text-xs"
+      className="justify-end text-xs"
     />
   );
 }

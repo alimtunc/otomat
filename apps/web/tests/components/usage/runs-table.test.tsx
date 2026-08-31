@@ -37,7 +37,7 @@ it("states the figures a run reported and the ones it did not", async () => {
     />,
   );
 
-  expect(view.container.textContent).toContain("in 1.2k");
+  expect(view.container.textContent).toContain("1.2k in");
   expect(view.container.textContent).toContain("codex · Model not reported");
   expect(view.container.textContent).toContain("Not measured");
   expect(view.container.textContent).toContain("Not reported");

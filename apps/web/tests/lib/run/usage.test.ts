@@ -1,4 +1,9 @@
-import { formatCostUsd, formatTokenCount, latestReportedUsage } from "@web/lib/run/usage";
+import {
+  formatCostUsd,
+  formatExactTokenCount,
+  formatTokenCount,
+  latestReportedUsage,
+} from "@web/lib/run/usage";
 import { expect, it } from "vitest";
 
 import { envelope } from "#support/envelope";
@@ -36,9 +41,24 @@ it("ignores a usage event with a malformed payload", () => {
   ).toBeNull();
 });
 
-it("formats token counts and cost without inventing precision", () => {
+it("formats token counts in readable tiers of at most 3 significant digits", () => {
+  expect(formatTokenCount(0)).toBe("0");
   expect(formatTokenCount(999)).toBe("999");
+  expect(formatTokenCount(9_412)).toBe("9.41k");
   expect(formatTokenCount(18_400)).toBe("18.4k");
   expect(formatTokenCount(230_000)).toBe("230k");
-  expect(formatCostUsd(0.087)).toBe("$0.087");
+  expect(formatTokenCount(999_950)).toBe("1M");
+  expect(formatTokenCount(33_400_000)).toBe("33.4M");
+  expect(formatTokenCount(5_350_000_000)).toBe("5.35B");
+});
+
+it("exposes the exact integer with thousands separators for hover", () => {
+  expect(formatExactTokenCount(999)).toBe("999");
+  expect(formatExactTokenCount(33_412_001)).toBe("33,412,001");
+});
+
+it("formats costs as USD with two decimals and separators", () => {
+  expect(formatCostUsd(0.087)).toBe("$0.09");
+  expect(formatCostUsd(4)).toBe("$4.00");
+  expect(formatCostUsd(1_234.5)).toBe("$1,234.50");
 });

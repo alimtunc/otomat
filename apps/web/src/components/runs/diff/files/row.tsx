@@ -41,14 +41,14 @@ export function DiffFileRow({
     >
       <span
         aria-label={resolveStatus("diffFile", file.status).label}
-        className={cn("w-3 shrink-0 text-center font-mono text-[10px]", status.className)}
+        className={cn("w-3 shrink-0 text-center font-mono text-micro", status.className)}
       >
         {status.letter}
       </span>
       <span className="flex min-w-0 flex-1 items-baseline gap-1.5 text-left">
         <span className="min-w-0 shrink truncate">{labels.name}</span>
         {detail === "" ? null : (
-          <span className="min-w-0 shrink-[999] truncate text-[11px] text-text-tertiary">
+          <span className="min-w-0 shrink-[999] truncate text-micro text-text-tertiary">
             {detail}
           </span>
         )}
@@ -56,7 +56,7 @@ export function DiffFileRow({
       {reviewed ? (
         <Icon name="check" aria-label="Reviewed" className="h-3 w-3 shrink-0 text-success" />
       ) : null}
-      <span className="flex shrink-0 items-center gap-1 font-mono text-[10px] tabular-nums">
+      <span className="flex shrink-0 items-center gap-1 font-mono text-micro tabular-nums">
         <DiffStat additions={file.additions} deletions={file.deletions} />
       </span>
     </Button>

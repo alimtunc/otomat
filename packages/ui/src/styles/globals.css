@@ -55,6 +55,7 @@
   --color-iris-text: var(--iris-text);
   --color-iris-bg: var(--iris-bg);
 
+  --color-live: var(--live);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
@@ -63,6 +64,7 @@
   --color-stale: var(--stale);
   --color-neutral: var(--neutral);
 
+  --color-live-bg: var(--live-bg);
   --color-success-bg: var(--success-bg);
   --color-warning-bg: var(--warning-bg);
   --color-danger-bg: var(--danger-bg);

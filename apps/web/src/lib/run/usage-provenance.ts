@@ -1,8 +1,8 @@
 import type { UsageAvailability } from "@otomat/domain";
 
-/** Said next to a number so a still-moving total is never read as a settled one. */
+/** Settled is the default and says nothing; only a still-moving or absent total gets a marker. */
 export const USAGE_PROVENANCE = {
-  live: "live",
-  final: "final",
+  live: "counting…",
+  final: null,
   unavailable: "not reported",
-} satisfies Record<UsageAvailability, string>;
+} satisfies Record<UsageAvailability, string | null>;

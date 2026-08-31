@@ -58,7 +58,7 @@ export function CompeteComparison({
               ? `${marked.name} will become the canonical result.`
               : "Mark one succeeded candidate."}
           </p>
-          <p className="mt-0.5 text-[10px] text-text-tertiary">
+          <p className="mt-0.5 text-micro text-text-tertiary">
             Dependent steps remain queued until this explicit selection completes.
           </p>
         </div>

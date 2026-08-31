@@ -44,8 +44,8 @@ export function CandidateDiffEvidence({
           <div className="mt-2 max-h-44 space-y-2 overflow-auto">
             {candidateDiff.files.map((file) => (
               <div key={file.path}>
-                <p className="truncate font-mono text-[10px] text-text-secondary">{file.path}</p>
-                <pre className="mt-1 overflow-x-auto whitespace-pre-wrap rounded bg-background p-2 font-mono text-[10px] leading-4 text-text-secondary">
+                <p className="truncate font-mono text-micro text-text-secondary">{file.path}</p>
+                <pre className="mt-1 overflow-x-auto whitespace-pre-wrap rounded bg-background p-2 font-mono text-micro leading-4 text-text-secondary">
                   {file.patch ?? "Binary file or patch unavailable."}
                 </pre>
               </div>

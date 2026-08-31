@@ -7,7 +7,9 @@ export function StatusChipsSection() {
   return (
     <Section title="Status chips — color + icon + label (never color alone)">
       <Row>
+        <RunStatusChip status="preparing" />
         <RunStatusChip status="running" />
+        <StepStatusChip status="starting" />
         <RunStatusChip status="awaiting_permission" />
         <RunStatusChip status="awaiting_human" />
         <RunStatusChip status="review_ready" />

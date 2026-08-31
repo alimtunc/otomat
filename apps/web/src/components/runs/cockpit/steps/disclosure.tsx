@@ -45,7 +45,7 @@ export function StepsDisclosure({
           className="h-3.5 w-3.5 group-data-[closed]/steps:-rotate-90"
         />
         Steps &amp; sessions
-        <span className="ml-auto font-mono text-[10px] font-normal">
+        <span className="ml-auto font-mono text-micro font-normal">
           {stepCount === 1 ? "1 step" : `${stepCount} steps`}
         </span>
       </CollapsibleTrigger>

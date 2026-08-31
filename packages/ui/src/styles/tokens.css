@@ -35,7 +35,7 @@
   --border-subtle: #1b1e24;
   --border-strong: #30343d;
   --text-secondary: #9197a3;
-  --text-tertiary: #646a76;
+  --text-tertiary: #7a8291;
   --text-disabled: #454b55;
 
   /* Iris (single interactive hue) */
@@ -47,6 +47,7 @@
   --iris-text: #ff9b93;
 
   /* status */
+  --live: #4da3ff;
   --success: #3fb950;
   --warning: #d8a12b;
   --danger: #f2545b;
@@ -58,6 +59,7 @@
   --done: #a371f7;
 
   /* status subtle tints (chips) */
+  --live-bg: rgba(77, 163, 255, 0.13);
   --success-bg: rgba(63, 185, 80, 0.12);
   --warning-bg: rgba(216, 161, 43, 0.13);
   --danger-bg: rgba(242, 84, 91, 0.13);
@@ -169,7 +171,7 @@
   --border-subtle: #eceef1;
   --border-strong: #d2d6dc;
   --text-secondary: #5a616b;
-  --text-tertiary: #878e99;
+  --text-tertiary: #6a707c;
   --text-disabled: #b7bcc4;
 
   --iris-solid: #d2473e;
@@ -178,6 +180,8 @@
   --iris-subtle-bg: rgba(210, 71, 62, 0.09);
   --iris-ring: #d2473e;
   --iris-text: #bf392f;
+  --live: #1d6fd8;
+  --live-bg: rgba(29, 111, 216, 0.1);
   --success-bg: rgba(45, 164, 78, 0.12);
   --warning-bg: rgba(176, 124, 10, 0.14);
   --danger-bg: rgba(224, 59, 67, 0.1);
@@ -201,6 +205,8 @@
   --iris-text: #e0ac68;
   --iris-bg: rgba(192, 136, 62, 0.15);
   --selected: rgba(192, 136, 62, 0.12);
+  --live: #4f9be8;
+  --live-bg: rgba(79, 155, 232, 0.14);
   --info: #c0883e;
   --primary: #c0883e;
   --ring: #c0883e;
@@ -218,6 +224,8 @@
   --iris-text: #5fd3a6;
   --iris-bg: rgba(45, 176, 122, 0.14);
   --selected: rgba(45, 176, 122, 0.12);
+  --live: #3ba6d9;
+  --live-bg: rgba(59, 166, 217, 0.14);
   --info: #2db07a;
   --primary: #2db07a;
   --ring: #2db07a;

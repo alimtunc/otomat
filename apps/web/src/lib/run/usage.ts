@@ -32,12 +32,22 @@ export function latestReportedUsage(events: EventEnvelope[]): ReportedUsage | nu
   return payload ? parseReportedUsage(payload) : null;
 }
 
+const COMPACT_TOKENS = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  maximumSignificantDigits: 3,
+});
+const EXACT_TOKENS = new Intl.NumberFormat("en-US");
+const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
 export function formatTokenCount(count: number): string {
-  if (count < 1000) return String(count);
-  const thousands = count / 1000;
-  return `${thousands >= 100 ? Math.round(thousands) : thousands.toFixed(1)}k`;
+  return COMPACT_TOKENS.format(count).replace("K", "k");
+}
+
+/** Every compact count carries this in a `title` so the rounded figure stays inspectable. */
+export function formatExactTokenCount(count: number): string {
+  return EXACT_TOKENS.format(count);
 }
 
 export function formatCostUsd(cost: number): string {
-  return `$${cost.toFixed(3)}`;
+  return USD.format(cost);
 }

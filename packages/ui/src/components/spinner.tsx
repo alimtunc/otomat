@@ -6,7 +6,7 @@ import { cn } from "../lib/utils";
 
 const SPINNER_STYLE_ID = "otomat-spinner";
 const SPINNER_CSS = `
-.otomat-spinner{border-radius:50%;border:2px solid var(--border-strong);border-top-color:var(--iris-solid);animation:otomat-spin .7s linear infinite}
+.otomat-spinner{border-radius:50%;border:2px solid var(--border-strong);border-top-color:var(--live);animation:otomat-spin .7s linear infinite}
 @media (prefers-reduced-motion:reduce){.otomat-spinner{animation:none}}
 `;
 

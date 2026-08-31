@@ -52,8 +52,8 @@ export function DropdownsSection() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Chip tone="iris" className="cursor-pointer">
-                <LiveDot tone="iris" live size={7} />
+              <Chip tone="live" className="cursor-pointer">
+                <LiveDot tone="live" live size={7} />
                 running
                 <Icon name="chevron-down" className="size-2.75" />
               </Chip>

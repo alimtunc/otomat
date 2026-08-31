@@ -37,7 +37,7 @@ export function RunCompletionReportView() {
       <div className="mx-auto flex max-w-6xl flex-col gap-4 p-4 sm:p-6">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-iris-text">
+            <p className="font-mono text-micro uppercase tracking-[0.1em] text-iris-text">
               Persisted evidence
             </p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">Completion report</h1>

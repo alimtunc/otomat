@@ -93,10 +93,10 @@ export function DiffFileCommentIndicator({
                 className="h-auto w-full flex-col items-start gap-1 rounded-sm px-1.5 py-1.5 text-xs font-normal text-text-secondary hover:bg-hover"
               >
                 <span className="flex w-full items-center gap-1.5">
-                  <span className="min-w-0 flex-1 truncate text-left font-mono text-[11px]">
+                  <span className="min-w-0 flex-1 truncate text-left font-mono text-micro">
                     {commentAnchorLabel(comment)}
                   </span>
-                  <span className="text-[10px] uppercase tracking-wide text-text-tertiary">
+                  <span className="text-micro uppercase tracking-wide text-text-tertiary">
                     {comment.destination === "agent" ? "Agent" : "PR"}
                   </span>
                   <ReviewCommentStatusChip status={comment.status} />
@@ -105,9 +105,7 @@ export function DiffFileCommentIndicator({
                   {comment.body.trim() === "" ? "Code suggestion" : comment.body}
                 </span>
                 {comment.status !== "open" || anchoredIds.has(comment.id) ? null : (
-                  <span className="text-[10px] text-stale">
-                    Stale — shown at its pinned excerpt
-                  </span>
+                  <span className="text-micro text-stale">Stale — shown at its pinned excerpt</span>
                 )}
               </Button>
             </li>
