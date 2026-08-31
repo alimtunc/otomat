@@ -1,4 +1,4 @@
-import { getAgentProfile, getSkill, readExecutionDefaults, type Db } from "@otomat/db";
+import { getAgentProfile, readExecutionDefaults, type Db } from "@otomat/db";
 import {
   executionLevels,
   modelSelectionFromId,
@@ -20,7 +20,7 @@ import {
   UnknownRuntimeError,
 } from "#runtime";
 
-import { ProfileNotFoundError, SkillResolutionError } from "./errors.js";
+import { ProfileNotFoundError } from "./errors.js";
 import { assertOptionsAnnounced, resolveOptions } from "./options.js";
 import { hashContent } from "./skills/content.js";
 import { resolveSkills } from "./skills/resolve.js";
@@ -39,30 +39,10 @@ export function nodeAgentSelector(node: {
   return null;
 }
 
-export interface ProfileInput {
-  runtime: string;
-  options: ProviderOptions;
-  /** Null leaves the model to the host defaults. */
-  model: string | null;
-  skill_ids: string[];
-}
-
 export interface AgentConfigOverrides {
   /** Most specific first: a node's own level before the launch's. */
   levels?: readonly ExecutionLevel[];
   runtimeSource?: Extract<ExecutionSource, "step" | "launch" | "global">;
-}
-
-/** Runtime availability and skill files are checked at launch, not here. */
-export function validateProfileInput(db: Db, input: ProfileInput): void {
-  if (!isKnownRuntimeId(input.runtime)) throw new UnknownRuntimeError(input.runtime);
-  const model = resolveModelSelection(input.runtime, modelSelectionFromId(input.model));
-  assertOptionsAnnounced(input.runtime, model, input.options);
-  for (const skillId of input.skill_ids) {
-    if (!getSkill(db, skillId)) {
-      throw new SkillResolutionError("skill_unknown", `skill ${skillId} is not in the catalog`);
-    }
-  }
 }
 
 function configHash(config: Omit<ResolvedAgentConfig, "config_hash">): string {

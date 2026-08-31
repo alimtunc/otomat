@@ -276,6 +276,40 @@ cockpit's Execution card answers the same way — the selected step's effective
 configuration first, every step and what the runtime reported behind a
 disclosure.
 
+## One Global Agent Catalog
+
+A profile is a reusable user preference, so its definition belongs to the Otomat
+installation rather than to whichever daemon the cockpit is pointed at. Every
+host's daemon therefore holds a full replica of `agent_profiles` and stays its
+only writer: the cockpit keeps editing the host it is connected to, and the
+desktop shell carries the catalogs to each other
+(`main/remote/host/profile-sync.ts`) — forward through every reachable daemon,
+then the converged answer back to the ones already visited. A host that is down
+is left behind with its reason and picks the catalog up on the next round, so an
+offline edit is never lost and never overwrites a newer one. The round runs when
+a remote host reaches `connected` and, awaited, whenever the renderer is handed
+a new daemon, so a project switch opens on converged state.
+
+`POST /api/agent-profiles/replica` is the whole protocol: merge the peer's
+catalog, persist the result verbatim, answer with it. `agents/replica.ts` owns
+that merge and nothing else — last write wins on `updated_at`, a **tombstone
+takes a tie** (which is what stops a delete from being undone and makes the round
+trip idempotent), and two live rows fall back to their content so both hosts pick
+the same winner. Rows that share a name *and* a definition collapse onto the
+earliest, which is how two hosts that grew the same profile separately end up
+with one; nothing else is renamed or dropped, because names were never unique
+here. A delete is a `deleted_at` tombstone rather than a row removal, since a
+hole would simply be refilled by the next exchange.
+
+What stays host-scoped is availability. A write only asserts that the runtime id
+is one this installation knows: a model, an option and a skill exist only where a
+binary or a filesystem announced them, so validating those at write time would
+refuse an edit made from the wrong host. The launch refuses them instead, and
+`AgentProfileContract.compatibility` reports per read what this host could not
+resolve — the same `resolveAgentConfig` walk a launch performs, thrown away. That
+is why an incompatible profile is never hidden: it is listed with the capability
+it is missing, and the pickers disable it with that reason attached.
+
 ## Saved Workflow Presets
 
 A preset is a **structure**, not a launch: the steps, their dependencies and

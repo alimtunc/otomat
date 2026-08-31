@@ -39,6 +39,7 @@ const profile = (id: string, runtimeId: string): AgentProfileContract => ({
   options: {},
   guidance: null,
   skill_ids: [],
+  compatibility: null,
 });
 
 it("maps a profile choice to a profile_id request field", () => {
@@ -65,9 +66,14 @@ it("maps a null (inherit) choice to no fields", () => {
   expect(agentChoiceToRequest(null)).toEqual({});
 });
 
-it("treats a profile whose runtime is unavailable as unusable", () => {
-  const descriptors = [runtime("claude", false)];
-  const profiles = [profile("p1", "claude")];
+it("treats a profile this host reported incompatible as unusable", () => {
+  const descriptors = [runtime("claude", true)];
+  const profiles = [
+    {
+      ...profile("p1", "claude"),
+      compatibility: { error: "runtime_unavailable", message: "claude is not installed here" },
+    } as const,
+  ];
   expect(isUsableAgentChoice(encodeProfileChoice("p1"), profiles, descriptors)).toBe(false);
 });
 

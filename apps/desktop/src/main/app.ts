@@ -135,7 +135,9 @@ export class DesktopApp {
         localDaemonUrl: () => this.localDaemonUrl,
         onRemoteStatus: (status) => {
           this.sendToCockpit(EXECUTION_HOST_STATUS_CHANNEL, status);
-          if (status.phase === "connected") void this.runtime?.linear.reconcile();
+          if (status.phase !== "connected") return;
+          void this.runtime?.linear.reconcile();
+          void this.runtime?.profiles.sync();
         },
         onLinearDelivery: (delivery) =>
           this.sendToCockpit(LINEAR_DELIVERY_STATUS_CHANNEL, delivery),
@@ -144,6 +146,7 @@ export class DesktopApp {
         onSandboxDaemonStarted: (url) => {
           this.localDaemonUrl = url;
           void this.runtime?.linear.reconcile();
+          void this.runtime?.profiles.sync();
           if (this.runtime?.hosts.activeHostId !== "remote") this.ipcState.daemonUrl = url;
         },
       });
@@ -217,7 +220,8 @@ export class DesktopApp {
   }
 
   /** Host switches re-point the renderer and reload it so the preload re-reads the daemon URL. */
-  private applyRendererUrl(url: string): void {
+  private async applyRendererUrl(url: string): Promise<void> {
+    await this.runtime?.profiles.sync();
     this.ipcState.daemonUrl = url;
     this.cockpit?.webContents.reload();
   }

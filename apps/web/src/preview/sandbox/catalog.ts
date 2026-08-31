@@ -65,6 +65,7 @@ export const SANDBOX_PROFILES: AgentProfileContract[] = [
     model: null,
     guidance: "Work inside the issue's acceptance criteria and keep the diff small.",
     skill_ids: [],
+    compatibility: null,
   },
 ];
 

@@ -22,6 +22,7 @@ import type { AppPaths } from "./paths.js";
 import { PreviewSandbox } from "./preview/sandbox.js";
 import { deploymentForChannel } from "./remote/bootstrap/scripts.js";
 import { HostCapacityActions } from "./remote/host/capacity.js";
+import { AgentProfileSync } from "./remote/host/profile-sync.js";
 import { RemoteInstanceActions } from "./remote/instances/actions.js";
 import { ExecutionHostManager } from "./remote/manager.js";
 import { DesktopUpdater, type UpdaterPort } from "./update/controller.js";
@@ -38,6 +39,7 @@ export interface DesktopRuntime {
   daemon: DaemonController;
   linear: LinearCoordinator;
   hosts: ExecutionHostManager;
+  profiles: AgentProfileSync;
   sandbox: PreviewSandbox;
   instances: RemoteInstanceActions;
   capacity: HostCapacityActions;
@@ -59,7 +61,7 @@ interface DesktopRuntimeOptions {
   onRemoteStatus(status: RemoteHostStatus): void;
   onLinearDelivery(snapshot: LinearDeliverySnapshot): void;
   onUpdate(snapshot: DesktopUpdateSnapshot): void;
-  applyRendererUrl(url: string): void;
+  applyRendererUrl(url: string): Promise<void>;
   onSandboxDaemonStarted(url: string): void;
 }
 
@@ -104,6 +106,11 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     deployment,
     repo: OTOMAT_GITHUB_REPO,
   });
+  const profiles = new AgentProfileSync({
+    targets: () => hosts.catalog.targets(),
+    fetchImpl: fetch,
+    log: (message) => desktopLog.write(message),
+  });
   const linear = new LinearCoordinator({
     vault: createMainLinearVault(dataDirectory.root),
     targets: () => linearTargets(hosts),
@@ -137,6 +144,7 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     daemon,
     linear,
     hosts,
+    profiles,
     sandbox,
     instances,
     capacity,

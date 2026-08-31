@@ -17,6 +17,7 @@ const PROFILE = {
   options: {},
   guidance: null,
   skill_ids: [],
+  compatibility: null,
 };
 
 const SKILL = {
@@ -56,6 +57,40 @@ it("updates via PATCH and deletes via DELETE", async () => {
   await client.deleteAgentProfile("p1");
   expect(calls[0]).toMatchObject({ method: "PATCH", url: "http://x/api/agent-profiles/p1" });
   expect(calls[1]).toMatchObject({ method: "DELETE", url: "http://x/api/agent-profiles/p1" });
+});
+
+const REPLICA_ENTRY = {
+  id: "p1",
+  name: "P",
+  runtime: "fake",
+  options: {},
+  model: null,
+  guidance: null,
+  skill_ids: [],
+  created_at: "2026-01-01 10:00:00",
+  updated_at: "2026-01-01 10:00:00",
+  deleted_at: null,
+};
+
+it("exchanges a replica catalog and answers with the converged one", async () => {
+  let captured: CapturedRequest = {};
+  const fetchMock: typeof fetch = async (input, init) => {
+    captured = { url: String(input), method: init?.method, body: init?.body };
+    return jsonResponse({ profiles: [REPLICA_ENTRY] });
+  };
+  const client = createDaemonClient({ baseUrl: "http://x", fetch: fetchMock });
+  const converged = await client.mergeAgentProfileReplica([]);
+  expect(captured.url).toBe("http://x/api/agent-profiles/replica");
+  expect(captured.method).toBe("POST");
+  expect(JSON.parse(String(captured.body))).toEqual({ profiles: [] });
+  expect(converged).toEqual([REPLICA_ENTRY]);
+});
+
+it("refuses a replica answer that is not a catalog rather than merging it", async () => {
+  const client = createDaemonClient({
+    fetch: async () => jsonResponse({ profiles: [{ id: REPLICA_ENTRY.id }] }),
+  });
+  await expect(client.mergeAgentProfileReplica([])).rejects.toThrow();
 });
 
 it("scans skills via POST and lists them via GET", async () => {

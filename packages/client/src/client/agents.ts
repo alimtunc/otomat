@@ -1,6 +1,8 @@
 import {
   agentProfileContractSchema,
+  agentProfileReplicaSchema,
   skillContractSchema,
+  type AgentProfileReplicaEntry,
   type SaveAgentProfileRequest,
   type SetSkillEnabledRequest,
 } from "@otomat/domain";
@@ -30,6 +32,11 @@ export function createAgentsClient(config: DaemonClientConfig) {
     },
     async deleteAgentProfile(id: string) {
       await deleteJson(config, `/api/agent-profiles/${encodeURIComponent(id)}`);
+    },
+    async mergeAgentProfileReplica(profiles: readonly AgentProfileReplicaEntry[]) {
+      return agentProfileReplicaSchema.parse(
+        await postJson(config, "/api/agent-profiles/replica", { profiles }),
+      ).profiles;
     },
     async listSkills() {
       return skillContractSchema.array().parse(await getJson(config, "/api/skills"));

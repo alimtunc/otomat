@@ -11,7 +11,9 @@
 export * from "./errors.js";
 export * from "./refusal.js";
 export * from "./resolve.js";
+export { agentProfileCompatibility } from "./profile-compatibility.js";
 export { workflowPresetCompatibility } from "./preset-compatibility.js";
+export { mergeAgentProfileReplicas } from "./replica.js";
 export { validateExecutionDefaults } from "./execution-defaults.js";
 export { composeTurnPrompt } from "./prompt.js";
 export { rescanSkills } from "./skills/catalog.js";

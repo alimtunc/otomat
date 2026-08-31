@@ -19,6 +19,7 @@ export const agentProfiles = sqliteTable("agent_profiles", {
   model: text("model"),
   guidance: text("guidance"),
   skill_ids_json: text("skill_ids_json", { mode: "json" }).notNull(),
+  deleted_at: text("deleted_at"),
   ...timestamps,
 });
 

@@ -9,14 +9,17 @@ import {
 } from "@otomat/db";
 import {
   AGENT_PROFILE_NAME_MAX_LENGTH,
+  agentProfileReplicaSchema,
   saveAgentProfileRequestSchema,
   type SaveAgentProfileRequest,
 } from "@otomat/domain";
 import { Hono, type Context } from "hono";
 
-import { ProfileNotFoundError, validateProfileInput } from "#agents";
+import { ProfileNotFoundError } from "#agents";
+import { isKnownRuntimeId, UnknownRuntimeError } from "#runtime";
 
 import { agentConfigErrorResponse } from "../agent-config-refusal.js";
+import { mergeAgentProfileReplica } from "../agent-profile-replica.js";
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";
 import { readAgentProfile, readAgentProfiles } from "../reads.js";
@@ -55,21 +58,10 @@ function savedProfile(db: Db, id: string) {
   return profile;
 }
 
-/** Validates the runtime, options, model and referenced skills; returns an honest refusal or null. */
-function refuseInvalid(db: Db, request: SaveAgentProfileRequest) {
-  try {
-    validateProfileInput(db, {
-      runtime: request.runtime,
-      options: request.options ?? {},
-      model: request.model ?? null,
-      skill_ids: request.skill_ids ?? [],
-    });
-    return null;
-  } catch (error) {
-    const refusal = agentConfigErrorResponse(error);
-    if (refusal) return refusal;
-    throw error;
-  }
+function refuseUnknownRuntime(runtime: string) {
+  return isKnownRuntimeId(runtime)
+    ? null
+    : agentConfigErrorResponse(new UnknownRuntimeError(runtime));
 }
 
 /** Agent profile CRUD, mounted at `/api/agent-profiles`. Profiles are mutable; a launch freezes an immutable snapshot into the run plan. */
@@ -78,9 +70,13 @@ export function createAgentProfileRoutes(deps: ApiDeps): Hono {
 
   routes.get("/", (c) => c.json(readAgentProfiles(deps.db)));
 
+  routes.post("/replica", validateJson(agentProfileReplicaSchema), (c) =>
+    c.json({ profiles: mergeAgentProfileReplica(deps.db, c.req.valid("json").profiles) }),
+  );
+
   routes.post("/", validateJson(saveAgentProfileRequestSchema), (c) => {
     const request = c.req.valid("json");
-    const refusal = refuseInvalid(deps.db, request);
+    const refusal = refuseUnknownRuntime(request.runtime);
     if (refusal) return refusalJson(c, refusal);
     const id = randomUUID();
     insertAgentProfile(deps.db, { id, ...profileColumns(request) });
@@ -91,7 +87,7 @@ export function createAgentProfileRoutes(deps: ApiDeps): Hono {
     const id = c.req.param("id");
     if (!getAgentProfile(deps.db, id)) return profileNotFound(c, id);
     const request = c.req.valid("json");
-    const refusal = refuseInvalid(deps.db, request);
+    const refusal = refuseUnknownRuntime(request.runtime);
     if (refusal) return refusalJson(c, refusal);
     updateAgentProfile(deps.db, id, profileColumns(request));
     return c.json(savedProfile(deps.db, id));

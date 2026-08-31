@@ -65,7 +65,7 @@ function sessionFor(worktree: string, appData: string) {
     onRemoteStatus: () => {},
     onLinearDelivery: () => {},
     onUpdate: () => {},
-    applyRendererUrl: () => {},
+    applyRendererUrl: async () => {},
     onSandboxDaemonStarted: () => {},
   });
   expect(runtime.dataDirectory.root).toBe(root);

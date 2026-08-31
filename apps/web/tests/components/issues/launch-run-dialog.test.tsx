@@ -42,6 +42,7 @@ const PROFILE: AgentProfileContract = {
   model: null,
   guidance: null,
   skill_ids: [],
+  compatibility: null,
 };
 
 interface ExecutionPickerProbeProps {

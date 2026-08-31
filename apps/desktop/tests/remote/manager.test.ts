@@ -61,6 +61,7 @@ function makeManager(options?: {
   localUrl?: string;
   expectedBuild?: string | null;
   fetchImpl?: typeof fetch;
+  onRendererUrl?: () => Promise<void>;
 }) {
   const dataDir = options?.dataDir ?? scratch();
   const applied: string[] = [];
@@ -72,7 +73,10 @@ function makeManager(options?: {
     localDaemonUrl: () => options?.localUrl ?? "http://127.0.0.1:49152",
     onRemoteStatus: () => {},
     onRemoteConnected: (alias, url) => connected.push({ alias, url }),
-    applyRendererUrl: (url) => applied.push(url),
+    applyRendererUrl: async (url) => {
+      await options?.onRendererUrl?.();
+      applied.push(url);
+    },
     expectedBuild: options?.expectedBuild ?? null,
     repo: "alimtunc/otomat",
     createSession: (sessionOptions) => {
@@ -94,6 +98,22 @@ function projectsResponse(projects: unknown): Response {
   // SAFETY: the manager reads only ok and json from a catalog response.
   return { ok: true, json: async () => projects } as Response;
 }
+
+it("reports a switch only once the renderer has taken its new host", async () => {
+  let handOver = (): void => {};
+  const made = makeManager({
+    onRendererUrl: () => new Promise<void>((resolve) => (handOver = resolve)),
+  });
+  made.manager.configureRemote("otomat-vps");
+
+  const selecting = made.manager.select("remote");
+  await Promise.resolve();
+  expect(made.applied).toEqual([]);
+
+  handOver();
+  expect((await selecting).ok).toBe(true);
+  expect(made.applied).toEqual(["http://127.0.0.1:45010"]);
+});
 
 it("refuses to select the remote host before an alias is configured", async () => {
   const { manager, applied } = makeManager();
@@ -117,7 +137,7 @@ it("refuses an alias change while a host switch is in flight", async () => {
     log: () => {},
     localDaemonUrl: () => "http://127.0.0.1:49152",
     onRemoteStatus: () => {},
-    applyRendererUrl: () => {},
+    applyRendererUrl: async () => {},
     expectedBuild: null,
     repo: "alimtunc/otomat",
     createSession: (sessionOptions) => {

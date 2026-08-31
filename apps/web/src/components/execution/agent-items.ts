@@ -5,7 +5,7 @@ import {
   encodeProfileChoice,
   encodeRuntimeChoice,
 } from "@web/lib/agent-choice";
-import { isAvailableRuntime, runtimeById, runtimeMark } from "@web/lib/runtimes";
+import { isAvailableRuntime, runtimeMark } from "@web/lib/runtimes";
 
 export interface ChoiceItem {
   value: string;
@@ -26,17 +26,15 @@ export function buildItems(
   descriptors: RuntimeDescriptor[],
   inheritLabel?: string,
 ): AgentChoiceItems {
-  const profileItems: ChoiceItem[] = profiles.map((profile) => {
-    const runtime = runtimeById(descriptors, profile.runtime);
-    const available = runtime ? isAvailableRuntime(runtime) : false;
-    return {
-      value: encodeProfileChoice(profile.id),
-      label: available ? profile.name : `${profile.name} — runtime unavailable`,
-      disabled: !available,
-      mark: runtimeMark(profile.runtime),
-      kind: "profile",
-    };
-  });
+  const profileItems: ChoiceItem[] = profiles.map((profile) => ({
+    value: encodeProfileChoice(profile.id),
+    label: profile.compatibility
+      ? `${profile.name} — ${profile.compatibility.message}`
+      : profile.name,
+    disabled: profile.compatibility !== null,
+    mark: runtimeMark(profile.runtime),
+    kind: "profile",
+  }));
   const runtimeItems: ChoiceItem[] = descriptors.map((descriptor) => ({
     value: encodeRuntimeChoice(descriptor.id),
     label: descriptor.display_name,

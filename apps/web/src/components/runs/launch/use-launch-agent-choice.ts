@@ -27,7 +27,7 @@ export function useLaunchAgentChoice(
     profiles,
     choice:
       scope === "profiles"
-        ? resolveProfileChoice(preferred, profiles, descriptors)
+        ? resolveProfileChoice(preferred, profiles)
         : resolveAgentChoice(preferred, profiles, descriptors),
     isPending: runtimes.isPending || profilesQuery.isPending,
     isError: runtimes.isError || profilesQuery.isError,

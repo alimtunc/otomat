@@ -83,7 +83,7 @@ export function isUsableAgentChoice(
   if (decoded === null) return false;
   if (decoded.kind === "profile") {
     const profile = profiles.find((candidate) => candidate.id === decoded.id);
-    return profile ? runtimeAvailable(descriptors, profile.runtime) : false;
+    return profile !== undefined && profile.compatibility === null;
   }
   return runtimeAvailable(descriptors, decoded.id);
 }
@@ -101,12 +101,8 @@ export function resolveAgentChoice(
 export function resolveProfileChoice(
   preferred: string | null,
   profiles: AgentProfileContract[],
-  descriptors: RuntimeDescriptor[],
 ): string | null {
-  return agentChoiceProfile(preferred, profiles) !== null &&
-    isUsableAgentChoice(preferred, profiles, descriptors)
-    ? preferred
-    : null;
+  return agentChoiceProfile(preferred, profiles)?.compatibility === null ? preferred : null;
 }
 
 export type AgentScope = "all" | "profiles" | "runtimes";

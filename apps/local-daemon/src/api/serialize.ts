@@ -52,12 +52,17 @@ import {
   type WorktreeStatus,
 } from "@otomat/domain";
 
+import type { AgentConfigRefusal } from "#agents";
+
 export function toProject(row: ProjectRow, hasRepository: boolean): ProjectContract {
   return projectContractSchema.parse({ ...row, has_repository: hasRepository });
 }
 
 /** Maps a profile row to its wire contract, unwrapping the typed json columns. */
-export function toAgentProfile(row: AgentProfileRow): AgentProfileContract {
+export function toAgentProfile(
+  row: AgentProfileRow,
+  compatibility: AgentConfigRefusal | null,
+): AgentProfileContract {
   return agentProfileContractSchema.parse({
     id: row.id,
     name: row.name,
@@ -66,6 +71,7 @@ export function toAgentProfile(row: AgentProfileRow): AgentProfileContract {
     model: row.model,
     guidance: row.guidance,
     skill_ids: row.skill_ids_json,
+    compatibility,
   });
 }
 

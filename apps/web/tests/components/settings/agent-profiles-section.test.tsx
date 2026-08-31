@@ -60,6 +60,7 @@ function profile(overrides: Partial<AgentProfileContract> = {}): AgentProfileCon
     model: null,
     guidance: "Read the diff before answering.",
     skill_ids: ["skill-review"],
+    compatibility: null,
     ...overrides,
   };
 }
@@ -100,10 +101,14 @@ it("offers a first profile instead of a catalog of agents nobody created", async
   expect(findButton("New profile")).toBeDefined();
 });
 
-it("marks a profile whose runtime this host does not offer", async () => {
-  profiles = [profile()];
-  runtimes = [claude({ availability: { status: "unavailable", reason: "binary_not_found" } })];
+it("names what this host is missing without dropping the profile", async () => {
+  profiles = [
+    profile({
+      compatibility: { error: "runtime_unavailable", message: "claude is not installed here" },
+    }),
+  ];
   const { container } = await renderSection();
 
-  expect(container.textContent).toContain("unavailable");
+  expect(container.textContent).toContain("Reviewer");
+  expect(container.textContent).toContain("claude is not installed here");
 });

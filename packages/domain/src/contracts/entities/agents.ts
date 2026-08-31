@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { agentProfileErrorSchema } from "../agent-profile.js";
 import { resolvedExecutionSourcesSchema } from "../execution-config.js";
 import { providerOptionsSchema } from "../provider-options.js";
 import { modelIdSchema, resolvedModelSchema } from "../runtime-model.js";
@@ -81,5 +82,7 @@ export const agentProfileContractSchema = z.object({
   guidance: z.string().nullable(),
   /** Ids of skills resolved and validated at launch. */
   skill_ids: z.array(z.string()),
+  /** The catalog is global, availability is not: this is resolved per read against the answering host. */
+  compatibility: agentProfileErrorSchema.nullable(),
 });
 export type AgentProfileContract = z.infer<typeof agentProfileContractSchema>;

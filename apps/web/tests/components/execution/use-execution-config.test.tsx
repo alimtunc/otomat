@@ -31,6 +31,7 @@ const PROFILE: AgentProfileContract = {
   model: "opus",
   guidance: null,
   skill_ids: [],
+  compatibility: null,
 };
 
 function Probe(options: UseExecutionConfigOptions) {

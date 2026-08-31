@@ -30,7 +30,7 @@ export interface ExecutionHostManagerOptions {
   onRemoteStatus(status: RemoteHostStatus): void;
   /** Fires whenever a session reaches `connected`, with the tunnel's local origin. */
   onRemoteConnected?(alias: string, url: string): void;
-  applyRendererUrl(url: string): void;
+  applyRendererUrl(url: string): Promise<void>;
   expectedBuild?: string | null;
   /** Daemon location and port this app targets on the host; the stable deployment when omitted. */
   deployment?: RemoteDeployment;
@@ -193,7 +193,7 @@ export class ExecutionHostManager {
     if (url === null) return errorResult("tunnel_failed");
     const committed = this.selection.commit({ active: "remote" });
     if (!committed.ok) return committed;
-    this.options.applyRendererUrl(url);
+    await this.options.applyRendererUrl(url);
     return committed;
   }
 
@@ -203,7 +203,7 @@ export class ExecutionHostManager {
     if (url === "") return errorResult("local_daemon_unavailable");
     const committed = this.selection.commit({ active: "local" });
     if (!committed.ok) return committed;
-    this.options.applyRendererUrl(url);
+    await this.options.applyRendererUrl(url);
     return committed;
   }
 

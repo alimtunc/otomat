@@ -18,6 +18,7 @@ interface RecoveryHarness {
       restoreBackup(path: string): Promise<void>;
     };
     linear: { reconcile(): Promise<void> };
+    profiles: { sync(): Promise<void> };
     hosts: {
       bootActivate(): Promise<string | null>;
       shutdown(): Promise<void>;
@@ -179,6 +180,7 @@ it("offers the next managed backup after the daemon rejects the newest candidate
       restoreBackup,
     },
     linear: { reconcile: async () => {} },
+    profiles: { sync: async () => {} },
     hosts: { bootActivate: async () => null, shutdown: async () => {}, remoteSession: null },
     updater: { start: vi.fn() },
   };

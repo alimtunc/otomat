@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  deleteAgentProfile,
   insertAgentProfile,
   setSkillEnabled,
   upsertSkillByPath,
@@ -15,7 +16,6 @@ import {
   ProfileOptionUnsupportedError,
   resolveAgentConfig,
   SkillResolutionError,
-  validateProfileInput,
 } from "#agents";
 
 import { setupTestDb, type TestDb } from "../support/db.js";
@@ -191,15 +191,21 @@ it("freezes the runtime's announced default when no level selects one", () => {
   expect(config.sources?.options).toEqual({ effort: "provider" });
 });
 
-it("validates a profile's model against the runtime before it is persisted", () => {
-  expect(() =>
-    validateProfileInput(t.db, {
-      runtime: "fake",
-      options: {},
-      model: "gpt-5",
-      skill_ids: [],
-    }),
-  ).toThrow(/gpt-5/);
+it("refuses to launch a profile another host deleted", () => {
+  insertAgentProfile(t.db, {
+    id: "p-gone",
+    name: "Gone",
+    runtime: "fake",
+    options_json: {},
+    model: null,
+    guidance: null,
+    skill_ids_json: [],
+  });
+  deleteAgentProfile(t.db, "p-gone");
+
+  expect(() => resolveAgentConfig(t.db, { kind: "profile", profileId: "p-gone" })).toThrow(
+    ProfileNotFoundError,
+  );
 });
 
 it("rejects a disabled skill referenced by a profile", () => {

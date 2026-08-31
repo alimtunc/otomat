@@ -50,6 +50,7 @@ function profile(overrides: Partial<AgentProfileContract> = {}): AgentProfileCon
     model: null,
     guidance: "Read the diff before answering.",
     skill_ids: [],
+    compatibility: null,
     ...overrides,
   };
 }
@@ -144,13 +145,28 @@ it("keeps a merely configured remote host out of a catalog the local daemon answ
   expect(container.textContent).toContain("Available on the local host");
 });
 
-it("makes an unavailable runtime actionable instead of hiding the profile", async () => {
-  const { container } = await renderDetail(profile(), [
-    claude({ availability: { status: "unavailable", reason: "binary_not_found" } }),
-  ]);
+it("refuses a profile whose runtime is here but whose skill is not", async () => {
+  const { container } = await renderDetail(
+    profile({
+      compatibility: { error: "skill_unavailable", message: 'skill "Review" is disabled' },
+    }),
+  );
+
+  expect(container.textContent).toContain("cannot be selected on the local host");
+  expect(container.textContent).toContain('skill "Review" is disabled');
+});
+
+it("makes a capability this host is missing actionable instead of hiding the profile", async () => {
+  const { container } = await renderDetail(
+    profile({
+      compatibility: { error: "runtime_unavailable", message: "claude is not installed here" },
+    }),
+    [claude({ availability: { status: "unavailable", reason: "binary_not_found" } })],
+  );
 
   expect(container.textContent).toContain("CLI not found on the local host");
   expect(container.textContent).toContain("cannot be selected on the local host");
+  expect(container.textContent).toContain("claude is not installed here");
   const runtimesLink = [...container.querySelectorAll("a")].find((link) =>
     link.textContent?.includes("Runtimes"),
   );

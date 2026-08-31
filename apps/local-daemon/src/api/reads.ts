@@ -50,7 +50,7 @@ import {
   type WorkflowPresetContract,
 } from "@otomat/domain";
 
-import { workflowPresetCompatibility } from "#agents";
+import { agentProfileCompatibility, workflowPresetCompatibility } from "#agents";
 import { readRunEvents } from "#events";
 import { isRepositoryRoot } from "#git";
 import { findWorktreeById } from "#git/worktrees-store";
@@ -76,12 +76,14 @@ export function readProjects(db: Db): ProjectContract[] {
 }
 
 export function readAgentProfiles(db: Db): AgentProfileContract[] {
-  return listAgentProfiles(db).map(toAgentProfile);
+  return listAgentProfiles(db).map((row) =>
+    toAgentProfile(row, agentProfileCompatibility(db, row.id)),
+  );
 }
 
 export function readAgentProfile(db: Db, id: string): AgentProfileContract | null {
   const row = getAgentProfile(db, id);
-  return row ? toAgentProfile(row) : null;
+  return row ? toAgentProfile(row, agentProfileCompatibility(db, row.id)) : null;
 }
 
 export function readSkills(db: Db): SkillContract[] {

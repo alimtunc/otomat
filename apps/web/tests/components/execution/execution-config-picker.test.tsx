@@ -54,6 +54,7 @@ const PROFILE: AgentProfileContract = {
   model: null,
   guidance: null,
   skill_ids: [],
+  compatibility: null,
 };
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -135,6 +136,23 @@ it("keeps a profile's own name on the trigger, which its provider mark cannot gi
   await render({ agent: encodeProfileChoice(PROFILE.id), options: {} }, [PROFILE]);
 
   expect(triggerSummary()).toContain("Careful reviewer");
+});
+
+it("offers an incompatible profile disabled, naming what this host is missing", async () => {
+  announced = CLAUDE_ANNOUNCED;
+  await render({ agent: null, options: {} }, [
+    {
+      ...PROFILE,
+      compatibility: { error: "skill_unavailable", message: 'skill "review" is disabled' },
+    },
+  ]);
+  await openSubmenu("Agent");
+
+  const choice = [...document.querySelectorAll<HTMLElement>("[role='menuitemradio']")].find(
+    (item) => item.textContent?.includes("Careful reviewer"),
+  );
+  expect(choice?.textContent).toContain('skill "review" is disabled');
+  expect(choice?.getAttribute("aria-disabled")).toBe("true");
 });
 
 it("keeps the agent visible for a runtime that has no mark to name it", async () => {

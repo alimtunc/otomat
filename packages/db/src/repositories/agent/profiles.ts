@@ -3,7 +3,7 @@ import {
   providerOptionsSchema,
   type ProviderOptions,
 } from "@otomat/domain";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 
 import type { Db } from "#db/client";
 
@@ -38,13 +38,28 @@ export function insertAgentProfile(db: Db, value: NewAgentProfile): void {
   db.insert(agentProfiles).values(value).run();
 }
 
-/** Throws (Zod) when the row's `options_json` or `skill_ids_json` is corrupt; `undefined` means no row matched `id`. */
+/** Throws (Zod) when the row's `options_json` or `skill_ids_json` is corrupt; `undefined` means no live row matched `id`. */
 export function getAgentProfile(db: Db, id: string): AgentProfileRow | undefined {
-  const row = db.select().from(agentProfiles).where(eq(agentProfiles.id, id)).get();
+  const row = db
+    .select()
+    .from(agentProfiles)
+    .where(and(eq(agentProfiles.id, id), isNull(agentProfiles.deleted_at)))
+    .get();
   return row ? hydrate(row) : undefined;
 }
 
 export function listAgentProfiles(db: Db): AgentProfileRow[] {
+  return db
+    .select()
+    .from(agentProfiles)
+    .where(isNull(agentProfiles.deleted_at))
+    .orderBy(agentProfiles.created_at)
+    .all()
+    .map(hydrate);
+}
+
+/** Every row this host holds, tombstones included: what one host hands another to converge the catalog. */
+export function listAgentProfileReplica(db: Db): AgentProfileRow[] {
   return db.select().from(agentProfiles).orderBy(agentProfiles.created_at).all().map(hydrate);
 }
 
@@ -52,6 +67,18 @@ export function updateAgentProfile(db: Db, id: string, columns: Omit<NewAgentPro
   db.update(agentProfiles).set(touch(columns)).where(eq(agentProfiles.id, id)).run();
 }
 
+/** Tombstones the row; `deleted_at` is what travels to the other hosts, so the delete is never undone by a sync. */
 export function deleteAgentProfile(db: Db, id: string): void {
-  db.delete(agentProfiles).where(eq(agentProfiles.id, id)).run();
+  db.update(agentProfiles)
+    .set(touch({ deleted_at: sql`(CURRENT_TIMESTAMP)` }))
+    .where(eq(agentProfiles.id, id))
+    .run();
+}
+
+/** Writes a merged replica entry verbatim: its timestamps are the merge's answer, never this host's clock. */
+export function upsertAgentProfileReplica(db: Db, value: AgentProfileRow): void {
+  db.insert(agentProfiles)
+    .values(value)
+    .onConflictDoUpdate({ target: agentProfiles.id, set: value })
+    .run();
 }

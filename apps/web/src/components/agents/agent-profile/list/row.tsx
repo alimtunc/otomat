@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { AgentProfileRowActions } from "@web/components/agents/agent-profile/list/row-actions";
 import { providerOptionKeyLabel, providerOptionValueLabel } from "@web/lib/provider-option-labels";
 import { storedProviderOptions } from "@web/lib/provider-options";
-import { isAvailableRuntime, runtimeById, runtimeMark } from "@web/lib/runtimes";
+import { runtimeById, runtimeMark } from "@web/lib/runtimes";
 import { CELL } from "@web/lib/table";
 
 export function AgentProfileRow({
@@ -19,7 +19,6 @@ export function AgentProfileRow({
   const descriptor = runtimeById(descriptors, profile.runtime);
   const options = storedProviderOptions(profile.options);
   const mark = runtimeMark(profile.runtime);
-  const usable = descriptor !== undefined && isAvailableRuntime(descriptor);
 
   return (
     <tr className="relative transition-colors hover:bg-hover">
@@ -32,17 +31,20 @@ export function AgentProfileRow({
           <AgentAvatar name={profile.name} />
           <span className="min-w-0 flex-1 leading-tight">
             <span className="block truncate font-medium text-foreground">{profile.name}</span>
-            <span className="block truncate text-xs text-text-tertiary">
-              {profile.guidance?.trim() || "No instructions yet."}
+            <span
+              className={`block truncate text-xs ${profile.compatibility ? "text-warning" : "text-text-tertiary"}`}
+            >
+              {profile.compatibility?.message ??
+                (profile.guidance?.trim() || "No instructions yet.")}
             </span>
           </span>
         </Link>
       </td>
       <td className={CELL}>
-        <Chip tone={usable ? "neutral" : "warning"}>
+        <Chip tone={profile.compatibility ? "warning" : "neutral"}>
           {mark ? <ProviderMark name={mark} /> : null}
           {descriptor?.display_name ?? profile.runtime}
-          {usable ? null : " · unavailable"}
+          {profile.compatibility ? " · unavailable" : null}
         </Chip>
       </td>
       <td className={`${CELL} font-mono text-xs text-text-secondary tabular-nums`}>

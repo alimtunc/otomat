@@ -36,3 +36,22 @@ export const agentProfileErrorSchema = z.object({
   error: z.enum(AGENT_PROFILE_ERRORS),
   message: z.string(),
 });
+
+export const agentProfileReplicaEntrySchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(AGENT_PROFILE_NAME_MAX_LENGTH),
+  runtime: z.string().min(1),
+  options: providerOptionsSchema,
+  model: modelIdSchema.nullable(),
+  guidance: z.string().max(AGENT_PROFILE_GUIDANCE_MAX_LENGTH).nullable(),
+  skill_ids: z.array(z.string().min(1)).max(AGENT_PROFILE_MAX_SKILLS),
+  created_at: z.string().min(1),
+  updated_at: z.string().min(1),
+  deleted_at: z.string().nullable(),
+});
+export type AgentProfileReplicaEntry = z.infer<typeof agentProfileReplicaEntrySchema>;
+
+export const agentProfileReplicaSchema = z.object({
+  profiles: z.array(agentProfileReplicaEntrySchema),
+});
+export type AgentProfileReplica = z.infer<typeof agentProfileReplicaSchema>;
