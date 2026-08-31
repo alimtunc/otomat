@@ -6,14 +6,9 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { mount, type Mounted } from "#support/mount";
 
-let connectionStatus: string;
 let projectId: string | undefined;
 const refreshIfStale = vi.fn();
 const seenProjectIds: (string | undefined)[] = [];
-
-vi.mock("@web/api/linear/queries", () => ({
-  useLinearConnection: () => ({ data: { status: connectionStatus } }),
-}));
 
 vi.mock("@web/components/shell/project-selection/use-selected", () => ({
   useSelectedProject: () => ({ projectId, projects: { isSuccess: true, data: [] } }),
@@ -51,7 +46,6 @@ async function returnToForeground(): Promise<void> {
 }
 
 beforeEach(() => {
-  connectionStatus = "connected";
   projectId = "p1";
   refreshIfStale.mockClear();
   seenProjectIds.length = 0;
@@ -64,18 +58,10 @@ afterEach(async () => {
   document.body.replaceChildren();
 });
 
-it("refreshes as soon as the Linear connection is usable", async () => {
+it("asks the project's sync hook to refresh on mount, gate included", async () => {
   await renderProbe();
 
   expect(refreshIfStale).toHaveBeenCalled();
-});
-
-it("stays quiet while Linear is not connected", async () => {
-  connectionStatus = "disconnected";
-
-  await renderProbe();
-
-  expect(refreshIfStale).not.toHaveBeenCalled();
 });
 
 it("refreshes the newly selected project, and only that one", async () => {

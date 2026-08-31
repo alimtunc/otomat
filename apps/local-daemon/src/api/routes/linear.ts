@@ -25,6 +25,8 @@ const LINEAR_ERROR_STATUS = {
   linear_unavailable: 503,
   linear_request_failed: 502,
   linear_request_superseded: 409,
+  linear_connection_not_found: 404,
+  linear_connection_mismatch: 409,
   linear_source_not_found: 404,
   linear_source_already_mapped: 409,
   linear_source_invalid_selection: 400,
@@ -47,15 +49,20 @@ export function createLinearRoutes(deps: ApiDeps): Hono {
     return c.json({ error: error.code, message: error.message }, LINEAR_ERROR_STATUS[error.code]);
   });
 
-  routes.get("/connection", (c) => c.json(deps.linear.connection()));
+  routes.get("/connections", (c) => c.json(deps.linear.connections()));
 
-  routes.post("/connect", validateJson(connectLinearRequestSchema), async (c) =>
-    c.json(await deps.linear.connect(c.req.valid("json").api_key)),
+  routes.post("/connections", validateJson(connectLinearRequestSchema), async (c) =>
+    c.json(await deps.linear.connect(c.req.valid("json"))),
   );
 
-  routes.post("/disconnect", (c) => c.json(deps.linear.disconnect()));
+  routes.delete("/connections/:id", (c) => {
+    deps.linear.disconnect(c.req.param("id"));
+    return c.body(null, 204);
+  });
 
-  routes.get("/workspace", async (c) => c.json(await deps.linear.workspace()));
+  routes.get("/connections/:id/workspace", async (c) =>
+    c.json(await deps.linear.workspace(c.req.param("id"))),
+  );
 
   routes.get("/sources", (c) => c.json(deps.linear.sources(c.req.query("projectId"))));
 

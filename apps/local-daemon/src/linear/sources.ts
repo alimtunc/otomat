@@ -17,6 +17,7 @@ import {
   LIFECYCLE_PHASE_STATE_TYPE,
   linearSyncStatusSchema,
   type CreateIssueSourceRequest,
+  type LinearConnectionContract,
   type IssueSourceContract,
   type LinearLifecyclePhase,
   type LinearSyncStatusContract,
@@ -37,6 +38,7 @@ export function sourceContract(db: Db, row: IssueSourceRow): IssueSourceContract
   return issueSourceContractSchema.parse({
     id: row.id,
     project_id: row.project_id,
+    connection_id: row.connection_id,
     source: row.source,
     external_team_id: row.external_team_id,
     external_team_key: row.external_team_key,
@@ -61,6 +63,15 @@ export function requireSourceRow(db: Db, sourceId: string): IssueSourceRow {
   return row;
 }
 
+/** A project reads one Linear workspace, so its sources all name the same connection. */
+export function projectConnectionId(db: Db, projectId: string): string | null {
+  return listIssueSources(db, SYNC_SOURCE, { projectId })[0]?.connection_id ?? null;
+}
+
+export function connectionSources(db: Db, connectionId: string): IssueSourceRow[] {
+  return listIssueSources(db, SYNC_SOURCE).filter((row) => row.connection_id === connectionId);
+}
+
 export function deleteSourceMapping(db: Db, sourceId: string): void {
   requireSourceRow(db, sourceId);
   deleteIssueSource(db, sourceId);
@@ -75,6 +86,10 @@ export function createSourceMapping(
 ): IssueSourceContract {
   if (getProject(db, request.project_id) === undefined) {
     throw linearError("linear_project_not_found");
+  }
+  const boundConnectionId = projectConnectionId(db, request.project_id);
+  if (boundConnectionId !== null && boundConnectionId !== request.connection_id) {
+    throw linearError("linear_connection_mismatch");
   }
   const team = workspace.teams.find((candidate) => candidate.id === request.external_team_id);
   const externalProjectId = request.external_project_id ?? "";
@@ -96,6 +111,7 @@ export function createSourceMapping(
   const row = {
     id,
     project_id: request.project_id,
+    connection_id: request.connection_id,
     source: SYNC_SOURCE,
     external_team_id: request.external_team_id,
     external_team_key: team.key,
@@ -153,6 +169,7 @@ export function projectSyncStatus(
   db: Db,
   runs: LinearSyncRuns,
   projectId: string,
+  connection: LinearConnectionContract | null,
 ): LinearSyncStatusContract {
   requireProject(db, projectId);
   const sources = listIssueSources(db, SYNC_SOURCE, { projectId });
@@ -160,6 +177,7 @@ export function projectSyncStatus(
   return linearSyncStatusSchema.parse({
     project_id: projectId,
     sources: sources.length,
+    connection,
     running: runs.running(sources.map((source) => source.id)),
     last_synced_at: oldestSuccess(db, sources),
     last_result: outcome.result,

@@ -36,6 +36,7 @@ it("does not show a source creation superseded by a newer connection", async () 
           teams: [{ id: "team-1", key: "OTO", name: "Otomat", states: [] }],
           projects: [],
         }}
+        connectionId="c-otomat"
         projects={[{ id: "p1", name: "Local", root_path: "/tmp/local" }]}
       />
     </QueryClientProvider>,
@@ -61,6 +62,7 @@ it("announces a saved mapping so its first import can start", async () => {
           teams: [{ id: "team-1", key: "OTO", name: "Otomat", states: [] }],
           projects: [],
         }}
+        connectionId="c-otomat"
         projects={[{ id: "p1", name: "Local", root_path: "/tmp/local" }]}
         onCreated={onCreated}
       />

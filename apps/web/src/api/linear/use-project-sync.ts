@@ -3,7 +3,7 @@ import { toast } from "@otomat/ui";
 import { useIsMutating, useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { isSupersededLinearError, linearErrorMessage } from "@web/api/linear/mutations";
-import { useLinearConnection, useLinearSyncStatus } from "@web/api/linear/queries";
+import { useLinearSyncStatus } from "@web/api/linear/queries";
 import { queryKeys } from "@web/api/query-keys";
 import { useCallback } from "react";
 
@@ -31,7 +31,6 @@ export interface ProjectLinearSync {
 export function useProjectLinearSync(projectId: string | undefined): ProjectLinearSync {
   const client = useQueryClient();
   const status = useLinearSyncStatus(projectId).data ?? null;
-  const connected = useLinearConnection().data?.status === "connected";
   const mutationKey = queryKeys.linearSync(projectId ?? "");
   const pending = useIsMutating({ mutationKey }) > 0;
   const { mutate } = useMutation({
@@ -54,7 +53,7 @@ export function useProjectLinearSync(projectId: string | undefined): ProjectLine
     },
     onSettled: async () => {
       await Promise.all([
-        client.invalidateQueries({ queryKey: queryKeys.linearConnection }),
+        client.invalidateQueries({ queryKey: queryKeys.linearConnections }),
         client.invalidateQueries({ queryKey: queryKeys.issueSources }),
         client.invalidateQueries({ queryKey: queryKeys.issues }),
         client.invalidateQueries({ queryKey: queryKeys.linearSyncStatus(projectId ?? "") }),
@@ -72,11 +71,12 @@ export function useProjectLinearSync(projectId: string | undefined): ProjectLine
   );
 
   const refreshIfStale = useCallback(() => {
-    if (!connected || status === null || status.sources === 0 || status.running) return;
+    if (status === null || status.connection?.status !== "connected") return;
+    if (status.sources === 0 || status.running) return;
     const syncedAt = status.last_synced_at;
     if (syncedAt !== null && Date.now() - Date.parse(syncedAt) < FRESH_FOR_MS) return;
     refresh();
-  }, [connected, refresh, status]);
+  }, [refresh, status]);
 
   return { status, running: pending || status?.running === true, refresh, refreshIfStale };
 }

@@ -6,6 +6,7 @@ import {
   schema,
   type Db,
   type IssueSourceLifecyclePatch,
+  updateIssueSourceLifecycle,
   upsertMirroredIssue,
 } from "@otomat/db";
 import type { SaveLinearDraftRequest } from "@otomat/domain";
@@ -18,7 +19,9 @@ import {
 } from "#linear";
 
 import { setupTestDb } from "./db.js";
-import { stubLinearApiClient } from "./linear.js";
+import { CONNECTION, connectLinear, stubLinearApiClient } from "./linear.js";
+
+export { CONNECTION };
 
 export const API_KEY = "lin_api_secret_do_not_leak";
 export const BASE = "2026-07-20T10:00:00.000Z";
@@ -36,7 +39,7 @@ export interface LinearWritebackTest {
   readLedger: (runId: string) => string;
   seedLinearIssue: (updatedAt?: string) => void;
   seedRun: () => void;
-  /** Maps the OTO team onto project p1, optionally with a lifecycle status mapping. */
+  /** Gives project p1's mapping a lifecycle status mapping; the mapping itself always exists. */
   seedSource: (lifecycle?: Partial<IssueSourceLifecyclePatch>) => void;
 }
 
@@ -74,6 +77,18 @@ export function setupLinearWritebackTest(): LinearWritebackTest {
   const testDb = setupTestDb("otomat-linear-writeback-");
   let counter = 0;
 
+  // Every mirrored issue reached p1 through a mapping, and that mapping names the connection
+  // whose key the writeback authorizes with.
+  insertIssueSource(testDb.db, {
+    id: "src-1",
+    project_id: "p1",
+    connection_id: CONNECTION.id,
+    source: "linear",
+    external_team_id: "team-1",
+    external_team_key: "OTO",
+    external_team_name: "Otomat",
+  });
+
   function seedLinearIssue(updatedAt = BASE): void {
     upsertMirroredIssue(testDb.db, {
       id: "li",
@@ -109,13 +124,11 @@ export function setupLinearWritebackTest(): LinearWritebackTest {
   }
 
   function seedSource(lifecycle: Partial<IssueSourceLifecyclePatch> = {}): void {
-    insertIssueSource(testDb.db, {
-      id: "src-1",
-      project_id: "p1",
-      source: "linear",
-      external_team_id: "team-1",
-      external_team_key: "OTO",
-      external_team_name: "Otomat",
+    updateIssueSourceLifecycle(testDb.db, "src-1", {
+      in_progress_state_id: null,
+      in_progress_state_name: null,
+      done_state_id: null,
+      done_state_name: null,
       ...lifecycle,
     });
   }
@@ -141,7 +154,7 @@ export function setupLinearWritebackTest(): LinearWritebackTest {
         ...overrides,
       }),
     );
-    await service.connect(API_KEY);
+    await connectLinear(service, API_KEY);
     return service;
   }
 

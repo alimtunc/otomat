@@ -15,6 +15,7 @@ import type {
 } from "@otomat/domain";
 
 import type { LinearApiClient } from "../client/types.js";
+import type { LinearAuthorization } from "../connections.js";
 
 export interface LinearWritebackConfig {
   db: Db;
@@ -22,8 +23,8 @@ export interface LinearWritebackConfig {
   client: LinearApiClient;
   idFactory: () => string;
   now: () => Date;
-  authorize: () => { apiKey: string; signal: AbortSignal };
-  guard: <T>(signal: AbortSignal, call: () => Promise<T>) => Promise<T>;
+  /** Resolves the key of the connection this issue's project reads from. */
+  authorize: (issueId: string) => LinearAuthorization;
 }
 
 export interface WritableIssue {

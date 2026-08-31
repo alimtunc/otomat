@@ -70,9 +70,9 @@ export class LinearWriteLedger {
   ): Promise<void> {
     this.active.add(write.id);
     try {
-      const { apiKey, signal } = this.config.authorize();
+      const { apiKey, signal, run } = this.config.authorize(write.issue_id);
       const sending = this.transition(write, "sending");
-      const outcome = await this.config.guard(signal, () => operation(apiKey, signal));
+      const outcome = await run(() => operation(apiKey, signal));
       const sent = this.transition(sending, "sent", {
         remote_id: outcome.remote_id,
         detail: outcome.detail,

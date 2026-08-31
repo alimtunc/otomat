@@ -1,13 +1,19 @@
 // @vitest-environment happy-dom
-import type { IssueSourceContract, ProjectContract } from "@otomat/domain";
+import type {
+  IssueSourceContract,
+  LinearConnectionContract,
+  ProjectContract,
+} from "@otomat/domain";
 import { LinearOnboardingPanel } from "@web/components/settings/integrations/onboarding-panel";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { linearConnection } from "#support/linear";
 import { mount, type Mounted } from "#support/mount";
 
 let projects: ProjectContract[];
 let sources: IssueSourceContract[];
+let connections: LinearConnectionContract[];
 const selectProject = vi.fn();
 
 vi.mock("@tanstack/react-router", () => ({
@@ -20,6 +26,7 @@ vi.mock("@web/api/daemon/queries", () => ({
 
 vi.mock("@web/api/linear/queries", () => ({
   useIssueSources: () => ({ data: sources, isSuccess: true }),
+  useLinearConnections: () => ({ data: connections, isSuccess: true }),
 }));
 
 vi.mock("@web/components/shell/project-selection/use-project-switcher", () => ({
@@ -39,10 +46,13 @@ function project(overrides: Partial<ProjectContract> = {}): ProjectContract {
   return { id: "p1", name: "Otomat", root_path: "/tmp/otomat", has_repository: true, ...overrides };
 }
 
+const CONNECTION = linearConnection();
+
 function source(projectId: string): IssueSourceContract {
   return {
     id: "src-1",
     project_id: projectId,
+    connection_id: CONNECTION.id,
     source: "linear",
     external_team_id: "team-1",
     external_team_key: "OTO",
@@ -57,7 +67,7 @@ function source(projectId: string): IssueSourceContract {
 let rendered: Mounted | null = null;
 
 async function renderPanel(): Promise<HTMLElement> {
-  rendered = await mount(<LinearOnboardingPanel workspaceId="workspace-1" />);
+  rendered = await mount(<LinearOnboardingPanel />);
   return rendered.container;
 }
 
@@ -68,6 +78,7 @@ function dialogOpen(container: HTMLElement): string | null | undefined {
 beforeEach(() => {
   projects = [project()];
   sources = [];
+  connections = [CONNECTION];
   selectProject.mockClear();
 });
 
@@ -111,6 +122,14 @@ it("ignores a project the active host cannot select", async () => {
 
 it("steps aside once a mapping exists", async () => {
   sources = [source("p1")];
+
+  const container = await renderPanel();
+
+  expect(container.textContent).toBe("");
+});
+
+it("stays quiet while the catalogue is empty", async () => {
+  connections = [];
 
   const container = await renderPanel();
 

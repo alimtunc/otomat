@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
-import type { LinearVaultOperationResult } from "@otomat/domain";
+import { DaemonRequestError } from "@otomat/client";
+import type { ConnectLinearRequest, LinearVaultOperationResult } from "@otomat/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { LinearConnectForm } from "@web/components/settings/integrations/linear-connect-form";
+import { LinearConnectForm } from "@web/components/settings/integrations/linear/connect-form";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
@@ -16,6 +17,7 @@ vi.mock("@web/api/client", () => ({
 }));
 
 const KEY = "lin_api_secret";
+const LABEL = "Otomat";
 const cleanups: Array<() => Promise<void>> = [];
 
 afterEach(async () => {
@@ -27,31 +29,33 @@ afterEach(async () => {
 });
 
 function installDesktopBridge(
-  saveKey: (apiKey: string) => Promise<LinearVaultOperationResult>,
+  saveKey: (request: ConnectLinearRequest) => Promise<LinearVaultOperationResult>,
 ): void {
   const bridge = fakeDesktopBridge();
   bridge.linear.saveKey = saveKey;
   window.otomat = bridge;
 }
 
-async function renderForm(connectionError: string | null = null) {
+async function renderForm() {
   const client = new QueryClient();
   const invalidateQueries = vi.spyOn(client, "invalidateQueries");
   const mounted = await mount(
     <QueryClientProvider client={client}>
-      <LinearConnectForm connectionError={connectionError} />
+      <LinearConnectForm />
     </QueryClientProvider>,
   );
   cleanups.push(mounted.cleanup);
   return { invalidateQueries };
 }
 
+function input(label: string): HTMLInputElement {
+  const found = document.querySelector<HTMLInputElement>(`input[aria-label='${label}']`);
+  if (!found) throw new Error(`${label} input not found`);
+  return found;
+}
+
 function keyInput(): HTMLInputElement {
-  const input = document.querySelector<HTMLInputElement>(
-    "input[aria-label='Linear Personal API key']",
-  );
-  if (!input) throw new Error("key input not found");
-  return input;
+  return input("Linear Personal API key");
 }
 
 function connectButton(): HTMLButtonElement {
@@ -64,6 +68,7 @@ function connectButton(): HTMLButtonElement {
 
 async function submitKey(value: string) {
   const rendered = await renderForm();
+  await act(async () => setInputValue(input("Linear connection name"), LABEL));
   await act(async () => setInputValue(keyInput(), value));
   await act(async () => {
     connectButton().click();
@@ -72,14 +77,7 @@ async function submitKey(value: string) {
 }
 
 it("masks the key and never persists it in the renderer", async () => {
-  connectLinear.mockResolvedValue({
-    status: "connected",
-    workspace_id: "workspace-1",
-    workspace_name: "Otomat",
-    user_name: "Alim",
-    error_code: null,
-    error_message: null,
-  });
+  connectLinear.mockResolvedValue({ status: "connected" });
 
   await submitKey(KEY);
 
@@ -89,19 +87,16 @@ it("masks the key and never persists it in the renderer", async () => {
   expect(document.body.innerHTML).not.toContain(KEY);
 });
 
-it("sends the key straight to the daemon in a plain browser", async () => {
-  connectLinear.mockResolvedValue({
-    status: "connected",
-    workspace_id: "workspace-1",
-    workspace_name: "Otomat",
-    user_name: "Alim",
-    error_code: null,
-    error_message: null,
-  });
+it("sends the labelled key straight to the daemon in a plain browser", async () => {
+  connectLinear.mockResolvedValue({ status: "connected" });
 
   await submitKey(KEY);
 
-  expect(connectLinear).toHaveBeenCalledWith({ api_key: KEY });
+  expect(connectLinear).toHaveBeenCalledWith({
+    id: expect.any(String),
+    label: LABEL,
+    api_key: KEY,
+  });
   expect(document.body.textContent).toContain("forgotten when the daemon restarts");
 });
 
@@ -111,37 +106,34 @@ it("routes the key through the desktop vault when running in Electron", async ()
 
   await submitKey(KEY);
 
-  expect(saveKey).toHaveBeenCalledWith(KEY);
+  expect(saveKey).toHaveBeenCalledWith({ id: expect.any(String), label: LABEL, api_key: KEY });
   expect(connectLinear).not.toHaveBeenCalled();
   expect(document.body.textContent).toContain("Stored encrypted on this device");
 });
 
+it("gives each new connection its own identifier", async () => {
+  connectLinear.mockResolvedValue({ status: "connected" });
+
+  await submitKey(KEY);
+  await submitKey("lin_api_other");
+
+  const [first, second] = connectLinear.mock.calls.map(([request]) => request.id);
+  expect(first).not.toBe(second);
+});
+
 it("surfaces a rejected key without clearing the form silently", async () => {
-  connectLinear.mockResolvedValue({
-    status: "failed",
-    workspace_id: null,
-    workspace_name: null,
-    user_name: null,
-    error_code: "linear_unauthorized",
-    error_message: "Linear rejected the API key. Create a new key and connect again.",
-  });
+  connectLinear.mockRejectedValue(
+    new DaemonRequestError(409, "POST", "/api/linear/connections", {
+      error: "linear_unauthorized",
+      message: "Linear rejected the API key. Create a new key and connect again.",
+    }),
+  );
 
   const { invalidateQueries } = await submitKey("bad-key");
 
   const alert = document.querySelector("[role='alert']");
   expect(alert?.textContent).toContain("Linear rejected the API key");
   expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["linear"] });
-});
-
-it("shows a restored connection error once and hides it when the key changes", async () => {
-  await renderForm("Linear rejected the saved API key.");
-
-  expect(document.querySelectorAll("[role='alert']")).toHaveLength(1);
-  expect(document.body.textContent).toContain("Linear rejected the saved API key.");
-
-  await act(async () => setInputValue(keyInput(), "replacement-key"));
-
-  expect(document.querySelector("[role='alert']")).toBeNull();
 });
 
 it("silences a desktop connection superseded by a newer attempt", async () => {

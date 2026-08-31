@@ -5,6 +5,15 @@ import { issues } from "./issues.js";
 import { runs } from "./runs.js";
 import { timestamps } from "./shared.js";
 
+export const linearConnections = sqliteTable("linear_connections", {
+  id: text("id").primaryKey(),
+  label: text("label").notNull(),
+  workspace_id: text("workspace_id").notNull().default(""),
+  workspace_name: text("workspace_name").notNull().default(""),
+  user_name: text("user_name").notNull().default(""),
+  ...timestamps,
+});
+
 export const linearIssueDrafts = sqliteTable(
   "linear_issue_drafts",
   {

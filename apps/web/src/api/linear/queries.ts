@@ -2,34 +2,36 @@ import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { queryKeys } from "@web/api/query-keys";
 
-export function useLinearConnection() {
+/** Every connection this daemon knows, whether or not it currently holds its key. */
+export function useLinearConnections() {
   return useQuery({
-    queryKey: queryKeys.linearConnection,
-    queryFn: () => daemon.getLinearConnection(),
+    queryKey: queryKeys.linearConnections,
+    queryFn: () => daemon.listLinearConnections(),
   });
 }
 
-export function useLinearWorkspace(workspaceId: string | null) {
+export function useLinearWorkspace(connectionId: string | null) {
   const client = useQueryClient();
   return useQuery({
-    queryKey: queryKeys.linearWorkspaceFor(workspaceId),
-    queryFn: async () => {
-      try {
-        return await daemon.getLinearWorkspace();
-      } catch (error) {
-        await client.invalidateQueries({ queryKey: queryKeys.linearConnection });
-        throw error;
-      }
-    },
-    enabled: workspaceId !== null,
+    queryKey: queryKeys.linearWorkspaceFor(connectionId),
+    queryFn:
+      connectionId === null
+        ? skipToken
+        : async () => {
+            try {
+              return await daemon.getLinearWorkspace(connectionId);
+            } catch (error) {
+              await client.invalidateQueries({ queryKey: queryKeys.linearConnections });
+              throw error;
+            }
+          },
     staleTime: 30_000,
   });
 }
 
-/** Scoped by the daemon that owns the project, so one project's mappings never carry another's rows. */
-export function useIssueSources(workspaceId: string | null, projectId?: string) {
+export function useIssueSources(projectId?: string) {
   return useQuery({
-    queryKey: queryKeys.issueSourcesFor(workspaceId, projectId),
+    queryKey: queryKeys.issueSourcesFor(projectId),
     queryFn: () => daemon.listIssueSources({ projectId }),
   });
 }

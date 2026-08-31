@@ -3,6 +3,7 @@ import type { CreateIssueSourceRequest, LinearWorkspaceContract } from "@otomat/
 export const WHOLE_TEAM = "";
 
 interface IssueSourceSelection {
+  connectionId: string;
   projectId: string;
   teamId: string;
   linearProjectId: string;
@@ -31,6 +32,7 @@ export function buildIssueSourceRequest(
 
   const teamScope: CreateIssueSourceRequest = {
     project_id: selection.projectId,
+    connection_id: selection.connectionId,
     external_team_id: team.id,
   };
   return linearProject === undefined

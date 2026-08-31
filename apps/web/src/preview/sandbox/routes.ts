@@ -75,6 +75,7 @@ const LINEAR_WORKSPACE: LinearWorkspaceContract = { teams: [], projects: [] };
 const LINEAR_SYNC: LinearSyncStatusContract = {
   project_id: SANDBOX_PROJECT_ID,
   sources: 0,
+  connection: null,
   running: false,
   last_synced_at: null,
   last_result: null,
@@ -109,8 +110,11 @@ const ROUTES: SandboxRoute[] = [
   { pattern: /^\/api\/skills$/, respond: () => json([]) },
   { pattern: /^\/api\/workflow-presets$/, respond: () => json([]) },
   { pattern: /^\/api\/github\/connection$/, respond: () => json(SANDBOX_GITHUB) },
-  { pattern: /^\/api\/linear\/connection$/, respond: () => json(SANDBOX_LINEAR) },
-  { pattern: /^\/api\/linear\/workspace$/, respond: () => json(LINEAR_WORKSPACE) },
+  { pattern: /^\/api\/linear\/connections$/, respond: () => json(SANDBOX_LINEAR) },
+  {
+    pattern: /^\/api\/linear\/connections\/[^/]+\/workspace$/,
+    respond: () => json(LINEAR_WORKSPACE),
+  },
   { pattern: /^\/api\/linear\/sources$/, respond: () => json([]) },
   { pattern: /^\/api\/linear\/sync-status$/, respond: () => json(LINEAR_SYNC) },
   { pattern: /^\/api\/issues$/, respond: () => json(SANDBOX_ISSUES) },

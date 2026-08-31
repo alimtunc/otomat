@@ -2,19 +2,23 @@ import type { LinearConnectionContract } from "@otomat/domain";
 
 import type { LinearApiClient, LinearService, LinearWriteback } from "#linear";
 
-type ConnectedLinear = Extract<LinearConnectionContract, { status: "connected" }>;
+export const CONNECTION = { id: "c-otomat", label: "Otomat" };
 
-const DISCONNECTED_LINEAR: Extract<LinearConnectionContract, { status: "disconnected" }> = {
-  status: "disconnected",
-  workspace_id: null,
-  workspace_name: null,
-  user_name: null,
-  error_code: null,
-  error_message: null,
-};
+export function connectLinear(
+  linear: LinearService,
+  apiKey: string,
+  id = CONNECTION.id,
+): Promise<LinearConnectionContract> {
+  return linear.connect({ id, label: CONNECTION.label, api_key: apiKey });
+}
 
-export function connectedLinear(): ConnectedLinear {
+export function connectedLinear(
+  id = CONNECTION.id,
+  label = CONNECTION.label,
+): LinearConnectionContract {
   return {
+    id,
+    label,
     status: "connected",
     workspace_id: "workspace-1",
     workspace_name: "Otomat",
@@ -71,11 +75,13 @@ export function stubLinearService(
 ): LinearService {
   const { writeback, ...service } = overrides;
   return {
-    connection: () => DISCONNECTED_LINEAR,
+    connections: () => [],
     connect: async () => {
       throw new Error("connect stub not configured");
     },
-    disconnect: () => DISCONNECTED_LINEAR,
+    disconnect: () => {
+      throw new Error("disconnect stub not configured");
+    },
     workspace: async () => {
       throw new Error("workspace stub not configured");
     },

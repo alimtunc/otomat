@@ -1,3 +1,4 @@
+import { LINEAR_DEFAULT_CONNECTION_ID } from "@otomat/domain";
 import { expect, it } from "vitest";
 
 import {
@@ -32,33 +33,53 @@ function fakeIo(overrides: Partial<LinearVaultIo> = {}): LinearVaultIo & { store
   };
 }
 
-it("stores the key only in encrypted form", () => {
+it("stores every connection's key only in encrypted form", () => {
   const io = fakeIo();
   const vault = createLinearVault(io);
 
-  vault.save(KEY);
+  vault.save("otomat", KEY);
+  vault.save("crm", "lin_api_other");
 
-  expect(io.stored?.toString()).not.toBe(KEY);
-  expect(io.stored?.toString()).toBe(`sealed:${KEY}`);
-  expect(vault.load()).toBe(KEY);
+  expect(io.stored?.toString()).toBe(
+    `sealed:${JSON.stringify({ otomat: KEY, crm: "lin_api_other" })}`,
+  );
+  expect(vault.load()).toEqual({ otomat: KEY, crm: "lin_api_other" });
 });
 
-it("forgets the key on clear", () => {
+it("forgets one connection and leaves the others stored", () => {
   const io = fakeIo();
   const vault = createLinearVault(io);
-  vault.save(KEY);
+  vault.save("otomat", KEY);
+  vault.save("crm", "lin_api_other");
 
-  vault.clear();
+  vault.forget("otomat");
+
+  expect(vault.load()).toEqual({ crm: "lin_api_other" });
+});
+
+it("erases the file once the last connection is forgotten", () => {
+  const io = fakeIo();
+  const vault = createLinearVault(io);
+  vault.save("otomat", KEY);
+
+  vault.forget("otomat");
 
   expect(io.stored).toBeNull();
-  expect(vault.load()).toBeNull();
+  expect(vault.load()).toEqual({});
+});
+
+it("reads a vault written as one bare key as the default connection", () => {
+  const io = fakeIo();
+  io.write(io.encrypt(KEY));
+
+  expect(createLinearVault(io).load()).toEqual({ [LINEAR_DEFAULT_CONNECTION_ID]: KEY });
 });
 
 it("refuses to save rather than falling back to plaintext when the keychain is unavailable", () => {
   const io = fakeIo({ isEncryptionAvailable: () => false });
   const vault = createLinearVault(io);
 
-  expect(() => vault.save(KEY)).toThrow(LinearVaultUnavailableError);
+  expect(() => vault.save("otomat", KEY)).toThrow(LinearVaultUnavailableError);
   expect(io.stored).toBeNull();
 });
 
@@ -69,14 +90,12 @@ it("treats ciphertext it can no longer decrypt as absent and drops it", () => {
     },
   });
   const vault = createLinearVault(io);
-  vault.save(KEY);
+  vault.save("otomat", KEY);
 
-  expect(vault.load()).toBeNull();
+  expect(vault.load()).toEqual({});
   expect(io.stored).toBeNull();
 });
 
 it("reports no stored key before anything was saved", () => {
-  const vault = createLinearVault(fakeIo());
-
-  expect(vault.load()).toBeNull();
+  expect(createLinearVault(fakeIo()).load()).toEqual({});
 });

@@ -37,6 +37,7 @@ it("falls back to backlog for unknown Linear state types", () => {
 const SOURCE: IssueSourceRow = {
   id: "src-1",
   project_id: "p1",
+  connection_id: "c-otomat",
   source: "linear",
   external_team_id: "team-1",
   external_team_key: "OTO",
