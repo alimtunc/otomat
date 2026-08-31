@@ -4,14 +4,14 @@ import {
   type PullRequestInboxGroup,
 } from "@otomat/domain";
 
-export const INBOX_GROUP_LABEL = {
-  needs_your_review: "Needs your review",
-  needs_team_review: "Needs your team’s review",
-  your_drafts: "Your drafts",
-  waiting_for_review: "Waiting for review or checks",
-  needs_action: "Needs action",
-  ready_to_merge: "Ready to merge",
-} satisfies Record<PullRequestInboxGroup, string>;
+export const INBOX_GROUP_COPY = {
+  needs_your_review: { label: "Needs your review", action: "Review" },
+  needs_team_review: { label: "Needs your team’s review", action: "Review" },
+  your_drafts: { label: "Your drafts", action: "Open" },
+  waiting_for_review: { label: "Waiting for review or checks", action: "Open" },
+  needs_action: { label: "Needs action", action: "Fix" },
+  ready_to_merge: { label: "Ready to merge", action: "Open" },
+} satisfies Record<PullRequestInboxGroup, { label: string; action: string }>;
 
 export interface InboxSection {
   group: PullRequestInboxGroup;

@@ -8,7 +8,7 @@ export function TableRow<TData extends RowData>({
   row: Row<typeof TABLE_FEATURES, TData>;
 }) {
   return (
-    <tr className="relative transition-colors hover:bg-hover">
+    <tr className="group/row relative transition-colors hover:bg-hover">
       {row.getAllCells().map((cell) => (
         <td key={cell.id} className={cn(CELL, cell.column.columnDef.meta?.cellClassName)}>
           <FlexRender cell={cell} />

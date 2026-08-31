@@ -3,6 +3,7 @@ import { Icon, Input, Skeleton } from "@otomat/ui";
 import { useHostWorkspaces } from "@web/api/workspaces/queries";
 import { SectionHeading } from "@web/components/settings/section-heading";
 import { AutoDeleteWorkspacesRow } from "@web/components/settings/workspaces/auto-delete-row";
+import { BulkCleanupWorkspacesButton } from "@web/components/settings/workspaces/bulk-cleanup-button";
 import { WorkspaceCounters } from "@web/components/settings/workspaces/counters";
 import { WorkspaceHostGroup } from "@web/components/settings/workspaces/host-group";
 import { useHostSnapshot } from "@web/components/shell/remote-session/use-host-snapshot";
@@ -16,7 +17,9 @@ export function WorkspacesSection() {
   const hosts = snapshot.data?.hosts ?? LOCAL_ONLY;
   const inventories = useHostWorkspaces(hosts);
   const [filter, setFilter] = useState(DEFAULT_WORKSPACES_FILTER);
-  const counts = countWorkspaces(inventories.flatMap((host) => host.data?.entries ?? []));
+  const rows = hosts.flatMap((host, index) =>
+    (inventories[index].data?.entries ?? []).map((entry) => ({ ...entry, host })),
+  );
   const toggleState = (state: WorkspaceState): void => {
     setFilter((current) => ({
       ...current,
@@ -41,18 +44,26 @@ export function WorkspacesSection() {
             Could not read the configured hosts — showing this machine only.
           </p>
         ) : null}
-        {inventories.every((host) => host.isPending) ? (
-          <Skeleton height={22} width={320} />
-        ) : (
-          <WorkspaceCounters counts={counts} selected={filter.states} onToggle={toggleState} />
-        )}
-        <Input
-          value={filter.search}
-          icon={<Icon name="search" aria-hidden />}
-          placeholder="Search host, issue, branch, path or repository"
-          aria-label="Search workspaces"
-          onChange={(event) => setFilter({ ...filter, search: event.target.value })}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {inventories.every((host) => host.isPending) ? (
+            <Skeleton height={22} width={320} />
+          ) : (
+            <WorkspaceCounters
+              counts={countWorkspaces(rows)}
+              selected={filter.states}
+              onToggle={toggleState}
+            />
+          )}
+          <BulkCleanupWorkspacesButton rows={rows} />
+          <Input
+            value={filter.search}
+            icon={<Icon name="search" aria-hidden />}
+            placeholder="Search host, issue, branch, path or repository"
+            aria-label="Search workspaces"
+            className="min-w-44 flex-1"
+            onChange={(event) => setFilter({ ...filter, search: event.target.value })}
+          />
+        </div>
         {hosts.map((host, index) => (
           <WorkspaceHostGroup
             key={host.id}

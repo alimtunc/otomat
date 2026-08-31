@@ -1,21 +1,27 @@
-import { RelativeTime } from "@otomat/ui";
+import { FOCUS_RING, Tooltip, TooltipContent, TooltipTrigger } from "@otomat/ui";
 import type { TableCellProps } from "@web/lib/table";
 import type { WorkspaceRow } from "@web/lib/workspace/row";
 
 export function WorkspaceGitStateCell({ row }: TableCellProps<WorkspaceRow, unknown>) {
-  const { present, dirty, last_activity_at: lastActivity } = row.original;
-  let git = "clean";
-  if (!present) git = "gone from disk";
-  else if (dirty === null) git = "unreadable";
-  else if (dirty) git = "uncommitted changes";
+  const { present, dirty } = row.original;
+  let git = { word: "clean", detail: "the worktree has no uncommitted change" };
+  if (!present) git = { word: "gone", detail: "the worktree is gone from disk" };
+  else if (dirty === null) git = { word: "unreadable", detail: "git could not read the worktree" };
+  else if (dirty) git = { word: "dirty", detail: "the worktree holds uncommitted changes" };
   return (
-    <span className="flex min-w-0 flex-col gap-0.5">
-      <span className="truncate text-xs text-text-secondary">{git}</span>
-      {lastActivity === null ? null : (
-        <span className="text-micro text-text-tertiary">
-          <RelativeTime date={lastActivity} />
-        </span>
-      )}
-    </span>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span
+            tabIndex={0}
+            aria-label={`${git.word} — ${git.detail}`}
+            className={`rounded-sm ${FOCUS_RING}`}
+          />
+        }
+      >
+        <span className="text-xs text-text-secondary">{git.word}</span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-64 whitespace-normal">{git.detail}</TooltipContent>
+    </Tooltip>
   );
 }
