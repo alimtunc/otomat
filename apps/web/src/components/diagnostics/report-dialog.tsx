@@ -22,7 +22,7 @@ export interface ReportProblemDialogProps {
 
 const PREVIEW_CLASS =
   "max-h-72 overflow-auto whitespace-pre-wrap rounded-md border border-border-subtle " +
-  "bg-background p-2.5 font-mono text-[11px] leading-relaxed text-text-secondary";
+  "bg-background p-2.5 font-mono text-micro leading-relaxed text-text-secondary";
 
 export function ReportProblemDialog({ diagnostic, open, onOpenChange }: ReportProblemDialogProps) {
   const draft = problemReportDraft(diagnostic);

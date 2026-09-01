@@ -5,8 +5,8 @@ import {
 } from "@otomat/domain";
 
 export const INBOX_GROUP_COPY = {
-  needs_your_review: { label: "Needs your review", action: "Review" },
-  needs_team_review: { label: "Needs your team’s review", action: "Review" },
+  needs_your_review: { label: "Needs your review", action: "Review diff" },
+  needs_team_review: { label: "Needs your team’s review", action: "Review diff" },
   your_drafts: { label: "Your drafts", action: "Open" },
   waiting_for_review: { label: "Waiting for review or checks", action: "Open" },
   needs_action: { label: "Needs action", action: "Fix" },

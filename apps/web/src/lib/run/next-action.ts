@@ -22,6 +22,8 @@ type NextActionTarget =
 
 export interface NextActionCta {
   label: string;
+  /** Chip-length copy for dense surfaces; `label` when absent. */
+  shortLabel?: string;
   target: NextActionTarget;
 }
 
@@ -54,7 +56,7 @@ const PUBLISH_ACTION: NextAction = {
   kind: "publish",
   description: "The run finished — its work is not published yet.",
   tone: "iris",
-  cta: { label: "Publish the pull request", target: { type: "pr" } },
+  cta: { label: "Publish the pull request", shortLabel: "Publish", target: { type: "pr" } },
 };
 
 function prName(pullRequest: NextActionPullRequest): string {
@@ -139,21 +141,33 @@ export function resolveNextAction(input: NextActionInput): NextAction {
         kind: "answer",
         description: "The agent is blocked on a permission request.",
         tone: "warning",
-        cta: { label: "Answer the request", target: { type: "conversation" } },
+        cta: {
+          label: "Answer the request",
+          shortLabel: "Answer",
+          target: { type: "conversation" },
+        },
       };
     case "awaiting_human":
       return {
         kind: "answer",
         description: "The agent asked a question and waits on your answer.",
         tone: "warning",
-        cta: { label: "Answer in the conversation", target: { type: "conversation" } },
+        cta: {
+          label: "Answer in the conversation",
+          shortLabel: "Answer",
+          target: { type: "conversation" },
+        },
       };
     case "awaiting_selection":
       return {
         kind: "choose",
         description: "Competing candidates finished — one must be chosen.",
         tone: "warning",
-        cta: { label: "Choose the winner", target: { type: "conversation" } },
+        cta: {
+          label: "Choose the winner",
+          shortLabel: "Choose winner",
+          target: { type: "conversation" },
+        },
       };
     case "waiting_for_provider":
       return {
@@ -167,7 +181,7 @@ export function resolveNextAction(input: NextActionInput): NextAction {
         kind: "review",
         description: "The run finished its work — the diff is ready for review.",
         tone: "review",
-        cta: { label: "Review the diff", target: { type: "diff" } },
+        cta: { label: "Review the diff", shortLabel: "Review diff", target: { type: "diff" } },
       };
     case "completed":
       return completedAction(input.pullRequest);
@@ -178,6 +192,7 @@ export function resolveNextAction(input: NextActionInput): NextAction {
         tone: "danger",
         cta: {
           label: "Open the failing step",
+          shortLabel: "Open step",
           target:
             input.failedStepId == null
               ? { type: "conversation" }
@@ -186,6 +201,19 @@ export function resolveNextAction(input: NextActionInput): NextAction {
       };
     case "canceled":
       return { kind: "stopped", description: "This run was canceled.", tone: "neutral", cta: null };
+  }
+}
+
+export function ctaTargetsCurrentTab(cta: NextActionCta, pathname: string, runId: string): boolean {
+  switch (cta.target.type) {
+    case "pr":
+      return pathname === `/runs/${runId}/pr`;
+    case "diff":
+      return pathname === `/runs/${runId}/diff`;
+    case "conversation":
+      return cta.target.stepId === undefined && pathname === `/runs/${runId}`;
+    case "external":
+      return false;
   }
 }
 

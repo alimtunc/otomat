@@ -37,7 +37,7 @@ export function WorkflowCompetitorCard({
   return (
     <div className="relative flex flex-col gap-2 rounded-md border border-border-subtle bg-surface-1 p-2.5 before:absolute before:-left-3 before:top-4 before:h-px before:w-3 before:bg-iris/50">
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-iris-text">
+        <span className="text-micro font-semibold uppercase tracking-wide text-iris-text">
           {label}
         </span>
         <form.Field

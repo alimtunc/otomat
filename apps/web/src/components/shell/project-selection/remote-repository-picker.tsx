@@ -44,7 +44,7 @@ export function RemoteRepositoryPicker({ value, onSelect, enabled }: RemoteRepos
           )}
         >
           <span className="text-xs text-foreground">{repository.label}</span>
-          <span className="truncate font-mono text-[10px] text-text-tertiary">
+          <span className="truncate font-mono text-micro text-text-tertiary">
             {repository.path}
           </span>
         </button>

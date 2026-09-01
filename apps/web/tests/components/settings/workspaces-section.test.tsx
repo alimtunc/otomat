@@ -121,7 +121,7 @@ it("counts only the cleared workspaces in the bulk cleanup", async () => {
     entry({ id: "c", state: "active", blocker: "cycle_open" }),
   ]);
 
-  expect(findButton("Clean up 1…")).toBeDefined();
+  expect(findButton("Clean up 1")).toBeDefined();
 });
 
 it("narrows on a search over the branch, and says so when nothing is left", async () => {

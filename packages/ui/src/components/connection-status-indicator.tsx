@@ -1,4 +1,4 @@
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNowStrict } from "date-fns";
 import { RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -21,7 +21,7 @@ export interface ConnectionStatusIndicatorProps {
 
 function formatLastSync(lastSyncAt: Date | number | null | undefined): string {
   if (lastSyncAt == null) return "never";
-  return `${formatDistanceToNow(lastSyncAt)} ago`;
+  return formatDistanceToNowStrict(lastSyncAt, { addSuffix: true });
 }
 
 export function ConnectionStatusIndicator({

@@ -1,9 +1,9 @@
-import { FOCUS_RING, RelativeTime } from "@otomat/ui";
+import { FOCUS_RING_INSET, RelativeTime } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import type { InboxRoute } from "@web/lib/inbox/target";
 import type { ReactNode } from "react";
 
-const ROW_CLASS = `flex h-11 items-center gap-3 rounded-md px-2.5 hover:bg-hover ${FOCUS_RING} focus-visible:outline-offset-[-2px]`;
+const ROW_CLASS = `flex h-11 items-center gap-3 rounded-md px-2.5 hover:bg-hover ${FOCUS_RING_INSET}`;
 
 export interface InboxRowProps {
   link: InboxRoute;
@@ -28,7 +28,7 @@ export function InboxRow({
 }: InboxRowProps) {
   return (
     <Link {...link} className={ROW_CLASS}>
-      {leading}
+      <span className="flex w-37.5 shrink-0 items-center">{leading}</span>
       <span className="min-w-0 flex-1 truncate text-sm text-foreground">
         {identifier === null ? null : (
           <span className="font-mono text-xs text-text-tertiary">{identifier} </span>

@@ -1,12 +1,11 @@
 // @vitest-environment happy-dom
 import type { ProjectLinearSync } from "@web/api/linear/use-project-sync";
 import { IssuesToolbar } from "@web/components/issues/list/toolbar";
-import { NewIssueContext } from "@web/components/shell/new-issue-context";
 import { NO_ADVANCED_FILTERS } from "@web/lib/issue/filters";
 import { DEFAULT_ISSUES_VIEW_CONFIG, type IssuesViewConfig } from "@web/lib/issue/view-config";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { findButton, findRefreshButton } from "#support/dom-queries";
+import { findRefreshButton } from "#support/dom-queries";
 import { linearIssueContract } from "#support/issue";
 import { mount, type Mounted } from "#support/mount";
 
@@ -48,17 +47,15 @@ async function render(
   sync: ProjectLinearSync = SYNC,
 ): Promise<HTMLElement> {
   const entry = await mount(
-    <NewIssueContext.Provider value={() => {}}>
-      <IssuesToolbar
-        config={config}
-        issues={ISSUES}
-        projectNames={new Map([["project-1", "otomat"]])}
-        sync={sync}
-        dirty={false}
-        onChange={vi.fn()}
-        onReset={vi.fn()}
-      />
-    </NewIssueContext.Provider>,
+    <IssuesToolbar
+      config={config}
+      issues={ISSUES}
+      projectNames={new Map([["project-1", "otomat"]])}
+      sync={sync}
+      dirty={false}
+      onChange={vi.fn()}
+      onReset={vi.fn()}
+    />,
   );
   mounted.push(entry);
   return entry.container;
@@ -90,7 +87,7 @@ it("keeps the strip on one line by ellipsising the summary, never the actions be
 
   expect(container.firstElementChild?.className).not.toContain("flex-wrap");
   expect(trigger?.querySelector(".truncate")).not.toBeNull();
-  expect(findButton("New issue")).toBeDefined();
+  expect(findRefreshButton(container)).not.toBeNull();
 });
 
 it("leaves the sync report to the refresh button, so the strip never widens with it", async () => {

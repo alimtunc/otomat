@@ -6,33 +6,13 @@ import {
 import type { WorkspaceRow } from "@web/lib/workspace/row";
 import { expect, it } from "vitest";
 
+import { workspaceEntry } from "#support/workspace";
+
 const LOCAL = { id: "local", label: "Local", kind: "local" } as const;
 const REMOTE = { id: "remote", label: "otomat-vps", kind: "ssh" } as const;
 
 function entry(over: Partial<WorkspaceRow> & { id: string }): WorkspaceRow {
-  return {
-    host: LOCAL,
-    repository_id: "repo-1",
-    repository_name: "otomat",
-    repository_path: "/tmp/otomat",
-    issue_id: "i1",
-    issue_identifier: "OTO-88",
-    issue_title: "Reconcile worktrees",
-    run_id: "r1",
-    branch: "otomat/run/r1",
-    path: `/tmp/worktrees/${over.id}`,
-    state: "cleanup_required",
-    attachment: "record",
-    blocker: null,
-    reason: "Ready to delete.",
-    registered: true,
-    present: true,
-    dirty: false,
-    head_sha: null,
-    last_activity_at: null,
-    pull_request: null,
-    ...over,
-  };
+  return { host: LOCAL, ...workspaceEntry({ id: over.id }), ...over };
 }
 
 it("hides already cleaned workspaces until a state is asked for by name", () => {

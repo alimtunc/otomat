@@ -18,6 +18,8 @@ vi.mock("@otomat/ui", async (importOriginal) => ({
 
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ runId: "run-1" }),
+  useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => string }) =>
+    select({ location: { pathname: "/runs/run-1" } }),
   useSearch: () => ({ step: searchedStep }),
   useNavigate: () => navigate,
   Link: ({ children }: { children?: ReactNode }) => <a>{children}</a>,

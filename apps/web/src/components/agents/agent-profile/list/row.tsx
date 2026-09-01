@@ -1,5 +1,5 @@
 import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
-import { AgentAvatar, Chip, FOCUS_RING, ProviderMark } from "@otomat/ui";
+import { AgentAvatar, Chip, FOCUS_RING_INSET, ProviderMark } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { AgentProfileRowActions } from "@web/components/agents/agent-profile/list/row-actions";
 import { providerOptionKeyLabel, providerOptionValueLabel } from "@web/lib/provider-option-labels";
@@ -27,7 +27,7 @@ export function AgentProfileRow({
         <Link
           to="/settings/agents/$profileId"
           params={{ profileId: profile.id }}
-          className={`flex h-full min-w-0 items-center gap-2.5 px-3 after:absolute after:inset-0 ${FOCUS_RING} focus-visible:outline-offset-[-2px]`}
+          className={`flex h-full min-w-0 items-center gap-2.5 px-3 after:absolute after:inset-0 ${FOCUS_RING_INSET}`}
         >
           <AgentAvatar name={profile.name} />
           <span className="min-w-0 flex-1 leading-tight">

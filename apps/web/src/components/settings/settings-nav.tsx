@@ -1,11 +1,11 @@
-import { cn, FOCUS_RING, Icon } from "@otomat/ui";
+import { cn, FOCUS_RING_INSET, Icon } from "@otomat/ui";
 import { Link, useMatchRoute } from "@tanstack/react-router";
 import { settingsNavGroups } from "@web/components/settings/settings-nav-groups";
 
 const ENTRY = cn(
   "group flex h-7.25 items-center gap-2.25 rounded-md px-2 text-sm font-[450] text-text-secondary",
   "hover:bg-hover hover:text-foreground",
-  `${FOCUS_RING} focus-visible:outline-offset-[-2px]`,
+  FOCUS_RING_INSET,
 );
 
 export function SettingsNav() {

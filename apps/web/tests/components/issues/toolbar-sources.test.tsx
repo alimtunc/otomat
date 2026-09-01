@@ -2,7 +2,6 @@
 import type { LinearSyncStatusContract } from "@otomat/domain";
 import type { ProjectLinearSync } from "@web/api/linear/use-project-sync";
 import { IssuesToolbar } from "@web/components/issues/list/toolbar";
-import { NewIssueContext } from "@web/components/shell/new-issue-context";
 import { DEFAULT_ISSUES_VIEW_CONFIG } from "@web/lib/issue/view-config";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -38,17 +37,15 @@ const mounted: Mounted[] = [];
 
 async function openViewOptions(mapped: number | null): Promise<void> {
   const entry = await mount(
-    <NewIssueContext.Provider value={() => {}}>
-      <IssuesToolbar
-        config={DEFAULT_ISSUES_VIEW_CONFIG}
-        issues={ISSUES}
-        projectNames={new Map([["project-1", "otomat"]])}
-        sync={sync(mapped)}
-        dirty={false}
-        onChange={vi.fn()}
-        onReset={vi.fn()}
-      />
-    </NewIssueContext.Provider>,
+    <IssuesToolbar
+      config={DEFAULT_ISSUES_VIEW_CONFIG}
+      issues={ISSUES}
+      projectNames={new Map([["project-1", "otomat"]])}
+      sync={sync(mapped)}
+      dirty={false}
+      onChange={vi.fn()}
+      onReset={vi.fn()}
+    />,
   );
   mounted.push(entry);
   const trigger = entry.container.querySelector<HTMLButtonElement>(

@@ -8,7 +8,7 @@ export interface DaemonLogPanelProps {
 
 const PANEL_CLASS =
   "max-h-56 overflow-auto rounded-md border border-border-subtle bg-background p-2.5 " +
-  "font-mono text-[11px] leading-relaxed text-text-secondary";
+  "font-mono text-micro leading-relaxed text-text-secondary";
 
 function unavailableNote({ diagnostic, pending, error }: DaemonLogPanelProps): string | null {
   if (pending) return `Asking ${diagnostic.host.label} for its log excerpt…`;

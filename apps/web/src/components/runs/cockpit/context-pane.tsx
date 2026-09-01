@@ -19,10 +19,11 @@ export function ContextPane({ detail }: { detail: RunDetail }) {
         <SidePanelToggle className="-mr-1.5 ml-auto" />
       </PaneHeader>
       <div className="min-w-0 p-4">
-        <div className="mb-3.5">
-          <NextActionCard detail={detail} pullRequest={pullRequest.data} />
-        </div>
-        {waiting === null ? null : (
+        {waiting === null ? (
+          <div className="mb-3.5">
+            <NextActionCard detail={detail} pullRequest={pullRequest.data} />
+          </div>
+        ) : (
           <div className="mb-3.5 rounded-lg border border-warning/40 bg-surface-1 p-3.5">
             <ProviderWaitPanel runId={detail.run.id} target={waiting} />
           </div>

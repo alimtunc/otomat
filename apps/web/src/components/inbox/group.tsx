@@ -1,4 +1,4 @@
-import { FOCUS_RING, Icon } from "@otomat/ui";
+import { FOCUS_RING_INSET, Icon } from "@otomat/ui";
 import { CountBadge } from "@web/components/issues/count-badge";
 import { type ReactNode, useId } from "react";
 
@@ -38,7 +38,7 @@ export function InboxGroup({
             aria-expanded={!collapsed}
             aria-controls={rowsId}
             onClick={onToggle}
-            className={`${HEADING_CLASS} w-full ${FOCUS_RING} focus-visible:outline-offset-[-2px]`}
+            className={`${HEADING_CLASS} w-full ${FOCUS_RING_INSET}`}
           >
             <Icon
               name="chevron-down"

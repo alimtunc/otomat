@@ -1,13 +1,10 @@
-import { FOCUS_RING, Tooltip, TooltipContent, TooltipTrigger } from "@otomat/ui";
+import { FOCUS_RING, LiveDot, Tooltip, TooltipContent, TooltipTrigger } from "@otomat/ui";
 import type { TableCellProps } from "@web/lib/table";
 import type { WorkspaceRow } from "@web/lib/workspace/row";
+import { workspaceGitState } from "@web/lib/workspace/state";
 
 export function WorkspaceGitStateCell({ row }: TableCellProps<WorkspaceRow, unknown>) {
-  const { present, dirty } = row.original;
-  let git = { word: "clean", detail: "the worktree has no uncommitted change" };
-  if (!present) git = { word: "gone", detail: "the worktree is gone from disk" };
-  else if (dirty === null) git = { word: "unreadable", detail: "git could not read the worktree" };
-  else if (dirty) git = { word: "dirty", detail: "the worktree holds uncommitted changes" };
+  const git = workspaceGitState(row.original.present, row.original.dirty);
   return (
     <Tooltip>
       <TooltipTrigger
@@ -19,7 +16,10 @@ export function WorkspaceGitStateCell({ row }: TableCellProps<WorkspaceRow, unkn
           />
         }
       >
-        <span className="text-xs text-text-secondary">{git.word}</span>
+        <span className="inline-flex items-center gap-1.5 text-xs text-text-secondary">
+          <LiveDot tone={git.tone} />
+          {git.word}
+        </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-64 whitespace-normal">{git.detail}</TooltipContent>
     </Tooltip>

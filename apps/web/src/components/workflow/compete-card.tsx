@@ -35,7 +35,7 @@ export function WorkflowCompeteCard({
   return (
     <div className="flex flex-col gap-2.5 rounded-lg border border-iris/40 bg-iris-bg p-2.5">
       <div className="flex items-center gap-2">
-        <span className="flex items-center gap-1 rounded-md bg-iris-subtle px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-iris-text">
+        <span className="flex items-center gap-1 rounded-md bg-iris-subtle px-1.5 py-1 text-micro font-semibold uppercase tracking-wide text-iris-text">
           <Icon name="workflow" aria-hidden className="h-3.5 w-3.5" />
           Compete
         </span>

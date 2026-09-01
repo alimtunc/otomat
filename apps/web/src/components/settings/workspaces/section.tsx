@@ -3,7 +3,7 @@ import { Icon, Input, Skeleton } from "@otomat/ui";
 import { useHostWorkspaces } from "@web/api/workspaces/queries";
 import { SectionHeading } from "@web/components/settings/section-heading";
 import { AutoDeleteWorkspacesRow } from "@web/components/settings/workspaces/auto-delete-row";
-import { BulkCleanupWorkspacesButton } from "@web/components/settings/workspaces/bulk-cleanup-button";
+import { BulkCleanupStrip } from "@web/components/settings/workspaces/bulk-cleanup-strip";
 import { WorkspaceCounters } from "@web/components/settings/workspaces/counters";
 import { WorkspaceHostGroup } from "@web/components/settings/workspaces/host-group";
 import { useHostSnapshot } from "@web/components/shell/remote-session/use-host-snapshot";
@@ -44,6 +44,7 @@ export function WorkspacesSection() {
             Could not read the configured hosts — showing this machine only.
           </p>
         ) : null}
+        <BulkCleanupStrip rows={rows} />
         <div className="flex flex-wrap items-center gap-2">
           {inventories.every((host) => host.isPending) ? (
             <Skeleton height={22} width={320} />
@@ -54,7 +55,6 @@ export function WorkspacesSection() {
               onToggle={toggleState}
             />
           )}
-          <BulkCleanupWorkspacesButton rows={rows} />
           <Input
             value={filter.search}
             icon={<Icon name="search" aria-hidden />}

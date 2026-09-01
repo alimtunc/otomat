@@ -13,6 +13,9 @@ export function UsageTokensCell({ row }: TableCellProps<UsageRunRow>) {
         format={(value) => `${formatTokenCount(value)} in`}
         exact={formatExactTokenCount}
       />
+      <span aria-hidden className="text-text-tertiary">
+        ·
+      </span>
       <UsageMetricValue
         metric={figures.output_tokens}
         turns={figures.turns}

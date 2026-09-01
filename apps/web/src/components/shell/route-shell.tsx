@@ -16,7 +16,6 @@ import { Link } from "@tanstack/react-router";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
 import { ActivityCenter } from "@web/components/shell/activity/center";
 import type { ShellSection } from "@web/components/shell/nav-items";
-import { NewIssueContext } from "@web/components/shell/new-issue-context";
 import { usePaletteGroups } from "@web/components/shell/palette/use-groups";
 import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
 import { ProjectTabsBar } from "@web/components/shell/project-tabs/bar";
@@ -157,16 +156,14 @@ export function RouteShell({
         />
       }
       rightPanel={rightPanel}
-      topbar={pageBar}
+      pageBar={pageBar}
     >
-      <NewIssueContext.Provider value={openNewIssue}>
-        <div className="flex h-full min-h-0 flex-col">
-          {banner}
-          <div data-scroll-restoration-id="route-content" className="min-h-0 flex-1 overflow-auto">
-            {children}
-          </div>
+      <div className="flex h-full min-h-0 flex-col">
+        {banner}
+        <div data-scroll-restoration-id="route-content" className="min-h-0 flex-1 overflow-auto">
+          {children}
         </div>
-      </NewIssueContext.Provider>
+      </div>
       <CommandPalette
         open={palette.open}
         onOpenChange={palette.setOpen}

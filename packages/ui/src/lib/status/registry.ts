@@ -147,7 +147,7 @@ const PR_STATUS: StatusMap<PullRequestState> = {
   draft: { tone: "neutral", icon: GitPullRequestDraft, label: "Draft" },
   open: { tone: "success", icon: GitPullRequest, label: "Open" },
   merged: { tone: "review", icon: GitMerge, label: "Merged" },
-  closed: { tone: "danger", icon: GitPullRequestClosed, label: "Closed" },
+  closed: { tone: "neutral", icon: GitPullRequestClosed, label: "Closed" },
 };
 
 const DIFF_FILE_STATUS: StatusMap<ChangeStatus> = {

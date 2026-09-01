@@ -38,7 +38,7 @@ export function ActivityCenter({ hostLabel }: ActivityCenterProps) {
       >
         <Icon name="activity" aria-hidden className="size-3.75" />
         {pending === 0 ? null : (
-          <span className="absolute -right-0.5 -top-0.5 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-iris-subtle px-1 text-micro font-medium tabular-nums text-iris-text">
+          <span className="absolute -right-0.5 -top-0.5 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-warning-bg px-1 text-micro font-medium tabular-nums text-warning">
             {pending > BADGE_CAP ? `${BADGE_CAP}+` : pending}
           </span>
         )}

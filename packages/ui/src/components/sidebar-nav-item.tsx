@@ -1,7 +1,8 @@
 import type { ElementType, ReactElement, ReactNode } from "react";
 
-import { FOCUS_RING } from "../lib/focus";
+import { FOCUS_RING_INSET } from "../lib/focus";
 import { cn } from "../lib/utils";
+import { Badge } from "../primitives/badge";
 import { Button } from "../primitives/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../primitives/tooltip";
 import { Icon, type IconName } from "./icon";
@@ -44,8 +45,7 @@ export function SidebarNavItem({
   const className = cn(
     "group flex h-7.25 items-center gap-2.25 rounded-md px-2 text-sm font-[450]",
     "text-text-secondary hover:bg-hover hover:text-foreground",
-    FOCUS_RING,
-    "focus-visible:outline-offset-[-2px]",
+    FOCUS_RING_INSET,
     active && "bg-selected text-foreground",
     collapsed && "justify-center px-0",
   );
@@ -63,12 +63,8 @@ export function SidebarNavItem({
   const rightEl =
     !collapsed && (badgeCount != null || live || kbd) ? (
       <span className="ml-auto inline-flex items-center gap-1.5">
-        {live ? <LiveDot tone="live" /> : null}
-        {badgeCount != null ? (
-          <span className="inline-flex h-4.5 items-center rounded-sm bg-iris-subtle px-1.5 text-micro font-medium tabular-nums text-iris-text">
-            {badgeCount}
-          </span>
-        ) : null}
+        {live ? <LiveDot tone="live" live /> : null}
+        {badgeCount != null ? <Badge variant="warning">{badgeCount}</Badge> : null}
         {kbd ? <Kbd>{kbd}</Kbd> : null}
       </span>
     ) : null;

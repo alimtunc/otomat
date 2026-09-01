@@ -9,11 +9,14 @@ export interface WorkspaceCountersProps {
 }
 
 export function WorkspaceCounters({ counts, selected, onToggle }: WorkspaceCountersProps) {
+  const empty = WORKSPACE_COUNTED_STATES.filter(
+    (state) => counts[state] === 0 && !selected.includes(state),
+  );
+  const shown = WORKSPACE_COUNTED_STATES.filter((state) => !empty.includes(state));
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {WORKSPACE_COUNTED_STATES.map((state) => {
+      {shown.map((state) => {
         const active = selected.includes(state);
-        if (counts[state] === 0 && !active) return null;
         return (
           <button
             key={state}
@@ -29,6 +32,11 @@ export function WorkspaceCounters({ counts, selected, onToggle }: WorkspaceCount
           </button>
         );
       })}
+      {empty.length === 0 ? null : (
+        <Chip tone="ghost" hint={empty.map((state) => WORKSPACE_STATE[state].label).join(", ")}>
+          +{empty.length} empty {empty.length === 1 ? "state" : "states"}
+        </Chip>
+      )}
     </div>
   );
 }

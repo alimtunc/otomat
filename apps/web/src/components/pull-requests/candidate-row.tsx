@@ -3,7 +3,10 @@ import { Button, Chip } from "@otomat/ui";
 import { useAttachPullRequest } from "@web/api/prs/mutations";
 import { AttachCandidateDialog } from "@web/components/pull-requests/attach-candidate-dialog";
 import { pullRequestImportRefusal } from "@web/lib/pull-request/import-error";
-import { PROVENANCE_LABEL, PROVENANCE_TONE } from "@web/lib/pull-request/provenance";
+import {
+  PULL_REQUEST_PROVENANCE_LABEL,
+  PULL_REQUEST_PROVENANCE_TONE,
+} from "@web/lib/pull-request/provenance";
 import { issueReferenceProof } from "@web/lib/pull-request/reference";
 import { useState } from "react";
 
@@ -37,8 +40,8 @@ export function PullRequestCandidateRow({ issueId, candidate }: PullRequestCandi
         <span className="min-w-0 flex-1 truncate text-sm text-foreground">
           Candidate #{evidence.number} on {evidence.head_ref}
         </span>
-        <Chip tone={PROVENANCE_TONE[candidate.provenance]}>
-          {PROVENANCE_LABEL[candidate.provenance]}
+        <Chip tone={PULL_REQUEST_PROVENANCE_TONE[candidate.provenance]}>
+          {PULL_REQUEST_PROVENANCE_LABEL[candidate.provenance]}
         </Chip>
       </div>
       <p className="m-0 text-xs text-text-tertiary">

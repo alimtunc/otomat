@@ -1,7 +1,7 @@
 import {
   Badge,
   cn,
-  FOCUS_RING,
+  FOCUS_RING_INSET,
   HostTag,
   Icon,
   IconButton,
@@ -32,15 +32,14 @@ export function ProjectTabsBar() {
             aria-current={active ? "page" : undefined}
             className={cn(
               "flex h-7 min-w-0 items-center gap-1.75 rounded-md pl-1 pr-1.5 text-sm",
-              FOCUS_RING,
-              "focus-visible:outline-offset-[-2px]",
+              FOCUS_RING_INSET,
               active ? "text-foreground" : "text-text-secondary",
             )}
           >
             <ProjectGlyph name={tab.name} />
             <span className="truncate">{tab.name}</span>
             {tab.tag === undefined ? null : <HostTag tag={tab.tag} />}
-            {tab.attention ? <Badge variant="iris">{tab.attention}</Badge> : null}
+            {tab.attention ? <Badge variant="warning">{tab.attention}</Badge> : null}
           </button>
         );
         return (

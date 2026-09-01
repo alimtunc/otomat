@@ -3,7 +3,6 @@ import { Chip } from "@otomat/ui";
 import type { ProjectLinearSync } from "@web/api/linear/use-project-sync";
 import { LinearSyncControl } from "@web/components/issues/linear-sync/control";
 import { linearSourcesMapped } from "@web/components/issues/linear-sync/describe";
-import { NewIssueButton } from "@web/components/issues/new-issue-button";
 import { IssueViewOptionsMenu } from "@web/components/issues/view-options/menu";
 import {
   assigneeOptions,
@@ -14,7 +13,6 @@ import {
 } from "@web/lib/issue/filter-options";
 import { unmatchedFilterValues } from "@web/lib/issue/invalid-filters";
 import type { IssuesViewConfig } from "@web/lib/issue/view-config";
-import { TOOLBAR_STRIP } from "@web/lib/toolbar";
 
 export interface IssuesToolbarProps {
   config: IssuesViewConfig;
@@ -43,7 +41,7 @@ export function IssuesToolbar({
   };
   const unmatched = unmatchedFilterValues(config.advanced, options);
   return (
-    <div className={TOOLBAR_STRIP}>
+    <div className="flex items-center gap-2">
       <IssueViewOptionsMenu
         config={config}
         options={options}
@@ -59,9 +57,7 @@ export function IssuesToolbar({
             : `${unmatched.length} filters match nothing`}
         </Chip>
       )}
-      <div className="flex-1" />
       <LinearSyncControl sync={sync} />
-      <NewIssueButton />
     </div>
   );
 }

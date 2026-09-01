@@ -6,12 +6,8 @@ import type { TableCellProps } from "@web/lib/table";
 export function RunNextActionCell({ row }: TableCellProps<RunContract, unknown>) {
   const action = resolveNextAction({ status: row.original.status });
   if (action.cta === null) return null;
+  const cta = { ...action.cta, label: action.cta.shortLabel ?? action.cta.label };
   return (
-    <NextActionCtaButton
-      runId={row.original.id}
-      cta={action.cta}
-      size="xs"
-      className="relative z-[1]"
-    />
+    <NextActionCtaButton runId={row.original.id} cta={cta} size="xs" className="relative z-[1]" />
   );
 }

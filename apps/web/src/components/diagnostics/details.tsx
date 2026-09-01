@@ -3,7 +3,7 @@ import { diagnosticSummaryRows } from "@web/lib/diagnostics/summary-rows";
 
 const TRACE_CLASS =
   "max-h-56 overflow-auto whitespace-pre-wrap rounded-md border border-border-subtle " +
-  "bg-background p-2.5 font-mono text-[11px] leading-relaxed text-text-secondary";
+  "bg-background p-2.5 font-mono text-micro leading-relaxed text-text-secondary";
 
 function Trace({ label, value }: { label: string; value: string }) {
   return (

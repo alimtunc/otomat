@@ -14,7 +14,7 @@ const helper = createColumnHelper<typeof TABLE_FEATURES, WorkspaceRow>();
 export const WORKSPACE_COLUMNS = helper.columns([
   helper.accessor("state", {
     header: "State",
-    meta: { headClassName: "w-30" },
+    meta: { headClassName: "w-32" },
     cell: WorkspaceStateCell,
   }),
   helper.display({ id: "issue", header: "Issue", cell: WorkspaceIssueCell }),
