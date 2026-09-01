@@ -13,6 +13,7 @@ export function WorkspaceCounters({ counts, selected, onToggle }: WorkspaceCount
     <div className="flex flex-wrap items-center gap-1.5">
       {WORKSPACE_COUNTED_STATES.map((state) => {
         const active = selected.includes(state);
+        if (counts[state] === 0 && !active) return null;
         return (
           <button
             key={state}

@@ -53,7 +53,7 @@ export function WorkspaceHostGroup({
             return (
               <EmptyState
                 icon="layers"
-                variant="inline"
+                variant="compact"
                 title={`No worktree on ${host.label}`}
                 description="Launch a run to fork the first isolated worktree of this host."
               />
@@ -61,7 +61,7 @@ export function WorkspaceHostGroup({
           }
           if (groups.length === 0) {
             return (
-              <p className="px-4.5 py-6 text-sm text-text-tertiary">
+              <p className="px-4.5 py-3 text-xs text-text-tertiary">
                 {`No workspace on ${host.label} matches these filters.`}
               </p>
             );

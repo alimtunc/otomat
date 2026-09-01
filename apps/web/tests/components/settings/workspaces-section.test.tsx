@@ -20,6 +20,7 @@ import { setInputValue } from "#support/dom-events";
 import { findButton, findLabelled } from "#support/dom-queries";
 import { testQueryClient } from "#support/query";
 import { mountRoutedWithQuery } from "#support/router";
+import { workspaceEntry as entry } from "#support/workspace";
 
 const listWorkspaces = vi.fn<() => Promise<WorkspaceInventory>>();
 const reconcileWorkspaces = vi.fn<() => Promise<WorkspaceReconcileReport>>();
@@ -50,31 +51,6 @@ afterEach(async () => {
   vi.clearAllMocks();
   workspaceSettings.mockResolvedValue({ auto_delete_after_merge: true });
 });
-
-function entry(over: Partial<WorkspaceEntry> & { id: string }): WorkspaceEntry {
-  return {
-    repository_id: "repo-1",
-    repository_name: "otomat",
-    repository_path: "/tmp/otomat",
-    issue_id: "i1",
-    issue_identifier: "OTO-88",
-    issue_title: "Reconcile worktrees",
-    run_id: "r1",
-    branch: "otomat/run/r1",
-    path: `/tmp/worktrees/${over.id}`,
-    state: "cleanup_required",
-    attachment: "record",
-    blocker: null,
-    reason: "Ready to delete: the cycle is closed and the worktree is clean.",
-    registered: true,
-    present: true,
-    dirty: false,
-    head_sha: null,
-    last_activity_at: null,
-    pull_request: null,
-    ...over,
-  };
-}
 
 function inventory(entries: WorkspaceEntry[]): WorkspaceInventory {
   return { entries, counts: countWorkspaces(entries) };
@@ -116,7 +92,10 @@ it("counts the maintenance states and says why each workspace is where it is", a
 
   expect(document.body.textContent).toContain("Cleanup required");
   expect(document.body.textContent).toContain("Unmanaged");
-  expect(document.body.textContent).toContain("manages nothing here");
+  const stateChips = [...document.body.querySelectorAll("span[aria-label]")];
+  expect(
+    stateChips.some((chip) => chip.getAttribute("aria-label")?.includes("manages nothing here")),
+  ).toBe(true);
 });
 
 it("offers a deletion only for the workspace the daemon already cleared", async () => {
@@ -126,10 +105,23 @@ it("offers a deletion only for the workspace the daemon already cleared", async 
   ]);
 
   expect(
-    [...document.body.querySelectorAll("button")].filter(
-      (button) => button.textContent?.trim() === "Clean…",
-    ),
+    document.body.querySelectorAll('button[aria-label="Delete this workspace…"]'),
   ).toHaveLength(1);
+});
+
+it("counts only the cleared workspaces in the bulk cleanup", async () => {
+  await renderSection([
+    entry({ id: "a" }),
+    entry({
+      id: "b",
+      blocker: "worktree_dirty",
+      dirty: true,
+      reason: "The worktree holds uncommitted changes.",
+    }),
+    entry({ id: "c", state: "active", blocker: "cycle_open" }),
+  ]);
+
+  expect(findButton("Clean up 1…")).toBeDefined();
 });
 
 it("narrows on a search over the branch, and says so when nothing is left", async () => {
@@ -294,7 +286,7 @@ it("sends a reconcile and a cleanup to the host that owns the worktree", async (
     remoteReconcile.click();
   });
   await act(async () => {
-    findButton("Clean…")?.click();
+    findLabelled("Delete this workspace…")?.click();
   });
   await act(async () => {
     findButton("Delete workspace")?.click();

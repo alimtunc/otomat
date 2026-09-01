@@ -14,7 +14,7 @@ export function ReviewSyncControl({ sync }: ReviewSyncControlProps) {
     if (sync.last_synced_at === null) return "Never synced with GitHub";
     return (
       <>
-        Synced <RelativeTime date={sync.last_synced_at} />
+        synced <RelativeTime date={sync.last_synced_at} />
       </>
     );
   };
@@ -30,7 +30,7 @@ export function ReviewSyncControl({ sync }: ReviewSyncControlProps) {
         disabled={sync.repositories === 0}
         onClick={sync.refresh}
       >
-        Refresh
+        Sync now
       </Button>
     </div>
   );
