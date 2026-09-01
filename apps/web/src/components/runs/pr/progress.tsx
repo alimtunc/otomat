@@ -8,7 +8,7 @@ export interface PullRequestProgressProps {
 }
 
 export function PullRequestProgress({ operation }: PullRequestProgressProps) {
-  if (operation === null) return null;
+  if (operation === null || operation.state === "succeeded") return null;
   return (
     <ol aria-label="Publication progress" className="flex flex-wrap items-center gap-3 text-xs">
       {operation.phases.map((phase) => (

@@ -1,5 +1,4 @@
 import type { RunCompletionReport } from "@otomat/domain";
-import { RunStatusChip } from "@otomat/ui";
 import { UsageTokens } from "@web/components/runs/usage/tokens";
 
 import { FactEvidence } from "./fact-evidence";
@@ -16,7 +15,6 @@ export function ReportSummary({ report }: { report: RunCompletionReport }) {
           <span className="text-xl font-semibold tracking-tight">
             {sentence(report.run.outcome)}
           </span>
-          <RunStatusChip status={report.run.status} />
           <FactEvidence report={report} evidence={report.run.evidence[0]} />
         </div>
         <p className="mt-1 text-sm text-text-secondary">

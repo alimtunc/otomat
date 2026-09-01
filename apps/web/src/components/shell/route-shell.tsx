@@ -36,6 +36,8 @@ export interface RouteShellProps {
   breadcrumbExtra?: ReactNode;
   tabs?: ReactNode;
   actions?: ReactNode;
+  /** Fixed row between the page header and the scrollable content. */
+  banner?: ReactNode;
   rightPanel?: ReactNode;
   children: ReactNode;
 }
@@ -49,6 +51,7 @@ export function RouteShell({
   breadcrumbExtra,
   tabs,
   actions,
+  banner,
   rightPanel,
   children,
 }: RouteShellProps) {
@@ -157,8 +160,11 @@ export function RouteShell({
       topbar={pageBar}
     >
       <NewIssueContext.Provider value={openNewIssue}>
-        <div data-scroll-restoration-id="route-content" className="h-full min-h-0 overflow-auto">
-          {children}
+        <div className="flex h-full min-h-0 flex-col">
+          {banner}
+          <div data-scroll-restoration-id="route-content" className="min-h-0 flex-1 overflow-auto">
+            {children}
+          </div>
         </div>
       </NewIssueContext.Provider>
       <CommandPalette

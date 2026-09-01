@@ -1,0 +1,11 @@
+@keyframes otomat-next-action-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* Duration rides --motion-medium, which the reduced-motion media query zeroes. */
+.otomat-next-action-in {
+  animation: otomat-next-action-in var(--motion-medium) var(--ease);
+}

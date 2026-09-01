@@ -79,6 +79,10 @@ vi.mock("@web/api/workspaces/queries", () => ({
   useWorkspacesForRun: () => ({ data: undefined }),
 }));
 
+vi.mock("@web/api/prs/queries", () => ({
+  useRunPullRequest: () => ({ data: undefined }),
+}));
+
 vi.mock("@web/api/issues/queries", () => ({
   useIssue: () => ({ isPending: false, isError: false, data: undefined }),
 }));

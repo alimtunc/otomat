@@ -29,6 +29,14 @@ vi.mock("@web/api/runs/queries", () => ({
   useRunDetail: () => detail,
 }));
 
+vi.mock("@web/api/prs/queries", () => ({
+  useRunPullRequest: () => ({ data: undefined }),
+}));
+
+vi.mock("@web/components/runs/next-action/strip", () => ({
+  NextActionStrip: () => <div>next action</div>,
+}));
+
 vi.mock("@web/api/issues/queries", () => ({
   useIssue: () => issue,
 }));
@@ -50,11 +58,13 @@ vi.mock("@web/components/shell/route-shell", () => ({
     active,
     breadcrumbs,
     breadcrumbExtra,
+    banner,
     children,
   }: {
     active: string;
     breadcrumbs: BreadcrumbItem[];
     breadcrumbExtra: ReactNode;
+    banner: ReactNode;
     children: ReactNode;
   }) => (
     <div data-active-section={active}>
@@ -66,6 +76,7 @@ vi.mock("@web/components/shell/route-shell", () => ({
         ))}
       </ol>
       {breadcrumbExtra}
+      {banner}
       {children}
     </div>
   ),
@@ -111,6 +122,19 @@ describe("RunCockpitLayout", () => {
     expect(
       view.container.querySelector("[data-active-section]")?.getAttribute("data-active-section"),
     ).toBe("runs");
+    await view.cleanup();
+  });
+
+  it("mounts the next-action strip once the run detail is loaded", async () => {
+    const view = await render();
+    expect(view.container.textContent).toContain("next action");
+    await view.cleanup();
+  });
+
+  it("mounts no next-action strip before the run detail has loaded", async () => {
+    detail = { data: undefined };
+    const view = await render();
+    expect(view.container.textContent).not.toContain("next action");
     await view.cleanup();
   });
 

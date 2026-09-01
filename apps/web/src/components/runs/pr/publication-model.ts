@@ -55,15 +55,6 @@ function creationModel(input: PublicationModelInput): PublicationModel {
   };
 }
 
-function terminalModel(status: "merged" | "closed"): PublicationModel {
-  return {
-    actionLabel: "Pull request complete",
-    actionDisabled: true,
-    actionPending: false,
-    stateLabel: `PR ${status}`,
-  };
-}
-
 function runningModel(operation: OperationContract): PublicationModel {
   const label = operation.phases.find((phase) => phase.state === "active")?.label ?? "Publishing";
   return {
@@ -94,14 +85,10 @@ function stoppedModel(
   };
 }
 
-/** The operation is the only account of the publication: reading `publication_status` beside it is how the two disagree. */
+/** The operation is the only account of the publication: reading `publication_status` beside it is how the two disagree. A terminal pull request never reaches this model — the PR tab renders its outcome view instead. */
 export function publicationModel(input: PublicationModelInput): PublicationModel {
   const { pullRequest, operation } = input;
-  if (pullRequest === null) return creationModel(input);
-  if (pullRequest.status === "merged" || pullRequest.status === "closed") {
-    return terminalModel(pullRequest.status);
-  }
-  if (operation === null) return creationModel(input);
+  if (pullRequest === null || operation === null) return creationModel(input);
   if (operation.state === "running") return runningModel(operation);
   if (operation.state === "succeeded") return createdModel(input.hasDraftChanges, input.connected);
   return stoppedModel(input, pullRequest, operation.state === "interrupted");
