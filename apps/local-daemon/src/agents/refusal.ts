@@ -5,6 +5,7 @@ import { ModelSelectionRefusedError, RuntimeUnavailableError, UnknownRuntimeErro
 import {
   ProfileNotFoundError,
   ProfileOptionUnsupportedError,
+  ProfileProjectUnknownError,
   SkillResolutionError,
 } from "./errors.js";
 
@@ -17,6 +18,9 @@ export interface AgentConfigRefusal {
 export function agentConfigRefusal(error: unknown): AgentConfigRefusal | null {
   if (error instanceof ProfileNotFoundError) {
     return { error: "profile_not_found", message: error.message };
+  }
+  if (error instanceof ProfileProjectUnknownError) {
+    return { error: "profile_project_unknown", message: error.message };
   }
   if (error instanceof UnknownRuntimeError) {
     return { error: "runtime_unknown", message: error.message };

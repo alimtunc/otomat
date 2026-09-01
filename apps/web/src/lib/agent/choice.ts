@@ -2,7 +2,9 @@ import type {
   AgentProfileContract,
   RuntimeDescriptor,
   SaveAgentProfileRequest,
+  SkillContract,
 } from "@otomat/domain";
+import { agentProfileAvailability } from "@web/lib/agent/profile-availability";
 import { isAvailableRuntime, resolveRuntimeChoice, runtimeById } from "@web/lib/runtimes";
 
 const PROFILE_PREFIX = "profile:";
@@ -78,12 +80,13 @@ export function isUsableAgentChoice(
   choice: string | null,
   profiles: AgentProfileContract[],
   descriptors: RuntimeDescriptor[],
+  skills: SkillContract[],
 ): boolean {
   const decoded = decodeAgentChoice(choice);
   if (decoded === null) return false;
   if (decoded.kind === "profile") {
     const profile = profiles.find((candidate) => candidate.id === decoded.id);
-    return profile ? runtimeAvailable(descriptors, profile.runtime) : false;
+    return profile ? agentProfileAvailability(profile, descriptors, skills).usable : false;
   }
   return runtimeAvailable(descriptors, decoded.id);
 }
@@ -92,8 +95,9 @@ export function resolveAgentChoice(
   preferred: string | null,
   profiles: AgentProfileContract[],
   descriptors: RuntimeDescriptor[],
+  skills: SkillContract[],
 ): string | null {
-  if (isUsableAgentChoice(preferred, profiles, descriptors)) return preferred;
+  if (isUsableAgentChoice(preferred, profiles, descriptors, skills)) return preferred;
   const fallback = resolveRuntimeChoice(descriptors, null);
   return fallback ? encodeRuntimeChoice(fallback) : null;
 }
@@ -102,9 +106,10 @@ export function resolveProfileChoice(
   preferred: string | null,
   profiles: AgentProfileContract[],
   descriptors: RuntimeDescriptor[],
+  skills: SkillContract[],
 ): string | null {
   return agentChoiceProfile(preferred, profiles) !== null &&
-    isUsableAgentChoice(preferred, profiles, descriptors)
+    isUsableAgentChoice(preferred, profiles, descriptors, skills)
     ? preferred
     : null;
 }
@@ -118,6 +123,7 @@ export function requestForProfile(
 ): SaveAgentProfileRequest {
   return {
     name: profile.name,
+    project_id: profile.project_id,
     runtime: profile.runtime,
     options: profile.options,
     model: profile.model,

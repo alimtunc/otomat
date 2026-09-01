@@ -1,4 +1,3 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { SkillContract } from "@otomat/domain";
@@ -6,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { json, makeApiApp, patch, post, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
+import { writeSkillFile } from "../support/skills.js";
 
 // The scan route reads the user skills root via homedir(); pin it so the test never ingests the developer's real ~/.claude/skills.
 vi.mock("node:os", async (importOriginal) => ({
@@ -24,9 +24,7 @@ afterEach(() => {
 });
 
 it("scans the project root, lists the catalog and toggles enablement", async () => {
-  const dir = join(t.dir, ".agents", "skills", "x");
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "SKILL.md"), "---\nname: X\ndescription: d\n---\nBody");
+  writeSkillFile(join(t.dir, ".agents", "skills", "x"), "---\nname: X\ndescription: d\n---\nBody");
 
   const app = makeApiApp(t);
 

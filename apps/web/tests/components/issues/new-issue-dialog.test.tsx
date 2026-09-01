@@ -44,6 +44,7 @@ vi.mock("@web/api/issues/mutations", () => ({
 }));
 
 vi.mock("@web/api/daemon/queries", () => ({
+  useProjects: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
   useRuntimes: () => ({
     data: runtimesData,
     isPending: false,

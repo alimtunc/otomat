@@ -45,6 +45,7 @@ vi.mock("@web/api/runs/use-launch-run", () => ({
 }));
 
 vi.mock("@web/api/daemon/queries", () => ({
+  useProjects: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
   useRuntimes: () => ({
     data: [runtimeDescriptor("claude"), runtimeDescriptor("codex")],
     isPending: false,
@@ -58,6 +59,10 @@ vi.mock("@web/api/daemon/queries", () => ({
 
 vi.mock("@web/api/agent-profiles/queries", () => ({
   useAgentProfiles: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
+}));
+
+vi.mock("@web/api/skills/queries", () => ({
+  useSkills: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
 }));
 
 vi.mock("@web/api/workflow-presets/queries", () => ({

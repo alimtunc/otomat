@@ -7,6 +7,13 @@ export class ProfileNotFoundError extends Error {
   }
 }
 
+export class ProfileProjectUnknownError extends Error {
+  constructor(readonly projectId: string) {
+    super(`project ${projectId} is not registered on this host`);
+    this.name = "ProfileProjectUnknownError";
+  }
+}
+
 export class ProfileOptionUnsupportedError extends Error {
   constructor(message: string) {
     super(message);
@@ -14,7 +21,10 @@ export class ProfileOptionUnsupportedError extends Error {
   }
 }
 
-export type SkillResolutionCode = Extract<AgentProfileError, "skill_unknown" | "skill_unavailable">;
+export type SkillResolutionCode = Extract<
+  AgentProfileError,
+  "skill_unknown" | "skill_unavailable" | "skill_out_of_scope"
+>;
 
 export class SkillResolutionError extends Error {
   constructor(

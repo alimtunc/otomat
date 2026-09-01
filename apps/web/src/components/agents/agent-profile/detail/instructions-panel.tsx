@@ -1,8 +1,8 @@
 import { AGENT_PROFILE_GUIDANCE_MAX_LENGTH, type AgentProfileContract } from "@otomat/domain";
 import { Button, Field, FieldControl, FieldLabel, Textarea, toast } from "@otomat/ui";
 import { useUpdateAgentProfile } from "@web/api/agent-profiles/mutations";
-import { requestForProfile } from "@web/lib/agent-choice";
-import { agentConfigRefusalMessage } from "@web/lib/agent-config-error";
+import { requestForProfile } from "@web/lib/agent/choice";
+import { agentConfigRefusalMessage } from "@web/lib/agent/config-error";
 import { useState } from "react";
 
 export function InstructionsPanel({ profile }: { profile: AgentProfileContract }) {

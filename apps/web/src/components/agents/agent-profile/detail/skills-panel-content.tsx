@@ -1,10 +1,10 @@
-import type { AgentProfileContract, SkillContract } from "@otomat/domain";
+import { isSkillInScope, type AgentProfileContract, type SkillContract } from "@otomat/domain";
 import { Chip, EmptyState, toast } from "@otomat/ui";
 import { useUpdateAgentProfile } from "@web/api/agent-profiles/mutations";
 import { ActivatedSkillCard } from "@web/components/agents/agent-profile/detail/activated-skill-card";
 import { SkillMultiSelect } from "@web/components/agents/agent-profile/shared/skill-multi-select";
-import { requestForProfile } from "@web/lib/agent-choice";
-import { agentConfigRefusalMessage } from "@web/lib/agent-config-error";
+import { requestForProfile } from "@web/lib/agent/choice";
+import { agentConfigRefusalMessage } from "@web/lib/agent/config-error";
 import { skillAvailability } from "@web/lib/skill-availability";
 import { useState } from "react";
 
@@ -51,7 +51,7 @@ export function SkillsPanelContent({
               <ActivatedSkillCard
                 key={skillId}
                 skillId={skillId}
-                availability={skillAvailability(skillId, skills)}
+                availability={skillAvailability(skillId, skills, profile.project_id)}
                 hostLabel={hostLabel}
                 disabled={update.isPending}
                 onRemove={() => void toggleSkill(skillId)}
@@ -72,10 +72,13 @@ export function SkillsPanelContent({
         <h3 className="mb-1 text-sm font-semibold text-foreground">Skill catalog</h3>
         <p className="mb-2.5 text-xs leading-relaxed text-text-tertiary">
           Enabled local instructions this profile can activate when a run launches, as discovered on{" "}
-          {hostLabel}.
+          {hostLabel}.{" "}
+          {profile.project_id === null
+            ? "A global agent is limited to your user skills."
+            : "A project agent may also use this repository's own skills."}
         </p>
         <SkillMultiSelect
-          skills={skills}
+          skills={skills.filter((skill) => isSkillInScope(skill.project_id, profile.project_id))}
           selectedIds={profile.skill_ids}
           disabled={update.isPending}
           onToggle={(skillId) => void toggleSkill(skillId)}

@@ -22,7 +22,8 @@ export function SettingsNav() {
           </div>
           <div className="flex flex-col gap-px">
             {group.entries.map((entry) => {
-              const active = "to" in entry && !!matchRoute({ to: entry.to, fuzzy: true });
+              const active =
+                "to" in entry && !!matchRoute({ to: entry.to, fuzzy: entry.exact !== true });
               const icon = (
                 <Icon
                   name={entry.icon}

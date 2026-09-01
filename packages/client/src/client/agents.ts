@@ -6,12 +6,16 @@ import {
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { deleteJson, getJson, patchJson, postJson } from "./http.js";
+import { deleteJson, getJson, patchJson, postJson, queryString } from "./http.js";
 
 export function createAgentsClient(config: DaemonClientConfig) {
   return {
-    async listAgentProfiles() {
-      return agentProfileContractSchema.array().parse(await getJson(config, "/api/agent-profiles"));
+    async listAgentProfiles(projectId?: string) {
+      return agentProfileContractSchema
+        .array()
+        .parse(
+          await getJson(config, `/api/agent-profiles${queryString({ project_id: projectId })}`),
+        );
     },
     async createAgentProfile(request: SaveAgentProfileRequest) {
       return agentProfileContractSchema.parse(

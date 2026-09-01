@@ -3,6 +3,7 @@ import { and, eq, inArray, notInArray, or, type SQL } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import {
+  agentProfiles,
   agentSessions,
   competeGroups,
   eventStreams,
@@ -19,6 +20,7 @@ import {
   runContributions,
   runs,
   runtimeEvents,
+  skills,
   stepRuns,
   syncState,
   workflowPresets,
@@ -56,11 +58,7 @@ export function repositoryHasActiveRuns(db: Db, repositoryId: string): boolean {
 }
 
 /**
- * Removes a registered repository and every row that depends on it — its runs
- * (with their steps, sessions, events, reviews, pull requests, and Linear
- * writes), its worktree rows, and the owning project with its issues, issue
- * sources and workflow presets when this was the project's only repository.
- * Callers gate on
+ * The owning project goes with its last repository. Callers gate on
  * `repositoryHasActiveRuns`; the cascade assumes the repository is idle.
  * Disk artifacts (run event files, git worktree registrations) are not touched.
  */
@@ -163,6 +161,8 @@ export function deleteRepositoryCascade(db: Db, repositoryId: string): boolean {
         .get();
       if (!remaining) {
         tx.delete(workflowPresets).where(eq(workflowPresets.project_id, projectId)).run();
+        tx.delete(agentProfiles).where(eq(agentProfiles.project_id, projectId)).run();
+        tx.delete(skills).where(eq(skills.project_id, projectId)).run();
         tx.delete(projects).where(eq(projects.id, projectId)).run();
       }
       return true;

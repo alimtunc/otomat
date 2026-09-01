@@ -29,6 +29,7 @@ export function PullRequestGeneratorForm({ generator }: { generator: ExecutionDe
                 onChange={field.handleChange}
                 profiles={[]}
                 descriptors={runtimes.data ?? []}
+                skills={[]}
                 label="PR metadata generator"
                 disabled={isSaving}
               />

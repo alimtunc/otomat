@@ -1,4 +1,4 @@
-import { mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, realpathSync, rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import { rescanSkills } from "#agents";
 
 import { setupTestDb, type TestDb } from "../support/db.js";
+import { writeSkillFile } from "../support/skills.js";
 
 let t: TestDb;
 
@@ -18,9 +19,7 @@ afterEach(() => {
 });
 
 function writeSkill(name: string, body: string): void {
-  const dir = join(t.dir, ".agents", "skills", name);
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "SKILL.md"), body);
+  writeSkillFile(join(t.dir, ".agents", "skills", name), body);
 }
 
 it("discovers valid and invalid skills under a project root", () => {
@@ -29,7 +28,7 @@ it("discovers valid and invalid skills under a project root", () => {
   const skills = rescanSkills(t.db, { home: null });
   const good = skills.find((skill) => skill.name === "Good");
   expect(good?.status).toBe("available");
-  expect(good?.source).toBe("project");
+  expect(good?.project_id).toBe("p1");
   const invalid = skills.find((skill) => skill.canonical_path.includes("nofm"));
   expect(invalid?.status).toBe("invalid");
   expect(invalid?.invalid_reason).toBe("frontmatter_missing");

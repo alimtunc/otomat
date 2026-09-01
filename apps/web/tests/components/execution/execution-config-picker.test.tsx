@@ -7,12 +7,13 @@ import {
   type RuntimeKind,
 } from "@otomat/domain";
 import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
-import { encodeProfileChoice, encodeRuntimeChoice } from "@web/lib/agent-choice";
+import { encodeProfileChoice, encodeRuntimeChoice } from "@web/lib/agent/choice";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { SIMULATED_RUNTIME_NOTE } from "@web/lib/runtimes";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { agentProfile } from "#support/agent";
 import { CLAUDE_ANNOUNCED, CODEX_ANNOUNCED } from "#support/announced-options";
 import { executionDefaultsQueryResult } from "#support/execution-defaults";
 import { mount } from "#support/mount";
@@ -46,15 +47,7 @@ function descriptor(id: string, kind: RuntimeKind = "real"): RuntimeDescriptor {
 
 const DESCRIPTORS = [descriptor("claude"), descriptor("codex"), descriptor("fake", "simulated")];
 
-const PROFILE: AgentProfileContract = {
-  id: "p1",
-  name: "Careful reviewer",
-  runtime: "claude",
-  options: {},
-  model: null,
-  guidance: null,
-  skill_ids: [],
-};
+const PROFILE = agentProfile({ name: "Careful reviewer", runtime: "claude" });
 
 const cleanups: Array<() => Promise<void>> = [];
 
@@ -72,6 +65,7 @@ async function render(value: ExecutionSelection, profiles: AgentProfileContract[
       onChange={vi.fn()}
       profiles={profiles}
       descriptors={DESCRIPTORS}
+      skills={[]}
       label="Single run"
     />,
   );

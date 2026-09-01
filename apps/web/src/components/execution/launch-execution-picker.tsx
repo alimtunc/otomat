@@ -1,7 +1,7 @@
 import { Button, EmptyState } from "@otomat/ui";
 import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
 import type { LaunchExecution } from "@web/components/execution/use-launch-execution";
-import type { AgentScope } from "@web/lib/agent-choice";
+import type { AgentScope } from "@web/lib/agent/choice";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { hasLaunchableRuntime } from "@web/lib/runtimes";
 
@@ -57,6 +57,7 @@ export function LaunchExecutionPicker({
       onChange={onChange}
       profiles={agents.profiles}
       descriptors={agents.descriptors}
+      skills={agents.skills}
       label={label}
       scope={scope}
       disabled={agents.isPending}

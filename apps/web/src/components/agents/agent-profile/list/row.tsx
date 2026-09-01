@@ -1,25 +1,34 @@
-import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
+import type { AgentProfileContract, RuntimeDescriptor, SkillContract } from "@otomat/domain";
 import { AgentAvatar, Chip, FOCUS_RING_INSET, ProviderMark } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { AgentProfileRowActions } from "@web/components/agents/agent-profile/list/row-actions";
+import { useRemoteSession } from "@web/components/shell/remote-session/context";
+import { executionHostLabel } from "@web/components/shell/remote-session/status-labels";
+import {
+  agentProfileAvailability,
+  agentProfileAvailabilityLabel,
+} from "@web/lib/agent/profile-availability";
 import { providerOptionKeyLabel, providerOptionValueLabel } from "@web/lib/provider-option-labels";
 import { storedProviderOptions } from "@web/lib/provider-options";
-import { isAvailableRuntime, runtimeById, runtimeMark } from "@web/lib/runtimes";
+import { runtimeById, runtimeMark } from "@web/lib/runtimes";
 import { CELL } from "@web/lib/table";
 
 export function AgentProfileRow({
   profile,
   descriptors,
+  skills,
   onEdit,
 }: {
   profile: AgentProfileContract;
   descriptors: RuntimeDescriptor[];
+  skills: SkillContract[];
   onEdit: (profile: AgentProfileContract) => void;
 }) {
+  const hostLabel = executionHostLabel(useRemoteSession());
   const descriptor = runtimeById(descriptors, profile.runtime);
   const options = storedProviderOptions(profile.options);
   const mark = runtimeMark(profile.runtime);
-  const usable = descriptor !== undefined && isAvailableRuntime(descriptor);
+  const availability = agentProfileAvailability(profile, descriptors, skills);
 
   return (
     <tr className="relative transition-colors hover:bg-hover">
@@ -39,10 +48,14 @@ export function AgentProfileRow({
         </Link>
       </td>
       <td className={CELL}>
-        <Chip tone={usable ? "neutral" : "warning"}>
+        <Chip tone="neutral">
           {mark ? <ProviderMark name={mark} /> : null}
           {descriptor?.display_name ?? profile.runtime}
-          {usable ? null : " · unavailable"}
+        </Chip>
+      </td>
+      <td className={CELL}>
+        <Chip tone={availability.usable ? "success" : "warning"}>
+          {agentProfileAvailabilityLabel(availability, hostLabel)}
         </Chip>
       </td>
       <td className={`${CELL} font-mono text-xs text-text-secondary tabular-nums`}>

@@ -60,6 +60,7 @@ export function WorkflowCompetitorCard({
           inherited={execution.inherited}
           profiles={execution.agents.profiles}
           descriptors={execution.agents.descriptors}
+          skills={execution.agents.skills}
           label={label}
         />
         <IconButton

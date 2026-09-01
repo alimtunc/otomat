@@ -1,4 +1,5 @@
-import { EmptyState, Skeleton } from "@otomat/ui";
+import { Skeleton } from "@otomat/ui";
+import { NoProjectSelectedState } from "@web/components/settings/project/no-project-selected-state";
 import { ProjectRepositoryPanel } from "@web/components/settings/project/repository-panel";
 import { ProjectSourcesPanel } from "@web/components/settings/project/sources-panel";
 import { SectionHeading } from "@web/components/settings/section-heading";
@@ -14,14 +15,7 @@ export function ProjectSettingsSection() {
   if (projects.isPending) {
     content = <Skeleton height={80} />;
   } else if (project === undefined) {
-    content = (
-      <EmptyState
-        icon="folder-git-2"
-        variant="inline"
-        title="No project selected"
-        description="Register a repository under global Repositories to create your first project."
-      />
-    );
+    content = <NoProjectSelectedState icon="folder-git-2" />;
   } else {
     content = (
       <div className="flex flex-col gap-6">

@@ -75,8 +75,8 @@ export function readProjects(db: Db): ProjectContract[] {
   return listProjects(db).map((row) => toProject(row, withRepository.has(row.id)));
 }
 
-export function readAgentProfiles(db: Db): AgentProfileContract[] {
-  return listAgentProfiles(db).map(toAgentProfile);
+export function readAgentProfiles(db: Db, projectId?: string): AgentProfileContract[] {
+  return listAgentProfiles(db, projectId).map(toAgentProfile);
 }
 
 export function readAgentProfile(db: Db, id: string): AgentProfileContract | null {

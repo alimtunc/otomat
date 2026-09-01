@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { getRun, insertAgentProfile, updateAgentProfile, upsertSkillByPath } from "@otomat/db";
@@ -6,6 +6,7 @@ import { isRunPlanCompeteGroup } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { writeSkillFile } from "../support/skills.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
@@ -19,12 +20,12 @@ afterEach(() => {
 });
 
 it("freezes the resolved profile config into plan_json and keeps it immutable after a profile edit", async () => {
-  const dir = join(fix.dataDir, "skills", "guide");
-  mkdirSync(dir, { recursive: true });
-  const path = join(dir, "SKILL.md");
-  writeFileSync(path, "---\nname: Guide\ndescription: d\n---\nOriginal instructions");
+  const path = writeSkillFile(
+    join(fix.dataDir, "skills", "guide"),
+    "---\nname: Guide\ndescription: d\n---\nOriginal instructions",
+  );
   const skillId = upsertSkillByPath(fix.db, "sk", {
-    source: "user",
+    project_id: null,
     canonical_path: path,
     name: "Guide",
     description: "d",

@@ -2,11 +2,10 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import { listProjects, type Db } from "@otomat/db";
-import type { SkillSource } from "@otomat/domain";
 
 export interface SkillRoot {
   dir: string;
-  source: SkillSource;
+  project_id: string | null;
 }
 
 export interface SkillRootsOptions {
@@ -23,12 +22,13 @@ const PROJECT_SKILL_DIRS = [".agents/skills", ".claude/skills"];
  */
 export function skillDiscoveryRoots(db: Db, options: SkillRootsOptions = {}): SkillRoot[] {
   const roots: SkillRoot[] = [];
+  // First root wins the canonical-path de-duplication: a symlinked user skill stays the user's.
+  const home = options.home === undefined ? homedir() : options.home;
+  if (home) roots.push({ dir: join(home, ".claude", "skills"), project_id: null });
   for (const project of listProjects(db)) {
     for (const dir of PROJECT_SKILL_DIRS) {
-      roots.push({ dir: join(project.root_path, dir), source: "project" });
+      roots.push({ dir: join(project.root_path, dir), project_id: project.id });
     }
   }
-  const home = options.home === undefined ? homedir() : options.home;
-  if (home) roots.push({ dir: join(home, ".claude", "skills"), source: "user" });
   return roots;
 }

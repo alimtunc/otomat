@@ -1,13 +1,14 @@
 // @vitest-environment happy-dom
-import type { AgentProfileContract, ExecutionDefaults, ProviderOptionSet } from "@otomat/domain";
+import type { ExecutionDefaults, ProviderOptionSet } from "@otomat/domain";
 import {
   useExecutionConfig,
   type UseExecutionConfigOptions,
 } from "@web/components/execution/use-execution-config";
-import { encodeProfileChoice, encodeRuntimeChoice } from "@web/lib/agent-choice";
+import { encodeProfileChoice, encodeRuntimeChoice } from "@web/lib/agent/choice";
 import { resolvedModelLabel, resolvedOptionLabel } from "@web/lib/execution/labels";
 import { expect, it, vi } from "vitest";
 
+import { agentProfile } from "#support/agent";
 import { CLAUDE_ANNOUNCED, CODEX_ANNOUNCED } from "#support/announced-options";
 import { executionDefaultsQueryResult } from "#support/execution-defaults";
 import { mount } from "#support/mount";
@@ -23,15 +24,12 @@ vi.mock("@web/api/daemon/queries", () => ({
   useExecutionDefaults: () => executionDefaultsQueryResult(defaults),
 }));
 
-const PROFILE: AgentProfileContract = {
-  id: "p1",
+const PROFILE = agentProfile({
   name: "Careful",
   runtime: "claude",
   options: { permission_mode: "plan" },
   model: "opus",
-  guidance: null,
-  skill_ids: [],
-};
+});
 
 function Probe(options: UseExecutionConfigOptions) {
   const config = useExecutionConfig(options);

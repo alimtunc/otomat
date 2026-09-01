@@ -1,14 +1,16 @@
 // @vitest-environment happy-dom
-import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
+import type { AgentProfileContract, RuntimeDescriptor, SkillContract } from "@otomat/domain";
 import { AgentProfilesSection } from "@web/components/agents/agent-profile/list/section";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { agentProfile, runtimeDescriptor, skillContract } from "#support/agent";
 import { findButton } from "#support/dom-queries";
 import { mountWithQuery, type Mounted } from "#support/mount";
 
 let profiles: AgentProfileContract[] = [];
 let runtimes: RuntimeDescriptor[] = [];
+let skills: SkillContract[] = [];
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -28,45 +30,29 @@ vi.mock("@web/api/client", () => ({
   daemon: {
     listAgentProfiles: async () => profiles,
     listRuntimes: async () => runtimes,
+    listSkills: async () => skills,
   },
 }));
 
 const cleanups: Array<() => Promise<void>> = [];
 
-function claude(overrides: Partial<RuntimeDescriptor> = {}): RuntimeDescriptor {
-  return {
-    id: "claude",
-    display_name: "Claude Code",
-    kind: "real",
-    capabilities: {
-      stream: true,
-      steering: "turn_boundary",
-      abort: true,
-      resume: true,
-      interactions: { status: "supported", kinds: ["permission"] },
-      diff_hints: true,
-    },
-    availability: { status: "available", version: "1.0.0" },
-    ...overrides,
-  };
-}
+const claude = (overrides: Partial<RuntimeDescriptor> = {}): RuntimeDescriptor =>
+  runtimeDescriptor({ id: "claude", display_name: "Claude Code", ...overrides });
 
-function profile(overrides: Partial<AgentProfileContract> = {}): AgentProfileContract {
-  return {
+const profile = (overrides: Partial<AgentProfileContract> = {}): AgentProfileContract =>
+  agentProfile({
     id: "profile-1",
     name: "Reviewer",
     runtime: "claude",
-    options: {},
-    model: null,
     guidance: "Read the diff before answering.",
     skill_ids: ["skill-review"],
     ...overrides,
-  };
-}
+  });
 
 beforeEach(() => {
   profiles = [];
   runtimes = [claude()];
+  skills = [skillContract({ id: "skill-review" })];
 });
 
 afterEach(async () => {
@@ -105,5 +91,13 @@ it("marks a profile whose runtime this host does not offer", async () => {
   runtimes = [claude({ availability: { status: "unavailable", reason: "binary_not_found" } })];
   const { container } = await renderSection();
 
-  expect(container.textContent).toContain("unavailable");
+  expect(container.textContent).toContain("CLI not found on the local host");
+});
+
+it("marks a global profile whose skill belongs to a project", async () => {
+  profiles = [profile()];
+  skills = [skillContract({ id: "skill-review", project_id: "proj-1", name: "CRM" })];
+  const { container } = await renderSection();
+
+  expect(container.textContent).toContain("Skill “CRM”: Belongs to another project");
 });

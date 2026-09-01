@@ -5,7 +5,7 @@ import {
   type WorkflowPresetPlan,
   type WorkflowPresetScope,
 } from "@otomat/domain";
-import { nodeAgentChoice } from "@web/lib/agent-choice";
+import { nodeAgentChoice } from "@web/lib/agent/choice";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import type {
   WorkflowCompetitorDraft,

@@ -1,4 +1,4 @@
-import { getAgentProfile, getSkill, readExecutionDefaults, type Db } from "@otomat/db";
+import { getAgentProfile, getProject, readExecutionDefaults, type Db } from "@otomat/db";
 import {
   executionLevels,
   modelSelectionFromId,
@@ -20,10 +20,10 @@ import {
   UnknownRuntimeError,
 } from "#runtime";
 
-import { ProfileNotFoundError, SkillResolutionError } from "./errors.js";
+import { ProfileNotFoundError, ProfileProjectUnknownError } from "./errors.js";
 import { assertOptionsAnnounced, resolveOptions } from "./options.js";
 import { hashContent } from "./skills/content.js";
-import { resolveSkills } from "./skills/resolve.js";
+import { requireSkillInScope, resolveSkills } from "./skills/resolve.js";
 
 export type AgentConfigSelector =
   | { kind: "profile"; profileId: string }
@@ -40,6 +40,7 @@ export function nodeAgentSelector(node: {
 }
 
 export interface ProfileInput {
+  project_id: string | null;
   runtime: string;
   options: ProviderOptions;
   /** Null leaves the model to the host defaults. */
@@ -55,14 +56,13 @@ export interface AgentConfigOverrides {
 
 /** Runtime availability and skill files are checked at launch, not here. */
 export function validateProfileInput(db: Db, input: ProfileInput): void {
+  if (input.project_id !== null && !getProject(db, input.project_id)) {
+    throw new ProfileProjectUnknownError(input.project_id);
+  }
   if (!isKnownRuntimeId(input.runtime)) throw new UnknownRuntimeError(input.runtime);
   const model = resolveModelSelection(input.runtime, modelSelectionFromId(input.model));
   assertOptionsAnnounced(input.runtime, model, input.options);
-  for (const skillId of input.skill_ids) {
-    if (!getSkill(db, skillId)) {
-      throw new SkillResolutionError("skill_unknown", `skill ${skillId} is not in the catalog`);
-    }
-  }
+  for (const skillId of input.skill_ids) requireSkillInScope(db, skillId, input.project_id);
 }
 
 function configHash(config: Omit<ResolvedAgentConfig, "config_hash">): string {
@@ -157,7 +157,7 @@ export function resolveAgentConfig(
       profile_id: profile.id,
       profile_name: profile.name,
       guidance: profile.guidance,
-      skills: resolveSkills(db, profile.skill_ids_json),
+      skills: resolveSkills(db, profile.skill_ids_json, profile.project_id),
     },
   );
 }

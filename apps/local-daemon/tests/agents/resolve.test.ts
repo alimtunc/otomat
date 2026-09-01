@@ -1,4 +1,3 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -19,6 +18,7 @@ import {
 } from "#agents";
 
 import { setupTestDb, type TestDb } from "../support/db.js";
+import { writeSkillFile } from "../support/skills.js";
 
 let t: TestDb;
 
@@ -31,11 +31,7 @@ afterEach(() => {
 });
 
 function writeSkill(name: string, body: string): string {
-  const dir = join(t.dir, "skills", name);
-  mkdirSync(dir, { recursive: true });
-  const path = join(dir, "SKILL.md");
-  writeFileSync(path, body);
-  return path;
+  return writeSkillFile(join(t.dir, "skills", name), body);
 }
 
 it("resolves an ad-hoc runtime to a minimal config", () => {
@@ -50,7 +46,7 @@ it("resolves an ad-hoc runtime to a minimal config", () => {
 it("freezes a profile's guidance and captures skill instructions", () => {
   const path = writeSkill("alpha", "---\nname: Alpha\ndescription: d\n---\n\nAlpha instructions");
   const skillId = upsertSkillByPath(t.db, "sk-1", {
-    source: "user",
+    project_id: null,
     canonical_path: path,
     name: "Alpha",
     description: "d",
@@ -194,6 +190,7 @@ it("freezes the runtime's announced default when no level selects one", () => {
 it("validates a profile's model against the runtime before it is persisted", () => {
   expect(() =>
     validateProfileInput(t.db, {
+      project_id: null,
       runtime: "fake",
       options: {},
       model: "gpt-5",
@@ -205,7 +202,7 @@ it("validates a profile's model against the runtime before it is persisted", () 
 it("rejects a disabled skill referenced by a profile", () => {
   const path = writeSkill("beta", "---\nname: Beta\ndescription: d\n---\nBody");
   const skillId = upsertSkillByPath(t.db, "sk-2", {
-    source: "user",
+    project_id: null,
     canonical_path: path,
     name: "Beta",
     description: "d",

@@ -17,6 +17,8 @@ const REFUSAL_STATUS = {
   model_unknown: 400,
   skill_unknown: 400,
   skill_unavailable: 409,
+  skill_out_of_scope: 409,
+  profile_project_unknown: 404,
 } satisfies Record<AgentProfileError, AgentConfigErrorResponse["status"]>;
 
 /** Maps a profile/skill/runtime resolution error to an honest HTTP refusal, or null when it is not one of ours. */

@@ -2,7 +2,6 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import type { SkillDiscovery } from "@otomat/db";
-import type { SkillSource } from "@otomat/domain";
 
 import { tryRealpath } from "#git";
 
@@ -12,16 +11,12 @@ import type { SkillRoot } from "./roots.js";
 
 const SKILL_FILENAME = "SKILL.md";
 
-function describeSkill(
-  source: SkillSource,
-  dirName: string,
-  canonicalPath: string,
-): SkillDiscovery {
+function describeSkill(root: SkillRoot, dirName: string, canonicalPath: string): SkillDiscovery {
+  const provenance = { project_id: root.project_id, canonical_path: canonicalPath };
   const content = readSkillContent(canonicalPath);
   if (content === null) {
     return {
-      source,
-      canonical_path: canonicalPath,
+      ...provenance,
       name: dirName,
       description: null,
       content_hash: null,
@@ -32,8 +27,7 @@ function describeSkill(
   const frontmatter = parseFrontmatter(content.content);
   if (frontmatter === null) {
     return {
-      source,
-      canonical_path: canonicalPath,
+      ...provenance,
       name: dirName,
       description: null,
       content_hash: content.hash,
@@ -44,8 +38,7 @@ function describeSkill(
   const name = frontmatter.name?.trim();
   if (!name) {
     return {
-      source,
-      canonical_path: canonicalPath,
+      ...provenance,
       name: dirName,
       description: frontmatter.description,
       content_hash: content.hash,
@@ -54,8 +47,7 @@ function describeSkill(
     };
   }
   return {
-    source,
-    canonical_path: canonicalPath,
+    ...provenance,
     name,
     description: frontmatter.description,
     content_hash: content.hash,
@@ -77,7 +69,7 @@ function discoverInRoot(root: SkillRoot): SkillDiscovery[] {
   for (const name of names) {
     const canonicalPath = tryRealpath(join(canonicalRoot, name, SKILL_FILENAME));
     if (canonicalPath === null) continue;
-    found.push(describeSkill(root.source, name, canonicalPath));
+    found.push(describeSkill(root, name, canonicalPath));
   }
   return found;
 }

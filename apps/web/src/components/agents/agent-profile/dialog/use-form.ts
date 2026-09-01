@@ -6,18 +6,20 @@ import type {
 import { toast } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import { useCreateAgentProfile, useUpdateAgentProfile } from "@web/api/agent-profiles/mutations";
-import { agentChoiceRuntimeId } from "@web/lib/agent-choice";
-import { agentConfigRefusalMessage } from "@web/lib/agent-config-error";
+import { agentChoiceRuntimeId } from "@web/lib/agent/choice";
+import { agentConfigRefusalMessage } from "@web/lib/agent/config-error";
 import { selectionFromStored, storedFromSelection } from "@web/lib/execution/stored";
 import { resolveRuntimeChoice } from "@web/lib/runtimes";
 import { useState } from "react";
 
 export function useAgentProfileForm({
   profile,
+  projectId,
   descriptors,
   onSaved,
 }: {
   profile: AgentProfileContract | null;
+  projectId: string | null;
   descriptors: RuntimeDescriptor[];
   onSaved: () => void;
 }) {
@@ -46,6 +48,7 @@ export function useAgentProfileForm({
       const stored = storedFromSelection(value.execution, runtime);
       const request: SaveAgentProfileRequest = {
         name: value.name.trim(),
+        project_id: projectId,
         runtime,
         options: stored.options,
         model: stored.model,

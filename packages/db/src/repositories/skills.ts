@@ -1,4 +1,4 @@
-import type { SkillInvalidReason, SkillSource, SkillStatus } from "@otomat/domain";
+import type { SkillInvalidReason, SkillStatus } from "@otomat/domain";
 import { eq, notInArray } from "drizzle-orm";
 
 import type { Db } from "../client.js";
@@ -9,7 +9,7 @@ export type SkillRow = typeof skills.$inferSelect;
 
 /** Discovered facts about one skill file, written by a rescan. Excludes id and the user's `enabled` choice, both preserved across rescans. */
 export interface SkillDiscovery {
-  source: SkillSource;
+  project_id: string | null;
   canonical_path: string;
   name: string;
   description: string | null;
@@ -41,7 +41,7 @@ export function upsertSkillByPath(db: Db, newId: string, discovery: SkillDiscove
     db.update(skills)
       .set(
         touch({
-          source: discovery.source,
+          project_id: discovery.project_id,
           name: discovery.name,
           description: discovery.description,
           content_hash: discovery.content_hash,
