@@ -1,5 +1,5 @@
 import {
-  WORKSPACE_DIFF_SCOPE,
+  BRANCH_DIFF_SCOPE,
   type RunDiffScopeParams,
   type RunDiffScopeSelector,
 } from "@otomat/domain";
@@ -25,7 +25,7 @@ export function readDiffScopeSearch(search: Record<string, unknown>): DiffScopeS
   return parsed;
 }
 
-/** A scope naming nothing usable falls back to the workspace instead of asking the daemon a question it cannot answer. */
+/** A scope naming nothing usable falls back to the branch instead of asking the daemon a question it cannot answer. */
 export function toDiffScopeSelector(search: DiffScopeSearch): RunDiffScopeSelector {
   if (search.scope === "commit" && search.commit) {
     return { kind: "commit", commit: search.commit };
@@ -35,5 +35,5 @@ export function toDiffScopeSelector(search: DiffScopeSearch): RunDiffScopeSelect
     return { kind: "session", session: search.session };
   }
   if (search.scope === "pull_request") return { kind: "pull_request" };
-  return WORKSPACE_DIFF_SCOPE;
+  return BRANCH_DIFF_SCOPE;
 }

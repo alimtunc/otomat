@@ -796,7 +796,7 @@ it("serves isolated candidate diff evidence and delegates explicit winner select
         return {
           computedAt: "2026-07-05T00:00:00.000Z",
           diff: null,
-          scope: { kind: "workspace" },
+          scope: { kind: "branch", branch: null, base_ref: null },
           unavailable: "No worktree.",
         };
       },

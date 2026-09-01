@@ -21,7 +21,13 @@ import { ReviewFixBusyError, RunWorkspaceClosedError } from "#supervisor";
 
 import { json, makeApiApp, post, request, runRowWithStep } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
-import { commentRow, reviewedFileRow, reviewRow, stubReviewService } from "../support/review.js";
+import {
+  BRANCH_SCOPE,
+  commentRow,
+  reviewedFileRow,
+  reviewRow,
+  stubReviewService,
+} from "../support/review.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "run-review";
@@ -30,6 +36,7 @@ let t: TestDb;
 
 const DIFF: CanonicalDiff = {
   base: "base-sha",
+  head: "head-sha",
   additions: 3,
   deletions: 1,
   sha: "diff-sha",
@@ -75,7 +82,7 @@ it("serves the canonical diff mapped to the wire contract", async () => {
       getDiff: () => ({
         computedAt: "2026-07-05T00:00:00.000Z",
         diff: DIFF,
-        scope: { kind: "workspace" },
+        scope: BRANCH_SCOPE,
         unavailable: null,
       }),
     }),

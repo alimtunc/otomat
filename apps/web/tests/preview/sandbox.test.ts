@@ -1,5 +1,5 @@
 import { createDaemonClient, DaemonRequestError } from "@otomat/client";
-import { WORKSPACE_DIFF_SCOPE, type EventEnvelope } from "@otomat/domain";
+import { BRANCH_DIFF_SCOPE, type EventEnvelope } from "@otomat/domain";
 import { sandboxTransport } from "@web/preview/sandbox/transport";
 import { describe, expect, it } from "vitest";
 
@@ -42,7 +42,7 @@ describe("the preview sandbox", () => {
   });
 
   it("serves a reviewable diff with its comments and expandable blobs", async () => {
-    const diff = await daemon.getReviewDiff({ kind: "run", id: RUN_ID }, WORKSPACE_DIFF_SCOPE);
+    const diff = await daemon.getReviewDiff({ kind: "run", id: RUN_ID }, BRANCH_DIFF_SCOPE);
     const file = diff.diff?.files[0];
     expect(file?.patch).toContain("@@");
     const review = await daemon.getReviewDetail({ kind: "run", id: RUN_ID });
@@ -51,7 +51,7 @@ describe("the preview sandbox", () => {
       { kind: "run", id: RUN_ID },
       file?.path ?? "",
       file?.sha ?? "",
-      WORKSPACE_DIFF_SCOPE,
+      BRANCH_DIFF_SCOPE,
     );
     expect(blobs.head_content).toContain("ANCHOR_VERSION");
   });

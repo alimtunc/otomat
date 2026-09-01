@@ -13,14 +13,14 @@ import {
 } from "@otomat/domain";
 
 import {
-  diffSnapshotOrNull,
-  pullRequestDiffSnapshot,
+  branchDiffOrNull,
+  treeRangeSnapshot,
   type GitWorktreeService,
   type RepositoryBinding,
 } from "#git";
 
 import { DiffScopeNotFoundError } from "./errors.js";
-import { pullRequestTrees, reviewAnchorSha } from "./pull-request.js";
+import { pullRequestTrees, reviewAnchorSha, runDiffBaseRef } from "./pull-request.js";
 import { resolveReviewSubject } from "./subject.js";
 import type { ReviewContext, ReviewSubjectRef, ScopedDiff } from "./types.js";
 
@@ -36,12 +36,21 @@ function unavailable(scope: RunDiffScope, reason: string): ScopedDiff {
   return { scope, snapshot: null, unavailable: reason };
 }
 
-function resolveWorkspace(service: GitWorktreeService, owner: string): ScopedDiff {
-  const snapshot = diffSnapshotOrNull(service, owner);
-  const scope: RunDiffScope = { kind: "workspace" };
-  return snapshot === null
-    ? unavailable(scope, NO_WORKTREE)
-    : { scope, snapshot, unavailable: null };
+function resolveBranch(
+  ctx: ReviewContext,
+  service: GitWorktreeService,
+  runId: string,
+  owner: string,
+): ScopedDiff {
+  const resolved = branchDiffOrNull(service, owner, runDiffBaseRef(ctx.db, runId));
+  if (resolved === null) {
+    return unavailable({ kind: "branch", branch: null, base_ref: null }, NO_WORKTREE);
+  }
+  return {
+    scope: { kind: "branch", branch: resolved.branch, base_ref: resolved.baseRef },
+    snapshot: resolved.snapshot,
+    unavailable: null,
+  };
 }
 
 function resolveCommit(service: GitWorktreeService, commit: string): ScopedDiff {
@@ -148,7 +157,11 @@ function resolvePullRequest(
   const trees = pullRequestTrees(row, binding);
   return trees === null
     ? unavailable(scope, NO_PUBLISHED_HEAD)
-    : { scope, snapshot: pullRequestDiffSnapshot(binding.rootPath, trees), unavailable: null };
+    : {
+        scope,
+        snapshot: treeRangeSnapshot(binding.rootPath, trees.base, trees.head),
+        unavailable: null,
+      };
 }
 
 /** An adopted pull request is its own subject and has exactly one scope: the head it is pinned to. */
@@ -168,7 +181,9 @@ export function resolveScope(
 ): ScopedDiff {
   if (ref.kind === "pull_request") return resolveAdoptedPullRequest(ctx, ref);
   const binding = ctx.repositories.forRun(ref.id);
-  if (binding === null) return unavailable({ kind: "workspace" }, NO_REPOSITORY);
+  if (binding === null) {
+    return unavailable({ kind: "branch", branch: null, base_ref: null }, NO_REPOSITORY);
+  }
   if (request.kind === "commit") return resolveCommit(binding.service, request.commit);
   if (request.kind === "step") return resolveStep(ctx, binding.service, ref.id, request.step);
   if (request.kind === "session") {
@@ -177,5 +192,5 @@ export function resolveScope(
   if (request.kind === "pull_request") {
     return resolvePullRequest(getPullRequestForRun(ctx.db, ref.id) ?? null, binding);
   }
-  return resolveWorkspace(binding.service, ref.owner ?? ref.id);
+  return resolveBranch(ctx, binding.service, ref.id, ref.owner ?? ref.id);
 }

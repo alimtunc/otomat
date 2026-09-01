@@ -1,8 +1,5 @@
-import { computeCanonicalDiff, readFileBlobs } from "./diff.js";
 import { runGit } from "./git-cli.js";
 import { hasCommit, mergeBase, revParse } from "./repo.js";
-import type { DiffSnapshot } from "./service-contract.js";
-import { readTreeFile } from "./tree-file.js";
 
 export interface PullRequestFetchInput {
   repoRoot: string;
@@ -49,13 +46,4 @@ export function publishedPullRequestTrees(
   if (!hasCommit(repoRoot, head)) return null;
   const base = mergeBase(repoRoot, baseRef, head);
   return base === null ? null : { base, head };
-}
-
-/** The imported diff plus whole-file reads, captured from the one `{base, head}` pair the review is pinned to. */
-export function pullRequestDiffSnapshot(repoRoot: string, trees: PullRequestTrees): DiffSnapshot {
-  return {
-    diff: computeCanonicalDiff(repoRoot, trees.base, trees.head),
-    fileBlobs: (paths) => readFileBlobs(repoRoot, trees.base, trees.head, paths),
-    readFile: (path, limits) => readTreeFile(repoRoot, trees.head, path, limits),
-  };
 }

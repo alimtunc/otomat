@@ -1,4 +1,4 @@
-import { WORKSPACE_DIFF_SCOPE } from "@otomat/domain";
+import { BRANCH_DIFF_SCOPE } from "@otomat/domain";
 import type { DiffFileCardProps } from "@web/components/runs/diff/files/card";
 import { DEFAULT_DIFF_PREFS } from "@web/components/runs/diff/prefs/prefs";
 import type {
@@ -36,7 +36,7 @@ export function fileCommentActions(
 export function diffFileCardProps(overrides: Partial<DiffFileCardProps> = {}): DiffFileCardProps {
   return {
     target: { kind: "run", id: "run-1" },
-    scope: WORKSPACE_DIFF_SCOPE,
+    scope: BRANCH_DIFF_SCOPE,
     file: diffFile({ path: "src/index.ts" }),
     prefs: DEFAULT_DIFF_PREFS,
     reviewed: false,

@@ -7,13 +7,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { projectRunCompletionReport } from "#api/completion-report";
 import type { CanonicalDiff } from "#git";
 import { setupTestDb, type TestDb } from "#test-support/db";
-import { commentRow, reviewRow, stubReviewService } from "#test-support/review";
+import { BRANCH_SCOPE, commentRow, reviewRow, stubReviewService } from "#test-support/review";
 import { seedRun, seedWorkflowRun } from "#test-support/seed";
 
 const OCCURRED_AT = "2026-07-22T12:00:00.000Z";
 
 const DIFF: CanonicalDiff = {
   base: "base-sha",
+  head: "head-sha",
   sha: "diff-sha",
   additions: 4,
   deletions: 1,
@@ -199,7 +200,7 @@ describe("run completion report projection", () => {
       getDiff: () => ({
         computedAt: OCCURRED_AT,
         diff: DIFF,
-        scope: { kind: "workspace" },
+        scope: BRANCH_SCOPE,
         unavailable: null,
       }),
       getReviewDetail: () => ({

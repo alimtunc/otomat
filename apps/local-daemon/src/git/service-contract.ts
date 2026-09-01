@@ -61,6 +61,12 @@ export interface DiffSnapshot extends TreeSnapshot {
   fileBlobs(paths: DiffFilePaths): DiffFileBlobs;
 }
 
+export interface BranchDiff {
+  branch: string;
+  baseRef: string;
+  snapshot: DiffSnapshot;
+}
+
 /** One commit resolved into what it actually changed; `parent` is null on a root commit, diffed against the empty tree. */
 export interface CommitScope {
   commit: CommitSummary;
@@ -96,9 +102,10 @@ export interface GitWorktreeService {
   /**
    * The diff plus whole-file reads captured from one `{base, tree}` pair, so
    * expanded content always matches the diff it is served with even while the
-   * worktree keeps changing. Resolves like `diff`.
+   * worktree keeps changing. `against` overrides the fork base — a pull
+   * request's target branch. Resolves like `diff`.
    */
-  diffSnapshot(owner: string): DiffSnapshot;
+  branchDiff(owner: string, against?: string): BranchDiff;
   /** A tree captured from a ref rather than from a worktree: what a launch reads before its worktree exists. */
   treeSnapshot(baseRef: string): TreeSnapshot;
   /** Requires an active worktree; the tree it writes covers staged, unstaged and untracked work alike. */
@@ -139,15 +146,24 @@ export function diffOrNull(service: GitWorktreeService, owner: string): Canonica
   }
 }
 
-/** The owner's diff snapshot, or null when its worktree is gone; any other git failure propagates. */
-export function diffSnapshotOrNull(
+/** The owner's branch diff, or null when its worktree is gone; any other git failure propagates. */
+export function branchDiffOrNull(
   service: GitWorktreeService,
   owner: string,
-): DiffSnapshot | null {
+  against?: string,
+): BranchDiff | null {
   try {
-    return service.diffSnapshot(owner);
+    return service.branchDiff(owner, against);
   } catch (error) {
     if (error instanceof WorktreeNotFoundError) return null;
     throw error;
   }
+}
+
+export function diffSnapshotOrNull(
+  service: GitWorktreeService,
+  owner: string,
+  against?: string,
+): DiffSnapshot | null {
+  return branchDiffOrNull(service, owner, against)?.snapshot ?? null;
 }

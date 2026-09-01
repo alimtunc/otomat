@@ -38,6 +38,7 @@ export const SANDBOX_DIFF: ReviewDiffResponse = {
   computed_at: SANDBOX_NOW,
   diff: {
     base: "1c4d7e9a2b6f08351d4e7a9c2b6f08351d4e7a9c",
+    head: "7f2b91c4e0a53d86b1f4c7e0a53d86b1f4c7e0a5",
     files: [
       {
         path: FILE_PATH,
@@ -54,7 +55,7 @@ export const SANDBOX_DIFF: ReviewDiffResponse = {
     deletions: 2,
     sha: DIFF_SHA,
   },
-  scope: { kind: "workspace" },
+  scope: { kind: "branch", branch: "otomat/run/sandbox", base_ref: "main" },
   unavailable: null,
 };
 

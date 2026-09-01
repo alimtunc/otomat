@@ -36,6 +36,8 @@ export type DiffFileContract = z.infer<typeof diffFileContractSchema>;
 export const reviewDiffContractSchema = z.object({
   /** Commit sha the diff is computed against (the fork point, or the imported base). */
   base: z.string(),
+  /** Sha of the head side; a live worktree's is a tree object, uncommitted work included. */
+  head: z.string(),
   files: z.array(diffFileContractSchema),
   additions: z.number().int().nonnegative(),
   deletions: z.number().int().nonnegative(),
@@ -46,7 +48,7 @@ export type ReviewDiffContract = z.infer<typeof reviewDiffContractSchema>;
 
 /** What a caller asks a diff read for; the response echoes back the scope that answered. */
 const runDiffScopeSelectorSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("workspace") }),
+  z.object({ kind: z.literal("branch") }),
   z.object({ kind: z.literal("commit"), commit: z.string().min(1) }),
   z.object({ kind: z.literal("step"), step: z.string().min(1) }),
   z.object({ kind: z.literal("pull_request") }),
@@ -54,11 +56,11 @@ const runDiffScopeSelectorSchema = z.discriminatedUnion("kind", [
 ]);
 export type RunDiffScopeSelector = z.infer<typeof runDiffScopeSelectorSchema>;
 
-export const WORKSPACE_DIFF_SCOPE: RunDiffScopeSelector = { kind: "workspace" };
+export const BRANCH_DIFF_SCOPE: RunDiffScopeSelector = { kind: "branch" };
 
 /** Every key the selector can occupy, so switching scope clears the one the previous scope named. */
 export type RunDiffScopeParams = {
-  scope: Exclude<RunDiffScopeSelector["kind"], "workspace"> | undefined;
+  scope: Exclude<RunDiffScopeSelector["kind"], "branch"> | undefined;
   commit: string | undefined;
   step: string | undefined;
   session: string | undefined;
@@ -67,7 +69,7 @@ export type RunDiffScopeParams = {
 /** The selector as query parameters — one spelling shared by the client, the cockpit's URL and its query keys. */
 export function runDiffScopeParams(selector: RunDiffScopeSelector): RunDiffScopeParams {
   return {
-    scope: selector.kind === "workspace" ? undefined : selector.kind,
+    scope: selector.kind === "branch" ? undefined : selector.kind,
     commit: selector.kind === "commit" ? selector.commit : undefined,
     step: selector.kind === "step" ? selector.step : undefined,
     session: selector.kind === "session" ? selector.session : undefined,
@@ -76,7 +78,12 @@ export function runDiffScopeParams(selector: RunDiffScopeSelector): RunDiffScope
 
 /** What a diff response was actually computed from, so a reader never has to infer which scope answered. */
 export const runDiffScopeSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("workspace") }),
+  z.object({
+    kind: z.literal("branch"),
+    /** Both null when nothing answered, so no branch and no base could be named. */
+    branch: z.string().nullable(),
+    base_ref: z.string().nullable(),
+  }),
   z.object({
     kind: z.literal("commit"),
     commit: z.string(),

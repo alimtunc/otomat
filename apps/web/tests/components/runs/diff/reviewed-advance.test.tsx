@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { ReviewDiffContract, ReviewedFileContract } from "@otomat/domain";
+import type { ReviewedFileContract } from "@otomat/domain";
 import { ThemeProvider } from "@otomat/ui";
 import { diffPrefsStore } from "@web/components/runs/diff/prefs/store";
 import { ReviewWorkbench } from "@web/components/runs/diff/review-workbench";
@@ -7,7 +7,7 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { diffCardsOf, domRect, overflowLonghandStyle, stubDiffCanvas } from "#support/diff-dom";
-import { diffFile, diffPatch } from "#support/diff-file";
+import { diffFile, diffPatch, reviewDiff } from "#support/diff-file";
 import { reviewDetail } from "#support/review-detail";
 import { reviewedFile } from "#support/reviewed-file";
 import { mountRoutedWithQuery } from "#support/router";
@@ -24,13 +24,10 @@ const PATHS = ["src/a.ts", "src/b.ts", "src/c.ts", "src/d.ts", "src/e.ts"];
 const READING = "src/c.ts";
 const NEXT = "src/d.ts";
 
-const DIFF: ReviewDiffContract = {
-  base: "base-sha",
+const DIFF = reviewDiff({
   files: PATHS.map((path) => diffFile({ path, patch: diffPatch(path) })),
   additions: 5,
-  deletions: 0,
-  sha: "diff-sha",
-};
+});
 
 vi.mock("@web/api/reviews/mutations", () => ({
   useAddReviewComment: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -87,6 +84,7 @@ async function mountReviewer(reviewedFiles: ReviewedFileContract[] = []) {
       <ReviewWorkbench
         target={{ kind: "pull_request", id: "pr-1" }}
         workspace={{ open: false, issueId: null }}
+        answered={{ kind: "pull_request", number: 1 }}
         diff={DIFF}
         review={reviewDetail(reviewedFiles)}
         notice={null}

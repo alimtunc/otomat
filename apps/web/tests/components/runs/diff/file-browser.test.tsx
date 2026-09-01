@@ -1,12 +1,11 @@
 // @vitest-environment happy-dom
-import type { ReviewDiffContract } from "@otomat/domain";
 import { DiffFileBrowser } from "@web/components/runs/diff/files/browser";
 import type { DiffBrowserMode } from "@web/components/runs/diff/prefs/prefs";
 import { useDiffKeyboardNav } from "@web/components/runs/diff/use-diff-keyboard-nav";
 import { act, useState } from "react";
 import { describe, expect, it } from "vitest";
 
-import { diffFile } from "#support/diff-file";
+import { diffFile, reviewDiff } from "#support/diff-file";
 import { mount } from "#support/mount";
 
 const FILES = [
@@ -19,13 +18,7 @@ const FILES = [
   diffFile({ path: "docs/ai/codebase-map.md" }),
 ];
 
-const diff: ReviewDiffContract = {
-  base: "base-sha",
-  files: FILES,
-  additions: 3,
-  deletions: 0,
-  sha: "diff-sha",
-};
+const diff = reviewDiff({ files: FILES, additions: 3 });
 
 function Harness({ initialMode }: { initialMode: DiffBrowserMode }) {
   const [mode, setMode] = useState<DiffBrowserMode>(initialMode);

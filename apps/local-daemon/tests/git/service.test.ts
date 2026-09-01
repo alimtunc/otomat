@@ -142,7 +142,7 @@ describe("GitWorktreeService", () => {
   it("serves snapshot blobs from the captured tree even after the worktree moves on", () => {
     const wt = env.service.acquire({ owner: "snap", branch: "feat-snap" });
     writeFileSync(join(wt.path, "file.txt"), "captured\n");
-    const snapshot = env.service.diffSnapshot("snap");
+    const { snapshot } = env.service.branchDiff("snap");
     writeFileSync(join(wt.path, "file.txt"), "mutated\n");
 
     const file = snapshot.diff.files.find((f) => f.path === "file.txt");

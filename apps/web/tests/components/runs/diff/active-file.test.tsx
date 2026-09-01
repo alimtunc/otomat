@@ -45,8 +45,8 @@ it("carries the read file in the URL without burying the page it came from or re
   expect(navigate).toHaveBeenCalledTimes(1);
   const [call] = navigate.mock.calls;
   expect(call?.[0]).toMatchObject({ to: ".", replace: true, resetScroll: false });
-  expect(call?.[0].search({ scope: "workspace" })).toEqual({
-    scope: "workspace",
+  expect(call?.[0].search({ scope: "step" })).toEqual({
+    scope: "step",
     file: "src/b.ts",
   });
 });

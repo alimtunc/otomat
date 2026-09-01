@@ -271,7 +271,7 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
   whole composition; re-assembling a subset is how queues silently stall.
 - Everything one response derives from a worktree — diff, anchor validation,
   expanded blobs, prompt context — reads from a single captured `{base, tree}`
-  snapshot (`diffSnapshot`). Never pair content from two separately computed
+  snapshot (`DiffSnapshot`). Never pair content from two separately computed
   trees, and never read worktree files through `fs` into provider prompts: a
   changed path can be a symlink to a host file.
 - The API layer consumes daemon modules through their service seams

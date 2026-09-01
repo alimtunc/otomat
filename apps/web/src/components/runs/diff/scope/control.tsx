@@ -53,15 +53,15 @@ export function DiffScopeControl({ runId, scope, steps, onSelect }: DiffScopeCon
           <ConfigMenuNote>Reading the run's pull request…</ConfigMenuNote>
         ) : null}
         <DropdownMenuRadioGroup
-          value={scope.kind === "workspace" || scope.kind === "pull_request" ? scope.kind : ""}
+          value={scope.kind === "branch" || scope.kind === "pull_request" ? scope.kind : ""}
           onValueChange={(next) =>
-            onSelect(next === "pull_request" ? { kind: "pull_request" } : { kind: "workspace" })
+            onSelect(next === "pull_request" ? { kind: "pull_request" } : { kind: "branch" })
           }
         >
           <ConfigMenuChoice
-            value="workspace"
-            label="Workspace"
-            description="Everything the branch carries against its fork point."
+            value="branch"
+            label="Branch"
+            description="The current branch against the base it will land on."
           />
           {number === null ? null : (
             <ConfigMenuChoice

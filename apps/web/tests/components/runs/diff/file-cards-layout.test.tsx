@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { WORKSPACE_DIFF_SCOPE } from "@otomat/domain";
+import { BRANCH_DIFF_SCOPE } from "@otomat/domain";
 import { ThemeProvider } from "@otomat/ui";
 import { DiffFileCards, type DiffFileCardsProps } from "@web/components/runs/diff/cards";
 import { DEFAULT_DIFF_PREFS } from "@web/components/runs/diff/prefs/prefs";
@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { fileCommentActions } from "#support/diff-card";
 import { MODIFIED_FILE_PATCH, stubDiffCanvas } from "#support/diff-dom";
-import { diffFile } from "#support/diff-file";
+import { diffFile, reviewDiff } from "#support/diff-file";
 import { mountWithQuery } from "#support/mount";
 
 stubDiffCanvas();
@@ -23,7 +23,7 @@ const SPACING_UTILITY = /(?:^|\s)-?[mp][xytrbles]?-/;
 function cardsProps(overrides: Partial<DiffFileCardsProps> = {}): DiffFileCardsProps {
   return {
     target: { kind: "run", id: "run-1" },
-    scope: WORKSPACE_DIFF_SCOPE,
+    scope: BRANCH_DIFF_SCOPE,
     files: FILES,
     hiddenCount: 0,
     onShowHidden: () => {},
@@ -37,10 +37,7 @@ function cardsProps(overrides: Partial<DiffFileCardsProps> = {}): DiffFileCardsP
     activePath: null,
     onActivate: () => {},
     comments: {
-      partition: partitionComments(
-        { base: "base", files: FILES, additions: 0, deletions: 0, sha: "diff-sha" },
-        [],
-      ),
+      partition: partitionComments(reviewDiff({ files: FILES }), []),
       destinations: { pr_review: false, reason: "This run has no pull request yet." },
       preferredDestination: "agent",
       publishingId: null,

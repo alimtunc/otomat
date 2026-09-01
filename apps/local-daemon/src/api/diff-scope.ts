@@ -10,11 +10,11 @@ export class DiffScopeInvalidError extends Error {
   }
 }
 
-/** An absent scope is the workspace, as every existing link expects. */
+/** An absent scope is the branch, which is what the cockpit's default link omits. */
 export function readDiffScope<E extends Env>(c: Context<E>): RunDiffScopeSelector {
   const query = (key: string): string | undefined => c.req.query(key);
   const kind = query("scope");
-  if (kind === undefined || kind === "workspace") return { kind: "workspace" };
+  if (kind === undefined || kind === "branch") return { kind: "branch" };
   if (kind === "commit") {
     const commit = query("commit");
     if (!commit) throw new DiffScopeInvalidError("A commit scope needs a `commit` sha.");

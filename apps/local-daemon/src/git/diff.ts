@@ -5,6 +5,8 @@ import { join } from "node:path";
 
 import { parseNameStatusZ, parseNumstatZ, splitPatchByFile } from "./diff-parse.js";
 import { runGit } from "./git-cli.js";
+import type { DiffSnapshot } from "./service-contract.js";
+import { readTreeFile } from "./tree-file.js";
 import type {
   CanonicalDiff,
   ChangedFile,
@@ -76,6 +78,7 @@ export function computeCanonicalDiff(gitCwd: string, base: string, tree: string)
 
   return {
     base,
+    head: tree,
     files,
     additions: files.reduce((sum, f) => sum + f.additions, 0),
     deletions: files.reduce((sum, f) => sum + f.deletions, 0),
@@ -97,5 +100,13 @@ export function readFileBlobs(
   return {
     base: readBlob(gitCwd, base, paths.oldPath ?? paths.path),
     head: readBlob(gitCwd, tree, paths.path),
+  };
+}
+
+export function treeRangeSnapshot(gitCwd: string, base: string, tree: string): DiffSnapshot {
+  return {
+    diff: computeCanonicalDiff(gitCwd, base, tree),
+    fileBlobs: (paths) => readFileBlobs(gitCwd, base, tree, paths),
+    readFile: (path, limits) => readTreeFile(gitCwd, tree, path, limits),
   };
 }

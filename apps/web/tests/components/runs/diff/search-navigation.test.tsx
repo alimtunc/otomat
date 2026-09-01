@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { ReviewDiffContract, ReviewedFileContract } from "@otomat/domain";
+import type { ReviewedFileContract } from "@otomat/domain";
 import { ThemeProvider } from "@otomat/ui";
 import { diffPrefsStore } from "@web/components/runs/diff/prefs/store";
 import { ReviewWorkbench } from "@web/components/runs/diff/review-workbench";
@@ -13,7 +13,7 @@ import {
   stubDiffCanvas,
   stubHighlightApi,
 } from "#support/diff-dom";
-import { diffFile, diffPatch } from "#support/diff-file";
+import { diffFile, diffPatch, reviewDiff } from "#support/diff-file";
 import { setInputValue } from "#support/dom-events";
 import { mountWithQuery } from "#support/mount";
 import { reviewDetail } from "#support/review-detail";
@@ -34,13 +34,11 @@ const SOLO = "src/a.ts";
 const PATHS = [SOLO, "src/b.ts"];
 const ADDED_LINE = "const answer = 42;";
 
-const DIFF: ReviewDiffContract = {
-  base: "base-sha",
+const DIFF = reviewDiff({
   files: PATHS.map((path) => diffFile({ path, patch: diffPatch(path) })),
   additions: 2,
   deletions: 2,
-  sha: "diff-sha",
-};
+});
 
 const getDiffFileBlobs = vi.fn();
 
@@ -118,6 +116,7 @@ async function mountReviewer(reviewedFiles: ReviewedFileContract[] = [], diff = 
       <ReviewWorkbench
         target={{ kind: "pull_request", id: "pr-1" }}
         workspace={{ open: false, issueId: null }}
+        answered={{ kind: "pull_request", number: 1 }}
         diff={diff}
         review={reviewDetail(reviewedFiles)}
         notice={null}
@@ -352,6 +351,7 @@ describe("searching the loaded hunks from the reviewer toolbar", () => {
         <ReviewWorkbench
           target={{ kind: "pull_request", id: "pr-1" }}
           workspace={{ open: false, issueId: null }}
+          answered={{ kind: "pull_request", number: 1 }}
           diff={{ ...DIFF, files: [], additions: 0, deletions: 0 }}
           review={reviewDetail()}
           notice={null}

@@ -1,4 +1,4 @@
-import type { PullRequestRow } from "@otomat/db";
+import { getPullRequestForRun, type Db, type PullRequestRow } from "@otomat/db";
 import type { ReviewDestinationAvailability, ReviewFixAuthority } from "@otomat/domain";
 
 import {
@@ -15,6 +15,11 @@ import {
  */
 export function reviewAnchorSha(row: PullRequestRow): string | null {
   return row.origin === "imported" ? row.head_sha : row.published_head_sha;
+}
+
+/** Scope and subject both read this, so comments anchor to the same base the reviewer sees. */
+export function runDiffBaseRef(db: Db, runId: string): string | undefined {
+  return getPullRequestForRun(db, runId)?.base_ref || undefined;
 }
 
 /** An import is pinned to the pair it fetched; a published head is only ever as current as its fork from the base. */

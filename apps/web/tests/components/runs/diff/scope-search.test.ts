@@ -22,7 +22,7 @@ it("reads every named scope back out of the URL", () => {
 
 it("round-trips every selector through the search params", () => {
   for (const selector of [
-    { kind: "workspace" },
+    { kind: "branch" },
     { kind: "commit", commit: "abc" },
     { kind: "step", step: "st1" },
     { kind: "session", session: "s1" },
@@ -45,16 +45,16 @@ it("clears the key the previous scope named when the next one does not use it", 
   expect(toDiffScopeSelector(moved)).toEqual({ kind: "step", step: "st1" });
 });
 
-it("falls back to the workspace rather than asking for a scope naming nothing", () => {
-  expect(toDiffScopeSelector(readDiffScopeSearch({}))).toEqual({ kind: "workspace" });
+it("falls back to the branch rather than asking for a scope naming nothing", () => {
+  expect(toDiffScopeSelector(readDiffScopeSearch({}))).toEqual({ kind: "branch" });
   expect(toDiffScopeSelector(readDiffScopeSearch({ scope: "commit" }))).toEqual({
-    kind: "workspace",
+    kind: "branch",
   });
   expect(toDiffScopeSelector(readDiffScopeSearch({ scope: "step", step: "" }))).toEqual({
-    kind: "workspace",
+    kind: "branch",
   });
   expect(toDiffScopeSelector(readDiffScopeSearch({ scope: "nonsense", commit: "abc" }))).toEqual({
-    kind: "workspace",
+    kind: "branch",
   });
 });
 
