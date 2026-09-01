@@ -7,10 +7,9 @@ import { UnsavedViewActions } from "@web/components/issues/views/unsaved-actions
 import type { IssueViewsResult } from "@web/components/issues/views/use-issue-views";
 import { orderedViews, type SavedView } from "@web/lib/issue/saved-view";
 import type { IssuesViewConfig } from "@web/lib/issue/view-config";
-import { TOOLBAR_STRIP } from "@web/lib/toolbar";
 import { useState } from "react";
 
-export interface IssueViewBarProps {
+export interface IssueViewControlsProps {
   views: IssueViewsResult;
   active: SavedView;
   config: IssuesViewConfig;
@@ -19,14 +18,14 @@ export interface IssueViewBarProps {
   onReset: () => void;
 }
 
-export function IssueViewBar({
+export function IssueViewControls({
   views,
   active,
   config,
   dirty,
   onOpenView,
   onReset,
-}: IssueViewBarProps) {
+}: IssueViewControlsProps) {
   const [promptKind, setPromptKind] = useState<NamePromptKind | null>(null);
   const [deleting, setDeleting] = useState(false);
   const editable = active.id !== views.set.system.id;
@@ -40,7 +39,7 @@ export function IssueViewBar({
   };
 
   return (
-    <div className={TOOLBAR_STRIP}>
+    <div className="flex min-w-0 items-center gap-1">
       <IssueViewTabs
         views={orderedViews(views.set)}
         activeId={active.id}
@@ -50,7 +49,6 @@ export function IssueViewBar({
           onOpenView(id);
         }}
       />
-      <div className="flex-1" />
       {dirty ? (
         <UnsavedViewActions
           savable={editable}

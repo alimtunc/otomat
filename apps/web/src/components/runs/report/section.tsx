@@ -1,4 +1,4 @@
-import { FOCUS_RING } from "@otomat/ui";
+import { FOCUS_RING_INSET } from "@otomat/ui";
 import type { ReactNode } from "react";
 
 export function ReportSection({ title, children }: { title: string; children: ReactNode }) {
@@ -12,7 +12,7 @@ export function ReportSection({ title, children }: { title: string; children: Re
         role="region"
         aria-label={title}
         tabIndex={0}
-        className={`max-h-96 overflow-auto p-4 ${FOCUS_RING} focus-visible:[outline-offset:-2px]`}
+        className={`max-h-96 overflow-auto p-4 ${FOCUS_RING_INSET}`}
       >
         {children}
       </div>

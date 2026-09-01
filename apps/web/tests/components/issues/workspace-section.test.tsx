@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { findButton } from "#support/dom-queries";
 import { mountRoutedWithQuery } from "#support/router";
+import { workspaceEntry } from "#support/workspace";
 
 const listWorkspaces = vi.fn<() => Promise<WorkspaceInventory>>();
 
@@ -26,29 +27,7 @@ afterEach(async () => {
 });
 
 function entry(over: Partial<WorkspaceEntry> = {}): WorkspaceEntry {
-  return {
-    id: "wt-1",
-    repository_id: "repo-1",
-    repository_name: "otomat",
-    repository_path: "/tmp/otomat",
-    issue_id: "i1",
-    issue_identifier: "OTO-88",
-    issue_title: "Reconcile worktrees",
-    run_id: "r1",
-    branch: "otomat/run/r1",
-    path: "/tmp/worktrees/r1",
-    state: "cleanup_required",
-    attachment: "record",
-    blocker: null,
-    reason: "Ready to delete: the cycle is closed and the worktree is clean.",
-    registered: true,
-    present: true,
-    dirty: false,
-    head_sha: null,
-    last_activity_at: "2026-08-18 00:00:00",
-    pull_request: null,
-    ...over,
-  };
+  return { ...workspaceEntry({ id: "wt-1" }), last_activity_at: "2026-08-18 00:00:00", ...over };
 }
 
 async function renderSection(over: Partial<WorkspaceEntry> = {}) {
@@ -64,7 +43,7 @@ it("offers the deletion once the daemon names no blocker", async () => {
   await renderSection();
 
   expect(document.body.textContent).toContain("Cleanup required");
-  expect(document.body.textContent).toContain("otomat/run/r1");
+  expect(document.body.textContent).toContain("otomat/run/wt-1");
   expect(findButton("Clean workspace…")).toBeDefined();
 });
 

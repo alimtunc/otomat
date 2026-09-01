@@ -9,7 +9,7 @@
  */
 export { cn } from "./lib/utils";
 export { isEditableTarget } from "./lib/keyboard";
-export { FOCUS_RING } from "./lib/focus";
+export { FOCUS_RING, FOCUS_RING_INSET } from "./lib/focus";
 export { useMediaQuery } from "./lib/use-media-query";
 export { usePanelGroupLayout, type PanelGroupLayout } from "./lib/use-panel-group-layout";
 export { useSidePanel, type SidePanelState } from "./lib/side-panel-context";

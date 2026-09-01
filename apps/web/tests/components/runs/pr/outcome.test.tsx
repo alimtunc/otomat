@@ -26,7 +26,8 @@ describe("PullRequestOutcome", () => {
     const github = [...view.container.querySelectorAll("a")].find(
       (anchor) => anchor.getAttribute("href") === "https://github.com/alimtunc/otomat/pull/183",
     );
-    expect(github?.textContent).toContain("Open pull request #183 on GitHub");
+    expect(github?.textContent).toContain("Open on GitHub");
+    expect(github?.getAttribute("aria-label")).toBe("Open on GitHub — pull request #183");
     expect(view.container.textContent).toContain(
       "The run's worktree was removed — there is no local diff to show.",
     );

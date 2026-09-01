@@ -3,7 +3,10 @@ import { Button, Chip, PRStatusBadge } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useRefreshPullRequest } from "@web/api/prs/mutations";
 import { DetachPullRequestDialog } from "@web/components/pull-requests/detach-dialog";
-import { PROVENANCE_LABEL, PROVENANCE_TONE } from "@web/lib/pull-request/provenance";
+import {
+  PULL_REQUEST_PROVENANCE_LABEL,
+  PULL_REQUEST_PROVENANCE_TONE,
+} from "@web/lib/pull-request/provenance";
 import { useState } from "react";
 
 export interface AttachedPullRequestCardProps {
@@ -34,8 +37,8 @@ export function AttachedPullRequestCard({ issueId, pullRequest }: AttachedPullRe
           </a>
         )}
         <PRStatusBadge status={pullRequest.status} />
-        <Chip tone={PROVENANCE_TONE[pullRequest.provenance]}>
-          {PROVENANCE_LABEL[pullRequest.provenance]}
+        <Chip tone={PULL_REQUEST_PROVENANCE_TONE[pullRequest.provenance]}>
+          {PULL_REQUEST_PROVENANCE_LABEL[pullRequest.provenance]}
         </Chip>
       </div>
       <p className="m-0 truncate font-mono text-xs text-text-tertiary">

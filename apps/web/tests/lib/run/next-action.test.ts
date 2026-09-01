@@ -5,6 +5,7 @@ import {
   runDetailFixture,
 } from "@web/gallery/gallery.fixtures";
 import {
+  ctaTargetsCurrentTab,
   resolveNextAction,
   runNextAction,
   type NextAction,
@@ -47,7 +48,11 @@ describe("resolveNextAction", () => {
   it("asks for publication when the run completed without a pull request", () => {
     const action = resolveNextAction({ status: "completed", pullRequest: null });
     expect(action.kind).toBe("publish");
-    expect(action.cta).toEqual({ label: "Publish the pull request", target: { type: "pr" } });
+    expect(action.cta).toEqual({
+      label: "Publish the pull request",
+      shortLabel: "Publish",
+      target: { type: "pr" },
+    });
   });
 
   it("claims nothing about publication while it is unknown", () => {
@@ -80,7 +85,11 @@ describe("resolveNextAction", () => {
       pullRequest: pr({ status: "draft", number: null, url: null }),
     });
     expect(action.kind).toBe("publish");
-    expect(action.cta).toEqual({ label: "Publish the pull request", target: { type: "pr" } });
+    expect(action.cta).toEqual({
+      label: "Publish the pull request",
+      shortLabel: "Publish",
+      target: { type: "pr" },
+    });
   });
 
   it("asks a published draft to be marked ready", () => {
@@ -125,6 +134,25 @@ describe("resolveNextAction", () => {
   it("deep-links the failing step when it is known", () => {
     const action = resolveNextAction({ status: "failed", failedStepId: "step-9" });
     expect(action.cta?.target).toEqual({ type: "conversation", stepId: "step-9" });
+  });
+});
+
+describe("ctaTargetsCurrentTab", () => {
+  it("suppresses a CTA that links to the tab already open", () => {
+    const publish = resolveNextAction({ status: "completed", pullRequest: null }).cta;
+    expect(publish && ctaTargetsCurrentTab(publish, "/runs/r1/pr", "r1")).toBe(true);
+    expect(publish && ctaTargetsCurrentTab(publish, "/runs/r1", "r1")).toBe(false);
+    const review = resolveNextAction({ status: "review_ready" }).cta;
+    expect(review && ctaTargetsCurrentTab(review, "/runs/r1/diff", "r1")).toBe(true);
+    const follow = resolveNextAction({ status: "running" }).cta;
+    expect(follow && ctaTargetsCurrentTab(follow, "/runs/r1", "r1")).toBe(true);
+  });
+
+  it("keeps a step deep-link and external links everywhere", () => {
+    const failing = resolveNextAction({ status: "failed", failedStepId: "s9" }).cta;
+    expect(failing && ctaTargetsCurrentTab(failing, "/runs/r1", "r1")).toBe(false);
+    const open = resolveNextAction({ status: "completed", pullRequest: pr() }).cta;
+    expect(open && ctaTargetsCurrentTab(open, "/runs/r1/pr", "r1")).toBe(false);
   });
 });
 

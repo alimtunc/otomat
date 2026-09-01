@@ -1,11 +1,5 @@
 import type { PullRequestDetail, RunDetail } from "@otomat/domain";
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from "@tanstack/react-router";
+import { NextActionCard } from "@web/components/runs/next-action/card";
 import { NextActionStrip } from "@web/components/runs/next-action/strip";
 import { PullRequestOutcome } from "@web/components/runs/pr/outcome";
 
@@ -21,6 +15,24 @@ interface StripCase {
   detail: RunDetail;
   pullRequest: PullRequestDetail | undefined;
 }
+
+const COMPLETED_CASES: StripCase[] = [
+  {
+    label: "completed · unpublished",
+    detail: runDetailFixture("completed"),
+    pullRequest: pullRequestDetailFixture(null),
+  },
+  {
+    label: "completed · PR open",
+    detail: runDetailFixture("completed"),
+    pullRequest: pullRequestDetailFixture(pullRequestFixture({})),
+  },
+  {
+    label: "completed · PR merged",
+    detail: runDetailFixture("completed"),
+    pullRequest: pullRequestDetailFixture(pullRequestFixture({ status: "merged" })),
+  },
+];
 
 const STRIP_CASES: StripCase[] = [
   { label: "running", detail: runDetailFixture("running"), pullRequest: undefined },
@@ -40,21 +52,7 @@ const STRIP_CASES: StripCase[] = [
     pullRequest: undefined,
   },
   { label: "review_ready", detail: runDetailFixture("review_ready"), pullRequest: undefined },
-  {
-    label: "completed · unpublished",
-    detail: runDetailFixture("completed"),
-    pullRequest: pullRequestDetailFixture(null),
-  },
-  {
-    label: "completed · PR open",
-    detail: runDetailFixture("completed"),
-    pullRequest: pullRequestDetailFixture(pullRequestFixture({})),
-  },
-  {
-    label: "completed · PR merged",
-    detail: runDetailFixture("completed"),
-    pullRequest: pullRequestDetailFixture(pullRequestFixture({ status: "merged" })),
-  },
+  ...COMPLETED_CASES,
   {
     label: "failed",
     detail: runDetailFixture("failed", [{ id: "s1", status: "failed" }]),
@@ -63,7 +61,7 @@ const STRIP_CASES: StripCase[] = [
   { label: "canceled", detail: runDetailFixture("canceled"), pullRequest: undefined },
 ];
 
-function RunStatesContent() {
+export function RunStatesSection() {
   return (
     <Section title="Run states — one next action per durable state">
       <div className="flex flex-col gap-2">
@@ -73,6 +71,14 @@ function RunStatesContent() {
             <div className="overflow-hidden rounded-md border border-border-subtle">
               <NextActionStrip detail={item.detail} pullRequest={item.pullRequest} />
             </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 grid gap-4 xl:grid-cols-3">
+        {COMPLETED_CASES.map((item) => (
+          <div key={item.label}>
+            <p className="mb-1 font-mono text-xs text-text-tertiary">rail card · {item.label}</p>
+            <NextActionCard detail={item.detail} pullRequest={item.pullRequest} />
           </div>
         ))}
       </div>
@@ -98,24 +104,4 @@ function RunStatesContent() {
       </div>
     </Section>
   );
-}
-
-const rootRoute = createRootRoute({ component: RunStatesContent });
-const routeTree = rootRoute.addChildren([
-  createRoute({ getParentRoute: () => rootRoute, path: "/", component: () => null }),
-  createRoute({ getParentRoute: () => rootRoute, path: "/runs/$runId", component: () => null }),
-  createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/runs/$runId/diff",
-    component: () => null,
-  }),
-  createRoute({ getParentRoute: () => rootRoute, path: "/runs/$runId/pr", component: () => null }),
-]);
-const router = createRouter({
-  routeTree,
-  history: createMemoryHistory({ initialEntries: ["/"] }),
-});
-
-export function RunStatesSection() {
-  return <RouterProvider router={router} />;
 }

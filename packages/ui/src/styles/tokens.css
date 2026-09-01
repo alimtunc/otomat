@@ -55,8 +55,6 @@
   --review: #a371f7;
   --stale: #e0833b;
   --neutral: #646a76;
-  --todo: #d8a12b;
-  --done: #a371f7;
 
   /* status subtle tints (chips) */
   --live-bg: rgba(77, 163, 255, 0.13);
@@ -232,22 +230,6 @@
   --radius-md: 9px;
   --radius-lg: 12px;
   --radius-xl: 16px;
-}
-
-/* ---- density hooks (default = compact, per design-system §3) ---- */
-:root[data-density="compact"],
-[data-density="compact"] {
-  --row-h: 32px;
-  --nav-h: 28px;
-  --toolbar-h: 40px;
-  --topbar-h: 48px;
-}
-:root[data-density="comfortable"],
-[data-density="comfortable"] {
-  --row-h: 36px;
-  --nav-h: 32px;
-  --toolbar-h: 44px;
-  --topbar-h: 52px;
 }
 
 @media (prefers-reduced-motion: reduce) {

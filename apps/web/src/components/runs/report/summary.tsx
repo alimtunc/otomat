@@ -30,7 +30,7 @@ export function ReportSummary({ report }: { report: RunCompletionReport }) {
           <UsageTokens usage={report.run.usage} />
         </dd>
         <dt className="text-text-tertiary">report</dt>
-        <dd className="text-right font-mono">v{report.version} · deterministic</dd>
+        <dd className="text-right font-mono">v{report.version}</dd>
       </dl>
     </section>
   );

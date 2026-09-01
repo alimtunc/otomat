@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@otomat/ui";
-import { PROVENANCE_LABEL } from "@web/lib/pull-request/provenance";
+import { PULL_REQUEST_PROVENANCE_LABEL } from "@web/lib/pull-request/provenance";
 import { issueReferenceProof } from "@web/lib/pull-request/reference";
 
 export interface AttachCandidateDialogProps {
@@ -43,7 +43,7 @@ export function AttachCandidateDialog({
           </p>
           <p className="m-0 text-sm text-text-secondary">
             Author {evidence.author_login === null ? "unknown" : `@${evidence.author_login}`} ·
-            Provenance {PROVENANCE_LABEL[candidate.provenance]} — {candidate.reason}
+            Provenance {PULL_REQUEST_PROVENANCE_LABEL[candidate.provenance]} — {candidate.reason}
           </p>
           <p className="m-0 font-mono text-xs text-text-tertiary">
             {issueReferenceProof(reference)}

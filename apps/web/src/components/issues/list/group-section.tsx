@@ -1,4 +1,4 @@
-import { FOCUS_RING, Icon } from "@otomat/ui";
+import { FOCUS_RING_INSET, Icon } from "@otomat/ui";
 import { CountBadge } from "@web/components/issues/count-badge";
 import { IssueGroupHeading } from "@web/components/issues/list/group-heading";
 import type { IssueGroup } from "@web/lib/issue/grouping";
@@ -34,7 +34,7 @@ export function IssueGroupSection({
                 aria-expanded={!collapsed}
                 aria-controls={rowsId}
                 onClick={() => onToggle(group.key)}
-                className={`flex h-8 w-full items-center gap-2 px-3 text-sm font-medium text-foreground ${FOCUS_RING} focus-visible:outline-offset-[-2px]`}
+                className={`flex h-8 w-full items-center gap-2 px-3 text-sm font-medium text-foreground ${FOCUS_RING_INSET}`}
               >
                 <Icon
                   name="chevron-down"

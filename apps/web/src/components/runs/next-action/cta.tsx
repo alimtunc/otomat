@@ -1,6 +1,6 @@
 import { Button, type ButtonProps } from "@otomat/ui";
-import { Link } from "@tanstack/react-router";
-import type { NextActionCta } from "@web/lib/run/next-action";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { ctaTargetsCurrentTab, type NextActionCta } from "@web/lib/run/next-action";
 import type { ReactElement } from "react";
 
 export interface NextActionCtaButtonProps {
@@ -11,7 +11,9 @@ export interface NextActionCtaButtonProps {
 }
 
 export function NextActionCtaButton({ runId, cta, size, className }: NextActionCtaButtonProps) {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const target = cta.target;
+  if (ctaTargetsCurrentTab(cta, pathname, runId)) return null;
   const link = (): ReactElement => {
     switch (target.type) {
       case "external":

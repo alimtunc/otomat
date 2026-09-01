@@ -1,7 +1,7 @@
 import { Check, ChevronsUpDown, FolderGit2, Pin, Plus } from "lucide-react";
 import { useState } from "react";
 
-import { FOCUS_RING } from "../lib/focus";
+import { FOCUS_RING_INSET } from "../lib/focus";
 import type { ProjectSummary } from "../lib/project-summary";
 import { TONE_FACETS } from "../lib/tone";
 import { cn } from "../lib/utils";
@@ -74,8 +74,7 @@ export function ProjectSwitcher({
             variant="ghost"
             className={cn(
               "h-12 w-full justify-start gap-2.25 rounded-none border-0 px-3 text-left hover:bg-hover",
-              FOCUS_RING,
-              "focus-visible:outline-offset-[-2px]",
+              FOCUS_RING_INSET,
               "disabled:cursor-not-allowed disabled:opacity-60",
               collapsed && "justify-center px-0",
             )}
@@ -93,14 +92,6 @@ export function ProjectSwitcher({
                     <span className="truncate">
                       {loading ? "Loading…" : (current?.name ?? "No project")}
                     </span>
-                    {current?.tag ? <HostTag tag={current.tag} /> : null}
-                    {current?.health ? (
-                      <output
-                        aria-label={`repo ${current.health}`}
-                        className="inline-block h-1.75 w-1.75 flex-none rounded-full"
-                        style={{ background: HEALTH_COLOR[current.health] }}
-                      />
-                    ) : null}
                   </div>
                   {current?.repo || current?.branch ? (
                     <div className="truncate text-micro text-text-tertiary">

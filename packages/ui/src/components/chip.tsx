@@ -1,13 +1,16 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
+import { FOCUS_RING } from "../lib/focus";
 import { toneClassMap, type StatusTone } from "../lib/tone";
 import { cn } from "../lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../primitives/tooltip";
 
 export type ChipSize = "sm" | "lg";
 
 export interface ChipProps extends HTMLAttributes<HTMLSpanElement> {
   tone?: StatusTone;
   size?: ChipSize;
+  hint?: string;
   children: ReactNode;
 }
 
@@ -18,12 +21,13 @@ const TONE_CLASS: Record<StatusTone, string> = toneClassMap(
 export function Chip({
   tone = "neutral",
   size = "sm",
+  hint,
   className,
   children,
   role = "status",
   ...rest
 }: ChipProps) {
-  return (
+  const chip = (
     <span
       role={role}
       className={cn(
@@ -36,5 +40,23 @@ export function Chip({
     >
       {children}
     </span>
+  );
+  if (hint === undefined) return chip;
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          // A tooltip names nothing, so the hint is repeated on the accessible name.
+          <span
+            tabIndex={0}
+            aria-label={typeof children === "string" ? `${children} — ${hint}` : hint}
+            className={`rounded-sm ${FOCUS_RING}`}
+          />
+        }
+      >
+        {chip}
+      </TooltipTrigger>
+      <TooltipContent className="max-w-64 whitespace-normal">{hint}</TooltipContent>
+    </Tooltip>
   );
 }

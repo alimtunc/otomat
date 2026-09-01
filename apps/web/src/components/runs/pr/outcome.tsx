@@ -8,6 +8,7 @@ import {
   MetaList,
   PRStatusBadge,
   RelativeTime,
+  StatusGlyph,
   type MetaListItem,
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
@@ -59,10 +60,13 @@ export function PullRequestOutcome({
   ];
   return (
     <div className="flex flex-col gap-4">
-      <PRStatusBadge status={pullRequest.status} />
       <div className="rounded-lg border border-border-subtle bg-surface-1 p-4">
-        <h2 className="text-sm font-semibold">{name}</h2>
-        <p className="mt-0.5 text-sm text-text-secondary">{pullRequest.title}</p>
+        <div className="flex items-center gap-2.5">
+          <StatusGlyph kind="pr" status={pullRequest.status} className="size-5" />
+          <h2 className="text-sm font-semibold">{name}</h2>
+          <PRStatusBadge status={pullRequest.status} />
+        </div>
+        <p className="mt-1.5 text-sm text-text-secondary">{pullRequest.title}</p>
         <div className="mt-3.5">
           <MetaList items={items} />
         </div>
@@ -75,11 +79,11 @@ export function PullRequestOutcome({
                   href={pullRequest.url}
                   target="_blank"
                   rel="noreferrer"
-                  aria-label={`Open ${name.toLowerCase()} on GitHub`}
+                  aria-label={`Open on GitHub — ${name.toLowerCase()}`}
                 />
               }
             >
-              Open {name.toLowerCase()} on GitHub
+              Open on GitHub
             </Button>
           )}
           {hasWorktree ? (

@@ -32,7 +32,7 @@ describe("shared UI boundaries", () => {
   it("leaves toast infrastructure to the application root", async () => {
     await render(
       <ThemeProvider>
-        <AppShell sidebar={<aside />} topbar={<header />}>
+        <AppShell sidebar={<aside />} pageBar={<header />}>
           content
         </AppShell>
       </ThemeProvider>,

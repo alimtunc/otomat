@@ -5,7 +5,7 @@ import { IssuesContent } from "@web/components/issues/list/content";
 import { IssuesToolbar } from "@web/components/issues/list/toolbar";
 import { useIssuesLayout } from "@web/components/issues/list/use-issues-layout";
 import { useIssuesView } from "@web/components/issues/list/use-issues-view";
-import { IssueViewBar } from "@web/components/issues/views/bar";
+import { IssueViewControls } from "@web/components/issues/views/controls";
 import { ProjectQueryBoundary } from "@web/components/shell/project-selection/query-boundary";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
 import { RouteShell } from "@web/components/shell/route-shell";
@@ -36,7 +36,17 @@ export function IssuesView() {
       active="issues"
       titleIcon="list-todo"
       breadcrumbs={[{ label: "Issues", current: true }]}
-      actions={
+      breadcrumbExtra={
+        <IssueViewControls
+          views={view.views}
+          active={view.active}
+          config={config}
+          dirty={view.dirty}
+          onOpenView={view.openView}
+          onReset={view.reset}
+        />
+      }
+      tabs={
         <SegmentedControl
           type="single"
           value={layout}
@@ -46,24 +56,15 @@ export function IssuesView() {
           }}
           aria-label="Issues layout"
         >
-          <SegmentedItem value="board" icon={<Icon name="columns-3" />}>
+          <SegmentedItem value="board" icon={<Icon name="columns-3" className="max-lg:hidden" />}>
             Board
           </SegmentedItem>
-          <SegmentedItem value="list" icon={<Icon name="list" />}>
+          <SegmentedItem value="list" icon={<Icon name="list" className="max-lg:hidden" />}>
             List
           </SegmentedItem>
         </SegmentedControl>
       }
-    >
-      <div className="flex h-full min-h-0 flex-col">
-        <IssueViewBar
-          views={view.views}
-          active={view.active}
-          config={config}
-          dirty={view.dirty}
-          onOpenView={view.openView}
-          onReset={view.reset}
-        />
+      actions={
         <IssuesToolbar
           config={config}
           issues={issues.data ?? []}
@@ -73,19 +74,18 @@ export function IssuesView() {
           onChange={view.refine}
           onReset={view.reset}
         />
-        <div className="min-h-0 flex-1 overflow-auto">
-          <ProjectQueryBoundary query={selectedProject.projects}>
-            <IssuesContent
-              query={issues}
-              groups={(items) => visibleIssueGroups(items, config, projectNames)}
-              layout={layout}
-              showGroupHeadings={config.grouping !== "none"}
-              collapsed={config.collapsedGroups}
-              onToggleGroup={view.toggleGroup}
-            />
-          </ProjectQueryBoundary>
-        </div>
-      </div>
+      }
+    >
+      <ProjectQueryBoundary query={selectedProject.projects}>
+        <IssuesContent
+          query={issues}
+          groups={(items) => visibleIssueGroups(items, config, projectNames)}
+          layout={layout}
+          showGroupHeadings={config.grouping !== "none"}
+          collapsed={config.collapsedGroups}
+          onToggleGroup={view.toggleGroup}
+        />
+      </ProjectQueryBoundary>
     </RouteShell>
   );
 }

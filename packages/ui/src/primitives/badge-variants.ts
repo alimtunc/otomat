@@ -14,6 +14,7 @@ export const badgeVariants = cva(
         count:
           "min-w-4.25 h-4.25 px-1.25 justify-center rounded-full bg-surface-3 text-text-secondary text-micro",
         iris: "h-4.5 px-1.5 rounded-sm bg-iris-bg text-iris-text text-micro",
+        warning: "h-4.5 px-1.5 rounded-sm bg-warning-bg text-warning text-micro",
       },
     },
     defaultVariants: { variant: "default" },

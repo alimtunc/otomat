@@ -49,7 +49,7 @@ describe("RunPrView", () => {
 
     expect(view.container.querySelectorAll("input, textarea, select").length).toBe(0);
     expect(view.container.textContent).not.toContain("with AI");
-    expect(view.container.textContent).toContain("Open pull request #183 on GitHub");
+    expect(view.container.textContent).toContain("Open on GitHub");
     for (const control of view.container.querySelectorAll("button, a")) {
       expect(control.hasAttribute("disabled")).toBe(false);
     }

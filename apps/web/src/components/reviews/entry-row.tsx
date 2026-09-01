@@ -3,7 +3,10 @@ import { Chip, PRStatusBadge } from "@otomat/ui";
 import { InboxRow } from "@web/components/inbox/row";
 import { INBOX_GROUP_COPY } from "@web/lib/pull-request/inbox/groups";
 import { CHECKS_SIGNAL, REVIEW_DECISION_SIGNAL } from "@web/lib/pull-request/inbox/signals";
-import { PROVENANCE_LABEL, PROVENANCE_TONE } from "@web/lib/pull-request/provenance";
+import {
+  PULL_REQUEST_PROVENANCE_LABEL,
+  PULL_REQUEST_PROVENANCE_TONE,
+} from "@web/lib/pull-request/provenance";
 
 function entryReason(entry: PullRequestInboxEntry): string {
   const author = entry.author_login === null ? "author unknown" : `@${entry.author_login}`;
@@ -30,7 +33,9 @@ export function ReviewInboxRow({ entry }: { entry: PullRequestInboxEntry }) {
           {review === null ? null : <Chip tone={review.tone}>{review.label}</Chip>}
           <Chip tone={checks.tone}>{checks.label}</Chip>
           {entry.mergeable === "conflicting" ? <Chip tone="danger">Conflicts</Chip> : null}
-          <Chip tone={PROVENANCE_TONE[entry.provenance]}>{PROVENANCE_LABEL[entry.provenance]}</Chip>
+          <Chip tone={PULL_REQUEST_PROVENANCE_TONE[entry.provenance]}>
+            {PULL_REQUEST_PROVENANCE_LABEL[entry.provenance]}
+          </Chip>
         </>
       }
       time={entry.updated_at}

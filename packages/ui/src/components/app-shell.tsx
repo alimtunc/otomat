@@ -21,7 +21,7 @@ const SHELL_LAYOUT_ID = "otomat.shell";
 
 export interface AppShellProps {
   sidebar: ReactNode;
-  topbar: ReactNode;
+  pageBar: ReactNode;
   tabs?: ReactNode;
   children: ReactNode;
   rightPanel?: ReactNode;
@@ -39,7 +39,7 @@ export interface AppShellProps {
 
 export function AppShell({
   sidebar,
-  topbar,
+  pageBar,
   tabs,
   children,
   rightPanel,
@@ -88,7 +88,7 @@ export function AppShell({
 
   const content = (
     <main className="flex h-full min-h-0 min-w-0 flex-col bg-background">
-      {topbar}
+      {pageBar}
       {connectionState === "reconnecting" ? (
         <ReconnectingBar {...(connectionLabel === undefined ? {} : { label: connectionLabel })} />
       ) : null}

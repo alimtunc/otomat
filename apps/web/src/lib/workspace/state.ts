@@ -23,3 +23,23 @@ export const WORKSPACE_COUNTED_STATES = [
   "missing",
   "unmanaged",
 ] as const satisfies readonly WorkspaceState[];
+
+export interface WorkspaceGitStateDescriptor {
+  word: string;
+  tone: StatusTone;
+  detail: string;
+}
+
+export function workspaceGitState(
+  present: boolean,
+  dirty: boolean | null,
+): WorkspaceGitStateDescriptor {
+  if (!present) return { word: "gone", tone: "danger", detail: "the worktree is gone from disk" };
+  if (dirty === null) {
+    return { word: "unreadable", tone: "neutral", detail: "git could not read the worktree" };
+  }
+  if (dirty) {
+    return { word: "dirty", tone: "warning", detail: "the worktree holds uncommitted changes" };
+  }
+  return { word: "clean", tone: "success", detail: "the worktree has no uncommitted change" };
+}

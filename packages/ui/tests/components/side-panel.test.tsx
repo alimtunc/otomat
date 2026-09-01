@@ -121,7 +121,7 @@ function FileBrowser() {
 
 function Shell() {
   return (
-    <AppShell sidebar={<AppSidebar>navigation</AppSidebar>} topbar={<header />}>
+    <AppShell sidebar={<AppSidebar>navigation</AppSidebar>} pageBar={<header />}>
       content
     </AppShell>
   );

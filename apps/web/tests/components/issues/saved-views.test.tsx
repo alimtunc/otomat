@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { IssueViewBar } from "@web/components/issues/views/bar";
+import { IssueViewControls } from "@web/components/issues/views/controls";
 import { useIssueViews } from "@web/components/issues/views/use-issue-views";
 import { findView } from "@web/lib/issue/saved-view";
 import { DEFAULT_ISSUES_VIEW_CONFIG, type IssuesViewConfig } from "@web/lib/issue/view-config";
@@ -19,7 +19,7 @@ const mounted: Mounted[] = [];
 function ViewsHarness({ config, dirty }: { config: IssuesViewConfig; dirty: boolean }) {
   const views = useIssueViews("project-1");
   return (
-    <IssueViewBar
+    <IssueViewControls
       views={views}
       active={findView(views.set, views.set.activeId)}
       config={config}

@@ -1,4 +1,4 @@
-import { Button } from "@otomat/ui";
+import { Button, LiveDot } from "@otomat/ui";
 import { previewSession } from "@web/preview/session";
 
 const REASON_LABEL = {
@@ -17,10 +17,7 @@ export function PreviewStatusBar() {
       role="status"
       className="fixed bottom-3 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border-subtle bg-surface-2 px-3 py-1.5 shadow-lg"
     >
-      <span
-        aria-hidden
-        className={`size-1.5 rounded-full ${live ? "bg-success" : "animate-pulse bg-warning"}`}
-      />
+      <LiveDot tone={live ? "success" : "warning"} live={live} />
       <span className="text-xs text-text-secondary">
         {session.state === "live"
           ? `Full preview of ${pullRequest} · build ${session.manifest.build}`
