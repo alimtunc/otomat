@@ -7,6 +7,7 @@ import { ConfigMenusSection } from "./sections/config-menus";
 import { DropdownsSection } from "./sections/dropdowns";
 import { InputsSection } from "./sections/inputs";
 import { MarkdownSection } from "./sections/markdown";
+import { PageBarSection } from "./sections/page-bar";
 import { ProvenanceSection } from "./sections/provenance";
 import { StatusChipsSection } from "./sections/status-chips";
 import { SurfacesSection } from "./sections/surfaces";
@@ -34,6 +35,7 @@ export function GalleryApp() {
         <ProvenanceSection />
         <InputsSection />
         <TabsSection />
+        <PageBarSection />
         <AvatarsSection />
         <CardsSection />
         <MarkdownSection />

@@ -27,7 +27,6 @@ export function WorkflowPresetsSection() {
       <WorkflowPresetList
         presets={presets}
         projectId={projectId}
-        onCreate={() => setEditing({ preset: null })}
         onEdit={(preset) => setEditing({ preset })}
       />
       {editing === null ? null : (

@@ -3,10 +3,11 @@ import { Button, Field, FieldControl, FieldLabel } from "@otomat/ui";
 import { useRuntimes } from "@web/api/daemon/queries";
 import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
 import { useExecutionDefaultsForm } from "@web/components/settings/execution-defaults/use-form";
+import { SavedNotice } from "@web/components/settings/saved-notice";
 
 export function ExecutionDefaultsForm({ defaults }: { defaults: ExecutionDefaults }) {
   const runtimes = useRuntimes();
-  const { form, isSaving, submitError } = useExecutionDefaultsForm(defaults);
+  const { form, isSaving, isSaved, submitError } = useExecutionDefaultsForm(defaults);
 
   return (
     <form
@@ -44,16 +45,22 @@ export function ExecutionDefaultsForm({ defaults }: { defaults: ExecutionDefault
           {submitError}
         </p>
       )}
-      <Button
-        type="submit"
-        variant="primary"
-        size="sm"
-        className="self-start"
-        loading={isSaving}
-        disabled={isSaving}
-      >
-        Save defaults
-      </Button>
+      <form.Subscribe selector={(state) => state.isDefaultValue}>
+        {(isDefault) => (
+          <div className="flex items-center gap-2.5">
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              loading={isSaving}
+              disabled={isSaving || isDefault}
+            >
+              Save defaults
+            </Button>
+            {isSaved && isDefault ? <SavedNotice>Execution defaults saved</SavedNotice> : null}
+          </div>
+        )}
+      </form.Subscribe>
     </form>
   );
 }

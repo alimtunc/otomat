@@ -1,10 +1,11 @@
 import type { RegisterRepositoryRequest } from "@otomat/domain";
-import { Button, Field, FieldControl, FieldLabel, Input, toast } from "@otomat/ui";
+import { Button, Field, FieldControl, FieldLabel, Input } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import {
   registerRepositoryErrorMessage,
   useRegisterRepository,
 } from "@web/api/repositories/mutations";
+import { SavedNotice } from "@web/components/settings/saved-notice";
 import { desktopBridge, remoteHostAlias } from "@web/lib/desktop-bridge";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { useState } from "react";
@@ -26,8 +27,7 @@ export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProp
       try {
         const request: RegisterRepositoryRequest = { path: value.path.trim() };
         if (projectId !== undefined) request.project_id = projectId;
-        const registered = await register.mutateAsync(request);
-        toast.success(`Registered ${registered.project.name}`);
+        await register.mutateAsync(request);
         form.reset();
       } catch (error) {
         setSubmitError(registerRepositoryErrorMessage(error));
@@ -116,6 +116,13 @@ export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProp
           </Field>
         )}
       </form.Field>
+      <form.Subscribe selector={(state) => state.isDefaultValue}>
+        {(isDefault) =>
+          register.isSuccess && isDefault && submitError === null ? (
+            <SavedNotice>Registered {register.data.project.name}</SavedNotice>
+          ) : null
+        }
+      </form.Subscribe>
       {submitError === null ? null : (
         <p role="alert" className="text-xs text-danger">
           {submitError}

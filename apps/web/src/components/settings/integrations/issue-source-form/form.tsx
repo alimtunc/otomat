@@ -1,6 +1,7 @@
 import type { LinearWorkspaceContract, ProjectContract } from "@otomat/domain";
 import { Button } from "@otomat/ui";
 import { WHOLE_TEAM } from "@web/components/settings/integrations/issue-source-selection";
+import { SavedNotice } from "@web/components/settings/saved-notice";
 
 import { LinearProjectField } from "./linear-project-field";
 import { MappingField } from "./mapping-field";
@@ -20,7 +21,7 @@ export function IssueSourceForm({
   projects,
   onCreated,
 }: IssueSourceFormProps) {
-  const { form, pending, submitError, teamOptions, projectOptions } = useIssueSourceForm(
+  const { form, pending, created, submitError, teamOptions, projectOptions } = useIssueSourceForm(
     workspace,
     projects,
     connectionId,
@@ -95,6 +96,13 @@ export function IssueSourceForm({
               Map source
             </Button>
           )}
+        </form.Subscribe>
+        <form.Subscribe selector={(state) => state.isDefaultValue}>
+          {(isDefault) =>
+            created && isDefault && submitError === null ? (
+              <SavedNotice>Mapped Linear source to a local project</SavedNotice>
+            ) : null
+          }
         </form.Subscribe>
       </div>
 

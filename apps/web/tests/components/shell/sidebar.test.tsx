@@ -37,7 +37,6 @@ async function renderSidebar(overrides: Partial<Parameters<typeof Sidebar>[0]> =
         projects={[{ id: "local-default", name: "Local workspace" }]}
         currentProjectId="local-default"
         onProjectSelect={vi.fn()}
-        onOpenSettings={vi.fn()}
         onSearch={vi.fn()}
         onNewIssue={vi.fn()}
         {...overrides}
@@ -78,12 +77,11 @@ describe("Sidebar", () => {
     expect(onProjectSelect).toHaveBeenCalledWith("local-default");
   });
 
-  it("keeps only the working surfaces, leaving configuration and reference to Settings", async () => {
+  it("keeps only the working surfaces, pinning Settings alone in the footer", async () => {
     const container = await renderSidebar();
 
     const targets = [...container.querySelectorAll("a")].map((link) => link.getAttribute("href"));
-    expect(targets).toEqual(["/inbox", "/issues", "/runs", "/reviews", "/usage"]);
-    expect(container.textContent).not.toContain("Settings");
+    expect(targets).toEqual(["/inbox", "/issues", "/runs", "/reviews", "/usage", "/settings"]);
     expect(container.textContent).not.toContain("Runtimes");
     expect(container.textContent).not.toContain("Skills");
     expect(container.textContent).not.toContain("Design system");
@@ -108,17 +106,13 @@ describe("Sidebar", () => {
     expect(inbox?.textContent).toBe("Inbox");
   });
 
-  it("opens settings from the project switcher", async () => {
-    const onOpenSettings = vi.fn();
-    await renderSidebar({ onOpenSettings });
+  it("offers no Settings entry inside the project switcher popover", async () => {
+    await renderSidebar();
 
     await act(async () => {
       switcherTrigger()?.click();
     });
-    await act(async () => {
-      findButton("Settings")?.click();
-    });
 
-    expect(onOpenSettings).toHaveBeenCalledTimes(1);
+    expect(findButton("Settings")).toBeUndefined();
   });
 });

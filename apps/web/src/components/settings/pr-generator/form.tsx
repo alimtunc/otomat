@@ -3,10 +3,11 @@ import { Button, Field, FieldControl, FieldLabel } from "@otomat/ui";
 import { useRuntimes } from "@web/api/daemon/queries";
 import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
 import { usePullRequestGeneratorForm } from "@web/components/settings/pr-generator/use-form";
+import { SavedNotice } from "@web/components/settings/saved-notice";
 
 export function PullRequestGeneratorForm({ generator }: { generator: ExecutionDefaults }) {
   const runtimes = useRuntimes();
-  const { form, isSaving, submitError } = usePullRequestGeneratorForm(generator);
+  const { form, isSaving, isSaved, submitError } = usePullRequestGeneratorForm(generator);
 
   return (
     <form
@@ -45,16 +46,22 @@ export function PullRequestGeneratorForm({ generator }: { generator: ExecutionDe
           {submitError}
         </p>
       )}
-      <Button
-        type="submit"
-        variant="primary"
-        size="sm"
-        className="self-start"
-        loading={isSaving}
-        disabled={isSaving}
-      >
-        Save generator
-      </Button>
+      <form.Subscribe selector={(state) => state.isDefaultValue}>
+        {(isDefault) => (
+          <div className="flex items-center gap-2.5">
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              loading={isSaving}
+              disabled={isSaving || isDefault}
+            >
+              Save generator
+            </Button>
+            {isSaved && isDefault ? <SavedNotice>PR metadata generator saved</SavedNotice> : null}
+          </div>
+        )}
+      </form.Subscribe>
     </form>
   );
 }

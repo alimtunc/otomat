@@ -1,5 +1,5 @@
 import type { WorkflowPresetContract, WorkflowPresetScope } from "@otomat/domain";
-import { Button, EmptyState, ErrorState, Icon } from "@otomat/ui";
+import { EmptyState, ErrorState } from "@otomat/ui";
 import type { useWorkflowPresets } from "@web/api/workflow-presets/queries";
 import { WorkflowPresetRow } from "@web/components/settings/workflow-presets/row";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
@@ -9,7 +9,6 @@ import { PRESET_SCOPE_LABEL } from "@web/lib/workflow/preset";
 export interface WorkflowPresetListProps {
   presets: ReturnType<typeof useWorkflowPresets>;
   projectId: string | undefined;
-  onCreate: () => void;
   onEdit: (preset: WorkflowPresetContract) => void;
 }
 
@@ -46,12 +45,7 @@ function ScopeSection({
   );
 }
 
-export function WorkflowPresetList({
-  presets,
-  projectId,
-  onCreate,
-  onEdit,
-}: WorkflowPresetListProps) {
+export function WorkflowPresetList({ presets, projectId, onEdit }: WorkflowPresetListProps) {
   return (
     <QueryList
       query={presets}
@@ -65,12 +59,6 @@ export function WorkflowPresetList({
           variant="inline"
           title="No workflow preset yet"
           description="Save a workflow you keep rebuilding — its steps, their dependencies, the agent each one runs on and its static instructions."
-          action={
-            <Button variant="primary" size="sm" onClick={onCreate}>
-              <Icon name="plus" aria-hidden />
-              New preset
-            </Button>
-          }
         />
       }
     >

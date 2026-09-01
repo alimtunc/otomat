@@ -1,5 +1,4 @@
 import type { ExecutionDefaults } from "@otomat/domain";
-import { toast } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import { useSaveExecutionDefaults } from "@web/api/daemon/mutations";
 import { agentChoiceRuntimeId } from "@web/lib/agent-choice";
@@ -18,7 +17,6 @@ export function useExecutionDefaultsForm(defaults: ExecutionDefaults) {
       const runtime = agentChoiceRuntimeId(value.execution.agent, []);
       try {
         const saved = await save.mutateAsync(storedFromSelection(value.execution, runtime));
-        toast.success("Execution defaults saved");
         form.reset({ execution: selectionFromStored(saved) });
       } catch (error) {
         setSubmitError(agentConfigRefusalMessage(error, "the execution defaults"));
@@ -26,5 +24,5 @@ export function useExecutionDefaultsForm(defaults: ExecutionDefaults) {
     },
   });
 
-  return { form, isSaving: save.isPending, submitError };
+  return { form, isSaving: save.isPending, isSaved: save.isSuccess, submitError };
 }

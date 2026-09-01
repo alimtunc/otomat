@@ -1,7 +1,8 @@
 import type { RepositoryContract } from "@otomat/domain";
-import { Button, Field, FieldControl, FieldLabel, Textarea, toast } from "@otomat/ui";
+import { Button, Field, FieldControl, FieldLabel, Textarea } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import { useUpdateRepository } from "@web/api/repositories/mutations";
+import { SavedNotice } from "@web/components/settings/saved-notice";
 
 function parseCommands(value: string): string[] {
   return value
@@ -17,16 +18,10 @@ export function InitCommandsForm({ repository }: { repository: RepositoryContrac
   const form = useForm({
     defaultValues: { commands: saved },
     onSubmit: ({ value }) => {
-      update.mutate(
-        {
-          repositoryId: repository.id,
-          request: { init_commands: parseCommands(value.commands) },
-        },
-        {
-          onSuccess: () => toast.success("Worktree init commands saved"),
-          onError: () => toast.error("Could not save the init commands."),
-        },
-      );
+      update.mutate({
+        repositoryId: repository.id,
+        request: { init_commands: parseCommands(value.commands) },
+      });
     },
   });
 
@@ -54,18 +49,28 @@ export function InitCommandsForm({ repository }: { repository: RepositoryContrac
           </Field>
         )}
       </form.Field>
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-2.5">
+        {update.isError ? (
+          <p role="alert" className="text-xs text-danger">
+            Could not save the init commands.
+          </p>
+        ) : null}
         <form.Subscribe selector={(state) => parseCommands(state.values.commands).join("\n")}>
           {(edited) => (
-            <Button
-              type="submit"
-              variant="primary"
-              size="sm"
-              disabled={edited === saved}
-              loading={update.isPending}
-            >
-              Save init commands
-            </Button>
+            <>
+              {update.isSuccess && edited === saved ? (
+                <SavedNotice>Worktree init commands saved</SavedNotice>
+              ) : null}
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={edited === saved}
+                loading={update.isPending}
+              >
+                Save init commands
+              </Button>
+            </>
           )}
         </form.Subscribe>
       </div>

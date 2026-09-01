@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown, FolderGit2, Pin, Plus, Settings } from "lucide-react";
+import { Check, ChevronsUpDown, FolderGit2, Pin, Plus } from "lucide-react";
 import { useState } from "react";
 
 import { FOCUS_RING } from "../lib/focus";
@@ -36,8 +36,6 @@ export interface ProjectSwitcherProps {
   onAddProject?: () => void;
   /** Renders a per-project "open in a tab" action; selection alone never creates a tab. */
   onOpenTab?: (id: string) => void;
-  /** Opens the settings surface: the switcher is the only way in, so it is required. */
-  onOpenSettings: () => void;
 }
 
 export function ProjectSwitcher({
@@ -48,7 +46,6 @@ export function ProjectSwitcher({
   loading = false,
   onAddProject,
   onOpenTab,
-  onOpenSettings,
 }: ProjectSwitcherProps) {
   const [open, setOpen] = useState(false);
   const current = projects.find((p) => p.id === currentId);
@@ -121,23 +118,24 @@ export function ProjectSwitcher({
         <ComboboxInput placeholder="Find project…" aria-label="Find project" />
         {empty ? (
           <ComboboxEmpty className="p-1.5">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setOpen(false);
-                if (onAddProject) onAddProject();
-                else onOpenSettings();
-              }}
-              className="h-auto w-full justify-start gap-2 px-2.5 py-3 text-sm"
-            >
-              {onAddProject ? (
+            {onAddProject ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setOpen(false);
+                  onAddProject();
+                }}
+                className="h-auto w-full justify-start gap-2 px-2.5 py-3 text-sm"
+              >
                 <Plus className="h-4 w-4 text-text-tertiary" />
-              ) : (
-                <Settings className="h-4 w-4 text-text-tertiary" />
-              )}
-              {onAddProject ? "Add project…" : "Add a project in Settings"}
-            </Button>
+                Add project…
+              </Button>
+            ) : (
+              <span className="block px-2.5 py-3 text-sm text-text-tertiary">
+                Add a project in Settings
+              </span>
+            )}
           </ComboboxEmpty>
         ) : (
           <>
@@ -180,8 +178,8 @@ export function ProjectSwitcher({
                 </ComboboxItem>
               )}
             </ComboboxList>
-            <div className="border-t border-border-subtle p-1.5">
-              {onAddProject ? (
+            {onAddProject ? (
+              <div className="border-t border-border-subtle p-1.5">
                 <Button
                   type="button"
                   variant="ghost"
@@ -194,20 +192,8 @@ export function ProjectSwitcher({
                   <Plus className="h-4 w-4 text-text-tertiary" />
                   Add project…
                 </Button>
-              ) : null}
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  setOpen(false);
-                  onOpenSettings();
-                }}
-                className="h-auto w-full justify-start gap-2 px-2.5 py-2 text-sm"
-              >
-                <Settings className="h-4 w-4 text-text-tertiary" />
-                Settings
-              </Button>
-            </div>
+              </div>
+            ) : null}
           </>
         )}
       </ComboboxContent>

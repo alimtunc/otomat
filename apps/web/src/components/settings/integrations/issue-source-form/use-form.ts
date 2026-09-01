@@ -1,5 +1,4 @@
 import type { LinearWorkspaceContract, ProjectContract } from "@otomat/domain";
-import { toast } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import {
   isSupersededLinearError,
@@ -35,7 +34,6 @@ export function useIssueSourceForm(
       }
       try {
         await create.mutateAsync(resolution.request);
-        toast.success("Mapped Linear source to a local project");
         form.reset();
         onCreated?.();
       } catch (error) {
@@ -48,6 +46,7 @@ export function useIssueSourceForm(
   return {
     form,
     pending: create.isPending,
+    created: create.isSuccess,
     submitError,
     teamOptions: workspace.teams.map((team) => ({
       value: team.id,
