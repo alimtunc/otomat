@@ -48,6 +48,8 @@ export const queryKeys = {
   // A separate root on purpose: a host status push invalidates the snapshot, never the ssh config read.
   executionHostAliases: ["execution-host-aliases"] as const,
   agentProfiles: ["agent-profiles"] as const,
+  agentProfilesFor: (projectId?: string) =>
+    ["agent-profiles", "project", projectId ?? null] as const,
   skills: ["skills"] as const,
   workflowPresets: ["workflow-presets"] as const,
   workflowPresetsFor: (projectId?: string) =>

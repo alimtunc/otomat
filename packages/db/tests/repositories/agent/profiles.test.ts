@@ -7,6 +7,7 @@ import {
   listAgentProfiles,
   updateAgentProfile,
 } from "#db/repositories/agent/profiles";
+import { insertProject } from "#db/repositories/projects";
 import { createTempDb, type TempDb } from "#test-support/temp-db";
 
 let t: TempDb | null = null;
@@ -54,4 +55,28 @@ it("updates and deletes a profile", () => {
   deleteAgentProfile(t.client.db, "p");
   expect(getAgentProfile(t.client.db, "p")).toBeUndefined();
   expect(listAgentProfiles(t.client.db)).toHaveLength(0);
+});
+
+it("keeps a project profile out of the global listing and inside its own project's", () => {
+  t = createTempDb("otomat-profiles-");
+  insertProject(t.client.db, { id: "proj-a", name: "A", root_path: "/a" });
+  insertProject(t.client.db, { id: "proj-b", name: "B", root_path: "/b" });
+  for (const [id, projectId] of [
+    ["glob", null],
+    ["own", "proj-a"],
+    ["other", "proj-b"],
+  ] as const) {
+    insertAgentProfile(t.client.db, {
+      id,
+      name: id,
+      project_id: projectId,
+      runtime: "fake",
+      options_json: {},
+      guidance: null,
+      skill_ids_json: [],
+    });
+  }
+
+  expect(listAgentProfiles(t.client.db).map((row) => row.id)).toEqual(["glob"]);
+  expect(listAgentProfiles(t.client.db, "proj-a").map((row) => row.id)).toEqual(["glob", "own"]);
 });

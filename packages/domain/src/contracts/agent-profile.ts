@@ -16,12 +16,15 @@ export const AGENT_PROFILE_ERRORS = [
   ...MODEL_SELECTION_ERRORS,
   "skill_unknown",
   "skill_unavailable",
+  "skill_out_of_scope",
+  "profile_project_unknown",
 ] as const;
 export type AgentProfileError = (typeof AGENT_PROFILE_ERRORS)[number];
 
 /** Create or replace a profile. Options and model are validated against the chosen runtime's advertised catalog server-side. */
 export const saveAgentProfileRequestSchema = z.object({
   name: z.string().trim().min(1).max(AGENT_PROFILE_NAME_MAX_LENGTH),
+  project_id: z.string().min(1).nullish(),
   runtime: z.string().min(1),
   options: providerOptionsSchema.optional(),
   /** Absent or null requests the provider's own default model. */

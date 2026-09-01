@@ -8,12 +8,14 @@ import { useAgentProfileForm } from "@web/components/agents/agent-profile/dialog
 
 export function AgentProfileForm({
   profile,
+  projectId,
   descriptors,
   skills,
   onSaved,
   onCancel,
 }: {
   profile: AgentProfileContract | null;
+  projectId: string | null;
   descriptors: RuntimeDescriptor[];
   skills: SkillContract[];
   onSaved: () => void;
@@ -21,6 +23,7 @@ export function AgentProfileForm({
 }) {
   const { form, isPending, submitError } = useAgentProfileForm({
     profile,
+    projectId,
     descriptors,
     onSaved,
   });

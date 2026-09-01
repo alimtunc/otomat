@@ -1,7 +1,8 @@
-import type { SkillInvalidReason, SkillSource, SkillStatus } from "@otomat/domain";
+import type { SkillInvalidReason, SkillStatus } from "@otomat/domain";
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { timestamps } from "./shared.js";
+import { projects } from "./workspace.js";
 
 export const agents = sqliteTable("agents", {
   id: text("id").primaryKey(),
@@ -13,6 +14,7 @@ export const agents = sqliteTable("agents", {
 export const agentProfiles = sqliteTable("agent_profiles", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  project_id: text("project_id").references(() => projects.id),
   runtime: text("runtime").notNull(),
   options_json: text("options_json", { mode: "json" }).notNull(),
   // Null requests the provider's own default model; provenance is resolved at launch, never stored here.
@@ -26,7 +28,7 @@ export const skills = sqliteTable(
   "skills",
   {
     id: text("id").primaryKey(),
-    source: text("source").$type<SkillSource>().notNull(),
+    project_id: text("project_id").references(() => projects.id),
     canonical_path: text("canonical_path").notNull(),
     name: text("name").notNull(),
     description: text("description"),

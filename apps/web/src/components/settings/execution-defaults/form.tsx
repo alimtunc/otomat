@@ -29,6 +29,7 @@ export function ExecutionDefaultsForm({ defaults }: { defaults: ExecutionDefault
                 onChange={field.handleChange}
                 profiles={[]}
                 descriptors={runtimes.data ?? []}
+                skills={[]}
                 label="Global default"
                 disabled={isSaving}
               />

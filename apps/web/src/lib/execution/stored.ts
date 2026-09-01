@@ -3,7 +3,7 @@ import {
   PROVIDER_OPTION_KEYS,
   type ProviderOptions,
 } from "@otomat/domain";
-import { encodeRuntimeChoice } from "@web/lib/agent-choice";
+import { encodeRuntimeChoice } from "@web/lib/agent/choice";
 
 import type { ExecutionSelection } from "./selection";
 

@@ -1,4 +1,4 @@
-import type { AgentProfileContract, RuntimeDescriptor } from "@otomat/domain";
+import type { AgentProfileContract, RuntimeDescriptor, SkillContract } from "@otomat/domain";
 import {
   ConfigMenuChoice,
   ConfigMenuSubmenu,
@@ -8,11 +8,13 @@ import {
   ProviderMark,
 } from "@otomat/ui";
 import { buildItems, type ChoiceItem } from "@web/components/execution/agent-items";
-import { AGENT_CHOICE_DEFAULT, type AgentScope } from "@web/lib/agent-choice";
+import { AGENT_CHOICE_DEFAULT, type AgentScope } from "@web/lib/agent/choice";
 
 export interface ExecutionAgentSubmenuProps {
   profiles: AgentProfileContract[];
   descriptors: RuntimeDescriptor[];
+  skills: SkillContract[];
+  hostLabel: string;
   value: string | null;
   onValueChange: (value: string | null) => void;
   inheritLabel?: string;
@@ -35,6 +37,8 @@ function agentChoice(item: ChoiceItem) {
 export function ExecutionAgentSubmenu({
   profiles,
   descriptors,
+  skills,
+  hostLabel,
   value,
   onValueChange,
   inheritLabel,
@@ -44,6 +48,8 @@ export function ExecutionAgentSubmenu({
   const { defaultItem, profileItems, runtimeItems } = buildItems(
     scope === "runtimes" ? [] : profiles,
     descriptors,
+    skills,
+    hostLabel,
     inheritLabel,
   );
 

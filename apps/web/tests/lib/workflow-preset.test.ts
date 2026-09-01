@@ -3,7 +3,7 @@ import {
   workflowPresetPlanSchema,
   type WorkflowPresetContract,
 } from "@otomat/domain";
-import { encodeProfileChoice, encodeRuntimeChoice } from "@web/lib/agent-choice";
+import { encodeProfileChoice, encodeRuntimeChoice } from "@web/lib/agent/choice";
 import {
   freeNodeCounter,
   newWorkflowCompeteGroup,

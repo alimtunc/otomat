@@ -2,6 +2,7 @@ import type {
   AgentProfileContract,
   ProviderOptionSelection,
   RuntimeDescriptor,
+  SkillContract,
 } from "@otomat/domain";
 import {
   cn,
@@ -22,7 +23,9 @@ import { ExecutionModelSubmenu } from "@web/components/execution/execution-model
 import { ExecutionOptionSubmenu } from "@web/components/execution/execution-option-submenu";
 import { ExecutionSummaryDetail } from "@web/components/execution/execution-summary-detail";
 import { useExecutionConfig } from "@web/components/execution/use-execution-config";
-import type { AgentScope } from "@web/lib/agent-choice";
+import { useRemoteSession } from "@web/components/shell/remote-session/context";
+import { executionHostLabel } from "@web/components/shell/remote-session/status-labels";
+import type { AgentScope } from "@web/lib/agent/choice";
 import { executionDetectionProblem, noAnnouncedOptionsNote } from "@web/lib/execution/detection";
 import {
   EMPTY_EXECUTION_SELECTION,
@@ -55,6 +58,7 @@ export interface ExecutionConfigPickerProps {
   inherited?: ExecutionSelection;
   profiles: AgentProfileContract[];
   descriptors: RuntimeDescriptor[];
+  skills: SkillContract[];
   scope?: AgentScope;
   label: string;
   compact?: boolean;
@@ -68,6 +72,7 @@ export function ExecutionConfigPicker({
   inherited,
   profiles,
   descriptors,
+  skills,
   scope = "all",
   label,
   compact = false,
@@ -75,7 +80,8 @@ export function ExecutionConfigPicker({
 }: ExecutionConfigPickerProps) {
   const [pending, setPending] = useState<DangerConfirmProps["pending"] | null>(null);
   const config = useExecutionConfig({ level, value, inherited, profiles });
-  const chosen = agentChoiceItem(config.agentChoice, profiles, descriptors);
+  const hostLabel = executionHostLabel(useRemoteSession());
+  const chosen = agentChoiceItem(config.agentChoice, profiles, descriptors, skills, hostLabel);
 
   const selectOption = (
     option: ResolvedExecutionOption,
@@ -142,6 +148,8 @@ export function ExecutionConfigPicker({
           <ExecutionAgentSubmenu
             profiles={profiles}
             descriptors={descriptors}
+            skills={skills}
+            hostLabel={hostLabel}
             value={value.agent}
             onValueChange={(agent) => apply(withAgentSelection(agent))}
             {...(inherited ? { inheritLabel: inheritLabel(level) } : {})}

@@ -60,6 +60,7 @@ export const SANDBOX_PROFILES: AgentProfileContract[] = [
   {
     id: "sandbox-profile-1",
     name: "Implementer",
+    project_id: null,
     runtime: "claude",
     options: {},
     model: null,

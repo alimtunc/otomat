@@ -1,5 +1,5 @@
 import { runPlanInputSchema } from "@otomat/domain";
-import { encodeProfileChoice, encodeRuntimeChoice } from "@web/lib/agent-choice";
+import { encodeProfileChoice, encodeRuntimeChoice } from "@web/lib/agent/choice";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import {
   newWorkflowCompeteGroup,

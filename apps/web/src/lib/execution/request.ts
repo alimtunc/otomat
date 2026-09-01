@@ -1,5 +1,5 @@
 import type { ExecutionOptionSelections, ModelSelection } from "@otomat/domain";
-import { agentChoiceToRequest, type AgentRequestFields } from "@web/lib/agent-choice";
+import { agentChoiceToRequest, type AgentRequestFields } from "@web/lib/agent/choice";
 
 import type { ExecutionSelection } from "./selection";
 

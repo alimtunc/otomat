@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -9,6 +9,7 @@ import { afterEach, expect, it } from "vitest";
 import { createClient } from "#db/client";
 import { runMigrations } from "#db/migrate";
 import { listIssues } from "#db/repositories/issues";
+import { migrateUpToExcluding, upgradeFrom } from "#test-support/migrate-up-to";
 
 function columnName(column: unknown): string {
   if (typeof column === "object" && column !== null && "name" in column) {
@@ -184,44 +185,7 @@ it("upgrades a legacy database through the current migrations", () => {
   ).toThrow();
 });
 
-interface JournalEntry {
-  idx: number;
-  version: string;
-  when: number;
-  tag: string;
-  breakpoints: boolean;
-}
-
 const STEERING_MIGRATION = "0018_run_contribution_steering";
-
-/** Stages the schema as it stood the migration before `tag`, so a data migration can be exercised on real prior rows. */
-function migrateUpToExcluding(dir: string, dbPath: string, tag: string, seed: string): void {
-  const journal: { entries: JournalEntry[] } = JSON.parse(
-    readFileSync(new URL("../drizzle/meta/_journal.json", import.meta.url), "utf8"),
-  );
-  const target = journal.entries.find((entry) => entry.tag === tag);
-  if (!target) throw new Error(`migration ${tag} is not in the journal`);
-  const entries = journal.entries.filter((entry) => entry.idx < target.idx);
-
-  const folder = join(dir, `before-${tag}`);
-  const meta = join(folder, "meta");
-  mkdirSync(meta, { recursive: true });
-  for (const entry of entries) {
-    copyFileSync(
-      new URL(`../drizzle/${entry.tag}.sql`, import.meta.url),
-      join(folder, `${entry.tag}.sql`),
-    );
-  }
-  writeFileSync(
-    join(meta, "_journal.json"),
-    JSON.stringify({ version: "7", dialect: "sqlite", entries }),
-  );
-
-  const prior = createClient(dbPath);
-  migrate(prior.db, { migrationsFolder: folder });
-  prior.sqlite.exec(seed);
-  prior.sqlite.close();
-}
 
 const STEERING_SEED = `
   INSERT INTO projects (id, name, root_path) VALUES ('p1', 'P', '/tmp/p');
@@ -238,16 +202,8 @@ const STEERING_SEED = `
 `;
 
 it("gives every pre-steering message a step and renames its delivery status", () => {
-  const dir = mkdtempSync(join(tmpdir(), "otomat-steering-upgrade-"));
-  const dbPath = join(dir, "otomat.db");
-  migrateUpToExcluding(dir, dbPath, STEERING_MIGRATION, STEERING_SEED);
-
-  runMigrations(dbPath);
-  const migrated = createClient(dbPath);
-  cleanup = () => {
-    migrated.sqlite.close();
-    rmSync(dir, { recursive: true, force: true });
-  };
+  const migrated = upgradeFrom("otomat-steering-upgrade-", STEERING_MIGRATION, STEERING_SEED);
+  cleanup = migrated.cleanup;
 
   expect(
     migrated.sqlite
@@ -370,16 +326,8 @@ const TURN_INDEX_SEED = `
 `;
 
 it("numbers the turns a step already ran before the unique turn index lands", () => {
-  const dir = mkdtempSync(join(tmpdir(), "otomat-turn-index-upgrade-"));
-  const dbPath = join(dir, "otomat.db");
-  migrateUpToExcluding(dir, dbPath, TURN_INDEX_MIGRATION, TURN_INDEX_SEED);
-
-  runMigrations(dbPath);
-  const migrated = createClient(dbPath);
-  cleanup = () => {
-    migrated.sqlite.close();
-    rmSync(dir, { recursive: true, force: true });
-  };
+  const migrated = upgradeFrom("otomat-turn-index-upgrade-", TURN_INDEX_MIGRATION, TURN_INDEX_SEED);
+  cleanup = migrated.cleanup;
 
   expect(
     migrated.sqlite.prepare("SELECT id, turn_index FROM agent_sessions ORDER BY turn_index").all(),

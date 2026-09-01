@@ -9,6 +9,18 @@ export const SKILL_SOURCES = ["project", "user"] as const;
 export const skillSourceSchema = z.enum(SKILL_SOURCES);
 export type SkillSource = (typeof SKILL_SOURCES)[number];
 
+export function skillSource(projectId: string | null): SkillSource {
+  return projectId === null ? "user" : "project";
+}
+
+/** A global agent must not depend on a repository another host may not have. */
+export function isSkillInScope(
+  skillProjectId: string | null,
+  ownerProjectId: string | null,
+): boolean {
+  return skillProjectId === null || skillProjectId === ownerProjectId;
+}
+
 /** Why a discovered skill cannot be activated; safe to show verbatim in the UI. */
 export const SKILL_INVALID_REASONS = [
   "frontmatter_missing",
@@ -27,6 +39,8 @@ export type SkillStatus = (typeof SKILL_STATUSES)[number];
 export const skillContractSchema = z.object({
   id: z.string(),
   source: skillSourceSchema,
+  /** The registered project whose tree this skill was discovered in; null for a user skill. */
+  project_id: z.string().nullable(),
   /** Canonical (realpath) absolute path to the skill's `SKILL.md`; stable identity across symlinks. */
   canonical_path: z.string(),
   name: z.string().min(1),
@@ -74,6 +88,8 @@ export type ResolvedAgentConfig = z.infer<typeof resolvedAgentConfigSchema>;
 export const agentProfileContractSchema = z.object({
   id: z.string(),
   name: z.string().min(1),
+  /** The project this profile belongs to; null makes it global, usable from every project. */
+  project_id: z.string().nullable(),
   runtime: z.string(),
   options: providerOptionsSchema,
   /** The profile's model default, applied unless a launch or plan node overrides it. Null requests the provider default. */

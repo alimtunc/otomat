@@ -19,7 +19,7 @@ afterEach(() => {
 
 function discovery(path: string, overrides: Partial<SkillDiscovery> = {}): SkillDiscovery {
   return {
-    source: "user",
+    project_id: null,
     canonical_path: path,
     name: "n",
     description: null,

@@ -13,6 +13,7 @@ interface CapturedRequest {
 const PROFILE = {
   id: "p1",
   name: "P",
+  project_id: null,
   runtime: "fake",
   options: {},
   guidance: null,
@@ -22,6 +23,7 @@ const PROFILE = {
 const SKILL = {
   id: "s1",
   source: "user",
+  project_id: null,
   canonical_path: "/a/SKILL.md",
   name: "S",
   description: null,
@@ -63,4 +65,15 @@ it("scans skills via POST and lists them via GET", async () => {
   const client = createDaemonClient({ fetch: fetchMock });
   expect(await client.listSkills()).toHaveLength(1);
   expect(await client.scanSkills()).toHaveLength(1);
+});
+
+it("scopes the profile listing to a project when one is named", async () => {
+  let url = "";
+  const fetchMock: typeof fetch = async (input) => {
+    url = String(input);
+    return jsonResponse([PROFILE]);
+  };
+  const client = createDaemonClient({ baseUrl: "http://x", fetch: fetchMock });
+  await client.listAgentProfiles("proj 1");
+  expect(url).toBe("http://x/api/agent-profiles?project_id=proj+1");
 });

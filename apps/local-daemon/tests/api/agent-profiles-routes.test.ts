@@ -1,3 +1,6 @@
+import { join } from "node:path";
+
+import { upsertSkillByPath } from "@otomat/db";
 import { AGENT_PROFILE_NAME_MAX_LENGTH, type AgentProfileContract } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -122,4 +125,74 @@ it("refuses a skill that is not in the catalog", async () => {
   });
   expect(res.status).toBe(400);
   expect((await json<{ error: string }>(res)).error).toBe("skill_unknown");
+});
+
+it("refuses a project that is not registered on this host", async () => {
+  const app = makeApiApp(t);
+  const res = await post(app, "/api/agent-profiles", {
+    name: "P",
+    runtime: "fake",
+    project_id: "ghost",
+  });
+  expect(res.status).toBe(404);
+  expect((await json<{ error: string }>(res)).error).toBe("profile_project_unknown");
+});
+
+it("refuses a project skill on a global profile and keeps it on the project's own", async () => {
+  const app = makeApiApp(t);
+  const skillId = upsertSkillByPath(t.db, "sk-crm", {
+    project_id: "p1",
+    canonical_path: join(t.dir, ".agents", "skills", "crm", "SKILL.md"),
+    name: "CRM",
+    description: "d",
+    content_hash: "x",
+    status: "available",
+    invalid_reason: null,
+  });
+
+  const refused = await post(app, "/api/agent-profiles", {
+    name: "Global",
+    runtime: "fake",
+    skill_ids: [skillId],
+  });
+  expect(refused.status).toBe(409);
+  expect((await json<{ error: string }>(refused)).error).toBe("skill_out_of_scope");
+
+  const scoped = await json<AgentProfileContract>(
+    await post(app, "/api/agent-profiles", {
+      name: "Project",
+      runtime: "fake",
+      project_id: "p1",
+      skill_ids: [skillId],
+    }),
+  );
+  expect(scoped.project_id).toBe("p1");
+  expect(scoped.skill_ids).toEqual([skillId]);
+});
+
+it("keeps a profile's owning project when an update omits it", async () => {
+  const app = makeApiApp(t);
+  const created = await json<AgentProfileContract>(
+    await post(app, "/api/agent-profiles", { name: "Scoped", runtime: "fake", project_id: "p1" }),
+  );
+
+  const patched = await json<AgentProfileContract>(
+    await patch(app, `/api/agent-profiles/${created.id}`, { name: "Renamed", runtime: "fake" }),
+  );
+
+  expect(patched.project_id).toBe("p1");
+});
+
+it("lists global profiles alone, and adds a project's own when one is named", async () => {
+  const app = makeApiApp(t);
+  await post(app, "/api/agent-profiles", { name: "Global", runtime: "fake" });
+  await post(app, "/api/agent-profiles", { name: "Scoped", runtime: "fake", project_id: "p1" });
+
+  const global = await json<AgentProfileContract[]>(await request(app, "/api/agent-profiles"));
+  const scoped = await json<AgentProfileContract[]>(
+    await request(app, "/api/agent-profiles?project_id=p1"),
+  );
+
+  expect(global.map((profile) => profile.name)).toEqual(["Global"]);
+  expect(scoped.map((profile) => profile.name)).toEqual(["Global", "Scoped"]);
 });

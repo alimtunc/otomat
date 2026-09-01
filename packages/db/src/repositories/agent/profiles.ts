@@ -3,7 +3,7 @@ import {
   providerOptionsSchema,
   type ProviderOptions,
 } from "@otomat/domain";
-import { eq } from "drizzle-orm";
+import { eq, isNull, or } from "drizzle-orm";
 
 import type { Db } from "#db/client";
 
@@ -44,8 +44,17 @@ export function getAgentProfile(db: Db, id: string): AgentProfileRow | undefined
   return row ? hydrate(row) : undefined;
 }
 
-export function listAgentProfiles(db: Db): AgentProfileRow[] {
-  return db.select().from(agentProfiles).orderBy(agentProfiles.created_at).all().map(hydrate);
+export function listAgentProfiles(db: Db, projectId?: string): AgentProfileRow[] {
+  const visible = projectId
+    ? or(isNull(agentProfiles.project_id), eq(agentProfiles.project_id, projectId))
+    : isNull(agentProfiles.project_id);
+  return db
+    .select()
+    .from(agentProfiles)
+    .where(visible)
+    .orderBy(agentProfiles.created_at)
+    .all()
+    .map(hydrate);
 }
 
 export function updateAgentProfile(db: Db, id: string, columns: Omit<NewAgentProfile, "id">): void {

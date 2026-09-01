@@ -29,6 +29,7 @@ import {
   runContributionContractSchema,
   runInteractionContractSchema,
   skillContractSchema,
+  skillSource,
   stepRunContractSchema,
   workflowPresetContractSchema,
   type AgentProfileContract,
@@ -61,6 +62,7 @@ export function toAgentProfile(row: AgentProfileRow): AgentProfileContract {
   return agentProfileContractSchema.parse({
     id: row.id,
     name: row.name,
+    project_id: row.project_id,
     runtime: row.runtime,
     options: row.options_json,
     model: row.model,
@@ -70,7 +72,7 @@ export function toAgentProfile(row: AgentProfileRow): AgentProfileContract {
 }
 
 export function toSkill(row: SkillRow): SkillContract {
-  return skillContractSchema.parse(row);
+  return skillContractSchema.parse({ ...row, source: skillSource(row.project_id) });
 }
 
 export function toIssue(

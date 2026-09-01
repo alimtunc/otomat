@@ -4,12 +4,12 @@ import { AgentProfileDetail } from "@web/components/agents/agent-profile/detail/
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { agentProfile, runtimeDescriptor, skillContract } from "#support/agent";
 import { mountWithQuery, type Mounted } from "#support/mount";
 import { providerOptionSet } from "#support/runtime-options";
 
 let alias: string | null = null;
 let hostActive = false;
-let catalog: SkillContract[] = [];
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ to, children }: { to: string; children?: ReactNode }) => <a href={to}>{children}</a>,
@@ -22,10 +22,7 @@ vi.mock("@web/components/shell/remote-session/context", async (importOriginal) =
 }));
 
 vi.mock("@web/api/client", () => ({
-  daemon: {
-    listSkills: async () => catalog,
-    runtimeProviderOptions: async () => providerOptionSet(),
-  },
+  daemon: { runtimeProviderOptions: async () => providerOptionSet() },
 }));
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -33,7 +30,6 @@ const cleanups: Array<() => Promise<void>> = [];
 beforeEach(() => {
   alias = null;
   hostActive = false;
-  catalog = [];
 });
 
 afterEach(async () => {
@@ -41,66 +37,42 @@ afterEach(async () => {
   document.body.replaceChildren();
 });
 
-function profile(overrides: Partial<AgentProfileContract> = {}): AgentProfileContract {
-  return {
+const profile = (overrides: Partial<AgentProfileContract> = {}): AgentProfileContract =>
+  agentProfile({
     id: "profile-1",
     name: "Reviewer",
+    project_id: "project-1",
     runtime: "claude",
-    options: {},
-    model: null,
     guidance: "Read the diff before answering.",
-    skill_ids: [],
     ...overrides,
-  };
-}
+  });
 
-function claude(overrides: Partial<RuntimeDescriptor> = {}): RuntimeDescriptor {
-  return {
-    id: "claude",
-    display_name: "Claude Code",
-    kind: "real",
-    capabilities: {
-      stream: true,
-      steering: "turn_boundary",
-      abort: true,
-      resume: true,
-      permissions: true,
-      diff_hints: true,
-    },
-    availability: { status: "available", version: "1.0.0" },
-    ...overrides,
-  };
-}
+const claude = (overrides: Partial<RuntimeDescriptor> = {}): RuntimeDescriptor =>
+  runtimeDescriptor({ id: "claude", display_name: "Claude Code", ...overrides });
 
-function skill(overrides: Partial<SkillContract> = {}): SkillContract {
-  return {
+const skill = (overrides: Partial<SkillContract> = {}): SkillContract =>
+  skillContract({
     id: "skill-review",
-    source: "project",
+    project_id: "project-1",
     canonical_path: "/repo/.agents/skills/review/SKILL.md",
     name: "Review",
-    description: "Review a diff",
-    content_hash: "abc",
-    status: "available",
-    invalid_reason: null,
-    enabled: true,
     ...overrides,
-  };
-}
+  });
 
 async function renderDetail(
-  agentProfile: AgentProfileContract,
+  subject: AgentProfileContract,
+  catalog: SkillContract[] = [],
   descriptors: RuntimeDescriptor[] = [claude()],
 ): Promise<Mounted> {
   const mounted = await mountWithQuery(
-    <AgentProfileDetail profile={agentProfile} descriptors={descriptors} />,
+    <AgentProfileDetail profile={subject} descriptors={descriptors} skills={catalog} />,
   );
   cleanups.push(mounted.cleanup);
   return mounted;
 }
 
 it("shows the profile's own runtime, instructions and skills", async () => {
-  catalog = [skill()];
-  const { container } = await renderDetail(profile({ skill_ids: ["skill-review"] }));
+  const { container } = await renderDetail(profile({ skill_ids: ["skill-review"] }), [skill()]);
 
   expect(container.textContent).toContain("Reviewer");
   expect(container.textContent).toContain("Claude Code");
@@ -111,15 +83,13 @@ it("shows the profile's own runtime, instructions and skills", async () => {
 });
 
 it("says a profile has no skill rather than implying one", async () => {
-  catalog = [skill()];
-  const { container } = await renderDetail(profile());
+  const { container } = await renderDetail(profile(), [skill()]);
 
   expect(container.textContent).toContain("No activated skills");
 });
 
 it("flags a configured skill the host cannot offer, without dropping it", async () => {
-  catalog = [];
-  const { container } = await renderDetail(profile({ skill_ids: ["skill-review"] }));
+  const { container } = await renderDetail(profile({ skill_ids: ["skill-review"] }), []);
 
   expect(container.textContent).toContain("skill-review");
   expect(container.textContent).toContain("Not found on the local host");
@@ -128,26 +98,33 @@ it("flags a configured skill the host cannot offer, without dropping it", async 
 it("names the remote host a catalog was read on once the session moves there", async () => {
   alias = "otomat-vps";
   hostActive = true;
-  catalog = [skill({ enabled: false })];
-  const { container } = await renderDetail(profile({ skill_ids: ["skill-review"] }));
+  const { container } = await renderDetail(profile({ skill_ids: ["skill-review"] }), []);
 
-  expect(container.textContent).toContain("Available on otomat-vps");
-  expect(container.textContent).toContain("Disabled in the skill catalog");
+  expect(container.textContent).toContain("A configured skill: Not found on otomat-vps");
+});
+
+it("names the skill a disabled catalog entry blocks, without blaming the host", async () => {
+  const { container } = await renderDetail(profile({ skill_ids: ["skill-review"] }), [
+    skill({ enabled: false }),
+  ]);
+
+  expect(container.textContent).toContain("Skill “Review”: Disabled in the skill catalog");
 });
 
 it("keeps a merely configured remote host out of a catalog the local daemon answered", async () => {
   alias = "otomat-vps";
-  catalog = [skill()];
-  const { container } = await renderDetail(profile({ skill_ids: ["skill-review"] }));
+  const { container } = await renderDetail(profile({ skill_ids: ["skill-review"] }), [skill()]);
 
   expect(container.textContent).not.toContain("otomat-vps");
   expect(container.textContent).toContain("Available on the local host");
 });
 
 it("makes an unavailable runtime actionable instead of hiding the profile", async () => {
-  const { container } = await renderDetail(profile(), [
-    claude({ availability: { status: "unavailable", reason: "binary_not_found" } }),
-  ]);
+  const { container } = await renderDetail(
+    profile(),
+    [],
+    [claude({ availability: { status: "unavailable", reason: "binary_not_found" } })],
+  );
 
   expect(container.textContent).toContain("CLI not found on the local host");
   expect(container.textContent).toContain("cannot be selected on the local host");
@@ -155,4 +132,29 @@ it("makes an unavailable runtime actionable instead of hiding the profile", asyn
     link.textContent?.includes("Runtimes"),
   );
   expect(runtimesLink?.getAttribute("href")).toBe("/settings/runtimes");
+});
+
+it("refuses a project skill to a global profile and says so on the badge", async () => {
+  const { container } = await renderDetail(
+    profile({ project_id: null, skill_ids: ["skill-review"] }),
+    [skill()],
+  );
+
+  expect(container.textContent).toContain("Global");
+  expect(container.textContent).toContain("Skill “Review”: Belongs to another project");
+});
+
+it("offers a project agent its own project's skills, and never another project's", async () => {
+  const { container } = await renderDetail(profile(), [
+    skill(),
+    skill({
+      id: "skill-foreign",
+      name: "Foreign",
+      description: "Another repository's own",
+      project_id: "project-2",
+    }),
+  ]);
+
+  expect(container.textContent).toContain("Review a diff");
+  expect(container.textContent).not.toContain("Another repository's own");
 });

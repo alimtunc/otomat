@@ -27,6 +27,7 @@ export function AgentProfileConfigurationFields({
                 onChange={(execution) => form.setFieldValue("execution", execution)}
                 profiles={[]}
                 descriptors={descriptors}
+                skills={[]}
                 label="Profile"
               />
             </FieldControl>

@@ -1,12 +1,15 @@
 import type { AgentProfileContract } from "@otomat/domain";
-import { Button, Icon } from "@otomat/ui";
+import { Button, EmptyState, Icon } from "@otomat/ui";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAgentProfiles } from "@web/api/agent-profiles/queries";
 import { useRuntimes } from "@web/api/daemon/queries";
 import { AgentProfileDialog } from "@web/components/agents/agent-profile/dialog/agent-profile-dialog";
 import { AgentProfileListContent } from "@web/components/agents/agent-profile/list/content";
 import { AgentProfileFilters } from "@web/components/agents/agent-profile/list/filters";
-import type { ProfileFilter } from "@web/components/agents/agent-profile/list/profile-filter";
+import {
+  matchesProfileFilter,
+  type ProfileFilter,
+} from "@web/components/agents/agent-profile/list/profile-filter";
 import { SectionHeading } from "@web/components/settings/section-heading";
 import { useState } from "react";
 
@@ -25,7 +28,7 @@ export function AgentProfilesSection() {
     <div>
       <SectionHeading
         title="Agents"
-        description="The agent profiles you define: the runtime each one launches on, the instructions it starts from, and the skills it activates. Detected runtime capabilities live under Reference."
+        description="The global agent profiles you define: the runtime each one launches on, the instructions it starts from, and the user skills it activates. Agents that need a repository's own skills live under Project · Agents."
       />
       <div className="mb-4 flex items-center justify-between gap-3">
         <AgentProfileFilters
@@ -41,8 +44,23 @@ export function AgentProfilesSection() {
       <AgentProfileListContent
         profiles={profiles}
         runtimes={runtimes}
-        filter={filter}
-        onCreate={() => setEditing({ profile: null })}
+        select={(items) => items.filter((profile) => matchesProfileFilter(profile, filter))}
+        empty={
+          <EmptyState
+            icon="bot"
+            variant="inline"
+            title="No agent profiles yet"
+            description="Create a reusable profile with a runtime, instructions and the user skills it activates."
+          />
+        }
+        emptySelection={
+          <EmptyState
+            icon="bot"
+            variant="inline"
+            title="No matching profiles"
+            description="Choose another filter to see your agent profiles."
+          />
+        }
         onEdit={(profile) => setEditing({ profile })}
       />
       {editing === null ? null : (

@@ -14,7 +14,7 @@ import {
   useRuntimeModels,
   useRuntimeProviderOptions,
 } from "@web/api/daemon/queries";
-import { agentChoiceProfile, agentChoiceRuntimeId } from "@web/lib/agent-choice";
+import { agentChoiceProfile, agentChoiceRuntimeId } from "@web/lib/agent/choice";
 import { pickerLevels, type ExecutionLevelsInput } from "@web/lib/execution/levels";
 import {
   scopedModelId,

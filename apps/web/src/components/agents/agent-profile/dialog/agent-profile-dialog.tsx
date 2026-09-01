@@ -1,4 +1,4 @@
-import type { AgentProfileContract } from "@otomat/domain";
+import { isSkillInScope, type AgentProfileContract } from "@otomat/domain";
 import {
   Dialog,
   DialogBody,
@@ -17,11 +17,18 @@ export interface AgentProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   profile: AgentProfileContract | null;
+  projectId?: string;
 }
 
-export function AgentProfileDialog({ open, onOpenChange, profile }: AgentProfileDialogProps) {
+export function AgentProfileDialog({
+  open,
+  onOpenChange,
+  profile,
+  projectId,
+}: AgentProfileDialogProps) {
   const runtimes = useRuntimes();
   const skills = useSkills();
+  const owner = profile === null ? (projectId ?? null) : profile.project_id;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,8 +69,9 @@ export function AgentProfileDialog({ open, onOpenChange, profile }: AgentProfile
               {(skillCatalog) => (
                 <AgentProfileForm
                   profile={profile}
+                  projectId={owner}
                   descriptors={descriptors}
-                  skills={skillCatalog}
+                  skills={skillCatalog.filter((skill) => isSkillInScope(skill.project_id, owner))}
                   onSaved={() => onOpenChange(false)}
                   onCancel={() => onOpenChange(false)}
                 />

@@ -1,10 +1,9 @@
 import type { IconName } from "@otomat/ui";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 
-export type SettingsNavEntry = { label: string; icon: IconName } & (
-  | { to: string }
-  | { href: string }
-);
+export type SettingsNavEntry = { label: string; icon: IconName } &
+  /** `exact` stops a parent entry claiming its own child routes. */
+  ({ to: string; exact?: true } | { href: string });
 
 export interface SettingsNavGroup {
   label: string;
@@ -13,7 +12,11 @@ export interface SettingsNavGroup {
 
 const PROJECT: SettingsNavGroup = {
   label: "Project",
-  entries: [{ to: "/settings/project", label: "This project", icon: "folder-git-2" }],
+  entries: [
+    { to: "/settings/project", label: "This project", icon: "folder-git-2", exact: true },
+    { to: "/settings/project/agents", label: "Agents", icon: "bot" },
+    { to: "/settings/project/skills", label: "Skills", icon: "book" },
+  ],
 };
 
 const GLOBAL_ENTRIES: SettingsNavEntry[] = [

@@ -1,8 +1,8 @@
 import type { ExecutionDefaults } from "@otomat/domain";
 import { useForm } from "@tanstack/react-form";
 import { useSavePullRequestGenerator } from "@web/api/daemon/mutations";
-import { agentChoiceRuntimeId } from "@web/lib/agent-choice";
-import { agentConfigRefusalMessage } from "@web/lib/agent-config-error";
+import { agentChoiceRuntimeId } from "@web/lib/agent/choice";
+import { agentConfigRefusalMessage } from "@web/lib/agent/config-error";
 import { selectionFromStored, storedFromSelection } from "@web/lib/execution/stored";
 import { useState } from "react";
 

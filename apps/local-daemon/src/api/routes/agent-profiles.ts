@@ -24,9 +24,10 @@ import { refusalJson } from "../refusal.js";
 
 const COPY_SUFFIX = " (copy)";
 
-function profileColumns(request: SaveAgentProfileRequest) {
+function profileColumns(request: SaveAgentProfileRequest, projectId: string | null) {
   return {
     name: request.name,
+    project_id: projectId,
     runtime: request.runtime,
     options_json: request.options ?? {},
     model: request.model ?? null,
@@ -55,10 +56,10 @@ function savedProfile(db: Db, id: string) {
   return profile;
 }
 
-/** Validates the runtime, options, model and referenced skills; returns an honest refusal or null. */
-function refuseInvalid(db: Db, request: SaveAgentProfileRequest) {
+function refuseInvalid(db: Db, request: SaveAgentProfileRequest, projectId: string | null) {
   try {
     validateProfileInput(db, {
+      project_id: projectId,
       runtime: request.runtime,
       options: request.options ?? {},
       model: request.model ?? null,
@@ -76,24 +77,27 @@ function refuseInvalid(db: Db, request: SaveAgentProfileRequest) {
 export function createAgentProfileRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();
 
-  routes.get("/", (c) => c.json(readAgentProfiles(deps.db)));
+  routes.get("/", (c) => c.json(readAgentProfiles(deps.db, c.req.query("project_id"))));
 
   routes.post("/", validateJson(saveAgentProfileRequestSchema), (c) => {
     const request = c.req.valid("json");
-    const refusal = refuseInvalid(deps.db, request);
+    const projectId = request.project_id ?? null;
+    const refusal = refuseInvalid(deps.db, request, projectId);
     if (refusal) return refusalJson(c, refusal);
     const id = randomUUID();
-    insertAgentProfile(deps.db, { id, ...profileColumns(request) });
+    insertAgentProfile(deps.db, { id, ...profileColumns(request, projectId) });
     return c.json(savedProfile(deps.db, id), 201);
   });
 
+  // The owning project is fixed at creation: moving one would invalidate the skills it activates.
   routes.patch("/:id", validateJson(saveAgentProfileRequestSchema), (c) => {
     const id = c.req.param("id");
-    if (!getAgentProfile(deps.db, id)) return profileNotFound(c, id);
+    const existing = getAgentProfile(deps.db, id);
+    if (!existing) return profileNotFound(c, id);
     const request = c.req.valid("json");
-    const refusal = refuseInvalid(deps.db, request);
+    const refusal = refuseInvalid(deps.db, request, existing.project_id);
     if (refusal) return refusalJson(c, refusal);
-    updateAgentProfile(deps.db, id, profileColumns(request));
+    updateAgentProfile(deps.db, id, profileColumns(request, existing.project_id));
     return c.json(savedProfile(deps.db, id));
   });
 
@@ -105,6 +109,7 @@ export function createAgentProfileRoutes(deps: ApiDeps): Hono {
     insertAgentProfile(deps.db, {
       id: copyId,
       name: copyName(source.name),
+      project_id: source.project_id,
       runtime: source.runtime,
       options_json: source.options_json,
       model: source.model,

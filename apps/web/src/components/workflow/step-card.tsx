@@ -88,6 +88,7 @@ export function WorkflowStepCard({ plan, index, execution, projectId }: Workflow
           inherited={execution.inherited}
           profiles={execution.agents.profiles}
           descriptors={execution.agents.descriptors}
+          skills={execution.agents.skills}
           label={label}
         />
       </div>

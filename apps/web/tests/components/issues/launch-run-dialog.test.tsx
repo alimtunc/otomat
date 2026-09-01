@@ -87,6 +87,7 @@ vi.mock("@web/api/runs/use-launch-run", () => ({
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
 
 vi.mock("@web/api/daemon/queries", () => ({
+  useProjects: () => ({ data: [], isPending: false, isError: false, isSuccess: true }),
   useRuntimes: () => ({
     data: [
       {
