@@ -12,7 +12,7 @@ describe("project selection store", () => {
 
     expect(projectSelectionStore.state).toBe("other");
     expect(seen).toContain("other");
-    expect(readSelectedProjectId()).toBe("other");
+    expect(readSelectedProjectId("local")).toBe("other");
     subscription.unsubscribe();
   });
 });

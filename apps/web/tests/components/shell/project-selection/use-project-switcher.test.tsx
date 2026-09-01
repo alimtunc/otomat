@@ -1,9 +1,11 @@
 // @vitest-environment happy-dom
+import { readSelectedProjectId } from "@web/components/shell/project-selection/selection";
 import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
 import { act } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { mount, type Mounted } from "#support/mount";
 
 const navigate = vi.fn();
@@ -11,8 +13,11 @@ let pathname = "/issues";
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
-  useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => string }) =>
-    select({ location: { pathname } }),
+  useRouterState: ({
+    select,
+  }: {
+    select: (state: { location: { pathname: string; href: string } }) => string;
+  }) => select({ location: { pathname, href: `${pathname}?view=board` } }),
 }));
 
 vi.mock("@web/api/daemon/queries", () => ({
@@ -47,6 +52,7 @@ afterEach(async () => {
   for (const instance of mounted.splice(0)) await instance.cleanup();
   document.body.replaceChildren();
   window.localStorage.clear();
+  delete window.otomat;
 });
 
 async function renderSwitcher(): Promise<void> {
@@ -87,4 +93,36 @@ it("stays where it is when the picked project has no view of its own yet", async
   await act(async () => select("local:p2"));
 
   expect(navigate).not.toHaveBeenCalled();
+});
+
+it("records the picked project under the host it belongs to", async () => {
+  window.otomat = fakeDesktopBridge();
+  projectTabsStore.setState(() => [{ key: "remote:p9", route: "/runs" }]);
+
+  await renderSwitcher();
+  await act(async () => select("remote:p9"));
+
+  expect(readSelectedProjectId("remote")).toBe("p9");
+  expect(readSelectedProjectId("local")).toBeUndefined();
+});
+
+it("returns to the view it left when the host switch fails", async () => {
+  const bridge = fakeDesktopBridge();
+  window.otomat = {
+    ...bridge,
+    executionHost: {
+      ...bridge.executionHost,
+      select: () => Promise.resolve({ ok: false as const, message: "unreachable" }),
+    },
+  };
+  projectTabsStore.setState(() => [{ key: "remote:p9", route: "/runs" }]);
+
+  await renderSwitcher();
+  await act(async () => {
+    select("remote:p9");
+    await Promise.resolve();
+  });
+
+  expect(navigate).toHaveBeenNthCalledWith(1, { href: "/runs" });
+  expect(navigate).toHaveBeenNthCalledWith(2, { href: "/issues?view=board" });
 });

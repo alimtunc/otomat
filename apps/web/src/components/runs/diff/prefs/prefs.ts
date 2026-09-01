@@ -1,6 +1,6 @@
 import { REVIEW_COMMENT_DESTINATIONS, type ReviewCommentDestination } from "@otomat/domain";
 import { asBoolean, asMember, asRecord } from "@web/lib/coerce";
-import { readStored, writeStored } from "@web/lib/storage";
+import { readStoredJson, writeStored } from "@web/lib/storage";
 
 export type DiffViewMode = "unified" | "split";
 export type DiffBrowserMode = "files" | "tree";
@@ -29,15 +29,7 @@ export const DEFAULT_DIFF_PREFS: DiffPrefs = {
 const PREFS_KEY = "otomat.diff-prefs";
 
 export function readDiffPrefs(storage?: Pick<Storage, "getItem"> | null): DiffPrefs {
-  const raw = readStored(PREFS_KEY, storage);
-  if (raw === null) return DEFAULT_DIFF_PREFS;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return DEFAULT_DIFF_PREFS;
-  }
-  const stored = asRecord(parsed);
+  const stored = readStoredJson(PREFS_KEY, asRecord, storage);
   if (stored === null) return DEFAULT_DIFF_PREFS;
   return {
     mode: asMember(stored.mode, ["unified", "split"] as const) ?? DEFAULT_DIFF_PREFS.mode,

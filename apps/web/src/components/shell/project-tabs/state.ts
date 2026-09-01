@@ -1,6 +1,6 @@
 import { asRecord, asString } from "@web/lib/coerce";
 import { isProjectScopedDetail } from "@web/lib/project-navigation";
-import { readStored, writeStored } from "@web/lib/storage";
+import { readStoredJson, writeStored } from "@web/lib/storage";
 
 const PROJECT_TABS_KEY = "otomat.project-tabs";
 
@@ -9,26 +9,22 @@ export interface StoredProjectTab {
   route: string | null;
 }
 
-export function readStoredProjectTabs(
-  storage?: Pick<Storage, "getItem"> | null,
-): StoredProjectTab[] {
-  const raw = readStored(PROJECT_TABS_KEY, storage);
-  if (raw === null) return [];
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return [];
-  }
-  if (!Array.isArray(parsed)) return [];
+function parseProjectTabs(raw: unknown): StoredProjectTab[] {
+  if (!Array.isArray(raw)) return [];
   const tabs: StoredProjectTab[] = [];
-  for (const entry of parsed) {
+  for (const entry of raw) {
     const record = asRecord(entry);
     const key = asString(record?.["key"]);
     if (key === null || tabs.some((tab) => tab.key === key)) continue;
     tabs.push({ key, route: asString(record?.["route"]) });
   }
   return tabs;
+}
+
+export function readStoredProjectTabs(
+  storage?: Pick<Storage, "getItem"> | null,
+): StoredProjectTab[] {
+  return readStoredJson(PROJECT_TABS_KEY, parseProjectTabs, storage);
 }
 
 export function writeStoredProjectTabs(

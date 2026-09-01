@@ -26,6 +26,7 @@ export function useProjectSwitcher() {
   const hostAlias = remoteHostAlias();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const href = useRouterState({ select: (state) => state.location.href });
   const projectsQuery = useProjects();
   const hostProjects = useHostProjects();
 
@@ -78,9 +79,11 @@ export function useProjectSwitcher() {
       if (destination !== null) void navigate({ href: destination });
       return;
     }
-    const previous = currentProjectId;
+    const rollBack = (): void => {
+      if (destination !== null) void navigate({ href });
+    };
     if (destination !== null) void navigate({ href: destination });
-    writeSelectedProjectId(target.projectId);
+    writeSelectedProjectId(target.hostId, target.projectId);
     void bridge.executionHost
       .select(target.hostId)
       .then((result) => {
@@ -89,11 +92,11 @@ export function useProjectSwitcher() {
           "status" in result &&
           result.status.phase === "error" &&
           result.status.code === "switch_in_progress";
-        if (!concurrent && previous !== undefined) writeSelectedProjectId(previous);
+        if (!concurrent) rollBack();
         toast.error(describeOperationFailure(result));
       })
       .catch((error: unknown) => {
-        if (previous !== undefined) writeSelectedProjectId(previous);
+        rollBack();
         toast.error(error instanceof Error ? error.message : "Switching hosts failed.");
       });
   }

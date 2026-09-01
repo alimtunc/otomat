@@ -36,17 +36,25 @@ export function writeStored(
 
 export type ScopedStorage = Pick<Storage, "getItem" | "setItem">;
 
-/** One key per concern, one bucket per project inside it, so a project's entries never leak into another's. */
-function readBuckets(key: string, storage?: ScopedStorage | null): Record<string, unknown> {
+export function readStoredJson<T>(
+  key: string,
+  parse: (raw: unknown) => T,
+  storage?: Pick<Storage, "getItem"> | null,
+): T {
   const raw = readStored(key, storage);
-  if (raw === null) return {};
+  if (raw === null) return parse(null);
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return {};
+    return parse(null);
   }
-  return asRecord(parsed) ?? {};
+  return parse(parsed);
+}
+
+/** One key per concern, one bucket per project inside it, so a project's entries never leak into another's. */
+function readBuckets(key: string, storage?: ScopedStorage | null): Record<string, unknown> {
+  return readStoredJson(key, (raw) => asRecord(raw) ?? {}, storage);
 }
 
 export function readScoped<T>(
