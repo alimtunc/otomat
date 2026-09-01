@@ -1,6 +1,7 @@
 import type { PullRequestIssueLink } from "@otomat/domain";
 import { Chip, FOCUS_RING } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
+import { IssueLabel } from "@web/components/issues/issue-label";
 
 const EVIDENCE_LABEL = {
   attachment: "Attached",
@@ -21,13 +22,13 @@ export function PullRequestIssueContext({ issue }: { issue: PullRequestIssueLink
       <Link
         to="/issues/$issueId"
         params={{ issueId: issue.id }}
-        title={issue.title}
-        className={`flex min-w-0 items-center gap-1.5 text-xs hover:text-foreground ${FOCUS_RING} focus-visible:rounded-sm`}
+        className={`flex min-w-0 items-center text-xs hover:text-foreground ${FOCUS_RING} focus-visible:rounded-sm`}
       >
-        {issue.identifier === null ? null : (
-          <span className="shrink-0 font-mono text-text-tertiary">{issue.identifier}</span>
-        )}
-        <span className="truncate text-text-secondary">{issue.title}</span>
+        <IssueLabel
+          identifier={issue.identifier}
+          title={issue.title}
+          className="text-text-secondary"
+        />
       </Link>
       <Chip tone="neutral" title={EVIDENCE_TITLE[issue.evidence]}>
         {EVIDENCE_LABEL[issue.evidence]}

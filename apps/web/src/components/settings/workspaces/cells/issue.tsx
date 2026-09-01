@@ -1,5 +1,6 @@
 import { FOCUS_RING } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
+import { IssueLabel } from "@web/components/issues/issue-label";
 import { shortId } from "@web/lib/ids";
 import type { TableCellProps } from "@web/lib/table";
 import type { WorkspaceRow } from "@web/lib/workspace/row";
@@ -11,11 +12,9 @@ export function WorkspaceIssueCell({ row }: TableCellProps<WorkspaceRow, unknown
     <Link
       to="/issues/$issueId"
       params={{ issueId }}
-      title={title ?? undefined}
-      className={`flex min-w-0 items-center gap-1.5 ${FOCUS_RING} focus-visible:rounded-sm`}
+      className={`flex min-w-0 items-center ${FOCUS_RING} focus-visible:rounded-sm`}
     >
-      <span className="font-mono text-xs text-text-tertiary">{identifier ?? shortId(issueId)}</span>
-      <span className="min-w-0 truncate">{title}</span>
+      <IssueLabel identifier={identifier ?? shortId(issueId)} title={title} />
     </Link>
   );
 }
