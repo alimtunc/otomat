@@ -1,10 +1,15 @@
 import { getAttachedPullRequest, getPullRequestForRun, type PullRequestRow } from "@otomat/db";
 
-import { diffSnapshotOrNull, pullRequestDiffSnapshot } from "#git";
+import { diffSnapshotOrNull, treeRangeSnapshot } from "#git";
 
 import { getFixAuthority } from "./authority.js";
 import { getDestinationAvailability } from "./destinations.js";
-import { importedDestinations, importedFixAuthority, pullRequestTrees } from "./pull-request.js";
+import {
+  importedDestinations,
+  importedFixAuthority,
+  pullRequestTrees,
+  runDiffBaseRef,
+} from "./pull-request.js";
 import type { ReviewContext, ReviewSubject, ReviewSubjectRef } from "./types.js";
 
 function runSubject(ctx: ReviewContext, id: string, owner: string): ReviewSubject {
@@ -13,7 +18,8 @@ function runSubject(ctx: ReviewContext, id: string, owner: string): ReviewSubjec
     ledgerRunId: id,
     snapshot: () => {
       const binding = ctx.repositories.forRun(id);
-      return binding === null ? null : diffSnapshotOrNull(binding.service, owner);
+      if (binding === null) return null;
+      return diffSnapshotOrNull(binding.service, owner, runDiffBaseRef(ctx.db, id));
     },
     fixAuthority: () => getFixAuthority(ctx, id),
     destinations: () => getDestinationAvailability(ctx, id),
@@ -30,7 +36,7 @@ function pullRequestSubject(ctx: ReviewContext, row: PullRequestRow): ReviewSubj
       const binding = ctx.repositories.forRepository(row.repository_id);
       if (binding === null) return null;
       const trees = pullRequestTrees(row, binding);
-      return trees === null ? null : pullRequestDiffSnapshot(binding.rootPath, trees);
+      return trees === null ? null : treeRangeSnapshot(binding.rootPath, trees.base, trees.head);
     },
     fixAuthority: () => importedFixAuthority(row),
     destinations: () => importedDestinations(row),

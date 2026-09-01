@@ -1,10 +1,12 @@
-import type { ReviewCommentContract, ReviewTarget } from "@otomat/domain";
+import type { ReviewCommentContract, ReviewTarget, RunDiffScope } from "@otomat/domain";
 import { EmptyState } from "@otomat/ui";
+import { diffScopeEmptyDescription } from "@web/components/runs/diff/scope/label";
 import { DetachedComments } from "@web/components/runs/review/detached-comments";
 import { CenteredState } from "@web/components/shell/centered-state";
 
 export interface DiffEmptyRegionProps {
   target: ReviewTarget;
+  scope: RunDiffScope;
   detached: ReviewCommentContract[];
   onPublish: (commentId: string) => void;
   publishingId: string | null;
@@ -12,6 +14,7 @@ export interface DiffEmptyRegionProps {
 
 export function DiffEmptyRegion({
   target,
+  scope,
   detached,
   onPublish,
   publishingId,
@@ -21,8 +24,8 @@ export function DiffEmptyRegion({
       <CenteredState fill="flex">
         <EmptyState
           icon="git-compare"
-          title="No changes yet"
-          description="The canonical git diff appears once a run produces changes. Diffs are never fabricated."
+          title="No changes in this scope"
+          description={diffScopeEmptyDescription(scope)}
         />
       </CenteredState>
       <DetachedComments

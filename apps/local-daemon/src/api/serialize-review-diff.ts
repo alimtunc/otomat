@@ -14,6 +14,7 @@ export function toReviewDiffResponse(
     diff: diff
       ? {
           base: diff.base,
+          head: diff.head,
           additions: diff.additions,
           deletions: diff.deletions,
           sha: diff.sha,

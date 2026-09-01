@@ -32,8 +32,8 @@ export interface DiffFileBlobs {
 }
 
 export interface CanonicalDiff {
-  /** Sha the diff is computed against (the worktree's fork point). */
   base: string;
+  head: string;
   files: DiffFile[];
   additions: number;
   deletions: number;

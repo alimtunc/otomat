@@ -6,12 +6,13 @@ import {
   getRun,
   insertAgentSession,
   insertPullRequest,
+  type NewPullRequest,
   recordSessionBoundaryError,
   recordSessionPassEnd,
   recordSessionPassStart,
   type RunRow,
 } from "@otomat/db";
-import type { RunDiffScopeSelector } from "@otomat/domain";
+import { BRANCH_DIFF_SCOPE, type RunDiffScopeSelector } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createRepositoryResolver, type GitWorktreeService } from "#git";
@@ -25,7 +26,6 @@ const SESSION_ID = `${RUN_ID}-session`;
 const STEP_ID = `${RUN_ID}-step`;
 const BRANCH = "otomat/run/r-scope";
 const TARGET = { kind: "run", id: RUN_ID } as const;
-const WORKSPACE: RunDiffScopeSelector = { kind: "workspace" };
 const PASS: RunDiffScopeSelector = { kind: "session", session: SESSION_ID };
 const STEP: RunDiffScopeSelector = { kind: "step", step: STEP_ID };
 const PULL_REQUEST: RunDiffScopeSelector = { kind: "pull_request" };
@@ -59,9 +59,24 @@ function addTurn(id: string): string {
 
 function commit(message: string): string {
   git("add", "-A");
-  git("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-m", message);
+  git("commit", "-m", message);
   return git("rev-parse", "HEAD");
 }
+
+const insertRunPullRequest = (
+  pr: Pick<NewPullRequest, "id" | "number" | "base_ref" | "published_head_sha">,
+): void => {
+  insertPullRequest(fix.db, {
+    issue_id: "i1",
+    run_id: RUN_ID,
+    repository_id: "repo-1",
+    status: "open",
+    publication_status: "created",
+    title: "Feature",
+    head_ref: BRANCH,
+    ...pr,
+  });
+};
 
 beforeEach(() => {
   fix = setupDaemonDb();
@@ -84,6 +99,8 @@ beforeEach(() => {
 
   const acquired = worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
   worktreePath = acquired.path;
+  git("config", "user.email", "t@t");
+  git("config", "user.name", "t");
   seedRun(fix.db, {
     runId: RUN_ID,
     repositoryId: "repo-1",
@@ -122,8 +139,8 @@ it("keeps a pass delta stable after a later pass changes the same file", () => {
   const after = review.getDiff(TARGET, PASS).diff;
   expect(after?.sha).toBe(before?.sha);
   expect(after?.files.map((file) => file.path)).toEqual(["notes.md"]);
-  // The workspace has moved on; the pass has not.
-  expect(review.getDiff(TARGET, WORKSPACE).diff?.files.map((f) => f.path)).toEqual([
+  // The branch has moved on; the pass has not.
+  expect(review.getDiff(TARGET, BRANCH_DIFF_SCOPE).diff?.files.map((f) => f.path)).toEqual([
     "notes.md",
     "other.md",
   ]);
@@ -140,7 +157,7 @@ it("includes a pass's commits as well as the work it left uncommitted", () => {
   expect(files).toEqual(["committed.md", "dirty.md"]);
 });
 
-it("reports a pass with no end boundary rather than showing the workspace diff", () => {
+it("reports a pass with no end boundary rather than showing the branch diff", () => {
   capture(false);
   writeFileSync(join(worktreePath, "notes.md"), "alpha\n");
 
@@ -188,7 +205,7 @@ it("diffs a chosen commit against its parent, not against the branch fork point"
   expect(result.diff?.files.map((file) => file.path)).toEqual(["second.md"]);
   expect(result.scope).toMatchObject({ kind: "commit", subject: "second" });
   // The whole branch carries both; the commit scope must not be confused with it.
-  expect(review.getDiff(TARGET, WORKSPACE).diff?.files.map((f) => f.path)).toEqual([
+  expect(review.getDiff(TARGET, BRANCH_DIFF_SCOPE).diff?.files.map((f) => f.path)).toEqual([
     "first.md",
     "second.md",
   ]);
@@ -221,7 +238,7 @@ it("expands context against the trees the scope was taken between", () => {
   capture(false);
   writeFileSync(join(worktreePath, "notes.md"), "alpha\nbeta\n");
   capture(true);
-  // The workspace moves on after the pass; expansion must not follow it.
+  // The branch moves on after the pass; expansion must not follow it.
   writeFileSync(join(worktreePath, "notes.md"), "alpha\nbeta\ngamma\n");
 
   const file = review.getDiff(TARGET, PASS).diff?.files.find((f) => f.path === "notes.md");
@@ -243,7 +260,7 @@ it("reports a run without a repository instead of throwing", () => {
   const bare = getRun(fix.db, "r-bare");
   if (!bare) throw new Error("bare run missing");
 
-  const result = review.getDiff({ kind: "run", id: bare.id }, WORKSPACE);
+  const result = review.getDiff({ kind: "run", id: bare.id }, BRANCH_DIFF_SCOPE);
 
   expect(result.diff).toBeNull();
   expect(result.unavailable).toContain("no git repository");
@@ -281,7 +298,7 @@ it("spans every turn of a step, from the snapshot it entered on to the one it le
   expect(review.getDiff(TARGET, PASS).diff?.files.map((f) => f.path)).toEqual(["first-turn.md"]);
 });
 
-it("reports a step whose last turn has not left a snapshot instead of showing the workspace", () => {
+it("reports a step whose last turn has not left a snapshot instead of showing the branch diff", () => {
   capture(false);
   writeFileSync(join(worktreePath, "done.md"), "one\n");
   capture(true);
@@ -324,7 +341,7 @@ it("gives each successive step of a run only its own changes", () => {
   expect(plan.scope).toMatchObject({ step_name: "Plan", step_number: 1 });
   expect(fixStep.diff?.files.map((file) => file.path)).toEqual(["fix.md"]);
   expect(fixStep.scope).toMatchObject({ step_name: "Fix", step_number: 2 });
-  expect(review.getDiff(target, WORKSPACE).diff?.files.map((f) => f.path)).toEqual([
+  expect(review.getDiff(target, BRANCH_DIFF_SCOPE).diff?.files.map((f) => f.path)).toEqual([
     "fix.md",
     "plan.md",
   ]);
@@ -341,23 +358,23 @@ it("lists a path changed more than once exactly once in every scope that carries
 
   const step = review.getDiff(TARGET, STEP).diff;
   const later = review.getDiff(TARGET, { kind: "session", session: resumed }).diff;
-  const workspace = review.getDiff(TARGET, WORKSPACE).diff;
+  const branchDiff = review.getDiff(TARGET, BRANCH_DIFF_SCOPE).diff;
 
-  for (const diff of [step, later, workspace]) {
+  for (const diff of [step, later, branchDiff]) {
     expect(diff?.files.map((file) => file.path)).toEqual(["shared.md"]);
   }
 });
 
-it("keeps the workspace diff to the branch's own work after a rebase moves its fork point", () => {
+it("keeps the branch diff to the branch's own work after a rebase moves its fork point", () => {
   writeFileSync(join(worktreePath, "feature.md"), "branch work\n");
   commit("feature");
   fix.repo.write("base-move.md", "moved on\n");
   fix.repo.commitAll("base branch moves on");
   git("rebase", "main");
 
-  const workspace = review.getDiff(TARGET, WORKSPACE);
+  const branchDiff = review.getDiff(TARGET, BRANCH_DIFF_SCOPE);
 
-  expect(workspace.diff?.files.map((file) => file.path)).toEqual(["feature.md"]);
+  expect(branchDiff.diff?.files.map((file) => file.path)).toEqual(["feature.md"]);
   expect(review.getBranchCommits(RUN_ID).commits.map((c) => c.subject)).toEqual(["feature"]);
 });
 
@@ -366,9 +383,9 @@ it("still shows a merged cycle's own work once its base branch contains it", () 
   commit("feature");
   fix.repo.git("merge", "--no-ff", "-m", "merge", BRANCH);
 
-  const workspace = review.getDiff(TARGET, WORKSPACE);
+  const branchDiff = review.getDiff(TARGET, BRANCH_DIFF_SCOPE);
 
-  expect(workspace.diff?.files.map((file) => file.path)).toEqual(["feature.md"]);
+  expect(branchDiff.diff?.files.map((file) => file.path)).toEqual(["feature.md"]);
   expect(review.getBranchCommits(RUN_ID).commits.map((c) => c.subject)).toEqual(["feature"]);
 });
 
@@ -379,17 +396,10 @@ it("shows the published head against the branch it targets, not everything the b
   fix.repo.commitAll("base branch moves on");
   git("rebase", "main");
   const published = git("rev-parse", "HEAD");
-  insertPullRequest(fix.db, {
+  insertRunPullRequest({
     id: "pr-scope",
-    issue_id: "i1",
-    run_id: RUN_ID,
-    repository_id: "repo-1",
     number: 79,
-    status: "open",
-    publication_status: "created",
-    title: "Feature",
     base_ref: "main",
-    head_ref: BRANCH,
     published_head_sha: published,
   });
 
@@ -400,20 +410,9 @@ it("shows the published head against the branch it targets, not everything the b
   expect(result.scope).toEqual({ kind: "pull_request", number: 79 });
 });
 
-it("names an unpublished pull request as such rather than answering with its workspace", () => {
+it("names an unpublished pull request as such rather than answering with its branch diff", () => {
   writeFileSync(join(worktreePath, "notes.md"), "alpha\n");
-  insertPullRequest(fix.db, {
-    id: "pr-unpublished",
-    issue_id: "i1",
-    run_id: RUN_ID,
-    repository_id: "repo-1",
-    number: 80,
-    status: "open",
-    publication_status: "created",
-    title: "Feature",
-    base_ref: "main",
-    head_ref: BRANCH,
-  });
+  insertRunPullRequest({ id: "pr-unpublished", number: 80, base_ref: "main" });
 
   const result = review.getDiff(TARGET, PULL_REQUEST);
 
@@ -422,7 +421,7 @@ it("names an unpublished pull request as such rather than answering with its wor
   expect(result.scope).toEqual({ kind: "pull_request", number: 80 });
 });
 
-it("states that a run has no pull request rather than answering with its workspace", () => {
+it("states that a run has no pull request rather than answering with its branch diff", () => {
   writeFileSync(join(worktreePath, "notes.md"), "alpha\n");
 
   const result = review.getDiff(TARGET, PULL_REQUEST);
@@ -430,6 +429,77 @@ it("states that a run has no pull request rather than answering with its workspa
   expect(result.diff).toBeNull();
   expect(result.unavailable).toContain("no pull request");
   expect(result.scope).toEqual({ kind: "pull_request", number: null });
+});
+
+it("names the branch and the base ref its diff spans, and pins a head that holds uncommitted work", () => {
+  writeFileSync(join(worktreePath, "feature.md"), "branch work\n");
+
+  const result = review.getDiff(TARGET, BRANCH_DIFF_SCOPE);
+  commit("feature");
+
+  expect(result.scope).toEqual({ kind: "branch", branch: BRANCH, base_ref: "main" });
+  expect(result.diff?.base).toBe(fix.repo.git("rev-parse", "main").trim());
+  expect(result.diff?.head).toBe(git("rev-parse", "HEAD^{tree}"));
+});
+
+it("measures the branch against the branch its pull request targets, not against its fork base", () => {
+  fix.repo.git("branch", "release", "main");
+  fix.repo.write("after-release.md", "only on main\n");
+  fix.repo.commitAll("main moves past release");
+  git("rebase", "main");
+  writeFileSync(join(worktreePath, "feature.md"), "branch work\n");
+  commit("feature");
+
+  const againstFork = review.getDiff(TARGET, BRANCH_DIFF_SCOPE);
+  insertRunPullRequest({ id: "pr-retargeted", number: 81, base_ref: "release" });
+  const againstTarget = review.getDiff(TARGET, BRANCH_DIFF_SCOPE);
+
+  expect(againstFork.scope).toMatchObject({ base_ref: "main" });
+  expect(againstFork.diff?.files.map((file) => file.path)).toEqual(["feature.md"]);
+  expect(againstTarget.scope).toMatchObject({ base_ref: "release" });
+  expect(againstTarget.diff?.base).toBe(fix.repo.git("rev-parse", "release").trim());
+  expect(againstTarget.diff?.files.map((file) => file.path)).toEqual([
+    "after-release.md",
+    "feature.md",
+  ]);
+});
+
+it("counts a scope's own files and lines, never another scope's", () => {
+  capture(false);
+  writeFileSync(join(worktreePath, "first.md"), "one\n");
+  commit("first");
+  capture(true);
+  writeFileSync(join(worktreePath, "second.md"), "two\nthree\n");
+  const only = commit("second");
+
+  const branchDiff = review.getDiff(TARGET, BRANCH_DIFF_SCOPE).diff;
+  const step = review.getDiff(TARGET, STEP).diff;
+  const one = review.getDiff(TARGET, { kind: "commit", commit: only }).diff;
+
+  expect([branchDiff?.files.length, branchDiff?.additions]).toEqual([2, 3]);
+  expect([step?.files.length, step?.additions]).toEqual([1, 1]);
+  expect([one?.files.length, one?.additions]).toEqual([1, 2]);
+});
+
+it("answers a step that left the tree it entered on with an empty diff, not with a refusal", () => {
+  capture(false);
+  capture(true);
+
+  const result = review.getDiff(TARGET, STEP);
+
+  expect(result.unavailable).toBeNull();
+  expect(result.diff?.files).toEqual([]);
+  expect(result.diff?.additions).toBe(0);
+});
+
+it("answers a commit that changed nothing with an empty diff, not with a refusal", () => {
+  git("commit", "--allow-empty", "-m", "empty");
+
+  const result = review.getDiff(TARGET, { kind: "commit", commit: git("rev-parse", "HEAD") });
+
+  expect(result.unavailable).toBeNull();
+  expect(result.diff?.files).toEqual([]);
+  expect(result.scope).toMatchObject({ kind: "commit", subject: "empty" });
 });
 
 it("refuses a step of another run rather than answering with this one's", () => {

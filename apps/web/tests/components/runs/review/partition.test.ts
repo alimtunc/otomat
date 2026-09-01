@@ -1,14 +1,11 @@
-import type { ReviewDiffContract } from "@otomat/domain";
 import { partitionComments } from "@web/components/runs/review/partition";
 import { expect, it } from "vitest";
 
+import { reviewDiff } from "#support/diff-file";
 import { reviewComment } from "#support/review-comment";
 
-const DIFF: ReviewDiffContract = {
-  base: "base-sha",
+const DIFF = reviewDiff({
   additions: 2,
-  deletions: 0,
-  sha: "diff-sha",
   files: [
     {
       path: "src/a.ts",
@@ -21,7 +18,7 @@ const DIFF: ReviewDiffContract = {
       sha: "sha-a",
     },
   ],
-};
+});
 
 it("anchors an open comment whose (file, diff_sha) matches the live diff", () => {
   const { byLine, detached, anchoredIds } = partitionComments(DIFF, [reviewComment({ id: "c1" })]);

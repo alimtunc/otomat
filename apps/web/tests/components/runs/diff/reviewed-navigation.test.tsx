@@ -9,7 +9,7 @@ import { useDiffInteractions } from "@web/components/runs/diff/use-diff-interact
 import { act, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { diffFile } from "#support/diff-file";
+import { diffFile, reviewDiff } from "#support/diff-file";
 import { reviewedFile } from "#support/reviewed-file";
 import { mountRouted } from "#support/router";
 
@@ -53,7 +53,7 @@ function ReviewedNavigationProbe({
   };
   const interactions = useDiffInteractions({
     target: { kind: "run", id: "run-1" },
-    diff: { base: "base", files: diffFiles, additions: 0, deletions: 0, sha: "diff-sha" },
+    diff: reviewDiff({ files: diffFiles }),
     comments: [],
     reviewedFiles: marks,
     sort: "path",

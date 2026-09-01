@@ -1,8 +1,7 @@
-import { computeCanonicalDiff, readFileBlobs, worktreeStateTree } from "./diff.js";
+import { treeRangeSnapshot, worktreeStateTree } from "./diff.js";
 import { runGit } from "./git-cli.js";
 import { commitParent, commitSummary, hasTree, headSha, revParse } from "./repo.js";
 import type { CommitScope, DiffSnapshot } from "./service-contract.js";
-import { readTreeFile } from "./tree-file.js";
 import type { WorktreeStateCapture } from "./types.js";
 
 // Written, not assumed: the well-known empty-tree sha is hash-algorithm specific,
@@ -15,14 +14,6 @@ export function captureWorktreeState(worktreePath: string): WorktreeStateCapture
   // Resolved before the tree is written, so the pair can never name a head the tree was not built on.
   const head = headSha(worktreePath);
   return { treeSha: worktreeStateTree(worktreePath, head), headSha: head };
-}
-
-function treeRangeSnapshot(repoRoot: string, base: string, tree: string): DiffSnapshot {
-  return {
-    diff: computeCanonicalDiff(repoRoot, base, tree),
-    fileBlobs: (paths) => readFileBlobs(repoRoot, base, tree, paths),
-    readFile: (path, limits) => readTreeFile(repoRoot, tree, path, limits),
-  };
 }
 
 /** Null when git no longer holds one of the two captured trees — a loose boundary tree is prunable. */

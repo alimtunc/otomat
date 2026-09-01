@@ -1,4 +1,4 @@
-import type { DiffFileContract } from "@otomat/domain";
+import type { DiffFileContract, ReviewDiffContract } from "@otomat/domain";
 
 /** Carries a keyword, so a card that is highlighted is distinguishable from one that is not. */
 export function diffPatch(path: string): string {
@@ -24,6 +24,18 @@ export function diffFile(
     binary: false,
     patch: "",
     sha: `sha-${overrides.path}`,
+    ...overrides,
+  };
+}
+
+export function reviewDiff(overrides: Partial<ReviewDiffContract> = {}): ReviewDiffContract {
+  return {
+    base: "base-sha",
+    head: "head-sha",
+    files: [],
+    additions: 0,
+    deletions: 0,
+    sha: "diff-sha",
     ...overrides,
   };
 }

@@ -49,7 +49,8 @@ export function ReviewDiffView({
     );
   }
 
-  const control = scopeControl?.(diffQuery.data.scope);
+  const answered = diffQuery.data.scope;
+  const control = scopeControl?.(answered);
   const diff = diffQuery.data.diff;
   if (diff === null) {
     return control === undefined ? (
@@ -67,6 +68,7 @@ export function ReviewDiffView({
       target={target}
       workspace={workspace}
       scope={scope}
+      answered={answered}
       scopeControl={control}
       diff={diff}
       review={review}

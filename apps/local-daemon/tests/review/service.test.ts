@@ -11,7 +11,7 @@ import {
   updateReviewCommentStatus,
   type ReviewCommentRow,
 } from "@otomat/db";
-import type { CreateReviewCommentRequest } from "@otomat/domain";
+import { BRANCH_DIFF_SCOPE, type CreateReviewCommentRequest } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
@@ -33,8 +33,6 @@ import type { AppendStepInput } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { seedRun } from "../support/seed.js";
-
-const WORKSPACE = { kind: "workspace" } as const;
 
 const RUN_ID = "r-review";
 const SESSION_ID = `${RUN_ID}-session`;
@@ -202,7 +200,7 @@ it("serves the exact base and head blobs of a live diff file", () => {
   const blobs = review.getFileBlobs(runTarget(), {
     path: "notes.md",
     sha: currentAnchor().sha,
-    scope: WORKSPACE,
+    scope: BRANCH_DIFF_SCOPE,
   });
 
   expect(blobs.base).toBeNull();
@@ -211,7 +209,7 @@ it("serves the exact base and head blobs of a live diff file", () => {
 
 it("refuses blobs read against a moved anchor", () => {
   expect(() =>
-    review.getFileBlobs(runTarget(), { path: "notes.md", sha: "moved", scope: WORKSPACE }),
+    review.getFileBlobs(runTarget(), { path: "notes.md", sha: "moved", scope: BRANCH_DIFF_SCOPE }),
   ).toThrow(ReviewAnchorStaleError);
 });
 
@@ -220,7 +218,7 @@ it("refuses a path that is not part of the current diff", () => {
     review.getFileBlobs(runTarget(), {
       path: "absent.md",
       sha: currentAnchor().sha,
-      scope: WORKSPACE,
+      scope: BRANCH_DIFF_SCOPE,
     }),
   ).toThrow(FileNotInDiffError);
 });
@@ -233,7 +231,7 @@ it("reads a modified file's base side from the fork point, not from the worktree
   const blobs = review.getFileBlobs(runTarget(), {
     path: "README.md",
     sha: file.sha,
-    scope: WORKSPACE,
+    scope: BRANCH_DIFF_SCOPE,
   });
 
   expect(blobs.base).toBe("# base\n");

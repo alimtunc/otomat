@@ -5,6 +5,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 
+import { reviewDiff } from "#support/diff-file";
 import { envelope } from "#support/envelope";
 
 const selectWinner = vi.fn();
@@ -20,8 +21,7 @@ vi.mock("@web/api/runs/queries", () => ({
     data: {
       run_id: "run-1",
       computed_at: "2026-07-19T00:00:00.000Z",
-      diff: {
-        base: "base",
+      diff: reviewDiff({
         additions: stepId === "direct" ? 4 : 7,
         deletions: 1,
         sha: `sha-${stepId}`,
@@ -37,7 +37,7 @@ vi.mock("@web/api/runs/queries", () => ({
             sha: `file-${stepId}`,
           },
         ],
-      },
+      }),
     },
   }),
 }));

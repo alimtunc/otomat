@@ -4,6 +4,8 @@ import { RunDiffView } from "@web/components/runs/diff/view";
 import type { ReactNode } from "react";
 import { expect, it, vi } from "vitest";
 
+import { reviewDiff } from "#support/diff-file";
+import { BRANCH_SCOPE } from "#support/diff-scope";
 import type { FakeQueryState } from "#support/fake-query";
 import { mount } from "#support/mount";
 import { reviewDetail } from "#support/review-detail";
@@ -22,8 +24,8 @@ vi.mock("@web/components/shell/use-back-navigation", () => ({
 const DIFF: ReviewDiffResponse = {
   subject_id: "run-1",
   computed_at: "2026-08-12T00:00:00.000Z",
-  diff: { base: "base-sha", files: [], additions: 0, deletions: 0, sha: "diff-sha" },
-  scope: { kind: "workspace" },
+  diff: reviewDiff(),
+  scope: BRANCH_SCOPE,
   unavailable: null,
 };
 
@@ -82,7 +84,7 @@ it("keeps the loaded diff and review on screen when one refresh fails", async ()
   const { container, cleanup } = await mount(<RunDiffView />);
 
   expect(container.textContent).toContain("Couldn’t refresh");
-  expect(container.textContent).toContain("No changes yet");
+  expect(container.textContent).toContain("No changes in this scope");
   expect(container.textContent).not.toContain("Could not load the diff");
   await cleanup();
 });

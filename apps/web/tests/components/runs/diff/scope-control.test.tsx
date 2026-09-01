@@ -5,6 +5,7 @@ import type { RunDiffStep } from "@web/lib/run/diff-steps";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { BRANCH_SCOPE } from "#support/diff-scope";
 import { findLabelled } from "#support/dom-queries";
 import { mount, type Mounted } from "#support/mount";
 
@@ -74,18 +75,25 @@ async function openControl(
 }
 
 it("offers the pull request only once the run has one", async () => {
-  view = await openControl({ kind: "workspace" }, 79);
+  view = await openControl(BRANCH_SCOPE, 79);
 
   expect(findMenuItemStartingWith("Pull request #79")).toBeDefined();
 
   await view.cleanup();
-  view = await openControl({ kind: "workspace" }, null);
+  view = await openControl(BRANCH_SCOPE, null);
 
   expect(findMenuItemStartingWith("Pull request")).toBeUndefined();
 });
 
-it("selects the pull request scope without touching the workspace one", async () => {
-  view = await openControl({ kind: "workspace" }, 79);
+it("names the branch and the base it is measured against on the trigger", async () => {
+  view = await openControl({ ...BRANCH_SCOPE, base_ref: "release" }, null);
+
+  expect(findLabelled("Diff scope: Branch · otomat/run/x")).toBeDefined();
+  expect(findMenuItemStartingWith("Branch")).toBeDefined();
+});
+
+it("selects the pull request scope without touching the branch one", async () => {
+  view = await openControl(BRANCH_SCOPE, 79);
 
   await act(async () => {
     findMenuItemStartingWith("Pull request")?.click();
@@ -112,7 +120,7 @@ it("says the pull request could not be read instead of dropping the choice", asy
   view = await mount(
     <DiffScopeControl
       runId="run-1"
-      scope={{ kind: "workspace" }}
+      scope={BRANCH_SCOPE}
       steps={STEPS}
       onSelect={(selector) => chosen.push(selector)}
     />,

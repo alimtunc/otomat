@@ -1,6 +1,13 @@
 import type { ReviewCommentRow, ReviewedFileRow, ReviewRow } from "@otomat/db";
+import type { RunDiffScope } from "@otomat/domain";
 
 import type { ReviewService } from "#review";
+
+export const BRANCH_SCOPE: RunDiffScope = {
+  kind: "branch",
+  branch: "otomat/run/x",
+  base_ref: "main",
+};
 
 export function reviewRow(overrides: Partial<ReviewRow> = {}): ReviewRow {
   return {
@@ -61,7 +68,7 @@ export function stubReviewService(overrides: Partial<ReviewService> = {}): Revie
     getDiff: () => ({
       computedAt: "2026-07-05T00:00:00.000Z",
       diff: null,
-      scope: { kind: "workspace" },
+      scope: { kind: "branch", branch: null, base_ref: null },
       unavailable: "This run has no worktree, so there is no current diff to show.",
     }),
     getBranchCommits: () => ({ commits: [], unavailable: null }),

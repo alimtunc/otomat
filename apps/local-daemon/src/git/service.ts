@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 
 import { acquireWorktree } from "./acquire.js";
 import { diffInputs, worktreeGitView } from "./diff-inputs.js";
-import { collectChangedFiles, computeCanonicalDiff, readFileBlobs } from "./diff.js";
+import { collectChangedFiles, computeCanonicalDiff, treeRangeSnapshot } from "./diff.js";
 import { WorktreeConflictError, WorktreeNotFoundError } from "./errors.js";
 import { toRecord } from "./record.js";
 import { commitsSince, deleteBranch, fastForward, headSha, isAncestor, revParse } from "./repo.js";
@@ -66,12 +66,12 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       return computeCanonicalDiff(gitCwd, base, tree);
     },
 
-    diffSnapshot(owner) {
-      const { gitCwd, base, tree } = diffInputs(scope, resolve(owner));
+    branchDiff(owner, against) {
+      const inputs = diffInputs(scope, resolve(owner), against);
       return {
-        diff: computeCanonicalDiff(gitCwd, base, tree),
-        fileBlobs: (paths) => readFileBlobs(gitCwd, base, tree, paths),
-        readFile: (path, limits) => readTreeFile(gitCwd, tree, path, limits),
+        branch: inputs.branch,
+        baseRef: inputs.baseRef,
+        snapshot: treeRangeSnapshot(inputs.gitCwd, inputs.base, inputs.tree),
       };
     },
 

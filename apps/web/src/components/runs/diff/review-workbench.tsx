@@ -1,8 +1,9 @@
 import {
-  WORKSPACE_DIFF_SCOPE,
+  BRANCH_DIFF_SCOPE,
   type ReviewDetail,
   type ReviewDiffContract,
   type ReviewTarget,
+  type RunDiffScope,
   type RunDiffScopeSelector,
 } from "@otomat/domain";
 import {
@@ -31,6 +32,7 @@ export interface ReviewWorkbenchProps {
   target: ReviewTarget;
   workspace: { open: boolean; issueId: string | null };
   scope?: RunDiffScopeSelector;
+  answered: RunDiffScope;
   scopeControl?: ReactNode;
   diff: ReviewDiffContract;
   review: ReviewDetail;
@@ -40,7 +42,8 @@ export interface ReviewWorkbenchProps {
 export function ReviewWorkbench({
   target,
   workspace,
-  scope = WORKSPACE_DIFF_SCOPE,
+  scope = BRANCH_DIFF_SCOPE,
+  answered,
   scopeControl,
   diff,
   review,
@@ -99,6 +102,7 @@ export function ReviewWorkbench({
   const emptyRegion = (
     <DiffEmptyRegion
       target={target}
+      scope={answered}
       detached={partition.detached}
       onPublish={commentActions.publish}
       publishingId={fileCommentsInput.publishingId}

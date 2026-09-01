@@ -1,24 +1,20 @@
 // @vitest-environment happy-dom
-import type { ReviewDiffContract } from "@otomat/domain";
 import { DiffFileBrowser } from "@web/components/runs/diff/files/browser";
 import { act } from "react";
 import { describe, expect, it } from "vitest";
 
-import { diffFile } from "#support/diff-file";
+import { diffFile, reviewDiff } from "#support/diff-file";
 import { setInputValue } from "#support/dom-events";
 import { mount } from "#support/mount";
 
-const DIFF: ReviewDiffContract = {
-  base: "base-sha",
+const DIFF = reviewDiff({
   files: [
     diffFile({ path: "src/components/Alpha.tsx" }),
     diffFile({ path: "tests/beta.test.ts" }),
     diffFile({ path: "src/current/Gamma.ts", old_path: "src/legacy/Gamma.ts" }),
   ],
   additions: 3,
-  deletions: 0,
-  sha: "diff-sha",
-};
+});
 
 function visibleFiles(container: HTMLElement): string[] {
   return [

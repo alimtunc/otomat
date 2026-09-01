@@ -10,7 +10,7 @@ import { DiffScopeNotFoundError } from "#review";
 
 import { json, makeApiApp, request } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
-import { stubReviewService } from "../support/review.js";
+import { BRANCH_SCOPE, stubReviewService } from "../support/review.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "run-scope";
@@ -21,12 +21,12 @@ let asked: RunDiffScopeSelector[] = [];
 function appEchoingScope() {
   return makeApiApp(t, {
     review: stubReviewService({
-      getDiff: (_ref, scope = { kind: "workspace" }) => {
+      getDiff: (_ref, scope = { kind: "branch" }) => {
         asked.push(scope);
         return {
           computedAt: "2026-08-16T00:00:00.000Z",
           diff: null,
-          scope: { kind: "workspace" },
+          scope: BRANCH_SCOPE,
           unavailable: "nothing here",
         };
       },
@@ -49,11 +49,11 @@ afterEach(() => {
   t.cleanup();
 });
 
-it("reads the workspace scope when the query names none", async () => {
+it("reads the branch scope when the query names none", async () => {
   const res = await request(appEchoingScope(), `/api/runs/${RUN_ID}/diff`);
 
   expect(res.status).toBe(200);
-  expect(asked).toEqual([{ kind: "workspace" }]);
+  expect(asked).toEqual([{ kind: "branch" }]);
 });
 
 it("passes every named scope through verbatim", async () => {
@@ -71,7 +71,7 @@ it("passes every named scope through verbatim", async () => {
   ]);
 });
 
-it("refuses a scope naming nothing rather than answering with the workspace", async () => {
+it("refuses a scope naming nothing rather than answering with the branch", async () => {
   const app = appEchoingScope();
 
   expect((await request(app, `/api/runs/${RUN_ID}/diff?scope=commit`)).status).toBe(400);
@@ -87,7 +87,7 @@ it("hands back the daemon's own unavailable sentence with a null diff", async ()
 
   expect(body.diff).toBeNull();
   expect(body.unavailable).toBe("nothing here");
-  expect(body.scope).toEqual({ kind: "workspace" });
+  expect(body.scope).toEqual(BRANCH_SCOPE);
 });
 
 it("answers 404 for a scope the run does not have", async () => {

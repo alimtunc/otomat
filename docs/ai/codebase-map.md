@@ -903,25 +903,35 @@ every surface treats a missing boundary as a named absence, never as an empty
 delta.
 
 That boundary is what makes the cockpit's diff scopes possible. `review/scope.ts`
-is the single place a scope becomes a snapshot — `workspace` (fork point →
-current state), `commit` (`commit^` → `commit`, or the empty tree for a root
-commit), `step` (its first pass's start tree → its last pass's end tree),
-`pull_request` (the published or imported head against its base), and `session`
-(one pass's two trees) — so no surface can pair one scope's descriptor with
-another's content. Every diff read carries the scope that answered plus an
-`unavailable` sentence when none could; the reviewer keeps the scope control on
-screen in that state rather than falling back to the workspace diff. Blob reads
-take the same scope, so expanded context always comes from the trees its patch
-was taken between.
+is the single place a scope becomes a snapshot — `branch` (base ref → current
+state), `commit` (`commit^` → `commit`, or the empty tree for a root commit),
+`step` (its first pass's start tree → its last pass's end tree), `pull_request`
+(the published or imported head against its base), and `session` (one pass's two
+trees) — so no surface can pair one scope's descriptor with another's content.
+Every diff read carries the scope that answered plus an `unavailable` sentence
+when none could; the reviewer keeps the scope control on screen in that state
+rather than falling back to the branch diff. Blob reads take the same scope, so
+expanded context always comes from the trees its patch was taken between.
 
-The picker offers `workspace`, `step`, `commit`, and `pull_request` once the run
+`branch` is the default because the question the main view answers is a git one:
+what does this branch currently carry against the base it will land on. That base
+is the pull request's target once one is attached, and the worktree's fork base
+otherwise — `review/pull-request.ts:runDiffBaseRef` decides it, and both
+`review/scope.ts` and `review/subject.ts` read it, so the diff a reviewer sees and
+the diff their comments anchor to are the same `{base, tree}` pair. The scope
+descriptor carries the branch and the base ref, and `CanonicalDiff` carries both
+ends' shas, so a reader can state what was compared instead of inferring it. The
+prompt-context digest keeps the fork base: it answers what the worktree carries,
+not what the branch proposes.
+
+The picker offers `branch`, `step`, `commit`, and `pull_request` once the run
 has one: those are the slices a reviewer chooses between. A step that captured no
 pair of boundaries is listed unselectable rather than hidden, so an absent delta
 reads as an absence. `session` stays a scope without being offered, because a fix
 proof links to the one pass that produced it, and a step that took several turns
 has different per-file shas than any of them.
 
-The workspace fork point is recomputed (`git/diff-inputs.ts`), not read from
+The branch's fork point is recomputed (`git/diff-inputs.ts`), not read from
 `worktrees.base_sha`: rebasing a branch moves where it forks from its base ref,
 and the sha recorded at acquire would then make the diff carry everything the
 base branch gained since — the shape behind a reviewer counting 407 files against
@@ -1000,7 +1010,7 @@ Context expansion reads the real thing rather than guessing around the patch:
 answers with the exact base and head blobs, refusing a moved anchor, a binary
 file, or one past a byte cap instead of shipping a truncated "full file".
 Verification and blobs come from one captured `{base, tree}` snapshot
-(`diffSnapshot`), so the expanded content always matches the patch it is served
+(`branchDiff`), so the expanded content always matches the patch it is served
 with even while the agent keeps writing. The web
 card only hands those blobs to `@git-diff-view` while they belong to the sha it
 is rendering — the query key carries it — because content paired with a stale or

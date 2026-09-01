@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { ReviewDiffContract, ReviewedFileContract } from "@otomat/domain";
+import type { ReviewedFileContract } from "@otomat/domain";
 import { ThemeProvider } from "@otomat/ui";
 import { diffPrefsStore } from "@web/components/runs/diff/prefs/store";
 import { ReviewWorkbench } from "@web/components/runs/diff/review-workbench";
@@ -7,7 +7,7 @@ import { act, useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { diffCardsOf, domRect, overflowLonghandStyle, stubDiffCanvas } from "#support/diff-dom";
-import { diffFile, diffPatch } from "#support/diff-file";
+import { diffFile, diffPatch, reviewDiff } from "#support/diff-file";
 import { mountWithQuery } from "#support/mount";
 import { reviewDetail } from "#support/review-detail";
 import { reviewedFile } from "#support/reviewed-file";
@@ -22,13 +22,10 @@ const CARD = 300;
 const PATHS = ["src/a.ts", "src/b.ts", "src/c.ts", "src/d.ts", "src/e.ts"];
 const TARGET = "src/c.ts";
 
-const DIFF: ReviewDiffContract = {
-  base: "base-sha",
+const DIFF = reviewDiff({
   files: PATHS.map((path) => diffFile({ path, patch: diffPatch(path) })),
   additions: 5,
-  deletions: 0,
-  sha: "diff-sha",
-};
+});
 
 vi.mock("@web/api/reviews/mutations", () => ({
   useAddReviewComment: () => ({ mutateAsync: vi.fn(), isPending: false }),

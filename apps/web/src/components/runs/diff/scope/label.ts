@@ -5,7 +5,7 @@ export function diffScopeSummary(scope: RunDiffScope): string {
   if (scope.kind === "step") return `Step ${scope.step_number} · ${scope.step_name}`;
   if (scope.kind === "session") return `Pass · ${scope.step_name}`;
   if (scope.kind === "pull_request") return pullRequestScopeLabel(scope.number);
-  return "Workspace";
+  return scope.branch === null ? "Branch" : `Branch · ${scope.branch}`;
 }
 
 export function diffScopeDetail(scope: RunDiffScope): string {
@@ -23,7 +23,23 @@ export function diffScopeDetail(scope: RunDiffScope): string {
   if (scope.kind === "pull_request") {
     return "The published head against the branch the pull request targets.";
   }
-  return "Everything the branch currently carries against its fork point, uncommitted work included.";
+  if (scope.branch === null || scope.base_ref === null) {
+    return "No branch could be resolved for this run.";
+  }
+  return `${scope.branch} against ${scope.base_ref}, uncommitted work included.`;
+}
+
+export function diffScopeEmptyDescription(scope: RunDiffScope): string {
+  const name = diffScopeSummary(scope);
+  if (scope.kind === "commit") return `${name} changed no file.`;
+  if (scope.kind === "step") {
+    return `${name} entered and left on the same tree, so it introduced no change.`;
+  }
+  if (scope.kind === "session") return `This pass of ${scope.step_name} introduced no change.`;
+  if (scope.kind === "pull_request") {
+    return `${name} carries no change against the branch it targets.`;
+  }
+  return `This branch carries no change against ${scope.base_ref ?? "its base"} yet.`;
 }
 
 export function stepChoiceLabel(stepName: string, stepNumber: number): string {
