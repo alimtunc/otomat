@@ -8,6 +8,7 @@ export function IssueTitleCell({ row, getValue }: TableCellProps<IssueContract, 
     <Link
       to="/issues/$issueId"
       params={{ issueId: row.original.id }}
+      title={getValue()}
       className={`flex h-full items-center px-3 text-foreground after:absolute after:inset-0 ${FOCUS_RING_INSET}`}
     >
       <span className="truncate">{getValue()}</span>

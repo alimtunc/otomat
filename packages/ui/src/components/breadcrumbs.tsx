@@ -17,6 +17,11 @@ export interface BreadcrumbsProps {
 }
 
 export function Breadcrumbs({ items, className, renderLink }: BreadcrumbsProps) {
+  // Shrinking every crumb proportionally decays the short ones into initials.
+  const shrinking = items.reduce(
+    (longest, item, i) => (item.label.length > (items[longest]?.label.length ?? 0) ? i : longest),
+    0,
+  );
   return (
     <nav
       aria-label="Breadcrumb"
@@ -52,7 +57,11 @@ export function Breadcrumbs({ items, className, renderLink }: BreadcrumbsProps) 
               <ChevronRight aria-hidden className="h-3.25 w-3.25 flex-none text-text-tertiary" />
             ) : null}
             {/* flex blockifies the inline link/text so their `truncate` can actually elide. */}
-            <span aria-current={isCurrent ? "page" : undefined} className="flex min-w-0">
+            <span
+              aria-current={isCurrent ? "page" : undefined}
+              title={i === shrinking ? item.label : undefined}
+              className={cn("flex", i === shrinking ? "min-w-0" : "flex-none")}
+            >
               {content}
             </span>
           </Fragment>

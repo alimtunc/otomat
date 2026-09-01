@@ -1,6 +1,7 @@
 import { FOCUS_RING } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { CountBadge } from "@web/components/issues/count-badge";
+import { IssueLabel } from "@web/components/issues/issue-label";
 import { issueShortId, shortId } from "@web/lib/ids";
 import type { RunIssueGroup } from "@web/lib/run/grouping";
 import { GROUP_HEAD_CELL } from "@web/lib/table";
@@ -23,14 +24,13 @@ export function RunIssueGroupSection({ group, columnCount, children }: RunIssueG
               <Link
                 to="/issues/$issueId"
                 params={{ issueId: group.issueId }}
-                className={`flex min-w-0 items-center gap-2 rounded-sm ${FOCUS_RING}`}
+                className={`flex min-w-0 items-center rounded-sm ${FOCUS_RING}`}
               >
-                <span className="font-mono text-xs text-text-tertiary">
-                  {issue === null ? shortId(group.issueId) : issueShortId(issue)}
-                </span>
-                <span className="truncate text-sm font-medium text-foreground">
-                  {issue === null ? "Issue not loaded" : issue.title}
-                </span>
+                <IssueLabel
+                  identifier={issue === null ? shortId(group.issueId) : issueShortId(issue)}
+                  title={issue === null ? "Issue not loaded" : issue.title}
+                  className="text-sm font-medium text-foreground"
+                />
               </Link>
               <CountBadge count={group.runs.length} tone="neutral" />
             </div>

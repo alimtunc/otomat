@@ -1,6 +1,7 @@
 import type { UsageRunRow } from "@otomat/domain";
 import { FOCUS_RING } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
+import { IssueLabel } from "@web/components/issues/issue-label";
 import type { TableCellProps } from "@web/lib/table";
 
 export function UsageIssueCell({ row }: TableCellProps<UsageRunRow, string>) {
@@ -9,13 +10,13 @@ export function UsageIssueCell({ row }: TableCellProps<UsageRunRow, string>) {
     <Link
       to="/issues/$issueId"
       params={{ issueId: issue_id }}
-      title={issue_title}
-      className={`flex min-w-0 items-center gap-1.5 hover:text-foreground ${FOCUS_RING} focus-visible:rounded-sm`}
+      className={`flex min-w-0 items-center hover:text-foreground ${FOCUS_RING} focus-visible:rounded-sm`}
     >
-      {issue_identifier === null ? null : (
-        <span className="shrink-0 font-mono text-xs text-text-tertiary">{issue_identifier}</span>
-      )}
-      <span className="truncate text-text-secondary">{issue_title}</span>
+      <IssueLabel
+        identifier={issue_identifier}
+        title={issue_title}
+        className="text-text-secondary"
+      />
     </Link>
   );
 }

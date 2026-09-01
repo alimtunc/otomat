@@ -34,11 +34,11 @@ export function RunDiffHeader({
   const fileCount = diff?.files.length ?? 0;
   const hasFiles = fileCount > 0;
   return (
-    <header className="flex h-10.5 flex-none items-center gap-2.5 border-b border-border-subtle px-4.5">
+    <header className="flex h-10.5 flex-none items-center gap-2.5 overflow-hidden border-b border-border-subtle px-4.5">
       {scopeControl}
       {reviewStatus ? <ReviewStatusChip status={reviewStatus} /> : null}
       {hasFiles ? (
-        <span className="text-xs text-text-tertiary">
+        <span className="flex-none text-xs text-text-tertiary">
           {reviewedCount}/{fileCount} reviewed
         </span>
       ) : null}
@@ -47,7 +47,7 @@ export function RunDiffHeader({
           {activePath}
         </span>
       )}
-      <span className="ml-auto flex items-center gap-2.5">
+      <span className="ml-auto flex flex-none items-center gap-2.5">
         {hasFiles ? search : null}
         {hasFiles ? <DiffShortcutsPopover /> : null}
         <DiffPrefsPopover prefs={prefs} onChange={onPrefsChange} browsable={browsable} />
