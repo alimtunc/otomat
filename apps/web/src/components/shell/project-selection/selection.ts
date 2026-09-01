@@ -1,6 +1,7 @@
-import type { ProjectContract } from "@otomat/domain";
+import type { ExecutionHostId, ProjectContract } from "@otomat/domain";
 import type { ProjectSummary } from "@otomat/ui";
-import { readStored, writeStored } from "@web/lib/storage";
+import { asString } from "@web/lib/coerce";
+import { readScoped, writeScoped, type ScopedStorage } from "@web/lib/storage";
 
 const PROJECT_SELECTION_KEY = "otomat.selected-project-id";
 
@@ -9,16 +10,18 @@ export function selectableProjects(projects: ProjectContract[]): ProjectContract
 }
 
 export function readSelectedProjectId(
-  storage?: Pick<Storage, "getItem"> | null,
+  hostId: ExecutionHostId,
+  storage?: ScopedStorage | null,
 ): string | undefined {
-  return readStored(PROJECT_SELECTION_KEY, storage) ?? undefined;
+  return readScoped(PROJECT_SELECTION_KEY, hostId, asString, storage) ?? undefined;
 }
 
 export function writeSelectedProjectId(
+  hostId: ExecutionHostId,
   projectId: string,
-  storage?: Pick<Storage, "setItem"> | null,
+  storage?: ScopedStorage | null,
 ): void {
-  writeStored(PROJECT_SELECTION_KEY, projectId, storage);
+  writeScoped(PROJECT_SELECTION_KEY, hostId, projectId, storage);
 }
 
 export function resolveSelectedProjectId(

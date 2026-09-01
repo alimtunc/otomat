@@ -14,6 +14,9 @@ if (!root) {
 // evaluated — so the app graph is imported only once that session is resolved.
 void openPreviewSession().then(async () => {
   const { Cockpit } = await import("@web/cockpit");
+  const { attachQuerySnapshot } = await import("@web/api/cache-snapshot");
+  const { queryClient } = await import("@web/api/query-client");
+  attachQuerySnapshot(queryClient);
   createRoot(root).render(
     <StrictMode>
       <Cockpit />

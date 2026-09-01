@@ -33,9 +33,19 @@ describe("project selection", () => {
   it("round-trips the selected id through storage for navigation remounts", () => {
     const storage = memoryStorage();
 
-    writeSelectedProjectId("other", storage);
+    writeSelectedProjectId("local", "other", storage);
 
-    expect(readSelectedProjectId(storage)).toBe("other");
+    expect(readSelectedProjectId("local", storage)).toBe("other");
+  });
+
+  it("keeps one selection per host, so returning to a host reopens its own project", () => {
+    const storage = memoryStorage();
+
+    writeSelectedProjectId("local", "local-default", storage);
+    writeSelectedProjectId("remote", "remote-default", storage);
+
+    expect(readSelectedProjectId("local", storage)).toBe("local-default");
+    expect(readSelectedProjectId("remote", storage)).toBe("remote-default");
   });
 
   it("degrades to no preference when storage is unavailable", () => {
@@ -48,7 +58,7 @@ describe("project selection", () => {
       },
     };
 
-    expect(readSelectedProjectId(throwing)).toBeUndefined();
-    expect(() => writeSelectedProjectId("other", throwing)).not.toThrow();
+    expect(readSelectedProjectId("local", throwing)).toBeUndefined();
+    expect(() => writeSelectedProjectId("local", "other", throwing)).not.toThrow();
   });
 });
