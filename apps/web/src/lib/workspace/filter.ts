@@ -31,27 +31,3 @@ export function filterWorkspaces(
     return state && (needle === "" || matchesSearch(row, needle));
   });
 }
-
-export interface WorkspaceRepositoryGroup {
-  repositoryId: string;
-  name: string;
-  path: string;
-  rows: WorkspaceRow[];
-}
-
-export function groupWorkspacesByRepository(
-  rows: readonly WorkspaceRow[],
-): WorkspaceRepositoryGroup[] {
-  const groups = new Map<string, WorkspaceRepositoryGroup>();
-  for (const row of rows) {
-    const group = groups.get(row.repository_id) ?? {
-      repositoryId: row.repository_id,
-      name: row.repository_name,
-      path: row.repository_path,
-      rows: [],
-    };
-    group.rows.push(row);
-    groups.set(row.repository_id, group);
-  }
-  return [...groups.values()];
-}

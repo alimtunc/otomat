@@ -52,9 +52,9 @@ export function createWorkspaceClient(config: DaemonClientConfig) {
     async deleteRepository(repositoryId: string) {
       await deleteJson(config, `/api/repositories/${encodeURIComponent(repositoryId)}`);
     },
-    /** Reads the worktrees this host holds; narrowing to a run answers for that run's cycle alone. */
-    async listWorkspaces(params: { runId?: string } = {}) {
-      const query = queryString(params.runId === undefined ? {} : { run_id: params.runId });
+    /** Reads the worktrees this host holds; narrowing to a run or a project answers for that scope alone. */
+    async listWorkspaces(params: { runId?: string; projectId?: string } = {}) {
+      const query = queryString({ run_id: params.runId, project_id: params.projectId });
       return workspaceInventorySchema.parse(await getJson(config, `/api/workspaces${query}`));
     },
     async reconcileWorkspaces() {
@@ -67,12 +67,18 @@ export function createWorkspaceClient(config: DaemonClientConfig) {
         await postJson(config, `/api/workspaces/${encodeURIComponent(worktreeId)}/cleanup`, {}),
       );
     },
-    async workspaceSettings() {
-      return workspaceSettingsSchema.parse(await getJson(config, "/api/settings/workspaces"));
-    },
-    async setWorkspaceSettings(settings: WorkspaceSettings) {
+    async workspaceSettings(projectId: string) {
       return workspaceSettingsSchema.parse(
-        await putJson(config, "/api/settings/workspaces", settings),
+        await getJson(config, `/api/settings/workspaces${queryString({ project_id: projectId })}`),
+      );
+    },
+    async setWorkspaceSettings(projectId: string, settings: WorkspaceSettings) {
+      return workspaceSettingsSchema.parse(
+        await putJson(
+          config,
+          `/api/settings/workspaces${queryString({ project_id: projectId })}`,
+          settings,
+        ),
       );
     },
   };

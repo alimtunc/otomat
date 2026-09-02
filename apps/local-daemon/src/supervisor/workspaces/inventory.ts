@@ -130,7 +130,7 @@ export function listWorkspaces(
 ): WorkspaceInventory {
   const run = scope.runId === undefined ? undefined : getRun(context.db, scope.runId);
   const holders = cycleHolders(context.db);
-  const entries = listRepositories(context.db)
+  const entries = listRepositories(context.db, { projectId: scope.projectId })
     .filter((repository) => run === undefined || repository.id === run.repository_id)
     .flatMap((repository) => repositoryInventory(context, repository, holders));
   const scoped =

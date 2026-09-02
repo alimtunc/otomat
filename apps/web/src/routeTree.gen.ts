@@ -34,7 +34,6 @@ import { Route as SettingsRuntimesRouteImport } from './routes/settings/runtimes
 import { Route as SettingsSandboxRouteImport } from './routes/settings/sandbox'
 import { Route as SettingsSkillsRouteImport } from './routes/settings/skills'
 import { Route as SettingsWorkflowPresetsRouteImport } from './routes/settings/workflow-presets'
-import { Route as SettingsWorkspacesRouteImport } from './routes/settings/workspaces'
 import { Route as PullRequestsPullRequestIdIndexRouteImport } from './routes/pull-requests/$pullRequestId/index'
 import { Route as PullRequestsPullRequestIdDiffRouteImport } from './routes/pull-requests/$pullRequestId/diff'
 import { Route as PullRequestsPullRequestIdOverviewRouteImport } from './routes/pull-requests/$pullRequestId/overview'
@@ -48,6 +47,7 @@ import { Route as SettingsAgentsProfileIdRouteImport } from './routes/settings/a
 import { Route as SettingsProjectIndexRouteImport } from './routes/settings/project/index'
 import { Route as SettingsProjectAgentsRouteImport } from './routes/settings/project/agents'
 import { Route as SettingsProjectSkillsRouteImport } from './routes/settings/project/skills'
+import { Route as SettingsProjectWorkspacesRouteImport } from './routes/settings/project/workspaces'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -175,11 +175,6 @@ const SettingsWorkflowPresetsRoute = SettingsWorkflowPresetsRouteImport.update({
   path: '/workflow-presets',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
-const SettingsWorkspacesRoute = SettingsWorkspacesRouteImport.update({
-  id: '/workspaces',
-  path: '/workspaces',
-  getParentRoute: () => SettingsRouteRoute,
-} as any)
 const PullRequestsPullRequestIdIndexRoute =
   PullRequestsPullRequestIdIndexRouteImport.update({
     id: '/',
@@ -248,6 +243,12 @@ const SettingsProjectSkillsRoute = SettingsProjectSkillsRouteImport.update({
   path: '/project/skills',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const SettingsProjectWorkspacesRoute =
+  SettingsProjectWorkspacesRouteImport.update({
+    id: '/project/workspaces',
+    path: '/project/workspaces',
+    getParentRoute: () => SettingsRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -271,7 +272,6 @@ export interface FileRoutesByFullPath {
   '/settings/sandbox': typeof SettingsSandboxRoute
   '/settings/skills': typeof SettingsSkillsRoute
   '/settings/workflow-presets': typeof SettingsWorkflowPresetsRoute
-  '/settings/workspaces': typeof SettingsWorkspacesRoute
   '/agents/': typeof AgentsIndexRoute
   '/issues/': typeof IssuesIndexRoute
   '/runs/': typeof RunsIndexRoute
@@ -285,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/settings/agents/$profileId': typeof SettingsAgentsProfileIdRoute
   '/settings/project/agents': typeof SettingsProjectAgentsRoute
   '/settings/project/skills': typeof SettingsProjectSkillsRoute
+  '/settings/project/workspaces': typeof SettingsProjectWorkspacesRoute
   '/pull-requests/$pullRequestId/': typeof PullRequestsPullRequestIdIndexRoute
   '/runs/$runId/': typeof RunsRunIdIndexRoute
   '/settings/agents/': typeof SettingsAgentsIndexRoute
@@ -308,7 +309,6 @@ export interface FileRoutesByTo {
   '/settings/sandbox': typeof SettingsSandboxRoute
   '/settings/skills': typeof SettingsSkillsRoute
   '/settings/workflow-presets': typeof SettingsWorkflowPresetsRoute
-  '/settings/workspaces': typeof SettingsWorkspacesRoute
   '/agents': typeof AgentsIndexRoute
   '/issues': typeof IssuesIndexRoute
   '/runs': typeof RunsIndexRoute
@@ -322,6 +322,7 @@ export interface FileRoutesByTo {
   '/settings/agents/$profileId': typeof SettingsAgentsProfileIdRoute
   '/settings/project/agents': typeof SettingsProjectAgentsRoute
   '/settings/project/skills': typeof SettingsProjectSkillsRoute
+  '/settings/project/workspaces': typeof SettingsProjectWorkspacesRoute
   '/pull-requests/$pullRequestId': typeof PullRequestsPullRequestIdIndexRoute
   '/runs/$runId': typeof RunsRunIdIndexRoute
   '/settings/agents': typeof SettingsAgentsIndexRoute
@@ -350,7 +351,6 @@ export interface FileRoutesById {
   '/settings/sandbox': typeof SettingsSandboxRoute
   '/settings/skills': typeof SettingsSkillsRoute
   '/settings/workflow-presets': typeof SettingsWorkflowPresetsRoute
-  '/settings/workspaces': typeof SettingsWorkspacesRoute
   '/agents/': typeof AgentsIndexRoute
   '/issues/': typeof IssuesIndexRoute
   '/runs/': typeof RunsIndexRoute
@@ -364,6 +364,7 @@ export interface FileRoutesById {
   '/settings/agents/$profileId': typeof SettingsAgentsProfileIdRoute
   '/settings/project/agents': typeof SettingsProjectAgentsRoute
   '/settings/project/skills': typeof SettingsProjectSkillsRoute
+  '/settings/project/workspaces': typeof SettingsProjectWorkspacesRoute
   '/pull-requests/$pullRequestId/': typeof PullRequestsPullRequestIdIndexRoute
   '/runs/$runId/': typeof RunsRunIdIndexRoute
   '/settings/agents/': typeof SettingsAgentsIndexRoute
@@ -393,7 +394,6 @@ export interface FileRouteTypes {
     | '/settings/sandbox'
     | '/settings/skills'
     | '/settings/workflow-presets'
-    | '/settings/workspaces'
     | '/agents/'
     | '/issues/'
     | '/runs/'
@@ -407,6 +407,7 @@ export interface FileRouteTypes {
     | '/settings/agents/$profileId'
     | '/settings/project/agents'
     | '/settings/project/skills'
+    | '/settings/project/workspaces'
     | '/pull-requests/$pullRequestId/'
     | '/runs/$runId/'
     | '/settings/agents/'
@@ -430,7 +431,6 @@ export interface FileRouteTypes {
     | '/settings/sandbox'
     | '/settings/skills'
     | '/settings/workflow-presets'
-    | '/settings/workspaces'
     | '/agents'
     | '/issues'
     | '/runs'
@@ -444,6 +444,7 @@ export interface FileRouteTypes {
     | '/settings/agents/$profileId'
     | '/settings/project/agents'
     | '/settings/project/skills'
+    | '/settings/project/workspaces'
     | '/pull-requests/$pullRequestId'
     | '/runs/$runId'
     | '/settings/agents'
@@ -471,7 +472,6 @@ export interface FileRouteTypes {
     | '/settings/sandbox'
     | '/settings/skills'
     | '/settings/workflow-presets'
-    | '/settings/workspaces'
     | '/agents/'
     | '/issues/'
     | '/runs/'
@@ -485,6 +485,7 @@ export interface FileRouteTypes {
     | '/settings/agents/$profileId'
     | '/settings/project/agents'
     | '/settings/project/skills'
+    | '/settings/project/workspaces'
     | '/pull-requests/$pullRequestId/'
     | '/runs/$runId/'
     | '/settings/agents/'
@@ -683,13 +684,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsWorkflowPresetsRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
-    '/settings/workspaces': {
-      id: '/settings/workspaces'
-      path: '/workspaces'
-      fullPath: '/settings/workspaces'
-      preLoaderRoute: typeof SettingsWorkspacesRouteImport
-      parentRoute: typeof SettingsRouteRoute
-    }
     '/pull-requests/$pullRequestId/': {
       id: '/pull-requests/$pullRequestId/'
       path: '/'
@@ -781,6 +775,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsProjectSkillsRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/settings/project/workspaces': {
+      id: '/settings/project/workspaces'
+      path: '/project/workspaces'
+      fullPath: '/settings/project/workspaces'
+      preLoaderRoute: typeof SettingsProjectWorkspacesRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
   }
 }
 
@@ -795,11 +796,11 @@ interface SettingsRouteRouteChildren {
   SettingsSandboxRoute: typeof SettingsSandboxRoute
   SettingsSkillsRoute: typeof SettingsSkillsRoute
   SettingsWorkflowPresetsRoute: typeof SettingsWorkflowPresetsRoute
-  SettingsWorkspacesRoute: typeof SettingsWorkspacesRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
   SettingsAgentsProfileIdRoute: typeof SettingsAgentsProfileIdRoute
   SettingsProjectAgentsRoute: typeof SettingsProjectAgentsRoute
   SettingsProjectSkillsRoute: typeof SettingsProjectSkillsRoute
+  SettingsProjectWorkspacesRoute: typeof SettingsProjectWorkspacesRoute
   SettingsAgentsIndexRoute: typeof SettingsAgentsIndexRoute
   SettingsProjectIndexRoute: typeof SettingsProjectIndexRoute
 }
@@ -815,11 +816,11 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsSandboxRoute: SettingsSandboxRoute,
   SettingsSkillsRoute: SettingsSkillsRoute,
   SettingsWorkflowPresetsRoute: SettingsWorkflowPresetsRoute,
-  SettingsWorkspacesRoute: SettingsWorkspacesRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   SettingsAgentsProfileIdRoute: SettingsAgentsProfileIdRoute,
   SettingsProjectAgentsRoute: SettingsProjectAgentsRoute,
   SettingsProjectSkillsRoute: SettingsProjectSkillsRoute,
+  SettingsProjectWorkspacesRoute: SettingsProjectWorkspacesRoute,
   SettingsAgentsIndexRoute: SettingsAgentsIndexRoute,
   SettingsProjectIndexRoute: SettingsProjectIndexRoute,
 }

@@ -6,7 +6,12 @@ export function createWorkspaceRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();
 
   routes.get("/", (c) => {
-    return c.json(deps.supervisor.workspaces({ runId: c.req.query("run_id") }));
+    return c.json(
+      deps.supervisor.workspaces({
+        runId: c.req.query("run_id"),
+        projectId: c.req.query("project_id"),
+      }),
+    );
   });
 
   routes.post("/reconcile", async (c) => c.json(await deps.supervisor.reconcileWorkspaces()));

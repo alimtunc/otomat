@@ -20,9 +20,8 @@ export function useReconcileWorkspaces() {
         () => daemon.reconcileWorkspaces(),
         (executionHost) => executionHost.reconcileWorkspaces(hostId),
       ),
-    onSuccess: (report, hostId) => {
+    onSuccess: (_report, hostId) => {
       const keys = hostKeys(hostId);
-      client.setQueryData(keys.workspaces, report.inventory);
       client.invalidateQueries({ queryKey: keys.workspaces });
       client.invalidateQueries({ queryKey: keys.issues });
       client.invalidateQueries({ queryKey: keys.runs });
@@ -53,14 +52,14 @@ export function useCleanupWorkspace() {
   });
 }
 
-export function useSetWorkspaceSettings() {
+export function useSetWorkspaceSettings(projectId: string) {
   const client = useQueryClient();
   const keys = useQueryKeys();
   return useMutation({
-    mutationFn: (settings: WorkspaceSettings) => daemon.setWorkspaceSettings(settings),
+    mutationFn: (settings: WorkspaceSettings) => daemon.setWorkspaceSettings(projectId, settings),
     onSuccess: (settings) => {
-      client.setQueryData(keys.workspaceSettings, settings);
-      client.invalidateQueries({ queryKey: keys.workspaceSettings });
+      client.setQueryData(keys.workspaceSettings(projectId), settings);
+      client.invalidateQueries({ queryKey: keys.workspaceSettings(projectId) });
     },
   });
 }

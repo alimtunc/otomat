@@ -3,9 +3,9 @@ import { useSetWorkspaceSettings } from "@web/api/workspaces/mutations";
 import { useWorkspaceSettings } from "@web/api/workspaces/queries";
 import { AppearanceRow } from "@web/components/settings/appearance-row";
 
-export function AutoDeleteWorkspacesRow() {
-  const settings = useWorkspaceSettings();
-  const save = useSetWorkspaceSettings();
+export function AutoDeleteWorkspacesRow({ projectId }: { projectId: string }) {
+  const settings = useWorkspaceSettings(projectId);
+  const save = useSetWorkspaceSettings(projectId);
 
   if (settings.isError && settings.data === undefined) {
     return (
@@ -18,18 +18,25 @@ export function AutoDeleteWorkspacesRow() {
   }
   return (
     <AppearanceRow
-      label="Automatically delete workspaces after merge"
+      label="Automatically delete this project's workspaces after merge"
       description="A merged canonical pull request removes its clean worktree. Off, the cycle still closes and the workspace waits in Cleanup required."
       control={
         settings.data === undefined ? (
           <Skeleton height={20} width={36} />
         ) : (
-          <Switch
-            checked={settings.data.auto_delete_after_merge}
-            disabled={save.isPending}
-            aria-label="Automatically delete workspaces after merge"
-            onCheckedChange={(auto) => save.mutate({ auto_delete_after_merge: auto })}
-          />
+          <div className="flex items-center gap-2.5">
+            {save.isError ? (
+              <p role="alert" className="text-xs text-danger">
+                Could not save this setting.
+              </p>
+            ) : null}
+            <Switch
+              checked={settings.data.auto_delete_after_merge}
+              disabled={save.isPending}
+              aria-label="Automatically delete this project's workspaces after merge"
+              onCheckedChange={(auto) => save.mutate({ auto_delete_after_merge: auto })}
+            />
+          </div>
         )
       }
     />

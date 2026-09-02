@@ -14,6 +14,7 @@ const PROJECT: SettingsNavGroup = {
   label: "Project",
   entries: [
     { to: "/settings/project", label: "This project", icon: "folder-git-2", exact: true },
+    { to: "/settings/project/workspaces", label: "Workspaces", icon: "layers" },
     { to: "/settings/project/agents", label: "Agents", icon: "bot" },
     { to: "/settings/project/skills", label: "Skills", icon: "book" },
   ],
@@ -29,7 +30,6 @@ const HOST_ENTRIES = [
 
 const EVERY_HOST_ENTRIES: SettingsNavEntry[] = [
   { to: "/settings/repositories", label: "Repositories", icon: "folder" },
-  { to: "/settings/workspaces", label: "Workspaces", icon: "layers" },
   { to: "/settings/host", label: "Execution hosts", icon: "monitor" },
   { to: "/settings/integrations", label: "Integrations", icon: "plug" },
   { to: "/settings/appearance", label: "Appearance", icon: "palette" },

@@ -32,3 +32,14 @@ export function getProject(db: Db, id: string): ProjectRow | undefined {
 export function listProjects(db: Db): ProjectRow[] {
   return db.select().from(projects).orderBy(projects.created_at).all();
 }
+
+export function readAutoDeleteWorkspaces(db: Db, projectId: string): boolean {
+  return getProject(db, projectId)?.auto_delete_workspaces ?? true;
+}
+
+export function writeAutoDeleteWorkspaces(db: Db, projectId: string, autoDelete: boolean): void {
+  db.update(projects)
+    .set(touch({ auto_delete_workspaces: autoDelete }))
+    .where(eq(projects.id, projectId))
+    .run();
+}

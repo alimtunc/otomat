@@ -1,3 +1,4 @@
+import { insertProject } from "@otomat/db";
 import type {
   WorkspaceCleanupResult,
   WorkspaceInventory,
@@ -47,7 +48,7 @@ const INVENTORY: WorkspaceInventory = {
   counts: { active: 0, cleanup_required: 1, stale: 0, missing: 0, unmanaged: 0 },
 };
 
-it("answers the inventory without touching git, and narrows it to one run", async () => {
+it("answers the inventory without touching git, and narrows it to one run or project", async () => {
   const scopes: unknown[] = [];
   const app = makeApiApp(t, {
     supervisor: stubSupervisor({
@@ -60,9 +61,10 @@ it("answers the inventory without touching git, and narrows it to one run", asyn
 
   const all = await json<WorkspaceInventory>(await request(app, "/api/workspaces"));
   await request(app, "/api/workspaces?run_id=r1");
+  await request(app, "/api/workspaces?project_id=p1");
 
   expect(all.counts.cleanup_required).toBe(1);
-  expect(scopes).toEqual([{}, { runId: "r1" }]);
+  expect(scopes).toEqual([{}, { runId: "r1" }, { projectId: "p1" }]);
 });
 
 it("reports what a reconciliation actually did", async () => {
@@ -114,11 +116,13 @@ it("404s a cleanup of a workspace no record holds", async () => {
   expect(await json<{ error: string }>(res)).toMatchObject({ error: "workspace_not_found" });
 });
 
-it("serves the auto-delete setting on by default and persists a change", async () => {
+it("serves a project's auto-delete setting on by default and persists a change", async () => {
   const app = makeApiApp(t);
 
-  const initial = await json<WorkspaceSettings>(await request(app, "/api/settings/workspaces"));
-  const updated = await request(app, "/api/settings/workspaces", {
+  const initial = await json<WorkspaceSettings>(
+    await request(app, "/api/settings/workspaces?project_id=p1"),
+  );
+  const updated = await request(app, "/api/settings/workspaces?project_id=p1", {
     method: "PUT",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ auto_delete_after_merge: false }),
@@ -126,7 +130,31 @@ it("serves the auto-delete setting on by default and persists a change", async (
 
   expect(initial).toEqual({ auto_delete_after_merge: true });
   expect(await json<WorkspaceSettings>(updated)).toEqual({ auto_delete_after_merge: false });
-  expect(await json<WorkspaceSettings>(await request(app, "/api/settings/workspaces"))).toEqual({
-    auto_delete_after_merge: false,
+  expect(
+    await json<WorkspaceSettings>(await request(app, "/api/settings/workspaces?project_id=p1")),
+  ).toEqual({ auto_delete_after_merge: false });
+});
+
+it("keeps each project's auto-delete setting to itself", async () => {
+  insertProject(t.db, { id: "p2", name: "Second", root_path: "/tmp/otomat-p2" });
+  const app = makeApiApp(t);
+
+  await request(app, "/api/settings/workspaces?project_id=p1", {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ auto_delete_after_merge: false }),
   });
+
+  expect(
+    await json<WorkspaceSettings>(await request(app, "/api/settings/workspaces?project_id=p2")),
+  ).toEqual({ auto_delete_after_merge: true });
+});
+
+it("refuses an auto-delete setting no project stands for", async () => {
+  const app = makeApiApp(t);
+
+  const res = await request(app, "/api/settings/workspaces?project_id=p-gone");
+
+  expect(res.status).toBe(404);
+  expect(await json<{ error: string }>(res)).toMatchObject({ error: "project_not_found" });
 });

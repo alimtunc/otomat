@@ -2,6 +2,7 @@ import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  insertProject,
   insertPullRequest,
   markRunAbandoned,
   updateIssueStatus,
@@ -200,9 +201,9 @@ it("refuses to attach a worktree that only looks like one of Otomat's", async ()
   expect(existsSync(lookalike)).toBe(true);
 });
 
-it("keeps the workspace when the host turned automatic deletion off, and still cleans it by hand", async () => {
+it("keeps the workspace when the project turned automatic deletion off, and still cleans it by hand", async () => {
   mergePullRequest();
-  writeAutoDeleteWorkspaces(fix.db, false);
+  writeAutoDeleteWorkspaces(fix.db, "p1", false);
 
   const report = await reconcileWorkspaces(context);
 
@@ -289,6 +290,15 @@ it("counts the maintenance states and narrows to one run's own workspaces", () =
   expect(listWorkspaces(context, { runId: RUN_ID }).entries.map((entry) => entry.path)).toEqual([
     worktreePath,
   ]);
+});
+
+it("answers for the asked project alone, so another project's worktrees never leak in", () => {
+  insertProject(fix.db, { id: "p2", name: "Other", root_path: join(fix.dataDir, "other") });
+
+  expect(listWorkspaces(context, { projectId: "p1" }).entries.map((entry) => entry.path)).toEqual([
+    worktreePath,
+  ]);
+  expect(listWorkspaces(context, { projectId: "p2" }).entries).toEqual([]);
 });
 
 it("answers the same after a restart, and the retry that follows still cleans", async () => {

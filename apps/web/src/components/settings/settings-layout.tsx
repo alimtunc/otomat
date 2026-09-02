@@ -1,3 +1,4 @@
+import { cn } from "@otomat/ui";
 import { Outlet, useMatchRoute } from "@tanstack/react-router";
 import { HostScopeNote } from "@web/components/settings/host-scope-note";
 import { SettingsNav } from "@web/components/settings/settings-nav";
@@ -9,6 +10,8 @@ export function SettingsLayout() {
   const back = useBackNavigation(null);
   const matchRoute = useMatchRoute();
   const hostOwned = hostOwnedSettingsRoutes().some((to) => matchRoute({ to, fuzzy: true }));
+  // The worktree table needs the whole pane.
+  const wide = !!matchRoute({ to: "/settings/project/workspaces" });
   return (
     <RouteShell
       active="settings"
@@ -19,7 +22,7 @@ export function SettingsLayout() {
       <div className="flex h-full min-h-0">
         <SettingsNav />
         <div className="min-w-0 flex-1 overflow-auto">
-          <div className="max-w-190 px-8 py-6.5">
+          <div className={cn("px-8 py-6.5", wide ? null : "max-w-190")}>
             {hostOwned ? <HostScopeNote /> : null}
             <Outlet />
           </div>

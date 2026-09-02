@@ -113,9 +113,9 @@ it("closes the cycle but keeps the worktree while no merged pull request stands 
   expect(branches(fix.repo)).toContain(BRANCH);
 });
 
-it("keeps the worktree when the host turned automatic deletion off", () => {
+it("keeps the worktree when the project turned automatic deletion off", () => {
   seedMergedPullRequest();
-  writeAutoDeleteWorkspaces(fix.db, false);
+  writeAutoDeleteWorkspaces(fix.db, "p1", false);
 
   closeMergedRun(config(), RUN_ID);
 

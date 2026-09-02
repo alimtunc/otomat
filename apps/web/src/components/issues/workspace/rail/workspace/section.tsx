@@ -64,7 +64,7 @@ export function WorkspaceSection({ runId }: { runId: string }) {
                 size="sm"
                 className="mt-1.5 w-full"
                 render={
-                  <Link to="/settings/workspaces">
+                  <Link to="/settings/project/workspaces">
                     <Icon name="layers" aria-hidden />
                     All workspaces
                   </Link>

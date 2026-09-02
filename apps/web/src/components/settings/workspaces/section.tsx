@@ -1,25 +1,32 @@
 import { countWorkspaces, type ExecutionHostDescriptor, type WorkspaceState } from "@otomat/domain";
 import { Icon, Input, Skeleton } from "@otomat/ui";
-import { useHostWorkspaces } from "@web/api/workspaces/queries";
+import { useProjectWorkspaces } from "@web/api/workspaces/queries";
+import { NoProjectSelectedState } from "@web/components/settings/project/no-project-selected-state";
 import { SectionHeading } from "@web/components/settings/section-heading";
 import { AutoDeleteWorkspacesRow } from "@web/components/settings/workspaces/auto-delete-row";
 import { BulkCleanupStrip } from "@web/components/settings/workspaces/bulk-cleanup-strip";
 import { WorkspaceCounters } from "@web/components/settings/workspaces/counters";
 import { WorkspaceHostGroup } from "@web/components/settings/workspaces/host-group";
+import { ProjectQueryBoundary } from "@web/components/shell/project-selection/query-boundary";
+import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
 import { useHostSnapshot } from "@web/components/shell/remote-session/use-host-snapshot";
+import { useActiveHostId, useActiveHostLabel } from "@web/lib/active-host";
 import { DEFAULT_WORKSPACES_FILTER } from "@web/lib/workspace/filter";
-import { useState } from "react";
-
-const LOCAL_ONLY: ExecutionHostDescriptor[] = [{ id: "local", label: "Local", kind: "local" }];
+import { useState, type ReactNode } from "react";
 
 export function WorkspacesSection() {
+  const { projectId, projects } = useSelectedProject();
+  const hostId = useActiveHostId();
+  const hostLabel = useActiveHostLabel();
   const snapshot = useHostSnapshot();
-  const hosts = snapshot.data?.hosts ?? LOCAL_ONLY;
-  const inventories = useHostWorkspaces(hosts);
+  const workspaces = useProjectWorkspaces(projectId);
   const [filter, setFilter] = useState(DEFAULT_WORKSPACES_FILTER);
-  const rows = hosts.flatMap((host, index) =>
-    (inventories[index].data?.entries ?? []).map((entry) => ({ ...entry, host })),
-  );
+  const host: ExecutionHostDescriptor = {
+    id: hostId,
+    label: hostLabel,
+    kind: hostId === "local" ? "local" : "ssh",
+  };
+  const rows = (workspaces.data?.entries ?? []).map((entry) => ({ ...entry, host }));
   const toggleState = (state: WorkspaceState): void => {
     setFilter((current) => ({
       ...current,
@@ -29,24 +36,20 @@ export function WorkspacesSection() {
     }));
   };
 
-  return (
-    <div>
-      <SectionHeading
-        title="Workspaces"
-        description="Every worktree Otomat holds, on every configured host, reconciled against real git state: what is active, what may be deleted, and what Otomat leaves alone."
-      />
+  let content: ReactNode;
+  if (projects.isPending) {
+    content = <Skeleton height={160} />;
+  } else if (projectId === undefined) {
+    content = <NoProjectSelectedState icon="layers" />;
+  } else {
+    content = (
       <div className="flex flex-col gap-4">
         <div className="rounded-lg border border-border-subtle bg-card px-4">
-          <AutoDeleteWorkspacesRow />
+          <AutoDeleteWorkspacesRow projectId={projectId} />
         </div>
-        {snapshot.isError && snapshot.data === undefined ? (
-          <p role="alert" className="text-xs text-danger">
-            Could not read the configured hosts — showing this machine only.
-          </p>
-        ) : null}
         <BulkCleanupStrip rows={rows} />
         <div className="flex flex-wrap items-center gap-2">
-          {inventories.every((host) => host.isPending) ? (
+          {workspaces.isPending ? (
             <Skeleton height={22} width={320} />
           ) : (
             <WorkspaceCounters
@@ -58,23 +61,29 @@ export function WorkspacesSection() {
           <Input
             value={filter.search}
             icon={<Icon name="search" aria-hidden />}
-            placeholder="Search host, issue, branch, path or repository"
+            placeholder="Search issue, branch, path or host"
             aria-label="Search workspaces"
             className="min-w-44 flex-1"
             onChange={(event) => setFilter({ ...filter, search: event.target.value })}
           />
         </div>
-        {hosts.map((host, index) => (
-          <WorkspaceHostGroup
-            key={host.id}
-            host={host}
-            active={host.id === (snapshot.data?.active_id ?? "local")}
-            status={host.kind === "ssh" ? (snapshot.data?.remote_status ?? null) : null}
-            inventory={inventories[index]}
-            filter={filter}
-          />
-        ))}
+        <WorkspaceHostGroup
+          host={host}
+          status={hostId === "local" ? null : (snapshot.data?.remote_status ?? null)}
+          inventory={workspaces}
+          filter={filter}
+        />
       </div>
+    );
+  }
+
+  return (
+    <div>
+      <SectionHeading
+        title="Workspaces"
+        description="The worktrees this project holds on its host, reconciled against real git state."
+      />
+      <ProjectQueryBoundary query={projects}>{content}</ProjectQueryBoundary>
     </div>
   );
 }

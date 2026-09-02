@@ -49,7 +49,7 @@ function groupOf(container: HTMLElement, label: string): string[] {
 it("groups every screen by what owns it, naming the daemon the global one belongs to", async () => {
   const { container } = await renderNav();
 
-  expect(groupOf(container, "Project")).toEqual(["This project", "Agents", "Skills"]);
+  expect(groupOf(container, "Project")).toEqual(["This project", "Workspaces", "Agents", "Skills"]);
   expect(groupOf(container, "Global · Local")).toEqual([
     "Agents",
     "Skills",
@@ -58,7 +58,6 @@ it("groups every screen by what owns it, naming the daemon the global one belong
   ]);
   expect(groupOf(container, "All hosts")).toEqual([
     "Repositories",
-    "Workspaces",
     "Execution hosts",
     "Integrations",
     "Appearance",

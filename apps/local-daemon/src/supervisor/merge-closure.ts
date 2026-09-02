@@ -1,5 +1,6 @@
 import {
   getIssue,
+  getRepository,
   getRun,
   listIssueExecutionEvidence,
   readAutoDeleteWorkspaces,
@@ -56,7 +57,7 @@ function markIssueDone(config: MergeClosureConfig, issueId: string, runId: strin
 
 /** Anything refused here leaves the workspace for the next reconciliation or a manual action. */
 function releaseWorkspace(config: MergeClosureConfig, worktreeId: string | null): void {
-  if (worktreeId === null || !readAutoDeleteWorkspaces(config.db)) return;
+  if (worktreeId === null) return;
   const context = {
     db: config.db,
     dataDir: config.dataDir,
@@ -66,6 +67,8 @@ function releaseWorkspace(config: MergeClosureConfig, worktreeId: string | null)
   };
   const entry = findWorkspaceEntry(context, worktreeId, cycleHolders(config.db));
   if (entry === null || entry.state === "removed" || entry.pull_request?.merged !== true) return;
+  const repository = getRepository(config.db, entry.repository_id);
+  if (!repository || !readAutoDeleteWorkspaces(config.db, repository.project_id)) return;
   const result = cleanupWorkspace(context, entry);
   if (result.outcome !== "cleaned") {
     console.error(
