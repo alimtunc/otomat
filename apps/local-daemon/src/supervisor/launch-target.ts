@@ -1,7 +1,13 @@
 import { getProject, listRepositories, type Db, type IssueRow } from "@otomat/db";
 import type { RunLaunchError, StartRunRequest } from "@otomat/domain";
 
-import { branchExists, isRepositoryRoot, type RepositoryBinding } from "#git";
+import {
+  branchExists,
+  isRepositoryRoot,
+  RemoteBaseError,
+  resolveBaseSha,
+  type RepositoryBinding,
+} from "#git";
 
 import type { SupervisorState } from "./state.js";
 import { issueWorkspace } from "./workspace.js";
@@ -27,6 +33,7 @@ export interface LaunchTarget {
   projectId: string;
   binding: RepositoryBinding;
   baseRef: string;
+  baseSha: string;
 }
 
 /**
@@ -96,6 +103,15 @@ function refuseSecondWorkspace(state: SupervisorState, issue: IssueRow): void {
   );
 }
 
+function launchBaseSha(rootPath: string, baseRef: string, request: StartRunRequest): string {
+  try {
+    return resolveBaseSha(rootPath, baseRef, request.local_base === true);
+  } catch (error) {
+    if (!(error instanceof RemoteBaseError)) throw error;
+    throw new LaunchRefusedError("base_remote_unavailable", error.message, { cause: error });
+  }
+}
+
 /** Every refusal is a typed `LaunchRefusedError` thrown before the launch writes any row. */
 export function resolveLaunchTarget(
   state: SupervisorState,
@@ -112,5 +128,10 @@ export function resolveLaunchTarget(
       `branch "${baseRef}" does not exist in ${binding.rootPath}`,
     );
   }
-  return { projectId, binding, baseRef };
+  return {
+    projectId,
+    binding,
+    baseRef,
+    baseSha: launchBaseSha(binding.rootPath, baseRef, request),
+  };
 }

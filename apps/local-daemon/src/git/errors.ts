@@ -26,3 +26,11 @@ export class GitCommandError extends Error {
     this.name = "GitCommandError";
   }
 }
+
+/** The base a new cycle must fork from could not be resolved. */
+export class RemoteBaseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RemoteBaseError";
+  }
+}

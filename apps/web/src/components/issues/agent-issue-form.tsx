@@ -4,6 +4,7 @@ import { useForm, useStore } from "@tanstack/react-form";
 import { useLaunchRun } from "@web/api/runs/use-launch-run";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
+import { launchBaseFields } from "@web/components/runs/launch/base-request";
 import { LaunchComposer } from "@web/components/runs/launch/launch-composer";
 import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 import { contextRequestFields } from "@web/lib/context/draft";
@@ -50,7 +51,7 @@ export function AgentIssueForm({
       const run = await launch({
         prompt: value.prompt.trim(),
         project_id: target.repository.project_id,
-        base_branch: target.baseBranch,
+        ...launchBaseFields(target),
         ...contextRequestFields({ references, note: "" }),
         ...launchExecution.request,
       });

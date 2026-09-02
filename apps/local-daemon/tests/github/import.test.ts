@@ -1,6 +1,4 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
@@ -27,7 +25,6 @@ let fix: DaemonTestDb;
 let cli: FakeGitHubCli;
 let github: GitHubService;
 let review: ReviewService;
-let remotePath: string;
 let headSha: string;
 let viewedImports: string[] = [];
 let remoteViewed: ViewedFilesResult = { viewerLogin: "octocat", files: [] };
@@ -37,11 +34,6 @@ function git(cwd: string, ...args: string[]): string {
 }
 
 function publishContributorBranch(): string {
-  remotePath = mkdtempSync(join(tmpdir(), "otomat-remote-"));
-  git(remotePath, "init", "--bare", "-b", "main");
-  git(fix.repo.root, "remote", "add", "origin", remotePath);
-  git(fix.repo.root, "push", "origin", "main");
-
   fix.repo.git("checkout", "-b", "contrib/fix");
   fix.repo.write("contributed.txt", "from the contributor\n");
   const sha = fix.repo.commitAll("contributor change");
@@ -99,7 +91,6 @@ beforeEach(() => {
 
 afterEach(() => {
   fix.cleanup();
-  rmSync(remotePath, { recursive: true, force: true });
 });
 
 it("adopts a verified pull request with its evidence and fetches its head read-only", async () => {

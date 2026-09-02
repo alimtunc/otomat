@@ -34,6 +34,8 @@ export type UpdateRepositoryRequest = z.infer<typeof updateRepositoryRequestSche
 export const repositoryBranchesResponseSchema = z.object({
   default_branch: z.string(),
   branches: z.array(z.string()),
+  /** False only for a repository with no git remote, where a launch needs the explicit local-base choice. */
+  has_remote: z.boolean(),
 });
 export type RepositoryBranchesResponse = z.infer<typeof repositoryBranchesResponseSchema>;
 

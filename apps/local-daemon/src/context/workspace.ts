@@ -47,16 +47,16 @@ export function workspaceContext(input: WorkspaceContextInput): ContextWorkspace
   const worktree = binding?.service.get(input.owner);
   const live = worktree !== undefined && existsSync(worktree.path);
   const base = worktree?.baseRef === "" ? null : (worktree?.baseRef ?? null);
-  const commits =
-    live && base !== null
-      ? commitsSince(worktree.path, base, "HEAD").slice(0, CONTEXT_MAX_COMMITS)
-      : [];
   const uncommitted = live ? uncommittedPaths(worktree.path) : [];
   // An archived worktree still diffs from the main repository; only an active one whose directory is gone has nowhere to read.
   const diff =
     binding === null || worktree === undefined || (worktree.status === "active" && !live)
       ? null
       : diffOrNull(binding.service, input.owner);
+  const commits =
+    live && diff !== null
+      ? commitsSince(worktree.path, diff.base, "HEAD").slice(0, CONTEXT_MAX_COMMITS)
+      : [];
   return {
     repository: binding?.rootPath ?? "",
     host: hostname(),

@@ -1,4 +1,5 @@
 import {
+  Checkbox,
   ConfigMenu,
   ConfigMenuChoice,
   ConfigMenuContent,
@@ -39,6 +40,17 @@ export function BaseBranchControl({ target, disabled = false }: BaseBranchContro
           </DropdownMenuRadioGroup>
         </ConfigMenuContent>
       </ConfigMenu>
+      {target.hasRemote ? null : (
+        <label className="flex items-center gap-2 text-xs text-text-secondary">
+          <Checkbox
+            checked={target.localBase}
+            onCheckedChange={(next) => target.setLocalBase(next === true)}
+            disabled={disabled}
+          />
+          Fork from the local {target.baseBranch} — this repository has no remote to read a fresh
+          base from.
+        </label>
+      )}
       {/* Inline, not in the trigger's tooltip: the failure disables that trigger, and a disabled button never opens one. */}
       {target.branchesFailed ? (
         <p role="alert" className="text-xs text-danger">

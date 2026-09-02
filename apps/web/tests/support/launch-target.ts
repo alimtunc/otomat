@@ -24,6 +24,9 @@ export function readyLaunchTarget(): ReadyLaunchTarget {
     branches: ["main", "develop"],
     branchesPending: false,
     branchesFailed: false,
+    hasRemote: true,
+    localBase: false,
+    setLocalBase: vi.fn(),
   };
 }
 
@@ -32,7 +35,11 @@ export function repositoriesQueryResult(rows: RepositoryContract[] = [repository
 }
 
 export function repositoryBranchesQueryResult(
-  branches: RepositoryBranchesResponse = { default_branch: "main", branches: ["main", "develop"] },
+  branches: RepositoryBranchesResponse = {
+    default_branch: "main",
+    branches: ["main", "develop"],
+    has_remote: true,
+  },
 ) {
   return { data: branches, isPending: false, isError: false, isSuccess: true, refetch: vi.fn() };
 }

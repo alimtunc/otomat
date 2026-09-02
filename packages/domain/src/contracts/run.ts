@@ -87,6 +87,7 @@ export const RUN_LAUNCH_ERRORS = [
   "repository_required",
   "repository_unavailable",
   "base_branch_not_found",
+  "base_remote_unavailable",
   "worktree_unavailable",
   "issue_workspace_open",
   "launches_held",
@@ -114,6 +115,8 @@ export const startRunRequestSchema = z
     project_id: z.string().min(1).optional(),
     /** Branch the run's dedicated worktree forks from; absent uses the repository's default branch. */
     base_branch: z.string().trim().min(1).optional(),
+    /** Fork from the local base branch; honored only by a repository that has no remote to read a fresh base from. */
+    local_base: z.boolean().optional(),
     /** Runtime adapter id; the daemon validates it against its registry and rejects unavailable runtimes. Steps may override it per step via `plan.steps[].agent`. */
     runtime: z.string().min(1).optional(),
     /** Agent profile resolved and frozen for the run default; per-node `profile_id` overrides it. Takes precedence over `runtime`. */

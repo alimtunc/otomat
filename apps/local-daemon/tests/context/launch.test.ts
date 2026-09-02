@@ -30,6 +30,7 @@ beforeEach(() => {
     .run();
   fix.repo.write("src/parser.ts", "export const parse = () => 1;\n");
   fix.repo.commitAll("add the parser");
+  fix.repo.git("push", "--quiet", "origin", "main");
 });
 
 afterEach(() => {

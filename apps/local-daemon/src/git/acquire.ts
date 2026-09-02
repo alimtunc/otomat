@@ -53,7 +53,7 @@ export function acquireWorktree(ctx: AcquireContext, input: AcquireWorktreeInput
   }
 
   const baseRef = input.baseRef ?? ctx.defaultBranch;
-  const baseSha = revParse(repoRoot, baseRef);
+  const baseSha = input.baseSha ?? revParse(repoRoot, baseRef);
   mkdirSync(ctx.worktreesRoot, { recursive: true });
   try {
     addWorktree(repoRoot, { worktreePath: path, branch: input.branch, baseRef: baseSha });

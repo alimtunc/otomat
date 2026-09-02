@@ -25,6 +25,9 @@ export type LaunchTargetState =
       branches: string[];
       branchesPending: boolean;
       branchesFailed: boolean;
+      hasRemote: boolean;
+      localBase: boolean;
+      setLocalBase: (local: boolean) => void;
     };
 
 export type ReadyLaunchTarget = Extract<LaunchTargetState, { status: "ready" }>;
@@ -33,6 +36,7 @@ export function useLaunchTarget(projectId: string): LaunchTargetState {
   const repositories = useRepositories(projectId);
   const [chosenId, setChosenId] = useState<string | null>(null);
   const [branchOverride, setBranchOverride] = useState<string | null>(null);
+  const [localBase, setLocalBase] = useState(false);
   const known = repositories.data ?? [];
   const usable = known.filter((entry) => entry.available);
   const chosen = usable.find((entry) => entry.id === chosenId) ?? null;
@@ -57,6 +61,7 @@ export function useLaunchTarget(projectId: string): LaunchTargetState {
   const fallback = branches.data?.default_branch ?? resolved.default_branch;
   const picked =
     branchOverride !== null && available.includes(branchOverride) ? branchOverride : fallback;
+  const hasRemote = branches.data?.has_remote ?? true;
 
   return {
     status: "ready",
@@ -66,5 +71,8 @@ export function useLaunchTarget(projectId: string): LaunchTargetState {
     branches: available,
     branchesPending: branches.isPending,
     branchesFailed: branches.isError,
+    hasRemote,
+    localBase: localBase && !hasRemote,
+    setLocalBase,
   };
 }
