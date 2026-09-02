@@ -4,6 +4,7 @@ import type { useWorkflowPresets } from "@web/api/workflow-presets/queries";
 import { WorkflowPresetRow } from "@web/components/settings/workflow-presets/row";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { QueryList } from "@web/components/shell/query-list";
+import { useActiveHostLabel } from "@web/lib/active-host";
 import { PRESET_SCOPE_LABEL } from "@web/lib/workflow/preset";
 
 export interface WorkflowPresetListProps {
@@ -46,6 +47,7 @@ function ScopeSection({
 }
 
 export function WorkflowPresetList({ presets, projectId, onEdit }: WorkflowPresetListProps) {
+  const hostLabel = useActiveHostLabel();
   return (
     <QueryList
       query={presets}
@@ -57,7 +59,7 @@ export function WorkflowPresetList({ presets, projectId, onEdit }: WorkflowPrese
         <EmptyState
           icon="workflow"
           variant="inline"
-          title="No workflow preset yet"
+          title={`No workflow preset on ${hostLabel} yet`}
           description="Save a workflow you keep rebuilding — its steps, their dependencies, the agent each one runs on and its static instructions."
         />
       }

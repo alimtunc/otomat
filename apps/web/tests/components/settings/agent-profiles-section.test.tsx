@@ -79,10 +79,10 @@ it("lists the profiles the user defined, with their instructions and skill count
   expect(link?.getAttribute("href")).toBe("/settings/agents/profile-1");
 });
 
-it("offers a first profile instead of a catalog of agents nobody created", async () => {
+it("offers a first profile, naming the host whose catalog is the empty one", async () => {
   const { container } = await renderSection();
 
-  expect(container.textContent).toContain("No agent profiles yet");
+  expect(container.textContent).toContain("No agent profile on Local yet");
   expect(findButton("New profile")).toBeDefined();
 });
 

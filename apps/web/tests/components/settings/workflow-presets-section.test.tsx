@@ -58,10 +58,10 @@ async function renderSection() {
   return mounted;
 }
 
-it("offers a first preset when the library is empty", async () => {
+it("offers a first preset when the library is empty, naming whose library it is", async () => {
   await renderSection();
 
-  expect(document.body.textContent).toContain("No workflow preset yet");
+  expect(document.body.textContent).toContain("No workflow preset on Local yet");
   expect(findButton("New preset")).toBeDefined();
 });
 

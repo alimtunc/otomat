@@ -45,3 +45,12 @@ export function useActiveHostId(): ExecutionHostId {
 export function useRemoteHostAlias(): string | null {
   return remoteHostAlias(useActiveHostId());
 }
+
+/** Not a hook, so a refusal composed outside React still names the host that did not answer. */
+export function activeHostLabel(hostId: ExecutionHostId = activeExecutionHostId()): string {
+  return hostId === "remote" ? (remoteHostAlias(hostId) ?? "Remote host") : "Local";
+}
+
+export function useActiveHostLabel(): string {
+  return activeHostLabel(useActiveHostId());
+}

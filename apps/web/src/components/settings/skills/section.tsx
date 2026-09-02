@@ -1,7 +1,9 @@
 import { SectionHeading } from "@web/components/settings/section-heading";
 import { SkillCatalogPanel } from "@web/components/settings/skills/catalog-panel";
+import { useActiveHostLabel } from "@web/lib/active-host";
 
 export function SkillsSection() {
+  const hostLabel = useActiveHostLabel();
   return (
     <div>
       <SectionHeading
@@ -10,8 +12,8 @@ export function SkillsSection() {
       />
       <SkillCatalogPanel
         owner={null}
-        emptyTitle="No skills found"
-        emptyDescription="Otomat scans ~/.claude/skills for your own skills. Add a SKILL.md there, then rescan."
+        emptyTitle={`No skills on ${hostLabel}`}
+        emptyDescription={`Otomat scans ~/.claude/skills on ${hostLabel} for your own skills. Add a SKILL.md there, then rescan.`}
       />
     </div>
   );

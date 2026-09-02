@@ -19,18 +19,23 @@ const PROJECT: SettingsNavGroup = {
   ],
 };
 
-const GLOBAL_ENTRIES: SettingsNavEntry[] = [
+/** Read from and written to the daemon currently answering, and to no other. */
+const HOST_ENTRIES = [
   { to: "/settings/agents", label: "Agents", icon: "bot" },
   { to: "/settings/skills", label: "Skills", icon: "book" },
+  { to: "/settings/execution", label: "Execution defaults", icon: "sliders-horizontal" },
+  { to: "/settings/workflow-presets", label: "Workflow presets", icon: "workflow" },
+] satisfies SettingsNavEntry[];
+
+const EVERY_HOST_ENTRIES: SettingsNavEntry[] = [
   { to: "/settings/repositories", label: "Repositories", icon: "folder" },
   { to: "/settings/workspaces", label: "Workspaces", icon: "layers" },
   { to: "/settings/host", label: "Execution hosts", icon: "monitor" },
   { to: "/settings/integrations", label: "Integrations", icon: "plug" },
-  { to: "/settings/execution", label: "Execution defaults", icon: "sliders-horizontal" },
-  { to: "/settings/workflow-presets", label: "Workflow presets", icon: "workflow" },
   { to: "/settings/appearance", label: "Appearance", icon: "palette" },
 ];
 
+/** The desktop shell's own test data: a reset refuses while a remote host is active. */
 const SANDBOX_ENTRY: SettingsNavEntry = {
   to: "/settings/sandbox",
   label: "Sandbox",
@@ -46,8 +51,17 @@ const REFERENCE: SettingsNavGroup = {
   ],
 };
 
-export function settingsNavGroups(): SettingsNavGroup[] {
-  const global =
-    desktopBridge()?.preview === true ? [...GLOBAL_ENTRIES, SANDBOX_ENTRY] : GLOBAL_ENTRIES;
-  return [PROJECT, { label: "Global", entries: global }, REFERENCE];
+export function hostOwnedSettingsRoutes(): string[] {
+  return HOST_ENTRIES.map((entry) => entry.to);
+}
+
+export function settingsNavGroups(hostLabel: string): SettingsNavGroup[] {
+  const everyHost =
+    desktopBridge()?.preview === true ? [...EVERY_HOST_ENTRIES, SANDBOX_ENTRY] : EVERY_HOST_ENTRIES;
+  return [
+    PROJECT,
+    { label: `Global · ${hostLabel}`, entries: HOST_ENTRIES },
+    { label: "All hosts", entries: everyHost },
+    REFERENCE,
+  ];
 }
