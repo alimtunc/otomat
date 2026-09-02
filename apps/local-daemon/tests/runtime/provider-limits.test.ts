@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ClaudeRuntimeAdapter } from "#runtime/providers/claude/adapter";
 import { claudeProviderLimit } from "#runtime/providers/claude/limits";
@@ -31,7 +31,27 @@ const input = (cwd: string) => runtimeRunInput({ run_dir: worktree, cwd });
 /** The epoch the `claude-usage-limit` fixture prints, as an instant. */
 const FIXTURE_RESET = new Date(4_102_444_800 * 1000).toISOString();
 
+const LOCAL_ZONE = "America/New_York";
+const FOREIGN_ZONE = "Asia/Tokyo";
+
+const refusedAt = (now: string, result: string) => {
+  vi.setSystemTime(new Date(now));
+  return claudeProviderLimit({ subtype: "error_during_execution", result });
+};
+
 describe("claudeProviderLimit", () => {
+  beforeEach(() => {
+    vi.stubEnv("TZ", LOCAL_ZONE);
+    // Only a process that re-resolves its zone can tell the local branch from the UTC one.
+    expect(Intl.DateTimeFormat().resolvedOptions().timeZone).toBe(LOCAL_ZONE);
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
+
   it("reads the reset the CLI printed next to the limit it reported", () => {
     expect(
       claudeProviderLimit({
@@ -59,8 +79,124 @@ describe("claudeProviderLimit", () => {
     ).toBe(new Date(1_600_000_000 * 1000).toISOString());
   });
 
+  it("reports the session limit the CLI phrased in prose, with the clock it named", () => {
+    expect(
+      refusedAt("2026-09-02T14:00:00.000Z", "You've hit your session limit · resets 6:10pm (UTC)"),
+    ).toEqual({
+      reason: "You've hit your session limit · resets 6:10pm (UTC)",
+      resume_at: "2026-09-02T18:10:59.999Z",
+    });
+  });
+
+  it("reads the refusal out of the errors a failed turn carries instead of a result", () => {
+    vi.setSystemTime(new Date("2026-09-02T14:00:00.000Z"));
+
+    expect(
+      claudeProviderLimit({
+        subtype: "error_during_execution",
+        errors: ["You've hit your session limit · resets 6:10pm (UTC)"],
+      }),
+    ).toEqual({
+      reason: "You've hit your session limit · resets 6:10pm (UTC)",
+      resume_at: "2026-09-02T18:10:59.999Z",
+    });
+  });
+
+  it("waits out the named minute rather than a whole day when the reset is inside it", () => {
+    expect(
+      refusedAt("2026-09-02T18:10:20.000Z", "You've hit your session limit · resets 6:10pm (UTC)")
+        ?.resume_at,
+    ).toBe("2026-09-02T18:10:59.999Z");
+  });
+
+  it("rolls a whole-hour reset that has already passed today over to tomorrow", () => {
+    expect(
+      refusedAt("2026-09-02T23:30:00.000Z", "You've hit your session limit · resets 1am (UTC)")
+        ?.resume_at,
+    ).toBe("2026-09-03T01:00:59.999Z");
+  });
+
+  it("reads noon and midnight as the hours the CLI meant by them", () => {
+    expect(
+      refusedAt("2026-09-02T14:00:00.000Z", "You've hit your session limit · resets 12am (UTC)")
+        ?.resume_at,
+    ).toBe("2026-09-03T00:00:59.999Z");
+    expect(
+      refusedAt("2026-09-02T09:00:00.000Z", "You've hit your session limit · resets 12pm (UTC)")
+        ?.resume_at,
+    ).toBe("2026-09-02T12:00:59.999Z");
+  });
+
+  it("reads a reset the CLI stamped with its own zone, which is this daemon's", () => {
+    expect(
+      refusedAt(
+        "2026-09-02T14:00:00.000Z",
+        `You've hit your session limit · resets 6:10pm (${LOCAL_ZONE})`,
+      )?.resume_at,
+    ).toBe("2026-09-02T22:10:59.999Z");
+  });
+
+  it("reads a reset the CLI left unqualified in that same zone", () => {
+    expect(
+      refusedAt("2026-09-02T09:00:00.000Z", "You've hit your session limit · resets 11:30pm")
+        ?.resume_at,
+    ).toBe("2026-09-03T03:30:59.999Z");
+  });
+
+  it("reports no deadline when the reset is in a zone this process cannot place", () => {
+    expect(
+      refusedAt(
+        "2026-09-02T14:00:00.000Z",
+        `You've hit your session limit · resets 6:10pm (${FOREIGN_ZONE})`,
+      ),
+    ).toEqual({
+      reason: `You've hit your session limit · resets 6:10pm (${FOREIGN_ZONE})`,
+      resume_at: null,
+    });
+  });
+
+  it("reports no deadline when the CLI dated the reset instead of clocking it", () => {
+    expect(
+      refusedAt(
+        "2026-09-02T14:00:00.000Z",
+        "You've hit your weekly limit · resets Sep 4, 6:10pm (UTC)",
+      )?.resume_at,
+    ).toBeNull();
+  });
+
+  it("reports no deadline when the clock names no real hour", () => {
+    expect(
+      refusedAt("2026-09-02T14:00:00.000Z", "You've hit your session limit · resets 13pm (UTC)")
+        ?.resume_at,
+    ).toBeNull();
+  });
+
+  it("recognises a billing refusal the CLI never phrased as hitting a limit", () => {
+    expect(
+      claudeProviderLimit({
+        subtype: "error_during_execution",
+        errors: ["spend limit reached (daily; resets 2026-08-08 00:00 UTC) — request an increase"],
+      }),
+    ).toEqual({
+      reason: "spend limit reached (daily; resets 2026-08-08 00:00 UTC) — request an increase",
+      resume_at: null,
+    });
+  });
+
+  it("still recognises the limit code the API returns with no prose around it", () => {
+    expect(
+      claudeProviderLimit({
+        subtype: "error",
+        result: 'API Error: 429 {"type":"rate_limit_error"}',
+      }),
+    ).not.toBeNull();
+  });
+
   it("leaves a failure the model itself caused alone", () => {
     expect(claudeProviderLimit({ subtype: "error", result: "tool call failed" })).toBeNull();
+    expect(
+      claudeProviderLimit({ subtype: "error", result: "fixed the smart quotation marks" }),
+    ).toBeNull();
   });
 });
 
