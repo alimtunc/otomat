@@ -27,7 +27,9 @@ vi.mock("@tanstack/react-router", () => ({
     select({ location }),
 }));
 
-vi.mock("@web/api/inbox/queries", () => ({ useInbox: () => ({ data: { entries } }) }));
+vi.mock("@web/components/shell/project-tabs/use-open-host-inboxes", () => ({
+  useOpenHostInboxes: () => [{ host: "local", entries }],
+}));
 
 vi.mock("@web/components/shell/project-selection/use-project-switcher", () => ({
   useProjectSwitcher: () => ({ projects, currentSwitcherId, selectProject }),

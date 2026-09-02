@@ -9,18 +9,19 @@ import {
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
 import { seedIssueRun } from "@web/api/runs/seed/run";
+import { useQueryKeys } from "@web/api/use-query-keys";
 import { describeRunWait } from "@web/lib/run/wait-copy";
 
 function useStartRun() {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: (request: StartRunRequest) => daemon.startRun(request),
     onSuccess: (launched) => {
-      seedIssueRun(client, launched.run);
-      client.invalidateQueries({ queryKey: queryKeys.issues });
-      client.invalidateQueries({ queryKey: queryKeys.runs });
+      seedIssueRun(client, keys, launched.run);
+      client.invalidateQueries({ queryKey: keys.issues });
+      client.invalidateQueries({ queryKey: keys.runs });
     },
   });
 }

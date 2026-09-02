@@ -12,33 +12,40 @@ import {
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
+import type { HostQueryKeys } from "@web/api/query-keys";
 import { seedContribution } from "@web/api/runs/seed/contribution";
 import { seedIssueRun } from "@web/api/runs/seed/run";
+import { useQueryKeys } from "@web/api/use-query-keys";
 import { contributionErrorMessage } from "@web/lib/run/contribution";
 
-export function invalidateRunCycleCaches(client: QueryClient, runId: string): void {
-  client.invalidateQueries({ queryKey: queryKeys.run(runId) });
-  client.invalidateQueries({ queryKey: queryKeys.runs });
-  client.invalidateQueries({ queryKey: queryKeys.issues });
-  client.invalidateQueries({ queryKey: queryKeys.activity });
-  client.invalidateQueries({ queryKey: queryKeys.inbox });
+export function invalidateRunCycleCaches(
+  client: QueryClient,
+  keys: HostQueryKeys,
+  runId: string,
+): void {
+  client.invalidateQueries({ queryKey: keys.run(runId) });
+  client.invalidateQueries({ queryKey: keys.runs });
+  client.invalidateQueries({ queryKey: keys.issues });
+  client.invalidateQueries({ queryKey: keys.activity });
+  client.invalidateQueries({ queryKey: keys.inbox });
 }
 
 export function useAbortRun(runId: string) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: () => daemon.abortRun(runId),
-    onSuccess: () => invalidateRunCycleCaches(client, runId),
+    onSuccess: () => invalidateRunCycleCaches(client, keys, runId),
     onError: () => toast.error("Could not cancel this run — is the daemon running?"),
   });
 }
 
 export function useResumeRun(runId: string) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: () => daemon.resumeRun(runId),
-    onSuccess: () => invalidateRunCycleCaches(client, runId),
+    onSuccess: () => invalidateRunCycleCaches(client, keys, runId),
     onError: (error) => toast.error(resumeErrorMessage(error)),
   });
 }
@@ -54,12 +61,13 @@ function resumeErrorMessage(error: unknown): string {
 
 export function useScheduleProviderResume(runId: string) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: (resumeAt: string | null) =>
       daemon.scheduleProviderResume(runId, { resume_at: resumeAt }),
     onSuccess: (detail) => {
-      client.setQueryData(queryKeys.run(runId), detail);
-      invalidateRunCycleCaches(client, runId);
+      client.setQueryData(keys.run(runId), detail);
+      invalidateRunCycleCaches(client, keys, runId);
     },
     onError: (error) => toast.error(scheduleErrorMessage(error)),
   });
@@ -76,10 +84,11 @@ function scheduleErrorMessage(error: unknown): string {
 
 export function useAbandonWorkspace(runId: string) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: () => daemon.abandonRunWorkspace(runId),
     onSuccess: () => {
-      invalidateRunCycleCaches(client, runId);
+      invalidateRunCycleCaches(client, keys, runId);
       toast.success("Workspace abandoned — the next launch starts a fresh cycle.");
     },
     onError: (error) => toast.error(abandonErrorMessage(error)),
@@ -110,11 +119,12 @@ function appendStepErrorMessage(error: unknown): string {
 
 export function useAppendRunStep(runId: string) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: (request: AppendRunStepRequest) => daemon.appendRunStep(runId, request),
     onSuccess: (response) => {
-      seedIssueRun(client, response.run);
-      invalidateRunCycleCaches(client, runId);
+      seedIssueRun(client, keys, response.run);
+      invalidateRunCycleCaches(client, keys, runId);
     },
     onError: (error) => toast.error(appendStepErrorMessage(error)),
   });
@@ -122,13 +132,14 @@ export function useAppendRunStep(runId: string) {
 
 export function useSelectCompeteWinner(runId: string, groupId: string) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: (stepRunId: string) =>
       daemon.selectCompeteWinner(runId, groupId, { step_run_id: stepRunId }),
     onSuccess: (detail) => {
-      client.setQueryData(queryKeys.run(runId), detail);
-      client.invalidateQueries({ queryKey: queryKeys.run(runId) });
-      client.invalidateQueries({ queryKey: queryKeys.runs });
+      client.setQueryData(keys.run(runId), detail);
+      client.invalidateQueries({ queryKey: keys.run(runId) });
+      client.invalidateQueries({ queryKey: keys.runs });
       toast.success("Winner selected — dependent steps can continue");
     },
     onError: (error) => {
@@ -137,7 +148,7 @@ export function useSelectCompeteWinner(runId: string, groupId: string) {
           ? "A winner was already selected. Refreshing the run."
           : "Could not select this winner — the promotion did not complete.";
       toast.error(message);
-      client.invalidateQueries({ queryKey: queryKeys.run(runId) });
+      client.invalidateQueries({ queryKey: keys.run(runId) });
     },
   });
 }
@@ -145,17 +156,18 @@ export function useSelectCompeteWinner(runId: string, groupId: string) {
 function useContributionMutation<TVariables, TResult>(
   runId: string,
   mutationFn: (variables: TVariables) => Promise<TResult>,
-  seed: (client: QueryClient, result: TResult) => void,
+  seed: (client: QueryClient, keys: HostQueryKeys, result: TResult) => void,
   onError?: (error: unknown) => void,
 ) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn,
     onSuccess: (result) => {
-      seed(client, result);
-      client.invalidateQueries({ queryKey: queryKeys.runContributions(runId) });
-      client.invalidateQueries({ queryKey: queryKeys.run(runId) });
-      client.invalidateQueries({ queryKey: queryKeys.runs });
+      seed(client, keys, result);
+      client.invalidateQueries({ queryKey: keys.runContributions(runId) });
+      client.invalidateQueries({ queryKey: keys.run(runId) });
+      client.invalidateQueries({ queryKey: keys.runs });
     },
     onError: onError ?? ((error) => toast.error(contributionErrorMessage(error))),
   });
@@ -192,7 +204,7 @@ export function useDeliverRunContributions(runId: string) {
   return useContributionMutation(
     runId,
     (_: void) => daemon.deliverRunContributions(runId),
-    (client, response) =>
-      client.setQueryData<RunContributionsResponse>(queryKeys.runContributions(runId), response),
+    (client, keys, response) =>
+      client.setQueryData<RunContributionsResponse>(keys.runContributions(runId), response),
   );
 }

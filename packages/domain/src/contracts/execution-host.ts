@@ -97,10 +97,14 @@ export interface ExecutionHostSnapshot {
   remote_update_error: string | null;
 }
 
-export type ExecutionHostOperationResult =
-  | { ok: true }
+export type ExecutionHostFailure =
   | { ok: false; status: RemoteHostStatus }
   | { ok: false; message: string };
+
+export type ExecutionHostOperationResult = { ok: true } | ExecutionHostFailure;
+
+/** A switch answers with the origin the renderer talks to next. */
+export type ExecutionHostSelectResult = { ok: true; url: string } | ExecutionHostFailure;
 
 export type ExecutionHostRegisterProjectResult =
   | { ok: true; project: ProjectContract }

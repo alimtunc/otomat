@@ -1,6 +1,6 @@
 import type { LinearConnectionContract } from "@otomat/domain";
 import { useLinearDelivery } from "@web/api/linear/use-delivery";
-import { activeExecutionHostId } from "@web/lib/desktop-bridge";
+import { useActiveHostId } from "@web/lib/active-host";
 
 export interface ConnectionUnavailableProps {
   connectionId: string;
@@ -10,9 +10,10 @@ export interface ConnectionUnavailableProps {
 
 export function ConnectionUnavailable({ connectionId, connection }: ConnectionUnavailableProps) {
   const delivery = useLinearDelivery();
+  const activeHostId = useActiveHostId();
   const hostDelivery = delivery?.connections
     .find((candidate) => candidate.connection_id === connectionId)
-    ?.hosts.find((host) => host.host_id === activeExecutionHostId());
+    ?.hosts.find((host) => host.host_id === activeHostId);
 
   if (connection === null) {
     return (

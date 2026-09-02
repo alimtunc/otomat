@@ -1,4 +1,4 @@
-import type { ExecutionHostId, ProjectContract } from "@otomat/domain";
+import { EXECUTION_HOST_IDS, type ExecutionHostId, type ProjectContract } from "@otomat/domain";
 import type { ProjectSummary } from "@otomat/ui";
 import { asString } from "@web/lib/coerce";
 import { readScoped, writeScoped, type ScopedStorage } from "@web/lib/storage";
@@ -9,11 +9,16 @@ export function selectableProjects(projects: ProjectContract[]): ProjectContract
   return projects.filter((project) => project.has_repository);
 }
 
-export function readSelectedProjectId(
-  hostId: ExecutionHostId,
-  storage?: ScopedStorage | null,
-): string | undefined {
-  return readScoped(PROJECT_SELECTION_KEY, hostId, asString, storage) ?? undefined;
+/** One remembered project per host, so a host that regains the focus reopens its own project. */
+export type SelectedProjectIds = Map<ExecutionHostId, string>;
+
+export function readSelectedProjectIds(storage?: ScopedStorage | null): SelectedProjectIds {
+  const ids: SelectedProjectIds = new Map();
+  for (const hostId of EXECUTION_HOST_IDS) {
+    const projectId = readScoped(PROJECT_SELECTION_KEY, hostId, asString, storage);
+    if (projectId !== null) ids.set(hostId, projectId);
+  }
+  return ids;
 }
 
 export function writeSelectedProjectId(

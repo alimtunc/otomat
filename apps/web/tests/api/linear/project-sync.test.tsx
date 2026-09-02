@@ -3,12 +3,14 @@ import { DaemonRequestError } from "@otomat/client";
 import type { LinearSyncStatusContract } from "@otomat/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useProjectLinearSync } from "@web/api/linear/use-project-sync";
-import { queryKeys } from "@web/api/query-keys";
+import { hostKeys } from "@web/api/query-keys";
 import { act } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { linearConnection } from "#support/linear";
 import { mount, type Mounted } from "#support/mount";
+
+const keys = hostKeys("local");
 
 const syncLinear = vi.fn();
 const getLinearSyncStatus = vi.fn();
@@ -221,11 +223,11 @@ it("refreshes persisted rows and shouts when a partially applied sync rejects", 
   click(container, "Refresh");
 
   await vi.waitFor(() => {
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.issues });
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.issueSources });
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.linearConnections });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: keys.issues });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: keys.issueSources });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: keys.linearConnections });
     expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: queryKeys.linearSyncStatus("p1"),
+      queryKey: keys.linearSyncStatus("p1"),
     });
   });
   expect(toastError).toHaveBeenCalledWith("second source failed");
@@ -245,7 +247,7 @@ it("silences a sync canceled by a newer connection state", async () => {
   click(container, "Refresh");
 
   await vi.waitFor(() => {
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.linearConnections });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: keys.linearConnections });
   });
   expect(toastError).not.toHaveBeenCalled();
 });

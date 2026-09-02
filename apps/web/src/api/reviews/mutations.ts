@@ -15,8 +15,9 @@ import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
+import type { HostQueryKeys } from "@web/api/query-keys";
 import { seedIssueRun } from "@web/api/runs/seed/run";
+import { useQueryKeys } from "@web/api/use-query-keys";
 
 function reviewRefusal(error: unknown): string | null {
   if (!(error instanceof DaemonRequestError)) return null;
@@ -26,10 +27,11 @@ function reviewRefusal(error: unknown): string | null {
 
 function seedComment(
   client: QueryClient,
+  keys: HostQueryKeys,
   target: ReviewTarget,
   comment: ReviewCommentContract,
 ): void {
-  client.setQueryData(queryKeys.reviewDetail(target), (current: ReviewDetail | undefined) => {
+  client.setQueryData(keys.reviewDetail(target), (current: ReviewDetail | undefined) => {
     if (current === undefined) return current;
     const known = current.comments.some((row) => row.id === comment.id);
     return {
@@ -39,15 +41,16 @@ function seedComment(
         : [...current.comments, comment],
     };
   });
-  client.invalidateQueries({ queryKey: queryKeys.reviewDetail(target) });
+  client.invalidateQueries({ queryKey: keys.reviewDetail(target) });
 }
 
 function seedReviewedFile(
   client: QueryClient,
+  keys: HostQueryKeys,
   target: ReviewTarget,
   mark: ReviewedFileContract,
 ): void {
-  client.setQueryData(queryKeys.reviewDetail(target), (current: ReviewDetail | undefined) => {
+  client.setQueryData(keys.reviewDetail(target), (current: ReviewDetail | undefined) => {
     if (current === undefined) return current;
     const known = current.reviewed_files.some((row) => row.file_path === mark.file_path);
     return {
@@ -57,16 +60,17 @@ function seedReviewedFile(
         : [...current.reviewed_files, mark],
     };
   });
-  client.invalidateQueries({ queryKey: queryKeys.reviewDetail(target) });
+  client.invalidateQueries({ queryKey: keys.reviewDetail(target) });
 }
 
 export function useSetReviewedFile(target: ReviewTarget) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: (request: SetReviewedFileRequest) => daemon.setReviewedFile(target, request),
-    onSuccess: (mark) => seedReviewedFile(client, target, mark),
+    onSuccess: (mark) => seedReviewedFile(client, keys, target, mark),
     onError: () => {
-      client.invalidateQueries({ queryKey: queryKeys.reviewDetail(target) });
+      client.invalidateQueries({ queryKey: keys.reviewDetail(target) });
       toast.error("Could not record this file as reviewed — is the daemon running?");
     },
   });
@@ -83,12 +87,13 @@ function commentErrorMessage(error: unknown): string {
 
 export function useAddReviewComment(target: ReviewTarget) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: (request: CreateReviewCommentRequest) => daemon.addReviewComment(target, request),
-    onSuccess: (comment) => seedComment(client, target, comment),
+    onSuccess: (comment) => seedComment(client, keys, target, comment),
     onError: (error) => {
       if (error instanceof DaemonRequestError && error.status === 409) {
-        client.invalidateQueries({ queryKey: queryKeys.reviewDiff(target) });
+        client.invalidateQueries({ queryKey: keys.reviewDiff(target) });
       }
       toast.error(commentErrorMessage(error));
     },
@@ -98,11 +103,12 @@ export function useAddReviewComment(target: ReviewTarget) {
 /** The daemon persists the outcome either way, so even a failure refreshes: the comment shows `failed`, never vanishes. */
 export function usePublishReviewComment(target: ReviewTarget) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: (commentId: string) => daemon.publishReviewComment(target, commentId),
-    onSuccess: (comment) => seedComment(client, target, comment),
+    onSuccess: (comment) => seedComment(client, keys, target, comment),
     onError: (error) => {
-      client.invalidateQueries({ queryKey: queryKeys.reviewDetail(target) });
+      client.invalidateQueries({ queryKey: keys.reviewDetail(target) });
       toast.error(reviewRefusal(error) ?? "Could not publish the comment — is the daemon running?");
     },
   });
@@ -125,13 +131,14 @@ function fixErrorMessage(error: unknown): string {
 
 export function useRequestFix(runId: string) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: (request: RequestFixRequest) => daemon.requestFix(runId, request),
     onSuccess: (response) => {
-      seedIssueRun(client, response.run);
-      client.invalidateQueries({ queryKey: queryKeys.run(runId) });
-      client.invalidateQueries({ queryKey: queryKeys.reviewDetail({ kind: "run", id: runId }) });
-      client.invalidateQueries({ queryKey: queryKeys.issues });
+      seedIssueRun(client, keys, response.run);
+      client.invalidateQueries({ queryKey: keys.run(runId) });
+      client.invalidateQueries({ queryKey: keys.reviewDetail({ kind: "run", id: runId }) });
+      client.invalidateQueries({ queryKey: keys.issues });
       toast.success("Fix step added to this issue's workspace");
     },
     onError: (error) => toast.error(fixErrorMessage(error)),

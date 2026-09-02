@@ -2,7 +2,7 @@ import type { ErrorDiagnostic } from "@otomat/domain";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { useHealth } from "@web/api/daemon/queries";
-import { queryKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 import { buildErrorDiagnostic } from "@web/lib/diagnostics/build";
 import { classifyError } from "@web/lib/diagnostics/classify";
 import { useState } from "react";
@@ -20,6 +20,7 @@ export interface ErrorDiagnosticState {
 }
 
 export function useErrorDiagnostic(options: ErrorDiagnosticOptions): ErrorDiagnosticState {
+  const keys = useQueryKeys();
   const [renderedAt] = useState(() => new Date());
   const classification = classifyError(options.error);
   const request = classification.request;
@@ -27,7 +28,7 @@ export function useErrorDiagnostic(options: ErrorDiagnosticOptions): ErrorDiagno
     classification.category === "daemon" && request !== null ? request.correlation_id : null;
   const health = useHealth();
   const excerpt = useQuery({
-    queryKey: queryKeys.daemonLogExcerpt(correlationId),
+    queryKey: keys.daemonLogExcerpt(correlationId),
     queryFn: correlationId === null ? skipToken : () => daemon.daemonLogExcerpt(correlationId),
     staleTime: Infinity,
     retry: false,

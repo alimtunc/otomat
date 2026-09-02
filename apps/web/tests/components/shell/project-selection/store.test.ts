@@ -1,18 +1,28 @@
 // @vitest-environment happy-dom
-import { readSelectedProjectId } from "@web/components/shell/project-selection/selection";
+import {
+  readSelectedProjectIds,
+  type SelectedProjectIds,
+} from "@web/components/shell/project-selection/selection";
 import { projectSelectionStore } from "@web/components/shell/project-selection/store";
 import { describe, expect, it } from "vitest";
 
 describe("project selection store", () => {
-  it("select notifies subscribers and persists for the next session", () => {
-    const seen: Array<string | undefined> = [];
-    const subscription = projectSelectionStore.subscribe((value) => seen.push(value));
+  it("keeps one project per host, notifies subscribers and persists for the next session", () => {
+    const seen: SelectedProjectIds[] = [];
+    const subscription = projectSelectionStore.subscribe(() =>
+      seen.push(projectSelectionStore.state),
+    );
 
-    projectSelectionStore.actions.select("other");
+    projectSelectionStore.actions.select("local", "other");
+    projectSelectionStore.actions.select("remote", "far");
 
-    expect(projectSelectionStore.state).toBe("other");
-    expect(seen).toContain("other");
-    expect(readSelectedProjectId("local")).toBe("other");
+    const expected = new Map([
+      ["local", "other"],
+      ["remote", "far"],
+    ]);
+    expect(projectSelectionStore.state).toEqual(expected);
+    expect(seen.at(-1)).toEqual(expected);
+    expect(readSelectedProjectIds()).toEqual(expected);
     subscription.unsubscribe();
   });
 });

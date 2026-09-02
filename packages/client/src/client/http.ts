@@ -58,7 +58,8 @@ async function readErrorBody(res: Response): Promise<JsonValue> {
 }
 
 export function resolveUrl(config: DaemonClientConfig, path: string): string {
-  return `${config.baseUrl ?? ""}${path}`;
+  const base = typeof config.baseUrl === "function" ? config.baseUrl() : (config.baseUrl ?? "");
+  return `${base}${path}`;
 }
 
 /** A list value repeats its key, so a selection carrying an empty string stays distinguishable from an absent one. */

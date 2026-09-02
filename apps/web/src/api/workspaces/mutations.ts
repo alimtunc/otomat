@@ -6,24 +6,26 @@ import {
 } from "@otomat/domain";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
-import { ExecutionHostCallError, onWorkspaceHost } from "@web/api/workspaces/host-call";
+import { ExecutionHostCallError, onExecutionHost } from "@web/api/host-call";
+import { hostKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 
 /** A reconciliation moves worktrees, runs and issues alike, so every surface reading them is refreshed. */
 export function useReconcileWorkspaces() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (hostId: ExecutionHostId) =>
-      onWorkspaceHost(
+      onExecutionHost(
         hostId,
         () => daemon.reconcileWorkspaces(),
         (executionHost) => executionHost.reconcileWorkspaces(hostId),
       ),
     onSuccess: (report, hostId) => {
-      client.setQueryData(queryKeys.workspacesForHost(hostId), report.inventory);
-      client.invalidateQueries({ queryKey: queryKeys.workspaces });
-      client.invalidateQueries({ queryKey: queryKeys.issues });
-      client.invalidateQueries({ queryKey: queryKeys.runs });
+      const keys = hostKeys(hostId);
+      client.setQueryData(keys.workspaces, report.inventory);
+      client.invalidateQueries({ queryKey: keys.workspaces });
+      client.invalidateQueries({ queryKey: keys.issues });
+      client.invalidateQueries({ queryKey: keys.runs });
     },
   });
 }
@@ -37,26 +39,28 @@ export function useCleanupWorkspace() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: ({ hostId, worktreeId }: CleanupWorkspaceInput) =>
-      onWorkspaceHost(
+      onExecutionHost(
         hostId,
         () => daemon.cleanupWorkspace(worktreeId),
         (executionHost) => executionHost.cleanupWorkspace(hostId, worktreeId),
       ),
-    onSuccess: () => {
-      client.invalidateQueries({ queryKey: queryKeys.workspaces });
-      client.invalidateQueries({ queryKey: queryKeys.issues });
-      client.invalidateQueries({ queryKey: queryKeys.runs });
+    onSuccess: (_result, { hostId }) => {
+      const keys = hostKeys(hostId);
+      client.invalidateQueries({ queryKey: keys.workspaces });
+      client.invalidateQueries({ queryKey: keys.issues });
+      client.invalidateQueries({ queryKey: keys.runs });
     },
   });
 }
 
 export function useSetWorkspaceSettings() {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: (settings: WorkspaceSettings) => daemon.setWorkspaceSettings(settings),
     onSuccess: (settings) => {
-      client.setQueryData(queryKeys.workspaceSettings, settings);
-      client.invalidateQueries({ queryKey: queryKeys.workspaceSettings });
+      client.setQueryData(keys.workspaceSettings, settings);
+      client.invalidateQueries({ queryKey: keys.workspaceSettings });
     },
   });
 }

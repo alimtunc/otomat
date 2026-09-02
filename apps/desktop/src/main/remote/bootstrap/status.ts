@@ -1,8 +1,4 @@
-import type {
-  ExecutionHostOperationResult,
-  RemoteHostErrorCode,
-  RemoteHostStatus,
-} from "@otomat/domain";
+import type { ExecutionHostFailure, RemoteHostErrorCode, RemoteHostStatus } from "@otomat/domain";
 
 import type { SshScriptResult } from "../ssh/script.js";
 import { parseBootstrapOutput } from "./scripts.js";
@@ -10,7 +6,7 @@ import { parseBootstrapOutput } from "./scripts.js";
 export type RemoteErrorStatus = RemoteHostStatus & { phase: "error" };
 
 /** A coded remote failure as an operation result; the web catalog owns the wording. */
-export function errorResult(code: RemoteHostErrorCode): ExecutionHostOperationResult {
+export function errorResult(code: RemoteHostErrorCode): ExecutionHostFailure {
   return { ok: false, status: { phase: "error", code, detail: null } };
 }
 

@@ -6,7 +6,8 @@ import {
   useRegisterRepository,
 } from "@web/api/repositories/mutations";
 import { SavedNotice } from "@web/components/settings/saved-notice";
-import { desktopBridge, remoteHostAlias } from "@web/lib/desktop-bridge";
+import { useRemoteHostAlias } from "@web/lib/active-host";
+import { desktopBridge } from "@web/lib/desktop-bridge";
 import { fieldErrorProps, requiredTrimmed } from "@web/lib/form";
 import { useState } from "react";
 
@@ -17,7 +18,7 @@ export interface RegisterRepositoryFormProps {
 export function RegisterRepositoryForm({ projectId }: RegisterRepositoryFormProps) {
   const register = useRegisterRepository();
   const bridge = desktopBridge();
-  const remoteAlias = remoteHostAlias();
+  const remoteAlias = useRemoteHostAlias();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm({

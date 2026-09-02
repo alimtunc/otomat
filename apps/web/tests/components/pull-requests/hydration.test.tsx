@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { DaemonRequestError } from "@otomat/client";
 import type { QueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@web/api/query-keys";
+import { hostKeys } from "@web/api/query-keys";
 import { PullRequestDiffView } from "@web/components/pull-requests/diff-view";
 import { act, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,6 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mount, type Mounted } from "#support/mount";
 import { pullRequestReviewContext } from "#support/pull-request";
 import { testQueryClient, withQueryClient } from "#support/query";
+
+const keys = hostKeys("local");
 
 const { getContext, refresh } = vi.hoisted(() => ({ getContext: vi.fn(), refresh: vi.fn() }));
 
@@ -72,7 +74,7 @@ afterEach(async () => {
 
 describe("arriving on a pull request", () => {
   it("renders what the cache already holds instead of a loader", async () => {
-    client.setQueryData(queryKeys.pullRequest("pr-1"), pullRequestReviewContext());
+    client.setQueryData(keys.pullRequest("pr-1"), pullRequestReviewContext());
 
     const view = await render();
 
@@ -120,7 +122,7 @@ describe("arriving on a pull request", () => {
     await render();
     await settle();
 
-    expect(client.getQueryData(queryKeys.pullRequest("pr-1"))).toEqual(pullRequestReviewContext());
-    expect(client.getQueryData(queryKeys.pullRequest("pr-2"))).not.toBeUndefined();
+    expect(client.getQueryData(keys.pullRequest("pr-1"))).toEqual(pullRequestReviewContext());
+    expect(client.getQueryData(keys.pullRequest("pr-2"))).not.toBeUndefined();
   });
 });

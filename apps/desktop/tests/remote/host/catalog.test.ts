@@ -135,6 +135,16 @@ it("reads the worktrees of the host that was named, on that host alone", async (
   expect(fetchImpl).toHaveBeenCalledWith(`${REMOTE_URL}/api/workspaces`, undefined);
 });
 
+it("reads the Inbox of the host that was named, on that host alone", async () => {
+  const inbox = { entries: [], observed_at: "2026-08-22T10:00:00.000Z" };
+  const fetchImpl = vi.fn(() => Promise.resolve(jsonResponse(inbox)));
+
+  const result = await catalog(fetchImpl).catalog.readInbox("remote");
+
+  expect(result).toEqual({ ok: true, value: inbox });
+  expect(fetchImpl).toHaveBeenCalledWith(`${REMOTE_URL}/api/inbox`, undefined);
+});
+
 it("says why an unreachable host could not be read instead of answering for it", async () => {
   const fetchImpl = vi.fn(() => Promise.resolve(jsonResponse(EMPTY_INVENTORY)));
 

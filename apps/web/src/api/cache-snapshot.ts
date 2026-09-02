@@ -1,6 +1,5 @@
 import { dehydrate, hydrate, type Query, type QueryClient } from "@tanstack/react-query";
 import { asNumber, asRecord } from "@web/lib/coerce";
-import { activeExecutionHostId } from "@web/lib/desktop-bridge";
 import { readStoredJson, writeStored, type ScopedStorage } from "@web/lib/storage";
 
 const SNAPSHOT_KEY = "otomat.query-snapshot";
@@ -9,16 +8,12 @@ const WRITE_DELAY_MS = 30_000;
 
 const SNAPSHOT_ROOTS = new Set(["activity", "inbox", "issues", "projects", "reviews", "runs"]);
 
+/** The shell's catalog keys are the only host-less entries kept. */
 function isSnapshotEntry(queryKey: readonly unknown[]): boolean {
-  const [root, scope] = queryKey;
+  const [first, second] = queryKey;
   // The live host status stays out: a restored one would name the wrong active host until the IPC read answers.
-  if (root === "execution-host") return scope === "projects" || scope === "repositories";
-  return SNAPSHOT_ROOTS.has(String(root));
-}
-
-/** A host switch reloads the renderer, so one live cache never spans hosts; only the stored snapshot has to. */
-function hostSnapshotKey(): string {
-  return `${SNAPSHOT_KEY}:${activeExecutionHostId()}`;
+  if (first === "execution-host") return second === "projects" || second === "repositories";
+  return SNAPSHOT_ROOTS.has(String(second));
 }
 
 export function saveQuerySnapshot(client: QueryClient, storage?: ScopedStorage | null): void {
@@ -27,11 +22,11 @@ export function saveQuerySnapshot(client: QueryClient, storage?: ScopedStorage |
       query.state.status === "success" && isSnapshotEntry(query.queryKey),
     shouldDehydrateMutation: () => false,
   });
-  writeStored(hostSnapshotKey(), JSON.stringify({ saved_at: Date.now(), state }), storage);
+  writeStored(SNAPSHOT_KEY, JSON.stringify({ saved_at: Date.now(), state }), storage);
 }
 
 export function restoreQuerySnapshot(client: QueryClient, storage?: ScopedStorage | null): void {
-  const stored = readStoredJson(hostSnapshotKey(), asRecord, storage);
+  const stored = readStoredJson(SNAPSHOT_KEY, asRecord, storage);
   if (stored === null) return;
   const savedAt = asNumber(stored["saved_at"]);
   const state = asRecord(stored["state"]);

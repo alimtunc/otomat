@@ -1,5 +1,5 @@
 import {
-  readSelectedProjectId,
+  readSelectedProjectIds,
   resolveSelectedProjectId,
   writeSelectedProjectId,
 } from "@web/components/shell/project-selection/selection";
@@ -35,7 +35,7 @@ describe("project selection", () => {
 
     writeSelectedProjectId("local", "other", storage);
 
-    expect(readSelectedProjectId("local", storage)).toBe("other");
+    expect(readSelectedProjectIds(storage)).toEqual(new Map([["local", "other"]]));
   });
 
   it("keeps one selection per host, so returning to a host reopens its own project", () => {
@@ -44,8 +44,12 @@ describe("project selection", () => {
     writeSelectedProjectId("local", "local-default", storage);
     writeSelectedProjectId("remote", "remote-default", storage);
 
-    expect(readSelectedProjectId("local", storage)).toBe("local-default");
-    expect(readSelectedProjectId("remote", storage)).toBe("remote-default");
+    expect(readSelectedProjectIds(storage)).toEqual(
+      new Map([
+        ["local", "local-default"],
+        ["remote", "remote-default"],
+      ]),
+    );
   });
 
   it("degrades to no preference when storage is unavailable", () => {
@@ -58,7 +62,7 @@ describe("project selection", () => {
       },
     };
 
-    expect(readSelectedProjectId("local", throwing)).toBeUndefined();
+    expect(readSelectedProjectIds(throwing)).toEqual(new Map());
     expect(() => writeSelectedProjectId("local", "other", throwing)).not.toThrow();
   });
 });

@@ -10,7 +10,7 @@ import {
   type WorkspaceReconcileReport,
   type WorkspaceSettings,
 } from "@otomat/domain";
-import { queryKeys } from "@web/api/query-keys";
+import { hostKeys } from "@web/api/query-keys";
 import { WorkspacesSection } from "@web/components/settings/workspaces/section";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -224,7 +224,7 @@ it("keeps an unreachable host's last known workspaces behind a stale notice", as
     message: "The remote host is not connected yet. Try again once its tunnel is up.",
   });
   await act(async () => {
-    await client.refetchQueries({ queryKey: queryKeys.workspacesForHost("remote") });
+    await client.refetchQueries({ queryKey: hostKeys("remote").workspaces });
   });
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));

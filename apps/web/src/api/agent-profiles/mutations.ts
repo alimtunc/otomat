@@ -1,11 +1,12 @@
 import type { SaveAgentProfileRequest } from "@otomat/domain";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 
 function useInvalidateProfiles() {
   const client = useQueryClient();
-  return () => client.invalidateQueries({ queryKey: queryKeys.agentProfiles });
+  const keys = useQueryKeys();
+  return () => client.invalidateQueries({ queryKey: keys.agentProfiles });
 }
 
 export function useCreateAgentProfile() {

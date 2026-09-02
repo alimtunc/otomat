@@ -1,20 +1,21 @@
 import { toast, type ProjectSummary } from "@otomat/ui";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useProjects } from "@web/api/daemon/queries";
+import { shellKeys } from "@web/api/query-keys";
 import {
   parseProjectSwitcherKey,
   projectSwitcherKey,
 } from "@web/components/shell/project-selection/host-key";
-import {
-  selectableProjects,
-  writeSelectedProjectId,
-} from "@web/components/shell/project-selection/selection";
+import { selectableProjects } from "@web/components/shell/project-selection/selection";
+import { projectSelectionStore } from "@web/components/shell/project-selection/store";
 import { useProjectSelection } from "@web/components/shell/project-selection/use-selection";
 import { projectTabDestination } from "@web/components/shell/project-tabs/state";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
 import { describeOperationFailure } from "@web/components/shell/remote-session/status-labels";
 import { useHostProjects } from "@web/components/shell/use-host-projects";
-import { activeExecutionHostId, desktopBridge, remoteHostAlias } from "@web/lib/desktop-bridge";
+import { activeHostStore, useActiveHostId, useRemoteHostAlias } from "@web/lib/active-host";
+import { desktopBridge } from "@web/lib/desktop-bridge";
 
 function lastPathSegment(rootPath: string): string | undefined {
   return rootPath.split("/").filter(Boolean).at(-1);
@@ -22,11 +23,11 @@ function lastPathSegment(rootPath: string): string | undefined {
 
 export function useProjectSwitcher() {
   const bridge = desktopBridge();
-  const activeHostId = activeExecutionHostId();
-  const hostAlias = remoteHostAlias();
+  const client = useQueryClient();
+  const activeHostId = useActiveHostId();
+  const hostAlias = useRemoteHostAlias();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const href = useRouterState({ select: (state) => state.location.href });
   const projectsQuery = useProjects();
   const hostProjects = useHostProjects();
 
@@ -38,13 +39,13 @@ export function useProjectSwitcher() {
     }),
   );
 
-  const { currentProjectId, selectProject: select } = useProjectSelection(projects);
+  const currentProjectId = useProjectSelection(projects);
   const currentProject = projects.find((project) => project.id === currentProjectId);
 
   const hostEntries = hostProjects.data ?? [];
   const multiHost = hostEntries.length > 1;
   const activeHostLabel =
-    hostEntries.find((entry) => entry.active)?.host.label ?? hostAlias ?? "Local";
+    hostEntries.find((entry) => entry.host.id === activeHostId)?.host.label ?? hostAlias ?? "Local";
   const switcherProjects: ProjectSummary[] = [
     ...projects.map((project) => ({
       ...project,
@@ -52,7 +53,7 @@ export function useProjectSwitcher() {
       tag: multiHost ? activeHostLabel : undefined,
     })),
     ...hostEntries
-      .filter((entry) => !entry.active)
+      .filter((entry) => entry.host.id !== activeHostId)
       .flatMap((entry) =>
         selectableProjects(entry.projects ?? []).map((project) => ({
           id: projectSwitcherKey(entry.host.id, project.id),
@@ -67,39 +68,37 @@ export function useProjectSwitcher() {
       ? hostEntries.map((entry) => ({
           id: entry.host.id,
           label: entry.host.label,
-          active: entry.active,
+          active: entry.host.id === activeHostId,
         }))
       : [{ id: "local" as const, label: "Local", active: true }];
 
-  function selectProject(switcherId: string): void {
+  // The selection and the navigation land only once the target host answers, so no view shows another host's data.
+  const selectProject = (switcherId: string): void => {
     const target = parseProjectSwitcherKey(switcherId, activeHostId);
     const destination = projectTabDestination(projectTabsStore.state, switcherId, pathname);
-    if (target.hostId === activeHostId || bridge === null) {
-      select(target.projectId);
+    const arrive = (): void => {
+      projectSelectionStore.actions.select(target.hostId, target.projectId);
       if (destination !== null) void navigate({ href: destination });
+    };
+    if (target.hostId === activeHostId || bridge === null) {
+      arrive();
       return;
     }
-    const rollBack = (): void => {
-      if (destination !== null) void navigate({ href });
-    };
-    if (destination !== null) void navigate({ href: destination });
-    writeSelectedProjectId(target.hostId, target.projectId);
     void bridge.executionHost
       .select(target.hostId)
       .then((result) => {
-        if (result.ok) return;
-        const concurrent =
-          "status" in result &&
-          result.status.phase === "error" &&
-          result.status.code === "switch_in_progress";
-        if (!concurrent) rollBack();
-        toast.error(describeOperationFailure(result));
+        if (!result.ok) {
+          toast.error(describeOperationFailure(result));
+          return;
+        }
+        activeHostStore.actions.activate({ id: target.hostId, daemonUrl: result.url });
+        arrive();
+        void client.invalidateQueries({ queryKey: shellKeys.executionHost });
       })
       .catch((error: unknown) => {
-        rollBack();
         toast.error(error instanceof Error ? error.message : "Switching hosts failed.");
       });
-  }
+  };
 
   return {
     hostAlias,

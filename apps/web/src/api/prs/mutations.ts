@@ -7,7 +7,8 @@ import type {
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
+import type { HostQueryKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 import { pullRequestImportRefusal } from "@web/lib/pull-request/import-error";
 
 function daemonErrorMessage(error: unknown, fallback: string): string {
@@ -27,21 +28,26 @@ interface RefreshPullRequestVariables {
   announce: boolean;
 }
 
-function invalidateIssuePullRequests(client: QueryClient, issueId: string | null): void {
+function invalidateIssuePullRequests(
+  client: QueryClient,
+  keys: HostQueryKeys,
+  issueId: string | null,
+): void {
   if (issueId !== null) {
-    client.invalidateQueries({ queryKey: queryKeys.issuePullRequests(issueId) });
-    client.invalidateQueries({ queryKey: queryKeys.issues });
+    client.invalidateQueries({ queryKey: keys.issuePullRequests(issueId) });
+    client.invalidateQueries({ queryKey: keys.issues });
   }
-  client.invalidateQueries({ queryKey: queryKeys.reviews });
-  client.invalidateQueries({ queryKey: queryKeys.inbox });
+  client.invalidateQueries({ queryKey: keys.reviews });
+  client.invalidateQueries({ queryKey: keys.inbox });
 }
 
 export function useConnectGitHub() {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: () => daemon.connectGitHub(),
     onSuccess: () => {
-      client.invalidateQueries({ queryKey: queryKeys.githubConnection });
+      client.invalidateQueries({ queryKey: keys.githubConnection });
       toast.success("GitHub sign-in started — enter the code shown in the PR panel");
     },
     onError: () => toast.error("Could not start GitHub login — is the daemon running?"),
@@ -51,9 +57,10 @@ export function useConnectGitHub() {
 /** The proposal is persisted daemon-side, so the publication draft it becomes is refetched, never mirrored here. */
 export function useGeneratePullRequestMetadata(runId: string) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: () => daemon.generatePullRequestMetadata(runId),
-    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.runPullRequest(runId) }),
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.runPullRequest(runId) }),
     onError: (error) =>
       toast.error(
         daemonErrorMessage(error, "Could not write the pull request — is the daemon running?"),
@@ -64,11 +71,12 @@ export function useGeneratePullRequestMetadata(runId: string) {
 /** A refused push refetches: the lease on offer must stand on a remote head read after the refusal, never before it. */
 export function usePushPullRequestCommits(runId: string) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: (request: PushPullRequestRequest) => daemon.pushPullRequestCommits(runId, request),
     onSuccess: (detail) => {
-      client.setQueryData(queryKeys.runPullRequest(runId), detail);
-      client.invalidateQueries({ queryKey: queryKeys.runPullRequest(runId) });
+      client.setQueryData(keys.runPullRequest(runId), detail);
+      client.invalidateQueries({ queryKey: keys.runPullRequest(runId) });
       toast.success(
         detail.sync?.dirty === true
           ? "Commits pushed — uncommitted changes stay local"
@@ -76,7 +84,7 @@ export function usePushPullRequestCommits(runId: string) {
       );
     },
     onError: (error) => {
-      client.invalidateQueries({ queryKey: queryKeys.runPullRequest(runId) });
+      client.invalidateQueries({ queryKey: keys.runPullRequest(runId) });
       toast.error(daemonErrorMessage(error, "Could not push — is the daemon running?"));
     },
   });
@@ -85,11 +93,12 @@ export function usePushPullRequestCommits(runId: string) {
 /** The daemon owns the publication once it accepts it; the run's ledger stream reports every phase after. */
 export function usePublishPullRequest(runId: string) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: (request: PublishPullRequestRequest) => daemon.publishPullRequest(runId, request),
     onSuccess: (detail) => {
-      client.setQueryData(queryKeys.runPullRequest(runId), detail);
-      client.invalidateQueries({ queryKey: queryKeys.runPullRequest(runId) });
+      client.setQueryData(keys.runPullRequest(runId), detail);
+      client.invalidateQueries({ queryKey: keys.runPullRequest(runId) });
       const pullRequest = detail.pull_request;
       if (pullRequest?.status === "merged" || pullRequest?.status === "closed") {
         toast.success(`Pull request #${pullRequest.number} is ${pullRequest.status}`);
@@ -107,10 +116,11 @@ export function usePublishPullRequest(runId: string) {
 /** The refusal is returned rather than only toasted: the attach form shows it next to the field it refuses. */
 export function useAttachPullRequest(issueId: string) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: (request: AttachPullRequestRequest) => daemon.attachPullRequest(issueId, request),
     onSuccess: (pullRequest) => {
-      invalidateIssuePullRequests(client, issueId);
+      invalidateIssuePullRequests(client, keys, issueId);
       toast.success(`Pull request #${pullRequest.number ?? ""} attached`);
     },
   });
@@ -119,15 +129,16 @@ export function useAttachPullRequest(issueId: string) {
 /** Keyed by pull request so the automatic pass and the operator's own Refresh are one in-flight reconciliation. */
 export function useRefreshPullRequest(pullRequestId: string, issueId: string | null) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
-    mutationKey: queryKeys.pullRequestRefresh(pullRequestId),
+    mutationKey: keys.pullRequestRefresh(pullRequestId),
     mutationFn: (_variables: RefreshPullRequestVariables) =>
       daemon.refreshPullRequest(pullRequestId),
     onSuccess: (context) => {
-      client.setQueryData(queryKeys.pullRequest(context.pull_request.id), context);
-      invalidateIssuePullRequests(client, issueId);
+      client.setQueryData(keys.pullRequest(context.pull_request.id), context);
+      invalidateIssuePullRequests(client, keys, issueId);
       client.invalidateQueries({
-        queryKey: queryKeys.reviewDiff({ kind: "pull_request", id: context.pull_request.id }),
+        queryKey: keys.reviewDiff({ kind: "pull_request", id: context.pull_request.id }),
       });
     },
     onError: (error, variables) => {
@@ -141,11 +152,12 @@ export function useRefreshPullRequest(pullRequestId: string, issueId: string | n
 
 export function useDetachPullRequest(issueId: string) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   return useMutation({
     mutationFn: (pullRequestId: string) => daemon.detachPullRequest(pullRequestId),
     onSuccess: (_, pullRequestId) => {
-      client.removeQueries({ queryKey: queryKeys.pullRequest(pullRequestId) });
-      invalidateIssuePullRequests(client, issueId);
+      client.removeQueries({ queryKey: keys.pullRequest(pullRequestId) });
+      invalidateIssuePullRequests(client, keys, issueId);
       toast.success("Attachment removed — the pull request itself is untouched");
     },
     onError: (error) =>

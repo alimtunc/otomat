@@ -9,6 +9,7 @@ import {
   type ExecutionHostProjectsEntry,
   type ExecutionHostRegisterProjectResult,
   type ExecutionHostRepositoriesEntry,
+  type InboxSnapshot,
   type RemoteHostStatus,
   type WorkspaceCleanupResult,
   type WorkspaceInventory,
@@ -133,6 +134,10 @@ export class HostCatalog {
     hostId: ExecutionHostId,
   ): Promise<ExecutionHostCallResult<WorkspaceInventory>> {
     return this.call(hostId, (client) => client.listWorkspaces());
+  }
+
+  async readInbox(hostId: ExecutionHostId): Promise<ExecutionHostCallResult<InboxSnapshot>> {
+    return this.call(hostId, (client) => client.listInbox());
   }
 
   async reconcileWorkspaces(

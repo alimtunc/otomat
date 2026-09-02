@@ -1,6 +1,6 @@
 import type { LinearWritebackState } from "@otomat/domain";
 import { useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 
 import { reportUnlessHandled } from "./errors";
 
@@ -9,9 +9,11 @@ export function useOptimisticWriteback<TRequest>(
   apply: (current: LinearWritebackState, request: TRequest) => LinearWritebackState,
 ) {
   const client = useQueryClient();
-  const key = queryKeys.linearWriteback(issueId);
+  const keys = useQueryKeys();
+  const key = keys.linearWriteback(issueId);
   return {
     client,
+    keys,
     onMutate: async (request: TRequest) => {
       await client.cancelQueries({ queryKey: key });
       const previous = client.getQueryData<LinearWritebackState>(key);

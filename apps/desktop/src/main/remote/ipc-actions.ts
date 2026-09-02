@@ -7,7 +7,9 @@ import {
   type ExecutionHostProjectsEntry,
   type ExecutionHostRegisterProjectResult,
   type ExecutionHostRepositoriesEntry,
+  type ExecutionHostSelectResult,
   type ExecutionHostSnapshot,
+  type InboxSnapshot,
   type RemoteInstanceListResult,
   type RemoteRepositoryListResult,
   type WorkspaceCleanupResult,
@@ -28,7 +30,7 @@ import type { ExecutionHostManager } from "./manager.js";
 export interface ExecutionHostIpcActions {
   sync(): ExecutionHostSync;
   snapshot(): ExecutionHostSnapshot;
-  select(id: unknown): Promise<ExecutionHostOperationResult>;
+  select(id: unknown): Promise<ExecutionHostSelectResult>;
   configureRemote(sshAlias: unknown): ExecutionHostOperationResult;
   removeRemote(): ExecutionHostOperationResult;
   registerProject(hostId: unknown, path: unknown): Promise<ExecutionHostRegisterProjectResult>;
@@ -43,6 +45,7 @@ export interface ExecutionHostIpcActions {
   listRepositories(): Promise<ExecutionHostRepositoriesEntry[]>;
   deleteRepository(hostId: unknown, repositoryId: unknown): Promise<ExecutionHostOperationResult>;
   readWorkspaces(hostId: unknown): Promise<ExecutionHostCallResult<WorkspaceInventory>>;
+  readInbox(hostId: unknown): Promise<ExecutionHostCallResult<InboxSnapshot>>;
   reconcileWorkspaces(hostId: unknown): Promise<ExecutionHostCallResult<WorkspaceReconcileReport>>;
   cleanupWorkspace(
     hostId: unknown,
@@ -56,7 +59,7 @@ export interface ExecutionHostIpcActions {
 
 const NOT_READY_MESSAGE = "The desktop runtime is not ready yet.";
 
-const NOT_READY: ExecutionHostOperationResult = { ok: false, message: NOT_READY_MESSAGE };
+const NOT_READY = { ok: false, message: NOT_READY_MESSAGE } as const;
 
 async function onOwningHost<T>(
   hosts: ExecutionHostManager | null,
@@ -150,6 +153,8 @@ export function buildExecutionHostActions(
     },
     readWorkspaces: async (hostId: unknown) =>
       onOwningHost(manager(), hostId, (catalog, id) => catalog.readWorkspaces(id)),
+    readInbox: async (hostId: unknown) =>
+      onOwningHost(manager(), hostId, (catalog, id) => catalog.readInbox(id)),
     reconcileWorkspaces: async (hostId: unknown) =>
       onOwningHost(manager(), hostId, (catalog, id) => catalog.reconcileWorkspaces(id)),
     cleanupWorkspace: async (hostId: unknown, worktreeId: unknown) => {

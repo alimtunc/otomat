@@ -1,9 +1,6 @@
 import type { ExecutionHostCallResult, ExecutionHostId, OtomatDesktopBridge } from "@otomat/domain";
-import {
-  activeExecutionHostId,
-  desktopBridge,
-  requireDesktopBridge,
-} from "@web/lib/desktop-bridge";
+import { activeExecutionHostId } from "@web/lib/active-host";
+import { desktopBridge, requireDesktopBridge } from "@web/lib/desktop-bridge";
 
 export class ExecutionHostCallError extends Error {
   constructor(message: string) {
@@ -13,7 +10,7 @@ export class ExecutionHostCallError extends Error {
 }
 
 /** The active host answers on its own client; every other host goes through the bridge, the only side holding its URL. */
-export async function onWorkspaceHost<T>(
+export async function onExecutionHost<T>(
   hostId: ExecutionHostId,
   active: () => Promise<T>,
   owner: (

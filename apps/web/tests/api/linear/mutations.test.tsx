@@ -2,10 +2,12 @@
 import { DaemonRequestError } from "@otomat/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useCreateIssueSource } from "@web/api/linear/mutations";
-import { queryKeys } from "@web/api/query-keys";
+import { hostKeys } from "@web/api/query-keys";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { mount, type Mounted } from "#support/mount";
+
+const keys = hostKeys("local");
 
 const createIssueSource = vi.fn();
 const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }));
@@ -60,6 +62,6 @@ it("refreshes the whole Linear state when source validation changes authorizatio
   rendered.container.querySelector("button")?.click();
 
   await vi.waitFor(() => {
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.linear });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: keys.linear });
   });
 });

@@ -13,7 +13,7 @@ import {
 import { useRunWorkspace } from "@web/api/runs/queries";
 import { cleanupWorkspaceErrorMessage, useCleanupWorkspace } from "@web/api/workspaces/mutations";
 import { WorkspaceClosureEvidence } from "@web/components/runs/actions/workspace-closure-evidence";
-import { activeExecutionHostId } from "@web/lib/desktop-bridge";
+import { useActiveHostId } from "@web/lib/active-host";
 import { workspaceBlockerAction } from "@web/lib/workspace/blocker";
 
 export interface CleanWorkspaceDialogProps {
@@ -29,7 +29,8 @@ export function CleanWorkspaceDialog({
   open,
   onOpenChange,
 }: CleanWorkspaceDialogProps) {
-  const owned = hostId === activeExecutionHostId();
+  const activeHostId = useActiveHostId();
+  const owned = hostId === activeHostId;
   const summary = useRunWorkspace(entry.run_id ?? "", open && entry.run_id !== null && owned);
   const cleanup = useCleanupWorkspace();
   const blocked = !isWorkspaceCleanable(entry);

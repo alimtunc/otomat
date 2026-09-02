@@ -21,12 +21,14 @@ class FakeSession implements RemoteSessionHandle {
   disposeCount = 0;
   refreshCount = 0;
   lastRetryFlag: boolean | null = null;
+  portReservations = 0;
   constructor(
     readonly alias: string,
     private readonly connectResult: RemoteHostStatus,
     private readonly onStatus: (status: RemoteHostStatus) => void = () => {},
   ) {}
   ensureLocalPort(): Promise<number> {
+    this.portReservations += 1;
     this.url = "http://127.0.0.1:45010";
     return Promise.resolve(45_010);
   }
@@ -141,7 +143,7 @@ it("refuses an alias change while a host switch is in flight", async () => {
   expect(blocked.ok).toBe(false);
 
   release(CONNECTED);
-  await expect(pending).resolves.toEqual({ ok: true });
+  await expect(pending).resolves.toEqual({ ok: true, url: "http://127.0.0.1:45010" });
   expect(manager.remoteSshAlias).toBe("otomat-vps");
 });
 
@@ -338,7 +340,7 @@ it("connects, persists the selection, and re-points the renderer on success", as
   const { manager, applied, sessions, dataDir } = makeManager();
   expect(manager.configureRemote("otomat-vps")).toEqual({ ok: true });
   const result = await manager.select("remote");
-  expect(result).toEqual({ ok: true });
+  expect(result).toEqual({ ok: true, url: "http://127.0.0.1:45010" });
   expect(applied).toEqual(["http://127.0.0.1:45010"]);
   expect(sessions[0]?.lastRetryFlag).toBe(false);
   expect(readExecutionHostsConfig(dataDir)).toEqual({
@@ -393,7 +395,7 @@ it("switching back to local keeps the tunnel alive for the aggregated switcher",
   manager.configureRemote("otomat-vps");
   await manager.select("remote");
   const result = await manager.select("local");
-  expect(result).toEqual({ ok: true });
+  expect(result).toEqual({ ok: true, url: "http://127.0.0.1:49152" });
   expect(sessions[0]?.disposeCount).toBe(0);
   expect(sessions[0]?.status.phase).toBe("connected");
   expect(applied.at(-1)).toBe("http://127.0.0.1:49152");
@@ -451,6 +453,7 @@ it("warms the remote tunnel at boot even when a local project is active", async 
   const { manager, sessions } = makeManager({ dataDir });
   expect(await manager.bootActivate()).toBeNull();
   expect(sessions).toHaveLength(1);
+  expect(sessions[0]?.portReservations).toBe(1);
   expect(sessions[0]?.lastRetryFlag).toBe(true);
   expect(manager.activeHostId).toBe("local");
 });

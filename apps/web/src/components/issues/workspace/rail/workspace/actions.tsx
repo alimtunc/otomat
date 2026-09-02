@@ -2,13 +2,13 @@ import { isWorkspaceCleanable, type WorkspaceEntry } from "@otomat/domain";
 import { Button, Icon } from "@otomat/ui";
 import { useReconcileWorkspaces } from "@web/api/workspaces/mutations";
 import { CleanWorkspaceDialog } from "@web/components/runs/actions/clean-workspace-dialog";
-import { activeExecutionHostId } from "@web/lib/desktop-bridge";
+import { useActiveHostId } from "@web/lib/active-host";
 import { useState } from "react";
 
 export function WorkspaceActions({ entry }: { entry: WorkspaceEntry }) {
   const [cleaning, setCleaning] = useState(false);
   const reconcile = useReconcileWorkspaces();
-  const hostId = activeExecutionHostId();
+  const hostId = useActiveHostId();
   const cleanable = isWorkspaceCleanable(entry);
 
   return (

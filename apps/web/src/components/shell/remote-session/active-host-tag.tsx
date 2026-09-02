@@ -1,6 +1,7 @@
 import { HostTag } from "@otomat/ui";
-import { remoteHostAlias } from "@web/lib/desktop-bridge";
+import { useRemoteHostAlias } from "@web/lib/active-host";
 
 export function ActiveHostTag() {
-  return <HostTag tag={remoteHostAlias() ?? "local"} />;
+  const alias = useRemoteHostAlias();
+  return <HostTag tag={alias ?? "local"} />;
 }

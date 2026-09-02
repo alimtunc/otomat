@@ -1,4 +1,5 @@
 import {
+  openTabHosts,
   projectTabDestination,
   readStoredProjectTabs,
   withoutProjectTab,
@@ -120,5 +121,13 @@ describe("project tab destination", () => {
   it("stays on a list view when the activated tab has no route yet", () => {
     expect(projectTabDestination([], LOCAL, "/issues")).toBeNull();
     expect(projectTabDestination([], LOCAL, "/settings/project")).toBeNull();
+  });
+});
+
+describe("open tab hosts", () => {
+  it("names the active host once, then every host with an open tab", () => {
+    expect(openTabHosts([{ key: REMOTE, route: null }], "local")).toEqual(["local", "remote"]);
+    expect(openTabHosts([{ key: LOCAL, route: null }], "local")).toEqual(["local"]);
+    expect(openTabHosts([], "remote")).toEqual(["remote"]);
   });
 });

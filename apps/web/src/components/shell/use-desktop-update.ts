@@ -1,6 +1,6 @@
 import type { DesktopUpdateSnapshot } from "@otomat/domain";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { queryKeys } from "@web/api/query-keys";
+import { shellKeys } from "@web/api/query-keys";
 import { desktopBridge, requireDesktopBridge } from "@web/lib/desktop-bridge";
 import { useEffect, useState } from "react";
 
@@ -20,7 +20,7 @@ export function useDesktopUpdate(): DesktopUpdateController {
   const bridge = desktopBridge();
   const [pushed, setPushed] = useState<DesktopUpdateSnapshot | null>(null);
   const seed = useQuery({
-    queryKey: queryKeys.desktopUpdate,
+    queryKey: shellKeys.desktopUpdate,
     queryFn: () => requireDesktopBridge(bridge).update.snapshot(),
     enabled: bridge !== null,
   });

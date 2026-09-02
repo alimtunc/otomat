@@ -1,3 +1,5 @@
+import type { ExecutionHostId } from "@otomat/domain";
+import { parseProjectSwitcherKey } from "@web/components/shell/project-selection/host-key";
 import { asRecord, asString } from "@web/lib/coerce";
 import { isProjectScopedDetail } from "@web/lib/project-navigation";
 import { readStoredJson, writeStored } from "@web/lib/storage";
@@ -51,6 +53,15 @@ export function withProjectTabRoute(
   const current = tabs.find((tab) => tab.key === key);
   if (current === undefined || current.route === route) return tabs;
   return tabs.map((tab) => (tab.key === key ? { ...tab, route } : tab));
+}
+
+export function openTabHosts(
+  tabs: StoredProjectTab[],
+  activeHostId: ExecutionHostId,
+): ExecutionHostId[] {
+  const hosts = new Set<ExecutionHostId>([activeHostId]);
+  for (const tab of tabs) hosts.add(parseProjectSwitcherKey(tab.key, activeHostId).hostId);
+  return [...hosts];
 }
 
 export function projectTabDestination(

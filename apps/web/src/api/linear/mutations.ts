@@ -10,7 +10,7 @@ import {
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 
 class LinearOperationError extends Error {
@@ -42,6 +42,7 @@ export function isSupersededLinearError(error: unknown): boolean {
 
 /** On the desktop the vault owns the key and fans it out; the browser build talks to its own daemon. */
 export function useConnectLinear() {
+  const keys = useQueryKeys();
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (request: ConnectLinearRequest) => {
@@ -53,21 +54,20 @@ export function useConnectLinear() {
     },
     onSuccess: (connection) => {
       if (connection === null) return;
-      client.setQueryData<LinearConnectionContract[]>(
-        queryKeys.linearConnections,
-        (connections = []) =>
-          connections.some((candidate) => candidate.id === connection.id)
-            ? connections.map((candidate) =>
-                candidate.id === connection.id ? connection : candidate,
-              )
-            : [...connections, connection],
+      client.setQueryData<LinearConnectionContract[]>(keys.linearConnections, (connections = []) =>
+        connections.some((candidate) => candidate.id === connection.id)
+          ? connections.map((candidate) =>
+              candidate.id === connection.id ? connection : candidate,
+            )
+          : [...connections, connection],
       );
     },
-    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.linear }),
   });
 }
 
 export function useDisconnectLinear() {
+  const keys = useQueryKeys();
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (connectionId: string) => {
@@ -79,7 +79,7 @@ export function useDisconnectLinear() {
       const result = await bridge.linear.forgetKey(connectionId);
       if (!result.ok) throw new LinearOperationError(result.message, result.error_code);
     },
-    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.linear }),
     onError: (error) => {
       if (!isSupersededLinearError(error)) toast.error(linearErrorMessage(error));
     },
@@ -87,25 +87,28 @@ export function useDisconnectLinear() {
 }
 
 export function useCreateIssueSource() {
+  const keys = useQueryKeys();
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: CreateIssueSourceRequest) => daemon.createIssueSource(request),
-    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.linear }),
   });
 }
 
 export function useUpdateIssueSource() {
+  const keys = useQueryKeys();
   const client = useQueryClient();
   return useMutation({
     mutationFn: (variables: { sourceId: string; request: UpdateIssueSourceRequest }) =>
       daemon.updateIssueSource(variables.sourceId, variables.request),
     onSuccess: () => toast.success("Updated the Linear status mapping."),
     onError: (error) => toast.error(linearErrorMessage(error)),
-    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.linear }),
   });
 }
 
 export function useReconcileIssueSource() {
+  const keys = useQueryKeys();
   const client = useQueryClient();
   return useMutation({
     mutationFn: (sourceId: string) => daemon.reconcileIssueSource(sourceId),
@@ -123,17 +126,18 @@ export function useReconcileIssueSource() {
       toast.success(`Reconciled ${result.reconciled} issue(s) with an open workspace.`);
     },
     onError: (error) => toast.error(linearErrorMessage(error)),
-    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.linear }),
   });
 }
 
 export function useDeleteIssueSource() {
+  const keys = useQueryKeys();
   const client = useQueryClient();
   return useMutation({
     mutationFn: (sourceId: string) => daemon.deleteIssueSource(sourceId),
     onSuccess: () => toast.success("Source unmapped — its issues stop syncing."),
     onError: (error) => toast.error(linearErrorMessage(error)),
-    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.linear }),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.linear }),
   });
 }
 

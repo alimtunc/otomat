@@ -1,8 +1,9 @@
 import type { ExecutionHostDescriptor, WorkspaceInventory } from "@otomat/domain";
 import { skipToken, useQueries, useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
-import { onWorkspaceHost } from "@web/api/workspaces/host-call";
+import { onExecutionHost } from "@web/api/host-call";
+import { hostKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 
 /** One query per host, so a host that stops answering keeps its last inventory and its own staleness. */
 export function useHostWorkspaces(
@@ -10,9 +11,9 @@ export function useHostWorkspaces(
 ): UseQueryResult<WorkspaceInventory>[] {
   return useQueries({
     queries: hosts.map((host) => ({
-      queryKey: queryKeys.workspacesForHost(host.id),
+      queryKey: hostKeys(host.id).workspaces,
       queryFn: () =>
-        onWorkspaceHost(
+        onExecutionHost(
           host.id,
           () => daemon.listWorkspaces(),
           (executionHost) => executionHost.readWorkspaces(host.id),
@@ -23,16 +24,18 @@ export function useHostWorkspaces(
 }
 
 export function useWorkspacesForRun(runId: string | null) {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.workspacesForRun(runId),
+    queryKey: keys.workspacesForRun(runId),
     queryFn: runId === null ? skipToken : () => daemon.listWorkspaces({ runId }),
     staleTime: 15_000,
   });
 }
 
 export function useWorkspaceSettings() {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.workspaceSettings,
+    queryKey: keys.workspaceSettings,
     queryFn: () => daemon.workspaceSettings(),
     staleTime: 30_000,
   });

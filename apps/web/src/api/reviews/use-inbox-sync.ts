@@ -2,8 +2,8 @@ import type { PullRequestInboxSync } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useIsMutating, useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
 import { usePullRequestInbox } from "@web/api/reviews/queries";
+import { useQueryKeys } from "@web/api/use-query-keys";
 import { useCallback, useEffect } from "react";
 
 const FRESH_FOR_MS = 60_000;
@@ -21,14 +21,15 @@ export interface PullRequestInboxSyncState extends Omit<PullRequestInboxSync, "r
 }
 
 export function usePullRequestInboxSync(projectId: string | undefined): PullRequestInboxSyncState {
+  const keys = useQueryKeys();
   const client = useQueryClient();
   const inbox = usePullRequestInbox(projectId).data;
-  const mutationKey = queryKeys.pullRequestInboxSync(projectId ?? "");
+  const mutationKey = keys.pullRequestInboxSync(projectId ?? "");
   const pending = useIsMutating({ mutationKey }) > 0;
   const { mutate } = useMutation({
     mutationKey,
     mutationFn: (variables: RefreshVariables) => daemon.syncPullRequestInbox(variables.project_id),
-    onSuccess: (next) => client.setQueryData(queryKeys.pullRequestInbox(next.project_id), next),
+    onSuccess: (next) => client.setQueryData(keys.pullRequestInbox(next.project_id), next),
     onError: (_error, variables) => {
       if (variables.announce)
         toast.error("Could not refresh pull requests — is the daemon running?");
@@ -38,10 +39,10 @@ export function usePullRequestInboxSync(projectId: string | undefined): PullRequ
   const start = useCallback(
     (announce: boolean) => {
       if (projectId === undefined) return;
-      if (client.isMutating({ mutationKey: queryKeys.pullRequestInboxSync(projectId) }) > 0) return;
+      if (client.isMutating({ mutationKey: keys.pullRequestInboxSync(projectId) }) > 0) return;
       mutate({ project_id: projectId, announce });
     },
-    [client, mutate, projectId],
+    [client, keys, mutate, projectId],
   );
 
   const refresh = useCallback(() => start(true), [start]);

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@web/api/query-keys";
+import { shellKeys } from "@web/api/query-keys";
 import { describeOperationFailure } from "@web/components/shell/remote-session/status-labels";
 import { desktopBridge, requireDesktopBridge } from "@web/lib/desktop-bridge";
 
@@ -14,7 +14,7 @@ export function useDaemonUpdate(): UseDaemonUpdateResult {
   const client = useQueryClient();
   const update = useMutation({
     mutationFn: () => requireDesktopBridge(bridge).executionHost.updateRemoteDaemon(),
-    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.executionHost }),
+    onSettled: () => client.invalidateQueries({ queryKey: shellKeys.executionHost }),
   });
 
   let error: string | null = null;

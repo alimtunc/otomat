@@ -133,7 +133,7 @@ it("surfaces a rejected key without clearing the form silently", async () => {
 
   const alert = document.querySelector("[role='alert']");
   expect(alert?.textContent).toContain("Linear rejected the API key");
-  expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["linear"] });
+  expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["local", "linear"] });
 });
 
 it("silences a desktop connection superseded by a newer attempt", async () => {

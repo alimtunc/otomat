@@ -20,9 +20,11 @@ desktop app stays the UI. This document is the contract for that mode.
   guard and CORS behavior apply unchanged.
 - **No state synchronization.** The local and remote daemons own separate
   SQLite databases. When the remote host is active, the cockpit reads only the
-  remote daemon's persistent state; switching hosts reloads the renderer against
-  the other daemon. A failed remote connection never silently falls back to the
-  local daemon — the selection is unchanged and the failure is shown.
+  remote daemon's persistent state; switching hosts re-points the renderer's one
+  daemon client at the other daemon without a reload, and every cached read is
+  keyed by the host it came from. A failed remote connection never silently
+  falls back to the local daemon — the selection is unchanged and the failure
+  is shown.
 - **The host follows the project.** The project switcher aggregates both hosts'
   project catalogs (fetched by the main process, badged per host); picking a
   project on the other host persists the choice and re-points the renderer at
@@ -314,10 +316,11 @@ session and reused across reconnects, so the renderer URL stays stable; an
 unexpected tunnel exit enters a visible `reconnecting` loop (1s→15s backoff)
 that keeps trying until the user acts or the app quits.
 
-The renderer learns the active host synchronously at preload
-(`window.otomat.executionHostId` / `executionHostSshAlias`) and the daemon URL
-is simply the tunnel's local origin, so the web app's health polling and SSE
-resume behave identically for both hosts. What the host status adds is
+The renderer learns the host active at load synchronously at preload
+(`window.otomat.executionHostId` / `executionHostSshAlias`); a later switch
+answers with the target's origin (`ExecutionHostSelectResult.url`) and the
+renderer records it in `lib/active-host.ts`, so the web app's health polling
+and SSE resume behave identically for both hosts. What the host status adds is
 knowing when a failed poll is only a bootstrap: `RemoteSessionProvider`
 (`apps/web/src/components/shell/remote-session/`) holds the single subscription
 to it, and every surface reads that one state — the shell's connection line, the

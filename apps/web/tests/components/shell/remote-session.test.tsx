@@ -1,12 +1,16 @@
 // @vitest-environment happy-dom
-import type { ExecutionHostSnapshot, RemoteHostStatus } from "@otomat/domain";
+import type { ExecutionHostSnapshot, IssueContract, RemoteHostStatus } from "@otomat/domain";
+import type { QueryClient } from "@tanstack/react-query";
+import { hostKeys } from "@web/api/query-keys";
 import { useRemoteSession } from "@web/components/shell/remote-session/context";
 import { useShellData } from "@web/components/shell/use-shell-data";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { fakeDesktopBridge, twoHostSnapshot } from "#support/desktop-bridge";
+import { issueContract } from "#support/issue";
 import { mountWithQuery } from "#support/mount";
+import { testQueryClient } from "#support/query";
 
 vi.mock("@web/api/daemon/queries", () => ({
   useDaemonStatus: () => ({ connectionState: "offline", lastSyncAt: null, retry: () => {} }),
@@ -51,16 +55,19 @@ function snapshot(overrides: Partial<ExecutionHostSnapshot> = {}): ExecutionHost
   });
 }
 
-async function renderProbe(overrides: Partial<ExecutionHostSnapshot> = {}) {
+async function renderProbe(
+  overrides: Partial<ExecutionHostSnapshot> = {},
+  client: QueryClient = testQueryClient(),
+) {
   let push: ((status: RemoteHostStatus) => void) | null = null;
-  const bridge = fakeDesktopBridge();
+  const bridge = fakeDesktopBridge({ executionHostId: overrides.active_id ?? "remote" });
   bridge.executionHost.snapshot = () => Promise.resolve(snapshot(overrides));
   bridge.executionHost.onRemoteStatus = (listener) => {
     push = listener;
     return () => {};
   };
   window.otomat = bridge;
-  const mounted = await mountWithQuery(<SessionProbe />);
+  const mounted = await mountWithQuery(<SessionProbe />, client);
   cleanups.push(mounted.cleanup);
   const read = (id: string) =>
     mounted.container.querySelector(`[data-testid='${id}']`)?.textContent;
@@ -127,6 +134,18 @@ it("leaves a local host alone: nothing settles, nothing waits", async () => {
   expect(probe.read("settling")).toBe("false");
   expect(probe.read("update-pending")).toBe("false");
   expect(probe.read("connection")).toBe("offline");
+});
+
+it("revalidates the remote host's cache on reconnect without clearing it", async () => {
+  const client = testQueryClient();
+  const key = hostKeys("remote").issuesList("p9");
+  client.setQueryData(key, [issueContract({ id: "i9" })]);
+  const probe = await renderProbe({}, client);
+
+  await probe.push({ phase: "connected", detail: null });
+
+  expect(client.getQueryData<IssueContract[]>(key)?.map((issue) => issue.id)).toEqual(["i9"]);
+  expect(client.getQueryState(key)?.isInvalidated).toBe(true);
 });
 
 it("carries the reason the last automatic update stopped", async () => {

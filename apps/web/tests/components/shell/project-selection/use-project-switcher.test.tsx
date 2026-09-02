@@ -1,12 +1,14 @@
 // @vitest-environment happy-dom
-import { readSelectedProjectId } from "@web/components/shell/project-selection/selection";
+import type { ExecutionHostSelectResult } from "@otomat/domain";
+import { readSelectedProjectIds } from "@web/components/shell/project-selection/selection";
 import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
+import { activeHostStore } from "@web/lib/active-host";
 import { act } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { fakeDesktopBridge } from "#support/desktop-bridge";
-import { mount, type Mounted } from "#support/mount";
+import { mountWithQuery, type Mounted } from "#support/mount";
 
 const navigate = vi.fn();
 let pathname = "/issues";
@@ -52,11 +54,18 @@ afterEach(async () => {
   for (const instance of mounted.splice(0)) await instance.cleanup();
   document.body.replaceChildren();
   window.localStorage.clear();
+  activeHostStore.setState(() => null);
   delete window.otomat;
 });
 
 async function renderSwitcher(): Promise<void> {
-  mounted.push(await mount(<Probe />));
+  mounted.push(await mountWithQuery(<Probe />));
+}
+
+async function settle(): Promise<void> {
+  await act(async () => {
+    await Promise.resolve();
+  });
 }
 
 it("opens no tab of its own: picking a project only switches to it", async () => {
@@ -95,34 +104,47 @@ it("stays where it is when the picked project has no view of its own yet", async
   expect(navigate).not.toHaveBeenCalled();
 });
 
-it("records the picked project under the host it belongs to", async () => {
-  window.otomat = fakeDesktopBridge();
-  projectTabsStore.setState(() => [{ key: "remote:p9", route: "/runs" }]);
-
-  await renderSwitcher();
-  await act(async () => select("remote:p9"));
-
-  expect(readSelectedProjectId("remote")).toBe("p9");
-  expect(readSelectedProjectId("local")).toBeUndefined();
-});
-
-it("returns to the view it left when the host switch fails", async () => {
+it("switches the host in place once it answers, then lands on the project's view", async () => {
   const bridge = fakeDesktopBridge();
-  window.otomat = {
-    ...bridge,
-    executionHost: {
-      ...bridge.executionHost,
-      select: () => Promise.resolve({ ok: false as const, message: "unreachable" }),
-    },
-  };
+  let answer: ((result: ExecutionHostSelectResult) => void) | null = null;
+  bridge.executionHost.select = () =>
+    new Promise((resolve) => {
+      answer = resolve;
+    });
+  window.otomat = bridge;
   projectTabsStore.setState(() => [{ key: "remote:p9", route: "/runs" }]);
 
   await renderSwitcher();
   await act(async () => {
     select("remote:p9");
-    await Promise.resolve();
   });
+  expect(navigate).not.toHaveBeenCalled();
+  expect(activeHostStore.state).toBeNull();
+  await act(async () => {
+    answer?.({ ok: true, url: "http://127.0.0.1:45010" });
+  });
+  await settle();
 
-  expect(navigate).toHaveBeenNthCalledWith(1, { href: "/runs" });
-  expect(navigate).toHaveBeenNthCalledWith(2, { href: "/issues?view=board" });
+  expect(activeHostStore.state).toEqual({ id: "remote", daemonUrl: "http://127.0.0.1:45010" });
+  expect(readSelectedProjectIds()).toEqual(new Map([["remote", "p9"]]));
+  expect(navigate).toHaveBeenCalledTimes(1);
+  expect(navigate).toHaveBeenCalledWith({ href: "/runs" });
+});
+
+it("stays on the current host and view when the host switch fails", async () => {
+  const bridge = fakeDesktopBridge();
+  bridge.executionHost.select = () =>
+    Promise.resolve({ ok: false as const, message: "unreachable" });
+  window.otomat = bridge;
+  projectTabsStore.setState(() => [{ key: "remote:p9", route: "/runs" }]);
+
+  await renderSwitcher();
+  await act(async () => {
+    select("remote:p9");
+  });
+  await settle();
+
+  expect(navigate).not.toHaveBeenCalled();
+  expect(activeHostStore.state).toBeNull();
+  expect(readSelectedProjectIds()).toEqual(new Map());
 });
