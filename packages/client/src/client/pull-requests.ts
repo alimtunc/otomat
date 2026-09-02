@@ -2,9 +2,11 @@ import {
   issuePullRequestsSchema,
   pullRequestContractSchema,
   pullRequestDetailSchema,
+  pullRequestOverviewSchema,
   pullRequestProposalSchema,
   pullRequestReviewContextSchema,
   type AttachPullRequestRequest,
+  type MergePullRequestRequest,
   type PublishPullRequestRequest,
   type PushPullRequestRequest,
 } from "@otomat/domain";
@@ -50,6 +52,18 @@ export function createPullRequestsClient(config: DaemonClientConfig) {
       const id = encodeURIComponent(pullRequestId);
       return pullRequestReviewContextSchema.parse(
         await getJson(config, `/api/pull-requests/${id}`),
+      );
+    },
+    async getPullRequestOverview(pullRequestId: string) {
+      const id = encodeURIComponent(pullRequestId);
+      return pullRequestOverviewSchema.parse(
+        await getJson(config, `/api/pull-requests/${id}/overview`),
+      );
+    },
+    async mergePullRequest(pullRequestId: string, request: MergePullRequestRequest) {
+      const id = encodeURIComponent(pullRequestId);
+      return pullRequestReviewContextSchema.parse(
+        await postJson(config, `/api/pull-requests/${id}/merge`, request),
       );
     },
     async refreshPullRequest(pullRequestId: string) {

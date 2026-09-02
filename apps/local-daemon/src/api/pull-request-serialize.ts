@@ -2,12 +2,16 @@ import type { PullRequestRow } from "@otomat/db";
 import {
   pullRequestContractSchema,
   pullRequestEvidenceSchema,
+  pullRequestOverviewSchema,
   pullRequestReviewContextSchema,
   type PullRequestAttachment,
   type PullRequestContract,
   type PullRequestIssueLink,
+  type PullRequestOverview,
   type PullRequestReviewContext,
 } from "@otomat/domain";
+
+import type { PullRequestOverviewResult } from "#github";
 
 /** A row carries its evidence as stored JSON; parsing it strictly means a corrupt audit is reported, never shown as "no evidence". */
 function toAttachment(row: PullRequestRow): PullRequestAttachment | null {
@@ -65,4 +69,23 @@ export function toPullRequestReviewContext(
   issue: PullRequestIssueLink | null,
 ): PullRequestReviewContext {
   return pullRequestReviewContextSchema.parse({ pull_request: toPullRequest(row), issue });
+}
+
+export function toPullRequestOverview(
+  result: PullRequestOverviewResult,
+  issue: PullRequestIssueLink | null,
+): PullRequestOverview {
+  return pullRequestOverviewSchema.parse({
+    pull_request: toPullRequest(result.row),
+    issue,
+    repository: result.repository,
+    checks: result.facts.checks,
+    reviews: result.facts.reviews,
+    commits: result.facts.commits,
+    changed_files: result.facts.changedFiles,
+    additions: result.facts.additions,
+    deletions: result.facts.deletions,
+    behind_base: result.behindBase,
+    merge: result.merge,
+  });
 }

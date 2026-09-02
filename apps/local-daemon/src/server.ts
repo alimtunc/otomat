@@ -98,8 +98,8 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       dataDir,
       repositories,
       appendRunStep: (runId, input) => supervisorBinding.on((it) => it.appendStep(runId, input)),
-      publishReviewComment: (runId, input) =>
-        gitHubBinding.on((it) => it.publishReviewComment(runId, input)),
+      submitPullRequestReview: (pullRequestId, input) =>
+        gitHubBinding.on((it) => it.submitPullRequestReview(pullRequestId, input)),
       syncViewedFile: (pullRequestId, input) =>
         gitHubBinding.on((it) => it.syncViewedFile(pullRequestId, input)),
       readViewedFiles: (pullRequestId) =>

@@ -50,7 +50,7 @@ beforeEach(() => {
     dataDir: fix.dataDir,
     repositories,
     appendRunStep: () => Promise.reject(new Error("not used")),
-    publishReviewComment: () => Promise.reject(new Error("not used")),
+    submitPullRequestReview: () => Promise.reject(new Error("not used")),
     syncViewedFile: async (pullRequestId, input) => {
       synced.push({ pullRequestId, input });
       if (syncFailure !== null) throw syncFailure;

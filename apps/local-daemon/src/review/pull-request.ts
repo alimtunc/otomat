@@ -1,5 +1,10 @@
 import { getPullRequestForRun, type Db, type PullRequestRow } from "@otomat/db";
-import type { ReviewDestinationAvailability, ReviewFixAuthority } from "@otomat/domain";
+import {
+  PULL_REQUEST_REVIEW_EVENTS,
+  type ReviewDestinationAvailability,
+  type ReviewFixAuthority,
+  type ReviewSubmissionAvailability,
+} from "@otomat/domain";
 
 import {
   hasCommit,
@@ -65,4 +70,22 @@ export function importedDestinations(row: PullRequestRow): ReviewDestinationAvai
     };
   }
   return { pr_review: true, reason: `Pull request #${row.number} is open for review.` };
+}
+
+/** GitHub refuses an approval from the author, so the verdict is withheld here rather than sent and rejected. */
+export function reviewSubmissionAvailability(
+  row: PullRequestRow | null,
+  destinations: ReviewDestinationAvailability,
+  viewerLogin: string | null,
+): ReviewSubmissionAvailability {
+  if (row === null || !destinations.pr_review) {
+    return { events: [], reason: destinations.reason };
+  }
+  if (row.author_login !== null && row.author_login === viewerLogin) {
+    return {
+      events: ["comment", "request_changes"],
+      reason: `GitHub does not let @${viewerLogin} approve a pull request they opened.`,
+    };
+  }
+  return { events: [...PULL_REQUEST_REVIEW_EVENTS], reason: destinations.reason };
 }

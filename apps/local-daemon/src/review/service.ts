@@ -4,10 +4,10 @@ import { getBranchCommits } from "./commits.js";
 import { getDiff } from "./diff.js";
 import { getCommentFixProof } from "./fix-proof.js";
 import { requestFix } from "./fix.js";
-import { publishComment } from "./publication.js";
 import { importViewedFiles, setReviewedFile } from "./reviewed-sync.js";
 import { onRunSettled } from "./settle.js";
 import { resolveReviewSubject } from "./subject.js";
+import { submitReview } from "./submission.js";
 import { getReviewDetail } from "./surface.js";
 import type {
   ReviewContext,
@@ -26,7 +26,7 @@ export function createReviewService(config: ReviewServiceConfig): ReviewService 
     getCommentFixProof: (runId, commentId) => getCommentFixProof(ctx, runId, commentId),
     getReviewDetail: (ref) => getReviewDetail(ctx, subject(ref)),
     addComment: (ref, request) => addComment(ctx, subject(ref), request),
-    publishComment: (ref, commentId) => publishComment(ctx, subject(ref), commentId),
+    submitReview: (ref, request) => submitReview(ctx, subject(ref), request),
     getFileBlobs: (ref, request) => getFileBlobs(ctx, ref, request),
     setReviewedFile: (ref, request) => setReviewedFile(ctx, subject(ref), request),
     importViewedFiles: (pullRequestId) => importViewedFiles(ctx, pullRequestId),

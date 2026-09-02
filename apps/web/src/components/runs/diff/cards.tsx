@@ -76,12 +76,7 @@ export function DiffFileCards({
       ))}
       <HiddenReviewedNotice count={hiddenCount} onShow={onShowHidden} />
       {allReviewed ? <DiffAllReviewedNotice count={reviewedPaths.size} /> : null}
-      <DetachedComments
-        target={target}
-        comments={comments.partition.detached}
-        onPublish={commentActions.publish}
-        publishingId={comments.publishingId}
-      />
+      <DetachedComments target={target} comments={comments.partition.detached} />
     </div>
   );
 }

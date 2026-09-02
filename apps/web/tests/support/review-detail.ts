@@ -10,6 +10,7 @@ export function reviewDetail(
     reviewed_files: reviewedFiles,
     fix_authority: { kind: "external", reason: "This pull request is someone else's branch." },
     destinations: { pr_review: false, reason: "This run has no pull request yet." },
+    submission: { events: [], reason: "This run has no pull request yet." },
     ...overrides,
   };
 }

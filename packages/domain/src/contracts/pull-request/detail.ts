@@ -1,13 +1,13 @@
 import { z } from "zod";
 
-import { ISSUE_STATES } from "../state-machines/issue.js";
-import { commitSubjectSchema } from "./commit-subject.js";
+import { commitSubjectSchema } from "../commit-subject.js";
 import {
   PULL_REQUEST_PUBLICATION_MODES,
   pullRequestContractSchema,
   pullRequestGeneratorAuditSchema,
-} from "./entities/pull-request.js";
-import { operationContractSchema } from "./operation.js";
+} from "../entities/pull-request.js";
+import { ISSUE_STATES } from "../entity-states.js";
+import { operationContractSchema } from "../operation.js";
 
 export const pullRequestPublicationDetailsSchema = z.object({
   subject: commitSubjectSchema,

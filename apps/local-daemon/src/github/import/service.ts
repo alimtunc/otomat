@@ -6,11 +6,11 @@ import {
 } from "@otomat/db";
 import type { AttachPullRequestRequest } from "@otomat/domain";
 
-import { fetchPullRequestTrees, type PullRequestTrees } from "#git";
-
+import type { GitHubCli, GitHubPullRequest, PullRequestOverviewFacts } from "../cli/contract.js";
 import { failureMessage, PullRequestImportRefusal } from "../errors.js";
-import type { GitHubCli, GitHubPullRequest, IssuePullRequestsResult } from "../types.js";
+import type { IssuePullRequestsResult } from "../types.js";
 import { detectIssuePullRequests } from "./detect.js";
+import { connectedLogin, fetchHeadTrees, readPullRequest, readOverviewFacts } from "./read.js";
 import { parsePullRequestReference } from "./reference.js";
 import {
   resolveIssueRepository,
@@ -25,6 +25,22 @@ export interface PullRequestImportConfig extends ImportStoreConfig {
   cli: GitHubCli;
 }
 
+export interface PullRequestOverviewRead {
+  row: PullRequestRow;
+  repository: string;
+  /** Checkout the read ran from; the merge policy is asked for from the same place. */
+  cwd: string;
+  /** The identity that classified this read, reused so the merge authority rests on one answer. */
+  viewerLogin: string | null;
+  facts: PullRequestOverviewFacts;
+}
+
+interface LivePullRequest {
+  row: PullRequestRow;
+  number: number;
+  repository: IssueRepository;
+}
+
 export interface PullRequestImportService {
   list(issueId: string): Promise<IssuePullRequestsResult>;
   /** Verifies the repository, the base, the head and the state before anything is written. */
@@ -32,6 +48,7 @@ export interface PullRequestImportService {
   detach(pullRequestId: string): PullRequestRow;
   /** Re-reads GitHub: a moved head re-pins the review, a merge or a close settles it. */
   refresh(pullRequestId: string): Promise<PullRequestRow>;
+  overview(pullRequestId: string): Promise<PullRequestOverviewRead>;
 }
 
 class DefaultPullRequestImportService implements PullRequestImportService {
@@ -56,7 +73,7 @@ class DefaultPullRequestImportService implements PullRequestImportService {
       {
         db: this.config.db,
         cli: this.config.cli,
-        connectedLogin: () => this.connectedLogin(),
+        connectedLogin: () => connectedLogin(this.config.cli),
       },
       issueId,
       repository,
@@ -91,12 +108,12 @@ class DefaultPullRequestImportService implements PullRequestImportService {
       );
     }
 
-    const provider = await this.view(repository, reference.number);
-    const connectedLogin = await this.connectedLogin();
+    const provider = await readPullRequest(this.config.cli, repository, reference.number);
+    const login = await connectedLogin(this.config.cli);
     const verdict = classifyPullRequest(this.config.db, {
       repositoryId: repository.binding.repositoryId,
       provider,
-      connectedLogin,
+      connectedLogin: login,
     });
     return insertMirroredPullRequest(this.config, {
       issueId,
@@ -104,8 +121,8 @@ class DefaultPullRequestImportService implements PullRequestImportService {
       provider,
       provenance: verdict.provenance,
       evidence: buildEvidence(repository.remote.repository, provider, "manual"),
-      attachedBy: connectedLogin,
-      trees: this.fetchTrees(repository, provider),
+      attachedBy: login,
+      trees: fetchHeadTrees(repository, provider),
       syncedAt: null,
     });
   }
@@ -122,24 +139,54 @@ class DefaultPullRequestImportService implements PullRequestImportService {
   }
 
   async refresh(pullRequestId: string): Promise<PullRequestRow> {
+    const live = await this.live(pullRequestId);
+    const provider = await readPullRequest(this.config.cli, live.repository, live.number);
+    return this.mirror(live.row, live.repository, provider, await connectedLogin(this.config.cli));
+  }
+
+  async overview(pullRequestId: string): Promise<PullRequestOverviewRead> {
+    const live = await this.live(pullRequestId);
+    const facts = await readOverviewFacts(this.config.cli, live.repository, live.number);
+    const viewerLogin = await connectedLogin(this.config.cli);
+    return {
+      row: await this.mirror(live.row, live.repository, facts.pullRequest, viewerLogin),
+      repository: live.repository.remote.repository,
+      cwd: live.repository.binding.rootPath,
+      viewerLogin,
+      facts,
+    };
+  }
+
+  private async live(pullRequestId: string): Promise<LivePullRequest> {
     const row = this.require(pullRequestId);
     if (row.number === null) {
       throw new PullRequestImportRefusal(
         "pr_not_found",
-        "This pull request has no number on GitHub yet, so there is nothing to refresh.",
+        "This pull request has no number on GitHub yet, so there is nothing to read.",
       );
     }
-    const repository = await resolvePullRequestRepository(this.config, row);
-    const provider = await this.view(repository, row.number);
+    return {
+      row,
+      number: row.number,
+      repository: await resolvePullRequestRepository(this.config, row),
+    };
+  }
+
+  private mirror(
+    row: PullRequestRow,
+    repository: IssueRepository,
+    provider: GitHubPullRequest,
+    login: string | null,
+  ): PullRequestRow {
     const verdict = classifyPullRequest(this.config.db, {
       repositoryId: repository.binding.repositoryId,
       provider,
-      connectedLogin: await this.connectedLogin(),
+      connectedLogin: login,
     });
     return applyProviderState(this.config, row, {
       provider,
       provenance: verdict.provenance,
-      trees: this.fetchTrees(repository, provider),
+      trees: fetchHeadTrees(repository, provider),
       syncedAt: null,
     });
   }
@@ -157,43 +204,6 @@ class DefaultPullRequestImportService implements PullRequestImportService {
 
   private repositoryFor(issueId: string): Promise<IssueRepository> {
     return resolveIssueRepository(this.config, issueId);
-  }
-
-  /** Isolation is the fetch itself: the head lands in a read-only ref, so review holds no branch it could push. */
-  private fetchTrees(repository: IssueRepository, provider: GitHubPullRequest): PullRequestTrees {
-    try {
-      return fetchPullRequestTrees({
-        repoRoot: repository.binding.rootPath,
-        remote: repository.remote.name,
-        number: provider.number,
-        baseRef: provider.baseRef,
-      });
-    } catch (error) {
-      throw new PullRequestImportRefusal(
-        "pr_lookup_failed",
-        `The pull request head could not be fetched: ${failureMessage(error)}`,
-      );
-    }
-  }
-
-  private async view(repository: IssueRepository, number: number): Promise<GitHubPullRequest> {
-    try {
-      return await this.config.cli.viewPullRequest(
-        repository.binding.rootPath,
-        repository.remote.repository,
-        number,
-      );
-    } catch (error) {
-      throw new PullRequestImportRefusal(
-        "pr_not_found",
-        `GitHub could not read ${repository.remote.repository}#${number}: ${failureMessage(error)}`,
-      );
-    }
-  }
-
-  private async connectedLogin(): Promise<string | null> {
-    const connection = await this.config.cli.connection();
-    return connection.status === "connected" ? connection.login : null;
   }
 }
 

@@ -1,16 +1,12 @@
-import { Button, EmptyState, ErrorState, type BreadcrumbItem } from "@otomat/ui";
+import { Button, EmptyState, ErrorState } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { usePullRequestReviewContext } from "@web/api/prs/queries";
 import { usePullRequestReconciliation } from "@web/api/prs/use-reconciliation";
-import { PullRequestIssueContext } from "@web/components/pull-requests/issue-context";
 import { ReviewDiffView } from "@web/components/runs/diff/review-view";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
-import { RouteShell } from "@web/components/shell/route-shell";
 import { StaleNotice } from "@web/components/shell/stale-notice";
-import { useBackNavigation } from "@web/components/shell/use-back-navigation";
-import { pullRequestLabel } from "@web/lib/pull-request/label";
 
 const HEAD_UNREACHABLE =
   "Otomat holds no fetched head for this pull request. Fetch it to read its diff here.";
@@ -22,74 +18,55 @@ export function PullRequestDiffView() {
   const query = usePullRequestReviewContext(pullRequestId);
   const pullRequest = query.data?.pull_request;
   const reconciliation = usePullRequestReconciliation(pullRequestId, pullRequest?.issue_id ?? null);
-  const back = useBackNavigation(null);
-
-  const pullRequestCrumb = (): BreadcrumbItem => {
-    if (pullRequest !== undefined) return { label: pullRequestLabel(pullRequest) };
-    return { label: query.isError ? "Pull request unavailable" : "Loading pull request…" };
-  };
 
   return (
-    <RouteShell
-      active="reviews"
-      back={back}
-      breadcrumbs={[
-        { label: "Reviews", href: "/reviews" },
-        pullRequestCrumb(),
-        { label: "Diff", current: true },
-      ]}
-      breadcrumbExtra={
-        query.data === undefined ? null : <PullRequestIssueContext issue={query.data.issue} />
+    <QueryBoundary
+      query={query}
+      pending={<DetailSkeleton blocks={2} />}
+      error={
+        <CenteredState>
+          <ErrorState
+            title="Could not load this pull request"
+            description="It may have been detached, or the daemon did not answer."
+            onRetry={() => void query.refetch()}
+          />
+        </CenteredState>
       }
     >
-      <QueryBoundary
-        query={query}
-        pending={<DetailSkeleton blocks={2} />}
-        error={
-          <CenteredState>
-            <ErrorState
-              title="Could not load this pull request"
-              description="It may have been detached, or the daemon did not answer."
-              onRetry={() => void query.refetch()}
+      {(context) => (
+        <>
+          {reconciliation.failure === null ? null : (
+            <StaleNotice
+              dataUpdatedAt={query.dataUpdatedAt}
+              refreshing={reconciliation.running}
+              onRetry={reconciliation.retry}
+              reason={reconciliation.failure}
             />
-          </CenteredState>
-        }
-      >
-        {(context) => (
-          <>
-            {reconciliation.failure === null ? null : (
-              <StaleNotice
-                dataUpdatedAt={query.dataUpdatedAt}
-                refreshing={reconciliation.running}
-                onRetry={reconciliation.retry}
-                reason={reconciliation.failure}
+          )}
+          {context.pull_request.head_sha === null ? (
+            <CenteredState>
+              <EmptyState
+                icon="git-compare"
+                title={reconciliation.running ? "Fetching the head…" : "No fetched head"}
+                description={reconciliation.running ? HEAD_FETCHING : HEAD_UNREACHABLE}
+                action={
+                  reconciliation.running ? undefined : (
+                    <Button size="sm" onClick={reconciliation.retry}>
+                      Fetch from GitHub
+                    </Button>
+                  )
+                }
               />
-            )}
-            {context.pull_request.head_sha === null ? (
-              <CenteredState>
-                <EmptyState
-                  icon="git-compare"
-                  title={reconciliation.running ? "Fetching the head…" : "No fetched head"}
-                  description={reconciliation.running ? HEAD_FETCHING : HEAD_UNREACHABLE}
-                  action={
-                    reconciliation.running ? undefined : (
-                      <Button size="sm" onClick={reconciliation.retry}>
-                        Fetch from GitHub
-                      </Button>
-                    )
-                  }
-                />
-              </CenteredState>
-            ) : (
-              <ReviewDiffView
-                target={{ kind: "pull_request", id: pullRequestId }}
-                workspace={{ open: false, issueId: context.pull_request.issue_id }}
-                emptyDescription={HEAD_UNREACHABLE}
-              />
-            )}
-          </>
-        )}
-      </QueryBoundary>
-    </RouteShell>
+            </CenteredState>
+          ) : (
+            <ReviewDiffView
+              target={{ kind: "pull_request", id: pullRequestId }}
+              workspace={{ open: false, issueId: context.pull_request.issue_id }}
+              emptyDescription={HEAD_UNREACHABLE}
+            />
+          )}
+        </>
+      )}
+    </QueryBoundary>
   );
 }

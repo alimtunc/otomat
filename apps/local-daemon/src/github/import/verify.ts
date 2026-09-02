@@ -1,7 +1,7 @@
 import { findPullRequestByNumber, getRepository, listRuns, type Db } from "@otomat/db";
 import type { PullRequestDiscovery, PullRequestEvidence } from "@otomat/domain";
 
-import type { GitHubPullRequest } from "../types.js";
+import type { GitHubPullRequest } from "../cli/contract.js";
 import { classifyProvenance, type ProvenanceVerdict } from "./provenance.js";
 
 export function buildEvidence(

@@ -9,7 +9,6 @@
  */
 export {
   CommentDestinationUnavailableError,
-  CommentPublicationFailedError,
   CommentRangeInvalidError,
   CommentsNotFixableError,
   DiffScopeNotFoundError,
@@ -18,6 +17,10 @@ export {
   FileNotInDiffError,
   FileTooLargeError,
   ReviewAnchorStaleError,
+  ReviewSubmissionBusyError,
+  ReviewSubmissionEmptyError,
+  ReviewSubmissionFailedError,
+  ReviewSubmissionUnavailableError,
 } from "./errors.js";
 export { createReviewService } from "./service.js";
 export type {
@@ -25,6 +28,7 @@ export type {
   FileBlobsResult,
   FixRequest,
   PullRequestCommentInput,
+  PullRequestReviewSubmission,
   ReviewDetailResult,
   ReviewDiffResult,
   ReviewService,

@@ -3,9 +3,10 @@ import {
   commandFailureDetail,
   commandSucceeded,
 } from "./cli/commands.js";
+import type { ForcePushWithLeaseInput, GitHubRemote } from "./cli/contract.js";
 import { GitHubCliError } from "./errors.js";
 import { maskRemoteUrl, parseGitHubRemoteUrl } from "./parse.js";
-import type { CommandRunner, ForcePushWithLeaseInput, GitHubRemote } from "./types.js";
+import type { CommandRunner } from "./types.js";
 
 const NON_FAST_FORWARD = /non-fast-forward|fetch first|Updates were rejected/i;
 const STALE_LEASE = /stale info/i;

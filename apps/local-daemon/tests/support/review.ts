@@ -81,12 +81,13 @@ export function stubReviewService(overrides: Partial<ReviewService> = {}): Revie
       reviewedFiles: [],
       fixAuthority: { kind: "otomat", reason: "Otomat owns this branch." },
       destinations: { pr_review: false, reason: "This run has no pull request yet." },
+      submission: { events: [], reason: "This run has no pull request yet." },
     }),
-    addComment: async () => {
+    addComment: () => {
       throw new Error("addComment stub not configured");
     },
-    publishComment: async () => {
-      throw new Error("publishComment stub not configured");
+    submitReview: async () => {
+      throw new Error("submitReview stub not configured");
     },
     getFileBlobs: () => {
       throw new Error("getFileBlobs stub not configured");

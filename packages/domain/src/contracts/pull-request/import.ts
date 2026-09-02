@@ -4,7 +4,7 @@ import {
   pullRequestContractSchema,
   pullRequestEvidenceSchema,
   pullRequestProvenanceSchema,
-} from "./entities/pull-request.js";
+} from "../entities/pull-request.js";
 
 /** A pull request number (`12`, `#12`) or a GitHub pull-request URL; the daemon verifies whatever it resolves to. */
 export const attachPullRequestRequestSchema = z

@@ -1,7 +1,7 @@
 import type { PullRequestPatch } from "@otomat/db";
 
 import { normalizePullRequestBody } from "./body.js";
-import type { GitHubPullRequest } from "./types.js";
+import type { GitHubPullRequest } from "./cli/contract.js";
 
 /** The one column set every path mirrors, so a publication, an adoption and a pass cannot drift apart. */
 export function mirroredColumns(provider: GitHubPullRequest): PullRequestPatch {

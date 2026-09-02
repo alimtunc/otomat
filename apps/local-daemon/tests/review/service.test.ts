@@ -8,7 +8,10 @@ import {
   getRun,
   insertPullRequest,
   setReviewCommentFixRequested,
+  setReviewCommentPublication,
+  updatePullRequest,
   updateReviewCommentStatus,
+  writeGitHubViewer,
   type ReviewCommentRow,
 } from "@otomat/db";
 import { BRANCH_DIFF_SCOPE, type CreateReviewCommentRequest } from "@otomat/domain";
@@ -24,7 +27,11 @@ import {
   FileNotInDiffError,
   ReviewAnchorStaleError,
   CommentsNotFixableError,
-  type PullRequestCommentInput,
+  ReviewSubmissionBusyError,
+  ReviewSubmissionEmptyError,
+  ReviewSubmissionFailedError,
+  ReviewSubmissionUnavailableError,
+  type PullRequestReviewSubmission,
   type ReviewService,
   type ReviewServiceConfig,
   type ReviewSubjectRef,
@@ -44,8 +51,8 @@ let worktrees: GitWorktreeService;
 let review: ReviewService;
 let reviewConfig: ReviewServiceConfig;
 let appended: AppendStepInput[] = [];
-let published: PullRequestCommentInput[] = [];
-let publishFailure: Error | null = null;
+let submissions: PullRequestReviewSubmission[] = [];
+let submitFailure: Error | null = null;
 let worktreePath = "";
 
 beforeEach(() => {
@@ -58,8 +65,8 @@ beforeEach(() => {
   if (!binding) throw new Error("repo-1 binding missing");
   worktrees = binding.service;
   appended = [];
-  published = [];
-  publishFailure = null;
+  submissions = [];
+  submitFailure = null;
   reviewConfig = {
     db: fix.db,
     dataDir: fix.dataDir,
@@ -70,10 +77,10 @@ beforeEach(() => {
       if (!row) throw new Error(`run ${runId} missing`);
       return row;
     },
-    publishReviewComment: async (_runId, input) => {
-      published.push(input);
-      if (publishFailure !== null) throw publishFailure;
-      return { url: "https://github.com/acme/app/pull/7#discussion_r1" };
+    submitPullRequestReview: async (_pullRequestId, input) => {
+      submissions.push(input);
+      if (submitFailure !== null) throw submitFailure;
+      return { url: "https://github.com/acme/app/pull/7#pullrequestreview-1" };
     },
     syncViewedFile: async () => "octocat",
     readViewedFiles: async () => ({ viewerLogin: "octocat", files: [] }),
@@ -107,7 +114,7 @@ function run() {
 const runTarget = (id: string = RUN_ID): ReviewSubjectRef => ({ kind: "run", id });
 
 /** Every field the daemon needs; a test names only the anchor it is about. */
-function addComment(
+async function addComment(
   target: ReviewSubjectRef,
   input: Omit<CreateReviewCommentRequest, "side" | "destination"> &
     Partial<Pick<CreateReviewCommentRequest, "side" | "destination">>,
@@ -601,7 +608,7 @@ it("refuses a whole-file anchor for the pull-request destination", async () => {
   ).rejects.toThrow(CommentRangeInvalidError);
 });
 
-it("publishes a chosen PR-review comment on creation and refuses to publish it twice", async () => {
+it("carries the summary, the verdict and every pending comment in one submission", async () => {
   openPullRequest();
   const created = await addComment(runTarget(), {
     file_path: "notes.md",
@@ -612,68 +619,168 @@ it("publishes a chosen PR-review comment on creation and refuses to publish it t
     body: "rename these",
     suggestion: "delta\nepsilon",
   });
+  expect(created.publication_status).toBe("local");
+  expect(submissions).toEqual([]);
 
-  expect(created.publication_status).toBe("published");
-  expect(created.external_url).toContain("discussion_r1");
-  expect(published[0]).toEqual({
-    commitSha: "f".repeat(40),
-    filePath: "notes.md",
-    side: "new",
-    startLine: 1,
-    line: 2,
-    body: "rename these",
-    suggestion: "delta\nepsilon",
+  const detail = await review.submitReview(runTarget(), {
+    body: "Two notes below.",
+    event: "request_changes",
   });
+
+  expect(submissions).toEqual([
+    {
+      commitSha: "f".repeat(40),
+      body: "Two notes below.",
+      event: "request_changes",
+      comments: [
+        {
+          filePath: "notes.md",
+          side: "new",
+          startLine: 1,
+          line: 2,
+          body: "rename these",
+          suggestion: "delta\nepsilon",
+        },
+      ],
+    },
+  ]);
+  expect(detail.review?.status).toBe("changes_requested");
+  expect(detail.comments[0]?.publication_status).toBe("published");
+  expect(detail.comments[0]?.external_url).toContain("pullrequestreview-1");
   expect(readRunEvents(fix.db, RUN_ID).some((e) => e.type === "review.comment_published")).toBe(
     true,
   );
+});
 
-  await expect(review.publishComment(runTarget(), created.id)).rejects.toThrow(
-    CommentDestinationUnavailableError,
+it("keeps every comment pending when GitHub refuses the review, and submits them on retry", async () => {
+  openPullRequest();
+  submitFailure = new Error("GitHub refused the review. (HTTP 422)");
+  const created = await addComment(runTarget(), {
+    file_path: "notes.md",
+    line: 2,
+    diff_sha: currentAnchor().sha,
+    destination: "pr_review",
+    body: "on the PR",
+  });
+
+  await expect(review.submitReview(runTarget(), { body: "", event: "comment" })).rejects.toThrow(
+    ReviewSubmissionFailedError,
   );
+
+  const failed = getReviewComment(fix.db, created.id);
+  expect(failed?.publication_status).toBe("failed");
+  expect(failed?.publication_error).toContain("HTTP 422");
+  expect(failed?.body).toBe("on the PR");
+
+  submitFailure = null;
+  const detail = await review.submitReview(runTarget(), { body: "", event: "comment" });
+  expect(detail.comments[0]?.publication_status).toBe("published");
+  expect(detail.comments[0]?.publication_error).toBeNull();
 });
 
-it("keeps a comment GitHub refused, with its reason, and publishes it on retry", async () => {
+it("refuses a submission with neither a summary nor a pending comment", async () => {
   openPullRequest();
-  publishFailure = new Error("GitHub refused the review comment. (HTTP 422)");
+  await expect(review.submitReview(runTarget(), { body: "  ", event: "comment" })).rejects.toThrow(
+    ReviewSubmissionEmptyError,
+  );
+  expect(submissions).toEqual([]);
+});
 
-  const created = await addComment(runTarget(), {
+it("withholds Approve on a pull request the connected account opened", async () => {
+  openPullRequest();
+  writeGitHubViewer(fix.db, { login: "octocat", teams: null });
+  updatePullRequest(fix.db, "pr-review", { author_login: "octocat" });
+
+  const submission = review.getReviewDetail(runTarget()).submission;
+  expect(submission.events).toEqual(["comment", "request_changes"]);
+  expect(submission.reason).toContain("@octocat");
+
+  await expect(
+    review.submitReview(runTarget(), { body: "looks good", event: "approve" }),
+  ).rejects.toThrow(ReviewSubmissionUnavailableError);
+  expect(submissions).toEqual([]);
+});
+
+it("approves a pull request the connected account did not open", async () => {
+  openPullRequest();
+  writeGitHubViewer(fix.db, { login: "octocat", teams: null });
+  updatePullRequest(fix.db, "pr-review", { author_login: "contrib" });
+
+  expect(review.getReviewDetail(runTarget()).submission.events).toEqual([
+    "comment",
+    "request_changes",
+    "approve",
+  ]);
+
+  const detail = await review.submitReview(runTarget(), { body: "lgtm", event: "approve" });
+  expect(submissions).toEqual([
+    { commitSha: "f".repeat(40), body: "lgtm", event: "approve", comments: [] },
+  ]);
+  expect(detail.review?.status).toBe("resolved");
+});
+
+it("leaves a resolved pull-request comment out of the review instead of blocking it", async () => {
+  openPullRequest();
+  const stale = await addComment(runTarget(), {
+    file_path: "notes.md",
+    line: 2,
+    diff_sha: currentAnchor().sha,
+    destination: "pr_review",
+    body: "no longer applies",
+  });
+  updateReviewCommentStatus(fix.db, stale.id, "outdated");
+
+  const detail = await review.submitReview(runTarget(), { body: "shipping", event: "comment" });
+  expect(submissions).toEqual([
+    { commitSha: "f".repeat(40), body: "shipping", event: "comment", comments: [] },
+  ]);
+  expect(detail.comments.find((c) => c.id === stale.id)?.publication_status).toBe("local");
+});
+
+it("retries a submission the daemon was killed in the middle of", async () => {
+  openPullRequest();
+  const comment = await addComment(runTarget(), {
+    file_path: "notes.md",
+    line: 2,
+    diff_sha: currentAnchor().sha,
+    destination: "pr_review",
+    body: "carried over",
+  });
+  setReviewCommentPublication(fix.db, comment.id, { publication_status: "pending" });
+
+  const detail = await review.submitReview(runTarget(), { body: "retry", event: "comment" });
+  expect(submissions).toHaveLength(1);
+  expect(detail.comments.find((c) => c.id === comment.id)?.publication_status).toBe("published");
+});
+
+it("refuses a second submission while the first is still in flight", async () => {
+  openPullRequest();
+  // Both calls are made in one tick, so the second sees the first still in flight.
+  const first = review.submitReview(runTarget(), { body: "first", event: "comment" });
+  const second = review.submitReview(runTarget(), { body: "second", event: "comment" });
+
+  await expect(second).rejects.toThrow(ReviewSubmissionBusyError);
+  await first;
+  expect(submissions).toEqual([
+    { commitSha: "f".repeat(40), body: "first", event: "comment", comments: [] },
+  ]);
+});
+
+it("refuses a submission whose comment anchor moved under it", async () => {
+  openPullRequest();
+  await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
     diff_sha: currentAnchor().sha,
     destination: "pr_review",
     body: "on the PR",
   });
-
-  // The comment is written either way: a refused publication is never a failed create.
-  expect(created.publication_status).toBe("failed");
-  expect(created.publication_error).toContain("HTTP 422");
-  expect(getReviewComment(fix.db, created.id)?.body).toBe("on the PR");
-
-  publishFailure = null;
-  const retried = await review.publishComment(runTarget(), created.id);
-  expect(retried.publication_status).toBe("published");
-  expect(retried.publication_error).toBeNull();
-});
-
-it("refuses to retry a publication whose diff moved under it", async () => {
-  openPullRequest();
-  publishFailure = new Error("GitHub was unreachable.");
-  const created = await addComment(runTarget(), {
-    file_path: "notes.md",
-    line: 2,
-    diff_sha: currentAnchor().sha,
-    destination: "pr_review",
-    body: "on the PR",
-  });
-  published.length = 0;
-  publishFailure = null;
   appendFileSync(join(worktreePath, "notes.md"), "delta\n");
 
-  await expect(review.publishComment(runTarget(), created.id)).rejects.toThrow(
+  await expect(review.submitReview(runTarget(), { body: "", event: "comment" })).rejects.toThrow(
     ReviewAnchorStaleError,
   );
-  expect(published).toEqual([]);
+  expect(submissions).toEqual([]);
 });
 
 it("never turns a PR-review comment into an agent instruction", async () => {
@@ -728,7 +835,7 @@ it("freezes the global instruction beside the range and suggestion it constrains
   });
 });
 
-it("keeps a published comment's destination and state through the review detail read", async () => {
+it("keeps a submitted comment's destination and state through the review detail read", async () => {
   openPullRequest();
   const created = await addComment(runTarget(), {
     file_path: "notes.md",
@@ -737,6 +844,7 @@ it("keeps a published comment's destination and state through the review detail 
     destination: "pr_review",
     body: "on the PR",
   });
+  await review.submitReview(runTarget(), { body: "", event: "comment" });
 
   const stored = review.getReviewDetail(runTarget()).comments.find((row) => row.id === created.id);
   expect(stored?.destination).toBe("pr_review");

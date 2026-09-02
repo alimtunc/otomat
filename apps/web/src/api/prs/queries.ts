@@ -34,3 +34,11 @@ export function usePullRequestReviewContext(pullRequestId: string) {
     queryFn: () => daemon.getPullRequestReviewContext(pullRequestId),
   });
 }
+
+export function usePullRequestOverview(pullRequestId: string) {
+  const keys = useQueryKeys();
+  return useQuery({
+    queryKey: keys.pullRequestOverview(pullRequestId),
+    queryFn: () => daemon.getPullRequestOverview(pullRequestId),
+  });
+}

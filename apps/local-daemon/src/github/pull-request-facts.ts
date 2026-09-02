@@ -1,4 +1,5 @@
 import type {
+  PullRequestCheck,
   PullRequestChecksState,
   PullRequestMergeability,
   PullRequestReviewDecision,
@@ -23,10 +24,14 @@ const reviewRequestSchema = z.object({
   name: z.string().nullish(),
 });
 
-/** A check run reports a `conclusion`; a legacy status context reports a `state`. */
+/** A check run reports a `conclusion` and a `name`; a legacy status context reports a `state` and a `context`. */
 const checkContextSchema = z.object({
   conclusion: z.string().nullish(),
   state: z.string().nullish(),
+  name: z.string().nullish(),
+  context: z.string().nullish(),
+  detailsUrl: z.string().nullish(),
+  targetUrl: z.string().nullish(),
 });
 
 export const providerReviewFactsSchema = z.object({
@@ -71,6 +76,15 @@ function checkOutcome(context: CheckContext): "failing" | "passing" | "pending" 
   if (state === "FAILURE" || state === "ERROR") return "failing";
   if (state === "SUCCESS") return "passing";
   return "pending";
+}
+
+/** Named per context so a red rollup says which check is red; an unnamed context is still listed, never dropped. */
+export function toChecks(contexts: readonly CheckContext[]): PullRequestCheck[] {
+  return contexts.map((context, index) => ({
+    name: context.name ?? context.context ?? `Check ${index + 1}`,
+    state: checkOutcome(context),
+    url: context.detailsUrl ?? context.targetUrl ?? null,
+  }));
 }
 
 function rollupChecks(contexts: readonly CheckContext[]): PullRequestChecksState {

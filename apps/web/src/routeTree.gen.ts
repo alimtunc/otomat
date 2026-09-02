@@ -20,6 +20,7 @@ import { Route as AgentsIndexRouteImport } from './routes/agents/index'
 import { Route as AgentsProfileIdRouteImport } from './routes/agents/$profileId'
 import { Route as IssuesIndexRouteImport } from './routes/issues/index'
 import { Route as IssuesIssueIdRouteImport } from './routes/issues/$issueId'
+import { Route as PullRequestsPullRequestIdRouteRouteImport } from './routes/pull-requests/$pullRequestId/route'
 import { Route as RunsIndexRouteImport } from './routes/runs/index'
 import { Route as RunsRunIdRouteRouteImport } from './routes/runs/$runId/route'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
@@ -34,7 +35,9 @@ import { Route as SettingsSandboxRouteImport } from './routes/settings/sandbox'
 import { Route as SettingsSkillsRouteImport } from './routes/settings/skills'
 import { Route as SettingsWorkflowPresetsRouteImport } from './routes/settings/workflow-presets'
 import { Route as SettingsWorkspacesRouteImport } from './routes/settings/workspaces'
+import { Route as PullRequestsPullRequestIdIndexRouteImport } from './routes/pull-requests/$pullRequestId/index'
 import { Route as PullRequestsPullRequestIdDiffRouteImport } from './routes/pull-requests/$pullRequestId/diff'
+import { Route as PullRequestsPullRequestIdOverviewRouteImport } from './routes/pull-requests/$pullRequestId/overview'
 import { Route as RunsRunIdIndexRouteImport } from './routes/runs/$runId/index'
 import { Route as RunsRunIdDiffRouteImport } from './routes/runs/$runId/diff'
 import { Route as RunsRunIdLogsRouteImport } from './routes/runs/$runId/logs'
@@ -101,6 +104,12 @@ const IssuesIssueIdRoute = IssuesIssueIdRouteImport.update({
   path: '/issues/$issueId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PullRequestsPullRequestIdRouteRoute =
+  PullRequestsPullRequestIdRouteRouteImport.update({
+    id: '/pull-requests/$pullRequestId',
+    path: '/pull-requests/$pullRequestId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const RunsIndexRoute = RunsIndexRouteImport.update({
   id: '/runs/',
   path: '/runs/',
@@ -171,11 +180,23 @@ const SettingsWorkspacesRoute = SettingsWorkspacesRouteImport.update({
   path: '/workspaces',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const PullRequestsPullRequestIdIndexRoute =
+  PullRequestsPullRequestIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => PullRequestsPullRequestIdRouteRoute,
+  } as any)
 const PullRequestsPullRequestIdDiffRoute =
   PullRequestsPullRequestIdDiffRouteImport.update({
-    id: '/pull-requests/$pullRequestId/diff',
-    path: '/pull-requests/$pullRequestId/diff',
-    getParentRoute: () => rootRouteImport,
+    id: '/diff',
+    path: '/diff',
+    getParentRoute: () => PullRequestsPullRequestIdRouteRoute,
+  } as any)
+const PullRequestsPullRequestIdOverviewRoute =
+  PullRequestsPullRequestIdOverviewRouteImport.update({
+    id: '/overview',
+    path: '/overview',
+    getParentRoute: () => PullRequestsPullRequestIdRouteRoute,
   } as any)
 const RunsRunIdIndexRoute = RunsRunIdIndexRouteImport.update({
   id: '/',
@@ -236,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/reviews': typeof ReviewsRoute
   '/skills': typeof SkillsRoute
   '/usage': typeof UsageRoute
+  '/pull-requests/$pullRequestId': typeof PullRequestsPullRequestIdRouteRouteWithChildren
   '/runs/$runId': typeof RunsRunIdRouteRouteWithChildren
   '/agents/$profileId': typeof AgentsProfileIdRoute
   '/issues/$issueId': typeof IssuesIssueIdRoute
@@ -255,6 +277,7 @@ export interface FileRoutesByFullPath {
   '/runs/': typeof RunsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/pull-requests/$pullRequestId/diff': typeof PullRequestsPullRequestIdDiffRoute
+  '/pull-requests/$pullRequestId/overview': typeof PullRequestsPullRequestIdOverviewRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
@@ -262,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/settings/agents/$profileId': typeof SettingsAgentsProfileIdRoute
   '/settings/project/agents': typeof SettingsProjectAgentsRoute
   '/settings/project/skills': typeof SettingsProjectSkillsRoute
+  '/pull-requests/$pullRequestId/': typeof PullRequestsPullRequestIdIndexRoute
   '/runs/$runId/': typeof RunsRunIdIndexRoute
   '/settings/agents/': typeof SettingsAgentsIndexRoute
   '/settings/project/': typeof SettingsProjectIndexRoute
@@ -290,6 +314,7 @@ export interface FileRoutesByTo {
   '/runs': typeof RunsIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/pull-requests/$pullRequestId/diff': typeof PullRequestsPullRequestIdDiffRoute
+  '/pull-requests/$pullRequestId/overview': typeof PullRequestsPullRequestIdOverviewRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
@@ -297,6 +322,7 @@ export interface FileRoutesByTo {
   '/settings/agents/$profileId': typeof SettingsAgentsProfileIdRoute
   '/settings/project/agents': typeof SettingsProjectAgentsRoute
   '/settings/project/skills': typeof SettingsProjectSkillsRoute
+  '/pull-requests/$pullRequestId': typeof PullRequestsPullRequestIdIndexRoute
   '/runs/$runId': typeof RunsRunIdIndexRoute
   '/settings/agents': typeof SettingsAgentsIndexRoute
   '/settings/project': typeof SettingsProjectIndexRoute
@@ -310,6 +336,7 @@ export interface FileRoutesById {
   '/reviews': typeof ReviewsRoute
   '/skills': typeof SkillsRoute
   '/usage': typeof UsageRoute
+  '/pull-requests/$pullRequestId': typeof PullRequestsPullRequestIdRouteRouteWithChildren
   '/runs/$runId': typeof RunsRunIdRouteRouteWithChildren
   '/agents/$profileId': typeof AgentsProfileIdRoute
   '/issues/$issueId': typeof IssuesIssueIdRoute
@@ -329,6 +356,7 @@ export interface FileRoutesById {
   '/runs/': typeof RunsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/pull-requests/$pullRequestId/diff': typeof PullRequestsPullRequestIdDiffRoute
+  '/pull-requests/$pullRequestId/overview': typeof PullRequestsPullRequestIdOverviewRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
@@ -336,6 +364,7 @@ export interface FileRoutesById {
   '/settings/agents/$profileId': typeof SettingsAgentsProfileIdRoute
   '/settings/project/agents': typeof SettingsProjectAgentsRoute
   '/settings/project/skills': typeof SettingsProjectSkillsRoute
+  '/pull-requests/$pullRequestId/': typeof PullRequestsPullRequestIdIndexRoute
   '/runs/$runId/': typeof RunsRunIdIndexRoute
   '/settings/agents/': typeof SettingsAgentsIndexRoute
   '/settings/project/': typeof SettingsProjectIndexRoute
@@ -350,6 +379,7 @@ export interface FileRouteTypes {
     | '/reviews'
     | '/skills'
     | '/usage'
+    | '/pull-requests/$pullRequestId'
     | '/runs/$runId'
     | '/agents/$profileId'
     | '/issues/$issueId'
@@ -369,6 +399,7 @@ export interface FileRouteTypes {
     | '/runs/'
     | '/settings/'
     | '/pull-requests/$pullRequestId/diff'
+    | '/pull-requests/$pullRequestId/overview'
     | '/runs/$runId/diff'
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
@@ -376,6 +407,7 @@ export interface FileRouteTypes {
     | '/settings/agents/$profileId'
     | '/settings/project/agents'
     | '/settings/project/skills'
+    | '/pull-requests/$pullRequestId/'
     | '/runs/$runId/'
     | '/settings/agents/'
     | '/settings/project/'
@@ -404,6 +436,7 @@ export interface FileRouteTypes {
     | '/runs'
     | '/settings'
     | '/pull-requests/$pullRequestId/diff'
+    | '/pull-requests/$pullRequestId/overview'
     | '/runs/$runId/diff'
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
@@ -411,6 +444,7 @@ export interface FileRouteTypes {
     | '/settings/agents/$profileId'
     | '/settings/project/agents'
     | '/settings/project/skills'
+    | '/pull-requests/$pullRequestId'
     | '/runs/$runId'
     | '/settings/agents'
     | '/settings/project'
@@ -423,6 +457,7 @@ export interface FileRouteTypes {
     | '/reviews'
     | '/skills'
     | '/usage'
+    | '/pull-requests/$pullRequestId'
     | '/runs/$runId'
     | '/agents/$profileId'
     | '/issues/$issueId'
@@ -442,6 +477,7 @@ export interface FileRouteTypes {
     | '/runs/'
     | '/settings/'
     | '/pull-requests/$pullRequestId/diff'
+    | '/pull-requests/$pullRequestId/overview'
     | '/runs/$runId/diff'
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
@@ -449,6 +485,7 @@ export interface FileRouteTypes {
     | '/settings/agents/$profileId'
     | '/settings/project/agents'
     | '/settings/project/skills'
+    | '/pull-requests/$pullRequestId/'
     | '/runs/$runId/'
     | '/settings/agents/'
     | '/settings/project/'
@@ -462,11 +499,11 @@ export interface RootRouteChildren {
   ReviewsRoute: typeof ReviewsRoute
   SkillsRoute: typeof SkillsRoute
   UsageRoute: typeof UsageRoute
+  PullRequestsPullRequestIdRouteRoute: typeof PullRequestsPullRequestIdRouteRouteWithChildren
   RunsRunIdRouteRoute: typeof RunsRunIdRouteRouteWithChildren
   IssuesIssueIdRoute: typeof IssuesIssueIdRoute
   IssuesIndexRoute: typeof IssuesIndexRoute
   RunsIndexRoute: typeof RunsIndexRoute
-  PullRequestsPullRequestIdDiffRoute: typeof PullRequestsPullRequestIdDiffRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -546,6 +583,13 @@ declare module '@tanstack/react-router' {
       path: '/issues/$issueId'
       fullPath: '/issues/$issueId'
       preLoaderRoute: typeof IssuesIssueIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pull-requests/$pullRequestId': {
+      id: '/pull-requests/$pullRequestId'
+      path: '/pull-requests/$pullRequestId'
+      fullPath: '/pull-requests/$pullRequestId'
+      preLoaderRoute: typeof PullRequestsPullRequestIdRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/runs/': {
@@ -646,12 +690,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsWorkspacesRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/pull-requests/$pullRequestId/': {
+      id: '/pull-requests/$pullRequestId/'
+      path: '/'
+      fullPath: '/pull-requests/$pullRequestId/'
+      preLoaderRoute: typeof PullRequestsPullRequestIdIndexRouteImport
+      parentRoute: typeof PullRequestsPullRequestIdRouteRoute
+    }
     '/pull-requests/$pullRequestId/diff': {
       id: '/pull-requests/$pullRequestId/diff'
-      path: '/pull-requests/$pullRequestId/diff'
+      path: '/diff'
       fullPath: '/pull-requests/$pullRequestId/diff'
       preLoaderRoute: typeof PullRequestsPullRequestIdDiffRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PullRequestsPullRequestIdRouteRoute
+    }
+    '/pull-requests/$pullRequestId/overview': {
+      id: '/pull-requests/$pullRequestId/overview'
+      path: '/overview'
+      fullPath: '/pull-requests/$pullRequestId/overview'
+      preLoaderRoute: typeof PullRequestsPullRequestIdOverviewRouteImport
+      parentRoute: typeof PullRequestsPullRequestIdRouteRoute
     }
     '/runs/$runId/': {
       id: '/runs/$runId/'
@@ -783,6 +841,25 @@ const AgentsRouteChildren: AgentsRouteChildren = {
 const AgentsRouteWithChildren =
   AgentsRoute._addFileChildren(AgentsRouteChildren)
 
+interface PullRequestsPullRequestIdRouteRouteChildren {
+  PullRequestsPullRequestIdDiffRoute: typeof PullRequestsPullRequestIdDiffRoute
+  PullRequestsPullRequestIdOverviewRoute: typeof PullRequestsPullRequestIdOverviewRoute
+  PullRequestsPullRequestIdIndexRoute: typeof PullRequestsPullRequestIdIndexRoute
+}
+
+const PullRequestsPullRequestIdRouteRouteChildren: PullRequestsPullRequestIdRouteRouteChildren =
+  {
+    PullRequestsPullRequestIdDiffRoute: PullRequestsPullRequestIdDiffRoute,
+    PullRequestsPullRequestIdOverviewRoute:
+      PullRequestsPullRequestIdOverviewRoute,
+    PullRequestsPullRequestIdIndexRoute: PullRequestsPullRequestIdIndexRoute,
+  }
+
+const PullRequestsPullRequestIdRouteRouteWithChildren =
+  PullRequestsPullRequestIdRouteRoute._addFileChildren(
+    PullRequestsPullRequestIdRouteRouteChildren,
+  )
+
 interface RunsRunIdRouteRouteChildren {
   RunsRunIdDiffRoute: typeof RunsRunIdDiffRoute
   RunsRunIdLogsRoute: typeof RunsRunIdLogsRoute
@@ -811,11 +888,12 @@ const rootRouteChildren: RootRouteChildren = {
   ReviewsRoute: ReviewsRoute,
   SkillsRoute: SkillsRoute,
   UsageRoute: UsageRoute,
+  PullRequestsPullRequestIdRouteRoute:
+    PullRequestsPullRequestIdRouteRouteWithChildren,
   RunsRunIdRouteRoute: RunsRunIdRouteRouteWithChildren,
   IssuesIssueIdRoute: IssuesIssueIdRoute,
   IssuesIndexRoute: IssuesIndexRoute,
   RunsIndexRoute: RunsIndexRoute,
-  PullRequestsPullRequestIdDiffRoute: PullRequestsPullRequestIdDiffRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -18,7 +18,6 @@ export * from "./desktop.js";
 export * from "./diagnostics.js";
 export * from "./diff.js";
 export * from "./execution-host.js";
-export * from "./pull-request-import.js";
 export * from "./review-inbox.js";
 export * from "./run-events.js";
 export * from "./interaction.js";
@@ -34,6 +33,7 @@ export {
   issueSourceContractSchema,
   issueWorkspaceSchema,
   isAgentFixEligible,
+  isPendingReviewComment,
   isProviderProvedResume,
   isReviewCommentDestination,
   isSkillInScope,

@@ -1,5 +1,6 @@
 import { GitHubCliError } from "../errors.js";
-import type { CommandResult, CommandRunner, PullRequestCreateInput } from "../types.js";
+import type { CommandResult, CommandRunner } from "../types.js";
+import type { PullRequestCreateInput } from "./contract.js";
 
 export function commandSucceeded(result: CommandResult): boolean {
   return result.exitCode === 0 && !result.errorCode;

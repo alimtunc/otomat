@@ -7,7 +7,7 @@ import {
   pullRequestProvenanceSchema,
   pullRequestReviewDecisionSchema,
 } from "./entities/pull-request.js";
-import { pullRequestIssueLinkSchema } from "./pull-request.js";
+import { pullRequestIssueLinkSchema } from "./pull-request/detail.js";
 
 export const PULL_REQUEST_INBOX_GROUPS = [
   "needs_your_review",

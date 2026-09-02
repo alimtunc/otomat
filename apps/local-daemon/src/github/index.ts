@@ -8,26 +8,33 @@ export { createDeviceAuthorization } from "./device-flow.js";
 export type { DeviceAuthorization, DeviceAuthorizationStart } from "./device-flow.js";
 export { parseGitHubRemoteUrl } from "./parse.js";
 export { GitHubCliError, GitHubPublicationError, PullRequestImportRefusal } from "./errors.js";
+export { mergeAvailability } from "./merge-availability.js";
 export { runCommand } from "./process.js";
 export { createGitHubService } from "./service.js";
 export type {
-  CommandRequest,
-  CommandResult,
-  CommandRunner,
   ForcePushWithLeaseInput,
   GitHubCli,
   GitHubPullRequest,
   GitHubRemote,
-  GitHubService,
-  GitHubServiceConfig,
-  IssuePullRequestsResult,
-  PullRequestView,
   PullRequestCreateInput,
+  PullRequestMergeInput,
   PullRequestModeInput,
+  PullRequestOverviewFacts,
   PullRequestSearchInput,
   PullRequestSelector,
   PullRequestUpdateInput,
-  ReviewCommentCreateInput,
+  RepositoryMergePolicy,
+  ReviewSubmissionInput,
   ViewedFileMutationInput,
+} from "./cli/contract.js";
+export type {
+  CommandRequest,
+  CommandResult,
+  CommandRunner,
+  GitHubService,
+  GitHubServiceConfig,
+  IssuePullRequestsResult,
+  PullRequestOverviewResult,
+  PullRequestView,
 } from "./types.js";
 export type { PullRequestViewedFile, PullRequestViewedFiles } from "./viewed-state.js";

@@ -1229,6 +1229,43 @@ surface and unlinked in the other. Resolving is display only: it writes nothing,
 and the reviewer still passes the row's own `issue_id` — the attachment alone —
 as the workspace the AI fix may act on.
 
+## The Pull Request Reviewer (OTO-164)
+
+`/pull-requests/:id` is a tab shell — `Overview` and `Diff` — so the header,
+`Open on GitHub`, the copy-link action and `Submit review` are written once and
+belong to both tabs. Overview is a **live read cached client-side**: the daemon
+answers `GET /api/pull-requests/:id/overview` from one `gh pr view` (the mirror's
+fields plus commits, changed files, additions, deletions, the latest review per
+reviewer and `mergeStateStatus`) and one `gh api repos/:repo` for the merge
+policy, re-mirroring the row on the way. Nothing new is persisted: TanStack Query
+renders the cached payload immediately, revalidates behind it, and `QueryBoundary`
+keeps that payload when the revalidation fails, so a refused refresh never empties
+the Overview. The per-check names come out of `statusCheckRollup`, which the list
+reads already fetched and only aggregated.
+
+**A pull-request comment is pending until a review carries it.** `addComment`
+stores a `pr_review` comment at `publication_status: "local"` and reaches GitHub
+for nothing; `POST /:id/review/submit` then sends the summary, the verdict and
+every pending comment in one `POST /pulls/:n/reviews`. GitHub accepts all of it
+or none of it, which is what makes "never publish partially and announce a
+success" true by construction: a refusal marks every comment it carried `failed`,
+leaves the composer filled, and the same call retries. `approve` is withheld
+whenever the connected account authored the pull request, and a second submission
+on one surface is refused rather than queued. There is deliberately no
+publish-one-comment path any more — two ways to publish is exactly the partial
+publish the review model forbids.
+
+**Merge needs authority, permission and a fresh state, in that order.**
+`mergeAvailability` is pure: the pull request's `provenance` must be `otomat` —
+the workspace owns the branch — or the authenticated identity must be its author;
+then GitHub must grant push, the repository must allow the chosen method, and the
+pull request must be open, conflict-free, not behind its base and not waiting on
+checks. Every refusal carries the sentence the reviewer reads, so an absent Merge
+button is always explained. The merge itself is `gh pr merge`; Otomat never
+merges locally and never enables auto-merge. Afterwards the ordinary refresh is
+what lands `merged` on the row, and landing it is what already closes the cycle
+through `closeMergedIssue` — no closure code of its own.
+
 ## Publishing to a Pull Request
 
 Publishing is a **durable operation the daemon owns**, not a request the browser

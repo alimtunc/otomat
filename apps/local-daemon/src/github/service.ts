@@ -6,9 +6,11 @@ import { resolveGenerationAgent } from "./generation/agent.js";
 import { createPullRequestImportService } from "./import/service.js";
 import { createPullRequestInboxService } from "./inbox/index.js";
 import { pullRequestIssue } from "./issue-link.js";
+import { mergePullRequest } from "./merge.js";
+import { readPullRequestOverview } from "./overview.js";
 import { createPullRequestPublisher } from "./publication/index.js";
 import { refreshTrackedPullRequests } from "./refresh.js";
-import { publishReviewComment } from "./review-comment.js";
+import { submitPullRequestReview } from "./review-submission.js";
 import type { GitHubService, GitHubServiceConfig } from "./types.js";
 import { readViewedFiles, syncViewedFile } from "./viewed-files.js";
 
@@ -43,8 +45,11 @@ export function createGitHubService(config: GitHubServiceConfig): GitHubService 
     reconcileInterruptedPublications: () => publisher.reconcileInterrupted(),
     settlePublications: () => publisher.settle(),
     pushCommits: (runId, request) => publisher.pushCommits(runId, request),
-    publishReviewComment: (pullRequestId, input) =>
-      publishReviewComment(config, pullRequestId, input),
+    submitPullRequestReview: (pullRequestId, input) =>
+      submitPullRequestReview(config, pullRequestId, input),
+    pullRequestOverview: (pullRequestId) => readPullRequestOverview(config, imports, pullRequestId),
+    mergePullRequest: (pullRequestId, method) =>
+      mergePullRequest(config, imports, pullRequestId, method),
     readViewedFiles: (pullRequestId) => readViewedFiles(config, pullRequestId),
     syncViewedFile: (pullRequestId, input) => syncViewedFile(config, pullRequestId, input),
     // Resolved before the run is reached: an unavailable runtime or model refuses here rather than in the CLI.

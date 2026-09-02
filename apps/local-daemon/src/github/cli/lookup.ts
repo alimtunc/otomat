@@ -6,14 +6,14 @@ import {
   providerPullRequestSchema,
   toPullRequest,
 } from "../parse.js";
+import type { CommandRunner } from "../types.js";
+import { assertPublicationSucceeded } from "./commands.js";
 import type {
-  CommandRunner,
   GitHubPullRequest,
   PullRequestListInput,
   PullRequestSearchInput,
   PullRequestSelector,
-} from "../types.js";
-import { assertPublicationSucceeded } from "./commands.js";
+} from "./contract.js";
 
 function parsePullRequestList(stdout: string, repository: string): GitHubPullRequest[] {
   return parsePullRequestJson(stdout, (payload) =>

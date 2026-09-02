@@ -70,10 +70,33 @@ export class CommentDestinationUnavailableError extends Error {
   }
 }
 
-/** GitHub refused the comment; the attempt is recorded as `failed` and stays retryable. */
-export class CommentPublicationFailedError extends Error {
+export class ReviewSubmissionUnavailableError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "CommentPublicationFailedError";
+    this.name = "ReviewSubmissionUnavailableError";
+  }
+}
+
+/** GitHub rejects a review that carries neither a summary nor a comment. */
+export class ReviewSubmissionEmptyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ReviewSubmissionEmptyError";
+  }
+}
+
+/** A submission is already in flight for this pull request; a retry would post the review twice. */
+export class ReviewSubmissionBusyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ReviewSubmissionBusyError";
+  }
+}
+
+/** GitHub refused the review; every comment it carried is marked failed and stays retryable. */
+export class ReviewSubmissionFailedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ReviewSubmissionFailedError";
   }
 }

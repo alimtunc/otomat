@@ -17,17 +17,16 @@ import {
   ReviewAnchorStaleError,
 } from "./errors.js";
 import { buildCommentCreatedEvent } from "./events.js";
-import { deliverComment } from "./publication.js";
 import { reloadOrThrow } from "./reload.js";
 import { ensureReview } from "./surface.js";
 import { driveReviewTo } from "./transitions.js";
 import type { ReviewContext, ReviewSubject } from "./types.js";
 
-export async function addComment(
+export function addComment(
   ctx: ReviewContext,
   subject: ReviewSubject,
   request: CreateReviewCommentRequest,
-): Promise<ReviewCommentRow> {
+): ReviewCommentRow {
   const diff = computeDiff(subject);
   if (diff === null) throw new DiffUnavailableError(subject.id);
   const file = diff.files.find(
@@ -75,6 +74,5 @@ export async function addComment(
       buildCommentCreatedEvent(ledgerRunId, created, now),
     );
   }
-  if (created.destination !== "pr_review") return created;
-  return deliverComment(ctx, subject, created);
+  return created;
 }

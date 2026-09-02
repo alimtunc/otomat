@@ -2,14 +2,14 @@ import type { PullRequestPatch, PullRequestRow } from "@otomat/db";
 import type { PullRequestPublicationMode } from "@otomat/domain";
 
 import { normalizePullRequestBody } from "../body.js";
-import { GitHubCliError, GitHubPublicationError } from "../errors.js";
-import { mirroredColumns } from "../mirror.js";
 import type {
   GitHubCli,
   GitHubPullRequest,
   GitHubRepositoryTarget,
   PullRequestSelector,
-} from "../types.js";
+} from "../cli/contract.js";
+import { GitHubCliError, GitHubPublicationError } from "../errors.js";
+import { mirroredColumns } from "../mirror.js";
 import type { PublicationStore } from "./store.js";
 import type {
   ExistingPullRequestResult,

@@ -2,8 +2,8 @@ import { getIssue, type Db, type PullRequestRow } from "@otomat/db";
 
 import type { RepositoryBinding, RepositoryResolver } from "#git";
 
+import type { GitHubCli, GitHubRemote } from "../cli/contract.js";
 import { failureMessage, PullRequestImportRefusal } from "../errors.js";
-import type { GitHubCli, GitHubRemote } from "../types.js";
 
 export interface IssueRepositoryConfig {
   db: Db;

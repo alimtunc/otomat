@@ -40,7 +40,6 @@ function cardsProps(overrides: Partial<DiffFileCardsProps> = {}): DiffFileCardsP
       partition: partitionComments(reviewDiff({ files: FILES }), []),
       destinations: { pr_review: false, reason: "This run has no pull request yet." },
       preferredDestination: "agent",
-      publishingId: null,
     },
     commentActions: fileCommentActions(),
     ...overrides,

@@ -1,25 +1,9 @@
 import type { GitHubConnectionContract } from "@otomat/domain";
 
 import { cliAvailability } from "../availability.js";
-import { authStatusFailed, parseAuthStatus, parseReviewCommentUrl } from "../parse.js";
+import { authStatusFailed, parseAuthStatus } from "../parse.js";
 import { fetchBranch, forcePushWithLease, push, remoteHead, resolveRemote } from "../remote.js";
-import { reviewCommentPayload } from "../review-comment-payload.js";
-import type {
-  CommandRunner,
-  ForcePushWithLeaseInput,
-  GitHubCli,
-  GitHubPullRequest,
-  GitHubRemote,
-  PullRequestCreateInput,
-  PullRequestListInput,
-  PullRequestModeInput,
-  PullRequestSearchInput,
-  PullRequestSelector,
-  PullRequestUpdateInput,
-  ReviewCommentCreateInput,
-  ViewedFileMutationInput,
-  ViewedFilesInput,
-} from "../types.js";
+import type { CommandRunner } from "../types.js";
 import type { PullRequestViewedFiles } from "../viewed-state.js";
 import { viewerTeams } from "../viewer.js";
 import {
@@ -29,12 +13,34 @@ import {
   createPullRequestWithRetry,
   defaultSleep,
 } from "./commands.js";
+import type {
+  ForcePushWithLeaseInput,
+  GitHubCli,
+  GitHubPullRequest,
+  GitHubRemote,
+  GitHubRepositoryTarget,
+  PullRequestCreateInput,
+  PullRequestListInput,
+  PullRequestMergeInput,
+  PullRequestModeInput,
+  PullRequestOverviewFacts,
+  PullRequestSearchInput,
+  PullRequestSelector,
+  PullRequestTarget,
+  PullRequestUpdateInput,
+  RepositoryMergePolicy,
+  ReviewSubmissionInput,
+  ViewedFileMutationInput,
+} from "./contract.js";
 import {
   findPullRequest,
   listOpenPullRequests,
   searchPullRequests,
   viewPullRequest,
 } from "./lookup.js";
+import { mergePullRequest } from "./merge.js";
+import { readRepositoryMergePolicy, viewPullRequestOverview } from "./overview.js";
+import { submitPullRequestReview } from "./review-submission.js";
 import { listViewedFiles, setFileViewed } from "./viewed.js";
 
 class CommandGitHubCli implements GitHubCli {
@@ -193,29 +199,23 @@ class CommandGitHubCli implements GitHubCli {
     );
   }
 
-  async createReviewComment(input: ReviewCommentCreateInput): Promise<{ url: string }> {
-    const commentResult = await this.run({
-      command: "gh",
-      args: [
-        "api",
-        "--method",
-        "POST",
-        `repos/${input.repository}/pulls/${input.number}/comments`,
-        "--input",
-        "-",
-      ],
-      cwd: input.cwd,
-      stdin: JSON.stringify(reviewCommentPayload(input)),
-    });
-    assertPublicationSucceeded(
-      commentResult,
-      "github_review_comment_failed",
-      "GitHub refused the review comment.",
-    );
-    return { url: parseReviewCommentUrl(commentResult.stdout) };
+  submitReview(input: ReviewSubmissionInput): Promise<{ url: string }> {
+    return submitPullRequestReview(this.run, input);
   }
 
-  listViewedFiles(input: ViewedFilesInput): Promise<PullRequestViewedFiles> {
+  viewPullRequestOverview(input: PullRequestTarget): Promise<PullRequestOverviewFacts> {
+    return viewPullRequestOverview(this.run, input);
+  }
+
+  readRepositoryMergePolicy(input: GitHubRepositoryTarget): Promise<RepositoryMergePolicy> {
+    return readRepositoryMergePolicy(this.run, input);
+  }
+
+  mergePullRequest(input: PullRequestMergeInput): Promise<void> {
+    return mergePullRequest(this.run, input);
+  }
+
+  listViewedFiles(input: PullRequestTarget): Promise<PullRequestViewedFiles> {
     return listViewedFiles(this.run, input);
   }
 

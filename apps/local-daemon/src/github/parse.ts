@@ -2,13 +2,13 @@ import type { GitHubConnectionContract, PullRequestState } from "@otomat/domain"
 import { z } from "zod";
 
 import { normalizePullRequestBody } from "./body.js";
+import type { GitHubPullRequest } from "./cli/contract.js";
 import { GitHubCliError } from "./errors.js";
 import {
   PR_REVIEW_FACT_FIELDS,
   providerReviewFactsSchema,
   toReviewFacts,
 } from "./pull-request-facts.js";
-import type { GitHubPullRequest } from "./types.js";
 
 export const providerPullRequestSchema = providerReviewFactsSchema.extend({
   id: z.string().min(1),
@@ -82,15 +82,26 @@ export function toPullRequest(value: unknown, repository: string): GitHubPullReq
   };
 }
 
-export function parsePullRequestJson<T>(stdout: string, parse: (payload: unknown) => T): T {
+export function parseGitHubJson<T>(
+  stdout: string,
+  parse: (payload: unknown) => T,
+  code: string,
+  message: string,
+): T {
   try {
     return parse(JSON.parse(stdout));
   } catch {
-    throw new GitHubCliError(
-      "github_pr_response_invalid",
-      "GitHub returned invalid pull request metadata.",
-    );
+    throw new GitHubCliError(code, message);
   }
+}
+
+export function parsePullRequestJson<T>(stdout: string, parse: (payload: unknown) => T): T {
+  return parseGitHubJson(
+    stdout,
+    parse,
+    "github_pr_response_invalid",
+    "GitHub returned invalid pull request metadata.",
+  );
 }
 
 function repositoryFromPath(pathname: string): string | null {
@@ -183,18 +194,5 @@ export function parseAuthStatus(stdout: string): GitHubConnectionContract {
       : disconnected();
   } catch {
     throw new GitHubCliError("github_auth_response_invalid", "GitHub auth response was invalid.");
-  }
-}
-
-const createdCommentSchema = z.object({ html_url: z.string() });
-
-export function parseReviewCommentUrl(stdout: string): string {
-  try {
-    return createdCommentSchema.parse(JSON.parse(stdout)).html_url;
-  } catch (error) {
-    throw new GitHubCliError(
-      "github_review_comment_unreadable",
-      `GitHub accepted the review comment but its answer could not be read: ${String(error)}`,
-    );
   }
 }

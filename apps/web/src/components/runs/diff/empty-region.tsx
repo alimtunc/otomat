@@ -8,17 +8,9 @@ export interface DiffEmptyRegionProps {
   target: ReviewTarget;
   scope: RunDiffScope;
   detached: ReviewCommentContract[];
-  onPublish: (commentId: string) => void;
-  publishingId: string | null;
 }
 
-export function DiffEmptyRegion({
-  target,
-  scope,
-  detached,
-  onPublish,
-  publishingId,
-}: DiffEmptyRegionProps) {
+export function DiffEmptyRegion({ target, scope, detached }: DiffEmptyRegionProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-auto">
       <CenteredState fill="flex">
@@ -28,12 +20,7 @@ export function DiffEmptyRegion({
           description={diffScopeEmptyDescription(scope)}
         />
       </CenteredState>
-      <DetachedComments
-        target={target}
-        comments={detached}
-        onPublish={onPublish}
-        publishingId={publishingId}
-      />
+      <DetachedComments target={target} comments={detached} />
     </div>
   );
 }

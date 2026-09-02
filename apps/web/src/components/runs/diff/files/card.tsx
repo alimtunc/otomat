@@ -119,13 +119,7 @@ export function DiffFileCard({
       {comments.whole.length === 0 ? null : (
         <div className="flex flex-col gap-2 border-b border-border bg-surface-1 p-3">
           {comments.whole.map((comment) => (
-            <ReviewCommentCard
-              key={comment.id}
-              target={target}
-              comment={comment}
-              onPublish={() => commentActions.publish(comment.id)}
-              publishing={comments.publishingId === comment.id}
-            />
+            <ReviewCommentCard key={comment.id} target={target} comment={comment} />
           ))}
         </div>
       )}

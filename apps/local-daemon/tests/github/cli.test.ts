@@ -5,6 +5,7 @@ import {
   parseGitHubRemoteUrl,
   type CommandRequest,
   type CommandResult,
+  type ReviewSubmissionInput,
 } from "#github";
 
 const ok = (stdout = ""): CommandResult => ({ stdout, stderr: "", exitCode: 0 });
@@ -684,55 +685,39 @@ describe("GitHub CLI adapter", () => {
   });
 });
 
-describe("createReviewComment", () => {
-  const INPUT = {
+describe("submitReview", () => {
+  const INPUT: ReviewSubmissionInput = {
     cwd: "/tmp/wt",
     repository: "acme/otomat",
     number: 7,
     commitSha: "f".repeat(40),
-    path: "notes.md",
-    body: "rename these",
-    side: "RIGHT",
-    line: 4,
-  } as const;
+    body: "Two notes below.",
+    event: "request_changes",
+    comments: [{ path: "notes.md", body: "rename these", side: "RIGHT", line: 4 }],
+  };
 
-  it("posts the anchor GitHub expects and returns the created comment's url", async () => {
-    const runner = fakeRunner([ok(JSON.stringify({ html_url: "https://gh/pr/7#r1" }))]);
+  it("posts one review carrying the summary, the verdict and every comment", async () => {
+    const runner = fakeRunner([ok(JSON.stringify({ html_url: "https://gh/pr/7#review-1" }))]);
 
-    await expect(
-      createGitHubCli(runner.run).createReviewComment({
-        ...INPUT,
-        startLine: 2,
-        startSide: "RIGHT",
-      }),
-    ).resolves.toEqual({ url: "https://gh/pr/7#r1" });
+    await expect(createGitHubCli(runner.run).submitReview(INPUT)).resolves.toEqual({
+      url: "https://gh/pr/7#review-1",
+    });
 
     const request = runner.requests[0];
     expect(request?.args).toEqual([
       "api",
       "--method",
       "POST",
-      "repos/acme/otomat/pulls/7/comments",
+      "repos/acme/otomat/pulls/7/reviews",
       "--input",
       "-",
     ]);
     expect(JSON.parse(request?.stdin ?? "{}")).toEqual({
-      body: "rename these",
       commit_id: "f".repeat(40),
-      path: "notes.md",
-      side: "RIGHT",
-      line: 4,
-      start_line: 2,
-      start_side: "RIGHT",
+      body: "Two notes below.",
+      event: "REQUEST_CHANGES",
+      comments: [{ path: "notes.md", body: "rename these", side: "RIGHT", line: 4 }],
     });
-  });
-
-  it("omits the start fields on a single-line anchor", async () => {
-    const runner = fakeRunner([ok(JSON.stringify({ html_url: "https://gh/pr/7#r1" }))]);
-
-    await createGitHubCli(runner.run).createReviewComment(INPUT);
-
-    expect(JSON.parse(runner.requests[0]?.stdin ?? "{}")).not.toHaveProperty("start_line");
   });
 
   it("carries GitHub's own refusal so the reviewer can act on it", async () => {
@@ -740,8 +725,76 @@ describe("createReviewComment", () => {
       { stdout: "", stderr: "gh: HTTP 422 line must be part of the diff", exitCode: 1 },
     ]);
 
-    await expect(createGitHubCli(runner.run).createReviewComment(INPUT)).rejects.toThrow(
+    await expect(createGitHubCli(runner.run).submitReview(INPUT)).rejects.toThrow(
       /line must be part of the diff/,
     );
+  });
+});
+
+describe("readRepositoryMergePolicy", () => {
+  it("reads only the methods GitHub confirms, and no permission it does not grant", async () => {
+    const runner = fakeRunner([
+      ok(JSON.stringify({ allow_squash_merge: true, permissions: { push: true } })),
+    ]);
+
+    await expect(
+      createGitHubCli(runner.run).readRepositoryMergePolicy({
+        cwd: "/tmp/wt",
+        repository: "acme/otomat",
+      }),
+    ).resolves.toEqual({ methods: ["squash"], canPush: true });
+    expect(runner.requests[0]?.args).toEqual(["api", "repos/acme/otomat"]);
+  });
+
+  it("reads an unanswered permission as no permission", async () => {
+    const runner = fakeRunner([ok(JSON.stringify({ allow_merge_commit: true }))]);
+
+    await expect(
+      createGitHubCli(runner.run).readRepositoryMergePolicy({
+        cwd: "/tmp/wt",
+        repository: "acme/otomat",
+      }),
+    ).resolves.toEqual({ methods: ["merge"], canPush: false });
+  });
+});
+
+describe("mergePullRequest", () => {
+  it("asks GitHub for the chosen method and never merges locally", async () => {
+    const runner = fakeRunner([ok("")]);
+
+    await createGitHubCli(runner.run).mergePullRequest({
+      cwd: "/tmp/wt",
+      repository: "acme/otomat",
+      number: 7,
+      method: "squash",
+    });
+
+    expect(runner.requests[0]?.args).toEqual([
+      "pr",
+      "merge",
+      "7",
+      "--repo",
+      "acme/otomat",
+      "--squash",
+    ]);
+  });
+
+  it("carries GitHub's own refusal verbatim", async () => {
+    const runner = fakeRunner([
+      {
+        stdout: "",
+        stderr: "gh: Pull request is not mergeable: the merge queue is enabled",
+        exitCode: 1,
+      },
+    ]);
+
+    await expect(
+      createGitHubCli(runner.run).mergePullRequest({
+        cwd: "/tmp/wt",
+        repository: "acme/otomat",
+        number: 7,
+        method: "merge",
+      }),
+    ).rejects.toThrow(/merge queue is enabled/);
   });
 });

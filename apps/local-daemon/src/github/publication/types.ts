@@ -10,13 +10,9 @@ import type {
 
 import type { GitWorktreeService, WorktreeRecord } from "#git";
 
+import type { GitHubPullRequest, GitHubRemote } from "../cli/contract.js";
 import type { GenerationAgent } from "../generation/agent.js";
-import type {
-  GitHubPullRequest,
-  GitHubRemote,
-  GitHubServiceConfig,
-  PullRequestView,
-} from "../types.js";
+import type { GitHubServiceConfig, PullRequestView } from "../types.js";
 
 export type PublicationConfig = Omit<GitHubServiceConfig, "idFactory"> & {
   idFactory: () => string;

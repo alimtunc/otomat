@@ -13,9 +13,12 @@ import type {
   ContextReviewComment,
   CreateReviewCommentRequest,
   DiffSide,
+  PullRequestReviewEvent,
   ExecutionOverrides,
   ReviewDestinationAvailability,
   ReviewFixAuthority,
+  ReviewSubmissionAvailability,
+  SubmitReviewRequest,
   RunCommit,
   RunDiffScope,
   RunDiffScopeSelector,
@@ -49,14 +52,20 @@ export interface ReviewSubject {
 
 /** One comment as the provider needs it; `suggestion` is serialized by the provider, not by review. */
 export interface PullRequestCommentInput {
-  /** The commit the comment anchors to — review owns that policy, the provider only forwards it. */
-  commitSha: string;
   filePath: string;
   side: DiffSide;
   startLine: number | null;
   line: number | null;
   body: string;
   suggestion: string | null;
+}
+
+export interface PullRequestReviewSubmission {
+  /** The commit the review anchors to — review owns that policy, the provider only forwards it. */
+  commitSha: string;
+  body: string;
+  event: PullRequestReviewEvent;
+  comments: PullRequestCommentInput[];
 }
 
 export interface ViewedFileState {
@@ -77,10 +86,10 @@ export interface ReviewServiceConfig {
   repositories: RepositoryResolver;
   /** The supervisor's append capability; late-bound in the composition root because each side needs the other. */
   appendRunStep(runId: string, input: AppendStepInput): Promise<RunRow>;
-  /** Rejects with the reason review stores on the comment and shows. */
-  publishReviewComment(
+  /** Rejects with the reason review stores on every comment of the submission and shows. */
+  submitPullRequestReview(
     pullRequestId: string,
-    input: PullRequestCommentInput,
+    input: PullRequestReviewSubmission,
   ): Promise<{ url: string }>;
   /** Rejects with the reason review stores on the mark and shows the reviewer. */
   syncViewedFile(pullRequestId: string, input: ViewedFileState): Promise<string | null>;
@@ -111,6 +120,7 @@ export interface ReviewDetailResult {
   reviewedFiles: ReviewedFileRow[];
   fixAuthority: ReviewFixAuthority;
   destinations: ReviewDestinationAvailability;
+  submission: ReviewSubmissionAvailability;
 }
 
 export interface FileBlobsRequest {
@@ -152,10 +162,9 @@ export interface ReviewService {
   getBranchCommits(runId: string): { commits: RunCommit[]; unavailable: string | null };
   getCommentFixProof(runId: string, commentId: string): CommentFixProof;
   getReviewDetail(ref: ReviewSubjectRef): ReviewDetailResult;
-  /** A `pr_review` comment is published on create; a GitHub refusal comes back on it, never as a failed create. */
-  addComment(ref: ReviewSubjectRef, request: CreateReviewCommentRequest): Promise<ReviewCommentRow>;
-  /** The same call retries a failed publication. */
-  publishComment(ref: ReviewSubjectRef, commentId: string): Promise<ReviewCommentRow>;
+  /** A `pr_review` comment stays pending until a review is submitted; nothing reaches GitHub on create. */
+  addComment(ref: ReviewSubjectRef, request: CreateReviewCommentRequest): ReviewCommentRow;
+  submitReview(ref: ReviewSubjectRef, request: SubmitReviewRequest): Promise<ReviewDetailResult>;
   getFileBlobs(ref: ReviewSubjectRef, request: FileBlobsRequest): FileBlobsResult;
   setReviewedFile(ref: ReviewSubjectRef, request: SetReviewedFileRequest): Promise<ReviewedFileRow>;
   importViewedFiles(pullRequestId: string): Promise<void>;
