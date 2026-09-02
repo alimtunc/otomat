@@ -11,10 +11,12 @@ import {
   type ProfileFilter,
 } from "@web/components/agents/agent-profile/list/profile-filter";
 import { SectionHeading } from "@web/components/settings/section-heading";
+import { useActiveHostLabel } from "@web/lib/active-host";
 import { useState } from "react";
 
 export function AgentProfilesSection() {
   const profiles = useAgentProfiles();
+  const hostLabel = useActiveHostLabel();
   const runtimes = useRuntimes();
   const { filter = "all" } = useSearch({ from: "/settings/agents/" });
   const navigate = useNavigate();
@@ -49,7 +51,7 @@ export function AgentProfilesSection() {
           <EmptyState
             icon="bot"
             variant="inline"
-            title="No agent profiles yet"
+            title={`No agent profile on ${hostLabel} yet`}
             description="Create a reusable profile with a runtime, instructions and the user skills it activates."
           />
         }

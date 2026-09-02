@@ -1,8 +1,12 @@
 // @vitest-environment happy-dom
+
 import { SettingsNav } from "@web/components/settings/settings-nav";
+import { hostOwnedSettingsRoutes } from "@web/components/settings/settings-nav-groups";
+import { activeHostStore } from "@web/lib/active-host";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { mount, type Mounted } from "#support/mount";
 
 let currentRoute = "/settings/appearance";
@@ -25,6 +29,8 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
   document.body.replaceChildren();
   currentRoute = "/settings/appearance";
+  activeHostStore.setState(() => null);
+  delete window.otomat;
 });
 
 async function renderNav(): Promise<Mounted> {
@@ -40,13 +46,42 @@ function groupOf(container: HTMLElement, label: string): string[] {
   return [...(group?.querySelectorAll("a") ?? [])].map((link) => link.textContent ?? "");
 }
 
-it("separates what belongs to the project, the machine, and reference material", async () => {
+it("groups every screen by what owns it, naming the daemon the global one belongs to", async () => {
   const { container } = await renderNav();
 
   expect(groupOf(container, "Project")).toEqual(["This project", "Agents", "Skills"]);
-  expect(groupOf(container, "Global")).toContain("Agents");
-  expect(groupOf(container, "Global")).toContain("Skills");
+  expect(groupOf(container, "Global · Local")).toEqual([
+    "Agents",
+    "Skills",
+    "Execution defaults",
+    "Workflow presets",
+  ]);
+  expect(groupOf(container, "All hosts")).toEqual([
+    "Repositories",
+    "Workspaces",
+    "Execution hosts",
+    "Integrations",
+    "Appearance",
+  ]);
   expect(groupOf(container, "Reference")).toEqual(["Runtimes", "About · Daemon", "Design system"]);
+});
+
+it("renames the global group after a host switch instead of implying one shared catalog", async () => {
+  window.otomat = fakeDesktopBridge({ executionHostSshAlias: "otomat-vps" });
+  activeHostStore.setState(() => ({ id: "remote", daemonUrl: "http://127.0.0.1:45010" }));
+  const { container } = await renderNav();
+
+  expect(groupOf(container, "Global · otomat-vps")).toContain("Agents");
+  expect(groupOf(container, "Global · Local")).toEqual([]);
+});
+
+it("leaves the sandbox out of what the displayed daemon owns, since a reset only wipes the local one", async () => {
+  window.otomat = fakeDesktopBridge({ preview: true });
+  const { container } = await renderNav();
+
+  expect(groupOf(container, "All hosts")).toContain("Sandbox");
+  expect(groupOf(container, "Global · Local")).not.toContain("Sandbox");
+  expect(hostOwnedSettingsRoutes()).not.toContain("/settings/sandbox");
 });
 
 it("gives a project sub-page the highlight instead of its parent entry", async () => {

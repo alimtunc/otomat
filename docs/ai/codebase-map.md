@@ -1357,13 +1357,14 @@ change what they are working on. `nav-items.ts` therefore holds one workspace
 list and a single `SETTINGS_NAV` entry the switcher and the palette share; there
 is no second "Configure" rail to keep in sync with the settings surface itself.
 
-Settings splits three ways, and the split is a claim about ownership rather than
-a menu order. *Project* is what belongs to the selected project. *Global* is what
-the operator sets once for this machine — their agents, the skills those agents
-may activate, repositories, workspaces, hosts, integrations, execution defaults,
-presets, appearance. *Reference* is what Otomat reports rather than what the
-operator decides: the runtimes it detected, the daemon it is talking to, and the
-design system.
+Settings splits four ways, and the split is a claim about ownership rather than
+a menu order. *Project* is what belongs to the selected project. *Global · <host>*
+is what the operator sets once for the daemon currently answering — their agents,
+the skills those agents may activate, execution defaults, presets. *All hosts*
+spans every configured host or depends on none: repositories, workspaces, the host
+list itself, Linear integrations, appearance. *Reference* is what Otomat reports
+rather than what the operator decides: the runtimes it detected, the daemon it is
+talking to, and the design system.
 
 That is what keeps the daemon's capability catalog from reading as a roster of
 agents. Global · Agents is the operator's own profiles — a profile's runtime,
@@ -1383,6 +1384,29 @@ would be refused before attempting one.
 The routes moved with the surfaces: `/settings/agents`, `/settings/agents/<id>`
 and `/settings/skills` are canonical, and `/agents`, `/agents/<id>` and `/skills`
 redirect to them, filter and profile id included.
+
+## Global Is Global To One Daemon (OTO-149)
+
+There is no cross-daemon synchronisation, and the settings surface says so instead
+of leaving "Global" to be read as "everywhere". A daemon is the only writer of its
+own rows, so a catalog held by the local daemon and one held by a VPS daemon are
+two catalogs: `hostKeys(host)` keys every daemon-backed read, `api/client.ts` resolves
+the write target from `activeHost()` at request time, and nothing in the app can move a
+row between them. `HostScopeNote` states that once per screen, on exactly the routes
+`hostOwnedSettingsRoutes()` names, so the empty states below it only have to name the
+host — an empty Local catalog must not read as a VPS catalog that vanished.
+`activeHostLabel()` names a host as a noun ("Local", the ssh alias) for the sidebar
+group, the note and a refused write; `executionHostLabel()` stays separate because it
+names one mid-sentence ("the local host") and the two cannot share a string.
+
+Repositories and Workspaces stay under *All hosts* because they render one visible
+group per host rather than a merged list, Integrations because the Linear vault is
+shell-owned and `ConnectionDelivery` already reports each host's delivery, and
+Appearance and Sandbox because they are the desktop shell's own — a sandbox reset
+refuses outright while a remote host is active. A write that cannot leave — the host
+stopped answering — comes back as that host's own sentence (`DaemonTransportError` in
+`agentConfigRefusalMessage` and `presetRefusalMessage`), because "the daemon" is
+ambiguous once there are two.
 
 ## Back Navigation
 
