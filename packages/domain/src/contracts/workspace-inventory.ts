@@ -13,7 +13,6 @@ export type WorkspaceState = (typeof WORKSPACE_STATES)[number];
 
 const WORKSPACE_CLEANUP_BLOCKERS = [
   "cycle_open",
-  "pull_request_not_merged",
   "worktree_dirty",
   "writer_alive",
   "worktree_unreadable",

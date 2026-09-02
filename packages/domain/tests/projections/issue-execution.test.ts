@@ -10,6 +10,7 @@ const OPEN_PR = { pr_status: "open", pr_publication: "created" } as const;
 
 function ev(over: Partial<IssueExecutionEvidence> & { run_id: string }): IssueExecutionEvidence {
   return {
+    issue_status: "ready",
     run_status: "completed",
     run_created_at: AT("1"),
     run_branch: `otomat/run/${over.run_id}`,

@@ -1,4 +1,4 @@
-import { isWorkspaceCleanable } from "@otomat/domain";
+import { isWorkspaceAutoDeletable } from "@otomat/domain";
 import { Button, Icon } from "@otomat/ui";
 import { BulkCleanupDialog } from "@web/components/settings/workspaces/bulk-cleanup-dialog";
 import type { WorkspaceRow } from "@web/lib/workspace/row";
@@ -6,7 +6,7 @@ import { useState } from "react";
 
 export function BulkCleanupStrip({ rows }: { rows: WorkspaceRow[] }) {
   const [open, setOpen] = useState(false);
-  const cleanable = rows.filter(isWorkspaceCleanable);
+  const cleanable = rows.filter(isWorkspaceAutoDeletable);
   // A successful run refetches and empties cleanable; the open dialog must outlive that to show its receipt.
   if (cleanable.length === 0 && !open) return null;
   return (

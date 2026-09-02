@@ -2,12 +2,14 @@ import {
   CLOSED_ISSUE_WORKSPACE,
   type IssueWorkspace,
 } from "../contracts/entities/issue-workspace.js";
+import { isIssueClosed } from "../state-machines/issue.js";
 import { isRunBusy } from "../state-machines/run.js";
 import type { IssueExecutionEvidence } from "./evidence.js";
 
-/** Only the two explicit closures end a cycle — a confirmed merge (`completed`) or an abandon stamp — and a workspace must never point at a worktree that is gone. */
+/** Only an explicit closure ends a cycle — a confirmed merge (`completed`), an abandon stamp, or a closed issue once its run is at rest — and a workspace must never point at a worktree that is gone. */
 export function holdsWorkspace(row: IssueExecutionEvidence): boolean {
   if (row.worktree_status !== "active") return false;
+  if (isIssueClosed(row.issue_status) && !isRunBusy(row.run_status)) return false;
   return row.run_abandoned_at === null && row.run_status !== "completed";
 }
 

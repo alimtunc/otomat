@@ -1,4 +1,5 @@
 import type { WorktreeStatus } from "../contracts/entities/workspace.js";
+import type { IssueState } from "../state-machines/issue.js";
 import type { PullRequestPublicationState } from "../state-machines/pull-request-publication.js";
 import type { PullRequestState } from "../state-machines/pull-request.js";
 import type { RunState } from "../state-machines/run.js";
@@ -11,6 +12,7 @@ export interface HaltedStepEvidence {
 
 /** One persisted run's contribution to its issue's execution and workspace state, as stored. */
 export interface IssueExecutionEvidence {
+  issue_status: IssueState;
   run_id: string;
   run_status: RunState;
   run_created_at: string;

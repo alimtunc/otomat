@@ -10,7 +10,7 @@ import { mountWithQuery } from "#support/mount";
 import { workspaceEntry } from "#support/workspace";
 
 const cleanableRow = (id: string): WorkspaceRow => ({
-  ...workspaceEntry({ id }),
+  ...workspaceEntry({ id, pull_request: { number: 7, url: null, merged: true } }),
   host: { id: "local", label: "Local", kind: "local" },
 });
 

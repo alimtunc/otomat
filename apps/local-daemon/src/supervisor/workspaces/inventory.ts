@@ -65,7 +65,6 @@ function toEntry(
     present,
     record_status: record?.status ?? null,
     cycle_open: issueId !== null && holders.get(issueId) === record?.run_id,
-    pull_request_merged: record?.pull_request?.merged ?? false,
     dirty,
     writer_alive: writerAlive(context, record?.run_id ?? null),
   });

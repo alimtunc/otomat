@@ -1,4 +1,4 @@
-import type { IssueContract, RunContract } from "@otomat/domain";
+import { isIssueClosed, type IssueContract, type RunContract } from "@otomat/domain";
 import type { RunsViewConfig } from "@web/lib/run/view-config";
 
 export interface RunIssueGroup {
@@ -51,7 +51,7 @@ export function visibleRunGroups(
   let hiddenGroups = 0;
   const visible: RunIssueGroup[] = [];
   for (const group of groups) {
-    if (!config.showDoneIssues && group.issue?.status === "done") {
+    if (!config.showClosedIssues && group.issue !== null && isIssueClosed(group.issue.status)) {
       hiddenGroups++;
       continue;
     }

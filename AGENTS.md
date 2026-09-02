@@ -252,8 +252,9 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
   while its work is unmerged. New work on it appends a step to that run; a second
   launch is refused (`issue_workspace_open`) rather than forking a competing
   worktree. A failure, a cancel or a lost provider session leaves that cycle open
-  and resumable; only a confirmed merge or an explicit abandon closes it, and the
-  next launch then starts a fresh cycle. Abandoning stamps the run and stops the
+  and resumable; only a confirmed merge, an explicit abandon, or the issue itself
+  closing at the tracker (`done` or `canceled`, once its run is at rest) closes
+  it, and the next launch then starts a fresh cycle. Abandoning stamps the run and stops the
   plan — it never deletes a branch, a worktree or a commit.
 - A prompt is declarative, never copied text. A step names what it works from —
   its issue, further issues, repository files — and adds at most one optional

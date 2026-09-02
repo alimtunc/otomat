@@ -86,12 +86,12 @@ it("says what its filters are hiding, and stays quiet when they hide nothing", a
       [run({ id: "r1", status: "failed" }), run({ id: "r2", issue_id: "issue-2" })],
       [ISSUE, linearIssueContract({ id: "issue-2", status: "done" })],
     ),
-    { showFailed: false, showDoneIssues: false },
+    { showFailed: false, showClosedIssues: false },
   );
   mounted.push(
     await mount(
       <RunsToolbar
-        config={{ showFailed: false, showDoneIssues: false }}
+        config={{ showFailed: false, showClosedIssues: false }}
         hidden={{ runs: hidden.hiddenRuns, groups: hidden.hiddenGroups }}
         onChange={vi.fn()}
       />,
@@ -123,7 +123,7 @@ it("restores a project's runs filters and leaves another project on the defaults
     const view = useRunsView(projectId);
     seen.push(view.config);
     return (
-      <button type="button" onClick={() => view.update({ showDoneIssues: true })}>
+      <button type="button" onClick={() => view.update({ showClosedIssues: true })}>
         Show done
       </button>
     );
@@ -137,7 +137,7 @@ it("restores a project's runs filters and leaves another project on the defaults
   await entry.cleanup();
 
   mounted.push(await mount(<Harness projectId="project-1" />));
-  expect(seen.at(-1)).toEqual({ showFailed: true, showDoneIssues: true });
+  expect(seen.at(-1)).toEqual({ showFailed: true, showClosedIssues: true });
 
   const [reopened] = mounted.splice(0, 1);
   await reopened.cleanup();

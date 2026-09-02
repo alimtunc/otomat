@@ -2,11 +2,15 @@ import { expect, it } from "vitest";
 
 import {
   describeWorkspace,
+  isWorkspaceAutoDeletable,
+  isWorkspaceCleanable,
   projectWorkspaceState,
   type WorkspaceFacts,
 } from "#domain/projections/workspace-inventory";
 
-/** A merged, quiet, clean, closed workspace: the only shape a deletion is allowed to act on. */
+const PR = { number: 7, url: null, merged: true };
+
+/** A quiet, clean workspace whose cycle is closed: the only shape a deletion is allowed to act on. */
 function facts(over: Partial<WorkspaceFacts> = {}): WorkspaceFacts {
   return {
     attachment: "record",
@@ -14,14 +18,13 @@ function facts(over: Partial<WorkspaceFacts> = {}): WorkspaceFacts {
     present: true,
     record_status: "active",
     cycle_open: false,
-    pull_request_merged: true,
     dirty: false,
     writer_alive: false,
     ...over,
   };
 }
 
-it("clears a merged cycle whose worktree is quiet and clean", () => {
+it("clears a closed cycle whose worktree is quiet and clean", () => {
   expect(projectWorkspaceState(facts())).toEqual({ state: "cleanup_required", blocker: null });
 });
 
@@ -52,11 +55,31 @@ it("blocks a worktree git could not read at all", () => {
   });
 });
 
-it("blocks while no merged pull request stands for the branch", () => {
-  expect(projectWorkspaceState(facts({ pull_request_merged: false }))).toEqual({
-    state: "cleanup_required",
-    blocker: "pull_request_not_merged",
-  });
+it("leaves a closed cycle deletable by hand, and automatic only once a merge stands", () => {
+  const closed = projectWorkspaceState(facts());
+
+  expect(isWorkspaceCleanable(closed)).toBe(true);
+  expect(isWorkspaceAutoDeletable({ ...closed, pull_request: null })).toBe(false);
+  expect(isWorkspaceAutoDeletable({ ...closed, pull_request: { ...PR, merged: false } })).toBe(
+    false,
+  );
+  expect(isWorkspaceAutoDeletable({ ...closed, pull_request: PR })).toBe(true);
+  expect(
+    isWorkspaceAutoDeletable({
+      ...projectWorkspaceState(facts({ dirty: true })),
+      pull_request: PR,
+    }),
+  ).toBe(false);
+});
+
+it("refuses every deletion an operator could regret", () => {
+  const refused = [facts({ cycle_open: true }), facts({ dirty: true }), facts({ dirty: null })];
+
+  expect(refused.map((fact) => isWorkspaceCleanable(projectWorkspaceState(fact)))).toEqual([
+    false,
+    false,
+    false,
+  ]);
 });
 
 it("reads a registration with no directory as stale, and a bare record as missing", () => {

@@ -1,6 +1,7 @@
 import { getIssue, getRun, listStepRunsForRun, schema, updateIssueStatus } from "@otomat/db";
-import { IllegalTransitionError } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
+
+import { RunNotResumableError } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { seedRun } from "../support/seed.js";
@@ -172,7 +173,7 @@ it("refuses to resume a run whose issue closed with its merge", async () => {
   });
   updateIssueStatus(fix.db, "i1", "done");
 
-  await expect(supervisor.resume("rdone")).rejects.toThrow(IllegalTransitionError);
+  await expect(supervisor.resume("rdone")).rejects.toThrow(RunNotResumableError);
   expect(spawn.calls).toBe(0);
   expect(getIssue(fix.db, "i1")?.status).toBe("done");
 });

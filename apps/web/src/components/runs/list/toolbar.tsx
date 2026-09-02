@@ -28,7 +28,7 @@ function hiddenSummary(hidden: { runs: number; groups: number }): string | null 
 export function RunsToolbar({ config, hidden, onChange }: RunsToolbarProps) {
   const activeCount =
     (config.showFailed === DEFAULT_RUNS_VIEW_CONFIG.showFailed ? 0 : 1) +
-    (config.showDoneIssues === DEFAULT_RUNS_VIEW_CONFIG.showDoneIssues ? 0 : 1);
+    (config.showClosedIssues === DEFAULT_RUNS_VIEW_CONFIG.showClosedIssues ? 0 : 1);
   const summary = hiddenSummary(hidden);
   return (
     <div className="flex items-center gap-2">
@@ -49,10 +49,10 @@ export function RunsToolbar({ config, hidden, onChange }: RunsToolbarProps) {
               onCheckedChange={(showFailed) => onChange({ showFailed })}
             />
           </FilterRow>
-          <FilterRow label="Done issues">
+          <FilterRow label="Closed issues">
             <Switch
-              checked={config.showDoneIssues}
-              onCheckedChange={(showDoneIssues) => onChange({ showDoneIssues })}
+              checked={config.showClosedIssues}
+              onCheckedChange={(showClosedIssues) => onChange({ showClosedIssues })}
             />
           </FilterRow>
           {activeCount > 0 ? (

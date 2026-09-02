@@ -14,7 +14,7 @@ import { useRunWorkspace } from "@web/api/runs/queries";
 import { cleanupWorkspaceErrorMessage, useCleanupWorkspace } from "@web/api/workspaces/mutations";
 import { WorkspaceClosureEvidence } from "@web/components/runs/actions/workspace-closure-evidence";
 import { useActiveHostId } from "@web/lib/active-host";
-import { workspaceBlockerAction } from "@web/lib/workspace/blocker";
+import { workspaceReason } from "@web/lib/workspace/blocker";
 
 export interface CleanWorkspaceDialogProps {
   entry: WorkspaceEntry;
@@ -44,7 +44,8 @@ export function CleanWorkspaceDialog({
         <DialogBody className="flex flex-col gap-3">
           <p className="m-0 text-sm text-text-secondary">
             This deletes the worktree at <span className="font-mono">{entry.path}</span> and its
-            local branch. The merged pull request and its commits stay on GitHub.
+            local branch. Everything already pushed stays on GitHub; commits that live only on this
+            branch are lost.
           </p>
           {owned ? null : (
             <p className="m-0 text-sm text-text-tertiary">
@@ -63,7 +64,7 @@ export function CleanWorkspaceDialog({
           {summary.data ? <WorkspaceClosureEvidence summary={summary.data} /> : null}
           {blocked ? (
             <p role="alert" className="m-0 text-xs text-danger">
-              {entry.reason} {workspaceBlockerAction(entry.blocker)}
+              {workspaceReason(entry)}
             </p>
           ) : null}
           {cleanup.isError ? (
