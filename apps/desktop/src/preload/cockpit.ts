@@ -9,7 +9,9 @@ import type {
   ExecutionHostRegisterProjectResult,
   ExecutionHostRepositoriesEntry,
   ConnectLinearRequest,
+  ExecutionHostSelectResult,
   ExecutionHostSnapshot,
+  InboxSnapshot,
   LinearDeliverySnapshot,
   LinearVaultOperationResult,
   OtomatDesktopBridge,
@@ -36,6 +38,7 @@ import {
   EXECUTION_HOST_CONFIGURE_CHANNEL,
   EXECUTION_HOST_DELETE_INSTANCE_CHANNEL,
   EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL,
+  EXECUTION_HOST_INBOX_CHANNEL,
   EXECUTION_HOST_INSTANCES_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_READ_CAPACITY_CHANNEL,
@@ -94,7 +97,7 @@ contextBridge.exposeInMainWorld("otomat", {
   executionHost: {
     snapshot: (): Promise<ExecutionHostSnapshot> =>
       ipcRenderer.invoke(EXECUTION_HOST_SNAPSHOT_CHANNEL),
-    select: (id: ExecutionHostId): Promise<ExecutionHostOperationResult> =>
+    select: (id: ExecutionHostId): Promise<ExecutionHostSelectResult> =>
       ipcRenderer.invoke(EXECUTION_HOST_SELECT_CHANNEL, id),
     configureRemote: (sshAlias: string): Promise<ExecutionHostOperationResult> =>
       ipcRenderer.invoke(EXECUTION_HOST_CONFIGURE_CHANNEL, sshAlias),
@@ -128,6 +131,8 @@ contextBridge.exposeInMainWorld("otomat", {
       hostId: ExecutionHostId,
     ): Promise<ExecutionHostCallResult<WorkspaceInventory>> =>
       ipcRenderer.invoke(EXECUTION_HOST_WORKSPACES_CHANNEL, hostId),
+    readInbox: (hostId: ExecutionHostId): Promise<ExecutionHostCallResult<InboxSnapshot>> =>
+      ipcRenderer.invoke(EXECUTION_HOST_INBOX_CHANNEL, hostId),
     reconcileWorkspaces: (
       hostId: ExecutionHostId,
     ): Promise<ExecutionHostCallResult<WorkspaceReconcileReport>> =>

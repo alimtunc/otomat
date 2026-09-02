@@ -2,6 +2,7 @@ import {
   sameRemoteHostStatus,
   type ExecutionHostId,
   type ExecutionHostOperationResult,
+  type ExecutionHostSelectResult,
   type ExecutionHostSnapshot,
   type RemoteHostStatus,
 } from "@otomat/domain";
@@ -129,7 +130,7 @@ export class ExecutionHostManager {
     return committed;
   }
 
-  async select(id: ExecutionHostId): Promise<ExecutionHostOperationResult> {
+  async select(id: ExecutionHostId): Promise<ExecutionHostSelectResult> {
     if (this.switching) return errorResult("switch_in_progress");
     this.switching = true;
     try {
@@ -139,18 +140,14 @@ export class ExecutionHostManager {
     }
   }
 
-  /** Reserves the tunnel port first so the renderer URL is stable, then connects in the background. */
+  /** Reserves the tunnel port before the cockpit loads, so its CSP can name the origin a later switch targets. */
   async bootActivate(): Promise<string | null> {
     const alias = this.remoteSshAlias;
     if (alias === null) return null;
-    if (this.activeHostId !== "remote") {
-      this.ensureBackgroundRemote();
-      return null;
-    }
     this.session ??= this.createSession(alias);
     await this.session.ensureLocalPort();
     void this.session.connect(true);
-    return this.session.url;
+    return this.activeHostId === "remote" ? this.session.url : null;
   }
 
   removeRemote(): ExecutionHostOperationResult {
@@ -178,7 +175,7 @@ export class ExecutionHostManager {
     if (session !== null) await session.dispose();
   }
 
-  private async selectRemote(): Promise<ExecutionHostOperationResult> {
+  private async selectRemote(): Promise<ExecutionHostSelectResult> {
     const alias = this.remoteSshAlias;
     if (alias === null) return errorResult("not_configured");
     if (this.session !== null && this.session.alias !== alias) {
@@ -194,17 +191,17 @@ export class ExecutionHostManager {
     const committed = this.selection.commit({ active: "remote" });
     if (!committed.ok) return committed;
     this.options.applyRendererUrl(url);
-    return committed;
+    return { ok: true, url };
   }
 
   /** The remote session survives a switch to local, so the switcher keeps listing that host. */
-  private async selectLocal(): Promise<ExecutionHostOperationResult> {
+  private async selectLocal(): Promise<ExecutionHostSelectResult> {
     const url = this.options.localDaemonUrl();
     if (url === "") return errorResult("local_daemon_unavailable");
     const committed = this.selection.commit({ active: "local" });
     if (!committed.ok) return committed;
     this.options.applyRendererUrl(url);
-    return committed;
+    return { ok: true, url };
   }
 
   private ensureBackgroundRemote(): void {

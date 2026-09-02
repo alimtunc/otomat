@@ -7,10 +7,12 @@ import {
   usePublishLinearFields,
   usePublishLinearStatus,
 } from "@web/api/linear/writeback";
-import { queryKeys } from "@web/api/query-keys";
+import { hostKeys } from "@web/api/query-keys";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { mount, type Mounted } from "#support/mount";
+
+const keys = hostKeys("local");
 
 const publishLinearFields = vi.fn();
 const publishLinearStatus = vi.fn();
@@ -104,7 +106,7 @@ it("does not toast a fields conflict but still refreshes the writeback state", a
   rendered.container.querySelector("button")?.click();
 
   await vi.waitFor(() => {
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.linearWriteback("li") });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: keys.linearWriteback("li") });
   });
   expect(toastError).not.toHaveBeenCalled();
 });
@@ -123,6 +125,6 @@ it("confirms a published status and refreshes the mirror", async () => {
 
   await vi.waitFor(() => {
     expect(toastSuccess).toHaveBeenCalledWith("Published status to Linear");
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.issue("li") });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: keys.issue("li") });
   });
 });

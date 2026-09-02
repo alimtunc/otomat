@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 
 export function useWorkflowPresets(projectId: string | undefined) {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.workflowPresetsFor(projectId),
+    queryKey: keys.workflowPresetsFor(projectId),
     queryFn: () => daemon.listWorkflowPresets(projectId),
   });
 }

@@ -8,11 +8,17 @@ import {
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
+import type { HostQueryKeys } from "@web/api/query-keys";
 import { invalidateRunCycleCaches } from "@web/api/runs/mutations";
+import { useQueryKeys } from "@web/api/use-query-keys";
 
-function seedStepRow(client: QueryClient, runId: string, step: StepRunContract): void {
-  client.setQueryData(queryKeys.run(runId), (current: RunDetail | undefined) =>
+function seedStepRow(
+  client: QueryClient,
+  keys: HostQueryKeys,
+  runId: string,
+  step: StepRunContract,
+): void {
+  client.setQueryData(keys.run(runId), (current: RunDetail | undefined) =>
     current === undefined
       ? current
       : {
@@ -31,13 +37,14 @@ function nextTurnModelErrorMessage(error: unknown): string {
 }
 
 export function useSetNextTurnModel(runId: string, stepId: string) {
+  const keys = useQueryKeys();
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: SetNextTurnModelRequest) =>
       daemon.setNextTurnModel(runId, stepId, request),
     onSuccess: (step) => {
-      seedStepRow(client, runId, step);
-      client.invalidateQueries({ queryKey: queryKeys.run(runId) });
+      seedStepRow(client, keys, runId, step);
+      client.invalidateQueries({ queryKey: keys.run(runId) });
       toast.success(
         `Next turn will use ${step.next_turn_config?.model?.id ?? "the provider default"}`,
       );
@@ -62,12 +69,13 @@ function stopStepErrorMessage(error: unknown): string {
 }
 
 export function useStopRunStep(runId: string) {
+  const keys = useQueryKeys();
   const client = useQueryClient();
   return useMutation({
     mutationFn: (stepId: string) => daemon.stopRunStep(runId, stepId),
     onSuccess: (step) => {
-      seedStepRow(client, runId, step);
-      invalidateRunCycleCaches(client, runId);
+      seedStepRow(client, keys, runId, step);
+      invalidateRunCycleCaches(client, keys, runId);
       toast.success("Step stopped — your next message resumes the same session.");
     },
     onError: (error) => toast.error(stopStepErrorMessage(error)),

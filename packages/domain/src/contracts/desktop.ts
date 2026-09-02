@@ -18,11 +18,13 @@ import type {
   ExecutionHostProjectsEntry,
   ExecutionHostRegisterProjectResult,
   ExecutionHostRepositoriesEntry,
+  ExecutionHostSelectResult,
   ExecutionHostSnapshot,
   RemoteHostStatus,
   RemoteInstanceListResult,
   RemoteRepositoryListResult,
 } from "./execution-host.js";
+import type { InboxSnapshot } from "./inbox.js";
 import type { ConnectLinearRequest, LinearErrorCode } from "./linear.js";
 import type {
   WorkspaceCleanupResult,
@@ -109,9 +111,9 @@ export interface DesktopBuildSummary {
  * daemon URL comes from the build-time env and there is no native folder picker.
  */
 export interface OtomatDesktopBridge {
-  /** Origin the renderer talks to: the local daemon, or the SSH tunnel's local end when the remote host is active. */
+  /** Origin of the host active at page load: the local daemon, or the SSH tunnel's local end. */
   readonly daemonUrl: string;
-  /** Active host at page load; every host switch reloads the renderer, so this is stable per load. */
+  /** Active host at page load; a later switch answers with its own origin. */
   readonly executionHostId: ExecutionHostId;
   /** Configured `~/.ssh/config` alias of the remote host, or null when none is configured. */
   readonly executionHostSshAlias: string | null;
@@ -121,7 +123,7 @@ export interface OtomatDesktopBridge {
   pickDirectory(): Promise<string | null>;
   executionHost: {
     snapshot(): Promise<ExecutionHostSnapshot>;
-    select(id: ExecutionHostId): Promise<ExecutionHostOperationResult>;
+    select(id: ExecutionHostId): Promise<ExecutionHostSelectResult>;
     configureRemote(sshAlias: string): Promise<ExecutionHostOperationResult>;
     /** Forgets the remote host: closes the tunnel and clears the alias. Nothing on the server is touched. */
     removeRemote(): Promise<ExecutionHostOperationResult>;
@@ -148,6 +150,8 @@ export interface OtomatDesktopBridge {
       repositoryId: string,
     ): Promise<ExecutionHostOperationResult>;
     readWorkspaces(hostId: ExecutionHostId): Promise<ExecutionHostCallResult<WorkspaceInventory>>;
+    /** One host's Inbox, so a project that is not on screen keeps its badge. */
+    readInbox(hostId: ExecutionHostId): Promise<ExecutionHostCallResult<InboxSnapshot>>;
     reconcileWorkspaces(
       hostId: ExecutionHostId,
     ): Promise<ExecutionHostCallResult<WorkspaceReconcileReport>>;

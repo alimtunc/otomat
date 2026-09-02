@@ -1,15 +1,14 @@
 import { countOpenInboxEntriesByProject } from "@otomat/domain";
 import { useRouterState } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
-import { useInbox } from "@web/api/inbox/queries";
 import { projectSwitcherKey } from "@web/components/shell/project-selection/host-key";
 import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
+import { useOpenHostInboxes } from "@web/components/shell/project-tabs/use-open-host-inboxes";
 import {
   visibleProjectTabs,
   type ProjectTab,
 } from "@web/components/shell/project-tabs/visible-tabs";
-import { activeExecutionHostId } from "@web/lib/desktop-bridge";
 import { isProjectRoute } from "@web/lib/project-navigation";
 import { useEffect } from "react";
 
@@ -23,17 +22,17 @@ export interface ProjectTabsView {
 export function useProjectTabs(): ProjectTabsView {
   const switcher = useProjectSwitcher();
   const stored = useSelector(projectTabsStore);
-  const inbox = useInbox();
+  const inboxes = useOpenHostInboxes();
   const href = useRouterState({ select: (state) => state.location.href });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const activeKey = switcher.currentSwitcherId;
-  const activeHostId = activeExecutionHostId();
 
   const attention = new Map(
-    [...countOpenInboxEntriesByProject(inbox.data?.entries ?? [])].map(([projectId, count]) => [
-      projectSwitcherKey(activeHostId, projectId),
-      count,
-    ]),
+    inboxes.flatMap(({ host, entries }) =>
+      [...countOpenInboxEntriesByProject(entries)].map(
+        ([projectId, count]) => [projectSwitcherKey(host, projectId), count] as const,
+      ),
+    ),
   );
   const tabs = visibleProjectTabs({ stored, projects: switcher.projects, attention });
 

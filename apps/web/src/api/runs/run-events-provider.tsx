@@ -1,11 +1,11 @@
 import type { EventEnvelope } from "@otomat/domain";
 import { useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
 import { mergeEvent, mergeEventWindow } from "@web/api/runs/events";
 import { invalidateForEvent } from "@web/api/runs/invalidate-for-event";
 import { RunEventsContext, type RunStreamState } from "@web/api/runs/run-event-stream";
 import { useEventHistory } from "@web/api/runs/use-event-history";
+import { useQueryKeys } from "@web/api/use-query-keys";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export interface RunEventsProviderProps {
@@ -15,6 +15,7 @@ export interface RunEventsProviderProps {
 
 export function RunEventsProvider({ runId, children }: RunEventsProviderProps) {
   const client = useQueryClient();
+  const keys = useQueryKeys();
   const history = useEventHistory(runId);
   const [live, setLive] = useState<EventEnvelope[]>([]);
   const [state, setState] = useState<RunStreamState>("connecting");
@@ -35,13 +36,13 @@ export function RunEventsProvider({ runId, children }: RunEventsProviderProps) {
       onOpen: () => setState("open"),
       onEvent: (event) => {
         setLive((current) => mergeEvent(current, event));
-        invalidateForEvent(client, runId, event);
+        invalidateForEvent(client, keys, runId, event);
       },
       onEnd: () => {
         closedRef.current = true;
         setState("closed");
-        client.invalidateQueries({ queryKey: queryKeys.run(runId) });
-        client.invalidateQueries({ queryKey: queryKeys.runs });
+        client.invalidateQueries({ queryKey: keys.run(runId) });
+        client.invalidateQueries({ queryKey: keys.runs });
       },
       onStreamError: () => {
         closedRef.current = true;
@@ -53,7 +54,7 @@ export function RunEventsProvider({ runId, children }: RunEventsProviderProps) {
       onParseError: () => setDegraded(true),
     });
     return () => subscription.close();
-  }, [runId, client, anchored, tailSeq]);
+  }, [runId, client, keys, anchored, tailSeq]);
 
   const events = mergeEventWindow(history.events, live);
 

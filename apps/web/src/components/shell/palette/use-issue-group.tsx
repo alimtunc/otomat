@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useProjectIssues } from "@web/api/issues/queries";
 import { PaletteIssueNotice } from "@web/components/shell/palette/issue-notice";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
-import { remoteHostAlias } from "@web/lib/desktop-bridge";
+import { useRemoteHostAlias } from "@web/lib/active-host";
 import { issueShortId } from "@web/lib/ids";
 import { searchIssues } from "@web/lib/issue/search";
 
@@ -16,7 +16,7 @@ export function usePaletteIssueGroup(search: string): CommandPaletteGroup {
 
   const query = search.trim();
   const project = (selected.projects.data ?? []).find((entry) => entry.id === selected.projectId);
-  const hostAlias = remoteHostAlias();
+  const hostAlias = useRemoteHostAlias();
   const hostSuffix = hostAlias === null ? "" : ` · ${hostAlias}`;
   const scope = project === undefined ? undefined : `${project.name}${hostSuffix}`;
   const matches = searchIssues(issues.data ?? [], query);

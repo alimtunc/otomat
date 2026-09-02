@@ -1,6 +1,6 @@
 import type { ExecutionHostOperationResult, ExecutionHostSnapshot } from "@otomat/domain";
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
-import { queryKeys } from "@web/api/query-keys";
+import { shellKeys } from "@web/api/query-keys";
 import { describeOperationFailure } from "@web/components/shell/remote-session/status-labels";
 import { useHostSnapshot } from "@web/components/shell/remote-session/use-host-snapshot";
 import { desktopBridge, requireDesktopBridge } from "@web/lib/desktop-bridge";
@@ -24,7 +24,7 @@ export function useExecutionHost(): UseExecutionHostResult {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const aliasesQuery = useQuery({
-    queryKey: queryKeys.executionHostAliases,
+    queryKey: shellKeys.executionHostAliases,
     queryFn: () => requireDesktopBridge(bridge).executionHost.listSshAliases(),
     enabled: bridge !== null,
   });
@@ -48,7 +48,7 @@ export function useExecutionHost(): UseExecutionHostResult {
       return false;
     } finally {
       setPending(null);
-      void client.invalidateQueries({ queryKey: queryKeys.executionHost });
+      void client.invalidateQueries({ queryKey: shellKeys.executionHost });
     }
   }
 

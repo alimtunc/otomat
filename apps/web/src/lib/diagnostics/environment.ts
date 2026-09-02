@@ -1,4 +1,5 @@
 import type { ErrorDiagnostic } from "@otomat/domain";
+import { activeExecutionHostId, remoteHostAlias } from "@web/lib/active-host";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 
 export interface DiagnosticEnvironment {
@@ -11,10 +12,10 @@ export function diagnosticEnvironment(): DiagnosticEnvironment {
   if (bridge === null) {
     return { host: { id: "local", label: "Local (browser)", ssh_alias: null }, app: null };
   }
-  const alias = bridge.executionHostId === "remote" ? bridge.executionHostSshAlias : null;
+  const alias = remoteHostAlias();
   return {
     host: {
-      id: bridge.executionHostId,
+      id: activeExecutionHostId(),
       label: alias === null ? "Local" : `Remote · ${alias}`,
       ssh_alias: alias,
     },

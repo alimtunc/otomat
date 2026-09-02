@@ -2,7 +2,7 @@ import { DaemonRequestError } from "@otomat/client";
 import type { DiffFileContract, ReviewTarget, RunDiffScopeSelector } from "@otomat/domain";
 import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 import { blobsErrorMessage } from "@web/components/runs/diff/files/blobs-error";
 import { useMemo, useState } from "react";
 
@@ -27,9 +27,10 @@ export function useFileBlobs(
   file: DiffFileContract,
   scope: RunDiffScopeSelector,
 ): UseFileBlobsResult {
+  const keys = useQueryKeys();
   const [requested, setRequested] = useState(false);
   const query = useQuery({
-    queryKey: queryKeys.reviewDiffFileBlobs(target, file.path, file.sha, scope),
+    queryKey: keys.reviewDiffFileBlobs(target, file.path, file.sha, scope),
     queryFn: () => daemon.getDiffFileBlobs(target, file.path, file.sha, scope),
     enabled: requested && !file.binary,
     retry: (count, error) => !(error instanceof DaemonRequestError) && count < 2,

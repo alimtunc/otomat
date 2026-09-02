@@ -7,6 +7,8 @@ import { routeTree } from "./routeTree.gen";
 export const router = createRouter({
   routeTree,
   scrollRestoration: true,
+  // A tab reopens its remembered href, so the offset is remembered by href rather than by history entry.
+  getScrollRestorationKey: (location) => location.href,
   defaultErrorComponent: RouteErrorReport,
   defaultOnCatch: (error, info) => recordComponentStack(error, info.componentStack ?? null),
 });

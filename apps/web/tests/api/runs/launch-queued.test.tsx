@@ -1,11 +1,13 @@
 // @vitest-environment happy-dom
 import type { RunContract, RunLaunchResponse } from "@otomat/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { queryKeys } from "@web/api/query-keys";
+import { hostKeys } from "@web/api/query-keys";
 import { useLaunchRun } from "@web/api/runs/use-launch-run";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { mount, type Mounted } from "#support/mount";
+
+const keys = hostKeys("local");
 
 const { startRun, toastError, toastInfo, toastSuccess } = vi.hoisted(() => ({
   startRun: vi.fn(),
@@ -105,5 +107,5 @@ it("seeds the issue's run list with the confirmed run before any refetch lands",
   await vi.waitFor(() => {
     expect(launched).toMatchObject({ id: "run-1" });
   });
-  expect(client.getQueryData<RunContract[]>(queryKeys.runsForIssue("i-1"))).toEqual([RUN]);
+  expect(client.getQueryData<RunContract[]>(keys.runsForIssue("i-1"))).toEqual([RUN]);
 });

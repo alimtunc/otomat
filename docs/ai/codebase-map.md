@@ -1432,17 +1432,49 @@ the URL come back with it. `lib/project-navigation.ts` draws that line: Inbox,
 Settings and the agent surfaces answer for every project at once and therefore
 never become a project's remembered view.
 
-The attention badge is `countOpenInboxEntriesByProject` over the Inbox snapshot
-the shell already polls — not a second notification path. That has three
+The attention badge is `countOpenInboxEntriesByProject` over each host's Inbox
+snapshot — not a second notification path. `useOpenHostInboxes` polls one Inbox
+per host that has an open tab (the active host on its own client, the others
+through `bridge.executionHost.readInbox`, the same `HostCatalog.call` seam the
+workspace inventory uses) and is mounted from the root layout, so the poll
+outlives the route remounts of the shell that renders the badge. That has three
 consequences worth stating: an entry that resolves clears the badge with the
-invalidation the acting mutation already issues, a project the operator is not
-looking at is badged from the same background poll, and everything the Inbox
-projection refuses to count (a withdrawn demand, a completed run) can never
-inflate it.
+invalidation the acting mutation already issues, a project on a host the
+operator is not looking at is badged from that host's own poll, and everything
+the Inbox projection refuses to count (a withdrawn demand, a completed run) can
+never inflate it.
 
 Closing a tab is a view operation and nothing else: it drops the tab and its
 remembered route while the selection stays where it is — the project outlives
 its tab — and touches no run, branch or worktree.
+
+## One Renderer For Every Host (OTO-160)
+
+A host switch used to reload the renderer, which emptied the query cache, tore
+down every subscription and repainted the chrome. It no longer does. The
+renderer keeps one `QueryClient` for the whole session and separates three
+things the reload used to conflate:
+
+- **Which host is focused.** `lib/active-host.ts` holds the switch the renderer
+  made, seeded from the bridge at load. `ExecutionHostManager.select` answers
+  with the target's origin, the renderer records it, and the one daemon client
+  (`api/client.ts`) reads that origin per request — the packaged CSP names both
+  daemon origins up front, the tunnel port being reserved at boot, and the main
+  process reloads only as a fallback when the served policy cannot name a new
+  origin (an alias configured after load).
+- **How long loaded data lives.** Every daemon-backed query key starts with the
+  host it was read from (`hostKeys(host)`), and hooks obtain the active host's
+  keys through `useQueryKeys()`, which is subscribed to the switch: the router
+  memoizes its matches, so nothing short of a per-hook subscription re-keys a
+  mounted observer without remounting it. Losing the focus removes nothing;
+  an unobserved entry lives its `gcTime`, the stored snapshot
+  (`api/cache-snapshot.ts`) is one bucket over every host, and a reconnect
+  invalidates the `remote` prefix rather than clearing it.
+- **What every open project still reports.** The selection is one project per
+  host (`project-selection/store.ts`), a cross-host switch lands the selection
+  and the navigation only once the target host answered (never optimistically,
+  so no view paints one host's data under another's tab), and the tabs' badges
+  come from the per-host Inbox polls described above.
 
 ## Saved Issue Views
 

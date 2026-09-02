@@ -4,7 +4,7 @@ import type { ActivitySnapshot } from "@otomat/domain";
 import { useActivity } from "@web/api/activity/queries";
 import { useActivityStream } from "@web/api/activity/use-activity-stream";
 import { restoreQuerySnapshot, saveQuerySnapshot } from "@web/api/cache-snapshot";
-import { queryKeys } from "@web/api/query-keys";
+import { hostKeys } from "@web/api/query-keys";
 import { act } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
@@ -12,6 +12,8 @@ import { runActivity } from "#support/activity";
 import { mountWithQuery } from "#support/mount";
 import { testQueryClient } from "#support/query";
 import { memoryStorage } from "#support/storage";
+
+const keys = hostKeys("local");
 
 const listActivity = vi.fn<() => Promise<ActivitySnapshot>>();
 const subscribe = vi.fn();
@@ -110,7 +112,7 @@ it("keeps the one stream open across a navigation", async () => {
 it("shows the stored snapshot on a cold start, then whatever the reopened stream pushes", async () => {
   const storage = memoryStorage();
   const source = testQueryClient();
-  source.setQueryData(queryKeys.activity, snapshot(["run-1"], "2026-08-20T10:00:00.000Z"));
+  source.setQueryData(keys.activity, snapshot(["run-1"], "2026-08-20T10:00:00.000Z"));
   saveQuerySnapshot(source, storage);
   listActivity.mockReturnValue(new Promise(() => undefined));
 

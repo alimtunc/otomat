@@ -17,7 +17,7 @@ import {
 } from "@otomat/ui";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@web/api/query-keys";
+import { hostKeys, shellKeys } from "@web/api/query-keys";
 import {
   registerRepositoryErrorMessage,
   useRegisterRepository,
@@ -52,9 +52,10 @@ export function AddProjectDialog({ open, onOpenChange, hosts, onSelect }: AddPro
       setError(null);
       const path = value.path.trim();
       const registered = (projectId: string, name: string): void => {
-        void client.invalidateQueries({ queryKey: queryKeys.executionHost });
-        void client.invalidateQueries({ queryKey: queryKeys.projects });
-        void client.invalidateQueries({ queryKey: queryKeys.repositories });
+        const keys = hostKeys(value.hostId);
+        void client.invalidateQueries({ queryKey: shellKeys.executionHost });
+        void client.invalidateQueries({ queryKey: keys.projects });
+        void client.invalidateQueries({ queryKey: keys.repositories });
         toast.success(`${name} added on ${labelOf(value.hostId)}`);
         close();
         onSelect(projectSwitcherKey(value.hostId, projectId));

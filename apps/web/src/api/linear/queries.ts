@@ -1,19 +1,21 @@
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 
 /** Every connection this daemon knows, whether or not it currently holds its key. */
 export function useLinearConnections() {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.linearConnections,
+    queryKey: keys.linearConnections,
     queryFn: () => daemon.listLinearConnections(),
   });
 }
 
 export function useLinearWorkspace(connectionId: string | null) {
+  const keys = useQueryKeys();
   const client = useQueryClient();
   return useQuery({
-    queryKey: queryKeys.linearWorkspaceFor(connectionId),
+    queryKey: keys.linearWorkspaceFor(connectionId),
     queryFn:
       connectionId === null
         ? skipToken
@@ -21,7 +23,7 @@ export function useLinearWorkspace(connectionId: string | null) {
             try {
               return await daemon.getLinearWorkspace(connectionId);
             } catch (error) {
-              await client.invalidateQueries({ queryKey: queryKeys.linearConnections });
+              await client.invalidateQueries({ queryKey: keys.linearConnections });
               throw error;
             }
           },
@@ -30,16 +32,18 @@ export function useLinearWorkspace(connectionId: string | null) {
 }
 
 export function useIssueSources(projectId?: string) {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.issueSourcesFor(projectId),
+    queryKey: keys.issueSourcesFor(projectId),
     queryFn: () => daemon.listIssueSources({ projectId }),
   });
 }
 
 /** Polled while a pass is in flight so a pass started elsewhere still shows up. */
 export function useLinearSyncStatus(projectId: string | undefined) {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.linearSyncStatus(projectId ?? ""),
+    queryKey: keys.linearSyncStatus(projectId ?? ""),
     queryFn: projectId === undefined ? skipToken : () => daemon.getLinearSyncStatus(projectId),
     refetchInterval: (query) => (query.state.data?.running === true ? 1_500 : false),
   });

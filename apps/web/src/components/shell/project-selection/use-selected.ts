@@ -8,8 +8,5 @@ export function useSelectedProject() {
     id: project.id,
     name: project.name,
   }));
-  return {
-    projectId: useProjectSelection(summaries).currentProjectId,
-    projects,
-  };
+  return { projectId: useProjectSelection(summaries), projects };
 }

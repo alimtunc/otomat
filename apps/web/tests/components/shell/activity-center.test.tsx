@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import type { ActivityContract, ActivitySnapshot, DesktopUpdateSnapshot } from "@otomat/domain";
-import { queryKeys } from "@web/api/query-keys";
+import { hostKeys } from "@web/api/query-keys";
 import { ActivityCenter } from "@web/components/shell/activity/center";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +11,8 @@ import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { findLabelled } from "#support/dom-queries";
 import { testQueryClient } from "#support/query";
 import { mountRoutedWithQuery } from "#support/router";
+
+const keys = hostKeys("local");
 
 const listActivity = vi.fn<() => Promise<ActivitySnapshot>>();
 
@@ -344,7 +346,7 @@ describe("ActivityCenter", () => {
 
     listActivity.mockRejectedValue(new Error("host unreachable"));
     await act(async () => {
-      await client.refetchQueries({ queryKey: queryKeys.activity });
+      await client.refetchQueries({ queryKey: keys.activity });
     });
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));

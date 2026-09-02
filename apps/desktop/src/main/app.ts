@@ -13,7 +13,7 @@ import {
 import { SPLASH_RETRY_CHANNEL, SPLASH_STATUS_CHANNEL, type StartupStatus } from "#shared/startup";
 import { resolveUserPath } from "#shared/user-path";
 
-import { buildCsp } from "./csp.js";
+import { RendererCsp } from "./csp.js";
 import { resolveExpectedBuild } from "./expected-build.js";
 import { buildIpcActions } from "./ipc-actions.js";
 import { registerIpc, type IpcState } from "./ipc.js";
@@ -47,6 +47,10 @@ export class DesktopApp {
   private splash: BrowserWindow | null = null;
   private cockpit: BrowserWindow | null = null;
   private operation: "restoring" | "starting" | null = null;
+  private readonly csp = new RendererCsp(() => [
+    this.localDaemonUrl,
+    this.runtime?.hosts.remoteSession?.url ?? null,
+  ]);
   private readonly rejectedBackupPaths = new Set<string>();
   private readonly log = new StartupLogSink(() => this.runtime?.desktopLog ?? null);
   readonly quit = new QuitSequence(
@@ -94,7 +98,7 @@ export class DesktopApp {
     const origins = resolveAllowedOrigins(this.devServer, (message) => this.log.write(message));
     app.on("web-contents-created", (_event, contents) => hardenWebContents(contents, origins));
     if (this.paths.packaged && this.paths.webDist !== null) {
-      serveAppScheme(this.paths.webDist, () => buildCsp(this.ipcState.daemonUrl));
+      serveAppScheme(this.paths.webDist, (document) => this.csp.headerFor(document));
     }
     this.splash = await createSplashWindow(this.paths);
     installApplicationMenu({
@@ -216,10 +220,9 @@ export class DesktopApp {
     };
   }
 
-  /** Host switches re-point the renderer and reload it so the preload re-reads the daemon URL. */
   private applyRendererUrl(url: string): void {
     this.ipcState.daemonUrl = url;
-    this.cockpit?.webContents.reload();
+    if (!this.csp.allows(url)) this.cockpit?.webContents.reload();
   }
 
   private sendToCockpit(channel: string, payload: unknown): void {

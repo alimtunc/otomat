@@ -1,11 +1,12 @@
 import type { ConnectionState } from "@otomat/ui";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 
 export function useHealth() {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.health,
+    queryKey: keys.health,
     queryFn: () => daemon.health(),
     refetchInterval: 8_000,
     refetchIntervalInBackground: true,
@@ -31,28 +32,31 @@ export function useDaemonStatus(): DaemonStatus {
 }
 
 export function useProjects() {
-  return useQuery({ queryKey: queryKeys.projects, queryFn: () => daemon.listProjects() });
+  const keys = useQueryKeys();
+  return useQuery({ queryKey: keys.projects, queryFn: () => daemon.listProjects() });
 }
 
 export function useRepositories(projectId?: string) {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey:
-      projectId === undefined ? queryKeys.repositories : queryKeys.repositoriesFor(projectId),
+    queryKey: projectId === undefined ? keys.repositories : keys.repositoriesFor(projectId),
     queryFn: () => daemon.listRepositories(projectId === undefined ? {} : { projectId }),
   });
 }
 
 export function useRepositoryBranches(repositoryId: string | null) {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.repositoryBranches(repositoryId),
+    queryKey: keys.repositoryBranches(repositoryId),
     queryFn: repositoryId === null ? skipToken : () => daemon.listRepositoryBranches(repositoryId),
     staleTime: 15_000,
   });
 }
 
 export function useRepositoryFiles(repositoryId: string | null, query: string) {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.repositoryFiles(repositoryId, query),
+    queryKey: keys.repositoryFiles(repositoryId, query),
     queryFn:
       repositoryId === null ? skipToken : () => daemon.searchRepositoryFiles(repositoryId, query),
     staleTime: 15_000,
@@ -61,32 +65,36 @@ export function useRepositoryFiles(repositoryId: string | null, query: string) {
 
 /** Short staleTime so installing a CLI shows up without a daemon restart. */
 export function useRuntimes() {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.runtimes,
+    queryKey: keys.runtimes,
     queryFn: () => daemon.listRuntimes(),
     staleTime: 30_000,
   });
 }
 
 export function useRuntimeModels(runtimeId: string | null) {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.runtimeModels(runtimeId),
+    queryKey: keys.runtimeModels(runtimeId),
     queryFn: runtimeId === null ? skipToken : () => daemon.runtimeModels(runtimeId),
     staleTime: 60_000,
   });
 }
 
 export function useExecutionDefaults() {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.executionDefaults,
+    queryKey: keys.executionDefaults,
     queryFn: () => daemon.executionDefaults(),
     staleTime: 30_000,
   });
 }
 
 export function usePullRequestGenerator() {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.pullRequestGenerator,
+    queryKey: keys.pullRequestGenerator,
     queryFn: () => daemon.pullRequestGenerator(),
     staleTime: 30_000,
   });
@@ -94,8 +102,9 @@ export function usePullRequestGenerator() {
 
 /** Model-scoped because Codex publishes its reasoning levels per model. */
 export function useRuntimeProviderOptions(runtimeId: string | null, model: string | null) {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.runtimeOptions(runtimeId, model),
+    queryKey: keys.runtimeOptions(runtimeId, model),
     queryFn:
       runtimeId === null
         ? skipToken

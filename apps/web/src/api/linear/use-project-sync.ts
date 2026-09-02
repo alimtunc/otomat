@@ -4,7 +4,7 @@ import { useIsMutating, useMutation, useQueryClient } from "@tanstack/react-quer
 import { daemon } from "@web/api/client";
 import { isSupersededLinearError, linearErrorMessage } from "@web/api/linear/mutations";
 import { useLinearSyncStatus } from "@web/api/linear/queries";
-import { queryKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 import { useCallback } from "react";
 
 const FRESH_FOR_MS = 60_000;
@@ -29,9 +29,10 @@ export interface ProjectLinearSync {
 
 /** Every Linear refresh for the active project funnels here, so concurrent triggers collapse into one request. */
 export function useProjectLinearSync(projectId: string | undefined): ProjectLinearSync {
+  const keys = useQueryKeys();
   const client = useQueryClient();
   const status = useLinearSyncStatus(projectId).data ?? null;
-  const mutationKey = queryKeys.linearSync(projectId ?? "");
+  const mutationKey = keys.linearSync(projectId ?? "");
   const pending = useIsMutating({ mutationKey }) > 0;
   const { mutate } = useMutation({
     mutationKey,
@@ -53,10 +54,10 @@ export function useProjectLinearSync(projectId: string | undefined): ProjectLine
     },
     onSettled: async () => {
       await Promise.all([
-        client.invalidateQueries({ queryKey: queryKeys.linearConnections }),
-        client.invalidateQueries({ queryKey: queryKeys.issueSources }),
-        client.invalidateQueries({ queryKey: queryKeys.issues }),
-        client.invalidateQueries({ queryKey: queryKeys.linearSyncStatus(projectId ?? "") }),
+        client.invalidateQueries({ queryKey: keys.linearConnections }),
+        client.invalidateQueries({ queryKey: keys.issueSources }),
+        client.invalidateQueries({ queryKey: keys.issues }),
+        client.invalidateQueries({ queryKey: keys.linearSyncStatus(projectId ?? "") }),
       ]);
     },
   });
@@ -64,10 +65,10 @@ export function useProjectLinearSync(projectId: string | undefined): ProjectLine
   const refresh = useCallback(
     (options: ProjectLinearSyncOptions = {}) => {
       if (projectId === undefined) return;
-      if (client.isMutating({ mutationKey: queryKeys.linearSync(projectId) }) > 0) return;
+      if (client.isMutating({ mutationKey: keys.linearSync(projectId) }) > 0) return;
       mutate({ project_id: projectId, full: options.full === true, announce: options.announce });
     },
-    [client, mutate, projectId],
+    [client, keys, mutate, projectId],
   );
 
   const refreshIfStale = useCallback(() => {

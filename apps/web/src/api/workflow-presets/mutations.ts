@@ -1,12 +1,13 @@
 import type { DuplicateWorkflowPresetRequest, SaveWorkflowPresetRequest } from "@otomat/domain";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 
 /** A write can move a preset between scopes, so every scoped list is refreshed, not just the one shown. */
 function useInvalidatePresets() {
   const client = useQueryClient();
-  return () => client.invalidateQueries({ queryKey: queryKeys.workflowPresets });
+  const keys = useQueryKeys();
+  return () => client.invalidateQueries({ queryKey: keys.workflowPresets });
 }
 
 export function useCreateWorkflowPreset() {

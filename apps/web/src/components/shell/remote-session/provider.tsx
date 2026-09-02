@@ -1,12 +1,13 @@
 import { isRemoteHostSettling, type RemoteHostStatus } from "@otomat/domain";
 import { useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@web/api/query-keys";
+import { hostKeys, shellKeys } from "@web/api/query-keys";
 import {
   RemoteSessionContext,
   LOCAL_SESSION,
   type RemoteSessionState,
 } from "@web/components/shell/remote-session/context";
 import { useHostSnapshot } from "@web/components/shell/remote-session/use-host-snapshot";
+import { useActiveHostId } from "@web/lib/active-host";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
@@ -18,6 +19,7 @@ export function RemoteSessionProvider({ children }: { children: ReactNode }) {
   const bridge = desktopBridge();
   const client = useQueryClient();
   const snapshot = useHostSnapshot();
+  const active = useActiveHostId() === "remote";
   const [pushed, setPushed] = useState<RemoteHostStatus | null>(null);
 
   // otomat-allow-effect: subscribe to the main process's remote-status push channel and detach on unmount.
@@ -25,13 +27,15 @@ export function RemoteSessionProvider({ children }: { children: ReactNode }) {
     if (bridge === null) return;
     return bridge.executionHost.onRemoteStatus((status) => {
       setPushed(status);
-      void client.invalidateQueries({ queryKey: queryKeys.executionHost });
+      void client.invalidateQueries({ queryKey: shellKeys.executionHost });
+      if (status.phase === "connected") {
+        void client.invalidateQueries({ queryKey: hostKeys("remote").host });
+      }
     });
   }, [bridge, client]);
 
   const host = snapshot.data;
   const status = pushed ?? host?.remote_status ?? null;
-  const active = host?.active_id === "remote";
   const alias = host?.remote_ssh_alias ?? null;
   const build = host?.remote_build ?? null;
   const expectedBuild = host?.expected_build ?? null;

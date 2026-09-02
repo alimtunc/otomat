@@ -67,16 +67,17 @@ function resolveWithinRoot(root: string, pathname: string): string | null {
  * a real asset is returned as-is, any other path returns `index.html` so deep-link refreshes
  * work. `cspFor` is read per request so a retry that picked a new daemon port gets a fresh CSP.
  */
-export function serveAppScheme(webDist: string, cspFor: () => string): void {
+export function serveAppScheme(webDist: string, cspFor: (document: boolean) => string): void {
+  const index = join(webDist, "index.html");
   protocol.handle(APP_SCHEME, async (request) => {
     const requested = resolveWithinRoot(webDist, new URL(request.url).pathname);
-    const file = requested !== null && isFile(requested) ? requested : join(webDist, "index.html");
+    const file = requested !== null && isFile(requested) ? requested : index;
     const body = await readFile(file);
     return new Response(new Uint8Array(body), {
       status: 200,
       headers: {
         "content-type": contentType(file),
-        "content-security-policy": cspFor(),
+        "content-security-policy": cspFor(file === index),
         "x-content-type-options": "nosniff",
       },
     });

@@ -17,6 +17,7 @@ import {
   EXECUTION_HOST_CONFIGURE_CHANNEL,
   EXECUTION_HOST_DELETE_INSTANCE_CHANNEL,
   EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL,
+  EXECUTION_HOST_INBOX_CHANNEL,
   EXECUTION_HOST_INSTANCES_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_READ_CAPACITY_CHANNEL,
@@ -143,6 +144,9 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
   );
   ipcMain.handle(EXECUTION_HOST_WORKSPACES_CHANNEL, (_event, hostId: unknown) =>
     actions.executionHost.readWorkspaces(hostId),
+  );
+  ipcMain.handle(EXECUTION_HOST_INBOX_CHANNEL, (_event, hostId: unknown) =>
+    actions.executionHost.readInbox(hostId),
   );
   ipcMain.handle(EXECUTION_HOST_RECONCILE_WORKSPACES_CHANNEL, (_event, hostId: unknown) =>
     actions.executionHost.reconcileWorkspaces(hostId),

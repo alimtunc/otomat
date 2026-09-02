@@ -1,17 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 
 export function useLinearWriteback(issueId: string) {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.linearWriteback(issueId),
+    queryKey: keys.linearWriteback(issueId),
     queryFn: () => daemon.getLinearWriteback(issueId),
   });
 }
 
 export function useLinearEditor(issueId: string) {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.linearEditor(issueId),
+    queryKey: keys.linearEditor(issueId),
     queryFn: () => daemon.getLinearEditor(issueId),
     retry: false,
     staleTime: 15_000,
@@ -19,8 +21,9 @@ export function useLinearEditor(issueId: string) {
 }
 
 export function useLinearComments(issueId: string) {
+  const keys = useQueryKeys();
   return useQuery({
-    queryKey: queryKeys.linearComments(issueId),
+    queryKey: keys.linearComments(issueId),
     queryFn: () => daemon.getLinearComments(issueId),
     retry: false,
     staleTime: 15_000,

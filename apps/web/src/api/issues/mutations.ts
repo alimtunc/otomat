@@ -10,37 +10,40 @@ import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { daemon } from "@web/api/client";
-import { queryKeys } from "@web/api/query-keys";
+import { useQueryKeys } from "@web/api/use-query-keys";
 
 export function useCreateIssue() {
+  const keys = useQueryKeys();
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: CreateIssueRequest) => daemon.createIssue(request),
     onSuccess: () => {
-      client.invalidateQueries({ queryKey: queryKeys.issues });
+      client.invalidateQueries({ queryKey: keys.issues });
     },
   });
 }
 
 export function useMoveIssueProject(issueId: string) {
+  const keys = useQueryKeys();
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: MoveIssueProjectRequest) => daemon.moveIssueProject(issueId, request),
     onSuccess: () => {
-      client.invalidateQueries({ queryKey: queryKeys.issues });
-      client.invalidateQueries({ queryKey: queryKeys.repositories });
+      client.invalidateQueries({ queryKey: keys.issues });
+      client.invalidateQueries({ queryKey: keys.repositories });
     },
   });
 }
 
 /** The daemon refuses this for a mirrored issue. */
 export function useSetIssueStatus(issueId: string) {
+  const keys = useQueryKeys();
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: SetIssueStatusRequest) => daemon.setIssueStatus(issueId, request),
     onSuccess: (issue) => {
-      client.setQueryData(queryKeys.issue(issue.id), issue);
-      client.invalidateQueries({ queryKey: queryKeys.issues });
+      client.setQueryData(keys.issue(issue.id), issue);
+      client.invalidateQueries({ queryKey: keys.issues });
     },
   });
 }

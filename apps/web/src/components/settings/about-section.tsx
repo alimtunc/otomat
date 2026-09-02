@@ -3,7 +3,7 @@ import { useDaemonStatus, useHealth } from "@web/api/daemon/queries";
 import { AboutRow } from "@web/components/settings/about-row";
 import { SectionHeading } from "@web/components/settings/section-heading";
 import { UpdateSection } from "@web/components/settings/update-section";
-import { remoteHostAlias } from "@web/lib/desktop-bridge";
+import { useRemoteHostAlias } from "@web/lib/active-host";
 
 const DAEMON_STATUS_LABELS = {
   online: "Connected",
@@ -14,7 +14,7 @@ const DAEMON_STATUS_LABELS = {
 export function AboutSection() {
   const health = useHealth();
   const { connectionState } = useDaemonStatus();
-  const remoteAlias = remoteHostAlias();
+  const remoteAlias = useRemoteHostAlias();
   const hostLabel = remoteAlias === null ? "Local" : `Remote · ${remoteAlias}`;
   return (
     <div className="flex flex-col gap-6">

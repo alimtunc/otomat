@@ -27,7 +27,7 @@ export function useSaveLinearDraft(issueId: string) {
     mutationFn: (request: SaveLinearDraftRequest) => daemon.saveLinearDraft(issueId, request),
     onMutate: optimistic.onMutate,
     onError: optimistic.onError,
-    onSettled: () => invalidateWriteback(optimistic.client, issueId),
+    onSettled: () => invalidateWriteback(optimistic.client, optimistic.keys, issueId),
   });
 }
 
@@ -40,6 +40,6 @@ export function useDiscardLinearDraft(issueId: string) {
     mutationFn: () => daemon.discardLinearDraft(issueId),
     onMutate: optimistic.onMutate,
     onError: optimistic.onError,
-    onSettled: () => invalidateWriteback(optimistic.client, issueId),
+    onSettled: () => invalidateWriteback(optimistic.client, optimistic.keys, issueId),
   });
 }
