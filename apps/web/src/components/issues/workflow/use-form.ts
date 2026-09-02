@@ -1,6 +1,7 @@
 import { runPlanInputSchema, type RunContract } from "@otomat/domain";
 import { useForm } from "@tanstack/react-form";
 import { useLaunchRun } from "@web/api/runs/use-launch-run";
+import type { LaunchBaseFields } from "@web/components/runs/launch/base-request";
 import { usePlanDraft } from "@web/components/workflow/use-plan-draft";
 import type { ExecutionRequestFields } from "@web/lib/execution/request";
 import { newWorkflowStep, type WorkflowNodeDraft } from "@web/lib/workflow-draft";
@@ -13,7 +14,7 @@ export interface UseWorkflowFormOptions {
   target: WorkflowLaunchTarget;
   execution: ExecutionRequestFields;
   canLaunch: boolean;
-  baseBranch: string;
+  base: LaunchBaseFields;
   onLaunched: (run: RunContract) => void;
 }
 
@@ -27,7 +28,7 @@ export function useWorkflowForm({
   target,
   execution,
   canLaunch,
-  baseBranch,
+  base,
   onLaunched,
 }: UseWorkflowFormOptions) {
   const { launch, isPending } = useLaunchRun();
@@ -46,7 +47,7 @@ export function useWorkflowForm({
       }
       const run = await launch({
         ...targetRequest(target, value.goal),
-        base_branch: baseBranch,
+        ...base,
         plan: parsed.data,
         ...execution,
       });

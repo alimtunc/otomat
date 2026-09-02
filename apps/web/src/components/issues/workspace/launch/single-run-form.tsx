@@ -6,6 +6,7 @@ import { ContextSourcesPanel } from "@web/components/context/context-sources-pan
 import { useContextSources } from "@web/components/context/use-context-sources";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
+import { launchBaseFields } from "@web/components/runs/launch/base-request";
 import { LaunchComposer } from "@web/components/runs/launch/launch-composer";
 import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 import { contextRequestFields } from "@web/lib/context/draft";
@@ -47,7 +48,7 @@ export function SingleRunLaunchForm({
     onSubmit: async ({ value }) => {
       const run = await launch({
         issue_id: issue.id,
-        base_branch: target.baseBranch,
+        ...launchBaseFields(target),
         ...contextRequestFields({ references, note: value.note }),
         ...launchExecution.request,
       });

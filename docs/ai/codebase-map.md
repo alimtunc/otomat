@@ -691,6 +691,24 @@ execution projection reads, so the daemon and the cockpit answer "where does thi
 issue work?" identically. A second launch on that issue is refused with
 `issue_workspace_open` before any row is written; new work appends a step instead.
 
+A new cycle forks from the base branch **as its remote carries it now**, never from
+the operator's checkout: `resolveBaseSha` (`git/remote-base.ts`) reads the branch's
+own `branch.<b>.remote`/`.merge` configuration — or the single remote when it has
+none, refusing a branch that tracks the repository itself — fetches it and returns
+the sha it just fetched, which `prepareRun` uses both to freeze the plan's context
+tree and to create the worktree. The whole launch path is synchronous, so nothing
+can move that base between the fetch and `worktree add`.
+A remote that cannot be read refuses the launch with `base_remote_unavailable`
+rather than silently forking from a stale local branch; only a branch the remote
+never had, or a repository with no remote plus an explicit `local_base: true`,
+forks from the local head. `worktrees.base_sha` records that commit, and the diff
+prefers it over `merge-base(base_ref, HEAD)` whenever the base branch reports a
+fork point behind it — a rebase that moves the branch forward still wins, so the
+cycle's diff never absorbs commits it did not write. The agent context reads that
+same diff's base for its commit list, so one launch base reaches both. Follow-ups
+and resumes stay in the cycle's worktree, and a compete candidate forks its own from
+the run branch; none of them re-resolves a base.
+
 A failure, a cancel, a lost session or a provider quota error therefore does
 **not** close the cycle: the branch, the worktree and the diff are still there, so
 `failed` and `canceled` are resting states the run machine can leave through

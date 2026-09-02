@@ -34,6 +34,7 @@ const LAUNCH_REFUSAL_STATUS = {
   project_not_found: 400,
   project_mismatch: 400,
   base_branch_not_found: 400,
+  base_remote_unavailable: 409,
   repository_required: 409,
   repository_unavailable: 409,
   worktree_unavailable: 409,

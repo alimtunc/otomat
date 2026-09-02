@@ -34,6 +34,8 @@ export interface AcquireWorktreeInput {
   branch: string;
   /** Ref to fork from; defaults to the configured default branch. */
   baseRef?: string;
+  /** Absent resolves `baseRef` at acquire time. */
+  baseSha?: string;
 }
 
 export interface CleanupOptions {

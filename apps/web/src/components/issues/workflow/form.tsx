@@ -2,6 +2,7 @@ import type { RunContract } from "@otomat/domain";
 import { Button, DialogBody, Field, FieldControl, FieldLabel, Kbd, Textarea } from "@otomat/ui";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
+import { launchBaseFields } from "@web/components/runs/launch/base-request";
 import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@web/lib/form";
@@ -73,7 +74,7 @@ export function WorkflowLaunchForm({
     target,
     execution: launchExecution.request,
     canLaunch: launchExecution.canLaunch,
-    baseBranch: worktreeTarget.baseBranch,
+    base: launchBaseFields(worktreeTarget),
     onLaunched,
   });
   const { form, plan, isPending } = workflow;

@@ -41,8 +41,13 @@ export interface TestRepo {
   cleanup(): void;
 }
 
-/** A temp git repo on `main` with one initial commit. */
-export function setupTestRepo(): TestRepo {
+export interface TestRepoOptions {
+  /** Skip the bare origin, so a launch has no remote base to fetch. */
+  withoutRemote?: boolean;
+}
+
+/** A temp git repo on `main` with one initial commit, pushed to a bare origin `main` tracks. */
+export function setupTestRepo(options: TestRepoOptions = {}): TestRepo {
   const root = mkdtempSync(join(tmpdir(), "otomat-git-repo-"));
   git(root, "init", "-b", "main");
   git(root, "config", "user.name", "Otomat Test");
@@ -50,6 +55,14 @@ export function setupTestRepo(): TestRepo {
   writeFileSync(join(root, "README.md"), "# base\n");
   git(root, "add", "-A");
   git(root, "commit", "-m", "init");
+
+  let remote: string | null = null;
+  if (!options.withoutRemote) {
+    remote = mkdtempSync(join(tmpdir(), "otomat-git-remote-"));
+    git(remote, "init", "--bare", "-b", "main");
+    git(root, "remote", "add", "origin", remote);
+    git(root, "push", "--quiet", "-u", "origin", "main");
+  }
 
   return {
     root,
@@ -81,6 +94,7 @@ export function setupTestRepo(): TestRepo {
     git: (...args) => git(root, ...args),
     cleanup() {
       rmSync(root, { recursive: true, force: true });
+      if (remote !== null) rmSync(remote, { recursive: true, force: true });
     },
   };
 }

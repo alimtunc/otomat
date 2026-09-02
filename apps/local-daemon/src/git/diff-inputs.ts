@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 
 import { worktreeStateTree } from "./diff.js";
-import { mergeBase, revParse } from "./repo.js";
+import { isAncestor, mergeBase, revParse } from "./repo.js";
 import type { WorktreeRow } from "./worktrees-store.js";
 
 export interface DiffScope {
@@ -25,18 +25,30 @@ export interface DiffInputs extends WorktreeGitView {
   tree: string;
 }
 
-function forkPoint(
+function forkBase(
   scope: DiffScope,
   row: WorktreeRow,
   gitCwd: string,
   ref: string,
-  baseRef: string,
-): string {
+  against: string | undefined,
+) {
+  const baseRef = against ?? (row.base_ref === "" ? scope.defaultBranch : row.base_ref);
   const merged = mergeBase(gitCwd, baseRef, ref);
   // Once the base branch contains `ref` the merge-base is `ref` itself, which would render the
   // cycle as an empty diff; the sha recorded at acquire is then the only fork point left.
-  if (merged !== null && merged !== revParse(gitCwd, ref)) return merged;
-  return row.base_sha === "" ? revParse(gitCwd, scope.defaultBranch) : row.base_sha;
+  if (merged === null || merged === revParse(gitCwd, ref)) {
+    return {
+      baseRef,
+      base: row.base_sha === "" ? revParse(gitCwd, scope.defaultBranch) : row.base_sha,
+    };
+  }
+  // A base branch still missing the fetched remote head reports a fork point behind the recorded one.
+  const behindRecorded =
+    row.base_sha !== "" &&
+    merged !== row.base_sha &&
+    isAncestor(gitCwd, merged, row.base_sha) &&
+    isAncestor(gitCwd, row.base_sha, ref);
+  return { baseRef, base: against === undefined && behindRecorded ? row.base_sha : merged };
 }
 
 export function worktreeGitView(
@@ -47,12 +59,10 @@ export function worktreeGitView(
   const live = row.status === "active" && existsSync(row.path);
   const gitCwd = live ? row.path : scope.repoRoot;
   const ref = live ? "HEAD" : row.branch;
-  const baseRef = against ?? (row.base_ref === "" ? scope.defaultBranch : row.base_ref);
   return {
     live,
     gitCwd,
-    base: forkPoint(scope, row, gitCwd, ref, baseRef),
-    baseRef,
+    ...forkBase(scope, row, gitCwd, ref, against),
     ref,
     branch: row.branch,
   };

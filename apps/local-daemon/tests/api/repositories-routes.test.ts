@@ -210,6 +210,7 @@ it("lists the repository's branches most-recently-committed first, and refuses w
   const listed = repositoryBranchesResponseSchema.parse(await res.json());
   expect(listed.default_branch).toBe("main");
   expect(listed.branches).toEqual(["zeta", "main"]);
+  expect(listed.has_remote).toBe(true);
 
   const unknown = await request(app, "/api/repositories/nope/branches");
   expect(unknown.status).toBe(404);
@@ -220,6 +221,19 @@ it("lists the repository's branches most-recently-committed first, and refuses w
   expect(await json<{ error: string }>(gone)).toMatchObject({
     error: "repository_unavailable",
   });
+});
+
+it("reports a repository with no remote, which is what offers the launch its local base", async () => {
+  const app = makeApiApp(t);
+  const remoteless = setupTestRepo({ withoutRemote: true });
+  try {
+    const created = await registerRepo(app, remoteless.root);
+
+    const res = await request(app, `/api/repositories/${created.repository.id}/branches`);
+    expect(repositoryBranchesResponseSchema.parse(await res.json()).has_remote).toBe(false);
+  } finally {
+    remoteless.cleanup();
+  }
 });
 
 it("searches tracked files for the context picker, capping and counting what it holds back", async () => {

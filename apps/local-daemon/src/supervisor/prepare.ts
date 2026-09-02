@@ -137,7 +137,11 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
 
   const runId = randomUUID();
   const branch = runBranchName(runId);
-  const { projectId, binding, baseRef } = resolveLaunchTarget(state, request, existingIssue);
+  const { projectId, binding, baseRef, baseSha } = resolveLaunchTarget(
+    state,
+    request,
+    existingIssue,
+  );
   const issue = launchIssue(projectId, request, existingIssue);
 
   // The plan freezes attached files from the base tree: the run's own worktree does not exist yet.
@@ -148,12 +152,17 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
     createContextFreezer({
       db,
       issue: issue.row,
-      snapshot: binding.service.treeSnapshot(baseRef),
+      snapshot: binding.service.treeSnapshot(baseSha),
       capturedAt: new Date().toISOString(),
     }),
   );
 
-  const worktree = acquireRunWorktree(binding.service, { owner: runId, branch, baseRef });
+  const worktree = acquireRunWorktree(binding.service, {
+    owner: runId,
+    branch,
+    baseRef,
+    baseSha,
+  });
 
   try {
     preflightRunPlan(plan, worktree.path);

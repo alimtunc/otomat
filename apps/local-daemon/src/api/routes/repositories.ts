@@ -8,12 +8,13 @@ import {
 import {
   registerRepositoryRequestSchema,
   updateRepositoryRequestSchema,
+  type RepositoryBranchesResponse,
   type RepositoryFilesResponse,
   type RepositoryRegistrationError,
 } from "@otomat/domain";
 import { Hono } from "hono";
 
-import { isRepositoryRoot, listBranches, searchTrackedFiles } from "#git";
+import { isRepositoryRoot, listBranches, repositoryRemotes, searchTrackedFiles } from "#git";
 
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";
@@ -112,7 +113,8 @@ export function createRepositoryRoutes(deps: ApiDeps): Hono {
     return c.json({
       default_branch: repository.default_branch,
       branches: listBranches(project.root_path),
-    });
+      has_remote: repositoryRemotes(project.root_path).length > 0,
+    } satisfies RepositoryBranchesResponse);
   });
 
   routes.get("/:id/files", (c) => {

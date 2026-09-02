@@ -1,7 +1,7 @@
 import type { Db, DbClient } from "@otomat/db";
 
 import { anchorProjectRoot, seedRepository, setupTestDb } from "./db.js";
-import { setupTestRepo, type TestRepo } from "./git.js";
+import { setupTestRepo, type TestRepo, type TestRepoOptions } from "./git.js";
 
 export interface DaemonTestDb {
   client: DbClient;
@@ -20,9 +20,9 @@ export interface DaemonTestDb {
  * cannot obtain one is refused — a supervisor test without a repo would only
  * ever exercise the refusal path.
  */
-export function setupDaemonDb(): DaemonTestDb {
+export function setupDaemonDb(repoOptions: TestRepoOptions = {}): DaemonTestDb {
   const base = setupTestDb("otomat-daemon-");
-  const repo = setupTestRepo();
+  const repo = setupTestRepo(repoOptions);
   anchorProjectRoot(base.db, repo.root);
   const repositoryId = seedRepository(base.db, repo.defaultBranch);
   return {

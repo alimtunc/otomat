@@ -56,6 +56,13 @@ export function detectDefaultBranch(repoPath: string): string | null {
   return branch === "" || branch === "HEAD" ? null : branch;
 }
 
+export function repositoryRemotes(repoPath: string): string[] {
+  return runGit(["remote"], { cwd: repoPath })
+    .stdout.split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+}
+
 /** Whether a local branch ref exists. */
 export function branchExists(repoPath: string, branch: string): boolean {
   const res = runGit(["rev-parse", "--verify", "--quiet", `refs/heads/${branch}`], {

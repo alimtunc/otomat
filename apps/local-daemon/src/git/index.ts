@@ -20,12 +20,14 @@ export {
   headSha,
   isRepositoryRoot,
   listBranches,
+  repositoryRemotes,
   searchTrackedFiles,
   uncommittedPaths,
   type CommitSummary,
   type TrackedFileMatches,
 } from "./repo.js";
 export * from "./pull-request.js";
+export { resolveBaseSha } from "./remote-base.js";
 export * from "./tree-file.js";
 export * from "./probe.js";
 export * from "./resolver.js";
