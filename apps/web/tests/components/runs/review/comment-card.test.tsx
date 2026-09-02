@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
 import { ReviewCommentCard } from "@web/components/runs/review/comment/card";
-import { act } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { findButton } from "#support/dom-queries";
 import { mount } from "#support/mount";
@@ -43,27 +42,33 @@ describe("review comment card", () => {
     await onPr.cleanup();
   });
 
-  it("states a failed publication with its reason and offers a retry", async () => {
-    const onPublish = vi.fn();
+  it("states a refused submission with its reason and offers no action of its own", async () => {
     const { container, cleanup } = await mount(
       <ReviewCommentCard
         target={TARGET}
         comment={reviewComment({
           destination: "pr_review",
           publication_status: "failed",
-          publication_error: "GitHub refused the review comment. (HTTP 422)",
+          publication_error: "GitHub refused the review. (HTTP 422)",
         })}
-        onPublish={onPublish}
-        publishing={false}
       />,
     );
 
     expect(container.textContent).toContain("Publish failed");
     expect(container.textContent).toContain("HTTP 422");
-    await act(async () => {
-      findButton("Retry publish")?.click();
-    });
-    expect(onPublish).toHaveBeenCalled();
+    expect(findButton("Retry publish")).toBeUndefined();
+    await cleanup();
+  });
+
+  it("says a pending comment travels with the next submitted review", async () => {
+    const { container, cleanup } = await mount(
+      <ReviewCommentCard
+        target={TARGET}
+        comment={reviewComment({ destination: "pr_review", publication_status: "local" })}
+      />,
+    );
+
+    expect(container.textContent).toContain("Included in the next review you submit.");
     await cleanup();
   });
 
@@ -76,7 +81,6 @@ describe("review comment card", () => {
           publication_status: "published",
           external_url: "https://gh/pr/7#r1",
         })}
-        onPublish={() => {}}
       />,
     );
 
@@ -88,7 +92,7 @@ describe("review comment card", () => {
 
   it("shows no publication state at all on an agent comment", async () => {
     const { container, cleanup } = await mount(
-      <ReviewCommentCard target={TARGET} comment={reviewComment()} onPublish={() => {}} />,
+      <ReviewCommentCard target={TARGET} comment={reviewComment()} />,
     );
 
     expect(container.textContent).not.toContain("Publish to GitHub");

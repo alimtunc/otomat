@@ -436,6 +436,7 @@ it("fetches the review surface and posts a pinned comment", async () => {
       reviewed_files: [REVIEWED_FILE],
       fix_authority: { kind: "otomat", reason: "Otomat owns this branch." },
       destinations: { pr_review: false, reason: "This run has no pull request yet." },
+      submission: { events: [], reason: "This run has no pull request yet." },
     });
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });

@@ -2,7 +2,7 @@ import type { PullRequestSync } from "@otomat/domain";
 
 import { commitsSince, hasCommit, headSha, uncommittedPaths } from "#git";
 
-import type { GitHubCli } from "../types.js";
+import type { GitHubCli } from "../cli/contract.js";
 
 export interface SyncInput {
   cli: GitHubCli;

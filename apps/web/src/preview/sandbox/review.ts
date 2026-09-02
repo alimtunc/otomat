@@ -4,6 +4,7 @@ import {
   type PullRequestContract,
   type PullRequestDetail,
   type PullRequestInbox,
+  type PullRequestOverview,
   type ReviewDetail,
   type ReviewDiffResponse,
 } from "@otomat/domain";
@@ -118,6 +119,7 @@ export const SANDBOX_REVIEW: ReviewDetail = {
   ],
   fix_authority: { kind: "otomat", reason: "Otomat opened this pull request." },
   destinations: { pr_review: false, reason: "The sandbox publishes nothing to GitHub." },
+  submission: { events: [], reason: "The sandbox publishes nothing to GitHub." },
 };
 
 const HEAD_SHA = "9f2c41d6b8ae5730c1d4f0a2b6e8d3c5a7091b24";
@@ -175,6 +177,27 @@ export const SANDBOX_PULL_REQUEST_DETAIL: PullRequestDetail = {
     additions: 5,
     deletions: 2,
     dirty: false,
+  },
+};
+
+export const SANDBOX_PULL_REQUEST_OVERVIEW: PullRequestOverview = {
+  pull_request: PULL_REQUEST,
+  issue: null,
+  repository: "otomat/otomat",
+  checks: [
+    { name: "build", state: "passing", url: null },
+    { name: "test", state: "passing", url: null },
+  ],
+  reviews: [{ author_login: "sandbox-operator", state: "commented", submitted_at: SANDBOX_NOW }],
+  commits: 3,
+  changed_files: 1,
+  additions: 5,
+  deletions: 2,
+  behind_base: false,
+  merge: {
+    methods: [],
+    blocker: "not_authorized",
+    reason: "The sandbox merges nothing on GitHub.",
   },
 };
 

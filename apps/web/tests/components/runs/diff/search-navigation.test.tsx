@@ -46,7 +46,6 @@ vi.mock("@web/api/client", () => ({ daemon: { getDiffFileBlobs: () => getDiffFil
 
 vi.mock("@web/api/reviews/mutations", () => ({
   useAddReviewComment: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  usePublishReviewComment: () => ({ mutate: vi.fn(), isPending: false, variables: undefined }),
   useRequestFix: () => ({ mutate: vi.fn(), isPending: false }),
   useSetReviewedFile: () => ({ mutate: vi.fn(), isPending: false, variables: undefined }),
 }));

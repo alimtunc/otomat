@@ -17,12 +17,10 @@ export interface DiffFileComments {
   anchoredIds: ReadonlySet<string>;
   destinations: ReviewDestinationAvailability;
   preferredDestination: ReviewCommentDestination;
-  publishingId: string | null;
 }
 
 export interface DiffFileCommentActions {
   add: (file: DiffFileContract, comment: ComposedComment) => Promise<void>;
-  publish: (commentId: string) => void;
   reveal: (comment: ReviewCommentContract) => void;
 }
 
@@ -33,7 +31,6 @@ export interface FileCommentsInput {
   partition: PartitionedComments;
   destinations: ReviewDestinationAvailability;
   preferredDestination: ReviewCommentDestination;
-  publishingId: string | null;
 }
 
 export function fileComments(path: string, input: FileCommentsInput): DiffFileComments {
@@ -46,6 +43,5 @@ export function fileComments(path: string, input: FileCommentsInput): DiffFileCo
     anchoredIds: partition.anchoredIds,
     destinations: input.destinations,
     preferredDestination: input.preferredDestination,
-    publishingId: input.publishingId,
   };
 }

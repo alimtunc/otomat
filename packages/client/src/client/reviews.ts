@@ -13,6 +13,7 @@ import {
   type ReviewTarget,
   type SetReviewedFileRequest,
   type RunDiffScopeSelector,
+  type SubmitReviewRequest,
   type SyncPullRequestInboxRequest,
 } from "@otomat/domain";
 
@@ -68,10 +69,9 @@ export function createReviewsClient(config: DaemonClientConfig) {
         await postJson(config, `${reviewPath(target)}/review/comments`, request),
       );
     },
-    async publishReviewComment(target: ReviewTarget, commentId: string) {
-      const comment = encodeURIComponent(commentId);
-      return reviewCommentContractSchema.parse(
-        await postJson(config, `${reviewPath(target)}/review/comments/${comment}/publish`, {}),
+    async submitReview(target: ReviewTarget, request: SubmitReviewRequest) {
+      return reviewDetailSchema.parse(
+        await postJson(config, `${reviewPath(target)}/review/submit`, request),
       );
     },
     async setReviewedFile(target: ReviewTarget, request: SetReviewedFileRequest) {

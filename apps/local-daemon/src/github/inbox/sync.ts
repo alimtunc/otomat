@@ -9,11 +9,11 @@ import {
 
 import type { RepositoryBinding } from "#git";
 
+import type { GitHubPullRequest } from "../cli/contract.js";
 import { resolveRepositoryRemote } from "../import/repository.js";
 import type { PullRequestImportConfig } from "../import/service.js";
 import { applyProviderState, insertMirroredPullRequest } from "../import/store.js";
 import { classifyPullRequest } from "../import/verify.js";
-import type { GitHubPullRequest } from "../types.js";
 
 export const SYNC_SOURCE = "github";
 export const SYNC_RESOURCE = "pull_requests";

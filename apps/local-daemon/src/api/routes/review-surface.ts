@@ -1,12 +1,19 @@
-import { createReviewCommentRequestSchema, setReviewedFileRequestSchema } from "@otomat/domain";
+import {
+  createReviewCommentRequestSchema,
+  setReviewedFileRequestSchema,
+  submitReviewRequestSchema,
+} from "@otomat/domain";
 import { Hono, type MiddlewareHandler } from "hono";
 
 import {
   CommentDestinationUnavailableError,
-  CommentPublicationFailedError,
   CommentRangeInvalidError,
   DiffUnavailableError,
   ReviewAnchorStaleError,
+  ReviewSubmissionBusyError,
+  ReviewSubmissionEmptyError,
+  ReviewSubmissionFailedError,
+  ReviewSubmissionUnavailableError,
 } from "#review";
 
 import type { ApiDeps } from "../deps.js";
@@ -14,7 +21,7 @@ import { diffFileBlobsErrorResponse, toDiffFileBlobsResponse } from "../diff-fil
 import { diffScopeErrorResponse, readDiffScope } from "../diff-scope.js";
 import { validateJson, type ReviewSubjectEnv } from "../guards.js";
 import { toReviewDiffResponse } from "../serialize-review-diff.js";
-import { toReview, toReviewComment, toReviewedFile } from "../serialize.js";
+import { toReviewComment, toReviewDetail, toReviewedFile } from "../serialize.js";
 
 /** One surface for both subjects: only the guard that names the subject differs, so the two never drift apart. */
 export function createReviewSurfaceRoutes(
@@ -54,14 +61,7 @@ export function createReviewSurfaceRoutes(
   });
 
   routes.get("/:id/review", guard, (c) => {
-    const detail = deps.review.getReviewDetail(c.get("subject"));
-    return c.json({
-      review: detail.review ? toReview(detail.review) : null,
-      comments: detail.comments.map(toReviewComment),
-      reviewed_files: detail.reviewedFiles.map(toReviewedFile),
-      fix_authority: detail.fixAuthority,
-      destinations: detail.destinations,
-    });
+    return c.json(toReviewDetail(deps.review.getReviewDetail(c.get("subject"))));
   });
 
   /** No refusal branch for GitHub: an outage rides back on the mark's own sync state, which the reviewer retries. */
@@ -80,11 +80,10 @@ export function createReviewSurfaceRoutes(
     "/:id/review/comments",
     guard,
     validateJson(createReviewCommentRequestSchema),
-    async (c) => {
+    (c) => {
       const subject = c.get("subject");
       try {
-        const comment = await deps.review.addComment(subject, c.req.valid("json"));
-        return c.json(toReviewComment(comment), 201);
+        return c.json(toReviewComment(deps.review.addComment(subject, c.req.valid("json"))), 201);
       } catch (error) {
         if (error instanceof DiffUnavailableError)
           return c.json({ error: "diff_unavailable" }, 409);
@@ -103,23 +102,28 @@ export function createReviewSurfaceRoutes(
     },
   );
 
-  routes.post("/:id/review/comments/:commentId/publish", guard, async (c) => {
+  routes.post("/:id/review/submit", guard, validateJson(submitReviewRequestSchema), async (c) => {
     const subject = c.get("subject");
-    const commentId = c.req.param("commentId");
     try {
-      return c.json(toReviewComment(await deps.review.publishComment(subject, commentId)));
+      return c.json(toReviewDetail(await deps.review.submitReview(subject, c.req.valid("json"))));
     } catch (error) {
-      if (error instanceof CommentDestinationUnavailableError) {
-        return c.json({ error: "comment_destination_unavailable", message: error.message }, 409);
+      if (error instanceof ReviewSubmissionUnavailableError) {
+        return c.json({ error: "review_submission_unavailable", message: error.message }, 409);
+      }
+      if (error instanceof ReviewSubmissionEmptyError) {
+        return c.json({ error: "review_submission_empty", message: error.message }, 422);
+      }
+      if (error instanceof ReviewSubmissionBusyError) {
+        return c.json({ error: "review_submission_busy", message: error.message }, 409);
       }
       if (error instanceof ReviewAnchorStaleError) {
         return c.json({ error: "comment_anchor_stale" }, 409);
       }
-      if (error instanceof CommentPublicationFailedError) {
-        return c.json({ error: "comment_publication_failed", message: error.message }, 502);
+      if (error instanceof ReviewSubmissionFailedError) {
+        return c.json({ error: "review_submission_failed", message: error.message }, 502);
       }
-      console.error(`[otomat] publishing comment ${commentId} on ${subject.id} failed`, error);
-      return c.json({ error: "comment_publish_failed" }, 500);
+      console.error(`[otomat] submitting the review of ${subject.id} failed`, error);
+      return c.json({ error: "review_submit_failed" }, 500);
     }
   });
 

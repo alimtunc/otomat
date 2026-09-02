@@ -20,9 +20,12 @@ import {
   type PullRequestSearchInput,
   type PullRequestSelector,
   type PullRequestUpdateInput,
+  type PullRequestMergeInput,
+  type PullRequestOverviewFacts,
   type PullRequestViewedFile,
   type PullRequestViewedFiles,
-  type ReviewCommentCreateInput,
+  type RepositoryMergePolicy,
+  type ReviewSubmissionInput,
   type ViewedFileMutationInput,
 } from "#github";
 
@@ -195,8 +198,14 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
     generatePullRequestMetadata: async () => {
       throw new Error("generation stub not configured");
     },
-    publishReviewComment: async () => {
-      throw new Error("publishReviewComment stub not configured");
+    submitPullRequestReview: async () => {
+      throw new Error("submitPullRequestReview stub not configured");
+    },
+    pullRequestOverview: async () => {
+      throw new Error("pullRequestOverview stub not configured");
+    },
+    mergePullRequest: async () => {
+      throw new Error("mergePullRequest stub not configured");
     },
     readViewedFiles: async () => {
       throw new Error("readViewedFiles stub not configured");
@@ -334,13 +343,48 @@ export class FakeGitHubCli implements GitHubCli {
     this.provider = { ...this.provider, lifecycle: input.draft ? "draft" : "open" };
   }
 
-  reviewComments: ReviewCommentCreateInput[] = [];
-  reviewCommentError: Error | null = null;
+  submittedReviews: ReviewSubmissionInput[] = [];
+  reviewSubmissionError: Error | null = null;
 
-  async createReviewComment(input: ReviewCommentCreateInput): Promise<{ url: string }> {
-    this.reviewComments.push(input);
-    if (this.reviewCommentError) throw this.reviewCommentError;
-    return { url: `https://github.com/acme/app/pull/${input.number}#discussion_r1` };
+  async submitReview(input: ReviewSubmissionInput): Promise<{ url: string }> {
+    this.submittedReviews.push(input);
+    if (this.reviewSubmissionError) throw this.reviewSubmissionError;
+    return { url: `https://github.com/acme/app/pull/${input.number}#pullrequestreview-1` };
+  }
+
+  overviewFacts: PullRequestOverviewFacts | null = null;
+
+  async viewPullRequestOverview(): Promise<PullRequestOverviewFacts> {
+    if (this.viewError) throw this.viewError;
+    return (
+      this.overviewFacts ?? {
+        pullRequest: this.provider,
+        checks: [],
+        reviews: [],
+        commits: 1,
+        changedFiles: 1,
+        additions: 1,
+        deletions: 0,
+        mergeState: "CLEAN",
+      }
+    );
+  }
+
+  mergePolicy: RepositoryMergePolicy = { methods: ["merge", "squash"], canPush: true };
+  mergePolicyError: Error | null = null;
+
+  async readRepositoryMergePolicy(): Promise<RepositoryMergePolicy> {
+    if (this.mergePolicyError) throw this.mergePolicyError;
+    return this.mergePolicy;
+  }
+
+  merges: PullRequestMergeInput[] = [];
+  mergeError: Error | null = null;
+
+  async mergePullRequest(input: PullRequestMergeInput): Promise<void> {
+    this.merges.push(input);
+    if (this.mergeError) throw this.mergeError;
+    this.provider = { ...this.provider, lifecycle: "merged" };
   }
 
   viewedFiles: PullRequestViewedFile[] = [];

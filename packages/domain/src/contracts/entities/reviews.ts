@@ -64,6 +64,17 @@ export function isAgentFixEligible(
   );
 }
 
+/** A resolved comment can no longer be anchored, so a submission must not try to carry it. */
+export function isPendingReviewComment(
+  comment: Pick<ReviewCommentContract, "status" | "destination" | "publication_status">,
+): boolean {
+  return (
+    comment.status === "open" &&
+    comment.destination === "pr_review" &&
+    comment.publication_status !== "published"
+  );
+}
+
 /** One file the operator marked, pinned to the `diff_sha` it was read at: the mark holds while that sha does. */
 export const reviewedFileContractSchema = z.object({
   id: z.string(),

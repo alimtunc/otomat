@@ -1,6 +1,6 @@
 import type { PullRequestProvenance } from "@otomat/domain";
 
-import type { GitHubPullRequest } from "../types.js";
+import type { GitHubPullRequest } from "../cli/contract.js";
 
 export interface ProvenanceInput {
   provider: GitHubPullRequest;

@@ -5,16 +5,9 @@ import { ReviewCommentCard } from "@web/components/runs/review/comment/card";
 export interface DetachedCommentsProps {
   target: ReviewTarget;
   comments: ReviewCommentContract[];
-  onPublish: (commentId: string) => void;
-  publishingId: string | null;
 }
 
-export function DetachedComments({
-  target,
-  comments,
-  onPublish,
-  publishingId,
-}: DetachedCommentsProps) {
+export function DetachedComments({ target, comments }: DetachedCommentsProps) {
   if (comments.length === 0) return null;
   return (
     <section className="flex flex-col gap-2 p-4">
@@ -27,8 +20,6 @@ export function DetachedComments({
           target={target}
           comment={comment}
           fallbackReason={commentFallbackReason(comment)}
-          onPublish={() => onPublish(comment.id)}
-          publishing={publishingId === comment.id}
         />
       ))}
     </section>

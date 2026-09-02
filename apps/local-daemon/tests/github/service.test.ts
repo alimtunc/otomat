@@ -110,7 +110,7 @@ describe("GitHubService", () => {
     });
   }
 
-  it("publishes a review comment on the anchor sha review supplies", async () => {
+  it("submits one review on the anchor sha review supplies", async () => {
     insertPullRequest(fix.db, {
       id: "pr-comment",
       issue_id: "i1",
@@ -125,25 +125,37 @@ describe("GitHubService", () => {
     });
 
     await expect(
-      service().publishReviewComment("pr-comment", {
+      service().submitPullRequestReview("pr-comment", {
         commitSha: "a".repeat(40),
-        filePath: "change.txt",
-        side: "new",
-        startLine: 1,
-        line: 2,
-        body: "rename these",
-        suggestion: "second",
+        body: "Two notes below.",
+        event: "request_changes",
+        comments: [
+          {
+            filePath: "change.txt",
+            side: "new",
+            startLine: 1,
+            line: 2,
+            body: "rename these",
+            suggestion: "second",
+          },
+        ],
       }),
-    ).resolves.toEqual({ url: "https://github.com/acme/app/pull/7#discussion_r1" });
+    ).resolves.toEqual({ url: "https://github.com/acme/app/pull/7#pullrequestreview-1" });
 
-    expect(cli.reviewComments[0]).toMatchObject({
+    expect(cli.submittedReviews[0]).toMatchObject({
       commitSha: "a".repeat(40),
-      path: "change.txt",
-      side: "RIGHT",
-      line: 2,
-      startLine: 1,
-      startSide: "RIGHT",
-      body: "rename these\n\n```suggestion\nsecond\n```",
+      body: "Two notes below.",
+      event: "request_changes",
+      comments: [
+        {
+          path: "change.txt",
+          side: "RIGHT",
+          line: 2,
+          start_line: 1,
+          start_side: "RIGHT",
+          body: "rename these\n\n```suggestion\nsecond\n```",
+        },
+      ],
     });
   });
 
@@ -214,16 +226,13 @@ describe("GitHubService", () => {
     ).rejects.toMatchObject({ code: "pr_node_missing" });
   });
 
-  it("refuses to publish a review comment with no pull request to anchor it on", async () => {
+  it("refuses to submit a review with no pull request to anchor it on", async () => {
     await expect(
-      service().publishReviewComment("pr-comment", {
+      service().submitPullRequestReview("pr-comment", {
         commitSha: "a".repeat(40),
-        filePath: "change.txt",
-        side: "new",
-        startLine: null,
-        line: 2,
         body: "nowhere to go",
-        suggestion: null,
+        event: "comment",
+        comments: [],
       }),
     ).rejects.toThrow(/no pull request/);
   });

@@ -83,7 +83,7 @@ beforeEach(() => {
     appendRunStep: async () => {
       throw new Error("append not expected");
     },
-    publishReviewComment: async () => ({ url: "https://github.com/acme/otomat/pull/7#c1" }),
+    submitPullRequestReview: async () => ({ url: "https://github.com/acme/otomat/pull/7#c1" }),
     syncViewedFile: async () => "octocat",
     readViewedFiles: async () => remoteViewed,
   });

@@ -4,17 +4,21 @@ import type {
   ReviewedFileContract,
   AppendedRunStepResponse,
   ReviewDiffResponse,
+  SubmitReviewRequest,
 } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import type { CanonicalDiff } from "#git";
 import {
   CommentDestinationUnavailableError,
-  CommentPublicationFailedError,
   CommentRangeInvalidError,
   CommentsNotFixableError,
   DiffUnavailableError,
   ReviewAnchorStaleError,
+  ReviewSubmissionBusyError,
+  ReviewSubmissionEmptyError,
+  ReviewSubmissionFailedError,
+  ReviewSubmissionUnavailableError,
   type FixRequest,
 } from "#review";
 import { ReviewFixBusyError, RunWorkspaceClosedError } from "#supervisor";
@@ -110,6 +114,7 @@ it("serves the review surface with serialized comments and the fix authority", a
         reviewedFiles: [],
         fixAuthority: { kind: "external", reason: "Otomat does not own this branch." },
         destinations: { pr_review: false, reason: "This run has no pull request yet." },
+        submission: { events: [], reason: "This run has no pull request yet." },
       }),
     }),
   });
@@ -133,6 +138,7 @@ it("serves the reviewed marks alongside the comments", async () => {
         reviewedFiles: [reviewedFileRow({ sync_status: "failed", sync_error: "GitHub said no." })],
         fixAuthority: { kind: "otomat", reason: "Otomat owns this branch." },
         destinations: { pr_review: false, reason: "This run has no pull request yet." },
+        submission: { events: [], reason: "This run has no pull request yet." },
       }),
     }),
   });
@@ -208,7 +214,7 @@ it("creates a pinned comment and returns 201", async () => {
   let received: unknown;
   const app = makeApiApp(t, {
     review: stubReviewService({
-      addComment: async (_run, req) => {
+      addComment: (_run, req) => {
         received = req;
         return commentRow();
       },
@@ -242,7 +248,7 @@ it("rejects an invalid comment body with 400", async () => {
 it("explains a refused range and an unreachable destination instead of failing blankly", async () => {
   const ranged = makeApiApp(t, {
     review: stubReviewService({
-      addComment: async () => {
+      addComment: () => {
         throw new CommentRangeInvalidError("Lines 4–11 of this file are not.");
       },
     }),
@@ -262,7 +268,7 @@ it("explains a refused range and an unreachable destination instead of failing b
 
   const unreachable = makeApiApp(t, {
     review: stubReviewService({
-      addComment: async () => {
+      addComment: () => {
         throw new CommentDestinationUnavailableError("This run has no pull request yet.");
       },
     }),
@@ -281,47 +287,109 @@ it("explains a refused range and an unreachable destination instead of failing b
   });
 });
 
-it("publishes one PR-review comment and reports a GitHub refusal as a bad gateway", async () => {
-  let publishedId = "";
+it("submits a review and reports a GitHub refusal as a bad gateway", async () => {
+  let submitted: SubmitReviewRequest | null = null;
   const app = makeApiApp(t, {
     review: stubReviewService({
-      publishComment: async (_run, commentId) => {
-        publishedId = commentId;
-        return commentRow({
-          destination: "pr_review",
-          publication_status: "published",
-          external_url: "https://gh/pr/7#r1",
-        });
+      submitReview: async (_ref, body) => {
+        submitted = body;
+        return {
+          review: null,
+          comments: [
+            commentRow({
+              destination: "pr_review",
+              publication_status: "published",
+              external_url: "https://gh/pr/7#r1",
+            }),
+          ],
+          reviewedFiles: [],
+          fixAuthority: { kind: "otomat", reason: "Otomat owns this branch." },
+          destinations: { pr_review: true, reason: "Pull request #7 is open for review." },
+          submission: { events: ["comment"], reason: "Pull request #7 is open for review." },
+        };
       },
     }),
   });
-  const res = await post(app, `/api/runs/${RUN_ID}/review/comments/c1/publish`, {});
+  const res = await post(app, `/api/runs/${RUN_ID}/review/submit`, {
+    body: "Two notes",
+    event: "comment",
+  });
   expect(res.status).toBe(200);
-  expect(publishedId).toBe("c1");
-  expect(await json<ReviewCommentContract>(res)).toMatchObject({
+  expect(submitted).toEqual({ body: "Two notes", event: "comment" });
+  expect((await json<ReviewDetail>(res)).comments[0]).toMatchObject({
     publication_status: "published",
     external_url: "https://gh/pr/7#r1",
   });
 
   const failing = makeApiApp(t, {
     review: stubReviewService({
-      publishComment: async () => {
-        throw new CommentPublicationFailedError("GitHub refused the review comment. (HTTP 422)");
+      submitReview: async () => {
+        throw new ReviewSubmissionFailedError("GitHub refused the review. (HTTP 422)");
       },
     }),
   });
-  const failed = await post(failing, `/api/runs/${RUN_ID}/review/comments/c1/publish`, {});
+  const failed = await post(failing, `/api/runs/${RUN_ID}/review/submit`, {
+    body: "Two notes",
+    event: "comment",
+  });
   expect(failed.status).toBe(502);
   expect(await failed.json()).toEqual({
-    error: "comment_publication_failed",
-    message: "GitHub refused the review comment. (HTTP 422)",
+    error: "review_submission_failed",
+    message: "GitHub refused the review. (HTTP 422)",
   });
+});
+
+it("names the refusal when a review may not be submitted at all", async () => {
+  const refusals = [
+    {
+      error: new ReviewSubmissionUnavailableError(
+        "GitHub does not let @octocat approve a pull request they opened.",
+      ),
+      status: 409,
+      body: {
+        error: "review_submission_unavailable",
+        message: "GitHub does not let @octocat approve a pull request they opened.",
+      },
+    },
+    {
+      error: new ReviewSubmissionBusyError("This review is already being submitted."),
+      status: 409,
+      body: {
+        error: "review_submission_busy",
+        message: "This review is already being submitted.",
+      },
+    },
+    {
+      error: new ReviewSubmissionEmptyError("Write a summary or leave a comment on the diff."),
+      status: 422,
+      body: {
+        error: "review_submission_empty",
+        message: "Write a summary or leave a comment on the diff.",
+      },
+    },
+  ];
+
+  for (const refusal of refusals) {
+    const app = makeApiApp(t, {
+      review: stubReviewService({
+        submitReview: async () => {
+          throw refusal.error;
+        },
+      }),
+    });
+    const res = await post(app, `/api/runs/${RUN_ID}/review/submit`, {
+      body: "Two notes",
+      event: "approve",
+    });
+    expect(res.status).toBe(refusal.status);
+    expect(await res.json()).toEqual(refusal.body);
+  }
 });
 
 it("maps stale anchors and missing diffs to 409 conflicts", async () => {
   const stale = makeApiApp(t, {
     review: stubReviewService({
-      addComment: async () => {
+      addComment: () => {
         throw new ReviewAnchorStaleError("src/thing.ts");
       },
     }),
@@ -337,7 +405,7 @@ it("maps stale anchors and missing diffs to 409 conflicts", async () => {
 
   const bare = makeApiApp(t, {
     review: stubReviewService({
-      addComment: async () => {
+      addComment: () => {
         throw new DiffUnavailableError(RUN_ID);
       },
     }),

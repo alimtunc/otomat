@@ -10,6 +10,7 @@ import {
   type ReviewedFileContract,
   type ReviewTarget,
   type SetReviewedFileRequest,
+  type SubmitReviewRequest,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -100,16 +101,25 @@ export function useAddReviewComment(target: ReviewTarget) {
   });
 }
 
-/** The daemon persists the outcome either way, so even a failure refreshes: the comment shows `failed`, never vanishes. */
-export function usePublishReviewComment(target: ReviewTarget) {
+/** The daemon answers the whole surface, so one response seeds the detail, its comments and the counters. */
+export function useSubmitReview(target: ReviewTarget) {
   const client = useQueryClient();
   const keys = useQueryKeys();
   return useMutation({
-    mutationFn: (commentId: string) => daemon.publishReviewComment(target, commentId),
-    onSuccess: (comment) => seedComment(client, keys, target, comment),
+    mutationFn: (request: SubmitReviewRequest) => daemon.submitReview(target, request),
+    onSuccess: (detail) => {
+      client.setQueryData(keys.reviewDetail(target), detail);
+      client.invalidateQueries({ queryKey: keys.reviewDetail(target) });
+      if (target.kind === "pull_request") {
+        client.invalidateQueries({ queryKey: keys.pullRequest(target.id) });
+      }
+      client.invalidateQueries({ queryKey: keys.reviews });
+      client.invalidateQueries({ queryKey: keys.activity });
+      toast.success("Review submitted on GitHub");
+    },
     onError: (error) => {
       client.invalidateQueries({ queryKey: keys.reviewDetail(target) });
-      toast.error(reviewRefusal(error) ?? "Could not publish the comment — is the daemon running?");
+      toast.error(reviewRefusal(error) ?? "Could not submit the review — is the daemon running?");
     },
   });
 }

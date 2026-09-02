@@ -41,6 +41,7 @@ import {
   type ProjectContract,
   type ReviewCommentContract,
   type ReviewContract,
+  type ReviewDetail,
   type ReviewedFileContract,
   type RunContract,
   type RunContributionContract,
@@ -52,6 +53,8 @@ import {
   type WorkflowPresetContract,
   type WorktreeStatus,
 } from "@otomat/domain";
+
+import type { ReviewDetailResult } from "#review";
 
 export function toProject(row: ProjectRow, hasRepository: boolean): ProjectContract {
   return projectContractSchema.parse({ ...row, has_repository: hasRepository });
@@ -163,6 +166,17 @@ export function toAgentSession(row: AgentSessionRow): AgentSessionContract {
 
 export function toReview(row: ReviewRow): ReviewContract {
   return reviewContractSchema.parse(row);
+}
+
+export function toReviewDetail(detail: ReviewDetailResult): ReviewDetail {
+  return {
+    review: detail.review ? toReview(detail.review) : null,
+    comments: detail.comments.map(toReviewComment),
+    reviewed_files: detail.reviewedFiles.map(toReviewedFile),
+    fix_authority: detail.fixAuthority,
+    destinations: detail.destinations,
+    submission: detail.submission,
+  };
 }
 
 export function toReviewComment(row: ReviewCommentRow): ReviewCommentContract {

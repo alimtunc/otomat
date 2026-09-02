@@ -57,7 +57,6 @@ function Reviewer() {
             partition: partitionComments(null, []),
             destinations: { pr_review: false, reason: "This run has no pull request yet." },
             preferredDestination: "agent",
-            publishingId: null,
           }}
           commentActions={fileCommentActions()}
         />

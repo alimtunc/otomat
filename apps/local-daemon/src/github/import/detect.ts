@@ -5,8 +5,8 @@ import {
   type PullRequestDetection,
 } from "@otomat/domain";
 
+import type { GitHubCli, GitHubPullRequest } from "../cli/contract.js";
 import { failureMessage } from "../errors.js";
-import type { GitHubCli, GitHubPullRequest } from "../types.js";
 import type { IssueRepository } from "./repository.js";
 import { buildEvidence, classifyPullRequest } from "./verify.js";
 

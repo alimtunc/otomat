@@ -47,7 +47,10 @@ function fakeCli(): GitHubCli & { tokens: string[] } {
     createPullRequest: () => Promise.reject(new Error("not used")),
     updatePullRequest: () => Promise.reject(new Error("not used")),
     setPullRequestMode: () => Promise.reject(new Error("not used")),
-    createReviewComment: () => Promise.reject(new Error("not used")),
+    submitReview: () => Promise.reject(new Error("not used")),
+    viewPullRequestOverview: () => Promise.reject(new Error("not used")),
+    readRepositoryMergePolicy: () => Promise.reject(new Error("not used")),
+    mergePullRequest: () => Promise.reject(new Error("not used")),
     listViewedFiles: () => Promise.reject(new Error("not used")),
     setFileViewed: () => Promise.reject(new Error("not used")),
   };

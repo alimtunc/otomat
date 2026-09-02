@@ -16,8 +16,8 @@ import {
 import type { PullRequestTrees } from "#git";
 import { closeMergedIssue, type MergeClosureConfig } from "#supervisor";
 
+import type { GitHubPullRequest } from "../cli/contract.js";
 import { mirroredColumns } from "../mirror.js";
-import type { GitHubPullRequest } from "../types.js";
 
 export interface ImportStoreConfig extends MergeClosureConfig {
   idFactory(): string;

@@ -1,9 +1,9 @@
 import type { GitHubConnectionContract, GitHubDeviceAuthorization } from "@otomat/domain";
 
+import type { GitHubCli } from "./cli/contract.js";
 import type { DeviceAuthorization } from "./device-flow.js";
 import { safeGitHubFailure } from "./errors.js";
 import { connectionProblem } from "./parse.js";
-import type { GitHubCli } from "./types.js";
 
 interface GitHubConnectionService {
   connection(): Promise<GitHubConnectionContract>;

@@ -1,6 +1,7 @@
 import { DaemonRequestError } from "@otomat/client";
 import type {
   AttachPullRequestRequest,
+  MergePullRequestRequest,
   PublishPullRequestRequest,
   PushPullRequestRequest,
 } from "@otomat/domain";
@@ -146,6 +147,29 @@ export function useRefreshPullRequest(pullRequestId: string, issueId: string | n
         toast.error(
           pullRequestImportRefusal(error) ?? "Could not refresh the pull request from GitHub.",
         );
+    },
+  });
+}
+
+/** Keyed so the in-flight merge outlives the confirmation dialog that started it. */
+export function useMergePullRequest(pullRequestId: string, issueId: string | null) {
+  const client = useQueryClient();
+  const keys = useQueryKeys();
+  return useMutation({
+    mutationKey: keys.pullRequestMerge(pullRequestId),
+    mutationFn: (request: MergePullRequestRequest) =>
+      daemon.mergePullRequest(pullRequestId, request),
+    onSuccess: (context) => {
+      client.setQueryData(keys.pullRequest(pullRequestId), context);
+      client.invalidateQueries({ queryKey: keys.pullRequestOverview(pullRequestId) });
+      client.invalidateQueries({ queryKey: keys.workspaces });
+      client.invalidateQueries({ queryKey: keys.activity });
+      invalidateIssuePullRequests(client, keys, issueId);
+      toast.success(`Pull request #${context.pull_request.number ?? ""} merged`);
+    },
+    onError: (error) => {
+      client.invalidateQueries({ queryKey: keys.pullRequestOverview(pullRequestId) });
+      toast.error(daemonErrorMessage(error, "Could not merge — is the daemon running?"));
     },
   });
 }

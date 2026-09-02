@@ -1,27 +1,32 @@
-import type { ReviewCommentCreateInput, ReviewCommentSide } from "./types.js";
+import type { DiffSide } from "@otomat/domain";
 
-/** Request body of `POST /repos/{repo}/pulls/{number}/comments`; a single-line anchor omits the start fields. */
-interface ReviewCommentPayload {
-  body: string;
-  commit_id: string;
-  path: string;
-  side: ReviewCommentSide;
-  line: number;
-  start_line?: number;
-  start_side?: ReviewCommentSide;
+import type { PullRequestCommentInput } from "#review";
+
+import { reviewCommentBody } from "./body.js";
+import type { ReviewCommentSide, ReviewSubmissionComment } from "./cli/contract.js";
+import { GitHubPublicationError } from "./errors.js";
+
+function side(value: DiffSide): ReviewCommentSide {
+  return value === "old" ? "LEFT" : "RIGHT";
 }
 
-export function reviewCommentPayload(input: ReviewCommentCreateInput): ReviewCommentPayload {
-  const payload: ReviewCommentPayload = {
-    body: input.body,
-    commit_id: input.commitSha,
-    path: input.path,
-    side: input.side,
+/** One entry of a review's `comments` array; a single-line anchor omits the start fields. */
+export function reviewCommentPayload(input: PullRequestCommentInput): ReviewSubmissionComment {
+  if (input.line === null) {
+    throw new GitHubPublicationError(
+      "comment_line_missing",
+      "GitHub anchors a review comment to lines, so a whole-file note cannot be submitted.",
+    );
+  }
+  const payload: ReviewSubmissionComment = {
+    path: input.filePath,
+    body: reviewCommentBody(input.body, input.suggestion),
+    side: side(input.side),
     line: input.line,
   };
-  if (input.startLine !== undefined) {
+  if (input.startLine !== null) {
     payload.start_line = input.startLine;
-    payload.start_side = input.startSide;
+    payload.start_side = side(input.side);
   }
   return payload;
 }

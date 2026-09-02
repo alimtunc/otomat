@@ -1,13 +1,13 @@
 import { getAttachedPullRequest } from "@otomat/db";
+import { mergePullRequestRequestSchema } from "@otomat/domain";
 import { Hono } from "hono";
 
 import type { ApiDeps } from "../deps.js";
-import { pullRequestSubjectGuard } from "../guards.js";
-import { pullRequestImportRefusal } from "../pull-request-refusal.js";
-import { toPullRequestReviewContext } from "../pull-request-serialize.js";
+import { pullRequestSubjectGuard, validateJson } from "../guards.js";
+import { pullRequestImportRefusal, pullRequestProviderRefusal } from "../pull-request-refusal.js";
+import { toPullRequestOverview, toPullRequestReviewContext } from "../pull-request-serialize.js";
 import { createReviewSurfaceRoutes } from "./review-surface.js";
 
-/** Mounted at `/api/pull-requests`: the review surface of an adopted pull request, plus refresh and detach. */
 export function createPullRequestRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();
 
@@ -27,6 +27,32 @@ export function createPullRequestRoutes(deps: ApiDeps): Hono {
       if (refusal) return refusal;
       console.error(`[otomat] refreshing pull request ${id} failed`, error);
       return c.json({ error: "pr_refresh_failed" }, 500);
+    }
+  });
+
+  routes.get("/:id/overview", async (c) => {
+    const id = c.req.param("id");
+    try {
+      const overview = await deps.github.pullRequestOverview(id);
+      return c.json(toPullRequestOverview(overview, deps.github.pullRequestIssue(overview.row)));
+    } catch (error) {
+      const refusal = pullRequestProviderRefusal(c, error, "pr_overview_failed");
+      if (refusal) return refusal;
+      console.error(`[otomat] overview for pull request ${id} failed`, error);
+      return c.json({ error: "pr_overview_failed" }, 500);
+    }
+  });
+
+  routes.post("/:id/merge", validateJson(mergePullRequestRequestSchema), async (c) => {
+    const id = c.req.param("id");
+    try {
+      const row = await deps.github.mergePullRequest(id, c.req.valid("json").method);
+      return c.json(toPullRequestReviewContext(row, deps.github.pullRequestIssue(row)));
+    } catch (error) {
+      const refusal = pullRequestProviderRefusal(c, error, "merge_failed");
+      if (refusal) return refusal;
+      console.error(`[otomat] merging pull request ${id} failed`, error);
+      return c.json({ error: "merge_failed" }, 500);
     }
   });
 

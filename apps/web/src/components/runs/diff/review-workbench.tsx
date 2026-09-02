@@ -15,7 +15,7 @@ import {
   WIDE_VIEWPORT_MEDIA_QUERY,
 } from "@otomat/ui";
 import { useSelector } from "@tanstack/react-store";
-import { useAddReviewComment, usePublishReviewComment } from "@web/api/reviews/mutations";
+import { useAddReviewComment } from "@web/api/reviews/mutations";
 import { DiffFileCards } from "@web/components/runs/diff/cards";
 import { DiffEmptyRegion } from "@web/components/runs/diff/empty-region";
 import { DiffFileNav } from "@web/components/runs/diff/files/nav";
@@ -50,7 +50,6 @@ export function ReviewWorkbench({
   notice,
 }: ReviewWorkbenchProps) {
   const addComment = useAddReviewComment(target);
-  const publishComment = usePublishReviewComment(target);
   const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
   const filesLayout = usePanelGroupLayout("otomat.run-diff");
   const prefs = useSelector(diffPrefsStore);
@@ -68,14 +67,12 @@ export function ReviewWorkbench({
     add: async (file, comment) => {
       await addComment.mutateAsync({ ...comment, file_path: file.path, diff_sha: file.sha });
     },
-    publish: (commentId) => publishComment.mutate(commentId),
     reveal: interactions.selectComment,
   };
   const fileCommentsInput = {
     partition,
     destinations: review.destinations,
     preferredDestination: prefs.commentDestination,
-    publishingId: publishComment.isPending ? publishComment.variables : null,
   };
 
   const cards = (
@@ -100,13 +97,7 @@ export function ReviewWorkbench({
   );
 
   const emptyRegion = (
-    <DiffEmptyRegion
-      target={target}
-      scope={answered}
-      detached={partition.detached}
-      onPublish={commentActions.publish}
-      publishingId={fileCommentsInput.publishingId}
-    />
+    <DiffEmptyRegion target={target} scope={answered} detached={partition.detached} />
   );
 
   const browsedRegion = wide ? (
@@ -163,11 +154,10 @@ export function ReviewWorkbench({
       />
       {diff.files.length === 0 ? emptyRegion : browsedRegion}
       <DiffFixBar
-        runId={target.id}
+        target={target}
         workspaceOpen={workspace.open}
         issueId={workspace.issueId}
-        authority={review.fix_authority}
-        comments={review.comments}
+        review={review}
       />
     </div>
   );

@@ -1,6 +1,14 @@
 import { schema, type PullRequestRow } from "@otomat/db";
-import { pullRequestReviewContextSchema, type PullRequestReviewContext } from "@otomat/domain";
+import {
+  pullRequestOverviewSchema,
+  pullRequestReviewContextSchema,
+  type PullRequestMergeAvailability,
+  type PullRequestOverview,
+  type PullRequestReviewContext,
+} from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
+
+import { GitHubPublicationError } from "#github";
 
 import { json, makeApiApp, post, request } from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
@@ -100,4 +108,81 @@ it("answers 404 for a pull request that is not attached here", async () => {
 
   expect(res.status).toBe(404);
   expect(await json(res)).toEqual({ error: "pull_request_not_found" });
+});
+
+function overviewApp(merge: PullRequestMergeAvailability) {
+  return makeApiApp(fix, {
+    github: stubGitHubService({
+      pullRequestIssue: () => null,
+      pullRequestOverview: async () => ({
+        row: seededRow(),
+        repository: "acme/otomat",
+        checks: [{ name: "build", state: "passing", url: null }],
+        reviews: [{ author_login: "octocat", state: "approved", submitted_at: null }],
+        commits: 3,
+        changedFiles: 2,
+        additions: 12,
+        deletions: 4,
+        behindBase: false,
+        merge,
+      }),
+      mergePullRequest: async () => {
+        throw new GitHubPublicationError("merge_unavailable", merge.reason);
+      },
+    }),
+  });
+}
+
+it("serves an overview carrying the merge verdict and its reason", async () => {
+  const res = await request(
+    overviewApp({ methods: ["squash"], blocker: null, reason: "Pull request #7 can be merged." }),
+    "/api/pull-requests/pr-1/overview",
+  );
+
+  expect(res.status).toBe(200);
+  const body = await json<PullRequestOverview>(res);
+  expect(pullRequestOverviewSchema.safeParse(body)).toMatchObject({ success: true });
+  expect(body).toMatchObject({ repository: "acme/otomat", commits: 3, changed_files: 2 });
+  expect(body.merge).toEqual({
+    methods: ["squash"],
+    blocker: null,
+    reason: "Pull request #7 can be merged.",
+  });
+});
+
+it("refuses a merge the daemon does not authorize, with the reason verbatim", async () => {
+  const reason = "@contrib owns contrib/fix. Otomat reviews it here; it never rewrites it.";
+  const res = await post(
+    overviewApp({ methods: [], blocker: "not_authorized", reason }),
+    "/api/pull-requests/pr-1/merge",
+    { method: "squash" },
+  );
+
+  expect(res.status).toBe(409);
+  expect(await json(res)).toEqual({ error: "merge_unavailable", message: reason });
+});
+
+it("rejects a merge that names no method", async () => {
+  const res = await post(
+    overviewApp({ methods: ["merge"], blocker: null, reason: "ok" }),
+    "/api/pull-requests/pr-1/merge",
+    { method: "rebase" },
+  );
+
+  expect(res.status).toBe(400);
+});
+
+it("answers a successful merge with the reviewer's own context shape", async () => {
+  const merged = makeApiApp(fix, {
+    github: stubGitHubService({
+      pullRequestIssue: () => null,
+      mergePullRequest: async () => ({ ...seededRow(), status: "merged" }),
+    }),
+  });
+  const res = await post(merged, "/api/pull-requests/pr-1/merge", { method: "merge" });
+
+  expect(res.status).toBe(200);
+  const body = await json<PullRequestReviewContext>(res);
+  expect(pullRequestReviewContextSchema.safeParse(body)).toMatchObject({ success: true });
+  expect(body.pull_request.status).toBe("merged");
 });

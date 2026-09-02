@@ -10,6 +10,7 @@ import {
 } from "@otomat/db";
 import { reviewMachine } from "@otomat/domain";
 
+import { reviewSubmissionAvailability } from "./pull-request.js";
 import { reloadOrThrow } from "./reload.js";
 import { ownedByViewer } from "./reviewed-files.js";
 import type { ReviewContext, ReviewDetailResult, ReviewSubject } from "./types.js";
@@ -28,6 +29,7 @@ export function ensureReview(ctx: ReviewContext, subjectId: string): ReviewRow {
 
 export function getReviewDetail(ctx: ReviewContext, subject: ReviewSubject): ReviewDetailResult {
   const connectedLogin = readGitHubViewer(ctx.db).login;
+  const destinations = subject.destinations();
   return {
     review: getReviewForSubject(ctx.db, subject.id) ?? null,
     comments: listReviewCommentsForSubject(ctx.db, subject.id),
@@ -35,6 +37,7 @@ export function getReviewDetail(ctx: ReviewContext, subject: ReviewSubject): Rev
       ownedByViewer(connectedLogin, row),
     ),
     fixAuthority: subject.fixAuthority(),
-    destinations: subject.destinations(),
+    destinations,
+    submission: reviewSubmissionAvailability(subject.pullRequest(), destinations, connectedLogin),
   };
 }

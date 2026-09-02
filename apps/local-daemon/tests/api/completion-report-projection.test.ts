@@ -212,6 +212,7 @@ describe("run completion report projection", () => {
         reviewedFiles: [],
         fixAuthority: { kind: "otomat", reason: "Otomat owns this branch." },
         destinations: { pr_review: false, reason: "This run has no pull request yet." },
+        submission: { events: [], reason: "This run has no pull request yet." },
       }),
     });
 

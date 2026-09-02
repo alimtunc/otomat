@@ -18,6 +18,7 @@ import {
   SANDBOX_DIFF,
   SANDBOX_DIFF_BLOBS,
   SANDBOX_PULL_REQUEST_DETAIL,
+  SANDBOX_PULL_REQUEST_OVERVIEW,
   SANDBOX_PULL_REQUESTS,
   SANDBOX_REVIEW,
   SANDBOX_REVIEW_INBOX,
@@ -128,6 +129,10 @@ const ROUTES: SandboxRoute[] = [
   { pattern: /^\/api\/issues\/[^/]+\/pull-requests$/, respond: () => json(SANDBOX_PULL_REQUESTS) },
   { pattern: /^\/api\/reviews$/, respond: () => json(SANDBOX_REVIEW_INBOX) },
   { pattern: /^\/api\/pull-requests\/[^/]+$/, respond: () => json(SANDBOX_PULL_REQUESTS[0]) },
+  {
+    pattern: /^\/api\/pull-requests\/[^/]+\/overview$/,
+    respond: () => json(SANDBOX_PULL_REQUEST_OVERVIEW),
+  },
   { pattern: /^\/api\/runs$/, respond: () => json(SANDBOX_RUNS) },
   {
     pattern: /^\/api\/runs\/([^/]+)$/,

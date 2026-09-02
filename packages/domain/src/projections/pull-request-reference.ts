@@ -1,4 +1,4 @@
-import type { IssueReference, IssueReferenceSurface } from "../contracts/pull-request-import.js";
+import type { IssueReference, IssueReferenceSurface } from "../contracts/pull-request/import.js";
 
 /** Bounded on both sides so suffix digits stay in the identifier and unrelated prose digits do not match. */
 const IDENTIFIER = /(?<![A-Za-z0-9])[A-Za-z][A-Za-z0-9]*-\d+(?![A-Za-z0-9])/g;

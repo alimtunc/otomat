@@ -1,22 +1,20 @@
-import type { ReviewCommentContract } from "@otomat/domain";
-import { Button, StatusChip } from "@otomat/ui";
+import { isPendingReviewComment, type ReviewCommentContract } from "@otomat/domain";
+import { StatusChip } from "@otomat/ui";
 
-export interface CommentPublicationProps {
-  comment: ReviewCommentContract;
-  onPublish?: () => void;
-  publishing: boolean;
-}
-
-export function CommentPublication({ comment, onPublish, publishing }: CommentPublicationProps) {
-  const retryable =
-    comment.publication_status === "local" || comment.publication_status === "failed";
+export function CommentPublication({ comment }: { comment: ReviewCommentContract }) {
+  const permalink = isPendingReviewComment(comment) ? null : comment.external_url;
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-2">
         <StatusChip kind="reviewCommentPublication" status={comment.publication_status} />
-        {comment.external_url === null ? null : (
+        {isPendingReviewComment(comment) ? (
+          <span className="text-xs text-text-tertiary">
+            Included in the next review you submit.
+          </span>
+        ) : null}
+        {permalink === null ? null : (
           <a
-            href={comment.external_url}
+            href={permalink}
             target="_blank"
             rel="noreferrer"
             className="text-xs text-iris-text underline underline-offset-2"
@@ -24,17 +22,6 @@ export function CommentPublication({ comment, onPublish, publishing }: CommentPu
             View on GitHub
           </a>
         )}
-        {retryable && onPublish !== undefined ? (
-          <Button
-            variant="outline"
-            size="xs"
-            className="ml-auto"
-            loading={publishing}
-            onClick={onPublish}
-          >
-            {comment.publication_status === "failed" ? "Retry publish" : "Publish to GitHub"}
-          </Button>
-        ) : null}
       </div>
       {comment.publication_error === null ? null : (
         <p role="alert" className="text-xs text-danger">

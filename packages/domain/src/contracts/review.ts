@@ -26,6 +26,22 @@ export const reviewDestinationAvailabilitySchema = z.object({
 });
 export type ReviewDestinationAvailability = z.infer<typeof reviewDestinationAvailabilitySchema>;
 
+/** GitHub's three verdicts, lowercased on the wire and uppercased only at the provider boundary. */
+export const PULL_REQUEST_REVIEW_EVENTS = ["comment", "request_changes", "approve"] as const;
+export const pullRequestReviewEventSchema = z.enum(PULL_REQUEST_REVIEW_EVENTS);
+export type PullRequestReviewEvent = z.infer<typeof pullRequestReviewEventSchema>;
+
+export function isPullRequestReviewEvent(value: string): value is PullRequestReviewEvent {
+  return PULL_REQUEST_REVIEW_EVENTS.some((event) => event === value);
+}
+
+/** `reason` is populated either way: a missing verdict is always explained, never silently absent. */
+export const reviewSubmissionAvailabilitySchema = z.object({
+  events: z.array(pullRequestReviewEventSchema),
+  reason: z.string().min(1),
+});
+export type ReviewSubmissionAvailability = z.infer<typeof reviewSubmissionAvailabilitySchema>;
+
 /** A run's review surface: the review row (null until something hangs from it), its comments newest last, and its reviewed marks. */
 export const reviewDetailSchema = z.object({
   review: reviewContractSchema.nullable(),
@@ -34,8 +50,15 @@ export const reviewDetailSchema = z.object({
   reviewed_files: z.array(reviewedFileContractSchema),
   fix_authority: reviewFixAuthoritySchema,
   destinations: reviewDestinationAvailabilitySchema,
+  submission: reviewSubmissionAvailabilitySchema,
 });
 export type ReviewDetail = z.infer<typeof reviewDetailSchema>;
+
+/** Submit the pending pull-request comments as one GitHub review; the summary alone is enough to submit. */
+export const submitReviewRequestSchema = z
+  .object({ body: z.string().max(65_536), event: pullRequestReviewEventSchema })
+  .strict();
+export type SubmitReviewRequest = z.infer<typeof submitReviewRequestSchema>;
 
 /** Create a comment pinned to the diff the reviewer is looking at; the daemon verifies the anchor. */
 export const createReviewCommentRequestSchema = z
@@ -80,8 +103,11 @@ export type SetReviewedFileRequest = z.infer<typeof setReviewedFileRequestSchema
 export const REVIEW_COMMENT_ERRORS = [
   "comment_range_invalid",
   "comment_destination_unavailable",
-  "comment_publication_failed",
   "comments_not_fixable",
+  "review_submission_unavailable",
+  "review_submission_empty",
+  "review_submission_busy",
+  "review_submission_failed",
 ] as const;
 export const reviewCommentErrorSchema = z.object({
   error: z.enum(REVIEW_COMMENT_ERRORS),

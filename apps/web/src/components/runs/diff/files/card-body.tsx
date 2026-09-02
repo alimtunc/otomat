@@ -128,13 +128,7 @@ export function DiffFileCardBody({
         renderExtendLine={({ data: onLine }) => (
           <div className="flex flex-col gap-2 border-y border-border bg-surface-1 p-3">
             {onLine.map((comment) => (
-              <ReviewCommentCard
-                key={comment.id}
-                target={target}
-                comment={comment}
-                onPublish={() => commentActions.publish(comment.id)}
-                publishing={comments.publishingId === comment.id}
-              />
+              <ReviewCommentCard key={comment.id} target={target} comment={comment} />
             ))}
           </div>
         )}

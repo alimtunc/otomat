@@ -10,17 +10,9 @@ export interface ReviewCommentCardProps {
   comment: ReviewCommentContract;
   target: ReviewTarget;
   fallbackReason?: string;
-  onPublish?: () => void;
-  publishing?: boolean;
 }
 
-export function ReviewCommentCard({
-  comment,
-  target,
-  fallbackReason,
-  onPublish,
-  publishing = false,
-}: ReviewCommentCardProps) {
+export function ReviewCommentCard({ comment, target, fallbackReason }: ReviewCommentCardProps) {
   const fixPending = comment.status === "open" && comment.fix_requested_at !== null;
 
   return (
@@ -49,9 +41,7 @@ export function ReviewCommentCard({
           replacement={comment.suggestion}
         />
       )}
-      {comment.destination === "agent" ? null : (
-        <CommentPublication comment={comment} onPublish={onPublish} publishing={publishing} />
-      )}
+      {comment.destination === "agent" ? null : <CommentPublication comment={comment} />}
       {fallbackReason === undefined ? null : (
         <>
           <p className="text-xs text-text-tertiary">{fallbackReason}</p>

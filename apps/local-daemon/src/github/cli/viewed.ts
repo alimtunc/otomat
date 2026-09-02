@@ -1,13 +1,14 @@
 import { z } from "zod";
 
 import { GitHubCliError } from "../errors.js";
-import type { CommandRunner, ViewedFileMutationInput, ViewedFilesInput } from "../types.js";
+import type { CommandRunner } from "../types.js";
 import {
   VIEWER_VIEWED_STATES,
   type PullRequestViewedFile,
   type PullRequestViewedFiles,
 } from "../viewed-state.js";
 import { assertPublicationSucceeded } from "./commands.js";
+import type { ViewedFileMutationInput, ViewedFilesInput } from "./contract.js";
 
 const VIEWED_PAGE_SIZE = 100;
 /** GitHub itself stops reporting a pull request's files at 3000, so this is its ceiling, not a sample. */

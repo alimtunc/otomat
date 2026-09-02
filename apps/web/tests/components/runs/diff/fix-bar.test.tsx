@@ -1,16 +1,26 @@
 // @vitest-environment happy-dom
-import type { ReviewCommentContract, ReviewFixAuthority } from "@otomat/domain";
+import type {
+  ReviewCommentContract,
+  ReviewDetail,
+  ReviewFixAuthority,
+  ReviewTarget,
+} from "@otomat/domain";
 import { DiffFixBar } from "@web/components/runs/diff/fix-bar";
 import { describe, expect, it, vi } from "vitest";
 
 import { findButton } from "#support/dom-queries";
 import { mount } from "#support/mount";
 import { reviewComment } from "#support/review-comment";
+import { reviewDetail } from "#support/review-detail";
 
 vi.mock("@web/components/runs/review/fix-step-dialog", () => ({
   ReviewFixStepDialog: ({ count, disabled }: { count: number; disabled: boolean }) => (
     <button type="button" disabled={disabled}>{`eligible:${count}`}</button>
   ),
+}));
+
+vi.mock("@web/components/runs/review/submit/dialog", () => ({
+  SubmitReviewDialog: () => <button type="button">Submit review</button>,
 }));
 
 const OTOMAT: ReviewFixAuthority = { kind: "otomat", reason: "Otomat owns otomat/run/r1 here." };
@@ -19,15 +29,28 @@ const EXTERNAL: ReviewFixAuthority = {
   reason: "@contrib owns contrib/fix. Otomat reviews it here; it never rewrites it.",
 };
 
-function bar(comments: ReviewCommentContract[], authority = OTOMAT, workspaceOpen = true) {
+const REVIEWABLE = {
+  destinations: { pr_review: true, reason: "Pull request #7 is open for review." },
+  submission: {
+    events: ["comment"],
+    reason: "Pull request #7 is open for review.",
+  } satisfies ReviewDetail["submission"],
+};
+
+function bar(
+  comments: ReviewCommentContract[],
+  authority = OTOMAT,
+  workspaceOpen = true,
+  target: ReviewTarget = { kind: "run", id: "r1" },
+  reviewable = false,
+) {
+  const review = reviewDetail([], { comments, fix_authority: authority });
+  if (reviewable) {
+    review.destinations = REVIEWABLE.destinations;
+    review.submission = REVIEWABLE.submission;
+  }
   return mount(
-    <DiffFixBar
-      runId="r1"
-      workspaceOpen={workspaceOpen}
-      issueId="i1"
-      authority={authority}
-      comments={comments}
-    />,
+    <DiffFixBar target={target} workspaceOpen={workspaceOpen} issueId="i1" review={review} />,
   );
 }
 
@@ -68,6 +91,20 @@ describe("diff fix bar", () => {
     expect(container.textContent).toContain("Review only");
     expect(container.textContent).toContain("@contrib owns contrib/fix");
     expect(findButton("eligible:1")).toBeUndefined();
+    await cleanup();
+  });
+
+  it("offers the submit composer on a run whose review reaches a pull request", async () => {
+    const { cleanup } = await bar([], OTOMAT, true, { kind: "run", id: "r1" }, true);
+
+    expect(findButton("Submit review")).toBeDefined();
+    await cleanup();
+  });
+
+  it("leaves the submit composer to the reviewer header on a pull request surface", async () => {
+    const { cleanup } = await bar([], OTOMAT, true, { kind: "pull_request", id: "pr-1" }, true);
+
+    expect(findButton("Submit review")).toBeUndefined();
     await cleanup();
   });
 });

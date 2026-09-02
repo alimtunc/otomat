@@ -78,7 +78,7 @@ beforeEach(() => {
     dataDir: fix.dataDir,
     repositories,
     appendRunStep: async () => run(),
-    publishReviewComment: async () => ({ url: "https://example.invalid/1" }),
+    submitPullRequestReview: async () => ({ url: "https://example.invalid/1" }),
     syncViewedFile: async () => "octocat",
     readViewedFiles: async () => ({ viewerLogin: "octocat", files: [] }),
   });
