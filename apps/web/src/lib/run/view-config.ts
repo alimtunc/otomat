@@ -5,12 +5,12 @@ const RUNS_VIEW_KEY = "otomat.runs-view";
 
 export interface RunsViewConfig {
   showFailed: boolean;
-  showDoneIssues: boolean;
+  showClosedIssues: boolean;
 }
 
 export const DEFAULT_RUNS_VIEW_CONFIG: RunsViewConfig = {
   showFailed: true,
-  showDoneIssues: false,
+  showClosedIssues: false,
 };
 
 export function parseRunsViewConfig(value: unknown): RunsViewConfig {
@@ -18,7 +18,8 @@ export function parseRunsViewConfig(value: unknown): RunsViewConfig {
   if (entry === null) return DEFAULT_RUNS_VIEW_CONFIG;
   return {
     showFailed: asBoolean(entry.showFailed) ?? DEFAULT_RUNS_VIEW_CONFIG.showFailed,
-    showDoneIssues: asBoolean(entry.showDoneIssues) ?? DEFAULT_RUNS_VIEW_CONFIG.showDoneIssues,
+    showClosedIssues:
+      asBoolean(entry.showClosedIssues) ?? DEFAULT_RUNS_VIEW_CONFIG.showClosedIssues,
   };
 }
 

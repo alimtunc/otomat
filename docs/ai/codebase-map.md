@@ -686,10 +686,14 @@ rendered outside the activity query's boundary so a host that stops answering ca
 
 An issue owns one canonical workspace while its work is unmerged: the run whose
 worktree row is still `active`, that has not been abandoned, and that a merge has
-not driven to `completed`. `projectIssueWorkspace` reduces the same evidence the
-execution projection reads, so the daemon and the cockpit answer "where does this
-issue work?" identically. A second launch on that issue is refused with
-`issue_workspace_open` before any row is written; new work appends a step instead.
+not driven to `completed`. A tracker status closes it too: an issue moved to
+`done` or `canceled` releases its workspace as soon as its run stops being busy,
+so a canceled cycle leaves every active surface without anyone deleting anything,
+while a turn still in flight keeps holding the worktree it writes in.
+`projectIssueWorkspace` reduces the same evidence the execution projection reads,
+so the daemon and the cockpit answer "where does this issue work?" identically. A
+second launch on that issue is refused with `issue_workspace_open` before any row
+is written; new work appends a step instead.
 
 A new cycle forks from the base branch **as its remote carries it now**, never from
 the operator's checkout: `resolveBaseSha` (`git/remote-base.ts`) reads the branch's
@@ -727,7 +731,8 @@ start the plan's next node (`next_step`). A recovery session is a new
 `agent_sessions` row on the same step — a failed session row cannot be reopened,
 and the honest signal that the provider conversation restarted.
 
-Two things close the cycle. A confirmed merge drives the run to `completed` and
+Two commands close the cycle, and the tracker status above closes it a third way.
+A confirmed merge drives the run to `completed` and
 hands the worktree it leaves behind to the guarded cleanup below
 (`merge-closure.ts`). An abandon stamps `runs.abandoned_at`
 and stops the plan (`supervisor/abandon.ts`) — it deletes no branch, no worktree
@@ -770,11 +775,14 @@ reach.
 cycle closed with the directory still on disk, `stale` for a registration whose
 directory is gone, `missing` for a record git no longer registers, `unmanaged`
 for anything unattached, and `removed` once nothing is left. A deletion is
-offered only when the cycle is closed, no writer is alive, a merged pull request
-names that branch and the tree is clean; otherwise the verdict names the blocker,
-and every surface shows that same sentence. The merged pull request may be the
-run's own or an adopted one whose head is that branch — an outside merge closes a
-cycle exactly like one Otomat made.
+offered when the cycle is closed, no writer is alive and the tree is clean;
+otherwise the verdict names the blocker, and every surface shows that same
+sentence. A closed cycle was always closed explicitly — a merge, an abandon stamp
+or a closed issue — so what a blocker protects is the work on disk, never the
+pull request. `isWorkspaceAutoDeletable` is the narrower rule for everything
+Otomat deletes without being asked row by row: a merged pull request must name
+that branch. It may be the run's own or an adopted one whose head is that branch —
+an outside merge closes a cycle exactly like one Otomat made.
 
 `reconcileWorkspaces` is the whole sequence and the only one: re-read the pull
 requests still open on GitHub (injected as `refreshPullRequests`, so `#supervisor`
@@ -793,7 +801,9 @@ are the reconciliation and one targeted `POST /api/workspaces/:worktreeId/cleanu
 that the settings table, the issue rail and the run cockpit all go through, so a
 destructive action has one confirmation and one code path. The host-wide
 `auto_delete_workspaces` setting gates the automatic pass alone: turned off, a
-merge still closes the issue and the workspace waits in `cleanup_required`.
+merge still closes the issue and the workspace waits in `cleanup_required`. An
+unmerged cycle waits there too whatever the setting says, until the operator
+deletes it from its row.
 
 ## Recovering a Failed Run
 

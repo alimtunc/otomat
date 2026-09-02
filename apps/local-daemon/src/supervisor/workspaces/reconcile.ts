@@ -1,6 +1,6 @@
 import { listRepositories, readAutoDeleteWorkspaces } from "@otomat/db";
 import {
-  isWorkspaceCleanable,
+  isWorkspaceAutoDeletable,
   type WorkspaceEntry,
   type WorkspaceReconcileReport,
 } from "@otomat/domain";
@@ -35,7 +35,7 @@ function applyEntry(
 ): void {
   if (entry.state === "missing") return converge(context, entry, tally);
   if (entry.state !== "cleanup_required") return;
-  if (!autoDelete || !isWorkspaceCleanable(entry)) {
+  if (!autoDelete || !isWorkspaceAutoDeletable(entry)) {
     tally.skipped += 1;
     return;
   }

@@ -202,16 +202,23 @@ it("notifies afterSettle when an appended turn settles live", async () => {
   expect(outcomes[0]).toMatchObject({ runId: run.id, classification: "completed" });
 });
 
-it("refuses a step on an issue that closed with its merge", async () => {
+it("refuses a step on an issue closed at the source, merged or canceled", async () => {
   const { supervisor } = makeSupervisor(fix, "complete");
-  const run = await supervisor.start({ issue_id: "i-work" });
-  await supervisor.settle();
-  updateIssueStatus(fix.db, "i-work", "done");
+  fix.db
+    .insert(schema.issues)
+    .values({ id: "i-dropped", project_id: "p1", title: "Drop me", status: "ready" })
+    .run();
 
-  await expect(supervisor.appendStep(run.id, FIX_STEP)).rejects.toMatchObject({
-    name: "IllegalTransitionError",
-    machine: "issue",
-  });
-  expect(getIssue(fix.db, "i-work")?.status).toBe("done");
-  expect(listStepRunsForRun(fix.db, run.id)).toHaveLength(1);
+  for (const [issueId, status] of [
+    ["i-work", "done"],
+    ["i-dropped", "canceled"],
+  ] as const) {
+    const run = await supervisor.start({ issue_id: issueId });
+    await supervisor.settle();
+    updateIssueStatus(fix.db, issueId, status);
+
+    await expect(supervisor.appendStep(run.id, FIX_STEP)).rejects.toThrow(RunWorkspaceClosedError);
+    expect(getIssue(fix.db, issueId)?.status).toBe(status);
+    expect(listStepRunsForRun(fix.db, run.id)).toHaveLength(1);
+  }
 });

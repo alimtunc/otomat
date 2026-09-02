@@ -14,9 +14,7 @@ export function appendStepSelector(request: { profile_id: string }): AgentConfig
 
 /**
  * Maps every refusal an append can raise to an honest HTTP answer, or null when
- * the error is a daemon fault the caller must see as a 500. The workspace and
- * issue refusals are the merge guard: a merged issue is `done`, so the issue
- * machine itself is what says no.
+ * the error is a daemon fault the caller must see as a 500.
  */
 export function stepAppendErrorResponse<E extends Env>(
   c: Context<E>,

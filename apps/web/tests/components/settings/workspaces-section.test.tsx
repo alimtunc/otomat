@@ -94,24 +94,41 @@ it("counts the maintenance states and says why each workspace is where it is", a
   expect(document.body.textContent).toContain("Unmanaged");
   const stateChips = [...document.body.querySelectorAll("span[aria-label]")];
   expect(
-    stateChips.some((chip) => chip.getAttribute("aria-label")?.includes("manages nothing here")),
+    stateChips.some((chip) =>
+      chip
+        .getAttribute("aria-label")
+        ?.includes("manages nothing here. Remove it yourself if you no longer need it."),
+    ),
   ).toBe(true);
 });
 
-it("offers a deletion only for the workspace the daemon already cleared", async () => {
+it("offers a deletion for the workspaces Otomat still holds, and none for the rest", async () => {
   await renderSection([
     entry({ id: "a" }),
     entry({ id: "b", state: "active", blocker: "cycle_open" }),
+    entry({ id: "c", state: "stale", present: false }),
+    entry({ id: "d", state: "unmanaged", attachment: "none", blocker: "unmanaged_worktree" }),
   ]);
 
   expect(
     document.body.querySelectorAll('button[aria-label="Delete this workspace…"]'),
-  ).toHaveLength(1);
+  ).toHaveLength(2);
 });
 
-it("counts only the cleared workspaces in the bulk cleanup", async () => {
+it("says what a reconciliation does before it is clicked", async () => {
+  await renderSection([entry({ id: "a" })]);
+
+  const described = findButton("Reconcile worktrees")?.getAttribute("aria-describedby");
+  expect(described).toBeTruthy();
+  expect(document.getElementById(described ?? "")?.textContent).toContain(
+    "Nothing on disk is deleted, except a clean worktree whose pull request is merged",
+  );
+});
+
+it("offers in one click only what a merge already made safe", async () => {
   await renderSection([
-    entry({ id: "a" }),
+    entry({ id: "a", pull_request: { number: 7, url: null, merged: true } }),
+    entry({ id: "unmerged" }),
     entry({
       id: "b",
       blocker: "worktree_dirty",

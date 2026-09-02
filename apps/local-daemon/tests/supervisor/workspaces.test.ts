@@ -1,7 +1,13 @@
 import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { insertPullRequest, writeAutoDeleteWorkspaces, type Db } from "@otomat/db";
+import {
+  insertPullRequest,
+  markRunAbandoned,
+  updateIssueStatus,
+  writeAutoDeleteWorkspaces,
+  type Db,
+} from "@otomat/db";
 import type { WorkspaceEntry } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -21,6 +27,7 @@ import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-merged";
 const BRANCH = `otomat/run/${RUN_ID}`;
+const OPEN_RUN_ID = "r-open";
 
 let fix: DaemonTestDb;
 let worktrees: GitWorktreeService;
@@ -88,6 +95,18 @@ function entryFor(path: string): WorkspaceEntry {
   const found = listWorkspaces(context).entries.find((entry) => entry.path === path);
   if (!found) throw new Error(`no workspace entry for ${path}`);
   return found;
+}
+
+function openCycle(): string {
+  const acquired = worktrees.acquire({ owner: OPEN_RUN_ID, branch: `otomat/run/${OPEN_RUN_ID}` });
+  seedRun(fix.db, {
+    runId: OPEN_RUN_ID,
+    worktreeId: acquired.id,
+    runStatus: "review_ready",
+    stepStatus: "succeeded",
+    sessionStatus: "terminated",
+  });
+  return acquired.path;
 }
 
 function registeredPaths(): string[] {
@@ -198,11 +217,67 @@ it("keeps the workspace when the host turned automatic deletion off, and still c
 });
 
 it("refuses a targeted cleanup while a blocker stands, and answers null for an unknown workspace", () => {
+  writeFileSync(join(worktreePath, "scratch.txt"), "work in progress\n");
+
   const blocked = cleanupWorkspace(context, entryFor(worktreePath));
 
-  expect(blocked).toMatchObject({ outcome: "skipped", blocker: "pull_request_not_merged" });
+  expect(blocked).toMatchObject({ outcome: "skipped", blocker: "worktree_dirty" });
   expect(existsSync(worktreePath)).toBe(true);
   expect(findWorkspaceEntry(context, "wt-gone", cycleHolders(fix.db))).toBeNull();
+});
+
+it("deletes nothing on its own while no merge stands for the branch, and still deletes it by hand", async () => {
+  const report = await reconcileWorkspaces(context);
+
+  expect(report).toMatchObject({ cleaned: 0, skipped: 1 });
+  expect(entryFor(worktreePath)).toMatchObject({ state: "cleanup_required", blocker: null });
+  expect(cleanupWorkspace(context, entryFor(worktreePath)).outcome).toBe("cleaned");
+  expect(existsSync(worktreePath)).toBe(false);
+});
+
+it("stops reading a closed issue's workspace as active, whatever its run still says", () => {
+  const path = openCycle();
+  expect(entryFor(path)).toMatchObject({ state: "active", blocker: "cycle_open" });
+
+  updateIssueStatus(fix.db, "i1", "done");
+
+  expect(entryFor(path)).toMatchObject({ state: "cleanup_required", blocker: null });
+});
+
+it("releases a canceled issue's worktree without deleting the work still in it", async () => {
+  const path = openCycle();
+  insertPullRequest(fix.db, {
+    id: "pr-dropped",
+    issue_id: "i1",
+    run_id: OPEN_RUN_ID,
+    repository_id: fix.repositoryId,
+    number: 43,
+    url: "https://github.com/acme/app/pull/43",
+    status: "closed",
+    publication_status: "created",
+    title: "feat: drop it",
+    head_ref: `otomat/run/${OPEN_RUN_ID}`,
+  });
+  writeFileSync(join(path, "scratch.txt"), "work in progress\n");
+  updateIssueStatus(fix.db, "i1", "canceled");
+
+  expect(entryFor(path)).toMatchObject({ state: "cleanup_required", blocker: "worktree_dirty" });
+  expect((await reconcileWorkspaces(context)).cleaned).toBe(0);
+  expect(cleanupWorkspace(context, entryFor(path))).toMatchObject({
+    outcome: "skipped",
+    blocker: "worktree_dirty",
+  });
+  expect(existsSync(path)).toBe(true);
+});
+
+it("closes the cycle on an abandon and leaves its worktree for an explicit deletion", async () => {
+  const path = openCycle();
+  markRunAbandoned(fix.db, OPEN_RUN_ID, new Date().toISOString());
+
+  expect(entryFor(path)).toMatchObject({ state: "cleanup_required", blocker: null });
+  expect((await reconcileWorkspaces(context)).cleaned).toBe(0);
+  expect(existsSync(path)).toBe(true);
+  expect(cleanupWorkspace(context, entryFor(path)).outcome).toBe("cleaned");
 });
 
 it("counts the maintenance states and narrows to one run's own workspaces", () => {

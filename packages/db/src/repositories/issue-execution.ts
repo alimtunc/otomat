@@ -69,6 +69,7 @@ export function listIssueExecutionEvidence(
   return db
     .select({
       issue_id: runs.issue_id,
+      issue_status: issues.status,
       run_id: runs.id,
       run_status: runs.status,
       run_created_at: runs.created_at,

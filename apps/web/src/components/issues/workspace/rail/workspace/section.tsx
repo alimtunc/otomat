@@ -10,7 +10,7 @@ import {
 import { WorkspaceActions } from "@web/components/issues/workspace/rail/workspace/actions";
 import { CopyablePath } from "@web/components/runs/copyable-path";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
-import { workspaceBlockerAction } from "@web/lib/workspace/blocker";
+import { workspaceReason } from "@web/lib/workspace/blocker";
 import { WORKSPACE_STATE } from "@web/lib/workspace/state";
 
 export function WorkspaceSection({ runId }: { runId: string }) {
@@ -33,7 +33,6 @@ export function WorkspaceSection({ runId }: { runId: string }) {
           const entry = inventory.entries.at(0);
           if (entry === undefined) return null;
           const state = WORKSPACE_STATE[entry.state];
-          const action = workspaceBlockerAction(entry.blocker);
           return (
             <>
               <RailMeta>
@@ -58,10 +57,7 @@ export function WorkspaceSection({ runId }: { runId: string }) {
                   )}
                 </RailRow>
               </RailMeta>
-              <p className="mt-2.5 mb-0 text-xs text-text-tertiary">
-                {entry.reason}
-                {action === null ? null : ` ${action}`}
-              </p>
+              <p className="mt-2.5 mb-0 text-xs text-text-tertiary">{workspaceReason(entry)}</p>
               <WorkspaceActions entry={entry} />
               <Button
                 variant="ghost"

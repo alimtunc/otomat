@@ -79,9 +79,9 @@ export function BulkCleanupDialog({ rows, open, onOpenChange }: BulkCleanupDialo
         </DialogHeader>
         <DialogBody className="flex flex-col gap-3">
           <p className="m-0 text-sm text-text-secondary">
-            This deletes each listed worktree and its local branch. Only workspaces whose cycle is
-            closed and whose worktree is clean are listed; merged pull requests and their commits
-            stay on GitHub.
+            This deletes each listed worktree and its local branch. Only workspaces whose pull
+            request is merged, whose cycle is closed and whose worktree is clean are listed; the
+            merged pull requests and their commits stay on GitHub.
           </p>
           <ul className="m-0 flex list-none flex-col gap-1 p-0">
             {targets.map((entry) => {

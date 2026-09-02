@@ -10,6 +10,7 @@ const CLOSED = { state: "closed", run_id: null, branch: null, run_status: null, 
 
 function ev(over: Partial<IssueExecutionEvidence> & { run_id: string }): IssueExecutionEvidence {
   return {
+    issue_status: "ready",
     run_status: "review_ready",
     run_created_at: AT("1"),
     run_branch: `otomat/run/${over.run_id}`,
@@ -51,6 +52,20 @@ it("keeps the workspace open after a failure or a cancel, so the cycle can be re
 it("closes the workspace on a merge and on an explicit abandon", () => {
   expect(projectIssueWorkspace([ev({ run_id: "r1", run_status: "completed" })])).toEqual(CLOSED);
   expect(projectIssueWorkspace([ev({ run_id: "r1", run_abandoned_at: AT("2") })])).toEqual(CLOSED);
+});
+
+it("closes the workspace once the issue itself is done or canceled, whatever its run still says", () => {
+  for (const issue_status of ["done", "canceled"] as const) {
+    expect(
+      projectIssueWorkspace([ev({ run_id: "r1", issue_status, run_status: "review_ready" })]),
+    ).toEqual(CLOSED);
+  }
+});
+
+it("keeps it open while a closed issue's run is still writing in the worktree", () => {
+  expect(
+    projectIssueWorkspace([ev({ run_id: "r1", issue_status: "done", run_status: "running" })]),
+  ).toMatchObject({ state: "open", run_id: "r1", busy: true });
 });
 
 it("closes the workspace once the worktree is released or never existed", () => {

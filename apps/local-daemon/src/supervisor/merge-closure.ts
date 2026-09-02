@@ -65,7 +65,7 @@ function releaseWorkspace(config: MergeClosureConfig, worktreeId: string | null)
     refreshPullRequests: null,
   };
   const entry = findWorkspaceEntry(context, worktreeId, cycleHolders(config.db));
-  if (entry === null) return;
+  if (entry === null || entry.state === "removed" || entry.pull_request?.merged !== true) return;
   const result = cleanupWorkspace(context, entry);
   if (result.outcome !== "cleaned") {
     console.error(

@@ -14,7 +14,6 @@ export interface WorkspaceFacts {
   /** `null` for a worktree Otomat holds no row for. */
   record_status: WorktreeStatus | null;
   cycle_open: boolean;
-  pull_request_merged: boolean;
   dirty: boolean | null;
   writer_alive: boolean;
 }
@@ -24,12 +23,11 @@ export interface WorkspaceVerdict {
   blocker: WorkspaceCleanupBlocker | null;
 }
 
+/** A closed cycle was always closed explicitly, so what is left to protect is the work on disk, never the pull request. */
 function cleanupBlocker(facts: WorkspaceFacts): WorkspaceCleanupBlocker | null {
   if (facts.writer_alive) return "writer_alive";
   if (facts.dirty === null) return "worktree_unreadable";
-  if (facts.dirty) return "worktree_dirty";
-  if (!facts.pull_request_merged) return "pull_request_not_merged";
-  return null;
+  return facts.dirty ? "worktree_dirty" : null;
 }
 
 export function projectWorkspaceState(facts: WorkspaceFacts): WorkspaceVerdict {
@@ -51,9 +49,15 @@ export function isWorkspaceCleanable(verdict: WorkspaceVerdict): boolean {
   return verdict.state === "cleanup_required" && verdict.blocker === null;
 }
 
+/** The narrower rule for a deletion nobody confirmed one row at a time: only a merge already made it safe. */
+export function isWorkspaceAutoDeletable(
+  entry: WorkspaceVerdict & Pick<WorkspaceEntry, "pull_request">,
+): boolean {
+  return entry.pull_request?.merged === true && isWorkspaceCleanable(entry);
+}
+
 const BLOCKER_REASONS = {
   cycle_open: "The issue is still working here — merge or abandon its cycle first.",
-  pull_request_not_merged: "No merged canonical pull request stands for this branch yet.",
   worktree_dirty: "Uncommitted changes are still in this worktree.",
   writer_alive: "A session is still running here — cancel the run first.",
   worktree_unreadable: "This worktree could not be read from disk.",
