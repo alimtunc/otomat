@@ -76,17 +76,13 @@ function toCommentInput(comment: ReviewCommentRow): PullRequestCommentInput {
 }
 
 /** Order is the invariant: mark pending, call the provider once, then persist its single answer. */
-interface Delivery {
-  pullRequestId: string;
-  commitSha: string;
-  pending: readonly ReviewCommentRow[];
-  request: SubmitReviewRequest;
-}
-
 async function deliver(
   ctx: ReviewContext,
   subject: ReviewSubject,
-  { pullRequestId, commitSha, pending, request }: Delivery,
+  pullRequestId: string,
+  commitSha: string,
+  pending: readonly ReviewCommentRow[],
+  request: SubmitReviewRequest,
 ): Promise<void> {
   const marked = pending.map((comment) =>
     comment.publication_status === "pending"
@@ -107,19 +103,19 @@ async function deliver(
     throw new ReviewSubmissionFailedError(reason);
   }
 
+  const settled = marked.map((comment) =>
+    drive(ctx, comment, "published", { publication_error: null, external_url: published.url }),
+  );
   const settledAt = new Date().toISOString();
-  for (const comment of marked) {
-    const settled = drive(ctx, comment, "published", {
-      publication_error: null,
-      external_url: published.url,
-    });
-    if (subject.ledgerRunId === null) continue;
-    emitLedgerEvent(
-      ctx.db,
-      ctx.dataDir,
-      subject.ledgerRunId,
-      buildCommentPublishedEvent(subject.ledgerRunId, settled, settledAt),
-    );
+  if (subject.ledgerRunId !== null) {
+    for (const comment of settled) {
+      emitLedgerEvent(
+        ctx.db,
+        ctx.dataDir,
+        subject.ledgerRunId,
+        buildCommentPublishedEvent(subject.ledgerRunId, comment, settledAt),
+      );
+    }
   }
   driveReviewTo(ctx, ensureReview(ctx, subject.id), REVIEW_OUTCOME[request.event]);
 }
@@ -154,7 +150,7 @@ export async function submitReview(
   }
   inFlight.add(pullRequest.id);
   try {
-    await deliver(ctx, subject, { pullRequestId: pullRequest.id, commitSha, pending, request });
+    await deliver(ctx, subject, pullRequest.id, commitSha, pending, request);
   } finally {
     inFlight.delete(pullRequest.id);
   }

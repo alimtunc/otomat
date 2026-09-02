@@ -5,7 +5,6 @@ import type {
   LinearLifecycleSync,
   PublishPullRequestRequest,
   PullRequestCandidate,
-  PullRequestCheck,
   PullRequestDetection,
   PullRequestInbox,
   PullRequestIssueLink,
@@ -13,7 +12,6 @@ import type {
   PullRequestMergeMethod,
   PullRequestProposal,
   PullRequestPublishability,
-  PullRequestSubmittedReview,
   PullRequestSync,
   PushPullRequestRequest,
 } from "@otomat/domain";
@@ -21,7 +19,7 @@ import type {
 import type { RepositoryResolver } from "#git";
 import type { PullRequestReviewSubmission, ViewedFilesResult, ViewedFileState } from "#review";
 
-import type { GitHubCli } from "./cli/contract.js";
+import type { GitHubCli, PullRequestOverviewFacts } from "./cli/contract.js";
 import type { GenerationAgent } from "./generation/agent.js";
 import type { GenerationInput } from "./generation/input.js";
 
@@ -105,24 +103,17 @@ export interface GitHubService {
     pullRequestId: string,
     input: PullRequestReviewSubmission,
   ): Promise<{ url: string }>;
-  /** Everything the reviewer opens a pull request with, read live and mirrored on the way. */
   pullRequestOverview(pullRequestId: string): Promise<PullRequestOverviewResult>;
-  /** Re-reads the authority and the state before asking GitHub to merge. */
   mergePullRequest(pullRequestId: string, method: PullRequestMergeMethod): Promise<PullRequestRow>;
   readViewedFiles(pullRequestId: string): Promise<ViewedFilesResult>;
   syncViewedFile(pullRequestId: string, input: ViewedFileState): Promise<string | null>;
 }
 
-/** The reviewer's Overview as the daemon holds it; the API layer serializes the row into its contract. */
 export interface PullRequestOverviewResult {
   row: PullRequestRow;
   repository: string;
-  checks: PullRequestCheck[];
-  reviews: PullRequestSubmittedReview[];
-  commits: number;
-  changedFiles: number;
-  additions: number;
-  deletions: number;
+  cwd: string;
+  facts: PullRequestOverviewFacts;
   behindBase: boolean;
   merge: PullRequestMergeAvailability;
 }

@@ -151,7 +151,6 @@ export function useRefreshPullRequest(pullRequestId: string, issueId: string | n
   });
 }
 
-/** Keyed so the in-flight merge outlives the confirmation dialog that started it. */
 export function useMergePullRequest(pullRequestId: string, issueId: string | null) {
   const client = useQueryClient();
   const keys = useQueryKeys();
@@ -162,6 +161,13 @@ export function useMergePullRequest(pullRequestId: string, issueId: string | nul
     onSuccess: (context) => {
       client.setQueryData(keys.pullRequest(pullRequestId), context);
       client.invalidateQueries({ queryKey: keys.pullRequestOverview(pullRequestId) });
+      client.invalidateQueries({
+        queryKey: keys.reviewDetail({ kind: "pull_request", id: pullRequestId }),
+      });
+      if (context.pull_request.run_id !== null) {
+        client.invalidateQueries({ queryKey: keys.runPullRequest(context.pull_request.run_id) });
+      }
+      client.invalidateQueries({ queryKey: keys.reviews });
       client.invalidateQueries({ queryKey: keys.workspaces });
       client.invalidateQueries({ queryKey: keys.activity });
       invalidateIssuePullRequests(client, keys, issueId);

@@ -26,11 +26,11 @@ import type {
   PullRequestOverviewFacts,
   PullRequestSearchInput,
   PullRequestSelector,
+  PullRequestTarget,
   PullRequestUpdateInput,
   RepositoryMergePolicy,
   ReviewSubmissionInput,
   ViewedFileMutationInput,
-  ViewedFilesInput,
 } from "./contract.js";
 import {
   findPullRequest,
@@ -203,9 +203,7 @@ class CommandGitHubCli implements GitHubCli {
     return submitPullRequestReview(this.run, input);
   }
 
-  viewPullRequestOverview(
-    input: GitHubRepositoryTarget & { number: number },
-  ): Promise<PullRequestOverviewFacts> {
+  viewPullRequestOverview(input: PullRequestTarget): Promise<PullRequestOverviewFacts> {
     return viewPullRequestOverview(this.run, input);
   }
 
@@ -217,7 +215,7 @@ class CommandGitHubCli implements GitHubCli {
     return mergePullRequest(this.run, input);
   }
 
-  listViewedFiles(input: ViewedFilesInput): Promise<PullRequestViewedFiles> {
+  listViewedFiles(input: PullRequestTarget): Promise<PullRequestViewedFiles> {
     return listViewedFiles(this.run, input);
   }
 

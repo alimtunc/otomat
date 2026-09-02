@@ -3,10 +3,10 @@ import { Button, Icon } from "@otomat/ui";
 import { useIsMutating } from "@tanstack/react-query";
 import { useQueryKeys } from "@web/api/use-query-keys";
 import { PullRequestMergeDialog } from "@web/components/pull-requests/overview/merge-dialog";
+import { OverviewSection } from "@web/components/pull-requests/overview/section";
 import { MERGE_METHOD_LABEL } from "@web/lib/pull-request/merge-method-label";
 import { useState } from "react";
 
-/** The refusal is shown rather than the buttons: an unavailable merge is always explained. */
 export function PullRequestMergePanel({ overview }: { overview: PullRequestOverview }) {
   const [method, setMethod] = useState<PullRequestMergeMethod | null>(null);
   const keys = useQueryKeys();
@@ -16,10 +16,9 @@ export function PullRequestMergePanel({ overview }: { overview: PullRequestOverv
   const { merge } = overview;
 
   return (
-    <section className="rounded-lg border border-border-subtle bg-surface-1 p-4">
-      <h3 className="text-xs font-semibold text-text-secondary">Merge</h3>
+    <OverviewSection title="Merge">
       <p className="mt-2 text-sm text-text-secondary">{merge.reason}</p>
-      {overview.behind_base ? (
+      {overview.behind_base && merge.blocker !== "behind_base" ? (
         <p className="mt-1.5 text-xs text-text-tertiary">
           {overview.pull_request.head_ref} is behind {overview.pull_request.base_ref}.
         </p>
@@ -44,12 +43,11 @@ export function PullRequestMergePanel({ overview }: { overview: PullRequestOverv
         <PullRequestMergeDialog
           overview={overview}
           method={method}
-          merging={merging}
           onOpenChange={(open) => {
             if (!open) setMethod(null);
           }}
         />
       )}
-    </section>
+    </OverviewSection>
   );
 }

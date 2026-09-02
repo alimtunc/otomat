@@ -34,6 +34,10 @@ export interface GitHubRepositoryTarget {
   repository: string;
 }
 
+export interface PullRequestTarget extends GitHubRepositoryTarget {
+  number: number;
+}
+
 export interface PullRequestSelector extends GitHubRepositoryTarget {
   head: string;
   base: string;
@@ -56,18 +60,12 @@ export interface PullRequestCreateInput extends PullRequestSelector {
   draft: boolean;
 }
 
-export interface PullRequestUpdateInput {
-  cwd: string;
-  repository: string;
-  number: number;
+export interface PullRequestUpdateInput extends PullRequestTarget {
   title: string;
   body: string;
 }
 
-export interface PullRequestModeInput {
-  cwd: string;
-  repository: string;
-  number: number;
+export interface PullRequestModeInput extends PullRequestTarget {
   /** True converts an open pull request back to a draft; false marks a draft ready for review. */
   draft: boolean;
 }
@@ -86,8 +84,7 @@ export interface ReviewSubmissionComment {
   start_side?: ReviewCommentSide;
 }
 
-export interface ReviewSubmissionInput extends GitHubRepositoryTarget {
-  number: number;
+export interface ReviewSubmissionInput extends PullRequestTarget {
   /** The commit the whole review anchors to; GitHub rejects a sha its diff does not carry. */
   commitSha: string;
   body: string;
@@ -95,7 +92,6 @@ export interface ReviewSubmissionInput extends GitHubRepositoryTarget {
   comments: ReviewSubmissionComment[];
 }
 
-/** What one `gh pr view` answers for the reviewer's Overview, beyond the columns the mirror keeps. */
 export interface PullRequestOverviewFacts {
   pullRequest: GitHubPullRequest;
   checks: PullRequestCheck[];
@@ -108,19 +104,13 @@ export interface PullRequestOverviewFacts {
   mergeState: string;
 }
 
-/** What the repository itself allows, read from GitHub rather than assumed. */
 export interface RepositoryMergePolicy {
   methods: PullRequestMergeMethod[];
   canPush: boolean;
 }
 
-export interface PullRequestMergeInput extends GitHubRepositoryTarget {
-  number: number;
+export interface PullRequestMergeInput extends PullRequestTarget {
   method: PullRequestMergeMethod;
-}
-
-export interface ViewedFilesInput extends GitHubRepositoryTarget {
-  number: number;
 }
 
 export interface ViewedFileMutationInput {
@@ -164,12 +154,10 @@ export interface GitHubCli {
   setPullRequestMode(input: PullRequestModeInput): Promise<void>;
   /** GitHub's refusal reaches the reviewer verbatim. */
   submitReview(input: ReviewSubmissionInput): Promise<{ url: string }>;
-  viewPullRequestOverview(
-    input: GitHubRepositoryTarget & { number: number },
-  ): Promise<PullRequestOverviewFacts>;
+  viewPullRequestOverview(input: PullRequestTarget): Promise<PullRequestOverviewFacts>;
   readRepositoryMergePolicy(input: GitHubRepositoryTarget): Promise<RepositoryMergePolicy>;
   /** Merges on GitHub itself. Never merges locally, never enables auto-merge, never touches branch protections. */
   mergePullRequest(input: PullRequestMergeInput): Promise<void>;
-  listViewedFiles(input: ViewedFilesInput): Promise<PullRequestViewedFiles>;
+  listViewedFiles(input: PullRequestTarget): Promise<PullRequestViewedFiles>;
   setFileViewed(input: ViewedFileMutationInput): Promise<void>;
 }

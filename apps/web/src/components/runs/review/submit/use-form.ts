@@ -26,7 +26,6 @@ export function useSubmitReviewForm({
     defaultValues,
     // `onMount` too: without it TanStack Form reports `canSubmit` until the first change.
     validators: { onMount: submittable, onChange: submittable },
-    // A refused submission keeps the composer filled to be retried; the mutation toasts GitHub's reason.
     onSubmit: ({ value }) => {
       submit.mutate(value, {
         onSuccess: () => {

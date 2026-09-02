@@ -1,19 +1,19 @@
 import type { PullRequestOverview } from "@otomat/domain";
 import { Chip, RelativeTime } from "@otomat/ui";
+import { OverviewSection } from "@web/components/pull-requests/overview/section";
 import { REVIEW_STATE_SIGNAL } from "@web/lib/pull-request/overview-signals";
 
 export function PullRequestReviewers({ overview }: { overview: PullRequestOverview }) {
   const requested = overview.pull_request.requested_reviewers;
   return (
-    <section className="rounded-lg border border-border-subtle bg-surface-1 p-4">
-      <h3 className="text-xs font-semibold text-text-secondary">Reviews</h3>
+    <OverviewSection title="Reviews">
       {overview.reviews.length === 0 ? (
         <p className="mt-2 text-sm text-text-tertiary">Nobody has submitted a review yet.</p>
       ) : (
         <ul className="mt-2.5 flex flex-col gap-1.5">
           {overview.reviews.map((review) => (
             <li
-              key={`${review.author_login ?? "unknown"}-${review.state}`}
+              key={review.author_login ?? "unknown"}
               className="flex items-center justify-between gap-2 text-sm"
             >
               <span className="truncate">
@@ -34,6 +34,6 @@ export function PullRequestReviewers({ overview }: { overview: PullRequestOvervi
           ? "No review is requested."
           : `Requested: ${requested.map((reviewer) => reviewer.handle).join(", ")}`}
       </p>
-    </section>
+    </OverviewSection>
   );
 }

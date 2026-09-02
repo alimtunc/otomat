@@ -8,7 +8,7 @@ import {
   type PullRequestViewedFiles,
 } from "../viewed-state.js";
 import { assertPublicationSucceeded } from "./commands.js";
-import type { ViewedFileMutationInput, ViewedFilesInput } from "./contract.js";
+import type { PullRequestTarget, ViewedFileMutationInput } from "./contract.js";
 
 const VIEWED_PAGE_SIZE = 100;
 /** GitHub itself stops reporting a pull request's files at 3000, so this is its ceiling, not a sample. */
@@ -57,7 +57,7 @@ function parsePage(stdout: string): z.infer<typeof viewedFilesPageSchema> {
 /** Paginated, and refuses a partial answer: a truncated read would report the tail of the diff as unreviewed. */
 export async function listViewedFiles(
   run: CommandRunner,
-  input: ViewedFilesInput,
+  input: PullRequestTarget,
 ): Promise<PullRequestViewedFiles> {
   const files: PullRequestViewedFile[] = [];
   let cursor: string | null = null;

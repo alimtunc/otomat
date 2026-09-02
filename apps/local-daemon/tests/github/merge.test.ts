@@ -1,13 +1,16 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { getIssue, getPullRequest, getRun } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createRepositoryResolver } from "#git";
-import { createGitHubService, GitHubPublicationError, type GitHubService } from "#github";
+import {
+  createGitHubService,
+  GitHubCliError,
+  GitHubPublicationError,
+  type GitHubService,
+} from "#github";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { FakeGitHubCli, providerPullRequest } from "../support/github.js";
@@ -19,7 +22,6 @@ const RUN_ID = "r-merging";
 let fix: DaemonTestDb;
 let cli: FakeGitHubCli;
 let github: GitHubService;
-let remotePath: string;
 let headSha: string;
 
 function git(cwd: string, ...args: string[]): string {
@@ -27,11 +29,6 @@ function git(cwd: string, ...args: string[]): string {
 }
 
 function publishBranch(): string {
-  remotePath = mkdtempSync(join(tmpdir(), "otomat-remote-"));
-  git(remotePath, "init", "--bare", "-b", "main");
-  git(fix.repo.root, "remote", "add", "origin", remotePath);
-  git(fix.repo.root, "push", "origin", "main");
-
   fix.repo.git("checkout", "-b", "contrib/fix");
   fix.repo.write("contributed.txt", "from the contributor\n");
   const sha = fix.repo.commitAll("contributor change");
@@ -77,7 +74,6 @@ beforeEach(() => {
 
 afterEach(() => {
   fix.cleanup();
-  rmSync(remotePath, { recursive: true, force: true });
 });
 
 it("answers an overview with the facts GitHub reports and the merge it refuses", async () => {
@@ -96,19 +92,15 @@ it("answers an overview with the facts GitHub reports and the merge it refuses",
   const overview = await github.pullRequestOverview(id);
   expect(overview).toMatchObject({
     repository: "acme/otomat",
-    commits: 3,
-    changedFiles: 2,
-    additions: 12,
-    deletions: 4,
+    facts: { commits: 3, changedFiles: 2, additions: 12, deletions: 4 },
     behindBase: true,
   });
-  expect(overview.checks[0]).toEqual({
+  expect(overview.facts.checks[0]).toEqual({
     name: "build",
     state: "failing",
     url: "https://gh/checks/1",
   });
-  expect(overview.reviews[0]?.author_login).toBe("octocat");
-  // The branch belongs to @contrib, so no authority is proven whatever GitHub allows.
+  expect(overview.facts.reviews[0]?.author_login).toBe("octocat");
   expect(overview.merge.blocker).toBe("not_authorized");
   expect(overview.merge.methods).toEqual([]);
 });
@@ -141,6 +133,29 @@ it("merges on GitHub and lets the refresh close the issue's cycle", async () => 
   expect(getPullRequest(fix.db, id)?.status).toBe("merged");
   expect(getIssue(fix.db, ISSUE_ID)?.status).toBe("done");
   expect(getRun(fix.db, RUN_ID)?.status).toBe("completed");
+});
+
+it("reports GitHub's own refusal and leaves the cycle open", async () => {
+  cli.provider = { ...cli.provider, authorLogin: "octocat" };
+  const id = await attach();
+  cli.mergeError = new Error("GitHub refused to merge the pull request.");
+
+  await expect(github.mergePullRequest(id, "squash")).rejects.toThrow(/refused to merge/);
+  expect(getPullRequest(fix.db, id)?.status).toBe("open");
+  expect(getIssue(fix.db, ISSUE_ID)?.status).not.toBe("done");
+});
+
+it("says the merge landed when only the refresh after it fails", async () => {
+  cli.provider = { ...cli.provider, authorLogin: "octocat" };
+  const id = await attach();
+  const merge = cli.mergePullRequest.bind(cli);
+  cli.mergePullRequest = async (input) => {
+    await merge(input);
+    cli.viewError = new GitHubCliError("github_pr_lookup_failed", "gh: connection reset");
+  };
+
+  await expect(github.mergePullRequest(id, "squash")).rejects.toThrow(/GitHub merged #7/);
+  expect(cli.merges).toHaveLength(1);
 });
 
 it("refuses a second merge on a pull request GitHub already merged", async () => {

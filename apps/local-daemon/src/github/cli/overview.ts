@@ -14,10 +14,10 @@ import { assertPublicationSucceeded } from "./commands.js";
 import type {
   GitHubRepositoryTarget,
   PullRequestOverviewFacts,
+  PullRequestTarget,
   RepositoryMergePolicy,
 } from "./contract.js";
 
-/** The list reads stay cheap: commits and reviews are only worth their payload when one pull request is opened. */
 /** An unrecognised verdict is listed as a plain comment rather than dropping the reviewer from the list. */
 const reviewState = pullRequestReviewStateSchema.catch("commented");
 
@@ -42,7 +42,7 @@ const overviewSchema = providerPullRequestSchema.extend({
 
 export async function viewPullRequestOverview(
   run: CommandRunner,
-  input: GitHubRepositoryTarget & { number: number },
+  input: PullRequestTarget,
 ): Promise<PullRequestOverviewFacts> {
   const result = await run({
     command: "gh",

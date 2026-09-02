@@ -1,4 +1,4 @@
-import type { PullRequestImportService, PullRequestOverviewRead } from "./import/service.js";
+import type { PullRequestImportService } from "./import/service.js";
 import { mergeAvailability } from "./merge-availability.js";
 import type { GitHubServiceConfig, PullRequestOverviewResult } from "./types.js";
 
@@ -8,27 +8,14 @@ export async function readPullRequestOverview(
   imports: PullRequestImportService,
   pullRequestId: string,
 ): Promise<PullRequestOverviewResult> {
-  const read: PullRequestOverviewRead = await imports.overview(pullRequestId);
-  const { row, facts } = read;
-  const policy = await config.cli.readRepositoryMergePolicy({
-    cwd: read.cwd,
-    repository: read.repository,
-  });
+  const { row, repository, cwd, viewerLogin, facts } = await imports.overview(pullRequestId);
+  const policy = await config.cli.readRepositoryMergePolicy({ cwd, repository });
   return {
     row,
-    repository: read.repository,
-    checks: facts.checks,
-    reviews: facts.reviews,
-    commits: facts.commits,
-    changedFiles: facts.changedFiles,
-    additions: facts.additions,
-    deletions: facts.deletions,
+    repository,
+    cwd,
+    facts,
     behindBase: facts.mergeState === "BEHIND",
-    merge: mergeAvailability({
-      row,
-      mergeState: facts.mergeState,
-      policy,
-      viewerLogin: read.viewerLogin,
-    }),
+    merge: mergeAvailability({ row, mergeState: facts.mergeState, policy, viewerLogin }),
   };
 }

@@ -70,7 +70,6 @@ export class CommentDestinationUnavailableError extends Error {
   }
 }
 
-/** No pull request, no anchor, or a verdict GitHub would refuse — the message names which. */
 export class ReviewSubmissionUnavailableError extends Error {
   constructor(message: string) {
     super(message);

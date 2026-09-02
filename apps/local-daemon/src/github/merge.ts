@@ -1,10 +1,9 @@
 import type { PullRequestRow } from "@otomat/db";
 import type { PullRequestMergeMethod } from "@otomat/domain";
 
-import { GitHubPublicationError } from "./errors.js";
+import { failureMessage, GitHubPublicationError } from "./errors.js";
 import type { PullRequestImportService } from "./import/service.js";
 import { readPullRequestOverview } from "./overview.js";
-import { pullRequestCwd } from "./pull-request-cwd.js";
 import type { GitHubServiceConfig } from "./types.js";
 
 /** The authority and the state are re-read because the reviewer's Overview may be minutes old. */
@@ -25,16 +24,20 @@ export async function mergePullRequest(
       `${overview.repository} does not allow a ${method} merge; it allows ${allowed}.`,
     );
   }
-  const { row } = overview;
-  if (row.number === null) {
-    throw new GitHubPublicationError("merge_unavailable", "This pull request has no number yet.");
-  }
+  const { number } = overview.facts.pullRequest;
   await config.cli.mergePullRequest({
-    cwd: pullRequestCwd(config, row),
+    cwd: overview.cwd,
     repository: overview.repository,
-    number: row.number,
+    number,
     method,
   });
   // The refresh is what lands `merged` on the row, and landing it is what closes the cycle.
-  return imports.refresh(pullRequestId);
+  try {
+    return await imports.refresh(pullRequestId);
+  } catch (error) {
+    throw new GitHubPublicationError(
+      "merge_refresh_failed",
+      `GitHub merged #${number}, but the mirror could not be refreshed: ${failureMessage(error)}`,
+    );
+  }
 }

@@ -1,10 +1,10 @@
-import { Button, CopyButton, Icon } from "@otomat/ui";
+import { Button, CopyButton } from "@otomat/ui";
 import { useReviewDetail } from "@web/api/reviews/queries";
+import { SubmitReviewButton } from "@web/components/runs/review/submit/button";
 import { SubmitReviewDialog } from "@web/components/runs/review/submit/dialog";
 
 export interface PullRequestReviewerActionsProps {
   pullRequestId: string;
-  /** Null while the mirror has no permanent link yet; the GitHub actions then have nothing to point at. */
   url: string | null;
 }
 
@@ -16,19 +16,14 @@ export function PullRequestReviewerActions({
   return (
     <>
       {detail.data === undefined ? (
-        <Button
-          size="sm"
-          variant="primary"
+        <SubmitReviewButton
           disabled
           title={
             detail.isError
               ? "Otomat could not read this review from the daemon."
               : "Reading this review…"
           }
-        >
-          <Icon name="git-pull-request" aria-hidden />
-          Submit review
-        </Button>
+        />
       ) : (
         <SubmitReviewDialog
           target={{ kind: "pull_request", id: pullRequestId }}

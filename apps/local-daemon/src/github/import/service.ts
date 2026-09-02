@@ -48,7 +48,6 @@ export interface PullRequestImportService {
   detach(pullRequestId: string): PullRequestRow;
   /** Re-reads GitHub: a moved head re-pins the review, a merge or a close settles it. */
   refresh(pullRequestId: string): Promise<PullRequestRow>;
-  /** The same re-read with the facts the mirror does not keep — commits, per-check results, submitted reviews. */
   overview(pullRequestId: string): Promise<PullRequestOverviewRead>;
 }
 

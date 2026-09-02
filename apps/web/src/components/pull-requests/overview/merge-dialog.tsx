@@ -20,14 +20,12 @@ const METHOD_CONSEQUENCE = {
 export interface PullRequestMergeDialogProps {
   overview: PullRequestOverview;
   method: PullRequestMergeMethod;
-  merging: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export function PullRequestMergeDialog({
   overview,
   method,
-  merging,
   onOpenChange,
 }: PullRequestMergeDialogProps) {
   const pullRequest = overview.pull_request;
@@ -45,11 +43,6 @@ export function PullRequestMergeDialog({
           <MetaList
             items={[
               {
-                key: "method",
-                label: "Method",
-                value: method === "squash" ? "Squash" : "Merge commit",
-              },
-              {
                 key: "head",
                 label: "Head",
                 value: (
@@ -66,8 +59,11 @@ export function PullRequestMergeDialog({
             ]}
           />
           <p className="text-xs text-text-tertiary">
-            {METHOD_CONSEQUENCE[method]} Otomat then closes this issue’s cycle and cleans its
-            workspace if that is its policy. This cannot be undone from here.
+            {METHOD_CONSEQUENCE[method]}{" "}
+            {pullRequest.issue_id === null
+              ? null
+              : "Otomat then closes this issue’s cycle and cleans its workspace if that is its policy. "}
+            This cannot be undone from here.
           </p>
         </DialogBody>
         <DialogFooter>
@@ -78,8 +74,7 @@ export function PullRequestMergeDialog({
             type="button"
             size="sm"
             variant="primary"
-            loading={merging}
-            disabled={merging}
+            loading={merge.isPending}
             onClick={() => {
               merge.mutate({ method }, { onSuccess: () => onOpenChange(false) });
             }}

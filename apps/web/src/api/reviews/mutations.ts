@@ -101,7 +101,6 @@ export function useAddReviewComment(target: ReviewTarget) {
   });
 }
 
-/** The daemon answers the whole surface, so one response seeds the detail, its comments and the counters. */
 export function useSubmitReview(target: ReviewTarget) {
   const client = useQueryClient();
   const keys = useQueryKeys();
@@ -112,6 +111,9 @@ export function useSubmitReview(target: ReviewTarget) {
       client.invalidateQueries({ queryKey: keys.reviewDetail(target) });
       if (target.kind === "pull_request") {
         client.invalidateQueries({ queryKey: keys.pullRequest(target.id) });
+        client.invalidateQueries({ queryKey: keys.pullRequestOverview(target.id) });
+      } else {
+        client.invalidateQueries({ queryKey: keys.runPullRequest(target.id) });
       }
       client.invalidateQueries({ queryKey: keys.reviews });
       client.invalidateQueries({ queryKey: keys.activity });

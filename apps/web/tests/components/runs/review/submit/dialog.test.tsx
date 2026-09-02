@@ -13,10 +13,11 @@ import { reviewedFile } from "#support/reviewed-file";
 
 const submitted: SubmitReviewRequest[] = [];
 let refusal: Error | null = null;
+let pending = false;
 
 vi.mock("@web/api/reviews/mutations", () => ({
   useSubmitReview: () => ({
-    isPending: false,
+    isPending: pending,
     mutate: (request: SubmitReviewRequest, options?: { onSuccess: () => void }) => {
       submitted.push(request);
       if (refusal === null) options?.onSuccess();
@@ -32,9 +33,10 @@ const OPEN_DETAIL = reviewDetail([reviewedFile({ file_path: "a.ts", reviewed: tr
   submission: { events: ["comment", "request_changes"], reason: "You opened this pull request." },
 });
 
-async function openDialog(detail = OPEN_DETAIL) {
+async function openDialog(detail = OPEN_DETAIL, inFlight = false) {
   submitted.length = 0;
   refusal = null;
+  pending = inFlight;
   const mounted = await mount(<SubmitReviewDialog target={TARGET} detail={detail} />);
   await act(async () => {
     findButton("Submit review")?.click();
@@ -43,9 +45,7 @@ async function openDialog(detail = OPEN_DETAIL) {
 }
 
 function summary(): HTMLTextAreaElement {
-  const field = document.body.querySelector<HTMLTextAreaElement>(
-    'textarea[aria-label="Review summary"]',
-  );
+  const field = document.body.querySelector<HTMLTextAreaElement>("textarea");
   if (field === null) throw new Error("no summary field rendered");
   return field;
 }
@@ -93,6 +93,25 @@ it("keeps the composer open with its text when GitHub refuses the submission", a
 
   expect(submitted).toHaveLength(1);
   expect(summary().value).toBe("Kept on refusal.");
+  await mounted.cleanup();
+});
+
+it("takes no second submission while the first is in flight", async () => {
+  const mounted = await openDialog(OPEN_DETAIL, true);
+  await act(async () => {
+    setTextareaValue(summary(), "Once.");
+  });
+  await act(async () => {
+    findButton("Submit to GitHub")?.click();
+  });
+  await act(async () => {
+    summary().dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", metaKey: true, bubbles: true }),
+    );
+  });
+
+  expect(submitted).toEqual([]);
+  expect(findButton("Submit to GitHub")?.disabled).toBe(true);
   await mounted.cleanup();
 });
 

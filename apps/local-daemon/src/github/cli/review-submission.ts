@@ -1,7 +1,7 @@
 import type { PullRequestReviewEvent } from "@otomat/domain";
 import { z } from "zod";
 
-import { GitHubCliError } from "../errors.js";
+import { parseGitHubJson } from "../parse.js";
 import type { CommandRunner } from "../types.js";
 import { assertPublicationSucceeded } from "./commands.js";
 import type { ReviewSubmissionInput } from "./contract.js";
@@ -38,12 +38,12 @@ export async function submitPullRequestReview(
     }),
   });
   assertPublicationSucceeded(result, "github_review_submit_failed", "GitHub refused the review.");
-  try {
-    return { url: submittedSchema.parse(JSON.parse(result.stdout)).html_url };
-  } catch (error) {
-    throw new GitHubCliError(
+  return {
+    url: parseGitHubJson(
+      result.stdout,
+      (payload) => submittedSchema.parse(payload).html_url,
       "github_review_unreadable",
-      `GitHub accepted the review but its answer could not be read: ${String(error)}`,
-    );
-  }
+      "GitHub accepted the review but its answer could not be read.",
+    ),
+  };
 }

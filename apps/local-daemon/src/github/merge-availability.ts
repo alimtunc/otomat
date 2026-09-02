@@ -12,60 +12,45 @@ export interface MergeAvailabilityInput {
   viewerLogin: string | null;
 }
 
-interface StateRefusal {
-  blocker: PullRequestMergeBlocker;
-  reason: (row: PullRequestRow) => string;
-}
-
 /** An unproven branch is someone else's, which Otomat reviews and never moves. */
 function authorized(row: PullRequestRow, viewerLogin: string | null): boolean {
   if (row.provenance === "otomat") return true;
   return row.author_login !== null && row.author_login === viewerLogin;
 }
 
-const CONFLICTING: StateRefusal = {
-  blocker: "conflicting",
-  reason: (row) => `${row.head_ref} conflicts with ${row.base_ref}; resolve the conflict first.`,
-};
-
-const MERGE_STATE_REFUSALS = new Map<string, StateRefusal>([
-  ["DIRTY", CONFLICTING],
-  [
-    "BEHIND",
-    {
-      blocker: "behind_base",
-      reason: (row) => `${row.head_ref} is behind ${row.base_ref}; update it before merging.`,
-    },
-  ],
-  [
-    "BLOCKED",
-    {
-      blocker: "blocked",
-      reason: () => "GitHub blocks this merge: a required review or check has not passed.",
-    },
-  ],
-  [
-    "UNKNOWN",
-    {
-      blocker: "unknown",
-      reason: () => "GitHub is still computing whether this pull request can merge.",
-    },
-  ],
-]);
-
 function refuse(blocker: PullRequestMergeBlocker, reason: string): PullRequestMergeAvailability {
   return { methods: [], blocker, reason };
 }
 
-function stateRefusal(row: PullRequestRow, mergeState: string): StateRefusal | null {
-  if (row.mergeable === "conflicting") return CONFLICTING;
-  if (row.checks_state === "pending") {
-    return {
-      blocker: "checks_pending",
-      reason: () => "Checks are still running on this pull request.",
-    };
+function stateRefusal(
+  row: PullRequestRow,
+  mergeState: string,
+): PullRequestMergeAvailability | null {
+  if (row.mergeable === "conflicting" || mergeState === "DIRTY") {
+    return refuse(
+      "conflicting",
+      `${row.head_ref} conflicts with ${row.base_ref}; resolve the conflict first.`,
+    );
   }
-  return MERGE_STATE_REFUSALS.get(mergeState) ?? null;
+  if (row.checks_state === "pending") {
+    return refuse("checks_pending", "Checks are still running on this pull request.");
+  }
+  switch (mergeState) {
+    case "BEHIND":
+      return refuse(
+        "behind_base",
+        `${row.head_ref} is behind ${row.base_ref}; update it before merging.`,
+      );
+    case "BLOCKED":
+      return refuse(
+        "blocked",
+        "GitHub blocks this merge: a required review or check has not passed.",
+      );
+    case "UNKNOWN":
+      return refuse("unknown", "GitHub is still computing whether this pull request can merge.");
+    default:
+      return null;
+  }
 }
 
 /** Every refusal names its own reason, so an absent Merge button is always explained. */
@@ -87,11 +72,11 @@ export function mergeAvailability(input: MergeAvailabilityInput): PullRequestMer
     const state = row.status === "draft" ? "still a draft" : row.status;
     return refuse("not_open", `Pull request #${row.number} is ${state}, so it cannot be merged.`);
   }
-  const refusal = stateRefusal(row, input.mergeState);
-  if (refusal !== null) return refuse(refusal.blocker, refusal.reason(row));
-  return {
-    methods: policy.methods,
-    blocker: null,
-    reason: `Pull request #${row.number} can be merged into ${row.base_ref}.`,
-  };
+  return (
+    stateRefusal(row, input.mergeState) ?? {
+      methods: policy.methods,
+      blocker: null,
+      reason: `Pull request #${row.number} can be merged into ${row.base_ref}.`,
+    }
+  );
 }

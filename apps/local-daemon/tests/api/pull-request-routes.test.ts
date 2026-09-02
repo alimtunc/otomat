@@ -12,7 +12,7 @@ import { GitHubPublicationError } from "#github";
 
 import { json, makeApiApp, post, request } from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
-import { stubGitHubService } from "../support/github.js";
+import { providerPullRequest, stubGitHubService } from "../support/github.js";
 
 let fix: TestDb;
 let refreshed: string[];
@@ -117,12 +117,17 @@ function overviewApp(merge: PullRequestMergeAvailability) {
       pullRequestOverview: async () => ({
         row: seededRow(),
         repository: "acme/otomat",
-        checks: [{ name: "build", state: "passing", url: null }],
-        reviews: [{ author_login: "octocat", state: "approved", submitted_at: null }],
-        commits: 3,
-        changedFiles: 2,
-        additions: 12,
-        deletions: 4,
+        cwd: "/repo",
+        facts: {
+          pullRequest: providerPullRequest({ number: 7 }),
+          checks: [{ name: "build", state: "passing", url: null }],
+          reviews: [{ author_login: "octocat", state: "approved", submitted_at: null }],
+          commits: 3,
+          changedFiles: 2,
+          additions: 12,
+          deletions: 4,
+          mergeState: "CLEAN",
+        },
         behindBase: false,
         merge,
       }),

@@ -9,10 +9,11 @@ import {
   DialogTitle,
   DialogTrigger,
   Field,
+  FieldControl,
   FieldLabel,
-  Icon,
   Textarea,
 } from "@otomat/ui";
+import { SubmitReviewButton } from "@web/components/runs/review/submit/button";
 import { SubmitReviewEventControl } from "@web/components/runs/review/submit/event-control";
 import { useSubmitReviewForm } from "@web/components/runs/review/submit/use-form";
 import { submitOnCmdEnter } from "@web/lib/form";
@@ -35,24 +36,12 @@ export function SubmitReviewDialog({ target, detail }: SubmitReviewDialogProps) 
   const reviewed = detail.reviewed_files.filter((file) => file.reviewed);
 
   if (detail.submission.events.length === 0) {
-    return (
-      <Button size="sm" variant="primary" disabled title={detail.submission.reason}>
-        <Icon name="git-pull-request" aria-hidden />
-        Submit review
-      </Button>
-    );
+    return <SubmitReviewButton disabled title={detail.submission.reason} />;
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          <Button size="sm" variant="primary">
-            <Icon name="git-pull-request" aria-hidden />
-            Submit review
-          </Button>
-        }
-      />
+      <DialogTrigger render={<SubmitReviewButton />} />
       <DialogContent aria-label="Submit a review to GitHub">
         <DialogHeader>
           <DialogTitle>Submit review</DialogTitle>
@@ -67,17 +56,18 @@ export function SubmitReviewDialog({ target, detail }: SubmitReviewDialogProps) 
             {(field) => (
               <Field>
                 <FieldLabel>Summary</FieldLabel>
-                <Textarea
-                  aria-label="Review summary"
-                  rows={5}
-                  value={field.state.value}
-                  placeholder="Optional — what the author should know before reading the comments."
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  onBlur={field.handleBlur}
-                  onKeyDown={submitOnCmdEnter(() => {
-                    if (!submitting) void form.handleSubmit();
-                  })}
-                />
+                <FieldControl>
+                  <Textarea
+                    rows={5}
+                    value={field.state.value}
+                    placeholder="Optional — what the author should know before reading the comments."
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    onBlur={field.handleBlur}
+                    onKeyDown={submitOnCmdEnter(() => {
+                      if (!submitting) void form.handleSubmit();
+                    })}
+                  />
+                </FieldControl>
               </Field>
             )}
           </form.Field>
@@ -105,7 +95,7 @@ export function SubmitReviewDialog({ target, detail }: SubmitReviewDialogProps) 
                 size="sm"
                 variant="primary"
                 loading={submitting}
-                disabled={submitting || !canSubmit}
+                disabled={!canSubmit}
                 title={typeof refusal === "string" ? refusal : undefined}
                 onClick={() => void form.handleSubmit()}
               >
