@@ -1,48 +1,59 @@
 // @vitest-environment happy-dom
 import {
   countWorkspaces,
-  type ExecutionHostCallResult,
-  type ExecutionHostId,
-  type OtomatDesktopBridge,
+  type ProjectContract,
   type WorkspaceCleanupResult,
   type WorkspaceEntry,
   type WorkspaceInventory,
   type WorkspaceReconcileReport,
   type WorkspaceSettings,
 } from "@otomat/domain";
-import { hostKeys } from "@web/api/query-keys";
 import { WorkspacesSection } from "@web/components/settings/workspaces/section";
 import { act } from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { fakeDesktopBridge, twoHostSnapshot } from "#support/desktop-bridge";
+import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { setInputValue } from "#support/dom-events";
 import { findButton, findLabelled } from "#support/dom-queries";
-import { testQueryClient } from "#support/query";
 import { mountRoutedWithQuery } from "#support/router";
 import { workspaceEntry as entry } from "#support/workspace";
 
-const listWorkspaces = vi.fn<() => Promise<WorkspaceInventory>>();
+const PROJECT: ProjectContract = {
+  id: "proj-1",
+  name: "otomat",
+  root_path: "/tmp/otomat",
+  has_repository: true,
+};
+
+let projects: ProjectContract[] = [PROJECT];
+
+const listWorkspaces = vi.fn<(params: { projectId?: string }) => Promise<WorkspaceInventory>>();
 const reconcileWorkspaces = vi.fn<() => Promise<WorkspaceReconcileReport>>();
 const cleanupWorkspace = vi.fn<(worktreeId: string) => Promise<WorkspaceCleanupResult>>();
-const workspaceSettings = vi.fn<() => Promise<WorkspaceSettings>>(async () => ({
+const workspaceSettings = vi.fn<(projectId: string) => Promise<WorkspaceSettings>>(async () => ({
   auto_delete_after_merge: true,
 }));
-const setWorkspaceSettings = vi.fn<(settings: WorkspaceSettings) => Promise<WorkspaceSettings>>(
-  async (settings) => settings,
-);
+const setWorkspaceSettings = vi.fn<
+  (projectId: string, settings: WorkspaceSettings) => Promise<WorkspaceSettings>
+>(async (_projectId, settings) => settings);
 
 vi.mock("@web/api/client", () => ({
   daemon: {
-    listWorkspaces: () => listWorkspaces(),
+    listProjects: () => Promise.resolve(projects),
+    listWorkspaces: (params: { projectId?: string }) => listWorkspaces(params),
     reconcileWorkspaces: () => reconcileWorkspaces(),
     cleanupWorkspace: (worktreeId: string) => cleanupWorkspace(worktreeId),
-    workspaceSettings: () => workspaceSettings(),
-    setWorkspaceSettings: (settings: WorkspaceSettings) => setWorkspaceSettings(settings),
+    workspaceSettings: (projectId: string) => workspaceSettings(projectId),
+    setWorkspaceSettings: (projectId: string, settings: WorkspaceSettings) =>
+      setWorkspaceSettings(projectId, settings),
   },
 }));
 
 const cleanups: Array<() => Promise<void>> = [];
+
+beforeEach(() => {
+  projects = [PROJECT];
+});
 
 afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
@@ -50,30 +61,33 @@ afterEach(async () => {
   delete window.otomat;
   vi.clearAllMocks();
   workspaceSettings.mockResolvedValue({ auto_delete_after_merge: true });
+  setWorkspaceSettings.mockImplementation(async (_projectId, settings) => settings);
 });
 
 function inventory(entries: WorkspaceEntry[]): WorkspaceInventory {
   return { entries, counts: countWorkspaces(entries) };
 }
 
-async function renderSection(entries: WorkspaceEntry[], client = testQueryClient()) {
+async function renderSection(entries: WorkspaceEntry[]) {
   listWorkspaces.mockResolvedValue(inventory(entries));
-  const mounted = await mountRoutedWithQuery(<WorkspacesSection />, client);
+  const mounted = await mountRoutedWithQuery(<WorkspacesSection />);
   cleanups.push(mounted.cleanup);
   return mounted;
 }
 
-function withRemoteHost(
-  overrides: Partial<OtomatDesktopBridge["executionHost"]>,
-  activeId: ExecutionHostId = "local",
-) {
-  const bridge = fakeDesktopBridge({ executionHostId: activeId });
-  Object.assign(bridge.executionHost, {
-    snapshot: () => Promise.resolve(twoHostSnapshot({ active_id: activeId })),
-    ...overrides,
-  });
-  window.otomat = bridge;
-}
+it("asks its host for the selected project's worktrees, and for no others", async () => {
+  await renderSection([entry({ id: "a" })]);
+
+  expect(listWorkspaces).toHaveBeenCalledWith({ projectId: "proj-1" });
+});
+
+it("asks for nothing while no project is selected", async () => {
+  projects = [];
+  await renderSection([]);
+
+  expect(document.body.textContent).toContain("No project selected");
+  expect(listWorkspaces).not.toHaveBeenCalled();
+});
 
 it("counts the maintenance states and says why each workspace is where it is", async () => {
   await renderSection([
@@ -100,6 +114,24 @@ it("counts the maintenance states and says why each workspace is where it is", a
         ?.includes("manages nothing here. Remove it yourself if you no longer need it."),
     ),
   ).toBe(true);
+});
+
+it("puts the path last, behind what identifies the row, and keeps it copyable", async () => {
+  await renderSection([entry({ id: "a" })]);
+
+  expect([...document.body.querySelectorAll("th")].map((head) => head.textContent)).toEqual([
+    "State",
+    "Issue",
+    "Branch",
+    "Git",
+    "PR",
+    "Updated",
+    "Path",
+    "",
+  ]);
+  expect(findLabelled("Worktree path: /tmp/worktrees/a")).toBeDefined();
+  expect(findLabelled("Copy Worktree path")).toBeDefined();
+  expect(document.body.querySelector("table")?.className).toContain("table-fixed");
 });
 
 it("offers a deletion for the workspaces Otomat still holds, and none for the rest", async () => {
@@ -175,142 +207,56 @@ it("reports exactly what a reconciliation did", async () => {
   expect(document.body.textContent).toContain("1 cleaned");
 });
 
-it("persists the auto-delete setting the operator turned off", async () => {
+it("persists the auto-delete setting the operator turned off for this project", async () => {
   await renderSection([]);
-  const toggle = findLabelled("Automatically delete workspaces after merge");
+  const toggle = findLabelled("Automatically delete this project's workspaces after merge");
   if (toggle === undefined) throw new Error("auto-delete switch not found");
 
   await act(async () => {
     toggle.click();
   });
 
-  expect(setWorkspaceSettings).toHaveBeenCalledWith({ auto_delete_after_merge: false });
+  expect(workspaceSettings).toHaveBeenCalledWith("proj-1");
+  expect(setWorkspaceSettings).toHaveBeenCalledWith("proj-1", { auto_delete_after_merge: false });
 });
 
-it("shows both hosts' workspaces, keeping same-path rows distinct under their owner", async () => {
-  withRemoteHost({
-    readWorkspaces: () =>
-      Promise.resolve({
-        ok: true,
-        value: inventory([
-          entry({ id: "twin", repository_name: "otomat-copy", branch: "otomat/run/twin" }),
-        ]),
-      }),
-  });
-  await renderSection([entry({ id: "twin", branch: "otomat/run/twin" })]);
-
-  expect(
-    [...document.body.querySelectorAll("section")].map(
-      (host) => host.querySelector("span")?.textContent,
-    ),
-  ).toEqual(["Local", "otomat-vps"]);
-  expect(document.body.textContent).toContain("otomat-copy");
-  expect(
-    [...document.body.querySelectorAll("td")].filter((cell) =>
-      cell.textContent?.includes("otomat/run/twin"),
-    ),
-  ).toHaveLength(2);
-});
-
-it("counts every host's workspaces in the global counters", async () => {
-  withRemoteHost({
-    readWorkspaces: () =>
-      Promise.resolve({ ok: true, value: inventory([entry({ id: "r1" }), entry({ id: "r2" })]) }),
-  });
-  await renderSection([entry({ id: "l1" })]);
-
-  const counter = [...document.body.querySelectorAll("button")].find((button) =>
-    button.textContent?.startsWith("Cleanup required"),
-  );
-  expect(counter?.textContent).toContain("3");
-});
-
-it("keeps an unreachable host's last known workspaces behind a stale notice", async () => {
-  const readWorkspaces = vi.fn(() =>
-    Promise.resolve<ExecutionHostCallResult<WorkspaceInventory>>({
-      ok: true,
-      value: inventory([entry({ id: "remote-1", branch: "otomat/run/remote" })]),
-    }),
-  );
-  withRemoteHost({ readWorkspaces });
-  const client = testQueryClient();
-  await renderSection([], client);
-
-  readWorkspaces.mockResolvedValue({
-    ok: false,
-    message: "The remote host is not connected yet. Try again once its tunnel is up.",
-  });
-  await act(async () => {
-    await client.refetchQueries({ queryKey: hostKeys("remote").workspaces });
-  });
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-
-  expect(document.body.textContent).toContain("Couldn’t refresh — showing data from");
-  expect(document.body.textContent).toContain("otomat/run/remote");
-});
-
-it("reads the local host through the bridge when the remote host is the active one", async () => {
-  const readWorkspaces = vi.fn((hostId: ExecutionHostId) =>
-    Promise.resolve<ExecutionHostCallResult<WorkspaceInventory>>({
-      ok: true,
-      value: inventory(hostId === "local" ? [entry({ id: "on-local" })] : []),
-    }),
-  );
-  withRemoteHost({ readWorkspaces }, "remote");
+it("says so when the daemon refuses the auto-delete change", async () => {
+  setWorkspaceSettings.mockRejectedValue(new Error("project_not_found"));
   await renderSection([]);
 
-  expect(readWorkspaces).toHaveBeenCalledWith("local");
-  expect(readWorkspaces).not.toHaveBeenCalledWith("remote");
-  expect(document.body.textContent).toContain("/tmp/worktrees/on-local");
+  await act(async () => {
+    findLabelled("Automatically delete this project's workspaces after merge")?.click();
+  });
+
+  expect(document.body.querySelector("[role='alert']")?.textContent).toContain(
+    "Could not save this setting",
+  );
 });
 
-it("sends a reconcile and a cleanup to the host that owns the worktree", async () => {
-  const reconcileOnHost = vi.fn(() =>
-    Promise.resolve<ExecutionHostCallResult<WorkspaceReconcileReport>>({
-      ok: true,
-      value: {
-        pull_requests_refreshed: 0,
-        pruned: 0,
-        converged: 0,
-        cleaned: 1,
-        skipped: 0,
-        failed: 0,
-        inventory: inventory([]),
-      },
-    }),
-  );
-  const cleanupOnHost = vi.fn(() =>
-    Promise.resolve<ExecutionHostCallResult<WorkspaceCleanupResult>>({
-      ok: true,
-      value: { outcome: "cleaned", blocker: null, message: "Deleted.", entry: null },
-    }),
-  );
-  withRemoteHost({
-    readWorkspaces: () =>
-      Promise.resolve({ ok: true, value: inventory([entry({ id: "remote-1" })]) }),
-    reconcileWorkspaces: reconcileOnHost,
-    cleanupWorkspace: cleanupOnHost,
+it("names the host that holds the project, and reconciles on that host alone", async () => {
+  const bridge = fakeDesktopBridge({
+    executionHostId: "remote",
+    executionHostSshAlias: "otomat-vps",
   });
-  await renderSection([]);
+  const viaBridge = vi.spyOn(bridge.executionHost, "reconcileWorkspaces");
+  window.otomat = bridge;
+  reconcileWorkspaces.mockResolvedValue({
+    pull_requests_refreshed: 0,
+    pruned: 0,
+    converged: 0,
+    cleaned: 0,
+    skipped: 0,
+    failed: 0,
+    inventory: inventory([]),
+  });
+  await renderSection([entry({ id: "a" })]);
 
-  const [, remoteReconcile] = [...document.body.querySelectorAll("button")].filter(
-    (button) => button.textContent?.trim() === "Reconcile worktrees",
-  );
-  if (remoteReconcile === undefined) throw new Error("the remote host has no Reconcile button");
+  const host = document.body.querySelector("section");
+  expect(host?.querySelector("span")?.textContent).toBe("otomat-vps");
   await act(async () => {
-    remoteReconcile.click();
-  });
-  await act(async () => {
-    findLabelled("Delete this workspace…")?.click();
-  });
-  await act(async () => {
-    findButton("Delete workspace")?.click();
+    findButton("Reconcile worktrees")?.click();
   });
 
-  expect(reconcileOnHost).toHaveBeenCalledWith("remote");
-  expect(cleanupOnHost).toHaveBeenCalledWith("remote", "remote-1");
-  expect(reconcileWorkspaces).not.toHaveBeenCalled();
-  expect(cleanupWorkspace).not.toHaveBeenCalled();
+  expect(reconcileWorkspaces).toHaveBeenCalledTimes(1);
+  expect(viaBridge).not.toHaveBeenCalled();
 });

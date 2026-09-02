@@ -61,7 +61,6 @@ export async function reconcileWorkspaces(
   context: WorkspaceContext,
 ): Promise<WorkspaceReconcileReport> {
   const refreshed = await refreshPullRequests(context);
-  const autoDelete = readAutoDeleteWorkspaces(context.db);
   const tally: Tally = { pruned: 0, converged: 0, cleaned: 0, skipped: 0, failed: 0 };
   const holders = cycleHolders(context.db);
 
@@ -69,6 +68,7 @@ export async function reconcileWorkspaces(
     const binding = context.repositories.forRepository(repository.id);
     if (!binding || !isRepositoryRoot(binding.rootPath)) continue;
     tally.pruned += pruneWorktrees(binding.rootPath);
+    const autoDelete = readAutoDeleteWorkspaces(context.db, repository.project_id);
     for (const entry of repositoryInventory(context, repository, holders)) {
       applyEntry(context, entry, autoDelete, tally);
     }

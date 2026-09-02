@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { timestamps } from "./shared.js";
@@ -14,9 +13,6 @@ export const daemonSettings = sqliteTable("daemon_settings", {
   pr_generator_runtime: text("pr_generator_runtime"),
   pr_generator_model: text("pr_generator_model"),
   pr_generator_options_json: text("pr_generator_options_json", { mode: "json" }),
-  auto_delete_workspaces: integer("auto_delete_workspaces", { mode: "boolean" })
-    .notNull()
-    .default(sql`1`),
   // Resolved by the last pull-request sync: the account the review inbox is classified for.
   github_viewer_login: text("github_viewer_login"),
   github_viewer_teams_json: text("github_viewer_teams_json", { mode: "json" }).$type<

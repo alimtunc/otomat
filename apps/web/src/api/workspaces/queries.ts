@@ -1,25 +1,14 @@
-import type { ExecutionHostDescriptor, WorkspaceInventory } from "@otomat/domain";
-import { skipToken, useQueries, useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
-import { onExecutionHost } from "@web/api/host-call";
-import { hostKeys } from "@web/api/query-keys";
 import { useQueryKeys } from "@web/api/use-query-keys";
 
-/** One query per host, so a host that stops answering keeps its last inventory and its own staleness. */
-export function useHostWorkspaces(
-  hosts: readonly ExecutionHostDescriptor[],
-): UseQueryResult<WorkspaceInventory>[] {
-  return useQueries({
-    queries: hosts.map((host) => ({
-      queryKey: hostKeys(host.id).workspaces,
-      queryFn: () =>
-        onExecutionHost(
-          host.id,
-          () => daemon.listWorkspaces(),
-          (executionHost) => executionHost.readWorkspaces(host.id),
-        ),
-      staleTime: 15_000,
-    })),
+/** A project lives on one host, so its worktrees are read from the daemon that owns it and no other. */
+export function useProjectWorkspaces(projectId: string | undefined) {
+  const keys = useQueryKeys();
+  return useQuery({
+    queryKey: keys.workspacesForProject(projectId),
+    queryFn: projectId === undefined ? skipToken : () => daemon.listWorkspaces({ projectId }),
+    staleTime: 15_000,
   });
 }
 
@@ -32,11 +21,11 @@ export function useWorkspacesForRun(runId: string | null) {
   });
 }
 
-export function useWorkspaceSettings() {
+export function useWorkspaceSettings(projectId: string) {
   const keys = useQueryKeys();
   return useQuery({
-    queryKey: keys.workspaceSettings,
-    queryFn: () => daemon.workspaceSettings(),
+    queryKey: keys.workspaceSettings(projectId),
+    queryFn: () => daemon.workspaceSettings(projectId),
     staleTime: 30_000,
   });
 }

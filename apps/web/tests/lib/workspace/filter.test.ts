@@ -1,8 +1,4 @@
-import {
-  DEFAULT_WORKSPACES_FILTER,
-  filterWorkspaces,
-  groupWorkspacesByRepository,
-} from "@web/lib/workspace/filter";
+import { DEFAULT_WORKSPACES_FILTER, filterWorkspaces } from "@web/lib/workspace/filter";
 import type { WorkspaceRow } from "@web/lib/workspace/row";
 import { expect, it } from "vitest";
 
@@ -50,17 +46,6 @@ it("keeps an unmanaged worktree searchable even though it names no issue", () =>
   });
 
   expect(filterWorkspaces([external], { search: "by-hand", states: [] })).toHaveLength(1);
-});
-
-it("groups by repository, keeping every entry under the checkout it belongs to", () => {
-  const groups = groupWorkspacesByRepository([
-    entry({ id: "a" }),
-    entry({ id: "b", repository_id: "repo-2", repository_name: "other" }),
-    entry({ id: "c" }),
-  ]);
-
-  expect(groups.map((group) => group.name)).toEqual(["otomat", "other"]);
-  expect(groups[0].rows.map((row) => row.id)).toEqual(["a", "c"]);
 });
 
 it("searches the owning host, so its label narrows to that host's rows alone", () => {

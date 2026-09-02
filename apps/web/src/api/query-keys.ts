@@ -111,8 +111,10 @@ export function hostKeys(host: ExecutionHostId) {
     pullRequestMerge: (id: string) => [host, "pull-request", id, "merge"] as const,
     pullRequestRefresh: (id: string) => [host, "pull-request", id, "refresh"] as const,
     workspaces: [host, "workspaces"] as const,
+    workspacesForProject: (projectId?: string) =>
+      [host, "workspaces", "project", projectId ?? null] as const,
     workspacesForRun: (runId: string | null) => [host, "workspaces", "run", runId] as const,
-    workspaceSettings: [host, "settings", "workspaces"] as const,
+    workspaceSettings: (projectId: string) => [host, "settings", "workspaces", projectId] as const,
     reviews: [host, "reviews"] as const,
     pullRequestInbox: (projectId?: string) =>
       [host, "reviews", "project", projectId ?? null] as const,

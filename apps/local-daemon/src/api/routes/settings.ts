@@ -1,4 +1,5 @@
 import {
+  getProject,
   readAutoDeleteWorkspaces,
   readExecutionDefaults,
   readPullRequestGenerator,
@@ -36,13 +37,17 @@ export function createSettingsRoutes(deps: ApiDeps): Hono {
     c.json(deps.supervisor.setLaunchHold(c.req.valid("json").held)),
   );
 
-  routes.get("/workspaces", (c) =>
-    c.json({ auto_delete_after_merge: readAutoDeleteWorkspaces(deps.db) }),
-  );
+  routes.get("/workspaces", (c) => {
+    const project = getProject(deps.db, c.req.query("project_id") ?? "");
+    if (!project) return c.json({ error: "project_not_found" }, 404);
+    return c.json({ auto_delete_after_merge: project.auto_delete_workspaces });
+  });
 
   routes.put("/workspaces", validateJson(workspaceSettingsSchema), (c) => {
-    writeAutoDeleteWorkspaces(deps.db, c.req.valid("json").auto_delete_after_merge);
-    return c.json({ auto_delete_after_merge: readAutoDeleteWorkspaces(deps.db) });
+    const project = getProject(deps.db, c.req.query("project_id") ?? "");
+    if (!project) return c.json({ error: "project_not_found" }, 404);
+    writeAutoDeleteWorkspaces(deps.db, project.id, c.req.valid("json").auto_delete_after_merge);
+    return c.json({ auto_delete_after_merge: readAutoDeleteWorkspaces(deps.db, project.id) });
   });
 
   routes.get("/execution-defaults", (c) => c.json(readExecutionDefaults(deps.db)));

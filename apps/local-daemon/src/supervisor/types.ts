@@ -110,6 +110,7 @@ export interface SupervisorConfig {
 
 export interface WorkspaceScope {
   runId?: string;
+  projectId?: string;
 }
 
 export interface Supervisor {

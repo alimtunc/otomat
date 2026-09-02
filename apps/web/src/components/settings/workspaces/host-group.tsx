@@ -5,32 +5,21 @@ import { HostRow } from "@web/components/settings/execution-host/host-row";
 import { ReconcileWorkspacesButton } from "@web/components/settings/workspaces/reconcile-button";
 import { WorkspacesTable } from "@web/components/settings/workspaces/table";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
-import {
-  filterWorkspaces,
-  groupWorkspacesByRepository,
-  type WorkspacesFilter,
-} from "@web/lib/workspace/filter";
+import { filterWorkspaces, type WorkspacesFilter } from "@web/lib/workspace/filter";
 
 export interface WorkspaceHostGroupProps {
   host: ExecutionHostDescriptor;
-  active: boolean;
   status: RemoteHostStatus | null;
   inventory: UseQueryResult<WorkspaceInventory>;
   filter: WorkspacesFilter;
 }
 
-export function WorkspaceHostGroup({
-  host,
-  active,
-  status,
-  inventory,
-  filter,
-}: WorkspaceHostGroupProps) {
+export function WorkspaceHostGroup({ host, status, inventory, filter }: WorkspaceHostGroupProps) {
   return (
     <section className="divide-y divide-border-subtle rounded-lg border border-border-subtle bg-card">
       <HostRow
         host={host}
-        active={active}
+        active
         status={status}
         action={<ReconcileWorkspacesButton hostId={host.id} />}
       />
@@ -47,19 +36,21 @@ export function WorkspaceHostGroup({
         }
       >
         {(data) => {
-          const rows = data.entries.map((entry) => ({ ...entry, host }));
-          const groups = groupWorkspacesByRepository(filterWorkspaces(rows, filter));
-          if (rows.length === 0) {
+          const rows = filterWorkspaces(
+            data.entries.map((entry) => ({ ...entry, host })),
+            filter,
+          );
+          if (data.entries.length === 0) {
             return (
               <EmptyState
                 icon="layers"
                 variant="compact"
                 title={`No worktree on ${host.label}`}
-                description="Launch a run to fork the first isolated worktree of this host."
+                description="Launch a run to fork this project's first isolated worktree."
               />
             );
           }
-          if (groups.length === 0) {
+          if (rows.length === 0) {
             return (
               <p className="px-4.5 py-3 text-xs text-text-tertiary">
                 {`No workspace on ${host.label} matches these filters.`}
@@ -68,7 +59,7 @@ export function WorkspaceHostGroup({
           }
           return (
             <div className="overflow-auto">
-              <WorkspacesTable groups={groups} />
+              <WorkspacesTable rows={rows} />
             </div>
           );
         }}
