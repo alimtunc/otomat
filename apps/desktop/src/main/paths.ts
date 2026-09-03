@@ -15,6 +15,8 @@ export interface AppPaths {
   /** Directory the packaged renderer is served from (index.html + assets); null in dev (Vite dev server). */
   webDist: string | null;
   splashHtml: string;
+  /** Menu-bar icon for background mode; its `@2x` sibling ships next to it. */
+  trayIcon: string;
   /** Template the preview sandbox's fixture repository is created from. */
   sandboxTemplateDir: string;
   cockpitPreload: string;
@@ -36,6 +38,7 @@ export function resolveAppPaths(): AppPaths {
       daemonEntry: join(daemonDir, "dist", "index.js"),
       webDist: join(process.resourcesPath, "web"),
       splashHtml: join(app.getAppPath(), "resources", "splash.html"),
+      trayIcon: join(app.getAppPath(), "resources", "tray-icon.png"),
       sandboxTemplateDir: join(app.getAppPath(), "resources", "sandbox"),
       cockpitPreload,
       splashPreload,
@@ -49,6 +52,7 @@ export function resolveAppPaths(): AppPaths {
     daemonEntry: join(repoRoot, "apps", "local-daemon", "dist", "index.js"),
     webDist: null,
     splashHtml: join(MAIN_DIR, "..", "..", "resources", "splash.html"),
+    trayIcon: join(MAIN_DIR, "..", "..", "resources", "tray-icon.png"),
     sandboxTemplateDir: join(MAIN_DIR, "..", "..", "resources", "sandbox"),
     cockpitPreload,
     splashPreload,

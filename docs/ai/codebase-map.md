@@ -645,6 +645,39 @@ tree when it really did time out. Every wait it makes is bounded and unref'd: a
 harness that lingers after the shutdown it observed, or that hangs on a child
 outliving SIGKILL, reads exactly like the defect it exists to catch.
 
+## Closing a Window Is Not Quitting (OTO-169)
+
+Closing the cockpit window used to quit, which stopped the daemon and every local
+run with it. `BackgroundMode` (`apps/desktop/src/main/background`) splits the two
+requests: a `close` is held until the answer is known, and what happens next depends
+on what the local daemon is actually doing. Nothing live quits straight away; live
+work asks — keep running, stop and quit, or cancel. Once a quit is underway the hold
+lifts, so the window closes with the app.
+
+Background mode hides the window instead of closing it. That is the whole reason
+reopening is instant and lands on the same run: the renderer, its SSE subscriptions
+and its router state were never torn down, so `reopen()` is a `show()`. The single
+instance lock already in `main/index.ts` makes `second-instance` and `activate`
+reach that same window rather than a second shell and a second daemon.
+
+A real quit takes the same gate. `before-quit` cannot ask anything synchronously, so
+a quit nothing has answered yet is refused once: the confirmation runs asynchronously
+and an approved quit re-issues `app.quit()`, which the open gate passes straight
+through to `QuitSequence` and its daemon shutdown. A quit that arrives while the
+operator is still answering is remembered and re-issued rather than dropped. SIGTERM
+skips the prompt through `forceQuit()` — no dialog can hold an OS shutdown, and
+outliving a logout is out of scope.
+
+The menu-bar item keeps no state of its own. It counts the runs the daemon already
+projects (`GET /api/activity`) into active / awaiting-you / failed, and only while no
+window is open; the read is bounded, because a daemon that never answers would
+otherwise hold the close and every quit behind it. "Awaiting you" is the three
+`awaiting_*` states, where a provider turn is blocked on an answer; `review_ready` is
+deliberately not counted, because quitting on it interrupts nothing, and neither are
+the operations projected alongside a run, which would count the same issue twice. The
+menu carries those counts, Open and Quit — never an issue title or a prompt, and its
+icon is a template image so the menu bar tints it for its own appearance.
+
 ## Replacing the Desktop App (OTO-33)
 
 The shell updates itself through `electron-updater` against GitHub Releases, but every decision

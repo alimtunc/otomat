@@ -6,6 +6,7 @@ import { resolveDevDataRoot } from "#main/dev-data-root";
 import type { AppPaths } from "#main/paths";
 import { createDesktopRuntime } from "#main/runtime";
 import { buildDaemonEnv } from "#shared/daemon-env";
+import { devAppPaths } from "#support/app-paths";
 import { scratchDir } from "#support/scratch-dir";
 
 vi.mock("electron", () => ({
@@ -17,16 +18,13 @@ vi.mock("electron", () => ({
 }));
 
 function devPaths(devDataRoot: string): AppPaths {
-  return {
-    packaged: false,
+  return devAppPaths({
     daemonEntry: "/nonexistent/daemon/index.js",
-    webDist: null,
     splashHtml: "/nonexistent/splash.html",
-    sandboxTemplateDir: "/tmp/otomat-sandbox-template",
     cockpitPreload: "/nonexistent/cockpit.cjs",
     splashPreload: "/nonexistent/splash.cjs",
     devDataRoot,
-  };
+  });
 }
 
 /** A shared root a developer's shell might export; no session may inherit it. */

@@ -4,6 +4,7 @@ import { DesktopApp } from "#main/app";
 import type { AppPaths } from "#main/paths";
 import { devBuildInfo } from "#shared/build-info";
 import { DEV_SERVER_ENV } from "#shared/constants";
+import { devAppPaths } from "#support/app-paths";
 import { scratchDir } from "#support/scratch-dir";
 
 interface Harness {
@@ -82,16 +83,13 @@ vi.mock("#main/windows", () => ({
 vi.mock("#shared/user-path", () => ({ resolveUserPath: () => "/usr/bin" }));
 
 function devPaths(devDataRoot: string | null): AppPaths {
-  return {
-    packaged: false,
+  return devAppPaths({
     daemonEntry: "/unused/daemon/index.js",
-    webDist: null,
     splashHtml: "/unused/splash.html",
-    sandboxTemplateDir: "/tmp/otomat-sandbox-template",
     cockpitPreload: "/unused/cockpit.cjs",
     splashPreload: "/unused/splash.cjs",
     devDataRoot,
-  };
+  });
 }
 
 async function startDesktop(url: string | null): Promise<void> {

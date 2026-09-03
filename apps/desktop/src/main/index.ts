@@ -30,8 +30,11 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   let desktop: DesktopApp | null = null;
 
-  registerQuitHandlers(app, process, () => desktop?.quit ?? null);
+  registerQuitHandlers(app, process, () =>
+    desktop === null ? null : { gate: desktop.background, sequence: desktop.quit },
+  );
   app.on("second-instance", () => desktop?.focusPrimary());
+  app.on("activate", () => desktop?.focusPrimary());
   app.on("window-all-closed", () => app.quit());
 
   app

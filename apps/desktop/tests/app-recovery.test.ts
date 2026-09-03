@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { devAppPaths } from "#support/app-paths";
 import { scratchDir } from "#support/scratch-dir";
 
 interface RecoveryHarness {
@@ -101,19 +102,9 @@ vi.mock("#main/windows", () => ({
 vi.mock("#shared/user-path", () => ({ resolveUserPath: () => "/usr/bin" }));
 
 import { DesktopApp } from "#main/app";
-import type { AppPaths } from "#main/paths";
 import { devBuildInfo } from "#shared/build-info";
 
-const DEV_PATHS: AppPaths = {
-  packaged: false,
-  daemonEntry: "/tmp/daemon.js",
-  webDist: null,
-  splashHtml: "/tmp/splash.html",
-  sandboxTemplateDir: "/tmp/otomat-sandbox-template",
-  cockpitPreload: "/tmp/cockpit.cjs",
-  splashPreload: "/tmp/splash.cjs",
-  devDataRoot: "/tmp/otomat-dev-root",
-};
+const DEV_PATHS = devAppPaths();
 
 afterEach(() => {
   harness.actions = null;
