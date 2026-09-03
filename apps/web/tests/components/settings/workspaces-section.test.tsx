@@ -228,8 +228,10 @@ it("says so when the daemon refuses the auto-delete change", async () => {
     findLabelled("Automatically delete this project's workspaces after merge")?.click();
   });
 
-  expect(document.body.querySelector("[role='alert']")?.textContent).toContain(
-    "Could not save this setting",
+  await vi.waitFor(() =>
+    expect(document.body.querySelector("[role='alert']")?.textContent).toContain(
+      "Could not save this setting",
+    ),
   );
 });
 
