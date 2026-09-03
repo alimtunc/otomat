@@ -12,6 +12,14 @@ it("names every reachable daemon origin and skips the ones not there yet", () =>
   expect(csp.headerFor(true)).not.toContain("null");
 });
 
+it("allows HTTPS images and videos without permitting insecure media", () => {
+  const header = new RendererCsp(() => []).headerFor(true);
+
+  expect(header).toContain("img-src 'self' data: blob: https:");
+  expect(header).toContain("media-src 'self' data: blob: https:");
+  expect(header).not.toContain("media-src 'self' data: blob: http:");
+});
+
 it("lets a switch land in place only on an origin the served document named", () => {
   let urls: Array<string | null> = [LOCAL, null];
   const csp = new RendererCsp(() => urls);

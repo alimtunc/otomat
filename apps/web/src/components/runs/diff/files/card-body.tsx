@@ -4,11 +4,12 @@ import {
   SplitSide,
   type DiffViewWithMultiSelectRef,
 } from "@git-diff-view/react";
-import type {
-  DiffFileContract,
-  DiffSide,
-  ReviewCommentContract,
-  ReviewTarget,
+import {
+  diffMediaTypeForPath,
+  type DiffFileContract,
+  type DiffSide,
+  type ReviewCommentContract,
+  type ReviewTarget,
 } from "@otomat/domain";
 import { useTheme } from "@otomat/ui";
 import {
@@ -16,7 +17,11 @@ import {
   extendDataFor,
   unrenderableNote,
 } from "@web/components/runs/diff/files/card.utils";
-import type { FileBlobsContext } from "@web/components/runs/diff/files/use-file-blobs";
+import { DiffMediaPreview } from "@web/components/runs/diff/files/media-preview";
+import type {
+  FileBlobsContext,
+  FileMediaContext,
+} from "@web/components/runs/diff/files/use-file-blobs";
 import { useGutterRange } from "@web/components/runs/diff/files/use-gutter-range";
 import type { DiffViewMode } from "@web/components/runs/diff/prefs/prefs";
 import { ReviewCommentCard } from "@web/components/runs/review/comment/card";
@@ -38,6 +43,7 @@ export interface DiffFileCardBodyProps {
   wrap: boolean;
   highlight: boolean;
   context: FileBlobsContext | null;
+  media: FileMediaContext | null;
   fullFile: boolean;
   comments: DiffFileComments;
   commentActions: DiffFileCommentActions;
@@ -50,6 +56,7 @@ export function DiffFileCardBody({
   wrap,
   highlight,
   context,
+  media,
   fullFile,
   comments,
   commentActions,
@@ -75,6 +82,11 @@ export function DiffFileCardBody({
     if (fullFile) instance.onAllExpand(mode);
     else instance.onAllCollapse(mode);
   }, [fullFile, context, mode]);
+
+  const mediaType = diffMediaTypeForPath(file.path);
+  if (file.binary && mediaType !== null) {
+    return media === null ? null : <DiffMediaPreview path={file.path} media={media} />;
+  }
 
   const note = unrenderableNote(file);
   if (note !== null) return <p className="px-3 py-4 text-sm text-text-tertiary">{note}</p>;

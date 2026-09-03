@@ -61,25 +61,31 @@ export const SANDBOX_DIFF: ReviewDiffResponse = {
 };
 
 export const SANDBOX_DIFF_BLOBS: DiffFileBlobsResponse = {
-  base_content: [
-    'import type { DiffFileContract } from "@otomat/domain";',
-    "",
-    "export function anchor(file: DiffFileContract, line: number) {",
-    "  return { path: file.path, line };",
-    "}",
-    "",
-  ].join("\n"),
-  head_content: [
-    'import type { DiffFileContract } from "@otomat/domain";',
-    "",
-    "export function anchor(file: DiffFileContract, line: number, startLine: number | null) {",
-    "  return { path: file.path, sha: file.sha, start_line: startLine, line };",
-    "}",
-    "",
-    "/** A stale anchor is refused, never silently re-pointed at the line that now sits there. */",
-    "export const ANCHOR_VERSION = 2;",
-    "",
-  ].join("\n"),
+  base: {
+    kind: "text",
+    content: [
+      'import type { DiffFileContract } from "@otomat/domain";',
+      "",
+      "export function anchor(file: DiffFileContract, line: number) {",
+      "  return { path: file.path, line };",
+      "}",
+      "",
+    ].join("\n"),
+  },
+  head: {
+    kind: "text",
+    content: [
+      'import type { DiffFileContract } from "@otomat/domain";',
+      "",
+      "export function anchor(file: DiffFileContract, line: number, startLine: number | null) {",
+      "  return { path: file.path, sha: file.sha, start_line: startLine, line };",
+      "}",
+      "",
+      "/** A stale anchor is refused, never silently re-pointed at the line that now sits there. */",
+      "export const ANCHOR_VERSION = 2;",
+      "",
+    ].join("\n"),
+  },
 };
 
 export const SANDBOX_REVIEW: ReviewDetail = {

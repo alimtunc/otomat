@@ -12,6 +12,7 @@ import type {
   ContextReference,
   ContextReviewComment,
   CreateReviewCommentRequest,
+  DiffMediaType,
   DiffSide,
   PullRequestReviewEvent,
   ExecutionOverrides,
@@ -130,9 +131,13 @@ export interface FileBlobsRequest {
   scope: RunDiffScopeSelector;
 }
 
+export type FileBlobResult =
+  | { kind: "text"; content: string }
+  | { kind: "media"; data: Buffer; mediaType: DiffMediaType };
+
 export interface FileBlobsResult {
-  base: string | null;
-  head: string | null;
+  base: FileBlobResult | null;
+  head: FileBlobResult | null;
 }
 
 export interface FixPreparation {

@@ -114,8 +114,8 @@ describe("diff card syntax highlighting", () => {
     await cleanup();
   });
 
-  it("says so plainly for a binary file rather than rendering an empty diff", async () => {
-    const entry = file({ path: "assets/logo.png", binary: true, patch: "" });
+  it("says so plainly for an unsupported binary file", async () => {
+    const entry = file({ path: "assets/logo.bin", binary: true, patch: "" });
     const { container, cleanup } = await renderCard(entry);
 
     await act(async () => {

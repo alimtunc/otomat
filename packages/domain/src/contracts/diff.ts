@@ -123,10 +123,54 @@ export const reviewDiffResponseSchema = z.object({
 });
 export type ReviewDiffResponse = z.infer<typeof reviewDiffResponseSchema>;
 
-/** The exact base and head blobs behind one diff file, so context can be expanded without guessing. */
+export const DIFF_MEDIA_TYPES = [
+  "image/avif",
+  "image/gif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "video/mp4",
+  "video/ogg",
+  "video/quicktime",
+  "video/webm",
+] as const;
+export const diffMediaTypeSchema = z.enum(DIFF_MEDIA_TYPES);
+export type DiffMediaType = z.infer<typeof diffMediaTypeSchema>;
+
+const DIFF_MEDIA_BY_EXTENSION = new Map<string, DiffMediaType>([
+  ["avif", "image/avif"],
+  ["gif", "image/gif"],
+  ["jpeg", "image/jpeg"],
+  ["jpg", "image/jpeg"],
+  ["mov", "video/quicktime"],
+  ["mp4", "video/mp4"],
+  ["ogv", "video/ogg"],
+  ["png", "image/png"],
+  ["webm", "video/webm"],
+  ["webp", "image/webp"],
+]);
+
+export function diffMediaTypeForPath(path: string): DiffMediaType | null {
+  const lowerPath = path.toLowerCase();
+  const slash = lowerPath.lastIndexOf("/");
+  const dot = lowerPath.lastIndexOf(".");
+  if (dot <= slash) return null;
+  return DIFF_MEDIA_BY_EXTENSION.get(lowerPath.slice(dot + 1)) ?? null;
+}
+
+export const diffFileBlobSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("text"), content: z.string() }),
+  z.object({
+    kind: z.literal("media"),
+    data: z.string(),
+    media_type: diffMediaTypeSchema,
+  }),
+]);
+export type DiffFileBlob = z.infer<typeof diffFileBlobSchema>;
+
 export const diffFileBlobsResponseSchema = z.object({
-  base_content: z.string().nullable(),
-  head_content: z.string().nullable(),
+  base: diffFileBlobSchema.nullable(),
+  head: diffFileBlobSchema.nullable(),
 });
 export type DiffFileBlobsResponse = z.infer<typeof diffFileBlobsResponseSchema>;
 

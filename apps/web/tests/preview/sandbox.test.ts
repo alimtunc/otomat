@@ -53,7 +53,8 @@ describe("the preview sandbox", () => {
       file?.sha ?? "",
       BRANCH_DIFF_SCOPE,
     );
-    expect(blobs.head_content).toContain("ANCHOR_VERSION");
+    expect(blobs.head?.kind).toBe("text");
+    if (blobs.head?.kind === "text") expect(blobs.head.content).toContain("ANCHOR_VERSION");
   });
 
   it("serves the pull-request inbox", async () => {

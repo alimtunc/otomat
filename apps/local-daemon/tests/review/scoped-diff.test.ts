@@ -245,8 +245,8 @@ it("expands context against the trees the scope was taken between", () => {
   if (!file) throw new Error("expected notes.md in the pass delta");
   const blobs = review.getFileBlobs(TARGET, { path: "notes.md", sha: file.sha, scope: PASS });
 
-  expect(blobs.base).toBe("alpha\n");
-  expect(blobs.head).toBe("alpha\nbeta\n");
+  expect(blobs.base).toEqual({ kind: "text", content: "alpha\n" });
+  expect(blobs.head).toEqual({ kind: "text", content: "alpha\nbeta\n" });
 });
 
 it("reports a run without a repository instead of throwing", () => {

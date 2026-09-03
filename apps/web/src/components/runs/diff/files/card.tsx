@@ -1,8 +1,9 @@
-import type {
-  DiffFileContract,
-  ReviewedFileContract,
-  ReviewTarget,
-  RunDiffScopeSelector,
+import {
+  diffMediaTypeForPath,
+  type DiffFileContract,
+  type ReviewedFileContract,
+  type ReviewTarget,
+  type RunDiffScopeSelector,
 } from "@otomat/domain";
 import { Button, cn, FOCUS_RING } from "@otomat/ui";
 import { DiffFileCardBody } from "@web/components/runs/diff/files/card-body";
@@ -57,7 +58,7 @@ export function DiffFileCard({
   commentActions,
 }: DiffFileCardProps) {
   const viewport = useNearViewport();
-  const blobs = useFileBlobs(target, file, scope);
+  const blobs = useFileBlobs(target, file, scope, viewport.near && !collapsed);
   const [fullFile, setFullFile] = useState(false);
   const [composing, setComposing] = useState(false);
   const expandable = unrenderableNote(file) === null;
@@ -114,7 +115,11 @@ export function DiffFileCard({
         </p>
       )}
       {blobs.isPending ? (
-        <p className={cn(NOTICE_CLASS, "text-text-tertiary")}>Loading the full file…</p>
+        <p className={cn(NOTICE_CLASS, "text-text-tertiary")}>
+          {diffMediaTypeForPath(file.path) === null
+            ? "Loading the full file…"
+            : "Loading media preview…"}
+        </p>
       ) : null}
       {comments.whole.length === 0 ? null : (
         <div className="flex flex-col gap-2 border-b border-border bg-surface-1 p-3">
@@ -143,6 +148,7 @@ export function DiffFileCard({
           wrap={prefs.wrap}
           highlight={viewport.near}
           context={blobs.context}
+          media={blobs.media}
           fullFile={fullFile}
           comments={comments}
           commentActions={commentActions}

@@ -5,6 +5,8 @@ import { openFenceBody } from "../lib/markdown";
 import { cn } from "../lib/utils";
 import { MarkdownCodeBlock } from "./markdown-code-block";
 import { MarkdownLink } from "./markdown-link";
+import { MarkdownMedia } from "./remote-media";
+import { MarkdownMediaLink } from "./remote-media-link";
 
 const LIST = "flex list-outside flex-col gap-1 pl-5 marker:text-text-tertiary";
 
@@ -44,11 +46,12 @@ export interface MarkdownProps {
   /** Untrusted Markdown. Raw HTML is never interpreted; it renders as literal text. */
   value: string;
   className?: string;
+  allowMedia?: boolean;
 }
 
 /** The one renderer for Linear descriptions, agent messages and report prose. Streaming
     suppression stays off: an unclosed `**` must keep its characters, not swallow them. */
-export function Markdown({ value, className }: MarkdownProps) {
+export function Markdown({ value, className, allowMedia = false }: MarkdownProps) {
   const options = useMemo<MarkdownToJSX.Options>(() => {
     const streaming = openFenceBody(value)?.trimEnd() ?? null;
     return {
@@ -56,7 +59,7 @@ export function Markdown({ value, className }: MarkdownProps) {
       disableFrontmatter: true,
       forceBlock: true,
       wrapper: null,
-      overrides: OVERRIDES,
+      overrides: allowMedia ? { ...OVERRIDES, a: { component: MarkdownMediaLink } } : OVERRIDES,
       renderRule(next, node, _renderChildren, state) {
         if (node.type === RuleType.codeBlock) {
           const code = node.text.trimEnd();
@@ -70,6 +73,11 @@ export function Markdown({ value, className }: MarkdownProps) {
           );
         }
         if (node.type === RuleType.image) {
+          if (allowMedia && node.target !== null) {
+            return (
+              <MarkdownMedia key={state.key} href={node.target} kind="image" label={node.alt} />
+            );
+          }
           return (
             <MarkdownLink key={state.key} href={node.target}>
               {node.alt ?? node.target}
@@ -92,7 +100,7 @@ export function Markdown({ value, className }: MarkdownProps) {
         return next();
       },
     };
-  }, [value]);
+  }, [allowMedia, value]);
 
   return (
     // The leading comes last: every caller sets a text size, and tailwind-merge drops a

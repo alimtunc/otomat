@@ -35,7 +35,9 @@ export function IssueHeader({ query }: { query: ReturnType<typeof useIssue> }) {
           <span className="font-mono">{issueShortId(issue)}</span>
         </div>
       </div>
-      {issue.body ? <Markdown value={issue.body} className="text-sm text-foreground" /> : null}
+      {issue.body ? (
+        <Markdown value={issue.body} className="text-sm text-foreground" allowMedia />
+      ) : null}
     </div>
   );
 }

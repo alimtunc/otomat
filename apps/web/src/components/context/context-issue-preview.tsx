@@ -14,7 +14,7 @@ export function ContextIssuePreview({ issue }: ContextIssuePreviewProps) {
         {issueShortId(issue)} · {issue.source_state_name ?? issue.status}
       </p>
       <div className="mt-2">
-        <Markdown value={issue.body ?? "_No description._"} />
+        <Markdown value={issue.body ?? "_No description._"} allowMedia />
       </div>
     </>
   );
