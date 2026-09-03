@@ -32,7 +32,7 @@ export function AgentProfileRow({
 
   return (
     <tr className="relative transition-colors hover:bg-hover">
-      <td className={`${CELL} min-w-64 p-0`}>
+      <td className={`${CELL} p-0`}>
         <Link
           to="/settings/agents/$profileId"
           params={{ profileId: profile.id }}
@@ -75,7 +75,7 @@ export function AgentProfileRow({
           <span className="text-text-tertiary">—</span>
         )}
       </td>
-      <td className={`${CELL} w-24 px-2 text-right`}>
+      <td className={`${CELL} px-2 text-right`}>
         <AgentProfileRowActions profile={profile} onEdit={onEdit} />
       </td>
     </tr>

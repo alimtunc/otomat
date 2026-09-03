@@ -2,6 +2,7 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import type { ComponentPropsWithRef } from "react";
 
 import { cn } from "../lib/utils";
+import { POPUP_MOTION_CLASS, POPUP_MOTION_STYLE } from "./styles";
 
 export const Popover = PopoverPrimitive.Root;
 export const PopoverTrigger = PopoverPrimitive.Trigger;
@@ -34,17 +35,10 @@ export function PopoverContent({
           ref={ref}
           className={cn(
             "min-w-47.5 rounded-lg border border-border bg-popover p-1.25 shadow-(--shadow-overlay)",
-            "opacity-0 data-[open]:opacity-100",
-            "transform-[scale(.97)] data-[open]:transform-none",
-            "motion-reduce:transform-none",
-            "origin-(--transform-origin)",
+            POPUP_MOTION_CLASS,
             className,
           )}
-          style={{
-            transition:
-              "opacity var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease-spring)",
-            ...style,
-          }}
+          style={{ ...POPUP_MOTION_STYLE, ...style }}
           {...props}
         />
       </PopoverPrimitive.Positioner>

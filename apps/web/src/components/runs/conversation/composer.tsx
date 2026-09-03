@@ -113,9 +113,11 @@ export function ConversationComposer({
         )}
       </form.Field>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className={contribute.error ? "text-xs text-danger" : "text-xs text-text-tertiary"}>
-          {contribute.error ? contributionErrorMessage(contribute.error) : gate.note}
-        </p>
+        {contribute.error ? (
+          <p className="text-xs text-danger">{contributionErrorMessage(contribute.error)}</p>
+        ) : (
+          <p className="text-xs text-text-tertiary">{stepRunId === null ? gate.note : null}</p>
+        )}
         <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting] as const}>
           {([canSubmit, isSubmitting]) => (
             <Button
@@ -124,6 +126,7 @@ export function ConversationComposer({
               size="xs"
               disabled={stepRunId === null || !canSubmit || contribute.isPending}
               loading={isSubmitting || contribute.isPending}
+              title={stepRunId === null ? undefined : gate.note}
             >
               {gate.queues ? "Queue message" : "Send message"}
               <Kbd tone="on-accent">⌘↵</Kbd>

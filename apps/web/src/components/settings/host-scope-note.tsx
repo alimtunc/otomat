@@ -20,10 +20,8 @@ export function HostScopeNote() {
       />
       <div>
         <p>
-          Shared by every project{" "}
-          <span className="font-medium text-text-secondary">{hostLabel}</span> runs, and kept by its
-          own daemon {session.active ? "over SSH" : "on this machine"}. Every other execution host
-          keeps its own — Otomat never copies, merges or deletes one host’s data on another.
+          Kept by the <span className="font-medium text-text-secondary">{hostLabel}</span> daemon
+          {session.active ? " over SSH" : " on this machine"}; every other host keeps its own.
         </p>
         {unreachable === null ? null : (
           <p role="alert" className="mt-1 text-danger">

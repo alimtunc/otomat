@@ -43,15 +43,11 @@ export type CommandPaletteProps = {
   className?: string;
 };
 
-const overlayClass =
-  "fixed inset-0 bg-overlay backdrop-blur-[1px] " +
-  "data-[open]:opacity-100 data-[closed]:opacity-0 " +
-  "transition-opacity [transition-duration:var(--motion-base)] [transition-timing-function:var(--ease)]";
+// A keyboard surface opened many times a day: no transition either way, like Raycast.
+const overlayClass = "fixed inset-0 bg-overlay backdrop-blur-[1px]";
 
 const contentClass =
-  "fixed left-1/2 top-[14vh] w-[min(620px,92vw)] -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-popover shadow-[var(--shadow-modal)] outline-none " +
-  "data-[open]:opacity-100 data-[open]:scale-100 data-[closed]:opacity-0 data-[closed]:scale-[0.97] " +
-  "transition-[opacity,transform] [transition-duration:var(--motion-base)] [transition-timing-function:var(--ease-spring)]";
+  "fixed left-1/2 top-[14vh] w-[min(620px,92vw)] -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-popover shadow-[var(--shadow-modal)] outline-none";
 
 export function CommandPalette({
   open,
@@ -66,18 +62,13 @@ export function CommandPalette({
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
-      if (!next) setPending(null);
+      if (!next) {
+        setPending(null);
+        onSearchChange("");
+      }
       onOpenChange(next);
     },
-    [onOpenChange],
-  );
-
-  // Reset after the exit transition: clearing at close-start repaints the unfiltered list mid-fade.
-  const handleOpenChangeComplete = useCallback(
-    (next: boolean) => {
-      if (!next) onSearchChange("");
-    },
-    [onSearchChange],
+    [onOpenChange, onSearchChange],
   );
 
   const run = useCallback(
@@ -96,12 +87,7 @@ export function CommandPalette({
   );
 
   return (
-    <Dialog.Root
-      open={open}
-      onOpenChange={handleOpenChange}
-      onOpenChangeComplete={handleOpenChangeComplete}
-      modal
-    >
+    <Dialog.Root open={open} onOpenChange={handleOpenChange} modal>
       <Dialog.Portal>
         <Dialog.Backdrop className={overlayClass} style={{ zIndex: "var(--z-command)" }} />
         <Dialog.Popup

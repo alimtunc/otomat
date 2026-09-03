@@ -1685,6 +1685,29 @@ credentials the cockpit does not send. `lib/markdown/open-fence.ts` is the one
 thing a compiler cannot tell us — it sees a finished document — so an unclosed
 fence can be labelled as still arriving.
 
+### Motion
+
+Motion is a budget, not a finish. `tokens.css` owns every duration and curve
+(`--motion-fast` 90ms for anchored surfaces, `--motion-base` 140ms for modals
+and notices, `--ease` for entrances, `--ease-spring` for the pop-in transform),
+and the reduced-motion media query zeroes those durations, so a component that
+rides the tokens needs no second rule. Only `transform` and `opacity` animate.
+
+Base UI mounts a popup with `data-open` already set, so an `opacity-0
+data-[open]:opacity-100` pair never transitions on enter — it only fades on exit.
+Every anchored surface (popover, menu, select, combobox, tooltip) therefore shares
+`POPUP_MOTION_CLASS`/`POPUP_MOTION_STYLE`: `data-starting-style` and
+`data-ending-style` carry the 0.97 scale and the fade, and the transform origin is
+the trigger. Modals use the same pair centered. A row that appears in the flow —
+the offline banner, a stale notice, the run's next-action strip — enters with
+`SETTLE_IN_CLASS` (`@starting-style`, opacity plus a 4px settle) rather than a
+keyframe, so a re-render retargets instead of restarting.
+
+The command palette animates nowhere: it is a keyboard surface opened many times
+a day, and a transition there only delays the input. Route changes, tab
+switches, sidebar badges and live dots stay instant for the same reason; the
+audit behind these decisions is `docs/design/motion-audit-2026-09-03`.
+
 ## Command Palette Search
 
 The palette searches one scope: the issues TanStack Query already holds for the

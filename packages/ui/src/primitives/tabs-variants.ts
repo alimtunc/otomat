@@ -21,7 +21,7 @@ export const tabTriggerVariants = cva(
   [
     "relative inline-flex items-center gap-1.5 px-2.5 font-medium",
     "text-text-secondary outline-none",
-    "transition-[color] duration-[--motion-fast] ease-standard",
+    "transition-[color] duration-(--motion-fast) ease-standard",
     "hover:text-foreground",
     "data-[active]:text-foreground",
     "disabled:pointer-events-none disabled:opacity-50",

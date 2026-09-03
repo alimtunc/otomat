@@ -1,6 +1,7 @@
 import { WifiOff } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { SETTLE_IN_CLASS } from "../lib/motion";
 import { cn } from "../lib/utils";
 
 export interface OfflineBannerProps {
@@ -17,6 +18,7 @@ export function OfflineBanner({ message = DEFAULT_MESSAGE, className }: OfflineB
       aria-live="polite"
       className={cn(
         "flex items-center gap-2.5 border-b border-border-subtle bg-warning-bg px-3.5 py-2 text-xs text-warning",
+        SETTLE_IN_CLASS,
         className,
       )}
     >

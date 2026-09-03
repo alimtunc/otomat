@@ -14,9 +14,15 @@ import { reviewComment } from "#support/review-comment";
 import { reviewDetail } from "#support/review-detail";
 
 vi.mock("@web/components/runs/review/fix-step-dialog", () => ({
-  ReviewFixStepDialog: ({ count, disabled }: { count: number; disabled: boolean }) => (
-    <button type="button" disabled={disabled}>{`eligible:${count}`}</button>
-  ),
+  ReviewFixStepDialog: ({
+    count,
+    disabled,
+    hint,
+  }: {
+    count: number;
+    disabled: boolean;
+    hint: string;
+  }) => <button type="button" disabled={disabled} title={hint}>{`eligible:${count}`}</button>,
 }));
 
 vi.mock("@web/components/runs/review/submit/dialog", () => ({
@@ -70,18 +76,18 @@ describe("diff fix bar", () => {
   });
 
   it("offers no fix and says why when nothing is addressed to the agent", async () => {
-    const { container, cleanup } = await bar([reviewComment({ destination: "pr_review" })]);
+    const { cleanup } = await bar([reviewComment({ destination: "pr_review" })]);
 
     expect(findButton("eligible:0")?.hasAttribute("disabled")).toBe(true);
-    expect(container.textContent).toContain("Address a comment to the agent");
+    expect(findButton("eligible:0")?.title).toContain("Address a comment to the agent");
     await cleanup();
   });
 
   it("keeps a closed workspace's reason over the eligible count", async () => {
-    const { container, cleanup } = await bar([reviewComment()], OTOMAT, false);
+    const { cleanup } = await bar([reviewComment()], OTOMAT, false);
 
     expect(findButton("eligible:1")?.hasAttribute("disabled")).toBe(true);
-    expect(container.textContent).toContain("workspace is still open");
+    expect(findButton("eligible:1")?.title).toContain("workspace is still open");
     await cleanup();
   });
 
@@ -89,7 +95,7 @@ describe("diff fix bar", () => {
     const { container, cleanup } = await bar([reviewComment()], EXTERNAL);
 
     expect(container.textContent).toContain("Review only");
-    expect(container.textContent).toContain("@contrib owns contrib/fix");
+    expect(container.innerHTML).toContain("@contrib owns contrib/fix");
     expect(findButton("eligible:1")).toBeUndefined();
     await cleanup();
   });

@@ -2,7 +2,7 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import type { ComponentPropsWithoutRef } from "react";
 
 import { cn } from "../lib/utils";
-import { FIELD_TRANSITION } from "./styles";
+import { FIELD_TRANSITION, POPUP_MOTION_CLASS, POPUP_MOTION_STYLE } from "./styles";
 
 export const Combobox = ComboboxPrimitive.Root;
 export const ComboboxTrigger = ComboboxPrimitive.Trigger;
@@ -38,6 +38,7 @@ export function ComboboxContent({
   align = "start",
   side,
   sideOffset = 6,
+  style,
   ...props
 }: ComboboxContentProps) {
   return (
@@ -52,10 +53,10 @@ export function ComboboxContent({
         <ComboboxPrimitive.Popup
           className={cn(
             "min-w-(--anchor-width) max-w-(--available-width) overflow-hidden rounded-lg border border-border bg-popover text-foreground shadow-(--shadow-overlay)",
-            "origin-(--transform-origin) transition-[opacity,transform] duration-100",
-            "data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0",
+            POPUP_MOTION_CLASS,
             className,
           )}
+          style={{ ...POPUP_MOTION_STYLE, ...style }}
           {...props}
         />
       </ComboboxPrimitive.Positioner>

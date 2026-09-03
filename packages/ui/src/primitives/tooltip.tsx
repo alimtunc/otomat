@@ -2,6 +2,7 @@ import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 import type { ComponentPropsWithRef } from "react";
 
 import { cn } from "../lib/utils";
+import { POPUP_MOTION_CLASS, POPUP_MOTION_STYLE } from "./styles";
 
 export const Tooltip = TooltipPrimitive.Root;
 export const TooltipTrigger = TooltipPrimitive.Trigger;
@@ -31,15 +32,10 @@ export function TooltipContent({
           ref={ref}
           className={cn(
             "whitespace-nowrap rounded-sm border border-border bg-surface-3 px-2 py-1 text-xs text-foreground",
-            "opacity-0 data-[open]:opacity-100",
-            "origin-(--transform-origin)",
+            POPUP_MOTION_CLASS,
             className,
           )}
-          style={{
-            transition:
-              "opacity var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease)",
-            ...style,
-          }}
+          style={{ ...POPUP_MOTION_STYLE, ...style }}
           {...props}
         />
       </TooltipPrimitive.Positioner>

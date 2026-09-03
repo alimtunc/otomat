@@ -55,6 +55,7 @@ export function RunsToolbar({ config, hidden, onChange }: RunsToolbarProps) {
               onCheckedChange={(showClosedIssues) => onChange({ showClosedIssues })}
             />
           </FilterRow>
+          {summary === null ? null : <p className="text-xs text-text-tertiary">{summary}</p>}
           {activeCount > 0 ? (
             <Button
               variant="ghost"
@@ -67,7 +68,6 @@ export function RunsToolbar({ config, hidden, onChange }: RunsToolbarProps) {
           ) : null}
         </PopoverContent>
       </Popover>
-      {summary === null ? null : <span className="text-xs text-text-tertiary">{summary}</span>}
     </div>
   );
 }

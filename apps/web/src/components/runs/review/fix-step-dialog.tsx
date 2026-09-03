@@ -25,9 +25,16 @@ export interface ReviewFixStepDialogProps {
   issueId: string | null;
   count: number;
   disabled: boolean;
+  hint: string;
 }
 
-export function ReviewFixStepDialog({ runId, issueId, count, disabled }: ReviewFixStepDialogProps) {
+export function ReviewFixStepDialog({
+  runId,
+  issueId,
+  count,
+  disabled,
+  hint,
+}: ReviewFixStepDialogProps) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const [context, setContext] = useState(EMPTY_CONTEXT_DRAFT);
@@ -60,7 +67,7 @@ export function ReviewFixStepDialog({ runId, issueId, count, disabled }: ReviewF
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant="primary" size="sm" disabled={disabled}>
+          <Button variant="primary" size="sm" disabled={disabled} title={hint}>
             <Icon name="wand-2" aria-hidden />
             {count === 1 ? "Fix 1 agent comment" : `Fix ${count} agent comments`}
           </Button>

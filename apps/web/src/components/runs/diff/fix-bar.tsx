@@ -24,10 +24,11 @@ export function DiffFixBar({ target, workspaceOpen, issueId, review }: DiffFixBa
 
   return (
     <footer className="flex h-12 flex-none items-center gap-2.5 border-t border-border-subtle bg-surface-1 px-4.5">
-      {owned ? null : <Chip tone="neutral">Review only</Chip>}
-      <span className="min-w-0 truncate text-xs text-text-tertiary" title={hint}>
-        {hint}
-      </span>
+      {owned ? null : (
+        <Chip tone="neutral" hint={hint}>
+          Review only
+        </Chip>
+      )}
       <span className="ml-auto flex items-center gap-2">
         {reviewable ? <SubmitReviewDialog target={target} detail={review} /> : null}
         {owned ? (
@@ -36,6 +37,7 @@ export function DiffFixBar({ target, workspaceOpen, issueId, review }: DiffFixBa
             issueId={issueId}
             count={count}
             disabled={!workspaceOpen || count === 0}
+            hint={hint}
           />
         ) : null}
       </span>

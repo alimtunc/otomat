@@ -262,7 +262,7 @@ describe("ConversationComposer", () => {
 
     expect(sendButton().disabled).toBe(false);
     expect(sendButton().textContent).toContain("Queue message");
-    expect(document.body.textContent).toContain("next safe turn");
+    expect(sendButton().title).toContain("next safe turn");
 
     await act(async () => {
       promptTextarea().dispatchEvent(

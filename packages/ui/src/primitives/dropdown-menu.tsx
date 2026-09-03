@@ -9,6 +9,8 @@ import {
   MENU_LABEL_CLASS,
   MENU_SEPARATOR_CLASS,
   MENU_SHORTCUT_CLASS,
+  POPUP_MOTION_CLASS,
+  POPUP_MOTION_STYLE,
 } from "./styles";
 
 export const DropdownMenu = Menu.Root;
@@ -46,6 +48,7 @@ export function DropdownMenuContent({
   sideOffset = 6,
   align,
   collisionPadding = 8,
+  style,
   ref,
   ...props
 }: DropdownMenuContentProps) {
@@ -58,7 +61,12 @@ export function DropdownMenuContent({
         collisionPadding={collisionPadding}
         style={{ zIndex: "var(--z-popover)" }}
       >
-        <Menu.Popup ref={ref} className={cn(contentClass, className)} {...props} />
+        <Menu.Popup
+          ref={ref}
+          className={cn(contentClass, POPUP_MOTION_CLASS, className)}
+          style={{ ...POPUP_MOTION_STYLE, ...style }}
+          {...props}
+        />
       </Menu.Positioner>
     </Menu.Portal>
   );

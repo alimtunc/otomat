@@ -14,28 +14,30 @@ export function AgentProfileList({
   onEdit: (profile: AgentProfileContract) => void;
 }) {
   return (
-    <table className={TABLE}>
-      <thead>
-        <tr>
-          <th className={HEAD_CELL}>Agent</th>
-          <th className={`${HEAD_CELL} w-40`}>Runtime</th>
-          <th className={`${HEAD_CELL} w-56`}>Availability</th>
-          <th className={`${HEAD_CELL} w-24`}>Skills</th>
-          <th className={`${HEAD_CELL} w-40`}>Options</th>
-          <th className={`${HEAD_CELL} w-24 text-right`}>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {profiles.map((profile) => (
-          <AgentProfileRow
-            key={profile.id}
-            profile={profile}
-            descriptors={descriptors}
-            skills={skills}
-            onEdit={onEdit}
-          />
-        ))}
-      </tbody>
-    </table>
+    <div className="overflow-x-auto">
+      <table className={`${TABLE} min-w-240 table-fixed`}>
+        <thead>
+          <tr>
+            <th className={HEAD_CELL}>Agent</th>
+            <th className={`${HEAD_CELL} w-32`}>Runtime</th>
+            <th className={`${HEAD_CELL} w-44`}>Availability</th>
+            <th className={`${HEAD_CELL} w-14`}>Skills</th>
+            <th className={`${HEAD_CELL} w-44`}>Options</th>
+            <th className={`${HEAD_CELL} w-16 text-right`}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {profiles.map((profile) => (
+            <AgentProfileRow
+              key={profile.id}
+              profile={profile}
+              descriptors={descriptors}
+              skills={skills}
+              onEdit={onEdit}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

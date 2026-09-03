@@ -63,9 +63,9 @@ export function RunConversationView() {
             <>
               <PaneHeader>
                 {data.steps.find((step) => step.id === selectedStepId)?.name ?? "Conversation"}
-                <span className="ml-auto font-normal normal-case text-text-tertiary">
-                  {stream.state === "open" ? "ordered by seq · live" : "ordered by seq"}
-                </span>
+                {stream.state === "open" ? (
+                  <span className="ml-auto font-normal normal-case text-live">live</span>
+                ) : null}
               </PaneHeader>
               <ConversationHeader detail={data} stepRunId={selectedStepId} />
               <StepConversationThread detail={data} stream={stream} stepRunId={selectedStepId} />

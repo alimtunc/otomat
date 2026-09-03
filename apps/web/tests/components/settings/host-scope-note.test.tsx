@@ -28,7 +28,7 @@ it("names the daemon that holds what is on screen, and follows a host switch", a
 
   expect(container.textContent).toContain("Local");
   expect(container.textContent).toContain("on this machine");
-  expect(container.textContent).toContain("never copies, merges or deletes");
+  expect(container.textContent).toContain("keeps its own");
   expect(container.textContent).not.toContain("otomat-vps");
 
   await act(async () => {

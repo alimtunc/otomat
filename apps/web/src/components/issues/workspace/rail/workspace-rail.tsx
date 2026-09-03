@@ -60,7 +60,7 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
           <RailRow label="Issue status">
             <IssueStatusControl issue={issue} />
           </RailRow>
-          <RailRow label="Workspace execution">
+          <RailRow label="Execution">
             {cycleExecution === null ? (
               <span className="text-xs text-text-tertiary">No open workspace</span>
             ) : (

@@ -25,7 +25,7 @@ it("marks a still-counting total and leaves a settled one unmarked", async () =>
 it("exposes the exact token figures on hover", async () => {
   view = await mount(<UsageTokens usage={reportedUsage({ input_tokens: 33_412_001 })} />);
 
-  expect(view.container.textContent).toContain("in 33.4M");
+  expect(view.container.textContent).toContain("in\u00a033.4M");
   expect(view.container.querySelector('[title="in 33,412,001 · out 340"]')).not.toBeNull();
 });
 
@@ -51,7 +51,7 @@ it("omits a field the provider never reported rather than inventing one", async 
     <UsageTokens usage={reportedUsage({ output_tokens: null, cost_usd: null })} />,
   );
 
-  expect(view.container.textContent).toContain("in 1.2k");
+  expect(view.container.textContent).toContain("in\u00a01.2k");
   expect(view.container.textContent).not.toContain("out");
   expect(view.container.textContent).not.toContain("$");
 });

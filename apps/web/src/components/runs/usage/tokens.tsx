@@ -16,17 +16,17 @@ export function UsageTokens({ usage, showProvenance = true, className }: UsageTo
   const parts: string[] = [];
   const exactParts: string[] = [];
   if (usage.input_tokens !== null) {
-    parts.push(`in ${formatTokenCount(usage.input_tokens)}`);
+    parts.push(`in\u00a0${formatTokenCount(usage.input_tokens)}`);
     exactParts.push(`in ${formatExactTokenCount(usage.input_tokens)}`);
   }
   if (usage.output_tokens !== null) {
-    parts.push(`out ${formatTokenCount(usage.output_tokens)}`);
+    parts.push(`out\u00a0${formatTokenCount(usage.output_tokens)}`);
     exactParts.push(`out ${formatExactTokenCount(usage.output_tokens)}`);
   }
   if (usage.cost_usd !== null) parts.push(formatCostUsd(usage.cost_usd));
   const marker = USAGE_PROVENANCE[usage.availability];
   return (
-    <span className={cn("flex items-center gap-1.5", className)}>
+    <span className={cn("flex flex-wrap items-center gap-x-1.5", className)}>
       <span
         className="font-mono text-xs tabular-nums text-text-secondary"
         title={exactParts.length === 0 ? undefined : exactParts.join(" · ")}
