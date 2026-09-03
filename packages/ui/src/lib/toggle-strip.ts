@@ -12,7 +12,7 @@ export function toggleStripItemVariants(preset: ToggleStripItemPreset) {
     [
       preset.layout,
       "text-text-secondary",
-      "transition-[background,color] duration-[--motion-fast] ease-standard",
+      "transition-[background,color] duration-(--motion-fast) ease-standard",
       "hover:text-foreground",
       preset.pressed,
       "disabled:pointer-events-none disabled:opacity-50",

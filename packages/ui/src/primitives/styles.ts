@@ -13,7 +13,17 @@ export const MENU_ITEM_CLASS =
   "data-[disabled]:pointer-events-none data-[disabled]:opacity-50 " +
   "[&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0 [&_svg]:text-text-tertiary";
 
-export const OVERLAY_CLASS = "fixed inset-0 backdrop-blur-[1px] opacity-0 data-[open]:opacity-100";
+export const POPUP_MOTION_CLASS =
+  "origin-(--transform-origin) data-starting-style:opacity-0 data-ending-style:opacity-0 " +
+  "data-starting-style:transform-[scale(.97)] data-ending-style:transform-[scale(.97)]";
+
+export const POPUP_MOTION_STYLE: CSSProperties = {
+  transition:
+    "opacity var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease-spring)",
+};
+
+export const OVERLAY_CLASS =
+  "fixed inset-0 backdrop-blur-[1px] data-starting-style:opacity-0 data-ending-style:opacity-0";
 
 export const OVERLAY_STYLE: CSSProperties = {
   backgroundColor: "var(--overlay-strong)",
@@ -22,9 +32,11 @@ export const OVERLAY_STYLE: CSSProperties = {
 };
 
 export const MODAL_POPUP_BASE =
-  "fixed left-1/2 top-1/2 overflow-hidden border border-border bg-popover rounded-xl opacity-0 " +
-  "shadow-(--shadow-modal) transform-[translate(-50%,-48%)_scale(.98)] data-[open]:opacity-100 " +
-  "data-[open]:transform-[translate(-50%,-50%)_scale(1)]";
+  "fixed left-1/2 top-1/2 overflow-hidden border border-border bg-popover rounded-xl " +
+  "shadow-(--shadow-modal) transform-[translate(-50%,-50%)] " +
+  "data-starting-style:opacity-0 data-ending-style:opacity-0 " +
+  "data-starting-style:transform-[translate(-50%,-50%)_scale(.97)] " +
+  "data-ending-style:transform-[translate(-50%,-50%)_scale(.97)]";
 
 export const MODAL_STYLE: CSSProperties = {
   zIndex: "var(--z-modal)",

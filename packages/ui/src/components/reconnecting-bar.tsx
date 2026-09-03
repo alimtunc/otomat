@@ -6,7 +6,7 @@ export interface ReconnectingBarProps {
 }
 
 const STYLES = `
-@keyframes otomat-reconnect-indeterminate{0%{left:-40%}100%{left:100%}}
+@keyframes otomat-reconnect-indeterminate{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
 .otomat-reconnect-bar::before{
   content:"";position:absolute;inset:0;width:40%;
   background:var(--iris-solid);
@@ -14,7 +14,7 @@ const STYLES = `
 }
 @media (prefers-reduced-motion:reduce){
   .otomat-reconnect-bar::before{
-    animation:none;left:0;width:100%;
+    animation:none;width:100%;
     background:repeating-linear-gradient(90deg,var(--iris-solid) 0 8px,transparent 8px 16px);
   }
 }

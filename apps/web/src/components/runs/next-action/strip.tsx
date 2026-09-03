@@ -1,6 +1,5 @@
-import "./strip.css";
 import type { PullRequestDetail, RunDetail } from "@otomat/domain";
-import { resolveStatus, TONE_TEXT } from "@otomat/ui";
+import { resolveStatus, SETTLE_IN_CLASS, TONE_TEXT } from "@otomat/ui";
 import { NextActionCtaButton } from "@web/components/runs/next-action/cta";
 import { runNextAction } from "@web/lib/run/next-action";
 
@@ -19,7 +18,7 @@ export function NextActionStrip({ detail, pullRequest }: NextActionStripProps) {
     >
       <div
         key={`${action.kind}:${action.description}`}
-        className="otomat-next-action-in flex min-w-0 flex-1 items-center gap-2.5"
+        className={`flex min-w-0 flex-1 items-center gap-2.5 ${SETTLE_IN_CLASS}`}
       >
         <StatusIcon size={14} aria-hidden className={`shrink-0 ${TONE_TEXT[action.tone]}`} />
         <p className="min-w-0 truncate text-sm text-text-secondary">{action.description}</p>

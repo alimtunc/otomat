@@ -5,7 +5,7 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 import { cn } from "../lib/utils";
 import { triggerVariants } from "./select-variants";
-import { FIELD_TRANSITION } from "./styles";
+import { FIELD_TRANSITION, POPUP_MOTION_CLASS, POPUP_MOTION_STYLE } from "./styles";
 
 export const Select = SelectPrimitive.Root;
 export const SelectGroup = SelectPrimitive.Group;
@@ -49,6 +49,7 @@ export function SelectContent({
   className,
   children,
   sideOffset = 4,
+  style,
   ...props
 }: SelectContentProps) {
   return (
@@ -58,8 +59,10 @@ export function SelectContent({
           className={cn(
             "relative min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover text-foreground shadow-[var(--shadow-overlay)]",
             "max-h-[var(--available-height)] min-w-[var(--anchor-width)] p-1",
+            POPUP_MOTION_CLASS,
             className,
           )}
+          style={{ ...POPUP_MOTION_STYLE, ...style }}
           {...props}
         >
           {children}
