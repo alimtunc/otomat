@@ -16,7 +16,7 @@ import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { RecoveryLinkField } from "@web/components/runs/steps/recovery-link-field";
 import { WorkspaceReuseNote } from "@web/components/runs/steps/workspace-reuse-note";
 import { contextRequestFields, EMPTY_CONTEXT_DRAFT } from "@web/lib/context/draft";
-import { profileRequestFields } from "@web/lib/execution/request";
+import { agentSelectionFields } from "@web/lib/execution/request";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@web/lib/form";
 import { useState } from "react";
@@ -40,7 +40,7 @@ export function AppendStepForm({
 }: AppendStepFormProps) {
   const [context, setContext] = useState(EMPTY_CONTEXT_DRAFT);
   const [recovers, setRecovers] = useState(true);
-  const launchExecution = useLaunchExecution(execution, "profiles");
+  const launchExecution = useLaunchExecution(execution);
   const append = useAppendRunStep(workspace.run_id);
   const recovered = issue.execution.state === "failed" ? issue.execution.failure.step : null;
   const sources = useContextSources({
@@ -52,12 +52,12 @@ export function AppendStepForm({
   const form = useForm({
     defaultValues: { name: "" },
     onSubmit: ({ value }) => {
-      const profile = profileRequestFields(launchExecution.request);
-      if (!launchExecution.canLaunch || profile === null) return;
+      const agent = agentSelectionFields(launchExecution.request);
+      if (!launchExecution.canLaunch || agent === null) return;
       const request: AppendRunStepRequest = {
         name: value.name.trim(),
         ...contextRequestFields(context),
-        ...profile,
+        ...agent,
         depends_on: [],
       };
       if (recovered !== null && recovers) request.replaces = recovered.id;
@@ -114,7 +114,6 @@ export function AppendStepForm({
           execution={launchExecution}
           onChange={onExecutionChange}
           label="Appended step"
-          scope="profiles"
         />
       </DialogBody>
       <IssueFormFooter

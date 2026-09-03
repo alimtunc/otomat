@@ -102,19 +102,7 @@ export function resolveAgentChoice(
   return fallback ? encodeRuntimeChoice(fallback) : null;
 }
 
-export function resolveProfileChoice(
-  preferred: string | null,
-  profiles: AgentProfileContract[],
-  descriptors: RuntimeDescriptor[],
-  skills: SkillContract[],
-): string | null {
-  return agentChoiceProfile(preferred, profiles) !== null &&
-    isUsableAgentChoice(preferred, profiles, descriptors, skills)
-    ? preferred
-    : null;
-}
-
-export type AgentScope = "all" | "profiles" | "runtimes";
+export type AgentScope = "all" | "runtimes";
 
 /** Provider options are the daemon's to refuse against the installed CLI, never this surface's to quietly rewrite. */
 export function requestForProfile(

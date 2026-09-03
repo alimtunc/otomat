@@ -2,7 +2,6 @@ import {
   useLaunchAgentChoice,
   type LaunchAgentChoice,
 } from "@web/components/runs/launch/use-launch-agent-choice";
-import type { AgentScope } from "@web/lib/agent/choice";
 import { executionRequestFields, type ExecutionRequestFields } from "@web/lib/execution/request";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { isCompleteModelSelection } from "@web/lib/model-choice";
@@ -14,11 +13,8 @@ export interface LaunchExecution {
   canLaunch: boolean;
 }
 
-export function useLaunchExecution(
-  preferred: ExecutionSelection,
-  scope: AgentScope = "all",
-): LaunchExecution {
-  const agents = useLaunchAgentChoice(preferred.agent, scope);
+export function useLaunchExecution(preferred: ExecutionSelection): LaunchExecution {
+  const agents = useLaunchAgentChoice(preferred.agent);
   const selection = { ...preferred, agent: agents.choice };
   return {
     agents,

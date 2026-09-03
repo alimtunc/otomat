@@ -56,3 +56,21 @@ export const EMPTY_EXECUTION_DEFAULTS: ExecutionDefaults = {
   model: null,
   options: {},
 };
+
+/** A step that names its own agent gives exactly one of these: unlike a launch it has no run default underneath to fall back to. */
+export const agentSelectionShape = {
+  profile_id: z.string().min(1).optional(),
+  runtime: z.string().min(1).optional(),
+};
+
+export type AgentSelection =
+  | { profile_id: string; runtime?: undefined }
+  | { profile_id?: undefined; runtime: string };
+
+export const AGENT_SELECTION_MESSAGE = "Provide exactly one of profile_id or runtime";
+
+export function selectsOneAgent<T extends { profile_id?: string; runtime?: string }>(
+  value: T,
+): value is T & AgentSelection {
+  return (value.profile_id === undefined) !== (value.runtime === undefined);
+}

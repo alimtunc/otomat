@@ -48,7 +48,6 @@ interface ExecutionPickerProbeProps {
   level: string;
   value: { agent: string | null; options: Record<string, unknown> };
   onChange: (value: unknown) => void;
-  scope?: "all" | "profiles" | "runtimes";
 }
 
 const APPENDED_RUN: RunContract = {
@@ -144,18 +143,20 @@ vi.mock("@web/components/execution/execution-config-picker", () => ({
   ExecutionConfigPicker: (props: ExecutionPickerProbeProps) => {
     pickerProps(props);
     return (
-      <button
-        type="button"
-        onClick={() =>
-          props.onChange({
-            ...props.value,
-            agent: props.scope === "profiles" ? "profile:profile-1" : props.value.agent,
-            model: { kind: "model", id: "opus" },
-          })
-        }
-      >
-        {`pick opus for ${props.level}`}
-      </button>
+      <>
+        <button
+          type="button"
+          onClick={() => props.onChange({ ...props.value, model: { kind: "model", id: "opus" } })}
+        >
+          {`pick opus for ${props.level}`}
+        </button>
+        <button
+          type="button"
+          onClick={() => props.onChange({ ...props.value, agent: "profile:profile-1" })}
+        >
+          {`pick the profile for ${props.level}`}
+        </button>
+      </>
     );
   },
 }));
@@ -395,7 +396,7 @@ it("refuses to append until the step is named, and never for a missing instructi
   expect(findButton("Add follow-up step⌘↵")?.disabled).toBe(false);
 });
 
-it("appends the step on the agent the user picked and follows the run it joined", async () => {
+it("appends the step on the resolved runtime and follows the run it joined", async () => {
   await openDialog(CONTINUING);
   await act(async () => {
     setInputValue(input("Step name"), "  Address the failing test  ");
@@ -408,7 +409,7 @@ it("appends the step on the agent the user picked and follows the run it joined"
     {
       name: "Address the failing test",
       note: "fix the parser",
-      profile_id: "profile-1",
+      runtime: "claude",
       model: { kind: "model", id: "opus" },
       depends_on: [],
     },
@@ -416,6 +417,19 @@ it("appends the step on the agent the user picked and follows the run it joined"
   );
   expect(onLaunched).toHaveBeenCalledWith(APPENDED_RUN, "appended-step");
   expect(launch).not.toHaveBeenCalled();
+});
+
+it("appends the step on a saved profile when the user picks one instead", async () => {
+  await openDialog(CONTINUING);
+  await act(async () => setInputValue(input("Step name"), "Address the failing test"));
+  await click("pick the profile for launch");
+  await click("Add follow-up step⌘↵");
+
+  expect(appendStep).toHaveBeenCalledWith(
+    expect.objectContaining({ profile_id: "profile-1" }),
+    expect.anything(),
+  );
+  expect(appendStep.mock.calls[0]?.[0]).not.toHaveProperty("runtime");
 });
 
 const STOPPED: IssueContract = {

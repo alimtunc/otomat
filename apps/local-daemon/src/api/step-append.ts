@@ -1,4 +1,4 @@
-import { IllegalTransitionError, InvalidRunPlanError } from "@otomat/domain";
+import { IllegalTransitionError, InvalidRunPlanError, type AgentSelection } from "@otomat/domain";
 import type { Context, Env } from "hono";
 
 import type { AgentConfigSelector } from "#agents";
@@ -8,8 +8,10 @@ import { agentConfigErrorResponse } from "./agent-config-refusal.js";
 import { refusalJson } from "./refusal.js";
 import { runtimeUnavailableResponse } from "./runtime-unavailable.js";
 
-export function appendStepSelector(request: { profile_id: string }): AgentConfigSelector {
-  return { kind: "profile", profileId: request.profile_id };
+export function appendStepSelector(request: AgentSelection): AgentConfigSelector {
+  return request.profile_id === undefined
+    ? { kind: "runtime", runtimeId: request.runtime }
+    : { kind: "profile", profileId: request.profile_id };
 }
 
 /**

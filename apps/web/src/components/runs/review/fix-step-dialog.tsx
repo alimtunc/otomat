@@ -16,7 +16,7 @@ import { LaunchExecutionPicker } from "@web/components/execution/launch-executio
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { contextRequestFields, EMPTY_CONTEXT_DRAFT } from "@web/lib/context/draft";
-import { profileRequestFields } from "@web/lib/execution/request";
+import { agentSelectionFields } from "@web/lib/execution/request";
 import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
 import { useState } from "react";
 
@@ -41,15 +41,15 @@ export function ReviewFixStepDialog({
   const [execution, setExecution] = useState<ExecutionSelection>(EMPTY_EXECUTION_SELECTION);
   const issue = useIssue(issueId);
   const fix = useRequestFix(runId);
-  const launchExecution = useLaunchExecution(execution, "profiles");
-  const profile = profileRequestFields(launchExecution.request);
-  const canSubmit = launchExecution.canLaunch && profile !== null && !fix.isPending;
+  const launchExecution = useLaunchExecution(execution);
+  const canSubmit = launchExecution.canLaunch && !fix.isPending;
 
   const submit = (): void => {
-    if (!canSubmit || profile === null) return;
+    const agent = agentSelectionFields(launchExecution.request);
+    if (!canSubmit || agent === null) return;
     const request: RequestFixRequest = {
       ...contextRequestFields(context),
-      ...profile,
+      ...agent,
     };
     fix.mutate(request, {
       onSuccess: (response) => {
@@ -97,7 +97,6 @@ export function ReviewFixStepDialog({
             execution={launchExecution}
             onChange={setExecution}
             label="Fix step"
-            scope="profiles"
           />
         </DialogBody>
         <IssueFormFooter

@@ -11,7 +11,12 @@ import {
   runContributionContractSchema,
   stepRunContractSchema,
 } from "./entities/runs.js";
-import { executionOptionSelectionsSchema } from "./execution-config.js";
+import {
+  AGENT_SELECTION_MESSAGE,
+  agentSelectionShape,
+  executionOptionSelectionsSchema,
+  selectsOneAgent,
+} from "./execution-config.js";
 import { providerOptionsSchema } from "./provider-options.js";
 import { modelIdSchema, modelSelectionSchema } from "./runtime-model.js";
 
@@ -140,7 +145,7 @@ export const appendRunStepRequestSchema = z
     note: z.string().trim().min(1).max(CONTEXT_NOTE_MAX_LENGTH).optional(),
     /** Extra issues and repository files to attach; the run's own issue is always attached. */
     context: contextReferencesSchema.optional(),
-    profile_id: z.string().min(1),
+    ...agentSelectionShape,
     /** Model override for this step alone; absent inherits the model of the config it resolves to. */
     model: modelSelectionSchema.optional(),
     /** Provider options for this step alone; an absent key keeps what the config it resolves to carries. */
@@ -150,7 +155,8 @@ export const appendRunStepRequestSchema = z
     /** Halted step this one recovers; once it succeeds, that failure stops holding the run in `failed`. */
     replaces: z.string().min(1).optional(),
   })
-  .strict();
+  .strict()
+  .refine(selectsOneAgent, { message: AGENT_SELECTION_MESSAGE });
 export type AppendRunStepRequest = z.infer<typeof appendRunStepRequestSchema>;
 
 /** Why a resume was refused. Both are caller-fixable, and the daemon's own sentence says which precondition failed. */
