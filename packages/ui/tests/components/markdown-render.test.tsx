@@ -94,12 +94,44 @@ it("resolves a reference link and leaves its definition out of the prose", async
   expect(container.textContent).not.toContain("[ref]:");
 });
 
-it("links an image instead of loading a destination the cockpit cannot authenticate", async () => {
+it("keeps remote media as a link unless its surface enables previews", async () => {
   const container = await render(<Markdown value="![screenshot](https://uploads.test/a.png)" />);
 
   expect(container.querySelector("img")).toBeNull();
   expect(container.querySelector("a")?.getAttribute("href")).toBe("https://uploads.test/a.png");
   expect(container.querySelector("a")?.textContent).toContain("screenshot");
+});
+
+it("previews remote images when the surface enables media", async () => {
+  const container = await render(
+    <Markdown value="![screenshot](https://uploads.test/a.png)" allowMedia />,
+  );
+  const image = container.querySelector("img");
+
+  expect(image?.getAttribute("src")).toBe("https://uploads.test/a.png");
+  expect(image?.getAttribute("alt")).toBe("screenshot");
+  expect(image?.getAttribute("loading")).toBe("lazy");
+  expect(container.querySelector("a")?.getAttribute("href")).toBe("https://uploads.test/a.png");
+});
+
+it("previews linked videos with native controls", async () => {
+  const container = await render(
+    <Markdown value="[Demo recording](https://uploads.test/demo.mp4)" allowMedia />,
+  );
+  const video = container.querySelector("video");
+
+  expect(video?.getAttribute("src")).toBe("https://uploads.test/demo.mp4");
+  expect(video?.hasAttribute("controls")).toBe(true);
+  expect(video?.getAttribute("preload")).toBe("metadata");
+});
+
+it("does not load non-HTTPS media", async () => {
+  const container = await render(
+    <Markdown value="![screenshot](http://uploads.test/a.png)" allowMedia />,
+  );
+
+  expect(container.querySelector("img")).toBeNull();
+  expect(container.querySelector("a")?.getAttribute("href")).toBe("http://uploads.test/a.png");
 });
 
 it("keeps a long code block scrollable and copyable", async () => {

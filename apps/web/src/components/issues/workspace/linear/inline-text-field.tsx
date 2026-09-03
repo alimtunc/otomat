@@ -44,7 +44,7 @@ export function InlineTextField({
     if (multiline && !empty) {
       return (
         <div className="group -mx-1.5 flex flex-col items-start gap-2 px-1.5">
-          <Markdown value={value} className={className} />
+          <Markdown value={value} className={className} allowMedia />
           {disabled ? null : (
             <Button
               type="button"

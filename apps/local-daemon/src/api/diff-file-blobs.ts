@@ -1,4 +1,8 @@
-import { diffFileBlobsResponseSchema, type DiffFileBlobsResponse } from "@otomat/domain";
+import {
+  diffFileBlobsResponseSchema,
+  type DiffFileBlob,
+  type DiffFileBlobsResponse,
+} from "@otomat/domain";
 import type { Context, Env } from "hono";
 
 import {
@@ -10,10 +14,20 @@ import {
   type FileBlobsResult,
 } from "#review";
 
+function toResponseBlob(blob: FileBlobsResult["base"]): DiffFileBlob | null {
+  if (blob === null) return null;
+  if (blob.kind === "text") return blob;
+  return {
+    kind: "media",
+    data: blob.data.toString("base64"),
+    media_type: blob.mediaType,
+  };
+}
+
 export function toDiffFileBlobsResponse(result: FileBlobsResult): DiffFileBlobsResponse {
   return diffFileBlobsResponseSchema.parse({
-    base_content: result.base,
-    head_content: result.head,
+    base: toResponseBlob(result.base),
+    head: toResponseBlob(result.head),
   });
 }
 

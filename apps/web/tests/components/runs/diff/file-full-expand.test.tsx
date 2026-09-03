@@ -4,11 +4,12 @@ import type { DiffFileBlobsResponse } from "@otomat/domain";
 import { ThemeProvider } from "@otomat/ui";
 import { DiffFileCard } from "@web/components/runs/diff/files/card";
 import { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { diffFileCardProps } from "#support/diff-card";
 import { MODIFIED_FILE_PATCH, stubDiffCanvas } from "#support/diff-dom";
 import { diffFile } from "#support/diff-file";
+import { stubIntersectionObserver, type IntersectionStub } from "#support/intersection";
 import { mountWithQuery } from "#support/mount";
 
 stubDiffCanvas();
@@ -18,8 +19,8 @@ const WHOLE_FILE = ["line one", "line two changed", "line three", "line four", "
 );
 
 const getDiffFileBlobs = vi.fn<() => Promise<DiffFileBlobsResponse>>(async () => ({
-  base_content: WHOLE_FILE,
-  head_content: WHOLE_FILE,
+  base: { kind: "text", content: WHOLE_FILE },
+  head: { kind: "text", content: WHOLE_FILE },
 }));
 
 vi.mock("@web/api/client", () => ({
@@ -29,11 +30,16 @@ vi.mock("@web/api/client", () => ({
 const file = diffFile({ path: "src/index.ts", patch: MODIFIED_FILE_PATCH, sha: "file-sha" });
 
 const cleanups: Array<() => Promise<void>> = [];
+let observer: IntersectionStub;
 
-async function renderCard() {
+beforeEach(() => {
+  observer = stubIntersectionObserver();
+});
+
+async function renderCard(renderedFile = file) {
   const { container, cleanup } = await mountWithQuery(
     <ThemeProvider>
-      <DiffFileCard {...diffFileCardProps({ file })} />
+      <DiffFileCard {...diffFileCardProps({ file: renderedFile })} />
     </ThemeProvider>,
   );
   cleanups.push(cleanup);
@@ -62,7 +68,11 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
   document.body.replaceChildren();
   vi.clearAllMocks();
-  getDiffFileBlobs.mockResolvedValue({ base_content: WHOLE_FILE, head_content: WHOLE_FILE });
+  observer.restore();
+  getDiffFileBlobs.mockResolvedValue({
+    base: { kind: "text", content: WHOLE_FILE },
+    head: { kind: "text", content: WHOLE_FILE },
+  });
 });
 
 describe("full-file expansion", () => {
@@ -110,5 +120,33 @@ describe("full-file expansion", () => {
 
     expect(getDiffFileBlobs).toHaveBeenCalledTimes(2);
     expect(card.container.textContent).toContain("line five");
+  });
+
+  it("loads a supported binary preview automatically when its card is near", async () => {
+    getDiffFileBlobs.mockResolvedValueOnce({
+      base: null,
+      head: { kind: "media", data: "iVBORw==", media_type: "image/png" },
+    });
+    const mediaFile = diffFile({
+      path: "assets/preview.png",
+      status: "added",
+      binary: true,
+      patch: "",
+      sha: "media-sha",
+    });
+
+    const card = await renderCard(mediaFile);
+    await act(async () => {
+      observer.reveal();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(getDiffFileBlobs).toHaveBeenCalledTimes(1);
+    expect(card.container.querySelector("img")?.getAttribute("src")).toBe(
+      "data:image/png;base64,iVBORw==",
+    );
   });
 });

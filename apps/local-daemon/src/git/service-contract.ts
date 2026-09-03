@@ -7,6 +7,7 @@ import type {
   CanonicalDiff,
   ChangedFile,
   DiffFileBlobs,
+  DiffFileMediaBlobs,
   DiffFilePaths,
   WorktreeRecord,
   WorktreeStateCapture,
@@ -61,6 +62,7 @@ export interface DiffSnapshot extends TreeSnapshot {
   diff: CanonicalDiff;
   /** Whole-file text on both sides of `diff`, read from the captured base and tree. */
   fileBlobs(paths: DiffFilePaths): DiffFileBlobs;
+  mediaBlobs(paths: DiffFilePaths): DiffFileMediaBlobs;
 }
 
 export interface BranchDiff {

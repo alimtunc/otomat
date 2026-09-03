@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { parseNameStatusZ, parseNumstatZ, splitPatchByFile } from "./diff-parse.js";
-import { runGit } from "./git-cli.js";
+import { runGit, runGitBytes } from "./git-cli.js";
 import type { DiffSnapshot } from "./service-contract.js";
 import { readTreeFile } from "./tree-file.js";
 import type {
@@ -12,6 +12,7 @@ import type {
   ChangedFile,
   DiffFile,
   DiffFileBlobs,
+  DiffFileMediaBlobs,
   DiffFilePaths,
 } from "./types.js";
 
@@ -103,10 +104,28 @@ export function readFileBlobs(
   };
 }
 
+function readMediaBlob(gitCwd: string, ref: string, path: string): Buffer | null {
+  const result = runGitBytes(["show", `${ref}:${path}`], { cwd: gitCwd, allowFailure: true });
+  return result.exitCode === 0 ? result.stdout : null;
+}
+
+function readMediaBlobs(
+  gitCwd: string,
+  base: string,
+  tree: string,
+  paths: DiffFilePaths,
+): DiffFileMediaBlobs {
+  return {
+    base: readMediaBlob(gitCwd, base, paths.oldPath ?? paths.path),
+    head: readMediaBlob(gitCwd, tree, paths.path),
+  };
+}
+
 export function treeRangeSnapshot(gitCwd: string, base: string, tree: string): DiffSnapshot {
   return {
     diff: computeCanonicalDiff(gitCwd, base, tree),
     fileBlobs: (paths) => readFileBlobs(gitCwd, base, tree, paths),
+    mediaBlobs: (paths) => readMediaBlobs(gitCwd, base, tree, paths),
     readFile: (path, limits) => readTreeFile(gitCwd, tree, path, limits),
   };
 }

@@ -16,6 +16,12 @@ export interface GitResult {
   exitCode: number | null;
 }
 
+export interface GitBytesResult {
+  stdout: Buffer;
+  stderr: string;
+  exitCode: number | null;
+}
+
 const MAX_BUFFER = 256 * 1024 * 1024;
 
 // Repo-location vars a parent process (notably a `pre-push` hook) may export;
@@ -54,6 +60,29 @@ export function runGit(args: readonly string[], options: RunGitOptions): GitResu
 
   if (!options.allowFailure && result.status !== 0) {
     throw new GitCommandError(args, options.cwd, result.status, out.stderr);
+  }
+  return out;
+}
+
+export function runGitBytes(args: readonly string[], options: RunGitOptions): GitBytesResult {
+  const result = spawnSync("git", args, {
+    cwd: options.cwd,
+    encoding: null,
+    env: { ...scrubGitEnv(process.env), ...options.env },
+    maxBuffer: MAX_BUFFER,
+  });
+
+  if (result.error) throw result.error;
+
+  const stderr = result.stderr?.toString("utf8") ?? "";
+  const out: GitBytesResult = {
+    stdout: result.stdout ?? Buffer.alloc(0),
+    stderr,
+    exitCode: result.status,
+  };
+
+  if (!options.allowFailure && result.status !== 0) {
+    throw new GitCommandError(args, options.cwd, result.status, stderr);
   }
   return out;
 }

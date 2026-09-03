@@ -48,6 +48,7 @@ function renderBody(mode: DiffViewMode, add = vi.fn(async () => {})) {
         wrap={false}
         highlight={false}
         context={null}
+        media={null}
         expandAll={false}
         comments={fileCommentsProp()}
         commentActions={fileCommentActions({ add })}
@@ -73,6 +74,7 @@ function LayoutHarness() {
         wrap={wrap}
         highlight={false}
         context={null}
+        media={null}
         expandAll={false}
         comments={fileCommentsProp()}
         commentActions={fileCommentActions({ add: vi.fn(async () => {}) })}

@@ -211,7 +211,25 @@ it("serves the exact base and head blobs of a live diff file", () => {
   });
 
   expect(blobs.base).toBeNull();
-  expect(blobs.head).toBe("alpha\nbeta\ngamma\n");
+  expect(blobs.head).toEqual({ kind: "text", content: "alpha\nbeta\ngamma\n" });
+});
+
+it("serves supported binary media as exact bytes", () => {
+  const bytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 1]);
+  writeFileSync(join(worktreePath, "preview.png"), bytes);
+  const file = review
+    .getDiff(runTarget())
+    .diff?.files.find((candidate) => candidate.path === "preview.png");
+  if (!file) throw new Error("expected preview.png in the diff");
+
+  const blobs = review.getFileBlobs(runTarget(), {
+    path: file.path,
+    sha: file.sha,
+    scope: BRANCH_DIFF_SCOPE,
+  });
+
+  expect(blobs.base).toBeNull();
+  expect(blobs.head).toEqual({ kind: "media", data: bytes, mediaType: "image/png" });
 });
 
 it("refuses blobs read against a moved anchor", () => {
@@ -241,8 +259,8 @@ it("reads a modified file's base side from the fork point, not from the worktree
     scope: BRANCH_DIFF_SCOPE,
   });
 
-  expect(blobs.base).toBe("# base\n");
-  expect(blobs.head).toBe("# base\nplus a line\n");
+  expect(blobs.base).toEqual({ kind: "text", content: "# base\n" });
+  expect(blobs.head).toEqual({ kind: "text", content: "# base\nplus a line\n" });
 });
 
 it("grants fix authority only while Otomat still holds the run's worktree", () => {

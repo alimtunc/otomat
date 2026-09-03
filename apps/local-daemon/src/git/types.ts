@@ -31,6 +31,11 @@ export interface DiffFileBlobs {
   head: string | null;
 }
 
+export interface DiffFileMediaBlobs {
+  base: Buffer | null;
+  head: Buffer | null;
+}
+
 export interface CanonicalDiff {
   base: string;
   head: string;

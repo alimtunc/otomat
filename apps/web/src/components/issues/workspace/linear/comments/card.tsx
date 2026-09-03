@@ -24,7 +24,7 @@ export function Card({
           </Button>
         ) : null}
       </header>
-      <Markdown value={comment.body} className="mt-1.5 text-sm text-foreground" />
+      <Markdown value={comment.body} className="mt-1.5 text-sm text-foreground" allowMedia />
     </article>
   );
 }

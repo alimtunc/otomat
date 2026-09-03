@@ -186,7 +186,10 @@ it("answers a refused synchronization with the persisted mark, not with a failur
 it("hands back the exact base and head blobs behind one file of the diff", async () => {
   const app = makeApiApp(t, {
     review: stubReviewService({
-      getFileBlobs: () => ({ base: "alpha\n", head: "alpha\nbeta\n" }),
+      getFileBlobs: () => ({
+        base: { kind: "text", content: "alpha\n" },
+        head: { kind: "text", content: "alpha\nbeta\n" },
+      }),
     }),
   });
   const res = await request(
@@ -194,7 +197,31 @@ it("hands back the exact base and head blobs behind one file of the diff", async
     `/api/runs/${RUN_ID}/diff/file?path=${encodeURIComponent("src/thing.ts")}&sha=sha-1`,
   );
   expect(res.status).toBe(200);
-  expect(await res.json()).toEqual({ base_content: "alpha\n", head_content: "alpha\nbeta\n" });
+  expect(await res.json()).toEqual({
+    base: { kind: "text", content: "alpha\n" },
+    head: { kind: "text", content: "alpha\nbeta\n" },
+  });
+});
+
+it("encodes media bytes without decoding them as text", async () => {
+  const app = makeApiApp(t, {
+    review: stubReviewService({
+      getFileBlobs: () => ({
+        base: null,
+        head: { kind: "media", data: Buffer.from([0, 1, 2, 255]), mediaType: "image/png" },
+      }),
+    }),
+  });
+  const res = await request(
+    app,
+    `/api/runs/${RUN_ID}/diff/file?path=${encodeURIComponent("image.png")}&sha=sha-1`,
+  );
+
+  expect(res.status).toBe(200);
+  expect(await res.json()).toEqual({
+    base: null,
+    head: { kind: "media", data: "AAEC/w==", media_type: "image/png" },
+  });
 });
 
 it("refuses blobs read against a moved anchor instead of expanding the wrong context", async () => {
