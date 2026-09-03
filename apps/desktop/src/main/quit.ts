@@ -13,15 +13,34 @@ interface QuitSignalSource {
   once(event: "SIGTERM", listener: () => void): void;
 }
 
+/** Decides whether a quit may proceed at all; `BackgroundMode` implements it. */
+export interface QuitGate {
+  allowQuit(): boolean;
+  forceQuit(): void;
+}
+
+export interface QuitHandlers {
+  gate: QuitGate;
+  sequence: QuitSequence;
+}
+
 export function registerQuitHandlers(
   app: QuitApplication,
   signals: QuitSignalSource,
-  sequence: () => QuitSequence | null,
+  handlers: () => QuitHandlers | null,
 ): void {
-  signals.once("SIGTERM", () => app.quit());
+  signals.once("SIGTERM", () => {
+    handlers()?.gate.forceQuit();
+    app.quit();
+  });
   app.on("before-quit", (event) => {
-    const quit = sequence();
-    if (quit !== null && quit.begin(() => app.quit())) event.preventDefault();
+    const current = handlers();
+    if (current === null) return;
+    if (!current.gate.allowQuit()) {
+      event.preventDefault();
+      return;
+    }
+    if (current.sequence.begin(() => app.quit())) event.preventDefault();
   });
 }
 

@@ -1,6 +1,15 @@
 import { expect, it, vi } from "vitest";
 
-import { QuitSequence, registerQuitHandlers, type QuittableRuntime } from "#main/quit";
+import {
+  QuitSequence,
+  registerQuitHandlers,
+  type QuitGate,
+  type QuittableRuntime,
+} from "#main/quit";
+
+function openGate(): QuitGate {
+  return { allowQuit: () => true, forceQuit: vi.fn() };
+}
 
 function quitSequence(
   runtime: QuittableRuntime,
@@ -47,7 +56,7 @@ it("holds Electron's quit while owned processes stop", async () => {
   const quit = quitSequence(runningRuntime(() => Promise.resolve()));
   const preventDefault = vi.fn();
 
-  registerQuitHandlers(app, { once: vi.fn() }, () => quit);
+  registerQuitHandlers(app, { once: vi.fn() }, () => ({ gate: openGate(), sequence: quit }));
   if (beforeQuit === undefined) throw new Error("before-quit handler was not registered");
   beforeQuit({ preventDefault });
 
@@ -145,4 +154,51 @@ it("leaves the quit alone when it owns no daemon and no remote session", () => {
 
   expect(quit.begin(done)).toBe(false);
   expect(done).not.toHaveBeenCalled();
+});
+
+it("holds the quit while the gate is still asking the operator", () => {
+  let beforeQuit: ((event: { preventDefault(): void }) => void) | undefined;
+  const app = {
+    on: vi.fn((_event: "before-quit", listener: typeof beforeQuit) => {
+      beforeQuit = listener;
+    }),
+    quit: vi.fn(),
+  };
+  const sequence = quitSequence(runningRuntime(() => Promise.resolve()));
+  const begin = vi.spyOn(sequence, "begin");
+  const preventDefault = vi.fn();
+
+  registerQuitHandlers(app, { once: vi.fn() }, () => ({
+    gate: { allowQuit: () => false, forceQuit: vi.fn() },
+    sequence,
+  }));
+  if (beforeQuit === undefined) throw new Error("before-quit handler was not registered");
+  beforeQuit({ preventDefault });
+
+  expect(preventDefault).toHaveBeenCalledOnce();
+  expect(begin).not.toHaveBeenCalled();
+});
+
+it("skips the gate's confirmation on SIGTERM, which no dialog can hold", () => {
+  let onSigterm: (() => void) | undefined;
+  const app = {
+    on: vi.fn(),
+    quit: vi.fn(),
+  };
+  const signals = {
+    once: vi.fn((_signal: "SIGTERM", listener: () => void) => {
+      onSigterm = listener;
+    }),
+  };
+  const gate = openGate();
+
+  registerQuitHandlers(app, signals, () => ({
+    gate,
+    sequence: quitSequence(runningRuntime(() => Promise.resolve())),
+  }));
+  if (onSigterm === undefined) throw new Error("SIGTERM handler was not registered");
+  onSigterm();
+
+  expect(gate.forceQuit).toHaveBeenCalledOnce();
+  expect(app.quit).toHaveBeenCalledOnce();
 });

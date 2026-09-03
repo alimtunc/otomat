@@ -13,6 +13,8 @@ import {
 import { SPLASH_RETRY_CHANNEL, SPLASH_STATUS_CHANNEL, type StartupStatus } from "#shared/startup";
 import { resolveUserPath } from "#shared/user-path";
 
+import { createBackgroundMode } from "./background/create.js";
+import { CockpitWindow } from "./cockpit-window.js";
 import { RendererCsp } from "./csp.js";
 import { resolveExpectedBuild } from "./expected-build.js";
 import { buildIpcActions } from "./ipc-actions.js";
@@ -45,7 +47,6 @@ export class DesktopApp {
   private localDaemonUrl = "";
   private diagnostic: DesktopStartupDiagnostic | null = null;
   private splash: BrowserWindow | null = null;
-  private cockpit: BrowserWindow | null = null;
   private operation: "restoring" | "starting" | null = null;
   private readonly csp = new RendererCsp(() => [
     this.localDaemonUrl,
@@ -57,6 +58,17 @@ export class DesktopApp {
     () => this.runtime,
     (message) => this.log.write(message),
   );
+  readonly background = createBackgroundMode({
+    trayIcon: () => this.paths.trayIcon,
+    daemonUrl: () => this.localDaemonUrl,
+    hideWindow: () => this.cockpit.hide(),
+    openWindow: () => this.showPrimary(),
+    log: (message) => this.log.write(message),
+  });
+  private readonly cockpit = new CockpitWindow({
+    create: () => createCockpitWindow(this.paths, this.devServer),
+    onClose: () => this.background.handleWindowClose(),
+  });
 
   constructor(
     private readonly paths: AppPaths,
@@ -91,7 +103,7 @@ export class DesktopApp {
       runtime: () => this.runtime,
       support: this.support,
       restoreBackup: () => this.restoreBackup(),
-      reloadCockpit: () => this.cockpit?.webContents.reload(),
+      reloadCockpit: () => this.cockpit.reload(),
     });
     registerIpc(this.ipcState, actions);
     ipcMain.on(SPLASH_RETRY_CHANNEL, () => void this.runStartup());
@@ -109,10 +121,7 @@ export class DesktopApp {
   }
 
   focusPrimary(): void {
-    const window = this.cockpit ?? this.splash;
-    if (window === null) return;
-    if (window.isMinimized()) window.restore();
-    window.focus();
+    this.background.reopen();
   }
 
   private async runStartup(): Promise<void> {
@@ -138,12 +147,11 @@ export class DesktopApp {
         ),
         localDaemonUrl: () => this.localDaemonUrl,
         onRemoteStatus: (status) => {
-          this.sendToCockpit(EXECUTION_HOST_STATUS_CHANNEL, status);
+          this.cockpit.send(EXECUTION_HOST_STATUS_CHANNEL, status);
           if (status.phase === "connected") void this.runtime?.linear.reconcile();
         },
-        onLinearDelivery: (delivery) =>
-          this.sendToCockpit(LINEAR_DELIVERY_STATUS_CHANNEL, delivery),
-        onUpdate: (snapshot) => this.sendToCockpit(UPDATE_STATUS_CHANNEL, snapshot),
+        onLinearDelivery: (delivery) => this.cockpit.send(LINEAR_DELIVERY_STATUS_CHANNEL, delivery),
+        onUpdate: (snapshot) => this.cockpit.send(UPDATE_STATUS_CHANNEL, snapshot),
         applyRendererUrl: (url) => this.applyRendererUrl(url),
         onSandboxDaemonStarted: (url) => {
           this.localDaemonUrl = url;
@@ -159,7 +167,7 @@ export class DesktopApp {
       await this.runtime.linear.reconcile();
       this.rejectedBackupPaths.clear();
       this.diagnostic = null;
-      this.openCockpit();
+      this.cockpit.open();
       this.splash?.close();
       this.splash = null;
       this.runtime.updater.start();
@@ -222,23 +230,16 @@ export class DesktopApp {
 
   private applyRendererUrl(url: string): void {
     this.ipcState.daemonUrl = url;
-    if (!this.csp.allows(url)) this.cockpit?.webContents.reload();
+    if (!this.csp.allows(url)) this.cockpit.reload();
   }
 
-  private sendToCockpit(channel: string, payload: unknown): void {
-    const contents = this.cockpit?.webContents;
-    if (contents === undefined || contents.isDestroyed()) return;
-    contents.send(channel, payload);
-  }
-
-  private openCockpit(): void {
-    if (this.cockpit !== null) {
-      this.cockpit.focus();
+  private showPrimary(): void {
+    if (this.cockpit.isOpen) {
+      this.cockpit.show();
       return;
     }
-    const window = createCockpitWindow(this.paths, this.devServer);
-    window.on("closed", () => (this.cockpit = null));
-    this.cockpit = window;
+    if (this.splash?.isMinimized() === true) this.splash.restore();
+    this.splash?.focus();
   }
 
   private sendStatus(status: StartupStatus): void {
