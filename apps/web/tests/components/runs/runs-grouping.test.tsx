@@ -97,8 +97,9 @@ it("says what its filters are hiding, and stays quiet when they hide nothing", a
       />,
     ),
   );
-  expect(document.body.textContent).toContain("1 issue and 1 failed run hidden");
   expect(filterTrigger()?.textContent).toBe("Filter1");
+  await act(async () => filterTrigger()?.click());
+  expect(document.body.textContent).toContain("1 issue and 1 failed run hidden");
 
   const [entry] = mounted.splice(0, 1);
   await entry.cleanup();

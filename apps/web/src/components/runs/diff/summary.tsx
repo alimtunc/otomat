@@ -6,16 +6,13 @@ export function DiffSummary({ diff }: { diff: ReviewDiffContract }) {
   const fileCount = diff.files.length;
   const filesLabel = fileCount === 1 ? "1 file" : `${fileCount} files`;
   return (
-    <span className="flex items-center gap-2 font-mono text-xs text-text-tertiary">
+    <span
+      className="flex items-center gap-2 font-mono text-xs text-text-tertiary"
+      title={`base ${shortSha(diff.base)} → head ${shortSha(diff.head)} · diff ${diff.sha}`}
+    >
       <span>{filesLabel}</span>
       <DiffStat additions={diff.additions} deletions={diff.deletions} />
-      <span title={`base ${diff.base} → head ${diff.head}`}>
-        {shortSha(diff.base)} → {shortSha(diff.head)}
-      </span>
-      <span className="flex items-center gap-1" title={diff.sha}>
-        diff {diff.sha.slice(0, 10)}
-        <CopyButton value={diff.sha} label="Copy diff sha" />
-      </span>
+      <CopyButton value={diff.sha} label="Copy diff sha" />
     </span>
   );
 }

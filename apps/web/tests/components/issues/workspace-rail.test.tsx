@@ -40,14 +40,14 @@ it("names both axes and reads them apart while the cycle is open", async () => {
   );
 
   expect(rowValue(container, "Issue status")).toBe("Backlog");
-  expect(rowValue(container, "Workspace execution")).toBe("Reviewing");
+  expect(rowValue(container, "Execution")).toBe("Reviewing");
 });
 
 it("stops naming an execution once the cycle is closed", async () => {
   const container = await render(issueContract({ status: "ready", execution: REVIEWING }));
 
   expect(rowValue(container, "Issue status")).toBe("Ready");
-  expect(rowValue(container, "Workspace execution")).toBe("No open workspace");
+  expect(rowValue(container, "Execution")).toBe("No open workspace");
 });
 
 it("keeps the stopped cycle of a done issue readable in the rail", async () => {
@@ -64,6 +64,6 @@ it("keeps the stopped cycle of a done issue readable in the rail", async () => {
   );
 
   expect(rowValue(container, "Issue status")).toBe("Done");
-  expect(rowValue(container, "Workspace execution")).toBe("Failed");
+  expect(rowValue(container, "Execution")).toBe("Failed");
   expect(container.textContent).toContain("Failed at Reviewer");
 });

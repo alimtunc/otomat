@@ -19,10 +19,13 @@ export function LifecycleSync({ issueId, lifecycle }: LifecycleSyncProps) {
       className="flex scroll-mt-4 items-start justify-between gap-2 text-xs"
     >
       <div className="min-w-0">
-        <span className="text-text-secondary">Status sync</span>
-        <span className={`ml-1.5 ${WRITE_STATUS_TEXT[lifecycle.status]}`}>{lifecycle.status}</span>
-        <div className="truncate text-text-tertiary">
-          {LIFECYCLE_PHASE_LABEL[lifecycle.phase]} → {lifecycle.target_state_name}
+        <div className="truncate">
+          <span className="text-text-secondary">
+            {LIFECYCLE_PHASE_LABEL[lifecycle.phase]} → {lifecycle.target_state_name}
+          </span>
+          <span className={`ml-1.5 ${WRITE_STATUS_TEXT[lifecycle.status]}`}>
+            {lifecycle.status}
+          </span>
         </div>
         {lifecycle.status === "failed" && lifecycle.error_message ? (
           <div className="text-danger">{lifecycle.error_message}</div>

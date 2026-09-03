@@ -10,6 +10,7 @@ import {
   Field,
   FieldControl,
   FieldLabel,
+  Icon,
   Select,
   SelectContent,
   SelectItem,
@@ -86,7 +87,14 @@ export function NextTurnModelDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button type="button" variant="ghost" size="xs" className={className}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            className={className}
+            title="Model for next turn"
+          >
+            <Icon name="cpu" aria-hidden />
             {modelLabel(config.model)}
           </Button>
         }

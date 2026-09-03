@@ -56,5 +56,5 @@ it("explains the blocker and points at the action that lifts it, instead of offe
 
   expect(findButton("Clean workspace…")).toBeUndefined();
   expect(findButton("Reconcile")).toBeDefined();
-  expect(document.body.textContent).toContain("Merge or abandon the cycle");
+  expect(document.body.textContent).toContain("merge or abandon its cycle first");
 });

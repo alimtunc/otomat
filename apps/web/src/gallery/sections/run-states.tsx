@@ -1,5 +1,4 @@
 import type { PullRequestDetail, RunDetail } from "@otomat/domain";
-import { NextActionCard } from "@web/components/runs/next-action/card";
 import { NextActionStrip } from "@web/components/runs/next-action/strip";
 import { PullRequestOutcome } from "@web/components/runs/pr/outcome";
 
@@ -71,14 +70,6 @@ export function RunStatesSection() {
             <div className="overflow-hidden rounded-md border border-border-subtle">
               <NextActionStrip detail={item.detail} pullRequest={item.pullRequest} />
             </div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-6 grid gap-4 xl:grid-cols-3">
-        {COMPLETED_CASES.map((item) => (
-          <div key={item.label}>
-            <p className="mb-1 font-mono text-xs text-text-tertiary">rail card · {item.label}</p>
-            <NextActionCard detail={item.detail} pullRequest={item.pullRequest} />
           </div>
         ))}
       </div>
