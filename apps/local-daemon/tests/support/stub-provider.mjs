@@ -45,6 +45,7 @@ if (process.env.OTOMAT_STUB_PERMISSION === "1") {
         display_name: "Write",
         description: "notes.md",
         input: { file_path: "notes.md", content: "ok" },
+        decision_reason: "the deny rule Read(./notes.md) covers it; only you can approve it.",
         tool_use_id: "tu-perm-1",
       },
     })}\n`,

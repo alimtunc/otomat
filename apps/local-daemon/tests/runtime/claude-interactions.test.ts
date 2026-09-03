@@ -81,6 +81,7 @@ it("turns a can_use_tool control request into a runtime-agnostic question", asyn
     prompt: "Run Write: notes.md",
     tool: "Write",
     options: [],
+    reason: "the deny rule Read(./notes.md) covers it; only you can approve it.",
     tool_use_id: "tu-perm-1",
     permission_mode: "acceptEdits",
   });

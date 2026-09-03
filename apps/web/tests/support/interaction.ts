@@ -13,6 +13,7 @@ export function interaction(
     state: "pending",
     prompt: "Run Write: notes.md",
     tool: "Write",
+    reason: null,
     options: [],
     answer: null,
     canceled_reason: null,

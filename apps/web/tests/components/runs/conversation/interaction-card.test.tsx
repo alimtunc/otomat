@@ -38,6 +38,14 @@ it("offers approve and refuse for a permission, and sends the decision the opera
   expect(answer).toHaveBeenCalledWith({ kind: "permission", decision: "deny" });
 });
 
+it("shows the runtime's own reason for asking next to the question", async () => {
+  ui = await mount(
+    card({ reason: "grep on '.' would read '.env', which the deny rule Read(./.env) covers." }),
+  );
+
+  expect(ui.container.textContent).toContain("deny rule Read(./.env)");
+});
+
 it("offers the runtime's own options for a choice, never an approval", async () => {
   ui = await mount(
     card({

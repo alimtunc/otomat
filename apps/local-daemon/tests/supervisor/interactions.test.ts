@@ -96,6 +96,7 @@ it("promotes a question the turn asked into a pending row and rests the run on i
     state: "pending",
     prompt: "Run Write: notes.md",
     tool: "Write",
+    reason: "the deny rule Read(./notes.md) covers it; only you can approve it.",
   });
   expect(await waitFor(() => getRun(fix.db, RUN)?.status === "awaiting_permission")).toBe(true);
   expect(getStepRun(fix.db, STEP)?.status).toBe("awaiting_permission");

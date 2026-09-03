@@ -101,6 +101,7 @@ if (behavior === "complete") {
       prompt: "Run Write: notes.md",
       tool: "Write",
       options: [],
+      reason: "the deny rule Read(./notes.md) covers it; only you can approve it.",
     });
   }
   const inbox = join(job.agentSessionDir, "live-input.jsonl");

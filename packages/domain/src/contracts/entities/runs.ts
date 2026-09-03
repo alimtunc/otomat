@@ -59,6 +59,7 @@ export const runInteractionContractSchema = z.object({
   state: z.enum(RUN_INTERACTION_STATES),
   prompt: z.string().min(1),
   tool: z.string().nullable(),
+  reason: z.string().nullable(),
   options: z.array(runtimeInteractionOptionSchema),
   answer: runtimeInteractionAnswerSchema.nullable(),
   /** Why the request can no longer be answered; set only on `canceled`. */
