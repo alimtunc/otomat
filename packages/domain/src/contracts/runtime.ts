@@ -61,6 +61,8 @@ export const runtimeInteractionRequestSchema = z.object({
   /** The tool the question gates, when it gates one. */
   tool: z.string().min(1).nullable(),
   options: z.array(runtimeInteractionOptionSchema),
+  /** Why the runtime asked instead of deciding, in its own words; a request recorded before it said so reads as none. */
+  reason: z.string().min(1).nullable().default(null),
 });
 export type RuntimeInteractionRequest = z.infer<typeof runtimeInteractionRequestSchema>;
 

@@ -91,6 +91,7 @@ export class ClaudeFrameMapper implements ProviderFrameMapper {
       prompt: detail === null ? `Run ${toolName}?` : `Run ${toolName}: ${detail}`,
       tool: toolName,
       options: [],
+      reason: asString(request["decision_reason"]),
       tool_use_id: toolUseId,
       input: request["input"] ?? null,
       permission_mode: this.permission.mode,

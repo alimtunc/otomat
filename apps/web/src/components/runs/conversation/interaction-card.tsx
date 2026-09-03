@@ -32,6 +32,9 @@ export function InteractionCard({
       </div>
       <div className="flex flex-col gap-2 rounded-lg border border-border-strong bg-card px-3 py-2">
         <p className="text-sm text-text-primary">{interaction.prompt}</p>
+        {interaction.reason === null ? null : (
+          <p className="text-xs text-text-secondary">{interaction.reason}</p>
+        )}
         {interaction.tool === null ? null : (
           <p className="text-micro text-text-tertiary">Tool: {interaction.tool}</p>
         )}

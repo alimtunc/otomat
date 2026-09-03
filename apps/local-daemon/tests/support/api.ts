@@ -129,6 +129,7 @@ export function interactionRow(
     state: "pending",
     prompt: "Run Write: notes.md",
     tool: "Write",
+    reason: null,
     options_json: [],
     answer_json: null,
     canceled_reason: null,

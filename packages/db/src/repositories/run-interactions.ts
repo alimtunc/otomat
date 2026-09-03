@@ -16,6 +16,7 @@ export interface RecordRunInteraction {
   kind: RunInteractionRow["kind"];
   prompt: string;
   tool: string | null;
+  reason: string | null;
   options_json: RuntimeInteractionOption[];
   requested_at: string;
 }

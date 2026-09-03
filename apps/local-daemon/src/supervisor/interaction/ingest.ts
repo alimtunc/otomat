@@ -37,6 +37,7 @@ function recordRequest(db: Db, event: EventEnvelope): void {
     kind: request.data.kind,
     prompt: request.data.prompt,
     tool: request.data.tool,
+    reason: request.data.reason,
     options_json: request.data.options,
     requested_at: event.occurred_at,
   });

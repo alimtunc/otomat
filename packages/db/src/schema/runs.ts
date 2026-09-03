@@ -164,6 +164,7 @@ export const runInteractions = sqliteTable(
     state: text("state").$type<RunInteractionState>().notNull().default("pending"),
     prompt: text("prompt").notNull(),
     tool: text("tool"),
+    reason: text("reason"),
     options_json: text("options_json", { mode: "json" })
       .$type<RuntimeInteractionOption[]>()
       .notNull(),
