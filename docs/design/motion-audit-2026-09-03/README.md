@@ -17,7 +17,7 @@ before extending any of it.
   duration, easing), `getComputedStyle` sampled every 16 ms, and a
   `layout-shift` `PerformanceObserver`. Reduced motion was checked with
   `Emulation.setEmulatedMedia`, widths at 1440 and 1024 px, keyboard paths with
-  synthetic key events. Screenshots are 1440×900 unless cropped.
+  synthetic key events.
 - Skills: `improve-animations` (audit), `find-animation-opportunities` (gate),
   `prototype` (picker harness, PICKER.md verbatim), `emil-design-eng`
   (implementation), `review-animations` (final review). The audit and the review
@@ -108,9 +108,6 @@ primitives with `!important`; production code was untouched during exploration.
 |  | **Settle** | fade + 4 px slide over 140 ms | Opacity 0→.32→.57→.86→.97, translate −4→0 px; CLS unchanged by the motion; reduced motion → instant | **Chosen** |
 |  | Fade | Opacity only | Same | Fine, but the settle explains "a row arrived" better for the same price |
 
-Prototype crops: `prototypes/overlays-Anchored-menu-{f0,f1,end}.png`,
-`prototypes/banner-Settle-{f0,f1,end}.png`.
-
 ## Phase 3 — What shipped
 
 - `packages/ui/src/primitives/styles.ts`: `POPUP_MOTION_CLASS` /
@@ -151,11 +148,6 @@ Same viewport (1440×900), same states, same daemon data.
 | Project switch, cached badges | present on frame 0 | unchanged |
 | Layout shift introduced by the change | — | none: only `transform`, `translate` and `opacity` animate |
 | Blocking animation | — | none: every transition is interruptible and shorter than 150 ms |
-
-Images: `before/popover-filter.png` vs `after/popover-frame-{0..3}.png` (0, 30,
-60, 120 ms after the click); `before/dialog-new-issue.png` vs
-`after/dialog-new-issue.png`; `before/palette.png` vs `after/palette.png`;
-`before/stale-offline.png` vs `after/offline-banner.png`.
 
 ## `review-animations` on the final diff
 
