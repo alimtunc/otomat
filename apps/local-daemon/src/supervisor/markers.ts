@@ -26,7 +26,7 @@ type RunLifecyclePayload =
   | { phase: "provider_resume"; resume_at: string; outcome: ProviderResumeOutcome; detail: string }
   | { phase: "reopened"; from_status: RunSettledState; step_name: string }
   | { phase: "abandoned"; branch: string }
-  | { phase: "workspace_cleaned"; branch: string; worktree_path: string };
+  | { phase: "workspace_cleaned"; branch: string; worktree_path: string; forced: boolean };
 
 function lifecycleEvent(
   ref: SessionRef,
@@ -132,11 +132,12 @@ export function buildWorkspaceCleanedEvent(
   runId: string,
   branch: string,
   worktreePath: string,
+  forced: boolean,
   occurredAt: string,
 ): RuntimeEvent {
   return lifecycleEvent(
     { runId, stepRunId: null, agentSessionId: null },
-    { phase: "workspace_cleaned", branch, worktree_path: worktreePath },
+    { phase: "workspace_cleaned", branch, worktree_path: worktreePath, forced },
     occurredAt,
   );
 }

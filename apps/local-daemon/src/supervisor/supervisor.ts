@@ -102,9 +102,9 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
       }
       return workspacePass;
     },
-    cleanupWorkspace: (worktreeId) => {
-      const entry = findWorkspaceEntry(workspaces, worktreeId, cycleHolders(state.db));
-      return entry === null ? null : cleanupWorkspace(workspaces, entry);
+    cleanupWorkspace: (workspaceId, force) => {
+      const entry = findWorkspaceEntry(workspaces, workspaceId, cycleHolders(state.db));
+      return entry === null ? null : cleanupWorkspace(workspaces, entry, { force });
     },
     settle: async () => {
       while (state.inflight.size > 0 || state.pending.size > 0) {

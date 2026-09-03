@@ -29,7 +29,8 @@ let projects: ProjectContract[] = [PROJECT];
 
 const listWorkspaces = vi.fn<(params: { projectId?: string }) => Promise<WorkspaceInventory>>();
 const reconcileWorkspaces = vi.fn<() => Promise<WorkspaceReconcileReport>>();
-const cleanupWorkspace = vi.fn<(worktreeId: string) => Promise<WorkspaceCleanupResult>>();
+const cleanupWorkspace =
+  vi.fn<(workspaceId: string, force: boolean) => Promise<WorkspaceCleanupResult>>();
 const workspaceSettings = vi.fn<(projectId: string) => Promise<WorkspaceSettings>>(async () => ({
   auto_delete_after_merge: true,
 }));
@@ -42,7 +43,7 @@ vi.mock("@web/api/client", () => ({
     listProjects: () => Promise.resolve(projects),
     listWorkspaces: (params: { projectId?: string }) => listWorkspaces(params),
     reconcileWorkspaces: () => reconcileWorkspaces(),
-    cleanupWorkspace: (worktreeId: string) => cleanupWorkspace(worktreeId),
+    cleanupWorkspace: (workspaceId: string, force: boolean) => cleanupWorkspace(workspaceId, force),
     workspaceSettings: (projectId: string) => workspaceSettings(projectId),
     setWorkspaceSettings: (projectId: string, settings: WorkspaceSettings) =>
       setWorkspaceSettings(projectId, settings),
@@ -95,12 +96,13 @@ it("counts the maintenance states and says why each workspace is where it is", a
     entry({
       id: "b",
       state: "unmanaged",
-      attachment: "none",
+      provenance: "external_worktree",
       blocker: "unmanaged_worktree",
       issue_id: null,
       issue_identifier: null,
       issue_title: null,
-      reason: "Otomat did not create this worktree, so it manages nothing here.",
+      reason:
+        "Git does not hold this worktree under Otomat's worktrees root, so nothing here may delete it.",
     }),
   ]);
 
@@ -111,7 +113,7 @@ it("counts the maintenance states and says why each workspace is where it is", a
     stateChips.some((chip) =>
       chip
         .getAttribute("aria-label")
-        ?.includes("manages nothing here. Remove it yourself if you no longer need it."),
+        ?.includes("nothing here may delete it. Remove it yourself if you no longer need it."),
     ),
   ).toBe(true);
 });
@@ -120,6 +122,7 @@ it("puts the path last, behind what identifies the row, and keeps it copyable", 
   await renderSection([entry({ id: "a" })]);
 
   expect([...document.body.querySelectorAll("th")].map((head) => head.textContent)).toEqual([
+    "",
     "State",
     "Issue",
     "Branch",
@@ -139,7 +142,12 @@ it("offers a deletion for the workspaces Otomat still holds, and none for the re
     entry({ id: "a" }),
     entry({ id: "b", state: "active", blocker: "cycle_open" }),
     entry({ id: "c", state: "stale", present: false }),
-    entry({ id: "d", state: "unmanaged", attachment: "none", blocker: "unmanaged_worktree" }),
+    entry({
+      id: "d",
+      state: "unmanaged",
+      provenance: "external_worktree",
+      blocker: "unmanaged_worktree",
+    }),
   ]);
 
   expect(
@@ -164,13 +172,100 @@ it("offers in one click only what a merge already made safe", async () => {
     entry({
       id: "b",
       blocker: "worktree_dirty",
-      dirty: true,
+      uncommitted_files: 2,
       reason: "The worktree holds uncommitted changes.",
     }),
     entry({ id: "c", state: "active", blocker: "cycle_open" }),
   ]);
 
+  expect(document.body.textContent).toContain(
+    "1 worktree has a merged pull request and is safe to delete.",
+  );
+  await act(async () => {
+    findButton("Select the 1 safe to delete")?.click();
+  });
+
   expect(findButton("Clean up 1")).toBeDefined();
+});
+
+it("selects several rows and deletes them on the owning host in one operation", async () => {
+  cleanupWorkspace.mockImplementation(async (workspaceId) => ({
+    outcome: workspaceId === "b" ? "failed" : "cleaned",
+    blocker: null,
+    message: workspaceId === "b" ? "git refused to remove this worktree." : "Removed.",
+    entry: null,
+  }));
+  await renderSection([
+    entry({ id: "a" }),
+    entry({ id: "b" }),
+    entry({ id: "c", state: "active", blocker: "cycle_open" }),
+  ]);
+
+  await act(async () => {
+    findLabelled("Select every deletable workspace")?.click();
+  });
+
+  expect(findButton("Clean up 2")).toBeDefined();
+  await act(async () => {
+    findButton("Clean up 2")?.click();
+  });
+  await act(async () => {
+    findButton("Delete 2 workspaces")?.click();
+  });
+
+  expect(cleanupWorkspace.mock.calls).toEqual([
+    ["a", false],
+    ["b", false],
+  ]);
+  expect(document.body.textContent).toContain("git refused to remove this worktree.");
+  expect(document.body.textContent).toContain("1 cleaned · 1 failed");
+});
+
+it("keeps its receipt on screen while the refetched list drops the rows it deleted", async () => {
+  cleanupWorkspace.mockResolvedValue({
+    outcome: "cleaned",
+    blocker: null,
+    message: "Removed.",
+    entry: null,
+  });
+  const left = entry({ id: "b", state: "active", blocker: "cycle_open" });
+  await renderSection([entry({ id: "a" }), left]);
+
+  await act(async () => {
+    findLabelled("Select otomat/run/a")?.click();
+  });
+  listWorkspaces.mockResolvedValue(inventory([left]));
+  await act(async () => {
+    findButton("Clean up 1")?.click();
+  });
+  await act(async () => {
+    findButton("Delete 1 workspace")?.click();
+  });
+
+  expect(document.body.textContent).toContain("1 cleaned");
+  expect(findButton("Close")).toBeDefined();
+  expect(document.body.querySelectorAll("tbody tr")).toHaveLength(1);
+
+  await act(async () => {
+    findButton("Close")?.click();
+  });
+
+  expect(document.body.textContent).not.toContain("otomat/run/a");
+});
+
+it("offers no selection for a worktree no confirmation may delete", async () => {
+  await renderSection([
+    entry({
+      id: "external",
+      state: "unmanaged",
+      provenance: "external_worktree",
+      blocker: "unmanaged_worktree",
+    }),
+    entry({ id: "unreconciled", state: "unmanaged", provenance: "otomat_unreconciled" }),
+  ]);
+
+  expect(findLabelled("Select otomat/run/external")).toBeUndefined();
+  expect(findLabelled("Select otomat/run/unreconciled")).toBeDefined();
 });
 
 it("narrows on a search over the branch, and says so when nothing is left", async () => {
@@ -261,4 +356,30 @@ it("names the host that holds the project, and reconciles on that host alone", a
 
   expect(reconcileWorkspaces).toHaveBeenCalledTimes(1);
   expect(viaBridge).not.toHaveBeenCalled();
+});
+
+it("deletes on the host that holds the project rather than through the bridge", async () => {
+  const bridge = fakeDesktopBridge({
+    executionHostId: "remote",
+    executionHostSshAlias: "otomat-vps",
+  });
+  const viaBridge = vi.spyOn(bridge.executionHost, "cleanupWorkspace");
+  window.otomat = bridge;
+  cleanupWorkspace.mockRejectedValue(new Error("daemon unreachable"));
+  await renderSection([entry({ id: "a" })]);
+
+  await act(async () => {
+    findLabelled("Select every deletable workspace")?.click();
+  });
+  await act(async () => {
+    findButton("Clean up 1")?.click();
+  });
+  await act(async () => {
+    findButton("Delete 1 workspace")?.click();
+  });
+
+  expect(cleanupWorkspace).toHaveBeenCalledWith("a", false);
+  expect(viaBridge).not.toHaveBeenCalled();
+  expect(document.body.textContent).toContain("is the daemon running?");
+  expect(document.body.textContent).toContain("0 cleaned · 1 failed");
 });

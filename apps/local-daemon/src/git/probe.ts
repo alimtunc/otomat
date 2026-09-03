@@ -1,5 +1,5 @@
 import { realpathSync, statSync } from "node:fs";
-import { isAbsolute } from "node:path";
+import { basename, dirname, isAbsolute, join, relative } from "node:path";
 
 import type { RepositoryRegistrationError } from "@otomat/domain";
 
@@ -22,6 +22,20 @@ export function tryRealpath(path: string): string | null {
   } catch {
     return null;
   }
+}
+
+/** Resolves as far as the path exists, so a root reached through a symlink still matches a deleted worktree. */
+function resolveExisting(path: string): string {
+  const real = tryRealpath(path);
+  if (real !== null) return real;
+  const parent = dirname(path);
+  return parent === path ? path : join(resolveExisting(parent), basename(path));
+}
+
+/** Strictly below `root` once both are resolved, so a symlink cannot smuggle a path out of it. */
+export function isInsideRoot(root: string, path: string): boolean {
+  const step = relative(resolveExisting(root), resolveExisting(path));
+  return step !== "" && !step.startsWith("..") && !isAbsolute(step);
 }
 
 /**

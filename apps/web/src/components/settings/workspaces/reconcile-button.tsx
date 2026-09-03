@@ -4,7 +4,7 @@ import { useReconcileWorkspaces } from "@web/api/workspaces/mutations";
 import { useId } from "react";
 
 const EFFECT =
-  "Re-reads this host's pull requests and git worktree list, refreshes every workspace state, and drops git registrations whose directory is gone. Nothing on disk is deleted, except a clean worktree whose pull request is merged while automatic deletion is on.";
+  "Reads only: it re-reads this host's pull requests and git worktree list, refreshes every workspace state, and drops git registrations whose directory is gone. Nothing on disk is deleted, except a clean worktree whose pull request is merged while automatic deletion is on.";
 
 export function ReconcileWorkspacesButton({ hostId }: { hostId: ExecutionHostId }) {
   const reconcile = useReconcileWorkspaces();

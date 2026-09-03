@@ -157,7 +157,8 @@ export interface OtomatDesktopBridge {
     ): Promise<ExecutionHostCallResult<WorkspaceReconcileReport>>;
     cleanupWorkspace(
       hostId: ExecutionHostId,
-      worktreeId: string,
+      workspaceId: string,
+      force: boolean,
     ): Promise<ExecutionHostCallResult<WorkspaceCleanupResult>>;
     /** Subscribes to live remote-connection status; returns the unsubscribe function. */
     onRemoteStatus(listener: (status: RemoteHostStatus) => void): () => void;

@@ -34,7 +34,7 @@ describe("worktree-cli", () => {
   it("removes a worktree and leaves no orphan entry", () => {
     const wtPath = join(wtRoot, "b");
     addWorktree(repo.root, { worktreePath: wtPath, branch: "feat-b", baseRef: "main" });
-    removeWorktree(repo.root, wtPath);
+    removeWorktree(repo.root, wtPath, { force: true });
     pruneWorktrees(repo.root);
 
     expect(existsSync(wtPath)).toBe(false);
@@ -55,8 +55,8 @@ describe("worktree-cli", () => {
   it("tolerates removing an already-removed worktree", () => {
     const wtPath = join(wtRoot, "idem");
     addWorktree(repo.root, { worktreePath: wtPath, branch: "feat-idem", baseRef: "main" });
-    removeWorktree(repo.root, wtPath);
-    expect(() => removeWorktree(repo.root, wtPath)).not.toThrow();
+    removeWorktree(repo.root, wtPath, { force: true });
+    expect(() => removeWorktree(repo.root, wtPath, { force: true })).not.toThrow();
     pruneWorktrees(repo.root);
     expect(listWorktrees(repo.root).some((e) => e.branch === "feat-idem")).toBe(false);
   });

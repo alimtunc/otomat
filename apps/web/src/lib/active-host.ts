@@ -1,4 +1,4 @@
-import type { ExecutionHostId } from "@otomat/domain";
+import type { ExecutionHostDescriptor, ExecutionHostId } from "@otomat/domain";
 import { createStore, useSelector } from "@tanstack/react-store";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 
@@ -53,4 +53,9 @@ export function activeHostLabel(hostId: ExecutionHostId = activeExecutionHostId(
 
 export function useActiveHostLabel(): string {
   return activeHostLabel(useActiveHostId());
+}
+
+export function useActiveHostDescriptor(): ExecutionHostDescriptor {
+  const id = useActiveHostId();
+  return { id, label: activeHostLabel(id), kind: id === "local" ? "local" : "ssh" };
 }

@@ -5,6 +5,8 @@ import { WorkspaceGitStateCell } from "@web/components/settings/workspaces/cells
 import { WorkspaceIssueCell } from "@web/components/settings/workspaces/cells/issue";
 import { WorkspacePathCell } from "@web/components/settings/workspaces/cells/path";
 import { WorkspacePullRequestCell } from "@web/components/settings/workspaces/cells/pull-request";
+import { WorkspaceSelectCell } from "@web/components/settings/workspaces/cells/select";
+import { WorkspaceSelectHeader } from "@web/components/settings/workspaces/cells/select-header";
 import { WorkspaceStateCell } from "@web/components/settings/workspaces/cells/state";
 import { WorkspaceUpdatedCell } from "@web/components/settings/workspaces/cells/updated";
 import { TABLE_FEATURES } from "@web/lib/table";
@@ -13,6 +15,12 @@ import type { WorkspaceRow } from "@web/lib/workspace/row";
 const helper = createColumnHelper<typeof TABLE_FEATURES, WorkspaceRow>();
 
 export const WORKSPACE_COLUMNS = helper.columns([
+  helper.display({
+    id: "select",
+    header: WorkspaceSelectHeader,
+    meta: { headClassName: "w-8", cellClassName: "align-middle" },
+    cell: WorkspaceSelectCell,
+  }),
   helper.accessor("state", {
     header: "State",
     meta: { headClassName: "w-32" },

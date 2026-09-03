@@ -1,4 +1,4 @@
-import { existsSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -12,6 +12,7 @@ import {
 import type { WorkspaceEntry } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
+import { runEventsPath } from "#events";
 import { createGitWorktreeService, createRepositoryResolver, type GitWorktreeService } from "#git";
 import { listWorktrees } from "#git/worktree-cli";
 import {
@@ -98,6 +99,17 @@ function entryFor(path: string): WorkspaceEntry {
   return found;
 }
 
+function forcedCleanups(runId: string): boolean[] {
+  const forced: boolean[] = [];
+  for (const line of readFileSync(runEventsPath(fix.dataDir, runId), "utf8").split("\n")) {
+    if (line === "") continue;
+    // SAFETY: the daemon wrote this file itself, one lifecycle event per line.
+    const event = JSON.parse(line) as { payload?: { phase?: string; forced?: boolean } };
+    if (event.payload?.phase === "workspace_cleaned") forced.push(event.payload.forced === true);
+  }
+  return forced;
+}
+
 function openCycle(): string {
   const acquired = worktrees.acquire({ owner: OPEN_RUN_ID, branch: `otomat/run/${OPEN_RUN_ID}` });
   seedRun(fix.db, {
@@ -151,7 +163,7 @@ it("keeps a dirty worktree, names why, and cleans it once the change is gone", a
   expect(entryFor(worktreePath)).toMatchObject({
     state: "cleanup_required",
     blocker: "worktree_dirty",
-    dirty: true,
+    uncommitted_files: 1,
   });
 
   rmSync(join(worktreePath, "scratch.txt"));
@@ -180,9 +192,13 @@ it("leaves a worktree created outside Otomat unmanaged and untouched", async () 
 
   expect(entryFor(external)).toMatchObject({
     state: "unmanaged",
-    attachment: "none",
+    provenance: "external_worktree",
     blocker: "unmanaged_worktree",
     issue_id: null,
+  });
+  expect(cleanupWorkspace(context, entryFor(external), { force: true })).toMatchObject({
+    outcome: "skipped",
+    blocker: "unmanaged_worktree",
   });
   expect(existsSync(external)).toBe(true);
 });
@@ -195,10 +211,17 @@ it("refuses to attach a worktree that only looks like one of Otomat's", async ()
 
   expect(entryFor(lookalike)).toMatchObject({
     state: "unmanaged",
-    attachment: "ambiguous",
+    provenance: "otomat_unreconciled",
     run_id: null,
+    blocker: null,
   });
-  expect(existsSync(lookalike)).toBe(true);
+
+  const cleaned = cleanupWorkspace(context, entryFor(lookalike));
+
+  expect(cleaned.outcome).toBe("cleaned");
+  expect(existsSync(lookalike)).toBe(false);
+  // No record verifies the cycle, so the branch it checked out survives the deletion.
+  expect(fix.repo.git("branch", "--list", "otomat/run/impostor")).toContain("otomat/run/impostor");
 });
 
 it("keeps the workspace when the project turned automatic deletion off, and still cleans it by hand", async () => {
@@ -334,4 +357,83 @@ it("reads a merge Otomat only adopted, matched on the branch its pull request na
   });
 
   expect(entryFor(worktreePath)).toMatchObject({ state: "cleanup_required", blocker: null });
+});
+
+it("forces a dirty worktree away only when asked, and deletes the branch its record names", () => {
+  writeFileSync(join(worktreePath, "scratch.txt"), "work in progress\n");
+
+  const protective = cleanupWorkspace(context, entryFor(worktreePath));
+
+  expect(protective).toMatchObject({ outcome: "skipped", blocker: "worktree_dirty" });
+  expect(existsSync(worktreePath)).toBe(true);
+
+  const forced = cleanupWorkspace(context, entryFor(worktreePath), { force: true });
+
+  expect(forced.outcome).toBe("cleaned");
+  expect(existsSync(worktreePath)).toBe(false);
+  expect(fix.repo.git("branch", "--list", BRANCH)).toBe("");
+  expect(forcedCleanups(RUN_ID)).toEqual([true]);
+});
+
+it("refuses a directory git no longer registers rather than reporting a deletion git never made", () => {
+  const result = cleanupWorkspace(
+    context,
+    { ...entryFor(worktreePath), registered: false },
+    { force: true },
+  );
+
+  expect(result.outcome).toBe("skipped");
+  expect(result.message).toContain("reconcile before deleting");
+  expect(existsSync(worktreePath)).toBe(true);
+});
+
+it("counts the commits no remote holds, so a forced deletion can name what it loses", () => {
+  writeFileSync(join(worktreePath, "shipped.txt"), "done\n");
+  fix.repo.git("-C", worktreePath, "add", "-A");
+  fix.repo.git("-C", worktreePath, "commit", "-m", "feat: unpublished");
+
+  expect(entryFor(worktreePath)).toMatchObject({ unpushed_commits: 1, uncommitted_files: 0 });
+});
+
+it("converges a record whose directory is gone instead of asking git to remove it", () => {
+  rmSync(worktreePath, { recursive: true, force: true });
+
+  const result = cleanupWorkspace(context, entryFor(worktreePath), { force: true });
+
+  expect(result.outcome).toBe("cleaned");
+  expect(registeredPaths()).not.toContain(worktreePath);
+  expect(worktrees.list({ status: "removed" }).map((row) => row.id)).toContain(worktreeId);
+});
+
+it("refuses every path outside the worktrees root, whatever the entry claims", () => {
+  const outside = join(fix.dataDir, "elsewhere");
+  fix.repo.git("worktree", "add", "-b", "elsewhere", outside, "HEAD");
+
+  const result = cleanupWorkspace(
+    context,
+    { ...entryFor(worktreePath), path: outside, present: true },
+    { force: true },
+  );
+
+  expect(result.outcome).toBe("skipped");
+  expect(result.message).toContain("outside the worktrees Otomat may delete");
+  expect(existsSync(outside)).toBe(true);
+});
+
+it("reports each target of a batch on its own, so one refusal never hides the rest", () => {
+  const openPath = openCycle();
+  writeFileSync(join(worktreePath, "scratch.txt"), "work in progress\n");
+  const external = join(fix.dataDir, "by-hand");
+  fix.repo.git("worktree", "add", "-b", "by-hand", external, "HEAD");
+
+  const outcomes = [worktreePath, openPath, external].map(
+    (path) => cleanupWorkspace(context, entryFor(path)).outcome,
+  );
+
+  expect(outcomes).toEqual(["skipped", "skipped", "skipped"]);
+  expect([worktreePath, openPath, external].every((path) => existsSync(path))).toBe(true);
+  expect(cleanupWorkspace(context, entryFor(worktreePath), { force: true }).outcome).toBe(
+    "cleaned",
+  );
+  expect(existsSync(openPath)).toBe(true);
 });

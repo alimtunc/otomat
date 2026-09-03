@@ -31,17 +31,18 @@ export function useReconcileWorkspaces() {
 
 export interface CleanupWorkspaceInput {
   hostId: ExecutionHostId;
-  worktreeId: string;
+  workspaceId: string;
+  force: boolean;
 }
 
 export function useCleanupWorkspace() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ hostId, worktreeId }: CleanupWorkspaceInput) =>
+    mutationFn: ({ hostId, workspaceId, force }: CleanupWorkspaceInput) =>
       onExecutionHost(
         hostId,
-        () => daemon.cleanupWorkspace(worktreeId),
-        (executionHost) => executionHost.cleanupWorkspace(hostId, worktreeId),
+        () => daemon.cleanupWorkspace(workspaceId, force),
+        (executionHost) => executionHost.cleanupWorkspace(hostId, workspaceId, force),
       ),
     onSuccess: (_result, { hostId }) => {
       const keys = hostKeys(hostId);

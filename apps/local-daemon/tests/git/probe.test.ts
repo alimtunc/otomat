@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { scrubGitEnv } from "#git/git-cli";
-import { probeLocalRepository, tryRealpath } from "#git/probe";
+import { isInsideRoot, probeLocalRepository, tryRealpath } from "#git/probe";
 
 import { setupTestRepo, type TestRepo } from "../support/git.js";
 
@@ -88,4 +88,16 @@ it("refuses a repository whose branch has no commit yet", () => {
 it("tryRealpath returns null for a missing path and the canonical path otherwise", () => {
   expect(tryRealpath(join(scratch, "nope"))).toBeNull();
   expect(tryRealpath(repo.root)).toBe(realpathSync(repo.root));
+});
+
+it("keeps a deleted worktree inside a root reached through a symlink, and every real path out", () => {
+  const real = join(scratch, "real");
+  mkdirSync(join(real, "worktrees"), { recursive: true });
+  const link = join(scratch, "link");
+  symlinkSync(real, link);
+  const root = join(link, "worktrees");
+
+  expect(isInsideRoot(root, join(root, "deleted-run"))).toBe(true);
+  expect(isInsideRoot(root, join(scratch, "elsewhere"))).toBe(false);
+  expect(isInsideRoot(root, root)).toBe(false);
 });
