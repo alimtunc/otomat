@@ -12,7 +12,7 @@ import type {
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import type { RuntimeEvent } from "#runtime";
+import { RuntimeUnavailableError, type RuntimeEvent } from "#runtime";
 import {
   LaunchRefusedError,
   RunContributionNotCancelableError,
@@ -480,6 +480,62 @@ it("appends a step with the agent the caller chose, never an inherited one", asy
     dependsOn: [],
     replaces: null,
     origin: "user",
+  });
+});
+
+it("appends a step on a runtime the caller named directly", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  let received: AppendStepInput | null = null;
+  const app = makeApiApp(t, {
+    supervisor: stubSupervisor({
+      appendStep: async (_id, input) => {
+        received = input;
+        return runRowWithStep(runId, "appended-step");
+      },
+    }),
+  });
+
+  const res = await post(app, `/api/runs/${runId}/steps`, {
+    name: "Address review",
+    runtime: "codex",
+    model: { kind: "model", id: "gpt-5" },
+    depends_on: [],
+  });
+
+  expect(res.status).toBe(201);
+  expect(received).toEqual({
+    name: "Address review",
+    note: null,
+    references: [],
+    selector: { kind: "runtime", runtimeId: "codex" },
+    overrides: { model: { kind: "model", id: "gpt-5" } },
+    dependsOn: [],
+    replaces: null,
+    origin: "user",
+  });
+});
+
+it("refuses a step whose runtime this host cannot run", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  const app = makeApiApp(t, {
+    supervisor: stubSupervisor({
+      appendStep: async () => {
+        throw new RuntimeUnavailableError("codex", "binary_not_found");
+      },
+    }),
+  });
+
+  const res = await post(app, `/api/runs/${runId}/steps`, {
+    name: "Address review",
+    runtime: "codex",
+  });
+
+  expect(res.status).toBe(409);
+  expect(await json<{ error: string; runtime: string }>(res)).toMatchObject({
+    error: "runtime_unavailable",
+    runtime: "codex",
   });
 });
 

@@ -447,7 +447,7 @@ it("maps stale anchors and missing diffs to 409 conflicts", async () => {
   expect((await json<{ error: string }>(bareRes)).error).toBe("diff_unavailable");
 });
 
-it("delegates the fix request with its parsed agent and returns the updated run", async () => {
+it("delegates the fix request with its parsed agent, profile or runtime alike", async () => {
   let received: { runId: string; request: FixRequest } | null = null;
   const app = makeApiApp(t, {
     review: stubReviewService({
@@ -477,11 +477,32 @@ it("delegates the fix request with its parsed agent and returns the updated run"
     run: { status: "running" },
     step_run_id: "fix-review-comments",
   });
+
+  const onRuntime = await post(app, `/api/runs/${RUN_ID}/review/fix`, {
+    runtime: "codex",
+    model: { kind: "model", id: "gpt-5" },
+  });
+  expect(onRuntime.status).toBe(201);
+  expect(received).toEqual({
+    runId: RUN_ID,
+    request: {
+      note: null,
+      references: [],
+      selector: { kind: "runtime", runtimeId: "codex" },
+      overrides: { model: { kind: "model", id: "gpt-5" } },
+    },
+  });
 });
 
 it("refuses a fix with no explicit agent, and maps conflicts to 409", async () => {
   const noAgent = await post(makeApiApp(t), `/api/runs/${RUN_ID}/review/fix`, {});
   expect(noAgent.status).toBe(400);
+
+  const bothAgents = await post(makeApiApp(t), `/api/runs/${RUN_ID}/review/fix`, {
+    profile_id: "p-reviewer",
+    runtime: "codex",
+  });
+  expect(bothAgents.status).toBe(400);
 
   const chosenComments = await post(makeApiApp(t), `/api/runs/${RUN_ID}/review/fix`, {
     comment_ids: ["c1"],

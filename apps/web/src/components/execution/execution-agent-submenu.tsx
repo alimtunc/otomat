@@ -70,13 +70,9 @@ export function ExecutionAgentSubmenu({
             {profileItems.map(agentChoice)}
           </>
         ) : null}
-        {scope === "profiles" ? null : (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>Runtimes</DropdownMenuLabel>
-            {runtimeItems.map(agentChoice)}
-          </>
-        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Runtimes</DropdownMenuLabel>
+        {runtimeItems.map(agentChoice)}
       </DropdownMenuRadioGroup>
     </ConfigMenuSubmenu>
   );

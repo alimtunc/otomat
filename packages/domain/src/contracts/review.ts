@@ -9,7 +9,12 @@ import {
   reviewContractSchema,
   reviewedFileContractSchema,
 } from "./entities/reviews.js";
-import { executionOptionSelectionsSchema } from "./execution-config.js";
+import {
+  AGENT_SELECTION_MESSAGE,
+  agentSelectionShape,
+  executionOptionSelectionsSchema,
+  selectsOneAgent,
+} from "./execution-config.js";
 import { modelSelectionSchema } from "./runtime-model.js";
 
 /** `reason` is user-facing: review-only is always explained, never a silently disabled button. */
@@ -118,7 +123,7 @@ export type ReviewCommentError = z.infer<typeof reviewCommentErrorSchema>;
 /** Ask an agent to fix every open Agent comment as a step appended to the run's plan; the daemon resolves which ones, and the agent is chosen explicitly. */
 export const requestFixRequestSchema = z
   .object({
-    profile_id: z.string().min(1),
+    ...agentSelectionShape,
     model: modelSelectionSchema.optional(),
     /** Provider options for the fix step alone; an absent key keeps what the chosen agent carries. */
     options: executionOptionSelectionsSchema.optional(),
@@ -127,7 +132,8 @@ export const requestFixRequestSchema = z
     /** Extra issues and repository files to attach alongside the comments. */
     context: contextReferencesSchema.optional(),
   })
-  .strict();
+  .strict()
+  .refine(selectsOneAgent, { message: AGENT_SELECTION_MESSAGE });
 export type RequestFixRequest = z.infer<typeof requestFixRequestSchema>;
 
 export const FIX_REVIEW_COMMENTS_STEP_NAME = "Fix review comments";

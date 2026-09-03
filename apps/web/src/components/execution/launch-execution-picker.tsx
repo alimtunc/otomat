@@ -1,7 +1,6 @@
 import { Button, EmptyState } from "@otomat/ui";
 import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
 import type { LaunchExecution } from "@web/components/execution/use-launch-execution";
-import type { AgentScope } from "@web/lib/agent/choice";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { hasLaunchableRuntime } from "@web/lib/runtimes";
 
@@ -9,15 +8,9 @@ export interface LaunchExecutionPickerProps {
   execution: LaunchExecution;
   onChange: (value: ExecutionSelection) => void;
   label: string;
-  scope?: AgentScope;
 }
 
-export function LaunchExecutionPicker({
-  execution,
-  onChange,
-  label,
-  scope = "all",
-}: LaunchExecutionPickerProps) {
+export function LaunchExecutionPicker({ execution, onChange, label }: LaunchExecutionPickerProps) {
   const { agents } = execution;
   if (agents.isError) {
     return (
@@ -59,7 +52,6 @@ export function LaunchExecutionPicker({
       descriptors={agents.descriptors}
       skills={agents.skills}
       label={label}
-      scope={scope}
       disabled={agents.isPending}
     />
   );

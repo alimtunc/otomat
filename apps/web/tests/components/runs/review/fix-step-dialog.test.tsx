@@ -1,14 +1,17 @@
 // @vitest-environment happy-dom
-import type { RequestFixRequest } from "@otomat/domain";
+import type { AgentSelection, RequestFixRequest } from "@otomat/domain";
 import { ReviewFixStepDialog } from "@web/components/runs/review/fix-step-dialog";
 import { act } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { findButton } from "#support/dom-queries";
 import { repositoriesQueryResult } from "#support/launch-target";
 import { mount } from "#support/mount";
 
+const PROFILE_PICK: AgentSelection = { profile_id: "profile-fix" };
+
 const requests: RequestFixRequest[] = [];
+let picked: AgentSelection = PROFILE_PICK;
 
 vi.mock("@web/api/daemon/queries", () => ({
   useRepositories: () => repositoriesQueryResult(),
@@ -31,7 +34,7 @@ vi.mock("@web/api/reviews/mutations", () => ({
 }));
 
 vi.mock("@web/components/execution/use-launch-execution", () => ({
-  useLaunchExecution: () => ({ canLaunch: true, request: { profile_id: "profile-fix" } }),
+  useLaunchExecution: () => ({ canLaunch: true, request: picked }),
 }));
 
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn() }));
@@ -82,6 +85,10 @@ async function type(field: HTMLTextAreaElement, value: string): Promise<void> {
 }
 
 describe("AI fix confirmation", () => {
+  beforeEach(() => {
+    picked = PROFILE_PICK;
+  });
+
   it("names how many comments become the step and carries the global instruction", async () => {
     const { cleanup } = await openDialog(2);
 
@@ -93,6 +100,18 @@ describe("AI fix confirmation", () => {
 
     // The daemon resolves which comments are eligible; the request never names them.
     expect(requests).toEqual([{ note: "Keep the file ASCII-only.", profile_id: "profile-fix" }]);
+    await cleanup();
+  });
+
+  it("sends the runtime when the operator picked one instead of a profile", async () => {
+    picked = { runtime: "codex" };
+    const { cleanup } = await openDialog(1);
+
+    await act(async () => {
+      findButton("Add fix step")?.click();
+    });
+
+    expect(requests).toEqual([{ runtime: "codex" }]);
     await cleanup();
   });
 

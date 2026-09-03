@@ -3,7 +3,7 @@ import { useAgentProfiles } from "@web/api/agent-profiles/queries";
 import { useRuntimes } from "@web/api/daemon/queries";
 import { useSkills } from "@web/api/skills/queries";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
-import { resolveAgentChoice, resolveProfileChoice, type AgentScope } from "@web/lib/agent/choice";
+import { resolveAgentChoice } from "@web/lib/agent/choice";
 
 export interface LaunchAgentChoice {
   descriptors: RuntimeDescriptor[];
@@ -16,10 +16,7 @@ export interface LaunchAgentChoice {
   onRetry: () => void;
 }
 
-export function useLaunchAgentChoice(
-  preferred: string | null,
-  scope: AgentScope = "all",
-): LaunchAgentChoice {
+export function useLaunchAgentChoice(preferred: string | null): LaunchAgentChoice {
   const runtimes = useRuntimes();
   const { projectId } = useSelectedProject();
   const profilesQuery = useAgentProfiles(projectId);
@@ -32,10 +29,7 @@ export function useLaunchAgentChoice(
     descriptors,
     profiles,
     skills,
-    choice:
-      scope === "profiles"
-        ? resolveProfileChoice(preferred, profiles, descriptors, skills)
-        : resolveAgentChoice(preferred, profiles, descriptors, skills),
+    choice: resolveAgentChoice(preferred, profiles, descriptors, skills),
     isPending: runtimes.isPending || profilesQuery.isPending || skillsQuery.isPending,
     isError: runtimes.isError || profilesQuery.isError || skillsQuery.isError,
     isSuccess: runtimes.isSuccess,

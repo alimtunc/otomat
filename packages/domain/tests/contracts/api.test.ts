@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   agentCapacitySchema,
+  appendRunStepRequestSchema,
   createIssueRequestSchema,
   createRunContributionRequestSchema,
   healthResponseSchema,
   registerRepositoryRequestSchema,
   repositoryRegistrationErrorSchema,
+  requestFixRequestSchema,
   runDetailSchema,
   runLaunchResponseSchema,
   runtimeAvailabilitySchema,
@@ -388,5 +390,29 @@ describe("repository registration contracts", () => {
     expect(
       repositoryRegistrationErrorSchema.safeParse({ error: "disk_on_fire", message: "m" }).success,
     ).toBe(false);
+  });
+});
+
+describe("an appended step names its agent", () => {
+  const STEP = { name: "Address review", depends_on: [] };
+
+  it("takes a saved profile or a runtime directly", () => {
+    expect(appendRunStepRequestSchema.parse({ ...STEP, profile_id: "p1" }).profile_id).toBe("p1");
+    expect(appendRunStepRequestSchema.parse({ ...STEP, runtime: "codex" }).runtime).toBe("codex");
+    expect(
+      requestFixRequestSchema.parse({ runtime: "codex", model: { kind: "provider_default" } })
+        .runtime,
+    ).toBe("codex");
+  });
+
+  it("refuses neither and both, so the frozen config is never ambiguous", () => {
+    expect(appendRunStepRequestSchema.safeParse(STEP).success).toBe(false);
+    expect(
+      appendRunStepRequestSchema.safeParse({ ...STEP, profile_id: "p1", runtime: "codex" }).success,
+    ).toBe(false);
+    expect(requestFixRequestSchema.safeParse({}).success).toBe(false);
+    expect(requestFixRequestSchema.safeParse({ profile_id: "p1", runtime: "codex" }).success).toBe(
+      false,
+    );
   });
 });

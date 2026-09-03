@@ -1,4 +1,9 @@
-import type { ExecutionOptionSelections, ModelSelection } from "@otomat/domain";
+import {
+  selectsOneAgent,
+  type AgentSelection,
+  type ExecutionOptionSelections,
+  type ModelSelection,
+} from "@otomat/domain";
 import { agentChoiceToRequest, type AgentRequestFields } from "@web/lib/agent/choice";
 
 import type { ExecutionSelection } from "./selection";
@@ -15,16 +20,8 @@ export function executionRequestFields(selection: ExecutionSelection): Execution
   return fields;
 }
 
-export interface ProfileRequestFields {
-  profile_id: string;
-  model?: ModelSelection;
-  options?: ExecutionOptionSelections;
-}
-
-export function profileRequestFields(fields: ExecutionRequestFields): ProfileRequestFields | null {
-  if (fields.profile_id === undefined) return null;
-  const request: ProfileRequestFields = { profile_id: fields.profile_id };
-  if (fields.model) request.model = fields.model;
-  if (fields.options) request.options = fields.options;
-  return request;
+export function agentSelectionFields(
+  fields: ExecutionRequestFields,
+): (ExecutionRequestFields & AgentSelection) | null {
+  return selectsOneAgent(fields) ? fields : null;
 }
