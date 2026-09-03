@@ -62,9 +62,11 @@ export function createWorkspaceClient(config: DaemonClientConfig) {
         await postJson(config, "/api/workspaces/reconcile", {}),
       );
     },
-    async cleanupWorkspace(worktreeId: string) {
+    async cleanupWorkspace(workspaceId: string, force: boolean) {
       return workspaceCleanupResultSchema.parse(
-        await postJson(config, `/api/workspaces/${encodeURIComponent(worktreeId)}/cleanup`, {}),
+        await postJson(config, `/api/workspaces/${encodeURIComponent(workspaceId)}/cleanup`, {
+          force,
+        }),
       );
     },
     async workspaceSettings(projectId: string) {

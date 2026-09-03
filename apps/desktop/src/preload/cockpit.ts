@@ -139,9 +139,10 @@ contextBridge.exposeInMainWorld("otomat", {
       ipcRenderer.invoke(EXECUTION_HOST_RECONCILE_WORKSPACES_CHANNEL, hostId),
     cleanupWorkspace: (
       hostId: ExecutionHostId,
-      worktreeId: string,
+      workspaceId: string,
+      force: boolean,
     ): Promise<ExecutionHostCallResult<WorkspaceCleanupResult>> =>
-      ipcRenderer.invoke(EXECUTION_HOST_CLEANUP_WORKSPACE_CHANNEL, hostId, worktreeId),
+      ipcRenderer.invoke(EXECUTION_HOST_CLEANUP_WORKSPACE_CHANNEL, hostId, workspaceId, force),
     onRemoteStatus: (listener: (status: RemoteHostStatus) => void): (() => void) => {
       const wrapped = (_event: IpcRendererEvent, status: RemoteHostStatus): void =>
         listener(status);

@@ -1,5 +1,6 @@
+import { isWorkspaceForceCleanable } from "@otomat/domain";
 import { Icon, IconButton } from "@otomat/ui";
-import { CleanWorkspaceDialog } from "@web/components/runs/actions/clean-workspace-dialog";
+import { WorkspaceCleanupDialog } from "@web/components/workspaces/cleanup-dialog";
 import type { TableCellProps } from "@web/lib/table";
 import type { WorkspaceRow } from "@web/lib/workspace/row";
 import { useState } from "react";
@@ -7,7 +8,7 @@ import { useState } from "react";
 export function WorkspaceActionsCell({ row }: TableCellProps<WorkspaceRow, unknown>) {
   const [cleaning, setCleaning] = useState(false);
   const workspace = row.original;
-  if (workspace.state !== "active" && workspace.state !== "cleanup_required") return null;
+  if (!isWorkspaceForceCleanable(workspace)) return null;
   return (
     <span className="inline-flex opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100">
       <IconButton
@@ -16,12 +17,7 @@ export function WorkspaceActionsCell({ row }: TableCellProps<WorkspaceRow, unkno
         icon={<Icon name="trash-2" aria-hidden />}
         onClick={() => setCleaning(true)}
       />
-      <CleanWorkspaceDialog
-        entry={workspace}
-        hostId={workspace.host.id}
-        open={cleaning}
-        onOpenChange={setCleaning}
-      />
+      <WorkspaceCleanupDialog rows={[workspace]} open={cleaning} onOpenChange={setCleaning} />
     </span>
   );
 }

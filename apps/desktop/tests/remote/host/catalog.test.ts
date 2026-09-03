@@ -180,7 +180,7 @@ it("reconciles and cleans on the owning host alone", async () => {
   const hosts = catalog(fetchImpl).catalog;
 
   const reconciled = await hosts.reconcileWorkspaces("remote");
-  const cleaned = await hosts.cleanupWorkspace("remote", "w-1");
+  const cleaned = await hosts.cleanupWorkspace("remote", "w-1", true);
 
   expect(reconciled.ok && reconciled.value.cleaned).toBe(1);
   expect(cleaned.ok && cleaned.value.outcome).toBe("cleaned");
@@ -190,7 +190,7 @@ it("reconciles and cleans on the owning host alone", async () => {
   );
   expect(fetchImpl).toHaveBeenCalledWith(
     `${REMOTE_URL}/api/workspaces/w-1/cleanup`,
-    expect.objectContaining({ method: "POST" }),
+    expect.objectContaining({ method: "POST", body: JSON.stringify({ force: true }) }),
   );
 });
 
@@ -199,7 +199,7 @@ it("forwards a refusal as prose rather than deleting on another host", async () 
     Promise.resolve(jsonResponse({ error: "workspace_not_found", message: "gone" }, 404)),
   );
 
-  expect(await catalog(fetchImpl).catalog.cleanupWorkspace("remote", "w-1")).toEqual({
+  expect(await catalog(fetchImpl).catalog.cleanupWorkspace("remote", "w-1", false)).toEqual({
     ok: false,
     message: "The remote daemon refused the request (HTTP 404).",
   });

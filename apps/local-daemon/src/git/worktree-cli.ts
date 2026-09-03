@@ -14,16 +14,17 @@ export function addWorktree(repoPath: string, input: AddWorktreeInput): void {
 }
 
 /**
- * Removes a worktree's working directory and admin files. Tolerant of an
- * already-removed directory so callers can converge a half-removed state.
+ * Removes a worktree's working directory and admin files, returning git's
+ * refusal. Without `force`, uncommitted work refuses removal instead of being
+ * discarded; with it, an already-removed directory converges instead of failing.
  */
-export function removeWorktree(repoPath: string, worktreePath: string): void {
-  runGit(["worktree", "remove", "--force", worktreePath], { cwd: repoPath, allowFailure: true });
-}
-
-/** No `--force`: uncommitted work refuses removal instead of being discarded. Returns git's refusal. */
-export function removeWorktreeSafely(repoPath: string, worktreePath: string): string | null {
-  const result = runGit(["worktree", "remove", worktreePath], {
+export function removeWorktree(
+  repoPath: string,
+  worktreePath: string,
+  options: { force: boolean },
+): string | null {
+  const flags = options.force ? ["--force"] : [];
+  const result = runGit(["worktree", "remove", ...flags, worktreePath], {
     cwd: repoPath,
     allowFailure: true,
   });

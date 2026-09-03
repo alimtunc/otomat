@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { branchExists, headSha, mergeBase, revParse } from "#git/repo";
+import { branchExists, headSha, mergeBase, revParse, unpushedCommitCount } from "#git/repo";
 
 import { setupTestRepo } from "../support/git.js";
 
@@ -18,6 +18,23 @@ describe("repo primitives", () => {
     const repo = setupTestRepo();
     try {
       expect(revParse(repo.root, "main")).toBe(repo.git("rev-parse", "main").trim());
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it("unpushedCommitCount counts only what deleting the branch would lose", () => {
+    const repo = setupTestRepo();
+    try {
+      repo.git("checkout", "-b", "feature");
+      repo.write("a.txt", "a");
+      repo.commitAll("feat: only here");
+
+      expect(unpushedCommitCount(repo.root, "feature")).toBe(1);
+
+      repo.git("branch", "keeper", "feature");
+
+      expect(unpushedCommitCount(repo.root, "feature")).toBe(0);
     } finally {
       repo.cleanup();
     }

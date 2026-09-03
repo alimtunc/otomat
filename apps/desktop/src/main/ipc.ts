@@ -153,8 +153,8 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
   );
   ipcMain.handle(
     EXECUTION_HOST_CLEANUP_WORKSPACE_CHANNEL,
-    (_event, hostId: unknown, worktreeId: unknown) =>
-      actions.executionHost.cleanupWorkspace(hostId, worktreeId),
+    (_event, hostId: unknown, workspaceId: unknown, force: unknown) =>
+      actions.executionHost.cleanupWorkspace(hostId, workspaceId, force),
   );
   ipcMain.handle(EXECUTION_HOST_INSTANCES_CHANNEL, () => actions.executionHost.listInstances());
   ipcMain.handle(EXECUTION_HOST_STOP_INSTANCE_CHANNEL, (_event, build: unknown) =>

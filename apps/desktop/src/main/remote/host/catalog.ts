@@ -148,9 +148,10 @@ export class HostCatalog {
 
   async cleanupWorkspace(
     hostId: ExecutionHostId,
-    worktreeId: string,
+    workspaceId: string,
+    force: boolean,
   ): Promise<ExecutionHostCallResult<WorkspaceCleanupResult>> {
-    return this.call(hostId, (client) => client.cleanupWorkspace(worktreeId));
+    return this.call(hostId, (client) => client.cleanupWorkspace(workspaceId, force));
   }
 
   /** Asking warms an idle remote host. */

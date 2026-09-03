@@ -1,5 +1,4 @@
-import { isRunResumable, isRunSettled } from "@otomat/domain";
-import { isWorkspaceCleanable } from "@otomat/domain";
+import { isRunResumable, isRunSettled, isWorkspaceForceCleanable } from "@otomat/domain";
 import {
   Button,
   DropdownMenu,
@@ -13,8 +12,8 @@ import { useAbortRun, useResumeRun } from "@web/api/runs/mutations";
 import { useRunDetail } from "@web/api/runs/queries";
 import { useWorkspacesForRun } from "@web/api/workspaces/queries";
 import { AbandonWorkspaceDialog } from "@web/components/runs/actions/abandon-workspace-dialog";
-import { CleanWorkspaceDialog } from "@web/components/runs/actions/clean-workspace-dialog";
-import { useActiveHostId } from "@web/lib/active-host";
+import { WorkspaceCleanupDialog } from "@web/components/workspaces/cleanup-dialog";
+import { useActiveHostDescriptor } from "@web/lib/active-host";
 import { canAbortRun } from "@web/lib/run/actions";
 import { resumeModeNote } from "@web/lib/run/resume-mode";
 import { useState } from "react";
@@ -27,14 +26,15 @@ export interface RunActionsMenuProps {
 export function RunActionsMenu({ runId, stretch = false }: RunActionsMenuProps) {
   const [abandoning, setAbandoning] = useState(false);
   const [cleaning, setCleaning] = useState(false);
-  const activeHostId = useActiveHostId();
+  const host = useActiveHostDescriptor();
   const detail = useRunDetail(runId).data;
   const workspace = useWorkspacesForRun(runId).data?.entries[0] ?? null;
   const abort = useAbortRun(runId);
   const resume = useResumeRun(runId);
 
   const cancelable = detail !== undefined && canAbortRun(detail.run.status);
-  const cleanable = workspace !== null && isWorkspaceCleanable(workspace) ? workspace : null;
+  const cleanable =
+    workspace !== null && isWorkspaceForceCleanable(workspace) ? { ...workspace, host } : null;
 
   return (
     <>
@@ -83,12 +83,7 @@ export function RunActionsMenu({ runId, stretch = false }: RunActionsMenuProps) 
       </DropdownMenu>
       <AbandonWorkspaceDialog runId={runId} open={abandoning} onOpenChange={setAbandoning} />
       {cleanable === null ? null : (
-        <CleanWorkspaceDialog
-          entry={cleanable}
-          hostId={activeHostId}
-          open={cleaning}
-          onOpenChange={setCleaning}
-        />
+        <WorkspaceCleanupDialog rows={[cleanable]} open={cleaning} onOpenChange={setCleaning} />
       )}
     </>
   );

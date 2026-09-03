@@ -176,8 +176,8 @@ export interface Supervisor {
   workspaces(scope?: WorkspaceScope): WorkspaceInventory;
   /** Concurrent callers share the one running pass. */
   reconcileWorkspaces(): Promise<WorkspaceReconcileReport>;
-  /** `null` for a worktree no record holds. */
-  cleanupWorkspace(worktreeId: string): WorkspaceCleanupResult | null;
+  /** `null` when no workspace answers to that id. */
+  cleanupWorkspace(workspaceId: string, force: boolean): WorkspaceCleanupResult | null;
   /** Resolve once every in-flight session process has exited (shutdown/test aid). */
   settle(): Promise<void>;
   /** Stop every in-flight worker group (SIGTERM, then SIGKILL after `graceMs`); resolves once all have exited. */

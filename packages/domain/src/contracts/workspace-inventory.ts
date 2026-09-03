@@ -22,8 +22,18 @@ const workspaceCleanupBlockerSchema = z.enum(WORKSPACE_CLEANUP_BLOCKERS);
 export type WorkspaceCleanupBlocker = (typeof WORKSPACE_CLEANUP_BLOCKERS)[number];
 
 const WORKSPACE_ATTACHMENTS = ["record", "convention", "ambiguous", "none"] as const;
-const workspaceAttachmentSchema = z.enum(WORKSPACE_ATTACHMENTS);
 export type WorkspaceAttachment = (typeof WORKSPACE_ATTACHMENTS)[number];
+
+const WORKSPACE_PROVENANCES = [
+  "otomat_run",
+  "otomat_unreconciled",
+  "external_worktree",
+  "missing_path",
+  "orphan_record",
+  "unknown",
+] as const;
+const workspaceProvenanceSchema = z.enum(WORKSPACE_PROVENANCES);
+export type WorkspaceProvenance = (typeof WORKSPACE_PROVENANCES)[number];
 
 const workspacePullRequestSchema = z.object({
   number: z.number().int().positive().nullable(),
@@ -44,13 +54,15 @@ export const workspaceEntrySchema = z.object({
   branch: z.string().nullable(),
   path: z.string(),
   state: workspaceStateSchema,
-  attachment: workspaceAttachmentSchema,
+  provenance: workspaceProvenanceSchema,
   blocker: workspaceCleanupBlockerSchema.nullable(),
   reason: z.string(),
   registered: z.boolean(),
   present: z.boolean(),
   /** `null` when the working directory refused to answer `git status`. */
-  dirty: z.boolean().nullable(),
+  uncommitted_files: z.number().int().nonnegative().nullable(),
+  /** Commits deleting the branch would destroy; `null` when git could not answer for it. */
+  unpushed_commits: z.number().int().nonnegative().nullable(),
   head_sha: z.string().nullable(),
   last_activity_at: z.string().nullable(),
   pull_request: workspacePullRequestSchema.nullable(),
@@ -83,6 +95,8 @@ export const workspaceReconcileReportSchema = z.object({
   inventory: workspaceInventorySchema,
 });
 export type WorkspaceReconcileReport = z.infer<typeof workspaceReconcileReportSchema>;
+
+export const workspaceCleanupRequestSchema = z.object({ force: z.boolean().default(false) });
 
 export const workspaceCleanupResultSchema = z.object({
   outcome: z.enum(["cleaned", "skipped", "failed"]),

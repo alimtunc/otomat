@@ -112,6 +112,20 @@ export function listBranches(repoPath: string): string[] {
     .filter((line) => line !== "");
 }
 
+/** Commits only this branch holds, so deleting it loses them; `null` when git cannot answer. */
+export function unpushedCommitCount(repoPath: string, branch: string): number | null {
+  const res = runGit(
+    ["rev-list", "--count", branch, "--not", `--exclude=${branch}`, "--branches", "--remotes"],
+    {
+      cwd: repoPath,
+      allowFailure: true,
+    },
+  );
+  if (res.exitCode !== 0) return null;
+  const count = Number.parseInt(res.stdout.trim(), 10);
+  return Number.isNaN(count) ? null : count;
+}
+
 /** Deletes a local branch (`-D`, force). No-op tolerant when the branch is gone. */
 export function deleteBranch(repoPath: string, branch: string): void {
   runGit(["branch", "-D", branch], { cwd: repoPath, allowFailure: true });

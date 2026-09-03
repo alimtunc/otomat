@@ -4,7 +4,7 @@ import type { WorkspaceRow } from "@web/lib/workspace/row";
 import { workspaceGitState } from "@web/lib/workspace/state";
 
 export function WorkspaceGitStateCell({ row }: TableCellProps<WorkspaceRow, unknown>) {
-  const git = workspaceGitState(row.original.present, row.original.dirty);
+  const git = workspaceGitState(row.original.present, row.original.uncommitted_files);
   return (
     <Tooltip>
       <TooltipTrigger

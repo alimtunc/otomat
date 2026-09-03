@@ -32,12 +32,13 @@ const ENTRY = {
   branch: "otomat/run/r1",
   path: "/tmp/worktrees/r1",
   state: "cleanup_required",
-  attachment: "record",
+  provenance: "otomat_run",
   blocker: null,
   reason: "Ready to delete.",
   registered: true,
   present: true,
-  dirty: false,
+  uncommitted_files: 0,
+  unpushed_commits: 0,
   head_sha: "abc",
   last_activity_at: "2026-08-18 00:00:00",
   pull_request: { number: 42, url: "https://github.com/acme/app/pull/42", merged: true },
@@ -98,7 +99,11 @@ it("returns the daemon's refusal verbatim rather than a fake success", async () 
     supervisor: stubSupervisor({ cleanupWorkspace: () => skipped }),
   });
 
-  const res = await request(app, "/api/workspaces/wt-1/cleanup", { method: "POST" });
+  const res = await request(app, "/api/workspaces/wt-1/cleanup", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ force: false }),
+  });
 
   expect(res.status).toBe(200);
   expect(await json<WorkspaceCleanupResult>(res)).toMatchObject({
@@ -107,10 +112,37 @@ it("returns the daemon's refusal verbatim rather than a fake success", async () 
   });
 });
 
+it("forwards the operator's force decision, and stays protective when the body omits it", async () => {
+  const forced: boolean[] = [];
+  const app = makeApiApp(t, {
+    supervisor: stubSupervisor({
+      cleanupWorkspace: (_workspaceId, force) => {
+        forced.push(force);
+        return { outcome: "cleaned", blocker: null, message: "Removed.", entry: ENTRY };
+      },
+    }),
+  });
+
+  for (const body of [JSON.stringify({ force: true }), JSON.stringify({})]) {
+    const res = await request(app, "/api/workspaces/wt-1/cleanup", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+    });
+    expect(res.status).toBe(200);
+  }
+
+  expect(forced).toEqual([true, false]);
+});
+
 it("404s a cleanup of a workspace no record holds", async () => {
   const app = makeApiApp(t, { supervisor: stubSupervisor({ cleanupWorkspace: () => null }) });
 
-  const res = await request(app, "/api/workspaces/wt-gone/cleanup", { method: "POST" });
+  const res = await request(app, "/api/workspaces/wt-gone/cleanup", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ force: false }),
+  });
 
   expect(res.status).toBe(404);
   expect(await json<{ error: string }>(res)).toMatchObject({ error: "workspace_not_found" });

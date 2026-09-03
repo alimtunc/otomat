@@ -60,7 +60,7 @@ export function acquireWorktree(ctx: AcquireContext, input: AcquireWorktreeInput
   } catch (error) {
     // `git worktree add -b` creates the branch before the checkout, and a registered worktree
     // makes `git branch -D` refuse; the prune stays path-scoped to spare unreachable siblings.
-    removeWorktree(repoRoot, path);
+    removeWorktree(repoRoot, path, { force: true });
     deleteBranch(repoRoot, input.branch);
     throw error;
   }
@@ -79,7 +79,7 @@ export function acquireWorktree(ctx: AcquireContext, input: AcquireWorktreeInput
       status: "active",
     });
   } catch (error) {
-    removeWorktree(repoRoot, path);
+    removeWorktree(repoRoot, path, { force: true });
     deleteBranch(repoRoot, input.branch);
     pruneWorktrees(repoRoot);
     throw error;

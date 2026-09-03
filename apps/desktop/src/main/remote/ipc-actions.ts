@@ -49,7 +49,8 @@ export interface ExecutionHostIpcActions {
   reconcileWorkspaces(hostId: unknown): Promise<ExecutionHostCallResult<WorkspaceReconcileReport>>;
   cleanupWorkspace(
     hostId: unknown,
-    worktreeId: unknown,
+    workspaceId: unknown,
+    force: unknown,
   ): Promise<ExecutionHostCallResult<WorkspaceCleanupResult>>;
   listInstances(): Promise<RemoteInstanceListResult>;
   stopInstance(build: unknown): Promise<ExecutionHostOperationResult>;
@@ -157,10 +158,10 @@ export function buildExecutionHostActions(
       onOwningHost(manager(), hostId, (catalog, id) => catalog.readInbox(id)),
     reconcileWorkspaces: async (hostId: unknown) =>
       onOwningHost(manager(), hostId, (catalog, id) => catalog.reconcileWorkspaces(id)),
-    cleanupWorkspace: async (hostId: unknown, worktreeId: unknown) => {
-      if (typeof worktreeId !== "string") return { ok: false, message: "Unknown workspace." };
+    cleanupWorkspace: async (hostId: unknown, workspaceId: unknown, force: unknown) => {
+      if (typeof workspaceId !== "string") return { ok: false, message: "Unknown workspace." };
       return onOwningHost(manager(), hostId, (catalog, id) =>
-        catalog.cleanupWorkspace(id, worktreeId),
+        catalog.cleanupWorkspace(id, workspaceId, force === true),
       );
     },
     listInstances: async () => instances()?.list() ?? { ok: false, message: NOT_READY_MESSAGE },

@@ -1,8 +1,6 @@
-import { isAbsolute, relative } from "node:path";
-
 import type { WorkspaceAttachment } from "@otomat/domain";
 
-import { tryRealpath } from "#git";
+import { isInsideRoot, tryRealpath } from "#git";
 import type { GitWorktreeEntry } from "#git/worktree-cli";
 
 import type { WorkspaceRecord } from "./evidence.js";
@@ -23,11 +21,6 @@ export interface AttachContext {
 
 function canonical(path: string): string {
   return tryRealpath(path) ?? path;
-}
-
-function isInside(root: string, path: string): boolean {
-  const step = relative(canonical(root), canonical(path));
-  return step !== "" && !step.startsWith("..") && !isAbsolute(step);
 }
 
 export function attachWorkspaces(
@@ -56,14 +49,14 @@ export function attachWorkspaces(
         record,
       };
     }
-    if (entry.branch === null || !isInside(context.worktreesRoot, entry.path)) {
+    if (entry.branch === null || !isInsideRoot(context.worktreesRoot, entry.path)) {
       return { ...base, branch: entry.branch, attachment: "none", record: null };
     }
     const candidates = records.filter(
       (candidate) =>
         candidate.branch === entry.branch &&
         !claimed.has(candidate.worktree_id) &&
-        isInside(context.worktreesRoot, candidate.path),
+        isInsideRoot(context.worktreesRoot, candidate.path),
     );
     const only = candidates.length === 1 ? candidates[0] : undefined;
     if (only === undefined) {

@@ -1,5 +1,6 @@
 import type { WorkspaceState } from "@otomat/domain";
 import type { StatusTone } from "@otomat/ui";
+import { plural } from "@web/lib/plural";
 
 export interface WorkspaceStateDescriptor {
   label: string;
@@ -32,14 +33,18 @@ export interface WorkspaceGitStateDescriptor {
 
 export function workspaceGitState(
   present: boolean,
-  dirty: boolean | null,
+  uncommittedFiles: number | null,
 ): WorkspaceGitStateDescriptor {
   if (!present) return { word: "gone", tone: "danger", detail: "the worktree is gone from disk" };
-  if (dirty === null) {
+  if (uncommittedFiles === null) {
     return { word: "unreadable", tone: "neutral", detail: "git could not read the worktree" };
   }
-  if (dirty) {
-    return { word: "dirty", tone: "warning", detail: "the worktree holds uncommitted changes" };
+  if (uncommittedFiles > 0) {
+    return {
+      word: "dirty",
+      tone: "warning",
+      detail: `${plural(uncommittedFiles, "uncommitted file")} in the worktree`,
+    };
   }
   return { word: "clean", tone: "success", detail: "the worktree has no uncommitted change" };
 }

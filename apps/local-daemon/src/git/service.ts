@@ -161,7 +161,7 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       } else {
         head = revParse(repoRoot, row.branch);
       }
-      removeWorktree(repoRoot, row.path);
+      removeWorktree(repoRoot, row.path, { force: true });
       pruneWorktrees(repoRoot);
       updateWorktreeStatus(db, row.id, { status: "archived", head_sha: head });
 
@@ -170,7 +170,7 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
 
     cleanup(owner, options = {}) {
       const row = resolve(owner);
-      removeWorktree(repoRoot, row.path);
+      removeWorktree(repoRoot, row.path, { force: true });
       pruneWorktrees(repoRoot);
       if (options.deleteBranch ?? true) deleteBranch(repoRoot, row.branch);
       updateWorktreeStatus(db, row.id, { status: "removed" });

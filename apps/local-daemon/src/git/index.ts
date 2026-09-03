@@ -23,6 +23,7 @@ export {
   repositoryRemotes,
   searchTrackedFiles,
   uncommittedPaths,
+  unpushedCommitCount,
   type CommitSummary,
   type TrackedFileMatches,
 } from "./repo.js";

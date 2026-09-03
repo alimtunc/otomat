@@ -13,12 +13,19 @@ import {
   countWorkspaces,
   describeWorkspace,
   projectIssueWorkspace,
+  projectWorkspaceProvenance,
   projectWorkspaceState,
   type WorkspaceEntry,
+  type WorkspaceFacts,
   type WorkspaceInventory,
 } from "@otomat/domain";
 
-import { isRepositoryRoot, uncommittedPaths, type RepositoryBinding } from "#git";
+import {
+  isRepositoryRoot,
+  uncommittedPaths,
+  unpushedCommitCount,
+  type RepositoryBinding,
+} from "#git";
 import { listWorktrees } from "#git/worktree-cli";
 
 import { isProcessAlive } from "../process.js";
@@ -39,9 +46,9 @@ function writerAlive(context: WorkspaceContext, runId: string | null): boolean {
 }
 
 /** `null` says the worktree refused to answer, which blocks a deletion instead of allowing one. */
-function readDirty(path: string): boolean | null {
+function readUncommitted(path: string): number | null {
   try {
-    return uncommittedPaths(path).length > 0;
+    return uncommittedPaths(path).length;
   } catch (error) {
     console.error(`[otomat] git status for worktree ${path} failed`, error);
     return null;
@@ -57,17 +64,18 @@ function toEntry(
 ): WorkspaceEntry {
   const { record } = attached;
   const present = existsSync(attached.path);
-  const dirty = present ? readDirty(attached.path) : false;
   const issueId = record?.issue_id ?? null;
-  const verdict = projectWorkspaceState({
+  const facts: WorkspaceFacts = {
     attachment: attached.attachment,
     registered: attached.registered,
     present,
     record_status: record?.status ?? null,
     cycle_open: issueId !== null && holders.get(issueId) === record?.run_id,
-    dirty,
+    uncommitted_files: present ? readUncommitted(attached.path) : 0,
     writer_alive: writerAlive(context, record?.run_id ?? null),
-  });
+  };
+  const verdict = projectWorkspaceState(facts);
+  const provenance = projectWorkspaceProvenance(facts);
   return {
     id: record?.worktree_id ?? attached.path,
     repository_id: repository.id,
@@ -80,12 +88,14 @@ function toEntry(
     branch: attached.branch,
     path: attached.path,
     state: verdict.state,
-    attachment: attached.attachment,
+    provenance,
     blocker: verdict.blocker,
-    reason: describeWorkspace(verdict, attached.attachment),
+    reason: describeWorkspace(verdict, provenance),
     registered: attached.registered,
     present,
-    dirty,
+    uncommitted_files: facts.uncommitted_files,
+    unpushed_commits:
+      attached.branch === null ? null : unpushedCommitCount(binding.rootPath, attached.branch),
     head_sha: attached.head,
     last_activity_at: record?.updated_at ?? null,
     pull_request: record?.pull_request ?? null,

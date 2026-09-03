@@ -4,6 +4,8 @@ import {
   describeWorkspace,
   isWorkspaceAutoDeletable,
   isWorkspaceCleanable,
+  isWorkspaceForceCleanable,
+  projectWorkspaceProvenance,
   projectWorkspaceState,
   type WorkspaceFacts,
 } from "#domain/projections/workspace-inventory";
@@ -18,7 +20,7 @@ function facts(over: Partial<WorkspaceFacts> = {}): WorkspaceFacts {
     present: true,
     record_status: "active",
     cycle_open: false,
-    dirty: false,
+    uncommitted_files: 0,
     writer_alive: false,
     ...over,
   };
@@ -36,20 +38,20 @@ it("keeps an open cycle active", () => {
 });
 
 it("blocks on the live writer before anything else it could report", () => {
-  const verdict = projectWorkspaceState(facts({ writer_alive: true, dirty: true }));
+  const verdict = projectWorkspaceState(facts({ writer_alive: true, uncommitted_files: 3 }));
 
   expect(verdict).toEqual({ state: "cleanup_required", blocker: "writer_alive" });
 });
 
 it("blocks a dirty worktree", () => {
-  expect(projectWorkspaceState(facts({ dirty: true }))).toEqual({
+  expect(projectWorkspaceState(facts({ uncommitted_files: 1 }))).toEqual({
     state: "cleanup_required",
     blocker: "worktree_dirty",
   });
 });
 
 it("blocks a worktree git could not read at all", () => {
-  expect(projectWorkspaceState(facts({ dirty: null }))).toEqual({
+  expect(projectWorkspaceState(facts({ uncommitted_files: null }))).toEqual({
     state: "cleanup_required",
     blocker: "worktree_unreadable",
   });
@@ -66,14 +68,18 @@ it("leaves a closed cycle deletable by hand, and automatic only once a merge sta
   expect(isWorkspaceAutoDeletable({ ...closed, pull_request: PR })).toBe(true);
   expect(
     isWorkspaceAutoDeletable({
-      ...projectWorkspaceState(facts({ dirty: true })),
+      ...projectWorkspaceState(facts({ uncommitted_files: 1 })),
       pull_request: PR,
     }),
   ).toBe(false);
 });
 
 it("refuses every deletion an operator could regret", () => {
-  const refused = [facts({ cycle_open: true }), facts({ dirty: true }), facts({ dirty: null })];
+  const refused = [
+    facts({ cycle_open: true }),
+    facts({ uncommitted_files: 1 }),
+    facts({ uncommitted_files: null }),
+  ];
 
   expect(refused.map((fact) => isWorkspaceCleanable(projectWorkspaceState(fact)))).toEqual([
     false,
@@ -93,13 +99,64 @@ it("reads a registration with no directory as stale, and a bare record as missin
   });
 });
 
-it("never manages a worktree it could not attach, however clean it looks", () => {
-  for (const attachment of ["none", "ambiguous"] as const) {
-    expect(projectWorkspaceState(facts({ attachment }))).toEqual({
-      state: "unmanaged",
-      blocker: "unmanaged_worktree",
-    });
-  }
+it("never touches a worktree outside the root, and offers the unreconciled one a clean deletion", () => {
+  const external = projectWorkspaceState(facts({ attachment: "none" }));
+  const unreconciled = projectWorkspaceState(facts({ attachment: "ambiguous" }));
+
+  expect(external).toEqual({ state: "unmanaged", blocker: "unmanaged_worktree" });
+  expect(isWorkspaceCleanable(external)).toBe(false);
+  expect(isWorkspaceForceCleanable(external)).toBe(false);
+  expect(unreconciled).toEqual({ state: "unmanaged", blocker: null });
+  expect(isWorkspaceCleanable(unreconciled)).toBe(true);
+});
+
+it("holds an unreconciled worktree to the same work-on-disk refusals as a recorded one", async () => {
+  const dirty = projectWorkspaceState(facts({ attachment: "ambiguous", uncommitted_files: 1 }));
+
+  expect(dirty).toEqual({ state: "unmanaged", blocker: "worktree_dirty" });
+  expect(isWorkspaceCleanable(dirty)).toBe(false);
+  expect(isWorkspaceForceCleanable(dirty)).toBe(true);
+});
+
+it("forces only over the work left on disk, never over a live writer or an open cycle", () => {
+  const forceable = [
+    facts({ uncommitted_files: 2 }),
+    facts({ uncommitted_files: null }),
+    facts({ present: false }),
+    facts({ present: false, registered: false }),
+  ];
+  const never = [
+    facts({ cycle_open: true }),
+    facts({ writer_alive: true }),
+    facts({ present: false, writer_alive: true }),
+  ];
+
+  expect(forceable.map((fact) => isWorkspaceForceCleanable(projectWorkspaceState(fact)))).toEqual([
+    true,
+    true,
+    true,
+    true,
+  ]);
+  expect(never.map((fact) => isWorkspaceForceCleanable(projectWorkspaceState(fact)))).toEqual([
+    false,
+    false,
+    false,
+  ]);
+});
+
+it("names where every row came from, including the one git no longer registers", () => {
+  const cases: Array<[Partial<WorkspaceFacts>, string]> = [
+    [{}, "otomat_run"],
+    [{ attachment: "none" }, "external_worktree"],
+    [{ attachment: "ambiguous" }, "otomat_unreconciled"],
+    [{ present: false }, "missing_path"],
+    [{ present: false, registered: false }, "orphan_record"],
+    [{ registered: false }, "unknown"],
+  ];
+
+  expect(cases.map(([over]) => projectWorkspaceProvenance(facts(over)))).toEqual(
+    cases.map(([, expected]) => expected),
+  );
 });
 
 it("reads an archived or removed record as already cleaned", () => {
@@ -111,13 +168,17 @@ it("reads an archived or removed record as already cleaned", () => {
   }
 });
 
-it("says why an ambiguous worktree was left alone rather than repeating the unmanaged sentence", () => {
-  const ambiguous = describeWorkspace(
-    { state: "unmanaged", blocker: "unmanaged_worktree" },
-    "ambiguous",
+it("explains an unmanaged row by where it came from, not by one sentence for both", () => {
+  const unreconciled = describeWorkspace(
+    { state: "unmanaged", blocker: null },
+    "otomat_unreconciled",
   );
-  const external = describeWorkspace({ state: "unmanaged", blocker: "unmanaged_worktree" }, "none");
+  const external = describeWorkspace(
+    { state: "unmanaged", blocker: "unmanaged_worktree" },
+    "external_worktree",
+  );
 
-  expect(ambiguous).not.toEqual(external);
-  expect(ambiguous).toContain("no record claims it");
+  expect(unreconciled).not.toEqual(external);
+  expect(unreconciled).toContain("no record claims");
+  expect(external).toContain("worktrees root");
 });

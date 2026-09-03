@@ -3,6 +3,7 @@ import {
   type CellData,
   metaHelper,
   type RowData,
+  rowSelectionFeature,
   tableFeatures,
 } from "@tanstack/react-table";
 
@@ -21,7 +22,10 @@ export interface TableColumnMeta {
   cellClassName?: string;
 }
 
-export const TABLE_FEATURES = tableFeatures({ columnMeta: metaHelper<TableColumnMeta>() });
+export const TABLE_FEATURES = tableFeatures({
+  rowSelectionFeature,
+  columnMeta: metaHelper<TableColumnMeta>(),
+});
 
 export type TableCellProps<TData extends RowData, TValue extends CellData = CellData> = CellContext<
   typeof TABLE_FEATURES,
