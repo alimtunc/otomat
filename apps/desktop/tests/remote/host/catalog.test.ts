@@ -7,6 +7,13 @@ import type { RemoteSessionHandle } from "#main/remote/session";
 const LOCAL_URL = "http://127.0.0.1:4319";
 const REMOTE_URL = "http://127.0.0.1:4400";
 
+const PROJECT = {
+  id: "p-1",
+  name: "otomat",
+  root_path: "/home/otomat/code/otomat",
+  has_repository: true,
+};
+
 const REPOSITORY = {
   id: "r-1",
   project_id: "p-1",
@@ -43,7 +50,7 @@ function catalog(fetchImpl: unknown, overrides: Partial<HostCatalogOptions> = {}
       activeHostId: () => "local",
       remoteSshAlias: () => "otomat-vps",
       remoteSession: () => session({ phase: "connected", detail: null }, REMOTE_URL),
-      warmRemote: () => {},
+      warmRemote: () => Promise.resolve({ phase: "connected", detail: null }),
       fetchImpl: fetchSeam,
       log: (message) => logs.push(message),
       ...overrides,
@@ -90,6 +97,34 @@ it("deletes on the owning host alone", async () => {
   expect(fetchImpl).toHaveBeenCalledWith(
     `${REMOTE_URL}/api/repositories/r-2`,
     expect.objectContaining({ method: "DELETE" }),
+  );
+});
+
+it("waits for an in-flight remote reconnect before registering a project", async () => {
+  const fetchImpl = vi.fn(() =>
+    Promise.resolve(jsonResponse({ project: PROJECT, repository: REPOSITORY }, 201)),
+  );
+  let remoteStatus: RemoteHostStatus = { phase: "checking_host", detail: "ssh otomat-vps" };
+  const warmRemote = vi.fn(
+    () =>
+      new Promise<RemoteHostStatus>((resolve) => {
+        queueMicrotask(() => {
+          remoteStatus = { phase: "connected", detail: null };
+          resolve(remoteStatus);
+        });
+      }),
+  );
+
+  const result = await catalog(fetchImpl, {
+    remoteSession: () => session(remoteStatus, REMOTE_URL),
+    warmRemote,
+  }).catalog.registerProject("remote", "/home/otomat/code/otomat");
+
+  expect(result).toEqual({ ok: true, project: PROJECT });
+  expect(warmRemote).toHaveBeenCalledOnce();
+  expect(fetchImpl).toHaveBeenCalledWith(
+    `${REMOTE_URL}/api/repositories`,
+    expect.objectContaining({ method: "POST" }),
   );
 });
 

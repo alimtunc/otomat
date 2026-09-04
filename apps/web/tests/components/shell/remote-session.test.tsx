@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import type { ExecutionHostSnapshot, IssueContract, RemoteHostStatus } from "@otomat/domain";
 import type { QueryClient } from "@tanstack/react-query";
-import { hostKeys } from "@web/api/query-keys";
+import { hostKeys, shellKeys } from "@web/api/query-keys";
 import { useRemoteSession } from "@web/components/shell/remote-session/context";
 import { useShellData } from "@web/components/shell/use-shell-data";
 import { act } from "react";
@@ -146,6 +146,18 @@ it("revalidates the remote host's cache on reconnect without clearing it", async
 
   expect(client.getQueryData<IssueContract[]>(key)?.map((issue) => issue.id)).toEqual(["i9"]);
   expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+});
+
+it("revalidates the cached multi-host projects when the VPS reconnects", async () => {
+  const client = testQueryClient();
+  const projects = [{ host: { id: "remote" }, projects: [{ id: "p9" }] }];
+  client.setQueryData(shellKeys.hostProjects, projects);
+  const probe = await renderProbe({}, client);
+
+  await probe.push({ phase: "connected", detail: null });
+
+  expect(client.getQueryData(shellKeys.hostProjects)).toEqual(projects);
+  expect(client.getQueryState(shellKeys.hostProjects)?.isInvalidated).toBe(true);
 });
 
 it("carries the reason the last automatic update stopped", async () => {

@@ -126,7 +126,7 @@ export class ExecutionHostManager {
     }
     const committed = this.selection.commit({ remote: { ssh_alias: alias } });
     if (!committed.ok) return committed;
-    this.ensureBackgroundRemote();
+    void this.ensureBackgroundRemote();
     return committed;
   }
 
@@ -204,15 +204,12 @@ export class ExecutionHostManager {
     return { ok: true, url };
   }
 
-  private ensureBackgroundRemote(): void {
+  private ensureBackgroundRemote(): Promise<RemoteHostStatus | null> {
     const alias = this.remoteSshAlias;
-    if (alias === null) return;
-    if (this.session === null) {
-      this.session = this.createSession(alias);
-      void this.session.connect(true);
-      return;
-    }
-    if (this.session.status.phase === "error") void this.session.connect(true);
+    if (alias === null) return Promise.resolve(null);
+    this.session ??= this.createSession(alias);
+    if (this.session.status.phase === "connected") return Promise.resolve(this.session.status);
+    return this.session.connect(true);
   }
 
   private createSession(alias: string): RemoteSessionHandle {

@@ -17,9 +17,9 @@ import {
 } from "@otomat/domain";
 
 import type { RemoteSessionHandle } from "../session.js";
+import { resolveCommandBaseUrl, type ResolvedDaemonUrl } from "./command-url.js";
 
-/** Where a host's daemon answers, or why it cannot be reached. */
-export type ResolvedDaemonUrl = { url: string } | { message: string };
+export type { ResolvedDaemonUrl } from "./command-url.js";
 
 type DaemonClient = ReturnType<typeof createDaemonClient>;
 
@@ -36,7 +36,7 @@ export interface HostCatalogOptions {
   activeHostId(): ExecutionHostId;
   remoteSshAlias(): string | null;
   remoteSession(): RemoteSessionHandle | null;
-  warmRemote(): void;
+  warmRemote(): Promise<RemoteHostStatus | null>;
   fetchImpl: typeof fetch;
   log(message: string): void;
 }
@@ -69,7 +69,7 @@ export class HostCatalog {
     path: string,
   ): Promise<ExecutionHostRegisterProjectResult> {
     if (path.trim() === "") return { ok: false, message: "Enter a repository path on the host." };
-    const target = this.resolveBaseUrl(hostId);
+    const target = await resolveCommandBaseUrl(this.options, hostId);
     if ("message" in target) return { ok: false, message: target.message };
     try {
       const created = await this.client(target.url).registerRepository({ path: path.trim() });
@@ -104,7 +104,7 @@ export class HostCatalog {
     hostId: ExecutionHostId,
     repositoryId: string,
   ): Promise<ExecutionHostOperationResult> {
-    const target = this.resolveBaseUrl(hostId);
+    const target = await resolveCommandBaseUrl(this.options, hostId);
     if ("message" in target) return { ok: false, message: target.message };
     try {
       await this.client(target.url).deleteRepository(repositoryId);
@@ -163,7 +163,7 @@ export class HostCatalog {
     if (this.options.remoteSshAlias() === null) {
       return { message: "No remote host is configured." };
     }
-    this.options.warmRemote();
+    void this.options.warmRemote();
     const session = this.options.remoteSession();
     if (session === null || session.status.phase !== "connected" || session.url === null) {
       return { message: "The remote host is not connected yet. Try again once its tunnel is up." };
@@ -184,7 +184,7 @@ export class HostCatalog {
     ];
     const alias = this.options.remoteSshAlias();
     if (alias === null) return targets;
-    this.options.warmRemote();
+    void this.options.warmRemote();
     const session = this.options.remoteSession();
     targets.push({
       host: { id: "remote", label: alias, kind: "ssh" },
@@ -204,7 +204,7 @@ export class HostCatalog {
     hostId: ExecutionHostId,
     run: (client: DaemonClient) => Promise<T>,
   ): Promise<ExecutionHostCallResult<T>> {
-    const target = this.resolveBaseUrl(hostId);
+    const target = await resolveCommandBaseUrl(this.options, hostId);
     if ("message" in target) return { ok: false, message: target.message };
     try {
       return { ok: true, value: await run(this.client(target.url)) };
