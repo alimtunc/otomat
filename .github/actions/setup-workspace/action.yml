@@ -1,18 +1,82 @@
 name: Setup workspace
-description: Install the pinned Node, pnpm and workspace dependencies
+description: Install the pinned Node and pnpm, restore the pnpm store and install workspace dependencies
+
+inputs:
+  install:
+    description: Install workspace dependencies with a frozen lockfile
+    default: "true"
 
 runs:
   using: composite
   steps:
-    - name: Install pnpm
-      uses: pnpm/action-setup@v6
+    - name: Start the setup clock
+      shell: bash
+      run: echo "start|$(date +%s)" > "$RUNNER_TEMP/setup-phases"
 
     - name: Setup Node
       uses: actions/setup-node@v7
       with:
         node-version: 22
-        cache: pnpm
+
+    # Corepack pins and hash-checks `packageManager` directly; pnpm/action-setup's npm self-installer
+    # fetched the newest pnpm first and stalled for up to seven minutes on the registry.
+    - name: Install pnpm
+      id: pnpm
+      shell: bash
+      env:
+        COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+      run: |
+        set -euo pipefail
+        echo "Setup Node|$(date +%s)" >> "$RUNNER_TEMP/setup-phases"
+        corepack enable pnpm
+        corepack install
+        node_major=$(node -p 'process.versions.node.split(".")[0]')
+        {
+          echo "store=$(pnpm store path --silent)"
+          echo "key=pnpm-store-${RUNNER_OS}-${RUNNER_ARCH}-node${node_major}-pnpm$(pnpm --version)-${{ hashFiles('pnpm-lock.yaml') }}"
+        } >> "$GITHUB_OUTPUT"
+        echo "Install pnpm|$(date +%s)" >> "$RUNNER_TEMP/setup-phases"
+
+    # No restore prefix: an exact key keeps a lockfile change on a clean, deterministic install.
+    - name: Restore the pnpm store
+      id: store
+      if: inputs.install == 'true'
+      uses: actions/cache@v6
+      with:
+        path: ${{ steps.pnpm.outputs.store }}
+        key: ${{ steps.pnpm.outputs.key }}
 
     - name: Install dependencies
+      if: inputs.install == 'true'
       shell: bash
-      run: pnpm install --frozen-lockfile
+      run: |
+        set -euo pipefail
+        echo "Restore the pnpm store|$(date +%s)" >> "$RUNNER_TEMP/setup-phases"
+        pnpm install --frozen-lockfile
+        echo "Install dependencies|$(date +%s)" >> "$RUNNER_TEMP/setup-phases"
+
+    - name: Report the setup phases
+      if: always()
+      shell: bash
+      env:
+        INSTALL: ${{ inputs.install }}
+        CACHE_HIT: ${{ steps.store.outputs.cache-hit }}
+        CACHE_KEY: ${{ steps.pnpm.outputs.key }}
+      run: |
+        set -euo pipefail
+        {
+          printf '### Workspace setup — %s %s\n\n' "$RUNNER_OS" "$RUNNER_ARCH"
+          printf '| Phase | Duration |\n| --- | ---: |\n'
+          awk -F'|' '
+            NR == 1 { first = $2 }
+            NR > 1 { printf "| %s | %ds |\n", $1, $2 - previous }
+            { previous = $2; last = $2 }
+            END { printf "| **Total** | **%ds** |\n", last - first }
+          ' "$RUNNER_TEMP/setup-phases"
+          if [ "$INSTALL" = "true" ]; then
+            state=miss
+            if [ "$CACHE_HIT" = "true" ]; then state=hit; fi
+            printf '\npnpm store cache: **%s** — `%s`\n' "$state" "$CACHE_KEY"
+          fi
+          printf '\n'
+        } >> "$GITHUB_STEP_SUMMARY"

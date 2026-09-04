@@ -148,8 +148,8 @@ jobs:
 
   # Close or merge and the pull request keeps nothing: teardown deletes its exact worker,
   # container application, Pages deployments and registry images; other previews are untouched.
-  # No pnpm install: the teardown path of instance.mjs runs without an installed workspace, and
-  # `pnpm dlx` fetches wrangler on demand.
+  # The shared setup without its install: the teardown path of instance.mjs runs without an
+  # installed workspace, and `pnpm dlx` fetches wrangler on demand.
   teardown:
     if: ${{ (github.event_name == 'pull_request' && github.event.action == 'closed') || (github.event_name == 'workflow_dispatch' && inputs.operation == 'teardown') }}
     runs-on: ubuntu-latest
@@ -157,13 +157,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v7
+      - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 22
+          install: "false"
 
       - name: Delete this pull request's dedicated resources
         env:
@@ -190,13 +186,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v7
+      - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 22
+          install: "false"
 
       - name: Inventory dedicated resources and PR state
         env:

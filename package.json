@@ -16,7 +16,7 @@
     "format:check": "oxfmt --check apps packages",
     "boundaries": "node scripts/import-boundaries.mjs",
     "guardrails": "node --test scripts/anti-slop.test.mjs scripts/guardrails.test.mjs scripts/react-doctor.test.mjs scripts/react-lint.test.mjs && node scripts/guardrails.mjs",
-    "test:scripts": "node --test \"scripts/preview/**/*.test.mjs\"",
+    "test:scripts": "node --test \"scripts/preview/**/*.test.mjs\" \"scripts/ci/**/*.test.mjs\"",
     "smoke:dist": "pnpm --filter @otomat/local-daemon smoke:dist",
     "check:static": "pnpm run format:check && pnpm run lint && pnpm run guard:react && pnpm run guardrails && pnpm run test:scripts",
     "check:build": "pnpm run build && pnpm run typecheck && pnpm run smoke:dist",
