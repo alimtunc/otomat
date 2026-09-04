@@ -2,11 +2,12 @@
 import { revealAndFocus } from "@web/components/runs/diff/diff-nav";
 import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
 import { useDiffKeyboardNav } from "@web/components/runs/diff/use-diff-keyboard-nav";
-import { act, useState } from "react";
+import { useState } from "react";
 import { describe, expect, it } from "vitest";
 
 import { diffLineRow } from "#support/diff-dom";
 import { diffFile } from "#support/diff-file";
+import { pressKey } from "#support/dom-events";
 import { mount } from "#support/mount";
 
 const files = [diffFile({ path: "a.ts" }), diffFile({ path: "b.ts" })];
@@ -52,19 +53,13 @@ function Harness({ collapsed }: { collapsed: string | null }) {
   );
 }
 
-async function press(key: string): Promise<void> {
-  await act(async () => {
-    window.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
-  });
-}
-
 describe("useDiffKeyboardNav change-block cursor", () => {
   it("enters the jumped-to file on the first n, not the first file in the diff", async () => {
     const { cleanup } = await mount(<Harness collapsed={null} />);
 
-    await press("j");
-    await press("j");
-    await press("n");
+    await pressKey("j");
+    await pressKey("j");
+    await pressKey("n");
 
     expect(document.activeElement?.id).toBe("b.ts-1");
     await cleanup();
@@ -73,9 +68,9 @@ describe("useDiffKeyboardNav change-block cursor", () => {
   it("clamps at the last change of the active file instead of crossing into the next", async () => {
     const { cleanup } = await mount(<Harness collapsed={null} />);
 
-    await press("n");
-    await press("n");
-    await press("n");
+    await pressKey("n");
+    await pressKey("n");
+    await pressKey("n");
 
     expect(document.activeElement?.id).toBe("a.ts-2");
     await cleanup();
@@ -84,10 +79,10 @@ describe("useDiffKeyboardNav change-block cursor", () => {
   it("does not leave the file when stepping back from its first change", async () => {
     const { cleanup } = await mount(<Harness collapsed={null} />);
 
-    await press("j");
-    await press("j");
-    await press("n");
-    await press("p");
+    await pressKey("j");
+    await pressKey("j");
+    await pressKey("n");
+    await pressKey("p");
 
     expect(document.activeElement?.id).toBe("b.ts-1");
     await cleanup();
@@ -96,9 +91,9 @@ describe("useDiffKeyboardNav change-block cursor", () => {
   it("does not fall through into another file when the active file has no changes left", async () => {
     const { cleanup } = await mount(<Harness collapsed="b.ts" />);
 
-    await press("j");
-    await press("j");
-    await press("n");
+    await pressKey("j");
+    await pressKey("j");
+    await pressKey("n");
 
     expect(document.activeElement?.id).toBe(diffFileDomId({ path: "b.ts" }));
     await cleanup();
@@ -107,11 +102,11 @@ describe("useDiffKeyboardNav change-block cursor", () => {
   it("re-enters at the first change after leaving and returning to a file", async () => {
     const { cleanup } = await mount(<Harness collapsed={null} />);
 
-    await press("n");
-    await press("n");
-    await press("j");
-    await press("k");
-    await press("n");
+    await pressKey("n");
+    await pressKey("n");
+    await pressKey("j");
+    await pressKey("k");
+    await pressKey("n");
 
     expect(document.activeElement?.id).toBe("a.ts-1");
     await cleanup();
@@ -146,8 +141,8 @@ describe("useDiffKeyboardNav change-block cursor", () => {
     }
 
     const { cleanup } = await mount(<Spy />);
-    await press("n");
-    await press("j");
+    await pressKey("n");
+    await pressKey("j");
 
     expect(jumped).toEqual(["a.ts", "b.ts"]);
     await cleanup();

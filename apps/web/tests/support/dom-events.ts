@@ -1,3 +1,11 @@
+import { act } from "react";
+
+export async function pressKey(key: string): Promise<void> {
+  await act(async () => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+  });
+}
+
 export function setInputValue(input: HTMLInputElement, value: string): void {
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
   setter?.call(input, value);

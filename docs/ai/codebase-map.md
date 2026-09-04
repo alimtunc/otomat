@@ -1118,6 +1118,16 @@ provenance stays distinct — the note constrains the fix, edits no comment and 
 never published to GitHub — and both survive in `runs.plan_json`, readable per
 session in the frozen context the step was given.
 
+File order is one list. `orderDiffFiles` applies the chosen sort and, under
+`Grouping: File type`, walks it group by group; the rail, the narrow-viewport
+nav, `j`/`k` and the next unread file all read that one list, so a group folded
+in the rail never disagrees with where the keys go next. A file is classified
+once from its path and extension (`runs/diff/files/group.ts`) and never from its
+content, so it lands in the same group on a workspace, a step, a commit or a
+pull request diff. Empty groups are not drawn, an unrecognized path lands in
+`Other`, and a folded group reopens when navigation moves into it the way a
+folded folder does in the tree.
+
 Reading a file is one primitive. Every surface that picks a file — the rail in
 either mode, the narrow-viewport nav, `j`/`k`, the Comments panel — calls
 `revealFile`, which selects, expands, and then scrolls in a layout effect that

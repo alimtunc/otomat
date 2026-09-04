@@ -59,9 +59,10 @@ export function ReviewWorkbench({
     comments: review.comments,
     reviewedFiles: review.reviewed_files,
     sort: prefs.sort,
+    grouping: prefs.grouping,
     hideReviewed: prefs.hideReviewed,
   });
-  const { partition, visible, reviewed, active, collapsed } = interactions;
+  const { partition, ordered, visible, reviewed, active, collapsed } = interactions;
 
   const commentActions: DiffFileCommentActions = {
     add: async (file, comment) => {
@@ -111,8 +112,11 @@ export function ReviewWorkbench({
         maxSize="40%"
       >
         <DiffSidebar
-          diff={diff}
+          additions={diff.additions}
+          deletions={diff.deletions}
+          files={ordered}
           browserMode={prefs.browser}
+          grouping={prefs.grouping}
           stats={prefs.stats}
           activePath={active.path}
           reviewedPaths={reviewed.paths}
@@ -129,7 +133,7 @@ export function ReviewWorkbench({
   ) : (
     <div className="flex min-h-0 flex-1 flex-col">
       <DiffFileNav
-        diff={diff}
+        files={ordered}
         activePath={active.path}
         reviewedPaths={reviewed.paths}
         onSelect={(file) => interactions.revealFile(file.path)}

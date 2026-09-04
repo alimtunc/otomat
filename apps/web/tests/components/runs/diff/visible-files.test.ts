@@ -1,4 +1,4 @@
-import { hideReviewedFiles, sortDiffFiles } from "@web/components/runs/diff/visible-files";
+import { hideReviewedFiles, orderDiffFiles } from "@web/components/runs/diff/visible-files";
 import { describe, expect, it } from "vitest";
 
 import { diffFile } from "#support/diff-file";
@@ -13,7 +13,7 @@ const NONE: ReadonlySet<string> = new Set();
 
 describe("reading order", () => {
   it("orders by path", () => {
-    expect(sortDiffFiles(FILES, "path").map((file) => file.path)).toEqual([
+    expect(orderDiffFiles(FILES, "path", "none").map((file) => file.path)).toEqual([
       "src/a.ts",
       "src/m.ts",
       "src/z.ts",
@@ -21,7 +21,7 @@ describe("reading order", () => {
   });
 
   it("orders by change volume, largest first", () => {
-    expect(sortDiffFiles(FILES, "changes").map((file) => file.path)).toEqual([
+    expect(orderDiffFiles(FILES, "changes", "none").map((file) => file.path)).toEqual([
       "src/z.ts",
       "src/m.ts",
       "src/a.ts",
@@ -29,7 +29,7 @@ describe("reading order", () => {
   });
 
   it("leaves the source list untouched", () => {
-    sortDiffFiles(FILES, "path");
+    orderDiffFiles(FILES, "path", "none");
     expect(FILES.map((file) => file.path)).toEqual(["src/z.ts", "src/a.ts", "src/m.ts"]);
   });
 });

@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { DiffFileBrowser } from "@web/components/runs/diff/files/browser";
+import type { DiffGroupingMode } from "@web/components/runs/diff/prefs/prefs";
 import { act } from "react";
 import { describe, expect, it } from "vitest";
 
@@ -24,11 +25,18 @@ function visibleFiles(container: HTMLElement): string[] {
     .filter((title) => title.endsWith(".ts") || title.endsWith(".tsx"));
 }
 
-async function openBrowser(mode: "files" | "tree") {
+function groupLabels(container: HTMLElement): (string | null | undefined)[] {
+  return [...container.querySelectorAll("section > button")].map(
+    (header) => header.querySelector("span")?.textContent,
+  );
+}
+
+async function openBrowser(mode: "files" | "tree", grouping: DiffGroupingMode = "none") {
   const mounted = await mount(
     <DiffFileBrowser
-      diff={DIFF}
+      files={DIFF.files}
       mode={mode}
+      grouping={grouping}
       activePath={null}
       reviewedPaths={new Set()}
       onSelect={() => {}}
@@ -64,6 +72,16 @@ describe("filtering changed files", () => {
     await view.type("legacy");
 
     expect(visibleFiles(view.container)).toEqual(["src/legacy/Gamma.ts → src/current/Gamma.ts"]);
+    await view.cleanup();
+  });
+
+  it("drops the groups a filter emptied and keeps the one it matched", async () => {
+    const view = await openBrowser("files", "type");
+
+    await view.type("beta");
+
+    expect(visibleFiles(view.container)).toEqual(["tests/beta.test.ts"]);
+    expect(groupLabels(view.container)).toEqual(["Tests"]);
     await view.cleanup();
   });
 

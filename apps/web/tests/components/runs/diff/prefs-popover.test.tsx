@@ -51,6 +51,20 @@ describe("reviewer preferences popover", () => {
     await cleanup();
   });
 
+  it("offers file-type grouping and reports the choice so the view can persist it", async () => {
+    const patches: Partial<DiffPrefs>[] = [];
+    const { cleanup } = await openPopover(true, patches);
+
+    expect(findButton("None")?.getAttribute("aria-pressed")).toBe("true");
+
+    await act(async () => {
+      findButton("File type")?.click();
+    });
+
+    expect(patches).toEqual([{ grouping: "type" }]);
+    await cleanup();
+  });
+
   it("reports the default comment destination so a new comment starts there", async () => {
     const patches: Partial<DiffPrefs>[] = [];
     const { cleanup } = await openPopover(true, patches);

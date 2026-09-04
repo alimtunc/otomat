@@ -1,4 +1,4 @@
-import type { DiffFileContract, ReviewDiffContract } from "@otomat/domain";
+import type { DiffFileContract } from "@otomat/domain";
 import {
   Icon,
   IconButton,
@@ -12,17 +12,16 @@ import { adjacentFile } from "@web/components/runs/diff/diff-nav";
 import { STATUS_LETTER } from "@web/components/runs/diff/files/status";
 
 export function DiffFileNav({
-  diff,
+  files,
   activePath,
   reviewedPaths,
   onSelect,
 }: {
-  diff: ReviewDiffContract;
+  files: readonly DiffFileContract[];
   activePath: string | null;
   reviewedPaths: ReadonlySet<string>;
   onSelect: (file: DiffFileContract) => void;
 }) {
-  const files = diff.files;
   const index = files.findIndex((file) => file.path === activePath);
   const previous = adjacentFile(files, activePath, -1);
   const next = adjacentFile(files, activePath, 1);

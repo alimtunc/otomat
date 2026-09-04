@@ -5,7 +5,8 @@ import { useDiffKeyboardNav } from "@web/components/runs/diff/use-diff-keyboard-
 import { act, useState } from "react";
 import { describe, expect, it } from "vitest";
 
-import { diffFile, reviewDiff } from "#support/diff-file";
+import { diffFile } from "#support/diff-file";
+import { pressKey } from "#support/dom-events";
 import { mount } from "#support/mount";
 
 const FILES = [
@@ -17,8 +18,6 @@ const FILES = [
   }),
   diffFile({ path: "docs/ai/codebase-map.md" }),
 ];
-
-const diff = reviewDiff({ files: FILES, additions: 3 });
 
 function Harness({ initialMode }: { initialMode: DiffBrowserMode }) {
   const [mode, setMode] = useState<DiffBrowserMode>(initialMode);
@@ -48,8 +47,9 @@ function Harness({ initialMode }: { initialMode: DiffBrowserMode }) {
         swap
       </button>
       <DiffFileBrowser
-        diff={diff}
+        files={FILES}
         mode={mode}
+        grouping="none"
         activePath={activePath}
         reviewedPaths={reviewed}
         onSelect={(next) => setActivePath(next.path)}
@@ -62,12 +62,6 @@ function fileRow(container: HTMLElement, fullPath: string): HTMLButtonElement {
   const row = container.querySelector<HTMLButtonElement>(`button[title="${fullPath}"]`);
   if (row === null) throw new Error(`no row for ${fullPath}`);
   return row;
-}
-
-async function press(key: string): Promise<void> {
-  await act(async () => {
-    window.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
-  });
 }
 
 describe("changed-file browser", () => {
@@ -152,9 +146,9 @@ describe("changed-file browser", () => {
     });
     expect(folder()?.getAttribute("aria-expanded")).toBe("false");
 
-    await press("j");
-    await press("j");
-    await press("j");
+    await pressKey("j");
+    await pressKey("j");
+    await pressKey("j");
 
     expect(folder()?.getAttribute("aria-expanded")).toBe("true");
     const revealed = fileRow(container, "docs/ai/codebase-map.md");
@@ -169,7 +163,7 @@ describe("changed-file browser", () => {
     await act(async () => {
       fileRow(container, path).click();
     });
-    await press("v");
+    await pressKey("v");
 
     expect(fileRow(container, path).getAttribute("aria-current")).toBe("true");
     expect(fileRow(container, path).querySelector('[aria-label="Reviewed"]')).not.toBeNull();
@@ -187,14 +181,14 @@ describe("changed-file browser", () => {
     for (const initialMode of ["files", "tree"] as const) {
       const { container, cleanup } = await mount(<Harness initialMode={initialMode} />);
 
-      await press("j");
+      await pressKey("j");
       expect(fileRow(container, FILES[0].path).getAttribute("aria-current")).toBe("true");
 
-      await press("j");
-      await press("j");
+      await pressKey("j");
+      await pressKey("j");
       expect(fileRow(container, FILES[2].path).getAttribute("aria-current")).toBe("true");
 
-      await press("k");
+      await pressKey("k");
       const renamed = fileRow(
         container,
         "packages/ui/src/line.tsx → apps/web/src/components/runs/diff/files/row.tsx",
