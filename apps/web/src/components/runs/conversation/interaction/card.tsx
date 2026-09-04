@@ -1,7 +1,7 @@
 import type { RunInteractionContract } from "@otomat/domain";
 import { Button, Chip, RelativeTime } from "@otomat/ui";
 import { useAnswerRunInteraction } from "@web/api/runs/interaction-mutations";
-import { InteractionAnswerForm } from "@web/components/runs/conversation/interaction-answer-form";
+import { InteractionAnswerForm } from "@web/components/runs/conversation/interaction/answer-form";
 import {
   interactionAnswerLabel,
   interactionErrorMessage,
@@ -62,24 +62,9 @@ export function InteractionCard({
             </Button>
           </div>
         ) : null}
-        {pending && interaction.kind === "choice" ? (
-          <div className="flex flex-wrap gap-2">
-            {interaction.options.map((option) => (
-              <Button
-                key={option.value}
-                type="button"
-                variant="outline"
-                size="xs"
-                disabled={answer.isPending}
-                loading={inFlight?.kind === "choice" && inFlight.values.includes(option.value)}
-                onClick={() => answer.mutate({ kind: "choice", values: [option.value] })}
-              >
-                {option.label}
-              </Button>
-            ))}
-          </div>
+        {pending && interaction.kind !== "permission" ? (
+          <InteractionAnswerForm interaction={interaction} answer={answer} />
         ) : null}
-        {pending && interaction.kind === "text" ? <InteractionAnswerForm answer={answer} /> : null}
         {interaction.answer === null ? null : (
           <p className="text-xs text-text-secondary">
             You answered: {interactionAnswerLabel(interaction.answer)}

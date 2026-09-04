@@ -80,7 +80,7 @@ it("turns a can_use_tool control request into a runtime-agnostic question", asyn
     kind: "permission",
     prompt: "Run Write: notes.md",
     tool: "Write",
-    options: [],
+    questions: [],
     reason: "the deny rule Read(./notes.md) covers it; only you can approve it.",
     tool_use_id: "tu-perm-1",
     permission_mode: "acceptEdits",
@@ -145,7 +145,7 @@ it("refuses an answer to a question this turn never asked instead of writing a b
   await done;
 
   expect(turn.channel.receipts).toEqual([
-    { id: "i1", error: "no open Claude permission request req-from-elsewhere on this turn" },
+    { id: "i1", error: "no open Claude request req-from-elsewhere on this turn" },
   ]);
   expect(stdinFrames(stdinFile).some((frame) => frame["type"] === "control_response")).toBe(false);
 });
@@ -160,4 +160,144 @@ it("always sends the flag that routes an ask to Otomat rather than to an auto-de
   expect(argv[argv.indexOf("--permission-prompt-tool") + 1]).toBe("stdio");
   // The frozen mode still travels with it: answering a question never widens what the provider decides alone.
   expect(argv).toContain("--permission-mode");
+});
+
+/** The shape the CLI sends for its question tool: an ask it needs answered, not an action it needs cleared. */
+function asksQuestions(questions: unknown[]): void {
+  process.env["OTOMAT_STUB_PERMISSION_REQUEST"] = JSON.stringify({
+    subtype: "can_use_tool",
+    tool_name: "AskUserQuestion",
+    display_name: "AskUserQuestion",
+    input: { questions },
+    tool_use_id: "tu-ask-1",
+    requires_user_interaction: true,
+  });
+}
+
+const COLOUR_QUESTION = {
+  question: "Which colour do you prefer?",
+  header: "Colour",
+  options: [
+    { label: "Red", description: "You prefer red." },
+    { label: "Blue", description: "You prefer blue." },
+  ],
+  multiSelect: false,
+};
+
+const SCOPE_QUESTION = {
+  question: "How far should I go?",
+  header: "Scope",
+  options: [{ label: "Minimal" }, { label: "Thorough" }],
+  multiSelect: true,
+};
+
+it("turns a native question into a choice carrying its own options, never an approval", async () => {
+  asksQuestions([COLOUR_QUESTION]);
+  const turn = turnAnswering({ kind: "choice", values: ["Red"] });
+
+  await runTurn(turn);
+
+  const request = turn.sink.events.find((event) => event.type === "runtime.interaction_requested");
+  expect(request?.payload).toMatchObject({
+    kind: "choice",
+    prompt: "Which colour do you prefer?",
+    tool: "AskUserQuestion",
+    questions: [
+      {
+        prompt: "Which colour do you prefer?",
+        select: "single",
+        allows_custom: true,
+        options: [
+          { value: "Red", label: "Red", description: "You prefer red." },
+          { value: "Blue", label: "Blue", description: "You prefer blue." },
+        ],
+      },
+    ],
+  });
+});
+
+it("sends the chosen option back as the answers the question tool reads", async () => {
+  const stdinFile = join(worktree, "stub-stdin.jsonl");
+  process.env["OTOMAT_STUB_STDIN_FILE"] = stdinFile;
+  asksQuestions([COLOUR_QUESTION]);
+
+  const final = await runTurn(turnAnswering({ kind: "choice", values: ["Red"] }));
+
+  expect(final.status).toBe("completed");
+  expect(
+    stdinFrames(stdinFile).find((frame) => frame["type"] === "control_response"),
+  ).toMatchObject({
+    response: {
+      response: {
+        behavior: "allow",
+        updatedInput: { answers: { "Which colour do you prefer?": "Red" } },
+      },
+    },
+  });
+});
+
+it("carries a custom answer the runtime allows, and a multi-select as the comma-joined string it documents", async () => {
+  const stdinFile = join(worktree, "stub-stdin.jsonl");
+  process.env["OTOMAT_STUB_STDIN_FILE"] = stdinFile;
+  asksQuestions([COLOUR_QUESTION, SCOPE_QUESTION]);
+
+  const turn = turnAnswering({
+    kind: "questionnaire",
+    responses: [
+      { question: "Which colour do you prefer?", values: ["Green, actually"] },
+      { question: "How far should I go?", values: ["Minimal", "Thorough"] },
+    ],
+  });
+  await runTurn(turn);
+
+  const request = turn.sink.events.find((event) => event.type === "runtime.interaction_requested");
+  // Several questions headline with the chips the tool gave them, not with one question's text.
+  expect(request?.payload).toMatchObject({ kind: "questionnaire", prompt: "Colour · Scope" });
+  expect(
+    stdinFrames(stdinFile).find((frame) => frame["type"] === "control_response"),
+  ).toMatchObject({
+    response: {
+      response: {
+        updatedInput: {
+          answers: {
+            "Which colour do you prefer?": "Green, actually",
+            "How far should I go?": "Minimal, Thorough",
+          },
+        },
+      },
+    },
+  });
+});
+
+it("keeps the request open when an answer cannot be translated, rather than clearing the tool blindly", async () => {
+  const stdinFile = join(worktree, "stub-stdin.jsonl");
+  process.env["OTOMAT_STUB_STDIN_FILE"] = stdinFile;
+  const turn = turnAnswering({ kind: "choice", values: ["Red"] });
+
+  const controller = new AbortController();
+  const done = runTurn(turn, controller.signal);
+  while (turn.channel.receipts.length === 0 || !existsSync(stdinFile)) {
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  controller.abort();
+  await done;
+
+  expect(turn.channel.receipts).toEqual([
+    { id: "i1", error: "Claude Code cannot take a choice answer for this request" },
+  ]);
+  expect(stdinFrames(stdinFile).some((frame) => frame["type"] === "control_response")).toBe(false);
+});
+
+it("falls back to the binary gate when the CLI sends a blank question, rather than dropping a request nothing can record", async () => {
+  asksQuestions([{ ...COLOUR_QUESTION, options: [{ label: "" }, { label: "Blue" }] }]);
+  const turn = turnAnswering({ kind: "permission", decision: "allow" });
+
+  await runTurn(turn);
+
+  const request = turn.sink.events.find((event) => event.type === "runtime.interaction_requested");
+  expect(request?.payload).toMatchObject({
+    kind: "permission",
+    prompt: "Run AskUserQuestion?",
+    questions: [],
+  });
 });

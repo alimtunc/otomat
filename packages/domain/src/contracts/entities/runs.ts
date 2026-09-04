@@ -10,7 +10,7 @@ import {
   STEP_RUN_STATES,
 } from "../entity-states.js";
 import { runPlanSchema } from "../run-plan.js";
-import { runtimeInteractionAnswerSchema, runtimeInteractionOptionSchema } from "../runtime.js";
+import { runtimeInteractionAnswerSchema, runtimeInteractionQuestionSchema } from "../runtime.js";
 import { resolvedAgentConfigSchema } from "./agents.js";
 import { worktreeStatusSchema } from "./workspace.js";
 
@@ -60,7 +60,7 @@ export const runInteractionContractSchema = z.object({
   prompt: z.string().min(1),
   tool: z.string().nullable(),
   reason: z.string().nullable(),
-  options: z.array(runtimeInteractionOptionSchema),
+  questions: z.array(runtimeInteractionQuestionSchema),
   answer: runtimeInteractionAnswerSchema.nullable(),
   /** Why the request can no longer be answered; set only on `canceled`. */
   canceled_reason: z.string().nullable(),

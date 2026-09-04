@@ -43,6 +43,7 @@ export type WorkerBehavior =
   | "live-refuse"
   /** Asks one permission over the ledger, then waits on the channel exactly as a blocked provider does. */
   | "live-ask"
+  | "live-choice"
   | "quota"
   | "quota-undated";
 

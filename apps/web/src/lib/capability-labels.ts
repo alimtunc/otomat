@@ -32,6 +32,7 @@ const INTERACTION_KIND_LABELS = {
   permission: "approvals",
   choice: "choices",
   text: "written answers",
+  questionnaire: "questionnaires",
 } satisfies Record<RunInteractionKind, string>;
 
 function interactionLabel(capability: RuntimeInteractionCapability): string {

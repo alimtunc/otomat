@@ -35,11 +35,9 @@ const stdinFile = process.env.OTOMAT_STUB_STDIN_FILE;
 // Permission stand-in: replay the prelude, ask once over the control channel, and report the decision the client sent back.
 if (process.env.OTOMAT_STUB_PERMISSION === "1") {
   replay(process.env.OTOMAT_STUB_FIXTURE);
-  process.stdout.write(
-    `${JSON.stringify({
-      type: "control_request",
-      request_id: "req-perm-1",
-      request: {
+  const request = process.env.OTOMAT_STUB_PERMISSION_REQUEST
+    ? JSON.parse(process.env.OTOMAT_STUB_PERMISSION_REQUEST)
+    : {
         subtype: "can_use_tool",
         tool_name: "Write",
         display_name: "Write",
@@ -47,8 +45,9 @@ if (process.env.OTOMAT_STUB_PERMISSION === "1") {
         input: { file_path: "notes.md", content: "ok" },
         decision_reason: "the deny rule Read(./notes.md) covers it; only you can approve it.",
         tool_use_id: "tu-perm-1",
-      },
-    })}\n`,
+      };
+  process.stdout.write(
+    `${JSON.stringify({ type: "control_request", request_id: "req-perm-1", request })}\n`,
   );
   for await (const line of createInterface({ input: process.stdin })) {
     if (stdinFile) appendFileSync(stdinFile, `${line}\n`);

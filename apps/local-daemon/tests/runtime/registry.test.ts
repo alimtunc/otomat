@@ -124,7 +124,7 @@ describe("runtime registry", () => {
     // Each adapter states the round-trip it genuinely has, and the reason when it has none.
     expect(claude?.capabilities.interactions).toEqual({
       status: "supported",
-      kinds: ["permission"],
+      kinds: ["permission", "choice", "questionnaire"],
     });
     expect(codex?.capabilities.interactions).toMatchObject({ status: "unsupported" });
     expect(fake?.capabilities.interactions).toMatchObject({ status: "unsupported" });

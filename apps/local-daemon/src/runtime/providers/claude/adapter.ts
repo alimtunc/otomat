@@ -44,6 +44,8 @@ const CLAUDE_PERMISSION_PROMPT_TOOL = ["--permission-prompt-tool", "stdio"];
  * `steering` is `live` because the CLI reads further user messages from an open
  * stdin while it works, and `interactions` rides that same open stdin: the CLI
  * asks with a `can_use_tool` control request and takes the control response back.
+ * `text` is absent because the CLI never asks for a free answer on its own — its
+ * question tool always lists options, and a custom answer rides one of them.
  * `provider_limit` is `deadline` because the CLI prints the unix second its plan
  * window reopens next to the limit it reports.
  */
@@ -52,7 +54,7 @@ const CLAUDE_CAPABILITIES = {
   steering: "live",
   abort: true,
   resume: true,
-  interactions: { status: "supported", kinds: ["permission"] },
+  interactions: { status: "supported", kinds: ["permission", "choice", "questionnaire"] },
   diff_hints: false,
   provider_limit: "deadline",
 } satisfies RuntimeAdapterCapabilities;

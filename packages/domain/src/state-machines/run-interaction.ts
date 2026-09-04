@@ -1,7 +1,7 @@
 import { defineMachine } from "./machine.js";
 
-/** What a runtime can block a turn on: an allow/deny gate, a pick among options it listed, or a free answer it asked for. */
-export const RUN_INTERACTION_KINDS = ["permission", "choice", "text"] as const;
+/** What a runtime can block a turn on: an allow/deny gate, a pick among options it listed, a free answer it asked for, or several questions it takes together. */
+export const RUN_INTERACTION_KINDS = ["permission", "choice", "text", "questionnaire"] as const;
 export type RunInteractionKind = (typeof RUN_INTERACTION_KINDS)[number];
 
 export const RUN_INTERACTION_STATES = ["pending", "answered", "canceled"] as const;

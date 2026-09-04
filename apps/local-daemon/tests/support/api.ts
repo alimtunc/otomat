@@ -130,7 +130,7 @@ export function interactionRow(
     prompt: "Run Write: notes.md",
     tool: "Write",
     reason: null,
-    options_json: [],
+    questions_json: [],
     answer_json: null,
     canceled_reason: null,
     requested_at: "2026-01-01T00:00:00.000Z",

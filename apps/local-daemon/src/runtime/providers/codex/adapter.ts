@@ -41,7 +41,7 @@ const CODEX_CAPABILITIES = {
   interactions: {
     status: "unsupported",
     reason:
-      "`codex exec` reads stdin as the prompt, so it has no channel to carry an approval back; the interactive app-server protocol is a different transport.",
+      "`codex exec` reads stdin as the prompt, so it has no channel to carry an answer back: the CLI refuses its own question tool there with `request_user_input is not supported in exec mode`. The interactive app-server protocol is a different transport.",
   },
   diff_hints: false,
   provider_limit: "detects",

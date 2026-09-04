@@ -5,6 +5,7 @@ import type { ProviderFrameMapper, ProviderTurnOutcome } from "#runtime/cli/turn
 import type { TurnEmitter } from "#runtime/cli/turn-emitter";
 
 import { claudeProviderLimit } from "./limits.js";
+import { claudeAskShape } from "./questions.js";
 
 /** What the turn was launched under, resolved against the installed binary before the first frame arrives. */
 interface ClaudeTurnPermission {
@@ -84,13 +85,10 @@ export class ClaudeFrameMapper implements ProviderFrameMapper {
     if (toolUseId !== null) this.askedToolUseIds.add(toolUseId);
     this.askedRequestIds.add(requestId);
     this.onRequest?.(requestId, request["input"] ?? null);
-    const detail = asString(request["description"]);
     this.emitter.emit("runtime.interaction_requested", "parsed", {
+      ...claudeAskShape(request, toolName),
       request_id: requestId,
-      kind: "permission",
-      prompt: detail === null ? `Run ${toolName}?` : `Run ${toolName}: ${detail}`,
       tool: toolName,
-      options: [],
       reason: asString(request["decision_reason"]),
       tool_use_id: toolUseId,
       input: request["input"] ?? null,

@@ -207,6 +207,31 @@ it("refuses an answer of the wrong kind for what the runtime asked", async () =>
   await supervisor.settle();
 });
 
+it("refuses an answer the runtime's own question could not take, and keeps it answerable", async () => {
+  const { supervisor } = makeSupervisor(fix, "live-choice");
+  seedAskingRun();
+  const row = await askingTurn(supervisor);
+  expect(row.kind).toBe("choice");
+
+  await expect(
+    supervisor.answerInteraction(RUN, row.id, { kind: "choice", values: ["main", "develop"] }),
+  ).rejects.toMatchObject({ code: "run_interaction_answer_invalid" });
+  await expect(
+    supervisor.answerInteraction(RUN, row.id, { kind: "choice", values: ["release"] }),
+  ).rejects.toMatchObject({ code: "run_interaction_answer_invalid" });
+  expect(interactions()[0]?.state).toBe("pending");
+
+  const answered = await supervisor.answerInteraction(RUN, row.id, {
+    kind: "choice",
+    values: ["develop"],
+  });
+  expect(answered.answer_json).toEqual({ kind: "choice", values: ["develop"] });
+  expect(inboxLines(RUN, liveSessionId())).toHaveLength(1);
+
+  await supervisor.abort(RUN);
+  await supervisor.settle();
+});
+
 it("ends a question whose turn is gone, and says so instead of accepting an answer", async () => {
   const { supervisor } = makeSupervisor(fix, "live-ask");
   seedAskingRun();

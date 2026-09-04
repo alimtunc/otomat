@@ -43,16 +43,31 @@ export const runtimeInteractionCapabilitySchema = z.discriminatedUnion("status",
 ]);
 export type RuntimeInteractionCapability = z.infer<typeof runtimeInteractionCapabilitySchema>;
 
+/** `value` is the runtime's own token, forwarded unread; `label` is all a surface shows. */
 export const runtimeInteractionOptionSchema = z.object({
   value: z.string().min(1),
   label: z.string().min(1),
+  description: z.string().min(1).nullable().default(null),
 });
 export type RuntimeInteractionOption = z.infer<typeof runtimeInteractionOptionSchema>;
 
 /**
- * One question as its adapter translated it — never inferred from prose.
- * `request_id` is the runtime's own correlation id, which the answer travels
- * back under; `options` is empty unless the kind is `choice`.
+ * One question inside a request, as its adapter translated it. `allows_custom` is
+ * the runtime's own announcement that it takes an answer outside `options`; a
+ * question with no options is a free answer and always allows one.
+ */
+export const runtimeInteractionQuestionSchema = z.object({
+  prompt: z.string().min(1),
+  options: z.array(runtimeInteractionOptionSchema),
+  select: z.enum(["single", "multiple"]),
+  allows_custom: z.boolean(),
+});
+export type RuntimeInteractionQuestion = z.infer<typeof runtimeInteractionQuestionSchema>;
+
+/**
+ * One ask as its adapter translated it — never inferred from prose. `request_id` is
+ * the runtime's own correlation id, which the answer travels back under; `questions`
+ * is empty for a `permission` gate and carries several only for a `questionnaire`.
  */
 export const runtimeInteractionRequestSchema = z.object({
   request_id: z.string().min(1),
@@ -60,17 +75,28 @@ export const runtimeInteractionRequestSchema = z.object({
   prompt: z.string().min(1),
   /** The tool the question gates, when it gates one. */
   tool: z.string().min(1).nullable(),
-  options: z.array(runtimeInteractionOptionSchema),
+  questions: z.array(runtimeInteractionQuestionSchema).default([]),
   /** Why the runtime asked instead of deciding, in its own words; a request recorded before it said so reads as none. */
   reason: z.string().min(1).nullable().default(null),
 });
 export type RuntimeInteractionRequest = z.infer<typeof runtimeInteractionRequestSchema>;
+
+/** One question's answer inside a questionnaire, tied to its question by the prompt the runtime asked under. */
+export const runtimeInteractionResponseSchema = z.object({
+  question: z.string().min(1),
+  values: z.array(z.string().min(1)).min(1),
+});
+export type RuntimeInteractionResponse = z.infer<typeof runtimeInteractionResponseSchema>;
 
 /** The operator's answer, in the runtime-agnostic shape every adapter translates back into its own protocol. */
 export const runtimeInteractionAnswerSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("permission"), decision: z.enum(["allow", "deny"]) }),
   z.object({ kind: z.literal("choice"), values: z.array(z.string().min(1)).min(1) }),
   z.object({ kind: z.literal("text"), text: z.string().trim().min(1) }),
+  z.object({
+    kind: z.literal("questionnaire"),
+    responses: z.array(runtimeInteractionResponseSchema).min(1),
+  }),
 ]);
 export type RuntimeInteractionAnswer = z.infer<typeof runtimeInteractionAnswerSchema>;
 

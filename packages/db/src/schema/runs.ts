@@ -7,7 +7,7 @@ import type {
   RunState,
   ResolvedAgentConfig,
   RuntimeInteractionAnswer,
-  RuntimeInteractionOption,
+  RuntimeInteractionQuestion,
   SessionContext,
   StepProviderWait,
   StepRunState,
@@ -165,8 +165,8 @@ export const runInteractions = sqliteTable(
     prompt: text("prompt").notNull(),
     tool: text("tool"),
     reason: text("reason"),
-    options_json: text("options_json", { mode: "json" })
-      .$type<RuntimeInteractionOption[]>()
+    questions_json: text("questions_json", { mode: "json" })
+      .$type<RuntimeInteractionQuestion[]>()
       .notNull(),
     answer_json: text("answer_json", { mode: "json" }).$type<RuntimeInteractionAnswer>(),
     canceled_reason: text("canceled_reason"),
