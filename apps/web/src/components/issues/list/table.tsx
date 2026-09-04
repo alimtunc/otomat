@@ -5,6 +5,7 @@ import { TableHead } from "@web/components/table/head";
 import { TableRow } from "@web/components/table/row";
 import type { IssueGroup } from "@web/lib/issue/grouping";
 import { rowSlices, TABLE, TABLE_FEATURES } from "@web/lib/table";
+import { useMemo } from "react";
 
 export interface IssuesTableProps {
   groups: IssueGroup[];
@@ -19,11 +20,8 @@ export function IssuesTable({
   collapsed,
   onToggleGroup,
 }: IssuesTableProps) {
-  const table = useTable({
-    features: TABLE_FEATURES,
-    columns: ISSUE_COLUMNS,
-    data: groups.flatMap((group) => group.issues),
-  });
+  const issues = useMemo(() => groups.flatMap((group) => group.issues), [groups]);
+  const table = useTable({ features: TABLE_FEATURES, columns: ISSUE_COLUMNS, data: issues });
   const sections = rowSlices(
     table.getRowModel().rows,
     groups.map((group) => group.issues.length),

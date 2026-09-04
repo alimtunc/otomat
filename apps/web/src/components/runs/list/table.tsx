@@ -5,13 +5,11 @@ import { TableHead } from "@web/components/table/head";
 import { TableRow } from "@web/components/table/row";
 import type { RunIssueGroup } from "@web/lib/run/grouping";
 import { rowSlices, TABLE, TABLE_FEATURES } from "@web/lib/table";
+import { useMemo } from "react";
 
 export function RunsTable({ groups }: { groups: RunIssueGroup[] }) {
-  const table = useTable({
-    features: TABLE_FEATURES,
-    columns: RUN_COLUMNS,
-    data: groups.flatMap((group) => group.runs),
-  });
+  const runs = useMemo(() => groups.flatMap((group) => group.runs), [groups]);
+  const table = useTable({ features: TABLE_FEATURES, columns: RUN_COLUMNS, data: runs });
   const sections = rowSlices(
     table.getRowModel().rows,
     groups.map((group) => group.runs.length),
