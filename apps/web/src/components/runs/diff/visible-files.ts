@@ -1,5 +1,6 @@
 import type { DiffFileContract } from "@otomat/domain";
-import type { DiffSortMode } from "@web/components/runs/diff/prefs/prefs";
+import { groupDiffFiles } from "@web/components/runs/diff/files/group";
+import type { DiffGroupingMode, DiffSortMode } from "@web/components/runs/diff/prefs/prefs";
 
 export interface HideReviewedOptions {
   hideReviewed: boolean;
@@ -17,14 +18,21 @@ function changeCount(file: DiffFileContract): number {
   return file.additions + file.deletions;
 }
 
-export function sortDiffFiles(
-  files: readonly DiffFileContract[],
-  sort: DiffSortMode,
-): DiffFileContract[] {
+function sortDiffFiles(files: readonly DiffFileContract[], sort: DiffSortMode): DiffFileContract[] {
   if (sort === "changes") {
     return files.toSorted((left, right) => changeCount(right) - changeCount(left));
   }
   return files.toSorted((left, right) => left.path.localeCompare(right.path));
+}
+
+export function orderDiffFiles(
+  files: readonly DiffFileContract[],
+  sort: DiffSortMode,
+  grouping: DiffGroupingMode,
+): DiffFileContract[] {
+  const sorted = sortDiffFiles(files, sort);
+  if (grouping === "none") return sorted;
+  return groupDiffFiles(sorted).flatMap((group) => group.files);
 }
 
 export function hideReviewedFiles(

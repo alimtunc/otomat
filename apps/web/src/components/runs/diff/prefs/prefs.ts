@@ -5,11 +5,13 @@ import { readStoredJson, writeStored } from "@web/lib/storage";
 export type DiffViewMode = "unified" | "split";
 export type DiffBrowserMode = "files" | "tree";
 export type DiffSortMode = "path" | "changes";
+export type DiffGroupingMode = "none" | "type";
 
 export interface DiffPrefs {
   mode: DiffViewMode;
   browser: DiffBrowserMode;
   sort: DiffSortMode;
+  grouping: DiffGroupingMode;
   wrap: boolean;
   stats: boolean;
   hideReviewed: boolean;
@@ -20,6 +22,7 @@ export const DEFAULT_DIFF_PREFS: DiffPrefs = {
   mode: "unified",
   browser: "files",
   sort: "path",
+  grouping: "none",
   wrap: false,
   stats: true,
   hideReviewed: false,
@@ -35,6 +38,7 @@ export function readDiffPrefs(storage?: Pick<Storage, "getItem"> | null): DiffPr
     mode: asMember(stored.mode, ["unified", "split"] as const) ?? DEFAULT_DIFF_PREFS.mode,
     browser: asMember(stored.browser, ["files", "tree"] as const) ?? DEFAULT_DIFF_PREFS.browser,
     sort: asMember(stored.sort, ["path", "changes"] as const) ?? DEFAULT_DIFF_PREFS.sort,
+    grouping: asMember(stored.grouping, ["none", "type"] as const) ?? DEFAULT_DIFF_PREFS.grouping,
     wrap: asBoolean(stored.wrap) ?? DEFAULT_DIFF_PREFS.wrap,
     stats: asBoolean(stored.stats) ?? DEFAULT_DIFF_PREFS.stats,
     hideReviewed: asBoolean(stored.hideReviewed) ?? DEFAULT_DIFF_PREFS.hideReviewed,

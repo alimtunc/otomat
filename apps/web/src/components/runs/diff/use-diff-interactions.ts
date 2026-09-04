@@ -1,4 +1,5 @@
 import type {
+  DiffFileContract,
   ReviewCommentContract,
   ReviewDiffContract,
   ReviewedFileContract,
@@ -6,7 +7,7 @@ import type {
 } from "@otomat/domain";
 import { nextUnreviewedFile, revealAndFocus } from "@web/components/runs/diff/diff-nav";
 import { diffFileDomId } from "@web/components/runs/diff/files/card.utils";
-import type { DiffSortMode } from "@web/components/runs/diff/prefs/prefs";
+import type { DiffGroupingMode, DiffSortMode } from "@web/components/runs/diff/prefs/prefs";
 import type { RevealBlock } from "@web/components/runs/diff/scroll";
 import { useDiffSearch, type DiffSearch } from "@web/components/runs/diff/search/use-diff-search";
 import { useSearchReveal } from "@web/components/runs/diff/search/use-search-reveal";
@@ -19,7 +20,7 @@ import { useDiffKeyboardNav } from "@web/components/runs/diff/use-diff-keyboard-
 import { useReviewedFiles, type ReviewedFiles } from "@web/components/runs/diff/use-reviewed-files";
 import {
   hideReviewedFiles,
-  sortDiffFiles,
+  orderDiffFiles,
   type VisibleFiles,
 } from "@web/components/runs/diff/visible-files";
 import { reviewCommentDomId } from "@web/components/runs/review/comment/anchor";
@@ -40,11 +41,13 @@ export interface DiffInteractionsInput {
   comments: ReviewCommentContract[];
   reviewedFiles: ReviewedFileContract[];
   sort: DiffSortMode;
+  grouping: DiffGroupingMode;
   hideReviewed: boolean;
 }
 
 export interface DiffInteractions {
   partition: PartitionedComments;
+  ordered: DiffFileContract[];
   visible: VisibleFiles;
   reviewed: ReviewedFiles;
   active: ActiveDiffFile;
@@ -61,8 +64,8 @@ export function useDiffInteractions(input: DiffInteractionsInput): DiffInteracti
   const reviewed = useReviewedFiles(input.target, input.reviewedFiles, input.diff.files);
   const collapsed = useCollapsedFiles(input.diff.files, reviewed.paths);
   const ordered = useMemo(
-    () => sortDiffFiles(input.diff.files, input.sort),
-    [input.diff.files, input.sort],
+    () => orderDiffFiles(input.diff.files, input.sort, input.grouping),
+    [input.diff.files, input.sort, input.grouping],
   );
   const partition = partitionComments(input.diff, input.comments);
   const visible = hideReviewedFiles(ordered, {
@@ -129,6 +132,7 @@ export function useDiffInteractions(input: DiffInteractionsInput): DiffInteracti
 
   return {
     partition,
+    ordered,
     visible,
     reviewed,
     active,

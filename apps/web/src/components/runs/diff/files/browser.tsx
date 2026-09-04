@@ -1,14 +1,16 @@
-import type { DiffFileContract, ReviewDiffContract } from "@otomat/domain";
+import type { DiffFileContract } from "@otomat/domain";
 import { Icon, Input } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
+import { DiffFileGroupList } from "@web/components/runs/diff/files/group-list";
 import { DiffFileList } from "@web/components/runs/diff/files/list";
 import { DiffFileTree } from "@web/components/runs/diff/files/tree";
-import type { DiffBrowserMode } from "@web/components/runs/diff/prefs/prefs";
+import type { DiffBrowserMode, DiffGroupingMode } from "@web/components/runs/diff/prefs/prefs";
 import type { ReactNode } from "react";
 
 export interface DiffFileBrowserProps {
-  diff: ReviewDiffContract;
+  files: readonly DiffFileContract[];
   mode: DiffBrowserMode;
+  grouping: DiffGroupingMode;
   activePath: string | null;
   reviewedPaths: ReadonlySet<string>;
   onSelect: (file: DiffFileContract) => void;
@@ -22,8 +24,9 @@ function matchesFile(file: DiffFileContract, needle: string): boolean {
 }
 
 export function DiffFileBrowser({
-  diff,
+  files,
   mode,
+  grouping,
   activePath,
   reviewedPaths,
   onSelect,
@@ -33,14 +36,15 @@ export function DiffFileBrowser({
     <form.Field name="query">
       {(field) => {
         const needle = field.state.value.trim().toLowerCase();
-        const files =
-          needle === "" ? diff.files : diff.files.filter((file) => matchesFile(file, needle));
-        const rowProps = { files, activePath, reviewedPaths, onSelect };
+        const matched = needle === "" ? files : files.filter((file) => matchesFile(file, needle));
+        const rowProps = { files: matched, activePath, reviewedPaths, onSelect };
         let content: ReactNode;
-        if (files.length === 0) {
+        if (matched.length === 0) {
           content = (
             <p className="px-3 py-4 text-xs text-text-tertiary">No changed file matches.</p>
           );
+        } else if (grouping === "type") {
+          content = <DiffFileGroupList mode={mode} {...rowProps} />;
         } else if (mode === "tree") {
           content = <DiffFileTree {...rowProps} />;
         } else {

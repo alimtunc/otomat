@@ -89,6 +89,19 @@ export function DiffPrefsPopover({ prefs, onChange, browsable }: DiffPrefsPopove
             <SegmentedItem value="changes">Changes</SegmentedItem>
           </SegmentedControl>
         </PrefRow>
+        <PrefRow label="Grouping">
+          <SegmentedControl
+            type="single"
+            value={prefs.grouping}
+            onValueChange={(value) => {
+              if (value === "none" || value === "type") onChange({ grouping: value });
+            }}
+            aria-label="File grouping"
+          >
+            <SegmentedItem value="none">None</SegmentedItem>
+            <SegmentedItem value="type">File type</SegmentedItem>
+          </SegmentedControl>
+        </PrefRow>
         <PrefRow label="Wrap lines">
           <Switch
             checked={prefs.wrap}

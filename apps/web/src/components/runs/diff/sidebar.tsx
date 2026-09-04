@@ -1,15 +1,18 @@
-import type { DiffFileContract, ReviewCommentContract, ReviewDiffContract } from "@otomat/domain";
+import type { DiffFileContract, ReviewCommentContract } from "@otomat/domain";
 import { Icon, Pill, PillTabs, SidePanelToggle } from "@otomat/ui";
 import { DiffFileBrowser } from "@web/components/runs/diff/files/browser";
-import type { DiffBrowserMode } from "@web/components/runs/diff/prefs/prefs";
+import type { DiffBrowserMode, DiffGroupingMode } from "@web/components/runs/diff/prefs/prefs";
 import { DiffStat } from "@web/components/runs/diff/stat";
 import { PaneHeader } from "@web/components/runs/pane-header";
 import { ReviewCommentsPanel } from "@web/components/runs/review/comments-panel";
 import { useState } from "react";
 
 export interface DiffSidebarProps {
-  diff: ReviewDiffContract;
+  additions: number;
+  deletions: number;
+  files: readonly DiffFileContract[];
   browserMode: DiffBrowserMode;
+  grouping: DiffGroupingMode;
   stats: boolean;
   activePath: string | null;
   reviewedPaths: ReadonlySet<string>;
@@ -20,8 +23,11 @@ export interface DiffSidebarProps {
 }
 
 export function DiffSidebar({
-  diff,
+  additions,
+  deletions,
+  files,
   browserMode,
+  grouping,
   stats,
   activePath,
   reviewedPaths,
@@ -57,15 +63,16 @@ export function DiffSidebar({
         </PillTabs>
         {stats ? (
           <span className="ml-auto flex items-center gap-1.5 font-mono text-micro font-normal normal-case">
-            <DiffStat additions={diff.additions} deletions={diff.deletions} />
+            <DiffStat additions={additions} deletions={deletions} />
           </span>
         ) : null}
         <SidePanelToggle className={stats ? "-mr-1.5" : "-mr-1.5 ml-auto"} />
       </PaneHeader>
       {tab === "files" ? (
         <DiffFileBrowser
-          diff={diff}
+          files={files}
           mode={browserMode}
+          grouping={grouping}
           activePath={activePath}
           reviewedPaths={reviewedPaths}
           onSelect={onSelectFile}
