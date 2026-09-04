@@ -88,7 +88,12 @@ if (behavior === "complete") {
   });
   marker("failed", limit);
   process.exit(1);
-} else if (behavior === "live" || behavior === "live-refuse" || behavior === "live-ask") {
+} else if (
+  behavior === "live" ||
+  behavior === "live-refuse" ||
+  behavior === "live-ask" ||
+  behavior === "live-choice"
+) {
   // Mirrors the worker's real live-input protocol: tail the daemon's inbox, receipt each write, linger like `linger`.
   const error = behavior === "live-refuse" ? "stdin closed" : null;
   if (behavior === "live-ask") {
@@ -100,8 +105,30 @@ if (behavior === "complete") {
       kind: "permission",
       prompt: "Run Write: notes.md",
       tool: "Write",
-      options: [],
+      questions: [],
       reason: "the deny rule Read(./notes.md) covers it; only you can approve it.",
+    });
+  }
+  if (behavior === "live-choice") {
+    emit("runtime.interaction_requested", "otomat", {
+      fidelity: "parsed",
+      adapter: "fake",
+      test_adapter: true,
+      request_id: "ask-1",
+      kind: "choice",
+      prompt: "Which branch should I target?",
+      tool: null,
+      questions: [
+        {
+          prompt: "Which branch should I target?",
+          options: [
+            { value: "main", label: "main", description: null },
+            { value: "develop", label: "develop", description: null },
+          ],
+          select: "single",
+          allows_custom: false,
+        },
+      ],
     });
   }
   const inbox = join(job.agentSessionDir, "live-input.jsonl");

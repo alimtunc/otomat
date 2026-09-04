@@ -388,10 +388,18 @@ an explicit action.
 
 ## Runtime Interactions
 
-An agent that blocks mid-turn on a permission, a choice or a written question is
-answered through one provider-agnostic contract. `supervisor/interaction/` owns
-that lifecycle end to end; the conversation, the Activity Center and the project
-badge only consume it.
+An agent that blocks mid-turn on a permission, a choice, a written question or a
+questionnaire is answered through one provider-agnostic contract.
+`supervisor/interaction/` owns that lifecycle end to end; the conversation, the
+Activity Center and the project badge only consume it.
+
+A request carries the questions its runtime actually asked — each with its
+ordered options, its single/multiple cardinality and whether the runtime
+announced a free answer — and an option's `value` is the runtime's own token,
+forwarded unread while only its `label` is shown. One validator
+(`interactionAnswerRefusal`) decides whether an answer fits that request, so the
+command that refuses it and the form that disables its own submit control
+cannot disagree.
 
 The request travels on evidence the turn already writes. An adapter translates
 its native protocol into a `runtime.interaction_requested` event, the session

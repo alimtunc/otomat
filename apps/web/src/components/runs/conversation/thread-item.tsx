@@ -1,6 +1,6 @@
 import { ActivityGroup } from "@web/components/runs/conversation/activity-group";
 import { AgentMessage } from "@web/components/runs/conversation/agent-message";
-import { InteractionCard } from "@web/components/runs/conversation/interaction-card";
+import { InteractionCard } from "@web/components/runs/conversation/interaction/card";
 import { LedgerEventRow } from "@web/components/runs/conversation/ledger-event-row";
 import { ConversationMessage } from "@web/components/runs/conversation/message";
 import type { ConversationItem } from "@web/lib/conversation";

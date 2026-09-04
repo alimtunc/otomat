@@ -4,6 +4,7 @@ import {
   type RunInteractionRow,
 } from "@otomat/db";
 import {
+  interactionAnswerRefusal,
   runInteractionMachine,
   type AnswerRunInteractionError,
   type RuntimeInteractionAnswer,
@@ -70,12 +71,11 @@ function liveTurnExitOrCancel(
 }
 
 function requireAnswerable(row: RunInteractionRow, answer: RuntimeInteractionAnswer): void {
-  if (answer.kind !== row.kind) {
-    throw new RunInteractionRefusedError(
-      "run_interaction_kind_mismatch",
-      `interaction ${row.id} asks for a ${row.kind} answer, not a ${answer.kind} one`,
-    );
-  }
+  const refusal = interactionAnswerRefusal(
+    { kind: row.kind, questions: row.questions_json },
+    answer,
+  );
+  if (refusal !== null) throw new RunInteractionRefusedError(refusal.error, refusal.message);
   if (row.state === "canceled") {
     throw new RunInteractionRefusedError(
       "run_interaction_unreachable",

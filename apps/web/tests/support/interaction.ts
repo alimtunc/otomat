@@ -14,7 +14,7 @@ export function interaction(
     prompt: "Run Write: notes.md",
     tool: "Write",
     reason: null,
-    options: [],
+    questions: [],
     answer: null,
     canceled_reason: null,
     requested_at: "2026-07-25T10:00:00.000Z",

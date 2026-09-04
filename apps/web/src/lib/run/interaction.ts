@@ -29,7 +29,10 @@ export function interactionStateLabel(state: RunInteractionContract["state"]): s
 export function interactionAnswerLabel(answer: RuntimeInteractionAnswer): string {
   if (answer.kind === "permission") return answer.decision === "allow" ? "Approved" : "Refused";
   if (answer.kind === "choice") return answer.values.join(", ");
-  return answer.text;
+  if (answer.kind === "text") return answer.text;
+  return answer.responses
+    .map((response) => `${response.question} ${response.values.join(", ")}`)
+    .join(" · ");
 }
 
 /** A typed refusal reads verbatim: it is the daemon's own sentence about why the runtime can no longer take this answer. */

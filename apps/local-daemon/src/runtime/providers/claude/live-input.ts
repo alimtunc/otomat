@@ -3,6 +3,8 @@ import type { RuntimeInteractionAnswer } from "@otomat/domain";
 import type { LiveInputChannel, LiveInputItem } from "#runtime/contract";
 import { errorMessage } from "#runtime/errors";
 
+import { claudeAnsweredInput } from "./questions.js";
+
 /** Claude Code's streaming-input frame: one user message per line on stdin. */
 export function claudeUserFrame(body: string): string {
   return `${JSON.stringify({
@@ -13,28 +15,41 @@ export function claudeUserFrame(body: string): string {
 
 /**
  * Answers one `can_use_tool` control request. An approval re-sends the tool input
- * the CLI asked about unchanged: Otomat approves the call that was shown to the
- * operator, never a rewritten one.
+ * the CLI asked about, unchanged for a permission gate and carrying the operator's
+ * answers for a question: Otomat clears the call that was shown to the operator,
+ * never a rewritten one.
  */
 function claudeControlResponse(
   requestId: string,
   answer: RuntimeInteractionAnswer,
   toolInput: unknown,
-): string {
-  const decision =
-    answer.kind === "permission" && answer.decision === "allow"
-      ? { behavior: "allow", updatedInput: toolInput }
-      : { behavior: "deny", message: refusalMessage(answer) };
+): string | { error: string } {
+  const decision = claudeDecision(answer, toolInput);
+  if (decision === null) {
+    return { error: `Claude Code cannot take a ${answer.kind} answer for this request` };
+  }
   return `${JSON.stringify({
     type: "control_response",
     response: { subtype: "success", request_id: requestId, response: decision },
   })}\n`;
 }
 
-function refusalMessage(answer: RuntimeInteractionAnswer): string {
-  if (answer.kind === "text") return answer.text;
-  if (answer.kind === "choice") return answer.values.join(", ");
-  return "The operator refused this action in Otomat.";
+type ClaudeDecision =
+  | { behavior: "allow"; updatedInput: unknown }
+  | { behavior: "deny"; message: string };
+
+function claudeDecision(
+  answer: RuntimeInteractionAnswer,
+  toolInput: unknown,
+): ClaudeDecision | null {
+  if (answer.kind === "permission") {
+    return answer.decision === "allow"
+      ? { behavior: "allow", updatedInput: toolInput }
+      : { behavior: "deny", message: "The operator refused this action in Otomat." };
+  }
+  // A question is cleared by allowing its tool with the answers filled in; there is no deny that carries them.
+  const answered = claudeAnsweredInput(toolInput, answer);
+  return answered === null ? null : { behavior: "allow", updatedInput: answered };
 }
 
 /**
@@ -86,10 +101,15 @@ export class ClaudeLiveInput {
   private frameFor(item: LiveInputItem): string | { error: string } {
     if (item.kind === "message") return claudeUserFrame(item.body);
     if (!this.pendingInput.has(item.request_id)) {
-      return { error: `no open Claude permission request ${item.request_id} on this turn` };
+      return { error: `no open Claude request ${item.request_id} on this turn` };
     }
-    const toolInput = this.pendingInput.get(item.request_id);
-    this.pendingInput.delete(item.request_id);
-    return claudeControlResponse(item.request_id, item.answer, toolInput);
+    const frame = claudeControlResponse(
+      item.request_id,
+      item.answer,
+      this.pendingInput.get(item.request_id),
+    );
+    // The request stays open when no frame was produced: nothing was handed over, so the answer can still be retried.
+    if (typeof frame === "string") this.pendingInput.delete(item.request_id);
+    return frame;
   }
 }

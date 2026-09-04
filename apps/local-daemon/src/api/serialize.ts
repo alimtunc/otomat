@@ -125,7 +125,7 @@ export function toRunContribution(row: RunContributionRow): RunContributionContr
 export function toRunInteraction(row: RunInteractionRow): RunInteractionContract {
   return runInteractionContractSchema.parse({
     ...row,
-    options: row.options_json,
+    questions: row.questions_json,
     answer: row.answer_json,
     requested_at: sqliteToIso(row.requested_at),
     settled_at: toIsoInstant(row.settled_at),

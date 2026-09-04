@@ -1,4 +1,4 @@
-import type { RuntimeInteractionAnswer, RuntimeInteractionOption } from "@otomat/domain";
+import type { RuntimeInteractionAnswer, RuntimeInteractionQuestion } from "@otomat/domain";
 import { and, eq, inArray } from "drizzle-orm";
 
 import type { Db } from "../client.js";
@@ -17,7 +17,7 @@ export interface RecordRunInteraction {
   prompt: string;
   tool: string | null;
   reason: string | null;
-  options_json: RuntimeInteractionOption[];
+  questions_json: RuntimeInteractionQuestion[];
   requested_at: string;
 }
 
