@@ -43,9 +43,9 @@ function parseKeys(plainText: string): LinearVaultKeys {
 
 export function createLinearVault(io: LinearVaultIo): LinearVault {
   const read = (): LinearVaultKeys => {
-    if (!io.isEncryptionAvailable()) return {};
     const cipher = io.read();
-    if (cipher === null) return {};
+    // The keychain lookup behind isEncryptionAvailable can block on a system prompt.
+    if (cipher === null || !io.isEncryptionAvailable()) return {};
     try {
       return parseKeys(io.decrypt(cipher));
     } catch {

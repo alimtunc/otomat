@@ -1,5 +1,5 @@
 import { LINEAR_DEFAULT_CONNECTION_ID } from "@otomat/domain";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import {
   createLinearVault,
@@ -73,6 +73,14 @@ it("reads a vault written as one bare key as the default connection", () => {
   io.write(io.encrypt(KEY));
 
   expect(createLinearVault(io).load()).toEqual({ [LINEAR_DEFAULT_CONNECTION_ID]: KEY });
+});
+
+it("leaves the keychain untouched while no key is stored", () => {
+  const isEncryptionAvailable = vi.fn(() => true);
+  const vault = createLinearVault(fakeIo({ isEncryptionAvailable }));
+
+  expect(vault.load()).toEqual({});
+  expect(isEncryptionAvailable).not.toHaveBeenCalled();
 });
 
 it("refuses to save rather than falling back to plaintext when the keychain is unavailable", () => {

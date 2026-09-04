@@ -80,6 +80,20 @@ export function describeProcesses(pids) {
   return listed.stdout.trimEnd();
 }
 
+/** Where the main thread sits while it ignores SIGTERM: a blocking native call names itself here. */
+function mainThreadStack(pid) {
+  const sampled = spawnSync("sample", [String(pid), "1", "-mayDie"], { encoding: "utf8" });
+  if (sampled.status !== 0) return `  (sample failed: ${sampled.stderr.trim()})`;
+  const lines = sampled.stdout.split("\n");
+  const first = lines.findIndex((line) => /^\s+\d+ Thread_/.test(line));
+  if (first === -1) return "  (sample reported no thread)";
+  const next = lines.findIndex((line, index) => index > first && /^\s+\d+ Thread_/.test(line));
+  return lines
+    .slice(first, next === -1 ? first + 40 : Math.min(next, first + 40))
+    .map((line) => `  ${line.trimEnd()}`)
+    .join("\n");
+}
+
 export function tail(text, lines = 40) {
   const kept = text.trimEnd().split("\n").slice(-lines);
   return kept.length === 1 && kept[0] === "" ? "  (empty)" : kept.map((l) => `  ${l}`).join("\n");
@@ -123,6 +137,8 @@ export async function terminate(child, label, evidence) {
       `  pid: ${String(pid)}`,
       `  surviving children: ${survivors.length === 0 ? "none" : survivors.join(", ")}`,
       describeProcesses([String(pid), ...survivors]),
+      "  main thread:",
+      mainThreadStack(pid),
     ].join("\n"),
   );
   child.kill("SIGKILL");
