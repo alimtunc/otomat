@@ -298,8 +298,10 @@ it("reports exactly what a reconciliation did", async () => {
   });
 
   expect(reconcileWorkspaces).toHaveBeenCalledTimes(1);
-  expect(document.body.textContent).toContain("2 pull request(s) re-read");
-  expect(document.body.textContent).toContain("1 cleaned");
+  await vi.waitFor(() => {
+    expect(document.body.textContent).toContain("2 pull request(s) re-read");
+    expect(document.body.textContent).toContain("1 cleaned");
+  });
 });
 
 it("persists the auto-delete setting the operator turned off for this project", async () => {

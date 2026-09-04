@@ -1,8 +1,9 @@
 # CI Performance Baseline and Cache Contract
 
-Measured at 2026-08-20 from GitHub-hosted runner timestamps and job logs. Queue time means workflow
-creation to the first job start; setup includes job initialization, checkout, pnpm and Node. A cache
-is cold only when the `Setup Node` log says no matching pnpm cache was found.
+Measured at 2026-08-20 and again at 2026-09-03 from GitHub-hosted runner timestamps and job logs.
+Queue time means workflow creation to the first job start; setup includes job initialization,
+checkout, pnpm and Node. A cache is cold only when the job summary's `Workspace setup` block reports
+a pnpm store miss.
 
 ## Baseline samples
 
@@ -25,6 +26,43 @@ The workspace test command already overlaps packages on one two-core runner. Its
 were web at 262s and local-daemon at 223s in run 32382856589, while the desktop and package suites
 finished in at most 34s. CI therefore gives those heavy suites separate runners and keeps an
 aggregator named `check` as the required status.
+
+### Pull-request bootstrap, 2026-09-03
+
+Twenty consecutive successful pull-request runs of `ci.yml`, measured from workflow creation to the
+last gate job. `pnpm/action-setup@v6` with `standalone: false` ran an npm self-installer that
+installed the newest pnpm and then downgraded it to the `packageManager` version:
+
+```
+##[group]Running self-installer...
+added 1 package in 7m
+Checking for updates...
+Switching pnpm from v11.19.0 to v11.8.0...
+```
+
+| Measure | p50 | p95 | Max |
+| --- | ---: | ---: | ---: |
+| Critical path | 4m03s | 10m38s | 10m57s |
+| Slowest `setup-workspace` in the run | 24s | 6m55s | 7m14s |
+
+Two of the twenty runs spent over a minute in the self-installer; both landed at about 11 minutes.
+The npm install stalls, not the pnpm store: run 33815360259 restored a 179 MB store cache in 2s and
+installed the workspace in 6s inside the same 6m55s step. Corepack installs the pinned version
+directly from `packageManager`, verifies its integrity hash and finished in 1.2s when measured by
+hand, so the self-installer, its extra registry round-trip and its audit call all disappear.
+
+Removing that stall does not move p50, which the two heaviest suites own: on run 33807794515
+`test-web` ran 3m27s and `test-daemon` 2m25s inside a 4m03s critical path. Their cost is per-file
+transform and import, and `vitest --shard` divides them evenly: locally `--shard=1/2` and
+`--shard=2/2` took 121/121 of the web files and 79/79 of the daemon files, and `--shard=1/3` took 81
+of the 242 web files. Those local runs prove the split, not the gain — the machine is slower than a
+runner — so CI shards web three ways and the daemon two behind their existing gate names, and the
+per-shard runner times belong in the rollout measurement below.
+
+Each web shard builds `@otomat/web^...`, the dependencies without the app: no web test reads the app
+bundle and `build` already typechecks it, so the 39s `tsgo --noEmit && vite build` runs once for the
+whole run instead of once per shard. The daemon's own build is 4s, so `test-daemon` keeps building
+`@otomat/local-daemon...` whole.
 
 ### Main
 
@@ -62,22 +100,30 @@ the unsigned `package-macos` job is not a substitute for a release measurement.
 
 | Outcome | Before | After | Evidence |
 | --- | ---: | ---: | --- |
-| Warm PR required check | 5m40s median | pending real PR | the new critical path is the slower isolated web/daemon suite plus setup and aggregation |
+| Warm PR required check | 4m03s p50, 10m38s p95 over 20 runs of the current isolated-gate design | pending real PR | Corepack removes the self-installer that owns p95; sharding and the dropped per-shard web build attack p50 |
 | Main daemon availability | 5m14s | pending merge | candidate build takes about 38s, but its public name waits for the new `check` |
 | Main macOS package/smokes | 11m39s | about 7m01s DAG bound | same measured macOS job starts immediately; download cache gain is not credited |
 | Web preview | 2m30s median | 1m56.5s median | observed GitHub runs, 22.3% reduction |
 | Signed macOS release | no run | pending dispatch | no baseline exists |
 
 The main figures are critical-path calculations from measured jobs, not replacement runs. The PR
-target remains at least 25%; record warm and cold PR runs here after the workflow is pushed. A result
-above 4m15s needs step-level evidence explaining the runner-bound limit before the target can be
-considered unattainable.
+target is at least 40% off the 4m03s p50; record warm and cold PR runs here after the workflow is
+pushed. `ci.yml`'s `timings` job prints every job's start, duration and end, each top-level step that
+took at least a second, the critical path from the attempt start to the `check` aggregator, and the
+p50/p95 of the same measure over up to twenty previous successful first-attempt runs of the same
+event. It measures `check` rather than the slowest job so a pull request is never compared against a
+push that also packaged macOS, and it skips re-runs and any attempt whose `check` did not succeed,
+because a partial graph has no comparable span; the bootstrap phases sit in each job's own `Workspace setup` block, because the jobs
+API reports a composite action as one step. A result above 2m26s needs step-level evidence explaining
+the runner-bound limit before the target can be considered unattainable.
 
 ## Repeated work and retained changes
 
 | Previous repetition | Decision |
 | --- | --- |
 | One runner executes web and daemon tests under contention | isolate the two suites and aggregate every gate under `check` |
+| Every job reinstalls pnpm through an npm self-installer that fetches the wrong version first | install the pinned `packageManager` with Corepack inside `setup-workspace` |
+| The two dominant suites each hold a whole runner for minutes | shard them by file behind their existing gate names, so `check` still requires five results |
 | Main waits before daemon build and native macOS work | build a full-SHA daemon candidate and macOS package immediately; expose the daemon only after `check` |
 | Preview uploads/downloads a daemon tarball and repeats checkout/setup/install/domain build | provision in the job that built the tarball |
 | Web and daemon filtered builds each rebuild shared packages | pass both filters to one recursive build |
@@ -92,8 +138,14 @@ start independently; cross-OS artifact reuse would be unsafe.
 
 ## Cache and artifact contract
 
-- `actions/setup-node` caches the pnpm store under its OS/architecture/package-manager/lockfile key.
-  Logs expose the full `node-cache-<OS>-<arch>-pnpm-<lock-hash>` key. It never caches `node_modules`.
+- `setup-workspace` caches the pnpm store, resolved from `pnpm store path`, under
+  `pnpm-store-<OS>-<arch>-node<major>-pnpm<version>-<hash(pnpm-lock.yaml)>`. Every job that installs
+  dependencies prints that key and whether it hit in its step summary. There is no restore prefix, so a lockfile change
+  installs cold rather than layering onto a store built for other resolutions, and there is no
+  `node_modules` cache.
+- `setup-workspace` installs pnpm with Corepack from the repository's `packageManager` field. No
+  third-party action takes part in the bootstrap, so nothing needs pinning to a commit to keep a
+  credential-handling job away from a mutable tag.
 - Electron caches contain `~/Library/Caches/electron` and
   `~/Library/Caches/electron-builder`. Their key is
   `electron-<OS>-<arch>-<hash(lockfile, desktop package)>`, so Electron and builder version changes
@@ -107,13 +159,15 @@ start independently; cross-OS artifact reuse would be unsafe.
 - No output crosses OS or architecture boundaries. better-sqlite3 and packaged Electron binaries
   are always produced on their target runner.
 
-For a suspect cache, open `Setup Node` or `Restore Electron downloads` and compare the printed key
-with runner OS/architecture, `pnpm-lock.yaml` and `apps/desktop/package.json`. Re-run with a miss to
-prove correctness; do not add a restore prefix or cache native output to turn a miss into a hit.
+For a suspect cache, read the job summary's `Workspace setup` block or open `Restore Electron
+downloads`, and compare the printed key with runner OS/architecture, Node and pnpm versions,
+`pnpm-lock.yaml` and `apps/desktop/package.json`. Re-run with a miss to prove correctness; do not add
+a restore prefix or cache native output to turn a miss into a hit.
 
 ## Measurement after rollout
 
 Measure at least two warm PR synchronizations, one lockfile-changing cold PR, one successful merge
-to `main`, one preview close/reopen cycle and one `release-macos` manual dispatch. Record workflow
-creation, job start/end and every named step from `gh run view <id> --json jobs`. Verify that a
-second push cancels the older CI and preview runs, while a `closed` cleanup queues and completes.
+to `main`, one preview close/reopen cycle and one `release-macos` manual dispatch. The `timings` job
+records the `ci.yml` push and pull-request runs; `web-preview.yml` and `release-macos.yml` have no
+such job, so read those with `gh run view <id> --json jobs`. Verify that a second push cancels the older CI and preview runs,
+while a `closed` cleanup queues and completes.

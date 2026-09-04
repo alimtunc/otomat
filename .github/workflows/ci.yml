@@ -45,20 +45,31 @@ jobs:
       - name: Build, boundaries, typecheck and dist smoke
         run: pnpm check:build
 
+  # The two dominant suites shard behind their own gate name: `needs.<job>.result` aggregates a
+  # matrix, so `check` still requires five results.
   test-web:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-workspace
 
+      # `^...` excludes the app itself: no web test reads its bundle and `build` already typechecks it.
       - name: Build web test dependencies
-        run: pnpm --filter "@otomat/web..." run build
+        run: pnpm --filter "@otomat/web^..." run build
 
       - name: Test web
-        run: pnpm --filter @otomat/web test
+        run: pnpm --filter @otomat/web run test --shard=${{ matrix.shard }}/3
 
   test-daemon:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-workspace
@@ -67,7 +78,7 @@ jobs:
         run: pnpm --filter "@otomat/local-daemon..." run build
 
       - name: Test daemon
-        run: pnpm --filter @otomat/local-daemon test
+        run: pnpm --filter @otomat/local-daemon run test --shard=${{ matrix.shard }}/2
 
   test-packages:
     runs-on: ubuntu-latest
@@ -99,6 +110,24 @@ jobs:
           test "$WEB_RESULT" = success
           test "$DAEMON_RESULT" = success
           test "$PACKAGES_RESULT" = success
+
+  # Reporting only: a cancelled run has no duration to publish, and a GitHub API hiccup must not
+  # turn a green run red.
+  timings:
+    if: ${{ !cancelled() }}
+    needs: [check]
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Publish this run's phase durations and the critical-path baseline
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ci/summary.mjs
 
   daemon-bundle:
     if: github.event_name == 'push'
