@@ -1,3 +1,5 @@
+import { vi } from "vitest";
+
 export const MODIFIED_FILE_PATCH = `diff --git a/src/index.ts b/src/index.ts
 index 0000001..0000002 100644
 --- a/src/index.ts
@@ -51,10 +53,11 @@ export function stubDiffCanvas(): void {
 /** happy-dom ships no CSS Custom Highlight API, so a painted name is otherwise unobservable. */
 export function stubHighlightApi(): Map<string, Set<Range>> {
   const registry = new Map<string, Set<Range>>();
-  // The bare `CSS` binding is not `globalThis.CSS`, and `Object.create` keeps happy-dom's `escape`.
+  // happy-dom exposes `CSS` through a getter-only accessor; `Object.create` keeps its `escape`.
   const css: { highlights: Map<string, Set<Range>> } = Object.create(globalThis.CSS);
   css.highlights = registry;
-  Object.assign(globalThis, { Highlight: Set, CSS: css });
+  vi.stubGlobal("Highlight", Set);
+  vi.stubGlobal("CSS", css);
   return registry;
 }
 

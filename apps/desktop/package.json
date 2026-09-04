@@ -22,11 +22,11 @@
   "devDependencies": {
     "@otomat/client": "workspace:*",
     "@otomat/domain": "workspace:*",
-    "@types/node": "^26.1.2",
-    "electron": "^43.4.1",
+    "@types/node": "^26.4.1",
+    "electron": "^44.1.1",
     "electron-builder": "^26.15.3",
     "electron-updater": "^6.8.9",
-    "tsdown": "^0.22.14",
-    "vitest": "^4.1.11"
+    "tsdown": "^0.23.0",
+    "vitest": "^5.0.0"
   }
 }

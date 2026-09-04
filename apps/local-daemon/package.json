@@ -42,17 +42,17 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
-    "@hono/zod-validator": "^0.9.0",
+    "@hono/zod-validator": "^0.9.1",
     "@otomat/db": "workspace:*",
     "@otomat/domain": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.13.5",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
-    "@types/node": "^26.1.2",
-    "tsdown": "^0.22.14",
-    "tsx": "^4.23.12",
-    "vitest": "^4.1.11"
+    "@types/node": "^26.4.1",
+    "tsdown": "^0.23.0",
+    "tsx": "^4.23.13",
+    "vitest": "^5.0.0"
   }
 }
