@@ -21,6 +21,7 @@ const EXPECTED_TABLES = [
   "reviews",
   "review_comments",
   "reviewed_files",
+  "inbox_marks",
   "pull_requests",
   "sync_state",
   "issue_sources",

@@ -1,4 +1,4 @@
-import { countOpenInboxEntriesByProject } from "@otomat/domain";
+import { countUnreadInboxEntriesByProject } from "@otomat/domain";
 import { useRouterState } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
 import { projectSwitcherKey } from "@web/components/shell/project-selection/host-key";
@@ -29,7 +29,7 @@ export function useProjectTabs(): ProjectTabsView {
 
   const attention = new Map(
     inboxes.flatMap(({ host, entries }) =>
-      [...countOpenInboxEntriesByProject(entries)].map(
+      [...countUnreadInboxEntriesByProject(entries)].map(
         ([projectId, count]) => [projectSwitcherKey(host, projectId), count] as const,
       ),
     ),

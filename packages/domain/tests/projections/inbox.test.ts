@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import type { InboxMark } from "#domain/contracts/inbox";
 import type { ActivityEvidence } from "#domain/projections/activity";
 import {
-  countOpenInboxEntries,
-  countOpenInboxEntriesByProject,
+  countUnreadInboxEntries,
+  countUnreadInboxEntriesByProject,
   projectInbox,
   type InboxEvidence,
   type InboxPullRequestEvidence,
@@ -65,7 +66,10 @@ const STOPPED_PUBLICATION = {
 } as const;
 
 function inbox(evidence: Partial<InboxEvidence> = {}) {
-  return projectInbox({ runs: [], pull_requests: [], viewer: VIEWER, ...evidence }, WINDOW);
+  return projectInbox(
+    { runs: [], pull_requests: [], viewer: VIEWER, marks: [], ...evidence },
+    WINDOW,
+  );
 }
 
 describe("projectInbox aggregation", () => {
@@ -80,6 +84,8 @@ describe("projectInbox aggregation", () => {
         target: { kind: "run", run_id: "run-1" },
         detail: "Check",
         updated_at: NOW,
+        read: false,
+        archived: false,
       },
     ]);
   });
@@ -284,7 +290,7 @@ describe("projectInbox resolution", () => {
       ],
     });
 
-    expect(countOpenInboxEntries(entries)).toBe(1);
+    expect(countUnreadInboxEntries(entries)).toBe(1);
   });
 
   it("counts what is still open for each project on its own", () => {
@@ -302,7 +308,7 @@ describe("projectInbox resolution", () => {
       ],
     });
 
-    expect(countOpenInboxEntriesByProject(entries)).toEqual(
+    expect(countUnreadInboxEntriesByProject(entries)).toEqual(
       new Map([
         ["project-1", 2],
         ["project-2", 1],
@@ -314,6 +320,59 @@ describe("projectInbox resolution", () => {
     const entries = inbox({ runs: [run({ run_id: "run-done", run_status: "completed" })] });
 
     expect(entries.map((entry) => entry.state)).toEqual(["resolved"]);
-    expect(countOpenInboxEntriesByProject(entries)).toEqual(new Map());
+    expect(countUnreadInboxEntriesByProject(entries)).toEqual(new Map());
+  });
+});
+
+describe("projectInbox marks", () => {
+  const mark = (overrides: Partial<InboxMark> = {}): InboxMark => ({
+    entry_id: "run:run-1",
+    read: true,
+    archived: false,
+    evidence_updated_at: NOW,
+    ...overrides,
+  });
+
+  it("applies a mark made on the evidence the entry still carries", () => {
+    const [entry] = inbox({ runs: [run()], marks: [mark({ archived: true })] });
+
+    expect(entry).toMatchObject({ read: true, archived: true });
+  });
+
+  it("keeps an archived entry archived when the same evidence is read again", () => {
+    const [entry] = inbox({ runs: [run()], marks: [mark({ archived: true })] });
+
+    expect(entry?.archived).toBe(true);
+  });
+
+  it("returns an entry unread and unarchived when its evidence is newer than the mark", () => {
+    const [entry] = inbox({
+      runs: [run({ run_updated_at: NOW })],
+      marks: [mark({ archived: true, evidence_updated_at: OLD })],
+    });
+
+    expect(entry).toMatchObject({ read: false, archived: false });
+  });
+
+  it("ignores a mark for an entry the evidence no longer produces", () => {
+    expect(inbox({ runs: [], marks: [mark()] })).toEqual([]);
+  });
+
+  it("counts only what is unread, unarchived and still open", () => {
+    const entries = inbox({
+      runs: [
+        run({ run_id: "run-1" }),
+        run({ run_id: "run-read" }),
+        run({ run_id: "run-archived" }),
+        run({ run_id: "run-done", run_status: "completed" }),
+      ],
+      marks: [
+        mark({ entry_id: "run:run-read" }),
+        mark({ entry_id: "run:run-archived", read: false, archived: true }),
+      ],
+    });
+
+    expect(countUnreadInboxEntries(entries)).toBe(1);
+    expect(countUnreadInboxEntriesByProject(entries)).toEqual(new Map([["project-1", 1]]));
   });
 });

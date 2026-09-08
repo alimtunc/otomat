@@ -60,8 +60,21 @@ export const inboxEntrySchema = z.object({
   detail: z.string().nullable(),
   /** When the evidence last changed; the age the operator reads is measured from it. */
   updated_at: z.iso.datetime(),
+  read: z.boolean(),
+  archived: z.boolean(),
 });
 export type InboxEntry = z.infer<typeof inboxEntrySchema>;
+
+export const inboxMarkSchema = z.object({
+  entry_id: z.string().min(1),
+  read: z.boolean(),
+  archived: z.boolean(),
+  evidence_updated_at: z.iso.datetime(),
+});
+export type InboxMark = z.infer<typeof inboxMarkSchema>;
+
+export const markInboxRequestSchema = z.object({ marks: z.array(inboxMarkSchema).min(1) }).strict();
+export type MarkInboxRequest = z.infer<typeof markInboxRequestSchema>;
 
 export const inboxSnapshotSchema = z.object({
   entries: z.array(inboxEntrySchema),

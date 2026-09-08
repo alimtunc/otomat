@@ -12,6 +12,8 @@ export function inboxEntry(overrides: Partial<InboxEntry> = {}): InboxEntry {
     target: { kind: "run", run_id: "run-1" },
     detail: "Check",
     updated_at: UPDATED_AT,
+    read: false,
+    archived: false,
     ...overrides,
   };
 }

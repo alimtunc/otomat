@@ -10,7 +10,7 @@ import { MultiSelect } from "@web/components/config-menu/multi-select";
 import { Select } from "@web/components/config-menu/select";
 import {
   activeInboxEntryFilterCount,
-  INBOX_STATE_OPTIONS,
+  INBOX_VIEW_OPTIONS,
   NO_INBOX_ENTRY_FILTERS,
   type InboxEntryFilterOptions,
   type InboxEntryFilters,
@@ -31,15 +31,15 @@ export function InboxFiltersMenu({ filters, options, onChange }: InboxFiltersMen
     <ConfigMenu>
       <ConfigMenuTrigger
         label={MENU_LABEL}
-        summary={active === 0 ? "Open only" : `${active} active`}
+        summary={active === 0 ? "Open" : `${active} active`}
         leading={<Icon name="sliders-horizontal" aria-hidden className="shrink-0" />}
       />
       <ConfigMenuContent aria-label={MENU_LABEL}>
         <Select
-          label="State"
-          items={INBOX_STATE_OPTIONS}
-          value={filters.state}
-          onChange={(state) => onChange({ ...filters, state })}
+          label="View"
+          items={INBOX_VIEW_OPTIONS}
+          value={filters.view}
+          onChange={(view) => onChange({ ...filters, view })}
         />
         <MultiSelect
           label="Type"

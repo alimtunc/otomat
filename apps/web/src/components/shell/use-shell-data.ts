@@ -1,4 +1,4 @@
-import { countActionablePullRequestInboxEntries, countOpenInboxEntries } from "@otomat/domain";
+import { countActionablePullRequestInboxEntries, countUnreadInboxEntries } from "@otomat/domain";
 import { useDaemonStatus, useHealth } from "@web/api/daemon/queries";
 import { useInbox } from "@web/api/inbox/queries";
 import { usePullRequestInbox } from "@web/api/reviews/queries";
@@ -30,6 +30,6 @@ export function useShellData() {
     ...switcher,
     hasLiveRun: (runs.data ?? []).some(isRunning),
     reviewCount: countActionablePullRequestInboxEntries(reviewInbox.data?.entries ?? []),
-    inboxCount: countOpenInboxEntries(inbox.data?.entries ?? []),
+    inboxCount: countUnreadInboxEntries(inbox.data?.entries ?? []),
   };
 }
