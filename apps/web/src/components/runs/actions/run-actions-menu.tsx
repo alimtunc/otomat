@@ -4,6 +4,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   Icon,
   IconButton,
@@ -13,7 +14,9 @@ import { useRunDetail } from "@web/api/runs/queries";
 import { useWorkspacesForRun } from "@web/api/workspaces/queries";
 import { AbandonWorkspaceDialog } from "@web/components/runs/actions/abandon-workspace-dialog";
 import { WorkspaceCleanupDialog } from "@web/components/workspaces/cleanup-dialog";
+import { WorkspaceOpenMenuItems } from "@web/components/workspaces/open-menu-items";
 import { useActiveHostDescriptor } from "@web/lib/active-host";
+import { desktopBridge } from "@web/lib/desktop-bridge";
 import { canAbortRun } from "@web/lib/run/actions";
 import { resumeModeNote } from "@web/lib/run/resume-mode";
 import { useState } from "react";
@@ -57,6 +60,12 @@ export function RunActionsMenu({ runId, stretch = false }: RunActionsMenuProps) 
           render={<IconButton label="Run actions" icon={<Icon name="more-horizontal" />} />}
         />
         <DropdownMenuContent align="end">
+          {desktopBridge() === null ? null : (
+            <>
+              <WorkspaceOpenMenuItems entry={workspace} host={host} />
+              <DropdownMenuSeparator />
+            </>
+          )}
           <DropdownMenuItem
             disabled={!cancelable || abort.isPending}
             onClick={() => abort.mutate()}

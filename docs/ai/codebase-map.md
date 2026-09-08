@@ -1464,6 +1464,26 @@ desktop shell, `remote/host/capacity.ts` relays the read and the write to the ho
 the operator is configuring; an unreachable host or a refused write comes back as
 a message, never as a value shown as applied.
 
+## Opening a Worktree Outside Otomat (OTO-163)
+
+**Open in VS Code** and **Open in terminal** sit in the run actions menu (issue
+header and run cockpit) and behind the folder button of a Workspaces row. The
+renderer only sends `(hostId, path, target)` over one allowlisted channel; the
+main process (`remote/host/open-workspace.ts`) re-reads the owning host's
+workspace inventory and launches only a path that is byte-equal to a listed,
+present worktree. The inventory never lists the repository root, so the main
+checkout is never opened by approximation, and a missing worktree is refused
+rather than replaced by its parent. Nothing is created: the call is a read then a
+launch. VS Code opens through its URL scheme (`vscode://file/…` locally,
+`vscode://vscode-remote/ssh-remote+<alias>…` on the VPS) with every path segment
+percent-encoded; the local terminal is macOS Terminal via `open -a Terminal
+<path>` as an argument array. A remote terminal has no supported integration, so
+the item is disabled with the reason and a single-quoted `ssh -t <alias> '…'`
+command is copyable — Otomat never runs it. The electron launchers are injected
+from `ipc.ts`, the renderer IPC edge, so the resolution and its tests stay
+electron-free. Without the desktop bridge (browser dev, web preview) the items do
+not render.
+
 ## Settings and Global Agents (OTO-61)
 
 The sidebar carries work only — Issues, Runs, Reviews, Usage, plus the Inbox and

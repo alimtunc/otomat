@@ -1,5 +1,6 @@
 import {
   isExecutionHostId,
+  isWorkspaceOpenTarget,
   type ExecutionHostCallResult,
   type ExecutionHostCapacityResult,
   type ExecutionHostId,
@@ -21,6 +22,7 @@ import type { ExecutionHostSync } from "#shared/execution-host-sync";
 
 import type { HostCapacityActions } from "./host/capacity.js";
 import type { HostCatalog } from "./host/catalog.js";
+import { openWorkspace, type WorkspaceLaunchers } from "./host/open-workspace.js";
 import { listRemoteRepositories } from "./host/repos.js";
 import { executionHostSnapshot } from "./host/snapshot.js";
 import type { RemoteInstanceActions } from "./instances/actions.js";
@@ -52,6 +54,12 @@ export interface ExecutionHostIpcActions {
     workspaceId: unknown,
     force: unknown,
   ): Promise<ExecutionHostCallResult<WorkspaceCleanupResult>>;
+  openWorkspace(
+    hostId: unknown,
+    path: unknown,
+    target: unknown,
+    launchers: WorkspaceLaunchers,
+  ): Promise<ExecutionHostOperationResult>;
   listInstances(): Promise<RemoteInstanceListResult>;
   stopInstance(build: unknown): Promise<ExecutionHostOperationResult>;
   deleteInstance(build: unknown): Promise<ExecutionHostOperationResult>;
@@ -162,6 +170,25 @@ export function buildExecutionHostActions(
       if (typeof workspaceId !== "string") return { ok: false, message: "Unknown workspace." };
       return onOwningHost(manager(), hostId, (catalog, id) =>
         catalog.cleanupWorkspace(id, workspaceId, force === true),
+      );
+    },
+    openWorkspace: async (hostId: unknown, path: unknown, target: unknown, launchers) => {
+      if (!isExecutionHostId(hostId)) return { ok: false, message: "Unknown execution host." };
+      if (typeof path !== "string" || path === "") {
+        return { ok: false, message: "Unknown worktree path." };
+      }
+      if (!isWorkspaceOpenTarget(target)) return { ok: false, message: "Unknown open target." };
+      const hosts = manager();
+      if (hosts === null) return NOT_READY;
+      return openWorkspace(
+        {
+          readWorkspaces: (id) => hosts.catalog.readWorkspaces(id),
+          remoteSshAlias: () => hosts.remoteSshAlias,
+          launchers,
+        },
+        hostId,
+        path,
+        target,
       );
     },
     listInstances: async () => instances()?.list() ?? { ok: false, message: NOT_READY_MESSAGE },

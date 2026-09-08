@@ -2,6 +2,7 @@ import { DaemonRequestError } from "@otomat/client";
 import {
   workspaceCleanupErrorSchema,
   type ExecutionHostId,
+  type WorkspaceOpenTarget,
   type WorkspaceSettings,
 } from "@otomat/domain";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +10,7 @@ import { daemon } from "@web/api/client";
 import { ExecutionHostCallError, onExecutionHost } from "@web/api/host-call";
 import { hostKeys } from "@web/api/query-keys";
 import { useQueryKeys } from "@web/api/use-query-keys";
+import { desktopBridge, requireDesktopBridge } from "@web/lib/desktop-bridge";
 
 /** A reconciliation moves worktrees, runs and issues alike, so every surface reading them is refreshed. */
 export function useReconcileWorkspaces() {
@@ -73,4 +75,18 @@ export function cleanupWorkspaceErrorMessage(error: unknown): string {
   }
   if (error instanceof ExecutionHostCallError) return error.message;
   return "Could not clean this workspace — is the daemon running?";
+}
+
+export interface OpenWorkspaceInput {
+  hostId: ExecutionHostId;
+  path: string;
+  target: WorkspaceOpenTarget;
+}
+
+/** A refusal comes back in the result, so the caller reports it with the host's own words. */
+export function useOpenWorkspace() {
+  return useMutation({
+    mutationFn: ({ hostId, path, target }: OpenWorkspaceInput) =>
+      requireDesktopBridge(desktopBridge()).executionHost.openWorkspace(hostId, path, target),
+  });
 }

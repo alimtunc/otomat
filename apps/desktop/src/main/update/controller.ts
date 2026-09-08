@@ -5,6 +5,8 @@ import {
   type DesktopUpdateState,
 } from "@otomat/domain";
 
+import { failureMessage } from "#shared/failure-message";
+
 import { cooldownElapsed, readLastCheck, writeLastCheck } from "./cooldown.js";
 import { feedOf, replaces } from "./feed.js";
 import type { UpdateGate } from "./gate.js";
@@ -27,10 +29,6 @@ export interface DesktopUpdaterOptions {
   port: UpdaterPort;
   onChange(snapshot: DesktopUpdateSnapshot): void;
   log(message: string): void;
-}
-
-function reason(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 export class DesktopUpdater {
@@ -145,7 +143,7 @@ export class DesktopUpdater {
   }
 
   private fail(error: unknown): void {
-    const message = reason(error);
+    const message = failureMessage(error);
     this.options.log(`Desktop update stopped: ${message}`);
     this.progress = null;
     this.publish("failed", message);

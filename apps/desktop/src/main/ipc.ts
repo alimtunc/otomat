@@ -19,6 +19,7 @@ import {
   EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL,
   EXECUTION_HOST_INBOX_CHANNEL,
   EXECUTION_HOST_INSTANCES_CHANNEL,
+  EXECUTION_HOST_OPEN_WORKSPACE_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_READ_CAPACITY_CHANNEL,
   EXECUTION_HOST_RECONCILE_WORKSPACES_CHANNEL,
@@ -51,6 +52,7 @@ import {
 } from "#shared/startup";
 
 import type { ExecutionHostIpcActions } from "./remote/ipc-actions.js";
+import { electronWorkspaceLaunchers } from "./workspace-launchers.js";
 
 /** Mutable holder so the sync handler always returns the URL resolved by the last successful daemon start. */
 export interface IpcState {
@@ -155,6 +157,11 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
     EXECUTION_HOST_CLEANUP_WORKSPACE_CHANNEL,
     (_event, hostId: unknown, workspaceId: unknown, force: unknown) =>
       actions.executionHost.cleanupWorkspace(hostId, workspaceId, force),
+  );
+  ipcMain.handle(
+    EXECUTION_HOST_OPEN_WORKSPACE_CHANNEL,
+    (_event, hostId: unknown, path: unknown, target: unknown) =>
+      actions.executionHost.openWorkspace(hostId, path, target, electronWorkspaceLaunchers),
   );
   ipcMain.handle(EXECUTION_HOST_INSTANCES_CHANNEL, () => actions.executionHost.listInstances());
   ipcMain.handle(EXECUTION_HOST_STOP_INSTANCE_CHANNEL, (_event, build: unknown) =>

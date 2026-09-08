@@ -94,6 +94,13 @@ export interface LinearDeliverySnapshot {
   connections: LinearConnectionDelivery[];
 }
 
+const WORKSPACE_OPEN_TARGETS = ["vscode", "terminal"] as const;
+export type WorkspaceOpenTarget = (typeof WORKSPACE_OPEN_TARGETS)[number];
+
+export function isWorkspaceOpenTarget(value: unknown): value is WorkspaceOpenTarget {
+  return WORKSPACE_OPEN_TARGETS.some((target) => target === value);
+}
+
 export type PreviewSandboxResetResult =
   | { ok: true; message: null }
   | { ok: false; message: string };
@@ -160,6 +167,12 @@ export interface OtomatDesktopBridge {
       workspaceId: string,
       force: boolean,
     ): Promise<ExecutionHostCallResult<WorkspaceCleanupResult>>;
+    /** Opens a worktree the host's daemon lists, in VS Code or a terminal; the main process verifies the path before any launch. */
+    openWorkspace(
+      hostId: ExecutionHostId,
+      path: string,
+      target: WorkspaceOpenTarget,
+    ): Promise<ExecutionHostOperationResult>;
     /** Subscribes to live remote-connection status; returns the unsubscribe function. */
     onRemoteStatus(listener: (status: RemoteHostStatus) => void): () => void;
     /** Preview daemons under `~/.otomat/instances` on the remote host. */
