@@ -1,4 +1,5 @@
 export * from "./agents.js";
+export * from "./inbox.js";
 export * from "./issues.js";
 export * from "./linear.js";
 export * from "./pull-requests.js";

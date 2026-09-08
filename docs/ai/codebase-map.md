@@ -1572,8 +1572,25 @@ the URL come back with it. `lib/project-navigation.ts` draws that line: Inbox,
 Settings and the agent surfaces answer for every project at once and therefore
 never become a project's remembered view.
 
-The attention badge is `countOpenInboxEntriesByProject` over each host's Inbox
-snapshot — not a second notification path. `useOpenHostInboxes` polls one Inbox
+The Inbox is the operator's own: each projected entry carries a `read` and an
+`archived` flag from `inbox_marks`, a table keyed by the projected entry id
+(`run:<id>`, `publication:<pr>`, `pull_request:<pr>`), never by a row of its own.
+A mark is stamped with the entry's `updated_at` at the time it was made, and
+`projectInbox` treats it as stale — the entry returns unread and unarchived — as
+soon as the evidence carries a newer `updated_at`. That one rule is what makes a
+refresh or an event replay harmless (the evidence did not move) while a run that
+re-enters a demanding state, or a pull request GitHub touched, comes back as a
+new demand. The web sends each entry's whole reading — both flags and the
+`updated_at` it displayed — rather than a partial patch the daemon would merge
+into a possibly stale row, so a mark made on a stale view never hides a demand
+the operator has not seen. `POST /api/inbox/marks` writes those flags and nothing
+else: a run, a pull request or a permission request is never advanced by
+reading or clearing its entry, and the daemon route reaches no service seam.
+
+The attention badge is `countUnreadInboxEntriesByProject` over each host's Inbox
+snapshot — not a second notification path. It counts what is unread, unarchived
+and still open; a resolved entry keeps its mark but never badges, because the
+operator caused the resolution. `useOpenHostInboxes` polls one Inbox
 per host that has an open tab (the active host on its own client, the others
 through `bridge.executionHost.readInbox`, the same `HostCatalog.call` seam the
 workspace inventory uses) and is mounted from the root layout, so the poll

@@ -1,4 +1,5 @@
 import {
+  getRun,
   insertPullRequest,
   schema,
   updatePullRequest,
@@ -8,7 +9,7 @@ import {
 import type { InboxSnapshot } from "@otomat/domain";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { json, makeApiApp, request } from "../support/api.js";
+import { json, makeApiApp, post, request } from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
 import { seedRun } from "../support/seed.js";
 
@@ -162,5 +163,81 @@ describe("GET /api/inbox", () => {
     });
 
     expect((await readInboxSnapshot()).entries).toEqual([]);
+  });
+});
+
+describe("POST /api/inbox/marks", () => {
+  const seedBlocked = (): void => {
+    seedRun(t.db, {
+      runId: "run-blocked",
+      runStatus: "awaiting_human",
+      stepStatus: "awaiting_human",
+      sessionStatus: "awaiting_input",
+    });
+  };
+  const readBlockedEntry = async () => {
+    const [entry] = (await readInboxSnapshot()).entries;
+    if (entry === undefined) throw new Error("expected one entry");
+    return entry;
+  };
+  const mark = (
+    entry: { id: string; updated_at: string },
+    reading: { read: boolean; archived: boolean },
+  ) =>
+    post(makeApiApp(t), "/api/inbox/marks", {
+      marks: [{ entry_id: entry.id, evidence_updated_at: entry.updated_at, ...reading }],
+    });
+
+  it("persists the operator's reading and answers the marked snapshot", async () => {
+    seedBlocked();
+    const entry = await readBlockedEntry();
+
+    const response = await mark(entry, { read: true, archived: true });
+
+    expect(response.status).toBe(200);
+    expect((await json<InboxSnapshot>(response)).entries[0]).toMatchObject({
+      id: entry.id,
+      read: true,
+      archived: true,
+    });
+    expect((await readInboxSnapshot()).entries[0]).toMatchObject({ read: true, archived: true });
+  });
+
+  it("leaves the run it reports on untouched", async () => {
+    seedBlocked();
+    await mark(await readBlockedEntry(), { read: false, archived: true });
+
+    expect(getRun(t.db, "run-blocked")?.status).toBe("awaiting_human");
+  });
+
+  it("brings an archived entry back unread once its evidence moved on", async () => {
+    seedBlocked();
+    const entry = await readBlockedEntry();
+    await mark(
+      { ...entry, updated_at: "2020-01-01T00:00:00.000Z" },
+      { read: true, archived: true },
+    );
+
+    expect((await readInboxSnapshot()).entries[0]).toMatchObject({ read: false, archived: false });
+  });
+
+  it("reads a returned entry without re-archiving it", async () => {
+    seedBlocked();
+    const entry = await readBlockedEntry();
+    await mark(
+      { ...entry, updated_at: "2020-01-01T00:00:00.000Z" },
+      { read: true, archived: true },
+    );
+    await mark(await readBlockedEntry(), { read: true, archived: false });
+
+    expect((await readInboxSnapshot()).entries[0]).toMatchObject({ read: true, archived: false });
+  });
+
+  it("refuses a mark missing part of the reading", async () => {
+    const response = await post(makeApiApp(t), "/api/inbox/marks", {
+      marks: [{ entry_id: "run:x", evidence_updated_at: "2026-08-22T10:00:00.000Z", read: true }],
+    });
+
+    expect(response.status).toBe(400);
   });
 });

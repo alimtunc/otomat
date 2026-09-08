@@ -5,7 +5,7 @@ export function InboxEmpty({ filtered }: { filtered: boolean }) {
     <EmptyState
       icon="inbox"
       title="No entry matches these filters"
-      description="Widen the state, type or project filter to see the rest of the Inbox."
+      description="Widen the view, type or project filter to see the rest of the Inbox."
     />
   ) : (
     <EmptyState

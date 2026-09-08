@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type { InboxRoute } from "@web/lib/inbox/target";
 import type { ReactNode } from "react";
 
-const ROW_CLASS = `flex h-11 items-center gap-3 rounded-md px-2.5 hover:bg-hover ${FOCUS_RING_INSET}`;
+const LINK_CLASS = `flex h-11 min-w-0 flex-1 items-center gap-3 rounded-md px-2.5 ${FOCUS_RING_INSET}`;
 
 export interface InboxRowProps {
   link: InboxRoute;
@@ -14,6 +14,10 @@ export interface InboxRowProps {
   chips?: ReactNode;
   time: string;
   action: string;
+  /** Never inside the link: interactive content in an anchor is invalid HTML and its click would navigate. */
+  selection?: ReactNode;
+  actions?: ReactNode;
+  muted?: boolean;
 }
 
 export function InboxRow({
@@ -25,24 +29,33 @@ export function InboxRow({
   chips,
   time,
   action,
+  selection,
+  actions,
+  muted = false,
 }: InboxRowProps) {
   return (
-    <Link {...link} className={ROW_CLASS}>
-      <span className="flex w-37.5 shrink-0 items-center">{leading}</span>
-      <span className="min-w-0 flex-1 truncate text-sm text-foreground">
-        {identifier === null ? null : (
-          <span className="font-mono text-xs text-text-tertiary">{identifier} </span>
-        )}
-        <span className="font-medium">{title}</span>
-        <span className="text-xs text-text-tertiary"> — {reason}</span>
-      </span>
-      {chips}
-      <span className="shrink-0 text-xs text-text-tertiary">
-        <RelativeTime date={time} />
-      </span>
-      <span className="inline-flex h-6 shrink-0 items-center rounded-md border border-border bg-surface-2 px-2 text-xs font-medium text-text-secondary">
-        {action}
-      </span>
-    </Link>
+    <div className="flex items-center gap-1 rounded-md hover:bg-hover">
+      {selection}
+      <Link {...link} className={LINK_CLASS}>
+        <span className="flex w-37.5 shrink-0 items-center gap-2">{leading}</span>
+        <span
+          className={`min-w-0 flex-1 truncate text-sm ${muted ? "text-text-secondary" : "text-foreground"}`}
+        >
+          {identifier === null ? null : (
+            <span className="font-mono text-xs text-text-tertiary">{identifier} </span>
+          )}
+          <span className="font-medium">{title}</span>
+          <span className="text-xs text-text-tertiary"> — {reason}</span>
+        </span>
+        {chips}
+        <span className="shrink-0 text-xs text-text-tertiary">
+          <RelativeTime date={time} />
+        </span>
+        <span className="inline-flex h-6 shrink-0 items-center rounded-md border border-border bg-surface-2 px-2 text-xs font-medium text-text-secondary">
+          {action}
+        </span>
+      </Link>
+      {actions}
+    </div>
   );
 }

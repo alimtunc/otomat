@@ -5,7 +5,7 @@ export interface ProjectTab {
   id: string;
   name: string;
   tag?: string;
-  /** Unresolved Inbox entries for the project; absent while its host is not the connected one. */
+  /** Unread Inbox entries for the project; absent while its host is not the connected one. */
   attention?: number;
 }
 

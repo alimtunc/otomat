@@ -15,27 +15,34 @@ const OPEN_WAITING = inboxEntry({
   kind: "run_awaiting_answer",
   project: { id: "p2", name: "Cockpit" },
 });
-const RESOLVED = inboxEntry({ id: "run:run-3", kind: "run_review_ready", state: "resolved" });
-const ENTRIES = [OPEN_BLOCKED, OPEN_WAITING, RESOLVED];
+const RESOLVED = inboxEntry({
+  id: "run:run-3",
+  kind: "run_review_ready",
+  state: "resolved",
+  read: true,
+});
+const ARCHIVED = inboxEntry({ id: "run:run-4", archived: true });
+const ENTRIES = [OPEN_BLOCKED, OPEN_WAITING, RESOLVED, ARCHIVED];
 
 describe("applyInboxEntryFilters", () => {
-  it("shows only what is still open by default", () => {
+  it("hides only what the operator archived by default", () => {
     expect(applyInboxEntryFilters(ENTRIES, NO_INBOX_ENTRY_FILTERS)).toEqual([
       OPEN_BLOCKED,
       OPEN_WAITING,
+      RESOLVED,
     ]);
   });
 
-  it("separates resolved entries from open ones", () => {
-    const filters = { ...NO_INBOX_ENTRY_FILTERS, state: "resolved" as const };
+  it("narrows to what was never read", () => {
+    const filters = { ...NO_INBOX_ENTRY_FILTERS, view: "unread" as const };
 
-    expect(applyInboxEntryFilters(ENTRIES, filters)).toEqual([RESOLVED]);
+    expect(applyInboxEntryFilters(ENTRIES, filters)).toEqual([OPEN_BLOCKED, OPEN_WAITING]);
   });
 
-  it("keeps both states when the operator asks for both", () => {
-    const filters = { ...NO_INBOX_ENTRY_FILTERS, state: "all" as const };
+  it("shows the archive so an entry can be restored from it", () => {
+    const filters = { ...NO_INBOX_ENTRY_FILTERS, view: "archived" as const };
 
-    expect(applyInboxEntryFilters(ENTRIES, filters)).toEqual(ENTRIES);
+    expect(applyInboxEntryFilters(ENTRIES, filters)).toEqual([ARCHIVED]);
   });
 
   it("narrows to a type", () => {
@@ -58,7 +65,7 @@ describe("activeInboxEntryFilterCount", () => {
 
   it("counts each narrowed axis once", () => {
     expect(
-      activeInboxEntryFilterCount({ state: "all", kinds: ["run_failed"], projects: ["p1"] }),
+      activeInboxEntryFilterCount({ view: "archived", kinds: ["run_failed"], projects: ["p1"] }),
     ).toBe(3);
   });
 });

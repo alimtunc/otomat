@@ -1,4 +1,4 @@
-import type { InboxEntry, InboxEntryKind } from "../contracts/inbox.js";
+import type { InboxEntry, InboxEntryKind, InboxMark } from "../contracts/inbox.js";
 import type { PullRequestInboxGroup } from "../contracts/review-inbox.js";
 import { isIssueClosed } from "../state-machines/issue.js";
 import type { RunState } from "../state-machines/run.js";
@@ -49,6 +49,16 @@ export interface InboxEvidence {
   runs: ActivityEvidence[];
   pull_requests: InboxPullRequestEvidence[];
   viewer: PullRequestInboxViewerIdentity;
+  marks: InboxMark[];
+}
+
+type InboxEntryFacts = Omit<InboxEntry, "read" | "archived">;
+
+/** A mark made on older evidence is stale: the entry is a new demand the operator has not seen. */
+function markEntry(entry: InboxEntryFacts, marks: Map<string, InboxMark>): InboxEntry {
+  const mark = marks.get(entry.id);
+  const current = mark !== undefined && mark.evidence_updated_at >= entry.updated_at;
+  return { ...entry, read: current && mark.read, archived: current && mark.archived };
 }
 
 /** An abandoned cycle, a superseded run and a closed issue withdraw a demand; none of them resolves it. */
@@ -66,7 +76,7 @@ function runDetail(row: ActivityEvidence, kind: InboxEntryKind): string | null {
   return row.current_step;
 }
 
-function publicationEntry(row: ActivityEvidence): InboxEntry | null {
+function publicationEntry(row: ActivityEvidence): InboxEntryFacts | null {
   if (row.publication === null || !isDemanding(row)) return null;
   const operation = projectPullRequestPublicationOperation(row.publication.id, row.publication);
   if (operation === null || (operation.state !== "failed" && operation.state !== "interrupted")) {
@@ -84,7 +94,7 @@ function publicationEntry(row: ActivityEvidence): InboxEntry | null {
   };
 }
 
-function runEntry(row: ActivityEvidence, covered: boolean): InboxEntry | null {
+function runEntry(row: ActivityEvidence, covered: boolean): InboxEntryFacts | null {
   const kind = RUN_KINDS[row.run_status];
   if (kind === null || !isDemanding(row)) return null;
   if (kind === "run_review_ready" && covered) return null;
@@ -101,7 +111,7 @@ function runEntry(row: ActivityEvidence, covered: boolean): InboxEntry | null {
 }
 
 /** `review_ready` is the only edge into `completed`, so a completed run proves the review it asked for happened. */
-function resolvedRunEntry(row: ActivityEvidence, window: ActivityWindow): InboxEntry | null {
+function resolvedRunEntry(row: ActivityEvidence, window: ActivityWindow): InboxEntryFacts | null {
   const withdrawn = row.run_abandoned_at !== null || row.run_superseded;
   if (row.run_status !== "completed" || withdrawn || row.run_updated_at < window.since) return null;
   return {
@@ -119,7 +129,7 @@ function resolvedRunEntry(row: ActivityEvidence, window: ActivityWindow): InboxE
 function pullRequestEntry(
   row: InboxPullRequestEvidence,
   viewer: PullRequestInboxViewerIdentity,
-): InboxEntry | null {
+): InboxEntryFacts | null {
   const group = classifyPullRequestInboxGroup(row.facts, viewer);
   const kind = group === null ? null : PULL_REQUEST_KINDS[group];
   if (kind === null) return null;
@@ -135,7 +145,7 @@ function pullRequestEntry(
   };
 }
 
-function byNewest(a: InboxEntry, b: InboxEntry): number {
+function byNewest(a: InboxEntryFacts, b: InboxEntryFacts): number {
   return b.updated_at.localeCompare(a.updated_at);
 }
 
@@ -166,19 +176,27 @@ export function projectInbox(evidence: InboxEvidence, window: ActivityWindow): I
     ...evidence.runs.flatMap((row) => runEntry(row, covered.has(row.run_id)) ?? []),
   ];
   const resolved = evidence.runs.flatMap((row) => resolvedRunEntry(row, window) ?? []);
-  return [...open.toSorted(byNewest), ...resolved.toSorted(byNewest).slice(0, window.limit)];
+  const marks = new Map(evidence.marks.map((mark) => [mark.entry_id, mark]));
+  return [...open.toSorted(byNewest), ...resolved.toSorted(byNewest).slice(0, window.limit)].map(
+    (entry) => markEntry(entry, marks),
+  );
 }
 
-export function countOpenInboxEntries(entries: readonly InboxEntry[]): number {
-  return entries.filter((entry) => entry.state === "open").length;
+/** A resolved entry never badges: the operator caused the resolution, so it cannot be news to them. */
+function isUnreadInboxEntry(entry: InboxEntry): boolean {
+  return entry.state === "open" && !entry.read && !entry.archived;
 }
 
-export function countOpenInboxEntriesByProject(
+export function countUnreadInboxEntries(entries: readonly InboxEntry[]): number {
+  return entries.filter(isUnreadInboxEntry).length;
+}
+
+export function countUnreadInboxEntriesByProject(
   entries: readonly InboxEntry[],
 ): Map<string, number> {
   const counts = new Map<string, number>();
   for (const entry of entries) {
-    if (entry.state !== "open") continue;
+    if (!isUnreadInboxEntry(entry)) continue;
     counts.set(entry.project.id, (counts.get(entry.project.id) ?? 0) + 1);
   }
   return counts;

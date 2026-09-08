@@ -1,10 +1,11 @@
-import type { InboxPullRequestEvidence } from "@otomat/domain";
+import type { InboxMark, InboxPullRequestEvidence } from "@otomat/domain";
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 
 import type { Db } from "../client.js";
-import { issues, projects, pullRequests, repositories } from "../schema/index.js";
+import { inboxMarks, issues, projects, pullRequests, repositories } from "../schema/index.js";
 import { sqliteToIso } from "./instants.js";
 import { LIVE_PULL_REQUEST_STATES } from "./pull-requests.js";
+import { touch } from "./touch.js";
 
 /** Settled pull requests can no longer demand anything; which of the live ones does is the projection’s call, not this read’s. */
 export function listInboxPullRequestEvidence(db: Db): InboxPullRequestEvidence[] {
@@ -45,4 +46,27 @@ export function listInboxPullRequestEvidence(db: Db): InboxPullRequestEvidence[]
       },
       updated_at: row.provider_updated_at ?? sqliteToIso(row.updated_at),
     }));
+}
+
+export function listInboxMarks(db: Db): InboxMark[] {
+  return db
+    .select({
+      entry_id: inboxMarks.entry_id,
+      read: inboxMarks.read,
+      archived: inboxMarks.archived,
+      evidence_updated_at: inboxMarks.evidence_updated_at,
+    })
+    .from(inboxMarks)
+    .all();
+}
+
+export function upsertInboxMarks(db: Db, marks: readonly InboxMark[]): void {
+  db.transaction((tx) => {
+    for (const { entry_id, ...reading } of marks) {
+      tx.insert(inboxMarks)
+        .values({ entry_id, ...reading })
+        .onConflictDoUpdate({ target: inboxMarks.entry_id, set: touch(reading) })
+        .run();
+    }
+  });
 }

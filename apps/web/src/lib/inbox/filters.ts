@@ -1,20 +1,21 @@
 import { INBOX_ENTRY_KINDS, type InboxEntry, type InboxEntryKind } from "@otomat/domain";
 import { INBOX_KIND_COPY } from "@web/lib/inbox/labels";
 
-const STATES = ["all", "open", "resolved"] as const;
+const VIEWS = ["open", "unread", "archived"] as const;
+export type InboxViewFilter = (typeof VIEWS)[number];
 
 export interface InboxEntryFilters {
-  state: (typeof STATES)[number];
+  view: InboxViewFilter;
   kinds: InboxEntryKind[];
   projects: string[];
 }
 
-export const NO_INBOX_ENTRY_FILTERS: InboxEntryFilters = { state: "open", kinds: [], projects: [] };
+export const NO_INBOX_ENTRY_FILTERS: InboxEntryFilters = { view: "open", kinds: [], projects: [] };
 
-export const INBOX_STATE_OPTIONS: { value: InboxEntryFilters["state"]; label: string }[] = [
+export const INBOX_VIEW_OPTIONS: { value: InboxViewFilter; label: string }[] = [
   { value: "open", label: "Open" },
-  { value: "resolved", label: "Resolved" },
-  { value: "all", label: "Open and resolved" },
+  { value: "unread", label: "Unread" },
+  { value: "archived", label: "Archived" },
 ];
 
 interface FilterOption<T extends string> {
@@ -30,8 +31,13 @@ export interface InboxEntryFilterOptions {
 export function activeInboxEntryFilterCount(filters: InboxEntryFilters): number {
   return (
     [filters.kinds, filters.projects].filter((list) => list.length > 0).length +
-    (filters.state === NO_INBOX_ENTRY_FILTERS.state ? 0 : 1)
+    (filters.view === NO_INBOX_ENTRY_FILTERS.view ? 0 : 1)
   );
+}
+
+function inView(entry: InboxEntry, view: InboxViewFilter): boolean {
+  if (view === "archived") return entry.archived;
+  return !entry.archived && (view === "open" || !entry.read);
 }
 
 export function applyInboxEntryFilters(
@@ -42,7 +48,7 @@ export function applyInboxEntryFilters(
   const projects = new Set(filters.projects);
   return entries.filter(
     (entry) =>
-      (filters.state === "all" || entry.state === filters.state) &&
+      inView(entry, filters.view) &&
       (kinds.size === 0 || kinds.has(entry.kind)) &&
       (projects.size === 0 || projects.has(entry.project.id)),
   );

@@ -1,5 +1,6 @@
 import {
   listActivityEvidence,
+  listInboxMarks,
   listInboxPullRequestEvidence,
   readGitHubViewer,
   type Db,
@@ -20,6 +21,7 @@ export function readInbox(db: Db): InboxSnapshot {
         runs: listActivityEvidence(db, since),
         pull_requests: listInboxPullRequestEvidence(db),
         viewer: { login: viewer.login, teams: viewer.teams ?? [] },
+        marks: listInboxMarks(db),
       },
       { since, limit: RESOLVED_LIMIT },
     ),

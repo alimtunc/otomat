@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { countOpenInboxEntriesByProject, type InboxSnapshot } from "@otomat/domain";
+import { countUnreadInboxEntriesByProject, type InboxSnapshot } from "@otomat/domain";
 import { hostKeys } from "@web/api/query-keys";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
 import { useOpenHostInboxes } from "@web/components/shell/project-tabs/use-open-host-inboxes";
@@ -31,7 +31,7 @@ function Probe() {
       {inboxes.map(({ host, entries }) => (
         <li key={host}>
           {host}:
-          {[...countOpenInboxEntriesByProject(entries)]
+          {[...countUnreadInboxEntriesByProject(entries)]
             .map(([projectId, count]) => `${projectId}=${count}`)
             .join(",")}
         </li>

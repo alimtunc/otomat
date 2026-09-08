@@ -8,6 +8,7 @@ export const SANDBOX_INBOX: InboxSnapshot = {
       runs: SANDBOX_RUN_EVIDENCE,
       pull_requests: [],
       viewer: { login: "otomat-operator", teams: [] },
+      marks: [],
     },
     { since: "2026-08-18T09:30:00.000Z", limit: 12 },
   ),
