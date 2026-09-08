@@ -182,3 +182,40 @@ it("applies a pending model revision on a plain resume, as its own audited turn"
     config_json: { model: { id: "fake-fast" } },
   });
 });
+
+it("keeps the pending and then current configuration when reopening terminated turns", async () => {
+  const { supervisor, spawn } = makeSupervisor(fix, ["fail", "fail", "complete"]);
+  const run = await supervisor.start({
+    prompt: "do the work",
+    runtime: "fake",
+    model: { kind: "model", id: "fake-thorough" },
+    options: { effort: { kind: "value", value: "high" } },
+  });
+  await supervisor.settle();
+  const stepRunId = firstStepOf(fix.db, run.id);
+  const session = listAgentSessionsForRun(fix.db, run.id).at(-1);
+  if (!session?.config_json) throw new Error("expected a frozen session config");
+  supervisor.setNextTurnModel(
+    run.id,
+    stepRunId,
+    session.id,
+    session.config_json.config_hash,
+    "fake-fast",
+    { effort: "low" },
+  );
+  const pending = getStepRun(fix.db, stepRunId)?.next_turn_config_json;
+
+  await supervisor.resume(run.id);
+  await supervisor.settle();
+  expect(spawn.jobs[1]?.config).toEqual(pending);
+  expect(getStepRun(fix.db, stepRunId)?.next_turn_config_json).toBeNull();
+  expect(listAgentSessionsForRun(fix.db, run.id).at(-1)).toMatchObject({
+    resumed_from_session_id: session.id,
+    config_json: pending,
+  });
+
+  await supervisor.resume(run.id);
+  await supervisor.settle();
+  expect(spawn.jobs[2]?.config).toEqual(pending);
+  expect(getRun(fix.db, run.id)?.plan_json).toEqual(run.plan_json);
+});

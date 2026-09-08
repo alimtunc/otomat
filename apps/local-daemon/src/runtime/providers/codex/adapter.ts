@@ -23,6 +23,7 @@ import type {
 import type { RuntimeModelSupport } from "#runtime/models/support";
 import type { RuntimeSink } from "#runtime/sinks";
 
+import { codexApprovalArgs } from "./approval.js";
 import { CodexFrameMapper } from "./frames.js";
 import { codexModelSupport } from "./models.js";
 import { CODEX_DEFAULT_SANDBOX, codexOptionSupport } from "./options.js";
@@ -128,18 +129,14 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
         model: input.model ?? null,
       });
     }
-    // Every configured flag is `exec`-level; the real CLI rejects them after the `resume` subcommand.
     const args = ["exec", ...this.execArgs(input), "resume", requireProviderSession(session), "-"];
     return runCliTurn(this.spec(args, input, session), sink, signal);
   }
 
-  /** JSONL output plus the frozen sandbox, approval policy, reasoning level and model, in that order. */
   private execArgs(input: { options?: ProviderOptions; model?: string | null }): string[] {
     const options = input.options ?? {};
     const args = ["--json", "--sandbox", options.sandbox ?? CODEX_DEFAULT_SANDBOX];
-    if (options.approval_policy !== undefined) {
-      args.push("--ask-for-approval", options.approval_policy);
-    }
+    args.push(...codexApprovalArgs(this.binary, options.approval_policy));
     return [...args, ...this.tuningArgs(input.model ?? null, options)];
   }
 

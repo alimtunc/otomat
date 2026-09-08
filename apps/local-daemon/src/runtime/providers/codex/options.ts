@@ -4,13 +4,13 @@ import type { RuntimeOptionSupport } from "#runtime/contract";
 import { cachedProviderProbe } from "#runtime/probe/cache";
 import { helpFlagValues } from "#runtime/probe/help-flags";
 
+import { CODEX_EXEC_APPROVAL_NOTE, codexApprovalValues } from "./approval.js";
 import { codexBundledCatalog } from "./models.js";
 import { probeCodexSandbox, type CodexSandboxProbeResult } from "./sandbox.js";
 
 const CODEX_EXEC_HELP_ARGS = ["exec", "--help"] as const;
 
 const CODEX_SANDBOX_FLAG = "--sandbox";
-const CODEX_APPROVAL_FLAG = "--ask-for-approval";
 
 /** The widest sandbox Otomat picks by itself: writes confined to the worktree, never the unconfined one. */
 export const CODEX_DEFAULT_SANDBOX = "workspace-write";
@@ -64,11 +64,11 @@ function sandboxDescriptor(
 }
 
 function approvalDescriptor(help: string): ProviderOptionDescriptor | null {
-  const values = helpFlagValues(help, CODEX_APPROVAL_FLAG);
-  if (values === null || values.length === 0) return null;
+  const values = codexApprovalValues(help);
+  if (values.length === 0) return null;
   return {
     key: "approval_policy",
-    description: "When Codex asks a human before acting. Otomat cannot answer such a request yet.",
+    description: `When Codex asks a human before acting. Otomat cannot answer such a request yet. ${CODEX_EXEC_APPROVAL_NOTE}`,
     choices: values.map((value) => ({
       value,
       description: APPROVAL_DESCRIPTIONS.get(value) ?? null,
@@ -119,7 +119,7 @@ function reasoningEffortDescriptor(binary: string, model: string | null): Reason
 }
 
 function detectionDetail(note: string | null, capability: CodexSandboxProbeResult | null): string {
-  const catalog = note === null ? `${HELP_DETAIL}, ${CATALOG_DETAIL}.` : `${HELP_DETAIL}. ${note}`;
+  const catalog = `${note === null ? `${HELP_DETAIL}, ${CATALOG_DETAIL}.` : `${HELP_DETAIL}. ${note}`} ${CODEX_EXEC_APPROVAL_NOTE}`;
   if (capability?.status !== "unavailable") return catalog;
   const { diagnostics } = capability;
   return `${catalog} Confined sandboxes are unavailable on host "${diagnostics.host}": ${diagnostics.stderr || capability.cause}. ${capability.remediation}`;

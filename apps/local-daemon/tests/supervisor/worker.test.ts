@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { WORKER_JOB_ENV } from "@otomat/domain";
+import { resolvedAgentConfigSchema, WORKER_JOB_ENV } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readEventsJsonl } from "#runtime";
@@ -64,6 +64,23 @@ it("parses a job from the environment, or null when absent", () => {
   expect(parseJob({ [WORKER_JOB_ENV]: JSON.stringify(j) })).toEqual(j);
   expect(parseJob({})).toBeNull();
 });
+
+it.each(["run", "resume"] as const)(
+  "preserves both Codex permission settings when deserializing a %s job",
+  (mode) => {
+    const config = resolvedAgentConfigSchema.parse({
+      runtime: "codex",
+      profile_id: null,
+      profile_name: null,
+      options: { sandbox: "danger-full-access", approval_policy: "never" },
+      guidance: null,
+      skills: [],
+      config_hash: "full",
+    });
+    const serialized = { ...job(mode), runtime: "codex", config };
+    expect(parseJob({ [WORKER_JOB_ENV]: JSON.stringify(serialized) })).toEqual(serialized);
+  },
+);
 
 it("writes a real file on a run turn and appends on a resume turn", async () => {
   const worktree = mkdtempSync(join(tmpdir(), "otomat-worktree-"));

@@ -203,7 +203,9 @@ it("keeps the frozen-value explanation and the audit trail behind Execution deta
   if (details === undefined) throw new Error("the execution details disclosure is missing");
   await act(async () => details.click());
 
-  expect(mounted.container.textContent).toContain("a resume or a follow-up replays");
+  expect(mounted.container.textContent).toContain(
+    "Resumes and follow-ups use the latest session settings",
+  );
 
   await mounted.cleanup();
 });

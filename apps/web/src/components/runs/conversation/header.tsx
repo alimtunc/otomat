@@ -2,6 +2,7 @@ import type { RunDetail } from "@otomat/domain";
 import { Badge, Button, Icon } from "@otomat/ui";
 import { useRuntimes } from "@web/api/daemon/queries";
 import { useStopRunStep } from "@web/api/runs/step-mutations";
+import { CodexPermissions } from "@web/components/runs/conversation/codex-permissions";
 import { NextTurnModelDialog } from "@web/components/runs/conversation/next-turn-model-dialog";
 import { agentLabel, modelLabel } from "@web/lib/execution/labels";
 import { stepParticipant } from "@web/lib/run/participant";
@@ -109,6 +110,11 @@ export function ConversationHeader({
           {fallback.label}
         </span>
       )}
+      {current.runtime === "codex" ? (
+        <div className="basis-full">
+          <CodexPermissions options={current.options} />
+        </div>
+      ) : null}
     </div>
   );
 }

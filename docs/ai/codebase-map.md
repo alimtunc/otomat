@@ -139,6 +139,14 @@ host/environment, CLI version, requested and resolved sandbox, exit/stderr and
 the relevant user/network-namespace settings; they never substitute an
 unconfined mode.
 
+Codex permissions follow the installed `exec` contract. When that command has no
+approval flag, only explicit `never` is supported through a config override;
+incompatible frozen policies are refused before the turn starts. Native resume
+preflights pending/session configuration before falling back to the immutable
+plan. The session UI distinguishes requested permissions from unreported
+effective values and offers an external resume command with explicit settings.
+See [Codex permission evidence and external resume](codex-permissions.md).
+
 A published catalog is a contract that moves: Codex 0.147 lists a reasoning level
 as `{ effort, description }` where earlier releases listed the bare identifier.
 Both shapes parse, into the same normalised level, because either can come from a

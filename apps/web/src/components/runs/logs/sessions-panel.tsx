@@ -1,35 +1,6 @@
-import type { AgentSessionContract, RunDetail } from "@otomat/domain";
-import { AgentAvatar, CopyButton, StatusChip } from "@otomat/ui";
+import type { RunDetail } from "@otomat/domain";
+import { SessionRow } from "@web/components/runs/logs/session-row";
 import { PaneHeader } from "@web/components/runs/pane-header";
-
-function SessionRow({
-  session,
-  stepName,
-}: {
-  session: AgentSessionContract;
-  stepName: string | null;
-}) {
-  return (
-    <li className="flex h-9 items-center gap-2.5 px-3.5 text-sm">
-      <AgentAvatar size="sm" name={session.agent_id ?? "agent"} />
-      <span className="truncate font-medium text-foreground">{session.agent_id ?? "agent"}</span>
-      {stepName !== null ? (
-        <span className="truncate text-xs text-text-tertiary">{stepName}</span>
-      ) : null}
-      <span className="ml-auto flex items-center gap-2">
-        {session.provider_session_id !== null ? (
-          <span className="flex items-center gap-1 font-mono text-micro text-text-tertiary">
-            <span className="max-w-40 truncate" title={session.provider_session_id}>
-              {session.provider_session_id}
-            </span>
-            <CopyButton value={session.provider_session_id} label="Copy provider session id" />
-          </span>
-        ) : null}
-        <StatusChip kind="session" status={session.status} />
-      </span>
-    </li>
-  );
-}
 
 export function SessionsPanel({ detail }: { detail: RunDetail }) {
   return (
@@ -50,6 +21,7 @@ export function SessionsPanel({ detail }: { detail: RunDetail }) {
             <SessionRow
               key={session.id}
               session={session}
+              worktreePath={detail.worktree_path}
               stepName={detail.steps.find((step) => step.id === session.step_run_id)?.name ?? null}
             />
           ))}

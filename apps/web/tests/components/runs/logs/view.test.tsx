@@ -1,5 +1,11 @@
 // @vitest-environment happy-dom
-import type { EventEnvelope, RunDetail } from "@otomat/domain";
+import {
+  agentSessionContractSchema,
+  resolvedAgentConfigSchema,
+  type EventEnvelope,
+  type RunDetail,
+} from "@otomat/domain";
+import { SessionRow } from "@web/components/runs/logs/session-row";
 import { RunLogsView } from "@web/components/runs/logs/view";
 import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -104,4 +110,44 @@ describe("RunLogsView", () => {
     expect(filtered?.textContent).not.toContain("hello");
     await cleanup();
   });
+});
+
+it("separates requested Codex permissions from unreported effective permissions", async () => {
+  const config = resolvedAgentConfigSchema.parse({
+    runtime: "codex",
+    profile_id: null,
+    profile_name: null,
+    options: { sandbox: "danger-full-access", approval_policy: "never" },
+    guidance: null,
+    skills: [],
+    config_hash: "full",
+  });
+  const session = agentSessionContractSchema.parse({
+    id: "codex-1",
+    step_run_id: "s1",
+    agent_id: "codex",
+    status: "terminated",
+    provider_session_id: "thread-1",
+    resumed_from_session_id: null,
+    reported_model: null,
+    started_at: null,
+    boundary: {
+      start_tree_sha: null,
+      start_head_sha: null,
+      end_tree_sha: null,
+      end_head_sha: null,
+      error: null,
+    },
+    config,
+  });
+  const { container, cleanup } = await mount(
+    <SessionRow session={session} stepName="Implement" worktreePath="/work" />,
+  );
+  expect(container.textContent).toContain(
+    "Requested permissions: sandbox danger-full-access · approval never",
+  );
+  expect(container.textContent).toContain("Effective permissions: not reported");
+  expect(container.textContent).toContain("External resume loads its own configuration");
+  expect(container.querySelector('button[aria-label="Copy Codex resume command"]')).not.toBeNull();
+  await cleanup();
 });

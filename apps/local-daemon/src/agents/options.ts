@@ -61,7 +61,6 @@ export function assertOptionsAnnounced(
   }
 }
 
-/** An unannounced value is refused, except from the host defaults: those are a preference for every execution rather than a claim about this one, so they are dropped instead. */
 export function resolveOptions(
   runtime: KnownRuntimeId,
   model: ResolvedModel | null,
@@ -80,7 +79,9 @@ export function resolveOptions(
     const resolved = resolveExecutionOption(levels, key);
     if (resolved.value === null) continue;
     if (!announced(support, key, resolved.value)) {
-      if (resolved.source === "global") continue;
+      const codexPermission =
+        runtime === "codex" && (key === "sandbox" || key === "approval_policy");
+      if (resolved.source === "global" && !codexPermission) continue;
       throw refusal(runtime, support, key, resolved.value);
     }
     options[key] = resolved.value;

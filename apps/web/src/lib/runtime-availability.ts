@@ -4,6 +4,7 @@ const UNAVAILABLE_LABELS = {
   binary_not_found: "CLI not found",
   not_enabled: "Not enabled",
   sandbox_unavailable: "Sandbox unavailable",
+  permissions_unsupported: "Permissions unsupported",
 } satisfies Record<RuntimeUnavailableReason, string>;
 
 export function runtimeAvailabilityLabel(

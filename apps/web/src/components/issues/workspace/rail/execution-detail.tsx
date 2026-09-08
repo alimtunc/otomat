@@ -66,8 +66,8 @@ export function ExecutionDetail({ executions, reported }: ExecutionDetailProps) 
           </RailRow>
         </RailMeta>
         <p className="mt-2 text-xs leading-relaxed text-text-tertiary">
-          This is what the run froze at launch, and exactly what a resume or a follow-up replays —
-          never the preferences as they stand now. Reported is only what the runtime said it used.
+          These are the launch settings. Resumes and follow-ups use the latest session settings,
+          including explicit next-turn changes. Reported is only what the runtime said it used.
         </p>
       </CollapsiblePanel>
     </Collapsible>
