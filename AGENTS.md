@@ -11,10 +11,11 @@ enforced import rules belong in
 
 For implementation, read
 [`first-pass-quality`](.agents/skills/first-pass-quality/SKILL.md) before editing.
-For harness setup, skill selection, permissions and host-profile maintenance,
-read [`docs/ai/agent-workflow.md`](docs/ai/agent-workflow.md). Claude imports this
-guide through `CLAUDE.md`; keep shared requirements here, with one canonical
-skill body under `.agents/skills` and Claude discovery links under `.claude/skills`.
+For skill discovery, activation or prompt provenance, read
+[`Skill discovery and activation`](docs/ai/codebase-map.md#skill-discovery-and-activation).
+Claude imports this guide through `CLAUDE.md`; keep shared requirements here,
+with one canonical skill body under `.agents/skills` and Claude discovery links
+under `.claude/skills`.
 
 ## Monorepo layout
 
@@ -150,6 +151,17 @@ Why: a file that owns one thing can be understood, tested, and replaced without
 loading unrelated concerns; the gates check shape so prose only has to carry
 judgment.
 
+### Documentation
+
+Maintain durable behavior, architecture and operating instructions in the existing
+owning document. Create a document only for a lasting use that no existing file
+serves, and name it by subject, never by ticket or PR identifier. Keep ticket/PR
+history, session reports, check logs, host snapshots and pending patch bundles in
+the handoff or PR, outside tracked documentation. A request for an audit, plan or
+handoff does not by itself require a new repository file. If a skill requests a
+report file, return it in the conversation unless the user explicitly requests
+a versioned deliverable. Do not rename disposable reports to make them look durable.
+
 ### Final diff pass (mandatory)
 
 Before declaring any change done, re-read the full diff and check each point.
@@ -166,6 +178,8 @@ silently.
    entries.
 5. Over-engineering — every abstraction, option, and export introduced has a
    consumer today.
+6. Documentation — every added or edited document meets the documentation rule
+   above, and removed files leave no broken references.
 
 ## Commands
 
