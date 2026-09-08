@@ -4,7 +4,7 @@ import { RunActionsMenu } from "@web/components/runs/actions/run-actions-menu";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { findButton } from "#support/dom-queries";
+import { findButton, findLabelled, findMenuItem } from "#support/dom-queries";
 import { mount } from "#support/mount";
 
 const resume = vi.fn();
@@ -88,6 +88,21 @@ it("offers no Resume on a merged run", async () => {
   const mounted = await mount(<RunActionsMenu runId="run-1" />);
 
   expect(findButton("Resume run")).toBeUndefined();
+
+  await mounted.cleanup();
+});
+
+it("offers no worktree opener outside the desktop shell, and no stray separator", async () => {
+  detail = runDetail("completed", { mode: "unavailable", reason: "A completed run has no turn" });
+  const mounted = await mount(<RunActionsMenu runId="run-1" />);
+
+  await act(async () => {
+    findLabelled("Run actions")?.click();
+  });
+
+  expect(findMenuItem("Open in VS Code")).toBeUndefined();
+  expect(document.body.querySelector("[role='separator']")).toBeNull();
+  expect(findMenuItem("Cancel run")).toBeDefined();
 
   await mounted.cleanup();
 });

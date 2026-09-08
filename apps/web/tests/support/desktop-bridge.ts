@@ -104,6 +104,7 @@ export function fakeDesktopBridge(
           ok: true as const,
           value: { outcome: "cleaned" as const, blocker: null, message: "Deleted.", entry: null },
         }),
+      openWorkspace: () => Promise.resolve({ ok: true as const }),
       onRemoteStatus: () => () => {},
       listInstances: () => Promise.resolve({ ok: true as const, instances: [] }),
       stopInstance: () => Promise.resolve({ ok: true as const }),

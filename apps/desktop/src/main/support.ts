@@ -7,6 +7,8 @@ import type {
 } from "@otomat/domain";
 import { app, dialog, shell } from "electron";
 
+import { failureMessage } from "#shared/failure-message";
+
 import { readBuildInfo } from "./build-info.js";
 import { DATA_RETENTION_POLICY, exportSupportBundle } from "./data-safety/index.js";
 import { writeSupportBundleAtomically } from "./data-safety/support/bundle-file.js";
@@ -27,10 +29,6 @@ function issueDraftUrl(draft: ProblemReportDraft): string {
   url.searchParams.set("title", draft.title);
   url.searchParams.set("body", draft.body.slice(0, MAX_DRAFT_BODY_CHARACTERS));
   return url.toString();
-}
-
-function failureMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 export class DesktopSupport {

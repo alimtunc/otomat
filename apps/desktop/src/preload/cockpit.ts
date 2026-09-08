@@ -23,6 +23,7 @@ import type {
   SupportBundleExportResult,
   WorkspaceCleanupResult,
   WorkspaceInventory,
+  WorkspaceOpenTarget,
   WorkspaceReconcileReport,
 } from "@otomat/domain";
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
@@ -40,6 +41,7 @@ import {
   EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL,
   EXECUTION_HOST_INBOX_CHANNEL,
   EXECUTION_HOST_INSTANCES_CHANNEL,
+  EXECUTION_HOST_OPEN_WORKSPACE_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_READ_CAPACITY_CHANNEL,
   EXECUTION_HOST_RECONCILE_WORKSPACES_CHANNEL,
@@ -143,6 +145,12 @@ contextBridge.exposeInMainWorld("otomat", {
       force: boolean,
     ): Promise<ExecutionHostCallResult<WorkspaceCleanupResult>> =>
       ipcRenderer.invoke(EXECUTION_HOST_CLEANUP_WORKSPACE_CHANNEL, hostId, workspaceId, force),
+    openWorkspace: (
+      hostId: ExecutionHostId,
+      path: string,
+      target: WorkspaceOpenTarget,
+    ): Promise<ExecutionHostOperationResult> =>
+      ipcRenderer.invoke(EXECUTION_HOST_OPEN_WORKSPACE_CHANNEL, hostId, path, target),
     onRemoteStatus: (listener: (status: RemoteHostStatus) => void): (() => void) => {
       const wrapped = (_event: IpcRendererEvent, status: RemoteHostStatus): void =>
         listener(status);
