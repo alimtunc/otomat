@@ -106,7 +106,7 @@ describe("claude provider options", () => {
     );
 
     expect(permission?.default_value).toBe("acceptEdits");
-    expect(permission?.description).toContain("git push");
+    expect(permission?.description).toContain("approval through Otomat");
     expect(permission?.description).toContain("Update Claude Code");
   });
 
@@ -138,7 +138,7 @@ describe("claude provider options", () => {
     expect(described.get("auto")).toBe("Claude approves safe actions and pauses for risky ones.");
     expect(described.get("plan")).toBe("Claude explores and presents a plan before editing.");
     expect(described.get("acceptEdits")).toContain("Claude edits the selected code or file.");
-    expect(described.get("acceptEdits")).toContain("headless run cannot give");
+    expect(described.get("acceptEdits")).toContain("approval through Otomat");
     expect(described.get("dontAsk")).toBeNull();
   });
 

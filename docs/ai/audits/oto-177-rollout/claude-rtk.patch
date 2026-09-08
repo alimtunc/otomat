@@ -1,0 +1,19 @@
+diff --git a/.claude/RTK.md b/.claude/RTK.md
+index f68d972a..18be170f 100644
+--- a/.claude/RTK.md
++++ b/.claude/RTK.md
+@@ -21,9 +21,11 @@ which rtk             # Verify correct binary
+ 
+ ⚠️ **Name collision**: If `rtk gain` fails, you may have reachingforthejack/rtk (Rust Type Kit) installed instead.
+ 
+-## Hook-Based Usage
++## Command usage
+ 
+-All other commands are automatically rewritten by the Claude Code hook.
+-Example: `git status` → `rtk git status` (transparent, 0 tokens overhead)
++Prefix shell commands with `rtk`; use `rtk proxy` when raw output matters.
++Only rely on automatic rewriting after verifying an active RTK hook in the
++Claude settings actually loaded by this session. A file import does not install
++a hook.
+ 
+ Refer to CLAUDE.md for full command reference.

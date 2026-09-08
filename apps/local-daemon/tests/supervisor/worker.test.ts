@@ -99,6 +99,43 @@ it("writes a real file on a run turn and appends on a resume turn", async () => 
   }
 });
 
+it("injects frozen skill provenance on a fresh session and keeps it out of the resume prompt", async () => {
+  const worktree = mkdtempSync(join(tmpdir(), "otomat-worker-skill-"));
+  const config = resolvedAgentConfigSchema.parse({
+    runtime: "fake",
+    profile_id: "profile",
+    profile_name: "Implementation",
+    options: {},
+    guidance: "Follow the project guide",
+    skills: [
+      {
+        id: "skill",
+        name: "Guide",
+        source: "user",
+        canonical_path: "/unavailable/guide/SKILL.md",
+        content_hash: "frozen",
+        instructions: "Read references/constraints.md",
+      },
+    ],
+    config_hash: "config",
+  });
+  try {
+    await runWorkerJob({ ...job("run", worktree), config }, new AbortController().signal);
+    const file = join(worktree, "simulated-turn.md");
+    const first = readFileSync(file, "utf8");
+    expect(first).toContain('Source (user): "/unavailable/guide/SKILL.md"');
+    expect(first).toContain("Read references/constraints.md");
+
+    await runWorkerJob({ ...job("resume", worktree), config }, new AbortController().signal);
+    const followup = readFileSync(file, "utf8").slice(first.length);
+    expect(followup).toContain("do the thing");
+    expect(followup).not.toContain("Read references/constraints.md");
+    expect(followup).not.toContain("Agent profile guidance");
+  } finally {
+    rmSync(worktree, { recursive: true, force: true });
+  }
+});
+
 it("leaves the filesystem untouched when the job's worktree no longer exists", async () => {
   await runWorkerJob(job("run"), new AbortController().signal);
   expect(existsSync(join(dir, "simulated-turn.md"))).toBe(false);

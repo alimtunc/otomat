@@ -1,0 +1,143 @@
+diff --git a/handoff/SKILL.md b/handoff/SKILL.md
+index e9a13999..bb63cc64 100644
+--- a/handoff/SKILL.md
++++ b/handoff/SKILL.md
+@@ -12,7 +12,7 @@ Produce a markdown summary of **this conversation**, ready to paste into another
+ ## Argument
+ 
+ - **(none)** — summary only. Read-only: never commits, pushes, creates or removes a worktree, or updates tracker state.
+-- **`ship`** — delegate commit + push + PR + ticket update to the `ship` skill, then show the summary with the PR pointer.
++- **`ship`** — delegate commit + push + PR to the `ship` skill; tracker changes require separate explicit authorization. Then show the summary with the PR pointer.
+ 
+ ## Default mode (summary only)
+ 
+@@ -24,7 +24,8 @@ This mode is **read-only**. It inspects state with read-only git commands and wr
+    - Important decisions / trade-offs / pitfalls avoided.
+    - What we did (functional summary + gate results: tests, lint, typecheck, and manual verification if applicable).
+    - Environment state (worktree present or not, branch pushed or not, tracker status if known, PR open / bundled / none).
+-   - Pointer to the commit(s) — short hash + branch — telling the other LLM to read them (`git show <hash>`) for the detail.
++   - Pointer to the commit(s), or the current diff and relevant untracked files if uncommitted.
++   - Remaining work, blockers, exact check results and the repository-required final diff pass.
+ 3. **Print the summary** in a copy-pasteable markdown block (fenced).
+ 
+ ### Optional cleanup (report, never execute)
+@@ -43,15 +44,15 @@ Never run worktree removal, branch deletion, or any state-changing git command a
+ Shipping is delegated entirely to the `ship` skill — handoff does **not** reimplement commit, push, PR creation, or tracker updates.
+ 
+ 1. **Draft the summary** from `git diff` and `git diff --cached` (the commit does not exist yet).
+-2. **Invoke the `ship` skill.** It handles commit + push + PR + ticket update. If `ship` fails (pre-commit hook, rejected push, no PR host, etc.), surface its error verbatim and do **not** print a summary.
++2. **Invoke the `ship` skill.** It handles commit + push + PR and only explicitly authorized tracker changes. If `ship` fails (pre-commit hook, rejected push, no PR host, etc.), surface its error verbatim and do **not** print a summary.
+ 3. **Capture the PR URL and number** from ship's output (the `PR :` line and the bare `#<PR_NUMBER>` last line).
+ 4. **Print the summary** with the PR pointer instead of a commit pointer, in the copy-pasteable block.
+ 5. **Re-emit ship's final block** right after the summary's closing fence. The bare `#<PR_NUMBER>` stays the very last line of the response.
+ 
+ ## Writing rules
+ 
+-- **Do not list changed files.** If the other LLM needs detail, it reads the commit.
+-- **No "remaining work" section.** The handoff describes the current state, not a backlog.
++- Point to the commit or current diff; name untracked deliverables when no commit exists.
++- Include remaining work and blockers, or state that none remain. Never hide an incomplete criterion.
+ - **Always include environment state**: worktree (path / none), branch (pushed or not), tracker (current status if known, or "no tracker"), PR (open with URL / bundled / none). That is what tells the other LLM where to resume.
+ - **Always include gate results** under "What we did": tests (n/n), lint, typecheck, and explicitly note if manual UI verification was not done.
+ - Stay factual and dense: no filler, no restating the ticket.
+@@ -84,7 +85,13 @@ Always print the summary in a **markdown code block** so the user can copy it in
+ Read the commit(s) on branch `<branch>`:
+ - `<hash>` — <commit subject>
+ 
+-Run `git show <hash>` to see the detail.
++Run `git show <hash>` for committed work; otherwise read `git diff`, `git diff --cached` and the named untracked files.
++
++## Remaining work and blockers
++...
++
++## Final diff pass
++<Repository-required evidence, including retained comments when required.>
+ ```
+ ````
+ 
+diff --git a/ship/SKILL.md b/ship/SKILL.md
+index db1b36d6..8c53b454 100644
+--- a/ship/SKILL.md
++++ b/ship/SKILL.md
+@@ -1,15 +1,15 @@
+ ---
+ name: ship
+-description: Commit, push, open a PR, and mark the issue done — one command to ship a finished change. Operator invokes only after manual verification.
++description: Commit, push and open a PR for a finished change; update the tracker only when explicitly authorized. Operator invokes only after manual verification.
+ disable-model-invocation: true
+ allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git push:*), Bash(command -v:*), Bash(mktemp:*), Bash(gh pr create:*), Bash(glab mr create:*), Read, Grep, Glob, Write, Skill
+ ---
+ 
+ # Ship
+ 
+-Finalize a validated change: commit → push → PR → close out the ticket.
++Finalize a validated change: commit → push → PR. Tracker transitions require explicit authorization compatible with the repository and session rules.
+ 
+-**Preconditions:** the operator has manually verified the change works. This skill does not run the test suite. It does not hard-require GitHub CLI — the PR host is resolved per `references/vcs-host-detection.md`.
++**Preconditions:** the operator has manually verified the change works and the required repository checks and final diff pass are recorded for the current diff. If evidence is missing or stale, complete verification before publishing. This skill does not replace those checks. It does not hard-require GitHub CLI — the PR host is resolved per `references/vcs-host-detection.md`.
+ 
+ ## Steps
+ 
+@@ -19,7 +19,7 @@ Finalize a validated change: commit → push → PR → close out the ticket.
+ 
+ 3. **Stage and commit changes.**
+    - Write a commit subject in the configured language per `references/output-preferences.md` and the project's convention if detectable (Conventional Commits if prior commits follow it — check `git log --oneline -20`).
+-   - Include a 1–3 sentence body only if the diff needs motivation; otherwise subject-only.
++   - Include required repository issue footers even when no prose body is needed. Add 1–3 sentences of motivation only when useful; subject-only is allowed only when the repository requires no footer.
+    - **Never** add `Co-Authored-By` or AI credit.
+    - Run commit via HEREDOC to preserve formatting.
+ 
+@@ -32,7 +32,7 @@ Finalize a validated change: commit → push → PR → close out the ticket.
+    - If a configured custom `vcs.pr_create` command is blocked by the host/tool sandbox, do not bypass approval. Print the exact manual command plus title/body/branch and use the manual fallback output.
+    - **No PR host available** (no config, no `gh`, no `glab`): do not fail. Print the title + body and the pushed branch name, and tell the operator to open the PR in their host UI or CLI. Report with `PR : opened manually — <branch>` and the `#<PR_NUMBER>` line carrying the number the operator assigns (or `#-` if unknown).
+ 
+-6. **Mark the ticket Done.** Via `references/issue-tracker-detection.md`. If no tracker, skip silently.
++6. **Update the ticket only when explicitly authorized.** Respect session tracker restrictions and the repository completion condition. Opening a PR alone does not imply Done. Otherwise preserve tracker state and report it as unchanged.
+ 
+ 7. **Report.** Emit the [Output format](#output-format) block exactly — no prose before it, no prose after it. The bare `#<PR_NUMBER>` MUST be the very last line of the entire response so the operator (and other tools) can extract it without parsing.
+ 
+@@ -44,7 +44,7 @@ The final response of this skill MUST end with this exact block. Fill placeholde
+ ✅ Shipped
+ - Commit : <short-hash> — <subject>
+ - Branch : <branch>
+-- Ticket : <ID> → Done       (or: no tracker detected)
++- Ticket : <ID> → <actual authorized state> (or: unchanged / no tracker)
+ - PR     : <url>                (or: opened manually — <branch>)
+ 
+ #<PR_NUMBER>
+diff --git a/ticket/SKILL.md b/ticket/SKILL.md
+index 67a3a5cf..874e5c46 100644
+--- a/ticket/SKILL.md
++++ b/ticket/SKILL.md
+@@ -116,14 +116,14 @@ Read resolved Turkit config when present, but tolerate missing files.
+ - **Verify the environment first.** Resolve the workspace policy from `.turkit.yaml → workflow.workspace`:
+     - `worktree_required`, or the operator explicitly asked for isolation → bootstrap a worktree following `references/worktree-bootstrap.md` **literally** (create-if-absent → enter → `pwd` / `git rev-parse --show-toplevel` / `git branch --show-current` verification with stop-on-mismatch → env copy → init). Do not reorder or skip a step.
+     - Missing or `feature_branch` → work in the current tree on a feature branch; skip the worktree procedure.
+-- **Implement criterion by criterion.** For each acceptance criterion: read the relevant files, make the change, verify it typechecks via the project's `check` command (resolved per `references/build-tool-detection.md`), then mark the criterion `[x]` in the plan file (or track it inline for a one-shot).
++- **Implement criterion by criterion.** For each acceptance criterion: read the relevant files, make the change, run the narrowest relevant test or typecheck from the project scripts, then mark the criterion `[x]` in the plan file (or track it inline for a one-shot).
+ - Full project conventions apply at write time — honor the rules loaded in Phase 2 (ownership / boundaries / comment hygiene). When a guardrail or hook blocks a change, **fix the underlying type or logic — never bypass it** by commenting it out, masking the pattern, or adding a disable directive.
+ - Execution stays in the main session. **Never commit.**
+ 
+ ### 5. Verify + handoff
+ 
+ - **Self-check the diff** against the plan's quality contract: every acceptance criterion maps to a concrete change, no scope creep, no half-implementation. Quick pass on touched files for reuse (no duplicated helper/component/schema), ownership (helpers/types/constants in the planned module, not opportunistically inside entry points or render files), boundaries (no new cross-layer import or hidden public surface), and comment hygiene.
+-- **Run the project gate** from the active working-tree root (the worktree root if one was bootstrapped). Resolve `check` / `lint` / `fmt` per `references/build-tool-detection.md`. Run a **React gate only when** React files were changed **and** a gate is configured — `.turkit.yaml → commands.react_review`, or the `turkit-react` pack when installed. Never hardcode a specific React tool; if no gate is configured, skip it. Fix root causes or report them; do not bypass a guardrail to make a check pass.
++- **Run the project gate** from the active working-tree root (the worktree root if one was bootstrapped). Resolve `check` / `lint` / `fmt` per `references/build-tool-detection.md`. Run a **React gate only when** React files were changed **and** a gate is configured — `.turkit.yaml → commands.react_review`, or the `turkit-react` pack when installed. If the project gate already includes that React gate, do not repeat it. Repeat successful checks only after a relevant change, failure or unresolved concern. Never hardcode a specific React tool; if no gate is configured, skip it. Fix root causes or report them; do not bypass a guardrail to make a check pass.
+ - **Emit the handoff** from `references/handoff-format.md` — fill every field. It **suggests** `/goal-review` (`--diff` before commit, `--branch` before PR) and the commit, prefixed "do NOT run these yourself", and never runs them. If `output.style` is `compact`, keep each filled field to the shortest accurate form; do not add narrative after the handoff.
+ 
+ ## Orchestration & platform
+diff --git a/ticket/references/handoff-format.md b/ticket/references/handoff-format.md
+index a85ecf6d..db9955f8 100644
+--- a/ticket/references/handoff-format.md
++++ b/ticket/references/handoff-format.md
+@@ -24,6 +24,10 @@ Files modified:
+   - path/to/file2 — <1 line: what changed>
+ Criteria covered: [1, 2, 3]
+ Criteria not covered: [list, or "none"]
++Checks: [exact commands, results, and baseline/environment failures]
++Final diff pass: [repository-required evidence]
++New comments: <n>; [file:line — durable reason for each retained comment]
++Remaining work: [list, or "none"]
+ Manual tests done: [list, or "none"]
+ Blockers/questions: [list, or "none"]
+ 

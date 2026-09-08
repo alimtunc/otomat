@@ -230,14 +230,19 @@ Every field is read locally. No external id, tracker URL or credential rides
 along, and the rendered context says so — an imported Linear issue reaches a
 session exactly like a local one, on a laptop or on a VPS daemon.
 
-Project skills are discovered one directory deep from `.agents/skills` and
-`.claude/skills`. Discovery only makes a skill selectable: an agent profile owns
-the selected ids, resolution freezes their content hashes, and `composeTurnPrompt`
-prepends the frozen bodies before the supervisor chooses Claude or Codex. The
-repo-local `first-pass-quality` skill therefore reaches both runtimes through the
-same profile contract without becoming a daemon-built-in role. Its Claude project
-path is a symlink to the canonical `.agents` directory; realpath de-duplication
-keeps one catalog entry and one instruction body.
+Skill discovery scans one directory deep: user `.agents/skills`, legacy
+`.claude/skills` and `.codex/skills`, then each registered project's `.agents/skills`
+and `.claude/skills`. It does not scan run worktrees or nested plugin directories.
+Realpath de-duplication keeps one catalog entry per file; user roots win ownership
+when project links expose the same file. Homonymous files remain distinct.
+
+Discovery only makes a skill selectable. A profile owns the selected ids within
+its scope; resolution freezes their bodies and hashes. `composeTurnPrompt` labels
+profile guidance as task guidance and includes each skill's canonical file and
+resource directory before the supervisor chooses Claude or Codex. Ancillary
+resources remain live, and native frontmatter capabilities are not implemented
+by text injection. A native resume retains its conversation without re-injection.
+The [operation guide](agent-workflow.md) explains catalog versus native loading.
 
 ## One Execution Configuration
 
@@ -1902,7 +1907,7 @@ in `pnpm check` so CI cannot depend on an agent having selected the right profil
 `scripts/react-lint.test.mjs` pressure-tests the gate with a failing render-time
 state update and its event-handler counterpart.
 
-The second layer pins `react-doctor@0.9.12` and scans only Bugs and Accessibility
+The second layer pins `react-doctor@0.9.13` and scans only Bugs and Accessibility
 diagnostics introduced against `main`, including untracked React files. The
 repository's existing `doctor.config.json` remains the owner of reviewed
 file-specific exceptions and now also disables Performance, Maintainability,
