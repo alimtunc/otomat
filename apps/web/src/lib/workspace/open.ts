@@ -1,4 +1,9 @@
-import type { ExecutionHostDescriptor, WorkspaceEntry, WorkspaceOpenTarget } from "@otomat/domain";
+import type {
+  ExecutionHostDescriptor,
+  ResolvedAgentConfig,
+  WorkspaceEntry,
+  WorkspaceOpenTarget,
+} from "@otomat/domain";
 
 export interface WorkspaceOpenAvailability {
   available: boolean;
@@ -31,4 +36,22 @@ function shellQuote(value: string): string {
 /** Copy-only: Otomat never runs it, and every path byte is single-quoted so nothing in it is parsed. */
 export function remoteShellCommand(alias: string, path: string): string {
   return `ssh -t ${alias} ${shellQuote(`cd ${shellQuote(path)} && exec "$SHELL" -l`)}`;
+}
+
+export function codexResumeCommand(
+  sessionId: string,
+  config: ResolvedAgentConfig,
+  worktreePath: string,
+): string {
+  const args = ["codex", "resume", "--cd", worktreePath];
+  if (config.options.sandbox !== undefined) args.push("--sandbox", config.options.sandbox);
+  if (config.options.approval_policy !== undefined) {
+    args.push("--ask-for-approval", config.options.approval_policy);
+  }
+  if (config.model !== null) args.push("--model", config.model.id);
+  if (config.options.reasoning_effort !== undefined) {
+    args.push("-c", `model_reasoning_effort="${config.options.reasoning_effort}"`);
+  }
+  args.push("--", sessionId);
+  return args.map(shellQuote).join(" ");
 }

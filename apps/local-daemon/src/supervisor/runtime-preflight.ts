@@ -15,7 +15,11 @@ import {
 } from "#runtime";
 
 import type { ResumeAction } from "./resume-plan.js";
-import { requireResumableRuntime, RunNotResumableError } from "./resume.js";
+import {
+  requireResumableRuntime,
+  requireResumeConfigSupport,
+  RunNotResumableError,
+} from "./resume.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
 
@@ -78,6 +82,9 @@ export function preflightResumeAction(
   if (worktreePath === undefined) return;
   if (action.kind === "native") {
     const runtime = requireResumableRuntime(state.db, run, action.session);
+    if (action.step.config) {
+      requireResumeConfigSupport(state.db, run, action.session, action.step.config);
+    }
     preflightRuntimeConfig(runtime, action.step.config ?? null, worktreePath);
     return;
   }

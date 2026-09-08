@@ -85,13 +85,20 @@ it("maps RuntimeUnavailableError from launch to a 409 with the reason", async ()
   });
 });
 
-it("returns the actionable sandbox refusal from launch", async () => {
-  const message =
-    "Codex sandbox unavailable on host vps: requested=provider-default; resolved=workspace-write";
+it.each([
+  [
+    "sandbox_unavailable",
+    "Codex sandbox unavailable: requested=provider-default; resolved=workspace-write",
+  ],
+  [
+    "permissions_unsupported",
+    'Codex exec cannot honor requested approval policy "on-request". No turn was started.',
+  ],
+] as const)("returns the actionable %s refusal from launch", async (reason, message) => {
   const app = makeApiApp(t, {
     supervisor: stubSupervisor({
       start: async () => {
-        throw new RuntimeUnavailableError("codex", "sandbox_unavailable", message);
+        throw new RuntimeUnavailableError("codex", reason, message);
       },
     }),
   });
@@ -101,7 +108,7 @@ it("returns the actionable sandbox refusal from launch", async () => {
   expect(await json<unknown>(res)).toEqual({
     error: "runtime_unavailable",
     runtime: "codex",
-    reason: "sandbox_unavailable",
+    reason,
     message,
   });
 });

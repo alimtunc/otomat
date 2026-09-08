@@ -1,5 +1,9 @@
-import type { ExecutionHostDescriptor } from "@otomat/domain";
-import { remoteShellCommand, workspaceOpenAvailability } from "@web/lib/workspace/open";
+import { resolvedAgentConfigSchema, type ExecutionHostDescriptor } from "@otomat/domain";
+import {
+  codexResumeCommand,
+  remoteShellCommand,
+  workspaceOpenAvailability,
+} from "@web/lib/workspace/open";
 import { expect, it } from "vitest";
 
 import { workspaceEntry } from "#support/workspace";
@@ -40,5 +44,24 @@ it("single-quotes the path so nothing in it is ever parsed as a command", () => 
   const command = remoteShellCommand("otomat-vps", "/home/u/it's; rm -rf $HOME `x`/wt");
   expect(command).toBe(
     `ssh -t otomat-vps 'cd '\\''/home/u/it'\\''\\'\\'''\\''s; rm -rf $HOME \`x\`/wt'\\'' && exec "$SHELL" -l'`,
+  );
+});
+
+it("copies explicit Codex permissions, with every session and path byte shell-quoted", () => {
+  const config = resolvedAgentConfigSchema.parse({
+    runtime: "codex",
+    profile_id: null,
+    profile_name: null,
+    options: { sandbox: "danger-full-access", approval_policy: "never", reasoning_effort: "high" },
+    model: { id: "gpt-5.6-sol", source: "discovered" },
+    guidance: null,
+    skills: [],
+    config_hash: "frozen",
+  });
+  expect(codexResumeCommand("thread;$(x)", config, "/work/it's here")).toBe(
+    `'codex' 'resume' '--cd' '/work/it'\\''s here' '--sandbox' 'danger-full-access' '--ask-for-approval' 'never' '--model' 'gpt-5.6-sol' '-c' 'model_reasoning_effort="high"' '--' 'thread;$(x)'`,
+  );
+  expect(codexResumeCommand("thread", { ...config, options: {}, model: null }, "/work")).toBe(
+    "'codex' 'resume' '--cd' '/work' '--' 'thread'",
   );
 });

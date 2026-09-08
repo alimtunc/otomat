@@ -1,5 +1,6 @@
 import {
   getRun,
+  getStepRun,
   listAgentSessionsForRun,
   listCompeteGroupsForRun,
   listStepRunsForRun,
@@ -71,7 +72,9 @@ function reopen(
     const reason = "This run's runtime cannot reattach to a provider session";
     return { kind: "recovery", step, reason };
   }
-  return { kind: "native", session, step };
+  const config =
+    getStepRun(db, step.id)?.next_turn_config_json ?? session.config_json ?? step.config ?? null;
+  return { kind: "native", session, step: { ...step, config } };
 }
 
 /** The earliest step that stopped without succeeding: a fail-fast cascade cancels everything after the real failure, and recovery starts at the failure. Compete candidates reopen as a group or not at all. */

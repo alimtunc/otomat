@@ -218,6 +218,9 @@ describe("CodexRuntimeAdapter", () => {
     const argsFile = join(worktree, "stub-args.json");
     process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
     process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    process.env["OTOMAT_STUB_FIXTURES"] = JSON.stringify({
+      "exec --help": join(STUB_FIXTURES, "codex-exec-help.txt"),
+    });
     const adapter = new CodexRuntimeAdapter(STUB_BIN);
     const options = { sandbox: "read-only", approval_policy: "never", reasoning_effort: "xhigh" };
 

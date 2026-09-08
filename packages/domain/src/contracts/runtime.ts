@@ -133,6 +133,7 @@ export const RUNTIME_UNAVAILABLE_REASONS = [
   "binary_not_found",
   "not_enabled",
   "sandbox_unavailable",
+  "permissions_unsupported",
 ] as const;
 export type RuntimeUnavailableReason = (typeof RUNTIME_UNAVAILABLE_REASONS)[number];
 

@@ -176,7 +176,7 @@ export function insertSessionResumeTurn(
   state: SupervisorState,
   run: RunRow,
   session: AgentSessionRow,
-  config: ResolvedAgentConfig,
+  config: ResolvedAgentConfig | null,
   prompt: string | null,
   contributionIds: readonly string[],
 ): ResumeTurn {
@@ -194,7 +194,7 @@ export function insertSessionResumeTurn(
     status: agentSessionMachine.initial,
     provider_session_id: session.provider_session_id,
     resumed_from_session_id: session.id,
-    config_json: config,
+    config_json: turn.context.config,
   });
   return turn;
 }

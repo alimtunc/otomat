@@ -2,15 +2,24 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 
-import { getRun, listRuns } from "@otomat/db";
+import {
+  getRun,
+  insertAgentProfile,
+  listAgentSessionsForRun,
+  listRuns,
+  updateAgentProfile,
+  writeExecutionDefaults,
+} from "@otomat/db";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { ProfileOptionUnsupportedError } from "#agents";
 import { clearProviderProbeCache } from "#runtime";
 import {
   clearCodexSandboxProbeCache,
   CodexSandboxUnavailableError,
 } from "#runtime/providers/codex/sandbox";
 
+import { contributeToStep } from "../support/contribution.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { stubLinuxPlatform } from "../support/platform.js";
 import { seedWorkflowRun } from "../support/seed.js";
@@ -122,4 +131,63 @@ it("resumes only the next runtime when an earlier Codex step is already complete
   expect(spawn.jobs).toHaveLength(1);
   expect(spawn.jobs[0]?.runtime).toBe("fake");
   expect(getRun(fix.db, "mixed-runtime")?.status).toBe("review_ready");
+});
+
+it("persists explicit Codex permissions through launch, Resume and follow-up after preferences change", async () => {
+  process.env.OTOMAT_CODEX_HELP_FIXTURE = stubFixture("codex-exec-help-0.153.4.txt");
+  const full = { sandbox: "danger-full-access", approval_policy: "never" };
+  const profile = {
+    name: "Explicit Full",
+    runtime: "codex",
+    model: null,
+    options_json: full,
+    guidance: null,
+    skill_ids_json: [],
+  };
+  insertAgentProfile(fix.db, { id: "full", ...profile });
+  const { supervisor, spawn } = makeSupervisor(fix, ["fail", "complete", "complete"]);
+  const run = await supervisor.start({ prompt: "Return OK", profile_id: "full" });
+  await supervisor.settle();
+  const session = listAgentSessionsForRun(fix.db, run.id).at(-1);
+  if (!session) throw new Error("expected a persisted session");
+  expect(session.config_json?.options).toEqual(full);
+  expect(getRun(fix.db, run.id)?.plan_json.steps[0]).toMatchObject({ config: { options: full } });
+
+  updateAgentProfile(fix.db, "full", { ...profile, options_json: { sandbox: "read-only" } });
+  writeExecutionDefaults(fix.db, {
+    runtime: "codex",
+    model: null,
+    options: { sandbox: "read-only" },
+  });
+  await supervisor.resume(run.id);
+  await supervisor.settle();
+  await contributeToStep(fix.db, supervisor, run.id, session.step_run_id, "Return OK again");
+  await supervisor.settle();
+
+  expect(spawn.jobs.map((job) => job.config?.options)).toEqual([full, full, full]);
+  expect(spawn.jobs.map((job) => job.mode)).toEqual(["run", "resume", "resume"]);
+  expect(
+    listAgentSessionsForRun(fix.db, run.id).every(
+      (row) =>
+        row.config_json?.options.sandbox === "danger-full-access" &&
+        row.config_json.options.approval_policy === "never",
+    ),
+  ).toBe(true);
+  expect(getRun(fix.db, run.id)?.plan_json).toEqual(run.plan_json);
+});
+
+it("refuses incompatible Codex permissions from host preferences instead of dropping them", async () => {
+  process.env.OTOMAT_CODEX_HELP_FIXTURE = stubFixture("codex-exec-help-0.153.4.txt");
+  writeFileSync(stateFile, "ok");
+  writeExecutionDefaults(fix.db, {
+    runtime: "codex",
+    model: null,
+    options: { sandbox: "workspace-write", approval_policy: "on-request" },
+  });
+  const { supervisor, spawn } = makeSupervisor(fix, "complete");
+  await expect(supervisor.start({ prompt: "Return OK", runtime: "codex" })).rejects.toBeInstanceOf(
+    ProfileOptionUnsupportedError,
+  );
+  expect(listRuns(fix.db)).toEqual([]);
+  expect(spawn.jobs).toEqual([]);
 });
