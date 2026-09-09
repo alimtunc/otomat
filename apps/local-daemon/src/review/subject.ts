@@ -13,17 +13,18 @@ import {
 import type { ReviewContext, ReviewSubject, ReviewSubjectRef } from "./types.js";
 
 function runSubject(ctx: ReviewContext, id: string, owner: string): ReviewSubject {
+  const pullRequest = () => getPullRequestForRun(ctx.db, id) ?? null;
   return {
     id,
     ledgerRunId: id,
     snapshot: () => {
       const binding = ctx.repositories.forRun(id);
       if (binding === null) return null;
-      return diffSnapshotOrNull(binding.service, owner, runDiffBaseRef(ctx.db, id));
+      return diffSnapshotOrNull(binding.service, owner, runDiffBaseRef(pullRequest()));
     },
     fixAuthority: () => getFixAuthority(ctx, id),
     destinations: () => getDestinationAvailability(ctx, id),
-    pullRequest: () => getPullRequestForRun(ctx.db, id) ?? null,
+    pullRequest,
   };
 }
 

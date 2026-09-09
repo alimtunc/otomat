@@ -1,15 +1,14 @@
 import {
-  BRANCH_DIFF_SCOPE,
+  DEFAULT_DIFF_SCOPE,
+  RUN_DIFF_SCOPE_PARAM_KINDS,
   type RunDiffScopeParams,
   type RunDiffScopeSelector,
 } from "@otomat/domain";
 
-const SCOPE_KINDS = ["commit", "step", "session", "pull_request"] as const;
-
 export type DiffScopeSearch = Partial<RunDiffScopeParams>;
 
 function readScopeKind(value: unknown): DiffScopeSearch["scope"] {
-  return SCOPE_KINDS.find((kind) => kind === value);
+  return RUN_DIFF_SCOPE_PARAM_KINDS.find((kind) => kind === value);
 }
 
 export function readDiffScopeSearch(search: Record<string, unknown>): DiffScopeSearch {
@@ -25,7 +24,7 @@ export function readDiffScopeSearch(search: Record<string, unknown>): DiffScopeS
   return parsed;
 }
 
-/** A scope naming nothing usable falls back to the branch instead of asking the daemon a question it cannot answer. */
+/** A scope naming nothing usable falls back to the subject's default instead of asking the daemon a question it cannot answer. */
 export function toDiffScopeSelector(search: DiffScopeSearch): RunDiffScopeSelector {
   if (search.scope === "commit" && search.commit) {
     return { kind: "commit", commit: search.commit };
@@ -35,5 +34,6 @@ export function toDiffScopeSelector(search: DiffScopeSearch): RunDiffScopeSelect
     return { kind: "session", session: search.session };
   }
   if (search.scope === "pull_request") return { kind: "pull_request" };
-  return BRANCH_DIFF_SCOPE;
+  if (search.scope === "branch") return { kind: "branch" };
+  return DEFAULT_DIFF_SCOPE;
 }

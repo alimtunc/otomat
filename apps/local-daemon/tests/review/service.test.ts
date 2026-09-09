@@ -123,14 +123,14 @@ async function addComment(
 }
 
 function currentAnchor() {
-  const diff = review.getDiff(runTarget()).diff;
+  const diff = review.getDiff(runTarget(), BRANCH_DIFF_SCOPE).diff;
   const file = diff?.files.find((f) => f.path === "notes.md");
   if (!file) throw new Error("expected notes.md in the diff");
   return file;
 }
 
 it("computes the real git diff for the run's worktree and null without one", () => {
-  const withWorktree = review.getDiff(runTarget());
+  const withWorktree = review.getDiff(runTarget(), BRANCH_DIFF_SCOPE);
   expect(withWorktree.diff?.files.map((f) => f.path)).toEqual(["notes.md"]);
   expect(withWorktree.diff?.additions).toBe(3);
 
@@ -142,7 +142,7 @@ it("computes the real git diff for the run's worktree and null without one", () 
     sessionStatus: "terminated",
   });
   const bare = getRun(fix.db, "r-bare");
-  expect(bare && review.getDiff(runTarget("r-bare")).diff).toBeNull();
+  expect(bare && review.getDiff(runTarget("r-bare"), BRANCH_DIFF_SCOPE).diff).toBeNull();
 });
 
 it("pins a comment to the live diff, snapshots its hunk, and opens the review", async () => {
@@ -218,7 +218,7 @@ it("serves supported binary media as exact bytes", () => {
   const bytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 1]);
   writeFileSync(join(worktreePath, "preview.png"), bytes);
   const file = review
-    .getDiff(runTarget())
+    .getDiff(runTarget(), BRANCH_DIFF_SCOPE)
     .diff?.files.find((candidate) => candidate.path === "preview.png");
   if (!file) throw new Error("expected preview.png in the diff");
 
@@ -250,7 +250,9 @@ it("refuses a path that is not part of the current diff", () => {
 
 it("reads a modified file's base side from the fork point, not from the worktree", () => {
   writeFileSync(join(worktreePath, "README.md"), "# base\nplus a line\n");
-  const file = review.getDiff(runTarget()).diff?.files.find((f) => f.path === "README.md");
+  const file = review
+    .getDiff(runTarget(), BRANCH_DIFF_SCOPE)
+    .diff?.files.find((f) => f.path === "README.md");
   if (!file) throw new Error("expected README.md in the diff");
 
   const blobs = review.getFileBlobs(runTarget(), {
@@ -375,7 +377,9 @@ it("keeps a symlinked path's fix context to the link target text, never the host
   writeFileSync(secretPath, "TOP-SECRET\n");
   symlinkSync(secretPath, join(worktreePath, "leak"));
 
-  const anchor = review.getDiff(runTarget()).diff?.files.find((f) => f.path === "leak");
+  const anchor = review
+    .getDiff(runTarget(), BRANCH_DIFF_SCOPE)
+    .diff?.files.find((f) => f.path === "leak");
   if (!anchor) throw new Error("expected leak in the diff");
   await addComment(runTarget(), {
     file_path: "leak",

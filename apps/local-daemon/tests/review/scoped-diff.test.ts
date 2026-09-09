@@ -12,7 +12,7 @@ import {
   recordSessionPassStart,
   type RunRow,
 } from "@otomat/db";
-import { BRANCH_DIFF_SCOPE, type RunDiffScopeSelector } from "@otomat/domain";
+import { BRANCH_DIFF_SCOPE, DEFAULT_DIFF_SCOPE, type RunDiffScopeSelector } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createRepositoryResolver, type GitWorktreeService } from "#git";
@@ -35,8 +35,12 @@ let worktrees: GitWorktreeService;
 let review: ReviewService;
 let worktreePath = "";
 
+function gitIn(cwd: string, ...args: string[]): string {
+  return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
+}
+
 function git(...args: string[]): string {
-  return execFileSync("git", args, { cwd: worktreePath, encoding: "utf8" }).trim();
+  return gitIn(worktreePath, ...args);
 }
 
 function run(): RunRow {
@@ -408,6 +412,165 @@ it("shows the published head against the branch it targets, not everything the b
   expect(result.unavailable).toBeNull();
   expect(result.diff?.files.map((file) => file.path)).toEqual(["feature.md"]);
   expect(result.scope).toEqual({ kind: "pull_request", number: 79 });
+});
+
+/** A clone whose `main` stayed where it was pulled while `origin/main` moved on. */
+function advanceOriginPast(...unrelated: string[]): string {
+  fix.repo.git("checkout", "--quiet", "-b", "upstream-work", "main");
+  for (const path of unrelated) {
+    fix.repo.write(path, `landed on main before the run forked: ${path}\n`);
+    fix.repo.commitAll(`upstream: ${path}`);
+  }
+  fix.repo.git("push", "--quiet", "origin", "upstream-work:main");
+  fix.repo.git("checkout", "--quiet", "main");
+  fix.repo.git("fetch", "--quiet", "origin");
+  return fix.repo.git("rev-parse", "origin/main").trim();
+}
+
+/** Worktree of a run acquired at the fetched remote tip, exactly as `resolveBaseSha` hands it to a launch. */
+function runForkedFromOrigin(runId: string, originTip: string): string {
+  const acquired = worktrees.acquire({
+    owner: runId,
+    branch: `otomat/run/${runId}`,
+    baseSha: originTip,
+  });
+  seedRun(fix.db, {
+    runId,
+    repositoryId: "repo-1",
+    worktreeId: acquired.id,
+    runStatus: "review_ready",
+    stepStatus: "succeeded",
+    sessionStatus: "terminated",
+  });
+  return acquired.path;
+}
+
+function commitFeatureOn(worktree: string): string {
+  writeFileSync(join(worktree, "feature.md"), "the only file the PR carries\n");
+  gitIn(worktree, "add", "-A");
+  gitIn(worktree, "commit", "-m", "feature");
+  return gitIn(worktree, "rev-parse", "HEAD");
+}
+
+function insertPullRequestForRun(runId: string, id: string, number: number, head: string): void {
+  insertPullRequest(fix.db, {
+    id,
+    issue_id: "i1",
+    run_id: runId,
+    repository_id: "repo-1",
+    status: "open",
+    publication_status: "created",
+    title: "Feature",
+    head_ref: `otomat/run/${runId}`,
+    number,
+    base_ref: "main",
+    published_head_sha: head,
+  });
+}
+
+it("measures a pull request against the base the remote publishes, not against a local branch left behind", () => {
+  const originTip = advanceOriginPast("unrelated-a.md", "unrelated-b.md", "unrelated-c.md");
+  const target = { kind: "run", id: "r-stale-pr" } as const;
+  const forked = runForkedFromOrigin(target.id, originTip);
+  const published = commitFeatureOn(forked);
+  insertPullRequestForRun(target.id, "pr-stale-base", 224, published);
+
+  const pullRequest = review.getDiff(target, PULL_REQUEST);
+  const branchDiff = review.getDiff(target, BRANCH_DIFF_SCOPE);
+
+  expect(pullRequest.diff?.files.map((file) => file.path)).toEqual(["feature.md"]);
+  expect(pullRequest.diff?.base).toBe(originTip);
+  expect(branchDiff.diff?.files.map((file) => file.path)).toEqual(["feature.md"]);
+  expect(branchDiff.diff?.base).toBe(originTip);
+});
+
+it("answers a pull request opened as its own subject with the same patch its run does", () => {
+  const originTip = advanceOriginPast("unrelated-a.md", "unrelated-b.md");
+  const target = { kind: "run", id: "r-opened-pr" } as const;
+  const published = commitFeatureOn(runForkedFromOrigin(target.id, originTip));
+  insertPullRequestForRun(target.id, "pr-opened", 224, published);
+
+  const fromRun = review.getDiff(target, PULL_REQUEST);
+  const opened = review.getDiff({ kind: "pull_request", id: "pr-opened" }, DEFAULT_DIFF_SCOPE);
+
+  expect(opened.diff?.sha).toBe(fromRun.diff?.sha);
+  expect(opened.diff?.files.map((file) => file.path)).toEqual(["feature.md"]);
+});
+
+it("defaults a run to its pull request, and to its branch when it has none", () => {
+  writeFileSync(join(worktreePath, "uncommitted.md"), "still in the worktree\n");
+  commit("feature");
+
+  expect(review.getDiff(TARGET, DEFAULT_DIFF_SCOPE).scope).toMatchObject({ kind: "branch" });
+
+  insertRunPullRequest({
+    id: "pr-default",
+    number: 82,
+    base_ref: "main",
+    published_head_sha: git("rev-parse", "HEAD"),
+  });
+
+  const defaulted = review.getDiff(TARGET, DEFAULT_DIFF_SCOPE);
+
+  expect(defaulted.scope).toEqual({ kind: "pull_request", number: 82 });
+  expect(defaulted.diff?.files.map((file) => file.path)).toEqual(["uncommitted.md"]);
+});
+
+it("keeps an explicitly chosen branch as its own answer, never re-read as the default", () => {
+  writeFileSync(join(worktreePath, "uncommitted.md"), "still in the worktree\n");
+  commit("feature");
+  insertRunPullRequest({
+    id: "pr-explicit",
+    number: 83,
+    base_ref: "main",
+    published_head_sha: git("rev-parse", "HEAD"),
+  });
+
+  expect(review.getDiff(TARGET, BRANCH_DIFF_SCOPE).scope).toMatchObject({ kind: "branch" });
+});
+
+it("defaults to the branch when a publication left a pull request row with no head", () => {
+  writeFileSync(join(worktreePath, "uncommitted.md"), "still in the worktree\n");
+  commit("feature");
+  insertRunPullRequest({ id: "pr-unpublished-default", number: null, base_ref: "main" });
+
+  const defaulted = review.getDiff(TARGET, DEFAULT_DIFF_SCOPE);
+
+  expect(defaulted.scope).toMatchObject({ kind: "branch" });
+  expect(defaulted.diff?.files.map((file) => file.path)).toEqual(["uncommitted.md"]);
+});
+
+it("freezes the default at the published head while the branch moves past it", () => {
+  writeFileSync(join(worktreePath, "published.md"), "in the pull request\n");
+  const published = commit("published");
+  insertRunPullRequest({
+    id: "pr-moved-on",
+    number: 84,
+    base_ref: "main",
+    published_head_sha: published,
+  });
+  writeFileSync(join(worktreePath, "after.md"), "landed after the push\n");
+  commit("after the push");
+
+  const defaulted = review.getDiff(TARGET, DEFAULT_DIFF_SCOPE);
+  const branchDiff = review.getDiff(TARGET, BRANCH_DIFF_SCOPE);
+
+  expect(defaulted.scope).toEqual({ kind: "pull_request", number: 84 });
+  expect(defaulted.diff?.files.map((file) => file.path)).toEqual(["published.md"]);
+  expect(branchDiff.diff?.files.map((file) => file.path)).toEqual(["after.md", "published.md"]);
+
+  const file = defaulted.diff?.files[0];
+  if (file === undefined) throw new Error("the default patch carried no file");
+  const comment = review.addComment(TARGET, {
+    file_path: file.path,
+    diff_sha: file.sha,
+    side: "new",
+    line: 1,
+    body: "from the default view",
+    destination: "agent",
+  });
+
+  expect(comment.diff_sha).toBe(file.sha);
 });
 
 it("names an unpublished pull request as such rather than answering with its branch diff", () => {

@@ -48,6 +48,7 @@ export type ReviewDiffContract = z.infer<typeof reviewDiffContractSchema>;
 
 /** What a caller asks a diff read for; the response echoes back the scope that answered. */
 const runDiffScopeSelectorSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("default") }),
   z.object({ kind: z.literal("branch") }),
   z.object({ kind: z.literal("commit"), commit: z.string().min(1) }),
   z.object({ kind: z.literal("step"), step: z.string().min(1) }),
@@ -58,18 +59,33 @@ export type RunDiffScopeSelector = z.infer<typeof runDiffScopeSelectorSchema>;
 
 export const BRANCH_DIFF_SCOPE: RunDiffScopeSelector = { kind: "branch" };
 
+/** The subject's own default: its pull request once one records a head, its branch otherwise. */
+export const DEFAULT_DIFF_SCOPE: RunDiffScopeSelector = { kind: "default" };
+
 /** Every key the selector can occupy, so switching scope clears the one the previous scope named. */
 export type RunDiffScopeParams = {
-  scope: Exclude<RunDiffScopeSelector["kind"], "branch"> | undefined;
+  scope: Exclude<RunDiffScopeSelector["kind"], "default"> | undefined;
   commit: string | undefined;
   step: string | undefined;
   session: string | undefined;
 };
 
+type RunDiffScopeParamKind = NonNullable<RunDiffScopeParams["scope"]>;
+
+const PARAM_KIND = {
+  branch: "branch",
+  commit: "commit",
+  step: "step",
+  session: "session",
+  pull_request: "pull_request",
+} as const satisfies Record<RunDiffScopeParamKind, RunDiffScopeParamKind>;
+
+export const RUN_DIFF_SCOPE_PARAM_KINDS = Object.values(PARAM_KIND);
+
 /** The selector as query parameters — one spelling shared by the client, the cockpit's URL and its query keys. */
 export function runDiffScopeParams(selector: RunDiffScopeSelector): RunDiffScopeParams {
   return {
-    scope: selector.kind === "branch" ? undefined : selector.kind,
+    scope: selector.kind === "default" ? undefined : selector.kind,
     commit: selector.kind === "commit" ? selector.commit : undefined,
     step: selector.kind === "step" ? selector.step : undefined,
     session: selector.kind === "session" ? selector.session : undefined,

@@ -1,6 +1,6 @@
 import {
   runDiffScopeParams,
-  BRANCH_DIFF_SCOPE,
+  DEFAULT_DIFF_SCOPE,
   type ExecutionHostId,
   type ReviewTarget,
   type RunDiffScopeSelector,
@@ -9,7 +9,7 @@ import {
 
 function runDiffScopeKey(scope: RunDiffScopeSelector): string {
   const params = runDiffScopeParams(scope);
-  return `${params.scope ?? "branch"}:${params.commit ?? params.step ?? params.session ?? ""}`;
+  return `${params.scope ?? "default"}:${params.commit ?? params.step ?? params.session ?? ""}`;
 }
 
 /**
@@ -78,13 +78,15 @@ export function hostKeys(host: ExecutionHostId) {
     runInteractions: (id: string) => [host, "run", id, "interactions"] as const,
     sessionContext: (runId: string, agentSessionId: string) =>
       [host, "run", runId, "session", agentSessionId, "context"] as const,
-    reviewDiff: (target: ReviewTarget, scope: RunDiffScopeSelector = BRANCH_DIFF_SCOPE) =>
+    reviewDiffs: (target: ReviewTarget) =>
+      [host, "review", target.kind, target.id, "diff"] as const,
+    reviewDiff: (target: ReviewTarget, scope: RunDiffScopeSelector = DEFAULT_DIFF_SCOPE) =>
       [host, "review", target.kind, target.id, "diff", runDiffScopeKey(scope)] as const,
     reviewDiffFileBlobs: (
       target: ReviewTarget,
       path: string,
       sha: string,
-      scope: RunDiffScopeSelector = BRANCH_DIFF_SCOPE,
+      scope: RunDiffScopeSelector = DEFAULT_DIFF_SCOPE,
     ) =>
       [
         host,

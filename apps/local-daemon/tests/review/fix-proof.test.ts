@@ -9,6 +9,7 @@ import {
   type ReviewCommentRow,
   type RunRow,
 } from "@otomat/db";
+import { BRANCH_DIFF_SCOPE } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createRepositoryResolver, type GitWorktreeService } from "#git";
@@ -39,7 +40,7 @@ function write(lines: string[]): void {
 }
 
 async function comment(line: number, startLine: number | null = null): Promise<ReviewCommentRow> {
-  const diff = review.getDiff({ kind: "run", id: RUN_ID }).diff;
+  const diff = review.getDiff({ kind: "run", id: RUN_ID }, BRANCH_DIFF_SCOPE).diff;
   const file = diff?.files.find((entry) => entry.path === "notes.md");
   if (!file) throw new Error("expected notes.md in the diff");
   return review.addComment(
@@ -224,7 +225,7 @@ it("reports an unavailable proof for a comment no pass addressed", async () => {
 });
 
 it("falls back to the file's whole delta for a whole-file anchor, and says so", async () => {
-  const diff = review.getDiff({ kind: "run", id: RUN_ID }).diff;
+  const diff = review.getDiff({ kind: "run", id: RUN_ID }, BRANCH_DIFF_SCOPE).diff;
   const file = diff?.files.find((entry) => entry.path === "notes.md");
   if (!file) throw new Error("expected notes.md in the diff");
   const target = await review.addComment(

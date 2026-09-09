@@ -1,5 +1,5 @@
 import {
-  BRANCH_DIFF_SCOPE,
+  DEFAULT_DIFF_SCOPE,
   type ReviewDetail,
   type ReviewDiffContract,
   type ReviewTarget,
@@ -42,7 +42,7 @@ export interface ReviewWorkbenchProps {
 export function ReviewWorkbench({
   target,
   workspace,
-  scope = BRANCH_DIFF_SCOPE,
+  scope = DEFAULT_DIFF_SCOPE,
   answered,
   scopeControl,
   diff,

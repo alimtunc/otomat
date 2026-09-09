@@ -37,12 +37,11 @@ function unavailable(scope: RunDiffScope, reason: string): ScopedDiff {
 }
 
 function resolveBranch(
-  ctx: ReviewContext,
   service: GitWorktreeService,
-  runId: string,
   owner: string,
+  pullRequest: PullRequestRow | null,
 ): ScopedDiff {
-  const resolved = branchDiffOrNull(service, owner, runDiffBaseRef(ctx.db, runId));
+  const resolved = branchDiffOrNull(service, owner, runDiffBaseRef(pullRequest));
   if (resolved === null) {
     return unavailable({ kind: "branch", branch: null, base_ref: null }, NO_WORKTREE);
   }
@@ -145,6 +144,13 @@ function resolveStep(
     : { scope, snapshot, unavailable: null };
 }
 
+/** A publication that never reached GitHub leaves a row with no head, which is not a patch to default to. */
+function hasRecordedHead(row: PullRequestRow | null): boolean {
+  if (row === null) return false;
+  const anchor = reviewAnchorSha(row);
+  return anchor !== null && anchor !== "";
+}
+
 function resolvePullRequest(
   row: PullRequestRow | null,
   binding: RepositoryBinding | null,
@@ -152,8 +158,7 @@ function resolvePullRequest(
   const scope: RunDiffScope = { kind: "pull_request", number: row?.number ?? null };
   if (row === null) return unavailable(scope, NO_PULL_REQUEST);
   if (binding === null) return unavailable(scope, NO_REPOSITORY);
-  const anchor = reviewAnchorSha(row);
-  if (anchor === null || anchor === "") return unavailable(scope, NO_HEAD_RECORDED);
+  if (!hasRecordedHead(row)) return unavailable(scope, NO_HEAD_RECORDED);
   const trees = pullRequestTrees(row, binding);
   return trees === null
     ? unavailable(scope, NO_PUBLISHED_HEAD)
@@ -189,8 +194,12 @@ export function resolveScope(
   if (request.kind === "session") {
     return resolveSession(ctx, binding.service, ref.id, request.session);
   }
-  if (request.kind === "pull_request") {
-    return resolvePullRequest(getPullRequestForRun(ctx.db, ref.id) ?? null, binding);
+  const pullRequest = getPullRequestForRun(ctx.db, ref.id) ?? null;
+  if (
+    request.kind === "pull_request" ||
+    (request.kind === "default" && hasRecordedHead(pullRequest))
+  ) {
+    return resolvePullRequest(pullRequest, binding);
   }
-  return resolveBranch(ctx, binding.service, ref.id, ref.owner ?? ref.id);
+  return resolveBranch(binding.service, ref.owner ?? ref.id, pullRequest);
 }

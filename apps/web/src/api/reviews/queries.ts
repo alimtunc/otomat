@@ -1,11 +1,11 @@
-import { BRANCH_DIFF_SCOPE, type ReviewTarget, type RunDiffScopeSelector } from "@otomat/domain";
+import { DEFAULT_DIFF_SCOPE, type ReviewTarget, type RunDiffScopeSelector } from "@otomat/domain";
 import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { useQueryKeys } from "@web/api/use-query-keys";
 
 export function useReviewDiff(
   target: ReviewTarget,
-  scope: RunDiffScopeSelector = BRANCH_DIFF_SCOPE,
+  scope: RunDiffScopeSelector = DEFAULT_DIFF_SCOPE,
 ) {
   const keys = useQueryKeys();
   return useQuery({

@@ -7,6 +7,7 @@ it("keys each diff scope apart so one never serves another's files", () => {
   const target = { kind: "run", id: "run-1" } as const;
   const keys = [
     local.reviewDiff(target),
+    local.reviewDiff(target, { kind: "branch" }),
     local.reviewDiff(target, { kind: "step", step: "s1" }),
     local.reviewDiff(target, { kind: "step", step: "s2" }),
     local.reviewDiff(target, { kind: "session", session: "s1" }),

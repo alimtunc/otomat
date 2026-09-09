@@ -23,10 +23,11 @@ export function RunDiffView() {
       }}
       emptyDescription={NO_WORKTREE}
       scope={diffScope.selector}
-      scopeControl={(scope) => (
+      scopeControl={(scope, diff) => (
         <DiffScopeControl
           runId={runId}
           scope={scope}
+          diff={diff}
           steps={run.data === undefined ? NO_STEPS : runDiffSteps(run.data)}
           onSelect={diffScope.select}
         />

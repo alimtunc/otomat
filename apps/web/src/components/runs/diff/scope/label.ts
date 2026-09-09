@@ -1,4 +1,4 @@
-import { shortSha, type RunDiffScope } from "@otomat/domain";
+import { shortSha, type ReviewDiffContract, type RunDiffScope } from "@otomat/domain";
 
 export function diffScopeSummary(scope: RunDiffScope): string {
   if (scope.kind === "commit") return `Commit ${scope.short_sha}`;
@@ -8,7 +8,7 @@ export function diffScopeSummary(scope: RunDiffScope): string {
   return scope.branch === null ? "Branch" : `Branch · ${scope.branch}`;
 }
 
-export function diffScopeDetail(scope: RunDiffScope): string {
+function scopeSentence(scope: RunDiffScope): string {
   if (scope.kind === "commit") {
     return scope.parent === null
       ? `${scope.subject} — a root commit, shown against the empty tree.`
@@ -27,6 +27,13 @@ export function diffScopeDetail(scope: RunDiffScope): string {
     return "No branch could be resolved for this run.";
   }
   return `${scope.branch} against ${scope.base_ref}, uncommitted work included.`;
+}
+
+/** Only a pull request spans two commits; every other scope ends on a tree id no history holds. */
+export function diffScopeDetail(scope: RunDiffScope, diff: ReviewDiffContract | null): string {
+  const sentence = scopeSentence(scope);
+  if (diff === null || scope.kind !== "pull_request") return sentence;
+  return `${sentence} Spans ${shortSha(diff.base)} → ${shortSha(diff.head)}.`;
 }
 
 export function diffScopeEmptyDescription(scope: RunDiffScope): string {

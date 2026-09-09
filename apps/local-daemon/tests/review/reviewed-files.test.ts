@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { insertPullRequest, listReviewedFilesForSubject, writeGitHubViewer } from "@otomat/db";
+import { BRANCH_DIFF_SCOPE } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createRepositoryResolver, type GitWorktreeService } from "#git";
@@ -79,7 +80,9 @@ afterEach(() => {
 });
 
 function fileSha(path: string): string {
-  const file = review.getDiff(RUN).diff?.files.find((candidate) => candidate.path === path);
+  const file = review
+    .getDiff(RUN, BRANCH_DIFF_SCOPE)
+    .diff?.files.find((candidate) => candidate.path === path);
   if (!file) throw new Error(`expected ${path} in the diff`);
   return file.sha;
 }
@@ -125,7 +128,9 @@ it("pins the mark to the content it was made against, leaving the other files al
 
   writeFileSync(join(worktreePath, "notes.md"), "alpha\nbeta\ndelta\n");
   const marks = review.getReviewDetail(RUN).reviewedFiles;
-  const live = new Map(review.getDiff(RUN).diff?.files.map((file) => [file.path, file.sha]));
+  const live = new Map(
+    review.getDiff(RUN, BRANCH_DIFF_SCOPE).diff?.files.map((file) => [file.path, file.sha]),
+  );
 
   expect(marks.find((mark) => mark.file_path === "notes.md")?.diff_sha).toBe(staleSha);
   expect(live.get("notes.md")).not.toBe(staleSha);
