@@ -1,5 +1,8 @@
 import {
   PROVIDER_OPTION_KEYS,
+  isCodexPermissionKey,
+  codexPermissionProblem,
+  providerOptionDefault,
   resolveExecutionModel,
   resolveExecutionOption,
   type AgentProfileContract,
@@ -37,6 +40,7 @@ export interface ExecutionConfig {
   model: ResolvedExecutionValue<ModelSelection>;
   options: ResolvedExecutionOption[];
   stale: ProviderOptionKey[];
+  permissionProblem: string | null;
   catalog: RuntimeModelCatalog | undefined;
   catalogPending: boolean;
   catalogError: boolean;
@@ -84,10 +88,13 @@ export function useExecutionConfig({
     announced.data === undefined
       ? []
       : PROVIDER_OPTION_KEYS.filter((key) => {
-          const selection = value.options[key];
-          if (selection?.kind !== "value") return false;
+          const resolved = resolveExecutionOption(levels, key);
+          if (resolved.source === "global" && !(runtimeId === "codex" && isCodexPermissionKey(key)))
+            return false;
+          const selection = resolved.value;
+          if (selection === null) return false;
           const descriptor = descriptors.find((candidate) => candidate.key === key);
-          return !descriptor?.choices.some((choice) => choice.value === selection.value);
+          return !descriptor?.choices.some((choice) => choice.value === selection);
         });
 
   return {
@@ -97,6 +104,17 @@ export function useExecutionConfig({
     model,
     options,
     stale,
+    permissionProblem:
+      runtimeId === "codex"
+        ? codexPermissionProblem(
+            Object.fromEntries(
+              options.map((option) => [
+                option.key,
+                option.resolved.value ?? providerOptionDefault(option.descriptor) ?? undefined,
+              ]),
+            ),
+          )
+        : null,
     catalog: catalog.data,
     catalogPending: runtimeId !== null && catalog.isPending,
     catalogError: catalog.isError,

@@ -32,6 +32,32 @@ export const CODEX_ANNOUNCED = providerOptionSet({
   detection: { status: "ok", detail: "Announced by `codex exec --help`." },
   options: [
     {
+      key: "approvals_reviewer",
+      description: "Automatic review keeps the sandbox and may deny a request.",
+      choices: [
+        { value: "user", description: "No automatic review.", dangerous: false },
+        {
+          value: "auto_review",
+          description: "Approve for me requires on-request.",
+          dangerous: false,
+        },
+      ],
+      default_value: null,
+    },
+    {
+      key: "approval_policy",
+      description: "When approval is requested.",
+      choices: [
+        { value: "never", description: "No approval requests.", dangerous: false },
+        {
+          value: "on-request",
+          description: "Requires automatic review in exec.",
+          dangerous: false,
+        },
+      ],
+      default_value: null,
+    },
+    {
       key: "sandbox",
       description: "What the OS-level sandbox lets Codex write while it runs.",
       choices: [

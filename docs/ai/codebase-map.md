@@ -137,13 +137,16 @@ host/environment, CLI version, requested and resolved sandbox, exit/stderr and
 the relevant user/network-namespace settings; they never substitute an
 unconfined mode.
 
-Codex permissions follow the installed `exec` contract. When that command has no
-approval flag, only explicit `never` is supported through a config override;
-incompatible frozen policies are refused before the turn starts. Native resume
-preflights pending/session configuration before falling back to the immutable
-plan. The session UI distinguishes requested permissions from unreported
-effective values and offers an external resume command with explicit settings.
-See [Codex permission evidence and external resume](codex-permissions.md).
+Codex permissions keep sandbox, approval policy and approvals reviewer separate.
+The installed exec help or reviewer feature listing establishes automatic-review
+support. `Approve for me` sends `approvals_reviewer="auto_review"` and
+`approval_policy="on-request"` as config overrides, preserving the chosen confined
+sandbox. Unsupported or contradictory frozen settings fail before spawning;
+there is no automatic full-access fallback. Resume and recovery select pending →
+latest session → immutable plan configuration. The session UI displays requested
+permissions, the launch log records transmitted arguments, and effective settings
+remain unconfirmed when exec JSONL does not report them.
+See [Codex permissions and external resume](codex-permissions.md).
 
 A published catalog is a contract that moves: Codex 0.147 lists a reasoning level
 as `{ effort, description }` where earlier releases listed the bare identifier.

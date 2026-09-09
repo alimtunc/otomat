@@ -60,7 +60,7 @@ it.each(["run", "resume"] as const)(
 it("offers only the approval policy exec can honor, without selecting it implicitly", () => {
   const support = new CodexRuntimeAdapter(STUB_BIN).describeOptions(null);
   expect(support.options.find((option) => option.key === "approval_policy")).toMatchObject({
-    choices: [{ value: "never" }],
+    choices: [{ value: "never" }, { value: "on-request" }],
     default_value: null,
   });
   expect(support.detection.detail).toContain("non-interactive");

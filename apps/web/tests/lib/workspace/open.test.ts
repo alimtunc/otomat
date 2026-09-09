@@ -64,4 +64,21 @@ it("copies explicit Codex permissions, with every session and path byte shell-qu
   expect(codexResumeCommand("thread", { ...config, options: {}, model: null }, "/work")).toBe(
     "'codex' 'resume' '--cd' '/work' '--' 'thread'",
   );
+  const reviewed = codexResumeCommand(
+    "thread",
+    {
+      ...config,
+      options: {
+        sandbox: "read-only",
+        approval_policy: "on-request",
+        approvals_reviewer: "auto_review",
+      },
+    },
+    "/work",
+  );
+  expect(reviewed).toContain(
+    "'--sandbox' 'read-only' '--ask-for-approval' 'on-request' '-c' 'approvals_reviewer=\"auto_review\"'",
+  );
+  expect(reviewed).not.toContain("--approve-for-me");
+  expect(reviewed).not.toContain("danger-full-access");
 });

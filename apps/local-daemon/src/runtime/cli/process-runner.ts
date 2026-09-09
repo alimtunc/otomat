@@ -21,6 +21,7 @@ export interface CliProcessOptions {
   signal: AbortSignal;
   onStdoutLine: (line: string) => void;
   onStderrLine: (line: string) => void;
+  onSpawn?: () => void;
 }
 
 export interface CliProcessExit {
@@ -74,6 +75,7 @@ export function runCliProcess(options: CliProcessOptions): Promise<CliProcessExi
 
     createInterface({ input: child.stdout }).on("line", options.onStdoutLine);
     createInterface({ input: child.stderr }).on("line", options.onStderrLine);
+    if (options.onSpawn) child.once("spawn", options.onSpawn);
 
     child.on("error", (error) => {
       cleanup();

@@ -43,6 +43,7 @@ export interface CliTurnSpec {
   cwd: string;
   ref: TurnRef;
   streamStdin?: CliProcessOptions["streamStdin"];
+  startMessage?: string;
   createMapper(emitter: TurnEmitter): ProviderFrameMapper;
 }
 
@@ -109,6 +110,10 @@ export async function runCliTurn(
       signal: AbortSignal.any([signal, dispatchAbort.signal]),
       onStdoutLine: (line) => guarded(() => dispatchStdoutLine(line, emitter, mapper)),
       onStderrLine: (line) => guarded(() => emitter.log("stderr", line)),
+      onSpawn: () =>
+        guarded(() => {
+          if (spec.startMessage !== undefined) emitter.daemonLog(spec.startMessage);
+        }),
     });
     if (dispatchError !== null) {
       return failedState(spec.adapter, dispatchError, mapper.outcome, emitter.emitted);

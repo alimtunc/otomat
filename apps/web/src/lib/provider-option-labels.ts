@@ -6,6 +6,7 @@ const KEY_LABELS = {
   effort: "Effort",
   sandbox: "Sandbox",
   approval_policy: "Approval policy",
+  approvals_reviewer: "Approval reviewer",
   reasoning_effort: "Reasoning effort",
 } satisfies Record<ProviderOptionKey, string>;
 
@@ -23,6 +24,13 @@ const PERMISSION_MODE_LABELS = new Map<string, string>([
 /** One option's vocabulary, which another option announcing the same value does not share. */
 const KEY_VALUE_LABELS = new Map<ProviderOptionKey, Map<string, string>>([
   ["permission_mode", PERMISSION_MODE_LABELS],
+  [
+    "approvals_reviewer",
+    new Map([
+      ["user", "No automatic review"],
+      ["auto_review", "Approve for me"],
+    ]),
+  ],
 ]);
 
 /** Values whose plain humanization would misread, whichever option announced them. */

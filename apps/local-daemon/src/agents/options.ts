@@ -1,5 +1,8 @@
 import {
   PROVIDER_OPTION_KEYS,
+  codexApprovalPolicy,
+  codexPermissionProblem,
+  isCodexPermissionKey,
   providerOptionDefault,
   providerOptionDescriptor,
   resolveExecutionOption,
@@ -13,6 +16,7 @@ import {
 } from "@otomat/domain";
 
 import { describeProviderOptions, type KnownRuntimeId } from "#runtime";
+import { codexApprovalArgs } from "#runtime/providers/codex/approval";
 
 import { ProfileOptionUnsupportedError } from "./errors.js";
 
@@ -50,6 +54,8 @@ export function assertOptionsAnnounced(
   model: ResolvedModel | null,
   options: ProviderOptions,
 ): void {
+  const problem = runtime === "codex" ? codexPermissionProblem(options) : null;
+  if (problem !== null) throw new ProfileOptionUnsupportedError(problem);
   const keys = PROVIDER_OPTION_KEYS.filter((key) => options[key] !== undefined);
   if (keys.length === 0) return;
   const support = describeProviderOptions(runtime, model?.id ?? null);
@@ -79,13 +85,20 @@ export function resolveOptions(
     const resolved = resolveExecutionOption(levels, key);
     if (resolved.value === null) continue;
     if (!announced(support, key, resolved.value)) {
-      const codexPermission =
-        runtime === "codex" && (key === "sandbox" || key === "approval_policy");
+      const codexPermission = runtime === "codex" && isCodexPermissionKey(key);
       if (resolved.source === "global" && !codexPermission) continue;
       throw refusal(runtime, support, key, resolved.value);
     }
     options[key] = resolved.value;
     sources[key] = resolved.source;
+  }
+  if (runtime === "codex") {
+    const policy = codexApprovalPolicy(options);
+    if (policy !== undefined && options.approval_policy === undefined) {
+      options.approval_policy = policy;
+      sources.approval_policy = "provider";
+    }
+    codexApprovalArgs("codex", options);
   }
   return { options, sources };
 }

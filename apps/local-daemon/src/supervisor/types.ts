@@ -128,7 +128,7 @@ export interface Supervisor {
     stepRunId: string,
     sessionId: string,
     currentConfigHash: string,
-    model: string,
+    model: string | null,
     options: ProviderOptions,
   ): StepRunRow;
   /** Interrupt the step's live turn without settling the run or starting dependents; the step lands `awaiting_human`, resumable on the same provider session. */

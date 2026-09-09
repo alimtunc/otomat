@@ -165,6 +165,26 @@ it("summarises the Codex keys for a Codex agent, and no Claude one", async () =>
   expect(label).not.toContain("Auto");
 });
 
+it("explains an incompatible inherited reviewer and keeps the choice visible", async () => {
+  announced = CODEX_ANNOUNCED;
+  const profile = agentProfile({
+    name: "Reviewed",
+    runtime: "codex",
+    options: {
+      approvals_reviewer: "auto_review",
+      approval_policy: "never",
+      sandbox: "workspace-write",
+    },
+  });
+  await render({ agent: encodeProfileChoice(profile.id), options: {} }, [profile]);
+  expect(triggerLabel()).toContain("Approve for me");
+  expect(document.body.textContent).toContain("With never, no request reaches automatic review");
+  await openSubmenu("Approval reviewer");
+  expect(document.body.textContent).toContain(
+    "Automatic review keeps the sandbox and may deny a request",
+  );
+});
+
 it("names each Claude permission mode as Claude does, without echoing the flag value", async () => {
   announced = CLAUDE_ANNOUNCED;
   await render({ agent: encodeRuntimeChoice("claude"), options: {} });

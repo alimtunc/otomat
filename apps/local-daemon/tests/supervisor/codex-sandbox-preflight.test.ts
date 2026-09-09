@@ -12,8 +12,7 @@ import {
 } from "@otomat/db";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { ProfileOptionUnsupportedError } from "#agents";
-import { clearProviderProbeCache } from "#runtime";
+import { clearProviderProbeCache, RuntimeUnavailableError } from "#runtime";
 import {
   clearCodexSandboxProbeCache,
   CodexSandboxUnavailableError,
@@ -133,48 +132,58 @@ it("resumes only the next runtime when an earlier Codex step is already complete
   expect(getRun(fix.db, "mixed-runtime")?.status).toBe("review_ready");
 });
 
-it("persists explicit Codex permissions through launch, Resume and follow-up after preferences change", async () => {
-  process.env.OTOMAT_CODEX_HELP_FIXTURE = stubFixture("codex-exec-help-0.153.4.txt");
-  const full = { sandbox: "danger-full-access", approval_policy: "never" };
-  const profile = {
-    name: "Explicit Full",
-    runtime: "codex",
-    model: null,
-    options_json: full,
-    guidance: null,
-    skill_ids_json: [],
-  };
-  insertAgentProfile(fix.db, { id: "full", ...profile });
-  const { supervisor, spawn } = makeSupervisor(fix, ["fail", "complete", "complete"]);
-  const run = await supervisor.start({ prompt: "Return OK", profile_id: "full" });
-  await supervisor.settle();
-  const session = listAgentSessionsForRun(fix.db, run.id).at(-1);
-  if (!session) throw new Error("expected a persisted session");
-  expect(session.config_json?.options).toEqual(full);
-  expect(getRun(fix.db, run.id)?.plan_json.steps[0]).toMatchObject({ config: { options: full } });
+it.each([
+  { sandbox: "danger-full-access", approval_policy: "never" },
+  { sandbox: "workspace-write", approval_policy: "on-request", approvals_reviewer: "auto_review" },
+])(
+  "persists %j through launch, Resume and follow-up after preferences change",
+  async (permissions) => {
+    process.env.OTOMAT_CODEX_HELP_FIXTURE = stubFixture("codex-exec-help-0.153.4.txt");
+    writeFileSync(stateFile, "ok");
+    const profile = {
+      name: "Explicit permissions",
+      runtime: "codex",
+      model: null,
+      options_json: permissions,
+      guidance: null,
+      skill_ids_json: [],
+    };
+    insertAgentProfile(fix.db, { id: "explicit-permissions", ...profile });
+    const { supervisor, spawn } = makeSupervisor(fix, ["fail", "complete", "complete"]);
+    const run = await supervisor.start({ prompt: "Return OK", profile_id: "explicit-permissions" });
+    await supervisor.settle();
+    const session = listAgentSessionsForRun(fix.db, run.id).at(-1);
+    if (!session) throw new Error("expected a persisted session");
+    expect(session.config_json?.options).toEqual(permissions);
+    expect(getRun(fix.db, run.id)?.plan_json.steps[0]).toMatchObject({
+      config: { options: permissions },
+    });
 
-  updateAgentProfile(fix.db, "full", { ...profile, options_json: { sandbox: "read-only" } });
-  writeExecutionDefaults(fix.db, {
-    runtime: "codex",
-    model: null,
-    options: { sandbox: "read-only" },
-  });
-  await supervisor.resume(run.id);
-  await supervisor.settle();
-  await contributeToStep(fix.db, supervisor, run.id, session.step_run_id, "Return OK again");
-  await supervisor.settle();
+    updateAgentProfile(fix.db, "explicit-permissions", {
+      ...profile,
+      options_json: { sandbox: "read-only" },
+    });
+    writeExecutionDefaults(fix.db, {
+      runtime: "codex",
+      model: null,
+      options: { sandbox: "read-only" },
+    });
+    await supervisor.resume(run.id);
+    await supervisor.settle();
+    await contributeToStep(fix.db, supervisor, run.id, session.step_run_id, "Return OK again");
+    await supervisor.settle();
 
-  expect(spawn.jobs.map((job) => job.config?.options)).toEqual([full, full, full]);
-  expect(spawn.jobs.map((job) => job.mode)).toEqual(["run", "resume", "resume"]);
-  expect(
-    listAgentSessionsForRun(fix.db, run.id).every(
-      (row) =>
-        row.config_json?.options.sandbox === "danger-full-access" &&
-        row.config_json.options.approval_policy === "never",
-    ),
-  ).toBe(true);
-  expect(getRun(fix.db, run.id)?.plan_json).toEqual(run.plan_json);
-});
+    expect(spawn.jobs.map((job) => job.config?.options)).toEqual([
+      permissions,
+      permissions,
+      permissions,
+    ]);
+    expect(spawn.jobs.map((job) => job.mode)).toEqual(["run", "resume", "resume"]);
+    for (const row of listAgentSessionsForRun(fix.db, run.id))
+      expect(row.config_json?.options).toEqual(permissions);
+    expect(getRun(fix.db, run.id)?.plan_json).toEqual(run.plan_json);
+  },
+);
 
 it("refuses incompatible Codex permissions from host preferences instead of dropping them", async () => {
   process.env.OTOMAT_CODEX_HELP_FIXTURE = stubFixture("codex-exec-help-0.153.4.txt");
@@ -186,7 +195,7 @@ it("refuses incompatible Codex permissions from host preferences instead of drop
   });
   const { supervisor, spawn } = makeSupervisor(fix, "complete");
   await expect(supervisor.start({ prompt: "Return OK", runtime: "codex" })).rejects.toBeInstanceOf(
-    ProfileOptionUnsupportedError,
+    RuntimeUnavailableError,
   );
   expect(listRuns(fix.db)).toEqual([]);
   expect(spawn.jobs).toEqual([]);

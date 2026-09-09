@@ -136,7 +136,7 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
   private execArgs(input: { options?: ProviderOptions; model?: string | null }): string[] {
     const options = input.options ?? {};
     const args = ["--json", "--sandbox", options.sandbox ?? CODEX_DEFAULT_SANDBOX];
-    args.push(...codexApprovalArgs(this.binary, options.approval_policy));
+    args.push(...codexApprovalArgs(this.binary, options));
     return [...args, ...this.tuningArgs(input.model ?? null, options)];
   }
 
@@ -156,6 +156,7 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
       command: this.binary,
       args,
       prompt: input.prompt,
+      startMessage: `Arguments sent to Codex: ${JSON.stringify(args)}. Effective permissions are not reported by exec JSONL.`,
       cwd: input.cwd,
       ref,
       createMapper: (emitter) => new CodexFrameMapper(emitter),

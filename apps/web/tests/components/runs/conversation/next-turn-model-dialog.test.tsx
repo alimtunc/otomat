@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
 import type { ProviderOptionSet, ResolvedAgentConfig, RuntimeModelCatalog } from "@otomat/domain";
-import { NextTurnModelDialog } from "@web/components/runs/conversation/next-turn-model-dialog";
+import { NextTurnModelDialog } from "@web/components/runs/conversation/next-turn/dialog";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { CODEX_ANNOUNCED } from "#support/announced-options";
 import { findButton, findLabelled } from "#support/dom-queries";
 import { mount } from "#support/mount";
 import { modelCatalogQueryResult } from "#support/runtime-models";
@@ -42,8 +43,8 @@ function optionSet(model: string | null): ProviderOptionSet {
 
 vi.mock("@web/api/daemon/queries", () => ({
   useRuntimeModels: () => modelCatalogQueryResult(CATALOG),
-  useRuntimeProviderOptions: (_runtime: string, model: string | null) =>
-    providerOptionSetQueryResult(optionSet(model)),
+  useRuntimeProviderOptions: (runtime: string, model: string | null) =>
+    providerOptionSetQueryResult(runtime === "codex" ? CODEX_ANNOUNCED : optionSet(model)),
 }));
 
 vi.mock("@web/api/runs/step-mutations", () => ({
@@ -69,6 +70,59 @@ const CONFIG: ResolvedAgentConfig = {
 afterEach(() => {
   mutate.mockClear();
   document.body.replaceChildren();
+});
+
+it("edits the reviewer for the next turn and blocks a conflicting policy without changing the sandbox", async () => {
+  const config = {
+    ...CONFIG,
+    runtime: "codex",
+    model: null,
+    options: { sandbox: "workspace-write", approval_policy: "never" },
+  };
+  const view = await mount(
+    <NextTurnModelDialog runId="run-1" stepId="step-1" sessionId="session-1" config={config} />,
+  );
+  await act(async () => findButton("Provider default")?.click());
+  await act(async () =>
+    document.querySelector<HTMLElement>("[aria-label^='Permissions for next turn']")?.click(),
+  );
+  await act(async () =>
+    document.querySelector<HTMLElement>("[aria-label^='Approval reviewer:']")?.click(),
+  );
+  const choice = [...document.querySelectorAll<HTMLElement>("[role='menuitemradio']")].find(
+    (item) => item.textContent?.startsWith("Approve for me"),
+  );
+  expect(choice).toBeDefined();
+  await act(async () => choice?.click());
+  expect(document.body.textContent).toContain("With never, no request reaches automatic review");
+  expect(findButton("Confirm next turn")?.disabled).toBe(true);
+  const permissionsTrigger = document.querySelector<HTMLElement>(
+    "[aria-label^='Permissions for next turn']",
+  );
+  if (permissionsTrigger?.getAttribute("aria-expanded") !== "true")
+    await act(async () => permissionsTrigger?.click());
+  await act(async () =>
+    document.querySelector<HTMLElement>("[aria-label^='Approval policy:']")?.click(),
+  );
+  const policy = [...document.querySelectorAll<HTMLElement>("[role='menuitemradio']")].find(
+    (item) => item.textContent?.startsWith("On request"),
+  );
+  expect(policy, document.body.textContent ?? "").toBeDefined();
+  await act(async () => policy?.click());
+  expect(findButton("Confirm next turn")?.disabled).toBe(false);
+  await act(async () => findButton("Confirm next turn")?.click());
+  expect(mutate).toHaveBeenCalledWith(
+    expect.objectContaining({
+      model: null,
+      options: {
+        sandbox: "workspace-write",
+        approval_policy: "on-request",
+        approvals_reviewer: "auto_review",
+      },
+    }),
+    expect.anything(),
+  );
+  await view.cleanup();
 });
 
 it("keeps an incompatible effort explicit before freezing the next-turn model", async () => {

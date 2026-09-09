@@ -36,7 +36,7 @@ export function setNextTurnModel(
   stepRunId: string,
   sessionId: string,
   currentConfigHash: string,
-  model: string,
+  model: string | null,
   options: ProviderOptions,
 ): StepRunRow {
   const run = getRun(state.db, runId);

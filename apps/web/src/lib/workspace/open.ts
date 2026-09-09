@@ -1,3 +1,4 @@
+import { codexApprovalPolicy } from "@otomat/domain";
 import type {
   ExecutionHostDescriptor,
   ResolvedAgentConfig,
@@ -45,8 +46,12 @@ export function codexResumeCommand(
 ): string {
   const args = ["codex", "resume", "--cd", worktreePath];
   if (config.options.sandbox !== undefined) args.push("--sandbox", config.options.sandbox);
-  if (config.options.approval_policy !== undefined) {
-    args.push("--ask-for-approval", config.options.approval_policy);
+  const policy = codexApprovalPolicy(config.options);
+  if (policy !== undefined) {
+    args.push("--ask-for-approval", policy);
+  }
+  if (config.options.approvals_reviewer !== undefined) {
+    args.push("-c", `approvals_reviewer="${config.options.approvals_reviewer}"`);
   }
   if (config.model !== null) args.push("--model", config.model.id);
   if (config.options.reasoning_effort !== undefined) {
