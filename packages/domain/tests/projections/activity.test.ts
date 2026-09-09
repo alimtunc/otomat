@@ -10,6 +10,7 @@ function evidence(overrides: Partial<ActivityEvidence> = {}): ActivityEvidence {
   return {
     run_id: "run-1",
     run_status: "running",
+    run_started_at: NOW,
     run_updated_at: NOW,
     run_abandoned_at: null,
     run_superseded: false,
@@ -47,7 +48,14 @@ describe("projectActivities", () => {
       run_id: "run-1",
       project: { id: "project-1", name: "Otomat" },
       issue: { id: "issue-1", identifier: "ABC-1", title: "Ship it" },
+      started_at: NOW,
     });
+  });
+
+  it("carries a run that never started as one with no start", () => {
+    const [activity] = projectActivities([evidence({ run_started_at: null })], WINDOW);
+
+    expect(activity).toMatchObject({ kind: "run", started_at: null });
   });
 
   it.each([

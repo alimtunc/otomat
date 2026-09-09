@@ -32,6 +32,7 @@ const OPERATION_BUCKETS = {
 export interface ActivityEvidence {
   run_id: string;
   run_status: RunState;
+  run_started_at: string | null;
   run_updated_at: string;
   run_abandoned_at: string | null;
   run_superseded: boolean;
@@ -73,6 +74,7 @@ function runActivity(row: ActivityEvidence): ActivityContract {
     id: `run:${row.run_id}`,
     bucket: RUN_BUCKETS[row.run_status],
     status: row.run_status,
+    started_at: row.run_started_at,
     project: { id: row.project_id, name: row.project_name },
     issue: { id: row.issue_id, identifier: row.issue_identifier, title: row.issue_title },
     run_id: row.run_id,

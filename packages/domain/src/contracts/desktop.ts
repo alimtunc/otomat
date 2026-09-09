@@ -128,6 +128,8 @@ export interface OtomatDesktopBridge {
   readonly build: DesktopBuildSummary;
   /** Opens the native directory chooser; resolves to the absolute path, or null when canceled. */
   pickDirectory(): Promise<string | null>;
+  /** Subscribes to the run the shell was asked to show, from the menu bar; returns the unsubscribe function. */
+  onOpenRun(listener: (runId: string) => void): () => void;
   executionHost: {
     snapshot(): Promise<ExecutionHostSnapshot>;
     select(id: ExecutionHostId): Promise<ExecutionHostSelectResult>;

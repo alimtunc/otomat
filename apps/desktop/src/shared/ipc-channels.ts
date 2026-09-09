@@ -39,3 +39,4 @@ export const UPDATE_SNAPSHOT_CHANNEL = "otomat:update-snapshot";
 export const UPDATE_CHECK_CHANNEL = "otomat:update-check";
 export const UPDATE_INSTALL_CHANNEL = "otomat:update-install";
 export const UPDATE_STATUS_CHANNEL = "otomat:update-status";
+export const OPEN_RUN_CHANNEL = "otomat:open-run";

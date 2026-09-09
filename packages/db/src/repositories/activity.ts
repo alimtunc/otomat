@@ -64,6 +64,7 @@ export function listActivityEvidence(db: Db, since: string): ActivityEvidence[] 
     .select({
       run_id: runs.id,
       run_status: runs.status,
+      run_started_at: runs.started_at,
       run_updated_at: runs.updated_at,
       run_abandoned_at: runs.abandoned_at,
       issue_id: issues.id,
@@ -100,6 +101,7 @@ export function listActivityEvidence(db: Db, since: string): ActivityEvidence[] 
   const currentRunIds = currentRuns(db, [...new Set(rows.map((row) => row.issue_id))]);
   return rows.map(({ pullRequest, ...row }) => ({
     ...row,
+    run_started_at: row.run_started_at === null ? null : sqliteToIso(row.run_started_at),
     run_updated_at: sqliteToIso(row.run_updated_at),
     current_step: current.get(row.run_id) ?? null,
     halted_step: halted.get(row.run_id) ?? null,

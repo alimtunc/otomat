@@ -11,6 +11,7 @@ export function runActivity(overrides: Partial<RunActivity> = {}): RunActivity {
     id: `run:${overrides.run_id ?? "run-1"}`,
     bucket: "running",
     status: "running",
+    started_at: UPDATED_AT,
     project: { id: "p1", name: "Otomat" },
     issue: { id: "i1", identifier: "ABC-1", title: "Ship it" },
     run_id: "run-1",

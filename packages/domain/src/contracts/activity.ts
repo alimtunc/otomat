@@ -32,6 +32,7 @@ export const activityContractSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("run"),
     status: z.enum(RUN_STATES),
+    started_at: z.iso.datetime().nullable(),
     ...activityShape,
   }),
   z.object({

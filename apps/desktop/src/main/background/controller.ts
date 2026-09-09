@@ -1,23 +1,23 @@
 import type { CloseChoice } from "./prompts.js";
 import type { LocalWorkReading } from "./read-work.js";
 import type { BackgroundTrayActions } from "./tray.js";
-import { hasLiveWork, type LocalWorkSummary } from "./work-summary.js";
+import { hasLiveWork, type LocalWorkItem } from "./work-items.js";
 
 const REFRESH_INTERVAL_MS = 5_000;
 
 /** The menu-bar item this mode drives; `BackgroundTray` implements it. */
 export interface BackgroundTrayPort {
-  render(summary: LocalWorkSummary | null): void;
+  render(items: readonly LocalWorkItem[] | null): void;
   destroy(): void;
 }
 
 export interface BackgroundModeOptions {
   readWork(): Promise<LocalWorkReading>;
-  askCloseChoice(summary: LocalWorkSummary | null): Promise<CloseChoice>;
-  confirmQuit(summary: LocalWorkSummary | null): Promise<boolean>;
+  askCloseChoice(items: readonly LocalWorkItem[] | null): Promise<CloseChoice>;
   createTray(actions: BackgroundTrayActions): BackgroundTrayPort;
   hideWindow(): void;
   openWindow(): void;
+  openRun(runId: string): void;
   quit(): void;
   log(message: string): void;
 }
@@ -57,31 +57,30 @@ export class BackgroundMode {
 
   private start(request: "close" | "quit"): void {
     this.pending = request;
-    void this.decide(request);
+    void this.decide();
   }
 
-  private async decide(request: "close" | "quit"): Promise<void> {
+  private async decide(): Promise<void> {
     try {
-      const summary = await this.readSummary();
-      const choice = await this.choose(request, summary);
+      const items = await this.readItems();
+      const choice = await this.choose(items);
       if (this.quitting) return;
       if (choice === "quit") this.startQuit();
-      else if (choice === "background") this.enterBackground(summary);
+      else if (choice === "background") this.enterBackground(items);
     } catch (error) {
-      this.options.log(`Could not settle the window close, so it was held: ${String(error)}`);
+      this.options.log(
+        `Could not settle the quit the operator asked for, so it was held: ${String(error)}`,
+      );
     } finally {
       this.pending = null;
       this.releaseHeldQuit();
     }
   }
 
-  private async choose(
-    request: "close" | "quit",
-    summary: LocalWorkSummary | null,
-  ): Promise<CloseChoice> {
-    if (summary !== null && !hasLiveWork(summary)) return "quit";
-    if (request === "close") return this.options.askCloseChoice(summary);
-    return (await this.options.confirmQuit(summary)) ? "quit" : "cancel";
+  /** Every quit the operator asks for is offered the background, so none of them cuts a live run by surprise. */
+  private async choose(items: readonly LocalWorkItem[] | null): Promise<CloseChoice> {
+    if (items !== null && !hasLiveWork(items)) return "quit";
+    return this.options.askCloseChoice(items);
   }
 
   private releaseHeldQuit(): void {
@@ -96,26 +95,30 @@ export class BackgroundMode {
     this.options.quit();
   }
 
-  private async readSummary(): Promise<LocalWorkSummary | null> {
+  private async readItems(): Promise<LocalWorkItem[] | null> {
     const reading = await this.options.readWork();
-    if (reading.ok) return reading.summary;
+    if (reading.ok) return reading.items;
     this.options.log(reading.message);
     return null;
   }
 
-  private enterBackground(summary: LocalWorkSummary | null): void {
+  private enterBackground(items: readonly LocalWorkItem[] | null): void {
     this.tray ??= this.options.createTray({
       open: () => this.reopen(),
+      openRun: (runId) => {
+        this.reopen();
+        this.options.openRun(runId);
+      },
       quit: () => this.options.quit(),
     });
-    this.tray.render(summary);
+    this.tray.render(items);
     this.options.hideWindow();
     this.refresh ??= setInterval(() => void this.refreshTray(), REFRESH_INTERVAL_MS);
   }
 
   private async refreshTray(): Promise<void> {
     try {
-      this.tray?.render(await this.readSummary());
+      this.tray?.render(await this.readItems());
     } catch (error) {
       this.options.log(`Could not refresh the menu-bar item: ${String(error)}`);
     }

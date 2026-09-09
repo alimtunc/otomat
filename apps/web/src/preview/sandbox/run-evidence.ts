@@ -7,6 +7,7 @@ export const SANDBOX_RUN_EVIDENCE: ActivityEvidence[] = [
   {
     run_id: SANDBOX_LIVE_RUN_ID,
     run_status: "running",
+    run_started_at: SANDBOX_NOW,
     run_updated_at: SANDBOX_NOW,
     run_abandoned_at: null,
     run_superseded: false,
@@ -23,6 +24,7 @@ export const SANDBOX_RUN_EVIDENCE: ActivityEvidence[] = [
   {
     run_id: SANDBOX_REVIEW_RUN_ID,
     run_status: "review_ready",
+    run_started_at: SANDBOX_NOW,
     run_updated_at: SANDBOX_NOW,
     run_abandoned_at: null,
     run_superseded: false,

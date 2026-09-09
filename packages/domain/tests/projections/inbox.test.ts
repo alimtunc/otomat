@@ -19,6 +19,7 @@ function run(overrides: Partial<ActivityEvidence> = {}): ActivityEvidence {
   return {
     run_id: "run-1",
     run_status: "failed",
+    run_started_at: NOW,
     run_updated_at: NOW,
     run_abandoned_at: null,
     run_superseded: false,
