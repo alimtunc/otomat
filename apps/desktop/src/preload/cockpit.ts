@@ -17,6 +17,7 @@ import type {
   OtomatDesktopBridge,
   PreviewSandboxResetResult,
   ProblemReportDraft,
+  ProjectHealthReport,
   RemoteHostStatus,
   RemoteInstanceListResult,
   RemoteRepositoryListResult,
@@ -42,6 +43,7 @@ import {
   EXECUTION_HOST_INBOX_CHANNEL,
   EXECUTION_HOST_INSTANCES_CHANNEL,
   EXECUTION_HOST_OPEN_WORKSPACE_CHANNEL,
+  EXECUTION_HOST_PROJECT_HEALTH_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_READ_CAPACITY_CHANNEL,
   EXECUTION_HOST_RECONCILE_WORKSPACES_CHANNEL,
@@ -140,6 +142,11 @@ contextBridge.exposeInMainWorld("otomat", {
       ipcRenderer.invoke(EXECUTION_HOST_WORKSPACES_CHANNEL, hostId),
     readInbox: (hostId: ExecutionHostId): Promise<ExecutionHostCallResult<InboxSnapshot>> =>
       ipcRenderer.invoke(EXECUTION_HOST_INBOX_CHANNEL, hostId),
+    readProjectHealth: (
+      hostId: ExecutionHostId,
+      projectId: string,
+    ): Promise<ExecutionHostCallResult<ProjectHealthReport>> =>
+      ipcRenderer.invoke(EXECUTION_HOST_PROJECT_HEALTH_CHANNEL, hostId, projectId),
     reconcileWorkspaces: (
       hostId: ExecutionHostId,
     ): Promise<ExecutionHostCallResult<WorkspaceReconcileReport>> =>

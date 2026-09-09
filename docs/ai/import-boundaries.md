@@ -36,12 +36,12 @@ Grouping:
 
 The daemon-only backend lives inside `apps/local-daemon/src/<module>`:
 `agents`, `api`, `context`, `data-safety`, `diagnostics`, `events`, `git`,
-`github`, `linear`, `review`, `runtime`, `supervisor`. They are
+`github`, `health`, `linear`, `review`, `runtime`, `supervisor`. They are
 **not** packages and carry no `@otomat/*` specifier. Inside the daemon:
 
 - a module is consumed through its public index via a Node subpath import —
   `#agents`, `#api`, `#context`, `#data-safety`, `#diagnostics`, `#events`,
-  `#git`, `#github`, `#linear`, `#review`, `#runtime`, `#supervisor` (or
+  `#git`, `#github`, `#health`, `#linear`, `#review`, `#runtime`, `#supervisor` (or
   `#api/<file>` for a specific file);
 - imports within a module stay shallow-relative;
 - deep relative imports (`../../…`) are banned by oxlint everywhere.
@@ -61,8 +61,8 @@ apps/web
 apps/local-daemon
   -> packages/domain
   -> packages/db
-  -> #agents / #api / #context / #data-safety / #diagnostics / #events / #git / #github / #linear /
-     #review / #runtime / #supervisor (its own internal modules)
+  -> #agents / #api / #context / #data-safety / #diagnostics / #events / #git / #github / #health /
+     #linear / #review / #runtime / #supervisor (its own internal modules)
 
 apps/desktop
   -> packages/domain

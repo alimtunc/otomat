@@ -180,6 +180,21 @@ it("reads the Inbox of the host that was named, on that host alone", async () =>
   expect(fetchImpl).toHaveBeenCalledWith(`${REMOTE_URL}/api/inbox`, undefined);
 });
 
+it("runs the health check on the named host's own daemon, under that host's project id", async () => {
+  const health = {
+    project_id: "p-remote",
+    checked_at: "2026-09-09T10:00:00.000Z",
+    status: "ready",
+    checks: [],
+  };
+  const fetchImpl = vi.fn(() => Promise.resolve(jsonResponse(health)));
+
+  const result = await catalog(fetchImpl).catalog.readProjectHealth("remote", "p-remote");
+
+  expect(result).toEqual({ ok: true, value: health });
+  expect(fetchImpl).toHaveBeenCalledWith(`${REMOTE_URL}/api/projects/p-remote/health`, undefined);
+});
+
 it("says why an unreachable host could not be read instead of answering for it", async () => {
   const fetchImpl = vi.fn(() => Promise.resolve(jsonResponse(EMPTY_INVENTORY)));
 

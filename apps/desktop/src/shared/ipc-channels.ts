@@ -22,6 +22,7 @@ export const EXECUTION_HOST_CATALOG_REPOSITORIES_CHANNEL =
 export const EXECUTION_HOST_DELETE_REPOSITORY_CHANNEL = "otomat:execution-host-delete-repository";
 export const EXECUTION_HOST_WORKSPACES_CHANNEL = "otomat:execution-host-workspaces";
 export const EXECUTION_HOST_INBOX_CHANNEL = "otomat:execution-host-inbox";
+export const EXECUTION_HOST_PROJECT_HEALTH_CHANNEL = "otomat:execution-host-project-health";
 export const EXECUTION_HOST_RECONCILE_WORKSPACES_CHANNEL =
   "otomat:execution-host-reconcile-workspaces";
 export const EXECUTION_HOST_CLEANUP_WORKSPACE_CHANNEL = "otomat:execution-host-cleanup-workspace";

@@ -11,6 +11,7 @@ import {
   type ExecutionHostSelectResult,
   type ExecutionHostSnapshot,
   type InboxSnapshot,
+  type ProjectHealthReport,
   type RemoteInstanceListResult,
   type RemoteRepositoryListResult,
   type WorkspaceCleanupResult,
@@ -48,6 +49,10 @@ export interface ExecutionHostIpcActions {
   deleteRepository(hostId: unknown, repositoryId: unknown): Promise<ExecutionHostOperationResult>;
   readWorkspaces(hostId: unknown): Promise<ExecutionHostCallResult<WorkspaceInventory>>;
   readInbox(hostId: unknown): Promise<ExecutionHostCallResult<InboxSnapshot>>;
+  readProjectHealth(
+    hostId: unknown,
+    projectId: unknown,
+  ): Promise<ExecutionHostCallResult<ProjectHealthReport>>;
   reconcileWorkspaces(hostId: unknown): Promise<ExecutionHostCallResult<WorkspaceReconcileReport>>;
   cleanupWorkspace(
     hostId: unknown,
@@ -164,6 +169,14 @@ export function buildExecutionHostActions(
       onOwningHost(manager(), hostId, (catalog, id) => catalog.readWorkspaces(id)),
     readInbox: async (hostId: unknown) =>
       onOwningHost(manager(), hostId, (catalog, id) => catalog.readInbox(id)),
+    readProjectHealth: async (hostId: unknown, projectId: unknown) => {
+      if (typeof projectId !== "string" || projectId === "") {
+        return { ok: false, message: "Unknown project." };
+      }
+      return onOwningHost(manager(), hostId, (catalog, id) =>
+        catalog.readProjectHealth(id, projectId),
+      );
+    },
     reconcileWorkspaces: async (hostId: unknown) =>
       onOwningHost(manager(), hostId, (catalog, id) => catalog.reconcileWorkspaces(id)),
     cleanupWorkspace: async (hostId: unknown, workspaceId: unknown, force: unknown) => {

@@ -61,3 +61,42 @@ export function resolveBaseSha(repoPath: string, branch: string, allowLocal: boo
     `"${branch}" could not be read from ${remote}: ${fetched.stderr.trim()}`,
   );
 }
+
+const REMOTE_PROBE_TIMEOUT_MS = 10_000;
+
+export type RemoteBranchProbe =
+  | { status: "reachable"; remote: string }
+  | { status: "local_only"; remote: string }
+  | { status: "no_remote" }
+  | { status: "no_upstream" }
+  | { status: "timed_out"; remote: string }
+  | { status: "unreadable"; reason: string };
+
+/** Reads with `ls-remote`, never `fetch`, so a diagnostic moves no ref, and forwards no output: a remote URL can carry a credential. */
+export function probeRemoteBranch(repoPath: string, branch: string): RemoteBranchProbe {
+  const remotes = repositoryRemotes(repoPath);
+  if (remotes.length === 0) return { status: "no_remote" };
+
+  let target: RemoteBranch;
+  try {
+    target = resolveRemoteBranch(repoPath, branch, remotes);
+  } catch (error) {
+    if (error instanceof RemoteBaseError) return { status: "no_upstream" };
+    throw error;
+  }
+
+  const advertised = runGit(["ls-remote", "--exit-code", target.remote, target.ref], {
+    cwd: repoPath,
+    env: { GIT_TERMINAL_PROMPT: "0" },
+    allowFailure: true,
+    timeoutMs: REMOTE_PROBE_TIMEOUT_MS,
+  });
+  if (advertised.exitCode === 0) return { status: "reachable", remote: target.remote };
+  if (advertised.exitCode === 2) return { status: "local_only", remote: target.remote };
+  // A killed probe reports no exit code; only a timeout can kill this one.
+  if (advertised.exitCode === null) return { status: "timed_out", remote: target.remote };
+  return {
+    status: "unreadable",
+    reason: `"${branch}" could not be read from "${target.remote}" on this host.`,
+  };
+}

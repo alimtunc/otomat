@@ -8,6 +8,8 @@ export interface RunGitOptions {
   env?: NodeJS.ProcessEnv;
   /** When true, a non-zero exit returns the result instead of throwing. */
   allowFailure?: boolean;
+  /** Bounds a command that can wait on a network peer; `spawnSync` blocks the whole daemon without it. */
+  timeoutMs?: number;
 }
 
 export interface GitResult {
@@ -41,6 +43,14 @@ export function scrubGitEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.Proces
   return scrubbed;
 }
 
+/** `spawnSync` reports a timeout as an error, not an exit code; `allowFailure` still owns whether it throws. */
+function timeoutStderr(error: Error, args: readonly string[], options: RunGitOptions): string {
+  if (!("code" in error) || error.code !== "ETIMEDOUT") throw error;
+  const stderr = `timed out after ${options.timeoutMs}ms`;
+  if (!options.allowFailure) throw new GitCommandError(args, options.cwd, null, stderr);
+  return stderr;
+}
+
 /** Runs `git` with array args (no shell), capturing stdout/stderr as UTF-8. */
 export function runGit(args: readonly string[], options: RunGitOptions): GitResult {
   const result = spawnSync("git", args, {
@@ -48,9 +58,12 @@ export function runGit(args: readonly string[], options: RunGitOptions): GitResu
     encoding: "utf8",
     env: { ...scrubGitEnv(process.env), ...options.env },
     maxBuffer: MAX_BUFFER,
+    timeout: options.timeoutMs,
   });
 
-  if (result.error) throw result.error;
+  if (result.error) {
+    return { stdout: "", stderr: timeoutStderr(result.error, args, options), exitCode: null };
+  }
 
   const out: GitResult = {
     stdout: result.stdout ?? "",
@@ -70,9 +83,16 @@ export function runGitBytes(args: readonly string[], options: RunGitOptions): Gi
     encoding: null,
     env: { ...scrubGitEnv(process.env), ...options.env },
     maxBuffer: MAX_BUFFER,
+    timeout: options.timeoutMs,
   });
 
-  if (result.error) throw result.error;
+  if (result.error) {
+    return {
+      stdout: Buffer.alloc(0),
+      stderr: timeoutStderr(result.error, args, options),
+      exitCode: null,
+    };
+  }
 
   const stderr = result.stderr?.toString("utf8") ?? "";
   const out: GitBytesResult = {

@@ -175,6 +175,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       startedAt: new Date().toISOString(),
       dbPath,
       schemaMetadata: () => readSchemaMetadata(sqlite),
+      repositories,
       supervisor,
       github,
       linear,

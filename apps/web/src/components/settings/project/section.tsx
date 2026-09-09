@@ -1,4 +1,5 @@
 import { Skeleton } from "@otomat/ui";
+import { ProjectHealthPanel } from "@web/components/settings/project/health/panel";
 import { NoProjectSelectedState } from "@web/components/settings/project/no-project-selected-state";
 import { ProjectRepositoryPanel } from "@web/components/settings/project/repository-panel";
 import { ProjectSourcesPanel } from "@web/components/settings/project/sources-panel";
@@ -19,6 +20,7 @@ export function ProjectSettingsSection() {
   } else {
     content = (
       <div className="flex flex-col gap-6">
+        <ProjectHealthPanel project={project} />
         <ProjectRepositoryPanel projectId={project.id} />
         <ProjectSourcesPanel project={project} />
       </div>
@@ -29,7 +31,7 @@ export function ProjectSettingsSection() {
     <div>
       <SectionHeading
         title={project ? `Project · ${project.name}` : "Project"}
-        description="Settings scoped to the selected project: its repository, worktree init commands, and Linear issue sources."
+        description="Settings scoped to the selected project: its readiness on each host, its repository, worktree init commands, and Linear issue sources."
       />
       <ProjectQueryBoundary query={projects}>{content}</ProjectQueryBoundary>
     </div>

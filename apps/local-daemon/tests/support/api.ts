@@ -1,8 +1,11 @@
+import { dirname, join } from "node:path";
+
 import type { RunContributionRow, RunInteractionRow, RunRow } from "@otomat/db";
 import type { Hono } from "hono";
 
 import { createApiApp } from "#api/app";
 import type { ApiDeps } from "#api/deps";
+import { createRepositoryResolver } from "#git";
 import type { Supervisor } from "#supervisor";
 
 import type { TestDb } from "./db.js";
@@ -233,6 +236,10 @@ export function makeApiApp(
       latest_migration_at: 1_784_742_886_678,
       page_count: 1,
       page_size: 4096,
+    }),
+    repositories: createRepositoryResolver({
+      db: t.db,
+      worktreesRoot: join(dirname(t.dbPath), "worktrees"),
     }),
     supervisor: stubSupervisor(),
     github: stubGitHubService(),

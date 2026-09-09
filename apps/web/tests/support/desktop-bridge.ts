@@ -3,11 +3,21 @@ import {
   type ExecutionHostSnapshot,
   type InboxSnapshot,
   type OtomatDesktopBridge,
+  type ProjectHealthReport,
   type WorkspaceInventory,
 } from "@otomat/domain";
 
 function emptyInventory(): WorkspaceInventory {
   return { entries: [], counts: countWorkspaces([]) };
+}
+
+function readyHealth(): ProjectHealthReport {
+  return {
+    project_id: "p-local",
+    checked_at: "2026-09-09T10:00:00.000Z",
+    status: "ready",
+    checks: [],
+  };
 }
 
 function emptyInbox(): InboxSnapshot {
@@ -87,6 +97,7 @@ export function fakeDesktopBridge(
       deleteRepository: () => Promise.resolve({ ok: true as const }),
       readWorkspaces: () => Promise.resolve({ ok: true as const, value: emptyInventory() }),
       readInbox: () => Promise.resolve({ ok: true as const, value: emptyInbox() }),
+      readProjectHealth: () => Promise.resolve({ ok: true as const, value: readyHealth() }),
       reconcileWorkspaces: () =>
         Promise.resolve({
           ok: true as const,
