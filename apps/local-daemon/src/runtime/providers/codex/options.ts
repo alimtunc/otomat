@@ -4,7 +4,11 @@ import type { RuntimeOptionSupport } from "#runtime/contract";
 import { cachedProviderProbe } from "#runtime/probe/cache";
 import { helpFlagValues } from "#runtime/probe/help-flags";
 
-import { CODEX_EXEC_APPROVAL_NOTE, codexApprovalValues } from "./approval.js";
+import {
+  CODEX_EXEC_APPROVAL_NOTE,
+  codexApprovalValues,
+  supportsCodexReviewer,
+} from "./approval.js";
 import { codexBundledCatalog } from "./models.js";
 import { probeCodexSandbox, type CodexSandboxProbeResult } from "./sandbox.js";
 
@@ -63,15 +67,45 @@ function sandboxDescriptor(
   };
 }
 
-function approvalDescriptor(help: string): ProviderOptionDescriptor | null {
+function reviewerDescriptor(binary: string, help: string): ProviderOptionDescriptor | null {
+  if (!supportsCodexReviewer(binary, help)) return null;
+  return {
+    key: "approvals_reviewer",
+    description:
+      "Who reviews approval requests. Approve for me keeps the selected confined sandbox and uses on-request when no policy is selected. A review can deny an action; it grants no blanket approval.",
+    choices: [
+      {
+        value: "user",
+        description: "No automatic review. Otomat cannot answer human approvals through exec.",
+        dangerous: false,
+      },
+      {
+        value: "auto_review",
+        description:
+          "Approve for me: Codex reviews eligible requests and may approve or deny them. Requires read-only or workspace-write and on-request.",
+        dangerous: false,
+      },
+    ],
+    default_value: null,
+  };
+}
+
+function approvalDescriptor(
+  help: string,
+  reviewerSupported: boolean,
+): ProviderOptionDescriptor | null {
   const values = codexApprovalValues(help);
+  if (reviewerSupported && !values.includes("on-request")) values.push("on-request");
   if (values.length === 0) return null;
   return {
     key: "approval_policy",
-    description: `When Codex asks a human before acting. Otomat cannot answer such a request yet. ${CODEX_EXEC_APPROVAL_NOTE}`,
+    description: `When Codex requests approval. On-request requires Approve for me on current exec; never sends nothing to review. ${CODEX_EXEC_APPROVAL_NOTE}`,
     choices: values.map((value) => ({
       value,
-      description: APPROVAL_DESCRIPTIONS.get(value) ?? null,
+      description:
+        value === "on-request" && reviewerSupported
+          ? "Codex requests approval when needed. Select Approve for me to route it to automatic review in exec."
+          : (APPROVAL_DESCRIPTIONS.get(value) ?? null),
       dangerous: false,
     })),
     default_value: null,
@@ -125,11 +159,6 @@ function detectionDetail(note: string | null, capability: CodexSandboxProbeResul
   return `${catalog} Confined sandboxes are unavailable on host "${diagnostics.host}": ${diagnostics.stderr || capability.cause}. ${capability.remediation}`;
 }
 
-/**
- * Feature-detected against the installed binary. The sandbox and approval
- * policy come from `codex exec --help`; the reasoning levels come from the
- * bundled catalog and therefore depend on the selected model.
- */
 export function codexOptionSupport(binary: string, model: string | null): RuntimeOptionSupport {
   const probe = cachedProviderProbe(binary, CODEX_EXEC_HELP_ARGS);
   if (probe.status !== "ok") {
@@ -137,13 +166,18 @@ export function codexOptionSupport(binary: string, model: string | null): Runtim
   }
   const capability = process.platform === "linux" ? probeCodexSandbox(binary, process.cwd()) : null;
   const reasoning = reasoningEffortDescriptor(binary, model);
+  const reviewer = reviewerDescriptor(binary, probe.stdout);
   const options = [
     sandboxDescriptor(probe.stdout, capability),
-    approvalDescriptor(probe.stdout),
+    approvalDescriptor(probe.stdout, reviewer !== null),
+    reviewer,
     reasoning.descriptor,
   ].filter((option): option is ProviderOptionDescriptor => option !== null);
   return {
-    detection: { status: "ok", detail: detectionDetail(reasoning.note, capability) },
+    detection: {
+      status: "ok",
+      detail: `${detectionDetail(reasoning.note, capability)}${reviewer === null ? " Approve for me was not detected from exec help or the installed reviewer feature. Update the CLI on the execution host and refresh its options to detect support." : ""}`,
+    },
     options,
   };
 }

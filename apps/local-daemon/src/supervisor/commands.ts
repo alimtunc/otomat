@@ -1,13 +1,7 @@
-import {
-  getRun,
-  listAgentSessionsForRun,
-  listStepRunsForRun,
-  type RunRow,
-  type StepRunRow,
-} from "@otomat/db";
+import { getRun, listAgentSessionsForRun, listStepRunsForRun, type RunRow } from "@otomat/db";
 import { isRunSettled, type StartRunRequest } from "@otomat/domain";
 
-import { emitLedgerEvent, sessionDir } from "#events";
+import { emitLedgerEvent } from "#events";
 
 import { scheduleNextStep, startNextReadyStep } from "./advance.js";
 import { failIdleRun, failureReason } from "./fail-run.js";
@@ -17,21 +11,16 @@ import { requireLaunchable } from "./launch-hold.js";
 import { buildRunReopenedEvent } from "./markers.js";
 import { prepareRun } from "./prepare.js";
 import { resolveResumeAction, type ResumeAction } from "./resume-plan.js";
-import { spawnReopenTurn } from "./resume-turn.js";
+import { resumeCompeteGroup, spawnReopenTurn } from "./resume-turn.js";
 import {
-  NATIVE_CONTINUATION,
   reopenIssue,
   reopenSettledRun,
   requeueCanceledSteps,
-  requireResumableRuntime,
   requireRunRow,
   RunNotResumableError,
 } from "./resume.js";
 import { preflightResumeAction } from "./runtime-preflight.js";
 import type { SupervisorState } from "./state.js";
-import { driveCompeteGroupTo } from "./transitions.js";
-import { scheduleTurn } from "./turn-scheduling.js";
-import type { TurnContext } from "./types.js";
 import { scheduleWorktreeInit } from "./worktree-init.js";
 
 /**
@@ -63,12 +52,6 @@ async function startNextPlanNode(state: SupervisorState, run: RunRow): Promise<R
     throw new RunNotResumableError(`run ${run.id} has no step left to start`);
   }
   return requireRunRow(state.db, run.id, "resume");
-}
-
-/** Only a settled run is recovering from something; a resting one is merely continuing. */
-interface ResumableCandidate {
-  context: TurnContext;
-  providerSessionId: string;
 }
 
 function recoverStoppedRun(
@@ -125,60 +108,4 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
     }
     throw error;
   }
-}
-
-async function resumeCompeteGroup(
-  state: SupervisorState,
-  run: RunRow,
-  action: Extract<ResumeAction, { kind: "compete_group" }>,
-  steps: readonly StepRunRow[],
-): Promise<RunRow> {
-  const { group } = action;
-  const candidates = steps.filter(
-    (step) =>
-      step.compete_group_id === group.id &&
-      (step.status === "awaiting_human" || step.status === "waiting_for_provider"),
-  );
-  const sessions = listAgentSessionsForRun(state.db, run.id);
-  const service = state.repositories.forRepository(run.repository_id)?.service;
-  if (!service) {
-    throw new RunNotResumableError(`compete group ${group.id} repository is unavailable`);
-  }
-  const contexts = candidates.map((candidate): ResumableCandidate => {
-    const session = sessions.find(
-      (entry) => entry.step_run_id === candidate.id && entry.provider_session_id !== null,
-    );
-    const planStep = action.competitors.find((entry) => entry.id === candidate.id);
-    if (!session || session.provider_session_id === null || !planStep) {
-      throw new RunNotResumableError(`competitor ${candidate.id} has no resumable session`);
-    }
-    const knownRuntime = requireResumableRuntime(state.db, run, session);
-    const worktreePath = service.get(candidate.id)?.path;
-    if (!worktreePath) {
-      throw new RunNotResumableError(`competitor ${candidate.id} worktree is unavailable`);
-    }
-    return {
-      context: {
-        runId: run.id,
-        stepRunId: candidate.id,
-        agentSessionId: session.id,
-        prompt: planStep.prompt ?? NATIVE_CONTINUATION,
-        contextSelection: planStep.context ?? null,
-        agentSessionDir: sessionDir(state.dataDir, run.id, session.id),
-        worktreePath,
-        runtime: knownRuntime,
-        config: planStep.config ?? null,
-      },
-      providerSessionId: session.provider_session_id,
-    };
-  });
-  if (contexts.length === 0) {
-    throw new RunNotResumableError(`compete group ${group.id} has no interrupted competitor`);
-  }
-  driveCompeteGroupTo(state.db, group.id, group.status, "running");
-  const launches = contexts.map(({ context, providerSessionId }) =>
-    scheduleTurn(state, context, "resume", providerSessionId),
-  );
-  await launches[0];
-  return requireRunRow(state.db, run.id, "resume");
 }

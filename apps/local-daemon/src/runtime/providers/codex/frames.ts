@@ -136,7 +136,9 @@ export class CodexFrameMapper implements ProviderFrameMapper {
         phase: "result",
         tool: "command_execution",
         tool_use_id: itemId,
-        is_error: (asNumber(item["exit_code"]) ?? 0) !== 0,
+        is_error:
+          ["failed", "declined"].includes(asString(item["status"]) ?? "") ||
+          (asNumber(item["exit_code"]) ?? 0) !== 0,
         result: {
           exit_code: asNumber(item["exit_code"]),
           output: asString(item["aggregated_output"]),

@@ -42,3 +42,17 @@ export function unofferedProviderOptions(
     (stored) => !set.options.some((option) => option.key === stored.key),
   );
 }
+
+export function unsupportedProviderOptions(
+  options: ProviderOptions,
+  set: ProviderOptionSet,
+): StoredProviderOption[] {
+  return storedProviderOptions(options).filter(
+    (stored) =>
+      !set.options.some(
+        (option) =>
+          option.key === stored.key &&
+          option.choices.some((choice) => choice.value === stored.value),
+      ),
+  );
+}

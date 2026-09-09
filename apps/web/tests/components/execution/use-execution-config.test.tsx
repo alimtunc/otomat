@@ -73,7 +73,7 @@ it("offers exactly the keys Claude announces, and exactly the keys Codex announc
     value: { agent: encodeRuntimeChoice("codex"), options: {} },
     profiles: [],
   });
-  expect(codex.read("keys")).toBe("sandbox,reasoning_effort");
+  expect(codex.read("keys")).toBe("approvals_reviewer,approval_policy,sandbox,reasoning_effort");
   await codex.cleanup();
 });
 
@@ -139,7 +139,7 @@ it("ignores host defaults that name another runtime rather than carrying their o
 
   expect(mounted.read("model")).toBe("Provider's own default — Otomat sends no model");
   expect(mounted.read("values")).toBe(
-    "sandbox=Runtime default — Workspace write | reasoning_effort=Runtime default",
+    "approvals_reviewer=Runtime default | approval_policy=Runtime default | sandbox=Runtime default — Workspace write | reasoning_effort=Runtime default",
   );
   await mounted.cleanup();
 

@@ -57,10 +57,13 @@ describe("CodexRuntimeAdapter", () => {
     });
 
     for (const event of sink.events) runtimeEventSchema.parse(event);
-    expect(sink.events.every((e) => e.source === "codex")).toBe(true);
+    expect(sink.events[0]?.source).toBe("otomat");
+    expect(sink.events[0]?.payload["text"]).toContain("Arguments sent to Codex");
+    expect(sink.events.slice(1).every((e) => e.source === "codex")).toBe(true);
 
     const types = sink.events.map((e) => [e.type, e.payload["fidelity"]]);
     expect(types).toEqual([
+      ["runtime.log", "raw_log"],
       ["runtime.provider_session", "native"],
       ["runtime.log", "native"],
       ["runtime.tool_call", "parsed"],
@@ -103,7 +106,7 @@ describe("CodexRuntimeAdapter", () => {
     expect(final.status).toBe("failed");
     expect(final.error?.message).toMatch(/codex exited \(3\) without reporting a result/);
 
-    const diagnostic = sink.events.find((e) => e.source === "otomat");
+    const diagnostic = sink.events.findLast((e) => e.source === "otomat");
     expect(diagnostic?.type).toBe("runtime.log");
     expect(diagnostic?.payload["text"]).toMatch(
       /^\[otomat\] codex exited \(3\) without reporting a result/,
@@ -311,7 +314,9 @@ describe("CodexRuntimeAdapter", () => {
 
     await adapter.run(input(worktree), sink, new AbortController().signal);
 
-    const stderrEvent = sink.events.find((e) => e.payload["stream"] === "stderr");
+    const stderrEvent = sink.events.find(
+      (e) => e.source === "codex" && e.payload["stream"] === "stderr",
+    );
     expect(stderrEvent?.type).toBe("runtime.log");
     expect(stderrEvent?.payload["text"]).toBe("WARN model config fallback");
   });

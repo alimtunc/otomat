@@ -11,6 +11,7 @@ import { daemon } from "@web/api/client";
 import type { HostQueryKeys } from "@web/api/query-keys";
 import { invalidateRunCycleCaches } from "@web/api/runs/mutations";
 import { useQueryKeys } from "@web/api/use-query-keys";
+import { agentConfigRefusalMessage } from "@web/lib/agent/config-error";
 
 function seedStepRow(
   client: QueryClient,
@@ -33,7 +34,7 @@ function nextTurnModelErrorMessage(error: unknown): string {
     const refusal = nextTurnModelErrorSchema.safeParse(error.body);
     if (refusal.success) return refusal.data.message;
   }
-  return "Could not set the model for the next turn.";
+  return agentConfigRefusalMessage(error, "next-turn settings");
 }
 
 export function useSetNextTurnModel(runId: string, stepId: string) {

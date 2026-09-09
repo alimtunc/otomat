@@ -56,7 +56,7 @@ vi.mock("@web/api/daemon/queries", () => ({
   }),
 }));
 
-vi.mock("@web/components/runs/conversation/next-turn-model-dialog", () => ({
+vi.mock("@web/components/runs/conversation/next-turn/dialog", () => ({
   NextTurnModelDialog: ({ config }: { config: ResolvedAgentConfig }) => (
     <button type="button">Change {config.model?.id}</button>
   ),

@@ -223,6 +223,11 @@ export function ExecutionConfigPicker({
           {`This runtime and model no longer announce the selected ${providerOptionKeyLabel(key)}. Pick another value — a launch with it is refused.`}
         </p>
       ))}
+      {config.permissionProblem === null ? null : (
+        <p role="alert" className="text-xs text-danger">
+          {config.permissionProblem}
+        </p>
+      )}
     </div>
   );
 }

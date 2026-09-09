@@ -2,6 +2,8 @@ import { getAgentProfile, getProject, readExecutionDefaults, type Db } from "@ot
 import {
   executionLevels,
   modelSelectionFromId,
+  optionSelectionsFromValues,
+  overrideLevel,
   PROVIDER_OPTION_KEYS,
   PROVIDER_DEFAULT_MODEL,
   resolveExecutionModel,
@@ -83,26 +85,40 @@ function finalize(config: Omit<ResolvedAgentConfig, "config_hash">): ResolvedAge
 
 export function reviseAgentConfigForTurn(
   current: ResolvedAgentConfig,
-  modelId: string,
+  modelId: string | null,
   options: ProviderOptions,
 ): ResolvedAgentConfig {
   if (!isKnownRuntimeId(current.runtime)) throw new UnknownRuntimeError(current.runtime);
   const runtime = current.runtime;
   const model = resolveModelSelection(runtime, modelSelectionFromId(modelId));
-  assertOptionsAnnounced(runtime, model, options);
+  const resolved =
+    runtime === "codex"
+      ? resolveOptions(runtime, model, [
+          overrideLevel("turn", { options: optionSelectionsFromValues(options) }),
+        ])
+      : null;
+  const nextOptions = resolved?.options ?? options;
+  assertOptionsAnnounced(runtime, model, nextOptions);
   const optionSources: NonNullable<ResolvedAgentConfig["sources"]>["options"] = {};
   for (const key of PROVIDER_OPTION_KEYS) {
-    if (options[key] === undefined) continue;
-    optionSources[key] = "turn";
+    if (nextOptions[key] === undefined) continue;
+    optionSources[key] =
+      nextOptions[key] === current.options[key]
+        ? (current.sources?.options[key] ?? "turn")
+        : (resolved?.sources[key] ?? "turn");
   }
   return finalize({
     ...current,
     model,
-    options,
+    options: nextOptions,
     sources:
       current.sources === null
         ? null
-        : { runtime: current.sources.runtime, model: "turn", options: optionSources },
+        : {
+            runtime: current.sources.runtime,
+            model: model?.id === current.model?.id ? current.sources.model : "turn",
+            options: optionSources,
+          },
   });
 }
 

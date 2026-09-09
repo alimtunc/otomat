@@ -32,6 +32,7 @@ export const providerOptionsSchema = z
 
     sandbox: optionalValue,
     approval_policy: optionalValue,
+    approvals_reviewer: optionalValue,
     reasoning_effort: optionalValue,
   })
   .strict();
@@ -43,10 +44,14 @@ type ProviderOptionKeyGroup = readonly (keyof ProviderOptions)[];
 /** Claude Code: `--permission-mode`, `--effort`. */
 const CLAUDE_OPTION_KEYS = ["permission_mode", "effort"] as const satisfies ProviderOptionKeyGroup;
 
-/** Codex: `--sandbox`, `--ask-for-approval`, `-c model_reasoning_effort=…`. */
+const CODEX_PERMISSION_KEYS = ["sandbox", "approval_policy", "approvals_reviewer"] as const;
+
+export function isCodexPermissionKey(key: keyof ProviderOptions): boolean {
+  return CODEX_PERMISSION_KEYS.some((permission) => permission === key);
+}
+
 const CODEX_OPTION_KEYS = [
-  "sandbox",
-  "approval_policy",
+  ...CODEX_PERMISSION_KEYS,
   "reasoning_effort",
 ] as const satisfies ProviderOptionKeyGroup;
 

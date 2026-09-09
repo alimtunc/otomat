@@ -1,133 +1,133 @@
 # Codex permissions: launch and resume
 
-## Host and evidence
+## Three independent settings
 
-Verified on `vps-543f6276`, 2026-09-08: `codex-cli 0.153.4`.
-`/home/ubuntu/.local/bin/codex` resolves to
-`/home/ubuntu/.codex/packages/standalone/releases/0.153.4-x86_64-unknown-linux-musl/bin/codex`.
-The running Otomat daemon processes' PATHs resolve the same executable. Only
-PATH and entrypoint information were inspected; credentials were not displayed
-or modified.
+Otomat stores Codex's native `sandbox`, `approval_policy` and
+`approvals_reviewer` separately. **Approve for me** labels
+`approvals_reviewer="auto_review"`; it is not a new approval policy or Full Access.
+The default sandbox remains `workspace-write`.
 
-Otomat uses `codex exec --json`, with prompts on stdin, not app-server for
-conversations. Captured help lives in local-daemon's three
-`tests/support/fixtures/codex-*-0.153.4.txt` files.
+Automatic review decides eligible requests to cross a boundary and may deny them.
+It does not itself expand writable roots, enable networking, remove protected
+paths, or override managed requirements. `never` sends no requests to a reviewer.
+See [official automatic-review behavior](https://learn.chatgpt.com/docs/sandboxing/auto-review)
+and [configuration precedence](https://learn.chatgpt.com/docs/config-file/config-basic).
 
-An initial Full launch with `sandbox=danger-full-access` works on this version:
-the native turn context records that sandbox and approval `never`. The original
-report contains no conversation identifier or process evidence, so this does not
-establish the history of that particular conversation.
+## Compatibility
 
-The external-resume symptom reproduces on a new conversation. Plain
-`codex resume ID` loads current configuration rather than preserving the prior
-turn's permission overrides. A test config of `read-only` / `on-request` produces
-**Read Only (Ask for approval)** in interactive `/status` after a Full exec turn.
-Explicit sandbox and approval flags produce **Full Access** on the same
-conversation. Codex's own exit message suggests a bare command without the flags.
+| Sandbox | Approval policy | Reviewer | Otomat exec behavior |
+| --- | --- | --- | --- |
+| `read-only` or `workspace-write` | `on-request` | `auto_review` | Automatic review, preserving the sandbox |
+| `read-only` or `workspace-write` | unset | `auto_review` | Freeze `on-request` as the mode's default |
+| any | `never` | unset or `user` | No requests; sandbox failures remain failures |
+| unset | compatible policy | supported reviewer | Freeze/use `workspace-write`, never Full |
+| any | `never`, `untrusted` or `on-failure` | `auto_review` | Refuse the contradictory combination |
+| `danger-full-access` | any | `auto_review` | Refuse; select a confined sandbox |
+| any | `on-request` | unset or `user` | Refuse on exec versions without a human-approval flag |
+| any | policy announced by exec's approval flag | unset or `user` | Preserve legacy flag support; Otomat cannot answer human requests |
 
-## Corrected Otomat defects
+Explicit `danger-full-access` plus `never` remains Full Access, requiring the
+existing dangerous-choice confirmation. An absent reviewer on an old stored
+configuration remains absent. Unsupported permissions are never silently replaced,
+including permissions inherited from host preferences.
 
-- The adapter sent `--ask-for-approval` after `exec`; 0.153.4 rejects it with
-  `unexpected argument '--ask-for-approval' found`, exit 2. Root placement parses,
-  but exec forces `never`; even `-c approval_policy="on-request"` records `never`.
-  Otomat now detects exec support: a help page announcing approval values retains
-  that flag, while the current non-interactive contract offers only explicit
-  `never`, encoded as `-c approval_policy="never"`. Unsupported frozen policies
-  fail with `permissions_unsupported`, including after CLI upgrades.
-  Incompatible Codex permission preferences at host scope also produce a refusal
-  during resolution instead of being dropped as stale optional tuning.
-- Reopening a terminal session inserted a turn from the original plan config,
-  losing pending/latest session revisions. Native resume now selects pending →
-  session → plan before preflight, and persists a new session linked through
-  `resumed_from_session_id`. Follow-up already froze this precedence on its
-  contribution and now has Codex-specific coverage. The plan remains immutable.
+Approve for me with no policy freezes `on-request` with provider provenance.
+An explicitly inherited `never` remains a conflict: change that policy or the
+reviewer. Profiles may store partial preferences; launch validates the complete
+resolved combination.
 
-## Meaning and precedence
+## Capabilities and transports
 
-Sandbox and approval are independent. **Full Access** is the verified pair
-`danger-full-access` + `never`: unconfined execution, no approval requests.
-`read-only` disallows writes; `workspace-write` confines them to the workspace.
+Otomat detects the executable it actually spawns. Exec help declaring
+`--approve-for-me` establishes the current reviewer interface. Older binaries
+support the same configuration without that shortcut: a successful
+`features list -c 'approvals_reviewer="auto_review"'` listing `guardian_approval`
+establishes the older interface. Unsupported choices carry instructions to update
+the execution host's CLI and refresh options. Failed probes are not cached;
+replacement changes the binary path/size/mtime fingerprint and triggers redetection.
 
-Otomat retains its confined default (`workspace-write`), including when legacy
-options omit sandbox. An absent approval sends no override; current exec resolves
-it to `never`, while interactive Codex may differ. Full stays an explicit dangerous
-selection. No incompatible choice is silently replaced with Default or Full.
+The 0.146.0 fixture covers exec without the shortcut; 0.153.4 covers exec with it.
+Native contexts on those versions and 0.147.0 support the separate config spelling.
+Version labels alone are never the capability check.
 
-Otomat resolves step/launch overrides over the agent profile and matching host
-defaults, persisting values, provenance and hash in plan, session and contribution
-configs. Worker deserialization validates and forwards them. Later preference
-edits do not affect resumed sessions; explicit next-turn changes are separate
-persisted configs. An Otomat profile is not a Codex `--profile`.
-
-Codex precedence is CLI flags/`-c`, trusted project config, selected Codex profile,
-user config, system config, then built-in defaults. Managed requirements constrain
-even explicit overrides. See [official configuration precedence](https://learn.chatgpt.com/docs/config-file/config-basic)
-and [official CLI reference](https://learn.chatgpt.com/docs/developer-commands?surface=cli).
-
-The standard `/etc/codex/{requirements,managed_config,config}.toml` files were
-absent on this host. No root sandbox/approval key was found in user config, and
-this worktree has no `.codex/config.toml`. This does not prove the absence of
-account-managed requirements. Otomat disables no requirements, rules, config
-loading or hook trust. Provider refusals remain failures with stderr in run logs;
-a refusal fixture tests this without installing an administrator policy.
-
-## Requested and effective
-
-The conversation header and session list display requested permissions from
-session config. The observed JSONL reports thread/turn events, without effective
-permission fields. Otomat displays **Effective permissions: not reported**.
-Requested arguments or completion are not substituted for provider evidence.
-The UI does not scan unrelated Codex conversation files.
-
-Effective investigation evidence comes from native `turn_context` records in
-isolated test state and interactive `/status`. The smoke parser returns only
-approval/sandbox fields. A local deterministic Responses fixture tests real CLI
-configuration without credentials or remote model calls; this is not a
-real-account authorization or model-quality test.
-
-## External resume
-
-Stop the Otomat turn first. **Copy Codex resume command** in the session list
-copies its ID, worktree and explicitly persisted settings. Execute on the same
-host with the same Codex installation/state, then check `/status`. Unset fields
-resolve from external configuration; use Otomat Resume to preserve its defaults.
-No global defaults are changed.
-
-For an explicitly configured Full session:
-
-```sh
-codex resume --cd /path/to/worktree --sandbox danger-full-access --ask-for-approval never -- SESSION_ID
-```
-
-Otomat-controlled turns use:
-
-```sh
-codex exec --json --sandbox danger-full-access -c 'approval_policy="never"' -
-codex exec --json --sandbox danger-full-access -c 'approval_policy="never"' resume SESSION_ID -
-```
-
-Exec sandbox/model flags precede `resume`. The copied interactive command
-shell-quotes paths and IDs. Codex restrictions can still refuse the request.
-
-## Verification
-
-| Path | Evidence on 0.153.4 |
+| Command / transport | Permissions and evidence |
 | --- | --- |
-| Initial Full through adapter | Native `danger-full-access`, `never` |
-| Resume and follow-up through adapter | Same conversation, same pair |
-| Bare external exec resume | Config's `read-only`, exec's `never` |
-| Bare interactive resume | `/status`: Read Only (Ask for approval) |
-| Explicit interactive Full resume | `/status`: Full Access |
-| Explicit exec `on-request` via `-c` | CLI records `never`; Otomat refuses the selection |
-| Old Otomat approval argv | Parser refusal, exit 2 |
+| Otomat launch: `codex exec --json` | Explicit sandbox and config overrides; JSONL turn/tool outcomes |
+| Otomat resume/follow-up | Same exec arguments **before** `resume SESSION_ID -` |
+| Recovery without a native session | Fresh exec with pending → latest session → plan config |
+| External interactive `codex resume` | Copied permission overrides; inspect native `/status` |
+| Native app-server | Separate `approvalPolicy`, `approvalsReviewer` and sandbox fields for start/resume/turn; thread responses report resolved configuration. Not Otomat's conversation transport |
+| Read-only PR metadata helper | `describeOneShot` fixes `read-only` and forwards model/effort only; conversational permissions are not inherited |
 
-Repeatable smoke from the worktree:
+On the current CLI, `--approve-for-me` conflicts with an explicit `--sandbox`.
+Otomat sends independent config overrides:
 
 ```sh
-mkdir -p .data/oto-176/tmp
-TMPDIR="$PWD/.data/oto-176/tmp" OTOMAT_CODEX_SMOKE=1 pnpm --filter @otomat/local-daemon test tests/runtime/codex-smoke.test.ts
+codex exec --json --sandbox read-only -c 'approval_policy="on-request"' -c 'approvals_reviewer="auto_review"' -
+codex exec --json --sandbox read-only -c 'approval_policy="on-request"' -c 'approvals_reviewer="auto_review"' resume SESSION_ID -
 ```
 
-The smoke keeps isolated state under TMPDIR for inspection; ordinary test runs
-skip this installed-binary test. Other tests cover resolution/profile changes,
-serialization, argv, refusals, pending/terminal resumes and requested/effective UI.
+This retains `read-only`; the preset would select `workspace-write`. Without
+automatic review, exec versions without an approval flag force `never`, even when
+a root-level human-approval flag parses. Otomat refuses that ineffective selection.
+See the [official CLI reference](https://learn.chatgpt.com/docs/developer-commands?surface=cli).
+
+## Selection, persistence and restart
+
+The shared execution picker exposes identical descriptors and explanations in
+profiles, host settings, simple launches, workflows, competitors and added steps.
+**Settings for next turn** exposes the same permission choices before resume or
+follow-up. Conflicting combinations display explanations and the daemon validates
+again. Unsupported saved choices remain visible as stale values. Next-turn
+settings can explicitly return to runtime permission defaults.
+
+Resolution applies step/launch overrides over profile and matching host defaults.
+Existing JSON contracts persist values, provenance and hash in the immutable plan,
+session, pending next-turn config and queued contribution. Turn revisions preserve
+unchanged provenance. Later preference edits do not affect frozen turns. Native
+resume, competitor resume and recovery prefer pending config, then the latest
+session, then the plan; a revised native turn gets its own session record. Workers
+validate serialization and the adapter rechecks permissions before spawning.
+
+An Otomat profile is not a Codex `--profile`. Codex's own project, user, system and
+managed configuration remains applicable. Otomat disables no rules, hook trust,
+sandbox checks or administrator requirements.
+
+## Requested, transmitted and effective
+
+- **Requested:** session headers display persisted sandbox, policy and reviewer.
+- **Transmitted:** after spawning, the run log records exact argv, marked as Otomat evidence.
+- **Confirmed:** exec JSONL does not report resolved permissions. The UI says
+  **Effective permissions: not reported**. Neither argv nor completion proves them.
+
+Native investigation can inspect `turn_context` in isolated test state, including
+`approval_policy`, `approvals_reviewer` and `sandbox_policy`. The application does
+not scan unrelated session files. App-server fields do not establish what exec used.
+
+Runtime stderr and failed-turn messages remain visible. Failed or declined
+commands are errored tool results even without exit codes; a later safe alternative
+may still complete the turn. A review denial never triggers an Otomat retry with
+wider permissions. Restrictions must be addressed within the authorized scope.
+
+## External resume and verification
+
+Stop the Otomat turn before using **Copy Codex resume command**. The command
+shell-quotes the worktree, session ID and settings. Use the same host, installation
+and state, then inspect native `/status`. Bare `codex resume ID` uses current
+external configuration and does not preserve previous turn overrides.
+
+The opt-in native smoke uses isolated state and a local deterministic Responses
+fixture, without credentials or remote inference. It checks adapter launch, resume
+and follow-up contexts. A temporary Git scenario checks workspace writes and
+`git status` while protecting `.git/config`; no commit, push or publication occurs.
+
+```sh
+mkdir -p .data/codex-permissions/tmp
+TMPDIR="$PWD/.data/codex-permissions/tmp" OTOMAT_CODEX_SMOKE=1 pnpm --filter @otomat/local-daemon test tests/runtime/codex-reviewer-smoke.test.ts
+```
+
+These checks require loopback listening, child-process I/O and a working Codex
+sandbox. Missing facilities are blockers, not permission to change the host or use
+Full Access. Ordinary runs skip native smoke. Simulated tests cover capabilities,
+transmission, serialization, inheritance, revisions, recovery and review denial;
+they do not prove real-account approval, model behavior or publication.

@@ -20,6 +20,37 @@ function levels(step = {}, launch = {}) {
 }
 
 describe("resolveExecutionOption", () => {
+  it("inherits the reviewer independently of the sandbox and policy, including agent-default overrides", () => {
+    const inherited = [
+      storedLevel("profile", {
+        model: null,
+        options: { approvals_reviewer: "auto_review", sandbox: "read-only" },
+      }),
+      storedLevel("global", { model: null, options: { approval_policy: "on-request" } }),
+    ];
+    const launch = overrideLevel("launch", {
+      options: { approvals_reviewer: { kind: "value", value: "user" } },
+    });
+    expect(resolveExecutionOption([launch, ...inherited], "approvals_reviewer")).toEqual({
+      value: "user",
+      source: "launch",
+    });
+    const step = overrideLevel("step", {
+      options: { approvals_reviewer: { kind: "agent_default" } },
+    });
+    expect(resolveExecutionOption([step, launch, ...inherited], "approvals_reviewer")).toEqual({
+      value: "auto_review",
+      source: "profile",
+    });
+    expect(resolveExecutionOption([step, launch, ...inherited], "sandbox")).toEqual({
+      value: "read-only",
+      source: "profile",
+    });
+    expect(resolveExecutionOption(inherited, "approval_policy")).toEqual({
+      value: "on-request",
+      source: "global",
+    });
+  });
   it("answers with the most specific level that names a value", () => {
     const own = levels({ options: { effort: { kind: "value", value: "high" } } });
     expect(resolveExecutionOption(own, "effort")).toEqual({ value: "high", source: "step" });

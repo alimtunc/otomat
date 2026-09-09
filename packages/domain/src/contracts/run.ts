@@ -209,7 +209,7 @@ export const setNextTurnModelRequestSchema = z
   .object({
     agent_session_id: z.string().min(1),
     current_config_hash: z.string().min(1),
-    model: modelIdSchema,
+    model: modelIdSchema.nullable(),
     options: providerOptionsSchema,
   })
   .strict();

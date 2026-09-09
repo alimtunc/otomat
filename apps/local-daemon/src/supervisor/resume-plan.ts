@@ -17,7 +17,7 @@ import {
   isRunSettled,
   isStepSettled,
   readyPlanWork,
-  selectLatestResumableSession,
+  latestSessionForStep,
   type RunPlanCompetitor,
   type RunPlanStep,
   type ReadyPlanWork,
@@ -47,34 +47,24 @@ function stepOf(run: RunRow, stepRunId: string): ResumableStep | undefined {
   return executableSteps(run.plan_json).find((step) => step.id === stepRunId);
 }
 
-/** The reattachable session of one step; a step the provider never named has none. */
-function lastSessionOf(
-  sessions: readonly AgentSessionRow[],
-  stepRunId: string | undefined,
-): AgentSessionRow | undefined {
-  if (stepRunId === undefined) return undefined;
-  return sessions.findLast(
-    (session) => session.step_run_id === stepRunId && session.provider_session_id !== null,
-  );
-}
-
 /** Native when the provider session survives, a recovery session in the same step otherwise. */
-function reopen(
-  db: Db,
-  run: RunRow,
-  step: ResumableStep,
-  session: AgentSessionRow | undefined,
-): ResumeAction {
-  if (!session) {
-    return { kind: "recovery", step, reason: "No provider session was recorded for this step" };
-  }
-  if (resumableRuntime(db, run, session) === null) {
-    const reason = "This run's runtime cannot reattach to a provider session";
-    return { kind: "recovery", step, reason };
-  }
+function reopen(db: Db, run: RunRow, step: ResumableStep): ResumeAction {
+  const latest = latestSessionForStep(listAgentSessionsForRun(db, run.id), step.id);
   const config =
-    getStepRun(db, step.id)?.next_turn_config_json ?? session.config_json ?? step.config ?? null;
-  return { kind: "native", session, step: { ...step, config } };
+    getStepRun(db, step.id)?.next_turn_config_json ?? latest?.config_json ?? step.config ?? null;
+  const resolvedStep = { ...step, config };
+  if (!latest || latest.provider_session_id === null) {
+    return {
+      kind: "recovery",
+      step: resolvedStep,
+      reason: "No provider session was recorded for this step",
+    };
+  }
+  if (resumableRuntime(db, run, latest) === null) {
+    const reason = "This run's runtime cannot reattach to a provider session";
+    return { kind: "recovery", step: resolvedStep, reason };
+  }
+  return { kind: "native", session: latest, step: resolvedStep };
 }
 
 /** The earliest step that stopped without succeeding: a fail-fast cascade cancels everything after the real failure, and recovery starts at the failure. Compete candidates reopen as a group or not at all. */
@@ -99,6 +89,7 @@ function unavailableFor(state: SupervisorState, run: RunRow): ResumeAction | nul
 }
 
 function interruptedCompeteAction(
+  db: Db,
   run: RunRow,
   steps: readonly StepRunRow[],
   group: CompeteGroupRow,
@@ -113,7 +104,19 @@ function interruptedCompeteAction(
     plannedGroup && isRunPlanCompeteGroup(plannedGroup)
       ? plannedGroup.compete.filter((candidate) => candidateIds.has(candidate.id))
       : [];
-  return { kind: "compete_group", group, competitors };
+  const sessions = listAgentSessionsForRun(db, run.id);
+  return {
+    kind: "compete_group",
+    group,
+    competitors: competitors.map((step) => ({
+      ...step,
+      config:
+        getStepRun(db, step.id)?.next_turn_config_json ??
+        latestSessionForStep(sessions, step.id)?.config_json ??
+        step.config ??
+        null,
+    })),
+  };
 }
 
 /** Reads rows only; nothing here writes, so the same call answers the cockpit and drives the command. */
@@ -125,15 +128,13 @@ export function resolveResumeAction(state: SupervisorState, run: RunRow): Resume
   const steps = listStepRunsForRun(db, run.id);
   const groups = listCompeteGroupsForRun(db, run.id);
   const interruptedGroup = groups.find((group) => group.status === "awaiting_human");
-  if (interruptedGroup) return interruptedCompeteAction(run, steps, interruptedGroup);
+  if (interruptedGroup) return interruptedCompeteAction(db, run, steps, interruptedGroup);
 
-  const sessions = listAgentSessionsForRun(db, run.id);
-  const session = selectLatestResumableSession(sessions, steps, groups);
   const interrupted = steps.find(
     (step) => step.status === "awaiting_human" || step.status === "waiting_for_provider",
   );
   const target = interrupted ? stepOf(run, interrupted.id) : undefined;
-  if (target) return reopen(db, run, target, session);
+  if (target) return reopen(db, run, target);
 
   // A stopped run reopens its own unfinished work first; a paused one owes the plan its next node.
   if (isRunSettled(run.status)) {
@@ -142,13 +143,13 @@ export function resolveResumeAction(state: SupervisorState, run: RunRow): Resume
     if (!stopped || !node) {
       return { kind: "unavailable", reason: "This run has no stopped step left to reopen" };
     }
-    return reopen(db, run, node, lastSessionOf(sessions, stopped.id));
+    return reopen(db, run, node);
   }
   const ready = readyPlanWork(run.plan_json, stepStatuses(steps), competeGroupStatuses(groups));
   if (ready) return { kind: "next_step", work: ready };
   const last = executableSteps(run.plan_json).at(-1);
   if (!last) return { kind: "unavailable", reason: "This run's plan has no step to resume" };
-  return reopen(db, run, last, session);
+  return reopen(db, run, last);
 }
 
 function toResumePlan(action: ResumeAction): RunResumePlan {

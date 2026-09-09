@@ -1,6 +1,7 @@
-import type { RunRow } from "@otomat/db";
+import { listAgentSessionsForRun, type RunRow } from "@otomat/db";
 import {
   executableSteps,
+  latestSessionForStep,
   type ResolvedAgentConfig,
   type RunPlan,
   type RunPlanCompetitor,
@@ -68,9 +69,13 @@ export function preflightResumeAction(
   if (action.kind === "compete_group") {
     const service = state.repositories.forRepository(run.repository_id)?.service;
     if (!service) return;
+    const sessions = listAgentSessionsForRun(state.db, run.id);
     for (const competitor of action.competitors) {
       const path = service.get(competitor.id)?.path;
       if (!path) return;
+      const session = latestSessionForStep(sessions, competitor.id);
+      if (session && competitor.config)
+        requireResumeConfigSupport(state.db, run, session, competitor.config);
       preflightStep(state, competitor, path);
     }
     return;

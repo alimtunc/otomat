@@ -17,10 +17,14 @@ describe("providerOptionsSchema", () => {
       effort: "xhigh",
       sandbox: "workspace-write",
       approval_policy: "on-request",
+      approvals_reviewer: "auto_review",
       reasoning_effort: "ultra",
     });
     expect(parsed.permission_mode).toBe("dontAsk");
     expect(parsed.reasoning_effort).toBe("ultra");
+    expect(providerOptionsSchema.parse(JSON.parse(JSON.stringify(parsed))).approvals_reviewer).toBe(
+      "auto_review",
+    );
   });
 
   it("keeps a value a past CLI accepted, so it can be shown and refused rather than lost", () => {

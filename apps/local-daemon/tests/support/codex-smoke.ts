@@ -8,6 +8,7 @@ const contextSchema = z.object({
   type: z.literal("turn_context"),
   payload: z.object({
     approval_policy: z.string(),
+    approvals_reviewer: z.string().optional(),
     sandbox_policy: z.object({ type: z.string() }),
   }),
 });
@@ -64,7 +65,10 @@ export async function startCodexSmokeProvider(home: string): Promise<() => Promi
       );
     });
   });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
   const address = server.address();
   if (address === null || typeof address === "string")
     throw new Error("missing smoke server address");
