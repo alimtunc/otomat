@@ -41,6 +41,7 @@ export function fakeDesktopBridge(
     executionHostSshAlias: null,
     build: { version: "0.0.0", commit: "abc1234", channel: "local" },
     pickDirectory: () => Promise.resolve(null),
+    onOpenRun: () => () => {},
     executionHost: {
       snapshot: () =>
         Promise.resolve({

@@ -109,6 +109,7 @@ const SNAPSHOT = {
       id: "run:run-1",
       bucket: "running",
       status: "running",
+      started_at: "2026-01-01T00:00:00.000Z",
       project: { id: "project-1", name: "Otomat" },
       issue: { id: "issue-1", identifier: "ABC-1", title: "Ship it" },
       run_id: "run-1",

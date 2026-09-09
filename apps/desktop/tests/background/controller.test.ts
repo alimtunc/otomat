@@ -6,29 +6,38 @@ import {
   type BackgroundTrayPort,
 } from "#main/background/controller";
 import type { CloseChoice } from "#main/background/prompts";
-import type { LocalWorkSummary } from "#main/background/work-summary";
+import type { BackgroundTrayActions } from "#main/background/tray";
+import type { LocalWorkItem } from "#main/background/work-items";
 
-const LIVE: LocalWorkSummary = { active: 1, waiting: 1, failed: 0 };
-const IDLE: LocalWorkSummary = { active: 0, waiting: 0, failed: 2 };
+function item(state: LocalWorkItem["state"], runId = `run-${state}`): LocalWorkItem {
+  return { run_id: runId, project: "Otomat", issue: "OTO-1", state, started_at: null };
+}
+
+const LIVE: LocalWorkItem[] = [item("running"), item("waiting")];
+const IDLE: LocalWorkItem[] = [item("failed")];
 
 const started: BackgroundMode[] = [];
 
 function harness(overrides: Partial<BackgroundModeOptions> = {}) {
   const tray: BackgroundTrayPort = { render: vi.fn(), destroy: vi.fn() };
+  let trayActions: BackgroundTrayActions | null = null;
   const options = {
-    readWork: vi.fn(() => Promise.resolve({ ok: true as const, summary: LIVE })),
+    readWork: vi.fn(() => Promise.resolve({ ok: true as const, items: LIVE })),
     askCloseChoice: vi.fn(() => Promise.resolve("background" as const)),
-    confirmQuit: vi.fn(() => Promise.resolve(true)),
-    createTray: vi.fn(() => tray),
+    createTray: vi.fn((actions: BackgroundTrayActions) => {
+      trayActions = actions;
+      return tray;
+    }),
     hideWindow: vi.fn(),
     openWindow: vi.fn(),
+    openRun: vi.fn(),
     quit: vi.fn(),
     log: vi.fn(),
     ...overrides,
   } satisfies BackgroundModeOptions;
   const mode = new BackgroundMode(options);
   started.push(mode);
-  return { mode, options, tray };
+  return { mode, options, tray, trayActions: () => trayActions };
 }
 
 function held() {
@@ -55,6 +64,42 @@ it("hides the window instead of stopping the runs when the operator keeps them g
   expect(tray.render).toHaveBeenCalledWith(LIVE);
 });
 
+it("offers the same three answers to a real quit, and keeps Otomat alive on the background one", async () => {
+  const { mode, options } = harness();
+
+  expect(mode.allowQuit()).toBe(false);
+
+  await vi.waitFor(() => expect(options.hideWindow).toHaveBeenCalledOnce());
+  expect(options.askCloseChoice).toHaveBeenCalledWith(LIVE);
+  expect(options.quit).not.toHaveBeenCalled();
+  expect(options.createTray).toHaveBeenCalledOnce();
+});
+
+it("lets a quit through once, without asking again, when the operator stops the runs", async () => {
+  const { mode, options } = harness({
+    askCloseChoice: vi.fn(() => Promise.resolve("quit" as const)),
+  });
+
+  expect(mode.allowQuit()).toBe(false);
+
+  await vi.waitFor(() => expect(options.quit).toHaveBeenCalledOnce());
+  expect(mode.allowQuit()).toBe(true);
+  expect(options.askCloseChoice).toHaveBeenCalledOnce();
+});
+
+it("keeps Otomat exactly as it was when the operator cancels a quit", async () => {
+  const { mode, options } = harness({
+    askCloseChoice: vi.fn(() => Promise.resolve("cancel" as const)),
+  });
+
+  mode.allowQuit();
+
+  await vi.waitFor(() => expect(options.askCloseChoice).toHaveBeenCalledOnce());
+  expect(options.quit).not.toHaveBeenCalled();
+  expect(options.hideWindow).not.toHaveBeenCalled();
+  expect(mode.allowQuit()).toBe(false);
+});
+
 it("shows the same window again on reopen and drops the menu-bar item", async () => {
   const { mode, options, tray } = harness();
 
@@ -66,9 +111,20 @@ it("shows the same window again on reopen and drops the menu-bar item", async ()
   expect(tray.destroy).toHaveBeenCalledOnce();
 });
 
+it("reopens the window on the run the operator picked in the menu bar", async () => {
+  const { mode, options, trayActions } = harness();
+
+  mode.handleWindowClose();
+  await vi.waitFor(() => expect(options.createTray).toHaveBeenCalledOnce());
+  trayActions()?.openRun("run-42");
+
+  expect(options.openWindow).toHaveBeenCalledOnce();
+  expect(options.openRun).toHaveBeenCalledWith("run-42");
+});
+
 it("quits without asking when no local run is live", async () => {
   const { mode, options } = harness({
-    readWork: vi.fn(() => Promise.resolve({ ok: true as const, summary: IDLE })),
+    readWork: vi.fn(() => Promise.resolve({ ok: true as const, items: IDLE })),
   });
 
   expect(mode.handleWindowClose()).toBe(true);
@@ -89,38 +145,6 @@ it("lets the window close for real once the operator chose to stop the runs", as
   expect(mode.handleWindowClose()).toBe(false);
 });
 
-it("leaves the window and the runs alone when the operator cancels", async () => {
-  const { mode, options } = harness({
-    askCloseChoice: vi.fn(() => Promise.resolve("cancel" as const)),
-  });
-
-  mode.handleWindowClose();
-
-  await vi.waitFor(() => expect(options.askCloseChoice).toHaveBeenCalledOnce());
-  expect(options.quit).not.toHaveBeenCalled();
-  expect(options.hideWindow).not.toHaveBeenCalled();
-});
-
-it("asks before a real quit interrupts live runs, then lets that quit through", async () => {
-  const { mode, options } = harness();
-
-  expect(mode.allowQuit()).toBe(false);
-
-  await vi.waitFor(() => expect(options.quit).toHaveBeenCalledOnce());
-  expect(options.confirmQuit).toHaveBeenCalledWith(LIVE);
-  expect(mode.allowQuit()).toBe(true);
-});
-
-it("keeps Otomat running when the operator declines the quit", async () => {
-  const { mode, options } = harness({ confirmQuit: vi.fn(() => Promise.resolve(false)) });
-
-  mode.allowQuit();
-
-  await vi.waitFor(() => expect(options.confirmQuit).toHaveBeenCalledOnce());
-  expect(options.quit).not.toHaveBeenCalled();
-  expect(mode.allowQuit()).toBe(false);
-});
-
 it("re-issues a quit that arrived while the operator was still choosing", async () => {
   const pending = held();
   const { mode, options } = harness({ askCloseChoice: vi.fn(pending.prompt) });
@@ -134,19 +158,17 @@ it("re-issues a quit that arrived while the operator was still choosing", async 
   expect(options.hideWindow).toHaveBeenCalledOnce();
 });
 
-it("does not ask again when a second quit arrives while the warning is on screen", async () => {
+it("does not ask again when a second quit arrives while the dialog is on screen", async () => {
   const pending = held();
-  const { mode, options } = harness({
-    confirmQuit: vi.fn(async () => (await pending.prompt()) === "quit"),
-  });
+  const { mode, options } = harness({ askCloseChoice: vi.fn(pending.prompt) });
 
   expect(mode.allowQuit()).toBe(false);
-  await vi.waitFor(() => expect(options.confirmQuit).toHaveBeenCalledOnce());
+  await vi.waitFor(() => expect(options.askCloseChoice).toHaveBeenCalledOnce());
   expect(mode.allowQuit()).toBe(false);
   pending.settle("cancel");
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  expect(options.confirmQuit).toHaveBeenCalledOnce();
+  expect(options.askCloseChoice).toHaveBeenCalledOnce();
   expect(options.quit).not.toHaveBeenCalled();
 });
 
@@ -156,7 +178,7 @@ it("takes SIGTERM's quit without a dialog no one can answer", () => {
   mode.forceQuit();
 
   expect(mode.allowQuit()).toBe(true);
-  expect(options.confirmQuit).not.toHaveBeenCalled();
+  expect(options.askCloseChoice).not.toHaveBeenCalled();
 });
 
 it("drops an answer that lands after the OS already took the process down", async () => {

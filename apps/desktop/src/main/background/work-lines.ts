@@ -1,12 +1,15 @@
-import type { LocalWorkSummary } from "./work-summary.js";
+import type { LocalWorkItem, LocalWorkState } from "./work-items.js";
 
 const plural = (count: number): string => (count === 1 ? "" : "s");
 
-export function localWorkLines(summary: LocalWorkSummary | null): string[] {
-  if (summary === null) return ["Otomat could not read the local daemon's activity."];
+export function localWorkLines(items: readonly LocalWorkItem[] | null): string[] {
+  if (items === null) return ["Otomat could not read the local daemon's activity."];
+  const count = (state: LocalWorkState): number =>
+    items.filter((item) => item.state === state).length;
+  const active = count("running");
   return [
-    `${summary.active} run${plural(summary.active)} active`,
-    `${summary.waiting} awaiting you`,
-    `${summary.failed} failed`,
+    `${active} run${plural(active)} active`,
+    `${count("waiting")} awaiting you`,
+    `${count("failed")} failed`,
   ];
 }

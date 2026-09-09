@@ -26,7 +26,7 @@ import type {
   WorkspaceOpenTarget,
   WorkspaceReconcileReport,
 } from "@otomat/domain";
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
+import { contextBridge, ipcRenderer } from "electron";
 
 import { isDesktopBuildSummary } from "#shared/build-summary";
 import { isExecutionHostSync } from "#shared/execution-host-sync";
@@ -60,6 +60,7 @@ import {
   LINEAR_DELIVERY_STATUS_CHANNEL,
   LINEAR_FORGET_KEY_CHANNEL,
   LINEAR_SAVE_KEY_CHANNEL,
+  OPEN_RUN_CHANNEL,
   PICK_DIRECTORY_CHANNEL,
   PREVIEW_SANDBOX_RESET_CHANNEL,
   PREVIEW_SYNC_CHANNEL,
@@ -70,6 +71,8 @@ import {
   UPDATE_SNAPSHOT_CHANNEL,
   UPDATE_STATUS_CHANNEL,
 } from "#shared/ipc-channels";
+
+import { subscribe } from "./subscribe.js";
 
 // Resolved synchronously so `window.otomat.daemonUrl` exists before the client module reads it.
 const daemonUrl: unknown = ipcRenderer.sendSync(DAEMON_URL_CHANNEL);
@@ -96,6 +99,8 @@ contextBridge.exposeInMainWorld("otomat", {
   executionHostSshAlias: hostSync.ssh_alias,
   build: buildSummary,
   pickDirectory: (): Promise<string | null> => ipcRenderer.invoke(PICK_DIRECTORY_CHANNEL),
+  onOpenRun: (listener: (runId: string) => void): (() => void) =>
+    subscribe(OPEN_RUN_CHANNEL, listener),
   executionHost: {
     snapshot: (): Promise<ExecutionHostSnapshot> =>
       ipcRenderer.invoke(EXECUTION_HOST_SNAPSHOT_CHANNEL),
@@ -151,12 +156,8 @@ contextBridge.exposeInMainWorld("otomat", {
       target: WorkspaceOpenTarget,
     ): Promise<ExecutionHostOperationResult> =>
       ipcRenderer.invoke(EXECUTION_HOST_OPEN_WORKSPACE_CHANNEL, hostId, path, target),
-    onRemoteStatus: (listener: (status: RemoteHostStatus) => void): (() => void) => {
-      const wrapped = (_event: IpcRendererEvent, status: RemoteHostStatus): void =>
-        listener(status);
-      ipcRenderer.on(EXECUTION_HOST_STATUS_CHANNEL, wrapped);
-      return () => ipcRenderer.off(EXECUTION_HOST_STATUS_CHANNEL, wrapped);
-    },
+    onRemoteStatus: (listener: (status: RemoteHostStatus) => void): (() => void) =>
+      subscribe(EXECUTION_HOST_STATUS_CHANNEL, listener),
     listInstances: (): Promise<RemoteInstanceListResult> =>
       ipcRenderer.invoke(EXECUTION_HOST_INSTANCES_CHANNEL),
     stopInstance: (build: string): Promise<ExecutionHostOperationResult> =>
@@ -172,12 +173,8 @@ contextBridge.exposeInMainWorld("otomat", {
     forgetKey: (connectionId: string): Promise<LinearVaultOperationResult> =>
       ipcRenderer.invoke(LINEAR_FORGET_KEY_CHANNEL, connectionId),
     delivery: (): Promise<LinearDeliverySnapshot> => ipcRenderer.invoke(LINEAR_DELIVERY_CHANNEL),
-    onDelivery: (listener: (snapshot: LinearDeliverySnapshot) => void): (() => void) => {
-      const wrapped = (_event: IpcRendererEvent, snapshot: LinearDeliverySnapshot): void =>
-        listener(snapshot);
-      ipcRenderer.on(LINEAR_DELIVERY_STATUS_CHANNEL, wrapped);
-      return () => ipcRenderer.off(LINEAR_DELIVERY_STATUS_CHANNEL, wrapped);
-    },
+    onDelivery: (listener: (snapshot: LinearDeliverySnapshot) => void): (() => void) =>
+      subscribe(LINEAR_DELIVERY_STATUS_CHANNEL, listener),
   },
   support: {
     exportBundle: (diagnostic: ErrorDiagnostic): Promise<SupportBundleExportResult> =>
@@ -190,12 +187,8 @@ contextBridge.exposeInMainWorld("otomat", {
       ipcRenderer.invoke(UPDATE_SNAPSHOT_CHANNEL),
     check: (): Promise<void> => ipcRenderer.invoke(UPDATE_CHECK_CHANNEL),
     install: (): Promise<void> => ipcRenderer.invoke(UPDATE_INSTALL_CHANNEL),
-    onChange: (listener: (snapshot: DesktopUpdateSnapshot) => void): (() => void) => {
-      const wrapped = (_event: IpcRendererEvent, snapshot: DesktopUpdateSnapshot): void =>
-        listener(snapshot);
-      ipcRenderer.on(UPDATE_STATUS_CHANNEL, wrapped);
-      return () => ipcRenderer.off(UPDATE_STATUS_CHANNEL, wrapped);
-    },
+    onChange: (listener: (snapshot: DesktopUpdateSnapshot) => void): (() => void) =>
+      subscribe(UPDATE_STATUS_CHANNEL, listener),
   },
   preview,
   sandbox: {

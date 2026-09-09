@@ -672,23 +672,30 @@ and its router state were never torn down, so `reopen()` is a `show()`. The sing
 instance lock already in `main/index.ts` makes `second-instance` and `activate`
 reach that same window rather than a second shell and a second daemon.
 
-A real quit takes the same gate. `before-quit` cannot ask anything synchronously, so
-a quit nothing has answered yet is refused once: the confirmation runs asynchronously
-and an approved quit re-issues `app.quit()`, which the open gate passes straight
-through to `QuitSequence` and its daemon shutdown. A quit that arrives while the
-operator is still answering is remembered and re-issued rather than dropped. SIGTERM
-skips the prompt through `forceQuit()` — no dialog can hold an OS shutdown, and
-outliving a logout is out of scope.
+A real quit takes the same gate and the same prompt. Cmd+Q, the application menu, the
+menu-bar Quit and the last window close all reach `BackgroundMode`, and live local work
+is always offered the background rather than a bare warning: quitting is one of three
+answers, never the only one. `before-quit` cannot ask anything synchronously, so a quit
+nothing has answered yet is refused once: the prompt runs asynchronously and an approved
+quit re-issues `app.quit()`, which the open gate — the explicit confirmed-stop state that
+keeps the hook out of its own recursion — passes straight through to `QuitSequence` and
+its daemon shutdown. A quit that arrives while the operator is still answering is
+remembered and re-issued rather than dropped. SIGTERM skips the prompt through
+`forceQuit()` — no dialog can hold an OS shutdown, and outliving a logout is out of scope.
 
-The menu-bar item keeps no state of its own. It counts the runs the daemon already
-projects (`GET /api/activity`) into active / awaiting-you / failed, and only while no
-window is open; the read is bounded, because a daemon that never answers would
-otherwise hold the close and every quit behind it. "Awaiting you" is the three
-`awaiting_*` states, where a provider turn is blocked on an answer; `review_ready` is
-deliberately not counted, because quitting on it interrupts nothing, and neither are
-the operations projected alongside a run, which would count the same issue twice. The
-menu carries those counts, Open and Quit — never an issue title or a prompt, and its
-icon is a template image so the menu bar tints it for its own appearance.
+The menu-bar item keeps no state of its own. `localWorkItems` folds the runs the daemon
+already projects (`GET /api/activity`) into one item per `run_id`, which is what both the
+counts and the listed rows read from; the fetch is bounded, because a daemon that never
+answers would otherwise hold the close and every quit behind it. An item is awaiting the
+operator in the three `awaiting_*` states, where a provider turn is blocked on an answer;
+`review_ready` alone is dropped, because quitting on it interrupts nothing, while an
+operation still publishing under such a run keeps its workspace live — counted once,
+never twice. The menu carries the totals, then each run under its state with the issue,
+the project and the run's age — stamped once when it first ran, so it is not the current
+turn's duration — marked local because the menu only ever reads the local daemon; it
+opens one on `OPEN_RUN_CHANNEL`, which the loaded renderer turns into a route change.
+What it never carries is a prompt, a conversation or a secret, and its icon stays a
+template image so the menu bar tints it for its own appearance.
 
 ## Replacing the Desktop App
 

@@ -4,6 +4,7 @@ import { PreviewStatusBar } from "@web/components/preview/status-bar";
 import { useActivityNotices } from "@web/components/shell/activity/use-notices";
 import { useOpenHostInboxes } from "@web/components/shell/project-tabs/use-open-host-inboxes";
 import { RemoteSessionProvider } from "@web/components/shell/remote-session/provider";
+import { useDesktopOpenRun } from "@web/components/shell/use-desktop-open-run";
 import { useLinearAutoSync } from "@web/components/shell/use-linear-auto-sync";
 
 /** Mounted for every route, so these subscriptions outlive navigation. */
@@ -12,6 +13,7 @@ function RootLayout() {
   useActivityStream();
   useActivityNotices();
   useOpenHostInboxes();
+  useDesktopOpenRun();
   return (
     <RemoteSessionProvider>
       <Outlet />

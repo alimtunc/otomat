@@ -17,6 +17,8 @@ export interface AppPaths {
   splashHtml: string;
   /** Menu-bar icon for background mode; its `@2x` sibling ships next to it. */
   trayIcon: string;
+  /** Otomat's icon for the native dialogs, which otherwise show a generic document. */
+  appIcon: string;
   /** Template the preview sandbox's fixture repository is created from. */
   sandboxTemplateDir: string;
   cockpitPreload: string;
@@ -39,6 +41,7 @@ export function resolveAppPaths(): AppPaths {
       webDist: join(process.resourcesPath, "web"),
       splashHtml: join(app.getAppPath(), "resources", "splash.html"),
       trayIcon: join(app.getAppPath(), "resources", "tray-icon.png"),
+      appIcon: join(app.getAppPath(), "resources", "app-icon.png"),
       sandboxTemplateDir: join(app.getAppPath(), "resources", "sandbox"),
       cockpitPreload,
       splashPreload,
@@ -53,6 +56,7 @@ export function resolveAppPaths(): AppPaths {
     webDist: null,
     splashHtml: join(MAIN_DIR, "..", "..", "resources", "splash.html"),
     trayIcon: join(MAIN_DIR, "..", "..", "resources", "tray-icon.png"),
+    appIcon: join(MAIN_DIR, "..", "..", "resources", "app-icon.png"),
     sandboxTemplateDir: join(MAIN_DIR, "..", "..", "resources", "sandbox"),
     cockpitPreload,
     splashPreload,

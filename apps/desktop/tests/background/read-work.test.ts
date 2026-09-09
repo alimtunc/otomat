@@ -9,6 +9,7 @@ const SNAPSHOT = {
       id: "a",
       bucket: "running",
       status: "running",
+      started_at: "2026-09-03T09:00:00.000Z",
       project: { id: "project-1", name: "Otomat" },
       issue: { id: "issue-1", identifier: "OTO-1", title: "Title" },
       run_id: "run-a",
@@ -29,7 +30,18 @@ it("reads the daemon's own activity projection", async () => {
     return new Response(JSON.stringify(SNAPSHOT));
   });
 
-  expect(reading).toEqual({ ok: true, summary: { active: 1, waiting: 0, failed: 0 } });
+  expect(reading).toEqual({
+    ok: true,
+    items: [
+      {
+        run_id: "run-a",
+        project: "Otomat",
+        issue: "OTO-1",
+        state: "running",
+        started_at: "2026-09-03T09:00:00.000Z",
+      },
+    ],
+  });
 });
 
 it("reports an unreachable daemon instead of counting it as idle", async () => {
@@ -44,10 +56,7 @@ it("reports an unreachable daemon instead of counting it as idle", async () => {
 it("has no work to read before the daemon has a URL", async () => {
   const fetchImpl = vi.fn();
 
-  expect(await readLocalWork("", fetchImpl)).toEqual({
-    ok: true,
-    summary: { active: 0, waiting: 0, failed: 0 },
-  });
+  expect(await readLocalWork("", fetchImpl)).toEqual({ ok: true, items: [] });
   expect(fetchImpl).not.toHaveBeenCalled();
 });
 

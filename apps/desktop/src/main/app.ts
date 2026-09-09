@@ -1,16 +1,17 @@
 import { basename } from "node:path";
 
 import type { DesktopStartupDiagnostic } from "@otomat/domain";
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, ipcMain } from "electron";
 
 import type { BuildInfo } from "#shared/build-info";
 import { DEV_SERVER_ENV } from "#shared/constants";
 import {
   EXECUTION_HOST_STATUS_CHANNEL,
   LINEAR_DELIVERY_STATUS_CHANNEL,
+  OPEN_RUN_CHANNEL,
   UPDATE_STATUS_CHANNEL,
 } from "#shared/ipc-channels";
-import { SPLASH_RETRY_CHANNEL, SPLASH_STATUS_CHANNEL, type StartupStatus } from "#shared/startup";
+import { SPLASH_RETRY_CHANNEL } from "#shared/startup";
 import { resolveUserPath } from "#shared/user-path";
 
 import { createBackgroundMode } from "./background/create.js";
@@ -25,6 +26,7 @@ import { serveAppScheme } from "./protocol.js";
 import { QuitSequence } from "./quit.js";
 import { createDesktopRuntime, type DesktopRuntime } from "./runtime.js";
 import { hardenWebContents, resolveAllowedOrigins } from "./security.js";
+import { SplashWindow } from "./splash-window.js";
 import {
   attachAvailableBackup,
   describeStartupFailure,
@@ -46,7 +48,6 @@ export class DesktopApp {
   private runtime: DesktopRuntime | null = null;
   private localDaemonUrl = "";
   private diagnostic: DesktopStartupDiagnostic | null = null;
-  private splash: BrowserWindow | null = null;
   private operation: "restoring" | "starting" | null = null;
   private readonly csp = new RendererCsp(() => [
     this.localDaemonUrl,
@@ -54,15 +55,18 @@ export class DesktopApp {
   ]);
   private readonly rejectedBackupPaths = new Set<string>();
   private readonly log = new StartupLogSink(() => this.runtime?.desktopLog ?? null);
+  private readonly splash = new SplashWindow(() => createSplashWindow(this.paths));
   readonly quit = new QuitSequence(
     () => this.runtime,
     (message) => this.log.write(message),
   );
   readonly background = createBackgroundMode({
     trayIcon: () => this.paths.trayIcon,
+    appIcon: () => this.paths.appIcon,
     daemonUrl: () => this.localDaemonUrl,
     hideWindow: () => this.cockpit.hide(),
     openWindow: () => this.showPrimary(),
+    openRun: (runId) => this.cockpit.send(OPEN_RUN_CHANNEL, runId),
     log: (message) => this.log.write(message),
   });
   private readonly cockpit = new CockpitWindow({
@@ -112,7 +116,7 @@ export class DesktopApp {
     if (this.paths.packaged && this.paths.webDist !== null) {
       serveAppScheme(this.paths.webDist, (document) => this.csp.headerFor(document));
     }
-    this.splash = await createSplashWindow(this.paths);
+    await this.splash.open();
     installApplicationMenu({
       exportSupportBundle: () => this.support.exportBundleWithFeedback(),
       showDataPolicy: () => this.support.showDataPolicy(),
@@ -127,7 +131,7 @@ export class DesktopApp {
   private async runStartup(): Promise<void> {
     if (this.operation !== null) return;
     this.operation = "starting";
-    this.sendStatus({ phase: "launching" });
+    this.splash.send({ phase: "launching" });
     try {
       this.runtime ??= createDesktopRuntime({
         paths: this.paths,
@@ -168,15 +172,14 @@ export class DesktopApp {
       this.rejectedBackupPaths.clear();
       this.diagnostic = null;
       this.cockpit.open();
-      this.splash?.close();
-      this.splash = null;
+      this.splash.close();
       this.runtime.updater.start();
     } catch (error) {
       this.ipcState.daemonUrl = "";
       this.localDaemonUrl = "";
       this.diagnostic = attachAvailableBackup(describeStartupFailure(error), this.backupContext());
       this.log.write(`${this.diagnostic.code}: ${this.diagnostic.message}`);
-      this.sendStatus({ phase: "failed", diagnostic: this.diagnostic });
+      this.splash.send({ phase: "failed", diagnostic: this.diagnostic });
     } finally {
       if (this.operation === "starting") this.operation = null;
     }
@@ -190,10 +193,10 @@ export class DesktopApp {
     this.operation = "restoring";
     try {
       if (!(await this.support.confirmRestore())) {
-        this.sendStatus({ phase: "failed", diagnostic });
+        this.splash.send({ phase: "failed", diagnostic });
         return;
       }
-      this.sendStatus({ phase: "restoring" });
+      this.splash.send({ phase: "restoring" });
       await this.runtime.daemon.restoreBackup(backupPath);
       this.ipcState.daemonUrl = "";
       this.diagnostic = null;
@@ -212,7 +215,7 @@ export class DesktopApp {
         this.diagnostic = attachAvailableBackup(restoreDiagnostic, this.backupContext());
       }
       this.log.write(`${this.diagnostic.code}: ${this.diagnostic.message}`);
-      this.sendStatus({ phase: "failed", diagnostic: this.diagnostic });
+      this.splash.send({ phase: "failed", diagnostic: this.diagnostic });
     } finally {
       if (this.operation === "restoring") this.operation = null;
     }
@@ -238,12 +241,6 @@ export class DesktopApp {
       this.cockpit.show();
       return;
     }
-    if (this.splash?.isMinimized() === true) this.splash.restore();
-    this.splash?.focus();
-  }
-
-  private sendStatus(status: StartupStatus): void {
-    if (this.splash === null || this.splash.isDestroyed()) return;
-    this.splash.webContents.send(SPLASH_STATUS_CHANNEL, status);
+    this.splash.focus();
   }
 }

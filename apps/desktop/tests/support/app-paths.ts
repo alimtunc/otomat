@@ -7,6 +7,7 @@ export function devAppPaths(overrides: Partial<AppPaths> = {}): AppPaths {
     webDist: null,
     splashHtml: "/tmp/splash.html",
     trayIcon: "/tmp/tray-icon.png",
+    appIcon: "/tmp/app-icon.png",
     sandboxTemplateDir: "/tmp/otomat-sandbox-template",
     cockpitPreload: "/tmp/cockpit.cjs",
     splashPreload: "/tmp/splash.cjs",
