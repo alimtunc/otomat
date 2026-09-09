@@ -19,7 +19,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
 import { createGitWorktreeService, type GitWorktreeService } from "#git";
-import { createGitHubService, type GitHubService, type GitHubServiceConfig } from "#github";
+import {
+  createPullRequestGenerator,
+  createGitHubService,
+  type CommandResult,
+  type GitHubService,
+  type GitHubServiceConfig,
+} from "#github";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { stubRepositoryResolver } from "../support/git.js";
@@ -186,6 +192,71 @@ describe("pull request publication as a durable operation", () => {
       "creating",
       "created",
     ]);
+  });
+
+  /** The generator the daemon really ships, so the subject the publication validates is the repaired one. */
+  function generatorAnswering(...summaries: string[]): GitHubServiceConfig["generator"] {
+    const answers: CommandResult[] = summaries.map((summary) => ({
+      stdout: `<otomat-json>${JSON.stringify({
+        type: "feat",
+        scope: "pr",
+        summary,
+        body: "Publishes the run in one click.",
+        commit_body: null,
+        branch: PROPOSAL.branch,
+        delivery: "complete",
+      })}</otomat-json>`,
+      stderr: "",
+      exitCode: 0,
+    }));
+    return createPullRequestGenerator(async () => {
+      const answer = answers.shift();
+      if (!answer) throw new Error("the generator was asked more times than the test allows");
+      return answer;
+    });
+  }
+
+  it("repairs the agent's over-long subject before the publication it starts validates it", async () => {
+    const summary = "publish the run in one action and keep every metadata field editable after it";
+    expect(`feat(pr): ${summary}`.length).toBe(87);
+
+    await withStubbedClaude(async () => {
+      const github = service(generatorAnswering(summary));
+      cli.provider = { ...cli.provider, headRef: PROPOSAL.branch };
+
+      await github.publish(run(), { mode: "draft" });
+      await github.settlePublications();
+    });
+
+    const row = stored();
+    expect(row.publication_status).toBe("created");
+    expect(row.commit_subject).toBe(
+      "feat(pr): publish the run in one action and keep every metadata field",
+    );
+    expect(cli.pushedBranches).toEqual([PROPOSAL.branch]);
+  });
+
+  it("commits, pushes and creates nothing when even the second answer breaks the contract", async () => {
+    const unusable = "x".repeat(80);
+
+    await withStubbedClaude(async () => {
+      const github = service(generatorAnswering(unusable, unusable));
+
+      const accepted = await github.publish(run(), { mode: "draft" });
+      expect(accepted.row.publication_status).toBe("generating");
+      await github.settlePublications();
+    });
+
+    expect(stored()).toMatchObject({
+      publication_status: "failed",
+      failed_phase: "generating",
+      error_code: "pr_generation_invalid",
+      error_message: "The subject is 90 characters; remove 18 to stay within 72.",
+      commit_subject: null,
+      number: null,
+    });
+    expect(cli.pushCalls).toBe(0);
+    expect(cli.createCalls).toBe(0);
   });
 
   it.each(PULL_REQUEST_PUBLICATION_ACTIVE_STATES)(

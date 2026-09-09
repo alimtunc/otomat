@@ -221,6 +221,28 @@ it("refuses a free-form title before the publisher is reached", async () => {
   expect(published).toBe(0);
 });
 
+it("opens no publication for the 80-character subject the boundary refuses", async () => {
+  let published = 0;
+  const app = makeApiApp(t, {
+    github: stubGitHubService({
+      publish: async () => {
+        published += 1;
+        throw new Error("an over-long subject must never open an operation");
+      },
+    }),
+  });
+
+  const summary = "x".repeat(70);
+  expect(`feat(pr): ${summary}`.length).toBe(80);
+  const response = await post(app, `/api/runs/${RUN_ID}/pr`, {
+    mode: "draft",
+    details: { subject: { type: "feat", scope: "pr", summary }, body: "Details" },
+  });
+
+  expect(response.status).toBe(400);
+  expect(published).toBe(0);
+});
+
 it("refuses a type the repository does not publish", async () => {
   const app = makeApiApp(t, { github: stubGitHubService() });
 

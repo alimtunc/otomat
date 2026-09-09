@@ -1388,6 +1388,17 @@ generator. Otomat reads no convention from the repository's history: inferring
 one from squash-merge titles is how a compliant repository ended up publishing
 free-form subjects.
 
+`commitSummaryBudget` is the single place the room left for a summary is
+computed, so the cockpit's Summary hint and the generator's correction prompt
+quote the same number and a longer scope shrinks it for both at once. A generated
+subject the contract refuses is repaired by dropping whole trailing words — never
+a partial one — and whenever that repair does not clear the contract, scope
+included, the agent is asked once more with that exact budget. A second refusal
+fails the publication at its `generating` phase, before any commit, push or
+`gh pr create`,
+and the sentence the contract answered with stands on the Summary field until the
+operator writes one.
+
 Only a commit can be pushed, so only a commit can stand as evidence of what was
 published: `published_head_sha` is the commit Otomat pushed and
 `published_diff_sha` is `commitDiff` of that commit against the run's fork

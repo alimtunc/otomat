@@ -35,6 +35,13 @@ export function commitScopeViolation(scope: string): string | null {
   return "A scope is lowercase, without spaces or parentheses.";
 }
 
+export function commitSummaryBudget(subject: Omit<CommitSubjectDraft, "summary">): number {
+  return Math.max(
+    0,
+    COMMIT_SUBJECT_MAX_LENGTH - formatCommitSubject({ ...subject, summary: "" }).length,
+  );
+}
+
 export function commitSummaryViolation(subject: CommitSubjectDraft): string | null {
   const summary = subject.summary.trim();
   if (summary === "") return "A summary is required.";
@@ -42,7 +49,22 @@ export function commitSummaryViolation(subject: CommitSubjectDraft): string | nu
   if (summary.endsWith(".")) return "A summary ends without a full stop.";
   const length = formatCommitSubject(subject).length;
   if (length > COMMIT_SUBJECT_MAX_LENGTH) {
-    return `The subject reaches ${String(length)} characters; it stays within ${String(COMMIT_SUBJECT_MAX_LENGTH)}.`;
+    const excess = length - COMMIT_SUBJECT_MAX_LENGTH;
+    return `The subject is ${String(length)} characters; remove ${String(excess)} to stay within ${String(COMMIT_SUBJECT_MAX_LENGTH)}.`;
+  }
+  return null;
+}
+
+const TRAILING_PUNCTUATION = /[\s.,;:\u2013\u2014-]+$/;
+
+/** Null when no whole word fits: a summary is never cut mid-word. */
+export function shortenCommitSummary(subject: CommitSubjectDraft): string | null {
+  const budget = commitSummaryBudget(subject);
+  const words = subject.summary.trim().split(/\s+/);
+  while (words.length > 0) {
+    const candidate = words.join(" ").replace(TRAILING_PUNCTUATION, "");
+    if (candidate !== "" && candidate.length <= budget) return candidate;
+    words.pop();
   }
   return null;
 }

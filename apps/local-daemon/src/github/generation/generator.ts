@@ -1,6 +1,9 @@
 import {
   commitSubjectViolation,
+  PR_GENERATION_INVALID_CODE,
+  shortenCommitSummary,
   type CommitSubject,
+  type CommitSubjectDraft,
   type PullRequestProposal,
 } from "@otomat/domain";
 
@@ -13,27 +16,34 @@ import type { CommandRunner, PullRequestGenerator } from "../types.js";
 import type { GenerationAgent } from "./agent.js";
 import type { GenerationInput } from "./input.js";
 import { parseGenerationOutput, sanitizeBranchName, type GenerationOutput } from "./parse.js";
-import { generationPrompt } from "./prompt.js";
+import { correctionPrompt, generationPrompt } from "./prompt.js";
 
 const GENERATION_TIMEOUT_MS = 180_000;
 
-/** Refused before any commit or push: an invalid proposal leaves the fields editable and publishes nothing. */
+function proposedSubject(output: GenerationOutput): CommitSubjectDraft {
+  return { type: output.type, scope: output.scope ?? null, summary: output.summary };
+}
+
+/** The subject the contract accepts, or the sentence it refused with. */
+function acceptedSubject(subject: CommitSubjectDraft): CommitSubject | string {
+  const violation = commitSubjectViolation(subject);
+  if (violation === null) return subject;
+  const summary = shortenCommitSummary(subject);
+  if (summary === null) return violation;
+  const shortened = { ...subject, summary };
+  return commitSubjectViolation(shortened) ?? shortened;
+}
+
 function compose(
   output: GenerationOutput,
+  subject: CommitSubject,
   input: GenerationInput,
   agent: GenerationAgent,
 ): PullRequestProposal {
-  const subject: CommitSubject = {
-    type: output.type,
-    scope: output.scope ?? null,
-    summary: output.summary,
-  };
-  const violation = commitSubjectViolation(subject);
-  if (violation !== null) throw new GitHubPublicationError("pr_generation_invalid", violation);
   const branch = sanitizeBranchName(output.branch);
   if (branch === null) {
     throw new GitHubPublicationError(
-      "pr_generation_invalid",
+      PR_GENERATION_INVALID_CODE,
       "The agent proposed an unusable branch name.",
     );
   }
@@ -47,6 +57,34 @@ function compose(
 }
 
 export function createPullRequestGenerator(run: CommandRunner): PullRequestGenerator {
+  const invoke = async (
+    agent: GenerationAgent,
+    cwd: string,
+    prompt: string,
+  ): Promise<GenerationOutput> => {
+    const result = await run({
+      command: agent.command,
+      args: agent.args,
+      cwd,
+      stdin: prompt,
+      timeoutMs: GENERATION_TIMEOUT_MS,
+    });
+    if (result.errorCode === "timed_out") {
+      throw new GitHubPublicationError(
+        "pr_generation_failed",
+        `The ${agent.audit.runtime} CLI did not answer within ${String(GENERATION_TIMEOUT_MS / 1000)} seconds.`,
+      );
+    }
+    if (!commandSucceeded(result)) {
+      const detail = result.stderr.trim().split("\n").at(-1) || (result.errorCode ?? "");
+      throw new GitHubPublicationError(
+        "pr_generation_failed",
+        `The ${agent.audit.runtime} CLI could not write the pull request${detail === "" ? "." : ` (${detail.slice(0, 200)})`}`,
+      );
+    }
+    return parseGenerationOutput(result.stdout);
+  };
+
   return {
     async generate(agent: GenerationAgent, input: GenerationInput): Promise<PullRequestProposal> {
       try {
@@ -57,27 +95,17 @@ export function createPullRequestGenerator(run: CommandRunner): PullRequestGener
         }
         throw error;
       }
-      const result = await run({
-        command: agent.command,
-        args: agent.args,
-        cwd: input.cwd,
-        stdin: generationPrompt(input),
-        timeoutMs: GENERATION_TIMEOUT_MS,
-      });
-      if (result.errorCode === "timed_out") {
-        throw new GitHubPublicationError(
-          "pr_generation_failed",
-          `The ${agent.audit.runtime} CLI did not answer within ${String(GENERATION_TIMEOUT_MS / 1000)} seconds.`,
-        );
+      const first = await invoke(agent, input.cwd, generationPrompt(input));
+      const proposed = proposedSubject(first);
+      const repaired = acceptedSubject(proposed);
+      if (typeof repaired !== "string") return compose(first, repaired, input, agent);
+
+      const retried = await invoke(agent, input.cwd, correctionPrompt(input, proposed, repaired));
+      const accepted = acceptedSubject(proposedSubject(retried));
+      if (typeof accepted === "string") {
+        throw new GitHubPublicationError(PR_GENERATION_INVALID_CODE, accepted);
       }
-      if (!commandSucceeded(result)) {
-        const detail = result.stderr.trim().split("\n").at(-1) || (result.errorCode ?? "");
-        throw new GitHubPublicationError(
-          "pr_generation_failed",
-          `The ${agent.audit.runtime} CLI could not write the pull request${detail === "" ? "." : ` (${detail.slice(0, 200)})`}`,
-        );
-      }
-      return compose(parseGenerationOutput(result.stdout), input, agent);
+      return compose(retried, accepted, input, agent);
     },
   };
 }

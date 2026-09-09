@@ -57,6 +57,7 @@ function render(overrides: Partial<Parameters<typeof PullRequestForm>[0]> = {}) 
         onModeChange={onModeChange}
         onSubmit={onSubmit}
         onGenerate={onGenerate}
+        generationRefusal={null}
         isPending={false}
         isGenerating={false}
         {...overrides}
@@ -82,6 +83,14 @@ afterEach(() => {
   root = null;
   container = null;
 });
+
+function summaryInput(view: HTMLElement): HTMLInputElement {
+  const found = [...view.querySelectorAll("input")].find(
+    (input) => input.placeholder === "unify run and workflow composers",
+  );
+  if (!found) throw new Error("no summary input");
+  return found;
+}
 
 function pullRequest(overrides: Partial<PullRequestContract> = {}): PullRequestContract {
   return {
@@ -223,6 +232,65 @@ describe("PullRequestForm", () => {
     await act(async () => {});
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ mode: "draft" }));
+  });
+
+  it("recomputes the summary budget the moment the scope changes", () => {
+    const { view } = render({ customize: true, pullRequest: pullRequest() });
+
+    expect(view.textContent).toContain("leaving 62 for the summary");
+
+    const scope = [...view.querySelectorAll("input")].find((input) => input.value === "pr");
+    if (!scope) throw new Error("no scope input");
+    act(() => {
+      setInputValue(scope, "publication");
+    });
+
+    expect(view.textContent).toContain("leaving 53 for the summary");
+    expect(view.textContent).toContain("limited to 72 characters");
+    expect(summaryInput(view).value).toBe("ship it");
+  });
+
+  it("leaves a refused generation editable, with the refusal on the summary field", () => {
+    const refusal = "The subject is 79 characters; remove 7 to stay within 72.";
+    const { view } = render({
+      customize: true,
+      generationRefusal: refusal,
+      pullRequest: pullRequest({ commit_subject: null }),
+    });
+
+    expect(view.textContent).toContain(refusal);
+    expect(summaryInput(view).disabled).toBe(false);
+    expect(view.textContent).toContain("Create draft PR");
+    expect(view.textContent).not.toContain("Create draft PR with AI");
+  });
+
+  it("offers no AI creation while a refusal stands", () => {
+    const { view } = render({
+      customize: false,
+      generationRefusal: "The subject is 79 characters; remove 7 to stay within 72.",
+    });
+
+    expect(view.textContent).toContain("Create PR ready for review");
+    expect(view.textContent).not.toContain("Create PR with AI");
+  });
+
+  it("clears the refusal once the operator writes a summary of their own", () => {
+    const refusal = "The subject is 79 characters; remove 7 to stay within 72.";
+    const { view } = render({
+      customize: true,
+      generationRefusal: refusal,
+      pullRequest: pullRequest({ commit_subject: null }),
+    });
+
+    expect(view.textContent).toContain(refusal);
+
+    const summary = summaryInput(view);
+    act(() => {
+      setInputValue(summary, "keep the metadata the operator wrote");
+    });
+
+    expect(view.textContent).not.toContain(refusal);
+    expect(summary.value).toBe("keep the metadata the operator wrote");
   });
 
   it("names the blocked publication and offers no creation", () => {

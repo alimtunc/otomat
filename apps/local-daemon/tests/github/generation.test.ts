@@ -1,3 +1,4 @@
+import { COMMIT_SUBJECT_MAX_LENGTH, formatCommitSubject } from "@otomat/domain";
 import { describe, expect, it } from "vitest";
 
 import { createPullRequestGenerator, sanitizeBranchName, type GenerationInput } from "#github";
@@ -138,14 +139,81 @@ describe("pull request generator", () => {
     );
   });
 
-  it("refuses a summary the composed subject cannot hold", async () => {
+  it("shortens an over-budget summary on whole words rather than failing the publication", async () => {
+    const summary =
+      "create the pull request in one action and keep every field editable afterwards";
+    const fake = runner([{ stdout: answer({ ...PROPOSAL, summary }), stderr: "", exitCode: 0 }]);
+
+    const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, INPUT);
+
+    expect(formatCommitSubject(proposal.subject).length).toBeLessThanOrEqual(
+      COMMIT_SUBJECT_MAX_LENGTH,
+    );
+    expect(proposal.subject.summary).toBe(
+      "create the pull request in one action and keep every field",
+    );
+    expect(fake.requests).toHaveLength(1);
+  });
+
+  it("asks once more with the exact budget when no whole word survives", async () => {
     const fake = runner([
       { stdout: answer({ ...PROPOSAL, summary: "x".repeat(80) }), stderr: "", exitCode: 0 },
+      { stdout: answer(PROPOSAL), stderr: "", exitCode: 0 },
+    ]);
+
+    const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, INPUT);
+
+    expect(proposal.subject.summary).toBe("create the pull request in one action");
+    expect(fake.requests).toHaveLength(2);
+    expect(fake.requests[1]?.stdin).toContain("the summary must be at most 62 characters");
+    expect(fake.requests[1]?.stdin).toContain("remove 18 to stay within 72");
+  });
+
+  it("refuses with the contract's own message when the second answer is still too long", async () => {
+    const tooLong = { ...PROPOSAL, summary: "x".repeat(80) };
+    const fake = runner([
+      { stdout: answer(tooLong), stderr: "", exitCode: 0 },
+      { stdout: answer(tooLong), stderr: "", exitCode: 0 },
     ]);
 
     await expect(createPullRequestGenerator(fake.run).generate(AGENT, INPUT)).rejects.toMatchObject(
-      { code: "pr_generation_invalid", message: expect.stringContaining("72") },
+      {
+        code: "pr_generation_invalid",
+        message: "The subject is 90 characters; remove 18 to stay within 72.",
+      },
     );
+    expect(fake.requests).toHaveLength(2);
+  });
+
+  it("asks again with the scope the contract refused, and takes the corrected answer", async () => {
+    const fake = runner([
+      { stdout: answer({ ...PROPOSAL, scope: "PR Publication" }), stderr: "", exitCode: 0 },
+      { stdout: answer(PROPOSAL), stderr: "", exitCode: 0 },
+    ]);
+
+    const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, INPUT);
+
+    expect(proposal.subject.scope).toBe("pr");
+    expect(fake.requests).toHaveLength(2);
+    expect(fake.requests[1]?.stdin).toContain(
+      "A scope is lowercase, without spaces or parentheses.",
+    );
+  });
+
+  it("refuses a scope that leaves the summary no budget at all", async () => {
+    const scoped = {
+      ...PROPOSAL,
+      scope: `publication/generation/${"commit-subject-budget/".repeat(3)}resolver`,
+    };
+    const fake = runner([
+      { stdout: answer(scoped), stderr: "", exitCode: 0 },
+      { stdout: answer(scoped), stderr: "", exitCode: 0 },
+    ]);
+
+    await expect(createPullRequestGenerator(fake.run).generate(AGENT, INPUT)).rejects.toMatchObject(
+      { code: "pr_generation_invalid", message: expect.stringContaining("stay within 72") },
+    );
+    expect(fake.requests[1]?.stdin).toContain("the summary must be at most 0 characters");
   });
 
   it("answers a scopeless subject when the change touches no single area", async () => {

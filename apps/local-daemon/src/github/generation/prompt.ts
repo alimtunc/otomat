@@ -1,4 +1,10 @@
-import { COMMIT_SUBJECT_MAX_LENGTH, COMMIT_TYPES } from "@otomat/domain";
+import {
+  COMMIT_SUBJECT_MAX_LENGTH,
+  COMMIT_TYPES,
+  commitSummaryBudget,
+  formatCommitSubject,
+  type CommitSubjectDraft,
+} from "@otomat/domain";
 
 import type { GenerationInput } from "./input.js";
 
@@ -36,10 +42,25 @@ export function generationPrompt(input: GenerationInput): string {
     '{"type": "…", "scope": null, "summary": "…", "body": "…", "commit_body": null, "branch": "…", "delivery": "complete"}',
     `- type: one of ${COMMIT_TYPES.join(", ")}`,
     "- scope: the area of the codebase the change touches, lowercase and one word, or null",
-    `- summary: imperative, lowercase, no full stop; the composed subject stays within ${String(COMMIT_SUBJECT_MAX_LENGTH)} characters`,
+    `- summary: imperative, lowercase, no full stop; count the characters of \`type(scope): summary\` and keep them at or under ${String(COMMIT_SUBJECT_MAX_LENGTH)}`,
     "- body: GitHub markdown — one-paragraph summary, then bullet points of the key changes, without an issue footer",
     "- commit_body: one extra paragraph for the commit message, or null",
     "- branch: kebab-case git branch such as feat/short-name, at most 50 characters",
     '- delivery: "complete" when the change fully delivers the issue, otherwise "partial"',
+  ].join("\n");
+}
+
+export function correctionPrompt(
+  input: GenerationInput,
+  subject: CommitSubjectDraft,
+  violation: string,
+): string {
+  return [
+    generationPrompt(input),
+    "",
+    `Your previous answer was refused: ${violation}`,
+    `It composed \`${formatCommitSubject(subject)}\`.`,
+    `Answer again. With type "${subject.type}" and scope ${subject.scope === null ? "null" : `"${subject.scope}"`}, the summary must be at most ${String(commitSummaryBudget(subject))} characters; a shorter scope, or none, leaves more room.`,
+    "Keep the distinctive meaning of the change — do not pad, and do not cut a word in half.",
   ].join("\n");
 }
