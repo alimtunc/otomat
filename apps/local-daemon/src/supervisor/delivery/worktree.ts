@@ -1,24 +1,19 @@
 import type { AgentSessionRow } from "@otomat/db";
+import type { DeliveryEvidence } from "@otomat/domain";
 
 import { captureBoundary } from "../pass-boundary.js";
 import type { SupervisorState } from "../state.js";
 
 /** What the turn actually did to its worktree, read from git rather than from what the turn said. */
-export interface WorktreeDelta {
-  changed_files: number;
-  committed: boolean;
-  end_tree_sha: string | null;
-  end_head_sha: string | null;
-  /** Why the delta could not be read; a contract that needs it is refused rather than assumed satisfied. */
-  evidence_error: string | null;
-}
+type WorktreeDelta = Pick<
+  DeliveryEvidence,
+  "changed_files" | "committed" | "end_tree_sha" | "end_head_sha" | "evidence_error"
+>;
 
-export interface WorktreeDeltaInput {
+export type WorktreeDeltaProbe = (input: {
   runId: string;
   session: AgentSessionRow;
-}
-
-export type WorktreeDeltaProbe = (input: WorktreeDeltaInput) => WorktreeDelta;
+}) => WorktreeDelta;
 
 const NO_START_BOUNDARY = "the pass never recorded the tree it started from";
 const NO_REPOSITORY = "this run has no git repository to read";

@@ -22,17 +22,8 @@ import { spawnTurn } from "../lifecycle.js";
 import { insertSessionResumeTurn } from "../resume.js";
 import type { SupervisorState } from "../state.js";
 import { driveRunTo, driveStepTo } from "../transitions.js";
-import { buildSupervisionEvent } from "./ledger.js";
+import { buildSupervisionEvent } from "./events.js";
 import { spawnSupervisionTurn } from "./turn.js";
-
-function supervisionSpend(
-  state: SupervisorState,
-  runId: string,
-  events: readonly EventEnvelope[],
-): number {
-  const supervisors = supervisionSessionIds(listAgentSessionsForRun(state.db, runId));
-  return sessionsUsage(events, supervisors, true).costUsd ?? 0;
-}
 
 function park(state: SupervisorState, run: RunRow, step: StepRunRow, reason: string): void {
   const now = new Date().toISOString();
@@ -84,10 +75,6 @@ async function parkOnFailure(
   }
 }
 
-function overBudget(supervision: Supervision, spent: number): boolean {
-  return supervision.budget_usd !== null && spent >= supervision.budget_usd;
-}
-
 async function actOn(
   state: SupervisorState,
   run: RunRow,
@@ -103,7 +90,9 @@ async function actOn(
     driveRunTo(state.db, run.id, run.status, "awaiting_human", new Date().toISOString());
     return true;
   }
-  if (overBudget(supervision, supervisionSpend(state, run.id, events))) {
+  const supervisors = supervisionSessionIds(listAgentSessionsForRun(state.db, run.id));
+  const spent = sessionsUsage(events, supervisors, true).costUsd ?? 0;
+  if (supervision.budget_usd !== null && spent >= supervision.budget_usd) {
     park(state, run, step, "the supervision budget for this run is spent");
     return true;
   }
@@ -129,10 +118,7 @@ async function actOn(
   return true;
 }
 
-/**
- * The supervised run's own scheduler pass, ahead of the plan's; `false` means supervision has
- * nothing outstanding and the plan may start its next node.
- */
+/** `false` means supervision has nothing outstanding and the plan may start its next node. */
 export async function advanceSupervision(
   state: SupervisorState,
   run: RunRow,

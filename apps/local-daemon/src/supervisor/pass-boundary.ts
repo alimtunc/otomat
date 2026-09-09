@@ -23,7 +23,6 @@ function passOwner(db: Db, runId: string, stepRunId: string | null): string {
   return competeGroupId === null ? runId : stepRunId;
 }
 
-/** One end of a pass's git boundary, or why it could not be read. */
 export interface BoundaryCapture {
   capture: SessionBoundaryCapture | null;
   error: string | null;

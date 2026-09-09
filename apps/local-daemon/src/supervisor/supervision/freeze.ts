@@ -1,24 +1,19 @@
 import type { Db } from "@otomat/db";
-import {
-  overrideLevel,
-  type StartRunRequest,
-  type Supervision,
-  type SupervisionRequest,
-} from "@otomat/domain";
+import { overrideLevel, type StartRunRequest, type Supervision } from "@otomat/domain";
 
-import { resolveAgentConfig, type AgentConfigSelector } from "#agents";
-
-function supervisorSelector(requested: SupervisionRequest): AgentConfigSelector {
-  if (requested.profile_id) return { kind: "profile", profileId: requested.profile_id };
-  if (requested.runtime) return { kind: "runtime", runtimeId: requested.runtime };
-  throw new Error("a supervised run must name a supervisor runtime or profile");
-}
+import { nodeAgentSelector, resolveAgentConfig } from "#agents";
 
 /** Frozen at launch like a plan node's agent, so a profile edited later cannot change who judged a step. */
 export function freezeSupervision(db: Db, request: StartRunRequest): Supervision | null {
   const requested = request.supervision;
   if (!requested) return null;
-  const config = resolveAgentConfig(db, supervisorSelector(requested), {
+  const selector = nodeAgentSelector({
+    agent: requested.runtime ?? null,
+    profile_id: requested.profile_id,
+  });
+  if (selector === null)
+    throw new Error("a supervised run must name a supervisor runtime or profile");
+  const config = resolveAgentConfig(db, selector, {
     levels: [overrideLevel("launch", { model: requested.model, options: requested.options })],
     runtimeSource: "launch",
   });

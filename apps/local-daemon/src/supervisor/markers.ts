@@ -1,3 +1,4 @@
+import type { AgentSessionRow } from "@otomat/db";
 import type { ProviderLimit, RunSettledState, RunState, StepProviderWait } from "@otomat/domain";
 
 import { buildRuntimeEvent, type RuntimeEvent } from "#runtime";
@@ -8,6 +9,13 @@ export interface SessionRef {
   runId: string;
   stepRunId: string | null;
   agentSessionId: string | null;
+}
+
+export function sessionRef(
+  runId: string,
+  session: AgentSessionRow,
+): SessionRef & { stepRunId: string; agentSessionId: string } {
+  return { runId, stepRunId: session.step_run_id, agentSessionId: session.id };
 }
 
 /** What one scheduled resume attempt did; the sweep and the journal agree on this single set. */

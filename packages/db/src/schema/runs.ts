@@ -33,7 +33,6 @@ export const runs = sqliteTable("runs", {
   status: text("status").$type<RunState>().notNull().default("queued"),
   branch: text("branch").notNull(),
   plan_json: text("plan_json", { mode: "json" }).notNull(),
-  // The supervisor profile and limits this run froze at launch; null on a run nobody supervises.
   supervision_json: text("supervision_json", { mode: "json" }).$type<Supervision>(),
   started_at: text("started_at"),
   completed_at: text("completed_at"),

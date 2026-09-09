@@ -1088,7 +1088,8 @@ Only `pass` drives the step to `succeeded` and lets the plan continue.
 `needs_changes` carries its instructions into a new turn of the same step,
 resuming the conversation its frozen profile already holds, and the next round
 re-judges it. `blocked`, an unreadable answer, an exhausted loop count and a
-spent budget all rest the run on `awaiting_human` with the reason journaled. The
+spent budget all rest the run on `awaiting_human` with the reason journaled; the
+same `override-delivery` command is the operator's way past any of them. The
 deterministic controller keeps the last word: the delivery gate runs first, so a
 supervisor can neither pass an unanswered permission nor certify evidence the
 daemon could not read. Supervisor turns are their own `agent_sessions` rows

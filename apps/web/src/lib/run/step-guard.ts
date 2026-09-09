@@ -6,7 +6,7 @@ import {
   type SupervisionEntry,
 } from "@otomat/domain";
 
-export interface StepGuardReading {
+interface StepGuardReading {
   reason: string;
   blocking: boolean;
 }
@@ -25,7 +25,6 @@ function supervisionReason(entry: SupervisionEntry): string {
   return `${DECISION_COPY[entry.decision.decision]}: ${entry.decision.reason}`;
 }
 
-/** One sentence for what the run's journal last said about this step's guard. */
 export function stepGuardReading(
   events: readonly EventEnvelope[],
   stepRunId: string,

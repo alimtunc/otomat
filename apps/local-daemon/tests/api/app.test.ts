@@ -21,6 +21,7 @@ import {
   RunNotResumableError,
   RunWorkspaceClosedError,
   StepStopRefusedError,
+  DeliveryOverrideRefusedError,
   WorkspaceAbandonRefusedError,
   type AppendStepInput,
 } from "#supervisor";
@@ -743,6 +744,67 @@ it("stops a live step over the API and maps a stop refusal to its own status", a
   const conflict = await post(refused, `/api/runs/${runId}/steps/step-1/stop`, {});
   expect(conflict.status).toBe(409);
   expect((await json<{ error: string }>(conflict)).error).toBe("step_not_active");
+});
+
+it("accepts a held step over the API with the operator's note, and maps a refusal", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  let received: { id: string; stepRunId: string; note: string } | null = null;
+  const app = makeApiApp(t, {
+    supervisor: stubSupervisor({
+      overrideStepDelivery: (id, stepRunId, note) => {
+        received = { id, stepRunId, note };
+        return {
+          id: stepRunId,
+          run_id: id,
+          idx: 0,
+          name: "Implement",
+          status: "succeeded",
+          compete_group_id: null,
+          worktree_id: null,
+          provider_wait_json: null,
+          next_turn_config_json: null,
+          created_at: "2026-01-01T00:00:00.000Z",
+          updated_at: "2026-01-01T00:00:00.000Z",
+        };
+      },
+    }),
+  });
+  const res = await post(app, `/api/runs/${runId}/steps/step-1/override-delivery`, {
+    note: "audited by hand",
+  });
+  expect(res.status).toBe(200);
+  expect(received).toEqual({ id: runId, stepRunId: "step-1", note: "audited by hand" });
+  expect(await json<{ status: string }>(res)).toMatchObject({ id: "step-1", status: "succeeded" });
+
+  const blank = await post(app, `/api/runs/${runId}/steps/step-1/override-delivery`, { note: " " });
+  expect(blank.status).toBe(400);
+
+  const refused = makeApiApp(t, {
+    supervisor: stubSupervisor({
+      overrideStepDelivery: () => {
+        throw new DeliveryOverrideRefusedError("step_not_blocked", "nothing is being held");
+      },
+    }),
+  });
+  const conflict = await post(refused, `/api/runs/${runId}/steps/step-1/override-delivery`, {
+    note: "again",
+  });
+  expect(conflict.status).toBe(409);
+  expect((await json<{ error: string }>(conflict)).error).toBe("step_not_blocked");
+
+  const unknown = makeApiApp(t, {
+    supervisor: stubSupervisor({
+      overrideStepDelivery: () => {
+        throw new DeliveryOverrideRefusedError("step_not_found", "step step-9 is not on this run");
+      },
+    }),
+  });
+  const missing = await post(unknown, `/api/runs/${runId}/steps/step-9/override-delivery`, {
+    note: "gone",
+  });
+  expect(missing.status).toBe(404);
+  expect((await json<{ error: string }>(missing)).error).toBe("step_not_found");
 });
 
 it("maps a non-cancelable contribution to 409 rather than pretending it was withdrawn", async () => {

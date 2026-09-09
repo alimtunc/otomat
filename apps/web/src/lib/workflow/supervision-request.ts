@@ -6,7 +6,7 @@ import {
 import { agentSelectionFields, executionRequestFields } from "@web/lib/execution/request";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 
-export interface SupervisionDraft {
+interface SupervisionDraft {
   execution: ExecutionSelection;
   /** Kept as typed text so an empty field stays empty rather than collapsing to a number. */
   maxLoops: string;
@@ -24,11 +24,8 @@ function positiveNumber(value: string): number | null {
 }
 
 export function supervisionRoundsError({ value }: { value: string }): string | undefined {
-  const rounds = Number(value.trim());
-  return value.trim() !== "" &&
-    Number.isInteger(rounds) &&
-    rounds >= 1 &&
-    rounds <= SUPERVISION_MAX_LOOPS_LIMIT
+  const rounds = positiveNumber(value);
+  return rounds !== null && Number.isInteger(rounds) && rounds <= SUPERVISION_MAX_LOOPS_LIMIT
     ? undefined
     : `Enter a whole number of rounds between 1 and ${SUPERVISION_MAX_LOOPS_LIMIT}.`;
 }
@@ -44,7 +41,7 @@ export function supervisionRequest(draft: SupervisionDraft): SupervisionRequest 
   if (agent === null) return null;
   return {
     ...agent,
-    max_loops: positiveNumber(draft.maxLoops) ?? SUPERVISION_DEFAULT_MAX_LOOPS,
+    max_loops: Number(draft.maxLoops),
     budget_usd: positiveNumber(draft.budgetUsd),
   };
 }

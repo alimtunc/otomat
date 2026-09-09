@@ -1,12 +1,12 @@
 import { AttachedContextRow } from "@web/components/context/attached-context-row";
 import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
 import type { LaunchExecution } from "@web/components/execution/use-launch-execution";
+import { SupervisionControl } from "@web/components/issues/workflow/supervision-control";
 import { BaseBranchControl } from "@web/components/runs/launch/base-branch-control";
 import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 import { WorkflowPlanEditor } from "@web/components/workflow/plan-editor";
 import { WorkflowPresetPicker } from "@web/components/workflow/preset/preset-picker";
 import { SavePresetDialog } from "@web/components/workflow/preset/save-preset-dialog";
-import { SupervisionControl } from "@web/components/workflow/supervision-control";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { draftsFromPresetPlan } from "@web/lib/workflow/preset";
 import { clearInheritedNodeOverrides } from "@web/lib/workflow/steps";

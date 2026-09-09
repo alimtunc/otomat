@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import type { ApiDeps } from "#api/deps";
 import { runGuard, validateJson, type RunEnv } from "#api/guards";
 import { readRunInteractions } from "#api/reads";
+import { commandRefusalJson } from "#api/refusal";
 import { toRunInteraction } from "#api/serialize";
 import { RunInteractionRefusedError } from "#supervisor";
 
@@ -29,10 +30,7 @@ export function createRunInteractionRoutes(deps: ApiDeps): Hono<RunEnv> {
         );
         return c.json(toRunInteraction(row));
       } catch (error) {
-        if (error instanceof RunInteractionRefusedError) {
-          const status = error.code === "run_interaction_not_found" ? 404 : 409;
-          return c.json({ error: error.code, message: error.message }, status);
-        }
+        if (error instanceof RunInteractionRefusedError) return commandRefusalJson(c, error);
         console.error(`[otomat] interaction answer on run ${run.id} failed`, error);
         return c.json({ error: "run_interaction_answer_failed" }, 500);
       }

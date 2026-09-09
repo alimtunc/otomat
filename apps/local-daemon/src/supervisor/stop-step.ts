@@ -1,4 +1,5 @@
 import { getStepRun, listAgentSessionsForRun, type StepRunRow } from "@otomat/db";
+import { stepSessions } from "@otomat/domain";
 
 import type { SupervisorState } from "./state.js";
 
@@ -31,9 +32,7 @@ export async function stopStepTurn(
     throw new StepStopRefusedError("step_not_found", `step ${stepRunId} is not on run ${runId}`);
   }
   const stepSessionIds = new Set(
-    listAgentSessionsForRun(state.db, runId)
-      .filter((session) => session.step_run_id === stepRunId && session.kind === "step")
-      .map((session) => session.id),
+    stepSessions(listAgentSessionsForRun(state.db, runId), stepRunId).map((session) => session.id),
   );
   const handle = [...state.inflight.values()].find((entry) =>
     stepSessionIds.has(entry.turn.agentSessionId),

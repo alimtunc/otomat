@@ -97,12 +97,7 @@ export function StepRow({
         </p>
       )}
       {stepUsage === undefined ? null : <UsageTokens usage={stepUsage} className="mt-1 ml-5.5" />}
-      <StepGuardNote
-        runId={detail.run.id}
-        stepRunId={step.id}
-        stepName={step.name}
-        held={step.status === "awaiting_human"}
-      />
+      <StepGuardNote step={step} />
       <SessionRows detail={detail} step={step} />
     </div>
   );

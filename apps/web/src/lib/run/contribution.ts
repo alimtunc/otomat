@@ -5,6 +5,7 @@ import {
   isRunSettled,
   projectRunContributionDelivery,
   resolveStepContributionRoute,
+  stepSessions,
   type RunContributionContract,
   type RunDetail,
   type ResolvedAgentConfig,
@@ -90,11 +91,8 @@ interface RoutedStep {
 }
 
 function isSteerable(detail: RunDetail, stepRunId: string): boolean {
-  return detail.sessions.some(
-    (session) =>
-      session.step_run_id === stepRunId &&
-      session.kind === "step" &&
-      session.provider_session_id !== null,
+  return stepSessions(detail.sessions, stepRunId).some(
+    (session) => session.provider_session_id !== null,
   );
 }
 

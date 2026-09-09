@@ -13,14 +13,6 @@ export const overrideStepDeliveryRequestSchema = z
   .strict();
 export type OverrideStepDeliveryRequest = z.infer<typeof overrideStepDeliveryRequestSchema>;
 
-/** Why an override was refused. Each is caller-fixable: the wrong step, a step nothing holds, or a live writer. */
-export const RUN_STEP_OVERRIDE_ERRORS = [
-  "step_not_found",
-  "step_not_blocked",
-  "workspace_busy",
-] as const;
-export type RunStepOverrideErrorCode = (typeof RUN_STEP_OVERRIDE_ERRORS)[number];
-
 export const setNextTurnModelRequestSchema = z
   .object({
     agent_session_id: z.string().min(1),

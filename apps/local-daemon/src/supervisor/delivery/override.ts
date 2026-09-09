@@ -1,17 +1,17 @@
 import { getRun, getStepRun, type StepRunRow } from "@otomat/db";
-import { isStepGuardBlocking, stepGuard, type RunStepOverrideErrorCode } from "@otomat/domain";
+import { isStepGuardBlocking, stepGuard } from "@otomat/domain";
 
 import { emitLedgerEvent, readRunEvents } from "#events";
 
 import { scheduleNextStep } from "../advance.js";
+import { requireRunRow } from "../resume.js";
 import { hasRunActivity, type SupervisorState } from "../state.js";
 import { driveRunTo, driveStepTo } from "../transitions.js";
 import { buildGuardOverrideEvent } from "./events.js";
 
-/** An override the caller got wrong: the step is unknown, not held, or its workspace still has a writer. */
 export class DeliveryOverrideRefusedError extends Error {
   constructor(
-    readonly code: RunStepOverrideErrorCode,
+    readonly code: "step_not_found" | "step_not_blocked" | "workspace_busy",
     message: string,
   ) {
     super(message);
@@ -19,10 +19,6 @@ export class DeliveryOverrideRefusedError extends Error {
   }
 }
 
-/**
- * Closes a step the delivery guard is holding, on the operator's explicit say-so. Automation
- * never reaches this, and it is journaled as a decision rather than as a verified delivery.
- */
 export function overrideStepDelivery(
   state: SupervisorState,
   runId: string,
@@ -63,15 +59,10 @@ export function overrideStepDelivery(
       now,
     ),
   );
-  const accepted = getStepRun(state.db, stepRunId);
-  if (!accepted) {
-    throw new DeliveryOverrideRefusedError(
-      "step_not_found",
-      `step ${stepRunId} vanished while accepting it`,
-    );
-  }
   // Accepting is the launch: the run has to be working again for the scheduler to converge it.
   driveRunTo(state.db, runId, run.status, "running", now);
-  void scheduleNextStep(state, getRun(state.db, runId) ?? run);
+  void scheduleNextStep(state, requireRunRow(state.db, runId, "override"));
+  const accepted = getStepRun(state.db, step.id);
+  if (!accepted) throw new Error(`step ${step.id} vanished immediately after override`);
   return accepted;
 }

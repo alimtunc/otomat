@@ -16,7 +16,6 @@ export interface WorkflowStepDraft {
   name: string;
   context: ContextDraft;
   execution: ExecutionSelection;
-  /** What this step has to deliver before a dependent starts. */
   delivery: DeliveryExpectation;
   /** Keys of top-level nodes this one waits for; competitors are never valid dependency targets. */
   dependsOn: string[];

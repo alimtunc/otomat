@@ -12,6 +12,7 @@ import { isRunWorking, readyPlanWork, type RunPlanCompetitor } from "@otomat/dom
 
 import type { WorktreeRecord } from "#git";
 
+import { createWorktreeDeltaProbe } from "./delivery/worktree.js";
 import { failIdleRun, failureReason } from "./fail-run.js";
 import { repositoryInitCommands } from "./init-commands.js";
 import { spawnTurn } from "./lifecycle.js";
@@ -125,6 +126,7 @@ function convergeIdleRun(state: SupervisorState, runId: string): void {
   const outcome = settleRun(state.db, state.dataDir, current, {
     mode: "live",
     turn: null,
+    worktreeDelta: createWorktreeDeltaProbe(state),
     now: new Date().toISOString(),
   });
   if (outcome === null) return;

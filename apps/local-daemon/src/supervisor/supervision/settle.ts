@@ -10,11 +10,12 @@ import { emitLedgerEvent } from "#events";
 import { asString } from "#runtime";
 
 import { cancelSessionInteractions, ingestRunInteractions } from "../interaction/index.js";
+import { sessionRef } from "../markers.js";
 import type { SettleContext } from "../settle/context.js";
 import { recordReconciled } from "../settle/ledger.js";
 import { driveRunTo, driveSessionTo } from "../transitions.js";
 import type { ReconcileOutcome } from "../types.js";
-import { buildSupervisionEvent } from "./ledger.js";
+import { buildSupervisionEvent } from "./events.js";
 
 const NO_DECISION =
   "the supervisor turn ended without a readable decision block, so nothing was released";
@@ -51,11 +52,7 @@ export function settleSupervisionTurn(
           round: supervisionDecisionsFor(runEvents, session.step_run_id).length + 1,
           decision,
         };
-  const ref = {
-    runId: ctx.run.id,
-    stepRunId: session.step_run_id,
-    agentSessionId: session.id,
-  };
+  const ref = sessionRef(ctx.run.id, session);
   emitLedgerEvent(
     ctx.db,
     ctx.dataDir,
@@ -77,8 +74,9 @@ export function settleSupervisionTurn(
   );
   return recordReconciled(ctx, {
     ref,
-    classification: decision === null ? "failed" : "completed",
-    reason: decision === null ? NO_DECISION : `supervisor decided: ${decision.decision}`,
+    classification: entry.state === "decided" ? "completed" : "failed",
+    reason:
+      entry.state === "decided" ? `supervisor decided: ${entry.decision.decision}` : entry.reason,
     providerSessionId: null,
     orphanTerminated: ctx.orphanTerminated,
   });

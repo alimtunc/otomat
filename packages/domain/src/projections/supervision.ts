@@ -4,23 +4,6 @@ import type { AgentSessionKind } from "../contracts/entities/runs.js";
 import { supervisionDecisionSchema, type SupervisionDecision } from "../contracts/supervision.js";
 import type { EventEnvelope } from "../events/envelope.js";
 
-interface SupervisionPending {
-  state: "pending";
-}
-
-interface SupervisionDecided {
-  state: "decided";
-  round: number;
-  decision: SupervisionDecision;
-}
-
-interface SupervisionUnavailable {
-  state: "unavailable";
-  reason: string;
-}
-
-export type SupervisionEntry = SupervisionPending | SupervisionDecided | SupervisionUnavailable;
-
 const supervisionEntrySchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("pending") }),
   z.object({
@@ -30,6 +13,7 @@ const supervisionEntrySchema = z.discriminatedUnion("state", [
   }),
   z.object({ state: z.literal("unavailable"), reason: z.string().min(1) }),
 ]);
+export type SupervisionEntry = z.infer<typeof supervisionEntrySchema>;
 
 const deliveryBlockedSchema = z.object({ reason: z.string().min(1) });
 
@@ -70,8 +54,9 @@ export function supervisionEntries(
 ): ReadonlyMap<string, SupervisionEntry> {
   const byStep = new Map<string, SupervisionEntry>();
   for (const event of events) {
-    const entry = event.step_run_id === null ? null : supervisionEntryOf(event);
-    if (entry !== null && event.step_run_id !== null) byStep.set(event.step_run_id, entry);
+    if (event.step_run_id === null) continue;
+    const entry = supervisionEntryOf(event);
+    if (entry !== null) byStep.set(event.step_run_id, entry);
   }
   return byStep;
 }

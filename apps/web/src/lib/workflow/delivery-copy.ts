@@ -1,10 +1,5 @@
 import type { DeliveryExpectation } from "@otomat/domain";
 
-export interface DeliveryExpectationCopy {
-  label: string;
-  hint: string;
-}
-
 export const DELIVERY_EXPECTATION_COPY = {
   standard: {
     label: "Standard",
@@ -18,4 +13,4 @@ export const DELIVERY_EXPECTATION_COPY = {
     label: "Analysis",
     hint: "No code change is expected; an empty diff finishes this step honestly.",
   },
-} satisfies Record<DeliveryExpectation, DeliveryExpectationCopy>;
+} satisfies Record<DeliveryExpectation, { label: string; hint: string }>;

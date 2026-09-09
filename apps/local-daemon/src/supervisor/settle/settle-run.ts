@@ -20,6 +20,7 @@ import {
   findReportedModel,
 } from "../evidence.js";
 import { cancelSessionInteractions, ingestRunInteractions } from "../interaction/index.js";
+import { sessionRef } from "../markers.js";
 import { recordProviderWait } from "../provider-wait/record.js";
 import { gateSupervision } from "../supervision/gate.js";
 import { settleSupervisionTurn } from "../supervision/settle.js";
@@ -101,9 +102,13 @@ export function settleRun(
     resolveSessionContributions(db, turnSession.id, classification, options.now);
     // Promotes any ledgered ask no pass reached into its row first: the cancel closes rows, and an unpromoted ask would otherwise resurrect as a pending question on the next turn.
     ingestRunInteractions(db, run.id);
-    // Read before the cancel below: an ask still open when the process died is what blocks delivery, and the cancel would erase it.
-    evidence = gateDelivery({ ctx, plan, session: turnSession, events: scoped, evidence });
-    evidence = gateSupervision(ctx, turnSession, evidence);
+    // A competition is settled by the operator picking a winner; holding or judging a candidate would strand its group.
+    const turnStep = steps.find((step) => step.id === turnSession.step_run_id);
+    if (!turnStep?.compete_group_id) {
+      // Read before the cancel below: an ask still open when the process died is what blocks delivery, and the cancel would erase it.
+      evidence = gateDelivery(ctx, plan, turnSession, scoped, evidence);
+      evidence = gateSupervision(ctx, turnSession, evidence);
+    }
     cancelSessionInteractions(
       db,
       dataDir,
@@ -113,13 +118,7 @@ export function settleRun(
     );
     // Persisted before the step reaches `waiting_for_provider`, so the state and the schedule it stands for land together.
     if (classification === "provider_limited" && providerLimit !== null) {
-      recordProviderWait(
-        db,
-        dataDir,
-        { runId: run.id, stepRunId: turnSession.step_run_id, agentSessionId: turnSession.id },
-        providerLimit,
-        options.now,
-      );
+      recordProviderWait(db, dataDir, sessionRef(run.id, turnSession), providerLimit, options.now);
     }
   }
 

@@ -18,7 +18,7 @@ export function reconcileRuns(
   db: Db,
   dataDir: string,
   now: string,
-  worktreeDelta?: WorktreeDeltaProbe,
+  worktreeDelta: WorktreeDeltaProbe,
 ): ReconcileReport {
   const active = listActiveRuns(db);
   for (const run of active.corrupt) {

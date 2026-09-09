@@ -83,6 +83,15 @@ it("releases nothing when the supervisor answers in prose alone", async () => {
   expect(decisionFor(run.id, steps[0]?.id ?? "")).toMatchObject({ state: "unavailable" });
 });
 
+it("rests the run when the supervisor turn itself dies, releasing nothing", async () => {
+  const { run, spawn, steps } = await launch({ behaviors: ["complete", "crash"] });
+
+  expect(steps.map((step) => step.status)).toEqual(["awaiting_human", "queued"]);
+  expect(spawn.calls).toBe(2);
+  expect(getRun(fix.db, run.id)?.status).toBe("awaiting_human");
+  expect(decisionFor(run.id, steps[0]?.id ?? "")).toMatchObject({ state: "unavailable" });
+});
+
 it("sends needs_changes instructions to a new turn of the same step, then re-judges it", async () => {
   const { run, spawn, steps } = await launch({
     behaviors: ["complete", "supervise-changes", "write", "supervise-pass"],

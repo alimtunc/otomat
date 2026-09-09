@@ -1,11 +1,11 @@
 import type { Context } from "hono";
 
+import { commandRefusalJson } from "#api/refusal";
 import { GitHubCliError, GitHubPublicationError, PullRequestImportRefusal } from "#github";
 
 export function pullRequestImportRefusal(c: Context, error: unknown): Response | null {
   if (!(error instanceof PullRequestImportRefusal)) return null;
-  const status = error.code === "pr_not_found" ? 404 : 409;
-  return c.json({ error: error.code, message: error.message }, status);
+  return commandRefusalJson(c, error);
 }
 
 /** `merge_unavailable` is a refusal the reviewer reads; every other provider failure keeps gh's own reason under the route's own code. */

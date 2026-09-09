@@ -88,7 +88,7 @@ export function requireWorktreePath(state: SupervisorState, run: RunRow): string
   return path;
 }
 
-type RunReadPoint = "spawn" | "resume" | "append" | "abandon";
+type RunReadPoint = "spawn" | "resume" | "append" | "abandon" | "override";
 
 export function requireRunRow(db: Db, runId: string, when: RunReadPoint): RunRow {
   const row = getRun(db, runId);

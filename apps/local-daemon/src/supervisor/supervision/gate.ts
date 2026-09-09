@@ -1,10 +1,11 @@
-import { getStepRun, type AgentSessionRow } from "@otomat/db";
+import type { AgentSessionRow } from "@otomat/db";
 
 import { emitLedgerEvent } from "#events";
 
 import { TARGETS } from "../classify.js";
+import { sessionRef } from "../markers.js";
 import type { SettleContext, SettleEvidence } from "../settle/context.js";
-import { buildSupervisionEvent } from "./ledger.js";
+import { buildSupervisionEvent } from "./events.js";
 
 const AWAITING =
   "this step delivered; the run's supervisor has to judge it before anything waits on it";
@@ -15,20 +16,12 @@ export function gateSupervision(
   session: AgentSessionRow,
   evidence: SettleEvidence,
 ): SettleEvidence {
-  if (evidence.classification !== "completed") return evidence;
-  if (!ctx.run.supervision_json) return evidence;
-  // A competition is settled by the operator picking a winner; supervising a losing candidate would judge work nobody keeps.
-  if (getStepRun(ctx.db, session.step_run_id)?.compete_group_id) return evidence;
-  const ref = {
-    runId: ctx.run.id,
-    stepRunId: session.step_run_id,
-    agentSessionId: session.id,
-  };
+  if (evidence.classification !== "completed" || !ctx.run.supervision_json) return evidence;
   emitLedgerEvent(
     ctx.db,
     ctx.dataDir,
     ctx.run.id,
-    buildSupervisionEvent(ref, { state: "pending" }, ctx.options.now),
+    buildSupervisionEvent(sessionRef(ctx.run.id, session), { state: "pending" }, ctx.options.now),
   );
   return {
     ...evidence,

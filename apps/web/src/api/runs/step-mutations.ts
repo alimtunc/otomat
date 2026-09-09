@@ -69,7 +69,6 @@ export function useOverrideStepDelivery(runId: string) {
   });
 }
 
-/** The daemon's own refusal sentence when it sent one; the fallback names the command the caller tried. */
 function stepCommandErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof DaemonRequestError) {
     const body = error.body;

@@ -11,7 +11,7 @@ import { modelSelectionSchema } from "./runtime-model.js";
 export const SUPERVISION_DEFAULT_MAX_LOOPS = 3;
 export const SUPERVISION_MAX_LOOPS_LIMIT = 10;
 
-export const supervisionLimitsSchema = z.object({
+const supervisionLimitsSchema = z.object({
   /** Remediation rounds one step may take; the run blocks rather than looping past it. */
   max_loops: z
     .number()

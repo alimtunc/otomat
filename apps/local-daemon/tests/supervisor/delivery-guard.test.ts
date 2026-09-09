@@ -1,4 +1,5 @@
 import { getRun, listStepRunsForRun } from "@otomat/db";
+import type { DeliveryExpectation } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
@@ -17,9 +18,7 @@ afterEach(() => {
   fix.cleanup();
 });
 
-type Expectation = "standard" | "implementation" | "analysis";
-
-function plan(delivery: Expectation) {
+function plan(delivery: DeliveryExpectation) {
   return {
     version: 1 as const,
     steps: [
@@ -29,7 +28,7 @@ function plan(delivery: Expectation) {
   };
 }
 
-async function launch(delivery: Expectation, behaviors: WorkerBehavior[]) {
+async function launch(delivery: DeliveryExpectation, behaviors: WorkerBehavior[]) {
   const { supervisor, spawn } = makeSupervisor(fix, behaviors);
   const run = await supervisor.start({ prompt: "the goal", plan: plan(delivery) });
   await supervisor.settle();

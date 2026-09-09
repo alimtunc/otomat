@@ -35,14 +35,12 @@ export type WorkerBehavior =
   | "complete"
   /** Completes after leaving a file behind, so the delivery guard has a real workspace delta to read. */
   | "write"
-  /** Exits 0 with the permission it asked for still unanswered. */
   | "ask-complete"
   /** Changes the workspace, but the one command it ran failed. */
   | "failed-command"
   | "supervise-pass"
   | "supervise-changes"
   | "supervise-blocked"
-  /** Answers in prose only: no decision block, so nothing is released. */
   | "supervise-silent"
   | "slow"
   | "fail"

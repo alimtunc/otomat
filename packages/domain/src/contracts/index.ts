@@ -26,7 +26,6 @@ export * from "./step-commands.js";
 export * from "./supervision.js";
 export {
   agentProfileContractSchema,
-  AGENT_SESSION_KINDS,
   agentSessionContractSchema,
   competeGroupContractSchema,
   CLOSED_ISSUE_WORKSPACE,
