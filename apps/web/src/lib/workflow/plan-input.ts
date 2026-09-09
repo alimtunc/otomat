@@ -37,6 +37,7 @@ export function buildRunPlanInput(steps: readonly WorkflowNodeDraft[]): RunPlanI
       name: step.name.trim(),
       ...nodeExecution(step.execution),
       ...contextRequestFields(step.context),
+      delivery: step.delivery,
       depends_on: step.dependsOn,
     };
   });

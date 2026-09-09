@@ -1038,6 +1038,64 @@ but not those lines, or did not touch the file at all, is reported as
 comment and anchor above the proof — evidence of a fix does not replace the
 context that asked for it.
 
+## A Step Delivers Before Its Dependents Start
+
+A process that exits `0` has proved it ended, not that it delivered. Every node
+therefore carries a declared **delivery expectation** frozen with it in
+`runs.plan_json` — `standard`, `implementation` or `analysis`, chosen per step in
+the composer. It is the user's declaration, never a guess from the step's name.
+
+At settle, `supervisor/delivery/` builds the canonical snapshot the controller
+judges on: the pass's own git boundary re-read live (`createWorktreeDeltaProbe`,
+over `boundaryDiff` between the tree the session started on and the one it ended
+on), the commands the ledger actually observed with the outcome the runtime
+reported (`collectReportedCommands`), and the questions still unanswered when the
+process died. `deliveryRefusal` in `domain/delivery` is the single reading of that
+snapshot: one unanswered ask blocks every contract, and an `implementation` node
+additionally owes a changed workspace and no failed observed command. An
+`analysis` node finishes honestly with an empty diff, and no line threshold is
+invented anywhere. The refusal turns the settle's `completed` into `undelivered`,
+which rests the step on `awaiting_human` with the whole snapshot journaled as
+`run.delivery_blocked` — so `readyPlanWork`'s existing rule, that only a
+`succeeded` dependency unlocks a node, keeps the dependent queued without a
+second gate. The ordering that makes the permission case work is deliberate: the
+gate reads pending interactions *before* the settle cancels the session's open
+questions.
+
+The one way past a refusal is the operator's own decision.
+`POST /api/runs/:id/steps/:stepId/override-delivery` closes the held step and
+schedules what waited on it, journaling `run.guard_override` with the operator's
+required note — the history says a human accepted it, never that the evidence was
+found. It refuses a step no guard is actually holding.
+
+## Supervised Workflows
+
+A launch may name a **supervisor**: an agent resolved and frozen on
+`runs.supervision_json` exactly like a step's, plus a loop limit and an optional
+budget. Otomat adds no built-in supervisor, prompt or profile.
+
+Supervision is event-triggered, never resident. A step that satisfies its
+delivery contract on a supervised run lands `awaiting_human` with a `pending`
+entry journaled on `run.supervision_decision`; the next scheduler pass
+(`supervision/advance.ts`, ahead of the plan's own) wakes one supervisor turn on
+that step, with the session dossier plus the step's boundary diff, its observed
+commands, its unanswered questions and every earlier round. The turn answers and
+exits; `supervision/settle.ts` reads a single fenced decision block out of its
+own messages and journals it. Approving prose is not a decision: an unreadable
+turn writes `unavailable` and releases nothing.
+
+Only `pass` drives the step to `succeeded` and lets the plan continue.
+`needs_changes` carries its instructions into a new turn of the same step,
+resuming the conversation its frozen profile already holds, and the next round
+re-judges it. `blocked`, an unreadable answer, an exhausted loop count and a
+spent budget all rest the run on `awaiting_human` with the reason journaled. The
+deterministic controller keeps the last word: the delivery gate runs first, so a
+supervisor can neither pass an unanswered permission nor certify evidence the
+daemon could not read. Supervisor turns are their own `agent_sessions` rows
+(`kind = "supervision"`), which is what keeps their conversation readable apart
+from the step's own and lets `GET /api/runs/:id/usage` report what supervision
+cost this run beside the steps it judged.
+
 ## Reporting Token Usage
 
 Each `runtime.usage` event is one turn's own totals, emitted on the provider's

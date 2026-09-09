@@ -54,6 +54,7 @@ export function runRow(id: string, overrides: Partial<RunRow> = {}): RunRow {
     status: "running",
     branch: "b",
     plan_json: { version: 1, steps: [] },
+    supervision_json: null,
     started_at: null,
     completed_at: null,
     abandoned_at: null,
@@ -148,6 +149,9 @@ export function stubSupervisor(overrides: Partial<Supervisor> = {}): Supervisor 
       throw new Error("start stub not configured");
     },
     waitFor: () => null,
+    overrideStepDelivery: () => {
+      throw new Error("overrideStepDelivery stub not configured");
+    },
     scheduleProviderResume: () => {
       throw new Error("scheduleProviderResume stub not configured");
     },

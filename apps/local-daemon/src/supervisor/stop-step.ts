@@ -32,7 +32,7 @@ export async function stopStepTurn(
   }
   const stepSessionIds = new Set(
     listAgentSessionsForRun(state.db, runId)
-      .filter((session) => session.step_run_id === stepRunId)
+      .filter((session) => session.step_run_id === stepRunId && session.kind === "step")
       .map((session) => session.id),
   );
   const handle = [...state.inflight.values()].find((entry) =>

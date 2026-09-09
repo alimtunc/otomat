@@ -91,7 +91,10 @@ interface RoutedStep {
 
 function isSteerable(detail: RunDetail, stepRunId: string): boolean {
   return detail.sessions.some(
-    (session) => session.step_run_id === stepRunId && session.provider_session_id !== null,
+    (session) =>
+      session.step_run_id === stepRunId &&
+      session.kind === "step" &&
+      session.provider_session_id !== null,
   );
 }
 

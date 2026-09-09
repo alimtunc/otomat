@@ -93,6 +93,7 @@ const detail: RunDetail = {
     {
       id: "session-direct",
       step_run_id: "direct",
+      kind: "step" as const,
       agent_id: "codex",
       status: "terminated",
       provider_session_id: "provider-direct",
@@ -100,6 +101,7 @@ const detail: RunDetail = {
     {
       id: "session-layered",
       step_run_id: "layered",
+      kind: "step" as const,
       agent_id: "claude",
       status: "terminated",
       provider_session_id: "provider-layered",

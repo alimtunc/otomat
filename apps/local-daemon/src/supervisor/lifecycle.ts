@@ -17,6 +17,7 @@ import {
   resolveCarriedContributions,
 } from "./contribution/carry.js";
 import { withCarriedContributions } from "./contribution/prompt.js";
+import { createWorktreeDeltaProbe } from "./delivery/worktree.js";
 import { failureReason } from "./fail-run.js";
 import { waitForWorkerIdentity } from "./identity.js";
 import { runInitCommandBatch, runStillLive } from "./init-commands.js";
@@ -48,7 +49,9 @@ function advanceToRunning(state: SupervisorState, ctx: TurnContext): void {
     (row) => row.id === ctx.agentSessionId,
   );
   if (!step || !session) throw new Error(`run ${ctx.runId} turn rows vanished before spawn`);
-  if (!stepRunMachine.isTerminal(step.status)) driveStepTo(db, step.id, step.status, "running");
+  if (ctx.kind === "step" && !stepRunMachine.isTerminal(step.status)) {
+    driveStepTo(db, step.id, step.status, "running");
+  }
   if (!agentSessionMachine.isTerminal(session.status)) {
     driveSessionTo(db, session.id, session.status, "active");
   }
@@ -61,6 +64,7 @@ function settleLive(state: SupervisorState, ctx: TurnContext, exit?: ProcessExit
     const settle: SettleOptions = {
       mode: "live",
       turn: { agentSessionId: ctx.agentSessionId },
+      worktreeDelta: createWorktreeDeltaProbe(state),
       now: new Date().toISOString(),
     };
     if (exit) settle.observedExit = exit;
@@ -162,20 +166,22 @@ export async function spawnTurn(
     capturePassStart(state, ctx);
     clearWorkerStartEvidence(ctx.agentSessionDir);
     clearLiveInput(ctx.agentSessionDir);
-    claimStepContributions(
-      state,
-      ctx.stepRunId,
-      ctx.agentSessionId,
-      ctx.config?.config_hash ?? null,
-      ctx.carryContributionIds,
-    );
+    if (ctx.kind === "step") {
+      claimStepContributions(
+        state,
+        ctx.stepRunId,
+        ctx.agentSessionId,
+        ctx.config?.config_hash ?? null,
+        ctx.carryContributionIds,
+      );
+    }
     const carried = carriedContributions(state, ctx.agentSessionId);
     const prompt = withCarriedContributions(
       captureTurnContext(state, ctx, mode),
       carried.map((row) => row.body),
     );
     // The selection is already rendered into `prompt`; a job is serialized into the worker's env, so it must not carry it twice.
-    const { contextSelection: _frozen, carryContributionIds: _carried, ...turn } = ctx;
+    const { kind: _kind, contextSelection: _frozen, carryContributionIds: _carried, ...turn } = ctx;
     proc = state.spawn({ ...turn, prompt, mode, providerSessionId });
     state.starting.set(ctx.agentSessionId, {
       runId: ctx.runId,

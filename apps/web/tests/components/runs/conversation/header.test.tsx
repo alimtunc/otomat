@@ -102,6 +102,7 @@ const DETAIL: RunDetail = {
     {
       id: "session-launched",
       step_run_id: "step-1",
+      kind: "step" as const,
       agent_id: "claude",
       status: "awaiting_input",
       provider_session_id: "provider-1",
@@ -120,6 +121,7 @@ const DETAIL: RunDetail = {
     {
       id: "session-unlaunched",
       step_run_id: "step-1",
+      kind: "step" as const,
       agent_id: "claude",
       status: "created",
       provider_session_id: "provider-1",

@@ -1,5 +1,12 @@
 // Pure Node with no workspace imports so the spawned child survives independent of the test process; behavior via FAKE_WORKER_BEHAVIOR.
-import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 
 const job = JSON.parse(process.env.OTOMAT_WORKER_JOB);
@@ -62,7 +69,82 @@ emit("runtime.log", "otomat", {
   text: "working",
 });
 
+function say(text) {
+  emit("runtime.message", "otomat", {
+    fidelity: "parsed",
+    adapter: "fake",
+    test_adapter: true,
+    role: "assistant",
+    text,
+  });
+}
+
+function decide(decision, extra = "") {
+  emit("runtime.usage", "otomat", {
+    fidelity: "native",
+    adapter: "fake",
+    test_adapter: true,
+    usage: { model: "fake", input_tokens: 1, output_tokens: 1, total_tokens: 2, cost_usd: 0.5 },
+  });
+  say(
+    `Judged.\n\n\u0060\u0060\u0060json\n{"decision":"${decision}","reason":"because"${extra}}\n\u0060\u0060\u0060`,
+  );
+  marker("completed");
+  process.exit(0);
+}
+
 if (behavior === "complete") {
+  marker("completed");
+  process.exit(0);
+} else if (behavior === "write") {
+  // A turn that actually leaves work behind: the delivery guard reads this tree, not the exit code.
+  writeFileSync(join(job.worktreePath, `${job.agentSessionId}.txt`), "work\n");
+  marker("completed");
+  process.exit(0);
+} else if (behavior === "ask-complete") {
+  emit("runtime.interaction_requested", "otomat", {
+    fidelity: "parsed",
+    adapter: "fake",
+    test_adapter: true,
+    request_id: "ask-1",
+    kind: "permission",
+    prompt: "Run Write: notes.md",
+    tool: "Write",
+    questions: [],
+    reason: "only you can approve it.",
+  });
+  marker("completed");
+  process.exit(0);
+} else if (behavior === "failed-command") {
+  writeFileSync(join(job.worktreePath, `${job.agentSessionId}.txt`), "work\n");
+  emit("runtime.tool_call", "otomat", {
+    fidelity: "parsed",
+    adapter: "fake",
+    test_adapter: true,
+    phase: "call",
+    tool: "bash",
+    tool_use_id: "cmd-1",
+    args: { command: "pnpm test" },
+  });
+  emit("runtime.tool_call", "otomat", {
+    fidelity: "parsed",
+    adapter: "fake",
+    test_adapter: true,
+    phase: "result",
+    tool_use_id: "cmd-1",
+    is_error: true,
+    result: { exit_code: 1, output: "1 failing" },
+  });
+  marker("completed");
+  process.exit(0);
+} else if (behavior === "supervise-pass") {
+  decide("pass");
+} else if (behavior === "supervise-changes") {
+  decide("needs_changes", ',"instructions":"implement it for real"');
+} else if (behavior === "supervise-blocked") {
+  decide("blocked");
+} else if (behavior === "supervise-silent") {
+  say("Looks good to me, ship it.");
   marker("completed");
   process.exit(0);
 } else if (behavior === "slow") {

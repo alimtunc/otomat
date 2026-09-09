@@ -9,7 +9,9 @@ import {
   isStepSettled,
   reportStepSchema,
   scopeUsage,
+  stepSessions,
   stepUsage,
+  supervisionSessionIds,
   type CompletionEvidence,
   type EventEnvelope,
   type RunCompletionReport,
@@ -72,11 +74,10 @@ function projectSteps({
   sessions,
   steps,
 }: ExecutionProjectionInput): RunCompletionReport["steps"] {
+  const supervisors = supervisionSessionIds(sessions);
   return steps.flatMap((step) => {
-    const stepSessions = sessions
-      .filter((session) => session.step_run_id === step.id)
-      .toSorted(comparePersistedRows);
-    const agent = stepSessions
+    const turns = stepSessions(sessions, step.id).toSorted(comparePersistedRows);
+    const agent = turns
       .flatMap((session) => (session.agent_id ? [getAgent(db, session.agent_id)] : []))
       .find(Boolean);
     const stepEvent = latestEvent(events, (event) => event.step_run_id === step.id);
@@ -85,10 +86,10 @@ function projectSteps({
       name: step.name,
       status: step.status,
       runtime: agent?.runtime ?? null,
-      provider_sessions: stepSessions.flatMap((session) =>
+      provider_sessions: turns.flatMap((session) =>
         session.provider_session_id ? [session.provider_session_id] : [],
       ),
-      usage: toReportedUsage(stepUsage(events, step.id, isStepSettled(step.status))),
+      usage: toReportedUsage(stepUsage(events, step.id, isStepSettled(step.status), supervisors)),
       evidence: timeline(stepEvent?.seq ?? null),
     });
     if (parsed.success) return [parsed.data];

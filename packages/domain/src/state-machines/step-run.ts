@@ -32,7 +32,8 @@ export const stepRunMachine = defineMachine<StepRunState>({
       "stale",
     ],
     awaiting_permission: ["running", "failed", "canceled", "stale"],
-    awaiting_human: ["running", "failed", "canceled", "stale"],
+    // Only an explicit decision — an operator override or a supervisor pass — closes a step from here.
+    awaiting_human: ["running", "succeeded", "failed", "canceled", "stale"],
     waiting_for_provider: ["running", "failed", "canceled", "stale"],
     succeeded: [],
     failed: ["queued"],

@@ -22,8 +22,11 @@ export * from "./review-inbox.js";
 export * from "./run-events.js";
 export * from "./interaction.js";
 export * from "./run-plan.js";
+export * from "./step-commands.js";
+export * from "./supervision.js";
 export {
   agentProfileContractSchema,
+  AGENT_SESSION_KINDS,
   agentSessionContractSchema,
   competeGroupContractSchema,
   CLOSED_ISSUE_WORKSPACE,
@@ -81,6 +84,7 @@ export {
   type IssueExecutionFailure,
   type IssueExecutionFailureReason,
   type IssueExecutionState,
+  type AgentSessionKind,
   type IssueSource,
   type IssueSourceContract,
   type IssueWorkspace,

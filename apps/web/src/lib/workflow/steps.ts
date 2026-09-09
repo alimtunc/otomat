@@ -1,3 +1,4 @@
+import type { DeliveryExpectation } from "@otomat/domain";
 import type { ContextDraft } from "@web/lib/context/draft";
 import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
 import type { WorkflowNodeDraft } from "@web/lib/workflow-draft";
@@ -41,6 +42,16 @@ export function setWorkflowStepExecution(
 ): WorkflowNodeDraft[] {
   return steps.map((step, stepIndex) =>
     stepIndex === index && step.kind === "step" ? { ...step, execution } : step,
+  );
+}
+
+export function setWorkflowStepDelivery(
+  steps: readonly WorkflowNodeDraft[],
+  index: number,
+  delivery: DeliveryExpectation,
+): WorkflowNodeDraft[] {
+  return steps.map((step, stepIndex) =>
+    stepIndex === index && step.kind === "step" ? { ...step, delivery } : step,
   );
 }
 

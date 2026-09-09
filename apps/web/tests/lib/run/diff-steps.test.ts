@@ -27,6 +27,7 @@ function session(id: string, stepRunId: string, boundary: Partial<SessionPassBou
   return {
     id,
     step_run_id: stepRunId,
+    kind: "step" as const,
     agent_id: null,
     status: "terminated",
     provider_session_id: null,

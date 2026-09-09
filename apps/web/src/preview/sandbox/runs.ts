@@ -25,6 +25,7 @@ function run(id: string, issueId: string, status: RunContract["status"]): RunCon
     issue_id: issueId,
     status,
     branch: branchOf(id),
+    supervision: null,
     plan_json: {
       version: 1,
       steps: [
@@ -82,6 +83,7 @@ function session(runId: string, status: AgentSessionContract["status"]): AgentSe
   return {
     id: `${runId}-session-1`,
     step_run_id: `${runId}-step-2`,
+    kind: "step",
     agent_id: "claude",
     status,
     provider_session_id: "sandbox-provider-session",
@@ -156,6 +158,7 @@ export function sandboxEventWindow(runId: string): RunEventWindow {
 export function sandboxRunUsage(runId: string): RunUsageResponse {
   return {
     run_id: runId,
+    supervision: null,
     total: {
       availability: "final",
       input_tokens: 184_320,

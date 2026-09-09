@@ -1,4 +1,4 @@
-import { stepPassBounds, type RunDetail } from "@otomat/domain";
+import { stepPassBounds, stepSessions, type RunDetail } from "@otomat/domain";
 
 export interface RunDiffStep {
   id: string;
@@ -14,8 +14,6 @@ export function runDiffSteps(detail: RunDetail): RunDiffStep[] {
     name: step.name,
     number: step.idx + 1,
     reconstructable:
-      stepPassBounds(
-        detail.sessions.filter((session) => session.step_run_id === step.id).map((s) => s.boundary),
-      ) !== null,
+      stepPassBounds(stepSessions(detail.sessions, step.id).map((s) => s.boundary)) !== null,
   }));
 }

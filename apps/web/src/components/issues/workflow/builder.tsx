@@ -6,6 +6,7 @@ import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-t
 import { WorkflowPlanEditor } from "@web/components/workflow/plan-editor";
 import { WorkflowPresetPicker } from "@web/components/workflow/preset/preset-picker";
 import { SavePresetDialog } from "@web/components/workflow/preset/save-preset-dialog";
+import { SupervisionControl } from "@web/components/workflow/supervision-control";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { draftsFromPresetPlan } from "@web/lib/workflow/preset";
 import { clearInheritedNodeOverrides } from "@web/lib/workflow/steps";
@@ -31,7 +32,7 @@ export function WorkflowPlanBuilder({
   target,
   worktreeTarget,
 }: WorkflowPlanBuilderProps) {
-  const { plan, planError, isPending } = workflow;
+  const { plan, planError, supervisor, setSupervisor, isPending } = workflow;
   const projectId = targetProjectId(target);
   const [saving, setSaving] = useState(false);
 
@@ -63,6 +64,13 @@ export function WorkflowPlanBuilder({
           label={COMPOSER_LABEL}
         />
       </div>
+      <SupervisionControl
+        form={workflow.form}
+        agents={execution.agents}
+        value={supervisor}
+        onChange={setSupervisor}
+        disabled={isPending}
+      />
       <WorkflowPlanEditor
         plan={plan}
         execution={{ agents: execution.agents, inherited: execution.selection }}

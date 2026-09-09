@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import { CONTEXT_NOTE_MAX_LENGTH } from "../context/limits.js";
 import { contextReferencesSchema } from "../context/reference.js";
+import {
+  DEFAULT_DELIVERY_EXPECTATION,
+  deliveryExpectationSchema,
+} from "../delivery/expectation.js";
 import { RUN_PLAN_STEP_NAME_MAX_LENGTH } from "../plan/limits.js";
 import { runPlanInputSchema } from "../plan/validate.js";
 import {
@@ -17,8 +21,8 @@ import {
   executionOptionSelectionsSchema,
   selectsOneAgent,
 } from "./execution-config.js";
-import { providerOptionsSchema } from "./provider-options.js";
-import { modelIdSchema, modelSelectionSchema } from "./runtime-model.js";
+import { modelSelectionSchema } from "./runtime-model.js";
+import { supervisionRequestSchema } from "./supervision.js";
 
 /** Place in the daemon's FIFO wait line for a session slot, observed at one instant. */
 export const runQueuePositionSchema = z.object({
@@ -131,6 +135,8 @@ export const startRunRequestSchema = z
     /** Per-launch provider options applied to every node that inherits this agent; an absent key keeps what the resolved agent carries. */
     options: executionOptionSelectionsSchema.optional(),
     plan: runPlanInputSchema.optional(),
+    /** Supervise this run: the chosen agent is resolved and frozen exactly like a step's, and judges every step that delivers. */
+    supervision: supervisionRequestSchema.optional(),
   })
   .refine((value) => Boolean(value.issue_id) || Boolean(value.prompt), {
     message: "Provide either issue_id or prompt",
@@ -150,6 +156,7 @@ export const appendRunStepRequestSchema = z
     model: modelSelectionSchema.optional(),
     /** Provider options for this step alone; an absent key keeps what the config it resolves to carries. */
     options: executionOptionSelectionsSchema.optional(),
+    delivery: deliveryExpectationSchema.default(DEFAULT_DELIVERY_EXPECTATION),
     /** Existing plan node ids this step waits on; an empty list runs it as soon as the workspace is free. */
     depends_on: z.array(z.string().min(1)).default([]),
     /** Halted step this one recovers; once it succeeds, that failure stops holding the run in `failed`. */
@@ -204,29 +211,6 @@ export const createRunContributionRequestSchema = z
   })
   .strict();
 export type CreateRunContributionRequest = z.infer<typeof createRunContributionRequestSchema>;
-
-export const setNextTurnModelRequestSchema = z
-  .object({
-    agent_session_id: z.string().min(1),
-    current_config_hash: z.string().min(1),
-    model: modelIdSchema.nullable(),
-    options: providerOptionsSchema,
-  })
-  .strict();
-export type SetNextTurnModelRequest = z.infer<typeof setNextTurnModelRequestSchema>;
-
-export const NEXT_TURN_MODEL_ERRORS = [
-  "step_not_found",
-  "session_not_found",
-  "session_changed",
-  "config_changed",
-  "config_unavailable",
-  "resume_model_unsupported",
-] as const;
-export const nextTurnModelErrorSchema = z.object({
-  error: z.enum(NEXT_TURN_MODEL_ERRORS),
-  message: z.string().min(1),
-});
 
 /** A run's conversation contributions, oldest first. */
 export const runContributionsResponseSchema = z.object({

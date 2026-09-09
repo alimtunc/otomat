@@ -4,9 +4,11 @@ import {
   type CompeteGroupState,
   type RunPlan,
   type StepRunState,
+  type Supervision,
 } from "@otomat/domain";
 
 import type { Targets } from "../classify.js";
+import type { WorktreeDeltaProbe } from "../delivery/worktree.js";
 import type { ProcessExit, ReconcileClassification } from "../types.js";
 
 export interface SettleOptions {
@@ -16,11 +18,16 @@ export interface SettleOptions {
   observedExit?: ProcessExit;
   /** The live-tracked turn; a follow-up runs on an already-terminal step/session so it cannot be derived from rows — boot omits it, and `null` says this settle judges the plan, not a turn. */
   turn?: { agentSessionId: string } | null;
+  /** Reads what the turn did to its worktree; without it a node that requires an implementation is refused rather than believed. */
+  worktreeDelta?: WorktreeDeltaProbe;
   now: string;
 }
 
 /** Boot reconciliation may settle a run whose `plan_json` failed to parse; it then converges from whole-ledger evidence. */
-export type SettleableRun = Pick<RunRow, "id" | "status"> & { plan_json?: RunPlan };
+export type SettleableRun = Pick<RunRow, "id" | "status"> & {
+  plan_json?: RunPlan;
+  supervision_json?: Supervision | null;
+};
 
 /** Everything a settle branch needs, gathered once by `settleRun`. */
 export interface SettleContext {

@@ -41,6 +41,7 @@ import { LaunchRefusedError, resolveLaunchTarget } from "./launch-target.js";
 import { preflightRunPlan } from "./runtime-preflight.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
+import { freezeSupervision } from "./supervision/freeze.js";
 
 const RUN_BRANCH_PREFIX = "otomat/run/";
 
@@ -133,7 +134,10 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
 
   // Agents are resolved and refused before the repository is touched: an unavailable runtime is the caller's to fix, whatever the worktree says.
   const { configFor, runtimes } = resolvePlanConfigs(db, request, runDefault, defaultConfig);
-  for (const runtime of runtimes) ensureRuntimeAgent(db, runtime);
+  const supervision = freezeSupervision(db, request);
+  for (const runtime of [...runtimes, supervision?.config.runtime]) {
+    if (runtime !== undefined) ensureRuntimeAgent(db, runtime);
+  }
 
   const runId = randomUUID();
   const branch = runBranchName(runId);
@@ -176,6 +180,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
           status: runMachine.initial,
           branch,
           plan_json: plan,
+          supervision_json: supervision,
           repository_id: binding.repositoryId,
           worktree_id: worktree.id,
         });

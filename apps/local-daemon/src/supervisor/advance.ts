@@ -19,6 +19,7 @@ import { finishSettle } from "./pass-boundary.js";
 import { competeGroupStatuses, stepStatuses } from "./settle/context.js";
 import { settleRun } from "./settle/index.js";
 import { hasRunActivity, trackPending, type SupervisorState } from "./state.js";
+import { advanceSupervision } from "./supervision/advance.js";
 import { driveCompeteGroupTo } from "./transitions.js";
 import { insertTurn, scheduleTurn } from "./turn-scheduling.js";
 import type { TurnContext } from "./types.js";
@@ -132,6 +133,9 @@ function convergeIdleRun(state: SupervisorState, runId: string): void {
 }
 
 export async function startNextStepOrConverge(state: SupervisorState, run: RunRow): Promise<void> {
+  // Supervision runs first: a delivered step is not a released dependency until its run's supervisor says so.
+  const supervision = run.supervision_json;
+  if (supervision !== null && (await advanceSupervision(state, run, supervision))) return;
   if (!(await startNextReadyStep(state, run))) convergeIdleRun(state, run.id);
 }
 

@@ -30,6 +30,8 @@ export const runUsageResponseSchema = z
   .object({
     run_id: z.string(),
     total: reportedUsageSchema,
+    /** What this run's supervisor spent, read apart from the steps it judged; defaulted so an older daemon reads as none. */
+    supervision: reportedUsageSchema.nullable().default(null),
     steps: z.array(runUsageStepSchema),
   })
   .strict();

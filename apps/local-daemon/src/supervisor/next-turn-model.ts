@@ -45,7 +45,7 @@ export function setNextTurnModel(
     throw new NextTurnModelError("step_not_found", `step ${stepRunId} is not on run ${runId}`);
   }
   const sessions = listAgentSessionsForRun(state.db, runId).filter(
-    (candidate) => candidate.step_run_id === stepRunId,
+    (candidate) => candidate.step_run_id === stepRunId && candidate.kind === "step",
   );
   const session = sessions.find((candidate) => candidate.id === sessionId);
   if (!session) {

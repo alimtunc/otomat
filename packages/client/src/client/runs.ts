@@ -20,6 +20,7 @@ import {
   type AnswerRunInteractionRequest,
   type CreateRunContributionRequest,
   type ScheduleProviderResumeRequest,
+  type OverrideStepDeliveryRequest,
   type SetNextTurnModelRequest,
   type SelectCompeteWinnerRequest,
   type StartRunRequest,
@@ -183,6 +184,15 @@ export function createRunsClient(config: DaemonClientConfig) {
           config,
           `/api/runs/${encodeURIComponent(id)}/steps/${encodeURIComponent(stepId)}/stop`,
           {},
+        ),
+      );
+    },
+    async overrideStepDelivery(id: string, stepId: string, request: OverrideStepDeliveryRequest) {
+      return stepRunContractSchema.parse(
+        await postJson(
+          config,
+          `/api/runs/${encodeURIComponent(id)}/steps/${encodeURIComponent(stepId)}/override-delivery`,
+          request,
         ),
       );
     },

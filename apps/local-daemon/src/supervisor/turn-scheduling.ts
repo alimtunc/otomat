@@ -34,6 +34,7 @@ export function insertTurn(
     runId: run.id,
     stepRunId: step.id,
     agentSessionId,
+    kind: "step",
     prompt: step.prompt,
     contextSelection: step.context ?? null,
     agentSessionDir: sessionDir(state.dataDir, run.id, agentSessionId),

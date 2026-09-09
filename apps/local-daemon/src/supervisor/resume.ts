@@ -147,6 +147,7 @@ function resumeTurnFor(
       ...turn,
       runId: run.id,
       stepRunId: session.step_run_id,
+      kind: "step",
       contextSelection: step?.context ?? null,
       agentSessionDir: sessionDir(state.dataDir, run.id, turn.agentSessionId),
       worktreePath,
