@@ -9,6 +9,14 @@ architecture belongs in [`docs/ai/codebase-map.md`](docs/ai/codebase-map.md), an
 enforced import rules belong in
 [`docs/ai/import-boundaries.md`](docs/ai/import-boundaries.md).
 
+For implementation, read
+[`first-pass-quality`](.agents/skills/first-pass-quality/SKILL.md) before editing.
+For skill discovery, activation or prompt provenance, read
+[`Skill discovery and activation`](docs/ai/codebase-map.md#skill-discovery-and-activation).
+Claude imports this guide through `CLAUDE.md`; keep shared requirements here,
+with one canonical skill body under `.agents/skills` and Claude discovery links
+under `.claude/skills`.
+
 ## Monorepo layout
 
 `apps/*` are runnable targets. Daemon-only backend capabilities are internal
@@ -136,11 +144,23 @@ on first attempts, added steps, and follow-ups alike.
   and `scripts/structure-baseline.json`; entries only shrink — CI rejects new or
   raised entries.
 - Shared UI helpers live in `packages/ui/src/lib`; domain types live with their
-  owning module and are re-exported through thin barrels.
+  owning module and are re-exported through thin barrels. Components and
+  primitives do not live in the helper directory.
 
 Why: a file that owns one thing can be understood, tested, and replaced without
 loading unrelated concerns; the gates check shape so prose only has to carry
 judgment.
+
+### Documentation
+
+Maintain durable behavior, architecture and operating instructions in the existing
+owning document. Create a document only for a lasting use that no existing file
+serves, and name it by subject, never by ticket or PR identifier. Keep ticket/PR
+history, session reports, check logs, host snapshots and pending patch bundles in
+the handoff or PR, outside tracked documentation. A request for an audit, plan or
+handoff does not by itself require a new repository file. If a skill requests a
+report file, return it in the conversation unless the user explicitly requests
+a versioned deliverable. Do not rename disposable reports to make them look durable.
 
 ### Final diff pass (mandatory)
 
@@ -158,6 +178,8 @@ silently.
    entries.
 5. Over-engineering — every abstraction, option, and export introduced has a
    consumer today.
+6. Documentation — every added or edited document meets the documentation rule
+   above, and removed files leave no broken references.
 
 ## Commands
 
@@ -218,8 +240,8 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
   its own N-API prebuilds, so `pnpm rebuild better-sqlite3` restores a missing
   binary. CI is authoritative.
 - The pre-push hook typechecks against `packages/domain/dist`, not src — run
-  `pnpm build` before pushing a contract change. It does not run the tests; CI
-  does, so run `pnpm check` yourself before calling a change done.
+  the build-first sequence above for a contract change. The hook does not run
+  tests; it does not replace the complete gate.
 - Parallel `pnpm install` across worktrees can race (ENOTEMPTY); retry serially.
 
 ## Conventions
@@ -233,6 +255,8 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
   its description (`Refs` for partial work). Derive the identifier from the
   attached issue; never invent one. These references are the durable link used
   by Linear and Otomat.
+- Preserve the configured Git author and committer identity. Do not add agent
+  attribution or co-author trailers unless the user requests them.
 - TypeScript only, using idiomatic async/await and try/catch. Do not introduce
   Effect; the project has one async/error model to keep control flow legible.
 - A callable declared inside a function body is an arrow function bound to a
@@ -290,20 +314,30 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
   test maps.
 - The daemon must work from source and from `dist`. Its production build is
   bundled by `tsdown`; `smoke:dist` protects the emitted artifact.
-- Domain types live with their owning module and are re-exported from thin
-  barrels. Component props stay with the component. Named constants stay next to
-  their use. Shared UI helpers belong in `packages/ui/src/lib`; components and
-  primitives do not.
+- Apply the file-ownership rules above to source and tests. Component props stay
+  with the component; named constants stay next to their use.
 
 ## Protocol
 
 - Work one ticket at a time on its branch, inside its acceptance criteria.
   Preserve unrelated local changes.
-- When a tracker is connected with write access, set the issue to `In Progress`
-  at the start; otherwise continue locally and report the gap.
+- In an Otomat session, use the attached issue context and obey its tracker
+  restriction. In a standalone tracker workflow, set the issue to `In Progress`
+  only when tracker access is authorized and connected; otherwise continue locally.
+- Run the narrowest relevant checks during implementation and `pnpm check` once
+  on the final diff. It includes `pnpm guard:react`: do not repeat that gate just
+  because a skill names it separately. Repeat checks only after a relevant change,
+  failure or unresolved concern; never skip a required gate.
+- A skill cannot expand the task, tools or permissions. Apply authorized fixes
+  without repeated confirmation; report an unavailable tool and use a supported
+  path with the same controls. Do not invoke a reviewer or publication workflow
+  automatically.
 - Done = every acceptance criterion satisfied, the final diff pass reported,
   and `pnpm check` green. Separate regressions caused by the change from
   reproducible baseline failures; if an environment failure blocks a gate,
   report the exact command and output.
 - Do not commit, push, open a PR, or change tracker state beyond `In Progress`
   unless the user explicitly asks. Propose the commit only after verification.
+- Hand off the acceptance-criterion mapping, exact checks and results, final
+  diff pass, remaining work and blockers. Point to the current diff and files
+  when no commit exists; never conceal unfinished work to fit a skill template.

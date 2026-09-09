@@ -1,7 +1,7 @@
 # Otomat Codebase Map
 
-This is the map of the Otomat monorepo as it stands, plus where later tickets add
-code. It is a map, not permission to scaffold empty packages.
+This map describes the Otomat monorepo and the module that owns each behavior.
+Package creation follows [`AGENTS.md`](../../AGENTS.md#a-package-must-earn-its-place).
 
 `apps/*` are **runnable targets** (a UI app or a local process), not only UI apps.
 A directory under `packages/*` exists only when it earns it (see "When something is
@@ -11,22 +11,22 @@ a package" below); daemon-only backend code lives inside `apps/local-daemon`.
 
 ```text
 apps/
-  web/                 # React + Vite cockpit (OTO-9, refactored in OTO-15)
+  web/                 # React + Vite cockpit
   local-daemon/        # Node local process — hosts the backend as internal modules
     src/
-      api/             # HTTP routes + SSE handlers (run ledger, activity snapshot) (OTO-9)
+      api/             # HTTP routes + SSE handlers (run ledger, activity snapshot)
       context/         # declarative agent context: freeze a selection, build a session dossier, render it
-      events/          # event ledger + stream-to-file tailer (OTO-7)
-      git/             # worktree/branch lifecycle + diff      (OTO-8)
-      github/          # gh CLI, PR publication, and adoption of a pull request Otomat did not open (OTO-26)
-      data-safety/     # startup diagnostics + restore maintenance mode (OTO-29)
-      diagnostics/     # correlation-id request log + bounded redacted excerpt   (OTO-52)
-      review/          # review slice: scoped diff snapshots, comment anchoring, fix proof, PR-comment publication (OTO-11, OTO-57)
-      runtime/         # adapter contract, provider adapters, model + option feature detection (OTO-6)
+      events/          # event ledger + stream-to-file tailer
+      git/             # worktree/branch lifecycle + diff
+      github/          # gh CLI, PR publication, and adoption of a pull request Otomat did not open
+      data-safety/     # startup diagnostics + restore maintenance mode
+      diagnostics/     # correlation-id request log + bounded redacted excerpt
+      review/          # review slice: scoped diff snapshots, comment anchoring, fix proof, PR-comment publication
+      runtime/         # adapter contract, provider adapters, model + option feature detection
         probe/         # bounded, credential-free reads of an installed provider binary
         providers/     # one folder per runtime: adapter, frames, models, options
-      supervisor/      # process supervisor + pid reconciliation (OTO-10)
-        workspaces/    # worktree inventory, attachment, safe cleanup and reconciliation (OTO-88)
+      supervisor/      # process supervisor + pid reconciliation
+        workspaces/    # worktree inventory, attachment, safe cleanup and reconciliation
       index.ts server.ts bootstrap.ts   # composition root / entrypoint
     tests/             # agents/ api/ data-safety/ events/ git/ runtime/ supervisor/ + support/
   desktop/             # Electron alpha shell: manages the local-daemon lifecycle, serves the web build
@@ -37,11 +37,11 @@ apps/
       shared/          # pure lifecycle logic (free port, PATH resolve, health poll, env, terminate)
 
 packages/
-  domain/              # pure TS domain, state machines, event envelope, zod contracts (OTO-5)
-  db/                  # better-sqlite3 + Drizzle schema/migrations/repositories (OTO-5)
-  ui/                  # Base UI primitives + Otomat design system (OTO-9)
-  client/              # typed daemon API/SSE client for the frontend (OTO-9)
-  tooling/             # shared tsconfig, lint, vitest/build/boundary presets (OTO-5)
+  domain/              # pure TS domain, state machines, event envelope, zod contracts
+  db/                  # better-sqlite3 + Drizzle schema/migrations/repositories
+  ui/                  # Base UI primitives + Otomat design system
+  client/              # typed daemon API/SSE client for the frontend
+  tooling/             # shared tsconfig, lint, vitest/build/boundary presets
 
 apps/ (later)
   mobile/              # Post-V1: companion app, no local agent execution
@@ -56,7 +56,6 @@ A directory is a **package** only when it has a real reason to be one:
 - an important boundary to protect;
 - a heavy/dangerous dependency to isolate;
 - a stable interface between two worlds;
-- reuse planned across more than one app.
 
 Otherwise it is an internal folder of an app/process. Do not create a new package
 without an explicit justification recorded in its owning ticket.
@@ -67,51 +66,50 @@ Why each current package qualifies:
 | ----------------- | --------------------------------------------------------------------------------- |
 | `domain`          | Shared by every app and module; the single source of canonical types/contracts.   |
 | `db`              | Isolates the native `better-sqlite3` driver + Drizzle schema; used by all backend modules; an enforced boundary. |
-| `ui`              | Frontend design system reused by `web` and future `desktop`/`mobile`.             |
-| `client`          | Typed daemon API/SSE client reused by `web` and future frontend apps.             |
+| `ui`              | Shared frontend design system with a separate component boundary.               |
+| `client`          | Typed daemon API/SSE boundary for frontend consumers.                            |
 | `tooling`         | Shared build/lint/test/boundary config.                                           |
 
 Why `api`, `context`, `data-safety`, `diagnostics`, `events`, `git`, `runtime` are **not** packages: each was
 consumed only by the local daemon (and each other) — no frontend or cross-app consumer — so they
 are internal daemon modules, consumed through
 `#api`/`#data-safety`/`#diagnostics`/`#events`/`#git`/`#runtime` subpath imports.
-`supervisor` (OTO-10), `review` (OTO-11) and `github` (OTO-26) live the same way
+`supervisor`, `review` and `github` live the same way
 under `apps/local-daemon/src/<module>`, consumed through
 `#supervisor`/`#review`/`#github`.
 
-## Ticket Ownership
+## Module Responsibilities
 
-| Path                              | Owner                    | Notes                                                                 |
-| --------------------------------- | ------------------------ | --------------------------------------------------------------------- |
-| `apps/web`                        | OTO-5, OTO-9, OTO-15     | Vite/React cockpit; file-based routing + domain-split components.     |
-| `apps/local-daemon`               | OTO-5, OTO-9/10, OTO-13  | Local process host; backend modules folded in by OTO-13.              |
-| `apps/local-daemon/src/runtime`   | OTO-6                    | Push-sink adapter contract and simulated adapter.                     |
-| `apps/local-daemon/src/events`    | OTO-7                    | Append-only event store, stream-to-file ingestion, projections.       |
-| `apps/local-daemon/src/git`       | OTO-8                    | Worktree/branch ownership, canonical diff, cleanup primitives.        |
-| `apps/local-daemon/src/data-safety` | OTO-29                 | Safe startup diagnostics and the one-shot restore maintenance mode.   |
-| `apps/local-daemon/src/diagnostics` | OTO-52                 | Correlation ids on `/api`, and the bounded redacted excerpt a host serves. |
-| `apps/web/src/components/diagnostics` | OTO-52               | Classified error report: details, host log excerpt, copy/export/report. |
-| `packages/domain/src/redaction`   | OTO-29, OTO-52           | The one log redactor; shared by the shell, the daemon and the cockpit. |
-| `apps/local-daemon/src/api`       | OTO-9                    | Local daemon routes and SSE surface.                                  |
-| `apps/local-daemon/src/context`   | OTO-107                  | Frozen context selection, per-session dossier, and its rendering.     |
-| `apps/web/src/components/context` | OTO-107                  | The one prompt composer: attached-context chips plus an optional note.|
-| `apps/web/src/components/workflow` | OTO-64                  | The shared node-graph editor, plus the preset library it fills from. |
-| `apps/desktop/src/main/data-safety` | OTO-29                 | Versioned data layout, redacted rotating logs, support bundle export. |
-| `apps/desktop/scripts`            | OTO-21, OTO-30           | macOS packaging: ad-hoc local build, signed/notarized release, packaged smoke. |
-| `apps/desktop/src/main/update`    | OTO-33                   | Self-update of the signed app: feed, installability, safety gate, state machine. |
-| `apps/local-daemon/src/supervisor`| OTO-10, OTO-87           | Process supervision, pid reconciliation, and the recovery of a stopped plan. |
-| `apps/local-daemon/src/review`    | OTO-11, OTO-26, OTO-57   | Review slice: scoped diff snapshots, comment anchoring, destinations, fix-step context, fix proof; one surface for a run and an adopted pull request.|
-| `apps/local-daemon/src/github/import` | OTO-26               | Adoption of an existing pull request: reference, verification, provenance, detection, audit. |
-| `apps/web/src/components/pull-requests` | OTO-26             | The issue's pull requests: attached cards, detected candidates, manual import, detach. |
-| `packages/domain/src/patch`       | OTO-11                   | The one unified-diff reader: hunks, range coverage, GitHub anchor refusals. |
-| `packages/domain`                 | OTO-5                    | Pure TS. Canonical types, state machines, event envelope, contracts.  |
-| `packages/db`                     | OTO-5                    | SQLite driver isolation, Drizzle schema, migrations, repositories.    |
-| `packages/ui`                     | OTO-9                    | UI primitives/design system (Base UI/Tailwind/lucide).                |
-| `packages/client`                 | OTO-9                    | Typed API/SSE client for the local daemon.                            |
-| `packages/tooling`                | OTO-5                    | Shared TypeScript, lint/boundary, and test configuration.             |
+| Path | Notes |
+| --------------------------------- | --------------------------------------------------------------------- |
+| `apps/web` | Vite/React cockpit; file-based routing + domain-split components. |
+| `apps/local-daemon` | Local process host with internal backend modules. |
+| `apps/local-daemon/src/runtime` | Push-sink adapter contract and simulated adapter. |
+| `apps/local-daemon/src/events` | Append-only event store, stream-to-file ingestion, projections. |
+| `apps/local-daemon/src/git` | Worktree/branch ownership, canonical diff, cleanup primitives. |
+| `apps/local-daemon/src/data-safety` | Safe startup diagnostics and the one-shot restore maintenance mode. |
+| `apps/local-daemon/src/diagnostics` | Correlation ids on `/api`, and the bounded redacted excerpt a host serves. |
+| `apps/web/src/components/diagnostics` | Classified error report: details, host log excerpt, copy/export/report. |
+| `packages/domain/src/redaction` | The one log redactor; shared by the shell, the daemon and the cockpit. |
+| `apps/local-daemon/src/api` | Local daemon routes and SSE surface. |
+| `apps/local-daemon/src/context` | Frozen context selection, per-session dossier, and its rendering. |
+| `apps/web/src/components/context` | The one prompt composer: attached-context chips plus an optional note. |
+| `apps/web/src/components/workflow` | The shared node-graph editor, plus the preset library it fills from. |
+| `apps/desktop/src/main/data-safety` | Versioned data layout, redacted rotating logs, support bundle export. |
+| `apps/desktop/scripts` | macOS packaging: ad-hoc local build, signed/notarized release, packaged smoke. |
+| `apps/desktop/src/main/update` | Self-update of the signed app: feed, installability, safety gate, state machine. |
+| `apps/local-daemon/src/supervisor` | Process supervision, pid reconciliation, and the recovery of a stopped plan. |
+| `apps/local-daemon/src/review` | Review slice: scoped diff snapshots, comment anchoring, destinations, fix-step context, fix proof; one surface for a run and an adopted pull request. |
+| `apps/local-daemon/src/github/import` | Adoption of an existing pull request: reference, verification, provenance, detection, audit. |
+| `apps/web/src/components/pull-requests` | The issue's pull requests: attached cards, detected candidates, manual import, detach. |
+| `packages/domain/src/patch` | The one unified-diff reader: hunks, range coverage, GitHub anchor refusals. |
+| `packages/domain` | Pure TS. Canonical types, state machines, event envelope, contracts. |
+| `packages/db` | SQLite driver isolation, Drizzle schema, migrations, repositories. |
+| `packages/ui` | UI primitives/design system (Base UI/Tailwind/lucide). |
+| `packages/client` | Typed API/SSE client for the local daemon. |
+| `packages/tooling` | Shared TypeScript, lint/boundary, and test configuration. |
 
-Integrations (Linear/GitHub) start as daemon modules when the local loop needs
-them; review pinning (OTO-11) already landed as `apps/local-daemon/src/review`.
+Linear, GitHub and review capabilities live in internal daemon modules.
 Promote a module to `packages/*` only if a real cross-app consumer appears.
 
 ## Provider Capability Detection
@@ -170,35 +168,19 @@ reasoning level is the runtime's business, and claiming it as Otomat's would mak
 the frozen plan lie. `providerOptionDefault` is the one place a default is read,
 because a value the CLI marks dangerous must be reachable only by choosing it.
 
-## Autonomy Is The Default, Approvals Are Not
+## Autonomy and Approval Channels
 
-Otomat drives every provider headless, so a mode that stops to ask a human is a
-mode that fails. Each adapter therefore defaults to **the most autonomous policy
-its installed binary announces and Otomat did not have to weaken**: Claude Code's
+Each adapter defaults to **the most autonomous policy its installed binary
+announces and Otomat did not have to weaken**: Claude Code's
 `auto`, where the provider's own classifier decides each call, and Codex's
 `workspace-write` sandbox. `bypassPermissions` and `danger-full-access` are never
 reached this way. Where the autonomous mode is unavailable the descriptor's own
 description says which run it degrades and what to do about it, so the fallback
 is never silent.
 
-Interactive approvals are a separate question with a separate answer, and both
-adapters answer `permissions: false` today. `claude -p` reports the calls its
-permission system refused — the result frame carries a structured
-`permission_denials` — but exposes no channel to answer one, so the adapter
-records each refusal as a `runtime.permission_request` plus the provider's own
-`runtime.permission_response`, and never claims Otomat could have approved it.
-`codex exec` does not surface an escalation in a machine-readable form at all.
-Nothing here is scraped from a terminal: a request/response contract is worth
-extending only for an interaction a provider actually exposes.
-
-Because both stay false, a permission mode and an approval channel must be named
-separately everywhere — `Permission mode: Auto` alongside
-`Interactive approvals: unavailable` is not a contradiction, and the label
-`Permissions — unavailable` (which reads as a blanket refusal) is wrong. A
-refusal that happens anyway carries `permission_mode_status`, resolved against
-the binary on the host that ran the turn, so the cockpit can separate a plan
-frozen before the policy, a mode that host never announced, the classifier's own
-verdict under the autonomous mode, and a request nothing could answer.
+Permission modes and interaction channels remain separate capabilities. Claude
+can relay unsettled asks; Codex's exec transport cannot. The supported protocol
+and answer lifecycle are documented in [Runtime Interactions](#runtime-interactions).
 
 ## Declarative Agent Context
 
@@ -230,14 +212,28 @@ Every field is read locally. No external id, tracker URL or credential rides
 along, and the rendered context says so — an imported Linear issue reaches a
 session exactly like a local one, on a laptop or on a VPS daemon.
 
-Project skills are discovered one directory deep from `.agents/skills` and
-`.claude/skills`. Discovery only makes a skill selectable: an agent profile owns
-the selected ids, resolution freezes their content hashes, and `composeTurnPrompt`
-prepends the frozen bodies before the supervisor chooses Claude or Codex. The
-repo-local `first-pass-quality` skill therefore reaches both runtimes through the
-same profile contract without becoming a daemon-built-in role. Its Claude project
-path is a symlink to the canonical `.agents` directory; realpath de-duplication
-keeps one catalog entry and one instruction body.
+### Skill discovery and activation
+
+Skill discovery scans one directory deep: user `.agents/skills`, legacy
+`.claude/skills` and `.codex/skills`, then each registered project's `.agents/skills`
+and `.claude/skills`. It does not scan run worktrees or nested plugin directories.
+Realpath de-duplication keeps one catalog entry per file; user roots win ownership
+when project links expose the same file. Homonymous files remain distinct.
+
+Discovery only makes a skill selectable. Global profiles may activate user skills;
+project profiles may also activate their own project's skills. Native harness
+discovery uses the active workspace independently of this catalog. A worktree edit
+does not update a skill cataloged from the registered checkout; test that version
+by its exact native path or through a separately registered test project.
+
+A profile owns the selected ids within its scope; resolution freezes their
+bodies and hashes. `composeTurnPrompt` labels profile guidance as task guidance
+and includes each skill's canonical file and
+resource directory before the supervisor chooses Claude or Codex. Ancillary
+resources remain live, and native frontmatter capabilities are not implemented
+by text injection. The prompt asks the agent to resolve relative resources from
+the stated directory and report missing files, without loading those resources
+on its behalf. A native resume retains its conversation without re-injection.
 
 ## One Execution Configuration
 
@@ -477,7 +473,7 @@ what gives the cockpit a last sync state, a target state name, an actionable err
 and a Retry, and what makes `linear.lifecycle_synced` refresh the rail without a
 navigation.
 
-## Repositories Belong To A Host (OTO-60)
+## Repositories Belong To A Host
 
 A repository is one project on exactly one execution host, and Settings says which. `HostCatalog`
 answers for every configured host in one walk — projects for the switcher, registered repositories
@@ -497,7 +493,7 @@ connection keep independent team, Linear-project and lifecycle-state selections 
 the other's rows. When the vault holds a key the active host has not received yet, the project's
 Linear panel says exactly that rather than inviting a connection that already exists.
 
-## Several Linear Workspaces (OTO-145)
+## Several Linear Workspaces
 
 The catalogue of connections is global; the choice of one is per project. `linear_connections` holds
 what identifies a connection — a label plus the workspace and account it last authenticated as — and
@@ -596,7 +592,7 @@ all failures together; `inventory` groups those same strict names by PR and live
 rejected alternative — per-commit instances on the operator's VPS behind a named
 tunnel — kept a personal host and an SSH private key inside CI, shared one machine between all
 previews and the stable daemon, and left processes to clean by pidfile; the VPS keeps serving the
-desktop previews (`instanceDeployment` in `apps/desktop`), which OTO-99 leaves untouched. Setup and
+desktop previews (`instanceDeployment` in `apps/desktop`). Setup and
 secrets: [`docs/release/web-preview.md`](../release/web-preview.md).
 
 **A preview launches its runs on the simulated runtime.** No provider CLI is installed in the
@@ -638,7 +634,7 @@ export never destroys the surrounding diagnostics. Copy, export and report are
 explicit user actions — the report previews its exact text and only opens a
 draft once confirmed. There is no telemetry and no automatic send.
 
-## Quitting the Desktop Shell (OTO-129)
+## Quitting the Desktop Shell
 
 The shell owns the daemon it spawned, so `before-quit` cannot simply let Electron
 go: `QuitSequence` (`apps/desktop/src/main/quit.ts`) preventDefaults the quit,
@@ -661,7 +657,7 @@ tree when it really did time out. Every wait it makes is bounded and unref'd: a
 harness that lingers after the shutdown it observed, or that hangs on a child
 outliving SIGKILL, reads exactly like the defect it exists to catch.
 
-## Closing a Window Is Not Quitting (OTO-169)
+## Closing a Window Is Not Quitting
 
 Closing the cockpit window used to quit, which stopped the daemon and every local
 run with it. `BackgroundMode` (`apps/desktop/src/main/background`) splits the two
@@ -694,7 +690,7 @@ the operations projected alongside a run, which would count the same issue twice
 menu carries those counts, Open and Quit — never an issue title or a prompt, and its
 icon is a template image so the menu bar tints it for its own appearance.
 
-## Replacing the Desktop App (OTO-33)
+## Replacing the Desktop App
 
 The shell updates itself through `electron-updater` against GitHub Releases, but every decision
 around it is the repository's own, in `apps/desktop/src/main/update`:
@@ -1241,7 +1237,7 @@ one its issue adopted — is merged or closed, so the run keeps its status and i
 history either way. Only a *merged* pull request
 also drives `closeMergedIssue`: through the issue's canonical run when it still
 holds one, and on the issue itself when the work never ran here, which is what
-lets OTO-67's Linear write-back apply to a merge Otomat only witnessed.
+lets Linear write-back apply to a merge Otomat only witnessed.
 
 ## The Reviews Inbox
 
@@ -1288,7 +1284,7 @@ surface and unlinked in the other. Resolving is display only: it writes nothing,
 and the reviewer still passes the row's own `issue_id` — the attachment alone —
 as the workspace the AI fix may act on.
 
-## The Pull Request Reviewer (OTO-164)
+## The Pull Request Reviewer
 
 `/pull-requests/:id` is a tab shell — `Overview` and `Diff` — so the header,
 `Open on GitHub`, the copy-link action and `Submit review` are written once and
@@ -1472,7 +1468,7 @@ desktop shell, `remote/host/capacity.ts` relays the read and the write to the ho
 the operator is configuring; an unreachable host or a refused write comes back as
 a message, never as a value shown as applied.
 
-## Opening a Worktree Outside Otomat (OTO-163)
+## Opening a Worktree Outside Otomat
 
 **Open in VS Code** and **Open in terminal** sit in the run actions menu (issue
 header and run cockpit) and behind the folder button of a Workspaces row. The
@@ -1492,7 +1488,7 @@ from `ipc.ts`, the renderer IPC edge, so the resolution and its tests stay
 electron-free. Without the desktop bridge (browser dev, web preview) the items do
 not render.
 
-## Settings and Global Agents (OTO-61)
+## Settings and Global Agents
 
 The sidebar carries work only — Issues, Runs, Reviews, Usage, plus the Inbox and
 the two quick actions. Everything that configures Otomat or documents it is
@@ -1529,7 +1525,7 @@ The routes moved with the surfaces: `/settings/agents`, `/settings/agents/<id>`
 and `/settings/skills` are canonical, and `/agents`, `/agents/<id>` and `/skills`
 redirect to them, filter and profile id included.
 
-## Global Is Global To One Daemon (OTO-149)
+## Global Is Global To One Daemon
 
 There is no cross-daemon synchronisation, and the settings surface says so instead
 of leaving "Global" to be read as "everywhere". A daemon is the only writer of its
@@ -1576,7 +1572,7 @@ keeps its tab and the reviewer keeps its file anchor. Every such write replaces
 the current entry (`runs/diff/use-active-file.ts` states it for the anchor), so
 refining a screen never buries the screen it was reached from.
 
-## Project Tabs (OTO-139)
+## Project Tabs
 
 The shell carries one tab per open project above everything else, and a tab is an
 **application** tab: the desktop shell never asks macOS for native ones, so the
@@ -1633,7 +1629,7 @@ Closing a tab is a view operation and nothing else: it drops the tab and its
 remembered route while the selection stays where it is — the project outlives
 its tab — and touches no run, branch or worktree.
 
-## One Renderer For Every Host (OTO-160)
+## One Renderer For Every Host
 
 A host switch used to reload the renderer, which emptied the query cache, tore
 down every subscription and repainted the chrome. It no longer does. The
@@ -1829,7 +1825,7 @@ SQLite, serves last-known state without network, and streams local updates to th
 web app over SSE. The frontend uses TanStack Query + SSE. There is no IndexedDB
 replica and no `frontend/store` package.
 
-## Anti-Slop Lint Rules (OTO-119)
+## Anti-Slop Lint Rules
 
 The [anti-slop](https://github.com/dmmulroy/anti-slop) Oxlint plugin is vendored
 at `packages/tooling/oxlint/anti-slop/` (its files are repo-owned and formatted
@@ -1851,7 +1847,7 @@ open-keyed or partial lookups, named interfaces over anonymous object types,
 `in`/`typeof`/`instanceof` narrowing over casts, and a one-line
 `// SAFETY:` invariant on each assertion that must remain.
 
-OTO-128 adds the repo-owned `no-ephemeral-comment-references` rule beside the
+The repo-owned `no-ephemeral-comment-references` rule runs beside the
 vendored rules. It reports tracker and pull-request references inside line, block
 and JSDoc comments while leaving durable standards such as ISO-8601 alone. It is
 an error with a zero-finding baseline; `scripts/anti-slop.test.mjs` fixes the
@@ -1881,7 +1877,7 @@ scoped down instead:
   `AvatarShape`; the lazy structural naming the rule targets does not exist
   in this repo.
 
-## First-Pass Quality Gates (OTO-128)
+## First-Pass Quality Gates
 
 The quality stack has three owners. `AGENTS.md` carries repository conventions;
 `.agents/skills/first-pass-quality/SKILL.md` carries the reusable implementation
@@ -1902,7 +1898,7 @@ in `pnpm check` so CI cannot depend on an agent having selected the right profil
 `scripts/react-lint.test.mjs` pressure-tests the gate with a failing render-time
 state update and its event-handler counterpart.
 
-The second layer pins `react-doctor@0.9.12` and scans only Bugs and Accessibility
+The second layer pins `react-doctor@0.9.13` and scans only Bugs and Accessibility
 diagnostics introduced against `main`, including untracked React files. The
 repository's existing `doctor.config.json` remains the owner of reviewed
 file-specific exceptions and now also disables Performance, Maintainability,
@@ -1913,8 +1909,5 @@ without turning existing findings into a baseline or sending scan data away.
 `scripts/react-doctor.test.mjs` verifies both the exclusion contract and a unique
 render-time ref mutation diagnostic.
 
-The candidate audit, measured baselines and promotion criteria live in
-[`first-pass-quality.md`](first-pass-quality.md). Knip remains the next dead-code
-pilot; broad Vercel guidance and heavy architecture/review skills do not enter the
-default stack without the evidence recorded there. React Doctor is a pinned code
-lint only; its output is not model training or cross-harness evaluation data.
+React Doctor is a pinned code lint only; its output is not model training or
+cross-harness evaluation data.

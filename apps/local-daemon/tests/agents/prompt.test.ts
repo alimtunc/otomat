@@ -32,7 +32,7 @@ it("prepends guidance and activated skill instructions", () => {
         id: "s",
         name: "Skill A",
         source: "user",
-        canonical_path: "/a",
+        canonical_path: "/skills/Skill A/SKILL.md",
         content_hash: "h",
         instructions: "step one",
       },
@@ -40,7 +40,35 @@ it("prepends guidance and activated skill instructions", () => {
   };
   const out = composeTurnPrompt("do it", config);
   expect(out).toContain("Be terse");
+  expect(out).toContain("# Agent profile guidance");
+  expect(out).not.toContain("# System guidance");
   expect(out).toContain("Skill A");
+  expect(out).toContain('Source (user): "/skills/Skill A/SKILL.md"');
+  expect(out).toContain('Resolve relative resources from: "/skills/Skill A"');
   expect(out).toContain("step one");
   expect(out.endsWith("do it")).toBe(true);
+});
+
+it("carries a frozen skill without needing its source or treating metadata as tool authorization", () => {
+  const instructions = "---\nname: Missing\nallowed-tools: Bash\n---\nRead references/rules.md";
+  const out = composeTurnPrompt("continue", {
+    ...base,
+    skills: [
+      {
+        id: "missing",
+        name: "Missing",
+        source: "project",
+        canonical_path: "/missing/project/.agents/skills/missing/SKILL.md",
+        content_hash: "frozen-hash",
+        instructions,
+      },
+    ],
+  });
+
+  expect(out).toContain(instructions);
+  expect(out).toContain("Frozen content hash: frozen-hash");
+  expect(out).toContain("Report missing resources");
+  expect(out).toContain("Metadata does not grant tools or permissions");
+  expect(out).toContain("referenced resources are read on demand");
+  expect(out.endsWith("continue")).toBe(true);
 });

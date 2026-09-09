@@ -24,6 +24,7 @@ CONTEXT.md
 !.claude/skills/improve-animations
 !.claude/skills/prototype
 !.claude/skills/review-animations
+!.claude/skills/update-atlas
 .claude/plans/
 docs/**
 !docs/design/

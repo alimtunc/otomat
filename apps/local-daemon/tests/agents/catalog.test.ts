@@ -48,6 +48,41 @@ it("deduplicates one skill exposed through both harness roots", () => {
   );
 });
 
+it("discovers shared and legacy user roots without merging homonymous skills", () => {
+  const home = join(t.dir, "home");
+  for (const root of [".agents", ".claude", ".codex"]) {
+    writeSkillFile(join(home, root, "skills", "guide"), "---\nname: Guide\n---\nBody");
+  }
+  writeSkill("guide", "---\nname: Guide\n---\nProject body");
+  writeSkillFile(
+    join(home, ".codex", "skills", ".system", "hidden"),
+    "---\nname: Hidden\n---\nBody",
+  );
+
+  const skills = rescanSkills(t.db, { home });
+
+  expect(skills.filter((skill) => skill.name === "Guide")).toHaveLength(4);
+  expect(skills.filter((skill) => skill.project_id === null)).toHaveLength(3);
+  expect(skills.some((skill) => skill.name === "Hidden")).toBe(false);
+});
+
+it("keeps one user-owned entry when project and harness roots link to a shared user skill", () => {
+  const home = join(t.dir, "home");
+  const shared = join(home, ".agents", "skills", "shared");
+  writeSkillFile(shared, "---\nname: Shared\n---\nBody");
+  for (const root of [join(home, ".claude"), join(home, ".codex"), join(t.dir, ".agents")]) {
+    mkdirSync(join(root, "skills"), { recursive: true });
+    symlinkSync(shared, join(root, "skills", "shared"));
+  }
+
+  const [skill, ...others] = rescanSkills(t.db, { home });
+
+  expect(others).toHaveLength(0);
+  expect(skill?.project_id).toBeNull();
+  expect(skill?.canonical_path).toBe(realpathSync(join(shared, "SKILL.md")));
+  expect(rescanSkills(t.db, { home }).map((entry) => entry.id)).toEqual([skill?.id]);
+});
+
 it("marks a removed skill as path_missing on the next rescan", () => {
   writeSkill("temp", "---\nname: Temp\ndescription: d\n---\nBody");
   const first = rescanSkills(t.db, { home: null });

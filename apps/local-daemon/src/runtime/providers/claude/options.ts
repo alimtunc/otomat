@@ -32,7 +32,7 @@ const PERMISSION_MODE_DESCRIPTIONS = new Map<string, string>([
   ["auto", "Claude approves safe actions and pauses for risky ones."],
   [
     "acceptEdits",
-    "Claude edits the selected code or file. Another gated tool still waits for an approval a headless run cannot give.",
+    "Claude edits the selected code or file. Other gated tools may request approval through Otomat.",
   ],
   ["plan", "Claude explores and presents a plan before editing."],
   [
@@ -48,10 +48,10 @@ const DANGEROUS_PERMISSION_MODES = new Set(["bypassPermissions"]);
 const PERMISSION_MODE_PREFERENCE = ["auto", "acceptEdits"] as const;
 
 const AUTONOMOUS_DEFAULT_NOTE =
-  "Otomat sends `auto` when nothing else is selected, so the provider decides for itself instead of asking a question a headless run cannot answer.";
+  "Otomat sends `auto` when nothing else is selected. Claude assesses tool calls, and Otomat relays any permission requests for an operator response.";
 
 const DEGRADED_DEFAULT_NOTE =
-  "This Claude Code announces no `auto` mode, so Otomat falls back to `acceptEdits`: edits apply, but a gated command such as `git commit` or `git push` is denied outright because nothing can approve it here. Update Claude Code to get the autonomous mode.";
+  "This Claude Code announces no `auto` mode, so Otomat falls back to `acceptEdits`: edits apply, while other gated tools may wait for approval through Otomat. Update Claude Code to get the autonomous mode.";
 
 function permissionModeChoice(value: string): ProviderOptionChoice {
   return {
