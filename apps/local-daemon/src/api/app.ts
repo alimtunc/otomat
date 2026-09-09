@@ -17,6 +17,7 @@ import { createHealthRoutes } from "./routes/health.js";
 import { createInboxRoutes } from "./routes/inbox.js";
 import { createIssueRoutes } from "./routes/issues.js";
 import { createLinearRoutes } from "./routes/linear.js";
+import { createProjectHealthRoutes } from "./routes/project-health.js";
 import { createPullRequestRoutes } from "./routes/pull-requests.js";
 import { createRepositoryRoutes } from "./routes/repositories.js";
 import { createReviewRoutes } from "./routes/review.js";
@@ -56,6 +57,7 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.route("/api/inbox", createInboxRoutes(deps));
   app.route("/api/linear", createLinearRoutes(deps));
   app.route("/api/settings", createSettingsRoutes(deps));
+  app.route("/api/projects", createProjectHealthRoutes(deps));
   app.route("/api/repositories", createRepositoryRoutes(deps));
   app.route("/api/agent-profiles", createAgentProfileRoutes(deps));
   app.route("/api/skills", createSkillRoutes(deps));

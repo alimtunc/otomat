@@ -20,6 +20,7 @@ import {
   EXECUTION_HOST_INBOX_CHANNEL,
   EXECUTION_HOST_INSTANCES_CHANNEL,
   EXECUTION_HOST_OPEN_WORKSPACE_CHANNEL,
+  EXECUTION_HOST_PROJECT_HEALTH_CHANNEL,
   EXECUTION_HOST_PROJECTS_CHANNEL,
   EXECUTION_HOST_READ_CAPACITY_CHANNEL,
   EXECUTION_HOST_RECONCILE_WORKSPACES_CHANNEL,
@@ -146,6 +147,11 @@ export function registerIpc(state: IpcState, actions: IpcActions): void {
   );
   ipcMain.handle(EXECUTION_HOST_WORKSPACES_CHANNEL, (_event, hostId: unknown) =>
     actions.executionHost.readWorkspaces(hostId),
+  );
+  ipcMain.handle(
+    EXECUTION_HOST_PROJECT_HEALTH_CHANNEL,
+    (_event, hostId: unknown, projectId: unknown) =>
+      actions.executionHost.readProjectHealth(hostId, projectId),
   );
   ipcMain.handle(EXECUTION_HOST_INBOX_CHANNEL, (_event, hostId: unknown) =>
     actions.executionHost.readInbox(hostId),

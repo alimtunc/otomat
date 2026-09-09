@@ -1,5 +1,6 @@
 import {
   projectContractSchema,
+  projectHealthReportSchema,
   registerRepositoryResponseSchema,
   repositoryBranchesResponseSchema,
   repositoryContractSchema,
@@ -20,6 +21,12 @@ export function createWorkspaceClient(config: DaemonClientConfig) {
   return {
     async listProjects() {
       return projectContractSchema.array().parse(await getJson(config, "/api/projects"));
+    },
+    /** Only the host that owns the project can answer for it; there is no fallback daemon. */
+    async projectHealth(projectId: string) {
+      return projectHealthReportSchema.parse(
+        await getJson(config, `/api/projects/${encodeURIComponent(projectId)}/health`),
+      );
     },
     async listRepositories(params: { projectId?: string } = {}) {
       return repositoryContractSchema

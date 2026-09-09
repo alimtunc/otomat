@@ -28,7 +28,7 @@ export {
   type TrackedFileMatches,
 } from "./repo.js";
 export * from "./pull-request.js";
-export { resolveBaseSha } from "./remote-base.js";
+export { probeRemoteBranch, resolveBaseSha, type RemoteBranchProbe } from "./remote-base.js";
 export * from "./tree-file.js";
 export * from "./probe.js";
 export * from "./resolver.js";

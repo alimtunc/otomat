@@ -19,6 +19,7 @@ export * from "./skill.js";
 export * from "./linear.js";
 export * from "./operation.js";
 export * from "./probe.js";
+export * from "./project-health.js";
 export * from "./provider-options.js";
 export * from "./pull-request/index.js";
 export * from "./repository.js";

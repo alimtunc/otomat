@@ -17,6 +17,8 @@ function runDiffScopeKey(scope: RunDiffScopeSelector): string {
  * and a host switch re-keys observers instead of clearing them. Keys nest so a parent invalidation
  * cascades by prefix; `run` (single) and `runs` (list) are distinct roots.
  */
+export const PROJECT_HEALTH_KEY = "project-health";
+
 export function hostKeys(host: ExecutionHostId) {
   return {
     host: [host] as const,
@@ -36,6 +38,7 @@ export function hostKeys(host: ExecutionHostId) {
     linearSyncStatus: (projectId: string) => [host, "linear", "sync-status", projectId] as const,
     linearSync: (projectId: string) => [host, "linear", "sync", projectId] as const,
     projects: [host, "projects"] as const,
+    projectHealthFor: (projectId: string | null) => [host, PROJECT_HEALTH_KEY, projectId] as const,
     repositories: [host, "repositories"] as const,
     repositoriesFor: (projectId?: string) =>
       [host, "repositories", "project", projectId ?? null] as const,

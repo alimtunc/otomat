@@ -10,6 +10,7 @@ import {
   type ExecutionHostRegisterProjectResult,
   type ExecutionHostRepositoriesEntry,
   type InboxSnapshot,
+  type ProjectHealthReport,
   type RemoteHostStatus,
   type WorkspaceCleanupResult,
   type WorkspaceInventory,
@@ -18,6 +19,7 @@ import {
 
 import type { RemoteSessionHandle } from "../session.js";
 import { resolveCommandBaseUrl, type ResolvedDaemonUrl } from "./command-url.js";
+import { hostCommandRefusal } from "./refusal.js";
 
 export type { ResolvedDaemonUrl } from "./command-url.js";
 
@@ -75,22 +77,19 @@ export class HostCatalog {
       const created = await this.client(target.url).registerRepository({ path: path.trim() });
       return { ok: true, project: created.project };
     } catch (error) {
-      if (error instanceof DaemonRequestError) {
-        const refusal = repositoryRegistrationErrorSchema.safeParse(error.body);
-        return {
-          ok: false,
-          message: refusal.success
-            ? refusal.data.message
-            : `The daemon refused the registration (HTTP ${error.status}).`,
-        };
-      }
-      if (error instanceof DaemonTransportError) {
-        this.options.log(`Register on ${hostId} failed: ${String(error.cause)}`);
-        return {
-          ok: false,
-          message: `Could not reach the ${hostId} daemon: ${String(error.cause)}`,
-        };
-      }
+      const refusal = hostCommandRefusal(
+        error,
+        hostId,
+        "Register",
+        this.options.log,
+        (status, body) => {
+          const parsed = repositoryRegistrationErrorSchema.safeParse(body);
+          return parsed.success
+            ? parsed.data.message
+            : `The daemon refused the registration (HTTP ${status}).`;
+        },
+      );
+      if (refusal !== null) return { ok: false, ...refusal };
       return {
         ok: false,
         message:
@@ -110,23 +109,20 @@ export class HostCatalog {
       await this.client(target.url).deleteRepository(repositoryId);
       return { ok: true };
     } catch (error) {
-      if (error instanceof DaemonRequestError) {
-        const refusal = repositoryDeletionErrorSchema.safeParse(error.body);
-        return {
-          ok: false,
-          message: refusal.success
-            ? refusal.data.message
-            : `The daemon refused the deletion (HTTP ${error.status}).`,
-        };
-      }
-      if (error instanceof DaemonTransportError) {
-        this.options.log(`Delete on ${hostId} failed: ${String(error.cause)}`);
-        return {
-          ok: false,
-          message: `Could not reach the ${hostId} daemon: ${String(error.cause)}`,
-        };
-      }
-      throw error;
+      const refusal = hostCommandRefusal(
+        error,
+        hostId,
+        "Delete",
+        this.options.log,
+        (status, body) => {
+          const parsed = repositoryDeletionErrorSchema.safeParse(body);
+          return parsed.success
+            ? parsed.data.message
+            : `The daemon refused the deletion (HTTP ${status}).`;
+        },
+      );
+      if (refusal === null) throw error;
+      return { ok: false, ...refusal };
     }
   }
 
@@ -138,6 +134,13 @@ export class HostCatalog {
 
   async readInbox(hostId: ExecutionHostId): Promise<ExecutionHostCallResult<InboxSnapshot>> {
     return this.call(hostId, (client) => client.listInbox());
+  }
+
+  async readProjectHealth(
+    hostId: ExecutionHostId,
+    projectId: string,
+  ): Promise<ExecutionHostCallResult<ProjectHealthReport>> {
+    return this.call(hostId, (client) => client.projectHealth(projectId));
   }
 
   async reconcileWorkspaces(
@@ -209,20 +212,16 @@ export class HostCatalog {
     try {
       return { ok: true, value: await run(this.client(target.url)) };
     } catch (error) {
-      if (error instanceof DaemonRequestError) {
-        return {
-          ok: false,
-          message: `The ${hostId} daemon refused the request (HTTP ${error.status}).`,
-        };
-      }
-      if (error instanceof DaemonTransportError) {
-        this.options.log(`Call on ${hostId} failed: ${String(error.cause)}`);
-        return {
-          ok: false,
-          message: `Could not reach the ${hostId} daemon: ${String(error.cause)}`,
-        };
-      }
-      return { ok: false, message: `The ${hostId} daemon answered in an unknown format.` };
+      const refusal = hostCommandRefusal(
+        error,
+        hostId,
+        "Call",
+        this.options.log,
+        (status) => `The ${hostId} daemon refused the request (HTTP ${status}).`,
+      );
+      return refusal === null
+        ? { ok: false, message: `The ${hostId} daemon answered in an unknown format.` }
+        : { ok: false, ...refusal };
     }
   }
 

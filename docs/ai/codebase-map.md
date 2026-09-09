@@ -92,6 +92,7 @@ under `apps/local-daemon/src/<module>`, consumed through
 | `apps/web/src/components/diagnostics` | Classified error report: details, host log excerpt, copy/export/report. |
 | `packages/domain/src/redaction` | The one log redactor; shared by the shell, the daemon and the cockpit. |
 | `apps/local-daemon/src/api` | Local daemon routes and SSE surface. |
+| `apps/local-daemon/src/health` | Read-only readiness of one project on this host, composed from the modules a launch would use. |
 | `apps/local-daemon/src/context` | Frozen context selection, per-session dossier, and its rendering. |
 | `apps/web/src/components/context` | The one prompt composer: attached-context chips plus an optional note. |
 | `apps/web/src/components/workflow` | The shared node-graph editor, plus the preset library it fills from. |
@@ -495,6 +496,34 @@ by the daemon that owns the project — `GET /api/linear/sources?projectId=…` 
 connection keep independent team, Linear-project and lifecycle-state selections and neither reads
 the other's rows. When the vault holds a key the active host has not received yet, the project's
 Linear panel says exactly that rather than inviting a connection that already exists.
+
+## Is This Project Ready On This Host
+
+A run fails for host-shaped reasons — a repository that moved, a base branch the remote no longer
+advertises, a `gh` that is signed out, a provider CLI that is not installed, a profile whose skill
+file is gone — and each of them used to surface only as a refused launch. `#health` answers the same
+question up front: `GET /api/projects/:id/health` composes one check per input a launch reads
+(daemon identity, repository path, remote and base branch, worktrees root, Linear, GitHub, runtimes,
+agent profiles and skills), each carrying a status, a sentence and the one action that clears it, and
+the report's own status is the worst of them — an undetermined check outranking a degraded one. A probe
+that throws leaves its own check undetermined rather than failing the request: the report is worth most
+on the host that is broken.
+
+Every check is a read. It installs nothing, connects nothing and repairs nothing: the remote is
+probed with `ls-remote` rather than `fetch`, GitHub with `gh auth status`, Linear from the sync state
+already held, agent profiles by resolving them exactly as a launch would and discarding the result.
+No command output crosses into a report, because a remote URL or a provider argument can carry a
+credential; a failure is named by remote, branch or connection label alone.
+
+The daemon that owns a project is the only one that can answer for it, so the cockpit fans out one
+query per host — its own daemon for the active host, `HostCatalog` for the others — under that host's
+own project id, matched on the repository root path. A host that does not answer, or that holds no
+project for that path, says so in its own card and leaves every other host's report standing; there
+is no fallback to another daemon, which would report the local machine's `gh` as if it were the VPS's.
+Outside the desktop shell there is no host catalogue to read, so the panel reports the active host alone.
+Reports carry `checked_at` so a kept result reads as stale rather than current, `Run health check`
+re-runs every host that holds the project, and a successful mutation invalidates every host's report
+the same way.
 
 ## Several Linear Workspaces
 

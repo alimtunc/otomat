@@ -26,6 +26,7 @@ import type {
 } from "./execution-host.js";
 import type { InboxSnapshot } from "./inbox.js";
 import type { ConnectLinearRequest, LinearErrorCode } from "./linear.js";
+import type { ProjectHealthReport } from "./project-health.js";
 import type {
   WorkspaceCleanupResult,
   WorkspaceInventory,
@@ -161,6 +162,11 @@ export interface OtomatDesktopBridge {
     readWorkspaces(hostId: ExecutionHostId): Promise<ExecutionHostCallResult<WorkspaceInventory>>;
     /** One host's Inbox, so a project that is not on screen keeps its badge. */
     readInbox(hostId: ExecutionHostId): Promise<ExecutionHostCallResult<InboxSnapshot>>;
+    /** One host's readiness report for the project it holds under that id; only that host can run its own checks. */
+    readProjectHealth(
+      hostId: ExecutionHostId,
+      projectId: string,
+    ): Promise<ExecutionHostCallResult<ProjectHealthReport>>;
     reconcileWorkspaces(
       hostId: ExecutionHostId,
     ): Promise<ExecutionHostCallResult<WorkspaceReconcileReport>>;

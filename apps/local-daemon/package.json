@@ -21,6 +21,8 @@
     "#git/*": "./src/git/*.ts",
     "#github": "./src/github/index.ts",
     "#github/*": "./src/github/*.ts",
+    "#health": "./src/health/index.ts",
+    "#health/*": "./src/health/*.ts",
     "#linear": "./src/linear/index.ts",
     "#linear/*": "./src/linear/*.ts",
     "#test-support/*": "./tests/support/*.ts",
