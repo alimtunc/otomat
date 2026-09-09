@@ -1,6 +1,6 @@
 import { getRun, type RunRow } from "@otomat/db";
 
-import { startNextReadyStep } from "./advance.js";
+import { startNextStepOrConverge } from "./advance.js";
 import { failIdleRun, failureReason } from "./fail-run.js";
 import { runInitCommandBatch, runStillLive } from "./init-commands.js";
 import { trackPending, type SupervisorState } from "./state.js";
@@ -45,7 +45,7 @@ export function scheduleWorktreeInit(
         if (!ready) return;
         const current = getRun(state.db, run.id);
         if (!current) return;
-        await startNextReadyStep(state, current);
+        await startNextStepOrConverge(state, current);
       })
       .catch((error: unknown) => {
         console.error(`[otomat] run ${run.id} worktree init failed`, error);

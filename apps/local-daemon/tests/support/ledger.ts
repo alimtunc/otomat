@@ -1,5 +1,6 @@
 import type { Db } from "@otomat/db";
 
+import { readRunEvents } from "#events";
 import { appendSeqedEvents } from "#events/ledger";
 import type { RuntimeEvent } from "#runtime";
 
@@ -26,4 +27,11 @@ export function appendEvents(
 export function seedContiguousEvents(db: Db, runId: string, count: number, fromSeq = 0): void {
   const events = Array.from({ length: count }, (_, i) => makeEvent(runId, fromSeq + i));
   appendEvents(db, runId, events, fromSeq);
+}
+
+/** The `run.lifecycle` `settled` events a run journaled, in order: one per landing. */
+export function runLandings(db: Db, runId: string): { status: string; seq: number }[] {
+  return readRunEvents(db, runId)
+    .filter((event) => event.type === "run.lifecycle" && event.payload["phase"] === "settled")
+    .map((event) => ({ status: String(event.payload["run_status"]), seq: event.seq }));
 }
